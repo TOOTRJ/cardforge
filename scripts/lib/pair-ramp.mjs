@@ -50,13 +50,28 @@ export const TWO_COLOR_PAIRS = ["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", 
  *     50.2 / 58.8 on its wrap under the title bar (9.6–11.9 %H) → 40→60
  *     (42 / 50 / 58), the pinline's ramp; the same borderless pairs' pinline
  *     (title and type rings) measures 42.0–43.4 / 50.2–51.2 / 58.4–59.0 on
- *     the uncrowned FDN #344 / #345 — 40→60 holds there too. */
+ *     the uncrowned FDN #344 / #345 — 40→60 holds there too.
+ *   • the borderless nonbasic LAND (TODO 4.56) splits its pinline AND its
+ *     text box across ONE ramp, a little wider than the pinline's: on the
+ *     119 two-colour borderless lands that print the tinted look (Scryfall
+ *     2026-10-06; 110 registered within 12 px), each ring's own left-end and
+ *     right-end colours taken as 0 and 1, the title and type rings read
+ *     41.3 / 50.2 / 58.9 (the median of 420 rings, interquartile 40.8–41.7 /
+ *     48.8–50.9 / 58.3–59.4, mean 41.2 / 50.0 / 58.8; the 69 digital renders
+ *     of CMM 2023 → DFT 2025 alone 41.3 / 50.2 / 58.9) and the box's
+ *     text-free top band 40.9 / 49.8 / 59.0 (the median profile of 102
+ *     prints) — where the same reading of a 40→60 master gives 42.0 / 50.0 /
+ *     58.0 exactly and of the borderless SPELLS FDN #344 / #345 42.5 / 51.5 /
+ *     59.0 and 41.8 / 50.5 / 58.4. The box does NOT take the bordered
+ *     frames' 45→57: it splits where the pinline does → 39→61 (41.2 /
+ *     50.0 / 58.8) for both. */
 export const PAIR_RAMPS = Object.freeze({
   pinline: Object.freeze([40, 60]),
   frame: Object.freeze([44, 57]),
   rules: Object.freeze([45, 57]),
   crown: Object.freeze([45, 55]),
   crownFloating: Object.freeze([40, 60]),
+  borderlessLand: Object.freeze([39, 61]),
 });
 
 /** How provenance names a ramp (never a Card Conjurer file). */

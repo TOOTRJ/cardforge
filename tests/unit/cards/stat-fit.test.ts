@@ -142,9 +142,50 @@ describe("fitStatSizePct", () => {
     expect(fitStatSizePct(dragon, "20/20")).toBeLessThan(dragon.sizePct);
   });
 
-  it("Ghostfire and Retro: values on their wide ribbon / strip keep their size", () => {
+  it("Ghostfire: values on its wide ribbon keep their size; the 1997 frame's 86 px P/T keeps one digit a side and shrinks two", () => {
     for (const value of ["20/20", "40/40", "50/50", "99/99"]) expect(keeps(pt("tarkirghostfire"), value), value).toBe(true);
-    for (const value of ["100/100", "*+1/*+1"]) expect(keeps(pt("retro"), value), value).toBe(true);
+    // TODO 4.10a: the prints' size (86 px, was 63), set against a fixed
+    // right edge as the prints set it — a two-digit value grows to the LEFT
+    // at the same size (MIR #315 12/12, LGN #130 13/13: digits 59–61 px, the
+    // one-digit height) until the artist line's box.
+    const retro = pt("retro");
+    expect(retro.align).toBe("end");
+    for (const value of ["1/1", "5/5", "8/8", "*/*", "X/X", "-1/-1", "12/12", "13/13", "11/11"]) expect(keeps(retro, value), value).toBe(true);
+    // Beleren's 0 is wider than the prints': 10/10 gives up 3 %, 20/20 a tenth.
+    expect(fitStatSizePct(retro, "10/10") / retro.sizePct).toBeGreaterThan(0.96);
+    expect(fitStatSizePct(retro, "10/10")).toBeLessThan(retro.sizePct);
+    expect(fitStatSizePct(retro, "20/20") / retro.sizePct).toBeGreaterThan(0.88);
+    for (const value of ["100/100", "*+1/*+1"]) expect(fitStatSizePct(retro, value), value).toBeLessThan(retro.sizePct * 0.8);
+  });
+
+  it("an END-aligned value is fitted from its rect's right edge: the ink ends a bearing short of it and never passes the span's left", () => {
+    const retro = pt("retro");
+    const edge = ((retro.rect.leftPct + retro.rect.widthPct) / 100) * HD;
+    const span = spanPx(retro);
+    for (const value of ["3/3", "10/10", "13/13", "100/100", "*+1/*+1", "1000/1000"]) {
+      const size = fitStatSizePct(retro, value) * HD;
+      const chars = Array.from(value);
+      const [, lsb] = STAT_GLYPHS[chars[0]];
+      const [, , rsb] = STAT_GLYPHS[chars[chars.length - 1]];
+      let kern = 0;
+      chars.forEach((ch, i) => {
+        if (i > 0) kern += STAT_KERNING[chars[i - 1] + ch] ?? 0;
+      });
+      const em = (units: number) => (units / 2048) * size;
+      // Satori's box is the advance sum, the browser's the kerned run: the
+      // further of the two on each side.
+      const left = edge - em(Math.max(0, kern)) - statWidthEm(value) * size + em(lsb);
+      const right = edge + em(Math.max(0, kern)) - em(rsb);
+      expect(left, value).toBeGreaterThanOrEqual(span.left - 1e-6);
+      expect(right, value).toBeLessThanOrEqual(span.right + 1e-6);
+    }
+    // The digits' ink ends where the prints' does: 1364–1370 px.
+    expect(edge - (STAT_GLYPHS["3"][2] / 2048) * retro.sizePct * HD).toBeGreaterThan(1364);
+    expect(edge - (STAT_GLYPHS["3"][2] / 2048) * retro.sizePct * HD).toBeLessThan(1370);
+    // The transform front's reverse P/T — end-aligned in a slot with no
+    // measured span — keeps its size, a trailing asterisk's overhang included.
+    const reverse = getFrameProfile("m15dfcfront").reversePt!;
+    for (const value of ["3/3", "13/13", "*/*", "1+*/1+*", "100/100"]) expect(fitStatSizePct(reverse, value), value).toBe(reverse.sizePct);
   });
 
   it("Modern: 100/100 would print over the plate's bevel and shrinks onto its face", () => {
@@ -154,12 +195,47 @@ describe("fitStatSizePct", () => {
     expect(inkPx(modern, "100/100").right).toBeLessThanOrEqual(1373 + 1e-6);
   });
 
-  it("Battle defense fits the drawn badge, not the whole rect", () => {
-    for (const value of ["15", "100", "999"]) expect(fitStatSizePct(battle, value, "landscape"), value).toBe(battle.sizePct);
-    expect(fitStatSizePct(battle, "1000", "landscape")).toBeLessThan(battle.sizePct);
-    const badge = spanPx(battle, "landscape");
-    expect(badge.right - badge.left).toBeCloseTo((battle.rect.widthPct / 100) * 2100 * 0.76, 6);
-    expect(inkPx(battle, "1000", "landscape").right).toBeLessThanOrEqual(badge.right + 1e-6);
+  it("Battle defense fits the black interior of the shield its master paints, not the whole rect", () => {
+    // TODO 4.21b: the value sits in Card Conjurer's painted shield, whose
+    // black interior is 1920–2007 px on the digits' rows (87 px; the shield
+    // itself 164). Every printed battle's defense is one digit; a two-digit
+    // one still prints at the full 78 px, a three-digit one shrinks to the
+    // interior (the MSE profile's drawn disc was 128 px wide).
+    expect(battle.paintedRect).toBeDefined();
+    expect(battle).not.toHaveProperty("badgeColorHex");
+    expect(battle.sizePct * 2100).toBeCloseTo(78, 9);
+    for (const value of ["3", "4", "5", "6", "7", "15"]) expect(fitStatSizePct(battle, value, "landscape"), value).toBe(battle.sizePct);
+    // The widest two-digit values give up a few percent, never more.
+    for (const value of ["20", "88", "99"]) {
+      const size = fitStatSizePct(battle, value, "landscape");
+      expect(size, value).toBeLessThanOrEqual(battle.sizePct);
+      expect(size, value).toBeGreaterThan(battle.sizePct * 0.9);
+    }
+    const interior = spanPx(battle, "landscape");
+    // (The pack's 1920–2007 px, 12 px right with the shield — TODO 4.21d.)
+    expect(interior.left).toBeCloseTo(1932, 6);
+    expect(interior.right).toBeCloseTo(2019, 6);
+    // …inside the painted shield, and narrower than the value's own rect
+    // would be judged without it.
+    const shield = battle.paintedRect!;
+    expect(interior.left).toBeGreaterThan((shield.leftPct / 100) * 2100);
+    expect(interior.right).toBeLessThan(((shield.leftPct + shield.widthPct) / 100) * 2100);
+    // Three digits shrink to the interior…
+    for (const value of ["100", "111", "999"]) {
+      const size = fitStatSizePct(battle, value, "landscape");
+      expect(size, value).toBeLessThan(battle.sizePct * 0.9);
+      const ink = inkPx(battle, value, "landscape");
+      expect(ink.left, value).toBeGreaterThanOrEqual(interior.left - 1e-6);
+      expect(ink.right, value).toBeLessThanOrEqual(interior.right + 1e-6);
+    }
+    // …and four stop at the 5 pt floor, a few px onto the shield's silver
+    // rim but well inside the shield.
+    const floored = fitStatSizePct(battle, "1000", "landscape");
+    expect(floored * 2100).toBeCloseTo(41.7, 1);
+    expect(fitStatSizePct(battle, "10000", "landscape")).toBe(floored);
+    const wide = inkPx(battle, "1000", "landscape");
+    expect(wide.left).toBeGreaterThan((shield.leftPct / 100) * 2100);
+    expect(wide.right).toBeLessThan(((shield.leftPct + shield.widthPct) / 100) * 2100);
   });
 
   it("planeswalker loyalty fits the shield's dark face: three digits keep their size, four shrink", () => {
@@ -222,7 +298,8 @@ describe("measured ink spans (HD px, on the digits' rows)", () => {
     ["agclassic", "pt", 1236, 1404],
     ["alphaland", "pt", 1236, 1404],
     ["m15pw", "loyalty", 1239, 1389],
-    ["retro", "pt", 1125, 1410],
+    // The 1997 frame (TODO 4.10a): from the artist line's box to the outer bevel.
+    ["retro", "pt", 1162, 1413],
     ["modern", "pt", 1143, 1373],
     // Flip (layout v38, TODO 4.21a): each Card Conjurer plate's light face on
     // the digits' rows, measured on every colour's cut plate.
@@ -237,9 +314,11 @@ describe("measured ink spans (HD px, on the digits' rows)", () => {
     const span = spanPx(slot);
     expect(span.left).toBeCloseTo(left, 0);
     expect(span.right).toBeCloseTo(right, 0);
-    const centre = ((slot.rect.leftPct + slot.rect.widthPct / 2) / 100) * HD;
-    expect(centre).toBeGreaterThan(span.left);
-    expect(centre).toBeLessThan(span.right);
+    // The point the value is set about — the rect's centre, or its right
+    // edge for an end-aligned one (the 1997 P/T) — lies on the face.
+    const anchor = ((slot.rect.leftPct + slot.rect.widthPct / (slot.align === "end" ? 1 : 2)) / 100) * HD;
+    expect(anchor).toBeGreaterThan(span.left);
+    expect(anchor).toBeLessThan(span.right);
   });
 
   it("a second face's span lies inside its rect (a fitted value never overflows it, which only StatBake centres)", () => {
@@ -325,8 +404,10 @@ describe("statsShrink / statLayoutChanged — the card-row scope", () => {
     const wraps = row({ power: "X", toughness: "X+1" });
     expect(statsShrink(wraps)).toBe(false);
     expect(statLayoutChanged(wraps)).toBe(true);
+    // (The 1997 frame's strip kept this value whole until TODO 4.10a set its
+    // P/T at the prints' 86 px: it shrinks there now.)
     const retro = row({ power: "*+1", toughness: "*+1", frame_style: { template: "retro" } });
-    expect(statsShrink(retro)).toBe(false);
+    expect(statsShrink(retro)).toBe(true);
     expect(statLayoutChanged(retro)).toBe(true);
     // No break: ran off the rect's right edge only.
     expect(statsShrink(row({ power: "40", toughness: "40" }))).toBe(false);

@@ -24,6 +24,8 @@ import {
   FLIP_PT_MASKS,
   PW_COLOURLESS_RIM_GAIN,
   PW_GOLD_FACE,
+  SAGA_CHAPTER_PIECES,
+  SAGA_MASK_INPUTS,
   SHIELD_BOX,
   M20_ARTIFACT_NAME_SLATE,
   M20_ARTIFACT_SOLID_NAME_PILL,
@@ -48,6 +50,7 @@ import {
   gainAt,
   finishFor,
   flatPixelAt,
+  outputSizeOf,
   recutBand,
   recutBlockUp,
   retintStructure,
@@ -60,6 +63,7 @@ import {
   toneRegion,
   toneSilver,
   stripRiderKeys,
+  RETRO_GOLD_MSE,
 } from "@/scripts/lib/cc-frames.mjs";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { TWO_COLOR_PAIRS } from "@/lib/cards/frame-reference-registry";
@@ -95,6 +99,8 @@ type Finish =
   | { op: "tint"; mask: string; rgb: [number, number, number]; opacity: number; alphaFull: number; alphaNone: number; colors?: string[] };
 type Def = {
   colors: Record<string, Layer[]>;
+  pieces?: Record<string, string>;
+  maskInputs?: Record<string, string>;
   finish?: Finish[];
   plates?: Record<string, string>;
   symbols?: Record<string, string>;
@@ -111,6 +117,10 @@ type Def = {
   bridge?: typeof EMBLEM_RAY_BRIDGE;
   tones?: readonly object[] | ((key: string) => readonly object[]);
   excluded?: Record<string, string>;
+  /** A landscape recipe (TODO 4.21b: split, battle) writes 2100 × 1500
+   *  masters by its transform (tests/unit/frames/landscape-importer.test.ts). */
+  orientation?: "landscape";
+  transform?: "rotate-cw" | "downscale";
   pack?: string;
   transforms?: string;
   notes: string[];
@@ -144,6 +154,8 @@ describe("Card Conjurer recipe", () => {
     expect(Object.keys(templates).sort()).toEqual([
       "adventure",
       "aftermath",
+      // The landscape pair (TODO 4.21b; tests/unit/frames/landscape-importer.test.ts).
+      "battle",
       "emblem",
       "flip",
       "fullartland",
@@ -181,6 +193,12 @@ describe("Card Conjurer recipe", () => {
       "m20tokenartifacttext",
       "m20tokentall",
       "m20tokentext",
+      // The 1997 frame (TODO 4.10a; tests/unit/frames/retro-1997-importer.test.ts).
+      "retro",
+      "retroland",
+      // The saga (TODO 4.21c; its own describe below).
+      "saga",
+      "split",
     ]);
     for (const [template, def] of Object.entries(templates)) {
       expect(FRAME_TEMPLATE_VALUES as readonly string[]).toContain(template);
@@ -196,6 +214,9 @@ describe("Card Conjurer recipe", () => {
       expect(covered, template).toEqual([...plain, ...crowned].sort());
       for (const file of sourceFilesFor(def as never)) {
         // CC's img/black.png is the erased strip under the floating crown (4.6f).
+        // …and the one source that is this repo's own file: the MSE gold the
+        // 1997 gold frame is cut from (TODO 4.10a).
+        if (file === RETRO_GOLD_MSE) continue;
         expect(file, `${template}: ${file}`).toMatch(/^img\/(frames\/[\w/]+|black)\.(png|svg)$/);
       }
     }
@@ -913,6 +934,113 @@ describe("the portrait layouts (4.21a)", () => {
     expect(provenance.flip.notes.join(" ")).toMatch(/lower half re-cut onto the prints/);
     expect(provenance.adventure.recutUp).toBeUndefined();
     expect(provenance.aftermath.recutUp).toBeUndefined();
+  });
+});
+
+// The saga (TODO 4.21c = 3.7): the pack's own frames copied 1:1, the land
+// saga as the colourless key, the rail's two bitmaps published as pieces and
+// the pack's masks RECORDED for the two-colour saga's pair masters (4.6f) —
+// never published.
+describe("the saga (4.21c)", () => {
+  const saga = templates.saga;
+  const files = (manifestJson as FrameManifest).files as Record<string, { width: number; height: number; bytes: number }>;
+  const provenance = () => JSON.parse(readFileSync("lib/cards/frame-sources.json", "utf8")).saga;
+
+  it("copies w u b r g m 1:1 from the pack's sagaFrame<K> and builds the colourless key from its Land Frame", () => {
+    expect(Object.keys(saga.colors).sort()).toEqual([...COLORS].sort());
+    for (const key of COLORS) {
+      // One layer, the pack's own file: no mask, no blend, no re-cut.
+      expect(saga.colors[key], key).toHaveLength(1);
+      expect(saga.colors[key][0].mask, key).toBeUndefined();
+      const want = key === "c" ? "img/frames/saga/regular/l.png" : `img/frames/saga/regular/sagaFrame${key.toUpperCase()}.png`;
+      expect(saga.colors[key][0].src, key).toBe(want);
+    }
+    // The pack's 'Artifact Frame' is not built (no profile key paints it),
+    // and nothing is excluded: every key is the pack's.
+    expect(Object.values(saga.colors).flat().map((l) => l.src)).not.toContain("img/frames/saga/regular/sagaFrameA.png");
+    expect(saga.excluded).toBeUndefined();
+    expect(saga.recut).toBeUndefined();
+    expect(saga.recutUp).toBeUndefined();
+    expect(saga.finish).toBeUndefined();
+    expect(saga.plates).toBeUndefined();
+    expect(saga.transforms).toMatch(/^native 1500x2100, pixels copied 1:1 \(no resample\)/);
+    expect(saga.pack).toMatch(/^packSagaRegular\.js 'Regular Frames'/);
+    expect(saga.notes.join(" ")).toMatch(/colourless = CC's 'Land Frame'/);
+    expect(saga.notes.join(" ")).toMatch(/MH2 #259 Urza's Saga/);
+    // The masters are published at the card's size, PNG and WebP, and git
+    // holds none of them (Card Conjurer-derived frames never enter the repo).
+    for (const key of COLORS) {
+      for (const ext of ["png", "webp"]) {
+        const entry = files[`saga/${key}.${ext}`];
+        expect(entry, `saga/${key}.${ext}`).toBeDefined();
+        expect([entry.width, entry.height], `saga/${key}.${ext}`).toEqual([1500, 2100]);
+      }
+    }
+    const tracked = execFileSync("git", ["ls-files", "public/frames/saga"], { encoding: "utf8" }).trim();
+    expect(tracked).toBe("");
+  });
+
+  it("publishes the rail's badge and divider at native size, at the paths the SAGA profile draws", () => {
+    expect(saga.pieces).toBe(SAGA_CHAPTER_PIECES);
+    expect(SAGA_CHAPTER_PIECES).toEqual({
+      "chapter/badge": "img/frames/saga/sagaChapter.png",
+      "chapter/divider": "img/frames/saga/sagaDivider.png",
+    });
+    const chapters = getFrameProfile("saga").chapters!;
+    // The profile names exactly the published objects…
+    expect([chapters.badge.assetPath, chapters.divider.assetPath].sort()).toEqual(
+      Object.keys(SAGA_CHAPTER_PIECES).map((name) => `/frames/saga/${name}.png`).sort(),
+    );
+    // …draws the badge at its native size (118 × 132 of 1500 × 2100)…
+    expect([files["saga/chapter/badge.png"].width, files["saga/chapter/badge.png"].height]).toEqual([118, 132]);
+    expect(Math.round(chapters.badge.widthPct * 15)).toBe(118);
+    expect(Math.round(chapters.badge.heightPct * 21)).toBe(132);
+    // …and the divider at the pack's 592 px width, 6 px tall (versionSaga.js
+    // draws the 9 px bitmap at 0.0029 of the card's height).
+    expect([files["saga/chapter/divider.png"].width, files["saga/chapter/divider.png"].height]).toEqual([592, 9]);
+    expect(Math.round(chapters.divider.widthPct * 15)).toBe(592);
+    expect(Math.round(chapters.divider.heightPct * 21)).toBe(6);
+    for (const name of Object.keys(SAGA_CHAPTER_PIECES)) {
+      expect(files[`saga/${name}.webp`], name).toBeDefined();
+      // frameUrl resolves both (the preview's WebP, the bake's PNG).
+      expect(frameUrl(`/frames/saga/${name}.png`)).toContain(`saga/${name}.`);
+    }
+    // No other template publishes pieces this way.
+    expect(Object.entries(templates).filter(([, d]) => d.pieces).map(([t]) => t)).toEqual(["saga"]);
+  });
+
+  it("records the pack's nine masks as inputs for the pair masters and never publishes one", () => {
+    expect(saga.maskInputs).toBe(SAGA_MASK_INPUTS);
+    // packSagaRegular.js `masks`, by the pack's own names.
+    expect(SAGA_MASK_INPUTS).toEqual({
+      Pinline: "img/frames/saga/sagaMaskPinline.png",
+      Title: "img/frames/m15/regular/m15MaskTitle.png",
+      Type: "img/frames/saga/sagaMaskType.png",
+      Frame: "img/frames/saga/sagaMaskFrame.png",
+      Banner: "img/frames/saga/sagaMaskBanner.png",
+      "Banner (Right)": "img/frames/saga/sagaMaskBannerRight.png",
+      Text: "img/frames/saga/sagaMaskText.png",
+      "Text (Right)": "img/frames/saga/sagaMaskTextRight.png",
+      Border: "img/frames/saga/sagaMaskBorder.png",
+    });
+    // Fetched with the masters (so a fresh cache holds them)…
+    const sources = sourceFilesFor(saga as never);
+    for (const src of [...Object.values(SAGA_MASK_INPUTS), ...Object.values(SAGA_CHAPTER_PIECES)]) expect(sources, src).toContain(src);
+    // …listed in provenance…
+    const p = provenance();
+    expect(p.maskInputs).toMatchObject(SAGA_MASK_INPUTS);
+    expect(p.maskInputs.output).toMatch(/^not published/);
+    expect(p.pieces).toMatchObject(SAGA_CHAPTER_PIECES);
+    expect(p.colors.c).toEqual(["img/frames/saga/regular/l.png"]);
+    expect(p.commit).toBe(CC_COMMIT);
+    // …and no saga object but the seven masters and the two pieces exists:
+    // no mask, no pair master (those are TODO 4.6f's).
+    const published = Object.keys(files).filter((k) => k.startsWith("saga/")).sort();
+    const want = [...COLORS.map((k) => `saga/${k}`), "saga/chapter/badge", "saga/chapter/divider"].flatMap((k) => [`${k}.png`, `${k}.webp`]).sort();
+    expect(published).toEqual(want);
+    expect(published.some((k) => /mask/i.test(k))).toBe(false);
+    // No other template records masks this way.
+    expect(Object.entries(templates).filter(([, d]) => d.maskInputs).map(([t]) => t)).toEqual(["saga"]);
   });
 });
 
@@ -1788,7 +1916,9 @@ describe("published to the frames bucket", () => {
   const manifest = manifestJson as FrameManifest;
   /** Every file a template's recipe writes, with its expected size. */
   const outputsOf = (template: string, def: Def): Array<[string, number, number]> => {
-    const out: Array<[string, number, number]> = builtColors(def as never).map((k) => [`${template}/${k}.png`, 1500, 2100]);
+    // 1500 × 2100, or 2100 × 1500 for a landscape recipe (split, battle).
+    const master = outputSizeOf(def as never);
+    const out: Array<[string, number, number]> = builtColors(def as never).map((k) => [`${template}/${k}.png`, master.width, master.height]);
     const plateSize: [number, number] = template.startsWith("m15borderless") ? [274, 140] : [0, 0];
     for (const k of Object.keys(def.plates ?? {})) out.push([`${template}/pt/${k}.png`, ...plateSize]);
     for (const k of Object.keys(def.symbols ?? {})) out.push([`${template}/symbol/${k}.png`, 168, 168]);
@@ -1848,8 +1978,12 @@ describe("provenance and hygiene", () => {
     for (const template of Object.keys(templates)) {
       expect(provenance[template]?.source, template).toBe("cardconjurer");
       expect(provenance[template].commit).toBe(CC_COMMIT);
-      // Every master was cut at the one card corner (TODO 3.26's re-import).
-      expect(provenance[template].output, template).toBe(`1500x2100, corners rounded to ${CORNER_RADIUS}px, webp q90`);
+      // Every master was cut at the one card corner (TODO 3.26's re-import)
+      // — 64.5 px on either orientation (4.3 % of the short side): a
+      // landscape recipe's masters are 2100 × 1500.
+      const { width: outW, height: outH } = outputSizeOf(templates[template] as never);
+      expect([outW, outH], template).toEqual(templates[template].orientation === "landscape" ? [2100, 1500] : [1500, 2100]);
+      expect(provenance[template].output, template).toBe(`${outW}x${outH}, corners rounded to ${CORNER_RADIUS}px, webp q90`);
       expect(provenance[template].output, template).toContain("64.5px");
       const plainKeys = [...COLORS, ...pairKeysOf(template), ...(getFrameProfile(template).artifactMasterKeys?.c === "a" ? ["a"] : [])];
       // A template whose crown is baked into its masters (4.6f) records a

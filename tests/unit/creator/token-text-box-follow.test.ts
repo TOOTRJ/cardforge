@@ -50,7 +50,7 @@ describe("the text picks the text box", () => {
   });
 
   it("leaves every other frame, and every other kind, alone", () => {
-    for (const template of ["alphatoken", "fullart", "m15textless", "flip", "m15"] as FrameTemplate[]) {
+    for (const template of ["fullart", "m15textless", "flip", "m15"] as FrameTemplate[]) {
       expect(textBoxFrameFor("token", template, true)).toBe(template);
       expect(textBoxFrameFor("token", template, false)).toBe(template);
     }
@@ -66,7 +66,7 @@ describe("the text picks the text box", () => {
     expect(textBoxFrameFits("token", "m15tokentext", true)).toBe(true);
     expect(textBoxFrameFits("token", "m15tokentext", false)).toBe(false);
     expect(textBoxFrameFits("token", "m15token", true)).toBe(false);
-    expect(textBoxFrameFits("token", "alphatoken", true)).toBe(true);
+    expect(textBoxFrameFits("token", "fullart", true)).toBe(true);
   });
 
   it("composes with the Artifact word (tokenFrameFor) in either order", () => {
@@ -114,7 +114,7 @@ describe("the creator's follow: automatic until the user picks a variation", () 
   });
 
   it("never touches another frame or kind", () => {
-    expect(follow("alphatoken", true)).toBeNull();
+    expect(follow("fullart", true)).toBeNull();
     expect(followTokenTextBox({ kind: "creature", template: "m15", hasText: true, manual: false })).toBeNull();
   });
 });
@@ -182,6 +182,6 @@ describe("the AI jobs land on the variant the text picks", () => {
     ).toBe("m15token");
     // Any other kind or frame as it is.
     expect(autoTokenTextBoxFrame({ ...base, cardType: "creature", template: "m15", flavorText: "x" })).toBe("m15");
-    expect(autoTokenTextBoxFrame({ ...base, template: "alphatoken", flavorText: "x" })).toBe("alphatoken");
+    expect(autoTokenTextBoxFrame({ ...base, template: "fullart", flavorText: "x" })).toBe("fullart");
   });
 });

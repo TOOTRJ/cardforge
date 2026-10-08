@@ -361,6 +361,35 @@ Rules and gotchas:
   the full-art basics' "ink-box" never reads the table). Frames outside the
   family keep the old paths byte-for-byte — bringing one in is its own
   layout bump (`docs/FRAMES.md`).
+- The landscape pair (layout v43, TODO 4.21b): `split` and `battle` are Card
+  Conjurer masters in the bucket at 2100 × 1500 — the importer's
+  `orientation: "landscape"` recipes (split turned a quarter turn clockwise
+  with no resample, battle downscaled once). A recipe's `shift` moves whole
+  blocks onto the prints through FLAT zones only (`shiftBlocksRgba8` throws
+  otherwise; `SPLIT_HALF_RECUT`, `BATTLE_BLOCK_RECUT`), and the profile
+  writes its rects in the PACK's px and rides the moves (`SPLIT_RECUT_PX`,
+  `BATTLE_LOWER_RECUT_PX`; a unit test holds recipe and profile together).
+  What no block reaches on the battle is re-cut after the shift (layout
+  v45, TODO 4.21d, the recipe's `printRecut`): the bars' paper stretched
+  right (`recutColumns`, `BATTLE_RIGHT_RECUT` — it throws unless the
+  window columns it covers are one colour a row), the shield set 12 px
+  right through the pack's Defense mask, source-over (`BATTLE_SHIELD.dx`),
+  the icon's rings REDRAWN at the prints' radii (`BATTLE_ICON_RECUT`:
+  flat geometry, said so in provenance); the slots ride
+  `BATTLE_TOP_RECUT_PX` / `BATTLE_RIGHT_RECUT_PX` — the name moves up
+  with its pill, the cost keeps the prints' rows (`costDy`). The bump is
+  `BATTLE_RECUT_LAYOUT_VERSION`.
+  Battle is in the M15 family through `displayPct(…, "landscape")`; split
+  is NOT — a half prints smaller (`SPLIT_*` in `lib/cards/typography.ts`,
+  `setSymbolFit: "ink-height"`) — yet both its halves are `fit: "measured"`
+  (an unturned second face is fitted as a front band is). The battle's
+  defense is the value alone in the shield the MASTER paints
+  (`StatSlot.paintedRect`: a rules keep-out on every battle; never a drawn
+  badge), and both print the artist credit down the left border
+  (`FrameProfile.footerTurn`, both renderers through `unturnedRect`; the
+  collector line there is 4.9d's). The split's half masks and the battle's
+  Defense mask are importer inputs, never published. `docs/FRAMES.md` "The
+  landscape layouts".
 - ONE rules layout (layout v33, TODO 3.29): `lib/cards/rules-layout.ts`
   decides the size (the even HD-px ladder `RULES_SIZE_PX` 76 / 68 / 64 → 42;
   profiles use `rulesPxToPct(RULES_SIZE_PX.*)`, never a pt literal), every
@@ -379,7 +408,15 @@ Rules and gotchas:
   `lib/cards/plate-ink.ts` — a new or replaced plate needs
   `scripts/measure-plate-ink.mjs` + the test's `MEASURED_ON`), judged glyph
   by glyph. Walkers ≤ `walkerSizePct`, row anatomy at `LOYALTY_ROW_SIZE_PX`;
-  saga keeps v32's geometry (TODO 4.21).
+  the saga's rail (4.21c) is `lib/cards/saga-rail.ts` — the reminder block
+  (its fixed box, its lines out of the fold's corner, `intro.keepOuts`; one
+  the box can't hold at the floor outgrows it into the chapters' column,
+  the rows under it — never a clip while the rows can give way), rows sized
+  by the walkers' `contentRowsAt` (never shorter than their badge stack;
+  stacks that cannot fit — alone, or beside the text at the floor — become
+  the combined marker before any text clips; past the floor a row keeps
+  its badge, `rowFractionsPastFloor`), the reminder ONE paragraph,
+  badges and dividers as frame pieces under the finishes.
   `tests/unit/render/rules-no-clip.test.tsx` holds real bakes to the layout.
 - Tokens (layout v34, TODO 4.49 + 3b.15): a token's card types are WORDS in
   `supertype` (Creature / Artifact / Enchantment / Legendary, printed order,
@@ -508,6 +545,26 @@ Rules and gotchas:
   arch is a
   glyph-level rules keep-out (`DrawnStats.stamp`) — the rules rect never
   shrinks.
+- The 1997 frame (`retro`, `retroland`; TODO 4.10a, layout v46) is the
+  ORIGINAL cards of 1996–2003, never the 2006 timeshifted redrawing or the
+  2021+ reprints (imports of those are `nearest`: the `timeshifted-frame`
+  and `reprint-colours` gaps). Masters: the frames bucket —
+  Card Conjurer's Seventh drawing re-cut edge by edge PER KEY and toned
+  region by region (`scripts/lib/print-cut.mjs`, the numbers in
+  `scripts/lib/seventh-1997.mjs` as DATA: no scan is read by a build), gold
+  from the MSE file `scripts/frame-inputs/retro-m-mse.png` cut with the same
+  edge map. Text: white with a hard shadow as PER-KEY ink (`inkByColorKey`,
+  never a band's `shadowCss`: it would emboss the pips), sizes from
+  `RETRO_*` in `lib/cards/typography.ts`, the type line and the artist line
+  in MPlantin — no font file is added for an era; the P/T is set against its
+  RIGHT edge as printed (`align: "end"` + `endKerned`: two digits grow to
+  the left at full size), never centred. A CENTRED footer declares
+  `FrameProfile.copyrightSlot` (`lib/cards/copyright-slot.ts`): the mark
+  sits there on display (not on the border) and a paid clean download
+  prints the card's `footer_text` there — without the slot that text is
+  dropped. A frame's era symbols are `symbolStyle` (`"1997"`: flat discs,
+  `tap-4ed`), a correction, never a per-card switch. `docs/FRAMES.md` "The
+  1997 frame".
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in
@@ -545,7 +602,9 @@ Rules and gotchas:
   its ref hands the credit back to the user a day later.
 - Shared helpers — never re-implement: `isUuid`/`randomId` (`lib/ids.ts`),
   `rateLimitedResponse` + `cronRouteGuard` (`lib/api/*`), date strings
-  (`lib/format/dates.ts`), `lookupUsername`/`revalidateProfilePage`
+  (`lib/format/dates.ts`; a BILLING date a subscriber sees is `<LocalDate>` /
+  `<LocalDateText>`, `components/ui/local-date.tsx` — the viewer's own day, as
+  Stripe's portal shows it; an admin page prints `formatUtcDate`, labelled), `lookupUsername`/`revalidateProfilePage`
   (`lib/profile/username.ts`) + `getCurrentUsername()` for handles,
   `narrowCard` (`lib/cards/narrow.ts`), `useSearchParamPatch` for browse
   filters (always resets `page`), `RARITY_LABELS`/`COLOR_IDENTITY_LABELS`/
@@ -661,7 +720,27 @@ Rules and gotchas:
   schedule (`scheduleDowngrade`; "Keep {Plan}" =
   `cancelScheduledPlanChangeAction` releases it; the billing page reads
   `pendingChange` from the expanded schedule) — never through the portal,
-  whose `schedule_at_period_end` only works within one product. Stripe's
+  whose `schedule_at_period_end` only works within one product. A CANCELLED
+  plan is read ONLY through `subscriptionEndsAt()` / `endsByPeriodEnd()`
+  (`lib/billing/subscription-ending.ts`: `cancel_at_period_end`, the
+  portal's `cancel_at` date, a schedule ending in "cancel") and the plan
+  card's copy + buttons come from `planStatusOf()`
+  (`lib/billing/plan-status.ts`: ending is decided BEFORE trial / renews;
+  "Resume", never "Cancel plan") — never read the boolean alone. Every
+  OTHER page that names the plan (dashboard notice + badges, Settings, the
+  avatar menu, the upgrade modal, the plan grid, `/admin/users` list +
+  detail) says "cancelled, ends <date>" from the PROFILE through ONE reader,
+  `planEndingOf()` (`lib/billing/plan-ending.ts`: `subscription_ends_at` /
+  `subscription_canceled_at`, migration 0135, written by the sync; the flag
+  + period end only as the pre-0135 fallback) — a new surface that prints a
+  tier uses it. "Resume {Plan}" is IN-APP (`ResumePlanButton` → confirm with
+  the date + price from `getResumePreviewAction` → `resumeSubscriptionAction`,
+  funnel `subscription_resumed`, portal only as `fallback: "portal"`);
+  un-cancelling goes through `clearCancellation` (`cancel_at: ""` for the
+  portal's dated shape, `cancel_at_period_end: false` for the flag — NEVER
+  both in one call, Stripe refuses it), which `scheduleDowngrade` runs first
+  too; an upgrade on an ending plan goes to the portal confirm untouched
+  (Stripe renews it on confirm). Stripe's
   `trial_will_end` becomes ONE `trial_ending` notification + "account" email
   per subscription (migration 0109; honest about whether a card is on file).
   `invoice.paid` writes ONE `billing_payments` row per invoice (0110; the
@@ -671,7 +750,12 @@ Rules and gotchas:
   notification + email per user per 30 days, skipped once the plan/pack was
   bought — every Checkout session carries `purchase_kind`/`tier`/`period`
   metadata for it. Every event must be subscribed on every webhook
-  endpoint (live + sandbox). FREE DOES NOT REFILL (owner decision
+  endpoint (live + sandbox). Events arrive in ANY order and more than once:
+  `syncSubscriptionForUser` writes Stripe's CURRENT state (the event's
+  subscription re-read by id + the customer's list), never the event's
+  snapshot — pass a webhook object as `eventSub`, an object you just read or
+  wrote as `currentSub`; only `deleted` is taken from the event
+  (`docs/BILLING.md` "a late event"). FREE DOES NOT REFILL (owner decision
   2026-09-24): `SIGNUP_CREDITS` (5, the `profiles.credits` default) once,
   `MONTHLY_CREDITS.free` = 0, `refillTierFor` → null for free — copy says
   "5 to start", never "a month". Three packs (`PACK_ORDER` mini/small/large,

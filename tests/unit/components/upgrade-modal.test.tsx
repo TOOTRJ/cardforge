@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { textContent } from "../helpers/text-content";
 import type { ReactNode } from "react";
 
 // ---------------------------------------------------------------------------
@@ -102,5 +103,15 @@ describe("UpgradeModal — out of credits", () => {
     render(<UpgradeModal open reason="hi_res_export" onOpenChange={() => {}} />);
     await waitFor(() => expect(screen.getByRole("button", { name: /try pro free/i })).toBeTruthy());
     expect(screen.queryByRole("button", { name: /buy 10 credits/i })).toBeNull();
+  });
+
+  it("a subscriber whose plan is cancelled: the modal says so on their plan's row, with the date, and offers Resume", async () => {
+    s.me = { ...proSubscriber, subscriptionEnding: true, subscriptionEndsAt: "2026-10-23T02:31:04.000Z" };
+    render(<UpgradeModal open reason="credits" onOpenChange={() => {}} />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Resume Pro" })).toBeTruthy());
+    expect(screen.getByText(textContent("Your current plan — cancelled, ends October 23, 2026"))).toBeTruthy();
+    expect(screen.queryByText("Your current plan")).toBeNull();
+    // The other plan still switches.
+    expect(screen.getByRole("button", { name: /switch to plus/i })).toBeTruthy();
   });
 });

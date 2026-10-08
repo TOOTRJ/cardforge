@@ -14,13 +14,14 @@ type Font = {
 };
 
 // ---------------------------------------------------------------------------
-// lib/cards/display-metrics.ts holds hand-kept tables of Beleren Bold's
+// lib/cards/display-metrics.ts measures with tables of Beleren Bold's
 // advance widths and widening kerning pairs (the CardDisplay face both
-// renderers draw names and type lines in), read by two fits: the title next
-// to a detached cost (displayTextWidthEm) and aftermath's sideways name bars
+// renderers draw names and type lines in; GENERATED since TODO 4.8.0 —
+// lib/cards/font-metrics.ts), read by two fits: the title next to a
+// detached cost (displayTextWidthEm) and aftermath's sideways name bars
 // (displayTextEm). Re-read the committed master the renderers load and hold
 // every entry to it; if the font is ever replaced (TODO 4.8's Beleren2016),
-// this fails until the tables are re-measured.
+// this fails until the tables are regenerated.
 // ---------------------------------------------------------------------------
 
 const buf = readFileSync(join(process.cwd(), "public/fonts/Beleren-Bold.ttf"));

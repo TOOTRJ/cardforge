@@ -13,10 +13,18 @@ import referencesData from "@/lib/cards/frame-references.json";
 // The DATA lives in lib/cards/frame-references.json (one entry per
 // template: an optional note, a `confirm` flag for families Scryfall can't
 // tell apart, and per colour an ORDERED list of printings or null when no
-// real printing exists — mono-colour split cards, 1993 tokens…). The first
+// real printing exists — a white, black or green split card, 1993 tokens…).
+// The first
 // printing is the default the checklist and the score use; the rest are
 // alternates the compare view can switch to (short vs long text, another
 // set), because one reference can't exercise every fit rule.
+//
+// A template whose two-colour pair masters have printed references of
+// their own lists them under `pairs` (TODO 4.56: the borderless land's ten
+// pairs, two prints each; TODO 4.6g moves the other templates' two-colour
+// references there and builds the compare page's pair strip on it). A pair
+// is NOT a combo: it rides its template's "m" tick, so `pairs` feeds no
+// checklist row and no score — framePairReferenceOptions only.
 //
 // Provenance: the M15-era defaults were researched by hand against the live
 // API (2026-07-01, `highres_scan` prints); everything else was found by
@@ -109,6 +117,8 @@ type TemplateReferences = {
   note?: string;
   confirm?: boolean;
   colors: Record<string, FrameReference[] | null>;
+  /** The printed references of the template's pair masters, per pair. */
+  pairs?: Partial<Record<TwoColorPair, FrameReference[]>>;
 };
 
 const DATA = referencesData as Record<string, TemplateReferences>;
@@ -120,6 +130,12 @@ export function frameReferenceOptions(
   colorKey: string,
 ): FrameReference[] {
   return DATA[template]?.colors[colorKey] ?? [];
+}
+
+/** The printings a template's pair master `pair` is judged against (TODO
+ *  4.56), the best-registered first; empty when the template lists none. */
+export function framePairReferenceOptions(template: string, pair: TwoColorPair): FrameReference[] {
+  return DATA[template]?.pairs?.[pair] ?? [];
 }
 
 /** The registry default (first option) per template × colour. */
@@ -186,8 +202,8 @@ export function frameComboKey(template: string, colorKey: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Sample content for combos with NO real printing (mono-color splits,
-// colorless adventures, …): the compare tool still renders our frame with
+// Sample content for combos with NO real printing (a white, black or green
+// split, colorless adventures, …): the compare tool still renders our frame with
 // era-plausible placeholder content so geometry can be eyeballed.
 // ---------------------------------------------------------------------------
 

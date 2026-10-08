@@ -13,20 +13,93 @@ import {
   DEFAULT_FRAME_TEMPLATE,
   FRAME_TEMPLATE_VALUES,
   RETIRED_CARD_FINISHES,
+  RETIRED_FRAME_TEMPLATES,
   type CardFinish,
   type CardType,
   type FrameTemplate,
 } from "@/types/card";
 
-// Coerce a persisted frame template to a known one. Older cards may carry the
-// retired "regular" placeholder (or an empty/unknown value); those resolve to
-// the default frame so the renderers never point at a deleted asset folder.
+/** The text a retired template's replacement depends on: a card or form
+ *  face (camelCase) or a stored row (snake_case). */
+export type FrameTextFace = {
+  rulesText?: string | null;
+  flavorText?: string | null;
+  rules_text?: string | null;
+  flavor_text?: string | null;
+};
+
+/**
+ * The frame a RETIRED template reads as (RETIRED_FRAME_TEMPLATES in
+ * types/card.ts; TODO 4.54), or null for any other value. With a `face`
+ * that carries rules or flavour text the answer is the frame with a text
+ * box; without one — or with no face to judge by (a URL parameter, a bare
+ * frame_style) — the bare frame.
+ */
+export function retiredFrameTemplate(
+  template: string | null | undefined,
+  face?: FrameTextFace | null,
+): FrameTemplate | null {
+  const retired = template ? RETIRED_FRAME_TEMPLATES.get(template) : undefined;
+  if (!retired) return null;
+  const hasText =
+    face != null &&
+    Boolean((face.rulesText ?? face.rules_text)?.trim() || (face.flavorText ?? face.flavor_text)?.trim());
+  return hasText ? retired.withText : retired.bare;
+}
+
+// Coerce a persisted frame template to a known one. A RETIRED template reads
+// as its replacement (retiredFrameTemplate — pass the card's text when it is
+// at hand, so a retired token frame with text lands on the text-box frame);
+// older cards may also carry the retired "regular" placeholder (or an
+// empty/unknown value): those resolve to the default frame, so the renderers
+// never point at a deleted asset folder.
 export function normalizeFrameTemplate(
   template: string | null | undefined,
+  face?: FrameTextFace | null,
 ): FrameTemplate {
-  return (FRAME_TEMPLATE_VALUES as readonly string[]).includes(template ?? "")
-    ? (template as FrameTemplate)
-    : DEFAULT_FRAME_TEMPLATE;
+  if ((FRAME_TEMPLATE_VALUES as readonly string[]).includes(template ?? "")) {
+    return template as FrameTemplate;
+  }
+  return retiredFrameTemplate(template, face) ?? DEFAULT_FRAME_TEMPLATE;
+}
+
+/**
+ * A SAVE payload that still names a retired template, with the template
+ * replaced by the frame the payload's own text asks for (TODO 4.54's
+ * acceptance: "save on the token frame their text asks for") — run on the
+ * raw payload BEFORE it is parsed: the validator's preprocess sees only the
+ * field, so on its own it stores the bare frame. Anything else — a current
+ * template, no frame_style, a non-object — is returned as it came.
+ */
+export function withRetiredFrameTemplate(payload: unknown): unknown {
+  if (payload === null || typeof payload !== "object" || Array.isArray(payload)) return payload;
+  const frameStyle = (payload as { frame_style?: unknown }).frame_style;
+  if (frameStyle === null || typeof frameStyle !== "object" || Array.isArray(frameStyle)) return payload;
+  const template = (frameStyle as { template?: unknown }).template;
+  if (typeof template !== "string") return payload;
+  const text = payload as { rules_text?: unknown; flavor_text?: unknown };
+  const replacement = retiredFrameTemplate(template, {
+    rules_text: typeof text.rules_text === "string" ? text.rules_text : null,
+    flavor_text: typeof text.flavor_text === "string" ? text.flavor_text : null,
+  });
+  if (!replacement) return payload;
+  return { ...payload, frame_style: { ...frameStyle, template: replacement } };
+}
+
+/**
+ * The frame_style an EDIT stores for a row whose stored template is retired
+ * (TODO 4.54), or null when it is not: the same style on the frame the row
+ * reads as, judged by the text the row will HOLD after the edit. An edit
+ * never sends its template (lib/creator/revise.ts), so without this a
+ * retired value would stay in the row for good.
+ */
+export function retiredFrameStyleRewrite<T extends { template?: unknown }>(
+  frameStyle: T | null | undefined,
+  savedText: FrameTextFace,
+): (Omit<T, "template"> & { template: FrameTemplate }) | null {
+  const template = frameStyle?.template;
+  const replacement = typeof template === "string" ? retiredFrameTemplate(template, savedText) : null;
+  return replacement && frameStyle ? { ...frameStyle, template: replacement } : null;
 }
 
 // Coerce a persisted finish to a current one: a retired value maps to the
@@ -346,6 +419,21 @@ export function displayLine(text: string): string {
  *  body text unless its profile says "display"). */
 export function slotLine(font: "display" | "body" | undefined, text: string): string {
   return font === "display" ? displayLine(text) : text;
+}
+
+/** What a footer's artist line starts with unless its profile says
+ *  otherwise (TextSlot.prefix, TODO 4.8.0). */
+export const FOOTER_PREFIX = "Art: ";
+
+/** A footer's artist line as BOTH renderers print it: the profile's prefix
+ *  (FOOTER_PREFIX when it names none — "Illus. " on the 1993–2003 prints,
+ *  4.10a–c) and the credit, or "Unknown" for a card without one. */
+export function footerArtistLine(
+  footer: { prefix?: string } | null | undefined,
+  artistCredit: string | null | undefined,
+): string {
+  const prefix = footer?.prefix ?? FOOTER_PREFIX;
+  return artistCredit?.trim() ? `${prefix}${artistCredit}` : `${prefix}Unknown`;
 }
 
 // ---------------------------------------------------------------------------

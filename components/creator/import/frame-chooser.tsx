@@ -10,6 +10,7 @@ import type {
   ImportFramePlan,
 } from "@/lib/creator/import-frame-choice";
 import type { FrameTypeInfo } from "@/components/cards/frame-layer";
+import { importedAnatomy, importedFormAnatomy, type ImportedAnatomyFacts } from "@/lib/cards/anatomy";
 import type { ColorIdentity, FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -22,6 +23,13 @@ import type { ColorIdentity, FrameTemplate } from "@/types/card";
 // current frame" is always there (disabled, with the reason, when the
 // current frame can't dress the imported card). The dialog keys it by
 // printing, so another printing starts collapsed again.
+//
+// A tile shows the master the import would paint on THAT frame: a two-colour
+// printing brings its pair and the two-colour switch (importedAnatomy), so
+// on a frame that draws pairs — the bordered land and, since TODO 4.56,
+// Borderless Land — its tile is the pair master, not the gold one the card
+// would never get (found by 4.56's skeptic pass: both land tiles of Deserted
+// Beach MID #281 were gold, and either pick gave the white | blue frame).
 // ---------------------------------------------------------------------------
 
 const KEEP_CURRENT = "keep-current";
@@ -37,14 +45,20 @@ export function ImportFrameChooser({
   onChange,
   colorIdentity,
   type,
+  printing,
   disabled = false,
 }: {
   plan: Extract<ImportFramePlan, { mode: "choose" }>;
   value: ImportFrameChoice | null;
   onChange: (next: ImportFrameChoice) => void;
   colorIdentity?: readonly ColorIdentity[];
-  /** The imported card's type, for frames that dress a colour by type. */
+  /** The imported card's type (and cost: a pair's dress follows it), for
+   *  frames that dress a colour by type. */
   type?: FrameTypeInfo | null;
+  /** The printing's own anatomy (the import patch: its pair, its crown), so
+   *  each tile paints what the import would on that frame. Absent: the
+   *  colour's plain master, as before. */
+  printing?: ImportedAnatomyFacts;
   disabled?: boolean;
 }) {
   const [showAll, setShowAll] = useState(false);
@@ -64,6 +78,14 @@ export function ImportFrameChooser({
       [firstRevealed]?.focus();
   }, [showAll, firstRevealed]);
   const shown = expanded ? [...plan.options, ...plan.moreOptions] : plan.options;
+  // What the import stores on a frame (the creator's own rule, applied when
+  // the pick lands): the printing's pair where that frame draws pairs, and
+  // its switches over the new-card defaults.
+  const tileOf = (template: FrameTemplate) => {
+    if (!printing) return { colorIdentity, anatomy: null };
+    const imported = importedAnatomy(printing, template);
+    return { colorIdentity: imported.colorIdentity ?? colorIdentity, anatomy: importedFormAnatomy(imported.style) };
+  };
   const options: ChipOption<string>[] = shown.map((option) => ({
     value: option.template,
     label: describeFrame(option.template),
@@ -80,8 +102,9 @@ export function ImportFrameChooser({
       <FrameThumb
         template={option.template}
         colorKey={plan.colorKey}
-        colorIdentity={colorIdentity}
+        colorIdentity={tileOf(option.template).colorIdentity}
         type={type}
+        anatomy={tileOf(option.template).anatomy}
       />
     ),
     disabled,
@@ -94,7 +117,13 @@ export function ImportFrameChooser({
       ? describeFrame(current.template)
       : (current.reason ?? undefined),
     leading: current.template ? (
-      <FrameThumb template={current.template} colorKey={plan.colorKey} type={type} />
+      <FrameThumb
+        template={current.template}
+        colorKey={plan.colorKey}
+        colorIdentity={printing ? tileOf(current.template).colorIdentity : undefined}
+        type={type}
+        anatomy={tileOf(current.template).anatomy}
+      />
     ) : undefined,
     disabled: disabled || !current.available,
   });

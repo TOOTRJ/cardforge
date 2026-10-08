@@ -21,12 +21,14 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 // Card step, without a "wrong colour" toast.
 //
 // Fixtures are real Scryfall payloads (/cards/:id, captured once on
-// 2026-09-28 for the references the import fixtures lack — TKLD #2 on
+// 2026-09-28 for the references the import fixtures lack — 40K #126 on
+// 2026-10-06 for TODO 4.21c's gold saga, TKLD #2 on
 // 2026-09-29, after TODO 4.49's token re-pin, and TDOM #2 / TXLN #7 (with
 // their rules text) for 4.49 (b)'s text-box tokens, the six full-art
 // token references of 4.48 / 4.50 (2026-09-29, with their text), M21
-// #280 / #281 for 4.33's borderless planeswalkers (2026-09-29) and TFDN #25
-// (2026-09-29) for 4.52's emblem; the rest reuse
+// #280 / #281 for 4.33's borderless planeswalkers (2026-09-29), TFDN #25
+// (2026-09-29) for 4.52's emblem and MH2 #123 / #60 and C16 #239
+// (2026-10-06) for 4.21b's split references; the rest reuse
 // tests/unit/scryfall/fixtures/import-printings.json), trimmed like those to
 // identity + the frame fields (no rules or flavour text) and parsed through
 // the routes' zod schema. No network. The walk's skins/treatments ride the
@@ -149,7 +151,12 @@ const CASES: Array<[FrameTemplate, FrameColorKey, string, string]> = [
   ["adventure", "r", "Bonecrusher Giant", "Stomp"],
   ["battle", "r", "Invasion of Mercadia", "Kyren Flamewright"],
   ["battle", "c", "Invasion of Ravnica", "Guildpact Paragon"],
-  ["split", "m", "Expansion", "Explosion"],
+  // TODO 4.21b's references: the two mono-colour M15 splits (MH2 #123, MH2
+  // #60) and the only gold // gold one, C16 #239. (GRN #224 Expansion //
+  // Explosion, hybrid // gold, left the registry: a 4.26 card.)
+  ["split", "r", "Fast", "Furious"],
+  ["split", "u", "Said", "Done"],
+  ["split", "m", "Trial", "Error"],
   ["aftermath", "r", "Insult", "Injury"],
   // aftermath/m has no reference since the 4.21a follow-up (its HOU
   // stand-ins were dropped: no gold // gold print exists, TODO 4.26).
@@ -157,7 +164,10 @@ const CASES: Array<[FrameTemplate, FrameColorKey, string, string]> = [
   // CM2 #71.
   ["flip", "g", "Budoka Gardener", "Dokai, Weaver of Life"],
   ["flip", "b", "Nezumi Graverobber", "Nighteyes the Desecrator"],
-  ["saga", "m", "The Kami War", "O-Kagachi Made Manifest"],
+  // The gold saga's reference since TODO 4.21c: 40K #126, a three-colour
+  // print on the plain gold frame (NEO's The Kami War is a transforming saga
+  // with an enchantment frame effect — 5.5's).
+  ["saga", "m", "The Horus Heresy", ""],
   ["saga", "c", "Urza's Saga", ""],
   // Skins and treatments whose registry default is in the import fixtures.
   ["m15artifact", "c", "Solemn Simulacrum", ""],

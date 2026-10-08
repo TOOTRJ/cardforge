@@ -10,15 +10,18 @@ import { serveStandInFrames, type StandInFrames } from "@/tests/stubs/stand-in-f
 // Stat shrink-to-fit (TODO 3.18) and the Draconic P/T plate (TODO 4.31) on
 // REAL HD bakes. Every template here draws a git frame from public/frames
 // (read from disk), so the renders are deterministic and offline — but
-// flip, whose Card Conjurer master lives in the frames bucket (layout v38):
-// it is served a flat stand-in master and plates
+// flip and battle, whose Card Conjurer masters live in the frames bucket
+// (layouts v38 / v43): they are served a flat stand-in master and plates
 // (tests/stubs/stand-in-frames.ts). The M15 plate lives in the frames bucket
 // too; its fit is pinned in stat-fit.test.ts.
 // ---------------------------------------------------------------------------
 
 let frames: StandInFrames;
 beforeAll(async () => {
-  frames = await serveStandInFrames([{ template: "flip", keys: ["r"] }]);
+  frames = await serveStandInFrames([
+    { template: "flip", keys: ["r"] },
+    { template: "battle", keys: ["r"] },
+  ]);
 }, 60_000);
 afterAll(() => frames.restore());
 
@@ -109,18 +112,32 @@ describe("long stats shrink to fit", () => {
     expect(box.x1).toBeLessThanOrEqual(1373);
   }, 60_000);
 
-  it("Retro: *+1/*+1 fits the strip at full size — on ONE line, centred, though wider than its rect", async () => {
+  it("Retro (4.10a): a value is set against the prints' right edge — two digits grow to the LEFT at full size, *+1/*+1 shrinks short of the artist line's box, ONE line", async () => {
     const none = await bake(card("retro", { power: null, toughness: null }));
-    const long = diffBox(none, await bake(card("retro", { power: "*+1", toughness: "*+1" })))!;
-    const short = diffBox(none, await bake(card("retro", { power: "4", toughness: "4" })))!;
-    const rect = getFrameProfile("retro").pt!.rect;
-    // Wider than the 210 px rect (it used to wrap after the slash, two lines).
-    expect(long.x1 - long.x0).toBeGreaterThan((rect.widthPct / 100) * 1500);
-    expect(long.y1 - long.y0).toBeLessThan((short.y1 - short.y0) * 1.3);
-    // Centred like the preview's span, not run off the rect's right edge.
-    expect(Math.abs((long.x0 + long.x1) / 2 - (short.x0 + short.x1) / 2)).toBeLessThan(4);
-    expect(long.x0).toBeGreaterThanOrEqual(1125);
-    expect(long.x1).toBeLessThanOrEqual(1410);
+    const box = async (power: string, toughness: string) => diffBox(none, await bake(card("retro", { power, toughness })))!;
+    const short = await box("4", "4");
+    const twelve = await box("12", "12");
+    const ten = await box("10", "10");
+    const long = await box("*+1", "*+1");
+    // The prints end every value's ink at 1364–1370 px (NEM #116 10/10
+    // 1160–1370, MIR #315 12/12 1164–1364, LGN #130 13/13 1170–1368); the
+    // hard shadow rides up to 6.7 px further where the diff reads it.
+    for (const [label, b] of [["4/4", short], ["12/12", twelve], ["10/10", ten]] as const) {
+      expect(b.x1, `${label} ${JSON.stringify(b)}`).toBeGreaterThanOrEqual(1363);
+      expect(b.x1, `${label} ${JSON.stringify(b)}`).toBeLessThanOrEqual(1376);
+    }
+    // 12/12 at the full size (as tall as 4/4), from about 1170 px.
+    expect(twelve.y1 - twelve.y0).toBe(short.y1 - short.y0);
+    expect(twelve.x0).toBeGreaterThanOrEqual(1162);
+    expect(twelve.x0).toBeLessThan(1185);
+    // 10/10 — wider in Beleren than in the prints' face — within 5 % of it.
+    expect(ten.x0).toBeGreaterThanOrEqual(1161);
+    expect((ten.y1 - ten.y0) / (short.y1 - short.y0)).toBeGreaterThan(0.94);
+    // The long one: one line (it used to wrap after the slash), shrunk, and
+    // short of the artist line's box (1160 px) and of the bevel (1413 px).
+    expect(long.y1 - long.y0).toBeLessThanOrEqual(short.y1 - short.y0);
+    expect(long.x0).toBeGreaterThanOrEqual(1161);
+    expect(long.x1).toBeLessThanOrEqual(1380);
   }, 60_000);
 
   it("Flip: the upside-down second face shrinks 100/100 into its plate's face (93–272 px)", async () => {
@@ -138,19 +155,47 @@ describe("long stats shrink to fit", () => {
     expect(box.x1).toBeLessThanOrEqual(273);
   }, 60_000);
 
-  it("Battle: a four-digit defense fits the drawn badge", async () => {
-    const battle = (defense: string) =>
+  it("Battle: a three-digit defense shrinks into the painted shield's black interior (1932–2019 px), and no badge is drawn", async () => {
+    // TODO 4.21b (layout v43): the defense is the value alone, in the
+    // shield Card Conjurer's master paints — the drawn disc and its outline
+    // are gone. (The stand-in master is flat grey: the value is the only
+    // mark the defense adds.)
+    const battle = (defense: string | null) =>
       card("battle", { cardType: "battle", subtypes: ["Siege"], power: null, toughness: null, defense });
-    const rect = getFrameProfile("battle").defense!.rect;
-    // Landscape: 2100 × 1500. The badge is the rect less 12 % each side.
-    const badgeL = ((rect.leftPct + rect.widthPct * 0.12) / 100) * 2100;
-    const badgeR = ((rect.leftPct + rect.widthPct * 0.88) / 100) * 2100;
-    const box = diffBox(await bake(battle("1")), await bake(battle("1000")))!;
-    // The ink may reach the badge's edge (one antialiased pixel either way).
-    expect(box.x0).toBeGreaterThanOrEqual(Math.floor(badgeL) - 1);
-    expect(box.x1).toBeLessThanOrEqual(Math.ceil(badgeR) + 1);
-    // …and shrinks no further than it must: it still spans the badge.
-    expect(badgeR - badgeL).toBeLessThan(box.x1 - box.x0 + 12);
+    const slot = getFrameProfile("battle").defense!;
+    // Landscape: 2100 × 1500.
+    const [spanL, spanR] = [(slot.inkSpanPct!.leftPct / 100) * 2100, (slot.inkSpanPct!.rightPct / 100) * 2100];
+    expect([Math.round(spanL), Math.round(spanR)]).toEqual([1932, 2019]);
+    const none = await bake(battle(null));
+    const one = await bake(battle("5"));
+    const three = await bake(battle("100"));
+    const wide = diffBox(none, three)!;
+    // The ink may reach the interior's edge (one antialiased pixel either way).
+    expect(wide.x0).toBeGreaterThanOrEqual(Math.floor(spanL) - 1);
+    expect(wide.x1).toBeLessThanOrEqual(Math.ceil(spanR) + 1);
+    // …and shrinks no further than it must: it still spans the interior.
+    expect(spanR - spanL).toBeLessThan(wide.x1 - wide.x0 + 12);
+    // A printed battle's one digit: 78 px, centred where the prints centre
+    // theirs (the pack's 1962 px across + the shield's 12 px — TODO 4.21d —
+    // and 82 px below the shield's top point).
+    const digit = diffBox(none, one)!;
+    const shield = slot.paintedRect!;
+    expect(Math.abs((digit.x0 + digit.x1) / 2 - 1974)).toBeLessThan(3);
+    expect(Math.abs((digit.y0 + digit.y1) / 2 - ((shield.topPct / 100) * 1500 + 82))).toBeLessThan(3);
+    expect(digit.y1 - digit.y0).toBeGreaterThan(52);
+    expect(digit.y1 - digit.y0).toBeLessThan(62);
+    // No drawn badge: the defense adds nothing but the digit's own ink — a
+    // box as narrow as the digit (the MSE profile's dark disc was 128 px
+    // wide and 101 tall), and every pixel it changes is LIGHTER than the
+    // stand-in master's grey (white ink; a disc or an outline would darken).
+    expect(digit.x1 - digit.x0).toBeLessThan(48);
+    let darker = 0;
+    for (let y = digit.y0; y < digit.y1; y += 1) {
+      for (let x = digit.x0; x < digit.x1; x += 1) {
+        if (lum(one, x, y) < lum(none, x, y) - 24) darker += 1;
+      }
+    }
+    expect(darker).toBe(0);
   }, 60_000);
 });
 

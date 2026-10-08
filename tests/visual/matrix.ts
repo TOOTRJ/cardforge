@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { CardRowForBake } from "@/lib/cards/bake-core";
 import { artReachesCardEdge, getFrameProfile } from "@/lib/cards/template-layout";
+import { frameAnatomyOf } from "@/lib/cards/anatomy";
 import { FRAME_COLOR_KEYS, frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { BASIC_LAND_NAME_BY_KEY } from "@/lib/cards/watermark";
 import { CARD_KIND_VALUES, KIND_DEFS, framesForKind, type CardKind } from "@/lib/creator/card-kinds";
@@ -28,6 +29,13 @@ import { isDfcBackBody } from "@/lib/cards/dfc";
 //     differ from their empty-art box (the see-through masters, whose
 //     under-frame art is drawn only under art, and layout v35's art slots —
 //     the empty box is drawn in the slot);
+//   * the saga's printed rail (TODO 4.21c "@stack3", "@prodshape", "@six",
+//     "@stack5", "@stack5-tight", "@stack6", "@combined", "@longintro",
+//     "@grownintro", "@dense", "@pastfloor", "@introonly", "@legacy8"): every
+//     row rule of lib/cards/saga-rail.ts on a real bake — badge stacks at the
+//     roomy and at a tighter pitch, a saga with no reminder, six rows, the
+//     combined marker, a reminder that steps down inside its box and one
+//     that outgrows it, the ladder's lower steps and a rail past its floor;
 //   * the kind anatomy a card TYPE prints on a body (TODO 4.5.0): a saga
 //     creature ("@creature"), a Vehicle and a Spacecraft ("@vehicle",
 //     "@spacecraft") — their P/T as it draws today;
@@ -37,8 +45,10 @@ import { isDfcBackBody } from "@/lib/cards/dfc";
 //     key, plus HD, foil and etched on m15 (HD, foil and square on
 //     m15borderless); the two-colour pair (FrameStyle.twoColor) on every
 //     template that draws pairs, in each dress, and with both switches on
-//     (the split crown). The same cards without the switches are the plain
-//     cases — every stored card;
+//     (the split crown) where it draws a crown too — the borderless land's
+//     pairs (TODO 4.56) draw none: its W|U card, the HD bake, a pair with
+//     black, the foil and the squared print. The same cards without the
+//     switches are the plain cases — every stored card;
 //   * the collector line switched ON (TODO 4.9b "@collector…"): on every
 //     template with the slot (COLLECTOR_TEMPLATES) the long card in the
 //     2023 style ("M 0107" over "DMU • EN", the © slot's mark on line 2)
@@ -625,6 +635,9 @@ const NO_ART_CASES: readonly [FrameTemplate, VisualColour][] = [
   // The see-through flip/c (layout v38, TODO 4.21a): no under-frame layer
   // without art, the empty-art box in the window.
   ["flip", "c"],
+  // The see-through battle/c (layout v43, TODO 4.21b): the same — the
+  // empty-art box under its translucent pill, type bar and text box.
+  ["battle", "c"],
 ];
 /** The portrait layouts (TODO 4.21a, layout v38), pinned as they draw now
  *  — new cases, a regenerated baseline: a flip whose bottom half has NO P/T
@@ -707,6 +720,369 @@ const LAYOUT_CASES: readonly [FrameTemplate, CardKind, VisualColour, VisualShape
       },
     },
   ],
+  // The landscape layouts (TODO 4.21b, layout v43) — new cases:
+  //   • split: a long name at the fit's floor on BOTH halves beside a heavy
+  //     cost, dense rules down the ladder in both text boxes;
+  //   • battle: a long name beside a heavy cost, a three-digit defense
+  //     shrunk into the painted shield, dense rules wrapping round it;
+  //   • battle/c: the see-through frame with rules text to the box's bottom
+  //     (the art under the frame, one picture);
+  //   • a battle with NO defense: the shield is the master's, still there,
+  //     and the rules still keep out of it.
+  [
+    "split",
+    "split",
+    "r",
+    "long",
+    "@dense",
+    {
+      title: "Incongruous Reconsideration of Everything",
+      cost: "{4}{R}{R}{R}",
+      rules_text: DENSE_RULES,
+      back_face: {
+        title: "Interminable Deliberation of the Undecided",
+        cost: "{X}{2}{R}{R}{R}",
+        card_type: "sorcery",
+        subtypes: [],
+        rules_text: DENSE_RULES,
+        art_url: "ART2",
+      },
+    },
+  ],
+  [
+    "battle",
+    "battle",
+    "u",
+    "long",
+    "@dense",
+    {
+      title: "Invasion of the Innumerable Drowned Archipelagos",
+      cost: "{4}{U}{U}{U}",
+      defense: "100",
+      rules_text:
+        "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\n" +
+        DENSE_RULES,
+    },
+  ],
+  [
+    "battle",
+    "battle",
+    "c",
+    "long",
+    "@dense",
+    {
+      rules_text:
+        "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\n" +
+        DENSE_RULES,
+    },
+  ],
+  [
+    "battle",
+    "battle",
+    "g",
+    "short",
+    "@nodefense",
+    {
+      defense: null,
+      rules_text:
+        "When this Siege enters, search your library and/or graveyard for a creature card with mana value 3 or less and put it onto the battlefield. If you search your library this way, shuffle. Then each player draws a card.",
+    },
+  ],
+];
+/** The saga's printed rail (TODO 4.21c), every row rule of
+ *  lib/cards/saga-rail.ts pinned on a real bake — new cases beside the
+ *  plain ones (short: no reminder, three single chapters; long: a reminder
+ *  and a two-badge stack):
+ *   • "@stack3": a reminder, a three-badge stack and a single (LTC #58's
+ *     shape) — at 750 and at HD;
+ *   • "@prodshape": NO reminder, I / II,III,IV / V / VI — the shape of a
+ *     stored production saga, at the stored bake's size;
+ *   • "@six": six single chapters with no reminder (the rows start at the
+ *     rail's own top), at 750 and at HD;
+ *   • "@stack5": a single chapter over a five-badge stack (WHO #99's
+ *     shape) — the rows have no room for the roomy pitch, so the stack
+ *     steps tighter (150 px); "@stack5-tight": one more line in chapter I —
+ *     the stack at its tightest (138 px) and the text one step down;
+ *   • "@stack6": six numerals stacked in ONE row under a reminder (LTR
+ *     #174's shape) — the stack sets the row's height;
+ *   • "@combined": repeated numerals whose stacks can never fit — every
+ *     multi-badge row draws ONE badge with the combined label;
+ *   • "@longintro": a read-ahead reminder, longer than its box holds at
+ *     62 px — it steps down inside the box and never pushes the rows;
+ *   • "@grownintro": a 300-character reminder, more than its box holds at
+ *     the ladder's floor — set at the floor in the chapters' column, as
+ *     tall as its text, the rows (a two-badge stack and a single) under it;
+ *   • "@dense": four chapters (one a two-badge stack) under a reminder —
+ *     the text at the ladder's lower steps, the stack tight;
+ *   • "@pastfloor": six long chapters under a reminder, more than the rail
+ *     holds at the ladder's floor — the floor's rows scaled alike into the
+ *     rail, each row's text set from its top (the tail is what clips);
+ *   • "@introonly": a saga typed with no chapter markers (legacy rules
+ *     text): all reminder, the whole rail;
+ *   • "@legacy8": legacy markers past VI ("I–VII", "VIII"): the labels
+ *     fitted to the badge. */
+const SAGA_REMINDER = "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)";
+const SAGA_RAIL_CASES: readonly [VisualColour, VisualShape, string, Partial<CardRowForBake>, VisualPreset?][] = [
+  [
+    "u",
+    "long",
+    "@stack3",
+    {
+      face_content: {
+        v: 1,
+        saga: {
+          intro: SAGA_REMINDER.replace("III", "IV"),
+          chapters: [
+            { numerals: [1, 2, 3], text: "Draw a card, then discard a card. If you discarded a land card this way, create a 2/2 blue Drake creature token with flying." },
+            { numerals: [4], text: "Return up to two target creatures to their owners' hands." },
+          ],
+        },
+      },
+    },
+  ],
+  [
+    "u",
+    "long",
+    "@stack3-hd",
+    {
+      face_content: {
+        v: 1,
+        saga: {
+          intro: SAGA_REMINDER.replace("III", "IV"),
+          chapters: [
+            { numerals: [1, 2, 3], text: "Draw a card, then discard a card. If you discarded a land card this way, create a 2/2 blue Drake creature token with flying." },
+            { numerals: [4], text: "Return up to two target creatures to their owners' hands." },
+          ],
+        },
+      },
+    },
+    "hd",
+  ],
+  [
+    "u",
+    "short",
+    "@prodshape",
+    {
+      face_content: {
+        v: 1,
+        saga: {
+          intro: null,
+          chapters: [
+            { numerals: [1], text: "Scry 2." },
+            { numerals: [2, 3, 4], text: "Tap target creature an opponent controls. It doesn't untap during its controller's next untap step." },
+            { numerals: [5], text: "Draw two cards." },
+            { numerals: [6], text: "Take an extra turn after this one." },
+          ],
+        },
+      },
+    },
+    "hd",
+  ],
+  [
+    "g",
+    "short",
+    "@six",
+    {
+      face_content: {
+        v: 1,
+        saga: {
+          intro: null,
+          chapters: [
+            { numerals: [1], text: "Create a 1/1 green Saproling creature token." },
+            { numerals: [2], text: "Put a +1/+1 counter on each creature you control." },
+            { numerals: [3], text: "Add {G}{G}." },
+            { numerals: [4], text: "Search your library for a basic land card, put it onto the battlefield tapped, then shuffle." },
+            { numerals: [5], text: "You gain 3 life." },
+            { numerals: [6], text: "Creatures you control get +2/+2 and gain trample until end of turn." },
+          ],
+        },
+      },
+    },
+  ],
+  [
+    "g",
+    "short",
+    "@six-hd",
+    {
+      face_content: {
+        v: 1,
+        saga: {
+          intro: null,
+          chapters: [
+            { numerals: [1], text: "Create a 1/1 green Saproling creature token." },
+            { numerals: [2], text: "Put a +1/+1 counter on each creature you control." },
+            { numerals: [3], text: "Add {G}{G}." },
+            { numerals: [4], text: "Search your library for a basic land card, put it onto the battlefield tapped, then shuffle." },
+            { numerals: [5], text: "You gain 3 life." },
+            { numerals: [6], text: "Creatures you control get +2/+2 and gain trample until end of turn." },
+          ],
+        },
+      },
+    },
+    "hd",
+  ],
+  [
+    "g",
+    "long",
+    "@stack5",
+    {
+      face_content: {
+        v: 1,
+        saga: {
+          intro: SAGA_REMINDER.replace("III", "VI"),
+          chapters: [
+            { numerals: [1], text: "Search your library for a basic land card, put it onto the battlefield tapped, then shuffle." },
+            { numerals: [2, 3, 4, 5, 6], text: "Create a token that's a copy of target nonlegendary token you control." },
+          ],
+        },
+      },
+    },
+  ],
+  [
+    "g",
+    "long",
+    "@stack5-tight",
+    {
+      face_content: {
+        v: 1,
+        saga: {
+          intro: SAGA_REMINDER.replace("III", "VI"),
+          chapters: [
+            { numerals: [1], text: "Search your library for a basic land card, put it onto the battlefield tapped, then shuffle. You gain 2 life." },
+            { numerals: [2, 3, 4, 5, 6], text: "Create a token that's a copy of target nonlegendary token you control." },
+          ],
+        },
+      },
+    },
+  ],
+  [
+    "r",
+    "short",
+    "@stack6",
+    {
+      face_content: {
+        v: 1,
+        saga: {
+          intro: SAGA_REMINDER.replace("III", "VI"),
+          chapters: [{ numerals: [1, 2, 3, 4, 5, 6], text: "Note a creature type that hasn't been noted for this Saga. When you next cast a creature spell of that type this turn, that creature enters with an additional +1/+1 counter on it." }],
+        },
+      },
+    },
+  ],
+  [
+    "w",
+    "short",
+    "@combined",
+    {
+      face_content: {
+        v: 1,
+        saga: {
+          intro: null,
+          chapters: [
+            { numerals: [1, 2, 3, 4, 5, 6], text: "Create a 1/1 white Soldier creature token." },
+            { numerals: [1, 3, 5], text: "You gain 1 life." },
+            { numerals: [2, 4, 6], text: "Scry 1." },
+            { numerals: [6], text: "Soldiers you control get +1/+1 until end of turn." },
+          ],
+        },
+      },
+    },
+  ],
+  [
+    "b",
+    "long",
+    "@longintro",
+    {
+      face_content: {
+        v: 1,
+        saga: {
+          intro:
+            "Read ahead (Choose a chapter and start with that many lore counters. Add one after your draw step. Skipped chapters don't trigger. Sacrifice after III.)",
+          chapters: [
+            { numerals: [1], text: "You may sacrifice a creature. If you do, each opponent discards a card." },
+            { numerals: [2], text: "Return target creature card from your graveyard to your hand." },
+            { numerals: [3], text: "Target opponent may sacrifice a nonland, nontoken permanent. If they don't, they lose 2 life and you draw a card." },
+          ],
+        },
+      },
+    },
+  ],
+  [
+    "r",
+    "long",
+    "@grownintro",
+    {
+      face_content: {
+        v: 1,
+        saga: {
+          intro:
+            "(As this Saga enters and after your draw step, add a lore counter. Whenever you cast your second spell each turn, put another lore counter on this Saga. If it would leave the battlefield, exile it with three time counters on it instead. Skipped chapters don't trigger. Sacrifice after III.)",
+          chapters: [
+            { numerals: [1, 2], text: "This Saga deals 2 damage to any target." },
+            { numerals: [3], text: "Creatures you control get +2/+0 and gain haste until end of turn." },
+          ],
+        },
+      },
+    },
+  ],
+  [
+    "wub",
+    "long",
+    "@dense",
+    {
+      face_content: {
+        v: 1,
+        saga: {
+          intro: SAGA_REMINDER.replace("III", "V"),
+          chapters: [
+            { numerals: [1], text: "Each player sacrifices a creature. Then each player who controls no creatures draws a card." },
+            { numerals: [2], text: "Exile target card from a graveyard. If it was a creature card, create a 2/2 black Zombie creature token." },
+            { numerals: [3, 4], text: "Counter target spell unless its controller pays {3}." },
+            { numerals: [5], text: "Return up to one target artifact, creature or enchantment card from your graveyard to the battlefield tapped." },
+          ],
+        },
+      },
+    },
+  ],
+  [
+    "wub",
+    "long",
+    "@pastfloor",
+    {
+      face_content: {
+        v: 1,
+        saga: {
+          intro: SAGA_REMINDER.replace("III", "VI"),
+          chapters: [
+            { numerals: [1], text: "Each player sacrifices a creature. Then each player who controls no creatures draws a card and loses 1 life." },
+            { numerals: [2], text: "Exile target card from a graveyard. If it was a creature card, create a 2/2 black Zombie creature token." },
+            { numerals: [3], text: "Counter target spell unless its controller pays {3}. If that spell is countered this way, exile it instead of putting it into its owner's graveyard." },
+            { numerals: [4], text: "Return up to one target artifact, creature or enchantment card from your graveyard to the battlefield tapped." },
+            { numerals: [5], text: "Each opponent discards two cards, then you draw a card for each card discarded this way." },
+            { numerals: [6], text: "Destroy all creatures. For each creature destroyed this way, its controller creates a 1/1 white Spirit creature token with flying." },
+          ],
+        },
+      },
+    },
+  ],
+  [
+    "c",
+    "short",
+    "@introonly",
+    {
+      face_content: null,
+      rules_text: "This Saga's first chapter has no marker yet.\nAs it enters, draw a card. Then add a lore counter, as a saga does after each draw step.",
+    },
+  ],
+  [
+    "b",
+    "short",
+    "@legacy8",
+    {
+      face_content: null,
+      rules_text: `${SAGA_REMINDER}\nI, II, III, IV, V, VI, VII — Scry 1.\nVIII — Each opponent loses 8 life.`,
+    },
+  ],
 ];
 /** No ability text on a borderless walker (TODO 4.33, owner round 15): its
  *  see-through window shows the light first stripe, never the bare art. */
@@ -781,6 +1157,9 @@ const SQUARE_CASES: readonly [FrameTemplate, VisualColour][] = [
   ["fullartland", "g"],
   ["m15borderless", "b"],
   ["battle", "r"],
+  // The other landscape frame (TODO 4.21b): its Card Conjurer master's
+  // black border runs to the corner too.
+  ["split", "r"],
 ];
 
 function caseId(template: string, colour: string, kind: string, shape: string, suffix = ""): string {
@@ -899,6 +1278,7 @@ export function visualCases(): VisualCase[] {
   }
   for (const [template, kind, colour, suffix, row] of KIND_ANATOMY_CASES) add(template, kind, colour, "short", { suffix, row });
   for (const [template, kind, colour, shape, suffix, row] of LAYOUT_CASES) add(template, kind, colour, shape, { suffix, row });
+  for (const [colour, shape, suffix, row, preset] of SAGA_RAIL_CASES) add("saga", "saga", colour, shape, { suffix, row, ...(preset ? { preset } : {}) });
   for (const [template, colour] of SQUARE_CASES) {
     const primary = (hosted.get(template) ?? ["creature"])[0];
     add(template, primary, colour, "short", { corners: "square", suffix: "@square" });
@@ -934,8 +1314,9 @@ export function visualCases(): VisualCase[] {
     const primary = (hosted.get(template) ?? ["creature"])[0];
     add(template, primary, "wu", "short", { suffix: "@pair", row: pairStyle(template) });
     // A two-colour legend with both switches on: the split crown over its
-    // pair master (4.6a + 4.6b, one release).
-    add(template, primary, "wu", "long", { suffix: "@pair-crown", row: pairStyle(template, "regular", true) });
+    // pair master (4.6a + 4.6b, one release) — where the template draws a
+    // crown at all (the borderless land draws its pairs and none: 4.56).
+    if (frameAnatomyOf(template).crown) add(template, primary, "wu", "long", { suffix: "@pair-crown", row: pairStyle(template, "regular", true) });
   }
   add("m15", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15"), cost: "{W/U}{W/U}" } });
   // The borderless hybrid dress (grey bars, the split pinline) and its
@@ -962,6 +1343,20 @@ export function visualCases(): VisualCase[] {
   // wave 2c: KHM #224's look), and the snow dual land.
   add("m15snow", "creature", "wu", "long", { suffix: "@pair-crown-hd", preset: "hd", row: pairStyle("m15snow", "regular", true) });
   add("m15snowland", "land", "wu", "short", { suffix: "@pair-hd", preset: "hd", row: pairStyle("m15snowland") });
+  // TODO 4.56: the borderless land's pair (the grey land bars, the pinline
+  // AND the box split) — the generic "@pair" above is its W|U card; here the
+  // long card at the stored bake's size, a pair with black on the left (its
+  // ring and box are the darkest of the ten), the foil (the sheen's mask
+  // reads the pair master; no etched: the art reaches the edge) and the
+  // squared print. The same land with the switch off is the plain
+  // "m15borderlessland/wu/…" case: the gold `m` master, as every stored one.
+  add("m15borderlessland", "land", "wu", "long", { suffix: "@pair-hd", preset: "hd", row: pairStyle("m15borderlessland") });
+  add("m15borderlessland", "land", "wu", "short", {
+    suffix: "@pair-br",
+    row: { ...pairStyle("m15borderlessland"), color_identity: ["black", "red"] },
+  });
+  add("m15borderlessland", "land", "wu", "short", { suffix: "@pair-foil", finish: "foil", row: pairStyle("m15borderlessland", "foil") });
+  add("m15borderlessland", "land", "wu", "short", { suffix: "@pair-square", corners: "square", row: pairStyle("m15borderlessland") });
   // TODO 4.9b: the collector line, opt-in per card (frame_style.collector —
   // no stored card has the key, so these are NEW cases, no bump): both
   // styles on every slotted template (the primary kind: a token on the
@@ -1439,7 +1834,7 @@ const DFC_AURA_BACK: Partial<CardRowForBake> = {
 /** The templates whose PROFILES entry declares two-colour pair masters
  *  (TODO 4.6b; tests/unit/render/visual-matrix.test.ts keeps it in step). */
 export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
-  "m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15snow", "m15snowland",
+  "m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15snow", "m15snowland",
   // The double-faced spell faces (5.1d): their cases carry a back face
   // (the DFC block below), never the generic pair loop's rows.
   "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback",

@@ -90,11 +90,14 @@ environment's own Supabase project, taken from `NEXT_PUBLIC_SUPABASE_URL`.
 
 Where every frame came from, and the rules that follow from it:
 
-- **MSE Full-Magic-Pack → git.** The masters in `public/frames/` (the Alpha,
-  1997 and 2003 eras, saga, split, battle, the showcase families, the
-  variation treatments, the textless and expedition frames, and the
-  planeswalker loyalty badges; adventure, flip and aftermath left for Card
-  Conjurer's masters with TODO 4.21a) are converted from Magic Set
+- **MSE Full-Magic-Pack → git.** The masters in `public/frames/` (the Alpha
+  and 2003 eras — the 1997 frame left for Card Conjurer's drawing with TODO
+  4.10a, its gold master cut from the MSE conversion kept as
+  `scripts/frame-inputs/retro-m-mse.png` — the showcase families, the variation treatments, the
+  textless and expedition frames, and the planeswalker loyalty badges;
+  adventure, flip and aftermath left for Card Conjurer's masters with TODO
+  4.21a, split and battle with 4.21b, saga with 4.21c) are converted from
+  Magic Set
   Editor's Full-Magic-Pack styles by the builders under `scripts/`
   (`convert-mse-frame.mjs`, `build-era-frames.mjs`,
   `build-showcase-frames.mjs`, `build-variation-frames.mjs`, …). The pack
@@ -102,7 +105,8 @@ Where every frame came from, and the rules that follow from it:
   path. `scripts/audit-frame-sources.mjs` answers "which pack file was this
   frame built from?", and `docs/mse-profile-report.md` keeps the MSE
   baselines the profiles started from. The card faces' Beleren Bold comes
-  from the same non-commercial pack (`lib/render/card-fonts.ts`).
+  from the same non-commercial pack (`lib/render/card-fonts.ts`); what each
+  font file is, is the **Fonts** bullet below.
 - **Card Conjurer → the bucket only.** Every Card Conjurer-derived master is
   built from the Investigamer/cardconjurer fork at a pinned commit
   (`CC_COMMIT` in `scripts/lib/cc-frames.mjs`). Card Conjurer's site was shut
@@ -119,6 +123,52 @@ Where every frame came from, and the rules that follow from it:
   (`lib/cards/frame-references.json`) and the test fixtures store only
   printing data (names, sets, Scryfall ids). No scan is stored in git or
   the bucket.
+- **Fonts: what the files are.** Facts as read on 2026-10-06 (the era
+  design) and re-read from the committed files for TODO 4.10.0; no view on
+  what they allow is taken here. The owner decided on 2026-10-07 (round 36)
+  to leave the three card-face files where they are.
+  - `public/fonts/Beleren-Bold.ttf` (+ `.woff2`; "CardDisplay": names, type
+    lines, stats, the mark). Its own name table: family "Beleren", "Bold",
+    "Version P1.01", unique id "DelveFonts: Beleren Bold: 2013", copyright
+    "Copyright (c) 2013 Wizards of the Coast, a Hasbro Subsidiary. All
+    rights reserved.", trademark "Beleren is a trademark of Wizards of the
+    Coast.", manufacturer "Delve Fonts", designer "Delve Withrington"; no
+    licence string. sha256 `00d9238f…910d`, recorded as byte-identical to
+    the MSE Full-Magic-Pack's `Magic - Fonts/beleren-bold_P1.01.ttf`. **No
+    licence text accompanies it.** It is Beleren Bold itself: the comments
+    that called it "an OFL Beleren stand-in" dated from six days in June
+    2026 when the display face was Sorts Mill Goudy.
+  - `public/fonts/mplantin.ttf` (+ `.woff`, `.woff2`; rules text). Name
+    table: family "MPlantin", copyright field "Converted by ALLTYPE",
+    version "Converted from C:\1E\PLA.TF1 by ALLTYPE"; no licence string.
+    sha256 `ebfb5d57…2ab5`, byte-identical to
+    `node_modules/mana-font/fonts/mplantin.ttf` (mana-font 1.18.0), which is
+    the file the bake reads. The package's README licenses "the Mana font"
+    (SIL OFL 1.1) and its CSS, LESS and Sass files (MIT), and its
+    `package.json` says MIT; neither names `mplantin.ttf`. **No licence text
+    accompanies it.** The comment in `app/globals.css` that called it "SIL
+    OFL 1.1" was wrong.
+  - `public/fonts/mplantin-italic.ttf` (+ `.woff2`; flavour and reminder
+    text). Name table: family "MPlantin-Italic", copyright field "Converted
+    by ALLTYPE", version "Converted from C:\1E\PLAI.TF1 by ALLTYPE"; no
+    licence string. sha256 `e81d8360…3290`, recorded as byte-identical to
+    the MSE pack's `mplantinit.ttf`. **No licence text accompanies it.**
+  - With their licence beside them: `Montserrat-Medium.ttf` (the collector
+    line; SIL OFL 1.1, `public/fonts/Montserrat-OFL.txt`),
+    `NotoSans-Fallback.ttf` (SIL OFL 1.1, `NotoSans-OFL.txt`), and the site
+    chrome's Geist and Cinzel under `app/fonts/*` (each folder's `OFL.txt`).
+    `mana.ttf` is mana-font's own file (same bytes; the package's README:
+    SIL OFL 1.1) and Keyrune is read from its package, which ships its own
+    licence file.
+  - Where they go: the repo is public; the card faces are served to every
+    browser from `/fonts/*`, traced into every render function
+    (`next.config.ts`), and a subset of `mplantin.ttf` is embedded in an
+    exported deck PDF.
+  - **A new font** follows the rule below for a new frame source: where it
+    came from, what its own name table and any licence text say, and which
+    home that allows, recorded here BEFORE it ships. The old cards' own
+    typefaces (Magic Medieval, Matrix) and the 2016 Beleren build are not in
+    the repo and are not being added (owner 2026-10-07; TODO 4.8c, 4.8d).
 - **A new source** is recorded before its first frame ships: where it came
   from (repo and commit, or pack and style), what licence it carries, and
   which home that allows. A source with no licence the owner has cleared
@@ -127,7 +177,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 37 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 42 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the M15 family (4.4, shipped in #380, layout v24): m15, m15artifact,
@@ -139,7 +189,9 @@ into `.frames-build/` — 37 templates today (`CC_TEMPLATES` in
   the crowned twin of every master (CC's floating crown, `<key>-legendary`;
   [The borderless crown and pair pinline](#the-borderless-crown-and-pair-pinline-46f-wave-2a));
 - the borderless nonbasic land (4.34): m15borderlessland, a composite of
-  the same pack's pixels (below), on m15borderless's plates;
+  the same pack's pixels (below), on m15borderless's plates — and, since
+  4.56, its ten two-colour pair masters from the same function
+  ([The borderless land's pairs](#the-borderless-lands-pairs-456));
 - the full-art basics from 'Fullart Basics (2022)' (4.39): the
   black-bordered m15fullartland and the borderless fullartland (the same
   frame with its Border mask erased), each with CC's mana symbols at
@@ -168,6 +220,11 @@ into `.frames-build/` — 37 templates today (`CC_TEMPLATES` in
   luminance — `PW_GOLD_FACE`, fitted to the 13 exact prints;
   `tests/unit/frames/gold-walker-faces.test.ts` holds a built master to
   their range, `tests/unit/frames/fixtures/gold-walker-prints.json`);
+- the 1997 frame from 'Seventh Edition' (4.10a, layout v46): `retro` and
+  `retroland` — the pack's drawing RE-CUT edge by edge and TONED region by
+  region onto the original cards of 1996–2003, gold from the MSE artwork
+  cut with the same edge map (see
+  [The 1997 frame](#the-1997-frame-410a-layout-v46));
 - the emblem from 'Planeswalker Emblems' (4.52): `emblem`, CC's one master
   in every colour key (an emblem is colourless), its name pill, silver, type
   pill and text box toned onto the prints and its spark's centre ray bridged
@@ -181,6 +238,27 @@ into `.frames-build/` — 37 templates today (`CC_TEMPLATES` in
   [The portrait layouts](#the-portrait-layouts-layout-v38). Their slots are
   the packs' own (packFlip.js, packAdventure.js, packAftermath.js) and the
   masters are copied 1:1 at their native 1500×2100;
+- the landscape layouts (4.21b, layout v43), the importer's first
+  2100×1500 masters: `split` from 'Split' (the pack draws it portrait with
+  its text turned; the composite is turned a quarter turn clockwise, a
+  pixel permutation, then its two halves are moved onto the prints through
+  the flat black border and spine; colourless = the pack's artifact frame,
+  a render stand-in that is never offered) and `battle` from 'Battle' (the
+  pack's 2814×2010 canvas downscaled once, then its lower block moved 4 px
+  down through flat rows; the defense shield stays in the master;
+  colourless = the pack's see-through frame) — see
+  [The landscape layouts](#the-landscape-layouts-421b-layout-v43);
+- the saga (4.21c): `saga` from the saga 'Regular Frames' pack — w u b r g
+  m are the pack's `sagaFrame<K>`, `c` its 'Land Frame' (the only printed
+  colourless saga is a land, MH2 #259 Urza's Saga), copied 1:1 at their
+  native 1500×2100 with the chapter ribbon in the master. Two more things a
+  recipe can carry ship with it: `pieces` — a pack's own bitmaps published
+  beside the masters at native size (the rail's `saga/chapter/badge.png`,
+  118 × 132, and `saga/chapter/divider.png`, 592 × 9, which both renderers
+  draw) — and `maskInputs`, pack masks RECORDED for a later recipe (the
+  two-colour saga's pair masters, 4.6f): fetched into the cache, listed in
+  provenance, never written to the build folder or the bucket — see
+  [The saga (4.21c)](#the-saga-421c);
 - the transform bodies (5.1a) from the 'Transform' packs: m15dfcfront
   ('Transform (Front)'), m15dfcback ('Transform (Back) (New)', the ▼ at the
   right) and m15dfcbackleft ('Transform (Back)', the empty left well) in
@@ -211,7 +289,9 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   4 minutes for the M15 family; `--only` builds a subset.
 - **Pairs.** m15, m15artifact and m15land also build their two-colour pair
   masters (`<pair>.png`, and m15's hybrid `<pair>-h.png`; TODO 4.6b —
-  [The two-colour frames](#the-two-colour-frames-46b)).
+  [The two-colour frames](#the-two-colour-frames-46b)); so do the
+  borderless frames (wave 2a), the snow frames (wave 2c), the double-faced
+  spell faces (5.1d) and the borderless land (4.56).
 - **Recipe.** It is in `scripts/lib/cc-frames.mjs`. Layers are composited
   exactly as Card Conjurer draws them: only each mask's alpha counts, in
   CC's draw order, at the pack's native size, then downscaled once. A
@@ -245,7 +325,16 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   re-cut (`recut`, `transforms`). A third re-cut moves a block UP in two
   pieces (`recutBlockUp`, `recutUp`): the flip masters' lower half
   (`FLIP_LOWER_RECUT`, layout v39 — [The portrait
-  layouts](#the-portrait-layouts-layout-v38)).
+  layouts](#the-portrait-layouts-layout-v38)). A fourth kind needs no
+  cross-fade: whole blocks moved through FLAT zones (`shiftBlocksRgba8`, a
+  recipe's `shift` — it throws on a zone that isn't flat): the split's two
+  halves and the battle's two blocks (`SPLIT_HALF_RECUT`,
+  `BATTLE_BLOCK_RECUT`, layout v43 — [The landscape
+  layouts](#the-landscape-layouts-421b-layout-v43)). A fifth stretches a
+  band SIDEWAYS through a cross-fade in a bar's own paper (`recutColumns`,
+  the battle's right ends — with its shield set aside through a mask and
+  its icon's rings redrawn, layout v45: [The battle re-cut onto the
+  prints](#the-battle-re-cut-onto-the-prints-421d-layout-v45)).
 - **The borderless land (4.34).** A borderless land prints its colour on
   the title bar, the type bar AND the text box, where a borderless spell
   tints only its title bar (checked on 50+ printings, 2026-09-29). No CC
@@ -261,27 +350,31 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   flat pixel the importer asserts), replacing the dark box through CC's
   Rules mask; and the pinline through the pack's Pinline mask on top. `m`
   is the three-and-more-colour land (gold bars, box and pinline); a
-  two-colour land prints grey bars with a split pinline and box, which are
-  4.6's pair masters (the same function with a letter pair). About a
+  two-colour land prints grey bars with a split pinline and box — the ten
+  pair masters `<pair>.png`, the same function with a letter pair (4.56,
+  [The borderless land's pairs](#the-borderless-lands-pairs-456)). About a
   quarter of the borderless nonbasic lands print the spells' look instead —
   the colour's title bar over a dark type bar AND a dark box (TDM, WOE,
-  ACR, EOE, FIC, FRA #379 / #397–401, many 2024+ SLD drops) — a few a
-  dark type bar alone over the tinted box (FRA #380–381, SLD #250 /
-  #1989 / #2143 / #7112), and a few the short box (the SNC triomes): none
-  is drawn, no reference comes from them, and the registry pins them
-  `nearest` (4.37's variants; `BORDERLESS_LAND_DARK_PINS` /
-  `BORDERLESS_LAND_DARK_TYPE_BAR_PINS` / `BORDERLESS_LAND_SHORT_BOX_PINS`
-  in `lib/scryfall/frame-signatures.ts`, read by eye on every printing it
-  called `exact` — compare the title, type and box bands side by side: the
-  type bar is the easy one to miss). One rules line starts at the box's
+  ACR, EOE, FIC, FRA #379, many 2024+ SLD drops) — a few a dark type bar
+  alone over the tinted box (FRA #380–381, SLD #250 / #1989 / #2143 /
+  #7112), the two-colour runs of 2025 on a see-through box with a shadow
+  behind the text under the land's own bars (SPG #109–118, ECL #347–351,
+  SOS #301–305, MSH #380–384, SLD #2440, FRA #397–401), and some the short
+  box (the SNC triomes, UNF's shock lands, SLD #456–460): none is drawn, no
+  reference comes from them, and the registry pins them `nearest` (4.37's
+  variants; `BORDERLESS_LAND_DARK_PINS` /
+  `BORDERLESS_LAND_DARK_TYPE_BAR_PINS` / `BORDERLESS_LAND_SHADOW_BOX_PINS` /
+  `BORDERLESS_LAND_SHORT_BOX_PINS` in `lib/scryfall/frame-signatures.ts`,
+  read by eye on every printing it called `exact` — compare the title, type
+  and box bands side by side: the type bar is the easy one to miss, and the
+  shadow box only shows against a flat tinted one). One rules line starts at the box's
   left, as on M15: the only non-SLD borderless lands printing a single
   line (the ZNR / KHM pathways) do; only SLD #300–304 centre it. w, u and
   g keep ONE reference (MH3 #354 / #350 / #357): the other exact mono-u /
   mono-g prints are Secret Lair scans whose bars show the art through
   (owner round 15), and white dropped Ancient Den SLD #300, an offset scan
   of the centred one-line print (owner round 16; it still imports as the
-  exact borderless land). The two-colour pair masters are TODO 4.56 (with
-  4.6b).
+  exact borderless land).
 - **See-through frames.** CC's colourless M15 frame, every devoid frame, the
   colourless creature tokens (both token frames) and the colourless
   planeswalker are see-through, like the printed cards. The profile's
@@ -315,7 +408,8 @@ node scripts/import-cc-frames.mjs --only m15,m15land
   238–1165 px on every colour; the inherited MSE slot left a 1–1.6 px
   hairline on every side. Adventure's slot is its own, pinned at its
   masters' window + 0.1 % (layout v38, 4.21a).
-- **Output.** 1500×2100 PNGs with transparent corners cut at the one card
+- **Output.** 1500×2100 PNGs (2100×1500 for a landscape recipe: split,
+  battle) with transparent corners cut at the one card
   corner (64.5 px, see [The card corner](#the-card-corner)), WebP siblings,
   P/T plates at native size, and (full-art basics) the 168 px mana symbols.
   The borderless and full-art masters are native 1500×2100 and copied 1:1
@@ -345,7 +439,8 @@ profiles fixed, one layout bump (v24) and a sweep. 4.32 / 4.39 / 4.49 (b)
 followed the same path; a new template needs no sweep (no card sits on it),
 while fullartland's re-source was its own template-scoped v30 sweep. 4.34's
 borderless land is new too: no bump, no sweep, only its visual-regression
-cases added to the baseline. A new
+cases added to the baseline (its pair masters, 4.56, are an addition a card
+switches on: the same). A new
 template stays out of the picker until the owner verifies each colour
 ([Verifying a frame](#verifying-a-frame)); an import never lands on one (the
 creator only offers it, once verified). The compare page's alignment score
@@ -386,13 +481,14 @@ bake's transparent corner mask and the frame masters all read it.
   scripts/round-frame-corners.mjs` repaints that paper, its grey
   anti-aliased fringe and the fringe's dark tail, then cuts the corner —
   only on the allow-list (`CORNER_NORMALISE_TEMPLATES` in
-  `scripts/lib/frame-corners.mjs`: retro, retroland, modern, modernland,
-  saga, extendedart, fullart, m15textless, m15textlessland, alphatoken, and
+  `scripts/lib/frame-corners.mjs`: modern, modernland (retro and retroland
+  left it with TODO 4.10a: the importer cuts their corner),
+  extendedart, fullart, m15textless, m15textlessland, and
   expeditionland w/u/r/c/m, whose paper reached 1–2 px inside the cut;
   adventure — its 1–2 px grey paper rim just inside the arc, added
-  2026-09-28 — flip and aftermath left the list with 4.21a, their Card
-  Conjurer masters cut by the importer), never on a showcase family
-  (`NEVER_NORMALISE`):
+  2026-09-28 — flip and aftermath left the list with 4.21a and saga with
+  4.21c, their Card Conjurer masters cut by the importer), never on a
+  showcase family (`NEVER_NORMALISE`):
   Bloomburrow, LOTR and Tarkir draconic keep their drawn top corners in
   square outputs and print (owner, 2026-09-28). The paint is the border AS
   IT RUNS BESIDE THE CORNER: the edge band's colour at the same depth inside
@@ -422,7 +518,8 @@ bake's transparent corner mask and the frame masters all read it.
     write (`normaliseMasterCorners` throws and restores the master on any
     failure), so a rebuild can't bring the white back. Then `npm run
     assets:frame-webp`. (The adventure, flip and aftermath builders were
-    retired with 4.21a: those masters are Card Conjurer's, in the bucket.)
+    retired with 4.21a, the split builder and the battle's ring remover
+    with 4.21b: those masters are Card Conjurer's, in the bucket.)
   - **Truecolour only.** The normalised masters are truecolour PNGs: a
     lossless palette is impossible (the base palettes were already full at
     255–256 colours and the cut's alpha ramp adds 35–58), and a quantised
@@ -432,7 +529,7 @@ bake's transparent corner mask and the frame masters all read it.
     builders above write the master the gate checked, truecolour, and
     `tests/unit/frames/frame-corners.test.ts` fails one whose write after
     the gate passes `effort`, `palette`, `quality`, `colours` or `dither`.
-    (The showcase, split and Alpha builders, whose masters the pass never
+    (The showcase and Alpha builders, whose masters the pass never
     touches, still quantise; Alpha only without `ALPHA_FULL_COLOUR=1`.)
 - **Square outputs.** Print (the PDF card and sheets, the Pro deck PDF +
   ZIP) and the Square PNG are the round render squared again
@@ -595,6 +692,53 @@ frame change](#shipping-a-frame-change)).
 8. **Ship it** ([Shipping a frame change](#shipping-a-frame-change)) and
    **have it verified** ([Verifying a frame](#verifying-a-frame)).
    `supabase/seed.sql` follows production's ticks afterwards, never before.
+
+### Retiring a frame
+
+A template leaves `FRAME_TEMPLATE_VALUES` only after its replacement is in
+`RETIRED_FRAME_TEMPLATES` (`types/card.ts`). An UNKNOWN `frame_style.template`
+draws `DEFAULT_FRAME_TEMPLATE` — m15, the creature frame — so without the map
+a row, draft or remix payload that still names the old value would change
+kind on screen. The map is the read path, and the only one:
+
+- `normalizeFrameTemplate(template, face)` / `retiredFrameTemplate`
+  (`lib/cards/card-display.ts`): both renderers, the print paths, the
+  creator's load for an edit and a remix, the re-bake scope rules. Pass the
+  card's text where the reader has it — a replacement may depend on it.
+- `getFrameProfile` (`lib/cards/template-layout.ts`): a reader handed the
+  stored value as it is (the anatomy rules, the kind rules) gets the
+  replacement's bare profile, never m15's.
+- the validator's `frame_style.template` preprocess
+  (`lib/validation/card.ts`): an old payload parses instead of failing.
+- `staleTemplateFilter`: an override of the replacement marks the rows that
+  draw on it; the PNG download's ETag reads the replacement's override too.
+
+The stored value leaves a row on its owner's next save, by the card
+actions (`lib/cards/actions.ts`): `createCardAction` runs
+`withRetiredFrameTemplate` on the payload before it is parsed (a remix, a
+crafted or stale payload: the frame the payload's own text asks for, then
+that frame's verification gate), and `updateCardAction` — an edit never
+sends its template — writes `retiredFrameStyleRewrite` of the stored style,
+judged by the text the row holds after the edit, with no verification gate
+(the card already draws there). Nothing else rewrites a stored row, and its
+stored bake keeps the old look until it is re-baked.
+`tests/unit/cards/retired-frame-template.test.ts`, `retired-frame-save
+.test.ts` and `tests/unit/render/retired-frame-bake.test.tsx` hold each
+reader; a new retired value needs no new code, only its map entry and its
+rows there.
+
+**`alphatoken`** (TODO 4.54, retired 2026-10-07; owner decision 2026-09-29):
+a 1993-style token frame of our own — no 1993-frame token was ever printed —
+with no reference, no tick and, counted on production the day it went, no
+card (public, unlisted or private). It reads as `m15token`, or
+`m15tokentext` when the card has rules or flavour text. No migration: no
+seed, CHECK, `frame_reviews` or `frame_profile_overrides` row named it on
+production; a row on a dev, preview or local database is covered by the
+map, and a `frame_reviews` / override row there is never read (both are
+looked up by a current template key). The registry's 1993 family now
+answers a token as `token/old-frame` does for 1997 and 2003 (nearest, the
+M15 token, 4.43). Its 17 Visual cases were removed without a bump (0 stored
+cards; a removal changes no case).
 
 ## Shipping a frame change
 
@@ -977,7 +1121,9 @@ badges to Exact the moment its `frame_reviews` row is ticked.
   (`tests/unit/cards/fixtures/reference-printings.json` — re-capture it
   when you add a reference). Never replace the DEFAULT reference of a combo
   production has verified; add an alternate and ask the owner to
-  re-verify.
+  re-verify. A template's `pairs` (4.56) lists the prints of its two-colour
+  pair masters: the same two rules, and no checklist row — a pair rides its
+  template's `m` tick.
 
 ## Additions vs corrections
 
@@ -1224,6 +1370,898 @@ stay importer inputs, never published: adventure's shaped book masks and
 aftermath's rectangles (cut at y 1139, 54.24 %H) are 4.26's; the flip
 plates' half masks are the card's halves.
 
+### The landscape layouts (4.21b, layout v43)
+
+TODO 4.21b (the second of 4.21's three PRs; design 2026-09-29, owner
+decisions 2026-09-29, built 2026-10-06): split and battle leave their MSE
+composites in git for Card Conjurer's masters in the bucket
+(`CC_TEMPLATES.split` / `.battle`) — the importer's first LANDSCAPE recipes
+(`orientation: "landscape"`, written 2100×1500, `outputSizeOf`), cut at the
+one corner (64.5 px: 4.3 % of the SHORT side in either orientation). Every
+px below is HD, 2100 × 1500. The prints are Scryfall PNGs turned a quarter
+turn clockwise and scaled to that size, registered edge by edge (each
+edge's profile cross-correlated with the master's over a ±24 px search —
+one global fit hides a half that sits off on its own); every difference is
+print − ours, + = right or down.
+
+- **Owner decisions** (all five round-33 sheets signed off; it merges as
+  built).
+  - owner round 33, 2026-10-06: split keeps the PRINTS' text sizes (name
+    76 px, type line 53, pips 68, the 48 px symbol box), not the design's.
+  - owner round 33, 2026-10-06: the gold split (`split/m`) stays unticked
+    until per-part colour (TODO 4.26); the owner ticks red and blue only,
+    per colour.
+  - owner round 33, 2026-10-06: centring a split half's short rules text
+    is a rules-layout follow-up (TODO 4.21e), before the first split tick.
+  - owner round 33, 2026-10-06: the battle merges as built; its right side
+    is re-cut onto the prints in a follow-up (TODO 4.21d), before the first
+    battle tick.
+- **The two recipes.**
+  - `split` — Card Conjurer's 'Split' pack (packSplit.js) is drawn PORTRAIT
+    with its text at −90°. The importer composites it at the pack's native
+    1500×2100 and turns it a quarter turn clockwise (`rotateCwRgba8`: a
+    pixel permutation, no resample), so the portrait card's bottom border —
+    where the collector line runs — is the landscape card's left border.
+    w u b r g m come from their own file; `c` is the pack's 'Artifact
+    Frame', a render stand-in that is never offered (no colourless split
+    was printed; owner 2026-09-29).
+  - `battle` — the 'Battle' pack (packBattle.js) is a 2814 × 2010 canvas:
+    ONE Lanczos pass to 2100×1500, every colour from its own file, `c` the
+    pack's see-through 'Colorless Frame' (MOM #1 Invasion of Ravnica). The
+    pack's artifact and land frames are not built (no print).
+- **Whole blocks moved onto the prints** (a recipe's `shift`,
+  `shiftBlocksRgba8` in `scripts/lib/cc-frames.mjs`). Each pack leaves the
+  prints by a near-constant offset over a whole piece of the card, with
+  FLAT zones — lines that are identical from one edge of the image to the
+  other — between the pieces: the split's black border and spine, the
+  battle's window sides and bottom border. The importer moves each block
+  byte for byte and lets the zones between them take up the difference by
+  repeating (or dropping) their one line: no resample, no cross-fade, and
+  it THROWS when a zone it would change is not flat, when two blocks would
+  meet or when a block would leave the image. (The tokens' and flip's
+  re-cuts cross-fade a seam through texture; these have no seam to fade.)
+  - `SPLIT_HALF_RECUT` — the pack's collector border is 160 px where MH2
+    #123 / #60 and TSR #161 / #186 print 147–148, and its halves sit 5–14
+    px right of theirs: columns 160–1081 (the left half) move 11 px left
+    and columns 1118–2040 (the right half) 3 px. The border becomes 149
+    px, the spine 44 (1071–1114; the pack's 36), the right border 62
+    (from 2038; the pack's 59).
+  - `BATTLE_BLOCK_RECUT` (v43's `BATTLE_LOWER_RECUT`, with a second block
+    since layout v45) — nine MOM battles print the type bar, the text box
+    and the shield 2.5–5.5 px lower than the pack: rows 842–1467 move 4 px
+    down. The window's sides grow 4 rows and the bottom border is 54 px
+    (from 1446; the pack's 58). TODO 4.21d added the top block — rows
+    57–362, 2 px up — and re-cut what no block reaches: "The battle re-cut
+    onto the prints" below.
+
+  A profile's numbers are written in the PACK's px and ride the moves
+  (`SPLIT_RECUT_PX`, `BATTLE_LOWER_RECUT_PX`, `BATTLE_TOP_RECUT_PX`,
+  `BATTLE_RIGHT_RECUT_PX`, `splitLeftPct` /
+  `splitRightPct` / `battleLowerPct` in `lib/cards/template-layout.ts` — as
+  the tokens ride `TOKEN_RECUT_PX`); `tests/unit/frames/landscape-importer.test.ts`
+  holds the recipe's and the profile's constants together. To take a move
+  out, drop the recipe's `shift` and zero its constant: nothing else reads
+  it.
+
+  **Split**, the mean of four prints (MH2 #123 Fast // Furious, MH2 #60
+  Said // Done, TSR #161 Dead // Gone, TSR #186 Rough // Tumble), L = the
+  left half, R = the right:
+
+  | Edge | The pack as drawn | The master |
+  |---|---|---|
+  | L body, left / right | −13.1 / −7.3 | −2.1 / +3.6 |
+  | L window, left / right | −12.7 / −10.4 | −1.7 / +0.6 |
+  | L name bar, left / right end | −14.3 / −7.8 | −3.3 / +3.3 |
+  | L text box, left / right | −12.8 / −11.0 | −1.8 / 0.0 |
+  | R body, left / right | −5.0 / +0.2 | −2.0 / +3.2 |
+  | R window, left / right | −6.1 / −2.2 | −3.1 / +0.8 |
+  | R name bar, left / right end | −6.1 / +0.2 | −3.1 / +3.2 |
+  | R text box, left / right | −5.1 / −3.4 | −2.1 / −0.3 |
+  | Rows (name bar top, window top and bottom, box top and bottom; not moved) | −1.9 … +1.5 | the same |
+
+  The worst edge's mean goes from 14.3 px to 3.6 (any one print: 16.4 →
+  5.4). What is left is the halves' WIDTH: the prints' bodies are about
+  6 px wider than the pack's (−2 at the left edge, +3 at the right), which
+  no move closes. On the master the left window is 204–1017 × 239–795 px
+  and the right one 1171–1983; the MSE composite's were 133–952 and
+  1149–1968 × 201–800 (37 px high, the left one 69 px left of the prints'),
+  on a black canvas with no coloured body round either half.
+
+  **Battle**, the mean of nine MOM prints (#1, #21, #22, #63, #115, #147,
+  #149, #190, #230 — the seven default references and two alternates):
+
+  | Edge | The pack as drawn | The master |
+  |---|---|---|
+  | Top border, inner edge | −0.3 | −0.3 |
+  | Name pill, top / bottom | −2.5 / −0.8 | the same (above the moved block) |
+  | Type bar, top | +5.3 … +5.5 | +1.3 … +1.5 |
+  | Type bar bottom / text box top | +4.6 | +0.6 |
+  | Text box, bottom | +2.5 | −1.5 |
+  | Shield, top / bottom | +2.8 / +5.0 | −1.2 / +1.0 |
+  | Name pill, right end | +10.8 | +10.8 |
+  | Type bar, left / right end | +1.9 / +9.2 | +1.7 / +9.4 |
+  | Text box, left / right | +0.5 / +8.3 | +0.5 / +8.3 |
+  | Shield, left point | +11.8 | +11.7 |
+  | Bottom border, top edge (under the text box) | +0.9 | −3.1 |
+  | Battle icon's dark disc: centre x / y, radius | −0.9 / −3.4, −2.9 | the same (above the moved block) |
+
+  The rows are within 1.5 px of the prints' mean after the move (2.3 px of
+  any one). **Not closed:** the prints' name pill, type bar and text box
+  end 8–11 px further RIGHT than Card Conjurer's and their shield sits 12
+  px right, while the left ends and the border agree (≤ 2 px); and the
+  pack's battle icon is a little larger and lower than the prints' (its
+  dark disc a circle of radius 55.2 px centred 290.5 / 131.6 px on the
+  master; eight prints: 52.3 px, 289.6 / 128.2 — each fitted within 0.4
+  px). No flat zone crosses the bars or the icon, so a block move can't
+  reach either; widening the bars would mean repeating single texture
+  columns along each and redrawing the shield over the border. Left as
+  the pack has it in this change — owner round 33: the right side and the
+  icon are re-cut in TODO 4.21d, before the first battle tick. Text is
+  placed relative to the master's own bars (below), so a name or a cost is
+  not 10 px off its bar. (The one edge the move takes OFF the prints is
+  the bottom border's: the prints' text-box rim is about 2 px thinner than
+  the pack's, so with the box on the prints the border starts 3 px below
+  theirs.)
+
+  **Skeptic pass (2026-10-06).** Both tables re-measured on other rows
+  and columns, two ways (half-level crossings and profile correlation, the
+  master blurred to the scan's sharpness): the battle's numbers within
+  about 1 px (right ends +10.0 / +8.6 / +7.6…+8.8, the shield's black
+  interior +11.7 by its centroid, the icon's disc r 54.6 against the
+  prints' 52.0, 3.9 px lower), the split's within 1–3 px by where an edge
+  is read (the prints' bodies 4–5.5 px wider than the pack's). A fresh
+  importer run from the pinned commit gives the 28 published objects byte
+  for byte; every zone a block moves through is one line repeated on all
+  14 masters, so no seam exists to look for (pack and master agree pixel
+  for pixel on both sides of every boundary). **The battle's right side
+  CAN be re-cut** the way the tokens and flip were, and the top block and
+  the icon with it — prototyped on all seven keys (scratchpad only, never
+  published; the recipe is TODO 4.21d): the name pill's end 10 px right
+  and the type bar's and text box's 8, each through a 24-column
+  cross-fade inside the bar's own paper (the lines it crosses there are
+  horizontal), the shield lifted through the pack's Defense mask and set
+  12 px right over the border, where the prints' sits — every right-side
+  edge then lies within 1 px of the nine prints' mean (the pill +0.1, the
+  type bar +0.7, the box −0.3, the shield −0.3); rows 57–362 two px up
+  through the flat top border (one more block for `BATTLE_BLOCK_RECUT`:
+  the pill's top −0.5, its bottom +0.6); and the icon's three rings
+  redrawn flat at the prints' radii, 1.4 px above the centre of their rim
+  as the prints set them (the disc r 52.0, 0.5 px from the prints'
+  centre; its triangle kept — the prints' is the pack's size). **Built as
+  layout v45** — "The battle re-cut onto the prints" below; the table
+  above is the master as v43 shipped it.
+
+- **How text is placed on both.** Where the prints set a line RELATIVE TO
+  ITS OWN BAR of the master: a baseline below its bar's face, a name's
+  start past its bar's left end, a cost's end before its bar's right end.
+  The card then reads right on the frame it is drawn on, and a later
+  master fix moves the slot with its bar.
+- **Split's slots** (`SPLIT` in `lib/cards/template-layout.ts`; the px
+  are the PACK's left half — 11 px further left on the master. The right
+  half is the back-face content, a second face with `rotation: 0` and its
+  own art window, every slot the left half's 966 px over —
+  `SPLIT_HALF_DX_PCT`: the pack's 958 px and the 8 px the two moves differ
+  by):
+  - **Art** — the windows + 0.1 % (2.1 px across, 1.5 px down): the pack's
+    215–1028 and 1174–1986 × 239–795, moved.
+  - **Sizes — the prints', not the family's.** Each half is a small card of
+    its own and every line on it prints smaller than a regular card's
+    (`lib/cards/typography.ts`): the name 76 px (`SPLIT_TITLE_SIZE_PCT` —
+    ten names measure 0.94–0.97 of an 80 px one, x-height 38–39 px against
+    a regular card's 41–42), the type line 53 px on its 69 px bar
+    (`SPLIT_TYPE_SIZE_PCT` — "Sorcery" prints 177–178 px wide; the design's
+    60 px, Card Conjurer's 0.0286 H, sets it 201), the pips 68 px
+    (`SPLIT_COST_DISC_PCT` — the prints' generic disc is 64–65 px across,
+    a regular card's 68.7–69.6), and the set symbol in a 48 px box
+    (`SPLIT_SET_SYMBOL_BOX_PCT`) that a Keyrune glyph's INK fills top to
+    bottom (`setSymbolFit: "ink-height"`: MH2's wide mark and TSR's tall
+    hourglass both print 47–50 px tall), never wider than the box × the
+    family's width-to-box ratio. So split is NOT in `M15_FAMILY_TEMPLATES`.
+    The design asked for the family's 80 px name and 72.75 px disc and a
+    60 px type line; the prints decided (flagged for the owner).
+  - **The name and the cost** — the name bar's face rows (104.5–209.5):
+    a centred 76 px name's baseline is 182.3 px, the prints' 182.7 (nine
+    halves, 180.8–184.4), and the pips centre on 157.0, the prints' 156.6
+    — no `dy`, no `costDy`. From 226 px (the prints start a name 30–32 px
+    past the bar's left end) to 1030 (their last disc ends 19 px before
+    the bar's face does).
+  - **The type line** — rows 815–884, its baseline the prints' 867.9 px
+    (ours 867.2), from 226 px; the left half's set symbol inline, ending
+    at 1030 px (MH2's ends 20–21 px before the bar's face). The right half
+    draws no symbol yet (TODO 3.9; the prints do).
+  - **Rules** — 228–1008 × 927–1426 px, inside the box's paper (so
+    `SPLIT_TEXTBOX_BORDER_PX` is 0 / 0: the MSE rect spanned the window's
+    width and held 33 / 38 px of border), the block centred as the prints
+    centre theirs (ink centred on 1178.5 px ± 2), at the 9 pt ladder top
+    (`RULES_SIZE_PX.standard`: TSR #161 and #186 set two and three lines
+    at 76 px, a 74–75 px pitch; MH2 #123's halves 70–71, a smaller text
+    than its length needs). Some prints also CENTRE a text's lines (MH2
+    #123, TSR #156 / #161 / #186, C16 #239 — one to four lines), others set
+    theirs left (MH2 #60's three and five lines, GRN #224, and DMR #209's
+    one- and two-line texts): no rule of length separates them, so ours is
+    always left-aligned — a rule of the rules layout's own, not this
+    correction's (TODO 4.21e; owner round 33: before the first split
+    tick). The layout already carries an indent per
+    line (a token's one centred line, `alignSingleLine`), so centring a
+    short block is a predicate away once someone says which texts. The
+    halves' missing 5 px also leave each text column about 10 px narrower
+    than the prints' (780 px against a 790 px printed line on TSR #186:
+    "Tumble deals 6 damage" breaks one word earlier in ours).
+  - **Both halves are `fit: "measured"`.** An unturned second face draws
+    its name and type line through `fitTitleBand` / `fitTypeLineBand`
+    exactly as the front draws its own, in both renderers; a turned one
+    (aftermath, flip) keeps the character estimate.
+- **Battle's slots** (`BATTLE`; the MOM Siege front, MOM #149):
+  - (The numbers in this list are layout v43's. Since v45 the art rect's
+    top is 56.2 px, the name sits 2 px higher, the cost ends at 1952.3 px, the type line's rect, the
+    symbol and the rules box end 8 px further right and the shield, its
+    value and its ink span sit 12 px right — "The battle re-cut onto the
+    prints" below.)
+  - **Art — ONE rect for every colour** (`BATTLE_ART_RECT`,
+    7.85/3.88/89.4 × 91.91: 164.9–2042.3 × 58.2–1436.9 px), from the
+    border's inner edge to the bottom border. On the master the full-art
+    window is clear over 168–2038 px across from 61 px down — beside the
+    type bar and the text box too, to 1386 px on the left — and again in a
+    sliver between the shield's right point and the border, down to 1432
+    px (α < 250 over 166–2040 × 59–1435). A slot that ended at the text
+    box would leave those on #101015: the design's 7.90/3.97/89.30 × 88.33
+    did. Card Conjurer's own artBounds run the art under the text box the
+    same way, as the print does.
+  - **Colourless** — the see-through `battle/c`: its pill, type bar and
+    text box are translucent (α ≈ 191) down to the bottom border, so the
+    `PROFILES` entry declares the same rect as its `underFrameArt` AND as
+    that layer's `artSlot`: ONE picture, nothing to seam (as m15pw/c).
+  - **The family's sizes** through `displayPct(…, "landscape")` (battle is
+    in `M15_FAMILY_TEMPLATES`, joined with this bump): an 80 px name with
+    M15's 0.01 em tracking (untracked it came out 2.5–2.8 % short of the
+    nine prints'), a 68 px type line, the family's cost disc and 86 px
+    symbol box with the ink fit. Both lines `fit: "measured"`.
+  - **The name** — the pill's face rows (76–181.5), from 392 px: the
+    prints start it 20–23 px past the pill's left end, right of the battle
+    icon. That closes TODO 3.28 (the MSE rect began 269 px in, under the
+    icon). Its baseline is the prints' 158.4 px (157.4–159.3), 2 px below
+    centred — `dy` 2 / 2100, a whole px at HD and at the 750 bake, so the
+    bake (which rounds a dy to whole px) and the preview move it alike.
+  - **The cost** — right-aligned to 1942.3 px: the prints end their last
+    disc 24 px before the pill's face ends, and centre the discs on the
+    face (no `costDy`).
+  - **The type line and the set symbol** — the type bar's face (the pack's
+    871–975.5), from 268 px, its baseline 76.9 px below the face's top as
+    printed; the symbol in CC's 180 × 86 px box, its right edge 25 px
+    before the bar's face ends, centred on the face.
+  - **Rules** — CC's box (the pack's 272–1933 × 1008–1422), centred, at
+    the 9 pt ladder top (MOM #21's lines pitch 74–75 px; the fuller boxes
+    step down the ladder as everywhere).
+  - **Defense — in the shield the master paints.** The value alone, white,
+    78 px, centred where the prints centre their digit (81 px right of the
+    shield's left point, 82 px below its top). The drawn disc and its
+    outline are gone (owner 2026-09-29). The shield is `StatSlot.paintedRect`
+    (`BATTLE_SHIELD_RECT`: the pack's Defense mask at the master's size,
+    moved with the lower block — `BATTLE_SHIELD` in the recipe, which the
+    importer checks against the mask's solid box and against solid paint
+    under it on every colour): a rules keep-out on EVERY battle, with or
+    without a defense value, since the paint is always there. A value
+    wider than the shield's black interior (87 px on the digits' rows,
+    `inkSpanPct`) is fitted to it: "20" draws at 74.7 px, "100" at 52.9.
+- **The artist credit** (3.8's slice for the two; artist only — the
+  collector number, set and language beside it are 4.9d's). The printed
+  card is the portrait card turned clockwise, so M15's footer line is the
+  landscape card's LEFT border, running down it from the top with the
+  letters' heads toward the card: `footerTurnedWithCard` turns M15's slot
+  (the band it covers is centred 79.8 px from the left edge and starts
+  97.5 px down; MH2 #123, TSR #186 and MOM #149 print their second border
+  line 75–79 px in, from 97–99 px), and `FrameProfile.footerTurn: 90` has
+  both renderers lay the line out in `unturnedRect(rect, …)` and turn it in
+  place. Code-owned: not an override field.
+- **The brand mark** — centred in the new bottom borders (battle's 54 px:
+  ink 1454–1492; split's 57 px: 1452–1490). Battle's ends at 1865 px, 16 px
+  short of the shield's left point; split's sits under the right half's
+  text box.
+- **Masks are importer inputs, never published.** The split pack's
+  'Bottom Half' and 'Top Half' masks are, after the turn, the LEFT and
+  RIGHT halves — plain rectangles cut at x 1100 of the pack's card, 1093 on
+  the master (the middle of its spine; `SPLIT_HALF_MASKS`, checked and
+  recorded in `lib/cards/frame-sources.json`), 4.26's inputs for a
+  per-half colour. The battle's Defense mask is the shield's box.
+- **The registry** (`lib/cards/frame-references.json`). split/r = MH2 #123
+  Fast // Furious, with WHO #77 Coward // Killer and TSR #156 / #161 / #186
+  as alternates; split/u = MH2 #60 Said // Done; split/m = C16 #239
+  Trial // Error — the only gold // gold M15 split outside a showcase, in
+  the frame's 2016 ARRANGEMENT (the collector line along the bottom
+  border: both halves end about 100 px higher and the left one starts
+  about 90 px further left), so it shows the gold dress, not where the
+  halves sit — and each of its halves prints its own two-colour pinline
+  and box tint over the gold (a W|U half, a U|B half), which our plain
+  gold `m` master doesn't: a loose reference, best left unticked until
+  4.26. w, b, g and c have no reference: built, never offered (owner
+  2026-09-29). J21 #730 Fast // Furious, which the design listed as an
+  alternate, is an Arena render in Arena's own layout, not a print: left
+  out. A split whose halves differ in colour (GRN #224, DMR #209) imports
+  `nearest`, blocked by 4.26. The old note that no mono-colour split was
+  printed in M15 is gone. Battle keeps its MOM references in all seven
+  keys; every battle still imports `nearest` until 5.5 (a battle is a
+  transform DFC and its back face isn't modelled), but it left
+  `BORDER_PENDING_TEMPLATES`: its border is the printed black one now.
+
+Both left their git masters, the split builder, the battle's ring remover
+and their `import-mse-profiles.mjs` rows behind; battle left
+`NEVER_NORMALISE`, the edge contract's known failures and the square
+corners' `root` fills (a square battle's corners are #000 now); both left
+`ART_WINDOW_KNOWN_FAILURES`. Their masters pass the edge contract, the
+corner check and the art-window check in the importer and in CI — the
+split windows with 1.5–2.1 px to spare, the battle's with 2.8–3.8, its
+translucent body with 0.8–1.25. Held by
+`tests/unit/frames/landscape-importer.test.ts` (the helpers, the recipes
+against the profiles, the published masters pixel by pixel) and
+`tests/unit/render/landscape-v43-bake.test.tsx` (real bakes at HD and at
+the 1050 px default: where each line, the shield's value, the turned
+credit and the mark land).
+
+Template-scoped sweep (`TEMPLATE_SCOPED_VERSIONS[43]`: every card on the
+two, art or none); production, anonymous read 2026-10-06: 0 public or
+unlisted cards on either (private cards and previews re-bake on their next
+save). NOT verification-neutral — masters and every slot move — but neither
+template has a tick to go stale. The owner's first ticks wait for the two
+follow-ups (owner round 33): battle in its seven colours against its MOM
+prints after TODO 4.21d, split/r and split/u against MH2 #123 and #60
+after 4.21e. Tick split PER COLOUR: a template's **Publish** ticks every
+colour that has a reference, and split/m — its C16 print is the 2016
+arrangement with per-half pinlines — stays unticked until 4.26. Neither
+is offered until then; an admin sees both with
+`?previewFrames=split,battle`.
+
+The browser half (the design's stepper check; a dev server on the shared
+dev database, the admin walk-through `/create?previewFrames=split,battle&kind=…&template=…&color=…&seed=sample`
+saved as a private frame preview, Chromium against the app's own live
+render of the same card): with the preview laid out at the card's own px,
+every line's ink sits within 2 px of the render at HD on split r / u and
+battle r / u (the names and type lines 1 px high, the rules 0–1, the
+defense digit 1–2, the turned credit within 1 px across; a name's width
+within 3 px) — the verified m15 measured the same way: 0–2 px. In the
+creator's 384 px column Chrome
+sets a line's box in whole CSS px (font ascent and descent rounded, the
+half-leading floored), which moves small text up to about 1.5 CSS px on
+every template (m15's rules 1.1); that is the browser's, not a slot's.
+(Skeptic pass, the real `CardPreview` at 384 px against the HD render: a
+name sits 0.8 CSS px high on m15, 0.5 on battle and 1.2–1.5 on split —
+Chrome's baseline against the font's unrounded metrics is 1.2 / 0.8 / 1.0
+px high — and the type lines 0.7–0.8 on all three. No profile number
+closes it: a slot's `dy` moves both renderers alike. The preview's cost
+discs are also 5 % smaller than the render's on every template, m15
+included (69 px against 73 at HD) — mana-font's `.ms-cost` is `font-size:
+.95em; width: 1.3em`, a disc of 1.235 em of the wrapper `pipFont` sizes
+by 1.3 — which is older than this change and not its business.)
+A private card has no stored bake, so its My Cards tile is the live
+preview letterboxed in the 5:7 tile; a public one shows its baked
+thumbnail in the same box.
+
+### The battle re-cut onto the prints (4.21d, layout v45)
+
+Owner round 33 (2026-10-06): the battle merged as built (v43) and its right
+side is re-cut BEFORE the first battle tick. After v43's block move Card
+Conjurer's 'Battle' master still left the nine MOM prints (#1, #21, #22,
+#63, #115, #147, #149, #190, #230) by 8–12 px on its right side, 2 px at
+the name pill and 5 % at the icon's disc. The importer now re-cuts all
+three (`CC_TEMPLATES.battle`: `shift` + `printRecut`, in
+`scripts/lib/cc-frames.mjs`), in this order, on the 2100 × 1500 downscale
+and before the corner is cut. Every row and column is the MASTER's.
+
+1. **The top block, 2 px up** — `BATTLE_BLOCK_RECUT` gained a block: rows
+   57–362 (the pill, the icon, the arc's upper curve) move 2 px up through
+   the flat top border, byte for byte (`shiftBlocksRgba8`; rows 0–56 are
+   one row on all seven masters). The top border is 55 rows (the pack's
+   57), the window 485, the bottom border 28. 3 px up is worse (the
+   border's inner edge would leave the prints by 2.3 px).
+2. **The bars' right ends, stretched** — `BATTLE_RIGHT_RECUT.bands`,
+   `recutColumns` (`recutBand`'s seam turned a quarter turn): inside a
+   band's rows the columns from 1820 to `toX` land `by` px right, and over
+   the 24 columns from 1820 each row is a premultiplied cross-fade of
+   itself with itself `by` px back. The seam is opened inside each bar's
+   own mottled paper, where every line a row crosses is horizontal, so
+   nothing with an edge is blended; the clear window columns after `toX`
+   give up `by` columns, and the importer THROWS unless they are one
+   colour a row (`clearTo`).
+
+   | Band | Rows | `toX` | `by` |
+   |---|---|---|---|
+   | name pill | 0–599 | 1998 | 10 |
+   | type bar + text box (with its arrow notch) | 600–1299 | 2010 | 8 |
+   | the text box under the shield | 1300–1471 | 2030 | 8 |
+
+3. **The shield, 12 px right, over the border** — `BATTLE_SHIELD.dx`. The
+   pack's Defense mask (moved 4 px down with its block) is the shield's
+   exact outline. Its footprint (+1 px) is first repainted with what is
+   beside it (`eraseMaskFootprint`, `BATTLE_RIGHT_RECUT.erase`: the paper
+   mirrored from the left of each row; above row 1326 each column
+   continued from above; from x 1986 the box's rim and clear window of row
+   1295; the border black), the text box under it is stretched (band 3),
+   then the pack's own shield pixels, lifted through the mask, are drawn
+   12 px right — source-OVER (`setThroughMask`: the shield's alpha times
+   the mask's coverage). A plain replace would leave the shield's
+   anti-aliased edge see-through on top of the opaque border, which the
+   art-window check refuses. What shows of the repaint is a 4 px crescent
+   along the shield's left-facing edges. The recipe's box is 1893,1304
+   164 × 166 (`paintedShieldFindings` holds the mask to it and the master
+   to solid paint under it); its tips end at x 2056, short of the right
+   edge's 42 px band.
+4. **The icon's rings, redrawn** — `BATTLE_ICON_RECUT`, `redrawBattleIcon`.
+   The pack's dark disc is r 54.9 px and concentric in its rim; the prints'
+   is r 52.0 and sits 1.4 px above the rim's centre. Inside r 65 of the
+   rim's centre (290.5 / 129.5) every pixel is repainted by its distance
+   from 289.1 / 128.1: black to 52.0, white to 58.5, black to 62.3, then
+   the rim's own colour (sampled per angle 67 px from the rim's centre,
+   where every key is flat), 1 px linear edges; the pack's triangle
+   (inside r 40) is kept, 1 px left. **A redraw of flat geometry, not the
+   pack's pixels** — `frame-sources.json` says so (`printRecut.icon.how`).
+
+**Measured against the nine prints** (print − master, HD px, + = right /
+down; the builder's own regions and code — each edge's profile, the median
+over its rows, slid under the print's fixed window; the shield by its
+black interior on the rows clear of the digit; the icon by circle fits to
+radial half-level crossings. The 4.21b skeptic's numbers, measured on
+other rows by correlation and crossings, are in brackets):
+
+| Edge | v43 | v45 |
+|---|---|---|
+| Name pill, right end | +9.6 (7.5 … 12.1) [+10.0] | **−0.4** (−2.4 … +2.1) [+0.1] |
+| Type bar, right end | +8.7 (7.1 … 9.2) [+8.6] | **+0.7** (−0.9 … +1.2) [+0.7] |
+| Text box, right edge | +9.1, median +8.6 [+7.6 / +8.8] | **+1.1**, median +0.6 [−0.3] |
+| Shield, black interior's centre | +11.8 (left +10.9, right +12.6) [+11.7] | **−0.2** (left −1.1, right +0.6) [−0.3] |
+| Name pill, face top / bottom | −2.9 / −1.4 [−2.5 / −1.4] | **−0.9 / +0.6** [−0.5 / +0.6] |
+| Top border, inner edge (7 prints) | −1.3 [−0.7] | +0.7 [+1.3] |
+| Icon disc, centre x / y | +1.35 / +3.86 low (290.5 / 131.5; prints 289.15 / 127.64) | **0.05 / 0.46** (289.1 / 128.1) |
+| Icon disc, radius | 54.91 (prints 51.94, each 51.89–52.01) | **51.98** |
+| Icon white ring, outer radius | 60.86 (prints 58.41) | **58.38** |
+| Not moved: type bar top, bar bottom / box top, type bar left end, box left, box bottom | +0.9, −0.2, −1.4, −0.1, −1.4 | the same |
+
++9 would put the bar at −0.3 and the box at −1.3. (The builder's box
+detector read MOM #115's edge 5 px right of the others'; the skeptic's two —
+the paper's colour crossing on four row bands and a gradient correlation —
+read it +1.0 / +0.1, with the rest: no per-print or per-colour miss.)
+
+**Skeptic pass 2026-10-07** (other regions and methods, every colour;
+print − ours, + = right / down): pill end −0.2 (−0.9 … +0.5 on eight
+prints; the paper → outline crossing on the rows of the face's middle),
+type bar end +0.9 (+0.2 … +1.4, all nine), box edge −0.1 (−1.2 … +0.6, all
+nine, by correlation; −0.5 … +1.3 by crossing on u / b / r / g), shield
+−0.4 (−1.6 … +0.2: each row's first and last black pixel of the interior,
+rows 1350–1435), icon disc r 51.87 on every key against 52.03 ± 0.04,
+centre 289.1 / 128.1 against 289.14 / 127.65 (sd 0.46 / 0.30), white ring
+58.0–58.4 against 58.41. w, u, b, g, c and m land as red does. The 24
+cross-fade columns: no step in any bar's row-mean on any key (the largest
+column-to-column step is the pack's own, elsewhere in the bar); the paper's
+texture energy there is 0.74–0.97 of its neighbours' (a slight softening,
+not visible at 8×). The 14 objects rebuilt byte-identical from a fourth
+fresh cache. **Left as the pack
+has it:** the bottom border's edge (the prints' box rim is 2 px thinner),
+the siege arc, and the name pill's left end (a plain concave arc on the
+pack, a bracket on the prints).
+
+**The profile rides it** (`BATTLE` in `lib/cards/template-layout.ts`;
+`BATTLE_TOP_RECUT_PX` −2, `BATTLE_RIGHT_RECUT_PX` { pill 10, bars 8,
+shield 12 } — `landscape-importer.test.ts` holds them to the recipe):
+
+- the art rect's top 58.2 → 56.2 px (the see-through frame starts at row
+  57 now; `battle/c` fails the art-window check without it — masters and
+  profile are ONE commit);
+- **the name 2 px up with its pill** (the title rect's top 76 → 74 px). On
+  nine bakes of the prints' own names the letters' feet were on row 158
+  where the prints' are on 156–157 (read pixel by pixel on MOM #22, #63 and
+  #149; v43 took 158.4 for the prints'), the ink's top 1.7 px low and
+  "Invasion of" as a whole 1.6 px low by a 2-D correlation — 0.4 px high
+  after the move (skeptic pass, half-level crossings under each letter on
+  all nine: the prints' feet at 155.8 px, 154.8–156.7; v43's bakes 157.5,
+  these 155.5; the "I" spans 99.6–157.1 on the prints, 99.5–157.6 on ours);
+- **the name 4 px left** (the title rect from 388 px, v43's 392 — the
+  skeptic pass's one change to the profile). By direct reads on nine
+  prints "Invasion" spans 392.6–685.2 px (its start 391.0–394.2); from 392
+  ours spanned 398.2–687.7, 5.5 px right at its start and 2.5 at its end
+  (the builder's 2-D correlation read 2.7 px right). From 388 it spans
+  394.2–683.7: −1.5 / +1.5 px, centred on the prints' (ours is 1 % narrower
+  at the same cap height);
+- **the type line is NOT moved**: "Battle — Siege" starts 273.4 px in
+  where the prints' starts 271.0–271.9 (2 px right) and ends 682.3 where
+  theirs ends 689.4–691.0 (8 px left) — at the same size ("Siege" and the
+  dash are the prints' widths to the px, 152 and 48) the prints' "Battle"
+  is 168 px wide against our 162 (their fount's own pair spacing) and
+  their word spaces a px wider. That is the 2-D correlation's "4 px left":
+  the line's middle, not its start. A family question (the type line
+  carries no tracking), left for the owner;
+- **the cost keeps its rows** (`costDy` 2 / 2100 gives the 2 px back): the
+  prints centre their discs 128.5–129.3 px down, 2 px below the middle of
+  their pill's face. The same nine bakes' last disc lies 0.5 px below the
+  prints' where it is and would lie 1.5 px above had it moved with the name;
+- the cost's right end 1942.3 → 1952.3 px (the prints end their last disc
+  at 1952–1953);
+- the type line's rect to 1943 px and the set symbol's box to 1950 (each
+  8 px with the bar);
+- **the rules box keeps the pack's column** (272–1933 px). The prints'
+  lines run to about 1942 px, but they WRAP round the shield; ours keep
+  out of it by stepping the size down (a plain keep-out). With the pack's
+  column, nine bakes of the prints' own texts set every one within 1.5 px
+  of its print's size (line pitch ÷ 0.98: ours 64 / 76 / 60 / 68 / 60 / 72
+  / 58 / 60 / 62, the prints 65.4 / 75.8 / 61.3 / 67.5 / 61.5 / 71.9 /
+  59.3 / 61.3 / 63.3); 8 px wider, four came out 2–6 px smaller (MOM #149
+  54, #230 56). Widening it wants the shield as a rules FLOAT first
+  (`RulesLayoutInput.floats`, as the transform front's reverse P/T) — a
+  follow-up, the owner's call;
+- the shield's rect (the rules keep-out), the defense value and its ink
+  span 12 px right (the value centred 1974 px across);
+- the brand mark stays where it was (it ends 28 px short of the shield's
+  left point now).
+
+**Rollout.** Layout v45 (`BATTLE_RECUT_LAYOUT_VERSION` — ONE constant: it
+was built as v44 beside the 2003 footer ink, which merged first and holds
+44; this bump took the next number by changing the constant and
+`CARD_LAYOUT_VERSION`), template-scoped to
+`battle`, a "sweep" (a correction). Production, anonymous read 2026-10-07:
+0 public or unlisted battles. NOT verification-neutral — the masters and
+the right-side slots move — and no battle tick exists to stale: **the
+owner's first battle ticks follow this bump**, in the seven colours against
+the MOM references. 14 bucket objects (seven masters + WebP), reproducible
+from a fresh cache of the pinned Card Conjurer commit.
+
+### The saga (4.21c)
+
+TODO 4.21c = 3.7 (the third of 4.21's PRs; design 2026-09-29, owner
+decisions 2026-09-29; its layout bump is `SAGA_RAIL_LAYOUT_VERSION` in
+`lib/cards/layout-version.ts`). The saga leaves its 375 px MSE cut in git
+for Card Conjurer's saga 'Regular Frames' pack in the bucket
+(`CC_TEMPLATES.saga`, native 1500×2100, copied 1:1 and cut at the one
+corner) and takes the printed anatomy: the chapter ribbon in the master,
+the rail on the profile. A CORRECTION — the frame was verified and in use.
+Against the prints (Scryfall PNGs at 1500 × 2100; the rail measured on 54
+of them, DOM → MH3):
+
+- **Masters.** w u b r g m are the pack's `sagaFrame<K>`; `c` is its 'Land
+  Frame' (owner 2026-09-29: the only printed colourless saga is a land, MH2
+  #259 Urza's Saga — a colourless non-land saga wears it too). The window
+  is 752–1384 × 237–1758 px on every key and the art slot is that + 0.1 %
+  (50.03/11.19/42.4 × 72.68; the MSE slot started 26 px left of the
+  prints'). The title bar, the type bar, the window and the rail's outline
+  register with DOM #21 / #42 / #90 / #122 / #173 and MH2 #259 within the
+  scans' own tolerance (1.5 px on most lines, 3.5 px on all): no re-cut.
+  The ribbon (x 66–166 px with its gold outlines, full width from the fold
+  at ≈ 610 px down to 1663 px, then tapering) is the pack's own drawing: on
+  the DOM prints its body lies where the pack's does (the face's edge at
+  153–158 px against 156; DOM prints a fatter outline, ending 164–169 px
+  against 164.5), and THB, 40K, WOE, LTR / LTC, WHO and MH3 print it 3–6 px
+  further right (their outline ends 169.4–171.1 px). Its TIP is not the
+  prints': the pack's ends at 1748 px, 12 px above the rail's foot, where
+  the five DOM references end at ≈ 1722–1730 px and the later sets higher
+  still (≈ 1710 px on WOE #23, WHO #35, LTC #58, 40K #126; read off the
+  scans, ± 4 px) — left as the pack draws it (skeptic pass 2026-10-06: a
+  re-cut of the taper is the owner's call).
+- **The bars.** The cost discs at the CC-framed M15 height
+  (`CC_M15_COST_DY`: the prints centre them on 151.5–153 px) in a title
+  band that ends at 92.2 %W (the last disc ends at 1383–1386 px on the
+  prints; ours ended at 1365 and sat 12 px lower). The type line on the
+  prints' baseline, 1855.3 px (1854–1857 on the five DOM references; ours
+  was 1846 — `TextSlot.dy` +9.3 px), from 8.5 %W. The set symbol in the
+  pack's box: its right edge at 92.27 %W and its centre on 87.39 %H (the
+  prints' 1380–1384 and 1835–1836.5 px; ours ended at 1360, centred 1827).
+- **The rail** is ONE layout, `lib/cards/saga-rail.ts` (`sagaRail` →
+  `sagaRailDrawing(rail, target)`), in whole px per bake target, and both
+  renderers only draw it (`ChapterBake` / `ChapterRail`, `RulesBoxBake` /
+  `RulesBox` for every text block). The frame's numbers are on the profile
+  (`FrameProfile.chapters`):
+  - *The reminder block* (`chapters.intro`): its own fixed box above the
+    first divider, 132–736 × 237–597 px, 62 px on a 62 px pitch — the
+    standard four-line reminder then sits on the prints' baselines (341 /
+    403 / 465 / 527 px). The prints set it at the chapters' 64 px in an
+    italic narrower than our MPlantin italic; at 62 px ours breaks into
+    their four lines. A longer reminder steps down the rules ladder INSIDE
+    the box and never pushes the rows, and its lines keep out of the FOLD'S
+    CORNER (`intro.keepOuts`: the ribbon folds out of the frame's left edge
+    under the reminder, and on every master the fold's edge crosses the
+    box's bottom-left — x 133 at y 572, 138 at 580, 144 at 588, 151 at
+    596 px; a keep-out judged glyph by glyph, as for a stat badge, so a
+    reminder whose last line would start on the fold is a step smaller).
+    Only a reminder the box cannot hold at the 42 px floor (about 240
+    characters; the editor takes 400, and layout v41 drew every one in
+    full) OUTGROWS it (`SagaRail.introGrown`): it is set at the floor in
+    the chapters' column (203–728 px — clear of the fold and of the ribbon,
+    which the box's own width is not below the fold) from the rail's top,
+    with the rows' 14 px above and below, in a box as tall as its text
+    needs at both bake targets, and the rows start 24 px under it (the
+    fixed box's foot to the first divider) with the divider on their top
+    edge. It may take the rail down to one badge a row; only past that does
+    it clip, from its tail: a reminder past ≈ 900 characters over one
+    chapter, ≈ 810 over two, ≈ 730 over three, ≈ 450 over six (fifteen
+    lines). Inside the editor's 400 characters a reminder reaches that only
+    over SIX chapters, when its words are wide enough for sixteen lines:
+    none of 20,000 random texts over one to five chapters; over six, none
+    of 3,000 texts of reminder prose, and of 3,000 of card words with pips
+    and numbers about one in five (25 ran to seventeen lines and lost ink;
+    a sixteenth line stands in the box's own padding). (Skeptic pass
+    2026-10-06 — as built it clipped past ≈ 270 characters, mid-line, with
+    the rows half empty.) Its emphasis is the text's own — a parenthesised
+    reminder italic, a keyword before it roman (DMU #85's "Read ahead (…)")
+    — where v33 set the whole block italic. It is ONE paragraph: a line
+    break typed in it is a space, as every print sets it, as v41 drew it
+    and as legacy rules text reads (`parseSagaIntro`); only a chapter's
+    line breaks are paragraphs.
+  - *Where the rows start*: the first divider, 621 px (`rowsTopPct`; 619–621
+    on 50 of the 54 prints, mean 620.1 — the pack draws 608) — lower only
+    under a reminder that outgrew its box —, or the rail's
+    own top at 237 px when the saga has NO reminder (owner 2026-09-29: no
+    empty reminder band, no generated reminder — every stored production
+    saga). Chapter I's badge then sits beside the frame's fold, above where
+    the ribbon starts.
+  - *The text*: the column 203–728 px (`chapters.rect`; the prints' ink
+    starts at 204–206), 64 px at the top of the rules ladder on a 62 px
+    pitch (v33 drew 43.5 px); a line break typed inside a chapter is a
+    paragraph, as in every other rules box (v33 joined a chapter into one).
+  - *The rows* are sized by their content with the walker rows' arithmetic
+    (`contentRowsAt` in `lib/cards/loyalty-rows.ts`, fed a `RowAnatomy`: the
+    walker's badge rail and one-badge minimum, or the saga's column and
+    stack minimum): a row's natural height is its text block + 14 px above
+    and below, or its stack of chapter badges, whichever is taller; the
+    text is ONE size for the whole rail, the largest ladder step at which
+    every row fits at both bake targets; what the rail has left is shared
+    equally. (The prints set their rows by hand — DOM #21 gives chapter III
+    more room than the I / II row above it — so a row's edges are ours, not
+    a print's; of the simple rules, the equal share was the closest over 37
+    prints.) Past the floor — by then with one badge a row, the combined
+    marker below — the rows are scaled alike into the rail and a row that
+    cannot hold its text sets it from its top; but no row gives up its
+    badge (`rowFractionsPastFloor`: a row that scaling would squeeze under
+    it is held at it, the others share the rest), so the hexagons never
+    meet and never leave the rail. Six chapters of about 115 characters
+    under a reminder are already past the floor; as first built a one-line
+    chapter beside long ones was squeezed to half its badge (skeptic pass
+    2026-10-06).
+  - *The badges*: the pack's gold hexagon (`saga/chapter/badge.png`,
+    118 × 132 px from x 58; the prints' reads 119–120 × 130–132, centred on
+    x 117), one per chapter numeral, stacked down the ribbon. A stack's
+    pitch is 160 px on DOM, THB, KHM, 40K, WOE and PIP (DOM #21 159.8) and
+    134–142 px on LTR, LTC, WHO and MH3 (LTC #58 138.3 / 138.6) — by set,
+    whatever room the row has: ours is the roomiest even step from 160 down
+    to 138 at which the rows fit at the text's size
+    (`SAGA_BADGE_PITCH_PX`), and the text steps down only once the stacks
+    are at 138. A stack is centred in its row and lifted 0.17 em onto the
+    text's leading, never out of the row. Up to six badges stack in ONE row
+    (`SAGA_RAIL.maxStack`), as the prints do (LTR #174 six, WHO #99 five,
+    WHO #86 four — the design's "four or more → the combined marker" took
+    those for unprinted).
+  - *The combined marker*: stacks that CANNOT FIT turn every multi-badge
+    row into ONE badge with a combined label ("I–III", or "I,III,V" when
+    the numerals are not a run), its size fitted to the badge; a legacy
+    marker past VI is fitted the same way. "Cannot fit" is: alone (repeated
+    numerals — validation lets several rows name the same chapter, so the
+    stacks' own heights can pass the rail), or beside the text — the rows
+    not fitting even at the ladder's floor with the stacks tight (skeptic
+    pass 2026-10-06, after the owner's decision 5 and for the owner to
+    confirm: v41 drew ONE marker a row, so a saga it baked whole —
+    chapter I of 300 characters beside II–VI under a reminder — baked as
+    first built with five hexagons and chapter I's last line cut; the
+    hexagons give way before a chapter loses a line, and the text then
+    takes the largest size that fits, 60 px there). Wherever the rows fit
+    with their stacks — down to the 42 px floor — they are stacked.
+  - *Numerals and dividers*: the numerals are MPlantin at 72 px, their
+    capitals centred on the badge (the prints set a bolder Plantin semibold
+    — TODO 4.8). The pack's divider (`saga/chapter/divider.png`, 592 × 9,
+    drawn 6 px tall from x 150) lies on every row's top edge but the first
+    row of a saga with no reminder.
+- **Pieces, not ink.** The badges and dividers are frame pieces: both
+  renderers draw them right after the frame, under both finish sheens and
+  in their masks (`sagaRailPieces`, with the profile's overlays), and
+  `frameAssetPathsFor` preloads them (`sagaRailAssetPaths`). The numerals
+  and the text stay above the sheens.
+- **Masks.** The pack's nine masks (Pinline, Title, Type, Frame, Banner,
+  Banner (Right), Text, Text (Right), Border) are recorded on the recipe as
+  `maskInputs` for the two-colour saga's pair masters (4.6f) and are never
+  published.
+- **Owner decisions** (owner round 34, 2026-10-06 — the before/after
+  sheets' five sections signed off, every question answered AS BUILT):
+  1. a saga with no reminder starts its chapters at the rail's top;
+  2. a line break typed inside a chapter is a paragraph;
+  3. the chapter text takes the largest size that fits, even when that fills the rail;
+  4. the swap of the three DMU alternates stays (WOE #23, DOM #102, THB #160);
+  5. hexagons stack up to six — the combined marker only for repeats that cannot fit, or more than six;
+  6. the stack pitch runs from 160 px down to 138 px by room;
+  7. the reminder keeps the text's own emphasis.
+- **No saga v41 baked whole bakes clipped** (skeptic pass 2026-10-06): of
+  60,000 random sagas inside the editor's limits — one to six chapters,
+  stacks to six, reminders to 396 characters with and without line breaks,
+  legacy numerals to VIII — layout v41 baked 29,180 with every line of
+  their text, and this layout bakes every one of those whole too (as first
+  built it clipped 1,098 to 1,866 of the ≈ 10,000 in each set of 20,000:
+  the reminder past ≈ 270 characters); and it bakes whole another 7,786
+  to 7,850 of each 20,000 that v41 clipped. Four rules hold that together:
+  the reminder outgrows its box, it is one paragraph, the stacks give way
+  to the combined marker before a chapter's text clips, and past the floor
+  a row keeps its badge.
+- **What it does not do**: flavour text (no printed saga has any — a typed
+  one is not drawn, as on main); a saga creature's P/T (4.5d); the crown and
+  the pairs (4.6f); the holofoil stamp (4.9d); DMU's read-ahead frame, whose
+  reminder box is 97 px taller (chapters from 717 px) — a read-ahead
+  reminder steps down inside the regular box instead; NEO's transforming
+  sagas (5.5).
+
+The saga left Phase B's allow-list, `ART_WINDOW_KNOWN_FAILURES` and
+`import-mse-profiles.mjs` (its masters pass the edge contract, the corner
+check and the art-window check in the importer and in CI). **Rollout:** a
+template-scoped sweep (`TEMPLATE_SCOPED_VERSIONS[SAGA_RAIL_LAYOUT_VERSION]`
+= `saga`: every card on it, art or none), never a badge. Production,
+anonymous read 2026-10-06: 4 public sagas, one owner, none with a reminder
+(3 gold, 1 blue; unlisted and private ones: owner SQL) — the automatic
+sweep re-bakes the public and unlisted ones after the deploy, on the
+owner's before/after sheet (round 34); a private saga and a preview
+re-bake on their next save. NOT verification-neutral — the masters, the art
+slot, the type line and the whole rail move: production's seven saga ticks
+are judged by the bump's scope, so each stays offered in the creator
+(`getVerifiedFrameKeys` reads `verified` alone) and is flagged "needs
+re-verification" on the checklist until the owner ticks it again against
+its reference. **References** (`lib/cards/frame-references.json`): w u b r
+g keep their DOM defaults; gold is 40K #126 The Horus Heresy with LTC #58
+In the Darkness Bind Them (three-colour prints on the plain gold frame; NEO
+The Kami War is a transforming saga with an enchantment frame effect, and
+KHM's two-colour sagas wait for 4.6f's pair masters); colourless is MH2
+#259 alone; no FIN Summon and no DMU read-ahead saga is listed. The walker
+rows moved onto the shared arithmetic unchanged:
+`tests/unit/cards/loyalty-rows-pinned.test.ts` holds every size, row, line
+and foil stripe of 24 layouts on the three walker bodies to what layout
+v41 computed, and `tests/unit/render/pw-rows-pinned-bake.test.tsx` 28
+m15pw bakes (750 and HD, regular and foil) to the pixels main baked.
+Sheets: scratchpad `c421c/sheets/`.
+
+### The 2003 footer ink (4.23a, layout v44)
+
+Era step E1 (design 2026-10-06), a correction. Eighth Edition → Journey into
+Nyx print the artist line black on white, blue, red, green, gold and the
+artifact frame and **white on the black frame and on lands** (M12 #81 Blood
+Seeker `#fcfdf8`, M12 #224 Buried Ruin `#f9fcf9`; Card Conjurer's 8th
+Edition pack script encodes the same rule). `MODERN.footer` printed `INK_DARK` on
+every master: 1.1 : 1 on `modern`/b and 2.2–2.3 : 1 on the one brown band all
+seven `modernland` keys share, so only the brush painted into the MSE master
+showed. Now `MODERN.footer.inkByColorKey = { b: white }` and `MODERNLAND`'s is
+white on all seven keys (`footerInk()`, both renderers; 16.2 : 1 and
+8.1–8.5 : 1, no shadow — the prints have none). `c` stays dark on `modern`:
+it is the artifact frame, whose print is black. Nothing else moves: sizes,
+masters, the P/T plate, symbols and the footer's layout are 4.10b; a hybrid
+card following its left half and the Eldrazi frame have no master here.
+
+Rollout: `"sweep"`, template-scoped to the pair
+(`TEMPLATE_SCOPED_VERSIONS[44]`) and card-scoped (`VERSION_SCOPES[44]`,
+`v44Changed`: every `modernland` card, a `modern` card on the black master).
+Production, anonymous read 2026-10-07: 7 `modern` cards (gold ×4, the
+artifact `c` ×2, green ×1), none on b, none on `modernland` — all seven are
+stamped without a re-bake, and a replay of their rows (their own art, HD and
+750, before and after) is byte-identical. The visual matrix against v43: 20
+cases change (`modern`/b ×3, `modernland` ×17) and no other. Verification-
+neutral (`VERIFICATION_NEUTRAL_VERSIONS`): no slot moves, so the fourteen 2003
+ticks stay fresh on the owner's round-37 sheet; 4.10b re-opens them once.
+Tests: `tests/unit/render/modern-footer-ink.test.tsx` (contrast on the
+masters, real bakes at 750 and HD) and its preview twin under `components/`.
+
+### The 1997 frame (4.10a, layout v46)
+
+Era step E4 (design 2026-10-06; owner round 38, 2026-10-07): `retro` and
+`retroland` as the ORIGINAL cards printed them, Mirage 1996 → Scourge 2003 —
+not the 2021+ reprints. A correction, made before anything is stored or
+ticked on the pair. HD px throughout; ΔE is CIE76 against the per-pixel
+median of a key's prints.
+
+**Masters** (the frames bucket; `scripts/lib/print-cut.mjs`,
+`scripts/lib/seventh-1997.mjs`, built by `scripts/import-cc-frames.mjs`).
+Neither source was right as it stood: Card Conjurer's 'Seventh Edition'
+drawing is sharp (its outer edge 1 px wide, a scan's 2.4, the MSE
+conversion's 5.8) but carries the reprints' colours (white frame 215 luma,
+the originals 157) on a frame 5 px off centre with a text box 8–9 px short;
+MSE has the colours on a blur. So:
+
+- **Re-cut, per key.** The prints' outer frame and art window are the same on
+  every colour; their text boxes are not (against white's: blue's top 6.6 px
+  lower, red's bottom 6.5 px higher, green's plank 24 px narrower, the
+  land's 10 px shorter). One scale per axis cannot place six edges that are
+  each off by their own amount, so the importer has a new step,
+  `recutPiecewise`: one piecewise-linear map per axis through `[source px,
+  print px]` anchors (outer frame, art window, text box), the art rows' and
+  the text-box rows' column maps lerped across the type band; Catmull-Rom,
+  premultiplied, one resample; local stretch 0.89–1.15. The anchors:
+  `SEVENTH_EDGES` → `PRINT_EDGES_1997` (21 white prints) + the key's
+  `SEVENTH_TEXT_BOX`.
+- **Regions from the drawing's own lines, not the pack's masks.** Its Pinline
+  mask is the land's coloured rings (not the bevels); its Trim mask starts
+  2 px outside the text box's line, and toned through it that sliver reads as
+  a pale halo. `seventhRegions`: frame body, text box and the four sides
+  each of the outer bevel, the art bevel and the box's trim, cut as
+  rectangles in the drawing's px and moved with the same map. Green's plank
+  and black's parchment have no drawn outline: their box is cut by colour.
+  A land's rings are their own region.
+- **Toned with an offset.** `toneMasked` / `toneRegion` multiply; the black
+  frame would need × 1.23 / 1.77 / 1.43, which doubles its grain and turns
+  the highlights mint. `toneRegions`: in the body and the text box
+  `(in − from) × k + to` per channel (`from` the region's mean in the
+  drawing, `to` the prints', `k` the prints' texture contrast over the
+  drawing's, 0.56–1.08); a per-channel gain `to ÷ from` per bevel side. The
+  constants are DATA (`SEVENTH_TONES`, about 50 per key, read off the prints
+  once and recorded in `lib/cards/frame-sources.json`); no scan is read by
+  the build.
+- **Gold is the MSE artwork.** Card Conjurer's gold failed the eye (less
+  fine detail than MSE's, twice the prints' contrast, violet bevels). The
+  MSE conversion — `scripts/frame-inputs/retro-m-mse.png`, the one
+  MSE-derived importer input, in git — is cut with the same edge map
+  (`retroGoldCut`), so its window and frame box are the other seven's, and
+  not toned. Its window was cut out of a white rectangle on a 375 px JPEG,
+  which left the last five px of the art ring fading grey → white — a ragged
+  white hairline between the art and the ring on every bake, on `main` too;
+  `clearWindowHalo` gives those px the ring's own colour (alpha untouched,
+  so the window is the same window). One home per template: gold is
+  published to the bucket like the rest.
+- **`retroland`.** `c` = the plain land (`l.png`, the orange box of Fifth
+  Edition 1997 on); `w`–`g` = the pack's coloured land boxes, toned onto the
+  seven black-bordered basics of each colour (MIR, TMP, USG, MMQ, INV, ODY,
+  ONS), their rings and trim by an offset (a gain on a channel near 0
+  multiplies its noise); `m` = a render STAND-IN, the plain land with the
+  pack's gold box laid in through its Rules mask — no three-colour 1997 land
+  was measured, two-colour ones print a blend (4.6h) — which is never ticked.
+
+Measured on the published masters (print minus master; edge = the RMS of
+twelve structural edges by correlation over the key's prints):
+
+| master | edge RMS | colour, six bands: mean / worst ΔE | before (MSE) |
+|---|---|---|---|
+| `retro`/w | 0.9 px (21 prints) | 1.5 / 5.2 | 2.6 / 3.3 |
+| `retro`/u | 0.7 px (9) | 2.1 / 5.2 | 4.4 / 6.9 |
+| `retro`/b | 3.4 px (9; the parchment's bottom reads − 9 px by correlation and 2 px by its extent) | 1.2 / 2.6 | 6.9 / 9.0 |
+| `retro`/r | 1.1 px (9) | 1.1 / 2.5 | 8.1 / 9.4 |
+| `retro`/g | 1.0 px on its drawn lines (the plank's ragged edge defeats the correlation) | 1.4 / 2.1 | 5.8 / 7.3 |
+| `retro`/c (artifact) | 0.9 px (9) | 1.7 / 3.2 | 8.3 / 11.0 |
+| `retro`/m (MSE) | 2.1 px (8); its art ring stays the MSE drawing's, up to 4.8 px off the gold prints' | 3.1 / 5.2 | 3.1 / 5.2 |
+| `retroland`/c | 0.6 px (9) | 1.0 / 1.3 | 5.0 / 11.3 |
+| `retroland`/w u b r g | 1.0 / 0.7 / 0.8 / 1.3 / 0.6 px (7 basics each) | 0.6–0.8 / ≤ 1.4 | 4.4–4.8 / ≤ 6.0 |
+
+The owner accepted three drawing caveats on the prototype sheet: Card
+Conjurer's blue is a flat-shaded redraw (hard shapes where the print has
+brushwork), green's plank has no grain, black's parchment keeps a burnt rim.
+
+**Profile** (`RETRO`, `RETROLAND`; sizes are `RETRO_*` in
+`lib/cards/typography.ts`; no font file was added — owner 2026-10-07):
+
+| slot | face, HD px | ink | on the prints |
+|---|---|---|---|
+| name | Beleren 71, measured | white `#f0f3ef` + shadow + 5 / + 3 | baseline 163, starts at 166 |
+| cost | flat discs 73 (`symbolStyle: "1997"`) | — | row 137, ends at 1383, 80.5 apart |
+| type line | MPlantin 67, measured | white + shadow + 4.5 / + 3.3 | baseline 1229, starts at 162 |
+| rules | MPlantin 76 (the shared ladder) | dark | one box for all keys: 192–1308 × 1288–1828 |
+| P/T | Beleren 86, set against its right edge (`align: "end"`, `endKerned`) | white + shadow + 6.7 / + 5.7 | baseline 1963, the ink ending at 1364–1370 on every value: one digit a side covers 1253–1367, two digits grow to the LEFT at the same size (NEM #116 10/10 1160–1370, MIR #315 12/12 1164–1364, LGN #130 13/13 1170–1368) |
+| footer line 1 | `Illus. <artist>`, MPlantin 58, centred, mixed case | white + shadow + 3.5 / + 3.5 | baseline 1933, centred on 748 |
+| footer line 2, the © slot | the mark at a 33 px em · a clean download's footer text, MPlantin 33 | black on the white frame, white elsewhere; no shadow | baseline 1976, centred on 748 |
+
+The shadows are per-key ink entries (`inkByColorKey`), never a band's own
+`shadowCss`: that would emboss the pips. The type line and the artist line
+are MPlantin because it is their printed face; names and the P/T stay
+Beleren (the prints' Magic Medieval and heavier Plantin are not in the repo
+and are not being added). The footer is the centred layout of Exodus 1998 on
+(D1); the mark sits in the © slot in the line's printed ink — flat dark on
+the white frame, its standard white elsewhere (D2) — and no Wizards line is
+printed. `{T}` is the 1997 symbol (mana-font `tap-4ed`); the five colour
+symbols are the font's, as printed.
+
+**Rollout.** `"sweep"`, template-scoped to the pair
+(`RETRO_1997_LAYOUT_VERSION`, the ONE constant `CARD_LAYOUT_VERSION` reads).
+Production, anonymous read 2026-10-07: no public or unlisted card on either
+template, and no tick — nothing is re-baked or re-ticked. Not
+verification-neutral. First ticks follow the merge: `retro` w u b r g c m
+(`c` against an artifact) and `retroland` w u b r g c — thirteen;
+`retroland`/m is not ticked. Imports: an original is `exact`; a Time Spiral
+timeshifted printing (2006) is `nearest` — the `timeshifted-frame` gap,
+`RETRO_TIMESHIFTED_FROM`: a redrawn old frame (21 prints, three per key,
+against these masters: the art window's top 9–11 px lower and the text box's
+bottom 5–14 px higher on every key, blue ΔE 13, red and gold 7; white, black
+and green keep the old colours) — and a printing on the frame released from
+2021 is `nearest` too (the `reprint-colours` gap,
+`RETRO_REPRINT_COLOURS_FROM`; TODO 4.10e is those looks as their own skins).
+
+Tests: `tests/unit/frames/print-cut.test.ts` (the two steps),
+`retro-1997-importer.test.ts` (recipes, provenance, the published masters),
+`tests/unit/cards/retro-1997-profile.test.ts` (sizes, ink, the © slot, the
+bump, imports), `tests/unit/render/retro-1997-bake.test.tsx` (baselines,
+shadows, discs, the slot and the print path on real bakes) and its preview
+twin under `components/`.
+
 ### Printed pieces a card switches on
 
 TODO 4.6.0. The legendary crown (4.6a) and the two-colour frames (4.6b) are
@@ -1262,7 +2300,8 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
   on a pair, or a plain `["multicolor"]` card whose cost spans two colours
   or has no coloured pip (`offersTwoColor` — never three colour words, never
   a Multicolor card whose cost spans one or three-plus), and for a LAND only
-  on a land frame (`twoColorFits`: m15land, `twoColorForLands`). A two-colour
+  on a land frame (`twoColorFits`: m15land, m15snowland and the borderless
+  land, `twoColorForLands`). A two-colour
   land stored with no template draws on m15, whose gold-split isn't a
   land's (Shadowwood Hollow, Sunfade Citadel): the switch is hidden there,
   the save drops it and the renderers don't draw it (owner round 17).
@@ -1307,7 +2346,8 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
   The split itself lives in ONE module, `scripts/lib/pair-ramp.mjs`, which
   both the pair masters and the pair crown bands read: the untilted
   `rampMask` (`PAIR_RAMPS`: pinline 40→60, a hybrid's outer frame 44→57,
-  text box 45→57, crown 45→55 %W)
+  text box 45→57, crown 45→55 %W, the floating crown 40→60, the borderless
+  land's pinline and box 39→61)
   and the premultiplied `lerpLayers` (`blendPair` = the two together).
 
 Turning a piece on for a template (4.6a / 4.6b / 4.6f): build its assets
@@ -1401,12 +2441,12 @@ m15land (the land frame and bars, the split in the two land tints; MKM
   no hybrid plate yet, so an all-hybrid artifact draws the gold-split pair
   (the creator says so under the switch) and its import stays `nearest`
   (`two-colour-hybrid`). What no frame draws yet — sagas, adventures,
-  extended art (its crown band draws no pairs: wave 2b), the borderless
-  land — keeps the `two-colour` gaps, now pointing at 4.6f (the borderless
-  frames draw theirs since wave 2a, the snow frames since wave 2c, below;
-  devoid's two-colour printings ARE its gold frame, so the gap is no gap
-  there); an M20 token's gaps point at 4.48 (its own central rim split and
-  pill crown).
+  extended art (its crown band draws no pairs: wave 2b) — keeps the
+  `two-colour` gaps, now pointing at 4.6f (the borderless frames draw theirs
+  since wave 2a, the snow frames since wave 2c, the borderless land since
+  4.56, below; devoid's two-colour printings ARE its gold frame, so the gap
+  is no gap there); an M20 token's gaps point at 4.48 (its own central rim
+  split and pill crown).
 - **With the crown:** a two-colour legend drawn as its pair master wears the
   split crown band `m15crown/<pair>` (the first colour's crown lerped into
   the second's across 45→55 %W, the same `pair-ramp.mjs`), on every dress and
@@ -1524,6 +2564,171 @@ card on the two frames bakes byte-identical with the switches absent).
   `tests/unit/render/borderless-crown-bake.test.tsx` (real bakes: the twin
   and the pair in the bake, the switches off byte-identical), the matrix's
   `m15borderless*` `@crown` / `@pair` cases.
+
+#### The borderless land's pairs (4.56)
+
+m15borderlessland draws a two-colour land the way the prints do — the
+colourless land's grey bars over a pinline AND a text box split between the
+two colours (Deserted Beach MID #281, Spirebluff Canal OTJ #304, the RVR
+shock lands, the MKM surveil lands) — from ten pair masters `<pair>.png`
+(`twoColorMasters: ["split"]`, `twoColorForLands`), through the same
+switch, hints, import rule and registry gap as m15land. Opt-in per card: a
+stored card on the frame's gold `m` master keeps it until its owner
+switches the two-colour frame on (the 21 production cards on the frame on
+2026-10-06 — six with a colour pair, none with the switch — bake
+byte-identical at 750 and HD before and after); a NEW two-colour borderless
+land starts on its pair, with the off switch. No bump, no sweep, no badge.
+
+- **The recipe** is the mono masters' function with a letter pair
+  (`borderlessLandLayers({ frame: "l", box: [x, y], pinline: [x, y] })`,
+  `scripts/lib/cc-frames.mjs`): the grey 'Land Frame', its title bar pasted
+  on the type row, the box structure re-tinted to each colour's own box tint
+  (the mono masters' tints, sampled at the same point) and the two lerped
+  across the ramp, then the two colours' frames lerped across the same ramp
+  through the pack's Pinline mask. Nothing is a new source: eleven files of
+  the pinned commit; the seven mono masters rebuild byte-identical and a
+  fresh cache reproduces the ten pairs byte for byte.
+- **One ramp, 39→61 %W** (`PAIR_RAMPS.borderlessLand`), for the pinline and
+  the box. Measured on the 110 prints of the tinted look that register
+  within 12 px (of 119), each ring's own left-end and right-end colours
+  taken as 0 and 1: the four rings cross 10 / 50 / 90 % at 41.3 / 50.2 /
+  58.9 %W (the median of 420 rings; their mean 41.2 / 50.0 / 58.8; the
+  2023+ digital renders alone 41.3 / 50.2 / 58.9) and the box's text-free
+  top band at 40.9 / 49.8 / 59.0 (the median profile of 102 boxes). The same reading of a 40→60 master gives 42.0 /
+  50.0 / 58.0 exactly, and of the borderless spells FDN #344 / #345 42.5 /
+  51.5 / 59.0 and 41.8 / 50.5 / 58.4 — so the land's split is a little
+  wider than the spells' pinline, and its box splits where its pinline
+  does, not on the bordered frames' narrower 45→57. The built masters read
+  41.2 / 50.0 / 58.8 on every ring and on the box. Per pair the prints'
+  middle crossing is 48.2–48.7 on W|B, U|B and U|R and 50.0–51.1 on the
+  other seven: a blend that is not straight in sRGB, not a moved ramp — one
+  symmetric ramp serves all ten, as on every other pair master (the
+  owner's decision too, 2026-10-07: one centred split).
+  **Re-measured by the skeptic (2026-10-07)** on its own regions, a
+  least-squares ramp fitted to every ring (Scryfall's digital renders from
+  LCI on are 256-colour images: a threshold reads the palette's steps, a
+  fit does not): 71 digital renders, 284 rings, 39.05 → 61.05 %W — width
+  22.0, interquartile 21.7–22.2, every set from CMM to DFT within
+  21.8–22.3; 252 of the 284 fit 39→61 better than 40→60; the same fit
+  returns 39.0 → 61.0 on the built masters, 40.0 → 60.0 on a 40→60 control
+  and a width of 19.0 %W (17.4–20.9) on the type rings of FDN's nine
+  borderless SPELLS (#343–351; the two uncrowned ones, #344 / #345, read
+  19.9–21.1 on all four rings), so the land's wider split is no noise. The
+  70 boxes' median profile fits 38.5 → 61.05 (rms 0.011 against 39→61,
+  0.023 against 40→60, 0.095 against the bordered box's 45→57). The three
+  pairs that cross left of centre are no moved ramp: on all ten the
+  gradient STARTS and ENDS in the same place (its 3 % point at 38.7–39.8
+  %W, its 97 % point at 60.0–61.2), the three
+  channels of ONE ring cross up to 3 %W apart (U|R: red at 47.3, blue at
+  50.2 — no shifted mask does that), and read in linear light the centres
+  scatter over 8 %W with which side is the darker colour (45.9–54.0) where
+  sRGB keeps all ten within 2.8: the prints blend close to an sRGB lerp,
+  bent a little by their colour pipeline. (Scans of physical cards — MID,
+  VOW, 2X2, DMU — read the same start and end, 39.2 / 61.0, with a steeper
+  middle: width 19.7–20.7 fitted.)
+- **The bars are the colourless land's grey**, never gold and never a
+  blend: on the prints the title bar reads α 0.71 (Card Conjurer's 0.70)
+  and, at CC's α, a tint of 148 / 142 / 136 (141 / 135 / 130 on the digital
+  renders) — the mono colourless borderless lands' 145 / 137 / 137, about
+  ten levels under Card Conjurer's 'Land Frame' 156 / 151 / 144 as the mono
+  `c` master is against its own prints, and nowhere near the gold land's
+  114 / 91 / 29.
+- **The box halves are the mono boxes'.** Where one set prints both, a
+  half reads what that colour's own borderless land does: over the same
+  art, the two-colour prints' white half predicts Monumental Henge MH3
+  #354's box within 3 levels (121 / 117 / 93 read, 121 / 117 / 95
+  predicted) and their red half Arena of Glory MH3 #351's within 10 (159 /
+  63 / 49 read, 151 / 64 / 59) — so the pairs take the mono masters' tints
+  through the same function. Those are Card Conjurer's, a little brighter
+  and more see-through than the prints: white reads α 0.84 at 124 / 120 /
+  108 on the prints (the master 0.75 at 166 / 155 / 133), blue 0.83 at 15 /
+  103 / 168 (0 / 117 / 190), black 0.73 at 50 / 49 / 48 (39 / 38 / 36), red
+  0.83 at 149 / 40 / 34 (130 / 22 / 14), green 0.79 at 40 / 84 / 66 (0 /
+  81 / 65). The owner chose NOT to re-tone them (2026-10-07: the
+  boxes stay as built, now and later — not a planned item). (The skeptic's read, on other
+  regions with its own calibration, 95 digital renders: white 0.83 at 119 /
+  116 / 102, blue 0.85 at 5 / 101 / 160, black 0.73 at 41 / 40 / 38, red
+  0.82 at 147 / 38 / 28, green 0.83 at 34 / 79 / 59; colourless 0.76 at
+  140 / 137 / 129 and gold 0.79 at 136 / 121 / 81 against the masters' 156 /
+  151 / 144 and 173 / 136 / 52. Over the prints' own art that is a built
+  white half 20–32 levels brighter than the printed one, a gold box 27
+  brighter in red and 22 lower in blue, a red half 18 darker in red, a
+  green one 24 lower in red, a colourless one 11 brighter; blue within 13,
+  black within 2. Where the ramp is 0 or 1 a pair's box IS its mono
+  master's, pixel for pixel — 0 of 296,201 differ on either half of all
+  ten.)
+- **No gold or mismatched hairline.** Every pair's rings (≈ 91,000 px) are
+  the lerp of its two mono masters within 4 levels where neither colour is
+  black; with black, within 17 levels on at most 75 px at the bar caps (the
+  black frame's outline is dark grey where the others are black), no row or
+  column holding more than 16 of them; the box is the lerp of the two mono
+  boxes within 1 level (0.1 on average); at most 77 px of a master are
+  explained by neither (recomputed by the skeptic: the same numbers on
+  that ring; counting every opaque pixel that differs between the masters,
+  the outline's anti-aliased edge included, 106 px at most over 8 levels,
+  26 in one column at a bar cap, never two in a row, 17 the worst — and
+  each is a mix of the grey master and the lerp, none a third colour). The
+  grey frame is used whole, so Card Conjurer's
+  gold frame — whose type-bar and box rings sit one row higher than the
+  colour frames' (wave 2a's 1 px gold line) — is never in the stack.
+- **No crown, no stamp notch, no collector line**: the frame declares none
+  (and the creator offers none there: the two-colour switch alone).
+  A crowned or nicknamed two-colour print stays `nearest` on those gaps.
+  No printed land carries P/T; a custom land with a Vehicle or Spacecraft
+  subtype prints its P/T on m15borderless's plate in its colour key — the
+  gold `m` for a pair, over the grey bars (`plateKeyFor`, as m15land's
+  pairs do; the grey plate the hybrid dress takes would match them — an
+  open detail, no print to follow).
+- **Which prints.** Of the 192 two-colour borderless nonbasic lands
+  (Scryfall 2026-10-06; 702 borderless nonbasic lands in all), 119 print
+  this look and resolve `exact` — MID, VOW, 2X2, DMU, BRO, ONE, CMM, LCI,
+  RVR, MKM, CLU, OTJ, DSK, DFT, MH3's five fetch lands (a fetch land prints
+  the two colours it searches for, m15land's rule) and 14 SLD:
+  `gapDrawnBy` drops the `two-colour` gap where the landing frame draws the
+  pair, no new gate. The other 73 stay `nearest`: 25 on the short box (UNF
+  #277–286 / #528–537, SLD #456–460), 10 on the dark type bar and box (ACR,
+  WOE), 31 on the see-through shadow box (SPG #109–118, ECL #347–351, SOS
+  #301–305, MSH #380–384, SLD #2440, FRA #397–401 — the 2025 look: the
+  land's own bars and split pinline over a box that only shades the art
+  behind the text; gap `shadow-box`, 4.37) and 7 on a crown or a nickname
+  bar (LTR #343 / #754, HOC #50 / #90; LTC #366 / #396 / #396z). The art
+  still lands an import on m15land (1.18), which draws its own pair;
+  choosing Borderless Land in the import's frame chooser keeps the pair and
+  the switch, and draws the pair master — and the chooser's tiles show it:
+  a tile paints what the import stores on that frame (`ImportFrameChooser`
+  `printing`, `importedAnatomy`), where a two-colour printing's tiles were
+  the gold master on every pair frame since 4.6b, whichever was picked
+  (skeptic pass). Nothing but the pin lists keeps the other 73 `nearest`
+  now that the gap is closed, so the census is a fixture:
+  `tests/unit/scryfall/fixtures/borderless-land-census.json` holds all 192
+  and the 46 other pinned printings as Scryfall listed them on 2026-10-07,
+  each with the look read on its scan, and
+  `borderless-land-census.test.ts` holds the registry and the four lists
+  to it both ways (ten of the 31 shadow-box pins — MSH's and SOS's — could
+  be deleted with every test green before it).
+- **References:** two prints per pair on the frame's entry
+  (`frame-references.json` `pairs`, `framePairReferenceOptions`) — the
+  pair's MKM surveil land, then Deserted Beach MID #281, an OTJ fast land
+  (Spirebluff Canal #304 among them) or a DSK verge; every one resolves
+  `exact`. The nineteen digital renders register to the frame within 2 px
+  (the DSK verges within 4); Deserted Beach MID #281, the item's own
+  headline print, is a scan of a physical card whose frame sits 6–20 px
+  left of the master's and whose split reads 39.6 / 47.0 / 56.0 — judge its
+  bars and box, not where its split falls. The pairs ride the `m`
+  tick (V-A), so they feed no checklist row; the compare page's pair strip
+  is 4.6g.
+- **Tests:** `tests/unit/frames/borderless-land-pair-masters.test.ts` (the
+  recipe, the manifest, each master's pixels against its two mono masters,
+  the ramp's crossings), `tests/unit/render/borderless-land-pair-bake.test.tsx`
+  (real bakes: the pair in the bake, the switch off or absent
+  byte-identical, mono and three-colour lands untouched, the ramp at HD),
+  `tests/unit/scryfall/frame-signatures.test.ts` (the pins and where each
+  class of printing lands), `tests/unit/scryfall/borderless-land-census.test.ts`
+  (every one of the 192 and every pin),
+  `tests/unit/components/creator-import-borderless-land-pair.test.tsx` (the
+  real chooser and creator form: the pick keeps the pair, the tiles show
+  it, no `m` tick → not offered), the matrix's five
+  `m15borderlessland/wu/…@pair*` cases.
 
 #### The extended-art crown (4.6f, wave 2b)
 
@@ -3248,7 +4453,7 @@ render time:
 |---|---|---|
 | creature | the P/T | `pt` (a plate or ink) |
 | planeswalker | the starting-loyalty shield and the ability rows | `loyalty` + `loyaltyRows` |
-| battle | the defense shield, on the landscape card | `defense` + `orientation: "landscape"` |
+| battle | the defense value, in the shield its landscape master paints | `defense` + `orientation: "landscape"` |
 | saga | the chapter rail | `chapters` |
 | adventure | the storybook page | `adventure` |
 | split, aftermath, flip | the second face | `secondFace` |
@@ -3448,7 +4653,8 @@ hand, never regenerated.
 
 The bake draws a stat plate only for a card that prints the stat: the P/T
 under `printsPowerToughness`, the loyalty shield on a planeswalker with a
-starting loyalty, the defense shield on a battle with one
+starting loyalty, the defense on a battle with one — the value alone since
+layout v43, in the shield the battle's master paints
 (`drawnStatSlots` in `lib/render/card-image.tsx`). It preloads exactly
 those plates (`frameAssetPathsFor` calls the same function): a bucket plate
 that can't load fails the whole bake, so before 4.5.0 one missing plate
@@ -3469,7 +4675,14 @@ kind)` (`lib/cards/profile-override.ts`) lists the loyalty shield, the
 defense and the chapter rail for their own kind only, and a score passes
 its reference printing's kind (`lib/frames/score-combo.ts`), so a creature
 printing is never scored against a walker's shield. The layout editor lists
-every slot.
+every slot, and offers each the fields the override schema reads at its
+PATH (`fieldsForSlot`, `isStatSlotPath`): a rect for an art window, a size
+and the value's offsets for a stat slot, a size alone for the saga's
+chapter rail, a size, line height and tracking for a text slot — never by
+the keys a profile's slot happens to carry (a P/T with no plate, the
+battle's defense in its painted shield and the chapter rail were offered a
+text slot's fields, and a draft that touched one could not be saved; a test
+writes every offered field on every template and parses it).
 
 ### Adding a body
 
@@ -3519,17 +4732,89 @@ A change that must not move a pixel (4.5.0's builders) proves it four ways:
 - A corpus replay: every visible production card baked at 750 px and HD
   on the base and on the branch, over sha-checked frames, byte-identical.
 
+### Faces, footer and symbol style are profile data
+
+TODO 4.8.0 (a refactor: no pixel moved, no layout bump). Three things a
+frame's era decides are DATA on its profile; no renderer names them.
+
+- **Which face a text is set in** — `lib/cards/type-faces.ts`, the one
+  resolver both renderers read at every text site outside the rules box:
+  `slotFace(slot)` for a slot that carries `font` (`TextSlot.font`, and now
+  `StatSlot.font`), `faceOf(profile, role)` for a role (name, type line,
+  stat, numeral, badge, second-face name / type / stat, footer, strip word,
+  mark). The faces are the two the repo has: `"display"` (CardDisplay =
+  Beleren Bold) and `"body"` (MPlantin). Walker badges and saga numerals
+  have no slot: `loyaltyRows.badgeFont`, `chapters.badge.numeralFont`. The
+  pipglyph.com mark is ALWAYS the brand face, whatever the profile says. A
+  rules box is always the body face: its lines are broken on MPlantin's
+  advances (one rules layout). The fits measure in the slot's face too —
+  `fitTitleBand`, `fitTypeLineBand`, `secondFaceLineSizes`,
+  `fitStatSizePct`, a shrunk line's baseline (`slotTextDy`), the bake's
+  centred-line margin (`displayRunPx`) and the creator's glyph warning.
+- **The fonts of a render** — `cardFonts(profile)` in
+  `lib/render/card-fonts.ts`: MPlantin, MPlantin italic, CardDisplay, [a
+  profile's own faces], Mana, CollectorLine, Keyrune. Today the same six
+  for every profile. A new face is registered only for the profiles that
+  name it, in the bracketed place — never last (Satori draws a character no
+  font has with the LAST registered font).
+- **The metric tables** — `lib/cards/font-metrics.ts` is GENERATED from the
+  committed TTFs: `node scripts/generate-font-metrics.mjs` (`--check` exits
+  1 when stale). `display-metrics.ts`, `stat-fit.ts` and `rules-metrics.ts`
+  read it; a test holds it byte-equal to the generator and equal to a
+  frozen copy of the hand-kept tables it replaced. Regenerate after a font
+  file changes; a new face is a line in `FONT_METRIC_FACES`
+  (`scripts/lib/font-metrics.mjs`).
+- **The footer line** — `TextSlot.prefix` on the footer (`"Art: "` when
+  unset, `footerArtistLine` in `lib/cards/card-display.ts`) and the
+  footer's own `align`: unset = the line at the rect's start and a clean
+  download's custom mark at its end; `"center"` = the line centred, no
+  custom mark on it.
+- **The © slot** — `FrameProfile.copyrightSlot`
+  (`lib/cards/copyright-slot.ts`, TODO 4.10a): a centred footer's second
+  line. On display it holds the pipglyph.com mark (which then leaves the
+  border: `brandMark` is not read), on a paid clean download the card's
+  footer text, or nothing. A profile with a centred footer and NO slot
+  drops a paid viewer's footer text: declare both together.
+- **The symbol style** — `FrameProfile.symbolStyle`
+  (`lib/cards/symbol-style.ts`): `"modern"` (M15's discs, their hard offset
+  shadow, the modern tap — every profile that names none) and `"1997"`
+  (flat discs, mana-font's `tap-4ed`: `retro`, `retroland`). Both renderers and both shadow
+  models (the rules layout's inline pip, the cost row) read the resolved
+  spec. A style is a CORRECTION of a frame, never a per-card switch.
+
+Adding a face, a prefix or a style is a profile change with its own layout
+bump; `tests/unit/render/profile-data-parity.test.tsx` gives a throwaway
+profile each of them and requires the same answer from the bake and the
+preview.
+
+**A pip's class is never written out as a literal.** mana-font's class for
+generic mana is `ms-` + the number, and Tailwind reads the same token as a
+`margin-inline-start` utility — which it emits for every candidate it finds
+in ANY file git does not ignore (tests, scripts and docs too). The app
+builds the class from the symbol, so the build has no such utility; one
+literal anywhere (the first draft of the parity test spelled the generic-3
+pip's class in an expectation) gives every such pip in the browser a 12 px
+left margin — preview only, so no bake-side check sees it. mana-font guards
+the 2 itself (`margin-left: inherit !important`); nothing guards the rest.
+`tests/unit/content/mana-class-collision.test.ts` fails on any such token
+in the tree: use `{X}` or a colour in a test's expectation.
+
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 44 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 45 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens, the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies and 5.1b's four modal
-bodies, new templates that joined without a bump; split and battle join
-with 4.21) prints its names, type
-lines, pips and set symbol at ONE set of sizes, Card Conjurer's, which match
-the prints. They live in `lib/cards/typography.ts`, as fractions of a
+bodies, new templates that joined without a bump, and the battle, which
+joined WITH one — layout v43, on its Card Conjurer master, the family's
+one landscape member: its sizes are the constants through
+`displayPct(…, "landscape")`, the same px on the card) prints its names,
+type lines, pips and set symbol at ONE set of sizes, Card Conjurer's, which
+match the prints. Split is M15-era too and stays OUT: a split half prints
+every line smaller than a regular card (the `SPLIT_*` constants, [The
+landscape layouts](#the-landscape-layouts-421b-layout-v43)) — its slots
+are `fit: "measured"` all the same. They live in `lib/cards/typography.ts`, as fractions of a
 portrait card's width: `TITLE_SIZE_PCT` 0.0533 (80 px at HD),
 `TYPE_SIZE_PCT` 0.0453 (68 px), `COST_DISC_PCT` 0.0485, the set-symbol box
 `SET_SYMBOL_BOX_PCT` 0.0574 (86 px; `SET_SYMBOL_BOX_PCT_THIN_BAR` 0.0533 on
@@ -3558,7 +4843,9 @@ A family profile:
   `template-layout.ts`): it moves the TEXT only — the rects, pips and set
   symbol stay where they were verified. A line the fit shrank keeps its
   band's baseline too (`slotTextDy`). Front faces only; second faces and the
-  adventure panel centre their text in the rect;
+  adventure panel centre their text in the rect (an UNTURNED second face
+  with `fit: "measured"` — the split's right half — is fitted and drawn as
+  a front band is, v43);
 - gives the set symbol a box in `symbolSizePct` and sets
   `setSymbolFit: "ink"` (code-owned, never in an override). `setSymbolSize`
   (`lib/cards/set-symbol-size.ts`) draws an uploaded icon or the default mark
@@ -3600,7 +4887,10 @@ A family profile:
   line less room — DSK's "Enchantment Creature — Avatar Horror" 62 → 59 px
   beside its 151.5 px symbol, where the print keeps 68 (our display face sets
   it wider than the print's, TODO 4.8). The full-art basics keep 4.39's print-checked
-  0.065 W glyph (`setSymbolFit: "ink-box"`), whatever the set. A NEW entry
+  0.065 W glyph (`setSymbolFit: "ink-box"`), whatever the set; the split's
+  thin bar fits a glyph's ink to its 48 px box by HEIGHT
+  (`setSymbolFit: "ink-height"`, v43) and reads no printed-size table,
+  which holds a regular card's sizes. A NEW entry
   (or a re-measured one) changes its set's stored bakes: a layout bump whose
   scope names the set. The planeswalkers' `symbolRect` ends where M15's
   band does (92.2 %W, 1383 px — layout v36, TODO 4.47): the walker prints
@@ -3625,9 +4915,12 @@ adventure page, the flip / split / aftermath second faces — is laid out by
 ONE pure module, `lib/cards/rules-layout.ts`, fed by `lib/cards/rules-box.ts`,
 and both renderers draw its lines (`RulesBox` in the preview, `RulesBoxBake`
 in the bake); neither wraps text itself. The planeswalker ability rows
-(`lib/cards/loyalty-rows.ts`) and the saga rail's text
-(`lib/cards/saga-rail.ts`) are broken by the same module and drawn by
-`RulesLines` / `RulesLinesBake`.
+(`lib/cards/loyalty-rows.ts`, drawn by `RulesLines` / `RulesLinesBake`) and
+the saga rail (`lib/cards/saga-rail.ts`: its reminder block and each
+chapter are rules layouts in their own boxes, drawn by the same
+`RulesBox` / `RulesBoxBake`) are broken by the same module; the rows of
+both are sized by one arithmetic (`contentRowsAt` in `loyalty-rows.ts` —
+[The saga (4.21c)](#the-saga-421c)).
 
 How rules text is sized and set:
 
@@ -3677,9 +4970,11 @@ What a frame gives it:
   (`TextSlot.padPx`; default 9 / 18, M15 and its skins the prints' 4 / 0 —
   a 0.98 em line box already holds the air above the ascenders, and an
   accented first capital gets its own headroom). A rect that holds part of
-  the frame's own textbox border pads past it, per side: split's halves
-  (`SPLIT_TEXTBOX_BORDER_PX`, 33 / 38 px measured on the masters by
-  `tests/unit/cards/rules-box.test.ts`, then the MSE split style's 24 / 16);
+  the frame's own textbox border pads past it, per side
+  (`SPLIT_TEXTBOX_BORDER_PX`: 0 / 0 since layout v43 — the Card Conjurer
+  split's rules rects lie inside the paper, 17–20 px from its sides, which
+  `tests/unit/cards/rules-box.test.ts` measures on every colour master; the
+  MSE rects spanned the window's width and held 33 / 38 px of border);
 - a planeswalker frame's `loyaltyRows.maxSizePct`: the walker ceiling (64 px
   on m15pw) for the ability rows and a walker drawn in the plain box; any
   other card on the frame keeps the rules slot's own size (68 px). The row
@@ -3705,8 +5000,11 @@ What a frame gives it:
   `PLATE_INK`, and the bucket plates' manifest hashes (the script prints
   them too) into the test's `MEASURED_ON` — that pin is what fails when a
   promoted plate replaces one the table was measured on. A value printed on
-  the art (no plate) keeps its rect clear, a drawn badge (the battle's
-  defense) its disc.
+  the art (no plate) keeps its rect clear, and a badge the MASTER paints
+  its box, whether the card has a value or not (`StatSlot.paintedRect`:
+  the battle's defense shield, v43). The renderers draw no badge of their
+  own: the rounded disc behind a plate-less value went with the battle's,
+  its one user (no override could ever declare one).
 
 ## Tokens
 
@@ -3881,7 +5179,7 @@ separate "Artifact Token" chip, and stored cards keep their template.
 
 The bump is card-scoped (`VERSION_SCOPES[34]`): every card on the two token
 frames, plus a token whose printed line changes on any other template
-(`tokenTypeLineChanged` — alphatoken, the showcases, flip's Roles; a
+(`tokenTypeLineChanged` — the since-retired alphatoken, the showcases, flip's Roles; a
 template list would AND those away). It is NOT verification-neutral: the
 m15token / m15tokenartifact ticks go stale (`VERIFICATION_TEMPLATE_SCOPES`;
 a pre-0115 tick is judged as made at `LEGACY_TICK_LAYOUT_VERSION` 33, so the

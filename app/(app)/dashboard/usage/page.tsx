@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LocalDate } from "@/components/ui/local-date";
 import { redirect } from "next/navigation";
 import { Coins, Sparkles, TriangleAlert } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
@@ -53,13 +54,10 @@ const ACTION_LABELS: Partial<Record<AiActionLabel, string>> = {
   fill_card: "Card fields (creator)",
 };
 
-function formatWhen(iso: string): string {
-  return new Date(iso).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+// A ledger row's moment, in the VIEWER's zone (the server's — UTC — put an
+// evening's generation on the next day for anyone in the Americas).
+function formatWhen(iso: string) {
+  return <LocalDate iso={iso} format="stamp" />;
 }
 
 export default async function UsagePage() {

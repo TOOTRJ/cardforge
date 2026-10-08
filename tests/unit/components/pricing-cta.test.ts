@@ -97,3 +97,47 @@ describe("pricingCtaFor", () => {
     }
   });
 });
+
+describe("pricingCtaFor — a cancelled (ending) subscription", () => {
+  const ending = signedIn({
+    isPaid: true,
+    currentTier: "plus",
+    hasSubscribed: true,
+    hasBillingAccount: true,
+    hasLiveSubscription: true,
+    subscriptionStatus: "active",
+    subscriptionEnding: true,
+  });
+
+  it("the Free card offers the way to STAY (Resume Plus) — never 'Manage plan', which had nothing to manage", () => {
+    expect(pricingCtaFor(ending, "free")).toEqual({ kind: "resume", label: "Resume Plus", planName: "Plus" });
+    // …while a subscriber who has NOT cancelled keeps the portal button.
+    expect(pricingCtaFor({ ...ending, subscriptionEnding: false }, "free")).toEqual({
+      kind: "portal",
+      label: "Manage plan",
+    });
+  });
+
+  it("the plan's own card offers Resume instead of a bare 'Your current plan'", () => {
+    expect(pricingCtaFor(ending, "plus")).toEqual({ kind: "resume", label: "Resume Plus", planName: "Plus" });
+    expect(pricingCtaFor({ ...ending, currentTier: "pro" }, "pro")).toEqual({
+      kind: "resume",
+      label: "Resume Pro",
+      planName: "Pro",
+    });
+  });
+
+  it("never offers Resume without a subscription to resume (comped / no billing account / signed out)", () => {
+    expect(pricingCtaFor({ ...ending, hasBillingAccount: false }, "free")).toEqual({ kind: "none" });
+    expect(pricingCtaFor({ ...ending, hasLiveSubscription: false }, "free").kind).not.toBe("resume");
+    expect(pricingCtaFor({ ...ending, isSignedIn: false }, "free").kind).toBe("signup");
+    // Not ending → no Resume anywhere.
+    for (const tier of ["free", "plus", "pro"] as const) {
+      expect(pricingCtaFor({ ...ending, subscriptionEnding: false }, tier).kind).not.toBe("resume");
+    }
+  });
+
+  it("can still switch to another paid plan", () => {
+    expect(pricingCtaFor(ending, "pro")).toEqual({ kind: "checkout", label: "Switch to Pro" });
+  });
+});

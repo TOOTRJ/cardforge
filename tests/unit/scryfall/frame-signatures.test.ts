@@ -89,25 +89,42 @@ describe("borderless families (TODO 1.17)", () => {
     // Nonbasic lands (4.34): the borderless land frame, exact — and, its art
     // reaching the card edge, the import lands on the bordered land frame
     // (1.18). A mono-colour (MH3 #351), a colourless (CMM #663) and a
-    // five-colour land (CMM #659, the gold master) are exact; the
-    // two-colour lands print a split pinline and box (4.6), a crowned one
-    // the floating crown (4.6), a nicknamed one its nickname line (6.3).
+    // five-colour land (CMM #659, the gold master) are exact — and, since
+    // 4.56 drew the pair masters, the two-colour lands that print the grey
+    // bars over a split pinline and box (MID #281, OTJ #304, MKM #328; the
+    // fetch land MH3 #353, which prints the two colours it searches for); a
+    // crowned one prints the floating crown (4.6f), a nicknamed one its
+    // nickname line (6.3).
     ["mh3-351", "exact", "m15borderlessland", "m15land"],
     ["cmm-663", "exact", "m15borderlessland", "m15land"],
     ["cmm-659", "exact", "m15borderlessland", "m15land"],
-    ["mid-281", "nearest", "m15borderlessland", "m15land"],
-    ["otj-304", "nearest", "m15borderlessland", "m15land"],
+    ["mid-281", "exact", "m15borderlessland", "m15land"],
+    ["otj-304", "exact", "m15borderlessland", "m15land"],
+    ["mkm-328", "exact", "m15borderlessland", "m15land"],
+    ["mh3-353", "exact", "m15borderlessland", "m15land"],
     ["neo-413", "nearest", "m15borderlessland", "m15land"],
     ["ltc-361", "nearest", "m15borderlessland", "m15land"],
-    // …and the two print variations Scryfall can't tell apart, pinned
-    // (4.34's skeptic pass, by eye): the spells' dark type bar and box
-    // (Cori Mountain Monastery TDM #393, Hall of Echoes FRA #379; Restless
-    // Bivouac WOE #303 on its two-colour gap too), and the short box (the
-    // triome SNC #291, the galaxy-foil SLD #469).
+    ["ltr-343", "nearest", "m15borderlessland", "m15land"],
+    ["ltc-366", "nearest", "m15borderlessland", "m15land"],
+    // …and the print variations Scryfall can't tell apart, pinned (4.34's
+    // skeptic passes and 4.56's, by eye): the spells' dark type bar and box
+    // (Cori Mountain Monastery TDM #393, Hall of Echoes FRA #379; the
+    // two-colour Restless Bivouac WOE #303 and Sunbaked Canyon ACR #111),
+    // the short box (the triome SNC #291, the galaxy-foil SLD #469; the
+    // two-colour shock land UNF #277 and check land SLD #456) and 2025's
+    // see-through box with a shadow behind the text (the fetch land SPG
+    // #109, the reversible shock land ECL #347, FRA #397, SLD #2440).
     ["tdm-393", "nearest", "m15borderlessland", "m15land"],
     ["fra-379", "nearest", "m15borderlessland", "m15land"],
     ["woe-303", "nearest", "m15borderlessland", "m15land"],
+    ["acr-111", "nearest", "m15borderlessland", "m15land"],
     ["snc-291", "nearest", "m15borderlessland", "m15land"],
+    ["unf-277", "nearest", "m15borderlessland", "m15land"],
+    ["sld-456", "nearest", "m15borderlessland", "m15land"],
+    ["spg-109", "nearest", "m15borderlessland", "m15land"],
+    ["ecl-347", "nearest", "m15borderlessland", "m15land"],
+    ["fra-397", "nearest", "m15borderlessland", "m15land"],
+    ["sld-2440", "nearest", "m15borderlessland", "m15land"],
     // …and the third look the second skeptic pass found: a dark type bar
     // alone over the tinted box (Theorist's Sanctum FRA #381, Mystic
     // Sanctuary SLD #2143).
@@ -240,11 +257,14 @@ describe("borderless families (TODO 1.17)", () => {
       exactLabel: "Borderless land",
       reason: null,
     });
-    expect(frameMatchFromScryfall(printing("mid-281"))).toMatchObject({
-      signature: "borderless/land+two-colour",
-      blockedBy: "4.6f",
-      gaps: ["two-colour"],
-    });
+    // A two-colour land is no gap since 4.56 (the frame draws its pairs):
+    // the base rule answers, exact, with nothing left to name.
+    for (const key of ["mid-281", "otj-304", "mkm-328", "mh3-353"] as const) {
+      const match = frameMatchFromScryfall(printing(key));
+      expect(match, key).toMatchObject({ status: "exact", signature: "borderless/land", reason: null });
+      expect(match.gaps, key).toBeUndefined();
+      expect(match.blockedBy, key).toBeUndefined();
+    }
     expect(frameMatchFromScryfall(printing("neo-413"))).toMatchObject({
       signature: "borderless/land+crown",
       blockedBy: "4.6f",
@@ -266,10 +286,15 @@ describe("borderless families (TODO 1.17)", () => {
       gaps: ["dark-type-and-box"],
     });
     expect(frameMatchFromScryfall(printing("fra-379")).signature).toBe("borderless/land+dark-type-and-box");
-    expect(frameMatchFromScryfall(printing("woe-303"))).toMatchObject({
-      signature: "borderless/land+two-colour",
-      gaps: ["two-colour", "dark-type-and-box"],
-    });
+    // The two-colour runs that print it (WOE, ACR) fall to it now that the
+    // two-colour gap is drawn: one gap, the dark one.
+    for (const key of ["woe-303", "acr-111"] as const) {
+      expect(frameMatchFromScryfall(printing(key)), key).toMatchObject({
+        signature: "borderless/land+dark-type-and-box",
+        blockedBy: "4.37",
+        gaps: ["dark-type-and-box"],
+      });
+    }
     expect(frameMatchFromScryfall(printing("snc-291"))).toMatchObject({
       signature: "borderless/land+short-box",
       reason: "this printing has the short text box, and PipGlyph's has the regular one",
@@ -280,6 +305,35 @@ describe("borderless families (TODO 1.17)", () => {
       signature: "borderless/land+short-box",
       gaps: ["short-box"],
     });
+    // 4.56's pins, made BEFORE the two-colour gap closed: the two-colour
+    // short-box lands (Unfinity's shock lands, SLD #456–460) …
+    for (const key of ["unf-277", "sld-456"] as const) {
+      expect(frameMatchFromScryfall(printing(key)), key).toMatchObject({
+        status: "nearest",
+        signature: "borderless/land+short-box",
+        reason: "this printing has the short text box, and PipGlyph's has the regular one",
+        blockedBy: "4.37",
+        gaps: ["short-box"],
+      });
+    }
+    // … and 2025's see-through box with a shadow behind the text, under the
+    // land's own grey bars: every two-colour run from the SPG fetch lands on
+    // (a reversible ECL shock land too), and FRA #397–401, which left the
+    // dark pins (their type bar is grey).
+    for (const key of ["spg-109", "ecl-347", "fra-397", "sld-2440"] as const) {
+      expect(frameMatchFromScryfall(printing(key)), key).toMatchObject({
+        status: "nearest",
+        template: "m15borderlessland",
+        signature: "borderless/land+shadow-box",
+        reason: "this printing's text box is see-through with a shadow behind the text, and PipGlyph's Borderless Land tints it",
+        blockedBy: "4.37",
+        gaps: ["shadow-box"],
+      });
+    }
+    // A crowned or nicknamed two-colour land keeps that gap alone (the land
+    // masters have no crowned twin, the nickname line is 6.3's).
+    expect(frameMatchFromScryfall(printing("ltr-343"))).toMatchObject({ signature: "borderless/land+crown", blockedBy: "4.6f", gaps: ["crown"] });
+    expect(frameMatchFromScryfall(printing("ltc-366"))).toMatchObject({ signature: "borderless/land+nickname", blockedBy: "6.3", gaps: ["nickname"] });
     for (const key of ["fra-381", "sld-2143"] as const) {
       expect(frameMatchFromScryfall(printing(key)), key).toMatchObject({
         signature: "borderless/land+dark-type-bar",
@@ -289,7 +343,7 @@ describe("borderless families (TODO 1.17)", () => {
       });
     }
     // The references stay exact: the pins name none of them.
-    for (const key of ["mh3-351", "cmm-663", "cmm-659"] as const) {
+    for (const key of ["mh3-351", "cmm-663", "cmm-659", "mid-281", "otj-304", "mkm-328"] as const) {
       expect(frameMatchFromScryfall(printing(key)).gaps, key).toBeUndefined();
     }
     expect(frameMatchFromScryfall(printing("hob-284"))).toMatchObject({
@@ -330,11 +384,76 @@ describe("the borderless land frame, verified or not (TODO 4.34)", () => {
     expect(imported("cmm-663", [frameComboKey("m15borderlessland", "c")]).frame_match?.status).toBe("exact");
   });
 
-  it("keeps a two-colour land nearest even when the gold master is verified: its split pinline is 4.6's", () => {
+  it("a two-colour land is exact once the gold `m` is verified — its pair rides that tick (V-A) — and nearest, 'not yet verified in multicolor', until then (TODO 4.56)", () => {
+    const before = imported("mid-281", []);
+    expect(before.frame_match).toMatchObject({
+      status: "nearest",
+      template: "m15borderlessland",
+      landOn: "m15land",
+      reason: "not yet verified in multicolor",
+      unverified: true,
+    });
     const out = imported("mid-281", [frameComboKey("m15borderlessland", "m")]);
-    expect(out.frame_match).toMatchObject({ status: "nearest", template: "m15borderlessland", blockedBy: "4.6f" });
+    expect(out.frame_match).toMatchObject({ status: "exact", template: "m15borderlessland", landOn: "m15land", reason: null });
+    expect("blockedBy" in (out.frame_match ?? {})).toBe(false);
     expect(colorKeyOf("mid-281")).toBe("m");
+    // The landing is the bordered land frame as before (1.18: Scryfall's
+    // art is the window crop), which draws its own pair since 4.6b.
     expect(out.frame_template).toBe("m15land");
+    // A pinned print stays nearest whatever is verified.
+    for (const key of ["unf-277", "spg-109", "woe-303"] as const) {
+      expect(imported(key, [frameComboKey("m15borderlessland", "m")]).frame_match?.status, key).toBe("nearest");
+    }
+  });
+});
+
+describe("two-colour borderless lands on the import (TODO 4.56)", () => {
+  const patchOf = (key: PrintingKey) => mapScryfallToFormPatch(printing(key), { artPreviewUrl: null });
+
+  it("the patch names the printing's pair and its switch; the card carries both on either land frame", () => {
+    const mid = patchOf("mid-281");
+    expect(mid).toMatchObject({ color_identity: ["multicolor"], color_pair: "wu", printed_two_color: true, kind: "land" });
+    // Landed on the bordered land frame (1.18's landing) …
+    expect(importedAnatomy(mid, "m15land")).toEqual({
+      style: expect.objectContaining({ twoColor: true }),
+      colorIdentity: ["white", "blue"],
+    });
+    // … or on Borderless Land, the chooser's other option: the pair and
+    // the switch stay (before 4.56 the frame drew no pair, and the card
+    // fell back to "multicolor" and the gold master).
+    expect(importedAnatomy(mid, "m15borderlessland")).toEqual({
+      style: expect.objectContaining({ twoColor: true }),
+      colorIdentity: ["white", "blue"],
+    });
+  });
+
+  it("a fetch land prints the two colours it searches for, in printed order, on an empty identity — the land rule m15land already follows", () => {
+    for (const [key, pair, words] of [
+      ["mh3-353", "wu", ["white", "blue"]],
+      ["spg-109", "rw", ["red", "white"]],
+    ] as const) {
+      const card = printing(key);
+      expect(card.color_identity, key).toEqual([]);
+      expect(card.produced_mana ?? [], key).toEqual([]);
+      expect(landFrameColorRule(card), key).toHaveLength(2);
+      const patch = patchOf(key);
+      expect(patch, key).toMatchObject({ color_identity: ["multicolor"], color_pair: pair, printed_two_color: true });
+      expect(importedAnatomy(patch, "m15borderlessland").colorIdentity, key).toEqual(words);
+    }
+    // Flooded Strand prints the tinted look (exact); the 2025 Special Guest
+    // Arid Mesa the shadow box (nearest).
+    expect(frameMatchFromScryfall(printing("mh3-353")).status).toBe("exact");
+    expect(frameMatchFromScryfall(printing("spg-109")).status).toBe("nearest");
+  });
+
+  it("the old request rows read as answered on the frame itself, never on the bordered landing", () => {
+    expect(signatureDrawnOn("borderless/land+two-colour", "m15borderlessland")).toBe(true);
+    expect(signatureDrawnOn("borderless/land+two-colour", "m15land")).toBe(false);
+    expect(signatureDrawnOn("borderless/land+crown", "m15borderlessland")).toBe(false);
+    for (const key of ["borderless/land+shadow-box", "borderless/land+short-box", "borderless/land+dark-type-and-box"]) {
+      expect(isKnownFrameSignature(key), key).toBe(true);
+      expect(signatureDrawnOn(key, "m15borderlessland"), key).toBe(false);
+    }
   });
 });
 
@@ -932,6 +1051,13 @@ describe("the rule table", () => {
     expect(isBorderPending("expeditionland", "m")).toBe(false);
     expect(isBorderPending("lotr", "w")).toBe(true);
     expect(isBorderPending("m15", "w")).toBe(false);
+    // The battle left the list with TODO 4.21b: its Card Conjurer master
+    // has the printed black border on every colour (the MSE one was a
+    // transparent ring) — and the split never was on it.
+    for (const key of ["w", "u", "b", "r", "g", "c", "m"]) {
+      expect(isBorderPending("battle", key), key).toBe(false);
+      expect(isBorderPending("split", key), key).toBe(false);
+    }
   });
 
   it("an exact match never needs a reason, a non-exact one always has one", () => {

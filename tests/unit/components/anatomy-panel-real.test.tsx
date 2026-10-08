@@ -123,12 +123,44 @@ describe("a stored card (no switch key)", () => {
     expect(colors()).toBe("multicolor");
   });
 
-  it.each(["m15devoid", "m15borderlessland", "saga"])("%s draws neither: no switch, no row, no hint", (template) => {
+  it.each(["m15devoid", "saga"])("%s draws neither: no switch, no row, no hint", (template) => {
     render(<Harness stored template={template} colors={["multicolor"]} />);
     expect(screen.queryByTestId("anatomy-panel")).toBeNull();
     expect(twoColorSwitch()).toBeNull();
     expect(crownSwitch()).toBeNull();
     expect(screen.queryByText(/New: the printed/)).toBeNull();
+  });
+
+  it("m15borderlessland draws the pair since 4.56: a stored two-colour land with no key keeps its gold look — the two-colour switch OFF with its hint, no crown switch — and switching it on stores the switch alone", () => {
+    render(<Harness stored template="m15borderlessland" cardType="land" cost="" colors={["white", "blue"]} />);
+    expect(screen.queryByTestId("anatomy-panel")).not.toBeNull();
+    expect(twoColorSwitch()?.getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByTestId("anatomy-hint-twoColor").textContent).toBe(ANATOMY_HINTS.twoColor);
+    // The frame draws no crown (its masters have no crowned twin), Legendary
+    // or not.
+    expect(crownSwitch()).toBeNull();
+    expect(JSON.parse(screen.getByTestId("style").textContent ?? "{}")).toEqual({ template: "m15borderlessland" });
+    fireEvent.click(twoColorSwitch()!);
+    expect(JSON.parse(screen.getByTestId("style").textContent ?? "{}")).toEqual({ template: "m15borderlessland", twoColor: true });
+    expect(twoColorSwitch()?.getAttribute("aria-checked")).toBe("true");
+    expect(screen.queryByTestId("anatomy-hint-twoColor")).toBeNull();
+    // The stored pair is the pair: nothing is re-coloured, and a land's
+    // dress is always the split (no hybrid note).
+    expect(colors()).toBe("white,blue");
+    expect(screen.queryByTestId("anatomy-note-twoColor")).toBeNull();
+  });
+
+  it("…a stored plain Multicolor land (the three-colour gold look, or a pair never named) is offered the row to name its pair; a mono land nothing", () => {
+    render(<Harness stored template="m15borderlessland" cardType="land" cost="" colors={["multicolor"]} />);
+    expect(twoColorSwitch()?.getAttribute("aria-checked")).toBe("false");
+    fireEvent.click(twoColorSwitch()!);
+    // No cost to pre-fill from: the row shows, the identity stays until a pick.
+    expect(screen.getByTestId("two-colour-row")).toBeTruthy();
+    expect(colors()).toBe("multicolor");
+    cleanup();
+    render(<Harness stored template="m15borderlessland" cardType="land" cost="" colors={["green"]} />);
+    expect(screen.queryByTestId("anatomy-panel")).toBeNull();
+    expect(twoColorSwitch()).toBeNull();
   });
 
   it("m15snow draws both since 4.6f wave 2c: a stored legendary snow pair with no key shows both switches off, with their hints", () => {

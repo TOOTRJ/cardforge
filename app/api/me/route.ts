@@ -14,6 +14,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import type { HeaderUser } from "@/components/layout/site-header";
 import { getCardCapacity } from "@/lib/cards/capacity";
 import { profileMediaSrc } from "@/lib/media/media-urls";
+import { planEndingOf } from "@/lib/billing/plan-ending";
 
 // ---------------------------------------------------------------------------
 // GET /api/me — the header auth island's data source.
@@ -57,6 +58,9 @@ export async function GET() {
       getMessageNavState(),
     ]);
 
+  // A cancelled plan that is still running (lib/billing/plan-ending.ts). Only
+  // while billing is on: with it off nobody is shown a plan at all.
+  const ending = isBillingEnabled() ? planEndingOf(profile) : null;
   const headerUser: HeaderUser = {
     id: user.id,
     username: profile?.username ?? null,
@@ -85,6 +89,12 @@ export async function GET() {
     hasLiveSubscription:
       profile?.subscription_status === "active" ||
       profile?.subscription_status === "trialing",
+    subscriptionEnding:
+      (profile?.subscription_status === "active" || profile?.subscription_status === "trialing") &&
+      (ending != null || Boolean(profile?.cancel_at_period_end)),
+    // When it stops — the avatar menu and the upgrade modal say so.
+    subscriptionEndsAt: ending?.endsAt ?? null,
+    subscriptionEndingKind: ending?.kind ?? null,
     isAdmin: profile?.is_admin ?? false,
   };
 

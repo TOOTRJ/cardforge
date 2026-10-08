@@ -89,7 +89,7 @@ const lum = (r: Raw, x: number, y: number) => {
 };
 
 describe("etched finish (v26)", () => {
-  it.each<FrameTemplate>(["retro", "modern"])("%s: texture on the frame only — no left-edge strip, border and art untouched", async (template) => {
+  it.each<FrameTemplate>(["modern"])("%s: texture on the frame only — no left-edge strip, border and art untouched", async (template) => {
     const [regular, etched] = [await bake(card(template)), await bake(card(template, { frameStyle: { template, finish: "etched" } }))];
     // Black border = pixels that are black in the regular bake. The texture
     // is masked by the frame's luminance, so near-black frame pixels may move
@@ -124,12 +124,19 @@ describe("etched finish (v26)", () => {
 describe("pipglyph.com mark sits inside the black border (v25)", () => {
   // extendedart shares modern's placement (brand-mark-placement.test.ts) but
   // preloads the bucket-hosted M15 P/T plate, so it can't bake offline here.
-  it.each<FrameTemplate>(["agclassic", "alphaland", "alphatoken", "retro", "retroland", "modern", "modernland", "battle", "split"])(
+  // (Battle and split left this list with TODO 4.21b: their Card Conjurer
+  // masters live in the frames bucket — their mark, centred in the new
+  // bottom borders, is held to the real masters' black border by
+  // tests/unit/render/landscape-v43-bake.test.tsx.)
+  // (Retro and retroland left this list with TODO 4.10a: their mark sits in
+  // the footer's © slot, on the frame — tests/unit/render/retro-1997-bake
+  // .test.tsx.)
+  it.each<FrameTemplate>(["agclassic", "alphaland", "modern", "modernland"])(
     "%s",
     async (template) => {
       // No P/T: extendedart draws the M15 plate, which lives in the frames
       // bucket (not on disk). The mark's placement doesn't depend on it.
-      const land = template === "alphaland" || template === "retroland" || template === "modernland";
+      const land = template === "alphaland" || template === "modernland";
       const data = card(template, { cardType: land ? "land" : "instant", cost: land ? null : "{2}{W}", power: null, toughness: null });
       const [off, on] = [await bake(data, false), await bake(data, true)];
       const box = diffBox(off, on);

@@ -8,18 +8,24 @@ import type { FrameTemplate } from "@/types/card";
 // profile that spreads it (land, snow, artifact, devoid, borderless, extended
 // art, expedition, Nyx, adventure, the full-art and textless frames, the
 // full-art basics), plus the M15-era frames with title and type slots of
-// their own (planeswalker, token, saga, flip, aftermath).
+// their own (planeswalker, token, saga, flip, aftermath) — and the battle,
+// the one LANDSCAPE member: its sizes are the same px on the page, so as
+// fractions of its 2100 px width they are the constants through
+// `displayPct(…, "landscape")` (× 5/7), never the bare constants (which
+// would draw them 1.4× the size).
 //
-// Split and battle are M15-era too but are NOT in it yet: their slots sit
-// off the painted bars of their MSE masters, so their sizes ship with the
-// Card Conjurer re-source (TODO 4.21) instead of carrying the misplacement
-// into a sweep.
+// Split is M15-era too but is NOT in it: the prints set every line of a
+// split half smaller than a regular card's (a 76 px name, a 53 px type line
+// on its thin bar, 68 px pips, a 48 px symbol box — the SPLIT_* constants in
+// lib/cards/typography.ts, measured on MH2 #123 / #60 and TSR #161 / #186;
+// TODO 4.21b).
 //
 // The profile tests read this list. Layout v32's template scope is a FROZEN
 // copy in lib/cards/layout-version.ts (a test keeps the two equal at v32):
-// a template that joins the family later brings its own bump — or, a NEW
-// template no card was ever baked on (4.49 (b)'s text-box tokens, 4.34's
-// borderless land, 4.48's full-art tokens), none.
+// a template that joins the family later brings its own bump (battle:
+// layout v43, with its Card Conjurer master) — or, a NEW template no card
+// was ever baked on (4.49 (b)'s text-box tokens, 4.34's borderless land,
+// 4.48's full-art tokens), none.
 // ---------------------------------------------------------------------------
 
 export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
@@ -74,6 +80,10 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   "m15mdfcback",
   "m15mdfclandfront",
   "m15mdfclandback",
+  // The battle (TODO 4.21b, CC's 'Battle' pack; layout v43): the family's
+  // sizes on a landscape card — it joined WITH its bump (0 stored public or
+  // unlisted cards).
+  "battle",
   // M15-era frames on MSE masters.
   "saga",
   "adventure",

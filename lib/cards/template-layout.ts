@@ -60,7 +60,7 @@ import {
   type HoloStampArt,
 } from "@/lib/cards/holo-stamp";
 import { baseMasterKey } from "@/lib/cards/master-key";
-import type { FrameTemplate } from "@/types/card";
+import { RETIRED_FRAME_TEMPLATES, type FrameTemplate } from "@/types/card";
 import {
   ADVENTURE_PANEL_COST_PCT,
   ADVENTURE_PANEL_PCT,
@@ -69,12 +69,25 @@ import {
   MDFC_STRIP_WORD_PX,
   SET_SYMBOL_BOX_PCT,
   SET_SYMBOL_BOX_PCT_THIN_BAR,
+  SPLIT_COST_DISC_PCT,
+  SPLIT_SET_SYMBOL_BOX_PCT,
+  SPLIT_TITLE_SIZE_PCT,
+  SPLIT_TYPE_SIZE_PCT,
   TITLE_SIZE_PCT,
+  RETRO_ARTIST_SIZE_PCT,
+  RETRO_COPYRIGHT_SIZE_PCT,
+  RETRO_COST_DISC_PCT,
+  RETRO_PT_SIZE_PCT,
+  RETRO_TITLE_SIZE_PCT,
+  RETRO_TYPE_SIZE_PCT,
   RULES_SIZE_PX,
   TYPE_SIZE_PCT,
+  displayPct,
   rulesPxToPct,
 } from "@/lib/cards/typography";
 import { walkerAnatomy } from "@/lib/cards/kind-anatomy";
+import type { SymbolStyle } from "@/lib/cards/symbol-style";
+import { TYPE_FACES, typeFace, type SlotFace } from "@/lib/cards/type-faces";
 
 /** A rectangle in card-relative percent (0–100), origin top-left. The card's
  *  full outer rect (corner to corner, the area the frame PNG fills) is the
@@ -103,8 +116,24 @@ export type TextSlot = {
   uppercase?: boolean;
   letterSpacingEm?: number;
   lineHeight?: number;
-  /** "display" → heading font (title/type); "body" → MTG body font (rules). */
-  font?: "display" | "body";
+  /** The face the slot's text is set in: "display" → CardDisplay (Beleren
+   *  Bold: names, type lines, the footer), "body" → MPlantin (rules; and
+   *  what the 1997 prints set their type and artist lines in). Every
+   *  shipped slot names one; unset = "display" on a name, type line or strip
+   *  word, "body" on a footer; a RULES box is always the body face (its
+   *  lines are broken on MPlantin's advances). Read by BOTH renderers and every
+   *  fit through lib/cards/type-faces.ts slotFace (TODO 4.8.0) — never by a
+   *  renderer's own literal. Code-owned: not part of the override schema. */
+  font?: SlotFace;
+  /** FOOTER only (TODO 4.8.0): what the artist line starts with — "Art: "
+   *  when unset (FOOTER_PREFIX; the 1993–2003 prints say "Illus. "). Both
+   *  renderers build the line with lib/cards/card-display.ts
+   *  footerArtistLine. The footer's `align` is read too: unset / "start" =
+   *  the line at the rect's start and a clean download's custom mark at its
+   *  end (every profile today); "center" = the line centred in the rect
+   *  (the 1997 prints from Exodus on) — a custom mark then has no place on
+   *  this line. Code-owned: not part of the override schema. */
+  prefix?: string;
   /** CSS text-shadow for text sitting directly on the frame (e.g. agclassic
    *  P/T, planeswalker loyalty). */
   shadowCss?: string;
@@ -140,8 +169,10 @@ export type TextSlot = {
    *  dy in cqw, the bake by the whole px (Math.round(dy × width)).
    *  FRONT-FACE title and type line only (both halves of a `split` type
    *  line): a second face (FrameProfile.secondFace) and the adventure panel
-   *  ignore it and keep centring their text in the rect. Code-owned: not
-   *  part of the override schema. */
+   *  ignore it and keep centring their text in the rect — but a MEASURED
+   *  unturned second face (split's right half, see `fit`), which reads its
+   *  own slots' dy as the front reads its own. Code-owned: not part of the
+   *  override schema. */
   dy?: number;
   /** How a single-line display slot (title / type line) fits its room —
    *  TODO 4.20, layout v32. "measured": shrink by the text's measured
@@ -152,7 +183,12 @@ export type TextSlot = {
    *  through the shared fits: a title (the front face's, the adventure
    *  panel's) through lib/cards/title-band.ts fitTitleBand, a type line
    *  through lib/cards/render-tiers.ts fitTypeLine. A second face fits
-   *  with its own `fitLines`. Code-owned: not part of the override schema. */
+   *  with its own `fitLines` — unless its own title and type slots are
+   *  measured (split's right half, TODO 4.21b): an UNTURNED second face
+   *  (rotation 0) with measured slots draws its two bands exactly as the
+   *  front draws its own — the same fit, the same `dy`, the pips at their
+   *  own size — so both halves of a split card are set alike.
+   *  Code-owned: not part of the override schema. */
   fit?: TextSlotFit;
   /** RULES boxes only (layout v33, TODO 3.29): the box's padding in HD px —
    *  px of the 1500 px portrait / 2100 px landscape card, one physical
@@ -198,22 +234,35 @@ export type TypeLineSplit = {
 };
 
 /** A stat value (P/T, loyalty, defense) drawn onto the frame, optionally with a
- *  color-keyed plate PNG or a drawn badge behind it. */
+ *  color-keyed plate PNG behind it — or in a badge the frame master paints
+ *  (`paintedRect`). */
 export type StatSlot = {
   rect: Rect;
   sizePct: number;
   colorHex: string;
   weight?: number;
+  /** The face the value is set in — TextSlot.font's twin (TODO 4.8.0):
+   *  unset = "display". The stat fit measures the value in this face
+   *  (lib/cards/stat-fit.ts) and both renderers draw it in it
+   *  (lib/cards/type-faces.ts slotFace). Code-owned: not part of the
+   *  override schema. */
+  font?: SlotFace;
   /** Horizontal alignment of the value in `rect`. Default "center" (every
    *  plate and badge); "end" for a value set against a rect's right edge —
    *  the transform front's reverse P/T in its grey tab (TODO 5.1a). */
   align?: SlotAlign;
+  /** With `align: "end"`: the value's KERNED run ends on the rect's right
+   *  edge in the bake too. Satori lays a run out in a box the sum of its
+   *  advances wide and draws it kerned from the left, so a pair that pulls in
+   *  (`4/4`: − 11 px at 86 px) would end that far short of the edge the
+   *  browser sets it against; the bake moves its box by the run's kerning
+   *  (lib/cards/stat-fit.ts statKernEm). The 1997 frame's P/T (TODO 4.10a:
+   *  the prints end every value at one px). Not set on the transform front's
+   *  reverse P/T (5.1a), whose bakes keep Satori's own box. Code-owned. */
+  endKerned?: true;
   /** Plate PNG template, {color} → frame color key. Renders behind the value
    *  (M15 P/T plate). */
   plateAssetPathTemplate?: string;
-  /** Drawn rounded badge behind the value when there's no plate PNG (the
-   *  Battle frame's defense disc). */
-  badgeColorHex?: string;
   shadowCss?: string;
   /** Per-frame-master ink — see InkByColorKey (resolved by slotInk). */
   inkByColorKey?: InkByColorKey;
@@ -235,9 +284,16 @@ export type StatSlot = {
    *  to its bevel, a strip up to its pinstripe. It may be wider or narrower
    *  than `rect` (the value stays centred in `rect` and never wraps), and
    *  lopsided about the value's centre. A value whose ink would run past it
-   *  shrinks (lib/cards/stat-fit.ts). Without it the ink may fill `rect`
-   *  (or a drawn badge). */
+   *  shrinks (lib/cards/stat-fit.ts). Without it the ink may fill `rect`. */
   inkSpanPct?: { leftPct: number; rightPct: number };
+  /** The frame MASTER paints this stat's badge itself (TODO 4.21b: the
+   *  battle's defense shield, part of Card Conjurer's master): the badge's
+   *  ink box in card percents. The value is drawn in `rect` with no plate
+   *  (the renderers draw no badge of their own), and the rules lines keep
+   *  out of this box on EVERY card on the frame — the shield is on the
+   *  master whether or not a value is drawn (lib/cards/rules-layout.ts
+   *  statKeepOuts). Code-owned: not part of the override schema. */
+  paintedRect?: Rect;
 };
 
 /** A frame colour key — the {color} of every frame asset
@@ -361,6 +417,29 @@ export function sameRect(a: Rect, b: Rect): boolean {
   return a.topPct === b.topPct && a.leftPct === b.leftPct && a.widthPct === b.widthPct && a.heightPct === b.heightPct;
 }
 
+/**
+ * The box both renderers DRAW for a slot whose content is turned `turn`°
+ * clockwise in place (FrameProfile.footerTurn — TODO 4.21b; 4.9d's collector
+ * line on the same band reuses it): `band` is what the turned content covers
+ * ON THE CARD, in card percents; the result is the unturned box centred on
+ * it — for a quarter turn as wide as the band is tall and as tall as it is
+ * wide, in px — which, rotated `turn`° about its centre, lands exactly on
+ * the band. It may reach off the card before the turn (a tall band's box is
+ * wide). `aspect` is the card's height ÷ width (7/5 portrait, 5/7 landscape).
+ */
+export function unturnedRect(band: Rect, turn: 0 | 90 | 180 | 270, aspect: number): Rect {
+  if (turn === 0 || turn === 180) return band;
+  // The band's px sides, in percents of the OTHER axis.
+  const widthPct = band.heightPct * aspect;
+  const heightPct = band.widthPct / aspect;
+  return {
+    leftPct: band.leftPct + band.widthPct / 2 - widthPct / 2,
+    topPct: band.topPct + band.heightPct / 2 - heightPct / 2,
+    widthPct,
+    heightPct,
+  };
+}
+
 /** A frame drawn in two halves for a two-colour card — see
  *  FrameProfile.twoColorSplit. */
 export type TwoColorSplit = {
@@ -466,6 +545,15 @@ export type FlipsideSlots = {
 
 export type FrameProfile = {
   label: string;
+  /** How the frame's era drew its mana symbols — the cost discs, their
+   *  shadow, the inline pips and {T} (TODO 4.8.0 / 4.24; lib/cards/
+   *  symbol-style.ts). Unset = "modern", the only style there is today:
+   *  M15's discs, hard offset shadow and tap. Profile data and a
+   *  CORRECTION when a frame changes it — never a per-card switch (era
+   *  design D8). Both renderers and both shadow models (the rules layout's
+   *  inline pip, the cost row's) read it through symbolStyleOf. Code-owned:
+   *  not part of the override schema. */
+  symbolStyle?: SymbolStyle;
   /** Printed anatomy drawn over the frame master — see FrameOverlaySlot.
    *  Opt-in per card (FrameStyle.crown), so declaring one never changes a
    *  stored card. Code-owned. */
@@ -549,6 +637,15 @@ export type FrameProfile = {
   flavorDivider?: boolean;
   /** Bottom info line (artist credit + brand). */
   footer?: TextSlot;
+  /** The footer's line is printed TURNED a quarter turn clockwise (TODO
+   *  4.21b / 3.8): a landscape card's artist credit runs down its left
+   *  border — the portrait card's bottom border, turned with the card
+   *  (split, battle; MH2 #123, MOM #149) — reading from the top, its
+   *  letters' heads toward the card. `footer.rect` is then the BAND the
+   *  line covers on the card (narrow and tall); both renderers draw the
+   *  footer in unturnedRect(rect, …) and turn it in place. Code-owned: not
+   *  part of the override schema. */
+  footerTurn?: 90;
   /** The printed collector line's slot (TODO 4.9b) — the two lines in the
    *  bottom border a card switches on (FrameStyle.collector, opt-in per
    *  card: declaring it changes no stored card). When the line is drawn it
@@ -556,6 +653,16 @@ export type FrameProfile = {
    *  on PROFILES entries (COLLECTOR_TEMPLATES), never on a base another
    *  profile spreads; code-owned (the override schema refuses it). */
   collector?: CollectorSlot;
+  /** The footer's SECOND line — the © slot of a frame whose prints set a
+   *  centred two-line footer (TODO 4.10a: the 1997 frame; era design D2, the
+   *  collector line's precedent). PipGlyph prints no Wizards © line, so the
+   *  slot carries: on DISPLAY surfaces the pipglyph.com mark — which then
+   *  leaves the border (`brandMark` is not read) — and on a paid viewer's
+   *  clean download the card's footer text, or nothing. Both renderers and
+   *  the print path draw it from lib/cards/copyright-slot.ts. Without it a
+   *  centred footer has no place for the custom text (TextSlot.prefix).
+   *  Code-owned (the override schema refuses it). */
+  copyrightSlot?: CopyrightSlot;
   pt?: StatSlot;
   loyalty?: StatSlot;
   defense?: StatSlot;
@@ -619,11 +726,14 @@ export type FrameProfile = {
    *  (lib/cards/set-symbol-prints.ts, layout v36, TODO 4.46), else fits it
    *  to the box by its ink (lib/cards/set-symbol-size.ts); "ink-box" is the
    *  box fit alone (the full-art basics, whose glyph size 4.39 print-checked
-   *  in their own pill); unset, its font size IS the box, as before v32. Set
-   *  on the M15-era family only (lib/cards/m15-family.ts). Code-owned: not
+   *  in their own pill); "ink-height" fills the box's height with the
+   *  glyph's ink whatever its shape (the split card's thin type bar, TODO
+   *  4.21b: its prints set every symbol 47–50 px tall); unset, its font size
+   *  IS the box, as before v32. "ink" is set on the M15-era family only
+   *  (lib/cards/m15-family.ts), "ink-height" on split alone. Code-owned: not
    *  part of the override schema, so an override's symbolSizePct resizes the
    *  box but never switches a frame outside the family to the ink fit. */
-  setSymbolFit?: "ink" | "ink-box";
+  setSymbolFit?: "ink" | "ink-box" | "ink-height";
   /** When true, never render the mana cost (tokens/emblems have none, and the
    *  frame's title bar has no cost area). */
   hideCost?: boolean;
@@ -644,24 +754,66 @@ export type FrameProfile = {
      *  rules slot's size is then what any OTHER card on the frame gets. */
     maxSizePct?: number;
     badgeTextHex: string;
+    /** The face the loyalty-cost badges' numerals are set in (TODO 4.8.0;
+     *  lib/cards/type-faces.ts faceOf "badge"). Unset = "display". */
+    badgeFont?: SlotFace;
     /** Alternating row backdrops (odd/even), translucent over the art. */
     stripeAHex: string;
     stripeBHex: string;
   };
-  /** Saga chapter rail. When set, the card's rules text is parsed into chapters
-   *  (parseChapters in lib/cards/card-display) and rendered as stacked rows — a
-   *  Roman-numeral marker badge + ability text — inside this rect, REPLACING the
-   *  normal rules box. The Saga's art is a separate right-column artSlot. */
+  /** Saga chapter rail (TODO 4.21c = 3.7). When set, the card's rules text is
+   *  parsed into a reminder block and chapters (parseChapters in
+   *  lib/cards/card-display) and drawn as the printed rail — REPLACING the
+   *  normal rules box: the reminder (the intro) in its own block, then one
+   *  row per chapter, each sized by its text and never shorter than its
+   *  stack of chapter badges, a divider at each row's top. The geometry is
+   *  the frame's (card percents, HD px in the comments); the layout that
+   *  turns it into rows, lines, badges and dividers for both renderers is
+   *  lib/cards/saga-rail.ts sagaRail(). The Saga's art is a separate
+   *  right-column artSlot. */
   chapters?: {
+    /** The chapter TEXT column, from the rail's top — where the rows start
+     *  on a saga with no reminder block — to its foot. */
     rect: Rect;
-    /** Ability-text size, as a fraction of card width. */
+    /** Chapter-text ceiling, as a fraction of card width: the top of the
+     *  rules ladder the rows share. */
     sizePct: number;
+    /** The chapter text's line pitch (× the size); RULES_TEXT's when unset. */
+    lineHeight?: number;
     textColorHex: string;
-    /** Chapter-number badge fill + text colors. */
-    markerFillHex: string;
-    markerTextHex: string;
-    /** Row divider line color. */
-    dividerHex: string;
+    /** The reminder block above chapter I: its box (a long reminder steps
+     *  down the ladder inside it; only one the box can't hold at the
+     *  ladder's floor outgrows it — saga-rail.ts), its ceiling and its line
+     *  pitch. `keepOuts` (card percents) are the parts of that box the frame
+     *  paints: no line's ink may enter them, judged glyph by glyph like a
+     *  stat badge's (RulesLayoutInput.keepOuts). */
+    intro: { rect: Rect; sizePct: number; lineHeight?: number; keepOuts?: readonly Rect[] };
+    /** Where the rows start UNDER a reminder block (card %H): the first
+     *  divider. Without one they start at `rect`'s top. */
+    rowsTopPct: number;
+    /** The chapter badge — a bitmap both renderers draw (a frames-bucket
+     *  object; frameAssetPathsFor preloads it): its left edge and size, the
+     *  centre-to-centre pitch of a stack (roomy while the rows have room,
+     *  down to the tight one before the text steps down), and its numeral. */
+    badge: {
+      assetPath: string;
+      leftPct: number;
+      widthPct: number;
+      heightPct: number;
+      /** Stack pitch, card %H: [tight, roomy]. */
+      pitchPct: { min: number; max: number };
+      /** The numeral's size (fraction of card width) and ink. */
+      numeralSizePct: number;
+      numeralColorHex: string;
+      /** The face the chapter numerals are set in (TODO 4.8.0;
+       *  lib/cards/type-faces.ts faceOf "numeral"). Unset = "body", the
+       *  prints' MPlantin (the numeral's vertical centring is the bitmap
+       *  badge's own, lib/cards/saga-rail.ts). */
+      numeralFont?: SlotFace;
+    };
+    /** The row divider — the pack's bitmap, drawn centred on each row's top
+     *  edge (a first row at the rail's own top has none). */
+    divider: { assetPath: string; leftPct: number; widthPct: number; heightPct: number };
   };
   /** Adventure (Eldraine) sub-panel. When set, the frame is a creature whose
    *  lower text area is an open storybook: this LEFT page holds an "adventure"
@@ -859,6 +1011,34 @@ export type CollectorSlot = {
   markLine?: 2;
 };
 
+/** A centred footer's second line (FrameProfile.copyrightSlot). */
+export type CopyrightSlot = {
+  /** The line's centre, % of the card's width. */
+  centerPct: number;
+  /** Its baseline, % of the card's height. */
+  baselinePct: number;
+  /** The size of a clean download's footer text, a fraction of the card's
+   *  width — and the em the brand mark is scaled to (its text; the star and
+   *  the gap in proportion). */
+  sizePct: number;
+  /** The face the footer text is set in ("body" when unset). The mark is
+   *  always the brand's. */
+  font?: SlotFace;
+  /** The line's PRINTED ink: the footer text's colour, and — where it is
+   *  dark (`markInk: "line"` on that master) — the mark's. */
+  colorHex: string;
+  inkByColorKey?: InkByColorKey;
+  /** The masters on which the mark takes the line's ink as ONE flat colour
+   *  with no shadow (the brand's single-ink treatment): where the print's
+   *  second line is dark and the white mark would not read (the 1997 white
+   *  frame). On every other master the mark is its standard white with its
+   *  own soft shadow. */
+  darkMarkKeys?: readonly FrameMasterKey[];
+  /** The widest the footer text is drawn, a fraction of the card's width:
+   *  a longer one is cut with ONE "…". */
+  maxWidthPct: number;
+};
+
 /** Default placement: inside the M15 black border (≈73 px of black above the
  *  ink on a 1500×2100 card, 34 px below). */
 export const BRAND_MARK_PLACEMENT: BrandMarkPlacement = { rightPct: 3.5, bottomPct: 1.8 };
@@ -964,8 +1144,6 @@ export function loyaltyBadgeShapeFor(
 export function loyaltyBadgeAssetFor(cost: string): string {
   return LOYALTY_BADGE_ASSETS[loyaltyBadgeShapeFor(cost)];
 }
-
-export const SAGA_MARKER_POINTS = "0,0 100,0 100,62 50,100 0,62";
 
 const INK_DARK = "#17120c";
 const INK_DARK_SOFT = "#2a2118";
@@ -1098,20 +1276,21 @@ const ALPHA_BAND_INK: InkByColorKey = {
 // ---------------------------------------------------------------------------
 
 /** Beleren Bold's baseline below the centre of its line box, per em:
- *  (hhea ascender 1917 − descender 552) ÷ 2 ÷ 2048 units. Both renderers
- *  centre a band's single line box (line-height normal = the hhea box,
- *  1.2056 em) in its rect, so a band whose font grows by Δ (a fraction of
- *  the card's width) lowers its baseline by this × Δ.
- *  tests/unit/cards/m15-text-sizes.test.ts re-reads the TTF. */
-export const DISPLAY_BASELINE_BELOW_CENTRE_EM = (1917 - 552) / 2 / 2048;
+ *  (hhea ascender 1917 − descender 552) ÷ 2 ÷ 2048 units — the display
+ *  face's own, from the generated table (lib/cards/type-faces.ts, TODO
+ *  4.8.0). Both renderers centre a band's single line box (line-height
+ *  normal = the hhea box, 1.2056 em) in its rect, so a band whose font
+ *  grows by Δ (a fraction of the card's width) lowers its baseline by
+ *  this × Δ. tests/unit/cards/m15-text-sizes.test.ts re-reads the TTF. */
+export const DISPLAY_BASELINE_BELOW_CENTRE_EM = TYPE_FACES.display.baselineBelowCentreEm;
 
 /** The TextSlot.dy that keeps a centred band's baseline where it printed at
  *  `fromPct` once its size is `toPct` (both fractions of the card's width,
  *  the unit of dy): the text moves up by the baseline's drop. Exact in the
  *  preview; the bake rounds it to whole pixels (≤ 1 px from the old
  *  baseline at 750 and 1500 px, measured on bakes of every family slot). */
-function keepBaseline(fromPct: number, toPct: number): number {
-  return -DISPLAY_BASELINE_BELOW_CENTRE_EM * (toPct - fromPct);
+function keepBaseline(fromPct: number, toPct: number, font?: SlotFace): number {
+  return -typeFace(font).baselineBelowCentreEm * (toPct - fromPct);
 }
 
 /**
@@ -1124,10 +1303,11 @@ function keepBaseline(fromPct: number, toPct: number): number {
  * climb ≈ 0.33 px per px it lost: Vinnie 'Goldfang' Lupo at 46 px sat 11 px
  * above every full-size name). The bake passes its whole-px size.
  */
-export function slotTextDy(slot: Pick<TextSlot, "dy" | "fit" | "sizePct">, drawnSizePct: number): number {
+export function slotTextDy(slot: Pick<TextSlot, "dy" | "fit" | "sizePct" | "font">, drawnSizePct: number): number {
   const dy = slot.dy ?? 0;
   if (slot.fit !== "measured" || !(drawnSizePct < slot.sizePct)) return dy;
-  return dy + keepBaseline(slot.sizePct, drawnSizePct);
+  // The baseline is the slot's own face's (TODO 4.8.0).
+  return dy + keepBaseline(slot.sizePct, drawnSizePct, slot.font);
 }
 
 /** The M15 name: 0.05 → TITLE_SIZE_PCT, baseline kept — it already sits on
@@ -2388,123 +2568,154 @@ const ALPHALAND: FrameProfile = {
   pt: { ...AGCLASSIC.pt!, inkByColorKey: ALPHA_LAND_INK },
 };
 
-// Alpha Token — the 1993 token frame (magic-agclassic-token.mse-style). Silver
-// stone border, a large white art window (cut to transparent), and a green
-// panel with a tan type box at the bottom. No title plate (the name sits in the
-// dark top border in light ink) and no cost. P/T is white text over the tan box
-// bottom-right; token abilities render over the lower art on a dark scrim.
-const ALPHATOKEN: FrameProfile = {
-  flavorDivider: false,
-  label: "Alpha Token",
-  brandMark: { rightPct: 3.5, bottomPct: 0.55 },
-  hideCost: true,
-  artSlot: { topPct: 9.0, leftPct: 10, widthPct: 80, heightPct: 52.5 },
-  title: {
-    rect: { topPct: 3.2, leftPct: 12, widthPct: 76, heightPct: 5.2 },
-    sizePct: 0.044,
-    colorHex: INK_LIGHT,
-    weight: 600,
-    align: "center",
-    font: "display",
-    shadowCss: OUTLINE_SHADOW,
-  },
-  type: {
-    rect: { topPct: 70.5, leftPct: 18, widthPct: 64, heightPct: 7 },
-    sizePct: 0.03,
-    colorHex: INK_DARK,
-    weight: 600,
-    align: "center",
-    font: "display",
-  },
-  rules: {
-    rect: { topPct: 49.0, leftPct: 12, widthPct: 76, heightPct: 11 },
-    sizePct: rulesPxToPct(RULES_SIZE_PX.compact),
-    colorHex: INK_LIGHT,
-    vAlign: "center",
-    font: "body",
-    backdropHex: "rgba(10,8,6,0.5)",
-  },
-  footer: {
-    rect: { topPct: 96.5, leftPct: 10, widthPct: 80, heightPct: 3 },
-    sizePct: 0.015,
-    colorHex: INK_LIGHT,
-    uppercase: true,
-    letterSpacingEm: 0.05,
-    font: "display",
-  },
-  pt: {
-    rect: { topPct: 82.5, leftPct: 75, widthPct: 19, heightPct: 6.5 },
-    sizePct: 0.04,
-    colorHex: "#ffffff",
-    weight: 700,
-    shadowCss: OUTLINE_SHADOW,
-  },
+// ---------------------------------------------------------------------------
+// Retro (1997) — the pre-8th-Edition "old border" as the ORIGINAL cards
+// printed it, Mirage 1996 → Scourge 2003 (TODO 4.10a, layout v46; owner
+// 2026-10-07: the originals, not the 2021+ reprints). The name and type line
+// sit directly on the frame (no plates), the P/T in the frame's bottom-right
+// corner, a centred two-line footer under the text box.
+//
+// MASTERS: the frames bucket. Seven keys are Card Conjurer's Seventh drawing
+// re-cut edge by edge and toned region by region onto the prints, gold is
+// the MSE artwork cut with the same edge map (scripts/lib/seventh-1997.mjs;
+// docs/FRAMES.md "The 1997 frame"). Every px below is the 1500 × 2100
+// master's; every text measure is the prints' (lib/cards/typography.ts
+// RETRO_*; 54 prints for baselines and centres).
+//
+// INK (104 prints, no exception): name, type line, P/T and artist line are
+// WHITE (≈ #f0f3ef) with a hard black drop shadow on EVERY frame colour,
+// white included — right / down at HD: name + 5 / + 3 px, type line
+// + 4.5 / + 3.3, artist line + 3.5 / + 3.5, P/T about twice the name's
+// (+ 6.7 / + 5.7). The shadows are per-key ink entries, never the band's own
+// `shadowCss`: a band-level shadow would emboss the pips beside the name.
+//
+// FOOTER (era design D1 / D2): the centred layout of Exodus 1998 on —
+// `Illus. <artist>` in MPlantin over the © slot (`copyrightSlot`), whose
+// printed ink is black on the white frame and white on every other from
+// Mercadian Masques 1999. PipGlyph prints no Wizards line: the slot holds
+// the pipglyph.com mark on display (off the border on this pair) and a
+// clean download's footer text.
+//
+// SYMBOLS (4.24): `symbolStyle: "1997"` — flat 73 px discs, the 1997 tap.
+// ---------------------------------------------------------------------------
+/** The 1997 prints' white ink and its drop shadow's black. */
+const RETRO_WHITE = "#f0f3ef";
+const RETRO_SHADOW_HEX = "#181311";
+const RETRO_KEYS = ["w", "u", "b", "r", "g", "c", "m"] as const;
+/** White ink with a hard shadow `dxPx` right and `dyPx` down at `sizePx`
+ *  (HD px), in em so both renderers scale it — one entry per master. */
+function retroInk(sizePx: number, dxPx: number, dyPx: number): InkByColorKey {
+  const em = (px: number) => Number((px / sizePx).toFixed(4));
+  const shadowCss = `${em(dxPx)}em ${em(dyPx)}em 0 ${RETRO_SHADOW_HEX}`;
+  return Object.fromEntries(RETRO_KEYS.map((k) => [k, { colorHex: RETRO_WHITE, shadowCss }]));
+}
+/** The 1997 masters' art window (4.10a): 175–1326 × 208–1136 px on every key
+ *  of both templates (the re-cut puts the pack's one window on the prints';
+ *  the MSE gold's is cut onto the same edges), covered with ≥ 0.05 % of the
+ *  card to spare: 174–1328 × 206.6–1137.8 px. */
+const RETRO_ART_SLOT: Rect = { topPct: 9.84, leftPct: 11.6, widthPct: 76.934, heightPct: 44.34 };
+/** The © slot: centred on the artist line's centre (748 px), baseline at
+ *  1976 px; black on the white frame, white elsewhere (the late prints'
+ *  rule, Mercadian Masques 1999 on). */
+const RETRO_COPYRIGHT: CopyrightSlot = {
+  centerPct: 49.87,
+  baselinePct: (1976 / 2100) * 100,
+  sizePct: RETRO_COPYRIGHT_SIZE_PCT,
+  font: "body",
+  colorHex: RETRO_WHITE,
+  inkByColorKey: { w: { colorHex: INK_DARK } },
+  darkMarkKeys: ["w"],
+  maxWidthPct: 0.5,
 };
-
-// ---------------------------------------------------------------------------
-// Retro (1997, magic-old.mse-style) — the pre-8th-Edition "old border": a tan
-// marble frame with the name + type printed directly on the border (no plates),
-// a white art window (cut to transparent), a cream text box, and dark-ink P/T
-// at the bottom-right. Structurally like AGCLASSIC but with the MSE magic-old
-// geometry. All text is dark ink on the light frame.
-// MSE magic-old spec (375×523): name 42,24 (23h); image 45,51 286×233;
-// type 39,291 (20h); text 43,318 289×143; pt 295,470 47×27.
-// ---------------------------------------------------------------------------
 const RETRO: FrameProfile = {
   flavorDivider: false,
   label: "Retro (1997)",
-  // Frame edge at 96.38%H: the default mark touched it.
-  brandMark: { rightPct: 3.5, bottomPct: 0.95 },
-  costSizePct: 0.04,
-  artSlot: { topPct: 9.6, leftPct: 11.7, widthPct: 76.6, heightPct: 44.8 },
+  symbolStyle: "1997",
+  costSizePct: RETRO_COST_DISC_PCT,
+  artSlot: RETRO_ART_SLOT,
+  // The band: from the name's start (166 px on the prints) to the last cost
+  // disc's end (1383 px), centred on the discs' row (137 px). The name's
+  // baseline is the prints' 163 px: `dy` lowers the text alone.
   title: {
-    rect: { topPct: 4.2, leftPct: 11, widthPct: 78, heightPct: 4.6 },
-    sizePct: 0.044,
-    colorHex: INK_DARK,
+    rect: { topPct: 4.224, leftPct: 10.87, widthPct: 81.33, heightPct: 4.6 },
+    sizePct: RETRO_TITLE_SIZE_PCT,
+    colorHex: RETRO_WHITE,
+    inkByColorKey: retroInk(71, 5, 3),
     weight: 600,
     font: "display",
+    fit: "measured",
+    dy: 3.4 / 1500,
   },
+  // MPlantin, the printed face: baseline 1229 px, starting at 162 px; the
+  // band is centred between the art ring and the text box (1204.5 px) for
+  // the set symbol, the text lowered onto its baseline by `dy`.
   type: {
-    rect: { topPct: 55.4, leftPct: 10.4, widthPct: 74, heightPct: 3.9 },
-    sizePct: 0.03,
-    colorHex: INK_DARK,
-    weight: 600,
-    font: "display",
+    rect: { topPct: 55.5, leftPct: 10.53, widthPct: 79.47, heightPct: 3.714 },
+    sizePct: RETRO_TYPE_SIZE_PCT,
+    colorHex: RETRO_WHITE,
+    inkByColorKey: retroInk(67, 4.5, 3.3),
+    font: "body",
+    fit: "measured",
+    dy: 6.1 / 1500,
   },
+  // ONE rules box for seven masters whose printed text boxes differ (the
+  // re-cut is per key): it fits the smallest — inside the trim ring of every
+  // outlined box (175–1325 × 1276–1846 px across both templates), clear of
+  // green's ragged plank and black's burnt rim. 183–1317 × 1270–1846 with
+  // the default 9 / 18 px padding sets the text in 192–1308 px, the pack's
+  // own text column.
   rules: {
-    rect: { topPct: 60.6, leftPct: 11.5, widthPct: 77, heightPct: 27.2 },
+    rect: { topPct: 60.476, leftPct: 12.2, widthPct: 75.6, heightPct: 27.43 },
     sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
     colorHex: INK_DARK,
     vAlign: "center",
     font: "body",
   },
+  // Line 1: "Illus. <artist>", centred on 748 px, baseline 1933 px; its box
+  // ends before the widest P/T's ink (1160 px), so a long credit takes its
+  // "…" there.
   footer: {
-    rect: { topPct: 95.3, leftPct: 11, widthPct: 78, heightPct: 2.6 },
-    sizePct: 0.015,
-    colorHex: "#efe9dd",
-    uppercase: true,
-    letterSpacingEm: 0.04,
-    font: "display",
+    rect: { topPct: 89.69, leftPct: 22.4, widthPct: 54.93, heightPct: 3.2 },
+    sizePct: RETRO_ARTIST_SIZE_PCT,
+    colorHex: RETRO_WHITE,
+    inkByColorKey: retroInk(58, 3.5, 3.5),
+    align: "center",
+    prefix: "Illus. ",
+    font: "body",
   },
-  // Real Mirage-era cards print P/T in dark ink on the tan strip (the MSE
-  // "white" note is its own outline treatment) — match the printed card.
-  // The strip is free on both sides of the value up to the frame's bevel
-  // shading at ~1410 px, so the ink may run 1125–1410 px (`100/100` fits).
+  copyrightSlot: RETRO_COPYRIGHT,
+  // White with the heavier shadow, baseline 1963 px, set against a fixed
+  // RIGHT edge as the prints set it: every value's ink ends at 1364–1370 px
+  // — a one-digit pair covers 1253–1367 (centre 1309, 54 prints), and a
+  // two-digit one grows to the LEFT at the same size (NEM #116 10/10
+  // 1160–1370, MIR #315 12/12 1164–1364, LGN #130 13/13 1170–1368, P02 #35
+  // 11/11: digits 59–61 px tall on all four). The rect's right edge is the
+  // digits' ink end plus Beleren's right bearing (3.9 px at 86). The corner
+  // is free from the artist line's box (1160 px): a value whose ink would
+  // pass it shrinks ("10/10", wider in Beleren than in the prints' face, to
+  // 97 %; "100/100" to two thirds). The hard shadow (+ 6.7 px) stays 39 px
+  // short of the outer bevel (1413 px).
   pt: {
-    rect: { topPct: 89.5, leftPct: 77.5, widthPct: 14, heightPct: 5.6 },
-    inkSpanPct: { leftPct: 75, rightPct: 94 },
-    sizePct: 0.042,
-    colorHex: INK_DARK,
+    rect: { topPct: 89.31, leftPct: 77.36, widthPct: 14, heightPct: 5.6 },
+    align: "end",
+    endKerned: true,
+    inkSpanPct: { leftPct: 77.47, rightPct: 94.2 },
+    sizePct: RETRO_PT_SIZE_PCT,
+    colorHex: RETRO_WHITE,
+    shadowCss: `${(6.7 / 86).toFixed(4)}em ${(5.7 / 86).toFixed(4)}em 0 ${RETRO_SHADOW_HEX}`,
     weight: 700,
   },
 };
 
-// Retro land — the 1997 nonbasic land frame (magic-old-unland): same geometry,
-// no mana cost.
+// Retro land — the 1997 land frame: the same geometry, no mana cost. `c` is
+// the plain land (the orange box of Fifth Edition 1997 on), w–g the basics'
+// coloured boxes, `m` a stand-in that is never ticked (4.6h). One brown land
+// frame under every key's footer: the © slot is white on all seven.
 const RETROLAND: FrameProfile = {
   ...RETRO,
   label: "Retro Land",
   hideCost: true,
+  copyrightSlot: { ...RETRO_COPYRIGHT, inkByColorKey: undefined, darkMarkKeys: undefined },
 };
 
 // ---------------------------------------------------------------------------
@@ -2515,6 +2726,20 @@ const RETROLAND: FrameProfile = {
 // MSE magic-new spec (375×523): name 30 (23h); image 32,62 311×228;
 // type 298 (20h); text 31,328 311×142; pt box 284,466 60×28 (+plate overlay).
 // ---------------------------------------------------------------------------
+/** The 2003 frame's artist line where the prints set it in WHITE (TODO
+ *  4.23a, layout v44): on the black frame and on every land. Eighth Edition
+ *  → Journey into Nyx print the footer black on white, blue, red, green,
+ *  gold and the artifact frame, and white on black (M12 #81: #fcfdf8) and
+ *  on lands (M12 #224: #f9fcf9) — Card Conjurer's pack8th.js encodes the
+ *  same rule. INK_DARK on those masters measured 1.1 : 1 (`modern`/b) and
+ *  2.2–2.3 : 1 (the one brown band every `modernland` key shares); white
+ *  is 16.2 : 1 and 8.1–8.5 : 1. No shadow: the prints have none. */
+const MODERN_FOOTER_WHITE = "#ffffff";
+/** `modernland`'s footer ink: one brown land frame under the artist line on
+ *  all seven colour keys, so all seven print white. */
+const MODERN_LAND_FOOTER_INK: InkByColorKey = Object.fromEntries(
+  (["w", "u", "b", "r", "g", "c", "m"] as const).map((k) => [k, { colorHex: MODERN_FOOTER_WHITE }]),
+);
 const MODERN: FrameProfile = {
   flavorDivider: false,
   label: "Modern border (2003)",
@@ -2555,6 +2780,9 @@ const MODERN: FrameProfile = {
     rect: { topPct: 92.2, leftPct: 15.5, widthPct: 58, heightPct: 2.6 },
     sizePct: 0.015,
     colorHex: INK_DARK,
+    // White on the black frame, as the prints (4.23a). `c` stays dark: on
+    // `modern` it is the artifact frame, whose print is black.
+    inkByColorKey: { b: { colorHex: MODERN_FOOTER_WHITE } },
     uppercase: true,
     letterSpacingEm: 0.04,
     font: "display",
@@ -2580,76 +2808,307 @@ const MODERNLAND: FrameProfile = {
   ...MODERN,
   label: "Modern Land",
   hideCost: true,
+  // The land frame is the same brown under the artist line on every colour
+  // key: the footer prints white on all seven (4.23a).
+  footer: { ...MODERN.footer!, inkByColorKey: MODERN_LAND_FOOTER_INK },
 };
 
-// Battle — the M15 Siege frame, the only LANDSCAPE frame (7:5). Full-bleed art
-// with a title pill (top), a type pill, and a text box overlaid; the frame
-// paints no defense shield, so the defense value renders on a drawn dark badge
-// in the bottom-right corner. All rects are % of the landscape card. Battles
-// are often DFCs (battle front / normal back) — the existing back-face flip
-// carries the back. Source: magic-modules.mse-include/cards/375 m15 battle.
+// ---------------------------------------------------------------------------
+// The landscape layouts (TODO 4.21b, layout v43): battle and split on Card
+// Conjurer's masters (the frames bucket, scripts/lib/cc-frames.mjs), each
+// 2100 × 1500. Every rect below is % of the LANDSCAPE card; every px is HD
+// (2100 × 1500). Placement rule for both: a text or a value sits where the
+// PRINTS set it RELATIVE TO ITS OWN BAR of the master (a baseline below its
+// bar's face, a name's start past its bar's left end, a cost's end before
+// its bar's right end), measured on Scryfall PNGs registered bar by bar —
+// so the card reads right on the frame it is drawn on. Where Card
+// Conjurer's pack itself leaves the prints, the importer moves whole blocks
+// of the master onto them through its flat border (SPLIT_RECUT_PX,
+// BATTLE_LOWER_RECUT_PX, BATTLE_TOP_RECUT_PX — the px below are the PACK's,
+// and ride those moves as the tokens ride TOKEN_RECUT_PX); what a block
+// move can't reach — the battle's bars ended 8–10 px short of the prints',
+// its shield 12 px left of theirs — the importer re-cuts (TODO 4.21d,
+// layout v45: BATTLE_RIGHT_RECUT_PX, which the slots ride the same way;
+// docs/FRAMES.md "The landscape layouts").
+// ---------------------------------------------------------------------------
+
+/** How far the importer moves Card Conjurer's two split halves onto the
+ *  prints, HD px (negative = left; scripts/lib/cc-frames.mjs
+ *  SPLIT_HALF_RECUT — a unit test holds the two together): the pack's
+ *  collector border is 160 px where the prints' is 147–148, so the left
+ *  half moves 11 px and the right half 3. */
+export const SPLIT_RECUT_PX = { left: -11, right: -3 } as const;
+/** How far the importer moves the battle's lower block (type bar, text box,
+ *  shield) DOWN onto the prints, HD px (BATTLE_BLOCK_RECUT's second block). */
+export const BATTLE_LOWER_RECUT_PX = 4;
+/** How far the importer moves the battle's top block (the name pill, the
+ *  icon, the arc's upper curve) onto the prints, HD px (negative = up;
+ *  BATTLE_BLOCK_RECUT's first block — TODO 4.21d). */
+export const BATTLE_TOP_RECUT_PX = -2;
+/** How far the importer re-cuts the battle's right side onto the prints, HD
+ *  px to the right (TODO 4.21d; scripts/lib/cc-frames.mjs
+ *  BATTLE_RIGHT_RECUT's bands and BATTLE_SHIELD.dx — a unit test holds them
+ *  together): the name pill's paper is stretched 10 px, the type bar's and
+ *  the text box's 8, and the shield is set 12 px right, over the border. */
+export const BATTLE_RIGHT_RECUT_PX = { pill: 10, bars: 8, shield: 12 } as const;
+
+/** A portrait footer slot as a LANDSCAPE card carries it (TODO 4.21b; 3.8's
+ *  slice for split and battle): the printed card is the portrait card turned
+ *  a quarter turn clockwise, so its bottom border — where M15 prints the
+ *  artist line — is the landscape card's LEFT border, and the line runs
+ *  down it from the top, its letters' heads toward the card (MH2 #123, TSR
+ *  #186, MOM #149: the prints' second border line is centred 75–79 px from
+ *  the left edge and starts 97–99 px down; M15's slot, turned, is centred on
+ *  79.8 px and starts at 97.5). The result's `rect` is the BAND the turned
+ *  line covers (FrameProfile.footerTurn draws it), its size the same px. */
+function footerTurnedWithCard(footer: TextSlot): TextSlot {
+  const r = footer.rect;
+  return {
+    ...footer,
+    rect: { topPct: r.leftPct, heightPct: r.widthPct, leftPct: 100 - (r.topPct + r.heightPct), widthPct: r.heightPct },
+    sizePct: displayPct(footer.sizePct, "landscape"),
+  };
+}
+
+// Battle — the March of the Machine Siege frame, FRONT face (LANDSCAPE, 7:5;
+// MOM #149 Invasion of Tarkir and the 36 MOM battles). Card Conjurer's
+// 'Battle' master (packBattle.js, 2814 × 2010 → 2100 × 1500 in one Lanczos
+// pass) replaces the MSE 'm15 mainframe battles' one, which had no border,
+// no siege arc, no battle icon and no defense shield (a transparent ring
+// round a drawn disc). On every colour the PACK is: the black border
+// (its inner edge the window's: 168–2039 × 61 px, the arc bulging left),
+// the battle icon's ring at x 220–362, the name pill's face 375–1967 ×
+// 76–181, the type bar's face 242–1967 × 871–975, the text box's paper
+// 253–1943 × 1006–1430, the defense shield 1881–2045 × 1300–1466 (its
+// black interior 1920–2007 on the digits' rows) and the bottom border from
+// 1442. Nine MOM prints set the type bar 5.3–5.5 px, the box's top 4.6, its
+// bottom 2.5 and the shield 2.8–5.0 px lower than the pack, the name pill
+// 1.4–2.5 px higher, the pill's right end 10.0 px, the type bar's 8.6 and
+// the box's 7.6 px further right and the shield 11.7 px right, over the
+// border. The importer re-cuts the master onto them (TODO 4.21b + 4.21d):
+// the lower block BATTLE_LOWER_RECUT_PX (4 px) down, the top block
+// BATTLE_TOP_RECUT_PX (2 px) up, the pill's paper stretched 10 px right,
+// the type bar's and the box's 8, the shield set 12 px right
+// (BATTLE_RIGHT_RECUT_PX) and the icon's rings redrawn at the prints'
+// radii — every one of those edges within 1.5 px of the prints' mean (the
+// right side within 0.7). The px below are the PACK's; each slot rides the
+// re-cut that moved its bar.
+//   • Art — ONE rect for every colour, from the border's inner edge to the
+//     bottom border (BATTLE_ART_RECT): on the master the full-art window is
+//     clear from 168 to 2039 px across and from 61 down to 1387, and again
+//     in a sliver between the shield's right point and the border down to
+//     1433 (α < 250 over 166–2041 × 59–1436), which a slot ending at the
+//     text box's row would leave on #101015. Card Conjurer's own artBounds
+//     (167–2040 × 60–1431) run the art under the text box the same way, as
+//     the printed card does.
+//   • Colourless — CC's see-through 'Colorless Frame' (MOM #1 Invasion of
+//     Ravnica): its pill, type bar and text box are translucent (α 190–250)
+//     down to the bottom border, so the PROFILES entry declares the same
+//     rect as its under-frame art (ONE picture: nothing to seam).
+//   • The name — the pill's face rows (the pack's 76–181.5, 2 px up with
+//     the top block), from 388 px: the prints start it 18–20 px past the
+//     pill's left end, right of the icon (3.28: the MSE rect began 269 px
+//     in, under the icon; 4.21d's skeptic pass: from 392 px the "I" of
+//     "Invasion" stood 398.2 px in where nine prints set it 391.0–394.2,
+//     and the word ended 2.5 px right of theirs — 4 px left centres ours
+//     on theirs, start −1.5 / end +1.5), 2 px below the row a centred 80 px
+//     line sets it on (dy: a whole px at HD and at 750, so the bake and the preview
+//     move it alike). It RIDES the top block (TODO 4.21d): on nine bakes of
+//     the prints' own names the letters' feet were on row 158 where the
+//     prints' are on 156–157 (v43 took 158.4 for theirs), and "Invasion of"
+//     as a whole lay 1.6 px below the prints' (a 2-D correlation of the
+//     region; its top the same 1.7) — 0.4 px above them after the move.
+//   • The cost — at the family's disc, right-aligned to the pack's 1942.3
+//     px + the pill's 10: the prints end their last disc 24 px before the
+//     pill's face ends (MOM #22 / #147 / #149: 1952–1953 px; ours 1952.3).
+//     Its ROWS do not ride the top block (costDy gives the 2 px back): the
+//     prints centre their discs 128.5–129.3 px down, 2 px below the middle
+//     of their pill's face — the same nine bakes' last disc lies 0.5 px
+//     below the prints' where it is and would lie 1.5 px above them had it
+//     moved with the name.
+//   • The type line — the type bar's face rows (the pack's 871–975.5),
+//     from 268 px (the prints' "Battle — Siege" starts 271.2–272.2), its
+//     baseline 76.9 px below the face's top as on the prints, 2 px below
+//     centred (dy).
+//   • The type line and the set symbol ride the type bar's 8 px: the line's
+//     rect ends at the pack's 1935 px + 8, the symbol's box — CC's (180 ×
+//     86 px, the family's), its right edge 25 px before the bar's face ends
+//     as on the prints — at the pack's 1942 + 8 = 1950 px, centred on the
+//     bar's face (the pack's 925 px); a Keyrune glyph takes the family's
+//     ink fit.
+//   • Rules — CC's box (the pack's 272–1933 × 1008–1422), the block centred
+//     in it as the prints centre theirs (their six-line blocks centre 209 px
+//     below the box's top ± 1), the lines from 273 px (the prints' 272–275),
+//     at the 9 pt ladder top (the prints' line pitch is 74–75 px on MOM
+//     #21, a 76 px text; #147 sets 72 px, #63 67, the fuller boxes 59–66).
+//     The box does NOT ride the text box's 8 px (TODO 4.21d): the prints'
+//     lines do run to about 1942 px, but they WRAP round the shield, where
+//     ours keep out of it by stepping the size down — with the pack's
+//     column nine bakes of the prints' texts set every one within 1.5 px
+//     of the print's own size (64 / 76 / 60 / 68 / 60 / 72 / 58 / 60 / 62
+//     against 65.4 / 75.8 / 61.3 / 67.5 / 61.5 / 71.9 / 59.3 / 61.3 /
+//     63.3); 8 px wider, four of them came out 2–6 px smaller (longer
+//     lines meet the shield). A wider column needs the shield as a rules
+//     FLOAT first (a follow-up).
+//   • Defense — in the shield the MASTER paints (`paintedRect`: the pack's
+//     Defense mask 12 px right, where the importer sets the shield — the
+//     rules keep-out on every battle): the value in white
+//     at 78 px, centred where the prints centre their digit in the shield
+//     (81 px right of its left point and 82 px below its top one; the digit
+//     57–58 px tall on nine prints, ours 56–59). The drawn disc and its
+//     outline are gone (owner 2026-09-29).
+//   • The artist credit — M15's footer line turned with the card, down the
+//     left border (footerTurnedWithCard). The collector number, set and
+//     language beside it are TODO 4.9d's.
+//   • The brand mark — in the 54 px bottom border, its right end clear of
+//     the shield's left point (1893 px).
+/** The battle's art rect: the PACK's window 58.2–1436.85 px down (164.85–
+ *  2042.25 across), its top 2 px up with the top block (the window's upper
+ *  edge is the pill's lower rim and the border's inner edge, which the
+ *  block carries: the see-through frame starts at row 57 on the master). */
+export const BATTLE_ART_RECT: Rect = {
+  topPct: 3.88 + BATTLE_TOP_RECUT_PX / 15,
+  leftPct: 7.85,
+  widthPct: 89.4,
+  heightPct: 91.91 - BATTLE_TOP_RECUT_PX / 15,
+};
+/** A row of the battle PACK's lower block (the type bar, the text box, the
+ *  shield, everything on them), where the master has it: % of the card's
+ *  height. */
+const battleLowerPct = (packPx: number) => (packPx + BATTLE_LOWER_RECUT_PX) / 15;
+/** A column of the battle PACK's shield (and the value in it), where the
+ *  master has it: % of the card's width. */
+const battleShieldPct = (packPx: number) => (packPx + BATTLE_RIGHT_RECUT_PX.shield) / 21;
+/** The defense shield the battle master paints, in card percents: the
+ *  pack's Defense mask at the master's size, moved with the lower block and
+ *  set 12 px right (scripts/lib/cc-frames.mjs BATTLE_SHIELD.box — a unit
+ *  test keeps the two in step). */
+export const BATTLE_SHIELD_RECT: Rect = { topPct: battleLowerPct(1300), leftPct: battleShieldPct(1881), widthPct: 164 / 21, heightPct: 166 / 15 };
+const LANDSCAPE_FOOTER: TextSlot = footerTurnedWithCard({
+  rect: { topPct: 94.6, leftPct: 6.5, widthPct: 87, heightPct: 3.2 },
+  sizePct: 0.019,
+  colorHex: INK_LIGHT,
+  uppercase: true,
+  letterSpacingEm: 0.06,
+  font: "display",
+});
 const BATTLE: FrameProfile = {
   label: "Battle (Siege)",
-  // Text box edge at 96.07%H; right 11% clears the defense badge
-  // (89.9–97.9%W), which the default mark was drawn over.
-  brandMark: { rightPct: 11, bottomPct: 0.8 },
+  // The bottom border is 54 px (1446–1500): the mark's 38 px of ink
+  // (1454–1492) centred in it; right 11 % ends it at 1865 px, 16 px short of
+  // the shield's left point as the pack had it — 28 px short of it now that
+  // the shield sits 12 px right (the mark stays put). (The MSE master had no
+  // border: 0.8 % sat the mark on the art's last rows.)
+  brandMark: { rightPct: 11, bottomPct: 0.47 },
   orientation: "landscape",
-  // Measured: title pill 5.0–12.0, art window 13.6–57.2, type bar 58.2–65.0,
-  // text box 67.2–96.2; MSE text 252→356 at left 63/523, defense at 480,336.
-  artSlot: { topPct: 13.6, leftPct: 4, widthPct: 92, heightPct: 43.6 },
+  artSlot: BATTLE_ART_RECT,
+  costSizePct: displayPct(COST_DISC_PCT, "landscape"),
+  // The discs stay on the prints' rows (centred 128.75 px down) while the
+  // name rides the top block 2 px up: a whole px at HD and at 750.
+  costDy: -BATTLE_TOP_RECUT_PX / 2100,
+  symbolSizePct: displayPct(SET_SYMBOL_BOX_PCT, "landscape"),
+  setSymbolFit: "ink",
+  symbolRect: { topPct: battleLowerPct(925 - 43), leftPct: (1942 + BATTLE_RIGHT_RECUT_PX.bars - 180) / 21, widthPct: 180 / 21, heightPct: 86 / 15 },
   title: {
-    // inset past the rounded red end-nubs of the title pill
-    rect: { topPct: 5.2, leftPct: 12.8, widthPct: 74, heightPct: 6.4 },
-    sizePct: 0.034,
+    rect: { topPct: (76 + BATTLE_TOP_RECUT_PX) / 15, leftPct: 388 / 21, widthPct: (1942.3 + BATTLE_RIGHT_RECUT_PX.pill - 388) / 21, heightPct: 105.5 / 15 },
+    sizePct: displayPct(TITLE_SIZE_PCT, "landscape"),
+    dy: 2 / 2100,
+    fit: "measured",
     colorHex: INK_DARK,
     weight: 600,
     font: "display",
+    // M15's own tracking: untracked, an 80 px name came out 2.5–2.8 % short
+    // of the nine prints' at the same cap height (MOM #149 632 px against
+    // 615); tracked it is within 0.5 %.
+    letterSpacingEm: 0.01,
   },
   type: {
-    rect: { topPct: 58.4, leftPct: 12.8, widthPct: 74, heightPct: 6.2 },
-    sizePct: 0.025,
-    colorHex: INK_DARK,
+    rect: { topPct: battleLowerPct(871), leftPct: 268 / 21, widthPct: (1935 + BATTLE_RIGHT_RECUT_PX.bars - 268) / 21, heightPct: 104.5 / 15 },
+    sizePct: displayPct(TYPE_SIZE_PCT, "landscape"),
+    dy: 2 / 2100,
+    fit: "measured",
+    // The family's type-line ink (M15's), as its size.
+    colorHex: INK_DARK_SOFT,
     weight: 600,
     font: "display",
   },
   rules: {
-    rect: { topPct: 67.5, leftPct: 12.1, widthPct: 78.4, heightPct: 27 },
-    sizePct: rulesPxToPct(RULES_SIZE_PX.reduced, "landscape"),
+    rect: { topPct: battleLowerPct(1008), leftPct: 272 / 21, widthPct: (1933 - 272) / 21, heightPct: 414 / 15 },
+    sizePct: rulesPxToPct(RULES_SIZE_PX.standard, "landscape"),
     colorHex: INK_DARK,
-    vAlign: "start",
+    vAlign: "center",
     font: "body",
+    padPx: { x: 1, y: 0 },
   },
+  footer: LANDSCAPE_FOOTER,
+  footerTurn: 90,
   defense: {
-    rect: { topPct: 87.3, leftPct: 89.9, widthPct: 8, heightPct: 11 },
-    sizePct: 0.034,
+    rect: { topPct: battleLowerPct(1382.9 - 61.5), leftPct: battleShieldPct(1962 - 43), widthPct: 86 / 21, heightPct: 123 / 15 },
+    paintedRect: BATTLE_SHIELD_RECT,
+    // The shield's black interior on the digits' rows (the pack's 1350–1412).
+    inkSpanPct: { leftPct: battleShieldPct(1920), rightPct: battleShieldPct(2007) },
+    sizePct: 78 / 2100,
     colorHex: "#ffffff",
     weight: 700,
-    badgeColorHex: "#141008",
-    shadowCss: OUTLINE_SHADOW,
   },
 };
 
-// Saga — the M15 Saga frame: a cream chapter rail on the LEFT (the parsed
-// chapters replace the normal rules box) and a tall art column on the RIGHT,
-// with a title bar (name + cost) on top and a type bar at the bottom. Source:
-// magic-modules.mse-include/cards/375 m15 saga cut.
+/** The saga's chapter-badge stack pitch, HD px (centre to centre): tight
+ *  (LTC #58, WHO #99) and roomy (DOM #21, THB #160) — see SAGA.chapters. Even,
+ *  so the 750 px bake draws exactly half. */
+export const SAGA_BADGE_PITCH_PX = { min: 138, max: 160 } as const;
+/** The chapter numeral's size, HD px (MPlantin; the prints' Plantin semibold
+ *  is TODO 4.8). */
+export const SAGA_NUMERAL_SIZE_PX = 72;
+/** The fold's corner inside the saga's reminder box, HD px: [the paper's
+ *  first column, from row, to row] — the curve's steps (see SAGA.chapters
+ *  .intro.keepOuts). */
+const SAGA_FOLD_CORNER_PX: readonly (readonly [right: number, top: number, bottom: number])[] = [
+  [138, 572, 580],
+  [144, 580, 588],
+  [152, 588, 597],
+];
+/** The saga type line's print offset, a fraction of the card's width
+ *  (TextSlot.dy): 9.3 px down at HD (see SAGA.type). */
+const SAGA_TYPE_PRINT_DY = 9.3 / 1500;
+
+// Saga — the M15 Saga frame: the chapter rail on the LEFT (the reminder
+// block, then the chapters down a ribbon that carries their numbered badges —
+// they replace the normal rules box) and a tall art column on the RIGHT, with
+// a title bar (name + cost) on top and a type bar at the bottom. Masters:
+// Card Conjurer's 'Regular Frames' saga pack, native 1500 × 2100 (TODO 4.21c
+// = 3.7, scripts/lib/cc-frames.mjs CC_TEMPLATES.saga) — the 375 px MSE cut
+// had no ribbon and a window that started 26 px left of the prints'.
 // Layout v32: printed sagas set the name and type line at M15's sizes (81 /
 // 68 px on DOM #21 / #90 / #122; ours were 64 / 52) and their pips at M15's
-// ~70 px (owner decision 2026-09-28). Both bands keep their baseline — the
-// name's is the prints' (184.7 px); the type line's print offset (~11 px
-// lower) waits for the Card Conjurer re-source (TODO 4.21).
+// ~70 px (owner decision 2026-09-28). The name keeps the prints' baseline
+// (184.7 px); the type line took its print offset with the CC masters.
 const SAGA: FrameProfile = {
   label: "Saga",
   costSizePct: COST_DISC_PCT,
-  // MSE m15-saga spec: image 188,59 → 345,438; rail text from 60 to 437
-  // (badges at left 30, text indented to 45); type at 444.
-  artSlot: { topPct: 11.3, leftPct: 50.1, widthPct: 41.9, heightPct: 72.5 },
+  // The saga's title bar is M15's (the pack's Title mask is m15MaskTitle; the
+  // masters' bar faces span 104–210 px against M15's 104–208), and the prints
+  // set the pips where M15's are: the generic disc centres on 151.5 px on DOM
+  // #122 and 153 px on 40K #126 (segmented by its colour), the band's centre
+  // lifted by CC_M15_COST_DY puts ours on 152.25.
+  costDy: CC_M15_COST_DY,
+  // The masters' window + 0.1 % (752–1384 × 237–1758 px on every colour,
+  // the land saga included; packSagaRegular.js artBounds 0.5 / 0.1124 /
+  // 0.4247 × 0.7253 sit flush with it).
+  artSlot: { topPct: 11.19, leftPct: 50.03, widthPct: 42.4, heightPct: 72.68 },
   // CC's saga symbol box (packSagaRegular 0.12 W × 0.0381 H = 80 px; layout
   // v32) — see M15's symbolSizePct.
   symbolSizePct: SET_SYMBOL_BOX_PCT_THIN_BAR,
   setSymbolFit: "ink",
+  // The pack's symbol box: its right edge at 92.27 %W (1384 px), centred on
+  // 87.39 %H (1835 px) — the prints' symbols end at 1380–1384 px and centre
+  // on 1835–1836.5 (DOM #122, 40K #126, THB #160), where the type band's own
+  // centre put them 8 px high and 23 px left.
+  symbolRect: { topPct: 87.39 - 3.81 / 2, leftPct: 92.27 - 12, widthPct: 12, heightPct: 3.81 },
   title: {
-    rect: { topPct: 5.4, leftPct: 8.5, widthPct: 83, heightPct: 4.8 },
+    // Ends where M15's band does (92.2 %W, 1383 px): the prints' last disc
+    // ends at 1383.5–1386 px (DOM #90 / #122 / #173, LTC #58).
+    rect: { topPct: 5.4, leftPct: 8.5, widthPct: 83.7, heightPct: 4.8 },
     sizePct: TITLE_SIZE_PCT,
     dy: keepBaseline(0.0427, TITLE_SIZE_PCT),
     fit: "measured",
@@ -2659,9 +3118,14 @@ const SAGA: FrameProfile = {
   },
   type: {
     // 85.1, not the MSE 84.9: production override 2026-07-08, folded 2026-09-25.
-    rect: { topPct: 85.1, leftPct: 8.8, widthPct: 82, heightPct: 3.9 },
+    // From 8.5 %W (the prints' type line starts 5–9 px left of the old 8.8)
+    // to M15's 92.2.
+    rect: { topPct: 85.1, leftPct: 8.5, widthPct: 83.7, heightPct: 3.9 },
     sizePct: TYPE_SIZE_PCT,
-    dy: keepBaseline(0.0347, TYPE_SIZE_PCT),
+    // …and on the prints' baseline: 1854–1857 px on DOM #21 / #42 / #90 /
+    // #122 / #173 (mean 1855.3), 9.3 px below where the MSE bar's centre had
+    // it (the +0.0065 W the 4.20 review measured).
+    dy: keepBaseline(0.0347, TYPE_SIZE_PCT) + SAGA_TYPE_PRINT_DY,
     fit: "measured",
     colorHex: INK_DARK,
     weight: 600,
@@ -2675,13 +3139,74 @@ const SAGA: FrameProfile = {
     colorHex: INK_DARK,
     font: "body",
   },
+  // The printed rail (TODO 4.21c; lib/cards/saga-rail.ts lays it out). HD px
+  // of a 1500 × 2100 card; prints are Scryfall PNGs at that size.
   chapters: {
-    rect: { topPct: 11.5, leftPct: 8, widthPct: 41, heightPct: 72 },
-    sizePct: 0.029,
+    // The chapter text column: x 203–728 — the pack's 0.35 W column (ability
+    // text 0.1334 / 0.35 W), 3 px right of it: the prints' ink starts at
+    // 204–206 px (DOM #21, #90, LTC #58, 40K #126), ours from 200 started at
+    // 201–202 — from the rail's top at 237 px (11.29 %H: where the rows start
+    // on a saga with no reminder, owner decision 2026-09-29) to its foot at
+    // 1759 px (83.76 %H, the window's and the paper's bottom edge).
+    rect: { topPct: 11.29, leftPct: 13.53, widthPct: 35, heightPct: 72.47 },
+    // 64 px on a 62 px pitch: the prints' chapter text (DOM #21's "Create a
+    // 2/2 white" 504 px wide against our 503 at 64; x-height 29–30 px; the
+    // line pitch 62.0 px on DOM #21 / #42 / #90 / #122 / #173, 59.7 on LTC
+    // #58's 62 px text — 0.969 em, not the rules standard's 0.98).
+    sizePct: rulesPxToPct(RULES_SIZE_PX.compact),
+    lineHeight: 0.97,
     textColorHex: INK_DARK,
-    markerFillHex: "#1c1712",
-    markerTextHex: "#f4eee2",
-    dividerHex: "rgba(40,32,22,0.35)",
+    intro: {
+      // x 132–736 (the pack's 0.0867 / 0.404 W box from 130; the prints'
+      // "(" inks from 133, ours from 130 at 131), from the rail's top; 360 px
+      // tall, its text centred — the standard four-line reminder then sits
+      // on the prints' baselines (341 / 403 / 465 / 527 px on DOM #21, LTC
+      // #58, WHO #99, MH2 #259).
+      rect: { topPct: 11.29, leftPct: 8.8, widthPct: 40.27, heightPct: 17.14 },
+      // 62 px on a 62 px pitch. The prints set the reminder at the chapters'
+      // 64 px, but in an italic narrower than ours (public/fonts/
+      // mplantin-italic.ttf sets "step, add a lore counter." 614 px wide at
+      // 64 px; the prints' is 591): at 62 px ours is 594 and breaks into the
+      // prints' four lines, where 64 px took five.
+      sizePct: rulesPxToPct(62),
+      lineHeight: 1,
+      // The fold's corner. The ribbon folds out of the frame's left edge
+      // under the reminder, and its edge bulges into the box's bottom-left
+      // corner: on every master the paper starts at x 133 at y 572, 138 at
+      // 580, 144 at 588 and 151 at 596 px (169 at the first divider). A
+      // reminder that fills its box (six lines or more: 120 characters and
+      // up) would start its last line ON the fold — three steps of the
+      // curve the lines keep out of.
+      keepOuts: SAGA_FOLD_CORNER_PX.map(([right, top, bottom]) => ({ leftPct: 0, widthPct: right / 15, topPct: top / 21, heightPct: (bottom - top) / 21 })),
+    },
+    // 621 px: the divider under the reminder block on every print measured
+    // (619–621 on 50 of the 54 prints measured, DOM → MH3 — 613.6–622.8 over
+    // all, mean 620.1; the pack starts its rows at 608).
+    rowsTopPct: 29.57,
+    badge: {
+      assetPath: "/frames/saga/chapter/badge.png",
+      // The pack's box (0.0386 W, 0.0787 W × 0.0629 H): 118 × 132 px from
+      // x 58, centred on x 117 over the ribbon — the prints' badge reads
+      // 119–120 × 130–132 px, centred on x 117 ± 1.5.
+      leftPct: 3.86,
+      widthPct: 7.87,
+      heightPct: 6.29,
+      // A stack's pitch: 160 px on DOM, THB, KHM, 40K, WOE and PIP (DOM #21
+      // 159.8, DOM #173 160.1, THB #160 161), 134–142 px on LTR, LTC, WHO
+      // and MH3 (LTC #58 138.3 / 138.6, WHO #99's five 138.0) — the pack's
+      // 150 is neither. Roomy while the rows have room, tight before the
+      // text steps down (saga-rail.ts).
+      pitchPct: { min: SAGA_BADGE_PITCH_PX.min / 21, max: SAGA_BADGE_PITCH_PX.max / 21 },
+      numeralSizePct: SAGA_NUMERAL_SIZE_PX / 1500,
+      numeralColorHex: INK_DARK,
+    },
+    divider: {
+      assetPath: "/frames/saga/chapter/divider.png",
+      // The pack's: x 150–742 (0.1 / 0.3947 W), 0.0029 H = 6 px tall.
+      leftPct: 10,
+      widthPct: 39.47,
+      heightPct: 0.29,
+    },
   },
   // Standard M15-family bottom border — same artist line as M15.
   footer: {
@@ -2955,88 +3480,130 @@ const FLIP: FrameProfile = {
   },
 };
 
-// Split — the M15 split frame (LANDSCAPE). Read sideways: two upright half-cards
-// side by side, each a full mini-card (name/cost → art → type → rules). The LEFT
-// half is the front content; the RIGHT half is the back-face content — a second
-// face with rotation 0 and its OWN art window. Both halves share the card's
-// color (the app has one color identity, so a two-color split renders multicolor
-// on both halves). Frame composited from two MSE half-frames by
-// scripts/build-split-frame.mjs. Geometry is the MSE 523×375 spec in percent.
-//
-// The rules rects span each half's art-window width, so the frame's textbox
-// border lies INSIDE them: at its widest the cream starts 33 HD px inside a
-// rect's left edge and ends 38 px inside its right, on both halves of every
-// colour master (tests/unit/cards/rules-box.test.ts measures them). The text
-// keeps the padding of the MSE split style the frame comes from (6 / 4 of
-// its 523 px card: 24 / 16 HD px) inside that border — the first v33 cut
-// set it on the gold (an italic "f" crossed into the black frame). Both halves
-// keep the front box's 18 px above and below (the right half had a second
-// face's 12), so their first lines sit level. The boxes themselves (the
-// clip, the watermark centred in them) stay where they were.
-export const SPLIT_TEXTBOX_BORDER_PX = { left: 33, right: 38 } as const;
+// Split — the M15 split frame (LANDSCAPE, layout v43, TODO 4.21b): two
+// upright half-cards side by side, each a small card of its own (name +
+// cost → art → type → rules). The LEFT half is the front content; the RIGHT
+// half is the back-face content — a second face with rotation 0 and its OWN
+// art window. Both halves share the card's colour (per-part colour is TODO
+// 4.26). Card Conjurer's 'Split' master (packSplit.js, drawn portrait and
+// turned a quarter turn clockwise by the importer, no resample) replaces the
+// MSE composite (two magic-m15-split-fusable half-frames on a black canvas),
+// which drew no coloured body round either half and set the title bars 31 px
+// and both windows 37 px above the prints' (the left window 69 px left of
+// theirs: 133–952 × 201–800 px against 202–1018 × 238–796).
+// On every colour the PACK's left half is: the body 160–1080 px, the name
+// bar's face 200–1049 × 105–210, the window 215–1028 × 239–795, the thin
+// type bar's face 204–1046 × 814–882, the text box's paper 211–1025 ×
+// 913–1431; its right half is the same 958 px over (its window 1174–1986).
+// The importer moves the left half 11 px left and the right half 3 px
+// (SPLIT_RECUT_PX: the pack's collector border is 160 px, the prints'
+// 147–148), so on the MASTER the left window is 204–1017 and the right one
+// 1171–1983, every edge of both halves within 3.6 px of the mean of MH2
+// #123 / #60 and TSR #161 / #186 (5.4 px of any one; rows within 2.7 px,
+// untouched). Every px below is the pack's and rides the move
+// (splitLeftPct / splitRightPct).
+//   • Art — the windows + 0.1 % (2.1 px across, 1.5 px down, to spare).
+//   • Sizes — the prints', smaller than the M15 family's on every line
+//     (lib/cards/typography.ts: the name 76 px, the type line 53 px on its
+//     69 px bar, the pips 68 px, the set symbol's box 48 px), which is why
+//     split is not in lib/cards/m15-family.ts.
+//   • The name and the cost — the name bar's face rows (104.5–209.5): at 76
+//     px a centred name's baseline is 182.3 px, the prints' 182.7 (nine
+//     halves of MH2 #123, MH2 #60, TSR #161 / #186, GRN #224: 180.8–184.4),
+//     and the pips centre on 157.0, the prints' 156.6 (circle fits) — no dy,
+//     no costDy on either half. From 226 px (the prints' names start 30–32
+//     px past the bar's left end; ours 4 px into its rect) to 1030 px (the
+//     prints' last disc ends 19 px before the bar's face does).
+//   • The type line — rows 815–884 (its baseline the prints' 867.9 px, a
+//     centred 53 px line's 867.2), from 226 px; the left half's set symbol
+//     inline at 1030 px (MH2's ends 20–21 px before the bar's face ends).
+//     The right half draws no symbol (TODO 3.9).
+//   • Rules — 228–1008 × 927–1426 inside the paper, the lines from the
+//     rect's edge (the prints' left-aligned text starts 17.7–18.3 px inside
+//     the paper: GRN #224, WHO #77, MH2 #60), the block centred as the
+//     prints centre theirs (ink centred on 1178.5 px ± 2), at the 9 pt
+//     ladder top (TSR #161 and #186 set two and three lines at 76 px, a
+//     74–75 px pitch; MH2's halves 69–74). Some prints also CENTRE a
+//     text's lines (MH2 #123, TSR #156 / #161 / #186, C16 #239), others
+//     set theirs left (MH2 #60, GRN #224, DMR #209's one- and two-line
+//     texts): ours is always left-aligned — a rules layout rule of its
+//     own, not this correction's.
+//   • Both halves are set ALIKE: the right half's title and type slots are
+//     `fit: "measured"` too, which an unturned second face draws exactly as
+//     the front draws its own (both renderers).
+//   • The artist credit and the brand mark — as the battle's.
+/** How far the frame's textbox border reaches into a half's rules rect, HD
+ *  px: none — the Card Conjurer rules rects lie inside the paper (17–20 px
+ *  from its sides: the pack's 211–1025 round 228–1008, 1169–1983 round
+ *  1186–1966), where the MSE profile's spanned the window's width and held
+ *  33 / 38 px of border. tests/unit/cards/rules-box.test.ts measures the
+ *  paper on every colour master. */
+export const SPLIT_TEXTBOX_BORDER_PX = { left: 0, right: 0 } as const;
 const SPLIT_RULES_PAD_PX = {
-  left: SPLIT_TEXTBOX_BORDER_PX.left + 24,
-  right: SPLIT_TEXTBOX_BORDER_PX.right + 16,
-  top: 18,
-  bottom: 18,
+  left: SPLIT_TEXTBOX_BORDER_PX.left,
+  right: SPLIT_TEXTBOX_BORDER_PX.right,
+  top: 0,
+  bottom: 0,
 } as const;
+/** A column of the split PACK's left half, where the master has it: % of
+ *  the card's width. */
+const splitLeftPct = (packPx: number) => (packPx + SPLIT_RECUT_PX.left) / 21;
+/** The same for a column of the pack's RIGHT half. */
+const splitRightPct = (packPx: number) => (packPx + SPLIT_RECUT_PX.right) / 21;
+/** The right half's slots: the left half's, one half over — the pack's
+ *  958 px and the 8 px the two halves' moves differ by (966 px). */
+export const SPLIT_HALF_DX_PCT = (958 + SPLIT_RECUT_PX.right - SPLIT_RECUT_PX.left) / 21;
+const SPLIT_TITLE: TextSlot = {
+  rect: { topPct: 104.5 / 15, leftPct: splitLeftPct(226), widthPct: 804 / 21, heightPct: 105 / 15 },
+  sizePct: SPLIT_TITLE_SIZE_PCT,
+  fit: "measured",
+  colorHex: INK_DARK,
+  weight: 600,
+  font: "display",
+};
+const SPLIT_TYPE: TextSlot = {
+  rect: { topPct: 815 / 15, leftPct: splitLeftPct(226), widthPct: 804 / 21, heightPct: 69 / 15 },
+  sizePct: SPLIT_TYPE_SIZE_PCT,
+  fit: "measured",
+  colorHex: INK_DARK_SOFT,
+  weight: 600,
+  font: "display",
+};
+const SPLIT_RULES: TextSlot = {
+  rect: { topPct: 927 / 15, leftPct: splitLeftPct(228), widthPct: 780 / 21, heightPct: 499 / 15 },
+  sizePct: rulesPxToPct(RULES_SIZE_PX.standard, "landscape"),
+  colorHex: INK_DARK,
+  vAlign: "center",
+  font: "body",
+  padPx: SPLIT_RULES_PAD_PX,
+};
+const rightHalf = (slot: TextSlot): TextSlot => ({ ...slot, rect: { ...slot.rect, leftPct: slot.rect.leftPct + SPLIT_HALF_DX_PCT } });
 
 const SPLIT: FrameProfile = {
   label: "Split",
   orientation: "landscape",
-  // Text boxes end at 96.0%H: the default mark straddled them.
-  brandMark: { rightPct: 3.5, bottomPct: 0.8 },
-  artSlot: { topPct: 14.7, leftPct: 4.8, widthPct: 41.9, heightPct: 40.8 },
-  // MSE planeshifted-split: cost symbols 18/523 — larger than the name.
-  costSizePct: 0.0344,
-  title: {
-    rect: { topPct: 7.4, leftPct: 5.2, widthPct: 41.4, heightPct: 5.5 },
-    sizePct: 0.0287,
-    colorHex: INK_DARK,
-    weight: 600,
-    font: "display",
-  },
-  type: {
-    rect: { topPct: 56.3, leftPct: 5.2, widthPct: 40, heightPct: 4.2 },
-    sizePct: 0.02,
-    colorHex: INK_DARK_SOFT,
-    weight: 600,
-    font: "display",
-  },
-  rules: {
-    rect: { topPct: 62.4, leftPct: 4.8, widthPct: 41.9, heightPct: 28.5 },
-    sizePct: rulesPxToPct(RULES_SIZE_PX.reduced, "landscape"),
-    colorHex: INK_DARK,
-    vAlign: "start",
-    font: "body",
-    padPx: SPLIT_RULES_PAD_PX,
-  },
+  // The bottom border is 57 px (1443–1500): the mark's 38 px of ink centred
+  // in it (1452.5–1490.5), under the right half's text box — its right end
+  // (2023 px) 12 px inside that half's body (2035).
+  brandMark: { rightPct: 3.5, bottomPct: 0.57 },
+  // The pack's left window 215–1028 × 239–795, + 0.1 % each side.
+  artSlot: { topPct: 15.83, leftPct: splitLeftPct(212.9), widthPct: 817.2 / 21, heightPct: 37.27 },
+  costSizePct: SPLIT_COST_DISC_PCT,
+  symbolSizePct: SPLIT_SET_SYMBOL_BOX_PCT,
+  setSymbolFit: "ink-height",
+  title: SPLIT_TITLE,
+  type: SPLIT_TYPE,
+  rules: SPLIT_RULES,
+  footer: LANDSCAPE_FOOTER,
+  footerTurn: 90,
   secondFace: {
     rotation: 0,
-    costSizePct: 0.0344,
-    artSlot: { topPct: 14.7, leftPct: 53.2, widthPct: 41.9, heightPct: 40.8 },
-    title: {
-      rect: { topPct: 7.4, leftPct: 53.5, widthPct: 41.4, heightPct: 5.5 },
-      sizePct: 0.0287,
-      colorHex: INK_DARK,
-      weight: 600,
-      font: "display",
-    },
-    type: {
-      rect: { topPct: 56.3, leftPct: 53.5, widthPct: 40, heightPct: 4.2 },
-      sizePct: 0.02,
-      colorHex: INK_DARK_SOFT,
-      weight: 600,
-      font: "display",
-    },
-    rules: {
-      rect: { topPct: 62.4, leftPct: 53.2, widthPct: 41.9, heightPct: 28.5 },
-      sizePct: rulesPxToPct(RULES_SIZE_PX.reduced, "landscape"),
-      colorHex: INK_DARK,
-      vAlign: "start",
-      font: "body",
-      padPx: SPLIT_RULES_PAD_PX,
-    },
+    costSizePct: SPLIT_COST_DISC_PCT,
+    // The pack's right window 1174–1986 × 239–795, + 0.1 % each side.
+    artSlot: { topPct: 15.83, leftPct: splitRightPct(1171.9), widthPct: 816.2 / 21, heightPct: 37.27 },
+    title: rightHalf(SPLIT_TITLE),
+    type: rightHalf(SPLIT_TYPE),
+    rules: rightHalf(SPLIT_RULES),
   },
 };
 
@@ -4437,19 +5004,30 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // the pinline-only split (`<pair>.png`: the gold M frame, the pinline
   // lerped between the pair's frames — FRA #376 / #377, HOB #213, TLA #306,
   // BLC #86, MH2 #321, FRA #461). Declared on the two entries only, never on
-  // M15BORDERLESS, which the land dress spreads (its pairs are 4.56's) —
-  // opt-in per card, so no stored card changes. A hybrid cost prints the
-  // same split pinline over GREY bars (2X2 #374 / #385, SPG #142 / #144,
-  // ECL #292–296: Card Conjurer's 'Land Frame' bars for a hybrid pair), so
-  // m15borderless draws print's hybrid dress too (`<pair>-h.png`, the grey
-  // plate `pt/c` = the pack's colourless plate).
+  // M15BORDERLESS, which the land dress spreads (its pairs are its own:
+  // 4.56, below) — opt-in per card, so no stored card changes. A hybrid
+  // cost prints the same split pinline over GREY bars (2X2 #374 / #385, SPG
+  // #142 / #144, ECL #292–296: Card Conjurer's 'Land Frame' bars for a
+  // hybrid pair), so m15borderless draws print's hybrid dress too
+  // (`<pair>-h.png`, the grey plate `pt/c` = the pack's colourless plate).
   m15borderless: { ...M15BORDERLESS, crownMasters: true, twoColorMasters: ["split", "hybrid"] },
   // The artifact dress: the same crowned twins and split pairs (its
   // colourless twin wears CC's artifact crown on the artifact frame); a
   // hybrid artifact falls back to the split, like m15artifact. Its `m`
   // tick's references print this pinline split (frame-references.json).
   m15borderlessartifact: { ...M15BORDERLESSARTIFACT, crownMasters: true, twoColorMasters: ["split"] },
-  m15borderlessland: M15BORDERLESSLAND,
+  // The borderless land's two-colour dress (TODO 4.56): ten pair masters
+  // `<pair>.png` — the grey 'Land Frame' bars with the pinline AND the text
+  // box split between the two colours across one ramp (39→61 %W), as MID
+  // #281, OTJ #304, the RVR shocks and the MKM surveil lands print
+  // (scripts/lib/cc-frames.mjs borderlessLandLayers with a letter pair).
+  // Its pairs are a land's (twoColorForLands, like m15land), and the kind
+  // gate keeps every other kind off the frame. Opt-in per card: a stored
+  // two-colour land on this frame keeps the gold `m` master until its owner
+  // switches the two-colour frame on. No crown (the frame has no crowned
+  // twins: the crowned and nicknamed two-colour prints stay `nearest`), no
+  // stamp notch, no collector line here.
+  m15borderlessland: { ...M15BORDERLESSLAND, twoColorMasters: ["split"], twoColorForLands: true },
   m15borderlesspw: M15BORDERLESSPW,
   m15borderlesspwtall: M15BORDERLESSPWTALL,
   // The transform bodies (TODO 5.1a): each declares its `dfc` on its own
@@ -4534,8 +5112,16 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   },
   agclassic: AGCLASSIC,
   alphaland: ALPHALAND,
-  alphatoken: ALPHATOKEN,
-  battle: BATTLE,
+  // CC's colourless battle frame is see-through (layout v43, TODO 4.21b;
+  // owner decision 2026-09-29; MOM #1 Invasion of Ravnica): its name pill,
+  // type bar and text box are translucent (α 190–250) from the border down
+  // to the bottom border at 1432 px. The art runs under the whole frame for
+  // "c" in the LANDSCAPE rect — never the portrait UNDER_FRAME_RECT — and
+  // the window draws in the same rect: ONE picture (the full-art window
+  // has no outline to hide a second crop's seam on, and the profile's art
+  // slot is that rect on every colour already). The art-window check holds
+  // the rect to every see-through pixel of the master.
+  battle: { ...BATTLE, underFrameArt: { rect: BATTLE_ART_RECT, colors: ["c"], artSlot: BATTLE_ART_RECT } },
   saga: SAGA,
   adventure: ADVENTURE,
   // CC's colourless flip frame is see-through (layout v38, TODO 4.21a; owner
@@ -4583,8 +5169,15 @@ export function getFrameProfile(
 ): FrameProfile {
   // The registry's m15 entry, not the bare M15 base: legacy templates draw
   // the m15 frame, so they need its CC cost lift and see-through colourless.
+  // A RETIRED template (types/card.ts RETIRED_FRAME_TEMPLATES, TODO 4.54)
+  // is its replacement's bare frame, never m15: a reader handed the stored
+  // value as it is (the anatomy rules, the kind gate) must not judge a
+  // retired token frame as the creature frame.
   if (!template) return PROFILES.m15;
-  return PROFILES[template as FrameTemplate] ?? PROFILES.m15;
+  return (
+    PROFILES[template as FrameTemplate] ??
+    PROFILES[RETIRED_FRAME_TEMPLATES.get(template)?.bare ?? "m15"]
+  );
 }
 
 /** The under-frame art rect for a profile + frame colour key, or null. */

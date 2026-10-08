@@ -117,7 +117,7 @@ describe("slotInk / footerInk", () => {
     expect(bandTextStyle({ ...band, inkByColorKey: undefined }, "b")).toEqual({});
   });
 
-  it("only the Alpha frame and its land twin carry an ink map — and the full-art token's white name pill", () => {
+  it("only the Alpha frame and its land twin carry an ink map — and the full-art token's white name pill, and the 2003 pair's footer", () => {
     // Every other template resolves to exactly the colour it had before.
     const keys = ["w", "u", "b", "r", "g", "c", "m"];
     // TODO 4.48: the full-art token prints its name white on every pill but
@@ -132,10 +132,25 @@ describe("slotInk / footerInk", () => {
         expect(Boolean(p.pt?.inkByColorKey || p.footer?.inkByColorKey || p.type.inkByColorKey), t).toBe(false);
         continue;
       }
+      // TODO 4.23a: the 2003 frame's artist line prints white on the black
+      // frame and on every land — the footer alone (the pair's own tests:
+      // modern-footer-ink.test.tsx, here and under render/).
+      if (t === "modern" || t === "modernland") {
+        expect(Object.keys(p.footer!.inkByColorKey ?? {}).sort(), t).toEqual(t === "modern" ? ["b"] : [...keys].sort());
+        expect(Boolean(p.pt?.inkByColorKey || p.title.inkByColorKey || p.type.inkByColorKey), t).toBe(false);
+        for (const k of keys) {
+          const white = t === "modernland" || k === "b";
+          expect(footerInk(p.footer!, k), `${t} ${k}`).toEqual({ colorHex: white ? "#ffffff" : p.footer!.colorHex, shadowCss: undefined });
+        }
+        continue;
+      }
       const inked = Boolean(
         p.pt?.inkByColorKey || p.footer?.inkByColorKey || p.title.inkByColorKey || p.type.inkByColorKey,
       );
-      expect(inked, t).toBe(t === "agclassic" || t === "alphaland");
+      // The 1997 pair (TODO 4.10a): white ink with the prints' hard shadow on
+      // every key, as per-key entries — tests/unit/cards/retro-1997-profile
+      // .test.ts holds them.
+      expect(inked, t).toBe(t === "agclassic" || t === "alphaland" || t === "retro" || t === "retroland");
       if (!inked) {
         for (const k of keys) {
           if (p.pt) expect(slotInk(p.pt, k)).toEqual({ colorHex: p.pt.colorHex, shadowCss: p.pt.shadowCss });

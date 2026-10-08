@@ -3,6 +3,7 @@ import "server-only";
 import { getStripe, isStripeConfigured } from "@/lib/stripe/client";
 import { tierForPrice, type PriceLike } from "@/lib/stripe/config";
 import type { PlanTier } from "@/lib/billing/plans";
+import { subscriptionEndsAt } from "@/lib/billing/subscription-ending";
 
 // ---------------------------------------------------------------------------
 // What the billing page shows from Stripe itself — the bits the profile row
@@ -52,7 +53,13 @@ export type SubscriptionSummary = {
   /** ISO timestamps. */
   currentPeriodEnd: string | null;
   trialEnd: string | null;
+  /** The plan is set to stop (see `endsAt`) — it does NOT renew. */
   cancelAtPeriodEnd: boolean;
+  /** ISO timestamp the subscription stops, when it is set to: Stripe's
+   *  `cancel_at`, the period (or trial) end under `cancel_at_period_end`, or
+   *  the last phase of a schedule that ends in a cancellation. Null = it
+   *  renews (lib/billing/subscription-ending.ts). */
+  endsAt: string | null;
   pendingChange: PendingChangeSummary | null;
 };
 
@@ -72,6 +79,8 @@ export type CustomerLike = {
 };
 
 export type ScheduleLike = {
+  /** "release" (carry on renewing) or "cancel" (end with the last phase). */
+  end_behavior?: string | null;
   current_phase?: { start_date: number; end_date: number } | null;
   phases: Array<{
     start_date: number;
@@ -86,6 +95,9 @@ export type ScheduleLike = {
 export type SubscriptionDetailsLike = {
   status: string;
   cancel_at_period_end?: boolean | null;
+  /** A cancellation DATE — the portal and newer API versions set this and
+   *  may leave `cancel_at_period_end` false. */
+  cancel_at?: number | null;
   trial_end?: number | null;
   default_payment_method?: string | PaymentMethodLike | null;
   /** Expanded (`schedule.phases.items.price`) when a change is pending. */
@@ -112,6 +124,10 @@ export type InvoiceLike = {
   created: number;
   hosted_invoice_url?: string | null;
 };
+
+function isOver(status: string): boolean {
+  return status === "canceled" || status === "incomplete_expired";
+}
 
 function iso(unixSeconds: number | null | undefined): string | null {
   return typeof unixSeconds === "number" ? new Date(unixSeconds * 1000).toISOString() : null;
@@ -165,6 +181,7 @@ export function summarizeBillingDetails(input: {
 }): StripeBillingDetails {
   const sub = input.subscription;
   const item = sub?.items?.data?.[0];
+  const endsAt = iso(subscriptionEndsAt(sub));
   const subscription: SubscriptionSummary | null = sub
     ? {
         status: sub.status,
@@ -173,8 +190,13 @@ export function summarizeBillingDetails(input: {
         currency: item?.price?.currency ?? "usd",
         currentPeriodEnd: iso(item?.current_period_end),
         trialEnd: iso(sub.trial_end),
-        cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
-        pendingChange: pendingChangeOf(sub.schedule),
+        // The flag stays true even if no end date could be derived (no item
+        // period): the profile's period end then dates it — never "renews".
+        cancelAtPeriodEnd: endsAt != null || (sub.cancel_at_period_end === true && !isOver(sub.status)),
+        endsAt,
+        // A plan that is ending has no "next plan": the schedule's later
+        // phases never start.
+        pendingChange: endsAt != null || isOver(sub.status) ? null : pendingChangeOf(sub.schedule),
       }
     : null;
 

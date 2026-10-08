@@ -27,6 +27,8 @@ import {
   SET_SYMBOL_BOX_PCT_THIN_BAR,
   SET_SYMBOL_KEYLINE_EM,
   SET_SYMBOL_MAX_WIDTH_PCT,
+  SPLIT_SET_SYMBOL_BOX_PCT,
+  displayPct,
 } from "@/lib/cards/typography";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
@@ -48,6 +50,9 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // ---------------------------------------------------------------------------
 
 const HD = 1500;
+/** The HD width of the card a profile draws: 2100 px on a landscape one (the
+ *  battle, the family's one landscape member — TODO 4.21b; split). */
+const hdOf = (p: { orientation?: "portrait" | "landscape" }) => (p.orientation === "landscape" ? 2100 : HD);
 const ICON: SetSymbolSource = { kind: "icon" };
 const MARK: SetSymbolSource = { kind: "mark" };
 const glyph = (code: string) => setSymbolSource(null, code);
@@ -88,14 +93,21 @@ describe("the family's set-symbol boxes", () => {
     for (const template of FRAME_TEMPLATE_VALUES) {
       const p = getFrameProfile(template);
       if (!M15_FAMILY_TEMPLATES.includes(template)) {
-        expect(p.symbolSizePct, template).toBeUndefined();
+        // Split (TODO 4.21b) is the one frame outside the family with a box
+        // of its own: the prints' 48 px on its thin type bar.
+        expect(p.symbolSizePct, template).toBe(template === "split" ? SPLIT_SET_SYMBOL_BOX_PCT : undefined);
         continue;
       }
-      expect(p.symbolSizePct, template).toBe(thin.has(template) ? SET_SYMBOL_BOX_PCT_THIN_BAR : SET_SYMBOL_BOX_PCT);
+      // The family's box is the same px on the page on its one landscape
+      // member (the battle): the constant × 5/7 of its 2100 px width.
+      const box = thin.has(template) ? SET_SYMBOL_BOX_PCT_THIN_BAR : SET_SYMBOL_BOX_PCT;
+      expect(p.symbolSizePct, template).toBe(p.orientation === "landscape" ? displayPct(box, "landscape") : box);
     }
-    // Split and battle stay out of v32 (4.21): no box, today's size.
-    expect(getFrameProfile("split").symbolSizePct).toBeUndefined();
-    expect(getFrameProfile("battle").symbolSizePct).toBeUndefined();
+    // The battle joined the family with its Card Conjurer master (layout
+    // v43): CC's 86 px box, on the landscape card.
+    const battle = getFrameProfile("battle");
+    expect(battle.symbolSizePct! * 2100).toBeCloseTo(SET_SYMBOL_BOX_PCT * HD, 9);
+    expect(battle.symbolSizePct).toBeLessThan(SET_SYMBOL_BOX_PCT);
   });
 
   it("are Card Conjurer's: 86 px on M15, 80 px on the planeswalker and saga bars (HD)", () => {
@@ -176,13 +188,16 @@ describe("setSymbolSize on the family", () => {
       // A keylined bar draws the ring 0.05 em out on every side: it is part
       // of the symbol as drawn, as the keyline is of the printed box.
       const ringEm = p.setSymbolKeyline ? SET_SYMBOL_KEYLINE_EM : 0;
+      // The printed box is HD px of a PORTRAIT card: the same px on the
+      // landscape battle's 2100 px card (a symbol prints no bigger there).
+      const hd = hdOf(p);
       for (const [code, [h, w]] of Object.entries(SET_SYMBOL_PRINTED_PX)) {
         const s = setSymbolSize(p, glyph(code));
         const { heightEm, widthEm, advanceEm } = ink(KEYRUNE_CODEPOINTS[code]);
         const [, xMin] = KEYRUNE_GLYPHS[KEYRUNE_CODEPOINTS[code]];
         const label = `${template} ${code}`;
-        const inkH = s.sizePct * (heightEm + 2 * ringEm) * HD;
-        const inkW = s.sizePct * (widthEm + 2 * ringEm) * HD;
+        const inkH = s.sizePct * (heightEm + 2 * ringEm) * hd;
+        const inkW = s.sizePct * (widthEm + 2 * ringEm) * hd;
         // Inside the printed box and CC's 0.12 W width (the core-set pills:
         // the box alone), touching one of them.
         const cap = SET_SYMBOL_PRINTED_PAST_CAP.includes(code) ? Infinity : SET_SYMBOL_MAX_WIDTH_PCT * HD;
@@ -294,11 +309,13 @@ describe("setSymbolSize on the family", () => {
   });
 
   it("fits a glyph by its ink only on a profile that says so (setSymbolFit, code-owned)", () => {
-    // Every family profile carries the flag; nothing else does.
+    // Every family profile carries the flag; outside it only split does —
+    // its own "ink-height" (TODO 4.21b), never the family's printed sizes.
     for (const template of FRAME_TEMPLATE_VALUES) {
       const p = getFrameProfile(template);
       const basic = template === "m15fullartland" || template === "fullartland";
-      expect(p.setSymbolFit, template).toBe(M15_FAMILY_TEMPLATES.includes(template) ? (basic ? "ink-box" : "ink") : undefined);
+      const outside = template === "split" ? "ink-height" : undefined;
+      expect(p.setSymbolFit, template).toBe(M15_FAMILY_TEMPLATES.includes(template) ? (basic ? "ink-box" : "ink") : outside);
     }
     // An override's symbolSizePct on a frame outside the family resizes the
     // box but keeps font = box, as before v32 — it never switches the frame
@@ -341,7 +358,8 @@ describe("setSymbolSize on the family", () => {
 describe("setSymbolSize off the family (byte-identical fallback)", () => {
   it("draws at type.sizePct × 1.1 — the icon, the mark and every glyph's font", () => {
     for (const template of FRAME_TEMPLATE_VALUES) {
-      if (M15_FAMILY_TEMPLATES.includes(template)) continue;
+      // (Split has a box and a fit of its own — the next block.)
+      if (M15_FAMILY_TEMPLATES.includes(template) || template === "split") continue;
       const p = getFrameProfile(template);
       const box = p.type.sizePct * 1.1;
       expect(setSymbolBoxPct(p), template).toBe(box);
@@ -377,6 +395,72 @@ describe("setSymbolSize off the family (byte-identical fallback)", () => {
 // (the box's width binds: EOE 0.91, OTJ 0.90, GRN / WOE / SNC 0.89–0.95, the
 // core-set pills 0.91 — at their print's 187.5–189 px width, past CC's 0.12 W
 // since owner round 18; 0.87 under it).
+describe("the split card's thin type bar (setSymbolFit \"ink-height\", TODO 4.21b)", () => {
+  // MH2 #123 / #60 print their symbol 47–48 px tall (72 wide), TSR #161 /
+  // #186 47–50, on a bar whose face is 69 px — where the same sets' symbols
+  // stand 88–91 px tall on a regular card. A split half's symbol is fitted by
+  // its ink's HEIGHT to a 48 px box, whatever the glyph's shape.
+  const split = getFrameProfile("split");
+  const W = 2100;
+  const BOX = 48;
+
+  it("has a 48 px box: the default mark and an uploaded icon fill a square of it", () => {
+    expect(split.symbolSizePct! * W).toBeCloseTo(BOX, 9);
+    expect(setSymbolBoxPct(split) * W).toBeCloseTo(BOX, 9);
+    for (const source of [ICON, MARK]) {
+      const s = setSymbolSize(split, source);
+      expect(s.sizePct * W).toBeCloseTo(BOX, 9);
+      expect(s.drawnWidthPct * W).toBeCloseTo(BOX, 9);
+      expect(s.inkLeftPct).toBe(0);
+    }
+  });
+
+  it("stands every glyph's ink exactly as tall as the box — a wide mark and a tall hourglass alike — unless the width cap binds", () => {
+    // Never wider than the box × the family's width-to-box ratio (CC's
+    // 0.12 W box over its 0.041 H one): 100.5 px.
+    const maxWidthPx = BOX * (SET_SYMBOL_MAX_WIDTH_PCT / SET_SYMBOL_BOX_PCT);
+    expect(maxWidthPx).toBeCloseTo(100.35, 1);
+    let capped = 0;
+    for (const source of ALL_GLYPHS) {
+      const s = setSymbolSize(split, source);
+      const { heightEm, widthEm, advanceEm } = ink(source.codepoint);
+      const label = `U+${source.codepoint.toString(16)}`;
+      const inkH = s.sizePct * heightEm * W;
+      const inkW = s.sizePct * widthEm * W;
+      expect(inkH, label).toBeLessThanOrEqual(BOX + 1e-9);
+      expect(inkW, label).toBeLessThanOrEqual(maxWidthPx + 1e-9);
+      if (Math.abs(inkW - maxWidthPx) < 1e-9 && inkH < BOX - 1e-9) capped += 1;
+      else expect(inkH, label).toBeCloseTo(BOX, 9);
+      expect(s.drawnWidthPct, label).toBeCloseTo(advanceEm * s.sizePct, 12);
+    }
+    // Only a handful of very wide glyphs meet the cap.
+    expect(capped).toBeLessThan(ALL_GLYPHS.length * 0.1);
+    // MH2's wide mark and TSR's tall hourglass: both 48 px tall.
+    for (const code of ["mh2", "tsr"]) {
+      const s = setSymbolSize(split, glyph(code));
+      expect(s.sizePct * ink(KEYRUNE_CODEPOINTS[code]).heightEm * W, code).toBeCloseTo(BOX, 9);
+    }
+  });
+
+  it("never reads the printed-size table: that one holds a regular card's sizes", () => {
+    // DOM prints 88.5 px tall on a regular card (and so on the battle, a
+    // family frame); on a split half its ink is the box's 48 px.
+    expect(printedSetSymbolPx(KEYRUNE_CODEPOINTS.dom)).not.toBeNull();
+    const onSplit = setSymbolSize(split, glyph("dom"));
+    expect(onSplit.sizePct * ink(KEYRUNE_CODEPOINTS.dom).heightEm * W).toBeCloseTo(BOX, 9);
+    const battle = getFrameProfile("battle");
+    const onBattle = setSymbolSize(battle, glyph("dom"));
+    expect(onBattle.sizePct * ink(KEYRUNE_CODEPOINTS.dom).heightEm * W).toBeCloseTo(88.5, 6);
+    // …the same px as on M15.
+    const onM15 = setSymbolSize(getFrameProfile("m15"), glyph("dom"));
+    expect(onBattle.sizePct * W).toBeCloseTo(onM15.sizePct * HD, 9);
+    // An unflagged copy of split would draw font = box, as any frame off the
+    // family: the fit is the flag's.
+    const unflagged = { ...split, setSymbolFit: undefined };
+    expect(setSymbolSize(unflagged, glyph("mh2")).sizePct).toBe(SPLIT_SET_SYMBOL_BOX_PCT);
+  });
+});
+
 describe("print check", () => {
   it("draws every measured set within its printed box, and its height to 0.87 of the print or better", () => {
     const m15 = getFrameProfile("m15");

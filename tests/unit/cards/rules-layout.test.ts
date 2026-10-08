@@ -215,10 +215,17 @@ describe("the even HD-px ladder", () => {
     // the rows' maxSizePct); any other card on the frame gets v32's 8 pt.
     expect(getFrameProfile("m15pw").rules.sizePct).toBe(rulesPxToPct(68));
     expect(getFrameProfile("m15pw").loyaltyRows!.maxSizePct).toBe(rulesPxToPct(64));
-    expect(getFrameProfile("battle").rules.sizePct).toBe(rulesPxToPct(68, "landscape"));
-    // The saga's chapter rail keeps today's size (owner decision 2026-09-28:
-    // its geometry is TODO 4.21's).
-    expect(getFrameProfile("saga").chapters!.sizePct).toBe(0.029);
+    // The battle and both split halves print 9 pt (TODO 4.21b: MOM #21 and
+    // TSR #161 / #186 set their short texts at 76 px) — the ladder top, on
+    // the landscape card's 2100 px.
+    expect(getFrameProfile("battle").rules.sizePct).toBe(rulesPxToPct(76, "landscape"));
+    expect(getFrameProfile("split").rules.sizePct).toBe(rulesPxToPct(76, "landscape"));
+    expect(getFrameProfile("split").secondFace!.rules.sizePct).toBe(rulesPxToPct(76, "landscape"));
+    // The saga's chapter rail prints 7.5 pt (TODO 4.21c: 64 px on DOM's
+    // prints; v32–v41 kept 0.029 W = 44 px), its reminder block 62 px (our
+    // italic sets the prints' four lines there).
+    expect(getFrameProfile("saga").chapters!.sizePct).toBe(rulesPxToPct(64));
+    expect(getFrameProfile("saga").chapters!.intro.sizePct).toBe(rulesPxToPct(62));
   });
 });
 
@@ -569,16 +576,39 @@ describe("keep-outs", () => {
     const [shield] = statKeepOuts(m15pw, { loyalty: true });
     expect(shield.leftPct).toBeGreaterThan(m15pw.loyalty!.plateRect!.leftPct);
     expect(shield.topPct).toBeGreaterThan(m15pw.loyalty!.plateRect!.topPct);
-    // The battle's drawn defense disc, inset in its rect (STAT_BADGE_INSET).
-    const [defense] = statKeepOuts(battle, { defense: true });
-    const d = battle.defense!.rect;
-    expect(defense.leftPct).toBeCloseTo(d.leftPct + d.widthPct * 0.12, 9);
-    expect(defense.topPct).toBeCloseTo(d.topPct + d.heightPct * 0.08, 9);
-    expect(defense.widthPct).toBeCloseTo(d.widthPct * 0.76, 9);
+    // A value with no plate and no painted badge (a P/T printed straight on
+    // the art or the frame): its own rect, only while the card draws it.
+    // (The renderers' own drawn badge is gone with TODO 4.21b: the battle's
+    // disc was its one user, and no override could ever declare one.)
+    const d: Rect = { topPct: 87.3, leftPct: 89.9, widthPct: 8, heightPct: 11 };
+    const bare = { defense: { rect: d, sizePct: 0.034, colorHex: "#ffffff" } };
+    expect(statKeepOuts(bare, { defense: true })).toEqual([d]);
+    expect(statKeepOuts(bare, { defense: false })).toEqual([]);
+    // The battle's defense shield is painted by its MASTER (paintedRect,
+    // TODO 4.21b): the keep-out is the shield's own box — the pack's Defense
+    // mask set 12 px right (TODO 4.21d), 164 × 166 px from 1893 / 1304 at HD
+    // — and it is there on EVERY
+    // battle, whatever the show flags say: the shield is on the card whether
+    // or not a value is drawn in it.
+    const painted = battle.defense!.paintedRect!;
+    expect(painted.leftPct * 21).toBeCloseTo(1893, 9);
+    expect(painted.topPct * 15).toBeCloseTo(1304, 9);
+    expect(painted.widthPct * 21).toBeCloseTo(164, 9);
+    expect(painted.heightPct * 15).toBeCloseTo(166, 9);
+    expect(statKeepOuts(battle, { defense: true })).toEqual([painted]);
+    expect(statKeepOuts(battle, { defense: false })).toEqual([painted]);
+    expect(statKeepOuts(battle, {})).toEqual([painted]);
+    // The value's own rect lies inside the shield.
+    const value = battle.defense!.rect;
+    expect(value.leftPct).toBeGreaterThan(painted.leftPct);
+    expect(value.leftPct + value.widthPct).toBeLessThan(painted.leftPct + painted.widthPct);
+    expect(value.topPct).toBeGreaterThan(painted.topPct);
+    expect(value.topPct + value.heightPct).toBeLessThan(painted.topPct + painted.heightPct);
     // A value printed straight on the art (no plate, no badge): its rect.
     const avatar = getFrameProfile("avatar");
     expect(statKeepOuts(avatar, { pt: true })).toEqual([avatar.pt!.rect]);
-    expect(statKeepOuts(battle, { pt: true, loyalty: true })).toEqual([]); // the battle frame has neither
+    // The battle frame has neither a P/T nor a loyalty: only its shield.
+    expect(statKeepOuts(battle, { pt: true, loyalty: true })).toEqual([painted]);
   });
 
   it("turns a keep-out into a rotated box's own frame", () => {

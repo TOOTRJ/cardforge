@@ -187,7 +187,7 @@ describe("artWindowViolations", () => {
     const m = withWindow(0, W, 0, 380);
     expect(artWindowViolations(m, W, H, slot(0, W, 0, 381))).toEqual([]);
     // An inset slot over a window that leaks into a transparent ring: the
-    // ring shows #101015 (battle, lotrscroll, bloomanime…).
+    // ring shows #101015 (lotrscroll, bloomanime…; the MSE battle until 4.21b).
     expect(artWindowViolations(m, W, H, slot(8, 292, 8, 381))).toEqual([expect.stringMatching(/left 8 > 0, right 292 < 300, top 8 > 0$/)]);
   });
 
@@ -613,17 +613,14 @@ describe("the art-window known failures", () => {
   it("lists today's failures — the TODO's list, and what checking every colour of every master found", () => {
     expect(Object.keys(ART_WINDOW_KNOWN_FAILURES).sort()).toEqual(
       [
-        // 7.6's list (2026-09-25): split, lotr, battle, lotrscroll and the
-        // saga hairline. (The M15 family's windows — then MSE, now CC —
-        // were covered by layout v35, 4.4 (2); flip, adventure and
-        // aftermath by their Card Conjurer masters, layout v38, 4.21a.)
-        "split",
+        // 7.6's list (2026-09-25): lotr and lotrscroll. (The M15 family's
+        // windows — then MSE, now CC — were covered by layout v35, 4.4 (2);
+        // flip, adventure and aftermath by their Card Conjurer masters,
+        // layout v38, 4.21a; split and battle by theirs, layout v43, 4.21b;
+        // the saga's hairline by its own, 4.21c.)
         "lotr",
-        "battle",
         "lotrscroll",
-        "saga",
         // Found on 2026-09-29.
-        "alphatoken",
         "avatar",
         "bloomanime",
         "bloomburrow",
@@ -657,6 +654,14 @@ describe("the art-window known failures", () => {
       expect(ART_WINDOW_KNOWN_FAILURES[template], template).toBeUndefined();
     }
     for (const template of ["m15token", "m15tokentext"]) expect(ART_WINDOW_KNOWN_FAILURES[template].keys, template).toEqual(["c"]);
+    // Layout v43 (TODO 4.21b) struck the landscape pair: split's two
+    // windows and the battle's — with the see-through sliver beside its
+    // shield, and the colourless master's whole translucent body — are
+    // covered on every colour.
+    for (const template of ["split", "battle"]) {
+      expect(ART_WINDOW_KNOWN_FAILURES[template], template).toBeUndefined();
+      for (const key of ["w", "u", "b", "r", "g", "c", "m"]) expect(isKnownArtWindowFailure(template, key), `${template}/${key}`).toBe(false);
+    }
     expect(isKnownArtWindowFailure("expeditionland", "w")).toBe(false);
     expect(isKnownArtWindowFailure("expeditionland", "b")).toBe(true);
   });
@@ -669,10 +674,16 @@ describe("the Card Conjurer importer runs the art-window check (TODO 7.6)", () =
   const importer = fs.readFileSync(path.join(ROOT, "scripts/import-cc-frames.mjs"), "utf8");
 
   it("checks every master it builds after the downscale and the corner cut, holding known failures to their bounds", () => {
-    const cut = importer.indexOf("roundCornersRgba8(master");
-    const check = importer.indexOf("artWindowFindings(master, OUT_W, OUT_H");
-    expect(cut).toBeGreaterThan(0);
+    // At the recipe's own size: 1500 × 2100, or 2100 × 1500 for a landscape
+    // recipe (TODO 4.21b: split, battle) — whose whole blocks are moved onto
+    // the prints BEFORE the corner is cut and the check runs.
+    const shift = importer.indexOf("shiftBlocksRgba8(master, outW, outH, def.shift)");
+    const cut = importer.indexOf("roundCornersRgba8(master, outW, outH");
+    const check = importer.indexOf("artWindowFindings(master, outW, outH");
+    expect(shift).toBeGreaterThan(0);
+    expect(cut).toBeGreaterThan(shift);
     expect(check).toBeGreaterThan(cut);
+    expect(importer).toContain("const { width: outW, height: outH } = outputSizeOf(def);");
     expect(importer).toContain("artWindowVerdict(template, key, findings)");
     expect(importer).toContain("artWindowSlotsOf(profile, underFrameArtRect(profile, key), underFrameArtSlot(profile, key))");
     expect(importer).not.toContain("isKnownArtWindowFailure");

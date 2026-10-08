@@ -82,6 +82,8 @@ export const PUBLIC_PROFILE_DEFAULTS: Pick<
   | "stripe_subscription_id"
   | "current_period_end"
   | "cancel_at_period_end"
+  | "subscription_ends_at"
+  | "subscription_canceled_at"
   | "credits"
   | "comp_tier"
   | "comp_expires_at"
@@ -94,6 +96,8 @@ export const PUBLIC_PROFILE_DEFAULTS: Pick<
   stripe_subscription_id: null,
   current_period_end: null,
   cancel_at_period_end: false,
+  subscription_ends_at: null,
+  subscription_canceled_at: null,
   credits: 0,
   comp_tier: null,
   comp_expires_at: null,
@@ -121,7 +125,9 @@ export const getCurrentProfile = cache(async (): Promise<ProfileRow | null> => {
     ]);
     if (!profile) return null;
     const own = billing?.[0];
-    return { ...profile, ...(own ?? PUBLIC_PROFILE_DEFAULTS) } as ProfileRow;
+    // The defaults go first: get_my_billing() returns the 0135 columns only
+    // once that migration is applied, and they must read null until then.
+    return { ...profile, ...PUBLIC_PROFILE_DEFAULTS, ...(own ?? {}) } as ProfileRow;
   } catch {
     return null;
   }

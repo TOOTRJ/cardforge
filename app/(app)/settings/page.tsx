@@ -20,11 +20,13 @@ import { ThemePreference } from "@/components/settings/theme-preference";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
 import { BillingPanel } from "@/components/settings/billing-panel";
+import { LocalDate } from "@/components/ui/local-date";
 import { ExportWatermarkPanel } from "@/components/settings/export-watermark-panel";
 import { SecurityPanel } from "@/components/settings/security-panel";
 import { BillingReturnToast } from "@/components/billing/billing-return-toast";
 import { getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { getEntitlements } from "@/lib/billing/entitlements";
+import { planEndingOf } from "@/lib/billing/plan-ending";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { listPublicCardsByOwner } from "@/lib/cards/queries";
 import { drawableMediaUrl } from "@/lib/media/media-urls";
@@ -44,13 +46,10 @@ export default async function SettingsPage({
   const user = await getCurrentUser();
   const profile = await getCurrentProfile();
   const entitlements = await getEntitlements();
-  const renewLabel = entitlements.currentPeriodEnd
-    ? new Date(entitlements.currentPeriodEnd).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    : null;
+  // The viewer's own calendar day (Stripe's portal shows the same one).
+  const renewLabel = entitlements.currentPeriodEnd ? (
+    <LocalDate iso={entitlements.currentPeriodEnd} />
+  ) : null;
 
   const emailPreferences = await getMyEmailPreferences();
   // "Incomplete" = still on the handle the signup trigger minted.
@@ -248,6 +247,7 @@ export default async function SettingsPage({
               credits={entitlements.credits}
               renewLabel={renewLabel}
               cancelAtPeriodEnd={entitlements.cancelAtPeriodEnd}
+              planEnding={planEndingOf(profile)}
               hasBillingAccount={Boolean(profile?.stripe_customer_id)}
             />
           </SurfaceCard>

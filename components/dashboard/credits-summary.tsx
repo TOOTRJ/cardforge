@@ -8,6 +8,8 @@ import {
 } from "@/lib/ai/usage-queries";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { SIGNUP_CREDITS, formatCredits, isLowCredits, planForTier } from "@/lib/billing/plans";
+import { getEntitlements } from "@/lib/billing/entitlements";
+import { PlanBadgeLabel } from "@/components/dashboard/plan-ending-notice";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -20,9 +22,10 @@ import { cn } from "@/lib/utils";
 export async function CreditsSummaryCard() {
   if (!isBillingEnabled()) return null;
 
-  const [snapshot, used] = await Promise.all([
+  const [snapshot, used, entitlements] = await Promise.all([
     getCreditSnapshot(),
     getCreditsUsedThisMonth(),
+    getEntitlements(),
   ]);
 
   const { balance, monthlyAllotment, tier, isPaid } = snapshot;
@@ -50,7 +53,14 @@ export async function CreditsSummaryCard() {
             </span>
           </div>
         </div>
-        <Badge variant={isPaid ? "primary" : "outline"}>{tierLabel} plan</Badge>
+        <Badge variant={isPaid ? "primary" : "outline"}>
+          {/* A cancelled plan says when it ends, right where it is named. */}
+          <PlanBadgeLabel
+            planName={tierLabel}
+            ending={entitlements.planEnding}
+            subscriptionPlanName={planForTier(entitlements.tier).name}
+          />
+        </Badge>
       </header>
 
       <div className="grid gap-3 sm:grid-cols-3">

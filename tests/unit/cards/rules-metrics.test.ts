@@ -14,11 +14,12 @@ type Font = {
 };
 
 // ---------------------------------------------------------------------------
-// lib/cards/rules-metrics.ts holds hand-kept tables of MPlantin's advances
-// (the rules-text face both renderers draw, regular and italic), which
+// lib/cards/rules-metrics.ts measures with tables of MPlantin's advances
+// (the rules-text face both renderers draw, regular and italic; GENERATED
+// since TODO 4.8.0 — lib/cards/font-metrics.ts), which
 // lib/cards/rules-layout.ts breaks every rules line with. Re-read the
 // committed masters the bake loads and hold every entry to them; if a font
-// is ever replaced, this fails until the tables are re-measured.
+// is ever replaced, this fails until the tables are regenerated.
 // ---------------------------------------------------------------------------
 
 const parse = (file: string): Font => {

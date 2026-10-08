@@ -24,6 +24,8 @@ import {
 import { logoutAction } from "@/app/(auth)/actions";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { cn } from "@/lib/utils";
+import { useLocalDateText } from "@/components/ui/local-date";
+import type { DateText } from "@/lib/format/dates";
 
 // ---------------------------------------------------------------------------
 // UserMenu — avatar dropdown that consolidates account links. Replaces the
@@ -40,6 +42,11 @@ type UserMenuProps = {
   /** Shows "Messages" — only for users with a support thread. */
   hasMessages?: boolean;
   unreadMessages?: number;
+  /** "Pro ends Oct 23, 2026" — the plan is cancelled and still running; the
+   *  billing row says so (lib/billing/plan-ending.ts). */
+  /** "Pro ends Oct 23, 2026" — parts, so the date is printed in the
+   *  viewer's time zone (a plain string is printed as it is). */
+  planEndingNote?: DateText | string | null;
 };
 
 export function UserMenu({
@@ -50,9 +57,14 @@ export function UserMenu({
   isAdmin = false,
   hasMessages = false,
   unreadMessages = 0,
+  planEndingNote = null,
 }: UserMenuProps) {
   const label = displayName?.trim() || username || "Account";
   const initial = (label[0] ?? "?").toUpperCase();
+  const billingLabel = useLocalDateText([
+    "Billing · ",
+    ...(typeof planEndingNote === "string" ? [planEndingNote] : (planEndingNote ?? [])),
+  ]);
 
   return (
     <Popover>
@@ -133,7 +145,7 @@ export function UserMenu({
             <MenuItem
               href="/dashboard/billing"
               icon={CreditCard}
-              label="Billing & subscription"
+              label={planEndingNote ? billingLabel : "Billing & subscription"}
             />
             {isPaid ? null : (
               <MenuItem href="/pricing" icon={Sparkles} label="Upgrade to Pro" />

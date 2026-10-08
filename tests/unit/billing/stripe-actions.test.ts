@@ -29,6 +29,7 @@ const s = vi.hoisted(() => ({
     status: string;
     trial_end?: number | null;
     cancel_at_period_end?: boolean;
+    cancel_at?: number | null;
     schedule?: string | null;
     default_payment_method?: string | null;
     items: {
@@ -46,6 +47,8 @@ const s = vi.hoisted(() => ({
   scheduleCreate: vi.fn(),
   scheduleUpdate: vi.fn(),
   scheduleRelease: vi.fn(),
+  syncSubscription: vi.fn(),
+  revalidated: [] as string[],
   customersCreate: vi.fn(),
   checkoutCreate: vi.fn(),
   portalCreate: vi.fn(),
@@ -84,6 +87,11 @@ vi.mock("@/lib/supabase/admin", () => ({
     }),
   }),
 }));
+vi.mock("next/cache", () => ({
+  revalidatePath: (path: string) => {
+    s.revalidated.push(path);
+  },
+}));
 vi.mock("@/lib/site-url", () => ({ getSiteBaseUrl: () => "https://test.local" }));
 vi.mock("@/lib/stripe/client", () => ({
   isStripeConfigured: () => s.stripeConfigured,
@@ -117,6 +125,10 @@ vi.mock("@/lib/stripe/config", () => ({
 vi.mock("@/lib/stripe/subscription-sync", () => ({
   findLiveSubscription: async () => s.live,
   findDelinquentSubscription: async () => s.delinquent,
+  customerIdOf: (customer: string | { id: string } | null | undefined) =>
+    !customer ? null : typeof customer === "string" ? customer : customer.id,
+  isLiveStatus: (status: string | null | undefined) => status === "active" || status === "trialing",
+  syncSubscriptionForUser: (...args: unknown[]) => s.syncSubscription(...args),
   subscriptionHasPaymentMethod: async (sub: { default_payment_method?: string | null }) =>
     Boolean(sub.default_payment_method),
   // The mocked catalog's ids spell their tier ("price_pro_annual").
@@ -130,6 +142,8 @@ import {
   cancelScheduledPlanChangeAction,
   createCheckoutSessionAction,
   createPortalSessionAction,
+  getResumePreviewAction,
+  resumeSubscriptionAction,
 } from "@/lib/stripe/actions";
 import { isPlanDowngrade } from "@/lib/billing/plan-change";
 import { clearPriceCache } from "@/lib/stripe/prices";
@@ -150,6 +164,8 @@ beforeEach(() => {
   s.live = null;
   s.lapsedTrial = false;
   s.funnelInserts = [];
+  s.revalidated = [];
+  s.syncSubscription.mockReset().mockResolvedValue({});
   s.delinquent = null;
   s.history = [];
   s.historyThrows = false;
@@ -447,6 +463,92 @@ describe("createCheckoutSessionAction", () => {
     expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 
+  it("a plan cancelled by DATE (the portal's cancel_at, flag false) is resumed with cancel_at: \"\" and THEN downgraded", async () => {
+    // The sandbox shape of a Customer Portal cancellation on a flexible-
+    // billing subscription: cancel_at = the item's period end, flag false.
+    // On main this was refused ("Resume it first"): the un-cancel only knew
+    // the flag.
+    s.live = {
+      id: "sub_live",
+      status: "active",
+      cancel_at_period_end: false,
+      cancel_at: 1792722400,
+      items: { data: [{ id: "si_1", price: { id: "price_pro_monthly", recurring: { interval: "month" } } }] },
+    };
+    s.subscriptionsUpdate.mockImplementation(async (_id: string, params: Record<string, unknown>) => ({
+      ...s.live,
+      ...("cancel_at" in params ? { cancel_at: null } : {}),
+    }));
+    const result = await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    expect(result).toEqual({ ok: true, url: "https://test.local/dashboard/billing?billing=scheduled" });
+    // ONE parameter per call — Stripe refuses cancel_at together with
+    // cancel_at_period_end (sandbox, 2026-10-07).
+    expect(s.subscriptionsUpdate.mock.calls).toEqual([["sub_live", { cancel_at: "" }]]);
+    expect(s.subscriptionsUpdate.mock.invocationCallOrder[0]).toBeLessThan(
+      s.scheduleCreate.mock.invocationCallOrder[0],
+    );
+    expect(s.scheduleCreate).toHaveBeenCalledWith({ from_subscription: "sub_live" });
+  });
+
+  it("a downgrade on a plan that could NOT be resumed schedules nothing (the new price would never start)", async () => {
+    s.live = {
+      id: "sub_live",
+      status: "active",
+      cancel_at_period_end: false,
+      cancel_at: 1792722400,
+      items: { data: [{ id: "si_1", price: { id: "price_pro_monthly", recurring: { interval: "month" } } }] },
+    };
+    // Stripe answers with the cancellation still in place.
+    s.subscriptionsUpdate.mockImplementation(async () => ({ ...s.live }));
+    const result = await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.error).toMatch(/Resume it on the billing page first/);
+    expect(s.scheduleCreate).not.toHaveBeenCalled();
+  });
+
+  it("a downgrade that un-cancels and THEN fails to schedule says the plan now renews — never a generic error over a silent resume", async () => {
+    s.live = {
+      id: "sub_live",
+      status: "active",
+      cancel_at_period_end: false,
+      cancel_at: 1792722400,
+      items: { data: [{ id: "si_1", price: { id: "price_pro_monthly", recurring: { interval: "month" } } }] },
+    };
+    s.subscriptionsUpdate.mockImplementation(async () => ({ ...s.live, cancel_at: null }));
+    s.scheduleCreate.mockRejectedValueOnce(new Error("stripe down"));
+    const result = await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.error).toMatch(/was resumed and now renews as usual/);
+    expect(result.ok === false && result.error).toMatch(/couldn't be scheduled/);
+    // The pages that named the cancellation are refreshed: it is gone.
+    expect(s.revalidated).toEqual(expect.arrayContaining(["/dashboard", "/settings"]));
+    // A plan that was NOT cancelled keeps the ordinary error path.
+    s.live = { ...s.live, cancel_at: null };
+    s.scheduleCreate.mockRejectedValueOnce(new Error("stripe down"));
+    // (And it is ANSWERED, not thrown: `return scheduleDowngrade(…)` without
+    // an await used to let the rejection past the action's catch, unlogged.)
+    const plain = await createCheckoutSessionAction({ kind: "subscription", tier: "plus" });
+    expect(plain).toEqual({ ok: false, error: "Stripe checkout failed. Please try again." });
+  });
+
+  it("an UPGRADE on a plan that is set to end goes to the portal's confirm page untouched — Stripe renews it on confirm", async () => {
+    // Read on the sandbox's confirm page (2026-10-07): "Your subscription is
+    // currently scheduled to cancel on …. By confirming, your updated
+    // subscription will be renewed". So no un-cancel here: a customer who
+    // backs out of the confirm page must still have a cancelled plan.
+    s.live = {
+      id: "sub_live",
+      status: "active",
+      cancel_at_period_end: false,
+      cancel_at: 1792722400,
+      items: { data: [{ id: "si_1", price: { id: "price_plus_monthly", recurring: { interval: "month" } } }] },
+    };
+    const result = await createCheckoutSessionAction({ kind: "subscription", tier: "pro" });
+    expect(result).toEqual({ ok: true, url: "https://portal.test/session" });
+    expect(s.subscriptionsUpdate).not.toHaveBeenCalled();
+    expect(s.portalCreate.mock.calls[0][0].flow_data.type).toBe("subscription_update_confirm");
+  });
+
   it("an UPGRADE drops a pending downgrade first, then confirms in the portal (a scheduled subscription can't be updated there)", async () => {
     s.live = {
       id: "sub_live",
@@ -620,6 +722,225 @@ describe("createCheckoutSessionAction", () => {
       ok: false,
       error: "Stripe checkout failed. Please try again.",
     });
+  });
+});
+
+describe("resumeSubscriptionAction — one-click Resume", () => {
+  const PERIOD_END = 1794097332;
+  const item = (interval = "month") => ({
+    id: "si_1",
+    current_period_end: PERIOD_END,
+    price: { id: "price_pro_monthly", unit_amount: 1500, currency: "usd", recurring: { interval } },
+  });
+  /** Stripe's answers: update() applies the parameter to the stored sub. */
+  function stripeHolds(sub: Record<string, unknown>) {
+    let current = { ...sub };
+    s.subscriptionsRetrieve.mockImplementation(async () => current);
+    s.subscriptionsUpdate.mockImplementation(async (_id: string, params: Record<string, unknown>) => {
+      if ("cancel_at" in params && "cancel_at_period_end" in params) {
+        throw new Error("Received both cancel_at_period_end and cancel_at parameters. Please pass in only one.");
+      }
+      if (params.cancel_at === "") current = { ...current, cancel_at: null, canceled_at: null };
+      if (params.cancel_at_period_end === false) {
+        // Classic billing mirrors the flag into cancel_at; clearing the flag clears both.
+        current = { ...current, cancel_at_period_end: false, cancel_at: null, canceled_at: null };
+      }
+      return current;
+    });
+  }
+  beforeEach(() => {
+    s.profile = { stripe_customer_id: "cus_1", stripe_subscription_id: "sub_live", subscription_status: "active" };
+  });
+
+  it("needs Stripe, a signed-in user and a subscription of the caller's own", async () => {
+    s.stripeConfigured = false;
+    expect(await resumeSubscriptionAction()).toEqual({ ok: false, error: "Billing isn't available right now." });
+    s.stripeConfigured = true;
+    s.user = null;
+    expect(await resumeSubscriptionAction()).toEqual({ ok: false, error: "Please sign in to manage billing." });
+    s.user = { id: USER, email: "x@example.test" };
+    s.profile = { stripe_customer_id: "cus_1", stripe_subscription_id: null };
+    expect(await resumeSubscriptionAction()).toEqual({ ok: false, error: "There's no plan to resume." });
+    // The stored subscription belongs to ANOTHER customer: never touched.
+    s.profile = { stripe_customer_id: "cus_1", stripe_subscription_id: "sub_live" };
+    stripeHolds({ id: "sub_live", status: "active", customer: "cus_someone_else", cancel_at: PERIOD_END, items: { data: [item()] } });
+    expect(await resumeSubscriptionAction()).toEqual({ ok: false, error: "There's no plan to resume." });
+    expect(s.subscriptionsUpdate).not.toHaveBeenCalled();
+  });
+
+  it("the portal's shape (flexible billing: cancel_at = period end, flag false) is cleared with cancel_at: \"\" — one call, one parameter", async () => {
+    stripeHolds({
+      id: "sub_live",
+      status: "active",
+      customer: "cus_1",
+      cancel_at_period_end: false,
+      cancel_at: PERIOD_END,
+      canceled_at: 1791418974,
+      schedule: null,
+      items: { data: [item()] },
+    });
+    const result = await resumeSubscriptionAction({ surface: "dashboard" });
+    expect(result).toEqual({ ok: true, url: "https://test.local/dashboard/billing?billing=resumed" });
+    expect(s.subscriptionsRetrieve).toHaveBeenCalledWith("sub_live", { expand: ["schedule"] });
+    expect(s.subscriptionsUpdate.mock.calls).toEqual([["sub_live", { cancel_at: "" }]]);
+    // The profile is resynced from the resumed subscription, through the
+    // one sync, so the next page already says "Renews on".
+    expect(s.syncSubscription).toHaveBeenCalledTimes(1);
+    const [, , userId, options] = s.syncSubscription.mock.calls[0];
+    expect(userId).toBe(USER);
+    expect(options).toMatchObject({ customerId: "cus_1", currentSub: { id: "sub_live", cancel_at: null } });
+    expect(s.revalidated).toEqual(expect.arrayContaining(["/dashboard", "/settings"]));
+    // Funnel: a money step, allow-listed name and props.
+    expect(s.funnelInserts).toEqual([
+      expect.objectContaining({
+        event: "subscription_resumed",
+        user_id: USER,
+        props: { tier: "pro", interval: "month", trial: false, subscriptionId: "sub_live", surface: "dashboard" },
+      }),
+    ]);
+  });
+
+  it("the classic shape (cancel_at_period_end: true, cancel_at mirrored) is cleared with the flag alone", async () => {
+    stripeHolds({
+      id: "sub_live",
+      status: "active",
+      customer: "cus_1",
+      cancel_at_period_end: true,
+      cancel_at: PERIOD_END,
+      items: { data: [item()] },
+    });
+    expect((await resumeSubscriptionAction()).ok).toBe(true);
+    expect(s.subscriptionsUpdate.mock.calls).toEqual([["sub_live", { cancel_at_period_end: false }]]);
+  });
+
+  it("a flag AND a date that survives it: two calls, never both parameters in one", async () => {
+    let current: Record<string, unknown> = {
+      id: "sub_live",
+      status: "active",
+      customer: "cus_1",
+      cancel_at_period_end: true,
+      cancel_at: PERIOD_END + 86400 * 40,
+      items: { data: [item()] },
+    };
+    s.subscriptionsRetrieve.mockImplementation(async () => current);
+    s.subscriptionsUpdate.mockImplementation(async (_id: string, params: Record<string, unknown>) => {
+      expect(Object.keys(params)).toHaveLength(1);
+      if (params.cancel_at_period_end === false) current = { ...current, cancel_at_period_end: false };
+      if (params.cancel_at === "") current = { ...current, cancel_at: null };
+      return current;
+    });
+    expect((await resumeSubscriptionAction()).ok).toBe(true);
+    expect(s.subscriptionsUpdate.mock.calls).toEqual([
+      ["sub_live", { cancel_at_period_end: false }],
+      ["sub_live", { cancel_at: "" }],
+    ]);
+  });
+
+  it("a cancelled TRIAL resumes the same way and is recorded as a trial", async () => {
+    stripeHolds({
+      id: "sub_live",
+      status: "trialing",
+      customer: "cus_1",
+      trial_end: PERIOD_END,
+      cancel_at: PERIOD_END,
+      items: { data: [item()] },
+    });
+    expect((await resumeSubscriptionAction({ surface: "billing" })).ok).toBe(true);
+    expect(s.subscriptionsUpdate.mock.calls).toEqual([["sub_live", { cancel_at: "" }]]);
+    expect(s.funnelInserts[0]).toMatchObject({ event: "subscription_resumed", props: { trial: true, surface: "billing" } });
+  });
+
+  it("a schedule that ends in a cancellation is switched to release", async () => {
+    let scheduleBehavior = "cancel";
+    s.subscriptionsRetrieve.mockImplementation(async () => ({
+      id: "sub_live",
+      status: "active",
+      customer: "cus_1",
+      cancel_at: null,
+      schedule: { id: "sub_sched_9", end_behavior: scheduleBehavior, phases: [{ end_date: PERIOD_END }] },
+      items: { data: [item()] },
+    }));
+    s.scheduleUpdate.mockImplementation(async (_id: string, params: { end_behavior: string }) => {
+      scheduleBehavior = params.end_behavior;
+      return { id: "sub_sched_9" };
+    });
+    expect((await resumeSubscriptionAction()).ok).toBe(true);
+    expect(s.scheduleUpdate).toHaveBeenCalledWith("sub_sched_9", { end_behavior: "release" });
+    expect(s.subscriptionsUpdate).not.toHaveBeenCalled();
+  });
+
+  it("a plan that is not ending any more (resumed in another tab) answers ok without writing to Stripe or the funnel", async () => {
+    stripeHolds({ id: "sub_live", status: "active", customer: "cus_1", cancel_at: null, items: { data: [item()] } });
+    expect((await resumeSubscriptionAction()).ok).toBe(true);
+    expect(s.subscriptionsUpdate).not.toHaveBeenCalled();
+    expect(s.funnelInserts).toEqual([]);
+    // …but the profile is still resynced: that is what made the button show.
+    expect(s.syncSubscription).toHaveBeenCalledTimes(1);
+  });
+
+  it("an ENDED subscription can't be resumed (a new plan is a new checkout) and nothing is written", async () => {
+    stripeHolds({ id: "sub_live", status: "canceled", customer: "cus_1", items: { data: [item()] } });
+    const result = await resumeSubscriptionAction();
+    expect(result).toEqual({ ok: false, error: "This plan has already ended. Pick a plan to start a new one." });
+    expect(s.subscriptionsUpdate).not.toHaveBeenCalled();
+  });
+
+  it("a PAST-DUE subscription has not ended: no \"pick a new plan\" (that would bill twice) — the portal fixes the payment", async () => {
+    stripeHolds({ id: "sub_live", status: "past_due", customer: "cus_1", cancel_at: PERIOD_END, items: { data: [item()] } });
+    const result = await resumeSubscriptionAction();
+    expect(result).toMatchObject({ ok: false, fallback: "portal" });
+    expect(result.ok === false && result.error).not.toMatch(/already ended/);
+    expect(s.subscriptionsUpdate).not.toHaveBeenCalled();
+    expect(s.funnelInserts).toEqual([]);
+  });
+
+  it("Stripe refusing, or leaving the plan set to end, falls back to the portal — and nothing is recorded as resumed", async () => {
+    stripeHolds({ id: "sub_live", status: "active", customer: "cus_1", cancel_at: PERIOD_END, items: { data: [item()] } });
+    s.subscriptionsUpdate.mockRejectedValue(new Error("stripe down"));
+    expect(await resumeSubscriptionAction()).toMatchObject({ ok: false, fallback: "portal" });
+    // Stripe answers 200 but the cancellation is still there.
+    s.subscriptionsUpdate.mockReset().mockImplementation(async () => ({
+      id: "sub_live",
+      status: "active",
+      cancel_at: PERIOD_END,
+      items: { data: [item()] },
+    }));
+    expect(await resumeSubscriptionAction()).toMatchObject({ ok: false, fallback: "portal" });
+    expect(s.funnelInserts).toEqual([]);
+    expect(s.syncSubscription).not.toHaveBeenCalled();
+  });
+
+  it("a failed profile resync does not fail the resume (Stripe is right; the webhook repeats the sync)", async () => {
+    stripeHolds({ id: "sub_live", status: "active", customer: "cus_1", cancel_at: PERIOD_END, items: { data: [item()] } });
+    s.syncSubscription.mockRejectedValue(new Error("db down"));
+    expect((await resumeSubscriptionAction()).ok).toBe(true);
+  });
+
+  it("getResumePreviewAction: the plan, the price and the next bill date from Stripe — a trial bills at its end", async () => {
+    stripeHolds({ id: "sub_live", status: "active", customer: "cus_1", cancel_at: PERIOD_END, items: { data: [item("year")] } });
+    expect(await getResumePreviewAction()).toEqual({
+      ok: true,
+      planName: "Pro",
+      trial: false,
+      nextBillAt: new Date(PERIOD_END * 1000).toISOString(),
+      priceLine: "$15 / year",
+    });
+    stripeHolds({
+      id: "sub_live",
+      status: "trialing",
+      customer: "cus_1",
+      trial_end: PERIOD_END - 86400,
+      cancel_at: PERIOD_END - 86400,
+      items: { data: [item()] },
+    });
+    expect(await getResumePreviewAction()).toMatchObject({
+      ok: true,
+      trial: true,
+      nextBillAt: new Date((PERIOD_END - 86400) * 1000).toISOString(),
+      priceLine: "$15 / month",
+    });
+    stripeHolds({ id: "sub_live", status: "canceled", customer: "cus_1", items: { data: [item()] } });
+    expect(await getResumePreviewAction()).toEqual({ ok: false, error: "There's no plan to resume." });
   });
 });
 

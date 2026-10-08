@@ -70,7 +70,7 @@ import {
   rulesTextWidthEm,
 } from "@/lib/cards/rules-metrics";
 import { groupTightRuns, tokenizeRulesText, type RulesItem } from "@/lib/cards/rules-text";
-import { STAT_BADGE_INSET } from "@/lib/cards/stat-fit";
+import { discShadowPx, symbolStyle, type SymbolStyle } from "@/lib/cards/symbol-style";
 import type { FrameProfile, Rect, SlotAlign, StatSlot } from "@/lib/cards/template-layout";
 import {
   RULES_BOX_PAD_PX,
@@ -101,11 +101,12 @@ export function rulesTargetFor(cardWidth: number, orientation: CardOrientation):
   return cardWidth >= RULES_HD_WIDTH[orientation] ? "hd" : "default";
 }
 
-/** The bake's hard shadow under an inline pip (lib/render/card-image.tsx
- *  ManaGem): max(1, round(disc × this)) down, and max(1, round(disc × 0.06))
- *  to the left (the preview's .ms-shadow: 0.07 / 0.06 of 1.3 em). */
-const PIP_SHADOW_DOWN = 0.07;
-const PIP_SHADOW_LEFT = 0.06;
+// The bake's hard shadow under an inline pip (lib/render/card-image.tsx
+// ManaGem) is the frame's SYMBOL STYLE's (lib/cards/symbol-style.ts, TODO
+// 4.8.0): on "modern", max(1, round(disc × 0.07)) down and max(1, round(disc
+// × 0.06)) to the left (the preview's .ms-shadow: 0.07 / 0.06 of 1.3 em).
+// metricsFor reads it through discShadowPx, so a style with another shadow
+// (or none) moves the ink the layout keeps clear with it.
 
 /** One size's rules metrics at one target, in that target's whole px (the
  *  font excepted: an odd HD size is a half px at 750 — the ladder is even). */
@@ -162,7 +163,9 @@ export function metricsFor(
   sizePx: number,
   lineHeight: number = RULES_TEXT.lineHeight,
   target: RulesTarget = "hd",
+  symbols?: SymbolStyle,
 ): RulesMetrics {
+  const pipShadow = (discPx: number) => discShadowPx(symbolStyle(symbols), discPx);
   const scale = RULES_TARGET_SCALE[target];
   const fontPx = sizePx * scale;
   const linePx = Math.round(fontPx * lineHeight);
@@ -180,8 +183,8 @@ export function metricsFor(
     pipPx,
     pipGapPx: Math.max(1, Math.round(fontPx * RULES_TEXT.pipGapEm)),
     pipTopPx: Math.round(regularBaseline - RULES_TEXT.pipCentreEm * fontPx - pipPx / 2),
-    pipShadowPx: Math.max(1, Math.round(pipPx * PIP_SHADOW_DOWN)),
-    pipShadowLeftPx: Math.max(1, Math.round(pipPx * PIP_SHADOW_LEFT)),
+    pipShadowPx: pipShadow(pipPx).down,
+    pipShadowLeftPx: pipShadow(pipPx).left,
     paragraphGapPx: targetPx(RULES_TEXT.paragraphGapPx, scale),
     flavorGapPx: targetPx(RULES_TEXT.flavorGapPx, scale),
     flavorGapNoBarPx: targetPx(RULES_TEXT.flavorGapNoBarPx, scale),
@@ -329,21 +332,6 @@ export function breakRulesText(
   return breakParsed(parseText(rulesText, flavorText), sizePx, columns, lineHeight);
 }
 
-/**
- * breakRulesText for paragraphs already tokenized (tokenizeRulesText), for a
- * caller that sets their emphasis itself — the saga's intro is italic
- * throughout (lib/cards/saga-rail.ts). An empty paragraph is a blank block.
- */
-export function breakRulesParagraphs(
-  paragraphs: readonly (readonly RulesItem[])[],
-  sizePx: number,
-  columns: Readonly<Record<RulesTarget, number>>,
-  lineHeight: number = RULES_TEXT.lineHeight,
-): RulesBlock[] {
-  const rules = paragraphs.map((items) => (items.length === 0 ? null : groupTightRuns([...items])));
-  return breakParsed({ rules, flavor: [] }, sizePx, columns, lineHeight);
-}
-
 /** A card's text as runs, once for every ladder step: each rules paragraph's
  *  runs (null for a blank source line), then each flavor source line's. */
 type ParsedText = { rules: (RulesItem[][] | null)[]; flavor: RulesItem[][][] };
@@ -446,6 +434,10 @@ export type RulesLayoutInput = {
    *  (TODO 4.49 (b)). Each target indents it by its own whole px
    *  (singleLineIndentPx), and the keep-outs are judged where it lands. */
   alignSingleLine?: "center";
+  /** The frame's symbol style (FrameProfile.symbolStyle, TODO 4.8.0): the
+   *  inline pip's shadow, which the layout keeps inside the box and out of
+   *  the keep-outs. Unset = "modern". */
+  symbolStyle?: SymbolStyle;
   /** Whether a flavor block after rules text gets the 1 px bar (M15-era
    *  frames) or the no-bar gap. Default true. */
   divider?: boolean;
@@ -676,7 +668,7 @@ function placeBlocks(
 ): RulesPlacement {
   const orientation = orientationFromAspect(input.aspect);
   const lineHeight = input.lineHeight ?? RULES_TEXT.lineHeight;
-  const base = metricsFor(sizePx, lineHeight, target);
+  const base = metricsFor(sizePx, lineHeight, target, input.symbolStyle);
   // A squeezed paragraph gap (fitRulesLayout, paragraphGapMinPx): whole px
   // at each target, like every gap.
   const m =
@@ -935,7 +927,10 @@ function sameLineColumns(a: LineColumns | undefined, b: LineColumns): boolean {
 function layoutParsedAt(input: RulesLayoutInput, sizePx: number, parsed: ParsedText): RulesLayout {
   const orientation = orientationFromAspect(input.aspect);
   const lineHeight = input.lineHeight ?? RULES_TEXT.lineHeight;
-  const metrics = { hd: metricsFor(sizePx, lineHeight, "hd"), default: metricsFor(sizePx, lineHeight, "default") };
+  const metrics = {
+    hd: metricsFor(sizePx, lineHeight, "hd", input.symbolStyle),
+    default: metricsFor(sizePx, lineHeight, "default", input.symbolStyle),
+  };
   const pad = padFor(input, sizePx);
   const pads = { hd: targetPad(pad, RULES_TARGET_SCALE.hd), default: targetPad(pad, RULES_TARGET_SCALE.default) };
   // The side headroom depends on which words start and end the lines, and
@@ -1076,25 +1071,20 @@ export function blockHeightPx(layout: RulesLayout, target: RulesTarget): number 
 // ---------------------------------------------------------------------------
 
 /**
- * Where a stat badge the card draws puts ink, in card percents: a plate
- * master's measured ink over the plate's box (lib/cards/plate-ink.ts — the
- * box itself for a plate the table doesn't know), the drawn badge inside its
- * rect (STAT_BADGE_INSET — the battle's defense disc), else the value's rect
- * (a value printed straight on the art or the frame).
+ * Where a stat badge the card draws puts ink, in card percents: the badge
+ * the frame MASTER paints (StatSlot.paintedRect — the battle's defense
+ * shield, TODO 4.21b), a plate master's measured ink over the plate's box
+ * (lib/cards/plate-ink.ts — the box itself for a plate the table doesn't
+ * know), else the value's rect (a value printed straight on the art or the
+ * frame). (The renderers drew a rounded badge of their own behind a
+ * plate-less value until the battle's disc, its one user, gave way to the
+ * painted shield: no profile declared one, and the override schema never
+ * could — the path is gone.)
  */
 export function statInkRect(slot: StatSlot): Rect {
+  if (slot.paintedRect) return slot.paintedRect;
   const plateBox = slot.plateRect ?? slot.rect;
   if (slot.plateAssetPathTemplate) return plateInkRect(slot.plateAssetPathTemplate, plateBox) ?? plateBox;
-  if (slot.badgeColorHex) {
-    const dx = (slot.rect.widthPct * STAT_BADGE_INSET.xPct) / 100;
-    const dy = (slot.rect.heightPct * STAT_BADGE_INSET.yPct) / 100;
-    return {
-      leftPct: slot.rect.leftPct + dx,
-      topPct: slot.rect.topPct + dy,
-      widthPct: slot.rect.widthPct - 2 * dx,
-      heightPct: slot.rect.heightPct - 2 * dy,
-    };
-  }
   return slot.rect;
 }
 
@@ -1103,16 +1093,19 @@ export function statInkRect(slot: StatSlot): Rect {
  * DRAWS them — each only when its show flag is set (the renderers' showPT /
  * showLoyalty / showDefense): the P/T plate, the loyalty shield (only when a
  * walker's text is drawn in the plain box — its ability rows keep clear of
- * it themselves) and the battle's defense badge. Each is where the badge
- * puts ink (statInkRect): a plate's measured ink, the drawn disc, or the
- * value's rect.
+ * it themselves) and the battle's defense shield. Each is where the badge
+ * puts ink (statInkRect): a plate's measured ink, or the value's rect. A
+ * badge the frame MASTER paints (StatSlot.paintedRect: the
+ * battle's shield, TODO 4.21b) is on every card on the frame, value or no
+ * value — it keeps the text out whatever its show flag says.
  */
 export function statKeepOuts(
   layout: Pick<FrameProfile, "pt" | "loyalty" | "defense">,
   show: { pt?: boolean; loyalty?: boolean; defense?: boolean },
 ): Rect[] {
-  const ink = (slot: StatSlot | undefined) => (slot ? statInkRect(slot) : null);
-  return [show.pt ? ink(layout.pt) : null, show.loyalty ? ink(layout.loyalty) : null, show.defense ? ink(layout.defense) : null].filter(
+  const ink = (slot: StatSlot | undefined, shown: boolean | undefined) =>
+    slot && (shown || slot.paintedRect) ? statInkRect(slot) : null;
+  return [ink(layout.pt, show.pt), ink(layout.loyalty, show.loyalty), ink(layout.defense, show.defense)].filter(
     (r): r is Rect => r !== null,
   );
 }

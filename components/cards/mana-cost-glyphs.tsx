@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { pipOverrideForToken, type PipOverrides } from "@/lib/pips/override";
+import { styledSuffix, symbolStyle, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
 
 // ---------------------------------------------------------------------------
 // ManaCostGlyphs — render `{2}{R}{G/W}{R/P}{T}{S}` etc. using the open-source
@@ -36,6 +37,11 @@ type ManaCostGlyphsProps = {
   /** Vertical nudge of the whole cost (a CSS length, e.g. a `cqw` string;
    *  negative = up) — a frame profile's `costDy` (CardPreview only). */
   offsetY?: string;
+  /** The frame's symbol style (lib/cards/symbol-style.ts, TODO 4.8.0) — a
+   *  prop of the CARD's uses only (CardPreview hands it its profile's): the
+   *  pickers, dialogs, deck lists and articles omit it and keep the
+   *  "modern" look, whatever frame a card is on. */
+  symbols?: SymbolStyleSpec;
   className?: string;
 };
 
@@ -179,10 +185,13 @@ export function PipOverrideImg({
   src,
   fontSizeEm = 0.95,
   style,
+  symbols = symbolStyle(undefined),
 }: {
   src: string;
   fontSizeEm?: number;
   style?: React.CSSProperties;
+  /** The frame's symbol style (the disc's shadow); "modern" when omitted. */
+  symbols?: SymbolStyleSpec;
 }) {
   return (
     <span
@@ -199,7 +208,8 @@ export function PipOverrideImg({
           height: "1.3em",
           borderRadius: "50%",
           objectFit: "cover",
-          boxShadow: "-0.06em 0.07em 0 #111, 0 0.06em 0 #111",
+          // mana-font's `.ms-cost.ms-shadow` pair, where the style has a shadow.
+          ...(symbols.previewShadowCss ? { boxShadow: symbols.previewShadowCss } : {}),
         }}
       />
     </span>
@@ -212,6 +222,7 @@ export function ManaCostGlyphs({
   fontSize,
   overrides,
   offsetY,
+  symbols = symbolStyle(undefined),
   className,
 }: ManaCostGlyphsProps) {
   if (!cost || !cost.trim()) return null;
@@ -253,7 +264,7 @@ export function ManaCostGlyphs({
         }
         const overrideSrc = pipOverrideForToken(token, overrides);
         if (overrideSrc) {
-          return <PipOverrideImg key={`g-${i}`} src={overrideSrc} />;
+          return <PipOverrideImg key={`g-${i}`} src={overrideSrc} symbols={symbols} />;
         }
         const suffix = tokenSuffix(token);
         if (!suffix) return null;
@@ -263,7 +274,7 @@ export function ManaCostGlyphs({
           <i
             key={`g-${i}`}
             aria-hidden
-            className={cn("ms ms-cost ms-shadow", `ms-${suffix}`)}
+            className={cn("ms ms-cost", symbols.previewShadowClass, `ms-${styledSuffix(symbols, suffix)}`)}
           />
         );
       })}

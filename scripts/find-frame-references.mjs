@@ -8,7 +8,7 @@
 // English), and reports two candidates: the printing with the SHORTEST
 // rules text and the one with the LONGEST — the two ends of the fit ladder
 // a single reference can't exercise. Combos whose signature no real printing
-// carries (mono-colour split cards, 1993 tokens…) report `null`.
+// carries (a white, black or green split card, 1993 tokens…) report `null`.
 //
 //   node scripts/find-frame-references.mjs [out.json]
 //
@@ -151,19 +151,24 @@ const TEMPLATES = {
   },
   // The borderless nonbasic land (4.34). A land's frame colour follows the
   // mana it makes: c = colourless lands, m = three and more colours (two
-  // split the pinline and box, 4.6). No crown or nickname line until 4.6 /
-  // 6.3. Curate by eye: drop the prints of the spells' look — a DARK type
-  // bar and text box under the colour's title bar (TDM, WOE, ACR, EOE, FIC,
-  // many 2024+ SLD drops; the registry pins them, BORDERLESS_LAND_DARK_PINS),
-  // a dark type bar alone over the tinted box (FRA #380–381, a few SLD
-  // drops; BORDERLESS_LAND_DARK_TYPE_BAR_PINS) and the short box (the SNC
-  // triomes): the master tints the type bar and the box. Also drop scans
+  // split the pinline and box on grey bars: the pair masters, whose own
+  // references are the entry's `pairs` in frame-references.json — 4.56,
+  // curated by hand from the tinted-look sets, never found by this query).
+  // No crown or nickname line until 4.6 / 6.3. Curate by eye: drop the
+  // prints of the spells' look — a DARK type bar and text box under the
+  // colour's title bar (TDM, WOE, ACR, EOE, FIC, many 2024+ SLD drops; the
+  // registry pins them, BORDERLESS_LAND_DARK_PINS), a dark type bar alone
+  // over the tinted box (FRA #380–381, a few SLD drops;
+  // BORDERLESS_LAND_DARK_TYPE_BAR_PINS), the see-through box with a shadow
+  // behind the text (2025's runs: SPG #109–118, MSH, SOS, ECL;
+  // BORDERLESS_LAND_SHADOW_BOX_PINS) and the short box (the SNC triomes,
+  // UNF's shock lands): the master tints the type bar and the box. Also drop scans
   // whose bars let the art through (SLD #230 / #301 / #304, owner round 15:
   // u and g keep their one MH3 reference rather than take them). w keeps
   // Monumental Henge MH3 #354 alone too (owner round 16: not Ancient Den
   // SLD #300, an offset scan of Secret Lair's centred one-line print).
   m15borderlessland: {
-    confirm: "Keep prints whose type bar AND text box wear the title bar's tint; drop a dark type bar, with or without a dark box (BORDERLESS_LAND_DARK_PINS, BORDERLESS_LAND_DARK_TYPE_BAR_PINS), and the short box.",
+    confirm: "Keep prints whose type bar AND text box wear the title bar's tint; drop a dark type bar, with or without a dark box (BORDERLESS_LAND_DARK_PINS, BORDERLESS_LAND_DARK_TYPE_BAR_PINS), a see-through box with a shadow behind the text (BORDERLESS_LAND_SHADOW_BOX_PINS) and the short box.",
     q: (k) =>
       `border:borderless frame:2015 t:land -t:basic -is:showcase -frame:legendary -is:dfc -is:textless -is:flavorname -t:creature ${k === "m" ? "produces>=3 -produces:c" : `produces=${k}`}`,
   },
@@ -189,14 +194,22 @@ const TEMPLATES = {
     q: (k) => `t:battle ${spellColor(k)}`,
   },
   saga: {
+    confirm:
+      "Keep only prints on the regular saga frame (TODO 4.21c): not DMU's read-ahead sagas (their reminder box is 97 px taller), not a saga creature (FIN's Summons), and for m not a two-colour print (the pair frame, TODO 4.6f) — see frame-references.json's note.",
     q: (k) => `t:saga frame:2015 (st:expansion or st:core) is:booster -is:showcase -is:dfc -is:borderless -is:extended ${spellColor(k)}`,
   },
   adventure: {
     q: (k) => (k === "c" ? null : `is:adventure frame:2015 (st:expansion or st:core) is:booster -is:showcase -is:borderless -is:extended ${spellColor(k)}`),
   },
   split: {
-    note: "Mono-colour split cards were never printed in the M15 frame.",
-    q: (k) => (k === "m" ? `is:split -kw:aftermath frame:2015 -is:showcase c>=2` : null),
+    note:
+      "The M15 split frame as printed since 2018 (the collector line down the left border): mono-red and mono-blue only (MH2, TSR, WHO). Rooms are their own frame.",
+    confirm:
+      "m: keep only a GOLD // GOLD printing (C16 #239 Trial // Error, in the frame's 2016 arrangement) — a split whose halves differ in colour (GRN's hybrid // gold, DMR's mono // mono) needs TODO 4.26, never a reference.",
+    q: (k) =>
+      k === "c"
+        ? null
+        : `is:split -kw:aftermath frame:2015 -is:showcase -t:room ${k === "m" ? "c>=2" : spellColor(k)}`,
   },
   aftermath: {
     q: (k) => (k === "c" ? null : `kw:aftermath ${spellColor(k)}`),
@@ -205,31 +218,41 @@ const TEMPLATES = {
     note: "Printed flip cards are 2003-frame (Kamigawa); our frame is the MSE modernisation — expect an era warning.",
     q: (k) => (k === "c" || k === "m" ? null : `is:flip ${spellColor(k)}`),
   },
+  // The 1993 and 1997 frames are referenced to BLACK-bordered printings
+  // (TODO 4.10.0): the white-bordered core sets and starters (ITP, RQS, 4ED,
+  // SUM; 6ED, 7ED) print another border, which is its own switch (4.30).
   agclassic: {
-    q: (k) => `frame:1993 -t:land -t:token ${spellColor(k)}`,
+    note: "Black-bordered printings only (LEA / LEB / ARN / LEG / ICE / ALL).",
+    q: (k) => `frame:1993 border:black -t:land -t:token ${spellColor(k)}`,
   },
   alphaland: {
+    note: "Black-bordered printings only.",
     q: (k) =>
       k === "m"
-        ? `frame:1993 t:land id>=2`
+        ? `frame:1993 border:black t:land id>=2`
         : k === "c"
-          ? `frame:1993 t:land -t:basic id=c`
-          : `frame:1993 t:basic ${identityColor(k)}`,
+          ? `frame:1993 border:black t:land -t:basic id=c`
+          : `frame:1993 border:black t:basic ${identityColor(k)}`,
   },
-  alphatoken: {
-    note: "No 1993-frame tokens were printed.",
-    q: () => null,
-  },
+  // The 1997 frame reproduces the ORIGINAL cards of 1996–2003 (owner round
+  // 36, 2026-10-07), in their later layout: the centred footer of Exodus
+  // (1998-06) on. The reprints on this frame since 2021 (TSR, MH2, DMR, INR,
+  // MH3…) carry lighter colours and are not its references (TODO 4.10e), and
+  // Time Spiral's timeshifted cards (2006) are alternates at most.
   retro: {
-    q: (k) => `frame:1997 -t:land -t:token -is:showcase (st:expansion or st:core) ${spellColor(k)}`,
+    note: "Black-bordered originals, Exodus (1998) → Scourge (2003).",
+    q: (k) =>
+      `frame:1997 border:black date>=1998-06-01 date<=2003-07-01 -t:land -t:token -is:showcase (st:expansion or st:core) ${spellColor(k)}`,
   },
   retroland: {
+    note:
+      "Black-bordered originals, Exodus (1998) → Scourge (2003). m: a two-colour land prints a blend this frame does not draw yet (TODO 4.6h) — look, never verify.",
     q: (k) =>
       k === "m"
-        ? `frame:1997 t:land id>=2 -is:showcase`
+        ? `frame:1997 border:black date>=1998-06-01 date<=2003-07-01 t:land id>=2 -is:showcase`
         : k === "c"
-          ? `frame:1997 t:land -t:basic id=c -is:showcase`
-          : `frame:1997 t:basic ${identityColor(k)}`,
+          ? `frame:1997 border:black date>=1998-06-01 date<=2003-07-01 t:land -t:basic id=c -is:showcase`
+          : `frame:1997 border:black date>=1998-06-01 date<=2003-07-01 t:basic ${identityColor(k)}`,
   },
   modern: {
     q: (k) => `frame:2003 -t:land -t:token -t:planeswalker -is:showcase (st:expansion or st:core) ${spellColor(k)}`,

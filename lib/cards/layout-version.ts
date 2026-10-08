@@ -845,9 +845,239 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            getVerifiedFrameKeys reads `verified` alone) and FLAGGED "needs
 //            re-verification" on the admin checklist until it is ticked
 //            again; nothing is dropped.
+//   42     — the saga rebuilt from Card Conjurer (TODO 4.21c = 3.7; design
+//            2026-09-29 §3.4, owner decisions 2026-09-29, built 2026-10-06).
+//            A CORRECTION against the prints (Scryfall PNGs at 1500 × 2100:
+//            DOM #21 / #38 / #42 / #90 / #102 / #122 / #173, THB #53 / #160 /
+//            #170, 40K #126, LTC #58, WHO #99, LTR #174, MH2 #259 and 40
+//            more — the rail measured on 54):
+//            * the masters: CC's 'Regular Frames' saga pack 1:1 (w u b r g m
+//              = sagaFrame<K>; c = its Land Frame, MH2 #259) for the 375 px
+//              MSE cut — the chapter RIBBON is in the master now; the art
+//              slot is the masters' window + 0.1 % (50.03/11.19/42.4 ×
+//              72.68: the window is 752–1384 × 237–1758 px on every key; the
+//              MSE slot started 26 px left of the prints' window); the cost
+//              discs at the CC-framed M15 height (CC_M15_COST_DY: DOM #122's
+//              centre 151.5 px, 40K #126's 153), the title rect to 92.2 %W
+//              (the last disc ends 1383–1386); the type line's baseline on
+//              the prints' 1855.3 px (+9.3 px, TextSlot.dy) from 8.5 %W; the
+//              set symbol in CC's box (right 92.27 %W, centred 87.39 %H —
+//              the prints end 1380–1384, centred 1835–1836.5).
+//            * the rail (lib/cards/saga-rail.ts, one layout both renderers
+//              draw): the reminder block in its own fixed box (62 px on a
+//              62 px pitch: the prints' baselines 341 / 403 / 465 / 527; its
+//              emphasis the text's own, where v33 set the whole block
+//              italic; its lines out of the fold's corner; one the box
+//              cannot hold at the ladder's floor — past ≈ 240 characters —
+//              outgrows it: the floor size, the chapters' column, the rows
+//              under it, as v41 drew every reminder in full); the rows from
+//              the first divider at 621 px (the
+//              prints' 619–621 on 50 of 54 scans; CC draws 608), or from the
+//              rail's own top (237 px) when the saga has no reminder (owner
+//              decision 2026-09-29); the chapter text at 64 px on the rules
+//              ladder (v33: 43.5) in the column 203–728 px; rows sized by
+//              their content — never shorter than their stack of chapter
+//              badges — with the rail's leftover shared equally (the walker
+//              rows' arithmetic, lib/cards/loyalty-rows.ts contentRowsAt;
+//              v33 gave every chapter the same height); the pack's gold
+//              hexagon (118 × 132 px) once per chapter numeral, stacked 160
+//              px apart where the rows have room (DOM, THB, KHM, 40K, WOE,
+//              PIP) down to 138 px where they do not (LTC #58 138.3 / 138.6,
+//              WHO #99 138.0) — v33 drew ONE dark badge with the joined
+//              marker ("II,III,IV"); the numerals in MPlantin at 72 px (the
+//              prints' Plantin semibold is TODO 4.8); the pack's divider on
+//              every row's top edge but the first row of a saga with no
+//              reminder. Up to six badges stack in one row, as the prints do
+//              (LTR #174 six, WHO #99 five); the combined marker ("I–III")
+//              is drawn only where stacks cannot fit — alone (repeated
+//              numerals) or beside the text at the ladder's floor (before a
+//              chapter loses a line: v41 drew one marker a row) — or past
+//              six. The reminder is one paragraph, as v41 drew it.
+//            The walker rows moved onto the shared arithmetic and are
+//            byte-identical (tests/unit/cards/loyalty-rows-pinned.test.ts,
+//            tests/unit/render/pw-rows-pinned-bake.test.tsx).
+//            Template-scoped (TEMPLATE_SCOPED_VERSIONS[42] = saga): every
+//            card on it, art or none. Public production (anonymous read,
+//            2026-10-06): 4 public sagas, one owner, none with a reminder
+//            (3 gold, 1 blue; I/II/III, I–IV twice, I / II,III,IV / V / VI)
+//            — re-baked by the sweep after the owner's before/after sheet
+//            (round 34); unlisted and private ones: owner SQL (the sweep
+//            re-bakes public and unlisted cards, a private one re-bakes on
+//            its next save). The visual
+//            matrix: only the saga cases change. "sweep" (a correction,
+//            FRAMES.md "Additions vs corrections"), never a badge. NOT
+//            verification-neutral: the masters, the art slot, the type line
+//            and the whole rail move — production's seven saga ticks are
+//            judged by this scope: KEPT (the creator goes on offering the
+//            saga) and FLAGGED "needs re-verification" until the owner
+//            ticks them again against the registry's references (saga/m is
+//            40K #126 now, with LTC #58).
+//   43     — the landscape layouts re-sourced from Card Conjurer (TODO
+//            4.21b; design 2026-09-29, owner decisions 2026-09-29; built
+//            2026-10-06): split and battle leave their MSE masters (git)
+//            for CC's (the frames bucket, scripts/lib/cc-frames.mjs — the
+//            first LANDSCAPE recipes, 2100 × 1500). Measured against the
+//            prints (Scryfall PNGs turned a quarter turn clockwise at 2100 ×
+//            1500, each edge registered by correlation):
+//            * split: CC's 'Split' pack turned clockwise without a resample
+//              (two half-cards with their own coloured body) for the MSE
+//              composite of two half-frames on a black canvas. The pack's
+//              collector border is 160 px where MH2 #123 / #60 and TSR #161
+//              / #186 print 147–148, so the importer moves the left half 11
+//              px left and the right half 3 px through the flat black
+//              border and spine (SPLIT_HALF_RECUT: byte for byte): every
+//              edge within 3.6 px of the four prints' mean (was up to 14.3).
+//              The art slots are the windows + 0.1 %. The prints set a
+//              split half SMALLER than a regular card on every line, so
+//              split stays out of the M15 family with constants of its own
+//              (lib/cards/typography.ts): the name 76 px (the design's 80
+//              came out 4–6 % wide on ten names), the type line 53 px on
+//              its 69 px bar (the design's 60, Card Conjurer's 0.0286 H,
+//              set "Sorcery" 201 px wide against the prints' 177–178), the
+//              pips 68 px, the set symbol fitted by its ink's HEIGHT to a
+//              48 px box (setSymbolFit "ink-height"). Both halves are
+//              `fit: "measured"` — the right one, an unturned second face,
+//              drawn exactly as the front draws its own lines — and both
+//              sit on the prints' baselines relative to their bars; the
+//              rules at the 9 pt ladder top, centred as the prints centre
+//              theirs. No coloured half-pair (TODO 4.26), no fuse.
+//            * battle: CC's 'Battle' pack (2814 × 2010 → 2100 × 1500 in one
+//              Lanczos pass) for the MSE master with no border, siege arc,
+//              icon or shield. Nine MOM battles print the type bar, the
+//              text box and the shield 2.5–5.5 px lower than the pack, so
+//              the importer moves that block 4 px down through flat rows
+//              (BATTLE_BLOCK_RECUT, then named BATTLE_LOWER_RECUT: within 1.5 px of their mean; the
+//              prints' bars also end 8–11 px further right, which no block
+//              move reaches — kept as the pack has them). ONE art rect for every colour,
+//              from the border's inner edge to the bottom border (the
+//              window runs on in a sliver beside the shield), which is also
+//              the see-through colourless master's under-frame picture. The
+//              battle JOINS the M15 family through `displayPct(…,
+//              "landscape")`: an 80 px name with M15's tracking (it starts
+//              right of the icon, 23 px into the pill — closes 3.28), a 68
+//              px type line, the family's cost disc and symbol box, each
+//              on the prints' baseline relative to its bar. The defense is
+//              the value alone, white, in the shield the MASTER paints —
+//              the drawn disc and its outline are gone — and that shield is
+//              a rules keep-out on every battle.
+//            * both: the artist credit down the left border, M15's footer
+//              line turned with the card (FrameProfile.footerTurn — 3.8's
+//              slice; the collector number, set and language beside it are
+//              4.9d's); the brand mark centred in the new bottom border.
+//            Template-scoped (TEMPLATE_SCOPED_VERSIONS[43] = battle, split):
+//            every card on the two, art or none. Public production
+//            (anonymous read, 2026-10-06): 0 public or unlisted cards on
+//            either (private cards and previews: owner SQL). The visual
+//            matrix: only their cases change. "sweep" (a correction,
+//            FRAMES.md "Additions vs corrections"). NOT
+//            verification-neutral: masters and every slot move — but no
+//            tick exists on either template to stale (0 of 7 each), so the
+//            first ticks are the owner's after the deploy.
+//   44     — the 2003 frame's artist line in the prints' ink (TODO 4.23a;
+//            era design 2026-10-06, step E1): `modern` and `modernland`
+//            printed the footer in INK_DARK on every master — 1.1 : 1 on
+//            the black frame and 2.2–2.3 : 1 on the brown band all seven
+//            land keys share (only the brush painted into the MSE master
+//            showed). Eighth Edition → Journey into Nyx print it black on
+//            white, blue, red, green, gold and the artifact frame and WHITE
+//            on black and on lands (M12 #81, #224; Card Conjurer's
+//            pack8th.js). So: MODERN.footer.inkByColorKey = { b: white },
+//            MODERNLAND's = white on all seven keys (footerInk, both
+//            renderers; 16.2 : 1 and 8.1–8.5 : 1). No slot, size, master,
+//            plate or symbol moves (those are 4.10b). A CORRECTION
+//            ("sweep", FRAMES.md "Additions vs corrections"), never a
+//            badge. Template-scoped (TEMPLATE_SCOPED_VERSIONS[44] = modern,
+//            modernland) AND card-scoped (VERSION_SCOPES[44], v44Changed):
+//            every `modernland` card, and a `modern` card that paints the
+//            black master — every other `modern` card bakes byte for byte
+//            as before and is stamped without a re-bake. Public production
+//            (anonymous read, 2026-10-07): 7 `modern` cards on m ×4, c ×2,
+//            g ×1, none on b, none on `modernland` — the sweep re-bakes
+//            nothing. The visual matrix: only the `modern`/b and
+//            `modernland` cases change. VERIFICATION-NEUTRAL: the frame a
+//            tick verified is the same master with every slot where it
+//            was; the owner signs the ink off on the round-37 sheet
+//            instead of re-ticking the eight combos (4.10b re-opens all
+//            fourteen 2003 ticks once).
+//   45     — the battle's right side, top block and icon re-cut onto the
+//            prints (TODO 4.21d; owner round 33, 2026-10-06: re-cut before
+//            the first battle tick). ITS number lives in
+//            BATTLE_RECUT_LAYOUT_VERSION below (built as 44 beside the 2003
+//            footer ink, which merged first and holds that number). After v43's block move
+//            Card Conjurer's 'Battle' master still left nine MOM prints
+//            (#1, #21, #22, #63, #115, #147, #149, #190, #230) by: the name
+//            pill's right end +10.0 px, the type bar's +8.6, the text box's
+//            right edge +7.6, the shield +11.7 (the prints' lies over the
+//            right border), the pill 2.5 / 1.4 px high, the icon's dark
+//            disc r 54.6 against 52.0 and 3.9 px low. The importer now
+//            (scripts/lib/cc-frames.mjs): moves the top block 2 px up
+//            through the flat top border (BATTLE_BLOCK_RECUT), stretches
+//            the pill's paper 10 px and the type bar's and text box's 8 px
+//            right (recutColumns: a 24-column cross-fade inside each bar's
+//            own paper), lifts the shield through the pack's Defense mask
+//            and sets it 12 px right, over the border, and redraws the
+//            icon's three rings at the prints' radii (BATTLE_RIGHT_RECUT,
+//            BATTLE_ICON_RECUT). Every one of those edges within 1 px of
+//            the nine prints' mean. The profile rides it: the name and the
+//            art rect's top 2 px up (the name's feet were on row 158 where
+//            the prints' are on 156–157; the cost stays on the prints'
+//            rows: costDy), the cost's end 10 px right, the type line's
+//            rect and the symbol 8 px, the shield's rect and the defense
+//            value 12 px; the name starts 4 px further left (388 px: by
+//            direct reads on the nine prints v43's stood 5.5 px right at
+//            its first letter and 2.5 at the word's end — the skeptic
+//            pass's one change). The rules box keeps the pack's column (the
+//            prints wrap their lines round the shield; ours keep out of it
+//            by size, and a wider column set four of nine references'
+//            texts 2–6 px smaller than their prints).
+//            Template-scoped (battle alone): every card on it. Public
+//            production (anonymous read, 2026-10-07): 0 public or unlisted
+//            battles. The visual matrix: only the battle cases change.
+//            "sweep" (a correction). NOT verification-neutral: the masters
+//            and every slot on the right move — no battle tick exists to
+//            stale (the first ticks wait for this bump).
+//   46     — the 1997 frame on the ORIGINAL cards (TODO 4.10a; era design
+//            2026-10-06 step E4, owner round 38 of 2026-10-07). ITS number
+//            lives in RETRO_1997_LAYOUT_VERSION below — the ONE constant;
+//            CARD_LAYOUT_VERSION reads it while it is the latest. `retro`
+//            and `retroland` drew MSE masters from 375 px JPEGs (edges
+//            5.8 px soft, 3.5 px off the prints' shape), every line of text
+//            in dark ink and M15's shadowed pips. Now: the MASTERS are Card
+//            Conjurer's Seventh drawing re-cut edge by edge (a piecewise-
+//            linear map per axis, the text box per colour) and toned region
+//            by region (mean and contrast) onto the 1996–2003 prints — seven
+//            keys of `retro`, all seven of `retroland`; gold keeps the MSE
+//            artwork, cut with the same edge map (scripts/lib/print-cut.mjs,
+//            seventh-1997.mjs; the frames bucket). The PROFILE: name, type
+//            line, P/T and artist line white with the prints' hard black
+//            shadow on every key; the type line and the artist line in
+//            MPlantin (their printed face), names and P/T in Beleren, at the
+//            prints' sizes (71 / 67 / 86 / 58 px), `fit: "measured"`; the
+//            centred `Illus. <artist>` footer over the © slot
+//            (FrameProfile.copyrightSlot: the pipglyph.com mark on display,
+//            off the border; a clean download's footer text);
+//            `symbolStyle: "1997"` — flat 73 px discs, the 1997 tap; the art
+//            slot on the new window, one rules box fitted to the smallest
+//            text box. A CORRECTION ("sweep"), never a badge.
+//            Template-scoped (retro, retroland): every card on the pair.
+//            Public production (anonymous read, 2026-10-07): 0 public or
+//            unlisted cards on either — the sweep re-bakes nothing; the
+//            bump is the visual gate's record. The visual matrix: only the
+//            retro / retroland cases change. NOT verification-neutral:
+//            masters and every slot move — no tick exists on the pair to
+//            stale (first ticks follow the merge; `retroland`/m is a
+//            stand-in and is not ticked).
 // ---------------------------------------------------------------------------
 
-export const CARD_LAYOUT_VERSION = 41;
+/** The 1997 frame rebuilt on the original cards (TODO 4.10a): the masters
+ *  of `retro` and `retroland` and every slot on them. ITS version lives
+ *  here alone — CARD_LAYOUT_VERSION, the scoped tables and the rollout below
+ *  read this constant — so a bump that merges first moves it in one place.
+ *  Frozen like the lists below once it ships. */
+export const RETRO_1997_LAYOUT_VERSION = 46;
+export const RETRO_1997_TEMPLATES: readonly string[] = ["retro", "retroland"];
+
+export const CARD_LAYOUT_VERSION = RETRO_1997_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -875,8 +1105,8 @@ export const V32_M15_FAMILY_TEMPLATES: readonly string[] = [
 
 // v38 — the portrait layouts 4.21a re-sourced from Card Conjurer (their
 // masters, art slots and text slots). Frozen like the lists below: v38 is
-// history once it ships (4.21b's split and battle and 4.21c's saga bring
-// their own bumps).
+// history once it ships (4.21b's split and battle — v43 — and 4.21c's saga
+// bring their own bumps).
 export const V38_PORTRAIT_LAYOUT_TEMPLATES: readonly string[] = ["adventure", "aftermath", "flip"];
 
 // v39 — flip's lower half and aftermath's cost onto the prints (the 4.21a
@@ -897,6 +1127,31 @@ export const V40_VERIFICATION_TEMPLATES: readonly string[] = ["m15mdfcback", "m1
  *  verification scope too (every one of the four has references whose
  *  compare render changes), so there is no V41_VERIFICATION_TEMPLATES. */
 export const V41_TEMPLATES: readonly string[] = ["m15mdfcfront", "m15mdfclandfront", "m15mdfcback", "m15mdfclandback"];
+/** The saga's rebuild (TODO 4.21c): the masters from Card Conjurer and the
+ *  printed rail. ITS version lives here alone — the scoped table and the
+ *  rollout below key their entries by this constant — because 4.21b (split
+ *  and battle) was built beside it: whichever of the two merges second takes
+ *  the next number by changing this constant (and CARD_LAYOUT_VERSION, when
+ *  it becomes the latest). Frozen like the lists above once it ships. */
+export const SAGA_RAIL_LAYOUT_VERSION = 42;
+export const SAGA_RAIL_TEMPLATES: readonly string[] = ["saga"];
+/** v43 — the landscape layouts 4.21b re-sourced from Card Conjurer (their
+ *  masters, art slots and every text slot). Frozen like v38's: v43 is
+ *  history once it ships (4.21c's saga brings its own bump). */
+export const V43_LANDSCAPE_LAYOUT_TEMPLATES: readonly string[] = ["battle", "split"];
+/** v44 — the 2003 pair whose artist line took the prints' white (4.23a).
+ *  Frozen like the lists above: v44 is history once it ships (4.10b's swap
+ *  of the same pair brings its own bump). */
+export const V44_FOOTER_INK_TEMPLATES: readonly string[] = ["modern", "modernland"];
+/** The battle's re-cut onto the prints (TODO 4.21d): its masters' right
+ *  side, top block and icon, and the slots that ride them. ITS version
+ *  lives here alone — the scoped table and the rollout below key their
+ *  entries by this constant — because another bump was built beside it:
+ *  whichever of the two merges second takes the next number by changing
+ *  this constant (and CARD_LAYOUT_VERSION, when it becomes the latest).
+ *  Frozen like the lists above once it ships. */
+export const BATTLE_RECUT_LAYOUT_VERSION = 45;
+export const BATTLE_RECUT_TEMPLATES: readonly string[] = ["battle"];
 
 /**
  * Bumps that changed the output of only some frame templates, keyed by the
@@ -904,7 +1159,10 @@ export const V41_TEMPLATES: readonly string[] = ["m15mdfcfront", "m15mdfclandfro
  * every card). List EVERY template whose output changed — including the ones
  * that inherit a changed profile by spread (alphaland ← agclassic,
  * modernland ← modern). Template keys match `frame_style.template`
- * (types/card.ts FRAME_TEMPLATE_VALUES).
+ * (types/card.ts FRAME_TEMPLATE_VALUES). The retired "alphatoken" (TODO
+ * 4.54) stays in v25's list and v29's two as history, and is inert there: a
+ * row that still carries it is judged on the frame it now DRAWS
+ * (normalizeFrameTemplate → m15token / m15tokentext), never by that name.
  */
 const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // v24: the Card Conjurer M15 swap + everything that draws the M15 P/T plate.
@@ -959,6 +1217,25 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // them is judged by this scope too (each has references whose compare
   // render gains the rider): kept, flagged for a re-check.
   41: V41_TEMPLATES,
+  // The saga rebuilt from Card Conjurer (4.21c): its masters, art slot,
+  // type line and the whole chapter rail; every card on it. A tick on it is
+  // judged by this scope too: kept, flagged for a re-check.
+  [SAGA_RAIL_LAYOUT_VERSION]: SAGA_RAIL_TEMPLATES,
+  // v43: the landscape layouts re-sourced from Card Conjurer (4.21b) —
+  // their masters, art slots and text slots; every card on the two. No
+  // narrower verification scope: neither has a tick.
+  43: V43_LANDSCAPE_LAYOUT_TEMPLATES,
+  // v44: the 2003 footer ink (4.23a) — the pair; VERSION_SCOPES[44] narrows
+  // `modern` to the cards on the black master.
+  44: V44_FOOTER_INK_TEMPLATES,
+  // The battle re-cut onto the prints (4.21d): its masters and the slots on
+  // its right side and top block; every card on it. No narrower
+  // verification scope: the battle has no tick.
+  [BATTLE_RECUT_LAYOUT_VERSION]: BATTLE_RECUT_TEMPLATES,
+  // The 1997 frame on the original cards (4.10a): the pair's masters and
+  // every slot; every card on it (none stored). No narrower verification
+  // scope: neither template has a tick.
+  [RETRO_1997_LAYOUT_VERSION]: RETRO_1997_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -1079,10 +1356,15 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
  * (legacy) stay fresh; the owner signed the walkers off on the sheet.
  * v37 is: it darkens the black of nyx's type bar and text box on the
  * masters (4.17e) and moves no slot — and nyx has no tick.
+ * v44 is (era design D9, TODO 4.23a): only the INK of the 2003 artist line
+ * changes, on `modern`/b and the seven `modernland` keys — no slot, size,
+ * master or plate moves, so no alignment score a tick stored would change.
+ * Production's fourteen 2003 ticks stay fresh; the owner signs the ink off
+ * on the round-37 sheet (black frame, land), and 4.10b re-opens them once.
  * Stored bakes still owe these bumps: this list is read by frame
  * verification only, never by the stale / sweep / download rules.
  */
-export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32, 33, 35, 36, 37];
+export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32, 33, 35, 36, 37, 44];
 
 /** TEMPLATE_SCOPED_VERSIONS with VERIFICATION_TEMPLATE_SCOPES laid over it
  *  (v34: only the token frames' ticks) and every verification-neutral bump
@@ -1170,7 +1452,7 @@ function v29TypeLine(face: { supertype?: unknown; card_type?: unknown; subtypes?
  */
 function v29Changed(card: ScopeCard): boolean {
   if (card.frame_style === undefined) return true;
-  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style));
+  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style), card);
   // Word spacing on every display-face footer. This also holds the
   // planeswalker rows + names (m15pw, modern), Alpha's ink and artifact card
   // (agclassic) and five of the six foil-backdrop templates.
@@ -1242,7 +1524,7 @@ function v33FaceContentPrints(faceContent: unknown): boolean {
  */
 function v33PrintsText(card: ScopeCard): boolean {
   if (card.frame_style === undefined) return true;
-  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style));
+  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style), card);
   if (V33_TEXTLESS_TEMPLATES.includes(template)) return false;
   if ([card.rules_text, card.flavor_text, card.face_content, card.back_face].some((v) => v === undefined)) return true;
   if (v33FaceContentPrints(card.face_content)) return true;
@@ -1308,7 +1590,7 @@ export function tokenTypeLineChanged(card: ScopeCard): boolean {
  */
 function v34Changed(card: ScopeCard): boolean {
   if (card.frame_style === undefined) return true;
-  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style));
+  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style), card);
   if (V34_TOKEN_FRAME_TEMPLATES.includes(template)) return true;
   return tokenTypeLineChanged(card);
 }
@@ -1324,12 +1606,31 @@ function v34Changed(card: ScopeCard): boolean {
  */
 function v35Changed(card: ScopeCard): boolean {
   if (card.frame_style === undefined) return true;
-  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style));
+  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style), card);
   if (V35_ART_SLOT_TEMPLATES.includes(template)) return true;
   if (!V35_SEE_THROUGH_C_TEMPLATES.includes(template)) return false;
   if (card.color_identity === undefined || card.art_url === undefined) return true;
   const identities = (card.color_identity ?? []).filter(isColorIdentity);
   return pickFrameColorKey(identities) === "c" && Boolean(card.art_url);
+}
+
+/**
+ * Whether layout v44 (the 2003 footer ink, TODO 4.23a) changed a card's
+ * bake: every `modernland` card (white on all seven keys), and a `modern`
+ * card that paints the BLACK master — the bake's own pick: `modern` has no
+ * pair, crowned or artifact-dressed master, so frameMasterKey is
+ * pickFrameColorKey of the identities the card keeps. Every other `modern`
+ * card (white, blue, red, green, gold, the artifact `c`) prints the same
+ * dark ink as before, byte for byte. Any column it needs that the row
+ * doesn't carry → affected.
+ */
+function v44Changed(card: ScopeCard): boolean {
+  if (card.frame_style === undefined) return true;
+  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style));
+  if (template === "modernland") return true;
+  if (template !== "modern") return false;
+  if (card.color_identity === undefined) return true;
+  return pickFrameColorKey((card.color_identity ?? []).filter(isColorIdentity)) === "b";
 }
 
 /** A mana token the rules tokenizer draws as a disc: braces around
@@ -1382,7 +1683,7 @@ function v36FaceContentHasPip(faceContent: unknown): boolean {
  */
 function v36Changed(card: ScopeCard): boolean {
   if (card.frame_style === undefined) return true;
-  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style));
+  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style), card);
   if (V36_EVERY_CARD_TEMPLATES.includes(template)) return true;
   if (card.set_icon_code === undefined) return true;
   if (
@@ -1455,6 +1756,9 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // v36 — the second correction round: every walker card, a listed
   // set's printed-size glyph, an inline pip — v36Changed.
   36: v36Changed,
+  // v44 — the 2003 footer ink: every `modernland` card and a `modern` card
+  // on the black master — v44Changed.
+  44: v44Changed,
 };
 
 /** `frame_style.finish` from the jsonb column, or null when absent (= regular). */
@@ -1511,14 +1815,16 @@ function pendingVersions(
   const scopes = opts.scopes ?? VERSION_SCOPES;
   const current = opts.current ?? CARD_LAYOUT_VERSION;
   // Judge by the template the card is DRAWN on when we can tell: a known
-  // template, or a frame_style that was read ({} or a retired value draws
+  // template, a RETIRED one read as its replacement (retiredFrameTemplate,
+  // TODO 4.54 — with the card's text when the row carries it), or a
+  // frame_style that was read ({} or an unknown value draws
   // DEFAULT_FRAME_TEMPLATE — the rule lib/cards/frame-override-stale.ts
   // uses; 272 production cards carry frame_style = {}). A caller that didn't
   // supply frame_style can't tell → conservative (touched), as
   // lib/render/stored-render.ts documents.
   const drawn =
     template != null || (card !== undefined && card.frame_style !== undefined)
-      ? normalizeFrameTemplate(template)
+      ? normalizeFrameTemplate(template, card)
       : null;
   const pending: number[] = [];
   for (let version = layoutVersion + 1; version <= current; version += 1) {
@@ -1575,6 +1881,11 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   39: "sweep", // flip's lower half re-cut + aftermath's cost onto the prints (4.21a follow-up) — a correction, never a badge
   40: "sweep", // the modal backs' flipside strip toned onto the prints + the transform front's reverse P/T made a rules float (5.1d) — corrections on bodies no card uses yet, never a badge
   41: "sweep", // the modal strip rider (5.1c): an addition the visual gate records as a bump on the four modal faces — 0 cards on them, never a badge
+  [SAGA_RAIL_LAYOUT_VERSION]: "sweep", // the saga rebuilt from Card Conjurer (4.21c): the ribbon in the master, the printed rail — a correction after the owner's sheet, never a badge
+  43: "sweep", // the landscape layouts re-sourced from Card Conjurer (4.21b): split and battle — a frame swap on two templates no public card uses, never a badge
+  44: "sweep", // the 2003 artist line white on the black frame and on lands (4.23a) — a legibility correction against the prints on combos no stored card uses, never a badge
+  [RETRO_1997_LAYOUT_VERSION]: "sweep", // the 1997 frame on the original cards (4.10a): masters, ink, footer, sizes, symbols — a correction on a pair no stored card uses, never a badge
+  [BATTLE_RECUT_LAYOUT_VERSION]: "sweep", // the battle's right side, top block and icon re-cut onto the prints (4.21d) — a correction on a template no public card uses, never a badge
 };
 
 export function rolloutPolicy(version: number, rollout = VERSION_ROLLOUT): RolloutPolicy {

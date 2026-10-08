@@ -127,6 +127,90 @@ export const ADVENTURE_PANEL_PCT = 0.0414;
 /** Adventure panel pip disc — CC mana2, 60 px at HD. */
 export const ADVENTURE_PANEL_COST_PCT = 0.04;
 
+// ---------------------------------------------------------------------------
+// The split card's display sizes (TODO 4.21b, layout v43). Fractions of the
+// LANDSCAPE card's own width (2100 px at HD) — a split card is never
+// portrait. Split stays OUT of lib/cards/m15-family.ts: each half is a
+// small card of its own, and the prints set every line on it smaller than
+// the family's. Measured on MH2 #123 Fast // Furious, MH2 #60 Said // Done,
+// TSR #156 / #161 / #186 and GRN #224 (Scryfall PNGs at 2100 × 1500),
+// against regular M15 prints of the same sets on the same scans (MH2 #50,
+// MH2 #118) and against our own bakes of the same words:
+//   • the type line — "Instant" 157–160 px wide, "Sorcery" 177–178 (a
+//     regular card's 203 / 229 at 68 px; ours at 60 px 176 / 201): 0.775 of
+//     the family's, 53 px — NOT Card Conjurer's 0.0286 H (60 px), which sets
+//     it 13 % larger than every print;
+//   • the name — ten names 0.94–0.97 of our 80 px bake by width (mean
+//     0.950), x-height 38–39 px against a regular card's 41–42: 76 px;
+//   • the pips — the generic disc 64–65 px across (circle fits), a regular
+//     card's 68.7–69.6: 0.935 of the family's 72.75 px disc, 68 px;
+//   • the set symbol — MH2's 47–48 px tall (72 wide), TSR's 47–50, GRN's
+//     46–54, on a bar whose face is 69 px: a 48 px box a Keyrune glyph's INK
+//     fills top to bottom (FrameProfile.setSymbolFit "ink-height"), where a
+//     regular card's box is 86 px (0.55 of it: MH2's symbol prints 88–91 px
+//     tall on MH2 #50 / #118).
+// ---------------------------------------------------------------------------
+
+/** The split card's name — 76 px at HD (see above). */
+export const SPLIT_TITLE_SIZE_PCT = 76 / 2100;
+
+/** The split card's type line — 53 px at HD on the thin type bar (see
+ *  above; Card Conjurer's packSplit.js says 0.0286 H = 60 px). */
+export const SPLIT_TYPE_SIZE_PCT = 53 / 2100;
+
+/** The split card's mana-cost disc — 68 px at HD (see above). */
+export const SPLIT_COST_DISC_PCT = 68 / 2100;
+
+/** The split card's set-symbol box — 48 px at HD: the default mark and an
+ *  uploaded icon are contained in a square of it, a Keyrune glyph's ink
+ *  fills its height (see above). */
+export const SPLIT_SET_SYMBOL_BOX_PCT = 48 / 2100;
+
+// ---------------------------------------------------------------------------
+// The 1997 frame's sizes (TODO 4.10a, layout v46: `retro`, `retroland`).
+// Fractions of a portrait card's width; HD px = × 1500. Print-matched for the
+// faces the site sets them in (owner 2026-10-07: no new typeface — names stay
+// in Beleren, the type line and the artist line are MPlantin, their printed
+// face). Measured on the ORIGINAL cards, Mirage 1996 → Scourge 2003 (the era
+// design's overlay fits, 7–13 prints per slot; baselines and centres
+// re-measured for 4.10a on 54 prints of blue, red, green, artifact, black
+// and land):
+//   • the name — the prints' MagicMedieval is set at 84 px (x-height 32 px,
+//     baseline at 163 px); Beleren Bold overlaps that ink best at 71 px
+//     (caps 50 px against the print's 58: a wider, lower face);
+//   • the type line — MPlantin at 67 px (x-height 29 px, baseline 1229 px);
+//   • the P/T — a Plantin heavier than MPlantin at 92 px (digits 58–63 px
+//     tall, baseline 1963 px, every value's ink ENDING at 1364–1370 px: a
+//     one-digit pair is centred on 1309 px, a two-digit one grows to the
+//     left at the same size); Beleren Bold's digits are that tall at 86 px;
+//   • the artist line — MPlantin at 58 px (x-height 25 px, baseline 1933 px,
+//     centred on 748 px), from Exodus 1998 on;
+//   • the line under it (the prints' © line, our © slot) — MPlantin at 33 px
+//     (capitals 21 px, baseline 1976 px);
+//   • the cost — flat discs 72–74 px across, 80–81 px apart, centred on
+//     row 137, the last one ending at 1383 px.
+// ---------------------------------------------------------------------------
+
+/** The 1997 frame's name — 71 px at HD (Beleren Bold). */
+export const RETRO_TITLE_SIZE_PCT = 71 / 1500;
+
+/** The 1997 frame's type line — 67 px at HD (MPlantin). */
+export const RETRO_TYPE_SIZE_PCT = 67 / 1500;
+
+/** The 1997 frame's P/T — 86 px at HD (Beleren Bold). */
+export const RETRO_PT_SIZE_PCT = 86 / 1500;
+
+/** The 1997 frame's artist line — 58 px at HD (MPlantin). */
+export const RETRO_ARTIST_SIZE_PCT = 58 / 1500;
+
+/** The 1997 frame's © slot: a clean download's footer text — 33 px at HD
+ *  (MPlantin), and the pipglyph.com mark at the same em. */
+export const RETRO_COPYRIGHT_SIZE_PCT = 33 / 1500;
+
+/** The 1997 frame's mana-cost disc — 73 px at HD, flat (symbol style
+ *  "1997", lib/cards/symbol-style.ts). */
+export const RETRO_COST_DISC_PCT = 73 / 1500;
+
 /** A display size given as a fraction of a PORTRAIT card's width, as a
  *  fraction of the width of a card in `orientation`: the same absolute size
  *  on the physical card (× 5/7 on a landscape card, whose width is the
@@ -193,10 +277,11 @@ export const RULES_TEXT = {
  */
 export const RULES_SIZE_PX = {
   /** A full text box (M15 and every frame that prints 9 pt; tokens, whose
-   *  prints set 9 pt too). */
+   *  prints set 9 pt too — and, since TODO 4.21b, the split halves and the
+   *  battle: TSR #161 / #186 and MOM #21 set their short texts at 76 px). */
   standard: 76,
-  /** Half-width and showcase boxes that print 8 pt (split, battle, the
-   *  adventure creature page, the art-forward showcases, LOTR, full-art). */
+  /** Half-width and showcase boxes that print 8 pt (the adventure creature
+   *  page, the art-forward showcases, LOTR, full-art). */
   reduced: 68,
   /** The 7.5 pt boxes (flip, the adventure page, Alpha tokens, the saga) and
    *  planeswalker text, which prints at most this (the walker prints'

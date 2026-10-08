@@ -1,6 +1,9 @@
+import { copyrightFace } from "@/lib/cards/copyright-slot";
 import { tokenizeRulesText } from "@/lib/cards/rules-text";
 import { collectorStyleOf, COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { getFrameProfile } from "@/lib/cards/template-layout";
+import { faceOf, type FaceRole } from "@/lib/cards/type-faces";
 import {
   CARD_DISPLAY_COVERAGE,
   CARD_ITALIC_COVERAGE,
@@ -19,8 +22,8 @@ import {
 //   * a character the face's first font maps to an EMPTY glyph vanishes —
 //     MPlantin does that to Č, °, ×, →, đ and ~180 more, so they drop out of
 //     rules text although MPlantin italic and Beleren have them;
-//   * italic runs (flavor text, reminder text, a saga's intro) never reach
-//     the Noto fallback, so "Ǵ" draws in rules text but not in flavor text;
+//   * italic runs (flavor text, reminder text) never reach the Noto
+//     fallback, so "Ǵ" draws in rules text but not in flavor text;
 //   * in names, type lines, the footer and stats a character only the Noto
 //     fallback has draws in some words and as a box in others — flagged, as
 //     one that "may not show".
@@ -33,8 +36,9 @@ import {
 /** Which bake face a field is drawn with: "display" (titles, type lines,
  *  footer, stats), "rules" (rules text — read through the shared tokenizer,
  *  so its reminder text and ability words are checked as italic and its
- *  {mana} tokens, which become pips, are skipped), "italic" (flavor text,
- *  a saga's intro) or "body" (plain MPlantin: a collector card's footer
+ *  {mana} tokens, which become pips, are skipped — a saga's reminder
+ *  block and chapters are rules text too, TODO 4.21c), "italic" (flavor
+ *  text) or "body" (plain MPlantin: a collector card's footer
  *  mark in the © slot — TODO 4.9b — read as it is, no tokenizer). */
 export type GlyphFace = "display" | "rules" | "italic" | "body";
 
@@ -193,19 +197,41 @@ export function cardGlyphFields(v: GlyphCheckValues): GlyphCheckField[] {
   const abilities = v.loyalty_abilities ?? [];
   const chapters = v.saga_chapters ?? [];
   const collector = drawsCollectorLine(v.frame_style);
+  // The face each single-line field is DRAWN in is its frame's (TODO 4.8.0,
+  // lib/cards/type-faces.ts): the display face on every profile today, so
+  // nothing changed — and the body face's coverage where a profile sets a
+  // slot in MPlantin.
+  const profile = getFrameProfile(normalizeFrameTemplate(v.frame_style?.template ?? undefined));
+  const glyphFace = (role: FaceRole): GlyphFace => (faceOf(profile, role).id === "body" ? "body" : "display");
+  // (A profile without a footer draws no artist line; the check keeps the
+  // display face it always used.)
+  const footer: GlyphFace = profile.footer ? glyphFace("footer") : "display";
+  // The check has always judged the artist and the footer mark as capitals
+  // too (most footers upper-case their line); only a centred two-line footer
+  // that sets mixed case (the 1997 frame's `Illus.` line, TODO 4.10a) is
+  // judged as typed.
+  const footerUpper = !(profile.copyrightSlot && !profile.footer?.uppercase);
   const fields: GlyphCheckField[] = [
-    { label: "Name", face: "display", value: v.title },
-    { label: "Type line", face: "display", value: `${v.supertype} ${v.subtypes_text}` },
+    { label: "Name", face: glyphFace("name"), value: v.title },
+    { label: "Type line", face: glyphFace("typeLine"), value: `${v.supertype} ${v.subtypes_text}` },
     { label: "Rules text", face: "rules", value: v.rules_text },
     ...abilities.map((row, i) => ({ label: `Loyalty ability ${i + 1}`, face: "rules" as const, value: row.text })),
-    { label: "Saga intro", face: "italic", value: v.saga_intro },
+    { label: "Saga intro", face: "rules", value: v.saga_intro },
     ...chapters.map((row, i) => ({ label: `Chapter ${i + 1}`, face: "rules" as const, value: row.text })),
     { label: "Flavor text", face: "italic", value: v.flavor_text },
-    { label: "Stats", face: "display", value: `${v.power} ${v.toughness} ${v.loyalty} ${v.defense}` },
-    { label: "Artist", face: "display", value: v.artist_credit, uppercase: true },
+    { label: "Stats", face: glyphFace("stat"), value: `${v.power} ${v.toughness} ${v.loyalty} ${v.defense}` },
+    // (On a collector card the artist is the collector line's own display
+    // small caps, whatever the footer slot says.)
+    // The footer upper-cases its line only where its slot says so (the 1997
+    // frame's `Illus.` line is mixed case, TODO 4.10a) — a collector card's
+    // artist is capitals whatever the slot says.
+    { label: "Artist", face: collector ? "display" : footer, value: v.artist_credit, uppercase: collector || footerUpper },
     collector
       ? { label: "Footer mark", face: "body", value: v.footer_text }
-      : { label: "Footer mark", face: "display", value: v.footer_text, uppercase: true },
+      : profile.copyrightSlot
+        ? // A centred footer's © slot (4.10a): as typed, in the slot's face.
+          { label: "Footer mark", face: copyrightFace(profile.copyrightSlot).id === "body" ? "body" : "display", value: v.footer_text }
+        : { label: "Footer mark", face: footer, value: v.footer_text, uppercase: footerUpper },
   ];
   if (v.has_back_face) {
     const b = v.back_face;

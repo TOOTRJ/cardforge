@@ -60,7 +60,6 @@ describe("the Phase B allow-list", () => {
   it("is the owner's list: the MSE masters with paper corners, never a showcase family", () => {
     expect(Object.keys(CORNER_NORMALISE_TEMPLATES).sort()).toEqual(
       [
-        "alphatoken",
         "expeditionland",
         "extendedart",
         "fullart",
@@ -68,9 +67,6 @@ describe("the Phase B allow-list", () => {
         "m15textlessland",
         "modern",
         "modernland",
-        "retro",
-        "retroland",
-        "saga",
       ].sort(),
     );
     // expeditionland: only the keys the corner check flags — w u r c m, whose
@@ -78,9 +74,12 @@ describe("the Phase B allow-list", () => {
     // failures (a transparent edge band: no border to paint with).
     expect(CORNER_NORMALISE_TEMPLATES.expeditionland).toEqual(["w", "u", "r", "c", "m"]);
     // adventure (its 1–2 px grey paper rim, owner 2026-09-28), flip and
-    // aftermath left the list with TODO 4.21a: Card Conjurer masters in the
-    // frames bucket, cut at the one corner by the importer.
-    for (const t of ["adventure", "aftermath", "flip"]) expect(CORNER_NORMALISE_TEMPLATES, t).not.toHaveProperty(t);
+    // aftermath left the list with TODO 4.21a, saga with 4.21c: Card
+    // Conjurer masters in the frames bucket, cut at the one corner by the
+    // importer.
+    // retro and retroland left it with TODO 4.10a: the 1997 masters are the
+    // importer's (the frames bucket), the MSE gold among them.
+    for (const t of ["adventure", "aftermath", "flip", "saga", "retro", "retroland"]) expect(CORNER_NORMALISE_TEMPLATES, t).not.toHaveProperty(t);
     for (const template of Object.keys(CORNER_NORMALISE_TEMPLATES)) {
       expect(FRAME_TEMPLATE_VALUES as readonly string[], template).toContain(template);
       expect(NEVER_NORMALISE.test(template), template).toBe(false);
@@ -88,14 +87,21 @@ describe("the Phase B allow-list", () => {
   });
 
   it("never normalises the showcase families, Alpha or the Card Conjurer masters", () => {
-    for (const t of ["bloomburrow", "bloomanime", "lotr", "lotrscroll", "tarkirdragon", "tarkirghostfire", "tarkirdraconic", "avatar", "battle"]) {
+    for (const t of ["bloomburrow", "bloomanime", "lotr", "lotrscroll", "tarkirdragon", "tarkirghostfire", "tarkirdraconic", "avatar"]) {
       expect(NEVER_NORMALISE.test(t), t).toBe(true);
       expect(shouldNormalise(t, "w"), t).toBe(false);
     }
-    for (const t of ["agclassic", "alphaland", "split", "nyx", "m15", "m15borderless", "fullartland", "adventure", "aftermath", "flip"]) {
+    // The battle left the never-normalise list with TODO 4.21b (it was a
+    // borderless MSE ring): like the split's, its master is Card Conjurer's
+    // in the frames bucket now, cut at the one corner by the importer — the
+    // pass has no git file of either to touch.
+    expect(NEVER_NORMALISE.test("battle")).toBe(false);
+    for (const t of ["agclassic", "alphaland", "split", "battle", "nyx", "m15", "m15borderless", "fullartland", "adventure", "aftermath", "flip"]) {
       expect(shouldNormalise(t, "w"), t).toBe(false);
+      expect(CORNER_NORMALISE_TEMPLATES, t).not.toHaveProperty(t);
     }
-    expect(shouldNormalise("retro", "w")).toBe(true);
+    expect(shouldNormalise("retro", "w")).toBe(false);
+    expect(shouldNormalise("modern", "w")).toBe(true);
     expect(shouldNormalise("expeditionland", "w")).toBe(true);
     expect(shouldNormalise("expeditionland", "b")).toBe(false);
     expect(shouldNormalise("expeditionland", "g")).toBe(false);
@@ -176,9 +182,9 @@ describe("normaliseCardCorners", () => {
     for (let i = 0; i < 120; i += 1) for (let d = -2; d <= 2; d += 1) leak.set([255, 255, 255], at(i, Math.max(0, i + d)));
     const report = normaliseCardCorners(Uint8Array.from(leak), W, H);
     expect(report[0].skipped).toMatch(/leak/);
-    expect(() => normaliseMasterCorners("retro", "w", leak, W, H)).toThrow(/^retro\/w: corner normalise refused — tl: exterior reaches the guard arc \(leak\)/);
+    expect(() => normaliseMasterCorners("modern", "w", leak, W, H)).toThrow(/^modern\/w: corner normalise refused — tl: exterior reaches the guard arc \(leak\)/);
     const white = new Uint8Array(W * H * 4).fill(255);
-    expect(() => normaliseMasterCorners("retro", "w", white, W, H)).toThrow(/border band is not opaque and dark/);
+    expect(() => normaliseMasterCorners("modern", "w", white, W, H)).toThrow(/border band is not opaque and dark/);
     // Off the allow-list the hook does nothing.
     const bloom = mseMaster();
     const copy = Uint8Array.from(bloom);
@@ -258,11 +264,11 @@ describe("normaliseCardCorners", () => {
     // contract (a border is opaque) refuses the normalised master.
     for (let y = 0; y < 8; y += 1) for (let x = 400; x < 420; x += 1) m[at(x, y) + 3] = 0;
     const withSpot = Uint8Array.from(m);
-    expect(() => normaliseMasterCorners("retro", "w", m, W, H)).toThrow(/^retro\/w: corner normalise refused — .*top/);
+    expect(() => normaliseMasterCorners("modern", "w", m, W, H)).toThrow(/^modern\/w: corner normalise refused — .*top/);
     expect(Buffer.from(m).equals(Buffer.from(withSpot))).toBe(true);
     // A clean one passes, and the report comes back.
-    expect(normaliseMasterCorners("retro", "w", copy, W, H)).toHaveLength(4);
-    expect(normalisedMasterFailures("retro", "w", mseMaster(), copy, W, H, normaliseCardCorners(Uint8Array.from(copy), W, H))).toEqual([]);
+    expect(normaliseMasterCorners("modern", "w", copy, W, H)).toHaveLength(4);
+    expect(normalisedMasterFailures("modern", "w", mseMaster(), copy, W, H, normaliseCardCorners(Uint8Array.from(copy), W, H))).toEqual([]);
   });
 });
 
@@ -271,14 +277,12 @@ describe("normaliseCardCorners", () => {
 // back once because dc65aa5's clear was a one-off over the files).
 describe("the MSE builders run the pass", () => {
   const BUILDER_OF: Record<string, string> = {
-    retro: "build-era-frames.mjs",
-    retroland: "build-era-frames.mjs",
+    // (retro and retroland left the list with TODO 4.10a: the importer's.)
     modern: "build-era-frames.mjs",
     modernland: "build-era-frames.mjs",
-    saga: "convert-mse-frame.mjs",
-    alphatoken: "convert-mse-frame.mjs",
-    // (aftermath, flip and adventure left the list with TODO 4.21a: Card
-    // Conjurer masters in the frames bucket, cut by the importer.)
+    // (aftermath, flip and adventure left the list with TODO 4.21a, saga
+    // with 4.21c: Card Conjurer masters in the frames bucket, cut by the
+    // importer.)
     extendedart: "build-variation-frames.mjs",
     fullart: "build-variation-frames.mjs",
     m15textless: "build-variation-frames.mjs",
@@ -317,8 +321,8 @@ describe("the allow-listed git masters are already normalised", () => {
       .filter((key) => shouldNormalise(template, key))
       .map((key) => ({ template, key, file: path.join(process.cwd(), "public", "frames", template, `${key}.png`) })),
   );
-  it("covers all 75 (10 templates × 7 colours, and expeditionland's 5)", () => {
-    expect(masters).toHaveLength(75);
+  it("covers all 47 (6 templates × 7 colours, and expeditionland's 5)", () => {
+    expect(masters).toHaveLength(47);
     for (const m of masters) expect(fs.existsSync(m.file), m.file).toBe(true);
   });
   for (const { template, key, file } of masters) {
@@ -326,7 +330,7 @@ describe("the allow-listed git masters are already normalised", () => {
       const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
       const report = normaliseCardCorners(Uint8Array.from(data), info.width, info.height);
       expect(report.map((c) => c.alreadyNormalised)).toEqual([true, true, true, true]);
-      expect(lightInsideCorners(data, info.width, info.height)).toBeLessThanOrEqual(26); // alphatoken's silver bevel deep in the box
+      expect(lightInsideCorners(data, info.width, info.height)).toBeLessThanOrEqual(26); // (the bound the retired Alpha token's silver bevel set)
     });
   }
 });

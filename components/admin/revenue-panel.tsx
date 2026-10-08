@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Receipt } from "lucide-react";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { formatMoney } from "@/lib/format/money";
-import { formatCalendarDate } from "@/lib/format/dates";
+import { formatUtcDate } from "@/lib/format/dates";
 import type { RevenueSummary } from "@/lib/admin/revenue-queries";
 
 const REASON_LABEL: Record<string, string> = {
@@ -56,7 +56,7 @@ export function RevenuePanel({ summary }: { summary: RevenueSummary }) {
               key={payment.invoiceId}
               className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm"
             >
-              <span className="text-muted">{formatCalendarDate(payment.paidAt)}</span>
+              <span className="text-muted">{formatUtcDate(payment.paidAt, "long")}</span>
               {payment.userId ? (
                 <Link
                   href={`/admin/users?u=${payment.userId}`}

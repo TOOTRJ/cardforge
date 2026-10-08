@@ -169,7 +169,7 @@ export async function FrameTemplateSignOffPage({
       </Link>
       <PageHeader
         // The template key beside the label: two frames can share a label
-        // across eras ("Token" = m20token and alphatoken, TODO 4.48a).
+        // across eras ("Standard", "Land"; TODO 4.48a).
         eyebrow={`Admin · Frame sign-off · ${template}`}
         title={`${eraGroupFrameLabel(template)} · sign-off`}
         description={`Score every colour against its reference in one job, compare them side by side, walk the stepper on the frame, then publish the template in one go. Scoring never ticks anything; each colour stays individually withdrawable.${

@@ -13,8 +13,13 @@
 // their artifact templates; the textless pair re-cut 5 px onto the prints),
 // 4.33's borderless planeswalkers (m15borderlesspw, m15borderlesspwtall),
 // 4.6a's legendary crown band (m15crown, an overlay the m15 / m15artifact
-// / m15land profiles draw over their masters), and 4.21a's portrait layouts
-// (flip with its two P/T plates cut per half, adventure, aftermath).
+// / m15land profiles draw over their masters), 4.21a's portrait layouts
+// (flip with its two P/T plates cut per half, adventure, aftermath),
+// 4.21b's LANDSCAPE layouts (split, the pack's portrait card turned a
+// quarter turn clockwise without resampling; battle, the pack's 2814×2010
+// canvas downscaled once — both written at 2100×1500) and
+// 4.21c's saga (the ribbon in the masters; its chapter badge and row divider
+// published beside them).
 //
 //   node scripts/import-cc-frames.mjs                 # every template
 //   node scripts/import-cc-frames.mjs --only m15,m15land
@@ -46,7 +51,9 @@
 // For each template × colour it downloads the pack files from the PINNED
 // commit (cached outside the repo), composites the layers through their
 // masks at the pack's NATIVE size in CC's draw order (2010×2814 for the
-// accurate M15 pack), downscales once with Lanczos to 1500×2100, cuts the
+// accurate M15 pack), downscales once with Lanczos to 1500×2100 (a
+// landscape recipe to 2100×1500 — or, split, turns its portrait composite a
+// quarter turn clockwise, no resample), cuts the
 // one card corner (lib/cards/card-corner.ts, 64.5 px), checks the edge
 // contract (7.7), the corner (3.26) and the art window (7.6), and writes
 // <out>/<template>/<colour>.png + .webp (and a template's two-colour pair
@@ -115,7 +122,18 @@ import {
   describeCrownBand,
   describeStripRider,
   describeFinish,
+  describeBlockShift,
+  describeHalfMasks,
   describeLayer,
+  describeBattleRecut,
+  describePaintedShield,
+  halfMaskFindings,
+  outputSizeOf,
+  paintedShieldFindings,
+  recutBattleOntoPrints,
+  rotateCwRgba8,
+  seamInsideSpine,
+  shiftBlocksRgba8,
   applyTone,
   boundsPx,
   bridgeRayTip,
@@ -125,6 +143,14 @@ import {
   placeOnCanvas,
   recutBand,
   recutBlockUp,
+  REPO_SOURCE_PREFIX,
+  cutMaps,
+  describePrintRecipe,
+  recutPiecewise,
+  seventhRegions,
+  clearWindowHalo,
+  squareCornersOnBlack,
+  toneRegions,
   rectPx,
   retintStructure,
   roundCornersRgba8,
@@ -179,6 +205,13 @@ if (only) {
 }
 
 async function fetchCached(rel) {
+  // A file of this repo (TODO 4.10a: the MSE gold the 1997 gold is cut
+  // from), read from the checkout — never fetched, never cached.
+  if (rel.startsWith(REPO_SOURCE_PREFIX)) {
+    const local = path.resolve(rel.slice(REPO_SOURCE_PREFIX.length));
+    if (!fs.existsSync(local)) throw new Error(`${rel}: not in this checkout`);
+    return local;
+  }
   const file = path.join(cacheDir, rel);
   if (fs.existsSync(file) && fs.statSync(file).size > 0) return file;
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -198,9 +231,9 @@ async function rgba(file, width, height) {
   return data;
 }
 
-async function writeMaster(bytes, pngFile) {
+async function writeMaster(bytes, pngFile, width = OUT_W, height = OUT_H) {
   fs.mkdirSync(path.dirname(pngFile), { recursive: true });
-  const image = sharp(bytes, { raw: { width: OUT_W, height: OUT_H, channels: 4 } });
+  const image = sharp(bytes, { raw: { width, height, channels: 4 } });
   await image.clone().png({ compressionLevel: 9 }).toFile(pngFile);
   await image.clone().webp(WEBP).toFile(pngFile.replace(/\.png$/, ".webp"));
 }
@@ -230,6 +263,17 @@ for (const template of Object.keys(provenance)) {
 for (const [template, def] of Object.entries(CC_TEMPLATES)) {
   if (only && !only.includes(template)) continue;
   const recipe = {};
+  // The size this recipe's masters are written at: 1500×2100, or 2100×1500
+  // for a landscape one (TODO 4.21b: split, battle).
+  const { width: outW, height: outH } = outputSizeOf(def);
+  const landscape = def.orientation === "landscape";
+  if (landscape && (def.shield || def.ptCut || def.strip || def.plates || def.symbols)) {
+    throw new Error(`${template}: a landscape recipe cuts no shield, plates, symbols or strip (their boxes are portrait px)`);
+  }
+  if (landscape !== Boolean(def.transform)) {
+    throw new Error(`${template}: a landscape recipe names its transform ("rotate-cw" or "downscale"), and only a landscape one does`);
+  }
+  if (def.shift && !landscape) throw new Error(`${template}: a block shift is in the 2100×1500 master's px — a landscape recipe's only`);
   for (const key of builtColors(def)) {
     recipe[key] = def.colors[key].map(describeLayer);
     const out = path.join(outDir, template, `${key}.png`);
@@ -264,8 +308,18 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
         if (from.some((v, c) => v !== flat[c])) {
           throw new Error(`${l.src}: its flat box is ${flat.slice(0, 3)}, the recipe says ${from} (the source moved?)`);
         }
-        const tint = flatPixelAt(await rgba(await fetchCached(tintOf.src), W, H), W, H, tintOf);
-        data = retintStructure(data, from, tint.slice(0, 3));
+        const tintAt = async (t) => flatPixelAt(await rgba(await fetchCached(t.src), W, H), W, H, t).slice(0, 3);
+        // A pair's box (TODO 4.56): the structure re-tinted to each colour,
+        // the two blended across the pair's untilted ramp like any pair layer.
+        data = l.retint.tintOfRight
+          ? blendPair(
+              retintStructure(data, from, await tintAt(tintOf)),
+              retintStructure(data, from, await tintAt(l.retint.tintOfRight)),
+              W,
+              H,
+              l.retint.ramp,
+            )
+          : retintStructure(data, from, await tintAt(tintOf));
       }
       // 4.34's type bar: the title bar moved down onto it.
       if (l.dy) data = shiftRows(data, W, H, l.dy);
@@ -304,8 +358,28 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
       : def.recutUp
         ? recutBlockUp(composite, W, H, def.recutUp)
         : composite;
+    // A drawing moved onto the prints edge by edge and toned region by
+    // region (TODO 4.10a: the 1997 frame) — scripts/lib/print-cut.mjs.
+    const printRecipe = def.printRecipe?.(key);
+    let printed = recut;
+    if (printRecipe) {
+      if (W !== OUT_W || H !== OUT_H) throw new Error(`${template}/${key}: a print recipe's px are the ${OUT_W}×${OUT_H} master's, the source is ${W}×${H}`);
+      const maps = cutMaps(printRecipe.cut, W, H);
+      printed = recutPiecewise(printRecipe.squareCorners ? squareCornersOnBlack(recut, W, H) : recut, maps);
+      // A JPEG source's white-window fade on the art ring (the MSE gold).
+      if (printRecipe.windowHalo) printed = clearWindowHalo(printed, W, H, { reach: printRecipe.windowHalo });
+      if (printRecipe.tones) {
+        let rings = null;
+        if (printRecipe.rings) {
+          const mask = await rgba(await fetchCached(printRecipe.rings), W, H);
+          rings = new Float32Array(W * H);
+          for (let p = 0; p < W * H; p += 1) rings[p] = mask[p * 4 + 3] / 255;
+        }
+        printed = toneRegions(printed, W, H, seventhRegions(printed, maps, { byColour: printRecipe.byColour, rings }), printRecipe.tones);
+      }
+    }
     // A ray's top closed over by the frame (the emblem's spark, 4.52).
-    const bridged = def.bridge ? bridgeRayTip(recut, W, H, def.bridge) : recut;
+    const bridged = def.bridge ? bridgeRayTip(printed, W, H, def.bridge) : printed;
     // Toned regions, onto the prints' tone (the emblem's silver, name pill,
     // type pill and text box, 4.52; the transform backs' bars and box through
     // the pack's masks, per key — 5.1a), in order.
@@ -314,19 +388,45 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
       await Promise.all([...new Set(tones.flatMap((t) => (t.mask ? [t.mask] : [])))].map(async (m) => [m, await rgba(await fetchCached(m), W, H)])),
     );
     const native = tones.reduce((img, tone) => applyTone(img, W, H, tone, toneMasks), bridged);
-    const master = await sharp(native, { raw: { width: W, height: H, channels: 4 } })
-      .resize(OUT_W, OUT_H, { fit: "fill", kernel: "lanczos3" })
-      .raw()
-      .toBuffer();
-    roundCornersRgba8(master, OUT_W, OUT_H, CORNER_RADIUS);
+    let master;
+    if (def.transform === "rotate-cw") {
+      // The pack draws the card portrait (split): a quarter turn clockwise,
+      // a pixel permutation — nothing is resampled.
+      if (W !== outH || H !== outW) throw new Error(`${template}/${key}: ${W}×${H} can't be turned into ${outW}×${outH} without a resample`);
+      master = rotateCwRgba8(native, W, H);
+    } else {
+      if (landscape && def.transform !== "downscale") throw new Error(`${template}: unknown transform ${JSON.stringify(def.transform)}`);
+      // A landscape pack's canvas (battle, 2814×2010) must be the card's
+      // shape: the one Lanczos pass scales, it never stretches.
+      if (landscape && Math.abs(W / H - outW / outH) > 1e-9) throw new Error(`${template}/${key}: ${W}×${H} is not the ${outW}×${outH} card's shape`);
+      master = await sharp(native, { raw: { width: W, height: H, channels: 4 } })
+        .resize(outW, outH, { fit: "fill", kernel: "lanczos3" })
+        .raw()
+        .toBuffer();
+    }
+    // Whole blocks moved onto the prints through the flat zones between
+    // them (TODO 4.21b: split's halves, battle's lower block) — it throws
+    // when a zone isn't flat, so every moved pixel is the pack's.
+    if (def.shift) master = shiftBlocksRgba8(master, outW, outH, def.shift);
+    // What no block move reaches, re-cut onto the prints (TODO 4.21d: the
+    // battle's right side and icon) — the bars' paper stretched, the shield
+    // set right through the pack's Defense mask, the icon's rings redrawn.
+    if (def.printRecut) {
+      if (!def.paintedShield || !def.shift) throw new Error(`${template}: a print re-cut needs the recipe's shift and painted shield`);
+      const mask = await rgba(await fetchCached(def.paintedShield.mask), outW, outH);
+      master = recutBattleOntoPrints(master, mask, outW, outH, { shift: def.shift, shield: def.paintedShield, ...def.printRecut });
+    }
+    // The one card corner: 4.3 % of the SHORT side, 64.5 px on either
+    // orientation (CORNER_RADIUS).
+    roundCornersRgba8(master, outW, outH, CORNER_RADIUS);
     // A crowned twin (4.6f) is held to its own edges where they differ.
     const contract = edgeContractFor(template, key);
     if (!contract) {
       edgeFailures.push(`${template}/${key}: no edge contract declared (lib/frames/edge-contract.ts)`);
     } else if (!isKnownEdgeFailure(template, key)) {
       for (const v of [
-        ...edgeContractViolations(contract, master, OUT_W, OUT_H),
-        ...cornerViolations(contract, master, OUT_W, OUT_H),
+        ...edgeContractViolations(contract, master, outW, outH),
+        ...cornerViolations(contract, master, outW, outH),
       ]) {
         edgeFailures.push(`${template}/${key} ${v}`);
       }
@@ -334,13 +434,22 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     {
       // A known failure fails only when it got worse than its entry's bound.
       const profile = getFrameProfile(template);
-      const findings = artWindowFindings(master, OUT_W, OUT_H, artWindowSlotsOf(profile, underFrameArtRect(profile, key), underFrameArtSlot(profile, key)));
+      const findings = artWindowFindings(master, outW, outH, artWindowSlotsOf(profile, underFrameArtRect(profile, key), underFrameArtSlot(profile, key)));
       const verdict = artWindowVerdict(template, key, findings);
       for (const v of verdict.fails) artWindowFailures.push(`${template}/${key} ${v}`);
       if (verdict.fixed) console.log(`${template}/${key}: its art window passes now — strike it from ART_WINDOW_KNOWN_FAILURES (lib/frames/art-window.ts)`);
     }
-    await writeMaster(master, out);
-    console.log(`wrote ${path.relative(process.cwd(), out)} (+ .webp) from ${W}×${H}`);
+    // A painted shield (TODO 4.21b: the battle's defense shield) stays in
+    // the master: the pack's mask, moved as the master's lower block was,
+    // is held to the box the recipe records and the master to solid paint
+    // under it.
+    if (def.paintedShield) {
+      const mask = await rgba(await fetchCached(def.paintedShield.mask), outW, outH);
+      const found = paintedShieldFindings(def.paintedShield, mask, outW, outH, master, def.shift);
+      for (const f of found.failures) edgeFailures.push(`${template}/${key} painted shield (${def.paintedShield.mask}): ${f}`);
+    }
+    await writeMaster(master, out, outW, outH);
+    console.log(`wrote ${path.relative(process.cwd(), out)} (+ .webp) ${landscape ? `${outW}×${outH} ` : ""}from ${W}×${H}${def.transform === "rotate-cw" ? ", turned clockwise (no resample)" : ""}`);
     if (def.shield) {
       const mask = await rgba(await fetchCached(def.shield.mask), OUT_W, OUT_H);
       const { box } = def.shield;
@@ -351,6 +460,30 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
   for (const [key, why] of Object.entries(def.excluded ?? {})) {
     recipe[key] = [`NOT IMPORTED — ${why}`];
     if (dryRun) console.log(`${template}/${key}: skipped — ${why}`);
+  }
+  // A recipe's half masks (TODO 4.21b: split) — importer INPUTS, never
+  // written: each is rasterised at the pack's size, turned with the masters
+  // and held to the plain rectangle the recipe records (its half of the
+  // card, every row), so the seam the provenance names is the pack's.
+  if (def.halfMasks) {
+    const { left, right, packSeamX: seamX } = def.halfMasks;
+    // Both seams lie inside their spine: the pack's mask seam in the pack's,
+    // the master's in the one the halves' move left.
+    if (def.shift) for (const f of seamInsideSpine(def.halfMasks, def.shift)) edgeFailures.push(`${template} half masks: ${f}`);
+    if (dryRun) {
+      console.log(`${template}: half masks ${left} (left, x 0–${seamX - 1}) + ${right} (right, x ${seamX}–${outW - 1}) — checked, never published`);
+    } else {
+      if (def.transform !== "rotate-cw") throw new Error(`${template}: half masks are turned with a "rotate-cw" recipe only`);
+      for (const [side, src, expect] of [
+        ["left", left, { x0: 0, x1: seamX }],
+        ["right", right, { x0: seamX, x1: outW }],
+      ]) {
+        const turned = rotateCwRgba8(await rgba(await fetchCached(src), outH, outW), outH, outW);
+        const found = halfMaskFindings(turned, outW, outH, expect);
+        for (const f of found.failures) edgeFailures.push(`${template} half mask ${side} (${src}): ${f}`);
+        console.log(`${template}: half mask ${side} = ${src}, solid x ${found.x0}–${found.x1 - 1} of ${outW} (not published)`);
+      }
+    }
   }
   const plates = def.plates ? { ...def.plates } : undefined;
   if (plates && !dryRun) {
@@ -384,21 +517,42 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     }
     console.log(`wrote ${template} plates (${Object.keys(boxes).map((n) => `pt/<colour>-${n}.png`).join(", ")})`);
   }
+  // A pack's own bitmaps published beside the masters (4.21c's saga: the
+  // chapter badge and the row divider), native size: <template>/<name>.png.
+  const pieces = def.pieces ? { ...def.pieces } : undefined;
+  if (pieces && !dryRun) {
+    for (const [name, src] of Object.entries(pieces)) await writePlate(src, path.join(outDir, template, `${name}.png`));
+    console.log(`wrote ${template} pieces (${Object.keys(pieces).map((n) => `${n}.png`).join(", ")})`);
+  }
+  // Masks a LATER recipe reads (the two-colour saga's pair masters, TODO
+  // 4.6f): fetched into the cache so the pinned commit's bytes are at hand,
+  // listed in provenance, never written to the build folder.
+  if (def.maskInputs && !dryRun) {
+    for (const src of Object.values(def.maskInputs)) await fetchCached(src);
+  }
   provenance[template] = {
     source: "cardconjurer",
     repo: CC_REPO,
     commit: CC_COMMIT,
     ...(def.pack ? { pack: def.pack } : {}),
     converter: "scripts/import-cc-frames.mjs",
-    output: `${OUT_W}x${OUT_H}, corners rounded to ${CORNER_RADIUS}px, webp q${WEBP.quality}`,
+    output: `${outW}x${outH}, corners rounded to ${CORNER_RADIUS}px, webp q${WEBP.quality}`,
+    ...(landscape ? { orientation: "landscape", transform: def.transform } : {}),
+    ...(def.shift ? { shift: describeBlockShift(def.shift, outW, outH) } : {}),
+    ...(def.printRecut ? { printRecut: describeBattleRecut({ shield: def.paintedShield, ...def.printRecut }) } : {}),
     ...(def.transforms ? { transforms: def.transforms } : {}),
     colors: recipe,
+    ...(def.halfMasks ? { halfMasks: describeHalfMasks(def.halfMasks, outW) } : {}),
+    ...(def.paintedShield ? { paintedShield: describePaintedShield(def.paintedShield) } : {}),
     ...(def.finish ? { finish: def.finish.map(describeFinish) } : {}),
     ...(def.excluded ? { excluded: def.excluded } : {}),
     ...(plates ? { plates } : {}),
     ...(symbols ? { symbols: { ...symbols, output: "symbol/<colour>.png, native size" } } : {}),
     ...(def.shield ? { shield: { mask: def.shield.mask, box: def.shield.box, output: "loyalty/<colour>.png" } } : {}),
     ...(def.ptCut ? { ptCut: describePtCut(def.ptCut, OUT_W, OUT_H) } : {}),
+    ...(pieces ? { pieces: { ...pieces, output: "<name>.png, native size" } } : {}),
+    ...(def.maskInputs ? { maskInputs: { ...def.maskInputs, output: "not published — importer inputs for a later recipe" } } : {}),
+    ...(def.printRecipe ? { printRecipe: Object.fromEntries(builtColors(def).map((key) => [key, describePrintRecipe(def.printRecipe(key))])) } : {}),
     ...(def.recut ? { recut: def.recut } : {}),
     ...(def.recutUp ? { recutUp: def.recutUp } : {}),
     ...(def.bridge ? { bridge: def.bridge } : {}),

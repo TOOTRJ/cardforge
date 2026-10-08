@@ -4,14 +4,12 @@ import fontkit from "@pdf-lib/fontkit";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
-import { displayLine } from "@/lib/cards/card-display";
-import { fitSingleLineSizePct } from "@/lib/cards/render-tiers";
 import { getFrameProfile, type Rect } from "@/lib/cards/template-layout";
 import { renderCardImage, RENDER_PRESETS } from "@/lib/render/card-image";
 
 // ---------------------------------------------------------------------------
 // Display-font word spacing (TODO 4.31), pinned on REAL bakes of the git
-// "retro" frame (read from disk: deterministic, offline). Satori used to place
+// "modern" frame (read from disk: deterministic, offline). Satori used to place
 // every word after a space at the preceding characters' UNKERNED advances and
 // draw it kerned, so each gap grew by the kerning inside the words before it —
 // "Jester's Mask" by Beleren's J·e, s·t, t·e, e·r and '·s pairs (−558/2048 em,
@@ -22,7 +20,7 @@ import { renderCardImage, RENDER_PRESETS } from "@/lib/render/card-image";
 // ---------------------------------------------------------------------------
 
 const W = RENDER_PRESETS.hd.width;
-const TITLE = getFrameProfile("retro").title;
+const TITLE = getFrameProfile("modern").title;
 const FONT_PX = Math.round(TITLE.sizePct * W);
 
 const beleren = fontkit.create(readFileSync(join(process.cwd(), "public/fonts/Beleren-Bold.ttf")));
@@ -35,7 +33,7 @@ const unkerned = (text: string) =>
 
 function card(
   title: string,
-  template = "retro",
+  template = "modern",
   type: Pick<CardPreviewData, "supertype" | "subtypes"> = { supertype: null, subtypes: ["Dragon"] },
 ): CardPreviewData {
   return {
@@ -128,80 +126,15 @@ describe("display-font word spacing (bake)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Centred lines — the token title and type line, on the git "alphatoken"
-// frame. Satori sizes the text node from each glyph's own advance but draws
-// the run kerned, so a centred band centred a box wider than the ink and the
-// line sat half its kerning (plus half the band's gap, from a filler span the
-// preview never had) left of the browser's. The browser centres the KERNED
-// advance box: the ink spans lsb(first glyph) … advance − rsb(last glyph).
+// Centred lines (a token's and an emblem's name: Satori sizes the text node
+// from each glyph's own advance but draws the run kerned, so the bake pads a
+// centred line to its KERNED width — alignedText in lib/render/card-image.tsx)
+// were pinned here on the git "alphatoken" frame until TODO 4.54 retired it.
+// The centred templates left (m15token…, m20token…, emblem) have bucket
+// masters, so the probes moved to a stubbed-bucket bake: "a centred display
+// line (bake): the emblem's name" in tests/unit/render/emblem-bake.test.tsx
+// (kerning-heavy names within 2 px of the font's own centre, and a name too
+// long for the bar). The retired frame's centred TYPE line was the only one:
+// that half of alignedText has no profile to bake until one centres its
+// type line again.
 // ---------------------------------------------------------------------------
-
-const TOKEN = getFrameProfile("alphatoken");
-const scaled = (units: number, fontPx: number) => (units * fontPx) / beleren.unitsPerEm;
-const centre = (rect: Rect) => ((rect.leftPct + rect.widthPct / 2) / 100) * W;
-
-/** The ink of `text` (as drawn: displayLine) in a group `extraPx` wider than
- *  its kerned advance, centred on the band: [left, right] in px. */
-function centredInk(text: string, fontPx: number, rect: Rect, extraPx = 0): [number, number] {
-  const line = displayLine(text);
-  const glyphs = beleren.glyphsForString(line);
-  const first = glyphs[0];
-  const last = glyphs[glyphs.length - 1];
-  const advance = scaled(beleren.layout(line, { liga: false }).advanceWidth, fontPx);
-  const left = centre(rect) - (advance + extraPx) / 2;
-  return [
-    left + scaled(first.bbox.minX, fontPx),
-    left + advance - scaled(last.advanceWidth - last.bbox.maxX, fontPx),
-  ];
-}
-
-describe("centred display lines (bake)", () => {
-  const titlePx = Math.round(TOKEN.title.sizePct * W);
-
-  it("centres a token title where the browser does, kerned or not", async () => {
-    // A lone "I" as the reference: its ink sits inside every probe's.
-    const reference = await bake(card("I", "alphatoken"));
-    for (const title of [
-      "Voldemort’s Vengeful Spirit",
-      "Bogardan",
-      // Fits the band kerned but not at Satori's unkerned width: shown whole.
-      "Jester's Tower of the Yawning Wayfarer's",
-    ]) {
-      const columns = diffColumns(await bake(card(title, "alphatoken")), reference, TOKEN.title.rect);
-      const [left, right] = centredInk(title, titlePx, TOKEN.title.rect);
-      // The title's outline shadow widens both edges alike; the centre holds.
-      const inkCentre = (columns[0] + columns[columns.length - 1]) / 2;
-      expect(Math.abs(inkCentre - (left + right) / 2), title).toBeLessThanOrEqual(1.5);
-      expect(Math.abs(columns[columns.length - 1] - columns[0] - (right - left)), title).toBeLessThanOrEqual(6);
-    }
-  }, 60_000);
-
-  it("still ellipsizes a centred title that overflows, inside the band", async () => {
-    const [long, reference] = await Promise.all([
-      bake(card("Tobias Featherwhistle the Unconquerable, Keeper of the Western Watchtowers", "alphatoken")),
-      bake(card("I", "alphatoken")),
-    ]);
-    const columns = diffColumns(long, reference, TOKEN.title.rect);
-    const left = (TOKEN.title.rect.leftPct / 100) * W;
-    const right = ((TOKEN.title.rect.leftPct + TOKEN.title.rect.widthPct) / 100) * W;
-    expect(columns[0]).toBeGreaterThanOrEqual(left - 2);
-    expect(columns[columns.length - 1]).toBeLessThanOrEqual(right + 2);
-  }, 60_000);
-
-  it("centres a token type line and its set symbol as one group", async () => {
-    const text = "Creature — Avatar Warrior";
-    const [line, short] = await Promise.all([
-      bake(card("Bogardan", "alphatoken", { supertype: null, subtypes: ["Avatar", "Warrior"] })),
-      bake(card("Bogardan", "alphatoken", { supertype: null, subtypes: [] })),
-    ]);
-    const slot = TOKEN.type;
-    const symbolPct = TOKEN.symbolSizePct ?? slot.sizePct * 1.1;
-    const fontPx = Math.round(
-      fitSingleLineSizePct({ text, rect: slot.rect, baseSizePct: slot.sizePct, reservedPct: symbolPct * 1.3 }) * W,
-    );
-    // The wider group starts further left, so the first differing column is
-    // this line's first ink.
-    const [left] = centredInk(text, fontPx, slot.rect, Math.round(0.02 * W) + Math.round(symbolPct * W));
-    expect(Math.abs(diffColumns(line, short, slot.rect)[0] - left)).toBeLessThanOrEqual(1.5);
-  }, 60_000);
-});

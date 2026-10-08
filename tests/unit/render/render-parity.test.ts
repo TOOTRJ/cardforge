@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { getFrameProfile } from "@/lib/cards/template-layout";
+import { faceOf } from "@/lib/cards/type-faces";
 
 // ---------------------------------------------------------------------------
 // Preview ⇄ bake parity guards (CLAUDE.md: the browser preview and the Satori
@@ -123,10 +125,16 @@ describe("text dy (TextSlot.dy, TODO 4.20)", () => {
     expect(BAKE).toContain("...textDyBake(layout.title, width, titleSlot.sizePct)");
     expect(BAKE).toContain("...textDyBake(layout.type, width, typeSlot.sizePct)");
     expect(BAKE.match(/\.\.\.textDyBake\(slot, cardWidth\)/g)).toHaveLength(1);
-    // Nowhere else: a second face and the adventure panel keep centring
-    // their text in the rect.
-    expect(PREVIEW.match(/textDy\(/g)).toHaveLength(6);
-    expect(BAKE.match(/textDyBake\(/g)).toHaveLength(4);
+    // …and the two bands of an UNTURNED measured second face (split's right
+    // half, TODO 4.21b), which is drawn as the front draws its own.
+    expect(PREVIEW).toContain("...textDy(slot.title, faceTitleSizePct)");
+    expect(PREVIEW).toContain("...textDy(slot.type, faceTypeSizePct)");
+    expect(BAKE).toContain("...textDyBake(slot.title, cardWidth, faceTitleSlot.sizePct)");
+    expect(BAKE).toContain("...textDyBake(slot.type, cardWidth, faceTypeSlot.sizePct)");
+    // Nowhere else: a turned second face (flip, aftermath) and the adventure
+    // panel keep centring their text in the rect.
+    expect(PREVIEW.match(/textDy\(/g)).toHaveLength(8);
+    expect(BAKE.match(/textDyBake\(/g)).toHaveLength(6);
   });
 });
 
@@ -137,13 +145,20 @@ describe("display-font lines", () => {
     for (const src of [BAKE, PREVIEW]) {
       expect(src).not.toMatch(/>\s*\{(title|safeTitle|name|typeLine)\}\s*<\/span>/);
     }
-    expect(PREVIEW).toMatch(/\{slotLine\(\s*layout\.footer\.font,\s*\w+\.artistCredit/);
-    expect(PREVIEW).toContain("{slotLine(layout.footer.font, footerWatermark)}");
+    // The footer's artist line is ONE helper's string in both renderers
+    // (footerArtistLine: the profile's prefix — "Art: " unless it says
+    // otherwise, TODO 4.8.0 — and the credit), set through slotLine in the
+    // footer's own face (footerFace).
+    expect(PREVIEW).toContain("{slotLine(footerFace(layout.footer).id, footerArtistLine(layout.footer, face.artistCredit))}");
+    expect(PREVIEW).toContain("{slotLine(footerFace(layout.footer).id, footerWatermark)}");
     // The bake's footer (FooterBake, which also draws the outline copies)
     // takes the same artist line and custom mark through slotLine.
-    expect(BAKE).toMatch(/artist: card\.artistCredit\?\.trim\(\) \? `Art: \$\{card\.artistCredit\}` : "Art: Unknown"/);
-    expect(BAKE).toContain("const line = slotLine(slot.font, artist);");
-    expect(BAKE).toContain("const mark = watermarkText ? slotLine(slot.font, watermarkText) : null;");
+    expect(BAKE).toContain("artist: footerArtistLine(layout.footer, card.artistCredit),");
+    expect(BAKE).toContain("const face = footerFace(slot);");
+    expect(BAKE).toContain("const line = slotLine(face.id, artist);");
+    expect(BAKE).toContain("const mark = watermarkText && !aligned ? slotLine(face.id, watermarkText) : null;");
+    // No renderer spells the prefix itself.
+    for (const src of [BAKE, PREVIEW]) expect(src).not.toMatch(/["'`]Art: /);
     // The name: whole, or as fitted (fitTitleBand: before a detached cost,
     // and anywhere on a measured slot, TODO 4.20).
     expect(BAKE).toContain("{displayLine(titleFit ? titleFit.text : title)}");
@@ -228,33 +243,77 @@ describe("planeswalker ability rows", () => {
   });
 });
 
-describe("saga chapter rail (layout v33: correctness only)", () => {
+describe("saga chapter rail (TODO 4.21c: the printed rail)", () => {
   const fn = (src: string, name: string) => {
     const start = src.indexOf(`function ${name}(`);
     return src.slice(start, src.indexOf("\n}\n", start));
   };
   const BAKE_RAIL = fn(BAKE, "ChapterBake");
   const PREVIEW_RAIL = fn(PREVIEW, "ChapterRail");
+  const PREVIEW_PIECES = fn(PREVIEW, "SagaRailPieces");
 
-  it("draws the intro and every chapter as lib/cards/saga-rail.ts's lines in both renderers, at today's anatomy", () => {
-    // One layout call each (the same resolution of face_content / rules).
-    for (const src of [BAKE, PREVIEW]) {
-      expect(src).toContain("layoutSagaRail(layout.chapters, sagaContent.intro, sagaContent.chapters)");
-    }
-    expect(BAKE_RAIL).toContain("sagaRailPx(slot, target)");
-    expect(PREVIEW_RAIL).toContain('sagaRailPx(slot, "hd")');
+  it("lays the rail out ONCE in lib/cards/saga-rail.ts and draws its px in both renderers — the bake's target, the preview the HD bake's", () => {
+    // One layout call each (the same resolution of face_content / rules),
+    // then the drawing at the renderer's target.
+    expect(BAKE).toContain("const sagaRailLayout = profileSagaRail(layout, sagaContent, aspect);");
+    expect(BAKE).toContain("sagaRailDrawing(sagaRailLayout, rulesTarget)");
+    expect(PREVIEW).toContain("profileSagaRail(layout, resolveSagaChapters(face.faceContent, face.rulesText), aspect)");
+    expect(PREVIEW).toContain('sagaRailDrawing(rail, "hd")');
+    // Neither renderer computes a row, a badge or a divider itself.
     for (const rail of [BAKE_RAIL, PREVIEW_RAIL]) {
-      // Real pips, reminder italics, U+2212 — never the raw text (DOM #122
-      // baked "Add {R}{R}." as literal braces).
-      expect(rail).not.toMatch(/\{(ch\.text|intro|bakeText\(intro\))\}/);
-      expect(rail).toMatch(/<RulesLines(Bake)? blocks=\{rail\.intro\} metrics=\{metrics\.intro\}/);
-      expect(rail).toMatch(/<RulesLines(Bake)? blocks=\{ch\.blocks\} metrics=\{metrics\.chapter\}/);
-      // The badge box the lines were broken beside, in both.
-      expect(rail).toMatch(/width: (hdCqw\()?sagaBadgeWidthPx\(ch\.marker, px\)/);
-      // Equal rows, as v32 drew them (owner decision 2026-09-28; TODO 4.21).
-      expect(rail).toContain("flex: 1,");
-      expect(rail).not.toMatch(/\* (0\.9|1\.7|1\.12|0\.32|0\.6|0\.82|1\.22|1\.2)\b/);
+      expect(rail).not.toMatch(/flex: 1\b/);
+      expect(rail).not.toMatch(/rowFractions|pitch|badgeLift|SAGA_RAIL\./);
+      expect(rail).not.toMatch(/\* (0\.9|1\.7|1\.12|0\.17|0\.32|0\.6|0\.82|1\.22|1\.2)\b/);
     }
+  });
+
+  it("draws the reminder and every chapter as rules layouts through the ONE rules box, never raw text", () => {
+    // Real pips, reminder italics, U+2212 (DOM #122 once baked "Add {R}{R}."
+    // as literal braces) — the layout's lines, in the layout's boxes.
+    expect(BAKE_RAIL).toContain("RulesBoxBake({ layout: rail.intro, target: rail.target, colorHex: slot.textColorHex");
+    expect(BAKE_RAIL).toMatch(/<RulesBoxBake\s+key=\{`text-\$\{i\}`\}\s+layout=\{row\.text\}\s+target=\{rail\.target\}/);
+    expect(PREVIEW_RAIL).toContain("<RulesBox layout={rail.intro} colorHex={slot.textColorHex} overrides={pipOverrides} />");
+    expect(PREVIEW_RAIL).toContain("<RulesBox key={`text-${i}`} layout={row.text} colorHex={slot.textColorHex} overrides={pipOverrides} />");
+    for (const rail of [BAKE_RAIL, PREVIEW_RAIL]) {
+      expect(rail).not.toMatch(/\{(ch\.text|row\.marker|intro|bakeText\(intro\))\}/);
+      expect(rail).not.toMatch(/<RulesLines(Bake)?\b/);
+    }
+  });
+
+  it("draws each numeral in the layout's line box: the badge's width, one em tall, from labelTop, in the body face", () => {
+    expect(BAKE_RAIL).toMatch(/left: badge\.left,\s+top: badge\.labelTop,\s+width: badge\.width,\s+height: badge\.fontPx,/);
+    expect(BAKE_RAIL).toContain("fontSize: badge.fontPx,");
+    expect(BAKE_RAIL).toContain('fontFamily: faceOf({ chapters: slot }, "numeral").bakeFamily,');
+    expect(PREVIEW_RAIL).toMatch(/left: hdX\(badge\.left\),\s+top: hdY\(badge\.labelTop\),\s+width: hdX\(badge\.width\),\s+height: hdCqw\(badge\.fontPx\),/);
+    expect(PREVIEW_RAIL).toContain("fontSize: hdCqw(badge.fontPx),");
+    expect(PREVIEW_RAIL).toContain('fontFamily: faceOf({ chapters: slot }, "numeral").previewFamily,');
+    // …which is the body face on every profile (the prints' MPlantin).
+    expect(faceOf(getFrameProfile("saga"), "numeral").id).toBe("body");
+    for (const rail of [BAKE_RAIL, PREVIEW_RAIL]) {
+      expect(rail).toContain("lineHeight: 1,");
+      expect(rail).toContain('justifyContent: "center",');
+      expect(rail).toContain("color: slot.badge.numeralColorHex,");
+      expect(rail).toContain("{badge.label}");
+    }
+  });
+
+  it("draws the badges and dividers as frame pieces — right after the frame, under both finishes, masked into them", () => {
+    // The one list (sagaRailPieces) in both; drawn at the frame's z, before
+    // the sheens in the bake's document order.
+    expect(BAKE).toContain("sagaRailPieces(sagaDrawing, layout.chapters).map((piece) => ({ ...piece, href: getFrameOverlayDataUrl(piece.path) }))");
+    expect(PREVIEW).toContain("sagaRailPieces(sagaRail, layout.chapters)");
+    expect(BAKE.indexOf("{railPieces.map((piece, i) =>")).toBeGreaterThan(BAKE.indexOf("{overlays.map((overlay) =>"));
+    expect(BAKE.indexOf("{railPieces.map((piece, i) =>")).toBeLessThan(BAKE.indexOf("{isEtched ? ("));
+    expect(BAKE.indexOf("{isEtched ? (")).toBeLessThan(BAKE.indexOf("{isFoil ? ("));
+    expect(PREVIEW.indexOf("<SagaRailPieces pieces={railPieces} />")).toBeGreaterThan(PREVIEW.indexOf("<FrameOverlayLayer overlays={overlays} zIndex={5} />"));
+    expect(PREVIEW.indexOf("<SagaRailPieces pieces={railPieces} />")).toBeLessThan(PREVIEW.indexOf("{isEtched ? ("));
+    expect(PREVIEW_PIECES).toContain("style={{ zIndex: 5 }}");
+    expect(PREVIEW_PIECES).toContain("...rectStyle(piece.rect),");
+    // Both finishes mask with the frame's overlays AND the rail's pieces.
+    expect(BAKE.match(/overlays=\{drawnOverlays\(\[\.\.\.overlays, \.\.\.railPieces\]\)\}/g)).toHaveLength(2);
+    expect(PREVIEW.match(/overlays=\{\[\.\.\.overlays, \.\.\.railPieces\]\.map\(/g)).toHaveLength(2);
+    // The bake preloads exactly what the rail draws.
+    expect(BAKE).toContain("paths.push(...sagaRailAssetPaths(profileSagaRail(layout, resolveSagaChapters(card.faceContent, card.rulesText))));");
   });
 });
 
@@ -294,7 +353,8 @@ describe("the measured fits (TODO 4.20, layout v32)", () => {
     for (const src of [PREVIEW, BAKE]) {
       expect(src).not.toContain("fitSingleLineSizePct(");
       expect(src).not.toContain("fitTypeLine(");
-      expect(src.match(/fitTypeLineBand\(\{/g)).toHaveLength(2); // the type band, the adventure panel
+      // The type band, the adventure panel, a measured second face.
+      expect(src.match(/fitTypeLineBand\(\{/g)).toHaveLength(3);
     }
     expect(PREVIEW).toMatch(
       /fitTypeLineBand\(\{\s*layout,\s*text: typeLine,\s*symbolWidthPct: setSymbol\.drawnWidthPct,\s*symbolInkLeftPct: setSymbol\.inkLeftPct,\s*orientation: orientationFromAspect\(aspect\),/,
@@ -317,7 +377,7 @@ describe("the measured fits (TODO 4.20, layout v32)", () => {
     const panel = fn(PREVIEW, "AdventurePanel");
     const bake = fn(BAKE, "AdventureBake");
     for (const src of [panel, bake]) {
-      expect(src).toMatch(/fitTitleBand\(\s*\{ title: slot\.title, costSizePct: slot\.costSizePct \},\s*name,\s*showCost \? \w+\.cost : null,\s*\)/);
+      expect(src).toMatch(/fitTitleBand\(\s*\{ title: slot\.title, costSizePct: slot\.costSizePct, symbolStyle: symbols\.id \},\s*name,\s*showCost \? \w+\.cost : null,\s*\)/);
       expect(src).toContain('slot.type.fit === "measured"');
       expect(src).toContain("fitTypeLineBand({ layout: { type: slot.type }, text: typeLine, symbolWidthPct: null })");
       // The pips keep the panel's disc whatever the name does.
@@ -343,6 +403,60 @@ describe("the measured fits (TODO 4.20, layout v32)", () => {
     // filler span must not take a gap from it.
     expect(bake).toContain("...(slot.fitLines && showCost ? { gap: fpx(NAME_COST_GAP_PCT, cardWidth) } : {}),");
   });
+
+  it("draw an unturned measured second face (split's right half, TODO 4.21b) as the front draws its own bands, in both renderers", () => {
+    const panel = fn(PREVIEW, "SecondFacePanel");
+    const bake = fn(BAKE, "SecondFaceBake");
+    for (const src of [panel, bake]) {
+      // One switch: the face isn't turned and its name slot is measured.
+      expect(src).toContain('const measured = slot.rotation === 0 && slot.title.fit === "measured";');
+      // The name before its cost, from the front's own fit, at the card's
+      // orientation (a landscape card's 5 pt floor)…
+      expect(src).toMatch(
+        /fitTitleBand\(\{ title: slot\.title, costSizePct: slot\.costSizePct, symbolStyle: symbols\.id \}, name, showCost \? \w+\.cost : null, orientation\)/,
+      );
+      // …and the type line to its own bar, with no set symbol (TODO 3.9).
+      expect(src).toContain(
+        'measured && slot.type.fit === "measured"\n      ? fitTypeLineBand({ layout: { type: slot.type }, text: typeLine, symbolWidthPct: null, orientation })',
+      );
+      // The fit's text and room, cut with the one "…".
+      expect(src).toContain("{displayLine(faceTitleFit.text)}");
+      expect(src).toContain("{displayLine(faceTypeFit.text)}");
+      // The pips at their own disc, whatever the name's fit.
+      expect(src).toMatch(/\(slot\.costSizePct \?\? slot\.title\.sizePct/);
+    }
+    // The front's band component in each renderer, a shrunk line at the
+    // stored HD bake's whole px (measuredLinePx / measuredLinePreviewPct).
+    expect(panel).toContain("<BandSlot slot={{ ...slot.title, sizePct: faceTitleSizePct }}>");
+    expect(panel).toContain("<BandSlot slot={{ ...slot.type, sizePct: faceTypeSizePct }}>");
+    expect(panel).toContain("measuredLinePreviewPct(faceTitleFit.sizePct, slot.title.sizePct, orientation)");
+    expect(panel).toContain("measuredLinePreviewPct(faceTypeFit.sizePct, slot.type.sizePct, orientation)");
+    expect(panel).toContain("maxWidth: cqw(faceTitleFit.widthPct)");
+    expect(bake).toContain("<Band slot={faceTitleSlot} cardWidth={cardWidth}>");
+    expect(bake).toContain("<Band slot={faceTypeSlot} cardWidth={cardWidth}>");
+    expect(bake).toContain("measuredLinePx(faceTitleFit.sizePct, slot.title.sizePct, cardWidth, orientation) / cardWidth");
+    expect(bake).toContain("measuredLinePx(faceTypeFit.sizePct, slot.type.sizePct, cardWidth, orientation) / cardWidth");
+    expect(bake).toContain("maxWidth: Math.round(faceTitleFit.widthPct * cardWidth)");
+  });
+});
+
+describe("a turned footer (FrameProfile.footerTurn, TODO 4.21b)", () => {
+  it("is ONE box in both renderers: the band's unturned rect, turned about its centre", () => {
+    // The profile's rect is the BAND the turned line covers (what the
+    // compare page scores); both renderers lay the line out in the same
+    // unturned box (unturnedRect: the band's sides swapped through the
+    // card's aspect, about its centre) and turn it by the same angle.
+    expect(PREVIEW).toContain(
+      "...rectStyle(layout.footerTurn ? unturnedRect(layout.footer.rect, layout.footerTurn, aspect) : layout.footer.rect),",
+    );
+    expect(PREVIEW).toContain('...(layout.footerTurn ? { transform: `rotate(${layout.footerTurn}deg)`, transformOrigin: "center" } : {}),');
+    expect(BAKE).toContain("turn: layout.footerTurn ?? 0,");
+    expect(BAKE).toContain("const rect = turn ? unturnedRect(slot.rect, turn, aspect) : slot.rect;");
+    expect(BAKE).toContain("...slotBox(rect),");
+    expect(BAKE).toMatch(/turn \? \{ transform: `rotate\(\$\{turn\}deg\)`, transformOrigin: "50% 50%" \} : \{\}/);
+    // No renderer turns a footer any other way.
+    for (const src of [PREVIEW, BAKE]) expect(src.match(/unturnedRect\(/g)).toHaveLength(1);
+  });
 });
 
 describe("landscape renders", () => {
@@ -361,6 +475,24 @@ describe("landscape renders", () => {
     expect(social).toContain("width={box.width}");
     expect(read("app/api/cards/[id]/og/route.ts")).toContain("landscape: isLandscapeRender(previewData)");
     expect(read("app/api/oembed/route.ts")).toContain("naturalRenderSize(isLandscapeTemplate(card.frame_style))");
+  });
+});
+
+describe("a centred footer's © slot (TODO 4.10a)", () => {
+  it("is laid out by ONE shared function in both renderers, and takes the border mark's place", () => {
+    // The same call but for each renderer's name of the footer text.
+    expect(BAKE).toContain('copyrightSlotLayout(layout, masterKey, brandMark ? { kind: "display" } : { kind: "download", footerText: watermarkText })');
+    expect(PREVIEW).toContain('copyrightSlotLayout(layout, masterKey, brandMark ? { kind: "display" } : { kind: "download", footerText: footerWatermark })');
+    for (const src of [BAKE, PREVIEW]) {
+      // Never beside a collector line; the border mark only without a slot.
+      expect(src).toMatch(/const copyright = collector\s+\? null\s+: copyrightSlotLayout\(/);
+      expect(src).toContain('brandMark && collector?.mark.kind !== "brand" && !copyright');
+      expect(src).toContain('copyright?.kind === "brand"');
+      expect(src).toContain('copyright?.kind === "text"');
+      // The mark's two inks come from the shared module, not a literal.
+      expect(src).toContain("BRAND_MARK_LIGHT_SHADOW");
+      expect(src).toContain('ink.kind === "flat" ? ink.colorHex : BRAND_MARK_LIGHT_INK');
+    }
   });
 });
 

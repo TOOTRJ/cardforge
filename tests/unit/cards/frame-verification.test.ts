@@ -44,10 +44,10 @@ describe("frame reference registry", () => {
       "m15tokenartifact/r",
       "m15tokenartifact/m",
       "adventure/c",
+      // The M15 split frame was printed in red, blue and gold // gold only
+      // (TODO 4.21b: MH2 #123, MH2 #60, C16 #239).
       "split/w",
-      "split/u",
       "split/b",
-      "split/r",
       "split/g",
       "split/c",
       "flip/c",

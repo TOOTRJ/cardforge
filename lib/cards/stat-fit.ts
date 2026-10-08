@@ -10,8 +10,10 @@
 // the plate's light interior, the strip up to its pinstripe (the slot's
 // `inkSpanPct`, else its rect) — in BOTH renderers, so every value that fits
 // today bakes byte-identically; a wider one shrinks until it fits, down to the
-// typography hard floor. The ink is modelled glyph by glyph from Beleren
-// Bold's metrics, because the two renderers place it differently:
+// typography hard floor. The ink is modelled glyph by glyph from the metrics
+// of the face the slot is set in (StatSlot.font — Beleren Bold unless a
+// profile says otherwise; lib/cards/type-faces.ts), because the two
+// renderers place it differently:
 //   * Satori lays a value out at the sum of its advance widths (it measures
 //     each grapheme on its own) and centres that box — kept at full width
 //     (flexShrink: 0) even when it is wider than the rect — but DRAWS the
@@ -29,37 +31,26 @@ import {
   showsDefense,
   showsLoyalty,
 } from "@/lib/cards/card-display";
+import { LINE_FACE_METRICS, type LineFaceMetrics } from "@/lib/cards/font-metrics";
+import { typeFace, type SlotFace } from "@/lib/cards/type-faces";
 import { RULES_TEXT, ptToPct, type CardOrientation } from "@/lib/cards/typography";
 import type { CardType } from "@/types/card";
 
-/** Units per em of public/fonts/Beleren-Bold.ttf (the CardDisplay face). */
-const UNITS_PER_EM = 2048;
+/** The face a value is measured in when its slot names none: the display
+ *  face (lib/cards/type-faces.ts DEFAULT_SLOT_FACE). */
+const DEFAULT_FACE: SlotFace = "display";
+
+const metricsOf = (font: SlotFace | undefined) => typeFace(font ?? DEFAULT_FACE).metrics;
 
 /** [advance width, left side bearing, right side bearing] (font units) of
- *  every glyph a stat is likely to hold: printable ASCII plus ½ ∞ − – — ×.
- *  A bearing is the gap between the glyph's ink and its advance box (negative
- *  when the ink overhangs it, like `*`). Read from public/fonts/
- *  Beleren-Bold.ttf; tests/unit/cards/stat-fit.test.ts re-reads the font and
- *  pins each entry. */
-export const STAT_GLYPHS: Readonly<Record<string, readonly [number, number, number]>> = {
-  " ": [491, 0, 0], "!": [606, 102, 102], "\"": [829, 102, 102], "#": [1269, 123, 122], "$": [927, 82, 71], "%": [1761, 72, 71],
-  "&": [1290, 72, 30], "'": [440, 102, 102], "(": [710, 113, 51], ")": [710, 51, 112], "*": [1113, -70, -65], "+": [1269, 154, 153],
-  ",": [565, 82, 82], "-": [1071, 72, 72], ".": [565, 82, 82], "/": [847, 51, 50], "0": [1269, 92, 91], "1": [921, 102, 102],
-  "2": [1073, 20, 112], "3": [1013, 41, 91], "4": [1165, 20, 82], "5": [1073, 102, 92], "6": [1204, 92, 112], "7": [1011, 51, 20],
-  "8": [1220, 92, 92], "9": [1204, 113, 92], ":": [565, 82, 82], ";": [565, 82, 82], "<": [1269, 154, 153], "=": [1269, 154, 153],
-  ">": [1269, 154, 153], "?": [1097, 61, 143], "@": [1597, 72, 71], "A": [1308, -31, -31], "B": [1230, 92, 61], "C": [1212, 92, 71],
-  "D": [1427, 92, 92], "E": [1112, 92, 82], "F": [1003, 92, 10], "G": [1411, 92, 133], "H": [1443, 92, 91], "I": [716, 92, 91],
-  "J": [727, -51, 92], "K": [1351, 92, -271], "L": [1034, 92, 20], "M": [1720, 92, 92], "N": [1382, 51, 92], "O": [1470, 92, 92],
-  "P": [1208, 92, 20], "Q": [1470, 92, -285], "R": [1300, 92, -322], "S": [1042, 72, 61], "T": [1126, 20, 20], "U": [1320, 72, 50],
-  "V": [1228, -20, -21], "W": [1843, -20, -21], "X": [1327, 0, -19], "Y": [1228, -20, -21], "Z": [1079, 45, 55], "[": [710, 113, 51],
-  "\\": [727, 20, -39], "]": [710, 51, 112], "^": [1269, 168, 167], "_": [1024, -31, -31], "`": [819, 43, 168], "a": [1046, 51, 20],
-  "b": [1208, 0, 61], "c": [1007, 61, 40], "d": [1198, 61, 154], "e": [1044, 61, 51], "f": [757, 31, -93], "g": [1024, 51, 0],
-  "h": [1218, 0, 30], "i": [604, 41, 41], "j": [604, 41, 100], "k": [1128, -10, -41], "l": [604, 2, 31], "m": [1712, 51, 31],
-  "n": [1220, 51, 30], "o": [1159, 61, 61], "p": [1208, 51, 61], "q": [1187, 61, 143], "r": [870, 51, 10], "s": [829, 72, 71],
-  "t": [768, 31, 31], "u": [1208, 51, 30], "v": [1044, -10, -11], "w": [1515, -10, -11], "x": [1116, 10, 10], "y": [1044, -10, -11],
-  "z": [937, 31, 40], "{": [710, 55, 51], "|": [614, 205, 204], "}": [710, 51, 55], "~": [1269, 162, 161], "½": [1632, 51, 102],
-  "∞": [1650, 99, 99], "−": [1311, 106, 103], "–": [1374, 72, 71], "—": [1701, 72, 71], "×": [1269, 158, 157],
-};
+ *  every glyph a stat is likely to hold — printable ASCII plus ½ ∞ − – — × —
+ *  in the DISPLAY face (Beleren Bold, 2048 units per em). A bearing is the
+ *  gap between the glyph's ink and its advance box (negative when the ink
+ *  overhangs it, like `*`). Generated from public/fonts/Beleren-Bold.ttf
+ *  (lib/cards/font-metrics.ts — by hand here until TODO 4.8.0);
+ *  tests/unit/cards/stat-fit.test.ts re-reads the font and pins each entry.
+ *  The fit reads the SLOT's face's table (StatSlot.font), not this one. */
+export const STAT_GLYPHS: Readonly<Record<string, readonly [number, number, number]>> = LINE_FACE_METRICS.display.statGlyphs;
 
 /** Beleren Bold's GPOS kerning (font units) between the characters stat
  *  values are made of — digits, + - * / X x ½ ∞ − – — × and the full stop —
@@ -67,35 +58,33 @@ export const STAT_GLYPHS: Readonly<Record<string, readonly [number, number, numb
  *  letters are left out (a value like `A/B` is measured unkerned, a few px
  *  either way); the test pins this table against the font. Note the positive
  *  pairs (`1/`, `/7`, `77`, `34`, `54`): kerning can WIDEN a value. */
-export const STAT_KERNING: Readonly<Record<string, number>> = {
-  "-1": -180, "-2": -315, "-3": -134, "-7": -315, "-9": -90, "-X": -202, "-x": -180, ".0": -112,
-  ".4": -134, ".7": -90, "/4": -271, "/5": -90, "/6": -202, "/7": 158, "0.": -112, "03": -44,
-  "1-": -90, "1/": 90, "14": -112, "17": -44, "19": -112, "1–": -90, "1—": -90, "24": -44,
-  "34": 68, "41": -44, "42": -90, "43": -68, "45": -112, "46": -90, "47": -44, "49": -180,
-  "52": -44, "54": 68, "59": -112, "6.": -90, "61": -44, "62": -134, "63": -44, "65": -112,
-  "67": -202, "69": -293, "7-": -44, "7.": -315, "7/": -271, "74": -224, "76": -90, "77": 224,
-  "78": -44, "7–": -44, "7—": -44, "82": -90, "89": -90, "9.": -134, "9/": -202, "92": -112,
-  "93": -68, "X-": -112, "X–": -112, "X—": -112, "x-": -202, "x–": -202, "x—": -202, "–1": -180,
-  "–2": -315, "–3": -134, "–7": -315, "–9": -90, "–X": -202, "–x": -180, "—1": -180, "—2": -315,
-  "—3": -134, "—7": -315, "—9": -90, "—X": -202, "—x": -180,
-};
+export const STAT_KERNING: Readonly<Record<string, number>> = LINE_FACE_METRICS.display.statKerning;
 
 /** Any other character counts a full em with no bearings: wider than every
  *  glyph above but W, so an unexpected symbol errs toward shrinking. */
-const FALLBACK_GLYPH = [UNITS_PER_EM, 0, 0] as const;
-
-const glyph = (ch: string) => STAT_GLYPHS[ch] ?? FALLBACK_GLYPH;
-
-/** The drawn defense badge's inset inside its rect (the Battle disc), in
- *  percent of the rect — both renderers draw it from these numbers. */
-export const STAT_BADGE_INSET = { xPct: 12, yPct: 8 } as const;
+const glyph = (ch: string, face: LineFaceMetrics) => face.statGlyphs[ch] ?? ([face.unitsPerEm, 0, 0] as const);
 
 /** A value's laid-out width in em — the sum of its advance widths, the box
- *  Satori centres (and wraps, when it is wider than the rect). */
-export function statWidthEm(value: string): number {
+ *  Satori centres (and wraps, when it is wider than the rect) — in the face
+ *  named `font` (a StatSlot's; the display face when it names none). */
+export function statWidthEm(value: string, font?: SlotFace): number {
+  const face = metricsOf(font);
   let units = 0;
-  for (const ch of value) units += glyph(ch)[0];
-  return units / UNITS_PER_EM;
+  for (const ch of value) units += glyph(ch, face)[0];
+  return units / face.unitsPerEm;
+}
+
+/** The kerning both renderers apply inside a value's run, in em of its
+ *  size (negative when its pairs pull in) — in the face named `font`. The
+ *  bake moves an `endKerned` slot's box by it (StatSlot.endKerned). */
+export function statKernEm(value: string, font?: SlotFace): number {
+  const face = metricsOf(font);
+  const chars = Array.from(value);
+  let kern = 0;
+  chars.forEach((ch, i) => {
+    if (i > 0) kern += face.statKerning[chars[i - 1] + ch] ?? 0;
+  });
+  return kern / face.unitsPerEm;
 }
 
 /**
@@ -103,31 +92,31 @@ export function statWidthEm(value: string): number {
  * is centred in, in em — the further of the two renderers on each side.
  * Satori: box = advance sum A, ink from its left edge for the kerned run K.
  * Browser: box = K, centred. Both inset by the first/last glyph's bearing.
+ * Measured in the face named `font` (a StatSlot's).
  */
-export function statInkEm(value: string): { left: number; right: number } {
+export function statInkEm(value: string, font?: SlotFace): { left: number; right: number } {
+  const face = metricsOf(font);
   const chars = Array.from(value);
   if (chars.length === 0) return { left: 0, right: 0 };
   let advance = 0;
   let kern = 0;
   chars.forEach((ch, i) => {
-    advance += glyph(ch)[0];
-    if (i > 0) kern += STAT_KERNING[chars[i - 1] + ch] ?? 0;
+    advance += glyph(ch, face)[0];
+    if (i > 0) kern += face.statKerning[chars[i - 1] + ch] ?? 0;
   });
-  const lsb = glyph(chars[0])[1];
-  const rsb = glyph(chars[chars.length - 1])[2];
+  const lsb = glyph(chars[0], face)[1];
+  const rsb = glyph(chars[chars.length - 1], face)[2];
   const kerned = advance + kern;
   const left = Math.max(advance / 2 - lsb, kerned / 2 - lsb);
   const right = Math.max(kerned - advance / 2 - rsb, kerned / 2 - rsb);
-  return { left: left / UNITS_PER_EM, right: right / UNITS_PER_EM };
+  return { left: left / face.unitsPerEm, right: right / face.unitsPerEm };
 }
 
 /** The x-range (fractions of the card's width) a slot's value may ink: the
- *  profile's measured `inkSpanPct`, else the value rect — or the drawn badge
- *  inside it. */
+ *  profile's measured `inkSpanPct`, else the value rect. */
 export function statInkSpan(slot: StatSlot): { left: number; right: number } {
   if (slot.inkSpanPct) return { left: slot.inkSpanPct.leftPct / 100, right: slot.inkSpanPct.rightPct / 100 };
-  const inset = !slot.plateAssetPathTemplate && slot.badgeColorHex ? (slot.rect.widthPct * STAT_BADGE_INSET.xPct) / 100 : 0;
-  return { left: (slot.rect.leftPct + inset) / 100, right: (slot.rect.leftPct + slot.rect.widthPct - inset) / 100 };
+  return { left: slot.rect.leftPct / 100, right: (slot.rect.leftPct + slot.rect.widthPct) / 100 };
 }
 
 /**
@@ -143,7 +132,8 @@ export function fitStatSizePct(
   orientation: CardOrientation = "portrait",
   upsideDown = false,
 ): number {
-  const ink = statInkEm(value);
+  if (slot.align === "end" && !upsideDown) return fitEndAlignedStatSizePct(slot, value, orientation);
+  const ink = statInkEm(value, slot.font);
   const [inkLeft, inkRight] = upsideDown ? [ink.right, ink.left] : [ink.left, ink.right];
   const span = statInkSpan(slot);
   const centre = (slot.rect.leftPct + slot.rect.widthPct / 2) / 100;
@@ -154,6 +144,46 @@ export function fitStatSizePct(
   const reachRight = inkRight + dx;
   const roomLeft = centre - span.left;
   const roomRight = span.right - centre;
+  const fits = (size: number) => size * reachLeft <= roomLeft && size * reachRight <= roomRight;
+  if (fits(slot.sizePct)) return slot.sizePct;
+  let largest = slot.sizePct;
+  if (reachLeft > 0) largest = Math.min(largest, roomLeft / reachLeft);
+  if (reachRight > 0) largest = Math.min(largest, roomRight / reachRight);
+  const floor = ptToPct(RULES_TEXT.hardFloorPt, orientation);
+  return Math.min(slot.sizePct, Math.max(floor, largest));
+}
+
+/**
+ * fitStatSizePct for a value set against its rect's RIGHT edge
+ * (StatSlot.align "end": the 1997 frame's P/T, TODO 4.10a — the prints end
+ * every value at the same px and let a two-digit one grow to the left; the
+ * transform front's reverse P/T). The value's box ends at the rect's right
+ * edge in both renderers — Satori's is the advance sum A with the kerned run
+ * K inked from its left, the browser's is K — so the ink reaches
+ * max(A, K) − lsb to the left of that edge and max(K − A, 0) − rsb past it.
+ * The left limit is the slot's span (`inkSpanPct`, else the rect); the right
+ * one binds only where a profile measured a span (a plate-less slot without
+ * one has no face to run off: the reverse P/T keeps its size).
+ */
+function fitEndAlignedStatSizePct(slot: StatSlot, value: string, orientation: CardOrientation): number {
+  const face = metricsOf(slot.font);
+  const chars = Array.from(value);
+  if (chars.length === 0) return slot.sizePct;
+  let advance = 0;
+  let kern = 0;
+  chars.forEach((ch, i) => {
+    advance += glyph(ch, face)[0];
+    if (i > 0) kern += face.statKerning[chars[i - 1] + ch] ?? 0;
+  });
+  const lsb = glyph(chars[0], face)[1];
+  const rsb = glyph(chars[chars.length - 1], face)[2];
+  const dx = slot.valueDxEm ?? 0;
+  const reachLeft = (Math.max(advance, advance + kern) - lsb) / face.unitsPerEm - dx;
+  const reachRight = (Math.max(kern, 0) - rsb) / face.unitsPerEm + dx;
+  const span = statInkSpan(slot);
+  const edge = (slot.rect.leftPct + slot.rect.widthPct) / 100;
+  const roomLeft = edge - span.left;
+  const roomRight = slot.inkSpanPct ? span.right - edge : Number.POSITIVE_INFINITY;
   const fits = (size: number) => size * reachLeft <= roomLeft && size * reachRight <= roomRight;
   if (fits(slot.sizePct)) return slot.sizePct;
   let largest = slot.sizePct;
@@ -187,7 +217,7 @@ export const END_ALIGNED_STAT_AIR_EM = 0.25;
  */
 export function endAlignedStatKeepOut(slot: StatSlot, value: string, orientation: CardOrientation = "portrait"): Rect {
   const sizePct = fitStatSizePct(slot, value, orientation);
-  const widthPct = (statWidthEm(value) + END_ALIGNED_STAT_AIR_EM) * sizePct * 100;
+  const widthPct = (statWidthEm(value, slot.font) + END_ALIGNED_STAT_AIR_EM) * sizePct * 100;
   const rightPct = slot.rect.leftPct + slot.rect.widthPct;
   return {
     leftPct: Math.max(slot.rect.leftPct, rightPct - widthPct),
@@ -280,6 +310,6 @@ export function statLayoutChanged(card: StatScopeCard): boolean {
   return stats.some(
     ({ slot, value, upsideDown }) =>
       fitStatSizePct(slot, value, orientation, upsideDown) < slot.sizePct ||
-      statWidthEm(value) * Math.round(slot.sizePct * hdWidth) > (slot.rect.widthPct / 100) * hdWidth,
+      statWidthEm(value, slot.font) * Math.round(slot.sizePct * hdWidth) > (slot.rect.widthPct / 100) * hdWidth,
   );
 }

@@ -6,11 +6,15 @@ import {
   parseChapters,
   printsPowerToughness,
   showsPowerToughness,
+  FOOTER_PREFIX,
+  footerArtistLine,
   slotLine,
   withSupertypeWord,
   withoutSupertypeWord,
 } from "@/lib/cards/card-display";
+import { getFrameProfile } from "@/lib/cards/template-layout";
 import { parseTypeLine } from "@/lib/scryfall/import-mapper";
+import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { parseSubtypes } from "@/lib/creator/card-fields";
 
 describe("parseChapters", () => {
@@ -252,5 +256,27 @@ describe("displayLine", () => {
     expect(slotLine("display", "Art: Nene Thomas")).toBe(`Art:${NBSP}Nene${NBSP}Thomas`);
     expect(slotLine("body", "Art: Nene Thomas")).toBe("Art: Nene Thomas");
     expect(slotLine(undefined, "Art: Nene Thomas")).toBe("Art: Nene Thomas");
+  });
+});
+
+describe("footerArtistLine — the artist line both renderers print (TODO 4.8.0)", () => {
+  it("is \"Art: \" + the credit as typed, \"Art: Unknown\" without one — the literal both renderers held", () => {
+    expect(FOOTER_PREFIX).toBe("Art: ");
+    expect(footerArtistLine(undefined, "Nene Thomas")).toBe("Art: Nene Thomas");
+    expect(footerArtistLine({}, " Nene Thomas ")).toBe("Art:  Nene Thomas ");
+    for (const none of [null, undefined, "", "   "]) expect(footerArtistLine({}, none)).toBe("Art: Unknown");
+    // Every shipped footer: no prefix of its own — but the 1997 pair's, the
+    // prints' "Illus. " (TODO 4.10a).
+    for (const template of FRAME_TEMPLATE_VALUES) {
+      const footer = getFrameProfile(template).footer;
+      const illus = template === "retro" || template === "retroland";
+      expect(footerArtistLine(footer, "Ada"), template).toBe(illus ? "Illus. Ada" : "Art: Ada");
+    }
+  });
+
+  it("takes a profile's own prefix (the 1993–2003 prints' \"Illus. \")", () => {
+    expect(footerArtistLine({ prefix: "Illus. " }, "Douglas Shuler")).toBe("Illus. Douglas Shuler");
+    expect(footerArtistLine({ prefix: "Illus. " }, null)).toBe("Illus. Unknown");
+    expect(footerArtistLine({ prefix: "" }, "Douglas Shuler")).toBe("Douglas Shuler");
   });
 });

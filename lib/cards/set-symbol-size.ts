@@ -10,6 +10,7 @@ import {
   displayPct,
   KEYRUNE_EM_PER_BOX,
   RULES_HD_WIDTH,
+  SET_SYMBOL_BOX_PCT,
   SET_SYMBOL_KEYLINE_EM,
   SET_SYMBOL_MAX_WIDTH_PCT,
 } from "@/lib/cards/typography";
@@ -40,6 +41,13 @@ import {
 //     print-checked size), or smaller when the glyph's ink would then stand
 //     taller than the box (a compact glyph like DOM's fills it exactly) or
 //     wider than CC's 0.12 W symbol box (owner decision 2026-09-28);
+//   • a Keyrune glyph on a profile with `setSymbolFit: "ink-height"` (the
+//     split card's thin type bar, TODO 4.21b): its INK fills the box's
+//     height, whatever the glyph's shape — MH2's wide mark and TSR's tall
+//     hourglass both print 47–50 px tall on MH2 #123 / TSR #186's 69 px
+//     bar — and is never wider than the box × the family's width-to-box
+//     ratio (CC's 0.12 W box over its 0.041 H one). No printed-size table:
+//     that one holds a regular card's sizes;
 //   • a Keyrune glyph on any other profile: the box IS its font size, as
 //     before — so those frames bake byte-identically, whatever an override
 //     sets symbolSizePct to (the flag is code-owned).
@@ -155,6 +163,16 @@ export function setSymbolSize(profile: SymbolProfile, source: SetSymbolSource): 
         inkWidthEm > 0 ? maxWidthPct / inkWidthEm : Infinity,
       );
     }
+  } else if (profile.setSymbolFit === "ink-height") {
+    // The split card's thin bar: the glyph's ink as tall as the box, never
+    // wider than the box × the family's width-to-box ratio.
+    const inkHeightEm = (yMax - yMin) / KEYRUNE_UNITS_PER_EM;
+    const inkWidthEm = (xMax - xMin) / KEYRUNE_UNITS_PER_EM;
+    const maxWidthPct = boxPct * (SET_SYMBOL_MAX_WIDTH_PCT / SET_SYMBOL_BOX_PCT);
+    sizePct = Math.min(
+      inkHeightEm > 0 ? boxPct / inkHeightEm : boxPct,
+      inkWidthEm > 0 ? maxWidthPct / inkWidthEm : Infinity,
+    );
   }
   return {
     boxPct,

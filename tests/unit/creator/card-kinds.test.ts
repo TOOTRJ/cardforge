@@ -94,9 +94,10 @@ describe("framesForKind", () => {
       expect(eras).not.toContain("retro");
       expect(eras).not.toContain("modern");
     }
-    // Tokens exist in classic + m15 but not retro/modern.
+    // Tokens exist in m15 only: no old-border token frame (the Alpha token
+    // was retired, TODO 4.54; the 1997 / 2003 ones are 4.43).
     const tokenEras = framesForKind("token", NO_VERIFIED).map((f) => f.era);
-    expect(tokenEras).toContain("classic");
+    expect(tokenEras).not.toContain("classic");
     expect(tokenEras).toContain("m15");
     expect(tokenEras).not.toContain("retro");
     expect(tokenEras).not.toContain("modern");

@@ -9,7 +9,7 @@
 // the one card corner (lib/cards/card-corner.ts, 64.5 px) that paper showed
 // as a light crescent inside the cut on retro, retroland, aftermath, saga …
 // The flood-fill clear of scripts/round-frame-corners.mjs (dc65aa5) left an
-// anti-aliased fringe behind on flip and alphatoken, and every builder that
+// anti-aliased fringe behind on flip (and on the since-retired Alpha token), and every builder that
 // regenerated a master after it brought the white back.
 //
 // The normalise pass, per corner of an ALLOW-LISTED master:
@@ -66,24 +66,25 @@ import {
  * failures with a transparent edge band — no border to paint with.
  * (adventure, with its 1–2 px grey paper rim, flip and aftermath left the
  * list with TODO 4.21a: their masters are Card Conjurer's in the frames
- * bucket, cut at the one corner by the importer.)
+ * bucket, cut at the one corner by the importer. Saga left it with 4.21c, the
+ * same way — and retro and retroland with 4.10a: the 1997 masters are the
+ * importer's too, the MSE gold among them.)
  */
 export const CORNER_NORMALISE_TEMPLATES = Object.freeze({
-  retro: "all",
-  retroland: "all",
   modern: "all",
   modernland: "all",
-  saga: "all",
   extendedart: "all",
   fullart: "all",
   m15textless: "all",
   m15textlessland: "all",
-  alphatoken: "all",
   expeditionland: Object.freeze(["w", "u", "r", "c", "m"]),
 });
 
-/** Never normalised: the showcase families' corners are real design. */
-export const NEVER_NORMALISE = /^(bloomburrow|bloomanime|lotr|lotrscroll|tarkir[a-z]*|avatar|battle)$/;
+/** Never normalised: the showcase families' corners are real design.
+ *  (battle left the list with TODO 4.21b: its master is Card Conjurer's in
+ *  the frames bucket, cut at the one corner by the importer — Phase B never
+ *  sees it, as it never sees the split's.) */
+export const NEVER_NORMALISE = /^(bloomburrow|bloomanime|lotr|lotrscroll|tarkir[a-z]*|avatar)$/;
 
 /** The corner box the pass works in (and the gate confines the diff to). */
 export const NORMALISE_BOX = 96;

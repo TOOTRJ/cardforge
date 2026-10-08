@@ -4,13 +4,16 @@ import referencesData from "@/lib/cards/frame-references.json";
 import {
   FRAME_COLOR_KEYS,
   FRAME_REFERENCES,
+  TWO_COLOR_PAIRS,
   findFrameReference,
+  framePairReferenceOptions,
   frameReferenceNote,
   frameReferenceOptions,
   referenceFace,
   referenceThumbUrl,
   referenceTierLabel,
 } from "@/lib/cards/frame-reference-registry";
+import { getFrameProfile } from "@/lib/cards/template-layout";
 import { isDfcBackBody } from "@/lib/cards/dfc";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
@@ -46,6 +49,12 @@ const templateSchema = z
         FRAME_COLOR_KEYS.map((key) => [key, z.array(referenceSchema).min(1).nullable()]),
       ),
     ).strict(),
+    /** The printed references of the template's pair masters (TODO 4.56):
+     *  all ten pairs or none, each at least one printing. */
+    pairs: z
+      .object(Object.fromEntries(TWO_COLOR_PAIRS.map((pair) => [pair, z.array(referenceSchema).min(1)])))
+      .strict()
+      .optional(),
   })
   .strict();
 
@@ -84,14 +93,16 @@ const DOCUMENTED_NULLS = new Set([
   "m20tokenartifacttall/g",
   "m20tokenartifacttall/m",
   "adventure/c",
-  "split/w", "split/u", "split/b", "split/r", "split/g", "split/c",
+  // The M15 split frame was printed in red (MH2 #123, TSR, WHO), blue (MH2
+  // #60) and gold // gold (C16 #239) only — TODO 4.21b; the other four are
+  // built and never offered (split/c is a render stand-in).
+  "split/w", "split/b", "split/g", "split/c",
   "aftermath/c",
   // No gold // gold aftermath exists (every two-colour one is mono // mono,
   // TODO 4.26's per-part colour): the HOU stand-ins were dropped so a
   // template Publish can't tick the combo (4.21a follow-up, 2026-10-02).
   "aftermath/m",
   "flip/c", "flip/m",
-  "alphatoken/w", "alphatoken/u", "alphatoken/b", "alphatoken/r", "alphatoken/g", "alphatoken/c", "alphatoken/m",
   "fullart/c",
   // Full-art basics (4.39): no multicolour basic, and the one left-disc
   // Wastes (FIN #309) is black-bordered — no borderless one (owner visual
@@ -157,11 +168,68 @@ describe("frame-references.json", () => {
     });
   }
 
+  it("pair references (TODO 4.56): only on a template that draws pairs — today the borderless land's, two prints per pair, a digital render first", () => {
+    const withPairs = FRAME_TEMPLATE_VALUES.filter((t) => (data[t] as { pairs?: unknown }).pairs !== undefined);
+    expect(withPairs).toEqual(["m15borderlessland"]);
+    for (const template of withPairs) expect(getFrameProfile(template).twoColorMasters ?? []).toContain("split");
+    const ids = new Set<string>();
+    for (const pair of TWO_COLOR_PAIRS) {
+      const list = framePairReferenceOptions("m15borderlessland", pair);
+      expect(list.map((ref) => ref.set), pair).toHaveLength(2);
+      // The first of each pair is an MKM surveil land (a WotC digital render,
+      // registered to the pixel); the second another tinted-look set's.
+      expect(list[0].set, pair).toBe("mkm");
+      expect(["mid", "otj", "dsk"], pair).toContain(list[1].set);
+      for (const ref of list) {
+        expect(ref.face, ref.name).toBeUndefined();
+        expect(ids.has(ref.scryfallId), ref.name).toBe(false);
+        ids.add(ref.scryfallId);
+        // Never one of a colour's own references, and never a set that
+        // prints a look the pair masters don't draw.
+        for (const key of FRAME_COLOR_KEYS) expect(findFrameReference("m15borderlessland", key, ref.scryfallId), ref.name).toBeNull();
+        expect(["woe", "acr", "fra", "unf", "spg", "ecl", "sos", "msh", "tdm", "eoe", "fic"], ref.name).not.toContain(ref.set);
+      }
+    }
+    expect(ids.size).toBe(20);
+    // The TODO's two headline prints are among them.
+    expect(framePairReferenceOptions("m15borderlessland", "wu").map((r) => `${r.set} ${r.name}`)).toEqual(["mkm Meticulous Archive", "mid Deserted Beach"]);
+    expect(framePairReferenceOptions("m15borderlessland", "ur").map((r) => `${r.set} ${r.name}`)).toEqual(["mkm Thundering Falls", "otj Spirebluff Canal"]);
+    // A template that lists none answers empty, never another's.
+    expect(framePairReferenceOptions("m15land", "wu")).toEqual([]);
+    expect(framePairReferenceOptions("nope", "wu")).toEqual([]);
+  });
+
   it("keeps the hand-researched M15 defaults first", () => {
     expect(FRAME_REFERENCES.m15.w?.name).toBe("Serra Angel");
     expect(FRAME_REFERENCES.m15.c?.name).toBe("Ulamog, the Ceaseless Hunger");
-    expect(FRAME_REFERENCES.saga.m?.name).toBe("The Kami War // O-Kagachi Made Manifest");
+    // The gold saga (TODO 4.21c): 40K #126, a three-colour print on the
+    // plain gold frame.
+    expect(FRAME_REFERENCES.saga.m?.name).toBe("The Horus Heresy");
     expect(FRAME_REFERENCES.battle.w?.name).toMatch(/^Invasion of Gobakhan/);
+  });
+
+  it("references split by the colours the M15 frame was printed in: red, blue and gold // gold (TODO 4.21b)", () => {
+    expect(FRAME_REFERENCES.split.r?.name).toBe("Fast // Furious");
+    expect(FRAME_REFERENCES.split.r?.set).toBe("mh2");
+    expect(FRAME_REFERENCES.split.u?.name).toBe("Said // Done");
+    expect(FRAME_REFERENCES.split.m?.name).toBe("Trial // Error");
+    // Red's alternates: the Doctor Who and Time Spiral Remastered prints.
+    expect(frameReferenceOptions("split", "r").map((ref) => `${ref.set} ${ref.name}`)).toEqual([
+      "mh2 Fast // Furious",
+      "who Coward // Killer",
+      "tsr Boom // Bust",
+      "tsr Dead // Gone",
+      "tsr Rough // Tumble",
+    ]);
+    for (const key of ["w", "b", "g", "c"] as const) expect(FRAME_REFERENCES.split[key], key).toBeNull();
+    // A split whose halves differ in colour is TODO 4.26's, never a
+    // reference: GRN #224 Expansion // Explosion (hybrid // gold) and DMR
+    // #209 Pain // Suffering (mono // mono) stood in on split/m before.
+    const ids = (["r", "u", "m"] as const).flatMap((key) => frameReferenceOptions("split", key).map((ref) => ref.scryfallId));
+    expect(ids).not.toContain("e0644c92-4d67-475e-8c8e-0e2c493682fb");
+    expect(ids).not.toContain("3d11164c-f27b-4cad-8620-d97ed384f0e6");
+    // …nor is the Arena-only render of Fast // Furious (J21 #730).
+    expect(ids).not.toContain("b601374d-c295-494c-881f-5c8ab7005ac2");
   });
 
   it("defaults m15snow w/b/g to the snow printings production verified them against (1.4 A6)", () => {
@@ -232,7 +300,11 @@ describe("registry helpers", () => {
   it("flags the families a human must confirm and explains the scan tiers", () => {
     expect(frameReferenceNote("bloomburrow").confirm).toBe(true);
     expect(frameReferenceNote("m15").confirm).toBe(false);
-    expect(frameReferenceNote("split").note).toMatch(/never printed/);
+    // Split's note says which colours the M15 frame was printed in, why
+    // split/m's reference shows the dress only, and what waits for 4.26.
+    expect(frameReferenceNote("split").note).toMatch(/No white, black or green split was printed in the M15 frame/);
+    expect(frameReferenceNote("split").note).toMatch(/C16 #239 Trial \/\/ Error/);
+    expect(frameReferenceNote("split").note).toMatch(/TODO 4\.26/);
     expect(referenceTierLabel({ name: "x", set: "y", scryfallId: "z" })).toBeNull();
     expect(referenceTierLabel({ name: "x", set: "y", scryfallId: "z", tier: 1 })).toMatch(/low-resolution/);
     expect(referenceTierLabel({ name: "x", set: "y", scryfallId: "z", tier: 2 })).toMatch(/foil/);
@@ -299,7 +371,8 @@ describe("4.32 / 4.34 / 4.39 references", () => {
     expect(ids("m15borderlessland", "m")).toEqual(["cmm Command Tower", "msh Avengers Tower"]);
     for (const key of FRAME_COLOR_KEYS) {
       for (const ref of frameReferenceOptions("m15borderlessland", key)) {
-        // Never a set that prints the DARK type bar, never a two-colour print.
+        // Never a set that prints the DARK type bar, never a two-colour print
+        // (those are the pair masters' references: `pairs`, 4.56).
         expect(["woe", "acr", "tdm", "eoe", "fic"], ref.name).not.toContain(ref.set);
         expect(["Deserted Beach", "Spirebluff Canal"], ref.name).not.toContain(ref.name);
         // Never the see-through SLD prints the owner turned down (round 15),
@@ -465,5 +538,55 @@ describe("4.48 / 4.50 full-art token references", () => {
       }
       expect(frameReferenceNote(template).note).toMatch(/full-art/);
     }
+  });
+});
+
+// TODO 4.21c (design 2026-09-29, D3): the regular saga frame's references.
+// Gold is the two three-colour prints on the plain gold frame; the
+// colourless key is the land saga; nothing on another saga master is listed.
+describe("4.21c saga references", () => {
+  const ids = (key: string) => frameReferenceOptions("saga", key).map((r) => `${r.set} ${r.name}`);
+  const all = () => FRAME_COLOR_KEYS.flatMap((key) => frameReferenceOptions("saga", key));
+
+  it("gold: 40K #126 The Horus Heresy, then LTC #58 In the Darkness Bind Them", () => {
+    expect(ids("m")).toEqual(["40k The Horus Heresy", "ltc In the Darkness Bind Them"]);
+    expect(FRAME_REFERENCES.saga.m).toMatchObject({ scryfallId: "c9551a51-2bbd-425b-a634-185921a96865", curated: true });
+    expect(findFrameReference("saga", "m", "f7f7413b-0a65-4338-90eb-4b4c5462c21c")?.name).toBe("In the Darkness Bind Them");
+    // NEO's transforming saga (a DFC marker and an enchantment frame effect)
+    // and KHM's two-colour sagas (the two-colour frame, TODO 4.6f) are gone.
+    for (const id of ["36052532-5028-43a8-9fc4-56221ec867fd", "d7de696a-49c2-421d-a86c-bcffd68870c6", "0bf01666-0fbf-4b15-a33d-964165bbfafb"]) {
+      expect(findFrameReference("saga", "m", id), id).toBeNull();
+    }
+  });
+
+  it("colourless: the land saga MH2 #259 Urza's Saga alone", () => {
+    expect(ids("c")).toEqual(["mh2 Urza's Saga"]);
+    expect(FRAME_REFERENCES.saga.c).toMatchObject({ scryfallId: "c1e0f201-42cb-46a1-901a-65bb4fc18f6c", curated: true });
+  });
+
+  it("w u b r g keep their DOM defaults, each with a regular-frame alternate", () => {
+    expect(ids("w")).toEqual(["dom History of Benalia", "woe The Princess Takes Flight"]);
+    expect(ids("u")).toEqual(["dom The Antiquities War", "thb Medomai's Prophecy", "woe Gadwick's First Duel"]);
+    expect(ids("b")).toEqual(["dom The Eldest Reborn", "dom Rite of Belzenlok"]);
+    expect(ids("r")).toEqual(["dom The First Eruption", "thb The Triumph of Anax"]);
+    expect(ids("g")).toEqual(["dom The Mending of Dominaria", "woe Welcome to Sweettooth"]);
+    for (const key of ["w", "u", "b", "r", "g"] as const) expect(FRAME_REFERENCES.saga[key]?.curated, key).toBe(true);
+  });
+
+  it("lists no print on another saga master: no FIN Summon (a saga creature), no DMU read-ahead saga, no transforming saga", () => {
+    for (const ref of all()) {
+      expect(ref.name, ref.name).not.toMatch(/^Summon: /);
+      expect(ref.name, ref.name).not.toContain(" // ");
+      // FIN's Summons print a P/T box (TODO 4.5d / 4.7); DMU's read-ahead
+      // sagas a reminder box 97 px taller (chapters from 717 px, not 621);
+      // NEO's sagas transform (TODO 5.5).
+      expect(["fin", "dmu", "neo", "khm"], `${ref.set} ${ref.name}`).not.toContain(ref.set);
+      expect(ref.face, ref.name).toBeUndefined();
+    }
+    const note = frameReferenceNote("saga");
+    expect(note.confirm).toBe(false);
+    expect(note.note).toMatch(/40K #126 The Horus Heresy/);
+    expect(note.note).toMatch(/MH2 #259 Urza’s Saga/);
+    expect(note.note).toMatch(/read-ahead/);
   });
 });

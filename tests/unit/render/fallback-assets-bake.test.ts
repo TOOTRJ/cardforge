@@ -6,7 +6,7 @@ import type { CardPreviewData } from "@/components/cards/card-preview";
 import { renderCardImage } from "@/lib/render/card-image";
 
 // ---------------------------------------------------------------------------
-// TODO 6.16a on REAL bakes (the git "retro" frame, read from disk):
+// TODO 6.16a on REAL bakes (the git "modern" frame, read from disk):
 //
 //  1. A card whose text Satori's registered fonts don't cover bakes with
 //     global fetch THROWING — the loader answers from disk.
@@ -91,7 +91,7 @@ function card(patch: Partial<CardPreviewData>): CardPreviewData {
     artistCredit: "Probe",
     artUrl: null,
     artPosition: {},
-    frameStyle: { template: "retro", finish: "regular" },
+    frameStyle: { template: "modern", finish: "regular" },
     setIconUrl: null,
     setIconCode: null,
     backFace: null,

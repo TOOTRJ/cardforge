@@ -2,6 +2,7 @@ import { Check, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { cn } from "@/lib/utils";
+import { LocalDate } from "@/components/ui/local-date";
 import type { BillingPeriod, PlanDisplay, PlanTier } from "@/lib/billing/plans";
 
 type PlanCardProps = {
@@ -13,11 +14,15 @@ type PlanCardProps = {
   /** CTA node (checkout / portal / signup button). Hidden when this is the
    *  viewer's current plan. */
   cta?: React.ReactNode;
+  /** The viewer's current plan is cancelled and still running: ISO date it
+   *  ends ("" when the date isn't known). The current card then says so and
+   *  shows its CTA ("Resume Pro") instead of a bare "Your current plan". */
+  currentEndsAt?: string | null;
 };
 
 // Presentational pricing tier card. The CTA is injected so this stays a pure
 // presentational component (the interactive checkout lives in client buttons).
-export function PlanCard({ plan, currentTier, period = "monthly", cta }: PlanCardProps) {
+export function PlanCard({ plan, currentTier, period = "monthly", cta, currentEndsAt = null }: PlanCardProps) {
   const isCurrent = currentTier === plan.tier;
   const showAnnual =
     period === "annual" && plan.annualUsd != null && plan.annualUsd > 0;
@@ -91,7 +96,21 @@ export function PlanCard({ plan, currentTier, period = "monthly", cta }: PlanCar
       ) : null}
 
       <div className="mt-auto pt-2">
-        {isCurrent ? (
+        {isCurrent && currentEndsAt != null ? (
+          <div className="flex flex-col gap-2">
+            <Badge variant="outline" className="flex w-full justify-center py-2 text-center text-sm">
+              {currentEndsAt ? (
+                <span>
+                  {"Your current plan · ends "}
+                  <LocalDate iso={currentEndsAt} />
+                </span>
+              ) : (
+                "Your current plan · cancelled"
+              )}
+            </Badge>
+            {cta}
+          </div>
+        ) : isCurrent ? (
           <Badge
             variant="outline"
             className="flex w-full justify-center py-2 text-sm"

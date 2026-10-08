@@ -2,6 +2,7 @@ import "server-only";
 
 import fs from "node:fs";
 import path from "node:path";
+import { facesOf, type SlotFace } from "@/lib/cards/type-faces";
 
 // ---------------------------------------------------------------------------
 // Card-fonts loader — reads the Mana and Keyrune TTFs from node_modules at
@@ -37,8 +38,12 @@ const MANA_CSS_PATH = path.join(
   "mana.css",
 );
 
-// MPlantin is the body-text font on real MTG cards. It ships alongside the
-// Mana symbol font in the same npm package. We use it as the default font
+// MPlantin is the body-text font on real MTG cards. The file ships inside
+// the mana-font npm package beside the Mana symbol font; the package's
+// licence statement does not name it: its README licenses "the Mana font" (SIL OFL
+// 1.1) and its CSS (MIT). The file's own name table says only "Converted by
+// ALLTYPE" — no copyright line, no licence string — and no licence text
+// accompanies it (docs/FRAMES.md "Provenance and legal"). We use it as the default font
 // for the Satori bake so providing explicit `fonts: [...]` to ImageResponse
 // doesn't strand the regular body text (Satori has no auto-fallback once
 // you opt into custom fonts).
@@ -61,6 +66,10 @@ const KEYRUNE_FONT_PATH = path.join(
 // CardDisplay — the title/type/footer/stat face: Beleren Bold, the face real
 // cards use, vendored in public/fonts from the same non-commercial
 // Full-Magic-Pack the frame trade dress comes from (see 12_CREATION_AUDIT.md).
+// The file's own name table: "Beleren Bold", "Version P1.01", "Copyright (c)
+// 2013 Wizards of the Coast, a Hasbro Subsidiary. All rights reserved.",
+// "Beleren is a trademark of Wizards of the Coast."; no licence string, and
+// no licence text accompanies it (docs/FRAMES.md "Provenance and legal").
 // The family name + this path are the swap contract. Read with the same
 // process.cwd()+literal-segments pattern as the node_modules fonts so
 // @vercel/nft bundles it into the function.
@@ -71,7 +80,9 @@ const DISPLAY_FONT_PATH = path.join(
   "Beleren-Bold.ttf",
 );
 
-// MPlantin Italic — the real italic master for flavor/reminder text. Satori
+// MPlantin Italic — the real italic master for flavor/reminder text (from
+// the same Full-Magic-Pack; name table "Converted by ALLTYPE", no licence
+// string, no licence text beside it). Satori
 // has no synthetic italics, so without this the bake would render italic runs
 // upright (or the browser-synthesized oblique wouldn't match the PNG).
 const MPLANTIN_ITALIC_FONT_PATH = path.join(
@@ -108,6 +119,66 @@ export const MPLANTIN_ITALIC_FONT_BYTES: Buffer = fs.readFileSync(
 export const KEYRUNE_FONT_BYTES: Buffer = fs.readFileSync(KEYRUNE_FONT_PATH);
 export const DISPLAY_FONT_BYTES: Buffer = fs.readFileSync(DISPLAY_FONT_PATH);
 export const COLLECTOR_FONT_BYTES: Buffer = fs.readFileSync(COLLECTOR_FONT_PATH);
+
+// ---------------------------------------------------------------------------
+// cardFonts — the Satori fonts array of ONE render (TODO 4.8.0; era design
+// D16). renderCardImage registers what this returns, in this order, and
+// nothing else:
+//
+//   MPlantin · MPlantin italic · CardDisplay · [a profile's own faces] ·
+//   Mana · CollectorLine · Keyrune
+//
+// Today that is the same six for every profile — the two faces a slot can
+// be set in (lib/cards/type-faces.ts: "body" = MPlantin, "display" =
+// CardDisplay) are the two every card already draws (rules text, the brand
+// mark), so no profile adds one. A face the repo gains later goes in
+// EXTRA_FACE_FONTS and is registered ONLY for the profiles that name it, in
+// the bracketed place: after CardDisplay and BEFORE Keyrune, never last —
+// Satori resolves a character through the requested families and then every
+// registered font in registration order, and draws a character NO font has
+// with the LAST one (its .notdef box and advance; COLLECTOR_FONT_PATH above
+// says why that must stay Keyrune). tests/unit/render/collector-font.test.ts
+// reads this builder for every template and pins the order.
+// ---------------------------------------------------------------------------
+
+/** One Satori font registration (satori's `Font`, without importing it). */
+export type CardFont = { name: string; data: Buffer; weight: 400 | 500; style: "normal" | "italic" };
+
+/** Fonts of a face a slot can name that is NOT among the base six. None
+ *  yet (owner decision 2026-10-07: no new typeface now). */
+const EXTRA_FACE_FONTS: Partial<Record<SlotFace, readonly CardFont[]>> = {};
+
+export function cardFonts(profile: Parameters<typeof facesOf>[0]): CardFont[] {
+  const extras = facesOf(profile).flatMap((id) => EXTRA_FACE_FONTS[id] ?? []);
+  return [
+    // MPlantin is the real MTG body font (ships with mana-font); Mana +
+    // Keyrune supply the cost pips and set symbol. Satori has no auto-
+    // fallback once explicit fonts are provided, so all are registered.
+    // A character none of these has goes to lib/render/fallback-assets.ts
+    // (bundled Noto Sans for extra Latin/Greek/Cyrillic, emoji stripped,
+    // other scripts drawn as missing glyphs) — never to the network.
+    { name: "MPlantin", data: MPLANTIN_FONT_BYTES, weight: 400, style: "normal" },
+    { name: "MPlantin", data: MPLANTIN_ITALIC_FONT_BYTES, weight: 400, style: "italic" },
+    { name: "CardDisplay", data: DISPLAY_FONT_BYTES, weight: 400, style: "normal" },
+    ...extras,
+    { name: "Mana", data: MANA_FONT_BYTES, weight: 400, style: "normal" },
+    // The collector line's face (TODO 4.9b) — after MPlantin and NEVER
+    // last. Its glyphs are all in MPlantin's cmap, so no other run
+    // resolves a character to it; and Satori draws a character NO font
+    // has (★, CJK, Thai…) with the LAST registered font — its .notdef
+    // box and advance, and the rest of a word that starts with one in
+    // that face — so the last font must stay Keyrune, as it was before
+    // this face (tests/unit/render/collector-font.test.ts).
+    { name: "CollectorLine", data: COLLECTOR_FONT_BYTES, weight: 500, style: "normal" },
+    { name: "Keyrune", data: KEYRUNE_FONT_BYTES, weight: 400, style: "normal" },
+  ];
+}
+
+/** The TTF a single-line face is drawn from, for the bake's run measure
+ *  (lib/render/satori-text.ts). */
+export function faceFontBytes(face: SlotFace): Buffer {
+  return face === "body" ? MPLANTIN_FONT_BYTES : DISPLAY_FONT_BYTES;
+}
 
 // ---------------------------------------------------------------------------
 // Codepoint extraction

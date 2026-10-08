@@ -987,6 +987,9 @@ export type Database = {
           stripe_subscription_id: string | null;
           current_period_end: string | null;
           cancel_at_period_end: boolean;
+          // Migration 0135 — when a cancelled subscription stops.
+          subscription_ends_at: string | null;
+          subscription_canceled_at: string | null;
           credits: number;
           is_admin: boolean;
           // Columns added by migration 0060 — folded in here until the
@@ -1024,6 +1027,8 @@ export type Database = {
           stripe_subscription_id?: string | null;
           current_period_end?: string | null;
           cancel_at_period_end?: boolean;
+          subscription_ends_at?: string | null;
+          subscription_canceled_at?: string | null;
           credits?: number;
           is_admin?: boolean;
           comp_tier?: string | null;
@@ -1058,6 +1063,8 @@ export type Database = {
           stripe_subscription_id?: string | null;
           current_period_end?: string | null;
           cancel_at_period_end?: boolean;
+          subscription_ends_at?: string | null;
+          subscription_canceled_at?: string | null;
           credits?: number;
           is_admin?: boolean;
           comp_tier?: string | null;
@@ -2008,6 +2015,11 @@ export type Database = {
           created_at: string;
           last_active_at: string | null;
           total_count: number;
+          // Migration 0135 (absent until it is applied).
+          current_period_end?: string | null;
+          cancel_at_period_end?: boolean | null;
+          subscription_ends_at?: string | null;
+          subscription_canceled_at?: string | null;
         }[];
       };
       // Migration 0112 — funnel instrumentation.
@@ -2097,6 +2109,9 @@ export type Database = {
           comp_expires_at: string | null;
           card_limit_override: number | null;
           is_admin: boolean;
+          // Migration 0135 (absent until it is applied).
+          subscription_ends_at?: string | null;
+          subscription_canceled_at?: string | null;
         }[];
       };
       owner_export_stamp: {

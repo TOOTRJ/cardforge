@@ -534,7 +534,7 @@ export type ArtWindowKnownFailure = {
  * Template × colour masters whose art windows escape their art today, and
  * the TODO items that fix each (measured 2026-09-29 on every git master
  * and every bucket master at the manifest's sha256; px on a 1500 × 2100
- * master, 2100 × 1500 for the landscape split and battle). Layout v35 struck
+ * master). Layout v35 struck
  * the CC M15 family's hairline (4.4 (2)), the see-through masters' band
  * (4.17a) and the nyx / fullart / m15pw-c seams (4.17b), and added the
  * see-through slot and seam rules, which list the colourless tokens (4.17c,
@@ -594,20 +594,14 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
   },
   // The MSE layout templates — 4.21 re-sources all six from Card Conjurer
   // (4.21a struck flip, adventure and aftermath: their CC masters' windows
-  // are covered with 1.45–2.25 px to spare; 4.21b / 4.21c take the rest).
-  split: {
-    keys: "all",
-    todo: ["4.21"],
-    why: "both windows start at 200–202 px, the slots at 220.5: a 1.2 % H strip on each half (4.21's interim fix: art top 14.7 → 13.4)",
-    maxMissPx: 21.5,
-  },
-  saga: {
-    keys: "all",
-    todo: ["4.21"],
-    why: "window ≈ 725–1382 × 234–1760 vs slot 751.5–1380 × 237.3–1759.8: 1.5 px at the divider, a hairline along the top to x 715, 1–4 px elsewhere",
-    maxMissPx: { w: 28.5, u: 26.5, b: 37.5, r: 26.5, g: 27.5, c: 27.5, m: 27.5 },
-  },
-  battle: { keys: "all", todo: ["4.21"], why: "borderless PNG: the window runs into the transparent ring, the whole card (7.7; 4.21's interim: full-bleed artSlot)", maxMissPx: 642.5 },
+  // are covered with 1.45–2.25 px to spare; 4.21b struck split — both
+  // windows covered with 1.5–2.2 px to spare on their 2100 × 1500 masters —
+  // and battle, whose window (with the see-through sliver between its
+  // shield and the border) is covered with 2.8–3.8 px to spare and whose
+  // translucent rim — the whole body of the see-through colourless master,
+  // one picture under the frame — with 0.8–1.25 px).
+  // (4.21c struck saga: its CC masters' window, 752–1384 × 237–1758 px on
+  // every colour, is covered with 1.45–2.27 px to spare.)
   // Transparent rings and bands (7.7's known failures) the window leaks into,
   // and the showcase windows cut wider than their slots.
   lotr: { keys: "all", todo: ["4.35", "4.11"], why: "the ring 9.8–90.5 × 11.24–55.62 % vs slot 14–86 × 13–58 % (4.35 A8 / 4.11 re-measure)", maxMissPx: 69 },
@@ -631,7 +625,6 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
   extendedart: { keys: ["m"], todo: ["4.7"], why: "m: the window starts at 250 px, the slot at 249.9: 0.1 px of overscan, 1.05 needed (4.7: CC extended)", maxMissPx: 1.5 },
   modern: { keys: "all", todo: ["4.10"], why: "window bottom 1163–1164 px vs slot 1163.4: 0.4 px of overscan to 0.6 px exposed (4.10: CC 8th)", maxMissPx: 2 },
   modernland: { keys: "all", todo: ["4.10"], why: "window bottom 1164 px vs slot 1163.4: 0.6 px exposed (4.10: CC 8th)", maxMissPx: 2 },
-  alphatoken: { keys: "all", todo: ["4.54"], why: "window 162–1339 × 187–1295 vs slot 150–1350 × 189–1291.5: 2 px top, 3.5 px bottom (4.54 retires it)", maxMissPx: 5 },
   // The emblem (found by v35's see-through slot rule when #421 merged main):
   // two owner decisions (2026-09-29) meet at the window's top — the slot is
   // Scryfall's art_crop box exactly (from 250.4 px, never grown) and the

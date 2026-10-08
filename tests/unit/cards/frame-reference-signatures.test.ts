@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import referencesData from "@/lib/cards/frame-references.json";
 import printingsData from "./fixtures/reference-printings.json";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
-import { frameMatchFromScryfall } from "@/lib/scryfall/import-mapper";
+import { frameMatchFromScryfall, frontFacePairFromScryfall, printsTwoColorFrame } from "@/lib/scryfall/import-mapper";
+import { TWO_COLOR_PAIRS, framePairReferenceOptions } from "@/lib/cards/frame-reference-registry";
 import { validateReferenceForCombo } from "@/lib/cards/frame-reference-validation";
 import { bodyFor, dfcIconFamilyFromEffects, templateHasBackFace } from "@/lib/cards/dfc";
 import { parseTypeLine } from "@/lib/scryfall/import-mapper";
@@ -110,6 +111,35 @@ describe("frame registry references vs the signature registry (TODO 1.4 (c))", (
     }
   });
 
+  it("every borderless land PAIR reference is the exact borderless land in that pair, with no print variation the pair masters don't draw (TODO 4.56)", () => {
+    // Two prints per pair, each a two-colour land the registry calls exact
+    // on m15borderlessland with no gap left — never a dark-bar, shadow-box,
+    // short-box, crowned or nicknamed print — and whose pair, in printed
+    // order, is the row's.
+    let checked = 0;
+    for (const pair of TWO_COLOR_PAIRS) {
+      for (const ref of framePairReferenceOptions("m15borderlessland", pair)) {
+        const raw = printings[ref.scryfallId];
+        expect(raw, `${pair} ${ref.name}: a captured printing`).toBeDefined();
+        const card = scryfallCardSchema.parse(raw);
+        expect({ name: card.name, set: card.set }, pair).toEqual({ name: ref.name, set: ref.set });
+        const match = frameMatchFromScryfall(card);
+        expect({ status: match.status, template: match.template, signature: match.signature, landOn: match.landOn, gaps: match.gaps }, `${pair} ${ref.name}`).toEqual({
+          status: "exact",
+          template: "m15borderlessland",
+          signature: "borderless/land",
+          landOn: "m15land",
+          gaps: undefined,
+        });
+        expect(frontFacePairFromScryfall(card), ref.name).toBe(pair);
+        expect(printsTwoColorFrame(card), ref.name).toBe(true);
+        expect(card.frame_effects ?? [], ref.name).not.toContain("legendary");
+        checked += 1;
+      }
+    }
+    expect(checked).toBe(20);
+  });
+
   it("Ancient Den SLD #300 still imports as the exact borderless land, though no longer a reference (owner round 16)", () => {
     // It left white's references (Monumental Henge MH3 #354 alone); the
     // registry's answer for it is unchanged: `exact` on m15borderlessland,
@@ -198,15 +228,13 @@ describe("the pin check reads the signature (TODO 1.4)", () => {
     expect(validateReferenceForCombo(treasure, "m15tokenartifacttext", "c").warnings).toEqual([]);
   });
 
-  it("names the template keys when the two frames share a label (\"Token\", TODO 4.48a)", () => {
-    // The full-art design (m20token) and Alpha's token (alphatoken) are both
-    // "Token" since 4.48a: a 1993-frame token pinned on the m20token row
-    // must not read "resolves it to the Token frame, not Token".
+  it("a 1993-frame token resolves to the M15 token, as nearest (TODO 4.54: the Alpha token is retired)", () => {
+    // No 1993-frame token was printed; a printing that claims the frame
+    // lands where the 1997 and 2003 tokens do (token/old-frame, 4.43).
     const soldier = card(idOf("m20token", "w", "Soldier"));
     const oldBorder = scryfallCardSchema.parse({ ...(printings[soldier.id] as object), frame: "1993" });
-    expect(frameMatchFromScryfall(oldBorder).template).toBe("alphatoken");
-    expect(validateReferenceForCombo(oldBorder, "m20token", "w").warnings.join(" ")).toMatch(
-      /resolves it to the Token \(alphatoken\) frame, not Token \(m20token\)\./,
-    );
+    const match = frameMatchFromScryfall(oldBorder);
+    expect(match.template).toBe("m15token");
+    expect(match.status).toBe("nearest");
   });
 });

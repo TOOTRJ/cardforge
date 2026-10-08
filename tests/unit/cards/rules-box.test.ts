@@ -1,4 +1,3 @@
-import { join } from "node:path";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import {
@@ -33,6 +32,7 @@ import { plateInkRect } from "@/lib/cards/plate-ink";
 import { RULES_BOX_PAD_PX, RULES_SIZE_PX } from "@/lib/cards/typography";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { EOE_30, TLA_112, plainText } from "@/tests/unit/cards/fixtures/rules-texts";
+import { bucketMaster, haveBucketMasters } from "@/tests/stubs/bucket-masters";
 
 // ---------------------------------------------------------------------------
 // lib/cards/rules-box.ts — what each rules consumer hands the ONE rules layout
@@ -62,7 +62,7 @@ function textReaching(input: (text: string) => RulesLayoutInput, keepOut: Rect):
 }
 
 describe("the main box on every template", () => {
-  it("gives M15 and its skins the prints' margins (4 / 0 HD px), split its border's, the text-box tokens theirs, every other box its default", () => {
+  it("gives M15 and its skins the prints' margins (4 / 0 HD px), split and battle their Card Conjurer boxes', the text-box tokens theirs, every other box its default", () => {
     const TOKEN_TEXT = [
       "m15tokentext", "m15tokenartifacttext",
       // …and 4.52's emblem: TFDN #24 / TBLB #30 start their lines at x
@@ -72,10 +72,20 @@ describe("the main box on every template", () => {
       // 2 px (the textless height never draws it).
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
     ];
+    // The landscape pair (TODO 4.21b, layout v43): Card Conjurer's rules
+    // rects lie INSIDE the paper, where the prints start their lines.
+    const LANDSCAPE = ["split", "battle"];
     const withPrintMargins = FRAME_TEMPLATE_VALUES.filter(
-      (t) => t !== "split" && !TOKEN_TEXT.includes(t) && getFrameProfile(t).rules.padPx,
+      (t) => !LANDSCAPE.includes(t) && !TOKEN_TEXT.includes(t) && getFrameProfile(t).rules.padPx,
     );
-    expect(getFrameProfile("split").rules.padPx).toEqual({ left: 57, right: 54, top: 18, bottom: 18 });
+    // Split: each half's rect is the text column itself (the prints' lines
+    // start 17.7–18.3 px inside the paper, the rect 17) — no border inside
+    // it to pad past (the MSE rects spanned the window's width and held
+    // 33 / 38 px of textbox border: 57 / 54 px of padding).
+    expect(getFrameProfile("split").rules.padPx).toEqual({ left: 0, right: 0, top: 0, bottom: 0 });
+    expect(getFrameProfile("split").secondFace!.rules.padPx).toEqual({ left: 0, right: 0, top: 0, bottom: 0 });
+    // Battle: CC's box from 272 px, the prints' lines from 272–275: 1 px.
+    expect(getFrameProfile("battle").rules.padPx).toEqual({ x: 1, y: 0 });
     // TODO 4.49 (b): the 2014–19 text-box token prints set their rules from
     // x 130 to 1372 in CC's 129–1371 px box: 2 px either side, none above.
     for (const t of TOKEN_TEXT) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 2, y: 0 });
@@ -229,22 +239,42 @@ describe("the main box on every template", () => {
     expect(found).toBe(true);
   });
 
-  it("keeps a battle's text out of its defense disc when it draws one", () => {
+  it("keeps a battle's text out of the shield its master paints — on EVERY battle, a defense or none", () => {
+    // TODO 4.21b: the defense shield is part of Card Conjurer's master, so
+    // it is on the card whether or not a value is drawn in it (the MSE
+    // profile drew a disc, and kept the text out only when it drew one).
     const battle = getFrameProfile("battle");
     const aspect = aspectOf(battle);
-    const disc = statInkRect(battle.defense!);
-    const shown = mainRulesLayout({ layout: battle, rulesText: plainText(300), aspect, show: { defense: true } });
-    const hidden = mainRulesLayout({ layout: battle, rulesText: plainText(300), aspect, show: { defense: false } });
-    expect(shown.input.keepOuts).toEqual([disc]);
-    expect(hidden.input.keepOuts).toEqual([]);
-    for (const t of RULES_TARGETS) expect(hits(shown, disc, t), t).toBe(false);
+    const shield = statInkRect(battle.defense!);
+    expect(shield).toBe(battle.defense!.paintedRect);
+    // The shield reaches into the rules box from its bottom-right corner.
+    const box = battle.rules.rect;
+    expect(shield.leftPct).toBeLessThan(box.leftPct + box.widthPct);
+    expect(shield.topPct).toBeLessThan(box.topPct + box.heightPct);
+    expect(shield.topPct).toBeGreaterThan(box.topPct);
+    const text = textReaching((rulesText) => mainRulesLayout({ layout: battle, rulesText, aspect, show: {} }).input, shield);
+    for (const show of [{ defense: true }, { defense: false }, {}]) {
+      const layout = mainRulesLayout({ layout: battle, rulesText: text, aspect, show });
+      expect(layout.input.keepOuts, JSON.stringify(show)).toEqual([shield]);
+      expect(layout.clipped, JSON.stringify(show)).toBe(false);
+      for (const t of RULES_TARGETS) expect(hits(layout, shield, t), `${JSON.stringify(show)} ${t}`).toBe(false);
+    }
+    // Without the keep-out the same text runs a line under the shield.
+    const bare = fitRulesLayout({ ...mainRulesLayout({ layout: battle, rulesText: text, aspect, show: {} }).input, keepOuts: [] });
+    expect(RULES_TARGETS.some((t) => hits(bare, shield, t))).toBe(true);
   });
 
   it("draws the landscape box on the 2100 px HD card", () => {
     const battle = getFrameProfile("battle");
     const layout = mainRulesLayout({ layout: battle, rulesText: "Flying", aspect: 5 / 7, show: {} });
     expect(layout.orientation).toBe("landscape");
-    expect(layout.sizePx).toBe(RULES_SIZE_PX.reduced);
+    // The battle and both split halves print at the 9 pt ladder top (TODO
+    // 4.21b: MOM #21 sets 76 px, TSR #161 / #186 too) — the same 76 HD px a
+    // portrait card's full box takes, on the 2100 px card.
+    expect(layout.sizePx).toBe(RULES_SIZE_PX.standard);
+    const split = getFrameProfile("split");
+    expect(mainRulesLayout({ layout: split, rulesText: "Flying", aspect: 5 / 7, show: {} }).sizePx).toBe(RULES_SIZE_PX.standard);
+    expect(secondFaceRulesLayout({ layout: split, rulesText: "Flying", aspect: 5 / 7, show: {} })!.sizePx).toBe(RULES_SIZE_PX.standard);
     expect(rulesTargetFor(2100, "landscape")).toBe("hd");
     expect(rulesTargetFor(1050, "landscape")).toBe("default");
     expect(rulesTargetFor(1500, "portrait")).toBe("hd");
@@ -271,62 +301,102 @@ describe("the adventure page and the second faces", () => {
       const p = getFrameProfile(t);
       const layout = secondFaceRulesLayout({ layout: p, rulesText: "Draw a card.", aspect: aspectOf(p), show: {} })!;
       expect(layout.input.rect, t).toBe(p.secondFace!.rules.rect);
-      // Split's halves pad past the textbox border inside their boxes (the
-      // next test); flip and aftermath take a second face's default.
+      // Split's halves take their own padding — none: their rects are the
+      // text columns (the next test); flip and aftermath take a second
+      // face's default.
       expect(layout.input.padPx, t).toEqual(t === "split" ? p.rules.padPx : SECOND_FACE_PAD_PX);
       expect(layout.input.vAlign, t).toBe(p.secondFace!.rules.vAlign ?? "start");
     }
-    // Split's right half honours its "start" (it was always centred).
+    // Both split halves centre their block in the box, as the prints do
+    // (TODO 4.21b: the ink of MH2 #123 / #60 and TSR #161 / #186's texts is
+    // centred on 1178.5 px ± 2) — the right half exactly like the left.
     const split = getFrameProfile("split");
-    expect(split.secondFace!.rules.vAlign).toBe("start");
+    expect(split.rules.vAlign).toBe("center");
+    expect(split.secondFace!.rules.vAlign).toBe("center");
+    const left = mainRulesLayout({ layout: split, rulesText: "Draw a card.", aspect: 5 / 7, show: {} });
     const right = secondFaceRulesLayout({ layout: split, rulesText: "Draw a card.", aspect: 5 / 7, show: {} })!;
-    const placed = linePositions(right, "hd");
-    expect(placed.top).toBe(placed.interior.top);
+    for (const target of RULES_TARGETS) {
+      const [l, r] = [linePositions(left, target), linePositions(right, target)];
+      // The same rows on both halves, one half apart.
+      expect(r.top).toBe(l.top);
+      expect(r.interior.top).toBe(l.interior.top);
+      expect(r.lines.map((line) => [line.top, line.height, line.inkTop, line.inkBottom])).toEqual(
+        l.lines.map((line) => [line.top, line.height, line.inkTop, line.inkBottom]),
+      );
+      // …the right half's lines one half (966 HD px) over.
+      const dx = ((split.secondFace!.rules.rect.leftPct - split.rules.rect.leftPct) / 100) * (target === "hd" ? 2100 : 1050);
+      expect(dx).toBeCloseTo(target === "hd" ? 966 : 483, 6);
+      r.lines.forEach((line, i) => expect(line.left - l.lines[i].left, `line ${i}`).toBeCloseTo(dx, 0));
+      // A short text sits well inside the box, the air split evenly.
+      expect(r.top).toBeGreaterThan(r.interior.top + 100 * (target === "hd" ? 1 : 0.5));
+    }
   });
 
-  it("keeps both split halves' text inside the frame's textbox border, at the MSE style's margins", async () => {
-    // The border measured on the masters (every colour but white, whose
-    // border is the cream's colour; the same MSE half in every colour): the
-    // cream — within 28 of the box's own colour on every channel, three px in
-    // a row — starts at most 33 HD px inside each half's rect and ends at
-    // most 38 px inside its right edge, on every row of the box.
-    const split = getFrameProfile("split");
-    const halves = [
-      { name: "left", rect: split.rules.rect },
-      { name: "right", rect: split.secondFace!.rules.rect },
-    ];
-    const widest = { left: 0, right: 0 };
-    for (const color of ["w", "u", "b", "r", "g", "c", "m"].filter((c) => c !== "w")) {
-      const { data, info } = await sharp(join(process.cwd(), "public/frames/split", `${color}.png`))
-        .removeAlpha()
-        .raw()
-        .toBuffer({ resolveWithObject: true });
-      expect([info.width, info.height], color).toEqual([2100, 1500]);
-      const px = (x: number, y: number) => [0, 1, 2].map((c) => data[(y * info.width + x) * 3 + c]);
-      for (const { rect } of halves) {
-        const box = rectPx(rect, "landscape", 5 / 7, "hd");
-        const mid = Math.round(box.left + box.width / 2);
-        for (let y = box.top; y < box.bottom; y += 4) {
-          const ref = Array.from({ length: 100 }, (_, i) => px(mid - 200 + 4 * i, y)).sort(
-            (a, b) => a[0] + a[1] + a[2] - (b[0] + b[1] + b[2]),
-          )[50];
-          const cream = (x: number) => [x, x + 1, x + 2].every((xx) => px(xx, y).every((v, c) => Math.abs(v - ref[c]) <= 28));
-          const creamR = (x: number) => [x, x - 1, x - 2].every((xx) => px(xx, y).every((v, c) => Math.abs(v - ref[c]) <= 28));
-          let l = box.left;
-          while (!cream(l)) l += 1;
-          let r = box.right - 1;
-          while (!creamR(r)) r -= 1;
-          widest.left = Math.max(widest.left, l - box.left);
-          widest.right = Math.max(widest.right, box.right - (r + 1));
+  const SPLIT_KEYS = ["w", "u", "b", "r", "g", "c", "m"];
+  const splitMasters = SPLIT_KEYS.map((k) => `split/${k}.png`);
+  // The paper each half's rules rect lies in, on the Card Conjurer masters
+  // (the frames bucket: FRAMES_BUILD_DIR, else .frames-build; CI fetches
+  // them): HD px left of / right of the rect before the box's own outline.
+  it.skipIf(!haveBucketMasters(splitMasters))(
+    "sets both split halves' rules rects INSIDE the paper of every colour master: no textbox border to pad past (set FRAMES_BUILD_DIR if skipped)",
+    async () => {
+      const split = getFrameProfile("split");
+      const halves = [
+        { name: "left", rect: split.rules.rect },
+        { name: "right", rect: split.secondFace!.rules.rect },
+      ];
+      const widest = { left: 0, right: 0 };
+      const margin = { left: Infinity, right: Infinity };
+      for (const color of SPLIT_KEYS) {
+        const { data, info } = await sharp(bucketMaster(`split/${color}.png`)!).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+        expect([info.width, info.height], color).toEqual([2100, 1500]);
+        const px = (x: number, y: number) => [0, 1, 2].map((c) => data[(y * info.width + x) * 3 + c]);
+        for (const { rect } of halves) {
+          const box = rectPx(rect, "landscape", 5 / 7, "hd");
+          const mid = Math.round(box.left + box.width / 2);
+          for (let y = Math.ceil(box.top); y < box.bottom; y += 4) {
+            const ref = Array.from({ length: 100 }, (_, i) => px(mid - 200 + 4 * i, y)).sort(
+              (a, b) => a[0] + a[1] + a[2] - (b[0] + b[1] + b[2]),
+            )[50];
+            // Paper: within 40 of the row's own median on every channel (the
+            // Card Conjurer paper is mottled; its outline is a saturated
+            // colour or a dark grey, 100+ away).
+            const paper = (x: number) => px(x, y).every((v, c) => Math.abs(v - ref[c]) <= 40);
+            // No border INSIDE the rect: its first and last px are paper.
+            let l = Math.ceil(box.left);
+            while (!paper(l)) l += 1;
+            let r = Math.floor(box.right) - 1;
+            while (!paper(r)) r -= 1;
+            widest.left = Math.max(widest.left, l - Math.ceil(box.left));
+            widest.right = Math.max(widest.right, Math.floor(box.right) - 1 - r);
+            // …and the paper runs on past it: how far, before the outline.
+            let out = Math.ceil(box.left);
+            while (paper(out - 1)) out -= 1;
+            margin.left = Math.min(margin.left, Math.ceil(box.left) - out);
+            let outR = Math.floor(box.right) - 1;
+            while (paper(outR + 1)) outR += 1;
+            margin.right = Math.min(margin.right, outR - (Math.floor(box.right) - 1));
+          }
         }
       }
-    }
-    expect(widest).toEqual(SPLIT_TEXTBOX_BORDER_PX);
+      expect(widest).toEqual(SPLIT_TEXTBOX_BORDER_PX);
+      expect(SPLIT_TEXTBOX_BORDER_PX).toEqual({ left: 0, right: 0 });
+      // The paper is 211–1025 px round the pack's 228–1008 rect (and the
+      // same on the right half): 17 px either side, on every colour.
+      expect(margin.left).toBeGreaterThanOrEqual(14);
+      expect(margin.left).toBeLessThanOrEqual(18);
+      expect(margin.right).toBeGreaterThanOrEqual(14);
+      expect(margin.right).toBeLessThanOrEqual(18);
+    },
+  );
 
+  it("keeps every line's ink of both split halves inside its rules rect's paper margin, at both targets and every ladder size", () => {
+    const split = getFrameProfile("split");
     // Every line's ink — an italic "f" leading a reminder, an overhanging
-    // last glyph — lands inside the cream on both halves, at both targets,
-    // at every size the ladder reaches; the column starts the MSE style's
-    // 24 px (right: 16) inside the border.
+    // last glyph — may leave the rect (the column has no padding) but never
+    // by more than a few px: the paper runs 17 px past it on both sides
+    // (the test above), on both halves, at both targets, at every size the
+    // ladder reaches.
     const texts = [
       "Aftermath (Cast this spell only from your graveyard. Then exile it.)\nEach opponent loses X life. You gain life equal to the life lost this way.",
       "(from your graveyard) (fff jjj of) " + plainText(60),
@@ -344,15 +414,15 @@ describe("the adventure page and the second faces", () => {
       for (const target of RULES_TARGETS) {
         const placed = linePositions(layout, target);
         const scale = target === "hd" ? 1 : 0.5;
-        const cream = {
-          left: placed.box.left + SPLIT_TEXTBOX_BORDER_PX.left * scale,
-          right: placed.box.left + placed.box.width - SPLIT_TEXTBOX_BORDER_PX.right * scale,
-        };
-        expect(placed.interior.left - cream.left, target).toBeGreaterThanOrEqual(24 * scale);
-        expect(cream.right - (placed.interior.left + placed.interior.width), target).toBeGreaterThanOrEqual(16 * scale - 0.5);
+        // The column is the rect (no border inside it, no padding)…
+        expect(placed.interior.left, target).toBeGreaterThanOrEqual(placed.box.left);
+        expect(placed.interior.left - placed.box.left, target).toBeLessThanOrEqual(12 * scale);
+        expect(placed.interior.left + placed.interior.width, target).toBeLessThanOrEqual(placed.box.left + placed.box.width + 0.5);
+        // …and no glyph's ink leaves the paper's 14 px margin round it.
+        const paper = { left: placed.box.left - 14 * scale, right: placed.box.left + placed.box.width + 14 * scale };
         for (const line of placed.lines) {
-          expect(line.inkLeft, `${layout.sizePx} ${target} line ${line.block}.${line.line}`).toBeGreaterThanOrEqual(cream.left);
-          expect(line.inkRight, `${layout.sizePx} ${target} line ${line.block}.${line.line}`).toBeLessThanOrEqual(cream.right);
+          expect(line.inkLeft, `${layout.sizePx} ${target} line ${line.block}.${line.line}`).toBeGreaterThanOrEqual(paper.left);
+          expect(line.inkRight, `${layout.sizePx} ${target} line ${line.block}.${line.line}`).toBeLessThanOrEqual(paper.right);
         }
       }
     }

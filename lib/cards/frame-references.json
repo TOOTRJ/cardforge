@@ -1607,7 +1607,7 @@
     }
   },
   "m15borderlessland": {
-    "note": "The borderless nonbasic land (frames plan 4.34): the colour's tint on the title bar, the type bar AND the text box (a borderless spell tints its title bar only). Non-legendary (no crown until 4.6), no nickname line; the first of each pair registers within ±2 px of the master on every bar and box edge (print review 2026-09-29) — MH2 #325 is an offset scan (its whole card sits 4–11 px off, as SLD #300's does), kept as the second printing. w, u and g have ONE reference. White verifies against Monumental Henge MH3 #354 alone (owner round 16, 2026-09-29): Ancient Den SLD #300 — the offset scan, and Secret Lair's centred one-line print — is no longer a reference (it still imports as the exact borderless land). Owner round 15 (2026-09-29): Archway of Innovation and Shifting Woodland are the only mono-blue / mono-green borderless nonbasic lands that print the tinted look on a clean scan — Scryfall's other exact ones (Shelldock Isle SLD #230, Seat of the Synod SLD #301, Tree of Tales SLD #304) let the art through their bars (luminance σ 22–36 across the type bar, against 2–5 on MH3) and SLD #304 is a scaled scan; the rest print a crown, a nickname, dark bars or a dark type bar, or another frame (showcase, source material, a poster, a two-face layout). The land frame's colour follows the mana it makes, so c = colourless lands (Reliquary Tower) and m = the three-and-more-colour lands (gold bars, box and pinline: Command Tower, Avengers Tower). The TODO's two-colour references (Deserted Beach MID #281, Spirebluff Canal OTJ #304) print grey bars with a SPLIT pinline and box: 4.6's pair masters, not scored against m. Most sets print the type bar in the title's tint (2XM, MID, VOW, 2X2, DMU, BRO, ONE, CMM, LCI, RVR, MKM, OTJ, DSK, FDN, DFT, MSH …); the spells' look — a DARK type bar and text box under the colour's title bar (TDM, WOE, ACR, EOE, FIC, FRA #379 / #397–401, many 2024+ SLD drops, pinned nearest in the registry) — a dark type bar alone over the tinted box (FRA #380–381, SLD #250 / #1989 / #2143 / #7112 — the second skeptic pass moved u and g off Theorist's Sanctum and Roiling Canopy for it) and the short box (the SNC triomes) are variations this master doesn't draw; no reference comes from them. The artifact lands of SLD #300–304 print the land look. The holo-stamp arch is masked from the score, as on m15borderless.",
+    "note": "The borderless nonbasic land (frames plan 4.34): the colour's tint on the title bar, the type bar AND the text box (a borderless spell tints its title bar only). Non-legendary (no crown until 4.6), no nickname line; the first of each pair registers within ±2 px of the master on every bar and box edge (print review 2026-09-29) — MH2 #325 is an offset scan (its whole card sits 4–11 px off, as SLD #300's does), kept as the second printing. w, u and g have ONE reference. White verifies against Monumental Henge MH3 #354 alone (owner round 16, 2026-09-29): Ancient Den SLD #300 — the offset scan, and Secret Lair's centred one-line print — is no longer a reference (it still imports as the exact borderless land). Owner round 15 (2026-09-29): Archway of Innovation and Shifting Woodland are the only mono-blue / mono-green borderless nonbasic lands that print the tinted look on a clean scan — Scryfall's other exact ones (Shelldock Isle SLD #230, Seat of the Synod SLD #301, Tree of Tales SLD #304) let the art through their bars (luminance σ 22–36 across the type bar, against 2–5 on MH3) and SLD #304 is a scaled scan; the rest print a crown, a nickname, dark bars or a dark type bar, or another frame (showcase, source material, a poster, a two-face layout). The land frame's colour follows the mana it makes, so c = colourless lands (Reliquary Tower) and m = the three-and-more-colour lands (gold bars, box and pinline: Command Tower, Avengers Tower). The two-colour lands (Deserted Beach MID #281, Spirebluff Canal OTJ #304) print grey bars with a SPLIT pinline and box: the pair masters (TODO 4.56), which ride the m tick and are judged against `pairs` below — two prints per pair, a WotC digital render first (MKM's surveil lands, all ten pairs) — never scored against m. Most sets print the type bar in the title's tint (2XM, MID, VOW, 2X2, DMU, BRO, ONE, CMM, LCI, RVR, MKM, OTJ, DSK, FDN, DFT, MSH …); the spells' look — a DARK type bar and text box under the colour's title bar (TDM, WOE, ACR, EOE, FIC, FRA #379, many 2024+ SLD drops, pinned nearest in the registry) — a dark type bar alone over the tinted box (FRA #380–381, SLD #250 / #1989 / #2143 / #7112 — the second skeptic pass moved u and g off Theorist's Sanctum and Roiling Canopy for it) 2025's see-through box with a shadow behind the text (every two-colour run from the SPG fetch lands on: ECL, SOS, MSH, FRA #397–401, SLD #2440) and the short box (the SNC triomes, UNF's shock lands, SLD #456–460) are variations this master doesn't draw; no reference comes from them. The artifact lands of SLD #300–304 print the land look. The holo-stamp arch is masked from the score, as on m15borderless.",
     "confirm": true,
     "colors": {
       "w": [
@@ -1677,6 +1677,128 @@
           "name": "Avengers Tower",
           "set": "msh",
           "scryfallId": "1292713f-1462-438f-a3a2-1f69ece99668"
+        }
+      ]
+    },
+    "pairs": {
+      "wu": [
+        {
+          "name": "Meticulous Archive",
+          "set": "mkm",
+          "scryfallId": "79d4ba4b-03f3-4e64-b4e7-8c025fc70178"
+        },
+        {
+          "name": "Deserted Beach",
+          "set": "mid",
+          "scryfallId": "c092d9c5-538f-4667-9070-bdce7f8b522a"
+        }
+      ],
+      "wb": [
+        {
+          "name": "Shadowy Backstreet",
+          "set": "mkm",
+          "scryfallId": "27eae4ce-e0b3-482b-9136-6fc17333877e"
+        },
+        {
+          "name": "Concealed Courtyard",
+          "set": "otj",
+          "scryfallId": "d7e85ace-7e2c-46f6-adb9-07f33f8e1750"
+        }
+      ],
+      "ub": [
+        {
+          "name": "Undercity Sewers",
+          "set": "mkm",
+          "scryfallId": "3239a1e5-a002-4389-b9a7-049b1d60e2ac"
+        },
+        {
+          "name": "Gloomlake Verge",
+          "set": "dsk",
+          "scryfallId": "b414e4bd-a443-4ab3-bee4-1ad1d039aa1a"
+        }
+      ],
+      "ur": [
+        {
+          "name": "Thundering Falls",
+          "set": "mkm",
+          "scryfallId": "da1792e4-2170-42ae-a335-fde6f5ef8932"
+        },
+        {
+          "name": "Spirebluff Canal",
+          "set": "otj",
+          "scryfallId": "9d83bdb3-1f04-4b99-a36b-312da0cbed50"
+        }
+      ],
+      "br": [
+        {
+          "name": "Raucous Theater",
+          "set": "mkm",
+          "scryfallId": "2faf0337-c7a3-45a0-bb14-c431526da2cd"
+        },
+        {
+          "name": "Blazemire Verge",
+          "set": "dsk",
+          "scryfallId": "73a926c5-ba2b-4ac5-9717-6c9181f9a827"
+        }
+      ],
+      "bg": [
+        {
+          "name": "Underground Mortuary",
+          "set": "mkm",
+          "scryfallId": "0d8938e4-bfa5-47e1-8c71-9c6583346300"
+        },
+        {
+          "name": "Blooming Marsh",
+          "set": "otj",
+          "scryfallId": "1cfb4a80-3319-41ad-9d97-a9a53c9f84fb"
+        }
+      ],
+      "rg": [
+        {
+          "name": "Commercial District",
+          "set": "mkm",
+          "scryfallId": "3a9889ab-3527-414e-9c30-539f0608bd2b"
+        },
+        {
+          "name": "Thornspire Verge",
+          "set": "dsk",
+          "scryfallId": "a817f77d-19ea-4342-b90f-d92f62543303"
+        }
+      ],
+      "rw": [
+        {
+          "name": "Elegant Parlor",
+          "set": "mkm",
+          "scryfallId": "1f0cef88-50bd-4baa-8d02-26ec4967a7be"
+        },
+        {
+          "name": "Inspiring Vantage",
+          "set": "otj",
+          "scryfallId": "551e216d-a82f-49a1-a3fd-8165715a05c4"
+        }
+      ],
+      "gw": [
+        {
+          "name": "Lush Portico",
+          "set": "mkm",
+          "scryfallId": "c3bd2920-9fbf-4853-ace3-66cd7015de32"
+        },
+        {
+          "name": "Hushwood Verge",
+          "set": "dsk",
+          "scryfallId": "2bc1b38f-11bf-4eb0-b333-4d605290e75b"
+        }
+      ],
+      "gu": [
+        {
+          "name": "Hedge Maze",
+          "set": "mkm",
+          "scryfallId": "ee215175-d48b-4630-a1b1-36e195db05dd"
+        },
+        {
+          "name": "Botanical Sanctum",
+          "set": "otj",
+          "scryfallId": "82670072-9851-48c7-a8f5-7842bff6c252"
         }
       ]
     }
@@ -2629,6 +2751,7 @@
     }
   },
   "saga": {
+    "note": "The regular 2015-frame saga (TODO 4.21c): the title bar, the chapter rail with its reminder block and ribbon, the art column, the type bar. Gold is referenced by the two three-colour prints on the plain gold frame, 40K #126 The Horus Heresy and LTC #58 In the Darkness Bind Them (which also prints a three-badge stack) — NEO The Kami War is a transforming saga with a DFC marker and an enchantment frame effect (TODO 5.5), and KHM’s two-colour sagas (Fall of the Impostor, Ascent of the Worthy) print the two-colour frame (TODO 4.6f’s pair masters). Colourless is the land saga, MH2 #259 Urza’s Saga — the only colourless saga printed on this frame. Not referenced here: FIN’s Summons (Enchantment Creature sagas with a P/T box, TODO 4.5d / 4.7) and DMU’s read-ahead sagas (their reminder box is 97 px taller at 1500 × 2100, so the chapters start at 717 px, not 621).",
     "colors": {
       "w": [
         {
@@ -2638,14 +2761,9 @@
           "curated": true
         },
         {
-          "name": "Summon: Choco/Mog",
-          "set": "fin",
-          "scryfallId": "00546117-018a-4286-bc20-b5446c5be56f"
-        },
-        {
-          "name": "Urza Assembles the Titans",
-          "set": "dmu",
-          "scryfallId": "10a544d7-ead7-42fd-a35a-c1b672771d5b"
+          "name": "The Princess Takes Flight",
+          "set": "woe",
+          "scryfallId": "dad7bd06-22e4-40f8-bda9-bcdbb2d8f632"
         }
       ],
       "u": [
@@ -2674,14 +2792,9 @@
           "curated": true
         },
         {
-          "name": "Summon: Anima",
-          "set": "fin",
-          "scryfallId": "aa4f6703-21f8-4c29-ad5a-5afb54188ade"
-        },
-        {
-          "name": "The Cruelty of Gix",
-          "set": "dmu",
-          "scryfallId": "3d6e5eb3-25ab-4e9e-96e8-655e0ce74675"
+          "name": "Rite of Belzenlok",
+          "set": "dom",
+          "scryfallId": "1ed7cca3-79be-44ca-bf10-2ae1c0835ed1"
         }
       ],
       "r": [
@@ -2692,14 +2805,9 @@
           "curated": true
         },
         {
-          "name": "Summon: G.F. Ifrit",
-          "set": "fin",
-          "scryfallId": "c6c73092-5195-4bdc-b039-a699f6e297b2"
-        },
-        {
-          "name": "Yotia Declares War",
-          "set": "dmu",
-          "scryfallId": "3bd9e99a-ae8c-4323-aa86-b19288c877d4"
+          "name": "The Triumph of Anax",
+          "set": "thb",
+          "scryfallId": "49b5b348-1415-4062-a2a7-017694424c05"
         }
       ],
       "g": [
@@ -2713,11 +2821,6 @@
           "name": "Welcome to Sweettooth",
           "set": "woe",
           "scryfallId": "8e629a31-2e06-4f95-9628-34670dcf68b9"
-        },
-        {
-          "name": "Summon: Fenrir",
-          "set": "fin",
-          "scryfallId": "93feb9d5-d004-4598-a448-b3488c869c05"
         }
       ],
       "c": [
@@ -2726,29 +2829,19 @@
           "set": "mh2",
           "scryfallId": "c1e0f201-42cb-46a1-901a-65bb4fc18f6c",
           "curated": true
-        },
-        {
-          "name": "Summon: Bahamut",
-          "set": "fin",
-          "scryfallId": "95318d85-4a08-47ac-a43d-ea83c0bea81c"
         }
       ],
       "m": [
         {
-          "name": "The Kami War // O-Kagachi Made Manifest",
-          "set": "neo",
-          "scryfallId": "36052532-5028-43a8-9fc4-56221ec867fd",
+          "name": "The Horus Heresy",
+          "set": "40k",
+          "scryfallId": "c9551a51-2bbd-425b-a634-185921a96865",
           "curated": true
         },
         {
-          "name": "Fall of the Impostor",
-          "set": "khm",
-          "scryfallId": "d7de696a-49c2-421d-a86c-bcffd68870c6"
-        },
-        {
-          "name": "Ascent of the Worthy",
-          "set": "khm",
-          "scryfallId": "0bf01666-0fbf-4b15-a33d-964165bbfafb"
+          "name": "In the Darkness Bind Them",
+          "set": "ltc",
+          "scryfallId": "f7f7413b-0a65-4338-90eb-4b4c5462c21c"
         }
       ]
     }
@@ -2857,25 +2950,54 @@
     }
   },
   "split": {
-    "note": "Mono-colour split cards were never printed in the M15 frame.",
+    "note": "The M15 split frame as printed since 2018, its collector line down the card’s left border: mono-red MH2 #123 Fast // Furious (alternates WHO #77 Coward // Killer, TSR #156 Boom // Bust, #161 Dead // Gone, #186 Rough // Tumble) and mono-blue MH2 #60 Said // Done (TODO 4.21b). split/m’s reference is C16 #239 Trial // Error, the only gold // gold M15 split outside a showcase — printed in the frame’s 2016 arrangement (the collector line along the bottom border: both halves end about 100 px higher and the left one starts about 90 px further left at HD), so it shows the gold dress, not where the halves sit. No white, black or green split was printed in the M15 frame (black only as the UNK playtest card Fear // Loathing) and no colourless one: those four are built and never offered — split/c is Card Conjurer’s artifact frame, a render stand-in — and stay unverified until a print appears (owner decision 2026-09-29). A split whose halves differ in colour (GRN #224 Expansion // Explosion, hybrid // gold; DMR #209 Pain // Suffering, mono // mono) needs TODO 4.26 (per-part colour): it imports as the nearest frame, blocked by 4.26, and is never a reference here. J21 #730 Fast // Furious is an Arena render in Arena’s own layout, not a print.",
     "colors": {
       "w": null,
-      "u": null,
+      "u": [
+        {
+          "name": "Said // Done",
+          "set": "mh2",
+          "scryfallId": "43ab3ed2-2b50-4488-a21f-60965222970a",
+          "curated": true
+        }
+      ],
       "b": null,
-      "r": null,
+      "r": [
+        {
+          "name": "Fast // Furious",
+          "set": "mh2",
+          "scryfallId": "5b209759-6215-49e8-a6a0-a6c94040adb2",
+          "curated": true
+        },
+        {
+          "name": "Coward // Killer",
+          "set": "who",
+          "scryfallId": "9e389269-deef-4c48-b6d1-c505bf7cc6b3"
+        },
+        {
+          "name": "Boom // Bust",
+          "set": "tsr",
+          "scryfallId": "8ffdee1b-bb5d-44e6-a90d-6f9e9266d4fd"
+        },
+        {
+          "name": "Dead // Gone",
+          "set": "tsr",
+          "scryfallId": "45b090c7-f1ba-4656-8b51-915fc1876922"
+        },
+        {
+          "name": "Rough // Tumble",
+          "set": "tsr",
+          "scryfallId": "ea0cdb87-030a-4696-a16f-c971cdced3ca"
+        }
+      ],
       "g": null,
       "c": null,
       "m": [
         {
-          "name": "Expansion // Explosion",
-          "set": "grn",
-          "scryfallId": "e0644c92-4d67-475e-8c8e-0e2c493682fb",
+          "name": "Trial // Error",
+          "set": "c16",
+          "scryfallId": "383451e1-9b97-4c85-a044-7c68b61c8c65",
           "curated": true
-        },
-        {
-          "name": "Pain // Suffering",
-          "set": "dmr",
-          "scryfallId": "3d11164c-f27b-4cad-8620-d97ed384f0e6"
         }
       ]
     }
@@ -3068,6 +3190,11 @@
       "u": [
         {
           "name": "Unsummon",
+          "set": "leb",
+          "scryfallId": "686843c8-8c8a-4af6-bca8-e7f7583cc886"
+        },
+        {
+          "name": "Unsummon",
           "set": "itp",
           "scryfallId": "550313e1-f8aa-4c31-a78c-3da2d8aada6f"
         },
@@ -3078,6 +3205,11 @@
         }
       ],
       "b": [
+        {
+          "name": "Dark Ritual",
+          "set": "leb",
+          "scryfallId": "0690f724-eb95-416b-b064-f1239e2a30e8"
+        },
         {
           "name": "Dark Ritual",
           "set": "itp",
@@ -3092,6 +3224,11 @@
       "r": [
         {
           "name": "Stone Rain",
+          "set": "leb",
+          "scryfallId": "901831ad-1840-4287-b6a0-bea310598dc2"
+        },
+        {
+          "name": "Stone Rain",
           "set": "4ed",
           "scryfallId": "b9029bfb-fcff-4f80-a423-c2cfdc881c61"
         },
@@ -3104,6 +3241,11 @@
       "g": [
         {
           "name": "Tsunami",
+          "set": "leb",
+          "scryfallId": "1f4b6f5a-1ba2-409d-9b9b-91e2c1470f62"
+        },
+        {
+          "name": "Tsunami",
           "set": "4ed",
           "scryfallId": "227c2abc-d484-4198-863c-3266a83249c6"
         },
@@ -3114,6 +3256,11 @@
         }
       ],
       "c": [
+        {
+          "name": "Jayemdae Tome",
+          "set": "leb",
+          "scryfallId": "e48b1c51-c0fd-4c08-8631-80f507b04d28"
+        },
         {
           "name": "Jayemdae Tome",
           "set": "itp",
@@ -3144,61 +3291,61 @@
       "w": [
         {
           "name": "Plains",
-          "set": "itp",
-          "scryfallId": "9919afe3-b65e-4ec6-8a4f-9adbe5682ac7"
+          "set": "lea",
+          "scryfallId": "b1623d57-4729-4796-b3f7-f1837a05c6ed"
         },
         {
           "name": "Plains",
-          "set": "lea",
-          "scryfallId": "b1623d57-4729-4796-b3f7-f1837a05c6ed"
+          "set": "itp",
+          "scryfallId": "9919afe3-b65e-4ec6-8a4f-9adbe5682ac7"
         }
       ],
       "u": [
         {
           "name": "Island",
-          "set": "itp",
-          "scryfallId": "1b42446b-379e-4952-ab41-8fffeff7d14b"
+          "set": "lea",
+          "scryfallId": "90a57c0e-fa61-45ef-955d-d296403967d5"
         },
         {
           "name": "Island",
-          "set": "lea",
-          "scryfallId": "90a57c0e-fa61-45ef-955d-d296403967d5"
+          "set": "itp",
+          "scryfallId": "1b42446b-379e-4952-ab41-8fffeff7d14b"
         }
       ],
       "b": [
         {
           "name": "Swamp",
-          "set": "itp",
-          "scryfallId": "026cdd68-9a0e-4261-9390-e8abbcd378ba"
+          "set": "lea",
+          "scryfallId": "6176936d-72e2-4205-8871-4c5a4f1cb2d8"
         },
         {
           "name": "Swamp",
-          "set": "lea",
-          "scryfallId": "6176936d-72e2-4205-8871-4c5a4f1cb2d8"
+          "set": "itp",
+          "scryfallId": "026cdd68-9a0e-4261-9390-e8abbcd378ba"
         }
       ],
       "r": [
         {
           "name": "Mountain",
-          "set": "itp",
-          "scryfallId": "f7a2af07-ef48-4492-bd2e-53320a26a89a"
+          "set": "lea",
+          "scryfallId": "eace2c85-976c-425e-9800-5a6ccbd91b56"
         },
         {
           "name": "Mountain",
-          "set": "lea",
-          "scryfallId": "eace2c85-976c-425e-9800-5a6ccbd91b56"
+          "set": "itp",
+          "scryfallId": "f7a2af07-ef48-4492-bd2e-53320a26a89a"
         }
       ],
       "g": [
         {
           "name": "Forest",
-          "set": "itp",
-          "scryfallId": "f9f4448e-076b-4add-828f-6f218bef8a93"
+          "set": "lea",
+          "scryfallId": "6f1c8cb0-38eb-408b-94e8-16db83999b3b"
         },
         {
           "name": "Forest",
-          "set": "lea",
-          "scryfallId": "6f1c8cb0-38eb-408b-94e8-16db83999b3b"
+          "set": "itp",
+          "scryfallId": "f9f4448e-076b-4add-828f-6f218bef8a93"
         }
       ],
       "c": [
@@ -3216,6 +3363,11 @@
       "m": [
         {
           "name": "Volcanic Island",
+          "set": "leb",
+          "scryfallId": "0324641d-af55-4c53-b4dc-c8262e967da5"
+        },
+        {
+          "name": "Volcanic Island",
           "set": "sum",
           "scryfallId": "f73ea932-5aba-4847-bb13-4cc0eb5dc726"
         },
@@ -3227,33 +3379,26 @@
       ]
     }
   },
-  "alphatoken": {
-    "note": "No 1993-frame tokens were printed; sample content only.",
-    "colors": {
-      "w": null,
-      "u": null,
-      "b": null,
-      "r": null,
-      "g": null,
-      "c": null,
-      "m": null
-    }
-  },
   "retro": {
     "colors": {
       "w": [
         {
-          "name": "Disenchant",
-          "set": "tsb",
-          "scryfallId": "b7be41f0-7391-49dd-b63c-2e8db9430f07"
-        },
-        {
           "name": "White Knight",
           "set": "lgn",
           "scryfallId": "cb9cb8ed-7abb-4e71-b42f-5041dd0c0394"
+        },
+        {
+          "name": "Disenchant",
+          "set": "tsb",
+          "scryfallId": "b7be41f0-7391-49dd-b63c-2e8db9430f07"
         }
       ],
       "u": [
+        {
+          "name": "Aven Fisher",
+          "set": "ody",
+          "scryfallId": "5b27130d-2296-4076-9829-15ab63081896"
+        },
         {
           "name": "Merfolk Assassin",
           "set": "tsb",
@@ -3267,14 +3412,14 @@
       ],
       "b": [
         {
-          "name": "Bad Moon",
-          "set": "tsb",
-          "scryfallId": "58fbbc7f-1d6e-4a6c-b5df-33bc275ee514"
-        },
-        {
           "name": "Shambling Swarm",
           "set": "tor",
           "scryfallId": "b5b93715-985f-4719-a3c3-044c2a150e96"
+        },
+        {
+          "name": "Bad Moon",
+          "set": "tsb",
+          "scryfallId": "58fbbc7f-1d6e-4a6c-b5df-33bc275ee514"
         }
       ],
       "r": [
@@ -3291,6 +3436,11 @@
       ],
       "g": [
         {
+          "name": "Elvish Warrior",
+          "set": "ons",
+          "scryfallId": "2c6b767b-49e5-4845-9b3f-29540e5fa330"
+        },
+        {
           "name": "Avoid Fate",
           "set": "tsb",
           "scryfallId": "04c9f48d-2213-4f95-8eac-b23bd2d95e34"
@@ -3303,33 +3453,39 @@
       ],
       "c": [
         {
-          "name": "Sky Diamond",
-          "set": "7ed",
-          "scryfallId": "b426b86d-b1d9-4aee-ac17-4eae7a3b69a3"
-        },
-        {
           "name": "Tangle Wire",
           "set": "nem",
           "scryfallId": "ad62f313-8a8a-4ffa-ada2-b12b76288729"
+        },
+        {
+          "name": "Sky Diamond",
+          "set": "7ed",
+          "scryfallId": "b426b86d-b1d9-4aee-ac17-4eae7a3b69a3"
         }
       ],
       "m": [
         {
-          "name": "Lightning Angel",
-          "set": "tsb",
-          "scryfallId": "322d5ba3-41cc-4e60-9d0a-074f48a71ea3"
-        },
-        {
           "name": "Cauldron Dance",
           "set": "inv",
           "scryfallId": "8dadcae0-f2b2-487c-bb93-0a2c073044c0"
+        },
+        {
+          "name": "Lightning Angel",
+          "set": "tsb",
+          "scryfallId": "322d5ba3-41cc-4e60-9d0a-074f48a71ea3"
         }
       ]
     }
   },
   "retroland": {
+    "note": "m: no printing read. A two-colour land on the 1997 frame prints a BLEND of its two colours in the text box (from Sixth Edition, 1999), which this frame does not draw yet (TODO 4.6h), and no three-colour 1997-frame land was read; m is a render stand-in and is not ticked (TODO 4.10a). Seaside Haven (W/U) and Hinterland Harbor (a 2023 reprint) are kept to look at, not to verify against. The reference is the 1996-2003 printing (owner 2026-10-07): the INR basics are 2025 reprints in the reprints' lighter colours, the Mirage basics print the left-aligned footer of 1996-98.",
     "colors": {
       "w": [
+        {
+          "name": "Plains",
+          "set": "ons",
+          "scryfallId": "7bf7d68a-dbd0-45f3-acbb-59ee38e6057e"
+        },
         {
           "name": "Plains",
           "set": "inr",
@@ -3344,6 +3500,11 @@
       "u": [
         {
           "name": "Island",
+          "set": "ons",
+          "scryfallId": "36e062ec-df51-40c0-ad8a-2ee1cb8f8f17"
+        },
+        {
+          "name": "Island",
           "set": "inr",
           "scryfallId": "4f8d16ec-cba6-43b7-be97-5ab184941e29"
         },
@@ -3354,6 +3515,11 @@
         }
       ],
       "b": [
+        {
+          "name": "Swamp",
+          "set": "ons",
+          "scryfallId": "0356ae45-e5ca-46b9-8ebc-42bf4776e89c"
+        },
         {
           "name": "Swamp",
           "set": "inr",
@@ -3368,6 +3534,11 @@
       "r": [
         {
           "name": "Mountain",
+          "set": "ons",
+          "scryfallId": "05f9bdca-0d54-46c7-b803-9083dfc9ee24"
+        },
+        {
+          "name": "Mountain",
           "set": "inr",
           "scryfallId": "787da7ce-527d-4abf-9e92-5de9db2250cd"
         },
@@ -3380,6 +3551,11 @@
       "g": [
         {
           "name": "Forest",
+          "set": "ons",
+          "scryfallId": "b361b42d-401f-440a-bae9-35338b5dde0e"
+        },
+        {
+          "name": "Forest",
           "set": "inr",
           "scryfallId": "7afdc917-ec37-4e03-853f-36cfe90053d9"
         },
@@ -3390,6 +3566,11 @@
         }
       ],
       "c": [
+        {
+          "name": "Rishadan Port",
+          "set": "mmq",
+          "scryfallId": "477a1f53-5cdf-4b45-b584-2e36b31a3fdb"
+        },
         {
           "name": "Crystal Vein",
           "set": "6ed",
@@ -3499,6 +3680,16 @@
           "name": "Whispering Madness",
           "set": "gtc",
           "scryfallId": "64e4b0cc-e611-4a4b-8392-b37bfc3a77e1"
+        },
+        {
+          "name": "Sprouting Thrinax",
+          "set": "ala",
+          "scryfallId": "8950df86-1e27-4b6b-8b5c-25298a3bda85"
+        },
+        {
+          "name": "Rhox War Monk",
+          "set": "ala",
+          "scryfallId": "19fb67e1-b791-4246-aebc-49fcf0f92c6c"
         }
       ]
     }
@@ -3513,8 +3704,8 @@
         },
         {
           "name": "Plains",
-          "set": "8ed",
-          "scryfallId": "a37c667a-f035-49b2-9f34-9831e186ae82"
+          "set": "m14",
+          "scryfallId": "334ca29a-7fb3-426f-922b-5a2b905a5565"
         }
       ],
       "u": [
@@ -3525,8 +3716,8 @@
         },
         {
           "name": "Island",
-          "set": "8ed",
-          "scryfallId": "4146a316-c409-4121-931f-1d3b5ae63675"
+          "set": "m14",
+          "scryfallId": "94de0250-53a6-45c8-85a7-a473f271102e"
         }
       ],
       "b": [
@@ -3549,8 +3740,8 @@
         },
         {
           "name": "Mountain",
-          "set": "8ed",
-          "scryfallId": "f243292a-e8a6-43c2-805c-15715fcebd67"
+          "set": "m14",
+          "scryfallId": "6e82bb8b-2a95-4935-a728-6898f64ce39a"
         }
       ],
       "g": [
@@ -3561,8 +3752,8 @@
         },
         {
           "name": "Forest",
-          "set": "8ed",
-          "scryfallId": "ac82d07b-f8f2-4cdd-b799-98d4dc228e5c"
+          "set": "m14",
+          "scryfallId": "5b5277ee-f1e0-4777-9011-d7a23c855919"
         }
       ],
       "c": [

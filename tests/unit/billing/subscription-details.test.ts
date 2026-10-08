@@ -66,6 +66,7 @@ describe("summarizeBillingDetails", () => {
       currentPeriodEnd: "2026-10-23T02:26:40.000Z",
       trialEnd: null,
       cancelAtPeriodEnd: false,
+      endsAt: null,
       pendingChange: null,
     });
     expect(details.paymentMethod).toEqual({ brand: "visa", last4: "4242", expMonth: 12, expYear: 2034 });
@@ -180,5 +181,69 @@ describe("formatMoney", () => {
     expect(formatMoney(600)).toBe("$6");
     expect(formatMoney(15000)).toBe("$150");
     expect(formatMoney(950)).toBe("$9.50");
+  });
+});
+
+describe("summarizeBillingDetails — a cancelled subscription", () => {
+  const periodEnd = paidSubscription.items.data[0].current_period_end;
+  const read = (subscription: Parameters<typeof summarizeBillingDetails>[0]["subscription"]) =>
+    summarizeBillingDetails({ customer: null, subscription, invoices: [] }).subscription;
+
+  it("cancel_at_period_end: ends at the period end", () => {
+    expect(read({ ...paidSubscription, cancel_at_period_end: true })).toMatchObject({
+      cancelAtPeriodEnd: true,
+      endsAt: "2026-10-23T02:26:40.000Z",
+    });
+  });
+
+  it("the Customer Portal's shape — cancel_at set, cancel_at_period_end FALSE — is ending too", () => {
+    // On main this read as "renews": only the boolean was looked at.
+    expect(read({ ...paidSubscription, cancel_at_period_end: false, cancel_at: periodEnd })).toMatchObject({
+      cancelAtPeriodEnd: true,
+      endsAt: "2026-10-23T02:26:40.000Z",
+    });
+  });
+
+  it("a cancel_at on a custom date ends on THAT date, not the period end", () => {
+    const sub = read({ ...paidSubscription, cancel_at: periodEnd + 86400 * 45 });
+    expect(sub?.endsAt).toBe(new Date((periodEnd + 86400 * 45) * 1000).toISOString());
+  });
+
+  it("a cancelled trial ends at the trial end", () => {
+    expect(read({ ...trial, cancel_at_period_end: true })).toMatchObject({
+      cancelAtPeriodEnd: true,
+      endsAt: "2026-09-30T02:26:40.000Z",
+    });
+  });
+
+  it("a schedule that ends in a cancellation ends with its last phase — and has no 'next plan'", () => {
+    const end = Math.floor(Date.now() / 1000) + 20 * 86400;
+    const sub = read({
+      ...paidSubscription,
+      schedule: {
+        end_behavior: "cancel",
+        current_phase: { start_date: end - 30 * 86400, end_date: end },
+        phases: [{ start_date: end - 30 * 86400, end_date: end, items: [] }],
+      },
+    });
+    expect(sub).toMatchObject({ cancelAtPeriodEnd: true, endsAt: new Date(end * 1000).toISOString(), pendingChange: null });
+  });
+
+  it("a scheduled DOWNGRADE (end_behavior release) is not a cancellation", () => {
+    const end = Math.floor(Date.now() / 1000) + 20 * 86400;
+    const sub = read({
+      ...paidSubscription,
+      schedule: {
+        end_behavior: "release",
+        current_phase: { start_date: end - 30 * 86400, end_date: end },
+        phases: [
+          { start_date: end - 30 * 86400, end_date: end, items: [] },
+          { start_date: end, end_date: end + 30 * 86400, items: [{ price: { id: "price_plus", unit_amount: 600, currency: "usd", recurring: { interval: "month" }, lookup_key: "plus_monthly" }, quantity: 1 }] },
+        ],
+      },
+    });
+    expect(sub?.cancelAtPeriodEnd).toBe(false);
+    expect(sub?.endsAt).toBeNull();
+    expect(sub?.pendingChange?.tier).toBe("plus");
   });
 });

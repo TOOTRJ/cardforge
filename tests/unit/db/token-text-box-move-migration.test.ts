@@ -160,6 +160,8 @@ describe("0129 — stored cards with text move to the text-box token frames", ()
     { template: "m15token", card_type: "token", rules_text: " \u180e ", flavor_text: null, after: "m15tokentext" },
     // Already on a text box, or another frame: untouched.
     { template: "m15tokentext", card_type: "token", rules_text: "Flying", flavor_text: null, after: null },
+    // (The retired "alphatoken", TODO 4.54: 0129 never moved it; it READS
+    // as m15tokentext with text — RETIRED_FRAME_TEMPLATES.)
     { template: "alphatoken", card_type: "token", rules_text: "Flying", flavor_text: null, after: null },
     { template: "m15", card_type: "token", rules_text: "Flying", flavor_text: null, after: null },
     { template: null, card_type: "token", rules_text: "Flying", flavor_text: null, after: null },

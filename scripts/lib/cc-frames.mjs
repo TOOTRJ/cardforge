@@ -17,6 +17,13 @@
 // type stripping like import-cc-frames.mjs's edge-contract import.
 import { applyCardCornerMask, cardCornerRadiusPx } from "../../lib/cards/card-corner.ts";
 import { PAIR_RAMPS, TWO_COLOR_PAIRS, rampName, rampShare } from "./pair-ramp.mjs";
+import { describeRegionTones, stretchRange } from "./print-cut.mjs";
+import { SEVENTH_BOX_BY_COLOUR, SEVENTH_TONES, retroGoldCut, seventhCut } from "./seventh-1997.mjs";
+
+// The piecewise-linear re-cut and the region tone with an offset (TODO
+// 4.10a): scripts/lib/print-cut.mjs, re-exported for the importer and tests.
+export { clearWindowHalo, cutMaps, piecewiseMap, recutPiecewise, recutPlane, regionGain, squareCornersOnBlack, stretchRange, toneRegions } from "./print-cut.mjs";
+export { seventhRegions } from "./seventh-1997.mjs";
 
 export const CC_REPO = "Investigamer/cardconjurer";
 /** Pinned so a rerun reproduces the same pixels; bump deliberately. */
@@ -579,10 +586,41 @@ const BORDERLESS_PT = { ...perColor((k) => `${BORDERLESS}/pt/${k}.png`, WUBRGM),
 //      pixels layers 2 and 3 replaced along its anti-aliased edge).
 // Two-colour lands (the most printed kind: MID #281, OTJ #304, the RVR
 // shocks, the MKM surveil lands) print the grey L bars with a SPLIT pinline
-// and a split box; their pair masters are 4.6's (borderlessLandLayers takes
-// the letters, so a pair adds the right-hand pinline and box through 4.6's
-// procedural ramp). Until then `m` is the three-and-more-colour land
-// (Command Tower CMM #659, SNC #291–295): gold bars, box and pinline.
+// and a split box: the ten pair masters `<pair>.png` (TODO 4.56) are the
+// SAME function with `{ frame: "l", box: [x, y], pinline: [x, y] }` — the
+// grey 'Land Frame' whole (its title bar, bottom bar and fins), its title
+// bar moved onto the type bar, the tinted box in the two colours' own box
+// tints (each colour's title-bar tint, as its mono master's box) and the
+// two colours' pinlines, each pair lerped across ONE untilted ramp,
+// PAIR_RAMPS.borderlessLand (39→61 %W, scripts/lib/pair-ramp.mjs), first
+// canonical colour on the left. Measured on the 119 two-colour borderless
+// lands that print this look (Scryfall 2026-10-06):
+//   • the bars are the colourless land's grey: inside-against-art
+//     regression (the art above and below the bar), α 0.71 on the title bar
+//     (CC's L bar: 179 / 255 = 0.70), its tint 141/135/130 on the 69 digital
+//     renders against 144/138/137 on the 13 colourless-land renders read the
+//     same way — never gold (m reads 114/91/29), never a colour;
+//   • each box half is that colour's mono box: MH3 #354's white box reads
+//     121/117/93 over 102/98/25, and the white half of the pairs predicts
+//     121/117/95 there (MH3 #351's red box 159/63/49, predicted 151/64/59);
+//     the regression (side strips against the art beside the box, corrected
+//     for its 0.89 under-read, found by covering the prints' own open art
+//     with a known α and tint) puts the printed boxes at α 0.73–0.84 with a
+//     duller tint than CC's
+//     (w 124/120/108 against 166/155/133, r 149/40/34 against 130/22/14):
+//     the mono masters' own difference from the prints, which the pairs
+//     keep on purpose (a pair's halves ARE its two mono boxes);
+//   • the split: 41.3 / 50.2 / 58.9 on the title and type rings (the
+//     median of 420 rings; their mean 41.2 / 50.0 / 58.8) and 40.9 / 49.8 /
+//     59.0 on the box's top band at 10 / 50 / 90 % — one ramp for
+//     both, a little wider than the spells' 40→60, and not the bordered
+//     frames' 45→57 for the box.
+// No hairline can show (the #449 lesson): CC's L frame draws every ring row
+// where the colour frames do, and the Pinline layer covers the L frame's own
+// brown-grey ring whole (tests/unit/frames/borderless-land-pair-masters
+// .test.ts holds each master to the two mono masters' lerp inside the ring
+// and the box, row by row). `m` stays the three-and-more-colour land
+// (Command Tower CMM #659): gold bars, box and pinline.
 const GENERIC_SHOWCASE = "img/frames/m15/genericShowcase";
 /** The pack's own Pinline mask (packBorderless.js lists it first). */
 const BORDERLESS_PINLINE_MASK = `${GENERIC_SHOWCASE}/m15GenericShowcaseMaskPinline.png`;
@@ -613,18 +651,38 @@ const borderlessLandLetter = (k) => (k === "c" ? "l" : k);
  * The borderless land master's layers, bottom → top (see above): `frame`
  * dresses the title bar, the type bar and the bottom bar, `box` tints the
  * text box, `pinline` colours the pinline — each a pack letter (w u b r g m
- * l). A mono-colour land passes one letter three times; 4.6's pair masters
- * pass the grey `l` bars and a letter pair for the box and pinline.
+ * l). A mono-colour land passes one letter three times; a pair master
+ * (TODO 4.56) passes the grey `l` bars and a letter PAIR `[left, right]` for
+ * the box and the pinline: the box structure re-tinted to each colour's
+ * title-bar tint and the two frames' pinlines, each lerped across
+ * PAIR_RAMPS.borderlessLand (39→61 %W, untilted, premultiplied).
  */
 export function borderlessLandLayers({ frame, box, pinline }) {
+  const tintOf = (letter) => ({ src: borderlessFrame(letter), ...BORDERLESS_TINT_POINT });
+  const ramp = [...PAIR_RAMPS.borderlessLand];
   return [
     layer(borderlessFrame(frame)),
     replacing(borderlessFrame(frame), REG_TYPE_MASK, { dy: BORDERLESS_TITLE_TO_TYPE_DY }),
     replacing(TINTED_BOX_STRUCTURE.src, REG_RULES_MASK, {
-      retint: { from: TINTED_BOX_STRUCTURE.from, tintOf: { src: borderlessFrame(box), ...BORDERLESS_TINT_POINT } },
+      retint: Array.isArray(box)
+        ? { from: TINTED_BOX_STRUCTURE.from, tintOf: tintOf(box[0]), tintOfRight: tintOf(box[1]), ramp }
+        : { from: TINTED_BOX_STRUCTURE.from, tintOf: tintOf(box) },
     }),
-    layer(borderlessFrame(pinline), BORDERLESS_PINLINE_MASK),
+    Array.isArray(pinline)
+      ? { src: borderlessFrame(pinline[0]), right: borderlessFrame(pinline[1]), ramp, mask: BORDERLESS_PINLINE_MASK }
+      : layer(borderlessFrame(pinline), BORDERLESS_PINLINE_MASK),
   ];
+}
+
+/** The ten borderless land pair masters (TODO 4.56): `{ wu: layers, … }`,
+ *  the first canonical colour on the left. */
+function borderlessLandPairs() {
+  return Object.fromEntries(
+    TWO_COLOR_PAIRS.map((pair) => {
+      const sides = pair.split("");
+      return [pair, borderlessLandLayers({ frame: "l", box: sides, pinline: sides })];
+    }),
+  );
 }
 
 // --- 4.6f (wave 2a): the borderless legendary crown and the two-colour
@@ -1138,6 +1196,778 @@ export const FLIP_LOWER_RECUT = {
   blendBottom: 24,
 };
 const NATIVE_1500 = "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius";
+
+// ---------------------------------------------------------------------------
+// The landscape layouts (TODO 4.21b, design 2026-09-29 §3.2 / §3.3 / §4.2):
+// split and battle from CC's own packs, the first LANDSCAPE recipes
+// (`orientation: "landscape"`, a 2100×1500 master cut at the one card corner
+// — 64.5 px, 4.3 % of the SHORT side, as the bake cuts a landscape card).
+// They replace the MSE composites in git (build-split-frame.mjs: two
+// 240×345 half-frames on a black canvas, no coloured body round either
+// half, the title bars 31 px above the prints'; the "375 m15 battle" module:
+// no border, no siege arc, no icon, no defense shield — a transparent ring).
+//   • split — the pack draws the card PORTRAIT (1500×2100) with every text
+//     at −90°; `transform: "rotate-cw"` turns the composite a quarter turn
+//     clockwise, a pure pixel permutation (rotateCwRgba8: no resample), so
+//     the text is upright and the pack's "Right" set lands on our right half;
+//   • battle — the pack's canvas is 2814×2010 (resetCardIrregularities);
+//     `transform: "downscale"` is ONE Lanczos pass to 2100×1500, the M15
+//     family's one-downscale rule (2010×2814 → 1500×2100, the same ratio).
+// ---------------------------------------------------------------------------
+const SPLIT = "img/frames/m15/split";
+const BATTLE = "img/frames/m15/battle";
+/** A landscape master's size: the portrait one turned. */
+export const LANDSCAPE_OUT = Object.freeze({ width: OUT_H, height: OUT_W });
+/** The size a recipe's masters are written at: 2100×1500 for a landscape
+ *  recipe (`orientation: "landscape"`), else 1500×2100. */
+export function outputSizeOf(def) {
+  return def.orientation === "landscape" ? { ...LANDSCAPE_OUT } : { width: OUT_W, height: OUT_H };
+}
+/**
+ * An 8-bit RGBA image turned a quarter turn CLOCKWISE: the pixel at (x, y)
+ * of the `width × height` source lands at (height − 1 − y, x) of the
+ * `height × width` result. A permutation of the pixels — nothing is
+ * resampled, so every value of the source is in the result exactly once
+ * (split's `transform: "rotate-cw"`). Returns a new buffer.
+ */
+export function rotateCwRgba8(buf, width, height) {
+  if (buf.length !== width * height * 4) throw new Error(`rotateCwRgba8: ${buf.length} bytes is not ${width}×${height} RGBA`);
+  const out = Buffer.alloc(buf.length);
+  for (let y = 0; y < height; y += 1) {
+    const tx = height - 1 - y;
+    for (let x = 0; x < width; x += 1) {
+      const from = (y * width + x) * 4;
+      buf.copy(out, (x * height + tx) * 4, from, from + 4);
+    }
+  }
+  return out;
+}
+/**
+ * Whole blocks of an 8-bit RGBA image moved along one axis through the FLAT
+ * zones between them (TODO 4.21b: the split's two halves and the battle's
+ * two blocks, onto the prints — SPLIT_HALF_RECUT, BATTLE_BLOCK_RECUT).
+ * `spec.axis` "x" moves columns, "y" rows. `spec.blocks` lists the blocks in
+ * order: lines [from, to) of the source, landing `by` px further along
+ * (negative = toward 0). Everything outside the blocks is a ZONE — before
+ * the first block, between two, after the last — and a zone only grows or
+ * shrinks, so it must be flat: each of its lines identical to the next over
+ * the image's whole other side (the black border, the spine between the
+ * split's halves, the battle's art window between its border and arc). The
+ * result then holds every block byte for byte, `by` px from where it was,
+ * and every zone as its one line repeated: nothing is resampled or blended
+ * and no pixel of a block is lost. Throws when a zone isn't flat, when a
+ * block leaves the image, when two blocks would meet (a zone keeps ≥ 1
+ * line; an empty one stays empty) or when the blocks are out of order.
+ * Returns a new buffer.
+ */
+export function shiftBlocksRgba8(buf, width, height, spec) {
+  if (buf.length !== width * height * 4) throw new Error(`shiftBlocksRgba8: ${buf.length} bytes is not ${width}×${height} RGBA`);
+  const { axis, blocks } = spec;
+  if (axis !== "x" && axis !== "y") throw new Error(`shiftBlocksRgba8: axis ${JSON.stringify(axis)}`);
+  const lines = axis === "x" ? width : height;
+  const across = axis === "x" ? height : width;
+  const bad = (why) => new Error(`shiftBlocksRgba8: ${why} ${JSON.stringify({ axis, blocks, lines })}`);
+  if (!Array.isArray(blocks) || blocks.length === 0) throw bad("no blocks");
+  // Line `line` of the source equals line `other`, over the whole other side.
+  const sameLine = (line, other) => {
+    for (let i = 0; i < across; i += 1) {
+      const a = (axis === "x" ? i * width + line : line * width + i) * 4;
+      const b = (axis === "x" ? i * width + other : other * width + i) * 4;
+      if (buf[a] !== buf[b] || buf[a + 1] !== buf[b + 1] || buf[a + 2] !== buf[b + 2] || buf[a + 3] !== buf[b + 3]) return false;
+    }
+    return true;
+  };
+  // src[t] = the source line the result's line t shows.
+  const src = new Int32Array(lines).fill(-1);
+  let sourceAt = 0;
+  let targetAt = 0;
+  const zone = (sourceEnd, targetEnd) => {
+    const had = sourceEnd - sourceAt;
+    const has = targetEnd - targetAt;
+    if (had < 0 || has < 0) throw bad("blocks out of order or overlapping");
+    if (had === 0 ? has !== 0 : has < 1) throw bad(`the zone at source ${sourceAt}–${sourceEnd} can't become ${has} lines`);
+    for (let line = sourceAt + 1; line < sourceEnd; line += 1) {
+      if (!sameLine(sourceAt, line)) throw bad(`the zone ${sourceAt}–${sourceEnd} is not flat: line ${line} differs from line ${sourceAt}`);
+    }
+    for (let t = targetAt; t < targetEnd; t += 1) src[t] = sourceAt;
+  };
+  for (const block of blocks) {
+    const { from, to, by } = block;
+    if (![from, to, by].every(Number.isInteger) || !(to > from) || from < 0 || to > lines || from + by < 0 || to + by > lines) throw bad("bad block");
+    zone(from, from + by);
+    for (let line = from; line < to; line += 1) src[line + by] = line;
+    sourceAt = to;
+    targetAt = to + by;
+  }
+  zone(lines, lines);
+  const out = Buffer.alloc(buf.length);
+  if (axis === "y") {
+    for (let t = 0; t < lines; t += 1) buf.copy(out, t * width * 4, src[t] * width * 4, (src[t] + 1) * width * 4);
+  } else {
+    for (let y = 0; y < height; y += 1) {
+      const row = y * width;
+      for (let t = 0; t < lines; t += 1) {
+        const from = (row + src[t]) * 4;
+        buf.copy(out, (row + t) * 4, from, from + 4);
+      }
+    }
+  }
+  return out;
+}
+/** Where a line of the source lands after `spec`'s blocks moved (the `by`
+ *  of the block that holds it), or null inside a zone — a zone's lines have
+ *  no one place. */
+export function shiftedLine(spec, line) {
+  const block = spec.blocks.find((b) => line >= b.from && line < b.to);
+  return block ? line + block.by : null;
+}
+/** How provenance records a block shift. */
+export function describeBlockShift(spec, width, height) {
+  const lines = spec.axis === "x" ? width : height;
+  const unit = spec.axis === "x" ? "columns" : "rows";
+  const zones = [];
+  let at = 0;
+  let landed = 0;
+  for (const b of spec.blocks) {
+    if (b.from > at) zones.push(`${unit} ${at}–${b.from - 1} (flat) → ${b.from + b.by - landed} px`);
+    at = b.to;
+    landed = b.to + b.by;
+  }
+  if (lines > at) zones.push(`${unit} ${at}–${lines - 1} (flat) → ${lines - landed} px`);
+  return {
+    axis: spec.axis,
+    blocks: spec.blocks.map((b) => ({ ...b })),
+    zones,
+    why: spec.why,
+    lossless: "each block is copied byte for byte; each zone between them is one flat line repeated (checked: every line of a zone is identical) — no resample, no blend",
+  };
+}
+/**
+ * The split's halves, onto the prints (TODO 4.21b, measured 2026-10-06 on
+ * MH2 #123 Fast // Furious, MH2 #60 Said // Done, TSR #161 Dead // Gone and
+ * TSR #186 Rough // Tumble, each registered edge by edge against the turned
+ * master). Card Conjurer's pack draws the collector border 160 px thick
+ * where the prints' is 147–148 (a regular M15 print's is 148), so its left
+ * half sits 13–14 px right of the prints' at its left edges and 7–11 px at
+ * its right ones, its right half 5–6 px right at its left edges and on the
+ * prints' at its right ones. The left half (columns 160–1081 of the turned
+ * master: body, name bar, window, type bar, text box) moves 11 px LEFT, the
+ * right half (1118–2040) 3 px left: every edge of both halves then lies
+ * within 3.6 px of the four prints' mean (5.4 px of any one print; the
+ * pack's lay up to 14.3 / 16.4 px off). The collector border (columns
+ * 0–159), the spine (1082–1117) and the right border (2041–2099) are flat
+ * black — the zones the move runs through. Rows are the pack's (within
+ * 2.7 px of the prints).
+ */
+export const SPLIT_HALF_RECUT = Object.freeze({
+  axis: "x",
+  blocks: Object.freeze([Object.freeze({ from: 160, to: 1082, by: -11 }), Object.freeze({ from: 1118, to: 2041, by: -3 })]),
+  why: "the pack's collector border is 160 px, the prints' 147–148: the left half moves 11 px left, the right half 3 px, onto MH2 #123 / #60 and TSR #161 / #186 (every edge within 3.6 px of the four prints' mean, 5.4 of any one; the pack's up to 14.3 / 16.4)",
+});
+/**
+ * The battle's two blocks, onto the prints (TODO 4.21b + 4.21d, measured
+ * 2026-10-06 on nine MOM battles — #1, #21, #22, #63, #115, #147, #149,
+ * #190, #230 — registered edge by edge).
+ *   • The LOWER block (4.21b): the prints set the type bar's top 5.3–5.5 px
+ *     lower than the pack, its bottom and the text box's top 4.6, the box's
+ *     bottom 2.5 (1.8–4.6), the shield's top 2.8 and its bottom 5.0. Rows
+ *     842–1467 of the downscaled master (the type bar, the text box, the
+ *     shield and the arc's foot) move 4 px DOWN: those edges then lie
+ *     within 1.5 px of the nine prints' mean (2.3 px of any one).
+ *   • The TOP block (4.21d): the prints set the name pill 2.5 px (its top)
+ *     and 1.4 px (its bottom) HIGHER than the pack, and the icon with it.
+ *     Rows 57–362 (the pill, the icon, the arc's upper curve) move 2 px UP:
+ *     the pill's top and bottom lie −0.5 / +0.6 px from the prints' mean.
+ *     The one edge the move takes off the prints is the top border's inner
+ *     edge (−0.7 → +1.3 px); 3 px up is worse (+2.3).
+ * The zones the moves run through are flat on all seven masters: rows 0–56
+ * (the top border: 57 → 55 rows), rows 363–841 (the art window between the
+ * arc's straight stretch and the right border: 479 → 485 rows) and rows
+ * 1468–1499 (the bottom border: 32 → 28 rows). What no flat zone reaches —
+ * the bars' right ends, the shield, the icon's rings — is BATTLE_RIGHT_RECUT
+ * and BATTLE_ICON_RECUT below.
+ */
+export const BATTLE_BLOCK_RECUT = Object.freeze({
+  axis: "y",
+  blocks: Object.freeze([Object.freeze({ from: 57, to: 363, by: -2 }), Object.freeze({ from: 842, to: 1468, by: 4 })]),
+  why: "the pack's name pill and icon sit 1.4–2.5 px below the nine MOM prints' and its type bar, text box and shield 2.5–5.5 px above them: rows 57–362 move 2 px up (the pill's top and bottom within 0.6 px of the prints' mean) and rows 842–1467 move 4 px down (those edges within 1.5 px of the mean, 2.3 of any one; the pack's up to 5.5 / 6.3)",
+});
+/**
+ * The split pack's two half masks, named for the half each covers AFTER the
+ * clockwise turn (design D2): CC's 'Bottom Half' (bottom.svg, portrait rows
+ * 1000–2099) is our LEFT half, its 'Top Half' (top.svg, rows 0–999) our
+ * RIGHT half — plain rectangles meeting at X `packSeamX` of the pack's
+ * turned card (1100 px, 52.38 %W: inside its flat black spine, columns
+ * 1082–1117). Importer INPUTS only: the importer rasterises and turns them,
+ * checks each is the plain rectangle recorded here (halfMaskFindings) and
+ * writes the seam into the provenance — no `mask/*` object is ever
+ * published. `seamX` is that seam on OUR master, whose halves
+ * SPLIT_HALF_RECUT moved: the middle of its spine (columns 1071–1114), 1093
+ * px (52.05 %W) — where TODO 4.26's per-half colour cuts between two
+ * masters (a hard seam through flat black, FrameProfile.twoColorSplit's
+ * machinery), never a mask asset. The importer holds both seams inside
+ * their spine (seamInsideSpine).
+ */
+export const SPLIT_HALF_MASKS = Object.freeze({
+  left: `${SPLIT}/bottom.svg`,
+  right: `${SPLIT}/top.svg`,
+  packSeamX: 1100,
+  seamX: 1093,
+});
+/** The flat zone between a two-block shift's blocks — the spine between the
+ *  split's halves — before (`pack`) and after (`master`) the move: [x0, x1). */
+export function spineOf(shift) {
+  const [a, b] = shift.blocks;
+  return { pack: { x0: a.to, x1: b.from }, master: { x0: a.to + a.by, x1: b.from + b.by } };
+}
+/** Every way a recipe's two seams are not inside their spine: the pack's
+ *  mask seam in the pack's, the master's in the moved one (each strictly
+ *  inside, so a half's own pixels never cross it). */
+export function seamInsideSpine(masks, shift) {
+  const spine = spineOf(shift);
+  const failures = [];
+  if (!(masks.packSeamX > spine.pack.x0 && masks.packSeamX < spine.pack.x1)) failures.push(`the pack's seam x ${masks.packSeamX} is outside its spine ${spine.pack.x0}–${spine.pack.x1 - 1}`);
+  if (!(masks.seamX > spine.master.x0 && masks.seamX < spine.master.x1)) failures.push(`the master's seam x ${masks.seamX} is outside its spine ${spine.master.x0}–${spine.master.x1 - 1}`);
+  return failures;
+}
+/**
+ * What a turned half mask covers on a `width × height` card, and every way
+ * it is not the plain rectangle `expect` (columns x0 … x1 − 1, every row):
+ * a pixel that is neither clear nor solid (α 2–253: only the one
+ * anti-aliased seam column may be soft, and it reads α ≤ 1 or ≥ 254), a
+ * solid pixel outside the rectangle, a clear one inside it. Empty
+ * `failures` = the mask is that rectangle.
+ */
+export function halfMaskFindings(mask, width, height, expect) {
+  let x0 = width;
+  let x1 = 0;
+  let soft = 0;
+  let outside = 0;
+  let inside = 0;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const a = mask[(y * width + x) * 4 + 3];
+      const solid = a >= 254;
+      if (!solid && a > 1) soft += 1;
+      if (solid) {
+        if (x < x0) x0 = x;
+        if (x + 1 > x1) x1 = x + 1;
+        if (x < expect.x0 || x >= expect.x1) outside += 1;
+      } else if (x >= expect.x0 && x < expect.x1) inside += 1;
+    }
+  }
+  const failures = [];
+  if (soft) failures.push(`${soft} px are neither clear nor solid`);
+  if (outside) failures.push(`${outside} solid px outside x ${expect.x0}–${expect.x1 - 1}`);
+  if (inside) failures.push(`${inside} clear px inside x ${expect.x0}–${expect.x1 - 1}`);
+  return { x0, x1, failures };
+}
+/** How provenance records a recipe's half masks (never published). */
+export function describeHalfMasks(masks, width) {
+  const pct = (x) => Math.round((x / width) * 10000) / 100;
+  return {
+    left: { src: masks.left, covers: `x 0–${masks.packSeamX - 1} of the pack's turned ${width} px card, every row` },
+    right: { src: masks.right, covers: `x ${masks.packSeamX}–${width - 1}, every row` },
+    packSeam: `x ${masks.packSeamX} px (${pct(masks.packSeamX)} %W) after the clockwise turn, inside the pack's flat black spine`,
+    seam: `x ${masks.seamX} px (${pct(masks.seamX)} %W) on the master, the middle of its spine after the halves moved`,
+    published: false,
+    use: "importer inputs only (rasterised, turned and checked to be these plain rectangles): TODO 4.26's per-half colour is a hard seam between two masters at the master's seam, no mask asset",
+  };
+}
+/**
+ * The battle's PAINTED defense shield (TODO 4.21b; owner decision
+ * 2026-09-29: the defense is drawn in the frame's own shield, the drawn
+ * badge is gone): the pack's 'Defense' mask and the box of its solid
+ * pixels (α ≥ 128) on the 2100×1500 MASTER, HD px — the shield the frame
+ * paints across the text box's bottom-right corner, on every colour: the
+ * pack's box 1881,1300 164×166, 4 px lower with the rest of the lower block
+ * (BATTLE_BLOCK_RECUT) and `dx` 12 px further RIGHT, over the right border,
+ * where nine MOM prints set theirs (TODO 4.21d: the black interior's
+ * centroid +11.7 px on the pack — BATTLE_RIGHT_RECUT lifts the shield
+ * through this mask and sets it there). The importer rasterises the mask at
+ * the master's size, moves it as it moved the master, holds its box to this
+ * one (paintedShieldFindings) and records it; the mask is never published —
+ * the shield stays in the master. The BATTLE profile's `defense.paintedRect`
+ * (lib/cards/template-layout.ts BATTLE_SHIELD_RECT) is this box in card
+ * percent, the rules text's keep-out on every battle; a unit test holds the
+ * two together.
+ */
+export const BATTLE_SHIELD = Object.freeze({
+  mask: `${BATTLE}/maskDefense.png`,
+  dx: 12,
+  box: Object.freeze({ x: 1893, y: 1304, width: 164, height: 166 }),
+});
+/** The box of a mask's solid pixels (α ≥ 128) on a `width × height` card,
+ *  or null when it has none. */
+export function solidBoxOf(mask, width, height) {
+  let x0 = width;
+  let y0 = height;
+  let x1 = -1;
+  let y1 = -1;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (mask[(y * width + x) * 4 + 3] < 128) continue;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
+  }
+  return x1 < 0 ? null : { x: x0, y: y0, width: x1 - x0 + 1, height: y1 - y0 + 1 };
+}
+/** How far a block shift moves a box that lies inside ONE of its blocks
+ *  (`{ dx, dy }`), or null when the box reaches into a zone or across two
+ *  blocks — it has no one place then. No shift = no move. */
+export function boxMoveOf(shift, box) {
+  if (!shift) return { dx: 0, dy: 0 };
+  const [from, to] = shift.axis === "x" ? [box.x, box.x + box.width] : [box.y, box.y + box.height];
+  const block = shift.blocks.find((b) => from >= b.from && to <= b.to);
+  if (!block) return null;
+  return shift.axis === "x" ? { dx: block.by, dy: 0 } : { dx: 0, dy: block.by };
+}
+/**
+ * Every way a painted shield is not what the recipe records: the pack
+ * mask's solid box, moved as `shift` moved the master's block it lies in,
+ * and then `spec.dx` px right (a shield the recipe sets aside, TODO 4.21d),
+ * differs from `spec.box` (the box on the master) — or the box straddles a
+ * block's edge — or (with a `master`) the master is see-through (α < 250)
+ * somewhere under the mask's solid pixels: the shield is paint on every
+ * colour, the colourless frame's translucent text box included, so the art
+ * never shows through the defense value. `mask` is the pack's, unmoved.
+ */
+export function paintedShieldFindings(spec, mask, width, height, master, shift) {
+  const failures = [];
+  const packBox = solidBoxOf(mask, width, height);
+  const blockMove = packBox ? boxMoveOf(shift, packBox) : null;
+  const move = blockMove ? { dx: blockMove.dx + (spec.dx ?? 0), dy: blockMove.dy } : null;
+  if (packBox && !move) failures.push(`the mask's solid box ${packBox.x},${packBox.y} ${packBox.width}×${packBox.height} is not inside one block of the shift`);
+  const box = packBox && move ? { x: packBox.x + move.dx, y: packBox.y + move.dy, width: packBox.width, height: packBox.height } : null;
+  const same = box && box.x === spec.box.x && box.y === spec.box.y && box.width === spec.box.width && box.height === spec.box.height;
+  if (!same && (box || !packBox)) {
+    failures.push(`the mask's solid box lands at ${box ? `${box.x},${box.y} ${box.width}×${box.height}` : "nowhere (it is empty)"}, the recipe records ${spec.box.x},${spec.box.y} ${spec.box.width}×${spec.box.height}`);
+  }
+  if (master && packBox && move) {
+    let thin = 0;
+    for (let y = packBox.y; y < packBox.y + packBox.height; y += 1) {
+      for (let x = packBox.x; x < packBox.x + packBox.width; x += 1) {
+        if (mask[(y * width + x) * 4 + 3] >= 254 && master[((y + move.dy) * width + x + move.dx) * 4 + 3] < 250) thin += 1;
+      }
+    }
+    if (thin) failures.push(`${thin} px of the master are see-through under the shield`);
+  }
+  return { box, failures };
+}
+/** How provenance records a painted shield (never cut, never published). */
+export function describePaintedShield(spec) {
+  return {
+    mask: spec.mask,
+    ...(spec.dx ? { dx: spec.dx } : {}),
+    box: { ...spec.box },
+    published: false,
+    use: "the shield is the master's own paint: the importer holds the pack's Defense mask to this box (HD px) and every master to solid paint under it; the profile draws the defense value inside it and keeps the rules text out of it",
+  };
+}
+/**
+ * The battle's RIGHT SIDE, onto the prints (TODO 4.21d; owner round 33,
+ * 2026-10-06: re-cut before the first battle tick). After the block moves
+ * the pack still leaves nine MOM prints (#1, #21, #22, #63, #115, #147,
+ * #149, #190, #230; print − master, HD px, + = right) by: the name pill's
+ * right end +10.0, the type bar's +8.6, the text box's right edge +7.6 and
+ * the shield +11.7 (its black interior's centroid; the prints' shield lies
+ * OVER the right border, the pack's stops at it). No flat zone crosses the
+ * bars, so their paper is STRETCHED and the shield lifted and set aside —
+ * every row and column below is the MASTER's, after BATTLE_BLOCK_RECUT:
+ *   • `bands` — three column stretches (recutColumns): inside a band's rows
+ *     the columns [fromX, toX) land `by` px right and each row fades from
+ *     itself to itself `by` px back over the `blend` columns from `fromX` —
+ *     opened INSIDE each bar's own paper, where every line a row crosses is
+ *     horizontal, so only the mottled paper is blended. The clear window
+ *     columns [toX, clearTo) give up `by` columns (held to one colour a
+ *     row). The name pill +10 (its end then +0.1 px from the prints'
+ *     mean); the type bar and the text box with its arrow notch +8 (+0.7 /
+ *     −0.3; +9 puts the bar at −0.3 but the box at −1.3); the box's corner
+ *     under the shield the same +8, with the shield erased first.
+ *   • `erase` — the shield's footprint (the Defense mask's every covered
+ *     pixel, grown `grow` px) repainted with what is beside it
+ *     (eraseMaskFootprint): from `borderX` on the border's edge as on row
+ *     `refRow` (black from `sideToRow`); black from `bottomRow`; from
+ *     `boxEndX` and above `sideToRow` the box's rim and the clear window of
+ *     row `refRow`; above `tipToRow` each column continued from above (the
+ *     box's rim runs into the top tip); else the paper mirrored from the
+ *     left of the row. What shows of it once the shield is set back is a
+ *     4 px crescent along the shield's left-facing edges.
+ *   • the shield itself is BATTLE_SHIELD: lifted through its mask and drawn
+ *     `dx` 12 px right, source-OVER what is under it (setThroughMask) — a
+ *     plain replace would leave its anti-aliased edge see-through on top of
+ *     the opaque border. Its tips end at x 2056, short of the right edge's
+ *     42 px band.
+ * Result on the nine prints: pill end +0.1, type bar end +0.7, box edge
+ * −0.3, shield −0.3.
+ */
+export const BATTLE_RIGHT_RECUT = Object.freeze({
+  fromX: 1820,
+  blend: 24,
+  bands: Object.freeze([
+    Object.freeze({ name: "name pill", rows: Object.freeze([0, 600]), toX: 1998, by: 10, clearTo: 2012 }),
+    Object.freeze({ name: "type bar + text box", rows: Object.freeze([600, 1300]), toX: 2010, by: 8, clearTo: 2036 }),
+    Object.freeze({ name: "text box under the shield", rows: Object.freeze([1300, 1472]), toX: 2030, by: 8 }),
+  ]),
+  erase: Object.freeze({ grow: 1, borderX: 2037, boxEndX: 1986, refRow: 1295, tipToRow: 1326, sideToRow: 1425, bottomRow: 1448 }),
+  why: "nine MOM prints end the name pill 10.0 px, the type bar 8.6 px and the text box 7.6 px further right than the pack and set the shield 11.7 px right, over the border: the pill's paper is stretched 10 px, the type bar's and the text box's 8 px (a 24-column cross-fade inside each bar's own paper) and the shield, lifted through the pack's Defense mask, is set 12 px right — those edges within 0.7 px of the prints' mean",
+});
+/**
+ * The battle ICON's three flat rings, redrawn (TODO 4.21d): the pack's dark
+ * disc is 5 % large (r 54.9 px against the prints' 52.0) and sits
+ * concentric in its rim, where nine MOM prints set it 1.4 px above the
+ * rim's centre (8 px of rim above the disc, 11 below). Inside `repaint` px
+ * of the rim's centre (`rim`, pixel-INDEX coordinates on the master, the
+ * top block's 2 px up included) every pixel is repainted by its distance
+ * from `centre`: black to `disc`, white to `white`, black to `ring`, then
+ * the rim's own colour — sampled per angle `rimSample` px from the rim's
+ * centre, where every key's rim is flat — with 1 px linear edges. The
+ * pack's triangle is kept: its pixels inside `triangle.radius` of the rim's
+ * centre, `triangle.dx` px along x. A REDRAW of flat geometry at the
+ * prints' half-level radii (52.0 / 58.4 / 62.4 on six prints, five
+ * directions), not the pack's pixels — provenance says so. What it leaves:
+ * the rim's outer radius (72.0 against 72.2) and the triangle (58 × 49 px
+ * against 57 × 48.5) already agree.
+ */
+export const BATTLE_ICON_RECUT = Object.freeze({
+  rim: Object.freeze({ x: 290.5, y: 129.5 }),
+  centre: Object.freeze({ x: 289.1, y: 128.1 }),
+  disc: 52.0,
+  white: 58.5,
+  ring: 62.3,
+  repaint: 65,
+  rimSample: 67,
+  triangle: Object.freeze({ radius: 40, dx: -1 }),
+  why: "the pack's icon disc is r 54.6 px and concentric in its rim; nine MOM prints draw it r 52.0, 1.4 px above the rim's centre: the three rings are redrawn as flat anti-aliased circles at the prints' radii (52.0 / 58.5 / 62.3) about the prints' centre, the rim's colour continued inward, the pack's triangle kept 1 px left",
+});
+/** What the battle recipe re-cuts after its block moves (`printRecut`). */
+export const BATTLE_PRINT_RECUT = Object.freeze({ right: BATTLE_RIGHT_RECUT, icon: BATTLE_ICON_RECUT });
+/**
+ * Stretch a band of an 8-bit RGBA image to the RIGHT (recutBand's seam
+ * turned a quarter turn; BATTLE_RIGHT_RECUT): inside rows [rows[0],
+ * rows[1]) the columns [fromX, toX) land `by` px further right, and over
+ * the `blend` columns from `fromX` each row fades — premultiplied — from
+ * itself to itself `by` px back: out[x] = (1 − t)·row[x] + t·row[x − by],
+ * t = (x − fromX + 1) / (blend + 1); from fromX + blend on it is
+ * row[x − by]. So `by` columns are gained across the fade, none is copied
+ * twice at full weight, and the columns [toX, toX + by) are covered. With
+ * `clearTo`, every row must be ONE colour over the columns [toX, clearTo)
+ * (clearTo ≥ toX + by: the zone that gives up the columns is flat, so
+ * nothing but that colour is lost) — it throws otherwise. Rows outside the
+ * band keep every byte. Returns a new buffer.
+ * @param {Buffer} buf
+ * @param {number} width
+ * @param {number} height
+ * @param {{ rows: readonly number[], fromX: number, toX: number, by: number, blend: number, clearTo?: number, name?: string }} band
+ */
+export function recutColumns(buf, width, height, { rows, fromX, toX, by, blend, clearTo }) {
+  if (buf.length !== width * height * 4) throw new Error(`recutColumns: ${buf.length} bytes is not ${width}×${height} RGBA`);
+  const [r0, r1] = rows ?? [];
+  const ok =
+    [r0, r1, fromX, toX, by, blend].every(Number.isInteger) &&
+    r0 >= 0 &&
+    r1 > r0 &&
+    r1 <= height &&
+    by > 0 &&
+    blend >= 0 &&
+    fromX - by >= 0 &&
+    fromX + blend <= toX &&
+    toX + by <= width &&
+    (clearTo == null || (Number.isInteger(clearTo) && clearTo >= toX + by && clearTo <= width));
+  if (!ok) throw new Error(`recutColumns: bad band ${JSON.stringify({ rows, fromX, toX, by, blend, clearTo, width, height })}`);
+  if (clearTo != null) {
+    for (let y = r0; y < r1; y += 1) {
+      const first = (y * width + toX) * 4;
+      for (let x = toX + 1; x < clearTo; x += 1) {
+        const i = (y * width + x) * 4;
+        if (buf[i] !== buf[first] || buf[i + 1] !== buf[first + 1] || buf[i + 2] !== buf[first + 2] || buf[i + 3] !== buf[first + 3]) {
+          throw new Error(`recutColumns: row ${y} is not one colour over columns ${toX}–${clearTo - 1} (column ${x} differs): the band would cover it`);
+        }
+      }
+    }
+  }
+  const out = Buffer.from(buf);
+  for (let y = r0; y < r1; y += 1) {
+    const row = y * width * 4;
+    buf.copy(out, row + (fromX + by) * 4, row + fromX * 4, row + toX * 4);
+    for (let x = fromX; x < fromX + blend; x += 1) {
+      const t = (x - fromX + 1) / (blend + 1);
+      const ia = row + x * 4;
+      const ib = row + (x - by) * 4;
+      const aa = (buf[ia + 3] / 255) * (1 - t);
+      const ab = (buf[ib + 3] / 255) * t;
+      const alpha = aa + ab;
+      const clear = Math.round(alpha * 255) === 0;
+      for (let c = 0; c < 3; c += 1) out[ia + c] = clear ? 0 : Math.round((buf[ia + c] * aa + buf[ib + c] * ab) / alpha);
+      out[ia + 3] = Math.round(alpha * 255);
+    }
+  }
+  return out;
+}
+/**
+ * Repaint a mask's footprint with what is beside it (BATTLE_RIGHT_RECUT
+ * `erase`: the battle's shield, before the text box under it is stretched
+ * and the shield set back 12 px right). `cover` is the mask's coverage on
+ * the image (one byte a pixel); the footprint is every pixel it covers at
+ * all, grown `grow` px (4-neighbours). Each footprint pixel takes, by the
+ * first rule that holds (every source pixel is the INPUT's, outside the
+ * footprint):
+ *   x ≥ borderX                → row refRow's pixel of that column above
+ *                                sideToRow (the border's inner edge), black
+ *                                (0, 0, 0, 255) from it on;
+ *   y ≥ bottomRow              → black (the bottom border);
+ *   x ≥ boxEndX, y < sideToRow → row refRow's pixel of that column (the
+ *                                box's rim and the clear window);
+ *   y < tipToRow               → its column mirrored about the footprint's
+ *                                top in that column (lines continued down);
+ *   else                       → its row mirrored about the footprint's
+ *                                left end in that row (the paper).
+ * Returns a new buffer.
+ */
+export function eraseMaskFootprint(buf, width, height, cover, { grow, borderX, boxEndX, refRow, tipToRow, sideToRow, bottomRow }) {
+  if (buf.length !== width * height * 4 || cover.length !== width * height) throw new Error(`eraseMaskFootprint: the image or the cover is not ${width}×${height}`);
+  let foot = new Uint8Array(width * height);
+  for (let i = 0; i < cover.length; i += 1) foot[i] = cover[i] > 0 ? 1 : 0;
+  for (let n = 0; n < grow; n += 1) {
+    const grown = Uint8Array.from(foot);
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        if (!foot[y * width + x]) continue;
+        if (y > 0) grown[(y - 1) * width + x] = 1;
+        if (y < height - 1) grown[(y + 1) * width + x] = 1;
+        if (x > 0) grown[y * width + x - 1] = 1;
+        if (x < width - 1) grown[y * width + x + 1] = 1;
+      }
+    }
+    foot = grown;
+  }
+  const colTop = new Int32Array(width).fill(-1);
+  for (let x = 0; x < width; x += 1) {
+    for (let y = 0; y < height; y += 1) {
+      if (foot[y * width + x]) {
+        colTop[x] = y;
+        break;
+      }
+    }
+  }
+  const out = Buffer.from(buf);
+  const BLACK = [0, 0, 0, 255];
+  for (let y = 0; y < height; y += 1) {
+    let left = -1;
+    for (let x = 0; x < width; x += 1) {
+      if (!foot[y * width + x]) continue;
+      if (left < 0) left = x;
+      const o = (y * width + x) * 4;
+      let from = -1;
+      if (x >= borderX) from = y < sideToRow ? refRow * width + x : -1;
+      else if (y >= bottomRow) from = -1;
+      else if (x >= boxEndX && y < sideToRow) from = refRow * width + x;
+      else if (y < tipToRow) from = Math.max(0, colTop[x] - 1 - (y - colTop[x])) * width + x;
+      else from = y * width + Math.max(0, left - 1 - (x - left));
+      if (from < 0) out.set(BLACK, o);
+      else buf.copy(out, o, from * 4, from * 4 + 4);
+    }
+  }
+  return out;
+}
+/**
+ * Draw `src` through a mask, `dx` px to the right, source-OVER `dst`
+ * (BATTLE_SHIELD's `dx`): a pixel of `src` at (x − dx, y) covers (x, y) by
+ * its own alpha times the mask's coverage there (`cover`, one byte a
+ * pixel, at `src`'s place), premultiplied — so an edge pixel that was
+ * anti-aliased against a clear window stays an edge pixel over whatever is
+ * under it, and an opaque pixel under it stays opaque. Returns a new
+ * buffer.
+ */
+export function setThroughMask(dst, src, cover, width, height, dx) {
+  if (dst.length !== width * height * 4 || src.length !== dst.length || cover.length !== width * height) throw new Error(`setThroughMask: an input is not ${width}×${height}`);
+  if (!Number.isInteger(dx) || dx < 0 || dx >= width) throw new Error(`setThroughMask: dx ${dx}`);
+  const out = Buffer.from(dst);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = dx; x < width; x += 1) {
+      const m = cover[y * width + x - dx];
+      if (!m) continue;
+      const s = (y * width + x - dx) * 4;
+      const o = (y * width + x) * 4;
+      const sa = (src[s + 3] / 255) * (m / 255);
+      if (sa === 0) continue;
+      const da = (dst[o + 3] / 255) * (1 - sa);
+      const alpha = sa + da;
+      // A trace of cover over a clear pixel that rounds to nothing leaves
+      // the pixel as it is (no colour under α 0).
+      if (Math.round(alpha * 255) === 0) continue;
+      for (let c = 0; c < 3; c += 1) out[o + c] = Math.round((src[s + c] * sa + dst[o + c] * da) / alpha);
+      out[o + 3] = Math.round(alpha * 255);
+    }
+  }
+  return out;
+}
+/**
+ * Redraw the battle icon's rings (BATTLE_ICON_RECUT): every pixel within
+ * `repaint` px of `rim` (the rim's centre; pixel-index coordinates — a
+ * pixel's centre is its index) becomes, by its distance d from `centre`,
+ * black for d ≤ disc, white to `white`, black to `ring` and beyond it the
+ * rim's own colour (the input's pixel `rimSample` px from `rim` at the
+ * pixel's angle), each boundary a 1 px linear edge (coverage r + 0.5 − d,
+ * clamped to 0–1); inside `triangle.radius` of `rim` the input's own pixel
+ * `triangle.dx` px back along x is kept instead (the pack's triangle,
+ * moved). Everything is opaque. Returns a new buffer.
+ */
+export function redrawBattleIcon(buf, width, height, { rim, centre, disc, white, ring, repaint, rimSample, triangle }) {
+  if (buf.length !== width * height * 4) throw new Error(`redrawBattleIcon: ${buf.length} bytes is not ${width}×${height} RGBA`);
+  const reach = Math.max(repaint, rimSample) + Math.abs(triangle.dx) + 1;
+  if (!(disc < white && white < ring && ring < repaint && repaint < rimSample) || rim.x - reach < 0 || rim.y - reach < 0 || rim.x + reach >= width || rim.y + reach >= height) {
+    throw new Error(`redrawBattleIcon: bad icon ${JSON.stringify({ rim, centre, disc, white, ring, repaint, rimSample, triangle })}`);
+  }
+  const out = Buffer.from(buf);
+  const cov = (r, d) => Math.min(1, Math.max(0, r + 0.5 - d));
+  for (let y = Math.floor(rim.y - repaint); y <= Math.ceil(rim.y + repaint); y += 1) {
+    for (let x = Math.floor(rim.x - repaint); x <= Math.ceil(rim.x + repaint); x += 1) {
+      if (Math.hypot(x - rim.x, y - rim.y) > repaint) continue;
+      const o = (y * width + x) * 4;
+      if (Math.hypot(x - triangle.dx - rim.x, y - rim.y) <= triangle.radius) {
+        buf.copy(out, o, (y * width + x - triangle.dx) * 4, (y * width + x - triangle.dx) * 4 + 4);
+        continue;
+      }
+      const angle = Math.atan2(y - rim.y, x - rim.x);
+      const sample = (Math.round(rim.y + rimSample * Math.sin(angle)) * width + Math.round(rim.x + rimSample * Math.cos(angle))) * 4;
+      const d = Math.hypot(x - centre.x, y - centre.y);
+      const [cDisc, cWhite, cRing] = [cov(disc, d), cov(white, d), cov(ring, d)];
+      // rim·(1 − ring) + black·(ring − white) + white·(white − disc) + black·disc
+      for (let c = 0; c < 3; c += 1) out[o + c] = Math.round(buf[sample + c] * (1 - cRing) + 255 * (cWhite - cDisc));
+      out[o + 3] = Math.round(buf[sample + 3] * (1 - cRing) + 255 * cRing);
+    }
+  }
+  return out;
+}
+/**
+ * The battle master re-cut onto the prints (TODO 4.21d), after the block
+ * moves and before the corner is cut: the shield's footprint erased, the
+ * three bands stretched, the shield set `shield.dx` px right and the icon's
+ * rings redrawn — in that order. `mask` is the pack's Defense mask (RGBA)
+ * at the master's size, UNMOVED: it rides `shift` as the master's lower
+ * block did. `spec` = { shift, shield (BATTLE_SHIELD), right
+ * (BATTLE_RIGHT_RECUT), icon (BATTLE_ICON_RECUT) }. With no bands, no
+ * shield `dx` and no icon it returns the input's bytes. Returns a new
+ * buffer.
+ * @param {Buffer} master
+ * @param {Buffer} mask
+ * @param {number} width
+ * @param {number} height
+ * @param {{ shift: any, shield: any, right?: any, icon?: any }} spec
+ */
+export function recutBattleOntoPrints(master, mask, width, height, { shift, shield, right, icon }) {
+  if (master.length !== width * height * 4 || mask.length !== master.length) throw new Error(`recutBattleOntoPrints: the master or the mask is not ${width}×${height} RGBA`);
+  let out = Buffer.from(master);
+  if (right) {
+    const packBox = solidBoxOf(mask, width, height);
+    const move = packBox ? boxMoveOf(shift, packBox) : null;
+    if (!move) throw new Error("recutBattleOntoPrints: the Defense mask is empty or not inside one block of the shift");
+    // The mask's coverage where the master's shield is.
+    const cover = new Uint8Array(width * height);
+    for (let y = 0; y < height; y += 1) {
+      const ty = y + move.dy;
+      if (ty < 0 || ty >= height) continue;
+      for (let x = 0; x < width; x += 1) {
+        const tx = x + move.dx;
+        if (tx >= 0 && tx < width) cover[ty * width + tx] = mask[(y * width + x) * 4 + 3];
+      }
+    }
+    out = eraseMaskFootprint(out, width, height, cover, right.erase);
+    for (const band of right.bands) out = recutColumns(out, width, height, { fromX: right.fromX, blend: right.blend, ...band });
+    out = setThroughMask(out, master, cover, width, height, shield.dx);
+  }
+  if (icon) out = redrawBattleIcon(out, width, height, icon);
+  return out;
+}
+/** How provenance records the battle's re-cut (TODO 4.21d). */
+export function describeBattleRecut({ shield, right, icon }) {
+  return {
+    order: "after the block moves, before the corner cut: the shield's footprint erased, the bands stretched, the shield set right, the icon's rings redrawn",
+    columns: {
+      fromX: right.fromX,
+      blend: right.blend,
+      bands: right.bands.map((b) => ({ name: b.name, rows: [...b.rows], toX: b.toX, by: b.by, ...(b.clearTo == null ? {} : { clearTo: b.clearTo }) })),
+      how: "inside a band's rows the columns [fromX, toX) land `by` px right; over the `blend` columns from fromX each row is a premultiplied cross-fade of itself with itself `by` px back (the bar's own paper, where every line a row crosses is horizontal); the columns [toX, clearTo) are one colour a row (checked) and give up `by` columns",
+      why: right.why,
+    },
+    shield: {
+      mask: shield.mask,
+      dx: shield.dx,
+      erase: { ...right.erase },
+      how: "the shield's footprint (the mask's every covered pixel, grown 1 px) is repainted with the paper, rim, window and border beside it, the text box under it is stretched, then the pack's own shield pixels — lifted through the mask — are drawn `dx` px right, source-over (premultiplied; the shield's alpha times the mask's coverage)",
+    },
+    icon: {
+      rim: { ...icon.rim },
+      centre: { ...icon.centre },
+      radii: { disc: icon.disc, white: icon.white, ring: icon.ring },
+      repaint: icon.repaint,
+      rimSample: icon.rimSample,
+      triangle: { ...icon.triangle },
+      how: "a REDRAW of flat geometry, not the pack's pixels: inside `repaint` px of the rim's centre the three rings are flat anti-aliased circles about `centre` (black, white, black; 1 px linear edges), the rim's own colour — sampled per angle `rimSample` px out — continued inward; the pack's triangle is kept, its pixels `triangle.dx` px along x",
+      why: icon.why,
+    },
+  };
+}
+const SPLIT_TRANSFORM =
+  "native 1500x2100 (the pack draws the card portrait, its text at −90°), turned a quarter turn CLOCKWISE to 2100x1500 — a pixel permutation, no resample: source (x, y) → (2099 − y, x); then the two halves moved onto the prints through the flat black border and spine (shift: the left half 11 px left, the right half 3 px — whole blocks, byte for byte); corners rounded to the importer radius (64.5 px, 4.3 % of the 1500 px short side)";
+const BATTLE_TRANSFORM =
+  "native 2814x2010 (the pack's landscape canvas), downscaled ONCE with Lanczos to 2100x1500 (the M15 family's one-downscale rule: the same 1.34 ratio as 2010x2814 → 1500x2100); then two blocks moved onto the prints through the flat rows between them (shift: the name pill and icon 2 px up, the type bar, text box and shield 4 px down — whole rows, byte for byte); then the right side re-cut onto the prints (printRecut: the name pill's paper stretched 10 px right, the type bar's and text box's 8 px, the shield lifted through the pack's Defense mask and set 12 px right over the border, the icon's three rings redrawn at the prints' radii); corners rounded to the importer radius (64.5 px, 4.3 % of the 1500 px short side)";
+
+// ---------------------------------------------------------------------------
+// The saga (TODO 4.21c = 3.7; design 2026-09-29 §3.4, owner decisions
+// 2026-09-29): Card Conjurer's 'Regular Frames' saga pack, native
+// 1500 × 2100, copied 1:1 — the chapter RIBBON is in each master (x 66–166
+// with its gold outlines, full width from the fold under the reminder block,
+// ≈ 610 px, down to 1663 px, then tapering to its tip at 1748 px — 18–26 px
+// lower than the DOM prints' tip, as the pack draws it), where the 375 px
+// MSE cut (magic-m15-saga, in git until
+// now) had a flat cream rail and a window that started 26 px left of the
+// prints'. Keys w u b r g m are the pack's `sagaFrame<K>.png`; `c` is its
+// 'Land Frame' (`l.png`) — the only printed colourless saga is a land, MH2
+// #259 Urza's Saga (owner decision 2026-09-29); the pack's 'Artifact Frame'
+// (sagaFrameA) is not built (no profile key paints it). Against the prints
+// (Scryfall PNGs at 1500 × 2100; DOM #21 / #42 / #90 / #122 / #173, 40K
+// #126, LTC #58, MH2 #259) every bar, the window and the rail's outline
+// register within the scans' ±1–3 px: no re-cut.
+//
+// The rail's two bitmaps are the pack's own, drawn by versionSaga.js and by
+// both of our renderers: the chapter badge (`sagaChapter.png`, a 118 × 132
+// gold hexagon — the prints' measures 119–120 × 130–132) and the row divider
+// (`sagaDivider.png`, 592 × 9: a soft dark line over a white one, fading out
+// to the right, drawn 6 px tall), published at native size as
+// saga/chapter/badge.png and saga/chapter/divider.png (SAGA_CHAPTER_PIECES).
+//
+// The pack's nine masks (SAGA_MASK_INPUTS) are importer INPUTS for the
+// two-colour saga's pair masters (TODO 4.6f: `saga/<pair>.png` through
+// twoColorRecipe, the banner split by Banner / Banner (Right), the text box
+// by Text / Text (Right)): recorded here and in provenance, fetched into the
+// cache with the masters, and never published — no `saga/mask/*` object.
+// ---------------------------------------------------------------------------
+const SAGA = "img/frames/saga";
+/** packSagaRegular.js `masks`, by the pack's own names (design D2). */
+export const SAGA_MASK_INPUTS = Object.freeze({
+  Pinline: `${SAGA}/sagaMaskPinline.png`,
+  Title: `${REG}/m15MaskTitle.png`,
+  Type: `${SAGA}/sagaMaskType.png`,
+  Frame: `${SAGA}/sagaMaskFrame.png`,
+  Banner: `${SAGA}/sagaMaskBanner.png`,
+  "Banner (Right)": `${SAGA}/sagaMaskBannerRight.png`,
+  Text: `${SAGA}/sagaMaskText.png`,
+  "Text (Right)": `${SAGA}/sagaMaskTextRight.png`,
+  Border: `${SAGA}/sagaMaskBorder.png`,
+});
+/** The rail's bitmaps (versionSaga.js): published path under the template's
+ *  folder → the pack's file. The SAGA profile's `chapters.badge.assetPath` /
+ *  `chapters.divider.assetPath` name these objects (a unit test keeps them
+ *  in step). */
+export const SAGA_CHAPTER_PIECES = Object.freeze({
+  "chapter/badge": `${SAGA}/sagaChapter.png`,
+  "chapter/divider": `${SAGA}/sagaDivider.png`,
+});
 
 // ---------------------------------------------------------------------------
 // The transform bodies (TODO 5.1a; design 2026-10-02, design-next/5/final.md
@@ -1695,8 +2525,9 @@ const DFC_PAIR_NOTE =
 
 /**
  * template → { colors: colour → layers, finish?, plates?, symbols?, shield?,
- * ptCut?, recut?, recutUp?, bridge?, tones?, excluded?, pack?, transforms?,
- * notes }.
+ * ptCut?, pieces?, maskInputs?, recut?, recutUp?, bridge?, tones?, excluded?,
+ * orientation?, transform?, shift?, halfMasks?, paintedShield?, pack?,
+ * transforms?, notes }.
  * `finish` composites PipGlyph layers over each flattened composite, before
  * any re-cut (compositeFinish; the full-art tokens' type pill darkened and
  * solid, the artifact name pill's slate made solid, owner decisions
@@ -1721,11 +2552,113 @@ const DFC_PAIR_NOTE =
  * silver, EMBLEM_SILVER_TONE; toneRegion for an outlined region — its name
  * pill, type pill and text box, EMBLEM_NAME_PILL_TONE, EMBLEM_TYPE_PILL_TONE,
  * EMBLEM_TEXT_BOX_TONE).
+ * `orientation: "landscape"` (4.21b's split and battle) writes 2100×1500
+ * masters (outputSizeOf), by its `transform`: "rotate-cw" turns the
+ * composite a quarter turn clockwise without resampling (rotateCwRgba8; the
+ * pack draws the card portrait), "downscale" resizes the pack's landscape
+ * canvas once. `shift` then moves whole blocks of the 2100×1500 master
+ * through the flat zones between them, onto the prints (shiftBlocksRgba8:
+ * SPLIT_HALF_RECUT, BATTLE_BLOCK_RECUT) — before the corner is cut.
+ * `halfMasks` (split) names the pack's two half masks for the
+ * half each covers after the turn and the seam between them: importer
+ * inputs the importer checks and records, never published. `paintedShield`
+ * (battle) names the pack's Defense mask and the box of the shield the
+ * master paints: checked and recorded, never published (BATTLE_SHIELD).
+ * `printRecut` (battle, TODO 4.21d) re-cuts what no block move reaches,
+ * after the shift and before the corner: the bars' right ends stretched,
+ * the shield set right through its mask, the icon's rings redrawn
+ * (recutBattleOntoPrints: BATTLE_RIGHT_RECUT, BATTLE_ICON_RECUT).
+ * `pieces` (4.21c's saga: its chapter badge and row divider) are a pack's
+ * own bitmaps written at native size to <template>/<name>.png; `maskInputs`
+ * are pack masks RECORDED for a later recipe (the two-colour saga's pair
+ * masters, TODO 4.6f) — fetched into the cache, listed in provenance, never
+ * written to the build folder.
  * `excluded` colours are NOT built: the template keeps its current master
  * for them. `pack` / `transforms` name the CC pack and what was done to its
  * pixels (recorded in provenance). `notes` records every substitution, so
  * provenance says why a colour is not a 1:1 Card Conjurer file.
  */
+// ---------------------------------------------------------------------------
+// TODO 4.10a (layout v46): the 1997 frame — `retro`, `retroland` — on the
+// ORIGINAL cards of 1996–2003 (owner 2026-10-07, round 38). Seven keys are
+// Card Conjurer's "Seventh Edition" drawing (packSeventh.js: sharp 2 px
+// lines, one geometry for every colour), which as drawn carries the 2021+
+// REPRINTS' colours (white frame 215 luma against the originals' 157) on a
+// frame 5 px off centre with a text box 8–9 px short — so each master is
+// RE-CUT edge by edge onto the prints (a piecewise-linear map per axis; the
+// text box's anchors are per colour, the prints' boxes differ) and TONED
+// region by region onto the prints' medians (mean and contrast in the frame
+// body and the text box, a per-channel gain per bevel side): the steps are
+// scripts/lib/print-cut.mjs, the numbers scripts/lib/seventh-1997.mjs.
+// GOLD keeps today's MSE artwork (Card Conjurer's gold failed the eye: less
+// detail than MSE's, twice the prints' contrast, violet bevels), cut edge by
+// edge with the same map so its window and frame box are the other seven's;
+// it is not toned (MSE's gold is the prints' colour, ΔE 2.6).
+// ---------------------------------------------------------------------------
+const SEVENTH = "img/frames/seventh/regular";
+/** A source that is a file of THIS repo, not of Card Conjurer's: the MSE
+ *  gold master the 1997 gold frame is cut from (the importer reads it from
+ *  the checkout; it is MSE-derived, so it may live in git). */
+export const REPO_SOURCE_PREFIX = "repo:";
+export const RETRO_GOLD_MSE = `${REPO_SOURCE_PREFIX}scripts/frame-inputs/retro-m-mse.png`;
+/** How far into the MSE gold's art ring the white window's fade reaches
+ *  (grey 85 → 112 → 153 → 208 → 236 on the last five px; the ring's own
+ *  inner shadow is 30–45): cleared by clearWindowHalo. */
+export const RETRO_GOLD_WINDOW_HALO_PX = 6;
+/** The pack's Pinline mask: a land's coloured rings (NOT the bevels). */
+const SEVENTH_RINGS_MASK = `${SEVENTH}/pinline.svg`;
+
+/** Which Seventh recipe (a key of SEVENTH_TONES / SEVENTH_TEXT_BOX) builds
+ *  a template's colour key; null = the MSE gold. */
+export const SEVENTH_RECIPE_OF = Object.freeze({
+  retro: Object.freeze({ w: "w", u: "u", b: "b", r: "r", g: "g", c: "a", m: null }),
+  retroland: Object.freeze({ w: "wl", u: "ul", b: "bl", r: "rl", g: "gl", c: "l", m: "ml" }),
+});
+
+/** A 1997 master's print recipe (the importer's `printRecipe`): the re-cut,
+ *  and — but for the MSE gold — the region tones, whether the text box is
+ *  cut by colour and the mask of a land's rings. */
+export function seventhPrintRecipe(template, key) {
+  const recipe = SEVENTH_RECIPE_OF[template]?.[key];
+  if (recipe === undefined) throw new Error(`seventhPrintRecipe: ${template}/${key} is no 1997 master`);
+  // The MSE master's corners are already cut: flattened onto black first.
+  // …and its art window was cut out of a white rectangle on a 375 px JPEG:
+  // the grey → white fade that leaves on the ring's last px is cleared.
+  if (recipe === null) return { cut: retroGoldCut(), squareCorners: true, windowHalo: RETRO_GOLD_WINDOW_HALO_PX };
+  return {
+    cut: seventhCut(recipe),
+    tones: SEVENTH_TONES[recipe],
+    byColour: SEVENTH_BOX_BY_COLOUR.includes(recipe),
+    ...(template === "retroland" ? { rings: SEVENTH_RINGS_MASK } : {}),
+  };
+}
+
+/** How provenance records a print recipe. */
+export function describePrintRecipe(recipe) {
+  const range = (anchors) => {
+    const { min, max } = stretchRange(anchors);
+    return `${min.toFixed(3)}–${max.toFixed(3)}`;
+  };
+  return {
+    cut: {
+      ...recipe.cut,
+      localStretch: { y: range(recipe.cut.y), xUpper: range(recipe.cut.xUpper), xLower: range(recipe.cut.xLower) },
+    },
+    ...(recipe.tones ? { tones: describeRegionTones(recipe.tones) } : {}),
+    ...(recipe.squareCorners ? { corners: "the source's cut corners flattened onto black before the re-cut" } : {}),
+    ...(recipe.windowHalo ? { windowHalo: `the last ${recipe.windowHalo} px of the art ring take the ring's colour ${recipe.windowHalo + 1} px out (the white window's fade on the JPEG source); alpha untouched` } : {}),
+    ...(recipe.byColour ? { textBox: "cut by colour (no drawn outline), no trim ring" } : {}),
+    ...(recipe.rings ? { rings: `${recipe.rings} = region "pin"` } : {}),
+  };
+}
+
+const SEVENTH_TRANSFORM =
+  "native 1500x2100; re-cut onto the 1996–2003 prints edge by edge (printRecipe.cut: one piecewise-linear map per axis through [source px, print px] anchors — outer frame, art window, text box; the art rows' and the text-box rows' column maps lerped across the type band; Catmull-Rom, premultiplied, one resample), then toned region by region (printRecipe.tones: (in − from) × k + to per channel in the frame body and the text box, × to ÷ from per side of the outer bevel, the art bevel and the text box's trim; regions cut from the drawing's own lines and moved with the same map); corners rounded to the importer radius";
+const SEVENTH_NOTES = [
+  "the ORIGINAL cards (Mirage 1996 → Scourge 2003), not the 2021+ reprints whose colours the pack carries (owner 2026-10-07); every constant read off the prints once: outer frame and art window on 21 white prints, each colour's text box and tones on the per-pixel median of its prints (9 sets; white 21; the basic lands 7) — no scan is read by the build",
+  "known drawing caveats the owner accepted (round 38): blue is a flat-shaded redraw (hard-edged shapes where the print has brushwork), green's plank has no grain, black's parchment keeps a burnt rim",
+];
+
 export const CC_TEMPLATES = {
   m15: {
     colors: {
@@ -1940,18 +2873,23 @@ export const CC_TEMPLATES = {
     ],
   },
   // 4.34 — the borderless nonbasic land: the colour on the title bar, the
-  // type bar AND the text box (borderlessLandLayers).
+  // type bar AND the text box (borderlessLandLayers). 4.56 adds the ten
+  // two-colour pair masters from the same function (borderlessLandPairs).
   m15borderlessland: {
-    colors: perColor((k) => {
-      const letter = borderlessLandLetter(k);
-      return borderlessLandLayers({ frame: letter, box: letter, pinline: letter });
-    }),
+    colors: {
+      ...perColor((k) => {
+        const letter = borderlessLandLetter(k);
+        return borderlessLandLayers({ frame: letter, box: letter, pinline: letter });
+      }),
+      ...borderlessLandPairs(),
+    },
     pack: "packBorderless.js 'Borderless (Alt)' (groupShowcase-5.js:49) + the text-box structure of packGenericShowcase.js 'Borderless' (groupShowcase-5.js:48)",
-    transforms: `native 1500x2100, no resample; a PipGlyph composite of the packs' pixels: the colour's frame whole, its title bar moved down ${BORDERLESS_TITLE_TO_TYPE_DY} px onto the type bar (replacing it through CC's Type mask), genericShowcase's neutral text box re-tinted to the colour's title-bar tint (the flat pixel at (${BORDERLESS_TINT_POINT.x}, ${BORDERLESS_TINT_POINT.y})) at its own alpha (replacing the dark box through CC's Rules mask), the pinline through the pack's Pinline mask on top; corners rounded to the importer radius`,
+    transforms: `native 1500x2100, no resample; a PipGlyph composite of the packs' pixels: the colour's frame whole, its title bar moved down ${BORDERLESS_TITLE_TO_TYPE_DY} px onto the type bar (replacing it through CC's Type mask), genericShowcase's neutral text box re-tinted to the colour's title-bar tint (the flat pixel at (${BORDERLESS_TINT_POINT.x}, ${BORDERLESS_TINT_POINT.y})) at its own alpha (replacing the dark box through CC's Rules mask), the pinline through the pack's Pinline mask on top; a pair master draws the box and the pinline as its two colours' lerped across the untilted ${rampName(PAIR_RAMPS.borderlessLand)} (4.56); corners rounded to the importer radius`,
     notes: [
       "the print's land look (2026-09-29, 50+ borderless land printings): title bar, type bar and text box all wear the colour's title-bar tint; a borderless spell tints only its title bar (m15borderless)",
       "colourless = CC's 'Land Frame' (m15GenericShowcaseFrameL.png): grey bars and box, the land's brown-grey pinline (the prints' #a5988a on CMM #663 / FRA #379), never the see-through 'Colorless Frame'",
-      "m = the three-and-more-colour land (gold bars, box and pinline: CMM #659, SNC #291); two-colour lands print grey L bars with a split pinline and box — 4.6's pair masters (borderlessLandLayers with a letter pair)",
+      "m = the three-and-more-colour land (gold bars, box and pinline: CMM #659, SNC #291); two-colour lands print grey L bars with a split pinline and box — the pair masters below",
+      `two-colour pair masters <pair>.png (TODO 4.56): the same function with the grey 'Land Frame' L for the frame (its title bar, the type bar moved from it, the bottom bar and fins) and the pair's two letters for the box and the pinline — the box structure re-tinted to each colour's title-bar tint and the two colours' frames through the pack's Pinline mask, each pair blended across ONE UNTILTED ramp ${PAIR_RAMPS.borderlessLand[0]}→${PAIR_RAMPS.borderlessLand[1]} %W by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left; measured on the 119 two-colour borderless lands that print the tinted look (MID #281, OTJ #304, the RVR shocks, the MKM surveil lands, CLU …; Scryfall 2026-10-06): the rings read 41.3 / 50.2 / 58.9 %W and the box's top band 40.9 / 49.8 / 59.0 at 10 / 50 / 90 %, the bars the colourless land's grey`,
       "no P/T plates of its own: a land creature prints on m15borderless's plates (the profile's plateAssetPathTemplate)",
     ],
   },
@@ -2093,6 +3031,78 @@ export const CC_TEMPLATES = {
       "the pack's top / bottom masks are plain rectangles cutting the card at y 1139 (54.24 %H): 4.26's per-half colour is a hard seam, no mask asset (not published)",
     ],
   },
+  // 4.21b — the M15 split frame (MH2 #123 Fast // Furious, MH2 #60 Said //
+  // Done, C16 #239 Trial // Error): two upright half-cards side by side on a
+  // landscape card, each with its own coloured body, name bar, window, thin
+  // type bar and text box.
+  split: {
+    orientation: "landscape",
+    transform: "rotate-cw",
+    colors: {
+      ...perColor((k) => [layer(`${SPLIT}/${k}.png`)], WUBRGM),
+      c: [layer(`${SPLIT}/a.png`)],
+    },
+    shift: SPLIT_HALF_RECUT,
+    halfMasks: SPLIT_HALF_MASKS,
+    pack: "packSplit.js 'Split'",
+    transforms: SPLIT_TRANSFORM,
+    notes: [
+      "source: CC 'Split' (packSplit.js): the two half-cards of the M15 split frame, each a coloured body round its name bar, art window, thin type bar and text box — replaces the MSE composite (build-split-frame.mjs: two 240×345 magic-m15-split-fusable half-frames on a black canvas), which drew no coloured body round either half, set the title bars 31 px above the prints' and both windows 37 px high (the left one 69 px left of the prints': 133–952 × 201–800 px against 202–1018 × 238–796)",
+      "the pack draws the card PORTRAIT with its text turned −90°: the importer turns each composite a quarter turn clockwise (a pixel permutation, no resample), so the text reads upright and the pack's 'Right' texts and art window are our right half, its 'Left' texts our left half",
+      "colourless = CC's 'Artifact Frame' (split/a.png) as a RENDER STAND-IN only (owner decision 2026-09-29): no colourless split was ever printed and the pack has no colourless frame, so the key keeps a master for a stray colourless card and is never offered (no reference, never ticked)",
+      "the two halves are moved onto the prints (SPLIT_HALF_RECUT): the pack's collector border is 160 px where MH2 #123 / #60 and TSR #161 / #186 print 147–148, so the left half moves 11 px left and the right half 3 px, through the flat black border and spine — every pixel of both halves is the pack's, byte for byte, and every edge of both lies within 3.6 px of the four prints' mean (5.4 px of any one print; the pack's up to 14.3 / 16.4)",
+      "the pack's 'Top Half' / 'Bottom Half' masks (top.svg, bottom.svg) are plain rectangles cutting the PORTRAIT card at y 1000: after the turn 'Bottom Half' is the LEFT half (x 0–1099) and 'Top Half' the RIGHT half (x 1100–2099), the seam at x 1100 (52.38 %W) inside the pack's spine — importer inputs, checked and recorded (halfMasks), never published; on the master, whose halves moved, the seam is the middle of its spine, x 1093: TODO 4.26's per-half colour is a hard seam between two masters there, no mask asset",
+      "gold (m) is the pack's 'Multicolored Frame' on BOTH halves (C16 #239 Trial // Error, the only gold // gold M15 split outside a showcase — printed in the frame's 2016 arrangement, its collector line along the bottom border); a mixed split (GRN's hybrid // gold, a mono // mono of two colours) needs TODO 4.26",
+      "the pack hides the set symbol (setSymbolBounds off the card) and has no fuse dress here (split/fuse/ is its own pack): neither is built",
+    ],
+  },
+  // 4.21b — the March of the Machine battle (Siege) frame, front face (MOM
+  // #149 Invasion of Tarkir and the 36 MOM battles): the black border with
+  // the siege arc down its left, the battle icon at the name bar's left end,
+  // full art under a name pill, a type bar and a text box, and the defense
+  // shield painted across the text box's bottom-right corner.
+  battle: {
+    orientation: "landscape",
+    transform: "downscale",
+    colors: perColor((k) => [layer(`${BATTLE}/${k}.png`)]),
+    shift: BATTLE_BLOCK_RECUT,
+    paintedShield: BATTLE_SHIELD,
+    printRecut: BATTLE_PRINT_RECUT,
+    pack: "packBattle.js 'Battle'",
+    transforms: BATTLE_TRANSFORM,
+    notes: [
+      "source: CC 'Battle' (packBattle.js), 2814×2010: the black border with the siege arc, the battle icon in the name bar's left end, the name pill, the type bar, the text box and the defense shield — replaces the MSE 'm15 mainframe battles' master, which had no border, arc, icon or shield (a transparent ring: the art window was the whole card, and the defense sat on a drawn disc)",
+      "two blocks are moved onto the prints (BATTLE_BLOCK_RECUT): the nine MOM battles measured print the type bar, the text box and the shield 2.5–5.5 px lower than the pack draws them and the name pill 1.4–2.5 px higher, so rows 842–1467 of the downscaled master move 4 px down and rows 57–362 (the pill, the icon, the arc's upper curve) 2 px up, through the flat rows of the top border, the art window and the bottom border — byte for byte, to within 1.5 px of the prints' mean (the top border's inner edge goes from −0.7 to +1.3 px)",
+      "the right side is re-cut onto the prints (BATTLE_RIGHT_RECUT, TODO 4.21d; owner round 33, 2026-10-06): the prints end the name pill 10.0 px, the type bar 8.6 px and the text box 7.6 px further right than the pack, which no flat zone can give — each bar's paper is stretched instead (a 24-column premultiplied cross-fade of each row with itself, opened inside the bar's own mottled paper from column 1820: the pill +10 px, the type bar and the text box +8 px), the clear window columns after each bar giving up as many; those ends then lie +0.1 / +0.7 / −0.3 px from the nine prints' mean",
+      "the defense shield is the pack's own pixels, lifted through the pack's Defense mask and set 12 px right, over the right border, where the prints print theirs (the pack's stops at the border; +11.7 px by the black interior's centroid, −0.3 after): its old footprint is repainted with the paper, the box's rim, the window and the border beside it (a 4 px crescent of that fill shows along its left-facing edges) and the shield is drawn source-over, so the border under its anti-aliased edge stays opaque",
+      "the battle icon's rings are REDRAWN, not the pack's pixels (BATTLE_ICON_RECUT): the pack's dark disc is r 54.6 px, concentric in its rim; the prints' is r 52.0, 1.4 px above the rim's centre — inside r 65 of the rim's centre the black disc (r 52.0), the white ring (to 58.5) and the black ring (to 62.3) are flat anti-aliased circles about the prints' centre, the rim's own colour continued inward, the pack's triangle kept 1 px left; the rim's outer edge and everything outside it are the pack's",
+      "the defense shield is the MASTER's own painted shield (the pack's Defense mask region, moved with the lower block and set 12 px right): the BATTLE profile draws the defense value in it in white and nothing else (owner decision 2026-09-29: the drawn badge is gone); it is on every battle, so the rules text keeps out of it whether or not a value is drawn",
+      "left as the pack has it: the bottom border's edge (−3.1 px: the prints' box rim is 2 px thinner), the siege arc down the left, and the name pill's left end (a plain concave arc on the pack, a bracket on the prints)",
+      "colourless = CC's see-through 'Colorless Frame' (battle/c.png), as MOM #1 Invasion of Ravnica prints: its name pill, type bar and text box are translucent down to the bottom border, so the BATTLE profile draws the art under the frame for 'c' in a LANDSCAPE under-frame rect that runs to the bottom border (underFrameArt; owner decision 2026-09-29) — the art-window check fails the import without it",
+      "the pack's Pinline / Title / Type / Rules / Defense / Border masks and its 'Holo Stamp' are not used and not published; its 'Artifact Frame' and 'Land Frame' are not built (no artifact or land battle was printed)",
+      "the grey reverse-P/T line the pack draws for the back face (its 'Reverse PT' text) and a legendary back face's crown are double-faced anatomy (TODO 5.5): not drawn",
+    ],
+  },
+  // 4.21c — the saga (DOM #21 History of Benalia and every 2015-frame saga
+  // print): the title bar, the chapter rail with its ribbon, the tall art
+  // column, the type bar.
+  saga: {
+    colors: {
+      ...perColor((k) => [layer(`${SAGA}/regular/sagaFrame${k.toUpperCase()}.png`)], WUBRGM),
+      c: [layer(`${SAGA}/regular/l.png`)],
+    },
+    pieces: SAGA_CHAPTER_PIECES,
+    maskInputs: SAGA_MASK_INPUTS,
+    pack: "packSagaRegular.js 'Regular Frames' (groupSaga-1.js; versionSaga.js draws the chapter badges and dividers)",
+    transforms: `${NATIVE_1500}; the chapter badge and the row divider published at native size (118x132, 592x9)`,
+    notes: [
+      "source: CC 'Regular Frames' saga pack (packSagaRegular.js): the M15 title bar, the chapter rail with the reminder block and the RIBBON the chapter badges sit on, the art column on the right, the type bar — replaces the 375 px MSE cut (magic-m15-saga.mse-style, import-mse-profiles.mjs), which had no ribbon and whose window started 26 px left of the prints'",
+      "colourless = CC's 'Land Frame' (saga/regular/l.png), the land saga (owner decision 2026-09-29): the only printed colourless saga is MH2 #259 Urza's Saga, an Enchantment Land; a colourless non-land saga wears it too (none was printed)",
+      "the pack's 'Artifact Frame' (sagaFrameA.png) is not built: no SAGA profile key paints an artifact master",
+      "the chapter badge (sagaChapter.png) and the row divider (sagaDivider.png) are the pack's own bitmaps, published as chapter/badge.png and chapter/divider.png and drawn by both renderers where lib/cards/saga-rail.ts puts them; the numerals are text (MPlantin — the prints' Plantin semibold is TODO 4.8)",
+      "the pack's masks (Pinline, Title, Type, Frame, Banner, Banner (Right), Text, Text (Right), Border) are importer inputs for the two-colour saga's pair masters (TODO 4.6f), recorded as maskInputs and never published; its 'Banner Pinstripe (Multicolored)' (sagaMidStripe.png) and 'Holo Stamp' addons are not drawn (4.6f / 4.9d)",
+    ],
+  },
   // --- TODO 5.1a: the transform bodies (see the section above CC_TEMPLATES).
   m15dfcfront: {
     colors: { ...perColor((k) => [layer(transformFrame("front", k))]), a: [layer(transformFrame("front", "a"))], ...dfcPairMasters("m15dfcfront") },
@@ -2176,6 +3186,37 @@ export const CC_TEMPLATES = {
     transforms: `${MODAL_LAND_TRANSFORM(false)}; ${mdfcBackToneTransform(MDFC_LAND_BACK_TONES)}`,
     strip: MDFC_STRIP_CUTS.m15mdfclandback,
     notes: [...MDFC_LAND_NOTES(false), MDFC_STRIP_NOTE],
+  },
+  // --- TODO 4.10a: the 1997 frame (see the section above CC_TEMPLATES).
+  retro: {
+    colors: {
+      ...perColor((k) => [layer(`${SEVENTH}/${k}.png`)], ["w", "u", "b", "r", "g"]),
+      c: [layer(`${SEVENTH}/a.png`)],
+      m: [layer(RETRO_GOLD_MSE)],
+    },
+    printRecipe: (key) => seventhPrintRecipe("retro", key),
+    pack: "packSeventh.js 'Seventh Edition' (w u b r g, a) + MSE magic-old mcard.jpg (m)",
+    transforms: SEVENTH_TRANSFORM,
+    notes: [
+      ...SEVENTH_NOTES,
+      "c = the pack's ARTIFACT frame a.png, as before (the 1997 frame printed no colourless non-artifact before 2021; the pack's c.png is MH3's 2024 frame)",
+      "m = today's MSE gold (scripts/frame-inputs/retro-m-mse.png, the former public/frames/retro/m.png: magic-old mcard.jpg at 1500×2100, window cut, corners normalised), re-cut with the same edge map and NOT toned — Card Conjurer's gold failed proof 1 by eye; its art ring stays the MSE drawing's (up to 4.8 px wider than the gold prints')",
+    ],
+  },
+  retroland: {
+    colors: {
+      c: [layer(`${SEVENTH}/l.png`)],
+      ...perColor((k) => [layer(`${SEVENTH}/${k}l.png`)], ["w", "u", "b", "r", "g"]),
+      m: [layer(`${SEVENTH}/l.png`), replacing(`${SEVENTH}/m.png`, `${SEVENTH}/rules.svg`)],
+    },
+    printRecipe: (key) => seventhPrintRecipe("retroland", key),
+    pack: "packSeventh.js 'Seventh Edition' lands (l, wl ul bl rl gl)",
+    transforms: SEVENTH_TRANSFORM,
+    notes: [
+      ...SEVENTH_NOTES,
+      "c = the plain land l.png (the orange box of Fifth Edition 1997 on); w–g = the pack's coloured land boxes (wl … gl: the land frame, the box and its rings in the colour), toned onto the seven black-bordered basics of each colour (MIR, TMP, USG, MMQ, INV, ODY, ONS); the rings (the pack's Pinline mask) are their own region",
+      "m = a render STAND-IN, never ticked: the plain land with the pack's gold text box laid in through its Rules mask, the box toned onto the gold prints' box. No three-colour 1997 land was measured; two-colour lands print a blend (TODO 4.6h)",
+    ],
   },
 };
 
@@ -3024,8 +4065,12 @@ export function toRgba8(acc) {
  *  through mask". */
 export function describeLayer(l) {
   const moved = l.dy ? ` moved down ${l.dy} px` : "";
+  // A pair's box (TODO 4.56): re-tinted twice, the two lerped across a ramp.
+  const tintAt = (t) => `${t.src} at (${t.x}, ${t.y})`;
   const tint = l.retint
-    ? ` re-tinted from ${l.retint.from.join(",")} to the tint of ${l.retint.tintOf.src} at (${l.retint.tintOf.x}, ${l.retint.tintOf.y})`
+    ? l.retint.tintOfRight
+      ? ` re-tinted from ${l.retint.from.join(",")} to the tints of (${tintAt(l.retint.tintOf)} | ${tintAt(l.retint.tintOfRight)} across ${rampName(l.retint.ramp)})`
+      : ` re-tinted from ${l.retint.from.join(",")} to the tint of ${tintAt(l.retint.tintOf)}`
     : "";
   const masks = Array.isArray(l.mask) ? l.mask.join(" ∩ ") : l.mask;
   const mask = masks ? ` ${l.replace ? "replacing through" : l.invert ? "outside" : "through"} ${masks}` : "";
@@ -3134,6 +4179,7 @@ export function sourceFilesFor(def) {
         if (!mask.startsWith("procedural:")) files.add(mask);
       }
       if (l.retint) files.add(l.retint.tintOf.src);
+      if (l.retint?.tintOfRight) files.add(l.retint.tintOfRight.src);
     }
   }
   for (const f of def.finish ?? []) files.add(f.mask);
@@ -3142,9 +4188,20 @@ export function sourceFilesFor(def) {
   if (def.shield) files.add(def.shield.mask);
   for (const src of Object.values(def.ptCut?.image ?? {})) files.add(src);
   for (const mask of Object.values(def.ptCut?.masks ?? {})) files.add(mask);
-  // A masked tone's mask (TODO 5.1a, the transform backs).
+  // A recipe's half masks (4.21b's split) and its painted shield's mask
+  // (battle): importer inputs, checked and recorded.
+  if (def.halfMasks) for (const src of [def.halfMasks.left, def.halfMasks.right]) files.add(src);
+  if (def.paintedShield) files.add(def.paintedShield.mask);
+  // A pack's own bitmaps published beside the masters, and the masks kept
+  // for a later recipe (4.21c's saga).
+  for (const src of Object.values(def.pieces ?? {})) files.add(src);
+  for (const src of Object.values(def.maskInputs ?? {})) files.add(src);
+  // A masked tone's mask (TODO 5.1a, the transform backs); a print recipe's
+  // rings mask (TODO 4.10a, the 1997 lands).
   for (const key of builtColors(def)) {
     for (const tone of tonesFor(def, key)) if (tone.mask) files.add(tone.mask);
+    const rings = def.printRecipe?.(key).rings;
+    if (rings) files.add(rings);
   }
   return [...files].sort();
 }

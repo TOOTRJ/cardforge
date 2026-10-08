@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Filter } from "lucide-react";
 import { SurfaceCard } from "@/components/ui/surface-card";
-import { formatCalendarDate } from "@/lib/format/dates";
+import { formatUtcDate } from "@/lib/format/dates";
 import type { FunnelSummary } from "@/lib/admin/funnel-queries";
 
 const OUTCOME_LABEL: Record<string, string> = {
@@ -109,7 +109,7 @@ export function FunnelPanel({ summary }: { summary: FunnelSummary }) {
                         {t.username ? `@${t.username}` : t.userId.slice(0, 8)}
                       </Link>
                     </td>
-                    <td className="py-1 pr-2 text-muted">{formatCalendarDate(t.startedAt)}</td>
+                    <td className="py-1 pr-2 text-muted">{formatUtcDate(t.startedAt, "long")}</td>
                     <td className="py-1 pr-2 text-foreground">{OUTCOME_LABEL[t.outcome] ?? t.outcome}</td>
                     <td className="py-1 text-right tabular-nums">{t.activeDays}</td>
                     <td className="py-1 text-right tabular-nums">{t.saves}</td>

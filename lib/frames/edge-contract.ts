@@ -150,7 +150,6 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // MSE-derived, in git.
   agclassic: ALL_BORDER,
   alphaland: ALL_BORDER,
-  alphatoken: ALL_BORDER,
   retro: ALL_BORDER,
   retroland: ALL_BORDER,
   modern: ALL_BORDER,
@@ -158,7 +157,6 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   saga: ALL_BORDER,
   adventure: ALL_BORDER,
   flip: ALL_BORDER,
-  split: ALL_BORDER,
   aftermath: ALL_BORDER,
   extendedart: ALL_BORDER,
   fullart: ALL_BORDER,
@@ -170,7 +168,12 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   m15textlessland: ALL_BORDER,
   // The only edge-to-edge master today (4.35 (a): it stays borderless).
   fullartland: ALL_ART,
-  // Battles print a black border (4.21 / 7.6).
+  // The landscape pair (TODO 4.21b, CC's 'Split' and 'Battle' packs, in the
+  // frames bucket): a black border on every edge of the 2100 × 1500 master
+  // — the split's turned from CC's portrait cut, the battle's scaled down
+  // from 2814 × 2010 with its border kept (the MSE battle was a borderless
+  // PNG whose ring baked the root's #101015, 7.7).
+  split: ALL_BORDER,
   battle: ALL_BORDER,
   // The showcase families, declared as the treatment prints; each master's
   // transparent outer ring is 4.35's / 4.11's to fix.
@@ -263,7 +266,6 @@ export const EDGE_CONTRACT_KNOWN_FAILURES: Readonly<Record<string, { keys: "all"
     why: "the ring bakes #101015 (16,16,21), not the MUL print's black (4.35); corner: transparent at the arc",
   },
   lotrscroll: { keys: "all", why: "borderless scroll PNG, transparent ring (7.6 / 4.21); corner: transparent at the arc" },
-  battle: { keys: "all", why: "borderless PNG, transparent ring (7.6 / 4.21); corner: transparent at the arc" },
   expeditionland: {
     keys: ["b", "g"],
     why: "the black flood fill leaked through the dark stone: no ring, no text box (4.35 (3)); corner: transparent at the arc",

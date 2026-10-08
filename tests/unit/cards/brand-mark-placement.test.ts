@@ -16,14 +16,18 @@ const THIN_BORDER: Record<string, { rightPct: number; bottomPct: number }> = {
   // not 60): the mark's ink centred in that band.
   agclassic: { rightPct: 3.5, bottomPct: 1.5 },
   alphaland: { rightPct: 3.5, bottomPct: 1.5 },
-  alphatoken: { rightPct: 3.5, bottomPct: 0.55 },
-  retro: { rightPct: 3.5, bottomPct: 0.95 },
-  retroland: { rightPct: 3.5, bottomPct: 0.95 },
+  // (retro and retroland left this table with TODO 4.10a: their mark sits in
+  // the centred footer's © slot — FrameProfile.copyrightSlot,
+  // tests/unit/cards/copyright-slot.test.ts — and `brandMark` is not read.)
   modern: { rightPct: 3.5, bottomPct: 0.8 },
   modernland: { rightPct: 3.5, bottomPct: 0.8 },
   extendedart: { rightPct: 3.5, bottomPct: 0.8 },
-  battle: { rightPct: 11, bottomPct: 0.8 },
-  split: { rightPct: 3.5, bottomPct: 0.8 },
+  // The Card Conjurer landscape masters (TODO 4.21b, layout v43): the mark's
+  // 38 px of ink centred in the battle's 54 px bottom border (its right end
+  // short of the painted shield) and in the split's 57 px one. The MSE
+  // battle had no border — 0.8 % sat the mark on the art's last rows.
+  battle: { rightPct: 11, bottomPct: 0.47 },
+  split: { rightPct: 3.5, bottomPct: 0.57 },
   // No border at all (4.39, borderless full-art basic): the mark sits on the
   // art, on its pill (BRAND_MARK_ON_ART, 3.23).
   fullartland: { rightPct: 3.5, bottomPct: 1.6 },

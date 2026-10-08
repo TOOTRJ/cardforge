@@ -70,12 +70,28 @@ describe("displayPct", () => {
 });
 
 describe("M15_FAMILY_TEMPLATES", () => {
-  it("lists real templates once each, without split and battle (TODO 4.21)", () => {
+  it("lists real templates once each: the battle joined with its Card Conjurer master, split stays out (TODO 4.21b)", () => {
     expect(new Set(M15_FAMILY_TEMPLATES).size).toBe(M15_FAMILY_TEMPLATES.length);
     for (const t of M15_FAMILY_TEMPLATES) expect(FRAME_TEMPLATE_VALUES, t).toContain(t);
+    // The battle prints the family's sizes (an 80 px name, a 68 px type
+    // line, the family's disc and symbol box on nine MOM prints); a split
+    // half prints every line smaller (the SPLIT_* constants).
+    expect(M15_FAMILY_TEMPLATES).toContain("battle");
     expect(M15_FAMILY_TEMPLATES).not.toContain("split");
-    expect(M15_FAMILY_TEMPLATES).not.toContain("battle");
-    // Every family frame is portrait.
-    for (const t of M15_FAMILY_TEMPLATES) expect(getFrameProfile(t).orientation ?? "portrait", t).toBe("portrait");
+    // The battle is the family's one LANDSCAPE member: every other frame is
+    // portrait, so a member's size is displayPct(constant, its orientation)
+    // — the bare constant on a portrait card, × 5/7 on the battle.
+    const landscape = M15_FAMILY_TEMPLATES.filter((t) => getFrameProfile(t).orientation === "landscape");
+    expect(landscape).toEqual(["battle"]);
+    const battle = getFrameProfile("battle");
+    expect(battle.title.sizePct).toBe(displayPct(TITLE_SIZE_PCT, "landscape"));
+    expect(battle.type.sizePct).toBe(displayPct(TYPE_SIZE_PCT, "landscape"));
+    expect(battle.costSizePct).toBe(displayPct(COST_DISC_PCT, "landscape"));
+    expect(battle.symbolSizePct).toBe(displayPct(SET_SYMBOL_BOX_PCT, "landscape"));
+    // The same px on the page as on a portrait card.
+    expect(battle.title.sizePct * 2100).toBeCloseTo(TITLE_SIZE_PCT * HD, 9);
+    expect(battle.type.sizePct * 2100).toBeCloseTo(TYPE_SIZE_PCT * HD, 9);
+    expect(battle.costSizePct! * 2100).toBeCloseTo(COST_DISC_PCT * HD, 9);
+    expect(battle.symbolSizePct! * 2100).toBeCloseTo(SET_SYMBOL_BOX_PCT * HD, 9);
   });
 });

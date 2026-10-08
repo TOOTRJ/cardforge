@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, RefreshCw, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { formatUtcDate } from "@/lib/format/dates";
 import { Button } from "@/components/ui/button";
 import {
   adminBillingHealthAction,
@@ -267,6 +268,24 @@ function toLocalInputValue(iso: string): string {
 // state (lib/stripe/subscription-sync.ts, the same code the webhook runs).
 // ---------------------------------------------------------------------------
 
+/** What the resync found — including a pending cancellation, so "Synced"
+ *  can never hide that the plan is on its way out. */
+export function resyncToast(result: {
+  tier: string;
+  status: string | null;
+  subscriptionId: string | null;
+  unresolvedPrice: boolean;
+  endsAt: string | null;
+}): string {
+  if (!result.subscriptionId) return "Synced: no live subscription in Stripe.";
+  const ending = result.endsAt
+    ? ` · cancelled, ends ${formatUtcDate(result.endsAt)}`
+    : "";
+  return `Synced: ${result.tier} · ${result.status}${ending}${
+    result.unresolvedPrice ? " (price not mapped — kept tier)" : ""
+  }`;
+}
+
 export function ResyncSubscriptionButton({
   userId,
   hasStripeCustomer,
@@ -284,13 +303,14 @@ export function ResyncSubscriptionButton({
         toast.error(result.error);
         return;
       }
-      toast.success(
-        result.subscriptionId
-          ? `Synced: ${result.tier} · ${result.status}${
-              result.unresolvedPrice ? " (price not mapped — kept tier)" : ""
-            }`
-          : "Synced: no live subscription in Stripe.",
-      );
+      if (result.nothingFound) {
+        // Not "Synced": nothing was read, so nothing was written (normal for
+        // a customer who only ever bought credit packs).
+        toast("Stripe has no subscription for this customer — the profile was left as it was.");
+        router.refresh();
+        return;
+      }
+      toast.success(resyncToast(result));
       router.refresh();
     });
   }

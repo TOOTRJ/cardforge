@@ -59,9 +59,11 @@ const MAP = {
 const SEEDS = [[0.5, 0.3]];
 // Which art-window fill to cut to transparent: "black" (the m15 family) or
 // "white" (the agclassic / Alpha family). Ignored if the window is already
-// alpha-cut in the source (battle/devoid) — the fill just finds nothing.
+// alpha-cut in the source (devoid) — the fill just finds nothing.
 const FILL = "black";
-// Output canvas. Portrait frames are 1500×2100; landscape (battle) is 2100×1500.
+// Output canvas. Portrait frames are 1500×2100. (The landscape pair, split
+// and battle at 2100×1500, are Card Conjurer masters since TODO 4.21b:
+// scripts/lib/cc-frames.mjs.)
 const OUT_W = 1500;
 const OUT_H = 2100;
 // ───────────────────────────────────────────────────────────────────────────

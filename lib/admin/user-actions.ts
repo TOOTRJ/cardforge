@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import type Stripe from "stripe";
 import { revalidatePath } from "next/cache";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
@@ -287,6 +288,11 @@ export type AdminResyncSubscriptionResult =
       status: string | null;
       subscriptionId: string | null;
       unresolvedPrice: boolean;
+      /** ISO date the synced plan is set to stop (cancelled, still active). */
+      endsAt: string | null;
+      /** Nothing was written: Stripe returned no subscription for this
+       *  customer and the profile points at none. */
+      nothingFound: boolean;
     }
   | ActionError;
 
@@ -305,7 +311,7 @@ export async function adminResyncSubscriptionAction(input: {
   const { admin } = gate;
   const { data: profile } = await admin
     .from("profiles")
-    .select("id, stripe_customer_id")
+    .select("id, stripe_customer_id, stripe_subscription_id")
     .eq("id", parsed.data.userId)
     .maybeSingle();
   if (!profile) return { ok: false, error: "No user with that id." };
@@ -315,8 +321,28 @@ export async function adminResyncSubscriptionAction(input: {
 
   try {
     const stripe = getStripe();
+    // The subscription the profile points at, read directly (with its
+    // schedule): the sync lists the CUSTOMER's subscriptions, and when that
+    // list comes back empty or fails (a customer link that drifted, a
+    // transient error) it used to write nothing and still answer "Synced".
+    // The stored subscription is then what gets synced.
+    let stored: Stripe.Subscription | undefined;
+    if (profile.stripe_subscription_id) {
+      try {
+        stored = await stripe.subscriptions.retrieve(profile.stripe_subscription_id, {
+          expand: ["schedule"],
+        });
+      } catch (error) {
+        console.warn(
+          "adminResyncSubscriptionAction: stored subscription unreadable",
+          error instanceof Error ? error.message : error,
+        );
+      }
+    }
     const result = await syncSubscriptionForUser(admin, stripe, profile.id, {
       customerId: profile.stripe_customer_id,
+      // An ended subscription syncs as the webhook's `deleted` event would.
+      ...(stored ? { currentSub: stored, eventDeleted: stored.status === "canceled" } : {}),
     });
     await grantCreditsForSync(result, admin, { isCreationEvent: false });
     revalidatePath("/admin/users");
@@ -326,6 +352,8 @@ export async function adminResyncSubscriptionAction(input: {
       status: result.status,
       subscriptionId: result.subscriptionId,
       unresolvedPrice: result.unresolvedPrice,
+      endsAt: result.endsAt ?? null,
+      nothingFound: result.source === "none",
     };
   } catch (error) {
     console.warn(

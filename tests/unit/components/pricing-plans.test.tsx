@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { textContent } from "../helpers/text-content";
 import type { ReactNode } from "react";
 
 // ---------------------------------------------------------------------------
@@ -16,6 +17,7 @@ const s = vi.hoisted(() => ({
   me: null as null | Record<string, unknown>,
   checkout: vi.fn(),
   portal: vi.fn(),
+  resume: vi.fn(),
   navigateTo: vi.fn(),
   toastError: vi.fn(),
   track: vi.fn(),
@@ -37,6 +39,8 @@ vi.mock("sonner", () => ({ toast: { error: s.toastError, success: vi.fn() } }));
 vi.mock("@/lib/stripe/actions", () => ({
   createCheckoutSessionAction: s.checkout,
   createPortalSessionAction: s.portal,
+  resumeSubscriptionAction: s.resume,
+  getResumePreviewAction: async () => ({ ok: true, planName: "Pro", trial: false, nextBillAt: "2026-10-23T02:31:04.000Z", priceLine: "$15 / month" }),
 }));
 vi.mock("@/lib/routing/navigate", () => ({ navigateTo: s.navigateTo }));
 vi.mock("@/lib/supabase/session-cookie", () => ({
@@ -52,6 +56,7 @@ beforeEach(() => {
   s.me = null;
   s.checkout.mockReset().mockResolvedValue({ ok: true, url: "https://checkout.test/s" });
   s.portal.mockReset().mockResolvedValue({ ok: true, url: "https://portal.test/s" });
+  s.resume.mockReset().mockResolvedValue({ ok: true, url: "https://test.local/dashboard/billing?billing=resumed" });
   s.navigateTo.mockReset();
   s.toastError.mockReset();
   s.track.mockReset();
@@ -190,5 +195,62 @@ describe("PricingPlans", () => {
     expect(fixes).toHaveLength(2);
     fireEvent.click(fixes[0]!);
     await waitFor(() => expect(s.portal).toHaveBeenCalledTimes(1));
+  });
+
+  it("a cancelled plan that is still running: its own card says when it ends and offers Resume, so does the Free card; the other plan still switches", async () => {
+    s.signedIn = true;
+    render(
+      <PricingPlans
+        surface="billing"
+        initialViewer={{
+          loaded: true,
+          isSignedIn: true,
+          isPaid: true,
+          currentTier: "pro",
+          hasSubscribed: true,
+          hasBillingAccount: true,
+          hasLiveSubscription: true,
+          subscriptionStatus: "active",
+          subscriptionEnding: true,
+          subscriptionEndsAt: "2026-10-23T02:31:04.000Z",
+        }}
+      />,
+    );
+    expect(screen.getByText(textContent("Your current plan · ends October 23, 2026"))).toBeTruthy();
+    // Two Resume buttons: the Pro card's and the Free card's (which showed
+    // NO button before, and "Manage plan" before #482).
+    const resumes = screen.getAllByRole("button", { name: "Resume Pro" });
+    expect(resumes).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: /manage plan/i })).toBeNull();
+    expect(button(/switch to plus/i)).toBeTruthy();
+    // The Free card's button resumes in-app, behind the confirm step.
+    fireEvent.click(resumes[0]!);
+    await waitFor(() => expect(screen.getByText(textContent(/will renew on October 23, 2026 at \$15 \/ month/))).toBeTruthy());
+    const confirm = screen.getAllByRole("button", { name: "Resume Pro" }).at(-1)!;
+    fireEvent.click(confirm);
+    await waitFor(() => expect(s.resume).toHaveBeenCalledWith({ surface: "billing" }));
+    expect(s.portal).not.toHaveBeenCalled();
+  });
+
+  it("a plan that renews keeps the plain 'Your current plan' and no Resume", () => {
+    s.signedIn = true;
+    render(
+      <PricingPlans
+        initialViewer={{
+          loaded: true,
+          isSignedIn: true,
+          isPaid: true,
+          currentTier: "pro",
+          hasSubscribed: true,
+          hasBillingAccount: true,
+          hasLiveSubscription: true,
+          subscriptionStatus: "active",
+          subscriptionEnding: false,
+        }}
+      />,
+    );
+    expect(screen.getByText("Your current plan")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /resume/i })).toBeNull();
+    expect(button(/manage plan/i)).toBeTruthy();
   });
 });
