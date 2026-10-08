@@ -980,8 +980,11 @@ export const RETRO_REPRINT_COLOURS_FROM = "2021-01-01";
 export const RETRO_TIMESHIFTED_FROM = "2006-01-01";
 
 /** The first day a printing on the 1993 frame counts as its LATER printing
- *  (the "two-line-footer" gap): Fallen Empires was released on 1994-11-15;
- *  the last set with the one-line credit, The Dark, on 1994-08-08. */
+ *  (the "two-line-footer" gap), INCLUSIVE — and it must stay Scryfall's own
+ *  date for Fallen Empires, `released_at` 1994-11-01 (the set reached the
+ *  shops on 1994-11-15, but an import reads Scryfall's field): a later day
+ *  here would land every Fallen Empires printing as `exact`. The last set
+ *  with the one-line credit, The Dark, is Scryfall's 1994-08-01. */
 export const ALPHA_TWO_LINE_FOOTER_FROM = "1994-11-01";
 
 const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = {

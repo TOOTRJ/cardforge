@@ -312,7 +312,10 @@ describe("imports — the 1993 frame is the printing of Alpha → The Dark", () 
     }) as ScryfallCard;
 
   it("a black-bordered printing of 1993–94 (LEA, LEB, ARN, ATQ, LEG, DRK) is exact on the pair", () => {
-    for (const released_at of ["1993-08-05", "1993-10-04", "1993-12-17", "1994-03-04", "1994-06-01", "1994-08-08"]) {
+    // Scryfall's dates (read 2026-10-08): lea, leb, arn, atq, fbb / 3ed's
+    // day, leg, the Dragon Con promo pdrc, drk (1994-08-01; the shops'
+    // 1994-08-08 too).
+    for (const released_at of ["1993-08-05", "1993-10-04", "1993-12-17", "1994-03-04", "1994-04-11", "1994-06-01", "1994-07-15", "1994-08-01", "1994-08-08"]) {
       expect(frameMatchFromScryfall(printing({ released_at })), released_at).toMatchObject({ status: "exact", template: "agclassic", signature: "era/1993" });
     }
     expect(frameMatchFromScryfall(printing({ released_at: "1993-08-05", type_line: "Basic Land — Forest", mana_cost: "", colors: [] }))).toMatchObject({
@@ -325,7 +328,11 @@ describe("imports — the 1993 frame is the printing of Alpha → The Dark", () 
 
   it("from Fallen Empires (1994-11) the frame prints a second line under a smaller credit: NEAREST, blocked by 4.10h", () => {
     expect(ALPHA_TWO_LINE_FOOTER_FROM).toBe("1994-11-01");
-    for (const released_at of ["1994-11-15", "1995-06-03", "1996-06-10", "2022-11-28"]) {
+    // "1994-11-01" is Scryfall's own `released_at` of Fallen Empires — the
+    // constant itself, so the bound is inclusive (read from the API,
+    // 2026-10-08: fem 1994-11-01, phpr 1995-01-01, ice 1995-06-03, hml
+    // 1995-10-01, all 1996-06-10, plst 2026-11-09).
+    for (const released_at of ["1994-11-01", "1994-11-15", "1995-01-01", "1995-06-03", "1995-10-01", "1996-06-10", "2022-11-28", "2026-11-09"]) {
       expect(frameMatchFromScryfall(printing({ released_at })), released_at).toMatchObject({
         status: "nearest",
         template: "agclassic",

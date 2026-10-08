@@ -2496,9 +2496,15 @@ shows.
 - **The © slot is the border.** A 1993 card has one line in its strip, so
   `copyrightSlot` (with `endPct`: the line ENDS there) is the black band
   under the frame, ending where the border mark has always ended (3.5 % in):
-  the mark on display — its pixels in that band are main's, byte for byte —
-  and a paid clean download's footer text in MPlantin, in the strip's
-  silver. On main that text was set at the END of the credit line, in the
+  the mark on display — at HD (every stored bake) its pixels in that band
+  are main's, byte for byte; the 750 px render sets it ONE pixel lower (the
+  slot anchors the mark's baseline, `brandMark` anchored its bottom, and
+  19.5 px rounds to 20) — and a paid clean download's footer text in
+  MPlantin, in the strip's silver. That text is exact at HD; at 750 px the
+  bake's whole-px font (20 for 19.5) sets it 2.5 % wide from its left end,
+  so it ends past the slot's end — 5 px on a 16-letter text, 8 px on one
+  cut at the slot's full width (12 px at most), still 14 px inside the card
+  — the same rounding the mark has on every frame. On main that text was set at the END of the credit line, in the
   credit's face; at 70 px it would run into the P/T.
 - **The symbols** (`symbolStyle: "original"`, 4.24): the five colour symbols
   are the 1993 DRAWINGS — the ringed twelve-ray sun; the drop, skull, flame
@@ -2526,6 +2532,48 @@ shows.
   the word "Tap"; the tilted T is Revised's (3ED, LEG, DRK, FEM); the turned
   arrow from Fourth Edition. Inline mana in the rules text of 1993–94 is the
   bare drawing with no disc — not built (the inline disc stays 0.785 em).
+
+- **The set symbol grows with the type line.** Neither profile names a
+  `symbolSizePct`, so the box is `type.sizePct × 1.1`
+  (`lib/cards/set-symbol-size.ts`): 49.5 px with the 45 px type line, 77 px
+  with the 70 px one. The default mark (a card with no set — all four
+  stored cards) is then 75 × 75 px in the 83 px type band (rows 1162–1237;
+  it was ~48), a Keyrune glyph ~77 × 65; both still end at 1314 px. Alpha
+  and Beta print no set symbol, so no print decides the size — pinning
+  `symbolSizePct` on the pair keeps the old one.
+
+**A second read** (the skeptic's pass on PR #493, 2026-10-08: 128 Alpha /
+Beta prints the build did not use, moved onto our bake by their own frame
+edges; the same tool on the print and on our bake of the same card):
+
+| what | prints | ours | print − ours |
+|---|---|---|---|
+| cost disc (a circle fit by the ring's strongest colour step, 147 discs on 80 cards) | 72.0 ± 0.6 | 72.0 | + 0.2 ± 0.6 |
+| discs' centre row, below the frame's top edge | 54.0 ± 0.9 | 54.2 | − 0.2 ± 0.9 |
+| last disc's centre, left of the frame's right edge | 92.0 ± 1.5 | 92.2 | − 0.1 ± 1.5 |
+| pitch | 82.9 ± 1.2 (66 pairs; two equal colour symbols 82.8 ± 0.2) | 84.0 | − 1.1 a step: the third disc from the right sits 2.3 px left of the print's, the fourth 3.4 (83 would break "the 750 px bake is half": its gap is 5.5 px) |
+| shadow: luma under the disc less luma above it | + 2.1 ± 8.6 (149 discs; main's shadowed discs − 16) | flat | — |
+| the five drawings, as a share of their disc (10–22 discs each) | W 88 × 90 %, U 43 × 82 %, B 88 × 88 %, R 78 × 85 %, G 87 × 88 % | 90 × 92, 45 × 85, 89 × 89, 79 × 86, 86 × 89 % | within 3 % of the disc; centred within 1 px |
+| name, first ink column (48 white prints) | 109.0 ± 2.9 | 182–186 | − 73 (the owner's margin) |
+| name, ink width, the same string | — | — | the print's is 7.9 ± 4.6 % wider (Beleren would need ≈ 78 px) |
+| name, capitals / x-height / baseline (26 names with no descender) | 58.1 / 35.0 / 172.6 ± 1.3 | 52 / 36 / 172.0 | + 6 (≈ 80 px by the capitals) / − 1 (≈ 70 px by the x-height) / + 0.1 |
+| type line, the same printed string (36: `Instant`, `Sorcery`, `Enchantment`, `Enchant Creature`) | starts 155.1 ± 0.9, bottom 1228.5 ± 1.0 | 183.0 / 1228.0 | − 27.6 (the owner's margin) / + 0.5; width print / ours 1.010 ± 0.008 |
+| `Illus.` (48 white prints) | 49.0 px tall, starts 158.1 ± 0.9, bottom 1951.6 ± 0.7 | 49.0 / 156.0 / 1950.0 | height 0.0, start + 2.1, **2.0 ± 0.8 px lower in print** |
+| P/T, one digit a side (6 white prints) | ink 1270.4–1374.1, bottom 1951.7 ± 0.7 | 1270.0–1373.0, 1949.0 | left + 0.3, right + 1.6 ± 0.7, **2.4 ± 0.4 px lower in print**, 1.9 % larger |
+
+So the cost row holds within a pixel but for its pitch, and the white
+frame's flat credit and P/T sit about 2 px above the print's (the list
+above says 1.2–1.5); on the red and green frames our silver face reads
+about 2 px BELOW the print's light face — the two halves of the same
+half-emboss compromise, each nearer 2 px than 1.5. Beleren at 72 px is the
+print's name by its x-height, 8 % narrow by its width and 6 px short in its
+capitals. By eye: on the red and green frames the prints set the NAME and
+the TYPE LINE in the embossed LIGHT ink (LEA #154, #199; ours: flat dark,
+the 2026-09-25 ink decision — not this step's); inline in the rules text
+the prints of 1994 set the colour symbols and the numerals bare and only
+the tilted T on a grey disc (3ED #211, FEM #26); printed generic numerals
+are heavier and taller in their disc than the font's, and the printed red
+and green discs are paler than Card Conjurer's.
 
 **Rollout.** `"sweep"`, template-scoped to the pair
 (`ALPHA_1993_LAYOUT_VERSION`, the ONE constant `CARD_LAYOUT_VERSION` reads),
