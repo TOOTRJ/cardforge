@@ -32,6 +32,13 @@ describe("lib/format/dates — one source of the date shapes", () => {
     expect(formatDateIn(ENDS, "short", "America/Los_Angeles")).toBe("Nov 7, 2026");
     expect(formatDateIn(ENDS, "short", "Asia/Tokyo")).toBe("Nov 8, 2026");
     expect(formatDateIn("soon", "long", "UTC")).toBe("soon");
+    // a log row's moment (the usage page): the evening before, in the Americas
+    expect(formatDateIn(ENDS, "stamp", "UTC")).toBe("Nov 8, 2:31 AM");
+    expect(formatDateIn(ENDS, "stamp", "America/Los_Angeles")).toBe("Nov 7, 6:31 PM");
+    // across a DST change (US clocks went back on Nov 1, 2026) and east of UTC
+    expect(formatDateIn("2026-11-01T08:30:00.000Z", "stamp", "America/Los_Angeles")).toBe("Nov 1, 1:30 AM");
+    expect(formatDateIn("2026-11-01T09:30:00.000Z", "stamp", "America/Los_Angeles")).toBe("Nov 1, 1:30 AM");
+    expect(formatDateIn("2026-11-07T15:30:00.000Z", "long", "Pacific/Auckland")).toBe("November 8, 2026");
   });
 
   it("the older helpers print exactly what they did", () => {
@@ -82,6 +89,7 @@ describe("admin pages: UTC, and they say so", () => {
   it.each([
     ["app/(app)/admin/users/page.tsx", /formatUtcDateTime\(user\.current_period_end\)/],
     ["app/(app)/admin/users/page.tsx", /formatUtcDateTime\(user\.comp_expires_at\)/],
+    ["app/(app)/admin/users/page.tsx", /formatUtcDateTime\(entry\.created_at\)/],
     ["components/admin/user-billing-controls.tsx", /formatUtcDate\(result\.endsAt\)/],
     ["components/admin/revenue-panel.tsx", /formatUtcDate\(payment\.paidAt/],
     ["components/admin/funnel-panel.tsx", /formatUtcDate\(t\.startedAt/],
@@ -104,6 +112,7 @@ describe("every billing surface a subscriber sees prints its dates through <Loca
     "components/billing/plan-card.tsx": "plan grid: your current plan · ends",
     "components/billing/upgrade-modal.tsx": "upgrade modal: cancelled, ends",
     "components/layout/user-menu.tsx": "account menu: Billing · Pro ends",
+    "app/(app)/dashboard/usage/page.tsx": "usage: when each generation / ledger row happened",
   };
   const LOCAL = /\b(LocalDate|LocalDateText|useLocalDateText|PlanBadgeLabel)\b/;
   // A date formatted on the spot is a date in the SERVER's zone (or UTC).

@@ -31,6 +31,8 @@ export function formatRelativeTime(value: string, now: number = Date.now()): str
 export const DATE_FORMATS = {
   long: { month: "long", day: "numeric", year: "numeric" },
   short: { month: "short", day: "numeric", year: "numeric" },
+  /** A log row's moment, "Nov 7, 6:31 PM" — the usage page's ledger. */
+  stamp: { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" },
 } as const satisfies Record<string, Intl.DateTimeFormatOptions>;
 
 export type DateFormat = keyof typeof DATE_FORMATS;

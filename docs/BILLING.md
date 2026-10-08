@@ -545,6 +545,26 @@ snapshot) is synced — never "free" from a transient empty read. "Free" is
 written in exactly two cases: the subscription given has ended (above) and
 nothing else is live.
 
+**When the list cannot be read** (a transient Stripe error; the read by id
+may still work) the subscription given is synced on its own, as before —
+with one exception added in review: if it is NOT live and the profile sits
+on a DIFFERENT subscription whose stored status is live, nothing is written.
+That is an event for a secondary subscription (the superseded no-card
+trial's `deleted`, a late event for a plan that ended long ago), and without
+the list nothing says the other one stopped — writing it was the 2026-09
+demotion again, until the paid plan's next event. The stored subscription's
+own `deleted` event clears the id, so the guard cannot keep a lapsed plan
+paid.
+
+Every way the sync writes tier `free` or clears `stripe_subscription_id`:
+
+| Path | Fires when | Why a live payer is safe |
+|---|---|---|
+| `deleted` event, list readable | the list (with the ended subscription merged in) holds nothing `active` / `trialing` | any live subscription is picked as primary first |
+| a read of `canceled`, no `deleted` event, list readable | same | same |
+| `deleted` event (or the admin Resync of a subscription read as `canceled`), list unreadable | the profile does not sit on another live subscription | the guard above |
+| anything else | never: a non-live status keeps the tier and the id (the status gates perks), an unmapped live price keeps the tier, no subscription given writes nothing | — |
+
 What the handler still takes from the event itself: the funnel rows
 (`trial_converted`, `subscription_changed`, `subscription_cancelled` — they
 record what that event said, with its `previous_attributes`), and the
@@ -584,6 +604,7 @@ cannot hold elements (the account menu row).
 | Plan grid (`PlanCard`) | "Your current plan · ends …" |
 | Upgrade modal | "Your current plan — cancelled, ends …" |
 | Account menu | "Billing · Pro ends …" |
+| Usage page (`/dashboard/usage`) | when each generation / ledger row happened (`format="stamp"`: "Nov 7, 6:31 PM") |
 
 `tests/unit/billing/billing-dates-local.test.ts` holds that list: each file
 prints through the component and formats no date on the spot — a new

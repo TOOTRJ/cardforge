@@ -521,6 +521,76 @@ describe("syncSubscriptionForUser — event order", () => {
     expect(updates[0].subscription_tier).not.toBe("free");
   });
 
+  it("LIST unreadable: an event for a SECONDARY subscription that is not live never touches a profile living on another one", async () => {
+    // The superseded trial's `deleted` event (or any late event for a plan
+    // that ended long ago) meeting a transient list failure: on main — and
+    // before this guard — it wrote free / canceled over the paid plan.
+    const livePro = { subscription_tier: "pro", subscription_status: "active", stripe_subscription_id: "sub_pro" };
+    const trial = sub("sub_trial", "canceled", PLUS);
+
+    // deleted event, retrieve readable
+    const a = makeAdmin(livePro);
+    const deleted = await syncSubscriptionForUser(
+      a.admin,
+      makeLiveStripe({ list: null, byId: { sub_trial: trial } }).stripe,
+      "user-1",
+      { eventSub: trial, eventDeleted: true },
+    );
+    expect(a.updates).toHaveLength(0);
+    expect(deleted).toMatchObject({ tier: "pro", status: "active", source: "none", subscriptionId: null });
+
+    // deleted event, nothing readable at all
+    const b = makeAdmin(livePro);
+    await syncSubscriptionForUser(b.admin, makeLiveStripe({ list: null }).stripe, "user-1", {
+      eventSub: { ...trial, status: "trialing" },
+      eventDeleted: true,
+    });
+    expect(b.updates).toHaveLength(0);
+
+    // a late `updated` whose re-read says canceled / past_due
+    for (const status of ["canceled", "past_due", "unpaid", "incomplete_expired", "paused"]) {
+      const c = makeAdmin(livePro);
+      const now = sub("sub_trial", status, PLUS);
+      await syncSubscriptionForUser(
+        c.admin,
+        makeLiveStripe({ list: null, byId: { sub_trial: now } }).stripe,
+        "user-1",
+        { eventSub: sub("sub_trial", "trialing", PLUS) },
+      );
+      expect(c.updates).toHaveLength(0);
+    }
+  });
+
+  it("LIST unreadable: the guard is only for ANOTHER live subscription — the stored one's own end, a live secondary and a lapsed profile still sync", async () => {
+    // The profile's own subscription is deleted: free.
+    const own = makeAdmin(paid);
+    await syncSubscriptionForUser(own.admin, makeLiveStripe({ list: null }).stripe, "user-1", {
+      eventSub: sub("sub_1", "canceled", PLUS),
+      eventDeleted: true,
+    });
+    expect(own.updates[0]).toMatchObject({ subscription_tier: "free", stripe_subscription_id: null });
+
+    // A LIVE subscription the profile does not point at yet (the paid plan
+    // bought over a trial): written.
+    const upgrade = makeAdmin({ subscription_tier: "plus", subscription_status: "trialing", stripe_subscription_id: "sub_trial" });
+    const pro = sub("sub_pro", "active", { id: "price_pro" });
+    await syncSubscriptionForUser(
+      upgrade.admin,
+      makeLiveStripe({ list: null, byId: { sub_pro: pro } }).stripe,
+      "user-1",
+      { eventSub: pro },
+    );
+    expect(upgrade.updates[0]).toMatchObject({ subscription_tier: "pro", stripe_subscription_id: "sub_pro" });
+
+    // The profile is not live (past_due on another id): the event is written as before.
+    const lapsed = makeAdmin({ subscription_tier: "plus", subscription_status: "past_due", stripe_subscription_id: "sub_old" });
+    await syncSubscriptionForUser(lapsed.admin, makeLiveStripe({ list: null }).stripe, "user-1", {
+      eventSub: sub("sub_1", "canceled", PLUS),
+      eventDeleted: true,
+    });
+    expect(lapsed.updates[0]).toMatchObject({ subscription_tier: "free", subscription_status: "canceled" });
+  });
+
   it("an unmapped price on the re-read subscription still never demotes", async () => {
     const { admin, updates } = makeAdmin({ subscription_tier: "pro", subscription_status: "active" });
     const mystery = sub("sub_1", "active", { id: "price_mystery", unit_amount: 999, recurring: { interval: "month" } });

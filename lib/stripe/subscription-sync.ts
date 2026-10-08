@@ -331,6 +331,35 @@ export async function syncSubscriptionForUser(
     subject = { ...subject, status: ENDED_STATUS };
   }
 
+  // The list could not be read, and the subscription given is NOT live while
+  // the profile sits on a DIFFERENT subscription that is: this is an event
+  // for a secondary subscription (the superseded trial's `deleted`, a late
+  // event for a plan that ended long ago), and without the list nothing
+  // says the other one has stopped. Writing the given one's state here is
+  // the 2026-09 demotion again, on a transient Stripe error — write nothing.
+  // The stored subscription's own events (its `deleted` clears the id, and
+  // this guard with it) keep the profile right.
+  if (
+    listed == null &&
+    subject != null &&
+    !isLiveStatus(subject.status) &&
+    previous.stripe_subscription_id != null &&
+    previous.stripe_subscription_id !== subject.id &&
+    isLiveStatus(previous.subscription_status)
+  ) {
+    console.warn(
+      `[stripe] Subscription list unreadable for user ${userId}: left the profile on live subscription ${previous.stripe_subscription_id} rather than writing ${subject.status} from ${subject.id}.`,
+    );
+    return {
+      userId,
+      subscriptionId: null,
+      tier: (previous.subscription_tier ?? "free") as PlanTier,
+      status: previous.subscription_status,
+      unresolvedPrice: false,
+      source: "none",
+    };
+  }
+
   let candidates: SubscriptionLike[] | null = listed;
   if (candidates && subject) {
     const merged = candidates.filter((sub) => sub.id !== subject.id);
