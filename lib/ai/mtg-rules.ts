@@ -59,9 +59,9 @@ const WORD_TO_COLOR_LETTER: Partial<Record<ColorIdentity, ColorLetter>> = {
 // generics {0}-{99}, variables {X}{Y}{Z}, colors {W}{U}{B}{R}{G}, colorless
 // {C}, snow {S}, two-color hybrid {W/U}, mono hybrid {2/W}, Phyrexian {W/P}
 // and hybrid Phyrexian {W/U/P}. Wider than what a card can DRAW: the mana
-// font has no pip for {21}-{99} or for a hybrid Phyrexian symbol, and the
-// card leaves those out — lintCardDesign refuses them through the creator's
-// own check (undrawableSymbols), never a second list here.
+// font has no pip for {21}-{99}, and the card leaves those out —
+// lintCardDesign refuses them through the creator's own check
+// (undrawableSymbols), never a second list here.
 const SYMBOL_RE =
   /^(?:\d{1,2}|[XYZ]|[WUBRGCS]|[WUBRG]\/[WUBRG]|2\/[WUBRG]|[WUBRG]\/P|[WUBRG]\/[WUBRG]\/P)$/;
 
@@ -456,18 +456,13 @@ export function lintCardDesign(card: LintableCard): LintResult {
 }
 
 /** The nearest symbol the card can draw for one it can't, or null when
- *  there is none to offer: a hybrid Phyrexian {W/U/P} becomes the hybrid
- *  {W/U} (same colours, same mana value), a generic past the font's last
- *  number the largest generic that draws. Asked of the creator's check, so
- *  it follows the font. */
+ *  there is none to offer: a generic past the font's last number becomes
+ *  the largest generic that draws. Asked of the creator's check, so it
+ *  follows the font. (A hybrid Phyrexian {W/U/P} used to become {W/U}; the
+ *  card draws it since layout v49.) */
 function drawableSymbolFor(symbol: string): string | null {
   const inner = symbol.slice(1, -1);
   const draws = (candidate: string) => undrawableSymbols(candidate).length === 0;
-  const hybridPhyrexian = /^([WUBRG]\/[WUBRG])\/P$/.exec(inner);
-  if (hybridPhyrexian) {
-    const hybrid = `{${hybridPhyrexian[1]}}`;
-    return draws(hybrid) ? hybrid : null;
-  }
   if (/^\d+$/.test(inner)) {
     for (let n = Math.min(Number(inner), 99) - 1; n >= 0; n -= 1) {
       if (draws(`{${n}}`)) return `{${n}}`;

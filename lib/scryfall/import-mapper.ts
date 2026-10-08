@@ -466,10 +466,12 @@ export function droppedFaceNotice(
 }
 
 /** The toast (and the import dialog's note) for the symbols a printing uses
- *  that the card can't draw — the hybrid Phyrexian {G/W/P} of Ajani, Sleeper
- *  Agent (DMU), {G/U/P} of Tamiyo, Compleated Sage (NEO): the import keeps
- *  the printing's cost and text as printed, and both renderers leave such a
- *  pip out (lib/cards/mana-gem.ts). Read from the patch — what the form is
+ *  that the card can't draw — a generic past the font's last number, a
+ *  half-mana or Un-set symbol ({1/2}, {CHAOS}): the import keeps the
+ *  printing's cost and text as printed, and both renderers leave such a
+ *  pip out (lib/cards/mana-gem.ts). The hybrid Phyrexian {G/W/P} of Ajani,
+ *  Sleeper Agent (DMU) and {G/U/P} of Tamiyo, Compleated Sage (NEO) draw
+ *  since layout v49 and are no longer named. Read from the patch — what the form is
  *  about to hold — by the creator's own check (undrawableSymbols), so the
  *  toast and the creator's notice never disagree. Null when every symbol
  *  draws. */

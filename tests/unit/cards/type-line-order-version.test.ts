@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildTypeLine, printsPowerToughness } from "@/lib/cards/card-display";
-import * as layoutVersion from "@/lib/cards/layout-version";
 import {
   CARD_LAYOUT_VERSION,
-  RESERVED_SYMBOLS_PRINT_VERSION,
   TYPE_LINE_ORDER_LAYOUT_VERSION,
   VERIFICATION_NEUTRAL_VERSIONS,
   VERIFICATION_SCOPED_VERSIONS,
@@ -27,10 +25,10 @@ import { UNTOUCHED_SINCE_V22 } from "../../stubs/layout-scope-cards";
 const V = TYPE_LINE_ORDER_LAYOUT_VERSION;
 const png = "https://x/y.png";
 
-/** A v48 bake of a card no earlier bump is pending on. */
+/** A v49 bake of a card no earlier bump is pending on. */
 const at = (template: string, over: Record<string, unknown> = {}) => ({
   ...UNTOUCHED_SINCE_V22,
-  layout_version: V - 2,
+  layout_version: V - 1,
   rendered_image_url: png,
   frame_style: { template, finish: "regular" },
   ...over,
@@ -102,18 +100,6 @@ describe(`v${V} — the type line in its printed order + a land creature's P/T (
     expect(VERSION_SCOPES[V]).toBeTypeOf("function");
     expect(VERIFICATION_NEUTRAL_VERSIONS).toContain(V);
     expect(VERIFICATION_SCOPED_VERSIONS[V]).toEqual([]);
-  });
-
-  it("v49 is RESERVED for the symbols as printed (PR #494): it changes no card until that scope lands", () => {
-    // DELETE this test with the placeholder (RESERVED_SYMBOLS_PRINT_VERSION
-    // and its VERSION_SCOPES line) when this branch and PR #494 meet: the
-    // real v49 scope must be the one in VERSION_SCOPES, never `() => false`.
-    expect(RESERVED_SYMBOLS_PRINT_VERSION).toBe(V - 1);
-    expect("SYMBOLS_PRINT_LAYOUT_VERSION" in layoutVersion).toBe(false);
-    expect(VERSION_SCOPES[V - 1]?.({})).toBe(false);
-    // Without the placeholder a version with no scope is "every card".
-    expect(isRenderStale(V - 2, "lotr", undefined, V - 1, UNTOUCHED_SINCE_V22)).toBe(false);
-    expect(isRenderStale(V - 2, "lotr", undefined, V - 1, UNTOUCHED_SINCE_V22, {})).toBe(true);
   });
 
   it("the scope is exactly the faces whose printed line or P/T changes — every card type × supertype", () => {
