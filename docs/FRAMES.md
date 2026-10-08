@@ -2390,6 +2390,26 @@ bulges left) — and set two digits a side at the full size. So `MODERN.pt`
 has no `align`; a value keeps 80 px up to `99/99` and shrinks onto the face
 (1134–1367 px) past it.
 
+**The cost row** (re-measured in the skeptic pass after the owner's round-41
+note "the pips are too low"; 84 prints the build did not use, CHK 2004 → JOU
+2014, every colour). A printed disc often stands only a few luma off its
+bar, so its own edges read 60–67 px by colour; the SHADOW is black against
+the bar on every colour, and a circle fitted to its outer arc (checked on
+our own bakes: radius within 0.05 px) gives radius 33.4 ± 0.5 px, lowest
+point row 211.9, left-most point 1302.0 px beside the last disc. Where the
+disc does stand clear (18 prints) it is rows 139.7–206.7, ending at 1369.9
+px, centre 172.8 ± 1.4 — 6.5 px below the middle of the bar's face — and the
+shadow lies 6.3 px under it and 1–2 px to its LEFT: a crescent from nine
+o'clock round the bottom to four, none on the right. As first built (68 px
+discs centred on row 174, ending at 1368, a shadow straight down to row
+214, pitch 76 px) the row sat 1.4 px low and 2.3 px left of the prints'.
+Now: 66 px (even: 33 at 750 px; × 1.12 is the prints' 74 px pitch), rows
+140–205, ending at 1370 px, the shadow 6 px down and 2 px left to row 212 —
+print minus ours: row +0.2, lowest point +0.6, left-most point +0.5 px. (Main
+before 4.10b drew 63 px discs centred on row 166, 7 px ABOVE the prints:
+against a stored card's old bake the corrected row is lower, and right.)
+Rules-text pips stay flat.
+
 **The footer.** The MSE masters had the brush PAINTED IN (dark: on the black
 frame and on lands only the brush showed); Card Conjurer's have none.
 `FrameProfile.footerBrush` is its ink box, drawn by both renderers from

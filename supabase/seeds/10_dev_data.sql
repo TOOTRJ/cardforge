@@ -355,8 +355,9 @@ from (values
   -- TODO 4.10b (layout v47): the 2003 frame's one sweep — Card Conjurer's
   -- sharp masters, the P/T box at its printed size, print-sized lettering,
   -- the brush and the artist over the pipglyph.com mark in the © slot, cost
-  -- discs with a shadow down and a little to the left. A three-colour GOLD creature (the
-  -- master is that look; {T} and a pip in its text; a two-digit P/T), a
+  -- discs with a shadow down and a little to the left. A three-colour GOLD
+  -- creature (the master is that look; {T} and a pip in its text; a
+  -- two-digit P/T), a
   -- colourless ARTIFACT (`c` paints the artifact frame) and a land on
   -- `modernland` (white footer). Both templates are ticked on production;
   -- on a fresh database an admin edits these with
