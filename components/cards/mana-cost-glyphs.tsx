@@ -76,7 +76,7 @@ type ColorKey = "W" | "U" | "B" | "R" | "G" | "C";
 
 export type Token =
   | { kind: "solid"; color: ColorKey; label: string }
-  | { kind: "hybrid"; left: ColorKey; right: ColorKey; label?: string }
+  | { kind: "hybrid"; left: ColorKey; right: ColorKey; label?: string; phyrexian?: true }
   | { kind: "phyrexian"; color: ColorKey }
   | { kind: "symbol"; symbol: "T" | "Q" | "S" | "E" }
   | { kind: "text"; value: string };
@@ -84,6 +84,9 @@ export type Token =
 const HYBRID_PATTERN = /^([WUBRG])\/([WUBRG])$/;
 const TWOBRID_PATTERN = /^(\d+)\/([WUBRG])$/;
 const PHYREXIAN_PATTERN = /^([WUBRGC])\/P$/;
+// PROTOTYPE (symbol round, 2026-10-08): the two-colour Phyrexian form,
+// {G/U/P} — a split disc with a Phyrexian symbol in each half.
+const HYBRID_PHYREXIAN_PATTERN = /^([WUBRG])\/([WUBRG])\/P$/;
 
 function classifyInner(inner: string): Token {
   if (/^\d+$/.test(inner)) {
@@ -106,6 +109,11 @@ function classifyInner(inner: string): Token {
 
   const phy = PHYREXIAN_PATTERN.exec(inner);
   if (phy) return { kind: "phyrexian", color: phy[1] as ColorKey };
+
+  const hybPhy = HYBRID_PHYREXIAN_PATTERN.exec(inner);
+  if (hybPhy && hybPhy[1] !== hybPhy[2]) {
+    return { kind: "hybrid", left: hybPhy[1] as ColorKey, right: hybPhy[2] as ColorKey, phyrexian: true };
+  }
 
   const two = TWOBRID_PATTERN.exec(inner);
   if (two) {
@@ -166,7 +174,7 @@ export function tokenSuffix(token: Token): string | null {
     case "hybrid": {
       const l = token.left === "C" ? token.label ?? "0" : token.left.toLowerCase();
       const r = token.right.toLowerCase();
-      return `${l}${r}`;
+      return token.phyrexian ? `${l}${r}p` : `${l}${r}`;
     }
     case "phyrexian":
       return `${token.color.toLowerCase()}p`;
@@ -265,9 +273,9 @@ export function CardPip({
           ...(boxShadow ? { boxShadow } : {}),
         }}
       >
-        {[gem.top, gem.bottom].map((half) => (
+        {[gem.top, gem.bottom].map((half, index) => (
           <i
-            key={half.suffix}
+            key={index}
             className={cn("ms", `ms-${half.suffix}`)}
             style={{
               position: "absolute",
@@ -296,7 +304,7 @@ export function CardPip({
         lineHeight: emOf((MS_LINE_EM / MS_DISC_EM) * discPx, gem.glyphPx),
         textAlign: "center",
         borderRadius: "50%",
-        backgroundColor: gem.bg,
+        ...(gem.bg === null ? {} : { backgroundColor: gem.bg }),
         color: gem.ink,
         flexShrink: 0,
         ...(boxShadow ? { boxShadow } : {}),

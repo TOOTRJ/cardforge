@@ -97,7 +97,8 @@ import {
 } from "@/lib/cards/basic-symbol";
 import { KEYRUNE_DEFAULT_GLYPH, cardFonts, getKeyruneCodepoint, getManaCodepoint } from "@/lib/render/card-fonts";
 import { discShadowCss, inlineSymbolStyle, symbolStyle, symbolStyleOf, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
-import { manaGemSpec, type ManaGemHalf } from "@/lib/cards/mana-gem";
+import { SNOW_FLAKE_BOX, SNOW_FLAKE_PATH } from "@/lib/cards/snow-flake-path";
+import { manaGemSpec, scaledDiscPx, type ManaGemHalf } from "@/lib/cards/mana-gem";
 import { FOOTER_BRUSH_PATH, FOOTER_BRUSH_VIEWBOX } from "@/lib/cards/footer-brush";
 import { BRAND_FACE, TYPE_FACES, faceOf, footerFace, slotFace, type TypeFace } from "@/lib/cards/type-faces";
 import { displayRunPx } from "@/lib/render/satori-text";
@@ -2013,7 +2014,7 @@ function KeylinedKeyruneGlyph({
 // for draws nothing.
 function ManaGem({
   suffix: symbol,
-  size,
+  size: plainSize,
   style,
   symbols,
 }: {
@@ -2023,11 +2024,15 @@ function ManaGem({
   /** The frame's symbol style: the disc's shadow and the {T} it draws. */
   symbols: SymbolStyleSpec;
 }) {
+  // PROTOTYPE (symbol round): a Phyrexian pip is drawn on a larger disc than
+  // the `size` its caller measured a plain pip at (pipScale) — the cost row
+  // centres it, the rules text places it (RulesItemBake).
+  const size = scaledDiscPx(symbol, plainSize);
   const gem = manaGemSpec(symbol, size, symbols);
   // The style's hard offset shadow ("modern": 0.06 of the disc left, 0.07
   // down, each at least 1 px, #111); no property at all for a style
   // without one.
-  const shadowCss = discShadowCss(symbols, size);
+  const shadowCss = gem.kind === "solid" && gem.bg === null ? undefined : discShadowCss(symbols, size);
   const shadow = shadowCss ? { boxShadow: shadowCss } : {};
 
   if (gem.kind === "split") {
@@ -2072,6 +2077,13 @@ function ManaGem({
 
   const cp = getManaCodepoint(gem.suffix);
   if (!cp) return null;
+  const glyph: React.CSSProperties = {
+    display: "flex",
+    // mana-font: 0.95em glyph in a 1.3em disc.
+    fontFamily: '"Mana"',
+    fontSize: gem.glyphPx,
+    lineHeight: 1,
+  };
   return (
     <span
       style={{
@@ -2081,24 +2093,34 @@ function ManaGem({
         width: size,
         height: size,
         borderRadius: size,
-        background: gem.bg,
+        // No disc at all for a bare symbol ({E}, prototype).
+        ...(gem.bg === null ? {} : { background: gem.bg }),
         ...shadow,
         ...style,
       }}
     >
-      <span
-        style={{
-          display: "flex",
-          // mana-font: 0.95em glyph in a 1.3em disc.
-          fontFamily: '"Mana"',
-          fontSize: gem.glyphPx,
-          lineHeight: 1,
-          color: gem.ink,
-        }}
-      >
-        {cp}
+      <span style={{ display: "flex", position: "relative" }}>
+        {gem.flake ? <SnowFlake flake={gem.flake} ink={gem.ink} /> : <span style={{ ...glyph, color: gem.ink }}>{cp}</span>}
       </span>
     </span>
+  );
+}
+
+// PROTOTYPE (symbol round): the prints' snow flake — the font's white parts
+// (lib/cards/snow-flake-path.ts) outlined in the ink and filled white, as an
+// inline SVG (Satori has no text stroke). The square is the flake: the
+// path's box, plus its outline, centred in it.
+function SnowFlake({ flake, ink }: { flake: NonNullable<Extract<ReturnType<typeof manaGemSpec>, { kind: "solid" }>["flake"]>; ink: string }) {
+  const [x0, y0, x1, y1] = SNOW_FLAKE_BOX;
+  // px per path unit: the wider side of the parts plus the outline spans the square.
+  const unit = (flake.sizePx - 2 * flake.outlinePx) / Math.max(x1 - x0, y1 - y0);
+  const side = flake.sizePx / unit;
+  const viewBox = `${(x0 + x1) / 2 - side / 2} ${(y0 + y1) / 2 - side / 2} ${side} ${side}`;
+  return (
+    <svg width={flake.sizePx} height={flake.sizePx} viewBox={viewBox} xmlns="http://www.w3.org/2000/svg">
+      <path d={SNOW_FLAKE_PATH} fill={ink} stroke={ink} strokeWidth={(2 * flake.outlinePx) / unit} strokeLinejoin="miter" strokeMiterlimit={2.5} />
+      <path d={SNOW_FLAKE_PATH} fill={flake.fill} stroke={flake.fill} strokeWidth={(2 * flake.fillPx) / unit} strokeLinejoin="miter" strokeMiterlimit={2.5} />
+    </svg>
   );
 }
 
@@ -2210,9 +2232,11 @@ function RulesItemBake({
   // carries one (inlineSymbolStyle — the 2003 prints shadow the cost alone).
   const symbols = inlineSymbolStyle(cardSymbols);
   if (item.t === "m") {
+    // PROTOTYPE (symbol round): a larger disc keeps a plain pip's centre.
+    const grow = scaledDiscPx(item.suffix, glyph) - glyph;
     const place: React.CSSProperties = {
       alignSelf: "flex-start",
-      marginTop: top,
+      marginTop: top - Math.floor(grow / 2),
       ...(gapBefore ? { marginLeft: gapBefore } : {}),
     };
     const overrideSrc = pipOverrideForSuffix(item.suffix, overrides);

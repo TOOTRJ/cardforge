@@ -8,7 +8,8 @@
 // adventure page and the second faces — draws the measured lines of
 // lib/cards/rules-layout.ts, and the old average-width estimate is gone.
 
-import { tokenize } from "@/components/cards/mana-cost-glyphs";
+import { tokenSuffix, tokenize } from "@/components/cards/mana-cost-glyphs";
+import { pipScale } from "@/lib/cards/mana-gem";
 import { displayTextEm, truncateDisplayLine } from "@/lib/cards/display-metrics";
 import { setSymbolBoxPct } from "@/lib/cards/set-symbol-size";
 import { symbolStyle, type SymbolStyle, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
@@ -398,7 +399,8 @@ function costRowTerms(
       perDisc += displayTextEm(token.value.toUpperCase()) * 0.6;
       fixedPct += token.value.length * 3 * HALF_PX_PCT;
     } else {
-      perDisc += 1;
+      // PROTOTYPE (symbol round): a Phyrexian pip's larger disc.
+      perDisc += pipScale(tokenSuffix(token) ?? "");
     }
   }
   return { perDisc, fixedPct };

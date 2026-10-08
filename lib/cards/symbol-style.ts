@@ -62,7 +62,11 @@ export const SYMBOL_STYLES: Readonly<Record<SymbolStyle, SymbolStyleSpec>> = {
   modern: {
     id: "modern",
     discShadow: { left: 0.06, down: 0.07, colorHex: "#111" },
-    inlineShadow: true,
+    // PROTOTYPE (symbol round, 2026-10-08): the M15-era prints set a pip in
+    // the rules text FLAT — 31 text pips on 22 prints, M15 2014 → TDM 2025,
+    // shadow 0.000 ± 0.004 of the disc below them, against 0.05–0.10 under
+    // the same cards' cost discs. Was `true`.
+    inlineShadow: false,
     previewShadowClass: "ms-shadow",
     previewShadowCss: "-0.06em 0.07em 0 #111, 0 0.06em 0 #111",
     costRowShadowDiscs: 0.1,

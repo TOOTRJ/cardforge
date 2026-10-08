@@ -35,6 +35,73 @@ export const MANA_GEM_BG: Readonly<Record<string, string>> = {
 /** The symbol's ink on every disc. */
 export const MANA_SYMBOL_INK = "#150d08";
 
+// ---------------------------------------------------------------------------
+// PROTOTYPE (symbol round, 2026-10-08 — pictures for the owner, NOT shipped:
+// no layout bump, no preview twin, no tests). The prints' own drawings of
+// five symbols, measured on Scryfall PNGs (2006 → 2025) and scaled to the HD
+// bake; the numbers are data here so a builder can pick them up.
+// ---------------------------------------------------------------------------
+
+/** {Q}: a near-black disc and a white arrow 0.64 of the disc tall (11 prints,
+ *  SHM 2008 → MB2 2024: disc #1c1a20–#27271d, arrow #f7f7f5–#ffffff, arrow
+ *  0.60–0.65 wide and 0.63–0.66 tall). mana-font's arrow is 0.704 em tall. */
+export const UNTAP_GEM = { bg: "#211f23", ink: "#ffffff", glyphOfDisc: 0.9 } as const;
+
+/** A Phyrexian symbol is 0.90–0.93 of ITS disc tall on the prints (18
+ *  discs, NPH 2011 → EOC 2025); mana-font's is 1 em tall. */
+export const PHYREXIAN_GLYPH_OF_DISC = 0.91;
+
+/** The prints set a Phyrexian pip — one colour or two — on a LARGER disc
+ *  than the pips beside it: 1.12–1.24 of them in a cost (mean 1.19, n = 11),
+ *  1.22–1.31 in rules text (n = 6). One factor for both here. */
+export const LARGE_PIP_SCALE = 1.2;
+
+/** The prints' hybrid and twobrid discs are that large too (GTC #215 41 px
+ *  against 35, EVE #152 40) — measured, NOT part of this round: flip this to
+ *  see it. */
+export const LARGE_PIP_INCLUDES_HYBRID: boolean = false;
+
+/** {S}: the disc of a generic pip, a WHITE flake 0.94 of the disc across
+ *  with a dark outline 0.05–0.06 of the flake wide (8 prints, CSP 2006 → J22
+ *  2022, the same drawing throughout). mana-font's `s` is that flake with an
+ *  outline 0.085 wide and no fill, so a card draws the prints' from the
+ *  font's white parts instead (lib/cards/snow-flake-path.ts): the parts
+ *  stroked `outlineOfDisc` of the disc in the ink, then filled — and grown
+ *  `fillOfDisc` — in white on top: a thin dark line round and between white
+ *  petals. */
+export const SNOW_GEM = { flakeOfDisc: 0.94, fill: "#ffffff", outlineOfDisc: 0.062, fillOfDisc: 0.012 } as const;
+
+/** {E}: a bare symbol, no disc and no shadow, 0.895 of a text pip's disc
+ *  tall and as wide, advancing like a pip (18 symbols on 9 prints, KLD 2016 →
+ *  DRC 2025). mana-font's is 0.863 em tall. */
+export const ENERGY_GEM = { glyphOfDisc: 1.04 } as const;
+
+/** A two-colour Phyrexian disc ({G/U/P}): each half's symbol 0.42–0.49 of
+ *  the disc tall, centred 0.17 of the diameter up-left / down-right of the
+ *  disc's centre (6 prints: NEO, DMU, ONE). Its em box's corner, as SPLIT_GEM. */
+export const PHYREXIAN_SPLIT_GEM = {
+  halfOfDisc: 0.45,
+  top: { top: 0.096, left: 0.105 },
+  bottom: { top: 0.436, left: 0.445 },
+} as const;
+
+const isPhyrexian = (suffix: string) => /^[wubrgc]p$/.test(suffix);
+const isSplitPhyrexian = (suffix: string) => /^[wubrg]{2}p$/.test(suffix);
+
+/** How much larger than a pip's own disc `symbol` is drawn (1 for most). The
+ *  rules layout and the cost row measure a pip with it; ManaGem draws it. */
+export function pipScale(symbol: string): number {
+  const suffix = symbol.toLowerCase();
+  if (isPhyrexian(suffix) || isSplitPhyrexian(suffix)) return LARGE_PIP_SCALE;
+  if (LARGE_PIP_INCLUDES_HYBRID && hybridHalves(suffix)) return LARGE_PIP_SCALE;
+  return 1;
+}
+
+/** A pip's drawn diameter in whole px where a plain pip's is `discPx`. */
+export function scaledDiscPx(symbol: string, discPx: number): number {
+  return Math.round(discPx * pipScale(symbol));
+}
+
 /** A split (hybrid / twobrid) disc: a 135° two-colour fill, each half's
  *  symbol at `halfOfDisc` of the diameter, its em box's corner at these
  *  fractions of the diameter from the disc's top-left. */
@@ -59,7 +126,14 @@ export type ManaGemSpec =
       kind: "solid";
       /** The mana-font suffix drawn — the style's own {T} already applied. */
       suffix: string;
-      bg: string;
+      /** The disc's fill; null = no disc and no shadow, the symbol alone
+       *  ({E}). */
+      bg: string | null;
+      /** Drawn INSTEAD of the font's symbol when present ({S}): the snow
+       *  flake's white parts in a square `sizePx` wide centred on the disc,
+       *  outlined `outlinePx` in `ink` and filled `fill`, the fill grown
+       *  `fillPx`. Fractions of a px are meant (an SVG stroke). */
+      flake?: { sizePx: number; outlinePx: number; fillPx: number; fill: string };
       ink: string;
       /** The symbol's font size, whole px. */
       glyphPx: number;
@@ -85,6 +159,8 @@ export function manaGemSpec(symbol: string, discPx: number, symbols: SymbolStyle
   const suffix = styledSuffix(symbols, symbol);
   const halves = hybridHalves(suffix);
   if (halves) {
+    const phyrexian = isSplitPhyrexian(suffix);
+    const geo = phyrexian ? PHYREXIAN_SPLIT_GEM : SPLIT_GEM;
     const topBg = MANA_GEM_BG[halves.top] ?? MANA_GEM_BG.c;
     const bottomBg = MANA_GEM_BG[halves.bottom] ?? MANA_GEM_BG.c;
     return {
@@ -92,28 +168,48 @@ export function manaGemSpec(symbol: string, discPx: number, symbols: SymbolStyle
       suffix,
       ink: MANA_SYMBOL_INK,
       background: `linear-gradient(${SPLIT_GEM.angleDeg}deg, ${topBg} 50%, ${bottomBg} 50%)`,
-      halfPx: Math.round(discPx * SPLIT_GEM.halfOfDisc),
+      halfPx: Math.round(discPx * geo.halfOfDisc),
       top: {
-        suffix: halves.top,
+        suffix: phyrexian ? "p" : halves.top,
         bg: topBg,
-        topPx: Math.round(discPx * SPLIT_GEM.top.top),
-        leftPx: Math.round(discPx * SPLIT_GEM.top.left),
+        topPx: Math.round(discPx * geo.top.top),
+        leftPx: Math.round(discPx * geo.top.left),
       },
       bottom: {
-        suffix: halves.bottom,
+        suffix: phyrexian ? "p" : halves.bottom,
         bg: bottomBg,
-        topPx: Math.round(discPx * SPLIT_GEM.bottom.top),
-        leftPx: Math.round(discPx * SPLIT_GEM.bottom.left),
+        topPx: Math.round(discPx * geo.bottom.top),
+        leftPx: Math.round(discPx * geo.bottom.left),
       },
     };
   }
-  return {
-    kind: "solid",
-    suffix,
-    bg: MANA_GEM_BG[inlineManaTintKey(suffix)] ?? MANA_GEM_BG.c,
-    ink: MANA_SYMBOL_INK,
-    glyphPx: manaGlyphPx(discPx),
-  };
+  const bg = MANA_GEM_BG[inlineManaTintKey(suffix)] ?? MANA_GEM_BG.c;
+  // The prints' own drawings (prototype — see the constants above).
+  if (suffix === "untap") {
+    return { kind: "solid", suffix, bg: UNTAP_GEM.bg, ink: UNTAP_GEM.ink, glyphPx: Math.round(discPx * UNTAP_GEM.glyphOfDisc) };
+  }
+  if (suffix === "s") {
+    return {
+      kind: "solid",
+      suffix,
+      bg,
+      ink: MANA_SYMBOL_INK,
+      glyphPx: manaGlyphPx(discPx),
+      flake: {
+        sizePx: Math.round(discPx * SNOW_GEM.flakeOfDisc),
+        outlinePx: discPx * SNOW_GEM.outlineOfDisc,
+        fillPx: discPx * SNOW_GEM.fillOfDisc,
+        fill: SNOW_GEM.fill,
+      },
+    };
+  }
+  if (suffix === "e") {
+    return { kind: "solid", suffix, bg: null, ink: MANA_SYMBOL_INK, glyphPx: Math.round(discPx * ENERGY_GEM.glyphOfDisc) };
+  }
+  if (isPhyrexian(suffix)) {
+    return { kind: "solid", suffix, bg, ink: MANA_SYMBOL_INK, glyphPx: Math.round(discPx * PHYREXIAN_GLYPH_OF_DISC) };
+  }
+  return { kind: "solid", suffix, bg, ink: MANA_SYMBOL_INK, glyphPx: manaGlyphPx(discPx) };
 }
 
 // ---------------------------------------------------------------------------
@@ -143,6 +239,8 @@ const MANA_GLYPH_SUFFIXES: ReadonlySet<string> = new Set([
   // hybrid, twobrid, colourless-hybrid and Phyrexian classes
   ..."wu wb ub ur br bg rw rg gw gu".split(" "),
   ...["w", "u", "b", "r", "g"].flatMap((c) => [`2${c}`, `c${c}`, `${c}p`]),
+  // two-colour Phyrexian (prototype: the tokenizer's three-part form)
+  ..."wup wbp ubp urp brp bgp rwp rgp gwp gup".split(" "),
   "tk",
   // tap and untap, every era's
   ..."tap untap tap-alt tap-3ed tap-4ed".split(" "),
