@@ -8,7 +8,6 @@ import {
   type DragEvent,
   type KeyboardEvent,
   type PointerEvent,
-  type WheelEvent,
 } from "react";
 import {
   ImagePlus,
@@ -110,12 +109,30 @@ export function ArtUploader({
     travelY: number;
     active: boolean;
   } | null>(null);
-  // The loaded image's natural pixel size — needed to compute how far the art
-  // overflows the crop box (and thus the drag→focal conversion). Null until the
-  // <img> fires onLoad; reset when the art changes.
-  const naturalSizeRef = useRef<{ w: number; h: number } | null>(null);
-  // The same size as state, tagged with its picture, for the sharpness note.
+  // The loaded picture's natural pixel size, tagged with its picture — what
+  // the drag (how far the art overflows the window) and the sharpness note
+  // read. Null until the picture is known: its onLoad, or — for a picture
+  // that finished loading BEFORE React attached onLoad (an edit page's art
+  // is in the server HTML and usually in the browser's cache, so its load
+  // event is gone by hydration) — the <img>'s own state when it mounts
+  // (pictureRef). Without that second path a reopened card's art could not
+  // be dragged and never got its sharpness note.
   const [loadedSize, setLoadedSize] = useState<{ src: string; width: number; height: number } | null>(null);
+  const recordPicture = useCallback((img: HTMLImageElement) => {
+    const src = img.getAttribute("src");
+    const width = img.naturalWidth;
+    const height = img.naturalHeight;
+    if (!src || !(width > 0) || !(height > 0)) return;
+    setLoadedSize((prev) =>
+      prev && prev.src === src && prev.width === width && prev.height === height ? prev : { src, width, height },
+    );
+  }, []);
+  const pictureRef = useCallback(
+    (img: HTMLImageElement | null) => {
+      if (img?.complete) recordPicture(img);
+    },
+    [recordPicture],
+  );
   const [uploading, setUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isDraggingArt, setIsDraggingArt] = useState(false);
@@ -138,12 +155,9 @@ export function ArtUploader({
   const focalX = clamp(artPosition.focalX ?? 0.5, 0, 1);
   const focalY = clamp(artPosition.focalY ?? 0.5, 0, 1);
   const scale = clamp(artPosition.scale ?? 1, MIN_SCALE, MAX_SCALE);
-
-  // A new image's natural size is unknown until it loads — clear the cached
-  // dimensions so the pan math doesn't use the previous art's overflow.
-  useEffect(() => {
-    naturalSizeRef.current = null;
-  }, [artUrl]);
+  // This picture's size, once known (a size recorded for another picture —
+  // the art was replaced — is not this one's).
+  const natural = artUrl && loadedSize?.src === artUrl ? loadedSize : null;
 
   // ---- Upload ------------------------------------------------------------
 
@@ -301,10 +315,9 @@ export function ArtUploader({
   // Signed: a picture zoomed out smaller than the window moves WITH the
   // focal, and the drag still follows the finger.
   const travelFor = (el: HTMLElement) => {
-    const nat = naturalSizeRef.current;
-    if (!nat) return { x: 0, y: 0 };
+    if (!natural) return { x: 0, y: 0 };
     // The content box: what the <img> fills (clientWidth excludes borders).
-    return focalTravel({ width: el.clientWidth, height: el.clientHeight }, { width: nat.w, height: nat.h }, scale);
+    return focalTravel({ width: el.clientWidth, height: el.clientHeight }, natural, scale);
   };
 
   const handleArtPointerDown = (event: PointerEvent<HTMLDivElement>) => {
@@ -365,21 +378,40 @@ export function ArtUploader({
 
   // ---- Wheel zoom --------------------------------------------------------
 
-  const handleWheel = (event: WheelEvent<HTMLDivElement>) => {
-    if (!artUrl) return;
-    // Don't hijack page scrolls — only zoom when the user is actively
-    // holding shift (intentional zoom gesture). Wheel-only would steal the
-    // page scroll while the cursor crossed the preview.
-    if (!event.shiftKey) return;
-    event.preventDefault();
-    zoomBy(event.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP);
-  };
-
   // Rounded so repeated steps never drift off the 5 % grid (0.1 + 0.2).
   const zoomBy = (delta: number) => {
     const next = clamp(Math.round((scale + delta) * 100) / 100, MIN_SCALE, MAX_SCALE);
     if (next !== scale) updatePosition({ scale: next });
   };
+
+  // A NATIVE, non-passive listener (the effect below): React attaches its
+  // own wheel listeners passive, so a preventDefault in an onWheel prop is
+  // ignored and the page scrolled under every Shift-scroll zoom.
+  const handleWheel = (event: globalThis.WheelEvent) => {
+    if (!artUrl) return;
+    // Don't hijack page scrolls — only zoom when the user is actively
+    // holding shift (intentional zoom gesture). Wheel-only would steal the
+    // page scroll while the cursor crossed the preview.
+    if (!event.shiftKey) return;
+    // With Shift held, macOS and Chrome report a vertical wheel as a
+    // horizontal one: deltaY is 0 and the turn is in deltaX.
+    const turn = event.deltaY || event.deltaX;
+    if (!turn) return;
+    event.preventDefault();
+    zoomBy(turn > 0 ? -ZOOM_STEP : ZOOM_STEP);
+  };
+  const wheelHandlerRef = useRef(handleWheel);
+  useEffect(() => {
+    wheelHandlerRef.current = handleWheel;
+  });
+  useEffect(() => {
+    const zone = dropzoneRef.current;
+    if (!zone) return;
+    const onWheel = (event: globalThis.WheelEvent) => wheelHandlerRef.current(event);
+    zone.addEventListener("wheel", onWheel, { passive: false });
+    return () => zone.removeEventListener("wheel", onWheel);
+  }, []);
+
 
   // ---- Misc handlers -----------------------------------------------------
 
@@ -454,7 +486,6 @@ export function ArtUploader({
   // its aspect with it (2 px a side is 1.5 % on a saga's narrow window).
   const surfaceStyle = artUrl ? positionerSurfaceStyle(artWindow.aspect) : undefined;
   // How sharp this picture prints in this window at this zoom.
-  const natural = artUrl && loadedSize?.src === artUrl ? loadedSize : null;
   const ppi = artPrintPpi(artWindow, natural, scale);
 
   return (
@@ -492,7 +523,6 @@ export function ArtUploader({
         onPointerMove={handleArtPointerMove}
         onPointerUp={handleArtPointerUp}
         onPointerCancel={handleArtPointerUp}
-        onWheel={handleWheel}
         onKeyDown={(event) => {
           if ((event.key === "Enter" || event.key === " ") && !artUrl) {
             event.preventDefault();
@@ -544,17 +574,8 @@ export function ArtUploader({
               src={artUrl}
               alt="Card artwork preview"
               draggable={false}
-              onLoad={(event) => {
-                naturalSizeRef.current = {
-                  w: event.currentTarget.naturalWidth,
-                  h: event.currentTarget.naturalHeight,
-                };
-                setLoadedSize({
-                  src: artUrl,
-                  width: event.currentTarget.naturalWidth,
-                  height: event.currentTarget.naturalHeight,
-                });
-              }}
+              ref={pictureRef}
+              onLoad={(event) => recordPicture(event.currentTarget)}
               className="pointer-events-none h-full w-full select-none object-cover"
               style={{
                 // Must stay identical to the bake/preview renderer

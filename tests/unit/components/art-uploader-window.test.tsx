@@ -265,3 +265,88 @@ describe("keyboard and buttons", () => {
     expect(el.getAttribute("aria-label")).toMatch(/Drag to reposition the art/);
   });
 });
+
+describe("a picture that loaded before React attached onLoad (an edit page's server HTML)", () => {
+  // The browser fires `load` once. An edit page's art <img> is in the server
+  // HTML and usually cached, so by hydration the event is gone: the size
+  // must be read from the element when it mounts, or the art cannot be
+  // dragged and never gets its sharpness note.
+  function withCompletePictures(natural: { width: number; height: number }, run: () => void) {
+    const proto = HTMLImageElement.prototype;
+    const saved = ["complete", "naturalWidth", "naturalHeight"].map((key) => [key, Object.getOwnPropertyDescriptor(proto, key)] as const);
+    Object.defineProperty(proto, "complete", { configurable: true, get: () => true });
+    Object.defineProperty(proto, "naturalWidth", { configurable: true, get: () => natural.width });
+    Object.defineProperty(proto, "naturalHeight", { configurable: true, get: () => natural.height });
+    try {
+      run();
+    } finally {
+      for (const [key, descriptor] of saved) {
+        if (descriptor) Object.defineProperty(proto, key, descriptor);
+        else delete (proto as unknown as Record<string, unknown>)[key];
+      }
+    }
+  }
+
+  it("drags and shows the sharpness note with no load event", () => {
+    withCompletePictures({ width: 626, height: 457 }, () => {
+      const onChange = vi.fn();
+      render(<Harness template="m15borderless" onChange={onChange} />);
+      const el = surface();
+      Object.defineProperty(el, "clientWidth", { configurable: true, value: 341 });
+      Object.defineProperty(el, "clientHeight", { configurable: true, value: 440 });
+      el.setPointerCapture = vi.fn();
+      el.releasePointerCapture = vi.fn();
+      // No fireEvent.load: the size came from the mounted element.
+      expect(screen.getByTestId("art-soft-note").textContent).toContain("626 × 457");
+      drag(40, 0);
+      expect(onChange).toHaveBeenCalled();
+      expect(onChange.mock.calls.at(-1)![0].focalX).toBeLessThan(0.5);
+    });
+  });
+
+  it("an incomplete picture waits for its load", () => {
+    render(<Harness template="m15borderless" />);
+    expect(screen.queryByTestId("art-soft-note")).toBeNull();
+    layOut({ width: 341, height: 440 }, { width: 626, height: 457 });
+    expect(screen.getByTestId("art-soft-note").textContent).toContain("626 × 457");
+  });
+});
+
+describe("Shift-scroll zoom", () => {
+  // A native wheel event, as the browser sends it (React's own wheel
+  // listeners are passive: a preventDefault there is ignored and the page
+  // scrolls under the zoom).
+  const wheel = (init: WheelEventInit) => {
+    const event = new WheelEvent("wheel", { bubbles: true, cancelable: true, ...init });
+    // happy-dom's WheelEvent carries no modifier keys.
+    Object.defineProperty(event, "shiftKey", { value: init.shiftKey === true });
+    act(() => {
+      surface().dispatchEvent(event);
+    });
+    return event;
+  };
+
+  it("zooms and keeps the page still; a plain wheel is left to the page", () => {
+    const onChange = vi.fn();
+    render(<Harness template="m15" onChange={onChange} />);
+    const plain = wheel({ deltaY: 120 });
+    expect(plain.defaultPrevented).toBe(false);
+    expect(onChange).not.toHaveBeenCalled();
+    const out = wheel({ deltaY: 120, shiftKey: true });
+    expect(out.defaultPrevented).toBe(true);
+    expect(onChange.mock.calls.at(-1)![0].scale).toBe(0.95);
+    wheel({ deltaY: -120, shiftKey: true });
+    wheel({ deltaY: -120, shiftKey: true });
+    expect(onChange.mock.calls.at(-1)![0].scale).toBe(1.05);
+  });
+
+  it("reads the turn from deltaX (Shift makes a vertical wheel horizontal on macOS and in Chrome)", () => {
+    const onChange = vi.fn();
+    render(<Harness template="m15" onChange={onChange} />);
+    const out = wheel({ deltaX: 120, deltaY: 0, shiftKey: true });
+    expect(out.defaultPrevented).toBe(true);
+    expect(onChange.mock.calls.at(-1)![0].scale).toBe(0.95);
+    wheel({ deltaX: -120, deltaY: 0, shiftKey: true });
+    expect(onChange.mock.calls.at(-1)![0].scale).toBe(1);
+  });
+});
