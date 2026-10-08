@@ -1133,6 +1133,56 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            visual matrix: only the agclassic / alphaland cases change.
 //            NOT verification-neutral: every text slot moves — no tick
 //            exists on the pair to stale (first ticks follow the merge).
+//   49     — RESERVED for the symbols as printed (TODO 6.16b, PR #494,
+//            open on 2026-10-08): that PR owns the number and its scope.
+//            Until it merges, v49 changes NO card here
+//            (RESERVED_SYMBOLS_PRINT_VERSION, an empty card scope) — an
+//            unlisted version would count as "every card" and sweep the
+//            whole library. The branch that merges second drops the
+//            placeholder for the real scope (a unit test fails until it
+//            does).
+//   50     — the type line in its printed order, and the P/T of a land
+//            that is also a creature (TODO 1.20). ITS number lives in
+//            TYPE_LINE_ORDER_LAYOUT_VERSION below. Two corrections of
+//            what a face prints, in the one helper both renderers read
+//            (lib/cards/card-display.ts):
+//              1. buildTypeLine put the supertype's words BEFORE the card
+//                 type, whatever they were. The importer keeps every type
+//                 word of a printed line but the card type's own in
+//                 `supertype` (TODO 1.3), so a line whose card type is
+//                 not its last word read another order: Dryad Arbor
+//                 "Creature Land — Forest Dryad", Urza's Saga "Land
+//                 Enchantment — Urza's Saga", a FIN Summon "Creature
+//                 Enchantment — Saga Dragon", Bident of Thassa "Legendary
+//                 Artifact Enchantment". Now the words left of the dash
+//                 print in the order cards print them (typeLineWords:
+//                 Basic, Legendary, Ongoing, Snow, World, Host / Elite,
+//                 Kindred / Tribal, Enchantment, Artifact, Land,
+//                 Planeswalker, Creature — "Land Creature", "Enchantment
+//                 Land", "Enchantment Creature", "Legendary Enchantment
+//                 Artifact"); a word the order does not know stays where
+//                 its owner typed it and nothing moves across it. A
+//                 token's words after "Token" follow the same order.
+//              2. showsPowerToughness was false for any card type but
+//                 creature and token, so a land whose words say Creature
+//                 (Dryad Arbor's 1/1) had no P/T inputs and printed none.
+//                 Now any face whose type words say Creature shows and
+//                 prints one (never an emblem), on a frame that has the
+//                 slot — the saga body still has none (4.5c).
+//            A CORRECTION ("sweep"), never a badge. Card-scoped on ANY
+//            template (v50Changed): a face — the card's or its
+//            `back_face` — whose printed line changes or that newly
+//            prints a P/T; every other card is stamped. Production
+//            (anonymous read, 2026-10-08: 863 public + 129 unlisted
+//            cards, 1,007 faces, old line and P/T rule against new): 0 in
+//            scope — no visible stored card changes a pixel; the form
+//            never stored a P/T for a type that hid its inputs, so no
+//            stored land gains one. Private cards cannot be read; any in
+//            scope re-bake once. The visual matrix: one case changes (the
+//            saga Summon, "Creature Enchantment" → "Enchantment
+//            Creature"), inside the scope; the land creature, Enchantment
+//            Land and Enchantment Artifact cases are new.
+//            Verification-neutral: no slot, master, size or plate moves.
 // ---------------------------------------------------------------------------
 
 /** The 1993 frame on its prints (TODO 4.10c): every text slot and the
@@ -1157,7 +1207,20 @@ export const MODERN_2003_TEMPLATES: readonly string[] = ["modern", "modernland"]
 export const RETRO_1997_LAYOUT_VERSION = 46;
 export const RETRO_1997_TEMPLATES: readonly string[] = ["retro", "retroland"];
 
-export const CARD_LAYOUT_VERSION = ALPHA_1993_LAYOUT_VERSION;
+/** v49 belongs to the symbols as printed (TODO 6.16b, PR #494 — open when
+ *  v50 was cut). Until that PR merges, v49 is an EMPTY card scope here: a
+ *  version with no scope at all means "every card", and would sweep the
+ *  whole library. Whichever branch merges second replaces this placeholder
+ *  (and its VERSION_SCOPES entry) with the real v49 —
+ *  tests/unit/cards/type-line-order-version.test.ts fails until it does. */
+export const RESERVED_SYMBOLS_PRINT_VERSION = 49;
+
+/** The type line in its printed order + the P/T of a land creature (TODO
+ *  1.20): ITS version lives here alone — CARD_LAYOUT_VERSION, the card
+ *  scope and the rollout below read this constant. */
+export const TYPE_LINE_ORDER_LAYOUT_VERSION = 50;
+
+export const CARD_LAYOUT_VERSION = TYPE_LINE_ORDER_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -1324,6 +1387,7 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // of the pair; every card on it (4 stored on `agclassic`). No narrower
   // verification scope: neither template has a tick.
   [ALPHA_1993_LAYOUT_VERSION]: ALPHA_1993_TEMPLATES,
+  // (v50 is not here: any template — a card scope, v50Changed.)
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -1449,10 +1513,13 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
  * master or plate moves, so no alignment score a tick stored would change.
  * Production's fourteen 2003 ticks stay fresh; the owner signs the ink off
  * on the round-37 sheet (black frame, land), and 4.10b re-opens them once.
+ * v50 is (TODO 1.20): the words of a type line change their order inside
+ * the type slot and a land creature prints its P/T on the plate the frame
+ * already has — no slot, master, size or plate moves.
  * Stored bakes still owe these bumps: this list is read by frame
  * verification only, never by the stale / sweep / download rules.
  */
-export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32, 33, 35, 36, 37, 44];
+export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32, 33, 35, 36, 37, 44, TYPE_LINE_ORDER_LAYOUT_VERSION];
 
 /** TEMPLATE_SCOPED_VERSIONS with VERIFICATION_TEMPLATE_SCOPES laid over it
  *  (v34: only the token frames' ticks) and every verification-neutral bump
@@ -1803,6 +1870,96 @@ function v36Changed(card: ScopeCard): boolean {
   );
 }
 
+// v50 — the type line in its printed order (TODO 1.20). The order is FROZEN
+// here (v50 is history once it ships): a later change to the live order in
+// lib/cards/card-display.ts is its own bump, and a test holds the two equal
+// while v50 is the latest.
+const V50_TYPE_WORD_RANK: Readonly<Record<string, number>> = {
+  basic: 0,
+  legendary: 1,
+  ongoing: 2,
+  snow: 3,
+  world: 4,
+  host: 5,
+  elite: 5,
+  kindred: 6,
+  tribal: 6,
+  enchantment: 7,
+  artifact: 8,
+  land: 9,
+  planeswalker: 10,
+  creature: 11,
+};
+const V50_PT_SUBTYPES: readonly string[] = ["vehicle", "spacecraft"];
+
+/** v50's order of a face's words: every unbroken run of ranked words in
+ *  rank order (stable), an unranked word where it was. */
+function v50Ordered(words: readonly string[]): string[] {
+  const out: string[] = [];
+  let run: Array<{ word: string; rank: number }> = [];
+  const flush = () => {
+    out.push(...run.sort((a, b) => a.rank - b.rank).map((entry) => entry.word));
+    run = [];
+  };
+  for (const word of words) {
+    const rank = V50_TYPE_WORD_RANK[word.toLowerCase()];
+    if (rank === undefined) {
+      flush();
+      out.push(word);
+    } else {
+      run.push({ word, rank });
+    }
+  }
+  flush();
+  return out;
+}
+
+/**
+ * Whether layout v50 changed what ONE face prints (the card's own columns,
+ * or a `back_face` jsonb): its type line — the words v49 printed as
+ * "supertype, then the card type" ("Token", then the supertype, on a token)
+ * are in another order now — or its P/T — a value on a face that is neither
+ * a creature nor a token (nor an emblem), has no Vehicle / Spacecraft
+ * subtype, and whose supertype says "Creature": v49 printed none.
+ */
+export function v50FaceChanged(face: {
+  card_type?: unknown;
+  supertype?: unknown;
+  subtypes?: unknown;
+  power?: unknown;
+  toughness?: unknown;
+}): boolean {
+  const cardType = typeof face.card_type === "string" ? face.card_type : null;
+  if (cardType === "emblem") return false;
+  const words = (typeof face.supertype === "string" ? face.supertype : "").split(/\s+/).filter(Boolean);
+  const typed =
+    cardType === null || cardType === "token"
+      ? words
+      : [...words, cardType.charAt(0).toUpperCase() + cardType.slice(1)];
+  if (v50Ordered(typed).join(" ") !== typed.join(" ")) return true;
+  if (cardType === "creature" || cardType === "token") return false;
+  if (!face.power && !face.toughness) return false;
+  if (!words.some((word) => word.toLowerCase() === "creature")) return false;
+  const subtypes = Array.isArray(face.subtypes) ? face.subtypes : [];
+  return !subtypes.some((s) => typeof s === "string" && V50_PT_SUBTYPES.includes(s.trim().toLowerCase()));
+}
+
+/**
+ * Whether layout v50 (TODO 1.20) changed a card's bake: v50FaceChanged of
+ * the card or of its `back_face` (a second face prints its own type line and
+ * P/T; a double-faced body also prints the OTHER face's last type word and
+ * P/T, so either face re-bakes both). Any template: no template list. Any
+ * column it needs that the row doesn't carry → affected.
+ */
+function v50Changed(card: ScopeCard): boolean {
+  if ([card.card_type, card.supertype, card.subtypes, card.power, card.toughness, card.back_face].some((v) => v === undefined)) {
+    return true;
+  }
+  if (v50FaceChanged(card)) return true;
+  const back = card.back_face && typeof card.back_face === "object" ? (card.back_face as Record<string, unknown>) : null;
+  return back !== null && v50FaceChanged(back);
+}
+
 /** The frozen v33 template lists, for the test that pins them to the
  *  profiles. */
 export const V33_SCOPE_TEMPLATES = {
@@ -1847,6 +2004,12 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // v44 — the 2003 footer ink: every `modernland` card and a `modern` card
   // on the black master — v44Changed.
   44: v44Changed,
+  // v49 — RESERVED (PR #494, the symbols as printed): no card here until
+  // that PR's own scope replaces this line.
+  [RESERVED_SYMBOLS_PRINT_VERSION]: () => false,
+  // v50 — the type line in its printed order + a land creature's P/T
+  // (1.20): a face whose line or P/T changes — v50Changed.
+  [TYPE_LINE_ORDER_LAYOUT_VERSION]: v50Changed,
 };
 
 /** `frame_style.finish` from the jsonb column, or null when absent (= regular). */
@@ -1975,6 +2138,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [RETRO_1997_LAYOUT_VERSION]: "sweep", // the 1997 frame on the original cards (4.10a): masters, ink, footer, sizes, symbols — a correction on a pair no stored card uses, never a badge
   [MODERN_2003_LAYOUT_VERSION]: "sweep", // the 2003 frame's one sweep (4.10b): masters, P/T box, sizes, footer, symbols — a correction of a live pair against its prints after the owner's before / after sign-off, never a badge
   [ALPHA_1993_LAYOUT_VERSION]: "sweep", // the 1993 frame on its prints (4.10c): sizes, faces, the `Illus.` credit, the P/T, the original symbols — a correction of a pair against Alpha / Beta after the owner's before / after sheet (4 stored cards), never a badge
+  [TYPE_LINE_ORDER_LAYOUT_VERSION]: "sweep", // the type line in its printed order + the P/T of a land creature (1.20) — a correction of what a face prints; 0 public or unlisted stored cards in scope, never a badge
   [BATTLE_RECUT_LAYOUT_VERSION]: "sweep", // the battle's right side, top block and icon re-cut onto the prints (4.21d) — a correction on a template no public card uses, never a badge
 };
 
