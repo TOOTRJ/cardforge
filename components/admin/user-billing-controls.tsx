@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, RefreshCw, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { formatUtcDate } from "@/lib/format/dates";
 import { Button } from "@/components/ui/button";
 import {
   adminBillingHealthAction,
@@ -278,7 +279,7 @@ export function resyncToast(result: {
 }): string {
   if (!result.subscriptionId) return "Synced: no live subscription in Stripe.";
   const ending = result.endsAt
-    ? ` · cancelled, ends ${new Date(result.endsAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}`
+    ? ` · cancelled, ends ${formatUtcDate(result.endsAt)}`
     : "";
   return `Synced: ${result.tier} · ${result.status}${ending}${
     result.unresolvedPrice ? " (price not mapped — kept tier)" : ""

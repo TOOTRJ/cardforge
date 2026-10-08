@@ -6,10 +6,12 @@ import { ResumePlanButton } from "@/components/billing/resume-plan-button";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { planForTier, type PlanTier } from "@/lib/billing/plans";
+import { LocalDateText } from "@/components/ui/local-date";
+import { dateTextToString, type DateText } from "@/lib/format/dates";
 import {
   planEndingOf,
-  planEndingSentence,
-  planEndingShort,
+  planEndingShortText,
+  planEndingText,
   type PlanEnding,
 } from "@/lib/billing/plan-ending";
 
@@ -24,13 +26,39 @@ import {
 /** "Pro plan" → "Pro plan · ends Oct 23, 2026" for the dashboard badges —
  *  only when the badge's tier IS the subscription that is ending (a comp
  *  that outranks it keeps the plain label). */
+export function planBadgeText(
+  planName: string,
+  ending: PlanEnding | null,
+  subscriptionPlanName: string | null,
+): DateText {
+  if (!ending || subscriptionPlanName !== planName) return [`${planName} plan`];
+  return [`${planName} plan · `, ...planEndingShortText(ending)];
+}
+
+/** The same label as a UTC string (no browser: a test, a server string). */
 export function planBadgeLabel(
   planName: string,
   ending: PlanEnding | null,
   subscriptionPlanName: string | null,
 ): string {
-  if (!ending || subscriptionPlanName !== planName) return `${planName} plan`;
-  return `${planName} plan · ${planEndingShort(ending)}`;
+  return dateTextToString(planBadgeText(planName, ending, subscriptionPlanName), "UTC");
+}
+
+/** The badge's label on the page: the date in the viewer's time zone. */
+export function PlanBadgeLabel(props: {
+  planName: string;
+  ending: PlanEnding | null;
+  subscriptionPlanName: string | null;
+}) {
+  // One element: a Badge is a flex row, and a bare text node beside the
+  // <time> would lose its trailing space as a flex item of its own.
+  return (
+    <span>
+      <LocalDateText
+        parts={planBadgeText(props.planName, props.ending, props.subscriptionPlanName)}
+      />
+    </span>
+  );
 }
 
 export function PlanEndingNotice({
@@ -59,7 +87,7 @@ export function PlanEndingNotice({
             {ending.kind === "trial" ? `Your ${planName} trial is ending` : `Your ${planName} plan is ending`}
           </p>
           <p className="text-xs leading-5 text-muted">
-            {planEndingSentence(ending, planName)}
+            <LocalDateText parts={planEndingText(ending, planName)} />
             {" Afterwards you're on the free plan, with your cards and any credits you have left."}
             {canResume ? ` Changed your mind? Resume ${planName} and it carries on as before.` : ""}
           </p>

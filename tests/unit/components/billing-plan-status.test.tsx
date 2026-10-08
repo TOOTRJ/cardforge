@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { textContent } from "../helpers/text-content";
 
 // ---------------------------------------------------------------------------
 // /dashboard/billing's plan card: a cancelled plan says when it ENDS, what is
@@ -179,7 +180,7 @@ describe("billing plan card", () => {
     fireEvent.click(screen.getByRole("button", { name: "Resume Plus" }));
     await waitFor(() =>
       expect(
-        screen.getByText("Your Plus plan will renew on October 23, 2026 at $6 / month. Nothing is charged today."),
+        screen.getByText(textContent("Your Plus plan will renew on October 23, 2026 at $6 / month. Nothing is charged today.")),
       ).toBeTruthy(),
     );
     expect(actions.resume).not.toHaveBeenCalled();

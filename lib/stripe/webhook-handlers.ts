@@ -368,7 +368,8 @@ async function handleInvoicePaid(
       const sub = await stripe.subscriptions.retrieve(subscriptionId);
       interval = sub.items?.data?.[0]?.price?.recurring?.interval ?? null;
       const result = await syncSubscriptionForUser(admin, stripe, userId, {
-        eventSub: sub,
+        // Just retrieved: current, not an event's snapshot.
+        currentSub: sub,
         customerId,
       });
       await grantCreditsForSync(result, admin, { isCreationEvent: false });

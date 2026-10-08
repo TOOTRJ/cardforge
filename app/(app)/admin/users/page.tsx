@@ -29,6 +29,7 @@ import { getFunnelSummary } from "@/lib/admin/funnel-queries";
 import { NewMessageDialog } from "@/components/admin/new-message-dialog";
 import { ThreadList } from "@/components/messages/thread-list";
 import { formatRelativeTime } from "@/components/messages/format";
+import { formatUtcDateTime } from "@/lib/format/dates";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import {
@@ -484,20 +485,20 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
             <SectionTitle title="Account" hint="Identity + subscription state as the profile row stores it." />
             <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
               <Stat label="Email" value={email ?? "—"} />
-              <Stat label="Last sign-in" value={lastSignIn ? new Date(lastSignIn).toLocaleString() : "—"} />
-              <Stat label="Joined" value={new Date(user.created_at).toLocaleString()} />
+              <Stat label="Last sign-in" value={lastSignIn ? formatUtcDateTime(lastSignIn) : "—"} />
+              <Stat label="Joined" value={formatUtcDateTime(user.created_at)} />
               <Stat label="Tier" value={user.subscription_tier} />
               <Stat label="Status" value={user.subscription_status ?? "—"} />
               <Stat
                 label="Period ends"
-                value={user.current_period_end ? new Date(user.current_period_end).toLocaleString() : "—"}
+                value={user.current_period_end ? formatUtcDateTime(user.current_period_end) : "—"}
               />
               <Stat label="Credits" value={String(user.credits)} />
               <Stat
                 label="Comp"
                 value={
                   compTier
-                    ? `${compTier}${user.comp_expires_at ? ` until ${new Date(user.comp_expires_at).toLocaleString()}` : " (no expiry)"}`
+                    ? `${compTier}${user.comp_expires_at ? ` until ${formatUtcDateTime(user.comp_expires_at)}` : " (no expiry)"}`
                     : "—"
                 }
               />
@@ -571,7 +572,7 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
                     {ledger.map((entry) => (
                       <tr key={entry.id} className="border-b border-border/30">
                         <td className="whitespace-nowrap py-2 pr-4 text-muted">
-                          {new Date(entry.created_at).toLocaleString()}
+                          {formatUtcDateTime(entry.created_at)}
                         </td>
                         <td className={cn("py-2 pr-4 font-medium tabular-nums", entry.delta > 0 ? "text-primary-bright" : "text-danger")}>
                           {entry.delta > 0 ? `+${entry.delta}` : entry.delta}

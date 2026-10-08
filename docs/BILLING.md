@@ -492,6 +492,142 @@ counts as a subscriber until then, and one who resumes never counts as a
 cancellation; `subscription_resumed` counts the resumes. Revenue reads only
 `billing_payments` (paid invoices) and is unaffected.
 
+### Follow-up 2 (2026-10-07): a late event cannot store a state the plan has left
+
+**The race.** Cancel in the Customer Portal, then Resume in the app seconds
+later. Stripe generates two `customer.subscription.updated` events — the
+cancellation's (snapshot: `cancel_at` set) and the resume's (snapshot:
+`cancel_at: null`). Delivered in the other order, or with the first one
+retried later, the profile ended up "ending" while Stripe renewed the plan:
+
+1. portal cancel → Stripe: ending
+2. app Resume → Stripe: renews; the action resyncs the profile → renews
+3. the resume's event arrives → renews
+4. the cancellation's event arrives late → the sync merged the EVENT's
+   snapshot over the subscription it had just listed → profile: ending, until
+   the next event (for a monthly plan: the renewal)
+
+The dashboard notice, Settings, the avatar menu and `/admin/users` read the
+profile, so all four said "ends on …"; the billing page reads Stripe live
+and disagreed with them. The same merge had a worse form: an old `updated`
+event delivered after `customer.subscription.deleted` wrote a live plan back
+onto the profile, and a dead subscription sends no further event to fix it.
+
+Why the snapshot was merged at all (commit 19a03d41, the 2026-09-14
+tier-demotion fix): "so a just-deleted subscription can't read as live" —
+right for `deleted`, wrong for every other event.
+
+**The rule** (`syncSubscriptionForUser`, `lib/stripe/subscription-sync.ts`).
+Stripe's guidance is not to depend on delivery order and to fetch the
+object: "Stripe doesn't guarantee the delivery of events in the order that
+they're generated … Make sure that your event destination isn't dependent on
+receiving events in a specific order … You can also use the API to retrieve
+any missing objects" ([docs.stripe.com/webhooks#event-ordering](https://docs.stripe.com/webhooks#event-ordering)).
+So an event only names the subscription:
+
+| What is given | What is written |
+|---|---|
+| `eventSub` (a webhook snapshot) | the subscription **read again by id** (`subscriptions.retrieve`), in parallel with the customer's list; the read wins over the list's row for it (the guard against a list that lags), the list's row wins over the snapshot, and the snapshot is used only when neither read has it (Stripe unreachable; a just-created subscription neither read knows yet) |
+| `eventSub` + `eventDeleted` (`customer.subscription.deleted`) | ended, even if a read still shows it live — deletion is terminal, an ended subscription never comes back |
+| a read that says `canceled`, no `deleted` event (an old event after the deletion) | ended too — but only when the list was readable, so it is known that nothing else is live |
+| `currentSub` (the caller's own fresh object: `invoice.paid`'s retrieve, the Resume action's update response, the admin Resync's retrieve with its schedule) | taken as it is, not read again |
+
+No event id / timestamp bookkeeping: Stripe says not to order by `created`
+(one-second resolution), and with the state always re-read a duplicate or
+late delivery is simply another sync of the present.
+
+**The 2026-09 protections are untouched**: the primary is still picked from
+the whole list (live, highest tier, newest) so a secondary subscription's
+event cannot demote; an unmapped price on a live subscription still keeps
+the tier; an empty or failed list still writes nothing when no subscription
+was given, and with one given the subscription itself (read by id, else the
+snapshot) is synced — never "free" from a transient empty read. "Free" is
+written in exactly two cases: the subscription given has ended (above) and
+nothing else is live.
+
+**When the list cannot be read** (a transient Stripe error; the read by id
+may still work) the subscription given is synced on its own, as before —
+with one exception added in review: if it is NOT live and the profile sits
+on a DIFFERENT subscription whose stored status is live, nothing is written.
+That is an event for a secondary subscription (the superseded no-card
+trial's `deleted`, a late event for a plan that ended long ago), and without
+the list nothing says the other one stopped — writing it was the 2026-09
+demotion again, until the paid plan's next event. The stored subscription's
+own `deleted` event clears the id, so the guard cannot keep a lapsed plan
+paid.
+
+Every way the sync writes tier `free` or clears `stripe_subscription_id`:
+
+| Path | Fires when | Why a live payer is safe |
+|---|---|---|
+| `deleted` event, list readable | the list (with the ended subscription merged in) holds nothing `active` / `trialing` | any live subscription is picked as primary first |
+| a read of `canceled`, no `deleted` event, list readable | same | same |
+| `deleted` event (or the admin Resync of a subscription read as `canceled`), list unreadable | the profile does not sit on another live subscription | the guard above |
+| anything else | never: a non-live status keeps the tier and the id (the status gates perks), an unmapped live price keeps the tier, no subscription given writes nothing | — |
+
+What the handler still takes from the event itself: the funnel rows
+(`trial_converted`, `subscription_changed`, `subscription_cancelled` — they
+record what that event said, with its `previous_attributes`), and the
+creation flag for the one trial grant, which keys on the SYNCED state
+(a late `created` event for a trial that has converted grants the month's
+allotment, idempotently, not a second trial tranche).
+
+### Follow-up 2 (2026-10-07): billing dates in the viewer's time zone
+
+Every billing date was formatted in UTC, so a subscriber west of Greenwich
+whose period ends in the early UTC hours was shown the NEXT calendar day: a
+plan ending `2026-11-08T02:31:04Z` read "November 8" in the app and
+"November 7" in Stripe's portal (which prints the browser's day) for anyone
+in the Americas.
+
+`<LocalDate iso>` (`components/ui/local-date.tsx`, a client component) is
+now how a subscriber-facing billing date is printed: the server — and the
+first client render, which must match it — prints the UTC date inside
+`<time dateTime=…>`; once hydrated the same shape is printed in the
+browser's zone (`useSyncExternalStore`, so no hydration mismatch;
+`suppressHydrationWarning` on the element as a belt). The format options are
+`DATE_FORMATS` in `lib/format/dates.ts` — the one source — so only the day
+can change, never the form. A sentence with dates in it is kept as parts
+(`DateText`: `planEndingText`, `planEndingShortText`, `planBadgeText`,
+`resumeConfirmText`) and printed by `<LocalDateText>`; the same parts make
+the UTC string (`planEndingSentence`, `resumeConfirmCopy`, …) for a reader
+with no browser. `useLocalDateText` is the string form for a label that
+cannot hold elements (the account menu row).
+
+| Surface | Dates |
+|---|---|
+| Billing page (`PlanStatusLine`) | plan ends on · renews on · still billed next on · trial ends on · scheduled change on · comp "until" |
+| Billing page, invoices | each invoice's date |
+| Resume confirm (`ResumePlanButton`) | "will renew on …" / "trial will carry on until …" |
+| Dashboard notice + the credits / saved-cards badges | the sentence; "Pro plan · ends …" |
+| Settings (`BillingPanel`) | the cancelled-plan sentence; "Renews on" / "trial ends on" (the page passes a `<LocalDate>`; it was a server-formatted string) |
+| Plan grid (`PlanCard`) | "Your current plan · ends …" |
+| Upgrade modal | "Your current plan — cancelled, ends …" |
+| Account menu | "Billing · Pro ends …" |
+| Usage page (`/dashboard/usage`) | when each generation / ledger row happened (`format="stamp"`: "Nov 7, 6:31 PM") |
+
+`tests/unit/billing/billing-dates-local.test.ts` holds that list: each file
+prints through the component and formats no date on the spot — a new
+surface with a billing date is added there.
+
+**Admin pages stay UTC and say so** (an admin reads about a user in another
+zone): `formatUtcDate` / `formatUtcDateTime` — the directory badge
+("cancelled, ends Oct 23, 2026 UTC"), the detail rows (Plan ends, Cancelled
+on, Billed again before it ends, Period ends, Comp until), the Resync toast,
+the Revenue panel's payment dates and the Funnel panel's trial start dates.
+"Period ends" and "Comp until" were printed with a bare `toLocaleString()` —
+the server's zone, unsaid.
+
+**Server-built strings cannot know the viewer's zone** and stay UTC:
+
+| String | Zone | Can it contradict the page? |
+|---|---|---|
+| Trial-ending email (`trialEndingEmail`) | UTC date in the subject / heading; the sentence that states the charge now adds the time and the zone: "ends on **November 8, 2026** (2:31 AM UTC)" | It could: the email is the reminder before a charge, and "November 8" was the day AFTER the one the billing page shows in the Americas. With the time and "UTC" beside it, it no longer reads as the reader's own day. |
+| Win-back email (`trialWinbackEmail`: "subscribe before …") | UTC, now explicit (it was the server's zone) | By a few hours at the very end of a 30-day window; left as it is. |
+| Notifications (`lib/notifications/describe.ts`: `trial_ending` "ends on …", `comp_plan` "until …", `trial_lapsed` "by …") | `formatShortDate`: the zone of whoever runs it — the viewer's in the bell and the toast (client-rendered, so they AGREE with the page), the server's (UTC) in the server render of `/notifications` and in the weekly digest email | The `/notifications` server render can show the UTC day for a moment before hydration; not changed here (it is every notification date, not a billing surface) — see the PR's open questions. |
+| Toasts (`?billing=…` return toasts, the Resume / downgrade results) | none of them carries a date | — |
+| Admin Resync toast | UTC, labelled | — |
+
 ## Addendum — sandbox lifecycle run (2026-09-22, test clock `clock_1UIftGQFLEpCg9s2uoFgd7kf`)
 
 Two clock-bound sandbox customers, driven through the Stripe API:

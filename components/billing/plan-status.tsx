@@ -4,13 +4,14 @@ import { ResumePlanButton } from "@/components/billing/resume-plan-button";
 import { SIGNUP_CREDITS, planForTier } from "@/lib/billing/plans";
 import { isEndingStatus, type PlanStatus } from "@/lib/billing/plan-status";
 import { formatMoney } from "@/lib/format/money";
-import { formatCalendarDate } from "@/lib/format/dates";
+import { LocalDate } from "@/components/ui/local-date";
 
 // ---------------------------------------------------------------------------
 // The billing page's plan card: what happens to the plan next, and the
 // buttons that go with it. Both draw from ONE PlanStatus
 // (lib/billing/plan-status.ts), so a plan that is ending can never be
-// offered "Cancel plan" or described as renewing.
+// offered "Cancel plan" or described as renewing. Every date is a
+// <LocalDate>: the viewer's own calendar day, as Stripe's portal shows it.
 // ---------------------------------------------------------------------------
 
 function Strong({ children }: { children: React.ReactNode }) {
@@ -46,7 +47,7 @@ export function PlanStatusLine({
       return (
         <>
           {"You cancelled your free trial. It ends on "}
-          <Strong>{formatCalendarDate(status.endsAt)}</Strong>
+          <Strong><LocalDate iso={status.endsAt} /></Strong>
           {` and you won't be charged — you keep every ${planName} perk until then, and afterwards you're on the free plan with your cards and any credits you have left. Changed your mind? Resume the plan below.`}
         </>
       );
@@ -61,9 +62,9 @@ export function PlanStatusLine({
         return (
           <>
             {"This plan is set to end on "}
-            <Strong>{formatCalendarDate(status.endsAt)}</Strong>
+            <Strong><LocalDate iso={status.endsAt} /></Strong>
             {". Until then it is still billed as usual — next on "}
-            <Strong>{formatCalendarDate(status.billedBeforeAt)}</Strong>
+            <Strong><LocalDate iso={status.billedBeforeAt} /></Strong>
             {`. You keep every ${planName} perk until it ends; afterwards you're on the free plan with your cards and any credits you have left. Changed your mind? Resume the plan below.`}
           </>
         );
@@ -71,7 +72,7 @@ export function PlanStatusLine({
       return (
         <>
           {"You cancelled this plan. It ends on "}
-          <Strong>{formatCalendarDate(status.endsAt)}</Strong>
+          <Strong><LocalDate iso={status.endsAt} /></Strong>
           {` and won't renew — nothing more is charged. You keep every ${planName} perk until then; afterwards you're on the free plan with your cards and any credits you have left. Changed your mind? Resume the plan below.`}
         </>
       );
@@ -79,7 +80,7 @@ export function PlanStatusLine({
       return (
         <>
           {"Your free trial ends on "}
-          <Strong>{formatCalendarDate(status.trialEnd)}</Strong>
+          <Strong><LocalDate iso={status.trialEnd} /></Strong>
           {hasPaymentMethod
             ? `, then ${priceLine} on the card below.`
             : ". Add a card in the portal before then to keep the plan — without one it simply ends."}
@@ -97,7 +98,7 @@ export function PlanStatusLine({
           {"Changes to "}
           <Strong>{pendingPlanName}</Strong>
           {`${pendingPriceLine} on `}
-          <Strong>{formatCalendarDate(pending.startsAt)}</Strong>
+          <Strong><LocalDate iso={pending.startsAt} /></Strong>
           {`. You keep ${planName} and everything you paid for until then; nothing is charged now. Changed your mind? Keep your current plan below.`}
         </>
       );
@@ -106,7 +107,7 @@ export function PlanStatusLine({
       return (
         <>
           {"Renews on "}
-          <Strong>{formatCalendarDate(status.renewsAt)}</Strong>
+          <Strong><LocalDate iso={status.renewsAt} /></Strong>
           {". Cancel any time — the plan runs to the end of the period you paid for."}
         </>
       );
@@ -115,9 +116,15 @@ export function PlanStatusLine({
     case "comped":
       return (
         <>
-          {compExpiresAt
-            ? `Courtesy of the PipGlyph team until ${formatCalendarDate(compExpiresAt)}.`
-            : "Courtesy of the PipGlyph team — no renewal, no card needed."}
+          {compExpiresAt ? (
+            <>
+              {"Courtesy of the PipGlyph team until "}
+              <LocalDate iso={compExpiresAt} />
+              {"."}
+            </>
+          ) : (
+            "Courtesy of the PipGlyph team — no renewal, no card needed."
+          )}
         </>
       );
     case "ended":

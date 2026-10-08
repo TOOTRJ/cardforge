@@ -731,7 +731,8 @@ export async function resumeSubscriptionAction(
       // subscription.updated event writes the same row a moment later.
       try {
         await syncSubscriptionForUser(admin, stripe, user.id, {
-          eventSub: resumed,
+          // The update's own response — the freshest state there is.
+          currentSub: resumed,
           customerId: profile.stripe_customer_id,
         });
       } catch (error) {

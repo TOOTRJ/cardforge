@@ -6,7 +6,7 @@ import { getCardCapacity } from "@/lib/cards/capacity";
 import { CAPACITY_WARN_AT, overCapacity, remainingCapacity } from "@/lib/billing/capacity-copy";
 import { planForTier } from "@/lib/billing/plans";
 import { getEntitlements } from "@/lib/billing/entitlements";
-import { planBadgeLabel } from "@/components/dashboard/plan-ending-notice";
+import { PlanBadgeLabel } from "@/components/dashboard/plan-ending-notice";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -67,7 +67,11 @@ export async function CardsSummaryCard() {
           </div>
         </div>
         <Badge variant={capacity.tier === "free" ? "outline" : "primary"}>
-          {planBadgeLabel(plan.name, entitlements.planEnding, planForTier(entitlements.tier).name)}
+          <PlanBadgeLabel
+            planName={plan.name}
+            ending={entitlements.planEnding}
+            subscriptionPlanName={planForTier(entitlements.tier).name}
+          />
         </Badge>
       </header>
 
