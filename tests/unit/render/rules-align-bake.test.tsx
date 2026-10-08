@@ -221,3 +221,44 @@ describe("a centred card's PRINT export (lib/render/card-print.ts) — the same 
     }
   }, 120_000);
 });
+
+describe("a centred line HELD short of the P/T plate — on real bakes (owner 2026-10-07)", () => {
+  let frames: StandInFrames;
+  beforeAll(async () => {
+    frames = await serveStandInFrames([{ template: "m15", keys: ["r"], tone: TONE }]);
+  }, 60_000);
+  afterAll(() => frames.restore());
+  const m15 = getFrameProfile("m15");
+  // Nine lines at the left-aligned size: the last two reach the plate's rows.
+  const TEXT = { rulesText: "Whenever this creature attacks, draw a card and gain 1 life. ".repeat(7).trim(), flavorText: null, power: "2", toughness: "2" };
+
+  it.each(PRESETS)("%s: the same size and lines as Left; the held lines' ink where the layout put it, clear of the plate; the others on the centre", async (preset, target) => {
+    const show = { pt: true };
+    const leftLayout = mainRulesLayout({ layout: m15, rulesText: TEXT.rulesText, aspect: 7 / 5, show });
+    const layout = mainRulesLayout({ layout: m15, rulesText: TEXT.rulesText, aspect: 7 / 5, show, rulesAlign: "center" });
+    expect(layout.sizePx).toBe(leftLayout.sizePx);
+    expect(layout.clipped).toBe(false);
+    expect(layout.blocks).toEqual(leftLayout.blocks);
+    const placed = linePositions(layout, target);
+    const before = linePositions(leftLayout, target);
+    const centre = placed.box.left + placed.box.width / 2;
+    const held = placed.lines.filter((l) => Math.abs(l.left + l.width / 2 - centre) > 12);
+    expect(held.length, "the text reaches the plate").toBeGreaterThan(0);
+    const [centred, left] = await Promise.all([bake(card("m15", "center", TEXT), preset), bake(card("m15", undefined, TEXT), preset)]);
+    const k = target === "hd" ? 1 : 0.5;
+    placed.lines.forEach((l, i) => {
+      // Up to the layout's own right end for the line: the plate is drawn right of a held one.
+      const span: [number, number] = [placed.box.left - 8 * k, held.includes(l) ? l.inkRight + 4 * k : placed.box.left + placed.box.width + 8 * k];
+      const ink = inkEnds(centred, l, ...span)!;
+      const was = inkEnds(left, before.lines[i], span[0], before.lines[i].inkRight + 4 * k)!;
+      expect(ink.left - was.left, `line ${i} moved by its indent`).toBe(l.indent - before.lines[i].indent);
+      expect(ink.right, `line ${i} ends where the layout says`).toBeLessThanOrEqual(Math.ceil(l.inkRight) + 1);
+    });
+    // The held lines moved LEFT of the centre, never to the box's edge.
+    for (const l of held) {
+      expect(l.left + l.width / 2).toBeLessThan(centre);
+      expect(l.indent).toBeGreaterThan(0);
+    }
+    expect(layout.checks[target].keepOutHit).toBe(false);
+  }, 120_000);
+});

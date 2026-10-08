@@ -20,8 +20,10 @@ import {
   type DrawnStats,
 } from "@/lib/cards/rules-box";
 import {
+  HELD_LINE_AIR_PX,
   RULES_TARGETS,
   centredLineIndentPx,
+  heldLineIndentPx,
   fitRulesLayout,
   linePositions,
   rectPx,
@@ -181,14 +183,10 @@ describe("centred: every line on the box's centre, nothing else moved", () => {
       const left = family.build(text, flavor);
       const centred = family.build(text, flavor, "center");
       expect(centred.input.align).toBe("center");
-      // Same size, same lines, same verdict: the lines only move sideways —
-      // unless a keep-out the left text cleared is met where a line lands
-      // (then the fit steps down, as for any keep-out).
-      if (centred.sizePx !== left.sizePx) {
-        expect((left.input.keepOuts ?? []).length + (left.input.floats ?? []).length, "a size step needs a keep-out").toBeGreaterThan(0);
-        expect(centred.sizePx).toBeLessThan(left.sizePx);
-        return;
-      }
+      // Same size, same lines: the lines only move sideways — a drawn badge
+      // never steps a centred text down (owner 2026-10-07: a line that
+      // would land on one is held short of it).
+      expect(centred.sizePx).toBe(left.sizePx);
       expect(centred.blocks).toEqual(left.blocks);
       expect(centred.clipped).toBe(left.clipped);
       expect(centred.sideInsets).toEqual(left.sideInsets);
@@ -199,7 +197,8 @@ describe("centred: every line on the box's centre, nothing else moved", () => {
         expect(b.bar).toEqual(a.bar);
         expect(b.lines.map((l) => [l.top, l.height, l.width, l.inkTop, l.inkBottom])).toEqual(a.lines.map((l) => [l.top, l.height, l.width, l.inkTop, l.inkBottom]));
         const centre = boxCentre(centred, target);
-        const floats = (centred.input.floats ?? []).length > 0;
+        const badges = [...(centred.input.keepOuts ?? []), ...(centred.input.floats ?? [])].map((k) => rectPx(k, centred.orientation, centred.input.aspect, target));
+        expect(centred.checks[target].keepOutHit).toBe(left.checks[target].keepOutHit);
         let moved = 0;
         for (const l of b.lines) {
           expect(Number.isInteger(l.indent), "a whole px").toBe(true);
@@ -210,9 +209,15 @@ describe("centred: every line on the box's centre, nothing else moved", () => {
           const room = b.interior.width - l.width;
           const off = Math.abs(l.left + l.width / 2 - centre);
           // On the box's centre to the half px — unless the line fills the
-          // column to within the side headroom (it can't move further) or a
-          // float holds it back.
-          if (!floats && room > 2 * (layoutSide(centred, target) + 1)) expect(off, `${target}: line centre`).toBeLessThanOrEqual(0.5);
+          // column to within the side headroom (it can't move further), or
+          // its rows meet a drawn badge or a float and it is HELD short of
+          // it: then its centred place would have put ink in the badge.
+          const meets = badges.filter((k) => l.inkBottom > k.top && l.inkTop < k.bottom);
+          if (room > 2 * (layoutSide(centred, target) + 1) && off > 0.5) {
+            expect(meets.length, `${target}: an off-centre line meets a badge's rows`).toBeGreaterThan(0);
+            const at = centre - l.width / 2;
+            expect(meets.some((k) => at + l.width + 8 > k.left && at - 8 < k.right), `${target}: its centred place reaches the badge`).toBe(true);
+          }
           if (l.indent > 0) moved += 1;
         }
         if (b.lines.some((l) => b.interior.width - l.width > 4)) expect(moved).toBeGreaterThan(0);
@@ -268,18 +273,74 @@ function layoutSide(layout: RulesLayout, target: (typeof RULES_TARGETS)[number])
   return Math.max(s.left, s.right);
 }
 
-describe("keep-outs and floats are judged where each centred line lands", () => {
+describe("a centred line is held short of the keep-outs and floats it would land on", () => {
   const rect: Rect = getFrameProfile("m15").rules.rect;
   const base: RulesLayoutInput = { rulesText: "Vigilance\nFlying", rect, aspect: 7 / 5, sizePct: getFrameProfile("m15").rules.sizePct, padPx: { x: 4, y: 0 } };
 
-  it("a keep-out in the middle of the box: clear when left, met when centred (the fit steps down or clips)", () => {
+  it("a keep-out in the middle of the box: a centred line is HELD short of it, at the left-aligned size — never a size step, never a clip", () => {
     const middle: Rect = { leftPct: rect.leftPct + rect.widthPct / 2 - 1, widthPct: 2, topPct: rect.topPct, heightPct: rect.heightPct };
     const left = fitRulesLayout({ ...base, keepOuts: [middle] });
     expect(left.clipped).toBe(false);
-    expect(left.checks.hd.keepOutHit).toBe(false);
     const centred = fitRulesLayout({ ...base, keepOuts: [middle], align: "center" });
-    expect(centred.clipped).toBe(true);
-    expect(centred.checks.hd.keepOutHit).toBe(true);
+    expect(centred.clipped).toBe(false);
+    expect(centred.sizePx).toBe(left.sizePx);
+    expect(centred.blocks).toEqual(left.blocks);
+    for (const target of RULES_TARGETS) {
+      expect(centred.checks[target].keepOutHit).toBe(false);
+      const k = rectPx(middle, "portrait", 7 / 5, target);
+      const air = Math.round(HELD_LINE_AIR_PX * (target === "hd" ? 1 : 0.5));
+      const placed = linePositions(centred, target);
+      for (const l of placed.lines) {
+        // Beside the keep-out with the air, on the side nearest the centre
+        // it was meant for — not back at the left edge.
+        const leftOf = l.inkRight <= k.left - air;
+        const rightOf = l.inkLeft >= k.right + air;
+        expect(leftOf || rightOf, `${target}: beside the keep-out`).toBe(true);
+        expect(l.indent, `${target}: held, not sent to the edge`).toBeGreaterThan(0);
+        if (leftOf) expect(k.left - air - l.inkRight).toBeLessThan(1.5);
+      }
+    }
+  });
+
+  it("heldLineIndentPx: the nearest clear indent, with air where there is room, the centred one when it is clear or nothing is", () => {
+    const glyphs = [{ left: 100, right: 300, top: 10, bottom: 50 }];
+    const badge = { left: 380, right: 480, top: 0, bottom: 60 };
+    // Clear where it is: not moved (no air is taken from a line that hits nothing).
+    expect(heldLineIndentPx(70, 400, glyphs, [badge], 14)).toBe(70);
+    expect(heldLineIndentPx(80, 400, glyphs, [badge], 14)).toBe(80);
+    // Its centred place enters the badge: back to the nearest indent with air (380 − 14 − 300).
+    expect(heldLineIndentPx(120, 400, glyphs, [badge], 14)).toBe(66);
+    // No place has the air (the room ends at 70): set against it.
+    expect(heldLineIndentPx(120, 70, [{ left: 100, right: 370, top: 10, bottom: 50 }], [badge], 14)).toBe(10);
+    // Nearest may be past the badge.
+    expect(heldLineIndentPx(360, 600, glyphs, [badge], 14)).toBe(394);
+    // A badge on other rows is not met.
+    expect(heldLineIndentPx(120, 400, glyphs, [{ ...badge, top: 60, bottom: 90 }], 14)).toBe(120);
+    // Nothing clears it: the centred indent (the keep-out check then decides).
+    expect(heldLineIndentPx(20, 40, [{ left: 100, right: 500, top: 10, bottom: 50 }], [{ left: 0, right: 900, top: 0, bottom: 60 }], 14)).toBe(20);
+  });
+
+  it("Centred sets every text at exactly the size Left sets it, and fits whenever Left fits — every family, with every badge drawn", () => {
+    const TEXTS = [MIXED, TWO_LINES, "Flying", "Whenever this creature attacks, draw a card and gain 1 life. ".repeat(7).trim(), "Level up {W}{U}\nLEVEL 1-3\n2/3\nFlying\nLEVEL 4+\n4/5\nFlying, lifelink"];
+    let held = 0;
+    for (const family of FAMILIES) {
+      for (const text of TEXTS) {
+        for (const flavor of [null, FLAVOR]) {
+          if (flavor && !family.name.endsWith("/main")) continue;
+          const left = family.build(text, flavor);
+          const centred = family.build(text, flavor, "center");
+          expect(centred.sizePx, family.name).toBe(left.sizePx);
+          expect(centred.blocks, family.name).toEqual(left.blocks);
+          if (!left.clipped) expect(centred.clipped, family.name).toBe(false);
+          for (const target of RULES_TARGETS) {
+            const centre = boxCentre(centred, target);
+            held += linePositions(centred, target).lines.filter((l) => Math.abs(l.left + l.width / 2 - centre) > 20).length;
+          }
+        }
+      }
+    }
+    // …and the rule is exercised: some of those lines are held beside a badge.
+    expect(held).toBeGreaterThan(5);
   });
 
   it("a keep-out at the box's left: met when left, clear when centred", () => {

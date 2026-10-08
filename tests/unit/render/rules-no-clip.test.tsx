@@ -402,9 +402,9 @@ describe("rules consumers — the HD bake (subset)", () => {
 // rules — a centred line is still inside its box, clear of every keep-out
 // where it now lands, and the layout's line.
 // ---------------------------------------------------------------------------
-/** Matrix texts that fit their box left-aligned and clip centred (a line
- *  that cleared a drawn badge at the left landing on it at every size):
- *  none. */
+/** Matrix texts that fit their box left-aligned and clip centred: none, by
+ *  the rule (a centred line that would land on a drawn badge is held short
+ *  of it; the left-aligned line's own place is always free). */
 const CENTRED_ONLY_CLIPS: string[] = [];
 
 describe("rules consumers, centred (FrameStyle.rulesAlign) — no clip, no keep-out ink, the layout's lines", () => {
@@ -419,15 +419,22 @@ describe("rules consumers, centred (FrameStyle.rulesAlign) — no clip, no keep-
     expect(cases.filter((c) => c.layout.input.align === "center").length).toBeGreaterThan(300);
   });
 
-  it("clips exactly the texts the left-aligned layout clips, at the floor — plus those a keep-out now meets", () => {
+  it("sets every text at exactly the left-aligned size, and clips none the left-aligned layout fits (owner 2026-10-07: held short of a badge, never a size step)", () => {
+    const leftByKey = new Map(left.flatMap((c) => c.keys.map((k) => [k, c.layout] as const)));
+    let n = 0;
+    for (const c of cases) {
+      for (const k of c.keys) {
+        const twin = leftByKey.get(k);
+        expect(twin, k).toBeDefined();
+        expect(c.layout.sizePx, k).toBe(twin!.sizePx);
+        if (!twin!.clipped) expect(c.layout.clipped, k).toBe(false);
+        n += 1;
+      }
+    }
+    expect(n).toBeGreaterThan(800);
     const leftClips = new Set(left.filter((c) => c.layout.clipped).flatMap((c) => c.keys));
-    const clipped = cases.filter((c) => c.layout.clipped);
-    for (const c of clipped) expect(c.layout.sizePx, c.keys[0]).toBe(RULES_SIZE_PX.floor);
-    const only = clipped.flatMap((c) => c.keys).filter((k) => !leftClips.has(k)).sort();
+    const only = cases.filter((c) => c.layout.clipped).flatMap((c) => c.keys).filter((k) => !leftClips.has(k)).sort();
     expect(only, "centred-only clips").toEqual(CENTRED_ONLY_CLIPS);
-    // …and no matrix text that clips left-aligned fits centred.
-    const centredClips = new Set(clipped.flatMap((c) => c.keys));
-    expect([...leftClips].filter((k) => !centredClips.has(k)).sort()).toEqual([]);
   });
 
   it("draws every other layout inside its box, clear of every keep-out, line for line (750 px)", async () => {

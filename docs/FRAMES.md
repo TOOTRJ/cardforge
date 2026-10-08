@@ -3265,31 +3265,38 @@ and the one switch a NEW card starts OFF on.
   line that fills the column stays inside it. At one size the line breaks,
   every vertical position, the flavour bar (still the column's width) and
   the block's vertical alignment are exactly the left-aligned layout's —
-  the lines only move sideways. The SIZE is the left-aligned one unless a
-  drawn badge decides otherwise (next point). Centring reminder text and flavour with the
+  the lines only move sideways. The SIZE is the left-aligned one, always
+  (next point). Centring reminder text and flavour with the
   rules is OUR reading of "centred" (one block, one alignment): the prints
   give no example either way, because they only centre texts that have
   neither.
-- **Keep-outs and floats.** Judged glyph by glyph where each line lands: a
-  centred line that now meets a drawn badge (the P/T plate, the holofoil
-  stamp's arch, the battle's shield, the modal strip) steps the size down
-  as any keep-out does — and one that cleared a badge by moving is no
-  longer held by it. On a float's rows (the transform front's reverse P/T)
-  the line is centred on the box but never past the float's left edge
+- **Centred beside a badge** (owner 2026-10-07, after the skeptic pass's
+  fuzz). A centred text is set at EXACTLY the size its left-aligned twin
+  fits at (`fitRulesLayout`: the twin is fitted first, its size and any
+  squeezed paragraph gap are the centred layout's), with the twin's lines.
+  A line whose centred place would put ink in a drawn keep-out — the P/T
+  plate, the holofoil stamp's arch, the battle's shield, the modal strip,
+  a float's digits — is **held short of it**: set at the whole-px indent
+  nearest its centred one at which no glyph of it enters any keep-out
+  (`heldLineIndentPx`, judged glyph by glyph like the keep-out check),
+  with `HELD_LINE_AIR_PX` (14 HD px) of air beside the badge where the
+  room allows, else set against it. The left-aligned line's own place is
+  always a candidate, so: **Centred never sets a text smaller than Left,
+  and never clips a text Left fits.** A line that meets no keep-out where
+  it is centred is not touched — it stays on the box's centre to the half
+  px. On a float's rows (the transform front's reverse P/T) the line was
+  already held at the float's left edge, its last glyph's ink included
   (`floatColumnsFor` measures the column from the box's edge, not from the
-  indented line), nor with its last glyph's ink in it (a line held back
-  sits flush against the digits, so the room it is given ends that ink
-  short of them). In the text matrix (`rules-no-clip`, every template ×
-  16 texts) no text that fits left-aligned clips centred. **That is the
-  matrix, not a rule** (skeptic pass 2026-10-07, 9,516 fuzzed boxes on
-  every frame with the choice): where a badge is drawn, a long text is set
-  one to five ladder steps SMALLER centred than left in about 5 % of the
-  boxes (its last lines land on the P/T plate, the stamp's arch or the
-  battle's shield, which a left-aligned short last line never reaches;
-  now and then a step larger), and about 0.7 % — texts already near the
-  42 px floor — fit left and clip centred; the creator's preview shows
-  both at once, and Left takes them back. Holding such a line short of
-  the badge instead (as a float's rows do) is an owner call, not built.
+  indented line). A line no indent clears (the left-aligned one hits too)
+  keeps its centred place and the text is clipped exactly as Left is.
+  Measured on 9,516 fuzzed boxes (every frame with the choice, every badge
+  drawn, 36,657 HD lines): 0 size differences, 0 texts that fit left and
+  clip centred (12 that clip left at the floor fit centred: a modal face's
+  last line held to the right of the strip); 500 lines held by a badge —
+  median 84 px off the centre, at most 286 — and 212 on a float's rows
+  (median 48, at most 110). Before this rule a badge stepped a centred
+  text down like any keep-out (about 5 % of those boxes one to five steps
+  smaller, 0.7 % clipped only when centred).
 - **Tokens.** The text-box tokens' and the emblem's automatic ONE centred
   line (`alignSingleLine`, 4.49 (b)) is unchanged with the switch left;
   Centred centres the whole block, however many lines.

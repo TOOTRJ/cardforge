@@ -574,11 +574,15 @@ Rules and gotchas:
   — the one anatomy key no default stamps. Centred = every line of every
   rules box of the card (rules, reminder, flavour; halves and faces alike)
   on its box's centre: `RulesLayoutInput.align`, a whole-px indent per line
-  per target, the breaks / vertical positions at a size exactly the
-  left-aligned layout's; keep-outs judged where each line lands (a drawn
-  badge can step a long centred text's size down; a float's rows hold the
-  line short of it, ink included). Both renderers pass the card's value
-  through `rulesAlignOf` and only draw the indents. A new template offers
+  per target, at EXACTLY the size, breaks and vertical positions of the
+  left-aligned layout (`fitRulesLayout` fits the left twin first). A line
+  whose centred place would land on a drawn keep-out or float (plate,
+  stamp arch, shield, strip, reverse P/T) is HELD SHORT of it
+  (`heldLineIndentPx`: the nearest clear indent, `HELD_LINE_AIR_PX` of air
+  where there is room) — never a size step: Centred never sets a text
+  smaller than Left and never clips one Left fits (owner 2026-10-07).
+  Both renderers pass the card's value through `rulesAlignOf` and only
+  draw the indents. A new template offers
   it by default — `rules-align.test.ts` names the six that don't. Never a sweep or a bump; `docs/FRAMES.md` "The text alignment".
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
