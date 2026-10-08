@@ -512,7 +512,10 @@ describe("the symbol style is profile data (TODO 4.8.0)", () => {
       .map((node) => node.props.style as { borderRadius?: number; width?: number; boxShadow?: string; background?: string } | undefined)
       .filter((style) => style?.borderRadius !== undefined && style.borderRadius === style.width && style.background)
       .map((style) => style!.boxShadow ?? null);
-  const previewPips = (html: string) => [...html.matchAll(/class="(ms ms-cost[^"]*)"/g)].map((m) => m[1]);
+  /** Each pip of the card's preview (CardPip marks its own with `data-pip`):
+   *  the mana-font suffix it draws, and whether its disc has a shadow. */
+  const previewPips = (html: string) =>
+    [...html.matchAll(/data-pip="([^"]*)"[^>]*style="([^"]*)"/g)].map((m) => `${m[1]} ${/box-shadow:/.test(m[2]) ? "shadow" : "flat"}`);
 
   it("\"modern\" — every profile's style — is today's discs: the hard offset shadow and the modern tap, in both renderers", async () => {
     const { getFrameProfile } = await import("@/lib/cards/template-layout");
@@ -531,7 +534,7 @@ describe("the symbol style is profile data (TODO 4.8.0)", () => {
     const discs = await bakeDiscs(PIPS);
     expect(discs).toHaveLength(4);
     for (const shadow of discs) expect(shadow).toMatch(/^-\d+px \d+px 0 #111$/);
-    expect(previewPips(preview(PIPS))).toEqual(["ms ms-cost ms-shadow ms-x", "ms ms-cost ms-shadow ms-g", "ms ms-cost ms-shadow ms-tap", "ms ms-cost ms-shadow ms-g"]);
+    expect(previewPips(preview(PIPS))).toEqual(["x shadow", "g shadow", "tap shadow", "g shadow"]);
   }, 60_000);
 
   it("a style with no shadow and another tap reaches every pip of the card in both renderers, and both shadow models", async () => {
@@ -552,7 +555,7 @@ describe("the symbol style is profile data (TODO 4.8.0)", () => {
       expect(texts).toContain(getManaCodepoint("tap-4ed"));
       expect(texts).not.toContain(getManaCodepoint("tap"));
       // …and the preview the same classes, on the card's own pips.
-      expect(previewPips(preview(PIPS))).toEqual(["ms ms-cost ms-x", "ms ms-cost ms-g", "ms ms-cost ms-tap-4ed", "ms ms-cost ms-g"]);
+      expect(previewPips(preview(PIPS))).toEqual(["x flat", "g flat", "tap-4ed flat", "g flat"]);
       // The rules layout's inline pip keeps no shadow clear; the cost row is
       // shorter by the shadow's reach.
       const style = "test" as unknown as import("@/lib/cards/symbol-style").SymbolStyle;
@@ -561,7 +564,7 @@ describe("the symbol style is profile data (TODO 4.8.0)", () => {
       expect(costRowWidthPct("{3}{G}", 0.04) - costRowWidthPct("{3}{G}", 0.04, styles.symbolStyle(style))).toBeCloseTo(0.1 * 0.04, 12);
       // Another frame's card is untouched.
       const other = { ...PIPS, frameStyle: { template: "agclassic", finish: "regular" } } as unknown as CardPreviewData;
-      expect(previewPips(preview(other))).toEqual(["ms ms-cost ms-shadow ms-x", "ms ms-cost ms-shadow ms-g", "ms ms-cost ms-shadow ms-tap", "ms ms-cost ms-shadow ms-g"]);
+      expect(previewPips(preview(other))).toEqual(["x shadow", "g shadow", "tap shadow", "g shadow"]);
     } finally {
       delete table.test;
     }

@@ -8,6 +8,8 @@
 //   - the preview's ManaCostGlyphs / RulesPip / PipOverrideImg, as a prop of
 //     the CARD's uses only (the same component draws the cost picker, the
 //     import dialog, deck lists and articles — those never take a style);
+//     WHAT a card's pip is — disc colour, ink, glyph size, a split disc's
+//     halves — is lib/cards/mana-gem.ts, read by both renderers;
 //   - the two shadow models: the rules layout's inline pip
 //     (lib/cards/rules-layout.ts metricsFor) and the cost row's
 //     (lib/cards/render-tiers.ts costRowWidthPct).
@@ -32,11 +34,11 @@ export type SymbolStyleSpec = {
    *  least 1 px in the bake): `left` of it and `down` from it, in `colorHex`.
    *  null = the style draws none. */
   discShadow: { left: number; down: number; colorHex: string } | null;
-  /** The mana-font class a shadowed pip carries in the browser
-   *  (`.ms-shadow`); null with no shadow. Its own `box-shadow` is mana-font's
-   *  — two layers in em of the PIP's font, 0.044–0.046 of the disc — and
-   *  draws only where no card is (the pickers, deck lists, articles): a
-   *  CARD's pip sets the bake's over it (previewDiscShadowCss). */
+  /** The mana-font class a shadowed pip carries in the browser OUTSIDE a
+   *  card (`.ms-shadow`: the pickers, deck lists, articles); null with no
+   *  shadow. Its own `box-shadow` is mana-font's — two layers in em of the
+   *  PIP's font, 0.044–0.046 of the disc. A CARD's pip takes no mana-font
+   *  cost class; it draws the bake's one layer (previewDiscShadowCss). */
   previewShadowClass: string | null;
   /** That class's own `box-shadow`, for an owner's custom pip IMAGE outside
    *  a card (which has no mana-font class to carry it); null with no
@@ -116,21 +118,37 @@ export function discShadowCss(spec: SymbolStyleSpec, discPx: number): string | u
   return `${-left}px ${down}px 0 ${spec.discShadow.colorHex}`;
 }
 
-/** The bake's disc shadow for the PREVIEW's pip of a card: discShadowCss's
- *  ONE layer at the stored bake's whole px for a disc `discPx` wide, written
+/** The colour a `colorHex` box-shadow HAS in the stored PNG. Satori draws a
+ *  box-shadow through an SVG filter, and resvg runs filters in linearRGB at
+ *  8 bits a channel: each channel goes sRGB → linear → a whole 0–255 step →
+ *  sRGB. Near black that step is coarse — "modern"'s #111 lands on #0d0d0d
+ *  in every stored bake (measured on HD bakes, 2026-10-07) — so the preview
+ *  asks the browser for the landed colour. Takes #rgb or #rrggbb. */
+export function bakedShadowHex(colorHex: string): string {
+  const hex = colorHex.replace("#", "");
+  const full = hex.length === 3 ? hex.replace(/./g, (c) => c + c) : hex;
+  const toLinear = (v: number) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+  const toSrgb = (v: number) => (v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055);
+  const channel = (i: number) => {
+    const step = Math.round(toLinear(Number.parseInt(full.slice(i, i + 2), 16) / 255) * 255);
+    return Math.round(toSrgb(step / 255) * 255).toString(16).padStart(2, "0");
+  };
+  return `#${channel(0)}${channel(2)}${channel(4)}`;
+}
+
+/** The bake's disc shadow for the PREVIEW's pip of a card: discShadowCss's ONE
+ *  layer at the stored bake's whole px for a disc `discPx` wide, written
  *  in em of an element whose font size is `emPx` of those px — so it scales
- *  with the card and is the stored PNG's at every preview size. `colorHex`
- *  replaces the style's ink (mana-font's untap disc is dark, its shadow
- *  white). undefined with no shadow. */
+ *  with the card and is the stored PNG's at every preview size — in the
+ *  colour the PNG holds (bakedShadowHex). undefined with no shadow. */
 export function previewDiscShadowCss(
   spec: SymbolStyleSpec,
   discPx: number,
   emPx: number,
-  colorHex?: string,
 ): string | undefined {
   if (!spec.discShadow) return undefined;
   const { left, down } = discShadowPx(spec, discPx);
-  return `${(-left / emPx).toFixed(4)}em ${(down / emPx).toFixed(4)}em 0 ${colorHex ?? spec.discShadow.colorHex}`;
+  return `${(-left / emPx).toFixed(4)}em ${(down / emPx).toFixed(4)}em 0 ${bakedShadowHex(spec.discShadow.colorHex)}`;
 }
 
 /** The mana-font suffix a symbol draws in `spec`: the style's own tap for

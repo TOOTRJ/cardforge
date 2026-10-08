@@ -50,11 +50,7 @@ import {
   pipOverrideForToken,
   type PipOverrides,
 } from "@/lib/pips/override";
-import {
-  hybridHalves,
-  inlineManaTintKey,
-  type RulesItem,
-} from "@/lib/cards/rules-text";
+import { type RulesItem } from "@/lib/cards/rules-text";
 import {
   FRAME_SPLIT_OVERLAP_PX,
   frameColorKeysFor,
@@ -100,7 +96,8 @@ import {
   type BasicSymbolPlan,
 } from "@/lib/cards/basic-symbol";
 import { KEYRUNE_DEFAULT_GLYPH, cardFonts, getKeyruneCodepoint, getManaCodepoint } from "@/lib/render/card-fonts";
-import { discShadowCss, manaGlyphPx, styledSuffix, symbolStyle, symbolStyleOf, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
+import { discShadowCss, symbolStyle, symbolStyleOf, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
+import { manaGemSpec, type ManaGemHalf } from "@/lib/cards/mana-gem";
 import { BRAND_FACE, TYPE_FACES, faceOf, footerFace, slotFace, type TypeFace } from "@/lib/cards/type-faces";
 import { displayRunPx } from "@/lib/render/satori-text";
 import { collectorLayout, type CollectorLayout, type CollectorMarkAnchor } from "@/lib/cards/collector-layout";
@@ -1979,25 +1976,14 @@ function KeylinedKeyruneGlyph({
   );
 }
 
-// Mana-pip gem disc colors — the mana-font `.ms-cost` background-colors from
-// mana.css. The live preview gets the gem from that CSS; Satori can't, so we
-// draw the disc ourselves and put the dark symbol on top (matching real cards).
-const MANA_GEM_BG: Record<string, string> = {
-  w: "#f0f2c0",
-  u: "#b5cde3",
-  b: "#aca29a",
-  r: "#db8664",
-  g: "#93b483",
-  c: "#beb9b2",
-};
-const MANA_SYMBOL_INK = "#150d08";
-
-// ManaGem — one mana pip the way it prints: a colored disc with the dark
-// symbol centered on top (mirrors mana-font's `.ms-cost`, where the glyph is
-// 0.95em inside a 1.3em disc and `.ms-shadow` is a hard offset shadow).
-// `size` is the disc diameter. Hybrid/twobrid pips render the printed split
-// disc: a 135° two-color fill with the two half-symbols offset to the top-left
-// and bottom-right, exactly like mana-font's `::before`/`::after` halves.
+// ManaGem — one mana pip the way the stored card draws it: a colored disc
+// with the dark symbol centered on top. `size` is the disc diameter. WHAT it
+// draws — the disc's colour, the ink, the glyph's size, a hybrid / twobrid
+// disc's 135° fill and its two half-symbols' size and corners — is
+// lib/cards/mana-gem.ts's manaGemSpec, the one description the preview's
+// CardPip draws too (components/cards/mana-cost-glyphs.tsx); this component
+// only lays it out for Satori. A one-colour symbol mana-font has no glyph
+// for draws nothing.
 function ManaGem({
   suffix: symbol,
   size,
@@ -2010,20 +1996,33 @@ function ManaGem({
   /** The frame's symbol style: the disc's shadow and the {T} it draws. */
   symbols: SymbolStyleSpec;
 }) {
-  const suffix = styledSuffix(symbols, symbol);
-  const halves = hybridHalves(suffix);
+  const gem = manaGemSpec(symbol, size, symbols);
   // The style's hard offset shadow ("modern": 0.06 of the disc left, 0.07
   // down, each at least 1 px, #111); no property at all for a style
   // without one.
   const shadowCss = discShadowCss(symbols, size);
   const shadow = shadowCss ? { boxShadow: shadowCss } : {};
 
-  if (halves) {
-    const topCp = getManaCodepoint(halves.top);
-    const bottomCp = getManaCodepoint(halves.bottom);
-    const topBg = MANA_GEM_BG[halves.top] ?? MANA_GEM_BG.c;
-    const bottomBg = MANA_GEM_BG[halves.bottom] ?? MANA_GEM_BG.c;
-    const half = Math.round(size * 0.42);
+  if (gem.kind === "split") {
+    const half = (h: ManaGemHalf) => {
+      const cp = getManaCodepoint(h.suffix);
+      return cp ? (
+        <span
+          style={{
+            position: "absolute",
+            top: h.topPx,
+            left: h.leftPx,
+            display: "flex",
+            fontFamily: '"Mana"',
+            fontSize: gem.halfPx,
+            lineHeight: 1,
+            color: gem.ink,
+          }}
+        >
+          {cp}
+        </span>
+      ) : null;
+    };
     return (
       <span
         style={{
@@ -2032,51 +2031,20 @@ function ManaGem({
           width: size,
           height: size,
           borderRadius: size,
-          background: `linear-gradient(135deg, ${topBg} 50%, ${bottomBg} 50%)`,
+          background: gem.background,
           ...shadow,
           overflow: "hidden",
           ...style,
         }}
       >
-        {topCp ? (
-          <span
-            style={{
-              position: "absolute",
-              top: Math.round(size * 0.07),
-              left: Math.round(size * 0.1),
-              display: "flex",
-              fontFamily: '"Mana"',
-              fontSize: half,
-              lineHeight: 1,
-              color: MANA_SYMBOL_INK,
-            }}
-          >
-            {topCp}
-          </span>
-        ) : null}
-        {bottomCp ? (
-          <span
-            style={{
-              position: "absolute",
-              top: Math.round(size * 0.5),
-              left: Math.round(size * 0.52),
-              display: "flex",
-              fontFamily: '"Mana"',
-              fontSize: half,
-              lineHeight: 1,
-              color: MANA_SYMBOL_INK,
-            }}
-          >
-            {bottomCp}
-          </span>
-        ) : null}
+        {half(gem.top)}
+        {half(gem.bottom)}
       </span>
     );
   }
 
-  const cp = getManaCodepoint(suffix);
+  const cp = getManaCodepoint(gem.suffix);
   if (!cp) return null;
-  const bg = MANA_GEM_BG[inlineManaTintKey(suffix)] ?? MANA_GEM_BG.c;
   return (
     <span
       style={{
@@ -2086,7 +2054,7 @@ function ManaGem({
         width: size,
         height: size,
         borderRadius: size,
-        background: bg,
+        background: gem.bg,
         ...shadow,
         ...style,
       }}
@@ -2096,9 +2064,9 @@ function ManaGem({
           display: "flex",
           // mana-font: 0.95em glyph in a 1.3em disc.
           fontFamily: '"Mana"',
-          fontSize: manaGlyphPx(size),
+          fontSize: gem.glyphPx,
           lineHeight: 1,
-          color: MANA_SYMBOL_INK,
+          color: gem.ink,
         }}
       >
         {cp}
