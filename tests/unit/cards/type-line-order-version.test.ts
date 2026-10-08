@@ -34,13 +34,15 @@ const at = (template: string, over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-/** What v49 printed left of the dash: the supertype as typed, then the card
- *  type ("Token", then the supertype, on a token; "Emblem" alone). */
+/** What v49 printed left of the dash, character for character (main at
+ *  0207499e, buildTypeLine): the supertype AS STORED, then the card type
+ *  ("Token", then the trimmed supertype, on a token; "Emblem" alone) — a
+ *  double space, a tab or a no-break space between two words printed as
+ *  typed, where v50 prints one space. */
 function v49Line(face: { supertype: string | null; cardType: CardType }): string {
   if (face.cardType === "emblem") return "Emblem";
   const type = face.cardType.charAt(0).toUpperCase() + face.cardType.slice(1);
-  const words = (face.supertype ?? "").split(/\s+/).filter(Boolean);
-  return (face.cardType === "token" ? ["Token", ...words] : [...words, type]).join(" ");
+  return (face.cardType === "token" ? ["Token", face.supertype?.trim()] : [face.supertype, type]).filter(Boolean).join(" ");
 }
 
 /** v49's P/T rule: a creature, a token whose supertype says Creature (or
@@ -88,6 +90,12 @@ const SUPERTYPES: readonly (string | null)[] = [
   "Creature Ancient",
   "Instant",
   "Token",
+  // Stored spacing v49 printed as typed (the form trims the ends only).
+  "Legendary  Snow",
+  "Legendary\tSnow",
+  "Legendary\u00a0Snow",
+  " Legendary",
+  "Artifact  Legendary",
 ];
 
 describe(`v${V} — the type line in its printed order + a land creature's P/T (TODO 1.20)`, () => {
@@ -168,6 +176,22 @@ describe(`v${V} — the type line in its printed order + a land creature's P/T (
       expect(scope(row), `${card_type} ${supertype}`).toBe(false);
       expect(classifyForSweep(row), `${card_type} ${supertype}`).toBe("stamp");
     }
+  });
+
+  it("takes a supertype whose stored spacing v49 printed as typed (review: flip, split and the full-art basics moved)", () => {
+    const scope = VERSION_SCOPES[V]!;
+    for (const supertype of ["Legendary  Snow", "Legendary\tSnow", "Legendary\u00a0Snow"]) {
+      for (const card_type of ["creature", "land", "token", "instant"] as const) {
+        const row = at("flip", { card_type, supertype, power: null, toughness: null });
+        expect(v49Line({ supertype, cardType: card_type }), supertype).not.toBe(buildTypeLine({ supertype, cardType: card_type }));
+        expect(scope(row), `${card_type} ${JSON.stringify(supertype)}`).toBe(true);
+        expect(classifyForSweep(row)).toBe("rebake");
+        expect(scope(at("flip", { back_face: { title: "Back", card_type, supertype } }))).toBe(true);
+      }
+    }
+    // One plain space between the words is what both versions print.
+    expect(scope(at("flip", { card_type: "creature", supertype: "Legendary Snow" }))).toBe(false);
+    expect(scope(at("flip", { card_type: "token", supertype: " Legendary Snow " }))).toBe(false);
   });
 
   it("holds on every template, and is conservative for a row it cannot read", () => {

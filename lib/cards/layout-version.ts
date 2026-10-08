@@ -2050,11 +2050,17 @@ function v50Ordered(words: readonly string[]): string[] {
 
 /**
  * Whether layout v50 changed what ONE face prints (the card's own columns,
- * or a `back_face` jsonb): its type line — the words v49 printed as
- * "supertype, then the card type" ("Token", then the supertype, on a token)
- * are in another order now — or its P/T — a value on a face that is neither
- * a creature nor a token (nor an emblem), has no Vehicle / Spacecraft
- * subtype, and whose supertype says "Creature": v49 printed none.
+ * or a `back_face` jsonb): its type line — what v49 printed left of the
+ * dash, CHARACTER FOR CHARACTER (the supertype as stored, then the card
+ * type; "Token", then the trimmed supertype, on a token), is not what v50
+ * prints (the words, split at any whitespace, in printed order). That is a
+ * changed order, and also a supertype stored with a double space, a tab or
+ * a no-break space between two words: v49 printed the gap as typed and v50
+ * prints one space, which moves the line on the bands that do not re-space
+ * it (review: flip, split and the full-art basics changed pixels) — or its
+ * P/T — a value on a face that is neither a creature nor a token (nor an
+ * emblem), has no Vehicle / Spacecraft subtype, and whose supertype says
+ * "Creature": v49 printed none.
  */
 export function v50FaceChanged(face: {
   card_type?: unknown;
@@ -2065,12 +2071,12 @@ export function v50FaceChanged(face: {
 }): boolean {
   const cardType = typeof face.card_type === "string" ? face.card_type : null;
   if (cardType === "emblem") return false;
-  const words = (typeof face.supertype === "string" ? face.supertype : "").split(/\s+/).filter(Boolean);
-  const typed =
-    cardType === null || cardType === "token"
-      ? words
-      : [...words, cardType.charAt(0).toUpperCase() + cardType.slice(1)];
-  if (v50Ordered(typed).join(" ") !== typed.join(" ")) return true;
+  const supertype = typeof face.supertype === "string" ? face.supertype : "";
+  const words = supertype.split(/\s+/).filter(Boolean);
+  const typeWord = cardType === null || cardType === "token" ? null : cardType.charAt(0).toUpperCase() + cardType.slice(1);
+  const v49 = (cardType === "token" ? ["Token", supertype.trim()] : [supertype, typeWord]).filter(Boolean).join(" ");
+  const v50 = (cardType === "token" ? ["Token", ...v50Ordered(words)] : v50Ordered(typeWord ? [...words, typeWord] : words)).join(" ");
+  if (v49 !== v50) return true;
   if (cardType === "creature" || cardType === "token") return false;
   if (!face.power && !face.toughness) return false;
   if (!words.some((word) => word.toLowerCase() === "creature")) return false;
