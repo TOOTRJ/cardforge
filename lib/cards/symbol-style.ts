@@ -14,8 +14,9 @@
 //     (lib/cards/rules-layout.ts metricsFor) and the cost row's
 //     (lib/cards/render-tiers.ts costRowWidthPct).
 //
-// Four styles exist: "modern" — M15's discs, their hard offset shadow and
-// the modern tap, what every profile resolves to unless it names another —
+// Four styles exist: "modern" — M15's discs, their hard offset shadow under
+// the COST (flat pips in the rules text, layout v49) and the modern tap,
+// what every profile resolves to unless it names another —
 // "1997" (TODO 4.10a: flat discs, the 1997 tap; `retro`, `retroland`) and
 // "2003" (TODO 4.10b: a COST disc with a black shadow down and a little to
 // the left, flat pips in the rules text, the modern tap; `modern`,
@@ -56,9 +57,10 @@ export type SymbolStyleSpec = {
    *  least 1 px in the bake; a `left` of 0 is none to the left): `left` of
    *  it and `down` from it, in `colorHex`. null = the style draws none. */
   discShadow: { left: number; down: number; colorHex: string } | null;
-  /** A pip set in the RULES text carries the disc's shadow too ("modern");
-   *  false = the shadow is the COST row's alone and an inline pip is flat
-   *  (the 2003 prints). Read through inlineSymbolStyle. */
+  /** A pip set in the RULES text carries the disc's shadow too; false = the
+   *  shadow is the COST row's alone and an inline pip is flat — every style
+   *  today (the 1993, 1997 and 2003 prints, and "modern" since layout v49). Read through
+   *  inlineSymbolStyle. */
   inlineShadow: boolean;
   /** The mana-font class a shadowed pip carries in the browser OUTSIDE a
    *  card (`.ms-shadow`: the pickers, deck lists, articles); null with no
@@ -93,7 +95,11 @@ export const SYMBOL_STYLES: Readonly<Record<SymbolStyle, SymbolStyleSpec>> = {
   modern: {
     id: "modern",
     discShadow: { left: 0.06, down: 0.07, colorHex: "#111" },
-    inlineShadow: true,
+    // The M15-era prints set a pip in the RULES text flat (layout v49,
+    // owner round 43): 31 text pips on 21 prints, M15 2014 → TDM 2025,
+    // shadow 0.003 ± 0.010 of the disc below them, against 0.079 ± 0.017
+    // under the same cards' cost discs. The cost row keeps the shadow.
+    inlineShadow: false,
     previewShadowClass: "ms-shadow",
     previewShadowCss: "-0.06em 0.07em 0 #111, 0 0.06em 0 #111",
     costRowShadowDiscs: 0.1,
