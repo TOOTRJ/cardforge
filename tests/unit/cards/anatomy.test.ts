@@ -24,7 +24,7 @@ import {
 } from "@/lib/cards/anatomy";
 import { templateSupportsKind } from "@/lib/creator/card-kinds";
 import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
-import { M15_CROWN, getFrameProfile, type FrameOverlaySlot, type FrameProfile } from "@/lib/cards/template-layout";
+import { M15_CROWN, getFrameProfile, profileOffersRulesAlign, type FrameOverlaySlot, type FrameProfile } from "@/lib/cards/template-layout";
 import { parseFrameProfileOverride } from "@/lib/cards/profile-override";
 import { FRAME_TEMPLATE_VALUES, type ColorIdentity, type FrameStyle } from "@/types/card";
 
@@ -353,7 +353,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // The borderless land spreads M15BORDERLESS and declares its OWN pairs
     // on its entry (4.56) — the land's, like m15land's — with no crown
     // (no crowned twin), no collector slot and no stamp notch.
-    expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: ["split"], collector: false, stamp: false, dfcIcon: false });
+    expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: ["split"], collector: false, stamp: false, dfcIcon: false, rulesAlign: true });
     expect(getFrameProfile("m15borderlessland").twoColorForLands).toBe(true);
     expect(getFrameProfile("m15borderlessland").crownMasters).toBeUndefined();
     expect(getFrameProfile("m15borderlessland").overlays).toBeUndefined();
@@ -367,9 +367,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // checked above.)
     // (…and the holofoil stamp's notch, 4.9c, on the devoid entry too:
     // STAMP_TEMPLATES below.)
-    expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true, stamp: true, dfcIcon: false });
+    expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true, stamp: true, dfcIcon: false, rulesAlign: true });
     for (const t of ["adventure", "saga", "nyx", "fullart", "expeditionland"]) {
-      expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: false, stamp: false, dfcIcon: false });
+      expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: profileOffersRulesAlign(getFrameProfile(t)) });
     }
     for (const t of ["m15pw", "m15token"] as const) {
       expect(frameAnatomyOf(t).crown, t).toBe(false);
