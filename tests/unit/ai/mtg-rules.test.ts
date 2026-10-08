@@ -8,6 +8,7 @@ import {
   isNoCost,
   lintCardDesign,
   parseManaCost,
+  withDrawableSymbols,
   type LintableCard,
 } from "@/lib/ai/mtg-rules";
 
@@ -389,3 +390,72 @@ describe("buildDeckSkeleton", () => {
   });
 });
 
+
+// ---------------------------------------------------------------------------
+// Symbols the card can't draw: the game's grammar accepts {21}-{99} and the
+// hybrid Phyrexian {W/U/P}, the mana font has no pip for them and the card
+// leaves them out — the design may not use one.
+// ---------------------------------------------------------------------------
+
+describe("symbols the card can't draw", () => {
+  it("the grammar still reads them (mana value, colours)", () => {
+    expect(parseManaCost("{2}{G/U/P}{U}")).toMatchObject({ manaValue: 4, colorLetters: ["G", "U"] });
+    expect(parseManaCost("{21}")).toMatchObject({ manaValue: 21 });
+  });
+
+  it("the lint refuses one in the cost, naming it", () => {
+    const { errors } = lintCardDesign(baseCard({ cost: "{2}{G/U/P}{U}", color_identity: ["green", "blue"] }));
+    expect(errors).toContainEqual({
+      field: "cost",
+      message: "{G/U/P} can't be drawn and will be left off the card — use a symbol the card has a pip for.",
+    });
+    const big = lintCardDesign(baseCard({ cost: "{21}{R}" }));
+    expect(big.errors.map((e) => e.message)).toContain(
+      "{21} can't be drawn and will be left off the card — use a symbol the card has a pip for.",
+    );
+  });
+
+  it("and in the rules text", () => {
+    const { errors } = lintCardDesign(
+      baseCard({ rules_text: "{T}, Pay {R/G/P}: This creature gets +{1/2}/+0 until end of turn." }),
+    );
+    expect(errors).toContainEqual({
+      field: "rules_text",
+      message: "{R/G/P} and {1/2} can't be drawn and will be left off the card — use a symbol the card has a pip for.",
+    });
+  });
+
+  it("every symbol the designer is told to use passes", () => {
+    const { errors } = lintCardDesign(
+      baseCard({
+        cost: "{20}{X}{W/U}{2/R}{R/P}{S}{C}{R}",
+        color_identity: ["white", "blue", "red"],
+        rules_text: "{T}, {Q}, Pay {E}: Add {R}.",
+      }),
+    );
+    expect(errors.filter((e) => e.message.includes("can't be drawn"))).toEqual([]);
+  });
+
+  it("the autofix swaps in the nearest symbol the card draws", () => {
+    expect(withDrawableSymbols("{2}{G/U/P}{U}")).toBe("{2}{G/U}{U}");
+    expect(withDrawableSymbols("{21}{R}")).toBe("{20}{R}");
+    expect(withDrawableSymbols("{99}")).toBe("{20}");
+    expect(withDrawableSymbols("{T}, Pay {w/b/p}: Draw a card.")).toBe("{T}, Pay {W/B}: Draw a card.");
+    // Nothing to offer: it stays (and the lint still says so).
+    expect(withDrawableSymbols("Pay {1/2}.")).toBe("Pay {1/2}.");
+    // Drawable text is returned untouched.
+    expect(withDrawableSymbols("{2}{r}{R}: Add {G}.")).toBe("{2}{r}{R}: Add {G}.");
+
+    const fixed = autofixCard(
+      baseCard({ cost: "{2}{R/G/P}{R}", rules_text: "{R/G/P}: This creature gains haste.", color_identity: ["red"] }),
+    );
+    expect(fixed.cost).toBe("{2}{R/G}{R}");
+    expect(fixed.rules_text).toBe("{R/G}: This creature gains haste.");
+    expect(fixed.color_identity).toEqual(["green", "red", "multicolor"]);
+    expect(lintCardDesign(fixed).errors.filter((e) => e.message.includes("can't be drawn"))).toEqual([]);
+  });
+
+  it("a land keeps its dash", () => {
+    expect(autofixCard(baseCard({ card_type: "land", cost: "{21}", rules_text: "{T}: Add {G}." })).cost).toBe("—");
+  });
+});

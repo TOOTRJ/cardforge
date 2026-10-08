@@ -4,6 +4,10 @@ import { collectorStyleOf, COLLECTOR_TEMPLATES } from "@/lib/cards/collector-lin
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { faceOf, type FaceRole } from "@/lib/cards/type-faces";
+import { drawsManaGem } from "@/lib/cards/mana-gem";
+import { symbolStyle, symbolStyleOf, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
+import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
+import { pipOverrideForToken, type PipOverrides } from "@/lib/pips/override";
 import {
   CARD_DISPLAY_COVERAGE,
   CARD_ITALIC_COVERAGE,
@@ -149,6 +153,9 @@ export function findUnrenderableText(fields: readonly GlyphCheckField[]): Unrend
  *  lib/creator/form-types.ts `FormValues`). */
 export type GlyphCheckValues = {
   title: string;
+  /** The mana cost — read by the symbol check only (its pips are drawn by
+   *  the mana font, never by a text face). */
+  cost?: string;
   supertype: string;
   subtypes_text: string;
   rules_text: string;
@@ -161,13 +168,14 @@ export type GlyphCheckValues = {
   footer_text: string;
   loyalty_abilities?: ReadonlyArray<{ text: string }>;
   saga_intro: string;
-  saga_chapters?: ReadonlyArray<{ text: string }>;
+  saga_chapters?: ReadonlyArray<{ text: string; numerals?: readonly number[] }>;
   /** The frame style's template and collector switch (TODO 4.9b): on a
    *  collector card the footer mark prints in the body face, as typed. */
   frame_style?: { template?: string | null; collector?: unknown } | null;
   has_back_face: boolean;
   back_face: {
     title: string;
+    cost?: string;
     supertype: string;
     subtypes_text: string;
     rules_text: string;
@@ -244,4 +252,127 @@ export function cardGlyphFields(v: GlyphCheckValues): GlyphCheckField[] {
     );
   }
   return fields;
+}
+
+// ---------------------------------------------------------------------------
+// Symbols the card may not draw — the same kind of warning, for `{…}` tokens.
+//
+// A `{…}` token in a mana cost or in rules text is a PIP, and a pip the mana
+// font has no glyph for is left out of the preview and of the stored image
+// alike: no disc, no room (lib/cards/mana-gem.ts — {21}, {C/P}, {1/2},
+// {3/W}, the hybrid Phyrexian {W/U/P}, {A}, {CHAOS}…). The character check
+// above skips those tokens, so this one names them. WHICH symbols draw is
+// never listed here: every token is read by the renderers' own tokenizer
+// (tokenize / tokenSuffix) and asked of their own gate (drawsManaGem), after
+// the owner's custom pip image, which both renderers draw first
+// (pipOverrideForToken — today only on {W}…{C}, which the font has anyway,
+// so an override changes no answer yet).
+//
+// Flavor text is not read: neither renderer parses symbols there — a `{…}`
+// in it prints as the characters typed.
+// ---------------------------------------------------------------------------
+
+export type SymbolCheckOptions = {
+  /** The frame's symbol style (its own {T}); the modern one by default. */
+  symbols?: SymbolStyleSpec;
+  /** The card owner's custom pip images. */
+  overrides?: PipOverrides | null;
+};
+
+const BRACE_TOKEN = /\{[^}]+\}/g;
+
+/** The distinct `{…}` tokens of a mana cost or a rules-style text that the
+ *  card leaves out, written as the tokenizer reads them (upper case), in
+ *  order of first appearance. */
+export function undrawableSymbols(
+  text: string | null | undefined,
+  { symbols = symbolStyle(undefined), overrides = null }: SymbolCheckOptions = {},
+): string[] {
+  if (!text) return [];
+  const found: string[] = [];
+  for (const match of text.matchAll(BRACE_TOKEN)) {
+    for (const token of tokenize(match[0])) {
+      if (pipOverrideForToken(token, overrides)) continue;
+      const suffix = tokenSuffix(token);
+      if (suffix == null || drawsManaGem(suffix, symbols)) continue;
+      const written = `{${match[0].slice(1, -1).trim().toUpperCase()}}`;
+      if (!found.includes(written)) found.push(written);
+    }
+  }
+  return found;
+}
+
+export type SymbolCheckField = { label: string; value: string | null | undefined };
+
+export type UndrawableSymbolField = { label: string; symbols: string[] };
+
+/** Warn-only: the labelled fields that hold symbols the card leaves out. */
+export function findUndrawableSymbols(
+  fields: readonly SymbolCheckField[],
+  options?: SymbolCheckOptions,
+): UndrawableSymbolField[] {
+  const out: UndrawableSymbolField[] = [];
+  for (const field of fields) {
+    const symbols = undrawableSymbols(field.value, options);
+    if (symbols.length) out.push({ label: field.label, symbols });
+  }
+  return out;
+}
+
+/** Every field of the card whose `{…}` tokens are drawn as pips, labelled as
+ *  the creator labels it: the costs and the rules-style texts (rules,
+ *  loyalty rows, the saga's intro and chapters, the second face).
+ *
+ *  Only what the card DRAWS: a planeswalker frame with a filled loyalty row
+ *  and a saga frame with a filled chapter draw their rows, never
+ *  `rules_text` (both renderers) — and the form still holds one there, with
+ *  no field to edit it in: the serialized copy an import or a saved card
+ *  came with. Reading it would name a symbol twice, and keep naming it once
+ *  the maker has taken it out of the row. With no filled row the renderers
+ *  parse `rules_text` instead, so it is read. */
+export function cardSymbolFields(v: GlyphCheckValues): SymbolCheckField[] {
+  const profile = getFrameProfile(normalizeFrameTemplate(v.frame_style?.template ?? undefined));
+  const abilities = v.loyalty_abilities ?? [];
+  const chapters = v.saga_chapters ?? [];
+  const rowsDrawn =
+    (Boolean(profile.loyaltyRows) && abilities.some((row) => row.text.trim())) ||
+    (Boolean(profile.chapters) &&
+      chapters.some((row) => row.text.trim() && (row.numerals === undefined || row.numerals.length > 0)));
+  const fields: SymbolCheckField[] = [
+    { label: "Mana cost", value: v.cost },
+    ...(rowsDrawn ? [] : [{ label: "Rules text", value: v.rules_text }]),
+    ...abilities.map((row, i) => ({ label: `Loyalty ability ${i + 1}`, value: row.text })),
+    { label: "Saga intro", value: v.saga_intro },
+    ...chapters.map((row, i) => ({ label: `Chapter ${i + 1}`, value: row.text })),
+  ];
+  if (v.has_back_face) {
+    fields.push(
+      { label: "Back face mana cost", value: v.back_face.cost },
+      { label: "Back face rules text", value: v.back_face.rules_text },
+    );
+  }
+  return fields;
+}
+
+/** The symbol style of the frame the form is on (its {T}). */
+export function cardSymbolStyle(v: Pick<GlyphCheckValues, "frame_style">): SymbolStyleSpec {
+  return symbolStyleOf(getFrameProfile(normalizeFrameTemplate(v.frame_style?.template ?? undefined)));
+}
+
+const MAX_SYMBOLS_NAMED = 6;
+
+/** "{21}", "{21} and {W/U/P}", "{21}, {C/P} and {1/2}" — at most six named,
+ *  then "and 2 more". */
+export function listSymbols(symbols: readonly string[]): string {
+  const named = symbols.slice(0, MAX_SYMBOLS_NAMED);
+  const more = symbols.length - named.length;
+  if (more > 0) return `${named.join(", ")} and ${more} more`;
+  if (named.length <= 1) return named.join("");
+  return `${named.slice(0, -1).join(", ")} and ${named[named.length - 1]}`;
+}
+
+/** The warning's one sentence: "{21} and {W/U/P} can't be drawn and will be
+ *  left off the card". */
+export function undrawableSymbolsMessage(symbols: readonly string[]): string {
+  return `${listSymbols(symbols)} can't be drawn and will be left off the card`;
 }

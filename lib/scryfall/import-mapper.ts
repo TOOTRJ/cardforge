@@ -1,4 +1,5 @@
 import type { ScryfallCard, ScryfallSet } from "@/lib/scryfall/client";
+import { listSymbols, undrawableSymbols } from "@/lib/validation/card-glyphs";
 import {
   DEFAULT_CARD_LANG,
   isCardLang,
@@ -461,6 +462,30 @@ export function droppedFaceNotice(
     default:
       return null;
   }
+}
+
+/** The toast (and the import dialog's note) for the symbols a printing uses
+ *  that the card can't draw — the hybrid Phyrexian {G/W/P} of Ajani, Sleeper
+ *  Agent (DMU), {G/U/P} of Tamiyo, Compleated Sage (NEO): the import keeps
+ *  the printing's cost and text as printed, and both renderers leave such a
+ *  pip out (lib/cards/mana-gem.ts). Read from the patch — what the form is
+ *  about to hold — by the creator's own check (undrawableSymbols), so the
+ *  toast and the creator's notice never disagree. Null when every symbol
+ *  draws. */
+export function undrawableSymbolsNotice(
+  patch: Pick<ScryfallImportPatch, "cost" | "rules_text" | "back_face">,
+  cardName: string,
+): string | null {
+  const symbols: string[] = [];
+  for (const text of [patch.cost, patch.rules_text, patch.back_face?.cost, patch.back_face?.rules_text]) {
+    for (const symbol of undrawableSymbols(text)) {
+      if (!symbols.includes(symbol)) symbols.push(symbol);
+    }
+  }
+  if (symbols.length === 0) return null;
+  return `${cardName} uses ${listSymbols(symbols)}, which PipGlyph can't draw yet — ${
+    symbols.length === 1 ? "it" : "they"
+  } will be left off the card.`;
 }
 
 // ---------------------------------------------------------------------------

@@ -20,6 +20,7 @@ import { describeFrame } from "@/lib/creator/frame-resolve";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import {
   droppedFaceNotice,
+  undrawableSymbolsNotice,
   type ScryfallImportPatch,
 } from "@/lib/scryfall/import-mapper";
 import type { PrintingSummary, PrintingView } from "@/lib/scryfall/printing-views";
@@ -123,6 +124,8 @@ export function ImportDetail({
   // A double-faced token or a Role card imports its front face only (TODO
   // 1.23): say so before the commit, as the creator's toast does after.
   const faceNote = droppedFaceNotice(patch, card.name);
+  // A symbol the card can't draw (a hybrid Phyrexian cost) is left off it.
+  const symbolNote = undrawableSymbolsNotice(patch, card.name);
   const frameCopy = frameOverwriteCopy(
     patch,
     plan.mode === "choose" ? frameChoice : null,
@@ -209,6 +212,15 @@ export function ImportDetail({
             >
               <Info className="mt-0.5 h-3 w-3 shrink-0 text-primary-bright" aria-hidden />
               <span>{faceNote}</span>
+            </p>
+          ) : null}
+          {symbolNote ? (
+            <p
+              className="inline-flex items-start gap-2 text-[11px] leading-4 text-muted"
+              data-testid="import-symbol-note"
+            >
+              <Info className="mt-0.5 h-3 w-3 shrink-0 text-primary-bright" aria-hidden />
+              <span>{symbolNote}</span>
             </p>
           ) : null}
         </div>
