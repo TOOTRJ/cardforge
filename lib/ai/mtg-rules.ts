@@ -19,6 +19,7 @@
 // ---------------------------------------------------------------------------
 
 import type { CardType, ColorIdentity, Rarity } from "@/types/card";
+import { undrawableSymbols, undrawableSymbolsMessage } from "@/lib/validation/card-glyphs";
 import {
   hasTokenTypeWord,
   showsPowerToughness,
@@ -54,10 +55,13 @@ const WORD_TO_COLOR_LETTER: Partial<Record<ColorIdentity, ColorLetter>> = {
   green: "G",
 };
 
-// One curly-brace symbol. Grammar covers everything the creator's pip
-// renderer understands: generics {0}-{99}, variables {X}{Y}{Z}, colors
-// {W}{U}{B}{R}{G}, colorless {C}, snow {S}, two-color hybrid {W/U},
-// mono hybrid {2/W}, Phyrexian {W/P} and hybrid Phyrexian {W/U/P}.
+// One curly-brace symbol — the GAME's grammar (mana value, colours):
+// generics {0}-{99}, variables {X}{Y}{Z}, colors {W}{U}{B}{R}{G}, colorless
+// {C}, snow {S}, two-color hybrid {W/U}, mono hybrid {2/W}, Phyrexian {W/P}
+// and hybrid Phyrexian {W/U/P}. Wider than what a card can DRAW: the mana
+// font has no pip for {21}-{99} or for a hybrid Phyrexian symbol, and the
+// card leaves those out — lintCardDesign refuses them through the creator's
+// own check (undrawableSymbols), never a second list here.
 const SYMBOL_RE =
   /^(?:\d{1,2}|[XYZ]|[WUBRGCS]|[WUBRG]\/[WUBRG]|2\/[WUBRG]|[WUBRG]\/P|[WUBRG]\/[WUBRG]\/P)$/;
 
@@ -282,6 +286,22 @@ export function lintCardDesign(card: LintableCard): LintResult {
       message: `Mana cost "${card.cost}" isn't valid curly-brace notation.`,
     });
   }
+  // A symbol the card can't draw is left off it (lib/cards/mana-gem.ts) —
+  // the design may not use one, in the cost or in the rules text.
+  const undrawnInCost = undrawableSymbols(card.cost);
+  if (undrawnInCost.length > 0) {
+    errors.push({
+      field: "cost",
+      message: `${undrawableSymbolsMessage(undrawnInCost)} — use a symbol the card has a pip for.`,
+    });
+  }
+  const undrawnInRules = undrawableSymbols(card.rules_text);
+  if (undrawnInRules.length > 0) {
+    errors.push({
+      field: "rules_text",
+      message: `${undrawableSymbolsMessage(undrawnInRules)} — use a symbol the card has a pip for.`,
+    });
+  }
   if (type === "land" && parsed !== null && parsed.symbols.length > 0) {
     errors.push({ field: "cost", message: "Lands don't have a mana cost — use \"—\"." });
   }
@@ -434,6 +454,38 @@ export function lintCardDesign(card: LintableCard): LintResult {
   return { errors, warnings };
 }
 
+/** The nearest symbol the card can draw for one it can't, or null when
+ *  there is none to offer: a hybrid Phyrexian {W/U/P} becomes the hybrid
+ *  {W/U} (same colours, same mana value), a generic past the font's last
+ *  number the largest generic that draws. Asked of the creator's check, so
+ *  it follows the font. */
+function drawableSymbolFor(symbol: string): string | null {
+  const inner = symbol.slice(1, -1);
+  const draws = (candidate: string) => undrawableSymbols(candidate).length === 0;
+  const hybridPhyrexian = /^([WUBRG]\/[WUBRG])\/P$/.exec(inner);
+  if (hybridPhyrexian) {
+    const hybrid = `{${hybridPhyrexian[1]}}`;
+    return draws(hybrid) ? hybrid : null;
+  }
+  if (/^\d+$/.test(inner)) {
+    for (let n = Math.min(Number(inner), 99) - 1; n >= 0; n -= 1) {
+      if (draws(`{${n}}`)) return `{${n}}`;
+    }
+  }
+  return null;
+}
+
+/** `text` with every symbol the card can't draw swapped for its nearest
+ *  drawable one (drawableSymbolFor); one with no such neighbour stays. */
+export function withDrawableSymbols(text: string): string {
+  if (undrawableSymbols(text).length === 0) return text;
+  return text.replace(/\{[^{}]+\}/g, (group) => {
+    const written = `{${group.slice(1, -1).trim().toUpperCase()}}`;
+    if (undrawableSymbols(written).length === 0) return group;
+    return drawableSymbolFor(written) ?? group;
+  });
+}
+
 /**
  * Mechanical repairs for lint ERRORS the model failed to fix itself — the
  * last line of defense so a batch generation never hands createCardAction a
@@ -485,6 +537,11 @@ export function autofixCard<T extends LintableCard>(card: T): T {
   fixed.rules_text = fixed.rules_text
     .replace(/\bhis or her\b/gi, "their")
     .replace(/\bcannot\b/g, "can't");
+
+  // The last resort for a symbol the card can't draw (the judge had its
+  // pass): the nearest symbol it can — see drawableSymbolFor.
+  if (type !== "land" && type !== "emblem") fixed.cost = withDrawableSymbols(fixed.cost);
+  fixed.rules_text = withDrawableSymbols(fixed.rules_text);
 
   return fixed;
 }

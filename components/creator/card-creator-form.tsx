@@ -127,6 +127,7 @@ import { frameRequestFromImport } from "@/lib/frames/frame-requests";
 import type { DeckRemixContext } from "@/types/deck";
 import {
   droppedFaceNotice,
+  undrawableSymbolsNotice,
   printingTreatmentNotice,
   printingTreatmentOffer,
   type ScryfallImportPatch,
@@ -275,7 +276,7 @@ import {
 } from "@/lib/creator/steps";
 import { buildCardPath } from "@/lib/cards/utils";
 import { CapacityNotice } from "@/components/billing/capacity-notice";
-import { GlyphCoverageNotice } from "@/components/creator/glyph-coverage-notice";
+import { GlyphCoverageNotice, UndrawableSymbolNotice } from "@/components/creator/glyph-coverage-notice";
 import type { CardCapacity } from "@/lib/billing/capacity-copy";
 import {
   isFramePreviewSave,
@@ -1857,6 +1858,10 @@ export function CardCreatorForm({
     // 1.23): say so, whoever asked — it isn't a frame substitution.
     const faceNotice = droppedFaceNotice(patch, source.name);
     if (faceNotice) toast.info(faceNotice, { duration: 8000 });
+    // A symbol the card can't draw (a hybrid Phyrexian cost): the import
+    // keeps it as printed and the card leaves it out — say so.
+    const symbolNotice = undrawableSymbolsNotice(patch, source.name);
+    if (symbolNotice) toast.info(symbolNotice, { duration: 8000 });
 
     let notice: ImportNotice | null = null;
     if (via === "dialog") {
@@ -3219,6 +3224,7 @@ export function CardCreatorForm({
         <CapacityNotice capacity={capacity} adding={1} className="mb-6" />
       ) : null}
       {!readOnly ? <GlyphCoverageNotice values={watched} className="mb-6" /> : null}
+      {!readOnly ? <UndrawableSymbolNotice values={watched} overrides={pipOverrides} className="mb-6" /> : null}
       <div
         className={readOnly ? "flex flex-col gap-6 select-none opacity-60" : "flex flex-col gap-6"}
         inert={readOnly || undefined}

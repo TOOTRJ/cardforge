@@ -5119,7 +5119,21 @@ disc, no room, no gap: `hasManaGlyph()` is the browser's copy of the bake's
 codepoint map (`lib/render/card-fonts.ts` is server-only), held to the
 installed `mana.css` by `tests/unit/cards/mana-gem.test.ts` — a mana-font
 upgrade that adds or drops a reachable glyph fails there until the list
-follows. The creator does not warn about such a symbol yet. The shadow's
+follows. The creator WARNS about such a symbol and never blocks the save
+(stored cards hold them): `undrawableSymbols()`
+(`lib/validation/card-glyphs.ts`) reads a cost or a rules-style text with
+the renderers' tokenizer and asks `drawsManaGem()` — no list of its own, the
+owner's custom pip image first as both renderers do (today only `{W}`…`{C}`,
+which the font has, so an override changes no answer) — and
+`UndrawableSymbolNotice` names them per field beside the missing-character
+notice ("Mana cost: {21} and {W/U/P} can't be drawn and will be left off the
+card."); flavor text is not read, no renderer parses symbols there. The AI
+lint refuses one in a cost or rules text through the same helper (the
+judge's pass, then `withDrawableSymbols`: `{W/U/P}` → `{W/U}`, a generic
+past the font's last → the largest that draws), and a Scryfall import of a
+printing that uses one says so (`undrawableSymbolsNotice`: toast + the
+import dialog's note; Ajani, Sleeper Agent's `{G/W/P}`). DRAWING the hybrid
+Phyrexian symbols is a look change and an owner decision — not done. The shadow's
 colour in the preview is the one the PNG holds, not the style's CSS colour
 (`bakedShadowHex()`: sharp's librsvg runs the shadow's filter in 8-bit
 linearRGB, `#111` lands on `#0d0d0d`); `mana-gem-parity.test.tsx` reads it
