@@ -346,9 +346,22 @@ export function measuredLinePreviewPct(
 }
 
 /** The gap between cost pips, as a fraction of the disc: the bake's
- *  CostGlyphs draws exactly this; the preview's 0.12em of disc ÷ 1.3 is
- *  narrower, so a row measured with it fits both. */
+ *  CostGlyphs draws exactly this, and the preview draws the stored bake's
+ *  (costRowHdPx). */
 export const COST_PIP_GAP = 0.12;
+
+/** A cost row's disc and the gap between its pips in the stored HD bake's
+ *  whole px — what CostGlyphs draws at that width (the disc at fpx of its
+ *  size, the gap at COST_PIP_GAP of that disc, at least 1 px). The preview
+ *  draws these px in cqw, so its row is the stored PNG's at every size. */
+export function costRowHdPx(
+  discPct: number,
+  orientation: CardOrientation = "portrait",
+): { discPx: number; gapPx: number; cardWidthPx: number } {
+  const cardWidthPx = STORED_BAKE_WIDTH[orientation];
+  const discPx = Math.round(discPct * cardWidthPx);
+  return { discPx, gapPx: Math.max(1, Math.round(discPx * COST_PIP_GAP)), cardWidthPx };
+}
 /** The gap between a second face's name and its cost, as a fraction of the
  *  card's width (the preview's 2cqw; the bake draws it for `fitLines` faces
  *  that print a cost) — the band gap. */

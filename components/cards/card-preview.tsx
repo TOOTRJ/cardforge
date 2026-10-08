@@ -53,6 +53,7 @@ import {
 } from "@/lib/cards/saga-rail";
 import {
   NAME_COST_GAP_PCT,
+  costRowHdPx,
   fitSplitTypeSizePct,
   fitTypeLineBand,
   inlineSymbolPullPct,
@@ -1357,7 +1358,7 @@ function CardFace({
         {showCost && !layout.costRect ? (
           <ManaCostGlyphs
             cost={face.cost}
-            fontSize={pipFont(layout.costSizePct ?? layout.title.sizePct)}
+            disc={costDisc(layout.costSizePct ?? layout.title.sizePct, orientationFromAspect(aspect))}
             overrides={pipOverrides}
             symbols={symbols}
             offsetY={layout.costDy ? cqw(layout.costDy) : undefined}
@@ -1376,7 +1377,7 @@ function CardFace({
         >
           <ManaCostGlyphs
             cost={face.cost}
-            fontSize={pipFont(layout.costSizePct ?? layout.title.sizePct)}
+            disc={costDisc(layout.costSizePct ?? layout.title.sizePct, orientationFromAspect(aspect))}
             overrides={pipOverrides}
             symbols={symbols}
             offsetY={layout.costDy ? cqw(layout.costDy) : undefined}
@@ -2507,7 +2508,7 @@ function AdventurePanel({
         {showCost ? (
           <ManaCostGlyphs
             cost={data.cost}
-            fontSize={pipFont(slot.costSizePct ?? slot.title.sizePct)}
+            disc={costDisc(slot.costSizePct ?? slot.title.sizePct)}
             overrides={pipOverrides}
             symbols={symbols}
           />
@@ -2624,7 +2625,7 @@ function SecondFacePanel({
           {showCost ? (
             <ManaCostGlyphs
               cost={data.cost}
-              fontSize={pipFont(slot.costSizePct ?? slot.title.sizePct)}
+              disc={costDisc(slot.costSizePct ?? slot.title.sizePct, orientation)}
               overrides={pipOverrides}
             symbols={symbols}
             />
@@ -2653,7 +2654,7 @@ function SecondFacePanel({
         {showCost ? (
           <ManaCostGlyphs
             cost={data.cost}
-            fontSize={pipFont(lineSizes.costSizePct)}
+            disc={costDisc(lineSizes.costSizePct, orientation)}
             overrides={pipOverrides}
             symbols={symbols}
           />
@@ -2815,12 +2816,21 @@ function textDy(slot: TextSlot, drawnSizePct = slot.sizePct): CSSProperties {
   return dy ? { transform: `translateY(${cqw(dy)})` } : {};
 }
 
-// mana-font's `.ms-cost` disc renders at 1.3em for a given font-size; profiles
-// specify the DISC diameter, so the CSS font-size is the diameter ÷ 1.3. The
-// bake's ManaGem draws the disc at the diameter directly — same visual size.
+// mana-font's `.ms-cost` disc is 1.3 em of the PIP's own font size, so a
+// rules pip — whose font size is set on the pip itself — takes the layout's
+// disc ÷ 1.3.
 const MS_COST_DISC_EM = 1.3;
-function pipFont(discPct: number): string {
-  return cqw(discPct / MS_COST_DISC_EM);
+
+// A cost row's disc and pip gap (ManaCostGlyphs' `disc`): the stored HD
+// bake's whole px in cqw (costRowHdPx — CostGlyphs' disc and gap at that
+// width), so the row is the PNG's at every preview size. The stylesheet's
+// `.ms-cost { font-size: 0.95em }` made a disc sized through its PARENT's
+// font 5 % smaller than the bake's, and an em gap on that parent narrower
+// still: a six-pip cost began ~30 HD px right of the PNG's (found
+// 2026-10-07, in every frame).
+function costDisc(discPct: number, orientation: CardOrientation = "portrait"): { size: string; gap: string } {
+  const { discPx, gapPx } = costRowHdPx(discPct, orientation);
+  return { size: hdCqw(discPx, orientation), gap: hdCqw(gapPx, orientation) };
 }
 
 function vJustify(align: SlotAlign): string {

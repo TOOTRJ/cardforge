@@ -100,7 +100,7 @@ import {
   type BasicSymbolPlan,
 } from "@/lib/cards/basic-symbol";
 import { KEYRUNE_DEFAULT_GLYPH, cardFonts, getKeyruneCodepoint, getManaCodepoint } from "@/lib/render/card-fonts";
-import { discShadowCss, styledSuffix, symbolStyle, symbolStyleOf, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
+import { MANA_GLYPH_OF_DISC, discShadowCss, styledSuffix, symbolStyle, symbolStyleOf, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
 import { BRAND_FACE, TYPE_FACES, faceOf, footerFace, slotFace, type TypeFace } from "@/lib/cards/type-faces";
 import { displayRunPx } from "@/lib/render/satori-text";
 import { collectorLayout, type CollectorLayout, type CollectorMarkAnchor } from "@/lib/cards/collector-layout";
@@ -2096,7 +2096,7 @@ function ManaGem({
           display: "flex",
           // mana-font: 0.95em glyph in a 1.3em disc.
           fontFamily: '"Mana"',
-          fontSize: Math.round(size * 0.73),
+          fontSize: Math.round(size * MANA_GLYPH_OF_DISC),
           lineHeight: 1,
           color: MANA_SYMBOL_INK,
         }}

@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { pipOverrideForToken, type PipOverrides } from "@/lib/pips/override";
-import { styledSuffix, symbolStyle, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
+import { MANA_GLYPH_OF_DISC, styledSuffix, symbolStyle, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
 
 // ---------------------------------------------------------------------------
 // ManaCostGlyphs — render `{2}{R}{G/W}{R/P}{T}{S}` etc. using the open-source
@@ -25,11 +25,11 @@ type GlyphSize = "sm" | "md" | "lg";
 type ManaCostGlyphsProps = {
   cost: string | null | undefined;
   size?: GlyphSize;
-  /** Explicit font-size override. Pass a container-relative value (e.g. a
-   *  `cqw` string) so the pips scale with the card instead of staying a fixed
-   *  pixel size. When set, it wins over `size`; the gap + text fallback scale
-   *  with it via em units. Used by CardPreview; the form pickers keep `size`. */
-  fontSize?: number | string;
+  /** A CARD's cost row (CardPreview only; the pickers keep `size`): each
+   *  disc's DIAMETER and the gap between pips, as container-relative CSS
+   *  lengths (`cqw`) — the bake's disc and gap, so the row scales with the
+   *  card and is the stored PNG's. When set, it wins over `size`. */
+  disc?: { size: string; gap: string };
   /** The card OWNER's custom pip icons. Pure color pips ({W}…{C}) with an
    *  entry render the uploaded image instead of the mana-font glyph; all
    *  other tokens (and all callers that omit this) keep the standard look. */
@@ -177,10 +177,35 @@ export function tokenSuffix(token: Token): string | null {
 // Renderer
 // ---------------------------------------------------------------------------
 
+// mana-font's `.ms-cost` box: a disc 1.3 em of the pip's own font size, its
+// line box 1.35 em.
+const MS_DISC_EM = 1.3;
+const MS_LINE_EM = 1.35;
+
+// One pip of a CARD's cost row, whose font size is the disc's diameter
+// (1 em = one disc): the bake's ManaGem — a disc exactly that wide, a
+// one-colour symbol at MANA_GLYPH_OF_DISC of it. mana-font sizes the disc
+// from the glyph's font (1.3 em of `.ms-cost`'s own 0.95 em), which left it
+// 5 % short of the bake's; so the glyph keeps its size and the box is set
+// around it, the line box in mana-font's own proportion. A split disc keeps
+// mana-font's box at disc ÷ 1.3 — the proportions the bake's halves follow.
+const COST_DISC_STYLE: React.CSSProperties = {
+  fontSize: `${MANA_GLYPH_OF_DISC}em`,
+  width: `${(1 / MANA_GLYPH_OF_DISC).toFixed(4)}em`,
+  height: `${(1 / MANA_GLYPH_OF_DISC).toFixed(4)}em`,
+  lineHeight: `${(MS_LINE_EM / MS_DISC_EM / MANA_GLYPH_OF_DISC).toFixed(4)}em`,
+  flexShrink: 0,
+};
+const COST_SPLIT_DISC_STYLE: React.CSSProperties = {
+  fontSize: `${(1 / MS_DISC_EM).toFixed(4)}em`,
+  flexShrink: 0,
+};
+
 // A custom pip image drawn in the exact box mana-font gives `.ms-cost`:
-// a 1.3em disc at the given font size (0.95em for costs; rules text passes
-// its own scale) with the hard offset `.ms-shadow` pair — so override pips
-// line up pixel-for-pixel with standard ones beside them.
+// a 1.3em disc at the given font size (0.95em for the pickers' costs; a
+// card's cost row and rules text pass their own scale) with the hard offset
+// `.ms-shadow` pair — so override pips line up pixel-for-pixel with standard
+// ones beside them.
 export function PipOverrideImg({
   src,
   fontSizeEm = 0.95,
@@ -219,7 +244,7 @@ export function PipOverrideImg({
 export function ManaCostGlyphs({
   cost,
   size = "md",
-  fontSize,
+  disc,
   overrides,
   offsetY,
   symbols = symbolStyle(undefined),
@@ -229,16 +254,14 @@ export function ManaCostGlyphs({
   const tokens = tokenize(cost.trim());
   if (tokens.length === 0) return null;
 
-  // A custom fontSize (e.g. a `cqw` value) scales the glyphs with the card; the
-  // gap then needs to scale too, so use an em gap instead of the fixed token.
-  const scaled = fontSize != null;
-  const resolvedFontSize = scaled ? fontSize : SIZE_PX[size];
+  // A card's row: the font size IS the disc's diameter, the gap the bake's.
+  const scaled = disc != null;
 
   return (
     <span
       className={cn(
         "inline-flex items-center",
-        scaled ? "gap-[0.12em]" : GAP_CLASS[size],
+        scaled ? null : GAP_CLASS[size],
         className,
       )}
       // A rendered mana cost is a composite pictograph — role="img" makes
@@ -247,7 +270,7 @@ export function ManaCostGlyphs({
       role="img"
       aria-label={`Cost ${cost}`}
       style={{
-        fontSize: resolvedFontSize,
+        ...(disc ? { fontSize: disc.size, columnGap: disc.gap } : { fontSize: SIZE_PX[size] }),
         ...(offsetY ? { transform: `translateY(${offsetY})` } : {}),
       }}
     >
@@ -256,7 +279,8 @@ export function ManaCostGlyphs({
           return (
             <span
               key={`t-${i}`}
-              className="text-[0.72em] uppercase tracking-wider text-muted"
+              // The bake's 0.6 × disc caps on a card; the pickers' as before.
+              className={cn(scaled ? "text-[0.6em]" : "text-[0.72em]", "uppercase tracking-wider text-muted")}
             >
               {token.value}
             </span>
@@ -264,7 +288,14 @@ export function ManaCostGlyphs({
         }
         const overrideSrc = pipOverrideForToken(token, overrides);
         if (overrideSrc) {
-          return <PipOverrideImg key={`g-${i}`} src={overrideSrc} symbols={symbols} />;
+          return (
+            <PipOverrideImg
+              key={`g-${i}`}
+              src={overrideSrc}
+              symbols={symbols}
+              {...(scaled ? { fontSizeEm: 1 / MS_DISC_EM, style: { flexShrink: 0 } } : {})}
+            />
+          );
         }
         const suffix = tokenSuffix(token);
         if (!suffix) return null;
@@ -275,6 +306,7 @@ export function ManaCostGlyphs({
             key={`g-${i}`}
             aria-hidden
             className={cn("ms ms-cost", symbols.previewShadowClass, `ms-${styledSuffix(symbols, suffix)}`)}
+            style={scaled ? (token.kind === "hybrid" ? COST_SPLIT_DISC_STYLE : COST_DISC_STYLE) : undefined}
           />
         );
       })}
