@@ -574,7 +574,19 @@ Rules and gotchas:
   social/feedback/message kinds, `notifyUser()` in `lib/admin/user-actions.ts`
   for credit grants, comp plans and card-limit overrides. New kinds go in the
   type CHECK + `lib/notifications/describe.ts` (the ONE copy source for bell,
-  page and toast).
+  page and toast). ONE stream per user per tab: every mounted `RealtimeAlerts`
+  queues through `lib/notifications/stream-claim.ts` and only the holder
+  subscribes — the browser client hands back the channel a topic already has,
+  so a second `.on("postgres_changes")` throws once the first has subscribed
+  (and binds twice, toasting twice, before that). Nothing in that effect may
+  throw (it reaches the root error boundary and replaces the page). A stream
+  that is down — it can't be set up or joined, or the server closed it —
+  polls, and looks again after a pause (30 s doubling to 5 min): a freshly
+  read session token for the socket, and a fresh channel only if it holds
+  none (never a replacement for one the client is still retrying). The
+  server closes a channel whose token expired — any tab left in the
+  background past the token's lifetime — and the client never rejoins a
+  closed channel by itself.
 - AI image generation goes through the **Vercel AI Gateway ONLY** (FLUX for
   text-to-image, Gemini for the "AI remix" i2i) — `lib/ai/image-gen.ts` has no
   direct-OpenAI path. `AI_GATEWAY_API_KEY` is required for any image flow; a
@@ -624,7 +636,13 @@ Rules and gotchas:
   global `loading.tsx` lives in `app/(app)/` for exactly this reason; the card
   route checks existence in its segment `layout.tsx` so its skeleton can still
   stream) and again in `generateMetadata` (detail queries are React `cache()`d,
-  so it costs nothing). Every public detail page sets a self-canonical,
+  so it costs nothing). Next draws that 404 INSIDE the route group's layout,
+  so every group has its own `not-found.tsx` — `NotFoundContent`, no shell;
+  only `app/not-found.tsx` (unmatched URLs, root layout alone) wraps it in
+  `AppShell`. A group without one falls back to the root file inside its own
+  layout: two headers, ribbons and footers, and two headers' worth of client
+  islands (`tests/unit/content/not-found-chrome.test.ts`). Every public
+  detail page sets a self-canonical,
   OG/Twitter, JSON-LD, and `robots: noindex` for anything unlisted or THIN (a
   handle-only profile, an empty deck). `app/sitemap.ts` lists only what is
   indexable (public cards, profiles with a public card, non-empty public
