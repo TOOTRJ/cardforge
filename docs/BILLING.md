@@ -492,6 +492,66 @@ counts as a subscriber until then, and one who resumes never counts as a
 cancellation; `subscription_resumed` counts the resumes. Revenue reads only
 `billing_payments` (paid invoices) and is unaffected.
 
+### Follow-up 2 (2026-10-07): a late event cannot store a state the plan has left
+
+**The race.** Cancel in the Customer Portal, then Resume in the app seconds
+later. Stripe generates two `customer.subscription.updated` events — the
+cancellation's (snapshot: `cancel_at` set) and the resume's (snapshot:
+`cancel_at: null`). Delivered in the other order, or with the first one
+retried later, the profile ended up "ending" while Stripe renewed the plan:
+
+1. portal cancel → Stripe: ending
+2. app Resume → Stripe: renews; the action resyncs the profile → renews
+3. the resume's event arrives → renews
+4. the cancellation's event arrives late → the sync merged the EVENT's
+   snapshot over the subscription it had just listed → profile: ending, until
+   the next event (for a monthly plan: the renewal)
+
+The dashboard notice, Settings, the avatar menu and `/admin/users` read the
+profile, so all four said "ends on …"; the billing page reads Stripe live
+and disagreed with them. The same merge had a worse form: an old `updated`
+event delivered after `customer.subscription.deleted` wrote a live plan back
+onto the profile, and a dead subscription sends no further event to fix it.
+
+Why the snapshot was merged at all (commit 19a03d41, the 2026-09-14
+tier-demotion fix): "so a just-deleted subscription can't read as live" —
+right for `deleted`, wrong for every other event.
+
+**The rule** (`syncSubscriptionForUser`, `lib/stripe/subscription-sync.ts`).
+Stripe's guidance is not to depend on delivery order and to fetch the
+object: "Stripe doesn't guarantee the delivery of events in the order that
+they're generated … Make sure that your event destination isn't dependent on
+receiving events in a specific order … You can also use the API to retrieve
+any missing objects" ([docs.stripe.com/webhooks#event-ordering](https://docs.stripe.com/webhooks#event-ordering)).
+So an event only names the subscription:
+
+| What is given | What is written |
+|---|---|
+| `eventSub` (a webhook snapshot) | the subscription **read again by id** (`subscriptions.retrieve`), in parallel with the customer's list; the read wins over the list's row for it (the guard against a list that lags), the list's row wins over the snapshot, and the snapshot is used only when neither read has it (Stripe unreachable; a just-created subscription neither read knows yet) |
+| `eventSub` + `eventDeleted` (`customer.subscription.deleted`) | ended, even if a read still shows it live — deletion is terminal, an ended subscription never comes back |
+| a read that says `canceled`, no `deleted` event (an old event after the deletion) | ended too — but only when the list was readable, so it is known that nothing else is live |
+| `currentSub` (the caller's own fresh object: `invoice.paid`'s retrieve, the Resume action's update response, the admin Resync's retrieve with its schedule) | taken as it is, not read again |
+
+No event id / timestamp bookkeeping: Stripe says not to order by `created`
+(one-second resolution), and with the state always re-read a duplicate or
+late delivery is simply another sync of the present.
+
+**The 2026-09 protections are untouched**: the primary is still picked from
+the whole list (live, highest tier, newest) so a secondary subscription's
+event cannot demote; an unmapped price on a live subscription still keeps
+the tier; an empty or failed list still writes nothing when no subscription
+was given, and with one given the subscription itself (read by id, else the
+snapshot) is synced — never "free" from a transient empty read. "Free" is
+written in exactly two cases: the subscription given has ended (above) and
+nothing else is live.
+
+What the handler still takes from the event itself: the funnel rows
+(`trial_converted`, `subscription_changed`, `subscription_cancelled` — they
+record what that event said, with its `previous_attributes`), and the
+creation flag for the one trial grant, which keys on the SYNCED state
+(a late `created` event for a trial that has converted grants the month's
+allotment, idempotently, not a second trial tranche).
+
 ## Addendum — sandbox lifecycle run (2026-09-22, test clock `clock_1UIftGQFLEpCg9s2uoFgd7kf`)
 
 Two clock-bound sandbox customers, driven through the Stripe API:

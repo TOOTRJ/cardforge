@@ -613,6 +613,29 @@ describe("handleStripeEvent — price/tier resolution + multi-subscription safet
     expect(grant?.args).toMatchObject({ p_amount: MONTHLY_CREDITS.pro - MONTHLY_CREDITS.plus });
   });
 
+  it("a cancellation's `updated` event delivered after the resume leaves the profile renewing (docs.stripe.com/webhooks#event-ordering)", async () => {
+    const { admin, updates } = makeAdmin();
+    const item = { id: "si_1", price: { id: "price_plus", recurring: { interval: "month" } }, current_period_end: 1893456000 };
+    // Stripe now: resumed. The event: the cancellation, generated earlier.
+    const now = { id: "sub_1", customer: "cus_1", status: "active", created: 10, cancel_at_period_end: false, cancel_at: null, items: { data: [item] } };
+    const late = { ...now, cancel_at: 1893456000, canceled_at: 1893000000 };
+    await handleStripeEvent(
+      {
+        id: "evt_late_cancel",
+        type: "customer.subscription.updated",
+        data: { object: late, previous_attributes: { cancel_at: null } },
+      } as never,
+      { admin, stripe: makeStripeWithSubs([now]).stripe },
+    );
+    const state = updates.find((u) => "subscription_tier" in u.values);
+    expect(state?.values).toMatchObject({
+      subscription_status: "active",
+      cancel_at_period_end: false,
+      subscription_ends_at: null,
+      subscription_canceled_at: null,
+    });
+  });
+
   it("a lingering trial's deletion resyncs to the live Pro subscription instead of demoting", async () => {
     const { admin, updates, rpcs } = makeAdmin();
     const trial = {

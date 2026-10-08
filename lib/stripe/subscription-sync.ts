@@ -181,7 +181,7 @@ async function readBillingSlice(
 export type SubscriptionSyncResult = {
   userId: string;
   /** The subscription whose state was written (null = nothing live and no
-   *  event subscription — the profile was left as it was). */
+   *  subscription given — the profile was left as it was — or it ended). */
   subscriptionId: string | null;
   tier: PlanTier;
   status: string | null;
@@ -240,10 +240,41 @@ function isMissingEndingColumn(error: { code?: string; message?: string }): bool
   );
 }
 
+/** Read one subscription by id — null when Stripe can't be read (no API in
+ *  unit tests, a transient error, a restricted key). */
+async function retrieveSubscription(
+  stripe: Stripe,
+  id: string,
+): Promise<Stripe.Subscription | null> {
+  try {
+    return await stripe.subscriptions.retrieve(id);
+  } catch {
+    return null;
+  }
+}
+
+/** A subscription that is over for good. `incomplete_expired` is the other
+ *  terminal status, but it never entitled anyone — only `canceled` ends a
+ *  plan the profile may be showing. */
+const ENDED_STATUS = "canceled";
+
 export type SyncOptions = {
-  /** The subscription the webhook event carried, if any. */
+  /**
+   * The subscription a WEBHOOK EVENT carried — a snapshot taken when the
+   * event was generated, possibly long ago (out-of-order delivery, a retry).
+   * It names the subscription to sync; its fields are trusted only when
+   * Stripe cannot be read, or for `eventDeleted`.
+   */
   eventSub?: SubscriptionLike;
-  /** The event was customer.subscription.deleted for `eventSub`. */
+  /**
+   * A subscription the caller has JUST read from or written to Stripe (a
+   * `retrieve`, an `update` response). Taken as current and not read again —
+   * it may carry more than a plain read would (an expanded schedule). Wins
+   * over `eventSub` when both are given.
+   */
+  currentSub?: SubscriptionLike;
+  /** The subscription given (`currentSub` / `eventSub`) has ENDED: the event
+   *  was customer.subscription.deleted, or the caller read it as canceled. */
   eventDeleted?: boolean;
   /** Known customer id (webhook path) — otherwise read from the profile. */
   customerId?: string | null;
@@ -252,7 +283,9 @@ export type SyncOptions = {
 /**
  * Write the profile's subscription columns from the customer's CURRENT Stripe
  * state. Never demotes an active subscriber on an unmapped price; never lets
- * a stale event for a secondary subscription overwrite the primary one.
+ * a stale event for a secondary subscription overwrite the primary one; never
+ * writes an event's own snapshot while Stripe can be read (a late or retried
+ * event would store a state the subscription has already left).
  */
 export async function syncSubscriptionForUser(
   admin: AdminClient,
@@ -260,22 +293,48 @@ export async function syncSubscriptionForUser(
   userId: string,
   options: SyncOptions = {},
 ): Promise<SubscriptionSyncResult> {
-  const { eventSub, eventDeleted = false } = options;
+  const { eventSub, currentSub, eventDeleted = false } = options;
+  const given = currentSub ?? eventSub;
   const previous = await readBillingSlice(admin, userId);
   const customerId =
     options.customerId ??
-    customerIdOf(eventSub?.customer) ??
+    customerIdOf(given?.customer) ??
     previous.stripe_customer_id;
 
-  // Prefer the customer's full subscription list; the event object is
-  // merged over it so a just-deleted subscription can't read as live.
-  const listed = customerId ? await listCustomerSubscriptions(stripe, customerId) : null;
+  // Stripe's CURRENT state: the customer's subscriptions, and — for a
+  // webhook event — the event's own subscription read again by id. Neither
+  // read is the event's snapshot, so the order events arrive in (and a
+  // retry of an old one) cannot change what is written.
+  const [listed, reread] = await Promise.all([
+    customerId ? listCustomerSubscriptions(stripe, customerId) : null,
+    eventSub && !currentSub ? retrieveSubscription(stripe, eventSub.id) : null,
+  ]);
+
+  // The given subscription as it is NOW: the caller's own fresh object, else
+  // the read by id, else its row in the list. Only when none of those exists
+  // (Stripe unreachable, or the reads don't know it yet) does the event's
+  // snapshot stand in.
+  const fresh: SubscriptionLike | null =
+    currentSub ??
+    reread ??
+    (given ? (listed?.find((sub) => sub.id === given.id) ?? null) : null);
+  let subject: SubscriptionLike | null = fresh ?? eventSub ?? null;
+  // It has ended when the caller says so (the `deleted` event: terminal, so
+  // it wins even over a read that still shows it live) or when Stripe's own
+  // read says so — an old `updated` event arriving after the deletion must
+  // not bring the plan back. A read counts only alongside the list: without
+  // it nobody knows whether another subscription is live.
+  const subjectEnded =
+    subject != null &&
+    (eventDeleted || (fresh?.status === ENDED_STATUS && listed != null));
+  if (subject && subjectEnded && subject.status !== ENDED_STATUS) {
+    subject = { ...subject, status: ENDED_STATUS };
+  }
+
   let candidates: SubscriptionLike[] | null = listed;
-  if (candidates && eventSub) {
-    const merged = candidates.filter((sub) => sub.id !== eventSub.id);
-    merged.push(
-      eventDeleted ? { ...eventSub, status: "canceled" } : eventSub,
-    );
+  if (candidates && subject) {
+    const merged = candidates.filter((sub) => sub.id !== subject.id);
+    merged.push(subject);
     candidates = merged;
   }
 
@@ -294,9 +353,11 @@ export async function syncSubscriptionForUser(
     source = chosen ? "primary" : "event";
   }
   if (!chosen) {
-    // Nothing live (or no API): the event's subscription describes the new
+    // Nothing live (or no API): the given subscription describes the new
     // state — a cancellation, a past_due, or (API-less) the plain old path.
-    chosen = eventSub ?? null;
+    // An empty list with no subscription given writes NOTHING: a transient
+    // empty read must never demote anyone.
+    chosen = subject;
     source = chosen ? "event" : "none";
   }
   if (!chosen) {
@@ -310,8 +371,8 @@ export async function syncSubscriptionForUser(
     };
   }
 
-  const chosenDeleted = eventDeleted && eventSub?.id === chosen.id;
-  const status = chosenDeleted ? "canceled" : chosen.status;
+  const chosenDeleted = subjectEnded && subject?.id === chosen.id;
+  const status = chosenDeleted ? ENDED_STATUS : chosen.status;
   const live = isLiveStatus(status);
   const resolved = chosenDeleted ? null : await resolveSubscriptionTier(chosen, stripe);
   const previousTier = (previous.subscription_tier ?? "free") as PlanTier;

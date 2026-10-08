@@ -342,7 +342,7 @@ export async function adminResyncSubscriptionAction(input: {
     const result = await syncSubscriptionForUser(admin, stripe, profile.id, {
       customerId: profile.stripe_customer_id,
       // An ended subscription syncs as the webhook's `deleted` event would.
-      ...(stored ? { eventSub: stored, eventDeleted: stored.status === "canceled" } : {}),
+      ...(stored ? { currentSub: stored, eventDeleted: stored.status === "canceled" } : {}),
     });
     await grantCreditsForSync(result, admin, { isCreationEvent: false });
     revalidatePath("/admin/users");
