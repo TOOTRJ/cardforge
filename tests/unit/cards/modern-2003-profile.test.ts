@@ -200,7 +200,7 @@ describe("the 2003 footer — the brush and the artist over the © slot, left-al
 });
 
 describe("the 2003 P/T — centred on the plate's face, the plate at the printed box", () => {
-  it("the value is centred on 1258 px (the prints': 62 one-digit and 6 two-digit values, sd 1.9 px), not set against an edge", () => {
+  it("the value is centred on 1258 px (the prints': 83 one-digit and 5 two-digit values, sd 1.9 px), not set against an edge", () => {
     for (const p of [modern, land]) {
       const pt = p.pt!;
       expect(pt.align).toBeUndefined();

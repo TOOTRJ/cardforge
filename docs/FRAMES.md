@@ -2380,7 +2380,7 @@ of white, blue, red, green, artifact and gold:
 | cost | 68 px discs, a black shadow 6 px straight down (`symbolStyle: "2003"`) | — | discs 66–68 px on row 173, ending at 1368, 74 apart; flat pips in the rules text; the modern tap |
 | type line | Beleren 66, measured | dark | capitals 46 px, baseline 1264, starts at 151 |
 | rules | MPlantin 76 (the shared ladder) | dark | the column 153–1347 px inside the box's face 130–1370 × 1314–1904 |
-| P/T | Beleren 80, CENTRED on 1258 px | dark | digits 58–59 px on 1959; every value centred on 1257–1260 at one size — 62 one-digit values (sd 1.9 px), CON #121 10/10 1168–1349, WWK #57 13/13 1170–1349, RTR #140 15/15 1177–1343, RAV #191 9/14 1181–1332 |
+| P/T | Beleren 80, CENTRED on 1258 px | dark | digits 58–59 px on 1959; every value centred on 1257–1260 at one size — 83 one-digit values (sd 1.9 px), CON #121 10/10 1168–1349, WWK #57 13/13 1170–1349, RTR #140 15/15 1177–1343, RAV #191 9/14 1181–1332 |
 | footer line 1 | the brush (`footerBrush`: our own path, 118–227 × 1946–1969 px) + the artist, Beleren 50, mixed case, from 235 px | dark; WHITE on `modern`/b and all seven `modernland` keys (v44's map) | capitals 33 px, baseline 1967 |
 | footer line 2, the © slot | the mark at a 32 px em · a clean download's footer text, MPlantin 32, from 128 px | the line's ink | baseline 2015, starts at 128 |
 
