@@ -101,7 +101,7 @@ export function IdentityPanel({ revise = false, token = false, emblem = false }:
           ) : (
             <FieldGroup
               label="Supertype"
-              helper="Optional — e.g. Legendary, Basic."
+              helper="Optional — e.g. Legendary, Basic, or a second card type: Artifact, Enchantment, Creature on a land. The card prints the words in their printed order."
               error={errors.supertype?.message}
             >
               <input
