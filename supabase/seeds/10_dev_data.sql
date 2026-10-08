@@ -233,7 +233,8 @@ on conflict (id) do nothing;
 --     Seraphine and The Glass Reliquary (…048 / …049) are 4.6f's: stored on
 --     the borderless frames with no key, before those drew the floating
 --     crown and the pinline split; Hrafn, Frostfall Deeps and Rimewood
---     Clearing (…050–…052) wave 2c's, on the snow frames.
+--     Clearing (…050–…052) wave 2c's, on the snow frames; …058–…060 are
+--     4.10a's, on the 1997 frame.
 -- ---------------------------------------------------------------------------
 
 insert into public.cards (
@@ -329,7 +330,28 @@ from (values
      '{"template":"m15snowland","finish":"regular"}'::jsonb, 3),
   ('c0000000-0000-4000-a000-000000000052'::uuid, 'Rimewood Clearing', 'rimewood-clearing', null, array['green','white'], 'Snow', 'land', array['Forest','Plains'], 'common',
      E'({T}: Add {G} or {W}.)\nRimewood Clearing enters tapped.', null, null, 22,
-     '{"template":"m15snowland","finish":"regular","twoColor":true}'::jsonb, 1)
+     '{"template":"m15snowland","finish":"regular","twoColor":true}'::jsonb, 1),
+  -- TODO 4.10a (layout v46): the 1997 frame on the ORIGINAL cards — white
+  -- lettering with a hard shadow, the centred `Illus.` footer with the
+  -- pipglyph.com mark in its © slot, flat discs and the 1997 tap. A red
+  -- creature (cost, P/T, {T} and {R} in its text), a colourless ARTIFACT
+  -- (`c` paints the artifact frame) and a land on `retroland`. Neither
+  -- template is ticked until the owner verifies it after the merge: these
+  -- rows are for looking at (an admin edits them with
+  -- `?previewFrames=retro,retroland`). Ids …058–…060.
+  ('c0000000-0000-4000-a000-000000000058'::uuid, 'Cinderpeak Wyrm', 'cinderpeak-wyrm', '{4}{R}{R}', array['red'], null, 'creature', array['Dragon'], 'rare',
+     E'Flying
+{R}: Cinderpeak Wyrm gets +1/+0 until end of turn.
+{T}: Cinderpeak Wyrm deals 1 damage to any target.', '5', '5', 1,
+     '{"template":"retro","finish":"regular"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000059'::uuid, 'Lodestone Compass', 'lodestone-compass', '{2}', array['colorless'], null, 'artifact', array[]::text[], 'uncommon',
+     E'{T}: Add {C}.
+{2}, {T}: Look at the top card of your library.', null, null, 8,
+     '{"template":"retro","finish":"regular"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000060'::uuid, 'Saltmarsh Causeway', 'saltmarsh-causeway', null, array['colorless'], null, 'land', array[]::text[], 'uncommon',
+     E'{T}: Add {C}.
+{T}, Sacrifice Saltmarsh Causeway: Destroy target nonbasic land.', null, null, 10,
+     '{"template":"retroland","finish":"regular"}'::jsonb, 1)
 ) as c (id, title, slug, cost, colors, supertype, card_type, subtypes, rarity,
         rules_text, power, toughness, art, frame_style, age_days)
 on conflict (id) do nothing;

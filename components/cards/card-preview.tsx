@@ -102,6 +102,13 @@ import {
   splitTypeLine,
   type LoyaltyAbility,
 } from "@/lib/cards/card-display";
+import {
+  BRAND_MARK_LIGHT_INK,
+  BRAND_MARK_LIGHT_SHADOW,
+  copyrightSlotLayout,
+  type CopyrightMarkInk,
+  type CopyrightSlotLayout,
+} from "@/lib/cards/copyright-slot";
 import { symbolStyle, symbolStyleOf, styledSuffix, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
 import { BRAND_FACE, TYPE_FACES, faceOf, footerFace, slotFace } from "@/lib/cards/type-faces";
 import {
@@ -900,6 +907,12 @@ function CardFace({
       ),
     [layout, face, rarity, finish, anatomy?.star, anatomy?.collector, showPT, showLoyalty, showDefense, brandMark, footerWatermark],
   );
+  // A centred footer's © slot (TODO 4.10a; lib/cards/copyright-slot.ts, the
+  // bake's twin): the mark on display, a clean download's footer text —
+  // never beside a collector line, which has its own.
+  const copyright = collector
+    ? null
+    : copyrightSlotLayout(layout, masterKey, brandMark ? { kind: "display" } : { kind: "download", footerText: footerWatermark });
 
   const isFoil = finish === "foil";
   const isEtched = finish === "etched";
@@ -1310,6 +1323,7 @@ function CardFace({
       {layout.reversePt && dfc?.otherFace.printsPt ? (
         <StatOverlay
           slot={layout.reversePt}
+          testId="reverse-pt"
           value={ptValue(dfc.otherFace.power, dfc.otherFace.toughness)}
           colorKey={plateKey}
           masterKey={masterKey}
@@ -1673,7 +1687,12 @@ function CardFace({
       {brandMark && collector?.mark.kind === "brand" ? (
         <BrandMarkInCollectorSlot anchor={collector.mark.anchor} />
       ) : null}
-      {brandMark && collector?.mark.kind !== "brand" ? (
+      {/* A centred footer's © slot (TODO 4.10a: the 1997 frame): the mark on
+          display — in place of the border mark below — and a clean
+          download's footer text; the bake's twin. */}
+      {copyright?.kind === "brand" ? <BrandMarkInCollectorSlot anchor={copyright.anchor} ink={copyright.ink} slot="copyright" /> : null}
+      {copyright?.kind === "text" ? <CopyrightSlotText layout={copyright} /> : null}
+      {brandMark && collector?.mark.kind !== "brand" && !copyright ? (
         <div
           aria-hidden
           className="pointer-events-none absolute z-40 flex items-center"
@@ -1842,12 +1861,23 @@ function CollectorBlock({ layout, ink }: { layout: CollectorLayout; ink: string 
  *  block below, unchanged in face, size, ink and shadow, with its line box's
  *  top on the slot's baseline less the display face's ascent and its right
  *  edge on the slot's — the bake's BrandMarkInCollectorSlotBake twin. */
-function BrandMarkInCollectorSlot({ anchor }: { anchor: CollectorMarkAnchor }) {
+function BrandMarkInCollectorSlot({
+  anchor,
+  ink = { kind: "light" },
+  slot = "collector",
+}: {
+  anchor: CollectorMarkAnchor;
+  /** A centred footer's © slot (TODO 4.10a) may ask for the line's printed
+   *  ink, flat (lib/cards/copyright-slot.ts); the collector slot never does. */
+  ink?: CopyrightMarkInk;
+  slot?: "collector" | "copyright";
+}) {
   const scale = anchor.sizePct / 0.026;
+  const color = ink.kind === "flat" ? ink.colorHex : BRAND_MARK_LIGHT_INK;
   return (
     <div
       aria-hidden
-      data-brand-mark="collector"
+      data-brand-mark={slot}
       className="pointer-events-none absolute z-40 flex items-center"
       style={{
         right: `${100 - anchor.rightPct}%`,
@@ -1857,8 +1887,8 @@ function BrandMarkInCollectorSlot({ anchor }: { anchor: CollectorMarkAnchor }) {
         fontSize: cqw(anchor.sizePct),
         fontWeight: 600,
         letterSpacing: "0.02em",
-        color: "rgba(255,255,255,0.82)",
-        textShadow: "0 1px 3px rgba(0,0,0,0.8)",
+        color,
+        ...(ink.kind === "light" ? { textShadow: BRAND_MARK_LIGHT_SHADOW } : {}),
       }}
     >
       <svg
@@ -1869,10 +1899,33 @@ function BrandMarkInCollectorSlot({ anchor }: { anchor: CollectorMarkAnchor }) {
           marginRight: cqw(0.008 * scale),
         }}
       >
-        <path d={ROSE_STAR_PATH} fill="rgba(255,255,255,0.82)" />
+        <path d={ROSE_STAR_PATH} fill={color} />
       </svg>
       pipglyph.com
     </div>
+  );
+}
+
+/** A centred footer's © slot on a clean download (TODO 4.10a): the card's
+ *  footer text at the layout's pen x and line-box top, in the line's printed
+ *  ink — the bake's CopyrightTextBake twin. */
+function CopyrightSlotText({ layout }: { layout: Extract<CopyrightSlotLayout, { kind: "text" }> }) {
+  return (
+    <span
+      data-copyright-slot="text"
+      className="pointer-events-none absolute z-20"
+      style={{
+        left: `${layout.xPct}%`,
+        top: `${layout.topPct}%`,
+        fontFamily: layout.face.previewFamily,
+        fontSize: cqw(layout.sizePct),
+        lineHeight: layout.lineHeight,
+        color: layout.colorHex,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {layout.text}
+    </span>
   );
 }
 
@@ -2159,9 +2212,13 @@ function StatOverlay({
   masterKey,
   orientation,
   foil = null,
+  testId,
 }: {
   slot: StatSlot;
   value: string;
+  /** A test hook for one stat among several (the reverse P/T) — never keyed
+   *  on `slot.align`: the 1997 frame's own P/T is end-aligned too. */
+  testId?: string;
   /** The card's colour key — picks the plate. */
   colorKey: string;
   /** The frame master the value prints on (frameMasterKey) — picks the ink. */
@@ -2223,7 +2280,7 @@ function StatOverlay({
   return (
     <div
       className="pointer-events-none absolute flex items-center"
-      data-testid={slot.align === "end" ? "reverse-pt" : undefined}
+      data-testid={testId}
       // Above the text layers (z20/21): printed cards draw the P/T plate and
       // the starting-loyalty shield OVER the text box edge, never under it.
       // Centred, or set against an edge (StatSlot.align — the transform

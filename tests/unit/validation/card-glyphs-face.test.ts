@@ -52,7 +52,13 @@ const SINGLE = { Name: "display", "Type line": "display", Stats: "display", Arti
 describe("cardGlyphFields reads each field's face from its frame", () => {
   it("every shipped template: the display face for the name, type line, stats, artist and footer mark — as before", () => {
     for (const template of [undefined, ...FRAME_TEMPLATE_VALUES]) {
-      expect(faces({ ...VALUES, frame_style: template ? { template } : null }), String(template)).toMatchObject(SINGLE);
+      // The 1997 pair sets its type line and artist line in MPlantin (TODO
+      // 4.10a); a clean download's footer text is its © slot's, MPlantin too.
+      const want =
+        template === "retro" || template === "retroland"
+          ? { ...SINGLE, "Type line": "body", Artist: "body", "Footer mark": "body" }
+          : SINGLE;
+      expect(faces({ ...VALUES, frame_style: template ? { template } : null }), String(template)).toMatchObject(want);
     }
   });
 

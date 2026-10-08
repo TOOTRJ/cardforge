@@ -12,16 +12,17 @@
 //     (lib/cards/rules-layout.ts metricsFor) and the cost row's
 //     (lib/cards/render-tiers.ts costRowWidthPct).
 //
-// ONE style exists today: "modern" — M15's discs, their hard offset shadow
-// and the modern tap. Every profile resolves to it, so nothing changed when
-// this landed. The era items (4.10a "1997", 4.10b "2003", 4.10c "original")
-// add a value HERE and name it on their profiles; a renderer never learns a
+// Two styles exist: "modern" — M15's discs, their hard offset shadow and the
+// modern tap, what every profile resolves to unless it names another — and
+// "1997" (TODO 4.10a: flat discs, the 1997 tap; `retro`, `retroland`). The
+// other era items (4.10b "2003", 4.10c "original") add a value HERE and name
+// it on their profiles; a renderer never learns a
 // style's name. A style is a CORRECTION of a frame, never a per-card switch.
 // Client-safe, no imports.
 // ---------------------------------------------------------------------------
 
 /** FrameProfile.symbolStyle's values. */
-export type SymbolStyle = "modern";
+export type SymbolStyle = "modern" | "1997";
 
 export const DEFAULT_SYMBOL_STYLE: SymbolStyle = "modern";
 
@@ -53,6 +54,21 @@ export const SYMBOL_STYLES: Readonly<Record<SymbolStyle, SymbolStyleSpec>> = {
     previewShadowCss: "-0.06em 0.07em 0 #111, 0 0.06em 0 #111",
     costRowShadowDiscs: 0.1,
     tapSuffix: "tap",
+  },
+  // The 1997 frame (TODO 4.10a / 4.24; `retro`, `retroland`): the prints'
+  // cost discs are FLAT — no drop shadow on any of 13 sets, Mirage 1996 →
+  // Scourge 2003 (INV #230, USG #179, TMP #163, INV #93 measured: discs
+  // 72–74 px, the profile's costSizePct) — and {T} is the era's own symbol,
+  // a white arrow on a black tilted square in a grey disc (11 sets read):
+  // mana-font's `tap-4ed`. The five colour symbols are the font's, as
+  // printed.
+  "1997": {
+    id: "1997",
+    discShadow: null,
+    previewShadowClass: null,
+    previewShadowCss: null,
+    costRowShadowDiscs: 0,
+    tapSuffix: "tap-4ed",
   },
 };
 

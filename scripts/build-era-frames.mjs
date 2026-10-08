@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
-// build-era-frames.mjs — convert the older-border standard frames (1997 retro,
-// 2003 modern, Future Sight) from the Full-Magic-Pack MSE styles into the app's
+// build-era-frames.mjs — convert the older-border standard frames (2003
+// modern, Future Sight; the 1997 frame until TODO 4.10a) from the Full-Magic-Pack MSE styles into the app's
 // 1500×2100 per-color frame PNGs, flood-filling the art window to transparent.
 //
 // Same flood-fill engine as scripts/convert-mse-frame.mjs, but driven by a
@@ -20,7 +20,7 @@ import sharp from "sharp";
 import path from "node:path";
 import fs from "node:fs";
 // Phase B (TODO 3.26): normalise the card corners before the write, so a
-// rebuild can't bring the white paper back (retro/modern are allow-listed).
+// rebuild can't bring the white paper back (modern is allow-listed).
 import { normaliseMasterCorners } from "./lib/frame-corners.mjs";
 
 const PACK_ROOT = "/Users/redjester/Projects/other/Full-Magic-Pack/data";
@@ -29,26 +29,12 @@ const OUT_H = 2100;
 const NEAR_BLACK = 60;
 const NEAR_WHITE = 232;
 
-// 1997 retro (magic-old): white art window, brown artifact frame for colorless,
-// gold for multicolor. Land + token are separate MSE styles.
-const oldMap = {
-  w: "wcard.jpg",
-  u: "ucard.jpg",
-  b: "bcard.jpg",
-  r: "rcard.jpg",
-  g: "gcard.jpg",
-  c: "acard.jpg",
-  m: "mcard.jpg",
-};
-const oldLandMap = {
-  w: "wlcard.jpg",
-  u: "ulcard.jpg",
-  b: "blcard.jpg",
-  r: "rlcard.jpg",
-  g: "glcard.jpg",
-  c: "clcard.jpg",
-  m: "mlcard.jpg",
-};
+// The 1997 frame (`retro`, `retroland`) left this builder with TODO 4.10a:
+// its masters are built by scripts/import-cc-frames.mjs into the frames
+// bucket (Card Conjurer's Seventh drawing re-cut and toned onto the
+// 1996–2003 prints). The gold master's SOURCE is the MSE conversion this
+// builder used to write (magic-old.mse-style/mcard.jpg → 1500×2100, window
+// cut, corners normalised), kept as scripts/frame-inputs/retro-m-mse.png.
 
 // 2003 modern (magic-new): white art window (the standard frame's window is the
 // light card stock), artifact frame for colorless, gold for multicolor.
@@ -84,20 +70,6 @@ const futureMap = {
 };
 
 const FRAMES = {
-  retro: {
-    out: "public/frames/retro",
-    pack: `${PACK_ROOT}/magic-old.mse-style`,
-    map: oldMap,
-    fill: "white",
-    seeds: [[0.5, 0.27]],
-  },
-  retroland: {
-    out: "public/frames/retroland",
-    pack: `${PACK_ROOT}/magic-old.mse-style`,
-    map: oldLandMap,
-    fill: "white",
-    seeds: [[0.5, 0.27]],
-  },
   modern: {
     out: "public/frames/modern",
     pack: `${PACK_ROOT}/magic-new.mse-style`,
