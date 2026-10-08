@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { getCardCapacity } from "@/lib/cards/capacity";
 import { CAPACITY_WARN_AT, overCapacity, remainingCapacity } from "@/lib/billing/capacity-copy";
 import { planForTier } from "@/lib/billing/plans";
+import { getEntitlements } from "@/lib/billing/entitlements";
+import { planBadgeLabel } from "@/components/dashboard/plan-ending-notice";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -15,7 +17,7 @@ import { cn } from "@/lib/utils";
 // ---------------------------------------------------------------------------
 
 export async function CardsSummaryCard() {
-  const capacity = await getCardCapacity();
+  const [capacity, entitlements] = await Promise.all([getCardCapacity(), getEntitlements()]);
   if (!capacity) return null;
 
   const remaining = remainingCapacity(capacity);
@@ -64,7 +66,9 @@ export async function CardsSummaryCard() {
             </span>
           </div>
         </div>
-        <Badge variant={capacity.tier === "free" ? "outline" : "primary"}>{plan.name} plan</Badge>
+        <Badge variant={capacity.tier === "free" ? "outline" : "primary"}>
+          {planBadgeLabel(plan.name, entitlements.planEnding, planForTier(entitlements.tier).name)}
+        </Badge>
       </header>
 
       <div className="grid gap-3 sm:grid-cols-3">

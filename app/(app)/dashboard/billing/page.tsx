@@ -77,6 +77,8 @@ export default async function BillingPage() {
           subscription_status: profile.subscription_status ?? null,
           stripe_customer_id: profile.stripe_customer_id ?? null,
           cancel_at_period_end: profile.cancel_at_period_end ?? false,
+          current_period_end: profile.current_period_end ?? null,
+          subscription_ends_at: profile.subscription_ends_at ?? null,
         }
       : null,
     entitlements,
@@ -112,6 +114,7 @@ export default async function BillingPage() {
     profile: {
       currentPeriodEnd: entitlements.currentPeriodEnd,
       cancelAtPeriodEnd: entitlements.cancelAtPeriodEnd,
+      endsAt: profile?.subscription_ends_at ?? null,
     },
   });
   const ending = isEndingStatus(planStatus);
@@ -201,7 +204,7 @@ export default async function BillingPage() {
         </h2>
         <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
           {live && ending
-            ? "Your plan is set to end, so there's nothing to downgrade. To stay — on this plan or another — resume the plan above first, then change it here."
+            ? "Your plan is set to end. To stay on it, resume it above. Picking another plan here also keeps you subscribed: an upgrade applies right away (Stripe shows the prorated difference before you confirm) and renews; a downgrade resumes your plan and starts the lower one at the end of the period you've paid for."
             : live
             ? "Upgrades apply right away — Stripe shows the prorated difference before you confirm, and the plan keeps its renewal date. Downgrades (Pro to Plus, or annual to monthly) take effect at the end of the period you've paid for, so nothing is lost. Downgrading to Free is a cancellation: you keep the plan until the period ends."
             : entitlements.isPaid

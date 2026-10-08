@@ -157,7 +157,7 @@ the same tier from annual to monthly:
 | Switch | What happens | Money |
 |---|---|---|
 | Upgrade (Plus → Pro, monthly → annual) | Portal confirm-update flow, as before; any pending downgrade is released first (the portal refuses to update a subscription a schedule manages) | Prorated difference charged now |
-| Downgrade (Pro → Plus, annual → monthly) | `scheduleDowngrade`: `subscriptionSchedules.create({ from_subscription })`, then `update` with the current phase kept exactly as it is (same price, same end date) and ONE phase on the new price (`duration` = one interval, `proration_behavior: none`), `end_behavior: release` — the subscription carries on renewing on the new price. A pending change is replaced, never stacked; a plan set to `cancel_at_period_end` is un-cancelled first (the click asked for "Plus after this period", not "nothing after this period"). Lands on `/dashboard/billing?billing=scheduled`. | Nothing now; the new price bills from the next period |
+| Downgrade (Pro → Plus, annual → monthly) | `scheduleDowngrade`: `subscriptionSchedules.create({ from_subscription })`, then `update` with the current phase kept exactly as it is (same price, same end date) and ONE phase on the new price (`duration` = one interval, `proration_behavior: none`), `end_behavior: release` — the subscription carries on renewing on the new price. A pending change is replaced, never stacked; a plan set to end — by `cancel_at_period_end` or by the portal's `cancel_at` date — is un-cancelled first through `clearCancellation` (the click asked for "Plus after this period", not "nothing after this period"); if the schedule then fails, the answer says so in words ("Your plan was resumed and now renews as usual, but the switch … couldn't be scheduled") — the plan is left RENEWING on its current price, never silently. Lands on `/dashboard/billing?billing=scheduled`. | Nothing now; the new price bills from the next period |
 | "Keep {Plan}" | `cancelScheduledPlanChangeAction` releases the schedule (`?billing=kept`) | — |
 
 The billing page reads the schedule back with
@@ -385,8 +385,8 @@ below".
   (`trial_ending`: ends, no charge) → cancelled plan (`ending`: the date, the
   perks kept until then) → running trial → scheduled downgrade
   (`pending_change`, NOT a cancellation) → renews. A plan that is ending shows
-  the badge "Ending" / "Trial ending", **Resume {Plan}** (the portal's home —
-  Stripe has no deep link to "don't cancel") and no "Cancel plan".
+  the badge "Ending" / "Trial ending", **Resume {Plan}** (in-app since the
+  follow-up below) and no "Cancel plan".
 - **Honest edges** (`planStatusOf`): an end date PAST the next renewal (a
   custom date set in the Dashboard, a schedule that ends in a cancellation
   after another phase) is `ending` with `billedBeforeAt` — "still billed as
@@ -394,11 +394,9 @@ below".
   reports as `canceled` while the profile still says live (a missed
   `customer.subscription.deleted`) is `stale` — "Stripe reports that this
   subscription has ended", badge "Ended", no Cancel / Resume — never "Renews".
-- **Changing plan while ending**: a downgrade of a plan cancelled by DATE is
-  refused with "Resume it first" before any Stripe write
-  (`createCheckoutSessionAction`; `scheduleDowngrade`'s un-cancel only knows
-  the flag, and clearing `cancel_at` + scheduling over it is unverified —
-  follow-up). An upgrade still goes to the portal's confirm flow.
+- **Changing plan while ending**: see "Follow-up" below (a downgrade resumes
+  the plan first, by flag or by date; an upgrade goes to the portal's
+  confirm page, which renews it).
 - **Trial reminder**: `trial_will_end` for a trial already set to end at or
   before its trial end sends nothing (the old "your card is charged then"
   was false for it).
@@ -406,14 +404,93 @@ below".
   `endsByPeriodEnd()` — true when the subscription stops at or before the
   stored period end, however Stripe expresses it (a `cancel_at` in a LATER
   period still renews first, so the flag stays false and the billing page
-  shows the exact date). No new column. Settings, `/api/me`
-  (`subscriptionEnding`) and the admin user panel read this flag.
-- **Plan grid**: `BillingViewer.subscriptionEnding` — the Free card offers
-  nothing to "manage" for a plan that is already ending (`pricingCtaFor`).
+  shows the exact date). The exact date is stored beside it since 0135
+  (below).
 - **Existing rows**: a subscription cancelled before this shipped keeps a
   stale `false` flag until its next `customer.subscription.*` event or an
   admin **Resync from Stripe** (`/admin/users` → the user). The billing page
   does not depend on it.
+
+### Follow-up (2026-10-07): the dashboard says so, Resume in one click, the admin sees it
+
+**One reader for every page without a Stripe call** — `planEndingOf()`
+(`lib/billing/plan-ending.ts`) turns the profile row into
+`{ kind: "plan" | "trial", endsAt, billedBeforeAt, canceledAt }` or null, and
+`planEndingSentence()` is the copy ("Your Pro plan was cancelled and ends on
+October 23, 2026. You keep Pro until then." / "You cancelled your Plus free
+trial. It ends on … and you won't be charged." / "… set to end on …. It is
+still billed as usual until then — next on …"). It reads two columns the sync
+writes (**migration 0135**): `profiles.subscription_ends_at` (the exact date
+the live subscription stops — `subscriptionEndsAt()`, with a schedule that
+ends in a cancellation looked up by id) and `subscription_canceled_at`
+(Stripe's `canceled_at`), both null for a plan that renews. Both are private
+billing columns: pinned by `protect_billing_columns`, returned by
+`get_my_billing()` and `admin_list_users()`, never in the public column
+grant. A row synced before 0135 falls back to `cancel_at_period_end` + the
+period end; the sync itself survives a database that hasn't run 0135 yet
+(it retries without the two columns and logs).
+
+| Surface | What it says for a cancelled, still-active plan |
+|---|---|
+| Dashboard (`components/dashboard/plan-ending-notice.tsx`) | a notice: the sentence, "Afterwards you're on the free plan…", **Resume {Plan}**, Billing. The credits / saved-cards badges read "Pro plan · ends Oct 23, 2026". |
+| Settings (`BillingPanel`) | badge "Ending" / "Trial ending", the same sentence, **Resume {Plan}** (in-app), "Billing portal". |
+| Avatar menu | "Billing · Pro ends Oct 23, 2026" (`HeaderUser.subscriptionEndsAt` from `/api/me`). |
+| Upgrade modal | the plan's row: "Your current plan — cancelled, ends …" + **Resume {Plan}**. |
+| Plan grid (`pricingCtaFor` → `{ kind: "resume" }`) | the plan's own card: "Your current plan · ends …" + **Resume {Plan}**; the Free card: **Resume {Plan}** (it showed no button); the other paid card still switches. |
+| `/admin/users` | list + detail badge "cancelled, ends Oct 23, 2026" (`… (billed first)` for a later date, "trial cancelled, …"); detail rows Cancellation / Plan ends / Cancelled on / Billed again before it ends (`lib/admin/user-cancellation.ts`); segment filter "Cancelled, still active" (`flag=ending`). Before this the page showed a cancellation only once the plan had ENDED (status `canceled`) — a pending one was a "Cancels at period end: yes/no" row in the detail and nothing in the list (the RPC returned neither the flag nor a date). |
+
+**Resume in the app** — `ResumePlanButton` (`components/billing/resume-plan-button.tsx`)
+opens a confirm step that states what happens, read from Stripe by
+`getResumePreviewAction()` ("Your Pro plan will renew on October 23, 2026 at
+$15 / month. Nothing is charged today."; a trial: "…free trial will carry on
+until …; then Pro starts at …"), then calls `resumeSubscriptionAction()`:
+the profile's OWN subscription (id from the profile, customer checked), the
+un-cancel, a resync of the profile through the one sync, a
+`subscription_resumed` funnel row (props tier / interval / trial /
+subscriptionId / surface), `?billing=resumed`. On any failure the result
+carries `fallback: "portal"` and the button opens the Customer Portal (its
+own "Renew plan"). No notification is sent.
+
+The un-cancel (`clearCancellation` in `lib/stripe/actions.ts`), as the
+sandbox answered on 2026-10-07 (flexible billing mode, the connector's API
+`2026-09-30.preview`; the app pins `2026-05-27.dahlia`):
+
+| Subscription | Call | Result |
+|---|---|---|
+| portal-cancelled: `cancel_at` = `items.data[0].current_period_end`, `cancel_at_period_end: false`, `canceled_at` set | `POST /v1/subscriptions/{id}` `cancel_at=""` | `cancel_at: null`, `canceled_at: null`, `cancellation_details.reason: null` |
+| same | `cancel_at_period_end=false` | also clears it (a `cancel_at` equal to the period end) |
+| `cancel_at` in a later period | `cancel_at=""` | cleared |
+| any | `cancel_at=""` **and** `cancel_at_period_end=false` | **400** "Received both cancel_at_period_end and cancel_at parameters. Please pass in only one." |
+
+So: the flag (when true) is cleared first with `cancel_at_period_end: false`,
+then a date that is still there with `cancel_at: ""` — one parameter per
+call. A schedule whose `end_behavior` is "cancel" is switched to "release"
+(NOT sandbox-verified: the connector has no schedule writes; the app never
+creates such a schedule).
+
+**Changing plan while ending** — a **downgrade** runs `clearCancellation`
+first (after releasing any schedule) and only then builds the schedule, on
+what is by then an ordinary renewing subscription; if Stripe leaves the plan
+set to end, nothing is scheduled and the action says to resume first. An
+**upgrade** goes to the portal's `subscription_update_confirm` page as
+before: on an ending plan that page reads "Your subscription is currently
+scheduled to cancel on …. By confirming, your updated subscription will be
+renewed with the following details." (read in the sandbox; not confirmed —
+that would charge the test card) — so the customer who backs out keeps the
+cancellation, and the one who confirms is renewed with Stripe saying so.
+
+**Admin Resync** (`adminResyncSubscriptionAction`) also reads the
+subscription the profile points at (with its schedule) and syncs from it
+when the customer's subscription list comes back empty or fails — it used to
+write nothing and still toast "Synced: no live subscription in Stripe". The
+toast now names a pending cancellation ("Synced: pro · active · cancelled,
+ends Nov 8, 2026").
+
+**Funnel** — `subscription_cancelled` is still written when the subscription
+ENDS (the `deleted` event), so a subscriber who has cancelled but is active
+counts as a subscriber until then, and one who resumes never counts as a
+cancellation; `subscription_resumed` counts the resumes. Revenue reads only
+`billing_payments` (paid invoices) and is unaffected.
 
 ## Addendum — sandbox lifecycle run (2026-09-22, test clock `clock_1UIftGQFLEpCg9s2uoFgd7kf`)
 

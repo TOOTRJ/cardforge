@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
 // /dashboard/billing's plan card: a cancelled plan says when it ENDS, what is
@@ -8,9 +8,21 @@ import { cleanup, render, screen } from "@testing-library/react";
 // ---------------------------------------------------------------------------
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
+const actions = vi.hoisted(() => ({
+  portal: vi.fn(),
+  resume: vi.fn(async () => ({ ok: true, url: "https://test.local/dashboard/billing?billing=resumed" })),
+}));
 vi.mock("@/lib/stripe/actions", () => ({
-  createPortalSessionAction: vi.fn(),
+  createPortalSessionAction: actions.portal,
   cancelScheduledPlanChangeAction: vi.fn(),
+  resumeSubscriptionAction: actions.resume,
+  getResumePreviewAction: async () => ({
+    ok: true,
+    planName: "Plus",
+    trial: false,
+    nextBillAt: "2026-10-23T02:31:04.000Z",
+    priceLine: "$6 / month",
+  }),
 }));
 vi.mock("@/lib/routing/navigate", () => ({ navigateTo: vi.fn() }));
 
@@ -160,5 +172,19 @@ describe("billing plan card", () => {
     expect(text({ kind: "comped" })).toMatch(/Courtesy of the PipGlyph team — no renewal, no card needed\./);
     expect(text({ kind: "ended" })).toMatch(/^Your previous plan has ended\. You're on the free plan/);
     expect(text({ kind: "free" })).toMatch(/^Every tool is yours for free/);
+  });
+
+  it("Resume on the billing page is in-app: a confirm that states the renewal date and price, then ONE click — the portal is not opened", async () => {
+    renderCard(statusFor({ ...stripeSub, cancel_at: PERIOD_END }));
+    fireEvent.click(screen.getByRole("button", { name: "Resume Plus" }));
+    await waitFor(() =>
+      expect(
+        screen.getByText("Your Plus plan will renew on October 23, 2026 at $6 / month. Nothing is charged today."),
+      ).toBeTruthy(),
+    );
+    expect(actions.resume).not.toHaveBeenCalled();
+    fireEvent.click(screen.getAllByRole("button", { name: "Resume Plus" }).at(-1)!);
+    await waitFor(() => expect(actions.resume).toHaveBeenCalledWith({ surface: "billing" }));
+    expect(actions.portal).not.toHaveBeenCalled();
   });
 });

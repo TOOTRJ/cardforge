@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ManageBillingButton } from "@/components/billing/manage-billing-button";
+import { ResumePlanButton } from "@/components/billing/resume-plan-button";
+import { planEndingSentence, type PlanEnding } from "@/lib/billing/plan-ending";
 import {
   formatCredits,
   planForTier,
@@ -18,6 +20,10 @@ type BillingPanelProps = {
    *  hydration mismatch). Null when there's no active subscription. */
   renewLabel: string | null;
   cancelAtPeriodEnd: boolean;
+  /** The live plan is cancelled and ends on a date — the profile's stored
+   *  state (lib/billing/plan-ending.ts), the same source as the dashboard
+   *  notice. Wins over `cancelAtPeriodEnd` + `renewLabel`. */
+  planEnding?: PlanEnding | null;
   /** The user has a Stripe customer — the portal can open for them. A comp'd
    *  user without one used to see a "Manage subscription" button that could
    *  only fail; a past-due subscriber (isPaid false) had NO way to reach the
@@ -42,15 +48,20 @@ export function BillingPanel({
   credits,
   renewLabel,
   cancelAtPeriodEnd,
+  planEnding = null,
   hasBillingAccount,
 }: BillingPanelProps) {
   const plan = planForTier(tier);
+  // Ending = the stored date, or (a caller without one) the old flag.
+  const ending = isPaid && (planEnding != null || (cancelAtPeriodEnd && renewLabel != null));
   // A lapsed paid plan shows its real status (Past due / Unpaid / …) rather
   // than pretending to be the free plan.
   const lapsed = !isPaid && tier !== "free" && status != null;
   const statusLabel = isPaid
-    ? cancelAtPeriodEnd && renewLabel
-      ? "Ending"
+    ? ending
+      ? planEnding?.kind === "trial" || (!planEnding && status === "trialing")
+        ? "Trial ending"
+        : "Ending"
       : STATUS_LABEL[status ?? ""] ?? "Active"
     : lapsed
       ? STATUS_LABEL[status ?? ""] ?? "Lapsed"
@@ -74,6 +85,12 @@ export function BillingPanel({
         <p className="text-xs leading-5 text-danger">
           Your last payment didn&apos;t go through, so paid perks are paused.
           Update your card under Manage subscription to restore them.
+        </p>
+      ) : isPaid && planEnding ? (
+        <p className="text-xs leading-5 text-muted" data-testid="settings-plan-ending">
+          {planEndingSentence(planEnding, plan.name)}
+          {planEnding.billedBeforeAt ? "" : " Nothing more is charged."}
+          {` Changed your mind? Resume ${plan.name} below.`}
         </p>
       ) : renewLabel ? (
         <p className="text-xs leading-5 text-muted">
@@ -107,11 +124,15 @@ export function BillingPanel({
         <Button asChild size="sm">
           <Link href="/dashboard/billing">Billing &amp; subscription</Link>
         </Button>
+        {/* A cancelled plan resumes in the app (confirm step → one click). */}
+        {hasBillingAccount && ending ? (
+          <ResumePlanButton planName={plan.name} surface="settings" variant="outline" />
+        ) : null}
         {hasBillingAccount ? (
           <ManageBillingButton size="sm">
             {isPaid
-              ? cancelAtPeriodEnd
-                ? "Resume subscription"
+              ? ending
+                ? "Billing portal"
                 : "Manage subscription"
               : lapsed
                 ? "Fix payment"

@@ -52,6 +52,8 @@ import {
 import { listThreadsForUser } from "@/lib/messages/queries";
 import { cn } from "@/lib/utils";
 import { isUuid } from "@/lib/ids";
+import { planEndingAdminLabel, planEndingOf } from "@/lib/billing/plan-ending";
+import { cancellationStats } from "@/lib/admin/user-cancellation";
 
 export const metadata: Metadata = {
   title: "Users",
@@ -277,7 +279,7 @@ function UserFilters({ params }: { params: UserListParams }) {
         ) : null}
       </div>
       <p className="text-xs text-subtle">
-        Email matches by prefix; names match anywhere. “Tier mismatch” = a live Stripe status on the free tier — open the user and Resync from Stripe.
+        Email matches by prefix; names match anywhere. “Tier mismatch” = a live Stripe status on the free tier — open the user and Resync from Stripe. “Cancelled, still active” = a subscriber who cancelled and keeps the plan until its end date.
       </p>
     </form>
   );
@@ -358,6 +360,9 @@ function PlanBadges({ user }: { user: AdminUserRow }) {
         {user.subscriptionTier}
         {user.subscriptionStatus && user.subscriptionTier !== "free" ? ` · ${user.subscriptionStatus}` : ""}
       </Badge>
+      {/* Cancelled but still on the plan until a date — "pro · active" alone
+          read as a subscriber who is staying. */}
+      {user.planEnding ? <Badge variant="gold">{planEndingAdminLabel(user.planEnding)}</Badge> : null}
       {compActive ? <Badge variant="accent">comp {user.compTier}</Badge> : null}
       {user.isAdmin ? <Badge variant="gold">admin</Badge> : null}
       {user.tierMismatch ? <Badge variant="danger">tier mismatch</Badge> : null}
@@ -375,9 +380,10 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
     await Promise.all([
       admin
         .from("profiles")
-        .select(
-          "id, username, display_name, avatar_url, subscription_tier, subscription_status, credits, is_admin, comp_tier, comp_expires_at, card_limit_override, created_at, stripe_customer_id, stripe_subscription_id, current_period_end, cancel_at_period_end, export_watermark_text",
-        )
+        // Every column: the 0135 pair (subscription_ends_at /
+        // subscription_canceled_at) is read when present, and naming a
+        // column a database doesn't have yet would fail the whole read.
+        .select("*")
         .eq("id", userId)
         .maybeSingle(),
       admin.auth.admin.getUserById(userId),
@@ -409,6 +415,10 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
   const tierMismatch =
     user.subscription_tier === "free" &&
     (user.subscription_status === "active" || user.subscription_status === "trialing");
+  // A pending cancellation: still active, ends on a date (the same reading
+  // the user's dashboard shows).
+  const planEnding = planEndingOf(user);
+  const cancellation = cancellationStats(planEnding, user.subscription_status ?? null);
 
   const statTiles = stats
     ? [
@@ -448,6 +458,7 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
         </Badge>
         {compTier ? <Badge variant="accent">comp {compTier}</Badge> : null}
         {user.is_admin ? <Badge variant="gold">admin</Badge> : null}
+        {planEnding ? <Badge variant="gold">{planEndingAdminLabel(planEnding)}</Badge> : null}
         {tierMismatch ? <Badge variant="danger">tier mismatch — resync below</Badge> : null}
       </div>
 
@@ -494,7 +505,10 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
                 label="Card cap override"
                 value={user.card_limit_override != null ? String(user.card_limit_override) : "— (tier default)"}
               />
-              <Stat label="Cancels at period end" value={user.cancel_at_period_end ? "yes" : "no"} />
+              <Stat label="Cancellation" value={cancellation.state} />
+              <Stat label="Plan ends" value={cancellation.endsAt} />
+              <Stat label="Cancelled on" value={cancellation.canceledAt} />
+              <Stat label="Billed again before it ends" value={cancellation.billedFirst} />
               <Stat label="Export footer mark" value={user.export_watermark_text ?? "—"} />
               <Stat label="Stripe customer" value={user.stripe_customer_id ?? "—"} mono />
               <Stat label="Stripe subscription" value={user.stripe_subscription_id ?? "—"} mono />

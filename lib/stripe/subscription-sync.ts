@@ -9,7 +9,11 @@ import {
   type PlanTier,
 } from "@/lib/billing/plans";
 import { grantMonthlyCreditsForPeriod, grantTrialCreditsForPeriod } from "@/lib/billing/credit-refill";
-import { endsByPeriodEnd } from "@/lib/billing/subscription-ending";
+import {
+  endsByPeriodEnd,
+  subscriptionEndsAt,
+  type EndingScheduleLike,
+} from "@/lib/billing/subscription-ending";
 import { tierForPrice, tierForProduct, type PriceLike } from "./config";
 
 // ---------------------------------------------------------------------------
@@ -58,14 +62,17 @@ export type SubscriptionLike = {
   /** A cancellation DATE: the Customer Portal and newer API versions set
    *  this and may leave `cancel_at_period_end` false. */
   cancel_at?: number | null;
+  /** When the pending cancellation was requested. */
+  canceled_at?: number | null;
   metadata?: Record<string, string> | null;
   trial_end?: number | null;
   /** Set once the subscription has ended (deleted events). */
   ended_at?: number | null;
   default_payment_method?: string | { id: string } | null;
   default_source?: string | { id: string } | null;
-  /** A subscription schedule attached to it (a pending plan change). */
-  schedule?: string | { id: string } | null;
+  /** A subscription schedule attached to it (a pending plan change) — an id
+   *  unless the caller expanded it. */
+  schedule?: string | { id: string } | (EndingScheduleLike & { id?: string }) | null;
   items: {
     data: Array<{
       id?: string;
@@ -183,7 +190,55 @@ export type SubscriptionSyncResult = {
   unresolvedPrice: boolean;
   /** Where the written state came from. */
   source: "primary" | "event" | "none";
+  /** ISO date the synced subscription is set to stop (cancelled, still
+   *  live) — null when it renews. What `subscription_ends_at` was written as. */
+  endsAt?: string | null;
 };
+
+const iso = (seconds: number | null | undefined): string | null =>
+  typeof seconds === "number" ? new Date(seconds * 1000).toISOString() : null;
+
+/**
+ * How the chosen subscription ends, however Stripe says it (cancel_at, the
+ * flag, or a schedule that ends in a cancellation). The list / event object
+ * carries a schedule only as an id, so that third way needs one read — made
+ * only for a live subscription that has a schedule and no cancellation of
+ * its own (a pending downgrade, usually: `end_behavior: release`).
+ */
+async function endingStateOf(
+  chosen: SubscriptionLike,
+  stripe: Stripe,
+): Promise<{ endsAt: string | null; byPeriodEnd: boolean; canceledAt: string | null }> {
+  let sub = chosen;
+  if (
+    isLiveStatus(sub.status) &&
+    typeof sub.schedule === "string" &&
+    subscriptionEndsAt(sub) == null
+  ) {
+    try {
+      const schedule = await stripe.subscriptionSchedules.retrieve(sub.schedule);
+      sub = { ...sub, schedule };
+    } catch {
+      // No API (unit tests) or a transient error: the cancellation fields
+      // alone decide, as before.
+    }
+  }
+  const endsAt = iso(subscriptionEndsAt(sub));
+  return {
+    endsAt,
+    byPeriodEnd: endsByPeriodEnd(sub),
+    canceledAt: endsAt ? iso(sub.canceled_at) : null,
+  };
+}
+
+/** PostgREST / Postgres "no such column" for the 0135 columns — a deploy
+ *  that reaches the database before its migration does. */
+function isMissingEndingColumn(error: { code?: string; message?: string }): boolean {
+  return (
+    (error.code === "PGRST204" || error.code === "42703") &&
+    /subscription_(ends|canceled)_at/.test(error.message ?? "")
+  );
+}
 
 export type SyncOptions = {
   /** The subscription the webhook event carried, if any. */
@@ -286,19 +341,37 @@ export async function syncSubscriptionForUser(
       ? new Date(item.current_period_end * 1000).toISOString()
       : null;
 
-  const { error: writeError } = await admin
+  // "Stops at the end of the stored period", however Stripe says it — the
+  // flag alone missed a `cancel_at` date, and Settings then told a customer
+  // who had cancelled that the plan renews. The exact DATE is stored beside
+  // it (0135): the dashboard, Settings and the admin directory read the
+  // profile alone, and a date in a later period has no other home.
+  const ending = chosenDeleted
+    ? { endsAt: null, byPeriodEnd: false, canceledAt: null }
+    : await endingStateOf(chosen, stripe);
+  const base = {
+    subscription_tier: tier,
+    subscription_status: status,
+    stripe_subscription_id: chosenDeleted ? null : chosen.id,
+    current_period_end: periodEnd,
+    cancel_at_period_end: ending.byPeriodEnd,
+  };
+  let { error: writeError } = await admin
     .from("profiles")
     .update({
-      subscription_tier: tier,
-      subscription_status: status,
-      stripe_subscription_id: chosenDeleted ? null : chosen.id,
-      current_period_end: periodEnd,
-      // "Stops at the end of the stored period", however Stripe says it —
-      // the flag alone missed a `cancel_at` date, and Settings then told a
-      // customer who had cancelled that the plan renews.
-      cancel_at_period_end: chosenDeleted ? false : endsByPeriodEnd(chosen),
+      ...base,
+      subscription_ends_at: live ? ending.endsAt : null,
+      subscription_canceled_at: live ? ending.canceledAt : null,
     })
     .eq("id", userId);
+  if (writeError && isMissingEndingColumn(writeError)) {
+    // The code is live before migration 0135: write what the old schema
+    // holds rather than failing every webhook until it lands.
+    console.error(
+      `[stripe] profiles.subscription_ends_at is missing (migration 0135 not applied?) — synced ${userId} without it.`,
+    );
+    ({ error: writeError } = await admin.from("profiles").update(base).eq("id", userId));
+  }
   // A failed profile write must surface: the webhook then 500s and Stripe
   // retries (handlers are idempotent). The old handler discarded this error
   // and acked the event, leaving the profile silently out of sync.
@@ -313,6 +386,7 @@ export async function syncSubscriptionForUser(
     status,
     unresolvedPrice,
     source,
+    endsAt: live ? ending.endsAt : null,
   };
 }
 

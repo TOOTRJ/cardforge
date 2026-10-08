@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { CheckoutButton } from "./checkout-button";
 import { CreditPackGrid } from "./credit-pack-grid";
 import { ManageBillingButton } from "./manage-billing-button";
+import { ResumePlanButton } from "./resume-plan-button";
 import { pricingCtaFor } from "./pricing-cta";
 import { useBillingViewer } from "./use-billing-viewer";
 import {
@@ -24,6 +25,7 @@ import {
   TRIAL_DAYS,
   type PaidTier,
 } from "@/lib/billing/plans";
+import { formatCalendarDate } from "@/lib/format/dates";
 
 export type UpgradeReason =
   | "credits"
@@ -116,6 +118,14 @@ function PlanCta({
   loaded: boolean;
 }) {
   const variant = featured ? "primary" : "outline";
+  // The current plan, cancelled and still running: offer the way to stay.
+  if (isCurrent && cta.kind === "resume") {
+    return (
+      <ResumePlanButton planName={cta.planName} surface="modal" variant={variant} size="sm">
+        {cta.label}
+      </ResumePlanButton>
+    );
+  }
   if (isCurrent) return <Badge variant="outline">Your current plan</Badge>;
   if (!loaded) {
     return (
@@ -224,7 +234,13 @@ export function UpgradeModal({ open, reason, onOpenChange }: UpgradeModalProps) 
                   {plan.featured ? <Badge variant="primary">Popular</Badge> : null}
                   <span className="text-sm text-muted">${plan.priceUsd}/mo</span>
                 </div>
-                <span className="truncate text-xs text-muted">{plan.tagline}</span>
+                <span className="truncate text-xs text-muted">
+                  {viewer.currentTier === plan.tier && viewer.hasLiveSubscription && viewer.subscriptionEnding
+                    ? viewer.subscriptionEndsAt
+                      ? `Your current plan — cancelled, ends ${formatCalendarDate(viewer.subscriptionEndsAt)}`
+                      : "Your current plan — cancelled, ends with the period you paid for"
+                    : plan.tagline}
+                </span>
               </div>
               <PlanCta
                 tier={plan.tier as PaidTier}

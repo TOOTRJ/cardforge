@@ -54,7 +54,8 @@ const LABEL: Record<FunnelEvent, string> = {
   trial_lapsed: "Trials lapsed",
   subscription_started: "Paid subscriptions started",
   subscription_changed: "Plan changes",
-  subscription_cancelled: "Cancellations",
+  subscription_cancelled: "Cancellations (plan ended)",
+  subscription_resumed: "Cancellations undone (resumed)",
   payment_received: "Payments received",
   payment_failed: "Payments failed",
   upgrade_modal_open: "Upgrade modal opens",
@@ -68,7 +69,7 @@ const SECTIONS: Array<{ title: string; chain: FunnelEvent[] }> = [
   { title: "Storefront", chain: ["pricing_view", "cta_click", "checkout_started", "checkout_completed"] },
   { title: "Trials", chain: ["trial_started", "trial_converted"] },
   { title: "Out of credits", chain: ["upgrade_modal_open", "pack_purchased"] },
-  { title: "Money", chain: ["payment_received", "subscription_started", "subscription_changed", "subscription_cancelled"] },
+  { title: "Money", chain: ["payment_received", "subscription_started", "subscription_changed", "subscription_cancelled", "subscription_resumed"] },
   { title: "Leaks", chain: ["checkout_expired", "trial_lapsed", "payment_failed"] },
 ];
 
