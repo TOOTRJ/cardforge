@@ -2472,11 +2472,11 @@ shows.
 
 | slot | face, HD px | on the prints (median ± sd, n) | print − ours |
 |---|---|---|---|
-| name | Beleren 72, measured | Goudy Medieval ≈ 84: capitals 57.5, x-height 33.5, baseline 171.5 (20 white prints); Beleren overlaps that ink best at 73.7 ± 4.3 | baseline − 0.4; starts at the owner's 178 px margin (the prints: ~110) |
+| name | Beleren 72, measured | Goudy Medieval ≈ 84: capitals 57.5, x-height 33.5, baseline 171.5 (20 white prints); Beleren overlaps that ink best at 73.7 ± 4.3; first ink column 109.0 ± 2.9 (48) | baseline − 0.4; start + 1.5 ± 3.8 (round 44) |
 | cost | flat discs 72, a 12 px gap (`symbolStyle: "original"`) | 72.6 ± 1.0 across (166 discs), row 142.5 ± 1.3, 83.2 ± 1.3 apart, the last ending at 1364.9 ± 1.0; no shadow | diameter + 0.2…0.6, row + 0.1, end 0.0, pitch − 0.8 |
-| type line | MPlantin 70, measured | MPlantin 70.0 ± 0.2 (16; overlap error 0.43, Beleren 0.61), baseline 1227.4 ± 0.7 | size 0.0, baseline − 0.4; starts at 178 px (the prints: 154) |
+| type line | MPlantin 70, measured | MPlantin 70.0 ± 0.2 (16; overlap error 0.43, Beleren 0.61), baseline 1227.4 ± 0.7; first ink column 155.1 ± 0.9 (36) | size 0.0, baseline − 0.4; start + 1.1 ± 0.9 (round 44) |
 | rules | MPlantin 76 (the shared ladder) | not measured | — |
-| credit | `Illus. <artist>`, MPlantin 70, mixed case | `Illus. © <artist>`, MPlantin 69.2 ± 0.3 (16), dark layer on 1950.4 ± 0.9 from 153.8 ± 2.2 | size − 0.8, pen + 1.0, baseline + 1.3 (flat ink) / − 1.1 (the dark edge) |
+| credit | `Illus. <artist>`, MPlantin 70, mixed case; nothing for a card with no artist | `Illus. © <artist>`, MPlantin 69.2 ± 0.3 (16), dark layer on 1950.4 ± 0.9 from 153.8 ± 2.2 | size − 0.8, pen + 1.0, baseline + 1.3 (flat ink) / − 1.1 (the dark edge) |
 | P/T | MPlantin 84, set against its right end (`align: "end"`, `endKerned`) | MPlantin 84.5 ± 0.4 (16; error 0.31, Beleren 0.49), dark layer on 1950.7 ± 1.1; one digit a side covers 1270–1378 px, and DRK #30 10/10, ICE #89 11/11, ALL #112 10/4 grow to the LEFT (ink ending 1383–1392) | size + 0.5, baseline + 1.5 / − 1.4, right end + 3.5 |
 | the © slot | the mark at its standard em (39 px) · a clean download's footer text, MPlantin 39, silver | no second line before Fallen Empires | — |
 
@@ -2486,9 +2486,39 @@ shows.
   and the P/T — embossed on six of seven — sit HALF that edge above and left
   of it: the white frame's flat ink is then 1.2–1.5 px short of the print's
   and the other keys' dark edge 1.2–1.5 px past it.
-- **Left margins.** The name and the type line keep the owner's round-4
-  margin, the art window's edge (178 px); the prints start the name at
-  ~110 px and the type line at 154. The credit starts where the prints' does.
+- **Where the name and the type line start** (owner, round 44,
+  2026-10-08 — round 4's shared 178 px margin, the art window's edge, is
+  retired): where the prints start them. The name's first ink column is
+  109.0 ± 2.9 px on 48 white prints, the type line's 155.1 ± 0.9 on 36; the
+  slots' left edges are the PEN positions that put our ink there —
+  `ALPHA_TITLE_LEFT_PX` = 104 (Beleren inks 3–7 px into its first letter's
+  advance) and `ALPHA_TYPE_LEFT_PX` = 150 (MPlantin's I, S, E: 4 px). Both
+  bands keep their right ends (1365, the last disc's; 1314, the set
+  symbol's), so the measured fits have 74 and 28 px more room. Read with
+  the second read's tool on the same 48 / 36 prints: name print − ours
+  + 1.5 ± 3.8 px by the median, − 0.1 by the mean (ours 108.0 ± 1.2), type
+  line + 1.1 ± 0.9 (ours 154.0). The name's spread (− 5.8…+ 5.1) is the
+  two faces' first letters, not the slot: a printed B, D or H starts at
+  104–106 px where Beleren's starts at 110 (− 4…− 5), a printed C, G or W
+  at 109–113 where ours starts at 106–108 (+ 2…+ 4). Both pens are EVEN:
+  the 750 px bake rounds a band's left and width to whole px each, and an
+  odd pen set what hangs on the band's right end — the cost row, the set
+  symbol — one 750 px pixel to the right (105 and 151 are 1 px nearer the
+  prints at HD). For the same reason the name band ends on 90.999 %, not
+  91: on the four stored cards the cost row and the set symbol are the
+  pixels they were before the move, at HD and at 750 px. On every master
+  the bevel is over by 92 px (`agclassic`, eight keys) or 96 px
+  (`alphaland`, seven: its coloured line covers 87–91): the name's ink
+  starts 11–15 px inside it and the type line's 55–60 px. The credit starts
+  where the prints' does.
+- **No artist, no credit** (owner, round 44): a card with no artist prints
+  NO credit line on this pair — `footer.noArtist: "omit"`
+  (`footerArtistLine` returns null and neither renderer draws the footer;
+  the strip is the master's own pixels). Every other frame still prints its
+  prefix and "Unknown". Three of the four stored cards are such cards. Only
+  for a footer whose clean-download text has its own `copyrightSlot` (a
+  test holds that), since a footer that carried it would lose it with the
+  line.
 - **The credit** is the printed one, without its ©: Alpha → Antiquities
   print `Illus. © <artist>`, Legends and The Dark `Illus. © 1994 <artist>`,
   Fallen Empires on `Illus. <artist>` over a Wizards line. PipGlyph prints
@@ -2533,14 +2563,15 @@ shows.
   arrow from Fourth Edition. Inline mana in the rules text of 1993–94 is the
   bare drawing with no disc — not built (the inline disc stays 0.785 em).
 
-- **The set symbol grows with the type line.** Neither profile names a
-  `symbolSizePct`, so the box is `type.sizePct × 1.1`
-  (`lib/cards/set-symbol-size.ts`): 49.5 px with the 45 px type line, 77 px
-  with the 70 px one. The default mark (a card with no set — all four
-  stored cards) is then 75 × 75 px in the 83 px type band (rows 1162–1237;
-  it was ~48), a Keyrune glyph ~77 × 65; both still end at 1314 px. Alpha
-  and Beta print no set symbol, so no print decides the size — pinning
-  `symbolSizePct` on the pair keeps the old one.
+- **The set symbol keeps its old size** (owner, round 44): the pair pins
+  `symbolSizePct` to `ALPHA_SET_SYMBOL_BOX_PCT`, 49.5 px — what the 45 px
+  type line × 1.1 gave it before v48 — so it does not follow the 70 px type
+  line (unpinned, the box was 77 px and the default mark 75 × 75 in the
+  83 px type band). Alpha and Beta print no set symbol; no print decides
+  it. The default mark (all four stored cards) is 50 × 50 px on columns
+  1264–1314, rows 1174–1224 (centred on 1199, the band's middle): on the
+  four stored cards those pixels are main's, byte for byte, at HD and at
+  750 px.
 
 **A second read** (the skeptic's pass on PR #493, 2026-10-08: 128 Alpha /
 Beta prints the build did not use, moved onto our bake by their own frame
@@ -2554,10 +2585,10 @@ edges; the same tool on the print and on our bake of the same card):
 | pitch | 82.9 ± 1.2 (66 pairs; two equal colour symbols 82.8 ± 0.2) | 84.0 | − 1.1 a step: the third disc from the right sits 2.3 px left of the print's, the fourth 3.4 (83 would break "the 750 px bake is half": its gap is 5.5 px) |
 | shadow: luma under the disc less luma above it | + 2.1 ± 8.6 (149 discs; main's shadowed discs − 16) | flat | — |
 | the five drawings, as a share of their disc (10–22 discs each) | W 88 × 90 %, U 43 × 82 %, B 88 × 88 %, R 78 × 85 %, G 87 × 88 % | 90 × 92, 45 × 85, 89 × 89, 79 × 86, 86 × 89 % | within 3 % of the disc; centred within 1 px |
-| name, first ink column (48 white prints) | 109.0 ± 2.9 | 182–186 | − 73 (the owner's margin) |
+| name, first ink column (48 white prints) | 109.0 ± 2.9 | 182–186 (round 44: 108.0 ± 1.2) | − 73, the round-4 margin (round 44: + 1.5 ± 3.8) |
 | name, ink width, the same string | — | — | the print's is 7.9 ± 4.6 % wider (Beleren would need ≈ 78 px) |
 | name, capitals / x-height / baseline (26 names with no descender) | 58.1 / 35.0 / 172.6 ± 1.3 | 52 / 36 / 172.0 | + 6 (≈ 80 px by the capitals) / − 1 (≈ 70 px by the x-height) / + 0.1 |
-| type line, the same printed string (36: `Instant`, `Sorcery`, `Enchantment`, `Enchant Creature`) | starts 155.1 ± 0.9, bottom 1228.5 ± 1.0 | 183.0 / 1228.0 | − 27.6 (the owner's margin) / + 0.5; width print / ours 1.010 ± 0.008 |
+| type line, the same printed string (36: `Instant`, `Sorcery`, `Enchantment`, `Enchant Creature`) | starts 155.1 ± 0.9, bottom 1228.5 ± 1.0 | 183.0 / 1228.0 (round 44: starts 154.0) | − 27.6, the round-4 margin (round 44: + 1.1 ± 0.9) / + 0.5; width print / ours 1.010 ± 0.008 |
 | `Illus.` (48 white prints) | 49.0 px tall, starts 158.1 ± 0.9, bottom 1951.6 ± 0.7 | 49.0 / 156.0 / 1950.0 | height 0.0, start + 2.1, **2.0 ± 0.8 px lower in print** |
 | P/T, one digit a side (6 white prints) | ink 1270.4–1374.1, bottom 1951.7 ± 0.7 | 1270.0–1373.0, 1949.0 | left + 0.3, right + 1.6 ± 0.7, **2.4 ± 0.4 px lower in print**, 1.9 % larger |
 
@@ -2591,7 +2622,8 @@ a second line, and from Fourth Edition today's sun and the turned-arrow
 tap).
 
 Not done here: the generic numeral's printed look (a Plantin numeral on a
-halftone disc), the rules text's printed size, the 1993–94 inline symbols without discs, the Alpha
+halftone disc), the rules text's printed size, the 1993–94 inline symbols without discs (the owner
+keeps the discs, round 44), the print's © in the credit (the owner: none), the Alpha
 bevel lighting (4.31), Card Conjurer's Legends multicolour for `m`, the
 white border (4.30).
 

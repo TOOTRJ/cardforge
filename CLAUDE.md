@@ -589,8 +589,17 @@ Rules and gotchas:
   MSE masters stay in git, untouched. Sizes are `ALPHA_*` in
   `lib/cards/typography.ts`: the name in Beleren, the type line, the credit
   and the P/T in MPlantin (their printed face; no font file is added), the
-  P/T set against its RIGHT end as 1997's. The credit is the printed
-  `Illus. <artist>` — never a © of our making, never a Wizards line — on ONE
+  P/T set against its RIGHT end as 1997's. The name and the type line
+  START where the prints start them (owner 2026-10-08: ink at 109 and
+  155 px — `ALPHA_TITLE_LEFT_PX` / `ALPHA_TYPE_LEFT_PX` are pen positions,
+  EVEN, and the name band ends on 90.999 %: the 750 px bake rounds left
+  and width apart, and anything else moves the cost row or the set symbol
+  a pixel there), and the set symbol's box is PINNED (`ALPHA_SET_SYMBOL_BOX_PCT`,
+  49.5 px — it does not follow the type line). The credit is the printed
+  `Illus. <artist>` — never a © of our making, never a Wizards line — and a
+  card with NO artist prints no credit at all (`footer.noArtist: "omit"`:
+  `footerArtistLine` → null, neither renderer draws the footer; this pair
+  only, and only beside a `copyrightSlot`). It shares ONE
   line with the P/T, so the © slot is the black border under the frame
   (`copyrightSlot.endPct`: the mark where it always sat, a clean download's
   `footer_text` there). `symbolStyle: "original"`: flat discs with their own

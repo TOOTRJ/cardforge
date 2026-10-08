@@ -282,4 +282,10 @@ describe("footerArtistLine — the artist line both renderers print (TODO 4.8.0)
     expect(footerArtistLine({ prefix: "Illus. " }, null)).toBe("Illus. Unknown");
     expect(footerArtistLine({ prefix: "" }, "Douglas Shuler")).toBe("Douglas Shuler");
   });
+
+  it("`noArtist: \"omit\"` — no artist, no line (null); a credit prints as ever (TODO 4.10c)", () => {
+    for (const none of [null, undefined, "", "   "]) expect(footerArtistLine({ prefix: "Illus. ", noArtist: "omit" }, none)).toBeNull();
+    expect(footerArtistLine({ prefix: "Illus. ", noArtist: "omit" }, "Douglas Shuler")).toBe("Illus. Douglas Shuler");
+    expect(footerArtistLine({ noArtist: "omit" }, "Ada")).toBe("Art: Ada");
+  });
 });

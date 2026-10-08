@@ -78,6 +78,7 @@ import {
   ALPHA_COPYRIGHT_SIZE_PCT,
   ALPHA_COST_DISC_PCT,
   ALPHA_PT_SIZE_PCT,
+  ALPHA_SET_SYMBOL_BOX_PCT,
   ALPHA_TITLE_SIZE_PCT,
   ALPHA_TYPE_SIZE_PCT,
   MODERN_ARTIST_SIZE_PCT,
@@ -146,6 +147,14 @@ export type TextSlot = {
    *  (the 1997 prints from Exodus on) — a custom mark then has no place on
    *  this line. Code-owned: not part of the override schema. */
   prefix?: string;
+  /** FOOTER only (TODO 4.10c, owner 2026-10-08): what a card with NO artist
+   *  prints — unset = the prefix and "Unknown" (every frame but the 1993
+   *  pair); "omit" = no credit line at all, in both renderers
+   *  (footerArtistLine returns null and neither draws the footer). Only for
+   *  a profile with a `copyrightSlot`: a footer that also carries a clean
+   *  download's custom text at its end would lose it with the line (a unit
+   *  test holds that). Code-owned: not part of the override schema. */
+  noArtist?: "omit";
   /** CSS text-shadow for text sitting directly on the frame (e.g. agclassic
    *  P/T, planeswalker loyalty). */
   shadowCss?: string;
@@ -1307,6 +1316,32 @@ const ALPHA_BAND_INK: InkByColorKey = {
  *  with the tool that read the prints: tests/unit/render/alpha-1993-bake). */
 const ALPHA_TITLE_DY_PX = 6;
 const ALPHA_TYPE_DY_PX = 9;
+/** Where the name's and the type line's boxes START, HD px — the pen
+ *  positions that put OUR ink on the prints' first ink column (owner, round
+ *  44). The name: 109.0 ± 2.9 px on 48 white Alpha / Beta prints; ours
+ *  108.0 ± 1.2 — print − ours + 1.5 px by the median, − 0.1 by the mean,
+ *  − 5.8…+ 5.1 by the first letter (the prints' Goudy B, D and H start at
+ *  104–106 px where Beleren's stand 6–7 px into their advance: − 4…− 5;
+ *  a printed C, G or W starts at 109–113 where ours inks 3–4 px in: + 2…
+ *  + 4). The type line: 155.1 ± 0.9 px on 36; ours 154.0 (MPlantin's I, S
+ *  and E ink 4 px in). Both EVEN, so the 750 px bake's boxes are whole px
+ *  and what hangs on their right ends — the cost row, the set symbol — is
+ *  the same pixels as before the move at both bake sizes (an odd pen set
+ *  each a 750 px pixel to the right). */
+const ALPHA_TITLE_LEFT_PX = 104;
+const ALPHA_TYPE_LEFT_PX = 150;
+/** The name band's right end, % of the card's width: the last cost disc's
+ *  end, 1365 px — written a hair UNDER 91 %. The 750 px bake rounds the
+ *  band's left and width to whole px each: an exact 91 % from the 104 px pen
+ *  is 52 + 630.5 → 683 px, a pixel right of the 682 the cost row has always
+ *  ended on there (it was 89.025 + 593.475 → 89 + 593). 90.999 % is
+ *  52 + 630.49 → 682 at 750 px and 104 + 1260.985 → 1365 at HD: both bakes'
+ *  cost rows keep the pixels they had before the name moved (held on real
+ *  bakes of the stored cards, round 44). */
+const ALPHA_TITLE_RIGHT_PCT = 90.999;
+/** Where the type band ends, HD px: the set symbol's end (4 px inside the
+ *  text box's outline). */
+const ALPHA_TYPE_RIGHT_PX = 1314;
 /** The credit's and the P/T's boxes, % of the card's height. */
 const ALPHA_FOOTER_TOP_PCT = 89.886;
 const ALPHA_PT_TOP_PCT = 88.969;
@@ -1569,12 +1604,16 @@ const M15SNOWLAND: FrameProfile = {
 // SIZES (lib/cards/typography.ts ALPHA_*): name Beleren 72 px, type line
 // MPlantin 70, credit MPlantin 70, P/T MPlantin 84 set against its right
 // end, cost discs 72 px — all `fit: "measured"` where a line can run long.
-// The LEFT margins of the name and the type line stay the owner's (round 4,
-// "B2": the art window's edge, 178 px; the prints start the name at ~110 px
-// and the type line at 154).
+// The LEFT starts of the name and the type line are the PRINTS' (owner,
+// round 44, 2026-10-08 — round 4's 178 px margin is retired): the name's
+// ink starts at 109.0 ± 2.9 px (48 white prints), the type line's at
+// 155.1 ± 0.9 (36) — ALPHA_TITLE_LEFT_PX / ALPHA_TYPE_LEFT_PX are the PEN
+// positions that put our faces' ink there. The set symbol keeps the size it
+// had before the type line grew (ALPHA_SET_SYMBOL_BOX_PCT, same round).
 //
 // FOOTER: the printed credit, `Illus. <artist>`, mixed case (the prints say
-// `Illus. © <artist>`; PipGlyph prints no © of its own making). The 1993
+// `Illus. © <artist>`; PipGlyph prints no © of its own making); a card with
+// NO artist prints no credit at all (`noArtist: "omit"`, same round). The 1993
 // card has ONE line in the strip, so the © slot (`copyrightSlot`) is the
 // black border under the frame, ending where the mark has always sat: the
 // pipglyph.com mark on display, a clean download's footer text there — on
@@ -1606,16 +1645,27 @@ const AGCLASSIC: FrameProfile = {
   label: "Alpha (1993)",
   artifactMasterKeys: { c: "a" },
   symbolStyle: "original",
+  // The set symbol's box as it was before v48 (owner, round 44): pinned, so
+  // it no longer follows the type line's size (70 px × 1.1 made it 77 px).
+  // Alpha and Beta print no set symbol; it still ends where the type band's
+  // box does and stays centred in it.
+  symbolSizePct: ALPHA_SET_SYMBOL_BOX_PCT,
   costSizePct: ALPHA_COST_DISC_PCT,
   // The discs' row on the prints (142.5 px): a pixel under the band's middle.
   costDy: 1 / 1500,
   // Covers the 178–1319 × 219–1138 opening with ~6 px under the bevel.
   artSlot: { topPct: 10.15, leftPct: 11.45, widthPct: 76.9, heightPct: 44.3 },
-  // The band: from the owner's left margin (178 px) to the last cost disc's
-  // end (1365 px on the prints), centred on the discs' row (142.5 px). The
-  // name's baseline is the prints' 171.5 px: `dy` lowers the text alone.
+  // The band: from the prints' start (ALPHA_TITLE_LEFT_PX) to the last cost
+  // disc's end (1365 px on the prints), centred on the discs' row
+  // (142.5 px). The name's baseline is the prints' 171.5 px: `dy` lowers the
+  // text alone.
   title: {
-    rect: { topPct: 4.386, leftPct: 11.87, widthPct: 79.13, heightPct: 4.8 },
+    rect: {
+      topPct: 4.386,
+      leftPct: (ALPHA_TITLE_LEFT_PX / 1500) * 100,
+      widthPct: ALPHA_TITLE_RIGHT_PCT - (ALPHA_TITLE_LEFT_PX / 1500) * 100,
+      heightPct: 4.8,
+    },
     sizePct: ALPHA_TITLE_SIZE_PCT,
     colorHex: INK_DARK,
     weight: 600,
@@ -1627,11 +1677,16 @@ const AGCLASSIC: FrameProfile = {
     inkByColorKey: ALPHA_BAND_INK,
   },
   // MPlantin, the printed face: baseline 1227.4 px on the prints, starting
-  // on the name's left margin (the owner's; the prints' 154 px). The band is
-  // the type band's middle for the set symbol, which ends ~4 px inside the
-  // text box's outline (1314 vs 1318); `dy` lowers the text alone.
+  // where the prints' does (ALPHA_TYPE_LEFT_PX). The band is the type band's
+  // middle for the set symbol, which ends ~4 px inside the text box's
+  // outline (1314 vs 1318); `dy` lowers the text alone.
   type: {
-    rect: { topPct: 55.1, leftPct: 11.87, widthPct: 75.73, heightPct: 4.0 },
+    rect: {
+      topPct: 55.1,
+      leftPct: (ALPHA_TYPE_LEFT_PX / 1500) * 100,
+      widthPct: ((ALPHA_TYPE_RIGHT_PX - ALPHA_TYPE_LEFT_PX) / 1500) * 100,
+      heightPct: 4.0,
+    },
     sizePct: ALPHA_TYPE_SIZE_PCT,
     colorHex: INK_DARK,
     font: "body",
@@ -1655,6 +1710,8 @@ const AGCLASSIC: FrameProfile = {
     sizePct: ALPHA_ARTIST_SIZE_PCT,
     colorHex: INK_DARK,
     prefix: "Illus. ",
+    // A card with no artist prints no credit (owner, round 44).
+    noArtist: "omit",
     font: "body",
     inkByColorKey: ALPHA_INK,
   },

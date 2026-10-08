@@ -386,9 +386,10 @@ describe("Alpha ink: silver lettering on every frame but white", () => {
 
 describe("Alpha name, pips and type line (owner review round 4; sizes and rows from the prints since TODO 4.10c)", () => {
   // Baked at the "hd" preset (1500 × 2100) so every number is an HD px and a
-  // 1–2 px move is visible (the default preset halves it). The art window's
-  // edge is ~178 px (the owner's pick, "B2", kept); round 3 put the name at
-  // ~114 px and the type line at ~157. Round 4's 41 px caps and 54 px discs
+  // 1–2 px move is visible (the default preset halves it). Round 4 started
+  // the name and the type line on the art window's edge (~178 px, the
+  // owner's pick "B2"); round 44 (2026-10-08) put both back on the prints'
+  // starts (ink at 109 and 155 px). Round 4's 41 px caps and 54 px discs
   // gave way to the prints' with layout v48: a 72 px name on the baseline
   // 171.5 px, 72 px discs on row 142.5 ending at 1365 px.
   const hd = (data: CardPreviewData) => bake(data, false, "hd");
@@ -409,7 +410,7 @@ describe("Alpha name, pips and type line (owner review round 4; sizes and rows f
   const TITLE_ROWS: [number, number] = [80, 215];
   const TYPE_ROWS: [number, number] = [1150, 1262];
 
-  it.each<FrameTemplate>(["agclassic", "alphaland"])("%s: name and type line start on one left margin, the art window's edge", async (template) => {
+  it.each<FrameTemplate>(["agclassic", "alphaland"])("%s: name and type line start where the prints start them (owner round 44; round 4's shared 178 px margin is retired)", async (template) => {
     const land = template === "alphaland";
     const base = {
       title: "Dawn Treader",
@@ -422,7 +423,7 @@ describe("Alpha name, pips and type line (owner review round 4; sizes and rows f
     } as Partial<CardPreviewData>;
     const full = await hd(card(template, base));
     // A blank title bakes as "Untitled Card", so the name box is the union of
-    // both names' ink: one left margin, caps + the d/l/t ascenders, no
+    // both names' ink: one start, caps + the d/l/t ascenders, no
     // descenders.
     const noName = await hd(card(template, { ...base, title: " " }));
     const noType = await hd(card(template, { ...base, cardType: null, supertype: null, subtypes: [" "] }));
@@ -430,13 +431,16 @@ describe("Alpha name, pips and type line (owner review round 4; sizes and rows f
     const type = bandBox(full, noType, ...TYPE_ROWS)!;
     expect(name).not.toBeNull();
     expect(type).not.toBeNull();
-    // Both start at the art window's edge (~178–181 px) — round 3 had the
-    // name at ~114 and the type line at 156–158.
-    for (const [what, box] of [["name", name], ["type", type]] as const) {
-      expect(box.x0, what).toBeGreaterThanOrEqual(176);
-      expect(box.x0, what).toBeLessThanOrEqual(184);
-    }
-    expect(Math.abs(name.x0 - type.x0)).toBeLessThanOrEqual(3);
+    // The prints' first ink columns (48 / 36 white Alpha and Beta prints):
+    // the name at 109.0 ± 2.9 px (ours 107–112 by its first letter — "D"
+    // and "U" ink 6–8 px into Beleren's advance), the type line at
+    // 155.1 ± 0.9 on lines starting with I, S or E (MPlantin's "L" here
+    // inks 3 px nearer its pen: 151). Round 4 had both on the art window's
+    // edge (~178–181 px).
+    expect(name.x0, "name").toBeGreaterThanOrEqual(106);
+    expect(name.x0, "name").toBeLessThanOrEqual(113);
+    expect(type.x0, "type").toBeGreaterThanOrEqual(150);
+    expect(type.x0, "type").toBeLessThanOrEqual(157);
     // 51 px caps (Beleren at 72 px): the two names' ink measures ~56 px with
     // the ascenders and anti-aliasing, ending on the prints' baseline.
     const inkH = name.y1 - name.y0 + 1;

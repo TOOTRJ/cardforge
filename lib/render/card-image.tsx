@@ -499,6 +499,9 @@ function CardImage({
   // Per-frame-master footer ink — the same footerInk() the preview resolves
   // (outlined when the profile prints it on the art, footerOnArt).
   const footerInkResolved = layout.footer ? footerInk(layout.footer, masterKey, layout) : null;
+  // The artist line, or null: a footer that omits the credit of a card with
+  // no artist (TextSlot.noArtist, the 1993 frame) draws no footer line.
+  const footerArtist = footerArtistLine(layout.footer, card.artistCredit);
   // …and the name's and type line's (the text spans only, not the pips or
   // the set symbol) — the preview's bandTextStyle() twins.
   const titleInk = bandTextStyle(layout.title, masterKey);
@@ -1378,11 +1381,11 @@ function CardImage({
             cardWidth: width,
             cardHeight: height,
           })
-        : layout.footer && footerInkResolved
+        : layout.footer && footerInkResolved && footerArtist !== null
           ? FooterBake({
               slot: layout.footer,
               ink: footerInkResolved,
-              artist: footerArtistLine(layout.footer, card.artistCredit),
+              artist: footerArtist,
               // A profile with a © slot prints the custom text THERE (line
               // 2), never at this line's end.
               watermarkText: layout.copyrightSlot ? null : watermarkText,

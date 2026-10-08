@@ -865,6 +865,9 @@ function CardFace({
   // the same footerInk() the bake resolves (outlined when the profile prints
   // it on the art, footerOnArt).
   const footerInkResolved = layout.footer ? footerInk(layout.footer, masterKey, layout) : null;
+  // The artist line, or null: a footer that omits the credit of a card with
+  // no artist (TextSlot.noArtist, the 1993 frame) draws no footer line.
+  const footerArtist = footerArtistLine(layout.footer, face.artistCredit);
   // …and the name's and type line's (the text spans only, not the pips or
   // the set symbol) — the bake's bandTextStyle() twins.
   const titleInk = bandTextStyle(layout.title, masterKey);
@@ -1650,7 +1653,7 @@ function CardFace({
           card's artist credit runs down its left border — the slot's rect is
           the band it covers, drawn as its unturned box and turned in place
           (unturnedRect, the bake's FooterBake twin). */}
-      {!collector && layout.footer && footerInkResolved ? (
+      {!collector && layout.footer && footerInkResolved && footerArtist !== null ? (
         <div
           data-testid="card-footer"
           style={{
@@ -1674,7 +1677,7 @@ function CardFace({
           }}
         >
           <span style={ELLIPSIS}>
-            {slotLine(footerFace(layout.footer).id, footerArtistLine(layout.footer, face.artistCredit))}
+            {slotLine(footerFace(layout.footer).id, footerArtist)}
           </span>
           {/* Footer-right: the owner's custom mark, or nothing — mirrors the
               bake (lib/render/card-image.tsx, layout v19). */}

@@ -55,7 +55,7 @@ vi.mock("@/lib/cards/template-layout", async (importOriginal) => {
               copyrightSlot: undefined,
               title: { ...shipped.title, fit: undefined, dy: undefined },
               type: { ...shipped.type, font: "display", fit: undefined, dy: undefined },
-              footer: { ...shipped.footer!, font: "display", prefix: undefined, uppercase: true },
+              footer: { ...shipped.footer!, font: "display", prefix: undefined, noArtist: undefined, uppercase: true },
               pt: { ...shipped.pt!, font: undefined, align: undefined, endKerned: undefined, weight: 700 },
             } as typeof shipped)
           : shipped;
@@ -494,6 +494,23 @@ describe("the footer line is profile data (TODO 4.8.0)", () => {
     expect(seen.art.preview).toBeNull();
     const anonymous = await both({ ...CREATURE, artistCredit: "  " } as CardPreviewData, { illus: displayLine("Illus. Unknown") });
     expect([anonymous.illus.bake === null, anonymous.illus.preview === null]).toEqual([false, false]);
+  }, 60_000);
+
+  it("`noArtist: \"omit\"` — a card with no artist prints NO credit line in either renderer; one with an artist prints it as before (TODO 4.10c)", async () => {
+    withPatch(footerOf({ prefix: "Illus. ", noArtist: "omit" }));
+    for (const none of [null, "", "  "]) {
+      const anonymous = await both({ ...CREATURE, artistCredit: none } as CardPreviewData, {
+        unknown: displayLine("Illus. Unknown"),
+        bare: displayLine("Illus."),
+        art: displayLine("Art: Unknown"),
+      });
+      for (const role of ["unknown", "bare", "art"]) {
+        expect([role, anonymous[role].bake, anonymous[role].preview]).toEqual([role, null, null]);
+      }
+    }
+    const credited = await both(CREATURE, { illus: displayLine("Illus. Ada Lovelace") });
+    expect(credited.illus.bake).not.toBeNull();
+    expect(credited.illus.preview).not.toBeNull();
   }, 60_000);
 
   it("a centred footer centres its line in both renderers and draws no custom mark on it", async () => {

@@ -4,7 +4,7 @@ import { copyrightFace, copyrightSlotLayout } from "@/lib/cards/copyright-slot";
 import { footerArtistLine } from "@/lib/cards/card-display";
 import { isRenderStale } from "@/lib/cards/layout-version";
 import { drawsManaGem, manaGemSpec, symbolImagePathsIn } from "@/lib/cards/mana-gem";
-import { COST_PIP_GAP, costRowHdPx, costRowWidthPct } from "@/lib/cards/render-tiers";
+import { COST_PIP_GAP, costRowHdPx, costRowWidthPct, fitTypeLineBand } from "@/lib/cards/render-tiers";
 import { metricsFor } from "@/lib/cards/rules-layout";
 import { fitStatSizePct, statWidthEm } from "@/lib/cards/stat-fit";
 import {
@@ -24,6 +24,7 @@ import {
   symbolStyleOf,
 } from "@/lib/cards/symbol-style";
 import { footerInk, getFrameProfile, slotInk } from "@/lib/cards/template-layout";
+import { setSymbolBoxPct, setSymbolSize, type SetSymbolSource } from "@/lib/cards/set-symbol-size";
 import { fitTitleBand } from "@/lib/cards/title-band";
 import { faceOf } from "@/lib/cards/type-faces";
 import {
@@ -31,6 +32,7 @@ import {
   ALPHA_COPYRIGHT_SIZE_PCT,
   ALPHA_COST_DISC_PCT,
   ALPHA_PT_SIZE_PCT,
+  ALPHA_SET_SYMBOL_BOX_PCT,
   ALPHA_TITLE_SIZE_PCT,
   ALPHA_TYPE_SIZE_PCT,
   RULES_SIZE_PX,
@@ -57,6 +59,7 @@ const land = getFrameProfile("alphaland");
 const PAIR = [alpha, land];
 const px = (pct: number) => pct * 1500;
 const KEYS = ["w", "u", "b", "r", "g", "c", "a", "m"];
+const MARK: SetSymbolSource = { kind: "mark" };
 
 describe("the 1993 frame's sizes are the prints', as constants", () => {
   it("name 72, type line 70, credit 70, P/T 84, discs 72 — all even, so the 750 px bake draws exactly half", () => {
@@ -88,15 +91,40 @@ describe("the 1993 frame's sizes are the prints', as constants", () => {
         expect(slot.fit).toBe("measured");
         expect(slot.dy).toBeGreaterThan(0);
       }
-      // The owner's left margin (round 4, "B2"): the art window's edge.
-      expect((p.title.rect.leftPct / 100) * 1500).toBeCloseTo(178, 0);
-      expect(p.type.rect.leftPct).toBe(p.title.rect.leftPct);
-      // The band ends where the prints end the last disc (1364.9 ± 1.0 px).
-      expect(((p.title.rect.leftPct + p.title.rect.widthPct) / 100) * 1500).toBeCloseTo(1365, 0);
+      // The prints' starts (owner, round 44 — round 4's 178 px margin is
+      // retired): the PEN positions that put our ink on the prints' first
+      // ink column, 109.0 ± 2.9 px for the name and 155.1 ± 0.9 for the
+      // type line (the bake test reads the ink).
+      expect((p.title.rect.leftPct / 100) * 1500).toBeCloseTo(104, 6);
+      expect((p.type.rect.leftPct / 100) * 1500).toBeCloseTo(150, 6);
+      // The band ends where the prints end the last disc (1364.9 ± 1.0 px);
+      // the type band where the set symbol always ended (1314 px).
+      // (A hair under 91 %: the 750 px bake rounds left and width apart, and
+      // an exact 91 % ends the cost row a pixel right of where it always has.)
+      const titleRight = ((p.title.rect.leftPct + p.title.rect.widthPct) / 100) * 1500;
+      expect(titleRight).toBeCloseTo(1365, 1);
+      expect(titleRight).toBeLessThan(1365);
+      expect(Math.round(titleRight)).toBe(1365);
+      // Whole px at the 750 px bake: left 52, width 630 → 682; the type
+      // band 75 → 657.
+      expect(Math.round((p.title.rect.leftPct / 100) * 750) + Math.round((p.title.rect.widthPct / 100) * 750)).toBe(682);
+      expect(Math.round((p.type.rect.leftPct / 100) * 750) + Math.round((p.type.rect.widthPct / 100) * 750)).toBe(657);
+      expect(((p.type.rect.leftPct + p.type.rect.widthPct) / 100) * 1500).toBeCloseTo(1314, 6);
     }
+    const symbolWidthPct = setSymbolSize(alpha, MARK).drawnWidthPct;
+    const typeFit = (layout: typeof alpha, text: string) => fitTypeLineBand({ layout, text, symbolWidthPct }).sizePct;
+    expect(typeFit(alpha, "Enchant Creature")).toBe(ALPHA_TYPE_SIZE_PCT);
+    const longType = "Legendary Artifact Creature — Elder Dragon Wizard";
+    const oldType = { ...alpha, type: { ...alpha.type, rect: { ...alpha.type.rect, leftPct: 11.87, widthPct: 75.73 } } };
+    expect(typeFit(alpha, longType)).toBeGreaterThan(typeFit(oldType, longType));
     // A long name shrinks instead of being cut by the renderer.
     const long = fitTitleBand(alpha, "Personal Incarnation of the Northern Paladin", "{3}{W}{W}{W}")!;
     expect(long.sizePct).toBeLessThan(ALPHA_TITLE_SIZE_PCT);
+    // The measured fits read the wider bands: a name that has to shrink
+    // shrinks less than it did in round 4's 178 px band.
+    const old = { ...alpha, title: { ...alpha.title, rect: { ...alpha.title.rect, leftPct: 11.87, widthPct: 79.13 } } };
+    expect((alpha.title.rect.widthPct - 79.13) * 15).toBeCloseTo(74, 0);
+    expect(long.sizePct).toBeGreaterThan(fitTitleBand(old, "Personal Incarnation of the Northern Paladin", "{3}{W}{W}{W}")!.sizePct);
     const short = fitTitleBand(alpha, "Juggernaut", "{4}")!;
     expect(short.sizePct).toBe(ALPHA_TITLE_SIZE_PCT);
     // "Land" prints a pixel under the other cards' type line: the land's
@@ -111,7 +139,10 @@ describe("the footer — the printed credit, one line with the P/T", () => {
     for (const p of PAIR) {
       const footer = p.footer!;
       expect(footerArtistLine(footer, "Douglas Schuler")).toBe("Illus. Douglas Schuler");
-      expect(footerArtistLine(footer, null)).toBe("Illus. Unknown");
+      // No artist, no credit (owner, round 44): the line is null and
+      // neither renderer draws the footer.
+      expect(footer.noArtist).toBe("omit");
+      for (const none of [null, undefined, "", "   "]) expect(footerArtistLine(footer, none)).toBeNull();
       expect(footer.uppercase).toBeUndefined();
       expect(footer.letterSpacingEm).toBeUndefined();
       expect(footer.align).toBeUndefined();
@@ -130,6 +161,29 @@ describe("the footer — the printed credit, one line with the P/T", () => {
     }
     expect(slotInk(alpha.pt!, "a").colorHex).toBe("#7e888c");
     expect(new Set(["w", "u", "b", "r", "g", "c", "m"].map((k) => footerInk(land.footer!, k).colorHex))).toEqual(new Set(["#b0b4b4"]));
+  });
+
+  it("`noArtist: \"omit\"` is the 1993 pair's alone, and only on a footer whose custom text has its own slot", () => {
+    for (const t of FRAME_TEMPLATE_VALUES) {
+      const p = getFrameProfile(t);
+      expect(p.footer?.noArtist, t).toBe(t === "agclassic" || t === "alphaland" ? "omit" : undefined);
+      // A footer that carried a clean download's text at its end would
+      // lose it with the line.
+      if (p.footer?.noArtist) expect(p.copyrightSlot, t).toBeDefined();
+      else if (p.footer) expect(footerArtistLine(p.footer, null), t).toMatch(/Unknown$/);
+    }
+  });
+
+  it("the set symbol keeps the box it had before the type line grew: 49.5 px, pinned, ending where the type band ends (owner, round 44)", () => {
+    expect(ALPHA_SET_SYMBOL_BOX_PCT * 1500).toBeCloseTo(49.5, 9);
+    for (const p of PAIR) {
+      expect(p.symbolSizePct).toBe(ALPHA_SET_SYMBOL_BOX_PCT);
+      expect(setSymbolBoxPct(p)).toBe(ALPHA_SET_SYMBOL_BOX_PCT);
+      // Not the type line's 70 px × 1.1.
+      expect(setSymbolBoxPct(p)).toBeLessThan(p.type.sizePct * 1.1);
+      expect(setSymbolSize(p, MARK)).toMatchObject({ sizePct: ALPHA_SET_SYMBOL_BOX_PCT, drawnWidthPct: ALPHA_SET_SYMBOL_BOX_PCT });
+      expect(p.symbolRect).toBeUndefined();
+    }
   });
 
   it("the P/T is set against its RIGHT end, as the prints set every value: two digits grow to the left at full size", () => {

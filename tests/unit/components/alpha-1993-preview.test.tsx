@@ -100,6 +100,33 @@ describe("CardPreview — the 1993 lettering", () => {
     }
   });
 
+  it("a card with no artist draws NO footer line — no `Illus.`, no `Unknown` — on both templates; the P/T and the mark stay (owner, round 44)", () => {
+    for (const template of ["agclassic", "alphaland"] as const) {
+      for (const none of [null, "", "   "]) {
+        const { container, mark } = renderOn(template, template === "alphaland" ? "c" : "w", { artistCredit: none });
+        expect(container.querySelector('[data-testid="card-footer"]'), template).toBeNull();
+        expect(container.textContent).not.toMatch(/Illus|Unknown/);
+        expect(mark).not.toBeNull();
+        cleanup();
+      }
+    }
+    // Another frame still says so behind its prefix.
+    const { container } = render(<CardPreview title="Ink Probe" cardType="creature" colorIdentity={["red"]} frameStyle={{ template: "m15" }} artistCredit={null} />);
+    expect(container.querySelector('[data-testid="card-footer"]')?.textContent).toMatch(/Unknown/);
+  });
+
+  it("the name and the type line start where the prints start them: the bake's rects, 104 px and 150 px (owner, round 44)", () => {
+    const { type, container } = renderOn("agclassic", "w");
+    const name = [...container.querySelectorAll("span")].find((s) => text(s) === "Ink Probe") as HTMLElement;
+    const html = container.innerHTML;
+    expect(html).toContain(`left: ${alpha.title.rect.leftPct}%`);
+    expect(html).toContain(`left: ${alpha.type.rect.leftPct}%`);
+    expect((alpha.title.rect.leftPct / 100) * 1500).toBeCloseTo(104, 6);
+    expect((alpha.type.rect.leftPct / 100) * 1500).toBeCloseTo(150, 6);
+    expect(name).toBeDefined();
+    expect(type).toBeDefined();
+  });
+
   it("the type line and the P/T are MPlantin at the prints' sizes; the name stays Beleren", () => {
     const { type, pt, container } = renderOn("agclassic", "r");
     const band = type.parentElement as HTMLElement;

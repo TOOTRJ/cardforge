@@ -310,6 +310,13 @@ export const ALPHA_ARTIST_SIZE_PCT = 70 / 1500;
  *  download's footer text at the same size (MPlantin). */
 export const ALPHA_COPYRIGHT_SIZE_PCT = 39 / 1500;
 
+/** The 1993 frame's set-symbol box — 49.5 px at HD, the size the pair drew
+ *  at before v48 (the old 45 px type line × 1.1). Pinned (owner, round 44,
+ *  2026-10-08): Alpha and Beta print no set symbol, so no print decides it,
+ *  and the owner keeps the old one rather than a box that grows with the
+ *  70 px type line. */
+export const ALPHA_SET_SYMBOL_BOX_PCT = 49.5 / 1500;
+
 /** The 1993 frame's mana-cost disc — 72 px at HD (36 at the 750 px bake),
  *  flat, 84 px apart (symbol style "original", lib/cards/symbol-style.ts). */
 export const ALPHA_COST_DISC_PCT = 72 / 1500;

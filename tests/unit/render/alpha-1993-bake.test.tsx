@@ -111,8 +111,8 @@ function diffBox(a: Raw, b: Raw, minDelta = 24): Box | null {
   return Number.isFinite(box.x0) ? { x0: box.x0 / k, x1: (box.x1 + 1) / k, y0: box.y0 / k, y1: (box.y1 + 1) / k } : null;
 }
 // The bands each line of text is alone in, HD px [x0, y0, x1, y1].
-const NAME = [150, 95, 1000, 205];
-const TYPE = [150, 1160, 1000, 1246];
+const NAME = [95, 95, 1000, 205];
+const TYPE = [120, 1160, 1000, 1246];
 const CREDIT = [100, 1880, 1150, 1990];
 const PT = [1150, 1880, 1440, 1990];
 const COST = [1050, 90, 1440, 200];
@@ -153,12 +153,15 @@ describe("the 1993 frame — text on the prints' rows, at the prints' sizes", ()
       // The credit's "l" ascender and capitals: 47–50 px at 70 px (the
       // prints' credit covers rows 1902–1950).
       expect(Math.abs(credit.y1 - credit.y0 - 48.5)).toBeLessThanOrEqual(tol + 1.5);
-      // The credit starts where the prints' does (ink at 155–156 px); the
-      // name and the type line on the owner's margin, the art window's edge.
+      // The credit starts where the prints' does (ink at 155–156 px), and so
+      // do the name and the type line (owner, round 44): the prints' first
+      // ink column is 109.0 ± 2.9 px for a name (Beleren's E inks 7 px into
+      // its advance, a C 3–4 px: ours 107–112) and 155.1 ± 0.9 for a type
+      // line (ours 154).
       expect(Math.abs(credit.x0 - 155)).toBeLessThanOrEqual(tol + 1);
-      expect(name.x0).toBeGreaterThanOrEqual(176);
-      expect(name.x0).toBeLessThanOrEqual(186);
-      expect(Math.abs(name.x0 - type.x0)).toBeLessThanOrEqual(4);
+      expect(name.x0, `name ${JSON.stringify(name)}`).toBeGreaterThanOrEqual(108 - tol);
+      expect(name.x0).toBeLessThanOrEqual(112 + tol);
+      expect(Math.abs(type.x0 - 155.1), `type ${JSON.stringify(type)}`).toBeLessThanOrEqual(tol + 0.5);
       // The P/T's ink ends where the prints end a one-digit pair (1370–1380).
       expect(pt.x1, `pt ${JSON.stringify(pt)}`).toBeGreaterThanOrEqual(1370 - tol);
       expect(pt.x1).toBeLessThanOrEqual(1380 + tol);
@@ -231,18 +234,48 @@ describe("the 1993 frame — text on the prints' rows, at the prints' sizes", ()
   it("a long name shrinks to its room instead of being cut; a long credit takes its ellipsis before the P/T", async () => {
     // {3}{W}{W}{W}: four discs and three gaps start at 1365 − 324 = 1041 px.
     const long = await bake(card({ title: "Personal Incarnation of the Northern Paladin", cost: "{3}{W}{W}{W}" }), "hd");
-    const name = inkBox(long, [150, 95, 1036, 205], isDark)!;
+    const name = inkBox(long, [95, 95, 1036, 205], isDark)!;
     // The name's last ink stays left of the first disc, with the band's gap…
     expect(name.x1).toBeLessThan(1041 - 4);
     expect(name.x1).toBeGreaterThan(780);
     // …because it shrank: its capitals are under the 51 px of the full size
     // ("P", "I", "N": no ascender past them but the "f"/"l"/"h"/"t"/"d").
-    const short = inkBox(await bake(card({ title: "Personal", cost: "{3}{W}{W}{W}" }), "hd"), [150, 95, 1036, 205], isDark)!;
+    const short = inkBox(await bake(card({ title: "Personal", cost: "{3}{W}{W}{W}" }), "hd"), [95, 95, 1036, 205], isDark)!;
     expect(name.y1 - name.y0).toBeLessThan(short.y1 - short.y0 - 6);
     const credit = await bake(card({ artistCredit: "Bartholomew Maximilian Featherstonehaugh-Cholmondeley the Younger", power: "10", toughness: "10" }), "hd");
     const line = inkBox(credit, CREDIT, isDark)!;
     expect(line.x1).toBeLessThanOrEqual(1150);
   }, 60_000);
+
+  for (const preset of ["hd", "default"] as const) {
+    it(`${preset}: a card with NO artist prints no credit line — the strip holds the P/T alone (owner, round 44)`, async () => {
+      for (const template of ["agclassic", "alphaland"] as const) {
+        const over = (template === "alphaland"
+          ? { frameStyle: { template, finish: "regular" }, colorIdentity: [], cardType: "land", cost: null, subtypes: [] }
+          : {}) as Partial<CardPreviewData>;
+        const credited = await bake(card(over), preset);
+        for (const none of [null, "", "   "]) {
+          const r = await bake(card({ ...over, artistCredit: none }), preset);
+          // Nothing but the P/T differs from the credited card, and what
+          // differs is the whole credit: the strip left of the P/T is bare.
+          const gone = diffBox(r, credited)!;
+          expect(gone.x0, `${template} ${JSON.stringify(gone)}`).toBeGreaterThanOrEqual(CREDIT[0]);
+          expect(gone.x1).toBeLessThanOrEqual(CREDIT[2]);
+          expect(gone.y0).toBeGreaterThanOrEqual(CREDIT[1]);
+          expect(gone.y1).toBeLessThanOrEqual(CREDIT[3]);
+          // The bare strip is the frame's own pixels: the same as a card
+          // whose credit is one space wide would leave — one flat tone on
+          // the stand-in master, no "Illus.", no "Unknown".
+          const strip = new Set<number>();
+          const k = r.w / 1500;
+          for (let y = Math.ceil(CREDIT[1] * k); y < CREDIT[3] * k; y++) for (let x = Math.ceil(CREDIT[0] * k); x < CREDIT[2] * k; x++) strip.add(sum(px(r, x, y)));
+          expect(strip.size, template).toBe(1);
+          // The P/T is where it was.
+          expect(inkBox(r, PT, template === "alphaland" ? isSilver : isDark)).toEqual(inkBox(credited, PT, template === "alphaland" ? isSilver : isDark));
+        }
+      }
+    }, 120_000);
+  }
 
   it("the land: no cost, `Land` a pixel under the other cards' type line (1228 px), the same credit line", async () => {
     const r = await bake(card({ frameStyle: { template: "alphaland", finish: "regular" }, colorIdentity: [], cardType: "land", cost: null, subtypes: [], power: null, toughness: null } as Partial<CardPreviewData>), "hd");

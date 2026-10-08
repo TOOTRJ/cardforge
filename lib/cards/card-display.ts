@@ -427,13 +427,17 @@ export const FOOTER_PREFIX = "Art: ";
 
 /** A footer's artist line as BOTH renderers print it: the profile's prefix
  *  (FOOTER_PREFIX when it names none — "Illus. " on the 1993–2003 prints,
- *  4.10a–c) and the credit, or "Unknown" for a card without one. */
+ *  4.10a–c) and the credit, or "Unknown" for a card without one — or NULL
+ *  on a footer that says `noArtist: "omit"` (the 1993 frame, owner
+ *  2026-10-08): no artist, no credit line, and neither renderer draws the
+ *  footer. */
 export function footerArtistLine(
-  footer: { prefix?: string } | null | undefined,
+  footer: { prefix?: string; noArtist?: "omit" } | null | undefined,
   artistCredit: string | null | undefined,
-): string {
+): string | null {
   const prefix = footer?.prefix ?? FOOTER_PREFIX;
-  return artistCredit?.trim() ? `${prefix}${artistCredit}` : `${prefix}Unknown`;
+  if (artistCredit?.trim()) return `${prefix}${artistCredit}`;
+  return footer?.noArtist === "omit" ? null : `${prefix}Unknown`;
 }
 
 // ---------------------------------------------------------------------------

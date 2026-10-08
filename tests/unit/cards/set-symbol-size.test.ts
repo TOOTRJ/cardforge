@@ -22,6 +22,7 @@ import {
 } from "@/lib/cards/set-symbol-prints";
 import { getFrameProfile, SET_SYMBOL_KEYLINE } from "@/lib/cards/template-layout";
 import {
+  ALPHA_SET_SYMBOL_BOX_PCT,
   KEYRUNE_EM_PER_BOX,
   SET_SYMBOL_BOX_PCT,
   SET_SYMBOL_BOX_PCT_THIN_BAR,
@@ -31,6 +32,9 @@ import {
   displayPct,
 } from "@/lib/cards/typography";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
+
+/** The 1993 pair: outside the family, with a pinned box (TODO 4.10c). */
+const ALPHA_1993: readonly string[] = ["agclassic", "alphaland"];
 
 // ---------------------------------------------------------------------------
 // The set-symbol size rule (TODO 4.20, layout v32; owner decision 2026-09-28),
@@ -95,7 +99,10 @@ describe("the family's set-symbol boxes", () => {
       if (!M15_FAMILY_TEMPLATES.includes(template)) {
         // Split (TODO 4.21b) is the one frame outside the family with a box
         // of its own: the prints' 48 px on its thin type bar.
-        expect(p.symbolSizePct, template).toBe(template === "split" ? SPLIT_SET_SYMBOL_BOX_PCT : undefined);
+        // …and the 1993 pair (TODO 4.10c, owner round 44): pinned at the
+        // 49.5 px it drew at before its type line grew to 70 px.
+        const own = template === "split" ? SPLIT_SET_SYMBOL_BOX_PCT : ALPHA_1993.includes(template) ? ALPHA_SET_SYMBOL_BOX_PCT : undefined;
+        expect(p.symbolSizePct, template).toBe(own);
         continue;
       }
       // The family's box is the same px on the page on its one landscape
@@ -361,7 +368,11 @@ describe("setSymbolSize off the family (byte-identical fallback)", () => {
       // (Split has a box and a fit of its own — the next block.)
       if (M15_FAMILY_TEMPLATES.includes(template) || template === "split") continue;
       const p = getFrameProfile(template);
-      const box = p.type.sizePct * 1.1;
+      // The 1993 pair's box is pinned (49.5 px, what 45 px × 1.1 gave it
+      // before v48): same rule — the box is every source's size — off the
+      // type line.
+      const box = ALPHA_1993.includes(template) ? ALPHA_SET_SYMBOL_BOX_PCT : p.type.sizePct * 1.1;
+      if (ALPHA_1993.includes(template)) expect(box * 1500).toBeCloseTo(49.5, 9);
       expect(setSymbolBoxPct(p), template).toBe(box);
       for (const source of [ICON, MARK, ...ALL_GLYPHS]) {
         expect(setSymbolSize(p, source).sizePct, template).toBe(box);
