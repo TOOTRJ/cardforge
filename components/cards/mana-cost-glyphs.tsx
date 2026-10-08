@@ -1,8 +1,7 @@
 import { cn } from "@/lib/utils";
 import { pipOverrideForToken, type PipOverrides } from "@/lib/pips/override";
-import { hybridHalves } from "@/lib/cards/rules-text";
+import { drawsManaGem, manaGemSpec } from "@/lib/cards/mana-gem";
 import {
-  manaGlyphPx,
   previewDiscShadowCss,
   styledSuffix,
   symbolStyle,
@@ -191,25 +190,35 @@ export function tokenSuffix(token: Token): string | null {
 const MS_DISC_EM = 1.3;
 const MS_LINE_EM = 1.35;
 
+/** A length of the HD bake, in em of an element whose font is `emPx` of
+ *  those px. */
+const emOf = (px: number, emPx: number) => `${(px / emPx).toFixed(4)}em`;
+
 // One pip of a CARD (CardPreview only: the cost rows, the rules text, the
 // flipside strip, the saga rail), inside a parent whose font size is the
 // disc's diameter (1 em = one disc) — the bake's ManaGem at the stored HD
-// bake's whole px for a disc `discPx` wide:
+// bake's whole px for a disc `discPx` wide, from the SAME description
+// (lib/cards/mana-gem.ts manaGemSpec): the disc's colour, the ink, the
+// glyph's size, a split disc's fill and its two half-symbols.
+//
+// It takes mana-font's `ms ms-<suffix>` classes for the FONT and the glyph
+// only — never `ms-cost`, whose own look is not the stored card's (a black
+// untap disc, a ×1.2 Phyrexian symbol, a white snow symbol under a second
+// glyph, split halves at its own offsets in its own lighter colours, #111
+// ink): those are for the pickers, deck lists and articles.
 //
 //   - a one-colour symbol at manaGlyphPx of the disc, in a box exactly one
-//     disc. mana-font sizes the disc FROM the glyph's font (1.3 em), so a pip
-//     sized by its disc drew the glyph at 1 ÷ 1.3 = 0.769 of it, the bake
-//     0.73; the glyph keeps the bake's size and the box is set around it,
-//     the line box in mana-font's own proportion. Satori centres the
-//     glyph's em box in the disc; Chromium rounds the font's ascent and
-//     floors the half-leading, which sets a glyph in a line box exactly one
-//     disc tall ~2 % of the disc HIGH of the bake on average. mana-font's
-//     1.35 em line in a 1.3 em disc halves that (measured against the bake
-//     at ten preview widths, 2026-10-07; either way it is within a px);
-//   - a split disc in mana-font's own box at disc ÷ 1.3;
-//   - the disc's shadow as the bake's ONE layer (previewDiscShadowCss), over
-//     the `.ms-shadow` class's two in em of the pip's font; mana-font's
-//     untap disc is dark, so its shadow stays white.
+//     disc, the line box in mana-font's own proportion (1.35 em in a 1.3 em
+//     disc). Satori centres the glyph's em box in the disc; Chromium rounds
+//     the font's ascent and floors the half-leading, which sets a glyph in a
+//     line box exactly one disc tall ~2 % of the disc HIGH of the bake on
+//     average, and mana-font's proportion halves that (measured against the
+//     bake at ten preview widths, 2026-10-07; either way it is within a px);
+//   - a split disc: the bake's 135° fill, each half's glyph an absolutely
+//     placed box at the bake's corner and size;
+//   - the disc's shadow as the bake's ONE layer (previewDiscShadowCss);
+//   - NOTHING for a one-colour symbol the font has no glyph for, as the bake
+//     (cardPipDraws — a caller that wraps the pip asks it first).
 export function CardPip({
   suffix,
   discPx,
@@ -223,35 +232,85 @@ export function CardPip({
   /** The card owner's image for this pip, when they set one. */
   overrideSrc?: string | null;
 }) {
-  const split = overrideSrc != null || hybridHalves(suffix) != null;
-  const glyphPx = split ? discPx / MS_DISC_EM : manaGlyphPx(discPx);
-  const boxShadow = previewDiscShadowCss(symbols, discPx, glyphPx, suffix === "untap" ? "#fff" : undefined);
-  const fontSize = `${(glyphPx / discPx).toFixed(4)}em`;
   if (overrideSrc != null) {
+    const emPx = discPx / MS_DISC_EM;
     return (
       <PipOverrideImg
         src={overrideSrc}
         symbols={symbols}
-        style={{ fontSize, flexShrink: 0 }}
-        boxShadow={boxShadow ?? null}
+        style={{ fontSize: emOf(emPx, discPx), flexShrink: 0 }}
+        boxShadow={previewDiscShadowCss(symbols, discPx, emPx) ?? null}
       />
     );
   }
-  const box = `${(discPx / glyphPx).toFixed(4)}em`;
+  if (!drawsManaGem(suffix, symbols)) return null;
+  const gem = manaGemSpec(suffix, discPx, symbols);
+  if (gem.kind === "split") {
+    // 1 em = the disc here, so the shadow and the halves are in discs.
+    const boxShadow = previewDiscShadowCss(symbols, discPx, discPx);
+    return (
+      <span
+        aria-hidden
+        data-pip={gem.suffix}
+        style={{
+          position: "relative",
+          display: "inline-block",
+          verticalAlign: "middle",
+          width: "1em",
+          height: "1em",
+          borderRadius: "50%",
+          overflow: "hidden",
+          background: gem.background,
+          flexShrink: 0,
+          ...(boxShadow ? { boxShadow } : {}),
+        }}
+      >
+        {[gem.top, gem.bottom].map((half) => (
+          <i
+            key={half.suffix}
+            className={cn("ms", `ms-${half.suffix}`)}
+            style={{
+              position: "absolute",
+              top: emOf(half.topPx, gem.halfPx),
+              left: emOf(half.leftPx, gem.halfPx),
+              fontSize: emOf(gem.halfPx, discPx),
+              lineHeight: 1,
+              color: gem.ink,
+            }}
+          />
+        ))}
+      </span>
+    );
+  }
+  const box = emOf(discPx, gem.glyphPx);
+  const boxShadow = previewDiscShadowCss(symbols, discPx, gem.glyphPx);
   return (
     <i
       aria-hidden
-      className={cn("ms ms-cost", symbols.previewShadowClass, `ms-${styledSuffix(symbols, suffix)}`)}
+      data-pip={gem.suffix}
+      className={cn("ms", `ms-${gem.suffix}`)}
       style={{
-        fontSize,
-        ...(split
-          ? {}
-          : { width: box, height: box, lineHeight: `${((MS_LINE_EM / MS_DISC_EM) * (discPx / glyphPx)).toFixed(4)}em` }),
+        fontSize: emOf(gem.glyphPx, discPx),
+        width: box,
+        height: box,
+        lineHeight: emOf((MS_LINE_EM / MS_DISC_EM) * discPx, gem.glyphPx),
+        textAlign: "center",
+        borderRadius: "50%",
+        backgroundColor: gem.bg,
+        color: gem.ink,
         flexShrink: 0,
         ...(boxShadow ? { boxShadow } : {}),
       }}
     />
   );
+}
+
+/** True when CardPip draws anything for this pip: an owner's image, a split
+ *  disc, or a symbol mana-font has a glyph for. The bake draws no disc and
+ *  keeps no room for the rest — a caller that wraps the pip (a gap, a
+ *  margin) leaves the wrapper out too. */
+export function cardPipDraws(suffix: string, symbols: SymbolStyleSpec, overrideSrc?: string | null): boolean {
+  return overrideSrc != null || drawsManaGem(suffix, symbols);
 }
 
 // A custom pip image drawn in the exact box mana-font gives `.ms-cost`:

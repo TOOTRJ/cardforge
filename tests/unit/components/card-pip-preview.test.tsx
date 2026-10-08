@@ -8,7 +8,9 @@ import { CardPreview, type CardPreviewData } from "@/components/cards/card-previ
 import { CardPip, ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import { metricsFor } from "@/lib/cards/rules-layout";
 import { costRowHdPx } from "@/lib/cards/render-tiers";
+import { manaGemSpec } from "@/lib/cards/mana-gem";
 import {
+  bakedShadowHex,
   discShadowCss,
   discShadowPx,
   manaGlyphPx,
@@ -26,14 +28,19 @@ import type { FrameTemplate } from "@/types/card";
 // at the stored HD bake's whole px, written in em of its disc:
 //
 //   - the disc's shadow: ONE layer, discShadowPx left and down (0.06 / 0.07
-//     of the disc, each at least 1 px). mana-font's `.ms-shadow` is two
-//     layers in em of the PIP's font — 0.044–0.046 of the disc — and drew a
-//     73 px cost disc's shadow 3.2 / 3.7 px where the PNG has 4 / 5
-//     (measured in Chromium, 2026-10-07);
+//     of the disc, each at least 1 px), in the colour the PNG holds
+//     (bakedShadowHex: the bake's filter lands #111 on #0d0d0d). mana-font's
+//     `.ms-shadow` is two layers in em of the PIP's font — 0.044–0.046 of
+//     the disc — and drew a 73 px cost disc's shadow 3.2 / 3.7 px where the
+//     PNG has 4 / 5 (measured in Chromium, 2026-10-07);
 //   - a one-colour symbol at manaGlyphPx of its disc in rules text too:
 //     mana-font's own box (a 1.3 em disc) made it 1 ÷ 1.3 = 0.769 of the
 //     disc, the bake 0.73 — a 60 px rules disc's tree 45 px tall, the
 //     PNG's 42.
+//
+// WHAT each symbol is (disc colour, ink, a split disc's halves, no disc for a
+// symbol without a glyph) is held to the bake's own nodes in
+// tests/unit/render/mana-gem-parity.test.tsx.
 //
 // The pickers, deck lists and articles keep mana-font's own look.
 // ---------------------------------------------------------------------------
@@ -66,11 +73,15 @@ function shadowLayers(value: string): Array<{ x: number; y: number; color: strin
 /** The pip's own font size in the bake's px, given its disc's. */
 const pipFontPx = (pip: Element, discPx: number) => em(css(pip, "font-size")) * discPx;
 
-function expectBakeShadow(pip: Element, discPx: number, color = "#111") {
+/** The colour "modern"'s #111 shadow has in a stored PNG. */
+const BAKED_SHADOW = "#0d0d0d";
+
+function expectBakeShadow(pip: Element, discPx: number, color = BAKED_SHADOW) {
   const layers = shadowLayers(css(pip, "box-shadow"));
   expect(layers).toHaveLength(1);
   const { left, down } = discShadowPx(symbolStyle("modern"), discPx);
-  const fontPx = pipFontPx(pip.tagName === "IMG" ? pip.parentElement! : pip, discPx);
+  // A split disc is in the row's own em (1 em = the disc).
+  const fontPx = pip.tagName === "SPAN" ? discPx : pipFontPx(pip.tagName === "IMG" ? pip.parentElement! : pip, discPx);
   expect(layers[0].x * fontPx).toBeCloseTo(-left, 1);
   expect(layers[0].y * fontPx).toBeCloseTo(down, 1);
   expect(layers[0].color).toBe(color);
@@ -105,7 +116,7 @@ const card = (template: FrameTemplate, more: Partial<CardPreviewData> = {}): Car
 const costPips = (body: HTMLElement) =>
   Array.from(body.querySelector('[role="img"][aria-label^="Cost"]')!.children);
 const rulesPips = (body: HTMLElement) =>
-  Array.from(body.querySelectorAll('[data-testid="rules-box"] i.ms-cost'));
+  Array.from(body.querySelectorAll('[data-testid="rules-box"] [data-pip]'));
 /** The layout's inline disc in the HD bake's px, from the size the box says
  *  it drew (RulesMetrics.pipPx). */
 function rulesDiscPx(body: HTMLElement, template: FrameTemplate): number {
@@ -115,6 +126,15 @@ function rulesDiscPx(body: HTMLElement, template: FrameTemplate): number {
 }
 
 describe("the preview's disc shadow is the bake's", () => {
+  it("the stored PNG's shadow colour: the bake's filter lands #111 on #0d0d0d", () => {
+    expect(bakedShadowHex("#111")).toBe(BAKED_SHADOW);
+    expect(bakedShadowHex("#111111")).toBe(BAKED_SHADOW);
+    // sRGB → linear → a whole 8-bit step → sRGB: the ends hold, the mid-tones move a level or none.
+    expect(bakedShadowHex("#000")).toBe("#000000");
+    expect(bakedShadowHex("#fff")).toBe("#ffffff");
+    expect(bakedShadowHex("#808080")).toBe("#808080");
+  });
+
   it("previewDiscShadowCss is discShadowCss's one layer, in em", () => {
     const modern = symbolStyle("modern");
     for (const discPx of [8, 42, 60, 73, 84]) {
@@ -126,10 +146,9 @@ describe("the preview's disc shadow is the bake's", () => {
       expect(layer.y * discPx).toBeCloseTo(down, 2);
     }
     // At least 1 px each way, as the bake's.
-    expect(previewDiscShadowCss(modern, 8, 8)).toBe("-0.1250em 0.1250em 0 #111");
+    expect(previewDiscShadowCss(modern, 8, 8)).toBe(`-0.1250em 0.1250em 0 ${BAKED_SHADOW}`);
     // In em of the element that carries it.
-    expect(previewDiscShadowCss(modern, 73, 53)).toBe(`${(-4 / 53).toFixed(4)}em ${(5 / 53).toFixed(4)}em 0 #111`);
-    expect(previewDiscShadowCss(modern, 73, 53, "#fff")).toMatch(/ #fff$/);
+    expect(previewDiscShadowCss(modern, 73, 53)).toBe(`${(-4 / 53).toFixed(4)}em ${(5 / 53).toFixed(4)}em 0 ${BAKED_SHADOW}`);
     expect(previewDiscShadowCss(FLAT, 73, 53)).toBeUndefined();
   });
 
@@ -141,12 +160,12 @@ describe("the preview's disc shadow is the bake's", () => {
     for (const pip of pips) expectBakeShadow(pip, discPx);
   });
 
-  it("the rules pips: the same layer at their own disc; the untap's stays white", () => {
+  it("the rules pips: the same layer at their own disc — the untap's too (the bake's is dark, not mana-font's white)", () => {
     const body = render(<CardPreview {...card("m15")} />);
     const discPx = rulesDiscPx(body, "m15");
     const pips = rulesPips(body);
-    expect(pips.map((p) => p.className.split(" ").pop())).toEqual(["ms-tap", "ms-2", "ms-g", "ms-wu", "ms-untap"]);
-    for (const pip of pips) expectBakeShadow(pip, discPx, pip.className.includes("ms-untap") ? "#fff" : "#111");
+    expect(pips.map((p) => p.getAttribute("data-pip"))).toEqual(["tap", "2", "g", "wu", "untap"]);
+    for (const pip of pips) expectBakeShadow(pip, discPx);
   });
 
   it("an owner's pip image carries it too", () => {
@@ -162,7 +181,7 @@ describe("the preview's disc shadow is the bake's", () => {
         <CardPip suffix="untap" discPx={60} symbols={FLAT} />
       </>,
     );
-    const pips = Array.from(body.querySelectorAll("i, img"));
+    const pips = Array.from(body.querySelectorAll("[data-pip], img"));
     expect(pips).toHaveLength(4);
     for (const pip of pips) {
       expect(css(pip, "box-shadow")).toBe("");
@@ -178,7 +197,7 @@ describe("the preview's disc shadow is the bake's", () => {
     expect(css(img, "box-shadow")).toBe(symbolStyle("modern").previewShadowCss);
   });
 
-  it("mana-font still draws `.ms-shadow` as the two layers a card overrides", () => {
+  it("mana-font still draws `.ms-shadow` as the two layers the pickers keep (a card's pip takes no `ms-cost` class)", () => {
     const sheet = fs.readFileSync(path.join(process.cwd(), "node_modules/mana-font/css/mana.css"), "utf8");
     expect(/\.ms-cost\.ms-shadow \{([^}]*)\}/.exec(sheet)?.[1]).toMatch(/box-shadow:\s*-0\.06em 0\.07em 0 #111, 0 0\.06em 0 #111/);
     expect(/\.ms-cost\.ms-shadow\.ms-untap \{([^}]*)\}/.exec(sheet)?.[1]).toMatch(/#fff/);
@@ -187,7 +206,7 @@ describe("the preview's disc shadow is the bake's", () => {
 
 describe("a rules pip's glyph is the bake's share of its disc", () => {
   for (const template of ["m15", "modern", "split"] as FrameTemplate[]) {
-    it(`${template}: one-colour symbols at manaGlyphPx, split discs in mana-font's box`, () => {
+    it(`${template}: one-colour symbols at manaGlyphPx, split discs at the bake's halves`, () => {
       const body = render(<CardPreview {...card(template)} />);
       const profile = getFrameProfile(template);
       const discPx = rulesDiscPx(body, template);
@@ -197,12 +216,19 @@ describe("a rules pip's glyph is the bake's share of its disc", () => {
       for (const pip of pips) {
         // The wrapper's font size is the layout's disc, in cqw.
         expect(css(pip.parentElement!, "font-size")).toBe(`${((discPx / width) * 100).toFixed(3)}cqw`);
-        const fontPx = pipFontPx(pip, discPx);
-        if (pip.className.includes("ms-wu")) {
-          expect(fontPx * 1.3).toBeCloseTo(discPx, 1);
-          expect(css(pip, "width")).toBe("");
+        // Never mana-font's cost classes: their look is not the stored card's.
+        expect(pip.className).not.toMatch(/ms-cost|ms-shadow/);
+        if (pip.getAttribute("data-pip") === "wu") {
+          const gem = manaGemSpec("wu", discPx, symbolStyle(profile.symbolStyle));
+          if (gem.kind !== "split") throw new Error("a hybrid is a split disc");
+          expect(css(pip, "width")).toBe("1em");
+          expect(css(pip, "height")).toBe("1em");
+          const halves = Array.from(pip.children);
+          expect(halves.map((h) => h.className)).toEqual(["ms ms-w", "ms ms-u"]);
+          for (const half of halves) expect(pipFontPx(half, discPx)).toBeCloseTo(gem.halfPx, 1);
           continue;
         }
+        const fontPx = pipFontPx(pip, discPx);
         expect(fontPx).toBeCloseTo(manaGlyphPx(discPx), 1);
         // Its box exactly one disc, whatever the glyph's size.
         expect(em(css(pip, "width")) * fontPx).toBeCloseTo(discPx, 1);
@@ -216,7 +242,8 @@ describe("a rules pip's glyph is the bake's share of its disc", () => {
 
   it("CardPip draws the style's own {T} and an owner's image at one disc", () => {
     const tap = render(<CardPip suffix="tap" discPx={60} symbols={FLAT} />).querySelector("i")!;
-    expect(tap.className).toBe("ms ms-cost ms-tap-4ed");
+    expect(tap.className).toBe("ms ms-tap-4ed");
+    expect(tap.getAttribute("data-pip")).toBe("tap-4ed");
     const img = render(
       <CardPip suffix="g" discPx={60} symbols={symbolStyle("modern")} overrideSrc="https://pips.example/g.png" />,
     ).querySelector("img")!;

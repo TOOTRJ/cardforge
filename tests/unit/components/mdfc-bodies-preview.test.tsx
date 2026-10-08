@@ -84,7 +84,7 @@ describe("CardPreview — the modal bodies (TODO 5.1b)", () => {
     expect(l.getAttribute("style")).toContain(`color:${MDFC_FLIPSIDE_BACK.line.colorHex}`);
     expect(Array.from(l.querySelectorAll("i.ms")).map((i) => i.className)).toEqual([expect.stringMatching(/ms-2/), expect.stringMatching(/ms-u/)]);
     // The back's own cost in its name bar: three pips ({3}{U}{U}) outside the strip.
-    const costPips = Array.from(back!.querySelectorAll("i.ms-cost")).filter((i) => !l.contains(i));
+    const costPips = Array.from(back!.querySelectorAll("[data-pip]")).filter((i) => !l.contains(i));
     expect(costPips.length).toBeGreaterThanOrEqual(3);
     expect(back!.querySelector('[data-testid="color-indicator"]')).toBeNull();
     expect(back!.querySelectorAll("[data-frame-overlay]")).toHaveLength(0);
@@ -102,7 +102,7 @@ describe("CardPreview — the modal bodies (TODO 5.1b)", () => {
     for (const face of [front, back!]) {
       const l = line(face)!;
       const box = face.querySelector('[data-testid="rules-box"]');
-      expect(Array.from(face.querySelectorAll("i.ms-cost")).filter((i) => !l.contains(i) && !box?.contains(i))).toHaveLength(0);
+      expect(Array.from(face.querySelectorAll("[data-pip]")).filter((i) => !l.contains(i) && !box?.contains(i))).toHaveLength(0);
     }
   });
 

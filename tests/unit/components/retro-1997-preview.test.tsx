@@ -59,8 +59,16 @@ function renderOn(template: "retro" | "retroland", key: string, over: Partial<Pa
     pt: spans.find((s) => s.textContent === "2/2") as HTMLElement | undefined,
     mark: container.querySelector<HTMLElement>("[data-brand-mark]"),
     slotText: container.querySelector<HTMLElement>('[data-copyright-slot="text"]'),
-    pips: [...container.querySelectorAll<HTMLElement>(".ms.ms-cost")].map((el) => el.className),
+    pips: pipsOf(container),
   };
+}
+
+/** Each pip the card draws (CardPip marks its own with `data-pip`): the
+ *  mana-font suffix it draws, and whether its disc has a shadow. */
+function pipsOf(container: HTMLElement): string[] {
+  return [...container.querySelectorAll<HTMLElement>("[data-pip]")].map(
+    (el) => `${el.getAttribute("data-pip")} ${el.style.boxShadow ? "shadow" : "flat"}`,
+  );
 }
 
 describe("CardPreview — the 1997 ink (the same ink maps as the bake)", () => {
@@ -160,19 +168,14 @@ describe("CardPreview — the 1997 footer and its © slot", () => {
 });
 
 describe('CardPreview — symbolStyle "1997"', () => {
-  it("draws flat discs (no `ms-shadow`) in the cost and the rules text, and the 1997 tap", () => {
+  it("draws flat discs (no shadow) in the cost and the rules text, and the 1997 tap", () => {
     const { pips } = renderOn("retro", "r");
-    expect(pips).toEqual(["ms ms-cost ms-x", "ms ms-cost ms-r", "ms ms-cost ms-tap-4ed", "ms ms-cost ms-r"]);
+    expect(pips).toEqual(["x flat", "r flat", "tap-4ed flat", "r flat"]);
     cleanup();
     // The same card on the 2003 frame keeps M15's shadowed discs and tap.
     const { container } = render(
       <CardPreview title="Probe" cost="{X}{R}" cardType="creature" colorIdentity={["red"]} rulesText="{T}: Add {R}." frameStyle={{ template: "modern" }} />,
     );
-    expect([...container.querySelectorAll(".ms.ms-cost")].map((el) => el.className)).toEqual([
-      "ms ms-cost ms-shadow ms-x",
-      "ms ms-cost ms-shadow ms-r",
-      "ms ms-cost ms-shadow ms-tap",
-      "ms ms-cost ms-shadow ms-r",
-    ]);
+    expect(pipsOf(container)).toEqual(["x shadow", "r shadow", "tap shadow", "r shadow"]);
   });
 });

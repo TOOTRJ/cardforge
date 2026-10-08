@@ -109,13 +109,15 @@ describe("the preview's cost row is the stored bake's", () => {
     });
   }
 
-  it("a split disc keeps mana-font's own box, one disc wide", () => {
+  it("a split disc is one disc wide too (its halves: tests/unit/render/mana-gem-parity.test.tsx)", () => {
     const row = costRow(render(<CardPreview {...card("m15", "{W/U}{2/G}{G}")} />));
     const [hybrid, twobrid, mono] = Array.from(row.children);
     for (const pip of [hybrid, twobrid]) {
-      // mana-font draws `.ms-cost` 1.3 em of the pip's own font size.
-      expect(num(css(pip, "font-size"), "em") * 1.3).toBeCloseTo(1, 3);
-      expect(css(pip, "width")).toBe("");
+      // In the row's own em (1 em = the disc): no font size of its own.
+      expect(css(pip, "font-size")).toBe("");
+      expect(css(pip, "width")).toBe("1em");
+      expect(css(pip, "height")).toBe("1em");
+      expect(css(pip, "flex-shrink")).toBe("0");
     }
     expect(num(css(mono, "font-size"), "em") * 73).toBeCloseTo(manaGlyphPx(73), 2);
   });
@@ -143,8 +145,9 @@ describe("the preview's cost row is the stored bake's", () => {
   it("mana-font still draws `.ms-cost` as the row assumes", () => {
     const sheet = fs.readFileSync(path.join(process.cwd(), "node_modules/mana-font/css/mana.css"), "utf8");
     const block = /\.ms-cost \{([^}]*)\}/.exec(sheet)?.[1] ?? "";
-    // The 0.95 em that made a parent-sized disc 5 % small, and the box a
-    // split disc and a rules pip (sized on the pip itself) still take.
+    // The 0.95 em that made a parent-sized disc 5 % small; the box an
+    // owner's image still takes on a card, and the line proportion a card's
+    // one-colour pip keeps (CardPip).
     expect(block).toMatch(/font-size:\s*0\.95em/);
     expect(block).toMatch(/width:\s*1\.3em/);
     expect(block).toMatch(/height:\s*1\.3em/);

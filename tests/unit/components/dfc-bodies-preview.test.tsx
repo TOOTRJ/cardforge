@@ -93,8 +93,8 @@ describe("CardPreview — the transform bodies (TODO 5.1a)", () => {
     const typeBand = back!.querySelector<HTMLElement>('[data-testid="type-line"]')?.closest("[style*='left:']");
     expect(typeBand?.getAttribute("style")).toContain(`left:${COLOR_INDICATOR.typeLeftPct}%`);
     // No mana cost on the back (the back body hides it) — the front has its pip.
-    expect(back!.querySelector(".ms-cost")).toBeNull();
-    expect(preview().front.querySelector(".ms-cost")).not.toBeNull();
+    expect(back!.querySelector("[data-pip]")).toBeNull();
+    expect(preview().front.querySelector("[data-pip]")).not.toBeNull();
     // The dark plate with white digits.
     expect(back!.innerHTML).toContain("m15dfcback/pt/u");
     expect(back!.innerHTML).toContain("3/2");
