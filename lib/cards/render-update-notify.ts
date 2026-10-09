@@ -112,7 +112,7 @@ export async function notifyOwnersOfRenderUpdates(
     const { data, error } = await admin
       .from("cards")
       .select(
-        "owner_id, layout_version, frame_style, rendered_image_url, visibility, rarity, set_icon_url, set_icon_code, title, cost, supertype, card_type, subtypes, power, toughness, loyalty, defense, back_face, rules_text, flavor_text, face_content, color_identity, art_url",
+        "owner_id, layout_version, frame_style, rendered_image_url, visibility, rarity, set_icon_url, set_icon_code, title, cost, supertype, card_type, subtypes, power, toughness, loyalty, defense, back_face, rules_text, flavor_text, face_content, color_identity, art_url, art_position",
       )
       .in("visibility", ["public", "unlisted"])
       // Coarse SQL filter; hasNewerLook decides. Null stamps and missing
