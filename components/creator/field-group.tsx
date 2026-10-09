@@ -105,6 +105,10 @@ export function FieldGroup({
         // (cancelling it would undo a checkbox tick or a <summary> toggle).
         const target = event.target as HTMLElement;
         if (target.closest(NATIVE_CLICK_TARGETS)) return;
+        // A label of its own inside the group (the watermark's "Large" tick
+        // and "Opacity" slider) forwards to ITS control: leave it alone.
+        const inner = target.closest("label");
+        if (inner && inner !== event.currentTarget) return;
         const first = event.currentTarget.querySelector(
           "input, textarea, select, button, [role='radio'], [role='switch']",
         );
