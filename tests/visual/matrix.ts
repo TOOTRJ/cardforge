@@ -1395,6 +1395,25 @@ export function visualCases(): VisualCase[] {
   });
   add("m15borderlessland", "land", "wu", "short", { suffix: "@pair-foil", finish: "foil", row: pairStyle("m15borderlessland", "foil") });
   add("m15borderlessland", "land", "wu", "short", { suffix: "@pair-square", corners: "square", row: pairStyle("m15borderlessland") });
+  // TODO 4.6h: two colours on the old frames — NEW cases (the switch is a
+  // card's own; the same card without it is the plain "<template>/wu/…"
+  // case, the gold master every stored card paints). The generic "@pair"
+  // above is each template's W|U card (on `modern` the wide, soft pinline);
+  // here a pair with the NARROW pinline (G|W: bg, gw and rw print it), the
+  // darkest pair, an all-hybrid cost (no hybrid dress there: the same
+  // split), the stored bake's size, the foil and the squared print; and the
+  // two land frames' long card at HD, a dark pair and the squared print.
+  add("modern", "creature", "wu", "short", { suffix: "@pair-gw", row: { ...pairStyle("modern"), color_identity: ["green", "white"], cost: "{1}{G}{W}" } });
+  add("modern", "creature", "wu", "short", { suffix: "@pair-ub", row: { ...pairStyle("modern"), color_identity: ["blue", "black"], cost: "{1}{U}{B}" } });
+  add("modern", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("modern"), cost: "{W/U}{W/U}" } });
+  add("modern", "creature", "wu", "long", { suffix: "@pair-hd", preset: "hd", row: pairStyle("modern") });
+  add("modern", "creature", "wu", "short", { suffix: "@pair-foil", finish: "foil", row: pairStyle("modern", "foil") });
+  add("modern", "creature", "wu", "short", { suffix: "@pair-square", corners: "square", row: pairStyle("modern") });
+  for (const land of ["modernland", "retroland"] as const) {
+    add(land, "land", "wu", "long", { suffix: "@pair-hd", preset: "hd", row: pairStyle(land) });
+    add(land, "land", "wu", "short", { suffix: "@pair-br", row: { ...pairStyle(land), color_identity: ["black", "red"] } });
+    add(land, "land", "wu", "short", { suffix: "@pair-square", corners: "square", row: pairStyle(land) });
+  }
   // TODO 4.9b: the collector line, opt-in per card (frame_style.collector —
   // no stored card has the key, so these are NEW cases, no bump): both
   // styles on every slotted template (the primary kind: a token on the
@@ -1906,6 +1925,9 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   // The double-faced spell faces (5.1d): their cases carry a back face
   // (the DFC block below), never the generic pair loop's rows.
   "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback",
+  // The old frames (TODO 4.6h): the 2003 gold card, the 2003 and the 1997
+  // two-colour lands.
+  "modern", "modernland", "retroland",
 ];
 
 /** The collector line's fields on its cases (TODO 4.9b): a real printing's
