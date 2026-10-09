@@ -44,6 +44,7 @@ import {
 } from "@/types/deck";
 import type { DeckItem } from "@/lib/decks/queries";
 import { cn } from "@/lib/utils";
+import { typedForMatching } from "@/lib/validation/print-typography";
 
 // ---------------------------------------------------------------------------
 // DeckCardModal — the "more info" view for one deck entry. Everyone gets the
@@ -502,9 +503,10 @@ function LinkCardPicker({
 
   const filtered = useMemo(() => {
     if (!cards) return [];
-    const q = query.trim().toLowerCase();
+    // Typed and printed quotes / dashes match each other (TODO 6.11).
+    const q = typedForMatching(query.trim().toLowerCase());
     const matches = q
-      ? cards.filter((c) => c.title.toLowerCase().includes(q))
+      ? cards.filter((c) => typedForMatching(c.title.toLowerCase()).includes(q))
       : cards;
     return matches.slice(0, 24);
   }, [cards, query]);

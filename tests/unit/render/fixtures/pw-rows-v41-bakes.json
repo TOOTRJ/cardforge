@@ -30,5 +30,16 @@
   "past the floor | default | foil": "60c7a31aae72ce57367aa537fc90f0e2ba5416bf95810c98be2cbbc5f2bae09b",
   "past the floor | hd | regular": "788c0bb3874307ebcfb938ac42eba94dba49bb97f97e9014d4f36a242e6177e3",
   "past the floor | hd | foil": "9ced36eaa051f74ef488301f07f43bba3a0ba743b07bbd419f054f7e9d7bbcb4"
+ },
+ "v49Comment": "the walkers whose rows draw a mana symbol, as layout v49 bakes them (flat rules-text pips, the white snow flake); written with PIN_PW_BAKES=write-v49 on the v49 commit, never since",
+ "v49": {
+  "pips + reminder | default | regular": "56f9dd6586b01686724ffe94b46a01ead1ea575c38b3772a132b204ae1b3e1ac",
+  "pips + reminder | default | foil": "eacc33ec981c6a10533e9ff7b48a6b5a98efbca3dbc998d796befd2f5ed5aeb0",
+  "pips + reminder | hd | regular": "43151e081b8fd03135ad910aee15766857efc4a597e1c9511f8f3a76c2c22afb",
+  "pips + reminder | hd | foil": "f22573aef6d71fa5a7d8a3bf7e9288961c289c6ad1ae241765ec8d18f1cb9e0b",
+  "past the floor | default | regular": "8c5e8fb8461dcff6f3908dc49065f2a2e3cf85644acf0491572be3029d8edd4e",
+  "past the floor | default | foil": "f11dc64deb9440d84d3d4bfa2ee9cc6aa1472b2973a878f18c3582090c7c8935",
+  "past the floor | hd | regular": "a6ff7e5d1426426995f1adacee78695b2d98cc41da306cc30de3299b553871ea",
+  "past the floor | hd | foil": "7ba23f74e5a5fc26101e37007e80c93e591a81805140fcbc7f44a5d10120a0b5"
  }
 }

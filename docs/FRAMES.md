@@ -2635,6 +2635,104 @@ bakes at 750 and HD — and the published symbols),
 `tests/unit/frames/alpha-1993-importer.test.ts` (the recipe, provenance) and
 the preview twin under `components/`.
 
+### Two colours on the old frames (4.6h)
+
+An ADDITION ([above](#additions-vs-corrections)): the card's own
+`frame_style.twoColor` switch, as on m15 — new two-colour cards start with it
+on, a stored card keeps plain gold until its owner switches it on, an import
+follows the printing. No layout bump, no sweep, no badge.
+
+**What the prints do** (181 scans read on 2026-10-08; each print pixel's
+share between OUR two single-colour masters of the frame, a ramp fitted by
+least squares):
+
+| Look | Prints | What splits | Where |
+|---|---|---|---|
+| 2003 gold card, two colours (Ravnica 2005 → Journey into Nyx 2014) | 52 | the pinline and the text box; the frame body, the bars and the P/T box stay gold | box: a soft blend 25→73 %W on every pair. Pinline: the same soft blend (25→71) on wu wb ub ur br rg gu, a narrow straight one (42→59) on bg (8 of 8), gw (6 of 7) and rw (6 of 8) |
+| 2003 two-colour land (Eighth Edition 2003 → Theros 2013) | 36 | the pinline and the text box, over the PLAIN land's body and grey bars | one straight ramp, 42→59 %W |
+| 1997 two-colour land (Sixth Edition 1999 → Onslaught 2002) | 36 | the text box and the box's ring, over the plain land — its gold outer and art rings too | one straight ramp, 40→60 %W |
+
+What prints NO two-colour look, and so is not built:
+
+- **1997 gold spells** — one gold frame whatever the colours (12 of 12,
+  Mirage 1996 → Odyssey 2001). `retro` declares no pairs, and the registry
+  no longer calls a two-colour 1997 gold printing a gap (`GOLD_PAIR_TEMPLATES`).
+- **1997 lands of 1997–98** (Fifth Edition, Tempest, Anthologies: 11 of 11)
+  and the ones coloured only by their abilities (Judgment, Onslaught: 5 of
+  5) — the plain land's orange box. They import as the plain land
+  (`landFrameColors`).
+- **The 2003 frame before Ravnica** — its one two-colour gold card, Iname as
+  One (SOK #151, June 2005), is plain gold. It imports on the gold master
+  with no switch (`TWO_COLOUR_2003_GOLD_FROM`).
+- **2003 hybrid cards** — the frame BODY is split, the bars and the P/T box
+  are grey (10 of 10). Another look, not drawn: the `two-colour-hybrid` gap
+  stays. An all-hybrid cost with the switch on gets the gold card's split,
+  with the creator's one-line note, as on m15artifact.
+
+**The masters are synthesised.** Card Conjurer's packs hold no two-colour
+file for either era (the 8th pack: fifteen single masters and five masks;
+the Seventh pack: fourteen, and a "Dual Land" mask of nested rectangles that
+no print wears). A pair master is made of the template's OWN finished
+masters — the pack's drawings after their re-cut and tones, never a scan
+(`oldFramePairLayers`, `scripts/import-cc-frames.mjs` `pairOfFinishedMasters`):
+the base whole (`modern/m`; the plain land `c`), and inside the split
+regions the pair's two colour masters blended left to right by a
+premultiplied lerp (`scripts/lib/pair-ramp.mjs`; a ramp may now be
+`[from, to, "smooth"]`, a smoothstep). The regions are the pack's own Rules
+and Pinline masks moved with the cut (2003) and the drawing's own box and
+ring (1997). A 1997 pair's two sides are built on the PLAIN land's cut: the
+basics' boxes sit up to 2.5 px off it, the dual prints' box within 1 px of
+it. `tests/unit/frames/old-frame-pair-masters.test.ts` recombines every 2003
+pair from the published files to the byte.
+
+**Code.** `twoColorMasters: ["split"]` on the `modern`, `modernland` and
+`retroland` PROFILES entries (`twoColorForLands` on the two lands), with the
+pair keys' ink through `withPairInk` (a pair prints its base master's ink:
+the gold frame's dark footer and mark, the land's white, the 1997 white with
+its shadow). The P/T plate is the gold `m` plate (`plateKeyFor`). Both
+renderers, the creator's switch and its copy, the save and the remix are
+4.6b's, untouched.
+
+**Import** (`printsTwoColorFrame`): the 2003 frame — a land always, a gold
+card from Ravnica on (`TWO_COLOUR_2003_GOLD_FROM`), never a hybrid card; the
+1997 frame — a land that taps for both colours, printed from 1999 on
+(`TWO_COLOUR_1997_LAND_FROM`), or an Onslaught fetch land. Two printings the
+data cannot tell, found by the skeptic pass on 251 further printings
+(2026-10-08) and named:
+
+- Scryfall dates the 2005 promos 2005-01-01. Arena League's Skyknight
+  Legionnaire (PAL05 #8) prints the split, the textless Psychatog of Player
+  Rewards (P05 #1) plain gold — so the one early set is named
+  (`TWO_COLOUR_2003_GOLD_EARLY_SETS`), never "any promo". The seven
+  printings Scryfall dates before the day are those two, Iname as One and
+  Unhinged's four (plain gold).
+- Riftstone Portal (JUD #143) taps for {C} alone; the {G} and {W} Scryfall
+  lists are what it grants other lands. It prints the plain land
+  (`LAND_FRAME_OVERRIDES`).
+
+**Verification.** A pair rides its template's `m` tick (owner decision
+2026-09-29, V-A), after the owner signs the PR's pair sheets — nothing new to
+tick. The creator's gate reads the colour key (`frameGateError`,
+`pickFrameColorKey`), and a pair's is `m`. Production, read 2026-10-08:
+`modern/m`, `modernland/m` AND `retroland/m` are ticked (`retroland`'s seven
+keys were ticked together that morning, at layout 46), so all three
+templates' pairs are offered there as soon as the masters are promoted and
+this is deployed. `retroland/m` itself is a render stand-in (the plain land
+with a gold box, which no printing read wears — a three-colour 1997 land
+prints the plain orange box); its tick is what offers the pairs AND that
+stand-in. The dev database has no `retro` / `retroland` tick at all, so on a
+preview only an admin's `?previewFrames=retroland` reaches them. One tick
+reads stale on the sign-off page after this: `retroland/m` was scored against
+Seaside Haven (ONS #323), which now imports as the plain land `c` and left
+the slot for Crosis's Catacombs — the gate (verified rows only) is not
+affected.
+
+**Proof that nothing stored changes.** The replay of 124 visible production
+cards (all 8 on `modern`; production holds none on the other three) is
+byte-identical at 750 and HD, base against head; with the switch forced on,
+the 8 stay identical (their colour is stored `multicolor`, no pair); the
+visual matrix: 1,451 unchanged, 0 changed, 15 new.
+
 ### Printed pieces a card switches on
 
 TODO 4.6.0. The legendary crown (4.6a) and the two-colour frames (4.6b) are
@@ -2661,8 +2759,10 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
   card printed without it (M15–RIX, List reprints) and for a Legendary
   showcase, and absent for a nonlegendary printing, a showcase one included
   (owner 2026-09-30); `printed_two_color` is `true` (with
-  its pair) for a 2015-frame printing of exactly two colours, else absent —
-  never `false`. A switch the printing doesn't name takes the new-card
+  its pair) for a 2015-frame printing of exactly two colours — and, since
+  4.6h, for an old-frame printing that prints them
+  ([above](#two-colours-on-the-old-frames-46h)) — else absent, never
+  `false`. A switch the printing doesn't name takes the new-card
   default (the save's stamp; the creator's form, `importedFormAnatomy`), so a
   card made Legendary or given a pair later starts on, like any new card.
   A stored card shows each switch OFF with a one-line
@@ -2673,8 +2773,8 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
   on a pair, or a plain `["multicolor"]` card whose cost spans two colours
   or has no coloured pip (`offersTwoColor` — never three colour words, never
   a Multicolor card whose cost spans one or three-plus), and for a LAND only
-  on a land frame (`twoColorFits`: m15land, m15snowland and the borderless
-  land, `twoColorForLands`). A two-colour
+  on a land frame (`twoColorFits`: m15land, m15snowland, the borderless
+  land and, since 4.6h, modernland and retroland — `twoColorForLands`). A two-colour
   land stored with no template draws on m15, whose gold-split isn't a
   land's (Shadowwood Hollow, Sunfade Citadel): the switch is hidden there,
   the save drops it and the renderers don't draw it (owner round 17).
@@ -5276,7 +5376,8 @@ frame's era decides are DATA on its profile; no renderer names them.
   prints that text at the end of line 1.
 - **The symbol style** — `FrameProfile.symbolStyle`
   (`lib/cards/symbol-style.ts`): `"modern"` (M15's discs, their hard offset
-  shadow, the modern tap — every profile that names none), `"1997"`
+  shadow under the COST, flat pips in the rules text since layout v49, the
+  modern tap — every profile that names none), `"1997"`
   (flat discs, mana-font's `tap-4ed`: `retro`, `retroland`) and `"2003"`
   (a COST disc with a black shadow down and a little to the left, flat pips in the rules
   text, the modern tap: `modern`, `modernland`) and `"original"` (flat discs
@@ -5293,21 +5394,24 @@ profile each of them and requires the same answer from the bake and the
 preview.
 
 **A card's pip is ONE description, drawn twice** (preview-symbol parity,
-2026-10-07; preview only, no layout bump). `lib/cards/mana-gem.ts`
-`manaGemSpec()` holds what the bake has always drawn — the disc's colour per
-tint, the `#150d08` ink, the glyph at `manaGlyphPx`, a hybrid / twobrid
-disc's 135° fill and its two half-symbols' size and corners — and both the
-bake's `ManaGem` and the preview's `CardPip` read it; neither keeps a table
-of its own. A number there is a stored-bake number: changing one is a layout
-bump. `CardPip` takes mana-font's `ms ms-<suffix>` for the font and the
-glyph ONLY and is marked `data-pip="<suffix>"` (tests and tools select a
-card's pips by that); it never takes mana-font's cost or shadow class, whose
-own look is not the stored card's (a black untap disc, a ×1.2 Phyrexian
-symbol, a white snow symbol, lighter split colours at other offsets, `#111`
+2026-10-07; the prints' own drawings since layout v49, below).
+`lib/cards/mana-gem.ts` `manaGemSpec(symbol, pipPx, style)` holds what the
+bake draws where a PLAIN pip's disc is `pipPx` — the disc's own diameter
+(`discPx`: a Phyrexian symbol's is larger), its colour per tint or none, the
+`#150d08` ink, the glyph's size (`manaGlyphPx` for most), a hybrid / twobrid
+disc's 135° fill and its two half-symbols' size and corners, the snow
+flake's SVG — and both the bake's `ManaGem` and the preview's `CardPip` read
+it; neither keeps a table of its own. A number there is a stored-bake
+number: changing one is a layout bump. `CardPip` takes mana-font's
+`ms ms-<suffix>` for the font and the glyph ONLY and is marked
+`data-pip="<suffix>"` (tests and tools select a card's pips by that); it
+never takes mana-font's cost or shadow class, whose own look is not the
+stored card's (its own untap disc, Phyrexian scale and snow glyphs, a disc
+behind the energy symbol, lighter split colours at other offsets, `#111`
 ink) and cannot be overridden from an element's style. Those classes stay on
 every pip OUTSIDE a card (pickers, toolbar, deck lists, articles, the
 dashboard), which keep mana-font's look. A symbol mana-font has no glyph for
-(`{C/P}`, `{W/U/P}`, `{21}`, `{1/2}`…) draws NOTHING in either renderer — no
+(`{C/P}`, `{21}`, `{1/2}`…) draws NOTHING in either renderer — no
 disc, no room, no gap: `hasManaGlyph()` is the browser's copy of the bake's
 codepoint map (`lib/render/card-fonts.ts` is server-only), held to the
 installed `mana.css` by `tests/unit/cards/mana-gem.test.ts` — a mana-font
@@ -5319,22 +5423,105 @@ the renderers' tokenizer and asks `drawsManaGem()` — no list of its own, the
 owner's custom pip image first as both renderers do (today only `{W}`…`{C}`,
 which the font has, so an override changes no answer) — and
 `UndrawableSymbolNotice` names them per field beside the missing-character
-notice ("Mana cost: {21} and {W/U/P} can't be drawn and will be left off the
+notice ("Mana cost: {21} and {C/P} can't be drawn and will be left off the
 card."); flavor text is not read, no renderer parses symbols there, and
 neither is the `rules_text` of a planeswalker or saga frame with a filled
 row — the card draws the rows, and the form's serialized copy (an import, a
 saved card) has no field to edit it in (`cardSymbolFields`). The AI
 lint refuses one in a cost or rules text through the same helper (the
-judge's pass, then `withDrawableSymbols`: `{W/U/P}` → `{W/U}`, a generic
-past the font's last → the largest that draws), and a Scryfall import of a
-printing that uses one says so (`undrawableSymbolsNotice`: toast + the
-import dialog's note; Ajani, Sleeper Agent's `{G/W/P}`). DRAWING the hybrid
-Phyrexian symbols is a look change and an owner decision — not done. The shadow's
+judge's pass, then `withDrawableSymbols`: a generic past the font's last →
+the largest that draws), and a Scryfall import of a printing that uses one
+says so (`undrawableSymbolsNotice`: toast + the import dialog's note). The
+hybrid Phyrexian symbols (`{G/U/P}`: Tamiyo, Compleated Sage; Ajani, Sleeper
+Agent's `{G/W/P}`) DRAW since layout v49 — the notices follow
+`drawsManaGem()` and no longer name them, and the AI's `{W/U/P}` → `{W/U}`
+swap and prompt sentence are gone. The shadow's
 colour in the preview is the one the PNG holds, not the style's CSS colour
 (`bakedShadowHex()`: sharp's librsvg runs the shadow's filter in 8-bit
 linearRGB, `#111` lands on `#0d0d0d`); `mana-gem-parity.test.tsx` reads it
 out of a real bake. A new symbol style puts its pip data in the spec /
 `mana-gem.ts` and both renderers follow.
+
+### Symbols as printed (layout v49, TODO 6.16b; owner round 43, 2026-10-08)
+
+Six corrections of a card's symbols against real prints — Scryfall PNGs,
+2006 → 2025, each symbol's disc found by a fitted circle and scaled to the
+HD bake (the round's sheets and measurement tables; no scan is read by a
+build). The numbers live in `lib/cards/mana-gem.ts` as data.
+
+| | the prints | a card (HD) | was |
+|---|---|---|---|
+| a pip in RULES text, `modern` style | flat: shadow 0.003 ± 0.010 of the disc under 31 text pips on 21 prints (M15 2014 → TDM 2025); 0.079 ± 0.017 under the same cards' cost discs | no shadow (`inlineShadow: false`); the cost row keeps 0.06 left / 0.07 down | the cost's shadow under every inline pip |
+| Phyrexian `{W/P}`: the disc | 1.175 ± 0.020 of the plain pips beside it in a cost (n = 8, M15 frame; New Phyrexia's on the 2003 frame: 80.9 px against that frame's 66 = 1.22), 1.21 ± 0.08 in rules text (n = 8) | ×1.2 (`LARGE_PIP_SCALE`): 88 px beside 73 in a cost, 72 beside 60 in 9-point text, on the plain pip's centre | the plain pip's disc |
+| Phyrexian: the symbol | 0.904 ± 0.009 of ITS disc tall in a cost (n = 11), 0.913 ± 0.018 in text (n = 8) | font size 0.91 of the disc (the glyph is 1 em tall; 0.90 in the PNG) | 0.73 × a 1 em glyph on the smaller disc: 0.70 |
+| two-colour Phyrexian `{G/U/P}` | disc 1.224 ± 0.025 of its neighbours (n = 5: NEO, DMU, ONE); each half's symbol 0.453 ± 0.051 of the disc tall, 0.169 ± 0.029 of it off the centre | the hybrid's 135° fill on the ×1.2 disc, mana-font's `p` in each half at 0.45 of the disc (`PHYREXIAN_SPLIT_GEM`) | not drawn at all (no disc, no room) |
+| untap `{Q}` | disc #202123, arrow #fefdfe, 0.639 ± 0.008 of the disc tall and 0.622 ± 0.011 wide (n = 9, SHM 2008 → MB2 2024) | disc `#211f23`, arrow `#ffffff`, font size 0.9 of the disc (mana-font's arrow is 0.704 em: 0.63) | the grey disc, a dark arrow 0.51 of it |
+| snow `{S}` | a WHITE flake 0.921 ± 0.009 of its grey disc across (text, n = 6; 0.94 in a cost), a dark outline 3.1 ± 0.4 HD px = 0.056 of the flake (n = 8, CSP 2006 → J22 2022: one drawing throughout) | the generic disc, the flake 0.92 of it (56 × 54 px on 60), white inside a 2.3–2.8 px outline | mana-font's `s`: a dark line drawing 0.70 of the disc, no white |
+| energy `{E}` | NO disc; the symbol 0.895 ± 0.012 of a text pip's disc tall, 0.883 ± 0.016 wide, advancing like a pip (18 symbols on 9 prints, KLD 2016 → DRC 2025) | no disc and no shadow (`bg: null`), font size 1.04 of the cell (0.863 em tall: 0.90), in a plain pip's cell | a grey disc with the symbol 0.63 of it |
+
+**Per era.** One look on every symbol style, by the prints: the untap
+symbol first printed on the 2003 frame (Shadowmoor / Eventide 2008) in the
+drawing the M15 frame keeps; Phyrexian mana on the 2003 frame (New Phyrexia
+2011) at the same ×1.2 and 0.90; the snow symbol on the 2003 frame
+(Coldsnap 2006 — Ice Age and Alliances of 1995–96 print no snow symbol);
+energy (Kaladesh 2016) and the two-colour Phyrexian symbol (Kamigawa: Neon
+Dynasty 2022) on the M15 frame only. The 1997 and 1993 frames never printed
+any of the five (the 2021+ retro reprints are not their reference), so a
+card on them takes the nearest printed look — the same one: on the
+`"original"` style (TODO 4.10c) the five COLOUR symbols stay the 1993
+drawings (bucket images, a plain pip's disc), and `{Q}`, `{S}`, `{E}`, a
+Phyrexian symbol and the two-colour Phyrexian disc are the font's glyphs in
+the printed look, as on every other style. The flat inline pip is
+`modern`'s correction alone: `"1997"`, `"2003"` and `"original"` already
+set it flat. NOT part of this: the hybrid and twobrid discs (the prints' look
+larger too — GTC #215 41 px against 35 — a measuring task of its own) and
+the plain cost disc's size.
+
+**How.** `pipScale()` / `pipDiscPx()` / `pipRisePx()` (mana-gem.ts) are the
+one answer to "how big is this pip": the rules layout measures a pip with
+them (`pipWidthPx`, `pipTopOf` in `lib/cards/rules-layout.ts` — widths, ink
+boxes, keep-outs, the clip check), the cost row's room for the name
+(`costRowTerms`), and both renderers draw `manaGemSpec().discPx` at
+`pipTopOf` — a larger disc keeps a plain pip's centre. The snow flake is
+ONE inline SVG both renderers draw from the spec (`SnowFlakeSpec`: the
+font's white parts — `lib/cards/snow-flake-path.ts`, glyph data of
+mana-font's `s-mtga`, SIL OFL 1.1, no font file added — stroked in the ink,
+then filled and stroked thinly in white): Satori has no text stroke, and
+the same vector element in the browser is the same shape. The energy
+symbol keeps a pip's cell, so no line moves.
+
+**Rollout.** A CORRECTION: `"sweep"`, no badge, after the owner's round-43
+sheets. Card-scoped (`v49Changed`): a redrawn symbol anywhere a pip is read
+(cost, rules text, walker rows, saga rail, second face), or an inline pip
+in printed text on a template that shadowed it (every template but
+`retro`, `retroland`, `modern`, `modernland`, `agclassic`, `alphaland`), or
+a modal double-faced body
+(its strip sets the other face's cost as text pips); every other card is
+stamped without a re-bake. Verification-neutral: no slot, master, size or
+plate moves.
+
+**What moved (measured 2026-10-08, v48's `main` `ad18f226` against the v49
+commit).** Public production, 863 cards (anonymous read; each row replayed
+art-less at HD on both commits — the replay of the one card baked with its
+art on the v47 base is the stored production PNG pixel for pixel): 356
+re-bake — 353 change pixels (349 by the flat pip alone, three by `{Q}`, one
+by a Phyrexian `{W/P}`), 3 re-bake to the same pixels (a pip in a legacy
+second face the frame does not draw) — and 507 are stamped, each
+byte-identical on both commits; of 129 unlisted, 51 re-bake. No stored card
+changes its rules size or a line break, the Phyrexian one included (72 px,
+the same seven lines). 240 real rules texts: the flat pip alone moves no
+size and no break; the larger Phyrexian disc moves a break in 4 of the 30
+texts that carry one, and no size. The visual matrix: 656 of 1451 cases
+change (650 the flat pip, 6 "edge" cards `{Q}` / `{B/P}`); one moves a
+line break by the flat pip — the saga set past the floor, whose chapter
+column was inset 3 px for the shadow of a pip that starts a line
+(`sideInsetNeeded`) and is that much wider now — none changes size, none
+its clipped state, and `rules-no-clip.test.tsx` draws a text of these
+symbols through every rules consumer without a clip. Chromium against the
+HD bake (m15, the 2003 and 1997 frames, a walker's rows, a saga's rail; 750
+and 1500 px; 178 pips, each of the six in a cost and in text): every
+symbol's ink box within 2 px in place and size (the two-colour disc's pair
+of symbols within 4).
 
 **A pip's class is never written out as a literal.** mana-font's class for
 generic mana is `ms-` + the number, and Tailwind reads the same token as a

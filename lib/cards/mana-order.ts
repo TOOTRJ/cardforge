@@ -66,8 +66,10 @@ const SEQUENCE_BY_KEY = new Map(
   CANONICAL_SEQUENCES.map((seq) => [sortByWheel(seq), seq] as const),
 );
 
-// Canonical internal order for hybrid pairs ({U/W} prints as {W/U}).
-const HYBRID_PAIRS = [
+// Canonical internal order for hybrid pairs ({U/W} prints as {W/U}) — and
+// the order the ten pairs are listed in (Scryfall's symbology, mana-font's
+// classes, the creator's symbol toolbar).
+export const HYBRID_PAIRS = [
   "WU",
   "WB",
   "UB",
@@ -83,6 +85,13 @@ const HYBRID_PAIRS = [
 const HYBRID_PAIR_BY_KEY = new Map(
   HYBRID_PAIRS.map((pair) => [sortByWheel(pair), pair] as const),
 );
+
+/** The printed order of a two-colour pair, whichever way it was typed
+ *  ("U", "G" → "GU"); null when the two are not two different colours. */
+export function canonicalHybridPair(a: string, b: string): string | null {
+  if (a === b) return null;
+  return HYBRID_PAIR_BY_KEY.get(sortByWheel((a + b).toUpperCase())) ?? null;
+}
 
 /** Resolve a set of colors to the canonical printed sequence. */
 export function canonicalColorSequence(colors: Iterable<string>): string {
