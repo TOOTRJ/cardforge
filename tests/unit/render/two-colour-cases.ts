@@ -200,6 +200,116 @@ export const PAIR_CASES: readonly PairCase[] = [
     master: "m15borderlessland/gw",
     plate: "/frames/m15borderless/pt/m.png",
   },
+  // TODO 4.6h: two colours on the old frames — `modern`'s gold pair under
+  // the gold plate (an all-hybrid or a cost-less card too: the frame has no
+  // hybrid dress), the two land frames' pairs; a LAND on `modern` stays gold
+  // (twoColorFits), and `retro` draws no pair at all (the 1997 frame printed
+  // one gold card).
+  {
+    id: "2003 gold pair (RAV #239 style): the pair master, the gold plate",
+    card: { colorIdentity: colours("green", "white"), cost: "{G}{W}", frameStyle: on("modern") },
+    master: "modern/gw",
+    plate: "/frames/modern/pt/m.png",
+  },
+  {
+    id: "2003 pair with an all-hybrid cost: the split (no hybrid dress on the 2003 frame)",
+    card: { colorIdentity: colours("red", "white"), cost: "{R/W}{R/W}", frameStyle: on("modern") },
+    master: "modern/rw",
+    plate: "/frames/modern/pt/m.png",
+  },
+  {
+    id: "2003 pair stored second colour first with the AI's multicolor token: printed order (U|R)",
+    card: { colorIdentity: colours("red", "blue", "multicolor"), cost: "{1}{U}{R}", frameStyle: on("modern") },
+    master: "modern/ur",
+    plate: "/frames/modern/pt/m.png",
+  },
+  {
+    id: "2003 dual land (RAV #284 style): the land pair, no plate",
+    card: {
+      cardType: "land",
+      supertype: null,
+      subtypes: ["Forest", "Plains"],
+      colorIdentity: colours("green", "white"),
+      cost: null,
+      power: null,
+      toughness: null,
+      frameStyle: on("modernland"),
+    },
+    master: "modernland/gw",
+    plate: null,
+  },
+  {
+    id: "1997 dual land (INV #321 style): the land pair, no plate",
+    card: {
+      cardType: "land",
+      supertype: null,
+      subtypes: [],
+      colorIdentity: colours("white", "blue"),
+      cost: null,
+      power: null,
+      toughness: null,
+      frameStyle: on("retroland"),
+    },
+    master: "retroland/wu",
+    plate: null,
+  },
+  {
+    id: "a LAND stored on the 2003 nonland frame: gold (a land wears the pairs on a land frame only)",
+    card: {
+      cardType: "land",
+      supertype: null,
+      subtypes: [],
+      colorIdentity: colours("white", "blue"),
+      cost: null,
+      power: null,
+      toughness: null,
+      frameStyle: on("modern"),
+    },
+    master: "modern/m",
+    plate: null,
+  },
+  {
+    id: "1997 gold pair (INV #264 style): gold — the printed look, no pair masters",
+    card: { colorIdentity: colours("blue", "black"), cost: "{1}{U}{B}", frameStyle: on("retro") },
+    master: "retro/m",
+    plate: null,
+  },
+  {
+    id: "2003 pair, no key (every stored card): gold",
+    card: { colorIdentity: colours("green", "white"), cost: "{G}{W}", frameStyle: { template: "modern" } },
+    master: "modern/m",
+    plate: "/frames/modern/pt/m.png",
+  },
+  {
+    id: "2003 dual land, switched off: the gold land",
+    card: {
+      cardType: "land",
+      supertype: null,
+      subtypes: [],
+      colorIdentity: colours("green", "white"),
+      cost: null,
+      power: null,
+      toughness: null,
+      frameStyle: { template: "modernland", twoColor: false },
+    },
+    master: "modernland/m",
+    plate: null,
+  },
+  {
+    id: "1997 dual land, no key (every stored card): the stand-in",
+    card: {
+      cardType: "land",
+      supertype: null,
+      subtypes: [],
+      colorIdentity: colours("white", "blue"),
+      cost: null,
+      power: null,
+      toughness: null,
+      frameStyle: { template: "retroland" },
+    },
+    master: "retroland/m",
+    plate: null,
+  },
   // The look each card had before 4.6b stays wherever the switch isn't on,
   // the identity isn't a pair, or the frame has no pair masters.
   {

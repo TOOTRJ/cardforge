@@ -42,6 +42,12 @@ export const RULES_ALIGN_OPTIONS: ChipOption<RulesAlign>[] = [
 export const RULES_ALIGN_HELP =
   "Centred sets every line in the middle of its text box, as some printed cards set a short text. It applies to every text box of the card.";
 
+/** The rules box's helper. Its last sentence is TODO 6.11's: the conversion
+ *  happens when a text field loses focus (lib/validation/
+ *  print-typography.ts), and the box says so before it does. */
+export const RULES_TEXT_HELP =
+  "Click a symbol to drop it in at the cursor — or type its code ({T}, {2}, {W/U}) and it turns into the icon. Up to 4000 characters. Plain quotes, a spaced hyphen and a line starting “- ” become print’s ’ “ ” — and • when you leave the box.";
+
 type TextPanelProps = {
   rulesTextRef: React.MutableRefObject<PipTextEditorHandle | null>;
   /** Symbol insertion into rules_text at the caret (orchestrator-owned). */
@@ -77,7 +83,7 @@ export function TextPanel({ rulesTextRef, onInsertSymbol }: TextPanelProps) {
       <FieldGroup
         label="Rules text"
         error={fieldState.error?.message}
-        helper="Click a symbol to drop it in at the cursor — or type its code ({T}, {2}, {W/U}) and it turns into the icon. Up to 4000 characters."
+        helper={RULES_TEXT_HELP}
       >
         <div className="flex flex-col gap-2">
           <RulesSymbolToolbar onInsert={onInsertSymbol} />

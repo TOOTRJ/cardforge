@@ -43,7 +43,7 @@ import {
   loyaltyRowsDrawing,
   type LoyaltyRowsLayout,
 } from "@/lib/cards/loyalty-rows";
-import { wordWidthPx, type RulesBlock, type RulesLayout, type RulesMetrics } from "@/lib/cards/rules-layout";
+import { pipTopOf, wordWidthPx, type RulesBlock, type RulesLayout, type RulesMetrics } from "@/lib/cards/rules-layout";
 import { flipsideStrip, type FlipsideLine } from "@/lib/cards/flipside-strip";
 import {
   profileSagaRail,
@@ -2176,7 +2176,7 @@ function FlipsideLineOverlay({ slot, line, orientation, overrides }: { slot: Tex
                 suffix={item.suffix}
                 disc={hd(m.pipPx)}
                 discPx={m.pipPx}
-                top={hd(m.pipTopPx)}
+                top={hd(pipTopOf(item, m))}
                 gapBefore={i > 0 && run[i - 1].t === "m" ? hd(m.pipGapPx) : null}
                 overrides={overrides}
               />
@@ -3003,7 +3003,7 @@ function RulesLineItem({
         suffix={item.suffix}
         disc={hdCqw(m.pipPx, orientation)}
         discPx={m.pipPx}
-        top={hdCqw(m.pipTopPx, orientation)}
+        top={hdCqw(pipTopOf(item, m), orientation)}
         gapBefore={pipGapBefore ? hdCqw(m.pipGapPx, orientation) : null}
         overrides={overrides}
       />
@@ -3044,12 +3044,14 @@ function RulesPip({
   overrides,
 }: {
   suffix: string;
-  /** The disc's diameter (RulesMetrics.pipPx, in cqw). */
+  /** A plain pip's diameter (RulesMetrics.pipPx, in cqw); CardPip draws a
+   *  larger disc for a Phyrexian symbol from it. */
   disc: string;
   /** That disc in the HD bake's px. */
   discPx: number;
-  /** The disc's top in its line box (RulesMetrics.pipTopPx, in cqw): the
-   *  run is the line box tall, so the wrapper sits at exactly that top. */
+  /** The disc's top in its line box (the layout's pipTopOf — pipTopPx, less
+   *  a larger disc's rise — in cqw): the run is the line box tall, so the
+   *  wrapper sits at exactly that top. */
   top: string;
   gapBefore: string | null;
   overrides: PipOverrides | null;
@@ -3220,7 +3222,7 @@ function RulesBoxLine({
                   suffix={item.suffix}
                   disc={pipDisc}
                   discPx={d.pipPx}
-                  top={hd(d.pipTopPx)}
+                  top={hd(pipTopOf(item, d))}
                   gapBefore={i > 0 && run[i - 1].t === "m" ? hd(d.pipGapPx) : null}
                   overrides={overrides}
                 />

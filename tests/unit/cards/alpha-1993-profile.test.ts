@@ -269,7 +269,10 @@ describe('symbolStyle "original" — flat discs, the 1993 drawings, the tilted T
     // …and the inline disc is every style's 0.785 em (the era design: it
     // does not move).
     expect(metricsFor(76, undefined, "hd", "original").pipPx).toBe(metricsFor(76, undefined, "hd").pipPx);
-    expect(metricsFor(76, undefined, "hd").pipShadowPx).toBeGreaterThan(0);
+    // (Every style's inline pip is flat since layout v49 — "modern" kept
+    // 4 px clear under it until then; its COST row still measures a shadow.)
+    expect(metricsFor(76, undefined, "hd")).toMatchObject({ pipShadowPx: 0, pipShadowLeftPx: 0 });
+    expect(SYMBOL_STYLES.modern.costRowShadowDiscs).toBeGreaterThan(0);
   });
 
   it("72 px discs 84 px apart (the prints: 72.6 ± 1.0 and 83.2 ± 1.3) — a wider gap than every other style's 0.12", () => {
@@ -294,14 +297,18 @@ describe('symbolStyle "original" — flat discs, the 1993 drawings, the tilted T
       expect(path).toBe(`/frames/${ORIGINAL_SYMBOL_FOLDER}/${c}.png`);
       expect(symbolImagePath(style, c)).toBe(path);
       expect(symbolImagePath(style, c.toUpperCase())).toBe(path);
-      expect(manaGemSpec(c, 72, style)).toEqual({ kind: "image", suffix: c, path });
+      // The whole pip as an image, on a plain pip's disc.
+      expect(manaGemSpec(c, 72, style)).toEqual({ kind: "image", suffix: c, discPx: 72, path });
       expect(drawsManaGem(c, style)).toBe(true);
       // Published: the manifest lists the PNG and its WebP sibling.
       const files = (manifestJson as { files: Record<string, { width: number; height: number }> }).files;
       expect(files[`${ORIGINAL_SYMBOL_FOLDER}/${c}.png`], c).toMatchObject({ width: 216, height: 216 });
       expect(files[`${ORIGINAL_SYMBOL_FOLDER}/${c}.webp`], c).toBeDefined();
     }
-    for (const other of ["c", "x", "0", "7", "s", "wu", "2w", "wp", "untap"]) {
+    // …the symbols layout v49 redrew included: the 1993 frame never printed
+    // a Phyrexian, snow, untap or energy symbol, so it takes the printed
+    // look every other style draws (the font's glyph, never an image).
+    for (const other of ["c", "x", "0", "7", "s", "wu", "2w", "wp", "untap", "e", "gup"]) {
       expect(symbolImagePath(style, other), other).toBeNull();
       expect(manaGemSpec(other, 72, style), other).toEqual(manaGemSpec(other, 72, SYMBOL_STYLES.modern));
     }

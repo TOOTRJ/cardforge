@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
+import { canonicalHybridPair } from "@/lib/cards/mana-order";
 import { pipOverrideForToken, type PipOverrides } from "@/lib/pips/override";
-import { drawsManaGem, manaGemSpec } from "@/lib/cards/mana-gem";
+import { SNOW_FLAKE_MITRE, drawsManaGem, manaGemSpec } from "@/lib/cards/mana-gem";
 import { frameUrl } from "@/lib/frames/frame-url";
 import {
   previewDiscShadowCss,
@@ -21,6 +22,7 @@ import {
 //   {W/U} {U/B} … {G/U}              — hybrid (combined two-color)
 //   {2/W} {2/U} … {2/G}              — twobrid
 //   {W/P} … {C/P}                    — phyrexian
+//   {G/U/P} {G/W/P} …                — two-colour phyrexian
 //   {T} {Q} {S} {E}                  — tap, untap, snow, energy
 //
 // Anything unknown falls back to a generic-cost gem labeled with the first
@@ -77,7 +79,7 @@ type ColorKey = "W" | "U" | "B" | "R" | "G" | "C";
 
 export type Token =
   | { kind: "solid"; color: ColorKey; label: string }
-  | { kind: "hybrid"; left: ColorKey; right: ColorKey; label?: string }
+  | { kind: "hybrid"; left: ColorKey; right: ColorKey; label?: string; phyrexian?: true }
   | { kind: "phyrexian"; color: ColorKey }
   | { kind: "symbol"; symbol: "T" | "Q" | "S" | "E" }
   | { kind: "text"; value: string };
@@ -85,6 +87,10 @@ export type Token =
 const HYBRID_PATTERN = /^([WUBRG])\/([WUBRG])$/;
 const TWOBRID_PATTERN = /^(\d+)\/([WUBRG])$/;
 const PHYREXIAN_PATTERN = /^([WUBRGC])\/P$/;
+// The two-colour Phyrexian form, {G/U/P} (Tamiyo, Compleated Sage): a
+// hybrid token that says `phyrexian` — a card draws a split disc with a
+// Phyrexian symbol in each half (layout v49).
+const HYBRID_PHYREXIAN_PATTERN = /^([WUBRG])\/([WUBRG])\/P$/;
 
 function classifyInner(inner: string): Token {
   if (/^\d+$/.test(inner)) {
@@ -107,6 +113,11 @@ function classifyInner(inner: string): Token {
 
   const phy = PHYREXIAN_PATTERN.exec(inner);
   if (phy) return { kind: "phyrexian", color: phy[1] as ColorKey };
+
+  const hybPhy = HYBRID_PHYREXIAN_PATTERN.exec(inner);
+  if (hybPhy && hybPhy[1] !== hybPhy[2]) {
+    return { kind: "hybrid", left: hybPhy[1] as ColorKey, right: hybPhy[2] as ColorKey, phyrexian: true };
+  }
 
   const two = TWOBRID_PATTERN.exec(inner);
   if (two) {
@@ -155,7 +166,7 @@ export function tokenize(cost: string): Token[] {
 // ---------------------------------------------------------------------------
 // Token → Mana-font class suffix.
 //   solid:       {W} → "w", {0..20} → digit string, {X|Y|Z|C} → letter
-//   hybrid:      {W/U} → "wu", {2/W} → "2w"
+//   hybrid:      {W/U} → "wu", {2/W} → "2w", {G/U/P} → "gup"
 //   phyrexian:   {W/P} → "wp"
 //   symbol:      {T} → "tap", {Q} → "untap", {S} → "s", {E} → "e"
 // ---------------------------------------------------------------------------
@@ -167,7 +178,7 @@ export function tokenSuffix(token: Token): string | null {
     case "hybrid": {
       const l = token.left === "C" ? token.label ?? "0" : token.left.toLowerCase();
       const r = token.right.toLowerCase();
-      return `${l}${r}`;
+      return token.phyrexian ? `${l}${r}p` : `${l}${r}`;
     }
     case "phyrexian":
       return `${token.color.toLowerCase()}p`;
@@ -180,6 +191,20 @@ export function tokenSuffix(token: Token): string | null {
     case "text":
       return null;
   }
+}
+
+/** The mana-font class a symbol draws with OFF a card (`.ms-cost`: the
+ *  pickers, the rules editor's chips, deck lists, articles). A card draws a
+ *  two-colour Phyrexian symbol itself, in the order typed (CardPip, the
+ *  bake); mana-font has ONE class per pair, in the printed order — so
+ *  `{U/G/P}` takes `{G/U/P}`'s class here, where its own has no glyph (an
+ *  empty disc). Every other symbol: tokenSuffix. */
+export function offCardSuffix(token: Token): string | null {
+  if (token.kind === "hybrid" && token.phyrexian) {
+    const pair = canonicalHybridPair(token.left, token.right);
+    if (pair) return `${pair.toLowerCase()}p`;
+  }
+  return tokenSuffix(token);
 }
 
 // ---------------------------------------------------------------------------
@@ -196,19 +221,21 @@ const MS_LINE_EM = 1.35;
 const emOf = (px: number, emPx: number) => `${(px / emPx).toFixed(4)}em`;
 
 // One pip of a CARD (CardPreview only: the cost rows, the rules text, the
-// flipside strip, the saga rail), inside a parent whose font size is the
-// disc's diameter (1 em = one disc) — the bake's ManaGem at the stored HD
-// bake's whole px for a disc `discPx` wide, from the SAME description
-// (lib/cards/mana-gem.ts manaGemSpec): the disc's colour, the ink, the
-// glyph's size, a split disc's fill and its two half-symbols.
+// flipside strip, the saga rail), inside a parent whose font size is a PLAIN
+// pip's disc (1 em = one plain disc) — the bake's ManaGem at the stored HD
+// bake's whole px where that disc is `discPx` wide, from the SAME
+// description (lib/cards/mana-gem.ts manaGemSpec): the disc's own diameter
+// (a Phyrexian symbol's is larger), its colour or none, the ink, the
+// glyph's size, a split disc's fill and its two half-symbols, the snow
+// flake's drawing.
 //
 // It takes mana-font's `ms ms-<suffix>` classes for the FONT and the glyph
-// only — never `ms-cost`, whose own look is not the stored card's (a black
-// untap disc, a ×1.2 Phyrexian symbol, a white snow symbol under a second
-// glyph, split halves at its own offsets in its own lighter colours, #111
+// only — never `ms-cost`, whose own look is not the stored card's (its own
+// untap disc, Phyrexian scale and snow glyphs, a disc behind the energy
+// symbol, split halves at its own offsets in its own lighter colours, #111
 // ink): those are for the pickers, deck lists and articles.
 //
-//   - a one-colour symbol at manaGlyphPx of the disc, in a box exactly one
+//   - a one-colour symbol at the spec's glyph size, in a box exactly its
 //     disc, the line box in mana-font's own proportion (1.35 em in a 1.3 em
 //     disc). Satori centres the glyph's em box in the disc; Chromium rounds
 //     the font's ascent and floors the half-leading, which sets a glyph in a
@@ -217,53 +244,57 @@ const emOf = (px: number, emPx: number) => `${(px / emPx).toFixed(4)}em`;
 //     bake at ten preview widths, 2026-10-07; either way it is within a px);
 //   - a split disc: the bake's 135° fill, each half's glyph an absolutely
 //     placed box at the bake's corner and size;
-//   - the disc's shadow as the bake's ONE layer (previewDiscShadowCss);
+//   - the snow flake: the bake's inline SVG, centred on the disc;
+//   - the disc's shadow as the bake's ONE layer (previewDiscShadowCss) —
+//     none for a symbol with no disc ({E});
 //   - NOTHING for a one-colour symbol the font has no glyph for, as the bake
 //     (cardPipDraws — a caller that wraps the pip asks it first).
 export function CardPip({
   suffix,
-  discPx,
+  discPx: pipPx,
   symbols,
   overrideSrc = null,
 }: {
   /** The symbol's mana-font suffix, before the style's own {T}. */
   suffix: string;
+  /** A plain pip's disc in the HD bake's px (the parent's 1 em). */
   discPx: number;
   symbols: SymbolStyleSpec;
   /** The card owner's image for this pip, when they set one. */
   overrideSrc?: string | null;
 }) {
   if (overrideSrc != null) {
-    const emPx = discPx / MS_DISC_EM;
+    const emPx = pipPx / MS_DISC_EM;
     return (
       <PipOverrideImg
         src={overrideSrc}
         symbols={symbols}
-        style={{ fontSize: emOf(emPx, discPx), flexShrink: 0 }}
-        boxShadow={previewDiscShadowCss(symbols, discPx, emPx) ?? null}
+        style={{ fontSize: emOf(emPx, pipPx), flexShrink: 0 }}
+        boxShadow={previewDiscShadowCss(symbols, pipPx, emPx) ?? null}
       />
     );
   }
   if (!drawsManaGem(suffix, symbols)) return null;
-  const gem = manaGemSpec(suffix, discPx, symbols);
+  const gem = manaGemSpec(suffix, pipPx, symbols);
   if (gem.kind === "image") {
     // A style's own symbol image (the 1993 frame's five colour symbols):
     // the whole pip in the disc's box, as the bake's ManaGem draws it — the
     // element an owner's custom pip uses.
-    const emPx = discPx / MS_DISC_EM;
+    const emPx = pipPx / MS_DISC_EM;
     return (
       <PipOverrideImg
         src={frameUrl(gem.path)}
         symbols={symbols}
         pip={gem.suffix}
-        style={{ fontSize: emOf(emPx, discPx), flexShrink: 0 }}
-        boxShadow={previewDiscShadowCss(symbols, discPx, emPx) ?? null}
+        style={{ fontSize: emOf(emPx, pipPx), flexShrink: 0 }}
+        boxShadow={previewDiscShadowCss(symbols, pipPx, emPx) ?? null}
       />
     );
   }
+  // The gem's own disc, in em of the parent (1 em = a plain disc).
+  const disc = emOf(gem.discPx, pipPx);
   if (gem.kind === "split") {
-    // 1 em = the disc here, so the shadow and the halves are in discs.
-    const boxShadow = previewDiscShadowCss(symbols, discPx, discPx);
+    const boxShadow = previewDiscShadowCss(symbols, gem.discPx, pipPx);
     return (
       <span
         aria-hidden
@@ -272,8 +303,8 @@ export function CardPip({
           position: "relative",
           display: "inline-block",
           verticalAlign: "middle",
-          width: "1em",
-          height: "1em",
+          width: disc,
+          height: disc,
           borderRadius: "50%",
           overflow: "hidden",
           background: gem.background,
@@ -281,15 +312,15 @@ export function CardPip({
           ...(boxShadow ? { boxShadow } : {}),
         }}
       >
-        {[gem.top, gem.bottom].map((half) => (
+        {[gem.top, gem.bottom].map((half, index) => (
           <i
-            key={half.suffix}
+            key={index}
             className={cn("ms", `ms-${half.suffix}`)}
             style={{
               position: "absolute",
               top: emOf(half.topPx, gem.halfPx),
               left: emOf(half.leftPx, gem.halfPx),
-              fontSize: emOf(gem.halfPx, discPx),
+              fontSize: emOf(gem.halfPx, pipPx),
               lineHeight: 1,
               color: gem.ink,
             }}
@@ -298,21 +329,49 @@ export function CardPip({
       </span>
     );
   }
-  const box = emOf(discPx, gem.glyphPx);
-  const boxShadow = previewDiscShadowCss(symbols, discPx, gem.glyphPx);
+  if (gem.flake) {
+    const boxShadow = gem.bg === null ? undefined : previewDiscShadowCss(symbols, gem.discPx, pipPx);
+    const side = emOf(gem.flake.sizePx, pipPx);
+    return (
+      <span
+        aria-hidden
+        data-pip={gem.suffix}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          verticalAlign: "middle",
+          width: disc,
+          height: disc,
+          borderRadius: "50%",
+          ...(gem.bg === null ? {} : { backgroundColor: gem.bg }),
+          flexShrink: 0,
+          ...(boxShadow ? { boxShadow } : {}),
+        }}
+      >
+        <svg viewBox={gem.flake.viewBox} style={{ display: "block", width: side, height: side, flexShrink: 0 }}>
+          <path d={gem.flake.d} fill={gem.ink} stroke={gem.ink} strokeWidth={gem.flake.outlineWidth} strokeLinejoin="miter" strokeMiterlimit={SNOW_FLAKE_MITRE} />
+          <path d={gem.flake.d} fill={gem.flake.fill} stroke={gem.flake.fill} strokeWidth={gem.flake.fillWidth} strokeLinejoin="miter" strokeMiterlimit={SNOW_FLAKE_MITRE} />
+        </svg>
+      </span>
+    );
+  }
+  const box = emOf(gem.discPx, gem.glyphPx);
+  const boxShadow = gem.bg === null ? undefined : previewDiscShadowCss(symbols, gem.discPx, gem.glyphPx);
   return (
     <i
       aria-hidden
       data-pip={gem.suffix}
       className={cn("ms", `ms-${gem.suffix}`)}
       style={{
-        fontSize: emOf(gem.glyphPx, discPx),
+        fontSize: emOf(gem.glyphPx, pipPx),
         width: box,
         height: box,
-        lineHeight: emOf((MS_LINE_EM / MS_DISC_EM) * discPx, gem.glyphPx),
+        lineHeight: emOf((MS_LINE_EM / MS_DISC_EM) * gem.discPx, gem.glyphPx),
         textAlign: "center",
         borderRadius: "50%",
-        backgroundColor: gem.bg,
+        // No disc at all for a bare symbol ({E}).
+        ...(gem.bg === null ? {} : { backgroundColor: gem.bg }),
         color: gem.ink,
         flexShrink: 0,
         ...(boxShadow ? { boxShadow } : {}),
@@ -434,14 +493,15 @@ export function ManaCostGlyphs({
         if (overrideSrc) {
           return <PipOverrideImg key={`g-${i}`} src={overrideSrc} symbols={symbols} />;
         }
-        if (!suffix) return null;
+        const classSuffix = offCardSuffix(token);
+        if (!classSuffix) return null;
         // ms-cost gives the circular gem background, ms-shadow adds depth.
         // Both come from mana-font's stylesheet.
         return (
           <i
             key={`g-${i}`}
             aria-hidden
-            className={cn("ms ms-cost", symbols.previewShadowClass, `ms-${styledSuffix(symbols, suffix)}`)}
+            className={cn("ms ms-cost", symbols.previewShadowClass, `ms-${styledSuffix(symbols, classSuffix)}`)}
           />
         );
       })}

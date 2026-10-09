@@ -46,7 +46,9 @@ describe("the 2003 recipes", { timeout: 30_000 }, () => {
     expect(EIGHTH_MASTER_OF.modernland).toEqual({ w: "wl", u: "ul", b: "bl", r: "rl", g: "gl", c: "l", m: "ml" });
     for (const template of TEMPLATES) {
       const def = defs[template];
-      expect(builtColors(def as never).sort()).toEqual([...KEYS].sort());
+      // Seven pack masters, and the ten pairs made of them (TODO 4.6h;
+      // tests/unit/frames/old-frame-pair-masters.test.ts).
+      expect(builtColors(def as never).sort()).toEqual([...KEYS, ...["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"]].sort());
       for (const key of KEYS) {
         expect(def.colors[key].map((l) => l.src), `${template}/${key}`).toEqual([`img/frames/8th/${EIGHTH_MASTER_OF[template][key]}.png`]);
         expect(def.printRecipe(key), `${template}/${key}`).toEqual(eighthPrintRecipe(template, key));

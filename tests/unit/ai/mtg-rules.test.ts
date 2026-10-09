@@ -392,9 +392,10 @@ describe("buildDeckSkeleton", () => {
 
 
 // ---------------------------------------------------------------------------
-// Symbols the card can't draw: the game's grammar accepts {21}-{99} and the
-// hybrid Phyrexian {W/U/P}, the mana font has no pip for them and the card
-// leaves them out — the design may not use one.
+// Symbols the card can't draw: the game's grammar accepts {21}-{99}, the
+// mana font has no pip for them and the card leaves them out — the design
+// may not use one. The hybrid Phyrexian {W/U/P} was one of them until layout
+// v49 drew it: the lint lets it through and the autofix leaves it alone.
 // ---------------------------------------------------------------------------
 
 describe("symbols the card can't draw", () => {
@@ -404,11 +405,9 @@ describe("symbols the card can't draw", () => {
   });
 
   it("the lint refuses one in the cost, naming it", () => {
+    // A hybrid Phyrexian cost draws: no symbol error.
     const { errors } = lintCardDesign(baseCard({ cost: "{2}{G/U/P}{U}", color_identity: ["green", "blue"] }));
-    expect(errors).toContainEqual({
-      field: "cost",
-      message: "{G/U/P} can't be drawn and will be left off the card — use a symbol the card has a pip for.",
-    });
+    expect(errors.filter((e) => e.message.includes("can't be drawn"))).toEqual([]);
     const big = lintCardDesign(baseCard({ cost: "{21}{R}" }));
     expect(big.errors.map((e) => e.message)).toContain(
       "{21} can't be drawn and will be left off the card — use a symbol the card has a pip for.",
@@ -417,18 +416,19 @@ describe("symbols the card can't draw", () => {
 
   it("and in the rules text", () => {
     const { errors } = lintCardDesign(
-      baseCard({ rules_text: "{T}, Pay {R/G/P}: This creature gets +{1/2}/+0 until end of turn." }),
+      baseCard({ rules_text: "{T}, Pay {R/G/P}{21}: This creature gets +{1/2}/+0 until end of turn." }),
     );
+    // {R/G/P} draws; the other two are named.
     expect(errors).toContainEqual({
       field: "rules_text",
-      message: "{R/G/P} and {1/2} can't be drawn and will be left off the card — use a symbol the card has a pip for.",
+      message: "{21} and {1/2} can't be drawn and will be left off the card — use a symbol the card has a pip for.",
     });
   });
 
   it("every symbol the designer is told to use passes", () => {
     const { errors } = lintCardDesign(
       baseCard({
-        cost: "{20}{X}{W/U}{2/R}{R/P}{S}{C}{R}",
+        cost: "{20}{X}{W/U}{2/R}{R/P}{W/R/P}{S}{C}{R}",
         color_identity: ["white", "blue", "red"],
         rules_text: "{T}, {Q}, Pay {E}: Add {R}.",
       }),
@@ -437,20 +437,22 @@ describe("symbols the card can't draw", () => {
   });
 
   it("the autofix swaps in the nearest symbol the card draws", () => {
-    expect(withDrawableSymbols("{2}{G/U/P}{U}")).toBe("{2}{G/U}{U}");
     expect(withDrawableSymbols("{21}{R}")).toBe("{20}{R}");
     expect(withDrawableSymbols("{99}")).toBe("{20}");
-    expect(withDrawableSymbols("{T}, Pay {w/b/p}: Draw a card.")).toBe("{T}, Pay {W/B}: Draw a card.");
+    // A hybrid Phyrexian symbol is drawn as designed — no longer swapped
+    // for the plain hybrid (the pre-v49 fix), as written.
+    expect(withDrawableSymbols("{2}{G/U/P}{U}")).toBe("{2}{G/U/P}{U}");
+    expect(withDrawableSymbols("{T}, Pay {w/b/p}{21}: Draw a card.")).toBe("{T}, Pay {w/b/p}{20}: Draw a card.");
     // Nothing to offer: it stays (and the lint still says so).
     expect(withDrawableSymbols("Pay {1/2}.")).toBe("Pay {1/2}.");
     // Drawable text is returned untouched.
     expect(withDrawableSymbols("{2}{r}{R}: Add {G}.")).toBe("{2}{r}{R}: Add {G}.");
 
     const fixed = autofixCard(
-      baseCard({ cost: "{2}{R/G/P}{R}", rules_text: "{R/G/P}: This creature gains haste.", color_identity: ["red"] }),
+      baseCard({ cost: "{21}{R/G/P}{R}", rules_text: "{R/G/P}, Pay {30}: This creature gains haste.", color_identity: ["red"] }),
     );
-    expect(fixed.cost).toBe("{2}{R/G}{R}");
-    expect(fixed.rules_text).toBe("{R/G}: This creature gains haste.");
+    expect(fixed.cost).toBe("{20}{R/G/P}{R}");
+    expect(fixed.rules_text).toBe("{R/G/P}, Pay {20}: This creature gains haste.");
     expect(fixed.color_identity).toEqual(["green", "red", "multicolor"]);
     expect(lintCardDesign(fixed).errors.filter((e) => e.message.includes("can't be drawn"))).toEqual([]);
   });
