@@ -232,6 +232,11 @@ function ensureFiller(root: HTMLElement, composing = false) {
   }
   const hosts = ensureCaretHosts(root, composing);
   const sel = window.getSelection();
+  // Only while the box has focus: a selection set inside a contenteditable
+  // FOCUSES it, and this also runs for a value that arrives from outside
+  // (the blur conversion, an AI fill) after the caret has left the box —
+  // the next field's typing landed at the start of the rules text.
+  if (document.activeElement !== root) return;
   if (!hosts.length || !sel || !sel.isCollapsed || !sel.anchorNode || !root.contains(sel.anchorNode)) return;
   // A deletion that emptied the text in front of a pip leaves Chrome's caret
   // at the end of the line ABOVE (the place had no caret yet): onto the host.

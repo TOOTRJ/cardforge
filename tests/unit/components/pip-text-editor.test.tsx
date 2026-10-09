@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { useState } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { PipTextEditor } from "@/components/creator/pip-text-editor";
 
@@ -140,6 +140,51 @@ describe("PipTextEditor — a value from outside", () => {
     const box = setup("Aa\n{T}: Add {G}.\n");
     expect(shape(box)).toBe("Aa<br><caret>{T}: Add {G}.<br><filler>");
     expect(valueOf()).toBe("Aa\n{T}: Add {G}.\n");
+  });
+});
+
+describe("PipTextEditor — a value from outside while the box is not focused", () => {
+  // The blur conversion (print typography) rewrites the text right after the
+  // caret left the box. A selection set inside a contenteditable focuses it,
+  // so the editor must not touch the selection then: the box took the focus
+  // back and the next field's typing landed at the start of the rules text.
+  function Outside() {
+    const [value, setValue] = useState("it's\n{T}: go");
+    return (
+      <>
+        <PipTextEditor aria-label="Rules text" value={value} onChange={setValue} />
+        <input aria-label="Power" />
+        <button type="button" onClick={() => setValue("it\u2019s\n{T}: go")}>
+          convert
+        </button>
+      </>
+    );
+  }
+
+  it("leaves the selection alone, so the focus stays where it went", () => {
+    render(<Outside />);
+    const box = screen.getByRole("textbox", { name: "Rules text" });
+    box.focus();
+    caretAt(box, 0);
+    const power = screen.getByRole("textbox", { name: "Power" });
+    power.focus();
+    const addRange = vi.spyOn(window.getSelection()!, "addRange");
+    fireEvent.click(screen.getByRole("button", { name: "convert" }));
+    expect(shape(box)).toContain("it\u2019s");
+    expect(addRange).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(power);
+    addRange.mockRestore();
+  });
+
+  it("still moves the caret onto a new host while the box is focused", () => {
+    render(<Outside />);
+    const box = screen.getByRole("textbox", { name: "Rules text" });
+    box.focus();
+    caretAt(box, 0);
+    const addRange = vi.spyOn(window.getSelection()!, "addRange");
+    fireEvent.click(screen.getByRole("button", { name: "convert" }));
+    expect(addRange).toHaveBeenCalled();
+    addRange.mockRestore();
   });
 });
 

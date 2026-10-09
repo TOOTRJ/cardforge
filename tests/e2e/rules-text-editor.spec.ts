@@ -204,6 +204,32 @@ test.describe("rules text editor", () => {
     expect(await textOf(page)).toBe("q{T}{G}");
   });
 
+  test("leaving the box after a blur conversion keeps the focus where it went", async ({ page }) => {
+    await signIn(page);
+    const box = await openTextStep(page);
+
+    // The apostrophe is rewritten when the box loses focus (print typography):
+    // the text is re-rendered while blurred, with a caret host in front of the
+    // pip on line 2. The box used to take the focus back there.
+    await box.click();
+    await page.keyboard.type("it's");
+    await page.keyboard.press("Enter");
+    await page.keyboard.type("{t}: go");
+    const power = page.locator('input[name="power"]');
+    const before = await power.inputValue();
+    await power.click();
+    await page.keyboard.type("7");
+    await expect(power).toBeFocused();
+    await expect(power).toHaveValue(`${before}7`);
+    expect(await textOf(page)).toBe("it\u2019s\n{T}: go");
+
+    // Tab leaves the box too.
+    await box.click();
+    await page.keyboard.type(" 'x'");
+    await page.keyboard.press("Tab");
+    await expect(box).not.toBeFocused();
+  });
+
   test("the step does not scroll sideways on a phone", async ({ page }) => {
     await signIn(page);
     await page.setViewportSize({ width: 390, height: 844 });
