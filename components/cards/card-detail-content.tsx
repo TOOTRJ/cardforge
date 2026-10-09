@@ -68,6 +68,7 @@ import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { sameOwnerBackCard } from "@/lib/cards/back-card";
 import { listPublicDecksContaining } from "@/lib/decks/queries";
 import { buildTypeLine, describeManaCost, normalizeFrameTemplate, printsPowerToughness } from "@/lib/cards/card-display";
+import { frontDrawsPowerToughness, secondFaceDrawsPowerToughness } from "@/lib/cards/pt-drawn";
 import { collectorDrawn } from "@/lib/cards/collector-layout";
 import { collectorNumberRuns } from "@/lib/cards/collector-line";
 import { PRINTED_LANGS } from "@/lib/cards/collector-fields";
@@ -1145,7 +1146,11 @@ export function CardDetails({
     .join(", ");
   // The stats the render prints (printsPowerToughness): a Treasure token
   // carrying a stray P/T prints none, so its details list none (TODO 3b.15).
-  const stats = printsPowerToughness({
+  // And only on a frame that draws one (lib/cards/pt-drawn.ts): a saga whose
+  // type says Creature keeps its 9/9 in the row, the picture shows none, so
+  // the details list none either — the stored value is untouched.
+  const frontTemplate = (card.frame_style as { template?: string | null } | null | undefined)?.template;
+  const stats = frontDrawsPowerToughness(frontTemplate) && printsPowerToughness({
     cardType: card.card_type as CardType | null,
     supertype: card.supertype,
     subtypes: card.subtypes ?? [],
@@ -1200,7 +1205,9 @@ export function CardDetails({
   const back = rowHasBakedBack({ frame_style: card.frame_style, back_face: card.back_face ?? null })
     ? ((card.back_face as CardBackFace | null) ?? null)
     : null;
-  const backRows: Array<[string, React.ReactNode]> = back ? backFaceRows(back, card.color_identity) : [];
+  const backRows: Array<[string, React.ReactNode]> = back
+    ? backFaceRows(back, card.color_identity, frontTemplate)
+    : [];
   return (
     <section aria-labelledby="card-details-heading" className="flex flex-col gap-2">
       <h2 id="card-details-heading" className="font-mono text-[11px] uppercase tracking-wider text-muted">
@@ -1238,7 +1245,11 @@ export function CardDetails({
  *  front's — the colour its body is drawn in, lib/cards/faces.ts
  *  backPreviewData), the stats its render prints and its artist — the same
  *  rules as the front's rows. */
-function backFaceRows(back: CardBackFace, frontColors: string[] | null): Array<[string, React.ReactNode]> {
+function backFaceRows(
+  back: CardBackFace,
+  frontColors: string[] | null,
+  frontTemplate: string | null | undefined,
+): Array<[string, React.ReactNode]> {
   const typeLine = buildTypeLine({
     supertype: back.supertype,
     cardType: back.card_type ?? null,
@@ -1247,7 +1258,8 @@ function backFaceRows(back: CardBackFace, frontColors: string[] | null): Array<[
   const colors = (back.color_identity ?? frontColors ?? [])
     .map((c) => COLOR_IDENTITY_LABELS[c as ColorIdentity] ?? c)
     .join(", ");
-  const stats = printsPowerToughness({
+  // Its body's own P/T slot (a land back body has none).
+  const stats = secondFaceDrawsPowerToughness(frontTemplate, back.frame_style?.template) && printsPowerToughness({
     cardType: back.card_type ?? null,
     supertype: back.supertype,
     subtypes: back.subtypes ?? [],
