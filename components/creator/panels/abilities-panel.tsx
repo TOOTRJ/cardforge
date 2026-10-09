@@ -10,6 +10,7 @@ import {
   FieldGroup,
   inputClass,
 } from "@/components/creator/field-group";
+import { PtNotDrawnNote } from "@/components/creator/pt-not-drawn-note";
 import type { FormValues } from "@/lib/creator/form-types";
 
 type AbilitiesPanelProps = {
@@ -49,6 +50,8 @@ export function AbilitiesPanel({ statVis }: AbilitiesPanelProps) {
                   autoComplete="off"
                 />
               </FieldGroup>
+              {/* The frame has no P/T slot (a saga, a walker frame…): say so. */}
+              <PtNotDrawnNote face="front" className="sm:col-span-2" />
             </>
           ) : null}
           {statVis.loyalty ? (
