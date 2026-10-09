@@ -3519,6 +3519,11 @@ default switch + automatic height (`lib/creator/token-frame-auto.ts`) wired
 into round 11's auto-pick on `feat/fullart-tokens-pr` — it takes effect per
 template/colour as each is verified.)
 
+- [ ] **7.10 [P2] One login on every preview: a script that gives a PR's own database the dev test password** (owner 2026-10-09, found testing #496) — A PR that touches `supabase/` gets its own preview database, where `supabase/seeds/*.sql` create the five `dev_*` accounts with RANDOM passwords (the repo is public: no credential in a seed). `DEV_SEED_PASSWORD` is set only on the shared dev branch by `npm run seed:dev`, so on such a preview the owner's usual login fails and they must sign up fresh.
+      - **Build:** an owner-run script (`npm run seed:preview -- <PR number or branch>`) that is `seed:dev` pointed at that PR's preview branch: it resolves the branch's project ref, REFUSES production and anything that is not a preview branch of this project (`scripts/lib/prod-guard.mjs`, target-verified like `scripts/db-dev.mjs`), takes that branch's key only through `promptHidden()` or the Supabase CLI's own login (never an argument, never echoed, never written to a file), and sets the five accounts' passwords to the local `DEV_SEED_PASSWORD`. Idempotent.
+      - **Not this item:** a "sign in as a test account" button on preview deployments — a sign-in shortcut in a public repository; the owner decides that separately.
+      - **Docs:** `docs/ENVIRONMENTS.md` §2 (the test logins) and the shipping workflow's step 3; one line in CLAUDE.md's Environments section. Acceptance: after the script, `pro@dev.pipglyph.test` signs in on a `supabase/`-touching PR's Vercel preview with the same password as on the dev database; running it against production or the dev branch's project is refused with a clear message.
+
 ## Billing audit follow-ups (2026-09-24)
 
 What's left from the 2026-09-22 billing audit (docs/BILLING.md §5–§9 record
