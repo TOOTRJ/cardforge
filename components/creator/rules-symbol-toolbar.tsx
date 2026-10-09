@@ -63,6 +63,40 @@ function SymbolButton({
   );
 }
 
+/** The print characters a plain keyboard has no key for (TODO 6.11). Typing
+ *  " - " / "--" or a leading "- " gives the same two when the field loses
+ *  focus (lib/validation/print-typography.ts). No minus sign: the rules
+ *  face has no U+2212 and both renderers set it as a hyphen. */
+const PRINT_CHARACTERS = [
+  { char: "\u2014", name: "Em dash", hint: "as in \u201cLandfall \u2014 Whenever\u2026\u201d" },
+  { char: "\u2022", name: "Bullet", hint: "starts each choice of a modal list" },
+] as const;
+
+function CharacterButton({
+  char,
+  name,
+  hint,
+  onInsert,
+}: {
+  char: string;
+  name: string;
+  hint: string;
+  onInsert: (token: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      title={`${name} \u2014 ${hint}`}
+      aria-label={`Insert ${name.toLowerCase()}`}
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={() => onInsert(char)}
+      className="flex h-7 w-7 items-center justify-center rounded-md border border-border/60 bg-elevated/40 text-sm font-semibold text-foreground transition-colors hover:border-border-strong hover:bg-elevated"
+    >
+      <span aria-hidden>{char}</span>
+    </button>
+  );
+}
+
 export function RulesSymbolToolbar({
   onInsert,
   className,
@@ -83,6 +117,10 @@ export function RulesSymbolToolbar({
         <span aria-hidden className="mx-1 h-5 w-px bg-border/60" />
         {GENERIC.map((t) => (
           <SymbolButton key={t} token={t} onInsert={onInsert} />
+        ))}
+        <span aria-hidden className="mx-1 h-5 w-px bg-border/60" />
+        {PRINT_CHARACTERS.map((c) => (
+          <CharacterButton key={c.char} {...c} onInsert={onInsert} />
         ))}
       </div>
       <details>

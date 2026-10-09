@@ -521,7 +521,11 @@ Rules and gotchas:
   `=== true`, `frame_style.collector` (`"2015"` / `"2023"` / `"off"`; drawn
   for a style) and `star` (`true` or absent) (`lib/cards/anatomy.ts`); new
   cards start on, every save runs `normalizeAnatomy`, an edit sends only
-  `frame_anatomy`, and a piece is declared on a `PROFILES` entry only
+  `frame_anatomy`, and a piece is declared on a `PROFILES` entry only — the
+  old frames' pairs too (4.6h: `modern`, `modernland`, `retroland`; masters
+  SYNTHESISED from the template's own finished masters, `oldFramePairLayers`,
+  never a scan; `retro` none — the 1997 frame printed one gold; an import
+  names the switch only where the print has the look, `printsTwoColorFrame`)
   (`FrameProfile.collector` = `M15_COLLECTOR` on the wave-1 entries,
   `COLLECTOR_TEMPLATES`) — `docs/FRAMES.md` "Printed pieces". On a card
   with the line the pipglyph.com mark sits in its © slot (line 2 with a
@@ -637,6 +641,27 @@ Rules and gotchas:
   Both renderers pass the card's value through `rulesAlignOf` and only
   draw the indents. A new template offers
   it by default — `rules-align.test.ts` names the six that don't. Never a sweep or a bump; `docs/FRAMES.md` "The text alignment".
+- Print typography (TODO 6.11): `printTypography(text, field)`
+  (`lib/validation/print-typography.ts`, pure, idempotent) turns what a plain
+  keyboard types into what a card prints — curly quotes and apostrophes
+  (`'90s`, `{T}'s`), ` - ` / `--` → an em dash, a rules line's leading `- ` /
+  `* ` → `•`, a flavor line's leading `-` → the attribution's `—` — and never
+  reads inside `{…}` or a URL. It runs in the creator when a text field loses
+  focus (one `onBlur` on the form; an AI fill, an idea and a Scryfall import
+  land converted through `printTypographyPatch`) and on the server in BOTH
+  card actions: a new card whole, an EDIT only in the fields whose text the
+  save changes (`withPrintTypographyUpdate` — a stored card never changes
+  where it wasn't edited; never a migration, bump or sweep). A character it
+  may introduce is listed in `PRINT_TYPOGRAPHY_CHARACTERS` and must have INK
+  in every face that draws that field (a test reads the font files) — so no
+  U+2212: MPlantin's is an EMPTY glyph, rules text sets it as a hyphen. A new
+  text field of the card is added to `typographyFieldOf` and the server
+  helpers together. Stored text now holds ’ “ ” — where people TYPE ' " -:
+  anything that matches a typed string against a title or a name folds both
+  sides with `typedForMatching()` (My Cards' search, the deck's card picker,
+  the deck copy-limit names) — the gallery's SQL title search folds the same
+  six characters (migration 0136; a test holds the two tables together).
+  Never compare a query with a stored title character for character.
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in
