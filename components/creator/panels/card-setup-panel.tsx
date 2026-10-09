@@ -110,6 +110,10 @@ import {
   type FrameSubstitution,
 } from "@/lib/creator/import-frame-choice";
 import { colorlessFaceAllowed } from "@/lib/cards/dfc";
+import {
+  LegendaryVariationChip,
+  useLegendaryVariation,
+} from "@/components/creator/panels/legendary-variation";
 import { DFC_COLORLESS_FRONT_NEEDS_ARTIFACT } from "@/lib/cards/dfc-gate";
 
 const KIND_HINTS: Partial<Record<CardKind, string>> = {
@@ -221,6 +225,9 @@ export function CardSetupPanel({
   // the pair master the card paints there (TODO 4.6b: gold-split or hybrid).
   const frameType: FrameTypeInfo = { cardType, supertype, cost };
   const frameAnatomy = { twoColor: twoColorOn };
+  // The Variations section's Legendary entry (TODO 3b.17): the crown
+  // switch's state, for the section's summary — the chip reads the same.
+  const legendary = useLegendaryVariation();
 
   // A frame a creature borrows dresses it as another type too: the Artifact
   // variation an Artifact Creature (TODO 1.7), the Nyx showcase an
@@ -434,11 +441,16 @@ export function CardSetupPanel({
           // that decides whether the card prints a big symbol or rules text.
           const showLandMode =
             kind === "land" && landMode !== undefined && Boolean(onLandModeChange);
-          const variationSummary = showLandMode
+          const frameAndLandSummary = showLandMode
             ? undressed === base
               ? landModeLabel(landMode as LandMode)
               : `${landModeLabel(landMode as LandMode)} · ${frameVariationSummary}`
             : frameVariationSummary;
+          // …and the Legendary entry (TODO 3b.17) says so while the crown
+          // is on and drawn.
+          const variationSummary = legendary.selected
+            ? `${frameAndLandSummary} · Legendary`
+            : frameAndLandSummary;
 
           // Group the frame list into era sections, preserving order.
           const byEra = new Map<FrameEra, FrameChoice[]>();
@@ -663,8 +675,11 @@ export function CardSetupPanel({
                 ) : null}
               </SetupSection>
 
-              {showLandMode || variationChoices.length > 0 ? (
-                <SetupSection title="Variations" value={variationSummary}>
+              {/* Always shown since TODO 3b.17: the Legendary entry is a
+                  variation of every frame — disabled, with its reason,
+                  where the frame prints no crown. */}
+              {
+                <SetupSection title="Variations" value={variationSummary} testId="variations-section">
                   <div className="flex flex-col gap-4">
                     {showLandMode ? (
                       <div className="flex flex-col gap-2">
@@ -716,9 +731,10 @@ export function CardSetupPanel({
                         ) : null}
                       </div>
                     ) : null}
+                    <LegendaryVariationChip />
                   </div>
                 </SetupSection>
-              ) : null}
+              }
             </>
           );
         }}
