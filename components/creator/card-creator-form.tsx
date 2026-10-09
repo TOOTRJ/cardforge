@@ -14,6 +14,7 @@ import {
   FormProvider,
   useForm,
   useWatch,
+  type FieldPath,
   type UseFormReturn,
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -123,6 +124,12 @@ import {
   updateCardAction,
 } from "@/lib/cards/actions";
 import { linkDeckCardAction } from "@/lib/decks/card-actions";
+import {
+  printTypography,
+  printTypographyPatch,
+  sameStoredText,
+  typographyFieldOf,
+} from "@/lib/validation/print-typography";
 import { recordFrameRequestAction } from "@/lib/frames/frame-request-actions";
 import { frameRequestFromImport } from "@/lib/frames/frame-requests";
 import type { DeckRemixContext } from "@/types/deck";
@@ -662,9 +669,12 @@ export function CardCreatorForm({
 
   const defaults = useMemo(() => {
     const viewer = { paid: isPaid, footerText: defaultFooterText };
+    // A remix saves a NEW card, and a new card's text is set as print sets
+    // it (TODO 6.11) — so its starting values already are, and the preview
+    // shows what the save will store. An edit starts on the stored text.
     const base =
       mode === "remix" && card
-        ? remixValuesFrom(card, gameSystems, viewer)
+        ? printTypographyPatch(remixValuesFrom(card, gameSystems, viewer))
         : defaultValuesFor(card, gameSystems, viewer);
     // Seed the challenge tag for fresh creates (edits keep the card's tags).
     if (initialTag && !card) {
@@ -696,6 +706,7 @@ export function CardCreatorForm({
     setError,
     clearErrors,
     getValues,
+    getFieldState,
     control,
     reset,
     subscribe,
@@ -1653,7 +1664,9 @@ export function CardCreatorForm({
   // Apply an AI patch through setValue so RHF marks every touched field
   // dirty. Strings are passed through as-is; the color_identity readonly
   // tuple from the schema is widened to a mutable array.
-  const handleAIPatch = (patch: CardFieldPatch) => {
+  const handleAIPatch = (rawPatch: CardFieldPatch) => {
+    // The idea's text as print sets it (TODO 6.11) — what the save stores.
+    const patch = printTypographyPatch(rawPatch);
     const setIfPresent = (
       key: keyof FormValues,
       value: string | undefined,
@@ -1741,9 +1754,12 @@ export function CardCreatorForm({
    *  The frame request log (TODO 1.6) files a "dialog" import as `import`
    *  and a "deck-remix" one as `deck_prefill`. */
   const handleScryfallImport = (
-    { patch, importedArtUrl, frameChoice, source }: ScryfallImportPayload,
+    { patch: rawPatch, importedArtUrl, frameChoice, source }: ScryfallImportPayload,
     via: "dialog" | "deck-remix" = "dialog",
   ): ImportNotice | null => {
+    // Scryfall's Oracle text is typed with straight quotes; the card prints
+    // curly ones (TODO 6.11). Converted as it lands, as the save would.
+    const patch = printTypographyPatch(rawPatch);
     const setIfPresent = (key: keyof FormValues, value: string | undefined) => {
       if (value === undefined) return;
       setValue(key, value as never, { shouldDirty: true });
@@ -2317,8 +2333,8 @@ export function CardCreatorForm({
           }
         }
       }
-      setValue("supertype", fill.supertype ?? "", { shouldDirty: true });
-      setValue("subtypes_text", (fill.subtypes ?? []).join(", "), {
+      setValue("supertype", printTypography(fill.supertype ?? "", "type"), { shouldDirty: true });
+      setValue("subtypes_text", printTypography((fill.subtypes ?? []).join(", "), "type"), {
         shouldDirty: true,
       });
     }
@@ -2329,16 +2345,18 @@ export function CardCreatorForm({
         { shouldDirty: true },
       );
     }
-    if (fill.title !== undefined) setValue("title", fill.title, { shouldDirty: true });
+    // The fill's text as print sets it (TODO 6.11) — what the save stores.
+    if (fill.title !== undefined) setValue("title", printTypography(fill.title, "name"), { shouldDirty: true });
     if (fill.cost !== undefined) setValue("cost", fill.cost, { shouldDirty: true });
     if (fill.rarity !== undefined) setValue("rarity", fill.rarity, { shouldDirty: true });
     if (fill.rules_text !== undefined) {
-      setValue("rules_text", fill.rules_text, { shouldDirty: true });
+      const filledRules = printTypography(fill.rules_text, "rules");
+      setValue("rules_text", filledRules, { shouldDirty: true });
       const k = kindFromCard(getValues("card_type"), getValues("frame_style.template"));
-      if (k === "planeswalker" || k === "saga") seedStructuredRows(k, fill.rules_text);
+      if (k === "planeswalker" || k === "saga") seedStructuredRows(k, filledRules);
     }
     if (fill.flavor_text !== undefined) {
-      setValue("flavor_text", fill.flavor_text ?? "", { shouldDirty: true });
+      setValue("flavor_text", printTypography(fill.flavor_text ?? "", "flavor"), { shouldDirty: true });
     }
     if (fill.power !== undefined || fill.loyalty !== undefined || fill.defense !== undefined) {
       setValue("power", fill.power ?? "", { shouldDirty: true });
@@ -3758,6 +3776,34 @@ export function CardCreatorForm({
     </>
   );
 
+  // Print typography as you go (TODO 6.11): when a text field loses focus,
+  // what was typed on a plain keyboard becomes what a card prints — curly
+  // quotes, em dashes, list bullets (lib/validation/print-typography.ts).
+  // On blur, never per keystroke: the caret is gone, so nothing moves under
+  // it, and the field and the preview show the change at once. One handler
+  // on the form (focus events bubble) covers every panel's inputs, the
+  // PipTextEditors (`data-field`) included. EDITING a stored card, only a
+  // field whose text differs from the stored one is touched — the server
+  // keeps the same rule, so a card never changes where it wasn't edited.
+  const tidyTypographyOnBlur = (event: React.FocusEvent<HTMLFormElement>) => {
+    const target = event.target as HTMLElement;
+    const name = target.getAttribute("name") ?? target.getAttribute("data-field") ?? "";
+    const field = typographyFieldOf(name);
+    if (!field || readOnly) return;
+    const path = name as FieldPath<FormValues>;
+    if (isEdit && !getFieldState(path).isDirty) return;
+    const value = getValues(path) as unknown;
+    if (typeof value !== "string") return;
+    // …and "differs" is read as the server reads it: a stored trailing space
+    // or Windows line ending a form control cannot hold is not an edit.
+    if (isEdit) {
+      const stored = name.split(".").reduce<unknown>((at, key) => (at && typeof at === "object" ? (at as Record<string, unknown>)[key] : undefined), defaults);
+      if (typeof stored === "string" && sameStoredText(value, stored)) return;
+    }
+    const next = printTypography(value, field);
+    if (next !== value) setValue(path, next as never, { shouldDirty: true });
+  };
+
   const formSubmit = handleSubmit(
     (values) => runSubmit(values, "save"),
     (formErrors) => {
@@ -3776,6 +3822,7 @@ export function CardCreatorForm({
         <form
           noValidate
           onSubmit={formSubmit}
+          onBlur={tidyTypographyOnBlur}
           className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:items-start"
           data-testid="creator-canvas"
         >
@@ -3825,6 +3872,7 @@ export function CardCreatorForm({
       <form
         noValidate
         onSubmit={formSubmit}
+        onBlur={tidyTypographyOnBlur}
         className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:grid-cols-[10.5rem_minmax(0,1.05fr)_minmax(0,0.95fr)] xl:gap-6"
       >
         {/* ----- Far left (xl+): vertical icon step rail ----- */}
