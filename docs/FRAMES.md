@@ -2778,6 +2778,37 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
   land stored with no template draws on m15, whose gold-split isn't a
   land's (Shadowwood Hollow, Sunfade Citadel): the switch is hidden there,
   the save drops it and the renderers don't draw it (owner round 17).
+- **The crown's two controls are one state** (TODO 3b.17). The Card step's
+  Variations section leads its frame chips with a **Legendary** chip — "the
+  legendary crown version of the selected frame" — and the Identity step
+  keeps the
+  "Legendary crown" switch. Both write `frame_style.crown` through the form
+  (never `frame_style.template`), and both read ONE rule,
+  `legendaryVariationOf` (`lib/creator/legendary-variation.ts`):
+  - **offered** when the card's OWN template declares a crown (the front
+    body of a double-faced card — the template the save's
+    `normalizeAnatomy` judges) and a face would draw it: the card type
+    prints one, and the key it would paint is published (`crownKeyFor`). A
+    double-faced card's back counts on the body its type and family derive.
+    Anywhere else the chip is shown **disabled with its reason** ("This
+    frame has no legendary crown"), as the section's other unavailable
+    chips are — the section itself now shows for every kind;
+  - **selected** only while the switch is exactly `true` AND a face has the
+    word "Legendary" — the crown is drawn. A new card that is not legendary
+    holds the new-card default (`crown: true`) and still reads unselected;
+  - **the switch's row** shows when the chip is offered and a face has the
+    word, and its on/off is then the chip's;
+  - **the word:** picking the chip on a NEW card with no legendary face
+    puts "Legendary" first in the supertype (`withLegendaryWord`) and a
+    toast says so; un-picking keeps the word (a legendary card without the
+    crown is every pre-2018 print). An edit or a remix has no Card step and
+    a locked type line (`lib/creator/revise.ts`), so the chip sits on the
+    Identity step under the locked summary and never writes the word: on a
+    stored card that is not legendary it is disabled ("Only a Legendary
+    card prints the crown, and this card's type line is fixed").
+  A frame change never clears the switch in the form: a move to a frame
+  with no crown and back restores it; only the save drops it. Imports and
+  AI jobs are untouched (the printing; the save's default).
 - **Every save** drops a switch its template can't draw for the card
   (`normalizeAnatomy`, with the card's type), so a template that gains a
   piece later (4.6f) never changes a card stored on it before, and a crafted

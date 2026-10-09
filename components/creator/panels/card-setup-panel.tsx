@@ -698,13 +698,15 @@ export function CardSetupPanel({
                         </p>
                       </div>
                     ) : null}
+                    {/* The Legendary entry (TODO 3b.17) leads the frame
+                        chips: the list of dresses and showcases is long,
+                        and the owner's ask is that makers FIND the crown. */}
+                    <LegendaryVariationChip />
                     {variationChoices.length > 0 ? (
                       <div className="flex flex-col gap-2">
-                        {showLandMode ? (
-                          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-                            Frame
-                          </p>
-                        ) : null}
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+                          Frame
+                        </p>
                         <ChipGroup
                           ariaLabel="Frame variations"
                           layout="grid-2"
@@ -731,7 +733,6 @@ export function CardSetupPanel({
                         ) : null}
                       </div>
                     ) : null}
-                    <LegendaryVariationChip />
                   </div>
                 </SetupSection>
               }
