@@ -36,6 +36,7 @@ import { frameGateError } from "@/lib/cards/frame-availability";
 import { cardFieldsFace, frameKindGateError } from "@/lib/cards/frame-kind-gate";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import { getCardById } from "@/lib/cards/queries";
+import { REBAKE_PENDING_RENDER } from "@/lib/cards/bake-core";
 import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
 import { revalidateCardPaths } from "@/lib/cards/revalidate";
 import { MEDIA_URL_NOT_ALLOWED_MESSAGE, mediaUrlViolationField } from "@/lib/media/media-url-errors";
@@ -120,6 +121,10 @@ export async function adoptDfcBodiesAction(cardId: string, layoutName: string): 
   const update: CardUpdate = {
     frame_style: plan.frame_style as CardUpdate["frame_style"],
     back_face: backGate.back as CardUpdate["back_face"],
+    // The stored bake is the card on its old frame: stop pointing at it in
+    // the same write (updateCardAction does the same) — the live preview
+    // stands in until the two-face bake below has persisted.
+    ...REBAKE_PENDING_RENDER,
   };
   const supabase = await createClient();
   const { data: row, error } = await supabase

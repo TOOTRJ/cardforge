@@ -14,7 +14,7 @@ import { isBillingEnabled } from "@/lib/billing/flags";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import {
   BAKE_SELECT_COLUMNS,
-  CLEARED_RENDER_POINTERS,
+  REBAKE_PENDING_RENDER,
   rowToPreviewData,
   type CardRowForBake,
   removeRenderObjects,
@@ -267,7 +267,12 @@ async function bakeCardRender(
     ownerId,
     card.id,
     { front: pngBytes, back: back.png },
-    { staleBack: Boolean((card as CardRowForBake).rendered_back_image_url) },
+    // Always, on this path: the save that asked for this bake cleared the
+    // row's pointers (REBAKE_PENDING_RENDER), so "the row still points at a
+    // back bake" can't be read any more — and a card that lost its back
+    // body must not leave that face in the public bucket. One remove of two
+    // names that usually don't exist.
+    { staleBack: true },
   );
   if (!uploaded.ok) return uploaded;
   return { ...uploaded, bakedFrom: card.updated_at };
@@ -309,7 +314,7 @@ export async function bakeAndPersistCardRender(
     // pointer), so this works even without the service-role key.
     const { error: clearErr } = await supabase
       .from("cards")
-      .update({ ...CLEARED_RENDER_POINTERS, layout_version: null })
+      .update({ ...REBAKE_PENDING_RENDER })
       .eq("id", cardId);
     if (clearErr) {
       console.warn(

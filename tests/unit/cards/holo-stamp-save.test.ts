@@ -26,6 +26,17 @@ import { called, chainClient, payloadOf, type ChainAnswer } from "@/tests/stubs/
 const USER = "11111111-1111-4111-8111-111111111111";
 const CARD = "22222222-2222-4222-8222-222222222222";
 const GAME = "33333333-3333-4333-8333-333333333333";
+// Every edit also stops pointing at the stored bake, in the same write
+// (lib/cards/bake-core.ts REBAKE_PENDING_RENDER; rebake-pending-save.test.ts).
+const REBAKE_PENDING = {
+  rendered_image_url: null,
+  rendered_thumb_url: null,
+  rendered_back_image_url: null,
+  rendered_back_thumb_url: null,
+  rendered_at: null,
+  layout_version: null,
+};
+
 
 const state = vi.hoisted(() => ({
   verified: [] as string[],
@@ -197,7 +208,7 @@ describe("updateCardAction — a stored card keeps its look", () => {
     const on = db();
     const result = await updateCardAction(CARD, { frame_anatomy: { stamp: "auto" } });
     expect(result.ok).toBe(true);
-    expect(written(on, "update")).toEqual({ frame_style: { template: "m15", finish: "foil", collector: "2023", stamp: "auto" } });
+    expect(written(on, "update")).toEqual({ frame_style: { template: "m15", finish: "foil", collector: "2023", stamp: "auto" }, ...REBAKE_PENDING });
 
     state.existing = stored({ frame_style: { template: "m15", stamp: "auto" } });
     const never = db();

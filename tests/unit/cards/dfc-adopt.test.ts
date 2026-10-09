@@ -235,7 +235,19 @@ describe("adoptDfcBodiesAction", () => {
     const row = written(stub)!;
     expect(row.frame_style).toEqual({ finish: "regular", template: "m15dfcfront", dfcIcon: "arrows" });
     expect(row.back_face).toEqual({ ...rows[2].back_face, frame_style: { template: "m15dfcback" }, color_identity: ["white"] });
-    expect(Object.keys(row).sort()).toEqual(["back_face", "frame_style"]);
+    // The two content columns, and the stored bake's pointers cleared in the
+    // same write (REBAKE_PENDING_RENDER): the bake is of the old frame.
+    expect(Object.keys(row).sort()).toEqual([
+      "back_face",
+      "frame_style",
+      "layout_version",
+      "rendered_at",
+      "rendered_back_image_url",
+      "rendered_back_thumb_url",
+      "rendered_image_url",
+      "rendered_thumb_url",
+    ]);
+    expect(row).toMatchObject({ rendered_image_url: null, rendered_thumb_url: null, rendered_at: null, layout_version: null });
     expect(state.baked).toEqual([CARD]);
   });
 

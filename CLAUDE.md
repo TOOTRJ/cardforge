@@ -734,7 +734,15 @@ Rules and gotchas:
   ImageObject/keywords/isPartOf — keep those in step with what the render
   shows. A render write is NOT an edit: `updated_at` ignores the render
   columns (0108) and the OG cache-buster is `renderVersionOf()`
-  (`max(updated_at, rendered_at)`), never `updated_at` alone.
+  (`max(updated_at, rendered_at)`), never `updated_at` alone. An EDIT that
+  a deferred re-bake follows clears the row's render pointers and stamp in
+  its OWN update (`REBAKE_PENDING_RENDER`, `lib/cards/bake-core.ts`): until
+  the bake lands every surface draws the live preview of the saved row,
+  never the bake of the card as it was — a page built in that window keeps
+  what it read for its whole ISR window, because the revalidation an
+  `after()` callback asks for is SKIPPED by Next for every path the action
+  already revalidated (never rely on it), and the save bake therefore
+  always removes a one-faced card's `.back.*` names.
 - Theme: the `cardforge-theme` cookie (dark / light / system; none = dark).
   The root layout reads NO cookies (every route stays static/ISR-eligible):
   server HTML is always `data-theme="dark"` and the `<head>` no-flash script

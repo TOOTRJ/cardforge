@@ -353,8 +353,11 @@ describe("a legacy back (no body) and a card that lost its back", () => {
     expect(state.rendered).toHaveLength(1);
     expect(state.rendered[0].card).toMatchObject({ title: "Village Elder", frameStyle: { template: "m15" } });
     expect(state.rendered[0].card).not.toHaveProperty("dfc.role");
+    // The back's names are removed on every one-face save bake: the save
+    // cleared the row's pointers, so it can't say whether a back bake is left.
     expect(state.ops).toEqual([
       { op: "upload", keys: [KEY(NAMES.png)], contentType: "image/png" },
+      { op: "remove", keys: [KEY(NAMES.backPng), KEY(NAMES.backThumb)] },
       { op: "upload", keys: [KEY(NAMES.thumb)], contentType: "image/webp" },
     ]);
     expect(state.writes).toHaveLength(1);
@@ -366,9 +369,9 @@ describe("a legacy back (no body) and a card that lost its back", () => {
     });
   });
 
-  it("a card whose row still points at a back bake it no longer has: the stale back names are removed, the pointers written null", async () => {
+  it("a card that lost its back body, saved (the save cleared its pointers): the stale back names are still removed, the pointers written null", async () => {
     state.card = legacyRow();
-    state.card.rendered_back_image_url = `https://storage.test/card-renders/${KEY(NAMES.backPng)}?v=1`;
+    state.card.rendered_back_image_url = null;
     await bakeAndPersistCardRender(CARD, USER);
     expect(state.ops).toEqual([
       { op: "upload", keys: [KEY(NAMES.png)], contentType: "image/png" },
@@ -382,7 +385,7 @@ describe("a legacy back (no body) and a card that lost its back", () => {
     state.card = dfcRow({ frame_style: { template: "m15", finish: "regular" } });
     await bakeAndPersistCardRender(CARD, USER);
     expect(state.rendered).toHaveLength(1);
-    expect(state.ops.map((op) => op.keys).flat()).toEqual([KEY(NAMES.png), KEY(NAMES.thumb)]);
+    expect(state.ops.filter((op) => op.op === "upload").map((op) => op.keys).flat()).toEqual([KEY(NAMES.png), KEY(NAMES.thumb)]);
     expect(state.writes[0].payload).toMatchObject({ rendered_back_image_url: null });
   });
 });
