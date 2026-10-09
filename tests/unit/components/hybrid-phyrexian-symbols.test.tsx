@@ -113,8 +113,12 @@ describe("RulesSymbolToolbar — the ten buttons", () => {
   it("no other button changed its name", () => {
     const { container } = open();
     const labels = [...container.querySelectorAll("button")].map((b) => b.getAttribute("aria-label")!);
-    expect(labels).toHaveLength(47);
-    for (const label of labels.slice(0, 37)) expect(label).toMatch(/^Insert \{[^}]+\}$/);
+    // 37 symbol buttons + the ten, and the two typography buttons (— and •, 6.11).
+    expect(labels).toHaveLength(49);
+    const symbols = labels.filter((label) => /\{[^}]+\}$/.test(label));
+    expect(symbols).toHaveLength(47);
+    for (const label of symbols.slice(0, 37)) expect(label).toMatch(/^Insert \{[^}]+\}$/);
+    expect(labels.filter((label) => !symbols.includes(label))).toHaveLength(2);
   });
 });
 
