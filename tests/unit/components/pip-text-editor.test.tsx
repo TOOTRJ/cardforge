@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { PipTextEditor } from "@/components/creator/pip-text-editor";
 
 // ---------------------------------------------------------------------------
@@ -17,7 +17,10 @@ import { PipTextEditor } from "@/components/creator/pip-text-editor";
 // And its pips: to Chrome a line that STARTS with a contenteditable=false
 // node has no caret place in front of it, so Backspace / Delete on a pip — and
 // on the break in front of one — are the editor's own ("Cc", Enter, "{t}",
-// Backspace did nothing).
+// Backspace did nothing). The place itself is a "caret host": a text node
+// holding one zero-width space in front of every pip a break precedes — never
+// part of the value — so typing there is the browser's own.
+// And a <br> Chrome puts in front of a pip whose text was deleted is no line.
 // Real typing is covered by tests/e2e/rules-text-editor.spec.ts.
 // ---------------------------------------------------------------------------
 
@@ -42,11 +45,16 @@ function setup(initial: string) {
 
 const valueOf = () => JSON.parse(screen.getByTestId("value").textContent ?? '""') as string;
 
-/** The box as tags: text, "<br>" for a break of ours, "<filler>", "<bare>". */
+/**
+ * The box as tags: text, "<br>" for a break of ours, "<filler>", "<bare>", and
+ * "<caret>" for the zero-width character of a caret host.
+ */
 function shape(box: HTMLElement): string {
   return Array.from(box.childNodes)
     .map((node) => {
-      if (node.nodeType === Node.TEXT_NODE) return node.nodeValue === "" ? "<empty>" : node.nodeValue;
+      if (node.nodeType === Node.TEXT_NODE) {
+        return node.nodeValue === "" ? "<empty>" : node.nodeValue!.replaceAll("\u200B", "<caret>");
+      }
       const el = node as Element;
       if (el.tagName !== "BR") return el.getAttribute("data-pip") ?? el.tagName;
       if (el.hasAttribute("data-filler")) return "<filler>";
@@ -130,7 +138,7 @@ describe("PipTextEditor — the browser's own placeholder break", () => {
 describe("PipTextEditor — a value from outside", () => {
   it("draws its breaks as the editor's own, with a filler after a trailing one", () => {
     const box = setup("Aa\n{T}: Add {G}.\n");
-    expect(shape(box)).toBe("Aa<br>{T}: Add {G}.<br><filler>");
+    expect(shape(box)).toBe("Aa<br><caret>{T}: Add {G}.<br><filler>");
     expect(valueOf()).toBe("Aa\n{T}: Add {G}.\n");
   });
 });
@@ -143,7 +151,7 @@ describe("PipTextEditor — Backspace and Delete on a pip", () => {
 
   it("Backspace removes a pip that is all the last line holds, and keeps the line", () => {
     const box = setup("Cc\n{T}");
-    caretAt(box, 3);
+    caretAt(box, 4);
     expect(fireEvent.keyDown(box, { key: "Backspace" })).toBe(false);
     expect(shape(box)).toBe("Cc<br><filler>");
     expect(valueOf()).toBe("Cc\n");
@@ -170,7 +178,7 @@ describe("PipTextEditor — Backspace and Delete on a pip", () => {
 
   it("Delete removes the pip a line starts with, and keeps the break above it", () => {
     const box = setup("Cc\n{T}");
-    caretAt(box, 2);
+    caretAt(box.childNodes[2], 1);
     expect(fireEvent.keyDown(box, { key: "Delete" })).toBe(false);
     expect(shape(box)).toBe("Cc<br><filler>");
     expect(valueOf()).toBe("Cc\n");
@@ -185,10 +193,10 @@ describe("PipTextEditor — Backspace and Delete on a pip", () => {
     expect(valueOf()).toBe("a{G}");
   });
 
-  // Home on a line a pip starts leaves Chrome's caret inside that pip.
+  // A click on a pip leaves Chrome's caret inside it.
   it("reads a caret inside a pip as the place in front of it", () => {
     const box = setup("Cc\n{T}ab");
-    caretAt(box.childNodes[2], 0);
+    caretAt(box.childNodes[3], 0);
     fireEvent.keyDown(box, { key: "Delete" });
     expect(shape(box)).toBe("Cc<br>ab");
     expect(valueOf()).toBe("Cc\nab");
@@ -205,11 +213,16 @@ describe("PipTextEditor — Backspace and Delete on a pip", () => {
     expect(caret()).toEqual([above.firstChild, 2]);
     cleanup();
 
-    const below = setup("Cc\n{T}ab");
-    caretAt(below.childNodes[2], 0);
-    fireEvent.keyDown(below, { key: "Backspace" });
-    expect(shape(below)).toBe("Cc{T}ab");
-    expect(valueOf()).toBe("Cc{T}ab");
+    // From the caret host, on either side of its character.
+    for (const offset of [0, 1]) {
+      const below = setup("Cc\n{T}ab");
+      caretAt(below.childNodes[2], offset);
+      fireEvent.keyDown(below, { key: "Backspace" });
+      expect(shape(below)).toBe("Cc{T}ab");
+      expect(valueOf()).toBe("Cc{T}ab");
+      expect(caret()).toEqual([below.firstChild, 2]);
+      cleanup();
+    }
   });
 
   it("leaves characters, other breaks, selections and Cmd+Backspace to the browser", () => {
@@ -232,5 +245,158 @@ describe("PipTextEditor — Backspace and Delete on a pip", () => {
     expect(fireEvent.keyDown(box, { key: "Backspace" })).toBe(true);
     expect(shape(box)).toBe("Aa<br>Bb{T}");
     expect(valueOf()).toBe("Aa\nBb{T}");
+  });
+});
+
+describe("PipTextEditor — the place in front of a pip that starts a line", () => {
+  const HOST = "\u200B";
+  const caret = () => {
+    const selection = window.getSelection()!;
+    return [selection.anchorNode, selection.anchorOffset] as const;
+  };
+
+  it("is a caret host behind every break a pip follows, and never part of the value", () => {
+    const box = setup("{T}a\n{G}\nb{W}\n\n{U}");
+    expect(shape(box)).toBe("{T}a<br><caret>{G}<br>b{W}<br><br><caret>{U}");
+    expect(valueOf()).toBe("{T}a\n{G}\nb{W}\n\n{U}");
+    // A copy of everything reads the same.
+    const range = document.createRange();
+    range.selectNodeContents(box);
+    window.getSelection()!.removeAllRanges();
+    window.getSelection()!.addRange(range);
+    let copied = "";
+    fireEvent.copy(box, { clipboardData: { setData: (_: string, text: string) => (copied = text) } });
+    expect(copied).toBe("{T}a\n{G}\nb{W}\n\n{U}");
+  });
+
+  // What Chrome leaves after a key in the host: the character beside the host's.
+  it.each([
+    ["behind the host's character", `${HOST}k`, 2],
+    ["in front of it", `k${HOST}`, 1],
+  ])("keeps a character typed there on the pip's line (%s)", (_, typed, at) => {
+    const box = setup("Cc\n{T}ab");
+    const host = box.childNodes[2];
+    host.nodeValue = typed;
+    caretAt(host, at);
+    fireEvent.input(box);
+    expect(shape(box)).toBe("Cc<br>k{T}ab");
+    expect(valueOf()).toBe("Cc\nk{T}ab");
+    expect(caret()).toEqual([box.childNodes[2], 1]);
+  });
+
+  it("turns a code typed there into a pip, with the host in front of the new one", () => {
+    const box = setup("Cc\n{T}ab");
+    const host = box.childNodes[2];
+    host.nodeValue = `${HOST}{g}`;
+    caretAt(host, 4);
+    fireEvent.input(box);
+    expect(shape(box)).toBe("Cc<br><caret>{G}{T}ab");
+    expect(valueOf()).toBe("Cc\n{G}{T}ab");
+    // Behind the new pip.
+    expect(caret()).toEqual([box, 4]);
+  });
+
+  it("takes a paste there", () => {
+    const box = setup("Cc\n{T}");
+    caretAt(box.childNodes[2], 1);
+    fireEvent.paste(box, { clipboardData: { getData: () => "x{g}" } });
+    expect(shape(box)).toBe("Cc<br>x{G}{T}");
+    expect(valueOf()).toBe("Cc\nx{G}{T}");
+  });
+
+  it("appears when the text in front of a pip is deleted, and takes the caret Chrome left on the line above", () => {
+    const box = setup("Cc\na{T}");
+    expect(shape(box)).toBe("Cc<br>a{T}");
+    box.childNodes[2].remove();
+    caretAt(box.firstChild!, 2);
+    fireEvent.input(box);
+    expect(shape(box)).toBe("Cc<br><caret>{T}");
+    expect(valueOf()).toBe("Cc\n{T}");
+    expect(caret()).toEqual([box.childNodes[2], 1]);
+  });
+
+  it("appears under an Enter in front of a pip, with the caret on it", () => {
+    const box = setup("Cc{T}");
+    caretAt(box.firstChild!, 2);
+    fireEvent.keyDown(box, { key: "Enter" });
+    expect(shape(box)).toBe("Cc<br><caret>{T}");
+    expect(valueOf()).toBe("Cc\n{T}");
+    expect(caret()).toEqual([box.childNodes[2], 1]);
+  });
+
+  it("is stepped over by ← and → in one press", () => {
+    const box = setup("Cc\n{T}x\n{G}");
+    const [above, , host, , behind, , lastHost] = Array.from(box.childNodes);
+    for (const offset of [0, 1]) {
+      caretAt(host, offset);
+      expect(fireEvent.keyDown(box, { key: "ArrowLeft" })).toBe(false);
+      expect(caret()).toEqual([above, 2]);
+      caretAt(host, offset);
+      expect(fireEvent.keyDown(box, { key: "ArrowRight" })).toBe(false);
+      expect(caret()).toEqual([behind, 0]);
+    }
+    // No text on either side: the places are the box's own.
+    caretAt(lastHost, 1);
+    fireEvent.keyDown(box, { key: "ArrowRight" });
+    expect(caret()).toEqual([box, 8]);
+    // Everywhere else, and with a modifier, the arrows are the browser's.
+    caretAt(lastHost, 1);
+    expect(fireEvent.keyDown(box, { key: "ArrowLeft", shiftKey: true })).toBe(true);
+    caretAt(above, 2);
+    expect(fireEvent.keyDown(box, { key: "ArrowRight" })).toBe(true);
+    caretAt(behind, 0);
+    expect(fireEvent.keyDown(box, { key: "ArrowLeft" })).toBe(true);
+  });
+
+  // A click on a pip lands inside it, where Chrome announces no typing.
+  it("moves a caret left inside a pip to the place beside it", () => {
+    const box = setup("a{T}\n{G}");
+    caretAt(box.childNodes[1], 0);
+    act(() => void document.dispatchEvent(new Event("selectionchange")));
+    expect(caret()).toEqual([box.firstChild, 1]);
+    caretAt(box.childNodes[4].firstChild!, 0);
+    act(() => void document.dispatchEvent(new Event("selectionchange")));
+    expect(caret()).toEqual([box.childNodes[3], 1]);
+    caretAt(box.childNodes[4], 1);
+    act(() => void document.dispatchEvent(new Event("selectionchange")));
+    expect(caret()).toEqual([box, 5]);
+  });
+
+  it("leaves a text being composed whole until the composition ends", () => {
+    const box = setup("Cc\n{T}");
+    const host = box.childNodes[2];
+    fireEvent.compositionStart(box);
+    host.nodeValue = `${HOST}か`;
+    caretAt(host, 2);
+    fireEvent.input(box);
+    expect(box.childNodes[2].nodeValue).toBe(`${HOST}か`);
+    expect(valueOf()).toBe("Cc\nか{T}");
+    fireEvent.compositionEnd(box);
+    expect(shape(box)).toBe("Cc<br>か{T}");
+    expect(caret()).toEqual([box.childNodes[2], 1]);
+  });
+});
+
+describe("PipTextEditor — a break the browser put in front of a pip", () => {
+  // "a{T}{G}", Delete on the "a": Chrome leaves <br>{T}{G}.
+  it("is no line: dropped at the start of the box", () => {
+    const box = setup("a{T}{G}");
+    box.firstChild!.remove();
+    box.insertBefore(document.createElement("br"), box.firstChild);
+    caretAt(box, 0);
+    fireEvent.input(box);
+    expect(shape(box)).toBe("{T}{G}");
+    expect(valueOf()).toBe("{T}{G}");
+    expect(window.getSelection()!.anchorNode).toBe(box);
+    expect(window.getSelection()!.anchorOffset).toBe(0);
+  });
+
+  it("is dropped in the middle of the box too, and our own breaks stay", () => {
+    const box = setup("Aa\n\nb{T}");
+    box.childNodes[3].remove();
+    box.insertBefore(document.createElement("br"), box.childNodes[3]);
+    fireEvent.input(box);
+    expect(shape(box)).toBe("Aa<br><br><caret>{T}");
+    expect(valueOf()).toBe("Aa\n\n{T}");
   });
 });

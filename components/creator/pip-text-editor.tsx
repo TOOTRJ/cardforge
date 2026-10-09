@@ -30,6 +30,19 @@
 //     was all its line held ("Cc", Enter, "{t}"), Delete at the end of the
 //     line above took the break AND the pip, and Home put the caret inside
 //     the pip, where Delete did nothing.
+//   • The same missing caret place, for typing: a character typed with the
+//     caret inside a pip (where Home leaves it) went nowhere, and one typed
+//     between a break and the pip behind it joined the line ABOVE — where
+//     Chrome also DRAWS a caret set there, and a caret set at the pip's own
+//     start types nothing at all. So the place is made: a pip a break
+//     precedes has a "caret host" in front of it, a text node holding one
+//     zero-width space. Typing there is the browser's own; the host is
+//     never part of the value, is dropped as soon as it holds anything else
+//     or no longer fronts such a pip, and ← / → step over it in one press.
+//   • Deleting the text in front of a pip makes Chrome put an unmarked <br>
+//     before the pip ("a{T}", Delete on the "a"). Anywhere but the end of
+//     the box a <br> without `data-br` is the browser's and is removed —
+//     read as a break it gave the text a line nobody typed.
 //   • `value` changes from outside (AI patch, import, reset) re-render the
 //     DOM; while focused the caret is restored at the same text offset.
 // ---------------------------------------------------------------------------
@@ -77,6 +90,8 @@ const PIP_ATTR = "data-pip";
 const FILLER_ATTR = "data-filler";
 const BREAK_ATTR = "data-br";
 const CODE_PATTERN = /\{([^{}\s]{1,5})\}/g;
+/** The caret host's one character (see the header): never part of the value. */
+const CARET_HOST = "\u200B";
 
 // ---------------------------------------------------------------------------
 // DOM ↔ string
@@ -125,8 +140,23 @@ function isPlainBr(node: Node | null | undefined): node is HTMLBRElement {
   );
 }
 
+/** A text node's characters without the caret host's. */
+function visibleText(node: Node): string {
+  return (node.nodeValue ?? "").replaceAll(CARET_HOST, "");
+}
+
+function isPip(node: Node | null | undefined): node is HTMLElement {
+  return (
+    !!node && node.nodeType === Node.ELEMENT_NODE && (node as Element).hasAttribute(PIP_ATTR)
+  );
+}
+
+function isCaretHost(node: Node | null | undefined): node is Text {
+  return !!node && node.nodeType === Node.TEXT_NODE && node.nodeValue === CARET_HOST;
+}
+
 function serializePipDom(node: Node): string {
-  if (node.nodeType === Node.TEXT_NODE) return node.nodeValue ?? "";
+  if (node.nodeType === Node.TEXT_NODE) return visibleText(node);
   if (node.nodeType === Node.ELEMENT_NODE) {
     const el = node as Element;
     const code = el.getAttribute(PIP_ATTR);
@@ -165,8 +195,18 @@ function renderValue(root: HTMLElement, value: string) {
   ensureFiller(root);
 }
 
+/**
+ * Remove the <br>s a browser put anywhere but the end of the box (see the
+ * header). The last one is ensureFiller's: it may be an emptied line's filler.
+ */
+function dropBrowserBreaks(root: HTMLElement) {
+  Array.from(root.childNodes).forEach((child) => {
+    if (child !== root.lastChild && isPlainBr(child) && !child.hasAttribute(BREAK_ATTR)) child.remove();
+  });
+}
+
 /** Keep exactly one filler <br>, and only right after a trailing plain <br>. */
-function ensureFiller(root: HTMLElement) {
+function ensureFiller(root: HTMLElement, composing = false) {
   // The browser's own placeholder for an emptied last line: the filler.
   const tail = root.lastChild;
   if (isPlainBr(tail) && !tail.hasAttribute(BREAK_ATTR)) tail.setAttribute(FILLER_ATTR, "");
@@ -190,6 +230,62 @@ function ensureFiller(root: HTMLElement) {
     filler.setAttribute(FILLER_ATTR, "");
     root.appendChild(filler);
   }
+  const hosts = ensureCaretHosts(root, composing);
+  const sel = window.getSelection();
+  if (!hosts.length || !sel || !sel.isCollapsed || !sel.anchorNode || !root.contains(sel.anchorNode)) return;
+  // A deletion that emptied the text in front of a pip leaves Chrome's caret
+  // at the end of the line ABOVE (the place had no caret yet): onto the host.
+  const range = sel.getRangeAt(0);
+  const next = besideCaret(root, range, "after");
+  const front = sel.anchorNode === root ? root.childNodes[sel.anchorOffset] : null;
+  const host = hosts.find((made) => made.previousSibling === next || made === front);
+  if (host) placeCaret(host, host.length);
+  // Set again once the hosts stand: Chrome reads a caret it was given before
+  // a host appeared beside it as a place inside that host.
+  else placeCaret(sel.anchorNode, sel.anchorOffset);
+}
+
+/**
+ * Keep one caret host in front of every pip a break precedes, and its
+ * character nowhere else (see the header). A text being composed is left
+ * whole until the composition ends: rewriting it would end it early.
+ * Returns the hosts it made.
+ */
+function ensureCaretHosts(root: HTMLElement, composing: boolean): Text[] {
+  const fronts = (node: Node) => isPlainBr(node.previousSibling) && isPip(node.nextSibling);
+  Array.from(root.childNodes).forEach((child) => {
+    if (child.nodeType !== Node.TEXT_NODE || !child.nodeValue?.includes(CARET_HOST)) return;
+    if ((isCaretHost(child) && fronts(child)) || composing) return;
+    const text = visibleText(child);
+    if (!text) {
+      child.remove();
+      return;
+    }
+    // The caret keeps its place among the characters that stay.
+    const sel = window.getSelection();
+    const at =
+      sel && sel.isCollapsed && sel.anchorNode === child
+        ? child.nodeValue.slice(0, sel.anchorOffset).replaceAll(CARET_HOST, "").length
+        : null;
+    child.nodeValue = text;
+    if (at != null) placeCaret(child, at);
+  });
+  const made: Text[] = [];
+  Array.from(root.childNodes).forEach((child) => {
+    if (isPip(child) && isPlainBr(child.previousSibling)) {
+      made.push(root.insertBefore(document.createTextNode(CARET_HOST), child));
+    }
+  });
+  return made;
+}
+
+/** The next sibling on one side that is not a text node with nothing to read (empty, or a caret host). */
+function siblingOf(node: Node, side: "before" | "after"): Node | null {
+  let next = side === "before" ? node.previousSibling : node.nextSibling;
+  while (next && next.nodeType === Node.TEXT_NODE && !visibleText(next)) {
+    next = side === "before" ? next.previousSibling : next.nextSibling;
+  }
+  return next;
 }
 
 function caretOffset(root: HTMLElement): number | null {
@@ -223,9 +319,15 @@ function setCaret(root: HTMLElement, offset: number) {
       return;
     }
     if (child.nodeType === Node.TEXT_NODE) {
-      const len = child.nodeValue?.length ?? 0;
+      const raw = child.nodeValue ?? "";
+      const len = visibleText(child).length;
       if (remaining <= len) {
-        placeCaret(child, remaining);
+        // Past the caret host's character: in a host, the place beside the pip.
+        let at = 0;
+        for (let seen = 0; at < raw.length && (raw[at] === CARET_HOST || seen < remaining); at++) {
+          if (raw[at] !== CARET_HOST) seen++;
+        }
+        placeCaret(child, at);
         return;
       }
       remaining -= len;
@@ -275,19 +377,43 @@ function convertTypedCodes(root: HTMLElement): boolean {
   return changed;
 }
 
-function isPip(node: Node | null | undefined): node is HTMLElement {
-  return (
-    !!node && node.nodeType === Node.ELEMENT_NODE && (node as Element).hasAttribute(PIP_ATTR)
-  );
+/**
+ * What a collapsed caret touches on one side: the sibling there, null at the
+ * box's edge, undefined when it is a character (or the caret is nowhere we
+ * know). A caret INSIDE a pip — Home on a line a pip starts leaves Chrome's
+ * there — reads as the place in front of that pip.
+ */
+function besideCaret(
+  root: HTMLElement,
+  range: Range,
+  side: "before" | "after",
+): Node | null | undefined {
+  if (!range.collapsed) return undefined;
+  let container: Node = range.startContainer;
+  let offset = range.startOffset;
+  const inside = pipHolding(root, container);
+  if (inside) {
+    offset = Array.prototype.indexOf.call(root.childNodes, inside) + (offset === 0 ? 0 : 1);
+    container = root;
+  }
+  if (container === root) {
+    const node = root.childNodes[side === "before" ? offset - 1 : offset] ?? null;
+    return node && node.nodeType === Node.TEXT_NODE && !visibleText(node) ? siblingOf(node, side) : node;
+  }
+  if (container.nodeType === Node.TEXT_NODE && container.parentNode === root) {
+    // Anywhere in a caret host is both of its edges.
+    const raw = container.nodeValue ?? "";
+    const rest = side === "before" ? raw.slice(0, offset) : raw.slice(offset);
+    return rest.replaceAll(CARET_HOST, "") ? undefined : siblingOf(container, side);
+  }
+  return undefined;
 }
 
-/** The next sibling on one side that is not an empty text node (see ensureFiller). */
-function siblingOf(node: Node, side: "before" | "after"): Node | null {
-  let next = side === "before" ? node.previousSibling : node.nextSibling;
-  while (next && next.nodeType === Node.TEXT_NODE && !next.nodeValue) {
-    next = side === "before" ? next.previousSibling : next.nextSibling;
-  }
-  return next;
+/** The pip of this box a node is, or is inside. */
+function pipHolding(root: HTMLElement, node: Node): HTMLElement | null {
+  const holder = node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement;
+  const pip = holder?.closest<HTMLElement>(`[${PIP_ATTR}]`);
+  return pip && pip.parentNode === root ? pip : null;
 }
 
 /**
@@ -301,29 +427,44 @@ function deletionTarget(
   range: Range,
   side: "before" | "after",
 ): HTMLElement | null {
-  if (!range.collapsed) return null;
-  let container: Node = range.startContainer;
-  let offset = range.startOffset;
-  // Home on a line a pip starts leaves Chrome's caret INSIDE that pip.
-  const holder = container.nodeType === Node.ELEMENT_NODE ? (container as Element) : container.parentElement;
-  const inside = holder?.closest(`[${PIP_ATTR}]`);
-  if (inside && inside.parentNode === root) {
-    offset = Array.prototype.indexOf.call(root.childNodes, inside) + (offset === 0 ? 0 : 1);
-    container = root;
-  }
-  let node: Node | null;
-  if (container === root) {
-    node = root.childNodes[side === "before" ? offset - 1 : offset] ?? null;
-    if (node && node.nodeType === Node.TEXT_NODE && !node.nodeValue) node = siblingOf(node, side);
-  } else if (container.nodeType === Node.TEXT_NODE && container.parentNode === root) {
-    const atEdge = side === "before" ? offset === 0 : offset === (container.nodeValue?.length ?? 0);
-    if (!atEdge) return null;
-    node = siblingOf(container, side);
-  } else {
-    return null;
-  }
+  const node = besideCaret(root, range, side);
   if (isPip(node)) return node;
   return isPlainBr(node) && node.hasAttribute(BREAK_ATTR) && isPip(siblingOf(node, "after")) ? node : null;
+}
+
+/**
+ * Where ← / → put a caret that stands in a caret host: out of it in one
+ * press, as if the host were not there. Null = the browser's.
+ */
+function arrowTarget(
+  root: HTMLElement,
+  range: Range,
+  key: "ArrowLeft" | "ArrowRight",
+): { node: Node; side: "before" | "after" } | null {
+  const host = range.startContainer;
+  if (!range.collapsed || !isCaretHost(host) || host.parentNode !== root) return null;
+  const node = key === "ArrowLeft" ? host.previousSibling : host.nextSibling;
+  return node ? { node, side: key === "ArrowLeft" ? "before" : "after" } : null;
+}
+
+/** The caret right before or right after a child of the box, in the text beside it if any. */
+function placeCaretBeside(root: HTMLElement, node: Node, side: "before" | "after") {
+  const text = side === "before" ? node.previousSibling : node.nextSibling;
+  if (text && text.nodeType === Node.TEXT_NODE) {
+    placeCaret(text, side === "before" ? (text.nodeValue?.length ?? 0) : 0);
+    return;
+  }
+  placeCaret(root, Array.prototype.indexOf.call(root.childNodes, node) + (side === "before" ? 0 : 1));
+}
+
+/**
+ * A caret Chrome left inside a pip (a click on one lands in its glyph, where
+ * typing is not even announced): back to the place beside the pip.
+ */
+function liftCaretOutOfPip(root: HTMLElement) {
+  const range = selectionInside(root);
+  const pip = range?.collapsed ? pipHolding(root, range.startContainer) : null;
+  if (pip) placeCaretBeside(root, pip, range!.startOffset === 0 ? "before" : "after");
 }
 
 function selectionInside(root: HTMLElement): Range | null {
@@ -364,6 +505,7 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
     // rendered or the value we last emitted — so fast edits between renders
     // never compare against a stale prop.
     const latestRef = useRef(value);
+    const composingRef = useRef(false);
 
     // Normalise the DOM after any edit and tell the form what it reads as.
     const commit = useCallback(() => {
@@ -374,9 +516,11 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
       if (root.childNodes.length === 1 && isPlainBr(root.firstChild) && !root.firstChild.hasAttribute(BREAK_ATTR)) {
         root.replaceChildren();
       }
+      dropBrowserBreaks(root);
       const offset = caretOffset(root);
-      if (convertTypedCodes(root) && offset != null) setCaret(root, offset);
-      ensureFiller(root);
+      const converted = convertTypedCodes(root);
+      ensureFiller(root, composingRef.current);
+      if (converted && offset != null) setCaret(root, offset);
       const next = serializePipDom(root);
       if (next !== latestRef.current) {
         latestRef.current = next;
@@ -396,13 +540,13 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
         if (!range) return;
       }
       range.deleteContents();
-      // Never land inside a pip span: bump the range out to its parent.
-      let container = range.startContainer;
-      if (container.nodeType === Node.ELEMENT_NODE && (container as Element).closest(`[${PIP_ATTR}]`)) {
-        const pip = (container as Element).closest(`[${PIP_ATTR}]`)!;
-        range.setStartAfter(pip);
+      // Never land inside a pip span: bump the range out to its parent — in
+      // front of the pip for a caret at its start (Home leaves Chrome's there).
+      const pip = pipHolding(root, range.startContainer);
+      if (pip) {
+        if (range.startOffset === 0) range.setStartBefore(pip);
+        else range.setStartAfter(pip);
         range.collapse(true);
-        container = range.startContainer;
       }
       let last: Node | null = null;
       for (const node of nodes) {
@@ -491,6 +635,16 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
       return () => root.removeEventListener("beforeinput", onBeforeInput);
     }, [insertNodes, insertPlainText]);
 
+    // selectionchange is announced a task late; the click and the next key
+    // (below) lift the caret themselves so a fast key is never lost.
+    useEffect(() => {
+      const onSelectionChange = () => {
+        if (rootRef.current) liftCaretOutOfPip(rootRef.current);
+      };
+      document.addEventListener("selectionchange", onSelectionChange);
+      return () => document.removeEventListener("selectionchange", onSelectionChange);
+    }, []);
+
     // Outside value → DOM (initial mount, AI patch, import, reset).
     useLayoutEffect(() => {
       const root = rootRef.current;
@@ -525,9 +679,20 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
         )}
         style={{ minHeight: `calc(${rows} * 1.25rem + 1rem + 2px)` }}
         onInput={commit}
+        onCompositionStart={() => {
+          composingRef.current = true;
+        }}
+        onCompositionEnd={() => {
+          composingRef.current = false;
+          commit();
+        }}
         onBlur={onBlur}
         onFocus={onFocus}
+        onClick={() => {
+          if (rootRef.current) liftCaretOutOfPip(rootRef.current);
+        }}
         onKeyDown={(event) => {
+          if (rootRef.current) liftCaretOutOfPip(rootRef.current);
           if (event.key === "Enter" && !event.nativeEvent.isComposing) {
             event.preventDefault();
             insertNodes([makeBreak()]);
@@ -537,6 +702,20 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
           if (event.nativeEvent.isComposing || event.metaKey) return;
           if (event.key === "Backspace" && deleteBesideCaret("before")) event.preventDefault();
           else if (event.key === "Delete" && deleteBesideCaret("after")) event.preventDefault();
+          else if (
+            (event.key === "ArrowLeft" || event.key === "ArrowRight") &&
+            !event.shiftKey &&
+            !event.altKey &&
+            !event.ctrlKey
+          ) {
+            // ← / → out of a caret host (see the header).
+            const root = rootRef.current;
+            const range = root ? selectionInside(root) : null;
+            const target = root && range ? arrowTarget(root, range, event.key) : null;
+            if (!root || !target) return;
+            event.preventDefault();
+            placeCaretBeside(root, target.node, target.side);
+          }
         }}
         onPaste={(event) => {
           event.preventDefault();
