@@ -208,6 +208,10 @@ export type CardPreviewData = {
   cost?: string | null;
   cardType?: CardType | null;
   supertype?: string | null;
+  /** The Types field as typed (cards.printed_types, TODO 3b.16): the words
+   *  printed left of the dash; null / absent = the line built from
+   *  `supertype` + `cardType`. Display only. */
+  printedTypes?: string | null;
   subtypes?: string[];
   rarity?: Rarity | null;
   colorIdentity?: ColorIdentity[];
@@ -328,6 +332,7 @@ type FaceData = {
   cost: string | null;
   cardType: CardType | null;
   supertype: string | null;
+  printedTypes?: string | null;
   subtypes: string[];
   rulesText: string | null;
   flavorText: string | null;
@@ -359,6 +364,7 @@ type AdventureData = {
   cost: string | null;
   cardType: CardType | null;
   supertype: string | null;
+  printedTypes?: string | null;
   subtypes: string[];
   rulesText: string | null;
 };
@@ -376,6 +382,7 @@ export function CardPreview(rawProps: CardPreviewProps) {
     cost,
     cardType,
     supertype,
+    printedTypes,
     subtypes,
     rarity,
     colorIdentity,
@@ -425,6 +432,7 @@ export function CardPreview(rawProps: CardPreviewProps) {
     cost: cost ?? null,
     cardType: cardType ?? null,
     supertype: supertype ?? null,
+    printedTypes: printedTypes ?? null,
     subtypes: subtypes ?? [],
     rulesText: rulesText ?? null,
     flavorText: flavorText ?? null,
@@ -448,6 +456,7 @@ export function CardPreview(rawProps: CardPreviewProps) {
         cost: backFace.cost ?? null,
         cardType: backFace.card_type ?? null,
         supertype: backFace.supertype ?? null,
+        printedTypes: backFace.printed_types ?? null,
         subtypes: backFace.subtypes ?? [],
         rulesText: backFace.rules_text ?? null,
         flavorText: backFace.flavor_text ?? null,
@@ -475,6 +484,7 @@ export function CardPreview(rawProps: CardPreviewProps) {
           cost: backFace.cost ?? null,
           cardType: backFace.card_type ?? null,
           supertype: backFace.supertype ?? null,
+          printedTypes: backFace.printed_types ?? null,
           subtypes: backFace.subtypes ?? [],
           rulesText: backFace.rules_text ?? null,
         }
@@ -493,6 +503,7 @@ export function CardPreview(rawProps: CardPreviewProps) {
         cost: backCard.cost ?? null,
         cardType: backCard.cardType ?? null,
         supertype: backCard.supertype ?? null,
+        printedTypes: backCard.printedTypes ?? null,
         subtypes: backCard.subtypes ?? [],
         rulesText: backCard.rulesText ?? null,
         flavorText: backCard.flavorText ?? null,
@@ -537,6 +548,7 @@ export function CardPreview(rawProps: CardPreviewProps) {
         cost: backBodyData.cost ?? null,
         cardType: backBodyData.cardType ?? null,
         supertype: backBodyData.supertype ?? null,
+        printedTypes: backBodyData.printedTypes ?? null,
         subtypes: backBodyData.subtypes ?? [],
         rulesText: backBodyData.rulesText ?? null,
         flavorText: backBodyData.flavorText ?? null,
@@ -1109,6 +1121,7 @@ function CardFace({
     supertype: face.supertype,
     cardType: face.cardType,
     subtypes: face.subtypes,
+    printedTypes: face.printedTypes,
   });
   const typeSplit = layout.type.split ? splitTypeLine(typeLine) : null;
   // The type line's fit (the bake's twin): the old estimate, or (a measured
@@ -2500,6 +2513,7 @@ function AdventurePanel({
     supertype: data.supertype,
     cardType: data.cardType,
     subtypes: data.subtypes,
+    printedTypes: data.printedTypes,
   });
   const showCost = Boolean(data.cost?.trim());
   // A measured panel (the M15-era family, layout v32) fits its name before
@@ -2598,6 +2612,7 @@ function SecondFacePanel({
     supertype: data.supertype,
     cardType: data.cardType,
     subtypes: data.subtypes,
+    printedTypes: data.printedTypes,
   });
   const showCost = Boolean(slot.costSizePct) && Boolean(data.cost?.trim());
   const showPT = Boolean(slot.pt) && Boolean(data.power || data.toughness);

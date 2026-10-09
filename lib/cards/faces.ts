@@ -98,6 +98,8 @@ export type FaceContentFacts = {
   cost?: string | null;
   cardType?: CardType | null;
   supertype?: string | null;
+  /** The face's Types field as typed (TODO 3b.16); null = the built line. */
+  printedTypes?: string | null;
   subtypes?: readonly string[] | null;
   rulesText?: string | null;
   power?: string | null;
@@ -154,6 +156,7 @@ export function typeWordOf(face: FaceContentFacts): string | null {
     supertype: face.supertype,
     cardType: face.cardType,
     subtypes: face.subtypes ?? undefined,
+    printedTypes: face.printedTypes,
   });
   if (line === "Type") return null;
   const words = line.split(/\s+/).filter((word) => word && word !== "—");
@@ -198,6 +201,9 @@ function backFacts(back: CardBackFace, card: Pick<CardPreviewData, "frameStyle" 
     cost: back.cost ?? null,
     cardType: back.card_type ?? null,
     supertype: back.supertype ?? null,
+    // Only a back whose maker typed its Types text carries the key (TODO
+    // 3b.16): every other back is, key for key, what it was.
+    ...(typeof back.printed_types === "string" ? { printedTypes: back.printed_types } : {}),
     subtypes: back.subtypes ?? [],
     rulesText: back.rules_text ?? null,
     power: back.power ?? null,
@@ -215,6 +221,7 @@ function frontFacts(card: CardPreviewData): FaceContentFacts {
     cost: card.cost,
     cardType: card.cardType,
     supertype: card.supertype,
+    ...(typeof card.printedTypes === "string" ? { printedTypes: card.printedTypes } : {}),
     subtypes: card.subtypes,
     rulesText: card.rulesText,
     power: card.power,
@@ -280,6 +287,9 @@ export function backPreviewData(card: CardPreviewData): CardPreviewData | null {
     cost: back.cost ?? null,
     cardType: back.card_type ?? null,
     supertype: back.supertype ?? null,
+    // Only a back whose maker typed its Types text carries the key (TODO
+    // 3b.16): every other back is, key for key, what it was.
+    ...(typeof back.printed_types === "string" ? { printedTypes: back.printed_types } : {}),
     subtypes: back.subtypes ?? [],
     rulesText: back.rules_text ?? null,
     flavorText: back.flavor_text ?? null,

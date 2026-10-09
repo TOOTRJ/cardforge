@@ -28,6 +28,7 @@ function baseValues(overrides: Partial<FormValues> = {}): FormValues {
     cost: "{2}{R}{R}",
     color_identity: ["red"],
     supertype: "Legendary",
+    printed_types: null,
     card_type: "creature",
     subtypes_text: "Dragon, Elder",
     tags_text: "dragons, tribal",
@@ -80,6 +81,7 @@ describe("cardFormSchema", () => {
     const values = baseValues({
       cost: "",
       supertype: "",
+      printed_types: null,
       subtypes_text: "",
       tags_text: "",
       rules_text: "",

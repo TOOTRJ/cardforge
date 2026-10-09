@@ -123,6 +123,17 @@ export const cardSupertypeSchema = optionalEmptyString(
     .max(64, "Supertype must be 64 characters or fewer."),
 );
 
+/** The Types field as typed (cards.printed_types, migration 0137; TODO
+ *  3b.16): the words printed left of the type line's dash. NOT emptied to
+ *  undefined like the other optional texts — "" is a maker who cleared the
+ *  field (the subtypes print alone); null / omitted = the line is built
+ *  from the supertype and the card type. 80 = PRINTED_TYPES_MAX
+ *  (lib/cards/type-line-field.ts) = the DB CHECK. */
+export const cardPrintedTypesSchema = z
+  .string()
+  .trim()
+  .max(80, "The type line must be 80 characters or fewer.");
+
 export const cardRulesTextSchema = optionalEmptyString(
   z
     .string()
@@ -403,6 +414,7 @@ export const backFaceSchema = z
     cost: cardCostSchema,
     card_type: cardTypeSchema,
     supertype: cardSupertypeSchema,
+    printed_types: cardPrintedTypesSchema.optional(),
     subtypes: cardSubtypesSchema,
     rules_text: cardRulesTextSchema,
     flavor_text: cardFlavorTextSchema,
@@ -534,6 +546,9 @@ const baseCardSchema = z.object({
   cost: cardCostSchema,
   color_identity: cardColorIdentitySchema,
   supertype: cardSupertypeSchema,
+  // `null` = the built line (and clears a stored text on update);
+  // `undefined` leaves the column untouched on update.
+  printed_types: cardPrintedTypesSchema.nullable().optional(),
   card_type: cardTypeSchema,
   subtypes: cardSubtypesSchema,
   tags: cardTagsSchema,

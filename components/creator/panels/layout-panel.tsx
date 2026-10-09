@@ -6,6 +6,7 @@
 // place of brace codes) whose handle ref + symbol insertion the orchestrator
 // owns, shared with the Text panel's toolbar.
 
+import { TypesField } from "@/components/creator/types-field";
 import { Controller, useController, useFormContext } from "react-hook-form";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -159,14 +160,7 @@ export function LayoutPanel({
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <FieldGroup label="Supertype">
-              <input
-                {...register("back_face.supertype")}
-                placeholder="Legendary"
-                className={inputClass(false)}
-                autoComplete="off"
-              />
-            </FieldGroup>
+            <TypesField face="back" />
             <FieldGroup label="Subtypes" helper="Comma-separated.">
               <input
                 {...register("back_face.subtypes_text")}

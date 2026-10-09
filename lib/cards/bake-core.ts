@@ -36,6 +36,9 @@ export type CardRowForBake = {
   cost: string | null;
   card_type: string | null;
   supertype: string | null;
+  /** The Types field as typed (migration 0137, TODO 3b.16). OPTIONAL like
+   *  the collector fields below: the visual matrix's rows have none. */
+  printed_types?: string | null;
   subtypes: string[];
   rarity: string | null;
   color_identity: string[];
@@ -73,7 +76,7 @@ export type CardRowForBake = {
 
 /** Every column the renderer needs (plus owner/visibility for gating). */
 export const BAKE_SELECT_COLUMNS =
-  "id, owner_id, visibility, updated_at, title, cost, card_type, supertype, subtypes, rarity, color_identity, rules_text, flavor_text, power, toughness, loyalty, defense, artist_credit, art_url, art_position, frame_style, set_icon_url, set_icon_code, back_face, face_content, watermark, set_code, collector_number, lang, rendered_back_image_url";
+  "id, owner_id, visibility, updated_at, title, cost, card_type, supertype, printed_types, subtypes, rarity, color_identity, rules_text, flavor_text, power, toughness, loyalty, defense, artist_credit, art_url, art_position, frame_style, set_icon_url, set_icon_code, back_face, face_content, watermark, set_code, collector_number, lang, rendered_back_image_url";
 
 export function rowToPreviewData(
   card: CardRowForBake,
@@ -94,6 +97,7 @@ export function rowToPreviewData(
     cost: card.cost,
     cardType: isCardType(card.card_type) ? (card.card_type as CardType) : null,
     supertype: card.supertype,
+    ...(typeof card.printed_types === "string" ? { printedTypes: card.printed_types } : {}),
     subtypes: card.subtypes,
     rarity: isRarity(card.rarity) ? (card.rarity as Rarity) : null,
     colorIdentity: card.color_identity.filter(isColorIdentity) as ColorIdentity[],

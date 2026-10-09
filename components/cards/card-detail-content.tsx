@@ -904,6 +904,7 @@ export function buildCardJsonLd({
     artist_credit: string | null;
     card_type: string | null;
     supertype: string | null;
+    printed_types?: string | null;
     subtypes: string[] | null;
     rarity: string | null;
     color_identity: string[] | null;
@@ -941,12 +942,13 @@ export function buildCardJsonLd({
     ? ((card.back_face as CardBackFace | null) ?? null)
     : null;
   const backTypeLine = back
-    ? buildTypeLine({ supertype: back.supertype, cardType: back.card_type ?? null, subtypes: back.subtypes ?? [] })
+    ? buildTypeLine({ supertype: back.supertype, cardType: back.card_type ?? null, subtypes: back.subtypes ?? [], printedTypes: back.printed_types })
     : null;
   const typeLine = buildTypeLine({
     supertype: card.supertype,
     cardType: card.card_type as CardType | null,
     subtypes: card.subtypes ?? [],
+    printedTypes: card.printed_types,
   });
   const version = renderVersionOf(card);
   const imageSize = naturalRenderSize(isLandscapeTemplate(card.frame_style));
@@ -1110,6 +1112,7 @@ export function CardDetails({
     cost: string | null;
     card_type: string | null;
     supertype: string | null;
+    printed_types?: string | null;
     subtypes: string[] | null;
     rarity: string | null;
     color_identity: string[] | null;
@@ -1138,6 +1141,7 @@ export function CardDetails({
     supertype: card.supertype,
     cardType: card.card_type as CardType | null,
     subtypes: card.subtypes ?? [],
+    printedTypes: card.printed_types,
   });
   const costWords = describeManaCost(card.cost);
   const colors = (card.color_identity ?? [])
@@ -1243,6 +1247,7 @@ function backFaceRows(back: CardBackFace, frontColors: string[] | null): Array<[
     supertype: back.supertype,
     cardType: back.card_type ?? null,
     subtypes: back.subtypes ?? [],
+    printedTypes: back.printed_types,
   });
   const colors = (back.color_identity ?? frontColors ?? [])
     .map((c) => COLOR_IDENTITY_LABELS[c as ColorIdentity] ?? c)

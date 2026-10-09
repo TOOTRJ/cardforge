@@ -1,5 +1,6 @@
 "use server";
 
+import { withPrintedTypes, withPrintedTypesUpdate } from "@/lib/cards/type-line-field";
 import { withPrintTypography, withPrintTypographyUpdate } from "@/lib/validation/print-typography";
 import { revalidatePath } from "next/cache";
 import { frameGateError } from "@/lib/cards/frame-availability";
@@ -255,7 +256,9 @@ export async function createCardAction(
   // … and its text as print sets it (TODO 6.11: curly quotes, em dashes,
   // bullets) — the one gate the creator, the AI jobs and the deck remix
   // all pass. A new card is converted whole.
-  let data = withPrintTypography(withEmblemShape(parsed.data));
+  // … and its Types text (TODO 3b.16) only where the maker's line differs
+  // from the one the card builds by itself.
+  let data = withPrintedTypes(withPrintTypography(withEmblemShape(parsed.data)));
 
   // An admin's frame preview (TODO 2.3): the creator's admin preview mode
   // asks for it, the server decides — only an admin (from the profile,
@@ -455,6 +458,9 @@ export async function createCardAction(
     color_identity: data.color_identity,
     supertype: data.supertype ?? null,
     card_type: data.card_type ?? null,
+    // Only a line the maker typed differently from the built one (TODO
+    // 3b.16, migration 0137); the column is left out otherwise.
+    ...(data.printed_types != null ? { printed_types: data.printed_types } : {}),
     subtypes: data.subtypes,
     tags: data.tags ?? [],
     rarity: data.rarity ?? null,
@@ -634,6 +640,9 @@ export async function updateCardAction(
   // it is stored keeps its stored characters — no stored card changes
   // because another field of it was edited.
   data = withPrintTypographyUpdate(data, existing);
+  // The Types text (TODO 3b.16) as it will be stored: null when the line
+  // typed is the line the card builds from its stored type words.
+  data = withPrintedTypesUpdate(data, existing);
 
   // An admin's frame preview (TODO 2.3) stays one: it is always private.
   // A card becomes one when an admin's preview-mode save moves it onto an
@@ -727,6 +736,10 @@ export async function updateCardAction(
   }
   if (data.color_identity !== undefined) update.color_identity = data.color_identity;
   if (data.supertype !== undefined) update.supertype = data.supertype ?? null;
+  // Written only when it CHANGES (the creator resends it on every edit).
+  if (data.printed_types !== undefined && (data.printed_types ?? null) !== (existing.printed_types ?? null)) {
+    update.printed_types = data.printed_types ?? null;
+  }
   if (data.card_type !== undefined) update.card_type = data.card_type ?? null;
   if (data.subtypes !== undefined) update.subtypes = data.subtypes;
   if (data.tags !== undefined) update.tags = data.tags;

@@ -1,4 +1,5 @@
 import type { ScryfallCard, ScryfallSet } from "@/lib/scryfall/client";
+import { resolvePrintedTypes } from "@/lib/cards/type-line-field";
 import { listSymbols, undrawableSymbols } from "@/lib/validation/card-glyphs";
 import {
   DEFAULT_CARD_LANG,
@@ -183,6 +184,11 @@ export type ScryfallImportPatch = {
   frame_match?: FrameMatch;
   card_type?: CardType;
   supertype?: string;
+  /** The words the PRINTING sets left of the dash, in its own order — named
+   *  only where they read differently from the line the card builds from
+   *  `supertype` + `card_type` (TODO 3b.16, printedTypesOfPrinting). The
+   *  creator pours it into the Types field. */
+  printed_types?: string;
   subtypes_text?: string;
   rarity?: Rarity;
   /** The card's COLOUR as the creator models it — the one frame dress the
@@ -301,6 +307,8 @@ export type ScryfallImportBackFacePatch = {
   cost?: string;
   card_type?: CardType;
   supertype?: string;
+  /** As the front's `printed_types`, for this face. */
+  printed_types?: string;
   subtypes_text?: string;
   rules_text?: string;
   flavor_text?: string;
@@ -405,6 +413,33 @@ export function parseTypeLine(
     card_type: cardType,
     subtypes_text: subtypes.length > 0 ? subtypes.join(", ") : undefined,
   };
+}
+
+/**
+ * The Types text an import pours into the creator's field (TODO 3b.16,
+ * owner 2026-10-09: "imports write the printing's order into the field"):
+ * the words the printing sets left of its dash — the ones the importer
+ * keeps, in the printing's order, a token's without its "Token" — or
+ * undefined when that is exactly the line the card builds from `supertype`
+ * and `card_type` (nearly every printing: the built order IS the printed
+ * one, TODO 1.20) and on an emblem, whose line is fixed.
+ */
+export function printedTypesOfPrinting(
+  typeLine: string | null | undefined,
+  face: { cardType?: CardType; supertype?: string },
+): string | undefined {
+  if (!typeLine || !face.cardType || face.cardType === "emblem") return undefined;
+  const printed = typeLineWords(typeLine)
+    .words.filter((w) => !(face.cardType === "token" && w.cardType === "token"))
+    .map((w) => w.word)
+    .join(" ");
+  return resolvePrintedTypes({ cardType: face.cardType, supertype: face.supertype, printedTypes: printed }) ?? undefined;
+}
+
+/** The patch key for a printing's own word order — absent, never
+ *  `undefined`, when the printing reads as the built line. */
+function printedTypesKey(printed: string | undefined): { printed_types?: string } {
+  return printed === undefined ? {} : { printed_types: printed };
 }
 
 /** The front face's type line: the first face of a multi-face card, else
@@ -1743,6 +1778,11 @@ export function mapScryfallToFormPatch(
     printing_detail: printingDetailFromScryfall(card),
     card_type: cardType,
     supertype: emblem ? undefined : typeParts.supertype,
+    ...printedTypesKey(
+      emblem
+        ? undefined
+        : printedTypesOfPrinting(pick(front?.type_line, card.type_line), { cardType, supertype: typeParts.supertype }),
+    ),
     subtypes_text: emblem && !emblemPrintsSubtype(card) ? undefined : typeParts.subtypes_text,
     rarity: emblem ? "common" : rarityChecked,
     color_identity: emblem
@@ -1836,6 +1876,7 @@ export function mapScryfallBackFacePatch(
     cost: back.mana_cost ?? undefined,
     card_type: cardType,
     supertype: typeParts.supertype,
+    ...printedTypesKey(printedTypesOfPrinting(back.type_line, { cardType, supertype: typeParts.supertype })),
     subtypes_text: typeParts.subtypes_text,
     rules_text: back.oracle_text ?? undefined,
     flavor_text: back.flavor_text ?? undefined,

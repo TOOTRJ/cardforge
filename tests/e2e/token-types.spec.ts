@@ -42,7 +42,6 @@ async function openTokenCreator(page: Page) {
 async function nameBySubtypes(page: Page, subtypes: string) {
   const rail = page.getByRole("navigation", { name: /card editor steps/i });
   await rail.getByRole("button", { name: /^identity$/i }).click();
-  await page.getByText(/more options — supertype, subtypes/i).click();
   await page.locator('input[placeholder="Dragon, Elder"]').fill(subtypes);
   await expect(page.locator('input[placeholder="Emberbound Wyrm"]')).toHaveValue(subtypes);
   return rail;
