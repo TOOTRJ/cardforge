@@ -2,13 +2,16 @@ import { test, expect, type Page } from "@playwright/test";
 import { signIn } from "./helpers/sign-in";
 
 // ---------------------------------------------------------------------------
-// The rules-text box on the Text & stats step, in a real browser — the three
+// The rules-text box on the Text & stats step, in a real browser — the four
 // things only one can show:
 //   • a mouse click inside the empty box used to drop a {W} pip into it (the
 //     field group is a <label>; its first labelable descendant is the symbol
 //     toolbar's first button, and a label forwards clicks to it);
 //   • the first Enter at the end of a text was dropped ("Aa", Enter, "Bb"
 //     read "AaBb"), and deleting the last line's text added a line;
+//   • Backspace did nothing behind a pip that was all its line held ("Cc",
+//     Enter, "{t}"), and Delete on a line a pip starts did nothing or took
+//     the break above with the pip;
 //   • at a phone's width the step scrolled sideways (the AI button's label
 //     never wrapped).
 // Auth-gated, so it skips without the seeded e2e user. See tests/README.md.
@@ -30,6 +33,10 @@ async function openTextStep(page: Page) {
   await expect(box).toBeVisible();
   return box;
 }
+
+// macOS moves to a line's edge with Cmd+Arrow; Home / End only scroll there.
+const LINE_START = process.platform === "darwin" ? "Meta+ArrowLeft" : "Home";
+const LINE_END = process.platform === "darwin" ? "Meta+ArrowRight" : "End";
 
 /** The box as the form reads it: pips as their codes, breaks as "\n". */
 async function textOf(page: Page): Promise<string> {
@@ -96,6 +103,42 @@ test.describe("rules text editor", () => {
     await page.keyboard.press("ArrowLeft");
     await page.keyboard.press("Enter");
     expect(await textOf(page)).toBe("Aa\nBb\nCc\nD\nd");
+  });
+
+  test("Backspace and Delete remove a pip that starts its line", async ({ page }) => {
+    await signIn(page);
+    const box = await openTextStep(page);
+
+    // A pip that is all the last line holds: Chrome's own Backspace did nothing.
+    await box.click();
+    await page.keyboard.type("Cc");
+    await page.keyboard.press("Enter");
+    await page.keyboard.type("{t}");
+    expect(await textOf(page)).toBe("Cc\n{T}");
+    await page.keyboard.press("Backspace");
+    expect(await textOf(page)).toBe("Cc\n");
+    // The caret stayed on the emptied line.
+    await page.keyboard.type("{t}{g}");
+    expect(await textOf(page)).toBe("Cc\n{T}{G}");
+    await page.keyboard.press("Backspace");
+    await page.keyboard.press("Backspace");
+    expect(await textOf(page)).toBe("Cc\n");
+
+    // Delete in front of the pip a line starts with (the key leaves Chrome's
+    // caret inside the pip) removes the pip and keeps the break above it.
+    await page.keyboard.type("{t}ab");
+    await page.keyboard.press(LINE_START);
+    await page.keyboard.press("Delete");
+    expect(await textOf(page)).toBe("Cc\nab");
+
+    // Delete at the end of the line above joins the lines; the pip stays.
+    await page.keyboard.press("Backspace");
+    await page.keyboard.press("Enter");
+    await page.keyboard.type("{t}");
+    await page.keyboard.press("ArrowUp");
+    await page.keyboard.press(LINE_END);
+    await page.keyboard.press("Delete");
+    expect(await textOf(page)).toBe("Cc{T}ab");
   });
 
   test("the step does not scroll sideways on a phone", async ({ page }) => {

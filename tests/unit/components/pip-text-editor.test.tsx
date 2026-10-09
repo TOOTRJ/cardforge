@@ -14,6 +14,10 @@ import { PipTextEditor } from "@/components/creator/pip-text-editor";
 //   • A browser keeps an emptied last line open with a <br> of its own; read
 //     as a break it gave the text a line nobody typed ("Cc\nD", Backspace →
 //     "Cc\n\n").
+// And its pips: to Chrome a line that STARTS with a contenteditable=false
+// node has no caret place in front of it, so Backspace / Delete on a pip — and
+// on the break in front of one — are the editor's own ("Cc", Enter, "{t}",
+// Backspace did nothing).
 // Real typing is covered by tests/e2e/rules-text-editor.spec.ts.
 // ---------------------------------------------------------------------------
 
@@ -128,5 +132,105 @@ describe("PipTextEditor — a value from outside", () => {
     const box = setup("Aa\n{T}: Add {G}.\n");
     expect(shape(box)).toBe("Aa<br>{T}: Add {G}.<br><filler>");
     expect(valueOf()).toBe("Aa\n{T}: Add {G}.\n");
+  });
+});
+
+describe("PipTextEditor — Backspace and Delete on a pip", () => {
+  const caret = () => {
+    const selection = window.getSelection()!;
+    return [selection.anchorNode, selection.anchorOffset] as const;
+  };
+
+  it("Backspace removes a pip that is all the last line holds, and keeps the line", () => {
+    const box = setup("Cc\n{T}");
+    caretAt(box, 3);
+    expect(fireEvent.keyDown(box, { key: "Backspace" })).toBe(false);
+    expect(shape(box)).toBe("Cc<br><filler>");
+    expect(valueOf()).toBe("Cc\n");
+    // Still on the emptied line: between the break and its filler.
+    expect(caret()).toEqual([box, 2]);
+  });
+
+  it("Backspace removes the pip in front of a text the caret starts", () => {
+    const box = setup("a{T}b");
+    caretAt(box.lastChild!, 0);
+    fireEvent.keyDown(box, { key: "Backspace" });
+    expect(shape(box)).toBe("ab");
+    expect(valueOf()).toBe("ab");
+    expect(caret()).toEqual([box.firstChild, 1]);
+  });
+
+  it("empties a box that held one pip", () => {
+    const box = setup("{T}");
+    caretAt(box, 1);
+    fireEvent.keyDown(box, { key: "Backspace" });
+    expect(shape(box)).toBe("");
+    expect(valueOf()).toBe("");
+  });
+
+  it("Delete removes the pip a line starts with, and keeps the break above it", () => {
+    const box = setup("Cc\n{T}");
+    caretAt(box, 2);
+    expect(fireEvent.keyDown(box, { key: "Delete" })).toBe(false);
+    expect(shape(box)).toBe("Cc<br><filler>");
+    expect(valueOf()).toBe("Cc\n");
+    expect(caret()).toEqual([box, 2]);
+  });
+
+  it("Delete removes the pip behind a text the caret ends", () => {
+    const box = setup("a{T}{G}");
+    caretAt(box.firstChild!, 1);
+    fireEvent.keyDown(box, { key: "Delete" });
+    expect(shape(box)).toBe("a{G}");
+    expect(valueOf()).toBe("a{G}");
+  });
+
+  // Home on a line a pip starts leaves Chrome's caret inside that pip.
+  it("reads a caret inside a pip as the place in front of it", () => {
+    const box = setup("Cc\n{T}ab");
+    caretAt(box.childNodes[2], 0);
+    fireEvent.keyDown(box, { key: "Delete" });
+    expect(shape(box)).toBe("Cc<br>ab");
+    expect(valueOf()).toBe("Cc\nab");
+    expect(caret()).toEqual([box.lastChild, 0]);
+  });
+
+  it("joins the lines when the break in front of a pip is deleted from either side", () => {
+    // Chrome's own Delete here took the break AND the pip.
+    const above = setup("Cc\n{T}\ndd");
+    caretAt(above.firstChild!, 2);
+    fireEvent.keyDown(above, { key: "Delete" });
+    expect(shape(above)).toBe("Cc{T}<br>dd");
+    expect(valueOf()).toBe("Cc{T}\ndd");
+    expect(caret()).toEqual([above.firstChild, 2]);
+    cleanup();
+
+    const below = setup("Cc\n{T}ab");
+    caretAt(below.childNodes[2], 0);
+    fireEvent.keyDown(below, { key: "Backspace" });
+    expect(shape(below)).toBe("Cc{T}ab");
+    expect(valueOf()).toBe("Cc{T}ab");
+  });
+
+  it("leaves characters, other breaks, selections and Cmd+Backspace to the browser", () => {
+    const box = setup("Aa\nBb{T}");
+    // Not prevented: fireEvent returns true.
+    caretAt(box.firstChild!, 1);
+    expect(fireEvent.keyDown(box, { key: "Backspace" })).toBe(true);
+    expect(fireEvent.keyDown(box, { key: "Delete" })).toBe(true);
+    caretAt(box.firstChild!, 2);
+    expect(fireEvent.keyDown(box, { key: "Delete" })).toBe(true);
+    caretAt(box.childNodes[2], 0);
+    expect(fireEvent.keyDown(box, { key: "Backspace" })).toBe(true);
+    caretAt(box, 4);
+    expect(fireEvent.keyDown(box, { key: "Backspace", metaKey: true })).toBe(true);
+    const range = document.createRange();
+    range.setStart(box.childNodes[2], 1);
+    range.setEnd(box, 4);
+    window.getSelection()!.removeAllRanges();
+    window.getSelection()!.addRange(range);
+    expect(fireEvent.keyDown(box, { key: "Backspace" })).toBe(true);
+    expect(shape(box)).toBe("Aa<br>Bb{T}");
+    expect(valueOf()).toBe("Aa\nBb{T}");
   });
 });
