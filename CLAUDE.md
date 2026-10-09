@@ -477,6 +477,19 @@ Rules and gotchas:
   its height follows the text until a Variations pick
   (`lib/creator/token-frame-auto.ts`, wired into the form's round-11 effect;
   `docs/FRAMES.md` "Full-art tokens").
+- The type line (layout v50, TODO 1.20): `supertype` holds every word left
+  of the dash but the card type's own (the importer's rule, 1.3) and
+  `typeLineWords` / `buildTypeLine` (`lib/cards/card-display.ts`) put the
+  card type back in PRINTED order at build time — Basic, Legendary, Ongoing,
+  Snow, World, Host / Elite, Kindred / Tribal, Enchantment, Artifact, Land,
+  Planeswalker, Creature ("Legendary Enchantment Creature", "Enchantment
+  Land", "Land Creature"); Instant / Sorcery / Battle print last; a word the
+  order doesn't know stays where it was typed and nothing moves across it.
+  Never store the order, never build a type line by hand. A face whose words
+  say Creature shows and prints a P/T whatever its card type (Dryad Arbor: a
+  land with "Creature"; `showsPowerToughness`), never an emblem. The table
+  and its Scryfall sample are `tests/unit/cards/type-line-order.test.ts`;
+  changing the order is a layout bump (`v50FaceChanged` is frozen).
 - Emblems (TODO 4.52 + 6.23, migration 0130): `card_type` 'emblem' and the
   `emblem` kind, reached ONLY through the token kind's Emblem choice
   (`KIND_PICKER_KINDS` leaves it out of the kind chips; `kindPickerChip`
