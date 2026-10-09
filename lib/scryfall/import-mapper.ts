@@ -1515,10 +1515,18 @@ export function printsStandardCrown(
  *  colours (TODO 4.6h): Ravnica, October 2005 — and Salvat's 2005 reprints
  *  of its cards, which Scryfall dates 2005-08-22. Before it the frame's one
  *  two-colour gold card, Iname as One (SOK #151, June 2005), printed plain
- *  gold. The 2005 promos carry Scryfall's placeholder date 2005-01-01
- *  (PAL05 #8 Skyknight Legionnaire prints the split), so a promo set counts
- *  whatever its date. */
+ *  gold, and so did Unhinged's three (November 2004) and the textless
+ *  Psychatog of Magic Player Rewards 2005 (P05 #1, gold pinline all round —
+ *  looked at 2026-10-08). The 2005 promos carry Scryfall's placeholder date
+ *  2005-01-01, so the date cannot tell that Psychatog from the one earlier
+ *  printing that DOES print the split: Arena League 2005's Skyknight
+ *  Legionnaire (PAL05 #8, a Ravnica card) — named by its set
+ *  (TWO_COLOUR_2003_GOLD_EARLY_SETS). Those seven are every non-hybrid
+ *  two-colour gold printing of the frame Scryfall dates before the day. */
 export const TWO_COLOUR_2003_GOLD_FROM = "2005-08-01";
+/** Sets Scryfall dates before TWO_COLOUR_2003_GOLD_FROM whose two-colour
+ *  gold cards print the split all the same (see there). */
+export const TWO_COLOUR_2003_GOLD_EARLY_SETS: ReadonlySet<string> = new Set(["pal05"]);
 /** The first day a two-colour LAND of the 1997 frame printed its two
  *  colours (TODO 4.6h): Sixth Edition, April 1999 (36 of 36 measured from
  *  then to Onslaught 2002, Battle Royale and Deckmasters included). Fifth
@@ -1548,7 +1556,7 @@ export function printsTwoColorFrame(card: ScryfallCard): boolean {
   const cost = card.card_faces?.[0]?.mana_cost ?? card.mana_cost ?? null;
   if (twoColorDressOf(cost, "nonland") === "hybrid") return false;
   const released = (card.released_at ?? "").trim();
-  return (card.set_type ?? "").trim().toLowerCase() === "promo" || released === "" || released >= TWO_COLOUR_2003_GOLD_FROM;
+  return TWO_COLOUR_2003_GOLD_EARLY_SETS.has((card.set ?? "").trim().toLowerCase()) || released === "" || released >= TWO_COLOUR_2003_GOLD_FROM;
 }
 
 /**

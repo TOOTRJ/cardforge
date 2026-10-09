@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ScryfallCard } from "@/lib/scryfall/client";
 import {
   TWO_COLOUR_1997_LAND_FROM,
+  TWO_COLOUR_2003_GOLD_EARLY_SETS,
   TWO_COLOUR_2003_GOLD_FROM,
   frameColorsFromScryfall,
   frameMatchFromScryfall,
@@ -63,10 +64,30 @@ describe("the 2003 frame", () => {
     expect(stored.colorIdentity).toEqual(["multicolor"]);
   });
 
-  it("a 2005 promo carries Scryfall's placeholder date and prints the split (PAL05 #8)", () => {
+  it("Arena League 2005's Skyknight Legionnaire carries Scryfall's placeholder date and prints the split (PAL05 #8)", () => {
     expect(P["pal05-8"].released_at).toBe("2005-01-01");
     expect(P["pal05-8"].set_type).toBe("promo");
     expect(printsTwoColorFrame(P["pal05-8"])).toBe(true);
+  });
+
+  it("the date cannot tell the 2005 promos apart: Player Rewards' Psychatog (P05 #1) printed plain gold — only the named set counts", () => {
+    expect(P["p05-1"].released_at).toBe(P["pal05-8"].released_at);
+    expect(P["p05-1"].set_type).toBe("promo");
+    expect([...TWO_COLOUR_2003_GOLD_EARLY_SETS]).toEqual(["pal05"]);
+    expect(printsTwoColorFrame(P["p05-1"])).toBe(false);
+    expect(patch("p05-1").printed_two_color).toBeUndefined();
+    const stored = importedAnatomy(patch("p05-1"), "modern");
+    expect("twoColor" in stored.style).toBe(false);
+    expect(stored.colorIdentity).toEqual(["multicolor"]);
+    expect(match("p05-1")).toEqual(["exact", "modern", ""]);
+  });
+
+  it("Unhinged's gold cards (November 2004) printed plain gold; a promo from 2006 on prints the split by its date (F06 #4)", () => {
+    expect(printsTwoColorFrame(P["unh-118"])).toBe(false);
+    expect(patch("unh-118").printed_two_color).toBeUndefined();
+    expect(P["f06-4"].released_at! >= TWO_COLOUR_2003_GOLD_FROM).toBe(true);
+    expect(printsTwoColorFrame(P["f06-4"])).toBe(true);
+    expect(patch("f06-4")).toMatchObject({ color_pair: "ub", printed_two_color: true });
   });
 
   it("a hybrid card stays a gap: its print splits the frame body, and no switch is named", () => {
@@ -121,6 +142,22 @@ describe("the 1997 frame's lands", () => {
     expect(frameColorsFromScryfall(P[key])).toEqual(["colorless"]);
     expect(match(key)).toEqual(["exact", "retroland", ""]);
     expect(patch(key).printed_two_color).toBeUndefined();
+  });
+
+  it("Riftstone Portal (JUD #143) taps for {C} alone — Scryfall lists the {G} and {W} it grants other lands — and prints the plain land", () => {
+    expect(P["jud-143"].produced_mana).toEqual(expect.arrayContaining(["G", "W"]));
+    expect(P["jud-143"].released_at! >= TWO_COLOUR_1997_LAND_FROM).toBe(true);
+    expect(frameColorsFromScryfall(P["jud-143"])).toEqual(["colorless"]);
+    expect(patch("jud-143").color_pair).toBeUndefined();
+    expect(patch("jud-143").printed_two_color).toBeUndefined();
+    expect(match("jud-143").slice(1, 2)).toEqual(["retroland"]);
+    expect(match("jud-143")[2]).not.toContain("two-colour");
+  });
+
+  it("Krosan Verge (JUD #141) fetches a Forest AND a Plains, not one of two: the plain land, as printed", () => {
+    expect(frameColorsFromScryfall(P["jud-141"])).toEqual(["colorless"]);
+    expect(patch("jud-141").printed_two_color).toBeUndefined();
+    expect(match("jud-141")).toEqual(["exact", "retroland", ""]);
   });
 
   it("an Onslaught fetch land prints the two land types it fetches (ONS #316)", () => {

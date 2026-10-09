@@ -575,5 +575,144 @@
     ],
     "oracle_text": "Destroy target permanent.",
     "rarity": "rare"
+  },
+  "p05-1": {
+    "id": "d4d067fb-f3c9-4fe0-8330-da5e566eae9c",
+    "oracle_id": "d7c4da85-d1a5-4a27-812d-65d8ee1494dd",
+    "name": "Psychatog",
+    "released_at": "2005-01-01",
+    "layout": "normal",
+    "set": "p05",
+    "set_name": "Magic Player Rewards 2005",
+    "set_type": "promo",
+    "collector_number": "1",
+    "frame": "2003",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Creature — Atog",
+    "mana_cost": "{1}{U}{B}",
+    "colors": [
+      "B",
+      "U"
+    ],
+    "color_identity": [
+      "B",
+      "U"
+    ],
+    "oracle_text": "Discard a card: This creature gets +1/+1 until end of turn.\nExile two cards from your graveyard: This creature gets +1/+1 until end of turn.",
+    "rarity": "rare"
+  },
+  "jud-143": {
+    "id": "92ece630-e484-4221-911f-e32048894f23",
+    "oracle_id": "8d7e05ba-5406-4d5e-bb8f-a4a6f3b0eaa7",
+    "name": "Riftstone Portal",
+    "released_at": "2002-05-27",
+    "layout": "normal",
+    "set": "jud",
+    "set_name": "Judgment",
+    "set_type": "expansion",
+    "collector_number": "143",
+    "frame": "1997",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "G",
+      "W"
+    ],
+    "produced_mana": [
+      "C",
+      "G",
+      "W"
+    ],
+    "oracle_text": "{T}: Add {C}.\nAs long as this card is in your graveyard, lands you control have \"{T}: Add {G} or {W}.\"",
+    "rarity": "uncommon"
+  },
+  "jud-141": {
+    "id": "bae25abc-22c2-436d-9e08-f123543a0911",
+    "oracle_id": "d9a10971-f32b-4978-952d-fed0a5bc9e36",
+    "name": "Krosan Verge",
+    "released_at": "2002-05-27",
+    "layout": "normal",
+    "set": "jud",
+    "set_name": "Judgment",
+    "set_type": "expansion",
+    "collector_number": "141",
+    "frame": "1997",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "C"
+    ],
+    "oracle_text": "This land enters tapped.\n{T}: Add {C}.\n{2}, {T}, Sacrifice this land: Search your library for a Forest card and a Plains card, put them onto the battlefield tapped, then shuffle.",
+    "rarity": "uncommon"
+  },
+  "f06-4": {
+    "id": "894e5b74-61e0-4165-82ab-5e7e22e5a817",
+    "oracle_id": "a7ebe748-c3de-402f-8a6e-236a6413c0f8",
+    "name": "Lobotomy",
+    "released_at": "2006-01-01",
+    "layout": "normal",
+    "set": "f06",
+    "set_name": "Friday Night Magic 2006",
+    "set_type": "promo",
+    "collector_number": "4",
+    "frame": "2003",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Sorcery",
+    "mana_cost": "{2}{U}{B}",
+    "colors": [
+      "B",
+      "U"
+    ],
+    "color_identity": [
+      "B",
+      "U"
+    ],
+    "oracle_text": "Target player reveals their hand, then you choose a card other than a basic land card from it. Search that player's graveyard, hand, and library for all cards with the same name as the chosen card and exile them. Then that player shuffles.",
+    "rarity": "rare"
+  },
+  "unh-118": {
+    "id": "5c86f1b5-d95d-4f44-8078-4572101997b4",
+    "oracle_id": "39701169-d61e-4bc8-be4b-72f905080859",
+    "name": "Meddling Kids",
+    "released_at": "2004-11-19",
+    "layout": "normal",
+    "set": "unh",
+    "set_name": "Unhinged",
+    "set_type": "funny",
+    "collector_number": "118",
+    "frame": "2003",
+    "border_color": "silver",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Creature — Human Child",
+    "mana_cost": "{2}{W}{U}",
+    "colors": [
+      "U",
+      "W"
+    ],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "oracle_text": "As this creature enters, choose a word with four or more letters.\nSpells with the chosen word in their text box can't be cast.",
+    "rarity": "rare"
   }
 }

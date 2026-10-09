@@ -2656,7 +2656,10 @@ const WUBRG = ["W", "U", "B", "R", "G"] as const;
 //     Vestige OGW #170, Gemstone Caverns TSP #274, Mirrex ONE #254,
 //     Springjack Pasture C13 #326), and Urborg UMA #254, whose Swamp-granting
 //     text Scryfall counts as {B} (Yavimaya MH2 #261, its Forest twin, does
-//     print green);
+//     print green); Riftstone Portal (JUD #143, its one printing) taps for
+//     {C} alone — the {G} and {W} Scryfall lists are what it grants other
+//     lands from the graveyard — and prints the plain land's orange box
+//     (looked at 2026-10-08, TODO 4.6h);
 //   • "gold" — fetch lands for "a basic land card" that print the gold land
 //     frame although Scryfall lists no mana and no identity (Fabled Passage
 //     ELD #244, Prismatic Vista MH1 #244; checked 2026-09-28). Evolving Wilds
@@ -2675,6 +2678,7 @@ const LAND_FRAME_OVERRIDES: ReadonlyMap<string, "identity" | "colorless" | "gold
   ["Gemstone Caverns", "colorless"],
   ["Mirrex", "colorless"],
   ["Springjack Pasture", "colorless"],
+  ["Riftstone Portal", "colorless"],
   ["Urborg, Tomb of Yawgmoth", "colorless"],
   ["Fabled Passage", "gold"],
   ["Prismatic Vista", "gold"],

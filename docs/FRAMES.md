@@ -2694,20 +2694,38 @@ renderers, the creator's switch and its copy, the save and the remix are
 4.6b's, untouched.
 
 **Import** (`printsTwoColorFrame`): the 2003 frame — a land always, a gold
-card from Ravnica on (or from a promo set, whose Scryfall date is a
-placeholder), never a hybrid card; the 1997 frame — a land that taps for
-both colours, printed from 1999 on (`TWO_COLOUR_1997_LAND_FROM`), or an
-Onslaught fetch land.
+card from Ravnica on (`TWO_COLOUR_2003_GOLD_FROM`), never a hybrid card; the
+1997 frame — a land that taps for both colours, printed from 1999 on
+(`TWO_COLOUR_1997_LAND_FROM`), or an Onslaught fetch land. Two printings the
+data cannot tell, found by the skeptic pass on 251 further printings
+(2026-10-08) and named:
+
+- Scryfall dates the 2005 promos 2005-01-01. Arena League's Skyknight
+  Legionnaire (PAL05 #8) prints the split, the textless Psychatog of Player
+  Rewards (P05 #1) plain gold — so the one early set is named
+  (`TWO_COLOUR_2003_GOLD_EARLY_SETS`), never "any promo". The seven
+  printings Scryfall dates before the day are those two, Iname as One and
+  Unhinged's four (plain gold).
+- Riftstone Portal (JUD #143) taps for {C} alone; the {G} and {W} Scryfall
+  lists are what it grants other lands. It prints the plain land
+  (`LAND_FRAME_OVERRIDES`).
 
 **Verification.** A pair rides its template's `m` tick (owner decision
 2026-09-29, V-A), after the owner signs the PR's pair sheets — nothing new to
-tick, and no tick goes stale. The creator's gate reads the colour key, and a
-pair's is `m`: `modern/m` and `modernland/m` are ticked on production, so
-their pairs are offered as soon as the masters are promoted. `retroland/m`
-is a render stand-in that has never been ticked (the plain land with a gold
-box, which no printing read wears), so a `retroland` pair can be picked only
-once the owner ticks `retroland/m` — which also offers the stand-in to a
-three-colour land. The owner decides on the pair sheet.
+tick. The creator's gate reads the colour key (`frameGateError`,
+`pickFrameColorKey`), and a pair's is `m`. Production, read 2026-10-08:
+`modern/m`, `modernland/m` AND `retroland/m` are ticked (`retroland`'s seven
+keys were ticked together that morning, at layout 46), so all three
+templates' pairs are offered there as soon as the masters are promoted and
+this is deployed. `retroland/m` itself is a render stand-in (the plain land
+with a gold box, which no printing read wears — a three-colour 1997 land
+prints the plain orange box); its tick is what offers the pairs AND that
+stand-in. The dev database has no `retro` / `retroland` tick at all, so on a
+preview only an admin's `?previewFrames=retroland` reaches them. One tick
+reads stale on the sign-off page after this: `retroland/m` was scored against
+Seaside Haven (ONS #323), which now imports as the plain land `c` and left
+the slot for Crosis's Catacombs — the gate (verified rows only) is not
+affected.
 
 **Proof that nothing stored changes.** The replay of 124 visible production
 cards (all 8 on `modern`; production holds none on the other three) is
