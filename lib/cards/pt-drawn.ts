@@ -14,8 +14,13 @@
 //   • the public card page's "Card details", which lists only what the
 //     render shows (CLAUDE.md, the SEO contract).
 //
-// It reads the CODE profile: a stored override moves a slot's rect, it never
-// adds or removes one (lib/cards/profile-override.ts mergeProfile).
+// It reads the CODE profile. A stored override moves a slot's rect and can
+// never REMOVE a slot; the layout editor offers only the slots a profile
+// already has (lib/cards/profile-override.ts listSlotPaths), so none adds
+// one either. The override schema itself would take a `pt` on a template
+// with none (mergeProfile would copy it in) — only a hand-made admin payload
+// gets there, and this module would then disagree with the bake.
+// tests/unit/render/pt-drawn-bake.test.tsx holds the answers to real bakes.
 //
 // Pure: no rendering, no I/O.
 // ---------------------------------------------------------------------------
