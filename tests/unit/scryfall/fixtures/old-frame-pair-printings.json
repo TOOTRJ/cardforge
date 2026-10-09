@@ -1,0 +1,718 @@
+{
+  "rav-239": {
+    "id": "95e5828a-3e54-4b9c-9e84-21880930f2d5",
+    "oracle_id": "a35c2e20-eb90-4132-b65f-be1fcb569819",
+    "name": "Watchwolf",
+    "released_at": "2005-10-07",
+    "layout": "normal",
+    "set": "rav",
+    "set_name": "Ravnica: City of Guilds",
+    "set_type": "expansion",
+    "collector_number": "239",
+    "frame": "2003",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Creature — Wolf",
+    "mana_cost": "{G}{W}",
+    "colors": [
+      "G",
+      "W"
+    ],
+    "color_identity": [
+      "G",
+      "W"
+    ],
+    "oracle_text": "",
+    "rarity": "uncommon"
+  },
+  "sok-151": {
+    "id": "4e13f122-0dfe-42f3-9815-9ae1a29fca99",
+    "oracle_id": "865e569b-6999-4a03-ad02-4bfd595d5820",
+    "name": "Iname as One",
+    "released_at": "2005-06-03",
+    "layout": "normal",
+    "set": "sok",
+    "set_name": "Saviors of Kamigawa",
+    "set_type": "expansion",
+    "collector_number": "151",
+    "frame": "2003",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Legendary Creature — Spirit",
+    "mana_cost": "{8}{B}{B}{G}{G}",
+    "colors": [
+      "B",
+      "G"
+    ],
+    "color_identity": [
+      "B",
+      "G"
+    ],
+    "oracle_text": "When Iname as One enters, if you cast it from your hand, you may search your library for a Spirit permanent card, put it onto the battlefield, then shuffle.\nWhen Iname as One dies, you may exile it. If you do, return target Spirit permanent card from your graveyard to the battlefield.",
+    "rarity": "rare"
+  },
+  "rav-242": {
+    "id": "072a1ff1-9c50-426a-a83c-817bde5beab7",
+    "oracle_id": "266c2f49-82eb-48e9-a7ea-e0da787fa40e",
+    "name": "Boros Guildmage",
+    "released_at": "2005-10-07",
+    "layout": "normal",
+    "set": "rav",
+    "set_name": "Ravnica: City of Guilds",
+    "set_type": "expansion",
+    "collector_number": "242",
+    "frame": "2003",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Creature — Human Wizard",
+    "mana_cost": "{R/W}{R/W}",
+    "colors": [
+      "R",
+      "W"
+    ],
+    "color_identity": [
+      "R",
+      "W"
+    ],
+    "oracle_text": "{1}{R}: Target creature gains haste until end of turn.\n{1}{W}: Target creature gains first strike until end of turn.",
+    "rarity": "uncommon"
+  },
+  "pal05-8": {
+    "id": "e1e4a4bf-6fd4-46b9-8f1d-c20c52e992f6",
+    "oracle_id": "61178a6c-70b7-447d-87ee-a8d9369c3d15",
+    "name": "Skyknight Legionnaire",
+    "released_at": "2005-01-01",
+    "layout": "normal",
+    "set": "pal05",
+    "set_name": "Arena League 2005",
+    "set_type": "promo",
+    "collector_number": "8",
+    "frame": "2003",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Flying",
+      "Haste"
+    ],
+    "type_line": "Creature — Human Knight",
+    "mana_cost": "{1}{R}{W}",
+    "colors": [
+      "R",
+      "W"
+    ],
+    "color_identity": [
+      "R",
+      "W"
+    ],
+    "oracle_text": "Flying, haste",
+    "rarity": "rare"
+  },
+  "rav-284": {
+    "id": "794a2b79-8c55-4423-8843-7e6e96f84071",
+    "oracle_id": "f413a83d-a40d-434c-b20a-4c707c0527fa",
+    "name": "Temple Garden",
+    "released_at": "2005-10-07",
+    "layout": "normal",
+    "set": "rav",
+    "set_name": "Ravnica: City of Guilds",
+    "set_type": "expansion",
+    "collector_number": "284",
+    "frame": "2003",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land — Forest Plains",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "G",
+      "W"
+    ],
+    "produced_mana": [
+      "G",
+      "W"
+    ],
+    "oracle_text": "({T}: Add {G} or {W}.)\nAs this land enters, you may pay 2 life. If you don't, it enters tapped.",
+    "rarity": "rare"
+  },
+  "8ed-323": {
+    "id": "9513c206-b578-4973-93cc-077e5a6658b0",
+    "oracle_id": "f0367926-4380-4d22-8cb8-46c2076f102a",
+    "name": "Coastal Tower",
+    "released_at": "2003-07-28",
+    "layout": "normal",
+    "set": "8ed",
+    "set_name": "Eighth Edition",
+    "set_type": "core",
+    "collector_number": "323",
+    "frame": "2003",
+    "border_color": "white",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "produced_mana": [
+      "U",
+      "W"
+    ],
+    "oracle_text": "This land enters tapped.\n{T}: Add {W} or {U}.",
+    "rarity": "uncommon"
+  },
+  "gpt-163": {
+    "id": "342dcdde-e4cc-4a49-a818-9283002aba1a",
+    "oracle_id": "92bac34e-2045-4331-842f-185711c1ac56",
+    "name": "Skarrg, the Rage Pits",
+    "released_at": "2006-02-03",
+    "layout": "normal",
+    "set": "gpt",
+    "set_name": "Guildpact",
+    "set_type": "expansion",
+    "collector_number": "163",
+    "frame": "2003",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "G",
+      "R"
+    ],
+    "produced_mana": [
+      "C"
+    ],
+    "oracle_text": "{T}: Add {C}.\n{R}{G}, {T}: Target creature gets +1/+1 and gains trample until end of turn.",
+    "rarity": "uncommon"
+  },
+  "6ed-319": {
+    "id": "764eff32-466f-4443-a3db-1007f446980b",
+    "oracle_id": "d5ad26cc-2bdb-46b7-b8bf-dd099d5fa09b",
+    "name": "Adarkar Wastes",
+    "released_at": "1999-04-21",
+    "layout": "normal",
+    "set": "6ed",
+    "set_name": "Classic Sixth Edition",
+    "set_type": "core",
+    "collector_number": "319",
+    "frame": "1997",
+    "border_color": "white",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "produced_mana": [
+      "C",
+      "U",
+      "W"
+    ],
+    "oracle_text": "{T}: Add {C}.\n{T}: Add {W} or {U}. This land deals 1 damage to you.",
+    "rarity": "rare"
+  },
+  "inv-321": {
+    "id": "d115dbff-e35b-495f-a1e3-19651895927e",
+    "oracle_id": "f0367926-4380-4d22-8cb8-46c2076f102a",
+    "name": "Coastal Tower",
+    "released_at": "2000-10-02",
+    "layout": "normal",
+    "set": "inv",
+    "set_name": "Invasion",
+    "set_type": "expansion",
+    "collector_number": "321",
+    "frame": "1997",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "produced_mana": [
+      "U",
+      "W"
+    ],
+    "oracle_text": "This land enters tapped.\n{T}: Add {W} or {U}.",
+    "rarity": "uncommon"
+  },
+  "tor-140": {
+    "id": "75b5f0aa-1570-4064-ad20-aac7be8b2c9c",
+    "oracle_id": "439de49b-1091-4688-9ffb-80a025df31c2",
+    "name": "Tainted Field",
+    "released_at": "2002-02-04",
+    "layout": "normal",
+    "set": "tor",
+    "set_name": "Torment",
+    "set_type": "expansion",
+    "collector_number": "140",
+    "frame": "1997",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "B",
+      "W"
+    ],
+    "produced_mana": [
+      "B",
+      "C",
+      "W"
+    ],
+    "oracle_text": "{T}: Add {C}.\n{T}: Add {W} or {B}. Activate only if you control a Swamp.",
+    "rarity": "uncommon"
+  },
+  "brb-13": {
+    "id": "2c85f028-01af-4a82-89dc-0792ce43a4d6",
+    "oracle_id": "6f8cc374-e76c-4bfa-bf20-28dea0bfefbe",
+    "name": "Cinder Marsh",
+    "released_at": "1999-11-12",
+    "layout": "normal",
+    "set": "brb",
+    "set_name": "Battle Royale Box Set",
+    "set_type": "box",
+    "collector_number": "13",
+    "frame": "1997",
+    "border_color": "white",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "B",
+      "R"
+    ],
+    "produced_mana": [
+      "B",
+      "C",
+      "R"
+    ],
+    "oracle_text": "{T}: Add {C}.\n{T}: Add {B} or {R}. This land doesn't untap during your next untap step.",
+    "rarity": "uncommon"
+  },
+  "tmp-316": {
+    "id": "7f01fe22-e8ff-4106-8ac5-693ef920b2c9",
+    "oracle_id": "c737d27b-db14-4bd4-8f16-bcbd4401c47b",
+    "name": "Caldera Lake",
+    "released_at": "1997-10-14",
+    "layout": "normal",
+    "set": "tmp",
+    "set_name": "Tempest",
+    "set_type": "expansion",
+    "collector_number": "316",
+    "frame": "1997",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "R",
+      "U"
+    ],
+    "produced_mana": [
+      "C",
+      "R",
+      "U"
+    ],
+    "oracle_text": "This land enters tapped.\n{T}: Add {C}.\n{T}: Add {U} or {R}. This land deals 1 damage to you.",
+    "rarity": "rare"
+  },
+  "5ed-410": {
+    "id": "56c1e5f1-4665-4afc-83e4-4968df72eb8f",
+    "oracle_id": "d5ad26cc-2bdb-46b7-b8bf-dd099d5fa09b",
+    "name": "Adarkar Wastes",
+    "released_at": "1997-03-24",
+    "layout": "normal",
+    "set": "5ed",
+    "set_name": "Fifth Edition",
+    "set_type": "core",
+    "collector_number": "410",
+    "frame": "1997",
+    "border_color": "white",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "produced_mana": [
+      "C",
+      "U",
+      "W"
+    ],
+    "oracle_text": "{T}: Add {C}.\n{T}: Add {W} or {U}. This land deals 1 damage to you.",
+    "rarity": "rare"
+  },
+  "ath-71": {
+    "id": "b17f43d6-d9ca-4e87-bf0f-1f5bc1ceabad",
+    "oracle_id": "5eb8b497-ec9a-4a89-ad29-1ec3ca82da7c",
+    "name": "Brushland",
+    "released_at": "1998-11-01",
+    "layout": "normal",
+    "set": "ath",
+    "set_name": "Anthologies",
+    "set_type": "box",
+    "collector_number": "71",
+    "frame": "1997",
+    "border_color": "white",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "G",
+      "W"
+    ],
+    "produced_mana": [
+      "C",
+      "G",
+      "W"
+    ],
+    "oracle_text": "{T}: Add {C}.\n{T}: Add {G} or {W}. This land deals 1 damage to you.",
+    "rarity": "rare"
+  },
+  "jud-142": {
+    "id": "cb870406-9d59-4493-9f81-0f4b84642001",
+    "oracle_id": "c6de0ee9-785d-4cd8-8a7f-5bb715763131",
+    "name": "Nantuko Monastery",
+    "released_at": "2002-05-27",
+    "layout": "normal",
+    "set": "jud",
+    "set_name": "Judgment",
+    "set_type": "expansion",
+    "collector_number": "142",
+    "frame": "1997",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Threshold"
+    ],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "G",
+      "W"
+    ],
+    "produced_mana": [
+      "C"
+    ],
+    "oracle_text": "{T}: Add {C}.\nThreshold — {G}{W}: This land becomes a 4/4 green and white Insect Monk creature with first strike until end of turn. It's still a land. Activate only if there are seven or more cards in your graveyard.",
+    "rarity": "uncommon"
+  },
+  "ons-323": {
+    "id": "9c940a6b-3c5e-4ce2-92b6-63e2cb575c15",
+    "oracle_id": "4adc39dd-8de1-4298-947c-ff666ec3adeb",
+    "name": "Seaside Haven",
+    "released_at": "2002-10-07",
+    "layout": "normal",
+    "set": "ons",
+    "set_name": "Onslaught",
+    "set_type": "expansion",
+    "collector_number": "323",
+    "frame": "1997",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "produced_mana": [
+      "C"
+    ],
+    "oracle_text": "{T}: Add {C}.\n{W}{U}, {T}, Sacrifice a Bird: Draw a card.",
+    "rarity": "uncommon"
+  },
+  "ons-316": {
+    "id": "b4e3d844-d3b4-41d8-921d-c1cb3af343f8",
+    "oracle_id": "f3c7af78-a77d-4134-82a2-a5ce84285a84",
+    "name": "Flooded Strand",
+    "released_at": "2002-10-07",
+    "layout": "normal",
+    "set": "ons",
+    "set_name": "Onslaught",
+    "set_type": "expansion",
+    "collector_number": "316",
+    "frame": "1997",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "oracle_text": "{T}, Pay 1 life, Sacrifice this land: Search your library for a Plains or Island card, put it onto the battlefield, then shuffle.",
+    "rarity": "rare"
+  },
+  "pls-136": {
+    "id": "7caad74f-c0d0-4eca-94be-b89a2c9a3980",
+    "oracle_id": "e9a7dede-3968-4b0e-a707-419d46a6fec9",
+    "name": "Crosis's Catacombs",
+    "released_at": "2001-02-05",
+    "layout": "normal",
+    "set": "pls",
+    "set_name": "Planeshift",
+    "set_type": "expansion",
+    "collector_number": "136",
+    "frame": "1997",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land — Lair",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "B",
+      "R",
+      "U"
+    ],
+    "produced_mana": [
+      "B",
+      "R",
+      "U"
+    ],
+    "oracle_text": "When this land enters, sacrifice it unless you return a non-Lair land you control to its owner's hand.\n{T}: Add {U}, {B}, or {R}.",
+    "rarity": "uncommon"
+  },
+  "inv-264": {
+    "id": "b6a77be3-e3b0-40f5-a470-414bac49da60",
+    "oracle_id": "1579bf86-4400-4467-88e8-1c5ba1209804",
+    "name": "Recoil",
+    "released_at": "2000-10-02",
+    "layout": "normal",
+    "set": "inv",
+    "set_name": "Invasion",
+    "set_type": "expansion",
+    "collector_number": "264",
+    "frame": "1997",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Instant",
+    "mana_cost": "{1}{U}{B}",
+    "colors": [
+      "B",
+      "U"
+    ],
+    "color_identity": [
+      "B",
+      "U"
+    ],
+    "oracle_text": "Return target permanent to its owner's hand. Then that player discards a card.",
+    "rarity": "common"
+  },
+  "apc-126": {
+    "id": "2a1bfefd-dae8-49e9-9d56-cc852e3dc93b",
+    "oracle_id": "63c1ac21-e3d8-40c2-8c09-3f31c52992ef",
+    "name": "Vindicate",
+    "released_at": "2001-06-04",
+    "layout": "normal",
+    "set": "apc",
+    "set_name": "Apocalypse",
+    "set_type": "expansion",
+    "collector_number": "126",
+    "frame": "1997",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Sorcery",
+    "mana_cost": "{1}{W}{B}",
+    "colors": [
+      "B",
+      "W"
+    ],
+    "color_identity": [
+      "B",
+      "W"
+    ],
+    "oracle_text": "Destroy target permanent.",
+    "rarity": "rare"
+  },
+  "p05-1": {
+    "id": "d4d067fb-f3c9-4fe0-8330-da5e566eae9c",
+    "oracle_id": "d7c4da85-d1a5-4a27-812d-65d8ee1494dd",
+    "name": "Psychatog",
+    "released_at": "2005-01-01",
+    "layout": "normal",
+    "set": "p05",
+    "set_name": "Magic Player Rewards 2005",
+    "set_type": "promo",
+    "collector_number": "1",
+    "frame": "2003",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Creature — Atog",
+    "mana_cost": "{1}{U}{B}",
+    "colors": [
+      "B",
+      "U"
+    ],
+    "color_identity": [
+      "B",
+      "U"
+    ],
+    "oracle_text": "Discard a card: This creature gets +1/+1 until end of turn.\nExile two cards from your graveyard: This creature gets +1/+1 until end of turn.",
+    "rarity": "rare"
+  },
+  "jud-143": {
+    "id": "92ece630-e484-4221-911f-e32048894f23",
+    "oracle_id": "8d7e05ba-5406-4d5e-bb8f-a4a6f3b0eaa7",
+    "name": "Riftstone Portal",
+    "released_at": "2002-05-27",
+    "layout": "normal",
+    "set": "jud",
+    "set_name": "Judgment",
+    "set_type": "expansion",
+    "collector_number": "143",
+    "frame": "1997",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "G",
+      "W"
+    ],
+    "produced_mana": [
+      "C",
+      "G",
+      "W"
+    ],
+    "oracle_text": "{T}: Add {C}.\nAs long as this card is in your graveyard, lands you control have \"{T}: Add {G} or {W}.\"",
+    "rarity": "uncommon"
+  },
+  "jud-141": {
+    "id": "bae25abc-22c2-436d-9e08-f123543a0911",
+    "oracle_id": "d9a10971-f32b-4978-952d-fed0a5bc9e36",
+    "name": "Krosan Verge",
+    "released_at": "2002-05-27",
+    "layout": "normal",
+    "set": "jud",
+    "set_name": "Judgment",
+    "set_type": "expansion",
+    "collector_number": "141",
+    "frame": "1997",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "C"
+    ],
+    "oracle_text": "This land enters tapped.\n{T}: Add {C}.\n{2}, {T}, Sacrifice this land: Search your library for a Forest card and a Plains card, put them onto the battlefield tapped, then shuffle.",
+    "rarity": "uncommon"
+  },
+  "f06-4": {
+    "id": "894e5b74-61e0-4165-82ab-5e7e22e5a817",
+    "oracle_id": "a7ebe748-c3de-402f-8a6e-236a6413c0f8",
+    "name": "Lobotomy",
+    "released_at": "2006-01-01",
+    "layout": "normal",
+    "set": "f06",
+    "set_name": "Friday Night Magic 2006",
+    "set_type": "promo",
+    "collector_number": "4",
+    "frame": "2003",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Sorcery",
+    "mana_cost": "{2}{U}{B}",
+    "colors": [
+      "B",
+      "U"
+    ],
+    "color_identity": [
+      "B",
+      "U"
+    ],
+    "oracle_text": "Target player reveals their hand, then you choose a card other than a basic land card from it. Search that player's graveyard, hand, and library for all cards with the same name as the chosen card and exile them. Then that player shuffles.",
+    "rarity": "rare"
+  },
+  "unh-118": {
+    "id": "5c86f1b5-d95d-4f44-8078-4572101997b4",
+    "oracle_id": "39701169-d61e-4bc8-be4b-72f905080859",
+    "name": "Meddling Kids",
+    "released_at": "2004-11-19",
+    "layout": "normal",
+    "set": "unh",
+    "set_name": "Unhinged",
+    "set_type": "funny",
+    "collector_number": "118",
+    "frame": "2003",
+    "border_color": "silver",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Creature — Human Child",
+    "mana_cost": "{2}{W}{U}",
+    "colors": [
+      "U",
+      "W"
+    ],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "oracle_text": "As this creature enters, choose a word with four or more letters.\nSpells with the chosen word in their text box can't be cast.",
+    "rarity": "rare"
+  }
+}

@@ -16,7 +16,7 @@
 // The one card corner (TODO 3.26). Import-free .ts, loaded through Node's
 // type stripping like import-cc-frames.mjs's edge-contract import.
 import { applyCardCornerMask, cardCornerRadiusPx } from "../../lib/cards/card-corner.ts";
-import { PAIR_RAMPS, TWO_COLOR_PAIRS, rampName, rampShare } from "./pair-ramp.mjs";
+import { GOLD_2003_NARROW_PAIRS, PAIR_RAMPS, TWO_COLOR_PAIRS, pairSides, rampName, rampShare } from "./pair-ramp.mjs";
 import { describeRegionTones, regionGain, stretchRange } from "./print-cut.mjs";
 import { SEVENTH_BOX_BY_COLOUR, SEVENTH_TONES, retroGoldCut, seventhCut } from "./seventh-1997.mjs";
 import { EIGHTH_MASTER_OF, EIGHTH_PLATE_TONES, eighthPrintRecipe } from "./eighth-2003.mjs";
@@ -2620,15 +2620,21 @@ export const SEVENTH_RECIPE_OF = Object.freeze({
 /** A 1997 master's print recipe (the importer's `printRecipe`): the re-cut,
  *  and — but for the MSE gold — the region tones, whether the text box is
  *  cut by colour and the mask of a land's rings. */
-export function seventhPrintRecipe(template, key) {
+export function seventhPrintRecipe(template, key, { cutOf = key } = {}) {
   const recipe = SEVENTH_RECIPE_OF[template]?.[key];
   if (recipe === undefined) throw new Error(`seventhPrintRecipe: ${template}/${key} is no 1997 master`);
+  // A two-colour land's side (TODO 4.6h): the key's own drawing and tones on
+  // ANOTHER key's cut — the plain land's, whose box the dual lands print.
+  const cutRecipe = SEVENTH_RECIPE_OF[template]?.[cutOf];
+  if (cutOf !== key && (cutRecipe === undefined || cutRecipe === null || recipe === null)) {
+    throw new Error(`seventhPrintRecipe: ${template}/${key} can't take the cut of ${cutOf}`);
+  }
   // The MSE master's corners are already cut: flattened onto black first.
   // …and its art window was cut out of a white rectangle on a 375 px JPEG:
   // the grey → white fade that leaves on the ring's last px is cleared.
   if (recipe === null) return { cut: retroGoldCut(), squareCorners: true, windowHalo: RETRO_GOLD_WINDOW_HALO_PX };
   return {
-    cut: seventhCut(recipe),
+    cut: seventhCut(cutOf === key ? recipe : cutRecipe),
     tones: SEVENTH_TONES[recipe],
     byColour: SEVENTH_BOX_BY_COLOUR.includes(recipe),
     ...(template === "retroland" ? { rings: SEVENTH_RINGS_MASK } : {}),
@@ -2691,6 +2697,83 @@ const EIGHTH_PT = Object.freeze(Object.fromEntries(COLORS.map((k) => [k, `${EIGH
 const EIGHTH_PT_GAINS = Object.freeze(
   Object.fromEntries(COLORS.map((k) => [k, Object.freeze(regionGain(EIGHTH_PLATE_TONES[EIGHTH_MASTER_OF.modern[k]]).map((g) => Math.round(g * 1000) / 1000))])),
 );
+
+// ---------------------------------------------------------------------------
+// TODO 4.6h: two colours on the old frames — `modern` (the 2003 gold card),
+// `modernland` and `retroland` (the two-colour lands of 2003 and of 1999 on).
+// Card Conjurer's two packs carry NO two-colour master for either era: the
+// 8th pack is fifteen single masters and five masks, the Seventh pack
+// fourteen and a "Dual Land" mask of nested rectangles that no print wears
+// (the prints blend left to right). So a pair master is SYNTHESISED from this
+// template's own finished masters — the pack's drawings after their re-cut
+// and their tones, i.e. the published single-colour masters before the
+// corner cut — never from a scan:
+//   • the BASE master whole (the gold frame; the plain land), then
+//   • the split regions, each the pair's two masters blended across the
+//     region's untilted ramp (scripts/lib/pair-ramp.mjs, a premultiplied
+//     lerp, first canonical colour on the left) through the region's
+//     coverage — the pack's own masks moved with the cut (2003), the
+//     drawing's own lines (1997).
+// What the prints do (measured 2026-10-08, the numbers beside PAIR_RAMPS):
+//   • 2003 gold, Ravnica 2005 on: gold body, gold bars and the gold P/T
+//     plate; the pinline and the text box in the two colours. The pinline's
+//     blend is wide and soft on seven pairs, narrow and straight on bg, gw
+//     and rw (GOLD_2003_NARROW_PAIRS); the box's is wide on all ten;
+//   • 2003 lands, Eighth Edition 2003 on: the plain land's body and grey
+//     bars; the pinline and the box in the two land colours, one narrow ramp;
+//   • 1997 lands, Sixth Edition 1999 on: the plain land whole — its gold
+//     outer and art rings too — with the box and the box's ring in the two
+//     colours, one ramp. Both sides are built on the PLAIN land's cut (the
+//     basics' boxes sit up to 2.5 px off it; the dual prints' box is the
+//     plain land's within 1 px).
+// ---------------------------------------------------------------------------
+/** A layer that is one of the template's own finished masters (after the
+ *  re-cut and the tones): whole, or — with `right` — blended into another
+ *  across `ramp` and laid in through the named regions' coverage. */
+const builtLayer = (key, extra = {}) => ({ built: key, ...extra });
+
+/** True for a recipe made of the template's finished masters. */
+export function isBuiltRecipe(layers) {
+  return Array.isArray(layers) && layers.length > 0 && layers.every((l) => typeof l.built === "string");
+}
+
+/** The regions a 1997 land's box is: its face and the four sides of its ring. */
+const SEVENTH_BOX_REGIONS = Object.freeze(["text", "trimL", "trimT", "trimR", "trimB"]);
+
+/** The layers of one old-frame pair master (see above). */
+export function oldFramePairLayers(template, pair) {
+  const [a, b] = pairSides(pair);
+  switch (template) {
+    case "modern":
+      return [
+        builtLayer("m"),
+        builtLayer(a, { right: b, ramp: [...PAIR_RAMPS.gold2003Rules], regions: ["text"] }),
+        builtLayer(a, {
+          right: b,
+          ramp: [...(GOLD_2003_NARROW_PAIRS.includes(pair) ? PAIR_RAMPS.gold2003PinlineNarrow : PAIR_RAMPS.gold2003Pinline)],
+          regions: ["pin"],
+        }),
+      ];
+    case "modernland":
+      return [builtLayer("c"), builtLayer(a, { right: b, ramp: [...PAIR_RAMPS.land2003], regions: ["text", "pin"] })];
+    case "retroland":
+      return [builtLayer("c"), builtLayer(a, { right: b, ramp: [...PAIR_RAMPS.land1997], regions: [...SEVENTH_BOX_REGIONS], cutOf: "c" })];
+    default:
+      throw new Error(`oldFramePairLayers: ${template} draws no old-frame pairs`);
+  }
+}
+
+/** A template's ten old-frame pair masters: `{ wu: layers, … }`. */
+const oldFramePairs = (template) => Object.fromEntries(TWO_COLOR_PAIRS.map((pair) => [pair, oldFramePairLayers(template, pair)]));
+
+const OLD_PAIR_NOTE = {
+  modern:
+    "two-colour pair masters <pair>.png (TODO 4.6h): SYNTHESISED, no Card Conjurer two-colour file exists for this frame — the finished gold master whole, with the pair's two finished colour masters blended left to right (a premultiplied lerp, scripts/lib/pair-ramp.mjs; first canonical colour on the left) inside the text box and the pinline (the pack's Rules and Pinline masks, moved with the cut); the gold bars, body and P/T plate stay gold. Measured on 52 two-colour gold prints, Ravnica 2005 → Journey into Nyx 2014: the box blends across a smoothstep 25→73 %W on every pair, the pinline across a smoothstep 25→71 on wu wb ub ur br rg gu and a straight 42→59 on bg gw rw (the pairs whose prints mostly wear the narrow blend: 8 of 8, 6 of 7, 6 of 8). Hybrid cards (a split frame body, grey bars, a grey plate) are not built",
+  modernland:
+    "two-colour pair masters <pair>.png (TODO 4.6h): SYNTHESISED, no Card Conjurer two-colour file exists for this frame — the finished plain land whole (its body and grey bars: the dual lands' bars read 202/190/182 against the plain land's 196/182/171 and the basics' 40 further off), with the pair's two finished coloured-land masters blended left to right across one straight ramp 42→59 %W inside the text box and the pinline (the pack's Rules and Pinline masks, moved with the cut). Measured on 36 two-colour lands, Eighth Edition 2003 → Theros 2013, all ten pairs: pinline 41.5→58.5, box 41.8→58.8",
+  retroland:
+    "two-colour pair masters <pair>.png (TODO 4.6h): SYNTHESISED — the pack's 'Dual Land' mask (nested rectangles) is not what the prints do. The finished plain land whole (its gold outer and art rings: the dual prints' rings read 174/131/56 against the plain land's 185/142/53 and a basic's 55/90/107), with the pair's two coloured lands — each the pack's drawing with its own tones, on the PLAIN land's cut — blended left to right across one straight ramp 40→60 %W inside the text box and its ring. Measured on 36 two-colour lands, Sixth Edition 1999 → Onslaught 2002: box 40.0→59.9, ring 39.9→59.5; the lands of 1997 and 1998 (Fifth Edition, Tempest, Anthologies: 11 of 11) print the plain land's orange box and are not this look",
+};
 
 export const CC_TEMPLATES = {
   m15: {
@@ -3241,19 +3324,23 @@ export const CC_TEMPLATES = {
       c: [layer(`${SEVENTH}/l.png`)],
       ...perColor((k) => [layer(`${SEVENTH}/${k}l.png`)], ["w", "u", "b", "r", "g"]),
       m: [layer(`${SEVENTH}/l.png`), replacing(`${SEVENTH}/m.png`, `${SEVENTH}/rules.svg`)],
+      ...oldFramePairs("retroland"),
     },
     printRecipe: (key) => seventhPrintRecipe("retroland", key),
+    // A pair's sides: the coloured land on the plain land's cut (4.6h).
+    builtSideRecipe: (key, cutOf) => seventhPrintRecipe("retroland", key, { cutOf }),
     pack: "packSeventh.js 'Seventh Edition' lands (l, wl ul bl rl gl)",
     transforms: SEVENTH_TRANSFORM,
     notes: [
       ...SEVENTH_NOTES,
       "c = the plain land l.png (the orange box of Fifth Edition 1997 on); w–g = the pack's coloured land boxes (wl … gl: the land frame, the box and its rings in the colour), toned onto the seven black-bordered basics of each colour (MIR, TMP, USG, MMQ, INV, ODY, ONS); the rings (the pack's Pinline mask) are their own region",
       "m = a render STAND-IN, never ticked: the plain land with the pack's gold text box laid in through its Rules mask, the box toned onto the gold prints' box. No three-colour 1997 land was measured; two-colour lands print a blend (TODO 4.6h)",
+      OLD_PAIR_NOTE.retroland,
     ],
   },
   // --- TODO 4.10b: the 2003 frame (see the section above CC_TEMPLATES).
   modern: {
-    colors: perColor((k) => [layer(`${EIGHTH}/${EIGHTH_MASTER_OF.modern[k]}.png`)]),
+    colors: { ...perColor((k) => [layer(`${EIGHTH}/${EIGHTH_MASTER_OF.modern[k]}.png`)]), ...oldFramePairs("modern") },
     printRecipe: (key) => eighthPrintRecipe("modern", key),
     plates: EIGHTH_PT,
     plateGains: EIGHTH_PT_GAINS,
@@ -3263,16 +3350,18 @@ export const CC_TEMPLATES = {
       ...EIGHTH_NOTES,
       "c = the pack's ARTIFACT frame a.png, as before (the pack's c.png is the translucent Eldrazi frame: TODO 4.10d); m = the pack's gold, the look of a THREE-colour card (a two-colour gold card wears two-colour pinlines: TODO 4.6h)",
       "P/T plates = the pack's own (322 × 176, native size), each multiplied by a per-channel gain onto its prints' plate face (plateGains: gold × 0.90 / 0.84 / 0.64, blue × 0.86 / 0.91 / 0.94, red × 1.08 / 1.09 / 1.15, the rest within 5 %), drawn at the printed box through the profile's plateRect; c takes the artifact plate; `modernland` draws this set",
+      OLD_PAIR_NOTE.modern,
     ],
   },
   modernland: {
-    colors: perColor((k) => [layer(`${EIGHTH}/${EIGHTH_MASTER_OF.modernland[k]}.png`)]),
+    colors: { ...perColor((k) => [layer(`${EIGHTH}/${EIGHTH_MASTER_OF.modernland[k]}.png`)]), ...oldFramePairs("modernland") },
     printRecipe: (key) => eighthPrintRecipe("modernland", key),
     pack: "pack8th.js '8th Edition' lands (l, wl ul bl rl gl, ml)",
     transforms: EIGHTH_TRANSFORM,
     notes: [
       ...EIGHTH_NOTES,
       "c = the plain land l.png, toned on 13 lands with no colour of their own; w–g = the pack's coloured land frames (wl … gl), toned on the eight basics of each colour (CHK RAV TSP LRW ALA ISD RTR THS); m = the pack's gold land ml.png, toned on 9 three- and five-colour lands (two-colour lands print a blend: TODO 4.6h)",
+      OLD_PAIR_NOTE.modernland,
     ],
   },
 };
@@ -4121,6 +4210,13 @@ export function toRgba8(acc) {
  *  mask", "src re-tinted from r,g,b to the tint of other at (x, y) replacing
  *  through mask". */
 export function describeLayer(l) {
+  // One of the template's own finished masters (TODO 4.6h, builtLayer).
+  if (typeof l.built === "string") {
+    const on = l.cutOf ? ` (each on the cut of ${l.cutOf})` : "";
+    return l.right
+      ? `(built:${l.built} | built:${l.right} across ${rampName(l.ramp)})${on} through the regions ${l.regions.join(" + ")}`
+      : `built:${l.built}`;
+  }
   const moved = l.dy ? ` moved down ${l.dy} px` : "";
   // A pair's box (TODO 4.56): re-tinted twice, the two lerped across a ramp.
   const tintAt = (t) => `${t.src} at (${t.x}, ${t.y})`;
@@ -4229,6 +4325,8 @@ export function sourceFilesFor(def) {
   const files = new Set();
   for (const layers of Object.values(def.colors)) {
     for (const l of layers) {
+      // A finished master of this template (4.6h) is no pack file.
+      if (typeof l.built === "string") continue;
       files.add(l.src);
       if (l.right) files.add(l.right);
       // A procedural mask (a ramp) is no Card Conjurer file.
@@ -4257,7 +4355,7 @@ export function sourceFilesFor(def) {
   // rings mask (TODO 4.10a, the 1997 lands).
   for (const key of builtColors(def)) {
     for (const tone of tonesFor(def, key)) if (tone.mask) files.add(tone.mask);
-    const printRecipe = def.printRecipe?.(key);
+    const printRecipe = isBuiltRecipe(def.colors[key]) ? null : def.printRecipe?.(key);
     if (printRecipe?.rings) files.add(printRecipe.rings);
     // …and its region masks (TODO 4.10b, the 2003 frame).
     for (const mask of Object.values(printRecipe?.regionMasks ?? {})) files.add(mask);
