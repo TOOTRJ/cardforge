@@ -19,6 +19,17 @@
 //     a pasted selection round-trips anywhere.
 //   • A trailing line break needs a second, "filler" <br> to render as an
 //     empty line (browser quirk); the filler is skipped when serialising.
+//   • Every line break of ours carries `data-br`. A browser adds a <br> of
+//     its own to keep a line open once its last character is deleted; that
+//     one is unmarked, and at the end of the box it IS the filler — counted
+//     as a break it gave the text a line nobody typed.
+//   • Backspace / Delete with the caret against a pip remove it here, never
+//     in the browser, and so do the two keys on a break a pip follows. To
+//     Chrome a line that STARTS with a contenteditable=false node has no
+//     caret place in front of it: Backspace did nothing behind a pip that
+//     was all its line held ("Cc", Enter, "{t}"), Delete at the end of the
+//     line above took the break AND the pip, and Home put the caret inside
+//     the pip, where Delete did nothing.
 //   • `value` changes from outside (AI patch, import, reset) re-render the
 //     DOM; while focused the caret is restored at the same text offset.
 // ---------------------------------------------------------------------------
@@ -64,6 +75,7 @@ type PipTextEditorProps = {
 
 const PIP_ATTR = "data-pip";
 const FILLER_ATTR = "data-filler";
+const BREAK_ATTR = "data-br";
 const CODE_PATTERN = /\{([^{}\s]{1,5})\}/g;
 
 // ---------------------------------------------------------------------------
@@ -86,6 +98,13 @@ function makePipNode(code: string, suffix: string): HTMLSpanElement {
   glyph.style.verticalAlign = "-0.08em";
   span.appendChild(glyph);
   return span;
+}
+
+/** A line break the editor made (see the header: the browser's are bare). */
+function makeBreak(): HTMLBRElement {
+  const br = document.createElement("br");
+  br.setAttribute(BREAK_ATTR, "");
+  return br;
 }
 
 function isFiller(node: Node | null | undefined): node is HTMLBRElement {
@@ -139,7 +158,7 @@ function renderValue(root: HTMLElement, value: string) {
     }
     const lines = run.value.split("\n");
     lines.forEach((line, i) => {
-      if (i > 0) root.appendChild(document.createElement("br"));
+      if (i > 0) root.appendChild(makeBreak());
       if (line) root.appendChild(document.createTextNode(line));
     });
   }
@@ -148,7 +167,19 @@ function renderValue(root: HTMLElement, value: string) {
 
 /** Keep exactly one filler <br>, and only right after a trailing plain <br>. */
 function ensureFiller(root: HTMLElement) {
+  // The browser's own placeholder for an emptied last line: the filler.
+  const tail = root.lastChild;
+  if (isPlainBr(tail) && !tail.hasAttribute(BREAK_ATTR)) tail.setAttribute(FILLER_ATTR, "");
   Array.from(root.childNodes).forEach((child) => {
+    // Range.insertNode at the end of a text node SPLITS it and leaves an
+    // empty text node behind the inserted <br>. That node hid the trailing
+    // break from the check below — no filler, so the new line never opened
+    // and the next characters were typed in front of the break (the first
+    // Enter at the end of a text looked dropped).
+    if (child.nodeType === Node.TEXT_NODE && !child.nodeValue) {
+      child.remove();
+      return;
+    }
     if (isFiller(child) && (child !== root.lastChild || !isPlainBr(child.previousSibling))) {
       child.remove();
     }
@@ -244,6 +275,57 @@ function convertTypedCodes(root: HTMLElement): boolean {
   return changed;
 }
 
+function isPip(node: Node | null | undefined): node is HTMLElement {
+  return (
+    !!node && node.nodeType === Node.ELEMENT_NODE && (node as Element).hasAttribute(PIP_ATTR)
+  );
+}
+
+/** The next sibling on one side that is not an empty text node (see ensureFiller). */
+function siblingOf(node: Node, side: "before" | "after"): Node | null {
+  let next = side === "before" ? node.previousSibling : node.nextSibling;
+  while (next && next.nodeType === Node.TEXT_NODE && !next.nodeValue) {
+    next = side === "before" ? next.previousSibling : next.nextSibling;
+  }
+  return next;
+}
+
+/**
+ * The node Backspace ("before") or Delete ("after") removes HERE rather than
+ * in the browser, for a collapsed caret: the pip it touches on that side, or
+ * a break of ours that a pip follows. Null for anything else — characters
+ * and every other break are the browser's.
+ */
+function deletionTarget(
+  root: HTMLElement,
+  range: Range,
+  side: "before" | "after",
+): HTMLElement | null {
+  if (!range.collapsed) return null;
+  let container: Node = range.startContainer;
+  let offset = range.startOffset;
+  // Home on a line a pip starts leaves Chrome's caret INSIDE that pip.
+  const holder = container.nodeType === Node.ELEMENT_NODE ? (container as Element) : container.parentElement;
+  const inside = holder?.closest(`[${PIP_ATTR}]`);
+  if (inside && inside.parentNode === root) {
+    offset = Array.prototype.indexOf.call(root.childNodes, inside) + (offset === 0 ? 0 : 1);
+    container = root;
+  }
+  let node: Node | null;
+  if (container === root) {
+    node = root.childNodes[side === "before" ? offset - 1 : offset] ?? null;
+    if (node && node.nodeType === Node.TEXT_NODE && !node.nodeValue) node = siblingOf(node, side);
+  } else if (container.nodeType === Node.TEXT_NODE && container.parentNode === root) {
+    const atEdge = side === "before" ? offset === 0 : offset === (container.nodeValue?.length ?? 0);
+    if (!atEdge) return null;
+    node = siblingOf(container, side);
+  } else {
+    return null;
+  }
+  if (isPip(node)) return node;
+  return isPlainBr(node) && node.hasAttribute(BREAK_ATTR) && isPip(siblingOf(node, "after")) ? node : null;
+}
+
 function selectionInside(root: HTMLElement): Range | null {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0) return null;
@@ -289,7 +371,7 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
       if (!root) return;
       // A fully emptied box is left holding a lone <br> by some browsers —
       // clear it so the placeholder shows and the value is truly "".
-      if (root.childNodes.length === 1 && root.firstChild && (root.firstChild as Element).tagName === "BR") {
+      if (root.childNodes.length === 1 && isPlainBr(root.firstChild) && !root.firstChild.hasAttribute(BREAK_ATTR)) {
         root.replaceChildren();
       }
       const offset = caretOffset(root);
@@ -344,12 +426,34 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
       (text: string) => {
         const nodes: Node[] = [];
         text.split("\n").forEach((line, i) => {
-          if (i > 0) nodes.push(document.createElement("br"));
+          if (i > 0) nodes.push(makeBreak());
           if (line) nodes.push(document.createTextNode(line));
         });
         insertNodes(nodes);
       },
       [insertNodes],
+    );
+
+    // Backspace / Delete on a pip or on the break in front of one (see the
+    // header). False when the caret is against neither — the browser's.
+    const deleteBesideCaret = useCallback(
+      (side: "before" | "after"): boolean => {
+        const root = rootRef.current;
+        const range = root ? selectionInside(root) : null;
+        const target = root && range ? deletionTarget(root, range, side) : null;
+        if (!root || !target) return false;
+        // Whichever side it was on, the caret belongs where the node stood.
+        const index = Array.prototype.indexOf.call(root.childNodes, target);
+        target.remove();
+        placeCaret(root, index);
+        const offset = caretOffset(root) ?? 0;
+        // The filler first: the caret of an emptied last line sits on it.
+        ensureFiller(root);
+        setCaret(root, offset);
+        commit();
+        return true;
+      },
+      [commit],
     );
 
     useImperativeHandle(
@@ -377,7 +481,7 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
       const onBeforeInput = (event: InputEvent) => {
         if (event.inputType === "insertParagraph" || event.inputType === "insertLineBreak") {
           event.preventDefault();
-          insertNodes([document.createElement("br")]);
+          insertNodes([makeBreak()]);
         } else if (event.inputType === "insertText" && event.data?.includes("\n")) {
           event.preventDefault();
           insertPlainText(event.data);
@@ -426,8 +530,13 @@ export const PipTextEditor = forwardRef<PipTextEditorHandle, PipTextEditorProps>
         onKeyDown={(event) => {
           if (event.key === "Enter" && !event.nativeEvent.isComposing) {
             event.preventDefault();
-            insertNodes([document.createElement("br")]);
+            insertNodes([makeBreak()]);
+            return;
           }
+          // Cmd+Backspace / Cmd+Delete clear to the line's edge: the browser's.
+          if (event.nativeEvent.isComposing || event.metaKey) return;
+          if (event.key === "Backspace" && deleteBesideCaret("before")) event.preventDefault();
+          else if (event.key === "Delete" && deleteBesideCaret("after")) event.preventDefault();
         }}
         onPaste={(event) => {
           event.preventDefault();
