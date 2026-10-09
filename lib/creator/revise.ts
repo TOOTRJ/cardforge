@@ -23,6 +23,13 @@ import type { ColorIdentity } from "@/types/card";
  *  is displayed read-only (LockedSummary) and never leaves the client. */
 export const REVISABLE_FIELDS = [
   "title",
+  // The PRINTED words of the type line (TODO 3b.16, owner 2026-10-09: "an
+  // existing card's field starts as the line it prints today, so nothing
+  // changes until its owner edits it"). What the card IS stays locked — its
+  // card type, its `supertype` (the words the frame, the P/T and the crown
+  // read) and its subtypes never leave the client on a revise; this is the
+  // line's wording alone.
+  "printed_types",
   "rarity",
   "cost",
   "art_url",
@@ -75,6 +82,7 @@ export function isRevisableField(name: string): name is RevisableField {
  *  REVISABLE_FIELDS. */
 export const REVISABLE_PAYLOAD_KEYS = [
   "title",
+  "printed_types",
   "rarity",
   "cost",
   "art_url",

@@ -3208,6 +3208,7 @@ function AdventureBake({
     supertype: back.supertype,
     cardType: back.card_type ?? null,
     subtypes: back.subtypes,
+    printedTypes: back.printed_types,
   });
   const showCost = Boolean(back.cost?.trim());
   // A measured panel (the M15-era family, layout v32) fits its name before
@@ -3388,6 +3389,7 @@ function SecondFaceBake({
     supertype: back.supertype,
     cardType: back.card_type ?? null,
     subtypes: back.subtypes,
+    printedTypes: back.printed_types,
   });
   const rot = `rotate(${slot.rotation}deg)`;
   const showCost = Boolean(slot.costSizePct) && Boolean(back.cost?.trim());

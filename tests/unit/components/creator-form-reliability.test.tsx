@@ -105,6 +105,7 @@ vi.mock("@/components/cards/card-preview", () => ({
     title?: string;
     cardType?: string | null;
     supertype?: string | null;
+    printedTypes?: string | null;
     power?: string | null;
     rarity?: string | null;
     rulesText?: string;
@@ -117,6 +118,7 @@ vi.mock("@/components/cards/card-preview", () => ({
       data-title={props.title ?? ""}
       data-card-type={props.cardType ?? ""}
       data-supertype={props.supertype ?? ""}
+      data-printed-types={JSON.stringify(props.printedTypes ?? null)}
       data-power={props.power ?? ""}
       data-rarity={props.rarity ?? ""}
       data-template={props.frameStyle?.template ?? ""}
@@ -275,6 +277,8 @@ function preview() {
     title: el.dataset.title,
     cardType: el.dataset.cardType,
     supertype: el.dataset.supertype,
+    /** The Types field as typed, or null while the line is built. */
+    printedTypes: JSON.parse(el.dataset.printedTypes ?? "null") as string | null,
     power: el.dataset.power,
     rarity: el.dataset.rarity,
     template: el.dataset.template,
@@ -695,14 +699,14 @@ describe("3b.5 the second face's name", () => {
     expect(saveButton().disabled).toBe(true);
   });
 
-  it("a subtypes error opens the Identity step's folded More options too", async () => {
+  it("a subtypes error jumps back to the Identity step, where the field is in plain view (3b.16: never folded)", async () => {
     renderForm({ mode: "create" });
     await clickNext(); // Identity
     await typeTitle("Too Many Types");
-    const details = screen
-      .getByText("More options — supertype, subtypes")
-      .closest("details") as HTMLDetailsElement;
-    expect(details.open).toBe(false);
+    // The type line's two fields are primary: no "More options" holds them.
+    expect(screen.queryByText("More options — supertype, subtypes")).toBeNull();
+    expect(screen.getByPlaceholderText("Dragon, Elder").closest("details")).toBeNull();
+    expect(screen.getByTestId("types-field-input-front").closest("details")).toBeNull();
     await act(async () => {
       fireEvent.change(screen.getByPlaceholderText("Dragon, Elder"), {
         target: { value: "A, B, C, D, E, F, G, H, I, J, K" },
@@ -713,17 +717,8 @@ describe("3b.5 the second face's name", () => {
       fireEvent.click(screen.getByTestId("save-as-draft"));
     });
     await clickSave();
-    // Client validation jumps back to Identity and unfolds the field.
-    await waitFor(() =>
-      expect(
-        (
-          screen
-            .getByText("More options — supertype, subtypes")
-            .closest("details") as HTMLDetailsElement
-        ).open,
-      ).toBe(true),
-    );
-    expect(screen.getByText("A card can have up to 10 subtypes.")).toBeTruthy();
+    // Client validation jumps back to Identity, the error under its field.
+    await waitFor(() => expect(screen.getByText("A card can have up to 10 subtypes.")).toBeTruthy());
     expect(actions.createCardAction).not.toHaveBeenCalled();
   });
 
@@ -1172,53 +1167,59 @@ describe("3b.15 the token type picker", () => {
     expect(payload.toughness).toBeUndefined();
   });
 
-  it("the Identity step's Supertype field shows and edits only the words the picker doesn't own", async () => {
+  const typesField = () => screen.getByTestId("types-field-input-front") as HTMLInputElement;
+
+  it("the Identity step's Types field holds the token's words after a fixed “Token”, in step with the picker (3b.16)", async () => {
     renderForm({ mode: "create", verifiedFrameKeys: WITH_ARTIFACT_TOKEN });
     await pickKind(/^Token/);
     await toggle(/^Legendary/);
     expect(preview().supertype).toBe("Legendary Creature");
     await clickNext(); // Card → Identity
-    const field = () => screen.getByPlaceholderText("Snow") as HTMLInputElement;
-    // Not "Legendary Creature": those two are the picker's.
-    expect(field().value).toBe("");
-    expect(screen.queryByPlaceholderText("Legendary")).toBeNull();
+    // "Token" is a fixed prefix beside the field, never in it.
+    expect(screen.getByTestId("types-field-token-prefix").textContent).toBe("Token");
+    expect(typesField().value).toBe("Legendary Creature");
+    expect(preview().printedTypes).toBeNull();
+    // The maker's order wins: the words are stored and printed as typed.
     await act(async () => {
-      fireEvent.change(field(), { target: { value: "Basic Snow " } });
+      fireEvent.change(typesField(), { target: { value: "snow Legendary Creature " } });
     });
-    // Merged in printed order with the picker's words; the text stays the
-    // user's (a trailing space and all) while they type.
-    expect(preview().supertype).toBe("Basic Legendary Snow Creature");
-    expect(field().value).toBe("Basic Snow ");
-    // A picker word typed here waits for the blur, then moves to its toggle.
+    expect(typesField().value).toBe("snow Legendary Creature ");
+    expect(preview().supertype).toBe("snow Legendary Creature");
+    expect(preview().printedTypes).toBe("snow Legendary Creature ");
+    // Leaving the field capitalises each word.
     await act(async () => {
-      fireEvent.change(field(), { target: { value: "Snow enchantment" } });
+      fireEvent.blur(typesField());
     });
-    expect(preview().supertype).toBe("Legendary Snow Creature");
-    await act(async () => {
-      fireEvent.blur(field());
-    });
-    expect(preview().supertype).toBe("Legendary Snow Enchantment Creature");
-    expect(field().value).toBe("Snow");
-    // The picker shows it; its toggles leave the field's words alone.
+    expect(typesField().value).toBe("Snow Legendary Creature");
+    expect(preview().supertype).toBe("Snow Legendary Creature");
+    // The picker reads the typed words, and its toggles write into the text
+    // where the printed order sets them — every other word stays put.
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /^Back/ }));
     });
-    expect(tokenChip(/^Enchantment/).getAttribute("aria-pressed")).toBe("true");
+    expect(tokenChip(/^Legendary/).getAttribute("aria-pressed")).toBe("true");
     await toggle(/^Creature/);
     await toggle(/^Artifact/);
-    expect(preview().supertype).toBe("Legendary Snow Enchantment Artifact");
+    expect(preview().supertype).toBe("Snow Legendary Artifact");
+    expect(preview().printedTypes).toBe("Snow Legendary Artifact");
     expect(preview().template).toBe("m15tokenartifact");
     await clickNext();
-    expect(field().value).toBe("Snow");
+    expect(typesField().value).toBe("Snow Legendary Artifact");
     // Leaving and re-entering the field without typing writes nothing.
     await act(async () => {
-      fireEvent.focus(field());
-      fireEvent.blur(field());
+      fireEvent.focus(typesField());
+      fireEvent.blur(typesField());
     });
-    expect(preview().supertype).toBe("Legendary Snow Enchantment Artifact");
+    expect(preview().printedTypes).toBe("Snow Legendary Artifact");
+    // Reset hands the line back to the card: the built, printed order.
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("types-field-reset-front"));
+    });
+    expect(preview().printedTypes).toBeNull();
+    expect(typesField().value).toBe("Legendary Snow Artifact");
   });
 
-  it("an imported \"Token Legendary Artifact Creature — Construct\" saves every word through the picker, the free field and Enter", async () => {
+  it("an imported \"Token Legendary Artifact Creature — Construct\" saves every word through the picker, the Types field and Enter", async () => {
     const card = scryfallCardSchema.parse({
       ...importPrintings["tkld-7"],
       name: "Construct",
@@ -1255,10 +1256,10 @@ describe("3b.15 the token type picker", () => {
     await waitFor(() => expect(preview().supertype).toBe("Legendary Artifact Creature"));
     expect(preview().cardType).toBe("token");
     expect(preview().template).toBe("m15tokenartifact");
-    // The import opens on the Identity step. Every word is the picker's: the
-    // free Supertype field starts empty.
-    const field = () => screen.getByPlaceholderText("Snow") as HTMLInputElement;
-    expect(field().value).toBe("");
+    // The import opens on the Identity step with the printing's own line —
+    // which is the built one, so nothing is stored beside the supertype.
+    expect(typesField().value).toBe("Legendary Artifact Creature");
+    expect(preview().printedTypes).toBeNull();
     const goTo = async (step: string) => {
       await act(async () => {
         fireEvent.click(screen.getAllByTitle(`Go to ${step}`)[0]);
@@ -1276,41 +1277,94 @@ describe("3b.15 the token type picker", () => {
     });
     await goTo("Identity");
     await act(async () => {
-      fireEvent.change(field(), { target: { value: "Snow legendary" } });
+      fireEvent.change(typesField(), { target: { value: "snow legendary Enchantment Artifact Creature" } });
     });
-    expect(preview().supertype).toBe("Snow Enchantment Artifact Creature");
+    expect(preview().supertype).toBe("snow legendary Enchantment Artifact Creature");
     // Enter submits the form with the field still focused — no blur. The
-    // typed picker word goes to its toggle first, so the save keeps it.
+    // words are capitalised first, so the save stores what the field shows.
     await act(async () => {
-      fireEvent.keyDown(field(), { key: "Enter" });
+      fireEvent.keyDown(typesField(), { key: "Enter" });
     });
-    expect(preview().supertype).toBe("Legendary Snow Enchantment Artifact Creature");
-    expect(field().value).toBe("Snow");
+    expect(typesField().value).toBe("Snow Legendary Enchantment Artifact Creature");
     expect(saveButton().disabled).toBe(false);
     await act(async () => {
-      fireEvent.submit(field().form!);
+      fireEvent.submit(typesField().form!);
     });
     await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
     expect(actions.createCardAction.mock.calls[0][0]).toMatchObject({
       title: "Construct",
       card_type: "token",
-      supertype: "Legendary Snow Enchantment Artifact Creature",
+      // The maker's order, sent whole; the action keeps `printed_types`
+      // because it is not the built line ("Legendary Snow …").
+      supertype: "Snow Legendary Enchantment Artifact Creature",
+      printed_types: "Snow Legendary Enchantment Artifact Creature",
       subtypes: ["Construct"],
       frame_style: { template: "m15tokenartifact" },
     });
   });
 
-  it("every other kind keeps its plain Supertype field", async () => {
+  it("a creature's Types field starts as “Creature”; words go before and after it, and it may be removed (3b.16)", async () => {
     renderForm({ mode: "create", verifiedFrameKeys: WITH_ARTIFACT_TOKEN });
     await pickKind(/^Creature/);
     await clickNext();
-    expect(screen.queryByPlaceholderText("Snow")).toBeNull();
-    const field = screen.getByPlaceholderText("Legendary") as HTMLInputElement;
+    expect(screen.queryByTestId("types-field-token-prefix")).toBeNull();
+    expect(typesField().value).toBe("Creature");
+    expect(preview().printedTypes).toBeNull();
+    expect(screen.queryByTestId("types-field-reset-front")).toBeNull();
+    // Words before and after: the supertype is every word but "Creature".
     await act(async () => {
-      fireEvent.change(field, { target: { value: "Legendary Snow" } });
+      fireEvent.change(typesField(), { target: { value: "legendary Creature snow" } });
+      fireEvent.blur(typesField());
     });
+    expect(typesField().value).toBe("Legendary Creature Snow");
     expect(preview().supertype).toBe("Legendary Snow");
-    expect(field.value).toBe("Legendary Snow");
+    expect(preview().printedTypes).toBe("Legendary Creature Snow");
+    // The word removed: the line prints "Goblin", the card stays a creature
+    // (its P/T is still there) and the field says so.
+    await act(async () => {
+      fireEvent.change(typesField(), { target: { value: "goblin" } });
+      fireEvent.blur(typesField());
+    });
+    expect(typesField().value).toBe("Goblin");
+    expect(preview().supertype).toBe("Goblin");
+    expect(preview().printedTypes).toBe("Goblin");
+    expect(preview().cardType).toBe("creature");
+    expect(preview().power).toBe("1");
+    expect(screen.getByTestId("types-field-note-front").textContent).toContain("still a creature");
+    // Emptied: nothing before the dash, still a creature.
+    await act(async () => {
+      fireEvent.change(typesField(), { target: { value: "" } });
+    });
+    expect(preview().printedTypes).toBe("");
+    expect(preview().supertype).toBe("");
+    // Reset: the pre-filled line again.
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("types-field-reset-front"));
+    });
+    expect(typesField().value).toBe("Creature");
+    expect(preview().printedTypes).toBeNull();
+  });
+
+  it("a typed line is kept when the card type changes, and its words keep deciding the P/T (3b.16)", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_ARTIFACT_TOKEN });
+    await pickKind(/^Creature/);
+    await clickNext();
+    await act(async () => {
+      fireEvent.change(typesField(), { target: { value: "Goblin Creature" } });
+    });
+    expect(preview().supertype).toBe("Goblin");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Back/ }));
+    });
+    await pickKind(/^Land/);
+    // The text is the maker's: kept, and re-read against the new type — on a
+    // land "Creature" is a type word of its own (Dryad Arbor's rule).
+    expect(preview().cardType).toBe("land");
+    expect(preview().printedTypes).toBe("Goblin Creature");
+    expect(preview().supertype).toBe("Goblin Creature");
+    await clickNext();
+    expect(typesField().value).toBe("Goblin Creature");
+    expect(screen.getByTestId("types-field-note-front").textContent).toContain("doesn’t say “Land”");
   });
 
   it("a stored token from before the picker opens as a Creature token with its P/T", async () => {

@@ -24,6 +24,7 @@
 // the ONE look change an edit may make — which the server re-derives the
 // back body from.
 
+import { TypesField } from "@/components/creator/types-field";
 import { Controller, useController, useFormContext, useWatch } from "react-hook-form";
 import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -275,14 +276,7 @@ export function DfcFacePanel({
             />
           </FieldGroup>
         ) : null}
-        <FieldGroup label="Supertype" error={errors.back_face?.supertype?.message}>
-          <input
-            {...register("back_face.supertype")}
-            placeholder="Legendary"
-            className={inputClass(Boolean(errors.back_face?.supertype))}
-            autoComplete="off"
-          />
-        </FieldGroup>
+        <TypesField face="back" />
         <FieldGroup
           label="Subtypes"
           helper="Comma-separated."

@@ -173,6 +173,7 @@ type SocialCard = {
   title: string;
   owner_id: string;
   supertype: string | null;
+  printed_types?: string | null;
   card_type: string | null;
   subtypes: string[];
   color_identity: string[];
@@ -200,6 +201,7 @@ async function renderSocialComposite(
       supertype: card.supertype,
       cardType: previewData.cardType,
       subtypes: card.subtypes,
+      printedTypes: card.printed_types,
     }),
     creatorHandle,
     cardImageDataUri,

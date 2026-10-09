@@ -1,30 +1,27 @@
 "use client";
 
-// Identity panel — title + the "more options" collapsible (supertype /
-// subtypes). Rarity moved to the Text & stats step (rarity-panel.tsx); the
+// Identity panel — title + the type line's two fields (TODO 3b.16: the
+// Types field, pre-filled with the card type's word, and the subtypes). Rarity moved to the Text & stats step (rarity-panel.tsx); the
 // Scryfall / AI quick-starts live in the hero cards above the stepper
 // (start-with-hero.tsx); card type lives on the Card step.
 
-import { useState } from "react";
-import { useFormContext, useWatch } from "react-hook-form";
+import { useFormContext } from "react-hook-form";
 import {
   FieldGroup,
   MoreOptions,
   inputClass,
 } from "@/components/creator/field-group";
-import {
-  tokenOtherWordsOf,
-  withTokenOtherWords,
-} from "@/lib/creator/card-kinds";
+import { TypesField } from "@/components/creator/types-field";
 import type { FormValues } from "@/lib/creator/form-types";
 
 type IdentityPanelProps = {
-  /** Edit / remix: supertype + subtypes are part of the locked type line
-   *  (see LockedSummary), so the "More options" editor is not offered. */
+  /** Edit / remix: the card's type words and subtypes are locked (see
+   *  LockedSummary) — the Types field edits the PRINTED words only and the
+   *  subtypes are not offered. */
   revise?: boolean;
-  /** The token kind: its type picker (the Card step's "Token type") owns
-   *  Legendary, Enchantment, Artifact and Creature, so the Supertype field
-   *  shows and edits only the other words (TODO 3b.15). */
+  /** The token kind: "Token" is a fixed prefix beside the field, whose
+   *  words are the token's types (the Card step's "Token type" toggles
+   *  write the same words, TODO 3b.15). */
   token?: boolean;
   /** The emblem kind (TODO 6.23): the name is the source planeswalker's, and
    *  an emblem has no supertype — only the optional subtype ("Emblem —
@@ -66,7 +63,14 @@ export function IdentityPanel({ revise = false, token = false, emblem = false }:
 
       {/* Quick path stops here: a title makes a real card. Everything below
           is detail control. */}
-      {revise ? null : emblem ? (
+      {/* The type line (TODO 3b.16): its words left of the dash are ONE
+          field, pre-filled with the card type's word — primary, never
+          folded away. An emblem's line is fixed ("Emblem"); only its
+          optional subtype is offered. On an edit or a remix the card's type
+          words and subtypes are locked (LockedSummary): the field then
+          changes the PRINTED words alone. */}
+      {emblem ? (
+        revise ? null : (
         <MoreOptions
           summary="More options — subtype"
           openWhen={Boolean(errors.subtypes_text)}
@@ -84,100 +88,31 @@ export function IdentityPanel({ revise = false, token = false, emblem = false }:
             />
           </FieldGroup>
         </MoreOptions>
+        )
       ) : (
-      <MoreOptions
-        summary="More options — supertype, subtypes"
-        openWhen={Boolean(errors.supertype || errors.subtypes_text)}
-      >
-        <div className="grid gap-4 sm:grid-cols-2">
-          {token ? (
+        <div className="grid gap-4 sm:grid-cols-2" data-testid="type-line-fields">
+          <TypesField
+            printedOnly={revise}
+            token={token}
+            label={revise ? "Type line" : "Types"}
+            placeholder={token ? "Creature" : undefined}
+          />
+          {revise ? null : (
             <FieldGroup
-              label="Supertype"
-              helper="Optional — e.g. Snow, Basic. Legendary and the card types are the Token type choices."
-              error={errors.supertype?.message}
-            >
-              <TokenSupertypeInput invalid={Boolean(errors.supertype)} />
-            </FieldGroup>
-          ) : (
-            <FieldGroup
-              label="Supertype"
-              helper="Optional — e.g. Legendary, Basic, or a second card type: Artifact, Enchantment, Creature on a land. The card prints the words in their printed order."
-              error={errors.supertype?.message}
+              label="Subtypes"
+              helper="After the dash. Comma-separated, up to 10 — e.g. Goblin, Wizard."
+              error={errors.subtypes_text?.message}
             >
               <input
-                {...register("supertype")}
-                placeholder="Legendary"
-                className={inputClass(Boolean(errors.supertype))}
+                {...register("subtypes_text")}
+                placeholder="Dragon, Elder"
+                className={inputClass(Boolean(errors.subtypes_text))}
                 autoComplete="off"
               />
             </FieldGroup>
           )}
-          <FieldGroup
-            label="Subtypes"
-            helper="Comma-separated. Up to 10."
-            error={errors.subtypes_text?.message}
-          >
-            <input
-              {...register("subtypes_text")}
-              placeholder="Dragon, Elder"
-              className={inputClass(Boolean(errors.subtypes_text))}
-              autoComplete="off"
-            />
-          </FieldGroup>
         </div>
-      </MoreOptions>
       )}
     </>
-  );
-}
-
-/**
- * The token's free Supertype field (TODO 3b.15): the supertype's words the
- * Token type picker doesn't own ("Snow", "Basic"), written back merged in
- * printed order with the picker's words (withTokenOtherWords). The text is
- * the user's while they type (a trailing space survives); it re-reads the
- * supertype when another control changes those words (an AI fill, an
- * import) and on blur, when a picker word typed here ("Legendary") turns its
- * toggle on and leaves the field. Enter does the same first: it submits the
- * form (Save is the form's default button) without a blur, and the save
- * must not drop a word the field still shows.
- */
-function TokenSupertypeInput({ invalid }: { invalid: boolean }) {
-  const { control, getValues, setValue } = useFormContext<FormValues>();
-  const supertype = useWatch({ control, name: "supertype" }) ?? "";
-  const others = tokenOtherWordsOf(supertype);
-  const [text, setText] = useState(others);
-  const [shown, setShown] = useState(others);
-  if (others !== shown) {
-    setShown(others);
-    if (tokenOtherWordsOf(text) !== others) setText(others);
-  }
-  const write = (next: string) =>
-    setValue("supertype", next, { shouldDirty: true, shouldValidate: invalid });
-  // Only a typed picker word is left to write (the other words went in as
-  // they were typed): focusing and leaving the field never re-spells a
-  // stored supertype, nor marks the card edited.
-  const adoptPickerWords = () => {
-    const current = getValues("supertype") ?? "";
-    const adopted = withTokenOtherWords(current, text, { adoptPickerWords: true });
-    if (adopted !== withTokenOtherWords(current, text)) write(adopted);
-    setText(tokenOtherWordsOf(getValues("supertype")));
-  };
-  return (
-    <input
-      value={text}
-      onChange={(event) => {
-        setText(event.target.value);
-        write(withTokenOtherWords(getValues("supertype"), event.target.value));
-      }}
-      onBlur={adoptPickerWords}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" && !event.nativeEvent.isComposing) adoptPickerWords();
-      }}
-      placeholder="Snow"
-      aria-invalid={invalid || undefined}
-      className={inputClass(invalid)}
-      autoComplete="off"
-    />
   );
 }

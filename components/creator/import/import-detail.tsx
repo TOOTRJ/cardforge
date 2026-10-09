@@ -317,9 +317,10 @@ export function ImportDetail({
  *  TODO 1.20), never the stored columns in stored order ("Creature land —
  *  Forest, Dryad"). */
 export function importPatchTypeLine(
-  patch: Pick<ScryfallImportPatch, "supertype" | "card_type" | "subtypes_text">,
+  patch: Pick<ScryfallImportPatch, "supertype" | "card_type" | "subtypes_text" | "printed_types">,
 ): string {
   return buildTypeLine({
+    printedTypes: patch.printed_types,
     supertype: patch.supertype,
     cardType: patch.card_type,
     subtypes: parseSubtypes(patch.subtypes_text ?? ""),

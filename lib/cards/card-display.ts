@@ -399,26 +399,44 @@ export function parseLoyaltyAbilities(
 }
 
 /**
- * The words LEFT of a type line's dash, in the order cards print them (TODO
- * 1.20). `supertype` holds every type word but the card type's own (the
- * importer's rule, TODO 1.3), so the card type's word is added to them and
- * the line is put in printed order (inPrintedOrder): "Legendary Enchantment
- * Creature", "Artifact Creature", "Enchantment Land" (Urza's Saga: an
- * enchantment with "Land"), "Land Creature" (Dryad Arbor: a land with
- * "Creature"), "Legendary Enchantment Artifact" (Bident of Thassa), "Kindred
- * Instant". A token prints "Token" FIRST, then its words (TODO 3b.15, the
- * M15-on wording): "Token Creature", "Token Legendary Artifact Creature", a
- * bare "Token" for a Copy (TFDN #26), "Token Basic" for a basic typed on the
- * token frame. An emblem prints "Emblem" alone (CR 114: no supertypes).
+ * The words LEFT of a type line's dash (TODO 1.20 + 3b.16).
+ *
+ * WITHOUT `printedTypes` (null / absent — every card saved before 3b.16, and
+ * every card whose maker left the Types field as it was pre-filled, an AI
+ * card, an import that reads as the built line) the line is BUILT:
+ * `supertype` holds every type word but the card type's own (the importer's
+ * rule, TODO 1.3), so the card type's word is added to them and the line is
+ * put in printed order (inPrintedOrder): "Legendary Enchantment Creature",
+ * "Artifact Creature", "Enchantment Land" (Urza's Saga: an enchantment with
+ * "Land"), "Land Creature" (Dryad Arbor: a land with "Creature"), "Legendary
+ * Enchantment Artifact" (Bident of Thassa), "Kindred Instant".
+ *
+ * WITH `printedTypes` (a string — the Types field as its maker typed it,
+ * cards.printed_types, migration 0137; "" is a maker who emptied it) the
+ * line is those words AS TYPED: their order, with or without the card type's
+ * word (owner 2026-10-09: the maker's own order wins). What the card IS —
+ * its frame, its P/T, its hubs — never reads this: that stays `card_type` +
+ * `supertype`.
+ *
+ * A token prints "Token" FIRST either way (TODO 3b.15, the M15-on wording:
+ * a fixed prefix, never part of the field): "Token Creature", "Token
+ * Legendary Artifact Creature", a bare "Token" for a Copy (TFDN #26). An
+ * emblem prints "Emblem" alone (CR 114: no supertypes), whatever is stored.
  */
 export function typeLineWords({
   supertype,
   cardType,
+  printedTypes,
 }: {
   supertype?: string | null;
   cardType?: CardType | null;
+  printedTypes?: string | null;
 }): string[] {
   if (cardType === "emblem") return ["Emblem"];
+  if (typeof printedTypes === "string") {
+    const typed = supertypeWords(printedTypes);
+    return cardType === "token" ? ["Token", ...typed] : typed;
+  }
   const words = supertypeWords(supertype);
   if (cardType === "token") return ["Token", ...inPrintedOrder(words)];
   return inPrintedOrder(cardType ? [...words, capitalize(cardType)] : words);
@@ -428,19 +446,25 @@ export function typeLineWords({
 // typeLineWords, then the subtypes as typed ("Emblem — Kaito" with an
 // emblem's optional subtype, TODO 6.23). BOTH renderers, the card page's
 // details and JSON-LD, the OG image and every list print this one string.
+// A maker who emptied the Types field (`printedTypes: ""`) prints the
+// subtypes alone, with no dash — or nothing at all; "Type" is only the
+// placeholder of a face with no type yet (the creator's first paint).
 export function buildTypeLine({
   supertype,
   cardType,
   subtypes,
+  printedTypes,
 }: {
   supertype?: string | null;
   cardType?: CardType | null;
-  subtypes?: readonly string[];
+  subtypes?: readonly string[] | null;
+  printedTypes?: string | null;
 }): string {
-  const left = typeLineWords({ supertype, cardType }).join(" ");
+  const left = typeLineWords({ supertype, cardType, printedTypes }).join(" ");
   const right = subtypes?.filter(Boolean).join(" ") ?? "";
   if (left && right) return `${left} — ${right}`;
-  return left || right || "Type";
+  if (left || right) return left || right;
+  return typeof printedTypes === "string" ? "" : "Type";
 }
 
 /** A type line split at its em dash, for a frame that prints it in two boxes
