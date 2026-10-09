@@ -1,9 +1,9 @@
 "use client";
 
+import { Fragment } from "react";
 import { offCardSuffix, tokenize } from "@/components/cards/mana-cost-glyphs";
-import { HYBRID_PAIRS } from "@/lib/cards/mana-order";
+import { MORE_SYMBOLS_LABEL, MORE_SYMBOL_GROUPS, capitalized } from "@/lib/cards/more-symbols";
 import { cn } from "@/lib/utils";
-import { COLOR_LETTER_IDENTITY, type ColorLetter } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // RulesSymbolToolbar — one-click symbol insertion for the rules-text editor.
@@ -19,31 +19,14 @@ import { COLOR_LETTER_IDENTITY, type ColorLetter } from "@/types/card";
 const CORE = ["{W}", "{U}", "{B}", "{R}", "{G}", "{C}"];
 const UTILITY = ["{T}", "{Q}", "{X}", "{S}", "{E}"];
 const GENERIC = ["{0}", "{1}", "{2}", "{3}", "{4}", "{5}"];
-const HYBRID = [
-  "{W/U}",
-  "{U/B}",
-  "{B/R}",
-  "{R/G}",
-  "{G/W}",
-  "{W/B}",
-  "{U/R}",
-  "{B/G}",
-  "{R/W}",
-  "{G/U}",
-];
-const TWOBRID = ["{2/W}", "{2/U}", "{2/B}", "{2/R}", "{2/G}"];
-const PHYREXIAN = ["{W/P}", "{U/P}", "{B/P}", "{R/P}", "{G/P}"];
-// The ten two-colour Phyrexian symbols ({G/U/P}: Tamiyo, Compleated Sage), in
-// the printed pair order — the one token normalizeManaCost keeps.
+// The collapsed group — the ONE list the cost picker offers too
+// (lib/cards/more-symbols.ts). A two-colour Phyrexian symbol ({G/U/P}:
+// Tamiyo, Compleated Sage) is read out by name, then its code.
 const HYBRID_PHYREXIAN_NAMES: Record<string, string> = Object.fromEntries(
-  HYBRID_PAIRS.map((pair) => [
-    `{${pair[0]}/${pair[1]}/P}`,
-    `${COLOR_LETTER_IDENTITY[pair[0] as ColorLetter]} or ${COLOR_LETTER_IDENTITY[pair[1] as ColorLetter]} Phyrexian mana`,
-  ]),
+  MORE_SYMBOL_GROUPS.filter((group) => group.id === "hybrid-phyrexian").flatMap((group) =>
+    group.symbols.map((symbol) => [symbol.token, symbol.name]),
+  ),
 );
-const HYBRID_PHYREXIAN = Object.keys(HYBRID_PHYREXIAN_NAMES);
-
-const capitalized = (text: string) => `${text[0].toUpperCase()}${text.slice(1)}`;
 
 const TOKEN_TITLES: Record<string, string> = {
   "{T}": "Tap",
@@ -64,7 +47,6 @@ function SymbolButton({
 }) {
   const suffix = offCardSuffix(tokenize(token)[0]);
   if (!suffix) return null;
-  // A two-colour Phyrexian symbol is read out by name, then its code.
   const name = HYBRID_PHYREXIAN_NAMES[token];
   return (
     <button
@@ -143,23 +125,16 @@ export function RulesSymbolToolbar({
       </div>
       <details>
         <summary className="cursor-pointer list-none text-xs text-subtle transition-colors hover:text-muted [&::-webkit-details-marker]:hidden">
-          Hybrid, twobrid &amp; Phyrexian symbols…
+          {MORE_SYMBOLS_LABEL}
         </summary>
         <div className="mt-1.5 flex flex-wrap items-center gap-1">
-          {HYBRID.map((t) => (
-            <SymbolButton key={t} token={t} onInsert={onInsert} />
-          ))}
-          <span aria-hidden className="mx-1 h-5 w-px bg-border/60" />
-          {TWOBRID.map((t) => (
-            <SymbolButton key={t} token={t} onInsert={onInsert} />
-          ))}
-          <span aria-hidden className="mx-1 h-5 w-px bg-border/60" />
-          {PHYREXIAN.map((t) => (
-            <SymbolButton key={t} token={t} onInsert={onInsert} />
-          ))}
-          <span aria-hidden className="mx-1 h-5 w-px bg-border/60" />
-          {HYBRID_PHYREXIAN.map((t) => (
-            <SymbolButton key={t} token={t} onInsert={onInsert} />
+          {MORE_SYMBOL_GROUPS.map((group, index) => (
+            <Fragment key={group.id}>
+              {index > 0 ? <span aria-hidden className="mx-1 h-5 w-px bg-border/60" /> : null}
+              {group.symbols.map((symbol) => (
+                <SymbolButton key={symbol.token} token={symbol.token} onInsert={onInsert} />
+              ))}
+            </Fragment>
           ))}
         </div>
       </details>

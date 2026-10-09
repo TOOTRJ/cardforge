@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { Delete, Eraser } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
+import { ManaCostGlyphs, offCardSuffix, tokenize } from "@/components/cards/mana-cost-glyphs";
 import { normalizeManaCost } from "@/lib/cards/mana-order";
+import { MORE_SYMBOLS, MORE_SYMBOLS_LABEL, MORE_SYMBOL_GROUPS, capitalized } from "@/lib/cards/more-symbols";
+import { CARD_COST_MAX } from "@/lib/validation/card";
 import {
   isCustomPipSymbol,
   type PipOverrides,
@@ -28,6 +30,17 @@ import {
 // cost. Costs the normalizer doesn't recognize (custom tokens) append
 // as-is. We never normalize on mount — an existing card's stored cost is
 // only rewritten when the user interacts with the picker.
+//
+// The hybrid, twobrid and Phyrexian symbols sit in a collapsed group under
+// the specials — the SAME thirty, in the same order and under the same
+// label, as the rules-text toolbar's (lib/cards/more-symbols.ts is the one
+// list). The picker is the same on every frame and every cost field (the
+// front's, a second face's, a modal back's): nothing here reads a template.
+//
+// A cost holds CARD_COST_MAX characters (the schema's and the database's
+// limit). A symbol that would take the cost past it is NOT added: its button
+// dims (aria-disabled — it keeps its place in the tab order), and a line
+// under the cost says why.
 // ---------------------------------------------------------------------------
 
 type Props = {
@@ -93,15 +106,38 @@ export function ManaCostPicker({
   // The generic-mana stepper is local UI state — it only matters while the
   // picker is mounted and never needs to round-trip to the form.
   const [generic, setGeneric] = useState<number>(1);
+  // The collapsed group, opened by its summary. Held here (not left to the
+  // <details>) so the summary's click can be cancelled: see `onClick` below.
+  const [moreOpen, setMoreOpen] = useState(false);
 
-  const append = (token: string) =>
-    onChange(normalizeManaCost(value + `{${token}}`));
+  const withToken = (token: string) => normalizeManaCost(value + `{${token}}`);
+  /** False when the symbol would take the cost past the limit. A generic
+   *  number merges into the one already there, so it is asked token by
+   *  token, never by length alone. */
+  const fits = (token: string) => withToken(token).length <= CARD_COST_MAX;
+  const append = (token: string) => {
+    const next = withToken(token);
+    if (next.length > CARD_COST_MAX) return;
+    onChange(next);
+  };
+  const someRefused =
+    !fits(String(generic)) ||
+    [...COLOR_BUTTONS, ...SYMBOL_BUTTONS].some((b) => !fits(b.token)) ||
+    MORE_SYMBOLS.some((symbol) => !fits(symbol.token.slice(1, -1)));
   const backspace = () => onChange(dropLastToken(value));
   const clear = () => onChange("");
 
   return (
     <div
       id={id}
+      // Every mount sits inside a FieldGroup's <label>, and a <label> hands a
+      // click on anything that is not a control of its own to its first
+      // button — here "Remove last mana symbol". A click on the picker's
+      // plain parts (a gap between pips, the limit's line, a caption) is
+      // cancelled so it presses nothing.
+      onClick={(event) => {
+        if (!(event.target as HTMLElement).closest("button, input, summary")) event.preventDefault();
+      }}
       className={cn(
         "flex flex-col gap-3 rounded-lg border border-border/50 bg-elevated/40 p-3",
         className,
@@ -109,16 +145,17 @@ export function ManaCostPicker({
     >
       {/* Live preview of what's currently in the cost field. */}
       <div className="flex min-h-9 items-center justify-between gap-2 rounded-md border border-border/40 bg-background/60 px-3 py-1.5">
-        <div className="flex items-center gap-1.5">
+        <div className="flex min-w-0 items-center gap-1.5">
           {value.trim() ? (
-            <ManaCostGlyphs cost={value} size="md" overrides={overrides} />
+            // A long cost wraps inside the row instead of widening the page.
+            <ManaCostGlyphs cost={value} size="md" overrides={overrides} className="flex-wrap gap-y-1" />
           ) : (
             <span className="text-[11px] uppercase tracking-wider text-subtle">
               No cost yet — click pips below
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
           <button
             type="button"
             onClick={backspace}
@@ -140,6 +177,13 @@ export function ManaCostPicker({
         </div>
       </div>
 
+      {/* Always in the tree, so a screen reader hears it appear. */}
+      <p role="status" className={cn("text-[11px] leading-4 text-muted", someRefused ? null : "sr-only")}>
+        {someRefused
+          ? `A cost holds up to ${CARD_COST_MAX} characters — the dimmed symbols no longer fit. Remove one to add another.`
+          : ""}
+      </p>
+
       {/* Generic mana stepper — number input + "Add {N}" button. */}
       <div className="flex items-center gap-2">
         <label className="text-[11px] uppercase tracking-wider text-subtle">
@@ -150,6 +194,16 @@ export function ManaCostPicker({
           min={0}
           max={20}
           value={generic}
+          // The caption beside it is not tied to it: named here.
+          aria-label="Generic mana amount"
+          // Enter in a form's input submits the form — here it would SAVE
+          // the card from the middle of building a cost. It adds the number
+          // instead, as the button beside it does.
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
+            event.preventDefault();
+            append(String(generic));
+          }}
           onChange={(e) => {
             const n = Number.parseInt(e.target.value, 10);
             if (Number.isNaN(n)) {
@@ -163,7 +217,12 @@ export function ManaCostPicker({
         <button
           type="button"
           onClick={() => append(String(generic))}
-          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border/40 bg-elevated/60 px-3 text-xs font-medium text-foreground transition-colors hover:border-border-strong hover:bg-elevated"
+          aria-disabled={fits(String(generic)) ? undefined : true}
+          title={fits(String(generic)) ? undefined : capitalized(REFUSED_TITLE)}
+          className={cn(
+            "inline-flex h-8 items-center gap-1.5 rounded-md border border-border/40 bg-elevated/60 px-3 text-xs font-medium text-foreground transition-colors hover:border-border-strong hover:bg-elevated",
+            fits(String(generic)) ? null : REFUSED_CLASS,
+          )}
         >
           <i className={`ms ms-${generic} ms-cost ms-shadow`} aria-hidden style={{ fontSize: 16 }} />
           Add
@@ -179,6 +238,7 @@ export function ManaCostPicker({
             label={b.label}
             iconSuffix={b.iconSuffix}
             onClick={() => append(b.token)}
+            refused={!fits(b.token)}
             ring={b.ring}
             overrideUrl={
               isCustomPipSymbol(b.token) ? overrides?.[b.token] ?? null : null
@@ -196,24 +256,78 @@ export function ManaCostPicker({
             label={b.label}
             iconSuffix={b.iconSuffix}
             onClick={() => append(b.token)}
+            refused={!fits(b.token)}
             ring="from-slate-500/20 to-slate-400/0"
           />
         ))}
       </div>
+
+      {/* Hybrid, twobrid and Phyrexian — the rules toolbar's group, collapsed
+          until asked for. A <details>: its summary is in the tab order and
+          opens with Enter / Space. */}
+      <details open={moreOpen}>
+        <summary
+          // Cancelled and toggled by hand: the browser's own toggle would
+          // also let the <label> round the picker forward the click (above)
+          // where a browser does not count a summary as a control. Enter and
+          // Space on the summary arrive here as a click too.
+          onClick={(event) => {
+            event.preventDefault();
+            setMoreOpen((open) => !open);
+          }}
+          className="w-fit cursor-pointer list-none rounded-sm text-xs text-subtle transition-colors hover:text-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary-bright/60 [&::-webkit-details-marker]:hidden"
+        >
+          {MORE_SYMBOLS_LABEL}
+        </summary>
+        <div className="mt-2 flex flex-col gap-2">
+          {MORE_SYMBOL_GROUPS.map((group) => (
+            <div key={group.id} role="group" aria-label={group.label} className="flex flex-wrap gap-2">
+              {group.symbols.map((symbol) => {
+                const inner = symbol.token.slice(1, -1);
+                return (
+                  <PipButton
+                    key={symbol.token}
+                    label={`${symbol.name} ${symbol.token}`}
+                    title={`${capitalized(symbol.name)} — adds ${symbol.token}`}
+                    iconSuffix={offCardSuffix(tokenize(symbol.token)[0]) ?? ""}
+                    onClick={() => append(inner)}
+                    refused={!fits(inner)}
+                    compact
+                    ring="from-slate-500/20 to-slate-400/0"
+                  />
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </details>
     </div>
   );
 }
 
+/** A symbol the cost has no room for: dimmed, still focusable, not added. */
+const REFUSED_CLASS = "cursor-not-allowed opacity-40 hover:scale-100 active:scale-100";
+const REFUSED_TITLE = `the cost is full (${CARD_COST_MAX} characters)`;
+
 function PipButton({
   label,
+  title,
   iconSuffix,
   onClick,
+  refused = false,
+  compact = false,
   ring,
   overrideUrl,
 }: {
   label: string;
+  /** The tooltip; the label when omitted. */
+  title?: string;
   iconSuffix: string;
   onClick: () => void;
+  /** The cost has no room for this symbol. */
+  refused?: boolean;
+  /** The collapsed group's size: ten to a row in the creator's column. */
+  compact?: boolean;
   ring: string;
   /** Custom pip icon — replaces the mana-font glyph, nothing else. */
   overrideUrl?: string | null;
@@ -223,10 +337,13 @@ function PipButton({
       type="button"
       onClick={onClick}
       aria-label={`Add ${label}`}
-      title={label}
+      aria-disabled={refused ? true : undefined}
+      title={refused ? `${title ?? label} — ${REFUSED_TITLE}` : (title ?? label)}
       className={cn(
-        "inline-flex h-10 w-10 items-center justify-center rounded-full border border-border/40 bg-gradient-to-br shadow-sm transition-all hover:scale-110 hover:border-border-strong active:scale-95",
+        "inline-flex items-center justify-center rounded-full border border-border/40 bg-gradient-to-br shadow-sm transition-all hover:scale-110 hover:border-border-strong active:scale-95",
+        compact ? "h-9 w-9" : "h-10 w-10",
         ring,
+        refused ? REFUSED_CLASS : null,
       )}
     >
       {overrideUrl ? (
@@ -241,7 +358,7 @@ function PipButton({
         <i
           className={`ms ms-${iconSuffix} ms-cost ms-shadow`}
           aria-hidden
-          style={{ fontSize: 22 }}
+          style={{ fontSize: compact ? 20 : 22 }}
         />
       )}
     </button>
