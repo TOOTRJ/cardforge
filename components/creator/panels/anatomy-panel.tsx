@@ -27,16 +27,15 @@ import {
   frameAnatomyOf,
   pairColorIdentity,
   offersTwoColor,
-  qualifiesForCrown,
   twoColorDressOf,
   twoColorFromCost,
   twoColorPairOf,
   type FrameAnatomyKey,
   type TwoColorPair,
 } from "@/lib/cards/anatomy";
-import { DEFAULT_DFC_ICON, bodyFor, dfcBodyOf, isDfcIconFamily } from "@/lib/cards/dfc";
+import { useLegendaryVariation } from "@/components/creator/panels/legendary-variation";
 import type { FormValues } from "@/lib/creator/form-types";
-import type { CardType, ColorIdentity, FrameStyle } from "@/types/card";
+import type { ColorIdentity, FrameStyle } from "@/types/card";
 
 /** The keys this panel can show as a switch: the booleans and the collector
  *  line's two keys. The transform icon FAMILY (`dfcIcon`, TODO 5.0a) is a
@@ -290,24 +289,23 @@ export function AnatomyPanel({
   pairRow?: boolean;
 }) {
   const { control, setValue } = useFormContext<FormValues>();
-  const [template, crown, twoColor, cardType, supertype, cost, colorIdentity, dfcIcon, backType, backSupertype] = useWatch({
+  const [template, crown, twoColor, cardType, cost, colorIdentity] = useWatch({
     control,
     name: [
       "frame_style.template",
       "frame_style.crown",
       "frame_style.twoColor",
       "card_type",
-      "supertype",
       "cost",
       "color_identity",
-      "frame_style.dfcIcon",
-      "back_face.card_type",
-      "back_face.supertype",
     ],
   });
   const anatomy = frameAnatomyOf(template);
   const colors = (colorIdentity ?? []) as ColorIdentity[];
   const pair = twoColorPairOf(colors);
+  // The crown's row shows when a face of the card draws one: the ONE rule
+  // the Variations section's "Legendary" entry reads too (TODO 3b.17,
+  // lib/creator/legendary-variation.ts), so the two controls are one state.
   // A double-faced card's ONE crown switch (TODO 5.1d) serves both faces:
   // the back wears it by its own supertype on its own body (lib/cards/
   // faces.ts carries the card's switches onto the back), so the row shows
@@ -316,11 +314,8 @@ export function AnatomyPanel({
   // — judged on the body the back's type and family derive, the same
   // derivation as the form's live preview (bodyFor), never a back body
   // that draws none (the ▼ land back, the modal land pair).
-  const dfcLayout = dfcBodyOf(template)?.role === "front" ? dfcBodyOf(template)!.layout : null;
-  const backBody = dfcLayout ? bodyFor(dfcLayout, "back", backType || null, isDfcIconFamily(dfcIcon) ? dfcIcon : DEFAULT_DFC_ICON) : null;
-  const backCrowned =
-    backBody !== null && frameAnatomyOf(backBody).crown && qualifiesForCrown({ cardType: (backType || null) as CardType | null, supertype: backSupertype });
-  const showCrown = which.includes("crown") && ((anatomy.crown && qualifiesForCrown({ cardType, supertype })) || backCrowned);
+  const legendary = useLegendaryVariation();
+  const showCrown = which.includes("crown") && legendary.switchShown;
   // Only a card the two-colour frame is for (offersTwoColor): never a
   // three-colour identity, nor a "multicolor" card whose cost spans one or
   // three-plus colours — there the switch would do nothing, or offer a pair

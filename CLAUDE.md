@@ -540,7 +540,13 @@ Rules and gotchas:
   never a scan; `retro` none — the 1997 frame printed one gold; an import
   names the switch only where the print has the look, `printsTwoColorFrame`)
   (`FrameProfile.collector` = `M15_COLLECTOR` on the wave-1 entries,
-  `COLLECTOR_TEMPLATES`) — `docs/FRAMES.md` "Printed pieces". On a card
+  `COLLECTOR_TEMPLATES`) — `docs/FRAMES.md` "Printed pieces". The crown has
+  TWO controls on ONE state (3b.17): the Variations section's "Legendary"
+  chip and the anatomy panel's switch both read `legendaryVariationOf`
+  (`lib/creator/legendary-variation.ts`) and write `frame_style.crown` —
+  never a template; the chip adds the word "Legendary" on a NEW card only
+  (an edit's type line is locked), and is disabled with its reason where the
+  card's own template declares no crown. On a card
   with the line the pipglyph.com mark sits in its © slot (line 2 with a
   drawn stat plate, else line 1 — m15pw's `markLine: 2` keeps it off the
   empty loyalty shield; `lib/cards/collector-layout.ts`) and a clean
