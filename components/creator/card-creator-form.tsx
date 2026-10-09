@@ -4008,7 +4008,9 @@ function AiFillButton({
       size="sm"
       onClick={onClick}
       disabled={disabled}
-      className="border-accent/50 text-foreground hover:border-accent"
+      // The label is a sentence: it wraps on a phone instead of widening
+      // the page (a nowrap button's min-content is its whole text).
+      className="h-auto min-h-9 whitespace-normal border-accent/50 py-1.5 text-left text-foreground hover:border-accent"
     >
       <Sparkles className="h-4 w-4 text-accent" aria-hidden />
       {label}
