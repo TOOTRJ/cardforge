@@ -194,6 +194,16 @@ export function ManaCostPicker({
           min={0}
           max={20}
           value={generic}
+          // The caption beside it is not tied to it: named here.
+          aria-label="Generic mana amount"
+          // Enter in a form's input submits the form — here it would SAVE
+          // the card from the middle of building a cost. It adds the number
+          // instead, as the button beside it does.
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
+            event.preventDefault();
+            append(String(generic));
+          }}
           onChange={(e) => {
             const n = Number.parseInt(e.target.value, 10);
             if (Number.isNaN(n)) {
@@ -208,6 +218,7 @@ export function ManaCostPicker({
           type="button"
           onClick={() => append(String(generic))}
           aria-disabled={fits(String(generic)) ? undefined : true}
+          title={fits(String(generic)) ? undefined : capitalized(REFUSED_TITLE)}
           className={cn(
             "inline-flex h-8 items-center gap-1.5 rounded-md border border-border/40 bg-elevated/60 px-3 text-xs font-medium text-foreground transition-colors hover:border-border-strong hover:bg-elevated",
             fits(String(generic)) ? null : REFUSED_CLASS,

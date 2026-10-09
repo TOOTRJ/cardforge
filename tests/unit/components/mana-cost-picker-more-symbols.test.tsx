@@ -187,6 +187,36 @@ describe("adding", () => {
   });
 });
 
+describe("the generic number field", () => {
+  it("has a name of its own", () => {
+    render(<Harness />);
+    expect(screen.getByRole("spinbutton", { name: "Generic mana amount" })).toBeTruthy();
+  });
+
+  it("Enter adds the number and is cancelled — it never submits the form round it", () => {
+    // The creator is one <form>: an uncancelled Enter in any of its inputs
+    // presses Save (seen in Chromium: "Changes saved." from this field).
+    const spy = vi.fn();
+    render(<Harness initial="{W/U}" spy={spy} />);
+    const field = screen.getByRole("spinbutton");
+    fireEvent.change(field, { target: { value: "3" } });
+    expect(fireEvent.keyDown(field, { key: "Enter" })).toBe(false);
+    expect(costNow()).toBe("{3}{W/U}");
+    fireEvent.keyDown(field, { key: "Enter" });
+    expect(costNow()).toBe("{6}{W/U}");
+    // Any other key is left alone.
+    expect(fireEvent.keyDown(field, { key: "ArrowUp" })).toBe(true);
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it("Enter at the limit adds nothing, and still does not submit", () => {
+    const spy = vi.fn();
+    render(<Harness initial={"{W/U/P}".repeat(9)} spy={spy} />);
+    expect(fireEvent.keyDown(screen.getByRole("spinbutton"), { key: "Enter" })).toBe(false);
+    expect(spy).not.toHaveBeenCalled();
+  });
+});
+
 describe("at the cost's limit", () => {
   const full = "{W/U/P}".repeat(9); // 63 characters
 
@@ -247,6 +277,16 @@ describe("at the cost's limit", () => {
     expect(costNow()).toBe("{10}" + "{W/U}".repeat(12));
     expect(costNow()).toHaveLength(64);
     expect(cardCostSchema.safeParse(costNow()).success).toBe(true);
+  });
+
+  it("the generic button says why too", () => {
+    render(<Harness initial={full} />);
+    const add = screen.getByText("Add").closest("button")!;
+    expect(add.getAttribute("aria-disabled")).toBe("true");
+    expect(add.getAttribute("title")).toBe("The cost is full (64 characters)");
+    cleanup();
+    render(<Harness />);
+    expect(screen.getByText("Add").closest("button")!.hasAttribute("title")).toBe(false);
   });
 
   it("an empty cost says nothing", () => {
