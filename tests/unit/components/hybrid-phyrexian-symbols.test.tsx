@@ -131,8 +131,8 @@ describe("off a card, either typed order draws", () => {
     }
   });
 
-  it("every other symbol keeps the class it had", () => {
-    const others = "{W}{U}{B}{R}{G}{C}{X}{0}{7}{20}{T}{Q}{S}{E}{W/U}{U/W}{G/U}{U/G}{2/W}{W/P}{G/P}{C/P}{W/W/P}{CHAOS}";
+  it("every other symbol keeps the class it had (a plain hybrid typed the other way: 6.16d)", () => {
+    const others = "{W}{U}{B}{R}{G}{C}{X}{0}{7}{20}{T}{Q}{S}{E}{W/U}{G/U}{2/W}{W/P}{G/P}{C/P}{W/W/P}{CHAOS}";
     for (const token of tokenize(others)) expect(offCardSuffix(token)).toBe(tokenSuffix(token));
   });
 
