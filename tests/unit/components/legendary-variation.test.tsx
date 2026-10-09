@@ -33,7 +33,9 @@ import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { kindFromCard, type CardKind } from "@/lib/creator/card-kinds";
 import type { FormValues } from "@/lib/creator/form-types";
-import { NO_CROWN_REASON, NOT_LEGENDARY_LOCKED_REASON } from "@/lib/creator/legendary-variation";
+import { NO_CROWN_REASON, NOT_LEGENDARY_LOCKED_REASON, previewFrameStyleOf } from "@/lib/creator/legendary-variation";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { frameAssetPathsFor } from "@/lib/render/card-image";
 import { FRAME_TEMPLATE_VALUES, type ColorIdentity, type FrameStyle, type FrameTemplate } from "@/types/card";
 
@@ -373,5 +375,50 @@ describe("the preview and the bake draw the crown the chip switched on", () => {
     expect(master()).toBe("w-legendary");
     expect(painted()).toBe(true);
     expect(style().template).toBe("m15borderless");
+  });
+});
+
+describe("a modal LAND front with a legendary back: the preview draws what the save keeps", () => {
+  // The save drops the crown switch there (normalizeAnatomy: m15mdfclandfront
+  // draws none), the entry and the switch's row are off — but a new card's
+  // switch starts ON and the back's body (m15mdfcback) declares the crown, so
+  // the raw form style previewed a crown the saved image never had.
+  const card = (frameStyle: FrameStyle): CardPreviewData & { face: "back" } => ({
+    title: "Shore",
+    cardType: "land",
+    supertype: null,
+    colorIdentity: ["red"],
+    frameStyle,
+    brandMark: false,
+    backFace: {
+      title: "Kesh",
+      card_type: "creature",
+      supertype: "Legendary",
+      frame_style: { template: "m15mdfcback" },
+      color_identity: ["red"],
+    } as CardPreviewData["backFace"],
+    face: "back",
+  });
+  const formStyle = { template: "m15mdfclandfront", ...NEW_CARD_ANATOMY } as FrameStyle;
+  const crownInPreview = () => document.querySelector('[data-frame-overlay="crown"]');
+
+  it("the form's raw style would draw the back's crown; the previewed style draws none", () => {
+    render(<CardPreview {...card(formStyle)} />);
+    expect(crownInPreview()).not.toBeNull();
+    cleanup();
+    render(<CardPreview {...card(previewFrameStyleOf(formStyle))} />);
+    expect(crownInPreview()).toBeNull();
+  });
+
+  it("a modal NONLAND front keeps its legendary back's crown (the save keeps the switch)", () => {
+    const style = { template: "m15mdfcfront", ...NEW_CARD_ANATOMY } as FrameStyle;
+    render(<CardPreview {...card(previewFrameStyleOf(style))} cardType="creature" />);
+    expect(crownInPreview()).not.toBeNull();
+  });
+
+  it("the creator's live preview is fed through it", () => {
+    const form = readFileSync(join(process.cwd(), "components/creator/card-creator-form.tsx"), "utf8");
+    expect(form).toContain("frameStyle: previewFrameStyleOf(watched.frame_style),");
+    expect(form).not.toMatch(/frameStyle: watched\.frame_style,/);
   });
 });

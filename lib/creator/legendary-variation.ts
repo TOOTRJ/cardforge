@@ -142,6 +142,31 @@ export function legendaryVariationOf(input: LegendaryVariationInput): LegendaryV
   };
 }
 
+/**
+ * The frame style the creator's LIVE PREVIEW draws: the form's, without a
+ * crown switch the save would drop (normalizeAnatomy: the card's own
+ * template draws no crown). The renderers gate the crown per FACE, on the
+ * body that face draws on — so without this the one card whose back body
+ * declares a crown while its own template declares none (a modal LAND front,
+ * m15mdfclandfront, with a legendary nonland back on m15mdfcback) previewed
+ * a crown on its back that the saved image never had: a new card's switch
+ * starts on (NEW_CARD_ANATOMY), and the entry and the switch's row are both
+ * off there, so nothing could turn it off. The input itself when the save
+ * keeps the switch (every other card).
+ */
+export function previewFrameStyleOf<T extends { template?: FrameTemplate | string | null; crown?: unknown }>(frameStyle: T): T;
+export function previewFrameStyleOf<T extends { template?: FrameTemplate | string | null; crown?: unknown }>(
+  frameStyle: T | null | undefined,
+): T | null | undefined;
+export function previewFrameStyleOf<T extends { template?: FrameTemplate | string | null; crown?: unknown }>(
+  frameStyle: T | null | undefined,
+): T | null | undefined {
+  if (!frameStyle || !("crown" in frameStyle) || frameAnatomyOf(frameStyle.template).crown) return frameStyle;
+  const kept = { ...frameStyle };
+  delete kept.crown;
+  return kept;
+}
+
 function unavailable(reason: string): LegendaryVariation {
   return { available: false, reason, selected: false, switchShown: false, addsWordTo: null };
 }

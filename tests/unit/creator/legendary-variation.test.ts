@@ -8,6 +8,7 @@ import {
   NO_CROWN_REASON,
   NOT_LEGENDARY_LOCKED_REASON,
   legendaryVariationOf,
+  previewFrameStyleOf,
   withLegendaryWord,
   type LegendaryVariationInput,
 } from "@/lib/creator/legendary-variation";
@@ -205,5 +206,36 @@ describe("the word goes first", () => {
     ["snow legendary", "snow legendary"],
   ])("%j → %j", (before, after) => {
     expect(withLegendaryWord(before)).toBe(after);
+  });
+});
+
+describe("the live preview draws the crown the save keeps (previewFrameStyleOf)", () => {
+  it.each(FRAME_TEMPLATE_VALUES.filter((t) => dfcBodyOf(t)?.role !== "back"))("%s: the previewed switch is the saved one", (template) => {
+    for (const crown of [true, false]) {
+      const style = { template, crown, twoColor: true, finish: "regular" };
+      const saved = normalizeAnatomy({ template, crown }, template, typeFor(template));
+      const previewed = previewFrameStyleOf(style);
+      expect("crown" in previewed, `${template} ${crown}`).toBe("crown" in saved);
+      expect(previewed.crown).toBe(saved.crown);
+      // Nothing else is touched, and an unchanged style is the SAME object.
+      expect({ ...previewed, crown }).toEqual(style);
+      if ("crown" in saved) expect(previewed).toBe(style);
+    }
+  });
+
+  it("the one card it changes: a modal land front, whose legendary back body would draw the crown the save drops", () => {
+    expect(frameAnatomyOf("m15mdfclandfront").crown).toBe(false);
+    expect(frameAnatomyOf("m15mdfcback").crown).toBe(true);
+    expect(previewFrameStyleOf({ template: "m15mdfclandfront", crown: true, collector: "2023" })).toEqual({
+      template: "m15mdfclandfront",
+      collector: "2023",
+    });
+  });
+
+  it("a style with no switch, and no style at all, pass through", () => {
+    const bare = { template: "m15mdfclandfront" };
+    expect(previewFrameStyleOf(bare)).toBe(bare);
+    expect(previewFrameStyleOf(null)).toBeNull();
+    expect(previewFrameStyleOf(undefined)).toBeUndefined();
   });
 });

@@ -2809,6 +2809,12 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
   A frame change never clears the switch in the form: a move to a frame
   with no crown and back restores it; only the save drops it. Imports and
   AI jobs are untouched (the printing; the save's default).
+  The creator's live preview draws the crown the save keeps: it reads the
+  form's style through `previewFrameStyleOf`, which leaves out a crown
+  switch the card's own template drops — the one card that changes is a
+  modal LAND front with a legendary nonland back (`m15mdfclandfront` draws
+  no crown, its back's body `m15mdfcback` does, and a new card's switch
+  starts on), whose preview drew a crown the saved image never had.
 - **Every save** drops a switch its template can't draw for the card
   (`normalizeAnatomy`, with the card's type), so a template that gains a
   piece later (4.6f) never changes a card stored on it before, and a crafted
