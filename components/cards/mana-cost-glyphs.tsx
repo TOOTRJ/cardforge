@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { canonicalHybridPair } from "@/lib/cards/mana-order";
 import { pipOverrideForToken, type PipOverrides } from "@/lib/pips/override";
 import { SNOW_FLAKE_MITRE, drawsManaGem, manaGemSpec } from "@/lib/cards/mana-gem";
 import { frameUrl } from "@/lib/frames/frame-url";
@@ -190,6 +191,20 @@ export function tokenSuffix(token: Token): string | null {
     case "text":
       return null;
   }
+}
+
+/** The mana-font class a symbol draws with OFF a card (`.ms-cost`: the
+ *  pickers, the rules editor's chips, deck lists, articles). A card draws a
+ *  two-colour Phyrexian symbol itself, in the order typed (CardPip, the
+ *  bake); mana-font has ONE class per pair, in the printed order — so
+ *  `{U/G/P}` takes `{G/U/P}`'s class here, where its own has no glyph (an
+ *  empty disc). Every other symbol: tokenSuffix. */
+export function offCardSuffix(token: Token): string | null {
+  if (token.kind === "hybrid" && token.phyrexian) {
+    const pair = canonicalHybridPair(token.left, token.right);
+    if (pair) return `${pair.toLowerCase()}p`;
+  }
+  return tokenSuffix(token);
 }
 
 // ---------------------------------------------------------------------------
@@ -478,14 +493,15 @@ export function ManaCostGlyphs({
         if (overrideSrc) {
           return <PipOverrideImg key={`g-${i}`} src={overrideSrc} symbols={symbols} />;
         }
-        if (!suffix) return null;
+        const classSuffix = offCardSuffix(token);
+        if (!classSuffix) return null;
         // ms-cost gives the circular gem background, ms-shadow adds depth.
         // Both come from mana-font's stylesheet.
         return (
           <i
             key={`g-${i}`}
             aria-hidden
-            className={cn("ms ms-cost", symbols.previewShadowClass, `ms-${styledSuffix(symbols, suffix)}`)}
+            className={cn("ms ms-cost", symbols.previewShadowClass, `ms-${styledSuffix(symbols, classSuffix)}`)}
           />
         );
       })}

@@ -3032,6 +3032,37 @@ const MODERN: FrameProfile = {
   },
 };
 
+/** The ten pair master keys in printed order (TWO_COLOR_PAIRS,
+ *  lib/cards/frame-reference-registry.ts — a unit test holds the two
+ *  together; this file may not import that module's values). */
+const OLD_FRAME_PAIR_KEYS = ["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"] as const;
+
+/** A profile whose ten pair masters print master `from`'s ink (TODO 4.6h):
+ *  every per-master ink entry of `from` — name, type line, footer, P/T, the
+ *  © slot — is repeated for the pair keys, and the mark is dark on them
+ *  where it is dark on `from`. A slot without an entry for `from` keeps its
+ *  own colour on the pairs, as on `from`. */
+function withPairInk(profile: FrameProfile, from: FrameMasterKey): FrameProfile {
+  const inked = (map: InkByColorKey | undefined): InkByColorKey | undefined => {
+    const entry = map?.[from];
+    return map && entry ? { ...map, ...Object.fromEntries(OLD_FRAME_PAIR_KEYS.map((k) => [k, entry])) } : map;
+  };
+  const slot = <T extends { inkByColorKey?: InkByColorKey }>(s: T | undefined): T | undefined =>
+    s && s.inkByColorKey ? { ...s, inkByColorKey: inked(s.inkByColorKey) } : s;
+  const copyright = profile.copyrightSlot;
+  return {
+    ...profile,
+    title: slot(profile.title)!,
+    type: slot(profile.type)!,
+    footer: slot(profile.footer),
+    pt: slot(profile.pt),
+    copyrightSlot: copyright && {
+      ...slot(copyright)!,
+      darkMarkKeys: copyright.darkMarkKeys?.includes(from) ? [...copyright.darkMarkKeys, ...OLD_FRAME_PAIR_KEYS] : copyright.darkMarkKeys,
+    },
+  };
+}
+
 // Modern land — the 2003 land frame: the same geometry, no mana cost. `c` is
 // the plain land, w–g the basics' coloured frames, `m` the gold land. One
 // brown land frame under every key's footer: the footer and the © slot are
@@ -5388,9 +5419,26 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   expeditionland: EXPEDITIONLAND,
   nyx: { ...NYX, pickerSampleArt: true },
   retro: RETRO,
-  retroland: RETROLAND,
-  modern: MODERN,
-  modernland: MODERNLAND,
+  // Two colours on the old frames (TODO 4.6h; `twoColorMasters`, opt-in per
+  // card — FrameStyle.twoColor, as on m15): declared on these three PROFILES
+  // entries only, never on the RETRO / MODERN bases. The pair masters are
+  // built from each template's own finished masters (scripts/lib/cc-frames.mjs
+  // oldFramePairLayers), so a pair rides its template's "m" tick:
+  //   • `modern` — the two-colour gold card of Ravnica 2005 on: the gold
+  //     frame, bars and plate with the pinline and the text box in the two
+  //     colours; its ink is the gold master's (dark), and so is the mark's;
+  //   • `modernland` — the two-colour lands of Eighth Edition 2003 on: the
+  //     plain land's body and grey bars, the pinline and the box split; a
+  //     land's pairs (twoColorForLands), the land's white footer;
+  //   • `retroland` — the two-colour lands of Sixth Edition 1999 on: the
+  //     plain land with its box and the box's ring split; the plain land's
+  //     ink.
+  // `retro` declares none: the 1997 frame printed ONE gold card, whatever
+  // its colours. No hybrid dress on any of them (a 2003 hybrid card splits
+  // the frame body itself: not built).
+  retroland: { ...withPairInk(RETROLAND, "c"), twoColorMasters: ["split"], twoColorForLands: true },
+  modern: { ...withPairInk(MODERN, "m"), twoColorMasters: ["split"] },
+  modernland: { ...withPairInk(MODERNLAND, "c"), twoColorMasters: ["split"], twoColorForLands: true },
 };
 
 /** Resolve a frame profile, defaulting to M15 for unknown/legacy templates

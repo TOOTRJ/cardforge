@@ -1,7 +1,9 @@
 "use client";
 
-import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
+import { offCardSuffix, tokenize } from "@/components/cards/mana-cost-glyphs";
+import { HYBRID_PAIRS } from "@/lib/cards/mana-order";
 import { cn } from "@/lib/utils";
+import { COLOR_LETTER_IDENTITY, type ColorLetter } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // RulesSymbolToolbar — one-click symbol insertion for the rules-text editor.
@@ -31,6 +33,17 @@ const HYBRID = [
 ];
 const TWOBRID = ["{2/W}", "{2/U}", "{2/B}", "{2/R}", "{2/G}"];
 const PHYREXIAN = ["{W/P}", "{U/P}", "{B/P}", "{R/P}", "{G/P}"];
+// The ten two-colour Phyrexian symbols ({G/U/P}: Tamiyo, Compleated Sage), in
+// the printed pair order — the one token normalizeManaCost keeps.
+const HYBRID_PHYREXIAN_NAMES: Record<string, string> = Object.fromEntries(
+  HYBRID_PAIRS.map((pair) => [
+    `{${pair[0]}/${pair[1]}/P}`,
+    `${COLOR_LETTER_IDENTITY[pair[0] as ColorLetter]} or ${COLOR_LETTER_IDENTITY[pair[1] as ColorLetter]} Phyrexian mana`,
+  ]),
+);
+const HYBRID_PHYREXIAN = Object.keys(HYBRID_PHYREXIAN_NAMES);
+
+const capitalized = (text: string) => `${text[0].toUpperCase()}${text.slice(1)}`;
 
 const TOKEN_TITLES: Record<string, string> = {
   "{T}": "Tap",
@@ -39,6 +52,7 @@ const TOKEN_TITLES: Record<string, string> = {
   "{S}": "Snow",
   "{E}": "Energy",
   "{C}": "Colorless",
+  ...Object.fromEntries(Object.entries(HYBRID_PHYREXIAN_NAMES).map(([token, name]) => [token, capitalized(name)])),
 };
 
 function SymbolButton({
@@ -48,13 +62,15 @@ function SymbolButton({
   token: string;
   onInsert: (token: string) => void;
 }) {
-  const suffix = tokenSuffix(tokenize(token)[0]);
+  const suffix = offCardSuffix(tokenize(token)[0]);
   if (!suffix) return null;
+  // A two-colour Phyrexian symbol is read out by name, then its code.
+  const name = HYBRID_PHYREXIAN_NAMES[token];
   return (
     <button
       type="button"
       title={`${TOKEN_TITLES[token] ?? token} — inserts ${token}`}
-      aria-label={`Insert ${token}`}
+      aria-label={name ? `Insert ${name} ${token}` : `Insert ${token}`}
       // Prevent the textarea from losing its caret position before we read it.
       onMouseDown={(event) => event.preventDefault()}
       onClick={() => onInsert(token)}
@@ -139,6 +155,10 @@ export function RulesSymbolToolbar({
           ))}
           <span aria-hidden className="mx-1 h-5 w-px bg-border/60" />
           {PHYREXIAN.map((t) => (
+            <SymbolButton key={t} token={t} onInsert={onInsert} />
+          ))}
+          <span aria-hidden className="mx-1 h-5 w-px bg-border/60" />
+          {HYBRID_PHYREXIAN.map((t) => (
             <SymbolButton key={t} token={t} onInsert={onInsert} />
           ))}
         </div>

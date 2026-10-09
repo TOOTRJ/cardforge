@@ -79,6 +79,12 @@ describe("the untilted ramp", () => {
       crown: [45, 55],
       crownFloating: [40, 60],
       borderlessLand: [39, 61],
+      // The old frames (TODO 4.6h; tests/unit/frames/old-frame-pair-masters.test.ts).
+      gold2003Pinline: [25, 71, "smooth"],
+      gold2003PinlineNarrow: [42, 59],
+      gold2003Rules: [25, 73, "smooth"],
+      land2003: [42, 59],
+      land1997: [40, 60],
     });
     expect(rampName([45, 57])).toBe("procedural:ramp(45→57 %W)");
     expect(() => rampMask(10, 1, [50, 50])).toThrow();
@@ -276,6 +282,12 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
     // …and the double-faced spell faces since 5.1d (tests/unit/frames/
     // dfc-crowns-pairs.test.ts); the land pair none.
     for (const [template, def] of Object.entries(CC_TEMPLATES)) {
+      // …and the old frames' ten each, made of their own finished masters
+      // (TODO 4.6h; tests/unit/frames/old-frame-pair-masters.test.ts).
+      if (["modern", "modernland", "retroland"].includes(template)) {
+        expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
+        continue;
+      }
       if (["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15snow", "m15snowland", "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback"].includes(template)) continue;
       expect(Object.keys((def as { colors: object }).colors).filter((k) => k.length > 1), template).toEqual([]);
     }

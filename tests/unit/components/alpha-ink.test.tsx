@@ -137,7 +137,13 @@ describe("slotInk / footerInk", () => {
       // frame and on every land — the footer alone (the pair's own tests:
       // modern-footer-ink.test.tsx, here and under render/).
       if (t === "modern" || t === "modernland") {
-        expect(Object.keys(p.footer!.inkByColorKey ?? {}).sort(), t).toEqual(t === "modern" ? ["b"] : [...keys].sort());
+        // The land's ten pair masters (TODO 4.6h) print the land's white too;
+        // `modern`'s are the gold frame, the slot's own dark ink.
+        const pairs = ["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"];
+        expect(Object.keys(p.footer!.inkByColorKey ?? {}).sort(), t).toEqual(t === "modern" ? ["b"] : [...keys, ...pairs].sort());
+        for (const k of pairs) {
+          expect(footerInk(p.footer!, k), `${t} ${k}`).toEqual({ colorHex: t === "modernland" ? "#ffffff" : p.footer!.colorHex, shadowCss: undefined });
+        }
         expect(Boolean(p.pt?.inkByColorKey || p.title.inkByColorKey || p.type.inkByColorKey), t).toBe(false);
         for (const k of keys) {
           const white = t === "modernland" || k === "b";
