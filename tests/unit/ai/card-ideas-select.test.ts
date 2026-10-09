@@ -39,7 +39,14 @@ describe("card ideas — composing the user's picks into a form patch", () => {
   });
 
   it("summarizes each group for the option chips", () => {
-    expect(ideaFieldSummary(a, "typeLine")).toBe("creature — Merfolk Scout");
+    expect(ideaFieldSummary(a, "typeLine")).toBe("Creature — Merfolk Scout");
+    // The words in printed order, as the card prints them (TODO 1.20).
+    expect(ideaFieldSummary({ ...a, supertype: "Legendary Enchantment", subtypes: ["God"] }, "typeLine")).toBe(
+      "Legendary Enchantment Creature — God",
+    );
+    expect(ideaFieldSummary({ ...a, card_type: "land", supertype: "Creature", subtypes: ["Forest", "Dryad"] }, "typeLine")).toBe(
+      "Land Creature — Forest Dryad",
+    );
     expect(ideaFieldSummary(a, "costColors")).toBe("{1}{U} · blue");
     expect(ideaFieldSummary(a, "stats")).toBe("1 / 3");
     expect(ideaFieldSummary(b, "stats")).toBe("(none)");

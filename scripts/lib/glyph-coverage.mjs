@@ -67,7 +67,7 @@ const INKLESS_BY_DESIGN = /[\p{Zs}\p{Zl}\p{Zp}\p{Cf}\p{Cc}]/u;
  *  glyph id — satori then uses this font and looks no further), and does
  *  that glyph DRAW anything? MPlantin, for one, maps 181 code points (Č, °,
  *  ×, →, đ…) to empty glyphs, so those vanish from rules text. */
-function loadFont(file) {
+export function loadFont(file) {
   const font = fontkit.create(readFileSync(file));
   const mapped = new Set(font.characterSet.filter((cp) => font.glyphForCodePoint(cp).id !== 0));
   return {
