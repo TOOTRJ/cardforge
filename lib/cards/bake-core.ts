@@ -189,6 +189,32 @@ export const CLEARED_RENDER_POINTERS = Object.freeze({
   rendered_at: null,
 });
 
+/**
+ * What a save that changes a card writes IN THE SAME UPDATE as the change,
+ * whenever a re-bake follows it: every render pointer and the stamp, cleared
+ * — the state a failed bake leaves, and the one the sweep reads as "owes a
+ * bake" (`rendered_image_url is null`, lib/cards/auto-rebake.ts).
+ *
+ * The stored bake shows the card as it WAS. The re-bake runs after the
+ * response (next/server `after`, seconds), and until it had persisted its
+ * own URL the row kept pointing at the old one: every page built in that
+ * window — the ISR'd /gallery, a profile, the card page, the payload the
+ * owner's own browser prefetches for the header's Gallery link right after
+ * the save — showed the previous picture, and kept it (the art an edit had
+ * just moved sat where it used to; owner report 2026-10-08). The save's
+ * second revalidation, after the bake, never corrected them: Next runs an
+ * `after()` callback's revalidations only for tags the request has not
+ * already revalidated (next/dist/server/revalidation-utils.js
+ * withExecuteRevalidates → diffRevalidationState), and the action had just
+ * revalidated those very paths. With the pointers cleared, the same pages
+ * draw the live preview — the row itself, always the saved card — until the
+ * bake's thumb is there.
+ */
+export const REBAKE_PENDING_RENDER = Object.freeze({
+  ...CLEARED_RENDER_POINTERS,
+  layout_version: null,
+});
+
 const STORAGE_UNCONFIGURED =
   "Render storage is unavailable (SUPABASE_SECRET_KEY is not set).";
 
@@ -293,8 +319,11 @@ async function uploadThumb(folder: RenderFolder, name: string, pngBytes: ArrayBu
  * mismatch window — the front PNG already overwritten when the back's
  * upload fails, under a sweep's unchanged pointers — is the thumb's
  * (written after the PNG, non-fatal), closed by the next successful bake.
- * A bake with no back and `staleBack` (the row still pointed at a back
- * bake from before its back body went) removes the back's names.
+ * A bake with no back and `staleBack` removes the back's names: the
+ * sweep passes whether the row still points at a back bake from before its
+ * back body went; the save bake always passes true — a save clears the
+ * row's pointers before its bake reads them (REBAKE_PENDING_RENDER), so
+ * the row can no longer say.
  */
 export async function uploadRenderObjects(
   ownerId: string,

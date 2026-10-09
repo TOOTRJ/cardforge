@@ -202,6 +202,9 @@ describe("the save-time bake writes card-renders with the service role", () => {
     const url = await bakeAndPersistCardRender(CARD, USER);
     expect(state.ops).toEqual([
       { bucket: "card-renders", op: "upload", keys: [`${USER}/${CARD}.png`] },
+      // A one-face bake always removes the back's names (the save cleared
+      // the pointers that used to say whether a back bake was left).
+      { bucket: "card-renders", op: "remove", keys: [`${USER}/${CARD}.back.png`, `${USER}/${CARD}.back.thumb.webp`] },
       { bucket: "card-renders", op: "upload", keys: [`${USER}/${CARD}.thumb.webp`] },
     ]);
     expect(url).toMatch(new RegExp(`^https://storage\\.test/card-renders/${USER}/${CARD}\\.png\\?v=\\d+$`));
@@ -239,7 +242,7 @@ describe("the save-time bake writes card-renders with the service role", () => {
 
   it("an ordinary card's bake writes the front's pair only, and ALL FOUR pointers in the one write — the back's null (TODO 5.3)", async () => {
     await bakeAndPersistCardRender(CARD, USER);
-    expect(state.ops.map((op) => op.keys).flat()).toEqual([`${USER}/${CARD}.png`, `${USER}/${CARD}.thumb.webp`]);
+    expect(state.ops.filter((op) => op.op === "upload").map((op) => op.keys).flat()).toEqual([`${USER}/${CARD}.png`, `${USER}/${CARD}.thumb.webp`]);
     const payload = state.writes[0].payload as Record<string, unknown>;
     expect(Object.keys(payload).sort()).toEqual([
       "layout_version",
