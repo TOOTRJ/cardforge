@@ -6164,6 +6164,34 @@ cron runs in production only), so a preview's stored bakes — gallery tiles,
 OG images, free downloads — stay at v34 while its creator draws v35. Judge a
 v35 change in the creator's live preview, or re-save a `dev_*` card.
 
+### The art's zoom and a focal point of exactly 0 (layout v51)
+
+The art is one `<img>`: `object-fit: cover`, `object-position` at the focal
+point, then `transform: scale(zoom)` about that same point
+(`lib/cards/art-framing.ts` is the arithmetic). Satori 0.25 keeps a
+`transform-origin` length or percentage only when it is truthy, so a ZERO on
+an axis (`0%`, `0px`) was dropped and that axis fell back to the centre: a
+card whose focal point is exactly 0 across — or down — with a zoom other
+than 100 % was baked zoomed about the MIDDLE of its window on that axis (the
+picture's left or top edge pushed out of sight by (zoom − 1) / 2 of the
+window), while the preview, the art positioner and the print render zoom
+about the edge. The bake writes the origin through
+`satoriTransformOrigin()` (`lib/render/card-image.tsx`): `left` / `top` for
+a zero — the spelling Satori reads as 0, and the same origin in a browser —
+and the percentage for every other value. Both `<img>` sites use it (the
+main window, which a double-faced back body's bake draws too, and the
+split's second window); aftermath's turned window is placed in px and never
+had the fault. Any new Satori `transform-origin` built from a number goes
+through it.
+
+**Rollout.** A CORRECTION: `"sweep"`, no badge, after the owner's before /
+after sheet. Card-scoped on any template (`v51Changed`): a face with art, a
+zoom ≠ 1 and `focalX` or `focalY` exactly 0, front or back face; every
+other card is stamped. Production on 2026-10-09 (anonymous read): 3 public
+cards and 1 unlisted, no back face. Verification-neutral.
+`tests/unit/render/art-focal-zero-bake.test.tsx` holds real bakes of a coded
+picture to the browser's crop.
+
 ## Emblems
 
 TODO 4.52 + 6.23. CR 114: an emblem has no colour, mana cost, types, rarity

@@ -1,6 +1,6 @@
 {
   "about": "Visual-regression baseline (TODO 7.1): every case in tests/visual/matrix.ts as <pixel hash>:<input fingerprint> (the case's row, preset and corners). Generated — never edit by hand; `npm run test:visual -- --update` (or the CI job's visual-baseline artifact) rewrites it. Hashes only: no pixels, no frame art.",
-  "layoutVersion": 50,
+  "layoutVersion": 51,
   "generatedOn": {
     "platform": "darwin-arm64",
     "node": "v25.6.1",

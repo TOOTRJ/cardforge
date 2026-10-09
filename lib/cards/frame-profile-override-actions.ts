@@ -102,7 +102,7 @@ async function markTemplateRendersStale(
     let query = admin
       .from("cards")
       .select(
-        "id, visibility, layout_version, rendered_image_url, frame_style, rarity, set_icon_url, set_icon_code, title, cost, supertype, card_type, subtypes, power, toughness, loyalty, defense, back_face, rules_text, flavor_text, face_content, color_identity, art_url",
+        "id, visibility, layout_version, rendered_image_url, frame_style, rarity, set_icon_url, set_icon_code, title, cost, supertype, card_type, subtypes, power, toughness, loyalty, defense, back_face, rules_text, flavor_text, face_content, color_identity, art_url, art_position",
       )
       .in("visibility", ["public", "unlisted"])
       .not("rendered_image_url", "is", null);

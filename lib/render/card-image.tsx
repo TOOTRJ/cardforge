@@ -810,7 +810,7 @@ function CardImage({
                 objectFit: "cover",
                 objectPosition: `${focalX}% ${focalY}%`,
                 transform: `scale(${scale})`,
-                transformOrigin: `${focalX}% ${focalY}%`,
+                transformOrigin: satoriTransformOrigin(focalX, focalY),
               }}
             />
           )
@@ -865,7 +865,7 @@ function CardImage({
               objectFit: "cover",
               objectPosition: `${focalX2}% ${focalY2}%`,
               transform: `scale(${scale2})`,
-              transformOrigin: `${focalX2}% ${focalY2}%`,
+              transformOrigin: satoriTransformOrigin(focalX2, focalY2),
             }}
           />
         </div>
@@ -3654,6 +3654,22 @@ export type PrintArtBox = {
   focalY: number;
   scale: number;
 };
+
+/**
+ * `transform-origin` for the art's zoom, as Satori reads it (layout v51).
+ * The browser's `0% 30%` is the box's left edge; Satori 0.25 keeps a length
+ * or percentage only when it is truthy (`r.relative ? … : {}`), so a ZERO
+ * on an axis was dropped and that axis fell back to the centre: a card
+ * whose focal point is exactly 0 across (or down) with a zoom other than
+ * 100 % was baked zoomed about the middle of its window — the picture's
+ * left (top) edge pushed out of sight — while the preview, the positioner
+ * and the print render zoomed about the edge. The keywords `left` / `top`
+ * ARE read as 0, and are the same origin in a browser. Percentages are the
+ * focal point × 100 (0–100).
+ */
+export function satoriTransformOrigin(focalXPct: number, focalYPct: number): string {
+  return `${focalXPct === 0 ? "left" : `${focalXPct}%`} ${focalYPct === 0 ? "top" : `${focalYPct}%`}`;
+}
 
 /** The data-* props an empty art box carries in a print layer (focal in
  *  percent, as CardImage holds it). Satori draws nothing for them; its
