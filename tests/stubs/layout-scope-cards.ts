@@ -34,4 +34,6 @@ export const UNTOUCHED_SINCE_V22 = {
   // a blue card with no art.
   color_identity: ["blue"],
   art_url: null,
+  // v49 (the symbols as printed) reads the cost too: this card has none.
+  cost: null,
 };

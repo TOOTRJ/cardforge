@@ -65,6 +65,25 @@ describe("FieldGroup — a group that opens with a button", () => {
   });
 });
 
+describe("FieldGroup — a label of its own inside a group that opens with a button", () => {
+  it("lets the nested label's words reach its own control (the watermark's Large tick)", () => {
+    render(
+      <FieldGroup label="Watermark">
+        <div>
+          <button type="button">White</button>
+          <label>
+            <input type="checkbox" aria-label="Large" />
+            <span>Large (the classic treatment)</span>
+          </label>
+        </div>
+      </FieldGroup>,
+    );
+    expect(forwards(screen.getByText("Large (the classic treatment)"))).toBe(true);
+    // The group's own caption is still cancelled.
+    expect(forwards(screen.getByText("Watermark", { selector: "span" }))).toBe(false);
+  });
+});
+
 describe("FieldGroup — a group that opens with a form control", () => {
   it("keeps the label's click-to-focus forwarding", () => {
     render(

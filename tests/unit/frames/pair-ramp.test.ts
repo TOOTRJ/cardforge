@@ -45,6 +45,12 @@ describe("the ramps", () => {
       crown: [45, 55],
       crownFloating: [40, 60],
       borderlessLand: [39, 61],
+      // The old frames (TODO 4.6h; tests/unit/frames/old-frame-pair-masters.test.ts).
+      gold2003Pinline: [25, 71, "smooth"],
+      gold2003PinlineNarrow: [42, 59],
+      gold2003Rules: [25, 73, "smooth"],
+      land2003: [42, 59],
+      land1997: [40, 60],
     });
     // The pair masters (4.6b) and the pair crown bands (4.6a) read the same
     // helpers: no second name for them anywhere in the importer's library.

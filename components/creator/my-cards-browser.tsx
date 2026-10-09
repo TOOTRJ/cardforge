@@ -53,6 +53,7 @@ import {
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import type { CardWithStats, RemixParentLink } from "@/lib/cards/queries";
 import { cn } from "@/lib/utils";
+import { typedForMatching } from "@/lib/validation/print-typography";
 
 // ---------------------------------------------------------------------------
 // MyCardsBrowser — the whole /dashboard/cards library: filter tabs (All /
@@ -202,18 +203,20 @@ export function MyCardsBrowser({
     [cards, likedCards],
   );
 
-  const needle = query.trim().toLowerCase();
+  // Typed and printed quotes / dashes match each other (TODO 6.11 stores
+  // “Urza’s”; a keyboard types "Urza's").
+  const needle = typedForMatching(query.trim().toLowerCase());
   const matches = useCallback(
     (card: DashboardCard | CardWithStats) =>
       !needle ||
-      card.title.toLowerCase().includes(needle) ||
-      buildTypeLine({
-        supertype: card.supertype,
-        cardType: card.card_type,
-        subtypes: card.subtypes,
-      })
-        .toLowerCase()
-        .includes(needle),
+      typedForMatching(card.title.toLowerCase()).includes(needle) ||
+      typedForMatching(
+        buildTypeLine({
+          supertype: card.supertype,
+          cardType: card.card_type,
+          subtypes: card.subtypes,
+        }).toLowerCase(),
+      ).includes(needle),
     [needle],
   );
 

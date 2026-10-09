@@ -45,7 +45,9 @@ describe("the 1997 recipes", () => {
   it("builds seven keys per template: Seventh's drawing for thirteen, the MSE gold for retro/m", () => {
     for (const template of TEMPLATES) {
       const def = (CC_TEMPLATES as unknown as Record<string, { colors: Record<string, { src: string }[]>; printRecipe: (k: string) => unknown }>)[template];
-      expect(builtColors(def as never).sort()).toEqual([...KEYS].sort());
+      // …and, on the land, the ten pairs made of them (TODO 4.6h;
+      // tests/unit/frames/old-frame-pair-masters.test.ts). `retro` builds none.
+      expect(builtColors(def as never).sort()).toEqual([...KEYS, ...(template === "retroland" ? ["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"] : [])].sort());
       for (const key of KEYS) expect(def.printRecipe(key), `${template}/${key}`).toEqual(seventhPrintRecipe(template, key));
     }
     expect(SEVENTH_RECIPE_OF.retro).toEqual({ w: "w", u: "u", b: "b", r: "r", g: "g", c: "a", m: null });

@@ -1,0 +1,614 @@
+{
+ "captured": "2026-10-08",
+ "source": "Scryfall /cards/search (unique=cards, include_extras), one example per distinct line left of the dash; scripts in the PR description",
+ "queries": [
+  {
+   "q": "t:/(Land|Planeswalker|Creature) ([A-Za-z]+ )*(Basic|Legendary|Snow|World|Kindred|Tribal|Enchantment|Artifact)/",
+   "total": 0
+  },
+  {
+   "q": "t:/(Planeswalker|Creature) ([A-Za-z]+ )*Land/",
+   "total": 0
+  },
+  {
+   "q": "t:/Creature ([A-Za-z]+ )*Planeswalker/",
+   "total": 0
+  },
+  {
+   "q": "t:/(Instant|Sorcery|Battle) [A-Za-z]/",
+   "total": 3
+  },
+  {
+   "q": "t:land t:creature",
+   "total": 26
+  },
+  {
+   "q": "t:enchantment t:land",
+   "total": 19
+  },
+  {
+   "q": "t:artifact t:land",
+   "total": 39
+  },
+  {
+   "q": "t:enchantment t:artifact",
+   "total": 11
+  },
+  {
+   "q": "t:kindred",
+   "total": 80
+  },
+  {
+   "q": "t:legendary t:snow",
+   "total": 11
+  },
+  {
+   "q": "t:basic t:snow",
+   "total": 6
+  },
+  {
+   "q": "t:world",
+   "total": 30
+  },
+  {
+   "q": "t:host",
+   "total": 20
+  },
+  {
+   "q": "t:elite",
+   "total": 4
+  },
+  {
+   "q": "t:ongoing",
+   "total": 21
+  },
+  {
+   "q": "t:token t:legendary",
+   "total": 44
+  },
+  {
+   "q": "t:token t:enchantment",
+   "total": 24
+  },
+  {
+   "q": "t:token t:land",
+   "total": 4
+  },
+  {
+   "q": "t:token t:artifact t:creature",
+   "total": 93
+  },
+  {
+   "q": "t:planeswalker t:creature",
+   "total": 13
+  },
+  {
+   "q": "t:battle",
+   "total": 39
+  },
+  {
+   "q": "t:legendary t:enchantment t:creature",
+   "total": 75
+  },
+  {
+   "q": "t:snow t:artifact",
+   "total": 11
+  },
+  {
+   "q": "t:legendary t:land",
+   "total": 97
+  },
+  {
+   "q": "t:legendary t:artifact t:creature",
+   "total": 179
+  }
+ ],
+ "lines": [
+  {
+   "left": "Artifact Creature",
+   "type_line": "Artifact Creature — Golem",
+   "name": "Golden Guardian",
+   "set": "rix",
+   "number": "179",
+   "set_type": "expansion",
+   "power": "4",
+   "toughness": "4",
+   "seen": 5
+  },
+  {
+   "left": "Artifact Enchantment",
+   "type_line": "Artifact Enchantment — Saga",
+   "name": "Greatest Show in the Multiverse",
+   "set": "unf",
+   "number": "189",
+   "set_type": "funny",
+   "power": null,
+   "toughness": null,
+   "seen": 1
+  },
+  {
+   "left": "Artifact Land",
+   "type_line": "Artifact Land",
+   "name": "Darksteel Citadel",
+   "set": "c21",
+   "number": "285",
+   "set_type": "commander",
+   "power": null,
+   "toughness": null,
+   "seen": 23
+  },
+  {
+   "left": "Basic Snow Land",
+   "type_line": "Basic Snow Land — Plains",
+   "name": "Snow-Covered Plains",
+   "set": "khm",
+   "number": "276",
+   "set_type": "expansion",
+   "power": null,
+   "toughness": null,
+   "seen": 6
+  },
+  {
+   "left": "Elite Creature",
+   "type_line": "Elite Creature — Head",
+   "name": "Ravenous Brute Head",
+   "set": "tfth",
+   "number": "2",
+   "set_type": "memorabilia",
+   "power": "0",
+   "toughness": "6",
+   "seen": 4
+  },
+  {
+   "left": "Enchantment Creature",
+   "type_line": "Enchantment Creature — Saga Construct",
+   "name": "Summon: Alexander",
+   "set": "fin",
+   "number": "13",
+   "set_type": "expansion",
+   "power": "4",
+   "toughness": "3",
+   "seen": 1
+  },
+  {
+   "left": "Enchantment Land",
+   "type_line": "Enchantment Land — Urza's Saga",
+   "name": "Urza's Saga",
+   "set": "mh2",
+   "number": "259",
+   "set_type": "draft_innovation",
+   "power": null,
+   "toughness": null,
+   "seen": 3
+  },
+  {
+   "left": "Host Artifact Creature",
+   "type_line": "Host Artifact Creature — Angel",
+   "name": "Angelic Rocket",
+   "set": "ust",
+   "number": "139",
+   "set_type": "funny",
+   "power": "4",
+   "toughness": "4",
+   "seen": 4
+  },
+  {
+   "left": "Host Creature",
+   "type_line": "Host Creature — Camel",
+   "name": "Shaggy Camel",
+   "set": "ust",
+   "number": "22",
+   "set_type": "funny",
+   "power": "3",
+   "toughness": "3",
+   "seen": 16
+  },
+  {
+   "left": "Instant Creature",
+   "type_line": "Instant Creature — Alien",
+   "name": "Visitor from Planet Q",
+   "set": "cmb2",
+   "number": "33",
+   "set_type": "funny",
+   "power": "0",
+   "toughness": "4",
+   "seen": 2
+  },
+  {
+   "left": "Kindred Artifact",
+   "type_line": "Kindred Artifact — Rogue Equipment",
+   "name": "Cloak and Dagger",
+   "set": "mor",
+   "number": "141",
+   "set_type": "expansion",
+   "power": null,
+   "toughness": null,
+   "seen": 9
+  },
+  {
+   "left": "Kindred Enchantment",
+   "type_line": "Kindred Enchantment — Giant",
+   "name": "Favor of the Mighty",
+   "set": "lrw",
+   "number": "14",
+   "set_type": "expansion",
+   "power": null,
+   "toughness": null,
+   "seen": 20
+  },
+  {
+   "left": "Kindred Instant",
+   "type_line": "Kindred Instant — Shapeshifter",
+   "name": "Shields of Velis Vel",
+   "set": "lrw",
+   "number": "39",
+   "set_type": "expansion",
+   "power": null,
+   "toughness": null,
+   "seen": 24
+  },
+  {
+   "left": "Kindred Sorcery",
+   "type_line": "Kindred Sorcery — Merfolk",
+   "name": "Summon the School",
+   "set": "lrw",
+   "number": "42",
+   "set_type": "expansion",
+   "power": null,
+   "toughness": null,
+   "seen": 26
+  },
+  {
+   "left": "Land Creature",
+   "type_line": "Land Creature — Island Fish",
+   "name": "Jasconian Isle",
+   "set": "cmb2",
+   "number": "117",
+   "set_type": "funny",
+   "power": "3",
+   "toughness": "4",
+   "seen": 3
+  },
+  {
+   "left": "Legendary Artifact",
+   "type_line": "Legendary Artifact",
+   "name": "Azor's Gateway",
+   "set": "rix",
+   "number": "176",
+   "set_type": "expansion",
+   "power": null,
+   "toughness": null,
+   "seen": 43
+  },
+  {
+   "left": "Legendary Artifact Creature",
+   "type_line": "Legendary Artifact Creature — Scarecrow",
+   "name": "Reaper King",
+   "set": "shm",
+   "number": "260",
+   "set_type": "expansion",
+   "power": "6",
+   "toughness": "6",
+   "seen": 159
+  },
+  {
+   "left": "Legendary Artifact Land",
+   "type_line": "Legendary Artifact Land — Vehicle Island",
+   "name": "The Belligerent and Useless Island",
+   "set": "unk",
+   "number": "RL01a",
+   "set_type": "funny",
+   "power": "2",
+   "toughness": "2",
+   "seen": 6
+  },
+  {
+   "left": "Legendary Creature",
+   "type_line": "Legendary Creature — God",
+   "name": "Ojer Taq, Deepest Foundation",
+   "set": "lci",
+   "number": "26",
+   "set_type": "expansion",
+   "power": "6",
+   "toughness": "6",
+   "seen": 69
+  },
+  {
+   "left": "Legendary Enchantment",
+   "type_line": "Legendary Enchantment",
+   "name": "Legion's Landing",
+   "set": "xln",
+   "number": "22",
+   "set_type": "expansion",
+   "power": null,
+   "toughness": null,
+   "seen": 28
+  },
+  {
+   "left": "Legendary Enchantment Artifact",
+   "type_line": "Legendary Enchantment Artifact",
+   "name": "Spear of Heliod",
+   "set": "ths",
+   "number": "33",
+   "set_type": "expansion",
+   "power": null,
+   "toughness": null,
+   "seen": 5
+  },
+  {
+   "left": "Legendary Enchantment Creature",
+   "type_line": "Legendary Enchantment Creature — God",
+   "name": "Ephara, Ever-Sheltering",
+   "set": "mom",
+   "number": "23",
+   "set_type": "expansion",
+   "power": "4",
+   "toughness": "4",
+   "seen": 56
+  },
+  {
+   "left": "Legendary Instant Artifact Enchantment",
+   "type_line": "Legendary Instant Artifact Enchantment",
+   "name": "Blue Screen of Death",
+   "set": "unk",
+   "number": "RZ06f",
+   "set_type": "funny",
+   "power": null,
+   "toughness": null,
+   "seen": 2
+  },
+  {
+   "left": "Legendary Kindred Artifact",
+   "type_line": "Legendary Kindred Artifact — Wizard Vehicle",
+   "name": "The Wizardly Barge",
+   "set": "unk",
+   "number": "RZ03r",
+   "set_type": "funny",
+   "power": "3",
+   "toughness": "5",
+   "seen": 1
+  },
+  {
+   "left": "Legendary Land",
+   "type_line": "Legendary Land",
+   "name": "Adanto, the First Fort",
+   "set": "xln",
+   "number": "22",
+   "set_type": "expansion",
+   "power": null,
+   "toughness": null,
+   "seen": 101
+  },
+  {
+   "left": "Legendary Planeswalker",
+   "type_line": "Legendary Planeswalker — Gideon",
+   "name": "Gideon, Battle-Forged",
+   "set": "ori",
+   "number": "23",
+   "set_type": "core",
+   "power": null,
+   "toughness": null,
+   "seen": 14
+  },
+  {
+   "left": "Legendary Snow Artifact",
+   "type_line": "Legendary Snow Artifact",
+   "name": "Kaldring, the Rimestaff",
+   "set": "khm",
+   "number": "179",
+   "set_type": "expansion",
+   "power": null,
+   "toughness": null,
+   "seen": 3
+  },
+  {
+   "left": "Legendary Snow Creature",
+   "type_line": "Legendary Snow Creature — Elk",
+   "name": "Myntasha, Honored One",
+   "set": "ph19",
+   "number": "5",
+   "set_type": "funny",
+   "power": "3",
+   "toughness": "3",
+   "seen": 10
+  },
+  {
+   "left": "Legendary Snow Enchantment",
+   "type_line": "Legendary Snow Enchantment",
+   "name": "Marit Lage's Slumber",
+   "set": "mh1",
+   "number": "56",
+   "set_type": "draft_innovation",
+   "power": null,
+   "toughness": null,
+   "seen": 1
+  },
+  {
+   "left": "Legendary Snow Land",
+   "type_line": "Legendary Snow Land",
+   "name": "Dark Depths",
+   "set": "dmr",
+   "number": "244",
+   "set_type": "masters",
+   "power": null,
+   "toughness": null,
+   "seen": 4
+  },
+  {
+   "left": "Ongoing Scheme",
+   "type_line": "Ongoing Scheme",
+   "name": "I Bask in Your Silent Awe",
+   "set": "oarc",
+   "number": "15★",
+   "set_type": "archenemy",
+   "power": null,
+   "toughness": null,
+   "seen": 21
+  },
+  {
+   "left": "Snow Artifact",
+   "type_line": "Snow Artifact",
+   "name": "Arcum's Astrolabe",
+   "set": "mh1",
+   "number": "220",
+   "set_type": "draft_innovation",
+   "power": null,
+   "toughness": null,
+   "seen": 4
+  },
+  {
+   "left": "Snow Artifact Creature",
+   "type_line": "Snow Artifact Creature — Phyrexian Construct",
+   "name": "Phyrexian Ironfoot",
+   "set": "csp",
+   "number": "139",
+   "set_type": "expansion",
+   "power": "3",
+   "toughness": "4",
+   "seen": 4
+  },
+  {
+   "left": "Token Artifact",
+   "type_line": "Token Artifact — Treasure",
+   "name": "Treasure",
+   "set": "f17",
+   "number": "10",
+   "set_type": "promo",
+   "power": null,
+   "toughness": null,
+   "seen": 6
+  },
+  {
+   "left": "Token Artifact Creature",
+   "type_line": "Token Artifact Creature — Goblin Golem",
+   "name": "Tuktuk the Returned",
+   "set": "t2xm",
+   "number": "28",
+   "set_type": "token",
+   "power": "5",
+   "toughness": "5",
+   "seen": 86
+  },
+  {
+   "left": "Token Creature",
+   "type_line": "Token Creature — Zombie Human Cleric",
+   "name": "Temmet, Vizier of Naktamun",
+   "set": "takh",
+   "number": "12",
+   "set_type": "token",
+   "power": "2",
+   "toughness": "2",
+   "seen": 7
+  },
+  {
+   "left": "Token Enchantment",
+   "type_line": "Token Enchantment — Aura",
+   "name": "Mask",
+   "set": "tc18",
+   "number": "4",
+   "set_type": "token",
+   "power": null,
+   "toughness": null,
+   "seen": 16
+  },
+  {
+   "left": "Token Enchantment Artifact Creature",
+   "type_line": "Token Enchantment Artifact Creature — Golem",
+   "name": "Golem",
+   "set": "teoc",
+   "number": "13",
+   "set_type": "token",
+   "power": "3",
+   "toughness": "3",
+   "seen": 3
+  },
+  {
+   "left": "Token Enchantment Creature",
+   "type_line": "Token Enchantment Creature — Soldier",
+   "name": "Soldier",
+   "set": "tbng",
+   "number": "3",
+   "set_type": "token",
+   "power": "1",
+   "toughness": "1",
+   "seen": 12
+  },
+  {
+   "left": "Token Land",
+   "type_line": "Token Land",
+   "name": "Everywhere",
+   "set": "tdsk",
+   "number": "16",
+   "set_type": "token",
+   "power": null,
+   "toughness": null,
+   "seen": 2
+  },
+  {
+   "left": "Token Land Creature",
+   "type_line": "Token Land Creature — Forest Dryad",
+   "name": "Forest Dryad",
+   "set": "tm3c",
+   "number": "19",
+   "set_type": "token",
+   "power": "1",
+   "toughness": "1",
+   "seen": 4
+  },
+  {
+   "left": "Token Legendary Artifact",
+   "type_line": "Token Legendary Artifact — Equipment",
+   "name": "Icingdeath, Frost Tongue",
+   "set": "tafr",
+   "number": "2",
+   "set_type": "token",
+   "power": null,
+   "toughness": null,
+   "seen": 5
+  },
+  {
+   "left": "Token Legendary Artifact Creature",
+   "type_line": "Token Legendary Artifact Creature — Construct",
+   "name": "Mechtitan",
+   "set": "tneo",
+   "number": "14",
+   "set_type": "token",
+   "power": "10",
+   "toughness": "10",
+   "seen": 12
+  },
+  {
+   "left": "Token Legendary Creature",
+   "type_line": "Token Legendary Creature — Elemental",
+   "name": "Ashaya, the Awoken World",
+   "set": "tori",
+   "number": "7",
+   "set_type": "token",
+   "power": "4",
+   "toughness": "4",
+   "seen": 34
+  },
+  {
+   "left": "Token Snow Artifact",
+   "type_line": "Token Snow Artifact",
+   "name": "Icy Manalith",
+   "set": "tkhm",
+   "number": "17",
+   "set_type": "token",
+   "power": null,
+   "toughness": null,
+   "seen": 2
+  },
+  {
+   "left": "World Enchantment",
+   "type_line": "World Enchantment",
+   "name": "Field of Dreams",
+   "set": "leg",
+   "number": "55",
+   "set_type": "expansion",
+   "power": null,
+   "toughness": null,
+   "seen": 30
+  }
+ ]
+}

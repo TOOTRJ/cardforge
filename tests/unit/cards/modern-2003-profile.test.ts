@@ -170,7 +170,9 @@ describe("the 2003 footer — the brush and the artist over the © slot, left-al
       // The footer text runs to 1095 px at most: short of the P/T box.
       expect(px(slot.startPct!) + slot.maxWidthPct * HD_W).toBeLessThan(1112);
     }
-    expect(modern.copyrightSlot!.darkMarkKeys).toEqual(["w", "u", "r", "g", "c", "m"]);
+    // The ten pair masters (TODO 4.6h) are the gold frame under the line:
+    // dark there too.
+    expect(modern.copyrightSlot!.darkMarkKeys).toEqual(["w", "u", "r", "g", "c", "m", ...["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"]]);
     expect(land.copyrightSlot!.darkMarkKeys).toBeUndefined();
     for (const key of KEYS) {
       const display = copyrightSlotLayout(modern, key, { kind: "display" })!;
@@ -269,17 +271,21 @@ describe('symbolStyle "2003" — a cost shadow down and a little to the left, fl
     expect(styledSuffix(style, "tap")).toBe("tap");
   });
 
-  it("an INLINE pip is flat: the rules layout keeps no shadow clear on the pair, and still does on every other frame", () => {
+  it("an INLINE pip is flat: the rules layout keeps no shadow clear on the pair — nor, since layout v49, on any other frame", () => {
     const inline = inlineSymbolStyle(SYMBOL_STYLES["2003"]);
     expect(inline.discShadow).toBeNull();
     expect(inline.previewShadowCss).toBeNull();
     expect(inline.tapSuffix).toBe("tap");
     expect(metricsFor(76, undefined, "hd", "2003")).toMatchObject({ pipShadowPx: 0, pipShadowLeftPx: 0 });
-    // "modern" shadows both; "1997" neither.
-    expect(inlineSymbolStyle(SYMBOL_STYLES.modern)).toBe(SYMBOL_STYLES.modern);
+    // "modern" shadowed both until layout v49 (the M15-era prints shadow
+    // the cost alone): its inline pip is flat now, its cost disc as it was;
+    // "1997" shadows neither.
+    expect(SYMBOL_STYLES.modern.inlineShadow).toBe(false);
+    expect(inlineSymbolStyle(SYMBOL_STYLES.modern)).toMatchObject({ id: "modern", discShadow: null, tapSuffix: "tap" });
     expect(inlineSymbolStyle(SYMBOL_STYLES["1997"])).toBe(SYMBOL_STYLES["1997"]);
-    expect(metricsFor(76, undefined, "hd").pipShadowPx).toBeGreaterThan(0);
+    expect(metricsFor(76, undefined, "hd")).toMatchObject({ pipShadowPx: 0, pipShadowLeftPx: 0 });
     expect(discShadowCss(SYMBOL_STYLES.modern, 60)).toBe("-4px 4px 0 #111");
+    expect(discShadowCss(SYMBOL_STYLES.modern, 73)).toBe("-4px 5px 0 #111");
   });
 });
 
