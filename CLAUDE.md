@@ -673,6 +673,21 @@ Rules and gotchas:
   colour pip serves `serveStandInSymbols()`. Imports from Fallen Empires on
   are `nearest` (the `two-line-footer` gap). `docs/FRAMES.md` "The 1993
   frame".
+- The white border (TODO 4.30): `frame_style.border` (`"white"` or absent =
+  black; the form and an edit's patch also say `"black"`, never stored) — a
+  card's own switch on the four frames whose `PROFILES` entry declares
+  `whiteBorder` (`retro`, `retroland`, `modern`, `modernland`; never the
+  1993 pair — other drawings on another box, its own step). A NEW card
+  starts BLACK (with the text alignment, the other anatomy key no default
+  stamps), an import follows `border_color`. ONE inline SVG
+  (`lib/cards/white-border.ts`: the white `#ececea` over the master's own
+  black border, the black keyline — 3 px on 1997, 4 px on 2003 — drawn
+  INSIDE the frame box) is the same `data:` URL in the preview, the bake
+  and both finish masks; square corners fill the white
+  (`squareCornerFillsOf`), a bleed copies it out, and a tile backs the
+  picture with it. No ink sits on these frames' borders: a profile may
+  declare the piece only beside a © slot inside the frame (a test holds
+  it). Never a sweep or a bump; `docs/FRAMES.md` "The white border".
 - Text alignment (TODO 4.21e): `frame_style.rulesAlign` (`"center"` or
   absent = left; the form and an edit's patch also say `"left"`, never
   stored) — a card's own choice on EVERY frame with plain rules boxes

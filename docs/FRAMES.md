@@ -1147,6 +1147,10 @@ and the kind decides the rollout:
   collector line and holofoil stamp, the vehicle P/T plate, colour
   indicators, coloured-artifact blends, new frames and treatments.
   - NEW cards get it by default, with a switch to turn it off.
+    (Two switches start OFF instead, because they are a printing's or an
+    owner's choice rather than today's standard look: the text alignment —
+    left — and the white border — black; [The white
+    border](#the-white-border-430).)
   - EXISTING cards keep their look; the owner can open the card and switch
     it on (the editor may hint at it).
   - Scryfall imports follow the printing (a crown only on printings from
@@ -3842,6 +3846,113 @@ and the one switch a NEW card starts OFF on.
   rules-align-preview.test.tsx` (the preview's margins are the layout's
   px), `rules-align-control.test.tsx`, the centred half of
   `rules-no-clip`, and the visual gate's `@centred` cases.
+
+### The white border (4.30)
+
+TODO 4.30, era step E8 (owner 2026-10-07: "the white border: YES, as the
+last era step"). The printed border of the core sets up to Ninth Edition —
+Fifth, Sixth and Seventh Edition, Anthologies, Battle Royale, Beatdown and
+Deckmasters on the 1997 frame; Eighth and Ninth Edition on the 2003 frame —
+as **a card's own switch**. An addition (above): opt-in per card, no layout
+bump, no sweep, no badge.
+
+- **The switch.** `frame_style.border`: `"white"` or absent (= black, the
+  look every card had). The creator's form and an edit's patch also say
+  `"black"`, which is never stored. It is an anatomy key
+  (`FRAME_ANATOMY_KEYS`), and with the text alignment the second one **no
+  default stamps**: a NEW card starts BLACK — a white border is a printing
+  choice, not a default — an import follows its printing's `border_color`,
+  a remix keeps its parent's. Every save runs `normalizeAnatomy`: the key
+  stays only as `"white"` and only on a template whose `PROFILES` entry
+  declares `whiteBorder`.
+- **Where.** `retro`, `retroland`, `modern`, `modernland` — declared on
+  those four `PROFILES` entries, never on the `RETRO` / `MODERN` bases. Not
+  the 1993 pair (below), not the 2015 frames.
+- **What is drawn** (`lib/cards/white-border.ts`): ONE inline SVG of two
+  flat rings, stretched over the whole card right after the frame master
+  and its overlays, under both finishes and every text layer — the same
+  `data:` URL in the browser preview (`[data-white-border]`), in the Satori
+  bake and in both finish masks, so the three agree by construction:
+  - the **white** `#ececea` from the card's edge to the frame box — exactly
+    the master's own black border (`whiteBorder.insetPx`: 73 / 73 px at the
+    sides, 82 on top, 81 below on the 1997 pair; 70 px all round on the
+    2003 pair). Never Card Conjurer's border mask: on the 8th pack it sits
+    on the frame's edge and erases the keyline, and it fills `#ffffff`;
+  - the black **keyline** just inside it, over the frame's outermost
+    pixels: 3 px on the 1997 frame, 4 px on the 2003 frame
+    (`whiteBorder.keylinePx`). It is drawn, not left to the master's black,
+    so it is that wide on every master (the MSE gold's border is
+    74 / 71 / 80 / 81).
+- **Why inside the frame box.** On the prints the white ends where the black
+  border of the same frame ends (37 prints on the 1997 frame: 73.7 / 73.4 /
+  81.9 / 80.8 px; nine 9ED prints: 70.5 px on all four edges), and a 7ED,
+  8ED or 9ED card and its own black-bordered foil printing put the frame's
+  first light pixel on the same px, 3–4 px inside the white: the core-set
+  plate is the era's frame with its outer edge taken by the line.
+- **The colour is a choice, not a measurement.** Scryfall regenerates the
+  border of its scans: all 88 white-bordered scans measured share two
+  templates (`#ededef`, `#edecea`) to two decimals. `#ececea` is ΔE 0.2 from
+  one and 2.0 from the other, and off-white on purpose — pure white has no
+  edge on a white page.
+- **No ink moves and none changes colour.** On both pairs the artist line,
+  the © slot (the pipglyph.com mark on display, a clean download's footer
+  text), the P/T and the set symbol are INSIDE the frame, as on the prints
+  (no 1997 or 2003 print sets anything on the white). A unit test holds
+  that: a profile may declare `whiteBorder` only beside a `copyrightSlot`
+  whose line, like every text slot, ends above the keyline
+  (`tests/unit/cards/white-border.test.ts`). A frame whose mark sits ON the
+  border (the 1993 pair) must give the mark the brand's dark single-ink
+  treatment before it declares the piece.
+- **Corners, print, finishes.**
+  - The white runs to the PNG's edge; the bake's corner cut rounds it
+    (`applyCardCornerMask`) and the display clip does on screen.
+  - A square output fills its corners with the same white
+    (`squareCornerFillsOf` → `WHITE_BORDER_RGB`): the PDF card and sheets,
+    the Pro exports, the paid Square and the free Square (the stored round
+    bake squared with those fills).
+  - A bleed (1/8 in, MakePlayingCards', 800 ppi) copies the trim edge out,
+    so it is white with no rule of its own: `EDGE_CONTRACTS` keeps `border`
+    on these templates (the contract is about the master's opacity).
+  - Foil and etched mask their sheen with the border too (`overlays` of
+    `FoilSheen` / `EtchedSheen`), so the white takes the finish like any
+    light part of the frame and the keyline takes none. (No real foil has a
+    white border — the core sets' foils were black-bordered.)
+  - The thumb and the OG image are the bake. A gallery tile
+    (`BakedCardThumbnail`) backs a white-bordered card's picture with the
+    white instead of `#101015`: on the dark backing the picture's soft
+    corner edge showed as a grey arc round a white card.
+- **Imports** (`lib/scryfall/frame-signatures.ts`): the `border` gap is one
+  gap for white, silver, gold and yellow, and `gapDrawnBy("border", …)` is
+  true only for a WHITE border on a frame that declares the piece — so a
+  white-bordered 5ED → 7ED, ATH, BRB, BTD, DKM, PTK, S99, 8ED or 9ED
+  printing is `exact` on its frame and imports with the switch on
+  (`printed_border`), its black-bordered foil twin imports black, and a
+  later gap still holds beside it (a 2021+ reprint: `reprint-colours`). A
+  white border on the 1993 or the 2015 frame, and every silver, gold or
+  yellow border, stays `nearest`. A `…+border` request row logged before
+  4.30 stays open (the row doesn't say which border it was).
+- **Verification.** Nothing new to tick: the white border rides its
+  template's colour tick, as a pair rides its `m` tick — the frame inside
+  the keyline is the ticked one, pixel for pixel
+  (`tests/unit/render/white-border-bake.test.tsx`). A white-bordered
+  reference printing is compared with its border drawn
+  (`previewDataFromPatch`).
+- **Not built: the 1993 pair.** Unlimited, Revised, Fourth Edition and
+  Chronicles were measured with the rest (33 prints) and need their own
+  step: the line there is OUTSIDE the frame box, 7 px wide and dark grey
+  (2ED / 3ED); the frame sits 6 px higher than Alpha's (85 px of white
+  below it, 98 px of black on our master); Revised and Fourth Edition are
+  other drawings — flat, no bevel, Fourth Edition on a larger box with a
+  thinner, fainter line; and the mark sits on that frame's border in
+  silver. `agclassic` and `alphaland` declare nothing, the switch is not
+  offered there, and their white-bordered printings import `nearest`.
+- **Tests:** `white-border.test.ts` (the rules), `white-border-save.test.ts`
+  (the actions), `white-border-bake.test.tsx` (real bakes: the rings, the
+  frame inside them unchanged, square corners, bleeds, finishes, and no
+  change with the switch off or on another frame),
+  `white-border-preview.test.tsx` (the preview's image, the creator's
+  switch, the tile's backing), `white-border-import.test.ts`; 23 visual
+  cases (`@white…`).
 
 ### Double-faced cards (TODO 5; the 5.0a plumbing)
 

@@ -133,3 +133,28 @@ describe("the creator's switch", () => {
     expect(borderSwitch()).toBeNull();
   });
 });
+
+describe("a gallery tile of a white-bordered card", () => {
+  it("sits on the card's own white, never on #101015 (no grey arc round the corners); every other tile is unchanged", async () => {
+    const { BakedCardThumbnail } = await import("@/components/cards/baked-card-thumbnail");
+    const { WHITE_BORDER_HEX } = await import("@/lib/cards/white-border");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://auth.pipglyph.com");
+    const base = "https://auth.pipglyph.com/storage/v1/object/public/card-renders/d0000000-0000-4000-a000-000000000002/c0000000-0000-4000-a000-000000000074";
+    const tile = (frameStyle: Record<string, unknown>) => {
+      const { container } = render(
+        <BakedCardThumbnail renderedImageUrl={`${base}.png`} renderedThumbUrl={`${base}.thumb.webp`} title="Dawnwatch Lancer" previewData={{ title: "Dawnwatch Lancer", frameStyle } as never} />,
+      );
+      const img = container.querySelector("img:not([data-white-border])");
+      cleanup();
+      return img?.className ?? "";
+    };
+    const white = tile({ template: "modern", border: "white" });
+    expect(WHITE_BORDER_HEX).toBe("#ececea");
+    expect(white).toContain("bg-[#ececea]");
+    expect(white).not.toContain("bg-[#101015]");
+    for (const style of [{ template: "modern" }, { template: "modern", border: "black" }, { template: "m15", border: "white" }, {}]) {
+      expect(tile(style), JSON.stringify(style)).toContain("bg-[#101015]");
+    }
+    vi.unstubAllEnvs();
+  });
+});
