@@ -1701,7 +1701,7 @@ export function visualCases(): VisualCase[] {
   // it — the light, the dark, the gold and the artifact master, the land, a two-colour
   // pair under it, the stored bake's size, both finishes (their masks hold
   // the border) and the squared print (white corners).
-  const whiteStyle = (template: FrameTemplate, finish: CardFinish = "regular", more: Record<string, unknown> = {}) => ({
+  const whiteStyle = (template: FrameTemplate, finish: VisualCase["finish"] = "regular", more: Record<string, unknown> = {}) => ({
     frame_style: { template, finish, border: "white", ...more } as CardRowForBake["frame_style"],
   });
   for (const template of ["retro", "modern"] as const) {
