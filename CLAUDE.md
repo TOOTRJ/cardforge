@@ -266,9 +266,27 @@ Rules and gotchas:
   flipped (the client island only), `?faces=both` (png, 5.3c) serves BOTH
   faces side by side in ONE PNG — each half what `face=` serves, a
   transparent gutter between, the modal's default on a two-faced card,
-  never a print variant or a JPEG (400) — tiles flip by a corner button
-  only, the page is "Front // Back" (`cardPageName`), and the OG image
-  stays the front.
+  never a print variant or a JPEG (400) — the page is "Front // Back"
+  (`cardPageName`), and the OG image stays the front.
+  A two-faced TILE (5.15, owner 2026-10-12 — it replaces 5.3's "nothing
+  moves on hover"): a card with a back PICTURE (`tileBackThumbOf` /
+  `hasBackPicture`, `lib/cards/tile-faces.ts` — a stored back thumb beside
+  the front's, portrait; the ONE answer for every surface) gets a labelled
+  "2 faces" button, bottom-LEFT, 44 px tall, named "Show back / front face
+  of <title>" (`components/cards/baked-card-flip.tsx`, inside
+  `BakedCardThumbnail` — never a second implementation), and ALSO turns
+  when a mouse rests on it for `HOVER_REST_MS` (333) — only under
+  `(hover: hover) and (pointer: fine)`, never under
+  `prefers-reduced-motion: reduce` (there the button cross-fades), back to
+  the front when the pointer leaves; a click still opens the card. The
+  back's 600 px thumb is mounted only on intent (the pointer entering a
+  tile that can hover-turn, the button's focus or press) — never at rest,
+  never the HD PNG. An older two-faced card with no back picture shows
+  NOTHING, and neither does a card mid-save (pointers cleared: the live
+  front, no button — `cardToPreviewData` carries no back). Where the
+  picture is too small to turn (the deck list's rows, My Cards' list view,
+  the pinned-cards picker) the same cards carry the `TwoFacesMark` text,
+  and the deck pop-up a Front / Back switch (one face at a time).
   Imports follow the printing PER FACE (5.4; `dfcImportOf` in the mapper):
   a transform / modal printing lands on the bodies — the front body by the
   front's type, the back body by the back's type and the printing's family

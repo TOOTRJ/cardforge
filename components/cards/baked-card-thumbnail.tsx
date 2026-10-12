@@ -4,6 +4,7 @@ import { CardPreview, type CardPreviewData } from "@/components/cards/card-previ
 import { BakedCardFlip } from "@/components/cards/baked-card-flip";
 import { isLandscapeFrame } from "@/lib/cards/card-orientation";
 import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
+import { tileBackThumbOf } from "@/lib/cards/tile-faces";
 
 // ---------------------------------------------------------------------------
 // BakedCardThumbnail — the canonical way to render a *saved* card in any
@@ -46,13 +47,17 @@ import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
 // a hair tighter than the image's own arc — over bg-background that sliver
 // showed as a pale rim on every dark-bordered card in LIGHT theme.
 //
-// A DOUBLE-FACED card (TODO 5.3, owner decision 2026-10-02 Q6): with the
-// back face's thumbnail too (cards.rendered_back_thumb_url — the bake's
+// A DOUBLE-FACED card (TODO 5.3 + 5.15, owner decisions 2026-10-12): with
+// the back face's thumbnail too (cards.rendered_back_thumb_url — the bake's
 // second WebP, written only for a card with a back BODY), the tile shows the
-// front with a small corner flip button that turns it over in place
-// (components/cards/baked-card-flip.tsx — the card page's control); nothing
-// moves on hover or by itself. Only a portrait pair flips (every DFC body
-// is portrait); a tile without a back thumb is exactly what it was.
+// front with a labelled "2 faces" button in its bottom-left corner that
+// turns it over in place, and — with a real hovering pointer, motion allowed
+// — it also turns when the pointer rests on it
+// (components/cards/baked-card-flip.tsx). Which cards: ONE answer,
+// lib/cards/tile-faces.ts (only a portrait pair, only our own bakes). A tile
+// without a back thumb is exactly what it was — an older two-faced card with
+// no back picture shows nothing, and neither does the live fallback below
+// (a card whose pointers an edit has just cleared: no back picture yet).
 //
 // The editor still uses <CardPreview> directly — that's where the live
 // preview matters and where the bake-from-form-state would be a chicken-
@@ -66,7 +71,8 @@ export type BakedCardThumbnailProps = {
    *  over the PNG whenever present. */
   renderedThumbUrl?: string | null;
   /** The BACK face's tile-sized WebP (cards.rendered_back_thumb_url, TODO
-   *  5.3): with it, the tile gets its corner flip button. */
+   *  5.3): with it, the tile gets its "2 faces" button and hover-turn
+   *  (TODO 5.15). */
   renderedBackThumbUrl?: string | null;
   /** Card title — used as the <img>'s accessible label. */
   title: string | null | undefined;
@@ -102,7 +108,12 @@ export function BakedCardThumbnail({
   const pngUrl = isStoredRenderUrl(renderedImageUrl) ? renderedImageUrl : null;
   const thumbUrl = pngUrl && isStoredRenderUrl(renderedThumbUrl) ? renderedThumbUrl : null;
   // The back's thumb — only beside a front thumb, only portrait, only ours.
-  const backThumbUrl = thumbUrl && !isLandscape && isStoredRenderUrl(renderedBackThumbUrl) ? renderedBackThumbUrl : null;
+  const backThumbUrl = tileBackThumbOf({
+    rendered_image_url: renderedImageUrl,
+    rendered_thumb_url: renderedThumbUrl,
+    rendered_back_thumb_url: renderedBackThumbUrl,
+    frame_style: previewData.frameStyle,
+  });
 
   if (!pngUrl) {
     // Live-preview fallback. Portrait cards fill the cell; landscape (Battle)
@@ -130,6 +141,7 @@ export function BakedCardThumbnail({
       frontSrc={toRenderCdnUrl(thumbUrl) ?? thumbUrl}
       backSrc={toRenderCdnUrl(backThumbUrl) ?? backThumbUrl}
       label={label}
+      title={title?.trim() || "this card"}
       priority={priority}
     />
   ) : thumbUrl ? (
