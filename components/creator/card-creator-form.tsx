@@ -94,6 +94,7 @@ import {
   FORM_SCROLL_TARGET_ID,
 } from "@/components/creator/start-with-hero";
 import { IdentityPanel } from "@/components/creator/panels/identity-panel";
+import { useTypesFieldSync } from "@/components/creator/types-field";
 import { PipsPanel } from "@/components/creator/panels/pips-panel";
 import { RarityPanel } from "@/components/creator/panels/rarity-panel";
 import { LoyaltyAbilitiesEditor } from "@/components/creator/panels/loyalty-editor";
@@ -941,6 +942,13 @@ export function CardCreatorForm({
     verifiedFrameKeys,
   ]);
 
+  // The Types field (TODO 3b.16): a text the maker typed follows the other
+  // controls that write a face's type words — a token's toggles, a borrowed
+  // frame's Artifact word, a kind change — and never while revising the
+  // front (its type words are locked; the field edits the printed line).
+  useTypesFieldSync("front", !isRevise, { control, getValues, setValue });
+  useTypesFieldSync("back", true, { control, getValues, setValue });
+
   // The token kind (TODO 3b.15). Both follow real edits only (isDirty, a
   // change this session) — a loaded card keeps its stored frame and name —
   // and never while revising (the type line is locked).
@@ -1712,6 +1720,9 @@ export function CardCreatorForm({
 
     setIfPresent("title", patch.title);
     setIfPresent("cost", patch.cost);
+    // An idea's type words print in the built order (TODO 1.20); a typed
+    // Types text gives way to them (TODO 3b.16). Locked while revising.
+    if (patch.supertype !== undefined && !isRevise) setValue("printed_types", null, { shouldDirty: true });
     setIfPresent("supertype", patch.supertype);
     setIfPresent("subtypes_text", patch.subtypes_text);
     setIfPresent("rarity", patch.rarity);
@@ -1931,6 +1942,10 @@ export function CardCreatorForm({
     // change seeded a moment ago — applyKindProgrammatic("land") writes a
     // "Basic — Wastes" seed over an empty identity, and leaving it in place
     // turned every imported nonbasic land into a textless basic.
+    // …and its words in the PRINTING's order (TODO 3b.16): the mapper names
+    // a Types text only where the printing reads differently from the line
+    // the card builds; any other import clears a text typed before it.
+    setValue("printed_types", patch.printed_types ?? null, { shouldDirty: true });
     if (importedKind) {
       setValue("supertype", patch.supertype ?? "", { shouldDirty: true });
       setValue("subtypes_text", patch.subtypes_text ?? "", {
@@ -2014,6 +2029,7 @@ export function CardCreatorForm({
           cost: bf.cost ?? "",
           card_type: bf.card_type ?? "",
           supertype: bf.supertype ?? "",
+          printed_types: bf.printed_types ?? null,
           subtypes_text: bf.subtypes_text ?? "",
           rules_text: bf.rules_text ?? "",
           flavor_text: bf.flavor_text ?? "",
@@ -2332,6 +2348,9 @@ export function CardCreatorForm({
           }
         }
       }
+      // The AI's line is the BUILT one (printed order, TODO 1.20): a text
+      // the maker typed in the Types field gives way to it (TODO 3b.16).
+      setValue("printed_types", null, { shouldDirty: true });
       setValue("supertype", printTypography(fill.supertype ?? "", "type"), { shouldDirty: true });
       setValue("subtypes_text", printTypography((fill.subtypes ?? []).join(", "), "type"), {
         shouldDirty: true,
@@ -2605,6 +2624,11 @@ export function CardCreatorForm({
           cost: values.back_face.cost.trim() || undefined,
           card_type: values.back_face.card_type || undefined,
           supertype: values.back_face.supertype.trim() || undefined,
+          // The Types field as typed (TODO 3b.16) — the server keeps it
+          // only when it differs from the line the face builds.
+          ...(typeof values.back_face.printed_types === "string"
+            ? { printed_types: values.back_face.printed_types.trim() }
+            : {}),
           subtypes: parseSubtypes(values.back_face.subtypes_text),
           rules_text: values.back_face.rules_text.trim() || undefined,
           flavor_text: values.back_face.flavor_text.trim() || undefined,
@@ -2727,6 +2751,10 @@ export function CardCreatorForm({
       cost: values.cost.trim() || undefined,
       color_identity: values.color_identity,
       supertype: values.supertype.trim() || undefined,
+      // The Types field as typed, or null for a field never edited (TODO
+      // 3b.16): the server stores it only when it differs from the line the
+      // card builds from its supertype and card type.
+      printed_types: typeof values.printed_types === "string" ? values.printed_types.trim() : null,
       card_type: values.card_type || undefined,
       subtypes: submitSubtypes,
       tags: parseTags(values.tags_text),
@@ -3074,6 +3102,7 @@ export function CardCreatorForm({
     cost: watched.cost,
     cardType: cardTypeForPreview,
     supertype: watched.supertype || null,
+    printedTypes: watched.printed_types,
     subtypes: parseSubtypes(watched.subtypes_text),
     rarity: rarityForPreview,
     colorIdentity: watched.color_identity,
@@ -3132,6 +3161,9 @@ export function CardCreatorForm({
               ? undefined
               : (watched.back_face.card_type as CardType),
           supertype: watched.back_face.supertype || undefined,
+          ...(typeof watched.back_face.printed_types === "string"
+            ? { printed_types: watched.back_face.printed_types }
+            : {}),
           subtypes: parseSubtypes(watched.back_face.subtypes_text),
           rules_text: watched.back_face.rules_text || undefined,
           flavor_text: watched.back_face.flavor_text || undefined,

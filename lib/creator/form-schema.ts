@@ -28,6 +28,7 @@ import {
   cardSetCodeSchema,
   cardStatStringSchema,
   cardSupertypeSchema,
+  cardPrintedTypesSchema,
   cardTitleSchema,
   loyaltyCostSchema,
 } from "@/lib/validation/card";
@@ -147,6 +148,10 @@ export const cardFormSchema: z.ZodType<FormValues, FormValues> = z
     // ----- Identity step -----
     check(ctx, ["title"], cardTitleSchema, values.title);
     check(ctx, ["supertype"], cardSupertypeSchema, values.supertype.trim());
+    // The Types field as typed (TODO 3b.16); null = never edited.
+    if (typeof values.printed_types === "string") {
+      check(ctx, ["printed_types"], cardPrintedTypesSchema, values.printed_types);
+    }
     checkSubtypesText(ctx, ["subtypes_text"], values.subtypes_text);
     check(ctx, ["cost"], cardCostSchema, values.cost.trim());
     check(
@@ -186,6 +191,9 @@ export const cardFormSchema: z.ZodType<FormValues, FormValues> = z
         cardSupertypeSchema,
         back.supertype.trim(),
       );
+      if (typeof back.printed_types === "string") {
+        check(ctx, ["back_face", "printed_types"], cardPrintedTypesSchema, back.printed_types);
+      }
       checkSubtypesText(ctx, ["back_face", "subtypes_text"], back.subtypes_text);
       check(
         ctx,

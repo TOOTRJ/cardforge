@@ -6,12 +6,12 @@ import type { createAdminClient } from "@/lib/supabase/admin";
 import { renderCardImage } from "@/lib/render/card-image";
 import { purgeCardCdnCache } from "@/lib/cards/cache-purge";
 import {
-  BAKE_SELECT_COLUMNS,
   removeRenderObjects,
   rowToPreviewData,
   type CardRowForBake,
   uploadRenderObjects,
 } from "@/lib/cards/bake-core";
+import { selectBakeColumns } from "@/lib/cards/bake-select";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
@@ -168,13 +168,15 @@ export async function runRebakeBatch(
 
   // Scan candidates in pages, classify, and stop once we have a batch (or,
   // for a dry run, once every candidate is counted).
-  const select = `${BAKE_SELECT_COLUMNS}, layout_version, rendered_image_url, rendered_at`;
+  // (selectBakeColumns below: without `printed_types` on a database that
+  // migration 0137 has not reached yet — lib/cards/bake-select.ts.)
+  const selectOf = (columns: string) => `${columns}, layout_version, rendered_image_url, rendered_at`;
   // Every marked row is a candidate, so a marked call reads only what it
   // can use (plus the rows it must skip) instead of a full page.
   const pageSize =
     scope.kind === "marked" && !dry ? Math.min(SCAN_PAGE, limit + skip.size) : SCAN_PAGE;
-  const candidates = (from: number) => {
-    let q = supabase.from("cards").select(select).in("visibility", ["public", "unlisted"]);
+  const candidates = (from: number, columns: string) => {
+    let q = supabase.from("cards").select(selectOf(columns)).in("visibility", ["public", "unlisted"]);
     if (scope.kind === "legacy-art") {
       q = q
         .or(LEGACY_SUPABASE_HOSTS.map((host) => `art_url.like.%${host}%`).join(","))
@@ -198,7 +200,7 @@ export async function runRebakeBatch(
   const plan = { rebake: 0, stamp: 0, optIn: 0 };
   const batch: Array<{ row: RebakeRow; verdict: SweepVerdict }> = [];
   for (let from = 0; from < SCAN_MAX; from += pageSize) {
-    const { data, error } = await candidates(from);
+    const { data, error } = await selectBakeColumns((columns) => candidates(from, columns));
     if (error) return { ok: false, error: error.message };
     const rows = (data ?? []) as unknown as RebakeRow[];
     for (const row of rows) {

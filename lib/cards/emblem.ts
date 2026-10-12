@@ -17,6 +17,8 @@ export const EMBLEM_FIXED_FIELDS = {
   cost: undefined,
   color_identity: ["colorless"] as ColorIdentity[],
   supertype: undefined,
+  // No Types text either: the line is "Emblem" (TODO 3b.16).
+  printed_types: undefined,
   power: undefined,
   toughness: undefined,
   loyalty: undefined,
@@ -30,6 +32,7 @@ type EmblemShaped = {
   cost?: string | null;
   color_identity?: ColorIdentity[];
   supertype?: string | null;
+  printed_types?: string | null;
   power?: string | null;
   toughness?: string | null;
   loyalty?: string | null;

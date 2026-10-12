@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { capitalizeTypeWords } from "@/lib/cards/type-line-field";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -48,9 +49,11 @@ describe("printTypography — the item's acceptance cases", () => {
 
   it("X-1 stays a hyphen — in every field", () => {
     for (const field of FIELDS) {
+      // (A type-line part also gains its capitals, TODO 3b.16 — AS_TYPE.)
+      const kept = (text: string) => (field === "type" ? capitalizeTypeWords(text) : text);
       expect(printTypography("X-1", field)).toBe("X-1");
-      expect(printTypography("gets -1/-1 and X-1 counters", field)).toBe("gets -1/-1 and X-1 counters");
-      expect(printTypography("where X is 5 - 2", field)).toBe("where X is 5 - 2");
+      expect(printTypography("gets -1/-1 and X-1 counters", field)).toBe(kept("gets -1/-1 and X-1 counters"));
+      expect(printTypography("where X is 5 - 2", field)).toBe(kept("where X is 5 - 2"));
     }
   });
 });
@@ -113,8 +116,10 @@ describe("printTypography — dashes and bullets", () => {
   it("leaves a rule of hyphens, a hyphenated word and a number's sign alone", () => {
     for (const field of FIELDS) {
       expect(printTypography("-----", field)).toBe("-----");
-      expect(printTypography("a---b", field)).toBe("a---b");
-      expect(printTypography("Power-Plant, non-Wall, +1/+1 and -2/-2", field)).toBe("Power-Plant, non-Wall, +1/+1 and -2/-2");
+      expect(printTypography("a---b", field)).toBe(field === "type" ? "A---B" : "a---b");
+      expect(printTypography("Power-Plant, non-Wall, +1/+1 and -2/-2", field)).toBe(
+        field === "type" ? "Power-Plant, Non-Wall, +1/+1 And -2/-2" : "Power-Plant, non-Wall, +1/+1 and -2/-2",
+      );
     }
   });
 });
@@ -136,7 +141,10 @@ describe("printTypography — what it never touches", () => {
 
   it("text that is already printed, line breaks and outer whitespace", () => {
     const printed = "Flash\nThis spell can’t be countered.\nWhenever you cast a spell, choose up to one —\n• Return target spell you don’t control to its owner’s hand.\n\n“Quoted.”";
-    for (const field of FIELDS) expect(printTypography(printed, field)).toBe(printed);
+    for (const field of FIELDS) {
+      // A type-line part keeps every character but its words' first letters.
+      expect(printTypography(printed, field)).toBe(field === "type" ? capitalizeTypeWords(printed) : printed);
+    }
     expect(printTypography("  can't  \n\n  won't ", "rules")).toBe("  can’t  \n\n  won’t ");
     expect(printTypography("", "rules")).toBe("");
   });
@@ -282,7 +290,9 @@ describe("printTypography — idempotent, and bounded", () => {
     for (const field of FIELDS) {
       const allowed = new Set(PRINT_TYPOGRAPHY_CHARACTERS[field]);
       for (const sample of SAMPLES) {
-        const typed = new Set(sample);
+        // A type-line part may also set a typed letter in its other case
+        // (TODO 3b.16: each word capitalised) — never a new letter.
+        const typed = new Set(field === "type" ? sample + sample.toUpperCase() + sample.toLowerCase() : sample);
         for (const ch of printTypography(sample, field)) {
           // (A space is no glyph: the spaced rules dash may add one.)
           if (!typed.has(ch) && ch !== " ") expect(allowed.has(ch), `${field} introduced ${JSON.stringify(ch)} in ${JSON.stringify(sample)}`).toBe(true);

@@ -305,8 +305,8 @@ describe("6.23 the Emblem choice inside the token kind", () => {
     await clickNext(); // Card → Identity
     // The walker's name, and only the subtype under "More options".
     expect(screen.getByPlaceholderText("Kaito, Cunning Infiltrator")).toBeTruthy();
-    expect(screen.queryByPlaceholderText("Legendary")).toBeNull();
-    expect(screen.queryByPlaceholderText("Snow")).toBeNull();
+    // No Types field: an emblem's line is fixed (TODO 3b.16).
+    expect(screen.queryByTestId("types-field-input-front")).toBeNull();
     expect(screen.getByPlaceholderText("Kaito")).toBeTruthy();
     await clickNext(); // Identity → Text & stats
     expect(screen.queryByRole("radiogroup", { name: "Rarity" })).toBeNull();

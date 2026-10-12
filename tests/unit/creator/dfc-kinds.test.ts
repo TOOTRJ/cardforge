@@ -143,6 +143,7 @@ describe("the form schema's back-face rules on a transform card", () => {
       cost: "{U}",
       color_identity: ["blue"],
       supertype: "",
+      printed_types: null,
       card_type: "creature",
       subtypes_text: "Human Wizard",
       tags_text: "",
