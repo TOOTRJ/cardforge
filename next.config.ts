@@ -62,6 +62,19 @@ const BUILD_ID =
   process.env.VERCEL_GIT_COMMIT_SHA ||
   "dev";
 
+// The preview ⇄ bake parity harness (TODO 3.11, tests/parity): its page is
+// app/dev/parity/page.parity.tsx — a ROUTE only for the harness's own dev
+// server, which asks for the extra page extension below
+// (PARITY_HARNESS=1, scripts/parity.mjs). Every other server — production,
+// a preview, `npm run dev`, `next build` whatever its env — knows no
+// ".parity.tsx" pages, so the file is never compiled and /dev/parity does
+// not exist there (tests/unit/devops/parity-harness-route.test.ts; the page
+// also answers 404 by itself outside the harness).
+export function parityHarnessEnabled(env: Record<string, string | undefined> = process.env): boolean {
+  return env.PARITY_HARNESS === "1" && env.NODE_ENV === "development";
+}
+export const PARITY_PAGE_EXTENSIONS = ["tsx", "ts", "jsx", "js", "parity.tsx"];
+
 // Baseline security headers on every response. No full Content-Security-
 // Policy yet (Next's inline runtime, Stripe.js and GA would each need
 // allow-listing and a nonce pipeline); these four carry no such risk:
@@ -84,6 +97,7 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_BUILD_ID: BUILD_ID,
   },
+  ...(parityHarnessEnabled() ? { pageExtensions: PARITY_PAGE_EXTENSIONS } : {}),
   async headers() {
     return [{ source: "/(.*)", headers: SECURITY_HEADERS }];
   },
@@ -99,6 +113,9 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "10mb",
     },
+    // The harness server compiles from the sources every time, as CI's does:
+    // no cached route table from a server started without its extension.
+    ...(parityHarnessEnabled() ? { turbopackFileSystemCacheForDev: false } : {}),
   },
   // public/frames (~163 MB of PNG masters) must NOT be traced into function
   // bundles. The bake reads frames through lib/render/card-frames.ts, which

@@ -1,0 +1,159 @@
+import type { CardRowForBake } from "@/lib/cards/bake-core";
+import { visualCases, type VisualCase, type VisualFace } from "../visual/matrix";
+
+// ---------------------------------------------------------------------------
+// The preview ⇄ bake parity matrix (TODO 3.11): the cards BOTH renderers draw
+// — components/cards/card-preview.tsx in headless Chromium and
+// lib/render/card-image.tsx through Satori — and tests/parity compares, at
+// 750 px and at HD.
+//
+// Every case is a row of tests/visual/matrix.ts, taken BY ID (a renamed or
+// removed case fails here, so the two harnesses cannot drift apart), a few of
+// them with fields laid over the row for what the hash matrix has no reason
+// to hold: the prints' symbols in one cost and one rules box, and art away
+// from its default position. One case per template FAMILY and per feature
+// that has drifted between the renderers before — not every template: the
+// hash gate (7.1) already holds every bake still; this suite holds the
+// preview to the bake.
+//
+// Adding a case costs about 3 s of CI. Add one in the PR that adds a new
+// rendering feature to both renderers (a new overlay, a new slot, a new
+// symbol kind).
+// ---------------------------------------------------------------------------
+
+export type ParityCase = {
+  /** Stable id (file names, thresholds, the report). */
+  id: string;
+  /** Which face both renderers draw. */
+  face: VisualFace;
+  /** The stored row (lib/cards/bake-core.ts rowToPreviewData). */
+  row: CardRowForBake;
+  /** What the case is there to hold (the report prints it). */
+  why: string;
+  /** The art both renderers are given instead of the coded PNG (TODO 3.14):
+   *  "tagged-jpeg" — a JPEG stored sideways with EXIF Orientation 6, as a
+   *  row saved before 3.14 holds it (Chrome turns it; the bake must too);
+   *  "uploaded-jpeg" — the same photo through prepareUploadBytes, as every
+   *  upload is stored today (upright pixels, no tag). */
+  art?: "tagged-jpeg" | "uploaded-jpeg";
+};
+
+type Pick = {
+  /** The visual matrix case whose row this is. */
+  from: string;
+  why: string;
+  /** A suffix for the id when the row is changed (`row`). */
+  as?: string;
+  row?: (row: CardRowForBake) => Partial<CardRowForBake>;
+  art?: ParityCase["art"];
+};
+
+/** Every symbol kind lib/cards/mana-gem.ts draws its own way (layout v49),
+ *  in ONE cost: a generic, X, a hybrid, a two-generic hybrid, a Phyrexian
+ *  (×1.2 disc), a two-colour Phyrexian, snow, colourless and a colour. */
+const SYMBOL_COST = "{X}{2}{W/U}{2/B}{R/P}{G/U/P}{S}{C}{G}";
+/** …and in rules text: tap, untap, energy (no disc), the same hybrids and
+ *  Phyrexian symbols inline, a loyalty-free plain line and a dash. */
+const SYMBOL_RULES =
+  "{T}, {Q}: Add {W/U}{2/B} or {R/P}{G/U/P}. You get {E}{E}.\n{S}{C}, {T}: Draw a card — then discard a card unless you pay {X}{G}.\nFlying, trample";
+
+const PICKS: readonly Pick[] = [
+  // --- M15 and its symbols -------------------------------------------------
+  { from: "m15/b/creature-edge", why: "100/100, a four-mode Command, reversed-hybrid and unknown symbols" },
+  {
+    from: "m15/g/creature-long",
+    as: "@symbols",
+    why: "a nine-pip cost and every symbol kind in cost and rules (v49)",
+    row: () => ({ cost: SYMBOL_COST, rules_text: SYMBOL_RULES, flavor_text: null }),
+  },
+  { from: "m15/c/creature-long", why: "the see-through colourless master: art under the frame" },
+  { from: "m15/w/creature-long@centred", why: "centred rules (held lines, per-line indents)" },
+  { from: "m15/g/creature-long@collector", why: "the collector line and the © slot's mark" },
+  { from: "m15/wu/creature-long@stamp-pair-crown", why: "crown + holofoil stamp + the two-colour pair, one card" },
+  { from: "m15/r/creature-short@foil", why: "foil: the sheen and its art mask" },
+  { from: "m15/u/creature-long@etched", why: "etched: the frame-only sheen" },
+  // --- art away from its default position (a coded picture) ----------------
+  {
+    from: "m15/r/creature-short",
+    as: "@art-zero",
+    why: "focal exactly 0 with zoom (#506): the art's left edge on the window's",
+    row: () => ({ art_position: { focalX: 0, focalY: 0.3, scale: 1.3 } }),
+  },
+  {
+    from: "m15/r/creature-short",
+    as: "@art-zoom",
+    why: "an off-centre focal point at zoom 1.6",
+    row: () => ({ art_position: { focalX: 0.8, focalY: 0.2, scale: 1.6 } }),
+  },
+  // --- an EXIF-turned photo as art (TODO 3.14) ------------------------------
+  {
+    from: "m15/r/creature-short",
+    as: "@exif6-stored",
+    why: "an orientation-6 JPEG as stored before 3.14: Chrome obeys the tag, the bake follows",
+    art: "tagged-jpeg",
+    row: () => ({ art_position: { focalX: 0.3, focalY: 0.4, scale: 1.2 } }),
+  },
+  {
+    from: "m15/r/creature-short",
+    as: "@exif6-upload",
+    why: "the same photo through prepareUploadBytes: both renderers read the uprighted bytes",
+    art: "uploaded-jpeg",
+    row: () => ({ art_position: { focalX: 0.3, focalY: 0.4, scale: 1.2 } }),
+  },
+  // --- the other bodies ----------------------------------------------------
+  { from: "m15pw/g/planeswalker-long", why: "walker: loyalty rows, badges, the shield" },
+  { from: "saga/g/saga-long", why: "saga: the rail, chapter badges, the reminder block" },
+  { from: "split/r/split-long", why: "split: two turned halves (landscape master)" },
+  { from: "aftermath/b/aftermath-long", why: "aftermath: the turned second half and its art" },
+  { from: "adventure/g/adventure-long", why: "adventure: the inline page" },
+  { from: "flip/u/flip-long", why: "flip: the upside-down second face" },
+  { from: "battle/g/battle-long", why: "battle: landscape, the painted defense shield, the turned credit" },
+  { from: "m15dfcfront/g/transform-long", why: "transform front: icon rider, reverse P/T float" },
+  { from: "m15dfcback/g/transform-long", why: "transform back: its own body, through the flip" },
+  { from: "m15mdfcfront/w/mdfc-long@strip-u", why: "modal front: the flipside strip in the other face's colour" },
+  { from: "m15mdfcback/g/mdfc-long", why: "modal back: the strip on a back, through the flip" },
+  { from: "m15tokentext/g/token-long", why: "token with a text box" },
+  { from: "m20tokentall/g/token-long", why: "M20 token, tall box (squeezed paragraph gaps)" },
+  { from: "emblem/g/emblem-long", why: "emblem: the toned master, the walker's name, no cost or stats" },
+  // 3.24's cases, by name (the Zendikar split type line waits for 4.40, the
+  // first profile to use `type.split`).
+  { from: "fullartland/w/land-short", why: "3.24: the full-art Plains — the basic symbol disc, footer on the art" },
+  { from: "m15land/w/land-short", why: "3.24: the m15land Plains — its watermark, unchanged by the disc slot" },
+  { from: "m15textless/g/creature-long", why: "3.24: a textless creature — rules kept in the data, hidden in both renderers" },
+  { from: "m15borderless/b/creature-long", why: "borderless: art to the edge, white ink, the keylined set symbol" },
+  // --- the old frames (era symbol styles, footers, © slots) ----------------
+  { from: "agclassic/g/creature-long", why: "1993: image pips, the Illus. line, right-set P/T" },
+  { from: "retro/r/creature-long", why: "1997: shadowed white ink, flat discs, centred © slot" },
+  { from: "modern/g/creature-long", why: "2003: shadowed cost discs, the brush, two-line footer" },
+  { from: "modern/wu/creature-short@pair", why: "the synthesised old-frame pair master" },
+];
+
+function slug(id: string): string {
+  return id.replace(/[/@]/g, "__");
+}
+
+/** File-name-safe form of a case id. */
+export const parityFileName = slug;
+
+/** The matrix, in order. Throws when a pick names no visual case. */
+export function parityCases(): ParityCase[] {
+  const byId = new Map<string, VisualCase>(visualCases().map((c) => [c.id, c]));
+  const out: ParityCase[] = [];
+  const seen = new Set<string>();
+  for (const pick of PICKS) {
+    const source = byId.get(pick.from);
+    if (!source) throw new Error(`tests/parity/cases.ts: no visual case "${pick.from}" in tests/visual/matrix.ts`);
+    if (pick.row && !pick.as) throw new Error(`tests/parity/cases.ts: "${pick.from}" changes its row — give it an "as" suffix`);
+    const id = `${pick.from}${pick.as ?? ""}`;
+    if (seen.has(id)) throw new Error(`tests/parity/cases.ts: duplicate case "${id}"`);
+    seen.add(id);
+    out.push({
+      id,
+      face: source.face,
+      row: { ...source.row, ...(pick.row ? pick.row(source.row) : {}) },
+      why: pick.why,
+      ...(pick.art ? { art: pick.art } : {}),
+    });
+  }
+  return out;
+}
