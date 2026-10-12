@@ -577,7 +577,7 @@ export async function createCardAction(
   after(async () => {
     try {
       await bakeAndPersistCardRender(row.id, user.id);
-      revalidateCardPaths(row.slug, ownerUsername, { visibility: insert.visibility });
+      revalidateCardPaths(row.slug, ownerUsername, { visibility: insert.visibility, afterBake: true });
     } catch (error) {
       console.error(`[create-card] deferred bake failed for ${row.id}:`, error);
     }
@@ -1029,12 +1029,17 @@ export async function updateCardAction(
   // bake persists its URL. The revalidation after it is best-effort only:
   // Next skips, in an after() callback, every path this request has already
   // revalidated (revalidation-utils withExecuteRevalidates) — which is all
-  // of them — so a page built during the bake keeps its live-preview tile
-  // until its own ISR window ends. Never rely on it for correctness.
+  // of them — so `afterBake` adds the ISR'd list pages by their PAGE tag
+  // (lib/cards/revalidate.ts), which is not skipped: a page built during
+  // the bake swaps its live-preview tile for the thumb then, not at the end
+  // of its ISR window. Never rely on it for correctness.
   after(async () => {
     try {
       await bakeAndPersistCardRender(row.id, user.id);
-      revalidateCardPaths(row.slug, ownerUsername, { visibility: update.visibility ?? existing.visibility });
+      revalidateCardPaths(row.slug, ownerUsername, {
+        visibility: update.visibility ?? existing.visibility,
+        afterBake: true,
+      });
       if (visibilityChanged) {
         await purgeHiddenCard({ id: row.id, slug: row.slug }, ownerUsername);
       }
@@ -1316,7 +1321,7 @@ export async function updateCardsVisibilityAction(
             console.error(`[bulk-visibility] deferred bake failed for ${cardId}:`, error);
           }
         }
-        if (baked > 0) revalidateCardListSurfaces();
+        if (baked > 0) revalidateCardListSurfaces({ afterBake: true });
       });
     }
   }

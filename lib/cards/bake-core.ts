@@ -208,7 +208,10 @@ export const CLEARED_RENDER_POINTERS = Object.freeze({
  * withExecuteRevalidates → diffRevalidationState), and the action had just
  * revalidated those very paths. With the pointers cleared, the same pages
  * draw the live preview — the row itself, always the saved card — until the
- * bake's thumb is there.
+ * bake's thumb is there; the bake then asks for the ISR'd tile pages by
+ * their PAGE tag (lib/cards/revalidate.ts `afterBake`), which Next does not
+ * skip, so they pick the thumb up seconds later rather than at the end of
+ * their ISR window.
  */
 export const REBAKE_PENDING_RENDER = Object.freeze({
   ...CLEARED_RENDER_POINTERS,

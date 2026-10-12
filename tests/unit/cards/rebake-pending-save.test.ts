@@ -63,7 +63,9 @@ vi.mock("@/lib/cards/revalidate", () => ({
   purgeHiddenCard: vi.fn(),
   purgeHiddenCards: vi.fn(),
   revalidateCardListSurfaces: vi.fn(),
-  revalidateCardPaths: vi.fn(() => void state.order.push("revalidate")),
+  revalidateCardPaths: vi.fn((_slug: string, _user: string, options?: { afterBake?: boolean }) =>
+    void state.order.push(options?.afterBake ? "revalidate (after the bake)" : "revalidate"),
+  ),
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/server", () => ({ after: (fn: () => Promise<void> | void) => void state.deferred.push(fn) }));
@@ -71,6 +73,18 @@ vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 
 import { updateCardAction } from "@/lib/cards/actions";
 import { CLEARED_RENDER_POINTERS, REBAKE_PENDING_RENDER } from "@/lib/cards/bake-core";
+
+/** The cleared pointers, SPELLED OUT: the expectations below must not read
+ *  them from the constant under test (a missing export spreads to nothing,
+ *  and `{ art_position }` alone is exactly what the action wrote before). */
+const CLEARED = {
+  rendered_image_url: null,
+  rendered_thumb_url: null,
+  rendered_back_image_url: null,
+  rendered_back_thumb_url: null,
+  rendered_at: null,
+  layout_version: null,
+};
 
 const BAKE = `https://storage.test/storage/v1/object/public/card-renders/${USER}/${CARD}`;
 
@@ -157,7 +171,7 @@ describe("updateCardAction — an edit never leaves the row pointing at the bake
     expect(result.ok).toBe(true);
     // One update of the row — not a save and then a clear: nothing can be
     // built from a row that has the new art position AND the old picture.
-    expect(updatesOf(stub)).toEqual([{ art_position: moved, ...REBAKE_PENDING_RENDER }]);
+    expect(updatesOf(stub)).toEqual([{ art_position: moved, ...CLEARED }]);
   });
 
   it("the write comes before the response's revalidation, and the bake only after the response", async () => {
@@ -167,14 +181,16 @@ describe("updateCardAction — an edit never leaves the row pointing at the bake
     expect(state.order).toEqual(["update", "revalidate"]);
     expect(state.deferred).toHaveLength(1);
     await state.deferred[0]();
-    expect(state.order).toEqual(["update", "revalidate", "bake", "revalidate"]);
+    // …and the bake's own revalidation is the `afterBake` one: the plain paths
+    // again would be dropped by Next (tests/unit/cards/revalidate-after-bake.test.ts).
+    expect(state.order).toEqual(["update", "revalidate", "bake", "revalidate (after the bake)"]);
   });
 
   it("any other edit does the same — the bake shows the old text as much as the old art", async () => {
     const stub = db();
     const result = await updateCardAction(CARD, { artist_credit: "B. Painter" });
     expect(result.ok).toBe(true);
-    expect(updatesOf(stub)).toEqual([{ artist_credit: "B. Painter", ...REBAKE_PENDING_RENDER }]);
+    expect(updatesOf(stub)).toEqual([{ artist_credit: "B. Painter", ...CLEARED }]);
   });
 
   it("a card with no bake (a private draft) writes the same nulls: nothing to lose", async () => {
@@ -187,6 +203,6 @@ describe("updateCardAction — an edit never leaves the row pointing at the bake
     });
     const stub = db();
     await updateCardAction(CARD, { art_position: { focalX: 0, focalY: 0, scale: 2 } });
-    expect(updatesOf(stub)[0]).toMatchObject(REBAKE_PENDING_RENDER);
+    expect(updatesOf(stub)[0]).toMatchObject(CLEARED);
   });
 });

@@ -145,7 +145,7 @@ export async function adoptDfcBodiesAction(cardId: string, layoutName: string): 
   after(async () => {
     try {
       await bakeAndPersistCardRender(row.id, user.id);
-      revalidateCardPaths(row.slug, ownerUsername, { visibility: existing.visibility });
+      revalidateCardPaths(row.slug, ownerUsername, { visibility: existing.visibility, afterBake: true });
     } catch (bakeError) {
       console.error(`[adopt-dfc] deferred bake failed for ${row.id}:`, bakeError);
     }

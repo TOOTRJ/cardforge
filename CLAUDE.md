@@ -776,11 +776,14 @@ Rules and gotchas:
   a deferred re-bake follows clears the row's render pointers and stamp in
   its OWN update (`REBAKE_PENDING_RENDER`, `lib/cards/bake-core.ts`): until
   the bake lands every surface draws the live preview of the saved row,
-  never the bake of the card as it was — a page built in that window keeps
-  what it read for its whole ISR window, because the revalidation an
-  `after()` callback asks for is SKIPPED by Next for every path the action
-  already revalidated (never rely on it), and the save bake therefore
-  always removes a one-faced card's `.back.*` names.
+  never the bake of the card as it was, and the save bake therefore always
+  removes a one-faced card's `.back.*` names. The revalidation an `after()`
+  callback asks for is SKIPPED by Next for every path the action already
+  revalidated, so a deferred bake revalidates with `afterBake: true`
+  (`lib/cards/revalidate.ts`): the ISR'd tile pages by their PAGE tag
+  (`BAKED_TILE_PAGE_ROUTES` — file-system routes, route group included; a
+  new ISR page that draws card tiles joins the list), which is not skipped —
+  best effort, never relied on for correctness.
 - Theme: the `cardforge-theme` cookie (dark / light / system; none = dark).
   The root layout reads NO cookies (every route stays static/ISR-eligible):
   server HTML is always `data-theme="dark"` and the `<head>` no-flash script
