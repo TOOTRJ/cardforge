@@ -28,6 +28,7 @@
 
 import { artReachesCardEdge, type FrameProfile, type Rect } from "@/lib/cards/template-layout";
 import type { ArtPosition, CardFinish } from "@/types/card";
+import { refitArtForWindow, type FitWindow } from "@/lib/cards/art-fit";
 
 export type Size = { width: number; height: number };
 
@@ -135,7 +136,9 @@ export function carryArtFraming({
 
 /**
  * What the creator changes when the user moves a card to another frame:
- * the art framing carried to the new window (carryArtFraming), and a finish
+ * the art framing carried to the new window (carryArtFraming) — for a
+ * picture the maker placed BY HAND; an untouched one is on its automatic
+ * fit and takes the new window's (TODO 3b.18, lib/cards/art-fit.ts) — and a finish
  * the new frame can't show dropped — Etched masks by the frame's luminance
  * and all but vanishes on an edge-to-edge treatment (artReachesCardEdge)
  * until the etched frame treatment (4.28). Only the keys that change are
@@ -147,18 +150,28 @@ export function planTreatmentSwitch({
   finish,
   natural,
   position,
+  windows,
 }: {
   from: Pick<FrameProfile, "artSlot" | "orientation">;
   to: Pick<FrameProfile, "artSlot" | "orientation">;
   finish: CardFinish | null | undefined;
   natural: Size | null | undefined;
   position: ArtPosition | null | undefined;
+  /** The windows the positioner shows for the two frames (a see-through
+   *  master's own, 3b.13); the profiles' slots when not given. */
+  windows?: { from?: FitWindow | null; to?: FitWindow | null };
 }): { position?: ArtPosition; finish?: CardFinish } {
   const out: { position?: ArtPosition; finish?: CardFinish } = {};
   if (finish === "etched" && !finishAvailableOn(to, finish)) out.finish = "regular";
   if (position) {
-    const carried = carryArtFraming({ from, to, natural, position });
-    if (carried !== position) out.position = carried;
+    const next = refitArtForWindow({
+      from: windows?.from ?? rectPx(from.artSlot, from),
+      to: windows?.to ?? rectPx(to.artSlot, to),
+      natural,
+      position,
+      carry: (set) => carryArtFraming({ from, to, natural, position: set }),
+    });
+    if (next !== position) out.position = next;
   }
   return out;
 }

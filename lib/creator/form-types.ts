@@ -3,6 +3,7 @@
 // (lib/creator/steps.ts) can reference `FormValues` without importing the
 // client component (which would create a cycle + drag React into the test).
 
+import { fitArtToWindow } from "@/lib/cards/art-fit";
 import type {
   ArtPosition,
   CardType,
@@ -159,6 +160,6 @@ export const EMPTY_BACK_FACE: BackFaceFormValues = {
   defense: "",
   artist_credit: "",
   art_url: "",
-  art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
+  art_position: fitArtToWindow(),
   color_identity: [],
 };
