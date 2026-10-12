@@ -36,4 +36,7 @@ export const UNTOUCHED_SINCE_V22 = {
   art_url: null,
   // v49 (the symbols as printed) reads the cost too: this card has none.
   cost: null,
+  // v51 (the art's zoom about a focal point of 0) reads the art's position:
+  // none stored — and no art.
+  art_position: null,
 };
