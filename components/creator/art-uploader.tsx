@@ -12,6 +12,7 @@ import {
 import {
   ImagePlus,
   Loader2,
+  Maximize,
   Move,
   Trash2,
   Upload,
@@ -20,6 +21,15 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  ART_ZOOM_MAX,
+  artFillsWindow,
+  canZoomArtOut,
+  fitArtToWindow,
+  isArtFitted,
+  stepArtZoom,
+  visibleArtShare,
+} from "@/lib/cards/art-fit";
 import {
   SOFT_PRINT_PPI,
   artPrintPpi,
@@ -54,9 +64,20 @@ import type { ArtPosition } from "@/types/card";
 // (box − covered·zoom) px (focalTravel); we divide the drag by that.
 // ---------------------------------------------------------------------------
 
-// The renderers' own clamps (card-preview.tsx / card-image.tsx: 0.5 – 4).
+// A new picture lands on its AUTOMATIC FIT (TODO 3b.18, lib/cards/art-fit.ts:
+// it fills the window, centred) and stays on it — re-fitted by the form when
+// the frame changes — until the maker moves or zooms it. From then on the
+// framing is theirs and is never replaced; "Fit to frame" (and R / 0) puts
+// the picture back on the fit. The line under the buttons says which of the
+// two it is, and warns when a STORED zoom under 100 % leaves the window part
+// empty (a new zoom-out stops at 100 %).
+//
+// The renderers' own clamps (card-preview.tsx / card-image.tsx: 0.5 – 4) —
+// what a STORED zoom is shown at. A zoom the maker makes here stops at 100 %
+// on the way down (stepArtZoom, owner 2026-10-12): a stored card under 100 %
+// opens as it is and can only be zoomed up from where it stands.
 const MIN_SCALE = 0.5;
-const MAX_SCALE = 4;
+const MAX_SCALE = ART_ZOOM_MAX;
 const ZOOM_STEP = 0.05;
 const ACCEPTED_TYPES = CARD_ART_MIME_TYPES.join(",");
 // The EMPTY dropzone: a file target, not a crop — a comfortable fixed box.
@@ -96,6 +117,12 @@ export function ArtUploader({
   actionSlot,
 }: ArtUploaderProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  // The window a NEW picture is fitted to — read when its upload finishes
+  // (a ref: the upload callback must not change with every render).
+  const artWindowRef = useRef(artWindow);
+  useEffect(() => {
+    artWindowRef.current = artWindow;
+  });
   const dropzoneRef = useRef<HTMLDivElement | null>(null);
   // Snapshot of an in-progress pan: the pointer + focal origin and the px
   // the picture travels per unit of focal (focalTravel) captured on
@@ -201,7 +228,8 @@ export function ArtUploader({
         }
         onArtChange({
           artUrl: result.publicUrl,
-          artPosition: { focalX: 0.5, focalY: 0.5, scale: 1 },
+          // The picture's size isn't known yet; the fit needs neither.
+          artPosition: fitArtToWindow(artWindowRef.current, null),
         });
         toast.success("Artwork uploaded.");
       } finally {
@@ -378,9 +406,11 @@ export function ArtUploader({
 
   // ---- Wheel zoom --------------------------------------------------------
 
-  // Rounded so repeated steps never drift off the 5 % grid (0.1 + 0.2).
+  // The ONE way a zoom changes by hand: the − / + buttons, the − / + keys
+  // and Shift-scroll all come through here. A zoom-out stops at 100 %, and
+  // a stored zoom under it never goes lower (stepArtZoom).
   const zoomBy = (delta: number) => {
-    const next = clamp(Math.round((scale + delta) * 100) / 100, MIN_SCALE, MAX_SCALE);
+    const next = stepArtZoom(scale, delta);
     if (next !== scale) updatePosition({ scale: next });
   };
 
@@ -423,17 +453,20 @@ export function ArtUploader({
   const handleRemove = () => {
     onArtChange({
       artUrl: null,
-      artPosition: { focalX: 0.5, focalY: 0.5, scale: 1 },
+      artPosition: fitArtToWindow(artWindow, null),
     });
   };
 
-  const handleResetPosition = () => {
-    updatePosition({ focalX: 0.5, focalY: 0.5, scale: 1 });
+  // The ONE way back to the automatic fit: the button and the R / 0 keys.
+  // The picture counts as untouched again (its numbers ARE the fit), so it
+  // follows the frame from here on.
+  const handleFit = () => {
+    updatePosition(fitArtToWindow(artWindow, natural));
   };
 
   // Keyboard nudging on the dropzone — arrow keys move the focal point by
   // 1% (Shift = 5%), `+` / `=` zooms in, `-` / `_` zooms out, `r` / `0`
-  // resets. Matches the v2 spec. Only fires when the dropzone has focus
+  // fits the picture to the frame again. Matches the v2 spec. Only fires when the dropzone has focus
   // AND there's an artUrl (no point nudging an empty slot).
   const handleDropzoneKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!artUrl) {
@@ -473,7 +506,7 @@ export function ArtUploader({
       case "R":
       case "0":
         event.preventDefault();
-        handleResetPosition();
+        handleFit();
         return;
       default:
         return;
@@ -487,6 +520,19 @@ export function ArtUploader({
   const surfaceStyle = artUrl ? positionerSurfaceStyle(artWindow.aspect) : undefined;
   // How sharp this picture prints in this window at this zoom.
   const ppi = artPrintPpi(artWindow, natural, scale);
+  // Untouched (on the automatic fit) or placed by hand — read from the
+  // numbers themselves (lib/cards/art-fit.ts).
+  const fitted = isArtFitted(artPosition, artWindow, natural);
+  const fills = artFillsWindow(artPosition);
+  // A fitted picture much wider or taller than its window shows only a
+  // strip of itself: say how much, so a sliver isn't a surprise.
+  const share = fitted ? visibleArtShare(artWindow, natural) : null;
+  const strip =
+    share && Math.min(share.x, share.y) < 0.5
+      ? share.x < share.y
+        ? `the middle ${Math.round(share.x * 100)}% of its width`
+        : `the middle ${Math.round(share.y * 100)}% of its height`
+      : null;
 
   return (
     <div className={cn("flex flex-col gap-4", className)}>
@@ -537,7 +583,7 @@ export function ArtUploader({
         role={artUrl ? "group" : "button"}
         aria-label={
           artUrl
-            ? "Drag to reposition the art. Shift-scroll to zoom. Arrow keys nudge, +/- zoom, R resets."
+            ? "Drag to reposition the art. Shift-scroll to zoom. Arrow keys nudge, +/- zoom, R fits it to the frame again."
             : "Drop an image here or click to upload"
         }
         tabIndex={0}
@@ -625,7 +671,7 @@ export function ArtUploader({
                 size="sm"
                 aria-label="Zoom out"
                 onClick={() => zoomBy(-ZOOM_STEP)}
-                disabled={uploading || scale <= MIN_SCALE}
+                disabled={uploading || !canZoomArtOut(scale)}
               >
                 <ZoomOut className="h-4 w-4" aria-hidden />
               </Button>
@@ -650,10 +696,12 @@ export function ArtUploader({
               type="button"
               variant="ghost"
               size="sm"
-              onClick={handleResetPosition}
-              disabled={uploading}
+              onClick={handleFit}
+              disabled={uploading || fitted}
+              title="Fill the art window and centre the picture (R)"
             >
-              Reset position
+              <Maximize className="h-4 w-4" aria-hidden />
+              Fit to frame
             </Button>
             <Button
               type="button"
@@ -679,6 +727,22 @@ export function ArtUploader({
               ? " Shown upright — the card turns this half upside down."
               : ""}{" "}
           Sharpest at {best.width} × {best.height} px or larger.
+        </p>
+      ) : null}
+      {artUrl ? (
+        <p
+          className={cn("text-[11px] leading-5", fills ? "text-subtle" : "text-accent")}
+          data-testid="art-fit-status"
+          data-art-framing={fitted ? "fitted" : "by-hand"}
+          aria-live="polite"
+        >
+          {!fills
+            ? `At ${Math.round(scale * 100)}% the picture is smaller than the art window, so empty space shows on the card. Zoom in to 100%, or choose Fit to frame, to fill it. It can't be made smaller.`
+            : fitted
+              ? `Fitted to this frame: the picture fills the art window, centred${
+                  strip ? `, which shows ${strip}` : ""
+                }. It is fitted again if you change the frame, until you move or zoom it.`
+              : "Placed by hand: your framing is kept when you change the frame. Fit to frame centres it again."}
         </p>
       ) : null}
       {natural && ppi !== null && ppi < SOFT_PRINT_PPI ? (

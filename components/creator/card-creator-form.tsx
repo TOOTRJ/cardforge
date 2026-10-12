@@ -107,6 +107,7 @@ import { KindChangeDialog } from "@/components/creator/kind-change-dialog";
 import { ArtPanel } from "@/components/creator/panels/art-panel";
 import { TextPanel } from "@/components/creator/panels/text-panel";
 import {
+  useArtAutoFit,
   useImageNaturalSize,
   useTreatmentSwitch,
 } from "@/components/creator/use-treatment-switch";
@@ -262,6 +263,7 @@ import {
   importedAnatomy,
   importedFormAnatomy,
 } from "@/lib/cards/anatomy";
+import { fitArtToWindow } from "@/lib/cards/art-fit";
 import { artPositionerWindows } from "@/lib/cards/art-positioner-window";
 import {
   AnatomyPanel,
@@ -1999,11 +2001,7 @@ export function CardCreatorForm({
 
     if (importedArtUrl) {
       setValue("art_url", importedArtUrl, { shouldDirty: true });
-      setValue(
-        "art_position",
-        { focalX: 0.5, focalY: 0.5, scale: 1 },
-        { shouldDirty: true },
-      );
+      setValue("art_position", fitArtToWindow(), { shouldDirty: true });
     }
     // What the Art step's note reads while this art stays (TODO 1.18):
     // Scryfall's art_crop stops at the printed frame.
@@ -2042,7 +2040,7 @@ export function CardCreatorForm({
           defense: bf.defense ?? "",
           artist_credit: bf.artist_credit ?? "",
           art_url: bf.imported_art_url ?? "",
-          art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
+          art_position: fitArtToWindow(),
           // The back's own colour (TODO 5.4): the printing's back face's,
           // on a double-faced body — colourless on the land back; a legacy
           // back carries none and follows the front's. The body itself is
@@ -2393,7 +2391,7 @@ export function CardCreatorForm({
     }
     if (fill.art_url) {
       setValue("art_url", fill.art_url, { shouldDirty: true });
-      setValue("art_position", { focalX: 0.5, focalY: 0.5, scale: 1 }, { shouldDirty: true });
+      setValue("art_position", fitArtToWindow(), { shouldDirty: true });
       if (fill.artist_credit) {
         setValue("artist_credit", fill.artist_credit, { shouldDirty: true });
       }
@@ -3204,6 +3202,28 @@ export function CardCreatorForm({
   // preview above draws — read from the same props, so a frame, colour or
   // back-type change moves the positioner with the preview.
   const artWindows = artPositionerWindows(previewProps);
+  // An untouched picture stays on its automatic fit when its face's window
+  // changes (TODO 3b.18); a hand-set one is never re-fitted. Each face to
+  // ITS window: the front's, and the second half's or the back's.
+  useArtAutoFit({
+    field: "art_position",
+    artWindow: artWindows.front,
+    artUrl: watched.art_url,
+    natural: artNaturalSize,
+    isDirty,
+    getValues,
+    setValue,
+  });
+  const otherFaceArtUrl = watched.back_face?.art_url;
+  useArtAutoFit({
+    field: "back_face.art_position",
+    artWindow: artWindows.second ?? artWindows.back,
+    artUrl: otherFaceArtUrl,
+    natural: useImageNaturalSize(otherFaceArtUrl),
+    isDirty,
+    getValues,
+    setValue,
+  });
 
   // ---- Render pieces shared by both layouts ----
   // The step panels, the once-mounted dialogs and the action bar are the
