@@ -109,6 +109,54 @@ export function typesAfterSupertypeChange(
   return words.join(" ");
 }
 
+/**
+ * A typed Types text after the card's TYPE changed (the Card step's kind, a
+ * back face's type chips): the old type's word, where the line still says
+ * it, becomes the new type's — "Legendary Creature" turned planeswalker is
+ * "Legendary Planeswalker", in the maker's order. Left as "Legendary
+ * Creature" the old word became a type word of the new card: an instant
+ * that prints "Creature" and a power / toughness, which no Reset undid. A
+ * line that already says the new word only loses the old one ("Land
+ * Creature" turned creature → "Creature"). Everything else is the maker's
+ * and stays: a line they took the type's word out of, and any change to or
+ * from a token, whose words are all its own.
+ */
+export function typesAfterCardTypeChange(
+  typed: string,
+  before: CardType | "" | null | undefined,
+  after: CardType | "" | null | undefined,
+): string {
+  const was = baseTypeWord(before);
+  const now = baseTypeWord(after);
+  const words = supertypeWords(typed);
+  if (!was || !now || was === now) return words.join(" ");
+  const at = words.findIndex((word) => word.toLowerCase() === was.toLowerCase());
+  if (at < 0) return words.join(" ");
+  const saysNew = words.some((word) => word.toLowerCase() === now.toLowerCase());
+  return [...words.slice(0, at), ...(saysNew ? [] : [now]), ...words.slice(at + 1)].join(" ");
+}
+
+/**
+ * A DASH typed in the Types field. The field holds the words LEFT of the
+ * dash and the card draws the dash itself before the subtypes, so "Creature
+ * - Goblin" typed here printed two ("Creature — Goblin — Wizard") and left a
+ * "—" among the card's type words. The words after the first dash are the
+ * subtypes the maker meant: this hands them back apart, for the creator to
+ * move into the Subtypes field (components/creator/types-field.tsx). A dash
+ * is an em or en dash anywhere, or hyphens standing alone as a word — never
+ * the hyphen inside one ("Assembly-Worker").
+ */
+export function splitTypedDash(typed: string): { types: string; subtypes: string[] } {
+  const words = supertypeWords(typed.replace(/[—–]+/g, " — "));
+  const isDash = (word: string) => /^[—–-]+$/.test(word);
+  const at = words.findIndex(isDash);
+  if (at < 0) return { types: words.join(" "), subtypes: [] };
+  return {
+    types: words.slice(0, at).join(" "),
+    subtypes: words.slice(at + 1).filter((word) => !isDash(word)),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Capitals (owner 2026-10-09, answer 3): each word of a type line is
 // capitalised as prints set it, whatever case was typed.

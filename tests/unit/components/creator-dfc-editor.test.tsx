@@ -297,7 +297,7 @@ describe("a new transform card", () => {
     expect(chipIn("Back face color", /^colorless/i).disabled).toBe(false);
   });
 
-  it("the back face has its own Types field (3b.16): pre-filled with its type's word, the maker's order kept, re-read when the back's type changes", async () => {
+  it("the back face has its own Types field (3b.16): pre-filled with its type's word, the maker's order kept, following the back's type when it changes", async () => {
     renderForm();
     await clickChip("Card type", /^Transform/);
     await clickChip("Color identity", /^blue/i);
@@ -312,18 +312,18 @@ describe("a new transform card", () => {
     expect(back().value).toBe("Creature Legendary Horror");
     // The preview's back carries the typed line and the words but "Creature".
     expect(preview().backFace).toMatchObject({ supertype: "Legendary Horror", printed_types: "Creature Legendary Horror" });
-    // The back's type changes: the text is the maker's, kept; its words are
-    // re-read against the new type ("Creature" is now a word of its own).
+    // The back's type changes: the old type's word becomes the new one's,
+    // where the maker set it; the other words are kept and re-read.
     await clickChip("Back face type", /^Artifact/);
-    expect(back().value).toBe("Creature Legendary Horror");
-    expect(preview().backFace).toMatchObject({ card_type: "artifact", supertype: "Creature Legendary Horror" });
+    expect(back().value).toBe("Artifact Legendary Horror");
+    expect(preview().backFace).toMatchObject({ card_type: "artifact", supertype: "Legendary Horror" });
     await act(async () => {
       fireEvent.click(screen.getByTestId("types-field-reset-back"));
     });
     expect(preview().backFace).not.toHaveProperty("printed_types");
     // The built line (TODO 1.20): ranked words in printed order, nothing
     // moved across a word the order doesn't know ("Horror").
-    expect(back().value).toBe("Legendary Creature Horror Artifact");
+    expect(back().value).toBe("Legendary Horror Artifact");
   });
 
   it("a land back goes colourless (the land back is verified on `c` alone) and follows the front again when the type leaves land", async () => {

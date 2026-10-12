@@ -13,13 +13,13 @@ import { renderCardImage } from "@/lib/render/card-image";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import {
-  BAKE_SELECT_COLUMNS,
   CLEARED_RENDER_POINTERS,
   rowToPreviewData,
   type CardRowForBake,
   removeRenderObjects,
   uploadRenderObjects,
 } from "@/lib/cards/bake-core";
+import { selectBakeColumns } from "@/lib/cards/bake-select";
 import { bakedBackOf } from "@/lib/cards/faces";
 import { TRANSPARENT_PIXEL_DATA_URL, resolveRenderableImage } from "@/lib/render/art-source";
 import { getPipOverrides } from "@/lib/pips/queries";
@@ -169,11 +169,12 @@ async function bakeCardRender(
   // Re-read the card after the save so we render exactly what's in the DB,
   // not what the action handler thinks it just wrote. Catches edge cases
   // where validation munged a field or a trigger normalized it.
-  const { data: card, error: fetchErr } = await supabase
-    .from("cards")
-    .select(BAKE_SELECT_COLUMNS)
-    .eq("id", cardId)
-    .maybeSingle();
+  // (selectBakeColumns: the same read without `printed_types` on a database
+  // migration 0137 has not reached yet — lib/cards/bake-select.ts.)
+  const { data, error: fetchErr } = await selectBakeColumns((columns) =>
+    supabase.from("cards").select(columns).eq("id", cardId).maybeSingle(),
+  );
+  const card = data as unknown as (CardRowForBake & { visibility: string; updated_at: string }) | null;
 
   if (fetchErr || !card) {
     return { ok: false, error: fetchErr?.message ?? "Card not found." };

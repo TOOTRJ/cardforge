@@ -12,7 +12,9 @@ import {
   capitalizeTypeWords,
   derivedTypesText,
   resolvePrintedTypes,
+  splitTypedDash,
   supertypeFromTypes,
+  typesAfterCardTypeChange,
   typesAfterSupertypeChange,
   typesFieldText,
   withPrintedTypes,
@@ -248,6 +250,66 @@ describe("another control changes a face's type words while a line is typed", ()
     expect(sync("Snow Legendary Creature", "Snow Legendary Creature", "Snow Legendary")).toBe("Snow Legendary");
     expect(sync("Creature Legendary", "Legendary", "")).toBe("Creature");
     expect(sync("Creature Legendary", "Legendary", "legendary")).toBe("Creature Legendary");
+  });
+});
+
+describe("the card type changes while a line is typed", () => {
+  it("the old type's word becomes the new type's, in the maker's place", () => {
+    expect(typesAfterCardTypeChange("Legendary Creature", "creature", "planeswalker")).toBe("Legendary Planeswalker");
+    expect(typesAfterCardTypeChange("Creature Legendary Snow", "creature", "instant")).toBe("Instant Legendary Snow");
+    expect(typesAfterCardTypeChange("legendary creature", "creature", "land")).toBe("legendary Land");
+    // …so the old word never turns into a type word of the new card.
+    const text = typesAfterCardTypeChange("Legendary Creature", "creature", "instant");
+    expect(showsPowerToughness("instant", [], supertypeFromTypes(text, "instant"))).toBe(false);
+    expect(showsPowerToughness("instant", [], supertypeFromTypes("Legendary Creature", "instant"))).toBe(true);
+  });
+
+  it("a line that already says the new word only loses the old one", () => {
+    expect(typesAfterCardTypeChange("Land Creature", "land", "creature")).toBe("Creature");
+    expect(typesAfterCardTypeChange("Artifact Creature", "creature", "artifact")).toBe("Artifact");
+  });
+
+  it("keeps a line without the old type's word, and every change to or from a token", () => {
+    expect(typesAfterCardTypeChange("Goblin", "creature", "land")).toBe("Goblin");
+    expect(typesAfterCardTypeChange("", "creature", "land")).toBe("");
+    expect(typesAfterCardTypeChange("Legendary Creature", "creature", "token")).toBe("Legendary Creature");
+    expect(typesAfterCardTypeChange("Artifact Creature", "token", "creature")).toBe("Artifact Creature");
+    expect(typesAfterCardTypeChange("Legendary Creature", "creature", "creature")).toBe("Legendary Creature");
+    expect(typesAfterCardTypeChange("Legendary Creature", "", "creature")).toBe("Legendary Creature");
+  });
+});
+
+describe("a dash typed in the Types field starts the subtypes (the card draws the dash itself)", () => {
+  it("splits at the first dash; the words after it are the subtypes", () => {
+    expect(splitTypedDash("Creature — Goblin Wizard")).toEqual({ types: "Creature", subtypes: ["Goblin", "Wizard"] });
+    expect(splitTypedDash("Legendary Creature - Goblin")).toEqual({ types: "Legendary Creature", subtypes: ["Goblin"] });
+    expect(splitTypedDash("Creature—Goblin")).toEqual({ types: "Creature", subtypes: ["Goblin"] });
+    expect(splitTypedDash("Creature – Goblin -- Wizard — Shaman")).toEqual({
+      types: "Creature",
+      subtypes: ["Goblin", "Wizard", "Shaman"],
+    });
+    expect(splitTypedDash("Creature —")).toEqual({ types: "Creature", subtypes: [] });
+    expect(splitTypedDash("— Goblin")).toEqual({ types: "", subtypes: ["Goblin"] });
+  });
+
+  it("leaves a line with no dash, and the hyphen inside a word, alone", () => {
+    expect(splitTypedDash("Legendary Creature")).toEqual({ types: "Legendary Creature", subtypes: [] });
+    expect(splitTypedDash("Assembly-Worker Creature")).toEqual({ types: "Assembly-Worker Creature", subtypes: [] });
+    expect(splitTypedDash("")).toEqual({ types: "", subtypes: [] });
+  });
+
+  it("without it the typed dash printed twice and sat among the card's type words", () => {
+    // The finding (skeptic check of #510): what the field stored as typed.
+    const typed = printTypography("Creature - Goblin", "type");
+    expect(buildTypeLine({ cardType: "creature", supertype: null, subtypes: ["Wizard"], printedTypes: typed })).toBe(
+      "Creature — Goblin — Wizard",
+    );
+    expect(supertypeFromTypes(typed, "creature")).toBe("— Goblin");
+    const { types, subtypes } = splitTypedDash(typed);
+    expect(buildTypeLine({ cardType: "creature", supertype: null, subtypes: ["Wizard", ...subtypes], printedTypes: types })).toBe(
+      "Creature — Wizard Goblin",
+    );
+    expect(supertypeFromTypes(types, "creature")).toBe("");
   });
 });
 

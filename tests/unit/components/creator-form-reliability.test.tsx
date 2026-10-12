@@ -1345,26 +1345,92 @@ describe("3b.15 the token type picker", () => {
     expect(preview().printedTypes).toBeNull();
   });
 
-  it("a typed line is kept when the card type changes, and its words keep deciding the P/T (3b.16)", async () => {
+  it("a dash typed in the Types field moves the words after it to Subtypes — one dash on the card (3b.16)", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_ARTIFACT_TOKEN });
+    await pickKind(/^Creature/);
+    await clickNext();
+    const subtypesField = () => screen.getByPlaceholderText("Dragon, Elder") as HTMLInputElement;
+    await act(async () => {
+      fireEvent.change(subtypesField(), { target: { value: "Wizard" } });
+      fireEvent.change(typesField(), { target: { value: "legendary creature - goblin wizard" } });
+      fireEvent.blur(typesField());
+    });
+    // "Wizard" was there already: it is not listed twice.
+    expect(typesField().value).toBe("Legendary Creature");
+    expect(subtypesField().value).toBe("Wizard, Goblin");
+    expect(preview().supertype).toBe("Legendary");
+    // A dash with nothing after it is dropped; a hyphen inside a word stays.
+    await act(async () => {
+      fireEvent.change(typesField(), { target: { value: "Assembly-Worker Creature —" } });
+      fireEvent.blur(typesField());
+    });
+    expect(typesField().value).toBe("Assembly-Worker Creature");
+    expect(subtypesField().value).toBe("Wizard, Goblin");
+    expect(preview().supertype).toBe("Assembly-Worker");
+  });
+
+  it("a typed line follows a card type change: the old type's word becomes the new one's, the rest is kept (3b.16)", async () => {
     renderForm({ mode: "create", verifiedFrameKeys: WITH_ARTIFACT_TOKEN });
     await pickKind(/^Creature/);
     await clickNext();
     await act(async () => {
-      fireEvent.change(typesField(), { target: { value: "Goblin Creature" } });
+      fireEvent.change(typesField(), { target: { value: "Goblin Creature Snow" } });
     });
-    expect(preview().supertype).toBe("Goblin");
+    expect(preview().supertype).toBe("Goblin Snow");
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /^Back/ }));
     });
     await pickKind(/^Land/);
-    // The text is the maker's: kept, and re-read against the new type — on a
-    // land "Creature" is a type word of its own (Dryad Arbor's rule).
+    // The maker's words and order stay; "Creature" was the old type's word,
+    // not a type word typed onto a land — so no P/T follows it there.
     expect(preview().cardType).toBe("land");
-    expect(preview().printedTypes).toBe("Goblin Creature");
-    expect(preview().supertype).toBe("Goblin Creature");
+    expect(preview().printedTypes).toBe("Goblin Land Snow");
+    expect(preview().supertype).toBe("Goblin Snow");
     await clickNext();
-    expect(typesField().value).toBe("Goblin Creature");
+    expect(typesField().value).toBe("Goblin Land Snow");
+    expect(screen.queryByTestId("types-field-note-front")).toBeNull();
+  });
+
+  it("a line whose maker took the type's word out is kept whole across a card type change (3b.16)", async () => {
+    renderForm({ mode: "create", verifiedFrameKeys: WITH_ARTIFACT_TOKEN });
+    await pickKind(/^Creature/);
+    await clickNext();
+    await act(async () => {
+      fireEvent.change(typesField(), { target: { value: "Goblin" } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Back/ }));
+    });
+    await pickKind(/^Land/);
+    expect(preview().printedTypes).toBe("Goblin");
+    expect(preview().supertype).toBe("Goblin");
+    await clickNext();
     expect(screen.getByTestId("types-field-note-front").textContent).toContain("doesn’t say “Land”");
+  });
+
+  it("an edit re-words the PRINTED line only: the card's type words, its P/T and a typed dash stay as they are (3b.16)", async () => {
+    renderForm({
+      mode: "edit",
+      verifiedFrameKeys: WITH_ARTIFACT_TOKEN,
+      card: savedCard({ card_type: "land", supertype: "goblin", subtypes: ["Forest"], power: null, toughness: null, cost: null }),
+    });
+    // The stored line, as it prints today — not re-spelled by a focus.
+    expect(typesField().value).toBe("goblin Land");
+    await act(async () => {
+      fireEvent.focus(typesField());
+      fireEvent.blur(typesField());
+    });
+    expect(typesField().value).toBe("goblin Land");
+    expect(preview().printedTypes).toBeNull();
+    // "Creature" typed on a saved land prints, and changes nothing else:
+    // the type words (`supertype`) are locked on an edit.
+    await act(async () => {
+      fireEvent.change(typesField(), { target: { value: "land creature - dryad" } });
+      fireEvent.blur(typesField());
+    });
+    expect(typesField().value).toBe("Land Creature — Dryad");
+    expect(preview().printedTypes).toBe("Land Creature — Dryad");
+    expect(preview().supertype).toBe("goblin");
   });
 
   it("a stored token from before the picker opens as a Creature token with its P/T", async () => {
