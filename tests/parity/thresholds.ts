@@ -66,9 +66,23 @@ export type Limits = {
   tileMad: number;
 };
 
+/**
+ * Measured 2026-10-12 on CI's runner (linux; macOS measures the same to
+ * within a pixel) over the 34 cases, 272 regions a size:
+ *
+ *   750  offsets: 0 px on 178 regions across / 201 down, ±1 on 58 / 59,
+ *        ±2 on 31 / 16, more on 9 (the known differences below);
+ *        region mad ≤ 27.0, hot ≤ 21 %, card mad ≤ 6.4, worst tile ≤ 84.0
+ *   hd   offsets: 0 px on 203 / 117, ±1 on 68 / 68, ±2 on 5 / 58, −3 down
+ *        on 33 (the known difference below);
+ *        region mad ≤ 15.5, hot ≤ 14 %, card mad ≤ 4.9, worst tile ≤ 56.9
+ *
+ * The offset limit is 2 px at both sizes (at HD: one CSS pixel). The
+ * difference limits are the worst measured plus about 15 %.
+ */
 export const LIMITS: Record<SizeName, Limits> = {
-  "750": { shift: 2, mad: 24, hot: 0.2, cardMad: 7.5, tileMad: 95 },
-  hd: { shift: 2, mad: 18, hot: 0.16, cardMad: 5.8, tileMad: 65 },
+  "750": { shift: 2, mad: 31, hot: 0.25, cardMad: 7.5, tileMad: 95 },
+  hd: { shift: 2, mad: 18, hot: 0.17, cardMad: 5.8, tileMad: 65 },
 };
 
 export type Metric = "dx" | "dy" | "mad" | "hot" | "cardMad" | "tileMad";
@@ -92,6 +106,13 @@ export type KnownDifference = {
 /** Every text slot a profile can name (tests/parity/regions.ts). */
 const TEXT_REGIONS = ["title", "cost", "type", "symbol", "rules", "stat", "second.title", "second.type", "second.rules", "page.title", "page.rules"] as const;
 
+/**
+ * Every entry is a difference between the two renderers that exists TODAY
+ * (measured 2026-10-12, CI's runner and macOS alike) — nothing here was
+ * introduced or excused by this suite. Bounds: the measured value, and one
+ * pixel further out. "Why" says what is seen; where the cause was not traced
+ * it says so.
+ */
 export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
   {
     name: "hd-text-rise",
@@ -99,17 +120,66 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
     cases: /./,
     regions: TEXT_REGIONS,
     metric: "dy",
-    min: -3,
+    min: -4,
     max: -3,
-    why: "PROVISIONAL",
+    why:
+      "At HD the preview's text sits ABOVE the bake's: by 1 px on 57 regions, 2 px on 58 and 3 px (1.5 CSS px) on 33 of 272 — names, type lines, rules and set symbols on most templates (the short M15 creature: name, type line and rules all −3). The 750 px comparison shows the same rise as −1 / −2. Seen on every text face; not traced further (the two engines place a line's baseline from the font's metrics independently). The frame, the art and the plates do not move with it.",
   },
-  { name: "750-cost-row", size: "750", cases: /^m15(borderless|textless)?\//, regions: ["cost"], metric: "dx", min: -4, max: -3, why: "PROVISIONAL" },
-  { name: "750-emblem-title", size: "750", cases: /^emblem\//, regions: ["cost"], metric: "dx", min: 3, max: 5, why: "PROVISIONAL" },
-  { name: "750-emblem-title-mad", size: "750", cases: /^emblem\//, regions: ["cost"], metric: "mad", min: 0, max: 30, why: "PROVISIONAL" },
-  { name: "750-emblem-title-hot", size: "750", cases: /^emblem\//, regions: ["cost"], metric: "hot", min: 0, max: 0.24, why: "PROVISIONAL" },
-  { name: "750-retro-type-line", size: "750", cases: /^retro\//, regions: ["symbol"], metric: "dx", min: 4, max: 6, why: "PROVISIONAL" },
-  { name: "750-token-flavour-end", size: "750", cases: /^m15tokentext\//, regions: ["stat"], metric: "dx", min: -4, max: -3, why: "PROVISIONAL" },
-  { name: "750-footer", size: "750", cases: /^(agclassic|m15tokentext)\//, regions: ["footer"], metric: "dx", min: 3, max: 3, why: "PROVISIONAL" },
+  {
+    name: "750-cost-row-width",
+    size: "750",
+    cases: /^m15(borderless|textless)?\//,
+    regions: ["cost"],
+    metric: "dx",
+    min: -4,
+    max: -3,
+    why:
+      "At 750 px a cost row of five or more pips starts 2–3 px further LEFT in the preview than in the bake (its right end agrees): the preview's row is wider by about half a pixel a pip. The HD comparison of the same cards measures 0, which points at the 750 px bake's whole-pixel disc and gap sizes (the preview keeps fractions); not traced to the line. Measured −3 on the M15 long card (collector, symbols, etched), m15borderless and m15textless; −2 on four more.",
+  },
+  {
+    name: "750-emblem-title-end",
+    size: "750",
+    cases: /^emblem\//,
+    regions: ["cost"],
+    metric: "dx",
+    min: 4,
+    max: 5,
+    why:
+      "The emblem's long name (it has no cost: this region is the name band's right end) runs 4 px further RIGHT in the preview at 750 px — the line is that much wider there than in the 750 px bake; the two agree across at HD (0). Like the other 750-only entries it is a width difference of the 750 px bake, seen here on a line that fills its band; not traced to a constant.",
+  },
+  {
+    name: "750-retro-type-line-end",
+    size: "750",
+    cases: /^retro\//,
+    regions: ["symbol"],
+    metric: "dx",
+    min: 5,
+    max: 6,
+    why:
+      "On the 1997 frame the type line (MPlantin, white with a hard shadow) ends 5 px further RIGHT in the preview at 750 px; the set symbol beside it does not move. At HD the line's end agrees (0 across, 3 px up — the rise above). A width difference of the 750 px bake's type line, not traced to a constant.",
+  },
+  {
+    name: "750-token-flavour-end",
+    size: "750",
+    cases: /^m15tokentext\//,
+    regions: ["stat"],
+    metric: "dx",
+    min: -4,
+    max: -3,
+    why:
+      "On the arch token with a text box the last flavour line (italic; it runs into the P/T plate's region) ends 3 px further LEFT in the preview at 750 px: the italic line is narrower there than in the 750 px bake. The P/T digits themselves agree; at HD the region measures 0 across.",
+  },
+  {
+    name: "750-artist-line-end",
+    size: "750",
+    cases: /^(agclassic|m15tokentext)\//,
+    regions: ["footer"],
+    metric: "dx",
+    min: 3,
+    max: 4,
+    why:
+      "The artist line (letter-spaced small capitals; `Illus. …` on the 1993 frame) is WIDER in the preview at 750 px: it ends 2 px further right on most cases and 3 px on the 1993 frame (and on the arch token on macOS). At HD the same line is NARROWER in the preview by about 6 px — within the limits there, but the worst tile of most HD cases (56.9). Both renderers start the line at the same x; they disagree about its letter-spacing or advances. Not traced.",
+  },
 ];
 
 /** How far a measurement may be from its recorded baseline. */

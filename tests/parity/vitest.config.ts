@@ -2,12 +2,11 @@ import { defineConfig } from "vitest/config";
 import path from "node:path";
 
 // ---------------------------------------------------------------------------
-// Vitest config for the visual-regression bake (TODO 7.1) — NOT part of
-// `npm run test:unit` (the root config only includes tests/unit). Run it
-// through scripts/visual-regression.mjs (`npm run test:visual`), which fetches
-// the frames, starts one process per shard and gates the merged hashes; a
-// bare `vitest run -c tests/visual/vitest.config.ts` bakes shard 0/1 without
-// the gate.
+// Vitest config for the BAKE half of the preview ⇄ bake parity suite (TODO
+// 3.11) — NOT part of `npm run test:unit` (the root config only includes
+// tests/unit). Run it through scripts/parity.mjs (`npm run test:parity`),
+// which fetches the frames, bakes in shards and then starts the browser
+// half (tests/parity/playwright.config.ts).
 // ---------------------------------------------------------------------------
 
 const ROOT = path.resolve(__dirname, "../..");
