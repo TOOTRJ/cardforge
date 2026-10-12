@@ -5481,7 +5481,8 @@ the plain cost disc's size.
 one answer to "how big is this pip": the rules layout measures a pip with
 them (`pipWidthPx`, `pipTopOf` in `lib/cards/rules-layout.ts` — widths, ink
 boxes, keep-outs, the clip check), the cost row's room for the name
-(`costRowTerms`), and both renderers draw `manaGemSpec().discPx` at
+(`costRowTerms` beside an inline cost; `manaCostWidthPct` before a detached
+one since v52, below), and both renderers draw `manaGemSpec().discPx` at
 `pipTopOf` — a larger disc keeps a plain pip's centre. The snow flake is
 ONE inline SVG both renderers draw from the spec (`SnowFlakeSpec`: the
 font's white parts — `lib/cards/snow-flake-path.ts`, glyph data of
@@ -5522,6 +5523,48 @@ HD bake (m15, the 2003 and 1997 frames, a walker's rows, a saga's rail; 750
 and 1500 px; 178 pips, each of the six in a cost and in text): every
 symbol's ink box within 2 px in place and size (the two-colour disc's pair
 of symbols within 4).
+
+**The name before a detached cost (layout v52, TODO 6.16d; owner
+2026-10-12).** Four templates place the cost in a box of its own
+(`FrameProfile.costRect`: `modern`, `m15pw`, `m15borderlesspw`,
+`m15borderlesspwtall`; `modernland` has the box but hides its cost) and fit
+the name to the room the row leaves: `titleBandRoomPct` →
+`manaCostWidthPct` (`lib/cards/title-band.ts`). That measure counted every
+pip as ONE plain disc, so since v49 a Phyrexian symbol's ×1.2 disc was not
+in it and a long name was set wider than its room. It now counts each pip at
+`pipScale()` — the same one source `costRowTerms` reads for an inline cost;
+there is no second table — and a plain pip's factor is exactly 1, so a cost
+without a larger disc measures to the same float and bakes to the same
+pixels.
+
+Name end → first disc at HD (1500 px wide), the longest name the fit keeps
+whole, on a flat stand-in master (negative: the name runs under the discs):
+
+| symbols | `modern` plain | `modern` Phyrexian, before → after | `m15pw` plain | `m15pw` Phyrexian, before → after |
+|---|---|---|---|---|
+| 1 | 52 | 39 → 39 | 35 | 19 → 46 |
+| 3 | 52 | 13 → 38 | 48 | 2 → 49 |
+| 5 | 53 | −12 → 54 | 31 | −45 → 40 |
+| 7 | 49 | −42 → 47 | 39 | −67 → 31 |
+| 10 | 39 | −91 → 39 | 28 | −123 → 23 |
+
+The two borderless walkers measure as `m15pw` (the same band and box) to
+within 2 px. The plain columns are the same numbers on both commits. The
+row as DRAWN is still a little longer than measured — the cost discs'
+shadow and whole-px rounding, up to 1 px a pip, which no plain cost counted
+either: measuring the detached row with `costRowWidthPct` would move every
+`modern` / walker name by a pixel or two and is not part of this.
+`tests/unit/render/title-room-scaled-pips-bake.test.tsx` holds 20 px of air
+on real bakes of all four at 0–10 such symbols, at 750 px and HD.
+
+A CORRECTION: `"sweep"`, no badge. Scoped to the four templates
+(`V52_DETACHED_COST_TEMPLATES`) AND to a card whose own cost holds a
+Phyrexian symbol (`v52Changed`); every other card is stamped.
+Verification-neutral (no slot, master, size or plate moves). Production
+(anonymous read, 2026-10-12): 17 public cards on the four templates, no
+visible card on any template with a Phyrexian symbol in its cost — nothing
+stored re-bakes. The visual matrix: no existing case changes; six are new
+(`@phyrexian-cost-3`, `-5`, `-5-hd` on `modern` and `m15pw`).
 
 **A pip's class is never written out as a literal.** mana-font's class for
 generic mana is `ms-` + the number, and Tailwind reads the same token as a
