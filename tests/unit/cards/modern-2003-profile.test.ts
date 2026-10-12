@@ -170,7 +170,9 @@ describe("the 2003 footer — the brush and the artist over the © slot, left-al
       // The footer text runs to 1095 px at most: short of the P/T box.
       expect(px(slot.startPct!) + slot.maxWidthPct * HD_W).toBeLessThan(1112);
     }
-    expect(modern.copyrightSlot!.darkMarkKeys).toEqual(["w", "u", "r", "g", "c", "m"]);
+    // The ten pair masters (TODO 4.6h) are the gold frame under the line:
+    // dark there too.
+    expect(modern.copyrightSlot!.darkMarkKeys).toEqual(["w", "u", "r", "g", "c", "m", ...["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"]]);
     expect(land.copyrightSlot!.darkMarkKeys).toBeUndefined();
     for (const key of KEYS) {
       const display = copyrightSlotLayout(modern, key, { kind: "display" })!;

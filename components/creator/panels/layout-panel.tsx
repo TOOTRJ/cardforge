@@ -32,6 +32,7 @@ import {
 } from "@/lib/creator/form-types";
 import { SECOND_FACE_NAME_HINT } from "@/lib/cards/second-face-name";
 import type { ArtWindow } from "@/lib/cards/art-positioner-window";
+import { PtNotDrawnNote } from "@/components/creator/pt-not-drawn-note";
 
 type LayoutPanelProps = {
   userId: string | null;
@@ -253,6 +254,9 @@ export function LayoutPanel({
                     autoComplete="off"
                   />
                 </FieldGroup>
+                {/* A split or aftermath half has no P/T slot: say so once
+                    a number is typed (this row isn't gated on the type). */}
+                <PtNotDrawnNote face="second" onlyWithValue className="sm:col-span-4" />
               </div>
 
               <FieldGroup label="Artist credit">

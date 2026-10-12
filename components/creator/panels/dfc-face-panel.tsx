@@ -47,6 +47,7 @@ import { ColorSection, colorSummaryOf } from "@/components/creator/panels/color-
 import { DfcIconFamilySection } from "@/components/creator/panels/dfc-setup-sections";
 import { parseSubtypes } from "@/lib/creator/card-fields";
 import { statVisibility } from "@/lib/creator/steps";
+import { PtNotDrawnNote } from "@/components/creator/pt-not-drawn-note";
 import { SECOND_FACE_NAME_HINT } from "@/lib/cards/second-face-name";
 import type { ArtWindow } from "@/lib/cards/art-positioner-window";
 import { DFC_FACE_TYPES, colorlessFaceAllowed, type DfcIconFamily, type DfcLayout } from "@/lib/cards/dfc";
@@ -353,6 +354,8 @@ export function DfcFacePanel({
               autoComplete="off"
             />
           </FieldGroup>
+          {/* A land back body has no P/T slot: say so. */}
+          <PtNotDrawnNote face="second" backBody={backBody} className="sm:col-span-2" />
         </div>
       ) : null}
 

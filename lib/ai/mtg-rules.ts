@@ -318,8 +318,9 @@ export function lintCardDesign(card: LintableCard): LintResult {
   }
 
   // ---- Stat slots per type ----
-  // A P/T belongs to a creature, a creature TOKEN (its supertype says
-  // "Creature" — a Treasure or a Shard has none, TODO 3b.15) and a Vehicle
+  // A P/T belongs to a creature, any other card whose supertype says
+  // "Creature" (a creature TOKEN — a Treasure or a Shard has none, TODO
+  // 3b.15 — and a land creature, TODO 1.20) and a Vehicle
   // or Spacecraft: the rule the creator and the renderers use
   // (showsPowerToughness).
   const isCreatureLike = showsPowerToughness(type, card.subtypes, card.supertype);

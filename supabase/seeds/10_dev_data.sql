@@ -395,7 +395,31 @@ Whenever Thornscale Behemoth attacks, it gets +2/+2 until end of turn.', '10', '
      '{"template":"agclassic","finish":"regular"}'::jsonb, 1),
   ('c0000000-0000-4000-a000-000000000066'::uuid, 'Mistvale Island', 'mistvale-island', null, array['blue'], 'Basic', 'land', array['Island'], 'common',
      E'{T}: Add {U}.', null, null, 13,
-     '{"template":"alphaland","finish":"regular"}'::jsonb, 1)
+     '{"template":"alphaland","finish":"regular"}'::jsonb, 1),
+  -- TODO 4.6h: two colours on the old frames, a card's own switch (no bump,
+  -- no sweep). A G|W creature on `modern` stored the way a NEW card is, the
+  -- switch on: the gold frame with a green-to-white pinline (the narrow
+  -- blend bg, gw and rw print) and text box under the gold P/T box; a U|R
+  -- instant stored the way every card saved BEFORE this was — no key — so it
+  -- stays plain gold, and its editor shows the switch off with its hint
+  -- (switching it on draws the wide blue-to-red blend); a W|U land on
+  -- `modernland` (the plain land's grey bars, the pinline and the box
+  -- split) and a B|R land on `retroland` (the plain land with its box and
+  -- the box's ring split), both with the switch on. On a fresh database an
+  -- admin edits these with `?previewFrames=modern,modernland,retroland`.
+  -- Ids …069–…072 (…067 / …068 are the printed-symbols rows).
+  ('c0000000-0000-4000-a000-000000000069'::uuid, 'Vinewall Lookout', 'vinewall-lookout', '{G}{W}', array['green','white'], null, 'creature', array['Wolf'], 'uncommon',
+     E'Vigilance\n{T}: Add {G} or {W}.', '3', '3', 5,
+     '{"template":"modern","finish":"regular","twoColor":true}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000070'::uuid, 'Stormglass Rebuke', 'stormglass-rebuke', '{1}{U}{R}', array['blue','red'], null, 'instant', array[]::text[], 'uncommon',
+     E'Stormglass Rebuke deals 2 damage divided as you choose among any number of targets.\nDraw a card.', null, null, 7,
+     '{"template":"modern","finish":"regular"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000071'::uuid, 'Cloudfen Terrace', 'cloudfen-terrace', null, array['white','blue'], null, 'land', array['Plains','Island'], 'rare',
+     E'({T}: Add {W} or {U}.)\nAs Cloudfen Terrace enters, you may pay 2 life. If you don''t, it enters tapped.', null, null, 15,
+     '{"template":"modernland","finish":"regular","twoColor":true}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000072'::uuid, 'Ashmoor Springs', 'ashmoor-springs', null, array['black','red'], null, 'land', array[]::text[], 'rare',
+     E'{T}: Add {C}.\n{T}: Add {B} or {R}. Ashmoor Springs deals 1 damage to you.', null, null, 18,
+     '{"template":"retroland","finish":"regular","twoColor":true}'::jsonb, 1)
 ) as c (id, title, slug, cost, colors, supertype, card_type, subtypes, rarity,
         rules_text, power, toughness, art, frame_style, age_days)
 on conflict (id) do nothing;

@@ -109,6 +109,14 @@ describe("validateDeck — 60-card constructed", () => {
     expect(validateDeck("standard", deck)).toEqual([]);
   });
 
+  it("a name stored as print sets it is the typed name (TODO 6.11: a custom card's entry is named by its title)", () => {
+    // “Dragon’s Approach” is still the any-number card…
+    expect(validateDeck("modern", [entry("Dragon’s Approach", 30), entry("Mountain", 30)])).toEqual([]);
+    // …and a custom “Urza’s Saga” counts with the imported "Urza's Saga".
+    const deck = [entry("Urza's Saga", 3), entry("Urza’s Saga", 2), entry("Mountain", 20), ...filler(35)];
+    expect(codes(validateDeck("legacy", deck))).toContain("copy_limit");
+  });
+
   it("flags under-60 mainboards", () => {
     expect(codes(validateDeck("modern", filler(59)))).toContain("deck_size");
   });

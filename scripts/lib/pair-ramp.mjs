@@ -72,17 +72,60 @@ export const PAIR_RAMPS = Object.freeze({
   crown: Object.freeze([45, 55]),
   crownFloating: Object.freeze([40, 60]),
   borderlessLand: Object.freeze([39, 61]),
+  // --- the old frames (TODO 4.6h; measured 2026-10-08 on Scryfall's scans,
+  // each print pixel's share between OUR two single-colour masters of the
+  // frame, the profile's own ends taken as 0 and 1, a ramp fitted by least
+  // squares; `[from, to, "smooth"]` is a smoothstep between the two).
+  //  • The 2003 frame's two-colour GOLD cards (Ravnica 2005 → Journey into
+  //    Nyx 2014; 52 prints) print TWO pinline blends, by colour pair: a wide,
+  //    soft one on wu wb ur br rg gu and — from Lorwyn 2007 — ub (30 prints:
+  //    a smoothstep 25.2→71.2, quartiles 23.3–27.4 / 69.8–73.2; a straight
+  //    ramp fits them worse, rms 0.024 against 0.014), and a narrow straight
+  //    one on bg (8 of 8), gw (6 of 7) and rw (6 of 8) — the four Ravnica
+  //    2005 guilds' files, ub's until 2005 only: 42.5→59.0 (21 prints,
+  //    quartiles 41.8–43.0 / 58.2–60.0).
+  //  • Their text box blends wide on EVERY pair, the narrow-pinline ones
+  //    too (18 boxes clean enough to fit: 25.1→72.2 under a wide pinline,
+  //    26.0→76.4 under a narrow one).
+  //  • The 2003 frame's two-colour LANDS (Eighth Edition 2003 → Theros
+  //    2013; 36 prints, all ten pairs) split their pinline and their box on
+  //    one narrow straight ramp: pinline 41.5→58.5 (quartiles 40.2–42.6 /
+  //    57.8–59.3), box 41.8→58.8.
+  //  • The 1997 frame's two-colour LANDS (Sixth Edition 1999 → Onslaught
+  //    2002; 36 prints, all ten pairs) split their box and the box's ring on
+  //    one straight ramp: box 40.0→59.9, ring 39.9→59.5 (quartiles
+  //    39.2–42.8 / 58.8–61.3).
+  gold2003Pinline: Object.freeze([25, 71, "smooth"]),
+  gold2003PinlineNarrow: Object.freeze([42, 59]),
+  gold2003Rules: Object.freeze([25, 73, "smooth"]),
+  land2003: Object.freeze([42, 59]),
+  land1997: Object.freeze([40, 60]),
 });
 
-/** How provenance names a ramp (never a Card Conjurer file). */
-export function rampName([from, to]) {
-  return `procedural:ramp(${from}→${to} %W)`;
+/** The pairs of the 2003 gold frame that print the NARROW pinline blend
+ *  (PAIR_RAMPS.gold2003PinlineNarrow): most prints of each wear it — bg 8 of
+ *  8, gw 6 of 7, rw 6 of 8; ub wore it in Ravnica 2005 only (2 of 7). */
+export const GOLD_2003_NARROW_PAIRS = Object.freeze(["bg", "rw", "gw"]);
+
+/** How provenance names a ramp (never a Card Conjurer file).
+ *  @param {readonly (number | string)[]} ramp `[from, to]` or `[from, to, "smooth"]` */
+export function rampName(ramp) {
+  const [from, to, shape] = ramp;
+  return shape === "smooth" ? `procedural:smoothstep(${from}→${to} %W)` : `procedural:ramp(${from}→${to} %W)`;
 }
 
-/** The second colour's share at `pct` % of the width (0..1). */
-export function rampShare(pct, [from, to]) {
+/** The second colour's share at `pct` % of the width (0..1): straight
+ *  between `from` and `to`, or a smoothstep for a `[from, to, "smooth"]`.
+ *  @param {number} pct
+ *  @param {readonly (number | string)[]} ramp */
+export function rampShare(pct, ramp) {
+  const [from, to, shape] = ramp;
   if (!(to > from)) throw new Error(`pair-ramp: bad ramp ${from}→${to}`);
-  return Math.min(1, Math.max(0, (pct - from) / (to - from)));
+  if (shape !== undefined && shape !== "smooth") throw new Error(`pair-ramp: unknown ramp shape ${shape}`);
+  const t = Math.min(1, Math.max(0, (pct - from) / (to - from)));
+  // A smoothstep: the same ends and centre, soft shoulders (the 2003 gold
+  // frame's wide blends, TODO 4.6h).
+  return shape === "smooth" ? t * t * (3 - 2 * t) : t;
 }
 
 /**

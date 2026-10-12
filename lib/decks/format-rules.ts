@@ -1,4 +1,5 @@
 import type { DeckCardEntry, DeckFormat } from "@/types/deck";
+import { typedForMatching } from "@/lib/validation/print-typography";
 
 // ---------------------------------------------------------------------------
 // Format legality checks — soft, non-blocking warnings (PipGlyph is a custom
@@ -115,7 +116,10 @@ export function validateDeck(
     if (entry.board === "commander") commanderCount += entry.quantity;
     if (entry.board === "companion") companionCount += entry.quantity;
 
-    const key = entry.name.trim().toLowerCase();
+    // A custom card's entry is named by its title, stored as print sets it
+    // since TODO 6.11 (“Dragon’s Approach”); an imported entry and the lists
+    // above hold the typed name. One name either way.
+    const key = typedForMatching(entry.name.trim().toLowerCase());
     copiesByName.set(key, (copiesByName.get(key) ?? 0) + entry.quantity);
   }
 

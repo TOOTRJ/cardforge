@@ -2121,7 +2121,10 @@ describe("v44 — the 2003 frame's artist line in the prints' ink (TODO 4.23a)",
     expect(land.footer!.rect).toEqual(modern.footer!.rect);
     expect(land.footer!.sizePct).toBe(modern.footer!.sizePct);
     expect(Object.keys(modern.footer!.inkByColorKey ?? {})).toEqual(["b"]);
-    expect(Object.keys(land.footer!.inkByColorKey ?? {}).sort()).toEqual(["b", "c", "g", "m", "r", "u", "w"]);
+    // …and, since the land's ten pair masters (TODO 4.6h), their keys too:
+    // the same white, on the same brown land frame.
+    const pairs = ["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"];
+    expect(Object.keys(land.footer!.inkByColorKey ?? {}).sort()).toEqual(["b", "c", "g", "m", "r", "u", "w", ...pairs].sort());
   });
 });
 

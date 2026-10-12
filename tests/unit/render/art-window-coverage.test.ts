@@ -569,7 +569,9 @@ describe("layout v35 covers the Card Conjurer masters' measured art windows", { 
 // ---------------------------------------------------------------------------
 describe("the two-colour pair masters (TODO 4.6b) are held to the check like the mono masters", () => {
   it("every declared template's pair masters are checked, and none of them is a known failure", () => {
-    for (const template of ["m15", "m15artifact", "m15land"]) {
+    // …and the old frames' (TODO 4.6h): made of their template's own finished
+    // masters, whose window they keep to the byte.
+    for (const template of ["m15", "m15artifact", "m15land", "modern", "modernland", "retroland"]) {
       const dresses = getFrameProfile(template).twoColorMasters ?? [];
       const expected = TWO_COLOR_MASTER_KEYS.filter((key) => (key.endsWith("-h") ? dresses.includes("hybrid") : dresses.includes("split")));
       // Checked here, or (without a local copy) listed as missing — which the

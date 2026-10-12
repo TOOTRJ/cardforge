@@ -279,8 +279,9 @@ export const KIND_DEFS: Record<CardKind, KindDef> = Object.fromEntries(
 //     hand stays drawable.
 //   • saga — Saga is an enchantment subtype; the chapter rail replaces the
 //     rules box and the profile has no P/T slot (a FIN Summon, "Enchantment
-//     Creature — Saga Dragon", stays the enchantment with "Creature" in
-//     front: TODO 1.20).
+//     Creature — Saga Dragon", stays the enchantment with "Creature" in its
+//     supertype: the line prints in that order since TODO 1.20, and its P/T
+//     is kept in the row — the body draws none until 4.5c).
 //   • split / aftermath — both halves are spells; Scryfall has no split card
 //     of another type (the Rooms are split on Scryfall but import as
 //     enchantments, not this kind).

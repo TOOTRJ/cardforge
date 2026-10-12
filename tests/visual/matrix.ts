@@ -1094,7 +1094,8 @@ const NO_TEXT_CASES: readonly [FrameTemplate, VisualColour][] = [
  *  draws today — new cases (a regenerated baseline, no bump):
  *   • a saga creature: a FIN "Summon" ("Enchantment Creature — Saga
  *     Dragon") is stored as the saga kind's enchantment with "Creature" in
- *     its supertype (TODO 1.3 / 1.21; the words print in 1.20's order) and a
+ *     its supertype (TODO 1.3 / 1.21; since layout v50 the words print in
+ *     their printed order, "Enchantment Creature", TODO 1.20) and a
  *     P/T the saga body doesn't draw yet — 4.5c's correction changes this
  *     case under its bump, every other saga case keeps its hash;
  *   • a Vehicle on m15/c (the one visible production Vehicle's frame) and on
@@ -1149,6 +1150,43 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
       power: "7",
       toughness: "7",
     },
+  ],
+  // The type line in its printed order and a land creature's P/T (TODO 1.20,
+  // layout v50) — new cases: a land with "Creature" in its supertype (Dryad
+  // Arbor's shape: "Land Creature — Forest Dryad" and a 1/1 on the land
+  // frame's plate), an enchantment with "Land" on the saga body (Urza's
+  // Saga's: "Enchantment Land"), and an enchantment with "Legendary
+  // Artifact" (Bident of Thassa's: "Legendary Enchantment Artifact").
+  [
+    "m15land",
+    "land",
+    "g",
+    "@creature",
+    {
+      title: "Grove Walker",
+      card_type: "land",
+      supertype: "Creature",
+      subtypes: ["Forest", "Dryad"],
+      cost: null,
+      rules_text: "(This land is also a creature. It has \"{T}: Add {G}.\")",
+      flavor_text: null,
+      power: "1",
+      toughness: "1",
+    },
+  ],
+  [
+    "saga",
+    "saga",
+    "u",
+    "@land",
+    { title: "The Sunken Archive", supertype: "Land", subtypes: ["Urza's", "Saga"], cost: null },
+  ],
+  [
+    "m15",
+    "enchantment",
+    "u",
+    "@artifact",
+    { title: "Trident of the Tides", supertype: "Legendary Artifact", subtypes: [], rules_text: "Creatures you control have flash." },
   ],
 ];
 const SQUARE_CASES: readonly [FrameTemplate, VisualColour][] = [
@@ -1357,6 +1395,25 @@ export function visualCases(): VisualCase[] {
   });
   add("m15borderlessland", "land", "wu", "short", { suffix: "@pair-foil", finish: "foil", row: pairStyle("m15borderlessland", "foil") });
   add("m15borderlessland", "land", "wu", "short", { suffix: "@pair-square", corners: "square", row: pairStyle("m15borderlessland") });
+  // TODO 4.6h: two colours on the old frames — NEW cases (the switch is a
+  // card's own; the same card without it is the plain "<template>/wu/…"
+  // case, the gold master every stored card paints). The generic "@pair"
+  // above is each template's W|U card (on `modern` the wide, soft pinline);
+  // here a pair with the NARROW pinline (G|W: bg, gw and rw print it), the
+  // darkest pair, an all-hybrid cost (no hybrid dress there: the same
+  // split), the stored bake's size, the foil and the squared print; and the
+  // two land frames' long card at HD, a dark pair and the squared print.
+  add("modern", "creature", "wu", "short", { suffix: "@pair-gw", row: { ...pairStyle("modern"), color_identity: ["green", "white"], cost: "{1}{G}{W}" } });
+  add("modern", "creature", "wu", "short", { suffix: "@pair-ub", row: { ...pairStyle("modern"), color_identity: ["blue", "black"], cost: "{1}{U}{B}" } });
+  add("modern", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("modern"), cost: "{W/U}{W/U}" } });
+  add("modern", "creature", "wu", "long", { suffix: "@pair-hd", preset: "hd", row: pairStyle("modern") });
+  add("modern", "creature", "wu", "short", { suffix: "@pair-foil", finish: "foil", row: pairStyle("modern", "foil") });
+  add("modern", "creature", "wu", "short", { suffix: "@pair-square", corners: "square", row: pairStyle("modern") });
+  for (const land of ["modernland", "retroland"] as const) {
+    add(land, "land", "wu", "long", { suffix: "@pair-hd", preset: "hd", row: pairStyle(land) });
+    add(land, "land", "wu", "short", { suffix: "@pair-br", row: { ...pairStyle(land), color_identity: ["black", "red"] } });
+    add(land, "land", "wu", "short", { suffix: "@pair-square", corners: "square", row: pairStyle(land) });
+  }
   // TODO 4.9b: the collector line, opt-in per card (frame_style.collector —
   // no stored card has the key, so these are NEW cases, no bump): both
   // styles on every slotted template (the primary kind: a token on the
@@ -1868,6 +1925,9 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   // The double-faced spell faces (5.1d): their cases carry a back face
   // (the DFC block below), never the generic pair loop's rows.
   "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback",
+  // The old frames (TODO 4.6h): the 2003 gold card, the 2003 and the 1997
+  // two-colour lands.
+  "modern", "modernland", "retroland",
 ];
 
 /** The collector line's fields on its cases (TODO 4.9b): a real printing's

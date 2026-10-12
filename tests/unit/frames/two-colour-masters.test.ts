@@ -6,6 +6,7 @@ import {
   borderlessLandLayers,
   borderlessPairLayers,
   describeLayer,
+  oldFramePairLayers,
   pairMasterLayers,
   snowPairLayers,
 } from "@/scripts/lib/cc-frames.mjs";
@@ -44,10 +45,13 @@ const SNOW_KIND: Record<string, "snow" | "snowland"> = { m15snow: "snow", m15sno
  *  2a), the snow pair through snowPairLayers (wave 2c), the borderless land
  *  through its own mono recipe with a letter pair (borderlessLandLayers,
  *  TODO 4.56). */
-const PAIR_TEMPLATES = ["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15snow", "m15snowland"] as const;
+const OLD_FRAME = ["modern", "modernland", "retroland"];
+const PAIR_TEMPLATES = ["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15snow", "m15snowland", "modern", "modernland", "retroland"] as const;
 function recipeOf(template: string, key: string) {
   const [pair, hybrid] = key.split("-");
   const dress = hybrid ? "hybrid" : "split";
+  // The old frames (TODO 4.6h): made of the template's own finished masters.
+  if (OLD_FRAME.includes(template)) return oldFramePairLayers(template, pair);
   if (KIND[template]) return pairMasterLayers(pair, dress, KIND[template]);
   if (SNOW_KIND[template]) return snowPairLayers(pair, dress, SNOW_KIND[template]);
   if (template === "m15borderlessland") return borderlessLandLayers({ frame: "l", box: pair.split(""), pinline: pair.split("") });
@@ -70,6 +74,9 @@ describe("the declared pair masters", () => {
     expect(declared).toEqual({
       m15: 20, m15land: 10, m15snowland: 10, m15artifact: 10, m15borderless: 20, m15borderlessartifact: 10, m15borderlessland: 10, m15snow: 10,
       m15dfcfront: 10, m15dfcback: 10, m15dfcbackleft: 10, m15mdfcfront: 20, m15mdfcback: 10,
+      // …and 30 on the old frames (TODO 4.6h): the 2003 gold card, the 2003
+      // and 1997 two-colour lands.
+      modern: 10, modernland: 10, retroland: 10,
     });
     // Every pair key is a master key the bake's loader knows (never "c").
     for (const key of TWO_COLOR_MASTER_KEYS) expect(FRAME_MASTER_KEYS as readonly string[]).toContain(key);

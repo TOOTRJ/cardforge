@@ -302,9 +302,14 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
   );
   /** …and the pair masters (extendedart draws none: a pair wears gold there;
    *  the transform land front none: no two-colour land face in print) — and
-   *  the borderless land's, which draws pairs and no crown (TODO 4.56). */
+   *  the borderless land's, which draws pairs and no crown (TODO 4.56), and
+   *  the old frames' (TODO 4.6h: the 2003 gold card, the 2003 and 1997
+   *  lands — pairs and no crown; `retro` none, its gold cards print one
+   *  gold). */
+  const OLD_FRAME_PAIRED = ["modern", "modernland", "retroland"];
   const PAIRED = FRAME_TEMPLATE_VALUES.filter(
-    (t): boolean => t === "m15borderlessland" || (CROWNED.includes(t) && t !== "extendedart" && t !== "m15dfclandfront"),
+    (t): boolean =>
+      t === "m15borderlessland" || OLD_FRAME_PAIRED.includes(t) || (CROWNED.includes(t) && t !== "extendedart" && t !== "m15dfclandfront"),
   );
 
   it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless, extended-art and snow PROFILES entries — never a profile that spreads them", () => {
@@ -317,6 +322,11 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).twoColor.length > 0).map((t) => [t, frameAnatomyOf(t).twoColor]),
     );
     expect(paired).toEqual({
+      // The old frames (4.6h): the split only — a 2003 hybrid card splits
+      // the frame body itself, which is not drawn.
+      modern: ["split"],
+      modernland: ["split"],
+      retroland: ["split"],
       m15: ["split", "hybrid"],
       m15land: ["split"],
       m15snowland: ["split"],
@@ -643,7 +653,7 @@ describe("a LAND wears the two-colour frame only on a land frame (owner round 17
       expect(twoColorFits(profile, "land"), template).toBe(templateSupportsKind(template, "land"));
       expect(twoColorFits(profile, "creature"), template).toBe(true);
     }
-    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).twoColorForLands === true)).toEqual(["m15land", "m15snowland", "m15borderlessland"]);
+    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).twoColorForLands === true)).toEqual(["m15land", "m15snowland", "m15borderlessland", "retroland", "modernland"]);
     expect(parseFrameProfileOverride({ twoColorForLands: true })).toBeNull();
   });
 });

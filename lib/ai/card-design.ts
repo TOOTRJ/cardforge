@@ -198,7 +198,8 @@ TOKENS (card_type "token"):
 - A token is named after its subtypes ("Soldier", "Rabbit Knight") unless it is a legendary one with a proper name. It has no mana cost ("—").
 
 OUTPUT RULES:
-- power/toughness only for creatures, creature tokens (supertype includes "Creature") and Vehicles; loyalty only for planeswalkers; defense only for battles; otherwise null.
+- A card with two card types keeps ONE in card_type and the other word in supertype, after Legendary/Snow: an Artifact Creature or an Enchantment Creature is card_type "creature" with "Artifact" / "Enchantment" in supertype; a land that is also a creature is card_type "land" with "Creature" in supertype. The card prints the words in their printed order ("Legendary Enchantment Creature — God", "Land Creature — Forest Dryad").
+- power/toughness only for creatures, any other card whose supertype includes "Creature" (a creature token, a land creature) and Vehicles; loyalty only for planeswalkers; defense only for battles; otherwise null.
 - color_identity must cover every colored mana symbol in the cost AND the rules text.
 - art_prompt: 60-100 words, subject + action + environment + lighting + palette. No frames, no text, no copyrighted artist or world names.
 - Output ONLY the structured fields. No preamble.`;

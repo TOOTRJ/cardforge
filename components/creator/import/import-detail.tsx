@@ -310,23 +310,20 @@ export function ImportDetail({
   );
 }
 
-/** The "Type" row of what an import will populate. A token reads as it will
- *  print — "Token" first, then its words ("Token Artifact — Treasure",
- *  TODO 3b.15) — not "Artifact token — Treasure". */
+/** The "Type" row of what an import will populate: the line as the card
+ *  will print it (buildTypeLine) — a token's "Token" first ("Token Artifact
+ *  — Treasure", TODO 3b.15), an emblem's "Emblem" (TODO 6.23), and every
+ *  other card's words in printed order ("Land Creature — Forest Dryad",
+ *  TODO 1.20), never the stored columns in stored order ("Creature land —
+ *  Forest, Dryad"). */
 export function importPatchTypeLine(
   patch: Pick<ScryfallImportPatch, "supertype" | "card_type" | "subtypes_text">,
 ): string {
-  // An emblem reads "Emblem" (TODO 6.23).
-  if (patch.card_type === "token" || patch.card_type === "emblem") {
-    return buildTypeLine({
-      supertype: patch.supertype,
-      cardType: patch.card_type,
-      subtypes: parseSubtypes(patch.subtypes_text ?? ""),
-    });
-  }
-  return [patch.supertype, patch.card_type, patch.subtypes_text ? `— ${patch.subtypes_text}` : null]
-    .filter(Boolean)
-    .join(" ");
+  return buildTypeLine({
+    supertype: patch.supertype,
+    cardType: patch.card_type,
+    subtypes: parseSubtypes(patch.subtypes_text ?? ""),
+  });
 }
 
 function PatchPreview({ patch }: { patch: ScryfallImportPatch }) {
@@ -341,7 +338,7 @@ function PatchPreview({ patch }: { patch: ScryfallImportPatch }) {
     rows.push({
       label: "Type",
       value: (
-        <span className="capitalize">{importPatchTypeLine(patch)}</span>
+        <span>{importPatchTypeLine(patch)}</span>
       ),
     });
   }

@@ -334,8 +334,8 @@ describe("type-line + layout precedence (TODO 1.3)", () => {
     // Urza's Saga MH2 #259 is layout "saga" and an "Enchantment Land": it
     // lands on the saga frame as an enchantment that keeps "Land" — never
     // "Enchantment Enchantment", never losing the word. (The renderers print
-    // it "Land Enchantment — Urza's Saga", supertype first: a renderer
-    // leftover, TODO 1.3.)
+    // it "Enchantment Land — Urza's Saga", the printed order: TODO 1.20,
+    // tests/unit/cards/type-line-order.test.ts.)
     const patch = mapScryfallToFormPatch(printing("mh2-259"));
     expect(patch.kind).toBe("saga");
     expect(patch.card_type).toBe("enchantment");

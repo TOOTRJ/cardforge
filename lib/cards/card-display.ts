@@ -153,24 +153,61 @@ export function hasTokenTypeWord(supertype: string | null | undefined): boolean 
 }
 
 // Printed order of the words left of a type line's dash: the supertypes
-// (Basic, Legendary, Ongoing, Snow, World), then the card types (Kindred,
-// Enchantment, Artifact, Land, Planeswalker, Creature) — "Legendary Snow
-// Artifact Creature", "Legendary Enchantment Artifact" (Bident of Thassa),
-// "Artifact Land", "Land Creature" (Dryad Arbor, TBRO #3).
+// (Basic, Legendary, Ongoing, Snow, World, then Unstable's Host / Elite),
+// then the card types (Kindred, Enchantment, Artifact, Land, Planeswalker,
+// Creature) — "Legendary Snow Artifact Creature", "Legendary Enchantment
+// Artifact" (Bident of Thassa), "Artifact Land", "Enchantment Land" (Urza's
+// Saga), "Land Creature" (Dryad Arbor), "Host Artifact Creature" (UST #139).
+// Held to Scryfall's type lines by tests/unit/cards/type-line-order.test.ts
+// (survey 2026-10-08: no black-bordered printing reads another order).
+// Instant, Sorcery and Battle are NOT ranked: a printed line never sets a
+// ranked word after them ("Kindred Instant"), so as a card type they print
+// last, where a word nobody ranked prints.
 const TYPE_WORD_RANK: Readonly<Record<string, number>> = {
   basic: 0,
   legendary: 1,
   ongoing: 2,
   snow: 3,
   world: 4,
-  kindred: 5,
-  tribal: 5,
-  enchantment: 6,
-  artifact: 7,
-  land: 8,
-  planeswalker: 9,
-  creature: 10,
+  host: 5,
+  elite: 5,
+  kindred: 6,
+  tribal: 6,
+  enchantment: 7,
+  artifact: 8,
+  land: 9,
+  planeswalker: 10,
+  creature: 11,
 };
+
+/**
+ * Type words in the order cards print them (TODO 1.20): every unbroken run
+ * of words TYPE_WORD_RANK knows is put in rank order (words of one rank keep
+ * their typed order — "Kindred" and "Tribal" are one word in two eras), and
+ * a word it does not know stays exactly where it was typed, with nothing
+ * moved across it — "Land - Artifact" (a hand-drawn dash) and "Legendary
+ * Comedic Saga" print as their owner wrote them.
+ */
+function inPrintedOrder(words: readonly string[]): string[] {
+  const out: string[] = [];
+  let run: Array<{ word: string; rank: number }> = [];
+  const flush = () => {
+    // Array.prototype.sort is stable: equal ranks keep their typed order.
+    out.push(...run.sort((a, b) => a.rank - b.rank).map((entry) => entry.word));
+    run = [];
+  };
+  for (const word of words) {
+    const rank = TYPE_WORD_RANK[word.toLowerCase()];
+    if (rank === undefined) {
+      flush();
+      out.push(word);
+    } else {
+      run.push({ word, rank });
+    }
+  }
+  flush();
+  return out;
+}
 
 /**
  * The supertype with `word` added in printed order (TYPE_WORD_RANK): before
@@ -208,11 +245,14 @@ export function withoutSupertypeWord(
 }
 
 /**
- * Whether the card type shows a P/T: a creature; a token whose supertype says
- * "Creature" (a Treasure — "Token Artifact — Treasure" — has none, TODO
- * 3b.15); any card with a Vehicle or Spacecraft subtype. The creator's P/T
- * inputs and the AI's stat rules follow this; the renderers print through
- * printsPowerToughness, which adds the stored tokens from before the picker.
+ * Whether the card type shows a P/T: a creature; any other card whose type
+ * words say "Creature" — a token ("Token Artifact — Treasure" has none, TODO
+ * 3b.15), and a land that is also a creature (Dryad Arbor, "Land Creature —
+ * Forest Dryad": the importer makes it a land with "Creature" in supertype,
+ * TODO 1.3 / 1.20); any card with a Vehicle or Spacecraft subtype. Never an
+ * emblem (CR 114: no types). The creator's P/T inputs and the AI's stat
+ * rules follow this; the renderers print through printsPowerToughness,
+ * which adds the stored tokens from before the picker.
  */
 export function showsPowerToughness(
   cardType: CardType | null | undefined,
@@ -220,7 +260,7 @@ export function showsPowerToughness(
   supertype?: string | null,
 ): boolean {
   if (cardType === "creature") return true;
-  if (cardType === "token" && supertypeHasWord(supertype, "Creature")) return true;
+  if (cardType !== "emblem" && supertypeHasWord(supertype, "Creature")) return true;
   return (subtypes ?? []).some((s) => PT_SUBTYPES.has(s.trim().toLowerCase()));
 }
 
@@ -358,11 +398,36 @@ export function parseLoyaltyAbilities(
   return out;
 }
 
-// Builds the "Supertype Type — Subtype Subtype" line shown in the type bar.
-// A token prints "Token" FIRST, then its words (TODO 3b.15, the M15-on
-// wording): "Token Creature — Soldier", "Token Legendary Artifact Creature —
-// Construct", a bare "Token" for a Copy (TFDN #26), "Token Basic — Wastes"
-// for a basic typed on the token frame.
+/**
+ * The words LEFT of a type line's dash, in the order cards print them (TODO
+ * 1.20). `supertype` holds every type word but the card type's own (the
+ * importer's rule, TODO 1.3), so the card type's word is added to them and
+ * the line is put in printed order (inPrintedOrder): "Legendary Enchantment
+ * Creature", "Artifact Creature", "Enchantment Land" (Urza's Saga: an
+ * enchantment with "Land"), "Land Creature" (Dryad Arbor: a land with
+ * "Creature"), "Legendary Enchantment Artifact" (Bident of Thassa), "Kindred
+ * Instant". A token prints "Token" FIRST, then its words (TODO 3b.15, the
+ * M15-on wording): "Token Creature", "Token Legendary Artifact Creature", a
+ * bare "Token" for a Copy (TFDN #26), "Token Basic" for a basic typed on the
+ * token frame. An emblem prints "Emblem" alone (CR 114: no supertypes).
+ */
+export function typeLineWords({
+  supertype,
+  cardType,
+}: {
+  supertype?: string | null;
+  cardType?: CardType | null;
+}): string[] {
+  if (cardType === "emblem") return ["Emblem"];
+  const words = supertypeWords(supertype);
+  if (cardType === "token") return ["Token", ...inPrintedOrder(words)];
+  return inPrintedOrder(cardType ? [...words, capitalize(cardType)] : words);
+}
+
+// Builds the "Supertype Type — Subtype Subtype" line shown in the type bar:
+// typeLineWords, then the subtypes as typed ("Emblem — Kaito" with an
+// emblem's optional subtype, TODO 6.23). BOTH renderers, the card page's
+// details and JSON-LD, the OG image and every list print this one string.
 export function buildTypeLine({
   supertype,
   cardType,
@@ -372,17 +437,7 @@ export function buildTypeLine({
   cardType?: CardType | null;
   subtypes?: readonly string[];
 }): string {
-  // An emblem prints "Emblem" alone (CR 114: no supertypes), or "Emblem —
-  // Kaito" with its optional subtype (TODO 6.23).
-  const left = (
-    cardType === "token"
-      ? ["Token", supertype?.trim()]
-      : cardType === "emblem"
-        ? ["Emblem"]
-        : [supertype, cardType ? capitalize(cardType) : null]
-  )
-    .filter(Boolean)
-    .join(" ");
+  const left = typeLineWords({ supertype, cardType }).join(" ");
   const right = subtypes?.filter(Boolean).join(" ") ?? "";
   if (left && right) return `${left} — ${right}`;
   return left || right || "Type";

@@ -1,6 +1,8 @@
 "use client";
 
-import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
+import { Fragment } from "react";
+import { offCardSuffix, tokenize } from "@/components/cards/mana-cost-glyphs";
+import { MORE_SYMBOLS_LABEL, MORE_SYMBOL_GROUPS, capitalized } from "@/lib/cards/more-symbols";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -17,20 +19,14 @@ import { cn } from "@/lib/utils";
 const CORE = ["{W}", "{U}", "{B}", "{R}", "{G}", "{C}"];
 const UTILITY = ["{T}", "{Q}", "{X}", "{S}", "{E}"];
 const GENERIC = ["{0}", "{1}", "{2}", "{3}", "{4}", "{5}"];
-const HYBRID = [
-  "{W/U}",
-  "{U/B}",
-  "{B/R}",
-  "{R/G}",
-  "{G/W}",
-  "{W/B}",
-  "{U/R}",
-  "{B/G}",
-  "{R/W}",
-  "{G/U}",
-];
-const TWOBRID = ["{2/W}", "{2/U}", "{2/B}", "{2/R}", "{2/G}"];
-const PHYREXIAN = ["{W/P}", "{U/P}", "{B/P}", "{R/P}", "{G/P}"];
+// The collapsed group — the ONE list the cost picker offers too
+// (lib/cards/more-symbols.ts). A two-colour Phyrexian symbol ({G/U/P}:
+// Tamiyo, Compleated Sage) is read out by name, then its code.
+const HYBRID_PHYREXIAN_NAMES: Record<string, string> = Object.fromEntries(
+  MORE_SYMBOL_GROUPS.filter((group) => group.id === "hybrid-phyrexian").flatMap((group) =>
+    group.symbols.map((symbol) => [symbol.token, symbol.name]),
+  ),
+);
 
 const TOKEN_TITLES: Record<string, string> = {
   "{T}": "Tap",
@@ -39,6 +35,7 @@ const TOKEN_TITLES: Record<string, string> = {
   "{S}": "Snow",
   "{E}": "Energy",
   "{C}": "Colorless",
+  ...Object.fromEntries(Object.entries(HYBRID_PHYREXIAN_NAMES).map(([token, name]) => [token, capitalized(name)])),
 };
 
 function SymbolButton({
@@ -48,19 +45,54 @@ function SymbolButton({
   token: string;
   onInsert: (token: string) => void;
 }) {
-  const suffix = tokenSuffix(tokenize(token)[0]);
+  const suffix = offCardSuffix(tokenize(token)[0]);
   if (!suffix) return null;
+  const name = HYBRID_PHYREXIAN_NAMES[token];
   return (
     <button
       type="button"
       title={`${TOKEN_TITLES[token] ?? token} — inserts ${token}`}
-      aria-label={`Insert ${token}`}
+      aria-label={name ? `Insert ${name} ${token}` : `Insert ${token}`}
       // Prevent the textarea from losing its caret position before we read it.
       onMouseDown={(event) => event.preventDefault()}
       onClick={() => onInsert(token)}
       className="flex h-7 w-7 items-center justify-center rounded-md border border-border/60 bg-elevated/40 transition-colors hover:border-border-strong hover:bg-elevated"
     >
       <i aria-hidden className={cn("ms ms-cost", `ms-${suffix}`)} style={{ fontSize: 13 }} />
+    </button>
+  );
+}
+
+/** The print characters a plain keyboard has no key for (TODO 6.11). Typing
+ *  " - " / "--" or a leading "- " gives the same two when the field loses
+ *  focus (lib/validation/print-typography.ts). No minus sign: the rules
+ *  face has no U+2212 and both renderers set it as a hyphen. */
+const PRINT_CHARACTERS = [
+  { char: "\u2014", name: "Em dash", hint: "as in \u201cLandfall \u2014 Whenever\u2026\u201d" },
+  { char: "\u2022", name: "Bullet", hint: "starts each choice of a modal list" },
+] as const;
+
+function CharacterButton({
+  char,
+  name,
+  hint,
+  onInsert,
+}: {
+  char: string;
+  name: string;
+  hint: string;
+  onInsert: (token: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      title={`${name} \u2014 ${hint}`}
+      aria-label={`Insert ${name.toLowerCase()}`}
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={() => onInsert(char)}
+      className="flex h-7 w-7 items-center justify-center rounded-md border border-border/60 bg-elevated/40 text-sm font-semibold text-foreground transition-colors hover:border-border-strong hover:bg-elevated"
+    >
+      <span aria-hidden>{char}</span>
     </button>
   );
 }
@@ -86,22 +118,23 @@ export function RulesSymbolToolbar({
         {GENERIC.map((t) => (
           <SymbolButton key={t} token={t} onInsert={onInsert} />
         ))}
+        <span aria-hidden className="mx-1 h-5 w-px bg-border/60" />
+        {PRINT_CHARACTERS.map((c) => (
+          <CharacterButton key={c.char} {...c} onInsert={onInsert} />
+        ))}
       </div>
       <details>
         <summary className="cursor-pointer list-none text-xs text-subtle transition-colors hover:text-muted [&::-webkit-details-marker]:hidden">
-          Hybrid, twobrid &amp; Phyrexian symbols…
+          {MORE_SYMBOLS_LABEL}
         </summary>
         <div className="mt-1.5 flex flex-wrap items-center gap-1">
-          {HYBRID.map((t) => (
-            <SymbolButton key={t} token={t} onInsert={onInsert} />
-          ))}
-          <span aria-hidden className="mx-1 h-5 w-px bg-border/60" />
-          {TWOBRID.map((t) => (
-            <SymbolButton key={t} token={t} onInsert={onInsert} />
-          ))}
-          <span aria-hidden className="mx-1 h-5 w-px bg-border/60" />
-          {PHYREXIAN.map((t) => (
-            <SymbolButton key={t} token={t} onInsert={onInsert} />
+          {MORE_SYMBOL_GROUPS.map((group, index) => (
+            <Fragment key={group.id}>
+              {index > 0 ? <span aria-hidden className="mx-1 h-5 w-px bg-border/60" /> : null}
+              {group.symbols.map((symbol) => (
+                <SymbolButton key={symbol.token} token={symbol.token} onInsert={onInsert} />
+              ))}
+            </Fragment>
           ))}
         </div>
       </details>

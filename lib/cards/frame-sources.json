@@ -7375,6 +7375,56 @@
       ],
       "m": [
         "img/frames/8th/m.png"
+      ],
+      "wu": [
+        "built:m",
+        "(built:w | built:u across procedural:smoothstep(25→73 %W)) through the regions text",
+        "(built:w | built:u across procedural:smoothstep(25→71 %W)) through the regions pin"
+      ],
+      "wb": [
+        "built:m",
+        "(built:w | built:b across procedural:smoothstep(25→73 %W)) through the regions text",
+        "(built:w | built:b across procedural:smoothstep(25→71 %W)) through the regions pin"
+      ],
+      "ub": [
+        "built:m",
+        "(built:u | built:b across procedural:smoothstep(25→73 %W)) through the regions text",
+        "(built:u | built:b across procedural:smoothstep(25→71 %W)) through the regions pin"
+      ],
+      "ur": [
+        "built:m",
+        "(built:u | built:r across procedural:smoothstep(25→73 %W)) through the regions text",
+        "(built:u | built:r across procedural:smoothstep(25→71 %W)) through the regions pin"
+      ],
+      "br": [
+        "built:m",
+        "(built:b | built:r across procedural:smoothstep(25→73 %W)) through the regions text",
+        "(built:b | built:r across procedural:smoothstep(25→71 %W)) through the regions pin"
+      ],
+      "bg": [
+        "built:m",
+        "(built:b | built:g across procedural:smoothstep(25→73 %W)) through the regions text",
+        "(built:b | built:g across procedural:ramp(42→59 %W)) through the regions pin"
+      ],
+      "rg": [
+        "built:m",
+        "(built:r | built:g across procedural:smoothstep(25→73 %W)) through the regions text",
+        "(built:r | built:g across procedural:smoothstep(25→71 %W)) through the regions pin"
+      ],
+      "rw": [
+        "built:m",
+        "(built:r | built:w across procedural:smoothstep(25→73 %W)) through the regions text",
+        "(built:r | built:w across procedural:ramp(42→59 %W)) through the regions pin"
+      ],
+      "gw": [
+        "built:m",
+        "(built:g | built:w across procedural:smoothstep(25→73 %W)) through the regions text",
+        "(built:g | built:w across procedural:ramp(42→59 %W)) through the regions pin"
+      ],
+      "gu": [
+        "built:m",
+        "(built:g | built:u across procedural:smoothstep(25→73 %W)) through the regions text",
+        "(built:g | built:u across procedural:smoothstep(25→71 %W)) through the regions pin"
       ]
     },
     "plates": {
@@ -8017,7 +8067,8 @@
       "the frame's LATER drawing (CHK 2004 → JOU 2014, black-bordered); every constant read off the prints once (proof 2, 2026-10-07): the edges on 34 white prints and confirmed per key, the tones on the per-pixel median of each master's prints — no scan is read by the build",
       "known drawing caveats (proof 2): the pack's white body is a blocky mottling where the prints have marble veins and its keylines are flat; the black frame's body is left as drawn (its sides read 10–20 luma under the prints' grey stone); every key has clean digital bevels, not the prints' soft ones",
       "c = the pack's ARTIFACT frame a.png, as before (the pack's c.png is the translucent Eldrazi frame: TODO 4.10d); m = the pack's gold, the look of a THREE-colour card (a two-colour gold card wears two-colour pinlines: TODO 4.6h)",
-      "P/T plates = the pack's own (322 × 176, native size), each multiplied by a per-channel gain onto its prints' plate face (plateGains: gold × 0.90 / 0.84 / 0.64, blue × 0.86 / 0.91 / 0.94, red × 1.08 / 1.09 / 1.15, the rest within 5 %), drawn at the printed box through the profile's plateRect; c takes the artifact plate; `modernland` draws this set"
+      "P/T plates = the pack's own (322 × 176, native size), each multiplied by a per-channel gain onto its prints' plate face (plateGains: gold × 0.90 / 0.84 / 0.64, blue × 0.86 / 0.91 / 0.94, red × 1.08 / 1.09 / 1.15, the rest within 5 %), drawn at the printed box through the profile's plateRect; c takes the artifact plate; `modernland` draws this set",
+      "two-colour pair masters <pair>.png (TODO 4.6h): SYNTHESISED, no Card Conjurer two-colour file exists for this frame — the finished gold master whole, with the pair's two finished colour masters blended left to right (a premultiplied lerp, scripts/lib/pair-ramp.mjs; first canonical colour on the left) inside the text box and the pinline (the pack's Rules and Pinline masks, moved with the cut); the gold bars, body and P/T plate stay gold. Measured on 52 two-colour gold prints, Ravnica 2005 → Journey into Nyx 2014: the box blends across a smoothstep 25→73 %W on every pair, the pinline across a smoothstep 25→71 on wu wb ub ur br rg gu and a straight 42→59 on bg gw rw (the pairs whose prints mostly wear the narrow blend: 8 of 8, 6 of 7, 6 of 8). Hybrid cards (a split frame body, grey bars, a grey plate) are not built"
     ]
   },
   "modernland": {
@@ -8049,6 +8100,46 @@
       ],
       "m": [
         "img/frames/8th/ml.png"
+      ],
+      "wu": [
+        "built:c",
+        "(built:w | built:u across procedural:ramp(42→59 %W)) through the regions text + pin"
+      ],
+      "wb": [
+        "built:c",
+        "(built:w | built:b across procedural:ramp(42→59 %W)) through the regions text + pin"
+      ],
+      "ub": [
+        "built:c",
+        "(built:u | built:b across procedural:ramp(42→59 %W)) through the regions text + pin"
+      ],
+      "ur": [
+        "built:c",
+        "(built:u | built:r across procedural:ramp(42→59 %W)) through the regions text + pin"
+      ],
+      "br": [
+        "built:c",
+        "(built:b | built:r across procedural:ramp(42→59 %W)) through the regions text + pin"
+      ],
+      "bg": [
+        "built:c",
+        "(built:b | built:g across procedural:ramp(42→59 %W)) through the regions text + pin"
+      ],
+      "rg": [
+        "built:c",
+        "(built:r | built:g across procedural:ramp(42→59 %W)) through the regions text + pin"
+      ],
+      "rw": [
+        "built:c",
+        "(built:r | built:w across procedural:ramp(42→59 %W)) through the regions text + pin"
+      ],
+      "gw": [
+        "built:c",
+        "(built:g | built:w across procedural:ramp(42→59 %W)) through the regions text + pin"
+      ],
+      "gu": [
+        "built:c",
+        "(built:g | built:u across procedural:ramp(42→59 %W)) through the regions text + pin"
       ]
     },
     "printRecipe": {
@@ -8637,7 +8728,8 @@
     "notes": [
       "the frame's LATER drawing (CHK 2004 → JOU 2014, black-bordered); every constant read off the prints once (proof 2, 2026-10-07): the edges on 34 white prints and confirmed per key, the tones on the per-pixel median of each master's prints — no scan is read by the build",
       "known drawing caveats (proof 2): the pack's white body is a blocky mottling where the prints have marble veins and its keylines are flat; the black frame's body is left as drawn (its sides read 10–20 luma under the prints' grey stone); every key has clean digital bevels, not the prints' soft ones",
-      "c = the plain land l.png, toned on 13 lands with no colour of their own; w–g = the pack's coloured land frames (wl … gl), toned on the eight basics of each colour (CHK RAV TSP LRW ALA ISD RTR THS); m = the pack's gold land ml.png, toned on 9 three- and five-colour lands (two-colour lands print a blend: TODO 4.6h)"
+      "c = the plain land l.png, toned on 13 lands with no colour of their own; w–g = the pack's coloured land frames (wl … gl), toned on the eight basics of each colour (CHK RAV TSP LRW ALA ISD RTR THS); m = the pack's gold land ml.png, toned on 9 three- and five-colour lands (two-colour lands print a blend: TODO 4.6h)",
+      "two-colour pair masters <pair>.png (TODO 4.6h): SYNTHESISED, no Card Conjurer two-colour file exists for this frame — the finished plain land whole (its body and grey bars: the dual lands' bars read 202/190/182 against the plain land's 196/182/171 and the basics' 40 further off), with the pair's two finished coloured-land masters blended left to right across one straight ramp 42→59 %W inside the text box and the pinline (the pack's Rules and Pinline masks, moved with the cut). Measured on 36 two-colour lands, Eighth Edition 2003 → Theros 2013, all ten pairs: pinline 41.5→58.5, box 41.8→58.8"
     ]
   },
   "retro": {
@@ -9336,6 +9428,46 @@
       "m": [
         "img/frames/seventh/regular/l.png",
         "img/frames/seventh/regular/m.png replacing through img/frames/seventh/regular/rules.svg"
+      ],
+      "wu": [
+        "built:c",
+        "(built:w | built:u across procedural:ramp(40→60 %W)) (each on the cut of c) through the regions text + trimL + trimT + trimR + trimB"
+      ],
+      "wb": [
+        "built:c",
+        "(built:w | built:b across procedural:ramp(40→60 %W)) (each on the cut of c) through the regions text + trimL + trimT + trimR + trimB"
+      ],
+      "ub": [
+        "built:c",
+        "(built:u | built:b across procedural:ramp(40→60 %W)) (each on the cut of c) through the regions text + trimL + trimT + trimR + trimB"
+      ],
+      "ur": [
+        "built:c",
+        "(built:u | built:r across procedural:ramp(40→60 %W)) (each on the cut of c) through the regions text + trimL + trimT + trimR + trimB"
+      ],
+      "br": [
+        "built:c",
+        "(built:b | built:r across procedural:ramp(40→60 %W)) (each on the cut of c) through the regions text + trimL + trimT + trimR + trimB"
+      ],
+      "bg": [
+        "built:c",
+        "(built:b | built:g across procedural:ramp(40→60 %W)) (each on the cut of c) through the regions text + trimL + trimT + trimR + trimB"
+      ],
+      "rg": [
+        "built:c",
+        "(built:r | built:g across procedural:ramp(40→60 %W)) (each on the cut of c) through the regions text + trimL + trimT + trimR + trimB"
+      ],
+      "rw": [
+        "built:c",
+        "(built:r | built:w across procedural:ramp(40→60 %W)) (each on the cut of c) through the regions text + trimL + trimT + trimR + trimB"
+      ],
+      "gw": [
+        "built:c",
+        "(built:g | built:w across procedural:ramp(40→60 %W)) (each on the cut of c) through the regions text + trimL + trimT + trimR + trimB"
+      ],
+      "gu": [
+        "built:c",
+        "(built:g | built:u across procedural:ramp(40→60 %W)) (each on the cut of c) through the regions text + trimL + trimT + trimR + trimB"
       ]
     },
     "printRecipe": {
@@ -10006,7 +10138,8 @@
       "the ORIGINAL cards (Mirage 1996 → Scourge 2003), not the 2021+ reprints whose colours the pack carries (owner 2026-10-07); every constant read off the prints once: outer frame and art window on 21 white prints, each colour's text box and tones on the per-pixel median of its prints (9 sets; white 21; the basic lands 7) — no scan is read by the build",
       "known drawing caveats the owner accepted (round 38): blue is a flat-shaded redraw (hard-edged shapes where the print has brushwork), green's plank has no grain, black's parchment keeps a burnt rim",
       "c = the plain land l.png (the orange box of Fifth Edition 1997 on); w–g = the pack's coloured land boxes (wl … gl: the land frame, the box and its rings in the colour), toned onto the seven black-bordered basics of each colour (MIR, TMP, USG, MMQ, INV, ODY, ONS); the rings (the pack's Pinline mask) are their own region",
-      "m = a render STAND-IN, never ticked: the plain land with the pack's gold text box laid in through its Rules mask, the box toned onto the gold prints' box. No three-colour 1997 land was measured; two-colour lands print a blend (TODO 4.6h)"
+      "m = a render STAND-IN, never ticked: the plain land with the pack's gold text box laid in through its Rules mask, the box toned onto the gold prints' box. No three-colour 1997 land was measured; two-colour lands print a blend (TODO 4.6h)",
+      "two-colour pair masters <pair>.png (TODO 4.6h): SYNTHESISED — the pack's 'Dual Land' mask (nested rectangles) is not what the prints do. The finished plain land whole (its gold outer and art rings: the dual prints' rings read 174/131/56 against the plain land's 185/142/53 and a basic's 55/90/107), with the pair's two coloured lands — each the pack's drawing with its own tones, on the PLAIN land's cut — blended left to right across one straight ramp 40→60 %W inside the text box and its ring. Measured on 36 two-colour lands, Sixth Edition 1999 → Onslaught 2002: box 40.0→59.9, ring 39.9→59.5; the lands of 1997 and 1998 (Fifth Edition, Tempest, Anthologies: 11 of 11) print the plain land's orange box and are not this look"
     ]
   },
   "saga": {

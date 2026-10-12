@@ -2137,3 +2137,72 @@ describe("frame request log", () => {
     expect(actions.recordFrameRequestAction).not.toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// TODO 6.11 — print typography in the editor: a text field that loses focus
+// shows what a card prints (lib/validation/print-typography.ts), text an
+// idea pours in arrives printed, a remix starts printed (it saves a NEW
+// card) — and EDITING a stored card touches only a field whose text differs
+// from the stored one.
+// ---------------------------------------------------------------------------
+
+async function blurTitle() {
+  await act(async () => {
+    fireEvent.blur(titleInput());
+  });
+}
+
+describe("6.11 print typography on blur", () => {
+  it("create: the typed title turns into print's characters when the field loses focus", async () => {
+    renderForm();
+    await clickNext();
+    await typeTitle(`Urza's "Saga" - Part '99`);
+    // As typed until the field is left: nothing moves under the caret.
+    expect(titleInput().value).toBe(`Urza's "Saga" - Part '99`);
+    await blurTitle();
+    expect(titleInput().value).toBe("Urza’s “Saga” — Part ’99");
+    expect(preview().title).toBe("Urza’s “Saga” — Part ’99");
+    // A second blur changes nothing.
+    await blurTitle();
+    expect(titleInput().value).toBe("Urza’s “Saga” — Part ’99");
+  });
+
+  it("edit: a stored field that was only visited keeps its stored characters", async () => {
+    renderForm({ mode: "edit", card: savedCard({ title: "Urza's Wyrm" }) });
+    expect(titleInput().value).toBe("Urza's Wyrm");
+    await blurTitle();
+    expect(titleInput().value).toBe("Urza's Wyrm");
+    expect(preview().title).toBe("Urza's Wyrm");
+  });
+
+  it("edit: a field the owner changes is converted whole; changed back, it is the stored text again", async () => {
+    renderForm({ mode: "edit", card: savedCard({ title: "Urza's Wyrm" }) });
+    await typeTitle("Urza's Elder Wyrm");
+    await blurTitle();
+    expect(titleInput().value).toBe("Urza’s Elder Wyrm");
+    await typeTitle("Urza's Wyrm");
+    await blurTitle();
+    expect(titleInput().value).toBe("Urza's Wyrm");
+  });
+
+  it("edit: a stored trailing space the owner deletes is not an edit of the text — nothing converts", async () => {
+    renderForm({ mode: "edit", card: savedCard({ title: "Urza's Wyrm " }) });
+    await typeTitle("Urza's Wyrm");
+    await blurTitle();
+    expect(titleInput().value).toBe("Urza's Wyrm");
+  });
+
+  it("remix: the new card starts on the printed characters", async () => {
+    renderForm({ mode: "remix", card: savedCard({ title: "Urza's Wyrm", rules_text: "It can't block." }) });
+    expect(titleInput().value).toBe("Urza’s Wyrm (remix)");
+    expect(preview().rules).toBe("It can’t block.");
+  });
+
+  it("an idea's text lands printed", async () => {
+    renderForm();
+    await applyIdea({ title: "O'Kagachi's Echo", rules_text: `Landfall - It can't block.\nIt has "{T}: Add {G}."` });
+    await clickNext();
+    expect(titleInput().value).toBe("O’Kagachi’s Echo");
+    expect(preview().rules).toBe("Landfall — It can’t block.\nIt has “{T}: Add {G}.”");
+  });
+});

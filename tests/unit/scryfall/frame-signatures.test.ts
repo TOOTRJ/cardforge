@@ -639,7 +639,9 @@ describe("the general signatures (TODO 1.4)", () => {
     ["msc-240", "exact", "m15land", undefined],
     ["eld-244", "exact", "m15land", undefined],
     ["mh1-244", "exact", "m15land", undefined],
-    ["zen-211", "nearest", "modernland", undefined],
+    // Arid Mesa ZEN #211: the 2003 land frame's two-colour pair, which
+    // `modernland` draws since 4.6h (pinline 43→60 %W, box 40→58 on the scan).
+    ["zen-211", "exact", "modernland", undefined],
     // Nyx: the THB constellation showcase IS the nyx frame, and an
     // Enchantment Creature borrows it (owner decision A3), so a god is exact
     // (once nyx is verified in its colour); the regular Nyx starfield

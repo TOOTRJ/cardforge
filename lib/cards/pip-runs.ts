@@ -9,14 +9,16 @@
 // stays literal text so nothing is silently dropped.
 // ---------------------------------------------------------------------------
 
-import { tokenize, tokenSuffix } from "@/components/cards/mana-cost-glyphs";
+import { offCardSuffix, tokenize } from "@/components/cards/mana-cost-glyphs";
 
 export type PipRun =
   | { kind: "text"; value: string }
   | { kind: "pip"; code: string; suffix: string };
 
 const CODE_PATTERN = /\{([^{}\s]{1,5})\}/g;
-const KNOWN_INNER = /^(\d{1,2}|[XYZ]|[WUBRGC]|[TQSE]|[WUBRG]\/[WUBRG]|2\/[WUBRG]|[WUBRGC]\/P)$/;
+// The two-colour Phyrexian {G/U/P} too (five characters: CODE_PATTERN's
+// limit), in either typed order — never a pair of one colour.
+const KNOWN_INNER = /^(\d{1,2}|[XYZ]|[WUBRGC]|[TQSE]|[WUBRG]\/[WUBRG]|2\/[WUBRG]|[WUBRGC]\/P|([WUBRG])\/(?!\2)[WUBRG]\/P)$/;
 
 /** Canonical brace code for an inner string the mana font knows, else null. */
 export function canonicalPipCode(inner: string): string | null {
@@ -25,11 +27,13 @@ export function canonicalPipCode(inner: string): string | null {
   return `{${upper}}`;
 }
 
-/** Mana-font class suffix for a canonical code ("{W/U}" → "wu"), else null. */
+/** Mana-font class suffix for a canonical code ("{W/U}" → "wu"), else null —
+ *  the class these off-card pips draw with (offCardSuffix: "{U/G/P}" →
+ *  "gup", the pair's one class). */
 export function pipSuffixForCode(code: string): string | null {
   const [token] = tokenize(code);
   if (!token || token.kind === "text") return null;
-  return tokenSuffix(token);
+  return offCardSuffix(token);
 }
 
 export function splitPipRuns(text: string): PipRun[] {

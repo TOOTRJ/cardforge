@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { printTypography } from "@/lib/validation/print-typography";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
@@ -223,11 +224,13 @@ describe("walking a layout frame from its real reference printing", () => {
       />,
     );
 
-    await waitFor(() => expect(preview().title).toBe(front));
+    // The seed is an import: its names land as the card prints them (TODO
+    // 6.11 — "Urza’s Saga", "Heart’s Desire").
+    await waitFor(() => expect(preview().title).toBe(printTypography(front, "name")));
     const shown = preview();
     expect(shown.template).toBe(template);
     expect(pickFrameColorKey(shown.colors)).toBe(colorKey);
-    expect(shown.backTitle).toBe(back);
+    expect(shown.backTitle).toBe(printTypography(back, "name"));
     // The walk starts on the Card step and never announces another colour
     // or a substituted frame.
     expect(document.querySelector('[aria-current="step"]')?.textContent?.trim()).toBe("Card");

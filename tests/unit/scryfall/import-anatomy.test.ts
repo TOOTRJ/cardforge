@@ -153,9 +153,12 @@ describe("the colour pair and printed_two_color", () => {
       expect(patchOf(key).color_pair, key).toBeUndefined();
       expect(patchOf(key).printed_two_color, key).toBeUndefined();
     }
-    // Azorius Charm RTR #145: two colours on the 2003 frame, which prints gold.
+    // Azorius Charm RTR #145: two colours on the 2003 frame, which has
+    // printed them since Ravnica 2005 (its pinline reads 30→64 %W white to
+    // blue on the scan) — named since `modern` draws the pair (TODO 4.6h;
+    // tests/unit/scryfall/old-frame-two-colour-import.test.ts holds the dates).
     expect(patchOf("rtr-145").color_pair).toBe("wu");
-    expect(patchOf("rtr-145").printed_two_color).toBeUndefined();
+    expect(patchOf("rtr-145").printed_two_color).toBe(true);
   });
 
   it("print's dress for each, from the cost (derived at render, never stored)", () => {
@@ -195,13 +198,20 @@ describe("what the import stores on the frame it lands on (4.6b: m15, m15artifac
     expect(importedAnatomy(patchOf("fdn-243"), "m15")).toEqual({ style: { crown: true, collector: "2023", stamp: "none" }, colorIdentity: ["multicolor"] });
     // Fabled Passage ELD #244 prints the gold land frame (landFrameColorRule).
     expect(importedAnatomy(patchOf("eld-244"), "m15land")).toEqual({ style: { collector: "2015", stamp: "none" }, colorIdentity: ["multicolor"] });
-    // Azorius Charm RTR #145: the 2003 frame prints gold, and modern draws no pair.
+    // Azorius Charm RTR #145: the 2003 frame prints its two colours, and
+    // `modern` draws the pair since 4.6h — the pair and the switch are stored.
     // (A 2003-frame printing prints no collector line: "off", 4.9b.)
     // (…and no stamp: "none", which the save drops on modern, 4.9c.)
-    expect(importedAnatomy(patchOf("rtr-145"), "modern")).toEqual({ style: { collector: "off", stamp: "none" }, colorIdentity: ["multicolor"] });
+    expect(importedAnatomy(patchOf("rtr-145"), "modern")).toEqual({ style: { twoColor: true, collector: "off", stamp: "none" }, colorIdentity: ["white", "blue"] });
+    // …but on a frame that draws no pair (the 1997 gold) it keeps "multicolor".
+    expect(importedAnatomy(patchOf("rtr-145"), "retro")).toEqual({ style: { twoColor: true, collector: "off", stamp: "none" }, colorIdentity: ["multicolor"] });
     // Landed on m15 (a frame that draws pairs), a printing that ISN'T
-    // two-coloured stores no pair either: it keeps its gold "multicolor".
-    expect(importedAnatomy(patchOf("rtr-145"), "m15")).toEqual({ style: { collector: "off", stamp: "none" }, colorIdentity: ["multicolor"] });
+    // two-coloured stores no pair either: it keeps its gold "multicolor" —
+    // Iname as One SOK #151, the one two-colour gold card the 2003 frame
+    // printed before Ravnica, in plain gold.
+    const iname = mapScryfallToFormPatch({ ...P["rtr-145"], released_at: "2005-06-03", set: "sok" } as ScryfallCard);
+    expect(iname.printed_two_color).toBeUndefined();
+    expect(importedAnatomy(iname, "m15")).toEqual({ style: { collector: "off", stamp: "none" }, colorIdentity: ["multicolor"] });
   });
 
   it("the AI deck remix carries the printing's switches and pair onto its frame", () => {

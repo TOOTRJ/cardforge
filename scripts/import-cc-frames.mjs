@@ -125,6 +125,7 @@ import {
   describeBlockShift,
   describeHalfMasks,
   describeLayer,
+  isBuiltRecipe,
   describeBattleRecut,
   describePaintedShield,
   halfMaskFindings,
@@ -164,7 +165,7 @@ import {
   stripRiderKeys,
   stripRiderSourceOf,
 } from "./lib/cc-frames.mjs";
-import { blendPair } from "./lib/pair-ramp.mjs";
+import { blendPair, lerpLayers, rampMask } from "./lib/pair-ramp.mjs";
 // The edge contract (TODO 7.7) and its corner check (TODO 3.26) — the same
 // checks CI runs on every master (tests/unit/frames/edge-contract.test.ts),
 // here after the downscale and the corner cut.
@@ -263,8 +264,117 @@ async function writePlate(src, pngFile, gain = null) {
   await image.clone().webp(WEBP).toFile(pngFile.replace(/\.png$/, ".webp"));
 }
 
+/**
+ * A drawing moved onto the prints edge by edge and toned region by region
+ * (TODO 4.10a / 4.10b; scripts/lib/print-cut.mjs): the re-cut image and the
+ * regions' coverage (bytes, name → plane; null when the recipe tones nothing).
+ */
+async function applyPrintRecipe(recut, printRecipe, W, H, what) {
+  if (W !== OUT_W || H !== OUT_H) throw new Error(`${what}: a print recipe's px are the ${OUT_W}×${OUT_H} master's, the source is ${W}×${H}`);
+  const maps = cutMaps(printRecipe.cut, W, H);
+  let printed = recutPiecewise(printRecipe.squareCorners ? squareCornersOnBlack(recut, W, H) : recut, maps);
+  // A JPEG source's white-window fade on the art ring (the MSE gold).
+  if (printRecipe.windowHalo) printed = clearWindowHalo(printed, W, H, { reach: printRecipe.windowHalo });
+  let regions = null;
+  if (printRecipe.tones) {
+    let rings = null;
+    if (printRecipe.rings) {
+      const mask = await rgba(await fetchCached(printRecipe.rings), W, H);
+      rings = new Float32Array(W * H);
+      for (let p = 0; p < W * H; p += 1) rings[p] = mask[p * 4 + 3] / 255;
+    }
+    // The regions: a pack whose masks ARE its drawing's regions names
+    // them (the 2003 frame, TODO 4.10b); else the Seventh drawing's own
+    // lines (4.10a).
+    if (printRecipe.regionMasks) {
+      const planes = {};
+      for (const [name, rel] of Object.entries(printRecipe.regionMasks)) {
+        const mask = await rgba(await fetchCached(rel), W, H);
+        const plane = new Float32Array(W * H);
+        for (let p = 0; p < W * H; p += 1) plane[p] = mask[p * 4 + 3] / 255;
+        planes[name] = plane;
+      }
+      regions = eighthRegions(planes, maps);
+    } else {
+      regions = seventhRegions(printed, maps, { byColour: printRecipe.byColour, rings });
+    }
+    printed = toneRegions(printed, W, H, regions, printRecipe.tones);
+  }
+  return { printed, regions };
+}
+
+/**
+ * One of a template's own finished masters before the corner cut (TODO
+ * 4.6h): its plain layers composited, re-cut and toned by `printRecipe` —
+ * the same steps, in the same order, as the master's own build.
+ */
+async function finishedMaster(template, def, key, printRecipe) {
+  const layers = def.colors[key];
+  if (!layers || isBuiltRecipe(layers)) throw new Error(`${template}/${key}: no pack recipe to build a side from`);
+  if (def.recut || def.recutUp || def.bridge || def.tones || def.finish || def.transform || def.shift) {
+    throw new Error(`${template}: a pair of finished masters is built for print-recipe templates only`);
+  }
+  const images = [];
+  for (const l of layers) {
+    if (l.right || l.at || l.retint || l.dy) throw new Error(`${template}/${key}: a finished master's layers are whole files`);
+    images.push({
+      data: await rgba(await fetchCached(l.src), OUT_W, OUT_H),
+      mask: l.mask ? await rgba(await fetchCached(l.mask), OUT_W, OUT_H) : undefined,
+      invert: l.invert,
+      opacity: l.opacity,
+      replace: l.replace,
+      erase: l.erase,
+      gain: l.gain,
+      recolour: l.recolour,
+      lumaRamp: l.lumaRamp,
+    });
+  }
+  const flat = toRgba8(compositeLayers(images, OUT_W, OUT_H));
+  return applyPrintRecipe(flat, printRecipe, OUT_W, OUT_H, `${template}/${key}`);
+}
+
+/**
+ * A pair master made of the template's finished masters (TODO 4.6h,
+ * cc-frames.mjs oldFramePairLayers): the base whole, then each split layer —
+ * its two masters blended across the layer's ramp — laid in through the
+ * coverage of its regions (the BASE build's regions; they are disjoint).
+ */
+async function pairOfFinishedMasters(template, def, key, cache) {
+  const [base, ...splits] = def.colors[key];
+  const get = async (k, cutOf) => {
+    const id = `${k}@${cutOf ?? k}`;
+    if (!cache.has(id)) {
+      const recipe = cutOf && cutOf !== k ? def.builtSideRecipe?.(k, cutOf) : def.printRecipe?.(k);
+      if (!recipe) throw new Error(`${template}/${key}: no print recipe for ${id}`);
+      cache.set(id, await finishedMaster(template, def, k, recipe));
+    }
+    return cache.get(id);
+  };
+  const ground = await get(base.built);
+  if (!ground.regions) throw new Error(`${template}/${key}: the base master ${base.built} has no regions`);
+  const out = Buffer.from(ground.printed);
+  for (const l of splits) {
+    const left = await get(l.built, l.cutOf);
+    const right = await get(l.right, l.cutOf);
+    const blend = lerpLayers(left.printed, right.printed, rampMask(OUT_W, OUT_H, l.ramp));
+    for (const name of l.regions) {
+      const cover = ground.regions[name];
+      if (!cover) throw new Error(`${template}/${key}: the base master has no region "${name}"`);
+      for (let p = 0; p < OUT_W * OUT_H; p += 1) {
+        const c = cover[p];
+        if (c === 0) continue;
+        const o = p * 4;
+        for (let ch = 0; ch < 4; ch += 1) out[o + ch] = Math.round(out[o + ch] + ((blend[o + ch] - out[o + ch]) * c) / 255);
+      }
+    }
+  }
+  return out;
+}
+
 const provenance = fs.existsSync(PROVENANCE) ? JSON.parse(fs.readFileSync(PROVENANCE, "utf8")) : {};
 const edgeFailures = [];
+// The finished masters a template's pairs are made of (TODO 4.6h), per template.
+const builtPairCache = new Map();
 const artWindowFailures = [];
 // Drop templates the recipe no longer builds (e.g. deferred ones).
 for (const template of Object.keys(provenance)) {
@@ -294,154 +404,131 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
       console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}${finish.length ? `, then ${finish.map(describeFinish).join("; ")}` : ""}`);
       continue;
     }
-    // Work at the base layer's native size; downscale once at the end.
-    const baseFile = await fetchCached(def.colors[key][0].src);
-    const { width: W, height: H } = await sharp(baseFile).metadata();
-    const images = [];
-    for (const l of def.colors[key]) {
-      // A layer at CC's bounds (TODO 4.6f: the floating crown, its outline
-      // and the erased strip) is resized to its box and placed on a clear
-      // canvas, as CC draws an image at its bounds; a whole-canvas layer is
-      // resized to the canvas. A pair layer (TODO 4.6b, pairLayer): its two
-      // files blended across the region's untilted ramp
-      // (scripts/lib/pair-ramp.mjs) first — a placed pair on the canvas, so
-      // the ramp's % of the card's width is the card's.
-      const box = l.at ? rectPx(l.at, W, H) : null;
-      const load = async (src) =>
-        box ? placeOnCanvas(await rgba(await fetchCached(src), box.width, box.height), box, W, H) : await rgba(await fetchCached(src), W, H);
-      let data = l.right ? blendPair(await load(l.src), await load(l.right), W, H, l.ramp) : await load(l.src);
-      if (l.retint) {
-        // 4.34's tinted box: a neutral structure re-tinted to the flat tint
-        // read from another frame (both asserted flat where they are read).
-        const { from, tintOf } = l.retint;
-        const flat = flatPixelAt(data, W, H, TINTED_BOX_STRUCTURE.flatAt);
-        if (from.some((v, c) => v !== flat[c])) {
-          throw new Error(`${l.src}: its flat box is ${flat.slice(0, 3)}, the recipe says ${from} (the source moved?)`);
-        }
-        const tintAt = async (t) => flatPixelAt(await rgba(await fetchCached(t.src), W, H), W, H, t).slice(0, 3);
-        // A pair's box (TODO 4.56): the structure re-tinted to each colour,
-        // the two blended across the pair's untilted ramp like any pair layer.
-        data = l.retint.tintOfRight
-          ? blendPair(
-              retintStructure(data, from, await tintAt(tintOf)),
-              retintStructure(data, from, await tintAt(l.retint.tintOfRight)),
-              W,
-              H,
-              l.retint.ramp,
-            )
-          : retintStructure(data, from, await tintAt(tintOf));
-      }
-      // 4.34's type bar: the title bar moved down onto it.
-      if (l.dy) data = shiftRows(data, W, H, l.dy);
-      images.push({
-        data,
-        mask: l.mask ? await rgba(await fetchCached(l.mask), W, H) : undefined,
-        invert: l.invert,
-        opacity: l.opacity,
-        replace: l.replace,
-        erase: l.erase,
-        gain: l.gain,
-        recolour: l.recolour,
-        lumaRamp: l.lumaRamp,
-      });
-    }
-    const flat = toRgba8(compositeLayers(images, W, H));
-    // PipGlyph composites over CC's flattened pixels (the full-art tokens'
-    // type pill darkened and solid, the artifact name pill slate and solid;
-    // owner decisions 2026-09-29), before any re-cut: the masks are the
-    // pack's geometry.
-    const composite = finish.length
-      ? compositeFinish(
-          flat,
-          W,
-          H,
-          finish,
-          Object.fromEntries(
-            await Promise.all(finish.map(async (f) => [f.mask, await rgba(await fetchCached(f.mask), W, H)])),
-          ),
-        )
-      : flat;
-    // A re-cut template's band, moved onto the prints (TODO 4.49, 4.49 (b));
-    // the flip masters' lower half, moved up in two pieces (4.21a, v39).
-    const recut = def.recut
-      ? recutBand(composite, W, H, def.recut)
-      : def.recutUp
-        ? recutBlockUp(composite, W, H, def.recutUp)
-        : composite;
-    // A drawing moved onto the prints edge by edge and toned region by
-    // region (TODO 4.10a: the 1997 frame) — scripts/lib/print-cut.mjs.
-    const printRecipe = def.printRecipe?.(key);
-    let printed = recut;
-    if (printRecipe) {
-      if (W !== OUT_W || H !== OUT_H) throw new Error(`${template}/${key}: a print recipe's px are the ${OUT_W}×${OUT_H} master's, the source is ${W}×${H}`);
-      const maps = cutMaps(printRecipe.cut, W, H);
-      printed = recutPiecewise(printRecipe.squareCorners ? squareCornersOnBlack(recut, W, H) : recut, maps);
-      // A JPEG source's white-window fade on the art ring (the MSE gold).
-      if (printRecipe.windowHalo) printed = clearWindowHalo(printed, W, H, { reach: printRecipe.windowHalo });
-      if (printRecipe.tones) {
-        let rings = null;
-        if (printRecipe.rings) {
-          const mask = await rgba(await fetchCached(printRecipe.rings), W, H);
-          rings = new Float32Array(W * H);
-          for (let p = 0; p < W * H; p += 1) rings[p] = mask[p * 4 + 3] / 255;
-        }
-        // The regions: a pack whose masks ARE its drawing's regions names
-        // them (the 2003 frame, TODO 4.10b); else the Seventh drawing's own
-        // lines (4.10a).
-        let regions;
-        if (printRecipe.regionMasks) {
-          const planes = {};
-          for (const [name, rel] of Object.entries(printRecipe.regionMasks)) {
-            const mask = await rgba(await fetchCached(rel), W, H);
-            const plane = new Float32Array(W * H);
-            for (let p = 0; p < W * H; p += 1) plane[p] = mask[p * 4 + 3] / 255;
-            planes[name] = plane;
-          }
-          regions = eighthRegions(planes, maps);
-        } else {
-          regions = seventhRegions(printed, maps, { byColour: printRecipe.byColour, rings });
-        }
-        printed = toneRegions(printed, W, H, regions, printRecipe.tones);
-      }
-    }
-    // A ray's top closed over by the frame (the emblem's spark, 4.52).
-    const bridged = def.bridge ? bridgeRayTip(printed, W, H, def.bridge) : printed;
-    // Toned regions, onto the prints' tone (the emblem's silver, name pill,
-    // type pill and text box, 4.52; the transform backs' bars and box through
-    // the pack's masks, per key — 5.1a), in order.
-    const tones = tonesFor(def, key);
-    const toneMasks = Object.fromEntries(
-      await Promise.all([...new Set(tones.flatMap((t) => (t.mask ? [t.mask] : [])))].map(async (m) => [m, await rgba(await fetchCached(m), W, H)])),
-    );
-    const native = tones.reduce((img, tone) => applyTone(img, W, H, tone, toneMasks), bridged);
     let master;
-    if (def.transform === "rotate-cw") {
-      // The pack draws the card portrait (split): a quarter turn clockwise,
-      // a pixel permutation — nothing is resampled.
-      if (W !== outH || H !== outW) throw new Error(`${template}/${key}: ${W}×${H} can't be turned into ${outW}×${outH} without a resample`);
-      master = rotateCwRgba8(native, W, H);
+    let builtFrom = { W: outW, H: outH };
+    if (isBuiltRecipe(def.colors[key])) {
+      // A pair made of this template's own finished masters (TODO 4.6h).
+      if (!builtPairCache.has(template)) builtPairCache.set(template, new Map());
+      master = await pairOfFinishedMasters(template, def, key, builtPairCache.get(template));
     } else {
-      if (landscape && def.transform !== "downscale") throw new Error(`${template}: unknown transform ${JSON.stringify(def.transform)}`);
-      // A landscape pack's canvas (battle, 2814×2010) must be the card's
-      // shape: the one Lanczos pass scales, it never stretches.
-      if (landscape && Math.abs(W / H - outW / outH) > 1e-9) throw new Error(`${template}/${key}: ${W}×${H} is not the ${outW}×${outH} card's shape`);
-      master = await sharp(native, { raw: { width: W, height: H, channels: 4 } })
-        .resize(outW, outH, { fit: "fill", kernel: "lanczos3" })
-        .raw()
-        .toBuffer();
+      // Work at the base layer's native size; downscale once at the end.
+      const baseFile = await fetchCached(def.colors[key][0].src);
+      const { width: W, height: H } = await sharp(baseFile).metadata();
+      builtFrom = { W, H };
+      const images = [];
+      for (const l of def.colors[key]) {
+        // A layer at CC's bounds (TODO 4.6f: the floating crown, its outline
+        // and the erased strip) is resized to its box and placed on a clear
+        // canvas, as CC draws an image at its bounds; a whole-canvas layer is
+        // resized to the canvas. A pair layer (TODO 4.6b, pairLayer): its two
+        // files blended across the region's untilted ramp
+        // (scripts/lib/pair-ramp.mjs) first — a placed pair on the canvas, so
+        // the ramp's % of the card's width is the card's.
+        const box = l.at ? rectPx(l.at, W, H) : null;
+        const load = async (src) =>
+          box ? placeOnCanvas(await rgba(await fetchCached(src), box.width, box.height), box, W, H) : await rgba(await fetchCached(src), W, H);
+        let data = l.right ? blendPair(await load(l.src), await load(l.right), W, H, l.ramp) : await load(l.src);
+        if (l.retint) {
+          // 4.34's tinted box: a neutral structure re-tinted to the flat tint
+          // read from another frame (both asserted flat where they are read).
+          const { from, tintOf } = l.retint;
+          const flat = flatPixelAt(data, W, H, TINTED_BOX_STRUCTURE.flatAt);
+          if (from.some((v, c) => v !== flat[c])) {
+            throw new Error(`${l.src}: its flat box is ${flat.slice(0, 3)}, the recipe says ${from} (the source moved?)`);
+          }
+          const tintAt = async (t) => flatPixelAt(await rgba(await fetchCached(t.src), W, H), W, H, t).slice(0, 3);
+          // A pair's box (TODO 4.56): the structure re-tinted to each colour,
+          // the two blended across the pair's untilted ramp like any pair layer.
+          data = l.retint.tintOfRight
+            ? blendPair(
+                retintStructure(data, from, await tintAt(tintOf)),
+                retintStructure(data, from, await tintAt(l.retint.tintOfRight)),
+                W,
+                H,
+                l.retint.ramp,
+              )
+            : retintStructure(data, from, await tintAt(tintOf));
+        }
+        // 4.34's type bar: the title bar moved down onto it.
+        if (l.dy) data = shiftRows(data, W, H, l.dy);
+        images.push({
+          data,
+          mask: l.mask ? await rgba(await fetchCached(l.mask), W, H) : undefined,
+          invert: l.invert,
+          opacity: l.opacity,
+          replace: l.replace,
+          erase: l.erase,
+          gain: l.gain,
+          recolour: l.recolour,
+          lumaRamp: l.lumaRamp,
+        });
+      }
+      const flat = toRgba8(compositeLayers(images, W, H));
+      // PipGlyph composites over CC's flattened pixels (the full-art tokens'
+      // type pill darkened and solid, the artifact name pill slate and solid;
+      // owner decisions 2026-09-29), before any re-cut: the masks are the
+      // pack's geometry.
+      const composite = finish.length
+        ? compositeFinish(
+            flat,
+            W,
+            H,
+            finish,
+            Object.fromEntries(
+              await Promise.all(finish.map(async (f) => [f.mask, await rgba(await fetchCached(f.mask), W, H)])),
+            ),
+          )
+        : flat;
+      // A re-cut template's band, moved onto the prints (TODO 4.49, 4.49 (b));
+      // the flip masters' lower half, moved up in two pieces (4.21a, v39).
+      const recut = def.recut
+        ? recutBand(composite, W, H, def.recut)
+        : def.recutUp
+          ? recutBlockUp(composite, W, H, def.recutUp)
+          : composite;
+      // A drawing moved onto the prints edge by edge and toned region by
+      // region (TODO 4.10a: the 1997 frame) — scripts/lib/print-cut.mjs.
+      const printRecipe = def.printRecipe?.(key);
+      const printed = printRecipe ? (await applyPrintRecipe(recut, printRecipe, W, H, `${template}/${key}`)).printed : recut;
+      // A ray's top closed over by the frame (the emblem's spark, 4.52).
+      const bridged = def.bridge ? bridgeRayTip(printed, W, H, def.bridge) : printed;
+      // Toned regions, onto the prints' tone (the emblem's silver, name pill,
+      // type pill and text box, 4.52; the transform backs' bars and box through
+      // the pack's masks, per key — 5.1a), in order.
+      const tones = tonesFor(def, key);
+      const toneMasks = Object.fromEntries(
+        await Promise.all([...new Set(tones.flatMap((t) => (t.mask ? [t.mask] : [])))].map(async (m) => [m, await rgba(await fetchCached(m), W, H)])),
+      );
+      const native = tones.reduce((img, tone) => applyTone(img, W, H, tone, toneMasks), bridged);
+      if (def.transform === "rotate-cw") {
+        // The pack draws the card portrait (split): a quarter turn clockwise,
+        // a pixel permutation — nothing is resampled.
+        if (W !== outH || H !== outW) throw new Error(`${template}/${key}: ${W}×${H} can't be turned into ${outW}×${outH} without a resample`);
+        master = rotateCwRgba8(native, W, H);
+      } else {
+        if (landscape && def.transform !== "downscale") throw new Error(`${template}: unknown transform ${JSON.stringify(def.transform)}`);
+        // A landscape pack's canvas (battle, 2814×2010) must be the card's
+        // shape: the one Lanczos pass scales, it never stretches.
+        if (landscape && Math.abs(W / H - outW / outH) > 1e-9) throw new Error(`${template}/${key}: ${W}×${H} is not the ${outW}×${outH} card's shape`);
+        master = await sharp(native, { raw: { width: W, height: H, channels: 4 } })
+          .resize(outW, outH, { fit: "fill", kernel: "lanczos3" })
+          .raw()
+          .toBuffer();
+      }
+      // Whole blocks moved onto the prints through the flat zones between
+      // them (TODO 4.21b: split's halves, battle's lower block) — it throws
+      // when a zone isn't flat, so every moved pixel is the pack's.
+      if (def.shift) master = shiftBlocksRgba8(master, outW, outH, def.shift);
+      // What no block move reaches, re-cut onto the prints (TODO 4.21d: the
+      // battle's right side and icon) — the bars' paper stretched, the shield
+      // set right through the pack's Defense mask, the icon's rings redrawn.
+      if (def.printRecut) {
+        if (!def.paintedShield || !def.shift) throw new Error(`${template}: a print re-cut needs the recipe's shift and painted shield`);
+        const mask = await rgba(await fetchCached(def.paintedShield.mask), outW, outH);
+        master = recutBattleOntoPrints(master, mask, outW, outH, { shift: def.shift, shield: def.paintedShield, ...def.printRecut });
+      }
     }
-    // Whole blocks moved onto the prints through the flat zones between
-    // them (TODO 4.21b: split's halves, battle's lower block) — it throws
-    // when a zone isn't flat, so every moved pixel is the pack's.
-    if (def.shift) master = shiftBlocksRgba8(master, outW, outH, def.shift);
-    // What no block move reaches, re-cut onto the prints (TODO 4.21d: the
-    // battle's right side and icon) — the bars' paper stretched, the shield
-    // set right through the pack's Defense mask, the icon's rings redrawn.
-    if (def.printRecut) {
-      if (!def.paintedShield || !def.shift) throw new Error(`${template}: a print re-cut needs the recipe's shift and painted shield`);
-      const mask = await rgba(await fetchCached(def.paintedShield.mask), outW, outH);
-      master = recutBattleOntoPrints(master, mask, outW, outH, { shift: def.shift, shield: def.paintedShield, ...def.printRecut });
-    }
+    const { W, H } = builtFrom;
     // The one card corner: 4.3 % of the SHORT side, 64.5 px on either
     // orientation (CORNER_RADIUS).
     roundCornersRgba8(master, outW, outH, CORNER_RADIUS);
@@ -579,7 +666,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     ...(def.ptCut ? { ptCut: describePtCut(def.ptCut, OUT_W, OUT_H) } : {}),
     ...(pieces ? { pieces: { ...pieces, output: "<name>.png, native size" } } : {}),
     ...(def.maskInputs ? { maskInputs: { ...def.maskInputs, output: "not published — importer inputs for a later recipe" } } : {}),
-    ...(def.printRecipe ? { printRecipe: Object.fromEntries(builtColors(def).map((key) => [key, describePrintRecipe(def.printRecipe(key))])) } : {}),
+    ...(def.printRecipe ? { printRecipe: Object.fromEntries(builtColors(def).filter((key) => !isBuiltRecipe(def.colors[key])).map((key) => [key, describePrintRecipe(def.printRecipe(key))])) } : {}),
     ...(def.recut ? { recut: def.recut } : {}),
     ...(def.recutUp ? { recutUp: def.recutUp } : {}),
     ...(def.bridge ? { bridge: def.bridge } : {}),

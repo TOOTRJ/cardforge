@@ -98,3 +98,31 @@ describe("LockedSummary — a legacy 'borderless' card", () => {
     expect(facts()).toContain("FinishEtched");
   });
 });
+
+describe("LockedSummary — the type line as the card prints it (TODO 1.20)", () => {
+  const card = (over: Record<string, unknown>, template = "m15") =>
+    ({ ...savedCard({ finish: "regular", template }), ...over }) as unknown as Card;
+
+  it("puts the words in printed order: a land creature, an enchantment artifact", () => {
+    render(
+      <Harness
+        values={defaultValuesFor(card({ card_type: "land", supertype: "Creature", subtypes: ["Forest", "Dryad"], cost: null }, "m15land"), [])}
+        mode="edit"
+      />,
+    );
+    expect(facts()).toContain("Land Creature — Forest Dryad");
+    cleanup();
+    render(<Harness values={defaultValuesFor(card({ supertype: "Legendary Artifact" }), [])} mode="edit" />);
+    expect(facts()).toContain("TypeLegendary Enchantment ArtifactFrame");
+  });
+
+  it("names a layout kind after the printed line", () => {
+    render(
+      <Harness
+        values={defaultValuesFor(card({ supertype: "Land", subtypes: ["Urza's", "Saga"], cost: null }, "saga"), [])}
+        mode="edit"
+      />,
+    );
+    expect(facts()).toContain("Enchantment Land — Urza's Saga · Saga");
+  });
+});

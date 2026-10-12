@@ -32,21 +32,18 @@ export function LockedSummary({ mode }: { mode: "edit" | "remix" }) {
   const template = normalizeFrameTemplate(frameStyle?.template) as FrameTemplate;
   const kind = kindFromCard(cardType, template);
   const subtypes = parseSubtypes(subtypesText);
-  // A token reads as it prints: "Token" first (TODO 3b.15). A double-faced
-  // card's front reads its own type line, the kind after it (TODO 5.2:
-  // "Legendary Creature — Human Werewolf · Transform").
+  // The type line as the card prints it (buildTypeLine: "Token" first, TODO
+  // 3b.15; the words in printed order, TODO 1.20 — "Land Creature — Forest
+  // Dryad"). A kind that is not its card type's own — a layout or a
+  // double-faced kind — is named after it (TODO 5.2: "Legendary Creature —
+  // Human Werewolf · Transform", "Enchantment Land — Urza's Saga · Saga").
+  const faceType = kind === "token" ? "token" : cardType || KIND_DEFS[kind].cardType;
+  const printed = buildTypeLine({ supertype, cardType: faceType, subtypes });
+  const kindIsItsType = KIND_DEFS[kind].label.toLowerCase() === faceType;
   const typeLine =
-    kind === "token"
-      ? buildTypeLine({ supertype, cardType: "token", subtypes })
-      : dfcLayoutForKind(kind)
-        ? `${buildTypeLine({ supertype, cardType: cardType || KIND_DEFS[kind].cardType, subtypes })} · ${KIND_DEFS[kind].label}`
-        : [
-            supertype.trim(),
-            KIND_DEFS[kind].label,
-            subtypes.length > 0 ? `— ${subtypes.join(" ")}` : "",
-          ]
-            .filter(Boolean)
-            .join(" ");
+    kind === "token" || (!dfcLayoutForKind(kind) && kindIsItsType)
+      ? printed
+      : `${printed} · ${KIND_DEFS[kind].label}`;
   const frameLabel = FRAME_TEMPLATE_LABELS[template] ?? template;
   const eraLabel = FRAME_ERA_LABELS[eraForTemplate(template)];
   const colorLabel =

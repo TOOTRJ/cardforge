@@ -73,7 +73,8 @@ describe("bake path = preview path", () => {
     // each (wave 2c), the double-faced spell faces' 10 each but the modal
     // front's 20 (5.1d: 60), the borderless land's 10 (4.56); the crowned
     // twins of every borderless master (7 + 20 and 7 + 10).
-    expect(pairKeys).toBe(160);
+    // …and the old frames' 10 each (4.6h: modern, modernland, retroland).
+    expect(pairKeys).toBe(190);
     expect(crownedKeys).toBe(44);
   });
 

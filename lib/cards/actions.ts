@@ -1,5 +1,6 @@
 "use server";
 
+import { withPrintTypography, withPrintTypographyUpdate } from "@/lib/validation/print-typography";
 import { revalidatePath } from "next/cache";
 import { frameGateError } from "@/lib/cards/frame-availability";
 import {
@@ -251,7 +252,10 @@ export async function createCardAction(
   const supabase = await createClient();
 
   // An emblem stores no colour, cost, supertype or stats (TODO 6.23).
-  let data = withEmblemShape(parsed.data);
+  // … and its text as print sets it (TODO 6.11: curly quotes, em dashes,
+  // bullets) — the one gate the creator, the AI jobs and the deck remix
+  // all pass. A new card is converted whole.
+  let data = withPrintTypography(withEmblemShape(parsed.data));
 
   // An admin's frame preview (TODO 2.3): the creator's admin preview mode
   // asks for it, the server decides — only an admin (from the profile,
@@ -625,6 +629,11 @@ export async function updateCardAction(
   // An emblem stores no colour, cost, supertype or stats (TODO 6.23), judged
   // on the card as it will be stored.
   data = withEmblemUpdateShape(data, existing.card_type);
+  // Print typography (TODO 6.11) only where the save CHANGES a text: the
+  // creator resends every revisable field, and a field that comes back as
+  // it is stored keeps its stored characters — no stored card changes
+  // because another field of it was edited.
+  data = withPrintTypographyUpdate(data, existing);
 
   // An admin's frame preview (TODO 2.3) stays one: it is always private.
   // A card becomes one when an admin's preview-mode save moves it onto an
