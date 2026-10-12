@@ -162,6 +162,20 @@ test.beforeAll(async ({ browser }, testInfo) => {
   await page.waitForSelector("html[data-parity-ready='1']", { timeout: 120_000 });
   // Next's dev badge is not the card.
   await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+  // A first card, drawn and thrown away: the first screenshot of a page
+  // measured a hair differently from every later one of the same card
+  // (2026-10-12: one region's `hot` by 0.001, locally and on CI) — fonts
+  // and the compositor are warm from here on.
+  if (cases.length) {
+    const first = cases[0];
+    await page.evaluate(({ card, face }) => window.__parity!.show({ key: "warm-up", card: card as never, face, width: 750 }), {
+      card: first.card,
+      face: first.face,
+    });
+    await settle(page, net);
+    await page.screenshot({ clip: { x: 0, y: 0, width: 750, height: 750 }, animations: "disabled", scale: "device" });
+    net.problems.length = 0;
+  }
 });
 
 test.afterAll(async () => {

@@ -68,7 +68,7 @@ export type Limits = {
 
 /**
  * Measured 2026-10-12 on CI's runner (linux; macOS measures the same to
- * within a pixel) over the 34 cases, 272 regions a size:
+ * within a pixel) over the 34 cases, 276 regions a size:
  *
  *   750  offsets: 0 px on 178 regions across / 201 down, ±1 on 58 / 59,
  *        ±2 on 31 / 16, more on 9 (the known differences below);
@@ -123,7 +123,7 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
     min: -4,
     max: -3,
     why:
-      "At HD the preview's text sits ABOVE the bake's: by 1 px on 57 regions, 2 px on 58 and 3 px (1.5 CSS px) on 33 of 272 — names, type lines, rules and set symbols on most templates (the short M15 creature: name, type line and rules all −3). The 750 px comparison shows the same rise as −1 / −2. Seen on every text face; not traced further (the two engines place a line's baseline from the font's metrics independently). The frame, the art and the plates do not move with it.",
+      "At HD the preview's text sits ABOVE the bake's: by 1 px on 57 regions, 2 px on 58 and 3 px (1.5 CSS px) on 33 of 276 — names, type lines, rules and set symbols on most templates (the short M15 creature: name, type line and rules all −3). The 750 px comparison shows the same rise as −1 / −2. Seen on every text face; not traced further (the two engines place a line's baseline from the font's metrics independently). The frame, the art and the plates do not move with it.",
   },
   {
     name: "750-cost-row-width",
