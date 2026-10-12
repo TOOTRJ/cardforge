@@ -675,10 +675,12 @@ export function CardSetupPanel({
                 ) : null}
               </SetupSection>
 
-              {/* Always shown since TODO 3b.17: the Legendary entry is a
-                  variation of every frame — disabled, with its reason,
-                  where the frame prints no crown. */}
-              {
+              {/* Shown when it has something to pick (owner 2026-10-12):
+                  a land mode, a frame chip, or an OFFERED Legendary entry
+                  (TODO 3b.17). Where it shows for another reason the entry
+                  that can't be picked stays, disabled with its reason; a
+                  section that would hold only that dead chip is hidden. */}
+              {showLandMode || variationChoices.length > 0 || legendary.available ? (
                 <SetupSection title="Variations" value={variationSummary} testId="variations-section">
                   <div className="flex flex-col gap-4">
                     {showLandMode ? (
@@ -735,7 +737,7 @@ export function CardSetupPanel({
                     ) : null}
                   </div>
                 </SetupSection>
-              }
+              ) : null}
             </>
           );
         }}

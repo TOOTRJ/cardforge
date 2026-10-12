@@ -99,7 +99,7 @@ import { RarityPanel } from "@/components/creator/panels/rarity-panel";
 import { LoyaltyAbilitiesEditor } from "@/components/creator/panels/loyalty-editor";
 import { SagaChaptersEditor } from "@/components/creator/panels/saga-editor";
 import { CardSetupPanel } from "@/components/creator/panels/card-setup-panel";
-import { LegendaryVariationChip } from "@/components/creator/panels/legendary-variation";
+import { LegendaryCrownReason } from "@/components/creator/panels/legendary-variation";
 import { previewFrameStyleOf } from "@/lib/creator/legendary-variation";
 import { CARD_TYPE_OPTIONS } from "@/components/creator/field-group";
 import { KindChangeDialog } from "@/components/creator/kind-change-dialog";
@@ -3304,10 +3304,6 @@ export function CardCreatorForm({
             {stepKey === "identity" ? (
               <>
                 {isRevise ? <LockedSummary mode={mode} /> : null}
-                {/* The Variations section's Legendary entry (TODO 3b.17):
-                    an edit or a remix has no Card step, so it sits here —
-                    the same switch as the crown's row below. */}
-                {isRevise ? <LegendaryVariationChip standalone /> : null}
                 <IdentityPanel revise={isRevise} token={kind === "token"} emblem={kind === "emblem"} />
                 {/* The printed-details switches (TODO 4.6.0): the crown
                     beside the Legendary supertype; on an edit or a remix —
@@ -3322,6 +3318,11 @@ export function CardCreatorForm({
                   }
                   onPairTouched={markPairTouched}
                 />
+                {/* An edit or a remix has the crown's switch alone (TODO
+                    3b.17, owner 2026-10-12); where it can't show on a frame
+                    that prints the crown — the stored card is not legendary
+                    and its type line is locked — one line says why. */}
+                {isRevise ? <LegendaryCrownReason /> : null}
                 <ArtPanel
                   userId={userId}
                   importedArtOrigin={importedArtOrigin}

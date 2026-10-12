@@ -10,7 +10,13 @@
 //
 // A frame with no printed crown shows the chip DISABLED with its reason, as
 // the section's other chips do ("Awaiting verification", the basic-only
-// frames) — never missing.
+// frames) — wherever the section itself shows (owner 2026-10-12: a section
+// that would hold nothing but that dead chip stays hidden, as before).
+//
+// An EDIT or a REMIX has no Card step and shows no chip (owner 2026-10-12):
+// the anatomy panel's "Legendary crown" switch is the one control there.
+// Where that switch is hidden because the stored card is not legendary on a
+// frame that prints the crown, LegendaryCrownReason says why, in one line.
 
 import { Crown } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -18,6 +24,7 @@ import { toast } from "sonner";
 import { ChipGroup } from "@/components/ui/chip-group";
 import type { FormValues } from "@/lib/creator/form-types";
 import {
+  NOT_LEGENDARY_LOCKED_REASON,
   legendaryVariationOf,
   withLegendaryWord,
   type LegendaryVariation,
@@ -65,15 +72,12 @@ const HELP_OFF = "The legendary crown version of this frame";
 const HELP_ADDS_WORD = "The legendary crown version of this frame. Adds “Legendary” to the type line.";
 
 /**
- * The chip. `standalone` is an edit or a remix: no Card step (type, frame,
- * colour and the TYPE LINE are locked, lib/creator/revise.ts), so the entry
- * sits on the Identity step under the locked summary, with its own
- * "Variations" caption — and never writes the word there: on a stored card
- * that is not legendary it is disabled, with that reason.
+ * The chip, in a NEW card's Variations section (the Card step). Its rules —
+ * offered, selected, which face takes the word — are legendaryVariationOf.
  */
-export function LegendaryVariationChip({ standalone = false }: { standalone?: boolean }) {
+export function LegendaryVariationChip() {
   const { setValue, getValues } = useFormContext<FormValues>();
-  const state = useLegendaryVariation({ typeLineLocked: standalone });
+  const state = useLegendaryVariation();
 
   const toggle = (on: boolean) => {
     if (!state.available) return;
@@ -84,50 +88,50 @@ export function LegendaryVariationChip({ standalone = false }: { standalone?: bo
     toast.info(LEGENDARY_WORD_ADDED);
   };
 
-  const chips = (
-    <ChipGroup
-      multiSelect
-      ariaLabel="Legendary"
-      layout="grid-2"
-      size="md"
-      value={state.selected ? ["legendary"] : []}
-      onChange={(next) => toggle(next.includes("legendary"))}
-      options={[
-        {
-          value: "legendary",
-          label: "Legendary",
-          description: !state.available
-            ? (state.reason ?? undefined)
-            : state.selected
-              ? HELP_ON
-              : state.addsWordTo
-                ? HELP_ADDS_WORD
-                : HELP_OFF,
-          leading: <Crown className="h-4 w-4" aria-hidden />,
-          disabled: !state.available,
-        },
-      ]}
-    />
-  );
-  if (!standalone) {
-    return (
-      <div className="flex flex-col gap-2" data-testid="legendary-variation">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Crown</p>
-        {chips}
-      </div>
-    );
-  }
   return (
-    <div
-      role="group"
-      aria-labelledby="legendary-variation-heading"
-      className="flex flex-col gap-1.5"
-      data-testid="legendary-variation"
-    >
-      <span id="legendary-variation-heading" className="text-xs font-semibold uppercase tracking-wider text-subtle">
-        Variations
-      </span>
-      {chips}
+    <div className="flex flex-col gap-2" data-testid="legendary-variation">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Crown</p>
+      <ChipGroup
+        multiSelect
+        ariaLabel="Legendary"
+        layout="grid-2"
+        size="md"
+        value={state.selected ? ["legendary"] : []}
+        onChange={(next) => toggle(next.includes("legendary"))}
+        options={[
+          {
+            value: "legendary",
+            label: "Legendary",
+            description: !state.available
+              ? (state.reason ?? undefined)
+              : state.selected
+                ? HELP_ON
+                : state.addsWordTo
+                  ? HELP_ADDS_WORD
+                  : HELP_OFF,
+            leading: <Crown className="h-4 w-4" aria-hidden />,
+            disabled: !state.available,
+          },
+        ]}
+      />
     </div>
+  );
+}
+
+/**
+ * An edit's or a remix's one line where the "Legendary crown" switch can't
+ * show: the stored card is not legendary on a frame that prints the crown,
+ * and its type line is locked (lib/creator/revise.ts) — so the maker learns
+ * why there is no crown. Nothing on a frame with no crown at all (as before
+ * 3b.17), nor while the switch shows.
+ */
+export function LegendaryCrownReason() {
+  const state = useLegendaryVariation({ typeLineLocked: true });
+  if (state.reason !== NOT_LEGENDARY_LOCKED_REASON) return null;
+  return (
+    <p className="flex items-start gap-2 text-xs text-subtle" data-testid="legendary-crown-reason">
+      <Crown className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+      <span>{state.reason}.</span>
+    </p>
   );
 }

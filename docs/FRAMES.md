@@ -2790,9 +2790,12 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
     `normalizeAnatomy` judges) and a face would draw it: the card type
     prints one, and the key it would paint is published (`crownKeyFor`). A
     double-faced card's back counts on the body its type and family derive.
-    Anywhere else the chip is shown **disabled with its reason** ("This
-    frame has no legendary crown"), as the section's other unavailable
-    chips are — the section itself now shows for every kind;
+    Anywhere else the chip is **disabled with its reason** ("This frame
+    has no legendary crown"), as the section's other unavailable chips
+    are — where the section shows at all: it shows only when it has
+    something to pick (a land mode, a frame chip, or the offered chip —
+    owner 2026-10-12), so a kind whose section would hold only the dead
+    chip (emblem, saga, adventure, aftermath, flip) has none, as before;
   - **selected** only while the switch is exactly `true` AND a face has the
     word "Legendary" — the crown is drawn. A new card that is not legendary
     holds the new-card default (`crown: true`) and still reads unselected;
@@ -2801,11 +2804,13 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
   - **the word:** picking the chip on a NEW card with no legendary face
     puts "Legendary" first in the supertype (`withLegendaryWord`) and a
     toast says so; un-picking keeps the word (a legendary card without the
-    crown is every pre-2018 print). An edit or a remix has no Card step and
-    a locked type line (`lib/creator/revise.ts`), so the chip sits on the
-    Identity step under the locked summary and never writes the word: on a
-    stored card that is not legendary it is disabled ("Only a Legendary
-    card prints the crown, and this card's type line is fixed").
+    crown is every pre-2018 print). An edit or a remix has no Card step, a
+    locked type line (`lib/creator/revise.ts`) and NO chip (owner
+    2026-10-12): the switch is the one control there. Where the switch
+    can't show on a frame that prints the crown — the stored card is not
+    legendary — the Identity step says so in one line ("Only a Legendary
+    card prints the crown, and this card's type line is fixed",
+    `LegendaryCrownReason`); the word is never written on an edit.
   A frame change never clears the switch in the form: a move to a frame
   with no crown and back restores it; only the save drops it. Imports and
   AI jobs are untouched (the printing; the save's default).

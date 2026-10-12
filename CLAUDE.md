@@ -544,9 +544,12 @@ Rules and gotchas:
   TWO controls on ONE state (3b.17): the Variations section's "Legendary"
   chip and the anatomy panel's switch both read `legendaryVariationOf`
   (`lib/creator/legendary-variation.ts`) and write `frame_style.crown` —
-  never a template; the chip adds the word "Legendary" on a NEW card only
-  (an edit's type line is locked), and is disabled with its reason where the
-  card's own template declares no crown. On a card
+  never a template; the chip is a NEW card's (it adds the word "Legendary"
+  there; an edit or a remix has the switch alone, plus one line of reason
+  for a non-legendary card on a crowned frame), disabled with its reason
+  where the card's own template declares no crown — and the Variations
+  section shows only when it has something to pick (never the dead chip
+  alone). The live preview reads the style through `previewFrameStyleOf`. On a card
   with the line the pipglyph.com mark sits in its © slot (line 2 with a
   drawn stat plate, else line 1 — m15pw's `markLine: 2` keeps it off the
   empty loyalty shield; `lib/cards/collector-layout.ts`) and a clean
