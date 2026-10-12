@@ -2236,11 +2236,15 @@ function v51Changed(card: ScopeCard): boolean {
 /** v52 — a symbol whose disc is larger than a plain pip's (pipScale ≠ 1 at
  *  v52): a Phyrexian symbol ({W/P}) or the two-colour one ({G/U/P}; two
  *  DIFFERENT colours — the tokenizer reads {G/G/P} as an unknown symbol on
- *  a plain disc, and {C/P} has no symbol). Case and outer spaces as the
- *  tokenizer reads them. A regex, not the tokenizer, so this module stays
- *  free of the components tree; a test holds it to pipScale while v52 is
- *  the latest. Frozen: a later change of a disc's size is its own bump. */
-const V52_LARGER_DISC = /\{\s*(?:[WUBRG]\/P|([WUBRG])\/(?!\1)[WUBRG]\/P)\s*\}/i;
+ *  a plain disc, and {C/P} has no symbol) — and the SLASH-LESS spelling a
+ *  cost typed by hand may hold ({WP}, {rp}, {WPx}): the tokenizer keeps an
+ *  unknown symbol's first two letters, "wp" is the Phyrexian symbol's own
+ *  suffix, and both renderers draw it on the larger disc. Case and outer
+ *  spaces as the tokenizer reads them. A regex, not the tokenizer, so this
+ *  module stays free of the components tree; a test holds it to pipScale
+ *  while v52 is the latest. Frozen: a later change of a disc's size is its
+ *  own bump. */
+const V52_LARGER_DISC = /\{\s*(?:[WUBRG]\/P\s*\}|([WUBRG])\/(?!\1)[WUBRG]\/P\s*\}|[WUBRG]P[^}]*\})/i;
 
 /** Whether a cost holds a symbol v52 measures wider than a plain pip. */
 export function v52HasLargerDisc(value: unknown): boolean {

@@ -2508,8 +2508,8 @@ describe("v52 — a name's room before a detached cost of Phyrexian symbols (TOD
     ...over,
   });
   const AT = { current: V } as const;
-  const LARGER = ["{W/P}", "{u/p}", "{G/U/P}", "{ r/p }", "{b/G/p}", "{2}{R/P}{R/P}", "{X}{G/W/P}"];
-  const PLAIN = ["{2}{R}{R}", "{W/U}{2/W}", "{X}{C}{S}", "{Q}{E}{T}", "{C/P}", "{G/G/P}", "{P}", "{W / P}", "2RR", "", null];
+  const LARGER = ["{W/P}", "{u/p}", "{G/U/P}", "{ r/p }", "{b/G/p}", "{2}{R/P}{R/P}", "{X}{G/W/P}", "{WP}", "{1}{ rp }{R}", "{GPx}"];
+  const PLAIN = ["{2}{R}{R}", "{W/U}{2/W}", "{X}{C}{S}", "{Q}{E}{T}", "{C/P}", "{G/G/P}", "{P}", "{W / P}", "{PW}", "{CP}", "{GUP}", "WP", "2RR", "", null];
 
   it("is a sweep, never a badge, scoped to the detached-cost templates AND to the card, and verification-neutral", async () => {
     const lv = await import("@/lib/cards/layout-version");
@@ -2548,6 +2548,11 @@ describe("v52 — a name's room before a detached cost of Phyrexian symbols (TOD
     const inners = [...letters];
     for (const a of letters) for (const b of letters) inners.push(`${a}/${b}`);
     for (const a of ["W", "U", "G", "C", "2"]) for (const b of ["W", "U", "G", "C"]) inners.push(`${a}/${b}/P`);
+    // A cost typed by hand without the slash: an unknown symbol keeps its
+    // first two letters, and "wp" IS the Phyrexian symbol's suffix — the
+    // larger disc ({WP}, {WPX}, {WP/U}); {PW}, {GUP}, {W P} are plain.
+    for (const a of letters) for (const b of letters) inners.push(`${a}${b}`, `${a}${b}X`, `${a}${b}/U`, `${a} ${b}`, `${a}${b} 3`);
+    inners.push("GUP", "WUP", "W/P/U", "P/W", "W/ P", "W /P", "WP/P", "2/W/P");
     for (const inner of inners) {
       for (const cost of [`{${inner}}`, `{${inner.toLowerCase()}}`, `{ ${inner} }`, `{1}{${inner}}{R}`, inner]) {
         expect(lv.v52HasLargerDisc(cost), cost).toBe(larger(cost));

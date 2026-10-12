@@ -5603,7 +5603,9 @@ on real bakes of all four at 0–10 such symbols, at 750 px and HD.
 
 A CORRECTION: `"sweep"`, no badge. Scoped to the four templates
 (`V52_DETACHED_COST_TEMPLATES`) AND to a card whose own cost holds a
-Phyrexian symbol (`v52Changed`); every other card is stamped.
+Phyrexian symbol (`v52Changed` — the slash-less `{WP}` a cost typed by hand
+may hold is read too: the tokenizer gives it the symbol's own suffix and
+both renderers draw it on the larger disc); every other card is stamped.
 Verification-neutral (no slot, master, size or plate moves). Production
 (anonymous read, 2026-10-12): 17 public cards on the four templates, no
 visible card on any template with a Phyrexian symbol in its cost — nothing
