@@ -222,7 +222,7 @@ describe("the sharpness note", () => {
 });
 
 describe("keyboard and buttons", () => {
-  it("arrow keys nudge, + and − zoom, R resets", () => {
+  it("arrow keys nudge, + and − zoom, R fits the picture to the frame again", () => {
     const onChange = vi.fn();
     render(<Harness template="m15" onChange={onChange} />);
     const el = surface();
@@ -332,21 +332,178 @@ describe("Shift-scroll zoom", () => {
     const plain = wheel({ deltaY: 120 });
     expect(plain.defaultPrevented).toBe(false);
     expect(onChange).not.toHaveBeenCalled();
+    // A zoom-out at 100 % is still the positioner's gesture (the page stays
+    // still) but changes nothing: the zoom stops at the cover fit.
     const out = wheel({ deltaY: 120, shiftKey: true });
     expect(out.defaultPrevented).toBe(true);
-    expect(onChange.mock.calls.at(-1)![0].scale).toBe(0.95);
+    expect(onChange).not.toHaveBeenCalled();
     wheel({ deltaY: -120, shiftKey: true });
     wheel({ deltaY: -120, shiftKey: true });
+    expect(onChange.mock.calls.at(-1)![0].scale).toBe(1.1);
+    wheel({ deltaY: 120, shiftKey: true });
     expect(onChange.mock.calls.at(-1)![0].scale).toBe(1.05);
   });
 
   it("reads the turn from deltaX (Shift makes a vertical wheel horizontal on macOS and in Chrome)", () => {
     const onChange = vi.fn();
-    render(<Harness template="m15" onChange={onChange} />);
+    render(<Harness template="m15" start={{ focalX: 0.5, focalY: 0.5, scale: 1.1 }} onChange={onChange} />);
     const out = wheel({ deltaX: 120, deltaY: 0, shiftKey: true });
     expect(out.defaultPrevented).toBe(true);
-    expect(onChange.mock.calls.at(-1)![0].scale).toBe(0.95);
+    expect(onChange.mock.calls.at(-1)![0].scale).toBe(1.05);
     wheel({ deltaX: -120, deltaY: 0, shiftKey: true });
+    expect(onChange.mock.calls.at(-1)![0].scale).toBe(1.1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The automatic fit (TODO 3b.18): the positioner says whether the picture is
+// on its fit or placed by hand, offers ONE way back (the button and R / 0),
+// and warns when a zoom leaves the window part empty.
+// ---------------------------------------------------------------------------
+describe("fitted or placed by hand", () => {
+  const status = () => screen.getByTestId("art-fit-status");
+  const fit = () => screen.getByRole("button", { name: /Fit to frame/ }) as HTMLButtonElement;
+
+  it("a fresh picture is fitted: the line says so and the button has nothing to do", () => {
+    render(<Harness template="saga" />);
+    expect(status().dataset.artFraming).toBe("fitted");
+    expect(status().textContent).toMatch(/Fitted to this frame: the picture fills the art window, centred/);
+    expect(fit().disabled).toBe(true);
+    expect(screen.queryByRole("button", { name: /Reset position/ })).toBeNull();
+  });
+
+  it("names the strip a fitted window shows of a much wider picture (a 3 : 1 panorama on a saga)", () => {
+    render(<Harness template="saga" />);
+    layOut({ width: 183, height: 440 }, { width: 2400, height: 800 });
+    expect(status().textContent).toMatch(/which shows the middle 14% of its width/);
+  });
+
+  it("a nudge makes it the maker's; Fit to frame puts it back on the fit", async () => {
+    const onChange = vi.fn();
+    render(<Harness template="saga" onChange={onChange} />);
+    fireEvent.keyDown(surface(), { key: "ArrowLeft", shiftKey: true });
+    fireEvent.keyDown(surface(), { key: "+" });
+    expect(status().dataset.artFraming).toBe("by-hand");
+    expect(status().textContent).toMatch(/Placed by hand: your framing is kept when you change the frame/);
+    expect(fit().disabled).toBe(false);
+    await act(async () => {
+      fireEvent.click(fit());
+    });
+    expect(onChange.mock.calls.at(-1)![0]).toEqual({ focalX: 0.5, focalY: 0.5, scale: 1 });
+    expect(status().dataset.artFraming).toBe("fitted");
+    expect(fit().disabled).toBe(true);
+  });
+
+  it("a stored hand-set position opens as it is: nothing is written, on any frame", () => {
+    const onChange = vi.fn();
+    const start = { focalX: 0.21, focalY: 0.83, scale: 1.4 };
+    const view = render(<Harness template="m15" start={start} onChange={onChange} />);
+    layOut({ width: 400, height: 293 }, { width: 2400, height: 800 });
+    view.rerender(<Harness template="saga" start={start} onChange={onChange} />);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(picture().style.objectPosition).toBe("21% 83%");
+    expect(picture().style.transform).toBe("scale(1.4)");
+    expect(status().dataset.artFraming).toBe("by-hand");
+  });
+
+  it("warns when the zoom leaves empty space in the window, and stops when it is filled again", () => {
+    render(<Harness template="saga" start={{ focalX: 0.5, focalY: 0.5, scale: 0.7 }} />);
+    expect(status().textContent).toMatch(/At 70% the picture is smaller than the art window, so empty space shows on the card/);
+    expect(fit().disabled).toBe(false);
+    for (let i = 0; i < 6; i++) fireEvent.keyDown(surface(), { key: "+" });
+    expect(screen.getByTestId("art-zoom-readout").textContent).toBe("100%");
+    expect(status().textContent).not.toMatch(/empty space/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A zoom-out stops at 100 % (owner 2026-10-12): under it the art window is
+// part empty on the card. Every way a zoom changes by hand — the buttons,
+// the − key, Shift-scroll — goes through the one rule (stepArtZoom); a
+// stored zoom under 100 % opens as it is and only ever goes up.
+// ---------------------------------------------------------------------------
+describe("the zoom stops at 100 % on the way down", () => {
+  const out = () => screen.getByRole("button", { name: "Zoom out" }) as HTMLButtonElement;
+  const zoomIn = () => screen.getByRole("button", { name: "Zoom in" }) as HTMLButtonElement;
+  const readout = () => screen.getByTestId("art-zoom-readout").textContent;
+  const wheelOut = () => {
+    const event = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 120 });
+    Object.defineProperty(event, "shiftKey", { value: true });
+    act(() => {
+      surface().dispatchEvent(event);
+    });
+  };
+
+  it("at 100 % the − button is disabled and the − key and Shift-scroll write nothing", () => {
+    const onChange = vi.fn();
+    render(<Harness template="saga" onChange={onChange} />);
+    expect(out().disabled).toBe(true);
+    fireEvent.keyDown(surface(), { key: "-" });
+    fireEvent.keyDown(surface(), { key: "_" });
+    wheelOut();
+    expect(onChange).not.toHaveBeenCalled();
+    expect(readout()).toBe("100%");
+  });
+
+  it("from above 100 % every zoom-out lands on 100 % and stays there", async () => {
+    const onChange = vi.fn();
+    render(<Harness template="saga" start={{ focalX: 0.3, focalY: 0.6, scale: 1.08 }} onChange={onChange} />);
+    expect(out().disabled).toBe(false);
+    fireEvent.keyDown(surface(), { key: "-" });
+    expect(onChange.mock.calls.at(-1)![0]).toEqual({ focalX: 0.3, focalY: 0.6, scale: 1.03 });
+    await act(async () => {
+      fireEvent.click(out());
+    });
+    expect(onChange.mock.calls.at(-1)![0]).toEqual({ focalX: 0.3, focalY: 0.6, scale: 1 });
+    expect(out().disabled).toBe(true);
+    const writes = onChange.mock.calls.length;
+    fireEvent.keyDown(surface(), { key: "-" });
+    wheelOut();
+    expect(onChange.mock.calls.length).toBe(writes);
+  });
+
+  it("a stored zoom under 100 % opens as stored, cannot go lower, and goes up step by step — never back under 100 %", async () => {
+    const onChange = vi.fn();
+    render(<Harness template="saga" start={{ focalX: 0.4, focalY: 0.5, scale: 0.7 }} onChange={onChange} />);
+    // As stored: drawn at 70 %, the warning, nothing written.
+    expect(picture().style.transform).toBe("scale(0.7)");
+    expect(readout()).toBe("70%");
+    expect(screen.getByTestId("art-fit-status").textContent).toMatch(/At 70% .* Zoom in to 100%, or choose Fit to frame, to fill it\. It can't be made smaller\./);
+    expect(out().disabled).toBe(true);
+    fireEvent.keyDown(surface(), { key: "-" });
+    wheelOut();
+    expect(onChange).not.toHaveBeenCalled();
+    // A pan keeps the stored zoom.
+    fireEvent.keyDown(surface(), { key: "ArrowLeft" });
+    expect(onChange.mock.calls.at(-1)![0]).toEqual({ focalX: 0.39, focalY: 0.5, scale: 0.7 });
+    // Up one step: 75 %, and 70 % is gone.
+    await act(async () => {
+      fireEvent.click(zoomIn());
+    });
+    expect(onChange.mock.calls.at(-1)![0]).toMatchObject({ scale: 0.75 });
+    expect(out().disabled).toBe(true);
+    const writes = onChange.mock.calls.length;
+    fireEvent.keyDown(surface(), { key: "-" });
+    expect(onChange.mock.calls.length).toBe(writes);
+    expect(screen.getByTestId("art-fit-status").textContent).toMatch(/At 75%/);
+    // Up to 100 % and past it; back down stops at 100 %.
+    for (let i = 0; i < 6; i++) fireEvent.keyDown(surface(), { key: "+" });
+    expect(readout()).toBe("105%");
+    expect(out().disabled).toBe(false);
+    fireEvent.keyDown(surface(), { key: "-" });
+    fireEvent.keyDown(surface(), { key: "-" });
+    fireEvent.keyDown(surface(), { key: "-" });
+    expect(readout()).toBe("100%");
+    expect(onChange.mock.calls.at(-1)![0]).toMatchObject({ scale: 1 });
+    expect(out().disabled).toBe(true);
+  });
+
+  it("an off-grid stored zoom (97 %) steps to 102 %, then down to 100 %", () => {
+    const onChange = vi.fn();
+    render(<Harness template="m15" start={{ focalX: 0.5, focalY: 0.5, scale: 0.97 }} onChange={onChange} />);
+    fireEvent.keyDown(surface(), { key: "+" });
+    expect(onChange.mock.calls.at(-1)![0].scale).toBe(1.02);
+    fireEvent.keyDown(surface(), { key: "-" });
     expect(onChange.mock.calls.at(-1)![0].scale).toBe(1);
   });
 });

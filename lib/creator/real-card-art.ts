@@ -1,5 +1,6 @@
 import type { UseFormSetValue } from "react-hook-form";
 import type { ImportedArtOrigin } from "@/components/creator/import/imported-art-note";
+import { fitArtToWindow } from "@/lib/cards/art-fit";
 import type { FormValues } from "@/lib/creator/form-types";
 import type { PrintingSummary } from "@/lib/scryfall/printing-views";
 import type { ArtPosition } from "@/types/card";
@@ -23,13 +24,10 @@ export type RealCardArtTarget = "front" | "back";
  *  `mode` values. */
 export type RealCardArtMode = "art" | "art-back";
 
-/** A fresh art crop starts centred and unzoomed — the old framing belonged
- *  to the old image. */
-export const CENTERED_ART_POSITION: Readonly<Required<ArtPosition>> = Object.freeze({
-  focalX: 0.5,
-  focalY: 0.5,
-  scale: 1,
-});
+/** A fresh art crop starts on the automatic fit (TODO 3b.18,
+ *  lib/cards/art-fit.ts: it fills the window, centred) — the old framing
+ *  belonged to the old image. */
+export const CENTERED_ART_POSITION: Readonly<Required<ArtPosition>> = Object.freeze(fitArtToWindow());
 
 /** The artist credit field's limit (cardArtistCreditSchema). */
 const ARTIST_CREDIT_MAX = 120;

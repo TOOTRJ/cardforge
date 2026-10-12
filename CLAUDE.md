@@ -697,6 +697,20 @@ Rules and gotchas:
   Both renderers pass the card's value through `rulesAlignOf` and only
   draw the indents. A new template offers
   it by default — `rules-align.test.ts` names the six that don't. Never a sweep or a bump; `docs/FRAMES.md` "The text alignment".
+- The art's automatic fit (TODO 3b.18): a picture that lands on a card
+  (upload, a real card's art, an import, an AI picture) takes
+  `fitArtToWindow()` (`lib/cards/art-fit.ts`: fill the window, show the
+  centre) — never three literal numbers — and is "untouched" exactly while
+  its position EQUALS that fit (`isArtFitted`; no flag, no column). Only an
+  untouched picture is re-fitted on a frame / kind / colour / face change; a
+  hand-set one is carried (3.23) or left alone, and a stored card's numbers
+  are never rewritten by opening it. A zoom-out STOPS AT 100 % (owner
+  2026-10-12: under it the window is part empty on the card): every hand
+  zoom goes through `stepArtZoom` (floor = `min(current zoom, 1)`, so a
+  stored zoom under 100 % opens as stored, never goes lower and only climbs)
+  — a creator rule; the validator, the database and the renderers keep
+  0.5 – 4, and no automatic path (landing = the fit, carry = the maker's
+  zoom) makes one.
 - Print typography (TODO 6.11): `printTypography(text, field)`
   (`lib/validation/print-typography.ts`, pure, idempotent) turns what a plain
   keyboard types into what a card prints — curly quotes and apostrophes
