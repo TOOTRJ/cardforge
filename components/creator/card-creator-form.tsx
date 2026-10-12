@@ -100,6 +100,8 @@ import { RarityPanel } from "@/components/creator/panels/rarity-panel";
 import { LoyaltyAbilitiesEditor } from "@/components/creator/panels/loyalty-editor";
 import { SagaChaptersEditor } from "@/components/creator/panels/saga-editor";
 import { CardSetupPanel } from "@/components/creator/panels/card-setup-panel";
+import { LegendaryCrownReason } from "@/components/creator/panels/legendary-variation";
+import { previewFrameStyleOf } from "@/lib/creator/legendary-variation";
 import { CARD_TYPE_OPTIONS } from "@/components/creator/field-group";
 import { KindChangeDialog } from "@/components/creator/kind-change-dialog";
 import { ArtPanel } from "@/components/creator/panels/art-panel";
@@ -3118,7 +3120,9 @@ export function CardCreatorForm({
     artistCredit: watched.artist_credit,
     artUrl: watched.art_url || null,
     artPosition: watched.art_position,
-    frameStyle: watched.frame_style,
+    // What the save keeps: never a crown the card's own template drops
+    // (a modal land front with a legendary back — TODO 3b.17).
+    frameStyle: previewFrameStyleOf(watched.frame_style),
     // Live set-symbol preview (the Set icon step edits these directly).
     setIconUrl: watched.set_icon_url || null,
     // The collector fields (TODO 4.9a) travel to the preview as the bake's
@@ -3373,6 +3377,11 @@ export function CardCreatorForm({
                   }
                   onPairTouched={markPairTouched}
                 />
+                {/* An edit or a remix has the crown's switch alone (TODO
+                    3b.17, owner 2026-10-12); where it can't show on a frame
+                    that prints the crown — the stored card is not legendary
+                    and its type line is locked — one line says why. */}
+                {isRevise ? <LegendaryCrownReason /> : null}
                 <ArtPanel
                   userId={userId}
                   artWindow={artWindows.front}
