@@ -413,7 +413,9 @@ describe("the name next to a detached cost (costRect)", () => {
   it("measures a cost as its discs plus the pip gaps", () => {
     expect(manaCostWidthPct("{W}", 0.04)).toBeCloseTo(0.04, 10);
     expect(manaCostWidthPct("{1}{R}{W}{B}", 0.04)).toBeCloseTo(4 * 0.04 + 3 * 0.12 * 0.04, 10);
-    expect(manaCostWidthPct("{W/U}{B/P}{2/R}", 0.04)).toBeCloseTo(3 * 0.04 + 2 * 0.12 * 0.04, 10);
+    expect(manaCostWidthPct("{W/U}{2/R}{C}", 0.04)).toBeCloseTo(3 * 0.04 + 2 * 0.12 * 0.04, 10);
+    // A Phyrexian symbol's disc is ×1.2 (pipScale; layout v52 counts it).
+    expect(manaCostWidthPct("{W/U}{B/P}{2/R}", 0.04)).toBeCloseTo((2 + 1.2) * 0.04 + 2 * 0.12 * 0.04, 10);
     expect(manaCostWidthPct("", 0.04)).toBe(0);
   });
 

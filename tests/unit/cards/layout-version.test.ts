@@ -2490,3 +2490,136 @@ describe("v51 — the art's zoom about a focal point of exactly 0 (Satori droppe
     expect(lv.hasNewerLook(row, AT)).toBe(false);
   });
 });
+
+describe("v52 — a name's room before a detached cost of Phyrexian symbols (TODO 6.16d)", () => {
+  const png = "https://x/y.png";
+  const V = 52;
+  const DETACHED = ["modern", "m15pw", "m15borderlesspw", "m15borderlesspwtall"];
+  /** A v51 bake: only v52 can be pending. */
+  const at = (template: string, cost: string | null, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    visibility: "public",
+    layout_version: V - 1,
+    rendered_image_url: png,
+    frame_style: { template, finish: "regular" },
+    card_type: template === "modern" ? "creature" : "planeswalker",
+    title: "Elesh Norn, Grand Cenobite of the Machine Orthodoxy",
+    cost,
+    ...over,
+  });
+  const AT = { current: V } as const;
+  const LARGER = ["{W/P}", "{u/p}", "{G/U/P}", "{ r/p }", "{b/G/p}", "{2}{R/P}{R/P}", "{X}{G/W/P}", "{WP}", "{1}{ rp }{R}", "{GPx}"];
+  const PLAIN = ["{2}{R}{R}", "{W/U}{2/W}", "{X}{C}{S}", "{Q}{E}{T}", "{C/P}", "{G/G/P}", "{P}", "{W / P}", "{PW}", "{CP}", "{GUP}", "WP", "2RR", "", null];
+
+  it("is a sweep, never a badge, scoped to the detached-cost templates AND to the card, and verification-neutral", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect(lv.VERSION_SCOPES[V]).toBeTypeOf("function");
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual([]);
+    // Without a card to judge by: the four templates are touched, no other.
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(DETACHED.includes(t));
+  });
+
+  it("the frozen list is the profiles': every template that draws its cost in a box of its own", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect([...lv.V52_DETACHED_COST_TEMPLATES].sort()).toEqual([...DETACHED].sort());
+    expect(
+      FRAME_TEMPLATE_VALUES.filter((t) => {
+        const p = getFrameProfile(t);
+        return Boolean(p.costRect) && !p.hideCost;
+      }).sort(),
+    ).toEqual([...DETACHED].sort());
+    // No second face draws its cost in a detached box: the front's cost alone is read.
+    for (const t of FRAME_TEMPLATE_VALUES) expect(getFrameProfile(t).secondFace && "costRect" in getFrameProfile(t).secondFace!, t).toBeFalsy();
+  });
+
+  it("the frozen symbol test is pipScale's: a larger disc, as the tokenizer reads the cost", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const { tokenize, tokenSuffix } = await import("@/components/cards/mana-cost-glyphs");
+    const { pipScale } = await import("@/lib/cards/mana-gem");
+    const larger = (cost: string) => tokenize(cost).some((t) => pipScale(tokenSuffix(t) ?? "") !== 1);
+    const letters = ["W", "U", "B", "R", "G", "C", "P", "X", "2", "S", "Q", "E", "T"];
+    const inners = [...letters];
+    for (const a of letters) for (const b of letters) inners.push(`${a}/${b}`);
+    for (const a of ["W", "U", "G", "C", "2"]) for (const b of ["W", "U", "G", "C"]) inners.push(`${a}/${b}/P`);
+    // A cost typed by hand without the slash: an unknown symbol keeps its
+    // first two letters, and "wp" IS the Phyrexian symbol's suffix — the
+    // larger disc ({WP}, {WPX}, {WP/U}); {PW}, {GUP}, {W P} are plain.
+    for (const a of letters) for (const b of letters) inners.push(`${a}${b}`, `${a}${b}X`, `${a}${b}/U`, `${a} ${b}`, `${a}${b} 3`);
+    inners.push("GUP", "WUP", "W/P/U", "P/W", "W/ P", "W /P", "WP/P", "2/W/P");
+    for (const inner of inners) {
+      for (const cost of [`{${inner}}`, `{${inner.toLowerCase()}}`, `{ ${inner} }`, `{1}{${inner}}{R}`, inner]) {
+        expect(lv.v52HasLargerDisc(cost), cost).toBe(larger(cost));
+      }
+    }
+    for (const cost of LARGER) expect(lv.v52HasLargerDisc(cost), cost).toBe(true);
+    for (const cost of PLAIN) expect(lv.v52HasLargerDisc(cost), String(cost)).toBe(false);
+  });
+
+  it("re-bakes a card on a detached-cost template whose cost holds a Phyrexian symbol", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const sweep = await sweepAt(V);
+    for (const template of DETACHED) {
+      for (const cost of LARGER) {
+        const row = at(template, cost);
+        expect(sweep(row), `${template} ${cost}`).toBe("rebake");
+        expect(sweep(row, V)).toBe("rebake");
+        expect(isRenderStale(V - 1, template, undefined, V, row)).toBe(true);
+        expect(lv.hasPendingCorrection(row, AT)).toBe(true);
+        expect(lv.hasNewerLook(row, AT)).toBe(false);
+      }
+    }
+  });
+
+  it("stamps every other card: a plain cost on the four, any cost on every other template", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const sweep = await sweepAt(V);
+    for (const template of DETACHED) {
+      for (const cost of PLAIN) {
+        const row = at(template, cost);
+        expect(sweep(row), `${template} ${cost}`).toBe("stamp");
+        expect(lv.hasPendingCorrection(row, AT)).toBe(false);
+        expect(lv.hasNewerLook(row, AT)).toBe(false);
+      }
+      // A Phyrexian symbol in the TEXT, or in a back face's cost, moves no name.
+      expect(sweep(at(template, "{2}{R}", { rules_text: "{R/P}: Draw a card.", back_face: { title: "Back", cost: "{R/P}{R/P}" } }))).toBe("stamp");
+    }
+    for (const template of FRAME_TEMPLATE_VALUES) {
+      if (DETACHED.includes(template)) continue;
+      for (const cost of LARGER) {
+        const row = at(template, cost, { card_type: "creature" });
+        expect(sweep(row), `${template} ${cost}`).toBe("stamp");
+        expect(isRenderStale(V - 1, template, undefined, V, row), template).toBe(false);
+      }
+    }
+    // `modernland` shares the box but hides its cost; a {} frame_style draws m15.
+    expect(sweep(at("modernland", "{R/P}{R/P}{R/P}", { card_type: "land" }))).toBe("stamp");
+    expect(sweep(at("m15", "{R/P}", { frame_style: {} }))).toBe("stamp");
+  });
+
+  it("a row that doesn't carry the cost can't be judged: affected on the four, stamped elsewhere", async () => {
+    const sweep = await sweepAt(V);
+    for (const template of [...DETACHED, "m15", "lotr"]) {
+      const row = at(template, "{2}{R}") as Record<string, unknown>;
+      delete row.cost;
+      expect(sweep(row as never), template).toBe(DETACHED.includes(template) ? "rebake" : "stamp");
+    }
+  });
+
+  it("an older bake owes v52 only on the four: a v50 card with a plain cost and centred art is stamped", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const sweep = await sweepAt(V);
+    for (const template of FRAME_TEMPLATE_VALUES) {
+      const plain = at(template, "{2}{R}", { layout_version: 50, card_type: "creature", title: "Worm", art_position: null });
+      expect(sweep(plain), template).toBe("stamp");
+      expect(lv.hasPendingCorrection(plain, AT), template).toBe(false);
+    }
+    expect(sweep(at("m15pw", "{1}{R/P}", { layout_version: 50, art_position: null }))).toBe("rebake");
+  });
+});

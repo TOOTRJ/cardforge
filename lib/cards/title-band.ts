@@ -14,7 +14,7 @@
 // renderers take the name's text, width and size from fitTitleBand, which
 // keeps fitDetachedCostTitle for every other frame.
 
-import { tokenize } from "@/components/cards/mana-cost-glyphs";
+import { tokenSuffix, tokenize } from "@/components/cards/mana-cost-glyphs";
 import { displayTextWidthEm, truncateDisplayLine } from "@/lib/cards/display-metrics";
 import {
   BAND_GAP_PCT,
@@ -28,6 +28,7 @@ import {
   measuredLineSizePct,
   pastFloorText,
 } from "@/lib/cards/render-tiers";
+import { pipScale } from "@/lib/cards/mana-gem";
 import { symbolStyleOf } from "@/lib/cards/symbol-style";
 import type { FrameProfile } from "@/lib/cards/template-layout";
 import { slotFace } from "@/lib/cards/type-faces";
@@ -46,13 +47,19 @@ const PIP_GAP_DISC = COST_PIP_GAP;
  *  per character errs wide. */
 const TEXT_TOKEN_CHAR_DISC = 0.6 * 0.7;
 
-/** Drawn width of a mana cost, as a fraction of card width, for pips
- *  `discPct` across (FrameProfile.costSizePct semantics). */
+/** Drawn width of a mana cost, as a fraction of card width, for plain pips
+ *  `discPct` across (FrameProfile.costSizePct semantics). Each pip counts
+ *  its OWN disc — a Phyrexian symbol's is ×1.2 (pipScale, the one answer
+ *  the cost row's costRowTerms and both renderers read; layout v52: every
+ *  pip counted as a plain disc, so a name ran under a detached cost of
+ *  Phyrexian symbols). A plain pip's factor is exactly 1: a cost without a
+ *  larger disc measures to the same float as before. */
 export function manaCostWidthPct(cost: string, discPct: number): number {
   const tokens = tokenize(cost.trim());
   if (tokens.length === 0) return 0;
   const glyphs = tokens.reduce(
-    (w, t) => w + (t.kind === "text" ? t.value.length * TEXT_TOKEN_CHAR_DISC * discPct : discPct),
+    (w, t) =>
+      w + (t.kind === "text" ? t.value.length * TEXT_TOKEN_CHAR_DISC * discPct : discPct * pipScale(tokenSuffix(t) ?? "")),
     0,
   );
   return glyphs + (tokens.length - 1) * PIP_GAP_DISC * discPct;

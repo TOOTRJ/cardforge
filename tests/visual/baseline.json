@@ -1,6 +1,6 @@
 {
   "about": "Visual-regression baseline (TODO 7.1): every case in tests/visual/matrix.ts as <pixel hash>:<input fingerprint> (the case's row, preset and corners). Generated — never edit by hand; `npm run test:visual -- --update` (or the CI job's visual-baseline artifact) rewrites it. Hashes only: no pixels, no frame art.",
-  "layoutVersion": 51,
+  "layoutVersion": 52,
   "generatedOn": {
     "platform": "darwin-arm64",
     "node": "v25.6.1",
@@ -959,6 +959,9 @@
     "m15pw/u/planeswalker-short@collector-2015": "e4efe1552033e7b7:d934bcc4",
     "m15pw/u/planeswalker-short@stamp": "d3982ec0d2abe8a4:39f72e78",
     "m15pw/w/planeswalker-long": "788b1dead8d2b899:c8d3158c",
+    "m15pw/w/planeswalker-long@phyrexian-cost-3": "24f1b3e3e7c70616:8adb8d86",
+    "m15pw/w/planeswalker-long@phyrexian-cost-5": "2eb0accb8a2e70fc:a4b6554b",
+    "m15pw/w/planeswalker-long@phyrexian-cost-5-hd": "ef501c7d365ae098:a0afdfba",
     "m15pw/w/planeswalker-short": "119625bd396c37b0:56b88a51",
     "m15pw/wu/planeswalker-long": "fd81264df0f0f820:c2cd2657",
     "m15pw/wu/planeswalker-short": "2aa443ffee2b0a2f:be85c483",
@@ -1269,6 +1272,9 @@
     "modern/u/creature-short@white-etched": "87e8ea079fb4b106:8cf719cc",
     "modern/u/instant-short": "80343cd5a8fa2815:b16ac258",
     "modern/w/creature-long": "de20d46723aeadba:a582e657",
+    "modern/w/creature-long@phyrexian-cost-3": "9c83eaf0547bf898:518f1b5d",
+    "modern/w/creature-long@phyrexian-cost-5": "e662d850671b684f:4612ae2c",
+    "modern/w/creature-long@phyrexian-cost-5-hd": "dd1ac859f68af131:99f6e655",
     "modern/w/creature-short": "32c3c089248418dc:7a7efda6",
     "modern/w/creature-short@white": "8529cdecd052841b:758c539f",
     "modern/w/enchantment-short": "20e7c23c6a615bd6:93bac2af",

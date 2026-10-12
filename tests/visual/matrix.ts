@@ -1414,6 +1414,18 @@ export function visualCases(): VisualCase[] {
     add(land, "land", "wu", "short", { suffix: "@pair-br", row: { ...pairStyle(land), color_identity: ["black", "red"] } });
     add(land, "land", "wu", "short", { suffix: "@pair-square", corners: "square", row: pairStyle(land) });
   }
+  // TODO 6.16d (layout v52): a long name before a DETACHED cost of Phyrexian
+  // symbols — NEW cases (no case above sets one in a detached cost). The
+  // name's room is measured against the row of ×1.2 discs: three and five
+  // of them on the 2003 frame and on the walker, and five at the stored
+  // bake's size. The name is long enough to shrink before either cost.
+  for (const [template, kind] of [["modern", "creature"], ["m15pw", "planeswalker"]] as const) {
+    for (const count of [3, 5]) {
+      const row = { title: "Elesh Norn, Grand Cenobite of the Machine Orthodoxy", cost: "{W/P}".repeat(count) };
+      add(template, kind, "w", "long", { suffix: `@phyrexian-cost-${count}`, row });
+      if (count === 5) add(template, kind, "w", "long", { suffix: `@phyrexian-cost-${count}-hd`, preset: "hd", row });
+    }
+  }
   // TODO 4.9b: the collector line, opt-in per card (frame_style.collector —
   // no stored card has the key, so these are NEW cases, no bump): both
   // styles on every slotted template (the primary kind: a token on the
