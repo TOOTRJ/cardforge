@@ -1233,6 +1233,34 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            Creature"), inside the scope; the land creature, Enchantment
 //            Land and Enchantment Artifact cases are new.
 //            Verification-neutral: no slot, master, size or plate moves.
+//   51     — the art's zoom about a focal point of exactly 0 (found by
+//            #497's review; owner decision 2026-10-09). Satori 0.25 keeps a
+//            `transform-origin` component only when it is truthy, so `0%`
+//            on an axis was dropped and that axis fell back to the CENTRE:
+//            a card whose focal point is exactly 0 across (or down) with a
+//            zoom other than 100 % was baked zoomed about the middle of its
+//            art window on that axis — the picture's left (top) edge pushed
+//            out of the window — while the live preview, the art positioner
+//            and the print render (sharp, its own arithmetic) zoom about
+//            the edge. The bake now names the edge (`left` / `top`,
+//            lib/render/card-image.tsx satoriTransformOrigin), the one
+//            spelling Satori reads as 0; every other position is the same
+//            string, the same pixels. Both sites: the main art window (a
+//            double-faced back body's bake too) and the split's second
+//            window; aftermath's turned window is placed in px and was
+//            right. A CORRECTION ("sweep"), never a badge, after the
+//            owner's before / after sheet. Card-scoped on ANY template
+//            (v51Changed): a face with art, a zoom ≠ 1 and focalX or
+//            focalY exactly 0 (as the renderer clamps them) — the front's
+//            `art_position`, or a back face's; every other card is
+//            stamped. Public production (anonymous read, 2026-10-09): 3
+//            public cards (`m15`, `m15devoid`, `aftermath`; zooms 1.05,
+//            1.05, 1.1) and 1 unlisted (`m15borderless`, 1.3) re-bake: the
+//            art moves by (zoom − 1) / 2 of its window on the zero axis —
+//            2.5 %, 2.5 %, 5 % and 15 %; no back face is in scope. The
+//            visual matrix: no case changes (none sets a focal of 0 with a
+//            zoom).
+//            Verification-neutral (no slot, master, size or plate moves).
 // ---------------------------------------------------------------------------
 
 /** The 1993 frame on its prints (TODO 4.10c): every text slot and the
@@ -1268,7 +1296,12 @@ export const SYMBOLS_PRINT_LAYOUT_VERSION = 49;
  *  scope and the rollout below read this constant. */
 export const TYPE_LINE_ORDER_LAYOUT_VERSION = 50;
 
-export const CARD_LAYOUT_VERSION = TYPE_LINE_ORDER_LAYOUT_VERSION;
+/** The art's zoom about a focal point of exactly 0 (Satori dropped a zero
+ *  `transform-origin`): ITS version lives here alone — CARD_LAYOUT_VERSION,
+ *  the card scope and the rollout below read this constant. */
+export const ART_FOCAL_ZERO_LAYOUT_VERSION = 51;
+
+export const CARD_LAYOUT_VERSION = ART_FOCAL_ZERO_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -1437,6 +1470,7 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   [ALPHA_1993_LAYOUT_VERSION]: ALPHA_1993_TEMPLATES,
   // (v49 is not here: any template — a card scope, v49Changed.)
   // (v50 is not here: any template — a card scope, v50Changed.)
+  // (v51 is not here: any template — a card scope, v51Changed.)
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -1570,10 +1604,15 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
  * v50 is (TODO 1.20): the words of a type line change their order inside
  * the type slot and a land creature prints its P/T on the plate the frame
  * already has — no slot, master, size or plate moves.
+ * v51 is: the art moves inside its own window on a card whose focal point
+ * is exactly 0 with a zoom — no slot, master, size or plate moves, and a
+ * reference card (focal 0.5, zoom 1) bakes to the same pixels.
  * Stored bakes still owe these bumps: this list is read by frame
  * verification only, never by the stale / sweep / download rules.
  */
-export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [31, 32, 33, 35, 36, 37, 44, 49, TYPE_LINE_ORDER_LAYOUT_VERSION];
+export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [
+  31, 32, 33, 35, 36, 37, 44, 49, TYPE_LINE_ORDER_LAYOUT_VERSION, ART_FOCAL_ZERO_LAYOUT_VERSION,
+];
 
 /** TEMPLATE_SCOPED_VERSIONS with VERIFICATION_TEMPLATE_SCOPES laid over it
  *  (v34: only the token frames' ticks) and every verification-neutral bump
@@ -1620,6 +1659,9 @@ export type ScopeCard = {
   face_content?: unknown;
   /** v49: the mana cost (a redrawn symbol in it). */
   cost?: string | null;
+  /** v51: the raw `art_position` jsonb ({ focalX, focalY, scale }); a back
+   *  face's is read from `back_face`. */
+  art_position?: unknown;
 };
 
 // v29 — the templates on which EVERY card's bake changed: their footer is
@@ -2100,6 +2142,35 @@ function v50Changed(card: ScopeCard): boolean {
   return back !== null && v50FaceChanged(back);
 }
 
+/** One face's art as v51 reads it: drawn zoomed (≠ 1) about a focal point
+ *  that is exactly 0 on an axis — the renderer's own clamps (focal 0–1,
+ *  default 0.5; scale 0.5–4, default 1). No art → never. */
+function v51FaceChanged(artUrl: unknown, artPosition: unknown): boolean {
+  if (typeof artUrl !== "string" || !artUrl) return false;
+  const position = artPosition && typeof artPosition === "object" ? (artPosition as Record<string, unknown>) : {};
+  const num = (value: unknown, fallback: number) => (typeof value === "number" && Number.isFinite(value) ? value : fallback);
+  const clamped = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+  const scale = clamped(num(position.scale, 1), 0.5, 4);
+  if (scale === 1) return false;
+  return clamped(num(position.focalX, 0.5), 0, 1) === 0 || clamped(num(position.focalY, 0.5), 0, 1) === 0;
+}
+
+/**
+ * Whether layout v51 (the art's zoom about a focal point of exactly 0)
+ * changed a card's bake: the front's art, or a back face's (the split's
+ * second window, a double-faced back body's own bake), is drawn with a zoom
+ * other than 100 % about a focal point that is 0 across or down. Read wider
+ * than what is drawn where telling costs more than a re-bake (a back face
+ * whose art the frame does not draw re-bakes to the same pixels). Any
+ * column it needs that the row doesn't carry → affected.
+ */
+function v51Changed(card: ScopeCard): boolean {
+  if ([card.art_url, card.art_position, card.back_face].some((v) => v === undefined)) return true;
+  if (v51FaceChanged(card.art_url, card.art_position)) return true;
+  const back = card.back_face && typeof card.back_face === "object" ? (card.back_face as Record<string, unknown>) : null;
+  return back !== null && v51FaceChanged(back.art_url, back.art_position);
+}
+
 /** The frozen v33 template lists, for the test that pins them to the
  *  profiles. */
 export const V33_SCOPE_TEMPLATES = {
@@ -2150,6 +2221,9 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // v50 — the type line in its printed order + a land creature's P/T
   // (1.20): a face whose line or P/T changes — v50Changed.
   [TYPE_LINE_ORDER_LAYOUT_VERSION]: v50Changed,
+  // v51 — the art's zoom about a focal point of exactly 0: a face with
+  // art, a zoom ≠ 1 and focalX or focalY 0 — v51Changed.
+  [ART_FOCAL_ZERO_LAYOUT_VERSION]: v51Changed,
 };
 
 /** `frame_style.finish` from the jsonb column, or null when absent (= regular). */
@@ -2280,6 +2354,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [ALPHA_1993_LAYOUT_VERSION]: "sweep", // the 1993 frame on its prints (4.10c): sizes, faces, the `Illus.` credit, the P/T, the original symbols — a correction of a pair against Alpha / Beta after the owner's before / after sheet (4 stored cards), never a badge
   [TYPE_LINE_ORDER_LAYOUT_VERSION]: "sweep", // the type line in its printed order + the P/T of a land creature (1.20) — a correction of what a face prints; 0 public or unlisted stored cards in scope, never a badge
   [SYMBOLS_PRINT_LAYOUT_VERSION]: "sweep", // five symbols on the prints' drawings + flat rules-text pips (6.16b) — a correction against the prints after the owner's round-43 sheets, never a badge
+  [ART_FOCAL_ZERO_LAYOUT_VERSION]: "sweep", // the art's zoom about a focal point of exactly 0 (Satori dropped a zero transform-origin) — a correction of the bake against the preview after the owner's before / after sheet, never a badge
   [BATTLE_RECUT_LAYOUT_VERSION]: "sweep", // the battle's right side, top block and icon re-cut onto the prints (4.21d) — a correction on a template no public card uses, never a badge
 };
 

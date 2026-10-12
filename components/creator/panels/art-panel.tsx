@@ -17,12 +17,16 @@ import {
   MoreOptions,
   inputClass,
 } from "@/components/creator/field-group";
+import type { ArtWindow } from "@/lib/cards/art-positioner-window";
 import type { FormValues } from "@/lib/creator/form-types";
 import { realCardArtOrigin } from "@/lib/creator/real-card-art";
 import { templateHasBackFace } from "@/lib/cards/dfc";
 
 type ArtPanelProps = {
   userId: string | null;
+  /** The front face's art window on the current frame and colour (TODO
+   *  3b.13): the positioner's surface. */
+  artWindow: ArtWindow;
   /** The back-face editor, rendered inside this panel's "More options" (the
    *  back face used to be its own step). Supplied by the orchestrator so its
    *  caret refs / symbol insertion stay there. */
@@ -50,6 +54,7 @@ type ArtPanelProps = {
 
 export function ArtPanel({
   userId,
+  artWindow,
   backFaceSlot,
   aiSlot,
   secondFaceNameMissing = false,
@@ -91,6 +96,7 @@ export function ArtPanel({
                 userId={userId}
                 artUrl={artUrlField.value}
                 artPosition={artPosField.value}
+                artWindow={artWindow}
                 onArtChange={({ artUrl, artPosition }) => {
                   // Controller onChange is the single write path — it updates
                   // the value AND dirties the field. A second setValue on the

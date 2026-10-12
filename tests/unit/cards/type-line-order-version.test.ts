@@ -205,7 +205,7 @@ describe(`v${V} — the type line in its printed order + a land creature's P/T (
       delete row[missing];
       expect(scope(row), missing).toBe(true);
     }
-    // A current bake is current.
-    expect(classifyForSweep(at("m15land", { card_type: "land", supertype: "Creature", layout_version: V }))).toBe("current");
+    // A current bake is current (at v50: a later bump is its own block's).
+    expect(classifyForSweep(at("m15land", { card_type: "land", supertype: "Creature", layout_version: V }), undefined, { current: V })).toBe("current");
   });
 });

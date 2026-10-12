@@ -306,6 +306,11 @@ Rules and gotchas:
   Resume / Retry. A migration that nulls stamps for a CODE fix ships with a
   sweep bump (or pause first): the old deployment's cron can re-bake them
   with the old code before the new deploy is live.
+- The art's zoom (layout v51): a Satori `transform-origin` built from a
+  number goes through `satoriTransformOrigin()` (`lib/render/card-image.tsx`)
+  — Satori drops a ZERO component (`0%`) and zooms about the centre on that
+  axis; `left` / `top` are read as 0. `docs/FRAMES.md` "Art under and around
+  the frame".
 - ONE card corner (layout v31, TODO 3.26): `lib/cards/card-corner.ts`
   (`CARD_CORNER_OF_SHORT_SIDE` 0.043 of the SHORT side — 64.5 px at HD in
   both orientations, never `Math.round`ed; no imports). The bake cuts it
