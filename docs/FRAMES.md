@@ -2808,8 +2808,10 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
     locked type line (`lib/creator/revise.ts`) and NO chip (owner
     2026-10-12): the switch is the one control there. Where the switch
     can't show on a frame that prints the crown — the stored card is not
-    legendary — the Identity step says so in one line ("Only a Legendary
-    card prints the crown, and this card's type line is fixed",
+    legendary — the Identity step says so in one line ("Only a card created
+    as Legendary prints the crown — rewording the type line here changes the
+    printed words only": since 3b.16 an edit can reword the PRINTED line, and
+    typing "Legendary" there does not make the card legendary,
     `LegendaryCrownReason`); the word is never written on an edit.
   A frame change never clears the switch in the form: a move to a frame
   with no crown and back restores it; only the save drops it. Imports and

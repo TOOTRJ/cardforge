@@ -78,7 +78,7 @@ export type LegendaryVariation = {
 /** The reasons the entry is disabled with — one line, plain words. */
 export const NO_CROWN_REASON = "This frame has no legendary crown";
 export const NO_CROWN_COLOUR_REASON = "This frame has no legendary crown in this colour";
-export const NOT_LEGENDARY_LOCKED_REASON = "Only a Legendary card prints the crown, and this card\u2019s type line is fixed";
+export const NOT_LEGENDARY_LOCKED_REASON = "Only a card created as Legendary prints the crown \u2014 rewording the type line here changes the printed words only";
 
 /** The supertype with "Legendary" FIRST, where the prints put it ("Legendary
  *  Artifact Creature", "Legendary Snow Land"); unchanged — its spacing
