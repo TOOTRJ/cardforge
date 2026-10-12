@@ -215,6 +215,7 @@ export function MyCardsBrowser({
           supertype: card.supertype,
           cardType: card.card_type,
           subtypes: card.subtypes,
+          printedTypes: card.printed_types,
         }).toLowerCase(),
       ).includes(needle),
     [needle],

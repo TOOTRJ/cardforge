@@ -248,6 +248,7 @@ describe("the stored shape (the card actions enforce it)", () => {
       cost: null,
       color_identity: ["colorless"],
       supertype: null,
+      printed_types: null,
       power: null,
       toughness: null,
       loyalty: null,

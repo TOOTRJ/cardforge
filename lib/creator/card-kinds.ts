@@ -36,7 +36,6 @@ import {
   hasRulesBoxText,
   normalizeFrameTemplate,
   supertypeHasWord,
-  supertypeWords,
   withSupertypeWord,
   withoutSupertypeWord,
   type TokenTypeWord,
@@ -757,53 +756,10 @@ export function toggleTokenWord(
   return on ? withSupertypeWord(supertype, word) : withoutSupertypeWord(supertype, word);
 }
 
-/** The picker word `word` spells (any case), or null for a word the picker
- *  doesn't own. */
-function pickerWordOf(word: string): TokenPickerWord | null {
-  const lower = word.toLowerCase();
-  return TOKEN_PICKER_WORDS.find((w) => w.toLowerCase() === lower) ?? null;
-}
-
-/**
- * The words of a token's supertype the picker does NOT own ("Basic", "Snow",
- * an import's "Land"), in their order — what the Identity step's free
- * Supertype field shows on the token kind, so the picker's words
- * (Legendary, Enchantment, Artifact, Creature) have one control, not two.
- */
-export function tokenOtherWordsOf(supertype: string | null | undefined): string {
-  return supertypeWords(supertype)
-    .filter((word) => pickerWordOf(word) === null)
-    .join(" ");
-}
-
-/**
- * The supertype after the token's free Supertype field is edited to
- * `typed`: `typed`'s words replace the supertype's other words, and the
- * picker's words that are on stay on, merged back in printed order
- * (withSupertypeWord) — "Snow" under Legendary + Creature → "Legendary Snow
- * Creature". A picker word typed into the field is not written while the
- * user types (the toggle is its one control); with `adoptPickerWords` (the
- * field's blur) it turns its toggle on, spelled as the picker spells it.
- */
-export function withTokenOtherWords(
-  supertype: string | null | undefined,
-  typed: string,
-  { adoptPickerWords = false }: { adoptPickerWords?: boolean } = {},
-): string {
-  const words = supertypeWords(typed);
-  const on = new Set<TokenPickerWord>(tokenPickerWordsOf(supertype));
-  if (adoptPickerWords) {
-    for (const word of words) {
-      const picked = pickerWordOf(word);
-      if (picked) on.add(picked);
-    }
-  }
-  const others = words.filter((word) => pickerWordOf(word) === null).join(" ");
-  return TOKEN_PICKER_WORDS.filter((word) => on.has(word)).reduce(
-    (acc, word) => withSupertypeWord(acc, word),
-    others,
-  );
-}
+// The token's free Supertype field (tokenOtherWordsOf / withTokenOtherWords)
+// is gone with TODO 3b.16: the Identity step's Types field holds ALL the
+// token's words after a fixed "Token", and the toggles above write into it
+// (components/creator/types-field.tsx useTypesFieldSync).
 
 /** The supertype a card carries INTO the token kind: "Creature" is on for a
  *  new token (a creature turned token stays a creature). */

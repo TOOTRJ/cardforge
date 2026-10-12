@@ -11,6 +11,8 @@
 //   Choose one -        → Choose one —
 //   - Destroy / * Draw  → • Destroy / • Draw    (rules only, start of a line)
 //   -Serra / -- Serra   → —Serra                (flavor only: the attribution)
+//   goblin wizard       → Goblin Wizard         (a type-line part: each word
+//                                                capitalised, TODO 3b.16)
 //
 // WHERE it runs (one function, the same answer everywhere):
 //   * the creator, when a field loses focus (and when an AI fill, an idea or
@@ -35,6 +37,8 @@
 // Pure; shared client + server.
 // ---------------------------------------------------------------------------
 
+import { capitalizeTypeWords, typesFieldText } from "@/lib/cards/type-line-field";
+import type { CardType } from "@/types/card";
 import { loyaltyFromRulesText, sagaFromRulesText, serializeLoyalty, serializeSaga } from "@/lib/cards/face-content";
 
 /** How a field is read: a card name, a type-line part (supertype, subtype),
@@ -166,6 +170,11 @@ function convertLine(rawLine: string, field: TypographyField): string {
     text = out.join("");
   }
 
+  // A type-line part prints each word with a capital (TODO 3b.16, owner
+  // 2026-10-09): "goblin wizard" → "Goblin Wizard" — never inside a
+  // protected span (still lifted out here).
+  if (field === "type") text = capitalizeTypeWords(text);
+
   let next = 0;
   return text.replace(//g, () => kept[next++] ?? "") + carriage;
 }
@@ -226,7 +235,7 @@ export function typedForMatching(text: string): string {
 export function typographyFieldOf(name: string): TypographyField | null {
   const key = name.replace(/^back_face\./, "");
   if (key === "title") return "name";
-  if (key === "supertype" || key === "subtypes_text") return "type";
+  if (key === "supertype" || key === "subtypes_text" || key === "printed_types") return "type";
   if (key === "rules_text" || key === "saga_intro") return "rules";
   if (/^(?:loyalty_abilities|saga_chapters)\.\d+\.text$/.test(key)) return "rules";
   if (key === "flavor_text") return "flavor";
@@ -236,6 +245,7 @@ export function typographyFieldOf(name: string): TypographyField | null {
 type TextPatch = {
   title?: string;
   supertype?: string;
+  printed_types?: string | null;
   subtypes_text?: string;
   rules_text?: string;
   flavor_text?: string;
@@ -245,6 +255,7 @@ function textPatch<T extends TextPatch>(patch: T): T {
   const out = { ...patch };
   if (typeof out.title === "string") out.title = printTypography(out.title, "name");
   if (typeof out.supertype === "string") out.supertype = printTypography(out.supertype, "type");
+  if (typeof out.printed_types === "string") out.printed_types = printTypography(out.printed_types, "type");
   if (typeof out.subtypes_text === "string") out.subtypes_text = printTypography(out.subtypes_text, "type");
   if (typeof out.rules_text === "string") out.rules_text = printTypography(out.rules_text, "rules");
   if (typeof out.flavor_text === "string") out.flavor_text = printTypography(out.flavor_text, "flavor");
@@ -295,6 +306,8 @@ type FaceContentText = {
 type FaceText = {
   title?: string;
   supertype?: string;
+  /** The Types field as typed (TODO 3b.16); null = the built line. */
+  printed_types?: string | null;
   subtypes?: string[];
   rules_text?: string;
   flavor_text?: string;
@@ -311,6 +324,8 @@ export type TypographyPayload = FaceText & {
 export type StoredTypographyText = {
   title?: string | null;
   supertype?: string | null;
+  printed_types?: string | null;
+  card_type?: string | null;
   subtypes?: readonly string[] | null;
   rules_text?: string | null;
   flavor_text?: string | null;
@@ -352,6 +367,19 @@ function faceText<T extends FaceText>(face: T, stored: StoredTypographyText | nu
   }
   if (typeof out.supertype === "string" && changed(out.supertype, stored?.supertype)) {
     out.supertype = printTypography(out.supertype, "type");
+  }
+  // The Types field: "as stored" is the line the face PRINTS — the stored
+  // text, else the line built from its supertype and card type, which is
+  // what the editor shows and resends for a card nobody typed one for.
+  if (typeof out.printed_types === "string") {
+    const shown = stored
+      ? typesFieldText({
+          cardType: (stored.card_type ?? null) as CardType | null,
+          supertype: stored.supertype,
+          printedTypes: stored.printed_types,
+        })
+      : null;
+    if (changed(out.printed_types, shown)) out.printed_types = printTypography(out.printed_types, "type");
   }
   if (out.subtypes) {
     const kept = new Set((stored?.subtypes ?? []).map(asResent));

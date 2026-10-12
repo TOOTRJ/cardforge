@@ -490,6 +490,30 @@ Rules and gotchas:
   land with "Creature"; `showsPowerToughness`), never an emblem. The table
   and its Scryfall sample are `tests/unit/cards/type-line-order.test.ts`;
   changing the order is a layout bump (`v50FaceChanged` is frozen).
+  That BUILT line is what prints while `cards.printed_types` is NULL (every
+  card saved before TODO 3b.16 / migration 0137, AI cards, nearly every
+  import). The creator's Types field (`components/creator/types-field.tsx`,
+  pre-filled with the built line) lets the maker reorder the words, type
+  round the card type's word or remove it: `printed_types` (a second face:
+  `back_face.printed_types`) then holds the words AS TYPED and
+  `typeLineWords` prints them unordered ("" = emptied: the subtypes alone, no
+  dash) — stored only when it differs from the built line
+  (`resolvePrintedTypes`, `lib/cards/type-line-field.ts`). It is DISPLAY
+  only: what a card IS reads `card_type` (frame, P/T inputs, hubs, stats, AI
+  lint) and `supertype`, which the field writes as the typed words minus the
+  card type's own (`supertypeFromTypes`) — never read `printed_types` to
+  decide behaviour, never write it without the helpers. A token's "Token" is
+  a fixed prefix outside it; an emblem never has one. On an edit / remix the
+  field changes the printed words ONLY (`supertype` stays locked). Each word
+  of a type-line part is capitalised by `printTypography(…, "type")`
+  (`capitalizeTypeWords`: the Types field, supertype and subtypes). A DASH
+  typed in the field moves the words after it to Subtypes on blur
+  (`splitTypedDash`; the card draws the dash itself — not on an edit, whose
+  subtypes are locked), and a card-type change swaps the old type's word in
+  a typed line for the new one (`typesAfterCardTypeChange`). The bake's
+  reads go through `selectBakeColumns` (`lib/cards/bake-select.ts`: the same
+  read without `printed_types` on a database 0137 has not reached — remove
+  it once 0137 is on production and dev).
 - Emblems (TODO 4.52 + 6.23, migration 0130): `card_type` 'emblem' and the
   `emblem` kind, reached ONLY through the token kind's Emblem choice
   (`KIND_PICKER_KINDS` leaves it out of the kind chips; `kindPickerChip`
