@@ -39,6 +39,8 @@ export type BackFaceFormValues = {
   cost: string;
   card_type: CardType | "";
   supertype: string;
+  /** The face's Types field as typed (TODO 3b.16); null = not edited. */
+  printed_types: string | null;
   subtypes_text: string;
   rules_text: string;
   flavor_text: string;
@@ -62,6 +64,12 @@ export type FormValues = {
   cost: string;
   color_identity: ColorIdentity[];
   supertype: string;
+  /** The Types field as the maker typed it (TODO 3b.16; cards.printed_types):
+   *  the words printed left of the dash. null = the maker has not edited the
+   *  field — it shows, and the card prints, the line built from `supertype`
+   *  and `card_type`. `supertype` keeps the typed words but the card type's
+   *  own (components/creator/types-field.tsx). */
+  printed_types: string | null;
   card_type: CardType | "";
   subtypes_text: string;
   tags_text: string;
@@ -141,6 +149,7 @@ export const EMPTY_BACK_FACE: BackFaceFormValues = {
   cost: "",
   card_type: "creature",
   supertype: "",
+  printed_types: null,
   subtypes_text: "",
   rules_text: "",
   flavor_text: "",

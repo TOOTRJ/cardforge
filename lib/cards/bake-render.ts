@@ -13,13 +13,13 @@ import { renderCardImage } from "@/lib/render/card-image";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import {
-  BAKE_SELECT_COLUMNS,
-  CLEARED_RENDER_POINTERS,
+  REBAKE_PENDING_RENDER,
   rowToPreviewData,
   type CardRowForBake,
   removeRenderObjects,
   uploadRenderObjects,
 } from "@/lib/cards/bake-core";
+import { selectBakeColumns } from "@/lib/cards/bake-select";
 import { bakedBackOf } from "@/lib/cards/faces";
 import { TRANSPARENT_PIXEL_DATA_URL, resolveRenderableImage } from "@/lib/render/art-source";
 import { getPipOverrides } from "@/lib/pips/queries";
@@ -169,11 +169,12 @@ async function bakeCardRender(
   // Re-read the card after the save so we render exactly what's in the DB,
   // not what the action handler thinks it just wrote. Catches edge cases
   // where validation munged a field or a trigger normalized it.
-  const { data: card, error: fetchErr } = await supabase
-    .from("cards")
-    .select(BAKE_SELECT_COLUMNS)
-    .eq("id", cardId)
-    .maybeSingle();
+  // (selectBakeColumns: the same read without `printed_types` on a database
+  // migration 0137 has not reached yet — lib/cards/bake-select.ts.)
+  const { data, error: fetchErr } = await selectBakeColumns((columns) =>
+    supabase.from("cards").select(columns).eq("id", cardId).maybeSingle(),
+  );
+  const card = data as unknown as (CardRowForBake & { visibility: string; updated_at: string }) | null;
 
   if (fetchErr || !card) {
     return { ok: false, error: fetchErr?.message ?? "Card not found." };
@@ -267,7 +268,12 @@ async function bakeCardRender(
     ownerId,
     card.id,
     { front: pngBytes, back: back.png },
-    { staleBack: Boolean((card as CardRowForBake).rendered_back_image_url) },
+    // Always, on this path: the save that asked for this bake cleared the
+    // row's pointers (REBAKE_PENDING_RENDER), so "the row still points at a
+    // back bake" can't be read any more — and a card that lost its back
+    // body must not leave that face in the public bucket. One remove of two
+    // names that usually don't exist.
+    { staleBack: true },
   );
   if (!uploaded.ok) return uploaded;
   return { ...uploaded, bakedFrom: card.updated_at };
@@ -309,7 +315,7 @@ export async function bakeAndPersistCardRender(
     // pointer), so this works even without the service-role key.
     const { error: clearErr } = await supabase
       .from("cards")
-      .update({ ...CLEARED_RENDER_POINTERS, layout_version: null })
+      .update({ ...REBAKE_PENDING_RENDER })
       .eq("id", cardId);
     if (clearErr) {
       console.warn(

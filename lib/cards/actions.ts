@@ -1,5 +1,6 @@
 "use server";
 
+import { withPrintedTypes, withPrintedTypesUpdate } from "@/lib/cards/type-line-field";
 import { withPrintTypography, withPrintTypographyUpdate } from "@/lib/validation/print-typography";
 import { revalidatePath } from "next/cache";
 import { frameGateError } from "@/lib/cards/frame-availability";
@@ -37,7 +38,7 @@ import {
 } from "@/lib/cards/queries";
 import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
 import { addCustomCardEntryToDeck } from "@/lib/decks/membership";
-import { CLEARED_RENDER_POINTERS, removeRenderObjects } from "@/lib/cards/bake-core";
+import { CLEARED_RENDER_POINTERS, REBAKE_PENDING_RENDER, removeRenderObjects } from "@/lib/cards/bake-core";
 import {
   purgeHiddenCard,
   purgeHiddenCards,
@@ -255,7 +256,9 @@ export async function createCardAction(
   // … and its text as print sets it (TODO 6.11: curly quotes, em dashes,
   // bullets) — the one gate the creator, the AI jobs and the deck remix
   // all pass. A new card is converted whole.
-  let data = withPrintTypography(withEmblemShape(parsed.data));
+  // … and its Types text (TODO 3b.16) only where the maker's line differs
+  // from the one the card builds by itself.
+  let data = withPrintedTypes(withPrintTypography(withEmblemShape(parsed.data)));
 
   // An admin's frame preview (TODO 2.3): the creator's admin preview mode
   // asks for it, the server decides — only an admin (from the profile,
@@ -455,6 +458,9 @@ export async function createCardAction(
     color_identity: data.color_identity,
     supertype: data.supertype ?? null,
     card_type: data.card_type ?? null,
+    // Only a line the maker typed differently from the built one (TODO
+    // 3b.16, migration 0137); the column is left out otherwise.
+    ...(data.printed_types != null ? { printed_types: data.printed_types } : {}),
     subtypes: data.subtypes,
     tags: data.tags ?? [],
     rarity: data.rarity ?? null,
@@ -577,7 +583,7 @@ export async function createCardAction(
   after(async () => {
     try {
       await bakeAndPersistCardRender(row.id, user.id);
-      revalidateCardPaths(row.slug, ownerUsername, { visibility: insert.visibility });
+      revalidateCardPaths(row.slug, ownerUsername, { visibility: insert.visibility, afterBake: true });
     } catch (error) {
       console.error(`[create-card] deferred bake failed for ${row.id}:`, error);
     }
@@ -634,6 +640,9 @@ export async function updateCardAction(
   // it is stored keeps its stored characters — no stored card changes
   // because another field of it was edited.
   data = withPrintTypographyUpdate(data, existing);
+  // The Types text (TODO 3b.16) as it will be stored: null when the line
+  // typed is the line the card builds from its stored type words.
+  data = withPrintedTypesUpdate(data, existing);
 
   // An admin's frame preview (TODO 2.3) stays one: it is always private.
   // A card becomes one when an admin's preview-mode save moves it onto an
@@ -727,6 +736,10 @@ export async function updateCardAction(
   }
   if (data.color_identity !== undefined) update.color_identity = data.color_identity;
   if (data.supertype !== undefined) update.supertype = data.supertype ?? null;
+  // Written only when it CHANGES (the creator resends it on every edit).
+  if (data.printed_types !== undefined && (data.printed_types ?? null) !== (existing.printed_types ?? null)) {
+    update.printed_types = data.printed_types ?? null;
+  }
   if (data.card_type !== undefined) update.card_type = data.card_type ?? null;
   if (data.subtypes !== undefined) update.subtypes = data.subtypes;
   if (data.tags !== undefined) update.tags = data.tags;
@@ -972,6 +985,14 @@ export async function updateCardAction(
     update.collector_number = data.collector_number ?? null;
   if (data.lang !== undefined) update.lang = data.lang;
 
+  // The stored bake shows the card as it was before this edit, and the
+  // re-bake below only lands seconds after the response: in the SAME write,
+  // stop pointing at it (lib/cards/bake-core.ts REBAKE_PENDING_RENDER — an
+  // API role may clear these columns, 0126), so nothing built meanwhile
+  // draws the old picture. Tiles and the card page show the live preview of
+  // the saved row until the bake persists its own URL.
+  Object.assign(update, REBAKE_PENDING_RENDER);
+
   const { data: row, error } = await supabase
     .from("cards")
     .update(update)
@@ -1016,14 +1037,22 @@ export async function updateCardAction(
   }
 
   // Re-bake the PNG AFTER the response is sent (next/server `after`) so Save
-  // stays fast, then revalidate the card surfaces again so the updated render
-  // (or, on failure, the live-preview fallback) appears. A bake failure clears
-  // the now-stale render columns (bakeAndPersistCardRender) instead of leaving
-  // the old mismatched PNG in place.
+  // stays fast. The row stopped pointing at the old bake in the update above,
+  // so every surface draws the live preview of the saved card until this
+  // bake persists its URL. The revalidation after it is best-effort only:
+  // Next skips, in an after() callback, every path this request has already
+  // revalidated (revalidation-utils withExecuteRevalidates) — which is all
+  // of them — so `afterBake` adds the ISR'd list pages by their PAGE tag
+  // (lib/cards/revalidate.ts), which is not skipped: a page built during
+  // the bake swaps its live-preview tile for the thumb then, not at the end
+  // of its ISR window. Never rely on it for correctness.
   after(async () => {
     try {
       await bakeAndPersistCardRender(row.id, user.id);
-      revalidateCardPaths(row.slug, ownerUsername, { visibility: update.visibility ?? existing.visibility });
+      revalidateCardPaths(row.slug, ownerUsername, {
+        visibility: update.visibility ?? existing.visibility,
+        afterBake: true,
+      });
       if (visibilityChanged) {
         await purgeHiddenCard({ id: row.id, slug: row.slug }, ownerUsername);
       }
@@ -1305,7 +1334,7 @@ export async function updateCardsVisibilityAction(
             console.error(`[bulk-visibility] deferred bake failed for ${cardId}:`, error);
           }
         }
-        if (baked > 0) revalidateCardListSurfaces();
+        if (baked > 0) revalidateCardListSurfaces({ afterBake: true });
       });
     }
   }

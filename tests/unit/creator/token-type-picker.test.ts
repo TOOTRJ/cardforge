@@ -8,11 +8,9 @@ import {
   supertypeLeavingToken,
   toggleTokenWord,
   tokenNameFromSubtypes,
-  tokenOtherWordsOf,
   tokenPickerWordsOf,
   typeWordFrameFits,
   typeWordFrameFor,
-  withTokenOtherWords,
 } from "@/lib/creator/card-kinds";
 import { resolveGeneratedFrame } from "@/lib/creator/frame-random";
 import { resolvePublishedFrame } from "@/lib/creator/frame-resolve";
@@ -87,52 +85,6 @@ describe("the token picker's toggles", () => {
   it("an imported line lights its own toggles", () => {
     expect(tokenPickerWordsOf("Enchantment Creature")).toEqual(["Creature", "Enchantment"]);
     expect(tokenPickerWordsOf("legendary artifact")).toEqual(["Artifact", "Legendary"]);
-  });
-});
-
-describe("the token's free Supertype field edits only the words the picker doesn't own", () => {
-  it("shows the other words, never Legendary / Enchantment / Artifact / Creature", () => {
-    expect(tokenOtherWordsOf("Creature")).toBe("");
-    expect(tokenOtherWordsOf("Legendary Snow Artifact Creature")).toBe("Snow");
-    expect(tokenOtherWordsOf("Basic Legendary Snow Creature")).toBe("Basic Snow");
-    // Any case, as the picker reads them (an old hand-typed row).
-    expect(tokenOtherWordsOf("legendary  land creature")).toBe("land");
-    expect(tokenOtherWordsOf(null)).toBe("");
-  });
-
-  it("writes the typed words back merged in printed order with the picker's words", () => {
-    expect(withTokenOtherWords("Creature", "Snow")).toBe("Snow Creature");
-    expect(withTokenOtherWords("Legendary Artifact Creature", "Snow")).toBe("Legendary Snow Artifact Creature");
-    expect(withTokenOtherWords("Legendary Creature", "Basic Snow")).toBe("Basic Legendary Snow Creature");
-    expect(withTokenOtherWords("Artifact", "Land")).toBe("Artifact Land");
-    // Clearing the field keeps the picker's words.
-    expect(withTokenOtherWords("Legendary Snow Enchantment Creature", "")).toBe("Legendary Enchantment Creature");
-    // Spacing is the field's; the words are what count.
-    expect(withTokenOtherWords("Creature", "  Snow   ")).toBe("Snow Creature");
-  });
-
-  it("never lets the field add or drop a picker word while the user types", () => {
-    // "Legendary" typed here does not write (the toggle is its control) …
-    expect(withTokenOtherWords("Creature", "Snow Legendary")).toBe("Snow Creature");
-    // … and a picker word that is on stays on when the field doesn't show it.
-    expect(withTokenOtherWords("Artifact Creature", "Snow")).toBe("Snow Artifact Creature");
-    // A word that merely starts like one is an ordinary word.
-    expect(withTokenOtherWords("", "Creatures")).toBe("Creatures");
-  });
-
-  it("on blur a typed picker word turns its toggle on, spelled as the picker spells it", () => {
-    const adopt = { adoptPickerWords: true };
-    expect(withTokenOtherWords("Creature", "Snow legendary", adopt)).toBe("Legendary Snow Creature");
-    expect(withTokenOtherWords("", "artifact", adopt)).toBe("Artifact");
-    expect(tokenPickerWordsOf(withTokenOtherWords("Creature", "Snow Legendary", adopt))).toEqual(["Creature", "Legendary"]);
-    expect(tokenOtherWordsOf(withTokenOtherWords("Creature", "Snow Legendary", adopt))).toBe("Snow");
-  });
-
-  it("round-trips: the field's words written back leave the supertype as it was", () => {
-    for (const supertype of ["Creature", "Legendary Snow Artifact Creature", "Basic Legendary Snow Creature", "Artifact Land", "", "Legendary"]) {
-      expect(withTokenOtherWords(supertype, tokenOtherWordsOf(supertype))).toBe(supertype);
-      expect(withTokenOtherWords(supertype, tokenOtherWordsOf(supertype), { adoptPickerWords: true })).toBe(supertype);
-    }
   });
 });
 

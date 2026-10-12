@@ -36,6 +36,9 @@ export type CardRowForBake = {
   cost: string | null;
   card_type: string | null;
   supertype: string | null;
+  /** The Types field as typed (migration 0137, TODO 3b.16). OPTIONAL like
+   *  the collector fields below: the visual matrix's rows have none. */
+  printed_types?: string | null;
   subtypes: string[];
   rarity: string | null;
   color_identity: string[];
@@ -73,7 +76,7 @@ export type CardRowForBake = {
 
 /** Every column the renderer needs (plus owner/visibility for gating). */
 export const BAKE_SELECT_COLUMNS =
-  "id, owner_id, visibility, updated_at, title, cost, card_type, supertype, subtypes, rarity, color_identity, rules_text, flavor_text, power, toughness, loyalty, defense, artist_credit, art_url, art_position, frame_style, set_icon_url, set_icon_code, back_face, face_content, watermark, set_code, collector_number, lang, rendered_back_image_url";
+  "id, owner_id, visibility, updated_at, title, cost, card_type, supertype, printed_types, subtypes, rarity, color_identity, rules_text, flavor_text, power, toughness, loyalty, defense, artist_credit, art_url, art_position, frame_style, set_icon_url, set_icon_code, back_face, face_content, watermark, set_code, collector_number, lang, rendered_back_image_url";
 
 export function rowToPreviewData(
   card: CardRowForBake,
@@ -94,6 +97,7 @@ export function rowToPreviewData(
     cost: card.cost,
     cardType: isCardType(card.card_type) ? (card.card_type as CardType) : null,
     supertype: card.supertype,
+    ...(typeof card.printed_types === "string" ? { printedTypes: card.printed_types } : {}),
     subtypes: card.subtypes,
     rarity: isRarity(card.rarity) ? (card.rarity as Rarity) : null,
     colorIdentity: card.color_identity.filter(isColorIdentity) as ColorIdentity[],
@@ -187,6 +191,35 @@ export const CLEARED_RENDER_POINTERS = Object.freeze({
   rendered_back_image_url: null,
   rendered_back_thumb_url: null,
   rendered_at: null,
+});
+
+/**
+ * What a save that changes a card writes IN THE SAME UPDATE as the change,
+ * whenever a re-bake follows it: every render pointer and the stamp, cleared
+ * — the state a failed bake leaves, and the one the sweep reads as "owes a
+ * bake" (`rendered_image_url is null`, lib/cards/auto-rebake.ts).
+ *
+ * The stored bake shows the card as it WAS. The re-bake runs after the
+ * response (next/server `after`, seconds), and until it had persisted its
+ * own URL the row kept pointing at the old one: every page built in that
+ * window — the ISR'd /gallery, a profile, the card page, the payload the
+ * owner's own browser prefetches for the header's Gallery link right after
+ * the save — showed the previous picture, and kept it (the art an edit had
+ * just moved sat where it used to; owner report 2026-10-08). The save's
+ * second revalidation, after the bake, never corrected them: Next runs an
+ * `after()` callback's revalidations only for tags the request has not
+ * already revalidated (next/dist/server/revalidation-utils.js
+ * withExecuteRevalidates → diffRevalidationState), and the action had just
+ * revalidated those very paths. With the pointers cleared, the same pages
+ * draw the live preview — the row itself, always the saved card — until the
+ * bake's thumb is there; the bake then asks for the ISR'd tile pages by
+ * their PAGE tag (lib/cards/revalidate.ts `afterBake`), which Next does not
+ * skip, so they pick the thumb up seconds later rather than at the end of
+ * their ISR window.
+ */
+export const REBAKE_PENDING_RENDER = Object.freeze({
+  ...CLEARED_RENDER_POINTERS,
+  layout_version: null,
 });
 
 const STORAGE_UNCONFIGURED =
@@ -293,8 +326,11 @@ async function uploadThumb(folder: RenderFolder, name: string, pngBytes: ArrayBu
  * mismatch window — the front PNG already overwritten when the back's
  * upload fails, under a sweep's unchanged pointers — is the thumb's
  * (written after the PNG, non-fatal), closed by the next successful bake.
- * A bake with no back and `staleBack` (the row still pointed at a back
- * bake from before its back body went) removes the back's names.
+ * A bake with no back and `staleBack` removes the back's names: the
+ * sweep passes whether the row still points at a back bake from before its
+ * back body went; the save bake always passes true — a save clears the
+ * row's pointers before its bake reads them (REBAKE_PENDING_RENDER), so
+ * the row can no longer say.
  */
 export async function uploadRenderObjects(
   ownerId: string,

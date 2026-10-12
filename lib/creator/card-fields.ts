@@ -127,6 +127,7 @@ function backFaceFormValuesFrom(
     cost: source.cost ?? "",
     card_type: source.card_type ?? "",
     supertype: source.supertype ?? "",
+    printed_types: source.printed_types ?? null,
     subtypes_text: source.subtypes?.join(", ") ?? "",
     rules_text: source.rules_text ?? "",
     flavor_text: source.flavor_text ?? "",
@@ -192,6 +193,7 @@ export function defaultValuesFor(
       cost: "",
       color_identity: [],
       supertype: "",
+      printed_types: null,
       card_type: "creature",
       subtypes_text: "",
       tags_text: "",
@@ -265,6 +267,9 @@ export function defaultValuesFor(
     cost: card.cost ?? "",
     color_identity: card.color_identity,
     supertype: formSupertypeOf(card),
+    // The Types field as stored (TODO 3b.16): null on every card saved
+    // before it, whose field then shows the line it prints today.
+    printed_types: card.printed_types ?? null,
     card_type: card.card_type ?? "",
     subtypes_text: card.subtypes.join(", "),
     tags_text: card.tags?.join(", ") ?? "",

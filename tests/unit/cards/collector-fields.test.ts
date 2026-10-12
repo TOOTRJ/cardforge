@@ -105,8 +105,11 @@ describe("every server render's select reads the collector columns", () => {
       expect(BAKE_SELECT_COLUMNS.split(/,\s*/)).toContain(column);
     }
     for (const consumer of ["lib/cards/bake-render.ts", "lib/cards/rebake-batch.ts", "lib/cards/frame-preview-cards.ts"]) {
-      expect(read(consumer), consumer).toMatch(/BAKE_SELECT_COLUMNS/);
+      // …through selectBakeColumns, which hands each read BAKE_SELECT_COLUMNS
+      // (lib/cards/bake-select.ts: the deploy window of migration 0137).
+      expect(read(consumer), consumer).toMatch(/selectBakeColumns\(/);
     }
+    expect(read("lib/cards/bake-select.ts")).toMatch(/run\(BAKE_SELECT_COLUMNS\)/);
   });
 
   it("the OG, PNG and PDF routes select the whole row", () => {

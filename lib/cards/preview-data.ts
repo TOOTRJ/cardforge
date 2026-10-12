@@ -17,6 +17,7 @@ export function cardToPreviewData(
     cost: card.cost,
     cardType: card.card_type,
     supertype: card.supertype,
+    ...(typeof card.printed_types === "string" ? { printedTypes: card.printed_types } : {}),
     subtypes: card.subtypes,
     rarity: card.rarity,
     colorIdentity: card.color_identity,

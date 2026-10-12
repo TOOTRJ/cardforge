@@ -2,10 +2,10 @@ import "server-only";
 
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import {
-  BAKE_SELECT_COLUMNS,
   rowToPreviewData,
   type CardRowForBake,
 } from "@/lib/cards/bake-core";
+import { selectBakeColumns } from "@/lib/cards/bake-select";
 import {
   toFramePreviewCard,
   type FramePreviewCard,
@@ -45,12 +45,15 @@ export async function listFramePreviewCards(
     // Every preview (a few dozen at most), grouped by the caller: a stored
     // legacy template value groups under the frame it renders as, which a
     // filter on the raw JSON value would miss.
-    const { data, error } = await createAdminClient()
-      .from("cards")
-      .select(`${BAKE_SELECT_COLUMNS}, slug, created_at`)
-      .eq("frame_preview", true)
-      .order("created_at", { ascending: false })
-      .limit(PREVIEW_LIMIT);
+    const admin = createAdminClient();
+    const { data, error } = await selectBakeColumns((columns) =>
+      admin
+        .from("cards")
+        .select(`${columns}, slug, created_at`)
+        .eq("frame_preview", true)
+        .order("created_at", { ascending: false })
+        .limit(PREVIEW_LIMIT),
+    );
     if (error || !data) return [];
     return (data as unknown as PreviewRow[]).map((row) => ({
       ...toFramePreviewCard(

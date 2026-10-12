@@ -127,6 +127,7 @@ export type Card = Omit<
   | "face_content"
   | "watermark"
   | "frame_preview"
+  | "printed_types"
 > & {
   visibility: Visibility;
   rarity: Rarity | null;
@@ -141,6 +142,12 @@ export type Card = Omit<
    *  Optional: a row read before the migration lands has no such key, so
    *  test it with `=== true`. */
   frame_preview?: boolean;
+  /** The Types field as its maker typed it (TODO 3b.16, migration 0137):
+   *  the words printed left of the dash, in their order ("" = emptied).
+   *  NULL / absent = the line is built from `supertype` + `card_type`
+   *  (lib/cards/card-display.ts typeLineWords). Optional: a row read by a
+   *  select that does not name the column has no such key. */
+  printed_types?: string | null;
 };
 
 export type CardInsert = Omit<
@@ -207,6 +214,9 @@ export type CardBackFace = {
   cost?: string;
   card_type?: CardType;
   supertype?: string;
+  /** The face's Types field as typed (TODO 3b.16) — absent = the built
+   *  line; "" = emptied. Display only, as the front's `printed_types`. */
+  printed_types?: string;
   subtypes?: string[];
   rules_text?: string;
   flavor_text?: string;

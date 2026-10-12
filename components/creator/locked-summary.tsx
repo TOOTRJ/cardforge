@@ -25,6 +25,7 @@ export function LockedSummary({ mode }: { mode: "edit" | "remix" }) {
   const { control } = useFormContext<FormValues>();
   const cardType = useWatch({ control, name: "card_type" });
   const supertype = useWatch({ control, name: "supertype" }) ?? "";
+  const printedTypes = useWatch({ control, name: "printed_types" });
   const subtypesText = useWatch({ control, name: "subtypes_text" }) ?? "";
   const colors = useWatch({ control, name: "color_identity" }) ?? [];
   const frameStyle = useWatch({ control, name: "frame_style" });
@@ -38,7 +39,7 @@ export function LockedSummary({ mode }: { mode: "edit" | "remix" }) {
   // double-faced kind — is named after it (TODO 5.2: "Legendary Creature —
   // Human Werewolf · Transform", "Enchantment Land — Urza's Saga · Saga").
   const faceType = kind === "token" ? "token" : cardType || KIND_DEFS[kind].cardType;
-  const printed = buildTypeLine({ supertype, cardType: faceType, subtypes });
+  const printed = buildTypeLine({ supertype, cardType: faceType, subtypes, printedTypes });
   const kindIsItsType = KIND_DEFS[kind].label.toLowerCase() === faceType;
   const typeLine =
     kind === "token" || (!dfcLayoutForKind(kind) && kindIsItsType)
