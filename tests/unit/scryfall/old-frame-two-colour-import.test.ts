@@ -96,12 +96,14 @@ describe("the 2003 frame", () => {
     expect(patch("rav-242").printed_two_color).toBeUndefined();
   });
 
-  it("a two-colour land, from Eighth Edition on: its pair on `modernland` (a white-bordered one keeps its border gap)", () => {
+  it("a two-colour land, from Eighth Edition on: its pair on `modernland` (a white-bordered one is exact too since TODO 4.30, with its border)", () => {
     expect(match("rav-284")).toEqual(["exact", "modernland", ""]);
     expect(patch("rav-284")).toMatchObject({ color_pair: "gw", printed_two_color: true });
     expect(importedAnatomy(patch("rav-284"), "modernland")).toMatchObject({ style: { twoColor: true }, colorIdentity: ["green", "white"] });
-    expect(match("8ed-323")).toEqual(["nearest", "modernland", "border"]);
-    expect(patch("8ed-323")).toMatchObject({ color_pair: "wu", printed_two_color: true });
+    expect(match("8ed-323")).toEqual(["exact", "modernland", ""]);
+    expect(patch("8ed-323")).toMatchObject({ color_pair: "wu", printed_two_color: true, printed_border: "white" });
+    expect(importedAnatomy(patch("8ed-323"), "modernland").style).toMatchObject({ twoColor: true, border: "white" });
+    expect(patch("rav-284").printed_border).toBeUndefined();
   });
 
   it("a land coloured only by its abilities prints the plain land, as before (GPT #163)", () => {
@@ -120,10 +122,11 @@ describe("the 1997 frame's lands", () => {
     expect(importedAnatomy(patch(key), "retroland").colorIdentity).toHaveLength(2);
   });
 
-  it("the white-bordered ones keep their border gap and still store the pair (6ED #319, BRB #13)", () => {
+  it("the white-bordered ones are exact since TODO 4.30 and store the pair and the border (6ED #319, BRB #13)", () => {
     for (const key of ["6ed-319", "brb-13"]) {
-      expect(match(key), key).toEqual(["nearest", "retroland", "border"]);
+      expect(match(key), key).toEqual(["exact", "retroland", ""]);
       expect(patch(key).printed_two_color, key).toBe(true);
+      expect(importedAnatomy(patch(key), "retroland").style.border, key).toBe("white");
     }
     expect(patch("6ed-319").color_pair).toBe("wu");
     expect(patch("brb-13").color_pair).toBe("br");

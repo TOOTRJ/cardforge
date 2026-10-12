@@ -235,7 +235,8 @@ on conflict (id) do nothing;
 --     crown and the pinline split; Hrafn, Frostfall Deeps and Rimewood
 --     Clearing (…050–…052) wave 2c's, on the snow frames; …058–…060 are
 --     4.10a's, on the 1997 frame; …061–…063 4.10b's, on the 2003 frame;
---     …064–…066 4.10c's, on the 1993 frame.
+--     …064–…066 4.10c's, on the 1993 frame; …069–…072 4.6h's pairs on the
+--     old frames; …073–…075 4.30's, with the white border.
 -- ---------------------------------------------------------------------------
 
 insert into public.cards (
@@ -419,7 +420,25 @@ Whenever Thornscale Behemoth attacks, it gets +2/+2 until end of turn.', '10', '
      '{"template":"modernland","finish":"regular","twoColor":true}'::jsonb, 1),
   ('c0000000-0000-4000-a000-000000000072'::uuid, 'Ashmoor Springs', 'ashmoor-springs', null, array['black','red'], null, 'land', array[]::text[], 'rare',
      E'{T}: Add {C}.\n{T}: Add {B} or {R}. Ashmoor Springs deals 1 damage to you.', null, null, 18,
-     '{"template":"retroland","finish":"regular","twoColor":true}'::jsonb, 1)
+     '{"template":"retroland","finish":"regular","twoColor":true}'::jsonb, 1),
+  -- TODO 4.30: the white border, a card's own switch (no bump, no sweep) —
+  -- the printed border of the core sets up to Ninth Edition: white to the
+  -- card's edge and a thin black keyline round the frame. A green creature
+  -- on `retro` and a white creature on `modern` (the pale frame against the
+  -- white: the keyline is what holds it), both with the switch on, and a
+  -- land on `modernland` with the white border over its two-colour pair.
+  -- Every other old-frame row above names no `border` and stays black. On a
+  -- fresh database an admin edits these with
+  -- `?previewFrames=retro,modern,modernland`. Ids …073–…075.
+  ('c0000000-0000-4000-a000-000000000073'::uuid, 'Mossback Sentry', 'mossback-sentry', '{1}{G}', array['green'], null, 'creature', array['Bear'], 'common',
+     E'Reach\n{G}, {T}: Mossback Sentry gets +2/+2 until end of turn.', '2', '2', 4,
+     '{"template":"retro","finish":"regular","border":"white"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000074'::uuid, 'Dawnwatch Lancer', 'dawnwatch-lancer', '{2}{W}', array['white'], null, 'creature', array['Knight'], 'uncommon',
+     E'First strike\n{W}, {T}: Tap target creature.', '2', '3', 2,
+     '{"template":"modern","finish":"regular","border":"white"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000075'::uuid, 'Tidewrack Bluff', 'tidewrack-bluff', null, array['blue','red'], null, 'land', array[]::text[], 'rare',
+     E'{T}: Add {C}.\n{T}: Add {U} or {R}. Tidewrack Bluff deals 1 damage to you.', null, null, 16,
+     '{"template":"modernland","finish":"regular","twoColor":true,"border":"white"}'::jsonb, 1)
 ) as c (id, title, slug, cost, colors, supertype, card_type, subtypes, rarity,
         rules_text, power, toughness, art, frame_style, age_days)
 on conflict (id) do nothing;

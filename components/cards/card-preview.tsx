@@ -110,6 +110,7 @@ import {
   type CopyrightMarkInk,
   type CopyrightSlotLayout,
 } from "@/lib/cards/copyright-slot";
+import { WHITE_BORDER_RECT, resolveWhiteBorder, whiteBorderDataUrl } from "@/lib/cards/white-border";
 import { inlineSymbolStyle, symbolStyle, symbolStyleOf, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
 import { FOOTER_BRUSH_PATH, FOOTER_BRUSH_VIEWBOX } from "@/lib/cards/footer-brush";
 import { BRAND_FACE, TYPE_FACES, faceOf, footerFace, slotFace } from "@/lib/cards/type-faces";
@@ -856,6 +857,12 @@ function CardFace({
   };
   const plateKey = plateKeyFor(colorKey, resolveTwoColor(layout, anatomy, anatomyFacts));
   const overlays = resolveFrameOverlays(layout, anatomy, { ...anatomyFacts, colorKey });
+  // The white border (TODO 4.30): one inline SVG over the master's black
+  // border, the same bytes the bake draws (lib/cards/white-border.ts) —
+  // null on every card whose switch is off or whose frame declares none.
+  const whiteBorder = resolveWhiteBorder(layout, anatomy);
+  const whiteBorderHref = whiteBorder ? whiteBorderDataUrl(whiteBorder, layout.orientation === "landscape") : null;
+  const borderMaskOverlays = whiteBorderHref ? [{ href: whiteBorderHref, rect: WHITE_BORDER_RECT }] : [];
   // The holofoil stamp (TODO 4.9c): its notch is one of the overlays; the
   // oval is our bitmap over the sheens (HoloStampOval), and its arch keeps
   // the rules lines out while drawn — the bake's twins.
@@ -1242,6 +1249,21 @@ function CardFace({
           master at its z-index, under every text layer: the bake draws them
           right after its frame image. Nothing when the card draws none. */}
       <FrameOverlayLayer overlays={overlays} zIndex={5} />
+      {/* The white border (TODO 4.30): the white over the master's black
+          border and the keyline inside it — right after the frame and its
+          overlays, under both finishes and every text layer; the bake's
+          twin. The display clip (.card-corners) rounds it. */}
+      {whiteBorderHref ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          aria-hidden
+          alt=""
+          data-white-border=""
+          src={whiteBorderHref}
+          className="pointer-events-none absolute inset-0 h-full w-full"
+          style={{ zIndex: 5 }}
+        />
+      ) : null}
       {/* The saga rail's bitmaps (TODO 4.21c): dividers and chapter badges
           at the layout's boxes — printed frame, under both finishes; the
           bake's railPieces twin. Nothing off a saga. */}
@@ -1266,7 +1288,10 @@ function CardFace({
                 }
               : null
           }
-          overlays={[...overlays, ...railPieces].map((overlay) => ({ href: frameOverlayImageUrl(overlay.path), rect: overlay.rect }))}
+          overlays={[
+            ...[...overlays, ...railPieces].map((overlay) => ({ href: frameOverlayImageUrl(overlay.path), rect: overlay.rect })),
+            ...borderMaskOverlays,
+          ]}
           landscape={layout.orientation === "landscape"}
           width="100%"
           height="100%"
@@ -1298,7 +1323,10 @@ function CardFace({
             secondArt: foilSecondArt,
             secondArtPosition: secondFace?.artPosition,
           })}
-          overlays={[...overlays, ...railPieces].map((overlay) => ({ href: frameOverlayImageUrl(overlay.path), rect: overlay.rect }))}
+          overlays={[
+            ...[...overlays, ...railPieces].map((overlay) => ({ href: frameOverlayImageUrl(overlay.path), rect: overlay.rect })),
+            ...borderMaskOverlays,
+          ]}
           landscape={layout.orientation === "landscape"}
           width="100%"
           height="100%"

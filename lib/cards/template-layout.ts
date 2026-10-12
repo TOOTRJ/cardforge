@@ -100,6 +100,7 @@ import {
 } from "@/lib/cards/typography";
 import { walkerAnatomy } from "@/lib/cards/kind-anatomy";
 import type { SymbolStyle } from "@/lib/cards/symbol-style";
+import type { WhiteBorderSlot } from "@/lib/cards/white-border";
 import { TYPE_FACES, typeFace, type SlotFace } from "@/lib/cards/type-faces";
 
 /** A rectangle in card-relative percent (0–100), origin top-left. The card's
@@ -703,6 +704,16 @@ export type FrameProfile = {
    *  prints (never beside a collector line). Code-owned (the override
    *  schema refuses it). */
   footerBrush?: { rect: Rect };
+  /** The printed WHITE BORDER a card switches on (TODO 4.30;
+   *  FrameStyle.border "white", opt-in per card: declaring it changes no
+   *  stored card): the master's black border on each edge, which the white
+   *  covers, and the keyline printed inside it — drawn by both renderers
+   *  from lib/cards/white-border.ts. Set only on PROFILES entries, never on
+   *  a base another profile spreads; a profile that declares it keeps the
+   *  pipglyph.com mark OFF the border (a `copyrightSlot` inside the frame —
+   *  tests/unit/cards/white-border.test.ts). Code-owned (the override
+   *  schema refuses it). */
+  whiteBorder?: WhiteBorderSlot;
   pt?: StatSlot;
   loyalty?: StatSlot;
   defense?: StatSlot;
@@ -3063,6 +3074,19 @@ function withPairInk(profile: FrameProfile, from: FrameMasterKey): FrameProfile 
   };
 }
 
+/** The 1997 frame's white border (TODO 4.30): the masters' black border is
+ *  73 px at the sides, 82 px on top and 81 px below on thirteen of the
+ *  fourteen masters of both templates (the MSE gold is 74 / 71 / 80 / 81:
+ *  the keyline is drawn, so it is 3 px there too) — and the white of 36
+ *  prints (5ED, 6ED, 7ED, ATH, BRB, BTD, DKM) ends at 73.6 / 73.4 px, 81.9
+ *  and 80.8. Keyline: 3.1 px on 5ED / 6ED and the box sets, 3.9 on 7ED. */
+const RETRO_WHITE_BORDER: WhiteBorderSlot = { insetPx: { top: 82, right: 73, bottom: 81, left: 73 }, keylinePx: 3 };
+/** The 2003 frame's: the masters' black border is 70–71 px on every edge of
+ *  all 34 masters, and the white of the 9ED prints ends at 70.5 px on all
+ *  four (12 prints; the 8ED scans sit up to 8 px off-centre). Keyline:
+ *  3.9 px on 9ED, 4.3 on 8ED. */
+const MODERN_WHITE_BORDER: WhiteBorderSlot = { insetPx: { top: 70, right: 70, bottom: 70, left: 70 }, keylinePx: 4 };
+
 // Modern land — the 2003 land frame: the same geometry, no mana cost. `c` is
 // the plain land, w–g the basics' coloured frames, `m` the gold land. One
 // brown land frame under every key's footer: the footer and the © slot are
@@ -5418,7 +5442,11 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15textlessland: { ...M15TEXTLESSLAND, pickerSampleArt: true },
   expeditionland: EXPEDITIONLAND,
   nyx: { ...NYX, pickerSampleArt: true },
-  retro: RETRO,
+  // The white border (TODO 4.30; `whiteBorder`, opt-in per card —
+  // FrameStyle.border): declared on these four PROFILES entries only, never
+  // on the RETRO / MODERN bases. `insetPx` is each template's own masters'
+  // black border (the white covers exactly it); `keylinePx` the prints'.
+  retro: { ...RETRO, whiteBorder: RETRO_WHITE_BORDER },
   // Two colours on the old frames (TODO 4.6h; `twoColorMasters`, opt-in per
   // card — FrameStyle.twoColor, as on m15): declared on these three PROFILES
   // entries only, never on the RETRO / MODERN bases. The pair masters are
@@ -5436,9 +5464,9 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // `retro` declares none: the 1997 frame printed ONE gold card, whatever
   // its colours. No hybrid dress on any of them (a 2003 hybrid card splits
   // the frame body itself: not built).
-  retroland: { ...withPairInk(RETROLAND, "c"), twoColorMasters: ["split"], twoColorForLands: true },
-  modern: { ...withPairInk(MODERN, "m"), twoColorMasters: ["split"] },
-  modernland: { ...withPairInk(MODERNLAND, "c"), twoColorMasters: ["split"], twoColorForLands: true },
+  retroland: { ...withPairInk(RETROLAND, "c"), twoColorMasters: ["split"], twoColorForLands: true, whiteBorder: RETRO_WHITE_BORDER },
+  modern: { ...withPairInk(MODERN, "m"), twoColorMasters: ["split"], whiteBorder: MODERN_WHITE_BORDER },
+  modernland: { ...withPairInk(MODERNLAND, "c"), twoColorMasters: ["split"], twoColorForLands: true, whiteBorder: MODERN_WHITE_BORDER },
 };
 
 /** Resolve a frame profile, defaulting to M15 for unknown/legacy templates

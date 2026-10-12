@@ -35,8 +35,9 @@ describe("the keys and the defaults", () => {
   it("collector and star are anatomy keys; a new card starts with the line on in the 2023 style and no ★", () => {
     // (`stamp` joined with TODO 4.9c, `dfcIcon` after it with TODO 5.0a —
     // tests/unit/cards/holo-stamp.test.ts, dfc-anatomy.test.ts; `rulesAlign`
-    // with TODO 4.21e — tests/unit/cards/rules-align.test.ts.)
-    expect([...FRAME_ANATOMY_KEYS]).toEqual(["crown", "twoColor", "collector", "star", "stamp", "dfcIcon", "rulesAlign"]);
+    // with TODO 4.21e — tests/unit/cards/rules-align.test.ts; `border` with
+    // TODO 4.30 — tests/unit/cards/white-border.test.ts.)
+    expect([...FRAME_ANATOMY_KEYS]).toEqual(["crown", "twoColor", "collector", "star", "stamp", "dfcIcon", "rulesAlign", "border"]);
     expect(NEW_CARD_ANATOMY).toEqual({ crown: true, twoColor: true, collector: "2023", stamp: "auto" });
     expect("star" in NEW_CARD_ANATOMY).toBe(false);
     for (const template of FRAME_TEMPLATE_VALUES) {

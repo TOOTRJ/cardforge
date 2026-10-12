@@ -78,6 +78,9 @@ export function previewFromImportPatch(
     frameStyle: {
       template,
       ...(patch.printed_stamp && patch.printed_stamp !== "none" ? { stamp: patch.printed_stamp } : {}),
+      // …and its border (TODO 4.30): a white-bordered reference is compared
+      // with the white border drawn, where the frame draws one.
+      ...(patch.printed_border === "white" ? { border: "white" as const } : {}),
     },
     backFace: backFaceFromPatch(patch.back_face),
   };

@@ -1,0 +1,294 @@
+{
+  "5ed-239": {
+    "id": "4bb9d069-1163-46bd-9a71-21c05898330e",
+    "oracle_id": "342199e0-15b6-4824-83da-25caef2592b3",
+    "name": "Hill Giant",
+    "released_at": "1997-03-24",
+    "layout": "normal",
+    "set": "5ed",
+    "set_name": "Fifth Edition",
+    "set_type": "core",
+    "collector_number": "239",
+    "frame": "1997",
+    "border_color": "white",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Creature — Giant",
+    "mana_cost": "{3}{R}",
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "oracle_text": "",
+    "rarity": "common"
+  },
+  "6ed-304": {
+    "id": "09c6ac8a-01b1-4af5-89d8-ad66d9a81ceb",
+    "oracle_id": "a3a98bc9-caa0-49b7-951c-fe4e4f54e4ba",
+    "name": "Ornithopter",
+    "released_at": "1999-04-21",
+    "layout": "normal",
+    "set": "6ed",
+    "set_name": "Classic Sixth Edition",
+    "set_type": "core",
+    "collector_number": "304",
+    "frame": "1997",
+    "border_color": "white",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Flying"
+    ],
+    "type_line": "Artifact Creature — Thopter",
+    "mana_cost": "{0}",
+    "colors": [],
+    "color_identity": [],
+    "oracle_text": "Flying",
+    "rarity": "uncommon"
+  },
+  "7ed-42": {
+    "id": "b7b4e357-de48-4461-8109-bbb07fff5171",
+    "oracle_id": "4b7ac066-e5c7-43e6-9e7e-2739b24a905d",
+    "name": "Serra Angel",
+    "released_at": "2001-04-11",
+    "layout": "normal",
+    "set": "7ed",
+    "set_name": "Seventh Edition",
+    "set_type": "core",
+    "collector_number": "42",
+    "frame": "1997",
+    "border_color": "white",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Flying",
+      "Vigilance"
+    ],
+    "type_line": "Creature — Angel",
+    "mana_cost": "{3}{W}{W}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "oracle_text": "Flying\nVigilance (Attacking doesn't cause this creature to tap.)",
+    "rarity": "rare"
+  },
+  "7ed-42★": {
+    "id": "3a398d30-2db9-4530-9f68-fb4dd6ebcbd2",
+    "oracle_id": "4b7ac066-e5c7-43e6-9e7e-2739b24a905d",
+    "name": "Serra Angel",
+    "released_at": "2001-04-11",
+    "layout": "normal",
+    "set": "7ed",
+    "set_name": "Seventh Edition",
+    "set_type": "core",
+    "collector_number": "42★",
+    "frame": "1997",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Flying",
+      "Vigilance"
+    ],
+    "type_line": "Creature — Angel",
+    "mana_cost": "{3}{W}{W}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "oracle_text": "Flying\nVigilance (Attacking doesn't cause this creature to tap.)",
+    "rarity": "rare"
+  },
+  "ath-65": {
+    "id": "89a8379e-cf55-4b02-a444-e66cd07b418d",
+    "oracle_id": "fcae9e87-50af-46b4-ab48-42ed92985e10",
+    "name": "Lady Orca",
+    "released_at": "1998-11-01",
+    "layout": "normal",
+    "set": "ath",
+    "set_name": "Anthologies",
+    "set_type": "box",
+    "collector_number": "65",
+    "frame": "1997",
+    "border_color": "white",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Legendary Creature — Demon",
+    "mana_cost": "{5}{B}{R}",
+    "colors": [
+      "B",
+      "R"
+    ],
+    "color_identity": [
+      "B",
+      "R"
+    ],
+    "oracle_text": "",
+    "rarity": "uncommon"
+  },
+  "dkm-33": {
+    "id": "2f108d7f-4db8-4295-8234-f86e3def0f15",
+    "oracle_id": "2c87565b-3902-4b11-b894-6922f66008ba",
+    "name": "Giant Trap Door Spider",
+    "released_at": "2001-12-01",
+    "layout": "normal",
+    "set": "dkm",
+    "set_name": "Deckmasters",
+    "set_type": "box",
+    "collector_number": "33",
+    "frame": "1997",
+    "border_color": "white",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Creature — Spider",
+    "mana_cost": "{1}{R}{G}",
+    "colors": [
+      "G",
+      "R"
+    ],
+    "color_identity": [
+      "G",
+      "R"
+    ],
+    "oracle_text": "{1}{R}{G}, {T}: Exile this creature and target creature without flying that's attacking you.",
+    "rarity": "uncommon"
+  },
+  "8ed-43": {
+    "id": "c58dbcf3-f8ad-4e82-9515-0290fa5373f7",
+    "oracle_id": "60ba93eb-39e6-4af2-9c66-cd38f72daff2",
+    "name": "Savannah Lions",
+    "released_at": "2003-07-28",
+    "layout": "normal",
+    "set": "8ed",
+    "set_name": "Eighth Edition",
+    "set_type": "core",
+    "collector_number": "43",
+    "frame": "2003",
+    "border_color": "white",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Creature — Cat",
+    "mana_cost": "{W}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "oracle_text": "",
+    "rarity": "rare"
+  },
+  "8ed-43★": {
+    "id": "c0ea8d9f-2b77-4cff-8b96-387f43366c1a",
+    "oracle_id": "60ba93eb-39e6-4af2-9c66-cd38f72daff2",
+    "name": "Savannah Lions",
+    "released_at": "2003-07-28",
+    "layout": "normal",
+    "set": "8ed",
+    "set_name": "Eighth Edition",
+    "set_type": "core",
+    "collector_number": "43★",
+    "frame": "2003",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Creature — Cat",
+    "mana_cost": "{W}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "oracle_text": "",
+    "rarity": "rare"
+  },
+  "8ed-138": {
+    "id": "2679472e-39a5-4a28-a04e-962c393fbcc4",
+    "oracle_id": "1a2030cc-d7ee-4059-b2d7-fb95ea8e267b",
+    "name": "Gravedigger",
+    "released_at": "2003-07-28",
+    "layout": "normal",
+    "set": "8ed",
+    "set_name": "Eighth Edition",
+    "set_type": "core",
+    "collector_number": "138",
+    "frame": "2003",
+    "border_color": "white",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Creature — Zombie",
+    "mana_cost": "{3}{B}",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "oracle_text": "When this creature enters, you may return target creature card from your graveyard to your hand.",
+    "rarity": "common"
+  },
+  "9ed-197": {
+    "id": "caa75eaf-948f-4503-962d-95b0321b36d9",
+    "oracle_id": "342199e0-15b6-4824-83da-25caef2592b3",
+    "name": "Hill Giant",
+    "released_at": "2005-07-29",
+    "layout": "normal",
+    "set": "9ed",
+    "set_name": "Ninth Edition",
+    "set_type": "core",
+    "collector_number": "197",
+    "frame": "2003",
+    "border_color": "white",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Creature — Giant",
+    "mana_cost": "{3}{R}",
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "oracle_text": "",
+    "rarity": "common"
+  },
+  "9ed-305": {
+    "id": "919bc14b-603d-42fa-91fe-58c4d4b3b27f",
+    "oracle_id": "a3a98bc9-caa0-49b7-951c-fe4e4f54e4ba",
+    "name": "Ornithopter",
+    "released_at": "2005-07-29",
+    "layout": "normal",
+    "set": "9ed",
+    "set_name": "Ninth Edition",
+    "set_type": "core",
+    "collector_number": "305",
+    "frame": "2003",
+    "border_color": "white",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Flying"
+    ],
+    "type_line": "Artifact Creature — Thopter",
+    "mana_cost": "{0}",
+    "colors": [],
+    "color_identity": [],
+    "oracle_text": "Flying",
+    "rarity": "uncommon"
+  }
+}

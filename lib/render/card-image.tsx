@@ -199,6 +199,7 @@ import {
   type CopyrightMarkInk,
   type CopyrightSlotLayout,
 } from "@/lib/cards/copyright-slot";
+import { WHITE_BORDER_RECT, WHITE_BORDER_RGB, resolveWhiteBorder, whiteBorderDataUrl } from "@/lib/cards/white-border";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { CardBackFace, ColorIdentity, Rarity } from "@/types/card";
 import { clamp } from "@/lib/utils";
@@ -481,6 +482,12 @@ function CardImage({
   const overlays = resolveFrameOverlays(layout, card.frameStyle, { ...anatomyFactsOf(card), colorKey }).map(
     (overlay) => ({ ...overlay, href: getFrameOverlayDataUrl(overlay.path) }),
   );
+  // The white border (TODO 4.30): one inline SVG over the master's black
+  // border — the preview's twin, the same bytes (lib/cards/white-border.ts);
+  // null on every card whose switch is off or whose frame declares none.
+  const whiteBorder = resolveWhiteBorder(layout, card.frameStyle);
+  const whiteBorderHref = whiteBorder ? whiteBorderDataUrl(whiteBorder, layout.orientation === "landscape") : null;
+  const borderMaskOverlays = whiteBorderHref ? [{ href: whiteBorderHref, rect: WHITE_BORDER_RECT }] : [];
   // The holofoil stamp (TODO 4.9c): its notch is one of the overlays above;
   // the oval is our bitmap, drawn over the sheens (never inside the foil
   // mask) at the same rect the preview stretches it over, and its arch is a
@@ -926,6 +933,21 @@ function CardImage({
         ) : null,
       )}
 
+      {/* The white border (TODO 4.30): the white over the master's black
+          border and the keyline inside it — right after the frame and its
+          overlays, under both finishes and every text layer; the preview's
+          twin. The corner cut rounds it; nothing on any other card. */}
+      {whiteBorderHref ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={whiteBorderHref}
+          alt=""
+          width={width}
+          height={height}
+          style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "fill", zIndex: 5 }}
+        />
+      ) : null}
+
       {/* The saga rail's bitmaps (TODO 4.21c): the divider on each row's top
           edge and the chapter badges, at the boxes lib/cards/saga-rail.ts
           gives this target — printed frame, so right after the frame and
@@ -962,7 +984,7 @@ function CardImage({
               ? { href: splitDataUrl, atPct: frameSplit.atPct }
               : null
           }
-          overlays={drawnOverlays([...overlays, ...railPieces])}
+          overlays={[...drawnOverlays([...overlays, ...railPieces]), ...borderMaskOverlays]}
           landscape={layout.orientation === "landscape"}
           width={width}
           height={height}
@@ -992,7 +1014,7 @@ function CardImage({
             secondArt: secondArtSlot && secondArtUrl ? (foilArt?.secondArt ?? null) : null,
             secondArtPosition: secondArtPos,
           })}
-          overlays={drawnOverlays([...overlays, ...railPieces])}
+          overlays={[...drawnOverlays([...overlays, ...railPieces]), ...borderMaskOverlays]}
           landscape={layout.orientation === "landscape"}
           width={width}
           height={height}
@@ -3770,10 +3792,14 @@ export function squareCornerFillsOf(card: CardPreviewData): CardCornerFills {
   const colors = card.colorIdentity as ColorIdentity[] | undefined;
   const split = frameSplitFor(layout, colors);
   const key = frameMasterKey(layout, colors, card, card.frameStyle);
-  return squareCornerFills(template, layout.artSlot, {
+  const fills = squareCornerFills(template, layout.artSlot, {
     left: split?.leftKey ?? key,
     right: split?.rightKey ?? key,
   });
+  // A white-bordered card (TODO 4.30) squares its border corners in the
+  // printed white: the border there IS the white the card drew.
+  if (!resolveWhiteBorder(layout, card.frameStyle)) return fills;
+  return fills.map((fill) => (fill === null ? null : WHITE_BORDER_RGB)) as unknown as CardCornerFills;
 }
 
 /** True for frames (Battle) whose canvas is 7:5 instead of 5:7. */

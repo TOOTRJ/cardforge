@@ -65,7 +65,7 @@ describe("visual-regression matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
       expect(id).toMatch(
-        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|land|artifact|vehicle|spacecraft|nopt|nodefense|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|sunmoon|moon|compass|fan|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd|square|br|gw|ub))?(-crown(-hd)?)?|centred(-hd)?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|pair-(split|hybrid|crown|hd|foil)))?))?$/,
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|land|artifact|vehicle|spacecraft|nopt|nodefense|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|sunmoon|moon|compass|fan|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd|square|br|gw|ub))?(-crown(-hd)?)?|centred(-hd)?|white(-(hd|foil|etched|square|pair))?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|pair-(split|hybrid|crown|hd|foil)))?))?$/,
       );
     }
     expect(ids).toEqual([...ids].sort());
@@ -339,9 +339,25 @@ describe("visual-regression matrix", () => {
         expect(keys, c.id).toEqual(["finish", "rulesAlign", "template"]);
         continue;
       }
+      // The white border's cases (TODO 4.30) name "white" — and are the
+      // ONLY cases that do.
+      if (c.id.includes("@white")) {
+        expect((c.row.frame_style as { border?: string }).border, c.id).toBe("white");
+        expect(keys, c.id).toEqual(["border", "finish", "template"]);
+        continue;
+      }
       expect(keys, c.id).toEqual(["finish", "template"]);
     }
     expect(cases.filter((c) => "rulesAlign" in (c.row.frame_style as object)).every((c) => c.id.includes("@centred"))).toBe(true);
+    // The white border (TODO 4.30): on each of the four frames that draw it,
+    // in both finishes, at the stored bake's size and squared; never on a
+    // stored card's case.
+    const white = cases.filter((c) => "border" in (c.row.frame_style as object));
+    expect(white.every((c) => c.id.includes("@white") && (c.row.frame_style as { border?: string }).border === "white")).toBe(true);
+    expect([...new Set(white.map((c) => c.template))].sort()).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).border).sort());
+    expect(new Set(white.map((c) => `${c.preset}/${c.finish}/${c.corners}`))).toEqual(
+      new Set(["default/regular/round", "hd/regular/round", "default/foil/round", "default/etched/round", "default/regular/square"]),
+    );
     // The split crown: both switches on, on every template that draws both
     // (the borderless land draws its pairs and no crown, 4.56: none there).
     const both = crowned.filter((c) => paired.includes(c));

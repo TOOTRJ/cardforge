@@ -316,8 +316,10 @@ describe("saga chapter rail (TODO 4.21c: the printed rail)", () => {
     expect(PREVIEW_PIECES).toContain("style={{ zIndex: 5 }}");
     expect(PREVIEW_PIECES).toContain("...rectStyle(piece.rect),");
     // Both finishes mask with the frame's overlays AND the rail's pieces.
-    expect(BAKE.match(/overlays=\{drawnOverlays\(\[\.\.\.overlays, \.\.\.railPieces\]\)\}/g)).toHaveLength(2);
-    expect(PREVIEW.match(/overlays=\{\[\.\.\.overlays, \.\.\.railPieces\]\.map\(/g)).toHaveLength(2);
+    // (…and, since TODO 4.30, with the white border's image after them.)
+    expect(BAKE.match(/overlays=\{\[\.\.\.drawnOverlays\(\[\.\.\.overlays, \.\.\.railPieces\]\), \.\.\.borderMaskOverlays\]\}/g)).toHaveLength(2);
+    expect(PREVIEW.match(/\.\.\.\[\.\.\.overlays, \.\.\.railPieces\]\.map\(/g)).toHaveLength(2);
+    expect(PREVIEW.match(/\.\.\.borderMaskOverlays,/g)).toHaveLength(2);
     // The bake preloads exactly what the rail draws.
     expect(BAKE).toContain("paths.push(...sagaRailAssetPaths(profileSagaRail(layout, resolveSagaChapters(card.faceContent, card.rulesText))));");
   });

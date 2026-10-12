@@ -186,6 +186,10 @@ export function frameAnatomyPatchFor(
   // sent only to take a stored "center" off.
   const centred = values.frame_style.rulesAlign === "center";
   if (centred !== (storedStyle.rulesAlign === "center")) patch.rulesAlign = centred ? "center" : "left";
+  // The border (TODO 4.30): the stored key is "white" or absent — "black"
+  // is sent only to take a stored "white" off.
+  const white = values.frame_style.border === "white";
+  if (white !== (storedStyle.border === "white")) patch.border = white ? "white" : "black";
   const pair = twoColorPairOf(values.color_identity);
   if (pair && values.frame_style.twoColor === true && !twoColorPairOf(stored.color_identity)) {
     patch.twoColor = true;
