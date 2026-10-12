@@ -66,8 +66,9 @@ items are parked by the owner (4.8c, 4.8d, 4.8e); 7.10 is held by the owner.
 
 Open P1, by number (what each still needs is its first sentence):
 - Phase 1: 1.23 (waits on 4.51).
-- Phase 3: 3.11 (the preview ⇄ bake half of the parity tests), 3.12 (a
-  standing rule, nothing to build).
+- Phase 3: 3.11 (one parity case, the split type line — waits on 4.40; the
+  preview ⇄ bake suite is in review as #514), 3.12 (a standing rule, nothing
+  to build).
 - Phase 3b: 3b.15 (waits on 4.51), 3b.18 (the art fits the window by itself —
   in review as #511).
 - Phase 4: 4.1, 4.3, 4.5 (parent of 4.5b–4.5e), 4.5b (ask the owner first),
