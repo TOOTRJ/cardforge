@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, renderHook, screen } from "@testing-library/react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
-import type { ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { carryArtFraming } from "@/lib/cards/art-framing";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import type { FormValues } from "@/lib/creator/form-types";
@@ -28,7 +28,7 @@ vi.mock("@/lib/cards/template-layout", async (importOriginal) => {
   };
 });
 
-const { useTreatmentSwitch, ETCHED_DROPPED_NOTICE } = await import("@/components/creator/use-treatment-switch");
+const { useArtAutoFit, useTreatmentSwitch, ETCHED_DROPPED_NOTICE } = await import("@/components/creator/use-treatment-switch");
 const { EffectsPanel, finishOptionsFor } = await import("@/components/creator/panels/effects-panel");
 const { TextPanel, TEXTLESS_FRAME_NOTE } = await import("@/components/creator/panels/text-panel");
 
@@ -97,6 +97,93 @@ describe("useTreatmentSwitch", () => {
       result.current.setValue("frame_style.template", "fullartland");
     });
     expect(result.current.getValues("art_position")).toEqual({ focalX: 0.2, focalY: 0.3, scale: 1.5 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TODO 3b.18: an UNTOUCHED picture is on its automatic fit and is never
+// carried; each face is re-fitted to its own window (useArtAutoFit), and a
+// hand-set position is never replaced there.
+// ---------------------------------------------------------------------------
+describe("an untouched picture on a frame switch", () => {
+  function useUntouched(position: unknown) {
+    const form = useForm<FormValues>({
+      defaultValues: {
+        art_url: natural.src,
+        art_position: position,
+        frame_style: { template: "m15", finish: "regular" },
+      } as unknown as FormValues,
+    });
+    const template = useWatch({ control: form.control, name: "frame_style.template" });
+    useTreatmentSwitch({
+      template,
+      artUrl: natural.src,
+      natural,
+      isDirty: true,
+      getValues: form.getValues,
+      setValue: form.setValue,
+    });
+    return form;
+  }
+
+  it("stays on the fit on every window — the numbers a centred cover has", () => {
+    const { result } = renderHook(() => useUntouched({ focalX: 0.5, focalY: 0.5, scale: 1 }));
+    for (const template of ["saga", "m15borderless", "aftermath", "m15"] as const) {
+      act(() => result.current.setValue("frame_style.template", template));
+      expect(result.current.getValues("art_position")).toEqual({ focalX: 0.5, focalY: 0.5, scale: 1 });
+    }
+  });
+
+  it("a stored position with no keys is left exactly as stored (it used to be rewritten as three numbers)", () => {
+    const { result } = renderHook(() => useUntouched({}));
+    act(() => result.current.setValue("frame_style.template", "saga"));
+    expect(result.current.getValues("art_position")).toEqual({});
+  });
+});
+
+describe("useArtAutoFit", () => {
+  const M15 = { width: 1271, height: 931 };
+  const SAGA = { width: 636, height: 1526 };
+  function useFitHarness(opts: { position: unknown; dirty?: boolean; field?: "art_position" | "back_face.art_position" }) {
+    const field = opts.field ?? "art_position";
+    const form = useForm<FormValues>({
+      defaultValues: {
+        art_url: natural.src,
+        art_position: field === "art_position" ? opts.position : { focalX: 0.5, focalY: 0.5, scale: 1 },
+        back_face: { art_url: natural.src, art_position: opts.position },
+      } as unknown as FormValues,
+    });
+    const [artWindow, setArtWindow] = useState<{ width: number; height: number } | null>(M15);
+    const setValue = useMemo(() => vi.fn(form.setValue), [form.setValue]);
+    useArtAutoFit({
+      field,
+      artWindow,
+      artUrl: natural.src,
+      natural,
+      isDirty: opts.dirty ?? true,
+      getValues: form.getValues,
+      setValue: setValue as unknown as typeof form.setValue,
+    });
+    return { form, setArtWindow, setValue };
+  }
+
+  it("leaves an untouched picture on the fit and writes nothing (the fit is the same numbers on every window)", () => {
+    const { result } = renderHook(() => useFitHarness({ position: { focalX: 0.5, focalY: 0.5, scale: 1 } }));
+    act(() => result.current.setArtWindow(SAGA));
+    expect(result.current.setValue).not.toHaveBeenCalled();
+    expect(result.current.form.getValues("art_position")).toEqual({ focalX: 0.5, focalY: 0.5, scale: 1 });
+  });
+
+  it("never touches a hand-set position — the front's or the other face's", () => {
+    for (const field of ["art_position", "back_face.art_position"] as const) {
+      const position = { focalX: 0.2, focalY: 0.3, scale: 1.5 };
+      const { result } = renderHook(() => useFitHarness({ position, field }));
+      act(() => result.current.setArtWindow(SAGA));
+      act(() => result.current.setArtWindow(null));
+      act(() => result.current.setArtWindow(M15));
+      expect(result.current.setValue).not.toHaveBeenCalled();
+      expect(result.current.form.getValues(field)).toEqual(position);
+    }
   });
 });
 

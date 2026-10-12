@@ -3,6 +3,7 @@
 // Extracted from components/creator/card-creator-form.tsx; nothing here may
 // read component state.
 
+import { fitArtToWindow } from "@/lib/cards/art-fit";
 import { tokenize } from "@/components/cards/mana-cost-glyphs";
 import {
   hasTokenTypeWord,
@@ -212,7 +213,7 @@ export function defaultValuesFor(
       defense: "",
       artist_credit: "",
       art_url: "",
-      art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
+      art_position: fitArtToWindow(),
       // A NEW card starts with every anatomy switch on (the legendary crown,
       // the two-colour frame — owner rule 2026-09-29): the renderers draw
       // only what the template can, and the save drops the rest

@@ -10,6 +10,7 @@ import {
   getCurrentUser,
 } from "@/lib/supabase/server";
 import { storedAnatomyOf, type FrameAnatomyStyle } from "@/lib/cards/anatomy";
+import { fitArtToWindow } from "@/lib/cards/art-fit";
 import {
   createCardAction,
   updateCardAction,
@@ -1280,7 +1281,9 @@ async function paintAndPublishCard(
 
   const updated = await updateCardAction(cardId, {
     art_url: persisted.publicUrl,
-    art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
+    // The automatic fit (TODO 3b.18): the picture fills the frame's window,
+    // centred — whatever frame the plan picked.
+    art_position: fitArtToWindow(),
     visibility: "public",
   });
   if (!updated.ok) {

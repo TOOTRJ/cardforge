@@ -7,10 +7,17 @@
 // 4.28). Draft restores, card loads and imports never re-frame anything:
 // only a change made while the form is dirty, with the same art on both
 // frames, counts.
+//
+// That carry is for a picture the maker placed BY HAND. An untouched one is
+// on its automatic fit (TODO 3b.18, lib/cards/art-fit.ts) and takes the new
+// window's fit instead — here for a frame change, and in useArtAutoFit for
+// every face whenever its own window changes (a colour that picks a
+// see-through master, a second half, a double-faced back's body).
 
 import { useEffect, useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
+import { refitArtForWindow, type FitWindow } from "@/lib/cards/art-fit";
 import { planTreatmentSwitch, type Size } from "@/lib/cards/art-framing";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import {
@@ -84,4 +91,58 @@ export function useTreatmentSwitch({
       toast.info(ETCHED_DROPPED_NOTICE);
     }
   }, [template, artUrl, natural, isDirty, getValues, setValue, profileOverrides]);
+}
+
+/**
+ * Keep an UNTOUCHED picture on its automatic fit when its face's art window
+ * changes (TODO 3b.18): the front's, an inline second half's or a
+ * double-faced back's — each to ITS window, the one its positioner shows
+ * (artPositionerWindows). A picture placed by hand is never re-fitted here:
+ * the front's is carried by useTreatmentSwitch on a frame change (3.23) and
+ * otherwise every hand-set position stays as it is.
+ *
+ * Like the carry, only a change the USER makes counts (a dirty form, the
+ * same picture before and after): a load, a draft restore or an import
+ * never rewrites a position.
+ */
+export function useArtAutoFit({
+  field,
+  artWindow,
+  artUrl,
+  natural,
+  isDirty,
+  getValues,
+  setValue,
+}: {
+  field: "art_position" | "back_face.art_position";
+  /** This face's window (null while the card has no such face). */
+  artWindow: FitWindow | null | undefined;
+  artUrl: string | null | undefined;
+  /** useImageNaturalSize(artUrl). */
+  natural: (Size & { src: string }) | null;
+  isDirty: boolean;
+  getValues: UseFormReturn<FormValues>["getValues"];
+  setValue: UseFormReturn<FormValues>["setValue"];
+}) {
+  const width = artWindow?.width ?? 0;
+  const height = artWindow?.height ?? 0;
+  const last = useRef({ width, height, artUrl });
+  useEffect(() => {
+    const prev = last.current;
+    last.current = { width, height, artUrl };
+    if ((prev.width === width && prev.height === height) || !isDirty) return;
+    // A face that appears or goes has no window to move between; a new
+    // picture already landed on its own fit.
+    if (!(width > 0 && height > 0 && prev.width > 0 && prev.height > 0)) return;
+    if (!artUrl || artUrl !== prev.artUrl) return;
+    const position = getValues(field);
+    if (!position) return;
+    const next = refitArtForWindow({
+      from: prev,
+      to: { width, height },
+      natural: natural?.src === artUrl ? natural : null,
+      position,
+    });
+    if (next !== position) setValue(field, next, { shouldDirty: true });
+  }, [field, width, height, artUrl, natural, isDirty, getValues, setValue]);
 }
