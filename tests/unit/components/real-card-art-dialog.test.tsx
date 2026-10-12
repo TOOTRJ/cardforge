@@ -23,6 +23,7 @@ import { EMPTY_BACK_FACE } from "@/lib/creator/form-types";
 import { defaultValuesFor } from "@/lib/creator/card-fields";
 import type { PrintingSummary } from "@/lib/scryfall/printing-views";
 import type { ImportedArtOrigin } from "@/components/creator/import/imported-art-note";
+import { faceArtWindow } from "@/lib/cards/art-positioner-window";
 
 // ---------------------------------------------------------------------------
 // "Use art from a real card" (TODO 1.15), through a real react-hook-form:
@@ -158,6 +159,7 @@ const PLACEHOLDER = printing({
   image_status: "placeholder",
 });
 
+const M15_ART_WINDOW = faceArtWindow({ frameStyle: { template: "m15" } });
 const PUBLIC_URL = "https://project.supabase.co/storage/v1/object/public/card-art/u/new.jpg";
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
@@ -647,6 +649,7 @@ describe("in the Art panel", () => {
       <FormProvider {...form}>
         <ArtPanel
           userId={userId}
+          artWindow={M15_ART_WINDOW}
           importedArtOrigin={origin}
           onImportedArtOrigin={setOrigin}
           backFaceSlot={backFaceSlot}
@@ -748,6 +751,7 @@ describe("in the second face's art block (split / aftermath / flip halves)", () 
       <FormProvider {...form}>
         <LayoutPanel
           userId="u"
+          artWindow={M15_ART_WINDOW}
           hasBackFace
           isAdventureFrame={isAdventureFrame}
           backRulesTextRef={{ current: null }}

@@ -32,10 +32,14 @@ import {
   type FormValues,
 } from "@/lib/creator/form-types";
 import { SECOND_FACE_NAME_HINT } from "@/lib/cards/second-face-name";
+import type { ArtWindow } from "@/lib/cards/art-positioner-window";
 import { PtNotDrawnNote } from "@/components/creator/pt-not-drawn-note";
 
 type LayoutPanelProps = {
   userId: string | null;
+  /** The second face's own art window (split's other half, aftermath's
+   *  sideways window — TODO 3b.13): the positioner's surface. */
+  artWindow: ArtWindow;
   /** Live has_back_face flag from the form. */
   hasBackFace: boolean;
   /** True when the Adventure frame repurposes this content as the inline
@@ -54,6 +58,7 @@ type LayoutPanelProps = {
 
 export function LayoutPanel({
   userId,
+  artWindow,
   hasBackFace,
   isAdventureFrame,
   backRulesTextRef,
@@ -269,6 +274,7 @@ export function LayoutPanel({
                         userId={userId}
                         artUrl={artUrlField.value}
                         artPosition={artPosField.value}
+                        artWindow={artWindow}
                         primaryPasteTarget={false}
                         actionSlot={
                           // TODO 1.15: a real printing's art on this face
