@@ -428,8 +428,11 @@ Rules and gotchas:
   — never centred by flexbox — and FLAT on every symbol style (v49: the
   shadow is the cost row's alone); a Phyrexian symbol's disc is ×1.2 on the
   same centre, in text and cost (`pipScale` in `lib/cards/mana-gem.ts`, the
-  ONE answer the layout's `pipWidthPx` / `pipTopOf`, `costRowTerms` and both
-  renderers read). WHAT a pip is — the prints' untap, Phyrexian, two-colour
+  ONE answer the layout's `pipWidthPx` / `pipTopOf`, `costRowTerms`, the
+  detached cost's `manaCostWidthPct` — v52: a name's room before a
+  `costRect` cost counts each pip's own disc — and both renderers read; a
+  new measure of a cost row reads it too, never a disc per pip). WHAT a pip
+  is — the prints' untap, Phyrexian, two-colour
   Phyrexian, snow (an SVG flake) and disc-less energy since v49 — is
   `manaGemSpec` alone (`docs/FRAMES.md` "Symbols as printed").
   `TextSlot.padPx` pads past any textbox border the rect holds (split).
