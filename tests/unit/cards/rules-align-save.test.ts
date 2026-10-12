@@ -21,6 +21,17 @@ import { called, chainClient, payloadOf, type ChainAnswer } from "@/tests/stubs/
 const USER = "11111111-1111-4111-8111-111111111111";
 const CARD = "22222222-2222-4222-8222-222222222222";
 const GAME = "33333333-3333-4333-8333-333333333333";
+// Every edit also stops pointing at the stored bake, in the same write
+// (lib/cards/bake-core.ts REBAKE_PENDING_RENDER; rebake-pending-save.test.ts).
+const REBAKE_PENDING = {
+  rendered_image_url: null,
+  rendered_thumb_url: null,
+  rendered_back_image_url: null,
+  rendered_back_thumb_url: null,
+  rendered_at: null,
+  layout_version: null,
+};
+
 
 const state = vi.hoisted(() => ({
   verified: [] as string[],
@@ -250,6 +261,7 @@ describe("updateCardAction — the edit's round trip", () => {
     expect(result.ok).toBe(true);
     expect(written(stub, "update")).toEqual({
       frame_style: { template: "m15", finish: "foil", collector: "2023", stamp: "none", rulesAlign: "center" },
+      ...REBAKE_PENDING,
     });
   });
 
@@ -262,7 +274,7 @@ describe("updateCardAction — the edit's round trip", () => {
     const stub = db();
     const result = await updateCardAction(CARD, { frame_anatomy: patch });
     expect(result.ok).toBe(true);
-    expect(written(stub, "update")).toEqual({ frame_style: { template: "m15", finish: "foil", collector: "2023" } });
+    expect(written(stub, "update")).toEqual({ frame_style: { template: "m15", finish: "foil", collector: "2023" }, ...REBAKE_PENDING });
     // The form with the key cleared (undefined) asks for the same.
     expect(
       frameAnatomyPatchFor(card as unknown as Card, { ...values, frame_style: { ...values.frame_style, rulesAlign: undefined } }),

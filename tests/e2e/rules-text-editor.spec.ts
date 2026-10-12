@@ -2,7 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { signIn } from "./helpers/sign-in";
 
 // ---------------------------------------------------------------------------
-// The rules-text box on the Text & stats step, in a real browser — the four
+// The rules-text box on the Text & stats step, in a real browser — the five
 // things only one can show:
 //   • a mouse click inside the empty box used to drop a {W} pip into it (the
 //     field group is a <label>; its first labelable descendant is the symbol
@@ -12,6 +12,10 @@ import { signIn } from "./helpers/sign-in";
 //   • Backspace did nothing behind a pip that was all its line held ("Cc",
 //     Enter, "{t}"), and Delete on a line a pip starts did nothing or took
 //     the break above with the pip;
+//   • a character typed in front of a pip that starts its line went nowhere
+//     (after Home) or onto the line above, ← and → stepped over that place,
+//     and deleting the text in front of a pip added a line ("a{t}{g}",
+//     Delete on the "a", read "\n{T}{G}");
 //   • at a phone's width the step scrolled sideways (the AI button's label
 //     never wrapped).
 // Auth-gated, so it skips without the seeded e2e user. See tests/README.md.
@@ -38,11 +42,14 @@ async function openTextStep(page: Page) {
 const LINE_START = process.platform === "darwin" ? "Meta+ArrowLeft" : "Home";
 const LINE_END = process.platform === "darwin" ? "Meta+ArrowRight" : "End";
 
-/** The box as the form reads it: pips as their codes, breaks as "\n". */
+/**
+ * The box as the form reads it: pips as their codes, breaks as "\n", and
+ * nothing for the zero-width character that holds the caret in front of a pip.
+ */
 async function textOf(page: Page): Promise<string> {
   return page.locator('[data-field="rules_text"]').evaluate((root) => {
     const read = (node: Node): string => {
-      if (node.nodeType === Node.TEXT_NODE) return node.nodeValue ?? "";
+      if (node.nodeType === Node.TEXT_NODE) return (node.nodeValue ?? "").replaceAll("\u200B", "");
       const el = node as Element;
       const pip = el.getAttribute("data-pip");
       if (pip) return pip;
@@ -139,6 +146,88 @@ test.describe("rules text editor", () => {
     await page.keyboard.press(LINE_END);
     await page.keyboard.press("Delete");
     expect(await textOf(page)).toBe("Cc{T}ab");
+  });
+
+  test("typing and the arrows reach the place in front of a pip that starts its line", async ({ page }) => {
+    await signIn(page);
+    const box = await openTextStep(page);
+
+    // The line's start: Chrome's own caret went inside the pip, and typed nothing.
+    await box.click();
+    await page.keyboard.type("Cc");
+    await page.keyboard.press("Enter");
+    await page.keyboard.type("{t}ab");
+    await page.keyboard.press(LINE_START);
+    await page.keyboard.type("k");
+    expect(await textOf(page)).toBe("Cc\nk{T}ab");
+    // Emptied again, the place keeps the caret (it went to the line above).
+    await page.keyboard.press("Backspace");
+    await page.keyboard.type("{g}m");
+    expect(await textOf(page)).toBe("Cc\n{G}m{T}ab");
+
+    // ← from behind a pip that is all its line holds stops in front of it …
+    await page.keyboard.press("ControlOrMeta+a");
+    await page.keyboard.press("Backspace");
+    await page.keyboard.type("Cc");
+    await page.keyboard.press("Enter");
+    await page.keyboard.type("{t}");
+    await page.keyboard.press("ArrowLeft");
+    await page.keyboard.type("z");
+    expect(await textOf(page)).toBe("Cc\nz{T}");
+    // … and one more press from there is the end of the line above; → comes
+    // back the same way, one place a press.
+    await page.keyboard.press("Backspace");
+    await page.keyboard.press("ArrowLeft");
+    await page.keyboard.type("d");
+    expect(await textOf(page)).toBe("Ccd\n{T}");
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.type("e");
+    expect(await textOf(page)).toBe("Ccd\ne{T}");
+    await page.keyboard.press("Backspace");
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.type("f");
+    expect(await textOf(page)).toBe("Ccd\n{T}f");
+
+    // A click on the pip is the place in front of it.
+    await box.locator("[data-pip]").click({ position: { x: 2, y: 8 } });
+    await page.keyboard.type("y");
+    expect(await textOf(page)).toBe("Ccd\ny{T}f");
+
+    // Deleting the text in front of a pip adds no line.
+    await page.keyboard.press("ControlOrMeta+a");
+    await page.keyboard.press("Backspace");
+    await page.keyboard.type("a{t}{g}");
+    await page.keyboard.press(LINE_START);
+    await page.keyboard.press("Delete");
+    expect(await textOf(page)).toBe("{T}{G}");
+    await page.keyboard.type("q");
+    expect(await textOf(page)).toBe("q{T}{G}");
+  });
+
+  test("leaving the box after a blur conversion keeps the focus where it went", async ({ page }) => {
+    await signIn(page);
+    const box = await openTextStep(page);
+
+    // The apostrophe is rewritten when the box loses focus (print typography):
+    // the text is re-rendered while blurred, with a caret host in front of the
+    // pip on line 2. The box used to take the focus back there.
+    await box.click();
+    await page.keyboard.type("it's");
+    await page.keyboard.press("Enter");
+    await page.keyboard.type("{t}: go");
+    const power = page.locator('input[name="power"]');
+    const before = await power.inputValue();
+    await power.click();
+    await page.keyboard.type("7");
+    await expect(power).toBeFocused();
+    await expect(power).toHaveValue(`${before}7`);
+    expect(await textOf(page)).toBe("it\u2019s\n{T}: go");
+
+    // Tab leaves the box too.
+    await box.click();
+    await page.keyboard.type(" 'x'");
+    await page.keyboard.press("Tab");
+    await expect(box).not.toBeFocused();
   });
 
   test("the step does not scroll sideways on a phone", async ({ page }) => {
