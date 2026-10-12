@@ -195,14 +195,15 @@ export function tokenSuffix(token: Token): string | null {
 
 /** The mana-font class a symbol draws with OFF a card (`.ms-cost`: the
  *  pickers, the rules editor's chips, deck lists, articles). A card draws a
- *  two-colour Phyrexian symbol itself, in the order typed (CardPip, the
- *  bake); mana-font has ONE class per pair, in the printed order — so
- *  `{U/G/P}` takes `{G/U/P}`'s class here, where its own has no glyph (an
- *  empty disc). Every other symbol: tokenSuffix. */
+ *  two-colour symbol itself, in the order typed (CardPip, the bake);
+ *  mana-font has ONE class per pair, in the printed order — so `{U/W}` takes
+ *  `{W/U}`'s class here and `{U/G/P}` takes `{G/U/P}`'s, where their own
+ *  have no glyph (an empty disc). Every other symbol — a twobrid among them
+ *  — : tokenSuffix. */
 export function offCardSuffix(token: Token): string | null {
-  if (token.kind === "hybrid" && token.phyrexian) {
+  if (token.kind === "hybrid" && token.left !== "C") {
     const pair = canonicalHybridPair(token.left, token.right);
-    if (pair) return `${pair.toLowerCase()}p`;
+    if (pair) return `${pair.toLowerCase()}${token.phyrexian ? "p" : ""}`;
   }
   return tokenSuffix(token);
 }
