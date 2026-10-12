@@ -109,11 +109,15 @@ export const cardSlugSchema = z
     "Slug must use lowercase letters, numbers, and hyphens (no leading/trailing hyphen).",
   );
 
+/** A cost's longest string ("{2}{W/U}" is 8) — the cost picker stops adding
+ *  at it (components/cards/mana-cost-picker.tsx). */
+export const CARD_COST_MAX = 64;
+
 export const cardCostSchema = optionalEmptyString(
   z
     .string()
     .trim()
-    .max(64, "Cost must be 64 characters or fewer."),
+    .max(CARD_COST_MAX, `Cost must be ${CARD_COST_MAX} characters or fewer.`),
 );
 
 export const cardSupertypeSchema = optionalEmptyString(
