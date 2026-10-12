@@ -699,7 +699,13 @@ Rules and gotchas:
   its position EQUALS that fit (`isArtFitted`; no flag, no column). Only an
   untouched picture is re-fitted on a frame / kind / colour / face change; a
   hand-set one is carried (3.23) or left alone, and a stored card's numbers
-  are never rewritten by opening it.
+  are never rewritten by opening it. A zoom-out STOPS AT 100 % (owner
+  2026-10-12: under it the window is part empty on the card): every hand
+  zoom goes through `stepArtZoom` (floor = `min(current zoom, 1)`, so a
+  stored zoom under 100 % opens as stored, never goes lower and only climbs)
+  — a creator rule; the validator, the database and the renderers keep
+  0.5 – 4, and no automatic path (landing = the fit, carry = the maker's
+  zoom) makes one.
 - Print typography (TODO 6.11): `printTypography(text, field)`
   (`lib/validation/print-typography.ts`, pure, idempotent) turns what a plain
   keyboard types into what a card prints — curly quotes and apostrophes

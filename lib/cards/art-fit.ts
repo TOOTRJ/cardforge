@@ -110,6 +110,41 @@ export function artFillsWindow(position: ArtPosition | null | undefined): boolea
   return numbersOf(position).scale >= COVER_ZOOM - SAME;
 }
 
+/** The renderers' own top of the zoom range (card-preview.tsx /
+ *  card-image.tsx clamp to 0.5 – 4). */
+export const ART_ZOOM_MAX = 4;
+
+/**
+ * The zoom a step of the positioner gives (its − / + buttons, the − / +
+ * keys, Shift-scroll: there is no other way to change a zoom by hand).
+ *
+ * A zoom-out STOPS AT COVER (owner 2026-10-12): under 100 % part of the art
+ * window is empty on the card, so the creator no longer makes such a zoom.
+ * It is a creator rule only — the validator, the database and both
+ * renderers keep the old 0.5 – 4 range, and a stored card whose zoom is
+ * already under 100 % opens and saves as it is. The floor of a step is
+ * therefore `min(the zoom the picture has now, cover)`:
+ *
+ *   at 100 % or more  → never under 100 %;
+ *   stored under it   → up, step by step, never lower than where it is —
+ *                       and once it reaches 100 % the first rule holds.
+ *
+ * Nothing is remembered between steps: the floor is read from the zoom
+ * itself, so a draft restore, a reload or a second positioner agree.
+ * Rounded to the 1 % grid so repeated steps never drift (0.1 + 0.2).
+ */
+export function stepArtZoom(scale: number, delta: number): number {
+  const from = Number.isFinite(scale) ? scale : COVER_ZOOM;
+  const floor = Math.min(from, COVER_ZOOM);
+  const next = Math.round((from + delta) * 100) / 100;
+  return Math.min(ART_ZOOM_MAX, Math.max(floor, next));
+}
+
+/** Whether a zoom-out step would change this zoom (the − button's state). */
+export function canZoomArtOut(scale: number): boolean {
+  return scale > COVER_ZOOM + SAME;
+}
+
 /**
  * The share of the picture's width and height the window shows at `scale`
  * (0–1 each; 1 = that whole side is in view). A 3 : 1 panorama on a saga's

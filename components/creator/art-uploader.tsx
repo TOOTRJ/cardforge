@@ -21,7 +21,15 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { artFillsWindow, fitArtToWindow, isArtFitted, visibleArtShare } from "@/lib/cards/art-fit";
+import {
+  ART_ZOOM_MAX,
+  artFillsWindow,
+  canZoomArtOut,
+  fitArtToWindow,
+  isArtFitted,
+  stepArtZoom,
+  visibleArtShare,
+} from "@/lib/cards/art-fit";
 import {
   SOFT_PRINT_PPI,
   artPrintPpi,
@@ -61,11 +69,15 @@ import type { ArtPosition } from "@/types/card";
 // the frame changes — until the maker moves or zooms it. From then on the
 // framing is theirs and is never replaced; "Fit to frame" (and R / 0) puts
 // the picture back on the fit. The line under the buttons says which of the
-// two it is, and warns when a zoom under 100 % leaves the window part empty.
+// two it is, and warns when a STORED zoom under 100 % leaves the window part
+// empty (a new zoom-out stops at 100 %).
 //
-// The renderers' own clamps (card-preview.tsx / card-image.tsx: 0.5 – 4).
+// The renderers' own clamps (card-preview.tsx / card-image.tsx: 0.5 – 4) —
+// what a STORED zoom is shown at. A zoom the maker makes here stops at 100 %
+// on the way down (stepArtZoom, owner 2026-10-12): a stored card under 100 %
+// opens as it is and can only be zoomed up from where it stands.
 const MIN_SCALE = 0.5;
-const MAX_SCALE = 4;
+const MAX_SCALE = ART_ZOOM_MAX;
 const ZOOM_STEP = 0.05;
 const ACCEPTED_TYPES = CARD_ART_MIME_TYPES.join(",");
 // The EMPTY dropzone: a file target, not a crop — a comfortable fixed box.
@@ -394,9 +406,11 @@ export function ArtUploader({
 
   // ---- Wheel zoom --------------------------------------------------------
 
-  // Rounded so repeated steps never drift off the 5 % grid (0.1 + 0.2).
+  // The ONE way a zoom changes by hand: the − / + buttons, the − / + keys
+  // and Shift-scroll all come through here. A zoom-out stops at 100 %, and
+  // a stored zoom under it never goes lower (stepArtZoom).
   const zoomBy = (delta: number) => {
-    const next = clamp(Math.round((scale + delta) * 100) / 100, MIN_SCALE, MAX_SCALE);
+    const next = stepArtZoom(scale, delta);
     if (next !== scale) updatePosition({ scale: next });
   };
 
@@ -657,7 +671,7 @@ export function ArtUploader({
                 size="sm"
                 aria-label="Zoom out"
                 onClick={() => zoomBy(-ZOOM_STEP)}
-                disabled={uploading || scale <= MIN_SCALE}
+                disabled={uploading || !canZoomArtOut(scale)}
               >
                 <ZoomOut className="h-4 w-4" aria-hidden />
               </Button>
@@ -723,7 +737,7 @@ export function ArtUploader({
           aria-live="polite"
         >
           {!fills
-            ? `At ${Math.round(scale * 100)}% the picture is smaller than the art window, so empty space shows on the card. Zoom to 100% or more, or choose Fit to frame, to fill it.`
+            ? `At ${Math.round(scale * 100)}% the picture is smaller than the art window, so empty space shows on the card. Zoom in to 100%, or choose Fit to frame, to fill it. It can't be made smaller.`
             : fitted
               ? `Fitted to this frame: the picture fills the art window, centred${
                   strip ? `, which shows ${strip}` : ""
