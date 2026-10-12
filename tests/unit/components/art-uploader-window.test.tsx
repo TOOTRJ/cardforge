@@ -222,7 +222,7 @@ describe("the sharpness note", () => {
 });
 
 describe("keyboard and buttons", () => {
-  it("arrow keys nudge, + and − zoom, R resets", () => {
+  it("arrow keys nudge, + and − zoom, R fits the picture to the frame again", () => {
     const onChange = vi.fn();
     render(<Harness template="m15" onChange={onChange} />);
     const el = surface();
@@ -348,5 +348,66 @@ describe("Shift-scroll zoom", () => {
     expect(onChange.mock.calls.at(-1)![0].scale).toBe(0.95);
     wheel({ deltaX: -120, deltaY: 0, shiftKey: true });
     expect(onChange.mock.calls.at(-1)![0].scale).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The automatic fit (TODO 3b.18): the positioner says whether the picture is
+// on its fit or placed by hand, offers ONE way back (the button and R / 0),
+// and warns when a zoom leaves the window part empty.
+// ---------------------------------------------------------------------------
+describe("fitted or placed by hand", () => {
+  const status = () => screen.getByTestId("art-fit-status");
+  const fit = () => screen.getByRole("button", { name: /Fit to frame/ }) as HTMLButtonElement;
+
+  it("a fresh picture is fitted: the line says so and the button has nothing to do", () => {
+    render(<Harness template="saga" />);
+    expect(status().dataset.artFraming).toBe("fitted");
+    expect(status().textContent).toMatch(/Fitted to this frame: the picture fills the art window, centred/);
+    expect(fit().disabled).toBe(true);
+    expect(screen.queryByRole("button", { name: /Reset position/ })).toBeNull();
+  });
+
+  it("names the strip a fitted window shows of a much wider picture (a 3 : 1 panorama on a saga)", () => {
+    render(<Harness template="saga" />);
+    layOut({ width: 183, height: 440 }, { width: 2400, height: 800 });
+    expect(status().textContent).toMatch(/which shows the middle 14% of its width/);
+  });
+
+  it("a nudge makes it the maker's; Fit to frame puts it back on the fit", async () => {
+    const onChange = vi.fn();
+    render(<Harness template="saga" onChange={onChange} />);
+    fireEvent.keyDown(surface(), { key: "ArrowLeft", shiftKey: true });
+    fireEvent.keyDown(surface(), { key: "+" });
+    expect(status().dataset.artFraming).toBe("by-hand");
+    expect(status().textContent).toMatch(/Placed by hand: your framing is kept when you change the frame/);
+    expect(fit().disabled).toBe(false);
+    await act(async () => {
+      fireEvent.click(fit());
+    });
+    expect(onChange.mock.calls.at(-1)![0]).toEqual({ focalX: 0.5, focalY: 0.5, scale: 1 });
+    expect(status().dataset.artFraming).toBe("fitted");
+    expect(fit().disabled).toBe(true);
+  });
+
+  it("a stored hand-set position opens as it is: nothing is written, on any frame", () => {
+    const onChange = vi.fn();
+    const start = { focalX: 0.21, focalY: 0.83, scale: 1.4 };
+    const view = render(<Harness template="m15" start={start} onChange={onChange} />);
+    layOut({ width: 400, height: 293 }, { width: 2400, height: 800 });
+    view.rerender(<Harness template="saga" start={start} onChange={onChange} />);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(picture().style.objectPosition).toBe("21% 83%");
+    expect(picture().style.transform).toBe("scale(1.4)");
+    expect(status().dataset.artFraming).toBe("by-hand");
+  });
+
+  it("warns when the zoom leaves empty space in the window, and stops when it is filled again", () => {
+    render(<Harness template="saga" start={{ focalX: 0.5, focalY: 0.5, scale: 0.7 }} />);
+    expect(status().textContent).toMatch(/At 70% the picture is smaller than the art window, so empty space shows on the card/);
+    expect(fit().disabled).toBe(false);
+    for (let i = 0; i < 6; i++) fireEvent.keyDown(surface(), { key: "+" });
+    expect(screen.getByTestId("art-zoom-readout").textContent).toBe("100%");
+    expect(status().textContent).not.toMatch(/empty space/);
   });
 });
