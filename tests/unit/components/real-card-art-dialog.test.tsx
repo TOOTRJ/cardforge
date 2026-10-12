@@ -50,6 +50,7 @@ vi.mock("@/lib/cards/art-upload-client", () => ({ uploadCardArtFile: vi.fn() }))
 import { RealCardArtButton } from "@/components/creator/real-card-art-dialog";
 import { ArtPanel } from "@/components/creator/panels/art-panel";
 import { LayoutPanel } from "@/components/creator/panels/layout-panel";
+import { SECOND_PART_WORDS } from "@/lib/creator/second-part";
 
 afterEach(() => {
   cleanup();
@@ -754,6 +755,7 @@ describe("in the second face's art block (split / aftermath / flip halves)", () 
           artWindow={M15_ART_WINDOW}
           hasBackFace
           isAdventureFrame={isAdventureFrame}
+          partWords={SECOND_PART_WORDS[isAdventureFrame ? "adventure" : "split"]!}
           backRulesTextRef={{ current: null }}
           onInsertSymbol={() => {}}
         />
