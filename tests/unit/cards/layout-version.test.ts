@@ -2386,3 +2386,107 @@ describe("v49 — the symbols as printed: five redrawn symbols and flat rules-te
     }
   });
 });
+
+describe("v51 — the art's zoom about a focal point of exactly 0 (Satori dropped a zero transform-origin)", () => {
+  const png = "https://x/y.png";
+  const art = "https://x/art.png";
+  const V = 51;
+  /** A v50 bake: only v51 can be pending. */
+  const at = (over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    visibility: "public",
+    layout_version: V - 1,
+    rendered_image_url: png,
+    art_url: art,
+    ...over,
+  });
+  const AT = { current: V } as const;
+
+  it("is a sweep, never a badge, on ANY template — a card scope alone, and verification-neutral", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.ART_FOCAL_ZERO_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect(lv.VERSION_SCOPES[V]).toBeTypeOf("function");
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual([]);
+    // Without a card to judge by, every template is touched.
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(true);
+  });
+
+  it("re-bakes a card with art, a zoom other than 100 % and a focal point of exactly 0 across OR down — on any template", async () => {
+    const sweep = await sweepAt(V);
+    for (const art_position of [
+      { focalX: 0, focalY: 0.5, scale: 1.3 },
+      { focalX: 0.8164473684210526, focalY: 0, scale: 1.1 },
+      { focalX: 0, focalY: 0, scale: 0.5 },
+      { focalX: 0, focalY: 0.14473316254764385, scale: 1.0500000000000005 },
+      // The renderer clamps: a focal below 0 IS 0, a zoom past 4 is 4.
+      { focalX: -0.2, focalY: 0.5, scale: 9 },
+      // A missing focal on the other axis is the centre.
+      { focalX: 0, scale: 2 },
+    ]) {
+      for (const template of ["m15", "saga", "split", "retro", "m15borderless", "lotr"]) {
+        const row = at({ art_position, frame_style: { template } });
+        expect(sweep(row), `${template} ${JSON.stringify(art_position)}`).toBe("rebake");
+        expect(sweep(row, V)).toBe("rebake");
+        expect(isRenderStale(V - 1, template, undefined, V, row)).toBe(true);
+      }
+    }
+  });
+
+  it("stamps every other card: no zoom, no zero, no art", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const sweep = await sweepAt(V);
+    for (const over of [
+      { art_position: { focalX: 0, focalY: 0, scale: 1 } }, // a zero with no zoom: the crop was right
+      { art_position: { focalX: 0.01, focalY: 0.5, scale: 1.3 } }, // near 0 is not 0
+      { art_position: { focalX: 1, focalY: 1, scale: 2 } }, // 100 % was never wrong
+      { art_position: { focalX: 0.5, focalY: 0.5, scale: 1.3 } },
+      { art_position: {} }, // the defaults: centre, 100 %
+      { art_position: null },
+      { art_position: { focalX: 0, focalY: 0.5, scale: 0.2 }, art_url: null }, // no art, nothing to crop
+      { art_position: { focalX: 0, focalY: 0.5 } }, // no scale = 100 %
+      { art_position: { focalX: 0, focalY: 0.5, scale: "2" } }, // not a number: the renderer's default
+    ]) {
+      const row = at(over);
+      expect(sweep(row), JSON.stringify(over)).toBe("stamp");
+      expect(isRenderStale(V - 1, "lotr", undefined, V, row)).toBe(false);
+      expect(lv.hasPendingCorrection(row, AT), JSON.stringify(over)).toBe(false);
+      expect(lv.hasNewerLook(row, AT)).toBe(false);
+    }
+  });
+
+  it("reads a BACK face's art the same way (the split's second window, a double-faced back body's bake)", async () => {
+    const sweep = await sweepAt(V);
+    const fine = { focalX: 0.5, focalY: 0.5, scale: 1 };
+    const hit = { focalX: 0.5, focalY: 0, scale: 1.3 };
+    expect(sweep(at({ art_position: fine, back_face: { art_url: art, art_position: hit } }))).toBe("rebake");
+    // …with no front art at all:
+    expect(sweep(at({ art_url: null, art_position: null, back_face: { art_url: art, art_position: hit } }))).toBe("rebake");
+    expect(sweep(at({ art_position: fine, back_face: { art_url: art, art_position: fine } }))).toBe("stamp");
+    expect(sweep(at({ art_position: fine, back_face: { art_url: null, art_position: hit } }))).toBe("stamp");
+    expect(sweep(at({ art_position: fine, back_face: { title: "No art" } }))).toBe("stamp");
+  });
+
+  it("a row that doesn't carry the columns can't be judged: affected", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const sweep = await sweepAt(V);
+    for (const missing of ["art_url", "art_position", "back_face"] as const) {
+      const row = at({ art_position: { focalX: 0.5, focalY: 0.5, scale: 1 } }) as Record<string, unknown>;
+      delete row[missing];
+      expect(sweep(row as never), missing).toBe("rebake");
+      expect(lv.hasPendingCorrection(row as never, AT), missing).toBe(true);
+    }
+  });
+
+  it("is a correction of the bake only: a pending card owes the sweep and is never badged", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const row = at({ art_position: { focalX: 0, focalY: 0.5, scale: 1.3 } });
+    expect(lv.hasPendingCorrection(row, AT)).toBe(true);
+    expect(lv.hasNewerLook(row, AT)).toBe(false);
+  });
+});
