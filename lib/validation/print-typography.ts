@@ -40,6 +40,7 @@
 import { capitalizeTypeWords, typesFieldText } from "@/lib/cards/type-line-field";
 import type { CardType } from "@/types/card";
 import { loyaltyFromRulesText, sagaFromRulesText, serializeLoyalty, serializeSaga } from "@/lib/cards/face-content";
+import { kindFromCard } from "@/lib/creator/card-kinds";
 
 /** How a field is read: a card name, a type-line part (supertype, subtype),
  *  rules-style text (rules, a loyalty row, a saga's intro and chapters) or
@@ -333,6 +334,8 @@ export type StoredTypographyText = {
   flavor_text?: string | null;
   back_face?: unknown;
   face_content?: unknown;
+  /** Its template tells a walker / saga from the card type alone. */
+  frame_style?: unknown;
 };
 
 /** The rows as the creator serializes them into `rules_text`. */
@@ -415,6 +418,41 @@ function storedRowTexts(stored: StoredTypographyText | null): Set<string> {
   return texts;
 }
 
+/**
+ * A stored walker's / saga's rows saved as PLAIN TEXT: more rows (or a
+ * later chapter) than `face_content` stores, so the creator sends the rows
+ * serialized and no `face_content` (lib/creator/structured-rules.ts). Each
+ * line is still a row of the editor — a field of its own: read back out of
+ * the text, a row the stored card already holds keeps its characters, and
+ * only an edited row is converted. (Converted whole, the text re-set the
+ * quotes of every row on a save that edited one — and the saved card no
+ * longer read as the preview.) Null when this is not such a save: another
+ * kind, a new card, or a text that is not the creator's serialization.
+ */
+function plainTextRows(
+  text: string,
+  stored: StoredTypographyText | null,
+  row: (text: string, max: number) => string,
+): string | null {
+  if (!stored) return null;
+  const template = (stored.frame_style as { template?: unknown } | null | undefined)?.template;
+  const kind = kindFromCard((stored.card_type ?? null) as CardType | null, typeof template === "string" ? template : null);
+  if (kind === "planeswalker") {
+    const rows = loyaltyFromRulesText(text);
+    if (rows.length === 0 || serializeLoyalty(rows) !== text) return null;
+    return serializeLoyalty(rows.map((r) => ({ ...r, text: row(r.text, ROW_MAX) })));
+  }
+  if (kind === "saga") {
+    const saga = sagaFromRulesText(text);
+    if (saga.chapters.length === 0 || serializeSaga(saga.intro, saga.chapters) !== text) return null;
+    return serializeSaga(
+      saga.intro === null ? null : row(saga.intro, INTRO_MAX),
+      saga.chapters.map((r) => ({ ...r, text: row(r.text, ROW_MAX) })),
+    );
+  }
+  return null;
+}
+
 function apply<T extends TypographyPayload>(data: T, stored: StoredTypographyText | null, changed: Changed): T {
   let out = faceText(data, stored, changed);
 
@@ -422,9 +460,9 @@ function apply<T extends TypographyPayload>(data: T, stored: StoredTypographyTex
   // a row whose text the stored card already holds is left as it is.
   const rawFace = out.face_content ?? null;
   let face = rawFace;
+  const keptRows = storedRowTexts(stored);
+  const row = (text: string, max: number) => (changed(text, keptRows.has(asResent(text)) ? text : null) ? within(text, "rules", max) : text);
   if (rawFace) {
-    const keptRows = storedRowTexts(stored);
-    const row = (text: string, max: number) => (changed(text, keptRows.has(asResent(text)) ? text : null) ? within(text, "rules", max) : text);
     face = {
       ...rawFace,
       ...(rawFace.loyalty
@@ -447,7 +485,15 @@ function apply<T extends TypographyPayload>(data: T, stored: StoredTypographyTex
     // A walker's or a saga's rules_text is the creator's serialized copy of
     // its rows: it follows the ROWS (a kept row stays kept in the copy too),
     // never a second reading of the joined text.
-    const copyOfRows = rawFace && face && serializedRows(rawFace) === out.rules_text ? serializedRows(face) : null;
+    // …and so does the text of a walker / saga saved WITHOUT rows beside it
+    // (more of them than face_content stores): its lines are still the
+    // editor's rows.
+    const copyOfRows =
+      rawFace && face && serializedRows(rawFace) === out.rules_text
+        ? serializedRows(face)
+        : rawFace
+          ? null
+          : plainTextRows(out.rules_text, stored, row);
     out.rules_text =
       copyOfRows !== null && copyOfRows.length <= RULES_MAX ? copyOfRows : within(out.rules_text, "rules", RULES_MAX);
   }

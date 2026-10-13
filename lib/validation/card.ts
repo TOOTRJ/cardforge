@@ -469,7 +469,7 @@ export const loyaltyCostSchema = z
   .transform((v) => v.toUpperCase())
   .nullable();
 
-const faceContentSchema = z
+export const faceContentSchema = z
   .object({
     v: z.literal(1),
     loyalty: z
