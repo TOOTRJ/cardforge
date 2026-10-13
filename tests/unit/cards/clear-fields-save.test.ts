@@ -131,7 +131,116 @@ describe("updateCardSchema — null is an emptied field", () => {
   });
 });
 
+// The sentinel is an allow-list: null means "clear" only for a column that
+// may be NULL. Everything a card must keep refuses it, and a key the schema
+// doesn't name (the owner, the id, the render pointers 0126 guards) never
+// reaches the write.
+describe("updateCardSchema — what null can NOT clear", () => {
+  const NEVER_NULL = [
+    "title",
+    "slug",
+    "game_system_id",
+    "color_identity",
+    "supertype",
+    "card_type",
+    "subtypes",
+    "tags",
+    "rarity",
+    "art_position",
+    "frame_style",
+    "visibility",
+    "parent_card_id",
+    "lang",
+    "frame_preview",
+    "frame_anatomy",
+  ] as const;
+
+  it.each(NEVER_NULL)("a null %s is refused", (key) => {
+    expect(updateCardSchema.safeParse({ [key]: null }).success).toBe(false);
+  });
+
+  it("every key that takes null is a nullable column — the list is pinned", () => {
+    const takesNull = Object.keys(updateCardSchema.shape).filter(
+      (key) => updateCardSchema.safeParse({ [key]: null }).success,
+    );
+    expect(takesNull.sort()).toEqual(
+      [
+        ...CLEARABLE,
+        // Nullable before this change (null = clear / none / the built line).
+        "printed_types",
+        "back_face",
+        "back_card_id",
+        "source_scryfall_id",
+        "set_icon_url",
+        "set_icon_code",
+        "set_code",
+        "collector_number",
+        "deck_id",
+        "face_content",
+        "watermark",
+        "footer_text",
+      ].sort(),
+    );
+  });
+
+  it("an empty title is refused, null or \"\"", () => {
+    expect(updateCardSchema.safeParse({ title: "" }).success).toBe(false);
+    expect(updateCardSchema.safeParse({ title: "   " }).success).toBe(false);
+  });
+
+  it("keys the schema doesn't name are dropped", () => {
+    expect(
+      updateCardSchema.parse({
+        owner_id: USER,
+        id: CARD,
+        rendered_image_url: null,
+        rendered_thumb_url: null,
+        layout_version: null,
+        created_at: null,
+        likes_count: null,
+      }),
+    ).toEqual({});
+  });
+});
+
 describe("updateCardAction — an emptied field is cleared", () => {
+  it("a crafted clear of the owner, the id or the title writes nothing", async () => {
+    const stub = db();
+    // Only unknown keys: nothing to change.
+    expect(await updateCardAction(CARD, { owner_id: null, id: null })).toMatchObject({ ok: false });
+    // A null title fails validation whole — the flavor beside it isn't cleared.
+    const refused = await updateCardAction(CARD, { title: null, flavor_text: null });
+    expect(refused.ok).toBe(false);
+    expect(written(stub, "update")).toBeUndefined();
+  });
+
+  it("an emblem's fixed fields: a clear stays a clear, an omitted one stays omitted", async () => {
+    state.existing = stored({
+      card_type: "emblem",
+      supertype: null,
+      cost: null,
+      power: null,
+      toughness: null,
+      color_identity: ["colorless"],
+      frame_style: { template: "emblem", finish: "regular" },
+    });
+    const stub = db();
+    await updateCardAction(CARD, { rules_text: null, flavor_text: null, cost: null });
+    const row = written(stub, "update")!;
+    expect(row).toMatchObject({ rules_text: null, flavor_text: null, cost: null });
+    for (const key of ["power", "toughness", "loyalty", "defense", "supertype", "color_identity"]) {
+      expect(row).not.toHaveProperty(key);
+    }
+  });
+
+  it("print typography still touches only a text the save changes", async () => {
+    // Straight quotes typed on an old card: resent as stored, they stay.
+    state.existing = stored({ rules_text: "It's \"old\".", flavor_text: "\"Hold.\"" });
+    const stub = db();
+    await updateCardAction(CARD, { rules_text: "It's \"old\".", flavor_text: null });
+    expect(written(stub, "update")).toMatchObject({ rules_text: "It's \"old\".", flavor_text: null });
+  });
+
   it("the flavor text: null clears the column and nothing else is written", async () => {
     const stub = db();
     const result = await updateCardAction(CARD, { flavor_text: null });

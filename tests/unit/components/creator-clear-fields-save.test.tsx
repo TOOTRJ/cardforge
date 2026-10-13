@@ -59,7 +59,7 @@ const GAME = "33333333-3333-4333-8333-333333333333";
 const CARD_ID = "22222222-2222-4222-8222-222222222222";
 const USER = "11111111-1111-4111-8111-111111111111";
 const GAME_SYSTEMS = [{ id: GAME, slug: "mtg", name: "Magic" } as unknown as GameSystem];
-const VERIFIED = ["m15", "m15pw"].flatMap((t) =>
+const VERIFIED = ["m15", "m15pw", "m15land", "saga"].flatMap((t) =>
   ["w", "u", "b", "r", "g", "c", "m"].map((k) => frameComboKey(t, k)),
 );
 
@@ -228,6 +228,150 @@ describe("an edit that empties a field sends null for it", () => {
     // Not the stored copy of the rows, which would bring them back.
     expect(payload.rules_text).toBeNull();
     expect(payload.power).toBeUndefined();
+  });
+});
+
+// A saga keeps its text in the intro + chapter rows; the rules textarea is
+// hidden and still holds the STORED text. It may be resent only while it is
+// what the editor shows.
+describe("a saga's rows on an edit", () => {
+  const saga = (over: Record<string, unknown> = {}) =>
+    savedCard({
+      card_type: "enchantment",
+      supertype: null,
+      subtypes: ["Saga"],
+      power: null,
+      toughness: null,
+      flavor_text: null,
+      frame_style: { finish: "regular", template: "saga" },
+      ...over,
+    });
+  const WITH_INTRO = {
+    rules_text: "(Reminder.)\nI — Draw a card.",
+    face_content: { v: 1, saga: { intro: "(Reminder.)", chapters: [{ numerals: [1], text: "Draw a card." }] } },
+  };
+
+  it("every chapter emptied, no intro: the rules text clears", async () => {
+    renderForm(
+      "edit",
+      saga({
+        rules_text: "I — Draw a card.",
+        face_content: { v: 1, saga: { intro: null, chapters: [{ numerals: [1], text: "Draw a card." }] } },
+      }),
+    );
+    await goTo("Text & stats");
+    await typeRich("saga_chapters.0.text", "");
+    const payload = await sentUpdate();
+    expect(payload.rules_text).toBeNull();
+    expect(payload.face_content).toBeNull();
+  });
+
+  it("every chapter emptied, the intro kept: the intro is the text — not the stored chapters", async () => {
+    renderForm("edit", saga(WITH_INTRO));
+    await goTo("Text & stats");
+    await typeRich("saga_chapters.0.text", "");
+    const payload = await sentUpdate();
+    expect(payload.rules_text).toBe("(Reminder.)");
+    expect(payload.face_content).toBeNull();
+  });
+
+  it("an untouched saga travels as stored", async () => {
+    renderForm("edit", saga(WITH_INTRO));
+    await type("title", "Another Name");
+    const payload = await sentUpdate();
+    expect(payload.rules_text).toBe("(Reminder.)\nI — Draw a card.");
+    expect(payload.face_content).toEqual(WITH_INTRO.face_content);
+  });
+
+  it("a stored text with no chapter is never rewritten by an edit of another field", async () => {
+    // The editor shows it as the intro, its lines joined — the stored
+    // text keeps its line break.
+    renderForm("edit", saga({ rules_text: "Flying\nTrample" }));
+    await type("title", "Another Name");
+    expect((await sentUpdate()).rules_text).toBe("Flying\nTrample");
+  });
+
+  it("…and its intro, once edited, is what is saved", async () => {
+    renderForm("edit", saga({ rules_text: "Flying" }));
+    await goTo("Text & stats");
+    await typeRich("saga_intro", "Flying, haste");
+    expect((await sentUpdate()).rules_text).toBe("Flying, haste");
+  });
+
+  it("…or cleared, once emptied", async () => {
+    renderForm("edit", saga({ rules_text: "Flying" }));
+    await goTo("Text & stats");
+    await typeRich("saga_intro", "");
+    expect((await sentUpdate()).rules_text).toBeNull();
+  });
+
+  it("a chapter the editor can't number is not an emptied editor: the stored text stays", async () => {
+    // "XI" is past the markers the rows read (I–X): the row holds the text
+    // and no number, so it never survives the submit filter.
+    renderForm("edit", saga({ rules_text: "XI — Draw a card." }));
+    await type("title", "Another Name");
+    expect((await sentUpdate()).rules_text).toBe("XI — Draw a card.");
+  });
+});
+
+describe("a planeswalker's rows on an edit", () => {
+  it("a walker stored as plain text (no structured rows) travels as stored", async () => {
+    renderForm(
+      "edit",
+      savedCard({
+        card_type: "planeswalker",
+        subtypes: ["Kesh"],
+        power: null,
+        toughness: null,
+        loyalty: "4",
+        rules_text: "Flying\n+1: Draw a card.",
+        face_content: null,
+        frame_style: { finish: "regular", template: "m15pw" },
+      }),
+    );
+    await type("title", "Another Name");
+    const payload = await sentUpdate();
+    expect(payload.rules_text).toBe("Flying\n+1: Draw a card.");
+    expect(payload.loyalty).toBe("4");
+  });
+});
+
+describe("an edit of ANOTHER field never clears a stored one", () => {
+  it("every stored text and stat travels as stored; the stats the type doesn't print are left out", async () => {
+    renderForm("edit", savedCard({ loyalty: "5", defense: "6" }));
+    await type("title", "Another Name");
+    const payload = await sentUpdate();
+    expect(payload).toMatchObject({
+      cost: "{2}{R}{R}",
+      rules_text: "Haste",
+      flavor_text: "\"Hold the line.\"",
+      power: "3",
+      toughness: "4",
+      artist_credit: "Anya Vale",
+      art_url: "https://example.com/art.png",
+    });
+    // A creature prints neither: a stored loyalty / defense is never sent,
+    // so it is never cleared.
+    expect(payload).not.toHaveProperty("loyalty", null);
+    expect(payload).not.toHaveProperty("defense", null);
+    expect(payload.loyalty).toBeUndefined();
+    expect(payload.defense).toBeUndefined();
+    // The locked structure never leaves the client on an edit.
+    for (const key of ["supertype", "subtypes", "card_type", "color_identity", "frame_style"]) {
+      expect(payload).not.toHaveProperty(key);
+    }
+  });
+
+  it("a land with a stored P/T it doesn't print: not sent, so not cleared", async () => {
+    renderForm(
+      "edit",
+      savedCard({ card_type: "land", supertype: null, subtypes: [], cost: null, power: "1", toughness: "1" }),
+    );
+    await type("title", "Another Name");
+    const payload = await sentUpdate();
+    expect(payload.power).toBeUndefined();
+    expect(payload.toughness).toBeUndefined();
+    expect(payload.cost).toBeNull();
   });
 });
 

@@ -3015,8 +3015,22 @@ export function CardCreatorForm({
         const intro = values.saga_intro.trim() || null;
         faceContentPayload = { v: 1, saga: { intro, chapters } };
         rulesTextOut = serializeSaga(intro, chapters);
-      } else if (isEdit && !values.saga_intro.trim()) {
-        rulesTextOut = "";
+      } else if (isEdit && values.saga_chapters.every((r) => !r.text.trim())) {
+        // No chapter row holds a text on an edit. The hidden textarea still
+        // holds the STORED rules text, and it is resent only while it reads
+        // as what the editor shows — a text with no chapter, all of it the
+        // intro, untouched (so a stored text is never rewritten by a save
+        // that didn't edit it). Chapters the stored text still has, or an
+        // intro that was edited or emptied: the editor's intro IS the text
+        // ("" clears it) — the stored copy would bring the chapters back
+        // and drop the edit. A row that holds a text and no chapter number
+        // (a marker the editor can't read) is not an emptied editor: the
+        // stored text stays.
+        const intro = values.saga_intro.trim();
+        const storedSaga = sagaFromRulesText(values.rules_text);
+        if (storedSaga.chapters.length > 0 || (storedSaga.intro ?? "") !== intro) {
+          rulesTextOut = intro;
+        }
       }
     }
 
