@@ -88,6 +88,16 @@ describe("supabase/seed.sql verified frames", () => {
     }
   });
 
+  it("seeds the Vehicle frame and the 1993 and 1997 pairs in every colour, as production verified them (2026-10-13)", () => {
+    // A preview branch without `m15vehicle` never offers the Vehicle frame
+    // to a card whose subtypes say Vehicle (TODO 4.5c), and an import of
+    // one lands on the artifact frame there while production's lands on it.
+    const combos = new Set(seededCombos());
+    for (const template of ["m15vehicle", "agclassic", "alphaland", "retro", "retroland"]) {
+      for (const colour of COLOR_KEYS) expect(combos.has(`${template}/${colour}`), `${template}/${colour}`).toBe(true);
+    }
+  });
+
   it("the snapshot count in the header is the number of seeded combos", () => {
     // Refreshing the list from production means refreshing the date and the
     // count beside it; a count that disagrees is a half-done refresh.

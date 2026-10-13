@@ -135,7 +135,7 @@ if (wipeError) {
 // Frame verification is the creator's ONLY gate (lib/cards/frame-availability):
 // an unverified frame is a disabled "Soon" chip. supabase/seed.sql seeds the
 // combos production has verified, but only on a `db reset` — a long-lived
-// local DB may predate it — and agclassic is NOT verified on prod, yet the
+// local DB may predate it (agclassic joined the list on 2026-10-13), and the
 // frame-era spec (create-card.spec.ts) picks a Classic frame before accepting
 // the "switch to M15" planeswalker offer. So verify exactly the combos the
 // specs click through — all seven color keys, so a spec that changes the
