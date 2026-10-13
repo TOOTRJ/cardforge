@@ -5860,7 +5860,7 @@ row as DRAWN is still a little longer than measured — the cost discs'
 shadow and whole-px rounding, up to 1 px a pip, which no plain cost counted
 either: measuring the detached row with `costRowWidthPct` would move every
 `modern` / walker name by a pixel or two and is not part of this.
-`tests/unit/render/title-room-scaled-pips-bake.test.tsx` holds 20 px of air
+`tests/unit/render/title-room-scaled-pips-bake-<n>.test.ts` (the bakes of `title-room-scaled-pips-bake.test.tsx`, in four files) hold 20 px of air
 on real bakes of all four at 0–10 such symbols, at 750 px and HD.
 
 A CORRECTION: `"sweep"`, no badge. Scoped to the four templates
