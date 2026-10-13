@@ -203,13 +203,17 @@ jobs:
 
   # The REQUIRED check (main's ruleset names "Typecheck, lint, unit"): green
   # only when typecheck, lint, the build, every unit shard and the coverage
-  # floors all are. It runs when one of them failed or was skipped, so the
-  # check is never "skipped" — a skipped required check counts as passing.
+  # floors all are. `always()`, not `!cancelled()`: the gate must RUN whatever
+  # became of the jobs it covers — failed, skipped, timed out (a job stopped
+  # at its `timeout-minutes` ends as "cancelled") or cancelled with the run —
+  # because a required check that is "skipped" counts as passing, and
+  # `always()` is the one condition documented to run in every one of those
+  # cases. It then fails on anything but three successes.
   # Never rename it; a new job the check must cover joins `needs`.
   checks:
     name: Typecheck, lint, unit
     needs: [static, unit, coverage]
-    if: ${{ !cancelled() }}
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

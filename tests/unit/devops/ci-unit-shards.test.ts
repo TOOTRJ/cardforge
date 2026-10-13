@@ -49,9 +49,11 @@ describe("the required check", () => {
   });
 
   it("runs when a job it covers failed (a skipped required check counts as passing) and passes only when all succeeded", () => {
-    // `!cancelled()`: a failed or timed-out need still runs the gate; a
-    // cancelled RUN reports the gate as cancelled, which is not a pass.
-    expect(gate).toMatch(/^ {4}if: \$\{\{ !cancelled\(\) \}\}$/m);
+    // `always()`: the gate runs whatever became of its needs — failed,
+    // skipped, stopped at a timeout ("cancelled") or cancelled with the run —
+    // and then fails on anything but three successes. `!cancelled()` leans on
+    // how a timed-out need is counted, which nothing documents.
+    expect(gate).toMatch(/^ {4}if: \$\{\{ always\(\) \}\}$/m);
     expect(gate).toContain("NEEDS: ${{ toJSON(needs) }}");
     expect(gate).toContain(`jq -e 'length == 3 and all(.[]; .result == "success")'`);
     // Nothing in it may swallow the verdict.
@@ -62,6 +64,22 @@ describe("the required check", () => {
     for (const id of ["static", "unit", "coverage"]) {
       expect(jobOf(id), id).not.toMatch(/continue-on-error|\|\| true/);
     }
+  });
+});
+
+describe("the jobs behind the check", () => {
+  it("each has its own time limit — a hung one ends in minutes, not in GitHub's six hours", () => {
+    for (const id of ["static", "unit", "coverage", "checks"]) {
+      expect(jobOf(id), id).toMatch(/^ {4}timeout-minutes: \d+$/m);
+    }
+  });
+
+  it("the shards all run on every event: no job condition, no matrix exclude or include", () => {
+    const unit = jobOf("unit");
+    expect(unit).not.toMatch(/^ {4}if:/m);
+    expect(unit).not.toMatch(/^ {8}(exclude|include):/m);
+    // A push that supersedes a run cancels it per ref, as before the split.
+    expect(ci).toMatch(/^concurrency:\n {2}group: ci-\$\{\{ github\.ref \}\}\n {2}cancel-in-progress: true$/m);
   });
 });
 
