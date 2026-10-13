@@ -1,0 +1,200 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import printingsData from "./fixtures/station-printings.json";
+import { scryfallCardSchema } from "@/lib/scryfall/client";
+import { frameMatchFromScryfall, mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
+import { FRAME_SIGNATURE_KEYS, isKnownFrameSignature } from "@/lib/scryfall/frame-signatures";
+import { finalizeImportMatch, withVerification } from "@/lib/creator/frame-resolve";
+import { frameRequestFromImport, frameRequestSchema, signatureBlockedBy } from "@/lib/frames/frame-requests";
+import { frameComboKey } from "@/lib/cards/frame-reference-registry";
+import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
+
+// ---------------------------------------------------------------------------
+// TODO 4.27a, step 0 — the station frame (Edge of Eternities' Spacecraft and
+// Planets) is not drawn yet, and Scryfall has no layout for it: the cards
+// are `layout: normal` with the keyword Station. Until this step `era/2015`
+// called a plain Spacecraft EXACT on the artifact frame (a Planet on the
+// land frame) and no row reached the frame request log. Now every station
+// printing lands where it landed, as that frame's NEAREST, and is logged.
+//
+// Every fixture is a real printing captured from Scryfall (2026-10-13) and
+// trimmed to the fields the registry and the importer read.
+// ---------------------------------------------------------------------------
+
+type Key = keyof typeof printingsData;
+const printing = (key: Key) => scryfallCardSchema.parse(printingsData[key]);
+const match = (key: Key) => frameMatchFromScryfall(printing(key));
+
+const STATION_REASON = "PipGlyph doesn't draw the Station frame yet";
+const EVERY: ReadonlySet<string> = new Set(
+  FRAME_TEMPLATE_VALUES.flatMap((template) => ["w", "u", "b", "r", "g", "c", "m"].map((colour) => frameComboKey(template, colour))),
+);
+
+/** The combos production has verified (supabase/seed.sql mirrors them). */
+function productionVerifiedKeys(): Set<string> {
+  const sql = readFileSync(join(process.cwd(), "supabase/seed.sql"), "utf8");
+  const block = /-- frame_reviews:begin\n([\s\S]*?)-- frame_reviews:end/.exec(sql)?.[1].replace(/--.*$/gm, "");
+  if (!block) throw new Error("frame_reviews block missing from seed.sql");
+  const everyColour = /unnest\(array\[([^\]]*)\]\)\s+as t/.exec(block)?.[1] ?? "";
+  const keys = new Set<string>();
+  for (const [, template] of everyColour.matchAll(/'([^']+)'/g)) {
+    for (const colour of ["w", "u", "b", "r", "g", "c", "m"]) keys.add(frameComboKey(template as FrameTemplate, colour));
+  }
+  for (const [, template, colour] of block.matchAll(/\('([^']+)',\s*'([wubrgcm])',\s*true/g)) {
+    keys.add(frameComboKey(template as FrameTemplate, colour));
+  }
+  return keys;
+}
+const PROD_VERIFIED = productionVerifiedKeys();
+
+describe("a bordered station printing is the artifact / land frame's nearest (station/2015)", () => {
+  const spacecraft: Key[] = ["eoe-25", "eoe-208", "eoe-219", "eoe-238", "eoe-241", "peoe-25s", "plst-eoe-101", "trk-273"];
+
+  it.each(spacecraft)("%s: a Spacecraft lands on the artifact frame, nearest, naming 4.27a", (key) => {
+    const found = match(key);
+    expect(found).toMatchObject({
+      status: "nearest",
+      signature: "station/2015",
+      template: "m15artifact",
+      exactLabel: "Station frame (Spacecraft)",
+      reason: STATION_REASON,
+      blockedBy: "4.27a",
+    });
+    expect(found.landOn).toBeUndefined();
+    // No frame is named for later: the station templates don't exist yet.
+    expect(found.onceVerified).toBeUndefined();
+    expect(found.landOnOnceVerified).toBeUndefined();
+  });
+
+  it("a Planet lands on the land frame, nearest", () => {
+    expect(match("eoe-253")).toMatchObject({
+      status: "nearest",
+      signature: "station/2015",
+      template: "m15land",
+      exactLabel: "Station frame (Planet)",
+      reason: STATION_REASON,
+      blockedBy: "4.27a",
+    });
+  });
+
+  it("verification never makes one exact — whatever is ticked", () => {
+    for (const key of [...spacecraft, "eoe-253"] as Key[]) {
+      const patch = finalizeImportMatch(mapScryfallToFormPatch(printing(key)), EVERY);
+      expect(patch.frame_match, key).toMatchObject({ status: "nearest", signature: "station/2015", reason: STATION_REASON });
+      expect(patch.frame_match?.unverified, key).toBeUndefined();
+    }
+    expect(withVerification(match("eoe-25"), "w", new Set())).toMatchObject({ status: "nearest", reason: STATION_REASON });
+  });
+
+  it("the import keeps its landing, its kind and its tiers as plain rules text", () => {
+    const frigate = finalizeImportMatch(mapScryfallToFormPatch(printing("eoe-25")), PROD_VERIFIED);
+    expect(frigate).toMatchObject({ kind: "artifact", frame_template: "m15artifact", power: "3", toughness: "5" });
+    expect(frigate.rules_text).toContain("12+ | Flying, lifelink");
+    const planet = finalizeImportMatch(mapScryfallToFormPatch(printing("eoe-253")), PROD_VERIFIED);
+    expect(planet).toMatchObject({ kind: "land", frame_template: "m15land" });
+  });
+
+  it("…and now writes a 'missing' row in the request log (none before)", () => {
+    const patch = finalizeImportMatch(mapScryfallToFormPatch(printing("eoe-208")), PROD_VERIFIED);
+    const row = frameRequestFromImport(patch, { artImported: true, source: "import" });
+    expect(row).toMatchObject({
+      signature: "station/2015",
+      label: "Station frame (Spacecraft)",
+      setCode: "eoe",
+      collectorNumber: "208",
+      status: "nearest",
+      cause: "missing",
+      template: "m15artifact",
+    });
+    expect(frameRequestSchema.safeParse(row).success).toBe(true);
+    expect(signatureBlockedBy("station/2015", "m15artifact")).toBe("4.27a");
+  });
+});
+
+describe("the other dresses keep their own rule and say the station frame is missing", () => {
+  it("extended art: the extended-art frame, with the station gap first", () => {
+    for (const key of ["eoe-321", "eoe-348"] as Key[]) {
+      const found = match(key);
+      expect(found, key).toMatchObject({
+        status: "nearest",
+        signature: "extendedart+station",
+        template: "extendedart",
+        reason: STATION_REASON,
+        blockedBy: "4.27a",
+      });
+      expect(found.gaps, key).toContain("station");
+      // Not "not yet verified": the frame would not be exact once ticked.
+      const final = withVerification(found, key === "eoe-321" ? "w" : "m", EVERY);
+      expect(final, key).toMatchObject({ status: "nearest", reason: STATION_REASON });
+      expect(final.unverified, key).toBeUndefined();
+    }
+  });
+
+  it("borderless: the borderless artifact frame, landing on the artifact frame as before", () => {
+    const found = match("eoc-1");
+    expect(found).toMatchObject({
+      status: "nearest",
+      signature: "borderless/standard+station",
+      template: "m15borderlessartifact",
+      landOn: "m15artifact",
+      reason: STATION_REASON,
+      blockedBy: "4.27a",
+    });
+    expect(found.gaps?.[0]).toBe("station");
+  });
+
+  it("showcase (the viewport Planets, TRK #557): the showcase rule's landing and item, both reasons", () => {
+    expect(match("eoe-277")).toMatchObject({
+      status: "nearest",
+      signature: "borderless/showcase+station",
+      template: "m15borderlessland",
+      landOn: "m15land",
+      reason: `PipGlyph doesn't have this set's showcase frame yet; ${STATION_REASON}`,
+      blockedBy: "4.11",
+    });
+    expect(match("trk-557")).toMatchObject({
+      status: "nearest",
+      signature: "showcase+station",
+      template: "m15artifact",
+      reason: `PipGlyph doesn't have this set's showcase frame yet; ${STATION_REASON}`,
+      blockedBy: "4.11",
+    });
+    expect(signatureBlockedBy("borderless/showcase+station", "m15land")).toBe("4.11");
+  });
+
+  it("every station signature is in the request log's vocabulary", () => {
+    for (const key of ["station/2015", "extendedart+station", "borderless/standard+station", "borderless/showcase+station", "showcase+station"]) {
+      expect(isKnownFrameSignature(key), key).toBe(true);
+    }
+    expect(new Set(FRAME_SIGNATURE_KEYS).size).toBe(FRAME_SIGNATURE_KEYS.length);
+  });
+});
+
+describe("nothing that isn't a station printing moves", () => {
+  it("a plain artifact, a land and a Vehicle of the same sets keep their rules", () => {
+    expect(match("eoe-240")).toMatchObject({ status: "exact", signature: "era/2015", template: "m15artifact" });
+    expect(match("eoe-256")).toMatchObject({ status: "exact", signature: "era/2015", template: "m15land" });
+    expect(match("dft-234").signature).toBe("vehicle/2015");
+  });
+
+  it("the keyword decides, never the subtype: Doctor Who's 'Plane — Spacecraft' stays a card PipGlyph doesn't make", () => {
+    expect(match("who-578")).toMatchObject({ status: "unsupported", signature: "no-card-type" });
+  });
+
+  it("a Spacecraft without the keyword (a custom or future type line) is not a station printing", () => {
+    const bare = scryfallCardSchema.parse({ ...printingsData["eoe-25"], keywords: [] });
+    expect(frameMatchFromScryfall(bare)).toMatchObject({ status: "exact", signature: "era/2015", template: "m15artifact" });
+    const lowerCase = scryfallCardSchema.parse({ ...printingsData["eoe-25"], keywords: ["station"] });
+    expect(frameMatchFromScryfall(lowerCase).signature).toBe("station/2015");
+  });
+
+  it("a showcase or extended-art printing without the keyword keeps its plain signature", () => {
+    const extended = scryfallCardSchema.parse({ ...printingsData["eoe-321"], keywords: [] });
+    expect(frameMatchFromScryfall(extended).signature).toBe("extendedart");
+    const showcase = scryfallCardSchema.parse({ ...printingsData["eoe-277"], keywords: [] });
+    expect(frameMatchFromScryfall(showcase)).toMatchObject({ signature: "borderless/showcase", blockedBy: "4.11", reason: "PipGlyph doesn't have this set's showcase frame yet" });
+    const trek = scryfallCardSchema.parse({ ...printingsData["trk-557"], keywords: [] });
+    expect(frameMatchFromScryfall(trek)).toMatchObject({ signature: "showcase", blockedBy: "4.11" });
+  });
+});

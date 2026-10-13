@@ -2776,8 +2776,17 @@ wear the brown plate with white digits (ink 252 / 252 / 253 at the median, never
 Weatherlight (bronze frame, a SILVER plate, dark digits): not offered
 (owner 2026-10-12). The plate's brown box reads x 1173–1420, y 1868–1985 px
 at the median; ours, at M15's plate box, 1172–1423 × 1873–1980. Spacecraft
-(EOE 2025) print another frame — the station layout, no brown plate, dark
-digits, 10 of 10 — and are TODO 4.27's, not Vehicles.
+(EOE 2025) print another frame — the station layout: no brown plate but a
+BLACK one with WHITE digits, set inside the tier that makes the card a
+creature (12 of 12 plated scans in the frame roadmap of 2026-10-13;
+re-read on EOE #25 and #208: the plate's face at luma 42–43, its digits at
+255) — and are TODO 4.27a's, not Vehicles. (An earlier note here said
+"dark digits": the plate is dark, the digits are not.) Until that frame is
+built an import of a station printing — Scryfall's keyword Station, its
+only field for the frame — lands on the artifact frame (a Planet on the
+land frame) as its NEAREST and is logged (`station/2015`; the extended-art,
+borderless and showcase printings keep their own rule with the `station`
+gap), where `era/2015` used to call it exact.
 
 **Masters** (the frames bucket; `scripts/lib/cc-frames.mjs`): Card
 Conjurer's own recipe for a type line that says Vehicle
