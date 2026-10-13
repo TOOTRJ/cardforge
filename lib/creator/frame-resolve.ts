@@ -338,8 +338,9 @@ export function withoutTextlessFrames(verifiedKeys: ReadonlySet<string>): Readon
  *   • a landing that would hide the text gives way to `standIn`: a
  *     template = the printing's landing with the textless frames read as
  *     unverified (scryfallRemixMechanics — the registry's own stand-in, a
- *     token's following the text again); `null` = the default landing, no
- *     template (an own card, as it landed before its frame was kept);
+ *     token's following the text again), or an own TOKEN's 2014–19 arch
+ *     (ownCardTextStandIn); `null` = the default landing, no template (an
+ *     own card, as it landed before its frame was kept);
  *     `undefined` = nothing else is published in the card's colour, so the
  *     landing stands — a hidden text, never a refused save after the art.
  * A stand-in is one-faced like the landing it replaces (the caller's

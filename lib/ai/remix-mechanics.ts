@@ -22,7 +22,7 @@ import { backFaceFromPatch, splitSubtypes } from "@/lib/scryfall/preview-from-pa
 import { DFC_REMIX_CREDITS } from "@/lib/scryfall/dfc-import";
 import { remixFrameFor, withoutTextlessFrames } from "@/lib/creator/frame-resolve";
 import { getFrameProfile } from "@/lib/cards/template-layout";
-import { templatePaintsSecondFace } from "@/lib/creator/card-kinds";
+import { templatePaintsSecondFace, typeWordFrameFor } from "@/lib/creator/card-kinds";
 import { dfcBodyOf, templateHasBackFace, withTransformBackShape } from "@/lib/cards/dfc";
 import {
   FRAME_TEMPLATE_VALUES,
@@ -296,21 +296,32 @@ export function ownCardRemixFrame(
 /**
  * Where an own card's remix saves INSTEAD when it saves with rules or
  * flavour text and its kept frame draws none (a `textless` profile, TODO
- * 1.24 — remixSavedFrame decides, once the text is known): `null` = the
- * default landing, no template — where this card lands when its frame is
- * NOT kept (above), i.e. where it would land with the textless frame
- * unverified — and only where the save's gates pass that landing in the
- * card's colour; `undefined` = they don't, so the kept frame stands (a
- * hidden text, never a refused save after the art). Pure.
+ * 1.24 — remixSavedFrame decides, once the text is known):
+ *   • a TOKEN: the 2014–19 arch its type words pick (`m15token`, or
+ *     `m15tokenartifact` for the Artifact word — typeWordFrameFor), whose
+ *     scrim keeps the text — the stand-in a PRINTING of that token gets
+ *     from the registry — where the save's gates pass it in the card's
+ *     colour;
+ *   • else `null` = the default landing, no template — where this card
+ *     lands when its frame is NOT kept (above) — where the gates pass that;
+ *   • `undefined` = neither, so the kept frame stands (a hidden text,
+ *     never a refused save after the art).
+ * Pure.
  */
 export function ownCardTextStandIn(
   source: OwnCardRemixSource,
   verifiedKeys: ReadonlySet<string>,
-): null | undefined {
-  return frameGateError(undefined, source.color_identity ?? [], verifiedKeys) === null &&
-    frameKindGateError(undefined, cardFieldsFace(source)) === null
-    ? null
-    : undefined;
+): FrameTemplate | null | undefined {
+  const colours = source.color_identity ?? [];
+  const face = cardFieldsFace(source);
+  const passes = (template: FrameTemplate | undefined) =>
+    frameGateError(template, colours, verifiedKeys) === null &&
+    frameKindGateError(template, face) === null;
+  if (source.card_type === "token") {
+    const arch = typeWordFrameFor("token", "m15token", source.supertype);
+    if (passes(arch)) return arch;
+  }
+  return passes(undefined) ? null : undefined;
 }
 
 /** An own card's rules text as the remix copies it: the stored text, or —

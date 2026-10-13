@@ -373,7 +373,8 @@ Rules and gotchas:
   textless heights) off it once the final text is known — a printing onto
   its landing with the textless frames read as unverified
   (`withoutTextlessFrames`, the registry's own stand-in, `text_stand_in`),
-  an own card onto the default landing where the save's gates pass it
+  an own token onto the 2014–19 arch its type words pick, else an own card
+  onto the default landing, where the save's gates pass it
   (`ownCardTextStandIn`) — and leaves it where the card saves with no text
   or nothing else is published in the colour; `resolveGeneratedFrame`'s
   random pool reads the same test. The "M15 Textless" frames are NOT

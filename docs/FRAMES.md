@@ -5540,9 +5540,11 @@ before anyone pays. Additions: 0 stored cards change, no bump, no sweep.
      stand-in — for a PRINTING, its own landing resolved with the textless
      frames read as unverified (`withoutTextlessFrames`;
      `scryfallRemixMechanics` names it as `text_stand_in`): the registry's
-     existing stand-in, the status still `nearest`; for an OWN card, the
-     default landing (no template — where it landed before #533) where the
-     save's gates pass it in the card's colour (`ownCardTextStandIn`);
+     existing stand-in, the status still `nearest`; for an OWN card, a
+     token's 2014–19 arch (`m15token`, `m15tokenartifact` for the Artifact
+     word — what a printing of it gets), else the default landing (no
+     template — where it landed before #533), each only where the save's
+     gates pass it in the card's colour (`ownCardTextStandIn`);
   4. no stand-in (nothing else of the kind published in the colour) → the
      landing stands: a hidden text, never a refused save after the art.
   A stand-in is one-faced like the landing, so the plan's price never
@@ -5554,7 +5556,7 @@ before anyone pays. Additions: 0 stored cards change, no bump, no sweep.
 
   | Landing | Reached by | Textless profile? | With text, the frame verified |
   |---|---|---|---|
-  | `m20token`, `m20tokenartifact` | `token/m20`, its gap rules (`+nyx-dress`, `+border`, `+crown`, `+two-colour`, `+two-colour-hybrid`) and `borderless/token`, all `onceVerified`; an own token kept on them | yes | the regular / tall box, else the arch's text box (the height rule, unchanged); with NO text box in the colour: the arch (`m15token` / `m15tokenartifact`, its scrim) — an own card: the default frame |
+  | `m20token`, `m20tokenartifact` | `token/m20`, its gap rules (`+nyx-dress`, `+border`, `+crown`, `+two-colour`, `+two-colour-hybrid`) and `borderless/token`, all `onceVerified`; an own token kept on them | yes | the regular / tall box, else the arch's text box (the height rule, unchanged); with NO text box in the colour: the arch (`m15token` / `m15tokenartifact`, its scrim) — an own card the same, the default frame only where the arch isn't published either |
   | `m15textless`, `m15textlessland` | `textless/2015`, `textless/future`, `borderless/textless`, `borderless/basic/textless` (static), `textless/old-frame` (`onceVerified`, A9); an own card kept on them | **no** — they draw the type line and the rules on the art | the landing stands, the text drawn on the art |
 
   Production (2026-10-13) ticks every colour of all six full-art token

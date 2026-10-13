@@ -1457,9 +1457,9 @@ async function executeDeckRemixStep(
     back_face?: CardBackFace;
     /** Where the card saves instead when it saves with text and its frame
      *  draws none (TODO 1.24, remixSavedFrame): a printing's registry
-     *  stand-in; `null` for an own card = the default landing (no
-     *  template), as it landed before its frame was kept
-     *  (ownCardTextStandIn); absent = none, the landing stands. */
+     *  stand-in; an own token's 2014–19 arch, else `null` for an own card
+     *  = the default landing (no template), as it landed before its frame
+     *  was kept (ownCardTextStandIn); absent = none, the landing stands. */
     text_stand_in?: FrameTemplate | null;
     art_url?: string | null;
   };

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
 import { mapScryfallToFormPatch, type ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 import { FRAME_SIGNATURE_RULES, templatesOfRule } from "@/lib/scryfall/frame-signatures";
-import { ownCardTextStandIn, remixCreditsOf, scryfallRemixMechanics } from "@/lib/ai/remix-mechanics";
+import { ownCardRemixFrame, ownCardTextStandIn, remixCreditsOf, scryfallRemixMechanics } from "@/lib/ai/remix-mechanics";
 import {
   autoTokenTextBoxFrame,
   frameHidesRulesBoxText,
@@ -158,6 +158,56 @@ describe("remixSavedFrame — the guard", () => {
     expect(frameGateError(undefined, token.color_identity, new Set(every(["m20token", "m15"], ["r"])))).toBeNull();
     expect(ownCardTextStandIn(token, new Set(every(["m20token"], ["r"])))).toBeUndefined();
     expect(ownCardTextStandIn(token, new Set(every(["m20token", "m15"], ["u"])))).toBeUndefined();
+  });
+
+  it("an own TOKEN's stand-in is the 2014–19 arch its type words pick — what a printing of it gets — before the default frame", () => {
+    const token = { frame_style: { template: "m20token" }, color_identity: ["red"] as ColorIdentity[], card_type: "token" as CardType, supertype: "Creature", subtypes: ["Goblin"], title: "Goblin", rules_text: null };
+    const treasure = { ...token, frame_style: { template: "m20tokenartifact" }, supertype: "Artifact", subtypes: ["Treasure"], title: "Treasure" };
+    const both = new Set(every(["m20token", "m20tokenartifact", "m15token", "m15tokenartifact", "m15"], ["r"]));
+    expect(ownCardTextStandIn(token, both)).toBe("m15token");
+    expect(ownCardTextStandIn(treasure, both)).toBe("m15tokenartifact");
+    // The arch of the OTHER dress is never taken: a Treasure whose artifact
+    // arch isn't published goes to the default frame, not the plain arch.
+    const plainOnly = new Set(every(["m20tokenartifact", "m15token", "m15"], ["r"]));
+    expect(ownCardTextStandIn(treasure, plainOnly)).toBeNull();
+    // Not a token: no arch (only a token wears it).
+    expect(ownCardTextStandIn({ ...token, card_type: "creature" as CardType }, both)).toBeNull();
+    // Through the guard: the arch stands in, the text on its scrim; where
+    // the arch's text box is published the height rule took it already.
+    const card = { cardType: "token" as CardType, supertype: "Creature", subtypes: ["Goblin"], power: "1", toughness: "1", colorIdentity: ["red"] as ColorIdentity[], rulesText: null, flavorText: "New flavour." };
+    expect(remixSavedFrame({ ...card, template: "m20token", verifiedKeys: both, standIn: ownCardTextStandIn(token, both) })).toBe("m15token");
+    const boxed = new Set([...both, ...every(["m15tokentext"], ["r"])]);
+    expect(remixSavedFrame({ ...card, template: "m20token", verifiedKeys: boxed, standIn: ownCardTextStandIn(token, boxed) })).toBe("m15tokentext");
+    expect(remixSavedFrame({ ...card, flavorText: null, template: "m20token", verifiedKeys: both, standIn: ownCardTextStandIn(token, both) })).toBe("m20token");
+  });
+});
+
+describe("the one place production's list differs from before the guard: an off-kind own card on a textless token height", () => {
+  // The server's kind gate never refuses a border-era standard (an off-kind
+  // legacy card stays editable), so a card whose card_type is NOT token can
+  // be stored on `m20token`; #533 keeps that frame. The height rule
+  // (autoTokenTextBoxFrame) reads the card's kind — a creature is no token
+  // — so before the guard such a card kept the textless height WITH its
+  // text, whatever was ticked. Now it lands on the default frame, the text
+  // drawn. No such card is public on production (2026-10-13: one card on
+  // these frames, a token without text).
+  const creature = { frame_style: { template: "m20token" }, color_identity: ["white"] as ColorIdentity[], card_type: "creature" as CardType, supertype: null, subtypes: ["Soldier"], title: "Soldier", rules_text: "Vigilance" };
+  const card = { template: "m20token" as FrameTemplate, cardType: creature.card_type, supertype: null, subtypes: creature.subtypes, rulesText: creature.rules_text, power: "1", toughness: "1", colorIdentity: creature.color_identity, verifiedKeys: PROD };
+
+  it("it kept the textless height with its text before; it takes the default frame now, and keeps the height with no text", () => {
+    expect(ownCardRemixFrame(creature, PROD, { singleFace: true }).frame_template).toBe("m20token");
+    expect(autoTokenTextBoxFrame({ ...card, flavorText: "New flavour." })).toBe("m20token");
+    expect(ownCardTextStandIn(creature, PROD)).toBeNull();
+    expect(remixSavedFrame({ ...card, flavorText: "New flavour.", standIn: ownCardTextStandIn(creature, PROD) })).toBeUndefined();
+    expect(remixSavedFrame({ ...card, rulesText: null, flavorText: null, standIn: ownCardTextStandIn(creature, PROD) })).toBe("m20token");
+  });
+
+  it("an own TOKEN there is untouched by the guard on production's list (its text finds its box, as before)", () => {
+    const token = { ...creature, card_type: "token" as CardType, supertype: "Creature" };
+    const tokenCard = { ...card, cardType: token.card_type, supertype: token.supertype, flavorText: "New flavour." };
+    const before = autoTokenTextBoxFrame(tokenCard);
+    expect(before).toBe("m20tokentext");
+    expect(remixSavedFrame({ ...tokenCard, standIn: ownCardTextStandIn(token, PROD) })).toBe(before);
   });
 });
 
