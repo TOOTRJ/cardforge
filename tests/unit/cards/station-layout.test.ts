@@ -6,8 +6,8 @@ import { inkEntersRect } from "@/lib/cards/rules-layout";
 import { STATION, parseStationText, type StationText } from "@/lib/cards/station";
 import { stationDrawing, stationLayout, type StationLayout } from "@/lib/cards/station-layout";
 import { getFrameProfile, type Rect } from "@/lib/cards/template-layout";
-import { STATION_MEASURED } from "@/scripts/lib/station-2025.mjs";
 import oracle from "./fixtures/station-oracle.json";
+import printEdges from "./fixtures/station-print-edges.json";
 
 // The station frame's tiers layout (TODO 4.27a): one size for the whole box,
 // bands from the text, every piece on even HD px — and the bands it gives
@@ -16,7 +16,7 @@ import oracle from "./fixtures/station-oracle.json";
 
 type OracleCard = { name: string; set: string; collector_number: string; type_line: string; oracle_text: string; power: string | null; toughness: string | null };
 const CARDS = oracle as OracleCard[];
-const PRINT = (STATION_MEASURED as { bands: { boundaries: Record<string, number[]>; unsure: string[] } }).bands;
+const PRINT_EDGES = printEdges as { id: string; name: string; sample: "in" | "out"; printing: string; stamped: boolean; pt: string | null; edges: number[]; pr1: number[] }[];
 
 const profileOf = (card: Pick<OracleCard, "type_line">) => getFrameProfile(card.type_line.startsWith("Land") ? "m15stationland" : "m15station");
 const lay = (card: OracleCard, stamp: Rect | null = null): StationLayout => {
@@ -43,36 +43,51 @@ describe("the printed cards", () => {
     }
   });
 
-  // EOE #249 Wurmwall Sweeper's measured 1666 is a 272 px band for the one
-  // word "Flying" — every other one-line last band is 176–178 px; the read
-  // caught something else. Listed, not chased, and out of the tolerances.
-  const OUTLIERS = new Set(["eoe-249"]);
-
-  it("puts the bands where print puts them: the median edge within 4 px, two in three within 10", () => {
+  // Print's band edges as the independent check of #543 re-measured them on
+  // the scans (fixtures/station-print-edges.json: 30 bordered printings the
+  // rule was fitted on — 36 edges — and 13 extended-art + 2 borderless
+  // printings it was not, 23 edges; print sets the extended ones without the
+  // reminder). Laid out as the BAKE lays them: with the holofoil stamp's
+  // keep-out on every stamped rare / mythic. `pr1` is where PR 1's bake put
+  // the same edge. STATION_REPORT_FILE=<path> writes the table.
+  it("puts the bands where print puts them: 32 of 36 edges within 20 px on the cards it was fitted on, 19 of 23 on the others", () => {
     const rows: string[] = [];
-    const deltas: number[] = [];
-    for (const card of CARDS) {
-      const id = `${card.set}-${card.collector_number}`;
-      const print = PRINT.boundaries[id];
-      if (!print) continue;
-      const laid = lay(card);
+    const stats = { in: [] as number[], out: [] as number[] };
+    const before = { in: [] as number[], out: [] as number[] };
+    const byName = new Map(CARDS.map((card) => [card.name, card]));
+    for (const print of PRINT_EDGES) {
+      const card = byName.get(print.name)!;
+      // An extended-art printing sets the keyword alone, without its reminder.
+      const oracle_text = print.printing === "extended" ? card.oracle_text.replace(/Station \([^)]*\)/, "Station") : card.oracle_text;
+      const laid = lay({ ...card, oracle_text }, print.stamped ? M15_HOLO_STAMP_KEEP_OUT : null);
       const ours = laid.bands.tiers.map((b) => b.y0);
-      expect(ours.length, id).toBe(print.length);
-      const delta = ours.map((y, i) => y - print[i]!);
-      if (!PRINT.unsure.some((u) => u.startsWith(id)) && !OUTLIERS.has(id)) deltas.push(...delta.map(Math.abs));
-      rows.push(`${id.padEnd(8)} ${String(laid.sizePx).padStart(2)} px rule ${laid.rule}  ours ${ours.join(" / ").padEnd(11)} print ${print.join(" / ").padEnd(11)} Δ ${delta.map((d) => (d > 0 ? `+${d}` : `${d}`)).join(" / ")}  ${card.name}`);
+      expect(ours.length, print.id).toBe(print.edges.length);
+      expect(laid.clipped, print.id).toBe(false);
+      const delta = ours.map((y, i) => y - print.edges[i]!);
+      const was = print.pr1.map((y, i) => y - print.edges[i]!);
+      stats[print.sample].push(...delta.map(Math.abs));
+      before[print.sample].push(...was.map(Math.abs));
+      const signed = (d: number[]) => d.map((v) => (v > 0 ? `+${v}` : `${v}`)).join(" / ");
+      rows.push(
+        `${print.id.padEnd(9)} ${print.sample.padEnd(3)} ${print.stamped ? "stamp" : "     "} ${String(laid.sizePx).padStart(2)} px rule ${laid.rule}  print ${print.edges.join(" / ").padEnd(11)} now ${ours.join(" / ").padEnd(11)} Δ ${signed(delta).padEnd(9)} PR 1 Δ ${signed(was).padEnd(9)} ${print.name}`,
+      );
     }
-    const sorted = [...deltas].sort((a, b) => a - b);
-    const median = sorted[Math.floor(sorted.length / 2)]!;
-    const within = (n: number) => sorted.filter((d) => d <= n).length;
-    rows.push(`edges ${sorted.length}: median ${median}, ≤4 px ${within(4)}, ≤10 px ${within(10)}, max ${sorted[sorted.length - 1]}`);
+    const line = (what: string, d: number[]) => {
+      const sorted = [...d].sort((a, b) => a - b);
+      const within = (n: number) => sorted.filter((v) => v <= n).length;
+      return `${what}: edges ${sorted.length}, median ${sorted[Math.floor(sorted.length / 2)]}, ≤10 px ${within(10)}, ≤20 px ${within(20)}, max ${sorted[sorted.length - 1]}`;
+    };
+    rows.push(line("in sample, now ", stats.in), line("in sample, PR 1", before.in), line("out of sample, now ", stats.out), line("out of sample, PR 1", before.out));
     if (process.env.STATION_REPORT_FILE) fs.writeFileSync(process.env.STATION_REPORT_FILE, rows.join("\n"));
-    expect(median).toBeLessThanOrEqual(4);
-    expect(within(10) / sorted.length).toBeGreaterThanOrEqual(2 / 3);
-    // The widest: EOE #241 The Eternity Elevator, +70 — print gives its
-    // three-line tier 315 px where the rule gives 248 (a smaller size or
-    // more air there; not readable off a scan at half our size).
-    expect(sorted[sorted.length - 1]).toBeLessThanOrEqual(70);
+    const within20 = (d: number[]) => d.filter((v) => v <= 20).length;
+    expect(stats.in).toHaveLength(36);
+    expect(stats.out).toHaveLength(23);
+    expect(within20(stats.in)).toBeGreaterThanOrEqual(32);
+    expect(Math.max(...stats.in)).toBeLessThanOrEqual(26);
+    expect(within20(stats.out)).toBeGreaterThanOrEqual(19);
+    // Never worse than PR 1's rule on either sample.
+    expect(within20(stats.in)).toBeGreaterThan(within20(before.in));
+    expect(within20(stats.out)).toBeGreaterThan(within20(before.out));
   });
 
   it("plates the tier the reminder names, at its band's centre, the lines clear of it — and no Planet", () => {
@@ -127,13 +142,51 @@ describe("shapes no print has", () => {
     const laid = custom({ intro: "", tiers: [{ threshold: 5, text: "", pt: true }] }, null);
     expect(laid.plate).toBeNull();
     expect(laid.tiers[0]!.text).toBeNull();
-    expect(laid.bands.tiers[0]!.y1 - laid.bands.tiers[0]!.y0).toBe(STATION.bandRules[0].minPx + STATION.bandRules[0].lastExtraPx);
+    expect(laid.bands.tiers[0]!.y1 - laid.bands.tiers[0]!.y0).toBe(STATION.bandRules[0].lastFloorPx);
     expect(stationDrawing(laid, getFrameProfile("m15station"), "c").pieces.map((p) => p.kind)).toEqual(["band", "badge"]);
   });
 
-  it("the stamp's arch is a keep-out of the last band only: a short last tier never moves", () => {
+  it("under the stamp a one-line last tier never moves; a full one gets print's 22 px more and its text sits above the arch", () => {
     const text = { intro: REMINDER, tiers: [{ threshold: 8, text: "Flying", pt: true }] };
     expect(custom(text, "4/4", M15_HOLO_STAMP_KEEP_OUT).bands).toEqual(custom(text, "4/4").bands);
+
+    const full = { intro: REMINDER, tiers: [{ threshold: 8, text: "Flying\nWhenever this Spacecraft attacks, draw two cards, then discard a card.\nOther creatures you control have vigilance.", pt: true }] };
+    const [stamped, bare] = [custom(full, "4/4", M15_HOLO_STAMP_KEEP_OUT), custom(full, "4/4")];
+    expect(stamped.clipped).toBe(false);
+    const [a, b] = [stamped.bands.tiers[0]!, bare.bands.tiers[0]!];
+    if (stamped.sizePx === bare.sizePx) expect(a.y1 - a.y0).toBeGreaterThan(b.y1 - b.y0);
+    expect(a.textY1).toBeLessThan(a.y1);
+    expect(a.cy).toBe((a.y0 + a.y1) / 2);
+    for (const target of ["hd", "default"] as const) expect(inkEntersRect(stamped.tiers[0]!.text!, M15_HOLO_STAMP_KEEP_OUT, target)).toBe(false);
+  });
+
+  it("the card the check clipped: two keyword lines, the reminder and three one-word tiers fit — the badges give way before the text", () => {
+    const tiers = [
+      { threshold: 2, text: "Flying", pt: false },
+      { threshold: 6, text: "Vigilance", pt: false },
+      { threshold: 10, text: "Trample", pt: true },
+    ];
+    for (const stamp of [null, M15_HOLO_STAMP_KEEP_OUT]) {
+      const laid = custom({ intro: `Flash\nWard {2}\n${REMINDER}`, tiers }, "5/5", stamp);
+      expect(laid.clipped).toBe(false);
+      expect(laid.bands.top.y0).toBe(STATION.box.top);
+      const drawing = stationDrawing(laid, getFrameProfile("m15station"), "u");
+      for (const piece of drawing.pieces) {
+        expect(isEvenPx(piece.rect), piece.kind).toBe(true);
+        // No piece leaves its own band.
+        if (piece.kind !== "band") {
+          const [y0, y1] = [piece.rect.topPct * 21, (piece.rect.topPct + piece.rect.heightPct) * 21];
+          expect(laid.bands.tiers.some((band) => y0 >= band.y0 - 0.01 && y1 <= band.y1 + 0.01), piece.kind).toBe(true);
+        }
+      }
+    }
+  });
+
+  it("no top text: the tiers keep print's air and the top band is the rest, empty", () => {
+    const laid = custom({ intro: "", tiers: [{ threshold: 4, text: "Flying", pt: true }] }, "2/2");
+    expect(laid.clipped).toBe(false);
+    expect(laid.bands.tiers[0]!.y1 - laid.bands.tiers[0]!.y0).toBe(STATION.bandRules[0].lastFloorPx);
+    expect(laid.bands.top.y1 - laid.bands.top.y0).toBeGreaterThan(400);
   });
 
   it("a text past every size is drawn at the floor and says so", () => {
@@ -142,6 +195,11 @@ describe("shapes no print has", () => {
     expect(laid.clipped).toBe(true);
     expect(laid.sizePx).toBe(42);
     expect(laid.rule).toBe(STATION.bandRules.length - 1);
+    // The box is the box: the bands share it, none over the type bar or the art.
+    expect(laid.bands.top.y0).toBe(STATION.box.top);
+    expect(laid.bands.tiers[0]!.y0).toBeGreaterThanOrEqual(STATION.box.top);
+    expect(laid.bands.tiers[1]!.y1).toBe(STATION.box.bottom);
+    for (const band of laid.bands.tiers) expect(band.y1).toBeGreaterThan(band.y0);
   });
 
   it("every piece of every printed card sits on even HD px — whole px at the 750 px target", () => {

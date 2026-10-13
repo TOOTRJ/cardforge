@@ -27,7 +27,9 @@
 
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { isDfcBackBody, templateHasBackFace } from "@/lib/cards/dfc";
+import { resolveStationTiers } from "@/lib/cards/station";
 import { getFrameProfile, type FrameProfile } from "@/lib/cards/template-layout";
+import type { FaceContent } from "@/types/card";
 
 type PtSlots = Pick<FrameProfile, "pt" | "tiers" | "secondFace" | "adventure">;
 
@@ -49,9 +51,23 @@ export function profileSecondFaceDrawsPowerToughness(profile: PtSlots): boolean 
   return null;
 }
 
-/** The front face of a card on `template` draws a P/T. */
-export function frontDrawsPowerToughness(template: string | null | undefined): boolean {
-  return profileDrawsPowerToughness(getFrameProfile(normalizeFrameTemplate(template)));
+/** The text a station card's tiers are read from (what both renderers read:
+ *  the structured rows first, else the rules text's grammar). */
+export type TierText = { rulesText?: string | null; faceContent?: FaceContent | null };
+
+/** The front face of a card on `template` draws a P/T. On the station frame
+ *  the P/T is printed on a TIER's plate, so a card with no tier (allowed:
+ *  owner round 54, decision 5) draws none — pass the card's `text` and the
+ *  answer says so; without it the answer is the frame's alone. */
+export function frontDrawsPowerToughness(template: string | null | undefined, text?: TierText): boolean {
+  const profile = getFrameProfile(normalizeFrameTemplate(template));
+  if (profile.tiers && text) return resolveStationTiers(text.faceContent, text.rulesText, false).tiers.length > 0;
+  return profileDrawsPowerToughness(profile);
+}
+
+/** The frame prints its P/T on a tier (the station frame). */
+export function frontPrintsPowerToughnessOnTier(template: string | null | undefined): boolean {
+  return Boolean(getFrameProfile(normalizeFrameTemplate(template)).tiers);
 }
 
 /**
@@ -84,3 +100,8 @@ export function secondFaceDrawsPowerToughness(
  *  half); the saga body's is TODO 4.5c. */
 export const PT_NOT_DRAWN_NOTE =
   "This frame doesn't draw power / toughness. The numbers are saved with the card, but the picture won't show them.";
+
+/** …and under the P/T inputs of a station card that has no tier yet: this
+ *  frame DOES print one — on a tier's plate. */
+export const PT_NEEDS_TIER_NOTE =
+  "This frame prints power / toughness on a tier. Add a tier and the numbers appear on it; until then they are saved with the card, but the picture won't show them.";
