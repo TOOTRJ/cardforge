@@ -97,16 +97,16 @@ jobs:
   # `exclude` switches off). It now runs in four files
   # (tests/unit/render/art-window-masters.ts), and the title-room bakes, next
   # in line at 2.2 to 4.7 min, in four more
-  # (tests/unit/render/title-room-scaled-pips.ts). Measured after (#525): six
-  # shards 4.3 to 4.6 min at their slowest (the job 5.0 to 5.3), eight 4.2
-  # (5.0) — no better: vitest's hash puts three of the heaviest files left
-  # (mana-gem-parity, walker-saga-bake, edge-contract) in ONE of eight, and a
-  # run that starts 15 jobs at once (13 at six) waited 2 to 3.5 min for
-  # runners beside other PRs' runs (the account runs 20 jobs at a time), so
-  # the check went green later, not sooner.
-  # Six it stays. Today's floor is walker-saga-bake or mana-gem-parity, 1.6 to
-  # 3.1 min each on one worker: more shards pay off only once those are split
-  # — and a long file is split as those two were, never by a list here.
+  # (tests/unit/render/title-room-scaled-pips.ts). Measured after (#525's
+  # runs): six shards 4.1 to 4.6 min at their slowest (the job 4.8 to 5.3),
+  # eight 4.2 (5.0) — no better: vitest's hash puts three of the heaviest
+  # files left (mana-gem-parity, walker-saga-bake, edge-contract) in ONE of
+  # eight. And eight shards start 15 jobs at once instead of 13 against the
+  # account's 20 at a time, which runs beside other PRs' already wait on
+  # (0 to 5 min for a runner, at six too). Six it stays. Today's floor is
+  # walker-saga-bake or mana-gem-parity, 1.6 to 3.1 min each on one worker:
+  # more shards pay off only once those are split — and a long file is split
+  # as those two were, never by a list here.
   unit:
     name: Unit tests (${{ matrix.shard }}/${{ matrix.total }})
     runs-on: ubuntu-latest
