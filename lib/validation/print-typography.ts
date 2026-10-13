@@ -39,7 +39,14 @@
 
 import { capitalizeTypeWords, typesFieldText } from "@/lib/cards/type-line-field";
 import type { CardType } from "@/types/card";
-import { loyaltyFromRulesText, sagaFromRulesText, serializeLoyalty, serializeSaga } from "@/lib/cards/face-content";
+import {
+  loyaltyFromRulesText,
+  sagaFromRulesText,
+  sagaMarkersFromRulesText,
+  serializeLoyalty,
+  serializeSaga,
+  serializeSagaMarkers,
+} from "@/lib/cards/face-content";
 import { kindFromCard } from "@/lib/creator/card-kinds";
 
 /** How a field is read: a card name, a type-line part (supertype, subtype),
@@ -443,11 +450,15 @@ function plainTextRows(
     return serializeLoyalty(rows.map((r) => ({ ...r, text: row(r.text, ROW_MAX) })));
   }
   if (kind === "saga") {
-    const saga = sagaFromRulesText(text);
-    if (saga.chapters.length === 0 || serializeSaga(saga.intro, saga.chapters) !== text) return null;
-    return serializeSaga(
+    // By MARKER, not by number: a row saved under its stored marker
+    // ("I, XI —", a numeral the editor has no number for) is the creator's
+    // serialization too, and read as numbers it lost that numeral — the
+    // text no longer matched, and the whole of it was converted.
+    const saga = sagaMarkersFromRulesText(text);
+    if (saga.rows.length === 0 || serializeSagaMarkers(saga.intro, saga.rows) !== text) return null;
+    return serializeSagaMarkers(
       saga.intro === null ? null : row(saga.intro, INTRO_MAX),
-      saga.chapters.map((r) => ({ ...r, text: row(r.text, ROW_MAX) })),
+      saga.rows.map((r) => ({ ...r, text: row(r.text, ROW_MAX) })),
     );
   }
   return null;

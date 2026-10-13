@@ -218,11 +218,13 @@ import {
 } from "@/lib/creator/frame-resolve";
 import {
   loyaltyFromRulesText,
-  sagaFromRulesText,
+  keepsStoredMarker,
+  resolveLoyaltyRows,
+  sagaEditorRows,
+  serializeSagaMarkers,
   serializeLoyalty,
-  serializeSaga,
 } from "@/lib/cards/face-content";
-import { submittedRulesOf } from "@/lib/creator/structured-rules";
+import { sagaRowsOut, submittedRulesOf } from "@/lib/creator/structured-rules";
 import { basicLandManaKey } from "@/lib/cards/watermark";
 import { saveNeedsOf, saveNeedsSentence, type SaveNeed } from "@/lib/creator/save-needs";
 import { secondPartWordsFor, secondPartWordsOfCard } from "@/lib/creator/second-part";
@@ -586,6 +588,58 @@ function SaveNeedsLine({
   );
 }
 
+/** The form field name of a saga row's chapter-number group — what the row
+ *  editor's group carries as `data-field-anchor`. */
+const sagaNumeralsField = (row: number) => `saga_chapters.${row}.numerals`;
+
+/** The saga rows (indices, in order) whose chapter numbers hold an error. */
+function sagaNumeralsErrorRows(errors: unknown): number[] {
+  const rows = (errors as { saga_chapters?: unknown } | null | undefined)?.saga_chapters;
+  if (!Array.isArray(rows)) return [];
+  return rows.flatMap((row, index) =>
+    row && typeof row === "object" && (row as { numerals?: unknown }).numerals ? [index] : [],
+  );
+}
+
+/** The line above Save after a save a saga row's chapter numbers blocked:
+ *  each such row a link that opens its step and puts the focus on its
+ *  chapter group — the "still needed" links' behaviour (SaveNeedsLine), for
+ *  something Save found rather than something that disables it. NOT a live
+ *  region: the row's own message is the alert, and it has spoken. */
+function SaveBlockedRowsLine({
+  rows,
+  stepLabel: step,
+  onGo,
+}: {
+  rows: readonly number[];
+  stepLabel: string;
+  onGo: (field: string) => void;
+}) {
+  return (
+    <div data-testid="save-blocked-rows" className="text-xs leading-5 text-gold">
+      Not saved — check the chapters of{" "}
+      <ul className="inline" aria-label="Chapter rows to check before saving">
+        {rows.map((row, i) => (
+          <li key={row} className="inline">
+            <button
+              type="button"
+              data-row={row}
+              aria-label={`row ${row + 1} — go to its chapters${step ? ` on the ${step} step` : ""}`}
+              title={step ? `Go to this row on the ${step} step` : "Go to this row"}
+              onClick={() => onGo(sagaNumeralsField(row))}
+              className="rounded-sm font-medium underline decoration-gold/60 underline-offset-2 hover:decoration-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
+            >
+              row {row + 1}
+            </button>
+            {i < rows.length - 2 ? ", " : i === rows.length - 2 ? " and " : ""}
+          </li>
+        ))}
+      </ul>
+      .
+    </div>
+  );
+}
+
 /** The first message in a (nested) react-hook-form errors object, or in a
  *  server action's flat `fieldErrors` map. */
 function firstErrorMessage(errors: unknown): string | null {
@@ -929,7 +983,11 @@ export function CardCreatorForm({
     const sameCard = lastReset.current.cardId === resetCardId;
     lastReset.current = { key: resetKey, cardId: resetCardId };
     if (sameCard && isDirty) {
-      reset(defaults, { keepValues: true, keepDirty: true });
+      // (…and what a blocked Save said about those kept values: the refresh
+      // of the save before it landed a moment after the message, and took
+      // it — and the "Not saved" line — off the row the focus had just been
+      // moved to.)
+      reset(defaults, { keepValues: true, keepDirty: true, keepErrors: true });
       return;
     }
     reset(defaults);
@@ -1474,8 +1532,9 @@ export function CardCreatorForm({
   // and puts the focus there (lib/creator/focus-field.ts). The focus moves
   // in an effect, once the step's panel has rendered.
   const stepPanelsRef = useRef<HTMLDivElement | null>(null);
-  const pendingFieldFocusRef = useRef<string | null>(null);
-  const [fieldFocusTick, setFieldFocusTick] = useState(0);
+  // (State, not a ref: a save blocked by a saga row's chapter numbers asks
+  // for the focus from handleSubmit's callback too.)
+  const [fieldFocus, setFieldFocus] = useState<{ field: string; tick: number } | null>(null);
   /** The step a field is edited on: with Face tabs a back field is on the
    *  step of its front twin (lib/creator/face-tabs.ts). */
   const fieldStepIndex = (field: string) => faceFieldStepIndex(field, steps, faceTabs, backFieldSteps);
@@ -1489,15 +1548,11 @@ export function CardCreatorForm({
   };
   const goToField = (field: string) => {
     showField(field);
-    pendingFieldFocusRef.current = field;
-    setFieldFocusTick((tick) => tick + 1);
+    setFieldFocus((last) => ({ field, tick: (last?.tick ?? 0) + 1 }));
   };
   useEffect(() => {
-    const field = pendingFieldFocusRef.current;
-    if (!field) return;
-    pendingFieldFocusRef.current = null;
-    revealAndFocusField(stepPanelsRef.current, field);
-  }, [fieldFocusTick]);
+    if (fieldFocus) revealAndFocusField(stepPanelsRef.current, fieldFocus.field);
+  }, [fieldFocus]);
   /** The step a still-needed item lives on, for its link's name. */
   const stepLabelForField = (field: string) => {
     const step = steps[fieldStepIndex(field)];
@@ -1582,15 +1637,8 @@ export function CardCreatorForm({
         { shouldDirty: true },
       );
     } else if (targetKind === "saga") {
-      const saga = sagaFromRulesText(rulesText);
-      setValue(
-        "saga_chapters",
-        saga.chapters.slice(0, MAX_STRUCTURED_ROWS).map((ch) => ({
-          numerals: [...ch.numerals],
-          text: ch.text,
-        })),
-        { shouldDirty: true },
-      );
+      const saga = sagaEditorRows(null, rulesText);
+      setValue("saga_chapters", saga.chapters.slice(0, MAX_STRUCTURED_ROWS), { shouldDirty: true });
       setValue("saga_intro", saga.intro ?? "", { shouldDirty: true });
     }
   };
@@ -1616,15 +1664,11 @@ export function CardCreatorForm({
       }
       setValue("loyalty_abilities", [], { shouldDirty: true });
     } else if (prevKind === "saga") {
-      const chapters = getValues("saga_chapters")
-        .map((r) => ({
-          numerals: [...r.numerals].sort((a, b) => a - b),
-          text: r.text.trim(),
-        }))
-        .filter((r) => r.text.length > 0 && r.numerals.length > 0);
+      // (As a save writes them: a row under the stored marker it keeps.)
+      const chapters = sagaRowsOut(getValues("saga_chapters")).filter((r) => r.marker);
       const intro = getValues("saga_intro").trim();
       if (chapters.length > 0 || intro) {
-        setValue("rules_text", serializeSaga(intro || null, chapters), {
+        setValue("rules_text", serializeSagaMarkers(intro || null, chapters), {
           shouldDirty: true,
         });
       }
@@ -2674,11 +2718,9 @@ export function CardCreatorForm({
         .filter((r) => r.text);
       if (rows.length) rulesNow = serializeLoyalty(rows);
     } else if (kindNow === "saga") {
-      const chapters = values.saga_chapters
-        .map((r) => ({ numerals: [...r.numerals].sort((a, b) => a - b), text: r.text.trim() }))
-        .filter((r) => r.text && r.numerals.length);
+      const chapters = sagaRowsOut(values.saga_chapters).filter((r) => r.marker);
       if (chapters.length) {
-        rulesNow = serializeSaga(values.saga_intro.trim() || null, chapters);
+        rulesNow = serializeSagaMarkers(values.saga_intro.trim() || null, chapters);
       }
     }
     return {
@@ -3402,7 +3444,31 @@ export function CardCreatorForm({
       // those keystrokes weren't sent, so they stay dirty and guarded, and
       // the keyed reset keeps them (TODO 3b.6).
       const typedDuringSave = !sameFormState(getValues(), values);
-      reset(values, { keepValues: true, keepDirty: typedDuringSave });
+      // A saga row this save wrote from its NUMBERS (an order-only marker
+      // whose numbers were changed, a number picked on "XI —") no longer
+      // holds the marker it opened with: the row forgets it now, as the
+      // refresh will. Kept until then, the numbers put back inside that
+      // window wrote the opened marker again — "XI —" back on a row just
+      // saved as "II —", with no question — where the same clicks after the
+      // refresh are asked for a number.
+      const savedRows = values.saga_chapters.map((row) =>
+        row.marker && !keepsStoredMarker(row) ? { ...row, marker: undefined } : row,
+      );
+      const forgetsMarker = savedRows.some((row, i) => row !== values.saga_chapters[i]);
+      if (forgetsMarker) {
+        savedRows.forEach((row, i) => {
+          // (Only a row still where it was: one moved or removed while the
+          // request was in flight keeps what it carries.)
+          const now = getValues(`saga_chapters.${i}`);
+          if (row !== values.saga_chapters[i] && now?.marker === values.saga_chapters[i]?.marker) {
+            setValue(`saga_chapters.${i}.marker`, undefined);
+          }
+        });
+      }
+      reset(forgetsMarker ? { ...values, saga_chapters: savedRows } : values, {
+        keepValues: true,
+        keepDirty: typedDuringSave,
+      });
       // Stop guarding and take the Back sentinel off (TODO 3b.7: Back had
       // to be pressed twice after a save) — unless we stay in the editor
       // with unsent keystrokes, which keep their guard.
@@ -3467,6 +3533,18 @@ export function CardCreatorForm({
         })
       : null;
   const liveFaceContent: FaceContent | null = liveRules?.faceContent ?? null;
+  // A walker whose loyalty badges run into each other on the frame it wears
+  // (lib/creator/walker-crowding.ts — read from the layout of the rows the
+  // card draws, never a count): the row editor says the card will be
+  // crowded. A note, nothing more.
+  // (The rows by value — the live rows are a new object every render, and
+  // a long walker's layout takes a few ms: the editor memoises on the key.)
+  const walkerRowsKey =
+    kind === "planeswalker" ? JSON.stringify(resolveLoyaltyRows(liveFaceContent, liveRules?.rulesText ?? "")) : "";
+  // The saga rows a blocked save left a message on (their chapter numbers):
+  // listed above Save as links to them, like everything else Save still
+  // needs.
+  const sagaBlockedRows = kind === "saga" ? sagaNumeralsErrorRows(errors) : [];
 
   // Shared live-preview props for the desktop sticky aside + the mobile inline
   // preview, so they never drift. `previewFace` is state (see the sync effect
@@ -4073,7 +4151,10 @@ export function CardCreatorForm({
                 ) : panelConfig.textVariant === "loyalty" ? (
                   // Planeswalkers: ability rows instead of a raw textarea
                   // (and no flavor text — real walkers never carry it).
-                  <LoyaltyAbilitiesEditor />
+                  <LoyaltyAbilitiesEditor
+                    drawnRows={walkerRowsKey}
+                    profile={resolveFrameProfile(normalizeFrameTemplate(watched.frame_style?.template), profileOverrides)}
+                  />
                 ) : panelConfig.textVariant === "saga" ? (
                   // Sagas: intro + chapter rows (flavor hidden — the rail
                   // replaces the text box).
@@ -4353,6 +4434,9 @@ export function CardCreatorForm({
                 {saveDisabledReason}
               </p>
             ) : null}
+            {userId && sagaBlockedRows.length > 0 ? (
+              <SaveBlockedRowsLine rows={sagaBlockedRows} stepLabel={stepLabelForField("saga_chapters")} onGo={goToField} />
+            ) : null}
             <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
               {isDirty ? (
@@ -4508,7 +4592,14 @@ export function CardCreatorForm({
     (formErrors) => {
       // Client validation blocked the save — jump to the first errored step.
       const first = firstErrorPath(formErrors);
-      if (first) showField(first);
+      // A saga row's chapter numbers are buttons, not a registered input:
+      // react-hook-form has nothing to focus there, and the focus stayed on
+      // Save with the message somewhere above it. The first such row's
+      // chapter group takes it (its step opened, scrolled to the middle of
+      // the view — clear of the sticky bars).
+      const sagaRow = first === "saga_chapters" ? sagaNumeralsErrorRows(formErrors)[0] : undefined;
+      if (sagaRow !== undefined) goToField(sagaNumeralsField(sagaRow));
+      else if (first) showField(first);
     },
   );
 
