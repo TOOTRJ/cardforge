@@ -1,10 +1,18 @@
 # CI — runs on every pull request and on main.
 #
-#   checks  typecheck + lint + unit tests with coverage floors + `next build`
-#           (~5 min). The build is the only thing that catches a cookie read
-#           on a `dynamic = "error"` page or an undefined Satori style value.
-#           The unit tests run on the bucket frame masters too, fetched from
-#           production's PUBLIC frames bucket (scripts/frames-fetch.mjs).
+#   checks  the required "Typecheck, lint, unit" check — a gate over three
+#           jobs that run side by side:
+#             static    typecheck + lint + `next build`. The build is the only
+#                       thing that catches a cookie read on a
+#                       `dynamic = "error"` page or an undefined Satori style
+#                       value.
+#             unit      the unit suite in six shards (vitest `--shard`), each
+#                       on the bucket frame masters too, fetched from
+#                       production's PUBLIC frames bucket
+#                       (scripts/frames-fetch.mjs).
+#             coverage  the shards' reports merged: the coverage floors of
+#                       vitest.config.ts held on the WHOLE suite, and the
+#                       `coverage` artifact.
 #   frames  every object in lib/frames/frame-manifest.json is readable from
 #           PRODUCTION's frames bucket (frames plan 4.2, docs/FRAMES.md) — a
 #           PR that adds frames stays red until the owner runs
@@ -52,13 +60,12 @@ permissions:
   contents: read
 
 jobs:
-  checks:
-    name: Typecheck, lint, unit
+  # Typecheck, lint and the build, beside the unit shards instead of in front
+  # of them (they used to run serially before the tests in one job).
+  static:
+    name: Typecheck, lint, build
     runs-on: ubuntu-latest
-    # 35, not 25: the coverage run alone took 14 to 23 minutes on one day
-    # (2026-10-12) and the job was cancelled at the limit twice with no test
-    # failing. The limit is a backstop for a hung run, not a budget.
-    timeout-minutes: 35
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -68,14 +75,53 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+      # No Supabase/Stripe env: every page falls back cleanly when nothing is
+      # configured, and that is exactly what the build must prove.
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_SITE_URL: https://www.pipglyph.com
+
+  # The unit suite, split over runners by vitest's own `--shard` (a hash of
+  # each test file's path — no file list to maintain). In one job the coverage
+  # run took 12 to 21 minutes (2026-10-12) and was cancelled at the limit
+  # twice in a day with no test failing. A shard only RECORDS its coverage
+  # (VITEST_COVERAGE_SHARD: no floors, no report — its share of the suite
+  # could never meet them); the `coverage` job merges the shards' blobs and
+  # enforces the floors of vitest.config.ts on the whole suite.
+  # Six shards, measured (2026-10-12; the slowest shard's test step, across
+  # runner types): three 7.4 min, four 6.2 to 9.5, six 5.6 to 7.3, eight 5.3.
+  # The hash split is uneven — a handful of bake files are 40 % of the suite —
+  # and a shard is never faster than its slowest FILE:
+  # tests/unit/render/art-window-coverage.test.ts alone takes 5.5 to 7.5 min
+  # under coverage (50 s without). At six the slowest shard is that file's;
+  # more shards pay off only once it is split.
+  unit:
+    name: Unit tests (${{ matrix.shard }}/${{ matrix.total }})
+    runs-on: ubuntu-latest
+    # A backstop for a hung run, not a budget.
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+        total: [6]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
       # The Card Conjurer-derived frames live in the frames bucket, never in
       # git (docs/FRAMES.md): fetch every PNG in the frame manifest from
       # PRODUCTION's public bucket — sha256-checked against the manifest; the
       # dev bucket is asked only for a PR's frames not promoted yet — so the
       # tests that read bucket masters (the art-window coverage 7.6, the edge
       # contract 7.7, the square corners, the plate ink) run on them instead
-      # of skipping. Cached by the manifest's hash (saved right after the
-      # fetch, so a red test run keeps it); never committed (.gitignore).
+      # of skipping. EVERY shard needs them: a suite gated on
+      # `haveBucketMasters` skips silently without. Cached by the manifest's
+      # hash (saved right after the fetch, so a red test run keeps it; by the
+      # first shard only — one key, one writer); never committed (.gitignore).
       - name: Restore bucket frames
         id: frames-cache
         uses: actions/cache/restore@v4
@@ -84,21 +130,69 @@ jobs:
           key: frames-${{ hashFiles('lib/frames/frame-manifest.json') }}
           restore-keys: frames-
       # A hung storage read fails this step in 10 min instead of eating the
-      # job's 25 (fetchVerified retries each file 4× with a 60 s timeout).
+      # job's 20 (fetchVerified retries each file 4× with a 60 s timeout).
       - name: Fetch bucket frames
         timeout-minutes: 10
         run: >-
           node scripts/frames-fetch.mjs --out .frames-cache
           --fallback-origin https://znipzaxgpaiandwiqabn.supabase.co/storage/v1/object/public/frames
       - name: Save bucket frames
-        if: steps.frames-cache.outputs.cache-hit != 'true'
+        if: steps.frames-cache.outputs.cache-hit != 'true' && matrix.shard == 1
         uses: actions/cache/save@v4
         with:
           path: .frames-cache
           key: frames-${{ hashFiles('lib/frames/frame-manifest.json') }}
-      - run: npm run test:coverage
+      - run: npm run test:coverage:shard -- --shard=${{ matrix.shard }}/${{ matrix.total }}
         env:
           FRAMES_BUILD_DIR: .frames-cache
+          VITEST_COVERAGE_SHARD: "1"
+      # The shard's results and coverage (.vitest-reports/blob-<i>-<n>.json),
+      # uploaded from a red shard too: the merge then reports its failures
+      # beside the others'.
+      - name: Upload the shard's report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-blob-${{ matrix.shard }}
+          path: .vitest-reports/
+          # The directory's name starts with a dot.
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+          # A re-run of this job replaces its attempt's report.
+          overwrite: true
+
+  # One report for the whole suite: every shard's tests replayed (a failure
+  # in any of them fails this job too) and the merged coverage held to the
+  # floors of vitest.config.ts — exactly what `npm run test:coverage` checks
+  # on one machine.
+  coverage:
+    name: Unit coverage
+    needs: unit
+    # Runs when a shard failed too, so the coverage report is still made.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: unit-blob-*
+          merge-multiple: true
+          path: .vitest-reports
+      # Floors checked on five shards of six would be floors on other
+      # numbers: every shard's blob must be here.
+      - name: Every shard reported
+        run: |
+          ls -l .vitest-reports
+          for i in 1 2 3 4 5 6; do test -s ".vitest-reports/blob-$i-6.json"; done
+          test "$(ls .vitest-reports | wc -l)" -eq 6
+      - run: npm run test:coverage:merge
       - name: Upload coverage report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
@@ -106,11 +200,29 @@ jobs:
           name: coverage
           path: coverage/
           retention-days: 7
-      # No Supabase/Stripe env: every page falls back cleanly when nothing is
-      # configured, and that is exactly what the build must prove.
-      - run: npm run build
+
+  # The REQUIRED check (main's ruleset names "Typecheck, lint, unit"): green
+  # only when typecheck, lint, the build, every unit shard and the coverage
+  # floors all are. `always()`, not `!cancelled()`: the gate must RUN whatever
+  # became of the jobs it covers — failed, skipped, timed out (a job stopped
+  # at its `timeout-minutes` ends as "cancelled") or cancelled with the run —
+  # because a required check that is "skipped" counts as passing, and
+  # `always()` is the one condition documented to run in every one of those
+  # cases. It then fails on anything but three successes.
+  # Never rename it; a new job the check must cover joins `needs`.
+  checks:
+    name: Typecheck, lint, unit
+    needs: [static, unit, coverage]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Gate
         env:
-          NEXT_PUBLIC_SITE_URL: https://www.pipglyph.com
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"' | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "$NEEDS" | jq -e 'length == 3 and all(.[]; .result == "success")' > /dev/null
 
   frames:
     name: Frames published
