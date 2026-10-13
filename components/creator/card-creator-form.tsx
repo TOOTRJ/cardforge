@@ -224,7 +224,7 @@ import {
   serializeSagaMarkers,
   serializeLoyalty,
 } from "@/lib/cards/face-content";
-import { sagaRowsOut, submittedRulesOf } from "@/lib/creator/structured-rules";
+import { keptStationRows, sagaRowsOut, submittedRulesOf } from "@/lib/creator/structured-rules";
 import { basicLandManaKey } from "@/lib/cards/watermark";
 import { saveNeedsOf, saveNeedsSentence, type SaveNeed } from "@/lib/creator/save-needs";
 import { secondPartWordsFor, secondPartWordsOfCard } from "@/lib/creator/second-part";
@@ -1275,10 +1275,17 @@ export function CardCreatorForm({
     lastVehicleRef.current = key;
     if (isRevise || !isDirty || vehicleFramePinned) return;
     const current = normalizeFrameTemplate(getValues("frame_style.template"));
-    const next = subtypeFrameFor(current, parseSubtypes(getValues("subtypes_text")));
-    if (next === current) return;
+    // A dress not published in the card's colour is never the answer (the
+    // station frame before its tick, TODO 4.27a): a Vehicle retyped as a
+    // Spacecraft goes back to the Artifact frame rather than staying on the
+    // Vehicle frame, which the server refuses for it.
     const colorKey = pickFrameColorKey(getValues("color_identity"));
-    if (!isFrameComboAvailable(next, colorKey, new Set(verifiedFrameKeys))) return;
+    const published = new Set(verifiedFrameKeys);
+    const next = subtypeFrameFor(current, parseSubtypes(getValues("subtypes_text")), (dress) =>
+      isFrameComboAvailable(dress, colorKey, published),
+    );
+    if (next === current) return;
+    if (!isFrameComboAvailable(next, colorKey, published)) return;
     setValue("frame_style.template", next, { shouldDirty: true });
   }, [kind, saysVehicle, isRevise, isDirty, vehicleFramePinned, getValues, setValue, verifiedFrameKeys]);
   // The token's frame follows its text (TODO 4.49 (b) and 4.48, owner
@@ -3532,7 +3539,13 @@ export function CardCreatorForm({
           storedFaceContent: isEdit ? (card?.face_content ?? null) : null,
         })
       : null;
-  const liveFaceContent: FaceContent | null = liveRules?.faceContent ?? null;
+  // …and a station card stored WITH rows (TODO 4.27a; no editor shows them
+  // yet) previews the rows a save keeps — as the bake draws the saved row —
+  // until its text is edited (lib/creator/structured-rules.ts keptStationRows).
+  const storedStationRows = isEdit && card?.face_content?.station ? card.face_content : null;
+  const liveFaceContent: FaceContent | null =
+    liveRules?.faceContent ??
+    (storedStationRows ? keptStationRows(kind, watched, { opened: defaults, storedFaceContent: storedStationRows }) : null);
   // A walker whose loyalty badges run into each other on the frame it wears
   // (lib/creator/walker-crowding.ts — read from the layout of the rows the
   // card draws, never a count): the row editor says the card will be

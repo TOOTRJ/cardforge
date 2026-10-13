@@ -549,7 +549,7 @@ type Match = {
 };
 
 /** A family of templates picked by kind (and dress). */
-type Family = "m15" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "m20" | "dfc";
+type Family = "m15" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "m20" | "dfc" | "station";
 
 type TemplateSpec = FrameTemplate | { family: Family };
 
@@ -793,6 +793,12 @@ const FAMILIES: Record<
   Family,
   { produces: readonly FrameTemplate[]; pick: (ctx: Ctx) => FrameTemplate }
 > = {
+  // The station frame (TODO 4.27a): a Planet's is the land master's, every
+  // other station card's (a Spacecraft) the artifact master's.
+  station: {
+    produces: ["m15station", "m15stationland"],
+    pick: ({ facts }) => (facts.kind === "land" ? "m15stationland" : "m15station"),
+  },
   // M15: the era standard for the kind, dressed by the printing's snow /
   // devoid effect and its artifact word (the 1.3 rules, unchanged): a snow
   // land is the snow land frame, a snow spell or snow ARTIFACT the snow frame
@@ -2445,9 +2451,13 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // import lands where it always did — the artifact frame for a Spacecraft,
   // the land frame for a Planet, its tiers as plain rules text — but as that
   // frame's NEAREST, and the request log counts the ask (before this rule
-  // `era/2015` called them exact and nothing was logged). The frame the
-  // build adds is named here once it exists (`onceVerified`, as the Vehicle
-  // rule below) — no template is named before it does.
+  // `era/2015` called them exact and nothing was logged). Since the build
+  // (4.27a step 1) the station frame exists: once `m15station` /
+  // `m15stationland` is verified in the card's colour this rule names it
+  // instead (`onceVerified`, as the Vehicle rule below) and is exact — the
+  // oracle text is already the tiers' grammar (lib/cards/station.ts), so the
+  // import draws its bands as it lands. Until then: the same landing as
+  // before, saying the frame isn't verified.
   {
     key: "station/2015",
     exactLabel: ({ facts }) => (facts.kind === "land" ? "Station frame (Planet)" : "Station frame (Spacecraft)"),
@@ -2455,7 +2465,9 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     outcome: {
       status: "nearest",
       template: { family: "m15" },
-      reason: GAPS.station.reason,
+      onceVerified: { family: "station" },
+      exactOnceVerified: true,
+      reason: "PipGlyph's Station frame isn't verified yet",
       blockedBy: GAPS.station.blockedBy,
     },
   },

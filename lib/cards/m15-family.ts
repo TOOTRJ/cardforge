@@ -37,6 +37,10 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // The Vehicle frame (TODO 4.5c): a new template, no stored card —
   // m15artifact's slots and sizes — so it joined without a bump.
   "m15vehicle",
+  // The station frame (TODO 4.27a): new templates on m15artifact's and
+  // m15land's slots and sizes — no stored card, no bump.
+  "m15station",
+  "m15stationland",
   "m15snow",
   "m15devoid",
   "m15borderless",

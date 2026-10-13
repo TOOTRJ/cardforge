@@ -142,7 +142,10 @@ export function resolveGeneratedFrame(input: {
   const pool = drawn.length > 0 ? drawn : dressed;
 
   if (requested !== "random") {
-    const vehicle = subtypeFrameFor(requested, face?.subtypes);
+    // (Only a dress in the pool: a Spacecraft asked for on the Vehicle frame
+    // lands on the Artifact frame while the station frame is unpublished,
+    // as it did before that frame existed.)
+    const vehicle = subtypeFrameFor(requested, face?.subtypes, has);
     const wanted = has(vehicle) && vehicle !== requested
       ? vehicle
       : walkerRowsFrameFor(kind, tokenFrameFor(kind, requested, tokenFace), rows);

@@ -1,0 +1,326 @@
+[
+  {
+    "name": "Adagia, Windswept Bastion",
+    "set": "eoe",
+    "collector_number": "250",
+    "type_line": "Land — Planet",
+    "oracle_text": "This land enters tapped.\n{T}: Add {W}.\nStation (Tap another creature you control: Put charge counters equal to its power on this Planet. Station only as a sorcery.)\n12+ | {3}{W}, {T}: Create a token that's a copy of target artifact or enchantment you control, except it's legendary. Activate only as a sorcery.",
+    "power": null,
+    "toughness": null
+  },
+  {
+    "name": "Atmospheric Greenhouse",
+    "set": "eoe",
+    "collector_number": "171",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "When this Spacecraft enters, put a +1/+1 counter on each creature you control.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 8+.)\n8+ | Flying, trample",
+    "power": "5",
+    "toughness": "4"
+  },
+  {
+    "name": "Candela, Aegis of Adagia",
+    "set": "yeoe",
+    "collector_number": "1",
+    "type_line": "Legendary Artifact — Spacecraft",
+    "oracle_text": "Flash\nWhen Candela enters, return up to one target creature you control to its owner's hand. It perpetually gets +1/+1.\nStation\n8+ | Flying\nWhenever Candela deals combat damage to a player, you may put a creature card with mana value 3 or less from your hand onto the battlefield.",
+    "power": "3",
+    "toughness": "3"
+  },
+  {
+    "name": "Dawnsire, Sunstar Dreadnought",
+    "set": "eoe",
+    "collector_number": "238",
+    "type_line": "Legendary Artifact — Spacecraft",
+    "oracle_text": "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 20+.)\n10+ | Whenever you attack, Dawnsire deals 100 damage to up to one target creature or planeswalker.\n20+ | Flying",
+    "power": "20",
+    "toughness": "20"
+  },
+  {
+    "name": "Debris Field Crusher",
+    "set": "eoe",
+    "collector_number": "131",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "When this Spacecraft enters, it deals 3 damage to any target.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 8+.)\n8+ | Flying\n{1}{R}: This Spacecraft gets +2/+0 until end of turn.",
+    "power": "1",
+    "toughness": "5"
+  },
+  {
+    "name": "Entropic Battlecruiser",
+    "set": "eoe",
+    "collector_number": "99",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 8+.)\n1+ | Whenever an opponent discards a card, they lose 3 life.\n8+ | Flying, deathtouch\nWhenever this Spacecraft attacks, each opponent discards a card. Each opponent who can't loses 3 life.",
+    "power": "3",
+    "toughness": "10"
+  },
+  {
+    "name": "Evendo, Waking Haven",
+    "set": "eoe",
+    "collector_number": "253",
+    "type_line": "Land — Planet",
+    "oracle_text": "This land enters tapped.\n{T}: Add {G}.\nStation (Tap another creature you control: Put charge counters equal to its power on this Planet. Station only as a sorcery.)\n12+ | {G}, {T}: Add {G} for each creature you control.",
+    "power": null,
+    "toughness": null
+  },
+  {
+    "name": "Exploration Broodship",
+    "set": "eoc",
+    "collector_number": "14",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 8+.)\n3+ | You may play an additional land on each of your turns.\n8+ | Flying\nOnce during each of your turns, you may cast a permanent spell from your graveyard by sacrificing a land in addition to paying its other costs.",
+    "power": "4",
+    "toughness": "4"
+  },
+  {
+    "name": "Extinguisher Battleship",
+    "set": "eoe",
+    "collector_number": "242",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "When this Spacecraft enters, destroy target noncreature permanent. Then this Spacecraft deals 4 damage to each creature.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 5+.)\n5+ | Flying, trample",
+    "power": "10",
+    "toughness": "10"
+  },
+  {
+    "name": "Fell Gravship",
+    "set": "eoe",
+    "collector_number": "101",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "When this Spacecraft enters, mill three cards, then return a creature or Spacecraft card from your graveyard to your hand.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 8+.)\n8+ | Flying, lifelink",
+    "power": "3",
+    "toughness": "2"
+  },
+  {
+    "name": "Galvanizing Sawship",
+    "set": "eoe",
+    "collector_number": "136",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 3+.)\n3+ | Flying, haste",
+    "power": "6",
+    "toughness": "5"
+  },
+  {
+    "name": "Hearthhull, the Worldseed",
+    "set": "eoc",
+    "collector_number": "1",
+    "type_line": "Legendary Artifact — Spacecraft",
+    "oracle_text": "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 8+.)\n2+ | {1}, {T}, Sacrifice a land: Draw two cards. You may play an additional land this turn.\n8+ | Flying, vigilance, haste\nWhenever you sacrifice a land, each opponent loses 2 life.",
+    "power": "6",
+    "toughness": "7"
+  },
+  {
+    "name": "Infinite Guideline Station",
+    "set": "eoe",
+    "collector_number": "219",
+    "type_line": "Legendary Artifact — Spacecraft",
+    "oracle_text": "When Infinite Guideline Station enters, create a tapped 2/2 colorless Robot artifact creature token for each multicolored permanent you control.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 12+.)\n12+ | Flying\nWhenever Infinite Guideline Station attacks, draw a card for each multicolored permanent you control.",
+    "power": "7",
+    "toughness": "15"
+  },
+  {
+    "name": "Inspirit, Flagship Vessel",
+    "set": "eoc",
+    "collector_number": "2",
+    "type_line": "Legendary Artifact — Spacecraft",
+    "oracle_text": "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 8+.)\n1+ | At the beginning of combat on your turn, put your choice of a +1/+1 counter or two charge counters on up to one other target artifact.\n8+ | Flying\nOther artifacts you control have hexproof and indestructible.",
+    "power": "5",
+    "toughness": "5"
+  },
+  {
+    "name": "Kavaron, Memorial World",
+    "set": "eoe",
+    "collector_number": "255",
+    "type_line": "Land — Planet",
+    "oracle_text": "This land enters tapped.\n{T}: Add {R}.\nStation (Tap another creature you control: Put charge counters equal to its power on this Planet. Station only as a sorcery.)\n12+ | {1}{R}, {T}, Sacrifice a land: Create a 2/2 colorless Robot artifact creature token, then creatures you control get +1/+0 and gain haste until end of turn.",
+    "power": null,
+    "toughness": null
+  },
+  {
+    "name": "Land Station",
+    "set": "unk",
+    "collector_number": "RG02e",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "When this Spacecraft enters, reveal a basic land card from outside the game and put it into your hand. (remembering that the nearest land station may be behind you).\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 10+.)\n10+ | Flying\nThis creature gets +1/+1 for each basic land you control.",
+    "power": "0",
+    "toughness": "0"
+  },
+  {
+    "name": "Larval Scoutlander",
+    "set": "eoe",
+    "collector_number": "194",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "When this Spacecraft enters, you may sacrifice a land or Lander. If you do, search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 7+.)\n7+ | Flying",
+    "power": "3",
+    "toughness": "3"
+  },
+  {
+    "name": "Lumen-Class Frigate",
+    "set": "eoe",
+    "collector_number": "25",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 12+.)\n2+ | Other creatures you control get +1/+1.\n12+ | Flying, lifelink",
+    "power": "3",
+    "toughness": "5"
+  },
+  {
+    "name": "Monoist Gravliner",
+    "set": "yeoe",
+    "collector_number": "11",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "Whenever a creature stations this Spacecraft, that creature perpetually gains deathtouch and lifelink.\nStation\n6+ | Flying, Deathtouch, Lifelink",
+    "power": "2",
+    "toughness": "3"
+  },
+  {
+    "name": "Pinnacle Kill-Ship",
+    "set": "eoe",
+    "collector_number": "244",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "When this Spacecraft enters, it deals 10 damage to up to one target creature.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 7+.)\n7+ | Flying",
+    "power": "7",
+    "toughness": "7"
+  },
+  {
+    "name": "Rescue Skiff",
+    "set": "eoe",
+    "collector_number": "32",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "When this Spacecraft enters, return target creature or enchantment card from your graveyard to the battlefield.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 10+.)\n10+ | Flying",
+    "power": "5",
+    "toughness": "6"
+  },
+  {
+    "name": "Sledge-Class Seedship",
+    "set": "eoe",
+    "collector_number": "208",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 7+.)\n7+ | Flying\nWhenever this Spacecraft attacks, you may put a creature card from your hand onto the battlefield.",
+    "power": "4",
+    "toughness": "5"
+  },
+  {
+    "name": "Specimen Freighter",
+    "set": "eoe",
+    "collector_number": "76",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "When this Spacecraft enters, return up to two target non-Spacecraft creatures to their owners' hands.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 9+.)\n9+ | Flying\nWhenever this Spacecraft attacks, defending player mills four cards.",
+    "power": "4",
+    "toughness": "7"
+  },
+  {
+    "name": "Squadron Carrier",
+    "set": "yeoe",
+    "collector_number": "2",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "Spacecraft you control have \"Exhaust — {W}: Conjure a card named Starfighter Pilot onto the battlefield.\"\nStation\n10+ | Creatures you control have flying.",
+    "power": "4",
+    "toughness": "4"
+  },
+  {
+    "name": "Susur Secundi, Void Altar",
+    "set": "eoe",
+    "collector_number": "259",
+    "type_line": "Land — Planet",
+    "oracle_text": "This land enters tapped.\n{T}: Add {B}.\nStation (Tap another creature you control: Put charge counters equal to its power on this Planet. Station only as a sorcery.)\n12+ | {1}{B}, {T}, Pay 2 life, Sacrifice a creature: Draw cards equal to the sacrificed creature's power. Activate only as a sorcery.",
+    "power": null,
+    "toughness": null
+  },
+  {
+    "name": "Susurian Dirgecraft",
+    "set": "eoe",
+    "collector_number": "117",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "When this Spacecraft enters, each opponent sacrifices a nontoken creature of their choice.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 7+.)\n7+ | Flying",
+    "power": "4",
+    "toughness": "3"
+  },
+  {
+    "name": "Synthesizer Labship",
+    "set": "eoe",
+    "collector_number": "81",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 9+.)\n2+ | At the beginning of combat on your turn, up to one other target artifact you control becomes an artifact creature with base power and toughness 2/2 and gains flying until end of turn.\n9+ | Flying, vigilance",
+    "power": "4",
+    "toughness": "4"
+  },
+  {
+    "name": "The Eternity Elevator",
+    "set": "eoe",
+    "collector_number": "241",
+    "type_line": "Legendary Artifact — Spacecraft",
+    "oracle_text": "{T}: Add {C}{C}{C}.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery.)\n20+ | {T}: Add X mana of any one color, where X is the number of charge counters on The Eternity Elevator.",
+    "power": null,
+    "toughness": null
+  },
+  {
+    "name": "The Seriema",
+    "set": "eoe",
+    "collector_number": "35",
+    "type_line": "Legendary Artifact — Spacecraft",
+    "oracle_text": "When The Seriema enters, search your library for a legendary creature card, reveal it, put it into your hand, then shuffle.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 7+.)\n7+ | Flying\nOther tapped legendary creatures you control have indestructible.",
+    "power": "5",
+    "toughness": "5"
+  },
+  {
+    "name": "U.S.S. Enterprise-D, Galaxy-Class",
+    "set": "trk",
+    "collector_number": "273",
+    "type_line": "Legendary Artifact — Spacecraft",
+    "oracle_text": "Whenever one or more charge counters are put on U.S.S. Enterprise-D for the first time each turn, exile the top card of your library. You may play that card this turn.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 7+.)\n7+ | Flying, vigilance",
+    "power": "4",
+    "toughness": "5"
+  },
+  {
+    "name": "Uthros Research Craft",
+    "set": "eoc",
+    "collector_number": "7",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 12+.)\n3+ | Whenever you cast an artifact spell, draw a card. Put a charge counter on this Spacecraft.\n12+ | Flying\nThis Spacecraft gets +1/+0 for each artifact you control.",
+    "power": "0",
+    "toughness": "8"
+  },
+  {
+    "name": "Uthros Scanship",
+    "set": "eoe",
+    "collector_number": "85",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "When this Spacecraft enters, draw two cards, then discard a card.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 8+.)\n8+ | Flying",
+    "power": "4",
+    "toughness": "4"
+  },
+  {
+    "name": "Uthros, Titanic Godcore",
+    "set": "eoe",
+    "collector_number": "260",
+    "type_line": "Land — Planet",
+    "oracle_text": "This land enters tapped.\n{T}: Add {U}.\nStation (Tap another creature you control: Put charge counters equal to its power on this Planet. Station only as a sorcery.)\n12+ | {U}, {T}: Add {U} for each artifact you control.",
+    "power": null,
+    "toughness": null
+  },
+  {
+    "name": "Warmaker Gunship",
+    "set": "eoe",
+    "collector_number": "167",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "When this Spacecraft enters, it deals damage equal to the number of artifacts you control to target creature an opponent controls.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 6+.)\n6+ | Flying",
+    "power": "4",
+    "toughness": "3"
+  },
+  {
+    "name": "Wedgelight Rammer",
+    "set": "eoe",
+    "collector_number": "43",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "When this Spacecraft enters, create a 2/2 colorless Robot artifact creature token.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 9+.)\n9+ | Flying, first strike",
+    "power": "3",
+    "toughness": "4"
+  },
+  {
+    "name": "Wurmwall Sweeper",
+    "set": "eoe",
+    "collector_number": "249",
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "When this Spacecraft enters, surveil 2.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 4+.)\n4+ | Flying",
+    "power": "2",
+    "toughness": "2"
+  }
+]

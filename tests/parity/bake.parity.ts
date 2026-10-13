@@ -11,6 +11,7 @@ import {
   PARITY_SIZES,
   PARITY_TAGGED_JPEG_URL,
   PARITY_UPLOADED_JPEG_URL,
+  PARITY_STRIPES_URL,
   type ParityCaseFile,
 } from "./shared";
 
@@ -49,6 +50,22 @@ let restoreStorage: () => void = () => {};
  * cell. Where the art sits in its window (focal point, zoom) is readable
  * from the cell edges to the pixel, which a smooth gradient would hide.
  */
+/** Ten flat vertical bars, edge to edge: black, white and saturated colours. */
+async function stripesArt(width: number, height: number): Promise<Buffer> {
+  const bars = [
+    [0, 0, 0], [255, 255, 255], [255, 0, 0], [0, 255, 0], [0, 0, 255],
+    [255, 255, 0], [0, 255, 255], [255, 0, 255], [255, 255, 255], [0, 0, 0],
+  ];
+  const px = Buffer.alloc(width * height * 3);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const bar = bars[Math.min(bars.length - 1, Math.floor((x / width) * bars.length))]!;
+      px.set(bar, (y * width + x) * 3);
+    }
+  }
+  return sharp(px, { raw: { width, height, channels: 3 } }).png().toBuffer();
+}
+
 async function codedArt(width: number, height: number, seed: number): Promise<Buffer> {
   const cols = width >= height ? 12 : 9;
   const rows = width >= height ? 9 : 12;
@@ -145,9 +162,15 @@ it("bakes the parity matrix", async () => {
   expect([uploadedMeta.orientation ?? 1, uploadedMeta.width, uploadedMeta.height], "an upload is stored upright, untagged").toEqual([1, 900, 1200]);
   writeArt("parity-exif6-stored.jpg", tagged);
   writeArt("parity-exif6-upload.jpg", uploaded);
+  // The station cases' picture (TODO 4.27a): ten flat bars down the whole
+  // card — black, white and the saturated primaries — so every band of the
+  // see-through box sits over every extreme.
+  const stripes = await stripesArt(1000, 1410);
+  writeArt("parity-stripes.png", stripes);
   const photo = {
     "tagged-jpeg": { url: PARITY_TAGGED_JPEG_URL, data: dataUrl(tagged, "image/jpeg") },
     "uploaded-jpeg": { url: PARITY_UPLOADED_JPEG_URL, data: dataUrl(uploaded, "image/jpeg") },
+    stripes: { url: PARITY_STRIPES_URL, data: dataUrl(stripes) },
   } as const;
 
   let cases = parityCases().map((c, index) => ({ ...c, index }));
