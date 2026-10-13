@@ -41,6 +41,7 @@ import {
   SECOND_FACE_NAME_ERROR,
 } from "@/lib/cards/second-face-name";
 import type { FormValues } from "@/lib/creator/form-types";
+import { sagaRowsNeedingNumber, structuredRowsUntouched, type StructuredRulesValues } from "@/lib/creator/structured-rules";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -122,7 +123,24 @@ function checkSubtypesText(ctx: Ctx, path: PathSegment[], text: string): void {
 // so the submit error handler jumps to the earliest errored step.
 // ---------------------------------------------------------------------------
 
-export const cardFormSchema: z.ZodType<FormValues, FormValues> = z
+/** What a saga row with a text and no chapter number says (TODO 3b.19): it
+ *  used to be dropped by the save without a word. */
+export const SAGA_ROW_NEEDS_NUMBER = "Pick a chapter number for this row, or remove it.";
+
+/**
+ * The form's schema. `opened` = an EDIT's values as the form opened with
+ * them (the stored card's): while a walker's / saga's rows still read as
+ * those, the save keeps the stored text byte for byte
+ * (lib/creator/structured-rules.ts), so nothing about the rows is checked —
+ * a stored card always opens and retitles, whatever its text holds (a marker
+ * the editor cannot number, a line past 600 characters). Once the maker
+ * edits a row the checks are back for every row: the save then writes what
+ * the editor shows.
+ */
+export function cardFormSchemaFor(
+  opened: StructuredRulesValues | null = null,
+): z.ZodType<FormValues, FormValues> {
+  return z
   .custom<FormValues>()
   .superRefine((values, ctx) => {
     // ----- Card step -----
@@ -252,12 +270,13 @@ export const cardFormSchema: z.ZodType<FormValues, FormValues> = z
       values.frame_style?.template,
     );
     let rulesTextIsSubmitted = true;
+    const rowsUntouched = structuredRowsUntouched(submitKind, values, opened);
     if (submitKind === "planeswalker") {
       const surviving = values.loyalty_abilities
         .map((row, index) => ({ row, index }))
         .filter(({ row }) => row.text.trim().length > 0);
       rulesTextIsSubmitted = surviving.length === 0;
-      for (const { row, index } of surviving) {
+      for (const { row, index } of rowsUntouched ? [] : surviving) {
         if (row.text.trim().length > 600) {
           ctx.addIssue({
             code: "custom",
@@ -281,7 +300,13 @@ export const cardFormSchema: z.ZodType<FormValues, FormValues> = z
           ({ row }) => row.text.trim().length > 0 && row.numerals.length > 0,
         );
       rulesTextIsSubmitted = surviving.length === 0;
-      for (const { row, index } of surviving) {
+      // A row with a text and no chapter number never saves as a chapter:
+      // say so on the row instead of dropping it (or, when it is the only
+      // row, leaving its text unsaved).
+      for (const index of sagaRowsNeedingNumber(submitKind, values, opened)) {
+        ctx.addIssue({ code: "custom", path: ["saga_chapters", index, "numerals"], message: SAGA_ROW_NEEDS_NUMBER });
+      }
+      for (const { row, index } of rowsUntouched ? [] : surviving) {
         if (row.text.trim().length > 600) {
           ctx.addIssue({
             code: "custom",
@@ -290,7 +315,7 @@ export const cardFormSchema: z.ZodType<FormValues, FormValues> = z
           });
         }
       }
-      if (surviving.length > 0 && values.saga_intro.trim().length > 400) {
+      if (!rowsUntouched && surviving.length > 0 && values.saga_intro.trim().length > 400) {
         ctx.addIssue({
           code: "custom",
           path: ["saga_intro"],
@@ -344,3 +369,7 @@ export const cardFormSchema: z.ZodType<FormValues, FormValues> = z
       });
     }
   });
+}
+
+/** A new card's schema (and a remix's): every check runs. */
+export const cardFormSchema = cardFormSchemaFor();

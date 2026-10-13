@@ -498,6 +498,33 @@ describe("the server's payload", () => {
     expect(withPrintTypographyUpdate(unchanged, stored)).toEqual(unchanged);
   });
 
+  it("a walker / saga saved as plain text (rows past face_content's limits) keeps the rows it did not change", () => {
+    // Seven lines, stored with typewriter quotes and Scryfall's U+2212: the
+    // creator sends the rows serialized (canonical costs) and no rows beside
+    // them. Converted whole, an edit of ONE row re-set the quotes of all.
+    const walker = { card_type: "planeswalker", frame_style: { template: "m15pw" }, face_content: null };
+    const lines = ["+1: Draw.", "−1: It can't block.", "−2: Make a token.", "0: Scry 2.", '−3: Say "done".', "−5: Destroy it.", "−8: Win."];
+    const sent = ["+1: Draw.", "-1: It can't block.", "-2: Make a token. It's big.", "0: Scry 2.", '-3: Say "done".', "-5: Destroy it.", "-8: Win."];
+    const out = withPrintTypographyUpdate({ rules_text: sent.join("\n"), face_content: null }, { ...walker, rules_text: lines.join("\n") });
+    expect(out.rules_text).toBe([...sent.slice(0, 2), "-2: Make a token. It’s big.", ...sent.slice(3)].join("\n"));
+
+    const saga = { card_type: "enchantment", frame_style: { template: "saga" }, face_content: null };
+    const stored = "(It's a Saga.)\nI — You can't lose.\nVII — Say \"done\".";
+    const edited = withPrintTypographyUpdate(
+      { rules_text: "(It's a Saga.)\nI — You can't lose.\nVII — Say \"done\" - twice.", face_content: null },
+      { ...saga, rules_text: stored },
+    );
+    expect(edited.rules_text).toBe("(It's a Saga.)\nI — You can't lose.\nVII — Say “done” — twice.");
+
+    // Not such a save: another kind's text is converted whole, as before…
+    const creature = { card_type: "creature", frame_style: { template: "m15" }, rules_text: "It can't block.\nFlying" };
+    expect(withPrintTypographyUpdate({ rules_text: "It can't block.\nHaste" }, creature).rules_text).toBe("It can’t block.\nHaste");
+    // …and so is a walker's text that is not the creator's serialization.
+    expect(
+      withPrintTypographyUpdate({ rules_text: "+1 : It can't block.\nNew.", face_content: null }, { ...walker, rules_text: "+1 : It can't block." }).rules_text,
+    ).toBe("+1 : It can’t block.\nNew.");
+  });
+
   it("never grows a text past its limit", () => {
     const full = `${"a".repeat(3996)}b--c`;
     expect(full).toHaveLength(4000);
