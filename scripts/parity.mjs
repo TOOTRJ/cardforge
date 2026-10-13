@@ -129,7 +129,9 @@ if (browser !== 0 && !UPDATE) {
   // On CI: the one command that brings this run's numbers (the linux section)
   // into the branch — nobody has to look the run id up.
   if (process.env.GITHUB_RUN_ID) {
-    const fetchBaseline = `gh run download ${process.env.GITHUB_RUN_ID} -n parity-baseline -D tests/parity`;
+    // Through tmp/: `gh run download` refuses to overwrite a file that exists.
+    const repo = process.env.GITHUB_REPOSITORY ? ` -R ${process.env.GITHUB_REPOSITORY}` : "";
+    const fetchBaseline = `gh run download ${process.env.GITHUB_RUN_ID}${repo} -n parity-baseline -D tmp/parity/ci && mv tmp/parity/ci/baseline.json tests/parity/baseline.json`;
     console.error(`\nThis run's numbers, if the change is intended (read the diff before committing it):\n  ${fetchBaseline}`);
     if (process.env.GITHUB_STEP_SUMMARY) {
       fs.appendFileSync(

@@ -303,7 +303,7 @@ jobs:
         run: node scripts/parity.mjs
 
       # What `npm run test:parity -- --update` would write for linux, made on
-      # this runner: `gh run download <run> -n parity-baseline -D tests/parity`.
+      # this runner (a red run prints the command that fetches it).
       - name: Upload the measured baseline
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
