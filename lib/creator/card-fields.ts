@@ -40,6 +40,7 @@ import { remixTitleFor } from "@/lib/creator/revise";
 import { secondPartWordsFor } from "@/lib/creator/second-part";
 import { defaultWatermarkFor } from "@/lib/cards/watermark";
 import { DEFAULT_CARD_LANG } from "@/lib/cards/collector-fields";
+import { stationOpenText, stationPtChoiceOf } from "@/lib/creator/station-rows";
 import {
   NEW_CARD_ANATOMY,
   pairColorIdentity,
@@ -207,6 +208,7 @@ export function defaultValuesFor(
       loyalty_abilities: [],
       saga_intro: "",
       saga_chapters: [],
+      station_pt_tier: null,
       flavor_text: "",
       // A fresh card is a 1/1 creature until the maker says otherwise — the
       // preview shows a real P/T box instead of an empty corner. Non-P/T
@@ -279,8 +281,11 @@ export function defaultValuesFor(
     subtypes_text: card.subtypes.join(", "),
     tags_text: card.tags?.join(", ") ?? "",
     rarity: card.rarity ?? "",
-    rules_text: card.rules_text ?? "",
+    // (A station card stored with rows that say another text than its
+    // rules text opens with the ROWS' text: they are what it draws.)
+    rules_text: stationOpenText(card.rules_text, card.face_content),
     ...structuredRowsFrom(card),
+    station_pt_tier: stationPtChoiceOf(card.rules_text, card.face_content),
     flavor_text: card.flavor_text ?? "",
     power: card.power ?? "",
     toughness: card.toughness ?? "",

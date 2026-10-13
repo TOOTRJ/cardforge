@@ -16,6 +16,8 @@
 // zodResolver hands runSubmit the untouched form state and drafts /
 // nothing else reads the raw form state.
 
+import { isStationFrame } from "@/lib/cards/station-frame";
+import { stationTiersProblem } from "@/lib/creator/station-rows";
 import { z } from "zod";
 import {
   cardArtistCreditSchema,
@@ -353,6 +355,16 @@ export function cardFormSchemaFor(
     }
     if (rulesTextIsSubmitted) {
       check(ctx, ["rules_text"], cardRulesTextSchema, values.rules_text.trim());
+    }
+    // A station card's tiers (TODO 4.27a): the tier editor's rows ARE the
+    // rules text, and a save writes them as rows — every tier with a text,
+    // the numbers rising. Never asked of an untouched edit: that save keeps
+    // the stored card as it is (lib/creator/structured-rules.ts).
+    if (isStationFrame(values.frame_style?.template)) {
+      const untouched =
+        opened !== null && opened.rules_text === values.rules_text && (opened.station_pt_tier ?? null) === (values.station_pt_tier ?? null);
+      const problem = untouched ? null : stationTiersProblem(values.rules_text);
+      if (problem) ctx.addIssue({ code: "custom", path: ["rules_text"], message: problem });
     }
 
     check(

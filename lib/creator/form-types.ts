@@ -88,6 +88,11 @@ export type FormValues = {
   /** Saga intro line + chapter rows — the Text step's editor for sagas. */
   saga_intro: string;
   saga_chapters: SagaChapterFormValues[];
+  /** The station frame's tier that carries the power / toughness (TODO
+   *  4.27a): an index into the tiers the rules text holds; null = as the
+   *  text says (the tier its reminder names, else the last). The tiers
+   *  themselves ARE the rules text (lib/creator/station-rows.ts). */
+  station_pt_tier?: number | null;
   flavor_text: string;
   power: string;
   toughness: string;
