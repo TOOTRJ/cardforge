@@ -54,25 +54,75 @@ export function DeckCardList({
   // so Radix has nowhere to return the focus and it fell to <body>: a
   // keyboard user started again from the top of the page. The row is found
   // by its entry id once the dialog has unmounted (its focus trap would pull
-  // the focus back before that); a row a filter or a removal has taken away
-  // is simply not there.
+  // the focus back before that).
+  //
+  // Three things the first cut missed (the independent check of #536):
+  //  - a click on the BACKDROP closes the dialog on pointerdown, and the
+  //    same click's mousedown then takes the focus off the row again (it
+  //    lands on <body>): the hand-back is repeated once the click is over;
+  //  - the row may be GONE — "Remove from deck" in the pop-up, or a proxy
+  //    linked under the "Needs proxy" filter — before or just after the
+  //    close: the focus then goes to the row that took its place (the last
+  //    one, past the end; the list's first control when no row is left),
+  //    never to <body>;
+  //  - an entry removed while its pop-up is open unmounts the dialog without
+  //    `selectedId` changing: the pop-up counts as open only while its entry
+  //    is still in `items` (`openId`).
   const listRef = useRef<HTMLDivElement | null>(null);
-  const returnFocusTo = useRef<string | null>(null);
+  const openId = selectedId !== null && items.some((i) => i.entry.id === selectedId) ? selectedId : null;
+  const returnFocusTo = useRef<{ id: string; index: number } | null>(null);
+  // The row the focus was handed back to, for as long as the focus is on it.
+  const handedBack = useRef<{ id: string; index: number } | null>(null);
+  const rowsOf = () =>
+    Array.from(listRef.current?.querySelectorAll<HTMLElement>("[data-deck-entry]") ?? []);
+  const focusNear = (index: number) => {
+    const rows = rowsOf();
+    const target =
+      rows[Math.max(0, Math.min(index, rows.length - 1))] ??
+      listRef.current?.querySelector<HTMLElement>("button, a[href]");
+    target?.focus({ preventScroll: true });
+  };
   useEffect(() => {
-    if (selectedId !== null) {
-      returnFocusTo.current = selectedId;
+    if (openId !== null) {
+      returnFocusTo.current = {
+        id: openId,
+        index: rowsOf().findIndex((row) => row.dataset.deckEntry === openId),
+      };
+      handedBack.current = null;
       return;
     }
-    const id = returnFocusTo.current;
+    const from = returnFocusTo.current;
     returnFocusTo.current = null;
-    if (!id) return;
-    for (const row of listRef.current?.querySelectorAll<HTMLElement>("[data-deck-entry]") ?? []) {
-      if (row.dataset.deckEntry === id) {
+    if (!from) return;
+    const handBack = () => {
+      const row = rowsOf().find((el) => el.dataset.deckEntry === from.id);
+      if (row) {
         row.focus();
-        break;
+        handedBack.current = from;
+      } else {
+        focusNear(from.index);
       }
-    }
-  }, [selectedId]);
+    };
+    handBack();
+    // A backdrop click: its mousedown comes after the close and blurs the row.
+    const again = setTimeout(() => {
+      const active = document.activeElement;
+      if (!active || active === document.body) handBack();
+    }, 0);
+    return () => clearTimeout(again);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the helpers read refs and the live DOM
+  }, [openId]);
+  // The row the focus was handed back to is taken away by the refresh that
+  // follows the close (a removal answers after the pop-up has shut).
+  useEffect(() => {
+    const given = handedBack.current;
+    if (!given) return;
+    if (rowsOf().some((row) => row.dataset.deckEntry === given.id)) return;
+    handedBack.current = null;
+    const active = document.activeElement;
+    if (active && active !== document.body) return;
+    focusNear(given.index);
+  });
 
   const anyRemixed = items.some((i) => i.entry.card_id);
   const needsCount = items.filter(
@@ -103,7 +153,15 @@ export function DeckCardList({
   }
 
   return (
-    <div ref={listRef} className="flex flex-col gap-6">
+    <div
+      ref={listRef}
+      className="flex flex-col gap-6"
+      // The focus moved on by itself (Tab, a click on another control): the
+      // row it was handed back to is no longer anyone's concern.
+      onBlurCapture={(event) => {
+        if (event.relatedTarget) handedBack.current = null;
+      }}
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div
           className="flex flex-wrap items-center gap-1.5"

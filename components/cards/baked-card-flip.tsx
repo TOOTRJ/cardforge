@@ -61,10 +61,39 @@ export const HOVER_REST_MS = 333;
 const HOVER_QUERY = "(hover: hover) and (pointer: fine)";
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
-// Where the mouse last really moved over a two-faced tile (client px). A
-// pointermove at the very same place is not a move: some engines dispatch
-// one for content that scrolled under a still cursor.
+// Where the mouse last was — ANYWHERE on the page — and the pointermove that
+// really moved it. A pointermove at the very same place is not a move:
+// WebKit dispatches one, at the unchanged place, for content that scrolled
+// under a still cursor (measured, Playwright WebKit 26.4, wheel notches
+// under a parked mouse: one pointermove per notch, 56 of 56 at the same
+// client px). The place is tracked on the DOCUMENT, not on the tiles: a
+// mouse parked beside the grid last moved THERE, and a tile that then
+// scrolls under it must not read as a move (tracked on the tiles alone it
+// did — WebKit turned 4–6 tiles in 56 notches, on main and on 5.17's first
+// cut alike). The first pointermove this module ever sees has nothing to be
+// compared with, so it is not a move either: a hand that really moves sends
+// a second one a pixel later.
 let lastMouseAt: { x: number; y: number } | null = null;
+let realMove: Event | null = null;
+let trackingMouse = false;
+
+/** Starts the page's one mouse tracker (idempotent; never removed — one
+ *  passive listener, shared by every two-faced tile). */
+function trackMouse() {
+  if (trackingMouse || typeof document === "undefined") return;
+  trackingMouse = true;
+  document.addEventListener(
+    "pointermove",
+    (event) => {
+      if (event.pointerType !== "mouse") return;
+      const moved =
+        lastMouseAt !== null && (lastMouseAt.x !== event.clientX || lastMouseAt.y !== event.clientY);
+      lastMouseAt = { x: event.clientX, y: event.clientY };
+      realMove = moved ? event : null;
+    },
+    { capture: true, passive: true },
+  );
+}
 
 /** True where the hover-turn may run: a hovering fine pointer, motion allowed. */
 function hoverTurnAllowed(): boolean {
@@ -122,6 +151,7 @@ export function BakedCardFlip({
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
+    trackMouse();
     const host = root.closest<HTMLElement>(".card-hover-effect") ?? root;
     const stopRest = () => {
       if (restTimer.current !== null) {
@@ -142,9 +172,9 @@ export function BakedCardFlip({
     };
     const onTileMove = (event: PointerEvent) => {
       if (event.pointerType !== "mouse") return;
-      const moved = !lastMouseAt || lastMouseAt.x !== event.clientX || lastMouseAt.y !== event.clientY;
-      lastMouseAt = { x: event.clientX, y: event.clientY };
-      if (!moved || restArmed.current) return;
+      // Only a pointermove the document's tracker saw MOVE the mouse (it
+      // runs first: capture, on the document).
+      if (realMove !== event || restArmed.current) return;
       if (buttonRef.current?.contains(event.target as Node)) return;
       startRest();
     };

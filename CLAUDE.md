@@ -337,9 +337,17 @@ Rules and gotchas:
   `BakedCardThumbnail` draws the button only with `backFaceButton`, which
   `CardTile` alone sets: a new tile surface uses `CardTile`, never a
   hand-nested `Link` + `CardHoverEffect` + thumbnail
-  (`card-tile-structure.test.tsx` scans for it). The deck pop-up's picture
+  (`card-tile-structure.test.tsx` scans for it). A pointermove "really
+  moved" the mouse only against its last place ANYWHERE on the page — one
+  passive document listener (`trackMouse`, `baked-card-flip.tsx`), never a
+  place remembered per tile: WebKit sends a pointermove at the unchanged
+  px on every wheel notch, and a mouse parked beside the grid turned the
+  tiles that scrolled under it. The deck pop-up's picture
   link opens the face it shows (`?face=back`) and closing the pop-up
-  returns the focus to the row that opened it. The back's 600 px thumb is mounted only
+  returns the focus to the row that opened it — once more when a backdrop
+  click is over (its mousedown blurs the row), and to the row that took
+  its place when the entry is gone (removed, filtered away), never
+  `<body>`. The back's 600 px thumb is mounted only
   on intent (the pointer moving on a tile that can hover-turn, the
   button's focus or press) — never at rest, never the HD PNG; a hover
   turns only once it has arrived, and a back that fails to load (removed

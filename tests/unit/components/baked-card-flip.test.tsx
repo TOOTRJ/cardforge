@@ -99,7 +99,10 @@ const pointer = (type: "enter" | "arrive" | "leave", el: Element, pointerType = 
     }
     fireEvent.pointerOver(el, { pointerType });
     if (type === "arrive") return;
+    // The mouse comes from somewhere: its last place on the page is known
+    // (the document's tracker), and the move onto the tile is to a new one.
     mouseAt += 7;
+    fireEvent.pointerMove(document.body, { pointerType, clientX: mouseAt - 3, clientY: mouseAt - 3 });
     fireEvent.pointerMove(el, { pointerType, clientX: mouseAt, clientY: mouseAt });
   });
 /** The back's thumbnail has arrived (happy-dom loads no images). */
@@ -516,6 +519,71 @@ describe("BakedCardThumbnail with a back picture — the hover-rest turn (TODO 5
     await backArrives(again);
     await advance(HOVER_REST_MS);
     expect(face()).toBe("back");
+  });
+
+  it("a mouse parked BESIDE the grid: a tile scrolling under it turns nothing, though the engine sends a pointermove at the unchanged place on every wheel notch (WebKit)", async () => {
+    const container = tile(BACK_URL);
+    const tileEl = screen.getByTestId("baked-card-flip");
+    // The mouse's last real moves were on the page, not on any tile…
+    await act(async () => {
+      fireEvent.pointerMove(document.body, { pointerType: "mouse", clientX: 635, clientY: 195 });
+      fireEvent.pointerMove(document.body, { pointerType: "mouse", clientX: 640, clientY: 200 });
+    });
+    // …then the wheel slides the tile under it: boundary events and, on
+    // WebKit, a pointermove at the very same client px — notch after notch.
+    for (let notch = 0; notch < 6; notch++) {
+      await act(async () => {
+        fireEvent.pointerOver(tileEl, { pointerType: "mouse" });
+        fireEvent.pointerMove(tileEl, { pointerType: "mouse", clientX: 640, clientY: 200 });
+      });
+      await advance(480);
+      expect(face()).toBe("front");
+    }
+    // Nothing was fetched for it either.
+    expect(srcs(container)).toEqual([FRONT]);
+    // The hand moves: the rest starts.
+    await act(async () => {
+      fireEvent.pointerMove(tileEl, { pointerType: "mouse", clientX: 641, clientY: 200 });
+    });
+    await backArrives(container);
+    await advance(HOVER_REST_MS);
+    expect(face()).toBe("back");
+  });
+
+  it("the page has ONE mouse tracker however many two-faced tiles mount and unmount, and a tile takes its two listeners off its box when it goes", () => {
+    const onBox = { added: [] as string[], removed: [] as string[] };
+    const add = HTMLElement.prototype.addEventListener;
+    const remove = HTMLElement.prototype.removeEventListener;
+    const docAdd = vi.spyOn(document, "addEventListener");
+    const elAdd = vi.spyOn(HTMLElement.prototype, "addEventListener").mockImplementation(function (
+      this: HTMLElement,
+      ...args: Parameters<typeof add>
+    ) {
+      if (this.classList.contains("card-hover-effect")) onBox.added.push(args[0]);
+      return add.apply(this, args);
+    });
+    const elRemove = vi.spyOn(HTMLElement.prototype, "removeEventListener").mockImplementation(function (
+      this: HTMLElement,
+      ...args: Parameters<typeof remove>
+    ) {
+      if (this.classList.contains("card-hover-effect")) onBox.removed.push(args[0]);
+      return remove.apply(this, args);
+    });
+    for (let i = 0; i < 20; i++) {
+      tile(BACK_URL);
+      cleanup();
+    }
+    // The tracker was installed by the first two-faced tile this file
+    // mounted: never once per tile.
+    expect(docAdd.mock.calls.filter(([type]) => type === "pointermove")).toHaveLength(0);
+    const mine = (list: string[]) => list.filter((type) => type === "pointermove" || type === "pointerleave").sort();
+    // (Each mount listens twice over: the tilt switches on after the first
+    // paint and re-parents the picture — the first pair is taken off then.)
+    expect(mine(onBox.added).length).toBeGreaterThanOrEqual(40);
+    expect(mine(onBox.removed)).toEqual(mine(onBox.added));
+    docAdd.mockRestore();
+    elAdd.mockRestore();
+    elRemove.mockRestore();
   });
 
   it("one rest per visit: moving about on the card does not push the turn back", async () => {
