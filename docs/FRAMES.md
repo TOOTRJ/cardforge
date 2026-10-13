@@ -2999,6 +2999,16 @@ tier, the dressed card, foil, a Planet — and a `tiers` region over the box
 with its badges and plate. No limit was raised and no known difference
 added.
 
+**Import.** Step 0's rule `station/2015` (the Station keyword on the 2015
+frame; #540) now names the frame: `onceVerified: { family: "station" }`
+(a Planet → `m15stationland`, else `m15station`) and `exactOnceVerified`.
+Until the frame is verified in the card's colour the import lands where it
+always did (the artifact / land frame, `nearest`, "not yet verified in
+<colour>", an `unverified` row in the request log); once it is, it lands on
+the station frame, exact — the oracle text is already the tiers' grammar,
+so the bands draw as imported. The other dresses (extended art, borderless,
+showcase) keep their own rules and the `station` gap (step 2).
+
 **Rollout.** ADDITIONS: new templates no stored card sits on — no layout
 bump, no sweep, no badge, no migration. A stored Spacecraft on the artifact
 frame keeps it.

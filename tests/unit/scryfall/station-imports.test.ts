@@ -27,6 +27,8 @@ const printing = (key: Key) => scryfallCardSchema.parse(printingsData[key]);
 const match = (key: Key) => frameMatchFromScryfall(printing(key));
 
 const STATION_REASON = "PipGlyph doesn't draw the Station frame yet";
+/** The bordered rule's reason since the frame exists (4.27a step 1). */
+const UNVERIFIED_REASON = "PipGlyph's Station frame isn't verified yet";
 const EVERY: ReadonlySet<string> = new Set(
   FRAME_TEMPLATE_VALUES.flatMap((template) => ["w", "u", "b", "r", "g", "c", "m"].map((colour) => frameComboKey(template, colour))),
 );
@@ -58,12 +60,13 @@ describe("a bordered station printing is the artifact / land frame's nearest (st
       signature: "station/2015",
       template: "m15artifact",
       exactLabel: "Station frame (Spacecraft)",
-      reason: STATION_REASON,
+      reason: UNVERIFIED_REASON,
       blockedBy: "4.27a",
     });
     expect(found.landOn).toBeUndefined();
-    // No frame is named for later: the station templates don't exist yet.
-    expect(found.onceVerified).toBeUndefined();
+    // The station frame is named for later (4.27a step 1): it takes over
+    // once it is verified in the card's colour.
+    expect(found.onceVerified).toBe("m15station");
     expect(found.landOnOnceVerified).toBeUndefined();
   });
 
@@ -73,18 +76,24 @@ describe("a bordered station printing is the artifact / land frame's nearest (st
       signature: "station/2015",
       template: "m15land",
       exactLabel: "Station frame (Planet)",
-      reason: STATION_REASON,
+      reason: UNVERIFIED_REASON,
       blockedBy: "4.27a",
     });
   });
 
-  it("verification never makes one exact — whatever is ticked", () => {
+  it("once the station frame is ticked in the card's colour the import lands on it, exact; with nothing ticked it stays the nearest", () => {
     for (const key of [...spacecraft, "eoe-253"] as Key[]) {
       const patch = finalizeImportMatch(mapScryfallToFormPatch(printing(key)), EVERY);
-      expect(patch.frame_match, key).toMatchObject({ status: "nearest", signature: "station/2015", reason: STATION_REASON });
-      expect(patch.frame_match?.unverified, key).toBeUndefined();
+      const station = key === "eoe-253" ? "m15stationland" : "m15station";
+      expect(patch.frame_template, key).toBe(station);
+      expect(patch.frame_match, key).toMatchObject({ status: "exact", signature: "station/2015", template: station });
+      // …and the text it lands with is the tiers' grammar: the bands draw.
+      expect(patch.rules_text, key).toMatch(/^\d+\+ \| /m);
     }
-    expect(withVerification(match("eoe-25"), "w", new Set())).toMatchObject({ status: "nearest", reason: STATION_REASON });
+    // Nothing ticked: the artifact frame stands in, and the match says the
+    // station frame is what isn't verified (the Vehicle rule's wording).
+    expect(withVerification(match("eoe-25"), "w", new Set())).toMatchObject({ status: "nearest", template: "m15artifact", reason: "not yet verified in white", unverified: true });
+    expect(match("eoe-253").onceVerified).toBe("m15stationland");
   });
 
   it("the import keeps its landing, its kind and its tiers as plain rules text", () => {
@@ -95,7 +104,7 @@ describe("a bordered station printing is the artifact / land frame's nearest (st
     expect(planet).toMatchObject({ kind: "land", frame_template: "m15land" });
   });
 
-  it("…and now writes a 'missing' row in the request log (none before)", () => {
+  it("…and writes a row in the request log (none before step 0) — 'unverified' since the frame exists", () => {
     const patch = finalizeImportMatch(mapScryfallToFormPatch(printing("eoe-208")), PROD_VERIFIED);
     const row = frameRequestFromImport(patch, { artImported: true, source: "import" });
     expect(row).toMatchObject({
@@ -104,7 +113,7 @@ describe("a bordered station printing is the artifact / land frame's nearest (st
       setCode: "eoe",
       collectorNumber: "208",
       status: "nearest",
-      cause: "missing",
+      cause: "unverified",
       template: "m15artifact",
     });
     expect(frameRequestSchema.safeParse(row).success).toBe(true);

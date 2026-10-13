@@ -549,7 +549,7 @@ type Match = {
 };
 
 /** A family of templates picked by kind (and dress). */
-type Family = "m15" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "m20" | "dfc";
+type Family = "m15" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "m20" | "dfc" | "station";
 
 type TemplateSpec = FrameTemplate | { family: Family };
 
@@ -793,6 +793,12 @@ const FAMILIES: Record<
   Family,
   { produces: readonly FrameTemplate[]; pick: (ctx: Ctx) => FrameTemplate }
 > = {
+  // The station frame (TODO 4.27a): a Planet's is the land master's, every
+  // other station card's (a Spacecraft) the artifact master's.
+  station: {
+    produces: ["m15station", "m15stationland"],
+    pick: ({ facts }) => (facts.kind === "land" ? "m15stationland" : "m15station"),
+  },
   // M15: the era standard for the kind, dressed by the printing's snow /
   // devoid effect and its artifact word (the 1.3 rules, unchanged): a snow
   // land is the snow land frame, a snow spell or snow ARTIFACT the snow frame
@@ -2445,9 +2451,13 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // import lands where it always did — the artifact frame for a Spacecraft,
   // the land frame for a Planet, its tiers as plain rules text — but as that
   // frame's NEAREST, and the request log counts the ask (before this rule
-  // `era/2015` called them exact and nothing was logged). The frame the
-  // build adds is named here once it exists (`onceVerified`, as the Vehicle
-  // rule below) — no template is named before it does.
+  // `era/2015` called them exact and nothing was logged). Since the build
+  // (4.27a step 1) the station frame exists: once `m15station` /
+  // `m15stationland` is verified in the card's colour this rule names it
+  // instead (`onceVerified`, as the Vehicle rule below) and is exact — the
+  // oracle text is already the tiers' grammar (lib/cards/station.ts), so the
+  // import draws its bands as it lands. Until then: the same landing as
+  // before, saying the frame isn't verified.
   {
     key: "station/2015",
     exactLabel: ({ facts }) => (facts.kind === "land" ? "Station frame (Planet)" : "Station frame (Spacecraft)"),
@@ -2455,7 +2465,9 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     outcome: {
       status: "nearest",
       template: { family: "m15" },
-      reason: GAPS.station.reason,
+      onceVerified: { family: "station" },
+      exactOnceVerified: true,
+      reason: "PipGlyph's Station frame isn't verified yet",
       blockedBy: GAPS.station.blockedBy,
     },
   },
@@ -2486,50 +2498,6 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       },
     },
     M15_ERA_GAPS.filter((gap) => gap !== "vehicle"),
-  ),
-  // A Spacecraft or a Planet on the plain 2015 frame (TODO 4.27a; Edge of
-  // Eternities 2025) prints the STATION frame: no frame field, a see-through
-  // text box banded into charge tiers, the P/T on a plate on a tier. Scryfall
-  // calls them `layout: normal` — the subtype is the signature (31 Spacecraft
-  // and 5 Planets, every one a station card). Until `m15station` /
-  // `m15stationland` is verified in the card's colour the artifact / land
-  // frame is the nearest (it was called exact before this rule: the import
-  // now says what is missing and logs the request); once it is, the rule
-  // names the station frame and is exact — the oracle text is already the
-  // tiers' grammar (lib/cards/station.ts), so the card draws its bands as
-  // imported. Extended-art, borderless and showcase printings keep their
-  // own gaps (step 2 lands them here).
-  ...withGaps(
-    {
-      key: "station/spacecraft",
-      exactLabel: "Station frame (Spacecraft)",
-      match: { frames: ["2015"], kinds: ["artifact"], subtypesAny: ["Spacecraft"] },
-      outcome: {
-        status: "nearest",
-        template: { family: "m15" },
-        onceVerified: "m15station",
-        exactOnceVerified: true,
-        reason: "PipGlyph's station frame isn't verified yet",
-        blockedBy: "4.27a",
-      },
-    },
-    M15_ERA_GAPS,
-  ),
-  ...withGaps(
-    {
-      key: "station/planet",
-      exactLabel: "Station frame (Planet)",
-      match: { frames: ["2015"], kinds: ["land"], subtypesAny: ["Planet"] },
-      outcome: {
-        status: "nearest",
-        template: { family: "m15" },
-        onceVerified: "m15stationland",
-        exactOnceVerified: true,
-        reason: "PipGlyph's station frame isn't verified yet",
-        blockedBy: "4.27a",
-      },
-    },
-    M15_ERA_GAPS,
   ),
   ...withGaps(
     {
