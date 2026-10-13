@@ -1,0 +1,481 @@
+{
+  "new transform card — a creature back with its own colour": {
+    "title": "Dusk Ferryman",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "cost": "{U}",
+    "color_identity": [
+      "blue"
+    ],
+    "supertype": "Legendary",
+    "printed_types": "Legendary Creature",
+    "card_type": "creature",
+    "subtypes": [
+      "Human",
+      "Rogue"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "rules_text": "Vigilance\nWhen Dusk Ferryman dies, transform it.",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "flavor_text": "“One coin. Both ways.”",
+    "power": "2",
+    "toughness": "3",
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15dfcfront",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto",
+      "dfcIcon": "sunmoon"
+    },
+    "visibility": "public",
+    "back_face": {
+      "title": "Ferryman of the Drowned",
+      "card_type": "creature",
+      "supertype": "Legendary",
+      "printed_types": "Legendary Creature",
+      "subtypes": [
+        "Spirit",
+        "Horror"
+      ],
+      "rules_text": "Flying\n{T}: Each opponent mills two cards.",
+      "flavor_text": "The river keeps what it is paid.",
+      "power": "4",
+      "toughness": "4",
+      "artist_credit": "Bo Marsh",
+      "art_url": "https://example.com/back.png",
+      "art_position": {
+        "focalX": 0.7,
+        "focalY": 0.25,
+        "scale": 1.15
+      },
+      "frame_style": {
+        "template": "m15dfcbackleft"
+      },
+      "color_identity": [
+        "green"
+      ]
+    },
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new transform card — a land back (colourless), saved as a draft with no back art": {
+    "title": "Dusk Ferryman",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "cost": "{U}",
+    "color_identity": [
+      "green"
+    ],
+    "supertype": "Legendary",
+    "printed_types": "Legendary Creature",
+    "card_type": "creature",
+    "subtypes": [
+      "Human",
+      "Rogue"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "rules_text": "Vigilance\nWhen Dusk Ferryman dies, transform it.",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "flavor_text": "“One coin. Both ways.”",
+    "power": "2",
+    "toughness": "3",
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15dfcfront",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto",
+      "dfcIcon": "arrows"
+    },
+    "visibility": "private",
+    "back_face": {
+      "title": "Drowned Landing",
+      "card_type": "land",
+      "subtypes": [
+        "Island"
+      ],
+      "rules_text": "{T}: Add {U}.",
+      "art_position": {
+        "focalX": 0.5,
+        "focalY": 0.5,
+        "scale": 1
+      },
+      "frame_style": {
+        "template": "m15dfclandback"
+      },
+      "color_identity": [
+        "colorless"
+      ]
+    },
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new modal card — a sorcery back with a cost": {
+    "title": "Dusk Ferryman",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "cost": "{U}",
+    "color_identity": [
+      "red"
+    ],
+    "supertype": "Legendary",
+    "printed_types": "Legendary Creature",
+    "card_type": "creature",
+    "subtypes": [
+      "Human",
+      "Rogue"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "rules_text": "Vigilance\nWhen Dusk Ferryman dies, transform it.",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "flavor_text": "“One coin. Both ways.”",
+    "power": "2",
+    "toughness": "3",
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15mdfcfront",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": {
+      "title": "Ferryman’s Toll",
+      "cost": "{R}{R}",
+      "card_type": "sorcery",
+      "subtypes": [],
+      "rules_text": "Ferryman’s Toll deals 3 damage to any target.",
+      "flavor_text": "Paid in full.",
+      "artist_credit": "Bo Marsh",
+      "art_url": "https://example.com/back.png",
+      "art_position": {
+        "focalX": 0.7,
+        "focalY": 0.25,
+        "scale": 1.15
+      },
+      "frame_style": {
+        "template": "m15mdfcback"
+      },
+      "color_identity": [
+        "red"
+      ]
+    },
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new modal card — a land back following the front's colour": {
+    "title": "Dusk Ferryman",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "cost": "{U}",
+    "color_identity": [
+      "white"
+    ],
+    "supertype": "Legendary",
+    "printed_types": "Legendary Creature",
+    "card_type": "creature",
+    "subtypes": [
+      "Human",
+      "Rogue"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "rules_text": "Vigilance\nWhen Dusk Ferryman dies, transform it.",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "flavor_text": "“One coin. Both ways.”",
+    "power": "2",
+    "toughness": "3",
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15mdfcfront",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": {
+      "title": "Ferry Landing",
+      "card_type": "land",
+      "supertype": "Legendary",
+      "printed_types": "Legendary Land",
+      "subtypes": [],
+      "rules_text": "{T}: Add {W}.",
+      "art_url": "https://example.com/back.png",
+      "art_position": {
+        "focalX": 0.7,
+        "focalY": 0.25,
+        "scale": 1.15
+      },
+      "frame_style": {
+        "template": "m15mdfclandback"
+      },
+      "color_identity": [
+        "white"
+      ]
+    },
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "stored transform card — opened for an edit: the values the form holds": {
+    "staticInEditor": true,
+    "pipOverrides": {},
+    "profileOverrides": null,
+    "title": "Dusk Ferryman",
+    "cost": "{1}{U}",
+    "cardType": "creature",
+    "supertype": "Legendary",
+    "printedTypes": "Legendary Creature",
+    "subtypes": [
+      "Human",
+      "Rogue"
+    ],
+    "rarity": "rare",
+    "colorIdentity": [
+      "blue"
+    ],
+    "rulesText": "Vigilance\nWhen Dusk Ferryman dies, transform it.",
+    "flavorText": "“One coin. Both ways.”",
+    "power": "2",
+    "toughness": "3",
+    "loyalty": "",
+    "defense": "",
+    "artistCredit": "Anya Vale",
+    "artUrl": "https://example.com/front.png",
+    "artPosition": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frameStyle": {
+      "finish": "regular",
+      "template": "m15dfcfront",
+      "crown": true,
+      "collector": "2023",
+      "dfcIcon": "sunmoon"
+    },
+    "setIconUrl": null,
+    "setCode": "MID",
+    "collectorNumber": "44",
+    "lang": "en",
+    "brandMark": false,
+    "footerWatermark": null,
+    "setIconCode": "mid",
+    "faceContent": null,
+    "watermark": null,
+    "backFace": {
+      "title": "Ferryman of the Drowned",
+      "card_type": "creature",
+      "supertype": "Legendary",
+      "printed_types": "Legendary Creature",
+      "subtypes": [
+        "Spirit",
+        "Horror"
+      ],
+      "rules_text": "Flying\n{T}: Each opponent mills two cards.",
+      "flavor_text": "The river keeps what it is paid.",
+      "power": "4",
+      "toughness": "4",
+      "artist_credit": "Bo Marsh",
+      "art_url": "https://example.com/back.png",
+      "art_position": {
+        "focalX": 0.7,
+        "focalY": 0.25,
+        "scale": 1.15
+      },
+      "frame_style": {
+        "template": "m15dfcbackleft"
+      },
+      "color_identity": [
+        "green"
+      ]
+    }
+  },
+  "stored transform card — an edit of one front field sends only that": {
+    "title": "Dusk Ferryman",
+    "printed_types": "Legendary Creature",
+    "rarity": "rare",
+    "cost": "{1}{U}",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "artist_credit": "Anya Vale",
+    "rules_text": "Vigilance\nWhen Dusk Ferryman dies, transform it.",
+    "face_content": null,
+    "flavor_text": "One coin.",
+    "power": "2",
+    "toughness": "3",
+    "set_icon_url": null,
+    "set_icon_code": "mid",
+    "set_code": "MID",
+    "collector_number": "44",
+    "lang": "en",
+    "tags": [
+      "test"
+    ],
+    "watermark": null,
+    "footer_text": "",
+    "visibility": "private",
+    "back_face": {
+      "title": "Ferryman of the Drowned",
+      "card_type": "creature",
+      "supertype": "Legendary",
+      "printed_types": "Legendary Creature",
+      "subtypes": [
+        "Spirit",
+        "Horror"
+      ],
+      "rules_text": "Flying\n{T}: Each opponent mills two cards.",
+      "flavor_text": "The river keeps what it is paid.",
+      "power": "4",
+      "toughness": "4",
+      "artist_credit": "Bo Marsh",
+      "art_url": "https://example.com/back.png",
+      "art_position": {
+        "focalX": 0.7,
+        "focalY": 0.25,
+        "scale": 1.15
+      },
+      "frame_style": {
+        "template": "m15dfcbackleft"
+      },
+      "color_identity": [
+        "green"
+      ]
+    }
+  },
+  "stored transform card — an edit of one back field keeps the rest of the back as stored": {
+    "title": "Dusk Ferryman",
+    "printed_types": "Legendary Creature",
+    "rarity": "rare",
+    "cost": "{1}{U}",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "artist_credit": "Anya Vale",
+    "rules_text": "Vigilance\nWhen Dusk Ferryman dies, transform it.",
+    "face_content": null,
+    "flavor_text": "“One coin. Both ways.”",
+    "power": "2",
+    "toughness": "3",
+    "set_icon_url": null,
+    "set_icon_code": "mid",
+    "set_code": "MID",
+    "collector_number": "44",
+    "lang": "en",
+    "tags": [
+      "test"
+    ],
+    "watermark": null,
+    "footer_text": "",
+    "visibility": "private",
+    "back_face": {
+      "title": "Ferryman of the Drowned",
+      "card_type": "creature",
+      "supertype": "Legendary",
+      "printed_types": "Legendary Creature",
+      "subtypes": [
+        "Spirit",
+        "Horror"
+      ],
+      "rules_text": "Flying\n{T}: Each opponent mills two cards.",
+      "flavor_text": "The river keeps what it is paid.",
+      "power": "5",
+      "toughness": "4",
+      "artist_credit": "Bo Marsh",
+      "art_url": "https://example.com/back.png",
+      "art_position": {
+        "focalX": 0.7,
+        "focalY": 0.25,
+        "scale": 1.15
+      },
+      "frame_style": {
+        "template": "m15dfcbackleft"
+      },
+      "color_identity": [
+        "green"
+      ]
+    }
+  }
+}

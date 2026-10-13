@@ -5,7 +5,7 @@
 // the shared input/textarea class builders, and form-wide option constants
 // used by more than one step. Extracted from card-creator-form.tsx.
 
-import { useEffect, useRef } from "react";
+import { createContext, useContext, useEffect, useRef } from "react";
 import {
   Box,
   Coins,
@@ -76,6 +76,23 @@ export function MoreOptions({
   );
 }
 
+// The face a group of fields belongs to on a card with Face tabs (TODO
+// 5.14): "Front face" / "Back face" from the kind's words. Every FieldGroup
+// inside names itself with it — "Back face — Title" — so a field is heard
+// with its face; the words are visually hidden except where a FieldGroup
+// asks for them (`showFace`: the name and the artwork, as the approved
+// mock-up). No scope (every one-faced card): nothing is added.
+const FaceLabelContext = createContext<string | null>(null);
+
+export function FaceScope({ label, children }: { label: string | null; children: React.ReactNode }) {
+  return <FaceLabelContext.Provider value={label}>{children}</FaceLabelContext.Provider>;
+}
+
+/** The face label of the enclosing FaceScope, or null. */
+export function useFaceLabel(): string | null {
+  return useContext(FaceLabelContext);
+}
+
 /** Elements whose own click does something a FieldGroup must not cancel. */
 const NATIVE_CLICK_TARGETS = "a, button, input, select, textarea, summary";
 
@@ -83,13 +100,18 @@ export function FieldGroup({
   label,
   helper,
   error,
+  showFace = false,
   children,
 }: {
   label: string;
   helper?: string;
   error?: string;
+  /** Inside a FaceScope: show the face's words before the label instead of
+   *  keeping them for screen readers only. */
+  showFace?: boolean;
   children: React.ReactNode;
 }) {
+  const face = useContext(FaceLabelContext);
   return (
     <label
       className="flex flex-col gap-1.5"
@@ -121,6 +143,7 @@ export function FieldGroup({
         data-fieldgroup-text
         className="text-xs font-semibold uppercase tracking-wider text-subtle"
       >
+        {face ? <span className={showFace ? undefined : "sr-only"}>{face} — </span> : null}
         {label}
       </span>
       {children}

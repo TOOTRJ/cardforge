@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -117,7 +118,33 @@ import { LandIconPanel } from "@/components/creator/panels/land-icon-panel";
 import { SetIconPanel } from "@/components/creator/panels/set-icon-panel";
 import { AbilitiesPanel } from "@/components/creator/panels/abilities-panel";
 import { LayoutPanel } from "@/components/creator/panels/layout-panel";
-import { DfcFacePanel } from "@/components/creator/panels/dfc-face-panel";
+import {
+  BackFaceColorSection,
+  BackFaceCostField,
+  BackFaceFlavorField,
+  BackFaceFrameError,
+  BackFaceIdentityFields,
+  BackFaceLockedRows,
+  BackFaceRulesField,
+  BackFaceStatsFields,
+  BackFaceTypeSection,
+} from "@/components/creator/panels/back-face-panels";
+import { DfcIconFamilySection } from "@/components/creator/panels/dfc-setup-sections";
+import { FaceScope } from "@/components/creator/field-group";
+import { FaceSwitch, FaceSwitchNote, FaceThumb, faceTabId } from "@/components/creator/face-switch";
+import { FacePreview } from "@/components/creator/face-preview";
+import { RulesAlignChoice } from "@/components/creator/panels/text-panel";
+import {
+  errorPaths,
+  faceFieldStepIndex,
+  faceOfField,
+  faceStatusOf,
+  firstErrorPath,
+  groupNeedsByFace,
+  needLabelInGroup,
+  type CardFaceId,
+  type FaceNeedGroup,
+} from "@/lib/creator/face-tabs";
 import { DfcAdoptHint } from "@/components/creator/panels/dfc-adopt-hint";
 import {
   PublishPanel,
@@ -283,7 +310,6 @@ import {
   hidesCost,
   panelConfigFor,
   statVisibility,
-  stepIndexForField,
   stepLabel,
   visibleSteps,
   LEGACY_STEP_ALIASES,
@@ -455,6 +481,7 @@ function SaveNeedsLine({
   stepLabelFor,
   onGo,
   hasFieldFor,
+  faceGroups = null,
 }: {
   needs: readonly SaveNeed[];
   stepLabelFor: (field: string) => string;
@@ -463,7 +490,46 @@ function SaveNeedsLine({
    *  of a back face kept on a one-part frame — a legacy double-faced back,
    *  a battle's): it is listed as plain words, never a link to nowhere. */
   hasFieldFor: (field: SaveNeed["field"]) => boolean;
+  /** Face tabs (TODO 5.14): the same items grouped per face — "Front face
+   *  — a title, artwork · Back face — artwork" — each link selecting its
+   *  face's tab as well as its step. Null on every card without the
+   *  switch: the sentence below, as before. */
+  faceGroups?: FaceNeedGroup[] | null;
 }) {
+  if (faceGroups) {
+    return (
+      <div role="status" data-testid="save-needs" data-by-face className="text-xs leading-5 text-gold">
+        Still needed to save:{" "}
+        <ul className="inline" aria-label="Still needed before saving">
+          {faceGroups.map((group, g) => (
+            <li key={group.face} className="inline" data-face-group={group.face}>
+              <span className="font-semibold">{group.label}</span> —{" "}
+              {group.needs.map((need, i) => {
+                const step = stepLabelFor(need.field);
+                const words = needLabelInGroup(need);
+                return (
+                  <span key={need.id}>
+                    <button
+                      type="button"
+                      data-need={need.id}
+                      aria-label={`${group.label}: ${words} — go to this field on the ${group.label} tab${step ? ` of the ${step} step` : ""}`}
+                      title={`Go to this field on the ${group.label} tab${step ? ` of the ${step} step` : ""}`}
+                      onClick={() => onGo(need.field)}
+                      className="rounded-sm font-medium underline decoration-gold/60 underline-offset-2 hover:decoration-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
+                    >
+                      {words}
+                    </button>
+                    {i < group.needs.length - 2 ? ", " : i === group.needs.length - 2 ? " and " : ""}
+                  </span>
+                );
+              })}
+              {g < faceGroups.length - 1 ? " · " : "."}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
   return (
     <div role="status" data-testid="save-needs" className="text-xs leading-5 text-gold">
       Add{" "}
@@ -693,9 +759,13 @@ export function CardCreatorForm({
     replace: boolean;
   } | null>(null);
   const [ideasOpen, setIdeasOpen] = useState(false);
-  // Which face the live preview shows. Auto-flips to the back when the user
-  // reaches the Back-face step (so they see what they're editing); they can
-  // also click the preview itself to flip it any time.
+  // Which face the live preview shows. On a card with Face tabs (a
+  // Transform or Modal double-faced card, TODO 5.14) this IS the selected
+  // tab — the one source of "which face": the steps edit it, the preview
+  // shows it large, and nothing changes it but the switch, the preview's
+  // small other face and a link or an error that names a field of the
+  // other face. On every other card it is the preview's own turn (a legacy
+  // back flips by a click on the card, as before).
   const [previewFace, setPreviewFace] = useState<"front" | "back">("front");
 
   // Listen for hero/palette custom events. Each event is fire-and-forget
@@ -850,6 +920,22 @@ export function CardCreatorForm({
   const dfcBackBody = dfcLayout
     ? bodyFor(dfcLayout, "back", watched.back_face.card_type || null, dfcFamily)
     : null;
+  // ---- Face tabs (TODO 5.14, part 1: Transform and Modal) ----
+  // The switch shows for a double-faced card; `editFace` is the face every
+  // step edits. A card without the switch always edits its front.
+  const faceTabs = dfcLayout !== null;
+  // The switch's words (lib/creator/second-part.ts): the kind's own for a
+  // double-faced card; a battle's too — its Back face tab is greyed out
+  // until battle backs are built (TODO 5.5). Null = no switch.
+  const faceWords = faceTabs || kind === "battle" ? secondPartWordsFor(kind) : null;
+  const editFace: CardFaceId = faceTabs ? previewFace : "front";
+  // A card that gains or loses the switch starts on its front (derived
+  // during render — a kind change, an import, Start over).
+  const [prevFaceTabs, setPrevFaceTabs] = useState(faceTabs);
+  if (prevFaceTabs !== faceTabs) {
+    setPrevFaceTabs(faceTabs);
+    setPreviewFace("front");
+  }
   // The visible steps + their order depend on the kind/frame context
   // (lib/creator/steps.ts). `current` is clamped so it stays valid when the
   // list shrinks (e.g. switching to a token frame hides the Pips step).
@@ -1258,12 +1344,34 @@ export function CardCreatorForm({
     setCurrent(Math.max(0, Math.min(i, steps.length - 1)));
     // Navigating a step always shows the front; the back is reached by adding
     // it (auto-flips, see onBackFaceAdded) or by clicking the preview to flip.
-    setPreviewFace("front");
+    // With Face tabs the selected tab stays: every step edits the face it
+    // names, and the preview never changes face by itself (TODO 5.14).
+    if (!faceTabs) setPreviewFace("front");
   };
   const goToStepKey = (key: StepKey) => {
     const i = steps.findIndex((s) => s.key === key);
     if (i >= 0) goToIndex(i);
   };
+  // ---- Face tabs: a tab change shows the new face's fields from the top ----
+  // The switch stays in view while a step scrolls (it is sticky). Selecting
+  // the other tab swaps the fields under it; if the step was scrolled, the
+  // page is moved — never the focus — so the swapped step starts right
+  // under the switch instead of somewhere in its middle. Declared before
+  // the field-focus effect below: a "still needed" link scrolls to its
+  // field after this.
+  const faceNoteRef = useRef<HTMLParagraphElement | null>(null);
+  const shownFaceRef = useRef(editFace);
+  useEffect(() => {
+    if (shownFaceRef.current === editFace) return;
+    shownFaceRef.current = editFace;
+    const note = faceNoteRef.current;
+    const bar = note?.previousElementSibling;
+    if (!note || !(bar instanceof HTMLElement) || typeof window.scrollBy !== "function") return;
+    const barBottom = bar.getBoundingClientRect().bottom;
+    const top = note.getBoundingClientRect().top;
+    if (top < barBottom) window.scrollBy({ top: top - barBottom - 12, behavior: "auto" });
+  }, [editFace]);
+
   // ---- "Still needed" links (TODO 5.14) ----
   // Each thing Save still needs is a link: it opens the step that holds the
   // field, opens a closed "More options" fold above it, scrolls it into view
@@ -1272,8 +1380,16 @@ export function CardCreatorForm({
   const stepPanelsRef = useRef<HTMLDivElement | null>(null);
   const pendingFieldFocusRef = useRef<string | null>(null);
   const [fieldFocusTick, setFieldFocusTick] = useState(0);
+  /** The step a field is edited on: with Face tabs a back field is on the
+   *  step of its front twin (lib/creator/face-tabs.ts). */
+  const fieldStepIndex = (field: string) => faceFieldStepIndex(field, steps, faceTabs);
+  /** Open a field's step — and, with Face tabs, its face's tab. */
+  const showField = (field: string) => {
+    goToIndex(fieldStepIndex(field));
+    if (faceTabs) setPreviewFace(faceOfField(field));
+  };
   const goToField = (field: string) => {
-    goToIndex(stepIndexForField(field, steps));
+    showField(field);
     pendingFieldFocusRef.current = field;
     setFieldFocusTick((tick) => tick + 1);
   };
@@ -1285,7 +1401,7 @@ export function CardCreatorForm({
   }, [fieldFocusTick]);
   /** The step a still-needed item lives on, for its link's name. */
   const stepLabelForField = (field: string) => {
-    const step = steps[stepIndexForField(field, steps)];
+    const step = steps[fieldStepIndex(field)];
     return step ? stepLabel(step) : "";
   };
   // Keep the listener-facing nav handle pointed at the latest closure (the
@@ -1302,16 +1418,22 @@ export function CardCreatorForm({
 
   // Which steps own a field that currently has an error — drives the step
   // marker's error state. Routes nested back_face.* errors to their root.
-  const stepsWithErrors = useMemo(() => {
+  const stepsWithErrors = (() => {
     const map = buildFieldToStep();
     const set = new Set<StepKey>();
-    for (const name of Object.keys(errors)) {
+    for (const name of errorPaths(errors)) {
+      // With Face tabs a back field's error lights the step it is on.
+      if (faceTabs && faceOfField(name) === "back") {
+        const step = steps[faceFieldStepIndex(name, steps, true)];
+        if (step) set.add(step.key);
+        continue;
+      }
       const root = name.split(".")[0] as keyof FormValues;
       const key = map.get(root);
       if (key) set.add(key);
     }
     return set;
-  }, [errors]);
+  })();
 
   const stepperSteps: StepperStep[] = steps.map((step) => ({
     key: step.key,
@@ -2408,7 +2530,11 @@ export function CardCreatorForm({
       goToStepKey("card");
       // After the step change (which shows the front): the face the walk
       // asked for — the back of a back body, or `?face=back` (TODO 5.0b).
-      setPreviewFace(walkthrough.previewFace);
+      // …in a task of its own: a card that has just gained the Face tabs
+      // starts on its front (the reset beside `faceTabs`), and the face
+      // the walk names comes after that.
+      const face = walkthrough.previewFace;
+      window.setTimeout(() => setPreviewFace(face), 0);
     }, 0);
     return () => window.clearTimeout(timer);
     // Apply-once (the ref); the handlers are recreated per render.
@@ -2996,7 +3122,7 @@ export function CardCreatorForm({
         }
         // Jump to the step owning the first errored field (falls back to the
         // last step if that step isn't currently visible).
-        if (firstErrorField) goToIndex(stepIndexForField(firstErrorField, steps));
+        if (firstErrorField) showField(firstErrorField);
         return unrendered.length > 0 ? unrendered.join(" ") : null;
       };
 
@@ -3354,6 +3480,50 @@ export function CardCreatorForm({
     onFaceChange: setPreviewFace,
     flipOnClick: true,
   };
+  // ---- Face tabs: the switch and the two-face preview (TODO 5.14) ----
+  const facePanelId = useId();
+  const switchFace = (next: CardFaceId) => setPreviewFace(next);
+  /** What the line under the switch says on this step. */
+  const faceSwitchNote = !faceWords
+    ? undefined
+    : !faceTabs
+      ? // A battle: its back has no editor yet (TODO 5.5).
+        `${faceWords.unavailableNote}.`
+      : stepKey === "card"
+        ? "The type and the colour below are the selected face's. The card type, the frame and its variations are shared by both faces."
+        : stepKey === "identity" || stepKey === "text"
+          ? "Every step shows the same fields, in the same order, for whichever face is selected. Rarity, set symbol and the collector line are shared by both faces."
+          : "Everything on this step is shared by both faces. The switch still chooses which face the preview shows.";
+  const faceNoteId = `${facePanelId}-note`;
+  const faceSwitch = faceWords ? (
+    <>
+    <FaceSwitch
+      words={faceWords}
+      value={editFace}
+      onChange={switchFace}
+      panelId={facePanelId}
+      noteId={faceSwitchNote ? faceNoteId : undefined}
+      // In view while the step scrolls, under the site header.
+      className="sticky top-[4.25rem] z-20"
+      front={{
+        name: watched.title,
+        status: faceTabs ? faceStatusOf({ title: watched.title, art_url: watched.art_url }) : null,
+        // (A battle is a wide card with no back yet: no pictures.)
+        thumb: faceTabs ? <FaceThumb artUrl={watched.art_url || null} /> : undefined,
+      }}
+      back={{
+        name: watched.back_face.title,
+        status: faceTabs ? faceStatusOf(watched.back_face) : null,
+        thumb: faceTabs ? <FaceThumb artUrl={watched.back_face.art_url || null} /> : undefined,
+      }}
+    />
+    {faceSwitchNote ? (
+      <FaceSwitchNote id={faceNoteId} ref={faceNoteRef}>
+        {faceSwitchNote}
+      </FaceSwitchNote>
+    ) : null}
+    </>
+  ) : null;
 
   // The art windows the positioners show (TODO 3b.13): the boxes the two
   // renderers crop each face's art to on the frame, colour and faces the
@@ -3457,7 +3627,20 @@ export function CardCreatorForm({
     </p>
   );
   const stepPanels = (
-    <div className="relative" ref={stepPanelsRef}>
+    <div
+      // Under the switch a focused field scrolls clear of it (and of the
+      // site header), never beneath them.
+      className={
+        faceWords
+          ? "relative [&_:is(input,textarea,select,button,summary,[contenteditable='true'])]:scroll-mt-44"
+          : "relative"
+      }
+      ref={stepPanelsRef}
+      // With the switch, the step is the tab's panel — named by the tab.
+      {...(faceWords
+        ? { role: "tabpanel", id: facePanelId, "aria-labelledby": faceTabId(facePanelId, editFace) }
+        : {})}
+    >
       {readOnly ? <GuestGate /> : null}
       {mode !== "edit" && !readOnly ? (
         <CapacityNotice capacity={capacity} adding={1} className="mb-6" />
@@ -3468,6 +3651,9 @@ export function CardCreatorForm({
         className={readOnly ? "flex flex-col gap-6 select-none opacity-60" : "flex flex-col gap-6"}
         inert={readOnly || undefined}
       >
+            {/* A refused back body, type or colour (the server's gate) is
+                said at the top of the Back face tab. */}
+            {faceTabs && editFace === "back" ? <BackFaceFrameError /> : null}
             {/* ----- Card setup (step 1 — type, frame & color) ----- */}
             {stepKey === "card" ? (
               <CardSetupPanel
@@ -3507,6 +3693,22 @@ export function CardCreatorForm({
                 }
                 onLandModeChange={handleLandModeChange}
                 onDfcFaceTypePick={handleDfcFaceTypePick}
+                // The Back face tab (TODO 5.14): the back's own type and
+                // colour stand where the front's are.
+                backFace={
+                  dfcLayout && editFace === "back"
+                    ? {
+                        type: <BackFaceTypeSection layout={dfcLayout} backBody={dfcBackBody} />,
+                        color: (
+                          <BackFaceColorSection
+                            backBody={dfcBackBody}
+                            frontColorIdentity={watched.color_identity}
+                            verifiedFrameKeys={verifiedFrameSet}
+                          />
+                        ),
+                      }
+                    : null
+                }
               />
             ) : null}
             {/* The two-colour frame's switch (TODO 4.6b), under the colour —
@@ -3521,6 +3723,30 @@ export function CardCreatorForm({
             {stepKey === "identity" ? (
               <>
                 {isRevise ? <LockedSummary mode={mode} /> : null}
+                {/* An edit has no Card step: a transform card's icon pair —
+                    the card's, shared by both faces — is chosen here. */}
+                {isRevise && dfcLayout === "transform" ? (
+                  <DfcIconFamilySection
+                    family={watched.frame_style?.dfcIcon ?? null}
+                    onChange={(next) => setValue("frame_style.dfcIcon", next, { shouldDirty: true })}
+                    testId="dfc-icon-family-revise"
+                  />
+                ) : null}
+                {dfcLayout && editFace === "back" ? (
+                  // The Back face tab (TODO 5.14): the back's name, type
+                  // line, artwork and artist, in the front's order.
+                  <FaceScope label={faceWords?.second ?? null}>
+                    {isRevise ? <BackFaceLockedRows frontColorIdentity={watched.color_identity} /> : null}
+                    <BackFaceIdentityFields
+                      userId={userId}
+                      layout={dfcLayout}
+                      // A back with no body yet draws on the front's frame.
+                      artWindow={artWindows.back ?? artWindows.front}
+                      blankBackFace={blankSecondFaceFor(kind)}
+                    />
+                  </FaceScope>
+                ) : (
+                  <FaceScope label={faceTabs ? (faceWords?.first ?? null) : null}>
                 <IdentityPanel revise={isRevise} token={kind === "token"} emblem={kind === "emblem"} />
                 {/* The printed-details switches (TODO 4.6.0): the crown
                     beside the Legendary supertype; on an edit or a remix —
@@ -3587,37 +3813,39 @@ export function CardCreatorForm({
                     ) : undefined
                   }
                 />
-                {/* The back face of a double-faced card (TODO 5.2): its own
-                    panel under the front's art block. Focusing it flips the
-                    live preview to the back. */}
-                {dfcLayout ? (
-                  <DfcFacePanel
-                    userId={userId}
-                    // A back with no body yet draws on the front's frame.
-                    artWindow={artWindows.back ?? artWindows.front}
-                    layout={dfcLayout}
-                    backBody={dfcBackBody}
-                    frontColorIdentity={watched.color_identity}
-                    verifiedFrameKeys={verifiedFrameSet}
-                    revise={isRevise}
-                    family={watched.frame_style?.dfcIcon ?? null}
-                    onFamilyChange={(next) =>
-                      setValue("frame_style.dfcIcon", next, { shouldDirty: true })
-                    }
-                    backRulesTextRef={backRulesTextRef}
-                    onInsertSymbol={(token) => insertSymbol(backRulesTextRef, token)}
-                    onFocus={() => setPreviewFace("back")}
-                    blankBackFace={blankSecondFaceFor(kind)}
-                  />
-                ) : null}
+                  </FaceScope>
+                )}
               </>
             ) : null}
 
             {/* ----- Text & stats panel (cost + rarity, rules/flavor, type-gated
                 stats). Cost and rarity moved here from Identity (owner
                 decision 2026-09-16). ----- */}
-            {stepKey === "text" ? (
+            {stepKey === "text" && dfcLayout && editFace === "back" ? (
+              // The Back face tab (TODO 5.14): the back's cost, rules,
+              // flavour and stats where the front's are, in the same order.
+              // Rarity and the text alignment are the card's — shared by
+              // both faces — and stay in their places.
               <>
+                <FaceScope label={faceWords?.second ?? null}>
+                  <BackFaceCostField layout={dfcLayout} />
+                </FaceScope>
+                {!kindHidesRarity(kind) ? <RarityPanel /> : null}
+                <FaceScope label={faceWords?.second ?? null}>
+                  <BackFaceRulesField
+                    layout={dfcLayout}
+                    backRulesTextRef={backRulesTextRef}
+                    onInsertSymbol={(token) => insertSymbol(backRulesTextRef, token)}
+                  />
+                </FaceScope>
+                <RulesAlignChoice />
+                <FaceScope label={faceWords?.second ?? null}>
+                  <BackFaceFlavorField />
+                  <BackFaceStatsFields backBody={dfcBackBody} />
+                </FaceScope>
+              </>
+            ) : stepKey === "text" ? (
+              <FaceScope label={faceTabs ? (faceWords?.first ?? null) : null}>
                 {!hidesCost(watched.frame_style?.template) ? (
                   <PipsPanel
                     frameTemplate={watched.frame_style?.template}
@@ -3629,7 +3857,12 @@ export function CardCreatorForm({
                     the token kind hides the chips (owner 2026-09-29) — a
                     new token (and a token's remix) is common, a stored one
                     keeps its rarity. */}
-                {!kindHidesRarity(kind) ? <RarityPanel /> : null}
+                {!kindHidesRarity(kind) ? (
+                  // The card's, not a face's: no face in its name.
+                  <FaceScope label={null}>
+                    <RarityPanel />
+                  </FaceScope>
+                ) : null}
                 {landBasicKey ? (
                   // Basic lands print a large mana symbol instead of rules
                   // text — so this step is the ICON step: follow the land
@@ -3679,7 +3912,7 @@ export function CardCreatorForm({
                     />
                   </div>
                 ) : null}
-              </>
+              </FaceScope>
             ) : null}
 
             {/* ----- Set icon panel (the type-line symbol, a direct card field) ----- */}
@@ -3852,8 +4085,8 @@ export function CardCreatorForm({
                     onFailure: setLeaveSaveError,
                   }),
                 (formErrors) => {
-                  const first = Object.keys(formErrors)[0];
-                  if (first) goToIndex(stepIndexForField(first, steps));
+                  const first = firstErrorPath(formErrors);
+                  if (first) showField(first);
                   setLeaveSaveError(
                     `Not saved: ${firstErrorMessage(formErrors) ?? "fix the highlighted field first."}`,
                   );
@@ -3908,6 +4141,7 @@ export function CardCreatorForm({
                   hasInlineBackFace(watched.frame_style?.template) ||
                   dfcLayout !== null
                 }
+                faceGroups={faceTabs && faceWords ? groupNeedsByFace(saveNeeds, faceWords) : null}
               />
             ) : userId && saveDisabledReason ? (
               <p
@@ -4071,8 +4305,8 @@ export function CardCreatorForm({
     (values) => runSubmit(values, "save"),
     (formErrors) => {
       // Client validation blocked the save — jump to the first errored step.
-      const first = Object.keys(formErrors)[0];
-      if (first) goToIndex(stepIndexForField(first, steps));
+      const first = firstErrorPath(formErrors);
+      if (first) showField(first);
     },
   );
 
@@ -4094,7 +4328,7 @@ export function CardCreatorForm({
               Live preview · click a part of the card to edit it
             </p>
             <div className="relative w-full max-w-md">
-              <CardPreview {...previewProps} flipOnClick={false} />
+              <CardPreview {...previewProps} flipOnClick={false} hideFlipControl={faceTabs} />
               {previewOverlays}
               {readOnly ? null : (
                 <CanvasHotspots
@@ -4121,6 +4355,7 @@ export function CardCreatorForm({
           >
             {fillOverlay}
             {serverErrorBlock}
+            {faceSwitch}
             {stepPanels}
             {dialogs}
             {actionBar}
@@ -4165,6 +4400,11 @@ export function CardCreatorForm({
               className="xl:hidden"
             />
 
+            {/* Face tabs (TODO 5.14): ONE switch at the top of every step
+                of a double-faced card — above the phone's preview, so the
+                face it shows is said first. */}
+            {faceSwitch}
+
             {/* Mobile inline preview — keeps the card visible while editing
                 (the desktop sticky aside is hidden below lg). CSS-only toggle. */}
             <details
@@ -4182,12 +4422,28 @@ export function CardCreatorForm({
                   <span className="hidden group-open/preview:inline">Hide the preview</span>
                 </span>
               </summary>
+              {faceTabs && faceWords ? (
+                // The face being edited large, the other one small beside
+                // it — tap it to switch (the same state as the tabs).
+                <div className="px-4 pb-4">
+                  <FacePreview
+                    previewProps={previewProps}
+                    face={editFace}
+                    onFaceChange={switchFace}
+                    words={faceWords}
+                    layout="inline"
+                  >
+                    {previewOverlays}
+                  </FacePreview>
+                </div>
+              ) : (
               <div className="mx-auto w-full max-w-[220px] px-4 pb-4">
                 <div className="relative">
                   <CardPreview {...previewProps} />
                   {previewOverlays}
                 </div>
               </div>
+              )}
             </details>
 
             {stepPanels}
@@ -4204,12 +4460,24 @@ export function CardCreatorForm({
             <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
               Live preview
             </p>
+            {faceTabs && faceWords ? (
+              <FacePreview
+                previewProps={previewProps}
+                face={editFace}
+                onFaceChange={switchFace}
+                words={faceWords}
+                layout="aside"
+              >
+                {previewOverlays}
+              </FacePreview>
+            ) : (
             <div className="mx-auto w-full max-w-sm">
               <div className="relative">
                 <CardPreview {...previewProps} />
                 {previewOverlays}
               </div>
             </div>
+            )}
             {visibilityNote}
           </div>
         </aside>

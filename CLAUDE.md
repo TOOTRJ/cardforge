@@ -258,6 +258,15 @@ Rules and gotchas:
   before 5.4; a TRANSFORM land back goes colourless — that pair is verified
   on `c` alone — while the modal land back keeps the front's colour, one
   tint per colour).
+  In the creator a Transform / Modal card has ONE Front face | Back face
+  switch above every step (Face tabs, 5.14 part 1: `face-switch.tsx`, words
+  from `SECOND_PART_WORDS`; a battle's Back tab is greyed out until 5.5) —
+  the tab is the one source of "which face": each back field sits on the
+  step of its front twin (`panels/back-face-panels.tsx`, `BACK_FIELD_STEP`
+  in `lib/creator/face-tabs.ts`; the same `back_face.*` paths), the preview
+  shows that face large with the other small and never turns by itself.
+  A "still needed" link or a server error on a back field selects its tab
+  as well as its step; one-faced cards render no switch.
   A card on a DFC body (a back with a body: `bakedBackOf`, 5.3) bakes TWO
   PNGs + TWO thumbs — the back's `{id}.back.png` / `.back.thumb.webp`
   through `renderBackFace` in both bake paths, the four pointers in ONE

@@ -404,6 +404,16 @@ body {
   transition: opacity 300ms ease-out;
 }
 
+/* The creator's two-face preview (TODO 5.14, components/creator/
+ * face-preview.tsx): selecting the other tab turns the card over; with
+ * reduced motion the faces swap in place. */
+@media (prefers-reduced-motion: reduce) {
+  .face-preview-still,
+  .face-preview-still * {
+    transition-duration: 0s !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .card-hover-rotor {
     transform: none !important;

@@ -293,6 +293,10 @@ type CardPreviewProps = CardPreviewData & {
    *  click/tap target that flips it, with a hover hint prompting the user —
    *  instead of the small corner flip button. Used in the editor preview. */
   flipOnClick?: boolean;
+  /** Draw no flip control of the preview's own (neither the whole-card
+   *  click nor the corner button): the creator's Face tabs (TODO 5.14) are
+   *  the one switch, and `face` follows them. */
+  hideFlipControl?: boolean;
 };
 
 // Which face a text is set in is decided by ONE resolver both renderers read
@@ -411,6 +415,7 @@ export function CardPreview(rawProps: CardPreviewProps) {
     face,
     onFaceChange,
     flipOnClick = false,
+    hideFlipControl = false,
     backCard,
     className,
     staticInEditor = false,
@@ -601,7 +606,7 @@ export function CardPreview(rawProps: CardPreviewProps) {
   };
   // Whole-card click-to-flip (editor preview) vs the small corner button
   // (gallery / detail). Only meaningful when there's a flippable back face.
-  const clickToFlip = showFlip && flipOnClick;
+  const clickToFlip = showFlip && flipOnClick && !hideFlipControl;
 
   const faceProps = {
     template,
@@ -720,7 +725,7 @@ export function CardPreview(rawProps: CardPreviewProps) {
       ) : null}
 
       {/* Small corner flip button — gallery / detail pages (no whole-card click). */}
-      {showFlip && !clickToFlip ? (
+      {showFlip && !clickToFlip && !hideFlipControl ? (
         <button
           type="button"
           onClick={(event) => {

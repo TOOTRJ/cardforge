@@ -4789,8 +4789,13 @@ change, no bump, no sweep.
   "arrows"` and forces the back face on (`panelConfigFor.forcedBackFace`,
   `blankSecondFaceFor` types it a creature); leaving the kind drops the
   face with the frame.
-- **The back-face panel** (`components/creator/panels/dfc-face-panel.tsx`,
-  modelled on `layout-panel.tsx`): its own SurfaceCard "Back face" on the
+- **The back-face panel** — *since TODO 5.14 (Face tabs, part 1) the panel
+  is gone: a Transform / Modal card has ONE Front face | Back face switch
+  above every step and each back field sits on the step of its front twin
+  (`components/creator/panels/back-face-panels.tsx`, `face-switch.tsx`,
+  `face-preview.tsx`, `lib/creator/face-tabs.ts`); the fields, their form
+  paths and every rule below are unchanged.* As built in 5.2 (one panel,
+  `DfcFacePanel`, modelled on `layout-panel.tsx`): its own SurfaceCard "Back face" on the
   Identity step under the front's art block (never inside "More options" —
   a whole face is not an option). Back type chips (`DFC_FACE_TYPES` →
   `back_face.card_type`), colour chips (`ColorSection`, extracted to

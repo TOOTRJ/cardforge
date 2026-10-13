@@ -60,7 +60,7 @@ vi.mock("@/components/cards/card-preview", () => ({
 }));
 
 import { CardCreatorForm } from "@/components/creator/card-creator-form";
-import { MODAL_LAND_BACK_COST_HINT } from "@/components/creator/panels/dfc-face-panel";
+import { MODAL_LAND_BACK_COST_HINT } from "@/components/creator/panels/back-face-panels";
 
 const GAME = "33333333-3333-4333-8333-333333333333";
 const USER = "11111111-1111-4111-8111-111111111111";
@@ -141,7 +141,15 @@ const activeStep = () =>
     ?.textContent ?? "";
 const field = <T extends HTMLElement = HTMLInputElement>(name: string) =>
   document.querySelector<T>(`[name='${name}']`);
+/** Select a tab of the Front face | Back face switch (Face tabs, TODO 5.14). */
+async function faceTab(name: RegExp) {
+  await click(screen.getByRole("tab", { name }));
+}
 async function type(name: string, value: string) {
+  // On a card with Face tabs a field is on its own face's tab.
+  if (!field(name) && screen.queryByTestId("face-switch")) {
+    await faceTab(name.startsWith("back_face.") ? /^Back face/ : /^Front face/);
+  }
   const el = field(name);
   if (!el) throw new Error(`no field ${name}`);
   await act(async () => {
@@ -273,25 +281,31 @@ describe("2 · each “still needed” item is a link to its field", () => {
     renderForm();
     await pickKind(/^Transform/);
     const line = screen.getByTestId("save-needs");
+    // A card with Face tabs (TODO 5.14) groups the same items per face.
     expect(line.textContent).toBe(
-      "Add a title, artwork, the back face's artwork and the back face's name to enable Save.",
+      "Still needed to save: Front face — a title and artwork · Back face — artwork and a name.",
     );
     const save = screen.getByRole("button", { name: /^Save$/ }) as HTMLButtonElement;
     expect(save.disabled).toBe(true);
-    // The button's hover text is the sentence the line reads as.
-    expect(save.title).toBe(line.textContent);
+    // The button's hover text is the Save rule's own sentence, as before.
+    expect(save.title).toBe(
+      "Add a title, artwork, the back face's artwork and the back face's name to enable Save.",
+    );
     const list = within(line).getByRole("list", { name: "Still needed before saving" });
-    expect(within(list).getAllByRole("listitem")).toHaveLength(4);
-    // Each link is named by its words and says where it goes.
-    expect(need("title")!.getAttribute("aria-label")).toBe("a title — go to this field on the Identity step");
+    expect(within(list).getAllByRole("listitem")).toHaveLength(2);
+    expect(line.querySelectorAll("button[data-need]")).toHaveLength(4);
+    // Each link is named by its face and its words and says where it goes.
+    expect(need("title")!.getAttribute("aria-label")).toBe(
+      "Front face: a title — go to this field on the Front face tab of the Identity step",
+    );
     expect(need("second-art")!.getAttribute("aria-label")).toBe(
-      "the back face's artwork — go to this field on the Identity step",
+      "Back face: artwork — go to this field on the Back face tab of the Identity step",
     );
 
     // A draft needs a title only: the list follows the rule.
     await goTo(/^publish/i);
     await click(screen.getByTestId("save-as-draft"));
-    expect(screen.getByTestId("save-needs").textContent).toBe("Add a title to enable Save.");
+    expect(screen.getByTestId("save-needs").textContent).toBe("Still needed to save: Front face — a title.");
     await goTo(/^identity/i);
     await type("title", "Delver of Secrets");
     expect(screen.queryByTestId("save-needs")).toBeNull();
@@ -315,13 +329,21 @@ describe("2 · each “still needed” item is a link to its field", () => {
 
     await goTo(/^publish/i);
     await click(need("second-art")!);
+    // The link selected the Back face TAB as well as the step.
+    expect(activeStep()).toMatch(/Identity/);
+    expect(screen.getByRole("tab", { name: /^Back face/ }).getAttribute("aria-selected")).toBe("true");
     const backArt = document.querySelector("[data-field-anchor='back_face.art_url']");
-    expect(backArt?.closest("[data-testid='dfc-face-panel']")).toBeTruthy();
+    expect(backArt).toBeTruthy();
     expect(document.activeElement).toBe(backArt);
 
     await goTo(/^card/i);
     await click(need("second-name")!);
     expect(document.activeElement).toBe(field("back_face.title"));
+    // …and a front item selects the Front face tab again.
+    await goTo(/^publish/i);
+    await click(need("art")!);
+    expect(screen.getByRole("tab", { name: /^Front face/ }).getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(document.querySelector("[data-field-anchor='art_url']"));
   });
 
   it("a field inside a closed “More options” fold: the fold opens, then the field is focused", async () => {
@@ -388,8 +410,10 @@ describe("3 · every kind's second part has its own words", () => {
   it("a transform back keeps “Back face” and its own example; a modal back has a modal card's", async () => {
     renderForm();
     await pickKind(/^Transform/);
+    await faceTab(/^Back face/);
     await goTo(/^identity/i);
     expect(field("back_face.title")!.getAttribute("placeholder")).toBe("Insectile Aberration");
+    await goTo(/^text/i);
     expect(screen.getByLabelText("Back face rules text")).toBeTruthy();
     await goTo(/^card/i);
     await pickKind(/^Modal double-faced/);
@@ -400,12 +424,15 @@ describe("3 · every kind's second part has its own words", () => {
   it("a modal LAND back's Cost field says a land has no cost; a spell back's says nothing", async () => {
     renderForm();
     await pickKind(/^Modal double-faced/);
-    await goTo(/^identity/i);
+    await faceTab(/^Back face/);
+    await goTo(/^text/i);
     expect(screen.queryByText(MODAL_LAND_BACK_COST_HINT)).toBeNull();
+    await goTo(/^card/i);
     const backTypes = screen.getByRole("radiogroup", { name: "Back face type" });
     await click(
       Array.from(backTypes.querySelectorAll("[role='radio']")).find((el) => /^Land/.test(el.textContent ?? ""))!,
     );
+    await goTo(/^text/i);
     expect(screen.getByText(MODAL_LAND_BACK_COST_HINT)).toBeTruthy();
   });
 

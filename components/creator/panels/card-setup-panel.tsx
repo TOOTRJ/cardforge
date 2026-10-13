@@ -170,6 +170,12 @@ type CardSetupPanelProps = {
    *  orchestrator, which writes the type, moves the card onto the body for
    *  it (the land front for a land) and keeps the colour verified. */
   onDfcFaceTypePick?: (next: CardType) => void;
+  /** Face tabs (TODO 5.14): while the Back face tab is selected, the back's
+   *  own type and colour sections stand where the front's "Front face" row
+   *  and the Color section are — the card type, the icons, the frame and
+   *  its variations are the card's (shared) and stay. Absent on every card
+   *  without the switch and on the Front face tab. */
+  backFace?: { type: React.ReactNode; color: React.ReactNode } | null;
 };
 
 export function CardSetupPanel({
@@ -186,6 +192,7 @@ export function CardSetupPanel({
   landBasicDisabledReason = null,
   onLandModeChange,
   onDfcFaceTypePick,
+  backFace = null,
 }: CardSetupPanelProps) {
   const { control, setValue, getValues, clearErrors } =
     useFormContext<FormValues>();
@@ -333,13 +340,17 @@ export function CardSetupPanel({
           front for a land), the back body follows the family. */}
       {dfcLayoutForKind(kind) ? (
         <>
-          <DfcFaceTypeSection
-            kind={kind}
-            cardType={cardType}
-            colorKey={colorKey as FrameColorKey}
-            verifiedKeys={verifiedKeys}
-            onPick={onDfcFaceTypePick}
-          />
+          {backFace ? (
+            backFace.type
+          ) : (
+            <DfcFaceTypeSection
+              kind={kind}
+              cardType={cardType}
+              colorKey={colorKey as FrameColorKey}
+              verifiedKeys={verifiedKeys}
+              onPick={onDfcFaceTypePick}
+            />
+          )}
           {dfcLayoutForKind(kind) === "transform" ? (
             <DfcIconFamilySection
               family={dfcIcon}
@@ -745,7 +756,9 @@ export function CardSetupPanel({
 
       {/* 3 · Color — last on purpose (pure PNG swap; never moves layout).
           An emblem has none (TODO 6.23): its frame is silver. */}
-      {kind === "emblem" ? null : (
+      {kind === "emblem" ? null : backFace ? (
+        backFace.color
+      ) : (
       <Controller
         control={control}
         name="color_identity"
