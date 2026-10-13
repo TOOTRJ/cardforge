@@ -477,5 +477,942 @@
         "green"
       ]
     }
+  },
+  "new split card — both parts filled, every field the second part is offered": {
+    "title": "Fire",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "cost": "{R}",
+    "color_identity": [
+      "red"
+    ],
+    "printed_types": null,
+    "card_type": "instant",
+    "subtypes": [
+      "Arcane"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "rules_text": "Fire deals 2 damage to any target.",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "flavor_text": "“A quiet evening” — never.",
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "split",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": {
+      "title": "Ice",
+      "cost": "{U}{U}",
+      "card_type": "sorcery",
+      "supertype": "Legendary",
+      "printed_types": "Legendary Sorcery",
+      "subtypes": [
+        "Arcane",
+        "Trap"
+      ],
+      "rules_text": "Tap target permanent.\nDraw a card.",
+      "flavor_text": "Cold comfort — “and little of it”.",
+      "power": "1",
+      "toughness": "2",
+      "loyalty": "3",
+      "defense": "4",
+      "artist_credit": "Bo Marsh",
+      "art_url": "https://example.com/back.png",
+      "art_position": {
+        "focalX": 0.7,
+        "focalY": 0.25,
+        "scale": 1.15
+      }
+    },
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "stored split card — opened for an edit: the values the form holds": {
+    "staticInEditor": true,
+    "pipOverrides": {},
+    "profileOverrides": null,
+    "title": "Fire",
+    "cost": "{1}{R}",
+    "cardType": "instant",
+    "supertype": null,
+    "printedTypes": null,
+    "subtypes": [],
+    "rarity": "uncommon",
+    "colorIdentity": [
+      "red"
+    ],
+    "rulesText": "Fire deals 2 damage to any target.",
+    "flavorText": "It was never going to be a quiet evening.",
+    "power": "",
+    "toughness": "",
+    "loyalty": "",
+    "defense": "",
+    "artistCredit": "Anya Vale",
+    "artUrl": "https://example.com/front.png",
+    "artPosition": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frameStyle": {
+      "finish": "regular",
+      "template": "split"
+    },
+    "setIconUrl": null,
+    "setCode": null,
+    "collectorNumber": null,
+    "lang": "en",
+    "brandMark": false,
+    "footerWatermark": null,
+    "setIconCode": null,
+    "faceContent": null,
+    "watermark": null,
+    "backFace": {
+      "title": "Ice",
+      "cost": "{1}{U}",
+      "card_type": "sorcery",
+      "supertype": "Legendary",
+      "subtypes": [
+        "Arcane"
+      ],
+      "rules_text": "Tap target permanent.\nDraw a card.",
+      "flavor_text": "Cold comfort.",
+      "power": "1",
+      "toughness": "2",
+      "loyalty": "3",
+      "defense": "4",
+      "artist_credit": "Bo Marsh",
+      "art_url": "https://example.com/back.png",
+      "art_position": {
+        "focalX": 0.7,
+        "focalY": 0.25,
+        "scale": 1.15
+      }
+    }
+  },
+  "stored split card — an edit of the first part only keeps the second part as stored": {
+    "title": "Fire",
+    "printed_types": null,
+    "rarity": "uncommon",
+    "cost": "{1}{R}",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "artist_credit": "Anya Vale",
+    "rules_text": "Fire deals 3 damage to any target.",
+    "face_content": null,
+    "flavor_text": "It was never going to be a quiet evening.",
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "tags": [
+      "test"
+    ],
+    "watermark": null,
+    "footer_text": "",
+    "visibility": "public",
+    "back_face": {
+      "title": "Ice",
+      "cost": "{1}{U}",
+      "card_type": "sorcery",
+      "supertype": "Legendary",
+      "subtypes": [
+        "Arcane"
+      ],
+      "rules_text": "Tap target permanent.\nDraw a card.",
+      "flavor_text": "Cold comfort.",
+      "power": "1",
+      "toughness": "2",
+      "loyalty": "3",
+      "defense": "4",
+      "artist_credit": "Bo Marsh",
+      "art_url": "https://example.com/back.png",
+      "art_position": {
+        "focalX": 0.7,
+        "focalY": 0.25,
+        "scale": 1.15
+      }
+    }
+  },
+  "stored split card — an edit of the second part only keeps the rest of it as stored": {
+    "title": "Fire",
+    "printed_types": null,
+    "rarity": "uncommon",
+    "cost": "{1}{R}",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "artist_credit": "Anya Vale",
+    "rules_text": "Fire deals 2 damage to any target.",
+    "face_content": null,
+    "flavor_text": "It was never going to be a quiet evening.",
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "tags": [
+      "test"
+    ],
+    "watermark": null,
+    "footer_text": "",
+    "visibility": "public",
+    "back_face": {
+      "title": "Ice",
+      "cost": "{1}{U}",
+      "card_type": "sorcery",
+      "supertype": "Legendary",
+      "subtypes": [
+        "Arcane"
+      ],
+      "rules_text": "Tap up to two target permanents.",
+      "flavor_text": "Cold comfort.",
+      "power": "1",
+      "toughness": "2",
+      "loyalty": "3",
+      "defense": "4",
+      "artist_credit": "Bo Marsh",
+      "art_url": "https://example.com/back.png",
+      "art_position": {
+        "focalX": 0.7,
+        "focalY": 0.25,
+        "scale": 1.15
+      }
+    }
+  },
+  "new aftermath card — both parts filled, every field the second part is offered": {
+    "title": "Fire",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "cost": "{R}",
+    "color_identity": [
+      "red"
+    ],
+    "printed_types": null,
+    "card_type": "sorcery",
+    "subtypes": [
+      "Arcane"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "rules_text": "Fire deals 2 damage to any target.",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "flavor_text": "“A quiet evening” — never.",
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "aftermath",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": {
+      "title": "Ice",
+      "cost": "{U}{U}",
+      "card_type": "instant",
+      "supertype": "Legendary Sorcery",
+      "printed_types": "Legendary Sorcery",
+      "subtypes": [
+        "Arcane",
+        "Trap"
+      ],
+      "rules_text": "Tap target permanent.\nDraw a card.",
+      "flavor_text": "Cold comfort — “and little of it”.",
+      "power": "1",
+      "toughness": "2",
+      "loyalty": "3",
+      "defense": "4",
+      "artist_credit": "Bo Marsh",
+      "art_url": "https://example.com/back.png",
+      "art_position": {
+        "focalX": 0.7,
+        "focalY": 0.25,
+        "scale": 1.15
+      }
+    },
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "stored aftermath card — opened for an edit: the values the form holds": {
+    "staticInEditor": true,
+    "pipOverrides": {},
+    "profileOverrides": null,
+    "title": "Fire",
+    "cost": "{1}{R}",
+    "cardType": "sorcery",
+    "supertype": null,
+    "printedTypes": null,
+    "subtypes": [],
+    "rarity": "uncommon",
+    "colorIdentity": [
+      "red"
+    ],
+    "rulesText": "Fire deals 2 damage to any target.",
+    "flavorText": "It was never going to be a quiet evening.",
+    "power": "",
+    "toughness": "",
+    "loyalty": "",
+    "defense": "",
+    "artistCredit": "Anya Vale",
+    "artUrl": "https://example.com/front.png",
+    "artPosition": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frameStyle": {
+      "finish": "regular",
+      "template": "aftermath"
+    },
+    "setIconUrl": null,
+    "setCode": null,
+    "collectorNumber": null,
+    "lang": "en",
+    "brandMark": false,
+    "footerWatermark": null,
+    "setIconCode": null,
+    "faceContent": null,
+    "watermark": null,
+    "backFace": {
+      "title": "Ice",
+      "cost": "{1}{U}",
+      "card_type": "instant",
+      "supertype": "Legendary",
+      "subtypes": [
+        "Arcane"
+      ],
+      "rules_text": "Tap target permanent.\nDraw a card.",
+      "flavor_text": "Cold comfort.",
+      "power": "1",
+      "toughness": "2",
+      "loyalty": "3",
+      "defense": "4",
+      "artist_credit": "Bo Marsh",
+      "art_url": "https://example.com/back.png",
+      "art_position": {
+        "focalX": 0.7,
+        "focalY": 0.25,
+        "scale": 1.15
+      }
+    }
+  },
+  "stored aftermath card — an edit of the first part only keeps the second part as stored": {
+    "title": "Fire",
+    "printed_types": null,
+    "rarity": "uncommon",
+    "cost": "{1}{R}",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "artist_credit": "Anya Vale",
+    "rules_text": "Fire deals 3 damage to any target.",
+    "face_content": null,
+    "flavor_text": "It was never going to be a quiet evening.",
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "tags": [
+      "test"
+    ],
+    "watermark": null,
+    "footer_text": "",
+    "visibility": "public",
+    "back_face": {
+      "title": "Ice",
+      "cost": "{1}{U}",
+      "card_type": "instant",
+      "supertype": "Legendary",
+      "subtypes": [
+        "Arcane"
+      ],
+      "rules_text": "Tap target permanent.\nDraw a card.",
+      "flavor_text": "Cold comfort.",
+      "power": "1",
+      "toughness": "2",
+      "loyalty": "3",
+      "defense": "4",
+      "artist_credit": "Bo Marsh",
+      "art_url": "https://example.com/back.png",
+      "art_position": {
+        "focalX": 0.7,
+        "focalY": 0.25,
+        "scale": 1.15
+      }
+    }
+  },
+  "stored aftermath card — an edit of the second part only keeps the rest of it as stored": {
+    "title": "Fire",
+    "printed_types": null,
+    "rarity": "uncommon",
+    "cost": "{1}{R}",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "artist_credit": "Anya Vale",
+    "rules_text": "Fire deals 2 damage to any target.",
+    "face_content": null,
+    "flavor_text": "It was never going to be a quiet evening.",
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "tags": [
+      "test"
+    ],
+    "watermark": null,
+    "footer_text": "",
+    "visibility": "public",
+    "back_face": {
+      "title": "Ice",
+      "cost": "{1}{U}",
+      "card_type": "instant",
+      "supertype": "Legendary",
+      "subtypes": [
+        "Arcane"
+      ],
+      "rules_text": "Tap up to two target permanents.",
+      "flavor_text": "Cold comfort.",
+      "power": "1",
+      "toughness": "2",
+      "loyalty": "3",
+      "defense": "4",
+      "artist_credit": "Bo Marsh",
+      "art_url": "https://example.com/back.png",
+      "art_position": {
+        "focalX": 0.7,
+        "focalY": 0.25,
+        "scale": 1.15
+      }
+    }
+  },
+  "new adventure card — both parts filled, every field the second part is offered": {
+    "title": "Fire",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "cost": "{R}",
+    "color_identity": [
+      "red"
+    ],
+    "printed_types": null,
+    "card_type": "creature",
+    "subtypes": [
+      "Giant"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "rules_text": "Fire deals 2 damage to any target.",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "flavor_text": "“A quiet evening” — never.",
+    "power": "4",
+    "toughness": "3",
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "adventure",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": {
+      "title": "Ice",
+      "cost": "{U}{U}",
+      "card_type": "sorcery",
+      "supertype": "Legendary",
+      "printed_types": "Legendary Sorcery",
+      "subtypes": [
+        "Arcane",
+        "Trap"
+      ],
+      "rules_text": "Tap target permanent.\nDraw a card.",
+      "art_position": {
+        "focalX": 0.5,
+        "focalY": 0.5,
+        "scale": 1
+      }
+    },
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "stored adventure card — opened for an edit: the values the form holds": {
+    "staticInEditor": true,
+    "pipOverrides": {},
+    "profileOverrides": null,
+    "title": "Fire",
+    "cost": "{1}{R}",
+    "cardType": "creature",
+    "supertype": null,
+    "printedTypes": null,
+    "subtypes": [
+      "Giant"
+    ],
+    "rarity": "uncommon",
+    "colorIdentity": [
+      "red"
+    ],
+    "rulesText": "Fire deals 2 damage to any target.",
+    "flavorText": "It was never going to be a quiet evening.",
+    "power": "4",
+    "toughness": "3",
+    "loyalty": "",
+    "defense": "",
+    "artistCredit": "Anya Vale",
+    "artUrl": "https://example.com/front.png",
+    "artPosition": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frameStyle": {
+      "finish": "regular",
+      "template": "adventure"
+    },
+    "setIconUrl": null,
+    "setCode": null,
+    "collectorNumber": null,
+    "lang": "en",
+    "brandMark": false,
+    "footerWatermark": null,
+    "setIconCode": null,
+    "faceContent": null,
+    "watermark": null,
+    "backFace": {
+      "title": "Ice",
+      "cost": "{1}{U}",
+      "card_type": "sorcery",
+      "supertype": "Legendary",
+      "subtypes": [
+        "Arcane"
+      ],
+      "rules_text": "Tap target permanent.\nDraw a card.",
+      "flavor_text": "Cold comfort.",
+      "power": "1",
+      "toughness": "2",
+      "loyalty": "3",
+      "defense": "4",
+      "artist_credit": "Bo Marsh",
+      "art_url": "https://example.com/back.png",
+      "art_position": {
+        "focalX": 0.7,
+        "focalY": 0.25,
+        "scale": 1.15
+      }
+    }
+  },
+  "stored adventure card — an edit of the first part only keeps the second part as stored": {
+    "title": "Fire",
+    "printed_types": null,
+    "rarity": "uncommon",
+    "cost": "{1}{R}",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "artist_credit": "Anya Vale",
+    "rules_text": "Fire deals 3 damage to any target.",
+    "face_content": null,
+    "flavor_text": "It was never going to be a quiet evening.",
+    "power": "4",
+    "toughness": "3",
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "tags": [
+      "test"
+    ],
+    "watermark": null,
+    "footer_text": "",
+    "visibility": "public",
+    "back_face": {
+      "title": "Ice",
+      "cost": "{1}{U}",
+      "card_type": "sorcery",
+      "supertype": "Legendary",
+      "subtypes": [
+        "Arcane"
+      ],
+      "rules_text": "Tap target permanent.\nDraw a card.",
+      "flavor_text": "Cold comfort.",
+      "power": "1",
+      "toughness": "2",
+      "loyalty": "3",
+      "defense": "4",
+      "artist_credit": "Bo Marsh",
+      "art_url": "https://example.com/back.png",
+      "art_position": {
+        "focalX": 0.7,
+        "focalY": 0.25,
+        "scale": 1.15
+      }
+    }
+  },
+  "stored adventure card — an edit of the second part only keeps the rest of it as stored": {
+    "title": "Fire",
+    "printed_types": null,
+    "rarity": "uncommon",
+    "cost": "{1}{R}",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "artist_credit": "Anya Vale",
+    "rules_text": "Fire deals 2 damage to any target.",
+    "face_content": null,
+    "flavor_text": "It was never going to be a quiet evening.",
+    "power": "4",
+    "toughness": "3",
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "tags": [
+      "test"
+    ],
+    "watermark": null,
+    "footer_text": "",
+    "visibility": "public",
+    "back_face": {
+      "title": "Ice",
+      "cost": "{1}{U}",
+      "card_type": "sorcery",
+      "supertype": "Legendary",
+      "subtypes": [
+        "Arcane"
+      ],
+      "rules_text": "Tap up to two target permanents.",
+      "flavor_text": "Cold comfort.",
+      "power": "1",
+      "toughness": "2",
+      "loyalty": "3",
+      "defense": "4",
+      "artist_credit": "Bo Marsh",
+      "art_url": "https://example.com/back.png",
+      "art_position": {
+        "focalX": 0.7,
+        "focalY": 0.25,
+        "scale": 1.15
+      }
+    }
+  },
+  "new flip card — both parts filled, every field the second part is offered": {
+    "title": "Fire",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "cost": "{R}",
+    "color_identity": [
+      "red"
+    ],
+    "printed_types": null,
+    "card_type": "creature",
+    "subtypes": [
+      "Giant"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "rules_text": "Fire deals 2 damage to any target.",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "flavor_text": "“A quiet evening” — never.",
+    "power": "4",
+    "toughness": "3",
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "flip",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": {
+      "title": "Ice",
+      "cost": "{U}{U}",
+      "card_type": "creature",
+      "supertype": "Legendary",
+      "printed_types": "Legendary Creature",
+      "subtypes": [
+        "Arcane",
+        "Trap"
+      ],
+      "rules_text": "Tap target permanent.\nDraw a card.",
+      "flavor_text": "Cold comfort — “and little of it”.",
+      "power": "1",
+      "toughness": "2",
+      "loyalty": "3",
+      "defense": "4",
+      "artist_credit": "Bo Marsh",
+      "art_url": "https://example.com/back.png",
+      "art_position": {
+        "focalX": 0.7,
+        "focalY": 0.25,
+        "scale": 1.15
+      }
+    },
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "stored flip card — opened for an edit: the values the form holds": {
+    "staticInEditor": true,
+    "pipOverrides": {},
+    "profileOverrides": null,
+    "title": "Fire",
+    "cost": "{1}{R}",
+    "cardType": "creature",
+    "supertype": null,
+    "printedTypes": null,
+    "subtypes": [
+      "Giant"
+    ],
+    "rarity": "uncommon",
+    "colorIdentity": [
+      "red"
+    ],
+    "rulesText": "Fire deals 2 damage to any target.",
+    "flavorText": "It was never going to be a quiet evening.",
+    "power": "4",
+    "toughness": "3",
+    "loyalty": "",
+    "defense": "",
+    "artistCredit": "Anya Vale",
+    "artUrl": "https://example.com/front.png",
+    "artPosition": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frameStyle": {
+      "finish": "regular",
+      "template": "flip"
+    },
+    "setIconUrl": null,
+    "setCode": null,
+    "collectorNumber": null,
+    "lang": "en",
+    "brandMark": false,
+    "footerWatermark": null,
+    "setIconCode": null,
+    "faceContent": null,
+    "watermark": null,
+    "backFace": {
+      "title": "Ice",
+      "cost": "{1}{U}",
+      "card_type": "creature",
+      "supertype": "Legendary",
+      "subtypes": [
+        "Arcane"
+      ],
+      "rules_text": "Tap target permanent.\nDraw a card.",
+      "flavor_text": "Cold comfort.",
+      "power": "1",
+      "toughness": "2",
+      "loyalty": "3",
+      "defense": "4",
+      "artist_credit": "Bo Marsh",
+      "art_url": "https://example.com/back.png",
+      "art_position": {
+        "focalX": 0.7,
+        "focalY": 0.25,
+        "scale": 1.15
+      }
+    }
+  },
+  "stored flip card — an edit of the first part only keeps the second part as stored": {
+    "title": "Fire",
+    "printed_types": null,
+    "rarity": "uncommon",
+    "cost": "{1}{R}",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "artist_credit": "Anya Vale",
+    "rules_text": "Fire deals 3 damage to any target.",
+    "face_content": null,
+    "flavor_text": "It was never going to be a quiet evening.",
+    "power": "4",
+    "toughness": "3",
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "tags": [
+      "test"
+    ],
+    "watermark": null,
+    "footer_text": "",
+    "visibility": "public",
+    "back_face": {
+      "title": "Ice",
+      "cost": "{1}{U}",
+      "card_type": "creature",
+      "supertype": "Legendary",
+      "subtypes": [
+        "Arcane"
+      ],
+      "rules_text": "Tap target permanent.\nDraw a card.",
+      "flavor_text": "Cold comfort.",
+      "power": "1",
+      "toughness": "2",
+      "loyalty": "3",
+      "defense": "4",
+      "artist_credit": "Bo Marsh",
+      "art_url": "https://example.com/back.png",
+      "art_position": {
+        "focalX": 0.7,
+        "focalY": 0.25,
+        "scale": 1.15
+      }
+    }
+  },
+  "stored flip card — an edit of the second part only keeps the rest of it as stored": {
+    "title": "Fire",
+    "printed_types": null,
+    "rarity": "uncommon",
+    "cost": "{1}{R}",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "artist_credit": "Anya Vale",
+    "rules_text": "Fire deals 2 damage to any target.",
+    "face_content": null,
+    "flavor_text": "It was never going to be a quiet evening.",
+    "power": "4",
+    "toughness": "3",
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "tags": [
+      "test"
+    ],
+    "watermark": null,
+    "footer_text": "",
+    "visibility": "public",
+    "back_face": {
+      "title": "Ice",
+      "cost": "{1}{U}",
+      "card_type": "creature",
+      "supertype": "Legendary",
+      "subtypes": [
+        "Arcane"
+      ],
+      "rules_text": "Tap up to two target permanents.",
+      "flavor_text": "Cold comfort.",
+      "power": "1",
+      "toughness": "2",
+      "loyalty": "3",
+      "defense": "4",
+      "artist_credit": "Bo Marsh",
+      "art_url": "https://example.com/back.png",
+      "art_position": {
+        "focalX": 0.7,
+        "focalY": 0.25,
+        "scale": 1.15
+      }
+    }
   }
 }

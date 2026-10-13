@@ -61,6 +61,7 @@ vi.mock("@/components/cards/card-preview", () => ({
 
 import { CardCreatorForm } from "@/components/creator/card-creator-form";
 import { MODAL_LAND_BACK_COST_HINT } from "@/components/creator/panels/back-face-panels";
+import { revealAndFocusField } from "@/lib/creator/focus-field";
 
 const GAME = "33333333-3333-4333-8333-333333333333";
 const USER = "11111111-1111-4111-8111-111111111111";
@@ -147,8 +148,10 @@ async function faceTab(name: RegExp) {
 }
 async function type(name: string, value: string) {
   // On a card with Face tabs a field is on its own face's tab.
+  // (The tabs carry the kind's own words — "Left half | Right half" — so
+  // they are taken by their place: the first part's, the second part's.)
   if (!field(name) && screen.queryByTestId("face-switch")) {
-    await faceTab(name.startsWith("back_face.") ? /^Back face/ : /^Front face/);
+    await click(screen.getAllByRole("tab")[name.startsWith("back_face.") ? 1 : 0]);
   }
   const el = field(name);
   if (!el) throw new Error(`no field ${name}`);
@@ -346,21 +349,33 @@ describe("2 · each “still needed” item is a link to its field", () => {
     expect(document.activeElement).toBe(document.querySelector("[data-field-anchor='art_url']"));
   });
 
-  it("a field inside a closed “More options” fold: the fold opens, then the field is focused", async () => {
+  it("a split half's name: the link selects the Right half tab, opens Identity and focuses the field — no fold in the way", async () => {
+    // Until Face tabs part 2 the half lived inside the Identity step's
+    // "More options" fold, which the link had to open first.
     renderForm();
     await pickKind(/^Split/);
-    await goTo(/^identity/i);
-    const nameInput = field("back_face.title")!;
-    const fold = nameInput.closest("details") as HTMLDetailsElement;
-    // The maker folded it away and moved on.
-    fold.open = false;
     await goTo(/^text/i);
+    expect(field("back_face.title")).toBeNull();
+    expect(need("second-name")!.textContent).toBe("a name");
     await click(need("second-name")!);
     expect(activeStep()).toMatch(/Identity/);
-    const again = field("back_face.title")!;
-    expect((again.closest("details") as HTMLDetailsElement).open).toBe(true);
-    expect(document.activeElement).toBe(again);
-    expect(need("second-name")!.textContent).toBe("the right half's name");
+    expect(screen.getByRole("tab", { name: /^Right half/ }).getAttribute("aria-selected")).toBe("true");
+    const nameInput = field("back_face.title")!;
+    expect(nameInput.closest("details")).toBeNull();
+    expect(document.activeElement).toBe(nameInput);
+  });
+
+  it("a field inside a closed fold: the fold opens, then the field is focused", () => {
+    // (The rule itself — lib/creator/focus-field.ts — on a plain page.)
+    const host = document.createElement("div");
+    host.innerHTML = `<details><summary>More options</summary><input name="artist_credit" /></details>`;
+    document.body.append(host);
+    const fold = host.querySelector("details")!;
+    expect(fold.open).toBe(false);
+    expect(revealAndFocusField(host, "artist_credit")).toBe(true);
+    expect(fold.open).toBe(true);
+    expect(document.activeElement).toBe(host.querySelector("input"));
+    host.remove();
   });
 
   it("works from the keyboard: the links are buttons in the tab order", async () => {
@@ -378,20 +393,28 @@ describe("3 · every kind's second part has its own words", () => {
     [/^Aftermath/, "Aftermath half", "aftermath half", "Ribbons"],
     [/^Flip/, "Flipped side", "flipped side", "Tok-Tok, Volcano Born"],
     [/^Adventure/, "Adventure spell", "adventure spell", "Stomp"],
-  ] as const)("%s: label, fold, example name, accessible names and Clear", async (kind, label, phrase, example) => {
+  ] as const)("%s: tab, label, example name, accessible names and Clear", async (kind, label, phrase, example) => {
     renderForm();
     await pickKind(kind);
     await goTo(/^identity/i);
-    expect(screen.getByText(`More options — artist credit & ${phrase}`)).toBeTruthy();
-    expect(screen.getByText(`${label} name`)).toBeTruthy();
+    // Face tabs, part 2: the second part has a tab of its own, in the
+    // kind's words — no fold holds it any more.
+    expect(screen.queryByText(`More options — artist credit & ${phrase}`)).toBeNull();
+    await click(screen.getByRole("tab", { name: new RegExp(`^${label}`) }));
+    expect(field("back_face.title")!.closest("label")!.textContent).toContain(`${label} — Title`);
     expect(field("back_face.title")!.getAttribute("placeholder")).toBe(example);
     // No kind borrows the transform back's example or its accessible name.
     expect(screen.queryByPlaceholderText("Insectile Aberration")).toBeNull();
-    expect(screen.queryByLabelText("Back face rules text")).toBeNull();
-    expect(screen.getByLabelText(`${label} rules text`)).toBeTruthy();
     expect(screen.getByRole("radiogroup", { name: `${label} card type` })).toBeTruthy();
     expect(screen.getByRole("button", { name: `Clear the ${phrase}` })).toBeTruthy();
-    expect(screen.getByTestId("save-needs").textContent).toContain(`the ${phrase}'s name`);
+    await goTo(/^text/i);
+    expect(screen.queryByLabelText("Back face rules text")).toBeNull();
+    expect(screen.getByLabelText(`${label} rules text`)).toBeTruthy();
+    // The Save rule's own sentence still names the part in full.
+    expect((screen.getByRole("button", { name: /^Save$/ }) as HTMLButtonElement).title).toContain(
+      `the ${phrase}'s name`,
+    );
+    expect(screen.getByTestId("save-needs").textContent).toContain(`${label} — a name`);
   });
 
   it("a new Adventure's spell starts as an Instant, never the creature it rides on", async () => {
@@ -399,6 +422,7 @@ describe("3 · every kind's second part has its own words", () => {
     await pickKind(/^Adventure/);
     expect(preview().backFace).toMatchObject({ card_type: "instant" });
     await goTo(/^identity/i);
+    await faceTab(/^Adventure spell/);
     const types = screen.getByRole("radiogroup", { name: "Adventure spell card type" });
     expect(types.querySelector("[aria-checked='true']")?.textContent).toMatch(/^Instant/);
     // Clear keeps the spell's own type.
@@ -565,6 +589,7 @@ describe("skeptic: the promise the question makes, and the links' dead ends", ()
     renderForm();
     await pickKind(/^Aftermath/);
     await goTo(/^identity/i);
+    await faceTab(/^Aftermath half/);
     expect(screen.getByRole("button", { name: "Use art from a real card for the aftermath half" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /for the second face/i })).toBeNull();
   });

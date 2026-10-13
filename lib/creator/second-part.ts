@@ -25,6 +25,9 @@ export type SecondPartWords = {
   /** The second part inside a sentence, with its article ("the right
    *  half"). */
   phrase: string;
+  /** The two parts together inside a sentence ("both halves") — what the
+   *  line under the Face tabs switch calls them. */
+  both: string;
   /** Example name for the second part's name field — a real card of THIS
    *  kind, never another kind's. */
   namePlaceholder: string;
@@ -46,12 +49,13 @@ function words(
   first: string,
   second: string,
   rest: Pick<SecondPartWords, "namePlaceholder" | "rulesPlaceholder"> &
-    Partial<Pick<SecondPartWords, "blankCardType" | "available" | "unavailableNote">>,
+    Partial<Pick<SecondPartWords, "both" | "blankCardType" | "available" | "unavailableNote">>,
 ): SecondPartWords {
   return {
     first,
     second,
     phrase: `the ${lower(second)}`,
+    both: "both faces",
     blankCardType: null,
     available: true,
     unavailableNote: null,
@@ -72,19 +76,23 @@ export const SECOND_PART_WORDS: Readonly<Partial<Record<CardKind, SecondPartWord
   adventure: words("Creature", "Adventure spell", {
     namePlaceholder: "Stomp",
     rulesPlaceholder: "Stomp deals 2 damage to any target. (The adventure's rules.)",
+    both: "both parts",
     blankCardType: "instant",
   }),
   split: words("Left half", "Right half", {
     namePlaceholder: "Ice",
     rulesPlaceholder: "Tap target permanent. Draw a card. (The right half's rules.)",
+    both: "both halves",
   }),
   aftermath: words("Top half", "Aftermath half", {
     namePlaceholder: "Ribbons",
     rulesPlaceholder: "Aftermath (Cast this spell only from your graveyard. Then exile it.)",
+    both: "both halves",
   }),
   flip: words("Top side", "Flipped side", {
     namePlaceholder: "Tok-Tok, Volcano Born",
     rulesPlaceholder: "Protection from red. (The rules once the card is flipped.)",
+    both: "both sides",
   }),
   battle: words("Battle", "Back face", {
     namePlaceholder: "",

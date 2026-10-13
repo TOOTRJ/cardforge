@@ -9,9 +9,11 @@
 // field belongs to, what a face still lacks, and the "still needed" items
 // grouped per face. No React, no form state.
 //
-// Part 2 (split, aftermath, adventure, flip) mounts the same switch from the
-// same table (lib/creator/second-part.ts) and reuses every function here:
-// only `BACK_FIELD_STEP` is about where a second part's fields sit.
+// Part 2 (split, aftermath, adventure, flip — the kinds whose two parts are
+// ONE picture) mounts the same switch from the same table
+// (lib/creator/second-part.ts) and reuses every function here; where its
+// second part's fields sit is `PART_FIELD_STEP`, and what its single preview
+// outlines is lib/creator/part-outline.ts.
 // ---------------------------------------------------------------------------
 
 import { stepIndexForField, type StepDef, type StepKey } from "@/lib/creator/steps";
@@ -47,6 +49,18 @@ export const BACK_FIELD_STEP: Readonly<Record<string, StepKey>> = {
   defense: "text",
 };
 
+/** The same table for the two-part kinds that are one picture (split,
+ *  aftermath, adventure, flip — part 2). Their second part's type is not
+ *  structure: it picks no frame and no colour and stays editable on an
+ *  edit, so its chips stand on the Identity step, above the type line they
+ *  feed — on a new card and on an edit alike. */
+export const PART_FIELD_STEP: Readonly<Record<string, StepKey>> = {
+  ...BACK_FIELD_STEP,
+  card_type: "identity",
+  color_identity: "identity",
+  frame_style: "identity",
+};
+
 /** The face a form field belongs to: `back_face.*` is the back's, every
  *  other field the front's (or the whole card's). */
 export function faceOfField(field: string): CardFaceId {
@@ -56,10 +70,14 @@ export function faceOfField(field: string): CardFaceId {
 /** The step key a field is edited on when the card has face tabs. An edit
  *  has no Card step: the back's locked type and colour are shown on the
  *  Identity step there, so that is where their errors go. */
-export function faceFieldStepKey(field: string, steps: readonly StepDef[]): StepKey | null {
+export function faceFieldStepKey(
+  field: string,
+  steps: readonly StepDef[],
+  fieldSteps: Readonly<Record<string, StepKey>> = BACK_FIELD_STEP,
+): StepKey | null {
   if (faceOfField(field) !== "back") return null;
   const key = field.split(".")[1] ?? "";
-  const wanted = BACK_FIELD_STEP[key] ?? "identity";
+  const wanted = fieldSteps[key] ?? "identity";
   if (steps.some((step) => step.key === wanted)) return wanted;
   return steps.some((step) => step.key === "identity") ? "identity" : null;
 }
@@ -67,9 +85,14 @@ export function faceFieldStepKey(field: string, steps: readonly StepDef[]): Step
 /** `stepIndexForField` for a card with face tabs: a back field goes to the
  *  step it is edited on. Without face tabs (every other card) this is
  *  `stepIndexForField` itself. */
-export function faceFieldStepIndex(field: string, steps: StepDef[], faceTabs: boolean): number {
+export function faceFieldStepIndex(
+  field: string,
+  steps: StepDef[],
+  faceTabs: boolean,
+  fieldSteps: Readonly<Record<string, StepKey>> = BACK_FIELD_STEP,
+): number {
   if (faceTabs) {
-    const key = faceFieldStepKey(field, steps);
+    const key = faceFieldStepKey(field, steps, fieldSteps);
     if (key) {
       const index = steps.findIndex((step) => step.key === key);
       if (index >= 0) return index;
@@ -126,10 +149,16 @@ export type FaceStatus = {
 /** What a face still lacks to be shown to other people: a name and
  *  artwork. Said on its tab whatever the card's visibility — a private
  *  draft saves without them, and the tab says what is still to come. */
-export function faceStatusOf(face: { title?: string | null; art_url?: string | null }): FaceStatus {
+export function faceStatusOf(
+  face: { title?: string | null; art_url?: string | null },
+  /** `artwork: false` for a part with no picture of its own — an
+   *  adventure's spell, a flip card's other side (part 2): it is never
+   *  asked for one. */
+  wants: { artwork: boolean } = { artwork: true },
+): FaceStatus {
   const missing: string[] = [];
   if (!(face.title ?? "").trim()) missing.push("a name");
-  if (!(face.art_url ?? "").trim()) missing.push("artwork");
+  if (wants.artwork && !(face.art_url ?? "").trim()) missing.push("artwork");
   return missing.length === 0
     ? { complete: true, text: "complete" }
     : { complete: false, text: `needs ${missing.join(" and ")}` };

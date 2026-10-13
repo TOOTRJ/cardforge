@@ -73,7 +73,7 @@ test.describe("double-faced editor", () => {
       // is the small button beside it (the desktop aside is the last in the
       // DOM; the phone block is hidden at this width).
       await expect(page.getByTestId("face-preview-showing").last()).toHaveText("Showing: Back face");
-      await expect(page.getByRole("button", { name: "Front face — edit this face" }).last()).toBeVisible();
+      await expect(page.getByRole("button", { name: "Front face · click to edit" }).last()).toBeVisible();
       // A 1024 × 768 window: the preview is ONE sticky column beside the
       // form, and whatever stands under the large card falls off its foot
       // for good (a sticky column never scrolls). The other face stands in
@@ -98,7 +98,7 @@ test.describe("double-faced editor", () => {
       await expect(page.getByTestId("back-no-cost-note")).toBeVisible();
       await expect(page.getByLabel("Back face rules text")).toBeVisible();
       // The small front face switches the tab back.
-      await page.getByRole("button", { name: "Front face — edit this face" }).last().click();
+      await page.getByRole("button", { name: "Front face · click to edit" }).last().click();
       await expect(frontTab).toHaveAttribute("aria-selected", "true");
       await expect(page.getByTestId("face-preview-showing").last()).toHaveText("Showing: Front face");
       await rail.getByRole("button", { name: /^identity$/i }).click();
