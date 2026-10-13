@@ -375,6 +375,14 @@ export const FRAME_TEMPLATE_VALUES = [
   // subtype says Vehicle. A stored template of its own — never a render-time
   // pick from the subtype, which would re-dress every stored Vehicle.
   "m15vehicle",
+  // The Nyx dress (TODO 4.7, Card Conjurer 'Nyx' of the accurate M15 pack):
+  // the M15 frame with the starfield in its frame field — the printed
+  // enchantment frame (enchantment creatures and artifacts since Theros,
+  // every enchantment since Foundations 2024). A stored template of its own,
+  // for a card whose type words say Enchantment; never a render-time pick
+  // from the words, which would re-dress every stored enchantment. NOT the
+  // `nyx` template below (the Theros Beyond Death constellation showcase).
+  "m15nyx",
   // The station frame (TODO 4.27a, Edge of Eternities 2025): a Spacecraft's
   // (an artifact whose subtype says Spacecraft) and a Planet's (a land whose
   // subtype says Planet) — PipGlyph's own masters, cut from the published
@@ -544,6 +552,7 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m15token: "Token (2014–2019)",
   m15artifact: "Artifact",
   m15vehicle: "Vehicle",
+  m15nyx: "Nyx",
   m15station: "Spacecraft",
   m15stationland: "Planet",
   m15ub: "Universes Beyond",
@@ -671,6 +680,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   m15token: "m15",
   m15artifact: "m15",
   m15vehicle: "m15",
+  m15nyx: "m15",
   m15station: "m15",
   m15stationland: "m15",
   m15ub: "m15",

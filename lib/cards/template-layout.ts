@@ -4707,6 +4707,25 @@ export const M15_CROWN: FrameOverlaySlot = {
 };
 
 /**
+ * The Nyx dress's legendary crown (TODO 4.7): `m15nyxcrown/<key>.png`, the
+ * M15 crown band's recipe with Card Conjurer's Nyx INNER crown as its last
+ * layer — the starfield strip a legendary Nyx print carries inside its
+ * crown, between the arch and the title bar (16.37 / 2.49 / 67.31 × 2.27 %
+ * of the card), where a plain legendary card's crown is its flat colour.
+ * One band per key (never two overlays stacked), at M15_CROWN's rect: the
+ * crown's own pixels are the m15crown band's. Keys
+ * (NYX_CROWN_BAND_KEYS in scripts/lib/cc-frames.mjs; a unit test holds them
+ * together): the Nyx masters' letters — w u b r g, m, a (the m15nyx entry
+ * maps its colourless key there) — and the ten pairs. Set on the m15nyx
+ * entry only; opt-in per card like every crown (FrameStyle.crown).
+ */
+export const M15_NYX_CROWN: FrameOverlaySlot = {
+  ...M15_CROWN,
+  assetPathTemplate: "/frames/m15nyxcrown/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "a", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+};
+
+/**
  * The Universes Beyond crown (TODO 4.25): `m15ubcrown/<key>.png`, Card
  * Conjurer's 'Legend Crowns (Universes Beyond)' of its accurate group — the
  * standard crown's geometry with the UB pack's smooth art, built by
@@ -5412,6 +5431,29 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     twoColorMasters: ["split"],
     pt: { ...M15ARTIFACT.pt!, plateAssetPathTemplate: "/frames/m15vehicle/pt/{color}.png", colorHex: VEHICLE_PT_INK },
     overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }, { ...M15_HOLO_STAMP, keyMap: { c: "a" } }],
+    collector: M15_COLLECTOR,
+  },
+  // The Nyx dress (TODO 4.7; owner decisions A3 / A4, 2026-09-29): the
+  // printed ENCHANTMENT frame — Card Conjurer's 'Nyx (Theros)' masters,
+  // which are the M15 masters with the frame field redrawn as a starfield
+  // (title bar, type bar, text box, pinline and border are M15's own
+  // pixels) — so m15's slots, sizes, two-colour dresses (gold-split and
+  // hybrid), stamp notch and collector line. Its crown is the Nyx crown
+  // band (M15_NYX_CROWN: the regular crown with the starfield strip inside
+  // it). The colourless key is the pack's artifact silver starfield (no
+  // see-through master: no art under the frame); the plates are m15's.
+  // An ADDITION: a new template no stored card sits on — an enchantment
+  // stored on m15 keeps its frame until its owner picks this one
+  // (lib/creator/card-kinds.ts ENCHANTMENT_DRESSES).
+  m15nyx: {
+    ...M15,
+    label: "M15 Nyx",
+    costDy: CC_M15_COST_DY,
+    artSlot: CC_M15_ART_SLOT,
+    type: { ...M15.type, dy: CC_M15_TYPE_DY },
+    pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15nyx/pt/{color}.png" },
+    overlays: [{ ...M15_NYX_CROWN, keyMap: { c: "a" } }, { ...M15_HOLO_STAMP, keyMap: { c: "a" } }],
+    twoColorMasters: ["split", "hybrid"],
     collector: M15_COLLECTOR,
   },
   // The Universes Beyond frames (TODO 4.25; owner 2026-10-13, roadmap Q5:

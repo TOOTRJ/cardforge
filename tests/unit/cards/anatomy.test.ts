@@ -296,7 +296,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
    *  (every transform body but the ▼ land back; the modal spell pair). */
   const CROWNED = FRAME_TEMPLATE_VALUES.filter((t) =>
     [
-      "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart",
+      "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart",
       // The station frame (TODO 4.27a): the parents' crown band on its two entries.
       "m15station", "m15stationland",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
@@ -339,6 +339,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       m15artifact: ["split"],
       // The Vehicle frame (4.5c): m15artifact's split over the bronze frame.
       m15vehicle: ["split"],
+      // The Nyx dress (4.7): m15's two dresses over the starfield masters.
+      m15nyx: ["split", "hybrid"],
       // The Universes Beyond frames (4.25): their M15 twins' dresses.
       m15ub: ["split", "hybrid"],
       m15ubartifact: ["split"],
@@ -402,7 +404,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
 
   /** The entries with the holofoil stamp's notch (4.9c, wave 1). */
   // …and the station frame's two entries (TODO 4.27a): the parents' notch; the Universes Beyond three (4.25): the triangle's.
-  const STAMP_TEMPLATES = ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15station", "m15stationland", "m15ub", "m15ubartifact", "m15ubland", "m15snow", "m15devoid", "m15pw"];
+  const STAMP_TEMPLATES = ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15stationland", "m15ub", "m15ubartifact", "m15ubland", "m15snow", "m15devoid", "m15pw"];
 
   it("the stamp's notch on exactly the seven wave-1 entries (4.9c): the M15 family's bordered frames and the walker, never a token, an emblem or a profile that spreads them", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).stamp)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => STAMP_TEMPLATES.includes(t)));

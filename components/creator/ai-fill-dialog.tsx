@@ -27,6 +27,7 @@ import {
   kindFromCard,
   templateIsBasicOnly,
   isSubtypeDress,
+  isEnchantmentDress,
 } from "@/lib/creator/card-kinds";
 import {
   CARD_FILL_FIELDS,
@@ -199,7 +200,9 @@ function AiFillDialogBody({
         !isTokenHeightDress(kind, choice.template) &&
         !isRowDress(kind, choice.template) &&
         // …nor the Vehicle frame: the subtype the AI writes picks it (4.5c).
-        !isSubtypeDress(choice.template),
+        !isSubtypeDress(choice.template) &&
+        // …nor the Nyx frame: the type words the AI writes pick it (4.7).
+        !isEnchantmentDress(choice.template),
     );
   }, [cardType, verifiedFrameKeys]);
 

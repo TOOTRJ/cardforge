@@ -180,6 +180,8 @@ describe("Card Conjurer recipe", () => {
       "m15mdfcfront",
       "m15mdfclandback",
       "m15mdfclandfront",
+      // The Nyx dress (TODO 4.7; tests/unit/creator/nyx-frame.test.ts).
+      "m15nyx",
       "m15pw",
       "m15snow",
       "m15snowland",

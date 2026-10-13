@@ -99,7 +99,11 @@ describe("three templates of their own", () => {
         .map((f) => f.template);
     expect(skins("instant", EVERY).at(-1)).toBe("m15ub");
     expect(skins("land", EVERY).at(-1)).toBe("m15ubland");
-    expect(skins("artifact", EVERY).at(-1)).toBe("m15ubartifact");
+    // …the last of the standard's OWN skins: the dress another type lends
+    // (the Nyx dress an Enchantment Artifact borrows, the Enchantment kind's
+    // own — TODO 4.7) is listed after them.
+    expect(skins("artifact", EVERY).slice(-2)).toEqual(["m15ubartifact", "m15nyx"]);
+    expect(skins("enchantment", EVERY).slice(-2)).toEqual(["m15ub", "m15nyx"]);
     const verifiedInRed = framesForKind("instant", keys(["m15", "r"], ["m15ub", "r"])).find((f) => f.template === "m15ub");
     expect(verifiedInRed?.availableColorKeys).toEqual(["r"]);
   });

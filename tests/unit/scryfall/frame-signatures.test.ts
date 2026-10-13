@@ -581,6 +581,12 @@ describe("full-art and textless families (TODO 1.19)", () => {
         expect(match.onceVerified, key).toMatch(/^m15dfc(land)?front$/);
         continue;
       }
+      // …and the Nyx printings on the plain 2015 frame, whose own frame
+      // takes over once verified (TODO 4.7, era/2015+nyx).
+      if (match.signature === "era/2015+nyx") {
+        expect(match.onceVerified, key).toBe("m15nyx");
+        continue;
+      }
       expect(match.signature, key).toBe("textless/old-frame");
     }
   });

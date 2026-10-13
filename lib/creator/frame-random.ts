@@ -11,6 +11,10 @@
 import type { CardType, ColorIdentity, FrameTemplate } from "@/types/card";
 import {
   borrowedFrameFits,
+  enchantmentFrameFits,
+  enchantmentFrameFor,
+  followsEnchantmentDress,
+  isEnchantmentDress,
   subtypeFrameFits,
   subtypeFrameFor,
   framesForKind,
@@ -96,7 +100,7 @@ export function resolveGeneratedFrame(input: {
   // height the same way — no text → no box, the regular box, the tall box —
   // whichever height was asked for.
   const kind = kindFromCard(cardType, undefined);
-  const type = { cardType, supertype: face?.supertype };
+  const type = { cardType, supertype: face?.supertype, subtypes: face?.subtypes };
   const tokenFace: TokenFrameFace = {
     supertype: face?.supertype,
     rulesText: face?.rulesText,
@@ -121,6 +125,11 @@ export function resolveGeneratedFrame(input: {
       // than the plain artifact frame wherever it is published in the
       // card's colour (subtypeFrameFor).
       subtypeFrameFits(choice.template, face?.subtypes) &&
+      // An enchantment dress (TODO 4.7: the Nyx frame) is for a card whose
+      // type words say Enchantment — and a NEW Enchantment Creature or
+      // Enchantment Artifact wears it rather than its plain frame wherever
+      // it is published in the card's colour (enchantmentFrameFor).
+      enchantmentFrameFits(choice.template, type) &&
       // The borderless planeswalker's tall box is for four rows or more,
       // the regular one for fewer (4.33): a gate, like the type words.
       walkerRowsFrameFits(kind, choice.template, rows),
@@ -129,9 +138,16 @@ export function resolveGeneratedFrame(input: {
   const has = (template: FrameTemplate) => typed.some((choice) => choice.template === template);
   // The base of a subtype dress the card wears (m15artifact for a Vehicle)
   // gives way to the dress where both are published.
+  // …and so does the base of an enchantment dress (m15 for an enchantment,
+  // plain or creature — owner decision 1, Round 56). An enchantment that
+  // prints on a body of its own (a Class, a Case…) follows nothing: the Nyx
+  // frame is its maker's pick, never a random one.
   const dressed = (boxed.length > 0 ? boxed : typed).filter((choice) => {
     const dress = subtypeFrameFor(choice.template, face?.subtypes);
-    return dress === choice.template || !has(dress);
+    if (dress !== choice.template && has(dress)) return false;
+    const nyx = enchantmentFrameFor(kind, choice.template, type);
+    if (nyx !== choice.template && has(nyx)) return false;
+    return !isEnchantmentDress(choice.template) || followsEnchantmentDress(type);
   });
   // …and a card with text never draws a frame that prints none (TODO 1.24,
   // frameHidesRulesBoxText — the full-art token's textless height) while
@@ -142,10 +158,18 @@ export function resolveGeneratedFrame(input: {
   const pool = drawn.length > 0 ? drawn : dressed;
 
   if (requested !== "random") {
-    // (Only a dress in the pool: a Spacecraft asked for on the Vehicle frame
-    // lands on the Artifact frame while the station frame is unpublished,
-    // as it did before that frame existed.)
-    const vehicle = subtypeFrameFor(requested, face?.subtypes, has);
+    // The subtype's answer first — only a dress in the pool: a Spacecraft
+    // asked for on the Vehicle frame lands on the Artifact frame while the
+    // station frame is unpublished, as it did before that frame existed; a
+    // request for the Vehicle frame on a card that is no Vehicle means its
+    // base. THEN the enchantment dress of that answer — again only where it
+    // is in the pool: an unpublished Nyx frame must never cost the card the
+    // frame the subtype rule named (an Enchantment Artifact asked onto the
+    // Vehicle frame lands on the artifact frame, as it did before the Nyx
+    // frame).
+    const bySubtype = subtypeFrameFor(requested, face?.subtypes, has);
+    const byWords = enchantmentFrameFor(kind, bySubtype, type);
+    const vehicle = has(byWords) ? byWords : bySubtype;
     const wanted = has(vehicle) && vehicle !== requested
       ? vehicle
       : walkerRowsFrameFor(kind, tokenFrameFor(kind, requested, tokenFace), rows);

@@ -126,6 +126,23 @@ export function tonePlateRgba8(data, { luma, saturation }) {
  *  where the artifact recipe names the artifact frame (`a`), the accurate
  *  M15 pack's file for every other letter. */
 const vehicleFrameFile = (letter) => (letter === "a" ? `${NEW}/v.png` : m15FrameFile(letter));
+/** The Nyx pack's folder (TODO 4.7; packM15NyxNew.js): seven whole masters,
+ *  w u b r g m a, on the accurate M15 pack's geometry and masks. */
+export const NYX = `${NEW}/nyx`;
+/** A recipe letter → its file for the Nyx dress: the pack's starfield master
+ *  for a colour, gold or the artifact silver; the regular pack's grey land
+ *  frame for `l` (the hybrid dress's title and type bars — the Nyx pack has
+ *  no land file, and its bars are the regular masters' own pixels). */
+const nyxFrameFile = (letter) => (letter === "l" ? m15FrameFile(letter) : `${NYX}/${letter}.png`);
+/** The Nyx dress's plates (TODO 4.7): the regular M15 plates, m15's seven
+ *  images — the prints set the P/T on M15's own plate (no star on it: 0 %
+ *  bright specks on the plate face of 58 prints), and the pack has none of
+ *  its own. The colourless key keeps the grey colourless plate (m15PTC): it
+ *  is the hybrid dress's plate (plateKeyFor), and the one colourless Nyx
+ *  creature printed (CLB #1 Faceless One) reads 206 / 202 / 202 on its
+ *  plate face — m15PTC's 210 / 202 / 197, not the artifact plate's bluer
+ *  203 / 214 / 221. */
+const NYX_PT = REG_PT;
 
 /**
  * A coloured artifact is CC's cardFrameProperties recipe (creator-23.js
@@ -2888,6 +2905,35 @@ export const CC_TEMPLATES = {
       `${PAIR_NOTE}. <pair> = the bronze Vehicle frame + border, GOLD title and type bars (m.png), the split text box and pinline — m15artifact's pair recipe with v.png for a.png — drawn with the same brown plate (DFT #188-220, NEO #231, MKM #215); no hybrid dress`,
     ],
   },
+  // TODO 4.7: the Nyx dress — the printed enchantment frame (Theros 2013 on
+  // the 2003 frame; on the 2015 frame C15 2015 → today: every enchantment
+  // creature and enchantment artifact, and since Foundations 2024 every
+  // enchantment). Card Conjurer's 'Nyx (Theros)' of the accurate M15 pack:
+  // seven whole masters at 2010 × 2814 whose title bar, type bar, text box,
+  // pinline and border are the regular M15 masters' own pixels (mean
+  // difference 0.00–0.20 inside each of CC's five masks, 46–62 inside the
+  // Frame mask: only the frame field is redrawn, as a starfield). A NEW
+  // template (docs/FRAMES.md "A template never gains a kind"): no stored
+  // card sits on it.
+  m15nyx: {
+    colors: {
+      ...perColor((k) => [layer(nyxFrameFile(k === "c" ? "a" : k))]),
+      // The two-colour dresses, as m15's (TODO 4.6b): gold-split — the gold
+      // starfield under the split text box and pinline (THB #220, NEO #225,
+      // FRC #52) — and hybrid — the two colours' starfields split across the
+      // frame ramp under CC's grey land bars (HOB #155, FRA #134).
+      ...pairMasters("m15", ["split", "hybrid"], (pair, dress, kind) => pairMasterLayers(pair, dress, kind, nyxFrameFile)),
+    },
+    plates: NYX_PT,
+    pack: "packM15NyxNew.js 'Nyx (Theros)' (groupAccurate.js)",
+    notes: [
+      "every colour key = Card Conjurer's whole Nyx master (new/nyx/<k>.png, 2010x2814), downscaled once: the regular M15 master of that letter with its frame field redrawn as a starfield — inside CC's Title, Type, Rules, Pinline and Border masks the two files differ by a mean 0.00-0.20 of 255, inside the Frame mask by 46-62 (measured on all seven, 2026-10-13)",
+      "colourless = the pack's 'Artifact Frame' (new/nyx/a.png): the pack draws no see-through colourless starfield, and the two colourless prints on the plain 2015 frame (CLB #1 Faceless One, SOC #131 Eldrazi Conscription) wear a silver-grey starfield; no art under the frame",
+      "an Enchantment Artifact wears its COLOUR's starfield, never an artifact frame with coloured bars: C15 #86 / A25 #42 / LCC #146 Bident of Thassa (blue), CP2 #5 Whip of Erebos (black), EOC #88 Hammer of Purphoros (red)",
+      "plates = the regular M15 plates (the pack has none: the prints set the P/T on M15's own plate, with no star on it) — m15's seven images under pt/<k>.png; the colourless key keeps the grey m15PTC, which is the hybrid dress's plate too (CLB #1 Faceless One's plate face reads 206/202/202: m15PTC's 210/202/197, not the artifact plate's 203/214/221)",
+      `${PAIR_NOTE}. Gold-split <pair> = the gold starfield master (nyx/m.png) with the split text box and pinline (THB #220, NEO #225, C20 #226, FRC #52); hybrid <pair>-h = the two colours' starfield masters split across the frame ramp, the regular pack's grey land bars (l.png title + type: the Nyx pack has no land file and its bars are the regular masters' own), the split text box and pinline (HOB #155, FRA #134, ECC #121)`,
+    ],
+  },
   // TODO 4.25: the Universes Beyond frames — three NEW templates (no stored
   // card sits on them), m15 / m15artifact / m15land's recipes over the UB
   // pack's files.
@@ -4620,6 +4666,44 @@ export function cropRows(buf, width, rows) {
 export const CROWN_BAND_KEYS = [...CROWN_BAND.keys, ...TWO_COLOR_PAIRS];
 
 /**
+ * The Nyx inner crown (TODO 4.7): Card Conjurer's 'Inner Crown (Nyx)'
+ * (packM15InnerCrownsNew.js, `img/frames/m15/innerCrowns/new/nyx/<k>.png`,
+ * 1353 × 64 at the pack's native 2010 × 2814) — the starfield strip a
+ * legendary Nyx print carries INSIDE its crown, between the crown's arch
+ * and the title bar, where a plain legendary card's crown is flat. CC draws
+ * it over the crown at 329 / 70 px (16.37 / 2.49 / 67.31 × 2.27 %); here it
+ * is the last layer of the crown band's composite, 1:1 at native size, so a
+ * crowned Nyx card draws ONE band (`m15nyxcrown/<key>.png`: the m15crown
+ * recipe + this strip). Keys: the Nyx masters' seven letters.
+ */
+export const NYX_INNER_CROWN = {
+  source: "img/frames/m15/innerCrowns/new/nyx",
+  box: { x: 329, y: 70, width: 1353, height: 64 },
+  keys: ["w", "u", "b", "r", "g", "m", "a"],
+};
+
+/** The Nyx crown band's keys: the seven letters, then the ten pairs (the
+ *  crown AND the strip split through the crown ramp, as m15crown's pairs). */
+export const NYX_CROWN_BAND_KEYS = [...NYX_INNER_CROWN.keys, ...TWO_COLOR_PAIRS];
+
+/** One key's inner-crown layer: a letter's strip, or a pair's two strips
+ *  lerped through the crown ramp. */
+export function innerCrownRecipe(inner, key) {
+  if (TWO_COLOR_PAIRS.includes(key)) {
+    const [a, b] = key.split("");
+    return { left: `${inner.source}/${a}.png`, right: `${inner.source}/${b}.png`, ramp: PAIR_RAMPS.crown };
+  }
+  if (!inner.keys.includes(key)) throw new Error(`innerCrownRecipe: no inner crown for key ${key}`);
+  return { left: `${inner.source}/${key}.png`, right: null, ramp: null };
+}
+
+/** How provenance prints an inner-crown layer. */
+export function describeInnerCrown(inner, recipe) {
+  const strip = recipe.right ? `${recipe.left} ⟷ ${recipe.right} lerped through ${rampName(recipe.ramp)}` : recipe.left;
+  return `${strip} at ${inner.box.x},${inner.box.y} ${inner.box.width}×${inner.box.height} px of the 2010×2814 composite (1:1), over the crown`;
+}
+
+/**
  * The Universes Beyond crown band (TODO 4.25): CC's 'Legend Crowns
  * (Universes Beyond)' of its accurate group (packUBLegendCrownsNew.js,
  * `img/frames/m15/ub/crowns/new/<key>.png`) — the standard crown's
@@ -5045,6 +5129,11 @@ const DFC_CROWN_NOTES = (what, bodies) => [
   "keys: the band's w u b r g, m (gold), a (the artifact stand-in's silver: a DFC body's colourless is `c` → `a`), l (the land grey) and the ten pairs (the pair band cut through the twin of the colour whose half the well is in); never c",
 ];
 
+const NYX_CROWN_NOTES = [
+  "the legendary crown of the Nyx dress (TODO 4.7), drawn over the m15nyx masters: the m15crown band's recipe — the black 'Legend Crown Border Cover', then the crown — with Card Conjurer's Nyx inner crown (innerCrowns/new/nyx/<k>.png, 1353x64) on top at the pack's bounds (329/70 px of 2010x2814: 16.37/2.49/67.31x2.27 %), composited at 2010x2814, downscaled once, corners cut, rows 0–409 kept",
+  "keys: w u b r g, m (gold), a (the colourless key's silver: m15nyx maps c → a) and the ten pairs — the first colour's crown and strip on the left, the second's on the right, through m15crown's untilted crown ramp 45→55 %W; never l or c (no Nyx land or see-through master)",
+];
+
 /** The overlay bands the importer builds, by bucket folder. */
 export const CC_OVERLAY_BANDS = {
   // 4.6f (wave 2b): the extended-art crown — a generic band (`layers` /
@@ -5070,6 +5159,15 @@ export const CC_OVERLAY_BANDS = {
       "a pair (wu … gu) is the first colour's crown on the left, the second's on the right, blended through an UNTILTED ramp 45→55 %W (the prints' crown split, each pixel de-shaded against the two single-colour crowns, measures 45.5 / 49.3 / 53.6 %W at 10 / 50 / 90 % on FDN's gold pairs, 46.4 / 49.4 / 53.6 on TLA's hybrids) as a premultiplied lerp — CC's stacking (maskRightHalf.png, tilted +1.35 %W) would double the crown's shadow over the art",
       "the older 'regular' crowns (crowns/m15Crown?.png, 1900x469) are a different pack and never mixed in",
     ],
+  },
+  // TODO 4.7: the Nyx dress's crown — the m15crown recipe with CC's Nyx
+  // inner crown as its last layer (`inner`).
+  m15nyxcrown: {
+    pack: "M15 'Legend Crowns (New)' (packM15LegendCrownsNew.js) + 'Inner Crowns' Nyx (packM15InnerCrownsNew.js), groupAccurate.js",
+    band: CROWN_BAND,
+    keys: NYX_CROWN_BAND_KEYS,
+    inner: NYX_INNER_CROWN,
+    notes: NYX_CROWN_NOTES,
   },
   // TODO 4.25: the Universes Beyond crown — the same recipe over the UB
   // pack's crowns.
@@ -5377,7 +5475,9 @@ export const HOLO_STAMP_NOTCHES = {
         pair,
         // …and the Vehicle frame's pairs (TODO 4.5c): m15artifact's
         // pinline layer over the bronze frame.
-        [`m15/${pair}-h`, `m15artifact/${pair}`, `m15vehicle/${pair}`, `m15land/${pair}`, `m15snow/${pair}`, `m15snowland/${pair}`],
+        // …and the Nyx dress's pairs (TODO 4.7): m15's pinline layer over
+        // the starfield masters, both dresses.
+        [`m15/${pair}-h`, `m15artifact/${pair}`, `m15vehicle/${pair}`, `m15nyx/${pair}`, `m15nyx/${pair}-h`, `m15land/${pair}`, `m15snow/${pair}`, `m15snowland/${pair}`],
       ]),
     ),
     barSample: M15_BAR_SAMPLE,

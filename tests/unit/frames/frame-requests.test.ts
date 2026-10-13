@@ -388,8 +388,9 @@ describe("supabase/seeds/21_frame_requests.sql", () => {
       });
       if (row.cause === "unverified") {
         // The registry says exact; the import logs it while that frame isn't
-        // verified in the card's colour.
-        expect(match.status, row.id).toBe("exact");
+        // verified in the card's colour — or nearest on a stand-in whose own
+        // frame is exact once verified (the Nyx dress, TODO 4.7).
+        expect(match.status === "exact" || match.onceVerifiedMatch?.status === "exact", row.id).toBe(true);
         expect(
           frameRequestFromImport(patch, { artImported: false, source: "import", verifiedKeys: new Set() }),
         ).toMatchObject({ status: "nearest", cause: "unverified" });

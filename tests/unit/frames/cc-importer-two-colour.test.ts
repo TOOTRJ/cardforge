@@ -304,6 +304,12 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
         expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
         continue;
       }
+      // …and the Nyx dress's twenty (TODO 4.7): m15's two dresses over the
+      // starfield masters (tests/unit/creator/nyx-frame.test.ts).
+      if (template === "m15nyx") {
+        expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(builtColors(CC_TEMPLATES.m15));
+        continue;
+      }
       if (["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15snow", "m15snowland", "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback"].includes(template)) continue;
       expect(Object.keys((def as { colors: object }).colors).filter((k) => k.length > 1), template).toEqual([]);
     }

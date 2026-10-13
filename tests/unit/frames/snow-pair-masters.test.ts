@@ -122,6 +122,7 @@ describe("declared and published", () => {
       "m15", "m15land", "m15artifact",
       // …and the Vehicle frame since 4.5c (m15artifact's split over the bronze frame).
       "m15vehicle",
+      "m15nyx",
       // …and the Universes Beyond frames since 4.25.
       "m15ub", "m15ubartifact", "m15ubland",
       "m15snow", "m15snowland", "m15borderless", "m15borderlessartifact", "m15borderlessland",

@@ -416,6 +416,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
   ...["m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback"],
   // TODO 4.5c's Vehicle frame and 4.25's Universes Beyond frames.
   "m15vehicle",
+  // TODO 4.7's Nyx dress.
+  "m15nyx",
   // The station frame (TODO 4.27a).
   "m15station", "m15stationland",
   "m15ub", "m15ubartifact", "m15ubland",
@@ -428,6 +430,8 @@ const POST_V36_TEMPLATES: readonly string[] = [
   "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
   // TODO 4.5c's Vehicle frame and 4.25's Universes Beyond frames.
   "m15vehicle",
+  // TODO 4.7's Nyx dress.
+  "m15nyx",
   // The station frame (TODO 4.27a).
   "m15station", "m15stationland",
   "m15ub", "m15ubartifact", "m15ubland",
@@ -774,6 +778,8 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
       // …and 4.5c's Vehicle frame and 4.25's Universes Beyond frames.
       "m15vehicle",
+      // …and 4.7's Nyx dress.
+      "m15nyx",
       // …and the station frame (TODO 4.27a).
       "m15station", "m15stationland",
       "m15ub", "m15ubartifact", "m15ubland",

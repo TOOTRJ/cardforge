@@ -238,10 +238,10 @@ on conflict (id) do nothing;
 --     …064–…066 4.10c's, on the 1993 frame; …069–…072 4.6h's pairs on the
 --     old frames; …073–…075 4.30's, with the white border; …076–…079
 --     4.5c's, on the Vehicle frame (and one Vehicle left on the artifact
---     frame); …110–…114 4.25's, on the Universes Beyond frames (…080–…089 are
---     left to the station and Nyx frames' cards, whose PRs were open beside
---     this one: `on conflict (id) do nothing` would have skipped a shared id
---     in silence).
+--     frame); …080–…082 4.27a's, on the station frame; …090–…094 4.7's,
+--     on the Nyx dress (and one Enchantment Creature left on the plain
+--     M15 frame) — …083–…089 are free; …110–…114 4.25's, on the
+--     Universes Beyond frames.
 -- ---------------------------------------------------------------------------
 
 insert into public.cards (
@@ -494,6 +494,38 @@ Whenever The Lantern of Far Suns attacks, draw a card.', '4', '4', 12,
 Station (Tap another creature you control: Put charge counters equal to its power on this Planet. Station only as a sorcery.)
 12+ | {G}, {T}: Add {G} for each creature you control.', null, null, 19,
      '{"template":"m15stationland","finish":"regular"}'::jsonb, 1),
+  -- TODO 4.7: the Nyx dress (m15nyx) — the printed enchantment frame, a
+  -- starfield in the frame field. Ids …090–…094: an Enchantment Creature
+  -- with its plate, a legendary two-colour one with the Nyx crown, the split
+  -- pair, the stamp and the collector line, a plain Aura (the frame every
+  -- enchantment has printed since Foundations 2024), a Legendary
+  -- Enchantment Artifact (the Enchantment card type with "Artifact" in its
+  -- supertype, as the importer writes Bident of Thassa), and Emberglow
+  -- Eidolon, an Enchantment Creature stored on the plain M15 frame (as every
+  -- enchantment saved before the frame shipped): it keeps that frame until
+  -- its owner picks "Nyx". Unverified on a fresh database: an admin edits
+  -- these with `?previewFrames=m15nyx`.
+  ('c0000000-0000-4000-a000-000000000090'::uuid, 'Starbound Griffin', 'starbound-griffin', '{2}{W}', array['white'], 'Enchantment', 'creature', array['Griffin'], 'common',
+     E'Flying
+Aura spells you cast cost {1} less to cast.', '2', '2', 2,
+     '{"template":"m15nyx","finish":"regular","collector":"2023"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000091'::uuid, 'Ilyra, Loom of the Night Sky', 'ilyra-loom-of-the-night-sky', '{2}{G}{W}', array['green','white'], 'Legendary Enchantment', 'creature', array['Nymph'], 'mythic',
+     E'Vigilance
+Whenever you cast an enchantment spell, you gain 1 life and put a +1/+1 counter on target creature you control.
+{2}{G}{W}: Return target enchantment card from your graveyard to your hand.', '3', '4', 9,
+     '{"template":"m15nyx","finish":"regular","crown":true,"twoColor":true,"stamp":"auto","collector":"2023"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000092'::uuid, 'Veil of Falling Stars', 'veil-of-falling-stars', '{1}{U}', array['blue'], null, 'enchantment', array['Aura'], 'uncommon',
+     E'Enchant creature
+Enchanted creature gets +1/+1 and has flying.
+When Veil of Falling Stars enters, scry 2.', null, null, 7,
+     '{"template":"m15nyx","finish":"regular","collector":"2023"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000093'::uuid, 'Hammer of the Night Forge', 'hammer-of-the-night-forge', '{1}{R}{R}', array['red'], 'Legendary Artifact', 'enchantment', array[]::text[], 'rare',
+     E'Creatures you control have haste.
+{2}{R}, {T}, Sacrifice a land: Create a 3/3 colorless Golem enchantment artifact creature token.', null, null, 12,
+     '{"template":"m15nyx","finish":"regular","crown":true,"stamp":"auto","collector":"2023"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000094'::uuid, 'Emberglow Eidolon', 'emberglow-eidolon', '{1}{R}', array['red'], 'Enchantment', 'creature', array['Spirit'], 'common',
+     E'Whenever a player casts a spell with mana value 3 or less, Emberglow Eidolon deals 1 damage to that player.', '2', '1', 5,
+     '{"template":"m15","finish":"regular"}'::jsonb, 4),
   -- TODO 4.25: the Universes Beyond frames (m15ub, m15ubartifact,
   -- m15ubland) — the smooth streaked dress on M15's slots. Ids …110–…114: a
   -- common red spell with the triangle stamp set to "Always" (print stamps

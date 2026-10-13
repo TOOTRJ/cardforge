@@ -79,6 +79,8 @@ describe("the declared pair masters", () => {
       modern: 10, modernland: 10, retroland: 10,
       // …and the Vehicle frame's ten (TODO 4.5c, owner 2026-10-12).
       m15vehicle: 10,
+      // The Nyx dress (TODO 4.7): m15's two dresses over the starfield.
+      m15nyx: 20,
       // …and the Universes Beyond frames' forty (TODO 4.25): their M15
       // twins' dresses.
       m15ub: 20, m15ubartifact: 10, m15ubland: 10,

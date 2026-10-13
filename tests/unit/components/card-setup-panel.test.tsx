@@ -436,7 +436,7 @@ describe("CardSetupPanel — the artifact frame is a creature variation (TODO 1.
 describe("CardSetupPanel — Nyx is a creature variation for Enchantment Creatures (A3)", () => {
   const verified = [frameComboKey("m15", "w"), frameComboKey("m15artifact", "w"), frameComboKey("nyx", "w")];
   const variations = () => screen.getByRole("radiogroup", { name: /Frame variations/ });
-  const nyxChip = () => within(variations()).getByRole("radio", { name: /^Nyx/ });
+  const nyxChip = () => within(variations()).getByRole("radio", { name: /^Nyx — Constellation/ });
 
   it("offers Nyx to a creature, saying who it is for", () => {
     render(<Harness verified={verified} onColor={vi.fn()} initialColor="white" />);
