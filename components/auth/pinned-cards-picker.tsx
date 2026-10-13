@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { Check, Pin, PinOff } from "lucide-react";
 import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
+import { TwoFacesMark } from "@/components/cards/two-faces-mark";
+import { hasBackPicture } from "@/lib/cards/tile-faces";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -162,8 +164,13 @@ export function PinnedCardsPicker({
                   </span>
                 )}
               </div>
-              <span className="truncate text-xs font-medium text-foreground">
-                {card.title}
+              <span className="flex min-w-0 items-center gap-1.5">
+                <span className="truncate text-xs font-medium text-foreground">
+                  {card.title}
+                </span>
+                {/* The tile is the pin toggle itself, so it cannot hold the
+                    grid's "2 faces" button (TODO 5.15): the text mark says it. */}
+                {hasBackPicture(card) ? <TwoFacesMark /> : null}
               </span>
             </button>
           );
