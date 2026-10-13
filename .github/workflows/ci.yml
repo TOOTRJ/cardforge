@@ -55,7 +55,10 @@ jobs:
   checks:
     name: Typecheck, lint, unit
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # 35, not 25: the coverage run alone took 14 to 23 minutes on one day
+    # (2026-10-12) and the job was cancelled at the limit twice with no test
+    # failing. The limit is a backstop for a hung run, not a budget.
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
