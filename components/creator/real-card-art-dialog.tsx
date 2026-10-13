@@ -30,6 +30,7 @@ import {
   type ImportedArtOrigin,
 } from "@/components/creator/import/imported-art-note";
 import type { FormValues } from "@/lib/creator/form-types";
+import { secondPartWordsOfCard } from "@/lib/creator/second-part";
 import {
   applyRealCardArt,
   defaultRealCardArtMode,
@@ -131,7 +132,9 @@ export function RealCardArtButton({
           onClick={() => setOpen(true)}
           disabled={!signedIn}
           title={signedIn ? undefined : SIGN_IN_HINT}
-          aria-label={target === "back" ? `${label} for the second face` : undefined}
+          // The kind's own word for its second part ("the right half", "the
+          // back face" — lib/creator/second-part.ts, TODO 5.14).
+          aria-label={target === "back" ? `${label} for ${secondPartWordsOfCard(null, template).phrase}` : undefined}
           data-testid={`real-card-art-${target}`}
         >
           <ImageDown className="h-4 w-4" aria-hidden />
@@ -360,7 +363,7 @@ function RealCardArtContent({
         <DialogTitle>Use art from a real card</DialogTitle>
         <DialogDescription>
           {target === "back"
-            ? "Pick a printing — only the second face's artwork and artist credit change."
+            ? `Pick a printing — only ${secondPartWordsOfCard(null, template).phrase}'s artwork and artist credit change.`
             : "Pick a printing — only the artwork and artist credit change. The name, text, type, frame and colours stay yours."}{" "}
           Images come from{" "}
           <a

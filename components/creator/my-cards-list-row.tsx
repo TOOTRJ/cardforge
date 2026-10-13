@@ -5,6 +5,8 @@ import { VISIBILITY_LABELS } from "@/types/card";
 import Link from "next/link";
 import { Check, Eye, Heart, Pencil } from "lucide-react";
 import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
+import { TwoFacesMark } from "@/components/cards/two-faces-mark";
+import { hasBackPicture } from "@/lib/cards/tile-faces";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -49,6 +51,18 @@ function RowThumb({
       sizes="48px"
       className="shadow-none"
     />
+  );
+}
+
+/** The row's second line: the type line and — for a card with a back
+ *  picture — the "2 faces" text mark (TODO 5.15: a 48 px thumbnail is too
+ *  small to turn; the same cards the grid gives its "2 faces" button). */
+function TypeLineWithFaces({ card }: { card: DashboardCard | CardWithStats }) {
+  return (
+    <span className="flex min-w-0 items-center gap-1.5">
+      <span className="truncate text-xs text-muted">{typeLineOf(card)}</span>
+      {hasBackPicture(card) ? <TwoFacesMark /> : null}
+    </span>
   );
 }
 
@@ -158,7 +172,7 @@ export function MyCardListRow({
         >
           {card.title}
         </Link>
-        <span className="truncate text-xs text-muted">{typeLineOf(card)}</span>
+        <TypeLineWithFaces card={card} />
         {isFramePreviewCard(card) ? <FramePreviewCardBadge className="self-start" /> : null}
         {caption}
       </div>
@@ -259,7 +273,7 @@ export function LikedCardListRow({
         >
           {card.title}
         </Link>
-        <span className="truncate text-xs text-muted">{typeLineOf(card)}</span>
+        <TypeLineWithFaces card={card} />
       </div>
       {card.owner?.username ? (
         <Link
