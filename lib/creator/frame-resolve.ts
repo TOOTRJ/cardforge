@@ -536,7 +536,14 @@ export type RemixFrame =
 export function remixFrameFor(
   patch: Pick<
     ScryfallImportPatch,
-    "kind" | "frame_template" | "card_type" | "supertype" | "color_identity" | "back_face" | "printed_dfc_icon"
+    | "kind"
+    | "frame_template"
+    | "frame_match"
+    | "card_type"
+    | "supertype"
+    | "color_identity"
+    | "back_face"
+    | "printed_dfc_icon"
   >,
   verifiedKeys: ReadonlySet<string>,
   options: {
@@ -545,6 +552,18 @@ export function remixFrameFor(
     singleFace?: boolean;
   } = {},
 ): RemixFrame {
+  // The mapper's landing is STATIC; the import finalizes it against the
+  // verified combos (finalizeImportMatch — what /api/scryfall/named hands
+  // the creator), and so does the remix, through that one function: a
+  // Vehicle on `m15vehicle` once it is verified in the card's colour
+  // (`onceVerified`, TODO 4.5c), a borderless or extended-art one landing
+  // there (`landOnOnceVerified`), an M20+ token on its full-art design
+  // (4.48), a 2003 textless promo on the textless frame (A9) — and the
+  // stand-in while it isn't. It used to read the static landing, so a
+  // remixed Smuggler's Copter kept the silver artifact frame after all
+  // seven colours of the Vehicle frame were ticked. A patch without a
+  // match (an older caller, a test fixture) passes through untouched.
+  patch = finalizeImportMatch(patch, verifiedKeys);
   // A printing with no modelled card type (the mapper found neither) keeps
   // none; its frame resolves as a creature's, which is the default frame.
   const known = Boolean(patch.kind || patch.card_type);

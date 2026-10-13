@@ -44,6 +44,17 @@ import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 // again by THIS FILE on `origin/main` 1a4d4f69 (part 2 merged, the hide rule
 // not) from a `git archive` of that commit; part 1's seven came out equal to
 // the fixture.
+//
+// Amended by hand since (creator-footer-and-create-clears.test.tsx): every
+// EDIT payload lost its `footer_text: ""` when an edit stopped resending a
+// footer mark its maker didn't touch — part 1's two transform edits, and
+// part 2's eight (two each for split, aftermath, adventure and flip).
+// Nothing else in the fixture was changed: recording this file on main
+// before that fix and on the branch with it differs by those ten lines
+// alone. A re-record on a commit from before the fix puts them back.
+// (Round 52's three added edits lost the same line when that fix was folded
+// in — thirteen in all: THIS FILE recorded on `origin/main` 37beda45, the
+// fix merged and the hide rule not, gives the fixture byte for byte.)
 // ---------------------------------------------------------------------------
 
 const toast = vi.hoisted(() => ({ info: vi.fn(), error: vi.fn(), success: vi.fn(), message: vi.fn() }));
