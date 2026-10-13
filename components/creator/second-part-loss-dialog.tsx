@@ -30,7 +30,8 @@ type SecondPartLossDialogProps = {
 // the default: it takes the focus when the dialog opens, Esc and a click
 // outside mean Cancel, and Cancel changes NOTHING (the kind chip snaps back,
 // since the kind derives from the untouched form). The dialog traps the
-// focus (Radix) and hands it back to the chip that opened it.
+// focus (Radix) and hands it back to the chip that opened it — after a
+// confirm, to the bar of the section that folded shut around that chip.
 export function SecondPartLossDialog({ loss, onConfirm, onCancel, returnFocusTo }: SecondPartLossDialogProps) {
   return (
     <Dialog open={loss !== null} onOpenChange={(open) => !open && onCancel()}>
@@ -48,6 +49,13 @@ export function SecondPartLossDialog({ loss, onConfirm, onCancel, returnFocusTo 
           if (!target) return;
           event.preventDefault();
           target.focus();
+          // After a CONFIRM the Card type section folds shut around the
+          // chips (as after any pick), and a chip inside a closed fold
+          // cannot take the focus — it fell on the page's body. The fold's
+          // own bar is the nearest thing that can.
+          if (document.activeElement !== target) {
+            target.closest("details:not([open])")?.querySelector<HTMLElement>("summary")?.focus();
+          }
         }}
       >
         <DialogHeader>

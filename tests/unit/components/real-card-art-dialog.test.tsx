@@ -250,7 +250,7 @@ async function pickCard(query: string, option: RegExp, face: "front" | "back" = 
     screen.getByRole("button", {
       name:
         face === "back"
-          ? /^use art from a real card for the second face$/i
+          ? /^use art from a real card for the back face$/i
           : /^use art from a real card$/i,
     }),
   );
@@ -767,7 +767,7 @@ describe("in the second face's art block (split / aftermath / flip halves)", () 
     stubRoutes();
     render(<LayoutHarness isAdventureFrame={false} />);
     expect(
-      screen.getByRole("button", { name: /^use art from a real card for the second face$/i }),
+      screen.getByRole("button", { name: /^use art from a real card for the back face$/i }),
     ).toBeTruthy();
     cleanup();
     render(<LayoutHarness isAdventureFrame />);

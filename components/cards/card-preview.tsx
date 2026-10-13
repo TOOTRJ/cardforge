@@ -2580,7 +2580,7 @@ function AdventurePanel({
 }
 
 /** The editor's hint on an empty adventure page (never baked). */
-const ADVENTURE_RULES_HINT = "Adventure rules (the back face).";
+const ADVENTURE_RULES_HINT = "Adventure rules (the adventure spell).";
 
 // ---------------------------------------------------------------------------
 // SecondFacePanel — the back-face content of a multi-panel frame, drawn inline

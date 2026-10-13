@@ -173,6 +173,19 @@ describe("blankSecondFaceFor / isBlankBackFace (3b.8)", () => {
       back_face: { title: "Ice", card_type: "sorcery" },
     } as unknown as Card;
     expect(defaultValuesFor(withFace, []).back_face.card_type).toBe("sorcery");
+  });
+
+  it("a STORED adventure keeps the spell type it was saved with — the Instant default is a new card's only (TODO 5.14)", () => {
+    // Every adventure made before 5.14's quick fixes stored its spell as a
+    // creature (the old blank): its editor still loads, and resends, that.
+    const stored = {
+      ...savedCard({ template: "adventure" }),
+      card_type: "creature",
+      back_face: { title: "Stomp", card_type: "creature", rules_text: "Stomp deals 2 damage to any target." },
+    } as unknown as Card;
+    expect(defaultValuesFor(stored, []).back_face.card_type).toBe("creature");
+    const sorcery = { ...stored, back_face: { title: "Stomp", card_type: "sorcery" } } as unknown as Card;
+    expect(defaultValuesFor(sorcery, []).back_face.card_type).toBe("sorcery");
     // A standard frame's missing back face stays the plain blank.
     expect(defaultValuesFor(savedCard({ template: "m15" }), []).back_face).toEqual(
       EMPTY_BACK_FACE,

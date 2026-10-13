@@ -454,10 +454,15 @@ function SaveNeedsLine({
   needs,
   stepLabelFor,
   onGo,
+  hasFieldFor,
 }: {
   needs: readonly SaveNeed[];
   stepLabelFor: (field: string) => string;
   onGo: (field: string) => void;
+  /** False for an item the creator has no field for on this card (the name
+   *  of a back face kept on a one-part frame — a legacy double-faced back,
+   *  a battle's): it is listed as plain words, never a link to nowhere. */
+  hasFieldFor: (field: SaveNeed["field"]) => boolean;
 }) {
   return (
     <div role="status" data-testid="save-needs" className="text-xs leading-5 text-gold">
@@ -467,17 +472,27 @@ function SaveNeedsLine({
           const step = stepLabelFor(need.field);
           return (
             <li key={need.id} className="inline">
-              <button
-                type="button"
-                data-need={need.id}
-                // The visible words first, then where the link goes.
-                aria-label={`${need.label} — go to this field${step ? ` on the ${step} step` : ""}`}
-                title={step ? `Go to this field on the ${step} step` : "Go to this field"}
-                onClick={() => onGo(need.field)}
-                className="rounded-sm font-medium underline decoration-gold/60 underline-offset-2 hover:decoration-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
-              >
-                {need.label}
-              </button>
+              {hasFieldFor(need.field) ? (
+                <button
+                  type="button"
+                  data-need={need.id}
+                  // The visible words first, then where the link goes.
+                  aria-label={`${need.label} — go to this field${step ? ` on the ${step} step` : ""}`}
+                  title={step ? `Go to this field on the ${step} step` : "Go to this field"}
+                  onClick={() => onGo(need.field)}
+                  className="rounded-sm font-medium underline decoration-gold/60 underline-offset-2 hover:decoration-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
+                >
+                  {need.label}
+                </button>
+              ) : (
+                <span
+                  data-need={need.id}
+                  data-no-field
+                  title="This card's frame has no field for it. A private draft can be saved without it."
+                >
+                  {need.label}
+                </span>
+              )}
               {i < needs.length - 2 ? ", " : i === needs.length - 2 ? " and " : ""}
             </li>
           );
@@ -1437,8 +1452,10 @@ export function CardCreatorForm({
   // The second part a change of card type removed, kept IN MEMORY for this
   // visit only (TODO 5.14): picking the kind it belonged to again puts it
   // back. Never sent with a save — the form holds an empty second part
-  // while the card is a one-part kind.
-  const stashedSecondPartRef = useRef<{ kind: CardKind; face: FormValues["back_face"] } | null>(null);
+  // while the card is a one-part kind. One slot PER KIND: the question
+  // promises "switch back to Transform … it comes back", and a half removed
+  // from a Split card on the way must not cost the Transform back its slot.
+  const stashedSecondPartRef = useRef<Partial<Record<CardKind, FormValues["back_face"]>>>({});
 
   const applyKindPatch = (patch: KindChangePatch, options: { byUser?: boolean } = {}) => {
     const { currentColorKey, resolution } = resolveKindPatchFrame(patch);
@@ -1499,32 +1516,29 @@ export function CardCreatorForm({
     const nextOwnsBack = frameOwnsSecondPart(template);
     // A kind change the user did not make (an import, an AI card) starts
     // from its own data: nothing kept from before is offered back.
-    if (!options.byUser) stashedSecondPartRef.current = null;
+    if (!options.byUser) stashedSecondPartRef.current = {};
     if (prevOwnsBack && !nextOwnsBack) {
       // The user was asked first when the part holds anything
       // (SecondPartLossDialog); it is kept for the session all the same.
       const leaving = getValues("back_face");
       if (options.byUser && !isBlankBackFace(leaving)) {
-        stashedSecondPartRef.current = {
-          kind: prevKind,
-          face: {
-            ...leaving,
-            art_position: { ...leaving.art_position },
-            color_identity: [...leaving.color_identity],
-          },
+        stashedSecondPartRef.current[prevKind] = {
+          ...leaving,
+          art_position: { ...leaving.art_position },
+          color_identity: [...leaving.color_identity],
         };
       }
       setValue("has_back_face", false, { shouldDirty: true });
       setValue("back_face", EMPTY_BACK_FACE, { shouldDirty: true });
     } else if (nextOwnsBack && isBlankBackFace(getValues("back_face"))) {
-      const stash = stashedSecondPartRef.current;
-      if (options.byUser && stash && stash.kind === nextKind) {
-        // Straight back to the kind whose second part was removed: it
-        // returns as it was.
-        setValue("back_face", stash.face, { shouldDirty: true });
-        stashedSecondPartRef.current = null;
+      const stashed = options.byUser ? stashedSecondPartRef.current[nextKind] : undefined;
+      if (stashed) {
+        // Back on the kind whose second part was removed: it returns as it
+        // was.
+        setValue("back_face", stashed, { shouldDirty: true });
+        delete stashedSecondPartRef.current[nextKind];
         toast.info(
-          `${(secondPartWordsFor(nextKind)?.second ?? "Back face")} restored${stash.face.title.trim() ? ` — “${stash.face.title.trim()}”` : ""}.`,
+          `${(secondPartWordsFor(nextKind)?.second ?? "Back face")} restored${stashed.title.trim() ? ` — “${stashed.title.trim()}”` : ""}.`,
         );
       } else {
         // Entering (or moving between) frames that paint a second face: an
@@ -2688,7 +2702,7 @@ export function CardCreatorForm({
   // and return to step 1.
   const handleStartOver = () => {
     reset(defaults);
-    stashedSecondPartRef.current = null;
+    stashedSecondPartRef.current = {};
     setRemixSource(null);
     setFrameSubstitution(null);
     setImportedArtOrigin(null);
@@ -3881,7 +3895,20 @@ export function CardCreatorForm({
               switching back to a "publishing" tab. */}
           <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-col gap-2 border-t border-border/50 bg-surface/95 px-6 py-4 backdrop-blur-sm">
             {userId && saveNeeds.length > 0 ? (
-              <SaveNeedsLine needs={saveNeeds} stepLabelFor={stepLabelForField} onGo={goToField} />
+              <SaveNeedsLine
+                needs={saveNeeds}
+                stepLabelFor={stepLabelForField}
+                onGo={goToField}
+                hasFieldFor={(field) =>
+                  // The second part is edited on a frame that paints one, or
+                  // on a double-faced body; a back kept on any other frame
+                  // has no editor (its owner is offered the move onto the
+                  // real frames on the Identity step).
+                  !field.startsWith("back_face.") ||
+                  hasInlineBackFace(watched.frame_style?.template) ||
+                  dfcLayout !== null
+                }
+              />
             ) : userId && saveDisabledReason ? (
               <p
                 role="status"

@@ -2,7 +2,7 @@
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { GameSystem } from "@/types/card";
+import type { Card, GameSystem } from "@/types/card";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 
 // ---------------------------------------------------------------------------
@@ -415,5 +415,130 @@ describe("3 · every kind's second part has its own words", () => {
     const summary = screen.getByText("Hide the preview").closest("summary")!;
     expect(summary.textContent).toContain("Live preview");
     expect(within(summary).getByText("Show the preview")).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Skeptic pass, 2026-10-12.
+// ---------------------------------------------------------------------------
+describe("skeptic: the promise the question makes, and the links' dead ends", () => {
+  const removeButton = () =>
+    Array.from(lossDialog()!.querySelectorAll("button")).find((b) => /^Remove /.test(b.textContent ?? ""))!;
+
+  it("each kind keeps its OWN removed part: a half removed from a Split card on the way does not cost the Transform back its place", async () => {
+    renderForm();
+    await cardWithSecondPart(/^Transform/, "Insectile Aberration");
+    await pickKind(/^Creature/);
+    await click(removeButton());
+    // On the way: a split card, its half named, removed too.
+    await pickKind(/^Split/);
+    await goTo(/^identity/i);
+    await type("back_face.title", "Ice");
+    await goTo(/^card/i);
+    await pickKind(/^Creature/);
+    expect(lossDialog()!.textContent).toContain("removes the right half (“Ice”)");
+    await click(removeButton());
+    // "If you switch back to Transform before you leave this page, it comes
+    // back as it was" — still true.
+    await pickKind(/^Transform/);
+    expect(preview().backFace).toMatchObject({ title: "Insectile Aberration", card_type: "creature" });
+    // …and so is the split half's.
+    await pickKind(/^Creature/);
+    await click(removeButton());
+    await pickKind(/^Split/);
+    expect(preview().backFace).toMatchObject({ title: "Ice", card_type: "instant" });
+    expect(toast.info.mock.calls.map((call) => call[0])).toEqual(
+      expect.arrayContaining(["Back face restored — “Insectile Aberration”.", "Right half restored — “Ice”."]),
+    );
+  });
+
+  it("after a CONFIRM the focus is handed on, never dropped on the page's body", async () => {
+    // (In a browser the Card type section has folded shut around the chip by
+    // then, and the dialog falls back to the section's bar — measured in the
+    // real page; happy-dom lets a chip inside a closed <details> take it.)
+    renderForm();
+    await cardWithSecondPart(/^Transform/, "Insectile Aberration");
+    kindChip(/^Creature/).focus();
+    await pickKind(/^Creature/);
+    await click(removeButton());
+    await waitFor(() => expect(lossDialog()).toBeNull());
+    await waitFor(() => {
+      const active = document.activeElement as HTMLElement | null;
+      expect(active).not.toBe(document.body);
+      expect(["radio", null]).toContain(active?.getAttribute("role") ?? null);
+      expect(active?.closest("details")).toBe(screen.getByRole("radiogroup", { name: "Card type" }).closest("details"));
+    });
+  });
+
+  it("a back face kept on a one-part frame has no name field: its item is plain words, not a link to nowhere", async () => {
+    // The shape of an imported double-faced card from before the real
+    // frames (a legacy back: content only, drawn on the front's frame) —
+    // here with its name missing and the card visible to others.
+    const legacy = {
+      id: "22222222-2222-4222-8222-222222222222",
+      owner_id: USER,
+      title: "Moorland Chaplain",
+      slug: "moorland-chaplain",
+      game_system_id: GAME,
+      cost: "{1}{W}",
+      color_identity: ["white"],
+      supertype: null,
+      card_type: "creature",
+      subtypes: [],
+      tags: [],
+      rarity: "common",
+      rules_text: null,
+      flavor_text: null,
+      power: "2",
+      toughness: "2",
+      loyalty: null,
+      defense: null,
+      artist_credit: null,
+      art_url: null,
+      art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
+      frame_style: { finish: "regular", template: "m15" },
+      visibility: "unlisted",
+      back_face: { title: "", card_type: "creature", subtypes: [] },
+      back_card_id: null,
+      source_scryfall_id: null,
+      set_icon_url: null,
+      set_icon_code: null,
+      face_content: null,
+      watermark: null,
+      footer_text: null,
+      updated_at: "2026-10-02T10:00:00.000Z",
+    } as unknown as Card;
+    render(
+      <CardCreatorForm
+        mode="edit"
+        userId={USER}
+        ownerUsername="tester"
+        gameSystems={GAME_SYSTEMS}
+        aiConfigured={false}
+        verifiedFrameKeys={VERIFIED}
+        card={legacy}
+      />,
+    );
+    const line = screen.getByTestId("save-needs");
+    expect(line.textContent).toBe("Add artwork and the back face's name to enable Save.");
+    // The front's art has a field: a link. The legacy back's name has none.
+    expect(need("art")).toBeTruthy();
+    expect(need("second-name")).toBeNull();
+    const plain = line.querySelector("[data-need='second-name']")!;
+    expect(plain.tagName).toBe("SPAN");
+    expect(plain.textContent).toBe("the back face's name");
+    // The gate itself is unchanged: Save stays disabled, with the sentence.
+    const save = document.querySelector<HTMLButtonElement>("button[type='submit']")!;
+    expect(save.disabled).toBe(true);
+    expect(save.title).toBe(line.textContent);
+    expect(document.querySelector("[name='back_face.title']")).toBeNull();
+  });
+
+  it("the half's “art from a real card” button is named by the kind's own word", async () => {
+    renderForm();
+    await pickKind(/^Aftermath/);
+    await goTo(/^identity/i);
+    expect(screen.getByRole("button", { name: "Use art from a real card for the aftermath half" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /for the second face/i })).toBeNull();
   });
 });
