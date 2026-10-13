@@ -20,9 +20,38 @@
 //   rows read as the rows the form OPENED with. (A new card has no stored
 //   text: it saves the canonical one, as before.)
 //
+//
+// And the rows are written as `face_content` — which the renderers read
+// BEFORE the text — only where they are something the server stores AND say
+// what the card draws (the #528 follow-up, 2026-10-13):
+//
+// - `face_content` holds at most 6 rows, chapters I–VI, costs of three
+//   digits, 600 characters a row (`faceContentSchema`, the printed extremes).
+//   A stored plain-text card past one of those — a walker of seven lines, a
+//   saga with a chapter VII — was refused whole by its own dual write: it
+//   could not even be retitled;
+// - the rows can say less than the text: a marker the editor cannot number
+//   ("XI —", or the XI of "I, XI —"), a marker written out of order
+//   ("II, I —" — the rows sort it).
+//   UNTOUCHED, such a card stays exactly as it is stored: its text byte for
+//   byte, its `face_content` not sent at all (`keepsStored`: the server
+//   leaves an omitted column alone). EDITED (or new) past the limits, it
+//   saves as PLAIN TEXT — the rows serialized, no `face_content` — which
+//   both renderers parse back into the same rows (`resolve*`, the path every
+//   plain-text walker and saga has always drawn through). The limits stay:
+//   no print has a seventh walker row or a chapter VII, and what a stored
+//   card draws is unchanged.
+//
 // Pure: no form, no React (tests/unit/creator/structured-rules.test.ts).
 
-import { sagaFromRulesText, serializeLoyalty, serializeSaga } from "@/lib/cards/face-content";
+import {
+  resolveLoyaltyRows,
+  resolveSagaChapters,
+  sagaFromRulesText,
+  serializeLoyalty,
+  serializeSaga,
+} from "@/lib/cards/face-content";
+import { faceContentSchema } from "@/lib/validation/card";
 import type { CardKind } from "@/lib/creator/card-kinds";
 import type { FormValues } from "@/lib/creator/form-types";
 import type { FaceContent, LoyaltyRowContent, SagaChapterContent } from "@/types/card";
@@ -35,8 +64,13 @@ export type StructuredRulesValues = Pick<
 export type SubmittedRules = {
   /** The rules text the save carries, trimmed; "" = none. */
   rulesText: string;
-  /** The structured rows, or null (every other kind; no row survives). */
+  /** The structured rows, or null (every other kind; no row survives; rows
+   *  past what `face_content` stores, saved as plain text). With
+   *  `keepsStored`, the STORED value — what the preview draws. */
   faceContent: FaceContent | null;
+  /** An untouched edit whose rows cannot be written as `face_content`
+   *  (above): the save must not send `face_content` at all. */
+  keepsStored?: true;
 };
 
 export type SubmittedRulesOptions = {
@@ -72,7 +106,87 @@ function sagaTextRowsOf(rows: readonly { numerals: readonly number[]; text: stri
     .filter((r) => r.text.length > 0);
 }
 
+/** `faceContentSchema`'s row count and highest chapter (a test holds them
+ *  to the schema). */
+export const MAX_STRUCTURED_ROWS = 6;
+
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/** Something the server stores as `face_content` (its own schema). */
+const fits = (content: FaceContent) => faceContentSchema.safeParse(content).success;
+
+/** The stored text is still the hidden textarea's (an AI fill replaces it —
+ *  and the rows with it). */
+function openedOf(values: StructuredRulesValues, options: SubmittedRulesOptions): StructuredRulesValues | null {
+  return options.opened && options.opened.rules_text === values.rules_text ? options.opened : null;
+}
+
+/** An EDIT whose walker / saga rows still read as the rows the form opened
+ *  with — the save keeps the stored text, and nothing about those rows is
+ *  the maker's to fix (lib/creator/form-schema.ts skips their checks: a
+ *  stored card always opens and retitles). False for every other kind, a new
+ *  card and a remix. */
+export function structuredRowsUntouched(
+  kind: CardKind,
+  values: StructuredRulesValues,
+  opened: StructuredRulesValues | null | undefined,
+): boolean {
+  const from = openedOf(values, { opened });
+  if (!from) return false;
+  if (kind === "planeswalker") {
+    return same(loyaltyRowsOf(values.loyalty_abilities), loyaltyRowsOf(from.loyalty_abilities));
+  }
+  if (kind === "saga") {
+    return (
+      (from.saga_intro.trim() || null) === (values.saga_intro.trim() || null) &&
+      same(sagaTextRowsOf(values.saga_chapters), sagaTextRowsOf(from.saga_chapters))
+    );
+  }
+  return false;
+}
+
+/**
+ * The saga rows (their indices in `values.saga_chapters`) that hold a text
+ * and NO chapter number, and whose text the save would not carry — what the
+ * form asks a number for instead of dropping them without a word:
+ * - beside a numbered chapter, such a row is simply left out of the save;
+ * - alone, the save keeps the hidden text — fine while the rows still read
+ *   as that text (a marker the editor can't number, "XI —", on a remix),
+ *   and a lost edit once the row or the intro was changed.
+ * Never on an edit whose rows are untouched: that save keeps the stored
+ * text whole.
+ */
+export function sagaRowsNeedingNumber(
+  kind: CardKind,
+  values: StructuredRulesValues,
+  opened?: StructuredRulesValues | null,
+): number[] {
+  if (kind !== "saga" || structuredRowsUntouched(kind, values, opened)) return [];
+  const unnumbered = values.saga_chapters.flatMap((row, index) =>
+    row.text.trim() && row.numerals.length === 0 ? [index] : [],
+  );
+  if (unnumbered.length === 0) return [];
+  if (unnumbered.length < sagaTextRowsOf(values.saga_chapters).length) return unnumbered;
+  const hidden = sagaFromRulesText(values.rules_text);
+  const asHidden =
+    (hidden.intro ?? "") === values.saga_intro.trim() &&
+    same(sagaTextRowsOf(values.saga_chapters), sagaTextRowsOf(hidden.chapters));
+  return asHidden ? [] : unnumbered;
+}
+
+/** Rows that hold a text but are more than `face_content` stores (seven
+ *  walker rows, a chapter VII…): the card saves as plain text. What the
+ *  editors say so from. */
+export function structuredRowsSaveAsText(kind: CardKind, values: StructuredRulesValues): boolean {
+  if (kind === "planeswalker") {
+    return values.loyalty_abilities.filter((r) => r.text.trim()).length > MAX_STRUCTURED_ROWS;
+  }
+  if (kind === "saga") {
+    const rows = sagaTextRowsOf(values.saga_chapters).filter((r) => r.numerals.length > 0);
+    return rows.length > MAX_STRUCTURED_ROWS || rows.some((r) => r.numerals.some((n) => n > MAX_STRUCTURED_ROWS));
+  }
+  return false;
+}
 
 export function submittedRulesOf(
   kind: CardKind,
@@ -80,18 +194,29 @@ export function submittedRulesOf(
   options: SubmittedRulesOptions = {},
 ): SubmittedRules {
   const textarea = values.rules_text.trim();
-  // The stored text is still the hidden textarea's (an AI fill replaces it —
-  // and the rows with it).
-  const opened = options.opened && options.opened.rules_text === values.rules_text ? options.opened : null;
+  const untouched = structuredRowsUntouched(kind, values, options.opened);
+  const stored = options.storedFaceContent ?? null;
 
   if (kind === "planeswalker") {
     const rows = loyaltyRowsOf(values.loyalty_abilities);
     if (rows.length > 0) {
-      const untouched = opened !== null && same(rows, loyaltyRowsOf(opened.loyalty_abilities));
-      return {
-        rulesText: untouched ? textarea : serializeLoyalty(rows),
-        faceContent: { v: 1, loyalty: { abilities: rows } },
-      };
+      const content: FaceContent = { v: 1, loyalty: { abilities: rows } };
+      if (untouched) {
+        // The dual write of a card stored as plain text — only where the
+        // rows are storable and draw what the card draws today.
+        // (A card with neither a text nor stored rows draws nothing to
+        // compare with — the rows are all there is.)
+        const writable =
+          fits(content) &&
+          ((!stored && !textarea) ||
+            same(resolveLoyaltyRows(content, textarea), resolveLoyaltyRows(stored, textarea)));
+        return writable
+          ? { rulesText: textarea, faceContent: content }
+          : { rulesText: textarea, faceContent: stored, keepsStored: true };
+      }
+      return fits(content)
+        ? { rulesText: serializeLoyalty(rows), faceContent: content }
+        : { rulesText: serializeLoyalty(rows), faceContent: null };
     }
     // Every row emptied or removed: the hidden textarea still holds the copy
     // of the rows, which would bring them all back. (A rules text always
@@ -105,22 +230,27 @@ export function submittedRulesOf(
     const chapters = textRows.filter((r) => r.numerals.length > 0);
     if (chapters.length > 0) {
       const intro = values.saga_intro.trim() || null;
-      const untouched =
-        opened !== null &&
-        (opened.saga_intro.trim() || null) === intro &&
-        same(textRows, sagaTextRowsOf(opened.saga_chapters));
-      // Untouched, with a row the chapters cannot carry (the stored text has
-      // a marker the editor can't number beside ones it can): the card stays
-      // as it is stored. Writing the numbered rows alone as `face_content` —
-      // which the renderers read BEFORE the text — took that chapter off
-      // the card on a save that only retitled it.
-      if (untouched && textRows.length !== chapters.length) {
-        return { rulesText: textarea, faceContent: options.storedFaceContent ?? null };
+      const content: FaceContent = { v: 1, saga: { intro, chapters } };
+      if (untouched) {
+        // Untouched: the dual write only where the rows are storable and
+        // say all the text does. A row the chapters cannot carry (a marker
+        // the editor can't number beside ones it can), a chapter VII, a
+        // seventh row, a marker the rows would re-order: the card stays as
+        // it is stored. Writing the numbered rows alone as `face_content` —
+        // which the renderers read BEFORE the text — took that chapter off
+        // the card on a save that only retitled it.
+        const writable =
+          textRows.length === chapters.length &&
+          fits(content) &&
+          ((!stored && !textarea) ||
+            same(resolveSagaChapters(content, textarea), resolveSagaChapters(stored, textarea)));
+        return writable
+          ? { rulesText: textarea, faceContent: content }
+          : { rulesText: textarea, faceContent: stored, keepsStored: true };
       }
-      return {
-        rulesText: untouched ? textarea : serializeSaga(intro, chapters),
-        faceContent: { v: 1, saga: { intro, chapters } },
-      };
+      return fits(content)
+        ? { rulesText: serializeSaga(intro, chapters), faceContent: content }
+        : { rulesText: serializeSaga(intro, chapters), faceContent: null };
     }
     // A row that holds a text and no chapter number (a marker the editor
     // can't read, "XI — …"; a number not picked yet) is NOT an emptied

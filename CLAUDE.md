@@ -888,7 +888,26 @@ Rules and gotchas:
   plain text gains `face_content` — which the renderers read BEFORE
   `rules_text` (`resolveLoyaltyRows` / `resolveSagaChapters`), so it is
   skipped where the rows cannot say all the text does (that unnumbered
-  row): the card stays plain text and draws as it did.
+  row): the card stays plain text and draws as it did. The dual write is
+  made only where the rows pass the server's `faceContentSchema` (6 rows,
+  chapters I–VI, a three-digit cost, 600 characters a row, a 400-character
+  intro — limits that are NOT raised for it) AND resolve to what the stored
+  card draws today; else `keepsStored`: the text byte for byte and
+  `face_content` NOT SENT (a seven-line walker, a chapter VII, "I, XI —",
+  "II, I —", which the rows would re-order) — main refused the first two
+  whole and redrew the last two on a retitle. `face_content` is left out
+  only until a save of the session has gone out for that card
+  (`savedUnderKey`: until the refresh lands "untouched" is read against the
+  card as it OPENED, so the opened value is sent), and an edit's form schema
+  (`cardFormSchemaFor(opened)`) checks nothing about rows that read as they
+  opened. EDITED (or new — a remix) past the limits, a card saves as PLAIN
+  TEXT: the rows serialized, `face_content` null, which both renderers
+  parse back into the same rows (the editors say so under the rows); the
+  server still reads each line as a row — one the stored card holds keeps
+  its characters (`plainTextRows`, `lib/validation/print-typography.ts`).
+  A saga row with a text and no chapter number is never dropped by a save:
+  `sagaRowsNeedingNumber` puts "Pick a chapter number for this row, or
+  remove it." on it and the save waits — never on an untouched edit.
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in
