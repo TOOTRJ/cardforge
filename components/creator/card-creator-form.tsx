@@ -2999,6 +2999,10 @@ export function CardCreatorForm({
       if (rows.length > 0) {
         faceContentPayload = { v: 1, loyalty: { abilities: rows } };
         rulesTextOut = serializeLoyalty(rows);
+      } else if (isEdit) {
+        // Every row emptied on an edit: the hidden textarea still holds the
+        // stored copy of the rows, which would bring them all back.
+        rulesTextOut = "";
       }
     } else if (submitKind === "saga") {
       const chapters = values.saga_chapters
@@ -3011,6 +3015,22 @@ export function CardCreatorForm({
         const intro = values.saga_intro.trim() || null;
         faceContentPayload = { v: 1, saga: { intro, chapters } };
         rulesTextOut = serializeSaga(intro, chapters);
+      } else if (isEdit && values.saga_chapters.every((r) => !r.text.trim())) {
+        // No chapter row holds a text on an edit. The hidden textarea still
+        // holds the STORED rules text, and it is resent only while it reads
+        // as what the editor shows — a text with no chapter, all of it the
+        // intro, untouched (so a stored text is never rewritten by a save
+        // that didn't edit it). Chapters the stored text still has, or an
+        // intro that was edited or emptied: the editor's intro IS the text
+        // ("" clears it) — the stored copy would bring the chapters back
+        // and drop the edit. A row that holds a text and no chapter number
+        // (a marker the editor can't read) is not an emptied editor: the
+        // stored text stays.
+        const intro = values.saga_intro.trim();
+        const storedSaga = sagaFromRulesText(values.rules_text);
+        if (storedSaga.chapters.length > 0 || (storedSaga.intro ?? "") !== intro) {
+          rulesTextOut = intro;
+        }
       }
     }
 
@@ -3060,6 +3080,10 @@ export function CardCreatorForm({
     // parent's rarity can't be seen or changed there. A stored token keeps
     // its rarity (edits never send a hidden change).
     const tokenRarity = kindHidesRarity(submitKind) && !isEdit;
+    // An optional text its field holds EMPTY: a new card leaves it out; an
+    // edit says null, which clears the stored column — left out, the update
+    // action keeps the old text and the emptied field came back on reload.
+    const emptied = isEdit ? null : undefined;
 
     // No `slug`: a NEW card's slug is derived server-side from the title it
     // is saved with (so a remix lives at ITS name, not the original's), and
@@ -3067,7 +3091,7 @@ export function CardCreatorForm({
     const payload = {
       title: values.title.trim(),
       game_system_id: values.game_system_id,
-      cost: values.cost.trim() || undefined,
+      cost: values.cost.trim() || emptied,
       color_identity: values.color_identity,
       supertype: values.supertype.trim() || undefined,
       // The Types field as typed, or null for a field never edited (TODO
@@ -3078,22 +3102,23 @@ export function CardCreatorForm({
       subtypes: submitSubtypes,
       tags: parseTags(values.tags_text),
       rarity: tokenRarity ? "common" : values.rarity || undefined,
-      rules_text: rulesTextOut || undefined,
+      rules_text: rulesTextOut || emptied,
       face_content: faceContentPayload,
       watermark: watermarkPayload,
-      flavor_text: values.flavor_text.trim() || undefined,
+      flavor_text: values.flavor_text.trim() || emptied,
       // The 1/1 default only belongs on P/T types — an instant or sorcery
-      // never carries the creature stats it started the form with.
-      power: printsPT ? values.power.trim() || undefined : undefined,
-      toughness: printsPT ? values.toughness.trim() || undefined : undefined,
+      // never carries the creature stats it started the form with. (A stat
+      // the type doesn't print is never sent: an edit leaves it as stored.)
+      power: printsPT ? values.power.trim() || emptied : undefined,
+      toughness: printsPT ? values.toughness.trim() || emptied : undefined,
       loyalty: showsLoyalty(submitCardType)
-        ? values.loyalty.trim() || undefined
+        ? values.loyalty.trim() || emptied
         : undefined,
       defense: showsDefense(submitCardType)
-        ? values.defense.trim() || undefined
+        ? values.defense.trim() || emptied
         : undefined,
-      artist_credit: values.artist_credit.trim() || undefined,
-      art_url: values.art_url.trim() || undefined,
+      artist_credit: values.artist_credit.trim() || emptied,
+      art_url: values.art_url.trim() || emptied,
       art_position: values.art_position,
       frame_style: values.frame_style,
       // Same no-art rule for the visibility dropdown (covers the "create
