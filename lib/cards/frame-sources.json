@@ -6940,6 +6940,103 @@
       "colourless = PipGlyph composite like m15token's: CC's silver token frame at 35 % (frame) / 80 % (type pill and text box) opacity over the art, as BFZ #2 / OGW #1 Eldrazi Scion print"
     ]
   },
+  "m15vehicle": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packM15RegularNew.js 'Vehicle Frame' + 'Vehicle Power/Toughness' (groupAccurate.js; creator-23.js cardFrameProperties draws a Vehicle this way)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/m15/new/v.png through img/frames/m15/new/border.png",
+        "img/frames/m15/new/v.png through img/frames/m15/new/frame.png",
+        "img/frames/m15/new/w.png through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/w.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/w.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/w.png through img/frames/m15/new/pinline.png"
+      ],
+      "u": [
+        "img/frames/m15/new/v.png through img/frames/m15/new/border.png",
+        "img/frames/m15/new/v.png through img/frames/m15/new/frame.png",
+        "img/frames/m15/new/u.png through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/u.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/u.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/u.png through img/frames/m15/new/pinline.png"
+      ],
+      "b": [
+        "img/frames/m15/new/v.png through img/frames/m15/new/border.png",
+        "img/frames/m15/new/v.png through img/frames/m15/new/frame.png",
+        "img/frames/m15/new/b.png through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/b.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/b.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/b.png through img/frames/m15/new/pinline.png"
+      ],
+      "r": [
+        "img/frames/m15/new/v.png through img/frames/m15/new/border.png",
+        "img/frames/m15/new/v.png through img/frames/m15/new/frame.png",
+        "img/frames/m15/new/r.png through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/r.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/r.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/r.png through img/frames/m15/new/pinline.png"
+      ],
+      "g": [
+        "img/frames/m15/new/v.png through img/frames/m15/new/border.png",
+        "img/frames/m15/new/v.png through img/frames/m15/new/frame.png",
+        "img/frames/m15/new/g.png through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/g.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/g.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/g.png through img/frames/m15/new/pinline.png"
+      ],
+      "c": [
+        "img/frames/m15/new/v.png through img/frames/m15/new/border.png",
+        "img/frames/m15/new/v.png through img/frames/m15/new/frame.png",
+        "img/frames/m15/new/a.png through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/a.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/a.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/a.png through img/frames/m15/new/pinline.png"
+      ],
+      "m": [
+        "img/frames/m15/new/v.png through img/frames/m15/new/border.png",
+        "img/frames/m15/new/v.png through img/frames/m15/new/frame.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/type.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/pinline.png"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/m15/regular/m15PTV.png",
+      "u": "img/frames/m15/regular/m15PTV.png",
+      "b": "img/frames/m15/regular/m15PTV.png",
+      "r": "img/frames/m15/regular/m15PTV.png",
+      "g": "img/frames/m15/regular/m15PTV.png",
+      "c": "img/frames/m15/regular/m15PTV.png",
+      "m": "img/frames/m15/regular/m15PTV.png"
+    },
+    "sourceFiles": [
+      "img/frames/m15/new/a.png",
+      "img/frames/m15/new/b.png",
+      "img/frames/m15/new/border.png",
+      "img/frames/m15/new/frame.png",
+      "img/frames/m15/new/g.png",
+      "img/frames/m15/new/m.png",
+      "img/frames/m15/new/pinline.png",
+      "img/frames/m15/new/r.png",
+      "img/frames/m15/new/rules.png",
+      "img/frames/m15/new/title.png",
+      "img/frames/m15/new/type.png",
+      "img/frames/m15/new/u.png",
+      "img/frames/m15/new/v.png",
+      "img/frames/m15/new/w.png",
+      "img/frames/m15/regular/m15PTV.png"
+    ],
+    "notes": [
+      "every key = the bronze 'Vehicle Frame' (new/v.png) through CC's Border and Frame masks, then the colour's pinline, title bar, type bar and text box through CC's masks (colourless: the artifact frame's silver, new/a.png; gold for two colours or more, new/m.png) — CC's recipe for a Vehicle, m15artifact's with v.png for a.png; as KLD #235, NEO #9, WAR #24, DFT #188 print",
+      "plates = CC's one brown Vehicle plate (m15PTV.png, 381x209) under every colour key (pt/<k>.png, seven names, one image): a printed Vehicle's plate is brown whatever its colour; the profile draws WHITE digits on it",
+      "no two-colour pair masters yet: a two-colour Vehicle draws the gold `m` master (the prints split the text box and pinline, DFT #188-220 — a later item)"
+    ]
+  },
   "m20token": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",

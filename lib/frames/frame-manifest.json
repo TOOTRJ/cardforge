@@ -9480,6 +9480,202 @@
       "width": 1500,
       "height": 2100
     },
+    "m15vehicle/b.png": {
+      "hash": "8eeb810454b7",
+      "sha256": "8eeb810454b7db4750b41ddcc3efea78497062f2825f57907dc4ffb04b6de487",
+      "bytes": 1970359,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15vehicle/b.webp": {
+      "hash": "d9c1f2aa3d11",
+      "sha256": "d9c1f2aa3d11a804894a4c898840a2f89388047a85dc8edc4f072efe7d6251a9",
+      "bytes": 90304,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15vehicle/c.png": {
+      "hash": "7c5eb606aa7a",
+      "sha256": "7c5eb606aa7a27006a26c5785a42619ddb6484303d3da32deedd6d49074663d1",
+      "bytes": 2140722,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15vehicle/c.webp": {
+      "hash": "4573fff395d5",
+      "sha256": "4573fff395d5e8d901423f690884ff9308bd6bfedd117ead7fb02414f722a74c",
+      "bytes": 112296,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15vehicle/g.png": {
+      "hash": "f33107bb602c",
+      "sha256": "f33107bb602c70e9fd469a664e867da9535bf4fb1147c9deeff69ce24208c990",
+      "bytes": 2067799,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15vehicle/g.webp": {
+      "hash": "7d452d6dbb58",
+      "sha256": "7d452d6dbb5882380bcfb317cf4a7c15ad43d29489c8edec8d3718e5d3aec913",
+      "bytes": 106910,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15vehicle/m.png": {
+      "hash": "e48bad65f2e9",
+      "sha256": "e48bad65f2e9505533bb2a90d164396b16ef14764851ef202dd16bb2d1bcd96a",
+      "bytes": 2141693,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15vehicle/m.webp": {
+      "hash": "a24301d0d6ed",
+      "sha256": "a24301d0d6ed24267d0b83afb7cb9002fbcf65d71ab164996f1bb677e8083541",
+      "bytes": 112268,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15vehicle/pt/b.png": {
+      "hash": "f7c27795acd9",
+      "sha256": "f7c27795acd9d2342a0e14a88ded49b4eab0588b7b9183a42edc2d8799d2ca66",
+      "bytes": 143642,
+      "width": 381,
+      "height": 209
+    },
+    "m15vehicle/pt/b.webp": {
+      "hash": "74b29848b780",
+      "sha256": "74b29848b7800577b7b9d5bf0925eeec717109179050160fa4dc7c185a1c137f",
+      "bytes": 14828,
+      "width": 381,
+      "height": 209
+    },
+    "m15vehicle/pt/c.png": {
+      "hash": "f7c27795acd9",
+      "sha256": "f7c27795acd9d2342a0e14a88ded49b4eab0588b7b9183a42edc2d8799d2ca66",
+      "bytes": 143642,
+      "width": 381,
+      "height": 209
+    },
+    "m15vehicle/pt/c.webp": {
+      "hash": "74b29848b780",
+      "sha256": "74b29848b7800577b7b9d5bf0925eeec717109179050160fa4dc7c185a1c137f",
+      "bytes": 14828,
+      "width": 381,
+      "height": 209
+    },
+    "m15vehicle/pt/g.png": {
+      "hash": "f7c27795acd9",
+      "sha256": "f7c27795acd9d2342a0e14a88ded49b4eab0588b7b9183a42edc2d8799d2ca66",
+      "bytes": 143642,
+      "width": 381,
+      "height": 209
+    },
+    "m15vehicle/pt/g.webp": {
+      "hash": "74b29848b780",
+      "sha256": "74b29848b7800577b7b9d5bf0925eeec717109179050160fa4dc7c185a1c137f",
+      "bytes": 14828,
+      "width": 381,
+      "height": 209
+    },
+    "m15vehicle/pt/m.png": {
+      "hash": "f7c27795acd9",
+      "sha256": "f7c27795acd9d2342a0e14a88ded49b4eab0588b7b9183a42edc2d8799d2ca66",
+      "bytes": 143642,
+      "width": 381,
+      "height": 209
+    },
+    "m15vehicle/pt/m.webp": {
+      "hash": "74b29848b780",
+      "sha256": "74b29848b7800577b7b9d5bf0925eeec717109179050160fa4dc7c185a1c137f",
+      "bytes": 14828,
+      "width": 381,
+      "height": 209
+    },
+    "m15vehicle/pt/r.png": {
+      "hash": "f7c27795acd9",
+      "sha256": "f7c27795acd9d2342a0e14a88ded49b4eab0588b7b9183a42edc2d8799d2ca66",
+      "bytes": 143642,
+      "width": 381,
+      "height": 209
+    },
+    "m15vehicle/pt/r.webp": {
+      "hash": "74b29848b780",
+      "sha256": "74b29848b7800577b7b9d5bf0925eeec717109179050160fa4dc7c185a1c137f",
+      "bytes": 14828,
+      "width": 381,
+      "height": 209
+    },
+    "m15vehicle/pt/u.png": {
+      "hash": "f7c27795acd9",
+      "sha256": "f7c27795acd9d2342a0e14a88ded49b4eab0588b7b9183a42edc2d8799d2ca66",
+      "bytes": 143642,
+      "width": 381,
+      "height": 209
+    },
+    "m15vehicle/pt/u.webp": {
+      "hash": "74b29848b780",
+      "sha256": "74b29848b7800577b7b9d5bf0925eeec717109179050160fa4dc7c185a1c137f",
+      "bytes": 14828,
+      "width": 381,
+      "height": 209
+    },
+    "m15vehicle/pt/w.png": {
+      "hash": "f7c27795acd9",
+      "sha256": "f7c27795acd9d2342a0e14a88ded49b4eab0588b7b9183a42edc2d8799d2ca66",
+      "bytes": 143642,
+      "width": 381,
+      "height": 209
+    },
+    "m15vehicle/pt/w.webp": {
+      "hash": "74b29848b780",
+      "sha256": "74b29848b7800577b7b9d5bf0925eeec717109179050160fa4dc7c185a1c137f",
+      "bytes": 14828,
+      "width": 381,
+      "height": 209
+    },
+    "m15vehicle/r.png": {
+      "hash": "4ec40d34d024",
+      "sha256": "4ec40d34d02443024fa24b1ce596cfcefa1d1372d360671d02ffa9b58ddc575b",
+      "bytes": 2229926,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15vehicle/r.webp": {
+      "hash": "e997212fece2",
+      "sha256": "e997212fece2091ce108f2e2002038a742d8e07ab2e430627189722b7f751c99",
+      "bytes": 125016,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15vehicle/u.png": {
+      "hash": "f0739aaf61db",
+      "sha256": "f0739aaf61db91469e32cb6ade5365aa58fe9f78892cf54ed80f9276f736e547",
+      "bytes": 1159957,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15vehicle/u.webp": {
+      "hash": "33902cbd9042",
+      "sha256": "33902cbd9042c3ecd5f1a02c628f0e64fd65053995c79817f4621e794e9d69df",
+      "bytes": 61066,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15vehicle/w.png": {
+      "hash": "225dc03c31c6",
+      "sha256": "225dc03c31c676cdb3fa8c87b8fdda2b785de2d9a22b8af181ffb12ebd1d2353",
+      "bytes": 1844819,
+      "width": 1500,
+      "height": 2100
+    },
+    "m15vehicle/w.webp": {
+      "hash": "9392a0aa903f",
+      "sha256": "9392a0aa903fd43d3affdb3e489bdc50c8b8548e8ccc4a0a61a99fc895a77884",
+      "bytes": 71922,
+      "width": 1500,
+      "height": 2100
+    },
     "m20token/b.png": {
       "hash": "a8b4f371d036",
       "sha256": "a8b4f371d036e71c66e8f3c9462d653087d56d4af78a0e0133009a4188f3157f",

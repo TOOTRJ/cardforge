@@ -6,6 +6,8 @@ import {
   KIND_DEFS,
   isSingleBasicLand,
   kindFromCard,
+  subtypeDressReason,
+  subtypeFrameFits,
   templateIsBasicOnly,
   templateRefusesKind,
 } from "@/lib/creator/card-kinds";
@@ -15,7 +17,8 @@ import { describeFrame } from "@/lib/creator/frame-resolve";
 // The server's kind gate, next to frameGateError (verification). The picker
 // never offers a frame for a card it can't draw: a showcase treatment's kind
 // restriction takes it out of the kind's gallery, and a basic-only frame's
-// chip is disabled on anything but a basic land. createCardAction and
+// chip is disabled on anything but a basic land, a subtype dress's (the
+// Vehicle frame, TODO 4.5c) on anything but its subtype. createCardAction and
 // updateCardAction repeat both checks so a stale client or a crafted payload
 // can't save a planeswalker on the Zendikar Rising hedron frame or a
 // shockland on the full-art basic frame (TODO 0.26).
@@ -62,6 +65,11 @@ export function frameKindGateError(
   }
   if (templateIsBasicOnly(resolved) && !isSingleBasicLand(face)) {
     return `${BASIC_ONLY_FRAME_REASON} — pick another frame.`;
+  }
+  // A subtype dress (TODO 4.5c: the Vehicle frame) is for the cards of its
+  // subtype only.
+  if (!subtypeFrameFits(resolved, face.subtypes)) {
+    return `${subtypeDressReason(resolved)} — pick another frame.`;
   }
   return null;
 }

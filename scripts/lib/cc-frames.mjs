@@ -93,6 +93,12 @@ export const SHIELD_BOX = { x: 1194, y: 1841, width: 240, height: 154 };
 /** Regular M15 P/T plates (CC keeps one set for regular, snow and tokens). */
 const REG_PT = Object.fromEntries(COLORS.map((k) => [k, `${REG}/m15PT${k.toUpperCase()}.png`]));
 const ARTIFACT_PT = { ...REG_PT, c: `${REG}/m15PTA.png` };
+/** The Vehicle plate (TODO 4.5c): Card Conjurer's one brown `m15PTV.png`
+ *  (381 × 209) under every colour key — every printed Vehicle wears it
+ *  whatever its colour (cardFrameProperties: `pt = 'V'` for a type line
+ *  that says Vehicle; 59 of 60 prints read, KLD 2016 → 2026). */
+export const VEHICLE_PT_FILE = `${REG}/m15PTV.png`;
+const VEHICLE_PT = Object.fromEntries(COLORS.map((k) => [k, VEHICLE_PT_FILE]));
 
 /**
  * A coloured artifact is CC's cardFrameProperties recipe (creator-23.js
@@ -2797,6 +2803,25 @@ export const CC_TEMPLATES = {
     notes: [
       "coloured artifacts = artifact frame + border, colour pinline/title/type/text box through CC's masks",
       `${PAIR_NOTE}. <pair> = the artifact frame + border, GOLD title and type bars (m.png), the split text box and pinline, drawn with the gold plate pt/m (DFT #188–220 gearhulks, MH3 #195, EOE #223); no hybrid dress (no hybrid plate on this template yet: a hybrid artifact draws the gold-split master)`,
+    ],
+  },
+  // TODO 4.5c: the Vehicle frame — Card Conjurer's own recipe for a type
+  // line that says Vehicle (creator-23.js cardFrameProperties: frame 'V'
+  // through the Frame and Border masks, the colour's — or the artifact's —
+  // pinline, title bar, type bar and text box on top, pt 'V'): m15artifact's
+  // recipe with the bronze 'Vehicle Frame' (new/v.png) where the silver
+  // artifact frame is. A NEW template (docs/FRAMES.md "A template never
+  // gains a kind"): no stored card sits on it.
+  m15vehicle: {
+    colors: {
+      ...perColor((k) => colouredArtifact(`${NEW}/v.png`, `${NEW}/${k === "c" ? "a" : k}.png`, M15_BASE_MASKS, M15_INTERIOR_MASKS)),
+    },
+    plates: VEHICLE_PT,
+    pack: "packM15RegularNew.js 'Vehicle Frame' + 'Vehicle Power/Toughness' (groupAccurate.js; creator-23.js cardFrameProperties draws a Vehicle this way)",
+    notes: [
+      "every key = the bronze 'Vehicle Frame' (new/v.png) through CC's Border and Frame masks, then the colour's pinline, title bar, type bar and text box through CC's masks (colourless: the artifact frame's silver, new/a.png; gold for two colours or more, new/m.png) — CC's recipe for a Vehicle, m15artifact's with v.png for a.png; as KLD #235, NEO #9, WAR #24, DFT #188 print",
+      "plates = CC's one brown Vehicle plate (m15PTV.png, 381x209) under every colour key (pt/<k>.png, seven names, one image): a printed Vehicle's plate is brown whatever its colour; the profile draws WHITE digits on it",
+      "no two-colour pair masters yet: a two-colour Vehicle draws the gold `m` master (the prints split the text box and pinline, DFT #188-220 — a later item)",
     ],
   },
   m15land: {
