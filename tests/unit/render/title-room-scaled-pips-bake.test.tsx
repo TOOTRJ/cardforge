@@ -1,13 +1,19 @@
-import sharp from "sharp";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { CardPreviewData } from "@/components/cards/card-preview";
+import fs from "node:fs";
+import path from "node:path";
+import { describe, expect, it } from "vitest";
 import { pipScale } from "@/lib/cards/mana-gem";
 import { symbolStyle, symbolStyleOf } from "@/lib/cards/symbol-style";
 import { getFrameProfile } from "@/lib/cards/template-layout";
-import { DETACHED_COST_GAP_PCT, fitTitleBand, manaCostWidthPct, titleBandRoomPct } from "@/lib/cards/title-band";
-import { renderCardImage, type RenderPreset } from "@/lib/render/card-image";
-import { serveStandInFrames, type StandInFrames } from "@/tests/stubs/stand-in-frames";
+import { manaCostWidthPct, titleBandRoomPct } from "@/lib/cards/title-band";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
+import {
+  TITLE_ROOM_BAKE_PARTS,
+  TITLE_ROOM_TEMPLATES as TEMPLATES,
+  plainTwin,
+  scaledCost,
+  titleRoomBakePlan,
+  titleRoomTemplatesOfPart,
+} from "./title-room-scaled-pips";
 
 // ---------------------------------------------------------------------------
 // A name before a DETACHED cost of Phyrexian symbols, on REAL bakes (layout
@@ -25,88 +31,11 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // what differs between the long name and a one-letter one before the same
 // cost. Both presets: the 750 px bake rounds every disc and gap apart. On
 // main (1985ba23) all eight bake tests below fail.
+//
+// The eight bake tests themselves are registered by title-room-scaled-pips.ts
+// in title-room-scaled-pips-bake-<n>.test.ts (why: that file's header); this
+// file keeps the rest, and holds those parts to be all eight.
 // ---------------------------------------------------------------------------
-
-/** Every template that draws its cost in a box of its own. */
-const TEMPLATES = ["modern", "m15pw", "m15borderlesspw", "m15borderlesspwtall"] as const;
-const HD_W = 1500;
-/** Long enough to be cut at the floor before any cost. */
-const LONG = "Elesh Norn, Grand Cenobite of the Machine Orthodoxy and Its Praetors";
-/** The least air, in HD px, between the name's ink and the first disc's
- *  (its shadow's) left edge. The name's box ends DETACHED_COST_GAP_PCT
- *  (30 px) before the row as measured; the row as DRAWN is a little
- *  longer — the style's shadow (5 px on the walkers) and the bake's whole-px
- *  discs, up to 1 px a pip. Measured: 36–56 px (`modern`) and 23–52 px
- *  (the walkers) at 1–10 larger discs; plain pips keep 27–60 px. */
-const MIN_AIR_HD_PX = 20;
-
-/** `n` larger discs: one-colour Phyrexian symbols, every third a two-colour
- *  one; none = a plain cost. */
-const scaledCost = (n: number) =>
-  n === 0 ? "{2}{R}{R}" : Array.from({ length: n }, (_, i) => (i % 3 === 2 ? "{G/U/P}" : "{R/P}")).join("");
-/** The plain cost with as many pips. */
-const plainTwin = (n: number) => (n === 0 ? "{2}{R}{R}" : "{R}".repeat(n));
-
-function card(template: string, title: string, cost: string | null): CardPreviewData {
-  const walker = template !== "modern";
-  return {
-    title,
-    cost,
-    cardType: walker ? "planeswalker" : "creature",
-    supertype: null,
-    subtypes: [],
-    rarity: "rare",
-    colorIdentity: ["red"],
-    rulesText: walker ? "+1: Scry 1." : "Flying",
-    flavorText: null,
-    power: walker ? null : "5",
-    toughness: walker ? null : "5",
-    loyalty: walker ? "4" : null,
-    defense: null,
-    artistCredit: "Edna",
-    artUrl: null,
-    artPosition: {},
-    frameStyle: { template, finish: "regular" },
-    setIconUrl: null,
-    setIconCode: null,
-    backFace: null,
-    faceContent: null,
-    watermark: null,
-  } as unknown as CardPreviewData;
-}
-
-type Raw = { data: Buffer; w: number; h: number };
-async function bake(data: CardPreviewData, preset: RenderPreset): Promise<Raw> {
-  const res = await renderCardImage(data, preset, { brandMark: false, watermarkText: null, corners: "square" });
-  const { data: raw, info } = await sharp(Buffer.from(await res.arrayBuffer())).removeAlpha().raw().toBuffer({ resolveWithObject: true });
-  return { data: raw, w: info.width, h: info.height };
-}
-/** The columns (bake px) in which two bakes differ, within the top fifth. */
-function diffColumns(a: Raw, b: Raw, minDelta = 24): { x0: number; x1: number } | null {
-  let x0 = Infinity;
-  let x1 = -Infinity;
-  for (let y = 0; y < Math.round(a.h * 0.2); y += 1) {
-    for (let x = 0; x < a.w; x += 1) {
-      const i = (y * a.w + x) * 3;
-      if (Math.abs(a.data[i] - b.data[i]) + Math.abs(a.data[i + 1] - b.data[i + 1]) + Math.abs(a.data[i + 2] - b.data[i + 2]) < minDelta) continue;
-      x0 = Math.min(x0, x);
-      x1 = Math.max(x1, x);
-    }
-  }
-  return Number.isFinite(x0) ? { x0, x1 } : null;
-}
-
-/** The longest prefix of LONG the fit keeps whole before `cost` (shrunk to
- *  its room, the name's box as wide as it gets) — and LONG itself, cut. */
-function namesFor(template: string, cost: string): string[] {
-  const profile = getFrameProfile(template);
-  for (let length = LONG.length; length > 2; length -= 1) {
-    const name = LONG.slice(0, length).trimEnd();
-    if (/[,\s]$/.test(name)) continue;
-    if (fitTitleBand(profile, name, cost)?.text === name) return [name, LONG];
-  }
-  return [LONG];
-}
 
 describe("the detached-cost templates", () => {
   it("are these four — every profile that places a cost it draws in its own box", () => {
@@ -156,42 +85,48 @@ describe("the measured cost row — each pip at its own disc", () => {
   });
 });
 
-describe("a name before a detached cost of Phyrexian symbols — real bakes", () => {
-  let frames: StandInFrames;
-  beforeAll(async () => {
-    frames = await serveStandInFrames(TEMPLATES.map((template) => ({ template, keys: ["r"], tone: 128 })));
-  });
-  afterAll(() => frames.restore());
+describe("the real bakes' parts are, together, every detached-cost template at both presets", () => {
+  const parts = Array.from({ length: TITLE_ROOM_BAKE_PARTS }, (_, i) => i + 1);
+  const sorted = (list: readonly string[]) => [...list].sort();
 
-  for (const template of TEMPLATES) {
-    for (const preset of ["hd", "default"] as const) {
-      it(`${template} @ ${preset}: 0–10 larger discs — the name's ink ends ${MIN_AIR_HD_PX} HD px or more before the first disc, and the row is as long as measured`, async () => {
-        const k = HD_W / (preset === "hd" ? 1500 : 750);
-        const profile = getFrameProfile(template);
-        const disc = profile.costSizePct ?? profile.title.sizePct;
-        const rowRight = ((profile.costRect!.leftPct + profile.costRect!.widthPct) / 100) * HD_W;
-        const bare = await bake(card(template, "I", null), preset);
-        for (let n = 0; n <= 10; n += 1) {
-          const cost = scaledCost(n);
-          const row = await bake(card(template, "I", cost), preset);
-          const discs = diffColumns(row, bare);
-          expect(discs, `${n}: the cost is drawn`).not.toBeNull();
-          const firstDisc = discs!.x0 * k;
-          // The row as drawn is the row as measured, but for the style's
-          // shadow (≤ 6 px) and whole-px discs and gaps (a 750 px one is
-          // two of HD) — which no plain cost counted either.
-          const measuredLeft = rowRight - manaCostWidthPct(cost, disc, symbolStyleOf(profile)) * HD_W;
-          expect(Math.abs(firstDisc - measuredLeft), `${n}: first disc at ${firstDisc}, measured ${measuredLeft.toFixed(1)}`).toBeLessThanOrEqual(8 + n * k);
-          for (const name of namesFor(template, cost)) {
-            const drawn = diffColumns(await bake(card(template, name, cost), preset), row);
-            expect(drawn, `${n} "${name}": the name is drawn`).not.toBeNull();
-            const inkEnd = (drawn!.x1 + 1) * k;
-            expect(firstDisc - inkEnd, `${n} pips, "${name}": ink ends ${inkEnd}, first disc ${firstDisc}`).toBeGreaterThanOrEqual(MIN_AIR_HD_PX);
-          }
-        }
-        // The name's box itself stops the detached gap short of the row.
-        expect(DETACHED_COST_GAP_PCT * HD_W).toBe(30);
-      }, 300_000);
+  it("every template is in exactly one part, no part is empty, and the parts' tests are the single file's eight", () => {
+    const perPart = parts.map((part) => titleRoomTemplatesOfPart(part));
+    for (const [i, templates] of perPart.entries()) expect(templates.length, `part ${i + 1}`).toBeGreaterThan(0);
+    const all = perPart.flat();
+    expect(new Set(all).size).toBe(all.length);
+    expect(sorted(all)).toEqual(sorted(TEMPLATES));
+    // What the one block registered: each template at "hd" and "default".
+    const whole = TEMPLATES.flatMap((template) => (["hd", "default"] as const).map((preset) => `${template} @ ${preset}`));
+    const split = perPart.flatMap((templates) => titleRoomBakePlan(templates).map((t) => `${t.template} @ ${t.preset}`));
+    expect(whole).toHaveLength(8);
+    expect(split).toHaveLength(whole.length);
+    expect(sorted(split)).toEqual(sorted(whole));
+    for (const t of titleRoomBakePlan(TEMPLATES)) expect(t.title.startsWith(`${t.template} @ ${t.preset}: `), t.title).toBe(true);
+    expect(() => titleRoomTemplatesOfPart(0)).toThrow();
+    expect(() => titleRoomTemplatesOfPart(TITLE_ROOM_BAKE_PARTS + 1)).toThrow();
+  });
+
+  it("each part has its file, the file registers its own part and nothing else, and nothing else registers one", () => {
+    const dir = path.join(process.cwd(), "tests", "unit", "render");
+    const partFile = (part: number) => `title-room-scaled-pips-bake-${part}.test.ts`;
+    const onDisk = fs.readdirSync(dir).filter((name) => /^title-room-scaled-pips-bake-.+\.test\.tsx?$/.test(name));
+    expect(sorted(onDisk)).toEqual(sorted(parts.map(partFile)));
+    for (const part of parts) {
+      const code = fs
+        .readFileSync(path.join(dir, partFile(part)), "utf8")
+        .split("\n")
+        .filter((line) => line.trim() && !line.trim().startsWith("//"));
+      expect(code, partFile(part)).toEqual(['import { describeTitleRoomBakes } from "./title-room-scaled-pips";', `describeTitleRoomBakes(${part});`]);
     }
-  }
+    const callers: string[] = [];
+    const walk = (folder: string) => {
+      for (const entry of fs.readdirSync(folder, { withFileTypes: true })) {
+        const full = path.join(folder, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.tsx?$/.test(entry.name) && /^\s*describeTitleRoomBakes\(/m.test(fs.readFileSync(full, "utf8"))) callers.push(path.relative(dir, full));
+      }
+    };
+    walk(path.join(process.cwd(), "tests"));
+    expect(sorted(callers)).toEqual(sorted(parts.map(partFile)));
+  });
 });

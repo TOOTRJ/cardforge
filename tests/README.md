@@ -55,6 +55,16 @@ floor); nothing else may set that variable. One machine's
 `npm run test:coverage` is unchanged and checks the same floors.
 `tests/unit/devops/ci-unit-shards.test.ts` pins the shape.
 
+A shard is never faster than its slowest FILE (vitest runs a file on one
+worker), so a file that takes minutes is split by a rule, not by a list: the
+per-master art-window check runs in `art-window-coverage-<1..4>.test.ts`
+(`tests/unit/render/art-window-masters.ts` — under coverage its pixel loops
+run ~9× slower, and V8's coverage cannot be switched off for one file) and
+the title-room bakes in `title-room-scaled-pips-bake-<1..4>.test.ts`
+(`title-room-scaled-pips.ts`). Each part file is three lines; the first file
+of each holds the proof that the parts are, together, exactly what the one
+file checked — a part can be added or removed, never silently lost.
+
 The **Visual regression** jobs gate the renderer's
 pixels (next section) and **Preview parity** holds the browser preview to
 the bake (the section after).

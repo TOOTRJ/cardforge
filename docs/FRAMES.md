@@ -583,7 +583,7 @@ TODO item that fixes it: fixing a master means striking its row.
 | Manifest | `tests/unit/frames/frame-manifest.test.ts` | well-formed entries; no frame in git AND the bucket; every PNG has its WebP |
 | Edge contract (7.7) | `lib/frames/edge-contract.ts`, `tests/unit/frames/edge-contract.test.ts` | each edge is what the template declares |
 | Corner check (3.26) | `cornerViolations`, same files | the pixels just inside the card corner are the border |
-| Art-window coverage (7.6) | `lib/frames/art-window.ts`, `tests/unit/render/art-window-coverage.test.ts` | the art slot covers the window; translucent parts stay inside it |
+| Art-window coverage (7.6) | `lib/frames/art-window.ts`, `tests/unit/render/art-window-coverage.test.ts` + its per-master parts `art-window-coverage-<n>.test.ts` (`art-window-masters.ts`) | the art slot covers the window; translucent parts stay inside it |
 | Square corners (3.26) | `lib/frames/square-corners.ts`, `tests/unit/frames/square-corners.test.ts` | the print corner fill matches the master |
 | Plate ink (3.29) | `lib/cards/plate-ink.ts`, `tests/unit/cards/plate-ink.test.ts` | every P/T plate has measured ink, pinned to its manifest hash |
 | Visual regression (7.1) | `tests/visual/`, `scripts/lib/visual-gate.mjs` | no stored-image change without a layout bump ([Shipping a frame change](#shipping-a-frame-change)) |
@@ -5859,7 +5859,7 @@ row as DRAWN is still a little longer than measured — the cost discs'
 shadow and whole-px rounding, up to 1 px a pip, which no plain cost counted
 either: measuring the detached row with `costRowWidthPct` would move every
 `modern` / walker name by a pixel or two and is not part of this.
-`tests/unit/render/title-room-scaled-pips-bake.test.tsx` holds 20 px of air
+`tests/unit/render/title-room-scaled-pips-bake-<n>.test.ts` (the bakes of `title-room-scaled-pips-bake.test.tsx`, in four files) hold 20 px of air
 on real bakes of all four at 0–10 such symbols, at 750 px and HD.
 
 A CORRECTION: `"sweep"`, no badge. Scoped to the four templates

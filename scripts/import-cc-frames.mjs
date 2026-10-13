@@ -177,7 +177,7 @@ import {
   isKnownEdgeFailure,
 } from "../lib/frames/edge-contract.ts";
 // The art-window coverage (TODO 7.6) — the check CI runs on every master
-// (tests/unit/render/art-window-coverage.test.ts), here on the flattened
+// (tests/unit/render/art-window-coverage*.test.ts), here on the flattened
 // master after the downscale has anti-aliased the window edge. The art
 // slots are the frame profiles' own (lib/cards/template-layout.ts), read
 // through the "@/" alias hook — a dynamic import, so the hook is in place.
