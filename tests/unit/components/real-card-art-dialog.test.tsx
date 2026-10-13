@@ -50,6 +50,7 @@ vi.mock("@/lib/cards/art-upload-client", () => ({ uploadCardArtFile: vi.fn() }))
 import { RealCardArtButton } from "@/components/creator/real-card-art-dialog";
 import { ArtPanel } from "@/components/creator/panels/art-panel";
 import { LayoutPanel } from "@/components/creator/panels/layout-panel";
+import { SECOND_PART_WORDS } from "@/lib/creator/second-part";
 
 afterEach(() => {
   cleanup();
@@ -249,7 +250,7 @@ async function pickCard(query: string, option: RegExp, face: "front" | "back" = 
     screen.getByRole("button", {
       name:
         face === "back"
-          ? /^use art from a real card for the second face$/i
+          ? /^use art from a real card for the back face$/i
           : /^use art from a real card$/i,
     }),
   );
@@ -754,6 +755,7 @@ describe("in the second face's art block (split / aftermath / flip halves)", () 
           artWindow={M15_ART_WINDOW}
           hasBackFace
           isAdventureFrame={isAdventureFrame}
+          partWords={SECOND_PART_WORDS[isAdventureFrame ? "adventure" : "split"]!}
           backRulesTextRef={{ current: null }}
           onInsertSymbol={() => {}}
         />
@@ -765,7 +767,7 @@ describe("in the second face's art block (split / aftermath / flip halves)", () 
     stubRoutes();
     render(<LayoutHarness isAdventureFrame={false} />);
     expect(
-      screen.getByRole("button", { name: /^use art from a real card for the second face$/i }),
+      screen.getByRole("button", { name: /^use art from a real card for the back face$/i }),
     ).toBeTruthy();
     cleanup();
     render(<LayoutHarness isAdventureFrame />);

@@ -37,6 +37,7 @@ import {
 } from "@/lib/cards/face-content";
 import { KIND_DEFS, dfcLayoutForKind, kindFromCard, type CardKind } from "@/lib/creator/card-kinds";
 import { remixTitleFor } from "@/lib/creator/revise";
+import { secondPartWordsFor } from "@/lib/creator/second-part";
 import { defaultWatermarkFor } from "@/lib/cards/watermark";
 import { DEFAULT_CARD_LANG } from "@/lib/cards/collector-fields";
 import {
@@ -85,15 +86,19 @@ function structuredRowsFrom(card: Card): {
 
 /** A blank second face for a card of `kind` (TODO 3b.8). A frame that
  *  paints one types it like the kind's own card — a split's halves are
- *  instants, an aftermath's sorceries, a flip's creatures (and an
- *  Adventure's spell, as before, until 3b.14 gives it a type choice); the
- *  blank used to be a Creature everywhere. A double-faced kind's back (TODO
+ *  instants, an aftermath's sorceries, a flip's creatures, an Adventure's
+ *  spell an instant (TODO 5.14); the blank used to be a Creature
+ *  everywhere. A double-faced kind's back (TODO
  *  5.2) starts as the kind's card type too — a creature. Every other kind
  *  keeps the plain blank. */
 export function blankSecondFaceFor(kind: CardKind): BackFaceFormValues {
   const def = KIND_DEFS[kind];
+  // An adventure's spell is an instant (or a sorcery), never the creature
+  // it rides on: the kind's second part names its own blank type where it
+  // differs (lib/creator/second-part.ts; TODO 5.14 — a new adventure card
+  // used to print "Creature" on its storybook page).
   return def.inlineSecondFace || dfcLayoutForKind(kind)
-    ? { ...EMPTY_BACK_FACE, card_type: def.cardType }
+    ? { ...EMPTY_BACK_FACE, card_type: secondPartWordsFor(kind)?.blankCardType ?? def.cardType }
     : EMPTY_BACK_FACE;
 }
 

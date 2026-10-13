@@ -146,8 +146,12 @@ describe("blankSecondFaceFor / isBlankBackFace (3b.8)", () => {
     expect(blankSecondFaceFor("split").card_type).toBe("instant");
     expect(blankSecondFaceFor("aftermath").card_type).toBe("sorcery");
     expect(blankSecondFaceFor("flip").card_type).toBe("creature");
-    // Adventure keeps today's default until 3b.14 gives its spell a type.
-    expect(blankSecondFaceFor("adventure").card_type).toBe("creature");
+    // An adventure's SPELL is an instant, never the creature it rides on
+    // (TODO 5.14; the creature's own type choice is still 3b.14).
+    expect(blankSecondFaceFor("adventure").card_type).toBe("instant");
+    // A double-faced back starts as the kind's own type, a creature.
+    expect(blankSecondFaceFor("transform").card_type).toBe("creature");
+    expect(blankSecondFaceFor("mdfc").card_type).toBe("creature");
     // Kinds without an intrinsic second face keep the plain blank.
     expect(blankSecondFaceFor("instant")).toBe(EMPTY_BACK_FACE);
     expect(blankSecondFaceFor("saga")).toBe(EMPTY_BACK_FACE);
@@ -169,6 +173,19 @@ describe("blankSecondFaceFor / isBlankBackFace (3b.8)", () => {
       back_face: { title: "Ice", card_type: "sorcery" },
     } as unknown as Card;
     expect(defaultValuesFor(withFace, []).back_face.card_type).toBe("sorcery");
+  });
+
+  it("a STORED adventure keeps the spell type it was saved with — the Instant default is a new card's only (TODO 5.14)", () => {
+    // Every adventure made before 5.14's quick fixes stored its spell as a
+    // creature (the old blank): its editor still loads, and resends, that.
+    const stored = {
+      ...savedCard({ template: "adventure" }),
+      card_type: "creature",
+      back_face: { title: "Stomp", card_type: "creature", rules_text: "Stomp deals 2 damage to any target." },
+    } as unknown as Card;
+    expect(defaultValuesFor(stored, []).back_face.card_type).toBe("creature");
+    const sorcery = { ...stored, back_face: { title: "Stomp", card_type: "sorcery" } } as unknown as Card;
+    expect(defaultValuesFor(sorcery, []).back_face.card_type).toBe("sorcery");
     // A standard frame's missing back face stays the plain blank.
     expect(defaultValuesFor(savedCard({ template: "m15" }), []).back_face).toEqual(
       EMPTY_BACK_FACE,

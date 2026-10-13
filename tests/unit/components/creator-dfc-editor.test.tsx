@@ -371,7 +371,7 @@ describe("a new transform card", () => {
       fireEvent.click(screen.getByRole("button", { name: /^Save$/ }));
     });
     expect(saveButton().disabled).toBe(true);
-    expect(screen.getByText(/Add artwork and the back face's artwork to enable Save/)).toBeTruthy();
+    expect(screen.getByTestId("save-needs").textContent).toBe("Add artwork and the back face's artwork to enable Save.");
     expect(actions.createCardAction).not.toHaveBeenCalled();
     // A draft needs neither.
     await goTo(/^publish$/i);

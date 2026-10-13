@@ -58,7 +58,12 @@ import {
   type BackFaceFormValues,
   type FormValues,
 } from "@/lib/creator/form-types";
+import { SECOND_PART_WORDS } from "@/lib/creator/second-part";
 import { FRAME_TEMPLATE_LABELS, type CardType, type ColorIdentity, type FrameTemplate } from "@/types/card";
+
+/** Under the Cost field of a modal card's LAND back (TODO 5.14). */
+export const MODAL_LAND_BACK_COST_HINT =
+  "A land has no mana cost — leave this empty. The front's strip then shows the land's mana ability (“{T}: Add {G}.”) instead.";
 
 const BACK_TYPE_OPTIONS: ChipOption<CardType>[] = CARD_TYPE_OPTIONS.filter((option) =>
   (DFC_FACE_TYPES as readonly string[]).includes(option.value),
@@ -140,6 +145,8 @@ export function DfcFacePanel({
     backFaceErrorMessage(errors, "frame_style") ??
     backFaceErrorMessage(errors, "card_type") ??
     backFaceErrorMessage(errors, "color_identity");
+  // The kind's own example texts (lib/creator/second-part.ts).
+  const partWords = SECOND_PART_WORDS[layout === "transform" ? "transform" : "mdfc"]!;
   const colourlessRefused =
     backBody !== null &&
     !colorlessFaceAllowed(backBody, { cardType: backType, supertype: backSupertype });
@@ -262,7 +269,7 @@ export function DfcFacePanel({
       >
         <input
           {...register("back_face.title")}
-          placeholder={layout === "transform" ? "Insectile Aberration" : "Emeria's Call"}
+          placeholder={partWords.namePlaceholder}
           className={inputClass(Boolean(errors.back_face?.title))}
           autoComplete="off"
         />
@@ -272,7 +279,14 @@ export function DfcFacePanel({
         {/* A transform back prints no mana cost — the save strips one; a
             modal back carries its own. */}
         {layout === "modal" ? (
-          <FieldGroup label="Cost" error={errors.back_face?.cost?.message}>
+          <FieldGroup
+            label="Cost"
+            // A land prints no mana cost. The field stays (a stored card may
+            // hold one, and the front's strip draws it), but says so: left
+            // empty, the strip shows the land's own mana ability instead.
+            helper={backType === "land" ? MODAL_LAND_BACK_COST_HINT : undefined}
+            error={errors.back_face?.cost?.message}
+          >
             <Controller
               control={control}
               name="back_face.cost"
@@ -310,11 +324,7 @@ export function DfcFacePanel({
             onChange={backRulesField.onChange}
             onBlur={backRulesField.onBlur}
             aria-label="Back face rules text"
-            placeholder={
-              layout === "transform"
-                ? "Flying. Whenever the back face deals damage…"
-                : "{T}: Add {W}. (The other mode's rules.)"
-            }
+            placeholder={partWords.rulesPlaceholder}
             rows={4}
             className={textareaClass(false)}
           />
@@ -376,6 +386,7 @@ export function DfcFacePanel({
                   artUrl={artUrlField.value}
                   artPosition={artPosField.value}
                   artWindow={artWindow}
+                  fieldAnchor="back_face.art_url"
                   primaryPasteTarget={false}
                   actionSlot={
                     // A real printing's art on this face only (TODO 1.15).

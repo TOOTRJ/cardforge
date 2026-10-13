@@ -31,6 +31,9 @@ type ArtPanelProps = {
    *  back face used to be its own step). Supplied by the orchestrator so its
    *  caret refs / symbol insertion stay there. */
   backFaceSlot?: React.ReactNode;
+  /** The second part's name inside a sentence ("right half", "adventure
+   *  spell" — lib/creator/second-part.ts): the fold says what it holds. */
+  secondPartLabel?: string;
   /** The "Generate AI artwork and title" button, beside Choose file. */
   aiSlot?: React.ReactNode;
   /** True while the save needs the second face's name and it is empty (the
@@ -56,6 +59,7 @@ export function ArtPanel({
   userId,
   artWindow,
   backFaceSlot,
+  secondPartLabel = "second face",
   aiSlot,
   secondFaceNameMissing = false,
   importedArtOrigin = null,
@@ -97,6 +101,7 @@ export function ArtPanel({
                 artUrl={artUrlField.value}
                 artPosition={artPosField.value}
                 artWindow={artWindow}
+                fieldAnchor="art_url"
                 onArtChange={({ artUrl, artPosition }) => {
                   // Controller onChange is the single write path — it updates
                   // the value AND dirties the field. A second setValue on the
@@ -165,7 +170,7 @@ export function ArtPanel({
       <MoreOptions
         summary={
           backFaceSlot
-            ? "More options — artist credit & second face"
+            ? `More options — artist credit & ${secondPartLabel}`
             : "More options — artist credit"
         }
         openWhen={Boolean(errors.artist_credit || (backFaceSlot && errors.back_face))}
