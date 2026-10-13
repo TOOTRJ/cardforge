@@ -6,7 +6,7 @@ import {
   drawsManaGem,
   ENERGY_GEM,
   hasManaGlyph,
-  LARGE_PIP_SCALE,
+  isLargePip,
   manaGemSpec,
   manaGlyphSuffixes,
   MANA_GEM_BG,
@@ -25,7 +25,7 @@ import { SNOW_FLAKE_BOX, SNOW_FLAKE_PATH } from "@/lib/cards/snow-flake-path";
 import { costRowWidthPct } from "@/lib/cards/render-tiers";
 import { metricsFor, pipTopOf, pipWidthPx, RULES_TARGETS, runWidthPx } from "@/lib/cards/rules-layout";
 import { tokenizeRulesText } from "@/lib/cards/rules-text";
-import { manaGlyphPx, SYMBOL_STYLES, symbolStyle } from "@/lib/cards/symbol-style";
+import { inlineSymbolStyle, LARGE_PIP_COST_SCALE, LARGE_PIP_TEXT_SCALE, manaGlyphPx, SYMBOL_STYLES, symbolStyle } from "@/lib/cards/symbol-style";
 import { getManaCodepoint } from "@/lib/render/card-fonts";
 
 // ---------------------------------------------------------------------------
@@ -65,20 +65,21 @@ describe("the stored bake's pip, as data", () => {
     expect(manaGemSpec("wu", 73, modern)).toEqual({
       kind: "split",
       suffix: "wu",
-      // A hybrid's disc is a plain pip's (its size is not part of v49).
-      discPx: 73,
+      // A hybrid's disc is a LARGE pip's since layout v53 (88 beside 73 in
+      // an M15 cost); its halves keep their shares of the disc.
+      discPx: 88,
       ink: "#150d08",
       background: "linear-gradient(135deg, #f0f2c0 50%, #b5cde3 50%)",
-      halfPx: 31,
-      top: { suffix: "w", bg: "#f0f2c0", topPx: 5, leftPx: 7 },
-      bottom: { suffix: "u", bg: "#b5cde3", topPx: 37, leftPx: 38 },
+      halfPx: 37,
+      top: { suffix: "w", bg: "#f0f2c0", topPx: 6, leftPx: 9 },
+      bottom: { suffix: "u", bg: "#b5cde3", topPx: 44, leftPx: 46 },
     });
     // Either order (mana-font has a class for only ten of the twenty), and
     // a twobrid's generic half on the grey.
     const uw = manaGemSpec("uw", 60, modern);
     expect(uw.kind === "split" && [uw.top.suffix, uw.bottom.suffix, uw.background]).toEqual(["u", "w", "linear-gradient(135deg, #b5cde3 50%, #f0f2c0 50%)"]);
     const two = manaGemSpec("2g", 60, modern);
-    expect(two.kind === "split" && [two.top.suffix, two.top.bg, two.bottom.suffix, two.halfPx]).toEqual(["2", "#beb9b2", "g", 25]);
+    expect(two.kind === "split" && [two.top.suffix, two.top.bg, two.bottom.suffix, two.discPx, two.halfPx]).toEqual(["2", "#beb9b2", "g", 72, 30]);
   });
 
   it("the style's own {T}, for every style", () => {
@@ -91,8 +92,14 @@ describe("the stored bake's pip, as data", () => {
       // style's image of the whole pip.
       const image = spec.symbolImages?.g;
       expect(manaGemSpec("g", 73, spec)).toEqual(image ? { kind: "image", suffix: "g", discPx: 73, path: image } : manaGemSpec("g", 73, modern));
-      // Generic, hybrid and utility symbols are the font's in every style.
-      for (const other of ["3", "x", "c", "wu", "2w", "s"]) expect(manaGemSpec(other, 73, spec)).toEqual(manaGemSpec(other, 73, modern));
+      // Generic and utility symbols are the font's in every style, at a
+      // plain pip's size; a hybrid and a twobrid are the font's too, on the
+      // style's own large disc (v53).
+      for (const other of ["3", "x", "c", "s"]) expect(manaGemSpec(other, 73, spec)).toEqual(manaGemSpec(other, 73, modern));
+      for (const other of ["wu", "2w"]) {
+        const gem = manaGemSpec(other, 73, spec);
+        expect([gem.kind, gem.suffix, gem.discPx], `${spec.id} ${other}`).toEqual(["split", other, Math.round(73 * spec.largePipScale)]);
+      }
     }
   });
 });
@@ -101,29 +108,53 @@ describe("layout v49: the symbols as printed, as data", () => {
   const INK = "#150d08";
   const styles = Object.values(SYMBOL_STYLES);
 
-  it("Phyrexian: the colour's disc ×1.2 of a plain pip's (print 1.175 ± 0.020 cost, 1.21 ± 0.08 text), the symbol 0.91 of it (print 0.904 / 0.913)", () => {
-    expect(LARGE_PIP_SCALE).toBe(1.2);
+  it("Phyrexian: the colour's disc ×1.2 of a plain pip's in a cost and ×1.28 in rules text (v53: print ×1.21 / 1.28), the symbol 0.91 of it (print 0.904 / 0.913)", () => {
+    expect([LARGE_PIP_COST_SCALE, LARGE_PIP_TEXT_SCALE]).toEqual([1.2, 1.28]);
     expect(PHYREXIAN_GLYPH_OF_DISC).toBe(0.91);
+    const inline = inlineSymbolStyle(modern);
     for (const c of WUBRG) {
-      // 73 → 88 (cost), 60 → 72 (9-point rules text); the glyph 0.91 of the LARGER disc.
+      // 73 → 88 (cost), 60 → 77 (9-point rules text); the glyph 0.91 of the LARGER disc.
       expect(manaGemSpec(`${c}p`, 73, modern)).toEqual({ kind: "solid", suffix: `${c}p`, discPx: 88, bg: MANA_GEM_BG[c], ink: INK, glyphPx: 80 });
-      expect(manaGemSpec(`${c}p`, 60, modern)).toEqual({ kind: "solid", suffix: `${c}p`, discPx: 72, bg: MANA_GEM_BG[c], ink: INK, glyphPx: 66 });
-      expect(pipScale(`${c}P`)).toBe(1.2);
+      expect(manaGemSpec(`${c}p`, 60, inline)).toEqual({ kind: "solid", suffix: `${c}p`, discPx: 77, bg: MANA_GEM_BG[c], ink: INK, glyphPx: 70 });
+      expect(pipScale(`${c}P`, modern)).toBe(1.2);
+      expect(pipScale(`${c}P`, inline)).toBe(1.28);
     }
     // Every disc of the rules ladder and the cost sizes: whole px, the rise
     // half the growth (the odd px below).
-    for (const pip of [33, 38, 41, 44, 47, 50, 53, 60, 66, 72, 73]) {
-      const disc = pipDiscPx("gp", pip);
-      expect(disc).toBe(Math.round(pip * 1.2));
-      expect(pipRisePx("gp", pip)).toBe(Math.floor((disc - pip) / 2));
-      expect(pipDiscPx("g", pip)).toBe(pip);
-      expect(pipRisePx("g", pip)).toBe(0);
+    for (const scale of [modern, inline, SYMBOL_STYLES["2003"]]) {
+      for (const pip of [33, 38, 41, 44, 47, 50, 53, 60, 66, 72, 73]) {
+        const disc = pipDiscPx("gp", pip, scale);
+        expect(disc).toBe(Math.round(pip * scale.largePipScale));
+        expect(pipRisePx("gp", pip, scale)).toBe(Math.floor((disc - pip) / 2));
+        expect(pipDiscPx("g", pip, scale)).toBe(pip);
+        expect(pipRisePx("g", pip, scale)).toBe(0);
+      }
     }
   });
 
-  it("only the Phyrexian symbols are larger: not a hybrid, a twobrid, nor a symbol no card draws", () => {
-    for (const suffix of ["wu", "uw", "2g", "cw", "s", "e", "untap", "tap", "x", "7", "cp", "wwp", "2wp", "p"]) expect(pipScale(suffix), suffix).toBe(1);
-    for (const pair of ["wu", "gu", "ug", "rw"]) expect(pipScale(`${pair}p`), pair).toBe(1.2);
+  it("layout v53: every split disc and the Phyrexian symbol are LARGE — a hybrid, a twobrid, either order — and no other symbol", () => {
+    const large = ["wu", "uw", "2g", "cw", "wp", "gup", "ugp", "rwp"];
+    const plain = ["w", "c", "s", "e", "untap", "tap", "x", "7", "cp", "ww", "wwp", "3w", "c/", "p", "20"];
+    for (const suffix of large) expect(isLargePip(suffix), suffix).toBe(true);
+    for (const suffix of plain) expect(isLargePip(suffix), suffix).toBe(false);
+    expect(isLargePip("WU")).toBe(true);
+    for (const style of styles) {
+      for (const suffix of large) {
+        expect(pipScale(suffix, style), `${style.id} ${suffix}`).toBe(style.largePipScale);
+        expect(pipScale(suffix, inlineSymbolStyle(style)), `${style.id} ${suffix}`).toBe(1.28);
+      }
+      for (const suffix of plain) expect(pipScale(suffix, style), `${style.id} ${suffix}`).toBe(1);
+    }
+    // The prints' ONE large disc: 85 px beside the 2003 frame's 66 px pip,
+    // 88 beside our 73 px M15 pip (print 85.1 beside 70.2: ×1.21), and 77
+    // beside 60 in 9-point text on every frame (print ×1.28).
+    expect(pipDiscPx("wu", 66, SYMBOL_STYLES["2003"])).toBe(85);
+    expect(pipDiscPx("2w", 66, SYMBOL_STYLES["2003"])).toBe(85);
+    expect(pipDiscPx("wp", 66, SYMBOL_STYLES["2003"])).toBe(85);
+    expect(pipDiscPx("wu", 73, modern)).toBe(88);
+    expect(pipDiscPx("wu", 73, SYMBOL_STYLES["1997"])).toBe(88);
+    expect(pipDiscPx("wu", 72, SYMBOL_STYLES.original)).toBe(86);
+    for (const style of styles) expect(pipDiscPx("wu", 60, inlineSymbolStyle(style)), style.id).toBe(77);
   });
 
   it("two-colour Phyrexian: the split fill on the larger disc, a Phyrexian symbol in each half (print: each 0.453 ± 0.051 tall, 0.169 ± 0.029 off centre)", () => {
@@ -131,6 +162,7 @@ describe("layout v49: the symbols as printed, as data", () => {
     expect(manaGemSpec("gwp", 60, modern)).toEqual({
       kind: "split",
       suffix: "gwp",
+      // (A 60 px pip in a COST's style: ×1.2.)
       discPx: 72,
       ink: INK,
       background: "linear-gradient(135deg, #93b483 50%, #f0f2c0 50%)",
@@ -265,7 +297,7 @@ describe("the bake keeps no pip table of its own", () => {
 describe("layout v49: the layout and the cost row measure a pip's own disc", () => {
   const run = (text: string) => tokenizeRulesText(text)[0].filter((item) => item.t === "m");
 
-  it("a rules run: a Phyrexian pip is 1.2 pips wide, on a plain pip's centre, at every size and both targets", () => {
+  it("a rules run: a large pip is 1.28 pips wide (v53), on a plain pip's centre, at every size and both targets", () => {
     for (const target of RULES_TARGETS) {
       for (const sizePx of [42, 50, 64, 76]) {
         const m = metricsFor(sizePx, undefined, target);
@@ -274,21 +306,25 @@ describe("layout v49: the layout and the cost row measure a pip's own disc", () 
         const [split] = run("{G/U/P}");
         if (plain.t !== "m" || phy.t !== "m" || split.t !== "m") throw new Error("pips");
         expect(pipWidthPx(plain, m)).toBe(m.pipPx);
-        expect(pipWidthPx(phy, m)).toBe(Math.round(m.pipPx * 1.2));
-        expect(pipWidthPx(split, m)).toBe(Math.round(m.pipPx * 1.2));
+        expect(m.largePipScale).toBe(1.28);
+        expect(pipWidthPx(phy, m)).toBe(Math.round(m.pipPx * 1.28));
+        expect(pipWidthPx(split, m)).toBe(Math.round(m.pipPx * 1.28));
+        for (const hybrid of [...run("{W/U}"), ...run("{2/W}")]) if (hybrid.t === "m") expect(pipWidthPx(hybrid, m)).toBe(pipWidthPx(phy, m));
         // The same centre (the odd px below): top + half the disc.
         const grow = pipWidthPx(phy, m) - m.pipPx;
         expect(pipTopOf(plain, m)).toBe(m.pipTopPx);
         expect(pipTopOf(phy, m)).toBe(m.pipTopPx - Math.floor(grow / 2));
         expect(Math.abs(pipTopOf(phy, m) + pipWidthPx(phy, m) / 2 - (m.pipTopPx + m.pipPx / 2))).toBeLessThanOrEqual(0.5);
         // It is centred on the capitals like every pip, so it rises a
-        // little ABOVE its line box (2–3 px at HD; the layout's ink boxes
-        // and its clip check measure that top) and never reaches the box's
-        // bottom: two such discs on consecutive lines stay apart.
+        // little ABOVE its line box (the layout's ink boxes and its clip
+        // check measure that top) and never reaches the box's bottom. At
+        // 1.28 its disc is about the line pitch (0.785 × 1.28 = 1.005 em
+        // against 0.98), as on the prints (GRN #231: 70 px discs on a
+        // ≈ 70 px pitch): two on consecutive lines touch, within 0.03 em.
         expect(pipTopOf(phy, m)).toBeLessThanOrEqual(0);
-        expect(pipTopOf(phy, m)).toBeGreaterThanOrEqual(-Math.ceil(0.05 * m.fontPx));
+        expect(pipTopOf(phy, m)).toBeGreaterThanOrEqual(-Math.ceil(0.09 * m.fontPx));
         expect(pipTopOf(phy, m) + pipWidthPx(phy, m)).toBeLessThan(m.linePx);
-        expect(m.linePx + pipTopOf(phy, m) - (pipTopOf(phy, m) + pipWidthPx(phy, m))).toBeGreaterThanOrEqual(1);
+        expect(pipWidthPx(phy, m) - m.linePx).toBeLessThanOrEqual(Math.ceil(0.03 * m.fontPx));
         // A run of pips: each its own disc, a hairline between two.
         expect(runWidthPx(run("{2}{G/P}{G/P}"), m)).toBe(m.pipPx + 2 * pipWidthPx(phy, m) + 2 * m.pipGapPx);
         expect(runWidthPx(run("{2}{G}{G}"), m)).toBe(3 * m.pipPx + 2 * m.pipGapPx);
@@ -306,12 +342,15 @@ describe("layout v49: the layout and the cost row measure a pip's own disc", () 
     for (const item of run("{Q}{S}{E}")) if (item.t === "m") expect(pipTopOf(item, m)).toBe(m.pipTopPx);
   });
 
-  it("the cost row: a Phyrexian disc takes 0.2 of a disc more of the bar, in every style", () => {
+  it("the cost row: a large disc takes the style's extra share of a disc more of the bar (0.2; 19/66 on the 2003 frame), in every style", () => {
     for (const style of Object.values(SYMBOL_STYLES)) {
+      const extra = style.largePipScale - 1;
+      expect(extra).toBeCloseTo(style.id === "2003" ? 19 / 66 : 0.2, 12);
       for (const disc of [0.04, 0.0487]) {
         const plain = costRowWidthPct("{2}{G}{G}", disc, style);
-        expect(costRowWidthPct("{2}{G/P}{G}", disc, style) - plain).toBeCloseTo(0.2 * disc, 12);
-        expect(costRowWidthPct("{2}{G/U/P}{G/P}", disc, style) - plain).toBeCloseTo(0.4 * disc, 12);
+        expect(costRowWidthPct("{2}{G/P}{G}", disc, style) - plain).toBeCloseTo(extra * disc, 12);
+        expect(costRowWidthPct("{2}{G/U/P}{G/P}", disc, style) - plain).toBeCloseTo(2 * extra * disc, 12);
+        expect(costRowWidthPct("{2}{G/U}{2/G}", disc, style) - plain).toBeCloseTo(2 * extra * disc, 12);
         expect(costRowWidthPct("{Q}{S}{E}", disc, style)).toBeCloseTo(plain, 12);
         // The modern row still measures its cost shadow (v49 left it alone).
         expect(costRowWidthPct("{G}", disc, style)).toBeCloseTo((1 + style.costRowShadowDiscs) * disc + costRowWidthPct("{G}", 0, style), 12);

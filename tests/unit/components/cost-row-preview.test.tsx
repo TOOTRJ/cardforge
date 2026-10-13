@@ -121,14 +121,14 @@ describe("the preview's cost row is the stored bake's", () => {
     });
   }
 
-  it("a split disc is one disc wide too (its halves: tests/unit/render/mana-gem-parity.test.tsx)", () => {
+  it("a split disc is a LARGE pip's — 88 px where a plain disc is 73 (layout v53; its halves: tests/unit/render/mana-gem-parity.test.tsx)", () => {
     const row = costRow(render(<CardPreview {...card("m15", "{W/U}{2/G}{G}")} />));
     const [hybrid, twobrid, mono] = Array.from(row.children);
     for (const pip of [hybrid, twobrid]) {
-      // In the row's own em (1 em = the disc): no font size of its own.
+      // In the row's own em (1 em = a plain disc): no font size of its own.
       expect(css(pip, "font-size")).toBe("");
-      expect(num(css(pip, "width"), "em")).toBe(1);
-      expect(num(css(pip, "height"), "em")).toBe(1);
+      expect(num(css(pip, "width"), "em") * 73).toBeCloseTo(88, 1);
+      expect(num(css(pip, "height"), "em") * 73).toBeCloseTo(88, 1);
       expect(css(pip, "flex-shrink")).toBe("0");
     }
     // A two-colour Phyrexian disc is the split disc on the larger size

@@ -4,7 +4,7 @@ import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
 import { mainRulesLayout, rulesDraw, secondFaceRulesLayout, type DrawnStats } from "@/lib/cards/rules-box";
-import { pipDiscPx, pipRisePx } from "@/lib/cards/mana-gem";
+import { isLargePip, pipDiscPx, pipRisePx } from "@/lib/cards/mana-gem";
 import { fitRulesLayout, wordWidthPx, type RulesLayout } from "@/lib/cards/rules-layout";
 import { SPLIT_TEXTBOX_BORDER_PX, getFrameProfile } from "@/lib/cards/template-layout";
 import { PLACEHOLDER_FLAVOR_TEXT, PLACEHOLDER_RULES_TEXT, RULES_HD_WIDTH } from "@/lib/cards/typography";
@@ -101,16 +101,17 @@ function expectDrawn(box: HTMLElement, layout: RulesLayout, template: FrameTempl
           // capitals like the prints (layout v36, TODO 3.31), never centred
           // in the line box.
           expect(css(item, "align-self")).toBe("flex-start");
-          // A Phyrexian symbol's larger disc starts its rise above that top
-          // (layout v49: the same centre) — 6 px at a 60 px pip, never 0 —
-          // and is that much wider than the wrapper's em.
-          const rise = word.t === "m" ? pipRisePx(word.suffix, d.pipPx) : 0;
-          const large = word.t === "m" && /^([wubrg]|[wubrg]{2})p$/.test(word.suffix);
+          // A large pip's disc (a Phyrexian symbol, a hybrid, a twobrid:
+          // layout v53) starts its rise above that top (the same centre) —
+          // 8 px at a 60 px pip, never 0 — and is that much wider than the
+          // wrapper's em.
+          const rise = word.t === "m" ? pipRisePx(word.suffix, d.pipPx, d) : 0;
+          const large = word.t === "m" && isLargePip(word.suffix);
           expect(rise > 0, word.t === "m" ? word.suffix : "").toBe(large);
           expect(css(item, "margin-top")).toBe(cqwOf(d.pipTopPx - rise, template));
           if (word.t === "m") {
             const drawn = pip.tagName === "SPAN" ? Number.parseFloat(css(pip, "width")) : Number.parseFloat(css(pip, "width")) * Number.parseFloat(css(pip, "font-size"));
-            expect(drawn * d.pipPx, word.suffix).toBeCloseTo(pipDiscPx(word.suffix, d.pipPx), 1);
+            expect(drawn * d.pipPx, word.suffix).toBeCloseTo(pipDiscPx(word.suffix, d.pipPx, d), 1);
           }
         } else if (item.tagName === "SPAN" && !item.className) {
           expect(word.t).toBe("w");

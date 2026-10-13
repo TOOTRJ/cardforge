@@ -258,6 +258,8 @@ export type RulesDraw = {
   lineHeight: number;
   wordGapPx: number;
   pipPx: number;
+  /** A large pip's disc ÷ a plain pip's here (RulesMetrics.largePipScale). */
+  largePipScale: number;
   pipGapPx: number;
   /** The pip disc's top in its line box (RulesMetrics.pipTopPx). */
   pipTopPx: number;
@@ -303,6 +305,7 @@ export function rulesDraw(layout: RulesLayout, target: RulesTarget): RulesDraw {
     lineHeight: m.linePx / m.fontPx,
     wordGapPx: m.wordGapPx,
     pipPx: m.pipPx,
+    largePipScale: m.largePipScale,
     pipGapPx: m.pipGapPx,
     pipTopPx: m.pipTopPx,
     pad: {
