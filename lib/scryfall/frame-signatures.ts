@@ -10,6 +10,8 @@ import {
   KIND_DEFS,
   borrowedTypeWord,
   dfcFrontDressesKind,
+  subtypeDressOf,
+  subtypeFrameFits,
   templateIsBasicOnly,
   templateSupportsKind,
   walkerRowCount,
@@ -353,6 +355,20 @@ export const LIGHT_BLACK_WALKER_PINS: Readonly<Record<string, readonly string[]>
   cmr: ["512"],
   med: ["RA3", "GR2"],
   sld: ["1593"],
+};
+
+/** Vehicles on the plain 2015 frame that do NOT print the brown plate with
+ *  white digits (TODO 4.5c; owner 2026-10-12: the silver plate is not
+ *  offered): Dominaria's Weatherlight — the bronze frame with a SILVER plate
+ *  and dark digits, the one exception among the plain Vehicle prints read
+ *  (KLD 2016 → 2026; DOM #237, its prerelease stamp and its List reprint
+ *  are the same plate). They stay off `vehicle/2015`: the Vehicle frame is
+ *  never "exact" for them, and the import lands where it did before the
+ *  frame shipped (the artifact frame, `nearest`, the `vehicle` gap). */
+export const SILVER_PLATE_VEHICLE_PINS: Readonly<Record<string, readonly string[]>> = {
+  dom: ["237"],
+  pdom: ["237s"],
+  plst: ["DOM-237"],
 };
 
 /** Borderless planeswalkers outside mono-black that print the dark dress —
@@ -2328,6 +2344,32 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     },
     OLD_ERA_GAPS,
   ),
+  // A Vehicle on the plain 2015 frame (TODO 4.5c; Kaladesh 2016 → today)
+  // prints the Vehicle frame: the bronze frame and the brown P/T plate with
+  // white digits. Until `m15vehicle` is verified in the card's colour the
+  // artifact frame is the nearest, as before; once it is, this rule names it
+  // instead (`onceVerified`) and is exact (`exactOnceVerified`) — the plate
+  // gap is drawn there (gapDrawnBy), every other M15-era gap still names
+  // the item that finishes the match (a two-colour Vehicle prints the split,
+  // DFT #188–220: the frame's ten pair masters draw it). A Vehicle BACK face
+  // (BOT's converts), the extended-art and borderless Vehicles and the one
+  // silver-plated print (SILVER_PLATE_VEHICLE_PINS) keep the `vehicle` gap.
+  ...withGaps(
+    {
+      key: "vehicle/2015",
+      exactLabel: "Vehicle frame (2015)",
+      match: { frames: ["2015"], kinds: ["artifact"], subtypesAny: ["Vehicle"], notCollectorIds: SILVER_PLATE_VEHICLE_PINS },
+      outcome: {
+        status: "nearest",
+        template: { family: "m15" },
+        onceVerified: "m15vehicle",
+        exactOnceVerified: true,
+        reason: "PipGlyph's Vehicle frame isn't verified yet",
+        blockedBy: "4.5c",
+      },
+    },
+    M15_ERA_GAPS.filter((gap) => gap !== "vehicle"),
+  ),
   ...withGaps(
     {
       key: "era/2015",
@@ -2602,6 +2644,9 @@ function gapDrawnBy(gap: GapKey, template: FrameTemplate, border?: string): bool
     // (the icon well, the grey tab; the back body the card's back wears).
     case "dfc":
       return templateHasBackFace(template);
+    // The Vehicle plate (TODO 4.5c): the Vehicle frame draws it.
+    case "vehicle":
+      return subtypeDressOf(template) === "Vehicle";
     default:
       return false;
   }
@@ -2618,6 +2663,10 @@ function kindMisfit(template: FrameTemplate, kind: CardKind, ctx: Ctx): string |
   // creator's gallery never lists it under that kind.
   if ((!templateSupportsKind(template, kind) && !dfcFrontDressesKind(template, kind)) || (templateIsBasicOnly(template) && !facts.singleBasic)) {
     return `PipGlyph's ${describeFrame(template)} frame doesn't dress ${kindWord(kind)} yet`;
+  }
+  // A subtype dress (the Vehicle frame, TODO 4.5c) for its subtype only.
+  if (!subtypeFrameFits(template, facts.subtypes)) {
+    return `PipGlyph's ${describeFrame(template)} frame dresses ${subtypeDressOf(template)}s only`;
   }
   const word = borrowedTypeWord(kind, template);
   if (word && !facts.cardTypes.has(word.toLowerCase() as CardType)) {

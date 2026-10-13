@@ -22,6 +22,7 @@ import {
   FRAME_ERA_LABELS,
   FRAME_ERA_VALUES,
   FRAME_SET_ERA,
+  FRAME_TEMPLATE_LABELS,
   FRAME_TEMPLATE_SET,
   FRAME_TEMPLATE_VALUES,
   type CardType,
@@ -518,6 +519,10 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   m15borderlesspwtall: ["planeswalker"],
   nyx: ["enchantment", "creature"],
   emblem: ["emblem"],
+  // The Vehicle frame (TODO 4.5c) is new — no legacy card sits on it — and
+  // dresses an artifact whose subtype says Vehicle (SUBTYPE_DRESSES, below,
+  // is the per-card half: the Artifact kind covers every artifact).
+  m15vehicle: ["artifact"],
 };
 
 /** Kinds that wear ONLY a template whose trade dress names them. */
@@ -585,6 +590,80 @@ export function isSingleBasicLand(face: BasicLandFace): boolean {
     (subtype) => basicSubtypeManaKey([subtype]) !== null,
   );
   return basicTypes.length <= 1;
+}
+
+// ---------------------------------------------------------------------------
+// Subtype dresses (TODO 4.5c). A frame that dresses the cards of ONE subtype
+// of its kind: the Vehicle frame, an artifact whose subtype says Vehicle
+// (the bronze frame and the brown P/T plate with white digits, Kaladesh 2016
+// → today). The kind rule above can't say it — the Artifact kind covers
+// every artifact — so, like the basic-only frames, it is a per-card check:
+// the chip is disabled on any other card, the server refuses the save, and
+// a random or stand-in pick never lands on it. It is the dress of a BASE
+// frame with the same slots (m15artifact), so a NEW card follows its subtype
+// between the two (subtypeFrameFor: the creator's effect, the AI jobs) —
+// while a stored card keeps its template until its owner picks the other
+// (owner 2026-09-29: an addition; never a render-time pick from the subtype,
+// which would re-dress every stored Vehicle). Spacecraft print another frame
+// (EOE 2025's station layout, TODO 4.27) and are not Vehicles.
+// ---------------------------------------------------------------------------
+
+const SUBTYPE_DRESSES: Partial<Record<FrameTemplate, { subtype: string; base: FrameTemplate }>> = {
+  m15vehicle: { subtype: "Vehicle", base: "m15artifact" },
+};
+
+/** The subtype a template dresses ("Vehicle" for the Vehicle frame), or
+ *  null for a frame any card of its kind may wear. */
+export function subtypeDressOf(template: FrameTemplate): string | null {
+  return SUBTYPE_DRESSES[template]?.subtype ?? null;
+}
+
+/** True when the subtypes say `word`, whatever its case ("vehicle" typed by
+ *  hand reads as the imported "Vehicle", as PT_SUBTYPES does). */
+export function subtypesSay(subtypes: readonly string[] | null | undefined, word: string): boolean {
+  const lower = word.toLowerCase();
+  return (subtypes ?? []).some((subtype) => subtype.trim().toLowerCase() === lower);
+}
+
+/** True when this card may wear the template as far as its subtype goes: a
+ *  frame with no subtype dress, or a card whose subtypes say the dress's
+ *  word (a Vehicle on the Vehicle frame — never a Sol Ring). */
+export function subtypeFrameFits(
+  template: FrameTemplate,
+  subtypes: readonly string[] | null | undefined,
+): boolean {
+  const word = subtypeDressOf(template);
+  return word === null || subtypesSay(subtypes, word);
+}
+
+/** Why a subtype dress's chip is disabled on any other card. */
+export function subtypeDressReason(template: FrameTemplate): string | null {
+  const word = subtypeDressOf(template);
+  return word === null ? null : `The ${FRAME_TEMPLATE_LABELS[template]} frame is for ${word}s`;
+}
+
+/**
+ * The frame the subtypes pick for a card on `template`: on a subtype
+ * dress's base (m15artifact) the dress when the subtypes say its word (a
+ * Vehicle → m15vehicle), on the dress itself the base when they don't; any
+ * other template as it is (a Vehicle on the 2003 frame or a showcase keeps
+ * it). What a NEW card follows; a stored card is never moved by it.
+ */
+export function subtypeFrameFor(
+  template: FrameTemplate,
+  subtypes: readonly string[] | null | undefined,
+): FrameTemplate {
+  for (const [dress, { subtype, base }] of Object.entries(SUBTYPE_DRESSES) as [FrameTemplate, { subtype: string; base: FrameTemplate }][]) {
+    if (template !== base && template !== dress) continue;
+    return subtypesSay(subtypes, subtype) ? dress : base;
+  }
+  return template;
+}
+
+/** True when the template is a subtype dress (the Vehicle frame): never a
+ *  stand-in or a random pick for a card that isn't its subtype. */
+export function isSubtypeDress(template: FrameTemplate): boolean {
+  return subtypeDressOf(template) !== null;
 }
 
 // ---------------------------------------------------------------------------

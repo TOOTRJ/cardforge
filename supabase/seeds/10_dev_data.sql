@@ -236,7 +236,9 @@ on conflict (id) do nothing;
 --     Clearing (…050–…052) wave 2c's, on the snow frames; …058–…060 are
 --     4.10a's, on the 1997 frame; …061–…063 4.10b's, on the 2003 frame;
 --     …064–…066 4.10c's, on the 1993 frame; …069–…072 4.6h's pairs on the
---     old frames; …073–…075 4.30's, with the white border.
+--     old frames; …073–…075 4.30's, with the white border; …076–…079
+--     4.5c's, on the Vehicle frame (and one Vehicle left on the artifact
+--     frame).
 -- ---------------------------------------------------------------------------
 
 insert into public.cards (
@@ -438,7 +440,30 @@ Whenever Thornscale Behemoth attacks, it gets +2/+2 until end of turn.', '10', '
      '{"template":"modern","finish":"regular","border":"white"}'::jsonb, 1),
   ('c0000000-0000-4000-a000-000000000075'::uuid, 'Tidewrack Bluff', 'tidewrack-bluff', null, array['blue','red'], null, 'land', array[]::text[], 'rare',
      E'{T}: Add {C}.\n{T}: Add {U} or {R}. Tidewrack Bluff deals 1 damage to you.', null, null, 16,
-     '{"template":"modernland","finish":"regular","twoColor":true,"border":"white"}'::jsonb, 1)
+     '{"template":"modernland","finish":"regular","twoColor":true,"border":"white"}'::jsonb, 1),
+  -- TODO 4.5c: the Vehicle frame (m15vehicle) — the bronze frame and the
+  -- brown P/T plate with white digits. Ids …076–…079: a colourless Vehicle,
+  -- a white one, a legendary two-colour one with the crown, the split pair,
+  -- the stamp and the collector line, and Ironclad Hauler, a Vehicle stored
+  -- on the plain artifact frame (as every Vehicle saved before the frame
+  -- shipped): it keeps the silver plate until its owner picks "Vehicle".
+  ('c0000000-0000-4000-a000-000000000076'::uuid, 'Skysail Runabout', 'skysail-runabout', '{2}', array['colorless'], null, 'artifact', array['Vehicle'], 'uncommon',
+     E'Flying
+Crew 1 (Tap any number of creatures you control with total power 1 or more: This Vehicle becomes an artifact creature until end of turn.)', '3', '3', 4,
+     '{"template":"m15vehicle","finish":"regular","collector":"2023"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000077'::uuid, 'Dawnguard Carriage', 'dawnguard-carriage', '{2}{W}', array['white'], null, 'artifact', array['Vehicle'], 'common',
+     E'Vigilance
+Crew 2', '4', '4', 6,
+     '{"template":"m15vehicle","finish":"regular","collector":"2023"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000078'::uuid, 'The Gilded Leviathan', 'the-gilded-leviathan', '{3}{U}{R}', array['blue','red'], 'Legendary', 'artifact', array['Vehicle'], 'mythic',
+     E'Flying, haste
+Whenever The Gilded Leviathan deals combat damage to a player, draw two cards, then discard a card.
+Crew 3', '12', '12', 11,
+     '{"template":"m15vehicle","finish":"regular","crown":true,"twoColor":true,"stamp":"auto","collector":"2023"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000079'::uuid, 'Ironclad Hauler', 'ironclad-hauler', '{4}', array['colorless'], null, 'artifact', array['Vehicle'], 'common',
+     E'Trample
+Crew 2', '5', '4', 14,
+     '{"template":"m15artifact","finish":"regular"}'::jsonb, 5)
 ) as c (id, title, slug, cost, colors, supertype, card_type, subtypes, rarity,
         rules_text, power, toughness, art, frame_style, age_days)
 on conflict (id) do nothing;

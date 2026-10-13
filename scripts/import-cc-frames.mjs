@@ -153,6 +153,7 @@ import {
   clearWindowHalo,
   squareCornersOnBlack,
   toneRegions,
+  tonePlateRgba8,
   rectPx,
   retintStructure,
   roundCornersRgba8,
@@ -247,7 +248,7 @@ async function writeCutout(bytes, box, pngFile) {
   await image.clone().webp(WEBP).toFile(pngFile.replace(/\.png$/, ".webp"));
 }
 
-async function writePlate(src, pngFile, gain = null) {
+async function writePlate(src, pngFile, gain = null, tone = null) {
   fs.mkdirSync(path.dirname(pngFile), { recursive: true });
   // Plates keep their native size; the renderer scales them into the slot.
   let image = sharp(await fetchCached(src));
@@ -258,6 +259,13 @@ async function writePlate(src, pngFile, gain = null) {
     for (let p = 0; p < info.width * info.height; p += 1) {
       for (let c = 0; c < 3; c += 1) data[p * 4 + c] = Math.min(255, Math.round(data[p * 4 + c] * gain[c]));
     }
+    image = sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } });
+  }
+  // …or toned about each pixel's own luminance (TODO 4.5c: the Vehicle
+  // plate — tonePlateRgba8), hue kept, alpha untouched.
+  if (tone) {
+    const { data, info } = await image.ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    tonePlateRgba8(data, tone);
     image = sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } });
   }
   await image.clone().png({ compressionLevel: 9 }).toFile(pngFile);
@@ -600,7 +608,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
   }
   const plates = def.plates ? { ...def.plates } : undefined;
   if (plates && !dryRun) {
-    for (const key of COLORS) await writePlate(plates[key], path.join(outDir, template, "pt", `${key}.png`), def.plateGains?.[key] ?? null);
+    for (const key of COLORS) await writePlate(plates[key], path.join(outDir, template, "pt", `${key}.png`), def.plateGains?.[key] ?? null, def.plateTone ?? null);
     console.log(`wrote ${template} plates`);
   }
   const symbols = def.symbols ? { ...def.symbols } : undefined;
@@ -661,6 +669,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     ...(def.excluded ? { excluded: def.excluded } : {}),
     ...(plates ? { plates } : {}),
     ...(def.plateGains ? { plateGains: def.plateGains } : {}),
+    ...(def.plateTone ? { plateTone: { ...def.plateTone } } : {}),
     ...(symbols ? { symbols: { ...symbols, output: "symbol/<colour>.png, native size" } } : {}),
     ...(def.shield ? { shield: { mask: def.shield.mask, box: def.shield.box, output: "loyalty/<colour>.png" } } : {}),
     ...(def.ptCut ? { ptCut: describePtCut(def.ptCut, OUT_W, OUT_H) } : {}),

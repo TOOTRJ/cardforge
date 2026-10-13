@@ -359,6 +359,11 @@ export const FRAME_TEMPLATE_VALUES = [
   "m15land",
   "m15token",
   "m15artifact",
+  // The Vehicle frame (TODO 4.5c, Card Conjurer 'Vehicle Frame' + its brown
+  // P/T plate, white digits): the artifact kind's variation for a card whose
+  // subtype says Vehicle. A stored template of its own — never a render-time
+  // pick from the subtype, which would re-dress every stored Vehicle.
+  "m15vehicle",
   "m15snow",
   "m15snowland",
   "m15devoid",
@@ -510,6 +515,7 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   // that new tokens default to the full-art design once it is verified.
   m15token: "Token (2014–2019)",
   m15artifact: "Artifact",
+  m15vehicle: "Vehicle",
   m15snow: "Snow",
   m15snowland: "Snow Land",
   m15devoid: "Devoid",
@@ -631,6 +637,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   m15land: "m15",
   m15token: "m15",
   m15artifact: "m15",
+  m15vehicle: "m15",
   m15snow: "m15",
   m15snowland: "m15",
   m15devoid: "m15",
@@ -810,8 +817,10 @@ export const TEMPLATE_SKIN_VARIANTS: Partial<
   Record<FrameTemplate, FrameTemplate[]>
 > = {
   m15: ["m15snow", "m15devoid", "m15borderless"],
-  // The artifact kind's own borderless dress (frames plan 4.32).
-  m15artifact: ["m15borderlessartifact"],
+  // The artifact kind's own borderless dress (frames plan 4.32), and the
+  // Vehicle frame (TODO 4.5c) — offered to a card whose subtype says Vehicle
+  // (lib/creator/card-kinds.ts templateSubtypeDress).
+  m15artifact: ["m15borderlessartifact", "m15vehicle"],
   // The planeswalker kind's borderless dresses (frames plan 4.33): the tall
   // one follows the ability rows (walkerRowsFrameFor).
   m15pw: ["m15borderlesspw", "m15borderlesspwtall"],

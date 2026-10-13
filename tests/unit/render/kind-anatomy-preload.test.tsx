@@ -285,6 +285,8 @@ describe("every plate a card draws was preloaded (empty cache, every plate publi
       draws: null,
     },
     { name: "a Vehicle on m15artifact", card: card({ ...vehicle, frameStyle: { template: "m15artifact" } }), draws: "m15artifact/pt/c" },
+    // TODO 4.5c: the Vehicle frame draws its own brown plate.
+    { name: "a Vehicle on the Vehicle frame", card: card({ ...vehicle, frameStyle: { template: "m15vehicle" } }), draws: "m15vehicle/pt/c" },
     {
       name: "a Spacecraft on m15artifact",
       card: card({ ...vehicle, subtypes: ["Spacecraft"], frameStyle: { template: "m15artifact" } }),
