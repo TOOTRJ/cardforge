@@ -74,8 +74,8 @@ describe("bake path = preview path", () => {
     // front's 20 (5.1d: 60), the borderless land's 10 (4.56); the crowned
     // twins of every borderless master (7 + 20 and 7 + 10).
     // …and the old frames' 10 each (4.6h: modern, modernland, retroland).
-    // …and the Vehicle frame's 10 (4.5c).
-    expect(pairKeys).toBe(200);
+    // …and the Vehicle frame's 10 (4.5c), the Nyx dress's 20 (4.7).
+    expect(pairKeys).toBe(220);
     expect(crownedKeys).toBe(44);
   });
 
@@ -97,7 +97,8 @@ describe("bake path = preview path", () => {
   });
 
   it("every overlay key a slot publishes resolves to its own path, and the bake's loader never swaps in another", () => {
-    // The crown bands: m15crown (4.6a) and the extended-art band (4.6f);
+    // The crown bands: m15crown (4.6a), the extended-art band (4.6f) and the
+    // Nyx dress's band (4.7: m15nyxcrown);
     // the transform icon riders (5.1a): dfcicon, keyed by the glyph; the
     // holofoil stamp's notch pieces (4.9c): m15holostamp on the M15
     // family, the walker's own m15pwholostamp.
@@ -130,7 +131,10 @@ describe("bake path = preview path", () => {
                 : "m15holostamp"
               : template === "extendedart"
                 ? "extendedcrown"
-                : (dfcCrown ?? "m15crown");
+                : template === "m15nyx"
+                  ? // The Nyx dress's crown (4.7): the band with the starfield strip.
+                    "m15nyxcrown"
+                  : (dfcCrown ?? "m15crown");
         for (const key of slot.keys) {
           expect(slot.assetPathTemplate.replace("{key}", key), `${template} ${slot.anatomy}`).toBe(`/frames/${folder}/${key}.png`);
           if (slot.anatomy === "holoStamp") notches += 1;
@@ -155,13 +159,13 @@ describe("bake path = preview path", () => {
     // The four modal strip slots (5.1c): 8 keys on each spell body (w u b r
     // g m a + l), 7 on each land body (w u b r g m c).
     expect(strips).toBe(8 + 8 + 7 + 7);
-    // Not vacuous: 9 bar keys + the 10 pairs (the 4.9c follow-up) × the seven
-    // M15-family entries (the Vehicle frame's since 4.5c) + the walker's 7 — and none on a DFC body, the
+    // Not vacuous: 9 bar keys + the 10 pairs (the 4.9c follow-up) × the eight
+    // M15-family entries (the Vehicle frame's since 4.5c, the Nyx dress's since 4.7) + the walker's 7 — and none on a DFC body, the
     // transform (5.1a) and modal (5.1b) bodies alike (no holoStamp on a back
     // body, ever; the fronts take it as their own addition later).
     // …and the station frame's two entries (TODO 4.27a): the parents' notch
-    // slot, so nine M15-family entries.
-    expect(notches).toBe((9 + 10) * 9 + 7);
+    // slot, so — with the Nyx dress (TODO 4.7) — ten M15-family entries.
+    expect(notches).toBe((9 + 10) * 10 + 7);
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

@@ -178,7 +178,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 45 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 46 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the M15 family (4.4, shipped in #380, layout v24): m15, m15artifact,
@@ -189,6 +189,10 @@ into `.frames-build/` — 45 templates today (`CC_TEMPLATES` in
   (or the artifact's) bars, box and pinline, its ten two-colour pair
   masters and the brown 'Vehicle Power/Toughness' plate, toned onto the
   prints ([The Vehicle frame](#the-vehicle-frame-45c));
+- the Nyx dress (4.7): m15nyx — the accurate M15 pack's seven 'Nyx
+  (Theros)' masters whole, m15's twenty pair masters over them, and
+  m15nyxcrown, the crown band with the pack's Nyx inner crown on top
+  ([The Nyx dress](#the-nyx-dress-47));
 - the borderless M15 frame from 'Borderless (Alt)' (4.32): m15borderless and
   its artifact dress m15borderlessartifact, each with the pack's own P/T
   plates — and, since 4.6f (wave 2a), their pinline-split pair masters and
@@ -2895,6 +2899,189 @@ bar's right end, where the set symbol goes. The printed body comes with
 ("This frame doesn't draw power / toughness", `lib/cards/pt-drawn.ts`)
 stays true for a saga creature.
 
+### The Nyx dress (4.7)
+
+TODO 4.7 (owner decisions A3 / A4, 2026-09-29; the frame roadmap of
+2026-10-13, block 3). `m15nyx` is the printed ENCHANTMENT frame on the 2015
+frame: the M15 frame with a starfield in its frame field. It is not the
+`nyx` template (the Theros Beyond Death constellation showcase, THB
+#258–268, which stays) and not the token kind's Nyx (4.51).
+
+**Which printings** (Scryfall `frame:nyxtouched` — the `enchantment` frame
+effect — 2026-10-13: 1,746 printings). 131 are on the 2003 frame (Theros,
+Born of the Gods, Journey into Nyx 2013–14, their promos and List
+reprints): out of scope, they keep `nyx/2003` (nearest). 1,615 are on the
+2015 frame, and 983 of those are plain — black border, one face, no other
+treatment, no token, no saga: 386 enchantment creatures, 6 enchantment
+artifacts and 591 plain enchantments and Auras; 134 legendary, 85 in two
+colours (4 with a hybrid cost), 21 in three or more, 4 colourless.
+
+- Enchantment creatures: 1 in 2014, 11 in 2015, 20 in 2016–19 (reprints of
+  Theros cards), then every one — 354 of the 388 plain printings since
+  Theros Beyond Death 2020; the 34 without it are Arena's Pioneer Masters
+  (31), a playtest card, MB2 #575 and SLD #7039.
+- Enchantment artifacts: all six plain printings (Bident of Thassa C15 #86,
+  A25 #42, LCC #146; Whip of Erebos CP2 #5; Hammer of Purphoros EOC #88; a
+  promo), each in its COLOUR's starfield, never an artifact frame.
+- Plain enchantments: none before Foundations (2024-11-15), every one
+  since — 591, and 0 on the plain frame in any premier or Commander set
+  from FDN on (the plain ones left are promos, List reprints, Alchemy, and
+  Foundations Jumpstart). The frame is the enchantment frame now, not the
+  enchantment-creature frame.
+- The rest of the 1,615 are other bodies or dresses: 201 sagas (4.5d), 138
+  borderless, 109 extended art, 66 showcase, 49 double-faced, 29 full art,
+  8 classes, 4 adventures, a case, 4 tokens, and 23 black-, white- or
+  yellow-bordered `inverted` / etched printings.
+
+**What the prints show** (101 plain prints read at 1500 × 2100, every
+colour, C15 2015 → FRA 2026, against Card Conjurer's masters):
+
+- The starfield is in the frame field ONLY. Inside Card Conjurer's Title,
+  Type, Rules, Pinline and Border masks its Nyx masters equal the regular
+  M15 masters (mean difference 0.00–0.20 of 255 on all seven; 46–62 inside
+  the Frame mask). On the prints the bars, the box and the pinline read
+  within 13 levels a channel of our masters with 0 % bright specks (a pixel
+  45 luma over its region's median) — against 10–30 % in the frame field —
+  and the P/T plate face is M15's own, 0 % specks on 58 creatures.
+- It is the same drawing as the masters': the prints' frame field
+  correlates 0.84–0.89 with the Nyx master of its colour (median per
+  colour; 0.58–0.92 over all prints, lowest on the 2014–15 scans) and
+  0.30–0.36 with the regular M15 master (0.68 on white, light either way).
+  A plain enchantment's (0.85, n 38) is an enchantment creature's (0.84,
+  n 51).
+- Tones need no correction. Field medians, print / master: white
+  126/130/112 – 128/135/110, blue 9/78/115 – 1/79/116, black 36/30/67 –
+  41/37/68, red 159/66/40 – 162/68/38, green 47/90/55 – 48/92/53, gold
+  141/115/63 – 147/120/61.
+- Two colours print m15's two dresses over the starfield: the gold field
+  with the split box and pinline (THB #220, NEO #225, FRC #52; 14 read),
+  and for a hybrid cost the two colours' fields under grey bars (HOB #155,
+  FRA #134, ECC #121, SLD #2444).
+- Colourless: Eldrazi Conscription (SOC #131) wears the pack's silver
+  starfield (48/63/67 against the master's 50/63/73, correlation 0.85).
+  Faceless One (CLB #1) prints a tan frame of its own (189/173/127) and is
+  not matched by any master; the registry cannot tell it apart.
+- The crown: 30 of 31 legendary prints since Theros Beyond Death carry the
+  starfield in the strip INSIDE the crown, between its arch and the title
+  bar (it correlates 0.87–0.96 with Card Conjurer's Nyx inner crown, 0.65–
+  0.84 with the plain crown band; white reads 130/118/99 there against the
+  plain crown's 242/241/236). The one flat crown is the oldest, Kestia
+  (C18 #42, 2018). The crown itself is M15's.
+
+**Masters** (the frames bucket; `scripts/lib/cc-frames.mjs`): Card
+Conjurer's 'Nyx (Theros)' of the accurate M15 pack — seven whole masters at
+2010 × 2814 (`m15/new/nyx/<k>.png`), downscaled once. The colourless key is
+the pack's artifact starfield (`a.png`; there is no see-through master, so
+no art under the frame). The twenty pair masters are m15's recipes with the
+Nyx files: `<pair>` the gold starfield with the split box and pinline,
+`<pair>-h` the two starfields across the frame ramp under the regular
+pack's grey land bars (the Nyx pack has no land file; its bars are the
+regular masters' own). The plates are m15's seven images — the colourless
+key keeps the grey m15PTC, which is the hybrid dress's plate and what
+Faceless One's plate reads (206/202/202). Nothing is synthesised or toned.
+
+**The crown** is its own band, `m15nyxcrown/<key>.png`: the m15crown
+recipe with Card Conjurer's Nyx inner crown (`innerCrowns/new/nyx`, 1353 ×
+64) as its last layer at the pack's bounds — one overlay, never two
+stacked (`M15_NYX_CROWN`; keys w u b r g m a and the ten pairs). The stamp
+notch is m15's (`m15holostamp`: the bar under it is the same pixels on
+every Nyx master, checked by the importer for the twenty pairs).
+
+**The profile** is m15's — slots, sizes, both two-colour dresses, the
+collector line, the stamp, the text alignment — with its own masters,
+plates and crown band, and no `underFrameArt`.
+
+**Who wears it.** A stored template of its own, never a render-time pick
+from the type words, which would re-dress every stored enchantment. It
+dresses a card whose TYPE WORDS say Enchantment — the card type, or a word
+in `supertype` ("Enchantment Creature" is the creature card type with the
+word; "Enchantment Artifact" the Enchantment card type with "Artifact", as
+the importer writes them; never `printed_types`) — in the three kinds such
+a card can be (`TREATMENT_KINDS`: creature, enchantment, artifact;
+`ENCHANTMENT_DRESSES` / `enchantmentFrameFits` in
+`lib/creator/card-kinds.ts`). The server's kind gate refuses it on any
+other card, and on an edit that takes the word off a card on the frame.
+
+- In **Variations** it is "Nyx". A creature and an artifact BORROW it, as
+  they borrow the artifact frame and the constellation showcase (A3 / A4):
+  picking it writes "Enchantment" into the type line, and leaving the frame
+  takes the word out again if the pick put it there. The Enchantment kind
+  wears it as its own skin (`KIND_SKIN_VARIANTS`); an instant or a sorcery,
+  whose standard is m15 too, is never offered it.
+- **A new card follows** onto it (`enchantmentFrameFor`: the creator's
+  effect, `resolveGeneratedFrame` when a frame is asked for) when its words
+  say Enchantment — the moment they first do, on the kind's M15 frame,
+  where the Nyx frame is verified in the card's colour; "Standard" in
+  Variations is the way back, and a pick made by hand sticks. A card on the
+  frame whose words stop saying Enchantment goes back to its kind's frame.
+- **A plain enchantment and an Aura follow too** (owner decision 1, Round
+  56, 2026-10-13: as print does since Foundations; the build had offered it
+  and never moved it). Never a card of a kind with no base here — an
+  Enchantment Land, a token, the saga kind, a double-faced face — and never
+  an enchantment whose SUBTYPES name a body of its own in print (Saga,
+  Class, Case, Room typed on a plain enchantment:
+  `ENCHANTMENT_DRESS_OWN_BODY_SUBTYPES`, read by `followsEnchantmentDress`
+  alone): those are offered the frame, may wear it, and are never moved.
+  While the frame is unverified in the card's colour nothing follows.
+- **An AI card follows where a frame is asked for** ("random" or a named
+  frame; `resolveGeneratedFrame`): an enchantment's M15 frame gives way to
+  the Nyx frame where both are published. A job that asks for no frame
+  keeps the default landing (M15), as a Vehicle's does. The art window, the
+  rules box and every slot are m15's, so nothing else about a generation
+  changes.
+- **A stored card keeps its frame** until its owner picks "Nyx"; an edit
+  and a remix never move one. **An import follows its PRINTING**, never
+  this rule: a plain enchantment printed before Foundations lands on M15,
+  one printed since lands on Nyx (once verified).
+
+**Owner decisions, Round 56 (2026-10-13).** (1) a new plain enchantment
+follows — built here. (2) The label stays "Nyx". (3) The word a borrowed
+frame wrote ("Enchantment", like "Artifact") stays after a step change:
+accepted for now, a follow-up with the artifact borrow. (4) Faceless One
+(CLB #1) and the ten `inverted`-only promo-pack printings become
+`nearest` in a follow-up. (5) Beleren's "ffi" ligature in the preview
+(`hd-beleren-ffi-ligature`, tests/parity) is its own PR, after fi / ff / fl
+are measured.
+
+**Rollout: an addition.** No stored card sits on a new template: no layout
+bump, no sweep, no badge.
+
+**Imports follow the printing.** The registry's `era/2015+nyx` rule is what
+it was — the kind's M15 frame, nearest, the starfield its gap — and now
+names `m15nyx` once that is verified in the card's colour
+(`nyxOnceVerified`: `onceVerified`, exact; the crown and the pairs are
+drawn there). Only where the frame dresses the card as it stands: a saga,
+a class, a case, an adventure, a token and a double-faced printing (the
+flag is the card's; one face is the enchantment) never reach it. Run over
+6,394 printings (all 1,746 Nyx ones and 4,648 others) against production's
+verified list: no landing differs from `main` — frame, kind, type words,
+switches, the chooser, the remix. 994 Nyx printings carry the new
+`onceVerified`; 984 of them now say "not yet verified in <colour>" where
+they said the starfield isn't drawn, and log to the request log as "Not yet
+verified" instead of "Missing" (the frame exists). With `m15nyx` verified
+in seven colours those 994 land on it — 984 exact, 10 nearest for a later
+gap (6 foil-etched, 3 yellow-bordered, 1 white-bordered) — and no other
+printing moves. The AI deck remix lands where the import lands
+(`remixFrameFor`).
+
+Not moved, on purpose:
+
+- **Borderless (138) and extended art (109).** The prints have no frame
+  field left to carry a starfield (NEO #480 / #483, DFT #382, INR #306, SLD
+  #1279 read): the bordered twin or the extended-art frame stays their
+  landing. Unlike a Vehicle's plate, nothing of the dress is lost there.
+- **Showcase (66)** — each set's own frame (4.11) — **masterpieces** (9:
+  OMB, SPG), **sagas** (4.5d's textured saga), **double-faced** printings,
+  classes, cases, adventures, **tokens** (4.51) and the **2003 frame**.
+- 23 bordered `inverted` / etched printings ride the rule like any plain
+  one (the registry has never read `inverted` on the bordered M15 frame):
+  the promo-pack look (THB #353, NEO #508) is the starfield with DARK bars,
+  so "exact" overstates the ten that are `inverted` alone; the etched and
+  odd-bordered ones stay nearest for their own gap.
+
+One m15 reference left the registry with this: Obsessive Pursuit (TLA
+#112), an alternate of `m15/b`, is a Nyx printing and would have had the
+owner compare a starfield against the plain frame.
 ### The Station frame (4.27a)
 
 TODO 4.27a (owner 2026-10-13, rounds 53–54). `m15station` and
@@ -6232,11 +6419,11 @@ at HD on all four.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 48 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 49 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens, the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame and 4.27a's two station frames, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress and 4.27a's two station frames, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card) prints its names,

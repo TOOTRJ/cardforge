@@ -629,7 +629,7 @@ export function kindsByTemplate(): Map<FrameTemplate, CardKind[]> {
  *  creator does (lib/cards/art-framing.ts). */
 // …and the station frame (TODO 4.27a): the sheen over its see-through box
 // and its drawn pieces.
-const FINISH_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15pw", "saga", "m15token", "agclassic", "lotr", "retro", "m15borderless", "m15station"];
+const FINISH_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15pw", "saga", "m15token", "agclassic", "lotr", "retro", "m15borderless", "m15nyx", "m15station"];
 /** The edge card (3.11's content cases) on one frame of each family. */
 const EDGE_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15borderless", "agclassic", "retro", "lotr", "tarkirdragon"];
 /** The legendary crown switched on (TODO 4.6a): the long card (Legendary) on
@@ -645,6 +645,10 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // colourless Vehicle (DMU #230), its colour on a coloured one (KHM #169),
   // gold on three colours.
   ["m15vehicle", ["c", "g", "wub"]],
+  // TODO 4.7: the Nyx dress's crown — the m15 crown with the starfield
+  // strip inside it (m15nyxcrown), in every colour that picks a different
+  // band: w u b r g, c (the silver: the frame maps c → a), wu and wub (gold).
+  ["m15nyx", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
   // TODO 4.27a: the station frame's crown — the parents' (artifact silver /
   // land grey on a colourless card, the colour's, gold).
   ["m15station", ["c", "g", "wub"]],
@@ -1219,6 +1223,13 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   // oddest — two digits a side (the stat fit) and a star.
   ["m15vehicle", "artifact", "c", "@wide", { power: "12", toughness: "12" }],
   ["m15vehicle", "artifact", "r", "@star", { power: "*", toughness: "5" }],
+  // TODO 4.7: the Nyx dress as the cards that wear it — an Enchantment
+  // Creature with its plate at its widest, a legendary Enchantment Artifact
+  // (the colour's starfield, never an artifact frame: LCC #146) and a
+  // colourless one on the silver starfield.
+  ["m15nyx", "creature", "w", "@nyx-wide", { supertype: "Enchantment", subtypes: ["Griffin"], power: "12", toughness: "12" }],
+  ["m15nyx", "enchantment", "u", "@nyx-artifact", { supertype: "Legendary Artifact", subtypes: [] }],
+  ["m15nyx", "artifact", "c", "@nyx-silver", { supertype: "Enchantment", subtypes: ["Equipment"] }],
   [
     "m15artifact",
     "artifact",
@@ -1448,6 +1459,15 @@ export function visualCases(): VisualCase[] {
   add("m15borderless", "creature", "wu", "long", {
     suffix: "@pair-hybrid-crown",
     row: { ...pairStyle("m15borderless", "regular", true), cost: "{X}{W/U}{W/U}{W/U}" },
+  });
+  // The Nyx dress's hybrid dress (TODO 4.7; added by the independent check
+  // of #542 — its ten `<pair>-h` masters were published and baked by no
+  // case): the two starfields across the frame ramp under the grey bars, and
+  // the split Nyx crown band over it.
+  add("m15nyx", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15nyx"), cost: "{W/U}{W/U}" } });
+  add("m15nyx", "creature", "wu", "long", {
+    suffix: "@pair-hybrid-crown",
+    row: { ...pairStyle("m15nyx", "regular", true), cost: "{X}{W/U}{W/U}{W/U}" },
   });
   add("m15", "creature", "wu", "short", { suffix: "@pair-foil", finish: "foil", row: pairStyle("m15", "foil") });
   add("m15", "creature", "wu", "long", {
@@ -1833,12 +1853,12 @@ export function visualCases(): VisualCase[] {
 /** The templates whose PROFILES entry declares the holofoil stamp's notch
  *  (TODO 4.9c; tests/unit/render/visual-matrix.test.ts keeps it in step). */
 // …and the station frame (TODO 4.27a): the parents' notch over the cut masters.
-export const STAMP_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15station", "m15stationland", "m15snow", "m15devoid", "m15pw"];
+export const STAMP_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15stationland", "m15snow", "m15devoid", "m15pw"];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's
  *  cases (the 4.9c follow-up; the same test keeps it in step: a template
  *  that gains pairs with the notch declared joins by itself). */
-export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15artifact", "m15vehicle", "m15land", "m15snow", "m15snowland"];
+export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15artifact", "m15vehicle", "m15nyx", "m15land", "m15snow", "m15snowland"];
 
 /** A rules text whose fitted last line enters the arch on m15 (found on the
  *  real layout, 2026-10-02: 50 px, the last line's ink 132–839 × …–1910 at
@@ -2056,6 +2076,8 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   "m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15snow", "m15snowland",
   // The Vehicle frame (TODO 4.5c): m15artifact's split over the bronze frame.
   "m15vehicle",
+  // The Nyx dress (TODO 4.7): m15's split and hybrid over the starfield.
+  "m15nyx",
   // The double-faced spell faces (5.1d): their cases carry a back face
   // (the DFC block below), never the generic pair loop's rows.
   "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback",

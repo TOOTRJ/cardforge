@@ -67,6 +67,7 @@ export const COLLECTOR_TEMPLATES = [
   "m15snowland",
   "m15artifact",
   "m15vehicle",
+  "m15nyx",
   "m15station",
   "m15stationland",
   "m15snow",
