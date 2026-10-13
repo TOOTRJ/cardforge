@@ -53,6 +53,12 @@ export type ParitySizeName = (typeof PARITY_SIZES)[number]["name"];
  *  onto the same grey). */
 export const PARITY_BACKDROP = { r: 128, g: 128, b: 128 } as const;
 
+/** File-name-safe form of a case id (the bake's PNGs, the results, and the
+ *  case's baseline file: tests/parity/baseline/<platform>/<this>.json). */
+export function parityFileName(id: string): string {
+  return id.replace(/[/@]/g, "__");
+}
+
 /** One case as the bake stage hands it to the browser stage. */
 export type ParityCaseFile = {
   /** Its place in tests/parity/cases.ts (the bake runs in shards). */

@@ -7,7 +7,6 @@ import {
   judge,
   limitFailures,
   overLimits,
-  serializeBaseline,
   toBaselineCase,
   type Measured,
 } from "@/tests/parity/thresholds";
@@ -166,20 +165,11 @@ describe("the three layers of tests/parity/thresholds.ts", () => {
     tileMoved.tiles = { ...tileMoved.tiles, mads: [3, 30] };
     expect(baselineFailures(tileMoved, base)[0]).toMatch(/tiles: 1 of 2 differ more than recorded — 25,0/);
     expect(baselineFailures(measured({ rules: [0, 0, 8, 0.05], title: [0, 0, 1, 0] }), base)[0]).toMatch(/title: a region the baseline has not got/);
-    expect(baselineFailures(measured({ rules: [0, 0, 8, 0.05] }), undefined)[0]).toMatch(/not in tests\/parity\/baseline.json/);
+    expect(baselineFailures(measured({ rules: [0, 0, 8, 0.05] }), undefined)[0]).toMatch(/not in tests\/parity\/baseline\/ for this platform/);
   });
 
   it("a platform with no recorded section is held to the limits only", () => {
     expect(judge(measured({ rules: [0, 0, 8, 0.05] }), null)).toEqual([]);
     expect(judge(measured({ rules: [0, 0, 8, 0.05] }), undefined)).toHaveLength(1);
-  });
-
-  it("the baseline file is one line per case, platforms and cases sorted", () => {
-    const one = toBaselineCase(measured({ rules: [0, 0, 8, 0.05] }));
-    const text = serializeBaseline({ note: "n", platforms: { linux: { recorded: "2026-10-12", cases: { "b@750": one, "a@750": one } }, darwin: { recorded: "2026-10-12", cases: {} } } });
-    expect(JSON.parse(text).platforms.linux.cases["a@750"]).toEqual(one);
-    expect(text.indexOf('"darwin"')).toBeLessThan(text.indexOf('"linux"'));
-    expect(text.indexOf('"a@750"')).toBeLessThan(text.indexOf('"b@750"'));
-    expect(text.split("\n").filter((line) => line.includes("@750"))).toHaveLength(2);
   });
 });

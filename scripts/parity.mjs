@@ -6,8 +6,16 @@
 // (lib/render/card-image.tsx) on the cards of tests/parity/cases.ts.
 //
 //   npm run test:parity                 check (exit 1 on a difference)
-//   npm run test:parity -- --update     re-record this platform's section of
-//                                       tests/parity/baseline.json
+//   npm run test:parity -- --update     re-record this platform's baseline
+//                                       (tests/parity/baseline/<platform>/):
+//                                       ONLY the cases that are new, removed
+//                                       or outside their recorded tolerance —
+//                                       every other file stays byte for byte
+//   npm run test:parity -- --update --all
+//                                       re-record EVERY case of this platform,
+//                                       also the ones inside their tolerance
+//                                       (a diff of the whole directory: only
+//                                       when that is what the PR is for)
 //
 //   --only p1,p2     only the cases whose id starts with these
 //   --save           keep every preview screenshot, bake and difference map
@@ -30,8 +38,10 @@
 //      and compares region by region (tests/parity/thresholds.ts).
 //
 // Output: tmp/parity/report.md (appended to $GITHUB_STEP_SUMMARY in CI),
-// tmp/parity/results/*.json, tmp/parity/next/baseline.json (what --update
-// would write — CI uploads it as the `parity-baseline` artifact).
+// tmp/parity/results/*.json, tmp/parity/next/ (the case files --update
+// would write, and update.json naming them — CI uploads it as the
+// `parity-baseline` artifact, and a red CI run prints it as a script to
+// paste: tests/parity/README.md "The linux half").
 // ---------------------------------------------------------------------------
 import { spawn } from "node:child_process";
 import fs from "node:fs";
@@ -41,6 +51,7 @@ import { fileURLToPath } from "node:url";
 import { parseFlags, publicBaseFor, readManifest } from "./lib/frame-objects.mjs";
 import { syncFrameCache } from "./lib/visual-frames.mjs";
 import { PRODUCTION_SUPABASE_REF } from "./lib/prod-guard.mjs";
+import { PASTE_LIMIT_BYTES, baselineArtifactCommand, baselinePasteScript, readNextBaseline } from "./lib/parity-next.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TMP = path.join(ROOT, "tmp", "parity");
@@ -61,7 +72,20 @@ const ORIGINS = (flags.get("--origin") ?? DEFAULT_ORIGINS.join(",")).split(",").
 const UPDATE = flags.has("--update");
 // Bake processes (Satori is single-threaded; the cases are independent).
 const SHARDS = Math.max(1, Math.min(3, Number(flags.get("--shards") ?? Math.min(3, os.availableParallelism?.() ?? os.cpus().length))));
+const UPDATE_ALL = flags.has("--all");
 if (UPDATE && ONLY) throw new Error("--update needs the whole matrix (drop --only).");
+if (UPDATE_ALL && !UPDATE) throw new Error("--all goes with --update (it re-records every case).");
+const ALL_BANNER = [
+  "",
+  "  ****************************************************************************",
+  `  --update --all: EVERY case of the ${process.platform} baseline is re-recorded, also the`,
+  "  ones that are inside their recorded tolerance. The diff is the whole",
+  "  directory and collides with every open PR that records a case. Use it only",
+  "  when that is the point of the PR; a renderer change needs plain --update.",
+  "  ****************************************************************************",
+  "",
+].join("\n");
+if (UPDATE_ALL) console.warn(ALL_BANNER);
 
 function run(label, args, env) {
   const t0 = Date.now();
@@ -109,6 +133,7 @@ if (baked.some((code) => code !== 0)) {
 const browser = await run("browser", [path.join(ROOT, "node_modules/@playwright/test/cli.js"), "test", "-c", "tests/parity/playwright.config.ts"], {
   ...shared,
   ...(UPDATE ? { PARITY_UPDATE: "1" } : {}),
+  ...(UPDATE_ALL ? { PARITY_UPDATE_ALL: "1" } : {}),
   ...(flags.has("--measure") ? { PARITY_MEASURE: "1" } : {}),
   ...(flags.has("--save") ? { PARITY_SAVE: "1" } : {}),
 });
@@ -120,23 +145,38 @@ if (fs.existsSync(reportFile)) {
   // The verdict and what failed; the full table is in the file.
   console.log(`\n${report.split("\n### ")[0].trim()}\n\n(full table: ${path.relative(ROOT, reportFile)})`);
 }
+if (UPDATE_ALL) console.warn(ALL_BANNER);
 if (browser !== 0 && !UPDATE) {
   console.error(
     "\nThe preview differs from the bake (or left its recorded offsets). Look at tmp/parity/out/<case>@<size>.{preview,bake,diff}.png.\n" +
       "A real difference: fix the renderer that is wrong. An intended change of both renderers that moved the recorded numbers:\n" +
-      "  npm run test:parity -- --update        (or commit CI's `parity-baseline` artifact as tests/parity/baseline.json)",
+      "  npm run test:parity -- --update        (this platform; it rewrites only the cases that moved — tests/parity/README.md)",
   );
-  // On CI: the one command that brings this run's numbers (the linux section)
-  // into the branch — nobody has to look the run id up.
-  if (process.env.GITHUB_RUN_ID) {
-    // Through tmp/: `gh run download` refuses to overwrite a file that exists.
-    const repo = process.env.GITHUB_REPOSITORY ? ` -R ${process.env.GITHUB_REPOSITORY}` : "";
-    const fetchBaseline = `gh run download ${process.env.GITHUB_RUN_ID}${repo} -n parity-baseline -D tmp/parity/ci && mv tmp/parity/ci/baseline.json tests/parity/baseline.json`;
-    console.error(`\nThis run's numbers, if the change is intended (read the diff before committing it):\n  ${fetchBaseline}`);
+  // On CI: this run's numbers (the linux half of a re-record) as something
+  // to paste — nobody has to look a run id up or download an artifact.
+  const next = process.env.GITHUB_RUN_ID ? readNextBaseline(path.join(TMP, "next")) : null;
+  if (process.env.GITHUB_RUN_ID && !next) {
+    console.error(
+      "\nThis run has no baseline lines to hand over: every case is inside its recorded tolerance (the failure is a LIMIT, a stale known difference or a removed case's leftovers), or a case could not be measured at all.",
+    );
+  }
+  if (next) {
+    const cases = `${next.changed.length} case line(s) of ${next.changed.length + next.kept} — ${next.files.length} file(s) written${next.remove.length ? `, ${next.remove.length} removed` : ""}`;
+    const script = baselinePasteScript(next);
+    const paste = Buffer.byteLength(script) <= PASTE_LIMIT_BYTES;
+    const artifact = baselineArtifactCommand({ ...next, runId: process.env.GITHUB_RUN_ID, repo: process.env.GITHUB_REPOSITORY });
+    const caveat = "A value over a limit is in here too and still fails the next run; nothing is handed over when a case could not be measured at all.";
+    console.error(
+      `\nThis run's numbers for ${next.platform}, if the change is intended (${cases}; read the diff before committing it).\n${caveat}\n` +
+        `From the artifact:\n  ${artifact}\n` +
+        (paste ? `Or paste this at the repo's root — the same files, no artifact:\n\n${script}` : "(Too large to print as a script: use the artifact.)"),
+    );
     if (process.env.GITHUB_STEP_SUMMARY) {
       fs.appendFileSync(
         process.env.GITHUB_STEP_SUMMARY,
-        `\n### If both renderers were changed on purpose\n\nThis run's numbers (linux) as \`tests/parity/baseline.json\` — read the diff before committing it:\n\n\`\`\`bash\n${fetchBaseline}\n\`\`\`\n\nThe artifact is not written when a case could not be measured at all, and a value over a limit still fails the next run (tests/README.md "Preview parity").\n`,
+        `\n### If both renderers were changed on purpose\n\nThis run's numbers for ${next.platform} (${cases}) — read the diff before committing it. ${caveat}\n\n` +
+          (paste ? `Paste at the repo's root (no artifact needed):\n\n\`\`\`bash\n${script}\`\`\`\n\nOr from the artifact:\n\n` : "") +
+          `\`\`\`bash\n${artifact}\n\`\`\`\n`,
       );
     }
   }
