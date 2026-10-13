@@ -546,8 +546,7 @@ export function ArtUploader({
 
   const uploaderId = useId();
   const headingId = `${uploaderId}-heading`;
-  const promptId = `${uploaderId}-prompt`;
-  const hintsId = `${uploaderId}-hints`;
+  const dropzoneId = `${uploaderId}-dropzone`;
 
   return (
     <div className={cn("flex flex-col gap-4", className)}>
@@ -602,11 +601,12 @@ export function ArtUploader({
             : undefined
         }
         // Empty: named by what it shows — the box's heading ("Artwork",
-        // "Back face — Artwork") and its own prompt — and described by the
-        // hints under the prompt. An aria-label in other words hid all three
-        // from a screen reader and from voice control.
-        aria-labelledby={artUrl ? undefined : `${headingId} ${promptId}`}
-        aria-describedby={artUrl ? undefined : hintsId}
+        // "Back face — Artwork") and then its own words (the prompt, the
+        // paste hint, the best size). An aria-label in other words hid all
+        // of them from a screen reader, and from voice control ("click drag
+        // art here" found nothing).
+        id={dropzoneId}
+        aria-labelledby={artUrl ? undefined : `${headingId} ${dropzoneId}`}
         tabIndex={0}
         data-art-window-aspect={artUrl ? artWindow.aspect.toFixed(4) : undefined}
         style={surfaceStyle}
@@ -662,13 +662,7 @@ export function ArtUploader({
             </div>
           </>
         ) : (
-          <EmptyDropzoneInner
-            uploading={uploading}
-            dragOver={isDragOver}
-            best={best}
-            promptId={promptId}
-            hintsId={hintsId}
-          />
+          <EmptyDropzoneInner uploading={uploading} dragOver={isDragOver} best={best} />
         )}
       </div>
 
@@ -794,15 +788,10 @@ function EmptyDropzoneInner({
   uploading,
   dragOver,
   best,
-  promptId,
-  hintsId,
 }: {
   uploading: boolean;
   dragOver: boolean;
   best: { width: number; height: number };
-  /** Ids for the dropzone's name (the prompt) and description (the hints). */
-  promptId: string;
-  hintsId: string;
 }) {
   return (
     <div className="pointer-events-none flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
@@ -821,8 +810,8 @@ function EmptyDropzoneInner({
           <ImagePlus className="h-5 w-5" />
         )}
       </div>
-      <div id={hintsId} className="flex flex-col gap-1">
-        <p id={promptId} className="text-sm font-medium text-foreground">
+      <div className="flex flex-col gap-1">
+        <p className="text-sm font-medium text-foreground">
           {dragOver ? "Drop to upload" : "Drag art here, or click to choose"}
         </p>
         <p className="text-[11px] uppercase tracking-wider text-subtle">
