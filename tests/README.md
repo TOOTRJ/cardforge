@@ -42,7 +42,20 @@ pricing specs run). A red e2e job is a real signal — in 2026-09 the suite had
 drifted to 12 failures locally and two of them were production bugs. The
 job summary lists every skipped test and every test that only passed on a
 retry (`scripts/e2e-summary.mjs`) — a flake that keeps appearing there is a
-bug to fix, not noise. The **Visual regression** jobs gate the renderer's
+bug to fix, not noise.
+
+The required **Typecheck, lint, unit** check is a gate over three jobs that
+run side by side: `static` (typecheck, lint, `next build`), `unit` (the unit
+suite in four shards — vitest's `--shard`, a hash of each file's path, so
+there is no file list to keep) and `coverage`, which merges the shards'
+blob reports (`npm run test:coverage:merge`) and holds the coverage floors
+of `vitest.config.ts` to the WHOLE suite. A shard only records coverage
+(`VITEST_COVERAGE_SHARD=1`: its share of the tests could never meet a
+floor); nothing else may set that variable. One machine's
+`npm run test:coverage` is unchanged and checks the same floors.
+`tests/unit/devops/ci-unit-shards.test.ts` pins the shape.
+
+The **Visual regression** jobs gate the renderer's
 pixels (next section) and **Preview parity** holds the browser preview to
 the bake (the section after).
 

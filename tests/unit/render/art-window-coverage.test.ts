@@ -716,12 +716,19 @@ describe("the Card Conjurer importer runs the art-window check (TODO 7.6)", () =
 describe("CI fetches the bucket masters", () => {
   it("restores, fetches (sha256-checked) and points FRAMES_BUILD_DIR at them before the unit tests", () => {
     const ci = fs.readFileSync(path.join(ROOT, ".github/workflows/ci.yml"), "utf8");
-    const fetch = ci.indexOf("node scripts/frames-fetch.mjs --out .frames-cache");
-    const unit = ci.indexOf("run: npm run test:coverage");
+    // The unit suite runs as shards of ONE matrix job (tests/unit/devops/
+    // ci-unit-shards.test.ts), so every shard takes these steps.
+    const job = /\n  unit:\n([\s\S]*?)(?=\n  [a-z-]+:\n|$)/.exec(ci)?.[1] ?? "";
+    const fetch = job.indexOf("node scripts/frames-fetch.mjs --out .frames-cache");
+    const unit = job.indexOf("run: npm run test:coverage:shard");
     expect(fetch).toBeGreaterThan(0);
     expect(unit).toBeGreaterThan(fetch);
-    expect(ci.slice(unit, unit + 200)).toMatch(/FRAMES_BUILD_DIR: \.frames-cache/);
-    expect(ci).toContain("key: frames-${{ hashFiles('lib/frames/frame-manifest.json') }}");
+    expect(job.slice(unit, unit + 200)).toMatch(/FRAMES_BUILD_DIR: \.frames-cache/);
+    expect(job).toContain("key: frames-${{ hashFiles('lib/frames/frame-manifest.json') }}");
+    // No other job runs the unit tests (one without the masters would skip
+    // the suites gated on them and stay green).
+    expect(ci.match(/run: npm run test:(unit|coverage)(?![:\w])/g)).toBeNull();
+    expect(ci.match(/run: npm run test:coverage:shard/g)).toHaveLength(1);
   });
 
   it("never commits the fetched frames", () => {

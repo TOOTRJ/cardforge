@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+# vitest's blob reports (CI's unit shards, `npm run test:coverage:shard`)
+/.vitest-reports/
 
 # next.js
 /.next/
