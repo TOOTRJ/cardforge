@@ -7,7 +7,7 @@
 // (lib/cards/face-content.ts), so exports/search keep working.
 
 import { useRef } from "react";
-import { useController, useFieldArray, useFormContext } from "react-hook-form";
+import { useController, useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FieldGroup, inputClass, textareaClass } from "@/components/creator/field-group";
@@ -17,6 +17,7 @@ import {
 } from "@/components/creator/pip-text-editor";
 import { RulesSymbolToolbar } from "@/components/creator/rules-symbol-toolbar";
 import type { FormValues } from "@/lib/creator/form-types";
+import { structuredRowsSaveAsText } from "@/lib/creator/structured-rules";
 
 const MAX_ROWS = 6; // Urza, Planeswalker is the printed extreme.
 
@@ -31,6 +32,13 @@ export function LoyaltyAbilitiesEditor() {
   const { fields, append, remove } = useFieldArray({
     control,
     name: "loyalty_abilities",
+  });
+  const watchedRows = useWatch({ control, name: "loyalty_abilities" }) ?? [];
+  const savesAsText = structuredRowsSaveAsText("planeswalker", {
+    rules_text: "",
+    loyalty_abilities: watchedRows.map((r) => ({ cost: r?.cost ?? "", text: r?.text ?? "" })),
+    saga_intro: "",
+    saga_chapters: [],
   });
   // The toolbar drops symbols into the row that last had focus (the first
   // row until one is clicked).
@@ -97,6 +105,12 @@ export function LoyaltyAbilitiesEditor() {
           </div>
           );
         })}
+        {savesAsText ? (
+          <span className="text-[11px] leading-5 text-subtle" data-testid="rows-save-as-text">
+            More than six rows: this card saves its abilities as lines of text, one row a line. It
+            prints the same.
+          </span>
+        ) : null}
         {fields.length < MAX_ROWS ? (
           <Button
             type="button"

@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { sagaFromRulesText } from "@/lib/cards/face-content";
-import { submittedRulesOf, type StructuredRulesValues } from "@/lib/creator/structured-rules";
+import { loyaltyFromRulesText, sagaFromRulesText } from "@/lib/cards/face-content";
+import {
+  MAX_STRUCTURED_ROWS,
+  sagaRowsNeedingNumber,
+  structuredRowsSaveAsText,
+  structuredRowsUntouched,
+  submittedRulesOf,
+  type StructuredRulesValues,
+} from "@/lib/creator/structured-rules";
+import { faceContentSchema } from "@/lib/validation/card";
 
 // ---------------------------------------------------------------------------
 // What a planeswalker's / a saga's row editors save. The rules textarea is
@@ -268,7 +276,11 @@ describe("an edit of a saga with a chapter the editor can't number", () => {
   it("untouched: the stored text, and NO rows written beside it", () => {
     // `face_content` is what the renderers read first; chapter I alone
     // there would take chapter XI off the card on a retitle.
-    expect(submittedRulesOf("saga", opened, editOf(opened))).toEqual({ rulesText: TEXT, faceContent: null });
+    expect(submittedRulesOf("saga", opened, editOf(opened))).toEqual({
+      rulesText: TEXT,
+      faceContent: null,
+      keepsStored: true,
+    });
   });
 
   it("…a stored face_content is kept as it is", () => {
@@ -276,6 +288,8 @@ describe("an edit of a saga with a chapter the editor can't number", () => {
     expect(submittedRulesOf("saga", opened, { opened, storedFaceContent: stored })).toEqual({
       rulesText: TEXT,
       faceContent: stored,
+      // …by not being sent at all.
+      keepsStored: true,
     });
   });
 
@@ -299,5 +313,119 @@ describe("an edit of a saga with a chapter the editor can't number", () => {
 
   it("a new card (no opened values) saves the numbered rows, as before", () => {
     expect(submittedRulesOf("saga", opened).rulesText).toBe("I — One.");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The #528 follow-up (2026-10-13): rows are written as `face_content` only
+// where the server stores them and they draw what the card draws.
+// ---------------------------------------------------------------------------
+
+const walkerOpened = (text: string) =>
+  values({
+    rules_text: text,
+    loyalty_abilities: loyaltyFromRulesText(text).map((r) => ({ cost: r.cost ?? "", text: r.text })),
+  });
+const sagaOpened = (text: string) => {
+  const saga = sagaFromRulesText(text);
+  return values({
+    rules_text: text,
+    saga_intro: saga.intro ?? "",
+    saga_chapters: saga.chapters.map((ch) => ({ numerals: [...ch.numerals], text: ch.text })),
+  });
+};
+
+describe("the limits of face_content", () => {
+  it("MAX_STRUCTURED_ROWS is the server schema's row count and highest chapter", () => {
+    const rows = (n: number) => Array.from({ length: n }, (_, i) => ({ cost: "+1", text: `Row ${i + 1}.` }));
+    const ok = (content: unknown) => faceContentSchema.safeParse(content).success;
+    expect(ok({ v: 1, loyalty: { abilities: rows(MAX_STRUCTURED_ROWS) } })).toBe(true);
+    expect(ok({ v: 1, loyalty: { abilities: rows(MAX_STRUCTURED_ROWS + 1) } })).toBe(false);
+    const chapter = (n: number) => ({ v: 1, saga: { chapters: [{ numerals: [n], text: "x" }] } });
+    expect(ok(chapter(MAX_STRUCTURED_ROWS))).toBe(true);
+    expect(ok(chapter(MAX_STRUCTURED_ROWS + 1))).toBe(false);
+  });
+
+  const SEVEN = ["Flying", "+2: a", "+1: b", "0: c", "−1: d", "−3: e", "−8: f"].join("\n");
+
+  it("a seven-line walker, untouched: the stored text and nothing sent beside it", () => {
+    const opened = walkerOpened(SEVEN);
+    expect(submittedRulesOf("planeswalker", opened, editOf(opened))).toEqual({
+      rulesText: SEVEN,
+      faceContent: null,
+      keepsStored: true,
+    });
+    expect(structuredRowsUntouched("planeswalker", opened, opened)).toBe(true);
+  });
+
+  it("…edited (and on a new card): plain text that parses back into the rows", () => {
+    const opened = walkerOpened(SEVEN);
+    const now = {
+      ...opened,
+      loyalty_abilities: opened.loyalty_abilities.map((r, i) => (i === 1 ? { ...r, text: "A" } : r)),
+    };
+    const out = submittedRulesOf("planeswalker", now, editOf(opened));
+    expect(out).toEqual({ rulesText: "Flying\n+2: A\n+1: b\n0: c\n-1: d\n-3: e\n-8: f", faceContent: null });
+    expect(loyaltyFromRulesText(out.rulesText).map((r) => r.text)).toEqual(["Flying", "A", "b", "c", "d", "e", "f"]);
+    expect(submittedRulesOf("planeswalker", opened).faceContent).toBeNull();
+    expect(structuredRowsSaveAsText("planeswalker", now)).toBe(true);
+    expect(structuredRowsSaveAsText("planeswalker", walkerOpened("+1: a\n-1: b"))).toBe(false);
+  });
+
+  it("a saga with a chapter VII, or seven rows: untouched stays stored, edited saves as text", () => {
+    const sevenRows = ["I", "II", "III", "IV", "V", "VI", "I, II"].map((m) => `${m} — x`).join("\n");
+    for (const text of ["I — a\nVII — g", sevenRows]) {
+      const opened = sagaOpened(text);
+      expect(submittedRulesOf("saga", opened, editOf(opened))).toEqual({
+        rulesText: text,
+        faceContent: null,
+        keepsStored: true,
+      });
+      expect(structuredRowsSaveAsText("saga", opened)).toBe(true);
+      const now = { ...opened, saga_intro: "(Intro.)" };
+      const out = submittedRulesOf("saga", now, editOf(opened));
+      expect(out.faceContent).toBeNull();
+      expect(out.keepsStored).toBeUndefined();
+      expect(sagaFromRulesText(out.rulesText)).toEqual({
+        intro: "(Intro.)",
+        chapters: opened.saga_chapters.map((ch) => ({ numerals: ch.numerals, text: ch.text })),
+      });
+    }
+    expect(structuredRowsSaveAsText("saga", sagaOpened("I — a\nVI — b"))).toBe(false);
+  });
+
+  it("rows that would draw another card than the stored text does are not written on a retitle", () => {
+    for (const text of ["II, I — Both.\nIII — c", "I, XI — Both.\nII — b"]) {
+      const opened = sagaOpened(text);
+      expect(submittedRulesOf("saga", opened, editOf(opened))).toEqual({
+        rulesText: text,
+        faceContent: null,
+        keepsStored: true,
+      });
+    }
+  });
+});
+
+describe("the saga rows the form asks a chapter number for", () => {
+  const XI = sagaOpened("I — One.\nXI — Eleven.");
+  it("none on an untouched edit", () => {
+    expect(sagaRowsNeedingNumber("saga", XI, XI)).toEqual([]);
+  });
+  it("the unnumbered row once anything was edited, and on a new card", () => {
+    const now = { ...XI, saga_chapters: [{ numerals: [1], text: "Changed." }, XI.saga_chapters[1]] };
+    expect(sagaRowsNeedingNumber("saga", now, XI)).toEqual([1]);
+    expect(sagaRowsNeedingNumber("saga", XI)).toEqual([1]);
+  });
+  it("alone: only once its text (or the intro) no longer reads as the hidden text", () => {
+    const only = sagaOpened("XI — Eleven.");
+    expect(sagaRowsNeedingNumber("saga", only)).toEqual([]);
+    expect(sagaRowsNeedingNumber("saga", { ...only, saga_chapters: [{ numerals: [], text: "Changed." }] })).toEqual([0]);
+    expect(sagaRowsNeedingNumber("saga", { ...only, saga_intro: "(Typed.)" })).toEqual([0]);
+    // A new saga typed here: no hidden text to keep.
+    expect(sagaRowsNeedingNumber("saga", values({ saga_chapters: [{ numerals: [], text: "Draw." }] }))).toEqual([0]);
+  });
+  it("never a row without a text, never another kind", () => {
+    expect(sagaRowsNeedingNumber("saga", values({ saga_chapters: [{ numerals: [], text: " " }] }))).toEqual([]);
+    expect(sagaRowsNeedingNumber("creature", XI)).toEqual([]);
   });
 });

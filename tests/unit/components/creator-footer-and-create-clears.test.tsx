@@ -637,7 +637,9 @@ describe("an edit of a walker's / saga's rows is never read as untouched", () =>
     expect(payload.rules_text).toBe(XI);
     // No dual write here: `face_content` with chapter I alone would be what
     // the card draws, and chapter XI would leave it on a retitle.
-    expect(payload.face_content).toBeNull();
+    // (Not sent at all since the #528 follow-up: the server leaves an omitted
+    // column alone, so the stored NULL stays.)
+    expect(payload).not.toHaveProperty("face_content");
   });
 
   it("…that row REMOVED is an edit: the text follows the rows", async () => {
