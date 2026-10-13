@@ -70,8 +70,11 @@ import type { DesignedCard } from "@/lib/ai/card-design";
 import { getCardById as getScryfallCardById } from "@/lib/scryfall/client";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
 import {
+  REMIX_EMBLEM_LEFT_OUT,
+  isEmblemRemixSource,
   ownCardRemixFrame,
   ownCardRulesText,
+  remixableDeckItems,
   remixCreditsOf,
   scryfallRemixMechanics,
 } from "@/lib/ai/remix-mechanics";
@@ -1180,17 +1183,23 @@ export async function createDeckRemixJob(
   }
 
   const items = await listDeckCards(deck.id);
-  const remixable = items.filter(
-    (item) => item.entry.card_id || item.entry.scryfall_id,
-  );
-  if (remixable.length === 0) {
+  // Emblems are not remixed (owner 2026-10-13): the user's own are left
+  // out before the batch cap — the estimate's own filter — and a printed
+  // one is what the estimate priced 0. No step, no charge; the new deck
+  // has no emblem.
+  const { remixable, ownEmblems } = remixableDeckItems(items);
+  const capped = remixable.slice(0, input.limit);
+  const taken = capped.filter((item) => input.creditsByEntry?.[item.entry.id] !== 0);
+  if (taken.length === 0) {
     return {
       ok: false,
-      error: "Nothing to remix — the deck has no resolved cards yet.",
+      error:
+        ownEmblems > 0 || capped.length > 0
+          ? "Nothing to remix — emblems aren't remixed."
+          : "Nothing to remix — the deck has no resolved cards yet.",
     };
   }
-  const taken = remixable.slice(0, input.limit);
-  const skipped = remixable.length - taken.length;
+  const skipped = remixable.length - capped.length;
 
   // Remix copies ship PUBLIC too — same posture as generated decks.
   const created = await createDeckAction(
@@ -1390,6 +1399,13 @@ async function runDeckRemixStep(
     return { ...step, status: "done", error: undefined };
   }
 
+  // An EMBLEM is not remixed (owner 2026-10-13). A new plan has no step for
+  // one; an older plan's step is refused here — before the reserve, so no
+  // ledger row is written, and before any AI call.
+  if (entry.card_id && isEmblemRemixSource(await getCardById(entry.card_id))) {
+    return { ...step, status: "failed", error: REMIX_EMBLEM_LEFT_OUT, spend_ref: null };
+  }
+
   // A failed remix step carries no card_id, so its retry reruns the whole
   // pipeline; the credit wrapper refunds every failed attempt. A
   // double-faced entry reserves its two credits (the plan's, TODO 5.4) —
@@ -1502,6 +1518,11 @@ async function executeDeckRemixStep(
     );
     if (!resolved.ok) {
       return { ...step, status: "failed", error: resolved.error };
+    }
+    // A printed emblem an older plan still carries (a new plan leaves it
+    // out): refused before any AI call — the wrapper hands the credit back.
+    if (isEmblemRemixSource(resolved.mechanics)) {
+      return { ...step, status: "failed", error: REMIX_EMBLEM_LEFT_OUT };
     }
     // The plan reserved two credits for both faces: a landing that lost
     // its bodies since (a tick withdrawn) is refused rather than charged

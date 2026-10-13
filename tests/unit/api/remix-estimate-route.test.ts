@@ -33,6 +33,7 @@ beforeEach(() => {
     credits: 5,
     doubleFaced: 2,
     skipped: 1,
+    emblems: 1,
     unresolved: 0,
     creditsByEntry: { a: 2, b: 2, c: 1 },
   });
@@ -64,7 +65,7 @@ describe("GET /api/ai/remix-estimate", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toBe("private, no-store");
     const body = await res.json();
-    expect(body).toEqual({ ok: true, cards: 3, credits: 5, doubleFaced: 2, skipped: 1, unresolved: 0, cardLimit: 100 });
+    expect(body).toEqual({ ok: true, cards: 3, credits: 5, doubleFaced: 2, skipped: 1, emblems: 1, unresolved: 0, cardLimit: 100 });
     expect(s.estimate).toHaveBeenCalledWith(DECK, 100);
   });
 });

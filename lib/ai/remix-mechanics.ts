@@ -282,3 +282,45 @@ export function ownCardRulesText(
   if (saga && saga.chapters.length > 0) return serializeSaga(saga.intro, saga.chapters);
   return source.rules_text ?? undefined;
 }
+
+// ---------------------------------------------------------------------------
+// Emblems are NOT remixed (owner 2026-10-13). An emblem prints its
+// planeswalker's name; a remix renames every card by itself, so the emblem
+// would stop matching its (separately renamed) walker — and the AI never
+// designs emblems. The entry is left out at PLAN time (the estimate prices
+// it nothing and counts it; createDeckRemixJob makes no step for it), and a
+// step of an older plan that still names one is refused before anything is
+// generated. The remixed deck simply has no emblem.
+// ---------------------------------------------------------------------------
+
+/** The step error of an emblem entry an older plan still carries. */
+export const REMIX_EMBLEM_LEFT_OUT =
+  "Emblems aren't remixed — this one is left out of the new deck. Nothing was charged.";
+
+/** True when a remix source — an own card's row or a mapped printing — is
+ *  an emblem. */
+export function isEmblemRemixSource(source: { card_type?: string | null } | null | undefined): boolean {
+  return source?.card_type === "emblem";
+}
+
+/** A deck's entries as the remix takes them, in deck order: every entry
+ *  with a source (an own card or a printing) but the user's own EMBLEMS,
+ *  which are counted instead. ONE filter for the estimate and the plan, so
+ *  the batch cap cuts the same list in both. (A printed emblem is known
+ *  only once its printing is resolved: the estimate prices it 0 and the
+ *  plan drops what the estimate priced 0.) */
+export function remixableDeckItems<
+  T extends {
+    entry: { card_id: string | null; scryfall_id: string | null };
+    card: { card_type?: string | null } | null;
+  },
+>(items: readonly T[]): { remixable: T[]; ownEmblems: number } {
+  const remixable: T[] = [];
+  let ownEmblems = 0;
+  for (const item of items) {
+    if (!item.entry.card_id && !item.entry.scryfall_id) continue;
+    if (item.entry.card_id && isEmblemRemixSource(item.card)) ownEmblems += 1;
+    else remixable.push(item);
+  }
+  return { remixable, ownEmblems };
+}

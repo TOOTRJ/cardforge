@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import signaturePrintings from "../scryfall/fixtures/signature-printings.json";
+import tokenPrintings from "../scryfall/fixtures/token-printings.json";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import type { DfcIconFamily, FrameTemplate } from "@/types/card";
 
@@ -97,6 +98,7 @@ vi.mock("@/lib/cards/actions", () => ({
 }));
 
 import { REMIX_DFC_FRAMES_GONE, runNextJobStep } from "@/lib/ai/generation-jobs";
+import { REMIX_EMBLEM_LEFT_OUT } from "@/lib/ai/remix-mechanics";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
 import { dfcFrontColorError, dfcFrontTypeError, resolveDfcBackFace, type DfcBackFacePayload } from "@/lib/cards/dfc-gate";
 import { frameKindGateError } from "@/lib/cards/frame-kind-gate";
@@ -109,8 +111,8 @@ const MID_7 = () => scryfallCardSchema.parse(signaturePrintings["mid-7"]);
 const BOTH_FACES = () => keys(["m15dfcfront", "w"], ["m15dfcbackleft", "r"], ["m15", "w"]);
 const REF = new RegExp(`^spend:job-1:remix:0:[0-9a-f-]{36}$`);
 
-async function run(options: { credits?: number } = {}) {
-  const printing = MID_7();
+async function run(options: { credits?: number; printing?: ReturnType<typeof MID_7> } = {}) {
+  const printing = options.printing ?? MID_7();
   s.printing = printing;
   s.job = {
     id: "job-1",
@@ -256,6 +258,26 @@ describe("a double-faced remix step priced at two credits (owner Q4)", () => {
     expect((card!.frame_style as Record<string, unknown>).dfcIcon).toBeUndefined();
     expect(step).toMatchObject({ status: "done", label: "Remixed Name" });
     expect(s.refund).not.toHaveBeenCalled();
+  });
+
+  // Emblems are not remixed (owner 2026-10-13). A new plan has no step for
+  // a printed emblem (the estimate prices it 0, the plan drops it); an older
+  // plan's step learns it is one only from the printing, inside the credit
+  // wrapper — refused before any AI call, the one credit handed back.
+  it("an older plan's PRINTED emblem is refused before any AI call and its credit refunded", async () => {
+    s.verified = keys(["emblem", "c"], ["m15", "c"]);
+    const emblem = scryfallCardSchema.parse((tokenPrintings as Record<string, unknown>)["tfdn-24"]);
+    expect(emblem.layout).toBe("emblem");
+    const { step, card } = await run({ printing: emblem });
+    expect(step.status).toBe("failed");
+    expect(step.error).toBe(REMIX_EMBLEM_LEFT_OUT);
+    expect(card).toBeUndefined();
+    expect(s.identity).not.toHaveBeenCalled();
+    expect(s.image).not.toHaveBeenCalled();
+    const ref = reservedRef();
+    expect(s.refund).toHaveBeenCalledTimes(1);
+    expect(s.refund.mock.calls[0]).toEqual([USER, 1, "generate_deck", `refund:${ref}`]);
+    expect(step.spend_ref).toBeNull();
   });
 
   it("a refused reserve (1 credit left, a 2-credit entry) fails the step with the plan-limit code and runs nothing", async () => {

@@ -366,6 +366,13 @@ Rules and gotchas:
   body, priced 2 by the estimate through the same function) — else no
   template: the default landing, one face. A fallback, never a refused
   save after the art; a token's height still follows the saved text.
+  An EMBLEM is never remixed (owner 2026-10-13; it prints its walker's
+  name, and a remix renames each card by itself): left out at plan time —
+  `remixableDeckItems` for an own emblem, a 0 in the estimate's
+  `creditsByEntry` for a printed one; `emblems` in the estimate, one line
+  in the dialog, no step, no charge — and an older plan's emblem step
+  fails with `REMIX_EMBLEM_LEFT_OUT` before any AI call (an own one before
+  the reserve: no ledger row).
   Owner-run scripts reach the app for such work through
   `POST /api/admin/storage-sweep` (cron bearer; `scripts/lib/app-endpoint.mjs`).
 - Automatic re-bake (migration 0120, `docs/FRAMES.md` "Re-bakes after a

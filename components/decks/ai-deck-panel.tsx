@@ -32,7 +32,15 @@ export type RemixEstimate = {
   credits: number;
   doubleFaced: number;
   skipped: number;
+  /** Emblems the remix leaves out (owner 2026-10-13): no step, no credit. */
+  emblems: number;
 };
+
+/** The one line that tells a deck's owner its emblems stay behind. */
+export function emblemsLeftOutLine(emblems: number): string {
+  if (emblems <= 0) return "";
+  return `${emblems} emblem${emblems === 1 ? " is" : "s are"} left out: emblems are not remixed.`;
+}
 
 /** The deck's remix estimate, or null when the request fails (the panel
  *  then keeps its "one per card" copy; the server re-checks at the job). */
@@ -46,7 +54,13 @@ export async function fetchRemixEstimate(deckId: string): Promise<RemixEstimate 
       | { ok: false }
       | null;
     if (!response.ok || !body || body.ok !== true) return null;
-    return { cards: body.cards, credits: body.credits, doubleFaced: body.doubleFaced, skipped: body.skipped };
+    return {
+      cards: body.cards,
+      credits: body.credits,
+      doubleFaced: body.doubleFaced,
+      skipped: body.skipped,
+      emblems: body.emblems ?? 0,
+    };
   } catch {
     return null;
   }
@@ -196,7 +210,7 @@ export function AiDeckPanel({
               doubleFaced > 0
                 ? ` ${doubleFaced} double-faced card${doubleFaced === 1 ? " costs" : "s cost"} 2 credits — both faces get art.`
                 : ""
-            }`
+            }${estimate && estimate.emblems > 0 ? ` ${emblemsLeftOutLine(estimate.emblems)}` : ""}`
           : "One credit per card. The deck cover and how-to-play guide are free.",
       confirmLabel: mode === "remix" ? "Remix" : "Generate",
     });
@@ -369,6 +383,9 @@ export function AiDeckPanel({
               : "(1 per card · cover art is free)"}{" "}
             · publishes publicly
             {mode === "remix" ? ` · first ${maxCards} cards this generation` : ""}
+            {mode === "remix" && estimate && estimate.emblems > 0
+              ? ` · ${emblemsLeftOutLine(estimate.emblems)}`
+              : ""}
           </span>
         </span>
         <div className="flex items-center gap-2">

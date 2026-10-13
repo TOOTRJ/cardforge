@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
       credits: estimate.credits,
       doubleFaced: estimate.doubleFaced,
       skipped: estimate.skipped,
+      emblems: estimate.emblems,
       unresolved: estimate.unresolved,
       cardLimit: limit,
     },

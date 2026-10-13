@@ -5546,6 +5546,22 @@ before anyone pays. Additions: 0 stored cards change, no bump, no sweep.
     retired or missing template, a body-less legacy back — is the landing
     it had before: no template (the default frame), one face, one credit.
     A fallback, never a refused save after the art is paid for.
+  - an EMBLEM is not remixed at all (owner 2026-10-13) — an own emblem card
+    or a printed one (`layout: emblem`). An emblem prints its planeswalker's
+    name and a remix renames every card by itself, so the two would stop
+    matching. It is left out at PLAN time: the estimate does not count it
+    in `cards` or `credits` and reports it as `emblems` (the dialog's one
+    line: "1 emblem is left out: emblems are not remixed."), and
+    `createDeckRemixJob` makes no entry and no step for it — the user's own
+    through `remixableDeckItems` (before the batch cap), a printed one as
+    the 0 the estimate put in `creditsByEntry`. Nothing is reserved, so no
+    `spend:` row exists; the new deck has no emblem. A step of an OLDER
+    plan that still names one fails with `REMIX_EMBLEM_LEFT_OUT` before any
+    AI call — an own emblem before the reserve (no ledger row), a printed
+    one inside the wrapper (its one credit refunded). Before this an own
+    emblem's remix painted the picture, was refused by the save (the
+    default frame doesn't dress emblems) and refunded, every attempt; a
+    printed emblem's was remixed for one credit.
   A token's height still follows the text the remix saves
   (`autoTokenTextBoxFrame`); a walker / saga stored with its rows alone
   (`rules_text` NULL) is copied with its rows as text (`ownCardRulesText`).

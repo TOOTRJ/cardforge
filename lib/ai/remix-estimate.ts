@@ -5,7 +5,13 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { getCardCollection, SCRYFALL_COLLECTION_MAX, type ScryfallCard } from "@/lib/scryfall/client";
 import { chunkIdentifiers } from "@/lib/decks/import-resolution";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
-import { ownCardRemixFrame, remixCreditsOf, scryfallRemixMechanics } from "@/lib/ai/remix-mechanics";
+import {
+  isEmblemRemixSource,
+  ownCardRemixFrame,
+  remixableDeckItems,
+  remixCreditsOf,
+  scryfallRemixMechanics,
+} from "@/lib/ai/remix-mechanics";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 
 // ---------------------------------------------------------------------------
@@ -34,10 +40,15 @@ export type DeckRemixEstimate = {
   doubleFaced: number;
   /** Entries beyond the batch cap. */
   skipped: number;
+  /** Emblems left out (owner 2026-10-13: emblems are not remixed) — own
+   *  emblem cards and printed emblems. Not in `cards`, priced nothing, no
+   *  step. */
+  emblems: number;
   /** Scryfall entries the lookup couldn't resolve — priced one credit; the
    *  step fails them plainly ("Couldn't resolve the printing") and refunds. */
   unresolved: number;
-  /** The credits per entry, by deck_cards id (every remixable entry). */
+  /** The credits per entry, by deck_cards id (every remixable entry; 0 = a
+   *  printed emblem, which the plan leaves out). */
   creditsByEntry: Record<string, number>;
 };
 
@@ -61,16 +72,19 @@ async function resolvePrintings(ids: readonly string[]): Promise<Map<string, Scr
 export async function estimateDeckRemix(deckId: string, limit: number): Promise<DeckRemixEstimate> {
   const [user, deck] = await Promise.all([getCurrentUser(), getDeckById(deckId)]);
   if (!user || !deck || deck.owner_id !== user.id) {
-    return { cards: 0, credits: 0, doubleFaced: 0, skipped: 0, unresolved: 0, creditsByEntry: {} };
+    return { cards: 0, credits: 0, doubleFaced: 0, skipped: 0, emblems: 0, unresolved: 0, creditsByEntry: {} };
   }
   const items = await listDeckCards(deckId);
-  const remixable = items.filter((item) => item.entry.card_id || item.entry.scryfall_id);
+  // The user's own emblems are left out before the batch cap (they take no
+  // slot); a printed emblem is found below, once its printing is resolved.
+  const { remixable, ownEmblems } = remixableDeckItems(items);
   const taken = remixable.slice(0, Math.max(1, limit));
   const estimate: DeckRemixEstimate = {
     cards: taken.length,
     credits: 0,
     doubleFaced: 0,
     skipped: Math.max(0, remixable.length - taken.length),
+    emblems: ownEmblems,
     unresolved: 0,
     creditsByEntry: {},
   };
@@ -99,7 +113,16 @@ export async function estimateDeckRemix(deckId: string, limit: number): Promise<
       if (!card) {
         estimate.unresolved += 1;
       } else {
-        const resolved = scryfallRemixMechanics(mapScryfallToFormPatch(card), entry.name, verifiedKeys);
+        const patch = mapScryfallToFormPatch(card);
+        if (isEmblemRemixSource(patch)) {
+          // A printed emblem: left out — no step, no credit. The 0 is what
+          // tells the plan to drop it (createDeckRemixJob).
+          estimate.emblems += 1;
+          estimate.cards -= 1;
+          estimate.creditsByEntry[entry.id] = 0;
+          continue;
+        }
+        const resolved = scryfallRemixMechanics(patch, entry.name, verifiedKeys);
         if (resolved.ok) credits = remixCreditsOf(resolved.mechanics);
       }
     }

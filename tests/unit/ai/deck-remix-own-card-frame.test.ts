@@ -98,7 +98,7 @@ vi.mock("@/lib/cards/actions", () => ({
 }));
 
 import { REMIX_DFC_FRAMES_GONE, runNextJobStep } from "@/lib/ai/generation-jobs";
-import { ownCardRemixFrame, ownCardRulesText, remixCreditsOf } from "@/lib/ai/remix-mechanics";
+import { REMIX_EMBLEM_LEFT_OUT, ownCardRemixFrame, ownCardRulesText, remixCreditsOf } from "@/lib/ai/remix-mechanics";
 import { frameGateError } from "@/lib/cards/frame-availability";
 import { cardFieldsFace, frameKindGateError } from "@/lib/cards/frame-kind-gate";
 import {
@@ -305,9 +305,17 @@ describe("an own card's deck remix keeps its frame", () => {
     expectSavable(card!);
   });
 
-  it("keeps the emblem frame for an own emblem (the default frame refuses that kind)", async () => {
+});
+
+// Emblems are NOT remixed (owner 2026-10-13). A new plan has no step for one
+// (the estimate and createDeckRemixJob leave it out); a step of an OLDER plan
+// is refused before the reserve — no ledger row at all — and before any AI
+// call. (Before: the picture was generated, the save refused the emblem on
+// the default frame, and the credit was refunded — every attempt.)
+describe("an own emblem is not remixed", () => {
+  it("an older plan's emblem step is refused BEFORE the reserve: nothing spent, nothing refunded, no AI call", async () => {
     s.verified = keys(["emblem", "c"], ["m15", "c"]);
-    const { card } = await remix(
+    const { step, card } = await remix(
       row({
         title: "Kaito",
         cost: null,
@@ -320,8 +328,16 @@ describe("an own card's deck remix keeps its frame", () => {
         frame_style: { template: "emblem" },
       }),
     );
-    expect(card!.frame_style).toEqual({ template: "emblem" });
-    expectSavable(card!);
+    expect(step.status).toBe("failed");
+    expect(step.error).toBe(REMIX_EMBLEM_LEFT_OUT);
+    expect(step.error_code ?? null).toBeNull();
+    expect(step.spend_ref).toBeNull();
+    expect(card).toBeUndefined();
+    expect(s.spend).not.toHaveBeenCalled();
+    expect(s.refund).not.toHaveBeenCalled();
+    expect(s.identity).not.toHaveBeenCalled();
+    expect(s.image).not.toHaveBeenCalled();
+    expect(s.restyle).not.toHaveBeenCalled();
   });
 });
 
