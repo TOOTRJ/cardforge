@@ -10,7 +10,11 @@
 // since TODO 4.21e, the rules text's ALIGNMENT (`rulesAlign`: "center" or
 // absent — every line of the card's rules boxes centred, on any frame with
 // plain rules boxes (owner 2026-10-07: every kind of card may choose it; the
-// one switch a new card starts OFF on — left).
+// one switch a new card starts OFF on — left) and, since TODO 4.30, the
+// card's BORDER (`border`: "white" or absent — the printed white border of
+// the core sets up to Ninth Edition, on a frame whose profile declares it,
+// lib/cards/white-border.ts; a new card starts BLACK — a white border is a
+// printing choice, never a default — and an import follows its printing).
 //
 // THE OWNER RULE (2026-09-29, docs/FRAMES.md "Additions vs corrections"):
 // these are ADDITIONS, so each is OPT-IN PER CARD, stored as card data in
@@ -84,8 +88,10 @@ import {
   type FrameStyle,
   type FrameTemplate,
   type RulesAlign,
+  type CardBorder,
 } from "@/types/card";
 import { dfcIconGlyph, type DfcIconRole } from "@/lib/cards/dfc-icons";
+import { wantsWhiteBorder } from "@/lib/cards/white-border";
 
 /** The transform family a card wears when it names none (lib/cards/dfc.ts
  *  DEFAULT_DFC_ICON — repeated here, not imported: dfc.ts reads
@@ -102,8 +108,10 @@ export { TWO_COLOR_PAIRS, type TwoColorPair, type TwoColorDress };
  *  lib/cards/holo-stamp.ts) and the transform icon family (5.0a) —
  *  `dfcIcon` holds one of DFC_ICON_FAMILY_VALUES or is absent — and the
  *  rules text's alignment (4.21e) — `rulesAlign` is "center" or absent in a
- *  stored style ("left" only in the creator's form and an edit's patch). */
-export const FRAME_ANATOMY_KEYS = ["crown", "twoColor", "collector", "star", "stamp", "dfcIcon", "rulesAlign"] as const;
+ *  stored style ("left" only in the creator's form and an edit's patch) —
+ *  and the border (4.30) — `border` is "white" or absent in a stored style
+ *  ("black" only in the creator's form and an edit's patch). */
+export const FRAME_ANATOMY_KEYS = ["crown", "twoColor", "collector", "star", "stamp", "dfcIcon", "rulesAlign", "border"] as const;
 export type FrameAnatomyKey = (typeof FRAME_ANATOMY_KEYS)[number];
 export type FrameAnatomyStyle = Pick<FrameStyle, FrameAnatomyKey>;
 
@@ -112,7 +120,8 @@ export type FrameAnatomyStyle = Pick<FrameStyle, FrameAnatomyKey>;
  *  rides on it), the holofoil stamp (a `holoStamp` overlay: the notch) and
  *  the transform icon family (a transform FRONT body, FrameProfile.dfc —
  *  the back body follows the family) — and whether it offers the text
- *  alignment choice (profileOffersRulesAlign, 4.21e). */
+ *  alignment choice (profileOffersRulesAlign, 4.21e) and the white border
+ *  (FrameProfile.whiteBorder, 4.30). */
 export type FrameAnatomy = {
   crown: boolean;
   twoColor: readonly TwoColorDress[];
@@ -120,6 +129,7 @@ export type FrameAnatomy = {
   stamp: boolean;
   dfcIcon: boolean;
   rulesAlign: boolean;
+  border: boolean;
 };
 
 type AnatomyProfile = Pick<
@@ -134,6 +144,7 @@ type AnatomyProfile = Pick<
   | "textless"
   | "chapters"
   | "loyaltyRows"
+  | "whiteBorder"
 >;
 
 /** The switches a NEW card starts with (the creator's create and remix
@@ -179,6 +190,8 @@ export function frameAnatomyOfProfile(profile: AnatomyProfile): FrameAnatomy {
     // The text alignment choice (4.21e): every frame with plain rules
     // boxes, unless it opts out (profileOffersRulesAlign).
     rulesAlign: profileOffersRulesAlign(profile),
+    // The white border (4.30): a profile that declares its box.
+    border: profile.whiteBorder !== undefined,
   };
 }
 
@@ -204,6 +217,8 @@ export function anatomyDrawn(anatomy: FrameAnatomy, key: FrameAnatomyKey): boole
       return anatomy.dfcIcon;
     case "rulesAlign":
       return anatomy.rulesAlign;
+    case "border":
+      return anatomy.border;
     default:
       return anatomy.collector;
   }
@@ -249,6 +264,7 @@ export function anatomyOn(
   if (key === "stamp") return isHoloStampSwitch(style?.stamp) && style?.stamp !== "none";
   if (key === "dfcIcon") return isDfcIconFamily(style?.dfcIcon);
   if (key === "rulesAlign") return style?.rulesAlign === "center";
+  if (key === "border") return wantsWhiteBorder(style);
   return style?.[key] === true;
 }
 
@@ -263,7 +279,9 @@ export function anatomyOn(
  *  saved by any path names its family and the back body it derives); a
  *  template that draws none drops the key at the save (normalizeAnatomy).
  *  NEVER the text alignment (4.21e, owner 2026-10-07: "New cards start
- *  left. Imports stay left.") — absent is left, so nothing is stamped. */
+ *  left. Imports stay left.") — absent is left, so nothing is stamped —
+ *  and NEVER the white border (4.30): a new card starts black, and absent
+ *  is black. */
 export function anatomyDefaults(
   template: FrameTemplate | string | null | undefined,
 ): FrameAnatomyStyle {
@@ -288,7 +306,8 @@ export function anatomyDefaults(
  * draws is kept either way — `false` is its owner's explicit "off".
  * The text alignment (4.21e) is stored as "center" or not at all: the
  * form's "left" — and anything else — is dropped on every template, so a
- * stored frame_style never names the default.
+ * stored frame_style never names the default. The border (4.30) the same
+ * way: "white" on a template that draws the white border, or not at all.
  * Everything else is kept as it is. Returns the input itself when nothing is
  * dropped.
  */
@@ -306,7 +325,9 @@ export function normalizeAnatomy<T extends FrameAnatomyStyle>(
         ? twoColorFits(profile, cardType)
         : key === "rulesAlign"
           ? anatomy.rulesAlign && frameStyle.rulesAlign === "center"
-          : anatomyDrawn(anatomy, key);
+          : key === "border"
+            ? anatomy.border && frameStyle.border === "white"
+            : anatomyDrawn(anatomy, key);
     if (key in frameStyle && !drawn) {
       if (out === frameStyle) out = { ...frameStyle };
       delete out[key];
@@ -352,6 +373,7 @@ export function storedAnatomyOf(frameStyle: unknown): FrameAnatomyStyle {
   if (isHoloStampSwitch(stored.stamp)) out.stamp = stored.stamp;
   if (isDfcIconFamily(stored.dfcIcon)) out.dfcIcon = stored.dfcIcon;
   if (stored.rulesAlign === "center") out.rulesAlign = "center";
+  if (stored.border === "white") out.border = "white";
   return out;
 }
 
@@ -772,6 +794,10 @@ export type FrameAnatomyPatch = {
    *  takes a stored "center" off (the stored key is "center" or absent);
    *  the save drops it on a template without the choice. */
   rulesAlign?: RulesAlign;
+  /** The border (TODO 4.30): "white" sets it, "black" takes a stored
+   *  "white" off (the stored key is "white" or absent); the save drops it
+   *  on a template without the white border. */
+  border?: CardBorder;
   /** The colour pair a stored multicolour card is given when its owner
    *  switches the two-colour frame on — pre-filled from the cost in the
    *  editor, confirmed by the owner. */
@@ -820,6 +846,8 @@ export function applyFrameAnatomyPatch(
   else if (patch.star === false) delete merged.star;
   if (patch.rulesAlign === "center") merged.rulesAlign = "center";
   else if (patch.rulesAlign === "left") delete merged.rulesAlign;
+  if (patch.border === "white") merged.border = "white";
+  else if (patch.border === "black") delete merged.border;
   const frameStyle = normalizeAnatomy(merged as FrameAnatomyStyle, template, stored.cardType) as Record<
     string,
     unknown
@@ -875,6 +903,10 @@ export type ImportedAnatomyFacts = {
    *  lands on a double-faced body (lib/scryfall/import-mapper.ts
    *  dfcImportOf); the save drops the key on any other frame. */
   printed_dfc_icon?: DfcIconFamily;
+  /** `"white"` for a white-bordered printing (TODO 4.30; Scryfall's
+   *  `border_color`), else absent — never "black". The save drops it on a
+   *  frame that draws no white border. */
+  printed_border?: "white";
 };
 
 /**
@@ -915,6 +947,9 @@ export function importedAnatomy(
   // …and the transform icon family (5.4): the printing's, on a double-faced
   // body; dropped at the save anywhere else.
   if (patch.printed_dfc_icon !== undefined) style.dfcIcon = patch.printed_dfc_icon;
+  // …and the border (4.30): white for a white-bordered printing; dropped at
+  // the save on a frame that draws none.
+  if (patch.printed_border === "white") style.border = "white";
   const drawsPairs = frameAnatomyOf(landedTemplate).twoColor.length > 0;
   const colorIdentity =
     drawsPairs && twoColourPrinting && patch.color_pair
@@ -934,11 +969,12 @@ export function importedAnatomy(
  * gets the default stamped (tests/unit/cards/anatomy-import-default.test.ts).
  * No text alignment: an import stays left (owner 2026-10-07), so the form's
  * key is cleared with the rest (the creator sets every FRAME_ANATOMY_KEYS
- * key from this).
+ * key from this). The border is the printing's (4.30): white for a
+ * white-bordered one, cleared — black — for any other.
  */
 export function importedFormAnatomy(
   style: FrameAnatomyStyle,
-): Required<Pick<FrameAnatomyStyle, "crown" | "twoColor" | "collector" | "stamp">> & Pick<FrameAnatomyStyle, "star" | "dfcIcon"> {
+): Required<Pick<FrameAnatomyStyle, "crown" | "twoColor" | "collector" | "stamp">> & Pick<FrameAnatomyStyle, "star" | "dfcIcon" | "border"> {
   return {
     crown: style.crown ?? NEW_CARD_ANATOMY.crown,
     twoColor: style.twoColor ?? NEW_CARD_ANATOMY.twoColor,
@@ -948,5 +984,6 @@ export function importedFormAnatomy(
     // The printing's icon family (5.4), where the import names one; the
     // form's own default (the kind change's `arrows`) stands otherwise.
     ...(style.dfcIcon !== undefined ? { dfcIcon: style.dfcIcon } : {}),
+    ...(style.border === "white" ? { border: "white" as const } : {}),
   };
 }

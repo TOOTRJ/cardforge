@@ -13,6 +13,13 @@
 // the m15 / m15artifact / m15land PROFILES entries: the crown (4.6a) and the
 // two-colour pair masters (4.6b).
 //
+// The white border (TODO 4.30) is the third: the printed border of the core
+// sets up to Ninth Edition, on the frames whose profile declares it (the
+// 1997 and 2003 frames). It is the one switch here that starts OFF on a new
+// card — a white border is a printing choice, not a default — and it has no
+// "New:" hint (its stored key is "white" or absent, so "never set" and
+// "switched off" are the same card).
+//
 // The two-colour frame needs the card's colour PAIR (color_identity): the
 // "Two colours" row (TwoColorPairRow) — under the Multicolor chip on the
 // Card step for a new card, and here, pre-filled from the cost, when the
@@ -81,6 +88,10 @@ const ANATOMY_COPY: Record<SwitchKey, { label: string; help: string }> = {
   stamp: {
     label: "Holofoil stamp",
     help: "The silver oval printed in the bottom border of rares and mythics since 2014. Our own neutral oval, no symbol.",
+  },
+  border: {
+    label: "White border",
+    help: "As core sets printed until 2007: a white border with a thin black line round the frame. Off is the black border.",
   },
 };
 
@@ -289,7 +300,7 @@ export function AnatomyPanel({
   pairRow?: boolean;
 }) {
   const { control, setValue } = useFormContext<FormValues>();
-  const [template, crown, twoColor, cardType, cost, colorIdentity] = useWatch({
+  const [template, crown, twoColor, cardType, cost, colorIdentity, border] = useWatch({
     control,
     name: [
       "frame_style.template",
@@ -298,6 +309,7 @@ export function AnatomyPanel({
       "card_type",
       "cost",
       "color_identity",
+      "frame_style.border",
     ],
   });
   const anatomy = frameAnatomyOf(template);
@@ -323,12 +335,15 @@ export function AnatomyPanel({
   // land stored with no template draws on m15, whose gold-split isn't a
   // land's; owner round 17: hidden, with its hint).
   const showTwoColor = which.includes("twoColor") && offersTwoColor(colors, cost, { template, cardType });
-  if (!showCrown && !showTwoColor) return null;
+  // The white border (TODO 4.30): wherever the frame draws it, whatever the
+  // card's type or colours.
+  const showBorder = which.includes("border") && anatomy.border;
+  if (!showCrown && !showTwoColor && !showBorder) return null;
 
   const editing = stored !== null;
   const hintFor = (key: "crown" | "twoColor", on: boolean) =>
     editing && !on && typeof stored?.frameStyle?.[key] !== "boolean" ? (ANATOMY_HINTS[key] ?? null) : null;
-  const setSwitch = (key: SwitchKey, next: boolean) =>
+  const setSwitch = (key: Exclude<SwitchKey, "border">, next: boolean) =>
     setValue(`frame_style.${key}`, next, { shouldDirty: true });
   const setPair = (next: TwoColorPair | null) =>
     setValue("color_identity", next ? pairColorIdentity(next) : ["multicolor"], { shouldDirty: true });
@@ -395,6 +410,14 @@ export function AnatomyPanel({
               />
             ) : null}
           </SwitchRow>
+        ) : null}
+        {showBorder ? (
+          <SwitchRow
+            anatomy="border"
+            on={border === "white"}
+            hint={null}
+            onToggle={(next) => setValue("frame_style.border", next ? "white" : "black", { shouldDirty: true })}
+          />
         ) : null}
       </div>
     </div>

@@ -199,6 +199,7 @@ import {
   type CopyrightMarkInk,
   type CopyrightSlotLayout,
 } from "@/lib/cards/copyright-slot";
+import { WHITE_BORDER_RECT, resolveWhiteBorder, whiteBorderDataUrl, whiteBorderRgb, type WhiteBorderMedium } from "@/lib/cards/white-border";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { CardBackFace, ColorIdentity, Rarity } from "@/types/card";
 import { clamp } from "@/lib/utils";
@@ -418,6 +419,7 @@ function CardImage({
   foilArt,
   secondArtSize,
   omitArt = false,
+  whiteBorderMedium = "screen",
 }: {
   card: CardPreviewData;
   width: number;
@@ -440,6 +442,9 @@ function CardImage({
    *  so the print path can composite the full-resolution art under this
    *  layer with the same fit. Off for every stored/display render. */
   omitArt?: boolean;
+  /** Which white a white-bordered card draws (lib/cards/white-border.ts):
+   *  "print" only from lib/render/card-print.ts. */
+  whiteBorderMedium?: WhiteBorderMedium;
   /** NEVER rendered — Satori's image preload list (see renderCardImage). */
   children?: React.ReactNode;
 }) {
@@ -481,6 +486,14 @@ function CardImage({
   const overlays = resolveFrameOverlays(layout, card.frameStyle, { ...anatomyFactsOf(card), colorKey }).map(
     (overlay) => ({ ...overlay, href: getFrameOverlayDataUrl(overlay.path) }),
   );
+  // The white border (TODO 4.30): one inline SVG over the master's black
+  // border — the preview's twin, the same bytes (lib/cards/white-border.ts);
+  // null on every card whose switch is off or whose frame declares none.
+  const whiteBorder = resolveWhiteBorder(layout, card.frameStyle);
+  // A print file draws it pure white, a display surface the off-white
+  // (owner 2026-10-12; `whiteBorderMedium`, set by the print path alone).
+  const whiteBorderHref = whiteBorder ? whiteBorderDataUrl(whiteBorder, layout.orientation === "landscape", whiteBorderMedium) : null;
+  const borderMaskOverlays = whiteBorderHref ? [{ href: whiteBorderHref, rect: WHITE_BORDER_RECT }] : [];
   // The holofoil stamp (TODO 4.9c): its notch is one of the overlays above;
   // the oval is our bitmap, drawn over the sheens (never inside the foil
   // mask) at the same rect the preview stretches it over, and its arch is a
@@ -926,6 +939,21 @@ function CardImage({
         ) : null,
       )}
 
+      {/* The white border (TODO 4.30): the white over the master's black
+          border and the keyline inside it — right after the frame and its
+          overlays, under both finishes and every text layer; the preview's
+          twin. The corner cut rounds it; nothing on any other card. */}
+      {whiteBorderHref ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={whiteBorderHref}
+          alt=""
+          width={width}
+          height={height}
+          style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "fill", zIndex: 5 }}
+        />
+      ) : null}
+
       {/* The saga rail's bitmaps (TODO 4.21c): the divider on each row's top
           edge and the chapter badges, at the boxes lib/cards/saga-rail.ts
           gives this target — printed frame, so right after the frame and
@@ -962,7 +990,7 @@ function CardImage({
               ? { href: splitDataUrl, atPct: frameSplit.atPct }
               : null
           }
-          overlays={drawnOverlays([...overlays, ...railPieces])}
+          overlays={[...drawnOverlays([...overlays, ...railPieces]), ...borderMaskOverlays]}
           landscape={layout.orientation === "landscape"}
           width={width}
           height={height}
@@ -992,7 +1020,7 @@ function CardImage({
             secondArt: secondArtSlot && secondArtUrl ? (foilArt?.secondArt ?? null) : null,
             secondArtPosition: secondArtPos,
           })}
-          overlays={drawnOverlays([...overlays, ...railPieces])}
+          overlays={[...drawnOverlays([...overlays, ...railPieces]), ...borderMaskOverlays]}
           landscape={layout.orientation === "landscape"}
           width={width}
           height={height}
@@ -3764,16 +3792,23 @@ async function withRenderableImages(
  *  png route squares a free Square from the stored round bake with these
  *  unless one is null (it renders those live: the downscaled bake no longer
  *  carries the pixels outside the arc). */
-export function squareCornerFillsOf(card: CardPreviewData): CardCornerFills {
+export function squareCornerFillsOf(card: CardPreviewData, medium: WhiteBorderMedium = "screen"): CardCornerFills {
   const template = normalizeFrameTemplate(card.frameStyle?.template, card);
   const layout = resolveFrameProfile(template, card.profileOverrides);
   const colors = card.colorIdentity as ColorIdentity[] | undefined;
   const split = frameSplitFor(layout, colors);
   const key = frameMasterKey(layout, colors, card, card.frameStyle);
-  return squareCornerFills(template, layout.artSlot, {
+  const fills = squareCornerFills(template, layout.artSlot, {
     left: split?.leftKey ?? key,
     right: split?.rightKey ?? key,
   });
+  // A white-bordered card (TODO 4.30) squares its border corners in the
+  // white the card drew: the screen's off-white on a display Square (the
+  // live one and the free one, a stored round bake squared), pure white in
+  // a print file (`medium`, passed by lib/render/card-print.ts alone).
+  if (!resolveWhiteBorder(layout, card.frameStyle)) return fills;
+  const white = whiteBorderRgb(medium);
+  return fills.map((fill) => (fill === null ? null : white)) as unknown as CardCornerFills;
 }
 
 /** True for frames (Battle) whose canvas is 7:5 instead of 5:7. */
@@ -3974,6 +4009,7 @@ export async function renderCardImage(
       foilArt={isFoil ? { art: foilArt, secondArt: foilSecondArt } : undefined}
       secondArtSize={secondArtSize}
       omitArt={opts.printLayer?.omitArt}
+      whiteBorderMedium={opts.printLayer ? "print" : "screen"}
     >
       {/* Satori serialises an inline SVG's <image href> from its image
           cache, which it fills by pre-walking the ROOT element's children

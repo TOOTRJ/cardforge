@@ -406,7 +406,8 @@ async function renderPrint(card: CardPreviewData, opts: PrintRenderOptions, art:
   // Square, as every print is: cut the corner and fill it the way a square
   // bake does (the art stays where it runs into the corner).
   const radius = cardCornerRadiusPx(trimW, trimH);
-  const cornerFills = squareCornerFillsOf(card);
+  // …a white-bordered card's in the PRINT white, as the layer drew its ring.
+  const cornerFills = squareCornerFillsOf(card, "print");
   applyCardCornerMask(trim, trimW, trimH, radius);
   squareCardCorners(trim, trimW, trimH, cornerFills, radius);
 

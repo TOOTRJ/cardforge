@@ -1707,6 +1707,28 @@ export function visualCases(): VisualCase[] {
   }
   add("split", "split", "r", "short", { suffix: "@centred-hd", preset: "hd", row: centredStyle("split") });
   add("m15", "creature", "w", "long", { suffix: "@centred-hd", preset: "hd", row: centredStyle("m15") });
+  // TODO 4.30: the white border (frame_style.border — an ADDITION, opt-in
+  // per card; no stored card has the key, so these are NEW cases and every
+  // case above stays byte-identical): on each of the four frames that draw
+  // it — the light, the dark, the gold and the artifact master, the land, a two-colour
+  // pair under it, the stored bake's size, both finishes (their masks hold
+  // the border) and the squared print (white corners).
+  const whiteStyle = (template: FrameTemplate, finish: VisualCase["finish"] = "regular", more: Record<string, unknown> = {}) => ({
+    frame_style: { template, finish, border: "white", ...more } as CardRowForBake["frame_style"],
+  });
+  for (const template of ["retro", "modern"] as const) {
+    for (const colour of ["w", "b", "wub", "c"] as const) add(template, "creature", colour, "short", { suffix: "@white", row: whiteStyle(template) });
+    add(template, "creature", "r", "long", { suffix: "@white-hd", preset: "hd", row: whiteStyle(template) });
+    add(template, "creature", "g", "short", { suffix: "@white-foil", finish: "foil", row: whiteStyle(template, "foil") });
+    add(template, "creature", "u", "short", { suffix: "@white-etched", finish: "etched", row: whiteStyle(template, "etched") });
+    add(template, "creature", "c", "short", { suffix: "@white-square", corners: "square", row: whiteStyle(template) });
+  }
+  for (const land of ["retroland", "modernland"] as const) {
+    add(land, "land", "c", "short", { suffix: "@white", row: whiteStyle(land) });
+    add(land, "land", "g", "long", { suffix: "@white-hd", preset: "hd", row: whiteStyle(land) });
+    add(land, "land", "wu", "short", { suffix: "@white-pair", row: { ...whiteStyle(land, "regular", { twoColor: true }), color_identity: ["white", "blue"] } });
+  }
+  add("modern", "creature", "wu", "short", { suffix: "@white-pair", row: { ...whiteStyle("modern", "regular", { twoColor: true }), color_identity: ["white", "blue"], cost: "{1}{W}{U}" } });
   cases.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   return cases;
 }

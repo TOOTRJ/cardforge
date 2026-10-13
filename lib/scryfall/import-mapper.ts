@@ -244,6 +244,11 @@ export type ScryfallImportPatch = {
    *  (stampOfPrinting). The save drops it where the landed frame has no
    *  notch (a stamped SLD token, a UB emblem). */
   printed_stamp?: HoloStampSwitch;
+  /** `"white"` for a white-bordered printing (TODO 4.30; `border_color`),
+   *  else absent: the card's border switch follows the printing. The save
+   *  keeps it only where the landed frame draws the white border (the 1997
+   *  and 2003 frames). */
+  printed_border?: "white";
   /** The transform icon FAMILY this printing wears (TODO 5.4, owner Q5:
    *  imports follow the printing's family) — `frame_style.dfcIcon`, from
    *  the printing's `frame_effects` (dfcIconFamilyFromEffects): sun / moon,
@@ -1810,6 +1815,8 @@ export function mapScryfallToFormPatch(
     printed_star: starOfPrinting(card),
     // …and the holofoil stamp it carries (TODO 4.9c).
     printed_stamp: stampOfPrinting(card),
+    // …and its border (TODO 4.30): white, or no key at all.
+    ...((card.border_color ?? "").trim().toLowerCase() === "white" ? { printed_border: "white" as const } : {}),
     rules_text: pick(front?.oracle_text, card.oracle_text),
     flavor_text: pick(front?.flavor_text, card.flavor_text),
     power: emblem ? undefined : pick(front?.power, card.power),
