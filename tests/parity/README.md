@@ -96,11 +96,19 @@ new case (`tests/parity/cases.ts`). Two pushes, one red round:
    for a new case ("not in tests/parity/baseline/ for this platform") or the
    old line for a moved one. The unit test `parity-matrix.test.ts` is red
    with it for a new or removed case.
-3. **The linux half.** The red run printed it — in the job's log
-   (`gh run view <run> --log-failed`, or the run's page) and in its
-   summary, under "If both renderers were changed on purpose": a script that
-   writes exactly the case files linux would re-record. Paste it at the
-   repo's root, read `git diff --cached`, commit.
+3. **The linux half.** The red run printed it — in the job's log and in its
+   summary (the run's page, under "If both renderers were changed on
+   purpose"): a script that writes exactly the case files linux would
+   re-record. Paste it at the repo's root, read `git diff --cached`, commit.
+
+   From a terminal, once the whole run has finished (`gh` has no log of a
+   run in progress; the log's lines carry a job / step / time prefix):
+
+   ```bash
+   gh run view <run> --log-failed | sed -E 's/^.*[0-9]Z //' \
+     | sed -n '/^mkdir -p tests\/parity\/baseline\//,/^git add tests\/parity\/baseline\//p' > tmp/parity/linux.sh
+   bash -eu tmp/parity/linux.sh        # read it first
+   ```
 
    The same from the artifact, if you prefer (the run prints this command
    with its own id; `gh` will not overwrite a file, hence the emptied
