@@ -183,7 +183,28 @@ export function FaceSwitchNote({
 
 /** A part's tiny picture for its tab: its artwork in a card-shaped box (a
  *  dark blank while it has none). Decorative — the tab's words name it. */
-export function FaceThumb({ artUrl }: { artUrl?: string | null }) {
+export function FaceThumb({
+  artUrl,
+  glyph,
+}: {
+  artUrl?: string | null;
+  /** For a part that has NO picture of its own (an adventure's spell, a
+   *  flip card's other side — part 2): a plain line glyph in the box
+   *  instead of an art window that would never fill. */
+  glyph?: React.ReactNode;
+}) {
+  if (glyph) {
+    return (
+      <span
+        aria-hidden
+        data-testid="face-thumb"
+        data-face-thumb="glyph"
+        className="card-corners relative flex aspect-[5/7] w-7 items-center justify-center overflow-hidden border border-black/40 bg-[#101015] text-white/70"
+      >
+        {glyph}
+      </span>
+    );
+  }
   return (
     <span
       aria-hidden

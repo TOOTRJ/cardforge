@@ -59,7 +59,7 @@ const GAME = "33333333-3333-4333-8333-333333333333";
 const CARD_ID = "22222222-2222-4222-8222-222222222222";
 const USER = "11111111-1111-4111-8111-111111111111";
 const GAME_SYSTEMS = [{ id: GAME, slug: "mtg", name: "Magic" } as unknown as GameSystem];
-const VERIFIED = ["m15", "m15pw", "m15land", "saga"].flatMap((t) =>
+const VERIFIED = ["m15", "m15pw", "m15land", "saga", "split", "aftermath", "adventure", "flip"].flatMap((t) =>
   ["w", "u", "b", "r", "g", "c", "m"].map((k) => frameComboKey(t, k)),
 );
 
@@ -390,4 +390,81 @@ describe("a new card and a remix leave an empty field out", () => {
     expect(payload.rules_text).toBe("Haste");
     expect(actions.updateCardAction).not.toHaveBeenCalled();
   });
+});
+
+// Face tabs, part 2 (TODO 5.14): a split, aftermath, adventure or flip card's
+// second part is edited on its own tab. It travels WHOLE in `back_face`, so
+// a field emptied there clears by leaving the object — and an edit of the
+// first part hands every stored value of the second back, the ones its tab
+// never shows included (an adventure spell's flavour, stats and picture).
+describe("a two-part card's parts on an edit", () => {
+  const STORED_SECOND = {
+    title: "Second",
+    cost: "{1}{U}",
+    card_type: "sorcery",
+    subtypes: ["Trap"],
+    rules_text: "Draw a card.",
+    flavor_text: "Kept.",
+    power: "4",
+    toughness: "5",
+    loyalty: "3",
+    defense: "6",
+    artist_credit: "Bo Reed",
+    art_url: "https://example.com/back.png",
+    art_position: { focalX: 0.2, focalY: 0.8, scale: 1.7 },
+  };
+  const KINDS = [
+    ["split", "instant", "Right half"],
+    ["aftermath", "sorcery", "Aftermath half"],
+    ["adventure", "creature", "Adventure spell"],
+    ["flip", "creature", "Flipped side"],
+  ] as const;
+  const twoPart = (template: string, cardType: string) =>
+    savedCard({
+      card_type: cardType,
+      supertype: null,
+      subtypes: [],
+      frame_style: { finish: "regular", template },
+      back_face: STORED_SECOND,
+    });
+  const secondTab = async (name: string) => {
+    await act(async () => {
+      fireEvent.click(screen.getByRole("tab", { name: new RegExp(`^${name}`) }));
+    });
+  };
+
+  for (const [template, cardType, second] of KINDS) {
+    it(`${template}: a title-only edit hands the second part back as stored`, async () => {
+      renderForm("edit", twoPart(template, cardType));
+      await type("title", "Kesh, Renamed");
+      const payload = await sentUpdate();
+      expect(payload.title).toBe("Kesh, Renamed");
+      expect(payload.back_face).toEqual(STORED_SECOND);
+      expect(payload.rules_text).toBe("Haste");
+      expect(payload.flavor_text).toBe("\"Hold the line.\"");
+    });
+
+    it(`${template}: the second part's rules text, emptied on its tab, clears — and nothing else does`, async () => {
+      renderForm("edit", twoPart(template, cardType));
+      await goTo("Text & stats");
+      await secondTab(second);
+      await typeRich("back_face.rules_text", "");
+      const payload = await sentUpdate();
+      const rest: Record<string, unknown> = { ...STORED_SECOND };
+      delete rest.rules_text;
+      expect(payload.back_face).toEqual(rest);
+      expect((payload.back_face as Record<string, unknown>).rules_text).toBeUndefined();
+      expect(payload.rules_text).toBe("Haste");
+      expect(payload.flavor_text).toBe("\"Hold the line.\"");
+    });
+
+    it(`${template}: the first part's flavor text, emptied on its tab, clears; the second part stays`, async () => {
+      renderForm("edit", twoPart(template, cardType));
+      await goTo("Text & stats");
+      await type("flavor_text", "");
+      const payload = await sentUpdate();
+      expect(payload.flavor_text).toBeNull();
+      expect(payload.back_face).toEqual(STORED_SECOND);
+    });
+  }
 });

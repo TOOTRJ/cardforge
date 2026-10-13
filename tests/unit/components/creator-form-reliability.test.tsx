@@ -646,7 +646,10 @@ describe("3b.5 the second face's name", () => {
     await pickKind(/^Split/);
     await clickNext(); // Identity
     await typeTitle("Fire");
-    expect(saveHint()).toBe("Add artwork and the right half's name to enable Save.");
+    // Face tabs, part 2 (TODO 5.14): the same list, grouped per part; the
+    // Save rule's own sentence is the button's hover text, as before.
+    expect(saveHint()).toBe("Still needed to save: Left half — artwork · Right half — a name.");
+    expect(saveButton().title).toBe("Add artwork and the right half's name to enable Save.");
     expect(saveButton().disabled).toBe(true);
 
     await goToLastStep();
@@ -664,24 +667,27 @@ describe("3b.5 the second face's name", () => {
     expect(payload.back_face.card_type).toBeTruthy();
   });
 
-  it("the section holding a missing second-face name opens without an error", async () => {
+  it("the missing second-part name is in plain view on its own tab — no fold holds it (Face tabs, part 2)", async () => {
     renderForm({ mode: "create" });
     await pickKind(/^Split/);
     await clickNext(); // Identity
-    // The Save hint asks for the name, so its folded section is open.
-    const details = screen
-      .getByText(/More options — artist credit & right half/)
-      .closest("details") as HTMLDetailsElement;
-    expect(saveHint()).toMatch(/the right half's name/);
-    expect(details.open).toBe(true);
+    expect(screen.queryByText(/More options — artist credit & right half/)).toBeNull();
+    expect(saveHint()).toMatch(/Right half — a name/);
+    const rightHalf = screen.getByRole("tab", { name: /^Right half/ });
+    expect(rightHalf.textContent).toMatch(/needs a name and artwork/);
+    await act(async () => {
+      fireEvent.click(rightHalf);
+    });
+    const nameInput = screen.getByPlaceholderText("Ice");
+    expect(nameInput.closest("details")).toBeNull();
   });
 
-  it("a named second face leaves the section folded", async () => {
+  it("a stored split card opens on its Left half; the Right half tab names the half", async () => {
     renderForm({ mode: "edit", card: savedCard({ ...SPLIT_CARD, visibility: "public" }) });
-    const details = screen
-      .getByText(/More options — artist credit & right half/)
-      .closest("details") as HTMLDetailsElement;
-    expect(details.open).toBe(false);
+    expect(screen.queryByText(/More options — artist credit & right half/)).toBeNull();
+    expect(screen.getByRole("tab", { name: /^Left half/ }).getAttribute("aria-selected")).toBe("true");
+    expect(screen.queryByPlaceholderText("Ice")).toBeNull();
+    expect(screen.getByRole("tab", { name: /^Right half/ }).textContent).toMatch(/needs artwork/);
   });
 
   it("an Adventure names what's missing as the adventure", async () => {
@@ -689,21 +695,26 @@ describe("3b.5 the second face's name", () => {
     await pickKind(/^Adventure/);
     await clickNext();
     await typeTitle("Bonecrusher Giant");
-    expect(saveHint()).toBe("Add artwork and the adventure spell's name to enable Save.");
+    expect(saveHint()).toBe("Still needed to save: Creature — artwork · Adventure spell — a name.");
+    expect(saveButton().title).toBe("Add artwork and the adventure spell's name to enable Save.");
   });
 
   it("edit: clearing a public card's second-face name disables Save and says why", async () => {
     renderForm({ mode: "edit", card: savedCard({ ...SPLIT_CARD, visibility: "public" }) });
-    // Identity step → More options → the second face's name field.
+    // Identity step → the Right half tab → the half's name field.
     // A split half's example name is a split card's ("Ice"), never the
     // transform back's it used to borrow (TODO 5.14).
+    await act(async () => {
+      fireEvent.click(screen.getByRole("tab", { name: /^Right half/ }));
+    });
     expect(screen.queryByPlaceholderText("Insectile Aberration")).toBeNull();
     const nameInput = screen.getByPlaceholderText("Ice") as HTMLInputElement;
     expect(nameInput.value).toBe("Ice");
     await act(async () => {
       fireEvent.change(nameInput, { target: { value: "" } });
     });
-    expect(saveHint()).toBe("Add the right half's name to enable Save.");
+    expect(saveHint()).toBe("Still needed to save: Right half — a name.");
+    expect(saveButton().title).toBe("Add the right half's name to enable Save.");
     expect(saveButton().disabled).toBe(true);
   });
 
@@ -730,21 +741,20 @@ describe("3b.5 the second face's name", () => {
     expect(actions.createCardAction).not.toHaveBeenCalled();
   });
 
-  it("a second-face error opens the folded More options that holds the field", async () => {
+  it("a second-part error selects the part's tab, where the field and its message are in view", async () => {
     actions.updateCardAction.mockResolvedValue({
       ok: false,
       fieldErrors: { "back_face.title": "That name is taken by the front face." },
     });
     renderForm({ mode: "edit", card: savedCard({ ...SPLIT_CARD, visibility: "private" }) });
-    const details = screen.getByText(/More options — artist credit & right half/).closest(
-      "details",
-    ) as HTMLDetailsElement;
-    expect(details.open).toBe(false);
+    const rightHalf = screen.getByRole("tab", { name: /^Right half/ });
+    expect(rightHalf.getAttribute("aria-selected")).toBe("false");
     await typeTitle("Fire, Again");
     await clickSave();
 
-    await waitFor(() => expect(details.open).toBe(true));
+    await waitFor(() => expect(rightHalf.getAttribute("aria-selected")).toBe("true"));
     expect(screen.getByText("That name is taken by the front face.")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Ice").closest("details")).toBeNull();
   });
 
   it("the leave dialog stays open through a failed save, says why, and continues only after a successful one", async () => {
@@ -994,6 +1004,9 @@ describe("3b.8 the second half is typed from the kind", () => {
 
     // Give the half some content, then clear it.
     await clickNext();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("tab", { name: /^Aftermath half/ }));
+    });
     const nameInput = screen.getByPlaceholderText("Ribbons");
     await act(async () => {
       fireEvent.change(nameInput, { target: { value: "Dawn" } });
@@ -1009,6 +1022,9 @@ describe("3b.8 the second half is typed from the kind", () => {
     renderForm({ mode: "create" });
     await pickKind(/^Split/);
     await clickNext();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("tab", { name: /^Right half/ }));
+    });
     await act(async () => {
       fireEvent.change(screen.getByPlaceholderText("Ice"), {
         target: { value: "Ice" },

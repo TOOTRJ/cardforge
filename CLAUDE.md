@@ -272,6 +272,19 @@ Rules and gotchas:
   shows that face large with the other small and never turns by itself.
   A "still needed" link or a server error on a back field selects its tab
   as well as its step; one-faced cards render no switch.
+  The four two-part kinds that are ONE picture — split, aftermath,
+  adventure, flip — have the same switch in their own words (5.14 part 2,
+  "Left half | Right half"): the second part's fields per step in
+  `panels/second-part-panels.tsx` (`PART_FIELD_STEP`: its card type is on
+  Identity, editable on an edit — it picks no frame), every field the old
+  "More options" panel showed still offered (hiding one a part never
+  prints is an OWNER decision per field — a stored card may hold a value),
+  ONE preview with a ring on the part being edited (`part-outline.tsx`,
+  boxes from the profile via `lib/creator/part-outline.ts`: creator chrome
+  beside `CardPreview`, never inside it or any renderer), and a part with
+  no picture of its own (adventure spell, flip side) is never asked for
+  artwork. A save's payload is pinned to `origin/main`'s by
+  `creator-face-tabs-payload.test.tsx` — a moved field keeps its path.
   A card on a DFC body (a back with a body: `bakedBackOf`, 5.3) bakes TWO
   PNGs + TWO thumbs — the back's `{id}.back.png` / `.back.thumb.webp`
   through `renderBackFace` in both bake paths, the four pointers in ONE
