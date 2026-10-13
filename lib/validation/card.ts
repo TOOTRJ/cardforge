@@ -649,7 +649,21 @@ export const createCardSchema = baseCardSchema;
 // default-free base: zod fills defaults for omitted keys even through
 // .partial(), and the action layer treats "defined" as "write this column" —
 // without the overrides a partial update silently wipes those columns.
+//
+// The optional texts also take `null` here: "this edit EMPTIED the field",
+// which clears the column. (Omitted leaves the column untouched — and the
+// creator sent nothing for an empty field, so it could never clear a flavor
+// text, a cost, a stat… on a stored card.) Create never takes null.
 export const updateCardSchema = baseCardSchema.partial().extend({
+  cost: cardCostSchema.nullable(),
+  rules_text: cardRulesTextSchema.nullable(),
+  flavor_text: cardFlavorTextSchema.nullable(),
+  power: cardStatStringSchema.nullable(),
+  toughness: cardStatStringSchema.nullable(),
+  loyalty: cardStatStringSchema.nullable(),
+  defense: cardStatStringSchema.nullable(),
+  artist_credit: cardArtistCreditSchema.nullable(),
+  art_url: cardArtUrlSchema.nullable(),
   subtypes: cardSubtypesBaseSchema.optional(),
   tags: cardTagsBaseSchema.optional(),
   color_identity: cardColorIdentityBaseSchema.optional(),
