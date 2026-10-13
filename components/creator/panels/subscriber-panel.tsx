@@ -132,7 +132,8 @@ function FooterMarkField({ userId }: { userId: string | null }) {
       </div>
       <span className="text-[11px] leading-5 text-subtle">
         &ldquo;Save as my default&rdquo; changes the account setting that
-        prefills new cards; this card keeps whatever is in the box when you save it.
+        prefills new cards. A card you gave a mark of its own, or blanked, keeps
+        that; a card you never changed here follows your default.
       </span>
     </FieldGroup>
   );

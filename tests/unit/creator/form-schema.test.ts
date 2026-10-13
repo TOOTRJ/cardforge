@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cardFormSchema } from "@/lib/creator/form-schema";
+import { cardFormSchema, cardFormSchemaFor, SAGA_ROW_NEEDS_NUMBER } from "@/lib/creator/form-schema";
 import {
   EMPTY_BACK_FACE,
   EMPTY_WATERMARK,
@@ -372,5 +372,60 @@ describe("cardFormSchema", () => {
       });
       expect(cardFormSchema.safeParse(values).success).toBe(true);
     });
+  });
+});
+
+// The #528 follow-up: an edit's schema knows the rows the form opened with.
+describe("cardFormSchemaFor — a walker's / saga's rows on an edit", () => {
+  const sagaValues = (over: Partial<FormValues> = {}) =>
+    baseValues({
+      card_type: "enchantment",
+      frame_style: { finish: "regular", template: "saga" },
+      power: "",
+      toughness: "",
+      rules_text: "I — One.\nXI — Eleven.",
+      saga_chapters: [
+        { numerals: [1], text: "One." },
+        { numerals: [], text: "Eleven." },
+      ],
+      ...over,
+    });
+  const issuesOf = (schema: typeof cardFormSchema, values: FormValues) => {
+    const result = schema.safeParse(values);
+    return result.success ? [] : result.error.issues.map((issue) => [issue.path.join("."), issue.message]);
+  };
+
+  it("a row with a text and no chapter number is an error on that row", () => {
+    expect(issuesOf(cardFormSchema, sagaValues())).toEqual([["saga_chapters.1.numerals", SAGA_ROW_NEEDS_NUMBER]]);
+  });
+
+  it("…never on an edit that left the rows as they opened", () => {
+    const opened = sagaValues();
+    expect(issuesOf(cardFormSchemaFor(opened), sagaValues({ title: "Another Name" }))).toEqual([]);
+    // One row edited: every row is the maker's again.
+    const edited = sagaValues({ saga_chapters: [{ numerals: [1], text: "Changed." }, opened.saga_chapters[1]] });
+    expect(issuesOf(cardFormSchemaFor(opened), edited)).toEqual([["saga_chapters.1.numerals", SAGA_ROW_NEEDS_NUMBER]]);
+  });
+
+  it("an untouched walker's stored rows are not checked; an edited one's are", () => {
+    const walker = (over: Partial<FormValues> = {}) =>
+      baseValues({
+        card_type: "planeswalker",
+        frame_style: { finish: "regular", template: "m15pw" },
+        power: "",
+        toughness: "",
+        loyalty: "4",
+        rules_text: "+1000: Win.\n-1: Lose.",
+        loyalty_abilities: [
+          { cost: "+1000", text: "Win." },
+          { cost: "-1", text: "Lose." },
+        ],
+        ...over,
+      });
+    const opened = walker();
+    expect(issuesOf(cardFormSchemaFor(opened), walker({ title: "Another Name" }))).toEqual([]);
+    expect(issuesOf(cardFormSchema, opened).map(([path]) => path)).toEqual(["loyalty_abilities.0.cost"]);
+    const edited = walker({ loyalty_abilities: [opened.loyalty_abilities[0], { cost: "-1", text: "Changed." }] });
+    expect(issuesOf(cardFormSchemaFor(opened), edited).map(([path]) => path)).toEqual(["loyalty_abilities.0.cost"]);
   });
 });

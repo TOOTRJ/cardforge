@@ -317,7 +317,7 @@ import {
   AnatomyPanel,
   useTwoColorPairFollow,
 } from "@/components/creator/panels/anatomy-panel";
-import { cardFormSchema } from "@/lib/creator/form-schema";
+import { cardFormSchemaFor } from "@/lib/creator/form-schema";
 import { DEFAULT_CARD_LANG } from "@/lib/cards/collector-fields";
 import type { PipOverrides } from "@/lib/pips/override";
 import type { Challenge } from "@/lib/challenges/shared";
@@ -842,9 +842,16 @@ export function CardCreatorForm({
   // (lib/creator/form-schema.ts) — the same jump-to-errored-step handling
   // covers both: handleSubmit's error callback fires for resolver failures,
   // and applyFieldErrors covers anything only the server can know.
+  // An edit's schema knows the rows the form opened with: a walker / saga
+  // whose rows the maker did not touch saves its stored text unchanged, so
+  // nothing about them blocks the save (lib/creator/form-schema.ts).
+  const formResolver = useMemo(
+    () => zodResolver(cardFormSchemaFor(mode === "edit" ? defaults : null)),
+    [mode, defaults],
+  );
   const methods = useForm<FormValues>({
     defaultValues: defaults,
-    resolver: zodResolver(cardFormSchema),
+    resolver: formResolver,
     mode: "onSubmit",
     reValidateMode: "onChange",
   });
@@ -3047,7 +3054,11 @@ export function CardCreatorForm({
     // (lib/creator/structured-rules.ts — the same answer on a new card, a
     // remix and an edit: once every row is removed the hidden textarea's
     // copy of them is NOT what saves.)
-    const { rulesText: rulesTextOut, faceContent: faceContentPayload } = submittedRulesOf(submitKind, values, {
+    const {
+      rulesText: rulesTextOut,
+      faceContent: faceContentPayload,
+      keepsStored: keepsStoredFaceContent,
+    } = submittedRulesOf(submitKind, values, {
       opened: isEdit ? defaults : null,
       storedFaceContent: isEdit ? (card?.face_content ?? null) : null,
     });
@@ -3121,7 +3132,10 @@ export function CardCreatorForm({
       tags: parseTags(values.tags_text),
       rarity: tokenRarity ? "common" : values.rarity || undefined,
       rules_text: rulesTextOut || emptied,
-      face_content: faceContentPayload,
+      // (`keepsStored`: an untouched walker / saga whose rows cannot be
+      // written as face_content — the column is not sent and the server
+      // leaves it alone.)
+      ...(keepsStoredFaceContent ? {} : { face_content: faceContentPayload }),
       watermark: watermarkPayload,
       flavor_text: values.flavor_text.trim() || emptied,
       // The 1/1 default only belongs on P/T types — an instant or sorcery
