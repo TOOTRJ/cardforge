@@ -197,6 +197,12 @@ async function goTo(step: RegExp) {
     fireEvent.click(button);
   });
 }
+/** Select a tab of the Front face | Back face switch (TODO 5.14). */
+async function faceTab(name: RegExp) {
+  await act(async () => {
+    fireEvent.click(screen.getByRole("tab", { name }));
+  });
+}
 const saveButton = () => screen.getByRole("button", { name: /^Save$/ }) as HTMLButtonElement;
 async function setField(placeholder: string, value: string) {
   await act(async () => {
@@ -268,23 +274,31 @@ describe("a new transform card", () => {
     expect(preview().template).toBe("m15dfcfront");
   });
 
-  it("the family picks the back body; the back's own colour wins over the front's; the panel flips the preview on focus", async () => {
+  it("the family picks the back body; the back's own colour wins over the front's; the Back face tab — never a focus — turns the preview", async () => {
     renderForm();
     await clickChip("Card type", /^Transform/);
     await clickChip("Color identity", /^blue/i);
     await clickChip("Transform icon family", /Sun \/ moon/);
     expect(preview().family).toBe("sunmoon");
     expect(preview().backFace).toMatchObject({ frame_style: { template: "m15dfcbackleft" }, color_identity: ["blue"] });
-    await goTo(/^identity$/i);
-    const panel = screen.getByTestId("dfc-face-panel");
-    expect(panel).toBeTruthy();
-    // No cost on a transform back; the type chips and the colour chips show.
-    expect(screen.queryByText(/^Cost$/)).toBeNull();
+    // The old Back face panel is gone: the switch is the way to the back.
+    expect(screen.queryByTestId("dfc-face-panel")).toBeNull();
+    expect(screen.getByTestId("face-switch")).toBeTruthy();
     expect(preview().face).toBe("front");
+    await faceTab(/^Back face/);
+    expect(preview().face).toBe("back");
+    // A focus in a back field changes nothing about the face shown.
+    await goTo(/^identity$/i);
     await act(async () => {
       fireEvent.focus(screen.getByPlaceholderText("Insectile Aberration"));
     });
     expect(preview().face).toBe("back");
+    // No cost on a transform back: the Text step says so where it would be.
+    await goTo(/^text/i);
+    expect(screen.getByTestId("back-no-cost-note")).toBeTruthy();
+    expect(document.querySelector("[name='back_face.cost']")).toBeNull();
+    // The back's type and colour chips are on the Card step, as the front's.
+    await goTo(/^card$/i);
     await clickChip("Back face color", /^green/i);
     expect(preview().backFace).toMatchObject({ color_identity: ["green"] });
     // The back's own body in the summary; its unverified colours are dark.
@@ -301,6 +315,7 @@ describe("a new transform card", () => {
     renderForm();
     await clickChip("Card type", /^Transform/);
     await clickChip("Color identity", /^blue/i);
+    await faceTab(/^Back face/);
     await goTo(/^identity$/i);
     const back = () => screen.getByTestId("types-field-input-back") as HTMLInputElement;
     expect(back().value).toBe("Creature");
@@ -314,7 +329,9 @@ describe("a new transform card", () => {
     expect(preview().backFace).toMatchObject({ supertype: "Legendary Horror", printed_types: "Creature Legendary Horror" });
     // The back's type changes: the old type's word becomes the new one's,
     // where the maker set it; the other words are kept and re-read.
+    await goTo(/^card$/i);
     await clickChip("Back face type", /^Artifact/);
+    await goTo(/^identity$/i);
     expect(back().value).toBe("Artifact Legendary Horror");
     expect(preview().backFace).toMatchObject({ card_type: "artifact", supertype: "Legendary Horror" });
     await act(async () => {
@@ -330,7 +347,7 @@ describe("a new transform card", () => {
     renderForm();
     await clickChip("Card type", /^Transform/);
     await clickChip("Color identity", /^green/i);
-    await goTo(/^identity$/i);
+    await faceTab(/^Back face/);
     await clickChip("Back face type", /^Land/);
     expect(preview().backFace).toMatchObject({ frame_style: { template: "m15dfclandback" }, color_identity: ["colorless"] });
     expect(chipIn("Back face color", /^colorless/i).disabled).toBe(false);
@@ -349,13 +366,16 @@ describe("a new transform card", () => {
     });
     await clickChip("Card type", /Modal double-faced/);
     await clickChip("Color identity", /^blue/i);
-    await goTo(/^identity$/i);
+    await faceTab(/^Back face/);
     await clickChip("Back face type", /^Land/);
     expect(preview().backFace).toMatchObject({ frame_style: { template: "m15mdfclandback" }, color_identity: ["blue"] });
     expect(screen.getByTestId("dfc-back-color").textContent).toMatch(/follows the front/);
     await clickChip("Back face type", /^Sorcery/);
     expect(preview().backFace).toMatchObject({ frame_style: { template: "m15mdfcback" }, color_identity: ["blue"] });
-    expect(screen.getByTestId("dfc-face-panel").textContent).toMatch(/Cost/);
+    await goTo(/^text/i);
+    expect(document.querySelector("[name='back_face.cost']") ?? screen.getByRole("tabpanel").textContent).toBeTruthy();
+    expect(screen.getByRole("tabpanel").textContent).toMatch(/Back face — Cost/);
+    expect(screen.queryByTestId("back-no-cost-note")).toBeNull();
   });
 
   it("saves the derived body, the explicit colour and no cost; the back's art is needed to publish", async () => {
@@ -365,13 +385,14 @@ describe("a new transform card", () => {
     await clickChip("Color identity", /^blue/i);
     await goTo(/^identity$/i);
     await setField("Emberbound Wyrm", "Delver of Secrets");
+    await faceTab(/^Back face/);
     await setField("Insectile Aberration", "Insectile Aberration");
     // Front art, no back art: the Save hint asks for the back's artwork.
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /^Save$/ }));
     });
     expect(saveButton().disabled).toBe(true);
-    expect(screen.getByTestId("save-needs").textContent).toBe("Add artwork and the back face's artwork to enable Save.");
+    expect(screen.getByTestId("save-needs").textContent).toBe("Still needed to save: Front face — artwork · Back face — artwork.");
     expect(actions.createCardAction).not.toHaveBeenCalled();
     // A draft needs neither.
     await goTo(/^publish$/i);
@@ -410,6 +431,10 @@ describe("editing a stored transform card", () => {
   it("locks the back's type AND colour (owner 2026-10-05) with the lock's copy, shows the family chips in the panel, and sends a family change as frame_anatomy.dfcIcon with the stored colour", async () => {
     actions.updateCardAction.mockResolvedValue({ ok: true, cardId: CARD_ID, slug: "delver-of-secrets" });
     renderForm({ mode: "edit", card: savedCard() });
+    // The locked rows are the Back face tab's, on the Identity step (an
+    // edit has no Card step).
+    expect(screen.queryByTestId("dfc-back-type-locked")).toBeNull();
+    await faceTab(/^Back face/);
     expect(screen.getByTestId("dfc-back-type-locked").textContent).toMatch(/Creature/);
     expect(screen.queryByRole("radiogroup", { name: "Back face type" })).toBeNull();
     // The colour is read-only too: no chips, the stored colour named, and
@@ -418,7 +443,7 @@ describe("editing a stored transform card", () => {
     expect(screen.getByTestId("dfc-back-color-locked").textContent).toMatch(/Blue/);
     expect(screen.queryByRole("radiogroup", { name: "Back face color" })).toBeNull();
     expect(screen.queryByTestId("dfc-back-color")).toBeNull();
-    expect(screen.getByTestId("dfc-face-panel").textContent).toMatch(/set when the card is created, like the front's/);
+    expect(screen.getByTestId("dfc-back-locked").textContent).toMatch(/set when the card is created, like the front's/);
     expect(screen.getByTestId("dfc-icon-family-revise")).toBeTruthy();
     expect(screen.getByTestId("locked-summary").textContent).toMatch(/Creature — Human Wizard · Transform/);
     await clickChip("Transform icon family", /Sun \/ moon/);
@@ -433,8 +458,9 @@ describe("editing a stored transform card", () => {
     expect(payload.back_face).toMatchObject({ frame_style: { template: "m15dfcbackleft" }, color_identity: ["blue"] });
   });
 
-  it("a remix locks the back's type and colour the same way (kept from the original)", () => {
+  it("a remix locks the back's type and colour the same way (kept from the original)", async () => {
     renderForm({ mode: "remix", card: savedCard({ back_face: { ...(savedCard().back_face as object), color_identity: ["green"] } }) });
+    await faceTab(/^Back face/);
     expect(screen.getByTestId("dfc-back-type-locked").textContent).toMatch(/Creature/);
     expect(screen.getByTestId("dfc-back-color-locked").textContent).toMatch(/Green/);
     expect(screen.queryByRole("radiogroup", { name: "Back face color" })).toBeNull();
@@ -453,7 +479,8 @@ describe("an imported double-faced card (the Q3 hint)", () => {
   it("shows the move, dark until both bodies are verified in the card's colour, and calls the action on click", async () => {
     renderForm({ mode: "edit", card: legacy(), verifiedFrameKeys: BASE_VERIFIED });
     expect(screen.getByTestId("dfc-adopt-hint")).toBeTruthy();
-    expect(screen.queryByTestId("dfc-face-panel")).toBeNull();
+    // A legacy back on a one-faced frame: no switch (TODO 5.14).
+    expect(screen.queryByTestId("face-switch")).toBeNull();
     const move = screen.getByTestId("dfc-adopt-move") as HTMLButtonElement;
     expect(move.disabled).toBe(true);
     expect(screen.getByText(/Frames awaiting verification in this card's colour/)).toBeTruthy();
@@ -558,7 +585,7 @@ describe("an imported double-faced card (the Q3 hint)", () => {
     expect(screen.getByTestId("dfc-adopt-hint").textContent).toMatch(/the front gets the modal double-faced front/);
     expect(screen.queryByRole("radiogroup", { name: "Double-faced layout" })).toBeNull();
     // Still a legacy back: no back-face panel either.
-    expect(screen.queryByTestId("dfc-face-panel")).toBeNull();
+    expect(screen.queryByTestId("face-switch")).toBeNull();
     cleanup();
     actions.adoptDfcBodiesAction.mockResolvedValue({ ok: true, cardId: CARD_ID, slug: "vader", frontBody: "m15mdfcfront", backBody: "m15mdfcback" });
     renderForm({
