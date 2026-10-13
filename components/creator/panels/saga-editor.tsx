@@ -36,6 +36,7 @@ export function SagaChaptersEditor() {
   const {
     control,
     setValue,
+    trigger,
     formState: { errors },
   } = useFormContext<FormValues>();
   const { fields, append, remove } = useFieldArray({
@@ -51,6 +52,13 @@ export function SagaChaptersEditor() {
   const insertSymbol = (token: string) =>
     (focusedBox.current ?? introBox.current)?.insertToken(token);
   const intro = useController({ control, name: "saga_intro" });
+  // A row told to pick a number is asked again when a row's text changes:
+  // emptied, it no longer needs one (the message stayed until the next save).
+  const recheckNumbers = () => {
+    rows.forEach((_, i) => {
+      if (errors.saga_chapters?.[i]?.numerals) void trigger(`saga_chapters.${i}.numerals`);
+    });
+  };
   const highest = Math.min(
     NUMERALS.length,
     Math.max(MAX_CHAPTERS, ...rows.flatMap((r) => r?.numerals ?? [])),
@@ -167,6 +175,7 @@ export function SagaChaptersEditor() {
                 <SagaRowText
                   index={i}
                   hasError={Boolean(errors.saga_chapters?.[i]?.text)}
+                  onTextChange={recheckNumbers}
                   onFocus={(handle) => {
                     focusedBox.current = handle;
                   }}
@@ -213,10 +222,13 @@ export function SagaChaptersEditor() {
 function SagaRowText({
   index,
   hasError,
+  onTextChange,
   onFocus,
 }: {
   index: number;
   hasError: boolean;
+  /** After the row's text changed in the form. */
+  onTextChange: () => void;
   onFocus: (handle: PipTextEditorHandle | null) => void;
 }) {
   const { control } = useFormContext<FormValues>();
@@ -233,7 +245,10 @@ function SagaRowText({
       }}
       name={field.name}
       value={field.value ?? ""}
-      onChange={field.onChange}
+      onChange={(next) => {
+        field.onChange(next);
+        onTextChange();
+      }}
       onBlur={field.onBlur}
       onFocus={() => onFocus(handleRef.current)}
       placeholder={

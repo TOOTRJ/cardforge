@@ -917,6 +917,10 @@ export function CardCreatorForm({
     key: resetKey,
     text: defaults.footer_text.trim(),
   }));
+  // The card (resetKey) a save of this session went out for: until the
+  // refresh after it arrives, `defaults` and `card` are still the card as it
+  // OPENED, not the row (onSubmit: face_content is never left out then).
+  const [savedUnderKey, setSavedUnderKey] = useState<string | null>(null);
   if (footerBaseline.key !== resetKey) {
     setFooterBaseline({ key: resetKey, text: defaults.footer_text.trim() });
   }
@@ -3135,7 +3139,14 @@ export function CardCreatorForm({
       // (`keepsStored`: an untouched walker / saga whose rows cannot be
       // written as face_content — the column is not sent and the server
       // leaves it alone.)
-      ...(keepsStoredFaceContent ? {} : { face_content: faceContentPayload }),
+      // Not once a save of this session has gone out for the card as it
+      // opened: until its refresh lands, "untouched" is read against values
+      // the row may no longer hold (a row edited, saved, put back and saved
+      // again in that window — the first save's rows stayed, and drew). The
+      // opened card's own value is then SENT, never left to the row.
+      ...(keepsStoredFaceContent && savedUnderKey !== resetKey
+        ? {}
+        : { face_content: faceContentPayload }),
       watermark: watermarkPayload,
       flavor_text: values.flavor_text.trim() || emptied,
       // The 1/1 default only belongs on P/T types — an instant or sorcery
@@ -3382,6 +3393,9 @@ export function CardCreatorForm({
       toast.success("Changes saved.");
       // The row's footer is now what this save sent (see the payload).
       if (typeof payload.footer_text === "string") setFooterBaseline({ key: resetKey, text: payload.footer_text });
+      // …and its rows may no longer be the rows the card opened with (the
+      // payload's face_content, above).
+      setSavedUnderKey(resetKey);
       // The saved values become the baseline, keeping the on-screen values;
       // the keyed reset swaps in server truth when the refresh lands. Mark
       // clean only if nothing was typed while the request was in flight —

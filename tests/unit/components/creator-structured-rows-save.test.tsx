@@ -477,6 +477,55 @@ describe("a saga row with a text and no chapter number", () => {
   });
 });
 
+describe("found by the independent check of this PR", () => {
+  const MESSAGE = "Pick a chapter number for this row, or remove it.";
+
+  it("the message goes when the row's text is emptied — it no longer needs a number", async () => {
+    await openRows(saga("I — One.\nII — Two."));
+    await clickLabel("Chapter II for row 2");
+    await blockedSave();
+    expect(screen.getByRole("alert").textContent).toBe(MESSAGE);
+    await typeRich("saga_chapters.1.text", "");
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+    expect((await sentUpdate()).rules_text).toBe("I — One.");
+  });
+
+  it("a row edited, saved, put back and saved again before the refresh lands: the first save's rows do not stay", async () => {
+    // "II, I —" is a marker the rows would re-order, so an untouched save
+    // leaves face_content out. The EDITED save stores rows (sorted, with
+    // the edit); the row put back reads as the card OPENED — and leaving
+    // face_content out there kept the edited rows, which draw first.
+    const STORED = "II, I — One.\nIII — Two.";
+    await openRows(saga(STORED));
+    await typeRich("saga_chapters.1.text", "Two, changed.");
+    const first = await sentUpdate();
+    expect((first.face_content as { saga: { chapters: { text: string }[] } }).saga.chapters[1].text).toBe("Two, changed.");
+    await typeRich("saga_chapters.1.text", "Two.");
+    await save();
+    await waitFor(() => expect(actions.updateCardAction).toHaveBeenCalledTimes(2));
+    const second = actions.updateCardAction.mock.calls[1][1] as Record<string, unknown>;
+    expect(second.rules_text).toBe(STORED);
+    expect("face_content" in second).toBe(true);
+    expect(second.face_content).toBeNull();
+    expect(serverAccepts(second)).toBe(true);
+  });
+
+  it("every row removed still clears the rows, on a card past the limits too", async () => {
+    await openRows(walker(SEVEN));
+    for (;;) {
+      const buttons = screen.queryAllByLabelText(/^Remove ability \d+$/);
+      if (buttons.length === 0) break;
+      await act(async () => {
+        fireEvent.click(buttons[0]);
+      });
+    }
+    const sent = await sentUpdate();
+    expect("face_content" in sent).toBe(true);
+    expect(sent.face_content).toBeNull();
+    expect(sent.rules_text).toBeNull();
+  });
+});
+
 describe("the Subscriber step's footer helper", () => {
   it("says what a card keeps and what follows the default", async () => {
     renderForm("edit", savedCard(), PAID);
