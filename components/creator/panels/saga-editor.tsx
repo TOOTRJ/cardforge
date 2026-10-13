@@ -52,6 +52,7 @@ export function SagaChaptersEditor() {
   return (
     <>
       <FieldGroup
+        kind="group"
         label="Intro / reminder"
         helper="The line above chapter I — e.g. the lore-counter reminder. Optional."
         error={errors.saga_intro?.message}
@@ -80,6 +81,7 @@ export function SagaChaptersEditor() {
       </FieldGroup>
 
       <FieldGroup
+        kind="group"
         label="Chapters"
         helper="One row per effect; toggle which chapters trigger it (rows can share, like “I, II —”). Real sagas run II–VI chapters."
       >

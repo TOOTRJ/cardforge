@@ -52,6 +52,9 @@ export function StylePicker({
         onChange={(event) => onChange(event.target.value)}
         maxLength={200}
         placeholder={placeholder}
+        // Every mount sits in a group captioned "Art style", after the
+        // preset chips: the box needs a name of its own.
+        aria-label="Art style, in your own words"
         className={inputClass(false)}
         disabled={disabled}
       />

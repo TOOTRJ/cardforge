@@ -62,8 +62,9 @@ describe("the group", () => {
   });
 
   it("inside a field's <label>, only a control acts: the summary and the plain parts press nothing", () => {
-    // Every mount is inside FieldGroup's <label>, which forwards a click on
-    // plain content to its first button — the picker's "Remove last".
+    // The creator's mounts sit in a FieldGroup of kind "group"; the picker
+    // still guards itself for a mount inside a <label>, which forwards a
+    // click on plain content to its first button — the picker's "Remove last".
     // A browser skips that for a cancelled click (checked in Chromium on the
     // creator); the test environment's <label> forwards regardless, so this
     // holds the cancelling itself.

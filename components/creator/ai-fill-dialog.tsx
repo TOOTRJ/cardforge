@@ -239,13 +239,9 @@ function AiFillDialogBody({
         </DialogHeader>
 
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 py-5">
-          <FieldGroup label="Fields to generate">
+          <FieldGroup kind="group" label="Fields to generate">
             <div className="flex flex-col gap-2">
-              <div
-                role="group"
-                aria-label="Fields to generate"
-                className="grid grid-cols-2 gap-1.5 sm:grid-cols-3"
-              >
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
                 {offered.map((field) => {
                   const ticked = want.has(field);
                   return (
@@ -344,6 +340,7 @@ function AiFillDialogBody({
           </FieldGroup>
 
           <FieldGroup
+            kind="group"
             label="Art style"
             helper="How the art and tone should feel. Pick a preset or write your own."
           >

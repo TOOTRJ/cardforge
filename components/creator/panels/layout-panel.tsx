@@ -140,7 +140,7 @@ export function LayoutPanel({
             />
           </FieldGroup>
 
-          <FieldGroup label="Cost">
+          <FieldGroup kind="group" label="Cost">
             <Controller
               control={control}
               name="back_face.cost"
@@ -156,7 +156,7 @@ export function LayoutPanel({
           {/* The type chips take the panel's full width: beside the cost,
               in half of it, the nine labels ran into each other
               ("PlaneswalkerBattle", TODO 5.14). */}
-          <FieldGroup label="Card type">
+          <FieldGroup kind="group" label="Card type">
             <Controller
               control={control}
               name="back_face.card_type"
@@ -184,7 +184,7 @@ export function LayoutPanel({
             </FieldGroup>
           </div>
 
-          <FieldGroup label="Rules text">
+          <FieldGroup kind="group" label="Rules text">
             <div className="flex flex-col gap-2">
               <RulesSymbolToolbar onInsert={onInsertSymbol} />
               <PipTextEditor

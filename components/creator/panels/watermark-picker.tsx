@@ -131,6 +131,7 @@ export function WatermarkPicker({ userId }: WatermarkPickerProps) {
 
         return (
           <FieldGroup
+            kind="group"
             label="Watermark"
             helper="A faint mark behind the rules text — a mana symbol, the PipGlyph Rose or one of our faction marks, or your own transparent PNG. Click the active mark again to remove it."
           >
