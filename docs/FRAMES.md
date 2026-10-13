@@ -3009,18 +3009,39 @@ other card, and on an edit that takes the word off a card on the frame.
   wears it as its own skin (`KIND_SKIN_VARIANTS`); an instant or a sorcery,
   whose standard is m15 too, is never offered it.
 - **A new card follows** onto it (`enchantmentFrameFor`: the creator's
-  effect, `resolveGeneratedFrame`) when its words say Enchantment AND
-  Creature or Artifact — the moment they first do, on the kind's M15 frame,
+  effect, `resolveGeneratedFrame` when a frame is asked for) when its words
+  say Enchantment — the moment they first do, on the kind's M15 frame,
   where the Nyx frame is verified in the card's colour; "Standard" in
   Variations is the way back, and a pick made by hand sticks. A card on the
   frame whose words stop saying Enchantment goes back to its kind's frame.
-- **A plain enchantment is offered it and never moved** — not by the
-  creator, not by a random AI frame (`followsEnchantmentDress`). The prints
-  would have it follow too (every enchantment since Foundations); it does
-  not because that changes the default look of the most common kind for
-  every maker, which is the owner's to decide
-  (`ENCHANTMENT_DRESS_FOLLOW_WORDS` is the one line).
-- **A stored card keeps its frame** until its owner picks "Nyx".
+- **A plain enchantment and an Aura follow too** (owner decision 1, Round
+  56, 2026-10-13: as print does since Foundations; the build had offered it
+  and never moved it). Never a card of a kind with no base here — an
+  Enchantment Land, a token, the saga kind, a double-faced face — and never
+  an enchantment whose SUBTYPES name a body of its own in print (Saga,
+  Class, Case, Room typed on a plain enchantment:
+  `ENCHANTMENT_DRESS_OWN_BODY_SUBTYPES`, read by `followsEnchantmentDress`
+  alone): those are offered the frame, may wear it, and are never moved.
+  While the frame is unverified in the card's colour nothing follows.
+- **An AI card follows where a frame is asked for** ("random" or a named
+  frame; `resolveGeneratedFrame`): an enchantment's M15 frame gives way to
+  the Nyx frame where both are published. A job that asks for no frame
+  keeps the default landing (M15), as a Vehicle's does. The art window, the
+  rules box and every slot are m15's, so nothing else about a generation
+  changes.
+- **A stored card keeps its frame** until its owner picks "Nyx"; an edit
+  and a remix never move one. **An import follows its PRINTING**, never
+  this rule: a plain enchantment printed before Foundations lands on M15,
+  one printed since lands on Nyx (once verified).
+
+**Owner decisions, Round 56 (2026-10-13).** (1) a new plain enchantment
+follows — built here. (2) The label stays "Nyx". (3) The word a borrowed
+frame wrote ("Enchantment", like "Artifact") stays after a step change:
+accepted for now, a follow-up with the artifact borrow. (4) Faceless One
+(CLB #1) and the ten `inverted`-only promo-pack printings become
+`nearest` in a follow-up. (5) Beleren's "ffi" ligature in the preview
+(`hd-beleren-ffi-ligature`, tests/parity) is its own PR, after fi / ff / fl
+are measured.
 
 **Rollout: an addition.** No stored card sits on a new template: no layout
 bump, no sweep, no badge.
@@ -3061,6 +3082,123 @@ Not moved, on purpose:
 One m15 reference left the registry with this: Obsessive Pursuit (TLA
 #112), an alternate of `m15/b`, is a Nyx printing and would have had the
 owner compare a starfield against the plain frame.
+### The Station frame (4.27a)
+
+TODO 4.27a (owner 2026-10-13, rounds 53–54). `m15station` and
+`m15stationland` are the frame Edge of Eternities (2025) prints its
+Spacecraft (artifacts) and Planets (lands) on: the M15 bars, pinlines and
+border with **no frame field** — the picture runs under the whole card —
+and a **see-through text box cut into bands**: a top band (abilities and
+the Station reminder), then one band per charge tier, each with an "N+"
+badge on the box's left pinline, and the card's P/T on a black plate with
+white digits on the tier that makes it a creature. PR 1 ships the body
+(masters, profiles, layout, both renderers); the creator's tier editor,
+the import and the AI follow (PRs 2–3). Until the owner verifies a colour
+nobody is offered the frames (an admin: `?previewFrames=m15station`).
+
+**What the prints show** (30 bordered station printings against 16 M15
+controls of the same set, read at 1500 × 2100 on 2026-10-13; the numbers
+and their spreads are `scripts/lib/station-2025.mjs`, the constants the
+renderers read `lib/cards/station.ts` `STATION`): title bar, type bar,
+pinlines, art-window rail and border equal the M15 controls' to 0–4 levels
+and 0–1 px; the field between the border and the bars is the untinted
+picture on 30 of 30; the box is the M15 box at about 0.68 strength; a tier's
+wash is the key's own colour over it at 0.25 (tier 1) and 0.57 (tier 2);
+a badge is a dark disc r 50 in a 10 px ring of the pinline's colour, centred
+x 100 and on its band; the plate is 230 × 112 with a 14 px rim, x 1190–1420,
+centred on its band, its digits white on 21 of 21.
+
+**Masters are PipGlyph's own derivation** (`scripts/build-station-frames.mjs`;
+neither Card Conjurer nor MSE has the frame at print size):
+`m15station/<w u b r g m c>` from the published `m15artifact/<k>`,
+`m15stationland/<w u b r g m c>` from `m15land/<k>`, each with two cuts —
+the frame FIELD to α 0 (its shape is where `m15/<k>` and `m15artifact/<k>`
+differ: the two paint the same bars and boxes over two fields; the run
+refuses a mask whose box is not the recorded one) and the text box's
+interior to α × 0.68. Nothing is drawn into a master. Every WebP's alpha is
+checked equal to its PNG's (the preview reads one, the bake the other: one
+level of alpha is a visible step over bright art). Printed Planets are
+w u b r g; `m` and `c` exist so that no colour of a land resolves to a
+missing master, and stay unticked. Provenance: `frame-sources.json`
+(`source: "pipglyph"`; the Card Conjurer importer leaves another builder's
+entries alone). The bucket is the only home: a master cut from a bucket
+master never enters git.
+
+**Profiles.** The parents' slots, crown, stamp notch and collector line;
+`underFrameArt` with `artSlot` = the under-frame rect (ONE picture, as the
+colourless walker — the art positioner, the AI's art size and the print
+path read the same rect); `tiers` (the inks: black text, white digits);
+**no `pt` slot** — the plate is on a tier, never in the corner — and
+`rulesAlignSwitch: false` (no Centred in the first build, owner round 54).
+The kind gate is the Vehicle's (`SUBTYPE_DRESSES`): `m15station` dresses an
+artifact whose subtypes say Spacecraft, `m15stationland` a land whose
+subtypes say Planet, nothing else; `subtypeFrameFor` reads a base's whole
+family of dresses (m15artifact has two).
+
+**Data.** A station card's text is Scryfall's own shape — the top band's
+lines, then `N+ | text` opening each tier, further lines joining the open
+tier — or structured rows in `face_content.station`
+(`{ intro, tiers: [{ threshold, text, pt? }] }`), read FIRST
+(`resolveStationTiers`). 0–3 tiers (a fourth line stays in the third tier's
+text; the schema refuses a fourth row); a Spacecraft with no tier is a top
+band alone. The plate sits on ONE tier: from plain text the tier the
+reminder names ("creature at N+"), else the last; rows may name another —
+never the top band, and only on a card that prints a P/T
+(`printsPowerToughness`), so a Planet has none.
+
+**The tiers layout** (`lib/cards/station-layout.ts`, the `tiers` anatomy of
+the ONE rules layout): one size for the whole box; each tier band is its
+text + 2 × 20 px, never under 168 px (180 for the last), the top band the
+rest, its text 20 px clear of its edges; every band's lines are
+`layoutRulesAt`'s (both targets), centred in the band, a tier's column from
+x 180; the plate is a FLOAT of its tier (the lines break short of it) and
+the stamp's arch a keep-out of the last band. The fit takes the LARGEST
+size at which everything fits; under 50 px it gives up the bands' floor and
+air (124 px, 12 px) before any text clips. That rule was fitted on the
+prints: the median band edge is 2 px from print's and 22 of 30 are within
+10 (`tests/unit/cards/station-layout.test.ts` holds it; the proof's
+36 px padding left nine cards 10–37 px off). What is left: the three Planets
+with a three-line tier and EOE #35 sit 25–36 px low, EOE #241 70 px (print
+gives its tier more room than any rule here), EOE #249's reading is an
+outlier. Every band, badge and plate box is EVEN in HD px — a whole px at
+the 750 px target.
+
+**Drawing.** `cardStation()` is what both renderers call; they only draw
+its `StationDrawing`: the PIECES — each tier's wash, the badge discs, the
+plate — are our own inline SVGs (`lib/cards/station-art.ts`, the white
+border's pattern: the same `data:` URL in the preview, the bake and both
+finish masks; nothing to warm, nothing to promote), drawn right after the
+frame and UNDER both finishes, which mask with them (the saga rail's
+pattern); the "N+" numerals and the P/T digits are ink through the stat fit
+(a wide value shrinks to the plate's face); the text is `RulesBox` /
+`RulesBoxBake`. The ring and the rim are lit from above with a dark seam
+against a face with a soft lighter middle (the bevel round, owner round 54
+decision 3; `flat` is kept for the comparison sheet only).
+
+**Checks.** The art-window check passes on the under-frame rect; the edge
+contract is the parents' (border on every edge), square corners black.
+Visual matrix: both templates × every colour, short and long, plus
+`@tiers-one` / `-three` (rows, the plate on the middle tier) / `-none` /
+`-wide` (20/20) / `-star`, the crown, stamp and collector-line cases of
+every template that draws them, foil and etched. Parity: six cases — two over a high-contrast STRIPE picture
+(black, white and saturated bars under every band, blue and red keys), one
+tier, the dressed card, foil, a Planet — and a `tiers` region over the box
+with its badges and plate. No limit was raised and no known difference
+added.
+
+**Import.** Step 0's rule `station/2015` (the Station keyword on the 2015
+frame; #540) now names the frame: `onceVerified: { family: "station" }`
+(a Planet → `m15stationland`, else `m15station`) and `exactOnceVerified`.
+Until the frame is verified in the card's colour the import lands where it
+always did (the artifact / land frame, `nearest`, "not yet verified in
+<colour>", an `unverified` row in the request log); once it is, it lands on
+the station frame, exact — the oracle text is already the tiers' grammar,
+so the bands draw as imported. The other dresses (extended art, borderless,
+showcase) keep their own rules and the `station` gap (step 2).
+
+**Rollout.** ADDITIONS: new templates no stored card sits on — no layout
+bump, no sweep, no badge, no migration. A stored Spacecraft on the artifact
+frame keeps it.
 
 ### Printed pieces a card switches on
 
@@ -4092,7 +4230,7 @@ and the one switch a NEW card starts OFF on.
 - **Which frames.** Every frame that sets its text in plain rules boxes,
   by default — capability data on the profile, read in ONE place:
   `profileOffersRulesAlign` (`lib/cards/template-layout.ts`). A profile
-  opts out with `rulesAlignSwitch: false` (none does). It is never offered
+  opts out with `rulesAlignSwitch: false` (the station pair does, TODO 4.27a). It is never offered
   — and a stored key is dropped at the save and ignored at render
   (`rulesAlignOf`, `lib/cards/rules-box.ts`) — on a `textless` frame, on
   the saga (`chapters`: the text sits in rows beside its hexagons) and on
@@ -6286,6 +6424,11 @@ TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
 bodies, 4.5c's Vehicle frame and 4.7's Nyx dress, new templates that joined without a bump, and the battle, which
+`lib/cards/m15-family.ts`: 48 templates — the 23 of v32's frozen scope in
+`lib/cards/layout-version.ts`, plus the two text-box tokens, the six
+full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
+land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
+bodies, 4.5c's Vehicle frame and 4.27a's two station frames, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card) prints its names,

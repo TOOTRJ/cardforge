@@ -16,6 +16,7 @@ import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
 import { finalizeImportMatch } from "@/lib/creator/frame-resolve";
 import signaturePrintings from "../scryfall/fixtures/signature-printings.json";
 import importPrintings from "../scryfall/fixtures/import-printings.json";
+import { chipOff } from "../helpers/chip";
 
 // ---------------------------------------------------------------------------
 // The card creator's save + kind-change plumbing, driven through the real
@@ -1982,7 +1983,7 @@ describe("4.48 the full-art token: the default switch and the automatic height",
     renderForm({ mode: "create", verifiedFrameKeys: [...VERIFIED, ...combos(ARCH), ...combos(M20, ["c", "w"])] });
     await pickKind(/^Token/);
     expect(preview().template).toBe("m20token");
-    expect(colourChip(/^blue/i).disabled).toBe(false);
+    expect(chipOff(colourChip(/^blue/i))).toBe(false);
     await pickColour(/^blue/i);
     expect(preview().template).toBe("m15token");
     await pickColour(/^white/i);
@@ -2000,7 +2001,7 @@ describe("4.48 the full-art token: the default switch and the automatic height",
     // A full-art height picked in Variations: its colours are its own.
     await clickChip("Frame variations", /^Token, tall text box/);
     expect(preview().template).toBe("m20tokentall");
-    expect(colourChip(/^blue/i).disabled).toBe(true);
+    expect(chipOff(colourChip(/^blue/i))).toBe(true);
     await pickColour(/^colorless/i);
     expect(preview().template).toBe("m20tokentall");
   });

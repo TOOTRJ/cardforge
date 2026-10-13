@@ -106,14 +106,18 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
     const without = FRAME_TEMPLATE_VALUES.filter((t) => !profileOffersRulesAlign(getFrameProfile(t)));
     for (const t of without) {
       const p = getFrameProfile(t);
-      expect(Boolean(p.chapters || p.loyaltyRows || p.textless), t).toBe(true);
+      // …or the station frame's tier bands (TODO 4.27a), which opt out.
+      expect(Boolean(p.chapters || p.loyaltyRows || p.textless || p.tiers), t).toBe(true);
     }
     expect(without).toEqual(expect.arrayContaining(["saga", "m15pw", "m15borderlesspw", "m15borderlesspwtall", "m20token", "m20tokenartifact"]));
     for (const t of ["m15", "m15land", "split", "aftermath", "flip", "adventure", "battle", "emblem", "m15token", "m15tokentext", "m15dfcfront", "m15dfcback", "m15mdfcfront", "retro", "alpha"] as FrameTemplate[]) {
       expect(profileOffersRulesAlign(getFrameProfile(t)), t).toBe(true);
     }
-    // No profile opts out today; the opt-out is read.
-    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).rulesAlignSwitch === false)).toEqual([]);
+    // The opt-out is read: the station frame's two (TODO 4.27a) — their
+    // text is set in tier bands beside badges, never a plain rules box.
+    const optedOut = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).rulesAlignSwitch === false);
+    expect(optedOut).toEqual(["m15station", "m15stationland"]);
+    for (const t of optedOut) expect(getFrameProfile(t).tiers, t).toBeDefined();
     expect(profileOffersRulesAlign({ ...getFrameProfile("m15"), rulesAlignSwitch: false })).toBe(false);
     for (const t of FRAME_TEMPLATE_VALUES) expect(frameAnatomyOf(t).rulesAlign, t).toBe(profileOffersRulesAlign(getFrameProfile(t)));
   });
@@ -127,7 +131,9 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
     // centre text against its badges. Adding a template changes this count:
     // decide then — `rulesAlignSwitch: false`, or one more frame with it.
     const without = FRAME_TEMPLATE_VALUES.filter((t) => !profileOffersRulesAlign(getFrameProfile(t)));
-    expect(without).toEqual(["m15pw", "m20token", "m20tokenartifact", "m15borderlesspw", "m15borderlesspwtall", "saga"]);
+    // The station frame (TODO 4.27a): tier bands beside "N+" badges —
+    // `rulesAlignSwitch: false` on its two entries.
+    expect(without).toEqual(["m15station", "m15stationland", "m15pw", "m20token", "m20tokenartifact", "m15borderlesspw", "m15borderlesspwtall", "saga"]);
     expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(56);
   });
 

@@ -22,7 +22,7 @@
 import { useEffect, useRef } from "react";
 import { useFormContext, useWatch, type UseFormReturn } from "react-hook-form";
 import { RotateCcw } from "lucide-react";
-import { FieldGroup, inputClass } from "@/components/creator/field-group";
+import { FieldGroup, inputClass, joinIds } from "@/components/creator/field-group";
 import { supertypeWords, withSupertypeWord } from "@/lib/cards/card-display";
 import {
   PRINTED_TYPES_MAX,
@@ -196,8 +196,14 @@ export function TypesField({
     if (tidied !== typed) write(tidied);
   };
 
+  const inputId = `types-field-${face}`;
+  const noteId = `${inputId}-note`;
+
   const reset = () => {
     setValue(paths.printed, null, { shouldDirty: true, shouldValidate: invalid });
+    // "Reset" leaves the page with the edit it undoes: the focus goes to the
+    // field it reset, not to the top of the document.
+    document.getElementById(inputId)?.focus();
   };
 
   const typeName = base ?? (token ? "token" : "card");
@@ -207,11 +213,10 @@ export function TypesField({
       ? "The words the card prints before the dash, in the order you type them. This changes the printed line only — the card’s type, frame and stats stay as they were made."
       : `Starts as the card’s type. Add words before or after it (Legendary, Artifact, Snow), or remove it — the card prints these words in the order you type them, and stays ${/^[aeiou]/i.test(typeName) ? "an" : "a"} ${typeName.toLowerCase()} either way.`;
 
-  const inputId = `types-field-${face}`;
-  const noteId = `${inputId}-note`;
   return (
     <div className="flex min-w-0 flex-col gap-1.5" data-testid={`types-field-${face}`}>
       <FieldGroup label={label} helper={helper} error={error}>
+        {(aria) => (
         <span className="flex min-w-0 items-stretch gap-2">
           {token ? (
             <span
@@ -224,6 +229,7 @@ export function TypesField({
           ) : null}
           <input
             id={inputId}
+            aria-labelledby={aria["aria-labelledby"]}
             value={text}
             maxLength={PRINTED_TYPES_MAX}
             onChange={(event) => write(event.target.value)}
@@ -235,13 +241,14 @@ export function TypesField({
             }}
             placeholder={placeholder ?? (base ? `Legendary ${base}` : "Legendary Creature")}
             aria-invalid={invalid || undefined}
-            aria-describedby={edited ? noteId : undefined}
+            aria-describedby={joinIds(aria["aria-describedby"], edited ? noteId : undefined)}
             className={`${inputClass(invalid)} min-w-0 flex-1`}
             autoComplete="off"
             autoCapitalize="words"
             data-testid={`types-field-input-${face}`}
           />
         </span>
+        )}
       </FieldGroup>
       {edited ? (
         <div id={noteId} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">

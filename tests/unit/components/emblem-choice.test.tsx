@@ -19,6 +19,7 @@ vi.mock("sonner", () => ({ toast }));
 
 import { CardSetupPanel } from "@/components/creator/panels/card-setup-panel";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
+import { chipOff } from "../helpers/chip";
 
 const TOKEN_VERIFIED = [frameComboKey("m15token", "c"), frameComboKey("m15", "c")];
 
@@ -59,7 +60,7 @@ describe("the Emblem choice inside the Token kind", () => {
     expect(screen.getByRole("group", { name: "Token types" })).toBeTruthy();
     const toggle = emblemToggle();
     expect(toggle.getAttribute("aria-pressed")).toBe("false");
-    expect((toggle as HTMLButtonElement).disabled).toBe(false);
+    expect(chipOff(toggle)).toBe(false);
     fireEvent.click(toggle);
     expect(onKind).toHaveBeenCalledWith("emblem");
   });
@@ -68,7 +69,7 @@ describe("the Emblem choice inside the Token kind", () => {
     const onKind = vi.fn();
     render(<Harness kind="token" verified={TOKEN_VERIFIED} onKind={onKind} />);
     const toggle = emblemToggle();
-    expect((toggle as HTMLButtonElement).disabled).toBe(true);
+    expect(chipOff(toggle)).toBe(true);
     expect(toggle.textContent).toMatch(/awaiting verification/);
     fireEvent.click(toggle);
     expect(onKind).not.toHaveBeenCalled();

@@ -224,7 +224,7 @@ import {
   serializeSagaMarkers,
   serializeLoyalty,
 } from "@/lib/cards/face-content";
-import { sagaRowsOut, submittedRulesOf } from "@/lib/creator/structured-rules";
+import { keptStationRows, sagaRowsOut, submittedRulesOf } from "@/lib/creator/structured-rules";
 import { basicLandManaKey } from "@/lib/cards/watermark";
 import { saveNeedsOf, saveNeedsSentence, type SaveNeed } from "@/lib/creator/save-needs";
 import { secondPartWordsFor, secondPartWordsOfCard } from "@/lib/creator/second-part";
@@ -1278,29 +1278,37 @@ export function CardCreatorForm({
     lastVehicleRef.current = key;
     if (isRevise || !isDirty || vehicleFramePinned) return;
     const current = normalizeFrameTemplate(getValues("frame_style.template"));
-    const next = subtypeFrameFor(current, parseSubtypes(getValues("subtypes_text")));
-    if (next === current) return;
+    // A dress not published in the card's colour is never the answer (the
+    // station frame before its tick, TODO 4.27a): a Vehicle retyped as a
+    // Spacecraft goes back to the Artifact frame rather than staying on the
+    // Vehicle frame, which the server refuses for it.
     const colorKey = pickFrameColorKey(getValues("color_identity"));
-    if (!isFrameComboAvailable(next, colorKey, new Set(verifiedFrameKeys))) return;
+    const published = new Set(verifiedFrameKeys);
+    const next = subtypeFrameFor(current, parseSubtypes(getValues("subtypes_text")), (dress) =>
+      isFrameComboAvailable(dress, colorKey, published),
+    );
+    if (next === current) return;
+    if (!isFrameComboAvailable(next, colorKey, published)) return;
     setValue("frame_style.template", next, { shouldDirty: true });
   }, [kind, saysVehicle, isRevise, isDirty, vehicleFramePinned, getValues, setValue, verifiedFrameKeys]);
-  // A NEW Enchantment Creature or Enchantment Artifact starts on the Nyx
-  // frame (TODO 4.7, owner decision A4: an addition — the dress those cards
-  // have printed since Theros, with the plain frame one click away in
-  // Variations). The frame follows the TYPE WORDS between the kind's M15
-  // frame and its Nyx dress (enchantmentFrameFor): the moment the words
-  // first say Enchantment AND Creature or Artifact on a card wearing that
-  // frame it takes the Nyx frame, and a card on the Nyx frame whose words
-  // stop saying Enchantment goes back (the server refuses it there). A plain
-  // enchantment is never moved: Nyx is its maker's pick. The Vehicle
+  // A NEW enchantment starts on the Nyx frame (TODO 4.7, owner decision A4
+  // and — for a plain enchantment and an Aura — decision 1 of Round 56,
+  // 2026-10-13: an addition, the dress every enchantment prints since
+  // Foundations, with the plain frame one click away in Variations). The
+  // frame follows the TYPE WORDS between the kind's M15 frame and its Nyx
+  // dress (enchantmentFrameFor): the moment the words first say Enchantment
+  // on a card wearing that frame it takes the Nyx frame, and a card on the
+  // Nyx frame whose words stop saying Enchantment goes back (the server
+  // refuses it there). A Saga, Class, Case or Room typed as a subtype is
+  // never moved (a body of its own in print). The Vehicle
   // follow's rules: real edits only, only when the words change, never an
   // unverified combo, never an admin's saved frame preview; an import or an
   // AI fill that names its frame decides it itself (settleTokenTextFollow).
-  const nyxWordsOf = (cardType: string | null | undefined, supertype: string | null | undefined) => {
-    const words = { cardType, supertype };
+  const nyxWordsOf = (cardType: string | null | undefined, supertype: string | null | undefined, subtypesText: string | null | undefined) => {
+    const words = { cardType, supertype, subtypes: parseSubtypes(subtypesText ?? "") };
     return `${typeLineHasWord(words, "Enchantment")}|${followsEnchantmentDress(words)}`;
   };
-  const nyxWords = `${kind}|${nyxWordsOf(watched.card_type, watched.supertype)}`;
+  const nyxWords = `${kind}|${nyxWordsOf(watched.card_type, watched.supertype, watched.subtypes_text)}`;
   const lastNyxRef = useRef(nyxWords);
   useEffect(() => {
     if (lastNyxRef.current === nyxWords) return;
@@ -1310,6 +1318,7 @@ export function CardCreatorForm({
     const next = enchantmentFrameFor(kind, current, {
       cardType: getValues("card_type"),
       supertype: getValues("supertype"),
+      subtypes: parseSubtypes(getValues("subtypes_text") ?? ""),
     });
     if (next === current) return;
     const colorKey = pickFrameColorKey(getValues("color_identity"));
@@ -1488,7 +1497,7 @@ export function CardCreatorForm({
     };
     manualTokenFrameRef.current = manual;
     lastVehicleRef.current = `${kindFromCard(getValues("card_type"), getValues("frame_style.template"))}|${subtypesSay(parseSubtypes(getValues("subtypes_text")), "Vehicle")}`;
-    lastNyxRef.current = `${kindFromCard(getValues("card_type"), getValues("frame_style.template"))}|${nyxWordsOf(getValues("card_type"), getValues("supertype"))}`;
+    lastNyxRef.current = `${kindFromCard(getValues("card_type"), getValues("frame_style.template"))}|${nyxWordsOf(getValues("card_type"), getValues("supertype"), getValues("subtypes_text"))}`;
     lastWalkerTallRef.current =
       walkerRowCount({ editorRows: getValues("loyalty_abilities"), rulesText: getValues("rules_text") }) >=
       TALL_WALKER_MIN_ROWS;
@@ -3568,7 +3577,13 @@ export function CardCreatorForm({
           storedFaceContent: isEdit ? (card?.face_content ?? null) : null,
         })
       : null;
-  const liveFaceContent: FaceContent | null = liveRules?.faceContent ?? null;
+  // …and a station card stored WITH rows (TODO 4.27a; no editor shows them
+  // yet) previews the rows a save keeps — as the bake draws the saved row —
+  // until its text is edited (lib/creator/structured-rules.ts keptStationRows).
+  const storedStationRows = isEdit && card?.face_content?.station ? card.face_content : null;
+  const liveFaceContent: FaceContent | null =
+    liveRules?.faceContent ??
+    (storedStationRows ? keptStationRows(kind, watched, { opened: defaults, storedFaceContent: storedStationRows }) : null);
   // A walker whose loyalty badges run into each other on the frame it wears
   // (lib/creator/walker-crowding.ts — read from the layout of the rows the
   // card draws, never a count): the row editor says the card will be

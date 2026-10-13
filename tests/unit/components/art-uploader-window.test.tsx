@@ -146,6 +146,17 @@ describe("the surface is the art window", () => {
     view.rerender(<Harness template="m15" artUrl={null} />);
     expect(screen.getByTestId("art-best-size").textContent).toBe("Best results: 1271 × 931 px or larger");
   });
+
+  it("the empty dropzone is named by what it shows: its heading, then its own words", () => {
+    // An aria-label in other words ("Drop an image here or click to upload")
+    // hid the prompt, the paste hint and the best size from a screen reader,
+    // and from voice control, which matches the words on the screen.
+    render(<Harness template="m15" artUrl={null} />);
+    expect(surface().hasAttribute("aria-label")).toBe(false);
+    const button = screen.getByRole("button", { name: /^Artwork Drag art here, or click to choose/ });
+    expect(button).toBe(surface());
+    expect(screen.getByRole("button", { name: /Best results: 1271 × 931 px or larger$/ })).toBe(surface());
+  });
 });
 
 describe("dragging on the window", () => {

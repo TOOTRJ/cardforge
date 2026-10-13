@@ -96,6 +96,8 @@ describe("the main box on every template", () => {
         "m15vehicle",
         // The Nyx dress (TODO 4.7): m15's box.
         "m15nyx",
+        // The station frame (TODO 4.27a): m15artifact's and m15land's box.
+        "m15station", "m15stationland",
         // The transform bodies (TODO 5.1a): M15's box and margins on both faces.
         "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
         // …and the modal bodies (5.1b), the same skeleton.

@@ -44,6 +44,7 @@ export function BatchSizeField({
       label={label}
       helper={helper ?? `1–${max} per generation · 1 credit per card.`}
     >
+      {(aria) => (
       <div className="flex flex-wrap items-center gap-2">
         <input
           type="number"
@@ -55,6 +56,7 @@ export function BatchSizeField({
           onChange={(event) => onChange(clampBatchInput(Number(event.target.value), max))}
           disabled={disabled}
           aria-label={`${label} (1 to ${max})`}
+          aria-describedby={aria["aria-describedby"]}
           className={cn(inputClass(false), "w-24")}
         />
         <div className="flex flex-wrap gap-1.5" role="group" aria-label="Quick picks">
@@ -81,6 +83,7 @@ export function BatchSizeField({
           })}
         </div>
       </div>
+      )}
     </FieldGroup>
   );
 }

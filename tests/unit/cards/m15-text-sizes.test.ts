@@ -68,8 +68,9 @@ describe("one M15-era display size (layout v32)", () => {
     // v32's 23, plus 4.49 (b)'s two text-box tokens, 4.34's borderless
     // land, 4.48 / 4.50's six full-art tokens, 4.33's two borderless
     // planeswalkers, 4.52's emblem, 5.1a / 5.1b's nine double-faced bodies
-    // and 4.21b's battle — 4.5c's Vehicle frame and 4.7's Nyx dress.
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(47);
+    // and 4.21b's battle — 4.5c's Vehicle frame, 4.7's Nyx dress — and the
+    // station frame's two (TODO 4.27a).
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(49);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       expect(p.title.sizePct, t).toBe(sized(t, TITLE_SIZE_PCT));
@@ -223,6 +224,9 @@ describe("baselines (TextSlot.dy)", () => {
     ["m15artifact", base.title, cc],
     ["m15vehicle", base.title, cc],
     ["m15nyx", base.title, cc],
+    // The station frame (TODO 4.27a): m15artifact's and m15land's bands.
+    ["m15station", base.title, cc],
+    ["m15stationland", base.title, cc],
     ["m15snow", base.title, cc],
     ["m15devoid", base.title, cc],
     ["m15borderless", base.title, cc],
@@ -385,6 +389,9 @@ describe("baselines (TextSlot.dy)", () => {
     const kept15 = getFrameProfile("extendedart").type.dy!;
     for (const t of [
       "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15snow", "m15devoid", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15pw",
+      // The station frame (TODO 4.27a): cut from the published m15artifact /
+      // m15land masters, so their type bar.
+      "m15station", "m15stationland",
       "m15borderlesspw", "m15borderlesspwtall",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

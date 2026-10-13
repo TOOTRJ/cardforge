@@ -6,6 +6,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { carryArtFraming } from "@/lib/cards/art-framing";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import type { FormValues } from "@/lib/creator/form-types";
+import { chipOff } from "../helpers/chip";
 
 // ---------------------------------------------------------------------------
 // The creator's side of TODO 3.23: a frame switch keeps the art's framing
@@ -206,8 +207,8 @@ describe("the Finish picker", () => {
       </WithForm>,
     );
     const chip = (label: string) => screen.getByText(label).closest("button") as HTMLButtonElement;
-    expect(chip("Etched").disabled).toBe(true);
-    expect(chip("Foil").disabled).toBe(false);
+    expect(chipOff(chip("Etched"))).toBe(true);
+    expect(chipOff(chip("Foil"))).toBe(false);
   });
 });
 

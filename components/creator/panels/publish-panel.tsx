@@ -8,7 +8,7 @@
 // (TODO 5.2): a double-faced card is a KIND of the Card step, its back a
 // panel of the Identity step.
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { FileEdit, Globe2, Link2, Loader2, Plus, Trophy } from "lucide-react";
 import { toast } from "sonner";
@@ -257,6 +257,25 @@ function DeckPicker({ myDecks }: { myDecks: DeckOption[] }) {
   const [newTitle, setNewTitle] = useState("");
   const [newFormat, setNewFormat] = useState<DeckFormat>("commander");
   const [isPending, startTransition] = useTransition();
+  // Closing the quick-create row (Cancel, or the deck was created) removes
+  // the control that held the focus: hand it back to "＋ New deck" instead
+  // of dropping it on the page.
+  const newDeckRef = useRef<HTMLButtonElement | null>(null);
+  const [closes, setCloses] = useState(0);
+  useEffect(() => {
+    const button = newDeckRef.current;
+    if (closes === 0 || !button) return;
+    // Only a focus that was lost with the row (or is still in this field):
+    // someone who clicked on elsewhere while the deck was created is left
+    // alone.
+    const active = document.activeElement;
+    if (active && active !== document.body && !button.closest("label")?.contains(active)) return;
+    button.focus();
+  }, [closes]);
+  const closeQuickCreate = () => {
+    setCreating(false);
+    setCloses((count) => count + 1);
+  };
 
   const options = [...extraDecks, ...myDecks];
 
@@ -281,7 +300,7 @@ function DeckPicker({ myDecks }: { myDecks: DeckOption[] }) {
         ...prev,
       ]);
       setValue("deck_id", result.deckId, { shouldDirty: true });
-      setCreating(false);
+      closeQuickCreate();
       setNewTitle("");
       toast.success(`Created “${title}” — this card will be added to it.`);
     });
@@ -292,12 +311,14 @@ function DeckPicker({ myDecks }: { myDecks: DeckOption[] }) {
       label="Add to deck"
       helper="Drop this card straight into one of your decks (mainboard, ×1)."
     >
+      {(aria) => (
       <Controller
         control={control}
         name="deck_id"
         render={({ field }) => (
           <div className="flex flex-col gap-2">
             <select
+              {...aria}
               value={field.value}
               onChange={(event) => field.onChange(event.target.value)}
               disabled={options.length === 0}
@@ -321,6 +342,9 @@ function DeckPicker({ myDecks }: { myDecks: DeckOption[] }) {
                   onChange={(event) => setNewTitle(event.target.value)}
                   placeholder="Deck name"
                   aria-label="New deck name"
+                  // "＋ New deck" was replaced by this row: the focus it
+                  // held comes here instead of being dropped.
+                  autoFocus
                   disabled={isPending}
                   className={cn(inputClass(false), "h-9 flex-1 min-w-40")}
                   onKeyDown={(event) => {
@@ -360,7 +384,11 @@ function DeckPicker({ myDecks }: { myDecks: DeckOption[] }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setCreating(false)}
+                  onClick={(event) => {
+                    // Gone before its click ends, like "＋ New deck" below.
+                    event.preventDefault();
+                    closeQuickCreate();
+                  }}
                   disabled={isPending}
                   className="text-xs text-muted transition-colors hover:text-foreground"
                 >
@@ -369,8 +397,16 @@ function DeckPicker({ myDecks }: { myDecks: DeckOption[] }) {
               </div>
             ) : (
               <button
+                ref={newDeckRef}
                 type="button"
-                onClick={() => setCreating(true)}
+                onClick={(event) => {
+                  // The button sits in the field's <label> and is gone before
+                  // its click ends: WebKit then hands the click to the
+                  // label's control (the deck select), which takes the focus
+                  // from the name input. A cancelled click is not forwarded.
+                  event.preventDefault();
+                  setCreating(true);
+                }}
                 className="self-start text-[11px] text-primary-bright underline-offset-2 hover:underline"
               >
                 ＋ New deck
@@ -379,6 +415,7 @@ function DeckPicker({ myDecks }: { myDecks: DeckOption[] }) {
           </div>
         )}
       />
+      )}
     </FieldGroup>
   );
 }

@@ -528,6 +528,10 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   // and an Enchantment Artifact (ENCHANTMENT_DRESSES, below, is the per-card
   // half: the type words must say Enchantment).
   m15nyx: ["creature", "enchantment", "artifact"],
+  // The station frame (TODO 4.27a), new as well: an artifact whose subtype
+  // says Spacecraft, a land whose subtype says Planet (SUBTYPE_DRESSES).
+  m15station: ["artifact"],
+  m15stationland: ["land"],
 };
 
 /** Kinds that wear ONLY a template whose trade dress names them. */
@@ -615,6 +619,10 @@ export function isSingleBasicLand(face: BasicLandFace): boolean {
 
 const SUBTYPE_DRESSES: Partial<Record<FrameTemplate, { subtype: string; base: FrameTemplate }>> = {
   m15vehicle: { subtype: "Vehicle", base: "m15artifact" },
+  // The station frame (TODO 4.27a; owner 2026-10-13, Q1): a Spacecraft is an
+  // artifact, a Planet a land — the Vehicle's pattern, twice.
+  m15station: { subtype: "Spacecraft", base: "m15artifact" },
+  m15stationland: { subtype: "Planet", base: "m15land" },
 };
 
 /** The subtype a template dresses ("Vehicle" for the Vehicle frame), or
@@ -653,16 +661,28 @@ export function subtypeDressReason(template: FrameTemplate): string | null {
  * Vehicle → m15vehicle), on the dress itself the base when they don't; any
  * other template as it is (a Vehicle on the 2003 frame or a showcase keeps
  * it). What a NEW card follows; a stored card is never moved by it.
+ *
+ * `available` (the caller's own test: published in the card's colour, in
+ * the pool…) narrows the DRESSES: one the card cannot wear yet is never
+ * picked, so a card whose subtype names it goes to — or stays on — the
+ * base. Without it a Vehicle retyped as a Spacecraft was sent to the
+ * unpublished station frame, which the creator's follow effect then
+ * dropped: the card stayed on the Vehicle frame the server refuses, where
+ * it used to go back to the Artifact frame. The base is never tested.
  */
 export function subtypeFrameFor(
   template: FrameTemplate,
   subtypes: readonly string[] | null | undefined,
+  available?: (dress: FrameTemplate) => boolean,
 ): FrameTemplate {
-  for (const [dress, { subtype, base }] of Object.entries(SUBTYPE_DRESSES) as [FrameTemplate, { subtype: string; base: FrameTemplate }][]) {
-    if (template !== base && template !== dress) continue;
-    return subtypesSay(subtypes, subtype) ? dress : base;
-  }
-  return template;
+  // A base may have several dresses (m15artifact: the Vehicle frame and the
+  // station frame, TODO 4.27a): the family is the base and every dress of it.
+  const base = SUBTYPE_DRESSES[template]?.base ?? template;
+  const family = (Object.entries(SUBTYPE_DRESSES) as [FrameTemplate, { subtype: string; base: FrameTemplate }][]).filter(
+    ([, dress]) => dress.base === base,
+  );
+  if (family.length === 0) return template;
+  return family.find(([dress, { subtype }]) => subtypesSay(subtypes, subtype) && (available?.(dress) ?? true))?.[0] ?? base;
 }
 
 /** True when the template is a subtype dress (the Vehicle frame): never a
@@ -691,12 +711,15 @@ export function isSubtypeDress(template: FrameTemplate): boolean {
 // stand-in pick never lands on it by accident — and the dress of a BASE
 // frame with the same slots, which a NEW card FOLLOWS onto
 // (enchantmentFrameFor: the creator's effect, the AI jobs) while a stored
-// card keeps its template until its owner picks the other. What follows is
-// narrower than what may wear it: an Enchantment CREATURE or ARTIFACT
-// (the dress those cards have printed for six years), never a plain
-// enchantment or an Aura, which only gets the choice
-// (ENCHANTMENT_DRESS_FOLLOW_WORDS — an owner question, docs/FRAMES.md "The
-// Nyx dress"). A creature and an artifact BORROW it under their own
+// card keeps its template until its owner picks the other. EVERY new card
+// whose words say Enchantment follows (owner decision 1, Round 56,
+// 2026-10-13: a plain enchantment and an Aura too, as print does since
+// Foundations) — in the three kinds that have a base here, so never a land,
+// a token, a saga or a double-faced face — except the enchantments that
+// print on a body of their own (ENCHANTMENT_DRESS_OWN_BODY_SUBTYPES: a
+// Saga, a Class, a Case, a Room typed as a subtype of a plain enchantment),
+// which are offered the frame and never moved (followsEnchantmentDress,
+// docs/FRAMES.md "The Nyx dress"). A creature and an artifact BORROW it under their own
 // standard (BORROWED_VARIATIONS, owner decisions A3 / A4: picking it writes
 // "Enchantment" into the type line, as the artifact frame writes
 // "Artifact"); the Enchantment kind wears it as a skin of its own
@@ -709,15 +732,18 @@ const ENCHANTMENT_DRESSES: Partial<Record<FrameTemplate, { bases: Partial<Record
   m15nyx: { bases: { creature: "m15", enchantment: "m15", artifact: "m15artifact" } },
 };
 
-/** The card-type words, beside Enchantment, whose cards a NEW card follows
- *  onto an enchantment dress with: an Enchantment Creature, an Enchantment
- *  Artifact. A plain enchantment is offered the frame and never moved. */
-const ENCHANTMENT_DRESS_FOLLOW_WORDS: readonly ("Creature" | "Artifact")[] = ["Creature", "Artifact"];
+/** The enchantment subtypes that print on a BODY OF THEIR OWN, never on the
+ *  plain enchantment frame (a Saga's rail, a Class's levels, a Case, a
+ *  Room's two doors — 0 of them among the plain Nyx printings): a new card
+ *  that says one is never moved onto an enchantment dress. It may still
+ *  wear it — the gate reads the type words alone. */
+const ENCHANTMENT_DRESS_OWN_BODY_SUBTYPES: readonly string[] = ["Saga", "Class", "Case", "Room"];
 
 /** A card's type words as far as an enchantment dress reads them: the card
  *  type and the supertype words — never `printed_types`, which is display
- *  only. */
-export type TypeWordsFace = { cardType?: string | null; supertype?: string | null };
+ *  only. `subtypes` is read by the FOLLOW alone (followsEnchantmentDress),
+ *  never by the gate. */
+export type TypeWordsFace = { cardType?: string | null; supertype?: string | null; subtypes?: readonly string[] | null };
 
 /** True when the template is an enchantment dress (the Nyx frame): never a
  *  stand-in or a random pick for a card that isn't an enchantment. */
@@ -737,12 +763,14 @@ export function enchantmentDressReason(template: FrameTemplate): string | null {
   return isEnchantmentDress(template) ? `The ${FRAME_TEMPLATE_LABELS[template]} frame is for enchantments` : null;
 }
 
-/** True when a NEW card with these words starts on an enchantment dress: an
- *  Enchantment Creature or an Enchantment Artifact. */
+/** True when a NEW card with these words starts on an enchantment dress:
+ *  every card whose words say Enchantment (owner decision 1, Round 56,
+ *  2026-10-13 — an Enchantment Creature, an Enchantment Artifact, a plain
+ *  enchantment, an Aura), but one whose subtypes name a body of its own. */
 export function followsEnchantmentDress(type: TypeWordsFace): boolean {
   return (
     typeLineHasWord(type, "Enchantment") &&
-    ENCHANTMENT_DRESS_FOLLOW_WORDS.some((word) => typeLineHasWord(type, word))
+    !ENCHANTMENT_DRESS_OWN_BODY_SUBTYPES.some((word) => subtypesSay(type.subtypes, word))
   );
 }
 
@@ -750,11 +778,12 @@ export function followsEnchantmentDress(type: TypeWordsFace): boolean {
  * The frame the type words pick for a card of `kind` on `template`: on an
  * enchantment dress's base for that kind (m15 for a creature or an
  * enchantment, m15artifact for an artifact) the dress when the words say
- * Enchantment AND Creature or Artifact; on the dress itself the base when
- * they no longer say Enchantment (the server refuses it there); any other
- * template as it is — a plain enchantment on the dress keeps it (its
- * owner's pick), an Enchantment Creature on the 2003 frame or a showcase
- * keeps that. What a NEW card follows; a stored card is never moved by it.
+ * Enchantment (followsEnchantmentDress: not a Saga, Class, Case or Room);
+ * on the dress itself the base when they no longer say Enchantment (the
+ * server refuses it there); any other template as it is — an enchantment
+ * on the 2003 frame or a showcase keeps that, and a kind with no base here
+ * (a land, a token, a saga, a double-faced face) is never moved. What a NEW
+ * card follows; a stored card is never moved by it.
  */
 export function enchantmentFrameFor(kind: CardKind, template: FrameTemplate, type: TypeWordsFace): FrameTemplate {
   for (const [dress, { bases }] of Object.entries(ENCHANTMENT_DRESSES) as [FrameTemplate, { bases: Partial<Record<CardKind, FrameTemplate>> }][]) {

@@ -82,25 +82,30 @@ export function EffectsPanel() {
   const options = finishOptionsFor(getFrameProfile(normalizeFrameTemplate(template)));
 
   return (
+    // ONE control: the chip row is the field — named for it, described by
+    // the helper — with no group around it saying "Finish" twice (3b.24).
     <FieldGroup
-      kind="group"
+      kind="control"
       label="Finish"
       helper="A treatment layered on top of the frame. Free on every plan."
     >
-      <Controller
-        control={control}
-        name="frame_style.finish"
-        render={({ field }) => (
-          <ChipGroup
-            ariaLabel="Finish"
-            layout="grid-2"
-            size="md"
-            value={field.value ?? "regular"}
-            onChange={(next) => field.onChange(next)}
-            options={options}
-          />
-        )}
-      />
+      {(aria) => (
+        <Controller
+          control={control}
+          name="frame_style.finish"
+          render={({ field }) => (
+            <ChipGroup
+              ariaLabel="Finish"
+              ariaDescribedBy={aria["aria-describedby"]}
+              layout="grid-2"
+              size="md"
+              value={field.value ?? "regular"}
+              onChange={(next) => field.onChange(next)}
+              options={options}
+            />
+          )}
+        />
+      )}
     </FieldGroup>
   );
 }

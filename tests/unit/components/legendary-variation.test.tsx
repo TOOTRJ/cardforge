@@ -42,6 +42,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { frameAssetPathsFor } from "@/lib/render/card-image";
 import { FRAME_TEMPLATE_VALUES, type ColorIdentity, type FrameStyle, type FrameTemplate } from "@/types/card";
+import { chipOff } from "../helpers/chip";
 
 beforeEach(() => toast.info.mockClear());
 afterEach(() => cleanup());
@@ -139,7 +140,7 @@ describe("where it lives", () => {
     const section = screen.getByTestId("variations-section");
     expect(within(section).getByTestId("legendary-variation")).toBeTruthy();
     expect(chip().tagName).toBe("BUTTON");
-    expect(chip().disabled).toBe(false);
+    expect(chipOff(chip())).toBe(false);
     expect(pressed()).toBe("false");
     // The section's own frame chips are still there, beside it.
     expect(within(section).getByRole("radiogroup", { name: "Frame variations" })).toBeTruthy();
@@ -167,7 +168,7 @@ describe("where it lives", () => {
       return;
     }
     const frameChips = within(section).queryByRole("radiogroup", { name: "Frame variations" }) !== null;
-    expect(frameChips || !chip().disabled, kind).toBe(true);
+    expect(frameChips || !chipOff(chip()), kind).toBe(true);
   });
 
   it.each([
@@ -189,7 +190,7 @@ describe("where it lives", () => {
     render(<Harness template={template} kind={kind} verified={[`${template}/w`]} backFace={{ card_type: "creature", supertype: "" }} />);
     const section = screen.getByTestId("variations-section");
     expect(within(section).queryByRole("radiogroup", { name: "Frame variations" })).toBeNull();
-    expect(chip().disabled).toBe(false);
+    expect(chipOff(chip())).toBe(false);
   });
 
   it("an edit (no Card step): no chip — the anatomy panel's switch is the one control", () => {
@@ -319,7 +320,7 @@ describe("a frame with no printed crown", () => {
     ["retro", "creature", "creature"],
   ] as const)("%s: the section shows for its frame chips — the entry disabled, with the reason, and a click writes nothing", (template, cardType, kind) => {
     render(<Harness template={template} cardType={cardType} kind={kind} supertype="" verified={[`${template}/w`, `${template}/c`]} />);
-    expect(chip().disabled).toBe(true);
+    expect(chipOff(chip())).toBe(true);
     expect(chip().textContent).toContain(NO_CROWN_REASON);
     const before = screen.getByTestId("style").textContent;
     fireEvent.click(chip());
@@ -334,7 +335,7 @@ describe("a frame with no printed crown", () => {
     const variations = () => screen.getByRole("radiogroup", { name: "Frame variations" });
     fireEvent.click(within(variations()).getByRole("radio", { name: /Devoid/i }));
     expect(style().template).toBe("m15devoid");
-    expect(chip().disabled).toBe(true);
+    expect(chipOff(chip())).toBe(true);
     expect(pressed()).toBe("false");
     expect(crownSwitch()).toBeNull();
     // The stored value is untouched while the frame can't draw it.

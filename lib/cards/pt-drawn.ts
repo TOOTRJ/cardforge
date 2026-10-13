@@ -29,12 +29,14 @@ import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { isDfcBackBody, templateHasBackFace } from "@/lib/cards/dfc";
 import { getFrameProfile, type FrameProfile } from "@/lib/cards/template-layout";
 
-type PtSlots = Pick<FrameProfile, "pt" | "secondFace" | "adventure">;
+type PtSlots = Pick<FrameProfile, "pt" | "tiers" | "secondFace" | "adventure">;
 
 /** A face drawn as a card face of its own on this profile — a front, or a
  *  back on its own body — has a P/T slot. */
-export function profileDrawsPowerToughness(profile: Pick<FrameProfile, "pt">): boolean {
-  return Boolean(profile.pt);
+export function profileDrawsPowerToughness(profile: Pick<FrameProfile, "pt" | "tiers">): boolean {
+  // …or the station frame's plate (TODO 4.27a): no corner slot, the P/T is
+  // drawn on a tier (lib/cards/station-layout.ts).
+  return Boolean(profile.pt || profile.tiers);
 }
 
 /** The second face a profile paints on its OWN master (a flip's lower half,

@@ -137,6 +137,10 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // border and bars, the starfield in the frame field only): the M15 black
   // border on every edge.
   m15nyx: ALL_BORDER,
+  // The station frame (TODO 4.27a): the parents' M15 black border, untouched
+  // by the cut (the field ends at the border's inner edge).
+  m15station: ALL_BORDER,
+  m15stationland: ALL_BORDER,
   m15snow: ALL_BORDER,
   m15devoid: ALL_BORDER,
   m15pw: ALL_BORDER,

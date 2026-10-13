@@ -376,5 +376,36 @@ export function submittedRulesOf(
     return { rulesText: textarea, faceContent: null };
   }
 
+  // A station card's rows (TODO 4.27a: `face_content.station`, written by a
+  // seed, the API or — from PR 2 — the tier editor; they can say what the
+  // text cannot: the plate on a tier other than the one the text plates).
+  // No editor shows them yet, so an EDIT that left the rules text as it
+  // opened keeps them: the column is not sent and the server leaves it
+  // alone (an edit never changes what its maker did not touch). An edited
+  // text is the card's tiers from then on — the rows would contradict it.
+  if (stored?.station && options.opened && options.opened.rules_text.trim() === textarea) {
+    return { rulesText: textarea, faceContent: stored, keepsStored: true };
+  }
   return { rulesText: textarea, faceContent: null };
+}
+
+/**
+ * The station rows the creator's PREVIEW draws (TODO 4.27a, the independent
+ * check of #543): the stored card's, exactly while a save would keep them
+ * (`submittedRulesOf` above — an edit whose rules text is as it opened),
+ * else null (the text's own tiers, which is what the save then stores).
+ * Without it the editor drew a card stored with rows from its text alone —
+ * the plate on the tier the TEXT plates, other line breaks — while the bake,
+ * the card page and the download drew the rows: the preview showed a card
+ * the save did not make. Never for a walker or a saga (their rows are the
+ * editor's own).
+ */
+export function keptStationRows(
+  kind: CardKind,
+  values: StructuredRulesValues,
+  options: SubmittedRulesOptions = {},
+): FaceContent | null {
+  if (kind === "planeswalker" || kind === "saga") return null;
+  const out = submittedRulesOf(kind, values, options);
+  return out.keepsStored && out.faceContent?.station ? out.faceContent : null;
 }

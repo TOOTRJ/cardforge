@@ -44,8 +44,8 @@ import { TWO_COLOR_PAIRS } from "@/scripts/lib/pair-ramp.mjs";
 // TODO 4.7 — the Nyx dress (`m15nyx`): the printed ENCHANTMENT frame, a stored
 // template of its own (owner decisions A3 / A4, 2026-09-29; the frame roadmap
 // of 2026-10-13, block 3) for the cards whose type words say Enchantment. A
-// new Enchantment Creature or Enchantment Artifact starts on it once it is
-// verified in the card's colour, a plain enchantment is offered it, stored
+// new enchantment — creature, artifact or plain (owner decision 1, Round 56,
+// 2026-10-13) — starts on it once it is verified in the card's colour, stored
 // cards keep their frame, imports follow the printing. NOT the token kind's
 // Nyx (4.51), nor the `nyx` template (the THB constellation showcase).
 // ---------------------------------------------------------------------------
@@ -221,31 +221,56 @@ describe("the enchantment dress", () => {
     for (const t of FRAME_TEMPLATE_VALUES) if (t !== "m15nyx") expect(enchantmentFrameFits(t, plainCreature), t).toBe(true);
   });
 
-  it("is followed by an Enchantment Creature and an Enchantment Artifact — never a plain enchantment or an Aura", () => {
+  it("is followed by every card whose words say Enchantment — a plain enchantment and an Aura too (owner decision 1, Round 56) — but a Saga, Class, Case or Room", () => {
     expect(followsEnchantmentDress(creature)).toBe(true);
     expect(followsEnchantmentDress(legend)).toBe(true);
     expect(followsEnchantmentDress(weapon)).toBe(true);
     expect(followsEnchantmentDress(typedArtifact)).toBe(true);
-    expect(followsEnchantmentDress(aura)).toBe(false);
-    expect(followsEnchantmentDress({ cardType: "enchantment", supertype: "Legendary" })).toBe(false);
+    // The plain enchantment: print's frame since Foundations 2024.
+    expect(followsEnchantmentDress(aura)).toBe(true);
+    expect(followsEnchantmentDress({ ...aura, subtypes: ["Aura"] })).toBe(true);
+    expect(followsEnchantmentDress({ cardType: "enchantment", supertype: "Legendary" })).toBe(true);
+    expect(followsEnchantmentDress({ cardType: "enchantment", supertype: "", subtypes: ["Aura", "Curse"] })).toBe(true);
+    // The enchantments that print on a body of their own are never moved…
+    for (const own of ["Saga", "Class", "Case", "Room", "saga"]) {
+      expect(followsEnchantmentDress({ cardType: "enchantment", supertype: "", subtypes: [own] }), own).toBe(false);
+      expect(followsEnchantmentDress({ cardType: "creature", supertype: "Enchantment", subtypes: [own, "Spirit"] }), own).toBe(false);
+      // …but may wear the frame: the gate reads the type words alone.
+      expect(enchantmentFrameFits("m15nyx", { cardType: "enchantment", supertype: "", subtypes: [own] }), own).toBe(true);
+    }
     expect(followsEnchantmentDress(plainCreature)).toBe(false);
     expect(followsEnchantmentDress(ring)).toBe(false);
+    expect(followsEnchantmentDress({ cardType: "instant", supertype: "" })).toBe(false);
   });
 
   it("the words move a card between its kind's M15 frame and the dress, and no other frame", () => {
-    // Onto the dress: the kind's base, the words saying Enchantment + Creature or Artifact.
+    // Onto the dress: the kind's base, the words saying Enchantment.
     expect(enchantmentFrameFor("creature", "m15", creature)).toBe("m15nyx");
     expect(enchantmentFrameFor("enchantment", "m15", weapon)).toBe("m15nyx");
     expect(enchantmentFrameFor("artifact", "m15artifact", typedArtifact)).toBe("m15nyx");
-    // Not a plain enchantment, not a plain creature, not an artifact.
-    expect(enchantmentFrameFor("enchantment", "m15", aura)).toBe("m15");
+    // A plain enchantment and an Aura too (owner decision 1, Round 56)…
+    expect(enchantmentFrameFor("enchantment", "m15", aura)).toBe("m15nyx");
+    expect(enchantmentFrameFor("enchantment", "m15", { cardType: "enchantment", supertype: "Legendary", subtypes: ["Aura"] })).toBe("m15nyx");
+    // …never a Class, a Case, a Room or a Saga typed as a subtype…
+    for (const own of ["Saga", "Class", "Case", "Room"]) {
+      expect(enchantmentFrameFor("enchantment", "m15", { cardType: "enchantment", supertype: "", subtypes: [own] }), own).toBe("m15");
+    }
+    // …never a kind with no base here, whatever its words: a land, a token,
+    // the saga kind, an instant, a double-faced face on its own body.
+    const enchantmentWords = { cardType: "enchantment", supertype: "Enchantment" };
+    for (const [kind, template] of [["land", "m15land"], ["token", "m15token"], ["token", "m20token"], ["saga", "saga"], ["instant", "m15"], ["sorcery", "m15"], ["transform", "m15dfcfront"], ["mdfc", "m15mdfcfront"], ["transform", "m15"], ["land", "m15"]] as const) {
+      expect(enchantmentFrameFor(kind, template, enchantmentWords), `${kind} on ${template}`).toBe(template);
+      expect(enchantmentFrameFor(kind, template, { cardType: "land", supertype: "Enchantment" }), `${kind} on ${template}`).toBe(template);
+    }
+    // Not a plain creature, not an artifact.
     expect(enchantmentFrameFor("creature", "m15", plainCreature)).toBe("m15");
     expect(enchantmentFrameFor("artifact", "m15artifact", ring)).toBe("m15artifact");
     // Back: only when the words stop saying Enchantment — to the kind's own base.
     expect(enchantmentFrameFor("creature", "m15nyx", plainCreature)).toBe("m15");
     expect(enchantmentFrameFor("artifact", "m15nyx", ring)).toBe("m15artifact");
     expect(enchantmentFrameFor("creature", "m15nyx", creature)).toBe("m15nyx");
-    // A plain enchantment that wears it keeps it (its maker's pick).
+    // An enchantment that wears it keeps it — a Class its maker put there too.
+    expect(enchantmentFrameFor("enchantment", "m15nyx", { cardType: "enchantment", supertype: "", subtypes: ["Class"] })).toBe("m15nyx");
     expect(enchantmentFrameFor("enchantment", "m15nyx", aura)).toBe("m15nyx");
     // A kind the dress doesn't dress, and every other frame, as they are.
     expect(enchantmentFrameFor("instant", "m15", { cardType: "instant", supertype: "Enchantment" })).toBe("m15");
@@ -390,15 +415,47 @@ describe("AI and random frames (resolveGeneratedFrame)", () => {
     }
   });
 
-  it("never moves a plain enchantment there by itself — and gives it the frame when it is asked for by name", () => {
+  it("lands a new PLAIN enchantment there too where it is published (owner decision 1, Round 56) — on its plain frame where it isn't, and never a Class, Case, Room or Saga", () => {
     const aura = { cardType: "enchantment", supertype: "", subtypes: ["Aura"], title: "Pacifism" };
-    expect(resolveGeneratedFrame({ cardType: "enchantment", requested: "m15", colorIdentity: ["white"], verifiedKeys: both, face: aura })).toBe("m15");
+    expect(resolveGeneratedFrame({ cardType: "enchantment", requested: "m15", colorIdentity: ["white"], verifiedKeys: both, face: aura })).toBe("m15nyx");
     for (const roll of [0, 0.5, 0.99]) {
       expect(
         resolveGeneratedFrame({ cardType: "enchantment", requested: "random", colorIdentity: ["white"], verifiedKeys: both, face: aura, random: () => roll }),
-      ).toBe("m15");
+      ).toBe("m15nyx");
     }
     expect(resolveGeneratedFrame({ cardType: "enchantment", requested: "m15nyx", colorIdentity: ["white"], verifiedKeys: both, face: aura })).toBe("m15nyx");
+    // Unpublished in the card's colour (production today; another colour's tick): the plain frame.
+    for (const verified of [keys(["m15", "w"]), keys(["m15", "w"], ["m15nyx", "u"])]) {
+      for (const requested of ["m15", "random"] as const) {
+        expect(resolveGeneratedFrame({ cardType: "enchantment", requested, colorIdentity: ["white"], verifiedKeys: verified, face: aura })).toBe("m15");
+      }
+    }
+    for (const requested of ["m15", "m15nyx", "random"] as const) {
+      for (const roll of [0, 0.5, 0.99]) {
+        expect(resolveGeneratedFrame({ cardType: "enchantment", requested, colorIdentity: ["white"], verifiedKeys: PROD, face: aura, random: () => roll })).not.toBe("m15nyx");
+      }
+    }
+    // A body of its own in print: never moved, never a random pick — the frame only by name.
+    for (const own of ["Class", "Case", "Room", "Saga"]) {
+      const face = { cardType: "enchantment", supertype: "", subtypes: [own], title: own };
+      expect(resolveGeneratedFrame({ cardType: "enchantment", requested: "m15", colorIdentity: ["white"], verifiedKeys: both, face }), own).toBe("m15");
+      for (const roll of [0, 0.5, 0.99]) {
+        expect(resolveGeneratedFrame({ cardType: "enchantment", requested: "random", colorIdentity: ["white"], verifiedKeys: both, face, random: () => roll }), own).toBe("m15");
+      }
+      expect(resolveGeneratedFrame({ cardType: "enchantment", requested: "m15nyx", colorIdentity: ["white"], verifiedKeys: both, face }), own).toBe("m15nyx");
+    }
+    // An Enchantment Land and an enchantment token never land there.
+    const everyNyx = withNyx("w", "g", "c");
+    for (const [cardType, supertype] of [["land", "Enchantment"], ["token", "Enchantment Creature"], ["token", "Enchantment"]] as const) {
+      for (const requested of ["m15nyx", "random"] as const) {
+        for (const roll of [0, 0.3, 0.6, 0.99]) {
+          expect(
+            resolveGeneratedFrame({ cardType, requested, colorIdentity: ["green"], verifiedKeys: everyNyx, face: { cardType, supertype, subtypes: [], title: "x" }, random: () => roll }),
+            `${cardType} ${supertype}`,
+          ).not.toBe("m15nyx");
+        }
+      }
+    }
   });
 
   it("never dresses a card that is no enchantment, asked for or at random", () => {

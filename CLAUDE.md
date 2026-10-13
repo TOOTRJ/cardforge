@@ -780,15 +780,43 @@ Rules and gotchas:
   it writes "Enchantment", as the artifact frame writes "Artifact"); the
   Enchantment kind wears it as its own skin (`KIND_SKIN_VARIANTS` — never
   `TEMPLATE_SKIN_VARIANTS.m15`, which an instant shares). An ADDITION: a
-  new Enchantment Creature / Artifact follows its words onto it where it is
+  new card whose words say Enchantment follows them onto it where it is
   verified (`enchantmentFrameFor`: the creator's effect,
-  `resolveGeneratedFrame`); a PLAIN enchantment is offered it and never
-  moved (`followsEnchantmentDress` — widening that is an owner decision); a
+  `resolveGeneratedFrame`) — a PLAIN enchantment and an Aura too (owner
+  2026-10-13, as print does since Foundations), never a land, a token, a
+  saga or a double-faced face (no base for those kinds), never a Saga /
+  Class / Case / Room subtype (`followsEnchantmentDress`: a body of its
+  own in print — offered, not moved); a
   stored card keeps its frame; an import names it once verified
   (`era/2015+nyx` keeps its key and gains `onceVerified`,
   `nyxOnceVerified`) — no bump, no sweep, no badge. Borderless and
   extended-art Nyx printings stay where they land (no frame field, no
   starfield on the print). `docs/FRAMES.md` "The Nyx dress".
+- The station frame (`m15station`, `m15stationland`; TODO 4.27a): Edge of
+  Eternities' Spacecraft (an artifact whose subtype says Spacecraft) and
+  Planets (a land whose subtype says Planet) — `SUBTYPE_DRESSES`, the
+  Vehicle's gate, nothing else. Masters are OUR OWN derivation
+  (`scripts/build-station-frames.mjs`, numbers in
+  `scripts/lib/station-2025.mjs`: the published m15artifact / m15land
+  masters with the frame field at α 0 and the text box at × 0.68; bucket
+  only; each WebP's alpha must equal its PNG's). The picture is ONE picture
+  under the whole frame (`underFrameArt.artSlot`). The text box is a top
+  band over 0–3 TIERS (`FrameProfile.tiers`): plain text in Scryfall's shape
+  (`N+ | text` opens a tier) or `face_content.station` rows, read first
+  (`resolveStationTiers`, `lib/cards/station.ts`); the P/T is on a drawn
+  plate on ONE tier (the one the reminder names, else the last; rows may
+  name another; never the top band, never without a printed P/T) — these
+  profiles have NO `pt` slot and no text-alignment switch. ONE layout,
+  `cardStation()` (`lib/cards/station-layout.ts`): one size for the box,
+  bands from the text (20 px of air, floors 168 / 180 — fitted on 30
+  prints), lines by the rules layout, the plate a float; both renderers
+  only draw it. Bands, badge discs and the plate are our own inline SVGs
+  (`lib/cards/station-art.ts`: the same `data:` URL in preview, bake and
+  finish masks) drawn right after the frame, UNDER both finishes; numerals
+  and digits go through the stat fit. Every piece's box is EVEN in HD px
+  (whole px at 750) — never a half-px band edge, never `opacity` /
+  blend modes on the washes. Additions: no bump, no sweep.
+  `docs/FRAMES.md` "The Station frame".
 - The 1997 frame (`retro`, `retroland`; TODO 4.10a, layout v46) is the
   ORIGINAL cards of 1996–2003, never the 2006 timeshifted redrawing or the
   2021+ reprints (imports of those are `nearest`: the `timeshifted-frame`
@@ -895,7 +923,7 @@ Rules and gotchas:
   smaller than Left and never clips one Left fits (owner 2026-10-07).
   Both renderers pass the card's value through `rulesAlignOf` and only
   draw the indents. A new template offers
-  it by default — `rules-align.test.ts` names the six that don't. Never a sweep or a bump; `docs/FRAMES.md` "The text alignment".
+  it by default — `rules-align.test.ts` names the eight that don't (the station pair among them). Never a sweep or a bump; `docs/FRAMES.md` "The text alignment".
 - The art's automatic fit (TODO 3b.18): a picture that lands on a card
   (upload, a real card's art, an import, an AI picture) takes
   `fitArtToWindow()` (`lib/cards/art-fit.ts`: fill the window, show the
@@ -1011,6 +1039,33 @@ Rules and gotchas:
   (`lib/creator/walker-crowding.ts`: read from `layoutProfileLoyaltyRows`,
   never a count compared — 9 one-line rows on `m15pw`, 11 on the tall
   borderless box; nothing is blocked, no renderer reads it).
+- Creator fields and chips for a keyboard and a screen reader (TODO 3b.10 /
+  3b.19 / 3b.24): a `FieldGroup` (`components/creator/field-group.tsx`) has
+  ONE of three shapes, all the same look. `field` (default): one text input /
+  select / textarea in a `<label>` — its NAME is the caption alone, the
+  helper or the error that replaces it is its DESCRIPTION (`aria-describedby`,
+  an error also `aria-invalid`), given to a plain first child automatically
+  and to anything else through a function child (`{(aria) => …}`); never let
+  the helper back into the name. `control`: ONE control with a role of its
+  own (a chip row, the rules editor under its toolbar) — NO role on the
+  wrapper, the control named for the field: a group around one control says
+  the field twice. `group`: a SET of controls with names of their own (the
+  cost picker, chips beside an uploader). A field error is never an alert of
+  its own — a blocked save focuses the refused field, a server refusal is the
+  form's one alert. A `ChipGroup` chip that cannot be picked is
+  `aria-disabled`, never `disabled` (reachable, its reason in its name; unit
+  tests ask `chipOff()`, `tests/unit/helpers/chip.ts`, which also refuses an
+  off chip that still has a click handler — `aria-disabled` alone stops
+  nothing, so never give an off chip an `onClick`); a single-select row
+  is one tab stop whose arrow keys move the focus and never pick (owner
+  2026-10-13: Space / Enter picks; the stop is the focused chip while the
+  focus is in the row, the picked one otherwise). A control that removes
+  itself hands the focus on (`useRowFocus`; the Publish step's deck
+  quick-create both ways) — and a button inside a `<label>` that removes
+  itself on click cancels that click (`preventDefault`), or WebKit forwards
+  it to the label's control. The Power /
+  Toughness inputs are described by the "frame draws no P/T" note while it
+  shows (`usePtNotDrawnNoteId`).
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

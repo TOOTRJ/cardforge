@@ -28,6 +28,7 @@ vi.mock("@/lib/cards/print-export", async (orig) => ({
 vi.mock("@/lib/analytics/funnel-client", () => ({ trackFunnelEvent: vi.fn() }));
 
 import { DownloadModal } from "@/components/cards/download-modal";
+import { chipOff } from "../helpers/chip";
 
 afterEach(() => {
   cleanup();
@@ -90,8 +91,8 @@ describe("DownloadModal print options (paid)", () => {
     expect(screen.getByText(/this frame is upscaled from its 600 ppi master/)).toBeTruthy();
     // Print is square and PNG only.
     expect(radio("download-corners", "Corners", "Square").getAttribute("aria-checked")).toBe("true");
-    expect((radio("download-corners", "Corners", "Rounded") as HTMLButtonElement).disabled).toBe(true);
-    expect((radio("download-format", "File type", "JPEG") as HTMLButtonElement).disabled).toBe(true);
+    expect(chipOff(radio("download-corners", "Corners", "Rounded"))).toBe(true);
+    expect(chipOff(radio("download-format", "File type", "JPEG"))).toBe(true);
   });
 
   it("the 1/8″ bleed adds &bleed=1 at either resolution", async () => {
@@ -122,7 +123,7 @@ describe("DownloadModal print options (paid)", () => {
     expect(screen.getByText(/A Battle or Split is turned onto MPC's portrait card, its title up the left edge\./)).toBeTruthy();
     // Print: square, PNG only.
     expect(radio("download-corners", "Corners", "Square").getAttribute("aria-checked")).toBe("true");
-    expect((radio("download-format", "File type", "JPEG") as HTMLButtonElement).disabled).toBe(true);
+    expect(chipOff(radio("download-format", "File type", "JPEG"))).toBe(true);
     await click(resolution(/800 ppi/));
     expect(link("/png?").getAttribute("href")).toBe("/api/cards/c1/png?ppi=800&corners=square&bleed=mpc");
     expect(link("/png?").getAttribute("download")).toBe("grizzly-800ppi-mpc.png");
@@ -135,9 +136,9 @@ describe("DownloadModal print options (paid)", () => {
   it("JPEG turns the print options off (PNG only)", async () => {
     await open(true);
     await click(radio("download-format", "File type", "JPEG"));
-    expect((bleedChip(/makeplayingcards/i) as HTMLButtonElement).disabled).toBe(true);
-    expect((bleedChip(/1\/8″/) as HTMLButtonElement).disabled).toBe(true);
-    expect((resolution(/800 ppi/) as HTMLButtonElement).disabled).toBe(true);
+    expect(chipOff(bleedChip(/makeplayingcards/i))).toBe(true);
+    expect(chipOff(bleedChip(/1\/8″/))).toBe(true);
+    expect(chipOff(resolution(/800 ppi/))).toBe(true);
     expect(screen.getByText("800 ppi and bleed are PNG only.")).toBeTruthy();
     expect(link("/png?").getAttribute("href")).toBe("/api/cards/c1/png?preset=hd&format=jpeg");
   });

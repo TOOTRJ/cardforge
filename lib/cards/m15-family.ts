@@ -40,6 +40,10 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // The Nyx dress (TODO 4.7): a new template, no stored card — m15's slots
   // and sizes — so it joined without a bump.
   "m15nyx",
+  // The station frame (TODO 4.27a): new templates on m15artifact's and
+  // m15land's slots and sizes — no stored card, no bump.
+  "m15station",
+  "m15stationland",
   "m15snow",
   "m15devoid",
   "m15borderless",

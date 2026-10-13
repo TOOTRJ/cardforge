@@ -1979,9 +1979,31 @@ describe("provenance and hygiene", () => {
     // tests/unit/frames/crown-band.test.ts), every rider set (5.1a's icon
     // glyphs: tests/unit/frames/dfc-importer.test.ts) and every notch folder
     // (4.9c: tests/unit/frames/holo-stamp-notch.test.ts).
+    // …and the station frame's two (TODO 4.27a), which are NOT Card Conjurer
+    // imports: PipGlyph's own derivation of the published m15artifact /
+    // m15land masters (scripts/build-station-frames.mjs), recorded as such.
+    const PIPGLYPH_DERIVED: Record<string, string> = { m15station: "m15artifact", m15stationland: "m15land" };
     expect(Object.keys(provenance).sort()).toEqual(
-      [...Object.keys(templates), ...Object.keys(CC_OVERLAY_BANDS), ...Object.keys(CC_RIDERS), ...Object.keys(HOLO_STAMP_NOTCHES)].sort(),
+      [
+        ...Object.keys(templates),
+        ...Object.keys(PIPGLYPH_DERIVED),
+        ...Object.keys(CC_OVERLAY_BANDS),
+        ...Object.keys(CC_RIDERS),
+        ...Object.keys(HOLO_STAMP_NOTCHES),
+      ].sort(),
     );
+    for (const [template, parent] of Object.entries(PIPGLYPH_DERIVED)) {
+      expect(Object.keys(templates), template).not.toContain(template);
+      expect(provenance[template].source, template).toBe("pipglyph");
+      expect(provenance[template].converter, template).toBe("scripts/build-station-frames.mjs");
+      expect(provenance[template].commit, template).toBeUndefined();
+      expect(provenance[template].output, template).toMatch(/^1500x2100, /);
+      // One master per colour key, each cut from the parent's published one.
+      expect(Object.keys(provenance[template].colors).sort(), template).toEqual([...COLORS].sort());
+      for (const key of COLORS) {
+        expect(provenance[template].colors[key], `${template}/${key}`).toEqual([expect.stringMatching(new RegExp(`^${parent}/${key}\\.png \\(published, sha256 [0-9a-f]{12}\\)$`))]);
+      }
+    }
     for (const template of Object.keys(templates)) {
       expect(provenance[template]?.source, template).toBe("cardconjurer");
       expect(provenance[template].commit).toBe(CC_COMMIT);

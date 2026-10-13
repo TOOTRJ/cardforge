@@ -6,14 +6,14 @@
 // that otherwise default to the PipGlyph Rose, and a "custom frames" veil.
 // Free accounts see the same step as an upsell.
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Crown, Download, Frame, Save, Stamp } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { PremiumBadge } from "@/components/billing/premium-badge";
 import { useUpgradeModal } from "@/components/billing/upgrade-modal-provider";
-import { FieldGroup, inputClass } from "@/components/creator/field-group";
+import { FieldGroup, inputClass, joinIds } from "@/components/creator/field-group";
 import { ComingSoon } from "@/components/creator/coming-soon";
 import { WatermarkPicker } from "@/components/creator/panels/watermark-picker";
 import { updateExportWatermarkAction } from "@/lib/account/actions";
@@ -84,6 +84,7 @@ function FooterMarkField({ userId }: { userId: string | null }) {
   const value = useWatch({ control, name: "footer_text" }) ?? "";
   const [pending, startTransition] = useTransition();
   const [savedDefault, setSavedDefault] = useState<string | null>(null);
+  const defaultNoteId = `${useId()}-default-note`;
 
   const saveAsDefault = () => {
     if (!userId) return;
@@ -109,32 +110,40 @@ function FooterMarkField({ userId }: { userId: string | null }) {
       helper="Prints bottom-right on your downloads, next to the artist credit. Leave it blank for no footer mark — that's the default."
       error={errors.footer_text?.message}
     >
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          {...register("footer_text")}
-          maxLength={40}
-          placeholder="e.g. yourname.art"
-          className={`${inputClass(Boolean(errors.footer_text))} min-w-56 flex-1`}
-          autoComplete="off"
-          data-testid="footer-text"
-        />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={saveAsDefault}
-          disabled={pending || savedDefault === value.trim()}
-          title="Use this footer mark on every card you create from now on"
-        >
-          <Save className="h-4 w-4" aria-hidden />
-          {pending ? "Saving…" : "Save as my default"}
-        </Button>
-      </div>
-      <span className="text-[11px] leading-5 text-subtle">
-        &ldquo;Save as my default&rdquo; changes the account setting that
-        prefills new cards. A card you gave a mark of its own, or blanked, keeps
-        that; a card you never changed here follows your default.
-      </span>
+      {(aria) => (
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Named by the caption alone; the helper (or the error) and the
+                line about the default under it are its description. */}
+            <input
+              {...register("footer_text")}
+              {...aria}
+              aria-describedby={joinIds(aria["aria-describedby"], defaultNoteId)}
+              maxLength={40}
+              placeholder="e.g. yourname.art"
+              className={`${inputClass(Boolean(errors.footer_text))} min-w-56 flex-1`}
+              autoComplete="off"
+              data-testid="footer-text"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={saveAsDefault}
+              disabled={pending || savedDefault === value.trim()}
+              title="Use this footer mark on every card you create from now on"
+            >
+              <Save className="h-4 w-4" aria-hidden />
+              {pending ? "Saving…" : "Save as my default"}
+            </Button>
+          </div>
+          <span id={defaultNoteId} className="text-[11px] leading-5 text-subtle">
+            &ldquo;Save as my default&rdquo; changes the account setting that
+            prefills new cards. A card you gave a mark of its own, or blanked, keeps
+            that; a card you never changed here follows your default.
+          </span>
+        </>
+      )}
     </FieldGroup>
   );
 }
