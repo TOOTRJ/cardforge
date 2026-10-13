@@ -119,7 +119,10 @@ export type FormValues = {
   deck_id: string;
   /** Design watermark behind the rules text. kind "" = none (default). */
   watermark: WatermarkFormValues;
-  /** Subscriber footer mark for this card (Subscriber step). "" = none. */
+  /** Subscriber footer mark for this card (Subscriber step). "" = none.
+   *  A stored NULL ("use my profile default") opens as that default's
+   *  text; an edit sends the field only when it differs from what it
+   *  opened with (card-creator-form.tsx), so the NULL survives. */
   footer_text: string;
 };
 

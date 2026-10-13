@@ -33,6 +33,14 @@ import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 // the fields a half never prints included (its loyalty, its defense, a flip
 // side's own picture) — a stored card as the form opens it, and an edit of
 // one part only, then of the other.
+//
+// Amended by hand since (creator-footer-and-create-clears.test.tsx): every
+// EDIT payload lost its `footer_text: ""` when an edit stopped resending a
+// footer mark its maker didn't touch — part 1's two transform edits, and
+// part 2's eight (two each for split, aftermath, adventure and flip).
+// Nothing else in the fixture was changed: recording this file on main
+// before that fix and on the branch with it differs by those ten lines
+// alone. A re-record on a commit from before the fix puts them back.
 // ---------------------------------------------------------------------------
 
 const toast = vi.hoisted(() => ({ info: vi.fn(), error: vi.fn(), success: vi.fn(), message: vi.fn() }));
