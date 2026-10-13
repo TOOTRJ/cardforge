@@ -1109,9 +1109,15 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
     reason: "PipGlyph doesn't have the foil-etched frame yet",
     blockedBy: "4.28",
   },
+  // The border (TODO 4.30): white is drawn on the 1997 and 2003 frames — no
+  // gap there (gapDrawnBy) — and nowhere else yet; silver, gold and yellow
+  // are 4.15's.
   border: {
     match: { borders: Object.keys(BORDER_WORD) },
-    reason: ({ border }) => `PipGlyph doesn't print a ${BORDER_WORD[border] ?? border} border yet`,
+    reason: ({ border }) =>
+      border === "white"
+        ? "PipGlyph doesn't print a white border on this frame yet"
+        : `PipGlyph doesn't print a ${BORDER_WORD[border] ?? border} border yet`,
     blockedBy: "4.30",
   },
   marks: {
@@ -2482,7 +2488,7 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
     FRAME_SIGNATURE_RULES.find(
       (candidate) =>
         matches(candidate.match, ctx) &&
-        !(candidate.gaps && gapDrawnBy(candidate.gaps[0], templateOf(candidate))),
+        !(candidate.gaps && gapDrawnBy(candidate.gaps[0], templateOf(candidate), ctx.border)),
     ) ?? FRAME_SIGNATURE_RULES[FRAME_SIGNATURE_RULES.length - 1];
   const template = templateOf(rule);
 
@@ -2538,7 +2544,7 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
   // gapDrawnBy) is no gap there.
   const holding = (list: readonly GapKey[] | undefined, on: FrameTemplate) =>
     list
-      ? list.filter((gap, index) => (index === 0 || matches(GAPS[gap].match, ctx)) && !gapDrawnBy(gap, on))
+      ? list.filter((gap, index) => (index === 0 || matches(GAPS[gap].match, ctx)) && !gapDrawnBy(gap, on, ctx.border))
       : [];
   const gaps = holding(rule.gaps, template);
 
@@ -2619,8 +2625,15 @@ const GOLD_PAIR_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<FrameTemplate>([
  *  crown, 4.6a, and the pairs, 4.6b; the borderless, extended-art and snow
  *  frames theirs, 4.6f) — or, for the gold-split gap, where the frame's
  *  two-colour printings are its plain gold master (GOLD_PAIR_TEMPLATES). */
-function gapDrawnBy(gap: GapKey, template: FrameTemplate): boolean {
+function gapDrawnBy(gap: GapKey, template: FrameTemplate, border?: string): boolean {
   switch (gap) {
+    // The border gap is ONE gap for white, silver, gold and yellow (TODO
+    // 4.30): only a WHITE border is drawn, and only by a frame whose profile
+    // declares it (the 1997 and 2003 frames). A caller that doesn't know the
+    // printing's border (signatureDrawnOn: a logged "+border" row may be a
+    // gold-bordered World Championship card) gets false.
+    case "border":
+      return border === "white" && frameAnatomyOf(template).border;
     case "crown":
       return frameAnatomyOf(template).crown;
     case "two-colour":

@@ -851,6 +851,11 @@ export const TEMPLATE_SKIN_VARIANTS: Partial<
 export const RULES_ALIGN_VALUES = ["left", "center"] as const;
 export type RulesAlign = (typeof RULES_ALIGN_VALUES)[number];
 
+/** A card's border colour as the creator's form holds it (TODO 4.30); a
+ *  stored frame_style names "white" only — absent is the black border. */
+export const CARD_BORDER_VALUES = ["black", "white"] as const;
+export type CardBorder = (typeof CARD_BORDER_VALUES)[number];
+
 export type FrameStyle = {
   /** Premium treatment layered on the base frame (foil / etched / showcase). */
   finish?: CardFinish;
@@ -918,6 +923,17 @@ export type FrameStyle = {
    *  chapter rows, a walker frame's ability rows or a textless frame); the
    *  save drops it anywhere else (lib/cards/anatomy.ts normalizeAnatomy). */
   rulesAlign?: RulesAlign;
+  /** The card's border colour (TODO 4.30): an ADDITION, opt-in per card.
+   *  "white" draws the printed white border of the core sets up to Ninth
+   *  Edition — the white over the frame's black border and the black keyline
+   *  round the frame box (lib/cards/white-border.ts); absent = black,
+   *  today's look (the stored key is "white" or absent — the owner's off
+   *  removes it). A NEW card starts black: a white border is a printing
+   *  choice, not a default; an import follows its printing's
+   *  `border_color`. Drawn only on a template whose PROFILES entry declares
+   *  `whiteBorder` (the 1997 and 2003 frames); the save drops it anywhere
+   *  else (lib/cards/anatomy.ts normalizeAnatomy). */
+  border?: CardBorder;
 };
 
 // ---------------------------------------------------------------------------

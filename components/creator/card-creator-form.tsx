@@ -3539,10 +3539,11 @@ export function CardCreatorForm({
                 onDfcFaceTypePick={handleDfcFaceTypePick}
               />
             ) : null}
-            {/* The two-colour frame's switch (TODO 4.6b), under the colour —
-                shown only where the frame draws it. */}
+            {/* The two-colour frame's switch (TODO 4.6b) and the white
+                border's (4.30), under the colour — each shown only where the
+                frame draws it. */}
             {stepKey === "card" ? (
-              <AnatomyPanel which={["twoColor"]} pairRow={false} onPairTouched={markPairTouched} />
+              <AnatomyPanel which={["twoColor", "border"]} pairRow={false} onPairTouched={markPairTouched} />
             ) : null}
 
             {/* ----- Identity (name + artwork). The inline-layout frames
@@ -3557,7 +3558,7 @@ export function CardCreatorForm({
                     whose Card step is locked — the two-colour frame too.
                     A stored card shows each OFF with a one-line hint. */}
                 <AnatomyPanel
-                  which={isRevise ? ["crown", "twoColor"] : ["crown"]}
+                  which={isRevise ? ["crown", "twoColor", "border"] : ["crown"]}
                   stored={
                     isEdit && card
                       ? { frameStyle: card.frame_style as FrameStyle | null, colorIdentity: card.color_identity }
