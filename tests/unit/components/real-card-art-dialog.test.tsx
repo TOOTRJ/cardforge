@@ -50,7 +50,9 @@ vi.mock("@/lib/cards/art-upload-client", () => ({ uploadCardArtFile: vi.fn() }))
 import { RealCardArtButton } from "@/components/creator/real-card-art-dialog";
 import { ArtPanel } from "@/components/creator/panels/art-panel";
 import { SecondPartIdentityFields } from "@/components/creator/panels/second-part-panels";
+import { neverDrawnSecondPartUnits, secondPartShown } from "@/lib/creator/second-part-fields";
 import { SECOND_PART_WORDS } from "@/lib/creator/second-part";
+import { getFrameProfile } from "@/lib/cards/template-layout";
 
 afterEach(() => {
   cleanup();
@@ -755,6 +757,12 @@ describe("in the second face's art block (split / aftermath / flip halves)", () 
           artWindow={M15_ART_WINDOW}
           isAdventureFrame={isAdventureFrame}
           ownArt={!isAdventureFrame}
+          // What the form hands the panel for a part that holds nothing: a
+          // part with no picture of its own has no art box (owner round 52).
+          shown={secondPartShown({
+            never: neverDrawnSecondPartUnits(getFrameProfile(isAdventureFrame ? "adventure" : "split")),
+            backFace: {},
+          })}
           partWords={SECOND_PART_WORDS[isAdventureFrame ? "adventure" : "split"]!}
         />
       </FormProvider>

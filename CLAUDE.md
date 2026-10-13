@@ -276,9 +276,18 @@ Rules and gotchas:
   adventure, flip — have the same switch in their own words (5.14 part 2,
   "Left half | Right half"): the second part's fields per step in
   `panels/second-part-panels.tsx` (`PART_FIELD_STEP`: its card type is on
-  Identity, editable on an edit — it picks no frame), every field the old
-  "More options" panel showed still offered (hiding one a part never
-  prints is an OWNER decision per field — a stored card may hold a value),
+  Identity, editable on an edit — it picks no frame; all nine type chips
+  stay), a field the card NEVER DRAWS for the part HIDDEN WHILE EMPTY and
+  shown whenever it holds a value (owner round 52, 2026-10-13;
+  `lib/creator/second-part-fields.ts` reads "never drawn" from the profile
+  — loyalty, defense, flavour and the artist credit on every second part,
+  power / toughness without `secondFace.pt`, the art box without
+  `secondFace.artSlot` — held to both renderers by
+  `tests/unit/render/second-part-never-drawn.test.tsx`; once shown a field
+  stays until Start over or another card, `use-second-part-fields.ts`; a
+  hidden field is not rendered, its value stays in the form, so a save is
+  unchanged; never a "show more" control — a stored or arriving value, or a
+  server error, is what shows one),
   ONE preview with a ring on the part being edited (`part-outline.tsx`,
   boxes from the profile via `lib/creator/part-outline.ts`: creator chrome
   beside `CardPreview`, never inside it or any renderer), and a part with

@@ -73,7 +73,13 @@ test.describe("two-part kinds: the part tabs", () => {
       await secondTab.click();
       await page.getByLabel(`${second} rules text`, { exact: true }).click();
       await page.keyboard.type("Tap target permanent.");
-      await expect(page.locator("[name='back_face.flavor_text']")).toHaveCount(kind === "adventure" ? 0 : 1);
+      // What the card never draws for the part is hidden while it is empty
+      // (owner round 52): no flavour, loyalty or defense on any second
+      // part; power / toughness only where the part has a plate (flip).
+      await expect(page.locator("[name='back_face.flavor_text']")).toHaveCount(0);
+      await expect(page.locator("[name='back_face.loyalty']")).toHaveCount(0);
+      await expect(page.locator("[name='back_face.defense']")).toHaveCount(0);
+      await expect(page.locator("[name='back_face.power']")).toHaveCount(kind === "flip" ? 1 : 0);
 
       // A private draft needs no artwork.
       await rail.getByRole("button", { name: /^publish$/i }).click();
