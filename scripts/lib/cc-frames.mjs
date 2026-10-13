@@ -96,9 +96,35 @@ const ARTIFACT_PT = { ...REG_PT, c: `${REG}/m15PTA.png` };
 /** The Vehicle plate (TODO 4.5c): Card Conjurer's one brown `m15PTV.png`
  *  (381 × 209) under every colour key — every printed Vehicle wears it
  *  whatever its colour (cardFrameProperties: `pt = 'V'` for a type line
- *  that says Vehicle; 59 of 60 prints read, KLD 2016 → 2026). */
+ *  that says Vehicle; 67 of 68 prints read, KLD 2016 → 2026). */
 export const VEHICLE_PT_FILE = `${REG}/m15PTV.png`;
 const VEHICLE_PT = Object.fromEntries(COLORS.map((k) => [k, VEHICLE_PT_FILE]));
+/**
+ * The Vehicle plate toned onto the prints (owner 2026-10-12): Card
+ * Conjurer's plate is a saturated orange-brown — its face reads 110 / 73 /
+ * 30 where the prints' median is 123 / 91 / 67 (52 plain black-bordered
+ * Vehicles, KLD 2016 → 2026, the same box at HD: x 1165–1185, y 1915–1955).
+ * A per-channel gain would need × 2.23 on blue and turns the bevel's light
+ * rim lavender, so the tone keeps every pixel's hue: its colour is pulled
+ * toward its own luminance (`saturation`) and the whole lifted (`luma`) —
+ * out = luma × (L + saturation × (p − L)), L = Rec. 709 luminance — the
+ * least-squares fit of the CC face onto the prints' (116 / 89 / 64 after,
+ * measured in the same box: within 7 of the median on every channel).
+ * Alpha untouched.
+ */
+export const VEHICLE_PLATE_TONE = Object.freeze({ luma: 1.235, saturation: 0.552 });
+/** A plate tone on raw RGBA, in place (see VEHICLE_PLATE_TONE). */
+export function tonePlateRgba8(data, { luma, saturation }) {
+  for (let o = 0; o < data.length; o += 4) {
+    const l = 0.2126 * data[o] + 0.7152 * data[o + 1] + 0.0722 * data[o + 2];
+    for (let c = 0; c < 3; c += 1) data[o + c] = Math.max(0, Math.min(255, Math.round(luma * (l + saturation * (data[o + c] - l)))));
+  }
+  return data;
+}
+/** A recipe letter → its file for a Vehicle: the bronze 'Vehicle Frame'
+ *  where the artifact recipe names the artifact frame (`a`), the accurate
+ *  M15 pack's file for every other letter. */
+const vehicleFrameFile = (letter) => (letter === "a" ? `${NEW}/v.png` : m15FrameFile(letter));
 
 /**
  * A coloured artifact is CC's cardFrameProperties recipe (creator-23.js
@@ -2533,7 +2559,7 @@ const DFC_PAIR_NOTE =
 
 /**
  * template → { colors: colour → layers, finish?, plates?, symbols?, shield?,
- * ptCut?, pieces?, maskInputs?, recut?, recutUp?, bridge?, tones?, excluded?,
+ * plateTone?, ptCut?, pieces?, maskInputs?, recut?, recutUp?, bridge?, tones?, excluded?,
  * orientation?, transform?, shift?, halfMasks?, paintedShield?, pack?,
  * transforms?, notes }.
  * `finish` composites PipGlyph layers over each flattened composite, before
@@ -2815,13 +2841,20 @@ export const CC_TEMPLATES = {
   m15vehicle: {
     colors: {
       ...perColor((k) => colouredArtifact(`${NEW}/v.png`, `${NEW}/${k === "c" ? "a" : k}.png`, M15_BASE_MASKS, M15_INTERIOR_MASKS)),
+      // The ten two-colour Vehicles (owner 2026-10-12; DFT #188–220, NEO
+      // #231, MKM #215): m15artifact's pair recipe — gold title and type
+      // bars, the text box and the pinline split between the two colours —
+      // over the bronze frame.
+      ...pairMasters("artifact", ["split"], (pair, dress, kind) => pairMasterLayers(pair, dress, kind, vehicleFrameFile)),
     },
     plates: VEHICLE_PT,
+    plateTone: VEHICLE_PLATE_TONE,
     pack: "packM15RegularNew.js 'Vehicle Frame' + 'Vehicle Power/Toughness' (groupAccurate.js; creator-23.js cardFrameProperties draws a Vehicle this way)",
     notes: [
       "every key = the bronze 'Vehicle Frame' (new/v.png) through CC's Border and Frame masks, then the colour's pinline, title bar, type bar and text box through CC's masks (colourless: the artifact frame's silver, new/a.png; gold for two colours or more, new/m.png) — CC's recipe for a Vehicle, m15artifact's with v.png for a.png; as KLD #235, NEO #9, WAR #24, DFT #188 print",
       "plates = CC's one brown Vehicle plate (m15PTV.png, 381x209) under every colour key (pt/<k>.png, seven names, one image): a printed Vehicle's plate is brown whatever its colour; the profile draws WHITE digits on it",
-      "no two-colour pair masters yet: a two-colour Vehicle draws the gold `m` master (the prints split the text box and pinline, DFT #188-220 — a later item)",
+      `the plate is TONED onto the prints (plateTone: luma x ${VEHICLE_PLATE_TONE.luma}, saturation x ${VEHICLE_PLATE_TONE.saturation} about each pixel's own luminance — hue kept, alpha untouched): CC's face reads 110/73/30, the prints' median 123/91/67 over 52 plain Vehicles (KLD 2016 - 2026); 116/89/64 after`,
+      `${PAIR_NOTE}. <pair> = the bronze Vehicle frame + border, GOLD title and type bars (m.png), the split text box and pinline — m15artifact's pair recipe with v.png for a.png — drawn with the same brown plate (DFT #188-220, NEO #231, MKM #215); no hybrid dress`,
     ],
   },
   m15land: {

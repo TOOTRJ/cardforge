@@ -178,12 +178,17 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 44 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 45 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the M15 family (4.4, shipped in #380, layout v24): m15, m15artifact,
   m15land, m15snow, m15snowland, m15devoid, m15pw, m15token and
   m15tokenartifact;
+- the Vehicle frame (4.5c): m15vehicle — the accurate M15 pack's bronze
+  'Vehicle Frame' through its Border and Frame masks under the colour's
+  (or the artifact's) bars, box and pinline, its ten two-colour pair
+  masters and the brown 'Vehicle Power/Toughness' plate, toned onto the
+  prints ([The Vehicle frame](#the-vehicle-frame-45c));
 - the borderless M15 frame from 'Borderless (Alt)' (4.32): m15borderless and
   its artifact dress m15borderlessartifact, each with the pack's own P/T
   plates — and, since 4.6f (wave 2a), their pinline-split pair masters and
@@ -2733,6 +2738,99 @@ byte-identical at 750 and HD, base against head; with the switch forced on,
 the 8 stay identical (their colour is stored `multicolor`, no pair); the
 visual matrix: 1,451 unchanged, 0 changed, 15 new.
 
+### The Vehicle frame (4.5c)
+
+TODO 4.5c (owner 2026-09-29 and 2026-10-12). `m15vehicle` is the printed
+Vehicle frame, Kaladesh 2016 → today: a bronze frame where an artifact has
+the silver one, the card's own bars, text box and pinline (silver for a
+colourless Vehicle, the colour's for a coloured one — War of the Spark
+2019 on — gold for two colours or more), and ONE brown P/T plate with
+WHITE digits whatever the colour.
+
+**What the prints show** (68 Vehicle prints read at 1500 × 2100,
+2026-10-12, from 522 Vehicle printings on the 2015 frame): 67 of them —
+52 of 53 plain black-bordered, 7 of 7 borderless, 8 of 8 extended art —
+wear the brown plate with white digits (ink 252 / 252 / 253 at the median, never under
+241), and every plain one the bronze frame. The one exception is DOM #237
+Weatherlight (bronze frame, a SILVER plate, dark digits): not offered
+(owner 2026-10-12). The plate's brown box reads x 1173–1420, y 1868–1985 px
+at the median; ours, at M15's plate box, 1172–1423 × 1873–1980. Spacecraft
+(EOE 2025) print another frame — the station layout, no brown plate, dark
+digits, 10 of 10 — and are TODO 4.27's, not Vehicles.
+
+**Masters** (the frames bucket; `scripts/lib/cc-frames.mjs`): Card
+Conjurer's own recipe for a type line that says Vehicle
+(`cardFrameProperties`) — the accurate M15 pack's 'Vehicle Frame'
+(`m15/new/v.png`) through its Border and Frame masks, then the colour's
+(colourless: the artifact frame's) text box, title bar, type bar and
+pinline through the pack's masks: m15artifact's recipe with `v.png` for
+`a.png`. The ten two-colour pair masters (owner 2026-10-12) are
+m15artifact's split recipe the same way — gold bars, the text box and the
+pinline in the two colours over the bronze frame (DFT #188–220, NEO #231,
+MKM #215); no hybrid dress. Nothing is synthesised.
+
+**The plate** is the pack's `m15PTV.png` (381 × 209), one image under
+every colour key (`m15vehicle/pt/<k>.png`), TONED onto the prints (owner
+2026-10-12): Card Conjurer's face reads 110 / 73 / 30 where the prints'
+median is 123 / 91 / 67 (52 plain Vehicles, the same box). A per-channel
+gain would need × 2.23 on blue and turns the bevel's light rim lavender, so
+the tone keeps each pixel's hue — `VEHICLE_PLATE_TONE`: its colour pulled
+toward its own luminance (× 0.552) and the whole lifted (× 1.235), the
+least-squares fit of the face (116 / 89 / 64 after). The importer's
+`plateTone` records it in provenance. Its ink row is in
+`lib/cards/plate-ink.ts`, so the rules lines keep out of it like any plate.
+
+**The profile** is m15artifact's with that plate and white digits: the
+same slots, crown (a colourless Vehicle's is the artifact silver — DMU
+#230 — a coloured one's its colour, KHM #169), stamp notch (the bar under
+it is the artifact master's, byte for byte, on all seven keys) and
+collector line; `twoColorMasters: ["split"]`.
+
+**A frame for Vehicles only.** It is a stored template of its own, picked
+under Variations ("Vehicle", beside the Artifact frame) — never a
+render-time pick from the subtype, which would re-dress every stored
+Vehicle, and not a `frame_style` switch (owner 2026-09-29). The Artifact
+kind covers every artifact, so the rule is a per-card one, like the
+basic-only frames: `SUBTYPE_DRESSES` in `lib/creator/card-kinds.ts`
+(`subtypeFrameFits`). The chip is disabled with its reason on any card
+whose subtypes don't say Vehicle, the server's kind gate refuses the save
+(`lib/cards/frame-kind-gate.ts`: also an edit that takes the word off a
+card on the frame), a random, stand-in or AI-fill frame pick never lands on
+it, and a reference printing pinned to it must be a Vehicle.
+
+**Rollout: an addition.** No stored card sits on a new template, so there
+is no layout bump, no sweep and no badge.
+
+- A NEW Vehicle starts on it: in the creator the frame follows the subtype
+  between the artifact frame and its Vehicle dress (`subtypeFrameFor`) —
+  the moment the subtypes first say Vehicle on a card wearing the artifact
+  frame — and the AI jobs land a Vehicle there (`resolveGeneratedFrame`).
+  Only where the frame is verified in the card's colour; until then nothing
+  changes and nothing is said. "Artifact" in Variations is the way back,
+  and a pick made by hand sticks.
+- A STORED Vehicle keeps its frame (the artifact frame's silver plate, or
+  whatever it wears) until its owner picks "Vehicle".
+- An IMPORT follows the printing: the registry's `vehicle/2015` rule lands
+  a plain 2015-frame Vehicle on the artifact frame, as before, until
+  `m15vehicle` is verified in its colour, and from then on names it, exact
+  (`onceVerified` — the `vehicle` gap is drawn there, `gapDrawnBy`). The
+  extended-art and borderless Vehicles and a Vehicle BACK face keep the gap.
+
+**Sagas are not part of it.** The item's other half — a P/T on the saga
+body — is not built (owner 2026-10-12). The only saga creatures printed
+with the saga layout are Final Fantasy's "Summon:" cards (FIN / FIC 2025),
+and their body is not ours: the textured saga with its type bar raised by
+173 px (its outline at 1588–1722 px of an HD card on all 19 black-bordered
+prints read, 1760–1899 on six plain DOM / DMU sagas and on our master), a
+second text box under it (1723–1947 px) and the plate at the M15 spot (the
+digits' ink there on 19 of 19, none where Card Conjurer puts its saga
+plate), the rail and the art column that much shorter. No plain saga
+ever printed a P/T, and Card Conjurer's `saga/pt` plates sit on the type
+bar's right end, where the set symbol goes. The printed body comes with
+4.5d's textured saga, as a new template; until then the creator's note
+("This frame doesn't draw power / toughness", `lib/cards/pt-drawn.ts`)
+stays true for a saga creature.
+
 ### Printed pieces a card switches on
 
 TODO 4.6.0. The legendary crown (4.6a) and the two-colour frames (4.6b) are
@@ -5272,8 +5370,10 @@ a **new template key** (4.5b's `extendedartpw` and `tarkirghostfirepw`,
 4.5c's `m15vehicle`), or a stored per-card switch through
 `normalizeAnatomy` ([Printed pieces a card switches
 on](#printed-pieces-a-card-switches-on)). A correction that must add
-anatomy to its own body (4.5c's saga-creature P/T) ships with its layout
-bump and a scoped sweep after the owner's sign-off.
+anatomy to its own body ships with its layout bump and a scoped sweep
+after the owner's sign-off — which 4.5c's saga-creature P/T turned out not
+to be: no plain saga ever printed one, so it becomes a new body with 4.5d
+([The Vehicle frame](#the-vehicle-frame-45c)).
 
 `tests/unit/cards/kind-capability-baseline.test.ts` pins every template's
 capabilities in `tests/unit/cards/fixtures/kind-capabilities.json`: a gain
@@ -5627,11 +5727,11 @@ in the tree: use `{X}` or a colour in a test's expectation.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 45 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 46 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens, the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
-land, the emblem, 5.1a's five transform bodies and 5.1b's four modal
-bodies, new templates that joined without a bump, and the battle, which
+land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
+bodies and 4.5c's Vehicle frame, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card) prints its names,

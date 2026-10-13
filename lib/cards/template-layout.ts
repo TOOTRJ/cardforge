@@ -5270,14 +5270,18 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // artifact silver "a": DMU #230, NEC #159; a coloured one's its colour,
   // KHM #169), stamp notch and collector line. Its ONE plate is the brown
   // `m15PTV` under every colour key, at M15's plate box, and the digits are
-  // WHITE on it (59 of 60 prints read, KLD 2016 → 2026: ink 244–255 on a
+  // WHITE on it (67 of 68 prints read, KLD 2016 → 2026: ink 241–255 on a
   // 75–148 luma face). An ADDITION: a new template no stored card sits on —
   // a Vehicle stored on m15 / m15artifact keeps its frame until its owner
-  // picks this one. No two-colour pair masters yet (a two-colour Vehicle
-  // draws the gold `m`).
+  // picks this one. Its two-colour dress is m15artifact's split — gold
+  // bars, the box and the pinline in the two colours — over the bronze
+  // frame (owner 2026-10-12; DFT #188–220, NEO #231, MKM #215): ten pair
+  // masters, the card's own switch, no hybrid dress. The plate is toned
+  // onto the prints' brown (scripts/lib/cc-frames.mjs VEHICLE_PLATE_TONE).
   m15vehicle: {
     ...M15ARTIFACT,
     label: "M15 Vehicle",
+    twoColorMasters: ["split"],
     pt: { ...M15ARTIFACT.pt!, plateAssetPathTemplate: "/frames/m15vehicle/pt/{color}.png", colorHex: VEHICLE_PT_INK },
     overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }, { ...M15_HOLO_STAMP, keyMap: { c: "a" } }],
     collector: M15_COLLECTOR,

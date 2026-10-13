@@ -7003,6 +7003,86 @@
         "img/frames/m15/new/m.png through img/frames/m15/new/title.png",
         "img/frames/m15/new/m.png through img/frames/m15/new/type.png",
         "img/frames/m15/new/m.png through img/frames/m15/new/pinline.png"
+      ],
+      "wu": [
+        "img/frames/m15/new/v.png through img/frames/m15/new/border.png",
+        "img/frames/m15/new/v.png through img/frames/m15/new/frame.png",
+        "(img/frames/m15/new/w.png | img/frames/m15/new/u.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/type.png",
+        "(img/frames/m15/new/w.png | img/frames/m15/new/u.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "wb": [
+        "img/frames/m15/new/v.png through img/frames/m15/new/border.png",
+        "img/frames/m15/new/v.png through img/frames/m15/new/frame.png",
+        "(img/frames/m15/new/w.png | img/frames/m15/new/b.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/type.png",
+        "(img/frames/m15/new/w.png | img/frames/m15/new/b.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "ub": [
+        "img/frames/m15/new/v.png through img/frames/m15/new/border.png",
+        "img/frames/m15/new/v.png through img/frames/m15/new/frame.png",
+        "(img/frames/m15/new/u.png | img/frames/m15/new/b.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/type.png",
+        "(img/frames/m15/new/u.png | img/frames/m15/new/b.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "ur": [
+        "img/frames/m15/new/v.png through img/frames/m15/new/border.png",
+        "img/frames/m15/new/v.png through img/frames/m15/new/frame.png",
+        "(img/frames/m15/new/u.png | img/frames/m15/new/r.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/type.png",
+        "(img/frames/m15/new/u.png | img/frames/m15/new/r.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "br": [
+        "img/frames/m15/new/v.png through img/frames/m15/new/border.png",
+        "img/frames/m15/new/v.png through img/frames/m15/new/frame.png",
+        "(img/frames/m15/new/b.png | img/frames/m15/new/r.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/type.png",
+        "(img/frames/m15/new/b.png | img/frames/m15/new/r.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "bg": [
+        "img/frames/m15/new/v.png through img/frames/m15/new/border.png",
+        "img/frames/m15/new/v.png through img/frames/m15/new/frame.png",
+        "(img/frames/m15/new/b.png | img/frames/m15/new/g.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/type.png",
+        "(img/frames/m15/new/b.png | img/frames/m15/new/g.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "rg": [
+        "img/frames/m15/new/v.png through img/frames/m15/new/border.png",
+        "img/frames/m15/new/v.png through img/frames/m15/new/frame.png",
+        "(img/frames/m15/new/r.png | img/frames/m15/new/g.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/type.png",
+        "(img/frames/m15/new/r.png | img/frames/m15/new/g.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "rw": [
+        "img/frames/m15/new/v.png through img/frames/m15/new/border.png",
+        "img/frames/m15/new/v.png through img/frames/m15/new/frame.png",
+        "(img/frames/m15/new/r.png | img/frames/m15/new/w.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/type.png",
+        "(img/frames/m15/new/r.png | img/frames/m15/new/w.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "gw": [
+        "img/frames/m15/new/v.png through img/frames/m15/new/border.png",
+        "img/frames/m15/new/v.png through img/frames/m15/new/frame.png",
+        "(img/frames/m15/new/g.png | img/frames/m15/new/w.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/type.png",
+        "(img/frames/m15/new/g.png | img/frames/m15/new/w.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "gu": [
+        "img/frames/m15/new/v.png through img/frames/m15/new/border.png",
+        "img/frames/m15/new/v.png through img/frames/m15/new/frame.png",
+        "(img/frames/m15/new/g.png | img/frames/m15/new/u.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/m.png through img/frames/m15/new/type.png",
+        "(img/frames/m15/new/g.png | img/frames/m15/new/u.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ]
     },
     "plates": {
@@ -7013,6 +7093,10 @@
       "g": "img/frames/m15/regular/m15PTV.png",
       "c": "img/frames/m15/regular/m15PTV.png",
       "m": "img/frames/m15/regular/m15PTV.png"
+    },
+    "plateTone": {
+      "luma": 1.235,
+      "saturation": 0.552
     },
     "sourceFiles": [
       "img/frames/m15/new/a.png",
@@ -7034,7 +7118,8 @@
     "notes": [
       "every key = the bronze 'Vehicle Frame' (new/v.png) through CC's Border and Frame masks, then the colour's pinline, title bar, type bar and text box through CC's masks (colourless: the artifact frame's silver, new/a.png; gold for two colours or more, new/m.png) — CC's recipe for a Vehicle, m15artifact's with v.png for a.png; as KLD #235, NEO #9, WAR #24, DFT #188 print",
       "plates = CC's one brown Vehicle plate (m15PTV.png, 381x209) under every colour key (pt/<k>.png, seven names, one image): a printed Vehicle's plate is brown whatever its colour; the profile draws WHITE digits on it",
-      "no two-colour pair masters yet: a two-colour Vehicle draws the gold `m` master (the prints split the text box and pinline, DFT #188-220 — a later item)"
+      "the plate is TONED onto the prints (plateTone: luma x 1.235, saturation x 0.552 about each pixel's own luminance — hue kept, alpha untouched): CC's face reads 110/73/30, the prints' median 123/91/67 over 52 plain Vehicles (KLD 2016 - 2026); 116/89/64 after",
+      "two-colour pair masters (TODO 4.6b, owner decision 2026-09-29): a recipe over the same CC files as the verified masters — each split region's two colours blended across an UNTILTED ramp (pinline 40→60 %W, a hybrid's frame 44→57, text box 45→57) by a premultiplied lerp (scripts/lib/pair-ramp.mjs), never CC's tilted maskRightHalf.png stacking; first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured against the prints (design 2026-09-29 §1.2). <pair> = the bronze Vehicle frame + border, GOLD title and type bars (m.png), the split text box and pinline — m15artifact's pair recipe with v.png for a.png — drawn with the same brown plate (DFT #188-220, NEO #231, MKM #215); no hybrid dress"
     ]
   },
   "m20token": {

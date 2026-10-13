@@ -4,7 +4,7 @@ import { artReachesCardEdge, getFrameProfile } from "@/lib/cards/template-layout
 import { frameAnatomyOf } from "@/lib/cards/anatomy";
 import { FRAME_COLOR_KEYS, frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { BASIC_LAND_NAME_BY_KEY } from "@/lib/cards/watermark";
-import { CARD_KIND_VALUES, KIND_DEFS, framesForKind, type CardKind } from "@/lib/creator/card-kinds";
+import { CARD_KIND_VALUES, KIND_DEFS, framesForKind, subtypeDressOf, type CardKind } from "@/lib/creator/card-kinds";
 import { FRAME_TEMPLATE_VALUES, type DfcIconFamily, type FrameTemplate } from "@/types/card";
 import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
 import { isDfcBackBody } from "@/lib/cards/dfc";
@@ -338,7 +338,10 @@ function contentFor(kind: CardKind, shape: VisualShape, colour: VisualColour, te
     default: {
       // creature, instant, sorcery, artifact, enchantment
       const type = KIND_DEFS[kind].cardType;
-      const creature = type === "creature";
+      // A subtype dress's cards ARE its subtype (TODO 4.5c: every case on
+      // the Vehicle frame is a Vehicle, with the P/T its plate carries).
+      const vehicle = template !== undefined && subtypeDressOf(template) === "Vehicle";
+      const creature = type === "creature" || vehicle;
       if (shape === "edge") {
         // TODO 3.11's edge content in one card: a 100/100 (3.18), a
         // four-mode Command (3.16), reversed-hybrid and unknown symbols (3.15).
@@ -356,10 +359,10 @@ function contentFor(kind: CardKind, shape: VisualShape, colour: VisualColour, te
         };
       }
       return {
-        title: long ? "Sisay, Captain of the Endless Weatherlight Skies" : creature ? "Grizzly Bears" : "Shock",
+        title: long ? "Sisay, Captain of the Endless Weatherlight Skies" : vehicle ? "Skysail Runabout" : creature ? "Grizzly Bears" : "Shock",
         card_type: type,
         supertype: long ? "Legendary" : null,
-        subtypes: creature ? (long ? ["Human", "Soldier", "Wizard", "Advisor"] : ["Bear"]) : [],
+        subtypes: vehicle ? ["Vehicle"] : creature ? (long ? ["Human", "Soldier", "Wizard", "Advisor"] : ["Bear"]) : [],
         cost: long ? `{X}${pips(colour, 3, 3)}` : pips(colour, 1, 1),
         rules_text: long ? LONG_RULES : creature ? "Vigilance" : "Deal 2 damage to any target.",
         flavor_text: long ? LONG_FLAVOR : null,
@@ -599,6 +602,10 @@ const EDGE_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15borderless", "agcla
 const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   ["m15", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
   ["m15artifact", ["c", "u"]],
+  // TODO 4.5c: the Vehicle frame's crown — the artifact silver on a
+  // colourless Vehicle (DMU #230), its colour on a coloured one (KHM #169),
+  // gold on three colours.
+  ["m15vehicle", ["c", "g", "wub"]],
   ["m15land", ["g", "c", "wub"]],
   // TODO 4.6f (wave 2a): the borderless FLOATING crown, baked into the
   // crowned twins (`<key>-legendary`, FrameProfile.crownMasters) — every
@@ -1134,6 +1141,10 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
     "@vehicle",
     VEHICLE_ROW,
   ],
+  // TODO 4.5c: the Vehicle plate's white digits at their widest and
+  // oddest — two digits a side (the stat fit) and a star.
+  ["m15vehicle", "artifact", "c", "@wide", { power: "12", toughness: "12" }],
+  ["m15vehicle", "artifact", "r", "@star", { power: "*", toughness: "5" }],
   [
     "m15artifact",
     "artifact",
@@ -1713,12 +1724,12 @@ export function visualCases(): VisualCase[] {
 
 /** The templates whose PROFILES entry declares the holofoil stamp's notch
  *  (TODO 4.9c; tests/unit/render/visual-matrix.test.ts keeps it in step). */
-export const STAMP_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15land", "m15snowland", "m15artifact", "m15snow", "m15devoid", "m15pw"];
+export const STAMP_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15snow", "m15devoid", "m15pw"];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's
  *  cases (the 4.9c follow-up; the same test keeps it in step: a template
  *  that gains pairs with the notch declared joins by itself). */
-export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15artifact", "m15land", "m15snow", "m15snowland"];
+export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15artifact", "m15vehicle", "m15land", "m15snow", "m15snowland"];
 
 /** A rules text whose fitted last line enters the arch on m15 (found on the
  *  real layout, 2026-10-02: 50 px, the last line's ink 132–839 × …–1910 at
@@ -1934,6 +1945,8 @@ const DFC_AURA_BACK: Partial<CardRowForBake> = {
  *  (TODO 4.6b; tests/unit/render/visual-matrix.test.ts keeps it in step). */
 export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   "m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15snow", "m15snowland",
+  // The Vehicle frame (TODO 4.5c): m15artifact's split over the bronze frame.
+  "m15vehicle",
   // The double-faced spell faces (5.1d): their cases carry a back face
   // (the DFC block below), never the generic pair loop's rows.
   "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback",
