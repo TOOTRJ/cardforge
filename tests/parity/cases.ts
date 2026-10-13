@@ -126,6 +126,15 @@ const PICKS: readonly Pick[] = [
   { from: "retro/r/creature-long", why: "1997: shadowed white ink, flat discs, centred © slot" },
   { from: "modern/g/creature-long", why: "2003: shadowed cost discs, the brush, two-line footer" },
   { from: "modern/wu/creature-short@pair", why: "the synthesised old-frame pair master" },
+  // --- a name fitted against a DETACHED cost of ×1.2 discs (TODO 6.16d, v52) -
+  // (The walker's twin, "m15pw/w/planeswalker-long@phyrexian-cost-5", is NOT
+  // here yet: at 750 px its row of five ×1.2 discs starts 4 px further left
+  // in the preview than in the 750 px bake and the cost region measures mad
+  // 32.9 against a limit of 31 — the 750-cost-row-width difference at its
+  // largest (measured 2026-10-12, darwin; HD agrees: 0,1 · 5.2; the name is
+  // cut at the same word in both). It joins with a described known
+  // difference, or once that one is fixed.)
+  { from: "modern/w/creature-long@phyrexian-cost-5", why: "v52: a long name's room before five Phyrexian discs in a detached cost (2003 frame)" },
 ];
 
 function slug(id: string): string {
