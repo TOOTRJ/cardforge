@@ -147,20 +147,20 @@ describe("band rows against print (HD px)", () => {
   it("two one-line tiers under a four-line reminder: EOE #25's 1591 / 1759 within 1 px", () => {
     // 60 px text: a one-line block is one line box tall.
     const bands = stationBands(236, [60, 60]);
-    expect(bands.tiers.map((b) => b.y0)).toEqual([1592, 1760]);
+    expect(bands.tiers.map((b) => b.y0)).toEqual([1590, 1758]);
     expect(bands.tiers[1]!.cy).toBe(1848); // print's badge and plate: 1845.5–1846.5
     expect(bands.fits).toBe(true);
   });
 
   it("a taller tier grows its band; the top band takes the rest and says when it can't", () => {
     const bands = stationBands(100, [260]);
-    expect(bands.tiers[0]).toMatchObject({ y0: STATION.box.bottom - 332, y1: STATION.box.bottom });
+    expect(bands.tiers[0]).toMatchObject({ y0: STATION.box.bottom - 300, y1: STATION.box.bottom });
     expect(stationBands(400, [260]).fits).toBe(false);
   });
 
   it("no tier: the top band is the whole box; compact bands still hold a badge", () => {
     expect(stationBands(200, []).top).toMatchObject({ y0: STATION.box.top, y1: STATION.box.bottom });
-    const compact = stationBands(0, [40, 40, 40], true);
+    const compact = stationBands(0, [40, 40, 40], STATION.bandRules[STATION.bandRules.length - 1]);
     for (const b of compact.tiers) expect(b.y1 - b.y0).toBeGreaterThanOrEqual(2 * STATION.badge.rRing);
   });
 });

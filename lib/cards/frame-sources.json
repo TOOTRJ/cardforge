@@ -6648,6 +6648,146 @@
       "two-colour pair masters (TODO 4.6f, wave 2c; owner round 20, 2026-10-01): 4.6b's recipe over the snow pack's files through the same accurate-M15 masks — each split region's two colours blended across the UNTILTED ramp (pinline 40→60 %W, text box 45→57) by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left; measured on KHM #224 / #223 / #230 and the ten KHM snow duals (#248–274): the pinline's rings 42–45 / 49–51 / 56–58 %W at 10 / 50 / 90 %. <pair> = CC's snow land frame l.png (the grey body and neutral white bars every KHM snow land prints) with the split text box and pinline in the two snow land tints (snow/l<k>.png), as the ten KHM snow duals #248–274 print"
     ]
   },
+  "m15station": {
+    "source": "pipglyph",
+    "converter": "scripts/build-station-frames.mjs",
+    "derivedFrom": "the published m15artifact/<key> masters of the frames bucket (themselves Card Conjurer imports: see \"m15artifact\")",
+    "output": "1500x2100, the parent's corners, webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "field": "alpha 0 where m15/<k> and m15artifact/<k> differ by more than 12 (|dR|+|dG|+|dB|+|dA|), union over w u b r g m, 1 px holes closed: 172278 px, box 58..1444 x 59..1856",
+      "box": "alpha x 0.68 inside 110..1390 x 1314..1937",
+      "maskSources": [
+        "m15/w.png@3818b6c0d274",
+        "m15artifact/w.png@d1159c684dc2",
+        "m15/u.png@80cb122e0539",
+        "m15artifact/u.png@318cc6817303",
+        "m15/b.png@d5578ecb1927",
+        "m15artifact/b.png@3d3a690b53c0",
+        "m15/r.png@e6cbb495cf62",
+        "m15artifact/r.png@4e7866b3b112",
+        "m15/g.png@f6d980508b95",
+        "m15artifact/g.png@8af763244e2f",
+        "m15/m.png@0b21a694ab48",
+        "m15artifact/m.png@768c91762d4a"
+      ]
+    },
+    "colors": {
+      "w": [
+        "m15artifact/w.png (published, sha256 d1159c684dc2)"
+      ],
+      "u": [
+        "m15artifact/u.png (published, sha256 318cc6817303)"
+      ],
+      "b": [
+        "m15artifact/b.png (published, sha256 3d3a690b53c0)"
+      ],
+      "r": [
+        "m15artifact/r.png (published, sha256 4e7866b3b112)"
+      ],
+      "g": [
+        "m15artifact/g.png (published, sha256 8af763244e2f)"
+      ],
+      "m": [
+        "m15artifact/m.png (published, sha256 768c91762d4a)"
+      ],
+      "c": [
+        "m15artifact/c.png (published, sha256 bc6654e4964d)"
+      ]
+    },
+    "sourceFiles": [
+      "m15/b.png",
+      "m15/g.png",
+      "m15/m.png",
+      "m15/r.png",
+      "m15/u.png",
+      "m15/w.png",
+      "m15artifact/b.png",
+      "m15artifact/c.png",
+      "m15artifact/g.png",
+      "m15artifact/m.png",
+      "m15artifact/r.png",
+      "m15artifact/u.png",
+      "m15artifact/w.png"
+    ],
+    "notes": [
+      "PipGlyph's own derivation (TODO 4.27a; owner 2026-10-13): neither Card Conjurer nor MSE has a station frame at print size. Nothing is drawn or synthesised in the master: every painted pixel is the parent master's, with its alpha cut.",
+      "The numbers are scripts/lib/station-2025.mjs (30 printed station cards measured 2026-10-13); no scan is read by the build.",
+      "Tier bands, badges and the P/T plate are DRAWN by both renderers (lib/cards/station.ts, lib/cards/station-art.ts) — not in the master."
+    ]
+  },
+  "m15stationland": {
+    "source": "pipglyph",
+    "converter": "scripts/build-station-frames.mjs",
+    "derivedFrom": "the published m15land/<key> masters of the frames bucket (themselves Card Conjurer imports: see \"m15land\")",
+    "output": "1500x2100, the parent's corners, webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "field": "alpha 0 where m15/<k> and m15artifact/<k> differ by more than 12 (|dR|+|dG|+|dB|+|dA|), union over w u b r g m, 1 px holes closed: 172278 px, box 58..1444 x 59..1856",
+      "box": "alpha x 0.68 inside 110..1390 x 1314..1937",
+      "maskSources": [
+        "m15/w.png@3818b6c0d274",
+        "m15artifact/w.png@d1159c684dc2",
+        "m15/u.png@80cb122e0539",
+        "m15artifact/u.png@318cc6817303",
+        "m15/b.png@d5578ecb1927",
+        "m15artifact/b.png@3d3a690b53c0",
+        "m15/r.png@e6cbb495cf62",
+        "m15artifact/r.png@4e7866b3b112",
+        "m15/g.png@f6d980508b95",
+        "m15artifact/g.png@8af763244e2f",
+        "m15/m.png@0b21a694ab48",
+        "m15artifact/m.png@768c91762d4a"
+      ]
+    },
+    "colors": {
+      "w": [
+        "m15land/w.png (published, sha256 cf9e1dc4d484)"
+      ],
+      "u": [
+        "m15land/u.png (published, sha256 3773d4dbfb84)"
+      ],
+      "b": [
+        "m15land/b.png (published, sha256 e4ab2ed1b611)"
+      ],
+      "r": [
+        "m15land/r.png (published, sha256 9367f6eeeff1)"
+      ],
+      "g": [
+        "m15land/g.png (published, sha256 84c3530c80e9)"
+      ],
+      "m": [
+        "m15land/m.png (published, sha256 8f8f07f8c96c)"
+      ],
+      "c": [
+        "m15land/c.png (published, sha256 690c19c4a85b)"
+      ]
+    },
+    "sourceFiles": [
+      "m15/b.png",
+      "m15/g.png",
+      "m15/m.png",
+      "m15/r.png",
+      "m15/u.png",
+      "m15/w.png",
+      "m15artifact/b.png",
+      "m15artifact/g.png",
+      "m15artifact/m.png",
+      "m15artifact/r.png",
+      "m15artifact/u.png",
+      "m15artifact/w.png",
+      "m15land/b.png",
+      "m15land/c.png",
+      "m15land/g.png",
+      "m15land/m.png",
+      "m15land/r.png",
+      "m15land/u.png",
+      "m15land/w.png"
+    ],
+    "notes": [
+      "PipGlyph's own derivation (TODO 4.27a; owner 2026-10-13): neither Card Conjurer nor MSE has a station frame at print size. Nothing is drawn or synthesised in the master: every painted pixel is the parent master's, with its alpha cut.",
+      "The numbers are scripts/lib/station-2025.mjs (30 printed station cards measured 2026-10-13); no scan is read by the build.",
+      "Tier bands, badges and the P/T plate are DRAWN by both renderers (lib/cards/station.ts, lib/cards/station-art.ts) — not in the master."
+    ]
+  },
   "m15token": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",

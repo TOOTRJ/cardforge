@@ -132,29 +132,56 @@ export function resolveStationTiers(
 // ---------------------------------------------------------------------------
 
 export const STATION = {
-  /** The text box inside its pinline (M15's own box). */
-  box: { left: 112, right: 1388, top: 1313, bottom: 1936 },
+  /** The see-through text box of OUR masters, inside the pinline: pixels
+   *  110..1390 × 1314..1937 (the recipe's cut, scripts/lib/station-2025.mjs;
+   *  the prints' reads 112..1388 × 1312..1935 at half our size). Written as
+   *  the box the bands are DRAWN in, every edge EVEN so it is a whole px at
+   *  the 750 px target too: `right` is 1392, one px into the pinline's
+   *  antialiased edge, rather than a half px short of it. */
+  box: { left: 110, right: 1392, top: 1314, bottom: 1938 },
   /** A tier band = its text + 2 × padY, never under minPx (prints: 168 for
-   *  a one-line upper tier, 176–178 for a one-line last tier); the top band
-   *  takes the rest. `compact`: what the bands give up — floor and air —
-   *  before any text clips on a card fuller than print's (three tiers under
-   *  a whole reminder). A badge (120 px) still fits its band. */
-  band: { minPx: 168, lastExtraPx: 8, padY: 36, topPadY: 20 },
-  compactBand: { minPx: 124, lastExtraPx: 4, padY: 14, topPadY: 6 },
-  /** Tier text starts past the badge; the top band's at M15's own start. */
+   *  a one-line upper tier, 176–178 for a one-line last tier — its top at
+   *  1755–1760 on 17 cards); the top band takes the rest, its text never
+   *  closer than topPadY to an edge. Rule 0 is print's: fitted on the 30
+   *  measured cards (2026-10-13: with the LARGEST size that fits, 20 / 20
+   *  puts the median band edge 2 px from print's and 22 of 31 within 10 —
+   *  print keeps a large size and little air round a tall tier; the first
+   *  proof's 36 px left nine cards 10–37 px off). Rule 1 is what the bands
+   *  give up — floor and air — before any text clips on a card fuller than
+   *  any print (three tiers under a whole reminder); a badge (120 px) still
+   *  fits its band. Heights are rounded UP to even px. */
+  bandRules: [
+    { minPx: 168, lastExtraPx: 12, padY: 20, topPadY: 20 },
+    { minPx: 124, lastExtraPx: 4, padY: 12, topPadY: 6 },
+  ],
+  /** The fit's order (lib/cards/station-layout.ts): [band rule, the smallest
+   *  size it is tried at] — print's rule down to 50 px, then the tight one
+   *  from the top (EOC #14, the fullest print, sets a one-line upper tier in
+   *  126 px rather than its text under 50). */
+  fitOrder: [
+    [0, 50],
+    [1, 42],
+  ],
+  /** The top band's text column is the profile's own rules slot (M15's: ink
+   *  from 132 px; prints 130–131). A tier's starts past the badge, at 180. */
   tierTextLeft: 180,
   /** Badge: a dark disc in a ring of the pinline's colour, centred on the
-   *  box's left pinline and on its band (31 read: x 99.5–101, r 49.4–50.9). */
-  badge: { cx: 100, rFill: 50, rRing: 60, capPx: 42 },
-  /** Plate: outer 231 × 112 with a 14 px rim, its two ends arcs; centre
-   *  x 1305.5 (21 read: 1305.5–1306.5), y its band's centre. WHITE digits,
-   *  52 px tall (255 on 21 of 21). */
-  plate: { cx: 1305.5, outerW: 231, outerH: 112, rim: 14, endSagitta: 15, digitPx: 52 },
+   *  box's left pinline and on its band (31 read: x 99.5–101, r 49.4–50.9).
+   *  Numeral: white, cap height 42 px — Beleren at 58 px. */
+  badge: { cx: 100, rFill: 50, rRing: 60, numeralPx: 58, inkHalfWidth: 44 },
+  /** Plate: outer 230 × 112 (x 1190–1420 on 21 prints, centre 1305.5) with
+   *  a 14 px rim, its two ends arcs; y its band's centre. WHITE digits,
+   *  52 px tall (255 on 21 of 21) — Beleren at 70 px; a wider value shrinks
+   *  to the face (lib/cards/stat-fit.ts: "20/20" prints 46 px tall). The
+   *  tier's lines break short of the plate, `airLeft` px before it. */
+  plate: { x0: 1190, x1: 1420, outerW: 230, outerH: 112, rim: 14, endSagitta: 15, digitPx: 70, airLeft: 12, airY: 6 },
   /** The tier wash over the master's see-through box: the key's colour at
    *  these opacities (tier 1 and 2 fitted on prints; tier 3 extrapolated —
    *  no print has one; owner round 54, decisions 2 and 4). */
   tierOpacity: [0.25, 0.57, 0.78],
 } as const;
+
+export type StationBandRule = { minPx: number; lastExtraPx: number; padY: number; topPadY: number };
 
 export type StationKey = "w" | "u" | "b" | "r" | "g" | "m" | "c";
 
@@ -173,21 +200,23 @@ export const STATION_COLOURS: Readonly<Record<StationKey, { tier: readonly [numb
 export type StationBand = { y0: number; y1: number; cy: number };
 export type StationBands = { top: StationBand; tiers: StationBand[]; fits: boolean };
 
+const evenUp = (px: number) => 2 * Math.ceil(px / 2);
+
 /**
  * Band rows (HD px) for block heights measured at ONE text size: the tiers
- * from the box's bottom up, each its text + padding (never under the floor),
- * the top band what is left. `fits` = the top band still holds its text.
- * The rules layout (lib/cards/rules-layout.ts) measures the heights and picks
- * the size; this is only the arithmetic both renderers' layout shares.
+ * from the box's bottom up, each its text + padding (never under the floor;
+ * an EVEN height, so every edge is a whole px at the 750 px target), the top
+ * band what is left. `fits` = the top band still holds its text. The station
+ * layout (lib/cards/station-layout.ts) measures the heights with the ONE
+ * rules layout and picks the size and the rule; this is the arithmetic.
  */
-export function stationBands(topTextH: number, tierTextH: readonly number[], compact = false): StationBands {
+export function stationBands(topTextH: number, tierTextH: readonly number[], rule: StationBandRule = STATION.bandRules[0]): StationBands {
   const { box } = STATION;
-  const rule = compact ? STATION.compactBand : STATION.band;
   let y: number = box.bottom;
   const tiers: StationBand[] = [];
   for (let i = tierTextH.length - 1; i >= 0; i--) {
     const floor = rule.minPx + (i === tierTextH.length - 1 ? rule.lastExtraPx : 0);
-    const h = Math.max(floor, Math.ceil(tierTextH[i]!) + 2 * rule.padY);
+    const h = evenUp(Math.max(floor, Math.ceil(tierTextH[i]!) + 2 * rule.padY));
     tiers.unshift({ y0: y - h, y1: y, cy: y - h / 2 });
     y -= h;
   }

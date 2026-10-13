@@ -523,6 +523,10 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   // dresses an artifact whose subtype says Vehicle (SUBTYPE_DRESSES, below,
   // is the per-card half: the Artifact kind covers every artifact).
   m15vehicle: ["artifact"],
+  // The station frame (TODO 4.27a), new as well: an artifact whose subtype
+  // says Spacecraft, a land whose subtype says Planet (SUBTYPE_DRESSES).
+  m15station: ["artifact"],
+  m15stationland: ["land"],
 };
 
 /** Kinds that wear ONLY a template whose trade dress names them. */
@@ -610,6 +614,10 @@ export function isSingleBasicLand(face: BasicLandFace): boolean {
 
 const SUBTYPE_DRESSES: Partial<Record<FrameTemplate, { subtype: string; base: FrameTemplate }>> = {
   m15vehicle: { subtype: "Vehicle", base: "m15artifact" },
+  // The station frame (TODO 4.27a; owner 2026-10-13, Q1): a Spacecraft is an
+  // artifact, a Planet a land — the Vehicle's pattern, twice.
+  m15station: { subtype: "Spacecraft", base: "m15artifact" },
+  m15stationland: { subtype: "Planet", base: "m15land" },
 };
 
 /** The subtype a template dresses ("Vehicle" for the Vehicle frame), or
@@ -653,11 +661,14 @@ export function subtypeFrameFor(
   template: FrameTemplate,
   subtypes: readonly string[] | null | undefined,
 ): FrameTemplate {
-  for (const [dress, { subtype, base }] of Object.entries(SUBTYPE_DRESSES) as [FrameTemplate, { subtype: string; base: FrameTemplate }][]) {
-    if (template !== base && template !== dress) continue;
-    return subtypesSay(subtypes, subtype) ? dress : base;
-  }
-  return template;
+  // A base may have several dresses (m15artifact: the Vehicle frame and the
+  // station frame, TODO 4.27a): the family is the base and every dress of it.
+  const base = SUBTYPE_DRESSES[template]?.base ?? template;
+  const family = (Object.entries(SUBTYPE_DRESSES) as [FrameTemplate, { subtype: string; base: FrameTemplate }][]).filter(
+    ([, dress]) => dress.base === base,
+  );
+  if (family.length === 0) return template;
+  return family.find(([, dress]) => subtypesSay(subtypes, dress.subtype))?.[0] ?? base;
 }
 
 /** True when the template is a subtype dress (the Vehicle frame): never a

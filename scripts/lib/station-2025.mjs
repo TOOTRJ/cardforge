@@ -23,7 +23,11 @@
 export const STATION_RECIPE = {
   templates: {
     m15station: { from: "m15artifact", keys: ["w", "u", "b", "r", "g", "m", "c"] },
-    m15stationland: { from: "m15land", keys: ["w", "u", "b", "r", "g"] },
+    // Printed Planets are w u b r g (EOE #250-260). "m" and "c" are built too
+    // so that no colour of a land ever resolves to a missing master (every
+    // template has every key); with no print to verify against they stay
+    // unticked, so nobody is offered them.
+    m15stationland: { from: "m15land", keys: ["w", "u", "b", "r", "g", "m", "c"] },
   },
   /** The field: pixels where m15/<k> and m15artifact/<k> differ by more than
    *  this (sum of |dR| + |dG| + |dB| + |dA|), union over these keys, 1 px

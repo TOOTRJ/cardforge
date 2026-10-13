@@ -386,6 +386,9 @@ const builtPairCache = new Map();
 const artWindowFailures = [];
 // Drop templates the recipe no longer builds (e.g. deferred ones).
 for (const template of Object.keys(provenance)) {
+  // …but never an entry another builder owns (TODO 4.27a: the station
+  // masters, scripts/build-station-frames.mjs).
+  if (provenance[template].converter && provenance[template].converter !== "scripts/import-cc-frames.mjs") continue;
   if (!CC_TEMPLATES[template] && !CC_OVERLAY_BANDS[template] && !CC_RIDERS[template] && !HOLO_STAMP_NOTCHES[template]) delete provenance[template];
 }
 for (const [template, def] of Object.entries(CC_TEMPLATES)) {
