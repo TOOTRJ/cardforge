@@ -295,6 +295,8 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       // 5.1b's modal bodies: the same box, the flipside strip a keep-out
       // in its last lines.
       "m15mdfcfront/main", "m15mdfcback/main", "m15mdfclandfront/main", "m15mdfclandback/main",
+      // 4.5c's Vehicle frame: m15artifact's box, its own plate in the corner.
+      "m15vehicle/main",
     ],
     ["1200 chars"],
   ],

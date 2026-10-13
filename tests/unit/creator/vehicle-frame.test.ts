@@ -236,7 +236,7 @@ describe("imports follow the printing (the registry's vehicle/2015 rule)", () =>
 
 describe("the importer's recipe", () => {
   type Layer = { src: string; mask?: string; right?: string };
-  const def = (CC_TEMPLATES as Record<string, { colors: Record<string, Layer[]>; plates: Record<string, string>; plateTone: unknown }>).m15vehicle;
+  const def = (CC_TEMPLATES as unknown as Record<string, { colors: Record<string, Layer[]>; plates: Record<string, string>; plateTone: unknown }>).m15vehicle;
   const NEW = "img/frames/m15/new";
 
   it("is Card Conjurer's Vehicle recipe: the bronze frame through the Border and Frame masks, the colour's interior on top", () => {

@@ -5266,7 +5266,9 @@ export const HOLO_STAMP_NOTCHES = {
     barSharedBy: Object.fromEntries(
       TWO_COLOR_PAIRS.map((pair) => [
         pair,
-        [`m15/${pair}-h`, `m15artifact/${pair}`, `m15land/${pair}`, `m15snow/${pair}`, `m15snowland/${pair}`],
+        // …and the Vehicle frame's pairs (TODO 4.5c): m15artifact's
+        // pinline layer over the bronze frame.
+        [`m15/${pair}-h`, `m15artifact/${pair}`, `m15vehicle/${pair}`, `m15land/${pair}`, `m15snow/${pair}`, `m15snowland/${pair}`],
       ]),
     ),
     barSample: M15_BAR_SAMPLE,
