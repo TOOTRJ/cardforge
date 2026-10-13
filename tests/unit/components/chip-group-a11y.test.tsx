@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import { chipOff } from "../helpers/chip";
 
@@ -77,6 +77,25 @@ describe("a chip that cannot be picked", () => {
     expect(chip("Retro").getAttribute("aria-checked")).toBe("true");
   });
 
+  it("ignores a click that lands on its label, its reason line or its badge", () => {
+    // A `disabled` button swallowed these; an aria-disabled one receives them.
+    const onPick = vi.fn();
+    render(<Row onPick={onPick} />);
+    const off = chip(/^Modern/);
+    for (const inner of off.querySelectorAll("*")) fireEvent.click(inner);
+    expect(onPick).not.toHaveBeenCalled();
+    expect(chip("Retro").getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("chipOff() refuses a chip that says it is off and can still be clicked", () => {
+    render(
+      <button type="button" aria-disabled onClick={() => {}}>
+        Lying
+      </button>,
+    );
+    expect(() => chipOff(screen.getByRole("button", { name: "Lying" }))).toThrow(/still has a click handler/);
+  });
+
   it("looks as it did: the same dimmed classes", () => {
     render(<Row />);
     expect(chip(/^Modern/).className).toMatch(/cursor-not-allowed .*opacity-55/);
@@ -116,6 +135,28 @@ describe("a single-select row on the keyboard", () => {
     // Moving is not picking: the card is as it was.
     expect(onPick).not.toHaveBeenCalled();
     expect(chip("Retro").getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("the tab stop follows the focus while it is in the row, and returns to the picked chip after", () => {
+    // A tab stop left on the picked chip while the arrows moved on made Tab
+    // (or Shift+Tab) land on the picked chip of the SAME row before leaving.
+    render(
+      <>
+        <Row />
+        <button type="button">after</button>
+      </>,
+    );
+    chip("Retro").focus();
+    expect(tabStops()).toEqual(["Retro"]);
+    press("Home");
+    expect(document.activeElement).toBe(chip("M15"));
+    expect(tabStops()).toEqual(["M15"]);
+    press("End");
+    expect(tabStops()).toEqual(["Future"]);
+    // Still one tab stop, and nothing was picked.
+    expect(chip("Retro").getAttribute("aria-checked")).toBe("true");
+    // The focus leaves the row: the stop is the picked chip again.
+    act(() => screen.getByRole("button", { name: "after" }).focus());
     expect(tabStops()).toEqual(["Retro"]);
   });
 

@@ -998,9 +998,16 @@ Rules and gotchas:
   its own — a blocked save focuses the refused field, a server refusal is the
   form's one alert. A `ChipGroup` chip that cannot be picked is
   `aria-disabled`, never `disabled` (reachable, its reason in its name; unit
-  tests ask `chipOff()`, `tests/unit/helpers/chip.ts`); a single-select row
-  is one tab stop whose arrow keys move the focus and never pick. A control
-  that removes itself hands the focus on (`useRowFocus`). The Power /
+  tests ask `chipOff()`, `tests/unit/helpers/chip.ts`, which also refuses an
+  off chip that still has a click handler — `aria-disabled` alone stops
+  nothing, so never give an off chip an `onClick`); a single-select row
+  is one tab stop whose arrow keys move the focus and never pick (owner
+  2026-10-13: Space / Enter picks; the stop is the focused chip while the
+  focus is in the row, the picked one otherwise). A control that removes
+  itself hands the focus on (`useRowFocus`; the Publish step's deck
+  quick-create both ways) — and a button inside a `<label>` that removes
+  itself on click cancels that click (`preventDefault`), or WebKit forwards
+  it to the label's control. The Power /
   Toughness inputs are described by the "frame draws no P/T" note while it
   shows (`usePtNotDrawnNoteId`).
 - Notifications are push, not pull: `notifications` is on the

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -19,9 +19,15 @@ import { cn } from "@/lib/utils";
 //   * A single-select row is ONE tab stop — the picked chip, or the first
 //     when none is picked (roving tabindex). The arrow keys, Home and End
 //     move the FOCUS between its chips, wrapping; Space or Enter picks the
-//     focused one. The arrows do not pick by themselves: several of these
-//     rows change the whole card on a pick (its kind, its frame), which must
-//     not happen while someone is only reading the choices.
+//     focused one. The arrows do not pick by themselves (owner 2026-10-13):
+//     several of these rows change the whole card on a pick (its kind, its
+//     frame), which must not happen while someone is only reading the
+//     choices. It is the WAI-ARIA "radio group in a toolbar" keyboard: a
+//     radio that is focused and not checked is announced as "not checked".
+//   * While the focus is INSIDE the row the tab stop is the focused chip, so
+//     Tab and Shift+Tab leave the row from wherever the arrows went (a tab
+//     stop left on the picked chip made Tab land on it — a second stop in
+//     the same row). It goes back to the picked chip when the focus leaves.
 //   * A multi-select row is independent toggles: every chip is a tab stop.
 // ---------------------------------------------------------------------------
 
@@ -100,10 +106,18 @@ export function ChipGroup<T extends string>(props: ChipGroupProps<T>) {
     ariaInvalid,
   } = props;
   const multi = props.multiSelect === true;
-  // Single-select: the one chip Tab lands on.
+  // The chip that holds the focus, while the focus is inside a single-select
+  // row (null outside it, and always for a multi-select row).
+  const [focused, setFocused] = useState<string | null>(null);
+  // Single-select: the one chip Tab lands on — the focused chip while the
+  // focus is in the row, else the picked one, else the first.
   const tabStop = multi
     ? null
-    : (options.find((option) => isActive(props.value, option.value, false)) ?? options[0])?.value;
+    : (
+        options.find((option) => option.value === focused) ??
+        options.find((option) => isActive(props.value, option.value, false)) ??
+        options[0]
+      )?.value;
 
   const moveFocus = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
@@ -146,6 +160,21 @@ export function ChipGroup<T extends string>(props: ChipGroupProps<T>) {
       aria-describedby={ariaDescribedBy}
       aria-invalid={!multi && ariaInvalid ? true : undefined}
       onKeyDown={multi ? undefined : moveFocus}
+      onFocus={
+        multi
+          ? undefined
+          : (event) => {
+              const value = (event.target as HTMLElement).getAttribute("data-chip-value");
+              if (value !== null) setFocused(value);
+            }
+      }
+      onBlur={
+        multi
+          ? undefined
+          : (event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocused(null);
+            }
+      }
       className={cn(LAYOUT_CLASS[layout], className)}
     >
       {options.map((option) => {
@@ -162,6 +191,7 @@ export function ChipGroup<T extends string>(props: ChipGroupProps<T>) {
             key={option.value}
             type="button"
             aria-disabled={disabled ? true : undefined}
+            data-chip-value={multi ? undefined : option.value}
             tabIndex={multi || option.value === tabStop ? undefined : -1}
             {...ariaProps}
             onClick={disabled ? undefined : () => handleClick(option.value)}
