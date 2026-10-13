@@ -463,10 +463,14 @@ body {
    opened the card (Chromium, pointer arriving on the button from the card:
    34 of 164 probes hit the button, none once the tilt had settled). With
    the stage out of hit-testing nothing transformed competes with the
-   button (670 of 670); the pointer on the card lands on `.tile-flip`
-   itself, inside the tile's link as before. Lifting the button instead
-   (translateZ) is NOT a fix: its hit area then leaves its drawn box as the
-   card tilts (1 px: 131 of 160; 12 px: 487 of 510; 100 px: 427 of 515). */
+   button (670 of 670). Lifting the button instead (translateZ) is NOT a
+   fix: its hit area then leaves its drawn box as the card tilts (1 px: 131
+   of 160; 12 px: 487 of 510; 100 px: 427 of 515).
+   Since TODO 5.17 the WHOLE picture of a two-faced tile takes no pointer —
+   the tile's link lies under it, a sibling of the tilt, never around the
+   button (components/cards/card-tile.tsx; the tilt's rotor carries
+   `pointer-events: none`, the button alone `auto`) — so this rule is the
+   inner half of the same guarantee: keep both. */
 .tile-flip-stage {
   pointer-events: none;
 }

@@ -4,11 +4,10 @@ import Image from "next/image";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { ArrowLeft, BookOpen, ExternalLink, Heart, Pin } from "lucide-react";
-import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
+import { CardTile } from "@/components/cards/card-tile";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
-import { CardHoverEffect } from "@/components/cards/card-hover-effect";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -542,22 +541,23 @@ function ProfileCardTile({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <Link
-        href={buildCardPath({ slug: card.slug, owner: { username: ownerUsername } })}
-        className="block card-corners focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        aria-label={`Open ${card.title}`}
-        style={{ viewTransitionName: `card-${card.id}` }}
-      >
-        <CardHoverEffect>
-          <BakedCardThumbnail
-            renderedImageUrl={card.rendered_image_url}
-            renderedThumbUrl={card.rendered_thumb_url}
-            renderedBackThumbUrl={card.rendered_back_thumb_url}
-            title={card.title}
-            previewData={cardToPreviewData(card, profileOverrides)}
+      <CardTile
+        viewTransitionName={`card-${card.id}`}
+        body={(slot) => (
+          <Link
+            href={buildCardPath({ slug: card.slug, owner: { username: ownerUsername } })}
+            aria-label={`Open ${card.title}`}
+            {...slot}
           />
-        </CardHoverEffect>
-      </Link>
+        )}
+        thumbnail={{
+          renderedImageUrl: card.rendered_image_url,
+          renderedThumbUrl: card.rendered_thumb_url,
+          renderedBackThumbUrl: card.rendered_back_thumb_url,
+          title: card.title,
+          previewData: cardToPreviewData(card, profileOverrides),
+        }}
+      />
       <div className="flex items-center justify-between gap-2 text-xs">
         <span className="truncate text-muted">{card.title}</span>
         <span className="inline-flex items-center gap-1 text-muted">
