@@ -5,6 +5,7 @@ import {
   FRAME_TEMPLATE_LABELS,
   FRAME_TEMPLATE_SET,
   DEFAULT_FRAME_TEMPLATE,
+  FRAME_TEMPLATE_VALUES,
   type CardType,
   type ColorIdentity,
   type FrameTemplate,
@@ -275,6 +276,89 @@ export function autoTokenTextBoxFrame(input: {
     if (isFrameComboAvailable(arch, colorKey, input.verifiedKeys)) return arch;
   }
   return input.template;
+}
+
+// ---------------------------------------------------------------------------
+// A remix never saves a text on a frame that draws none (TODO 1.24).
+//
+// A frame whose profile is `textless` (FrameProfile.textless, TODO 3.24)
+// hides the rules box in BOTH renderers: the card keeps its rules and
+// flavour text and prints neither. In the creator that is a choice the
+// maker sees (the Text step says so). An AI remix has no maker looking: it
+// copies the source's rules, writes a new flavour, and since #529 lands
+// where the import lands — "once verified" landings included — so a paid
+// remix could save a text nobody can read. The token heights already
+// follow the text (autoTokenTextBoxFrame); this is the rule behind them,
+// for every frame, and for the one case they leave (no text-box frame
+// published in the card's colour).
+//
+// The test is the PROFILE's flag, the one the renderers read — not a
+// template's name: the "M15 Textless" frames (`m15textless`,
+// `m15textlessland`, the registry's `textless` family) carry no flag and
+// draw their type line and rules straight on the art
+// (tests/unit/render/edge-to-edge-bake.test.tsx), so a text landing there
+// is drawn and stands. Give one of them the flag and this guard covers it
+// with no other change.
+// ---------------------------------------------------------------------------
+
+/** True when a card saved on `template` would carry rules-box text (the
+ *  renderers' test, hasRulesBoxText) that the frame never draws. */
+export function frameHidesRulesBoxText(
+  template: FrameTemplate,
+  face: { rulesText?: string | null; flavorText?: string | null },
+): boolean {
+  return Boolean(getFrameProfile(template).textless) && hasRulesBoxText(face);
+}
+
+/** The verified combos without those of the frames that draw no rules box
+ *  — the list as it reads while none of them is ticked. Resolving a
+ *  landing against it answers "where would this card land if that frame
+ *  were unverified": the stand-in the registry / the import already uses
+ *  (never one invented here). */
+export function withoutTextlessFrames(verifiedKeys: ReadonlySet<string>): ReadonlySet<string> {
+  const kept = new Set<string>();
+  for (const key of verifiedKeys) {
+    const template = key.slice(0, key.lastIndexOf("/"));
+    const known = (FRAME_TEMPLATE_VALUES as readonly string[]).includes(template);
+    if (known && getFrameProfile(template as FrameTemplate).textless) continue;
+    kept.add(key);
+  }
+  return kept;
+}
+
+/**
+ * The frame an AI deck remix SAVES on, once its final text is known (the
+ * copied rules, the AI's flavour) — the one point both remix paths share
+ * (executeDeckRemixStep, lib/ai/generation-jobs.ts). `template` is where
+ * the remix landed (remixFrameFor for a printing, ownCardRemixFrame for
+ * the user's own card):
+ *   • a token first follows its text (autoTokenTextBoxFrame, unchanged);
+ *   • a landing that draws the text — or a card that saves with NONE (the
+ *     identity's flavour is nullable: a vanilla card may) — stands;
+ *   • a landing that would hide the text gives way to `standIn`: a
+ *     template = the printing's landing with the textless frames read as
+ *     unverified (scryfallRemixMechanics — the registry's own stand-in, a
+ *     token's following the text again), or an own TOKEN's 2014–19 arch
+ *     (ownCardTextStandIn); `null` = the default landing, no template (an
+ *     own card, as it landed before its frame was kept);
+ *     `undefined` = nothing else is published in the card's colour, so the
+ *     landing stands — a hidden text, never a refused save after the art.
+ * A stand-in is one-faced like the landing it replaces (the caller's
+ * rule), so the credits the plan priced never move. Pure.
+ */
+export function remixSavedFrame(
+  input: Parameters<typeof autoTokenTextBoxFrame>[0] & { standIn?: FrameTemplate | null },
+): FrameTemplate | undefined {
+  const { standIn, ...card } = input;
+  const landed = autoTokenTextBoxFrame(card);
+  if (!frameHidesRulesBoxText(landed, card) || standIn === undefined) return landed;
+  if (standIn === null) return undefined;
+  const instead = autoTokenTextBoxFrame({
+    ...card,
+    template: standIn,
+    verifiedKeys: withoutTextlessFrames(card.verifiedKeys),
+  });
+  return frameHidesRulesBoxText(instead, card) ? landed : instead;
 }
 
 /**

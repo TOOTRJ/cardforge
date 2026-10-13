@@ -5530,6 +5530,51 @@ before anyone pays. Additions: 0 stored cards change, no bump, no sweep.
   settled with the step — `settle_spend`) are the same number. A one-credit
   entry is remixed ONE-FACED whatever its printing; an entry priced for both
   faces whose bodies were un-ticked since fails plainly and refunds.
+- **A remix never saves a text on a frame that draws none** (TODO 1.24,
+  2026-10-13). A frame whose PROFILE is `textless` (`FrameProfile.textless`,
+  3.24) hides the rules box in both renderers; the remix copies the
+  source's rules and writes a flavour line, so since the remix follows
+  verified landings (#529) and an own card keeps its frame (#533) it could
+  save a text nobody can read. `remixSavedFrame`
+  (`lib/creator/frame-resolve.ts`, pure) is the ONE guard, where both paths
+  save (`executeDeckRemixStep`, after the identity — the first point the
+  final text is known; the flavour is nullable, so a remix CAN save with
+  none):
+  1. a token follows its text first, as before (`autoTokenTextBoxFrame`:
+     the box or height the text asks for, else the arch's text box);
+  2. a landing that draws the text, and a card that saves with no text,
+     stand;
+  3. a landing that would hide the text (`frameHidesRulesBoxText`: the
+     profile's flag and the renderers' `hasRulesBoxText`) gives way to the
+     stand-in — for a PRINTING, its own landing resolved with the textless
+     frames read as unverified (`withoutTextlessFrames`;
+     `scryfallRemixMechanics` names it as `text_stand_in`): the registry's
+     existing stand-in, the status still `nearest`; for an OWN card, a
+     token's 2014–19 arch (`m15token`, `m15tokenartifact` for the Artifact
+     word — what a printing of it gets), else the default landing (no
+     template — where it landed before #533), each only where the save's
+     gates pass it in the card's colour (`ownCardTextStandIn`);
+  4. no stand-in (nothing else of the kind published in the colour) → the
+     landing stands: a hidden text, never a refused save after the art.
+  A stand-in is one-faced like the landing, so the plan's price never
+  moves; the estimate is untouched. The import and the creator are not
+  guarded (a maker picks a textless frame knowingly; the Text step says
+  so). `resolveGeneratedFrame`'s random pool (AI card, fill, deck
+  generation) reads the same test: a card with text never draws a textless
+  profile while another frame it fits is published.
+
+  | Landing | Reached by | Textless profile? | With text, the frame verified |
+  |---|---|---|---|
+  | `m20token`, `m20tokenartifact` | `token/m20`, its gap rules (`+nyx-dress`, `+border`, `+crown`, `+two-colour`, `+two-colour-hybrid`) and `borderless/token`, all `onceVerified`; an own token kept on them | yes | the regular / tall box, else the arch's text box (the height rule, unchanged); with NO text box in the colour: the arch (`m15token` / `m15tokenartifact`, its scrim) — an own card the same, the default frame only where the arch isn't published either |
+  | `m15textless`, `m15textlessland` | `textless/2015`, `textless/future`, `borderless/textless`, `borderless/basic/textless` (static), `textless/old-frame` (`onceVerified`, A9); an own card kept on them | **no** — they draw the type line and the rules on the art | the landing stands, the text drawn on the art |
+
+  Production (2026-10-13) ticks every colour of all six full-art token
+  templates and both arches, and neither "M15 Textless" frame: nothing a
+  remix does today changes. Flagging `m15textless*` `textless` (the real
+  textless frames, 4.37 / 4.42) makes the guard cover that family with no
+  other change — `tests/unit/ai/remix-textless-guard-flagged.test.ts` pins
+  the stand-ins (`m15`, `m15land`, `m15artifact`; `modern` for the 2003
+  promos). Never test a template's NAME for this.
 - **A remix of the user's OWN card keeps its frame** (2026-10-13; a deck
   entry's `card_id`, which the step reads before its printing — it used to
   carry no template, so a card on the Vehicle frame, the 2003 frame, a
@@ -5555,6 +5600,7 @@ before anyone pays. Additions: 0 stored cards change, no bump, no sweep.
     retired or missing template, a body-less legacy back — is the landing
     it had before: no template (the default frame), one face, one credit.
     A fallback, never a refused save after the art is paid for.
+  - **never a text on a frame that draws none** (TODO 1.24, below).
   - an EMBLEM is not remixed at all (owner 2026-10-13) — an own emblem card
     or a printed one (`layout: emblem`). An emblem prints its planeswalker's
     name and a remix renames every card by itself, so the two would stop

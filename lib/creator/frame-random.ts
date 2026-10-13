@@ -30,6 +30,7 @@ import {
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import { printsPowerToughness } from "@/lib/cards/card-display";
 import { isM20TokenTemplate } from "@/lib/cards/token-height";
+import { frameHidesRulesBoxText } from "@/lib/creator/frame-resolve";
 import type { BasicLandFace } from "@/lib/cards/watermark";
 
 export type FrameRequest = FrameTemplate | "random" | undefined;
@@ -132,7 +133,13 @@ export function resolveGeneratedFrame(input: {
     const dress = subtypeFrameFor(choice.template, face?.subtypes);
     return dress === choice.template || !has(dress);
   });
-  const pool = dressed;
+  // …and a card with text never draws a frame that prints none (TODO 1.24,
+  // frameHidesRulesBoxText — the full-art token's textless height) while
+  // any other frame it fits is published: with no frame the text picks
+  // (`boxed` empty), the arch's scrim keeps the text; the textless height
+  // would hide it.
+  const drawn = dressed.filter((choice) => !frameHidesRulesBoxText(choice.template, tokenFace));
+  const pool = drawn.length > 0 ? drawn : dressed;
 
   if (requested !== "random") {
     const vehicle = subtypeFrameFor(requested, face?.subtypes);

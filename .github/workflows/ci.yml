@@ -38,9 +38,11 @@
 #           in headless Chromium (its own `next dev`, no database) and by the
 #           Satori bake, compared region by region at 750 px and HD against
 #           tests/parity/thresholds.ts and the recorded offsets in
-#           tests/parity/baseline.json. The summary has the measured table;
-#           the `parity-baseline` artifact is this run's numbers, and a red
-#           run's `parity-differences` artifact its preview / bake /
+#           tests/parity/baseline/<platform>/ (one file per case). The
+#           summary has the measured table; a red run prints the linux case
+#           files an update would write as a script to paste (the same
+#           files are the `parity-baseline` artifact), and its
+#           `parity-differences` artifact holds the preview / bake /
 #           difference pictures.
 #
 # The repo is public, so Actions minutes are free. No secrets are needed: the
@@ -429,14 +431,16 @@ jobs:
       - name: Compare the preview with the bake
         run: node scripts/parity.mjs
 
-      # What `npm run test:parity -- --update` would write for linux, made on
-      # this runner (a red run prints the command that fetches it).
+      # The case files `npm run test:parity -- --update` would write for
+      # linux, made on this runner — only the ones that are new or moved,
+      # and update.json naming them (a red run prints them as a script to
+      # paste, and the command that fetches this). Nothing on a green run.
       - name: Upload the measured baseline
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: parity-baseline
-          path: tmp/parity/next/baseline.json
+          path: tmp/parity/next/
           if-no-files-found: ignore
           retention-days: 14
           overwrite: true
