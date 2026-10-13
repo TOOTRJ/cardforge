@@ -39,7 +39,8 @@ test.describe("two-part kinds: the part tabs", () => {
       // The Card step is the card's: the switch stays usable and says so.
       await secondTab.click();
       await expect(page.getByTestId("face-switch-note")).toContainText(/Everything on this step is shared by both/);
-      await expect(page.getByRole("radiogroup", { name: "Card type" })).toBeVisible();
+      // (The Card type section folds shut once a kind is picked: its bar.)
+      await expect(page.locator("summary").filter({ hasText: /^card type/i }).first()).toBeVisible();
       // ONE picture: no two-face preview; the part being edited is ringed.
       await expect(page.getByTestId("face-preview")).toHaveCount(0);
       const ring = page.getByTestId("part-outline").filter({ visible: true }).first();
