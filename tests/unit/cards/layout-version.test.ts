@@ -2272,13 +2272,14 @@ describe("v49 — the symbols as printed: five redrawn symbols and flat rules-te
   it("the redrawn-symbol test is the renderers' own answer: exactly the symbols whose pip changed", async () => {
     const { v49HasRedrawnSymbol } = await import("@/lib/cards/layout-version");
     const { tokenize, tokenSuffix } = await import("@/components/cards/mana-cost-glyphs");
-    const { manaGemSpec, pipScale } = await import("@/lib/cards/mana-gem");
+    const { manaGemSpec } = await import("@/lib/cards/mana-gem");
     const { symbolStyle, manaGlyphPx } = await import("@/lib/cards/symbol-style");
     /** The pip is anything but the plain one: a v47 disc with the font's glyph at mana-font's share, or a plain hybrid. */
     const changed = (text: string) => {
       const suffix = tokenSuffix(tokenize(text)[0])!;
       const gem = manaGemSpec(suffix, 60, symbolStyle("modern"));
-      if (pipScale(suffix) !== 1) return true;
+      // v49's larger disc was the Phyrexian symbols' alone (frozen: v53 made the hybrids large too).
+      if (/^[wubrg]p$/.test(suffix) || (/^[wubrg]{2}p$/.test(suffix) && suffix[0] !== suffix[1])) return true;
       if (gem.kind !== "solid") return false;
       return gem.bg === null || gem.flake !== undefined || gem.ink !== "#150d08" || gem.glyphPx !== manaGlyphPx(60);
     };
@@ -2545,11 +2546,12 @@ describe("v52 — a name's room before a detached cost of Phyrexian symbols (TOD
     for (const t of FRAME_TEMPLATE_VALUES) expect(getFrameProfile(t).secondFace && "costRect" in getFrameProfile(t).secondFace!, t).toBeFalsy();
   });
 
-  it("the frozen symbol test is pipScale's: a larger disc, as the tokenizer reads the cost", async () => {
+  it("the frozen symbol test is pipScale's as it stood at v52: a Phyrexian symbol's larger disc, as the tokenizer reads the cost", async () => {
     const lv = await import("@/lib/cards/layout-version");
     const { tokenize, tokenSuffix } = await import("@/components/cards/mana-cost-glyphs");
-    const { pipScale } = await import("@/lib/cards/mana-gem");
-    const larger = (cost: string) => tokenize(cost).some((t) => pipScale(tokenSuffix(t) ?? "") !== 1);
+    // v52's pipScale ≠ 1: the Phyrexian symbols, one colour or two (v53 made every split disc large).
+    const v52Larger = (suffix: string) => /^[wubrg]p$/.test(suffix) || (/^[wubrg]{2}p$/.test(suffix) && suffix[0] !== suffix[1]);
+    const larger = (cost: string) => tokenize(cost).some((t) => v52Larger(tokenSuffix(t) ?? ""));
     const letters = ["W", "U", "B", "R", "G", "C", "P", "X", "2", "S", "Q", "E", "T"];
     const inners = [...letters];
     for (const a of letters) for (const b of letters) inners.push(`${a}/${b}`);
@@ -2627,5 +2629,150 @@ describe("v52 — a name's room before a detached cost of Phyrexian symbols (TOD
       expect(lv.hasPendingCorrection(plain, AT), template).toBe(false);
     }
     expect(sweep(at("m15pw", "{1}{R/P}", { layout_version: 50, art_position: null }))).toBe("rebake");
+  });
+});
+
+describe("v53 — the large pips as printed (TODO 3.21, owner round 49)", () => {
+  const png = "https://x/y.png";
+  const V = 53;
+  /** A v52 bake: only v53 can be pending. */
+  const at = (template: string, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    visibility: "public",
+    layout_version: V - 1,
+    rendered_image_url: png,
+    frame_style: { template, finish: "regular" },
+    card_type: "creature",
+    title: "Worm",
+    cost: "{2}{R}",
+    rules_text: "Trample",
+    face_content: null,
+    back_face: null,
+    ...over,
+  });
+  const AT = { current: V } as const;
+  const SPLIT = ["{W/U}", "{u/w}", "{2/W}", "{ 2/g }", "{B/R}{B/R}", "{WU}", "{2W}", "{cw}", "{WUP}", "{1}{G/W}{W}"];
+  const PHYREXIAN = ["{W/P}", "{u/p}", "{G/U/P}", "{ r/p }", "{WP}", "{2}{R/P}{R/P}"];
+  const PLAIN = ["{2}{R}{R}", "{X}{C}{S}", "{Q}{E}{T}", "{C/P}", "{W/W}", "{3/W}", "{C/W}", "{P}", "{W / U}", "{PW}", "WU", "2/W", "", null];
+  const MODAL = ["m15mdfcfront", "m15mdfclandfront", "m15mdfcback", "m15mdfclandback"];
+
+  it("is a sweep, never a badge, card-scoped on every template, and verification-neutral", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.LARGE_PIPS_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect(lv.VERSION_SCOPES[V]).toBeTypeOf("function");
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual([]);
+    // Without a card to judge by, every template is touched (a card scope).
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(true);
+  });
+
+  it("the frozen list is the styles': only the 2003 frame's pair draws a large COST pip at another factor than 1.2, and text is 1.28 everywhere", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const { SYMBOL_STYLES, inlineSymbolStyle, LARGE_PIP_COST_SCALE, LARGE_PIP_TEXT_SCALE } = await import("@/lib/cards/symbol-style");
+    expect([LARGE_PIP_COST_SCALE, LARGE_PIP_TEXT_SCALE]).toEqual([1.2, 1.28]);
+    const other = Object.values(SYMBOL_STYLES).filter((s) => s.largePipScale !== 1.2);
+    expect(other.map((s) => [s.id, s.largePipScale])).toEqual([["2003", 85 / 66]]);
+    for (const s of Object.values(SYMBOL_STYLES)) {
+      expect(s.inlineLargePipScale, s.id).toBe(1.28);
+      expect(inlineSymbolStyle(s).largePipScale, s.id).toBe(1.28);
+      const inline = inlineSymbolStyle(s);
+      expect(inlineSymbolStyle(inline), s.id).toBe(inline);
+    }
+    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).symbolStyle === "2003").sort()).toEqual([...lv.V53_LARGER_COST_TEMPLATES].sort());
+    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).flipside).sort()).toEqual([...MODAL].sort());
+  });
+
+  it("the frozen symbol tests are isLargePip's, as the tokenizer reads a text", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const { tokenize, tokenSuffix } = await import("@/components/cards/mana-cost-glyphs");
+    const { isLargePip } = await import("@/lib/cards/mana-gem");
+    const phyrexian = (suffix: string) => /^[wubrg]p$/.test(suffix) || (/^[wubrg]{2}p$/.test(suffix) && suffix[0] !== suffix[1]);
+    const suffixes = (text: string) => tokenize(text).map((t) => tokenSuffix(t) ?? "");
+    const letters = ["W", "U", "B", "R", "G", "C", "P", "X", "2", "3", "S", "Q", "E", "T"];
+    const inners = [...letters, "10", "20"];
+    for (const a of letters) for (const b of letters) inners.push(`${a}/${b}`, `${a}${b}`, `${a}${b}X`, `${a}${b}/U`, `${a} ${b}`, `${a}${b} 3`, `${a}/${b}/P`, `${a}/${b}/U`);
+    inners.push("GUP", "WUP", "W/P/U", "P/W", "W/ U", "W /U", "WP/P", "2/W/P", "02/W", "22/W", "2/WU");
+    for (const inner of inners) {
+      for (const text of [`{${inner}}`, `{${inner.toLowerCase()}}`, `{ ${inner} }`, `{1}{${inner}}{R}`, `Pay {${inner}}: Draw a card.`, inner]) {
+        const large = suffixes(text).filter(isLargePip);
+        expect(lv.v53HasPhyrexianDisc(text), text).toBe(large.some(phyrexian));
+        expect(lv.v53HasSplitDisc(text), text).toBe(large.some((s) => !phyrexian(s)));
+      }
+    }
+    for (const text of SPLIT) expect(lv.v53HasSplitDisc(text), text).toBe(true);
+    for (const text of PHYREXIAN) expect(lv.v53HasPhyrexianDisc(text), text).toBe(true);
+    for (const text of PLAIN) {
+      expect(lv.v53HasSplitDisc(text), String(text)).toBe(false);
+      expect(lv.v53HasPhyrexianDisc(text), String(text)).toBe(false);
+    }
+  });
+
+  it("a hybrid or twobrid symbol re-bakes the card on any template — in the cost, the text, the rows, the rail or the second face", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const sweep = await sweepAt(V);
+    for (const t of ["m15", "lotr", "retro", "modern", "modernland", "m15pw", "saga", "m15token", "agclassic", "m15mdfcfront"]) {
+      for (const symbol of SPLIT) {
+        const rows = [
+          at(t, { cost: symbol }),
+          at(t, { rules_text: `${symbol}: Draw a card.` }),
+          at(t, { back_face: { title: "Back", cost: symbol } }),
+          at(t, { back_face: { title: "Back", rules_text: `Pay ${symbol}.` } }),
+          at(t, { face_content: { loyalty: { abilities: [{ cost: "+1", text: `Add ${symbol}.` }] } } }),
+          at(t, { face_content: { saga: { intro: null, chapters: [{ text: `Add ${symbol}.` }] } } }),
+          at(t, { face_content: { saga: { intro: `Pay ${symbol}.`, chapters: [] } } }),
+        ];
+        for (const row of rows) {
+          expect(sweep(row), `${t} ${symbol}`).toBe("rebake");
+          expect(isRenderStale(V - 1, t, undefined, V, row), t).toBe(true);
+          expect(lv.hasPendingCorrection(row, AT)).toBe(true);
+          expect(lv.hasNewerLook(row, AT)).toBe(false);
+        }
+      }
+    }
+  });
+
+  it("a Phyrexian symbol re-bakes in a text everywhere, in a cost only on the 2003 pair and the modal bodies", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const sweep = await sweepAt(V);
+    for (const t of FRAME_TEMPLATE_VALUES) {
+      const larger = lv.V53_LARGER_COST_TEMPLATES.includes(t) || MODAL.includes(t);
+      for (const symbol of PHYREXIAN) {
+        expect(sweep(at(t, { rules_text: `${symbol}: Draw a card.` })), `${t} text ${symbol}`).toBe("rebake");
+        expect(sweep(at(t, { back_face: { title: "Back", rules_text: `Pay ${symbol}.` } })), t).toBe("rebake");
+        expect(sweep(at(t, { face_content: { loyalty: { abilities: [{ cost: "−2", text: `Pay ${symbol}.` }] } } })), t).toBe("rebake");
+        expect(sweep(at(t, { cost: symbol })), `${t} cost ${symbol}`).toBe(larger ? "rebake" : "stamp");
+        expect(sweep(at(t, { back_face: { title: "Back", cost: symbol } })), `${t} back cost ${symbol}`).toBe(larger ? "rebake" : "stamp");
+      }
+    }
+    // A {} frame_style draws m15: its cost keeps ×1.2.
+    expect(sweep(at("m15", { frame_style: {}, cost: "{R/P}" }))).toBe("stamp");
+    expect(sweep(at("m15", { frame_style: {}, cost: "{R/W}" }))).toBe("rebake");
+  });
+
+  it("stamps every card without a large pip", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const sweep = await sweepAt(V);
+    for (const t of FRAME_TEMPLATE_VALUES) {
+      for (const text of PLAIN) {
+        const row = at(t, { cost: text, rules_text: text, back_face: { title: "Back", cost: text, rules_text: text } });
+        expect(sweep(row), `${t} ${text}`).toBe("stamp");
+        expect(isRenderStale(V - 1, t, undefined, V, row), t).toBe(false);
+        expect(lv.hasPendingCorrection(row, AT)).toBe(false);
+      }
+    }
+  });
+
+  it("a row that doesn't carry what it reads can't be judged: affected", async () => {
+    const sweep = await sweepAt(V);
+    for (const missing of ["frame_style", "cost", "rules_text", "face_content", "back_face"] as const) {
+      const row = at("m15") as Record<string, unknown>;
+      delete row[missing];
+      expect(sweep(row as never), missing).toBe("rebake");
+    }
   });
 });

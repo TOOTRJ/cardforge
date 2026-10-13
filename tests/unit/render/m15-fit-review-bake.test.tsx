@@ -5,6 +5,7 @@ import type { CardPreviewData } from "@/components/cards/card-preview";
 import { displayLine } from "@/lib/cards/card-display";
 import { TYPE_SYMBOL_GAP_PCT, fitTypeLineBand, measuredLinePx } from "@/lib/cards/render-tiers";
 import { setSymbolSize, setSymbolSource } from "@/lib/cards/set-symbol-size";
+import { symbolStyleOf } from "@/lib/cards/symbol-style";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { fitTitleBand, manaCostWidthPct } from "@/lib/cards/title-band";
 import { RULES_TEXT, ptToPct } from "@/lib/cards/typography";
@@ -171,7 +172,7 @@ describe("layout v32 review fixes — real bakes", () => {
         const y1 = Math.ceil(((rect.topPct + rect.heightPct) / 100) * H) + 12;
         const left = Math.round((rect.leftPct / 100) * W);
         const box = pw.costRect!;
-        const pipsLeft = Math.floor(((box.leftPct + box.widthPct) / 100 - manaCostWidthPct(cost, pw.costSizePct!)) * W);
+        const pipsLeft = Math.floor(((box.leftPct + box.widthPct) / 100 - manaCostWidthPct(cost, pw.costSizePct!, symbolStyleOf(pw))) * W);
         // (Short of the disc's dark hard shadow, ≈ 0.1 disc left of it.)
         const shadow = Math.ceil(0.1 * pw.costSizePct! * W) + 2;
         const ink = inkBox(out, dark, left - 4, pipsLeft - shadow, y0, y1)!;

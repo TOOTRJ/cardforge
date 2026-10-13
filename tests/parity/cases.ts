@@ -134,6 +134,9 @@ const PICKS: readonly Pick[] = [
   // largest (measured 2026-10-12, darwin; HD agrees: 0,1 · 5.2; the name is
   // cut at the same word in both). It joins with a described known
   // difference, or once that one is fixed.)
+  { from: "m15/u/creature-short@large-pips-hd", why: "v53: the large pips on the M15 frame — a hybrid, a twobrid and a Phyrexian disc at 88 px in the cost, 77 px in rules text" },
+  { from: "modern/u/creature-short@large-pips-hd", why: "v53: the large pips on the 2003 frame — 85 px discs in a detached cost, ×1.28 in rules text" },
+  { from: "retro/u/creature-short@large-pips-hd", why: "v53: the large pips on the 1997 frame — ×1.2 kept in the cost, ×1.28 in rules text, flat discs" },
   { from: "modern/w/creature-long@phyrexian-cost-5", why: "v52: a long name's room before five Phyrexian discs in a detached cost (2003 frame)" },
 ];
 
