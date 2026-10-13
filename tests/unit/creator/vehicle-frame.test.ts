@@ -214,6 +214,27 @@ describe("imports follow the printing (the registry's vehicle/2015 rule)", () =>
     expect(withVerification(suit, "w", keys(["m15vehicle", "c"]))).toMatchObject({ status: "nearest", template: "m15artifact" });
   });
 
+  it("the one silver-plated Vehicle print (DOM Weatherlight) stays off the rule: never exact on the Vehicle frame", () => {
+    // Bronze frame, SILVER plate, dark digits (owner 2026-10-12: that plate
+    // is not offered) — the print, its prerelease stamp and its List reprint.
+    const weatherlight = (set: string, collector_number: string) =>
+      scryfallCardSchema.parse({
+        id: "00000000-0000-4000-8000-000000000237", name: "Weatherlight", layout: "normal", set, set_type: "expansion", collector_number,
+        frame: "2015", frame_effects: ["legendary"], border_color: "black", full_art: false, textless: false, keywords: ["Flying", "Crew"],
+        type_line: "Legendary Artifact — Vehicle", colors: [], color_identity: [], mana_cost: "{4}", power: "4", toughness: "5", released_at: "2018-04-27",
+      });
+    for (const [set, number] of [["dom", "237"], ["pdom", "237s"], ["plst", "DOM-237"]] as const) {
+      const match = frameMatchFromScryfall(weatherlight(set, number));
+      expect(match.signature.startsWith("vehicle/"), `${set} ${number}`).toBe(false);
+      expect(match.onceVerified, `${set} ${number}`).toBeUndefined();
+      expect(match).toMatchObject({ status: "nearest", template: "m15artifact" });
+      expect(match.gaps).toContain("vehicle");
+      expect(withVerification(match, "c", EVERY)).toMatchObject({ status: "nearest", template: "m15artifact" });
+    }
+    // Another printing of the card with the brown plate takes the rule.
+    expect(frameMatchFromScryfall(weatherlight("nec", "165")).signature.startsWith("vehicle/2015")).toBe(true);
+  });
+
   it("a non-Vehicle artifact never takes the rule", () => {
     const strix = frameMatchFromScryfall(byName("Baleful Strix"));
     expect(strix.signature.startsWith("vehicle/")).toBe(false);

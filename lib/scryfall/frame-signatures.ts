@@ -357,6 +357,20 @@ export const LIGHT_BLACK_WALKER_PINS: Readonly<Record<string, readonly string[]>
   sld: ["1593"],
 };
 
+/** Vehicles on the plain 2015 frame that do NOT print the brown plate with
+ *  white digits (TODO 4.5c; owner 2026-10-12: the silver plate is not
+ *  offered): Dominaria's Weatherlight — the bronze frame with a SILVER plate
+ *  and dark digits, the one exception among the plain Vehicle prints read
+ *  (KLD 2016 → 2026; DOM #237, its prerelease stamp and its List reprint
+ *  are the same plate). They stay off `vehicle/2015`: the Vehicle frame is
+ *  never "exact" for them, and the import lands where it did before the
+ *  frame shipped (the artifact frame, `nearest`, the `vehicle` gap). */
+export const SILVER_PLATE_VEHICLE_PINS: Readonly<Record<string, readonly string[]>> = {
+  dom: ["237"],
+  pdom: ["237s"],
+  plst: ["DOM-237"],
+};
+
 /** Borderless planeswalkers outside mono-black that print the dark dress —
  *  dark name and type bars with white ink — with no `inverted` flag: the
  *  SDCC 2019 Nicol Bolas, Dragon-God (PS19 #207, gold rims). Found by a
@@ -2331,13 +2345,14 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // instead (`onceVerified`) and is exact (`exactOnceVerified`) — the plate
   // gap is drawn there (gapDrawnBy), every other M15-era gap still names
   // the item that finishes the match (a two-colour Vehicle prints the split,
-  // DFT #188–220: the frame has no pair masters yet). A Vehicle BACK face
-  // (BOT's converts) and the extended-art Vehicles keep the `vehicle` gap.
+  // DFT #188–220: the frame's ten pair masters draw it). A Vehicle BACK face
+  // (BOT's converts), the extended-art and borderless Vehicles and the one
+  // silver-plated print (SILVER_PLATE_VEHICLE_PINS) keep the `vehicle` gap.
   ...withGaps(
     {
       key: "vehicle/2015",
       exactLabel: "Vehicle frame (2015)",
-      match: { frames: ["2015"], kinds: ["artifact"], subtypesAny: ["Vehicle"] },
+      match: { frames: ["2015"], kinds: ["artifact"], subtypesAny: ["Vehicle"], notCollectorIds: SILVER_PLATE_VEHICLE_PINS },
       outcome: {
         status: "nearest",
         template: { family: "m15" },

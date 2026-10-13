@@ -2814,7 +2814,11 @@ is no layout bump, no sweep and no badge.
   a plain 2015-frame Vehicle on the artifact frame, as before, until
   `m15vehicle` is verified in its colour, and from then on names it, exact
   (`onceVerified` — the `vehicle` gap is drawn there, `gapDrawnBy`). The
-  extended-art and borderless Vehicles and a Vehicle BACK face keep the gap.
+  extended-art and borderless Vehicles and a Vehicle BACK face keep the gap
+  — and so does the one silver-plated print, Dominaria's Weatherlight (DOM
+  #237, its prerelease stamp and its List reprint:
+  `SILVER_PLATE_VEHICLE_PINS`), which is never "exact" on a brown plate and
+  lands on the artifact frame as it did before.
 
 **Sagas are not part of it.** The item's other half — a P/T on the saga
 body — is not built (owner 2026-10-12). The only saga creatures printed
