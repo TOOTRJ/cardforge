@@ -958,6 +958,26 @@ Rules and gotchas:
   (`lib/creator/walker-crowding.ts`: read from `layoutProfileLoyaltyRows`,
   never a count compared — 9 one-line rows on `m15pw`, 11 on the tall
   borderless box; nothing is blocked, no renderer reads it).
+- Creator fields and chips for a keyboard and a screen reader (TODO 3b.10 /
+  3b.19 / 3b.24): a `FieldGroup` (`components/creator/field-group.tsx`) has
+  ONE of three shapes, all the same look. `field` (default): one text input /
+  select / textarea in a `<label>` — its NAME is the caption alone, the
+  helper or the error that replaces it is its DESCRIPTION (`aria-describedby`,
+  an error also `aria-invalid`), given to a plain first child automatically
+  and to anything else through a function child (`{(aria) => …}`); never let
+  the helper back into the name. `control`: ONE control with a role of its
+  own (a chip row, the rules editor under its toolbar) — NO role on the
+  wrapper, the control named for the field: a group around one control says
+  the field twice. `group`: a SET of controls with names of their own (the
+  cost picker, chips beside an uploader). A field error is never an alert of
+  its own — a blocked save focuses the refused field, a server refusal is the
+  form's one alert. A `ChipGroup` chip that cannot be picked is
+  `aria-disabled`, never `disabled` (reachable, its reason in its name; unit
+  tests ask `chipOff()`, `tests/unit/helpers/chip.ts`); a single-select row
+  is one tab stop whose arrow keys move the focus and never pick. A control
+  that removes itself hands the focus on (`useRowFocus`). The Power /
+  Toughness inputs are described by the "frame draws no P/T" note while it
+  shows (`usePtNotDrawnNoteId`).
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in
