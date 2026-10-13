@@ -172,6 +172,64 @@ describe("estimateDeckRemix", () => {
     expect(s.collectionCalls).toEqual([]);
   });
 
+  // The independent check's mixed deck: every kind of entry in one estimate,
+  // each priced as its step lands it. The price never follows the printing
+  // behind an own card — in EITHER direction (the step reads `card_id`
+  // first, so that is the card whose pictures are generated).
+  it("a mixed deck: each entry priced as its step remixes it, the total their sum", async () => {
+    const own = (over: Record<string, unknown>) => ({
+      title: "My Card",
+      card_type: "creature",
+      supertype: null,
+      subtypes: ["Human"],
+      color_identity: ["white"],
+      rules_text: null,
+      frame_style: { template: "m15" },
+      back_face: null,
+      ...over,
+    });
+    const ownDfc = (backColour: string) =>
+      own({
+        frame_style: { template: "m15dfcfront", dfcIcon: "sunmoon" },
+        back_face: { title: "Other Side", card_type: "creature", frame_style: { template: "m15dfcbackleft" }, color_identity: [backColour] },
+      });
+    const id = (n: number) => `${String(n).repeat(8)}-1111-4111-8111-111111111111`;
+    s.verified = keys(
+      ["m15dfcfront", "w"],
+      ["m15dfcbackleft", "r"],
+      ["m15", "w"],
+      ["m15", "g"],
+      ["m20token", "r"],
+    );
+    s.items = [
+      { ...entry("own-one-faced", { card_id: id(1) }), card: own({}) },
+      { ...entry("own-dfc", { card_id: id(2) }), card: ownDfc("red") },
+      // Its back's body isn't published in blue: one face, one credit.
+      { ...entry("own-dfc-unverified", { card_id: id(3) }), card: ownDfc("blue") },
+      entry("scryfall-dfc", { name: "Brutal Cathar", scryfall_id: idOf("mid-7") }),
+      {
+        ...entry("own-token", { card_id: id(4) }),
+        card: own({ card_type: "token", supertype: "Creature", color_identity: ["red"], frame_style: { template: "m20token" } }),
+      },
+      // Both ids: the own card decides, whatever its printing is.
+      { ...entry("both-own-dfc", { card_id: id(5), scryfall_id: idOf("dom-168") }), card: ownDfc("red") },
+      { ...entry("both-own-one-faced", { card_id: id(6), scryfall_id: idOf("mid-7") }), card: own({}) },
+    ];
+    const estimate = await estimateDeckRemix("deck-1", 100);
+    expect(estimate.creditsByEntry).toEqual({
+      "own-one-faced": 1,
+      "own-dfc": 2,
+      "own-dfc-unverified": 1,
+      "scryfall-dfc": 2,
+      "own-token": 1,
+      "both-own-dfc": 2,
+      "both-own-one-faced": 1,
+    });
+    expect(estimate).toMatchObject({ cards: 7, credits: 10, doubleFaced: 3, unresolved: 0 });
+    // Only the entry WITHOUT an own card asks Scryfall.
+    expect(s.collectionCalls).toEqual([[{ id: idOf("mid-7") }]]);
+  });
+
   it("applies the batch cap and reports the skipped entries", async () => {
     s.verified = keys(["m15", "g"]);
     s.items = ["a", "b", "c"].map((id) => entry(`e-${id}`, { name: "Llanowar Elves", scryfall_id: idOf("dom-168") }));

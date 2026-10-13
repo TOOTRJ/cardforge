@@ -502,6 +502,52 @@ describe("an own double-faced card's deck remix: both faces or neither", () => {
     expect((s.refund.mock.calls[0] as [string, number])[1]).toBe(2);
   });
 
+  // A job planned BEFORE this change priced an entry with both ids by its
+  // PRINTING: a double-faced printing behind a one-faced own card reserved
+  // two, and the step — which always remixed the own card — painted one
+  // picture for them. Resumed after the change, that step is refused before
+  // any AI call and the two credits go back: never two for one picture.
+  it("an older plan that priced two for a ONE-FACED own card (by its printing) is refused and refunded", async () => {
+    s.verified = [...BOTH(), ...keys(["m15", "r"])];
+    const { step, card } = await remix(row({}), { credits: 2 });
+    expect(step.status).toBe("failed");
+    expect(step.error).toBe(REMIX_DFC_FRAMES_GONE);
+    expect(card).toBeUndefined();
+    expect(s.identity).not.toHaveBeenCalled();
+    expect(s.image).not.toHaveBeenCalled();
+    expect(s.restyle).not.toHaveBeenCalled();
+    expect(reserved()).toBe(2);
+    expect(s.refund).toHaveBeenCalledTimes(1);
+    expect((s.refund.mock.calls[0] as [string, number])[1]).toBe(2);
+  });
+
+  // Every failure after the reserve hands back exactly what was reserved,
+  // once: the identity call throwing, the second picture failing, and the
+  // save refusing the card after both pictures.
+  it("a two-credit step that fails after the reserve refunds both credits, once", async () => {
+    s.verified = BOTH();
+    s.identity.mockRejectedValueOnce(new Error("model timeout"));
+    let { step } = await remix(dfc(), { credits: 2 });
+    expect(step.status).toBe("failed");
+    expect(step.spend_ref).toBeNull();
+    expect(s.image).not.toHaveBeenCalled();
+    expect(s.refund).toHaveBeenCalledTimes(1);
+    expect((s.refund.mock.calls[0] as [string, number])[1]).toBe(2);
+
+    s.spend.mockClear();
+    s.refund.mockClear();
+    s.image
+      .mockResolvedValueOnce({ ok: true, bytes: new Uint8Array([1]), contentType: "image/png" })
+      .mockResolvedValueOnce({ ok: false, error: "The image model is busy." });
+    ({ step } = await remix(dfc(), { credits: 2 }));
+    expect(step.status).toBe("failed");
+    expect(step.error).toBe("The image model is busy.");
+    expect(s.created).toEqual([]);
+    expect(reserved()).toBe(2);
+    expect(s.refund).toHaveBeenCalledTimes(1);
+    expect((s.refund.mock.calls[0] as [string, number])[1]).toBe(2);
+  });
+
   it("a legacy back (no body) on a standard frame keeps the frame and stays one-faced, as before", async () => {
     s.verified = keys(["m15", "w"]);
     const legacy = { ...dfc(), frame_style: { template: "m15" }, back_face: { title: "Moonrage Brute", card_type: "creature" } };
