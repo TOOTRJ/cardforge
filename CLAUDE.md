@@ -815,6 +815,27 @@ Rules and gotchas:
   the deck copy-limit names) — the gallery's SQL title search folds the same
   six characters (migration 0136; a test holds the two tables together).
   Never compare a query with a stored title character for character.
+- An EDIT never changes a field its maker did not touch (#524 + its
+  follow-up; `tests/unit/components/creator-clear-fields-save.test.tsx`,
+  `creator-footer-and-create-clears.test.tsx`). The editor resends the
+  revisable fields as stored; an EMPTIED optional text travels as `null`
+  (`updateCardSchema`), which clears the column — omitted leaves it alone,
+  and a blank `""` sent to either card action is NULL in the row
+  (`withBlankTexts`, `BLANK_IS_NULL_TEXTS`; never `printed_types` or
+  `footer_text`, where "" and NULL mean two things). `footer_text` has THREE
+  values (migration 0090): NULL = the profile default, resolved at download
+  time; "" = explicitly none; a text = the card's own — the field shows the
+  default on a NULL row, so an edit sends it ONLY when it differs from what
+  it opened with. A walker's / saga's rows save through `submittedRulesOf`
+  (`lib/creator/structured-rules.ts`, the preview's rules text too): the
+  hidden textarea's copy of the rows never travels once they are all
+  removed (new card, remix and edit alike), and on an edit rows that still
+  read as the rows the form OPENED with keep the stored text byte for byte
+  (the rows serialize canonically — "-2:", "I, II —" — and a text spelled
+  "−2:", or the NULL of a card stored with its rows alone, must not be
+  rewritten by a retitle). The one write an untouched edit still makes is
+  the dual write: a walker / saga stored as plain text gains
+  `face_content`.
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

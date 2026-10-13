@@ -209,6 +209,7 @@ import {
   serializeLoyalty,
   serializeSaga,
 } from "@/lib/cards/face-content";
+import { submittedRulesOf } from "@/lib/creator/structured-rules";
 import { basicLandManaKey } from "@/lib/cards/watermark";
 import { saveNeedsOf, saveNeedsSentence, type SaveNeed } from "@/lib/creator/save-needs";
 import { secondPartWordsFor, secondPartWordsOfCard } from "@/lib/creator/second-part";
@@ -2985,54 +2986,12 @@ export function CardCreatorForm({
       values.card_type,
       values.frame_style?.template,
     );
-    let faceContentPayload: FaceContent | null = null;
-    let rulesTextOut = values.rules_text.trim();
-    if (submitKind === "planeswalker") {
-      const rows = values.loyalty_abilities
-        .map((r) => ({
-          cost: r.cost.trim()
-            ? r.cost.trim().replace(/[\u2212\u2013]/g, "-").toUpperCase()
-            : null,
-          text: r.text.trim(),
-        }))
-        .filter((r) => r.text.length > 0);
-      if (rows.length > 0) {
-        faceContentPayload = { v: 1, loyalty: { abilities: rows } };
-        rulesTextOut = serializeLoyalty(rows);
-      } else if (isEdit) {
-        // Every row emptied on an edit: the hidden textarea still holds the
-        // stored copy of the rows, which would bring them all back.
-        rulesTextOut = "";
-      }
-    } else if (submitKind === "saga") {
-      const chapters = values.saga_chapters
-        .map((r) => ({
-          numerals: [...r.numerals].sort((a, b) => a - b),
-          text: r.text.trim(),
-        }))
-        .filter((r) => r.text.length > 0 && r.numerals.length > 0);
-      if (chapters.length > 0) {
-        const intro = values.saga_intro.trim() || null;
-        faceContentPayload = { v: 1, saga: { intro, chapters } };
-        rulesTextOut = serializeSaga(intro, chapters);
-      } else if (isEdit && values.saga_chapters.every((r) => !r.text.trim())) {
-        // No chapter row holds a text on an edit. The hidden textarea still
-        // holds the STORED rules text, and it is resent only while it reads
-        // as what the editor shows — a text with no chapter, all of it the
-        // intro, untouched (so a stored text is never rewritten by a save
-        // that didn't edit it). Chapters the stored text still has, or an
-        // intro that was edited or emptied: the editor's intro IS the text
-        // ("" clears it) — the stored copy would bring the chapters back
-        // and drop the edit. A row that holds a text and no chapter number
-        // (a marker the editor can't read) is not an emptied editor: the
-        // stored text stays.
-        const intro = values.saga_intro.trim();
-        const storedSaga = sagaFromRulesText(values.rules_text);
-        if (storedSaga.chapters.length > 0 || (storedSaga.intro ?? "") !== intro) {
-          rulesTextOut = intro;
-        }
-      }
-    }
+    // (lib/creator/structured-rules.ts — the same answer on a new card, a
+    // remix and an edit: once every row is removed the hidden textarea's
+    // copy of them is NOT what saves.)
+    const { rulesText: rulesTextOut, faceContent: faceContentPayload } = submittedRulesOf(submitKind, values, {
+      opened: isEdit ? defaults : null,
+    });
 
     // Design watermark: the form's flat shape → the discriminated union
     // (null = none / clear).
@@ -3145,9 +3104,18 @@ export function CardCreatorForm({
       deck_id: values.deck_id || null,
       // Remix: the new card links back to the original it started from.
       parent_card_id: isRemix && card ? card.id : undefined,
-      // Subscriber footer mark for this card ("" = none). The action ignores
-      // it for free accounts.
-      footer_text: values.footer_text.trim(),
+      // Subscriber footer mark for this card. The action ignores it for
+      // free accounts. Three stored values (migration 0090): NULL = "use my
+      // profile default" (resolved at download time), "" = explicitly none,
+      // a text = this card's own. The field SHOWS the default on a NULL row,
+      // so an edit sends it only when the maker changed what the field
+      // opened with — resent, it froze every NULL to "" or to the default's
+      // text of that day on a save that only retitled the card. Emptying
+      // the field is the explicit "" ("Leave it blank for no footer mark").
+      // A new card and a remix always send it.
+      ...(isEdit && values.footer_text.trim() === defaults.footer_text.trim()
+        ? {}
+        : { footer_text: values.footer_text.trim() }),
       // An admin's frame preview (TODO 2.3) — honoured for admins only.
       // Edits never send it (not a revisable key); a flagged card stays
       // private on the server.
@@ -3450,7 +3418,10 @@ export function CardCreatorForm({
     subtypes: parseSubtypes(watched.subtypes_text),
     rarity: rarityForPreview,
     colorIdentity: watched.color_identity,
-    rulesText: watched.rules_text,
+    // A walker / saga draws what it will SAVE: with every row removed, not
+    // the hidden textarea's copy of them (lib/creator/structured-rules.ts).
+    rulesText:
+      kind === "planeswalker" || kind === "saga" ? submittedRulesOf(kind, watched, { opened: isEdit ? defaults : null }).rulesText : watched.rules_text,
     flavorText: watched.flavor_text,
     // The P/T the card will SAVE with: only while its inputs show (a token
     // with the Creature toggle off keeps the new card's 1/1 in the form, and

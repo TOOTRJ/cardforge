@@ -28,6 +28,7 @@ import {
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   createCardSchema,
+  withBlankTexts,
   isReservedCardSlug,
   slugify,
   updateCardSchema,
@@ -258,7 +259,9 @@ export async function createCardAction(
   // all pass. A new card is converted whole.
   // … and its Types text (TODO 3b.16) only where the maker's line differs
   // from the one the card builds by itself.
-  let data = withPrintedTypes(withPrintTypography(withEmblemShape(parsed.data)));
+  // … and no text at all for a field sent blank (withBlankTexts: NULL in
+  // the row, never the empty string).
+  let data = withPrintedTypes(withPrintTypography(withEmblemShape(withBlankTexts(parsed.data, undefined))));
 
   // An admin's frame preview (TODO 2.3): the creator's admin preview mode
   // asks for it, the server decides — only an admin (from the profile,
@@ -614,7 +617,9 @@ export async function updateCardAction(
     };
   }
 
-  let data = parsed.data;
+  // A text sent blank clears its column to NULL — what the editor's own
+  // null does — never the empty string (withBlankTexts).
+  let data = withBlankTexts(parsed.data, null);
   if (Object.keys(data).length === 0) {
     return { ok: false, formError: "No changes provided." };
   }

@@ -630,8 +630,14 @@ const baseCardSchema = z.object({
   face_content: faceContentSchema.nullable().optional(),
   // Design watermark. Same null/undefined semantics.
   watermark: watermarkSchema.nullable().optional(),
-  /** Subscriber footer mark for THIS card (migration 0090): "" = none,
-   *  null/omitted = fall back to the profile default. Ignored for free
+  /** Subscriber footer mark for THIS card (migration 0090), three values:
+   *  a text = this card's own; "" = explicitly NO footer mark (the field
+   *  emptied); null = "use my profile default", resolved at download time
+   *  (app/api/cards/[id]/png + pdf: `footer_text ?? profile default`) — a
+   *  new card that names none stores it. On an update, omitted leaves the
+   *  column alone: the editor sends the key only when the maker changed the
+   *  field (it SHOWS the default on a null row, and resending that froze
+   *  the null). Never blank-is-NULL (BLANK_IS_NULL_TEXTS). Ignored for free
    *  accounts by the actions. */
   footer_text: z.string().trim().max(40, "Keep it under 40 characters.").nullable().optional(),
   /** An admin's frame-preview save (TODO 2.3): the creator asks for it in
@@ -672,6 +678,44 @@ export const updateCardSchema = baseCardSchema.partial().extend({
   frame_style: frameStyleBaseSchema.optional(),
   frame_anatomy: frameAnatomyPatchSchema.optional(),
 });
+
+/** The nullable text columns whose EMPTY value is NULL — what a new card
+ *  stores for a field left empty, and what the editor's emptied field clears
+ *  to. The schemas above let a crafted `""` (or spaces: they trim) through
+ *  as `""`, and both card actions then stored the empty string: a second
+ *  spelling of "no text" beside NULL.
+ *  NOT `printed_types` ("" = emptied, the subtypes print alone; NULL = the
+ *  built line — CLAUDE.md "The type line") and NOT `footer_text` ("" =
+ *  explicitly no footer mark; NULL = the profile default — migration 0090):
+ *  there the two values mean two things. (`cost` is already normalised by
+ *  the actions; an empty `art_url` never parses as "".) */
+export const BLANK_IS_NULL_TEXTS = [
+  "supertype",
+  "rules_text",
+  "flavor_text",
+  "power",
+  "toughness",
+  "loyalty",
+  "defense",
+  "artist_credit",
+] as const;
+
+/** `data` with every blank text of BLANK_IS_NULL_TEXTS it NAMES replaced by
+ *  `blank` — `undefined` for a new card (the insert stores NULL for an
+ *  absent text), `null` for an edit (clear the column; `undefined` there
+ *  would mean "leave it alone"). A key the payload doesn't name stays
+ *  absent, and a text with ink is returned as it is. */
+export function withBlankTexts<T extends object>(data: T, blank: null | undefined): T {
+  let out: Record<string, unknown> | null = null;
+  for (const key of BLANK_IS_NULL_TEXTS) {
+    const value = (data as Record<string, unknown>)[key];
+    if (typeof value !== "string" || value.trim() !== "") continue;
+    out ??= { ...(data as Record<string, unknown>) };
+    if (blank === undefined) delete out[key];
+    else out[key] = blank;
+  }
+  return (out ?? data) as T;
+}
 
 // ---------------------------------------------------------------------------
 // Slug helpers

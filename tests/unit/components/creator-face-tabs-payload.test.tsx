@@ -24,6 +24,9 @@ import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 // steps and, where there is a switch, the tabs), so the same file runs
 // unchanged on both. To re-record on a checkout of that commit:
 //   FACE_TABS_CAPTURE=<path/to/out.json> npx vitest run <this file>
+// (Amended by hand since: the two EDIT payloads lost their `footer_text: ""`
+// when an edit stopped resending a footer mark its maker didn't touch —
+// creator-footer-and-create-clears.test.tsx.)
 // ---------------------------------------------------------------------------
 
 const toast = vi.hoisted(() => ({ info: vi.fn(), error: vi.fn(), success: vi.fn(), message: vi.fn() }));
