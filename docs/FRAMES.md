@@ -7074,7 +7074,7 @@ fix with a `"sweep"` bump that covers those cards, and the new code will
 re-bake them again. Or pause the automatic re-bake before merging and resume
 it once the deploy is live ([Re-bake runbook](#re-bake-runbook)).
 
-## Re-bake runbook
+## Re-bake playbook
 
 TODO 7.5. What an admin does around a sweep, and when the automatic re-bake
 needs a hand. Everything below happens on `/admin/renders` unless it says
