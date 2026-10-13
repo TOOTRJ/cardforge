@@ -383,22 +383,27 @@ describe("where an import lands in the creator (production's verified frames)", 
   it("an Artifact Creature lands on the M15 artifact frame, even from Alpha", () => {
     // M21 Solemn: the printing's own frame.
     expect(landing(mapScryfallToFormPatch(printing("m21-239")))).toEqual({ template: "m15artifact", colorKey: "c", status: "exact" });
-    // LEA Juggernaut: agclassic isn't published, so it falls forward to the
-    // artifact frame it is — never the grey M15 spell frame (the form toasts
-    // the switch).
-    expect(landing(mapScryfallToFormPatch(printing("lea-255")))).toEqual({ template: "m15artifact", colorKey: "c", status: "frame-switched" });
-    // Where agclassic IS verified (the local e2e seed adds it), the same
-    // import lands on the Alpha frame itself.
-    expect(
-      landing(mapScryfallToFormPatch(printing("lea-255")), new Set([...PROD_VERIFIED, frameComboKey("agclassic", "c")])),
-    ).toEqual({ template: "agclassic", colorKey: "c", status: "exact" });
+    // LEA Juggernaut where agclassic isn't published (built explicitly:
+    // production verified it in every colour by 2026-10-13, and
+    // supabase/seed.sql mirrors that): it falls forward to the artifact
+    // frame it is — never the grey M15 spell frame (the form toasts the
+    // switch).
+    const noAlpha = new Set([...PROD_VERIFIED].filter((key) => !key.startsWith("agclassic/")));
+    expect(landing(mapScryfallToFormPatch(printing("lea-255")), noAlpha)).toEqual({ template: "m15artifact", colorKey: "c", status: "frame-switched" });
+    // Where agclassic IS verified (production today), the same import lands
+    // on the Alpha frame itself.
+    expect(landing(mapScryfallToFormPatch(printing("lea-255")))).toEqual({ template: "agclassic", colorKey: "c", status: "exact" });
   });
 
   it("an Artifact Creature keeps its Artifact word into the frame choice", () => {
     // Without the supertype the same import would fall to the grey spell
     // frame: the helper the form calls must read it.
+    // (Read where the Alpha frame isn't published — there the printing
+    // lands on its own frame whatever its words say.)
     const patch = mapScryfallToFormPatch(printing("lea-255"));
-    expect(landing({ ...patch, supertype: undefined }).template).toBe("m15");
+    const noAlpha = new Set([...PROD_VERIFIED].filter((key) => !key.startsWith("agclassic/")));
+    expect(landing({ ...patch, supertype: undefined }, noAlpha).template).toBe("m15");
+    expect(landing(patch, noAlpha).template).toBe("m15artifact");
   });
 
   it("on the Alpha frame an imported Artifact Creature paints the brown artifact card (4.31)", () => {
