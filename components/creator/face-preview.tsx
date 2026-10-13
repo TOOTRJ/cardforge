@@ -64,7 +64,7 @@ export function FacePreview({ previewProps, face, onFaceChange, words, layout, c
     >
       <div
         aria-hidden
-        className={cn("pointer-events-none shrink-0", layout === "inline" ? "w-16" : "w-16 xl:w-[4.5rem]")}
+        className={cn("pointer-events-none shrink-0", layout === "inline" ? "w-16" : "w-10 xl:w-[4.5rem]")}
       >
         <CardPreview {...deferredProps} face={other} onFaceChange={undefined} flipOnClick={false} hideFlipControl />
       </div>
@@ -98,12 +98,21 @@ export function FacePreview({ previewProps, face, onFaceChange, words, layout, c
       </div>
     );
   }
+  // The column is sticky, so what it holds must fit the window: its foot
+  // can never be scrolled to. From xl up the other face stands BESIDE the
+  // large one. Below that (1024–1279 px: one column) it stands in the row
+  // of the "Showing" label, above the large card — under the card it fell
+  // off the foot of a 768 px-high window, out of reach — and the large card
+  // gives up a little width in a short window (700–760 px high) so its own
+  // foot, the collector line, stays in view under that row.
   return (
-    <div className={cn("flex flex-col gap-3", still)} data-testid="face-preview" data-face={face}>
-      {showing}
+    <div className={cn("relative flex flex-col gap-3", still)} data-testid="face-preview" data-face={face}>
+      <div className="flex min-h-14 items-center xl:min-h-0">{showing}</div>
       <div className="flex flex-col items-center gap-3 xl:flex-row xl:items-end xl:justify-center">
-        <div className="w-full min-w-0 max-w-sm xl:flex-1">{large}</div>
-        <div className="shrink-0 xl:w-[4.5rem]">{small}</div>
+        <div className="w-full min-w-0 max-w-[min(24rem,calc((100svh_-_14.5rem)*5/7))] xl:max-w-sm xl:flex-1">
+          {large}
+        </div>
+        <div className="absolute right-0 top-0 shrink-0 xl:static xl:w-[4.5rem]">{small}</div>
       </div>
     </div>
   );

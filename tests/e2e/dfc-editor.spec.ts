@@ -74,6 +74,15 @@ test.describe("double-faced editor", () => {
       // DOM; the phone block is hidden at this width).
       await expect(page.getByTestId("face-preview-showing").last()).toHaveText("Showing: Back face");
       await expect(page.getByRole("button", { name: "Front face — edit this face" }).last()).toBeVisible();
+      // A 1024 × 768 window: the preview is ONE sticky column beside the
+      // form, and whatever stands under the large card falls off its foot
+      // for good (a sticky column never scrolls). The other face stands in
+      // the label's row there — whole, in the window.
+      const desktop = page.viewportSize()!;
+      await page.setViewportSize({ width: 1024, height: 768 });
+      await page.getByTestId("face-preview-showing").last().scrollIntoViewIfNeeded();
+      await expect(page.getByTestId("face-preview-other").last()).toBeInViewport({ ratio: 1 });
+      await page.setViewportSize(desktop);
 
       // Identity: the selected face's name — the back's, then the front's.
       const title = `Walked Transform ${Date.now()}`;

@@ -47,8 +47,13 @@ vi.mock("@/lib/decks/card-actions", () => ({ linkDeckCardAction: vi.fn() }));
 vi.mock("@/lib/frames/frame-request-actions", () => ({
   recordFrameRequestAction: vi.fn(async () => ({ ok: true })),
 }));
+const importer = vi.hoisted(() => ({ payload: null as unknown }));
 vi.mock("@/components/creator/scryfall-import-dialog", () => ({
-  ScryfallImportDialog: () => null,
+  ScryfallImportDialog: ({ onImport }: { onImport: (payload: unknown) => unknown }) => (
+    <button type="button" onClick={() => onImport(importer.payload)}>
+      test: import
+    </button>
+  ),
   toastImportNotice: () => {},
 }));
 vi.mock("@/components/creator/ai-fill-dialog", () => ({ AiFillDialog: () => null }));
@@ -597,6 +602,94 @@ describe("what a save still needs, per face", () => {
     // On the Front face tab it is not shown (it is not the front's).
     await click(tab(/^Front face/));
     expect(screen.queryByTestId("dfc-back-error")).toBeNull();
+  });
+
+  // The server's schema errors name the top-level key only ("back_face",
+  // lib/auth/schemas.ts fieldErrorsFromZod): no field stands under it. Before
+  // (and on origin/main) the step opened and the message was said nowhere.
+  it("a refusal keyed on the whole back face is said at the top of the Back face tab", async () => {
+    actions.createCardAction.mockResolvedValue({
+      ok: false,
+      fieldErrors: { back_face: "Rules text must be 4000 characters or fewer." },
+    });
+    renderForm();
+    await pickKind(/^Modal double-faced/);
+    await goTo(/^identity/i);
+    await act(async () => {
+      fireEvent.change(named("title")!, { target: { value: "Valakut Awakening" } });
+    });
+    await goTo(/^publish/i);
+    await click(screen.getByTestId("save-as-draft"));
+    await click(screen.getByRole("button", { name: /^Save$/ }));
+    await waitFor(() => expect(selected()).toBe("back"));
+    expect(activeStep()).toMatch(/Identity/);
+    expect(screen.getByTestId("dfc-back-error").textContent).toBe("Rules text must be 4000 characters or fewer.");
+    await click(tab(/^Front face/));
+    expect(screen.queryByTestId("dfc-back-error")).toBeNull();
+  });
+});
+
+describe("what is the card's on the Back face tab", () => {
+  // ONE legendary crown serves both faces (TODO 5.1d): its row shows when
+  // EITHER face prints one. A legendary back under a plain front used to
+  // have its switch beside the back's own type line (the old Back face
+  // panel sat on the same step); with the tabs it must not be on the
+  // Front face tab alone.
+  it("a legendary back under a plain front: the crown's switch is on the Back face tab, where “Legendary” is typed — and it is the one switch", async () => {
+    renderForm();
+    await pickKind(/^Transform/);
+    await goTo(/^identity/i);
+    expect(screen.queryByRole("switch", { name: /crown/i })).toBeNull();
+    await click(tab(/^Back face/));
+    expect(screen.queryByRole("switch", { name: /crown/i })).toBeNull();
+    const types = document.querySelector<HTMLInputElement>("#types-field-back")!;
+    await act(async () => {
+      fireEvent.change(types, { target: { value: "Legendary Creature" } });
+    });
+    const onBack = screen.getByRole("switch", { name: /crown/i });
+    expect(onBack.getAttribute("aria-checked")).toBe("true");
+    // Between the type line and the artwork, as on the Front face tab.
+    const typeLine = screen.getByTestId("back-type-line-fields");
+    const artwork = screen.getByTestId("back-face-artwork");
+    expect(typeLine.compareDocumentPosition(onBack) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(onBack.compareDocumentPosition(artwork) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await click(onBack);
+    expect(screen.getByRole("switch", { name: /crown/i }).getAttribute("aria-checked")).toBe("false");
+    // The same state on the Front face tab.
+    await click(tab(/^Front face/));
+    expect(screen.getByRole("switch", { name: /crown/i }).getAttribute("aria-checked")).toBe("false");
+  });
+
+  // An import is another card. On origin/main it opened on the front (a
+  // step change turned the preview there); with the tabs kept through a
+  // step change, an import made from the Back face tab landed on the back.
+  it("an import made from the Back face tab opens on the Front face tab", async () => {
+    renderForm();
+    await pickKind(/^Transform/);
+    await click(tab(/^Back face/));
+    expect(selected()).toBe("back");
+    importer.payload = {
+      patch: { title: "Delver of Secrets" },
+      importedArtUrl: null,
+      source: { name: "Delver of Secrets // Insectile Aberration", scryfallUri: null },
+    };
+    await click(screen.getByRole("button", { name: "test: import" }));
+    expect(activeStep()).toMatch(/Identity/);
+    expect(selected()).toBe("front");
+    expect(named("title")?.getAttribute("name")).toBe("title");
+  });
+
+  it("the small face stays in reach where the preview is one sticky column: it stands in the label's row below xl, beside the card from xl up", async () => {
+    renderForm();
+    await pickKind(/^Transform/);
+    // The desktop column's (the last in the DOM; the phone block is inline).
+    const other = screen.getAllByTestId("face-preview-other").at(-1)!;
+    const slot = other.parentElement!;
+    expect(slot.className).toMatch(/(^| )absolute( |$)/);
+    expect(slot.className).toMatch(/(^| )top-0( |$)/);
+    expect(slot.className).toMatch(/(^| )xl:static( |$)/);
+    // …and the column is its positioning box.
+    expect(slot.closest("[data-testid='face-preview']")!.className).toMatch(/(^| )relative( |$)/);
   });
 });
 

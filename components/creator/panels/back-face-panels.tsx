@@ -88,10 +88,16 @@ export function BackFaceFrameError() {
   const {
     formState: { errors },
   } = useFormContext<FormValues>();
+  // A refusal the server keys on the whole face ("back_face": its schema
+  // errors name the top-level key only — lib/auth/schemas.ts
+  // fieldErrorsFromZod) has no field to stand under: said here, or it would
+  // be said nowhere.
+  const wholeFace = (errors as { back_face?: { message?: unknown } } | undefined)?.back_face?.message;
   const frameError =
     backFaceErrorMessage(errors, "frame_style") ??
     backFaceErrorMessage(errors, "card_type") ??
-    backFaceErrorMessage(errors, "color_identity");
+    backFaceErrorMessage(errors, "color_identity") ??
+    (typeof wholeFace === "string" ? wholeFace : undefined);
   return frameError ? (
     <p
       role="alert"
@@ -239,6 +245,10 @@ type BackFaceIdentityFieldsProps = {
   artWindow: ArtWindow;
   /** What "Clear" leaves behind: a blank face typed for the kind. */
   blankBackFace?: BackFaceFormValues;
+  /** Shown between the type line and the artwork, where the Front face tab
+   *  shows the card's printed-pieces switches: the ONE legendary crown
+   *  serves both faces (a legendary back wears it too). */
+  afterTypeLine?: React.ReactNode;
 };
 
 /** The back's name, type line, artwork and artist — the Identity step's
@@ -248,6 +258,7 @@ export function BackFaceIdentityFields({
   layout,
   artWindow,
   blankBackFace = EMPTY_BACK_FACE,
+  afterTypeLine,
 }: BackFaceIdentityFieldsProps) {
   const {
     register,
@@ -289,6 +300,8 @@ export function BackFaceIdentityFields({
           />
         </FieldGroup>
       </div>
+
+      {afterTypeLine}
 
       {/* The uploader's own heading names the face (no second label). */}
       <div className="flex flex-col gap-1.5" data-testid="back-face-artwork">

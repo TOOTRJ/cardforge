@@ -2373,6 +2373,10 @@ export function CardCreatorForm({
     settleTokenTextFollow();
     // Pop the user back to Identity so they can see the seeded fields.
     goToStepKey("identity");
+    // An import is another card: it opens on its front, as it always did
+    // (a step change used to turn the preview to the front). With Face tabs
+    // an import made from the Back face tab would otherwise land there.
+    setPreviewFace("front");
     return notice;
   };
 
@@ -3743,6 +3747,24 @@ export function CardCreatorForm({
                       // A back with no body yet draws on the front's frame.
                       artWindow={artWindows.back ?? artWindows.front}
                       blankBackFace={blankSecondFaceFor(kind)}
+                      // The card's printed-pieces switches, as on the Front
+                      // face tab: ONE legendary crown serves both faces
+                      // (TODO 5.1d) — a legendary back under a plain front
+                      // shows its switch here, where "Legendary" was typed.
+                      afterTypeLine={
+                        <FaceScope label={null}>
+                          <AnatomyPanel
+                            which={isRevise ? ["crown", "twoColor"] : ["crown"]}
+                            stored={
+                              isEdit && card
+                                ? { frameStyle: card.frame_style as FrameStyle | null, colorIdentity: card.color_identity }
+                                : null
+                            }
+                            onPairTouched={markPairTouched}
+                          />
+                          {isRevise ? <LegendaryCrownReason /> : null}
+                        </FaceScope>
+                      }
                     />
                   </FaceScope>
                 ) : (
