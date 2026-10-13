@@ -324,7 +324,32 @@ Rules and gotchas:
   (`.tile-flip-stage`) takes NO pointer events: inside `CardHoverEffect`'s
   3D tilt a browser hit-tests by depth, and the faces took the button's
   clicks (never "fix" it by lifting the button with translateZ — its hit
-  area then leaves its drawn box). The back's 600 px thumb is mounted only
+  area then leaves its drawn box). The button is NEVER inside the tile's
+  link or `role="button"` (5.17: a control in a control is invalid HTML,
+  axe "nested-interactive"): every gallery-style tile is nested by ONE
+  component, `CardTile` (`components/cards/card-tile.tsx`) — a one-faced
+  tile's link wraps the picture as it always did; a two-faced tile's link
+  (or My Cards' role="button") is an EMPTY element UNDER the picture,
+  first child of `.card-hover-effect` (`CardHoverEffect`'s `under`; the
+  very box the wrapping link was, focus ring included), the tilt's rotor
+  takes no pointer events so the pointer falls through the picture to it,
+  and the button alone is `pointer-events-auto` — keyboard order link →
+  "2 faces" → what follows. The hover-rest is therefore heard on
+  `.card-hover-effect` (native listeners), never on the picture. A
+  `BakedCardThumbnail` draws the button only with `backFaceButton`, which
+  `CardTile` alone sets: a new tile surface uses `CardTile`, never a
+  hand-nested `Link` + `CardHoverEffect` + thumbnail
+  (`card-tile-structure.test.tsx` scans for it). A pointermove "really
+  moved" the mouse only against its last place ANYWHERE on the page — one
+  passive document listener (`trackMouse`, `baked-card-flip.tsx`), never a
+  place remembered per tile: WebKit sends a pointermove at the unchanged
+  px on every wheel notch, and a mouse parked beside the grid turned the
+  tiles that scrolled under it. The deck pop-up's picture
+  link opens the face it shows (`?face=back`) and closing the pop-up
+  returns the focus to the row that opened it — once more when a backdrop
+  click is over (its mousedown blurs the row), and to the row that took
+  its place when the entry is gone (removed, filtered away), never
+  `<body>`. The back's 600 px thumb is mounted only
   on intent (the pointer moving on a tile that can hover-turn, the
   button's focus or press) — never at rest, never the HD PNG; a hover
   turns only once it has arrived, and a back that fails to load (removed
@@ -924,7 +949,8 @@ Rules and gotchas:
   "−2:", or the NULL of a card stored with its rows alone, must not be
   rewritten by a retitle). "Read as they opened" counts EVERY row that
   holds a text — a saga row with no chapter number too (a marker the editor
-  can't read, "XI —"): removing or editing it is an edit. The one write an
+  can't read, "XI —"): removing or editing it is an edit, and so is
+  dropping the stored marker a row carries (below). The one write an
   untouched edit still makes is the dual write: a walker / saga stored as
   plain text gains `face_content` — which the renderers read BEFORE
   `rules_text` (`resolveLoyaltyRows` / `resolveSagaChapters`), so it is
@@ -948,7 +974,40 @@ Rules and gotchas:
   its characters (`plainTextRows`, `lib/validation/print-typography.ts`).
   A saga row with a text and no chapter number is never dropped by a save:
   `sagaRowsNeedingNumber` puts "Pick a chapter number for this row, or
-  remove it." on it and the save waits — never on an untouched edit.
+  remove it." on it and the save waits — never on an untouched edit. A
+  save a row's chapter numbers blocked moves the focus to the first such
+  row's chapter group (`data-field-anchor` `saga_chapters.N.numerals`,
+  through `goToField`) and lists the rows above Save as links
+  (`SaveBlockedRowsLine` — never a live region: the row's `role="alert"` is
+  the one announcement). An EDITED saga save keeps the MARKER of every row
+  whose numbers were not changed (the 3b.25 follow-up): the editor holds a
+  chapter as numbers and writes them ascending, so a row whose stored
+  marker says more — an order ("II, I —"), a numeral with no toggle
+  ("I, XI —", "XI —") — CARRIES it (`SagaChapterFormValues.marker`, set by
+  `sagaEditorRows`, `lib/cards/face-content.ts`, only where the numbers
+  alone would not give it back; an ordinary row has none) and
+  `submittedRulesOf` writes it while the numbers are still the marker's own
+  (`keepsStoredMarker`), whatever else was edited — the row's text
+  included: "II, I" as `face_content` numerals `[2, 1]` (the renderers read
+  the array's order), a marker the rows cannot hold as PLAIN TEXT
+  (`serializeSagaMarkers`; the server's `plainTextRows` reads it by marker).
+  Numbers CHANGED on a marker that mixes numerals the toggles show with one
+  they can't ("I, XI") are never saved short of it without a word:
+  `sagaRowsLosingMarker` blocks on the row until they are put back or the
+  maker presses "Drop XI" (the row's `marker` cleared — an edit by itself);
+  changed on an order-only marker, or picked on one with no readable
+  numeral ("XI —"), the numbers picked are the row's — and a row a save
+  wrote from its numbers FORGETS its marker in that save (onSubmit, before
+  its `reset`), never only at the refresh: put back inside that window, the
+  numbers wrote the opened marker again ("XI —" back on a row just saved as
+  "II —"). The keyed same-card reset keeps field errors (`keepErrors`): the
+  refresh of the save before must not wipe a blocked Save's message. Never write a saga
+  row's line from its numbers alone — `sagaRowsOut` is the one answer (a
+  kind switch and the AI's context read it too). A walker whose loyalty
+  badges touch on its frame gets a note under its rows
+  (`lib/creator/walker-crowding.ts`: read from `layoutProfileLoyaltyRows`,
+  never a count compared — 9 one-line rows on `m15pw`, 11 on the tall
+  borderless box; nothing is blocked, no renderer reads it).
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
+import { CardTile } from "@/components/cards/card-tile";
 import { HOVER_REST_MS } from "@/components/cards/baked-card-flip";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import type { Card } from "@/types/card";
@@ -50,17 +51,20 @@ async function click(el: Element) {
 function tile(back: string | null) {
   const previewData = { title: "Village Elder", frameStyle: { template: "m15dfcfront" } } as CardPreviewData;
   const { container } = render(
-    // A plain anchor stands in for the tile's <Link> (the same DOM: the
-    // button's click must not follow it).
-    <a href="https://pipglyph.com/card/kesh/village-elder">
-      <BakedCardThumbnail
-        renderedImageUrl={`${RENDERS}/probe.png?v=1`}
-        renderedThumbUrl={`${RENDERS}/probe.thumb.webp?v=1`}
-        renderedBackThumbUrl={back}
-        title="Village Elder"
-        previewData={previewData}
-      />
-    </a>,
+    // What every tile wrapper renders (components/cards/card-tile.tsx); a
+    // plain anchor stands in for its <Link> (the same DOM).
+    <CardTile
+      body={(slot) => (
+        <a href="https://pipglyph.com/card/kesh/village-elder" aria-label="Open Village Elder" {...slot} />
+      )}
+      thumbnail={{
+        renderedImageUrl: `${RENDERS}/probe.png?v=1`,
+        renderedThumbUrl: `${RENDERS}/probe.thumb.webp?v=1`,
+        renderedBackThumbUrl: back,
+        title: "Village Elder",
+        previewData,
+      }}
+    />,
   );
   return container;
 }
@@ -86,14 +90,19 @@ const srcs = (container: Element) => Array.from(container.querySelectorAll("img"
 let mouseAt = 0;
 const pointer = (type: "enter" | "arrive" | "leave", el: Element, pointerType = "mouse") =>
   act(async () => {
-    // React listens for over / out and synthesises enter / leave.
+    // The rest is heard on the tile's box (.card-hover-effect) — the
+    // ancestor the link under the picture and the picture share; a browser
+    // fires pointerleave on it when the pointer leaves the tile.
     if (type === "leave") {
-      fireEvent.pointerOut(el, { pointerType });
+      fireEvent.pointerLeave(el.closest(".card-hover-effect") ?? el, { pointerType });
       return;
     }
     fireEvent.pointerOver(el, { pointerType });
     if (type === "arrive") return;
+    // The mouse comes from somewhere: its last place on the page is known
+    // (the document's tracker), and the move onto the tile is to a new one.
     mouseAt += 7;
+    fireEvent.pointerMove(document.body, { pointerType, clientX: mouseAt - 3, clientY: mouseAt - 3 });
     fireEvent.pointerMove(el, { pointerType, clientX: mouseAt, clientY: mouseAt });
   });
 /** The back's thumbnail has arrived (happy-dom loads no images). */
@@ -158,38 +167,89 @@ describe("BakedCardThumbnail with a back picture — the \"2 faces\" button (TOD
     expect(screen.getByTestId("baked-card-flip").getAttribute("data-face")).toBe("front");
   });
 
-  it("the button's click never follows the tile's link (the navigation is prevented)", async () => {
+  it("the button is OUTSIDE the tile's link — its next sibling, over it (TODO 5.17): a click on it reaches no link", async () => {
     tile(`${RENDERS}/probe.back.thumb.webp?v=1`);
-    const link = screen.getByRole("link");
+    const link = screen.getByRole("link", { name: "Open Village Elder" });
+    const button = screen.getByRole("button", { name: "Show back face of Village Elder" });
+    // Never a control inside a control (invalid HTML; axe "nested-interactive").
+    expect(button.closest("a, [role=button]")).toBeNull();
+    expect(link.contains(button)).toBe(false);
+    // The link is an EMPTY element filling the tile's box, UNDER the picture
+    // and before it in the document (keyboard: link, then "2 faces").
+    expect(link.childNodes).toHaveLength(0);
+    expect(link.getAttribute("data-tile-body")).toBe("under");
+    const linkClasses = new Set(link.className.split(/\s+/));
+    for (const cls of ["absolute", "inset-0", "card-corners", "focus-visible:ring-2", "focus-visible:ring-offset-2"]) {
+      expect(linkClasses.has(cls)).toBe(true);
+    }
+    const box = link.parentElement!;
+    expect(box.classList.contains("card-hover-effect")).toBe(true);
+    expect(box.firstElementChild).toBe(link);
+    expect(link.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // The picture lets the pointer through to the link; the button alone takes it.
+    const picture = screen.getByTestId("baked-card-flip").parentElement!;
+    expect(picture.classList.contains("pointer-events-none")).toBe(true);
+    expect(button.classList.contains("pointer-events-auto")).toBe(true);
+
     const events: Event[] = [];
-    // The native click reaches the <a> before React's root handler runs
-    // (and the button stops it there); what matters is that the button
-    // prevented its default — the navigation. Seen from the capture phase.
     const seen = (event: Event) => events.push(event);
     document.addEventListener("click", seen, { capture: true });
-    await click(screen.getByRole("button", { name: "Show back face of Village Elder" }));
+    await click(button);
     document.removeEventListener("click", seen, { capture: true });
     expect(events).toHaveLength(1);
-    expect(events[0].defaultPrevented).toBe(true);
-    expect(link.contains(events[0].target as Node)).toBe(true);
+    expect(link.contains(events[0].target as Node)).toBe(false);
+    expect(screen.getByTestId("baked-card-flip").getAttribute("data-face")).toBe("back");
   });
 
-  it("a middle click on the button does not open the card in a new tab, and turns nothing", async () => {
+  it("a middle click on the button reaches no link (no new tab), and turns nothing", async () => {
     tile(`${RENDERS}/probe.back.thumb.webp?v=1`);
-    const events: Event[] = [];
-    const seen = (event: Event) => events.push(event);
-    document.addEventListener("auxclick", seen, { capture: true });
+    const onLink = vi.fn();
+    screen.getByRole("link").addEventListener("auxclick", onLink);
     await act(async () => {
       fireEvent(
         screen.getByRole("button", { name: "Show back face of Village Elder" }),
         new MouseEvent("auxclick", { bubbles: true, cancelable: true, button: 1 }),
       );
     });
-    document.removeEventListener("auxclick", seen, { capture: true });
-    expect(events).toHaveLength(1);
-    // The link's default action for a middle click — a new tab — is prevented.
-    expect(events[0].defaultPrevented).toBe(true);
+    expect(onLink).not.toHaveBeenCalled();
     expect(screen.getByTestId("baked-card-flip").getAttribute("data-face")).toBe("front");
+  });
+
+  it("outside CardTile a back thumb draws NO button — it would land inside the caller's link", () => {
+    const previewData = { title: "Village Elder", frameStyle: { template: "m15dfcfront" } } as CardPreviewData;
+    const props = {
+      renderedImageUrl: `${RENDERS}/probe.png?v=1`,
+      renderedThumbUrl: `${RENDERS}/probe.thumb.webp?v=1`,
+      renderedBackThumbUrl: `${RENDERS}/probe.back.thumb.webp?v=1`,
+      title: "Village Elder",
+      previewData,
+    };
+    const { container } = render(
+      <a href="https://pipglyph.com/card/kesh/village-elder">
+        <BakedCardThumbnail {...props} />
+      </a>,
+    );
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(container.querySelector("[data-testid=baked-card-flip]")).toBeNull();
+    expect(srcs(container)).toEqual([FRONT]);
+    cleanup();
+    // Only `backFaceButton` (CardTile's) draws it.
+    render(<BakedCardThumbnail {...props} backFaceButton />);
+    expect(screen.getByRole("button", { name: "Show back face of Village Elder" })).toBeTruthy();
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("a ONE-faced tile is what it always was: the link wraps the tilt and the picture", () => {
+    const container = tile(null);
+    const link = screen.getByRole("link", { name: "Open Village Elder" });
+    expect(container.firstElementChild).toBe(link);
+    expect(link.getAttribute("data-tile-body")).toBeNull();
+    expect(link.className).toBe(
+      "block card-corners focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+    );
+    expect(link.firstElementChild?.classList.contains("card-hover-effect")).toBe(true);
+    expect(link.querySelector("img")?.getAttribute("src")).toBe(FRONT);
+    expect(container.querySelector("[data-testid=card-tile-shell]")).toBeNull();
   });
 
   it("the turning stage takes no pointer (app/globals.css): inside the tile's 3D tilt a browser hit-tests by depth, and the button lost its clicks to the turning faces", async () => {
@@ -201,6 +261,8 @@ describe("BakedCardThumbnail with a back picture — the \"2 faces\" button (TOD
     expect(Array.from(container.querySelectorAll("img")).every((img) => stage.contains(img))).toBe(true);
     expect(stage.contains(screen.getByRole("button"))).toBe(false);
     expect(screen.getByRole("button").parentElement).toBe(flip);
+    // The tile's link is outside the whole turning box.
+    expect(flip.contains(screen.getByRole("link"))).toBe(false);
     const { readFileSync } = await import("node:fs");
     const css = readFileSync("app/globals.css", "utf8");
     expect(css).toMatch(/\.tile-flip-stage\s*\{\s*pointer-events:\s*none;\s*\}/);
@@ -208,33 +270,43 @@ describe("BakedCardThumbnail with a back picture — the \"2 faces\" button (TOD
     expect(css).not.toMatch(/\.tile-flip-button\s*\{[^}]*translateZ/);
   });
 
-  it("the keyboard flips too: Enter / Space on the button never reach a tile body that opens the card on them (the dashboard tile)", async () => {
+  it("the keyboard flips too: the button is outside a role=\"button\" tile body that opens the card on Enter / Space (the dashboard tile)", async () => {
     const previewData = { title: "Village Elder", frameStyle: { template: "m15dfcfront" } } as CardPreviewData;
     const navigate = vi.fn();
-    // The dashboard tile's wrapper (components/creator/dashboard-card-tile.tsx):
-    // a role="button" body whose onKeyDown opens the card on Enter / Space.
+    // The dashboard tile's body (components/creator/dashboard-card-tile.tsx):
+    // a role="button" whose onKeyDown opens the card on Enter / Space.
     render(
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={navigate}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            navigate();
-          }
+      <CardTile
+        className="group cursor-pointer"
+        body={(slot) => (
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label="View Village Elder"
+            onClick={navigate}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                navigate();
+              }
+            }}
+            {...slot}
+          />
+        )}
+        thumbnail={{
+          renderedImageUrl: `${RENDERS}/probe.png?v=1`,
+          renderedThumbUrl: `${RENDERS}/probe.thumb.webp?v=1`,
+          renderedBackThumbUrl: `${RENDERS}/probe.back.thumb.webp?v=1`,
+          title: "Village Elder",
+          previewData,
         }}
-      >
-        <BakedCardThumbnail
-          renderedImageUrl={`${RENDERS}/probe.png?v=1`}
-          renderedThumbUrl={`${RENDERS}/probe.thumb.webp?v=1`}
-          renderedBackThumbUrl={`${RENDERS}/probe.back.thumb.webp?v=1`}
-          title="Village Elder"
-          previewData={previewData}
-        />
-      </div>,
+      />,
     );
     const button = screen.getByRole("button", { name: "Show back face of Village Elder" });
+    const body = screen.getByRole("button", { name: "View Village Elder" });
+    expect(body.contains(button)).toBe(false);
+    expect(body.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(body.className).toContain("cursor-pointer");
     for (const key of ["Enter", " "]) {
       await act(async () => {
         fireEvent.keyDown(button, { key });
@@ -246,6 +318,9 @@ describe("BakedCardThumbnail with a back picture — the \"2 faces\" button (TOD
     // Two flips: back, then front again.
     expect(screen.getByTestId("baked-card-flip").getAttribute("data-face")).toBe("front");
     expect(screen.getAllByRole("button")).toHaveLength(2);
+    // The body still opens the card.
+    await click(body);
+    expect(navigate).toHaveBeenCalledTimes(1);
   });
 
   it("nothing is shown without a back picture: an older two-faced card, a thumb that isn't ours, a landscape frame, a card mid-save", () => {
@@ -446,6 +521,71 @@ describe("BakedCardThumbnail with a back picture — the hover-rest turn (TODO 5
     expect(face()).toBe("back");
   });
 
+  it("a mouse parked BESIDE the grid: a tile scrolling under it turns nothing, though the engine sends a pointermove at the unchanged place on every wheel notch (WebKit)", async () => {
+    const container = tile(BACK_URL);
+    const tileEl = screen.getByTestId("baked-card-flip");
+    // The mouse's last real moves were on the page, not on any tile…
+    await act(async () => {
+      fireEvent.pointerMove(document.body, { pointerType: "mouse", clientX: 635, clientY: 195 });
+      fireEvent.pointerMove(document.body, { pointerType: "mouse", clientX: 640, clientY: 200 });
+    });
+    // …then the wheel slides the tile under it: boundary events and, on
+    // WebKit, a pointermove at the very same client px — notch after notch.
+    for (let notch = 0; notch < 6; notch++) {
+      await act(async () => {
+        fireEvent.pointerOver(tileEl, { pointerType: "mouse" });
+        fireEvent.pointerMove(tileEl, { pointerType: "mouse", clientX: 640, clientY: 200 });
+      });
+      await advance(480);
+      expect(face()).toBe("front");
+    }
+    // Nothing was fetched for it either.
+    expect(srcs(container)).toEqual([FRONT]);
+    // The hand moves: the rest starts.
+    await act(async () => {
+      fireEvent.pointerMove(tileEl, { pointerType: "mouse", clientX: 641, clientY: 200 });
+    });
+    await backArrives(container);
+    await advance(HOVER_REST_MS);
+    expect(face()).toBe("back");
+  });
+
+  it("the page has ONE mouse tracker however many two-faced tiles mount and unmount, and a tile takes its two listeners off its box when it goes", () => {
+    const onBox = { added: [] as string[], removed: [] as string[] };
+    const add = HTMLElement.prototype.addEventListener;
+    const remove = HTMLElement.prototype.removeEventListener;
+    const docAdd = vi.spyOn(document, "addEventListener");
+    const elAdd = vi.spyOn(HTMLElement.prototype, "addEventListener").mockImplementation(function (
+      this: HTMLElement,
+      ...args: Parameters<typeof add>
+    ) {
+      if (this.classList.contains("card-hover-effect")) onBox.added.push(args[0]);
+      return add.apply(this, args);
+    });
+    const elRemove = vi.spyOn(HTMLElement.prototype, "removeEventListener").mockImplementation(function (
+      this: HTMLElement,
+      ...args: Parameters<typeof remove>
+    ) {
+      if (this.classList.contains("card-hover-effect")) onBox.removed.push(args[0]);
+      return remove.apply(this, args);
+    });
+    for (let i = 0; i < 20; i++) {
+      tile(BACK_URL);
+      cleanup();
+    }
+    // The tracker was installed by the first two-faced tile this file
+    // mounted: never once per tile.
+    expect(docAdd.mock.calls.filter(([type]) => type === "pointermove")).toHaveLength(0);
+    const mine = (list: string[]) => list.filter((type) => type === "pointermove" || type === "pointerleave").sort();
+    // (Each mount listens twice over: the tilt switches on after the first
+    // paint and re-parents the picture — the first pair is taken off then.)
+    expect(mine(onBox.added).length).toBeGreaterThanOrEqual(40);
+    expect(mine(onBox.removed)).toEqual(mine(onBox.added));
+    docAdd.mockRestore();
+    elAdd.mockRestore();
+    elRemove.mockRestore();
+  });
+
   it("one rest per visit: moving about on the card does not push the turn back", async () => {
     const container = tile(BACK_URL);
     const tileEl = screen.getByTestId("baked-card-flip");
@@ -545,12 +685,13 @@ describe("BakedCardThumbnail with a back picture — the hover-rest turn (TODO 5
       // happy-dom would try to navigate: cancel at the document, AFTER the
       // component's handlers have had their say.
       document.addEventListener("click", (event) => event.preventDefault(), { once: true });
-      fireEvent.click(tileEl.querySelector("img")!);
+      // The link lies under the card (the picture lets the pointer through).
+      fireEvent.click(screen.getByRole("link"));
     });
     document.removeEventListener("click", seen);
     expect(events).toHaveLength(1);
     // Nothing in the tile stopped it on the way up.
-    expect(screen.getByRole("link").contains(events[0].target as Node)).toBe(true);
+    expect(events[0].target).toBe(screen.getByRole("link"));
   });
 });
 

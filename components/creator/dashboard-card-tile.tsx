@@ -5,12 +5,11 @@ import { VISIBILITY_LABELS } from "@/types/card";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Eye, Pencil } from "lucide-react";
-import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
+import { CardTile } from "@/components/cards/card-tile";
 import { RenderUpdateBadge } from "@/components/cards/render-update";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
 import { hasNewerLook } from "@/lib/cards/layout-version";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
-import { CardHoverEffect } from "@/components/cards/card-hover-effect";
 import {
   FramePreviewCardBadge,
   isFramePreviewCard,
@@ -117,40 +116,41 @@ export function DashboardCardTile({
             : "",
         )}
       >
-        <div
-          role="button"
-          tabIndex={0}
-          aria-label={
-            selectMode
-              ? isSelected
-                ? `Deselect ${card.title}`
-                : `Select ${card.title}`
-              : `View ${card.title}`
-          }
-          onClick={handleBodyClick}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault();
-              handleBodyClick(event);
-            }
-          }}
-          className="group block cursor-pointer card-corners focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          style={
-            enableViewTransition
-              ? { viewTransitionName: `card-${card.id}` }
-              : undefined
-          }
-        >
-          <CardHoverEffect>
-            <BakedCardThumbnail
-              renderedImageUrl={card.rendered_image_url}
-              renderedThumbUrl={card.rendered_thumb_url}
-              renderedBackThumbUrl={card.rendered_back_thumb_url}
-              title={card.title}
-              previewData={previewData}
+        {/* The body is a role="button" (it opens OR selects), nested with
+            the picture by CardTile: a two-faced tile's "2 faces" button is
+            its sibling, never inside it. */}
+        <CardTile
+          className="group cursor-pointer"
+          viewTransitionName={enableViewTransition ? `card-${card.id}` : undefined}
+          body={(slot) => (
+            <div
+              role="button"
+              tabIndex={0}
+              aria-label={
+                selectMode
+                  ? isSelected
+                    ? `Deselect ${card.title}`
+                    : `Select ${card.title}`
+                  : `View ${card.title}`
+              }
+              onClick={handleBodyClick}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  handleBodyClick(event);
+                }
+              }}
+              {...slot}
             />
-          </CardHoverEffect>
-        </div>
+          )}
+          thumbnail={{
+            renderedImageUrl: card.rendered_image_url,
+            renderedThumbUrl: card.rendered_thumb_url,
+            renderedBackThumbUrl: card.rendered_back_thumb_url,
+            title: card.title,
+            previewData,
+          }}
+        />
 
         {/* Hover action buttons — the user picks Edit or View explicitly.
             Hidden (and click-transparent) at rest; revealed on tile hover or

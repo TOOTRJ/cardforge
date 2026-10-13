@@ -48,11 +48,21 @@ describe("card-corner display surfaces", () => {
     ]) {
       const src = read(file);
       expect(src, file).not.toContain("rounded-frame");
-      expect(src, file).toMatch(/card-corners/);
+      // The tile's body — its corner and its focus ring — is CardTile's
+      // (TODO 5.17: one component nests the link and the picture).
+      expect(src, file).toMatch(/<CardTile\b/);
     }
     const profileTile = fn(read("app/(marketing)/profile/[username]/page.tsx"), "ProfileCardTile");
-    expect(profileTile).toContain('className="block card-corners focus-visible');
-    expect(read("components/creator/dashboard-card-tile.tsx").match(/card-corners/g)).toHaveLength(3);
+    expect(profileTile).toMatch(/<CardTile\b/);
+    // One-faced: the body wraps the picture (`block`); two-faced: it lies
+    // under it (`absolute inset-0`) — the same corner and ring on both.
+    const cardTile = read("components/cards/card-tile.tsx");
+    expect(cardTile).toContain('"card-corners focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60');
+    expect(cardTile).toContain('cn("block", BODY_CLASS, className)');
+    expect(cardTile).toContain('cn("absolute inset-0", BODY_CLASS, className)');
+    expect(cardTile).not.toContain("rounded-");
+    // The dashboard's selection ring and its hover scrim.
+    expect(read("components/creator/dashboard-card-tile.tsx").match(/card-corners/g)).toHaveLength(2);
   });
 
   it("skeletons, the deck card modal, moderation and the marketing strips use the corner", () => {

@@ -510,6 +510,9 @@ type Match = {
   noKind?: true;
   typeWordsAny?: readonly CardType[];
   subtypesAny?: readonly string[];
+  /** Scryfall's `keywords` holds one of these ("Station"), whatever the
+   *  case. */
+  keywordsAny?: readonly string[];
   layouts?: readonly string[];
   /** `full_art`, or the `fullart` frame effect. */
   fullArt?: boolean;
@@ -689,6 +692,10 @@ function matches(match: Match, ctx: Ctx): boolean {
   if (match.notKinds && facts.kind && match.notKinds.includes(facts.kind)) return false;
   if (match.typeWordsAny && !match.typeWordsAny.some((t) => facts.cardTypes.has(t))) return false;
   if (match.subtypesAny && !match.subtypesAny.some((s) => facts.subtypes.includes(s))) return false;
+  if (match.keywordsAny) {
+    const keywords = lower(card.keywords);
+    if (!match.keywordsAny.some((keyword) => keywords.has(keyword.toLowerCase()))) return false;
+  }
   if (match.layouts && !match.layouts.includes((card.layout ?? "").toLowerCase())) return false;
   if (match.fullArt !== undefined && ctx.fullArt !== match.fullArt) return false;
   if (match.textless !== undefined && (card.textless === true) !== match.textless) return false;
@@ -970,6 +977,7 @@ type GapKey =
   | "two-colour-hybrid"
   | "colour-indicator"
   | "vehicle"
+  | "station"
   | "dfc"
   | "parchment-land-back"
   | "layout"
@@ -1080,6 +1088,20 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
     match: { anyOf: [{ subtypesAny: ["Vehicle"] }, { backSubtypesAny: ["Vehicle"] }] },
     reason: "PipGlyph doesn't draw the Vehicle P/T plate yet",
     blockedBy: "4.6",
+  },
+  // The station frame (TODO 4.27a, step 0): Edge of Eternities' Spacecraft
+  // and Planets print a frame of their own — the picture under the whole
+  // card, a see-through text box cut into bands, a "N+" badge per tier and a
+  // black P/T plate inside the tier that makes the card a creature. Scryfall
+  // has no layout for it (`layout: normal`): the Station keyword is the one
+  // field that names it, on every such printing and on nothing else (91 of
+  // 91, Scryfall 2026-10-13 — Doctor Who's "Plane — Spacecraft" cards carry
+  // no keyword and no PipGlyph card type). No PipGlyph frame draws it, on
+  // any dress (STATION_MATCH's rule below is the bordered printings').
+  station: {
+    match: { keywordsAny: ["Station"] },
+    reason: "PipGlyph doesn't draw the Station frame yet",
+    blockedBy: "4.27a",
   },
   // The double-faced marks on a frame that isn't a double-faced body (TODO
   // 5.4): what is left once the transform / modal printings land on their
@@ -1373,6 +1395,10 @@ const vehicleStandIn = (dress: string): NonNullable<Outcome["landOnOnceVerified"
   reason: `this printing is ${dress}, and PipGlyph draws the Vehicle plate on its bordered Vehicle frame only`,
 });
 
+/** The item a showcase station printing waits on: its own showcase frame
+ *  (4.11) — the `station` gap there only says what else the print has. */
+const STATION_SHOWCASE: Partial<Record<GapKey, BlockedBy>> = { station: "4.11" };
+
 const showcaseLabel = ({ card, set }: Ctx) =>
   `${card.set_name ?? set.toUpperCase()} showcase`;
 
@@ -1623,17 +1649,24 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     match: { borders: ["borderless"], collectors: { tla: [[336, 353]], tle: [[305, 317]] } },
     outcome: { status: "exact", template: "avatar" },
   },
-  {
-    key: "borderless/showcase",
-    exactLabel: (ctx) => `${showcaseLabel(ctx)} (borderless)`,
-    match: { borders: ["borderless"], effectsAny: ["showcase"] },
-    outcome: {
-      status: "nearest",
-      template: { family: "borderless" },
-      reason: "PipGlyph doesn't have this set's showcase frame yet",
-      blockedBy: "4.11",
+  // Edge of Eternities' ten "viewport" Planets (EOE #277–285, #372–380) are
+  // station cards on a showcase of their own: they keep this rule's landing
+  // and item, and say the station frame is missing too (STATION_SHOWCASE).
+  ...withGaps(
+    {
+      key: "borderless/showcase",
+      exactLabel: (ctx) => `${showcaseLabel(ctx)} (borderless)`,
+      match: { borders: ["borderless"], effectsAny: ["showcase"] },
+      outcome: {
+        status: "nearest",
+        template: { family: "borderless" },
+        reason: "PipGlyph doesn't have this set's showcase frame yet",
+        blockedBy: "4.11",
+      },
     },
-  },
+    ["station"],
+    STATION_SHOWCASE,
+  ),
   {
     key: "borderless/basic/textless",
     exactLabel: "Textless borderless basic land",
@@ -1831,7 +1864,10 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       match: { borders: ["borderless"] },
       outcome: { status: "exact", template: { family: "borderless" }, landOnOnceVerified: vehicleStandIn("borderless") },
     },
-    ["etched", "nickname", "crown", "nyx", "vehicle", "colour-indicator", "two-colour", "two-colour-hybrid", "light-box"],
+    // A borderless Spacecraft (EOC #1 Hearthhull, #2 Inspirit) floats the
+    // station frame's bands, badges and plate over the art: the `station`
+    // gap first — the most visible miss.
+    ["station", "etched", "nickname", "crown", "nyx", "vehicle", "colour-indicator", "two-colour", "two-colour-hybrid", "light-box"],
   ),
 
   // --- 1.19 steps 3–7: the other full-art and textless printings ----------
@@ -2153,20 +2189,25 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       blockedBy: "4.11",
     },
   },
-  {
-    key: "showcase",
-    exactLabel: showcaseLabel,
-    match: { effectsAny: ["showcase"] },
-    outcome: {
-      status: "nearest",
-      template: { family: "m15" },
-      reason: ({ border }) =>
-        border === "white"
-          ? "PipGlyph doesn't have this set's showcase frame or a white border yet"
-          : "PipGlyph doesn't have this set's showcase frame yet",
-      blockedBy: "4.11",
+  // A showcase station printing (TRK #557 U.S.S. Enterprise-D) says both.
+  ...withGaps(
+    {
+      key: "showcase",
+      exactLabel: showcaseLabel,
+      match: { effectsAny: ["showcase"] },
+      outcome: {
+        status: "nearest",
+        template: { family: "m15" },
+        reason: ({ border }) =>
+          border === "white"
+            ? "PipGlyph doesn't have this set's showcase frame or a white border yet"
+            : "PipGlyph doesn't have this set's showcase frame yet",
+        blockedBy: "4.11",
+      },
     },
-  },
+    ["station"],
+    STATION_SHOWCASE,
+  ),
 
   // --- 1.4: Future Sight, extended art, Nyx, coloured artifacts -----------
   {
@@ -2192,7 +2233,10 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       match: { effectsAny: ["extendedart"] },
       outcome: { status: "exact", template: "extendedart", landOnOnceVerified: vehicleStandIn("extended art") },
     },
-    ["layout", "dfc", "etched", "border", "crown", "vehicle", "two-colour", "two-colour-hybrid"],
+    // An extended-art Spacecraft (13 printings: EOE #321–355, EOC #27 / #34,
+    // TRK #481) prints the station frame without the art window's rails: the
+    // `station` gap, before the pieces the extended-art frame lacks.
+    ["layout", "dfc", "station", "etched", "border", "crown", "vehicle", "two-colour", "two-colour-hybrid"],
   ),
   {
     key: "nyx/2003",
@@ -2395,6 +2439,26 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     },
     OLD_ERA_GAPS,
   ),
+  // A Spacecraft or a Planet on the plain 2015 frame (TODO 4.27a, step 0;
+  // Edge of Eternities 2025 → today: 65 of the 91 station printings, Scryfall
+  // 2026-10-13) prints the STATION frame, which PipGlyph doesn't draw: the
+  // import lands where it always did — the artifact frame for a Spacecraft,
+  // the land frame for a Planet, its tiers as plain rules text — but as that
+  // frame's NEAREST, and the request log counts the ask (before this rule
+  // `era/2015` called them exact and nothing was logged). The frame the
+  // build adds is named here once it exists (`onceVerified`, as the Vehicle
+  // rule below) — no template is named before it does.
+  {
+    key: "station/2015",
+    exactLabel: ({ facts }) => (facts.kind === "land" ? "Station frame (Planet)" : "Station frame (Spacecraft)"),
+    match: { frames: ["2015"], ...GAPS.station.match },
+    outcome: {
+      status: "nearest",
+      template: { family: "m15" },
+      reason: GAPS.station.reason,
+      blockedBy: GAPS.station.blockedBy,
+    },
+  },
   // A Vehicle on the plain 2015 frame (TODO 4.5c; Kaladesh 2016 → today)
   // prints the Vehicle frame: the bronze frame and the brown P/T plate with
   // white digits. Until `m15vehicle` is verified in the card's colour the

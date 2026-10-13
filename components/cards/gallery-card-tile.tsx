@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { Repeat2, Sparkles } from "lucide-react";
-import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
+import { CardTile } from "@/components/cards/card-tile";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
-import { CardHoverEffect } from "@/components/cards/card-hover-effect";
 import { buildCardPath } from "@/lib/cards/utils";
 import type { CardWithStats } from "@/lib/cards/queries";
 import { cardToPreviewData } from "@/lib/cards/preview-data";
@@ -37,24 +36,23 @@ export function GalleryCardTile({
   return (
     <div className="flex flex-col gap-2">
       <div className="relative">
-        <Link
-          href={buildCardPath(card)}
-          className="block card-corners focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          aria-label={`Open ${card.title}`}
-          style={{ viewTransitionName: `card-${card.id}` }}
-        >
-          <CardHoverEffect>
-            <BakedCardThumbnail
-              renderedImageUrl={card.rendered_image_url}
-              renderedThumbUrl={card.rendered_thumb_url}
-              renderedBackThumbUrl={card.rendered_back_thumb_url}
-              title={card.title}
-              // An emblem names no rarity (CR 114, TODO 6.23).
-              alt={`${card.title} — custom MTG-style ${card.card_type ?? "card"}${card.rarity && cardTypeHasRarity(card.card_type) ? `, ${card.rarity} rarity` : ""}`}
-              previewData={cardToPreviewData(card, null)}
-            />
-          </CardHoverEffect>
-        </Link>
+        {/* CardTile nests the link and the picture (a two-faced tile's
+            "2 faces" button is the link's sibling, never inside it). */}
+        <CardTile
+          viewTransitionName={`card-${card.id}`}
+          body={(slot) => (
+            <Link href={buildCardPath(card)} aria-label={`Open ${card.title}`} {...slot} />
+          )}
+          thumbnail={{
+            renderedImageUrl: card.rendered_image_url,
+            renderedThumbUrl: card.rendered_thumb_url,
+            renderedBackThumbUrl: card.rendered_back_thumb_url,
+            title: card.title,
+            // An emblem names no rarity (CR 114, TODO 6.23).
+            alt: `${card.title} — custom MTG-style ${card.card_type ?? "card"}${card.rarity && cardTypeHasRarity(card.card_type) ? `, ${card.rarity} rarity` : ""}`,
+            previewData: cardToPreviewData(card, null),
+          }}
+        />
         {remixHref ? (
           <a
             href={remixHref}

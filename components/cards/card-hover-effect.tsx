@@ -27,10 +27,21 @@ import { cn } from "@/lib/utils";
 //       <CardPreview ... />
 //     </CardHoverEffect>
 //   </Link>
+//
+// A tile with a control ON its picture (a two-faced card's "2 faces" button,
+// TODO 5.17) cannot be wrapped in a link — a button inside a link is invalid.
+// It passes its link as `under` instead (components/cards/card-tile.tsx): an
+// empty element filling this box, rendered BEFORE the tilting content, which
+// then takes no pointer events — so the pointer falls through the picture to
+// the link, and this box (the link's parent) still hears every move for the
+// tilt. A control in the content opts back in with `pointer-events: auto`.
 // ---------------------------------------------------------------------------
 
 type CardHoverEffectProps = {
   children: ReactNode;
+  /** The tile's link (or role="button") as an empty `absolute inset-0`
+   *  element under the content; the content then takes no pointer events. */
+  under?: ReactNode;
   /** Max tilt magnitude in degrees. Defaults to 8 — enough to read as
    *  "3D" without making the corners feel detached from the page. */
   tilt?: number;
@@ -39,9 +50,11 @@ type CardHoverEffectProps = {
 
 export function CardHoverEffect({
   children,
+  under,
   tilt = 8,
   className,
 }: CardHoverEffectProps) {
+  const hasUnder = under !== undefined && under !== null;
   const ref = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const [enabled, setEnabled] = useState(false);
@@ -65,7 +78,12 @@ export function CardHoverEffect({
   // Touch + reduced-motion path: render a plain wrapper so the gallery's
   // grid math (which assumes a single child per cell) still works.
   if (!enabled) {
-    return <div className={cn("card-hover-effect", className)}>{children}</div>;
+    return (
+      <div className={cn("card-hover-effect", hasUnder && "relative", className)}>
+        {under}
+        {children}
+      </div>
+    );
   }
 
   const handleMove = (event: PointerEvent<HTMLDivElement>) => {
@@ -116,7 +134,8 @@ export function CardHoverEffect({
       onPointerLeave={handleLeave}
       className={cn("card-hover-effect card-hover-effect-active", className)}
     >
-      <div className="card-hover-rotor">
+      {under}
+      <div className={cn("card-hover-rotor", hasUnder && "pointer-events-none")}>
         {children}
         <span aria-hidden className="card-hover-glare" />
       </div>
