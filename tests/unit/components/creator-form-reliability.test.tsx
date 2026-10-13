@@ -610,8 +610,13 @@ describe("3b.4 dual lands are nonbasic", () => {
 // saved without it; publishing needs it.
 // ---------------------------------------------------------------------------
 
+// The Save hint: the line of links while the card still needs something
+// (TODO 5.14: the same sentence, each item a link to its field), else the
+// plain sentence.
 const saveHint = () =>
-  screen.queryByText(/to enable Save\.$/, { selector: "p" })?.textContent ?? null;
+  screen.queryByTestId("save-needs")?.textContent ??
+  screen.queryByText(/to enable Save\.$/, { selector: "p" })?.textContent ??
+  null;
 
 async function goToLastStep() {
   while (screen.queryByRole("button", { name: /^Next/ })) {
@@ -641,7 +646,7 @@ describe("3b.5 the second face's name", () => {
     await pickKind(/^Split/);
     await clickNext(); // Identity
     await typeTitle("Fire");
-    expect(saveHint()).toBe("Add artwork and the second face's name to enable Save.");
+    expect(saveHint()).toBe("Add artwork and the right half's name to enable Save.");
     expect(saveButton().disabled).toBe(true);
 
     await goToLastStep();
@@ -665,16 +670,16 @@ describe("3b.5 the second face's name", () => {
     await clickNext(); // Identity
     // The Save hint asks for the name, so its folded section is open.
     const details = screen
-      .getByText(/More options — artist credit & second face/)
+      .getByText(/More options — artist credit & right half/)
       .closest("details") as HTMLDetailsElement;
-    expect(saveHint()).toMatch(/the second face's name/);
+    expect(saveHint()).toMatch(/the right half's name/);
     expect(details.open).toBe(true);
   });
 
   it("a named second face leaves the section folded", async () => {
     renderForm({ mode: "edit", card: savedCard({ ...SPLIT_CARD, visibility: "public" }) });
     const details = screen
-      .getByText(/More options — artist credit & second face/)
+      .getByText(/More options — artist credit & right half/)
       .closest("details") as HTMLDetailsElement;
     expect(details.open).toBe(false);
   });
@@ -684,18 +689,21 @@ describe("3b.5 the second face's name", () => {
     await pickKind(/^Adventure/);
     await clickNext();
     await typeTitle("Bonecrusher Giant");
-    expect(saveHint()).toBe("Add artwork and the adventure's name to enable Save.");
+    expect(saveHint()).toBe("Add artwork and the adventure spell's name to enable Save.");
   });
 
   it("edit: clearing a public card's second-face name disables Save and says why", async () => {
     renderForm({ mode: "edit", card: savedCard({ ...SPLIT_CARD, visibility: "public" }) });
     // Identity step → More options → the second face's name field.
-    const nameInput = screen.getByPlaceholderText("Insectile Aberration") as HTMLInputElement;
+    // A split half's example name is a split card's ("Ice"), never the
+    // transform back's it used to borrow (TODO 5.14).
+    expect(screen.queryByPlaceholderText("Insectile Aberration")).toBeNull();
+    const nameInput = screen.getByPlaceholderText("Ice") as HTMLInputElement;
     expect(nameInput.value).toBe("Ice");
     await act(async () => {
       fireEvent.change(nameInput, { target: { value: "" } });
     });
-    expect(saveHint()).toBe("Add the second face's name to enable Save.");
+    expect(saveHint()).toBe("Add the right half's name to enable Save.");
     expect(saveButton().disabled).toBe(true);
   });
 
@@ -728,7 +736,7 @@ describe("3b.5 the second face's name", () => {
       fieldErrors: { "back_face.title": "That name is taken by the front face." },
     });
     renderForm({ mode: "edit", card: savedCard({ ...SPLIT_CARD, visibility: "private" }) });
-    const details = screen.getByText(/More options — artist credit & second face/).closest(
+    const details = screen.getByText(/More options — artist credit & right half/).closest(
       "details",
     ) as HTMLDetailsElement;
     expect(details.open).toBe(false);
@@ -986,12 +994,12 @@ describe("3b.8 the second half is typed from the kind", () => {
 
     // Give the half some content, then clear it.
     await clickNext();
-    const nameInput = screen.getByPlaceholderText("Insectile Aberration");
+    const nameInput = screen.getByPlaceholderText("Ribbons");
     await act(async () => {
       fireEvent.change(nameInput, { target: { value: "Dawn" } });
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Clear second face" }));
+      fireEvent.click(screen.getByRole("button", { name: "Clear the aftermath half" }));
     });
     expect(preview().backFace?.title).toBe("");
     expect(preview().backFace?.card_type).toBe("sorcery");
@@ -1002,7 +1010,7 @@ describe("3b.8 the second half is typed from the kind", () => {
     await pickKind(/^Split/);
     await clickNext();
     await act(async () => {
-      fireEvent.change(screen.getByPlaceholderText("Insectile Aberration"), {
+      fireEvent.change(screen.getByPlaceholderText("Ice"), {
         target: { value: "Ice" },
       });
     });
