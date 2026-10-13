@@ -26,6 +26,7 @@ import {
   isTypeWordDress,
   kindFromCard,
   templateIsBasicOnly,
+  isSubtypeDress,
 } from "@/lib/creator/card-kinds";
 import {
   CARD_FILL_FIELDS,
@@ -196,7 +197,9 @@ function AiFillDialogBody({
         !isTypeWordDress(kind, choice.template) &&
         !isTextBoxDress(kind, choice.template) &&
         !isTokenHeightDress(kind, choice.template) &&
-        !isRowDress(kind, choice.template),
+        !isRowDress(kind, choice.template) &&
+        // …nor the Vehicle frame: the subtype the AI writes picks it (4.5c).
+        !isSubtypeDress(choice.template),
     );
   }, [cardType, verifiedFrameKeys]);
 

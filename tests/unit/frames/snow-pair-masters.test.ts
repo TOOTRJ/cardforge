@@ -119,7 +119,10 @@ describe("declared and published", () => {
     // …and the five double-faced spell faces since 5.1d (their land pair
     // none), and the borderless land since 4.56.
     expect(paired).toEqual([
-      "m15", "m15land", "m15artifact", "m15snow", "m15snowland", "m15borderless", "m15borderlessartifact", "m15borderlessland",
+      "m15", "m15land", "m15artifact",
+      // …and the Vehicle frame since 4.5c (m15artifact's split over the bronze frame).
+      "m15vehicle",
+      "m15snow", "m15snowland", "m15borderless", "m15borderlessartifact", "m15borderlessland",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback",
       // …and the old frames since 4.6h (the 2003 gold card, the 2003 and 1997 lands).
       "retroland", "modern", "modernland",

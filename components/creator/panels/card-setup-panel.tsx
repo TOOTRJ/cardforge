@@ -60,6 +60,9 @@ import {
   isTypeWordDress,
   rowDressBaseFor,
   skinVariantsFor,
+  subtypeDressOf,
+  subtypeDressReason,
+  subtypeFrameFits,
   templateIsBasicOnly,
   TOKEN_PICKER_WORDS,
   toggleTokenWord,
@@ -212,6 +215,7 @@ export function CardSetupPanel({
     control,
     name: ["card_type", "title", "supertype", "subtypes_text", "rules_text", "cost", "frame_style.twoColor", "frame_style.dfcIcon"],
   });
+  const cardSubtypes = parseSubtypes(subtypesText ?? "");
   const isBasicLand = isSingleBasicLand({
     cardType,
     supertype,
@@ -556,12 +560,17 @@ export function CardSetupPanel({
             );
             const basicOnlyRefused =
               templateIsBasicOnly(choice.template) && !isBasicLand;
+            // A subtype dress (the Vehicle frame, TODO 4.5c): for the cards
+            // of its subtype only — the server's rule too.
+            const subtypeRefused = !subtypeFrameFits(choice.template, cardSubtypes);
             const borrowedWord = borrowedTypeWord(kind, choice.template);
             return {
               value: choice.template,
               label,
               description: basicOnlyRefused
                 ? BASIC_ONLY_FRAME_REASON
+                : subtypeRefused
+                  ? (subtypeDressReason(choice.template) ?? undefined)
                 : !available
                   ? "Awaiting verification"
                   : !colorAvailable
@@ -572,6 +581,8 @@ export function CardSetupPanel({
                         ? "A text box for rules and flavour text"
                         : kind === "token" && m20TokenHeightOf(choice.template)
                           ? M20_TOKEN_HEIGHT_HINTS[m20TokenHeightOf(choice.template)!]
+                          : subtypeDressOf(choice.template)
+                            ? `The printed ${subtypeDressOf(choice.template)} frame: bronze, with white numbers on a brown plate`
                           : choice.group === "skin"
                             ? "Same layout, different dress"
                             : undefined,
@@ -592,7 +603,7 @@ export function CardSetupPanel({
                   anatomy={frameAnatomy}
                 />
               ),
-              disabled: !available || basicOnlyRefused,
+              disabled: !available || basicOnlyRefused || subtypeRefused,
               badge: available ? undefined : <SoonBadge />,
             };
           };

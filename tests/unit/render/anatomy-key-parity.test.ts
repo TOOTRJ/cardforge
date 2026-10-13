@@ -74,7 +74,8 @@ describe("bake path = preview path", () => {
     // front's 20 (5.1d: 60), the borderless land's 10 (4.56); the crowned
     // twins of every borderless master (7 + 20 and 7 + 10).
     // …and the old frames' 10 each (4.6h: modern, modernland, retroland).
-    expect(pairKeys).toBe(190);
+    // …and the Vehicle frame's 10 (4.5c).
+    expect(pairKeys).toBe(200);
     expect(crownedKeys).toBe(44);
   });
 
@@ -154,11 +155,11 @@ describe("bake path = preview path", () => {
     // The four modal strip slots (5.1c): 8 keys on each spell body (w u b r
     // g m a + l), 7 on each land body (w u b r g m c).
     expect(strips).toBe(8 + 8 + 7 + 7);
-    // Not vacuous: 9 bar keys + the 10 pairs (the 4.9c follow-up) × the six
-    // M15-family entries + the walker's 7 — and none on a DFC body, the
+    // Not vacuous: 9 bar keys + the 10 pairs (the 4.9c follow-up) × the seven
+    // M15-family entries (the Vehicle frame's since 4.5c) + the walker's 7 — and none on a DFC body, the
     // transform (5.1a) and modal (5.1b) bodies alike (no holoStamp on a back
     // body, ever; the fronts take it as their own addition later).
-    expect(notches).toBe((9 + 10) * 6 + 7);
+    expect(notches).toBe((9 + 10) * 7 + 7);
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

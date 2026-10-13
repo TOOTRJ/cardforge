@@ -133,7 +133,8 @@ describe("framesForKind", () => {
     for (const kind of ["instant", "sorcery", "enchantment"] as CardKind[]) {
       expect(skinsFor(kind)).toEqual(["m15snow", "m15devoid", "m15borderless"]);
     }
-    expect(skinsFor("artifact")).toEqual(["m15borderlessartifact"]);
+    // …and the Vehicle frame (TODO 4.5c), a subtype dress of the artifact frame.
+    expect(skinsFor("artifact")).toEqual(["m15borderlessartifact", "m15vehicle"]);
     // The land's borderless dress (4.34).
     expect(skinsFor("land")).toEqual(["m15snowland", "m15borderlessland"]);
     // The artifact dress, 4.49 (b)'s text-box variations and 4.48 / 4.50's

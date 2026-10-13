@@ -1343,7 +1343,7 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            other rows of that read bake byte-identical on main and on
 //            this commit); all 129 unlisted cards read on 2026-10-08 are
 //            stamped. Private cards cannot be read; any in scope re-bake
-//            once. The visual matrix: 326 of 1498 cases change, each with a
+//            once. The visual matrix: 340 of 1526 cases change, each with a
 //            symbol in scope; three `@large-pips-hd` cases are new.
 //            Verification-neutral: no slot, master, size or plate moves.
 // ---------------------------------------------------------------------------

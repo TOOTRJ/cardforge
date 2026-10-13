@@ -414,6 +414,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
   // TODO 5.1a's transform bodies and 5.1b's modal bodies.
   ...["m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback"],
   ...["m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback"],
+  // TODO 4.5c's Vehicle frame.
+  "m15vehicle",
 ];
 /** Templates added after v36 (TODO 5.1a's transform bodies, 5.1b's modal
  *  bodies): no card was ever baked on them before v37, so v36's frozen
@@ -421,6 +423,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
 const POST_V36_TEMPLATES: readonly string[] = [
   "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
   "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
+  // TODO 4.5c's Vehicle frame.
+  "m15vehicle",
 ];
 
 describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
@@ -762,6 +766,8 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       // …and 5.1a's transform bodies and 5.1b's modal bodies, the same way.
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
+      // …and 4.5c's Vehicle frame.
+      "m15vehicle",
     ];
     // An EXISTING template that joined brought its own bump: the battle
     // (TODO 4.21b), with layout v43 — its Card Conjurer master and the
