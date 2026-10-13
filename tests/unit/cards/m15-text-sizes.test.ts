@@ -68,8 +68,8 @@ describe("one M15-era display size (layout v32)", () => {
     // v32's 23, plus 4.49 (b)'s two text-box tokens, 4.34's borderless
     // land, 4.48 / 4.50's six full-art tokens, 4.33's two borderless
     // planeswalkers, 4.52's emblem, 5.1a / 5.1b's nine double-faced bodies
-    // and 4.21b's battle.
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(45);
+    // and 4.21b's battle — and 4.5c's Vehicle frame.
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(46);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       expect(p.title.sizePct, t).toBe(sized(t, TITLE_SIZE_PCT));
@@ -221,6 +221,7 @@ describe("baselines (TextSlot.dy)", () => {
     ["m15land", base.title, cc],
     ["m15snowland", base.title, cc],
     ["m15artifact", base.title, cc],
+    ["m15vehicle", base.title, cc],
     ["m15snow", base.title, cc],
     ["m15devoid", base.title, cc],
     ["m15borderless", base.title, cc],
@@ -382,7 +383,7 @@ describe("baselines (TextSlot.dy)", () => {
   it("lands the Card Conjurer masters' type line 4.2 px higher than a kept baseline, on the prints' (1259.6 px at HD)", () => {
     const kept15 = getFrameProfile("extendedart").type.dy!;
     for (const t of [
-      "m15", "m15land", "m15snowland", "m15artifact", "m15snow", "m15devoid", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15pw",
+      "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15snow", "m15devoid", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15pw",
       "m15borderlesspw", "m15borderlesspwtall",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

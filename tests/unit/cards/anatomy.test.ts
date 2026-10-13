@@ -296,7 +296,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
    *  (every transform body but the ▼ land back; the modal spell pair). */
   const CROWNED = FRAME_TEMPLATE_VALUES.filter((t) =>
     [
-      "m15", "m15land", "m15snowland", "m15artifact", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart",
+      "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
     ].includes(t),
   );
@@ -331,6 +331,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       m15land: ["split"],
       m15snowland: ["split"],
       m15artifact: ["split"],
+      // The Vehicle frame (4.5c): m15artifact's split over the bronze frame.
+      m15vehicle: ["split"],
       m15borderless: ["split", "hybrid"],
       m15borderlessartifact: ["split"],
       // The borderless land (4.56): the split of its pinline AND box over
@@ -389,7 +391,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
   });
 
   /** The entries with the holofoil stamp's notch (4.9c, wave 1). */
-  const STAMP_TEMPLATES = ["m15", "m15land", "m15snowland", "m15artifact", "m15snow", "m15devoid", "m15pw"];
+  const STAMP_TEMPLATES = ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15snow", "m15devoid", "m15pw"];
 
   it("the stamp's notch on exactly the seven wave-1 entries (4.9c): the M15 family's bordered frames and the walker, never a token, an emblem or a profile that spreads them", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).stamp)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => STAMP_TEMPLATES.includes(t)));

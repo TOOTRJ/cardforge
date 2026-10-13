@@ -16,6 +16,8 @@ import {
   dfcLayoutForKind,
   isSingleBasicLand,
   kindFromCard,
+  subtypeDressOf,
+  subtypeFrameFits,
   templateIsBasicOnly,
   templateSupportsKind,
   typeLineHasWord,
@@ -97,6 +99,12 @@ const ERA_FRAME: Partial<Record<string, string>> = {
  *  front face's Saga subtype (TODO 1.3). */
 export function referenceKindFor(card: ScryfallCard): CardKind | undefined {
   return kindFromScryfall(card);
+}
+
+/** The printing's front-face subtypes. */
+function referenceSubtypes(card: ScryfallCard): string[] {
+  const { subtypes_text } = parseTypeLine(card.card_faces?.[0]?.type_line ?? card.type_line);
+  return subtypes_text ? subtypes_text.split(", ") : [];
 }
 
 /** True when the printing's front face is one basic land — the only thing a
@@ -271,6 +279,12 @@ export function validateReferenceForCombo(
   } else if (templateIsBasicOnly(template) && !referenceIsSingleBasicLand(card)) {
     errors.push(
       `${card.name} isn't a basic land; the ${label} frame dresses basic lands only.`,
+    );
+  } else if (!subtypeFrameFits(template, referenceSubtypes(card))) {
+    // A subtype dress (the Vehicle frame, TODO 4.5c) is verified against
+    // printings of its subtype only.
+    errors.push(
+      `${card.name} isn't a ${subtypeDressOf(template)}; the ${label} frame dresses ${subtypeDressOf(template)}s only.`,
     );
   } else {
     // A creature may borrow the artifact frame (TODO 1.7) or the Nyx

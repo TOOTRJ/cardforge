@@ -11,6 +11,8 @@
 import type { CardType, ColorIdentity, FrameTemplate } from "@/types/card";
 import {
   borrowedFrameFits,
+  subtypeFrameFits,
+  subtypeFrameFor,
   framesForKind,
   isSingleBasicLand,
   kindFromCard,
@@ -113,15 +115,30 @@ export function resolveGeneratedFrame(input: {
       (basicLand || !templateIsBasicOnly(choice.template)) &&
       borrowedFrameFits(kind, choice.template, type) &&
       typeWordFrameFits(kind, choice.template, face?.supertype) &&
+      // A subtype dress (TODO 4.5c) is for its subtype only: the Vehicle
+      // frame never dresses a Sol Ring — and a NEW Vehicle wears it rather
+      // than the plain artifact frame wherever it is published in the
+      // card's colour (subtypeFrameFor).
+      subtypeFrameFits(choice.template, face?.subtypes) &&
       // The borderless planeswalker's tall box is for four rows or more,
       // the regular one for fewer (4.33): a gate, like the type words.
       walkerRowsFrameFits(kind, choice.template, rows),
   );
   const boxed = typed.filter((choice) => tokenFrameFits(kind, choice.template, tokenFace));
-  const pool = boxed.length > 0 ? boxed : typed;
+  const has = (template: FrameTemplate) => typed.some((choice) => choice.template === template);
+  // The base of a subtype dress the card wears (m15artifact for a Vehicle)
+  // gives way to the dress where both are published.
+  const dressed = (boxed.length > 0 ? boxed : typed).filter((choice) => {
+    const dress = subtypeFrameFor(choice.template, face?.subtypes);
+    return dress === choice.template || !has(dress);
+  });
+  const pool = dressed;
 
   if (requested !== "random") {
-    const wanted = walkerRowsFrameFor(kind, tokenFrameFor(kind, requested, tokenFace), rows);
+    const vehicle = subtypeFrameFor(requested, face?.subtypes);
+    const wanted = has(vehicle) && vehicle !== requested
+      ? vehicle
+      : walkerRowsFrameFor(kind, tokenFrameFor(kind, requested, tokenFace), rows);
     const asked = walkerRowsFrameFor(kind, typeWordFrameFor(kind, requested, face?.supertype), rows);
     // The height asked for stands in only on the arch, whose textless frame
     // keeps the text on its scrim: a full-art height the text doesn't fit

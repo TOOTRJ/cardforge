@@ -2495,6 +2495,9 @@ const M15ARTIFACT: FrameProfile = {
   type: { ...M15.type, dy: CC_M15_TYPE_DY },
   pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
 };
+/** The Vehicle plate's digits (TODO 4.5c): white, as every printed Vehicle
+ *  sets them on its brown plate. */
+const VEHICLE_PT_INK = "#ffffff";
 const M15SNOW: FrameProfile = {
   ...M15,
   label: "M15 Snow",
@@ -5282,6 +5285,29 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     ...M15ARTIFACT,
     overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }, { ...M15_HOLO_STAMP, keyMap: { c: "a" } }],
     twoColorMasters: ["split"],
+    collector: M15_COLLECTOR,
+  },
+  // The Vehicle frame (TODO 4.5c; owner 2026-09-29: a stored template of
+  // its own, for Vehicles only): Card Conjurer's bronze 'Vehicle Frame'
+  // where m15artifact has the silver one, under the same bars, box and
+  // pinline — so m15artifact's slots, crown (a colourless Vehicle's is the
+  // artifact silver "a": DMU #230, NEC #159; a coloured one's its colour,
+  // KHM #169), stamp notch and collector line. Its ONE plate is the brown
+  // `m15PTV` under every colour key, at M15's plate box, and the digits are
+  // WHITE on it (67 of 68 prints read, KLD 2016 → 2026: ink 241–255 on a
+  // 75–148 luma face). An ADDITION: a new template no stored card sits on —
+  // a Vehicle stored on m15 / m15artifact keeps its frame until its owner
+  // picks this one. Its two-colour dress is m15artifact's split — gold
+  // bars, the box and the pinline in the two colours — over the bronze
+  // frame (owner 2026-10-12; DFT #188–220, NEO #231, MKM #215): ten pair
+  // masters, the card's own switch, no hybrid dress. The plate is toned
+  // onto the prints' brown (scripts/lib/cc-frames.mjs VEHICLE_PLATE_TONE).
+  m15vehicle: {
+    ...M15ARTIFACT,
+    label: "M15 Vehicle",
+    twoColorMasters: ["split"],
+    pt: { ...M15ARTIFACT.pt!, plateAssetPathTemplate: "/frames/m15vehicle/pt/{color}.png", colorHex: VEHICLE_PT_INK },
+    overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }, { ...M15_HOLO_STAMP, keyMap: { c: "a" } }],
     collector: M15_COLLECTOR,
   },
   // The borderless frame's crown (TODO 4.6f, wave 2a) is CC's FLOATING crown

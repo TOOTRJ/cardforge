@@ -77,6 +77,8 @@ describe("the declared pair masters", () => {
       // …and 30 on the old frames (TODO 4.6h): the 2003 gold card, the 2003
       // and 1997 two-colour lands.
       modern: 10, modernland: 10, retroland: 10,
+      // …and the Vehicle frame's ten (TODO 4.5c, owner 2026-10-12).
+      m15vehicle: 10,
     });
     // Every pair key is a master key the bake's loader knows (never "c").
     for (const key of TWO_COLOR_MASTER_KEYS) expect(FRAME_MASTER_KEYS as readonly string[]).toContain(key);

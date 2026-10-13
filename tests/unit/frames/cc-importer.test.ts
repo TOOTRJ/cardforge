@@ -187,6 +187,8 @@ describe("Card Conjurer recipe", () => {
       "m15tokenartifact",
       "m15tokenartifacttext",
       "m15tokentext",
+      // The Vehicle frame (TODO 4.5c; tests/unit/frames/vehicle-importer.test.ts).
+      "m15vehicle",
       "m20token",
       "m20tokenartifact",
       "m20tokenartifacttall",

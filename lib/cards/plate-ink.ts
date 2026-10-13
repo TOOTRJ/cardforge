@@ -26,6 +26,10 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   // HD card (the body's lit bevel), nothing of it in the soft shadow below.
   "/frames/m15/pt/{color}.png": { left: 0.0742, top: 0.0436, right: 0.9974, bottom: 0.8641 },
   "/frames/m15artifact/pt/{color}.png": { left: 0.0742, top: 0.0436, right: 0.9974, bottom: 0.8641 },
+  // The Vehicle plate (TODO 4.5c): Card Conjurer's brown m15PTV (381 × 209),
+  // one image under every colour key, drawn at M15's plate box — the body
+  // with its bevels, none of the soft shadow.
+  "/frames/m15vehicle/pt/{color}.png": { left: 0.0761, top: 0.0526, right: 0.9922, bottom: 0.8613 },
   "/frames/m15snow/pt/{color}.png": { left: 0.0742, top: 0.0436, right: 0.9974, bottom: 0.8641 },
   "/frames/m15devoid/pt/{color}.png": { left: 0.0742, top: 0.0436, right: 0.9974, bottom: 0.8641 },
   // The transform backs' dark plates (TODO 5.1a; CC's transform pt<K>.png,

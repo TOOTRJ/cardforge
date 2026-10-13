@@ -34,6 +34,7 @@ import {
   isTypeWordDress,
   kindFromCard,
   templateIsBasicOnly,
+  isSubtypeDress,
   tokenFrameFor,
   type CardKind,
   type FrameColorKey,
@@ -131,6 +132,8 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
         !isBorrowedVariation(kind, choice.template) &&
         !isTypeWordDress(kind, choice.template) &&
         !isRowDress(kind, choice.template) &&
+        // …nor a subtype dress (the Vehicle frame, TODO 4.5c).
+        !isSubtypeDress(choice.template) &&
         Boolean(dfcBodyOf(choice.template)?.land) === Boolean(dfcBodyOf(wanted)?.land) &&
         choice.availableColorKeys.includes(colorKey),
     );

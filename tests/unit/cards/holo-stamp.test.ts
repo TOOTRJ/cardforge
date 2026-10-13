@@ -144,7 +144,7 @@ describe("the geometry", () => {
 describe("the notch and the resolved stamp", () => {
   it("the slot is on exactly the seven wave-1 entries, keyed by the master's bar: a colourless artifact's 'a', a colourless land's 'l', every devoid key's 'c', the walker's own piece", () => {
     const withNotch = FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).stamp);
-    expect(withNotch).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => ["m15", "m15land", "m15snowland", "m15artifact", "m15snow", "m15devoid", "m15pw"].includes(t)));
+    expect(withNotch).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15snow", "m15devoid", "m15pw"].includes(t)));
     const keyOf = (template: string, colorKey: string, over: Record<string, unknown> = {}) =>
       resolveHoloStamp(getFrameProfile(template), { stamp: "oval" }, facts({ colorKey, colors: [colorKey === "c" ? "colorless" : "blue"], ...over }))?.notch.path ?? null;
     expect(keyOf("m15", "w")).toBe("/frames/m15holostamp/w.png");
