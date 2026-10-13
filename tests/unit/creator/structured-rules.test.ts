@@ -246,3 +246,58 @@ describe("an edit of a card stored with its rows alone (rules_text NULL)", () =>
     ).toBe("-2: Old.");
   });
 });
+
+// A marker the editor can't number beside ones it can ("I — …" + "XI — …"):
+// the row opens with a text and no chapter. It never saves as a chapter,
+// but it is a row its maker can edit or remove (the independent check,
+// 2026-10-13).
+describe("an edit of a saga with a chapter the editor can't number", () => {
+  const TEXT = "I — One.\nXI — Eleven.";
+  const opened = values({
+    rules_text: TEXT,
+    saga_chapters: sagaFromRulesText(TEXT).chapters.map((ch) => ({ numerals: [...ch.numerals], text: ch.text })),
+  });
+
+  it("it opens as a numbered row and an unnumbered one", () => {
+    expect(opened.saga_chapters).toEqual([
+      { numerals: [1], text: "One." },
+      { numerals: [], text: "Eleven." },
+    ]);
+  });
+
+  it("untouched: the stored text, and NO rows written beside it", () => {
+    // `face_content` is what the renderers read first; chapter I alone
+    // there would take chapter XI off the card on a retitle.
+    expect(submittedRulesOf("saga", opened, editOf(opened))).toEqual({ rulesText: TEXT, faceContent: null });
+  });
+
+  it("…a stored face_content is kept as it is", () => {
+    const stored = { v: 1 as const, saga: { intro: null, chapters: [{ numerals: [1], text: "One." }] } };
+    expect(submittedRulesOf("saga", opened, { opened, storedFaceContent: stored })).toEqual({
+      rulesText: TEXT,
+      faceContent: stored,
+    });
+  });
+
+  it("the unnumbered row removed: an edit — the text follows the rows", () => {
+    const now = { ...opened, saga_chapters: [opened.saga_chapters[0]] };
+    expect(submittedRulesOf("saga", now, editOf(opened))).toEqual({
+      rulesText: "I — One.",
+      faceContent: { v: 1, saga: { intro: null, chapters: [{ numerals: [1], text: "One." }] } },
+    });
+  });
+
+  it("the unnumbered row's text edited: an edit too (the row still saves no chapter)", () => {
+    const now = { ...opened, saga_chapters: [opened.saga_chapters[0], { numerals: [], text: "Changed." }] };
+    expect(submittedRulesOf("saga", now, editOf(opened)).rulesText).toBe("I — One.");
+  });
+
+  it("the row given a number: its chapter", () => {
+    const now = { ...opened, saga_chapters: [opened.saga_chapters[0], { numerals: [2], text: "Eleven." }] };
+    expect(submittedRulesOf("saga", now, editOf(opened)).rulesText).toBe("I — One.\nII — Eleven.");
+  });
+
+  it("a new card (no opened values) saves the numbered rows, as before", () => {
+    expect(submittedRulesOf("saga", opened).rulesText).toBe("I — One.");
+  });
+});

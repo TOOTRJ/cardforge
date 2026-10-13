@@ -44,6 +44,9 @@ export type SubmittedRulesOptions = {
    *  `rules_text` is the stored text). Rows that still read as these are
    *  saved with that text unchanged. Absent for a new card and a remix. */
   opened?: StructuredRulesValues | null;
+  /** An EDIT: the stored card's `face_content` — what an untouched saga
+   *  keeps when its rows cannot say everything its text does (below). */
+  storedFaceContent?: FaceContent | null;
 };
 
 /** The rows a save carries: trimmed, textless ones dropped, the cost with
@@ -58,11 +61,15 @@ function loyaltyRowsOf(rows: readonly { cost?: string | null; text: string }[]):
     .filter((r) => r.text.length > 0);
 }
 
-/** …and a saga's: numbered chapters with a text, numerals ascending. */
-function sagaChaptersOf(rows: readonly { numerals: readonly number[]; text: string }[]): SagaChapterContent[] {
+/** …and a saga's rows that hold a text, numerals ascending — numbered or
+ *  not. A row with no number (a marker the editor can't read, "XI — …"; a
+ *  number not picked yet) never saves as a chapter, but it IS a row its
+ *  maker can edit or remove: "the rows read as they opened" is judged on
+ *  these, the chapters a save carries are the numbered ones. */
+function sagaTextRowsOf(rows: readonly { numerals: readonly number[]; text: string }[]): SagaChapterContent[] {
   return rows
     .map((r) => ({ numerals: [...r.numerals].sort((a, b) => a - b), text: r.text.trim() }))
-    .filter((r) => r.text.length > 0 && r.numerals.length > 0);
+    .filter((r) => r.text.length > 0);
 }
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
@@ -94,13 +101,22 @@ export function submittedRulesOf(
   }
 
   if (kind === "saga") {
-    const chapters = sagaChaptersOf(values.saga_chapters);
+    const textRows = sagaTextRowsOf(values.saga_chapters);
+    const chapters = textRows.filter((r) => r.numerals.length > 0);
     if (chapters.length > 0) {
       const intro = values.saga_intro.trim() || null;
       const untouched =
         opened !== null &&
         (opened.saga_intro.trim() || null) === intro &&
-        same(chapters, sagaChaptersOf(opened.saga_chapters));
+        same(textRows, sagaTextRowsOf(opened.saga_chapters));
+      // Untouched, with a row the chapters cannot carry (the stored text has
+      // a marker the editor can't number beside ones it can): the card stays
+      // as it is stored. Writing the numbered rows alone as `face_content` —
+      // which the renderers read BEFORE the text — took that chapter off
+      // the card on a save that only retitled it.
+      if (untouched && textRows.length !== chapters.length) {
+        return { rulesText: textarea, faceContent: options.storedFaceContent ?? null };
+      }
       return {
         rulesText: untouched ? textarea : serializeSaga(intro, chapters),
         faceContent: { v: 1, saga: { intro, chapters } },

@@ -492,3 +492,196 @@ describe("rows the maker did not change keep the stored text, however it is spel
     expect((await sentCreate()).rules_text).toBe("-2: Deal 2 damage.");
   });
 });
+
+// The independent check's probes (2026-10-13): "rows that still read as the
+// rows the form opened with keep the stored text" must never swallow a
+// change the maker DID make — and must hold for what the card DRAWS, which
+// is `face_content` before `rules_text` (lib/cards/face-content.ts).
+describe("an edit of a walker's / saga's rows is never read as untouched", () => {
+  const walker = (rules_text: string) =>
+    savedCard({
+      card_type: "planeswalker",
+      subtypes: ["Kesh"],
+      power: null,
+      toughness: null,
+      loyalty: "4",
+      rules_text,
+      face_content: null,
+      frame_style: { finish: "regular", template: "m15pw" },
+    });
+  const saga = (rules_text: string) =>
+    savedCard({
+      card_type: "enchantment",
+      supertype: null,
+      subtypes: ["Saga"],
+      power: null,
+      toughness: null,
+      flavor_text: null,
+      rules_text,
+      face_content: null,
+      frame_style: { finish: "regular", template: "saga" },
+    });
+  const W = "−2: Deal 2 damage.\n+1 : Scry 1.";
+  const S = "(Reminder.)\n\nI,II — Draw a card.\nIII — Win.";
+  const clickLabel = async (label: string) => {
+    await act(async () => {
+      fireEvent.click(screen.getAllByLabelText(label)[0]);
+    });
+  };
+  const clickButton = async (name: RegExp) => {
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole("button", { name })[0]);
+    });
+  };
+  const openRows = async (card: Card) => {
+    renderForm("edit", card);
+    await type("title", "Another Name");
+    await goTo("Text & stats");
+  };
+
+  it("a cost alone (+1 → +2)", async () => {
+    await openRows(walker(W));
+    await type("loyalty_abilities.1.cost", "+2");
+    expect((await sentUpdate()).rules_text).toBe("-2: Deal 2 damage.\n+2: Scry 1.");
+  });
+
+  it("a cost emptied (the row turns static)", async () => {
+    await openRows(walker(W));
+    await type("loyalty_abilities.1.cost", "");
+    expect((await sentUpdate()).rules_text).toBe("-2: Deal 2 damage.\nScry 1.");
+  });
+
+  it("a row removed, a row added", async () => {
+    await openRows(walker(W));
+    await clickLabel("Remove ability 1");
+    await clickButton(/Add ability/);
+    await typeRich("loyalty_abilities.1.text", "New.");
+    // (A second row is offered the "-2" cost.)
+    expect((await sentUpdate()).rules_text).toBe("+1: Scry 1.\n-2: New.");
+  });
+
+  it("two rows' texts swapped", async () => {
+    await openRows(walker("+1 : A.\n+1 : B."));
+    await typeRich("loyalty_abilities.0.text", "B.");
+    await typeRich("loyalty_abilities.1.text", "A.");
+    expect((await sentUpdate()).rules_text).toBe("+1: B.\n+1: A.");
+  });
+
+  it.each([
+    [
+      "a text edited and put back",
+      async () => {
+        await typeRich("loyalty_abilities.1.text", "Scry 9.");
+        await typeRich("loyalty_abilities.1.text", "Scry 1.");
+      },
+    ],
+    [
+      "a row added and removed again",
+      async () => {
+        await clickButton(/Add ability/);
+        await typeRich("loyalty_abilities.2.text", "New.");
+        await clickLabel("Remove ability 3");
+      },
+    ],
+    [
+      "an empty row added",
+      async () => {
+        await clickButton(/Add ability/);
+      },
+    ],
+    // The cost as Scryfall spells it reads as the "-2" the row opened with.
+    [
+      "the same cost retyped with U+2212",
+      async () => {
+        await type("loyalty_abilities.0.cost", "−2");
+      },
+    ],
+  ])("…while %s IS untouched: the stored text, byte for byte", async (_label, edit) => {
+    await openRows(walker(W));
+    await edit();
+    expect((await sentUpdate()).rules_text).toBe(W);
+  });
+
+  it("a saga's intro alone", async () => {
+    await openRows(saga(S));
+    await typeRich("saga_intro", "(Other.)");
+    expect((await sentUpdate()).rules_text).toBe("(Other.)\nI, II — Draw a card.\nIII — Win.");
+  });
+
+  it("a saga's intro emptied", async () => {
+    await openRows(saga(S));
+    await typeRich("saga_intro", "");
+    expect((await sentUpdate()).rules_text).toBe("I, II — Draw a card.\nIII — Win.");
+  });
+
+  it("a chapter's number alone", async () => {
+    await openRows(saga(S));
+    await clickLabel("Chapter II for row 1");
+    expect((await sentUpdate()).rules_text).toBe("(Reminder.)\nI — Draw a card.\nIII — Win.");
+  });
+
+  it("…a number switched off and on again is untouched", async () => {
+    await openRows(saga(S));
+    await clickLabel("Chapter II for row 1");
+    await clickLabel("Chapter II for row 1");
+    expect((await sentUpdate()).rules_text).toBe(S);
+  });
+
+  // A marker the editor cannot number ("XI") opens as a row with a text and
+  // no chapter. It never saves as a chapter — but it is a row.
+  const XI = "I — One.\nXI — Eleven.";
+  it("a saga with a chapter the editor can't number, untouched: the text AND the plain-text storage stay", async () => {
+    renderForm("edit", saga(XI));
+    await type("title", "Another Name");
+    const payload = await sentUpdate();
+    expect(payload.rules_text).toBe(XI);
+    // No dual write here: `face_content` with chapter I alone would be what
+    // the card draws, and chapter XI would leave it on a retitle.
+    expect(payload.face_content).toBeNull();
+  });
+
+  it("…that row REMOVED is an edit: the text follows the rows", async () => {
+    await openRows(saga(XI));
+    await clickLabel("Remove chapter row 2");
+    const payload = await sentUpdate();
+    expect(payload.rules_text).toBe("I — One.");
+    expect(payload.face_content).toEqual({ v: 1, saga: { intro: null, chapters: [{ numerals: [1], text: "One." }] } });
+  });
+
+  it("…that row given a number is saved as its chapter", async () => {
+    await openRows(saga(XI));
+    await clickLabel("Chapter II for row 2");
+    expect((await sentUpdate()).rules_text).toBe("I — One.\nII — Eleven.");
+  });
+});
+
+describe("the footer mark across two saves of one editing session", () => {
+  // The refreshed card arrives after the save; until then the form still
+  // holds the card as it opened.
+  it("typed and saved, then put back to what it opened with and saved again: sent again", async () => {
+    renderForm("edit", savedCard({ footer_text: null }), PAID);
+    await type("title", "Another Name");
+    await goTo("Subscriber");
+    await type("footer_text", "kesh.example");
+    await save();
+    await waitFor(() => expect(actions.updateCardAction).toHaveBeenCalledTimes(1));
+    expect(actions.updateCardAction.mock.calls[0][1]).toHaveProperty("footer_text", "kesh.example");
+    await type("footer_text", "tester.art");
+    await save();
+    await waitFor(() => expect(actions.updateCardAction).toHaveBeenCalledTimes(2));
+    expect(actions.updateCardAction.mock.calls[1][1]).toHaveProperty("footer_text", "tester.art");
+  });
+
+  it("…and a second save that leaves it alone does not resend it", async () => {
+    renderForm("edit", savedCard({ footer_text: null }), PAID);
+    await goTo("Subscriber");
+    await type("footer_text", "kesh.example");
+    await save();
+    await waitFor(() => expect(actions.updateCardAction).toHaveBeenCalledTimes(1));
+    await goTo("Text & stats");
+    await type("flavor_text", "Another line.");
+    await save();
+    await waitFor(() => expect(actions.updateCardAction).toHaveBeenCalledTimes(2));
+    expect(actions.updateCardAction.mock.calls[1][1]).not.toHaveProperty("footer_text");
+  });
+});
