@@ -1304,6 +1304,48 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            {B/P} are on inline-cost templates); the 3- and 5-symbol
 //            cases on `modern` and `m15pw` are new.
 //            Verification-neutral: no slot, master, size or plate moves.
+//   53     — the LARGE pips as printed (TODO 3.21; owner round 49,
+//            2026-10-12). ITS number lives in LARGE_PIPS_LAYOUT_VERSION
+//            below. 279 Scryfall prints, 2005 → 2026, each disc a circle
+//            fitted to its outer edge (−0.09 ± 0.08 px on our own bakes):
+//            every hybrid, twobrid, Phyrexian and two-colour Phyrexian
+//            symbol sits on ONE disc of about 85 HD px in a cost — on the
+//            2003 frame (hybrid 84.9 ± 1.3, twobrid 85.0 ± 1.1, Phyrexian
+//            84.8 ± 0.2 beside a 66.1 px plain pip: ×1.285) and on the M15
+//            frame alike (85.1 ± 1.2 / 85.1 ± 1.6 / 84.6 ± 0.9 / 84.7 ± 0.2
+//            beside a 70.2 px one: ×1.21) — and at 1.28 of the plain pip
+//            beside it in rules text on both (median 1.283, 9 cards), on
+//            the plain pips' centre line. A card drew a hybrid and a
+//            twobrid disc at a plain pip's size, the Phyrexian ones ×1.2
+//            everywhere. Now (lib/cards/mana-gem.ts isLargePip / pipScale,
+//            the factor a SymbolStyleSpec's `largePipScale`, the text's
+//            through inlineSymbolStyle): all four classes are large; a COST
+//            draws them ×1.2 on "modern" (88 px beside 73), 85/66 on
+//            "2003" (85 px beside 66), ×1.2 on "1997" and "original"
+//            (frames that never printed one keep today's size: owner
+//            decision 4); RULES text draws them ×1.28 on every style (77 px
+//            beside 60 in 9-point text). The rules layout, the cost row
+//            beside the name and a detached cost's width measure the same
+//            disc (pipScale is the one answer), so a line breaks, and a
+//            name is fitted, for the disc drawn.
+//            A CORRECTION ("sweep"), never a badge, after the owner's
+//            round-49 sheets. Card-scoped on ANY template (v53Changed): a
+//            hybrid or twobrid symbol anywhere a pip is read; a Phyrexian
+//            symbol in a TEXT (rules, a walker's rows, a saga's rail, a
+//            second face's rules); a Phyrexian symbol in a COST only on
+//            the 2003 frame's pair (V53_LARGER_COST_TEMPLATES) and on the
+//            modal double-faced bodies, whose strip sets the other face's
+//            cost as text pips. Every other card is stamped.
+//            Production (a fresh anonymous read, 2026-10-12): 7 public
+//            cards re-bake — six with a hybrid pip, one with a Phyrexian
+//            pip in its text; all 7 change pixels, none its rules size,
+//            one a line break — and 856 public cards are stamped (the 7
+//            other rows of that read bake byte-identical on main and on
+//            this commit); all 129 unlisted cards read on 2026-10-08 are
+//            stamped. Private cards cannot be read; any in scope re-bake
+//            once. The visual matrix: 326 of 1498 cases change, each with a
+//            symbol in scope; three `@large-pips-hd` cases are new.
+//            Verification-neutral: no slot, master, size or plate moves.
 // ---------------------------------------------------------------------------
 
 /** The 1993 frame on its prints (TODO 4.10c): every text slot and the
@@ -1354,7 +1396,18 @@ export const TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION = 52;
  *  list to the profiles while it is the latest). */
 export const V52_DETACHED_COST_TEMPLATES: readonly string[] = ["modern", "m15pw", "m15borderlesspw", "m15borderlesspwtall"];
 
-export const CARD_LAYOUT_VERSION = TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION;
+/** The large pips as printed (TODO 3.21, owner round 49): hybrid and
+ *  twobrid discs drawn large, the large pip's factor per symbol style and
+ *  place. ITS version lives here alone — CARD_LAYOUT_VERSION, the card scope
+ *  and the rollout below read this constant. */
+export const LARGE_PIPS_LAYOUT_VERSION = 53;
+/** v53 — the templates whose symbol style draws a large COST pip at
+ *  another factor than v52's ×1.2 ("2003": 85/66). Frozen: v53 is history
+ *  once it ships (a test holds the list to the profiles while it is the
+ *  latest). */
+export const V53_LARGER_COST_TEMPLATES: readonly string[] = ["modern", "modernland"];
+
+export const CARD_LAYOUT_VERSION = LARGE_PIPS_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -1528,6 +1581,7 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // templates that place the cost in its own box — and on them only a card
   // whose cost holds a Phyrexian symbol (v52Changed). Verification-neutral.
   [TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION]: V52_DETACHED_COST_TEMPLATES,
+  // (v53 is not here: any template — a card scope, v53Changed.)
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -1668,12 +1722,17 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
  * is fitted to the room their larger discs leave — no slot, master, size
  * or plate moves, and a card without such a cost bakes to the same pixels
  * (as v49, which drew those discs larger and stayed neutral).
+ * v53 is (TODO 3.21): a hybrid, a twobrid and a Phyrexian symbol are drawn
+ * on the prints' larger disc inside the cost and rules slots a frame
+ * already has — no slot, master, size or plate moves, and a card without
+ * one bakes to the same pixels.
  * Stored bakes still owe these bumps: this list is read by frame
  * verification only, never by the stale / sweep / download rules.
  */
 export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [
   31, 32, 33, 35, 36, 37, 44, 49, TYPE_LINE_ORDER_LAYOUT_VERSION, ART_FOCAL_ZERO_LAYOUT_VERSION,
   TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION,
+  LARGE_PIPS_LAYOUT_VERSION,
 ];
 
 /** TEMPLATE_SCOPED_VERSIONS with VERIFICATION_TEMPLATE_SCOPES laid over it
@@ -2265,6 +2324,64 @@ function v52Changed(card: ScopeCard): boolean {
   return v52HasLargerDisc(card.cost);
 }
 
+/** v53 — a SPLIT disc that is not a Phyrexian one, as the tokenizer reads a
+ *  symbol (components/cards/mana-cost-glyphs.tsx classifyInner →
+ *  lib/cards/rules-text.ts hybridHalves): a hybrid of two DIFFERENT colours
+ *  ({W/U}; {W/W} is an unknown symbol on a plain disc), the twobrid {2/W}
+ *  (no other number has a split disc), and the slash-less spellings a hand
+ *  may type — an unknown symbol keeps its first two characters, and "wu",
+ *  "2w" and "cw" are split discs' own suffixes ({WU}, {2W}, {CW}, {WUP}).
+ *  v53 drew them LARGE for the first time. Case and outer spaces as the
+ *  tokenizer reads them. A regex, not the tokenizer, so this module stays
+ *  free of the components tree; a test holds both regexes to isLargePip
+ *  while v53 is the latest. Frozen. */
+const V53_SPLIT_DISC = /\{\s*(?:([WUBRG])\/(?!\1)[WUBRG]\s*\}|2\/[WUBRG]\s*\}|([WUBRG2C])(?!\2)[WUBRG][^}]*\})/i;
+/** v53 — a Phyrexian symbol, one colour or two, and its slash-less spelling
+ *  ({W/P}, {G/U/P}, {WP}): large since v49, on v53's factors since v53. */
+const V53_PHYREXIAN_DISC = /\{\s*(?:[WUBRG]\/P\s*\}|([WUBRG])\/(?!\1)[WUBRG]\/P\s*\}|[WUBRG]P[^}]*\})/i;
+
+/** Whether a text holds a hybrid or twobrid symbol as v53 reads it. */
+export function v53HasSplitDisc(value: unknown): boolean {
+  return typeof value === "string" && V53_SPLIT_DISC.test(value);
+}
+/** Whether a text holds a Phyrexian symbol as v53 reads it. */
+export function v53HasPhyrexianDisc(value: unknown): boolean {
+  return typeof value === "string" && V53_PHYREXIAN_DISC.test(value);
+}
+
+/**
+ * Whether layout v53 (the large pips as printed, TODO 3.21) changed a
+ * card's bake, on ANY template:
+ *
+ *   - a hybrid or twobrid symbol anywhere a pip is read — the cost, the
+ *     rules text, a walker's rows, a saga's intro and chapters, a second
+ *     face's cost and rules text: its disc grew from a plain pip's;
+ *   - or a Phyrexian symbol in a TEXT (the rules text, the rows, the rail,
+ *     a second face's rules text): ×1.2 → ×1.28;
+ *   - or a Phyrexian symbol in a COST (the card's or a second face's) on a
+ *     template that draws it at another factor than before — the 2003
+ *     frame's pair (V53_LARGER_COST_TEMPLATES: 79 → 85 px) and the modal
+ *     double-faced bodies (V49_FLIPSIDE_TEMPLATES: the strip sets the other
+ *     face's cost as text pips). In every other cost it keeps ×1.2.
+ *
+ * Read wider than what is drawn where telling costs more than a re-bake (a
+ * symbol in a text the frame does not print re-bakes to the same pixels).
+ * Templates are judged as drawn (a {} frame_style is m15). Any column it
+ * needs that the row doesn't carry → affected.
+ */
+function v53Changed(card: ScopeCard): boolean {
+  if (card.frame_style === undefined) return true;
+  if ([card.cost, card.rules_text, card.face_content, card.back_face].some((v) => v === undefined)) return true;
+  const back = card.back_face && typeof card.back_face === "object" ? (card.back_face as Record<string, unknown>) : null;
+  const costs = [card.cost, back?.cost];
+  const texts = [card.rules_text, back?.rules_text, ...v49FaceContentTexts(card.face_content)];
+  if ([...costs, ...texts].some(v53HasSplitDisc)) return true;
+  if (texts.some(v53HasPhyrexianDisc)) return true;
+  if (!costs.some(v53HasPhyrexianDisc)) return false;
+  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style), card);
+  return V53_LARGER_COST_TEMPLATES.includes(template) || V49_FLIPSIDE_TEMPLATES.includes(template);
+}
+
 /** The frozen v33 template lists, for the test that pins them to the
  *  profiles. */
 export const V33_SCOPE_TEMPLATES = {
@@ -2322,6 +2439,10 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // (6.16d): on the four detached-cost templates (the template scope), a
   // cost that holds a larger disc — v52Changed.
   [TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION]: v52Changed,
+  // v53 — the large pips as printed (3.21): a hybrid or twobrid symbol
+  // anywhere, a Phyrexian one in a text, or in a cost on the 2003 pair and
+  // the modal bodies — v53Changed.
+  [LARGE_PIPS_LAYOUT_VERSION]: v53Changed,
 };
 
 /** `frame_style.finish` from the jsonb column, or null when absent (= regular). */
@@ -2452,6 +2573,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [ALPHA_1993_LAYOUT_VERSION]: "sweep", // the 1993 frame on its prints (4.10c): sizes, faces, the `Illus.` credit, the P/T, the original symbols — a correction of a pair against Alpha / Beta after the owner's before / after sheet (4 stored cards), never a badge
   [TYPE_LINE_ORDER_LAYOUT_VERSION]: "sweep", // the type line in its printed order + the P/T of a land creature (1.20) — a correction of what a face prints; 0 public or unlisted stored cards in scope, never a badge
   [TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION]: "sweep", // a name's room before a detached cost of Phyrexian symbols (6.16d) — a correction of a fit that ran the name under the pips; 0 public or unlisted stored cards in scope, never a badge
+  [LARGE_PIPS_LAYOUT_VERSION]: "sweep", // hybrid and twobrid discs large, the large pip's factor per frame and place (3.21) — a correction against the prints after the owner's round-49 sheets, never a badge
   [SYMBOLS_PRINT_LAYOUT_VERSION]: "sweep", // five symbols on the prints' drawings + flat rules-text pips (6.16b) — a correction against the prints after the owner's round-43 sheets, never a badge
   [ART_FOCAL_ZERO_LAYOUT_VERSION]: "sweep", // the art's zoom about a focal point of exactly 0 (Satori dropped a zero transform-origin) — a correction of the bake against the preview after the owner's before / after sheet, never a badge
   [BATTLE_RECUT_LAYOUT_VERSION]: "sweep", // the battle's right side, top block and icon re-cut onto the prints (4.21d) — a correction on a template no public card uses, never a badge

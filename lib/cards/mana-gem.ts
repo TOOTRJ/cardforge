@@ -61,14 +61,6 @@ export const UNTAP_GEM = { bg: "#211f23", ink: "#ffffff", glyphOfDisc: 0.9 } as 
  *  mana-font's is 1 em tall. */
 export const PHYREXIAN_GLYPH_OF_DISC = 0.91;
 
-/** The prints set a Phyrexian pip — one colour or two — on a LARGER disc
- *  than the pips beside it: 1.175 ± 0.020 of them in a cost (M15 frame,
- *  n = 8; New Phyrexia's on the 2003 frame 80.9 HD px against that frame's
- *  66: 1.22), 1.21 ± 0.08 in rules text (n = 8), 1.224 ± 0.025 for the
- *  two-colour one (n = 5). One factor for all. The hybrid and twobrid discs
- *  are NOT part of this (their own measuring task). */
-export const LARGE_PIP_SCALE = 1.2;
-
 /** {S}: the disc of a generic pip and a WHITE flake 0.92 of the disc across
  *  with a dark outline 0.056 of the flake wide (6 rules-text flakes and 2
  *  cost flakes on 7 prints, CSP 2006 → J22 2022, the same drawing
@@ -101,25 +93,47 @@ const isPhyrexian = (suffix: string) => /^[wubrg]p$/.test(suffix);
 /** A two-colour Phyrexian suffix ("gup"). */
 const isSplitPhyrexian = (suffix: string) => /^[wubrg]{2}p$/.test(suffix) && suffix[0] !== suffix[1];
 
-/** How much larger than a plain pip's disc `symbol` is drawn: LARGE_PIP_SCALE
- *  for a Phyrexian symbol, 1 for every other. The same on every symbol
- *  style. The rules layout (pipWidthPx) and the cost row (costRowTerms)
- *  measure a pip with it; both renderers draw manaGemSpec's `discPx`. */
-export function pipScale(symbol: string): number {
+/** The style's large-pip factor: a cost's (a SymbolStyleSpec), a rules
+ *  text's (inlineSymbolStyle's spec, or the layout's RulesMetrics, which
+ *  carries the same number). */
+export type LargePipScale = Pick<SymbolStyleSpec, "largePipScale">;
+
+/** True for a LARGE pip (layout v53, TODO 3.21, owner round 49): every
+ *  split disc — a hybrid ({W/U}, {C/W}), a twobrid ({2/W}), a two-colour
+ *  Phyrexian symbol ({G/U/P}) — and the Phyrexian symbol ({W/P}). The prints
+ *  set them all on ONE disc, about 85 HD px in a cost on the 2003 and the M15
+ *  frame alike (hybrid 84.9 ± 1.3 / 85.1 ± 1.2 on 93 prints, twobrid 85.0 /
+ *  85.1 on 26, Phyrexian 84.8 / 84.6 on 21, two-colour Phyrexian 84.7 on 5;
+ *  2005 → 2026) and 1.28 of the plain pip beside them in rules text (9
+ *  cards). Up to v52 only the Phyrexian symbols were. */
+export function isLargePip(symbol: string): boolean {
   const suffix = symbol.toLowerCase();
-  return isPhyrexian(suffix) || isSplitPhyrexian(suffix) ? LARGE_PIP_SCALE : 1;
+  return isPhyrexian(suffix) || hybridHalves(suffix) != null;
+}
+
+/** How much larger than a plain pip's disc `symbol` is drawn where
+ *  `symbols` is the style of the place it is set in — the frame's style for
+ *  a COST, its inlineSymbolStyle for RULES text: the style's
+ *  `largePipScale` for a large pip (isLargePip), 1 for every other. THE one
+ *  answer: the rules layout (pipWidthPx / pipTopOf), the cost row beside the
+ *  name (costRowTerms), a detached cost's width (manaCostWidthPct) and both
+ *  renderers (manaGemSpec's `discPx`) read it; a new measure of a pip reads
+ *  it too. */
+export function pipScale(symbol: string, symbols: LargePipScale): number {
+  return isLargePip(symbol) ? symbols.largePipScale : 1;
 }
 
 /** `symbol`'s drawn diameter in whole px where a plain pip's is `pipPx`. */
-export function pipDiscPx(symbol: string, pipPx: number): number {
-  return Math.round(pipPx * pipScale(symbol));
+export function pipDiscPx(symbol: string, pipPx: number, symbols: LargePipScale): number {
+  return Math.round(pipPx * pipScale(symbol, symbols));
 }
 
 /** How many whole px ABOVE a plain pip's top `symbol`'s disc starts in a
  *  line of rules text: a larger disc keeps the plain pip's centre (the
- *  odd px below). 0 for a plain pip. */
-export function pipRisePx(symbol: string, pipPx: number): number {
-  return Math.floor((pipDiscPx(symbol, pipPx) - pipPx) / 2);
+ *  odd px below), as the prints do (+0.1 ± 0.5 px in a cost, −1.1 ± 1.7 in
+ *  text). 0 for a plain pip. */
+export function pipRisePx(symbol: string, pipPx: number, symbols: LargePipScale): number {
+  return Math.floor((pipDiscPx(symbol, pipPx, symbols) - pipPx) / 2);
 }
 
 /** A split (hybrid / twobrid) disc: a 135° two-colour fill, each half's
@@ -236,7 +250,7 @@ export function manaGemSpec(symbol: string, pipPx: number, symbols: SymbolStyleS
   // whole pip, always a plain pip's disc.
   const imagePath = symbolImagePath(symbols, suffix);
   if (imagePath) return { kind: "image", suffix, discPx: pipPx, path: imagePath };
-  const discPx = pipDiscPx(suffix, pipPx);
+  const discPx = pipDiscPx(suffix, pipPx, symbols);
   const halves = hybridHalves(suffix);
   if (halves) {
     // A two-colour Phyrexian disc: the Phyrexian symbol in each half.

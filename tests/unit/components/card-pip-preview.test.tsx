@@ -10,6 +10,7 @@ import { metricsFor } from "@/lib/cards/rules-layout";
 import { costRowHdPx } from "@/lib/cards/render-tiers";
 import { manaGemSpec } from "@/lib/cards/mana-gem";
 import {
+  inlineSymbolStyle,
   bakedShadowHex,
   discShadowCss,
   discShadowPx,
@@ -79,8 +80,11 @@ const BAKED_SHADOW = "#0d0d0d";
 function expectBakeShadow(pip: Element, discPx: number, color = BAKED_SHADOW) {
   const layers = shadowLayers(css(pip, "box-shadow"));
   expect(layers).toHaveLength(1);
-  const { left, down } = discShadowPx(symbolStyle("modern"), discPx);
-  // A split disc is in the row's own em (1 em = the disc).
+  // A split disc is a LARGE pip (layout v53): its shadow is its own
+  // disc's share — 5 left and 6 down of 88 px beside a plain 73.
+  const ownPx = pip.tagName === "SPAN" ? Math.round(discPx * symbolStyle("modern").largePipScale) : discPx;
+  const { left, down } = discShadowPx(symbolStyle("modern"), ownPx);
+  // A split disc is in the row's own em (1 em = a plain disc).
   const fontPx = pip.tagName === "SPAN" ? discPx : pipFontPx(pip.tagName === "IMG" ? pip.parentElement! : pip, discPx);
   expect(layers[0].x * fontPx).toBeCloseTo(-left, 1);
   expect(layers[0].y * fontPx).toBeCloseTo(down, 1);
@@ -244,11 +248,13 @@ describe("a rules pip's glyph is the bake's share of its disc", () => {
         // Never mana-font's cost classes: their look is not the stored card's.
         expect(pip.className).not.toMatch(/ms-cost|ms-shadow/);
         if (pip.getAttribute("data-pip") === "wu") {
-          const gem = manaGemSpec("wu", discPx, symbolStyle(profile.symbolStyle));
+          const gem = manaGemSpec("wu", discPx, inlineSymbolStyle(symbolStyle(profile.symbolStyle)));
           if (gem.kind !== "split") throw new Error("a hybrid is a split disc");
-          // A hybrid's disc is a plain pip's: one em of the row.
-          expect(em(css(pip, "width"))).toBe(1);
-          expect(em(css(pip, "height"))).toBe(1);
+          // A hybrid's disc is a large pip's (layout v53): 1.28 em of the
+          // row in rules text, at the bake's whole px.
+          expect(gem.discPx).toBe(Math.round(discPx * 1.28));
+          expect(em(css(pip, "width")) * discPx).toBeCloseTo(gem.discPx, 1);
+          expect(em(css(pip, "height")) * discPx).toBeCloseTo(gem.discPx, 1);
           const halves = Array.from(pip.children);
           expect(halves.map((h) => h.className)).toEqual(["ms ms-w", "ms ms-u"]);
           for (const half of halves) expect(pipFontPx(half, discPx)).toBeCloseTo(gem.halfPx, 1);

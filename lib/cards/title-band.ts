@@ -29,7 +29,7 @@ import {
   pastFloorText,
 } from "@/lib/cards/render-tiers";
 import { pipScale } from "@/lib/cards/mana-gem";
-import { symbolStyleOf } from "@/lib/cards/symbol-style";
+import { symbolStyleOf, type SymbolStyle, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
 import type { FrameProfile } from "@/lib/cards/template-layout";
 import { slotFace } from "@/lib/cards/type-faces";
 import type { CardOrientation } from "@/lib/cards/typography";
@@ -49,17 +49,17 @@ const TEXT_TOKEN_CHAR_DISC = 0.6 * 0.7;
 
 /** Drawn width of a mana cost, as a fraction of card width, for plain pips
  *  `discPct` across (FrameProfile.costSizePct semantics). Each pip counts
- *  its OWN disc — a Phyrexian symbol's is ×1.2 (pipScale, the one answer
+ *  its OWN disc — a large pip's is the style's factor (pipScale, the one answer
  *  the cost row's costRowTerms and both renderers read; layout v52: every
  *  pip counted as a plain disc, so a name ran under a detached cost of
  *  Phyrexian symbols). A plain pip's factor is exactly 1: a cost without a
  *  larger disc measures to the same float as before. */
-export function manaCostWidthPct(cost: string, discPct: number): number {
+export function manaCostWidthPct(cost: string, discPct: number, symbols: SymbolStyleSpec): number {
   const tokens = tokenize(cost.trim());
   if (tokens.length === 0) return 0;
   const glyphs = tokens.reduce(
     (w, t) =>
-      w + (t.kind === "text" ? t.value.length * TEXT_TOKEN_CHAR_DISC * discPct : discPct * pipScale(tokenSuffix(t) ?? "")),
+      w + (t.kind === "text" ? t.value.length * TEXT_TOKEN_CHAR_DISC * discPct : discPct * pipScale(tokenSuffix(t) ?? "", symbols)),
     0,
   );
   return glyphs + (tokens.length - 1) * PIP_GAP_DISC * discPct;
@@ -77,7 +77,7 @@ export function detachedCostTitleWidthPct(
 ): number | null {
   if (!layout.costRect || !cost?.trim()) return null;
   const disc = layout.costSizePct ?? layout.title.sizePct;
-  const pipsLeft = (layout.costRect.leftPct + layout.costRect.widthPct) / 100 - manaCostWidthPct(cost, disc);
+  const pipsLeft = (layout.costRect.leftPct + layout.costRect.widthPct) / 100 - manaCostWidthPct(cost, disc, symbolStyleOf(layout as { symbolStyle?: SymbolStyle }));
   const band = layout.title.rect;
   return Math.max(0, Math.min(band.widthPct / 100, pipsLeft - band.leftPct / 100) - TITLE_COST_GAP_PCT);
 }
@@ -184,7 +184,7 @@ export function titleBandRoomPct(layout: TitleBandLayout, cost: string | null | 
   const drawn = cost?.trim() ? cost : null;
   const disc = layout.costSizePct ?? layout.title.sizePct;
   if (drawn && layout.costRect) {
-    const pipsLeft = (layout.costRect.leftPct + layout.costRect.widthPct) / 100 - manaCostWidthPct(drawn, disc);
+    const pipsLeft = (layout.costRect.leftPct + layout.costRect.widthPct) / 100 - manaCostWidthPct(drawn, disc, symbolStyleOf(layout));
     return Math.min(band.widthPct / 100 - HALF_PX_PCT, pipsLeft - band.leftPct / 100 - DETACHED_COST_GAP_PCT);
   }
   if (drawn) return band.widthPct / 100 - BAND_GAP_PCT - costRowWidthPct(drawn, disc, symbolStyleOf(layout));

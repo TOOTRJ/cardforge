@@ -101,7 +101,8 @@ const plain = (value: unknown) => JSON.parse(JSON.stringify(value)) as unknown;
 
 /** `drawing` with each metrics' inline pip shadow as layout v41 held it:
  *  M15's disc shadow at that metrics' own pip (discShadowPx). The ONLY
- *  numbers v49 changed on a walker's rows. */
+ *  numbers v49 changed on a walker's rows — and without the field layout
+ *  v53 added to the metrics (`largePipScale`), which v41 did not have. */
 function withV41PipShadow<T>(drawing: T): T {
   const modern = symbolStyle("modern");
   const visit = (value: unknown): unknown => {
@@ -112,6 +113,9 @@ function withV41PipShadow<T>(drawing: T): T {
       const { left, down } = discShadowPx(modern, out.pipPx);
       out.pipShadowPx = down;
       out.pipShadowLeftPx = left;
+      // Layout v53 added the text's large-pip factor to the metrics (1.28;
+      // none of these walkers sets a large pip): not a number v41 held.
+      delete out.largePipScale;
     }
     return out;
   };

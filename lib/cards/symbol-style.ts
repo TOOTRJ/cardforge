@@ -51,6 +51,14 @@ export function originalSymbolPath(letter: string): string {
   return `/frames/${ORIGINAL_SYMBOL_FOLDER}/${letter}.png`;
 }
 
+/** A large pip's disc ÷ a plain pip's in a COST on every style but one that
+ *  names its own ("2003"): the M15 prints' step (×1.21 measured), and what
+ *  the 1997 and 1993 frames — which never printed a large pip — keep (owner
+ *  2026-10-12). */
+export const LARGE_PIP_COST_SCALE = 1.2;
+/** …and in RULES text, on every style. */
+export const LARGE_PIP_TEXT_SCALE = 1.28;
+
 export type SymbolStyleSpec = {
   id: SymbolStyle;
   /** The disc's hard shadow, as fractions of the disc's diameter (each at
@@ -89,6 +97,19 @@ export type SymbolStyleSpec = {
   /** The mana-font suffix {T} draws (`ms-tap`; the 1997 prints' is
    *  `tap-4ed`, the original's `tap-3ed`). */
   tapSuffix: string;
+  /** How much larger than a plain pip's disc a LARGE pip's is — a hybrid,
+   *  a twobrid, a Phyrexian and a two-colour Phyrexian symbol (layout v53,
+   *  TODO 3.21, owner round 49) — in the COST row. The prints draw ONE large
+   *  disc, about 85 HD px, on the 2003 and the M15 frame alike (279 prints,
+   *  2005 → 2026; docs/FRAMES.md "Symbols as printed"): 85 beside the 2003
+   *  frame's 66 px pip, ×1.21 of the M15 frame's. Read through
+   *  lib/cards/mana-gem.ts pipScale, never directly. */
+  largePipScale: number;
+  /** The same factor for a pip set in the RULES text: 1.28 of the plain pip
+   *  on both printed frames (median 1.283 over 9 cards). inlineSymbolStyle
+   *  hands it back AS `largePipScale`, so a reader of an inline style gets
+   *  the text's factor from the one field. */
+  inlineLargePipScale: number;
 };
 
 export const SYMBOL_STYLES: Readonly<Record<SymbolStyle, SymbolStyleSpec>> = {
@@ -106,6 +127,8 @@ export const SYMBOL_STYLES: Readonly<Record<SymbolStyle, SymbolStyleSpec>> = {
     costGapDiscs: DEFAULT_COST_GAP_DISCS,
     symbolImages: null,
     tapSuffix: "tap",
+    largePipScale: LARGE_PIP_COST_SCALE,
+    inlineLargePipScale: LARGE_PIP_TEXT_SCALE,
   },
   // The 1997 frame (TODO 4.10a / 4.24; `retro`, `retroland`): the prints'
   // cost discs are FLAT — no drop shadow on any of 13 sets, Mirage 1996 →
@@ -124,6 +147,8 @@ export const SYMBOL_STYLES: Readonly<Record<SymbolStyle, SymbolStyleSpec>> = {
     costGapDiscs: DEFAULT_COST_GAP_DISCS,
     symbolImages: null,
     tapSuffix: "tap-4ed",
+    largePipScale: LARGE_PIP_COST_SCALE,
+    inlineLargePipScale: LARGE_PIP_TEXT_SCALE,
   },
   // The 2003 frame (TODO 4.10b / 4.24; `modern`, `modernland`): the prints'
   // cost discs (66 px, the profile's costSizePct) carry a BLACK shadow 6 px
@@ -147,6 +172,9 @@ export const SYMBOL_STYLES: Readonly<Record<SymbolStyle, SymbolStyleSpec>> = {
     costGapDiscs: DEFAULT_COST_GAP_DISCS,
     symbolImages: null,
     tapSuffix: "tap",
+    // The printed large disc beside this frame's 66 px pip: 85 px.
+    largePipScale: 85 / 66,
+    inlineLargePipScale: LARGE_PIP_TEXT_SCALE,
   },
   // The 1993 frame (TODO 4.10c / 4.24; `agclassic`, `alphaland`), measured
   // on 102 Alpha / Beta prints with a cost (proof 3, 2026-10-08; a circle
@@ -175,6 +203,8 @@ export const SYMBOL_STYLES: Readonly<Record<SymbolStyle, SymbolStyleSpec>> = {
     costGapDiscs: ORIGINAL_COST_GAP_PX / ORIGINAL_DISC_PX,
     symbolImages: Object.fromEntries(ORIGINAL_SYMBOL_LETTERS.map((c) => [c, originalSymbolPath(c)])),
     tapSuffix: "tap-3ed",
+    largePipScale: LARGE_PIP_COST_SCALE,
+    inlineLargePipScale: LARGE_PIP_TEXT_SCALE,
   },
 };
 
@@ -200,13 +230,21 @@ export function symbolStyleOf(profile: { symbolStyle?: SymbolStyle } | null | un
   return symbolStyle(profile?.symbolStyle);
 }
 
-/** The style of a pip set in the RULES text: `spec` itself where an inline
- *  pip carries the disc's shadow, else the same style with no shadow (the
- *  2003 prints shadow the cost row only). The rules layout's shadow model
- *  and both renderers' inline pips read the style through this. */
+/** The style of a pip set in the RULES text: `spec` with the TEXT's
+ *  large-pip factor as its `largePipScale` (layout v53: 1.28 on every
+ *  style, whatever the cost's), and with no shadow unless an inline pip
+ *  carries the disc's (the 2003 prints shadow the cost row only; no style
+ *  does today). The rules layout's shadow model and pip sizes and both
+ *  renderers' inline pips read the style through this. Idempotent: an
+ *  inline style comes back as itself. */
 export function inlineSymbolStyle(spec: SymbolStyleSpec): SymbolStyleSpec {
-  if (spec.inlineShadow || !spec.discShadow) return spec;
-  return { ...spec, discShadow: null, previewShadowClass: null, previewShadowCss: null, costRowShadowDiscs: 0 };
+  const flat = !spec.inlineShadow && spec.discShadow != null;
+  if (!flat && spec.largePipScale === spec.inlineLargePipScale) return spec;
+  return {
+    ...spec,
+    largePipScale: spec.inlineLargePipScale,
+    ...(flat ? { discShadow: null, previewShadowClass: null, previewShadowCss: null, costRowShadowDiscs: 0 } : {}),
+  };
 }
 
 /** The disc shadow's reach in whole px for a disc `discPx` wide — what the

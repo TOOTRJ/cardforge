@@ -262,7 +262,8 @@ describe('symbolStyle "original" — flat discs, the 1993 drawings, the tilted T
   it("flat in the cost and in the rules text, in both shadow models", () => {
     expect(style.discShadow).toBeNull();
     expect(discShadowCss(style, 72)).toBeUndefined();
-    expect(inlineSymbolStyle(style)).toBe(style);
+    // Flat already: an inline pip's style is the same but for the text's large-pip factor (layout v53).
+    expect(inlineSymbolStyle(style)).toEqual({ ...style, largePipScale: 1.28 });
     expect(style.costRowShadowDiscs).toBe(0);
     expect(style.previewShadowClass).toBeNull();
     expect(metricsFor(76, undefined, "hd", "original")).toMatchObject({ pipShadowPx: 0, pipShadowLeftPx: 0 });

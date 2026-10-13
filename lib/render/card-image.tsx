@@ -2286,7 +2286,7 @@ function RulesItemBake({
       // A larger disc (a Phyrexian symbol) keeps a plain pip's centre: it
       // starts the layout's pipRisePx above `top`. An owner's image is a
       // plain pip.
-      marginTop: top - (overrideSrc ? 0 : pipRisePx(item.suffix, glyph)),
+      marginTop: top - (overrideSrc ? 0 : pipRisePx(item.suffix, glyph, symbols)),
       ...(gapBefore ? { marginLeft: gapBefore } : {}),
     };
     if (overrideSrc) {

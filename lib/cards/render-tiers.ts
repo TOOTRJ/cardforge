@@ -402,7 +402,7 @@ function costRowTerms(
       fixedPct += token.value.length * 3 * HALF_PX_PCT;
     } else {
       // A pip's own disc: 1, or a Phyrexian symbol's larger one (v49).
-      perDisc += pipScale(tokenSuffix(token) ?? "");
+      perDisc += pipScale(tokenSuffix(token) ?? "", symbols);
     }
   }
   return { perDisc, fixedPct };

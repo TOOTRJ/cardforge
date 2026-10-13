@@ -441,9 +441,13 @@ Rules and gotchas:
   inline pip is a 0.785 em disc centred 0.334 em above the baseline (on the
   capitals, v36), drawn at the layout's `pipTopPx` in a run the line box tall
   — never centred by flexbox — and FLAT on every symbol style (v49: the
-  shadow is the cost row's alone); a Phyrexian symbol's disc is ×1.2 on the
-  same centre, in text and cost (`pipScale` in `lib/cards/mana-gem.ts`, the
-  ONE answer the layout's `pipWidthPx` / `pipTopOf`, `costRowTerms`, the
+  shadow is the cost row's alone); a LARGE pip — a hybrid, a twobrid, a
+  Phyrexian and a two-colour Phyrexian symbol (`isLargePip`, v53) — sits on
+  the prints' larger disc on the same centre: ×1.28 in rules text on every
+  frame, and in a cost the symbol style's `largePipScale` (×1.2; 85 px
+  beside 66 on the 2003 frame) (`pipScale` in `lib/cards/mana-gem.ts`, read
+  with the style of the PLACE — the frame's for a cost, `inlineSymbolStyle`'s
+  for text — the ONE answer the layout's `pipWidthPx` / `pipTopOf`, `costRowTerms`, the
   detached cost's `manaCostWidthPct` — v52: a name's room before a
   `costRect` cost counts each pip's own disc — and both renderers read; a
   new measure of a cost row reads it too, never a disc per pip). WHAT a pip

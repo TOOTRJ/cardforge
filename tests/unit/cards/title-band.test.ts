@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { symbolStyle } from "@/lib/cards/symbol-style";
 import { displayTextWidthEm } from "@/lib/cards/display-metrics";
 import { BAND_GAP_PCT, HALF_PX_PCT, MIN_NAME_EM, costRowWidthPct, measuredLinePx } from "@/lib/cards/render-tiers";
 import { getFrameProfile, type FrameProfile } from "@/lib/cards/template-layout";
@@ -193,14 +194,14 @@ describe("fitTitleBand — a measured name before a detached cost (the planeswal
     // The name's box ends at least one band gap before the first disc, as
     // an inline cost's does (the prints leave 39–57 px of ink).
     const box = PW.costRect!;
-    const pipsLeft = (box.leftPct + box.widthPct) / 100 - manaCostWidthPct(cost, COST_DISC_PCT);
+    const pipsLeft = (box.leftPct + box.widthPct) / 100 - manaCostWidthPct(cost, COST_DISC_PCT, symbolStyle(undefined));
     expect(PW.title.rect.leftPct / 100 + width(PW, name, px / 1500, 1) + BAND_GAP_PCT).toBeLessThanOrEqual(pipsLeft + 1e-12);
   });
 
   it("measures the name's advances against the room to the first disc, one band gap clear", () => {
     const cost = "{2}{R}{R}";
     const box = PW.costRect!;
-    const pipsLeft = (box.leftPct + box.widthPct) / 100 - manaCostWidthPct(cost, COST_DISC_PCT);
+    const pipsLeft = (box.leftPct + box.widthPct) / 100 - manaCostWidthPct(cost, COST_DISC_PCT, symbolStyle(undefined));
     expect(DETACHED_COST_GAP_PCT).toBe(BAND_GAP_PCT);
     const room = pipsLeft - PW.title.rect.leftPct / 100 - DETACHED_COST_GAP_PCT;
     expect(titleBandRoomPct(PW, cost)).toBeCloseTo(room, 12);
