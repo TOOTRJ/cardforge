@@ -73,6 +73,7 @@ import { BACK_FIELD_STEP, PART_FIELD_STEP, faceFieldStepIndex, faceStatusOf } fr
 import { partOutlineRects, secondPartHasOwnArt } from "@/lib/creator/part-outline";
 import { visibleSteps } from "@/lib/creator/steps";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import { chipOff } from "../helpers/chip";
 
 const GAME = "33333333-3333-4333-8333-333333333333";
 const USER = "11111111-1111-4111-8111-111111111111";
@@ -460,10 +461,15 @@ describe.each(KINDS)("$kind in the creator", ({ chip, kind, ownArt }) => {
     expect(screen.queryByTestId("second-part-art-not-drawn")).toBeNull();
     await goTo(/^text/i);
     expect(screen.getByLabelText(`${words.second} rules text`)).toBeTruthy();
-    expect(screen.getByRole("group", { name: `${words.second} — Rules text` })).toBeTruthy();
+    // ONE control under its toolbar: named with its part, no group around
+    // it saying the field a second time (TODO 3b.24).
+    expect(screen.getByRole("textbox", { name: `${words.second} rules text` })).toBeTruthy();
+    expect(screen.queryByRole("group", { name: /Rules text/ })).toBeNull();
     expect(screen.queryByLabelText("Back face rules text")).toBeNull();
-    const rarityGroup = screen.getByRole("radiogroup", { name: "Rarity" }).closest("[role='group']")!;
-    expect(screen.getByRole("group", { name: "Rarity" })).toBe(rarityGroup);
+    // Rarity is the card's: once, with no part's words.
+    const rarityField = screen.getByRole("radiogroup", { name: "Rarity" }).parentElement!;
+    expect(rarityField.textContent).toMatch(/^Rarity/);
+    expect(screen.queryByRole("group", { name: "Rarity" })).toBeNull();
   });
 
   it("ONE preview: no two-face preview; the part being edited is outlined and named — beside the card, never in it", async () => {
@@ -582,7 +588,7 @@ describe("between kinds, and on a stored card", () => {
     expect((named("back_face.title") as HTMLInputElement).value).toBe("Ice");
     const types = screen.getByRole("radiogroup", { name: "Right half card type" });
     expect(types.querySelector("[aria-checked='true']")?.textContent).toMatch(/^Instant/);
-    expect(Array.from(types.querySelectorAll("[role='radio']")).every((el) => !(el as HTMLButtonElement).disabled)).toBe(true);
+    expect(Array.from(types.querySelectorAll("[role='radio']")).every((el) => !chipOff(el))).toBe(true);
     await click(Array.from(types.querySelectorAll("[role='radio']")).find((el) => /^Sorcery/.test(el.textContent ?? ""))!);
     await click(screen.getByRole("button", { name: /^Save$/ }));
     await waitFor(() => expect(actions.updateCardAction).toHaveBeenCalledTimes(1));

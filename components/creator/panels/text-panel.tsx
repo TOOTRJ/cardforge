@@ -79,30 +79,36 @@ export function TextPanel({ rulesTextRef, onInsertSymbol }: TextPanelProps) {
           {TEXTLESS_FRAME_NOTE}
         </p>
       ) : null}
+      {/* ONE control under its toolbar: the editor is the field — named for
+          it, described by the helper or the error. No group around the two
+          that would say "Rules text" twice (TODO 3b.24). */}
       <FieldGroup
-        kind="group"
+        kind="control"
         label="Rules text"
         error={fieldState.error?.message}
         helper={RULES_TEXT_HELP}
       >
-        <div className="flex flex-col gap-2">
-          <RulesSymbolToolbar onInsert={onInsertSymbol} />
-          <PipTextEditor
-            ref={(handle) => {
-              rulesTextRef.current = handle;
-              field.ref(handle);
-            }}
-            name={field.name}
-            value={field.value ?? ""}
-            onChange={field.onChange}
-            onBlur={field.onBlur}
-            aria-label={faceLabel ? `${faceLabel} rules text` : "Rules text"}
-            aria-invalid={Boolean(fieldState.error)}
-            placeholder="Add text and rules here."
-            rows={6}
-            className={textareaClass(Boolean(fieldState.error))}
-          />
-        </div>
+        {(aria) => (
+          <div className="flex flex-col gap-2">
+            <RulesSymbolToolbar onInsert={onInsertSymbol} />
+            <PipTextEditor
+              ref={(handle) => {
+                rulesTextRef.current = handle;
+                field.ref(handle);
+              }}
+              name={field.name}
+              value={field.value ?? ""}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              aria-label={faceLabel ? `${faceLabel} rules text` : "Rules text"}
+              aria-describedby={aria["aria-describedby"]}
+              aria-invalid={Boolean(fieldState.error)}
+              placeholder="Add text and rules here."
+              rows={6}
+              className={textareaClass(Boolean(fieldState.error))}
+            />
+          </div>
+        )}
       </FieldGroup>
 
       <RulesAlignChoice />
@@ -136,21 +142,23 @@ export function RulesAlignChoice() {
   return (
     <>
       {offersAlign ? (
-        // A group, not a FieldGroup: that is a <label>, which would name
-        // both chips with its caption.
-        <div role="group" aria-labelledby="rules-align-heading" className="flex flex-col gap-1.5" data-testid="rules-align">
-          <span id="rules-align-heading" className="text-xs font-semibold uppercase tracking-wider text-subtle">
+        // The chip row IS the field: named for it, described by the help
+        // under it — no group around it that would say "Text alignment"
+        // twice (TODO 3b.24). Card-wide, so never a face's words.
+        <div className="flex flex-col gap-1.5" data-testid="rules-align">
+          <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
             Text alignment
           </span>
           <ChipGroup
             ariaLabel="Text alignment"
+            ariaDescribedBy="rules-align-help"
             layout="wrap"
             size="sm"
             value={rulesAlign === "center" ? "center" : "left"}
             onChange={(next) => setValue("frame_style.rulesAlign", next, { shouldDirty: true })}
             options={RULES_ALIGN_OPTIONS}
           />
-          <p className="text-xs leading-5 text-muted">{RULES_ALIGN_HELP}</p>
+          <p id="rules-align-help" className="text-xs leading-5 text-muted">{RULES_ALIGN_HELP}</p>
         </div>
       ) : null}
     </>

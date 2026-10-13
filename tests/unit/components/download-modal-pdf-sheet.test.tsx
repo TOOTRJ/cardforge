@@ -19,6 +19,7 @@ vi.mock("@/lib/analytics/funnel-client", () => ({ trackFunnelEvent: vi.fn() }));
 
 import { DownloadModal } from "@/components/cards/download-modal";
 import { PRINT_SELECTION_SETTINGS_KEY } from "@/lib/cards/print-selection";
+import { chipOff } from "../helpers/chip";
 
 // An in-memory localStorage (Node's own global one needs a backing file).
 const storage = new Map<string, string>();
@@ -133,7 +134,7 @@ describe("DownloadModal PDF tab — below Pro", () => {
   it("Plus: the Sheet choice is shown but disabled, with a way to Pro; the one-card PDF (and its bleed) stays", async () => {
     storage.set(PRINT_SELECTION_SETTINGS_KEY, JSON.stringify({ layout: "sheet-letter", bleed: false }));
     await open({ isPaid: true, canBatch: false });
-    expect(chip("PDF layout", "Sheet of copies").disabled).toBe(true);
+    expect(chipOff(chip("PDF layout", "Sheet of copies"))).toBe(true);
     expect(chip("PDF layout", "One card").getAttribute("aria-checked")).toBe("true");
     expect(pdfLink().getAttribute("href")).toBe("/api/cards/c1/pdf?layout=card");
     expect(screen.getByText("Print sheets are a Pro feature.")).toBeTruthy();

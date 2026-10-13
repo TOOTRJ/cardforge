@@ -24,6 +24,7 @@ vi.mock("@/lib/analytics/funnel-client", () => ({ trackFunnelEvent: vi.fn() }));
 
 import { DownloadModal } from "@/components/cards/download-modal";
 import { PRINT_SELECTION_SETTINGS_KEY } from "@/lib/cards/print-selection";
+import { chipOff } from "../helpers/chip";
 
 const storage = new Map<string, string>();
 beforeEach(() => {
@@ -76,7 +77,7 @@ describe("DownloadModal — the Image tab's Face switch", () => {
     expect(screen.getByText(/^750 × 1050 per face with the PipGlyph mark, the front and the back side by side in one PNG/)).toBeTruthy();
     expect(screen.getByText(/^The front and the back side by side in one PNG, named <card>-both\./)).toBeTruthy();
     expect(screen.getByRole("link", { name: /download free png/i })).toBe(a);
-    expect(chip("File type", "JPEG").disabled).toBe(true);
+    expect(chipOff(chip("File type", "JPEG"))).toBe(true);
     expect(chip("File type", "PNG").getAttribute("aria-checked")).toBe("true");
     // The corners apply to both faces.
     await click(chip("Corners", "Square"));
@@ -88,7 +89,7 @@ describe("DownloadModal — the Image tab's Face switch", () => {
     a = link("/png?");
     expect(a.getAttribute("href")).toBe("/api/cards/c1/png?preset=default&corners=square");
     expect(a.getAttribute("download")).toBe("village-elder-square.png");
-    expect(chip("File type", "JPEG").disabled).toBe(false);
+    expect(chipOff(chip("File type", "JPEG"))).toBe(false);
     expect(screen.getByText("Low-resolution PNG")).toBeTruthy();
     await click(chip("File type", "JPEG"));
     expect(link("/png?").getAttribute("href")).toBe("/api/cards/c1/png?preset=default&format=jpeg");
@@ -98,7 +99,7 @@ describe("DownloadModal — the Image tab's Face switch", () => {
     expect(a.getAttribute("href")).toBe("/api/cards/c1/png?preset=default&corners=square&faces=both");
     expect(a.getAttribute("download")).toBe("village-elder-both-square.png");
     expect(chip("File type", "PNG").getAttribute("aria-checked")).toBe("true");
-    expect(chip("File type", "JPEG").disabled).toBe(true);
+    expect(chipOff(chip("File type", "JPEG"))).toBe(true);
     await click(chip("Face", "Back"));
     expect(link("/png?").getAttribute("href")).toBe("/api/cards/c1/png?preset=default&format=jpeg&face=back");
     expect(link("/png?").getAttribute("download")).toBe("village-elder-back.jpg");
@@ -132,16 +133,16 @@ describe("DownloadModal — the Image tab's Face switch", () => {
     expect(screen.getByText("High-resolution PNG — both faces")).toBeTruthy();
     expect(screen.getByText(/^Clean, full-resolution \(1500 × 2100 per face\) render of the front and the back side by side in one PNG/)).toBeTruthy();
     // The print-only options: shown, disabled, with the reason.
-    expect(chip("Resolution", /800 ppi/).disabled).toBe(true);
-    expect(chip("Resolution", /600 ppi/).disabled).toBe(true);
-    expect(chip("Bleed", "MakePlayingCards").disabled).toBe(true);
-    expect(chip("Bleed", "1/8″").disabled).toBe(true);
+    expect(chipOff(chip("Resolution", /800 ppi/))).toBe(true);
+    expect(chipOff(chip("Resolution", /600 ppi/))).toBe(true);
+    expect(chipOff(chip("Bleed", "MakePlayingCards"))).toBe(true);
+    expect(chipOff(chip("Bleed", "1/8″"))).toBe(true);
     expect(screen.getByText("Print files come one face at a time — pick Front or Back.")).toBeTruthy();
-    expect(chip("File type", "JPEG").disabled).toBe(true);
+    expect(chipOff(chip("File type", "JPEG"))).toBe(true);
     // A face: the options are on; a print pick makes the print file.
     await click(chip("Face", "Back"));
-    expect(chip("Resolution", /800 ppi/).disabled).toBe(false);
-    expect(chip("Bleed", "MakePlayingCards").disabled).toBe(false);
+    expect(chipOff(chip("Resolution", /800 ppi/))).toBe(false);
+    expect(chipOff(chip("Bleed", "MakePlayingCards"))).toBe(false);
     expect(screen.queryByText("Print files come one face at a time — pick Front or Back.")).toBeNull();
     await click(chip("Resolution", /800 ppi/));
     a = link("/png?");
@@ -153,7 +154,7 @@ describe("DownloadModal — the Image tab's Face switch", () => {
     a = link("/png?");
     expect(a.getAttribute("href")).toBe("/api/cards/c1/png?preset=hd&corners=round&faces=both");
     expect(a.getAttribute("download")).toBe("village-elder-both.png");
-    expect(chip("Resolution", /800 ppi/).disabled).toBe(true);
+    expect(chipOff(chip("Resolution", /800 ppi/))).toBe(true);
     expect(screen.getByText("Print files come one face at a time — pick Front or Back.")).toBeTruthy();
     expect(screen.queryByText(/ppi=800/)).toBeNull();
     await click(chip("Face", "Front"));
@@ -185,7 +186,7 @@ describe("DownloadModal — the Image tab's Face switch", () => {
     expect(screen.queryByRole("radiogroup", { name: "Face" })).toBeNull();
     expect(screen.queryByText(/both faces/i)).toBeNull();
     expect(screen.queryByText(/one face at a time/)).toBeNull();
-    expect(chip("File type", "JPEG").disabled).toBe(false);
+    expect(chipOff(chip("File type", "JPEG"))).toBe(false);
     expect(link("/png?").getAttribute("href")).toBe("/api/cards/c1/png?preset=default&corners=round");
     expect(link("/png?").getAttribute("download")).toBe("village-elder.png");
     expect(screen.getByText("Low-resolution PNG")).toBeTruthy();
@@ -193,7 +194,7 @@ describe("DownloadModal — the Image tab's Face switch", () => {
     // …and a paid viewer's: the print options on, the plain HD link.
     await open({ hasBackFace: false });
     expect(screen.queryByText(/both faces/i)).toBeNull();
-    expect(chip("Resolution", /800 ppi/).disabled).toBe(false);
+    expect(chipOff(chip("Resolution", /800 ppi/))).toBe(false);
     expect(link("/png?").getAttribute("href")).toBe("/api/cards/c1/png?preset=hd&corners=round");
     expect(screen.getByText("High-resolution PNG")).toBeTruthy();
   });

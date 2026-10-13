@@ -54,9 +54,12 @@ describe("the Text step's alignment control", () => {
     expect(fresh).toMatchObject(NEW_CARD_ANATOMY);
     render(<Harness frameStyle={fresh} />);
     expect(group()).not.toBeNull();
-    // A labelled group of two radios.
-    expect(screen.getByRole("group", { name: "Text alignment" })).toBe(screen.getByTestId("rules-align"));
+    // ONE labelled row of two radios, described by its help — with no group
+    // around it that says "Text alignment" a second time (TODO 3b.24).
+    expect(screen.getByTestId("rules-align").contains(group())).toBe(true);
+    expect(screen.queryByRole("group", { name: "Text alignment" })).toBeNull();
     expect(screen.getByText(RULES_ALIGN_HELP)).toBeTruthy();
+    expect(screen.getByRole("radiogroup", { description: RULES_ALIGN_HELP })).toBe(group());
     expect(within(group()!).getAllByRole("radio").map((r) => r.textContent)).toEqual(["Left", "Centred"]);
     expect(chip("Left").getAttribute("aria-checked")).toBe("true");
     expect(chip("Centred").getAttribute("aria-checked")).toBe("false");

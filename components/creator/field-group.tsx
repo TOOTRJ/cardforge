@@ -5,7 +5,16 @@
 // the shared input/textarea class builders, and form-wide option constants
 // used by more than one step. Extracted from card-creator-form.tsx.
 
-import { createContext, useContext, useEffect, useId, useRef } from "react";
+import {
+  Children,
+  cloneElement,
+  createContext,
+  isValidElement,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+} from "react";
 import {
   Box,
   Coins,
@@ -100,22 +109,94 @@ const WRAPPER_CLASS = "flex flex-col gap-1.5";
 const CAPTION_CLASS = "text-xs font-semibold uppercase tracking-wider text-subtle";
 
 /**
- * A captioned field of a form. Two shapes, ONE look:
+ * What a FieldGroup hands the ONE control it captions (`kind="field"` and
+ * `kind="control"`): its name is the caption alone, the helper — or the
+ * error that replaces it — is its DESCRIPTION, and an error marks it
+ * invalid. Spread it on the control.
+ */
+export type FieldAria = {
+  "aria-labelledby": string;
+  "aria-describedby"?: string;
+  "aria-invalid"?: true;
+};
+
+/** `a b` from id lists, without blanks or repeats; undefined when empty. */
+export function joinIds(...ids: (string | null | undefined)[]): string | undefined {
+  const all = [...new Set(ids.flatMap((id) => (id ? id.split(/\s+/) : [])).filter(Boolean))];
+  return all.length > 0 ? all.join(" ") : undefined;
+}
+
+const TEXT_CONTROLS = new Set(["input", "select", "textarea"]);
+
+type ControlProps = {
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
+  "aria-describedby"?: string;
+  "aria-invalid"?: boolean | "true" | "false";
+};
+
+type FieldChildren = React.ReactNode | ((aria: FieldAria) => React.ReactNode);
+
+/**
+ * `kind="field"`: tie the field's text control to its caption and its note.
+ * A function child spreads the attributes itself (a control inside a
+ * wrapper, a Controller, a component); a plain `<input>` / `<select>` /
+ * `<textarea>` written as the FIRST child gets them here — what the control
+ * already says about itself (a name of its own, a note of its own) is kept.
+ */
+function withFieldAria(children: FieldChildren, aria: FieldAria): React.ReactNode {
+  if (typeof children === "function") return children(aria);
+  const nodes = Children.toArray(children);
+  const at = nodes.findIndex((node) => isValidElement(node));
+  const first = nodes[at];
+  if (!isValidElement<ControlProps>(first) || typeof first.type !== "string" || !TEXT_CONTROLS.has(first.type)) {
+    return children;
+  }
+  const own = first.props;
+  const named = own["aria-label"] !== undefined || own["aria-labelledby"] !== undefined;
+  nodes[at] = cloneElement(first, {
+    "aria-labelledby": named ? own["aria-labelledby"] : aria["aria-labelledby"],
+    "aria-describedby": joinIds(aria["aria-describedby"], own["aria-describedby"]),
+    "aria-invalid": own["aria-invalid"] ?? aria["aria-invalid"],
+  });
+  return nodes;
+}
+
+/**
+ * A captioned field of a form. Three shapes, ONE look:
  *
  *  - `kind="field"` (default) — the field is ONE text input, select or
  *    textarea (extra buttons beside it are fine as long as that control comes
- *    first). The wrapper is a real `<label>`: the caption names the control
- *    and a click on it focuses the control.
- *  - `kind="group"` — the field is a SET of controls: a chip row, a symbol
- *    toolbar over an editor, switches, ticks, an uploader. The wrapper is a
- *    `role="group"` named by the caption (`aria-labelledby`) and described
- *    by the helper or the error (`aria-describedby`). Never a `<label>`
- *    there: a label names its FIRST button with the caption (plus the helper
- *    and every other chip's words), names nothing else, and hands that
- *    button every click on its plain content.
+ *    first). The wrapper is a real `<label>`, so a click on the caption
+ *    focuses the control; the control's NAME is the caption alone
+ *    (`aria-labelledby`) and the helper or the error is its DESCRIPTION
+ *    (`aria-describedby`; an error also sets `aria-invalid`) — never part of
+ *    the name, which a `<label>` alone would make it (TODO 3b.19). A control
+ *    that is not the first child as a plain element takes them from a
+ *    function child: `{(aria) => <div><input {...aria} /></div>}`.
+ *  - `kind="control"` — the field is ONE control that is not a text input
+ *    and has a role of its own: a chip row (a radiogroup), the rules editor
+ *    under its symbol toolbar (a textbox). The wrapper is a plain `<div>`
+ *    with NO role: a group around one control says the field twice ("Rarity,
+ *    group — Rarity, radio group"; TODO 3b.24). The control is named and
+ *    described through the function child's attributes.
+ *  - `kind="group"` — the field is a SET of controls with names of their
+ *    own: the cost picker, switches, ticks, an uploader beside its chips.
+ *    The wrapper is a `role="group"` named by the caption
+ *    (`aria-labelledby`) and described by the helper or the error
+ *    (`aria-describedby`). Never a `<label>` there: a label names its FIRST
+ *    button with the caption (plus the helper and every other chip's words),
+ *    names nothing else, and hands that button every click on its plain
+ *    content.
  *
  * Rule of thumb: the first control inside is not an input / select /
- * textarea → `kind="group"`.
+ * textarea → `kind="control"` when it is the only one, `kind="group"` when
+ * there are several.
+ *
+ * An error is not a live region here: a blocked save moves the focus to the
+ * first refused field (which reads its description) and a refusal from the
+ * server is announced once by the form's own alert — an alert per field
+ * would say it twice.
  */
 export function FieldGroup({
   label,
@@ -131,33 +212,43 @@ export function FieldGroup({
   /** Inside a FaceScope: show the face's words before the label instead of
    *  keeping them for screen readers only. */
   showFace?: boolean;
-  kind?: "field" | "group";
-  children: React.ReactNode;
+  kind?: "field" | "control" | "group";
+  children: FieldChildren;
 }) {
   const face = useContext(FaceLabelContext);
   const faceWords = face ? <span className={showFace ? undefined : "sr-only"}>{face} — </span> : null;
   const id = useId();
-  if (kind === "group") {
-    const captionId = `${id}-caption`;
-    const noteId = `${id}-note`;
-    const note = error || helper;
+  const captionId = `${id}-caption`;
+  const noteId = `${id}-note`;
+  const hasNote = Boolean(error || helper);
+  const aria: FieldAria = {
+    "aria-labelledby": captionId,
+    "aria-describedby": hasNote ? noteId : undefined,
+    "aria-invalid": error ? true : undefined,
+  };
+  const caption = (
+    <span id={captionId} data-fieldgroup-text className={CAPTION_CLASS}>
+      {faceWords}
+      {label}
+    </span>
+  );
+  const note = error ? (
+    <span id={noteId} data-fieldgroup-text className="text-xs text-danger">{error}</span>
+  ) : helper ? (
+    <span id={noteId} data-fieldgroup-text className="text-xs text-muted">{helper}</span>
+  ) : null;
+  if (kind === "group" || kind === "control") {
+    const group = kind === "group";
     return (
       <div
-        role="group"
-        aria-labelledby={captionId}
-        aria-describedby={note ? noteId : undefined}
+        role={group ? "group" : undefined}
+        aria-labelledby={group ? captionId : undefined}
+        aria-describedby={group && hasNote ? noteId : undefined}
         className={WRAPPER_CLASS}
       >
-        <span id={captionId} data-fieldgroup-text className={CAPTION_CLASS}>
-          {faceWords}
-          {label}
-        </span>
-        {children}
-        {error ? (
-          <span id={noteId} data-fieldgroup-text className="text-xs text-danger">{error}</span>
-        ) : helper ? (
-          <span id={noteId} data-fieldgroup-text className="text-xs text-muted">{helper}</span>
-        ) : null}
+        {caption}
+        {typeof children === "function" ? children(aria) : children}
+        {note}
       </div>
     );
   }
@@ -187,16 +278,9 @@ export function FieldGroup({
         }
       }}
     >
-      <span data-fieldgroup-text className={CAPTION_CLASS}>
-        {faceWords}
-        {label}
-      </span>
-      {children}
-      {error ? (
-        <span data-fieldgroup-text className="text-xs text-danger">{error}</span>
-      ) : helper ? (
-        <span data-fieldgroup-text className="text-xs text-muted">{helper}</span>
-      ) : null}
+      {caption}
+      {withFieldAria(children, aria)}
+      {note}
     </label>
   );
 }

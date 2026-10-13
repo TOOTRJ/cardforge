@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useRef,
   useState,
   type DragEvent,
@@ -543,10 +544,14 @@ export function ArtUploader({
         : `the middle ${Math.round(share.y * 100)}% of its height`
       : null;
 
+  const uploaderId = useId();
+  const headingId = `${uploaderId}-heading`;
+  const dropzoneId = `${uploaderId}-dropzone`;
+
   return (
     <div className={cn("flex flex-col gap-4", className)}>
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
+        <span id={headingId} className="text-xs font-semibold uppercase tracking-wider text-subtle">
           {heading}
         </span>
         <span className="text-[11px] text-subtle">
@@ -593,8 +598,15 @@ export function ArtUploader({
         aria-label={
           artUrl
             ? "Drag to reposition the art. Shift-scroll to zoom. Arrow keys nudge, +/- zoom, R fits it to the frame again."
-            : "Drop an image here or click to upload"
+            : undefined
         }
+        // Empty: named by what it shows — the box's heading ("Artwork",
+        // "Back face — Artwork") and then its own words (the prompt, the
+        // paste hint, the best size). An aria-label in other words hid all
+        // of them from a screen reader, and from voice control ("click drag
+        // art here" found nothing).
+        id={dropzoneId}
+        aria-labelledby={artUrl ? undefined : `${headingId} ${dropzoneId}`}
         tabIndex={0}
         data-art-window-aspect={artUrl ? artWindow.aspect.toFixed(4) : undefined}
         style={surfaceStyle}

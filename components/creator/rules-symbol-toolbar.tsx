@@ -97,6 +97,9 @@ function CharacterButton({
   );
 }
 
+/** The toolbar's accessible name. */
+export const RULES_SYMBOL_TOOLBAR_NAME = "Insert a symbol";
+
 export function RulesSymbolToolbar({
   onInsert,
   className,
@@ -105,7 +108,10 @@ export function RulesSymbolToolbar({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-col gap-1.5", className)}>
+    // A group with its own name: the editor under it is named for the field
+    // ("Rules text"), the buttons for what they do — never both under one
+    // "Rules text" group that says the field twice (TODO 3b.24).
+    <div role="group" aria-label={RULES_SYMBOL_TOOLBAR_NAME} className={cn("flex flex-col gap-1.5", className)}>
       <div className="flex flex-wrap items-center gap-1">
         {CORE.map((t) => (
           <SymbolButton key={t} token={t} onInsert={onInsert} />

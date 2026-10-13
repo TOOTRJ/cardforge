@@ -48,7 +48,7 @@ import { ColorSection, colorSummaryOf } from "@/components/creator/panels/color-
 import { SetupSection } from "@/components/creator/panels/setup-section";
 import { parseSubtypes } from "@/lib/creator/card-fields";
 import { statVisibility } from "@/lib/creator/steps";
-import { PtNotDrawnNote } from "@/components/creator/pt-not-drawn-note";
+import { PtNotDrawnNote, usePtNotDrawnNoteId } from "@/components/creator/pt-not-drawn-note";
 import { SECOND_FACE_NAME_HINT } from "@/lib/cards/second-face-name";
 import type { ArtWindow } from "@/lib/cards/art-positioner-window";
 import { DFC_FACE_TYPES, colorlessFaceAllowed, type DfcLayout } from "@/lib/cards/dfc";
@@ -444,24 +444,28 @@ export function BackFaceRulesField({
   const { field: backRulesField } = useController({ control, name: "back_face.rules_text" });
   const partWords = partWordsFor(layout);
   return (
-    <FieldGroup kind="group" label="Rules text" error={errors.back_face?.rules_text?.message}>
-      <div className="flex flex-col gap-2">
-        <RulesSymbolToolbar onInsert={onInsertSymbol} />
-        <PipTextEditor
-          ref={(handle) => {
-            backRulesTextRef.current = handle;
-            backRulesField.ref(handle);
-          }}
-          name={backRulesField.name}
-          value={backRulesField.value ?? ""}
-          onChange={backRulesField.onChange}
-          onBlur={backRulesField.onBlur}
-          aria-label="Back face rules text"
-          placeholder={partWords.rulesPlaceholder}
-          rows={4}
-          className={textareaClass(false)}
-        />
-      </div>
+    <FieldGroup kind="control" label="Rules text" error={errors.back_face?.rules_text?.message}>
+      {(aria) => (
+        <div className="flex flex-col gap-2">
+          <RulesSymbolToolbar onInsert={onInsertSymbol} />
+          <PipTextEditor
+            ref={(handle) => {
+              backRulesTextRef.current = handle;
+              backRulesField.ref(handle);
+            }}
+            name={backRulesField.name}
+            value={backRulesField.value ?? ""}
+            onChange={backRulesField.onChange}
+            onBlur={backRulesField.onBlur}
+            aria-label="Back face rules text"
+            aria-describedby={aria["aria-describedby"]}
+            aria-invalid={aria["aria-invalid"]}
+            placeholder={partWords.rulesPlaceholder}
+            rows={4}
+            className={textareaClass(false)}
+          />
+        </div>
+      )}
     </FieldGroup>
   );
 }
@@ -495,6 +499,8 @@ export function BackFaceStatsFields({ backBody }: { backBody: FrameTemplate | nu
     name: ["back_face.card_type", "back_face.supertype", "back_face.subtypes_text"],
   });
   const statVis = statVisibility(backType, parseSubtypes(backSubtypes ?? ""), backSupertype);
+  // The "this frame draws no power / toughness" note describes both inputs.
+  const ptNoteId = usePtNotDrawnNoteId({ face: "second", backBody });
   if (!statVis.pt) return null;
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -502,6 +508,7 @@ export function BackFaceStatsFields({ backBody }: { backBody: FrameTemplate | nu
         <input
           {...register("back_face.power")}
           placeholder="3"
+          aria-describedby={ptNoteId}
           className={inputClass(false)}
           autoComplete="off"
         />
@@ -510,12 +517,13 @@ export function BackFaceStatsFields({ backBody }: { backBody: FrameTemplate | nu
         <input
           {...register("back_face.toughness")}
           placeholder="2"
+          aria-describedby={ptNoteId}
           className={inputClass(false)}
           autoComplete="off"
         />
       </FieldGroup>
       {/* A land back body has no P/T slot: say so. */}
-      <PtNotDrawnNote face="second" backBody={backBody} className="sm:col-span-2" />
+      <PtNotDrawnNote face="second" backBody={backBody} id={ptNoteId} className="sm:col-span-2" />
     </div>
   );
 }

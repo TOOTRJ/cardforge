@@ -72,6 +72,7 @@ vi.mock("@/components/cards/card-preview", () => ({
 }));
 
 import { CardCreatorForm } from "@/components/creator/card-creator-form";
+import { chipOff } from "../helpers/chip";
 
 const GAME = "33333333-3333-4333-8333-333333333333";
 const CARD_ID = "22222222-2222-4222-8222-222222222222";
@@ -214,14 +215,14 @@ describe("the kind chips", () => {
   it("Transform is dark with the hint until a front AND the default back are verified; Modal stays dark", () => {
     renderForm({ verifiedFrameKeys: [...BASE_VERIFIED, frameComboKey("m15dfcfront", "u")] });
     const transform = chipIn("Card type", /^Transform/);
-    expect(transform.disabled).toBe(true);
+    expect(chipOff(transform)).toBe(true);
     expect(transform.textContent).toMatch(/Frames awaiting verification/);
-    expect(chipIn("Card type", /Modal double-faced/).disabled).toBe(true);
+    expect(chipOff(chipIn("Card type", /Modal double-faced/))).toBe(true);
     cleanup();
     renderForm();
-    expect(chipIn("Card type", /^Transform/).disabled).toBe(false);
+    expect(chipOff(chipIn("Card type", /^Transform/))).toBe(false);
     expect(chipIn("Card type", /^Transform/).textContent).toMatch(/the front transforms into its back/);
-    expect(chipIn("Card type", /Modal double-faced/).disabled).toBe(true);
+    expect(chipOff(chipIn("Card type", /Modal double-faced/))).toBe(true);
   });
 });
 
@@ -248,10 +249,10 @@ describe("a new transform card", () => {
     await clickChip("Card type", /^Transform/);
     expect(preview().colour).toEqual(["blue"]);
     expect(toast.info).toHaveBeenCalledWith(expect.stringMatching(/can't be colourless — switched the colour to blue/));
-    expect(chipIn("Color identity", /^colorless/i).disabled).toBe(true);
+    expect(chipOff(chipIn("Color identity", /^colorless/i))).toBe(true);
     expect(chipIn("Color identity", /^colorless/i).textContent).toMatch(/needs “Artifact”/);
     await clickChip("Front face type", /^Artifact/);
-    expect(chipIn("Color identity", /^colorless/i).disabled).toBe(false);
+    expect(chipOff(chipIn("Color identity", /^colorless/i))).toBe(false);
     await clickChip("Color identity", /^colorless/i);
     expect(preview().colour).toEqual(["colorless"]);
     // Back to a creature: off colourless again.
@@ -302,13 +303,13 @@ describe("a new transform card", () => {
     await clickChip("Back face color", /^green/i);
     expect(preview().backFace).toMatchObject({ color_identity: ["green"] });
     // The back's own body in the summary; its unverified colours are dark.
-    expect(chipIn("Back face color", /^red/i).disabled).toBe(true);
+    expect(chipOff(chipIn("Back face color", /^red/i))).toBe(true);
     // A colourless back needs an Artifact word on a spell body (D2): the
     // chip is dark with the reason until the back's type says Artifact.
-    expect(chipIn("Back face color", /^colorless/i).disabled).toBe(true);
+    expect(chipOff(chipIn("Back face color", /^colorless/i))).toBe(true);
     expect(chipIn("Back face color", /^colorless/i).textContent).toMatch(/needs “Artifact”/);
     await clickChip("Back face type", /^Artifact/);
-    expect(chipIn("Back face color", /^colorless/i).disabled).toBe(false);
+    expect(chipOff(chipIn("Back face color", /^colorless/i))).toBe(false);
   });
 
   it("the back face has its own Types field (3b.16): pre-filled with its type's word, the maker's order kept, following the back's type when it changes", async () => {
@@ -350,7 +351,7 @@ describe("a new transform card", () => {
     await faceTab(/^Back face/);
     await clickChip("Back face type", /^Land/);
     expect(preview().backFace).toMatchObject({ frame_style: { template: "m15dfclandback" }, color_identity: ["colorless"] });
-    expect(chipIn("Back face color", /^colorless/i).disabled).toBe(false);
+    expect(chipOff(chipIn("Back face color", /^colorless/i))).toBe(false);
     await clickChip("Back face type", /^Creature/);
     expect(preview().backFace).toMatchObject({ frame_style: { template: "m15dfcback" }, color_identity: ["green"] });
   });
