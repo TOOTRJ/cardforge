@@ -135,6 +135,7 @@ export function SagaChaptersEditor() {
             return (
               <div
                 key={row.id}
+                data-saga-row
                 className="flex flex-col gap-2 rounded-lg border border-border/60 bg-elevated/40 p-3"
               >
                 <div
@@ -202,7 +203,13 @@ export function SagaChaptersEditor() {
                     variant="outline"
                     size="sm"
                     className="self-start"
-                    onClick={() => {
+                    onClick={(event) => {
+                      // (This button goes with the message: the focus moves
+                      // to the row's chapters first, never left on nothing.)
+                      event.currentTarget
+                        .closest("[data-saga-row]")
+                        ?.querySelector<HTMLElement>("[data-field-anchor]")
+                        ?.focus();
                       setValue(`saga_chapters.${i}.marker`, undefined, { shouldDirty: true });
                       // The message is the numbers': ask them again.
                       void trigger(`saga_chapters.${i}.numerals`);

@@ -295,6 +295,41 @@ describe("1. a save blocked by a row's chapter number", () => {
     expect((await sentUpdate()).rules_text).toBe("I — One.\nII — Two.\nIII — Three.");
   });
 
+  // (The independent check of #539.) The refresh after a save lands a moment
+  // later; a Save pressed and blocked inside that window had its message
+  // wiped by the keyed reset — the focus on a row that no longer said why.
+  it("the message and the line outlive the refresh of the save before", async () => {
+    const card = saga("I — One.\nII — Two.");
+    const view = renderForm("edit", card);
+    await goTo("Text & stats");
+    await typeRich("saga_chapters.0.text", "One, changed.");
+    await sentUpdate();
+    await clickLabel("Chapter II for row 2");
+    await save();
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe(NEEDS_NUMBER));
+    // The refresh: the same card, as the first save left it.
+    await act(async () => {
+      view.rerender(
+        <CardCreatorForm
+          mode="edit"
+          card={{ ...card, rules_text: "I — One, changed.\nII — Two.", updated_at: "2026-09-29T10:00:05.000Z" } as Card}
+          userId={USER}
+          ownerUsername="tester"
+          gameSystems={GAME_SYSTEMS}
+          aiConfigured
+          verifiedFrameKeys={VERIFIED}
+        />,
+      );
+    });
+    expect(screen.getByRole("alert").textContent).toBe(NEEDS_NUMBER);
+    expect(screen.getByTestId("save-blocked-rows").textContent).toBe("Not saved — check the chapters of row 2.");
+    expect(actions.updateCardAction).toHaveBeenCalledTimes(1);
+    // …and it still goes when the row is answered.
+    await clickLabel("Chapter II for row 2");
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByTestId("save-blocked-rows")).toBeNull();
+  });
+
   it("no line and no moved focus on a save that goes through", async () => {
     await openRows(saga("I — One.\nII — Two."));
     await typeRich("saga_chapters.1.text", "Two, changed.");
@@ -418,6 +453,65 @@ describe("2. an edited save keeps the marker of a row whose numbers were not tou
     await openRows(saga(ORDER));
     await clickLabel("Chapter IV for row 1");
     expect((await sentUpdate()).rules_text).toBe("I, II, IV — Both.\nIII — Three.");
+  });
+
+  // (The independent check of #539.) A row a save wrote from its NUMBERS no
+  // longer holds the marker it opened with — and the form knew it only once
+  // the refresh after the save had landed: inside that window the numbers
+  // put back wrote the OPENED marker again.
+  const secondUpdate = async () => {
+    await save();
+    await waitFor(() => expect(actions.updateCardAction).toHaveBeenCalledTimes(2));
+    return actions.updateCardAction.mock.calls[1][1] as Record<string, unknown>;
+  };
+
+  it("“II, I —” saved as “I, II, IV —”, then IV off before the refresh: what the row holds, ascending — not the opened order", async () => {
+    await openRows(saga(ORDER));
+    await clickLabel("Chapter IV for row 1");
+    expect((await sentUpdate()).rules_text).toBe("I, II, IV — Both.\nIII — Three.");
+    expect(screen.queryByTestId("saga-row-0-stored-marker")).toBeNull();
+    await clickLabel("Chapter IV for row 1");
+    expect(screen.queryByTestId("saga-row-0-stored-marker")).toBeNull();
+    const sent = await secondUpdate();
+    expect(sent.rules_text).toBe("I, II — Both.\nIII — Three.");
+    expect(drawn(sent).map((ch) => ch.marker)).toEqual(["I,II", "III"]);
+  });
+
+  it("“XI —” saved under a picked number, then the number off before the refresh: asked, the XI does not come back", async () => {
+    await openRows(saga("I — One.\nXI — Eleven."));
+    await clickLabel("Chapter II for row 2");
+    expect((await sentUpdate()).rules_text).toBe("I — One.\nII — Eleven.");
+    await clickLabel("Chapter II for row 2");
+    await save();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(actions.updateCardAction).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("alert").textContent).toBe(NEEDS_NUMBER);
+  });
+
+  it("…a row that KEPT its marker through a save still carries it (another row edited twice)", async () => {
+    await openRows(saga(ORDER));
+    await typeRich("saga_chapters.1.text", "Three, changed.");
+    expect((await sentUpdate()).rules_text).toBe("II, I — Both.\nIII — Three, changed.");
+    await typeRich("saga_chapters.1.text", "Three, changed again.");
+    const sent = await secondUpdate();
+    expect(sent.rules_text).toBe("II, I — Both.\nIII — Three, changed again.");
+    expect(drawn(sent).map((ch) => ch.marker)).toEqual(["II,I", "III"]);
+    expect(screen.getByTestId("saga-row-0-stored-marker")).toBeTruthy();
+  });
+
+  it("“Drop XI” leaves the focus on the row's chapters, not on a button that is gone", async () => {
+    await openRows(saga(ELEVEN));
+    await clickLabel("Chapter III for row 1");
+    await blockedSave();
+    const drop = screen.getByRole("button", { name: "Drop XI" });
+    drop.focus();
+    await act(async () => {
+      fireEvent.click(drop);
+    });
+    expect(screen.queryByRole("button", { name: "Drop XI" })).toBeNull();
+    expect(focused()?.getAttribute("data-field-anchor")).toBe("saga_chapters.0.numerals");
   });
 
   it("a remix (a new card) keeps its parent's markers too", async () => {

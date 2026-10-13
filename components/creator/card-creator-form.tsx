@@ -218,6 +218,7 @@ import {
 } from "@/lib/creator/frame-resolve";
 import {
   loyaltyFromRulesText,
+  keepsStoredMarker,
   resolveLoyaltyRows,
   sagaEditorRows,
   serializeSagaMarkers,
@@ -982,7 +983,11 @@ export function CardCreatorForm({
     const sameCard = lastReset.current.cardId === resetCardId;
     lastReset.current = { key: resetKey, cardId: resetCardId };
     if (sameCard && isDirty) {
-      reset(defaults, { keepValues: true, keepDirty: true });
+      // (…and what a blocked Save said about those kept values: the refresh
+      // of the save before it landed a moment after the message, and took
+      // it — and the "Not saved" line — off the row the focus had just been
+      // moved to.)
+      reset(defaults, { keepValues: true, keepDirty: true, keepErrors: true });
       return;
     }
     reset(defaults);
@@ -3439,7 +3444,31 @@ export function CardCreatorForm({
       // those keystrokes weren't sent, so they stay dirty and guarded, and
       // the keyed reset keeps them (TODO 3b.6).
       const typedDuringSave = !sameFormState(getValues(), values);
-      reset(values, { keepValues: true, keepDirty: typedDuringSave });
+      // A saga row this save wrote from its NUMBERS (an order-only marker
+      // whose numbers were changed, a number picked on "XI —") no longer
+      // holds the marker it opened with: the row forgets it now, as the
+      // refresh will. Kept until then, the numbers put back inside that
+      // window wrote the opened marker again — "XI —" back on a row just
+      // saved as "II —", with no question — where the same clicks after the
+      // refresh are asked for a number.
+      const savedRows = values.saga_chapters.map((row) =>
+        row.marker && !keepsStoredMarker(row) ? { ...row, marker: undefined } : row,
+      );
+      const forgetsMarker = savedRows.some((row, i) => row !== values.saga_chapters[i]);
+      if (forgetsMarker) {
+        savedRows.forEach((row, i) => {
+          // (Only a row still where it was: one moved or removed while the
+          // request was in flight keeps what it carries.)
+          const now = getValues(`saga_chapters.${i}`);
+          if (row !== values.saga_chapters[i] && now?.marker === values.saga_chapters[i]?.marker) {
+            setValue(`saga_chapters.${i}.marker`, undefined);
+          }
+        });
+      }
+      reset(forgetsMarker ? { ...values, saga_chapters: savedRows } : values, {
+        keepValues: true,
+        keepDirty: typedDuringSave,
+      });
       // Stop guarding and take the Back sentinel off (TODO 3b.7: Back had
       // to be pressed twice after a save) — unless we stay in the editor
       // with unsent keystrokes, which keep their guard.

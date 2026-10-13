@@ -932,7 +932,12 @@ Rules and gotchas:
   `sagaRowsLosingMarker` blocks on the row until they are put back or the
   maker presses "Drop XI" (the row's `marker` cleared — an edit by itself);
   changed on an order-only marker, or picked on one with no readable
-  numeral ("XI —"), the numbers picked are the row's. Never write a saga
+  numeral ("XI —"), the numbers picked are the row's — and a row a save
+  wrote from its numbers FORGETS its marker in that save (onSubmit, before
+  its `reset`), never only at the refresh: put back inside that window, the
+  numbers wrote the opened marker again ("XI —" back on a row just saved as
+  "II —"). The keyed same-card reset keeps field errors (`keepErrors`): the
+  refresh of the save before must not wipe a blocked Save's message. Never write a saga
   row's line from its numbers alone — `sagaRowsOut` is the one answer (a
   kind switch and the AI's context read it too). A walker whose loyalty
   badges touch on its frame gets a note under its rows
