@@ -238,7 +238,10 @@ on conflict (id) do nothing;
 --     …064–…066 4.10c's, on the 1993 frame; …069–…072 4.6h's pairs on the
 --     old frames; …073–…075 4.30's, with the white border; …076–…079
 --     4.5c's, on the Vehicle frame (and one Vehicle left on the artifact
---     frame); …080–…084 4.25's, on the Universes Beyond frames.
+--     frame); …110–…114 4.25's, on the Universes Beyond frames (…080–…089 are
+--     left to the station and Nyx frames' cards, whose PRs were open beside
+--     this one: `on conflict (id) do nothing` would have skipped a shared id
+--     in silence).
 -- ---------------------------------------------------------------------------
 
 insert into public.cards (
@@ -465,28 +468,28 @@ Crew 3', '12', '12', 11,
 Crew 2', '5', '4', 14,
      '{"template":"m15artifact","finish":"regular"}'::jsonb, 5),
   -- TODO 4.25: the Universes Beyond frames (m15ub, m15ubartifact,
-  -- m15ubland) — the smooth streaked dress on M15's slots. Ids …080–…084: a
+  -- m15ubland) — the smooth streaked dress on M15's slots. Ids …110–…114: a
   -- common red spell with the triangle stamp set to "Always" (print stamps
   -- every rarity), a legendary two-colour creature with the crown, the
   -- split pair, the stamp and the collector line, a hybrid one, a
   -- colourless artifact and a two-colour land. The frames are UNVERIFIED on
   -- a preview branch: the cards draw (a stored card keeps its frame), the
   -- pickers offer the frames to an admin through ?previewFrames= only.
-  ('c0000000-0000-4000-a000-000000000080'::uuid, 'Cinder Volley', 'cinder-volley', '{1}{R}', array['red'], null, 'instant', array[]::text[], 'common',
+  ('c0000000-0000-4000-a000-000000000110'::uuid, 'Cinder Volley', 'cinder-volley', '{1}{R}', array['red'], null, 'instant', array[]::text[], 'common',
      E'Cinder Volley deals 3 damage to target creature or planeswalker.', null, null, 3,
      '{"template":"m15ub","finish":"regular","stamp":"triangle","collector":"2023"}'::jsonb, 1),
-  ('c0000000-0000-4000-a000-000000000081'::uuid, 'Vael, Lantern of Two Courts', 'vael-lantern-of-two-courts', '{2}{W}{U}', array['white','blue'], 'Legendary', 'creature', array['Human','Advisor'], 'mythic',
+  ('c0000000-0000-4000-a000-000000000111'::uuid, 'Vael, Lantern of Two Courts', 'vael-lantern-of-two-courts', '{2}{W}{U}', array['white','blue'], 'Legendary', 'creature', array['Human','Advisor'], 'mythic',
      E'Flying, vigilance
 Whenever you cast your second spell each turn, draw a card.', '3', '4', 9,
      '{"template":"m15ub","finish":"regular","crown":true,"twoColor":true,"stamp":"auto","collector":"2023"}'::jsonb, 1),
-  ('c0000000-0000-4000-a000-000000000082'::uuid, 'Briarhowl Stalker', 'briarhowl-stalker', '{R/G}{R/G}', array['red','green'], null, 'creature', array['Wolf'], 'uncommon',
+  ('c0000000-0000-4000-a000-000000000112'::uuid, 'Briarhowl Stalker', 'briarhowl-stalker', '{R/G}{R/G}', array['red','green'], null, 'creature', array['Wolf'], 'uncommon',
      E'Trample
 Briarhowl Stalker gets +1/+1 as long as you control another Wolf.', '3', '2', 12,
      '{"template":"m15ub","finish":"regular","twoColor":true,"stamp":"auto","collector":"2023"}'::jsonb, 1),
-  ('c0000000-0000-4000-a000-000000000083'::uuid, 'Resonance Engine', 'resonance-engine', '{3}', array['colorless'], null, 'artifact', array[]::text[], 'rare',
+  ('c0000000-0000-4000-a000-000000000113'::uuid, 'Resonance Engine', 'resonance-engine', '{3}', array['colorless'], null, 'artifact', array[]::text[], 'rare',
      E'{T}: Add {C}{C}. Spend this mana only to cast artifact spells or activate abilities of artifacts.', null, null, 7,
      '{"template":"m15ubartifact","finish":"regular","stamp":"auto","collector":"2023"}'::jsonb, 1),
-  ('c0000000-0000-4000-a000-000000000084'::uuid, 'Gloamwater Crossing', 'gloamwater-crossing', null, array['blue','black'], null, 'land', array[]::text[], 'rare',
+  ('c0000000-0000-4000-a000-000000000114'::uuid, 'Gloamwater Crossing', 'gloamwater-crossing', null, array['blue','black'], null, 'land', array[]::text[], 'rare',
      E'Gloamwater Crossing enters tapped unless you control two or more other lands.
 {T}: Add {U} or {B}.', null, null, 18,
      '{"template":"m15ubland","finish":"regular","twoColor":true,"stamp":"auto","collector":"2023"}'::jsonb, 1)
