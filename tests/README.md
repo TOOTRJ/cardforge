@@ -34,12 +34,49 @@ npm test
 
 ## CI
 
-**A notes-only pull request runs almost none of it** (owner 2026-10-13 —
-Actions minutes are billed once the repo is private, and a full run is ~55
-runner-minutes). The first job, `changes` (`scripts/ci-classify-change.mjs`),
-reads the files the PR's merge commit changes; when EVERY one is on the
-allow-list of `scripts/lib/ci-docs-only.mjs` the heavy jobs are skipped at
-job level and one job, **Notes checks**, runs `npm run test:docs` instead:
+### Tiers: what a run costs, and how to work with them
+
+Actions minutes are billed (private repo; every job is rounded up to a whole
+minute). The first job of every run, **Classify the change**
+(`scripts/ci-classify-change.mjs`, rule in `scripts/lib/ci-docs-only.mjs`),
+puts the run in one tier and says which, and why, on the run summary:
+
+| Tier | When | Runs | Billed (measured 2026-10-13) |
+| --- | --- | --- | --- |
+| **full** | a READY pull request; a merge to `main` that its PR did not already test; anything unclear | everything | ~67 min |
+| **draft** | a DRAFT pull request that changes code | typecheck + lint + build, and the notes tests | ~7 min |
+| **notes** | every changed file is notes (PR or merge to `main`) | the notes tests (`npm run test:docs`) | ~3 min |
+| **light** | a merge to `main` whose tree IS its PR head's tree (the branch held all of `main`) and that leaves `lib/frames/frame-manifest.json` alone | typecheck + lint + build, the six unit shards, coverage | ~37 min |
+
+**Working with it: open the pull request as a draft while you iterate, mark
+it ready when you want the full checks.**
+
+```bash
+gh pr create --draft …     # every push: the draft tier
+gh pr ready 123            # starts the FULL run on the same commit, no push needed
+gh pr ready 123 --undo     # back to draft: the NEXT push runs the draft tier
+```
+
+- A draft cannot be merged (GitHub refuses it), and its gate reports as
+  **Draft checks (typecheck, lint, build)** — the required name
+  **Typecheck, lint, unit** stays "Expected — waiting for status" until a
+  full run has finished. That is deliberate: the draft run leaves "skipped"
+  on E2E, Frames published and Visual regression, and a skipped required
+  check counts as satisfied. A green gate under the required name would
+  still be on the commit in the minutes after "ready for review", before
+  the full run had judged anything. The gate also waits for every other
+  required job, so it is the last check to turn green.
+- A pull request opened ready, and every push to a ready one, is a full run.
+  A newer push (or "ready for review") cancels the run in flight for that
+  pull request. Merges to `main` never cancel each other.
+- `--undo` starts no run (`converted_to_draft` is not a trigger): the commit
+  keeps the results it has, and a full run already in flight finishes —
+  cancel it by hand if you want the minutes back.
+- A full run that is not needed is the expensive mistake: marking ready and
+  then pushing three fixes costs three full runs. Push the fixes as a draft.
+
+**Notes** are an allow-list — a pull request is notes-only when EVERY changed
+file is on it:
 
 | On the list (`.md` only) | Never on it |
 | --- | --- |
@@ -48,25 +85,43 @@ job level and one job, **Notes checks**, runs `npm run test:docs` instead:
 | `.claude/**/*.md` | `.github/**` |
 | `tests/README.md`, `tests/parity/README.md` | `app/`, `lib/`, `components/`, `content/`, `public/`, `scripts/`, `types/`, everything else under `tests/`, every `.txt`, `docs/*.json`, a bare `LICENSE` |
 
-One file off the list, an empty or unreadable diff, and every push to `main`
-run everything, exactly as before. `npm run test:docs` is the unit tests that
-READ a notes file — `frames-doc.test.ts` (docs/FRAMES.md, CLAUDE.md's section
-titles) and `art-window-coverage.test.ts` (TODO.md's item numbers; its
-bucket-master checks report "unavailable" there, no masters are fetched) —
-because a notes-only PR can break exactly those. **A unit test that starts to
-read a Markdown file joins `DOCS_READING_TESTS` and the `test:docs` script**;
+`npm run test:docs` is the unit tests that READ a notes file —
+`frames-doc.test.ts` (docs/FRAMES.md, CLAUDE.md's section titles) and
+`art-window-coverage.test.ts` (TODO.md's item numbers; its bucket-master
+checks report "unavailable" there, no masters are fetched) — because a
+notes-only PR can break exactly those. **A unit test that starts to read a
+Markdown file joins `DOCS_READING_TESTS` and the `test:docs` script**;
 `tests/unit/devops/ci-docs-only.test.ts` fails until it does (it scans every
 unit-test source for a string naming a `.md`, `docs/`, `.claude`, README or
 LICENSE), and fails too if app code starts to read a `.md`. The coverage
-floors do not apply to a notes-only run (no shard runs). Never use a
-workflow-level `paths-ignore` for this: a workflow that does not start leaves
-the required checks "Waiting for status to be reported" and the PR cannot
-merge, while a job skipped by its own `if` reports "skipped", which a
-required check accepts. That is also why the gate below is strict about it:
-it passes on skipped jobs ONLY when `changes` succeeded and said notes-only
-and the notes job is green; a new heavy job takes the same
-`if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}` (with
-`needs: changes`), so a FAILED classifier runs it.
+floors do not apply where no shard runs (notes, draft).
+
+The **light** tier rests on one fact: when the branch already contained all
+of `main`, the merge commit's files are byte for byte the files the pull
+request's own run tested, and E2E, Frames published and Visual regression
+are required checks there. The script proves it from git alone (the merge's
+tree equals its second parent's, and its first parent is an ancestor of the
+second). `main` moved under the PR → full. The manifest changed → full,
+because `main`'s run is what SAVES the frame caches every pull request
+restores (a PR can read only its base branch's caches).
+
+Rules for whoever edits the workflow:
+
+- Never a workflow-level `paths-ignore` (or `paths`): a workflow that does
+  not start leaves the required checks "Waiting for status to be reported"
+  and the PR cannot merge. A job skipped by its own `if` reports "skipped",
+  which a required check accepts.
+- A new job takes its group's condition, `needs: changes` and
+  `if: ${{ !cancelled() && needs.changes.outputs.<static|unit|heavy> != 'false' }}`
+  — so a FAILED classifier runs it — and is added to the test's `GROUP_JOBS`.
+- The gate accepts exactly one shape per tier (the table in the workflow);
+  "skipped" passes only where the classifier put it, and a failed or
+  cancelled classifier is red.
+- Artifacts: 3 days for a run's diagnostics (`coverage`, `playwright-report`,
+  `visual-results-*`, `parity-report`, `parity-differences`), 7 for the two a
+  contributor fetches to commit (`visual-baseline`, `parity-baseline`), 1 for
+  the shards' blobs (read by the same run only). Nothing reads an artifact
+  of another run.
 
 `.github/workflows/ci.yml` runs on every PR and on `main`: typecheck, lint,
 unit tests with coverage floors, `next build`, and the **full** Playwright
@@ -79,7 +134,8 @@ retry (`scripts/e2e-summary.mjs`) — a flake that keeps appearing there is a
 bug to fix, not noise.
 
 The required **Typecheck, lint, unit** check is a gate over three jobs that
-run side by side (and, on a notes-only PR, over **Notes checks** instead): `static` (typecheck, lint, `next build`), `unit` (the unit
+run side by side (in the full and light tiers; the other tiers above swap in
+**Notes checks**): `static` (typecheck, lint, `next build`), `unit` (the unit
 suite in six shards — vitest's `--shard`, a hash of each file's path, so
 there is no file list to keep) and `coverage`, which merges the shards'
 blob reports (`npm run test:coverage:merge`) and holds the coverage floors

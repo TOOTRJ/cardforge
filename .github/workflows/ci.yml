@@ -1,7 +1,7 @@
 # CI — runs on every pull request and on main.
 #
-#   changes the classifier: notes-only pull request or not (see the end).
-#   docs    a notes-only pull request's whole test run: `npm run test:docs`.
+#   changes the classifier: which TIER this run is (see the end).
+#   docs    the notes and draft tiers' test run: `npm run test:docs`.
 #   checks  the required "Typecheck, lint, unit" check — a gate over three
 #           jobs that run side by side:
 #             static    typecheck + lint + `next build`. The build is the only
@@ -47,71 +47,100 @@
 #           `parity-differences` artifact holds the preview / bake /
 #           difference pictures.
 #
-# A pull request that changes NOTES ONLY (the allow-list of
-# scripts/lib/ci-docs-only.mjs) runs none of the above: the `changes` job
-# classifies every run, the heavy jobs are skipped at job level and `docs`
-# runs the tests that read notes (a few runner-minutes instead of ~55).
-# Code changes and every push to main run everything, as before.
+# TIERS (owner 2026-10-13 — Actions minutes are billed once the repo is
+# private, and the full run is ~65 of them). `changes` picks one per run
+# (scripts/lib/ci-docs-only.mjs) and says which, and why, on the run summary:
 #
-# Actions minutes are billed once the repo is private — keep a new heavy job
-# behind the `changes` condition. No secrets are needed: the local stack's
+#   full   everything above. A READY pull request; a merge to main that the
+#          pull request's own run did not already test; anything unclear.
+#   notes  every changed file is notes (the allow-list: root *.md,
+#          docs/**/*.md, .claude/**/*.md, the two tests READMEs): `docs` only.
+#   draft  a DRAFT pull request: `static` + `docs`. Marking it ready starts
+#          the full run on the same head. Its gate reports as "Draft checks"
+#          — never under the required name (see `checks`).
+#   light  a merge to main whose tree is the pull request head's own tree
+#          (the branch held all of main) and that leaves the frame manifest
+#          alone: `static` + `unit` + `coverage`. e2e, visual, parity and
+#          frames ran on these exact files in the pull request.
+#
+# Keep a new heavy job behind the `changes` condition, never behind a
+# workflow-level `paths-ignore`. No secrets are needed: the local stack's
 # keys are generated per run and the e2e user is throwaway.
 name: CI
 
 on:
+  # `ready_for_review` is what starts the FULL run when a draft is marked
+  # ready (same head, no push). `converted_to_draft` is left out on purpose:
+  # the head keeps the results of the run it had — they are true of that
+  # commit — and the next push to the draft runs the draft tier.
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
 
+# A pull request: one run per pull request, a newer push (or "ready for
+# review") cancels the one in flight. main: one group per COMMIT, so no merge
+# ever cancels or queues behind another — each merge's run finishes. (With one
+# group for main a second merge cancelled the first one's run; that was sound
+# only while every main run was a full one. A notes or light run says nothing
+# about the merge before it.)
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
 
 jobs:
-  # Is this a notes-only pull request (owner 2026-10-13)? Every changed file
-  # on the allow-list of scripts/lib/ci-docs-only.mjs (root *.md, docs/**/*.md,
-  # .claude/**/*.md, the two tests READMEs) → `docs_only=true`: the heavy jobs
-  # below are skipped at JOB level and `docs` runs instead. Anything else —
-  # one other file, an unreadable diff, a push to main — is `false` and the
-  # run is exactly what it was before this job existed.
+  # Which tier is this run (owner 2026-10-13; the header's TIERS)? The script
+  # writes the tier and the job groups it runs — `static`, `unit`, `heavy`,
+  # `docs`, each "true" or "false" — and every job below reads its group.
+  # Anything unclear is the FULL tier: an unreadable diff, an unknown event,
+  # a merge to main whose tree the pull request did not test.
   # Never a workflow-level `paths-ignore`: a workflow that does not start
   # leaves its required checks "Waiting for status to be reported" and the
   # pull request cannot merge. A job skipped by its own `if` reports
   # "skipped", which a required check accepts.
-  # Every heavy job is `!cancelled() && … != 'true'`: when this job FAILS its
-  # output is empty and they all run (without a status function a failed
-  # need would skip them — and a skipped required check passes).
+  # Every job that a tier may skip is `!cancelled() && … != 'false'`: when
+  # this job FAILS its outputs are empty and they all run (without a status
+  # function a failed need would skip them — and a skipped required check
+  # passes).
   changes:
     name: Classify the change
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      docs_only: ${{ steps.classify.outputs.docs_only }}
+      tier: ${{ steps.classify.outputs.tier }}
+      static: ${{ steps.classify.outputs.static }}
+      unit: ${{ steps.classify.outputs.unit }}
+      heavy: ${{ steps.classify.outputs.heavy }}
+      docs: ${{ steps.classify.outputs.docs }}
     steps:
-      # Depth 2: a pull request's HEAD is the test merge commit and HEAD^1
-      # the base branch's tip — their diff is what merging would change.
+      # Depth 2: HEAD is a merge commit (a pull request's test merge, or the
+      # merge on main) and HEAD^1 what it was merged into — their diff is
+      # what merging changes. On main the script deepens the clone itself
+      # (commits and trees only) to ask whether the branch held all of main.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
       # The runner's own Node: the script imports nothing but node: modules.
       - name: Classify
         id: classify
+        env:
+          PR_DRAFT: ${{ github.event.pull_request.draft }}
         run: node scripts/ci-classify-change.mjs
 
-  # What a notes-only pull request runs INSTEAD of everything below: the unit
-  # tests that read a notes file (`npm run test:docs` — docs/FRAMES.md and
-  # CLAUDE.md's section titles, TODO.md's item numbers), which such a pull
-  # request can break. No coverage (the floors are the whole suite's), no
-  # bucket masters (their checks report "unavailable": notes move no master).
+  # The notes and draft tiers' tests: the unit tests that read a notes file
+  # (`npm run test:docs` — docs/FRAMES.md and CLAUDE.md's section titles,
+  # TODO.md's item numbers), which a notes-only pull request can break. No
+  # coverage (the floors are the whole suite's), no bucket masters (their
+  # checks report "unavailable": notes move no master).
   # tests/unit/devops/ci-docs-only.test.ts fails when a test that reads
   # Markdown is missing from the script.
   docs:
     name: Notes checks
     needs: changes
-    if: ${{ needs.changes.outputs.docs_only == 'true' }}
+    if: ${{ needs.changes.outputs.docs == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -128,7 +157,7 @@ jobs:
   static:
     name: Typecheck, lint, build
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.static != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -175,7 +204,7 @@ jobs:
   unit:
     name: Unit tests (${{ matrix.shard }}/${{ matrix.total }})
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.unit != 'false' }}
     runs-on: ubuntu-latest
     # A backstop for a hung run, not a budget.
     timeout-minutes: 20
@@ -249,9 +278,9 @@ jobs:
     name: Unit coverage
     needs: [changes, unit]
     # Runs when a shard failed too, so the coverage report is still made —
-    # and not at all on a notes-only pull request (no shard ran: the floors
+    # and not at all in the notes and draft tiers (no shard ran: the floors
     # do not apply to a run of the two notes tests).
-    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.unit != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -280,31 +309,42 @@ jobs:
         with:
           name: coverage
           path: coverage/
-          retention-days: 7
+          retention-days: 3
 
   # The REQUIRED check (main's ruleset names "Typecheck, lint, unit"): green
-  # only when typecheck, lint, the build, every unit shard and the coverage
-  # floors all are — or, on a notes-only pull request, when the `docs` job
-  # is. `always()`, not `!cancelled()`: the gate must RUN whatever became of
-  # the jobs it covers — failed, skipped, timed out (a job stopped at its
-  # `timeout-minutes` ends as "cancelled") or cancelled with the run —
-  # because a required check that is "skipped" counts as passing, and
-  # `always()` is the one condition documented to run in every one of those
-  # cases. It then accepts exactly two shapes and fails on anything else:
-  #   code   `changes` succeeded and did NOT say notes-only: static, unit and
-  #          coverage all "success" (and `docs` "skipped");
-  #   notes  `changes` succeeded and said notes-only: `docs` "success" and
-  #          static, unit and coverage all "skipped".
-  # So "skipped" passes only where the classifier put it. A failed or
+  # only when the jobs its tier runs all are. `always()`, not `!cancelled()`:
+  # the gate must RUN whatever became of the jobs it covers — failed, skipped,
+  # timed out (a job stopped at its `timeout-minutes` ends as "cancelled") or
+  # cancelled with the run — because a required check that is "skipped"
+  # counts as passing, and `always()` is the one condition documented to run
+  # in every one of those cases. It accepts exactly ONE shape per tier and
+  # fails on anything else (`changes` must have succeeded in all of them):
+  #
+  #            static   unit+coverage  docs     frames, e2e, visual
+  #   full     success  success        skipped  ran (not "skipped")
+  #   light    success  success        skipped  skipped
+  #   draft    success  skipped        success  skipped
+  #   notes    skipped  skipped        success  skipped
+  #
+  # So "skipped" passes only where the classifier put it; a failed or
   # cancelled classifier, a skip nobody asked for, a failure, a cancel and a
-  # timeout are all red here — and this is the check that keeps the pull
-  # request closed when another required check ("E2E (local Supabase)") is
-  # skipped with a cancelled run.
-  # Never rename it; a new job the check must cover joins `needs` and the
-  # shape it belongs to.
+  # timeout are all red. An unknown or empty tier is judged as full.
+  #
+  # It `needs` the other required jobs too (frames, e2e, visual) and so
+  # finishes LAST. That, and the name below, is what keeps a pull request
+  # closed between "ready for review" and the end of its full run: the draft
+  # run left "skipped" — which satisfies a required check — on those three
+  # names for the same commit, and GitHub reads the latest check of each
+  # name. On a DRAFT this job therefore reports as "Draft checks", never
+  # under the required name: the commit has no "Typecheck, lint, unit" at all
+  # until a full (or notes) run has finished every job, by which time the
+  # other names carry that run's own results. (A draft cannot be merged
+  # anyway; this is about the minutes after it stops being one.)
+  # Never rename the required name; a new job the check must cover joins
+  # `needs` and the table.
   checks:
-    name: Typecheck, lint, unit
-    needs: [changes, static, unit, coverage, docs]
+    name: ${{ needs.changes.outputs.tier == 'draft' && 'Draft checks (typecheck, lint, build)' || 'Typecheck, lint, unit' }}
+    needs: [changes, static, unit, coverage, docs, frames, e2e, visual]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -312,16 +352,27 @@ jobs:
       - name: Gate
         env:
           NEEDS: ${{ toJSON(needs) }}
-          DOCS_ONLY: ${{ needs.changes.outputs.docs_only }}
+          TIER: ${{ needs.changes.outputs.tier }}
         run: |
-          echo "notes-only: ${DOCS_ONLY:-false}" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "tier: ${TIER:-(none: judged as full)}" | tee -a "$GITHUB_STEP_SUMMARY"
           echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"' | tee -a "$GITHUB_STEP_SUMMARY"
-          echo "$NEEDS" | jq -e --arg docs "$DOCS_ONLY" 'length == 5 and .changes.result == "success" and (if $docs == "true" then .docs.result == "success" and ([.static, .unit, .coverage] | all(.result == "skipped")) else .docs.result == "skipped" and ([.static, .unit, .coverage] | all(.result == "success")) end)' > /dev/null
+          echo "$NEEDS" | jq -e --arg tier "$TIER" '
+            ( if   $tier == "notes" then ["skipped", "skipped", "success", "skipped"]
+              elif $tier == "draft" then ["success", "skipped", "success", "skipped"]
+              elif $tier == "light" then ["success", "success", "skipped", "skipped"]
+              else                       ["success", "success", "skipped", "ran"] end ) as $want
+            | length == 8
+            and .changes.result == "success"
+            and .static.result == $want[0]
+            and ([.unit, .coverage] | all(.result == $want[1]))
+            and .docs.result == $want[2]
+            and ([.frames, .e2e, .visual] | all(if $want[3] == "ran" then .result != "skipped" else .result == "skipped" end))
+          ' > /dev/null
 
   frames:
     name: Frames published
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.heavy != 'false' }}
     runs-on: ubuntu-latest
     # frames-check re-checks apparent misses one at a time with backoff
     # (transient storage errors are common when several PRs run at once).
@@ -336,7 +387,7 @@ jobs:
   e2e:
     name: E2E (local Supabase)
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.heavy != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -400,12 +451,12 @@ jobs:
           path: |
             playwright-report/
             test-results/
-          retention-days: 7
+          retention-days: 3
 
   visual-bake:
     name: Visual regression (bake ${{ matrix.group }}/3)
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.heavy != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -447,7 +498,7 @@ jobs:
           path: |
             tmp/visual/results/
             tmp/visual/logs/
-          retention-days: 7
+          retention-days: 3
           # A re-run of this job replaces its attempt's hashes.
           overwrite: true
 
@@ -456,8 +507,8 @@ jobs:
     needs: [changes, visual-bake]
     # Runs (and fails) when a bake job failed too, so a failed bake never
     # leaves the check "skipped" — a skipped check counts as passing. It is
-    # skipped on purpose on a notes-only pull request, with the bakes.
-    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
+    # skipped on purpose, with the bakes, in every tier but the full one.
+    if: ${{ !cancelled() && needs.changes.outputs.heavy != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -485,13 +536,13 @@ jobs:
           name: visual-baseline
           path: tmp/visual/next/baseline.json
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 7
           overwrite: true
 
   parity:
     name: Preview parity
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.heavy != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -531,7 +582,7 @@ jobs:
           name: parity-baseline
           path: tmp/parity/next/
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 7
           overwrite: true
 
       - name: Upload the report
@@ -543,7 +594,7 @@ jobs:
             tmp/parity/report.md
             tmp/parity/results/
           if-no-files-found: ignore
-          retention-days: 7
+          retention-days: 3
           overwrite: true
 
       # A failing case's preview screenshot, bake and difference map.
@@ -554,5 +605,5 @@ jobs:
           name: parity-differences
           path: tmp/parity/out/
           if-no-files-found: ignore
-          retention-days: 7
+          retention-days: 3
           overwrite: true

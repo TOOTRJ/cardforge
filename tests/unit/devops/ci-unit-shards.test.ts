@@ -13,9 +13,9 @@ import { describe, expect, it } from "vitest";
 // someone dropped them:
 //
 //   - the required check keeps its exact name (main's ruleset names it) and
-//     is red unless every job it covers is green — or, on a notes-only pull
-//     request (tests/unit/devops/ci-docs-only.test.ts), unless the notes job
-//     is green and the classifier is what skipped the rest;
+//     is red unless every job its TIER runs is green — the tiers (full,
+//     light, draft, notes) and what each may skip are pinned in
+//     tests/unit/devops/ci-docs-only.test.ts;
 //   - every shard runs, on the bucket masters, and none is the only one;
 //   - the coverage floors are checked once, on ALL shards' coverage — a shard
 //     alone never checks them, and nothing but a shard may switch them off.
@@ -41,13 +41,17 @@ const numbers = (list: string) => list.split(",").map((n) => Number(n.trim()));
 describe("the required check", () => {
   const gate = jobOf("checks");
 
-  it("keeps the exact name main's ruleset requires, on exactly one job", () => {
-    expect(gate).toMatch(/^ {4}name: Typecheck, lint, unit$/m);
-    expect(ci.match(/name: Typecheck, lint, unit$/gm)).toHaveLength(1);
+  it("keeps the exact name main's ruleset requires, on exactly one job — in every tier but a draft's", () => {
+    // A draft's gate reports as "Draft checks": a green check under the
+    // required name would still be on the commit when the draft is marked
+    // ready, before the full run has judged anything.
+    expect(gate).toContain("    name: ${{ needs.changes.outputs.tier == 'draft' && 'Draft checks (typecheck, lint, build)' || 'Typecheck, lint, unit' }}\n");
+    expect(ci.match(/Typecheck, lint, unit' \}\}$/gm)).toHaveLength(1);
+    expect(ci).not.toMatch(/^ +name: Typecheck, lint, unit$/m);
   });
 
-  it("covers the classifier, typecheck + lint + build, every unit shard, the coverage floors and the notes job", () => {
-    expect(gate).toMatch(/^ {4}needs: \[changes, static, unit, coverage, docs\]$/m);
+  it("covers the classifier, typecheck + lint + build, every unit shard, the coverage floors and the notes job — and waits for the other required jobs", () => {
+    expect(gate).toMatch(/^ {4}needs: \[changes, static, unit, coverage, docs, frames, e2e, visual\]$/m);
   });
 
   it("runs when a job it covers failed (a skipped required check counts as passing) and passes only when all succeeded", () => {
@@ -57,14 +61,16 @@ describe("the required check", () => {
     // leans on how a timed-out need is counted, which nothing documents.
     expect(gate).toMatch(/^ {4}if: \$\{\{ always\(\) \}\}$/m);
     expect(gate).toContain("NEEDS: ${{ toJSON(needs) }}");
-    expect(gate).toContain("DOCS_ONLY: ${{ needs.changes.outputs.docs_only }}");
-    // A code change: the classifier succeeded, did not say notes-only, and
-    // all three jobs succeeded. "skipped" passes ONLY in the notes shape —
-    // the classifier said notes-only and the notes job succeeded. The truth
-    // table is run through jq in ci-docs-only.test.ts.
-    expect(gate).toContain(
-      `jq -e --arg docs "$DOCS_ONLY" 'length == 5 and .changes.result == "success" and (if $docs == "true" then .docs.result == "success" and ([.static, .unit, .coverage] | all(.result == "skipped")) else .docs.result == "skipped" and ([.static, .unit, .coverage] | all(.result == "success")) end)' > /dev/null`,
-    );
+    expect(gate).toContain("TIER: ${{ needs.changes.outputs.tier }}");
+    // The full tier (and any tier nobody knows): the classifier succeeded
+    // and static, every shard and coverage succeeded. "skipped" passes ONLY
+    // in the shape of the tier the classifier named. The whole truth table
+    // is run through jq in ci-docs-only.test.ts.
+    expect(gate).toContain(`else                       ["success", "success", "skipped", "ran"] end ) as $want`);
+    expect(gate).toContain("| length == 8\n");
+    expect(gate).toContain(`and .changes.result == "success"\n`);
+    expect(gate).toContain("and .static.result == $want[0]\n");
+    expect(gate).toContain("and ([.unit, .coverage] | all(.result == $want[1]))\n");
     // Nothing in it may swallow the verdict.
     expect(gate).not.toMatch(/continue-on-error|\|\| true/);
   });
@@ -83,15 +89,18 @@ describe("the jobs behind the check", () => {
     }
   });
 
-  it("the shards all run on everything but a notes-only pull request: one job condition, no matrix exclude or include", () => {
+  it("the shards all run in the full and light tiers: one job condition, no matrix exclude or include", () => {
     const unit = jobOf("unit");
-    // The classifier's word is the ONLY thing that skips them — and a failed
-    // classifier (empty output) runs them.
+    // The classifier's word (a notes-only change, a draft) is the ONLY thing
+    // that skips them — and a failed classifier (empty output) runs them.
     expect(unit).toMatch(/^ {4}needs: changes$/m);
-    expect(unit.match(/^ {4}if: .*$/gm)).toEqual(["    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}"]);
+    expect(unit.match(/^ {4}if: .*$/gm)).toEqual(["    if: ${{ !cancelled() && needs.changes.outputs.unit != 'false' }}"]);
     expect(unit).not.toMatch(/^ {8}(exclude|include):/m);
-    // A push that supersedes a run cancels it per ref, as before the split.
-    expect(ci).toMatch(/^concurrency:\n {2}group: ci-\$\{\{ github\.ref \}\}\n {2}cancel-in-progress: true$/m);
+    // A push that supersedes a pull request's run cancels it; a merge to
+    // main has its own group and is never cancelled by the next one.
+    expect(ci).toContain(
+      "\nconcurrency:\n  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' }}\n",
+    );
   });
 });
 
@@ -179,9 +188,9 @@ describe("the coverage floors", () => {
 
   it("are checked on the merge of EVERY shard's coverage, shard failures or not", () => {
     expect(job).toMatch(/^ {4}needs: \[changes, unit\]$/m);
-    // …but never on a notes-only pull request: no shard ran, and the floors
-    // are the whole suite's.
-    expect(job.match(/^ {4}if: .*$/gm)).toEqual(["    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}"]);
+    // …but never where no shard ran (a notes-only change, a draft): the
+    // floors are the whole suite's.
+    expect(job.match(/^ {4}if: .*$/gm)).toEqual(["    if: ${{ !cancelled() && needs.changes.outputs.unit != 'false' }}"]);
     expect(job).toMatch(/pattern: unit-blob-\*\n\s+merge-multiple: true\n\s+path: \.vitest-reports/);
     expect(job).toMatch(/^ {6}- run: npm run test:coverage:merge$/m);
     const pkg = JSON.parse(read("package.json")) as { scripts: Record<string, string> };
