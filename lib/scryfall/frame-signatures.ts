@@ -100,6 +100,18 @@ export type FrameMatch = {
     blockedBy?: string;
     gaps?: readonly FrameGap[];
   };
+  /** The frame the import LANDS on instead once it is verified in the card's
+   *  colour, the match still naming the printing's own frame (`template`)
+   *  and still `nearest`: a borderless or extended-art Vehicle prints the
+   *  brown plate on a dress PipGlyph has no Vehicle plate for, and lands on
+   *  the silver artifact frame until the bordered Vehicle frame is verified
+   *  in its colour, then on that (TODO 4.5c, owner 2026-10-12, round 48).
+   *  Only ever a stand-in landing's replacement: withVerification
+   *  (lib/creator/frame-resolve.ts) leaves a printing on its OWN frame where
+   *  that one is verified in the colour and its art fits it. `reason` is
+   *  what the match says after the swap — null keeps the reason it had (a
+   *  gap named before the plate: the nickname line). */
+  landOnOnceVerified?: { template: FrameTemplate; reason: string | null };
   /** Set by withVerification only: the registry answered `exact`, but that
    *  frame isn't verified in the card's colour yet, so the match was
    *  downgraded to `nearest`. The frame request log files it under "Not yet
@@ -569,6 +581,12 @@ type Outcome = {
    *  only for a gap that frame doesn't draw either (FrameMatch
    *  .onceVerifiedMatch; the M20 token design, TODO 4.48). */
   exactOnceVerified?: true;
+  /** FrameMatch.landOnOnceVerified: the frame the import lands on once it is
+   *  verified, for the printings `match` holds on — `template` stays the
+   *  printing's own frame and the status its own. A match whose reason is
+   *  `gap`'s (the piece that landing draws) says `reason` after the swap;
+   *  one a gap before it named keeps its reason. */
+  landOnOnceVerified?: { template: FrameTemplate; match: Match; gap: GapKey; reason: Text };
 };
 
 type Rule = {
@@ -1333,6 +1351,28 @@ const OLD_ERA_GAPS: readonly GapKey[] = [
   "two-colour-hybrid",
 ];
 
+/** A Vehicle that prints the brown plate with white digits (TODO 4.5c): the
+ *  Artifact kind on the 2015 frame with the subtype on its front face, off
+ *  the one silver-plated print (SILVER_PLATE_VEHICLE_PINS). */
+const BROWN_PLATE_VEHICLE: Match = {
+  frames: ["2015"],
+  kinds: ["artifact"],
+  subtypesAny: ["Vehicle"],
+  notCollectorIds: SILVER_PLATE_VEHICLE_PINS,
+};
+
+/** Where such a Vehicle lands when its printing wears a dress PipGlyph has
+ *  no Vehicle plate for (borderless, extended art — 7 of 7 and 8 of 8 read
+ *  print the brown plate; owner 2026-10-12, round 48): the bordered Vehicle
+ *  frame once it is verified in the card's colour, still `nearest` — the
+ *  silver artifact frame until then, as before. `dress` names the print. */
+const vehicleStandIn = (dress: string): NonNullable<Outcome["landOnOnceVerified"]> => ({
+  template: "m15vehicle",
+  match: BROWN_PLATE_VEHICLE,
+  gap: "vehicle",
+  reason: `this printing is ${dress}, and PipGlyph draws the Vehicle plate on its bordered Vehicle frame only`,
+});
+
 const showcaseLabel = ({ card, set }: Ctx) =>
   `${card.set_name ?? set.toUpperCase()} showcase`;
 
@@ -1778,12 +1818,18 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       blockedBy: "4.37",
     },
   },
+  // A borderless Vehicle (63 printings + 4 nicknamed, Scryfall 2026-10-12)
+  // prints the brown plate on no frame at all: it stays `nearest` on the
+  // borderless artifact frame (the `vehicle` gap — no borderless Vehicle
+  // plate exists), and its bordered landing (1.18) is the Vehicle frame once
+  // that is verified in its colour, the silver artifact frame until then
+  // (`landOnOnceVerified`; the gap rules inherit it).
   ...withGaps(
     {
       key: "borderless/standard",
       exactLabel: "Borderless frame",
       match: { borders: ["borderless"] },
-      outcome: { status: "exact", template: { family: "borderless" } },
+      outcome: { status: "exact", template: { family: "borderless" }, landOnOnceVerified: vehicleStandIn("borderless") },
     },
     ["etched", "nickname", "crown", "nyx", "vehicle", "colour-indicator", "two-colour", "two-colour-hybrid", "light-box"],
   ),
@@ -2134,12 +2180,17 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       blockedBy: "4.15",
     },
   },
+  // An extended-art Vehicle (49 printings, Scryfall 2026-10-12) prints the
+  // brown plate too, and the extended-art frame has none (the `vehicle`
+  // gap): while that frame isn't verified in the card's colour the import
+  // lands on the Vehicle frame once THAT is, instead of the silver artifact
+  // frame (`landOnOnceVerified`).
   ...withGaps(
     {
       key: "extendedart",
       exactLabel: "Extended-art frame",
       match: { effectsAny: ["extendedart"] },
-      outcome: { status: "exact", template: "extendedart" },
+      outcome: { status: "exact", template: "extendedart", landOnOnceVerified: vehicleStandIn("extended art") },
     },
     ["layout", "dfc", "etched", "border", "crown", "vehicle", "two-colour", "two-colour-hybrid"],
   ),
@@ -2353,12 +2404,14 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // the item that finishes the match (a two-colour Vehicle prints the split,
   // DFT #188–220: the frame's ten pair masters draw it). A Vehicle BACK face
   // (BOT's converts), the extended-art and borderless Vehicles and the one
-  // silver-plated print (SILVER_PLATE_VEHICLE_PINS) keep the `vehicle` gap.
+  // silver-plated print (SILVER_PLATE_VEHICLE_PINS) keep the `vehicle` gap —
+  // the extended-art and borderless ones LANDING on the Vehicle frame once
+  // it is verified (their rules' `landOnOnceVerified`), still `nearest`.
   ...withGaps(
     {
       key: "vehicle/2015",
       exactLabel: "Vehicle frame (2015)",
-      match: { frames: ["2015"], kinds: ["artifact"], subtypesAny: ["Vehicle"], notCollectorIds: SILVER_PLATE_VEHICLE_PINS },
+      match: BROWN_PLATE_VEHICLE,
       outcome: {
         status: "nearest",
         template: { family: "m15" },
@@ -2538,6 +2591,21 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
       ? later
       : undefined;
 
+  // The frame the import lands on instead once verified, the match keeping
+  // its own frame and status (a borderless or extended-art Vehicle on the
+  // bordered Vehicle frame): only for the printings the rule names, only a
+  // frame that dresses this card as it stands and holds the cropped art.
+  const standIn = rule.outcome.landOnOnceVerified;
+  const landOnOnceVerified =
+    standIn &&
+    status !== "exact" &&
+    standIn.template !== (landOn ?? template) &&
+    matches(standIn.match, ctx) &&
+    !(kind && kindMisfit(standIn.template, kind, ctx)) &&
+    !artReachesCardEdge(getFrameProfile(standIn.template))
+      ? { template: standIn.template, reason: rule.gaps?.[0] === standIn.gap ? textOf(standIn.reason, ctx) : null }
+      : undefined;
+
   // Every anatomy gap that holds: the matched gap rule's own, then the
   // base's later ones (FrameMatch.gaps).
   // A gap the frame it lands on draws (the crown, a two-colour dress —
@@ -2585,6 +2653,7 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
     ...(status !== "exact" && blockedBy ? { blockedBy } : {}),
     ...(onceVerified ? { onceVerified } : {}),
     ...(onceVerifiedMatch ? { onceVerifiedMatch } : {}),
+    ...(landOnOnceVerified ? { landOnOnceVerified } : {}),
     ...(gaps.length > 0 ? { gaps } : {}),
   };
 }

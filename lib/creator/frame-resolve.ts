@@ -355,12 +355,38 @@ export function resolveImportFrame(input: {
  *     an unverified frame is never an exact match to a user, so it becomes
  *     `nearest`, "not yet verified in <colour>", marked `unverified` (the
  *     frame request log's "Not yet verified" cause, TODO 1.6 D1).
+ *   • a match that names another LANDING once it is verified
+ *     (`landOnOnceVerified`: a borderless or extended-art Vehicle lands on
+ *     the bordered Vehicle frame, TODO 4.5c) lands there when it is — the
+ *     match keeps its own frame, status, item and gaps, and says the
+ *     landing's reason — but only in place of a STAND-IN landing: a
+ *     printing on its own frame, verified in the colour with no other
+ *     landing (an extended-art Vehicle the day the extended-art frame is
+ *     verified), stays there.
  * Nearest and unsupported matches otherwise pass through unchanged. Pure.
  */
 export function withVerification<
   T extends Pick<FrameMatch, "status" | "template" | "reason"> &
-    Partial<Pick<FrameMatch, "onceVerified" | "onceVerifiedMatch" | "unverified" | "blockedBy" | "gaps">>,
+    Partial<
+      Pick<
+        FrameMatch,
+        "onceVerified" | "onceVerifiedMatch" | "unverified" | "blockedBy" | "gaps" | "landOn" | "landOnOnceVerified"
+      >
+    >,
 >(match: T, colorKey: string, verifiedKeys: ReadonlySet<string>): T {
+  const landing = match.landOnOnceVerified;
+  if (landing && match.status !== "exact" && verifiedKeys.has(frameComboKey(landing.template, colorKey))) {
+    const onOwnFrame = !match.landOn && verifiedKeys.has(frameComboKey(match.template, colorKey));
+    if (!onOwnFrame) {
+      const rest: Partial<FrameMatch> = { ...match };
+      delete rest.landOnOnceVerified;
+      return {
+        ...rest,
+        landOn: landing.template,
+        ...(landing.reason ? { reason: landing.reason } : {}),
+      } as unknown as T;
+    }
+  }
   let finalized = match;
   if (match.onceVerified && verifiedKeys.has(frameComboKey(match.onceVerified, colorKey))) {
     const { onceVerified, onceVerifiedMatch, ...rest } = match;
@@ -429,8 +455,10 @@ export function finalizeImportMatch<
     pickFrameColorKey(patch.color_identity),
     verifiedKeys,
   );
+  // …or another landing (a borderless Vehicle onto the Vehicle frame).
   const moved =
-    patch.frame_template !== undefined && match.template !== patch.frame_match.template;
+    patch.frame_template !== undefined &&
+    (match.template !== patch.frame_match.template || match.landOn !== patch.frame_match.landOn);
   const finalized: P = {
     ...patch,
     frame_match: match,
