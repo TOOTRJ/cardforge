@@ -33,6 +33,7 @@ import {
 } from "@/lib/creator/form-types";
 import { SECOND_FACE_NAME_HINT } from "@/lib/cards/second-face-name";
 import type { ArtWindow } from "@/lib/cards/art-positioner-window";
+import { secondPartFieldName, type SecondPartWords } from "@/lib/creator/second-part";
 import { PtNotDrawnNote } from "@/components/creator/pt-not-drawn-note";
 
 type LayoutPanelProps = {
@@ -43,8 +44,13 @@ type LayoutPanelProps = {
   /** Live has_back_face flag from the form. */
   hasBackFace: boolean;
   /** True when the Adventure frame repurposes this content as the inline
-   *  adventure spell (copy + which fields show flip accordingly). */
+   *  adventure spell (which fields show flips accordingly). */
   isAdventureFrame: boolean;
+  /** The kind's own words for this second part — "Right half", "Aftermath
+   *  half", "Adventure spell", "Flipped side" (lib/creator/second-part.ts):
+   *  every label, placeholder and accessible name here reads them, so a
+   *  split half is never announced as a "back face" (TODO 5.14). */
+  partWords: SecondPartWords;
   /** Hoisted register("back_face.rules_text") — merged with the caret ref. */
   backRulesTextRef: React.MutableRefObject<PipTextEditorHandle | null>;
   /** Caret-preserving symbol insertion into back_face.rules_text. */
@@ -61,6 +67,7 @@ export function LayoutPanel({
   artWindow,
   hasBackFace,
   isAdventureFrame,
+  partWords,
   backRulesTextRef,
   onInsertSymbol,
   onBackFaceAdded,
@@ -91,10 +98,9 @@ export function LayoutPanel({
               </>
             ) : (
               <>
-                This card only has a front face. Add a back face to make it
-                a double-faced card (DFC). The back face shares the
-                card&apos;s rarity, color identity, and frame style — only
-                the text and art differ.
+                This frame paints {partWords.phrase} on the same card. Add
+                it to give it a name, a cost and rules of its own — it
+                shares the card&apos;s rarity and frame.
               </>
             )}
           </p>
@@ -108,17 +114,17 @@ export function LayoutPanel({
             }}
           >
             <Sparkles className="h-4 w-4" aria-hidden />
-            {isAdventureFrame ? "Add the adventure" : "Add a back face"}
+            {`Add ${partWords.phrase}`}
           </Button>
         </SurfaceCard>
       ) : (
         <>
           <FieldGroup
-            label={isAdventureFrame ? "Adventure name" : "Title"}
+            label={secondPartFieldName(partWords, "name")}
             helper={
               isAdventureFrame
                 ? `The adventure spell's name (shown on the left page). ${SECOND_FACE_NAME_HINT}`
-                : `The second face's name. ${SECOND_FACE_NAME_HINT}`
+                : `The name printed on ${partWords.phrase}. ${SECOND_FACE_NAME_HINT}`
             }
             error={errors.back_face?.title?.message}
           >
@@ -128,42 +134,43 @@ export function LayoutPanel({
                 register-level rules are ignored once a resolver is set. */}
             <input
               {...register("back_face.title")}
-              placeholder={isAdventureFrame ? "Stomp" : "Insectile Aberration"}
+              placeholder={partWords.namePlaceholder}
               className={inputClass(Boolean(errors.back_face?.title))}
               autoComplete="off"
             />
           </FieldGroup>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FieldGroup label="Cost">
-              <Controller
-                control={control}
-                name="back_face.cost"
-                render={({ field }) => (
-                  <ManaCostPicker
-                    value={field.value ?? ""}
-                    onChange={field.onChange}
-                  />
-                )}
-              />
-            </FieldGroup>
+          <FieldGroup label="Cost">
+            <Controller
+              control={control}
+              name="back_face.cost"
+              render={({ field }) => (
+                <ManaCostPicker
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          </FieldGroup>
 
-            <FieldGroup label="Card type">
-              <Controller
-                control={control}
-                name="back_face.card_type"
-                render={({ field }) => (
-                  <ChipGroup
-                    ariaLabel="Back-face card type"
-                    layout="grid-3"
-                    value={field.value}
-                    onChange={(next) => field.onChange(next)}
-                    options={CARD_TYPE_OPTIONS}
-                  />
-                )}
-              />
-            </FieldGroup>
-          </div>
+          {/* The type chips take the panel's full width: beside the cost,
+              in half of it, the nine labels ran into each other
+              ("PlaneswalkerBattle", TODO 5.14). */}
+          <FieldGroup label="Card type">
+            <Controller
+              control={control}
+              name="back_face.card_type"
+              render={({ field }) => (
+                <ChipGroup
+                  ariaLabel={secondPartFieldName(partWords, "card type")}
+                  layout="grid-3"
+                  value={field.value}
+                  onChange={(next) => field.onChange(next)}
+                  options={CARD_TYPE_OPTIONS}
+                />
+              )}
+            />
+          </FieldGroup>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <TypesField face="back" />
@@ -189,12 +196,8 @@ export function LayoutPanel({
                 value={backRulesField.value ?? ""}
                 onChange={backRulesField.onChange}
                 onBlur={backRulesField.onBlur}
-                aria-label="Back face rules text"
-                placeholder={
-                  isAdventureFrame
-                    ? "Stomp deals 2 damage to any target. (The adventure's rules.)"
-                    : "Flying. Whenever the back face deals damage…"
-                }
+                aria-label={secondPartFieldName(partWords, "rules text")}
+                placeholder={partWords.rulesPlaceholder}
                 rows={4}
                 className={textareaClass(false)}
               />
@@ -275,6 +278,7 @@ export function LayoutPanel({
                         artUrl={artUrlField.value}
                         artPosition={artPosField.value}
                         artWindow={artWindow}
+                        fieldAnchor="back_face.art_url"
                         primaryPasteTarget={false}
                         actionSlot={
                           // TODO 1.15: a real printing's art on this face
@@ -312,7 +316,7 @@ export function LayoutPanel({
                 });
               }}
             >
-              {isAdventureFrame ? "Clear adventure" : "Clear second face"}
+              {`Clear ${partWords.phrase}`}
             </Button>
           </div>
         </>
