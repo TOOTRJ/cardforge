@@ -89,7 +89,7 @@ jobs:
   # could never meet them); the `coverage` job merges the shards' blobs and
   # enforces the floors of vitest.config.ts on the whole suite.
   # Six shards, measured (2026-10-12; the slowest shard's test step, across
-  # runner types): three 7.4 min, four 6.7 to 9.5, six 7.2 to 7.3, eight 5.3.
+  # runner types): three 7.4 min, four 6.2 to 9.5, six 5.6 to 7.3, eight 5.3.
   # The hash split is uneven — a handful of bake files are 40 % of the suite —
   # and a shard is never faster than its slowest FILE:
   # tests/unit/render/art-window-coverage.test.ts alone takes 5.5 to 7.5 min
