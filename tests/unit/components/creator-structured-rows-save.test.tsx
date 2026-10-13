@@ -450,28 +450,50 @@ describe("a saga row with a text and no chapter number", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("…but once ANOTHER row is edited that row would be dropped: it is asked for its number", async () => {
+  // Since the 3b.25 follow-up (2026-10-13) such a row is SAVED UNDER ITS
+  // STORED MARKER while its numbers are untouched — it was asked for a
+  // number (or to be removed) as soon as another row was edited: a row its
+  // maker never touched had to change before anything else could be saved.
+  // (creator-saga-marker-followups.test.tsx has the whole of it.)
+  it("…and once ANOTHER row is edited it still saves under its marker: nothing is asked", async () => {
     await openRows(saga(XI));
     await typeRich("saga_chapters.0.text", "One, changed.");
-    await blockedSave();
-    expect(screen.getByRole("alert").textContent).toBe(MESSAGE);
-    expect(screen.getByRole("group", { name: "Chapters of row 2" }).getAttribute("aria-describedby")).toBeTruthy();
-    // Removing it is the other answer.
+    const sent = await sentUpdate();
+    expect(sent.rules_text).toBe("I — One, changed.\nXI — Eleven.");
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(serverAccepts(sent)).toBe(true);
+  });
+
+  it("…removing it is still an answer", async () => {
+    await openRows(saga(XI));
+    await typeRich("saga_chapters.0.text", "One, changed.");
     await clickLabel("Remove chapter row 2");
     expect((await sentUpdate()).rules_text).toBe("I — One, changed.");
   });
 
-  it("the only row, its text edited: the edit is not silently left unsaved", async () => {
+  it("the only row, its text edited: the edit is saved, under the marker it has", async () => {
     await openRows(saga("XI — Eleven."));
     await typeRich("saga_chapters.0.text", "Eleven, changed.");
-    await blockedSave();
-    expect(screen.getByRole("alert").textContent).toBe(MESSAGE);
+    expect((await sentUpdate()).rules_text).toBe("XI — Eleven, changed.");
+  });
+
+  it("…and a number picked for it is the row's", async () => {
+    await openRows(saga("XI — Eleven."));
+    await typeRich("saga_chapters.0.text", "Eleven, changed.");
     await clickLabel("Chapter I for row 1");
     expect((await sentUpdate()).rules_text).toBe("I — Eleven, changed.");
   });
 
-  it("a new card (a remix) with such a row beside numbered ones: asked too", async () => {
+  it("a new card (a remix) with such a row beside numbered ones: saved as its parent prints", async () => {
     await openRows(saga(XI), "remix");
+    const sent = await sentCreate();
+    expect(sent.rules_text).toBe(XI);
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("a row with no marker and no number beside numbered ones (a new saga): asked", async () => {
+    await openRows(saga("I — One.\nII — Two."), "remix");
+    await clickLabel("Chapter II for row 2");
     await blockedSave();
     expect(screen.getByRole("alert").textContent).toBe(MESSAGE);
   });

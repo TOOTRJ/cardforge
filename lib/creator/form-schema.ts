@@ -41,7 +41,14 @@ import {
   SECOND_FACE_NAME_ERROR,
 } from "@/lib/cards/second-face-name";
 import type { FormValues } from "@/lib/creator/form-types";
-import { sagaRowsNeedingNumber, structuredRowsUntouched, type StructuredRulesValues } from "@/lib/creator/structured-rules";
+import {
+  sagaRowsLosingMarker,
+  sagaRowsNeedingNumber,
+  structuredRowsUntouched,
+  type StructuredRulesValues,
+} from "@/lib/creator/structured-rules";
+import { keepsStoredMarker, markerText, unreadableMarkerParts } from "@/lib/cards/face-content";
+import { listPhrase } from "@/lib/creator/save-needs";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -126,6 +133,16 @@ function checkSubtypesText(ctx: Ctx, path: PathSegment[], text: string): void {
 /** What a saga row with a text and no chapter number says (TODO 3b.19): it
  *  used to be dropped by the save without a word. */
 export const SAGA_ROW_NEEDS_NUMBER = "Pick a chapter number for this row, or remove it.";
+
+/** What a saga row says once its NUMBERS were changed while its stored
+ *  marker holds a numeral the editor has no toggle for ("I, XI —"): saving
+ *  would drop that numeral (lib/creator/structured-rules.ts
+ *  sagaRowsLosingMarker). `stored` = the marker as a rules line spells it
+ *  ("I, XI"), `lost` its numerals the editor can't set. */
+export function sagaRowLosesMarkerMessage(stored: string, lost: readonly string[]): string {
+  const numerals = listPhrase(lost);
+  return `This row is stored as “${stored}”, and the editor can’t set ${numerals}. Put its chapters back to keep it as it is, or drop ${numerals}.`;
+}
 
 /**
  * The form's schema. `opened` = an EDIT's values as the form opened with
@@ -297,7 +314,8 @@ export function cardFormSchemaFor(
       const surviving = values.saga_chapters
         .map((row, index) => ({ row, index }))
         .filter(
-          ({ row }) => row.text.trim().length > 0 && row.numerals.length > 0,
+          // (Numbered — or saved under the stored marker it keeps, "XI —".)
+          ({ row }) => row.text.trim().length > 0 && (row.numerals.length > 0 || keepsStoredMarker(row)),
         );
       rulesTextIsSubmitted = surviving.length === 0;
       // A row with a text and no chapter number never saves as a chapter:
@@ -305,6 +323,16 @@ export function cardFormSchemaFor(
       // row, leaving its text unsaved).
       for (const index of sagaRowsNeedingNumber(submitKind, values, opened)) {
         ctx.addIssue({ code: "custom", path: ["saga_chapters", index, "numerals"], message: SAGA_ROW_NEEDS_NUMBER });
+      }
+      // …and one whose numbers were changed under a stored marker the
+      // editor can't write in full is never saved short of it in silence.
+      for (const index of sagaRowsLosingMarker(submitKind, values)) {
+        const marker = values.saga_chapters[index]?.marker ?? "";
+        ctx.addIssue({
+          code: "custom",
+          path: ["saga_chapters", index, "numerals"],
+          message: sagaRowLosesMarkerMessage(markerText(marker), unreadableMarkerParts(marker)),
+        });
       }
       for (const { row, index } of rowsUntouched ? [] : surviving) {
         if (row.text.trim().length > 600) {

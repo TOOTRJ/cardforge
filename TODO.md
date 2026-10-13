@@ -41,14 +41,19 @@
 
 ## Frames & card creation plan (2026-09-24)
 
-**What is open** — generated 2026-10-13 from the boxes below (main `1fea29ee`,
-PRs to #532 merged; top-level items only). A "partly" item is open and its
-first sentence says what is left. 171 done, 139 open (26 P1, 59 P2, 54 P3).
+**What is open** — generated 2026-10-13 from the boxes below (main `65b2d7b0`,
+PRs to #534 merged; top-level items only). A "partly" item is open and its
+first sentence says what is left. 173 done, 138 open (27 P1, 58 P2, 53 P3).
 Counted since the 2026-10-12 table: 4.30b (added by #515), 3.34–3.36 (added
 by #523) and the fourteen follow-ups of 2026-10-13 (1.24, 3.37, 3b.24–3b.28,
-4.5f, 5.17, 5.18, 7.13–7.16; 7.16 is done, #532). Open PRs, their items
-still open here: #534 (3b.25, under its independent check) and #533 (3b.26,
-waiting on two owner decisions).
+4.5f, 5.17, 5.18, 7.13–7.16; 7.16 is done, #532). Since this morning's
+table (171 done, 139 open): 3b.26 is done (#533); 4.28 (foil-etched) is
+closed as DECLINED by the owner — a ticked box, so it counts as done though
+nothing was built; 4.27a (Spacecraft, P1) is new, from the frame roadmap of
+2026-10-13 at the head of Phase 4. 3b.25 is still counted open: #534 merged
+on 2026-10-13 and its box is ticked with its follow-up (#539); the next
+status pass counts it. Open PRs, their
+items still open here: #535 (1.24), #536 (5.17), #537 (7.13, 3.37).
 
 | Phase | Done | Open | partly | P1 | P2 | P3 |
 |---|---|---|---|---|---|---|
@@ -56,14 +61,15 @@ waiting on two owner decisions).
 | 1 Import | 20 | 4 | 3 | 1 | 3 | – |
 | 2 Admin walk-through | 4 | 1 | – | – | – | 1 |
 | 3 Parity | 23 | 16 | 6 | 2 | 10 | 4 |
-| 3b Creator wizard bugs | 13 | 15 | 3 | 1 | 5 | 9 |
-| 4 Frame factory | 48 | 56 | 17 | 17 | 21 | 18 |
+| 3b Creator wizard bugs | 14 | 14 | 3 | 1 | 4 | 9 |
+| 4 Frame factory | 49 | 56 | 17 | 18 | 21 | 17 |
 | 5 Two-sided cards | 15 | 16 | – | – | 7 | 9 |
 | 6 Creator polish and print | 12 | 25 | 5 | 5 | 12 | 8 |
 | 7 Ops and QA | 10 | 6 | – | – | 1 | 5 |
 
 Phase 3 also has two open owner sub-steps under 3.14b; three of Phase 4's open
 items are parked by the owner (4.8c, 4.8d, 4.8e) and one is ask-first (4.30b);
+one of Phase 4's done items is declined, not built (4.28, foil-etched);
 7.10 is held by the owner; 7.14 is the owner's GitHub setting.
 
 Open P1, by number (what each still needs; the item's first sentence has the
@@ -74,7 +80,9 @@ detail):
   4.40; the suite itself is merged, #514), 3.12 (a standing rule, nothing to
   build: each open correction ships with its own scoped sweep bump).
 - Phase 3b: 3b.15 (the Nyx dress on an Enchantment token — waits on 4.51).
-- Phase 4: 4.1 (the per-template `frame.json` and its codegen), 4.3
+- Phase 4: 4.27a (Spacecraft and Planets, the station frame — the owner's
+  first priority, 2026-10-13; nothing is built: the frame roadmap at the head
+  of Phase 4), 4.1 (the per-template `frame.json` and its codegen), 4.3
   (colour-indicator overlay, published half / page masks, CC bounds in
   profiles), 4.5 (parent of 4.5b, 4.5d–4.5f), 4.5b (walker bodies — ask the
   owner first), 4.6 (parent of 4.6c, 4.6e–4.6g), 4.6f (crowns and pairs on
@@ -119,19 +127,22 @@ large pips as printed (3.21, #523, **layout v53**, a sweep; 3.32 and 3.33
 closed by the owner, 3.34–3.36 recorded); an emptied field is cleared on an
 edit and an untouched one is never changed (#524, #528); CI — the unit suite
 in six shards, the two slowest groups split (#521, #522, #525);
-`supabase/seed.sql` refreshed from production's ticks (7.16, #532). **Open
-PRs:** #534 (3b.25: walkers of seven or more lines and sagas past chapter VI
-cannot be saved; the unnumbered-row message; the footer helper copy — under
-its independent check) and #533 (3b.26: a remix of your own card keeps its
-frame — waits on two owner decisions: 2 credits for the remix of an own
-double-faced card, and whether an own emblem can be remixed). **Held / ask first:** 6.29 (the stepper) stays the LAST task, ask
+`supabase/seed.sql` refreshed from production's ticks (7.16, #532). **Merged
+since (2026-10-13):** #533 (3b.26: a remix of your own card keeps its
+frame) and #534 (3b.25: walkers of seven or more lines and sagas past
+chapter VI can be saved; its box is ticked with its follow-up, #539, and
+counted at the next status pass). **Open PRs:** #535
+(1.24), #536 (5.17), #537 (7.13, 3.37). **Frame roadmap (2026-10-13):** at
+the head of Phase 4 — Spacecraft first (4.27a), foil-etched dropped
+(4.28). **Held / ask first:** 6.29 (the stepper) stays the LAST task, ask
 first; the walker follow-ups 4.5b, 4.19, 4.33, 4.33a and 5.13 — ask first;
 4.30b (the 1993 white border) — ask which printing first; 7.10 is held;
 4.8c, 4.8d and 4.8e stay parked. **Declined by the owner, recorded as
 closed:** the grey corner arc a white-bordered card shows on five surfaces
 (deck modal and its picker, marketing hero, featured creators, moderation
 list — round 47, under 4.30), a rim for black symbols on the white old
-frames (3.32), an own Phyrexian path (3.33). **Layout version:** v53; the
+frames (3.32), an own Phyrexian path (3.33), the foil-etched frame
+treatment (4.28, 2026-10-13). **Layout version:** v53; the
 next migration is `0138`. **Owner steps:** `supabase/seed.sql` mirrors
 production as read on 2026-10-13 (313 combos, #532), and it shows the ticks
 the earlier paragraphs listed as owed: `agclassic` and `alphaland` (v48),
@@ -1021,7 +1032,7 @@ Open decisions are marked **[decide]**; none blocks its phase.
         - **6.23 (+ 4.52):** every emblem bullet — `layout: emblem` → the emblem kind, the title without " Emblem", the printed subtype rule, the M20 / 2014–19 / 2003 emblem answers, the one-offs; `no-card-type` still answers emblems `unsupported` (nearest M15) and an emblem import keeps the previous kind until then. **Built 2026-09-29 (`feat/emblems`, 6.23's Status):** all of it; `no-card-type` no longer sees an emblem ("Emblem" is the emblem card type), and `tests/unit/scryfall/emblem-imports.test.ts` resolves every one of the 141 printings.
         - **3b.15:** the type picker that reads the imported words; rarity chips hidden for tokens (owner decision 8).
         - **5.5:** 5.0 design 2026-10-02: double-faced tokens stay the token front + toast until 5.5; the 121 paper printings are counted there.
-- [ ] **1.24 [P2] A remix never lands a text on a textless height — guard it before `m15textless` is ticked** (follow-up 2026-10-13, from #529's check; as relayed, reproduce first) — Since #529 the AI deck remix takes the import's VERIFIED landing (`remixFrameFor` → `finalizeImportMatch`). No textless template is verified today, so nothing can go wrong yet; the day one is ticked, a remix of a textless printing would land on it while the remix itself writes rules or flavour text. Before that tick: the remix (and `resolveGeneratedFrame`) refuses a `textless` profile for a card that carries text, as the token path already does (`tokenHeightForText`: 0 texts on a textless height over 8,661 saves in #529's check), with a test over the verified-list variants. No stored card changes.
+- [x] (done 2026-10-13, `fix/remix-textless-guard`; as built at the end of this item) **1.24 [P2] A remix never lands a text on a textless height — guard it before `m15textless` is ticked** (follow-up 2026-10-13, from #529's check; as relayed, reproduce first) — Since #529 the AI deck remix takes the import's VERIFIED landing (`remixFrameFor` → `finalizeImportMatch`). No textless template is verified today, so nothing can go wrong yet; the day one is ticked, a remix of a textless printing would land on it while the remix itself writes rules or flavour text. Before that tick: the remix (and `resolveGeneratedFrame`) refuses a `textless` profile for a card that carries text, as the token path already does (`tokenHeightForText`: 0 texts on a textless height over 8,661 saves in #529's check), with a test over the verified-list variants. No stored card changes. **As built:** reproduced first, and the relayed case is only half true. The profiles flagged `textless` are `m20token` / `m20tokenartifact` alone; `m15textless` / `m15textlessland` carry no flag and DRAW their type line and rules on the art (`edge-to-edge-bake.test.tsx` bakes it), so a remix landing there never hid a text. The real hole was the height rule's last line: a text on a textless token height when no text box is published in the colour (a printing or an own card; never on production's list, where every colour of every height is ticked). ONE guard where both remix paths save, `remixSavedFrame` (`lib/creator/frame-resolve.ts`): a `textless`-profile landing with text gives way to the printing's landing with those frames read as unverified (the registry's own stand-in), an own token to the same arch (`ownCardTextStandIn`: `m15token` / `m15tokenartifact` by its type words), else an own card to the default landing, where its gates pass; no text, or no stand-in, and the landing stands. `resolveGeneratedFrame`'s random pool takes the same test (one filter). Sweep, before against after: 393 recorded printings in the unit test and 3,193 live ones (6,386 saves a list) — 0 differences with production's list and with every template ticked, 848 with no token text box published (all 848 a hidden text before, none after). Flagging `m15textless*` `textless` (4.37 / 4.42) extends the guard to that family with no other change (`remix-textless-guard-flagged.test.ts`). `docs/FRAMES.md` "Import and the AI remix (5.4)" has the landings table. No stored card changes, no bump.
 
 ### Phase 2 — Admin walk-through of the stepper (3–5 days)
 
@@ -1277,7 +1288,7 @@ Owner decisions 2026-09-28 (the nine PR questions, PR #395):
 - [ ] **3.35 [P3] The 2003 title bar's lower bevel against print** (owner round 51, 2026-10-12: accepted for v53, look later) — The independent check of #523 found the 85 px large cost disc's shadow about 4 HD px from the dark lower bevel of our `modern` title bar, where the prints leave about 20 px of bar below the disc; the gap above the disc matches the print (about 17 px), so the bevel of our master is thicker than the print's. It predates v53 and no stored public card on the 2003 frame carries a large pip. Measure the bar's bevel on prints (CHK → JOU) against `scripts/lib/eighth-2003.mjs`'s cut; a master change is a correction with its own before / after. Same round: the shadow under a large disc STAYS proportional (8 px under 85; the prints read 7.0 ± 0.3 on 61 discs — owner: keep as built).
 - [ ] **3.36 [P3] The colourless hybrid `{C/W}`** (owner round 51, 2026-10-12: record only) — One printed card (Ulalek, Fused Atrocity, M3C) sets a colourless / colour split disc. The tokenizer reads `{C/W}` as an unknown symbol on a plain disc (the slash-less `{CW}` does draw a split disc); supporting it is its own layout bump with `isLargePip` and a frozen v53 predicate left as it is.
 - [ ] **3.34 [P3] The plain M15 cost pip prints at 70 px, we draw 73** (owner round 49, decision 7, 2026-10-12: a TODO item only — confirm on a wider sample first, change nothing) — The measuring pass for 3.21 read the PLAIN cost pip of the M15 frame at 70.3 ± 2.1 HD px (83 discs; 70.0 ± 0.9 on the 31 best fits; an independent area reading 70.2; 2014–19 70.1, 2020–22 70.6, 2023–26 70.2), where `COST_DISC_PCT` (0.0485, layout v32) draws 72.75 → 73. The same fit reads the 2003 frame's pip at 66.1 (we draw 66), the 1993 frame's at 72.2 (72) and the 1997 frame's at 71.9 (73). The sample was chosen for its LARGE pips (hybrid and Phyrexian cards), most plain pips on it were fitted through their shadow only, and round 43 called its own M15 fits unreliable — so: measure plain pips on a sample chosen for them (mono-coloured commons across 2014 → today, 30+ prints), by the circle fit and by the area reading, before proposing 70. It would re-bake nearly every M15-family card with a cost (a correction: a sweep after the owner's before / after), and with it the large pips' step on `"modern"` becomes 85/70. `docs/FRAMES.md` "The large pips".
-- [ ] **3.37 [P3] Preview ⇄ bake differences the parity suite found and did not fix** (follow-up 2026-10-13, from #514) — `tests/parity/thresholds.ts` describes six `KNOWN_DIFFERENCES` (at HD the preview's text sits 1–3 px above the bake's; at 750 px a 5+ pip cost row is 2–3 px wider in the preview, and the emblem name, the 1997 type line, an italic flavour line and the artist line end 3–5 px apart), and two more were seen and are not listed there: a walker's cost row of Phyrexian symbols at 750 px (record it as a described known difference, with its bounds, or fix it), and art at a zoom above 1 sitting 1 CSS px further right in the preview (+1 at 750, +2 at HD; 0 at the default position). Each fix is a renderer change: the preview's alone where it can be (no bump), otherwise a scoped sweep bump (3.12); a fixed difference is struck from the list — the suite fails once nothing needs it. Never raise a limit.
+- [ ] **3.37 [P3] Preview ⇄ bake differences the parity suite found and did not fix** (follow-up 2026-10-13, from #514) — `tests/parity/thresholds.ts` describes six `KNOWN_DIFFERENCES` (at HD the preview's text sits 1–3 px above the bake's; at 750 px a 5+ pip cost row is 2–3 px wider in the preview, and the emblem name, the 1997 type line, an italic flavour line and the artist line end 3–5 px apart), and the two that #514 saw and did not list are listed since 2026-10-13 (test/parity-baseline-format, re-measured on main after #523 — the numbers had not moved): (a) the walker's detached cost of five Phyrexian symbols at 750 px — the row starts 4 px further LEFT in the preview and its region measures mad 32.9 against a limit of 31 (hot 24.8 %; HD: 0,1 · 5.2) — is the case `m15pw/w/planeswalker-long@phyrexian-cost-5` with two known differences (`750-walker-phyrexian-cost-start`, dx −5 … −3; `-mad`, 31 … 35): the eight are the open list; (b) art at a zoom above 1 sits further right in the preview by +1 px at 750 and +2 at HD at every zoom and focal point measured (1.2, 1.3, 1.6 and 3; 0 at zoom 1 whatever the focal point) — INSIDE the limits, so it is a described `WITHIN_LIMIT_DIFFERENCES` pair over five cases (a new one at zoom 3), which the unit run holds to the recorded offsets. What the grid lines of the coded picture say: the bake's zoomed picture is where the arithmetic puts it in yoga's whole-pixel window, the preview's is +0.6 CSS px from that at zoom 1.3, +0.7 at 1.6, +1.0 at 3 — Chromium snaps an untransformed picture's box to whole pixels (as yoga does) and scales a transformed one from its fractional box; both renderers are given the same three declarations, so no one-line fix was found, and at the maximum zoom (4) it may pass the HD limit (no case measures it). Each fix is a renderer change: the preview's alone where it can be (no bump), otherwise a scoped sweep bump (3.12); a fixed difference is struck from the list — the suite fails once nothing needs it. Never raise a limit.
 
 ### Phase 3b — Creator wizard bugs (1 week, parallel with Phases 1–3)
 
@@ -1436,7 +1447,8 @@ Owner decisions 2026-09-28 (the nine PR questions, PR #395):
 - [ ] **3b.22 [P3] Rules editor leftovers** (owner-approved follow-up 2026-10-12, from #505's review; #500, #502 and #505 fixed the rest) — What the rules text box still does: (1) a click on the right half of a symbol puts the caret in FRONT of it; (2) the first character typed at a caret host cannot be undone; (3) Shift+→ needs an extra press at a host; (4) Android soft keyboards bypass the keydown-only delete and arrow handling — handle `beforeinput` `deleteContentBackward` / `deleteContentForward`; (5) Cmd+Z does not restore a symbol removed with Backspace. Creator only.
 - [x] (done 2026-10-13 — #530 merged, owner round 52: a second part's art box is hidden while empty wherever the profile has no `secondFace.artSlot` — flip and adventure (`lib/creator/second-part-fields.ts`, held to both renderers by `tests/unit/render/second-part-never-drawn.test.tsx`). A flip side that already HOLDS a stored picture still shows the box, by the owner's rule that a stored value is what shows a field; the panel is `panels/second-part-panels.tsx` since #526) **3b.23 [P3] Flip's second-face art uploader stores a picture nothing draws** (owner-approved follow-up 2026-10-12) — On a flip card the second-face panel (`components/creator/panels/layout-panel.tsx`) offers an art uploader, and the picture it stores is drawn by neither renderer. Hide the uploader on flip.
 - [ ] **3b.24 [P3] Field groups that say their name twice to a screen reader** (follow-up 2026-10-13, from #518) — #518 made every set of chips a named group (`FieldGroup` `kind="group"`, 24 fields) and dropped the AI fill dialog's inner group because it repeated the field's name. The same doubling is left where a group holds one control with the group's own name (as relayed from the review: check the uploader fields, the rules editor under "Rules text", the cost picker). Listen with VoiceOver / NVDA first, then name the inner control for what it is or drop its name. Creator only; no bake pixel. With 3b.10 and 6.7.
-- [ ] (IN REVIEW 2026-10-13 — PR #534 open, `fix/creator-structured-rows-save`, under its independent check; do not tick before it merges) **3b.25 [P2] A walker with seven or more lines and a saga with chapter VII or later cannot be saved from the editor** (follow-up 2026-10-13, from #528's check; same on `main` before it) — The dual write turns a stored text into rows, and the server refuses more than six rows / a numeral past VI, so the save is refused and nothing is written. With it: a saga row that holds a text and no chapter number is dropped by a save with no message when other chapters are numbered — say so and point at the row; and the Subscriber step's footer helper copy now that an untouched footer stays NULL (#528: blank = no footer mark, untouched = the profile default).
+- [x] (done 2026-10-13 — #534 merged: an untouched walker / saga past what `face_content` stores keeps its text byte for byte with `face_content` not sent, an edited one saves as plain text the renderers parse back, a saga row with a text and no chapter number says "Pick a chapter number for this row, or remove it." instead of being dropped, and the footer helper says what an untouched footer follows) **3b.25 [P2] A walker with seven or more lines and a saga with chapter VII or later cannot be saved from the editor** (follow-up 2026-10-13, from #528's check; same on `main` before it) — The dual write turns a stored text into rows, and the server refuses more than six rows / a numeral past VI, so the save is refused and nothing is written. With it: a saga row that holds a text and no chapter number is dropped by a save with no message when other chapters are numbered — say so and point at the row; and the Subscriber step's footer helper copy now that an untouched footer stays NULL (#528: blank = no footer mark, untouched = the profile default).
+  - **Follow-up (2026-10-13, `fix/saga-marker-followups`, from #534's independent check — in review, not merged):** (1) a save blocked by a saga row's chapter numbers moves the focus to the first such row's chapter group (its step opened, scrolled to the middle of the view) and lists the rows above Save as links to them — the row's own `role="alert"` is the one announcement; (2) an EDITED save keeps the marker of every row whose numbers were not changed, order and unreadable numerals included: the row carries its stored marker (`SagaChapterFormValues.marker`, set by `sagaEditorRows` only where the numbers alone would not give it back) and `submittedRulesOf` writes it while `keepsStoredMarker` — "II, I" as `face_content` numerals `[2, 1]`, "I, XI" as plain text — and numbers changed on a marker that mixes readable numerals with one the editor can't set are blocked on the row ("…stored as “I, XI”…", with "Drop XI" as the named way through); the server's `plainTextRows` reads such a text by marker so an untouched row keeps its characters; (3) a walker whose loyalty badges touch on its frame (`lib/creator/walker-crowding.ts`, read from the layout: 9 one-line rows on `m15pw` and the regular borderless box, 11 on the tall one) gets a one-line note under its rows. From #539's independent check: a row a save wrote from its numbers forgets its marker in that save (kept until the refresh, the numbers put back in that window wrote the OPENED marker again — "XI —" back on a row just saved as "II —"), the refresh of an earlier save no longer wipes a blocked Save's message (`keepErrors` on the keyed same-card reset), and "Drop XI" leaves the focus on the row's chapters. No stored card is rewritten, no renderer changes. Left as it was: an edited save still writes every row's line in the canonical SPELLING ("I,II —" → "I, II —", "−2:" → "-2:"), which draws the same.
 - [x] (done 2026-10-13 — #533 merged; owner 2026-10-13: an own double-faced card is remixed with both faces for 2 credits, as built; an emblem, own or printed, is NOT remixed. `ownCardRemixFrame` keeps the source's template where the save's gates pass it; an emblem is left out at plan time (`emblems` in the estimate, one line in the dialog, no step, no charge) and an older plan's emblem step is refused before any AI call. `docs/FRAMES.md` "Import and the AI remix (5.4)". Left open: the empty second art window on a kept aftermath / split card, and the back picture generated fresh rather than restyled) **3b.26 [P2] A remix of your own card keeps its frame** (follow-up 2026-10-13) — Remixing a card the maker owns should open on the frame the card is stored on, not on a frame re-derived for the kind. Creator only; no stored card changes.
 - [ ] **3b.27 [P3] The signed-in header overflows between about 768 and 880 px** (recorded 2026-10-13, owner to confirm priority; found on `main` by #520's check) — With a session the site header's row is wider than the viewport in that range (the nav, the search and the account controls together), so the page scrolls sideways or the row is cut. Measure at 768 / 820 / 880 px signed in as each plan, then collapse to the mobile nav earlier or let an item give way. Site chrome; no card pixel.
 - [ ] **3b.28 [P3] A focused field can sit under the creator's sticky Save bar** (recorded 2026-10-13, owner to confirm priority; found on `main` by #520's check) — Tabbing or a "still needed" link can focus a field that the sticky Save bar covers (WCAG 2.2 "Focus Not Obscured"). Give the creator's scroll container a `scroll-padding-bottom` of the bar's height (and the sticky Face switch's at the top), and check the focus jumps of `saveNeedsOf`'s links at 1440 and 375 px. Creator only. With 6.29's layout if that comes first.
@@ -1446,6 +1458,178 @@ Owner decisions 2026-09-28 (the nine PR questions, PR #395):
 4.1–4.3 are the machine, 4.4 the first product, 4.5–4.9 the capabilities the
 rest of the catalogue needs, 4.10–4.11 the catalogue itself.
 
+**Frame roadmap (2026-10-13)** — a research and planning pass (docs only,
+main `65b2d7b0`): what is still to build, sized and ordered. Owner
+directions of 2026-10-13: **Spacecraft go first** (4.27a below);
+**foil-etched is dropped** (4.28, closed as declined). The full report —
+every Scryfall query, the 260-row Card Conjurer table, four annotated
+Spacecraft scans — is `design-backup/frame-roadmap/ROADMAP-2026-10-13.md`
+(the owner's backup folder, not the repo). Counts: Scryfall's public API on
+2026-10-13, printings (`unique=prints`, extras and variations included).
+Demand is NOT in this ranking: the request log (1.6, `frame_requests`) is
+readable by admins only, and nothing in the repo exports it — the order
+below ranks by printings and effort until the owner pastes the log's top
+rows from `/admin`.
+
+*Have all of Card Conjurer's frames been added? No.* Card Conjurer (the
+fork the importer pins, `Investigamer/cardconjurer@2fcddba`, June 2024)
+offers **260 frame packs** in 15 groups (its `js/frames/pack*.js`; 4,423
+image references; the tree was listed from the public repository at that
+commit — no checkout is kept, nothing was copied into this repo). Sorted by
+what PipGlyph has, read from the importer's recipes and
+`lib/cards/frame-sources.json` (not a pixel comparison):
+
+| Status | Packs | What it means |
+|---|---|---|
+| Built | 34 | The pack's masters are in the frames bucket and a template (or overlay) draws them: the M15 family, snow, devoid, Vehicle, crowns, stamps, borderless spell / artifact / land / walkers, the double-faced bodies, saga, adventure, aftermath, flip, split, battle, the 2022 full-art basics, six token packs, the emblem, the 1997 and 2003 frames. |
+| Covered | 14 | The printed look exists in PipGlyph from a twin pack or another source: Card Conjurer's older M15 drawings (4 packs), the walker icon set, and nine packs whose look PipGlyph draws from MSE or its own drawing (the 1993 frame ×2, Fifth Edition's white border, LTR ring, LTR scroll, THB constellation, BFZ expeditions, ZNR showcase, extended art). |
+| Partly | 4 | Borderless light-box spells (only its box is used), colour-indicator pips (on transform backs only), coloured borders (white on the old frames only), the tall bordered walker (only its masks are read). |
+| Not built, in scope | 140 | 36 set-showcase families (44 packs), Universes Beyond (10), double-faced variants (10: Phase 5's 5.5 / 5.7), walkers (9, ask-first), nickname frames (8: 6.3), borderless and promo boxes (7), 4.15's Un-set / oversized / Future Sight (9), the P3 tail (14), Nyx and inner crowns (4), per-set full-art basics (5), class / case / leveler (3), prototype (2), extended art (2), textless (2), saga dresses (2), marks (2), mutate, fuse, old tokens, Fourth Edition, the ZNR expedition, and Card Conjurer's own "clear text box" look (2). |
+| Declined | 6 | Foil-etched (5 packs: owner 2026-10-13, 4.28) and Card Conjurer's 'Regular' token box (matches no print, owner 2026-09-29). |
+| Community designs | 40 | Not printings: Classicshifted (8), M15-Eighth (4), Brawl crowns (3), Neon, Circuit, Celid's Asap, Magrao's and FeuerAmeise's Kaldheim / Ixalan, floating old border (2), Seventh-edition sagas / walkers / snow lands / textless, deck covers, "Tapped", and others. Not on this roadmap unless the owner asks (question 7). |
+| Not needed | 14 | Print margins (12: PipGlyph extends its own bleed), card backs, MDFC helper cards. |
+| Out of scope | 8 | Flesh and Blood (7), Pokémon (1). |
+
+Card Conjurer has **no** pack for anything printed after June 2024: no
+station (Spacecraft, Planet), Room, Omen or Prepare. Four files its packs
+name are missing from its own tree (`m15/new/ub/c.png`,
+`m15/new/fullart/c.png`, `saga/ub/sagaMaskTitle.png`,
+`token/Initiative/initiative.png`).
+
+*The blocks, sized.* S = an importer recipe and a profile on a body that
+exists (the Vehicle frame, #519). M = new anatomy in both renderers (the
+white border #515, the full-art tokens #428 / #436). L = a new layout end to
+end (the saga #473, split and battle #474, the double-faced bodies
+#460–#470). "Printings" is what the block would move from `nearest` to its
+own frame.
+
+| # | Block (item) | Source | Printings | Work | Size | Owner call first |
+|---|---|---|---|---|---|---|
+| 1 | **Spacecraft and Planets — the station frame (4.27a)** | Not in Card Conjurer. MSE has 375-px pieces only (a plate 135 × 76, a badge 73 × 74). Masters: PipGlyph's own recipe from the M15 masters in the bucket, the badge and plate our own drawing. | 91 station printings (88 paper; 36 cards). The bordered frame: 61 (46 Spacecraft + 15 Planets). Extended art 13, borderless 2, showcase 11. | Two new templates, a new `tiers` anatomy in both renderers and the rules layout, a tier-rows editor, the import. | L (+ an S first) | Q1–Q4 |
+| 2 | Universes Beyond (4.25) | CC: 'Universes Beyond' new 40 images at 2010 × 2814, its crowns 9, the triangle stamps 9; extended 35, full 34, saga 10, spree 18, basics 15. `c` is missing. | 3,784 on the plain dress before 2025-09 (`is:universesbeyond frame:2015 -frame:showcase -frame:extendedart -border:borderless -is:token date<2025-09-01`); 1,124 extended art; 254 sagas. | Skins of m15 / m15artifact / m15land, their crown, the triangle stamp notch. No new anatomy. | M | Q5 |
+| 3 | Nyx: `m15nyx` + the Nyx and companion inner crowns (4.7) | CC: 'Nyx' new 7 masters at 2010 px, inner crowns 14 (1353 × 64). | 1,611 non-token (`frame:nyxtouched frame:2015`), 1,053 of them plain black-bordered non-saga. | A skin of m15, borrowed by Enchantment Creature / Artifact; the inner crown is an overlay on the crown's machinery. | S | – |
+| 4 | Extended art from CC (4.7; re-sources `extendedart`) | CC: 'Extended Art' new 17 masters at 2010 px (with `c` and `v`), short box 18. | 4,236 (`frame:extendedart`); 2,518 non-UB spells. | A correction of a template that exists (bump, sheet, sweep) — no colour of it is verified today. Unblocks 4.5f's Vehicle plate (49), the extended-art Spacecraft (13) and UB extended. | S–M | Q6 |
+| 5 | Textless: borderless (4.37 / 4.35) and black-bordered promos (4.42) | CC: 'Generic Showcase' textless 8 + plates; 'Magic Fest Promos' 10. | 291 (`is:textless`); 66 borderless, 62 black-bordered non-basic on the 2015 frame (37 after 4.42's exclusions). | Two profiles on 3.24's `textless` flag; `m15textless` is a correction. | S + S | Q6 |
+| 6 | Full-art basics per set (4.40, 4.41) | CC: ZEN 21, SNC 17, snow 8, THB 10 (all 1500 × 2100). | 640 black-bordered full-art basics; 4.40 names 127, 4.41 31. | 4.41 a profile; 4.40 the split type bar and the medallion on three or four looks. Closes 3.11's last parity case. | S + M | – |
+| 7 | Enchantment tokens: the Nyx dress (4.51) | CC: the 2014–19 token Nyx masters 14; the M20 pill starfield is a composite. | 17 by Scryfall's effect (32 by the item's own list). | A dress on six token templates, a creator toggle, the import. Closes 1.23 and 3b.15. | M | – |
+| 8 | Leveler (4.5e) | CC: 16 masters + 11 P/T boxes. | 63 (`layout:leveler`). | Reuses the station's bands; three P/T boxes. After block 1. | M | – |
+| 9 | Class and Case (4.5e) | CC: 13 images, one body for both. | 71 + 27 (`layout:class`, `layout:case`). | A new layout: the art column, the level rail, `face_content.class.levels`, a kind. | L | – |
+| 10 | Prepare (4.27) | Not in CC or MSE: synthesised from the adventure master. | 124 (`layout:prepare`; 95 plain). | A template on the `adventure` anatomy with the page on the right, a kind, the import keeping the spell half. | M | Q8 |
+| 11 | Room (4.27) | Not in CC; MSE `magic-m15-split-fusable` (low-res). | 63 (`t:room`; 53 plain). | A landscape layout with one picture, one type line, two doors. | L | Q8 |
+| 12 | Omen (4.27) | Not in CC; MSE's omen pages (low-res). | 37 (`t:omen`). | A page dress on the adventure body. | S–M | Q8 |
+| 13 | Marks: miracle, companion, lesson (4.7) | CC: miracle 8 (1380 × 1118), companion crowns 7; lesson has none. | 50 + 65 + 104. | Overlays a card switches on (4.6's plumbing). | S | – |
+| 14 | Spree (4.7) | CC: 16 at 2010 px. | 33. | The mode list with a cost per mode: a rules-layout row kind. | M | – |
+| 15 | Colour indicator on ordinary cards (4.6c) | Our own vector (built for the transform backs). | 130 (`has:indicator -is:dfc`); 95 on the 2015 frame. | The switch and the type line's indent. | S | – |
+| 16 | Crowns and pairs on adventure and saga (4.6f) | CC crowns, cut per body as 5.1d did. | Not counted. | Two overlays. | S + S | – |
+| 17 | Collector line and stamp, wave 2 (4.9d) | Profile data; a few notch pieces. | About 30 templates. | Per template; the landscape frames need a turned line. | S × 2, M × 1 | – |
+| 18 | Saga dresses (4.5d): textured saga, UB saga, LTR scroll saga | CC: `saga/nyx` 7, `saga/ub` 10, `saga/ltr` 9. | 189 sagas since 2025-04; 254 UB; 10 LTR. | New templates on the saga rail. | S each | – |
+| 19 | The saga-creature body (4.5d) | No master anywhere: synthesised. | 71 in FIN / FIC (`t:saga t:creature`, those sets). | A second text box under the rail and a P/T. | M–L | – |
+| 20 | Prototype | CC: 24 masters. | 49. | A second cost and P/T in an inset band. | M | – |
+| 21 | Mutate; Fuse | CC: 8 masters; 10. | 146; 46 (`kw:fuse`). | A mutate line above the box; a bar across the split. | M; S | – |
+| 22 | Per-part colour (4.26) | Split / aftermath: no asset. Adventure: CC's book masks. | 178 multi-colour splits, 97 aftermath, 460 adventures. | A second colour through a seam or a mask. | M + M | Its **[decide]** |
+| 23 | Borderless variants (4.37): light box, short and mid boxes, dark and shadow-box lands, tokens | CC: 'Borderless' 8, 'Extra Short' 29, 'Borderless Frames' 19, token 18. | 519 light-box (the item's count); 20 tokens. | A profile each. | S × 4 | – |
+| 24 | Text on art (4.36) | Derived from CC `m15/borderless`. | 247 + 50 (the item's counts). | Outlined ink, a gradient scrim. | M | – |
+| 25 | Old-frame extras (4.10d, e, f, h; 4.43) | CC `8th/c`, Seventh as it is, 'Original' tokens 13. | 397 old-frame tokens; the rest not counted. | d, e, f and 4.43 a recipe each; h the 1993 frame's two-line footer. | S × 4, M × 1 | 4.30b: ask first |
+| 26 | Token leftovers (4.48, 4.53, 4.55) | CC for the pill crown; none for the tall arch. | 60 legendary tokens; 21 tall-box. | The art slot is a correction; small caps stay parked with 4.8e. | S, S, M | – |
+| 27 | P3 tail: The List stamp, colour-shifted, playtest, Jumpstart fronts, full text, the nickname line (6.3) | CC has each (15 packs). | The List 5,663 (one small stamp); colour-shifted 64; Jumpstart fronts 92. | Mostly a recipe each. | S each | – |
+| 28 | Planeswalkers — **ask first**: tall bordered, compleated, extended-art body, Ghostfire body, the dark-bar dress, the rows (4.19), the outline re-cut (4.33a), double-faced walkers (5.13) | CC: tall 7, compleated 12, box topper 8, MDFC / transform 33. | 1,573 walkers on the 2015 frame; 56 compleated-cost printings. | Sized, not scheduled. | S, S, S, M, M, M, S, M | Q9 |
+| 29 | Showcase families (4.11): the nine contradicted MSE profiles, and 36 families Card Conjurer has that PipGlyph has not | MSE (744 px); CC (44 packs, most 1500 px). | 3,200 (`frame:showcase`), spread thin. | A correction each for the nine; a new template each for the 36, some with their own plate and crown. | S–M each | Q6, Q10 |
+| 30 | 4.15: Future Sight, Un-sets, oversized | CC: Future Sight at 744 px only; Unstable / Unhinged basics, attractions, planes, Vanguard, dungeons, conspiracies. | 252 + 666 silver-bordered + 559 oversized. | New card sizes and layouts. | L in sum | – |
+| 31 | Borderless layout cards (4.38) | No source: derived. | 71 sagas, 36 adventures, 11 class / case / room, 28 mutate. | A derived master each. | M each | – |
+
+Foil-etched (849 printings, `frame:etched`) is not on the list: its
+printings keep landing as the nearest frame with the `etched` gap.
+
+*The order.* About four builds run at once; each is followed by an
+independent check, an owner review round and (for bucket frames) the
+owner's promote.
+
+- **Wave 1:** 4.27a step 0 (the import says `nearest` and logs the request
+  — an hour, no asset) and step 1 (the station body); beside it Universes
+  Beyond (block 2), `m15nyx` and the inner crowns (3), extended art from CC
+  (4). They do not touch the same code: the last three are recipes and
+  profiles.
+- **Wave 2:** leveler on the station's bands (8); the two textless frames
+  (5); the full-art basics (6); the token Nyx dress (7); and one small
+  build on wave 1's extended-art masters — 4.27a's step 2 (the
+  extended-art Spacecraft) with 4.5f's Vehicle plate.
+- **Wave 3:** class and case (9), Prepare (10), Omen (12), Room (11).
+- **Wave 4:** the marks (13), Spree (14), the colour indicator (15), crowns
+  on adventure and saga (16).
+- **Wave 5:** the saga dresses (18), the saga-creature body (19), prototype
+  (20), mutate with fuse (21).
+- **Wave 6:** the collector line's wave 2, first half (17); per-part colour
+  on split and aftermath (22); the borderless variants (23); text on art
+  (24).
+- **Wave 7:** per-part colour on adventure (22); the collector line on the
+  landscape frames (17); the old-frame recipes and old tokens (25); the
+  1993 frame's later printing (25, 4.10h).
+- **Wave 8:** the token leftovers (26); The List stamp with the Jumpstart
+  fronts and playtest cards, colour-shifted with full text, the nickname
+  line (27).
+- **Then, by the request log:** the showcase families (29) four at a time,
+  4.15 (30), the borderless layout cards (31), Phase 5's borderless and
+  extended double-faced bodies (5.7). The walkers (28) enter whenever the
+  owner says.
+
+How far to "every in-scope Card Conjurer frame is available": blocks 1–27
+are about **33 builds in eight waves** (24 of them Card Conjurer imports;
+the rest have no Card Conjurer source). The walkers are 8 more, the 36
+showcase families 36, Phase 5's double-faced variants about 6: **about 75
+builds** until no in-scope pack is left, about 30 without the showcase
+families and the walkers. 4.15 and the 40 community designs are not in
+that count.
+
+*Open for the owner* (the recommendation in brackets):
+
+1. Spacecraft in the creator: a "Spacecraft" frame under Artifact that a
+   new card follows when its subtypes say Spacecraft, as the Vehicle frame
+   does, and "Planet" under Land — no new card type, no migration. [Yes.]
+2. The station masters are PipGlyph's own recipe (the M15 masters with the
+   frame's field and text box cut see-through, our own badge and plate):
+   nothing at print size exists in Card Conjurer or MSE. Signed off by eye
+   on a sheet against the scans. [Yes.]
+3. The P/T on a Spacecraft: the 12 scans read print WHITE digits on a
+   black plate, in the tier that makes it a creature — not dark digits
+   (`docs/FRAMES.md` "The Vehicle frame" says "dark digits"; corrected with
+   the build). [Confirm on the sheet.]
+4. Extended-art (13) and borderless (2) Spacecraft and the ten showcase
+   Planets land on the bordered station frame as its nearest until their
+   own dress exists, as the Vehicles do (#527). [Yes.]
+5. Universes Beyond as three frames of its own (spell, artifact, land) that
+   only an import or a pick puts a card on; the missing colourless master
+   borrowed from the artifact one. [Yes.]
+6. 4.11's open **[decide]**: re-source the looks PipGlyph has from MSE at
+   744 px from Card Conjurer where it has them sharper. [Yes for
+   `extendedart` and `m15textless` now — no colour of either is verified —
+   and for lotr, lotrscroll, the THB constellation, the expedition and the
+   ZNR showcase only when the request log asks.]
+7. Card Conjurer's 40 community designs. [Leave out; one at a time on
+   request.]
+8. Prepare, Omen and Room have no master either: synthesised from the
+   adventure and split masters. [Yes, after the station sheet has shown the
+   method.]
+9. The walkers: may the tall bordered walker and the compleated dress
+   (masters ready, an S each) join wave 2? [The owner's call.]
+10. The showcase families: the top rows of `/admin`'s frame requests decide
+    which of the 36 are built at all. [Build only what the log asks for.]
+
+- [ ] **4.27a [P1] Spacecraft and Planets: the station frame** (owner priority 2026-10-13 — FIRST in the frame roadmap above; split out of 4.27, which keeps Prepare, Room and Omen; nothing is built) — Edge of Eternities (2025-08) prints its Spacecraft (artifacts) and Planets (lands) on a frame of their own. Scryfall has no `station` layout: the cards are `layout: normal` with the keyword Station, so the registry had no rule for them: a plain Spacecraft import matched `era/2015`, was called **exact** on the artifact frame and wrote no row in the request log (step 0 below fixed that on 2026-10-13: `station/2015`, `nearest`, logged).
+      - **Printings** (Scryfall 2026-10-13, `kw:station or t:spacecraft or t:planet`: 95). 91 carry Station (88 paper, 3 Arena-only), 36 cards: 31 Spacecraft and 5 Planets. On the black-bordered station frame: 61 — 46 Spacecraft (EOE 22, EOC 2, their 20 promo-pack and prerelease stamps, The List 1, TRK #273) and 15 Planets (EOE 5, 10 stamped). Extended art: 13 (EOE #321–355 ×10, EOC #27 / #34, TRK #481). Borderless: 2 (EOC #1, #2). Showcase: 11 (the ten "viewport" Planets, EOE #277–285 and #372–380, and TRK #557) — per-set frames, 4.11's. One playtest card (UNK). The other four `t:spacecraft` / `t:planet` printings are Doctor Who planes (4.15). Colours printed: w u b r g, gold (three and five colours — no two-colour Spacecraft), colourless; Planets w u b r g.
+      - **Anatomy, read on 18 scans (14 measured, 744 × 1040; HD figures are × 2.016 and are the proof's to re-measure).**
+        - The M15 title bar, type bar and pinline in the card's colour, the M15 crown on a legendary, the oval stamp and the 2023 collector line: nothing new there.
+        - The picture runs UNDER the frame: it continues outside the art window and behind the whole text box (a see-through master, as devoid and the colourless Eldrazi frame: `underFrameArt`).
+        - The text box is a pale see-through wash cut into horizontal bands: a top band (abilities, then the Station reminder — 26 of 36 cards put an ability before it), then one band per tier, each darker than the one above (a white card's wash reads about 210 → 180 → 153 luma). 28 cards have one tier, 8 have two, none three; thresholds 1+ to 20+. A band's height follows its text.
+        - Each tier has a badge: a dark disc about 113 px across at HD with a ring in the pinline colour and white "N+", centred on the text box's LEFT edge (about 6.5 %W) and on its band.
+        - The P/T sits in the tier that makes the card a creature (the last one on every card read): a BLACK plate (face luma 43–50) about 210 × 83 px at HD with a rim in the pinline colour and WHITE digits (ink 255 on 12 of 12), against the box's right edge and centred on the band — so it moves with the text (y 875–915, 894–934, 855–895 on three cards). Not the M15 plate, not at its spot. The Eternity Elevator (no P/T) and every Planet print none. #519's note "dark digits" (`docs/FRAMES.md` "The Vehicle frame") is wrong on this point: correct it with the build.
+        - Extended art: the same pieces with no art-window rails and a dark type bar; its rules text drops the reminder ("Station" alone).
+      - **Source.** Card Conjurer has nothing (its fork ends 2024-06; 0 of 260 packs). MSE's `magic-m15-altered` has a station option (by Aanginer) whose pieces are 375-px scale — a plate 135 × 76 and a badge 73 × 74 in eight colours (`magic-modules.mse-include/pts/375 m15/station`, `levels/circles/station`): a reference, not a master. So the masters are the importer's own recipe — the M15 masters already in the bucket (`m15`, `m15artifact`, `m15land`) with the frame's field and the text box cut see-through — and the badge and plate are PipGlyph's own drawing (as the white border and the holofoil stamp are). The owner signs the sheet by eye (question 2).
+      - **Step 0 (S, no asset, no pixel): the import stops saying "exact".** A registry rule for the keyword / the Spacecraft and Planet subtypes: `nearest` on the artifact (land) frame, `blockedBy` this item, a row in the request log — which then measures the demand nobody can read today.
+        - **Done 2026-10-13 (fix/spacecraft-import-nearest).** Confirmed by a RUN first (the import path over every station printing, with production's verified list): 65 of the 91 were `exact` on `era/2015` with no row logged — 50 Spacecraft on the artifact frame, 15 Planets on the land frame — and the two borderless commanders (EOC #1, #2) `exact` on `borderless/standard`; the 13 extended-art ones were logged as "not yet verified", the 11 showcase ones as their set's showcase. Now: `station/2015` (`nearest`, "PipGlyph doesn't draw the Station frame yet", this item, logged as `missing`) for the bordered printings, and a `station` gap on the rules the other dresses keep (`extendedart+station`, `borderless/standard+station`; `showcase+station` and `borderless/showcase+station` keep 4.11 as their item). The KEYWORD decides (`keywordsAny`, Scryfall's only field for the frame), never the subtype — Doctor Who's "Plane — Spacecraft" cards stay `no-card-type`. Every landing is unchanged (91 of 91; 6,006 other printings of thirteen sets and searches identical). No template is named for later (`onceVerified`): the station templates don't exist yet — step 1 adds that to the rule. `docs/FRAMES.md` "The Vehicle frame": "dark digits" corrected (a black plate, WHITE digits).
+      - **Step 1 (L): the body.** Two new templates, `m15station` (w u b r g m c) and `m15stationland` (w u b r g), an ADDITION (no bump, no sweep, no badge). A new `tiers` anatomy (4.5e's, built here first): rows in `face_content` as the walker's and the saga's are; `lib/cards/rules-layout.ts` sizes the top band and each tier by its content (`contentRowsAt`), places the badge and the plate, and keeps the lines out of the plate (a drawn keep-out, as every plate); both renderers only draw. The creator: a tier-rows editor on the Text step, and — the owner's call, question 1 — "Spacecraft" under Artifact (a new card follows its subtype there, `SUBTYPE_DRESSES`, as a Vehicle does) and "Planet" under Land: no new card type, no migration. The import reads Scryfall's `N+ | …` lines into the rows. Comparable work: the saga (#473) plus the Vehicle frame (#519).
+      - **Step 2 (S): the other dresses land on it.** Extended-art and borderless Spacecraft and the showcase Planets land on the bordered station frame as its `nearest` once it is verified (`landOnOnceVerified`, as #527 did for Vehicles); the extended-art station master itself comes with the roadmap's extended-art block.
+      - **Risks.** No master to copy: the sign-off is by eye. Text on a see-through wash over art (legibility; the two renderers must blend alike — a parity case per band). The art is one picture under the frame: the art-window check and the AI art size (4.48b) must know it. The plate's place depends on the text.
+      - References: EOE #25 Lumen-Class Frigate (w, two tiers), #81 Synthesizer Labship (u), #99 Entropic Battlecruiser (b), #167 Warmaker Gunship (r), #208 Sledge-Class Seedship (g), #219 Infinite Guideline Station (m, legendary), #238 Dawnsire (c, legendary, two tiers), #241 The Eternity Elevator (c, no P/T); Planets EOE #250 / #253 / #255 / #259 / #260. Annotated scans: `design-backup/frame-roadmap/`.
 - [ ] (remaining, 2026-10-08: the per-template `frame.json` (kinds, slots, signature, profile), the codegen with its "nothing hand-kept" test, and the CC-audit fields below (`ccGeneration`, the per-colour substitute map, the overlays each treatment supports). `symbolStyle` is profile data since #481. — History: partly 2026-09-30 — #374, #377, #378, #396: the pieces live in four files, not one manifest — provenance in `lib/cards/frame-sources.json` (26 CC-built entries by #440: the M15 family, borderless spell/artifact/land/walkers, full-art basics, m15/m20 tokens, the emblem, the `m15crown` overlay), bucket objects with width/height in `lib/frames/frame-manifest.json`, reference printings in `lib/cards/frame-references.json`, Scryfall signatures in `lib/scryfall/frame-signatures.ts`; remaining: the per-template `frame.json` with kinds/slots/signature/profile, the codegen + "nothing hand-kept" test, and the CC-audit fields below (`ccGeneration`, the per-colour substitute map, `symbolStyle`, the overlays each treatment supports)) **4.1 [P1] Frame manifest** (`frames/<template>/frame.json`): source
       (pack/repo + commit + files), native resolution, conversion recipe,
       supported kinds + slots, Scryfall signature (1.4), reference printings
@@ -1641,7 +1825,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       - **The current-era textured (Nyx) saga** (CC `saga/nyx`; the standard print from TDM 2025-04 on: 221 prints, FIN 57). owner 2026-09-29: an ADDITION, opt-in per card — a new template; new sagas default to it with a switch back to `saga`; stored sagas keep theirs (the 4 visible stay on `saga`); imports follow the printing (2025 on → textured); the FIN references move to it. No sweep.
       - Also: the LTR scroll saga (CC `saga/ltr` + MSE `lotr-scroll-saga`, 10 prints), the borderless saga (4.38, derived) and the UB saga (4.25).
       - Each is ADDED to `KIND_DEFS.saga.layoutTemplates`, so `TEMPLATE_KIND` / `kindFromCard` see it. Crown slot declared or pending. Class A, 0 cards, new cases.
-- [ ] **4.5e [P2] Tier bodies** (4.5 design 2026-09-29) — class, case and leveler (4.7) and station (4.27): body-exclusive `tiers` anatomy (CC `class/*`, `levelers/*`; MSE `levels/`). Class A, 0 cards.
+- [ ] **4.5e [P2] Tier bodies** (4.5 design 2026-09-29) — class, case and leveler (4.7) and station (4.27a): body-exclusive `tiers` anatomy (CC `class/*`, `levelers/*`; MSE `levels/`). Class A, 0 cards. **Frame roadmap 2026-10-13:** the station frame (4.27a) builds the `tiers` anatomy FIRST (owner priority); leveler then reuses its bands (wave 2), class and case are their own layout (wave 3).
 - [ ] **4.5f [P3] The Vehicle frame's leftovers** (follow-ups 2026-10-13, from #519 and #527; each waits for its own source or decision — none is ready alone)
       - **The extended-art Vehicle plate** (CC `extended/v.png`): until it is built an extended-art Vehicle lands on the bordered Vehicle frame, nearest (#527); there is no borderless Vehicle plate in CC (the `vehicle` gap stays on both frames). With 4.9d / 4.37.
       - **The chooser's order once `extendedart` is verified in a colour** (none is today): an extended-art Vehicle then keeps its own extended-art frame (no plate) and the Vehicle frame sits behind "Show all frames" (#527's owner question 2: keep — revisit with the plate above).
@@ -1979,7 +2163,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         - **Not built, with the evidence:** 1997 gold pairs (no such print), 2003 hybrid, any crown / stamp / collector line.
         - **No stored card changes:** replay of 124 visible production cards byte-identical at 750 and HD (all 8 on `modern` read fresh on 2026-10-08; 0 on the other three); the 8 with the switch forced on stay identical (stored `multicolor`); visual matrix 1,451 unchanged, 0 changed, 15 new. No bump, no migration, no sweep, no badge.
         - **Open for the owner:** the bg / gw / rw narrow pinline (or one blend for all ten); `retroland/m` — a stand-in, but ticked on production since 2026-10-08 (read by the skeptic pass), so `retroland` pairs are offered there with the other two; whether to keep that tick, and its re-score (its reference moved from Seaside Haven to Crosis's Catacombs); the two-colour references in `modern/m`'s and `modernland/m`'s slots (Horizon Chimera THS, Whispering Madness GTC, Caves of Koilos MD1) are 4.6g's.
-- [ ] (remaining, 2026-10-08: CC extended art, textless (4.37 / 4.42), per-set full-art lands (4.40 / 4.41), `m15nyx`, class / case / fuse, prototype, mutate, leveler, the spree / companion / miracle / lesson marks, `m15pwtall` + compleated walkers, saga creatures (4.5c). — History: partly 2026-09-30 — #389, #413, #414, #420, #421, #428, #436, #438: borderless (4.32–4.34), the generic full-art basics (4.39), tokens (4.48–4.50) and emblems (4.52) from CC; remaining: CC extended art, textless (4.37 / 4.42), per-set full-art lands (4.40 / 4.41), `m15nyx`, class / case / fuse, prototype, mutate, leveler, the spree / companion / miracle / lesson marks, `m15pwtall` + compleated walkers, saga creatures (4.5c)) **4.7 [P1] M15-era variants from CC**, in request-log order — extended
+- [ ] (remaining, 2026-10-13: CC extended art, textless (4.37 / 4.42), per-set full-art lands (4.40 / 4.41), `m15nyx`, class / case / fuse, prototype, mutate, leveler, the spree / companion / miracle / lesson marks, `m15pwtall` + compleated walkers (ask first), saga creatures (4.5d — moved there from 4.5c by the owner on 2026-10-12; this lead still said 4.5c). Sized and ordered in the frame roadmap of 2026-10-13 at the head of Phase 4; foil-etched is not part of it (4.28, declined). — History: partly 2026-09-30 — #389, #413, #414, #420, #421, #428, #436, #438: borderless (4.32–4.34), the generic full-art basics (4.39), tokens (4.48–4.50) and emblems (4.52) from CC; remaining: CC extended art, textless (4.37 / 4.42), per-set full-art lands (4.40 / 4.41), `m15nyx`, class / case / fuse, prototype, mutate, leveler, the spree / companion / miracle / lesson marks, `m15pwtall` + compleated walkers, saga creatures (4.5c)) **4.7 [P1] M15-era variants from CC**, in request-log order — extended
       art + borderless (replace the contradicted profiles), textless, full-art
       lands (generic first, per-set later), Nyx (fix), class, prototype,
       mutate, leveler, spree/companion/miracle/lesson marks, tokens + emblems,
@@ -1989,8 +2173,8 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       - **Nyx (fix):** (owner decision A4 2026-09-29: until it ships, the signature registry keeps the 2015 starfield printings `nearest` M15 with `blockedBy` 4.7, and THS's 2003 Nyx `nearest` nyx; since A3 a creature borrows `nyx` for an Enchantment Creature, so `m15nyx` should be borrowed the same way) a new `m15nyx` skin of m15 from CC `m15/new/nyx` (normal cream text box, dark ink; c → a.png). Auto for Enchantment Creature/Artifact and for `frame_effects: enchantment` on non-showcase printings. Add a saga Nyx (4.5d: owner 2026-09-29, an ADDITION — a new textured-saga template, new sagas default to it, stored sagas keep theirs, imports follow the printing) and a Nyx inner crown. KEEP the `nyx` template as the THB 'Constellation' showcase, which matches its references.
       - **Tall walker:** `m15pwtall` from CC PlaneswalkerTall (type y 49.67, rows from 55.81 at 8.96 %, symbol y 52.34), auto at ≥4 loyalty rows; Compleated as a skin on it.
       - **Case and Fuse (new):** Case (MKM) as the class column with `face_content.case = {text, toSolve, solved}`; Fuse (DGM) as a split skin with a full-width fuse bar. Class stores `face_content.class.levels`.
-      - **Leveler:** via a `tiers` capability (shared with Station, 4.27).
-      - **Saga creatures:** a P/T slot plus CC saga/pt plates (64 cards). (4.5 design 2026-09-29: the P/T gate never passes a saga (card type enchantment), so the slot carries a body-scoped `gate: "creatureWord"` (4.5c); the global gate is unchanged. owner 2026-09-29: a CORRECTION on the saga body only — a scoped sweep of saga creatures with a P/T after the before/after sign-off.)
+      - **Leveler:** via a `tiers` capability (shared with Station — 4.27a since 2026-10-13, which builds it first).
+      - **Saga creatures:** (superseded 2026-10-12, #519's print read: the printed saga creature — FIN / FIC's "Summon:" cards — is another body, and CC's `saga/pt` plates sit where the set symbol goes; it is 4.5d's first bullet, a new template.) a P/T slot plus CC saga/pt plates (64 cards). (4.5 design 2026-09-29: the P/T gate never passes a saga (card type enchantment), so the slot carries a body-scoped `gate: "creatureWord"` (4.5c); the global gate is unchanged. owner 2026-09-29: a CORRECTION on the saga body only — a scoped sweep of saga creatures with a P/T after the before/after sign-off.)
       - **Seeds:** class art 7.53/11.24/42.47×72.53, rail x 50.93 w 40.4, header bars 4.81 % H; leveler bands 63.03/72.29/82.2 (lower two indented to 20.67), P/T 65.91/75.24/85.15; prototype band 8.6/63.57/69.4×9.19, mana 63.81, white pt2 69.35; mutate art to 75.63, rules 75.67–91.82; miracle overlay 4/2.86/92×53.24.
       - 'Tokens' moves to 4.22 and 'emblems' to 6.4.
       **Full-art research 2026-09-26:**
@@ -2487,14 +2671,14 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
       A second-part colour (`back_face.color_identity`, `types/card.ts`:193-210) composites the second colour's frame through those masks. 4.21 records the masks as importer inputs and publishes none (design 2026-09-29). Split's and aftermath's are plain rectangles — split's seam at X 1100 px (52.38 %W) after the clockwise turn, aftermath's at y 1139 px (54.24 %H) — so a second part's colour is a hard seam between two masters (the `twoColorSplit` machinery; a horizontal variant for aftermath): no asset, never pre-flattened 7×7 pairs. Adventure's shaped book masks (bookLeft, bookLeftMulticolor, bookRight): importer-built masters (4.6.0's pair pattern) or render-time masks **[decide]** here. Colour combos no M15 print shows (flip w u r m c, split b w g, aftermath m) stay unticked until a print appears or this item lands (owner 2026-09-29, 4.21). Default the second colour from the second part's cost, on import and in the editor.
 
       References: Fire // Ice, Cut // Ribbons, Callous Sell-Sword // Burn Together. Needs 4.6's mask machinery.
-- [ ] **4.27 [P2] Post-2024 layouts: Prepare, Room, Omen, Station** (Card Conjurer audit 2026-09-25) — CC's fork ends June 2024, so none of these is in CC.
+- [ ] **4.27 [P2] Post-2024 layouts: Prepare, Room, Omen** (Card Conjurer audit 2026-09-25; **Station moved out on 2026-10-13: it is 4.27a [P1], the owner's first priority, at the head of Phase 4**) — CC's fork ends June 2024, so none of these is in CC (re-checked 2026-10-13 against its tree at `2fcddba`: 0 of 260 packs). Printings, Scryfall 2026-10-13: Prepare 124 (`layout:prepare`; 95 on the plain dress), Room 63 (`t:room`; 53), Omen 37 (`t:omen`; 24) — the counts below are cards, not printings. Frame roadmap: wave 3, after the station frame has shown how a master with no source is signed off.
 
       1. **Prepare** first: 70 cards, Secrets of Strixhaven 2026. It is in neither CC nor MSE, and the importer drops the spell half (`lib/scryfall/import-mapper.ts`:198). Build a `prepare` template like `adventure` (its MSE builder `scripts/build-adventure-frame.mjs` left git with 4.21a — `git show 84604e53:scripts/build-adventure-frame.mjs`; adventure is CC's master now, `CC_TEMPLATES.adventure`): the spell page is on the RIGHT with its own grey name/cost and type bars, and creature rules are on the left. Add new slot rects on the `adventure` capability (it already takes arbitrary rects) and a kind 'Prepare'. Reference: Abigale, Poet Laureate.
       2. **Room** (30 cards; MSE `magic-m15-split-fusable` rooms/): landscape like split, but with ONE shared illustration and ONE shared 'Enchantment — Room' type line carrying the unlock reminder, plus two door panels each with name/cost and rules. `back_face` holds the second door (1.3 already stops mapping Rooms to Split).
-      3. **Omen** (MSE `magic-m15-adventure` omen pages) and **Station** (≈30 cards; MSE `magic-m15-altered`, using the tiers capability shared with levelers in 4.7) at P3.
+      3. **Omen** (MSE `magic-m15-adventure` omen pages) at P3. (**Station** — ≈30 cards; MSE `magic-m15-altered`, using the tiers capability shared with levelers in 4.7 — is 4.27a since 2026-10-13.)
 
       Order by the 1.6 log, and log each as 'unsupported' until it ships.
-- [ ] **4.28 [P3] Foil-etched frame treatment** (Card Conjurer audit 2026-09-25) — Scryfall `frame:etched` returns 849 printings (CMR, MH2, commander decks and later). CC has Etched (29 frames incl. vehicle + holo stamp), Etched Nyx, Etched Snow and etched legend/inner crowns (`groupShowcase-5.js`:56-61, `packEtched.js`), with its own colour rule: two-colour lands use colour frames, 3+ colour artifacts use A (`creator-23.js`:606-608,671-677,705-714,1373). MSE has `magic-m15-showcase-etched-foil`. PipGlyph's 'etched' is only a finish shader (`lib/cards/etched-finish.tsx`), selectable since 6.5; it isn't the etched frame treatment.
+- [x] (declined by the owner 2026-10-13 — NOT built and not planned: the foil-etched frame treatment is dropped from the plan. Etched printings keep landing as their nearest frame: the registry's `etched` gap and the `vehicle/2015+etched` landing stay as they are, and the gap's `blockedBy` still reads "4.28" in `lib/scryfall/frame-signatures.ts` — it now names a closed item, to be re-worded with the next registry change. The etched FINISH shader (6.5) is another thing and stays. Card Conjurer's five etched packs — Etched, Etched (Nyx), Etched (Snow) and the etched legend and inner crowns — are counted "declined" in the frame roadmap of 2026-10-13. The text below is kept as history) **4.28 [P3] Foil-etched frame treatment** (Card Conjurer audit 2026-09-25) — Scryfall `frame:etched` returns 849 printings (CMR, MH2, commander decks and later). CC has Etched (29 frames incl. vehicle + holo stamp), Etched Nyx, Etched Snow and etched legend/inner crowns (`groupShowcase-5.js`:56-61, `packEtched.js`), with its own colour rule: two-colour lands use colour frames, 3+ colour artifacts use A (`creator-23.js`:606-608,671-677,705-714,1373). MSE has `magic-m15-showcase-etched-foil`. PipGlyph's 'etched' is only a finish shader (`lib/cards/etched-finish.tsx`), selectable since 6.5; it isn't the etched frame treatment.
 
       Ship it as a treatment through 4.5, with crowns from 4.6. Import signature: `frame_effects` contains `etched`. Keep 6.5's shader decision separate.
       **4.6 design 2026-09-29 (hand-off):** UB crowns (4.25), etched crowns (4.28), the border-coloured crown cover (4.30) and the DFC icon beside the crown (5.1) stay in their items; each is opt-in per card, as 4.6.
@@ -3829,7 +4013,7 @@ template/colour as each is verified.)
       - **Docs:** `docs/ENVIRONMENTS.md` §2 (the test logins) and the shipping workflow's step 3; one line in CLAUDE.md's Environments section. Acceptance: after the script, `pro@dev.pipglyph.test` signs in on a `supabase/`-touching PR's Vercel preview with the same password as on the dev database; running it against production or the dev branch's project is refused with a clear message.
 - [ ] **7.11 [P3] A frame-profile override may not add a slot the code profile lacks** (owner-approved follow-up 2026-10-12, from #509) — The override schema (`lib/cards/profile-override.ts`) accepts `pt` / `secondFace.pt` on ANY template and `mergeProfile` copies it in, so a frame-compare save can hand a frame a P/T slot its code profile does not declare. Refuse override keys for slots the code profile lacks, with a test over every template.
 - [ ] **7.12 [P3] `revalidatePath("/challenges/[slug]", "page")` omits the `(marketing)` route group — verify first** (owner-approved follow-up 2026-10-12) — `lib/cards/revalidate.ts` and `lib/challenges/actions.ts` revalidate the pattern `/challenges/[slug]`, while the page is `app/(marketing)/challenges/[slug]/page.tsx`. By Next's rule for a dynamic pattern (the route's file path, groups included) the call probably never matches, and a challenge page would stay stale until its own revalidation. Verify on a build first — the audit list's 2026-09-21 fix ("revalidateChallengeSurfaces purges /challenges/[slug]") relies on it; if confirmed, name the group or revalidate the concrete path.
-- [ ] **7.13 [P3] A parity baseline that two PRs can change without a conflict** (follow-up 2026-10-13, from #514; #527 needed two CI rounds for it) — `tests/parity/baseline.json` is one file with a block per platform that every PR adding or moving a case rewrites, so two open renderer PRs conflict in it and the linux half can only be recorded from CI's `parity-baseline` artifact. Options: one file per case (or per case × platform), or sorted one-line-per-region entries so a merge is line-wise. Tests only.
+- [x] (done 2026-10-13, test/parity-baseline-format: ONE FILE PER CASE PER PLATFORM — `tests/parity/baseline/<platform>/<case>.json`, a line per size, no date and no note (`git log` is the record). Two PRs that add or move different cases touch different files; the same case conflicts in its own file alone. `--update` rewrites only the cases that are new, removed or outside their recorded tolerance and keeps every other line byte for byte (`--update --all` re-records them all and says so); it still refuses a value over a limit and never touches one. The loader (`tests/parity/baseline.ts`) reads a file only as the text an update writes — a doubled line, a missing size, a stray field, another case's name, a duplicate id, a conflict's leftovers and the old `baseline.json` all fail the unit run and the check. A red CI run prints the linux half as a script to paste (and the artifact command); a missing linux file stays red. Sequence: `tests/parity/README.md`. Not done: `merge=union` on the one file (it keeps two lines of one case), a file per template (two M15 PRs still collide).) **7.13 [P3] A parity baseline that two PRs can change without a conflict** (follow-up 2026-10-13, from #514; #527 needed two CI rounds for it) — `tests/parity/baseline.json` is one file with a block per platform that every PR adding or moving a case rewrites, so two open renderer PRs conflict in it and the linux half can only be recorded from CI's `parity-baseline` artifact. Options: one file per case (or per case × platform), or sorted one-line-per-region entries so a merge is line-wise. Tests only.
 - [ ] **7.14 [P3] Make "Preview parity" a required check** (follow-up 2026-10-13, from #514 — the OWNER's GitHub setting, not a code change) — after about ten green PRs in a row on `main` (count from #514, merged 2026-10-13), add CI's **Preview parity** to the `main` ruleset's required checks beside typecheck / lint / unit / e2e. Until then it reports and does not block.
 - [ ] **7.15 [P3] Split `walker-saga-bake` and `mana-gem-parity` across files** (follow-up 2026-10-13, from #525 — optional) — after #522 (six unit shards) and #525 (the art-window masters and the title-room bakes in four files each) these two files are the slowest shard's floor (≈ 5 min). Split them the same way only if 4–5 min is still too long; `frames/edge-contract`, `frames/score-combo` and `frames/art-window-override` cost less and were left.
 - [x] (done 2026-10-13 — #532 merged: the file mirrors production as read on 2026-10-13 (313 combos). Owner step left: the shared DEV database does not re-run a changed seed — run the seed's `-- frame_reviews:begin … end` block once in the dev branch's SQL editor) **7.16 [P2] `supabase/seed.sql` mirrors production's verified frames again** (follow-up 2026-10-13; 7.9 was the 2026-09-28 pass) — the file was production's list as read on 2026-10-06 (278 combos): it had no `m15vehicle`, and none of the ticks made since. Refresh it from production's `frame_reviews` (the query is in the file's header) so previews and local resets offer what production offers — never ahead of it.

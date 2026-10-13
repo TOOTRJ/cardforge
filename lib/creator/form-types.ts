@@ -27,6 +27,12 @@ export type SagaChapterFormValues = {
   /** Chapter numbers this row covers (1-based; rows may share: "I, II —"). */
   numerals: number[];
   text: string;
+  /** The row's chapter marker AS STORED ("II,I", "I,XI"), on a row whose
+   *  numbers alone would not give it back — another order, a numeral the
+   *  editor has no toggle for (lib/cards/face-content.ts storedMarkerOf).
+   *  Kept, and saved, for as long as `numerals` are the marker's; absent on
+   *  every ordinary row and on a row added here. */
+  marker?: string;
 };
 
 // Back-face form values mirror the front-face fields the back face stores.

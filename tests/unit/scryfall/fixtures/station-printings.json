@@ -1,0 +1,757 @@
+{
+  "eoe-25": {
+    "id": "0cc59b5a-65fa-47cc-8ac7-b7c3f533a782",
+    "oracle_id": "3aa0cda4-fb2d-4fd4-84f6-482089a85547",
+    "name": "Lumen-Class Frigate",
+    "layout": "normal",
+    "set": "eoe",
+    "set_name": "Edge of Eternities",
+    "set_type": "expansion",
+    "collector_number": "25",
+    "released_at": "2025-08-01",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Station"
+    ],
+    "type_line": "Artifact — Spacecraft",
+    "mana_cost": "{1}{W}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "oracle_text": "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 12+.)\n2+ | Other creatures you control get +1/+1.\n12+ | Flying, lifelink",
+    "power": "3",
+    "toughness": "5",
+    "rarity": "rare",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "games": [
+      "paper",
+      "arena",
+      "mtgo"
+    ]
+  },
+  "eoe-208": {
+    "id": "dc0cb4b6-cc20-49ea-84b2-2f3af3b0a19e",
+    "oracle_id": "bcd086ce-de5c-4b34-92a1-ece22055e479",
+    "name": "Sledge-Class Seedship",
+    "layout": "normal",
+    "set": "eoe",
+    "set_name": "Edge of Eternities",
+    "set_type": "expansion",
+    "collector_number": "208",
+    "released_at": "2025-08-01",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Station"
+    ],
+    "type_line": "Artifact — Spacecraft",
+    "mana_cost": "{2}{G}",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "oracle_text": "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 7+.)\n7+ | Flying\nWhenever this Spacecraft attacks, you may put a creature card from your hand onto the battlefield.",
+    "power": "4",
+    "toughness": "5",
+    "rarity": "rare",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "games": [
+      "paper",
+      "arena",
+      "mtgo"
+    ]
+  },
+  "eoe-219": {
+    "id": "5688894a-bbec-476b-ae2e-94000be258d0",
+    "oracle_id": "cda39514-86c9-483e-8d95-fd08138ce33a",
+    "name": "Infinite Guideline Station",
+    "layout": "normal",
+    "set": "eoe",
+    "set_name": "Edge of Eternities",
+    "set_type": "expansion",
+    "collector_number": "219",
+    "released_at": "2025-08-01",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Station"
+    ],
+    "type_line": "Legendary Artifact — Spacecraft",
+    "mana_cost": "{W}{U}{B}{R}{G}",
+    "colors": [
+      "B",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "color_identity": [
+      "B",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "oracle_text": "When Infinite Guideline Station enters, create a tapped 2/2 colorless Robot artifact creature token for each multicolored permanent you control.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 12+.)\n12+ | Flying\nWhenever Infinite Guideline Station attacks, draw a card for each multicolored permanent you control.",
+    "power": "7",
+    "toughness": "15",
+    "rarity": "rare",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "games": [
+      "paper",
+      "arena",
+      "mtgo"
+    ]
+  },
+  "eoe-238": {
+    "id": "6133355c-3dcf-466a-b771-fe6c44d4fa4d",
+    "oracle_id": "afc9436b-8cad-4916-929d-ff33a37b42d5",
+    "name": "Dawnsire, Sunstar Dreadnought",
+    "layout": "normal",
+    "set": "eoe",
+    "set_name": "Edge of Eternities",
+    "set_type": "expansion",
+    "collector_number": "238",
+    "released_at": "2025-08-01",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Station"
+    ],
+    "type_line": "Legendary Artifact — Spacecraft",
+    "mana_cost": "{5}",
+    "colors": [],
+    "color_identity": [],
+    "oracle_text": "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 20+.)\n10+ | Whenever you attack, Dawnsire deals 100 damage to up to one target creature or planeswalker.\n20+ | Flying",
+    "power": "20",
+    "toughness": "20",
+    "rarity": "mythic",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "games": [
+      "paper",
+      "arena",
+      "mtgo"
+    ]
+  },
+  "eoe-241": {
+    "id": "1bb90ab9-43b9-4991-806a-0afc4d8caf5f",
+    "oracle_id": "11323af4-b8b8-4ca9-932f-377c7fd77dea",
+    "name": "The Eternity Elevator",
+    "layout": "normal",
+    "set": "eoe",
+    "set_name": "Edge of Eternities",
+    "set_type": "expansion",
+    "collector_number": "241",
+    "released_at": "2025-08-01",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Station"
+    ],
+    "type_line": "Legendary Artifact — Spacecraft",
+    "mana_cost": "{5}",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "B",
+      "C",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "oracle_text": "{T}: Add {C}{C}{C}.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery.)\n20+ | {T}: Add X mana of any one color, where X is the number of charge counters on The Eternity Elevator.",
+    "rarity": "rare",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "games": [
+      "paper",
+      "arena",
+      "mtgo"
+    ]
+  },
+  "eoe-253": {
+    "id": "2fa09104-acbe-4410-b101-2fe6ac28efde",
+    "oracle_id": "83161d59-2520-4741-9328-e2a4a8b5d5bc",
+    "name": "Evendo, Waking Haven",
+    "layout": "normal",
+    "set": "eoe",
+    "set_name": "Edge of Eternities",
+    "set_type": "expansion",
+    "collector_number": "253",
+    "released_at": "2025-08-01",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Station"
+    ],
+    "type_line": "Land — Planet",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "G"
+    ],
+    "produced_mana": [
+      "G"
+    ],
+    "oracle_text": "This land enters tapped.\n{T}: Add {G}.\nStation (Tap another creature you control: Put charge counters equal to its power on this Planet. Station only as a sorcery.)\n12+ | {G}, {T}: Add {G} for each creature you control.",
+    "rarity": "mythic",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "games": [
+      "paper",
+      "arena",
+      "mtgo"
+    ]
+  },
+  "peoe-25s": {
+    "id": "9d599463-4a07-4175-b1d7-86921aa3bcbb",
+    "oracle_id": "3aa0cda4-fb2d-4fd4-84f6-482089a85547",
+    "name": "Lumen-Class Frigate",
+    "layout": "normal",
+    "set": "peoe",
+    "set_name": "Edge of Eternities Promos",
+    "set_type": "promo",
+    "collector_number": "25s",
+    "released_at": "2025-08-01",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "prerelease",
+      "datestamped"
+    ],
+    "keywords": [
+      "Station"
+    ],
+    "type_line": "Artifact — Spacecraft",
+    "mana_cost": "{1}{W}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "oracle_text": "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 12+.)\n2+ | Other creatures you control get +1/+1.\n12+ | Flying, lifelink",
+    "power": "3",
+    "toughness": "5",
+    "rarity": "rare",
+    "security_stamp": "oval",
+    "finishes": [
+      "foil"
+    ],
+    "games": [
+      "paper"
+    ]
+  },
+  "plst-eoe-101": {
+    "id": "ce474e94-d3b2-4652-b778-5a7b9816b758",
+    "oracle_id": "1a82be68-3b74-4dfc-9068-3abea61db709",
+    "name": "Fell Gravship",
+    "layout": "normal",
+    "set": "plst",
+    "set_name": "The List",
+    "set_type": "masters",
+    "collector_number": "EOE-101",
+    "released_at": "2026-10-19",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Station",
+      "Mill"
+    ],
+    "type_line": "Artifact — Spacecraft",
+    "mana_cost": "{2}{B}",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "oracle_text": "When this Spacecraft enters, mill three cards, then return a creature or Spacecraft card from your graveyard to your hand.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 8+.)\n8+ | Flying, lifelink",
+    "power": "3",
+    "toughness": "2",
+    "rarity": "uncommon",
+    "finishes": [
+      "nonfoil"
+    ],
+    "games": [
+      "paper"
+    ]
+  },
+  "trk-273": {
+    "id": "057a4413-6a17-491e-bfd7-6cd427b1a442",
+    "oracle_id": "d95af032-3efd-40c7-8229-ade9d974934f",
+    "name": "U.S.S. Enterprise-D, Galaxy-Class",
+    "layout": "normal",
+    "set": "trk",
+    "set_name": "Star Trek",
+    "set_type": "expansion",
+    "collector_number": "273",
+    "released_at": "2026-11-13",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "keywords": [
+      "Station"
+    ],
+    "type_line": "Legendary Artifact — Spacecraft",
+    "mana_cost": "{3}",
+    "colors": [],
+    "color_identity": [],
+    "oracle_text": "Whenever one or more charge counters are put on U.S.S. Enterprise-D for the first time each turn, exile the top card of your library. You may play that card this turn.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 7+.)\n7+ | Flying, vigilance",
+    "power": "4",
+    "toughness": "5",
+    "rarity": "rare",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ]
+  },
+  "eoe-321": {
+    "id": "7fffe390-d16c-4891-b94a-99e895f219d0",
+    "oracle_id": "3aa0cda4-fb2d-4fd4-84f6-482089a85547",
+    "name": "Lumen-Class Frigate",
+    "layout": "normal",
+    "set": "eoe",
+    "set_name": "Edge of Eternities",
+    "set_type": "expansion",
+    "collector_number": "321",
+    "released_at": "2025-08-01",
+    "frame": "2015",
+    "frame_effects": [
+      "extendedart"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [
+      "Station"
+    ],
+    "type_line": "Artifact — Spacecraft",
+    "mana_cost": "{1}{W}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "oracle_text": "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 12+.)\n2+ | Other creatures you control get +1/+1.\n12+ | Flying, lifelink",
+    "power": "3",
+    "toughness": "5",
+    "rarity": "rare",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "games": [
+      "paper",
+      "mtgo"
+    ]
+  },
+  "eoe-348": {
+    "id": "334654be-c433-43b6-bf33-8ba040c3c3a8",
+    "oracle_id": "cda39514-86c9-483e-8d95-fd08138ce33a",
+    "name": "Infinite Guideline Station",
+    "layout": "normal",
+    "set": "eoe",
+    "set_name": "Edge of Eternities",
+    "set_type": "expansion",
+    "collector_number": "348",
+    "released_at": "2025-08-01",
+    "frame": "2015",
+    "frame_effects": [
+      "extendedart",
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [
+      "Station"
+    ],
+    "type_line": "Legendary Artifact — Spacecraft",
+    "mana_cost": "{W}{U}{B}{R}{G}",
+    "colors": [
+      "B",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "color_identity": [
+      "B",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "oracle_text": "When Infinite Guideline Station enters, create a tapped 2/2 colorless Robot artifact creature token for each multicolored permanent you control.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 12+.)\n12+ | Flying\nWhenever Infinite Guideline Station attacks, draw a card for each multicolored permanent you control.",
+    "power": "7",
+    "toughness": "15",
+    "rarity": "rare",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "games": [
+      "paper",
+      "mtgo"
+    ]
+  },
+  "eoc-1": {
+    "id": "6b913e79-a9f6-44d4-bb37-c4f6f66b8151",
+    "oracle_id": "8d6f82d9-5c5b-4c41-8857-c0936f2d894c",
+    "name": "Hearthhull, the Worldseed",
+    "layout": "normal",
+    "set": "eoc",
+    "set_name": "Edge of Eternities Commander",
+    "set_type": "commander",
+    "collector_number": "1",
+    "released_at": "2025-08-01",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Station"
+    ],
+    "type_line": "Legendary Artifact — Spacecraft",
+    "mana_cost": "{1}{B}{R}{G}",
+    "colors": [
+      "B",
+      "G",
+      "R"
+    ],
+    "color_identity": [
+      "B",
+      "G",
+      "R"
+    ],
+    "oracle_text": "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 8+.)\n2+ | {1}, {T}, Sacrifice a land: Draw two cards. You may play an additional land this turn.\n8+ | Flying, vigilance, haste\nWhenever you sacrifice a land, each opponent loses 2 life.",
+    "power": "6",
+    "toughness": "7",
+    "rarity": "mythic",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ]
+  },
+  "eoe-277": {
+    "id": "4d6901e7-d519-4dfc-a74d-63fff5e4ffae",
+    "oracle_id": "70d35dbd-1d91-4a2a-a643-6870d168f4f5",
+    "name": "Adagia, Windswept Bastion",
+    "layout": "normal",
+    "set": "eoe",
+    "set_name": "Edge of Eternities",
+    "set_type": "expansion",
+    "collector_number": "277",
+    "released_at": "2025-08-01",
+    "frame": "2015",
+    "frame_effects": [
+      "showcase",
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "keywords": [
+      "Station"
+    ],
+    "type_line": "Land — Planet",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "W"
+    ],
+    "produced_mana": [
+      "W"
+    ],
+    "oracle_text": "This land enters tapped.\n{T}: Add {W}.\nStation (Tap another creature you control: Put charge counters equal to its power on this Planet. Station only as a sorcery.)\n12+ | {3}{W}, {T}: Create a token that's a copy of target artifact or enchantment you control, except it's legendary. Activate only as a sorcery.",
+    "rarity": "mythic",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "games": [
+      "paper",
+      "mtgo"
+    ]
+  },
+  "trk-557": {
+    "id": "cb823267-b230-40f3-a1eb-140657df2b1e",
+    "oracle_id": "d95af032-3efd-40c7-8229-ade9d974934f",
+    "name": "U.S.S. Enterprise-D, Galaxy-Class",
+    "layout": "normal",
+    "set": "trk",
+    "set_name": "Star Trek",
+    "set_type": "expansion",
+    "collector_number": "557",
+    "released_at": "2026-11-13",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "showcase"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "keywords": [
+      "Station"
+    ],
+    "type_line": "Legendary Artifact — Spacecraft",
+    "mana_cost": "{3}",
+    "colors": [],
+    "color_identity": [],
+    "oracle_text": "Whenever one or more charge counters are put on U.S.S. Enterprise-D for the first time each turn, exile the top card of your library. You may play that card this turn.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 7+.)\n7+ | Flying, vigilance",
+    "power": "4",
+    "toughness": "5",
+    "rarity": "rare",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ]
+  },
+  "eoe-240": {
+    "id": "a451a459-18e0-4c53-a171-3e9da534ebf1",
+    "oracle_id": "57ee0730-3ac5-4f17-ac82-bd4a6673c2bb",
+    "name": "The Endstone",
+    "layout": "normal",
+    "set": "eoe",
+    "set_name": "Edge of Eternities",
+    "set_type": "expansion",
+    "collector_number": "240",
+    "released_at": "2025-08-01",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Legendary Artifact",
+    "mana_cost": "{7}",
+    "colors": [],
+    "color_identity": [],
+    "oracle_text": "Whenever you play a land or cast a spell, draw a card.\nAt the beginning of your end step, your life total becomes half your starting life total, rounded up.",
+    "rarity": "mythic",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "games": [
+      "paper",
+      "arena",
+      "mtgo"
+    ]
+  },
+  "eoe-256": {
+    "id": "8b4e2642-3c87-4708-b9b4-2e7f7359ac7d",
+    "oracle_id": "45181cb8-2090-4471-ba90-e5a8f04d525f",
+    "name": "Sacred Foundry",
+    "layout": "normal",
+    "set": "eoe",
+    "set_name": "Edge of Eternities",
+    "set_type": "expansion",
+    "collector_number": "256",
+    "released_at": "2025-08-01",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Land — Mountain Plains",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "R",
+      "W"
+    ],
+    "produced_mana": [
+      "R",
+      "W"
+    ],
+    "oracle_text": "({T}: Add {R} or {W}.)\nAs this land enters, you may pay 2 life. If you don't, it enters tapped.",
+    "rarity": "rare",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "games": [
+      "paper",
+      "arena",
+      "mtgo"
+    ]
+  },
+  "dft-234": {
+    "id": "40c92203-17df-4f10-92c6-ebcc79f01357",
+    "oracle_id": "caa69b51-1efd-4d0e-803b-914a83ccb836",
+    "name": "Lifecraft Engine",
+    "layout": "normal",
+    "set": "dft",
+    "set_name": "Aetherdrift",
+    "set_type": "expansion",
+    "collector_number": "234",
+    "released_at": "2025-02-14",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [
+      "Crew"
+    ],
+    "type_line": "Artifact — Vehicle",
+    "mana_cost": "{3}",
+    "colors": [],
+    "color_identity": [],
+    "oracle_text": "As this Vehicle enters, choose a creature type.\nVehicle creatures you control are the chosen creature type in addition to their other types.\nEach creature you control of the chosen type other than this Vehicle gets +1/+1.\nCrew 3",
+    "power": "4",
+    "toughness": "4",
+    "rarity": "rare",
+    "security_stamp": "oval",
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "games": [
+      "paper",
+      "arena",
+      "mtgo"
+    ]
+  },
+  "who-578": {
+    "id": "bf6193ea-4906-4097-8e30-431220f9e35c",
+    "oracle_id": "7099883d-0a4b-47ae-bff8-a96efa7a3a9a",
+    "name": "The Dining Car",
+    "layout": "planar",
+    "set": "who",
+    "set_name": "Doctor Who",
+    "set_type": "commander",
+    "collector_number": "578",
+    "released_at": "2023-10-13",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "keywords": [
+      "Investigate",
+      "Sixty-Six Seconds",
+      "Food"
+    ],
+    "type_line": "Plane — Spacecraft",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [],
+    "oracle_text": "When you planeswalk to The Dining Car, each player creates a Food token.\nSixty-Six Seconds — At the beginning of your upkeep, sacrifice a creature with the least toughness among creatures you control. Then investigate.\nWhenever chaos ensues, activated abilities of artifact tokens you control cost {2} less to activate this turn.",
+    "rarity": "common",
+    "security_stamp": "triangle",
+    "finishes": [
+      "nonfoil"
+    ],
+    "games": [
+      "paper"
+    ]
+  }
+}

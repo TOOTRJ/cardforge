@@ -158,7 +158,9 @@ Rules and gotchas:
   optimizations must not touch what the bake reads. CI's **Preview parity**
   check holds them together (`npm run test:parity`, `tests/parity/`,
   `tests/README.md`): a change to ONE renderer that moves a region 2 px
-  fails it — fix the renderer; re-record `tests/parity/baseline.json` only
+  fails it — fix the renderer; re-record `tests/parity/baseline/` (one file
+  per case per platform, `tests/parity/README.md`; `--update` rewrites only
+  the cases that moved) only
   when both were changed on purpose, never raise a limit, and give a new
   rendering feature of both renderers a case in `tests/parity/cases.ts`.
   Frames listed in `lib/frames/frame-manifest.json` live in the `frames`
@@ -391,6 +393,20 @@ Rules and gotchas:
   body, priced 2 by the estimate through the same function) — else no
   template: the default landing, one face. A fallback, never a refused
   save after the art; a token's height still follows the saved text.
+  A remix never SAVES a text on a frame that draws none (TODO 1.24): where
+  both paths save, `remixSavedFrame` (`lib/creator/frame-resolve.ts`) takes
+  a landing whose PROFILE is `textless` (`frameHidesRulesBoxText` — the
+  renderers' flag and `hasRulesBoxText`; today the full-art token's two
+  textless heights) off it once the final text is known — a printing onto
+  its landing with the textless frames read as unverified
+  (`withoutTextlessFrames`, the registry's own stand-in, `text_stand_in`),
+  an own token onto the 2014–19 arch its type words pick, else an own card
+  onto the default landing, where the save's gates pass it
+  (`ownCardTextStandIn`) — and leaves it where the card saves with no text
+  or nothing else is published in the colour; `resolveGeneratedFrame`'s
+  random pool reads the same test. The "M15 Textless" frames are NOT
+  textless profiles (they draw the text on the art), so a landing there
+  stands until a profile gains the flag — never test a template's name.
   An EMBLEM is never remixed (owner 2026-10-13; it prints its walker's
   name, and a remix renames each card by itself): left out at plan time —
   `remixableDeckItems` for an own emblem, a 0 in the estimate's
@@ -908,7 +924,8 @@ Rules and gotchas:
   "−2:", or the NULL of a card stored with its rows alone, must not be
   rewritten by a retitle). "Read as they opened" counts EVERY row that
   holds a text — a saga row with no chapter number too (a marker the editor
-  can't read, "XI —"): removing or editing it is an edit. The one write an
+  can't read, "XI —"): removing or editing it is an edit, and so is
+  dropping the stored marker a row carries (below). The one write an
   untouched edit still makes is the dual write: a walker / saga stored as
   plain text gains `face_content` — which the renderers read BEFORE
   `rules_text` (`resolveLoyaltyRows` / `resolveSagaChapters`), so it is
@@ -932,7 +949,40 @@ Rules and gotchas:
   its characters (`plainTextRows`, `lib/validation/print-typography.ts`).
   A saga row with a text and no chapter number is never dropped by a save:
   `sagaRowsNeedingNumber` puts "Pick a chapter number for this row, or
-  remove it." on it and the save waits — never on an untouched edit.
+  remove it." on it and the save waits — never on an untouched edit. A
+  save a row's chapter numbers blocked moves the focus to the first such
+  row's chapter group (`data-field-anchor` `saga_chapters.N.numerals`,
+  through `goToField`) and lists the rows above Save as links
+  (`SaveBlockedRowsLine` — never a live region: the row's `role="alert"` is
+  the one announcement). An EDITED saga save keeps the MARKER of every row
+  whose numbers were not changed (the 3b.25 follow-up): the editor holds a
+  chapter as numbers and writes them ascending, so a row whose stored
+  marker says more — an order ("II, I —"), a numeral with no toggle
+  ("I, XI —", "XI —") — CARRIES it (`SagaChapterFormValues.marker`, set by
+  `sagaEditorRows`, `lib/cards/face-content.ts`, only where the numbers
+  alone would not give it back; an ordinary row has none) and
+  `submittedRulesOf` writes it while the numbers are still the marker's own
+  (`keepsStoredMarker`), whatever else was edited — the row's text
+  included: "II, I" as `face_content` numerals `[2, 1]` (the renderers read
+  the array's order), a marker the rows cannot hold as PLAIN TEXT
+  (`serializeSagaMarkers`; the server's `plainTextRows` reads it by marker).
+  Numbers CHANGED on a marker that mixes numerals the toggles show with one
+  they can't ("I, XI") are never saved short of it without a word:
+  `sagaRowsLosingMarker` blocks on the row until they are put back or the
+  maker presses "Drop XI" (the row's `marker` cleared — an edit by itself);
+  changed on an order-only marker, or picked on one with no readable
+  numeral ("XI —"), the numbers picked are the row's — and a row a save
+  wrote from its numbers FORGETS its marker in that save (onSubmit, before
+  its `reset`), never only at the refresh: put back inside that window, the
+  numbers wrote the opened marker again ("XI —" back on a row just saved as
+  "II —"). The keyed same-card reset keeps field errors (`keepErrors`): the
+  refresh of the save before must not wipe a blocked Save's message. Never write a saga
+  row's line from its numbers alone — `sagaRowsOut` is the one answer (a
+  kind switch and the AI's context read it too). A walker whose loyalty
+  badges touch on its frame gets a note under its rows
+  (`lib/creator/walker-crowding.ts`: read from `layoutProfileLoyaltyRows`,
+  never a count compared — 9 one-line rows on `m15pw`, 11 on the tall
+  borderless box; nothing is blocked, no renderer reads it).
 - Notifications are push, not pull: `notifications` is on the
   `supabase_realtime` publication (migration 0075) and
   `components/notifications/realtime-alerts.tsx` subscribes to the signed-in

@@ -33,7 +33,7 @@ import {
 } from "@/lib/creator/form-types";
 import {
   loyaltyFromRulesText,
-  sagaFromRulesText,
+  sagaEditorRows,
 } from "@/lib/cards/face-content";
 import { KIND_DEFS, dfcLayoutForKind, kindFromCard, type CardKind } from "@/lib/creator/card-kinds";
 import { remixTitleFor } from "@/lib/creator/revise";
@@ -71,14 +71,13 @@ function structuredRowsFrom(card: Card): {
     };
   }
   if (kind === "saga") {
-    const saga = card.face_content?.saga ?? sagaFromRulesText(card.rules_text);
+    // (A marker the numbers alone would not give back — "II, I", "I, XI" —
+    // rides on its row: lib/cards/face-content.ts sagaEditorRows.)
+    const saga = sagaEditorRows(card.face_content, card.rules_text);
     return {
       loyalty_abilities: [],
       saga_intro: saga.intro ?? "",
-      saga_chapters: saga.chapters.map((ch) => ({
-        numerals: [...ch.numerals],
-        text: ch.text,
-      })),
+      saga_chapters: saga.chapters,
     };
   }
   return { loyalty_abilities: [], saga_intro: "", saga_chapters: [] };

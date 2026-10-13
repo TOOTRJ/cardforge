@@ -15,15 +15,16 @@ import type { RegionMetrics } from "./compare";
 //      one means striking it: an entry nothing needs any more fails the run.
 //      Never raise a LIMIT to make a case pass — describe the difference
 //      here, or fix it.
-//   3. tests/parity/baseline.json — every region's offset as recorded on the
-//      platform the run is on. Today's offset must be within ±1 px of it and
+//   3. tests/parity/baseline/<platform>/<case>.json (tests/parity/baseline.ts)
+//      — every region's offset as recorded on the platform the run is on. Today's offset must be within ±1 px of it and
 //      its difference within BASELINE_MARGIN: a text 2 px from where it was
 //      is caught whichever way it moved, including "towards the bake" (a
 //      one-sided limit would let a preview-only nudge through whenever it
 //      happens to cancel a known offset). Re-record it with
-//      `npm run test:parity -- --update` (CI's numbers: the `parity-baseline`
-//      artifact) — the update refuses a value over a LIMIT that no known
-//      difference names.
+//      `npm run test:parity -- --update` (CI's numbers: the red run prints
+//      them; tests/parity/README.md) — the update rewrites only the cases
+//      that are new or left this tolerance, and refuses a value over a LIMIT
+//      that no known difference names.
 // ---------------------------------------------------------------------------
 
 export type SizeName = "750" | "hd";
@@ -103,6 +104,10 @@ export type KnownDifference = {
   why: string;
 };
 
+const ZOOMED_ART_CASES = /^m15\/r\/creature-short@(art-zero|art-zoom|art-zoom-3|exif6-stored|exif6-upload)$/;
+const ZOOMED_ART_WHY =
+  "Art at a zoom above 1 sits further RIGHT in the preview: +1 px at 750 and +2 at HD (+1 on one HD case on macOS) on every zoomed case — zooms 1.2, 1.3, 1.6 and 3, focal points 0, 0.3, 0.5 and 0.8 — and 0 at zoom 1 whatever the focal point. Measured on the coded picture's grid lines (2026-10-13, darwin): the BAKE's zoomed picture is where the arithmetic puts it in the whole-pixel window yoga lays out (58 + 635 px for the M15 window's 57.525 + 635.7 at 750: the centre line of a 3× zoom at 377.95 against 377.88 computed); the PREVIEW's is +0.6 CSS px from that at zoom 1.3, +0.7 at 1.6 and +1.0 at 3, the same at both sizes. Both renderers are given the same three declarations (object-position, scale(), transform-origin), so it is not a disagreement of ours in one line: Chromium snaps an untransformed picture's box to whole pixels (as yoga does — hence 0 at zoom 1) and scales a transformed one from its fractional box, and the zoom magnifies that sub-pixel difference. It grows slowly with the zoom, so at the maximum (4) it may pass the HD limit — no case measures that yet. Not fixed here: either renderer's fix is a layout question.";
+
 /** Every text slot a profile can name (tests/parity/regions.ts). */
 const TEXT_REGIONS = ["title", "cost", "type", "symbol", "rules", "stat", "second.title", "second.type", "second.rules", "page.title", "page.rules"] as const;
 
@@ -180,6 +185,61 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
     why:
       "The artist line (letter-spaced small capitals; `Illus. …` on the 1993 frame) is WIDER in the preview at 750 px: it ends 2 px further right on most cases and 3 px on the 1993 frame (and on the arch token on macOS). At HD the same line is NARROWER in the preview by about 6 px — within the limits there, but the worst tile of most HD cases (56.9). Both renderers start the line at the same x; they disagree about its letter-spacing or advances. Not traced.",
   },
+  // --- TODO 3.37: seen by #514, measured again 2026-10-13 (after #523's
+  // large pips; the numbers did not move) and listed with their case. -------
+  {
+    name: "750-walker-phyrexian-cost-start",
+    size: "750",
+    cases: /^m15pw\/w\/planeswalker-long@phyrexian-cost-5$/,
+    regions: ["cost"],
+    metric: "dx",
+    min: -5,
+    max: -3,
+    why:
+      "The walker's detached cost of five Phyrexian symbols (×1.2 discs) starts 4 px further LEFT in the preview at 750 px than in the 750 px bake (the name is cut at the same word in both, #514). It is 750-cost-row-width on the widest row the matrix has — five discs of about 44 px where a plain pip is 36 — and like it gone at HD (0 across, 1 down). The 2003 frame's twin (modern/w/…@phyrexian-cost-5) measures +1. Not traced past that entry's guess: the 750 px bake draws whole-pixel discs and gaps, the preview keeps the fractions.",
+  },
+  {
+    name: "750-walker-phyrexian-cost-mad",
+    size: "750",
+    cases: /^m15pw\/w\/planeswalker-long@phyrexian-cost-5$/,
+    regions: ["cost"],
+    metric: "mad",
+    min: 31,
+    max: 35,
+    why:
+      "The same row as 750-walker-phyrexian-cost-start, seen as a difference: with the row 4 px out of register the cost region's mean absolute difference is 32.9 against a limit of 31 (a quarter of the region reads as another picture: hot 24.8 %, a hair inside its limit of 25 %). At HD the region measures 5.2. It goes when the row's start does.",
+  },
+];
+
+/**
+ * Differences that are INSIDE the limits and still not noise (TODO 3.37):
+ * systematic, described, and recorded on every case they name. Nothing
+ * judges a run by them — the baseline already holds each of these offsets
+ * to ±1 px and the limit is one step past them — but the unit run
+ * (parity-matrix.test.ts) fails when a named case no longer records the
+ * offset: fixed means struck, like a known difference.
+ */
+export const WITHIN_LIMIT_DIFFERENCES: readonly KnownDifference[] = [
+  {
+    name: "750-zoomed-art-right",
+    size: "750",
+    cases: ZOOMED_ART_CASES,
+    regions: ["art"],
+    metric: "dx",
+    min: 1,
+    max: 2,
+    why: ZOOMED_ART_WHY,
+  },
+  {
+    name: "hd-zoomed-art-right",
+    size: "hd",
+    cases: ZOOMED_ART_CASES,
+    regions: ["art"],
+    metric: "dx",
+    min: 1,
+    max: 2,
+    why: ZOOMED_ART_WHY,
+  },
 ];
 
 /** How far a measurement may be from its recorded baseline. */
@@ -201,7 +261,8 @@ const encodeTile = (mad: number) => TILE_DIGITS[Math.min(TILE_DIGITS.length - 1,
 /** The upper bound of a recorded tile's step. */
 const decodeTile = (digit: string) => (TILE_DIGITS.indexOf(digit) + 1) * TILE_STEP;
 
-/** One case as tests/parity/baseline.json records it: per region
+/** One case at one size as the baseline records it (one line of
+ *  tests/parity/baseline/<platform>/<case>.json): per region
  *  [dx, dy, mad, hot]; the card's [mad, hot]; every tile's mad as one
  *  character (rows joined). */
 export type BaselineCase = {
@@ -209,28 +270,6 @@ export type BaselineCase = {
   card: [number, number];
   tiles: string;
 };
-
-export type BaselineFile = {
-  note: string;
-  platforms: Record<string, { recorded: string; cases: Record<string, BaselineCase> }>;
-};
-
-/** The baseline file's text: one line per case, so a re-record reads as a
- *  list of the cases that moved. */
-export function serializeBaseline(file: BaselineFile): string {
-  const platforms = Object.keys(file.platforms)
-    .sort()
-    .map((name) => {
-      const platform = file.platforms[name];
-      const cases = Object.keys(platform.cases)
-        .sort()
-        .map((key) => `    ${JSON.stringify(key)}: ${JSON.stringify(platform.cases[key])}`)
-        .join(",\n");
-      return `  ${JSON.stringify(name)}: {\n   "recorded": ${JSON.stringify(platform.recorded)},\n   "cases": {\n${cases}\n   }\n  }`;
-    })
-    .join(",\n");
-  return `{\n "note": ${JSON.stringify(file.note)},\n "platforms": {\n${platforms}\n }\n}\n`;
-}
 
 const round = (value: number, digits: number) => Number(value.toFixed(digits));
 
@@ -304,7 +343,7 @@ function regionsAt(m: Measured, x: number, y: number): string {
 
 /** Layer 3: the measurements that left their recorded baseline. */
 export function baselineFailures(m: Measured, base: BaselineCase | undefined): string[] {
-  if (!base) return [`not in tests/parity/baseline.json for this platform — record it (npm run test:parity -- --update)`];
+  if (!base) return [`not in tests/parity/baseline/ for this platform — record it (npm run test:parity -- --update; CI's half: tests/parity/README.md)`];
   const out: string[] = [];
   const margin = BASELINE_MARGIN;
   for (const [region, r] of Object.entries(m.regions)) {

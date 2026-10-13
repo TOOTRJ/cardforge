@@ -448,6 +448,42 @@ describe("executeDeckRemixStep — an M20+ token's height follows the saved text
     });
   });
 
+  // TODO 1.24: the one case the height rule left — NO text box published in
+  // the colour. The flavour used to save on the textless height, which
+  // draws none of it; the remix now keeps the registry's stand-in (the
+  // printing's landing while the full-art design is unverified: the arch,
+  // whose scrim keeps the text).
+  it("never saves text on the textless height: with no text box in the colour the arch stands in, at one credit", async () => {
+    s.verified = keys(...every("w", "m15token", "m20token"));
+    const { step, card } = await remix("lea-255", undefined, token("tfdn-6"));
+    expect(step.status).toBe("done");
+    expect(card).toMatchObject({ frame_style: { template: "m15token" }, card_type: "token", flavor_text: "New flavour." });
+    expect(s.reserved).toEqual([1]);
+    expect(s.image).toHaveBeenCalledTimes(1);
+    // Copied rules alone are text too (Cat TFDN #27, Lifelink).
+    identity(null);
+    expect((await remix("lea-255", undefined, token("tfdn-27"))).card).toMatchObject({
+      frame_style: { template: "m15token" },
+    });
+  });
+
+  it("…a remix that saves with NO text keeps the textless height there", async () => {
+    s.verified = keys(...every("w", "m15token", "m20token"));
+    identity(null);
+    const { card } = await remix("lea-255", undefined, token("tfdn-6"));
+    expect(card).toMatchObject({ frame_style: { template: "m20token" } });
+    expect(card?.flavor_text).toBeUndefined();
+    expect(card?.rules_text ?? "").toBe("");
+  });
+
+  it("…and where the textless height is the colour's only token frame the save still goes through on it", async () => {
+    s.verified = keys(["m20token", "w"]);
+    const { step, card } = await remix("lea-255", undefined, token("tfdn-6"));
+    expect(step.status).toBe("done");
+    expect(card).toMatchObject({ frame_style: { template: "m20token" }, flavor_text: "New flavour." });
+    expect(s.reserved).toEqual([1]);
+  });
+
   it("a printing with rules text keeps a box whatever the flavour, and takes the tall one for a long line", async () => {
     s.verified = WHITE;
     identity(null);
@@ -478,6 +514,40 @@ describe("executeDeckRemixStep — an M20+ token's height follows the saved text
     const { card } = await remix("lea-255", undefined, token("tlci-17"));
     expect(card).toMatchObject({ frame_style: { template: "m20tokenartifacttall" }, card_type: "token" });
     expect(String(card?.supertype)).toContain("Artifact");
+  });
+});
+
+// TODO 1.24, as the code stands: the registry's `textless` family lands on
+// the "M15 Textless" frames, which are NOT textless profiles — they draw the
+// type line and the rules on the art. So the day one is ticked, a remixed
+// textless promo saves there with its copied rules and the AI's flavour, and
+// both are DRAWN (tests/unit/render/edge-to-edge-bake.test.tsx bakes it):
+// the guard has nothing to move. The day those profiles gain the `textless`
+// flag it does, with no other change (remix-textless-guard-flagged.test.ts).
+describe("executeDeckRemixStep — a textless promo and the 'M15 Textless' frame", () => {
+  const confidant = () => ({
+    printing: {
+      ...(structuredClone(signaturePrintings["sch-3"]) as Record<string, unknown>),
+      oracle_text:
+        "At the beginning of your upkeep, reveal the top card of your library and put that card into your hand. You lose life equal to its mana value.",
+    },
+  });
+
+  it("lands on the bordered frame while the textless frame isn't verified (as on main — production today)", async () => {
+    s.verified = keys(["m15", "b"]);
+    const { step, card } = await remix("lea-255", undefined, confidant());
+    expect(step.status).toBe("done");
+    expect(card).toMatchObject({ frame_style: { template: "m15" }, flavor_text: "New flavour." });
+    expect(s.reserved).toEqual([1]);
+  });
+
+  it("lands on it once it is verified in the colour: that frame draws the text it saves with", async () => {
+    s.verified = keys(["m15", "b"], ["m15textless", "b"]);
+    const { step, card } = await remix("lea-255", undefined, confidant());
+    expect(step.status).toBe("done");
+    expect(card).toMatchObject({ frame_style: { template: "m15textless" }, flavor_text: "New flavour." });
+    expect(String(card?.rules_text)).toContain("At the beginning of your upkeep");
+    expect(s.reserved).toEqual([1]);
   });
 });
 
