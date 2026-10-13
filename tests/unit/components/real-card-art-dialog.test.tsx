@@ -49,7 +49,7 @@ vi.mock("@/lib/cards/art-upload-client", () => ({ uploadCardArtFile: vi.fn() }))
 
 import { RealCardArtButton } from "@/components/creator/real-card-art-dialog";
 import { ArtPanel } from "@/components/creator/panels/art-panel";
-import { LayoutPanel } from "@/components/creator/panels/layout-panel";
+import { SecondPartIdentityFields } from "@/components/creator/panels/second-part-panels";
 import { SECOND_PART_WORDS } from "@/lib/creator/second-part";
 
 afterEach(() => {
@@ -633,13 +633,13 @@ describe("in the Art panel", () => {
   function PanelHarness({
     userId,
     values = cardInProgress(),
-    backFaceSlot,
+    secondPartOnTab,
     onBackFaceArt,
     onForm,
   }: {
     userId: string | null;
     values?: FormValues;
-    backFaceSlot?: React.ReactNode;
+    secondPartOnTab?: boolean;
     onBackFaceArt?: () => void;
     onForm?: (form: Form) => void;
   }) {
@@ -653,7 +653,7 @@ describe("in the Art panel", () => {
           artWindow={M15_ART_WINDOW}
           importedArtOrigin={origin}
           onImportedArtOrigin={setOrigin}
-          backFaceSlot={backFaceSlot}
+          secondPartOnTab={secondPartOnTab}
           onBackFaceArt={onBackFaceArt}
         />
         <ArtistOutput control={form.control} />
@@ -711,7 +711,7 @@ describe("in the Art panel", () => {
     expect(screen.queryByTestId("back-face-art")).toBeNull();
     expect(screen.getAllByRole("button", { name: /use art from a real card/i })).toHaveLength(1);
     cleanup();
-    render(<PanelHarness userId="u" backFaceSlot={<div>split half editor</div>} />);
+    render(<PanelHarness userId="u" secondPartOnTab />);
     expect(screen.queryByTestId("back-face-art")).toBeNull();
   });
 
@@ -750,14 +750,12 @@ describe("in the second face's art block (split / aftermath / flip halves)", () 
     const form = useForm<FormValues>({ defaultValues: cardInProgress() });
     return (
       <FormProvider {...form}>
-        <LayoutPanel
+        <SecondPartIdentityFields
           userId="u"
           artWindow={M15_ART_WINDOW}
-          hasBackFace
           isAdventureFrame={isAdventureFrame}
+          ownArt={!isAdventureFrame}
           partWords={SECOND_PART_WORDS[isAdventureFrame ? "adventure" : "split"]!}
-          backRulesTextRef={{ current: null }}
-          onInsertSymbol={() => {}}
         />
       </FormProvider>
     );

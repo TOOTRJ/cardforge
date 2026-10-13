@@ -22,11 +22,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeft,
   ArrowRight,
+  BookOpen,
   IdCard,
   Layers,
   Crown,
   Loader2,
   Lock,
+  RotateCw,
   Save,
   ScrollText,
   Send,
@@ -117,7 +119,16 @@ import type { PipTextEditorHandle } from "@/components/creator/pip-text-editor";
 import { LandIconPanel } from "@/components/creator/panels/land-icon-panel";
 import { SetIconPanel } from "@/components/creator/panels/set-icon-panel";
 import { AbilitiesPanel } from "@/components/creator/panels/abilities-panel";
-import { LayoutPanel } from "@/components/creator/panels/layout-panel";
+import {
+  SecondPartCostField,
+  SecondPartEmpty,
+  SecondPartFlavorField,
+  SecondPartIdentityFields,
+  SecondPartRulesField,
+  SecondPartStatsFields,
+} from "@/components/creator/panels/second-part-panels";
+import { PartEditingLabel, PartOutline } from "@/components/creator/part-outline";
+import { partOutlineRects, secondPartHasOwnArt } from "@/lib/creator/part-outline";
 import {
   BackFaceColorSection,
   BackFaceCostField,
@@ -142,6 +153,8 @@ import {
   firstErrorPath,
   groupNeedsByFace,
   needLabelInGroup,
+  BACK_FIELD_STEP,
+  PART_FIELD_STEP,
   type CardFaceId,
   type FaceNeedGroup,
 } from "@/lib/creator/face-tabs";
@@ -215,7 +228,7 @@ import { saveNeedsOf, saveNeedsSentence, type SaveNeed } from "@/lib/creator/sav
 import { secondPartWordsFor, secondPartWordsOfCard } from "@/lib/creator/second-part";
 import { describeSecondPartLoss, type SecondPartLoss } from "@/lib/creator/second-part-loss";
 import { revealAndFocusField } from "@/lib/creator/focus-field";
-import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
+import { resolveFrameProfile, type FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import {
   basicLandSeedForColorKey,
   importedCardTypeForKind,
@@ -939,20 +952,33 @@ export function CardCreatorForm({
   const dfcBackBody = dfcLayout
     ? bodyFor(dfcLayout, "back", watched.back_face.card_type || null, dfcFamily)
     : null;
-  // ---- Face tabs (TODO 5.14, part 1: Transform and Modal) ----
-  // The switch shows for a double-faced card; `editFace` is the face every
-  // step edits. A card without the switch always edits its front.
-  const faceTabs = dfcLayout !== null;
-  // The switch's words (lib/creator/second-part.ts): the kind's own for a
-  // double-faced card; a battle's too — its Back face tab is greyed out
-  // until battle backs are built (TODO 5.5). Null = no switch.
-  const faceWords = faceTabs || kind === "battle" ? secondPartWordsFor(kind) : null;
+  // The kind's own words for its second part — "back face", "right half",
+  // "adventure spell" (lib/creator/second-part.ts, TODO 5.14).
+  const partWords = secondPartWordsOfCard(watched.card_type, watched.frame_style?.template);
+  // ---- Face tabs (TODO 5.14) ----
+  // The switch shows for a double-faced card (part 1: Transform and Modal —
+  // two pictures, "faces") and for a card whose frame paints its second
+  // part on the SAME picture (part 2: Split, Aftermath, Adventure, Flip —
+  // "parts"). `editFace` is the part every step edits; a card without the
+  // switch always edits its front.
+  const partTabs = dfcLayout === null && hasInlineBackFace(watched.frame_style?.template);
+  const faceTabsMode: "faces" | "parts" | null = dfcLayout !== null ? "faces" : partTabs ? "parts" : null;
+  const faceTabs = faceTabsMode !== null;
+  // The switch's words (lib/creator/second-part.ts): the kind's own — "Left
+  // half | Right half" on a split card; a battle's too — its Back face tab
+  // is greyed out until battle backs are built (TODO 5.5). Null = no switch.
+  const faceWords = partTabs ? partWords : dfcLayout !== null || kind === "battle" ? secondPartWordsFor(kind) : null;
   const editFace: CardFaceId = faceTabs ? previewFace : "front";
-  // A card that gains or loses the switch starts on its front (derived
-  // during render — a kind change, an import, Start over).
-  const [prevFaceTabs, setPrevFaceTabs] = useState(faceTabs);
-  if (prevFaceTabs !== faceTabs) {
-    setPrevFaceTabs(faceTabs);
+  // Where a second part's fields are (lib/creator/face-tabs.ts): a
+  // double-faced back's type and colour on the Card step, a half's type on
+  // the Identity step.
+  const backFieldSteps = partTabs ? PART_FIELD_STEP : BACK_FIELD_STEP;
+  // A card that gains or loses the switch — or goes from two pictures to
+  // one — starts on its front (derived during render: a kind change, an
+  // import, Start over).
+  const [prevFaceTabs, setPrevFaceTabs] = useState(faceTabsMode);
+  if (prevFaceTabs !== faceTabsMode) {
+    setPrevFaceTabs(faceTabsMode);
     setPreviewFace("front");
   }
   // The visible steps + their order depend on the kind/frame context
@@ -996,9 +1022,6 @@ export function CardCreatorForm({
         });
   const previewSave = previewSaveFor(watched);
   const savesAsDraft = watched.save_as_draft || previewSave;
-  // The kind's own words for its second part — "back face", "right half",
-  // "adventure spell" (lib/creator/second-part.ts, TODO 5.14).
-  const partWords = secondPartWordsOfCard(watched.card_type, watched.frame_style?.template);
   // ONE rule (lib/creator/save-needs.ts): what blocks Save is the list the
   // line above the button shows, each item a link to its field. A
   // double-faced card's back needs its artwork to publish too (TODO 5.2,
@@ -1013,7 +1036,6 @@ export function CardCreatorForm({
     doubleFaced: dfcLayout !== null,
     words: partWords,
   });
-  const secondFaceNameMissing = saveNeeds.some((need) => need.id === "second-name");
   // Edit / remix: at least one field must change (owner decision
   // 2026-09-16). For a remix the visibility choice alone doesn't count — the
   // card itself has to differ from the original.
@@ -1390,7 +1412,7 @@ export function CardCreatorForm({
   const goToIndex = (i: number) => {
     setCurrent(Math.max(0, Math.min(i, steps.length - 1)));
     // Navigating a step always shows the front; the back is reached by adding
-    // it (auto-flips, see onBackFaceAdded) or by clicking the preview to flip.
+    // it or by clicking the preview to flip.
     // With Face tabs the selected tab stays: every step edits the face it
     // names, and the preview never changes face by itself (TODO 5.14).
     if (!faceTabs) setPreviewFace("front");
@@ -1429,7 +1451,7 @@ export function CardCreatorForm({
   const [fieldFocusTick, setFieldFocusTick] = useState(0);
   /** The step a field is edited on: with Face tabs a back field is on the
    *  step of its front twin (lib/creator/face-tabs.ts). */
-  const fieldStepIndex = (field: string) => faceFieldStepIndex(field, steps, faceTabs);
+  const fieldStepIndex = (field: string) => faceFieldStepIndex(field, steps, faceTabs, backFieldSteps);
   /** Open a field's step — and, with Face tabs, its face's tab. */
   const showField = (field: string) => {
     goToIndex(fieldStepIndex(field));
@@ -1471,7 +1493,7 @@ export function CardCreatorForm({
     for (const name of errorPaths(errors)) {
       // With Face tabs a back field's error lights the step it is on.
       if (faceTabs && faceOfField(name) === "back") {
-        const step = steps[faceFieldStepIndex(name, steps, true)];
+        const step = steps[faceFieldStepIndex(name, steps, true, backFieldSteps)];
         if (step) set.add(step.key);
         continue;
       }
@@ -3503,6 +3525,23 @@ export function CardCreatorForm({
     flipOnClick: true,
   };
   // ---- Face tabs: the switch and the two-face preview (TODO 5.14) ----
+  // Part 2 — ONE picture, two parts: where each part sits on it (the
+  // profile's own rects, the frame-compare overrides included) and whether
+  // the second part has a picture of its own. Read only for the creator's
+  // outline and the tab's words; never by a renderer.
+  const partProfile = partTabs
+    ? resolveFrameProfile(normalizeFrameTemplate(watched.frame_style?.template), profileOverrides)
+    : null;
+  const partRects = partProfile ? partOutlineRects(partProfile) : null;
+  const partOwnArt = partProfile ? secondPartHasOwnArt(partProfile) : false;
+  /** The ring on the part being edited — a sibling of the preview inside
+   *  its `relative` box, never part of the card. */
+  const partOutline =
+    partTabs && partRects && watched.has_back_face ? <PartOutline rects={partRects} face={editFace} /> : null;
+  const partEditingLabel =
+    partTabs && partRects && faceWords && watched.has_back_face ? (
+      <PartEditingLabel label={editFace === "back" ? faceWords.second : faceWords.first} />
+    ) : null;
   const facePanelId = useId();
   const switchFace = (next: CardFaceId) => setPreviewFace(next);
   /** What the line under the switch says on this step. */
@@ -3511,6 +3550,12 @@ export function CardCreatorForm({
     : !faceTabs
       ? // A battle: its back has no editor yet (TODO 5.5).
         `${faceWords.unavailableNote}.`
+      : partTabs
+        ? // One picture, two parts (part 2): the card type, the frame and
+          // the colour are the card's — nothing on the Card step is a part's.
+          stepKey === "identity" || stepKey === "text"
+          ? `Every step shows the same fields, in the same order, for whichever part is selected — it is outlined on the preview. Rarity, set symbol and the collector line are shared by ${faceWords.both}.`
+          : `Everything on this step is shared by ${faceWords.both}. The switch still chooses which part the preview outlines.`
       : stepKey === "card"
         ? "The type and the colour below are the selected face's. The card type, the frame and its variations are shared by both faces."
         : stepKey === "identity" || stepKey === "text"
@@ -3535,8 +3580,23 @@ export function CardCreatorForm({
       }}
       back={{
         name: watched.back_face.title,
-        status: faceTabs ? faceStatusOf(watched.back_face) : null,
-        thumb: faceTabs ? <FaceThumb artUrl={watched.back_face.art_url || null} /> : undefined,
+        // A part with no picture of its own (an adventure's spell, a flip
+        // card's other side) is never asked for artwork, and its tab shows
+        // a plain glyph instead of an art window that would never fill.
+        status: faceTabs ? faceStatusOf(watched.back_face, { artwork: !partTabs || partOwnArt }) : null,
+        thumb: !faceTabs ? undefined : partTabs && !partOwnArt ? (
+          <FaceThumb
+            glyph={
+              isAdventureFrame ? (
+                <BookOpen className="h-3.5 w-3.5" aria-hidden />
+              ) : (
+                <RotateCw className="h-3.5 w-3.5" aria-hidden />
+              )
+            }
+          />
+        ) : (
+          <FaceThumb artUrl={watched.back_face.art_url || null} />
+        ),
       }}
     />
     {faceSwitchNote ? (
@@ -3606,6 +3666,9 @@ export function CardCreatorForm({
   const previewLandscape = isLandscapeFrame(watched.frame_style);
   const previewOverlays = (
     <>
+      {/* Face tabs, part 2: the ring on the part being edited — over the
+          card, under the busy overlays. Creator chrome only. */}
+      {partOutline}
       {fillPhase ? (
         <CardGeneratingOverlay
           label={fillPhase === "painting" ? "Painting art…" : "Designing…"}
@@ -3786,6 +3849,43 @@ export function CardCreatorForm({
                       }
                     />
                   </FaceScope>
+                ) : partTabs && editFace === "back" ? (
+                  // The second part's tab of a one-picture card (TODO 5.14,
+                  // part 2): the half's name, card type, type line, artwork
+                  // and artist, in the first part's order — out of the
+                  // "More options" fold they were in.
+                  <FaceScope label={faceWords?.second ?? null}>
+                    {watched.has_back_face ? (
+                      <SecondPartIdentityFields
+                        userId={userId}
+                        // Flip shares the front's art window (no second one).
+                        artWindow={artWindows.second ?? artWindows.front}
+                        isAdventureFrame={isAdventureFrame}
+                        ownArt={partOwnArt}
+                        partWords={partWords}
+                        blankSecondFace={blankSecondFaceFor(kind)}
+                        // The card's printed-pieces switches, as on the first
+                        // part's tab (owner round 50: the crown's switch
+                        // shows on both tabs).
+                        afterTypeLine={
+                          <FaceScope label={null}>
+                            <AnatomyPanel
+                              which={isRevise ? ["crown", "twoColor"] : ["crown"]}
+                              stored={
+                                isEdit && card
+                                  ? { frameStyle: card.frame_style as FrameStyle | null, colorIdentity: card.color_identity }
+                                  : null
+                              }
+                              onPairTouched={markPairTouched}
+                            />
+                            {isRevise ? <LegendaryCrownReason /> : null}
+                          </FaceScope>
+                        }
+                      />
+                    ) : (
+                      <SecondPartEmpty isAdventureFrame={isAdventureFrame} partWords={partWords} />
+                    )}
+                  </FaceScope>
                 ) : (
                   <FaceScope label={faceTabs ? (faceWords?.first ?? null) : null}>
                 <IdentityPanel revise={isRevise} token={kind === "token"} emblem={kind === "emblem"} />
@@ -3813,32 +3913,15 @@ export function CardCreatorForm({
                   importedArtOrigin={importedArtOrigin}
                   onImportedArtOrigin={setImportedArtOrigin}
                   onBackFaceArt={() => setPreviewFace("back")}
-                  secondFaceNameMissing={secondFaceNameMissing}
-                  secondPartLabel={partWords.phrase.replace(/^the /, "")}
+                  // A half painted on this frame is edited on its own tab
+                  // (Face tabs, part 2): never the legacy back's art strip.
+                  secondPartOnTab={partTabs}
                   aiSlot={
                     <AiFillButton
                       label="Generate AI artwork and title"
                       disabled={!userId || !aiConfigured || fillPhase !== null}
                       onClick={() => openFill(FILL_PRESETS.artAndTitle)}
                     />
-                  }
-                  backFaceSlot={
-                    hasInlineBackFace(watched.frame_style?.template) ? (
-                      <LayoutPanel
-                        userId={userId}
-                        // Flip shares the front's art window (no second one).
-                        artWindow={artWindows.second ?? artWindows.front}
-                        hasBackFace={watched.has_back_face}
-                        isAdventureFrame={isAdventureFrame}
-                        partWords={partWords}
-                        backRulesTextRef={backRulesTextRef}
-                        onInsertSymbol={(token) =>
-                          insertSymbol(backRulesTextRef, token)
-                        }
-                        onBackFaceAdded={() => setPreviewFace("back")}
-                        blankSecondFace={blankSecondFaceFor(kind)}
-                      />
-                    ) : undefined
                   }
                   // The one-click move of an imported double-faced card
                   // onto the real frames (TODO 5.2, owner Q3): a stored
@@ -3885,6 +3968,36 @@ export function CardCreatorForm({
                   <BackFaceStatsFields backBody={dfcBackBody} />
                 </FaceScope>
               </>
+            ) : stepKey === "text" && partTabs && editFace === "back" ? (
+              // The second part's tab of a one-picture card (TODO 5.14,
+              // part 2): its cost, rules, flavour and stats where the first
+              // part's are, in the same order. Rarity and the text alignment
+              // are the card's and stay in their places. An adventure's
+              // spell prints no flavour and no stats (as before).
+              watched.has_back_face ? (
+                <>
+                  <FaceScope label={faceWords?.second ?? null}>
+                    <SecondPartCostField />
+                  </FaceScope>
+                  {!kindHidesRarity(kind) ? <RarityPanel /> : null}
+                  <FaceScope label={faceWords?.second ?? null}>
+                    <SecondPartRulesField
+                      partWords={partWords}
+                      backRulesTextRef={backRulesTextRef}
+                      onInsertSymbol={(token) => insertSymbol(backRulesTextRef, token)}
+                    />
+                  </FaceScope>
+                  <RulesAlignChoice />
+                  {!isAdventureFrame ? (
+                    <FaceScope label={faceWords?.second ?? null}>
+                      <SecondPartFlavorField />
+                      <SecondPartStatsFields />
+                    </FaceScope>
+                  ) : null}
+                </>
+              ) : (
+                <SecondPartEmpty isAdventureFrame={isAdventureFrame} partWords={partWords} />
+              )
             ) : stepKey === "text" ? (
               <FaceScope label={faceTabs ? (faceWords?.first ?? null) : null}>
                 {!hidesCost(watched.frame_style?.template) ? (
@@ -4368,8 +4481,9 @@ export function CardCreatorForm({
             <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
               Live preview · click a part of the card to edit it
             </p>
+            {partEditingLabel}
             <div className="relative w-full max-w-md">
-              <CardPreview {...previewProps} flipOnClick={false} hideFlipControl={faceTabs} />
+              <CardPreview {...previewProps} flipOnClick={false} hideFlipControl={dfcLayout !== null} />
               {previewOverlays}
               {readOnly ? null : (
                 <CanvasHotspots
@@ -4463,7 +4577,7 @@ export function CardCreatorForm({
                   <span className="hidden group-open/preview:inline">Hide the preview</span>
                 </span>
               </summary>
-              {faceTabs && faceWords ? (
+              {dfcLayout !== null && faceWords ? (
                 // The face being edited large, the other one small beside
                 // it — tap it to switch (the same state as the tabs).
                 <div className="px-4 pb-4">
@@ -4478,7 +4592,10 @@ export function CardCreatorForm({
                   </FacePreview>
                 </div>
               ) : (
+              // One picture (every other card). On a two-part kind (part 2)
+              // the part being edited is outlined on it and named above it.
               <div className="mx-auto w-full max-w-[220px] px-4 pb-4">
+                {partEditingLabel ? <div className="mb-2 flex">{partEditingLabel}</div> : null}
                 <div className="relative">
                   <CardPreview {...previewProps} />
                   {previewOverlays}
@@ -4501,7 +4618,7 @@ export function CardCreatorForm({
             <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
               Live preview
             </p>
-            {faceTabs && faceWords ? (
+            {dfcLayout !== null && faceWords ? (
               <FacePreview
                 previewProps={previewProps}
                 face={editFace}
@@ -4513,6 +4630,7 @@ export function CardCreatorForm({
               </FacePreview>
             ) : (
             <div className="mx-auto w-full max-w-sm">
+              {partEditingLabel ? <div className="mb-3 flex">{partEditingLabel}</div> : null}
               <div className="relative">
                 <CardPreview {...previewProps} />
                 {previewOverlays}

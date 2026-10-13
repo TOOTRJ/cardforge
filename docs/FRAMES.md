@@ -5077,7 +5077,8 @@ change, no bump, no sweep.
   (`components/creator/panels/back-face-panels.tsx`, `face-switch.tsx`,
   `face-preview.tsx`, `lib/creator/face-tabs.ts`); the fields, their form
   paths and every rule below are unchanged.* As built in 5.2 (one panel,
-  `DfcFacePanel`, modelled on `layout-panel.tsx`): its own SurfaceCard "Back face" on the
+  `DfcFacePanel`, modelled on the inline kinds' layout panel — itself split per step into
+  `second-part-panels.tsx` by Face tabs part 2): its own SurfaceCard "Back face" on the
   Identity step under the front's art block (never inside "More options" —
   a whole face is not an option). Back type chips (`DFC_FACE_TYPES` →
   `back_face.card_type`), colour chips (`ColorSection`, extracted to

@@ -64,7 +64,7 @@ const GAME = "33333333-3333-4333-8333-333333333333";
 const CARD_ID = "22222222-2222-4222-8222-222222222222";
 const USER = "11111111-1111-4111-8111-111111111111";
 const GAME_SYSTEMS = [{ id: GAME, slug: "mtg", name: "Magic" } as unknown as GameSystem];
-const VERIFIED = ["m15", "m15pw", "m15land", "saga"].flatMap((t) =>
+const VERIFIED = ["m15", "m15pw", "m15land", "saga", "split", "aftermath", "adventure", "flip"].flatMap((t) =>
   ["w", "u", "b", "r", "g", "c", "m"].map((k) => frameComboKey(t, k)),
 );
 
@@ -684,4 +684,83 @@ describe("the footer mark across two saves of one editing session", () => {
     await waitFor(() => expect(actions.updateCardAction).toHaveBeenCalledTimes(2));
     expect(actions.updateCardAction.mock.calls[1][1]).not.toHaveProperty("footer_text");
   });
+});
+
+// Face tabs, part 2 (#526): a split, aftermath, adventure or flip card's
+// second part is edited on a tab of its own. The footer rule and the
+// "nothing its maker did not touch" rule hold through those tabs.
+describe("a two-part card edited through its part tabs", () => {
+  const STORED_SECOND = {
+    title: "Second",
+    cost: "{1}{U}",
+    card_type: "sorcery",
+    subtypes: ["Trap"],
+    rules_text: "+1 : Not a walker’s row — “kept” as typed.",
+    flavor_text: "Kept.",
+    artist_credit: "Bo Reed",
+    art_url: "https://example.com/back.png",
+    art_position: { focalX: 0.2, focalY: 0.8, scale: 1.7 },
+  };
+  // A rules text spelled as a walker's or a saga's rows would be: on these
+  // kinds it is plain text, and travels as stored.
+  const FRONT_RULES = "−2: Deal 2 damage.\n\nI,II — Draw a card.";
+  const KINDS = [
+    ["split", "instant", "Right half"],
+    ["aftermath", "sorcery", "Aftermath half"],
+    ["adventure", "creature", "Adventure spell"],
+    ["flip", "creature", "Flipped side"],
+  ] as const;
+  const twoPart = (template: string, cardType: string, footer: string | null) =>
+    savedCard({
+      card_type: cardType,
+      supertype: null,
+      subtypes: [],
+      rules_text: FRONT_RULES,
+      frame_style: { finish: "regular", template },
+      back_face: STORED_SECOND,
+      footer_text: footer,
+    });
+  const secondTab = async (name: string) => {
+    await act(async () => {
+      fireEvent.click(screen.getByRole("tab", { name: new RegExp(`^${name}`) }));
+    });
+  };
+
+  for (const [template, cardType, second] of KINDS) {
+    it.each([
+      ["NULL (the profile default shows)", null],
+      ["an explicit none", ""],
+      ["the card's own", "kesh.example"],
+    ])(`${template}: an edit of the second part alone — footer %s is not sent, the first part's text is as stored`, async (_l, footer) => {
+      renderForm("edit", twoPart(template, cardType, footer), PAID);
+      await goTo("Text & stats");
+      await secondTab(second);
+      await typeRich("back_face.rules_text", "Draw two cards.");
+      const payload = await sentUpdate();
+      expect(payload).not.toHaveProperty("footer_text");
+      expect(payload.rules_text).toBe(FRONT_RULES);
+      expect(payload.face_content).toBeNull();
+      expect(payload.back_face).toEqual({ ...STORED_SECOND, rules_text: "Draw two cards." });
+    });
+
+    it(`${template}: a title-only edit hands both parts' texts back byte for byte`, async () => {
+      renderForm("edit", twoPart(template, cardType, null), PAID);
+      await type("title", "Another Name");
+      const payload = await sentUpdate();
+      expect(payload).not.toHaveProperty("footer_text");
+      expect(payload.rules_text).toBe(FRONT_RULES);
+      expect(payload.back_face).toEqual(STORED_SECOND);
+    });
+
+    it(`${template}: the footer changed after a visit to the second part's tab IS sent`, async () => {
+      renderForm("edit", twoPart(template, cardType, null), PAID);
+      await goTo("Text & stats");
+      await secondTab(second);
+      await goTo("Subscriber");
+      await type("footer_text", "");
+      const payload = await sentUpdate();
+      expect(payload).toHaveProperty("footer_text", "");
+      expect(payload.back_face).toEqual(STORED_SECOND);
+    });
+  }
 });
