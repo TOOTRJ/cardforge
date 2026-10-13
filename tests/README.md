@@ -46,7 +46,7 @@ bug to fix, not noise.
 
 The required **Typecheck, lint, unit** check is a gate over three jobs that
 run side by side: `static` (typecheck, lint, `next build`), `unit` (the unit
-suite in four shards — vitest's `--shard`, a hash of each file's path, so
+suite in six shards — vitest's `--shard`, a hash of each file's path, so
 there is no file list to keep) and `coverage`, which merges the shards'
 blob reports (`npm run test:coverage:merge`) and holds the coverage floors
 of `vitest.config.ts` to the WHOLE suite. A shard only records coverage

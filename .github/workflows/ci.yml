@@ -6,7 +6,7 @@
 #                       thing that catches a cookie read on a
 #                       `dynamic = "error"` page or an undefined Satori style
 #                       value.
-#             unit      the unit suite in four shards (vitest `--shard`), each
+#             unit      the unit suite in six shards (vitest `--shard`), each
 #                       on the bucket frame masters too, fetched from
 #                       production's PUBLIC frames bucket
 #                       (scripts/frames-fetch.mjs).
@@ -88,11 +88,13 @@ jobs:
   # (VITEST_COVERAGE_SHARD: no floors, no report — its share of the suite
   # could never meet them); the `coverage` job merges the shards' blobs and
   # enforces the floors of vitest.config.ts on the whole suite.
-  # Four shards, not more: a shard is never faster than its slowest FILE, and
+  # Six shards, measured (2026-10-12; the slowest shard's test step, across
+  # runner types): three 7.4 min, four 6.7 to 9.5, six 7.2 to 7.3, eight 5.3.
+  # The hash split is uneven — a handful of bake files are 40 % of the suite —
+  # and a shard is never faster than its slowest FILE:
   # tests/unit/render/art-window-coverage.test.ts alone takes 5.5 to 7.5 min
-  # under coverage (50 s without) — three, four and six shards all measured
-  # 6.5 to 7.5 min for the slowest one. More shards pay off only once that
-  # file is split.
+  # under coverage (50 s without). At six the slowest shard is that file's;
+  # more shards pay off only once it is split.
   unit:
     name: Unit tests (${{ matrix.shard }}/${{ matrix.total }})
     runs-on: ubuntu-latest
@@ -101,8 +103,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
-        total: [4]
+        shard: [1, 2, 3, 4, 5, 6]
+        total: [6]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -183,13 +185,13 @@ jobs:
           pattern: unit-blob-*
           merge-multiple: true
           path: .vitest-reports
-      # Floors checked on three shards of four would be floors on other
+      # Floors checked on five shards of six would be floors on other
       # numbers: every shard's blob must be here.
       - name: Every shard reported
         run: |
           ls -l .vitest-reports
-          for i in 1 2 3 4; do test -s ".vitest-reports/blob-$i-4.json"; done
-          test "$(ls .vitest-reports | wc -l)" -eq 4
+          for i in 1 2 3 4 5 6; do test -s ".vitest-reports/blob-$i-6.json"; done
+          test "$(ls .vitest-reports | wc -l)" -eq 6
       - run: npm run test:coverage:merge
       - name: Upload coverage report
         if: ${{ !cancelled() }}
