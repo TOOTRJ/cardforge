@@ -80,15 +80,18 @@ Rules and gotchas:
   shared dev branch — target-verified, see `scripts/db-dev.mjs`)
 - CI (`.github/workflows/ci.yml`) runs typecheck + lint + unit + the full e2e
   suite on every PR. Keep it green — a red e2e may be a real bug, not drift.
-  A NOTES-ONLY PR (every changed file on the allow-list of
-  `scripts/lib/ci-docs-only.mjs`: root `*.md`, `docs/**/*.md`,
+  Minutes are BILLED (private repo) and CI runs in TIERS
+  (`scripts/lib/ci-docs-only.mjs`, `tests/README.md` "Tiers"): open a PR as
+  a DRAFT while iterating (typecheck + lint + build + the notes tests,
+  ~7 min) and `gh pr ready <n>` when it needs the FULL run (~67 min; that
+  starts it on the same commit — `--undo` goes back). A NOTES-ONLY change
+  (every file on the allow-list: root `*.md`, `docs/**/*.md`,
   `.claude/**/*.md`, the two tests READMEs — never `.mdx`, `supabase/**`,
-  `.github/**`) skips the heavy jobs and runs `npm run test:docs`, the unit
-  tests that read notes; a test that starts to read a Markdown file joins
-  that script (`tests/unit/devops/ci-docs-only.test.ts` fails until it
-  does). Minutes are billed (private repo): a new heavy job goes behind the
-  `changes` condition, never behind a workflow-level `paths-ignore`
-  (`tests/README.md` "CI").
+  `.github/**`) runs `npm run test:docs` alone; a unit test that starts to
+  read a Markdown file joins that script
+  (`tests/unit/devops/ci-docs-only.test.ts` fails until it does). A new job
+  goes behind the `changes` condition, never behind a workflow-level
+  `paths-ignore`; a draft's gate is named "Draft checks" on purpose.
 
 ## Conventions
 
