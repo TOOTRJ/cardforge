@@ -104,6 +104,10 @@ type ArtUploaderProps = {
   /** Rendered beside the Choose file button — the creator's "Generate AI
    *  artwork and title" button lives here. */
   actionSlot?: React.ReactNode;
+  /** The form field this uploader fills ("art_url", "back_face.art_url"):
+   *  written on the Choose file button as `data-field-anchor`, so a "still
+   *  needed" link can put the focus there (lib/creator/focus-field.ts). */
+  fieldAnchor?: string;
 };
 
 export function ArtUploader({
@@ -115,6 +119,7 @@ export function ArtUploader({
   primaryPasteTarget = true,
   className,
   actionSlot,
+  fieldAnchor,
 }: ArtUploaderProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   // The window a NEW picture is fitted to — read when its upload finishes
@@ -649,6 +654,7 @@ export function ArtUploader({
         <Button
           type="button"
           variant={artUrl ? "outline" : "primary"}
+          data-field-anchor={fieldAnchor}
           onClick={openPicker}
           disabled={uploading || !userId}
         >

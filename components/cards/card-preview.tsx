@@ -708,9 +708,13 @@ export function CardPreview(rawProps: CardPreviewProps) {
         <div className="pointer-events-none absolute inset-x-0 bottom-3 z-40 flex justify-center px-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-background/85 px-3 py-1.5 text-[11px] font-medium text-foreground shadow-lg backdrop-blur-sm">
             <RotateCw className="h-3.5 w-3.5" aria-hidden />
-            {currentFace === "front"
-              ? "Click to see the back"
-              : "Click to see the front"}
+            {/* "Click" where there is a mouse, "Tap" where there is none
+                (a phone has no click to offer — TODO 5.14). */}
+            <span>
+              <span className="[@media(hover:none)]:hidden">Click</span>
+              <span className="hidden [@media(hover:none)]:inline">Tap</span>{" "}
+              {currentFace === "front" ? "to see the back" : "to see the front"}
+            </span>
           </span>
         </div>
       ) : null}
@@ -2576,7 +2580,7 @@ function AdventurePanel({
 }
 
 /** The editor's hint on an empty adventure page (never baked). */
-const ADVENTURE_RULES_HINT = "Adventure rules (the back face).";
+const ADVENTURE_RULES_HINT = "Adventure rules (the adventure spell).";
 
 // ---------------------------------------------------------------------------
 // SecondFacePanel — the back-face content of a multi-panel frame, drawn inline

@@ -3,6 +3,7 @@ import { tokenizeRulesText } from "@/lib/cards/rules-text";
 import { collectorStyleOf, COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import { secondPartWordsOfCard } from "@/lib/creator/second-part";
 import { faceOf, type FaceRole } from "@/lib/cards/type-faces";
 import { drawsManaGem } from "@/lib/cards/mana-gem";
 import { symbolStyle, symbolStyleOf, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
@@ -151,6 +152,13 @@ export function findUnrenderableText(fields: readonly GlyphCheckField[]): Unrend
 
 /** The creator form values the check reads (a structural slice of
  *  lib/creator/form-types.ts `FormValues`). */
+/** What the card's second part is called in a notice — "Back face",
+ *  "Right half", "Adventure spell" (lib/creator/second-part.ts; the frame
+ *  decides: a split half used to be reported as a "back face"). */
+function secondPartLabelOf(v: Pick<GlyphCheckValues, "frame_style">): string {
+  return secondPartWordsOfCard(null, v.frame_style?.template ?? null).second;
+}
+
 export type GlyphCheckValues = {
   title: string;
   /** The mana cost — read by the symbol check only (its pips are drawn by
@@ -243,12 +251,13 @@ export function cardGlyphFields(v: GlyphCheckValues): GlyphCheckField[] {
   ];
   if (v.has_back_face) {
     const b = v.back_face;
+    const part = secondPartLabelOf(v);
     fields.push(
-      { label: "Back face name", face: "display", value: b.title },
-      { label: "Back face type line", face: "display", value: `${b.supertype} ${b.subtypes_text}` },
-      { label: "Back face rules text", face: "rules", value: b.rules_text },
-      { label: "Back face flavor text", face: "italic", value: b.flavor_text },
-      { label: "Back face stats", face: "display", value: `${b.power} ${b.toughness} ${b.loyalty} ${b.defense}` },
+      { label: `${part} name`, face: "display", value: b.title },
+      { label: `${part} type line`, face: "display", value: `${b.supertype} ${b.subtypes_text}` },
+      { label: `${part} rules text`, face: "rules", value: b.rules_text },
+      { label: `${part} flavor text`, face: "italic", value: b.flavor_text },
+      { label: `${part} stats`, face: "display", value: `${b.power} ${b.toughness} ${b.loyalty} ${b.defense}` },
     );
   }
   return fields;
@@ -347,9 +356,10 @@ export function cardSymbolFields(v: GlyphCheckValues): SymbolCheckField[] {
     ...chapters.map((row, i) => ({ label: `Chapter ${i + 1}`, value: row.text })),
   ];
   if (v.has_back_face) {
+    const part = secondPartLabelOf(v);
     fields.push(
-      { label: "Back face mana cost", value: v.back_face.cost },
-      { label: "Back face rules text", value: v.back_face.rules_text },
+      { label: `${part} mana cost`, value: v.back_face.cost },
+      { label: `${part} rules text`, value: v.back_face.rules_text },
     );
   }
   return fields;

@@ -104,6 +104,7 @@ import { LegendaryCrownReason } from "@/components/creator/panels/legendary-vari
 import { previewFrameStyleOf } from "@/lib/creator/legendary-variation";
 import { CARD_TYPE_OPTIONS } from "@/components/creator/field-group";
 import { KindChangeDialog } from "@/components/creator/kind-change-dialog";
+import { SecondPartLossDialog } from "@/components/creator/second-part-loss-dialog";
 import { ArtPanel } from "@/components/creator/panels/art-panel";
 import { TextPanel } from "@/components/creator/panels/text-panel";
 import {
@@ -182,7 +183,10 @@ import {
   serializeSaga,
 } from "@/lib/cards/face-content";
 import { basicLandManaKey } from "@/lib/cards/watermark";
-import { missingSecondFaceName } from "@/lib/cards/second-face-name";
+import { saveNeedsOf, saveNeedsSentence, type SaveNeed } from "@/lib/creator/save-needs";
+import { secondPartWordsFor, secondPartWordsOfCard } from "@/lib/creator/second-part";
+import { describeSecondPartLoss, type SecondPartLoss } from "@/lib/creator/second-part-loss";
+import { revealAndFocusField } from "@/lib/creator/focus-field";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import {
   basicLandSeedForColorKey,
@@ -442,11 +446,63 @@ const CARD_TYPE_LABEL: Partial<Record<string, string>> = Object.fromEntries(
   CARD_TYPE_OPTIONS.map((option) => [option.value, option.label.toLowerCase()]),
 );
 
-/** "a, b and c" — the Save hint's list of what's missing. */
-function listPhrase(parts: readonly string[]): string {
-  return parts.length <= 1
-    ? parts.join("")
-    : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+/** The line above the Save button while the card still needs something
+ *  (TODO 5.14): the same sentence as before — "Add a title, artwork and
+ *  the back face's name to enable Save." — with each item a link that opens
+ *  its step and puts the focus in its field. A real list, laid out inline;
+ *  the items come from the rule that disables Save (saveNeedsOf), never a
+ *  second list. */
+function SaveNeedsLine({
+  needs,
+  stepLabelFor,
+  onGo,
+  hasFieldFor,
+}: {
+  needs: readonly SaveNeed[];
+  stepLabelFor: (field: string) => string;
+  onGo: (field: string) => void;
+  /** False for an item the creator has no field for on this card (the name
+   *  of a back face kept on a one-part frame — a legacy double-faced back,
+   *  a battle's): it is listed as plain words, never a link to nowhere. */
+  hasFieldFor: (field: SaveNeed["field"]) => boolean;
+}) {
+  return (
+    <div role="status" data-testid="save-needs" className="text-xs leading-5 text-gold">
+      Add{" "}
+      <ul className="inline" aria-label="Still needed before saving">
+        {needs.map((need, i) => {
+          const step = stepLabelFor(need.field);
+          return (
+            <li key={need.id} className="inline">
+              {hasFieldFor(need.field) ? (
+                <button
+                  type="button"
+                  data-need={need.id}
+                  // The visible words first, then where the link goes.
+                  aria-label={`${need.label} — go to this field${step ? ` on the ${step} step` : ""}`}
+                  title={step ? `Go to this field on the ${step} step` : "Go to this field"}
+                  onClick={() => onGo(need.field)}
+                  className="rounded-sm font-medium underline decoration-gold/60 underline-offset-2 hover:decoration-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
+                >
+                  {need.label}
+                </button>
+              ) : (
+                <span
+                  data-need={need.id}
+                  data-no-field
+                  title="This card's frame has no field for it. A private draft can be saved without it."
+                >
+                  {need.label}
+                </span>
+              )}
+              {i < needs.length - 2 ? ", " : i === needs.length - 2 ? " and " : ""}
+            </li>
+          );
+        })}
+      </ul>{" "}
+      to enable Save.
+    </div>
+  );
 }
 
 /** The first message in a (nested) react-hook-form errors object, or in a
@@ -837,26 +893,24 @@ export function CardCreatorForm({
         });
   const previewSave = previewSaveFor(watched);
   const savesAsDraft = watched.save_as_draft || previewSave;
-  const secondFaceNameMissing =
-    watched.has_back_face &&
-    missingSecondFaceName(
-      watched.back_face,
-      savesAsDraft ? "private" : watched.visibility,
-    );
-  // A double-faced card's back needs its artwork to publish too (TODO 5.2,
+  // The kind's own words for its second part — "back face", "right half",
+  // "adventure spell" (lib/creator/second-part.ts, TODO 5.14).
+  const partWords = secondPartWordsOfCard(watched.card_type, watched.frame_style?.template);
+  // ONE rule (lib/creator/save-needs.ts): what blocks Save is the list the
+  // line above the button shows, each item a link to its field. A
+  // double-faced card's back needs its artwork to publish too (TODO 5.2,
   // design D13: the "no artwork → no gallery" rule on both faces).
-  const saveMissing = [
-    !watched.title.trim() ? "a title" : null,
-    !savesAsDraft && !watched.art_url.trim() ? "artwork" : null,
-    !savesAsDraft && dfcLayout && !watched.back_face.art_url.trim() ? "the back face's artwork" : null,
-    secondFaceNameMissing
-      ? isAdventureFrame
-        ? "the adventure's name"
-        : dfcLayout
-          ? "the back face's name"
-          : "the second face's name"
-      : null,
-  ].filter((part): part is string => part !== null);
+  const saveNeeds = saveNeedsOf({
+    title: watched.title,
+    artUrl: watched.art_url,
+    hasBackFace: watched.has_back_face,
+    backFace: watched.back_face,
+    savesAsDraft,
+    visibility: watched.visibility,
+    doubleFaced: dfcLayout !== null,
+    words: partWords,
+  });
+  const secondFaceNameMissing = saveNeeds.some((need) => need.id === "second-name");
   // Edit / remix: at least one field must change (owner decision
   // 2026-09-16). For a remix the visibility choice alone doesn't count — the
   // card itself has to differ from the original.
@@ -866,8 +920,8 @@ export function CardCreatorForm({
       ? !hasMeaningfulChange(Object.keys(dirtyFields), "remix")
       : false;
   const saveDisabledReason =
-    saveMissing.length > 0
-      ? `Add ${listPhrase(saveMissing)} to enable Save.`
+    saveNeeds.length > 0
+      ? saveNeedsSentence(saveNeeds)
       : deckRemix && remixSource && !isDirty
         ? "Change something to make it your own custom proxy — an exact copy can't be saved."
         : reviseUnchanged
@@ -1240,6 +1294,30 @@ export function CardCreatorForm({
     const i = steps.findIndex((s) => s.key === key);
     if (i >= 0) goToIndex(i);
   };
+  // ---- "Still needed" links (TODO 5.14) ----
+  // Each thing Save still needs is a link: it opens the step that holds the
+  // field, opens a closed "More options" fold above it, scrolls it into view
+  // and puts the focus there (lib/creator/focus-field.ts). The focus moves
+  // in an effect, once the step's panel has rendered.
+  const stepPanelsRef = useRef<HTMLDivElement | null>(null);
+  const pendingFieldFocusRef = useRef<string | null>(null);
+  const [fieldFocusTick, setFieldFocusTick] = useState(0);
+  const goToField = (field: string) => {
+    goToIndex(stepIndexForField(field, steps));
+    pendingFieldFocusRef.current = field;
+    setFieldFocusTick((tick) => tick + 1);
+  };
+  useEffect(() => {
+    const field = pendingFieldFocusRef.current;
+    if (!field) return;
+    pendingFieldFocusRef.current = null;
+    revealAndFocusField(stepPanelsRef.current, field);
+  }, [fieldFocusTick]);
+  /** The step a still-needed item lives on, for its link's name. */
+  const stepLabelForField = (field: string) => {
+    const step = steps[stepIndexForField(field, steps)];
+    return step ? stepLabel(step) : "";
+  };
   // Keep the listener-facing nav handle pointed at the latest closure (the
   // hero/palette listeners are registered once with a stable ref).
   useEffect(() => {
@@ -1373,17 +1451,17 @@ export function CardCreatorForm({
     }
   };
 
-  const applyKindPatch = (patch: KindChangePatch) => {
-    // The verification gate applies to KIND changes too — a card type pick
-    // must never land on an unpublished frame. When the planned template has
-    // no published color, fall back to the kind's first published frame; if
-    // the whole kind is unpublished (programmatic paths — the chips are
-    // already disabled in the UI), set the type but keep the current frame.
-    // Resolve against the CURRENT colour (the user's pick is a fact): the
-    // planned template in this colour, else another published frame of the
-    // kind in this colour, else the planned template in a colour it has —
-    // and say which of those happened. Never an unpublished pair.
-    // An emblem's frame is silver in every colour: it resolves in `c`.
+  // The verification gate applies to KIND changes too — a card type pick
+  // must never land on an unpublished frame. When the planned template has
+  // no published color, fall back to the kind's first published frame; if
+  // the whole kind is unpublished (programmatic paths — the chips are
+  // already disabled in the UI), set the type but keep the current frame.
+  // Resolve against the CURRENT colour (the user's pick is a fact): the
+  // planned template in this colour, else another published frame of the
+  // kind in this colour, else the planned template in a colour it has —
+  // and say which of those happened. Never an unpublished pair.
+  // An emblem's frame is silver in every colour: it resolves in `c`.
+  const resolveKindPatchFrame = (patch: KindChangePatch) => {
     const currentColorKey = frameColorKeyForKind(
       kindFromCard(patch.card_type, patch.template),
       pickFrameColorKey(getValues("color_identity")) as FrameColorKey,
@@ -1395,6 +1473,22 @@ export function CardCreatorForm({
       verifiedKeys: new Set(verifiedFrameKeys),
       prefer: "frame",
     });
+    return { currentColorKey, resolution };
+  };
+  /** A frame that carries a second part: an inline one (adventure, split,
+   *  aftermath, flip) or a double-faced front body. */
+  const frameOwnsSecondPart = (template: FrameTemplate | string | null | undefined) =>
+    hasInlineBackFace(template ?? undefined) || templateHasBackFace(template);
+  // The second part a change of card type removed, kept IN MEMORY for this
+  // visit only (TODO 5.14): picking the kind it belonged to again puts it
+  // back. Never sent with a save — the form holds an empty second part
+  // while the card is a one-part kind. One slot PER KIND: the question
+  // promises "switch back to Transform … it comes back", and a half removed
+  // from a Split card on the way must not cost the Transform back its slot.
+  const stashedSecondPartRef = useRef<Partial<Record<CardKind, FormValues["back_face"]>>>({});
+
+  const applyKindPatch = (patch: KindChangePatch, options: { byUser?: boolean } = {}) => {
+    const { currentColorKey, resolution } = resolveKindPatchFrame(patch);
     // Snapshot BEFORE the writes — the row fold and the land auto-identity
     // below must judge the state the user is leaving, not the one we're
     // creating.
@@ -1448,17 +1542,41 @@ export function CardCreatorForm({
     // or a double-faced front body (TODO 5.2): that face was forced on for
     // the frame, so drop it with the frame — otherwise an invisible,
     // unfixable back_face.title error followed the card around.
-    const prevOwnsBack = hasInlineBackFace(prevTemplate) || templateHasBackFace(prevTemplate);
-    const nextOwnsBack = hasInlineBackFace(template) || templateHasBackFace(template);
+    const prevOwnsBack = frameOwnsSecondPart(prevTemplate);
+    const nextOwnsBack = frameOwnsSecondPart(template);
+    // A kind change the user did not make (an import, an AI card) starts
+    // from its own data: nothing kept from before is offered back.
+    if (!options.byUser) stashedSecondPartRef.current = {};
     if (prevOwnsBack && !nextOwnsBack) {
+      // The user was asked first when the part holds anything
+      // (SecondPartLossDialog); it is kept for the session all the same.
+      const leaving = getValues("back_face");
+      if (options.byUser && !isBlankBackFace(leaving)) {
+        stashedSecondPartRef.current[prevKind] = {
+          ...leaving,
+          art_position: { ...leaving.art_position },
+          color_identity: [...leaving.color_identity],
+        };
+      }
       setValue("has_back_face", false, { shouldDirty: true });
       setValue("back_face", EMPTY_BACK_FACE, { shouldDirty: true });
     } else if (nextOwnsBack && isBlankBackFace(getValues("back_face"))) {
-      // Entering (or moving between) frames that paint a second face: an
-      // untouched one takes the new kind's type — a split's second half
-      // used to start, and save, as a Creature (TODO 3b.8). A double-faced
-      // kind's back starts as a creature in the front's colour.
-      setValue("back_face", blankSecondFaceFor(nextKind), { shouldDirty: true });
+      const stashed = options.byUser ? stashedSecondPartRef.current[nextKind] : undefined;
+      if (stashed) {
+        // Back on the kind whose second part was removed: it returns as it
+        // was.
+        setValue("back_face", stashed, { shouldDirty: true });
+        delete stashedSecondPartRef.current[nextKind];
+        toast.info(
+          `${(secondPartWordsFor(nextKind)?.second ?? "Back face")} restored${stashed.title.trim() ? ` — “${stashed.title.trim()}”` : ""}.`,
+        );
+      } else {
+        // Entering (or moving between) frames that paint a second face: an
+        // untouched one takes the new kind's type — a split's second half
+        // used to start, and save, as a Creature (TODO 3b.8). A double-faced
+        // kind's back starts as a creature in the front's colour.
+        setValue("back_face", blankSecondFaceFor(nextKind), { shouldDirty: true });
+      }
     }
     setValue("card_type", patch.card_type, { shouldDirty: true });
     setValue("frame_style.template", template, { shouldDirty: true });
@@ -1546,18 +1664,57 @@ export function CardCreatorForm({
     if (nextKind !== "token") setTokenDefaultFrame(false);
     else if (prevKind !== "token") setTokenDefaultFrame(!isRevise && isArchTokenFrame(template));
   };
+  /** Carry a planned kind change out: straight away, or after the era
+   *  question (KindChangeDialog). */
+  const proceedKindPlan = (plan: KindChangePlan) => {
+    if (plan.action === "apply") {
+      setFrameSubstitution(null);
+      applyKindPatch(plan.patch, { byUser: true });
+    } else {
+      setPendingKindPlan(plan);
+    }
+  };
+  /** A change of card type that would throw the card's second part away —
+   *  asked first (TODO 5.14). Null while the question is not open. */
+  const [pendingSecondPartLoss, setPendingSecondPartLoss] = useState<{
+    loss: SecondPartLoss;
+    plan: KindChangePlan;
+  } | null>(null);
+  /** What picking `next` would remove, judged on the frame the change
+   *  really lands on; null when the card keeps a second part, or the part
+   *  holds nothing the maker wrote. */
+  const secondPartLossFor = (next: CardKind, patch: KindChangePatch): SecondPartLoss | null => {
+    if (!frameOwnsSecondPart(getValues("frame_style.template"))) return null;
+    const { resolution } = resolveKindPatchFrame(patch);
+    // An unpublished kind keeps the current frame, and the second part.
+    if (resolution.status === "unavailable") return null;
+    if (frameOwnsSecondPart(resolution.template)) return null;
+    return describeSecondPartLoss({
+      face: getValues("back_face"),
+      words: partWords,
+      fromLabel: KIND_DEFS[kind].label,
+      toLabel: KIND_DEFS[next].label,
+    });
+  };
+  const kindChipFocusRef = useRef<HTMLElement | null>(null);
   const handleKindSelect = (next: CardKind) => {
     if (next === kind) return;
     const plan = planKindChange(next, {
       cardType: watched.card_type,
       template: watched.frame_style?.template,
     });
-    if (plan.action === "apply") {
-      setFrameSubstitution(null);
-      applyKindPatch(plan.patch);
-    } else {
-      setPendingKindPlan(plan);
+    const loss = secondPartLossFor(next, plan.patch);
+    if (loss) {
+      // The chip that was pressed: the focus returns to it when the
+      // question closes (a browser that does not focus a clicked button
+      // gets the selected chip instead).
+      const pressed = typeof document !== "undefined" ? document.activeElement : null;
+      kindChipFocusRef.current =
+        pressed instanceof HTMLElement && pressed.getAttribute("role") === "radio" ? pressed : null;
+      setPendingSecondPartLoss({ loss, plan });
+      return;
     }
+    proceedKindPlan(plan);
   };
   /** A double-faced FRONT may be colourless only with "Artifact" on its
    *  type line (design D2: the body's `c` is the artifact stand-in). A card
@@ -2575,6 +2732,7 @@ export function CardCreatorForm({
   // and return to step 1.
   const handleStartOver = () => {
     reset(defaults);
+    stashedSecondPartRef.current = {};
     setRemixSource(null);
     setFrameSubstitution(null);
     setImportedArtOrigin(null);
@@ -3329,7 +3487,7 @@ export function CardCreatorForm({
     </p>
   );
   const stepPanels = (
-    <div className="relative">
+    <div className="relative" ref={stepPanelsRef}>
       {readOnly ? <GuestGate /> : null}
       {mode !== "edit" && !readOnly ? (
         <CapacityNotice capacity={capacity} adding={1} className="mb-6" />
@@ -3419,6 +3577,7 @@ export function CardCreatorForm({
                   onImportedArtOrigin={setImportedArtOrigin}
                   onBackFaceArt={() => setPreviewFace("back")}
                   secondFaceNameMissing={secondFaceNameMissing}
+                  secondPartLabel={partWords.phrase.replace(/^the /, "")}
                   aiSlot={
                     <AiFillButton
                       label="Generate AI artwork and title"
@@ -3434,6 +3593,7 @@ export function CardCreatorForm({
                         artWindow={artWindows.second ?? artWindows.front}
                         hasBackFace={watched.has_back_face}
                         isAdventureFrame={isAdventureFrame}
+                        partWords={partWords}
                         backRulesTextRef={backRulesTextRef}
                         onInsertSymbol={(token) =>
                           insertSymbol(backRulesTextRef, token)
@@ -3644,11 +3804,31 @@ export function CardCreatorForm({
             onConfirm={() => {
               if (pendingKindPlan) {
                 setFrameSubstitution(null);
-                applyKindPatch(pendingKindPlan.patch);
+                applyKindPatch(pendingKindPlan.patch, { byUser: true });
               }
               setPendingKindPlan(null);
             }}
             onCancel={() => setPendingKindPlan(null)}
+          />
+
+          {/* Asked before a change of card type removes the card's second
+              part (its back face, right half, adventure spell…) — only when
+              that part holds something. Cancel = zero changes. */}
+          <SecondPartLossDialog
+            loss={pendingSecondPartLoss?.loss ?? null}
+            onConfirm={() => {
+              const pending = pendingSecondPartLoss;
+              setPendingSecondPartLoss(null);
+              if (pending) proceedKindPlan(pending.plan);
+            }}
+            onCancel={() => setPendingSecondPartLoss(null)}
+            returnFocusTo={() => {
+              const chip = kindChipFocusRef.current;
+              if (chip?.isConnected) return chip;
+              return document.querySelector<HTMLElement>(
+                "[role='radiogroup'][aria-label='Card type'] [role='radio'][aria-checked='true']",
+              );
+            }}
           />
 
           {/* Leaving with unsaved changes — save as a draft (create/remix)
@@ -3744,7 +3924,22 @@ export function CardCreatorForm({
           {/* Action bar — sticky across all tabs so saving never requires
               switching back to a "publishing" tab. */}
           <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-col gap-2 border-t border-border/50 bg-surface/95 px-6 py-4 backdrop-blur-sm">
-            {userId && saveDisabledReason ? (
+            {userId && saveNeeds.length > 0 ? (
+              <SaveNeedsLine
+                needs={saveNeeds}
+                stepLabelFor={stepLabelForField}
+                onGo={goToField}
+                hasFieldFor={(field) =>
+                  // The second part is edited on a frame that paints one, or
+                  // on a double-faced body; a back kept on any other frame
+                  // has no editor (its owner is offered the move onto the
+                  // real frames on the Identity step).
+                  !field.startsWith("back_face.") ||
+                  hasInlineBackFace(watched.frame_style?.template) ||
+                  dfcLayout !== null
+                }
+              />
+            ) : userId && saveDisabledReason ? (
               <p
                 role="status"
                 className="text-xs leading-5 text-gold"
@@ -4003,13 +4198,18 @@ export function CardCreatorForm({
             {/* Mobile inline preview — keeps the card visible while editing
                 (the desktop sticky aside is hidden below lg). CSS-only toggle. */}
             <details
-              className="rounded-lg border border-border/60 bg-elevated/30 lg:hidden"
+              className="group/preview rounded-lg border border-border/60 bg-elevated/30 lg:hidden"
               open
             >
+              {/* The bar folds the preview away; it never turns the card
+                  (tapping the card does) — so it says what it does, in the
+                  state it is in ("tap to toggle" read as the card's turn,
+                  TODO 5.14). */}
               <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2 text-xs font-semibold uppercase tracking-wider text-subtle [&::-webkit-details-marker]:hidden">
                 Live preview
                 <span className="text-[10px] normal-case text-muted">
-                  tap to toggle
+                  <span className="group-open/preview:hidden">Show the preview</span>
+                  <span className="hidden group-open/preview:inline">Hide the preview</span>
                 </span>
               </summary>
               <div className="mx-auto w-full max-w-[220px] px-4 pb-4">
