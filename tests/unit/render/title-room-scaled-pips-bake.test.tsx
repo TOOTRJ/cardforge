@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { pipScale } from "@/lib/cards/mana-gem";
+import { symbolStyle, symbolStyleOf } from "@/lib/cards/symbol-style";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { manaCostWidthPct, titleBandRoomPct } from "@/lib/cards/title-band";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
@@ -50,28 +51,35 @@ describe("the measured cost row — each pip at its own disc", () => {
   it("a cost with no larger disc measures to the SAME float as one plain disc per pip", () => {
     const GAP = 0.12;
     for (const disc of [0.044, 0.0485, 0.05333333333333334, 0.0367]) {
-      for (const cost of ["{R}", "{2}{R}{R}", "{X}{W/U}{2/W}{S}{C}", "{10}{G}{G}{G}{G}{G}", "{W}{U}{B}{R}{G}{W}{U}{B}{R}{G}", "{Q}{E}{T}"]) {
+      // (No hybrid or twobrid here: layout v53 made their discs large too.)
+      for (const cost of ["{R}", "{2}{R}{R}", "{X}{W}{2}{S}{C}", "{10}{G}{G}{G}{G}{G}", "{W}{U}{B}{R}{G}{W}{U}{B}{R}{G}", "{Q}{E}{T}"]) {
         const pips = cost.match(/\{[^}]*\}/g)!.length;
         let plain = 0;
         for (let i = 0; i < pips; i += 1) plain += disc;
-        expect(manaCostWidthPct(cost, disc), `${cost} @ ${disc}`).toBe(plain + (pips - 1) * GAP * disc);
+        for (const style of [symbolStyle(undefined), symbolStyle("2003")]) expect(manaCostWidthPct(cost, disc, style), `${cost} @ ${disc}`).toBe(plain + (pips - 1) * GAP * disc);
       }
     }
   });
 
   it("a Phyrexian symbol — one colour or two — counts pipScale discs, from the one source", () => {
-    expect(pipScale("rp")).toBe(1.2);
-    expect(pipScale("gup")).toBe(1.2);
+    const M15 = symbolStyle(undefined);
+    expect(pipScale("rp", M15)).toBe(1.2);
+    expect(pipScale("gup", M15)).toBe(1.2);
     const disc = 0.044;
-    expect(manaCostWidthPct("{R/P}", disc)).toBe(disc * pipScale("rp"));
-    expect(manaCostWidthPct("{G/U/P}", disc)).toBe(disc * pipScale("gup"));
-    expect(manaCostWidthPct("{1}{R/P}{R/P}", disc)).toBeCloseTo(disc * (1 + 2 * 1.2 + 2 * 0.12), 12);
-    // …and so the name's room shrinks by the extra fifth of a disc per symbol.
+    expect(manaCostWidthPct("{R/P}", disc, M15)).toBe(disc * pipScale("rp", M15));
+    expect(manaCostWidthPct("{G/U/P}", disc, M15)).toBe(disc * pipScale("gup", M15));
+    expect(manaCostWidthPct("{1}{R/P}{R/P}", disc, M15)).toBeCloseTo(disc * (1 + 2 * 1.2 + 2 * 0.12), 12);
+    // A hybrid and a twobrid count the same larger disc since layout v53.
+    expect(manaCostWidthPct("{1}{W/U}{2/W}", disc, M15)).toBe(manaCostWidthPct("{1}{R/P}{R/P}", disc, M15));
+    // …and so the name's room shrinks by the style's extra share of a disc
+    // per symbol: a fifth, or 19/66 on the 2003 frame (85 px beside 66).
     for (const template of TEMPLATES) {
       const p = getFrameProfile(template);
       const d = p.costSizePct ?? p.title.sizePct;
+      const extra = symbolStyleOf(p).largePipScale - 1;
+      expect(extra, template).toBeCloseTo(template === "modern" ? 19 / 66 : 0.2, 12);
       for (let n = 1; n <= 10; n += 1) {
-        expect(titleBandRoomPct(p, plainTwin(n)) - titleBandRoomPct(p, scaledCost(n)), `${template} ${n}`).toBeCloseTo(n * 0.2 * d, 10);
+        expect(titleBandRoomPct(p, plainTwin(n)) - titleBandRoomPct(p, scaledCost(n)), `${template} ${n}`).toBeCloseTo(n * extra * d, 10);
       }
     }
   });

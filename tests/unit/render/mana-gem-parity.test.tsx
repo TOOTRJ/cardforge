@@ -394,12 +394,15 @@ describe('symbol style "2003": the cost row\'s shadow (down and a little left) a
     // The cost row: every disc 66 px, the shadow's LEFT and DOWN components
     // and its colour, as the bake writes them and as the preview lands them.
     for (let i = 0; i < cost.length; i += 1) {
-      // 66 px; a Phyrexian symbol's disc ×1.2 (New Phyrexia's own: 80.9 px).
-      expect(bake[i].size, `cost ${cost[i]}`).toBe(cost[i].endsWith("/P}") ? 79 : 66);
-      // The shadow is the disc's own share: 6 px under 66, 7 under 79.
-      const down = cost[i].endsWith("/P}") ? 7 : 6;
-      expect(bake[i].shadow, `bake cost ${cost[i]}`).toEqual([-2, down, "#000"]);
-      expect(preview[i].shadow![0], `preview cost ${cost[i]}: left`).toBeCloseTo(-2, 1);
+      // 66 px; a large pip's disc — a hybrid's and a Phyrexian symbol's —
+      // is the prints' 85 px (layout v53: Shadowmoor 85.0, New Phyrexia 84.8).
+      const large = cost[i].includes("/");
+      expect(bake[i].size, `cost ${cost[i]}`).toBe(large ? 85 : 66);
+      // The shadow is the disc's own share: 2 px left and 6 down under 66,
+      // 3 and 8 under 85.
+      const [left, down] = large ? [-3, 8] : [-2, 6];
+      expect(bake[i].shadow, `bake cost ${cost[i]}`).toEqual([left, down, "#000"]);
+      expect(preview[i].shadow![0], `preview cost ${cost[i]}: left`).toBeCloseTo(left, 1);
       expect(preview[i].shadow![1], `preview cost ${cost[i]}: down`).toBeCloseTo(down, 1);
       expect(preview[i].shadow![2], `preview cost ${cost[i]}: colour`).toBe("#000000");
     }
@@ -595,29 +598,34 @@ describe("the symbols as printed (v49): the numbers, in both renderers and in th
     }
   }, 60_000);
 
-  it("#2 Phyrexian: a disc 1.2× a plain pip's, the symbol 0.90 of it — cost and rules text", async () => {
-    const { manaGemSpec, pipDiscPx, pipRisePx, pipScale, LARGE_PIP_SCALE, PHYREXIAN_GLYPH_OF_DISC } = await import("@/lib/cards/mana-gem");
-    expect([LARGE_PIP_SCALE, PHYREXIAN_GLYPH_OF_DISC]).toEqual([1.2, 0.91]);
-    for (const c of ["w", "u", "b", "r", "g"]) expect(pipScale(`${c}p`), c).toBe(1.2);
-    // Not the hybrids or the twobrids (their own measuring task), nor {C/P}.
-    for (const other of ["g", "7", "wu", "2w", "cw", "s", "e", "untap", "tap", "cp"]) expect(pipScale(other), other).toBe(1);
-    expect([pipDiscPx("gp", 73), pipDiscPx("gp", 60), pipRisePx("gp", 60), pipRisePx("g", 60)]).toEqual([88, 72, 6, 0]);
+  it("#2 Phyrexian: a disc 1.2× a plain pip's in the cost and 1.28× in rules text, the symbol 0.90 of it", async () => {
+    const { manaGemSpec, pipDiscPx, pipRisePx, pipScale, PHYREXIAN_GLYPH_OF_DISC } = await import("@/lib/cards/mana-gem");
+    const { inlineSymbolStyle, LARGE_PIP_COST_SCALE, LARGE_PIP_TEXT_SCALE } = await import("@/lib/cards/symbol-style");
+    const COST = SYMBOL_STYLES.modern;
+    const TEXT = inlineSymbolStyle(COST);
+    expect([LARGE_PIP_COST_SCALE, LARGE_PIP_TEXT_SCALE, PHYREXIAN_GLYPH_OF_DISC]).toEqual([1.2, 1.28, 0.91]);
+    for (const c of ["w", "u", "b", "r", "g"]) expect([pipScale(`${c}p`, COST), pipScale(`${c}p`, TEXT)], c).toEqual([1.2, 1.28]);
+    // Since layout v53 the hybrids and the twobrids too (the same factors); never {C/P} or a plain symbol.
+    for (const large of ["wu", "2w", "cw"]) expect([pipScale(large, COST), pipScale(large, TEXT)], large).toEqual([1.2, 1.28]);
+    for (const other of ["g", "7", "s", "e", "untap", "tap", "cp"]) expect(pipScale(other, COST), other).toBe(1);
+    expect([pipDiscPx("gp", 73, COST), pipDiscPx("gp", 60, TEXT), pipRisePx("gp", 60, TEXT), pipRisePx("g", 60, TEXT)]).toEqual([88, 77, 8, 0]);
     expect(manaGemSpec("gp", 73, SYMBOL_STYLES.modern)).toEqual({ kind: "solid", suffix: "gp", discPx: 88, bg: "#93b483", ink: INK, glyphPx: 80 });
 
     const { bake, cells: [, , plain, phy] } = await cells(rules("{2}{G/P}: Draw a card.", "{2}{G/P}"));
     // Cost: 73 beside 88; the larger disc's shadow is its own size's.
     expect(bake.slice(0, 2).map((d) => [d.size, d.shadow])).toEqual([[73, [-4, 5, "#111"]], [88, [-5, 6, "#111"]]]);
-    // Rules text: 60 beside 72, the larger disc 6 px higher (same centre).
-    expect([plain.size, phy.size]).toEqual([60, 72]);
-    expect(bake[2].lineTop! - bake[3].lineTop!).toBe(6);
-    expect(bake[3].y + 36).toBe(bake[2].y + 30);
-    // The PNG: the green disc 72 px across, the symbol 0.90 of it tall
+    // Rules text: 60 beside 77 (v53: ×1.28), the larger disc 8 px higher
+    // (same centre, the odd px below).
+    expect([plain.size, phy.size]).toEqual([60, 77]);
+    expect(bake[2].lineTop! - bake[3].lineTop!).toBe(8);
+    expect(bake[3].y + 38).toBe(bake[2].y + 30);
+    // The PNG: the green disc 77 px across, the symbol 0.90 of it tall
     // (the prints: 0.913 ± 0.018) and centred.
-    expectDisc(phy, "#93b483", 72);
+    expectDisc(phy, "#93b483", 77);
     expectDisc(plain, "#beb9b2", 60);
     const ink = phy.box(dark)!;
-    expect(ink.h / 72).toBeGreaterThan(0.88);
-    expect(ink.h / 72).toBeLessThan(0.93);
+    expect(ink.h / 77).toBeGreaterThan(0.88);
+    expect(ink.h / 77).toBeLessThan(0.93);
     expect(Math.abs(ink.cx)).toBeLessThan(1.5);
     expect(Math.abs(ink.cy)).toBeLessThan(2.5);
   }, 60_000);
@@ -625,7 +633,7 @@ describe("the symbols as printed (v49): the numbers, in both renderers and in th
   it("#3 two-colour Phyrexian: a split disc on the larger size, a Phyrexian symbol in each half", async () => {
     const { manaGemSpec, pipScale, drawsManaGem } = await import("@/lib/cards/mana-gem");
     const { getManaCodepoint } = await import("@/lib/render/card-fonts");
-    expect(pipScale("gup")).toBe(1.2);
+    expect(pipScale("gup", SYMBOL_STYLES.modern)).toBe(1.2);
     expect(manaGemSpec("gup", 73, SYMBOL_STYLES.modern)).toEqual({
       kind: "split",
       suffix: "gup",
@@ -639,25 +647,27 @@ describe("the symbols as printed (v49): the numbers, in both renderers and in th
     for (const style of Object.values(SYMBOL_STYLES)) expect(drawsManaGem("gup", style), style.id).toBe(true);
 
     const { bake, cells: [split] } = await cells(rules("{G/U/P}: Draw a card."));
-    expect(bake[0].size).toBe(72);
+    // In rules text the large disc is ×1.28 (layout v53): 77 px beside 60.
+    const D = 77;
+    expect(bake[0].size).toBe(D);
     expect(bake[0].glyphs.map((g) => g.glyph)).toEqual([getManaCodepoint("p"), getManaCodepoint("p")]);
     // The PNG: green up-left, blue down-right, ink in both halves — each
     // symbol 0.40–0.50 of the disc tall (the prints: 0.453 ± 0.051) and
     // 0.14–0.20 of it off the centre along the diagonal (0.169 ± 0.029).
-    expect(split.hex(14, 36)).toBe("#93b483");
-    expect(split.hex(58, 36)).toBe("#b5cde3");
+    expect(split.hex(15, 38)).toBe("#93b483");
+    expect(split.hex(62, 38)).toBe("#b5cde3");
     const half = (upLeft: boolean) => {
       const b = { x0: Infinity, x1: -1, y0: Infinity, y1: -1 };
-      for (let y = 0; y < 72; y += 1) {
-        for (let x = 0; x < 72; x += 1) {
-          if (x + y < 72 !== upLeft || !dark(split.hex(x, y))) continue;
+      for (let y = 0; y < D; y += 1) {
+        for (let x = 0; x < D; x += 1) {
+          if (x + y < D !== upLeft || !dark(split.hex(x, y))) continue;
           b.x0 = Math.min(b.x0, x);
           b.x1 = Math.max(b.x1, x);
           b.y0 = Math.min(b.y0, y);
           b.y1 = Math.max(b.y1, y);
         }
       }
-      return { h: (b.y1 - b.y0 + 1) / 72, cx: ((b.x0 + b.x1 + 1) / 2 - 36) / 72, cy: ((b.y0 + b.y1 + 1) / 2 - 36) / 72 };
+      return { h: (b.y1 - b.y0 + 1) / D, cx: ((b.x0 + b.x1 + 1) / 2 - D / 2) / D, cy: ((b.y0 + b.y1 + 1) / 2 - D / 2) / D };
     };
     for (const [h, sign] of [[half(true), -1], [half(false), 1]] as const) {
       expect(h.h).toBeGreaterThan(0.4);
@@ -742,7 +752,7 @@ describe("the symbols as printed (v49): the numbers, in both renderers and in th
   it("#6 energy: the bare symbol — no disc, no shadow — 0.89 of a text pip's disc, in a pip's cell", async () => {
     const { manaGemSpec, ENERGY_GEM, pipScale } = await import("@/lib/cards/mana-gem");
     expect(ENERGY_GEM).toEqual({ glyphOfDisc: 1.04 });
-    expect(pipScale("e")).toBe(1);
+    expect(pipScale("e", SYMBOL_STYLES.modern)).toBe(1);
     expect(manaGemSpec("e", 60, SYMBOL_STYLES.modern)).toEqual({ kind: "solid", suffix: "e", discPx: 60, bg: null, ink: INK, glyphPx: 62 });
 
     // In the cost row too: no disc, and no shadow though the row has one.

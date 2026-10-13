@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { symbolStyle } from "@/lib/cards/symbol-style";
 import { parseLoyaltyAbilities, type LoyaltyAbility } from "@/lib/cards/card-display";
 import { displayTextWidthEm } from "@/lib/cards/display-metrics";
 import {
@@ -411,18 +412,21 @@ const LEGACY_PW: FrameProfile = {
 
 describe("the name next to a detached cost (costRect)", () => {
   it("measures a cost as its discs plus the pip gaps", () => {
-    expect(manaCostWidthPct("{W}", 0.04)).toBeCloseTo(0.04, 10);
-    expect(manaCostWidthPct("{1}{R}{W}{B}", 0.04)).toBeCloseTo(4 * 0.04 + 3 * 0.12 * 0.04, 10);
-    expect(manaCostWidthPct("{W/U}{2/R}{C}", 0.04)).toBeCloseTo(3 * 0.04 + 2 * 0.12 * 0.04, 10);
-    // A Phyrexian symbol's disc is ×1.2 (pipScale; layout v52 counts it).
-    expect(manaCostWidthPct("{W/U}{B/P}{2/R}", 0.04)).toBeCloseTo((2 + 1.2) * 0.04 + 2 * 0.12 * 0.04, 10);
-    expect(manaCostWidthPct("", 0.04)).toBe(0);
+    const M15 = symbolStyle(undefined);
+    expect(manaCostWidthPct("{W}", 0.04, M15)).toBeCloseTo(0.04, 10);
+    expect(manaCostWidthPct("{1}{R}{W}{B}", 0.04, M15)).toBeCloseTo(4 * 0.04 + 3 * 0.12 * 0.04, 10);
+    // A large pip's disc is the style's factor (pipScale): a hybrid and a
+    // twobrid since layout v53, a Phyrexian symbol since v52's count.
+    expect(manaCostWidthPct("{W/U}{2/R}{C}", 0.04, M15)).toBeCloseTo((1 + 2 * 1.2) * 0.04 + 2 * 0.12 * 0.04, 10);
+    expect(manaCostWidthPct("{W/U}{B/P}{2/R}", 0.04, M15)).toBeCloseTo(3 * 1.2 * 0.04 + 2 * 0.12 * 0.04, 10);
+    expect(manaCostWidthPct("{W/U}{B/P}{2/R}", 0.04, symbolStyle("2003"))).toBeCloseTo(3 * (85 / 66) * 0.04 + 2 * 0.12 * 0.04, 10);
+    expect(manaCostWidthPct("", 0.04, M15)).toBe(0);
   });
 
   it("ends the name one band gap before the pips, never past the band", () => {
     const cost = "{1}{R}{W}{B}";
     const w = detachedCostTitleWidthPct(LEGACY_PW, cost)!;
-    const pipsLeft = (LEGACY_PW.costRect!.leftPct + LEGACY_PW.costRect!.widthPct) / 100 - manaCostWidthPct(cost, LEGACY_PW.title.sizePct);
+    const pipsLeft = (LEGACY_PW.costRect!.leftPct + LEGACY_PW.costRect!.widthPct) / 100 - manaCostWidthPct(cost, LEGACY_PW.title.sizePct, symbolStyle(undefined));
     expect(LEGACY_PW.title.rect.leftPct / 100 + w + TITLE_COST_GAP_PCT).toBeCloseTo(pipsLeft, 10);
     // A short cost leaves what the band always left the name (band − gap).
     expect(detachedCostTitleWidthPct({ ...LEGACY_PW, costRect: { ...LEGACY_PW.costRect!, leftPct: 90, widthPct: 30 } }, "{W}")).toBeCloseTo(

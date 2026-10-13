@@ -124,6 +124,11 @@ export type RulesMetrics = {
   wordGapPx: number;
   /** Inline pip disc diameter, and the hairline between adjacent pips. */
   pipPx: number;
+  /** A LARGE pip's disc ÷ a plain pip's in this text (layout v53): the
+   *  style's inline factor (lib/cards/symbol-style.ts inlineSymbolStyle) —
+   *  named as the style names it, so these metrics ARE the scale
+   *  lib/cards/mana-gem.ts pipScale reads. */
+  largePipScale: number;
   pipGapPx: number;
   /** The pip disc's top below its line box's top (layout v36, TODO 3.31):
    *  the disc centred RULES_TEXT.pipCentreEm above the regular baseline, as
@@ -184,6 +189,7 @@ export function metricsFor(
     linePx,
     wordGapPx: Math.round(fontPx * RULES_TEXT.wordGapEm),
     pipPx,
+    largePipScale: inlineSymbolStyle(symbolStyle(symbols)).largePipScale,
     pipGapPx: Math.max(1, Math.round(fontPx * RULES_TEXT.pipGapEm)),
     pipTopPx: Math.round(regularBaseline - RULES_TEXT.pipCentreEm * fontPx - pipPx / 2),
     pipShadowPx: pipShadow(pipPx).down,
@@ -225,16 +231,16 @@ export function wordWidthPx(item: Extract<RulesItem, { t: "w" }>, m: Pick<RulesM
   return Math.ceil(rulesTextWidthEm(item.v, Boolean(item.em)) * m.fontPx - 1e-6);
 }
 
-/** A pip's own disc in `m`'s whole px: `m.pipPx`, or a Phyrexian symbol's
- *  larger one (lib/cards/mana-gem.ts pipDiscPx, layout v49) — what both
+/** A pip's own disc in `m`'s whole px: `m.pipPx`, or a large pip's
+ *  larger one (lib/cards/mana-gem.ts pipDiscPx; layout v49, v53) — what both
  *  renderers draw and every width, ink box and keep-out here measures. */
-export function pipWidthPx(item: Extract<RulesItem, { t: "m" }>, m: Pick<RulesMetrics, "pipPx">): number {
-  return pipDiscPx(item.suffix, m.pipPx);
+export function pipWidthPx(item: Extract<RulesItem, { t: "m" }>, m: Pick<RulesMetrics, "pipPx" | "largePipScale">): number {
+  return pipDiscPx(item.suffix, m.pipPx, m);
 }
 /** That disc's top in its line box: `m.pipTopPx`, less a larger disc's
  *  rise (it keeps a plain pip's centre). */
-export function pipTopOf(item: Extract<RulesItem, { t: "m" }>, m: Pick<RulesMetrics, "pipPx" | "pipTopPx">): number {
-  return m.pipTopPx - pipRisePx(item.suffix, m.pipPx);
+export function pipTopOf(item: Extract<RulesItem, { t: "m" }>, m: Pick<RulesMetrics, "pipPx" | "pipTopPx" | "largePipScale">): number {
+  return m.pipTopPx - pipRisePx(item.suffix, m.pipPx, m);
 }
 
 /** A run's width as `m`'s target draws it: each word its box (wordWidthPx),

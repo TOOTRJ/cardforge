@@ -1,6 +1,7 @@
 import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
+import { symbolStyleOf } from "@/lib/cards/symbol-style";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { DETACHED_COST_GAP_PCT, fitTitleBand, manaCostWidthPct } from "@/lib/cards/title-band";
 import { renderCardImage, type RenderPreset } from "@/lib/render/card-image";
@@ -147,7 +148,7 @@ export function describeTitleRoomBakes(part: number): void {
           // The row as drawn is the row as measured, but for the style's
           // shadow (≤ 6 px) and whole-px discs and gaps (a 750 px one is
           // two of HD) — which no plain cost counted either.
-          const measuredLeft = rowRight - manaCostWidthPct(cost, disc) * HD_W;
+          const measuredLeft = rowRight - manaCostWidthPct(cost, disc, symbolStyleOf(profile)) * HD_W;
           expect(Math.abs(firstDisc - measuredLeft), `${n}: first disc at ${firstDisc}, measured ${measuredLeft.toFixed(1)}`).toBeLessThanOrEqual(8 + n * k);
           for (const name of namesFor(template, cost)) {
             const drawn = diffColumns(await bake(card(template, name, cost), preset), row);

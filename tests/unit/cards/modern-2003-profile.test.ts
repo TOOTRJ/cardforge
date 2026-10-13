@@ -282,7 +282,7 @@ describe('symbolStyle "2003" — a cost shadow down and a little to the left, fl
     // "1997" shadows neither.
     expect(SYMBOL_STYLES.modern.inlineShadow).toBe(false);
     expect(inlineSymbolStyle(SYMBOL_STYLES.modern)).toMatchObject({ id: "modern", discShadow: null, tapSuffix: "tap" });
-    expect(inlineSymbolStyle(SYMBOL_STYLES["1997"])).toBe(SYMBOL_STYLES["1997"]);
+    expect(inlineSymbolStyle(SYMBOL_STYLES["1997"])).toEqual({ ...SYMBOL_STYLES["1997"], largePipScale: 1.28 });
     expect(metricsFor(76, undefined, "hd")).toMatchObject({ pipShadowPx: 0, pipShadowLeftPx: 0 });
     expect(discShadowCss(SYMBOL_STYLES.modern, 60)).toBe("-4px 4px 0 #111");
     expect(discShadowCss(SYMBOL_STYLES.modern, 73)).toBe("-4px 5px 0 #111");

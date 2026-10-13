@@ -5758,7 +5758,7 @@ build). The numbers live in `lib/cards/mana-gem.ts` as data.
 | | the prints | a card (HD) | was |
 |---|---|---|---|
 | a pip in RULES text, `modern` style | flat: shadow 0.003 ± 0.010 of the disc under 31 text pips on 21 prints (M15 2014 → TDM 2025); 0.079 ± 0.017 under the same cards' cost discs | no shadow (`inlineShadow: false`); the cost row keeps 0.06 left / 0.07 down | the cost's shadow under every inline pip |
-| Phyrexian `{W/P}`: the disc | 1.175 ± 0.020 of the plain pips beside it in a cost (n = 8, M15 frame; New Phyrexia's on the 2003 frame: 80.9 px against that frame's 66 = 1.22), 1.21 ± 0.08 in rules text (n = 8) | ×1.2 (`LARGE_PIP_SCALE`): 88 px beside 73 in a cost, 72 beside 60 in 9-point text, on the plain pip's centre | the plain pip's disc |
+| Phyrexian `{W/P}`: the disc | 1.175 ± 0.020 of the plain pips beside it in a cost (n = 8, M15 frame; New Phyrexia's on the 2003 frame: 80.9 px against that frame's 66 = 1.22), 1.21 ± 0.08 in rules text (n = 8) | ×1.2: 88 px beside 73 in a cost, 72 beside 60 in 9-point text, on the plain pip's centre (re-measured and re-set by layout v53, below: ×1.28 in text, 85 px on the 2003 frame) | the plain pip's disc |
 | Phyrexian: the symbol | 0.904 ± 0.009 of ITS disc tall in a cost (n = 11), 0.913 ± 0.018 in text (n = 8) | font size 0.91 of the disc (the glyph is 1 em tall; 0.90 in the PNG) | 0.73 × a 1 em glyph on the smaller disc: 0.70 |
 | two-colour Phyrexian `{G/U/P}` | disc 1.224 ± 0.025 of its neighbours (n = 5: NEO, DMU, ONE); each half's symbol 0.453 ± 0.051 of the disc tall, 0.169 ± 0.029 of it off the centre | the hybrid's 135° fill on the ×1.2 disc, mana-font's `p` in each half at 0.45 of the disc (`PHYREXIAN_SPLIT_GEM`) | not drawn at all (no disc, no room) |
 | untap `{Q}` | disc #202123, arrow #fefdfe, 0.639 ± 0.008 of the disc tall and 0.622 ± 0.011 wide (n = 9, SHM 2008 → MB2 2024) | disc `#211f23`, arrow `#ffffff`, font size 0.9 of the disc (mana-font's arrow is 0.704 em: 0.63) | the grey disc, a dark arrow 0.51 of it |
@@ -5779,9 +5779,8 @@ drawings (bucket images, a plain pip's disc), and `{Q}`, `{S}`, `{E}`, a
 Phyrexian symbol and the two-colour Phyrexian disc are the font's glyphs in
 the printed look, as on every other style. The flat inline pip is
 `modern`'s correction alone: `"1997"`, `"2003"` and `"original"` already
-set it flat. NOT part of this: the hybrid and twobrid discs (the prints' look
-larger too — GTC #215 41 px against 35 — a measuring task of its own) and
-the plain cost disc's size.
+set it flat. NOT part of v49: the hybrid and twobrid discs (layout v53,
+"The large pips" below) and the plain cost disc's size (TODO 3.34).
 
 **How.** `pipScale()` / `pipDiscPx()` / `pipRisePx()` (mana-gem.ts) are the
 one answer to "how big is this pip": the rules layout measures a pip with
@@ -5885,6 +5884,85 @@ left margin — preview only, so no bake-side check sees it. mana-font guards
 the 2 itself (`margin-left: inherit !important`); nothing guards the rest.
 `tests/unit/content/mana-class-collision.test.ts` fails on any such token
 in the tree: use `{X}` or a colour in a test's expectation.
+
+### The large pips (layout v53, TODO 3.21; owner round 49, 2026-10-12)
+
+One measuring pass over 279 Scryfall PNGs (2005 → 2026; each disc a circle
+fitted to its outer edge — 90 rays, the edge on each the centroid of the
+colour gradient's peak — which reads our own bakes, downscaled to a
+Scryfall PNG's 745 px, to −0.09 ± 0.08 px on 169 discs of known size; no
+scan is read by a build). Sizes in HD px.
+
+| | the prints | a card (HD) | was |
+|---|---|---|---|
+| hybrid `{W/U}` in a cost | 2003 frame 84.9 ± 1.3 (87 discs, 53 prints; RAV 84.7, SHM / EVE 85.0, ARB 84.2, RTR 85.1) beside a 66.1 px plain pip = ×1.285; M15 frame 85.1 ± 1.2 (65 discs, 40 prints; 2014–19 85.1, 2020–22 85.7, 2023–26 84.4) beside a 70.2 px one = ×1.21 | 85 px beside 66 (`"2003"`: 85/66); 88 beside 73 (`"modern"`: ×1.2) | a plain pip's disc (66 / 73) |
+| twobrid `{2/W}` in a cost | 2003 frame 85.0 ± 1.1 (24 discs, 9 prints); M15 frame 85.1 ± 1.6 (54 discs, 17 prints — Commander 2014 89.9 and Jace vs. Vraska 88.6 are larger, Modern Masters 2015 on 84.4–84.6) | the hybrid's | a plain pip's disc |
+| Phyrexian `{W/P}` in a cost | 2003 frame (New Phyrexia) 84.8 ± 0.2 beside 65.5 = ×1.296 ± 0.006 (19 discs, 15 prints); M15 frame 84.6 ± 0.9 (8 discs, 6 prints) | 85 px beside 66; 88 beside 73 (unchanged) | 79 px on the 2003 frame |
+| two-colour Phyrexian `{G/U/P}` in a cost | 84.7 ± 0.2, ×1.212 ± 0.004 of the plain pips on the same card (5 prints of 3 cards) | 88 beside 73 (unchanged) | — |
+| any large pip in RULES text | 1.28 of the plain pip in the same text (median 1.283 over 9 cards: 2003 frame 1.286 ± 0.006, n = 4; M15 frame 1.275–1.34, n = 5) | ×1.28 on every style: 77 px beside 60 in 9-point text | hybrid and twobrid ×1.0, Phyrexian ×1.2 (72) |
+| centre and spacing | the plain pips' centre line (+0.1 ± 0.5 px in a cost, −1.1 ± 1.7 in text); about 7 px between neighbours whatever their size | the plain pip's centre (`pipRisePx`); the style's gap | the same |
+
+The prints draw ONE large disc, about 85 px, on both frames and in every
+era measured; its step over the plain pip differs only because the M15
+frame's plain cost pip is bigger than the 2003 frame's. In 9-point text a
+77 px disc is about the line pitch (74 px), as on the prints (Boros Locket,
+GRN #231: 70 px discs on a ≈ 70 px pitch): two on consecutive lines touch.
+
+**Per era (owner decisions 2026-10-12).** `"modern"`: cost ×1.2 (the print's
+×1.21), text ×1.28. `"2003"`: cost 85/66, text ×1.28. `"1997"` and
+`"original"` never printed a large pip: they keep ×1.2 in the cost (decision
+4) and take ×1.28 in text. The black disc on the white 1997 / 1993 frames
+stays as it is — its colour is the prints' (1997: rgb(146, 141, 134) against
+our reading of ours, rgb(156, 146, 138)), no print outlines a cost disc and
+no rim is drawn (decision 5; TODO 3.32). The Phyrexian symbol stays
+mana-font's (decision 6; TODO 3.33: the printed ring is 0.552 of the disc
+wide against the font's 0.508, its line 0.078 against 0.063). The plain M15
+cost pip measures 70.2 px on the prints against our 73: TODO 3.34, not
+changed here (decision 7).
+
+**How.** `isLargePip()` says which symbols are large (every split disc and
+the Phyrexian symbol); `pipScale(symbol, style)` answers with the
+`largePipScale` of the style of the PLACE: the frame's `SymbolStyleSpec` for
+a cost (`costRowTerms`, `manaCostWidthPct`, the cost row's `ManaGem` /
+`CardPip`), `inlineSymbolStyle(style)` for rules text — it hands the style's
+`inlineLargePipScale` back as `largePipScale`, and the rules metrics carry
+the same number (`RulesMetrics.largePipScale`, `RulesDraw.largePipScale`),
+so the layout's `pipWidthPx` / `pipTopOf` and both renderers' inline pips
+read one field. A new style names both factors; a renderer never learns a
+style's name. The cost disc's shadow keeps its share of the disc (on the
+2003 frame 3 px left and 8 down under an 85 px disc, 2 and 6 under 66).
+
+**Rollout.** A CORRECTION: `"sweep"`, no badge, after the owner's round-49
+sheets. Card-scoped on any template (`v53Changed`): a hybrid or twobrid
+symbol anywhere a pip is read; a Phyrexian symbol in a text; a Phyrexian
+symbol in a cost only on `modern` / `modernland` and on the modal
+double-faced bodies (their strip sets the other face's cost as text pips).
+Every other card is stamped without a re-bake. Verification-neutral: no
+slot, master, size or plate moves.
+
+**What moved (measured 2026-10-12, `main` against this commit).** Public production (a fresh anonymous read of every public card
+with a slash symbol in its cost, rules text, second face, rows or rail: 14
+rows, each unchanged since the 863-row read of 2026-10-08; each replayed at
+HD on both commits): 7 cards re-bake and all 7 change pixels — six with a
+hybrid pip (four in the cost, two in the rules text; one of them a modal
+double-faced card, whose back face changes too: its strip sets the front's
+hybrid cost) and one with a Phyrexian pip in its rules text. None changes
+its rules size; one moves a line break (a `{G/U}{G/U}` mutate cost in the
+text: "…for its / mutate cost" becomes "…for / its mutate cost"). The other
+7 rows of the read (walkers and sagas whose rows hold "+1/+1") and every
+other public card are stamped: 856 of 863, and all 129 unlisted cards of
+the 2026-10-08 read; the 7 stamped rows of the fresh read bake
+byte-identical on both commits. No stored public card sets a twobrid, and
+none on the 2003, 1997 or 1993 frame sets a large pip. 120 real rules texts
+with a large pip in the text (36 of round 43's 240 and 84 Scryfall oracle
+texts): 2 change size by one step (one down, one UP — its larger pips move
+a break and the text then fits a size larger), 6 more move a line break,
+none clips. The visual matrix: 340 of 1526 cases change and 3 are new (`@large-pips-hd` on `m15`, `modern` and `retro`); every
+changed case holds a symbol in v53's scope (the gate), 66 cases in scope
+bake to the same pixels (a symbol in a text the frame does not print).
+Chromium against the bake (`tests/parity`): the three new cases and the
+`@symbols` card within the limits at 750 px and HD — the cost row 0 px off
+at HD on all four.
 
 ## Text sizes on the M15-era family
 

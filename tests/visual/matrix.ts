@@ -1437,6 +1437,18 @@ export function visualCases(): VisualCase[] {
       if (count === 5) add(template, kind, "w", "long", { suffix: `@phyrexian-cost-${count}-hd`, preset: "hd", row });
     }
   }
+  // TODO 3.21 (layout v53): the LARGE pips — a hybrid, a twobrid and a
+  // Phyrexian symbol in one cost and in one rules text, at the stored
+  // bake's size — NEW cases: on the M15 frame (88 px beside 73 in the cost,
+  // 77 beside 60 in the text), the 2003 frame (85 beside 66; a detached
+  // cost: the name gives way) and the 1997 frame (×1.2 kept in the cost).
+  for (const template of ["m15", "modern", "retro"] as const) {
+    add(template, "creature", "u", "short", {
+      suffix: "@large-pips-hd",
+      preset: "hd",
+      row: { cost: "{1}{W/U}{2/W}{W/P}", rules_text: "{W/U}{2/W}, {T}: Draw a card.\n{G/U/P}{W/P}{1}: Scry 1.", flavor_text: null },
+    });
+  }
   // TODO 4.9b: the collector line, opt-in per card (frame_style.collector —
   // no stored card has the key, so these are NEW cases, no bump): both
   // styles on every slotted template (the primary kind: a token on the
