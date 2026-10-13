@@ -86,14 +86,13 @@ function remixOf(key: PrintingKey, verified: ReadonlySet<string> = PROD) {
 describe("remixFrameFor — the old-border printings that failed the step", () => {
   it("falls forward to M15 where the printing's frame isn't verified", () => {
     // Built explicitly: production verified modernland in every colour on
-    // 2026-09-29 (supabase/seed.sql mirrors it); agclassic still isn't.
+    // 2026-09-29 and agclassic by 2026-10-13 (supabase/seed.sql mirrors it).
     const unverified = without("agclassic", "modernland");
     expect(remixOf("lea-255", unverified)).toMatchObject({ template: "m15artifact", colorKey: "c", cardType: "creature" });
     expect(remixOf("mrd-283", unverified)).toMatchObject({ template: "m15land", colorKey: "u", cardType: "land" });
     expect(remixOf("c13-281", unverified)).toMatchObject({ template: "m15land", colorKey: "m", cardType: "land" });
-    // What production does today: Juggernaut still falls forward; the
-    // Mirrodin / C13 lands keep their own frame.
-    expect(remixOf("lea-255")).toMatchObject({ template: "m15artifact", colorKey: "c", cardType: "creature" });
+    // What production does today: all three keep their own frame.
+    expect(remixOf("lea-255")).toMatchObject({ template: "agclassic", colorKey: "c", cardType: "creature" });
     expect(remixOf("mrd-283")).toMatchObject({ template: "modernland", colorKey: "u", cardType: "land" });
     expect(remixOf("c13-281")).toMatchObject({ template: "modernland", colorKey: "m", cardType: "land" });
   });
@@ -208,8 +207,10 @@ describe("remixFrameFor — nothing published in the card's colour", () => {
   });
 
   it("reads a colourless card with no colour field as colourless", () => {
+    // (Without the Alpha frame, which production verifies today: the
+    // fall-forward frame is the one this reads the colour for.)
     const patch = { ...patchOf("lea-255"), color_identity: undefined };
-    expect(remixFrameFor(patch, PROD)).toMatchObject({ ok: true, template: "m15artifact" });
+    expect(remixFrameFor(patch, without("agclassic"))).toMatchObject({ ok: true, template: "m15artifact" });
   });
 });
 
@@ -219,11 +220,12 @@ describe("remixFrameFor — nothing published in the card's colour", () => {
 // combos (finalizeImportMatch) before the creator resolves the frame. The
 // remix read the static landing, so a remixed Vehicle kept the silver
 // artifact frame after `m15vehicle` was ticked in all seven colours.
-// supabase/seed.sql lags production's Vehicle ticks: they are added here.
+// supabase/seed.sql carries those ticks since its 2026-10-13 refresh, so the
+// verified side is production's own list; the unverified side is built with
+// `without`.
 // ---------------------------------------------------------------------------
 
 const COLOUR_KEYS = ["w", "u", "b", "r", "g", "c", "m"] as const;
-const VEHICLE_TICKS = COLOUR_KEYS.map((k): [string, string] => ["m15vehicle", k]);
 
 /** The remix of a mapped patch, held to the save's two gates. */
 function remixOfPatch(patch: ScryfallImportPatch, verified: ReadonlySet<string>) {
@@ -269,10 +271,10 @@ describe("remixFrameFor — the remix follows the import's verified landing", ()
   const blue = vehicle({ name: "Mindlink Mech", set: "neo", collector_number: "62", colors: ["U"], color_identity: ["U"], mana_cost: "{2}{U}" });
   const extended = vehicle({ name: "Mindlink Mech", set: "neo", collector_number: "448", frame_effects: ["extendedart"], colors: ["U"], color_identity: ["U"], mana_cost: "{2}{U}" });
   const borderless = vehicle({ name: "Boommobile", set: "dft", collector_number: "310", frame_effects: ["inverted"], border_color: "borderless", colors: ["R"], color_identity: ["R"], mana_cost: "{2}{R}{R}" });
-  const VERIFIED = plus(...VEHICLE_TICKS);
+  const VERIFIED = PROD;
 
-  it("seed.sql has no Vehicle tick of its own yet (drop VEHICLE_TICKS' part of this suite's setup once it has)", () => {
-    // The unverified side below is built with `without`, so it holds either way.
+  it("seed.sql carries production's seven Vehicle ticks (the verified side of this suite)", () => {
+    for (const key of COLOUR_KEYS) expect(PROD.has(frameComboKey("m15vehicle", key)), key).toBe(true);
     expect(without("m15vehicle").has(frameComboKey("m15vehicle", "c"))).toBe(false);
   });
 
