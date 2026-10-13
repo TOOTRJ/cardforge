@@ -20,6 +20,7 @@ import { cardCornerRadiusPx, type CardCornerFills } from "@/lib/cards/card-corne
 import { squareCornerFills } from "@/lib/frames/square-corners";
 import type { CardCorners } from "@/lib/cards/output-corners";
 import { foilMaskSource, imageNaturalSize, resolveRenderableImage } from "@/lib/render/art-source";
+import { cardStation } from "@/lib/cards/station-layout";
 import {
   NAME_COST_GAP_PCT,
   fitSplitTypeSizePct,
@@ -721,7 +722,14 @@ function CardImage({
   // (no abilities) keeps out of its loyalty shield — the preview's twin. Not
   // on a textless frame, a basic land, the saga rail or ability rows.
   const drawsRulesBox =
-    !textless && !isBasicLand && !layout.chapters && !(layout.loyaltyRows && loyaltyAbilities.length > 0);
+    !textless && !isBasicLand && !layout.chapters && !layout.tiers && !(layout.loyaltyRows && loyaltyAbilities.length > 0);
+  // The station frame's tiers (TODO 4.27a; lib/cards/station-layout.ts): the
+  // whole text box laid out once — bands, badges, plate, every band's lines
+  // — the preview's twin. Its bands, badge discs and plate are frame pieces
+  // (our own inline SVGs): drawn with the frame, under both finishes, which
+  // mask with them, as the saga rail's; the numerals and digits are ink.
+  const station = textless ? null : cardStation(layout, card, masterKey, holoStamp?.keepOut ?? null);
+  const stationPieces = station?.drawing.pieces ?? [];
   // The card's text alignment (FrameStyle.rulesAlign, TODO 4.21e): every
   // rules box of the card alike; the layout applies it only on a frame that
   // offers the choice (lib/cards/rules-box.ts rulesAlignOf).
@@ -973,6 +981,23 @@ function CardImage({
         ) : null,
       )}
 
+      {/* The station frame's drawn pieces (TODO 4.27a): each tier's wash,
+          its badge disc and the P/T plate, at the even HD boxes
+          lib/cards/station-layout.ts gives — printed frame, so right after
+          the frame and under both finishes; the numerals and digits are ink
+          (below). The preview's StationPieces twin. Sibling <img>s. */}
+      {stationPieces.map((piece, i) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={`station-${i}`}
+          src={piece.href}
+          alt=""
+          width={Math.round((piece.rect.widthPct / 100) * width)}
+          height={Math.round((piece.rect.heightPct / 100) * height)}
+          style={{ ...slotBox(piece.rect), objectFit: "fill", zIndex: 5 }}
+        />
+      ))}
+
       {/* Premium finish: etched — a fine cross-hatch + sheen on the FRAME
           only (masked by the frame's own luminance), directly above the
           frame so every text/stat layer stays crisp on top of it. The SAME
@@ -990,7 +1015,7 @@ function CardImage({
               ? { href: splitDataUrl, atPct: frameSplit.atPct }
               : null
           }
-          overlays={[...drawnOverlays([...overlays, ...railPieces]), ...borderMaskOverlays]}
+          overlays={[...drawnOverlays([...overlays, ...railPieces, ...stationPieces]), ...borderMaskOverlays]}
           landscape={layout.orientation === "landscape"}
           width={width}
           height={height}
@@ -1020,7 +1045,7 @@ function CardImage({
             secondArt: secondArtSlot && secondArtUrl ? (foilArt?.secondArt ?? null) : null,
             secondArtPosition: secondArtPos,
           })}
-          overlays={[...drawnOverlays([...overlays, ...railPieces]), ...borderMaskOverlays]}
+          overlays={[...drawnOverlays([...overlays, ...railPieces, ...stationPieces]), ...borderMaskOverlays]}
           landscape={layout.orientation === "landscape"}
           width={width}
           height={height}
@@ -1308,6 +1333,21 @@ function CardImage({
               })
             : null}
 
+      {/* The station frame's text (TODO 4.27a): every band's lines, set by
+          the ONE rules layout in its band — only drawn here. */}
+      {station
+        ? station.drawing.texts.map((text, i) => (
+            <RulesBoxBake
+              key={`station-text-${i}`}
+              layout={text}
+              target={rulesTarget}
+              colorHex={station.drawing.textColorHex}
+              overrides={card.pipOverrides}
+              symbols={symbols}
+            />
+          ))
+        : null}
+
       {/* Adventure spell — the left storybook page (Adventure frames). */}
       {layout.adventure && card.backFace
         ? AdventureBake({
@@ -1373,6 +1413,22 @@ function CardImage({
             orientation: orientationFromAspect(aspect),
             foil: plateFoil,
           })
+        : null}
+      {/* The station frame's ink over its pieces (TODO 4.27a): each badge's
+          "N+" and the plate's P/T, set by the stat fit in the slots the
+          station layout built — the preview's twin. */}
+      {station
+        ? station.drawing.values.map((v, i) => (
+            <StatBake
+              key={`station-value-${i}`}
+              slot={v.slot}
+              value={v.value}
+              colorKey={plateKey}
+              masterKey={masterKey}
+              cardWidth={width}
+              orientation={orientationFromAspect(aspect)}
+            />
+          ))
         : null}
       {/* The transform front's reverse P/T (TODO 5.1a): the BACK's P/T in
           the grey tab the master paints, only when the back prints one (the

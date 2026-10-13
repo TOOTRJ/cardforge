@@ -5,11 +5,14 @@ import {
   type RulesLayout,
   type RulesLayoutInput,
 } from "@/lib/cards/rules-layout";
-import { STATION, stationBands, type StationBandRule, type StationBands, type StationText } from "@/lib/cards/station";
+import { printsPowerToughness, type PowerToughnessFace } from "@/lib/cards/card-display";
+import { ptValue } from "@/lib/cards/stat-fit";
+import { STATION, resolveStationTiers, stationBands, type StationBandRule, type StationBands, type StationText } from "@/lib/cards/station";
 import { stationBadgeArt, stationBandArt, stationPlateArt, type StationArtStyle } from "@/lib/cards/station-art";
 import type { FrameProfile, Rect, StatSlot } from "@/lib/cards/template-layout";
 import type { SymbolStyle } from "@/lib/cards/symbol-style";
 import { RULES_HD_WIDTH } from "@/lib/cards/typography";
+import type { FaceContent } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // The station frame's TIERS layout (TODO 4.27a) — the `tiers` anatomy of the
@@ -256,8 +259,35 @@ export function stationDrawing(
   return { pieces, values, texts, textColorHex: inks.textColorHex };
 }
 
-/** The station box of a card on `profile` — null on every other frame. What
- *  BOTH renderers call. */
-export function profileStationLayout(profile: Pick<FrameProfile, "rules" | "tiers" | "symbolStyle">, input: Omit<StationLayoutInput, "profile">): StationLayout | null {
-  return profile.tiers ? stationLayout({ ...input, profile }) : null;
+/** The card fields the station box reads. */
+export type StationCard = PowerToughnessFace & {
+  rulesText?: string | null;
+  flavorText?: string | null;
+  faceContent?: FaceContent | null;
+};
+
+/**
+ * The station box of a card on `profile`, laid out and ready to draw — null
+ * on every frame without `tiers`. What BOTH renderers call: the structured
+ * rows first, the plain text's grammar otherwise (resolveStationTiers); the
+ * plate only on a card that PRINTS a P/T (printsPowerToughness — the gate
+ * every stat plate has), so a Planet never has one.
+ */
+export function cardStation(
+  profile: Pick<FrameProfile, "rules" | "tiers" | "symbolStyle">,
+  card: StationCard,
+  masterKey: string,
+  stamp: Rect | null = null,
+  style: StationArtStyle = "bevel",
+): { layout: StationLayout; drawing: StationDrawing } | null {
+  if (!profile.tiers) return null;
+  const hasPt = printsPowerToughness(card);
+  const layout = stationLayout({
+    profile,
+    text: resolveStationTiers(card.faceContent, card.rulesText, hasPt),
+    flavorText: card.flavorText,
+    ptValue: hasPt ? ptValue(card.power, card.toughness) : null,
+    stamp,
+  });
+  return { layout, drawing: stationDrawing(layout, profile, masterKey, style) };
 }
