@@ -583,7 +583,7 @@ TODO item that fixes it: fixing a master means striking its row.
 | Manifest | `tests/unit/frames/frame-manifest.test.ts` | well-formed entries; no frame in git AND the bucket; every PNG has its WebP |
 | Edge contract (7.7) | `lib/frames/edge-contract.ts`, `tests/unit/frames/edge-contract.test.ts` | each edge is what the template declares |
 | Corner check (3.26) | `cornerViolations`, same files | the pixels just inside the card corner are the border |
-| Art-window coverage (7.6) | `lib/frames/art-window.ts`, `tests/unit/render/art-window-coverage.test.ts` | the art slot covers the window; translucent parts stay inside it |
+| Art-window coverage (7.6) | `lib/frames/art-window.ts`, `tests/unit/render/art-window-coverage.test.ts` + its per-master parts `art-window-coverage-<n>.test.ts` (`art-window-masters.ts`) | the art slot covers the window; translucent parts stay inside it |
 | Square corners (3.26) | `lib/frames/square-corners.ts`, `tests/unit/frames/square-corners.test.ts` | the print corner fill matches the master |
 | Plate ink (3.29) | `lib/cards/plate-ink.ts`, `tests/unit/cards/plate-ink.test.ts` | every P/T plate has measured ink, pinned to its manifest hash |
 | Visual regression (7.1) | `tests/visual/`, `scripts/lib/visual-gate.mjs` | no stored-image change without a layout bump ([Shipping a frame change](#shipping-a-frame-change)) |
@@ -1130,6 +1130,13 @@ badges to Exact the moment its `frame_reviews` row is ticked.
   card's colour — the 2003-frame textless promos name the 2003 frame until
   `m15textless` is verified. `withVerification` makes the swap, so
   verifying the combo is all it takes.
+- **A LANDING the registry names for later** (`landOnOnceVerified`): a rule
+  may keep its match — the printing's own frame, its status, gaps and
+  signature — and name only another frame to land on once that one is
+  verified in the card's colour, for the printings its `match` holds on (a
+  borderless or extended-art Vehicle on `m15vehicle`, "The Vehicle frame").
+  `withVerification` applies it, and only in place of a stand-in landing: a
+  printing on its own verified frame stays there.
 - **Registry references** (`lib/cards/frame-references.json`) must resolve
   to their own template and pass the pin check;
   `tests/unit/cards/frame-reference-signatures.test.ts` holds that over a
@@ -2823,6 +2830,32 @@ is no layout bump, no sweep and no badge.
   #237, its prerelease stamp and its List reprint:
   `SILVER_PLATE_VEHICLE_PINS`), which is never "exact" on a brown plate and
   lands on the artifact frame as it did before.
+- A BORDERLESS or EXTENDED-ART Vehicle lands on the Vehicle frame as its
+  NEAREST (owner 2026-10-12, round 48; 67 borderless — 4 of them nicknamed —
+  and 49 extended-art printings, Scryfall `t:vehicle` 2026-10-12, 573
+  printings). The prints wear the brown plate (7 of 7 and 8 of 8 read) on a
+  dress we have no Vehicle plate for, so the match is unchanged — the
+  printing's own frame (`m15borderlessartifact`, `extendedart`), `nearest`,
+  the `vehicle` gap, the same signature — and only the LANDING moves
+  (`FrameMatch.landOnOnceVerified`, applied by `withVerification`): the
+  silver artifact frame until `m15vehicle` is verified in the card's colour,
+  the Vehicle frame from then on, and the reason says so ("this printing is
+  borderless, and PipGlyph draws the Vehicle plate on its bordered Vehicle
+  frame only"; a nicknamed one keeps its nickname reason). It replaces a
+  STAND-IN landing only: the borderless frame's bordered twin (1.18 — the
+  chooser still offers the borderless artifact frame, second, and the
+  artifact frame), or an unverified frame's fallback. An extended-art Vehicle
+  whose `extendedart` frame IS verified in its colour stays on that frame
+  (no colour is today) — which of the two is nearer then is the owner's to
+  say. Only the Artifact kind with the subtype on its front face, off the
+  pinned silver plate: no Spacecraft (4.27), no back face (5.10).
+- NOT the showcase Vehicles (17 printings: NEO, KHM, MH2, DSK, WHO, OTP,
+  LTR's scroll, DFT's Japan showcase, the FCA source-material Copter). Each
+  set's showcase draws its own plate — brown with white digits on three of
+  the nine looked at (NEO #404, KHM #315, MH2 #378), grey, black, newsprint
+  or parchment on five, none on FCA #62 — so "the print wears the Vehicle
+  plate" does not hold for them as a group, and they land where they did
+  (the artifact frame, `nearest`: 4.11's per-set frames).
 
 **Sagas are not part of it.** The item's other half — a P/T on the saga
 body — is not built (owner 2026-10-12). The only saga creatures printed
@@ -5859,7 +5892,7 @@ row as DRAWN is still a little longer than measured — the cost discs'
 shadow and whole-px rounding, up to 1 px a pip, which no plain cost counted
 either: measuring the detached row with `costRowWidthPct` would move every
 `modern` / walker name by a pixel or two and is not part of this.
-`tests/unit/render/title-room-scaled-pips-bake.test.tsx` holds 20 px of air
+`tests/unit/render/title-room-scaled-pips-bake-<n>.test.ts` (the bakes of `title-room-scaled-pips-bake.test.tsx`, in four files) hold 20 px of air
 on real bakes of all four at 0–10 such symbols, at 750 px and HD.
 
 A CORRECTION: `"sweep"`, no badge. Scoped to the four templates
