@@ -34,6 +34,40 @@ npm test
 
 ## CI
 
+**A notes-only pull request runs almost none of it** (owner 2026-10-13 —
+Actions minutes are billed once the repo is private, and a full run is ~55
+runner-minutes). The first job, `changes` (`scripts/ci-classify-change.mjs`),
+reads the files the PR's merge commit changes; when EVERY one is on the
+allow-list of `scripts/lib/ci-docs-only.mjs` the heavy jobs are skipped at
+job level and one job, **Notes checks**, runs `npm run test:docs` instead:
+
+| On the list (`.md` only) | Never on it |
+| --- | --- |
+| root `*.md` (`TODO.md`, `CLAUDE.md`, `README.md`, `BILLING_SETUP.md`, …) | `*.mdx` anywhere — `content/articles/*.mdx` are pages |
+| `docs/**/*.md` | `supabase/**` (even its README: it starts a Supabase preview branch) |
+| `.claude/**/*.md` | `.github/**` |
+| `tests/README.md`, `tests/parity/README.md` | `app/`, `lib/`, `components/`, `content/`, `public/`, `scripts/`, `types/`, everything else under `tests/`, every `.txt`, `docs/*.json`, a bare `LICENSE` |
+
+One file off the list, an empty or unreadable diff, and every push to `main`
+run everything, exactly as before. `npm run test:docs` is the unit tests that
+READ a notes file — `frames-doc.test.ts` (docs/FRAMES.md, CLAUDE.md's section
+titles) and `art-window-coverage.test.ts` (TODO.md's item numbers; its
+bucket-master checks report "unavailable" there, no masters are fetched) —
+because a notes-only PR can break exactly those. **A unit test that starts to
+read a Markdown file joins `DOCS_READING_TESTS` and the `test:docs` script**;
+`tests/unit/devops/ci-docs-only.test.ts` fails until it does (it scans every
+unit-test source for a string naming a `.md`, `docs/`, `.claude`, README or
+LICENSE), and fails too if app code starts to read a `.md`. The coverage
+floors do not apply to a notes-only run (no shard runs). Never use a
+workflow-level `paths-ignore` for this: a workflow that does not start leaves
+the required checks "Waiting for status to be reported" and the PR cannot
+merge, while a job skipped by its own `if` reports "skipped", which a
+required check accepts. That is also why the gate below is strict about it:
+it passes on skipped jobs ONLY when `changes` succeeded and said notes-only
+and the notes job is green; a new heavy job takes the same
+`if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}` (with
+`needs: changes`), so a FAILED classifier runs it.
+
 `.github/workflows/ci.yml` runs on every PR and on `main`: typecheck, lint,
 unit tests with coverage floors, `next build`, and the **full** Playwright
 suite against a Supabase stack booted inside the runner (its keys are
@@ -45,7 +79,7 @@ retry (`scripts/e2e-summary.mjs`) — a flake that keeps appearing there is a
 bug to fix, not noise.
 
 The required **Typecheck, lint, unit** check is a gate over three jobs that
-run side by side: `static` (typecheck, lint, `next build`), `unit` (the unit
+run side by side (and, on a notes-only PR, over **Notes checks** instead): `static` (typecheck, lint, `next build`), `unit` (the unit
 suite in six shards — vitest's `--shard`, a hash of each file's path, so
 there is no file list to keep) and `coverage`, which merges the shards'
 blob reports (`npm run test:coverage:merge`) and holds the coverage floors

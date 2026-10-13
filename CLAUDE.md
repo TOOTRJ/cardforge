@@ -80,6 +80,15 @@ Rules and gotchas:
   shared dev branch — target-verified, see `scripts/db-dev.mjs`)
 - CI (`.github/workflows/ci.yml`) runs typecheck + lint + unit + the full e2e
   suite on every PR. Keep it green — a red e2e may be a real bug, not drift.
+  A NOTES-ONLY PR (every changed file on the allow-list of
+  `scripts/lib/ci-docs-only.mjs`: root `*.md`, `docs/**/*.md`,
+  `.claude/**/*.md`, the two tests READMEs — never `.mdx`, `supabase/**`,
+  `.github/**`) skips the heavy jobs and runs `npm run test:docs`, the unit
+  tests that read notes; a test that starts to read a Markdown file joins
+  that script (`tests/unit/devops/ci-docs-only.test.ts` fails until it
+  does). Minutes are billed (private repo): a new heavy job goes behind the
+  `changes` condition, never behind a workflow-level `paths-ignore`
+  (`tests/README.md` "CI").
 
 ## Conventions
 
