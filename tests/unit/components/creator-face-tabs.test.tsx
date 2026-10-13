@@ -18,7 +18,8 @@ import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 //     selects its tab; it never changes face by itself;
 //   * the per-face "still needed" links and a server error select the TAB
 //     as well as the step;
-//   * a one-faced card, and the kinds of part 2, have no switch.
+//   * a one-faced card has no switch (the kinds of part 2 — split,
+//     aftermath, adventure, flip — are creator-part-tabs.test.tsx).
 // What a save sends is held by creator-face-tabs-payload.test.tsx.
 // ---------------------------------------------------------------------------
 
@@ -244,7 +245,7 @@ describe("the pure part (lib/creator/face-tabs.ts)", () => {
     // An edit has no Card step: the back's locked type and colour are on Identity.
     expect(keyAt(edit, "back_face.color_identity")).toBe("identity");
     expect(keyAt(edit, "back_face.frame_style")).toBe("identity");
-    // No switch (a split half, a legacy back): the Identity step, as before.
+    // No switch (a legacy back): the Identity step, as before.
     expect(keyAt(create, "back_face.rules_text", false)).toBe("identity");
     expect(keyAt(create, "back_face", true)).toBe("identity");
     // Every back field of the form has a step.
@@ -485,13 +486,15 @@ describe("the preview", () => {
   it("the small face is a named button: a click selects its tab", async () => {
     renderForm();
     await pickKind(/^Modal double-faced/);
-    const other = () => screen.getAllByRole("button", { name: "Back face — edit this face" });
+    // Its accessible name IS its visible text (no separate aria-label).
+    const other = () => screen.getAllByRole("button", { name: "Back face · click to edit" });
     expect(other().length).toBeGreaterThan(0);
+    expect(other().every((el) => !el.hasAttribute("aria-label") && el.textContent === "Back face · click to edit")).toBe(true);
     await click(other().at(-1)!);
     expect(selected()).toBe("back");
     expect(tab(/^Back face/).getAttribute("aria-selected")).toBe("true");
     expect(largePreview().face).toBe("back");
-    await click(screen.getAllByRole("button", { name: "Front face — edit this face" }).at(-1)!);
+    await click(screen.getAllByRole("button", { name: "Front face · click to edit" }).at(-1)!);
     expect(selected()).toBe("front");
   });
 
@@ -723,17 +726,8 @@ describe("cards without the switch, and the battle's greyed tab", () => {
     },
   );
 
-  it.each([[/^Split/, "right half"], [/^Aftermath/, "aftermath half"], [/^Adventure/, "adventure spell"], [/^Flip/, "flipped side"]] as const)(
-    "%s (part 2): no switch yet — the second part is still under “More options”",
-    async (kind, phrase) => {
-      renderForm();
-      await pickKind(kind);
-      expect(screen.queryByTestId("face-switch")).toBeNull();
-      await goTo(/^identity/i);
-      expect(screen.getByText(`More options — artist credit & ${phrase}`)).toBeTruthy();
-      expect(named("back_face.title")!.closest("details")).toBeTruthy();
-    },
-  );
+  // Split, Aftermath, Adventure and Flip have the switch since part 2:
+  // creator-part-tabs.test.tsx.
 
   it("a battle: the switch with its Back face tab greyed out and one line; nothing else changes", async () => {
     renderForm();

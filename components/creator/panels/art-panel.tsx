@@ -28,19 +28,14 @@ type ArtPanelProps = {
   /** The front face's art window on the current frame and colour (TODO
    *  3b.13): the positioner's surface. */
   artWindow: ArtWindow;
-  /** The back-face editor, rendered inside this panel's "More options" (the
-   *  back face used to be its own step). Supplied by the orchestrator so its
-   *  caret refs / symbol insertion stay there. */
-  backFaceSlot?: React.ReactNode;
-  /** The second part's name inside a sentence ("right half", "adventure
-   *  spell" — lib/creator/second-part.ts): the fold says what it holds. */
-  secondPartLabel?: string;
+  /** True on a frame that paints its second part on the same picture
+   *  (split, aftermath, adventure, flip): that part is edited on its own
+   *  tab (Face tabs part 2, TODO 5.14 — panels/second-part-panels.tsx), so
+   *  the legacy back's art strip below is not for it. Until part 2 its
+   *  whole editor was folded into this panel's "More options". */
+  secondPartOnTab?: boolean;
   /** The "Generate AI artwork and title" button, beside Choose file. */
   aiSlot?: React.ReactNode;
-  /** True while the save needs the second face's name and it is empty (the
-   *  Save hint asks for it): "More options" opens so the field is visible
-   *  (TODO 3b.5). */
-  secondFaceNameMissing?: boolean;
   /** Art a Scryfall import brought in (TODO 1.18): while it is still the
    *  card's art, a note says Scryfall's crop stops at the printed frame. */
   importedArtOrigin?: ImportedArtOrigin | null;
@@ -59,10 +54,8 @@ type ArtPanelProps = {
 export function ArtPanel({
   userId,
   artWindow,
-  backFaceSlot,
-  secondPartLabel = "second face",
+  secondPartOnTab = false,
   aiSlot,
-  secondFaceNameMissing = false,
   importedArtOrigin = null,
   onImportedArtOrigin,
   onBackFaceArt,
@@ -82,12 +75,12 @@ export function ArtPanel({
   // back in `back_face`, drawn on the front's frame. Its art can still come
   // from a real card (TODO 1.15), and its owner is offered the move onto the
   // real double-faced frames (backFaceHint, TODO 5.2). The inline second
-  // faces (adventure, split, aftermath, flip) edit theirs in backFaceSlot;
-  // a card on a double-faced FRONT body edits its back on the Back face tab
-  // (Face tabs, TODO 5.14 — panels/back-face-panels.tsx).
+  // parts (adventure, split, aftermath, flip) edit theirs on their own tab
+  // (secondPartOnTab); a card on a double-faced FRONT body edits its back
+  // on the Back face tab (Face tabs, TODO 5.14 — panels/back-face-panels.tsx).
   // "Front face" on a card with Face tabs (TODO 5.14); null elsewhere.
   const faceLabel = useFaceLabel();
-  const showBackFaceArt = Boolean(hasBackFace) && !backFaceSlot && !templateHasBackFace(template);
+  const showBackFaceArt = Boolean(hasBackFace) && !secondPartOnTab && !templateHasBackFace(template);
 
   return (
     <>
@@ -172,13 +165,8 @@ export function ArtPanel({
       {showBackFaceArt ? backFaceHint : null}
 
       <MoreOptions
-        summary={
-          backFaceSlot
-            ? `More options — artist credit & ${secondPartLabel}`
-            : "More options — artist credit"
-        }
-        openWhen={Boolean(errors.artist_credit || (backFaceSlot && errors.back_face))}
-        expandWhen={Boolean(backFaceSlot && secondFaceNameMissing)}
+        summary="More options — artist credit"
+        openWhen={Boolean(errors.artist_credit)}
       >
         <FieldGroup
           label="Artist credit"
@@ -192,7 +180,6 @@ export function ArtPanel({
             autoComplete="off"
           />
         </FieldGroup>
-        {backFaceSlot}
       </MoreOptions>
     </>
   );

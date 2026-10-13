@@ -325,9 +325,14 @@ describe("3b.13 the Art step's positioner is the frame's art window", () => {
     await pickKind(/^Split/);
     expect(preview().template).toBe("split");
     await clickNext();
+    // Left half 817 × 559, right half 816 × 559 on the 2100 × 1500 card —
+    // each half's uploader on its own tab (Face tabs part 2, TODO 5.14).
     await uploadArt(0);
-    await uploadArt(1);
-    // Left half 817 × 559, right half 816 × 559 on the 2100 × 1500 card.
-    expect(surfaces().map((el) => el.dataset.artWindowAspect)).toEqual(["1.4618", "1.4600"]);
+    expect(surfaces().map((el) => el.dataset.artWindowAspect)).toEqual(["1.4618"]);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("tab", { name: /^Right half/ }));
+    });
+    await uploadArt(0);
+    expect(surfaces().map((el) => el.dataset.artWindowAspect)).toEqual(["1.4600"]);
   });
 });

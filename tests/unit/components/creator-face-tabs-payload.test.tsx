@@ -24,6 +24,15 @@ import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 // steps and, where there is a switch, the tabs), so the same file runs
 // unchanged on both. To re-record on a checkout of that commit:
 //   FACE_TABS_CAPTURE=<path/to/out.json> npx vitest run <this file>
+//
+// Part 2 (split, aftermath, adventure, flip — the second part left the
+// Identity step's "More options" fold for a tab of its own): the scenarios
+// under PART_SCENARIOS were recorded by THIS FILE on `origin/main` 73661d13
+// (part 1 merged, part 2 not) from a `git archive` of that commit, and
+// added to the same fixture. Each kind: a new card with both parts filled —
+// the fields a half never prints included (its loyalty, its defense, a flip
+// side's own picture) — a stored card as the form opens it, and an edit of
+// one part only, then of the other.
 // ---------------------------------------------------------------------------
 
 const toast = vi.hoisted(() => ({ info: vi.fn(), error: vi.fn(), success: vi.fn(), message: vi.fn() }));
@@ -114,6 +123,10 @@ const VERIFIED = [
   "m15mdfcback",
   "m15mdfclandfront",
   "m15mdfclandback",
+  "split",
+  "aftermath",
+  "adventure",
+  "flip",
 ].flatMap((template) => EVERY_COLOUR.map((key) => frameComboKey(template, key)));
 
 type FormProps = Parameters<typeof CardCreatorForm>[0];
@@ -271,7 +284,10 @@ async function addPips(fieldPath: "cost" | "back_face.cost", labels: string[]) {
       const hit = pickers.find((b) => {
         const inBack =
           Boolean(b.closest("[data-testid='dfc-face-panel']")) ||
-          screen.queryByRole("tab", { name: /^Back face/ })?.getAttribute("aria-selected") === "true";
+          // The fold a half's whole editor was in before Face tabs part 2.
+          Boolean(b.closest("details")?.querySelector("[name='back_face.title']")) ||
+          // The switch's second tab, whatever the kind calls it.
+          screen.queryByTestId("face-switch")?.querySelectorAll("[role='tab']")[1]?.getAttribute("aria-selected") === "true";
         return inBack === wantBack;
       });
       return (hit as HTMLElement | undefined) ?? null;
@@ -387,6 +403,130 @@ const SCENARIOS: Record<string, () => Promise<unknown>> = {
     return save("updateCardAction");
   },
 };
+
+// ---------------------------------------------------------------------------
+// Part 2: the one-picture two-part kinds.
+// ---------------------------------------------------------------------------
+
+type PartKind = "split" | "aftermath" | "adventure" | "flip";
+const PART_KINDS: Record<PartKind, { chip: RegExp; second: string; cardType: string; backType: string; creature: boolean }> = {
+  split: { chip: /^Split/, second: "Right half", cardType: "instant", backType: "sorcery", creature: false },
+  aftermath: { chip: /^Aftermath/, second: "Aftermath half", cardType: "sorcery", backType: "instant", creature: false },
+  adventure: { chip: /^Adventure/, second: "Adventure spell", cardType: "creature", backType: "sorcery", creature: true },
+  flip: { chip: /^Flip/, second: "Flipped side", cardType: "creature", backType: "creature", creature: true },
+};
+
+/** A stored card of `kind` with every second-part field the form can hold
+ *  — the ones the frame never prints included. */
+function storedPartCard(kind: PartKind): Card {
+  const def = PART_KINDS[kind];
+  return {
+    ...storedCard(),
+    title: "Fire",
+    slug: "fire",
+    cost: "{1}{R}",
+    color_identity: ["red"],
+    supertype: null,
+    printed_types: null,
+    card_type: def.cardType,
+    subtypes: def.creature ? ["Giant"] : [],
+    rarity: "uncommon",
+    rules_text: "Fire deals 2 damage to any target.",
+    flavor_text: "It was never going to be a quiet evening.",
+    power: def.creature ? "4" : null,
+    toughness: def.creature ? "3" : null,
+    frame_style: { finish: "regular", template: kind },
+    visibility: "public",
+    back_face: {
+      title: "Ice",
+      card_type: def.backType,
+      cost: "{1}{U}",
+      supertype: "Legendary",
+      subtypes: ["Arcane"],
+      rules_text: "Tap target permanent.\nDraw a card.",
+      flavor_text: "Cold comfort.",
+      power: "1",
+      toughness: "2",
+      loyalty: "3",
+      defense: "4",
+      artist_credit: "Bo Marsh",
+      art_url: "https://example.com/back.png",
+      art_position: { focalX: 0.7, focalY: 0.25, scale: 1.15 },
+    },
+    set_icon_code: null,
+    set_code: null,
+    collector_number: null,
+  } as unknown as Card;
+}
+
+/** A new card of `kind`, both parts filled through whatever the creator
+ *  offers for them. */
+async function newPartCard(kind: PartKind) {
+  const def = PART_KINDS[kind];
+  renderForm();
+  await chip("Card type", def.chip);
+  await chip("Color identity", /^red/i);
+  await type("title", "Fire");
+  await type("subtypes_text", def.creature ? "Giant" : "Arcane");
+  await setArt("art_url");
+  await type("artist_credit", "Anya Vale");
+  await addPips("cost", ["Red"]);
+  await typeRules("rules_text", "Fire deals 2 damage to any target.");
+  await type("flavor_text", "\"A quiet evening\" - never.");
+  if (def.creature) {
+    await type("power", "4");
+    await type("toughness", "3");
+  }
+  // The second part.
+  await type("back_face.title", "Ice");
+  await chip(`${def.second} card type`, new RegExp(`^${def.backType}`, "i"));
+  await typeTestId("types-field-input-back", kind === "flip" ? "Legendary Creature" : "Legendary Sorcery");
+  await type("back_face.subtypes_text", "Arcane, Trap");
+  await addPips("back_face.cost", ["Blue", "Blue"]);
+  await typeRules("back_face.rules_text", "Tap target permanent.\nDraw a card.");
+  if (kind !== "adventure") {
+    // An adventure's spell has no flavour, stats, artist or art (the old
+    // panel offered none either).
+    await type("back_face.flavor_text", "Cold comfort - \"and little of it\".");
+    await type("back_face.power", "1");
+    await type("back_face.toughness", "2");
+    await type("back_face.loyalty", "3");
+    await type("back_face.defense", "4");
+    await type("back_face.artist_credit", "Bo Marsh");
+    await setArt("back_face.art_url");
+  }
+  return save("createCardAction");
+}
+
+const PART_SCENARIOS: Record<string, () => Promise<unknown>> = Object.fromEntries(
+  (Object.keys(PART_KINDS) as PartKind[]).flatMap((kind) => [
+    [`new ${kind} card — both parts filled, every field the second part is offered`, () => newPartCard(kind)],
+    [
+      `stored ${kind} card — opened for an edit: the values the form holds`,
+      async () => {
+        renderForm({ mode: "edit", card: storedPartCard(kind) });
+        return previewProps();
+      },
+    ],
+    [
+      `stored ${kind} card — an edit of the first part only keeps the second part as stored`,
+      async () => {
+        renderForm({ mode: "edit", card: storedPartCard(kind) });
+        await typeRules("rules_text", "Fire deals 3 damage to any target.");
+        return save("updateCardAction");
+      },
+    ],
+    [
+      `stored ${kind} card — an edit of the second part only keeps the rest of it as stored`,
+      async () => {
+        renderForm({ mode: "edit", card: storedPartCard(kind) });
+        await typeRules("back_face.rules_text", "Tap up to two target permanents.");
+        return save("updateCardAction");
+      },
+    ],
+  ]),
+);
+Object.assign(SCENARIOS, PART_SCENARIOS);
 
 const FIXTURE = path.join(__dirname, "fixtures", "face-tabs-main-payloads.json");
 const capturePath = process.env.FACE_TABS_CAPTURE;

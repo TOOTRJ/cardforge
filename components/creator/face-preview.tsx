@@ -12,7 +12,7 @@
 // which face is in front is chosen here. The small one is drawn from a
 // deferred copy of the props so typing never waits for it.
 
-import { useDeferredValue, type ComponentProps, type ReactNode } from "react";
+import { useDeferredValue, useSyncExternalStore, type ComponentProps, type ReactNode } from "react";
 import { CardPreview } from "@/components/cards/card-preview";
 import type { CardFaceId } from "@/lib/creator/face-tabs";
 import type { SecondPartWords } from "@/lib/creator/second-part";
@@ -34,10 +34,27 @@ type FacePreviewProps = {
   children?: ReactNode;
 };
 
+const NO_HOVER = "(hover: none)";
+function subscribeNoHover(onChange: () => void) {
+  const query = typeof window !== "undefined" ? window.matchMedia?.(NO_HOVER) : undefined;
+  query?.addEventListener?.("change", onChange);
+  return () => query?.removeEventListener?.("change", onChange);
+}
+/** True where nothing can hover (a phone): the caption says "tap". The
+ *  server and the first paint say "click". */
+function useNoHover(): boolean {
+  return useSyncExternalStore(
+    subscribeNoHover,
+    () => (typeof window !== "undefined" ? window.matchMedia?.(NO_HOVER)?.matches === true : false),
+    () => false,
+  );
+}
+
 export function FacePreview({ previewProps, face, onFaceChange, words, layout, children }: FacePreviewProps) {
   const other: CardFaceId = face === "front" ? "back" : "front";
   const label = (id: CardFaceId) => (id === "front" ? words.first : words.second);
   const deferredProps = useDeferredValue(previewProps);
+  const noHover = useNoHover();
 
   const showing = (
     <p
@@ -72,12 +89,13 @@ export function FacePreview({ previewProps, face, onFaceChange, words, layout, c
       <button
         type="button"
         onClick={() => onFaceChange(other)}
-        aria-label={`${label(other)} — edit this face`}
         className="rounded-md px-1.5 py-1 text-left text-[11px] font-medium leading-4 text-muted after:absolute after:inset-0 after:content-[''] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/70"
       >
-        {label(other)} ·{" "}
-        <span className="[@media(hover:none)]:hidden">click</span>
-        <span className="hidden [@media(hover:none)]:inline">tap</span> to edit
+        {/* ONE string, so the button's accessible name IS what it shows
+            ("Front face · click to edit"; "tap" where nothing hovers) —
+            two CSS-switched words read as "clicktap", and a separate
+            aria-label named it something a voice user could not say. */}
+        {`${label(other)} · ${noHover ? "tap" : "click"} to edit`}
       </button>
     </div>
   );
