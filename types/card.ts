@@ -271,10 +271,21 @@ export type SagaChapterContent = {
   text: string;
 };
 
+/** One tier of a station card (TODO 4.27a; lib/cards/station.ts): the charge
+ *  threshold its badge prints ("12+") and its text. `pt: true` on at most
+ *  ONE tier — where the card's power / toughness print, on the plate. */
+export type StationTierContent = {
+  threshold: number;
+  text: string;
+  pt?: true;
+};
+
 export type FaceContent = {
   v: 1;
   loyalty?: { abilities: LoyaltyRowContent[] };
   saga?: { intro?: string | null; chapters: SagaChapterContent[] };
+  /** A Spacecraft's / Planet's top band and its 0–3 tiers. */
+  station?: { intro?: string | null; tiers: StationTierContent[] };
 };
 
 // Per-card design watermark (cards.watermark, migration 0050) — the faint
