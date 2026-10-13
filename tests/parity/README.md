@@ -58,6 +58,11 @@ anything in the directory that is not a case file (a conflict's `.orig`),
 and `tests/parity/baseline.json` come back from an older branch. Never edit
 a case file by hand.
 
+A platform with nothing recorded (a first run on another OS) is held to the
+limits only — but never CI's: with `baseline/linux/` gone or empty a judging
+run on linux throws (`recordedFor`) instead of comparing against nothing and
+passing. A measuring run or an update is how it is recorded again.
+
 ## What `--update` writes
 
 ```bash

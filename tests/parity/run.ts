@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { PARITY_DIR, type ParityCaseFile } from "./shared";
-import { loadBaseline } from "./baseline";
+import { loadBaseline, recordedFor } from "./baseline";
 import type { Measured } from "./thresholds";
 
 // ---------------------------------------------------------------------------
@@ -44,8 +44,9 @@ export function loadCases(): ParityCaseFile[] {
 export const baseline = loadBaseline(ROOT);
 
 /** This platform's recorded offsets; null where none were recorded (Chromium
- *  rasterises text differently per OS — the limits still hold there). */
-export const recorded = baseline.platforms[PLATFORM]?.cases ?? null;
+ *  rasterises text differently per OS — the limits still hold there). On
+ *  CI's platform a judging run with none recorded throws (recordedFor). */
+export const recorded = recordedFor(baseline, PLATFORM, { recording: MEASURE });
 
 export type Result = Measured & { why: string; failures: string[] };
 

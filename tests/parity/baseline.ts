@@ -161,6 +161,27 @@ export function loadBaseline(root: string): Baseline {
   return readBaseline(entries);
 }
 
+/** CI's platform. Its directory is the half of the baseline the required
+ *  check runs against, so a run on it is never "limits only". */
+export const REQUIRED_PLATFORM = "linux";
+
+/**
+ * A platform's recorded cases for a run; null where none were recorded (the
+ * limits still hold there — a contributor's first run on another OS).
+ * NOT on CI's platform: with `baseline/linux/` gone or empty a judging run
+ * there would compare against nothing and pass, so it throws instead (a
+ * measuring run or an update — `recording` — is what records it again).
+ */
+export function recordedFor(baseline: Baseline, platform: string, options: { recording: boolean }): Record<string, BaselineCase> | null {
+  const cases = baseline.platforms[platform]?.cases ?? null;
+  if (platform === REQUIRED_PLATFORM && !options.recording && (!cases || Object.keys(cases).length === 0)) {
+    throw new Error(
+      `${BASELINE_DIR}/${platform}/ holds no case file: the run would compare the preview with nothing recorded and pass. Restore the directory (git checkout origin/main -- ${BASELINE_DIR}/${platform}), or record it again (tests/parity/README.md).`,
+    );
+  }
+  return cases;
+}
+
 export type UpdatePlan = {
   /** The platform's cases as an update leaves them. */
   cases: Record<string, BaselineCase>;

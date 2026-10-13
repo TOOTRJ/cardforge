@@ -15,9 +15,10 @@ import {
   planUpdate,
   platformDelta,
   readBaseline,
+  recordedFor,
   serializeCaseFile,
 } from "@/tests/parity/baseline";
-import { BASELINE_MARGIN, LIMITS, baselineKey, toBaselineCase, type BaselineCase, type Measured } from "@/tests/parity/thresholds";
+import { BASELINE_MARGIN, LIMITS, baselineKey, judge, toBaselineCase, type BaselineCase, type Measured } from "@/tests/parity/thresholds";
 
 // ---------------------------------------------------------------------------
 // The parity baseline as files (TODO 7.13, tests/parity/baseline.ts): one
@@ -179,6 +180,38 @@ describe("the loader", () => {
     expect(() => loadBaseline(root)).not.toThrow();
     fs.writeFileSync(path.join(root, LEGACY_BASELINE_FILE), "{}");
     expect(() => loadBaseline(root)).toThrow(/baseline\.json is back/);
+  });
+});
+
+// What a judging run is given (tests/parity/run.ts → preview.parity.spec.ts:
+// `judge(measured, recorded ? recorded[key] : null)`), per kind of damage to
+// the directory: none of them may read as "nothing to compare, pass".
+describe("a run against a damaged baseline", () => {
+  const run = runOf();
+
+  it("a case with no file on a recorded platform fails that case — both sizes", () => {
+    const root = tmpRoot();
+    record(root, "linux", run);
+    fs.rmSync(path.join(root, BASELINE_DIR, "linux", "m15__g__a.json"));
+    const recorded = recordedFor(loadBaseline(root), "linux", { recording: false })!;
+    const failing = run.filter((m) => judge(m, recorded[baselineKey(m)]).length);
+    expect(failing.map(baselineKey).sort()).toEqual(["m15/g/a@750", "m15/g/a@hd"]);
+    expect(judge(run[0], recorded[baselineKey(run[0])])[0]).toMatch(/not in tests\/parity\/baseline\/ for this platform/);
+  });
+
+  it("CI's platform with no case file at all — the directory gone, or empty — is an error, never a limits-only run", () => {
+    const root = tmpRoot();
+    record(root, "darwin", run);
+    expect(() => recordedFor(loadBaseline(root), "linux", { recording: false })).toThrow(/baseline\/linux\/ holds no case file/);
+    fs.mkdirSync(path.join(root, BASELINE_DIR, "linux"));
+    expect(() => recordedFor(loadBaseline(root), "linux", { recording: false })).toThrow(/baseline\/linux\/ holds no case file/);
+    // No baseline directory at all.
+    expect(() => recordedFor(loadBaseline(tmpRoot()), "linux", { recording: false })).toThrow(/holds no case file/);
+    // Recording it again (a measuring run, an update) is how it comes back.
+    expect(recordedFor(loadBaseline(root), "linux", { recording: true })).toBeNull();
+    // Another OS with nothing recorded is still held to the limits only.
+    expect(recordedFor(loadBaseline(root), "win32", { recording: false })).toBeNull();
+    expect(Object.keys(recordedFor(loadBaseline(root), "darwin", { recording: false })!)).toHaveLength(run.length);
   });
 });
 
