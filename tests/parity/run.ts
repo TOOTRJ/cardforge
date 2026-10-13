@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { PARITY_DIR, type ParityCaseFile } from "./shared";
-import type { BaselineFile, Measured } from "./thresholds";
+import { loadBaseline } from "./baseline";
+import type { Measured } from "./thresholds";
 
 // ---------------------------------------------------------------------------
 // What the browser stage's spec files share (TODO 3.11): where things are,
@@ -9,8 +10,9 @@ import type { BaselineFile, Measured } from "./thresholds";
 // recorded baseline.
 //
 // PARITY_MEASURE=1 records without judging (calibrating thresholds);
-// PARITY_UPDATE=1 does the same and then rewrites this platform's section of
-// tests/parity/baseline.json; PARITY_SAVE=1 keeps every preview screenshot
+// PARITY_UPDATE=1 does the same and then records this platform's baseline
+// files (tests/parity/baseline.ts: only the cases that are new or moved;
+// PARITY_UPDATE_ALL=1 with it: every case); PARITY_SAVE=1 keeps every preview screenshot
 // and difference map in tmp/parity/out/ (a failing case keeps its own either
 // way); PARITY_ONLY=a,b runs the cases whose id starts with one of these.
 // ---------------------------------------------------------------------------
@@ -18,9 +20,9 @@ import type { BaselineFile, Measured } from "./thresholds";
 export const ROOT = path.resolve(__dirname, "../..");
 export const DIR = path.join(ROOT, PARITY_DIR);
 export const FRAMES_DIR = process.env.PARITY_FRAMES_DIR ?? path.join(ROOT, "tmp/visual/frames");
-export const BASELINE_PATH = path.join(ROOT, "tests/parity/baseline.json");
 export const PLATFORM = process.platform;
 export const UPDATE = process.env.PARITY_UPDATE === "1";
+export const UPDATE_ALL = UPDATE && process.env.PARITY_UPDATE_ALL === "1";
 export const MEASURE = UPDATE || process.env.PARITY_MEASURE === "1";
 export const SAVE = process.env.PARITY_SAVE === "1";
 export const ONLY = (process.env.PARITY_ONLY ?? "").split(",").filter(Boolean);
@@ -37,13 +39,13 @@ export function loadCases(): ParityCaseFile[] {
   return ONLY.length ? cases.filter((c) => ONLY.some((p) => c.id.startsWith(p))) : cases;
 }
 
-export const baselineFile: BaselineFile | null = fs.existsSync(BASELINE_PATH)
-  ? (JSON.parse(fs.readFileSync(BASELINE_PATH, "utf8")) as BaselineFile)
-  : null;
+/** The committed baseline (it throws — and fails every spec — on a file
+ *  that is not a case file as an update writes it). */
+export const baseline = loadBaseline(ROOT);
 
 /** This platform's recorded offsets; null where none were recorded (Chromium
  *  rasterises text differently per OS — the limits still hold there). */
-export const recorded = baselineFile?.platforms[PLATFORM]?.cases ?? null;
+export const recorded = baseline.platforms[PLATFORM]?.cases ?? null;
 
 export type Result = Measured & { why: string; failures: string[] };
 

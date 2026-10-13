@@ -158,7 +158,9 @@ Rules and gotchas:
   optimizations must not touch what the bake reads. CI's **Preview parity**
   check holds them together (`npm run test:parity`, `tests/parity/`,
   `tests/README.md`): a change to ONE renderer that moves a region 2 px
-  fails it — fix the renderer; re-record `tests/parity/baseline.json` only
+  fails it — fix the renderer; re-record `tests/parity/baseline/` (one file
+  per case per platform, `tests/parity/README.md`; `--update` rewrites only
+  the cases that moved) only
   when both were changed on purpose, never raise a limit, and give a new
   rendering feature of both renderers a case in `tests/parity/cases.ts`.
   Frames listed in `lib/frames/frame-manifest.json` live in the `frames`
