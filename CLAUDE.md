@@ -356,6 +356,16 @@ Rules and gotchas:
   full-art design) is taken by a remix the day it is ticked — never read a
   mapped patch's `frame_template` for a landing without it, and never copy
   its rules.
+  A remix of the user's OWN card (a deck entry's `card_id`, read before its
+  printing) keeps the source's FRAME (owner 2026-10-13): its template with
+  the stored anatomy switches (`storedAnatomyOf`; never the finish) where
+  the save's own gates pass it — `ownCardRemixFrame`
+  (`lib/ai/remix-mechanics.ts`: published in the card's colour, the kind
+  gate — judged again on the NEW name before the art — a two-part frame
+  with its second half, a double-faced body with its back on a verified
+  body, priced 2 by the estimate through the same function) — else no
+  template: the default landing, one face. A fallback, never a refused
+  save after the art; a token's height still follows the saved text.
   Owner-run scripts reach the app for such work through
   `POST /api/admin/storage-sweep` (cron bearer; `scripts/lib/app-endpoint.mjs`).
 - Automatic re-bake (migration 0120, `docs/FRAMES.md` "Re-bakes after a

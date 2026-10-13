@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { getCardCollection, SCRYFALL_COLLECTION_MAX, type ScryfallCard } from "@/lib/scryfall/client";
 import { chunkIdentifiers } from "@/lib/decks/import-resolution";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
-import { remixCreditsOf, scryfallRemixMechanics } from "@/lib/ai/remix-mechanics";
+import { ownCardRemixFrame, remixCreditsOf, scryfallRemixMechanics } from "@/lib/ai/remix-mechanics";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 
 // ---------------------------------------------------------------------------
@@ -17,7 +17,10 @@ import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 // endpoint (≤ 75 ids a call, the client's throttle between calls) and maps
 // each through the remix's own frame choice (scryfallRemixMechanics): an
 // entry lands on the double-faced bodies — both verified — and is priced 2;
-// everything else 1. The same numbers size the jobs route's credit
+// everything else 1. An entry that is one of the user's OWN cards (`card_id`
+// — the step reads it before the printing) is priced through the step's own
+// frame choice too (ownCardRemixFrame): a card on the double-faced bodies
+// keeps both faces, at 2, where both are still verified. The same numbers size the jobs route's credit
 // pre-check and the plan's per-entry reserve (createDeckRemixJob), so what
 // the dialog shows is what the steps charge.
 // ---------------------------------------------------------------------------
@@ -74,14 +77,24 @@ export async function estimateDeckRemix(deckId: string, limit: number): Promise<
   if (taken.length === 0) return estimate;
 
   const ids = Array.from(
-    new Set(taken.map((item) => item.entry.scryfall_id).filter((id): id is string => Boolean(id))),
+    new Set(
+      taken
+        // The step remixes an entry's own card before its printing.
+        .filter((item) => !item.entry.card_id)
+        .map((item) => item.entry.scryfall_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
   );
   const printings = ids.length > 0 ? await resolvePrintings(ids) : new Map<string, ScryfallCard>();
   const verifiedKeys = new Set(await getVerifiedFrameKeys());
 
-  for (const { entry } of taken) {
+  for (const { entry, card: ownCard } of taken) {
     let credits = 1;
-    if (entry.scryfall_id) {
+    if (entry.card_id) {
+      // An unreadable card is priced one; the step fails it plainly
+      // ("Source card is gone") and refunds.
+      if (ownCard) credits = remixCreditsOf(ownCardRemixFrame(ownCard, verifiedKeys));
+    } else if (entry.scryfall_id) {
       const card = printings.get(entry.scryfall_id);
       if (!card) {
         estimate.unresolved += 1;

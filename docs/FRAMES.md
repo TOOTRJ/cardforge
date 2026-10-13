@@ -5520,8 +5520,36 @@ before anyone pays. Additions: 0 stored cards change, no bump, no sweep.
   `credits` (what `withCreditedStep` reserves: one charge, one ledger ref,
   settled with the step — `settle_spend`) are the same number. A one-credit
   entry is remixed ONE-FACED whatever its printing; an entry priced for both
-  faces whose bodies were un-ticked since fails plainly and refunds. An own
-  card's remix is unchanged (one-faced; a follow-up).
+  faces whose bodies were un-ticked since fails plainly and refunds.
+- **A remix of the user's OWN card keeps its frame** (2026-10-13; a deck
+  entry's `card_id`, which the step reads before its printing — it used to
+  carry no template, so a card on the Vehicle frame, the 2003 frame, a
+  borderless frame or a full-art token came back on the default frame).
+  `ownCardRemixFrame` (`lib/ai/remix-mechanics.ts`, pure) is the ONE
+  choice the estimate prices and the step lands:
+  - the source's stored template travels, with its stored anatomy switches
+    (`storedAnatomyOf`: crown, two-colour, collector line, ★, stamp, icon
+    family, alignment, border — as the creator's remix keeps them; the save
+    stamps the new-card default for the rest and keeps what the frame
+    draws). The finish does not travel, as before;
+  - WHEN the save's own gates pass it: a current template, published in
+    the card's colour (`frameGateError`), right for the kind
+    (`frameKindGateError` — run again on the card as it SAVES, since a
+    basic-only frame reads the name: a renamed Wastes falls back);
+  - a two-part frame (split, aftermath, adventure, flip) carries its second
+    half, renamed by the identity — one picture, one credit;
+  - a double-faced body carries its back, on the body the gate derives
+    (`resolveDfcBackFace`), only when BOTH combos are verified — then two
+    pictures at two credits, priced by the estimate; a one-credit entry (an
+    older plan, a body not ticked) lands as before, one-faced;
+  - anything else — unverified in the colour, refused by the kind gate, a
+    retired or missing template, a body-less legacy back — is the landing
+    it had before: no template (the default frame), one face, one credit.
+    A fallback, never a refused save after the art is paid for.
+  A token's height still follows the text the remix saves
+  (`autoTokenTextBoxFrame`); a walker / saga stored with its rows alone
+  (`rules_text` NULL) is copied with its rows as text (`ownCardRulesText`).
+  `tests/unit/ai/deck-remix-own-card-frame.test.ts`.
 - **Proofs.** `tests/unit/scryfall/dfc-imports.test.ts` (the mapping table
   on `fixtures/dfc-import-printings.json` — MID #7 / #169, INR #60, a VOW
   werewolf, a MOM transform, a BOT convert, XLN #22, LCI #26, EMN #63, ORI

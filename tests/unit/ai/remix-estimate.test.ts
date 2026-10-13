@@ -19,7 +19,7 @@ const ALL = { ...dfcPrintings, ...importPrintings, ...signaturePrintings } as un
 const idOf = (key: string) => ALL[key]!.id;
 
 const s = vi.hoisted(() => ({
-  items: [] as Array<{ entry: Record<string, unknown>; card: null }>,
+  items: [] as Array<{ entry: Record<string, unknown>; card: Record<string, unknown> | null }>,
   verified: [] as string[],
   collectionCalls: [] as Array<Array<{ id: string }>>,
   collectionFails: false,
@@ -110,6 +110,66 @@ describe("estimateDeckRemix", () => {
       s.verified = verified;
       expect(await estimateDeckRemix("deck-1", 100)).toMatchObject({ cards: 1, credits: 1, doubleFaced: 0 });
     }
+  });
+
+  // An entry that is one of the user's OWN cards is priced through the
+  // step's own frame choice (ownCardRemixFrame): a card on the double-faced
+  // bodies keeps both faces — two pictures, two credits — where both are
+  // still published; every other own card is one credit, as it always was.
+  it("prices an own card on the double-faced bodies at two credits, and only while both bodies are ticked", async () => {
+    const ownDfc = {
+      title: "Brutal Cathar",
+      card_type: "creature",
+      supertype: null,
+      subtypes: ["Human"],
+      color_identity: ["white"],
+      rules_text: "Daybound",
+      frame_style: { template: "m15dfcfront", dfcIcon: "sunmoon" },
+      back_face: { title: "Moonrage Brute", card_type: "creature", frame_style: { template: "m15dfcbackleft" }, color_identity: ["red"] },
+    };
+    const ownVehicle = {
+      title: "Skiff",
+      card_type: "artifact",
+      supertype: null,
+      subtypes: ["Vehicle"],
+      color_identity: ["colorless"],
+      rules_text: "Crew 1",
+      frame_style: { template: "m15vehicle" },
+      back_face: null,
+    };
+    s.items = [
+      { ...entry("e-dfc", { name: "Brutal Cathar", card_id: "11111111-1111-4111-8111-111111111111" }), card: ownDfc },
+      { ...entry("e-vehicle", { name: "Skiff", card_id: "22222222-2222-4222-8222-222222222222" }), card: ownVehicle },
+      // A card the viewer can no longer read: one credit (the step fails it and refunds).
+      entry("e-gone", { name: "Gone", card_id: "33333333-3333-4333-8333-333333333333" }),
+    ];
+    s.verified = keys(["m15dfcfront", "w"], ["m15dfcbackleft", "r"], ["m15vehicle", "c"]);
+    expect(await estimateDeckRemix("deck-1", 100)).toEqual({
+      cards: 3,
+      credits: 4,
+      doubleFaced: 1,
+      skipped: 0,
+      unresolved: 0,
+      creditsByEntry: { "e-dfc": 2, "e-vehicle": 1, "e-gone": 1 },
+    });
+    for (const verified of [keys(["m15dfcfront", "w"]), keys(["m15dfcbackleft", "r"]), []]) {
+      s.verified = verified;
+      expect(await estimateDeckRemix("deck-1", 100)).toMatchObject({ cards: 3, credits: 3, doubleFaced: 0 });
+    }
+    // Own cards never ask Scryfall.
+    expect(s.collectionCalls).toEqual([]);
+  });
+
+  it("an entry with BOTH an own card and a printing is priced as the step remixes it: by its own card", async () => {
+    s.verified = keys(["m15dfcfront", "w"], ["m15dfcbackleft", "r"], ["m15", "w"]);
+    s.items = [
+      {
+        ...entry("e-both", { name: "Brutal Cathar", card_id: "11111111-1111-4111-8111-111111111111", scryfall_id: idOf("mid-7") }),
+        card: { title: "My Cathar", card_type: "creature", supertype: null, subtypes: [], color_identity: ["white"], rules_text: null, frame_style: { template: "m15" }, back_face: null },
+      },
+    ];
+    expect(await estimateDeckRemix("deck-1", 100)).toMatchObject({ cards: 1, credits: 1, doubleFaced: 0, unresolved: 0 });
+    expect(s.collectionCalls).toEqual([]);
   });
 
   it("applies the batch cap and reports the skipped entries", async () => {

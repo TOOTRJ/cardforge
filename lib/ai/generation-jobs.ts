@@ -69,7 +69,13 @@ import type {
 import type { DesignedCard } from "@/lib/ai/card-design";
 import { getCardById as getScryfallCardById } from "@/lib/scryfall/client";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
-import { remixCreditsOf, scryfallRemixMechanics } from "@/lib/ai/remix-mechanics";
+import {
+  ownCardRemixFrame,
+  ownCardRulesText,
+  remixCreditsOf,
+  scryfallRemixMechanics,
+} from "@/lib/ai/remix-mechanics";
+import { cardFieldsFace, frameKindGateError } from "@/lib/cards/frame-kind-gate";
 import { applyRemixNames, remixSecondHalfLayout } from "@/lib/ai/remix-names";
 import { DFC_REMIX_CREDITS } from "@/lib/scryfall/dfc-import";
 import { templateHasBackFace } from "@/lib/cards/dfc";
@@ -1428,7 +1434,9 @@ async function executeDeckRemixStep(
      *  creator's remix keeps them too), so a parent switched off stays off.
      *  A switch nobody set gets the new-card default (createCardAction). */
     anatomy?: FrameAnatomyStyle;
-    /** A layout frame's second half (TODO 1.22), Scryfall entries only. */
+    /** A layout frame's second half (TODO 1.22) or a double-faced body's
+     *  back face — a Scryfall entry's printing's, or an own card's where
+     *  its frame is kept (ownCardRemixFrame). */
     back_face?: CardBackFace;
     art_url?: string | null;
   };
@@ -1439,6 +1447,20 @@ async function executeDeckRemixStep(
     if (!source) {
       return { ...step, status: "failed", error: "Source card is gone." };
     }
+    // The source's frame travels (owner 2026-10-13) where the save's own
+    // gates pass it — published in the card's colour, right for the kind,
+    // a double-faced body with its back's body verified too — else the
+    // card lands as before (no template). ownCardRemixFrame is what the
+    // estimate priced the entry with; a one-credit entry stays one-faced.
+    const doubleFacedPlan = remixEntryCredits(entry) >= DFC_REMIX_CREDITS;
+    const kept = ownCardRemixFrame(source, new Set(await getVerifiedFrameKeys()), {
+      singleFace: !doubleFacedPlan,
+    });
+    // Two credits were reserved for both faces: bodies withdrawn since are
+    // refused rather than charged two for one picture (refunded).
+    if (doubleFacedPlan && remixCreditsOf(kept) < DFC_REMIX_CREDITS) {
+      return { ...step, status: "failed", error: REMIX_DFC_FRAMES_GONE };
+    }
     mechanics = {
       title: source.title,
       cost: source.cost ?? undefined,
@@ -1447,7 +1469,7 @@ async function executeDeckRemixStep(
       subtypes: source.subtypes ?? [],
       rarity: source.rarity ?? undefined,
       color_identity: source.color_identity,
-      rules_text: source.rules_text ?? undefined,
+      rules_text: ownCardRulesText(source),
       flavor_text: source.flavor_text ?? undefined,
       power: source.power ?? undefined,
       toughness: source.toughness ?? undefined,
@@ -1456,6 +1478,8 @@ async function executeDeckRemixStep(
       parent_card_id: source.id,
       art_url: source.art_url,
       anatomy: storedAnatomyOf(source.frame_style),
+      frame_template: kept.frame_template,
+      back_face: kept.back_face,
     };
   } else if (entry.scryfall_id) {
     const scry = await getScryfallCardById(entry.scryfall_id);
@@ -1532,6 +1556,29 @@ async function executeDeckRemixStep(
   const named = applyRemixNames(mechanics, identity);
   if (!named.ok) {
     return { ...step, status: "failed", error: named.error };
+  }
+
+  // An own card's kept frame is judged again on the card as it SAVES: the
+  // kind gate reads the name (a basic-only frame: "Wastes" renamed is no
+  // basic land), so a frame the new name no longer fits falls back to the
+  // default landing here — never a refused save after the art. Only a
+  // one-faced frame can be refused by a name.
+  if (
+    entry.card_id &&
+    mechanics.frame_template &&
+    !mechanics.back_face &&
+    frameKindGateError(
+      mechanics.frame_template,
+      cardFieldsFace({
+        card_type: mechanics.card_type,
+        supertype: mechanics.supertype,
+        subtypes: mechanics.subtypes,
+        title: named.title,
+        rules_text: named.rules_text,
+      }),
+    ) !== null
+  ) {
+    mechanics = { ...mechanics, frame_template: undefined };
   }
 
   // ---- Art (REQUIRED — a remix is the art; failures fail the step so the
@@ -1662,10 +1709,10 @@ async function executeDeckRemixStep(
       defense: mechanics.defense,
       art_url: artUrl,
       // The printing's own crown / two-colour switches (importedAnatomy), or
-      // an own card's explicit ones (it carries no template: the remix lands
-      // on its kind's default frame, as before); createCardAction stamps the
-      // new-card default for a switch nobody set and keeps only what the
-      // frame draws.
+      // an own card's explicit ones — with its template where the frame is
+      // kept (ownCardRemixFrame), else none: the default frame, as before;
+      // createCardAction stamps the new-card default for a switch nobody set
+      // and keeps only what the frame draws.
       frame_style: frameTemplate
         ? { template: frameTemplate, ...mechanics.anatomy }
         : mechanics.anatomy && Object.keys(mechanics.anatomy).length > 0
