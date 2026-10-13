@@ -72,6 +72,9 @@ const PICKS: readonly Pick[] = [
   { from: "m15/wu/creature-long@stamp-pair-crown", why: "crown + holofoil stamp + the two-colour pair, one card" },
   { from: "m15/r/creature-short@foil", why: "foil: the sheen and its art mask" },
   { from: "m15/u/creature-long@etched", why: "etched: the frame-only sheen" },
+  // --- the Vehicle frame (TODO 4.5c): its own plate, white digits -----------
+  { from: "m15vehicle/c/artifact-short@wide", why: "Vehicle: the brown plate under white digits at their widest (12/12), the bronze frame" },
+  { from: "m15vehicle/wu/artifact-long@pair-crown", why: "Vehicle: the two-colour pair master and the crown over the bronze frame" },
   // --- art away from its default position (a coded picture) ----------------
   {
     from: "m15/r/creature-short",

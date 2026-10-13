@@ -18,10 +18,11 @@ import {
   CARD_KIND_VALUES,
 } from "@/lib/creator/card-kinds";
 import { resolveGeneratedFrame } from "@/lib/creator/frame-random";
-import { withVerification } from "@/lib/creator/frame-resolve";
-import { frameFitsImport } from "@/lib/creator/import-frame-choice";
+import { finalizeImportMatch, withVerification } from "@/lib/creator/frame-resolve";
+import { frameFitsImport, importFramePlan, importSubstitutionMessage } from "@/lib/creator/import-frame-choice";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
-import { frameMatchFromScryfall } from "@/lib/scryfall/import-mapper";
+import { signatureDrawnOn } from "@/lib/scryfall/frame-signatures";
+import { frameMatchFromScryfall, mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
 import { validateReferenceForCombo } from "@/lib/cards/frame-reference-validation";
 import { FRAME_TEMPLATE_VALUES, TEMPLATE_SKIN_VARIANTS } from "@/types/card";
 import { CC_TEMPLATES, VEHICLE_PLATE_TONE, VEHICLE_PT_FILE, tonePlateRgba8 } from "@/scripts/lib/cc-frames.mjs";
@@ -252,6 +253,150 @@ describe("imports follow the printing (the registry's vehicle/2015 rule)", () =>
     expect(validateReferenceForCombo(copter, "m15vehicle", "c").errors).toEqual([]);
     const errors = validateReferenceForCombo(byName("Solemn Simulacrum"), "m15vehicle", "c").errors.join(" ");
     expect(errors).toMatch(/Vehicle/);
+  });
+});
+
+describe("borderless and extended-art Vehicles land on the Vehicle frame, nearest (owner 2026-10-12, round 48)", () => {
+  // The prints wear the brown plate on a dress PipGlyph has no Vehicle plate
+  // for (7 of 7 borderless and 8 of 8 extended-art prints read): the match
+  // keeps naming the printing's own frame, `nearest`, and only the LANDING
+  // moves — from the silver artifact frame to the bordered Vehicle frame,
+  // once that is verified in the card's colour.
+  const vehicle = (over: Record<string, unknown>) =>
+    scryfallCardSchema.parse({
+      id: "00000000-0000-4000-8000-000000000448", name: "Mindlink Mech", layout: "normal", set: "neo", set_type: "expansion", collector_number: "448",
+      frame: "2015", frame_effects: ["extendedart"], border_color: "black", full_art: false, textless: false, keywords: ["Flying", "Crew"],
+      type_line: "Artifact — Vehicle", colors: ["U"], color_identity: ["U"], mana_cost: "{2}{U}", power: "4", toughness: "3", released_at: "2022-02-18",
+      oracle_text: "Flying\nCrew 1",
+      ...over,
+    });
+  const extended = vehicle({});
+  const borderless = vehicle({ name: "Boommobile", set: "dft", collector_number: "310", frame_effects: ["inverted"], border_color: "borderless", colors: ["R"], color_identity: ["R"], mana_cost: "{2}{R}{R}" });
+  const nicknamed = vehicle({ name: "Smuggler's Copter", set: "sld", collector_number: "446", frame_effects: ["inverted"], border_color: "borderless", colors: [], color_identity: [], mana_cost: "{2}", flavor_name: "Battle Bus" });
+  /** Production's shape today: the borderless artifact frame is verified, the extended-art frame is not. */
+  const production = (color: string) => keys(["m15artifact", color], ["m15borderlessartifact", color]);
+  const withVehicle = (color: string) => new Set([...production(color), frameComboKey("m15vehicle", color)]);
+
+  it("a borderless Vehicle: still nearest on the borderless artifact frame, landing on the artifact frame until the Vehicle frame is verified in its colour", () => {
+    const match = frameMatchFromScryfall(borderless);
+    expect(match).toMatchObject({
+      signature: "borderless/standard+vehicle",
+      status: "nearest",
+      template: "m15borderlessartifact",
+      landOn: "m15artifact",
+      reason: "PipGlyph doesn't draw the Vehicle P/T plate yet",
+      landOnOnceVerified: {
+        template: "m15vehicle",
+        reason: "this printing is borderless, and PipGlyph draws the Vehicle plate on its bordered Vehicle frame only",
+      },
+    });
+    expect(match.onceVerified).toBeUndefined();
+    expect(match.gaps).toContain("vehicle");
+    // Not verified in red (another colour's tick doesn't count): nothing changes.
+    for (const verified of [production("r"), new Set([...production("r"), frameComboKey("m15vehicle", "c")])]) {
+      expect(withVerification(match, "r", verified)).toEqual(match);
+      expect(finalizeImportMatch(mapScryfallToFormPatch(borderless), verified).frame_template).toBe("m15artifact");
+    }
+    // Verified: the landing moves; the match stays the printing's own frame, nearest, with the honest reason.
+    const after = withVerification(match, "r", withVehicle("r"));
+    expect(after).toMatchObject({
+      signature: "borderless/standard+vehicle",
+      status: "nearest",
+      template: "m15borderlessartifact",
+      landOn: "m15vehicle",
+      reason: "this printing is borderless, and PipGlyph draws the Vehicle plate on its bordered Vehicle frame only",
+      blockedBy: match.blockedBy,
+    });
+    expect(after.landOnOnceVerified).toBeUndefined();
+    expect(after.unverified).toBeUndefined();
+    expect(after.gaps).toEqual(match.gaps);
+    // …and finalizing twice is finalizing once.
+    expect(withVerification(after, "r", withVehicle("r"))).toEqual(after);
+    const patch = finalizeImportMatch(mapScryfallToFormPatch(borderless), withVehicle("r"));
+    expect(patch.frame_template).toBe("m15vehicle");
+    expect(patch.frame_match).toMatchObject({ status: "nearest", template: "m15borderlessartifact", landOn: "m15vehicle" });
+  });
+
+  it("the chooser preselects the Vehicle frame and still offers the borderless artifact frame and the artifact frame", () => {
+    const patch = finalizeImportMatch(mapScryfallToFormPatch(borderless), withVehicle("r"));
+    const plan = importFramePlan(patch, withVehicle("r"));
+    if (plan.mode !== "choose") throw new Error(`expected the chooser, got ${plan.mode}`);
+    expect(plan.preselected).toEqual({ template: "m15vehicle" });
+    expect(plan.options.map((o) => o.template)).toEqual(["m15vehicle", "m15borderlessartifact", "m15artifact"]);
+    expect(plan.windowCroppedNote).not.toBeNull();
+    expect(importSubstitutionMessage(patch.frame_match, "m15vehicle", () => true, "r")).toBe(
+      "Scryfall's art for this printing is cropped to the bordered window — using M15 (2015) Vehicle instead of the Borderless frame.",
+    );
+    // Before the tick the chooser is today's: the artifact frame, preselected.
+    const before = importFramePlan(finalizeImportMatch(mapScryfallToFormPatch(borderless), production("r")), production("r"));
+    if (before.mode !== "choose") throw new Error(`expected the chooser, got ${before.mode}`);
+    expect(before.preselected).toEqual({ template: "m15artifact" });
+    expect(before.options.map((o) => o.template)).toEqual(["m15artifact", "m15borderlessartifact"]);
+  });
+
+  it("a nicknamed borderless Vehicle lands there too and keeps the nickname as its reason", () => {
+    const match = frameMatchFromScryfall(nicknamed);
+    expect(match).toMatchObject({
+      signature: "borderless/standard+nickname",
+      landOn: "m15artifact",
+      landOnOnceVerified: { template: "m15vehicle", reason: null },
+    });
+    expect(withVerification(match, "c", withVehicle("c"))).toMatchObject({
+      status: "nearest",
+      template: "m15borderlessartifact",
+      landOn: "m15vehicle",
+      reason: "PipGlyph doesn't print the nickname line yet",
+    });
+  });
+
+  it("an extended-art Vehicle lands on the Vehicle frame while the extended-art frame is not verified in its colour — and stays on its own frame once it is", () => {
+    const match = frameMatchFromScryfall(extended);
+    expect(match).toMatchObject({
+      signature: "extendedart+vehicle",
+      status: "nearest",
+      template: "extendedart",
+      landOnOnceVerified: {
+        template: "m15vehicle",
+        reason: "this printing is extended art, and PipGlyph draws the Vehicle plate on its bordered Vehicle frame only",
+      },
+    });
+    expect(match.landOn).toBeUndefined();
+    expect(withVerification(match, "u", production("u"))).toEqual(match);
+    expect(withVerification(match, "u", withVehicle("u"))).toMatchObject({
+      status: "nearest",
+      template: "extendedart",
+      landOn: "m15vehicle",
+      reason: "this printing is extended art, and PipGlyph draws the Vehicle plate on its bordered Vehicle frame only",
+    });
+    expect(finalizeImportMatch(mapScryfallToFormPatch(extended), withVehicle("u")).frame_template).toBe("m15vehicle");
+    // The printing's OWN frame, verified in the colour, is never taken away.
+    const own = withVerification(match, "u", new Set([...withVehicle("u"), frameComboKey("extendedart", "u")]));
+    expect(own).toMatchObject({ status: "nearest", template: "extendedart", reason: "PipGlyph doesn't draw the Vehicle P/T plate yet" });
+    expect(own.landOn).toBeUndefined();
+  });
+
+  it("only a brown-plate Vehicle of the Artifact kind takes the landing: no other artifact, no silver-plated print, no Spacecraft, no showcase", () => {
+    const none = (card: ReturnType<typeof vehicle>, label: string) => {
+      const match = frameMatchFromScryfall(card);
+      expect(match.landOnOnceVerified, label).toBeUndefined();
+      const after = withVerification(match, "c", EVERY);
+      expect(after.landOn ?? after.template, label).not.toBe("m15vehicle");
+    };
+    const colourless = { colors: [], color_identity: [], mana_cost: "{2}" };
+    const borderlessDress = { border_color: "borderless", frame_effects: ["inverted"] };
+    none(vehicle({ ...colourless, ...borderlessDress, type_line: "Artifact — Equipment" }), "a borderless Equipment");
+    none(vehicle({ ...colourless, type_line: "Artifact — Equipment" }), "an extended-art Equipment");
+    none(vehicle({ ...colourless, ...borderlessDress, type_line: "Artifact — Spacecraft" }), "a borderless Spacecraft");
+    none(vehicle({ ...colourless, ...borderlessDress, type_line: "Legendary Artifact — Vehicle", set: "dom", collector_number: "237" }), "a pinned silver-plated print");
+    none(vehicle({ ...colourless, border_color: "borderless", frame_effects: ["showcase", "inverted"] }), "a borderless showcase Vehicle");
+    none(vehicle({ ...colourless, frame_effects: ["showcase"] }), "a showcase Vehicle");
+    // A plain Vehicle keeps its own rule (exact once verified), never this landing.
+    expect(frameMatchFromScryfall(vehicle({ frame_effects: [] })).landOnOnceVerified).toBeUndefined();
+  });
+
+  it("the request log keeps such a row open: landed on the Vehicle frame, the borderless plate is still not drawn", () => {
+    expect(signatureDrawnOn("borderless/standard+vehicle", "m15vehicle")).toBe(false);
+    expect(signatureDrawnOn("extendedart+vehicle", "m15vehicle")).toBe(false);
   });
 });
 
