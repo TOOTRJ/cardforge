@@ -199,8 +199,8 @@ stay parked. Walker follow-ups (4.5b, 4.19, 4.33, 4.33a, 5.13): ask the owner
 first. 6.29 stays the LAST task. **Owner steps the repo cannot show:** the
 first ticks of `battle`, `split` (r, u), `retro` and `retroland`, the saga's
 seven re-ticks after v42 and the 14 `modern` / `modernland` re-ticks after
-v47 — `supabase/seed.sql` still mirrors production as read on 2026-10-06
-(278 combos), before any of them. This housekeeping PR left 4.10c, 4.24 and
+v47 — `supabase/seed.sql` mirrors production as read on 2026-10-13
+(313 combos: `retro` and `retroland` are ticked, `battle` and `split` are not). This housekeeping PR left 4.10c, 4.24 and
 the symbol items (3.1, 3.15, 3.17, 3.21, 6.16a-2) exactly as they were: the
 two open PRs edit those lines.
 
