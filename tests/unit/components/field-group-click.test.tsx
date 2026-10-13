@@ -4,11 +4,14 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { FieldGroup } from "@/components/creator/field-group";
 
 // ---------------------------------------------------------------------------
-// FieldGroup is a <label>, and a label forwards a click on any of its
-// non-interactive content to its first labelable descendant. In a group that
-// opens with the symbol toolbar that descendant is the {W} button: a mouse
-// click inside the empty rules-text box (a contenteditable — not a form
-// control) dropped a {W} pip into it. The browser's forwarding is what a
+// A FieldGroup of the default kind is a <label>, and a label forwards a click
+// on any of its non-interactive content to its first labelable descendant. In
+// a field that opens with the symbol toolbar that descendant is the {W}
+// button: a mouse click inside the empty rules-text box (a contenteditable —
+// not a form control) dropped a {W} pip into it. Such a field is
+// `kind="group"` in the app today (field-group-a11y.test.tsx) and has no
+// label to forward anything; this file holds the NET under a label field
+// that still opens with a button. The browser's forwarding is what a
 // cancelled click stops, so these tests read `defaultPrevented`: the real
 // activation is covered by tests/e2e/rules-text-editor.spec.ts.
 // ---------------------------------------------------------------------------

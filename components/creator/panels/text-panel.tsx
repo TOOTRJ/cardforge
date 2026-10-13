@@ -81,6 +81,7 @@ export function TextPanel({ rulesTextRef, onInsertSymbol }: TextPanelProps) {
         </p>
       ) : null}
       <FieldGroup
+        kind="group"
         label="Rules text"
         error={fieldState.error?.message}
         helper={RULES_TEXT_HELP}

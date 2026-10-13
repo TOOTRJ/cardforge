@@ -83,6 +83,7 @@ export function EffectsPanel() {
 
   return (
     <FieldGroup
+      kind="group"
       label="Finish"
       helper="A treatment layered on top of the frame. Free on every plan."
     >

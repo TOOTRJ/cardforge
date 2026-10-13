@@ -170,7 +170,7 @@ export function FeedbackForm({ signedIn }: { signedIn: boolean }) {
         void onSubmit();
       }}
     >
-      <FieldGroup label="What kind of feedback is this?" helper={activeHint}>
+      <FieldGroup kind="group" label="What kind of feedback is this?" helper={activeHint}>
         <ChipGroup
           ariaLabel="Feedback category"
           layout="grid-2"

@@ -573,7 +573,7 @@ describe("3b.4 dual lands are nonbasic", () => {
       });
     });
     await clickNext(); // Identity → Text
-    expect(screen.getByLabelText("Rules text")).toBeTruthy();
+    expect(screen.getByRole("textbox", { name: "Rules text" })).toBeTruthy();
     expect(screen.queryByText("Land icon")).toBeNull();
 
     await act(async () => {
