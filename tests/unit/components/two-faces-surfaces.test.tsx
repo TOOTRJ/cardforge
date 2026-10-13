@@ -181,6 +181,23 @@ describe("the deck page — the list's mark and the pop-up's Front / Back switch
     expect(imgs()).toEqual([`/render-cdn/owner-1/${ID}.thumb.webp?v=1`]);
   });
 
+  it("a row whose bake has NO thumb (baked before thumbnails) still shows its picture — the HD PNG, as before — and no mark", () => {
+    list([item({ rendered_thumb_url: null })]);
+    expect(imgs()).toEqual([`${RENDERS}/${ID}.png?v=1`]);
+    // No front thumb: not a card a tile could turn, so no mark either.
+    expect(screen.queryByTestId("two-faces-mark")).toBeNull();
+    cleanup();
+    // …and a thumb that is not our bake is skipped for the PNG, never drawn.
+    list([item({ rendered_thumb_url: "https://evil.example/x.webp" })]);
+    expect(imgs()).toEqual([`${RENDERS}/${ID}.png?v=1`]);
+    cleanup();
+    // A card mid-save (no pointers at all): the placeholder, nothing broken.
+    list([item(MID_SAVE)]);
+    expect(imgs()).toEqual([]);
+    expect(screen.getByRole("button", { name: "Open Village Elder" })).toBeTruthy();
+    expect(screen.queryByTestId("two-faces-mark")).toBeNull();
+  });
+
   it("an older two-faced proxy carries no mark, and its pop-up no switch", async () => {
     list([item(LEGACY)]);
     expect(screen.queryByTestId("two-faces-mark")).toBeNull();

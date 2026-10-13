@@ -445,6 +445,21 @@ body {
 .tile-flip-back {
   transform: rotateY(180deg);
 }
+/* The turning stage takes no pointer. A tile sits inside CardHoverEffect's
+   3D tilt (`.card-hover-rotor`, preserve-3d), and a browser hit-tests the
+   layers of a 3D context by DEPTH, not by z-index: the turning faces
+   (transformed layers) were sorted in front of the button, so with a mouse
+   on the tile a click on "2 faces" landed on the picture behind it and
+   opened the card (Chromium, pointer arriving on the button from the card:
+   34 of 164 probes hit the button, none once the tilt had settled). With
+   the stage out of hit-testing nothing transformed competes with the
+   button (670 of 670); the pointer on the card lands on `.tile-flip`
+   itself, inside the tile's link as before. Lifting the button instead
+   (translateZ) is NOT a fix: its hit area then leaves its drawn box as the
+   card tilts (1 px: 131 of 160; 12 px: 487 of 510; 100 px: 427 of 515). */
+.tile-flip-stage {
+  pointer-events: none;
+}
 
 .tile-flip-label-hover,
 .tile-flip-label-touch {
@@ -477,11 +492,14 @@ body {
     }
   }
   /* …and the button's own spacing a notch tighter there, so the sentence
-     fits a 163 px tile (375 px screen, two columns) without being cut. */
+     fits the narrowest tile that shows it — 160 px, the query above — with
+     room to spare: at 0.5rem / 0.375rem it fitted a 161.5 px tile (375 px
+     screen, two columns) by half a pixel and was cut ("Back · tap for
+     fro…") at 161. */
   @container (max-width: 12.99rem) {
     .tile-flip-button[aria-pressed="true"] {
-      gap: 0.375rem;
-      padding-inline: 0.5rem;
+      padding-inline: 0.4375rem;
+      gap: 0.3125rem;
       letter-spacing: -0.01em;
     }
   }

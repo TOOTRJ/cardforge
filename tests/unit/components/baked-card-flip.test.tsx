@@ -79,10 +79,27 @@ function media(matches: { hover: boolean; reducedMotion: boolean }) {
 const FRONT = "/render-cdn/owner-1/probe.thumb.webp?v=1";
 const BACK = "/render-cdn/owner-1/probe.back.thumb.webp?v=1";
 const srcs = (container: Element) => Array.from(container.querySelectorAll("img")).map((img) => img.getAttribute("src"));
-const pointer = (type: "enter" | "leave", el: Element, pointerType = "mouse") =>
+// "enter" is a pointer that MOVES onto the tile (a browser fires the
+// boundary events and a pointermove for the same physical move), each time
+// at a new place; "arrive" is the tile sliding under a pointer that stands
+// still (a wheel scroll, a page load): boundary events only.
+let mouseAt = 0;
+const pointer = (type: "enter" | "arrive" | "leave", el: Element, pointerType = "mouse") =>
   act(async () => {
     // React listens for over / out and synthesises enter / leave.
-    (type === "enter" ? fireEvent.pointerOver : fireEvent.pointerOut)(el, { pointerType });
+    if (type === "leave") {
+      fireEvent.pointerOut(el, { pointerType });
+      return;
+    }
+    fireEvent.pointerOver(el, { pointerType });
+    if (type === "arrive") return;
+    mouseAt += 7;
+    fireEvent.pointerMove(el, { pointerType, clientX: mouseAt, clientY: mouseAt });
+  });
+/** The back's thumbnail has arrived (happy-dom loads no images). */
+const backArrives = (container: Element) =>
+  act(async () => {
+    fireEvent.load(container.querySelectorAll("img")[1]);
   });
 const advance = (ms: number) =>
   act(async () => {
@@ -155,6 +172,40 @@ describe("BakedCardThumbnail with a back picture — the \"2 faces\" button (TOD
     expect(events).toHaveLength(1);
     expect(events[0].defaultPrevented).toBe(true);
     expect(link.contains(events[0].target as Node)).toBe(true);
+  });
+
+  it("a middle click on the button does not open the card in a new tab, and turns nothing", async () => {
+    tile(`${RENDERS}/probe.back.thumb.webp?v=1`);
+    const events: Event[] = [];
+    const seen = (event: Event) => events.push(event);
+    document.addEventListener("auxclick", seen, { capture: true });
+    await act(async () => {
+      fireEvent(
+        screen.getByRole("button", { name: "Show back face of Village Elder" }),
+        new MouseEvent("auxclick", { bubbles: true, cancelable: true, button: 1 }),
+      );
+    });
+    document.removeEventListener("auxclick", seen, { capture: true });
+    expect(events).toHaveLength(1);
+    // The link's default action for a middle click — a new tab — is prevented.
+    expect(events[0].defaultPrevented).toBe(true);
+    expect(screen.getByTestId("baked-card-flip").getAttribute("data-face")).toBe("front");
+  });
+
+  it("the turning stage takes no pointer (app/globals.css): inside the tile's 3D tilt a browser hit-tests by depth, and the button lost its clicks to the turning faces", async () => {
+    const container = tile(`${RENDERS}/probe.back.thumb.webp?v=1`);
+    const flip = screen.getByTestId("baked-card-flip");
+    // Both pictures live in the stage; the button is its sibling, outside it.
+    const stage = flip.querySelector(".tile-flip-stage")!;
+    await click(screen.getByRole("button"));
+    expect(Array.from(container.querySelectorAll("img")).every((img) => stage.contains(img))).toBe(true);
+    expect(stage.contains(screen.getByRole("button"))).toBe(false);
+    expect(screen.getByRole("button").parentElement).toBe(flip);
+    const { readFileSync } = await import("node:fs");
+    const css = readFileSync("app/globals.css", "utf8");
+    expect(css).toMatch(/\.tile-flip-stage\s*\{\s*pointer-events:\s*none;\s*\}/);
+    // Never a lift of the button: its hit area would leave its drawn box as the card tilts.
+    expect(css).not.toMatch(/\.tile-flip-button\s*\{[^}]*translateZ/);
   });
 
   it("the keyboard flips too: Enter / Space on the button never reach a tile body that opens the card on them (the dashboard tile)", async () => {
@@ -282,6 +333,7 @@ describe("BakedCardThumbnail with a back picture — the hover-rest turn (TODO 5
     const tileEl = screen.getByTestId("baked-card-flip");
     await pointer("enter", tileEl);
     expect(srcs(container)).toEqual([FRONT, BACK]);
+    await backArrives(container);
     await advance(HOVER_REST_MS - 1);
     expect(face()).toBe("front");
     await advance(1);
@@ -336,26 +388,127 @@ describe("BakedCardThumbnail with a back picture — the hover-rest turn (TODO 5
   });
 
   it("a pointer on its way to the button is not resting on the card; back on the card, the rest starts again", async () => {
-    tile(BACK_URL);
+    const container = tile(BACK_URL);
     const tileEl = screen.getByTestId("baked-card-flip");
     const button = screen.getByRole("button");
     await pointer("enter", tileEl);
+    await backArrives(container);
     await advance(200);
     await pointer("enter", button);
     await advance(2000);
     expect(face()).toBe("front");
-    // Off the button, still on the tile: a fresh rest.
+    // Off the button, still on the tile: its next move there is a fresh rest.
     await act(async () => {
       fireEvent.pointerOut(button, { pointerType: "mouse", relatedTarget: tileEl });
     });
+    await advance(2000);
+    expect(face()).toBe("front");
+    await act(async () => {
+      fireEvent.pointerMove(container.querySelector("img")!, { pointerType: "mouse", clientX: 901, clientY: 902 });
+    });
+    await advance(HOVER_REST_MS - 1);
+    expect(face()).toBe("front");
+    await advance(1);
+    expect(face()).toBe("back");
+  });
+
+  it("a tile that arrives under a pointer standing still does not turn — a wheel scroll, a page load; the pointer's next real move starts the rest", async () => {
+    const container = tile(BACK_URL);
+    const tileEl = screen.getByTestId("baked-card-flip");
+    // The browser's boundary events for content that scrolled under the
+    // cursor: pointerenter, no pointermove.
+    await pointer("arrive", tileEl);
+    await advance(5000);
+    expect(face()).toBe("front");
+    // …and nothing was fetched for it.
+    expect(srcs(container)).toEqual([FRONT]);
+    // An engine that also sends a pointermove at the unchanged place: the
+    // pointer has not moved since its last real move (somewhere else).
+    cleanup();
+    const again = tile(BACK_URL);
+    const second = screen.getByTestId("baked-card-flip");
+    await act(async () => {
+      fireEvent.pointerMove(second, { pointerType: "mouse", clientX: 400, clientY: 300 });
+    });
+    await pointer("leave", second);
+    await act(async () => {
+      fireEvent.pointerOver(second, { pointerType: "mouse" });
+      fireEvent.pointerMove(second, { pointerType: "mouse", clientX: 400, clientY: 300 });
+    });
+    await advance(5000);
+    expect(face()).toBe("front");
+    // A real move (a new place) starts the rest.
+    await act(async () => {
+      fireEvent.pointerMove(second, { pointerType: "mouse", clientX: 401, clientY: 300 });
+    });
+    await backArrives(again);
     await advance(HOVER_REST_MS);
     expect(face()).toBe("back");
   });
 
-  it("a press on a hover-turned tile shows the FRONT, and that pointer does not turn it again until it has left", async () => {
-    tile(BACK_URL);
+  it("one rest per visit: moving about on the card does not push the turn back", async () => {
+    const container = tile(BACK_URL);
     const tileEl = screen.getByTestId("baked-card-flip");
     await pointer("enter", tileEl);
+    await backArrives(container);
+    await advance(HOVER_REST_MS - 100);
+    await act(async () => {
+      fireEvent.pointerMove(tileEl, { pointerType: "mouse", clientX: 611, clientY: 612 });
+    });
+    await advance(100);
+    expect(face()).toBe("back");
+  });
+
+  it("a hover never turns to a picture that has not arrived: the turn waits for the back thumb", async () => {
+    const container = tile(BACK_URL);
+    const tileEl = screen.getByTestId("baked-card-flip");
+    await pointer("enter", tileEl);
+    await advance(HOVER_REST_MS + 500);
+    expect(face()).toBe("front");
+    await backArrives(container);
+    expect(face()).toBe("back");
+    // A pointer that left before it arrived: nothing turns afterwards.
+    cleanup();
+    const late = tile(BACK_URL);
+    const lateTile = screen.getByTestId("baked-card-flip");
+    await pointer("enter", lateTile);
+    await advance(HOVER_REST_MS);
+    await pointer("leave", lateTile);
+    await backArrives(late);
+    expect(face()).toBe("front");
+  });
+
+  it("a back thumb that cannot be loaded (removed by an edit after the list was built): the tile stays on the front and loses its button", async () => {
+    const container = tile(BACK_URL);
+    const tileEl = screen.getByTestId("baked-card-flip");
+    await pointer("enter", tileEl);
+    await act(async () => {
+      fireEvent.error(container.querySelectorAll("img")[1]);
+    });
+    await advance(5000);
+    expect(face()).toBe("front");
+    expect(screen.queryByRole("button")).toBeNull();
+    // The broken picture is gone too; the front is what it was.
+    expect(srcs(container)).toEqual([FRONT]);
+    expect(container.querySelector("[aria-hidden=true] img")).toBeNull();
+    cleanup();
+    // The same after a press (touch, keyboard): back to the front, no button.
+    const pressed = tile(BACK_URL);
+    await click(screen.getByRole("button", { name: "Show back face of Village Elder" }));
+    expect(face()).toBe("back");
+    await act(async () => {
+      fireEvent.error(pressed.querySelectorAll("img")[1]);
+    });
+    expect(face()).toBe("front");
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.getByTestId("baked-card-flip").querySelector(".tile-flip-front")!.getAttribute("aria-hidden")).toBe("false");
+  });
+
+  it("a press on a hover-turned tile shows the FRONT, and that pointer does not turn it again until it has left", async () => {
+    const container = tile(BACK_URL);
+    const tileEl = screen.getByTestId("baked-card-flip");
+    await pointer("enter", tileEl);
+    await backArrives(container);
     await advance(HOVER_REST_MS);
     expect(face()).toBe("back");
     await click(screen.getByRole("button", { name: "Show front face of Village Elder" }));
