@@ -16,6 +16,7 @@ import {
   FieldGroup,
   MoreOptions,
   inputClass,
+  useFaceLabel,
 } from "@/components/creator/field-group";
 import type { ArtWindow } from "@/lib/cards/art-positioner-window";
 import type { FormValues } from "@/lib/creator/form-types";
@@ -82,8 +83,10 @@ export function ArtPanel({
   // from a real card (TODO 1.15), and its owner is offered the move onto the
   // real double-faced frames (backFaceHint, TODO 5.2). The inline second
   // faces (adventure, split, aftermath, flip) edit theirs in backFaceSlot;
-  // a card on a double-faced FRONT body edits its back in the back-face
-  // panel under this one (DfcFacePanel).
+  // a card on a double-faced FRONT body edits its back on the Back face tab
+  // (Face tabs, TODO 5.14 — panels/back-face-panels.tsx).
+  // "Front face" on a card with Face tabs (TODO 5.14); null elsewhere.
+  const faceLabel = useFaceLabel();
   const showBackFaceArt = Boolean(hasBackFace) && !backFaceSlot && !templateHasBackFace(template);
 
   return (
@@ -102,6 +105,7 @@ export function ArtPanel({
                 artPosition={artPosField.value}
                 artWindow={artWindow}
                 fieldAnchor="art_url"
+                heading={faceLabel ? `${faceLabel} — Artwork` : undefined}
                 onArtChange={({ artUrl, artPosition }) => {
                   // Controller onChange is the single write path — it updates
                   // the value AND dirties the field. A second setValue on the

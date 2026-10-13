@@ -16,6 +16,15 @@ import path from "node:path";
 // transform already compiles their JSX with the automatic React runtime.
 // ---------------------------------------------------------------------------
 
+// CI runs the suite as shards (`npm run test:coverage:shard -- --shard=i/N`,
+// .github/workflows/ci.yml): each shard sees only its share of the tests, so
+// its own coverage is a fraction of the suite's and the floors below would
+// fail on every one. A shard therefore only RECORDS coverage (the blob
+// reporter carries it) and prints no table; the floors are enforced once, on
+// the merged coverage of all shards, by `npm run test:coverage:merge` — which
+// runs without this variable. Nothing else may set it.
+const COVERAGE_SHARD = process.env.VITEST_COVERAGE_SHARD === "1";
+
 export default defineConfig({
   test: {
     environment: "node",
@@ -36,18 +45,20 @@ export default defineConfig({
         "lib/supabase/**",
         "lib/render/**",
       ],
-      reporter: ["text", "html", "lcov", "json-summary"],
+      reporter: COVERAGE_SHARD ? ["json-summary"] : ["text", "html", "lcov", "json-summary"],
       // Floors, not targets: a few points under the 2026-09-22 baseline of
       // the areas that guard money and auth, so a PR that deletes their
       // tests (or adds a large untested surface there) fails `test:coverage`
       // in CI. Raise them as coverage grows; never lower without saying why.
-      thresholds: {
-        "lib/billing/**": { lines: 75, functions: 65 },
-        "lib/stripe/**": { lines: 85, functions: 80 },
-        "lib/auth/**": { lines: 80 },
-        "lib/seo/**": { lines: 95 },
-        "lib/ai/**": { lines: 25 },
-      },
+      thresholds: COVERAGE_SHARD
+        ? undefined
+        : {
+            "lib/billing/**": { lines: 75, functions: 65 },
+            "lib/stripe/**": { lines: 85, functions: 80 },
+            "lib/auth/**": { lines: 80 },
+            "lib/seo/**": { lines: 95 },
+            "lib/ai/**": { lines: 25 },
+          },
     },
   },
   resolve: {

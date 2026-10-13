@@ -56,23 +56,53 @@ test.describe("double-faced editor", () => {
       await page.getByRole("radiogroup", { name: "Color identity" }).getByRole("radio", { name: /^blue/i }).click();
       await expect(page.locator("summary").filter({ hasText: /^colou?r/i })).toContainText(/blue/i);
 
-      // Identity: the front's name, then the back face panel.
+      // Face tabs (TODO 5.14): ONE Front face | Back face switch above every
+      // step. The back's type and colour are on the Card step, where the
+      // front's are, while the Back face tab is selected (collapsed
+      // sections: the summaries name the values).
+      const frontTab = page.getByRole("tab", { name: /^Front face/ });
+      const backTab = page.getByRole("tab", { name: /^Back face/ });
+      await expect(frontTab).toHaveAttribute("aria-selected", "true");
+      await expect(backTab).toContainText(/needs a name and artwork/);
+      await backTab.click();
+      await expect(backTab).toHaveAttribute("aria-selected", "true");
+      await expect(page.getByTestId("dfc-back-type")).toContainText(/Creature/);
+      await expect(page.getByTestId("dfc-back-color")).toContainText(/follows the front/);
+      await expect(page.getByTestId("dfc-front-type")).toHaveCount(0);
+      // The preview shows the face being edited, and says so; the other one
+      // is the small button beside it (the desktop aside is the last in the
+      // DOM; the phone block is hidden at this width).
+      await expect(page.getByTestId("face-preview-showing").last()).toHaveText("Showing: Back face");
+      await expect(page.getByRole("button", { name: "Front face — edit this face" }).last()).toBeVisible();
+      // A 1024 × 768 window: the preview is ONE sticky column beside the
+      // form, and whatever stands under the large card falls off its foot
+      // for good (a sticky column never scrolls). The other face stands in
+      // the label's row there — whole, in the window.
+      const desktop = page.viewportSize()!;
+      await page.setViewportSize({ width: 1024, height: 768 });
+      await page.getByTestId("face-preview-showing").last().scrollIntoViewIfNeeded();
+      await expect(page.getByTestId("face-preview-other").last()).toBeInViewport({ ratio: 1 });
+      await page.setViewportSize(desktop);
+
+      // Identity: the selected face's name — the back's, then the front's.
       const title = `Walked Transform ${Date.now()}`;
       const rail = page.getByRole("navigation", { name: /card editor steps/i });
       await rail.getByRole("button", { name: /^identity$/i }).click();
+      // The tab stays through a step change; the preview with it.
+      await expect(backTab).toHaveAttribute("aria-selected", "true");
+      await page.getByLabel(/^Back face — Title/).fill(`${title} (back)`);
+      await expect(page.locator('input[placeholder="Emberbound Wyrm"]')).toHaveCount(0);
+      await expect(backTab).toContainText(/needs artwork/);
+      // No mana cost on a transform back: the Text step says so in its place.
+      await rail.getByRole("button", { name: /^text/i }).click();
+      await expect(page.getByTestId("back-no-cost-note")).toBeVisible();
+      await expect(page.getByLabel("Back face rules text")).toBeVisible();
+      // The small front face switches the tab back.
+      await page.getByRole("button", { name: "Front face — edit this face" }).last().click();
+      await expect(frontTab).toHaveAttribute("aria-selected", "true");
+      await expect(page.getByTestId("face-preview-showing").last()).toHaveText("Showing: Front face");
+      await rail.getByRole("button", { name: /^identity$/i }).click();
       await page.locator('input[placeholder="Emberbound Wyrm"]').fill(title);
-      const panel = page.getByTestId("dfc-face-panel");
-      await expect(panel).toBeVisible();
-      // No mana cost on a transform back; a type and a colour of its own
-      // (the colour section is collapsed: its summary names the colour).
-      await expect(panel.getByRole("radiogroup", { name: "Back face type" })).toBeVisible();
-      await expect(panel.getByTestId("dfc-back-color")).toContainText(/follows the front/);
-      await expect(panel.getByText(/^Cost$/)).toHaveCount(0);
-      const backTitle = panel.locator('input[placeholder="Insectile Aberration"]');
-      await backTitle.fill(`${title} (back)`);
-      // Focusing the panel flips the live preview to the back (the desktop
-      // aside is the last preview in the DOM; the mobile one is hidden here).
-      await expect(page.getByRole("button", { name: /show the front face/i }).last()).toBeVisible();
 
       // A preview saves like a draft (no art needed).
       const saveButton = page.getByRole("button", { name: /^save$/i });

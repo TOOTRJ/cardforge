@@ -13,6 +13,8 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:coverage:shard": "vitest run --coverage --reporter=default --reporter=github-actions --reporter=blob",
+    "test:coverage:merge": "vitest run --merge-reports --coverage",
     "test:e2e": "playwright test",
     "test:visual": "node scripts/visual-regression.mjs",
     "test:parity": "node scripts/parity.mjs",

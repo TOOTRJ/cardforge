@@ -780,7 +780,11 @@ function spawnSyncGit(dir: string) {
 
 // --- the CLI against a fake Supabase ------------------------------------------------------
 
-describe("scripts/sweep-storage-orphans.mjs against a fake Supabase", () => {
+// Each test here starts the script as a child `node` (one to three times):
+// 1.2 to 2.6 s on a quiet CI runner (2026-10-12), and past vitest's default
+// 5 s on a machine busy with the rest of the suite — the tests timed out
+// with nothing wrong. The limit is for a hung child, not a budget.
+describe("scripts/sweep-storage-orphans.mjs against a fake Supabase", { timeout: 20_000 }, () => {
   let tmp = "";
   let server: Server;
   const store = new Map<string, StoredObject>();
@@ -947,7 +951,11 @@ describe("scripts/sweep-storage-orphans.mjs against a fake Supabase", () => {
 
 // --- incident 2026-09-29: storage ran out of database connections --------------------------
 
-describe("scripts/sweep-storage-orphans.mjs against a Storage whose database pool takes 4 calls at once", () => {
+// Each test here starts the script as a child `node` (one to three times):
+// 1.2 to 2.6 s on a quiet CI runner (2026-10-12), and past vitest's default
+// 5 s on a machine busy with the rest of the suite — the tests timed out
+// with nothing wrong. The limit is for a hung child, not a budget.
+describe("scripts/sweep-storage-orphans.mjs against a Storage whose database pool takes 4 calls at once", { timeout: 20_000 }, () => {
   // Production, 2026-09-29: `--apply --batch-size 100` fired each batch's
   // lookups all at once; after 193 deletes storage answered "Too many
   // connections issued to the database" and the batch's confirms failed.

@@ -16,8 +16,10 @@
 //     icon to the left well. A modal card's housing has no family.
 //
 // Both are chip rows in existing sections of the stepper; nothing moves
-// (6.29 stays last). The family chips are rendered again by the back-face
-// panel in revise mode, where the Card step is absent.
+// (6.29 stays last). The family chips are rendered again on the Identity
+// step in revise mode, where the Card step is absent. With Face tabs (TODO
+// 5.14) the Back face tab shows the back's own type and colour in the place
+// of the "Front face" row and the Color section (panels/back-face-panels.tsx).
 
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import { FrameThumb, SoonBadge } from "@/components/creator/frame-pickers";
@@ -96,7 +98,7 @@ export function DfcFaceTypeSection({
       />
       <p className="text-[11px] leading-4 text-subtle">
         The front&apos;s type. A land front wears the land frame; the back
-        face has a type of its own on the Identity step.
+        face has a type of its own on the Back face tab.
       </p>
     </SetupSection>
   );
