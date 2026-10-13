@@ -86,7 +86,9 @@ test.describe("two-part kinds: the part tabs", () => {
 
       // Reopen: the stored card, on its first part; the second on its tab.
       await page.reload();
+      // (The save keeps the step in the URL: back to Identity.)
       await expect(firstTab).toHaveAttribute("aria-selected", "true");
+      await rail.getByRole("button", { name: /^identity$/i }).click();
       await expect(page.locator("[name='title']")).toHaveValue(title);
       await secondTab.click();
       await expect(page.locator("[name='back_face.title']")).toHaveValue(`${title} (second)`);
