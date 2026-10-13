@@ -344,8 +344,9 @@ export function AnatomyPanel({
   const pairEditable = !editing || twoColorPairOf(stored?.colorIdentity) === null;
 
   return (
-    // A group, not a FieldGroup: that is a <label>, which would name every
-    // switch and chip inside it with its caption.
+    // A group with FieldGroup's look (its `kind="group"` shape, drawn here
+    // because the heading has a fixed id) — never a <label>, which would
+    // name the first switch inside it with its caption.
     <div role="group" aria-labelledby="anatomy-panel-heading" className="flex flex-col gap-1.5" data-testid="anatomy-panel">
       <span id="anatomy-panel-heading" className="text-xs font-semibold uppercase tracking-wider text-subtle">
         Printed details

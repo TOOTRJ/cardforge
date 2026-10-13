@@ -95,6 +95,7 @@ export function LandIconPanel({ userId, autoKey }: LandIconPanelProps) {
 
         return (
           <FieldGroup
+            kind="group"
             label="Land icon"
             helper="Basic lands print a large mana symbol instead of rules text. It follows the land type automatically — pick a different symbol to override it, or upload your own mark."
           >

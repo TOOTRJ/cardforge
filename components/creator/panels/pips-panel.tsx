@@ -83,6 +83,7 @@ export function PipsPanel({
     <>
       {hidesCost(frameTemplate) ? null : (
         <FieldGroup
+          kind="group"
           label="Cost"
           helper="Click pips to build the mana cost."
           error={errors.cost?.message}

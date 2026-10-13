@@ -224,7 +224,7 @@ describe("the Text step on a textless frame (TODO 3.24)", () => {
     expect(screen.getByTestId("textless-frame-note").textContent).toBe(TEXTLESS_FRAME_NOTE);
     expect(TEXTLESS_FRAME_NOTE).toBe("This frame prints no rules text — it's kept and shows on other frames.");
     // The fields stay: the text is kept, not cleared.
-    expect(screen.getByLabelText("Rules text")).toBeTruthy();
+    expect(screen.getByRole("textbox", { name: "Rules text" })).toBeTruthy();
   });
 
   it("says nothing on a frame that prints text", () => {

@@ -197,7 +197,7 @@ export function DfcFacePanel({
           </p>
         </div>
       ) : (
-        <FieldGroup label="Back face type" error={backFaceErrorMessage(errors, "card_type")}>
+        <FieldGroup kind="group" label="Back face type" error={backFaceErrorMessage(errors, "card_type")}>
           <Controller
             control={control}
             name="back_face.card_type"
@@ -280,6 +280,7 @@ export function DfcFacePanel({
             modal back carries its own. */}
         {layout === "modal" ? (
           <FieldGroup
+            kind="group"
             label="Cost"
             // A land prints no mana cost. The field stays (a stored card may
             // hold one, and the front's strip draws it), but says so: left
@@ -311,7 +312,7 @@ export function DfcFacePanel({
         </FieldGroup>
       </div>
 
-      <FieldGroup label="Rules text" error={errors.back_face?.rules_text?.message}>
+      <FieldGroup kind="group" label="Rules text" error={errors.back_face?.rules_text?.message}>
         <div className="flex flex-col gap-2">
           <RulesSymbolToolbar onInsert={onInsertSymbol} />
           <PipTextEditor
@@ -372,7 +373,7 @@ export function DfcFacePanel({
         />
       </FieldGroup>
 
-      <FieldGroup label="Back face artwork" error={errors.back_face?.art_url?.message}>
+      <FieldGroup kind="group" label="Back face artwork" error={errors.back_face?.art_url?.message}>
         <Controller
           control={control}
           name="back_face.art_url"

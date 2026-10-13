@@ -130,7 +130,8 @@ export function ManaCostPicker({
   return (
     <div
       id={id}
-      // Every mount sits inside a FieldGroup's <label>, and a <label> hands a
+      // The creator mounts this in a FieldGroup of kind "group" (never a
+      // <label>). Should a mount ever sit inside a <label>: that hands a
       // click on anything that is not a control of its own to its first
       // button — here "Remove last mana symbol". A click on the picker's
       // plain parts (a gap between pips, the limit's line, a caption) is

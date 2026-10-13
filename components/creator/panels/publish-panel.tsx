@@ -173,7 +173,7 @@ export function PublishPanel({
       ) : null}
 
       {/* Draft vs. publish — the one decision this step is for. */}
-      <FieldGroup label="Publishing">
+      <FieldGroup kind="group" label="Publishing">
         <div className="flex flex-col gap-3">
           <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border/60 bg-elevated/30 px-4 py-3 text-sm text-foreground has-[:checked]:border-primary/50 has-[:checked]:bg-primary/5">
             <input

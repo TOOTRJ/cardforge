@@ -37,6 +37,7 @@ export function RarityPanel() {
   const { control } = useFormContext<FormValues>();
   return (
     <FieldGroup
+      kind="group"
       label="Rarity"
       helper="Tints the set icon on the type line."
     >
