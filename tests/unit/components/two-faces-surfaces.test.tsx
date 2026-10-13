@@ -241,6 +241,154 @@ describe("the deck page — the list's mark and the pop-up's Front / Back switch
     expect(shown()).toEqual([[POINTERS.rendered_image_url, "Village Elder"]]);
   });
 
+  it("the pop-up's PICTURE link opens the face it shows: the card page on its back with Back chosen (TODO 5.17)", async () => {
+    list([item()]);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Open Village Elder" }));
+    });
+    const dialog = screen.getByRole("dialog");
+    const pictureLink = () => dialog.querySelector("img")!.closest("a")!;
+    expect(pictureLink().getAttribute("href")).toBe("/card/kesh/village-elder");
+    expect(pictureLink().getAttribute("aria-label")).toBe("Open this card's page");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    });
+    expect(pictureLink().getAttribute("href")).toBe("/card/kesh/village-elder?face=back");
+    expect(pictureLink().getAttribute("aria-label")).toBe("Open this card's page on its back face");
+    // The title and the text link name the card, not a face.
+    const others = Array.from(dialog.querySelectorAll("a[href^='/card/']")).filter((a) => a !== pictureLink());
+    expect(others.length).toBeGreaterThan(0);
+    for (const a of others) expect(a.getAttribute("href")).toBe("/card/kesh/village-elder");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Front" }));
+    });
+    expect(pictureLink().getAttribute("href")).toBe("/card/kesh/village-elder");
+  });
+
+  it("an older two-faced proxy's picture link never names a face", async () => {
+    list([item(LEGACY)]);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Open Village Elder" }));
+    });
+    const link = screen.getByRole("dialog").querySelector("img")!.closest("a")!;
+    expect(link.getAttribute("href")).toBe("/card/kesh/village-elder");
+  });
+
+  it("closing the pop-up returns the focus to the row that opened it (TODO 5.17) — Escape, and the close button", async () => {
+    const second = "55555555-5555-4555-8555-555555555555";
+    list([item(), item({ title: "Other Card", slug: "other-card" }, { id: second, name: "Other Card" })]);
+    const row = screen.getByRole("button", { name: "Open Other Card" });
+    expect(row.getAttribute("data-deck-entry")).toBe(second);
+    row.focus();
+    await act(async () => {
+      fireEvent.click(row);
+    });
+    const dialog = screen.getByRole("dialog");
+    await act(async () => {
+      fireEvent.keyDown(dialog, { key: "Escape" });
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Open Other Card" }));
+
+    // Opened by a click with the focus elsewhere: still the row that opened it.
+    (document.activeElement as HTMLElement).blur();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Open Village Elder" }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /close/i }));
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Open Village Elder" }));
+  });
+
+  describe("the focus after the pop-up when the plain hand-back is not enough (the check of #536)", () => {
+    const ids = ["a", "b", "c"].map((_, i) => `6666666${i}-6666-4666-8666-666666666666`);
+    const three = () =>
+      ids.map((id, i) => item({ title: `Card ${i + 1}`, slug: `card-${i + 1}` }, { id, name: `Card ${i + 1}` }));
+    const rowOf = (n: number) => screen.getByRole("button", { name: `Open Card ${n}` });
+    const openRow = async (n: number) => {
+      rowOf(n).focus();
+      await act(async () => {
+        fireEvent.click(rowOf(n));
+      });
+      expect(screen.getByRole("dialog")).toBeTruthy();
+    };
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it("a click on the backdrop: the click's own mousedown blurs the row after the close — the focus is handed back again once the click is over", async () => {
+      list(three());
+      await openRow(2);
+      await act(async () => {
+        fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+      });
+      expect(document.activeElement).toBe(rowOf(2));
+      // What a browser does next on a backdrop click (the dialog closed on
+      // pointerdown; mousedown on a non-focusable backdrop focuses <body>).
+      (document.activeElement as HTMLElement).blur();
+      expect(document.activeElement).toBe(document.body);
+      await act(async () => {
+        vi.advanceTimersByTime(0);
+      });
+      expect(document.activeElement).toBe(rowOf(2));
+    });
+
+    it("the entry is removed while its pop-up is open (the refresh lands first): the focus goes to the row that took its place, not to <body>", async () => {
+      const { rerender } = list(three());
+      await openRow(2);
+      const [first, , third] = three();
+      await act(async () => {
+        rerender(<DeckCardList items={[first, third]} ownerUsername="kesh" canManage={false} />);
+      });
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(document.activeElement).toBe(rowOf(3));
+    });
+
+    it("the entry is removed just AFTER the close (the removal answers once the pop-up has shut): the focus moves on from the row that goes", async () => {
+      const { rerender } = list(three());
+      await openRow(3);
+      await act(async () => {
+        fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+        vi.advanceTimersByTime(0);
+      });
+      expect(document.activeElement).toBe(rowOf(3));
+      const [first, second] = three();
+      await act(async () => {
+        rerender(<DeckCardList items={[first, second]} ownerUsername="kesh" canManage={false} />);
+      });
+      // The last row went: the one before it.
+      expect(document.activeElement).toBe(rowOf(2));
+    });
+
+    it("the last entry of the deck is removed: the list's first control, never <body>; and a focus the reader moved elsewhere is left alone", async () => {
+      const { rerender } = list(three().slice(0, 1));
+      await openRow(1);
+      await act(async () => {
+        rerender(<DeckCardList items={[]} ownerUsername="kesh" canManage={false} />);
+      });
+      expect(document.activeElement).not.toBe(document.body);
+      cleanup();
+
+      const again = list(three());
+      await openRow(1);
+      await act(async () => {
+        fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+        vi.advanceTimersByTime(0);
+      });
+      // The reader tabs on to another row; the first one is then removed.
+      await act(async () => {
+        fireEvent.blur(rowOf(1), { relatedTarget: rowOf(3) });
+        rowOf(3).focus();
+      });
+      const [, second, third] = three();
+      await act(async () => {
+        again.rerender(<DeckCardList items={[second, third]} ownerUsername="kesh" canManage={false} />);
+      });
+      expect(document.activeElement).toBe(rowOf(3));
+    });
+  });
+
   it("the switch belongs to the proxy: showing the ORIGINAL printing hides it (and the row's mark)", async () => {
     const original = "https://cards.scryfall.io/normal/front/a/b/abc.jpg";
     list([item({}, { scryfall_id: "44444444-4444-4444-8444-444444444444", image_url: original })]);

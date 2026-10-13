@@ -59,7 +59,12 @@ import { tileBackThumbOf } from "@/lib/cards/tile-faces";
 // turns it over in place, and — with a real hovering pointer, motion allowed
 // — it also turns when the pointer rests on it
 // (components/cards/baked-card-flip.tsx). Which cards: ONE answer,
-// lib/cards/tile-faces.ts (only a portrait pair, only our own bakes). A tile
+// lib/cards/tile-faces.ts (only a portrait pair, only our own bakes). The
+// button is a CONTROL, so it may never sit inside the tile's link or
+// role="button" (TODO 5.17): it is drawn only with `backFaceButton`, which
+// components/cards/card-tile.tsx alone sets — it puts the tile's link UNDER
+// the picture instead of around it, for every gallery-style surface. Without
+// it the tile is the front alone. A tile
 // without a back thumb is exactly what it was — an older two-faced card with
 // no back picture shows nothing, and neither does the live fallback below
 // (a card whose pointers an edit has just cleared: no back picture yet).
@@ -79,6 +84,12 @@ export type BakedCardThumbnailProps = {
    *  5.3): with it, the tile gets its "2 faces" button and hover-turn
    *  (TODO 5.15). */
   renderedBackThumbUrl?: string | null;
+  /** Draw the "2 faces" button of a tile with a back picture. True ONLY
+   *  where this thumbnail is not inside a link or a button — `CardTile`
+   *  sets it (the tile's link lies under the picture there). Left out, a
+   *  two-faced tile is the front alone: its button would be a control
+   *  nested in the caller's control. */
+  backFaceButton?: boolean;
   /** Card title — used as the <img>'s accessible label. */
   title: string | null | undefined;
   /** Image alt override — defaults to the card title. */
@@ -102,6 +113,7 @@ export function BakedCardThumbnail({
   renderedImageUrl,
   renderedThumbUrl = null,
   renderedBackThumbUrl = null,
+  backFaceButton = false,
   title,
   alt,
   previewData,
@@ -146,7 +158,7 @@ export function BakedCardThumbnail({
     : "bg-[#101015]";
   // The #101015 backdrop sits directly behind the image (see the header): it
   // only ever shows through a rounded bake's transparent corner sliver.
-  const image = backThumbUrl && thumbUrl ? (
+  const image = backThumbUrl && thumbUrl && backFaceButton ? (
     <BakedCardFlip
       frontSrc={toRenderCdnUrl(thumbUrl) ?? thumbUrl}
       backSrc={toRenderCdnUrl(backThumbUrl) ?? backThumbUrl}
