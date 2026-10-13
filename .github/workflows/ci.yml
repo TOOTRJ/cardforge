@@ -98,8 +98,8 @@ jobs:
   # (tests/unit/render/art-window-masters.ts), and the title-room bakes, next
   # in line at 2.2 to 4.7 min, in four more
   # (tests/unit/render/title-room-scaled-pips.ts). Measured after (#525's
-  # runs): six shards 4.1 to 4.6 min at their slowest (the job 4.8 to 5.3),
-  # eight 4.2 (5.0) — no better: vitest's hash puts three of the heaviest
+  # first four runs at six and its one at eight): six shards 4.1 to 4.7 min
+  # at their slowest (the job 4.8 to 5.3), eight 4.2 (5.0) — no better: vitest's hash puts three of the heaviest
   # files left (mana-gem-parity, walker-saga-bake, edge-contract) in ONE of
   # eight. And eight shards start 15 jobs at once instead of 13 against the
   # account's 20 at a time, which runs beside other PRs' already wait on
