@@ -443,12 +443,18 @@ describe("a Transform or Modal card in the creator", () => {
     await goTo(/^text/i);
     expect(screen.getByLabelText("Back face rules text")).toBeTruthy();
     expect(screen.getByLabelText(/^Back face — Power/)).toBe(named("back_face.power"));
-    // Rarity is the card's.
-    const rarity = screen.getByRole("radiogroup", { name: "Rarity" }).closest("label")!;
-    expect(rarity.textContent).not.toMatch(/face —/);
+    // A field of several controls is a named group (#518): its name carries
+    // the face too.
+    expect(screen.getByRole("group", { name: "Back face — Rules text" })).toBeTruthy();
+    // Rarity is the card's: its group is "Rarity" on both tabs.
+    const rarityGroup = () => screen.getByRole("radiogroup", { name: "Rarity" }).closest("[role='group']")!;
+    expect(rarityGroup().textContent).not.toMatch(/face —/);
+    expect(screen.getByRole("group", { name: "Rarity" })).toBe(rarityGroup());
     await click(tab(/^Front face/));
     expect(screen.getByLabelText("Front face rules text")).toBeTruthy();
-    expect(screen.getByRole("radiogroup", { name: "Rarity" }).closest("label")!.textContent).not.toMatch(/face —/);
+    expect(screen.getByRole("group", { name: "Front face — Rules text" })).toBeTruthy();
+    expect(rarityGroup().textContent).not.toMatch(/face —/);
+    expect(screen.getByRole("group", { name: "Rarity" })).toBe(rarityGroup());
   });
 
   it("switching moves no focus by itself: a click leaves it on the tab", async () => {

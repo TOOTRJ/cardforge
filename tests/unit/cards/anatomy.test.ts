@@ -296,7 +296,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
    *  (every transform body but the ▼ land back; the modal spell pair). */
   const CROWNED = FRAME_TEMPLATE_VALUES.filter((t) =>
     [
-      "m15", "m15land", "m15snowland", "m15artifact", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart",
+      "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
     ].includes(t),
   );
@@ -317,7 +317,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     expect(crowned).toEqual(CROWNED);
     // The extended-art frame draws its floating crown as a band (wave 2b)
     // and no pair masters.
-    expect(frameAnatomyOf("extendedart")).toEqual({ crown: true, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: true });
+    expect(frameAnatomyOf("extendedart")).toEqual({ crown: true, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: true, border: false });
     const paired = Object.fromEntries(
       FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).twoColor.length > 0).map((t) => [t, frameAnatomyOf(t).twoColor]),
     );
@@ -331,6 +331,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       m15land: ["split"],
       m15snowland: ["split"],
       m15artifact: ["split"],
+      // The Vehicle frame (4.5c): m15artifact's split over the bronze frame.
+      m15vehicle: ["split"],
       m15borderless: ["split", "hybrid"],
       m15borderlessartifact: ["split"],
       // The borderless land (4.56): the split of its pinline AND box over
@@ -363,7 +365,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // The borderless land spreads M15BORDERLESS and declares its OWN pairs
     // on its entry (4.56) — the land's, like m15land's — with no crown
     // (no crowned twin), no collector slot and no stamp notch.
-    expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: ["split"], collector: false, stamp: false, dfcIcon: false, rulesAlign: true });
+    expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: ["split"], collector: false, stamp: false, dfcIcon: false, rulesAlign: true, border: false });
     expect(getFrameProfile("m15borderlessland").twoColorForLands).toBe(true);
     expect(getFrameProfile("m15borderlessland").crownMasters).toBeUndefined();
     expect(getFrameProfile("m15borderlessland").overlays).toBeUndefined();
@@ -377,9 +379,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // checked above.)
     // (…and the holofoil stamp's notch, 4.9c, on the devoid entry too:
     // STAMP_TEMPLATES below.)
-    expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true, stamp: true, dfcIcon: false, rulesAlign: true });
+    expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true, stamp: true, dfcIcon: false, rulesAlign: true, border: false });
     for (const t of ["adventure", "saga", "nyx", "fullart", "expeditionland"]) {
-      expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: profileOffersRulesAlign(getFrameProfile(t)) });
+      expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: profileOffersRulesAlign(getFrameProfile(t)), border: false });
     }
     for (const t of ["m15pw", "m15token"] as const) {
       expect(frameAnatomyOf(t).crown, t).toBe(false);
@@ -389,7 +391,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
   });
 
   /** The entries with the holofoil stamp's notch (4.9c, wave 1). */
-  const STAMP_TEMPLATES = ["m15", "m15land", "m15snowland", "m15artifact", "m15snow", "m15devoid", "m15pw"];
+  const STAMP_TEMPLATES = ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15snow", "m15devoid", "m15pw"];
 
   it("the stamp's notch on exactly the seven wave-1 entries (4.9c): the M15 family's bordered frames and the walker, never a token, an emblem or a profile that spreads them", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).stamp)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => STAMP_TEMPLATES.includes(t)));

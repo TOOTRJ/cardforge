@@ -130,6 +130,9 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   m20tokenartifacttext: ALL_BORDER,
   m20tokenartifacttall: ALL_BORDER,
   m15artifact: ALL_BORDER,
+  // The Vehicle frame (TODO 4.5c, CC 'Vehicle Frame' through the M15 Border
+  // and Frame masks): the M15 black border on every edge.
+  m15vehicle: ALL_BORDER,
   m15snow: ALL_BORDER,
   m15devoid: ALL_BORDER,
   m15pw: ALL_BORDER,

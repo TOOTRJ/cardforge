@@ -359,6 +359,11 @@ export const FRAME_TEMPLATE_VALUES = [
   "m15land",
   "m15token",
   "m15artifact",
+  // The Vehicle frame (TODO 4.5c, Card Conjurer 'Vehicle Frame' + its brown
+  // P/T plate, white digits): the artifact kind's variation for a card whose
+  // subtype says Vehicle. A stored template of its own — never a render-time
+  // pick from the subtype, which would re-dress every stored Vehicle.
+  "m15vehicle",
   "m15snow",
   "m15snowland",
   "m15devoid",
@@ -510,6 +515,7 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   // that new tokens default to the full-art design once it is verified.
   m15token: "Token (2014–2019)",
   m15artifact: "Artifact",
+  m15vehicle: "Vehicle",
   m15snow: "Snow",
   m15snowland: "Snow Land",
   m15devoid: "Devoid",
@@ -631,6 +637,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   m15land: "m15",
   m15token: "m15",
   m15artifact: "m15",
+  m15vehicle: "m15",
   m15snow: "m15",
   m15snowland: "m15",
   m15devoid: "m15",
@@ -810,8 +817,10 @@ export const TEMPLATE_SKIN_VARIANTS: Partial<
   Record<FrameTemplate, FrameTemplate[]>
 > = {
   m15: ["m15snow", "m15devoid", "m15borderless"],
-  // The artifact kind's own borderless dress (frames plan 4.32).
-  m15artifact: ["m15borderlessartifact"],
+  // The artifact kind's own borderless dress (frames plan 4.32), and the
+  // Vehicle frame (TODO 4.5c) — offered to a card whose subtype says Vehicle
+  // (lib/creator/card-kinds.ts templateSubtypeDress).
+  m15artifact: ["m15borderlessartifact", "m15vehicle"],
   // The planeswalker kind's borderless dresses (frames plan 4.33): the tall
   // one follows the ability rows (walkerRowsFrameFor).
   m15pw: ["m15borderlesspw", "m15borderlesspwtall"],
@@ -841,6 +850,11 @@ export const TEMPLATE_SKIN_VARIANTS: Partial<
  *  4.21e); a stored frame_style names "center" only. */
 export const RULES_ALIGN_VALUES = ["left", "center"] as const;
 export type RulesAlign = (typeof RULES_ALIGN_VALUES)[number];
+
+/** A card's border colour as the creator's form holds it (TODO 4.30); a
+ *  stored frame_style names "white" only — absent is the black border. */
+export const CARD_BORDER_VALUES = ["black", "white"] as const;
+export type CardBorder = (typeof CARD_BORDER_VALUES)[number];
 
 export type FrameStyle = {
   /** Premium treatment layered on the base frame (foil / etched / showcase). */
@@ -909,6 +923,17 @@ export type FrameStyle = {
    *  chapter rows, a walker frame's ability rows or a textless frame); the
    *  save drops it anywhere else (lib/cards/anatomy.ts normalizeAnatomy). */
   rulesAlign?: RulesAlign;
+  /** The card's border colour (TODO 4.30): an ADDITION, opt-in per card.
+   *  "white" draws the printed white border of the core sets up to Ninth
+   *  Edition — the white over the frame's black border and the black keyline
+   *  round the frame box (lib/cards/white-border.ts); absent = black,
+   *  today's look (the stored key is "white" or absent — the owner's off
+   *  removes it). A NEW card starts black: a white border is a printing
+   *  choice, not a default; an import follows its printing's
+   *  `border_color`. Drawn only on a template whose PROFILES entry declares
+   *  `whiteBorder` (the 1997 and 2003 frames); the save drops it anywhere
+   *  else (lib/cards/anatomy.ts normalizeAnatomy). */
+  border?: CardBorder;
 };
 
 // ---------------------------------------------------------------------------

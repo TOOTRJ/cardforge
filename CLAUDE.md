@@ -651,6 +651,24 @@ Rules and gotchas:
   arch is a
   glyph-level rules keep-out (`DrawnStats.stamp`) — the rules rect never
   shrinks.
+- The Vehicle frame (`m15vehicle`; TODO 4.5c): a STORED template of its
+  own, picked under Variations beside the Artifact frame — never a
+  render-time pick from the subtype and not a `frame_style` switch (owner
+  2026-09-29). Card Conjurer's bronze 'Vehicle Frame' under m15artifact's
+  bars, box and pinline (the importer's own recipe, the ten split pairs
+  too), m15artifact's slots, crown, stamp notch and collector line, and ONE
+  brown plate under every colour key with WHITE digits, toned onto the
+  prints with its hue kept (`VEHICLE_PLATE_TONE`: never a per-channel gain,
+  which turns the bevel lavender). It dresses a card whose subtypes say
+  Vehicle and nothing else (`SUBTYPE_DRESSES` / `subtypeFrameFits` in
+  `lib/creator/card-kinds.ts`: the chip, the server's kind gate, random and
+  stand-in picks, the import chooser, reference pins); Spacecraft are 4.27.
+  An ADDITION: a new Vehicle follows its subtype onto it where it is
+  verified (`subtypeFrameFor`: the creator's effect, `resolveGeneratedFrame`),
+  a stored Vehicle keeps its frame, an import names it once verified
+  (`vehicle/2015`, `onceVerified`) — no bump, no sweep, no badge. The saga
+  body still draws no P/T: the printed saga creature (FIN 2025) is another
+  body, 4.5d's. `docs/FRAMES.md` "The Vehicle frame".
 - The 1997 frame (`retro`, `retroland`; TODO 4.10a, layout v46) is the
   ORIGINAL cards of 1996–2003, never the 2006 timeshifted redrawing or the
   2021+ reprints (imports of those are `nearest`: the `timeshifted-frame`
@@ -718,6 +736,27 @@ Rules and gotchas:
   colour pip serves `serveStandInSymbols()`. Imports from Fallen Empires on
   are `nearest` (the `two-line-footer` gap). `docs/FRAMES.md` "The 1993
   frame".
+- The white border (TODO 4.30): `frame_style.border` (`"white"` or absent =
+  black; the form and an edit's patch also say `"black"`, never stored) — a
+  card's own switch on the four frames whose `PROFILES` entry declares
+  `whiteBorder` (`retro`, `retroland`, `modern`, `modernland`; never the
+  1993 pair — other drawings on another box, its own step). A NEW card
+  starts BLACK (with the text alignment, the other anatomy key no default
+  stamps), an import follows `border_color`. ONE inline SVG
+  (`lib/cards/white-border.ts`: the white over the master's own black
+  border, the black keyline — 3 px on 1997, 4 px on 2003 — drawn INSIDE the
+  frame box) is the same `data:` URL in the preview, the bake and both
+  finish masks; square corners fill the white (`squareCornerFillsOf`), a
+  bleed copies it out, and a tile backs the picture with it. TWO whites
+  (owner 2026-10-12): `#ececea` on every DISPLAY surface (stored bake,
+  thumb, OG, preview, the plain PNG round or square — the free Square too)
+  and pure `#ffffff` in a PRINT file, i.e. everything
+  `lib/render/card-print.ts` makes (ring, squared corners, bleed) — the
+  `"print"` medium is passed by that path alone (`renderCardImage`'s
+  `printLayer`, `squareCornerFillsOf(card, "print")`); never read a white
+  as a literal. The keyline is the same black in both. No ink sits on these frames' borders: a profile may
+  declare the piece only beside a © slot inside the frame (a test holds
+  it). Never a sweep or a bump; `docs/FRAMES.md` "The white border".
 - Text alignment (TODO 4.21e): `frame_style.rulesAlign` (`"center"` or
   absent = left; the form and an edit's patch also say `"left"`, never
   stored) — a card's own choice on EVERY frame with plain rules boxes

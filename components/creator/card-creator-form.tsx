@@ -232,6 +232,8 @@ import {
   supertypeEnteringToken,
   supertypeLeavingToken,
   textBoxFrameFor,
+  subtypeFrameFor,
+  subtypesSay,
   typeWordFrameFor,
   KIND_DEFS,
   dfcFrontBodyFor,
@@ -1128,6 +1130,33 @@ export function CardCreatorForm({
     setValue,
     verifiedFrameKeys,
   ]);
+  // A NEW Vehicle starts on the Vehicle frame (TODO 4.5c, owner 2026-09-29:
+  // an addition — new cards get it by default, with the plain Artifact frame
+  // one click away in Variations). The frame follows the subtype between the
+  // artifact frame and its Vehicle dress (subtypeFrameFor): the moment the
+  // subtypes first say Vehicle on a card wearing the artifact frame it takes
+  // the Vehicle frame, and a card on the Vehicle frame that stops being one
+  // goes back (the server refuses it there). Real edits only, and only when
+  // the word comes or goes — so a stored Vehicle opened for an edit keeps
+  // its frame, and so does one moved back to "Artifact" by hand. Never an
+  // unverified combo (silently: until the owner ticks the frame nothing
+  // changes), never an admin's saved frame preview. An import or an AI fill
+  // that names its frame decides it itself (settleTokenTextFollow).
+  const saysVehicle = subtypesSay(parseSubtypes(watched.subtypes_text), "Vehicle");
+  const lastVehicleRef = useRef(`${kind}|${saysVehicle}`);
+  const vehicleFramePinned = isEdit && card?.frame_preview === true;
+  useEffect(() => {
+    const key = `${kind}|${saysVehicle}`;
+    if (lastVehicleRef.current === key) return;
+    lastVehicleRef.current = key;
+    if (isRevise || !isDirty || vehicleFramePinned) return;
+    const current = normalizeFrameTemplate(getValues("frame_style.template"));
+    const next = subtypeFrameFor(current, parseSubtypes(getValues("subtypes_text")));
+    if (next === current) return;
+    const colorKey = pickFrameColorKey(getValues("color_identity"));
+    if (!isFrameComboAvailable(next, colorKey, new Set(verifiedFrameKeys))) return;
+    setValue("frame_style.template", next, { shouldDirty: true });
+  }, [kind, saysVehicle, isRevise, isDirty, vehicleFramePinned, getValues, setValue, verifiedFrameKeys]);
   // The token's frame follows its text (TODO 4.49 (b) and 4.48, owner
   // decisions 2026-09-29). On the 2014–19 arch the text box comes and goes
   // with the rules or flavour text; on the full-art design the height (no
@@ -1299,6 +1328,7 @@ export function CardCreatorForm({
       }),
     };
     manualTokenFrameRef.current = manual;
+    lastVehicleRef.current = `${kindFromCard(getValues("card_type"), getValues("frame_style.template"))}|${subtypesSay(parseSubtypes(getValues("subtypes_text")), "Vehicle")}`;
     lastWalkerTallRef.current =
       walkerRowCount({ editorRows: getValues("loyalty_abilities"), rulesText: getValues("rules_text") }) >=
       TALL_WALKER_MIN_ROWS;
@@ -3715,10 +3745,11 @@ export function CardCreatorForm({
                 }
               />
             ) : null}
-            {/* The two-colour frame's switch (TODO 4.6b), under the colour —
-                shown only where the frame draws it. */}
+            {/* The two-colour frame's switch (TODO 4.6b) and the white
+                border's (4.30), under the colour — each shown only where the
+                frame draws it. */}
             {stepKey === "card" ? (
-              <AnatomyPanel which={["twoColor"]} pairRow={false} onPairTouched={markPairTouched} />
+              <AnatomyPanel which={["twoColor", "border"]} pairRow={false} onPairTouched={markPairTouched} />
             ) : null}
 
             {/* ----- Identity (name + artwork). The inline-layout frames
@@ -3775,7 +3806,7 @@ export function CardCreatorForm({
                     whose Card step is locked — the two-colour frame too.
                     A stored card shows each OFF with a one-line hint. */}
                 <AnatomyPanel
-                  which={isRevise ? ["crown", "twoColor"] : ["crown"]}
+                  which={isRevise ? ["crown", "twoColor", "border"] : ["crown"]}
                   stored={
                     isEdit && card
                       ? { frameStyle: card.frame_style as FrameStyle | null, colorIdentity: card.color_identity }

@@ -12,6 +12,7 @@ import { parseSubtypes } from "@/lib/creator/card-fields";
 import {
   KIND_DEFS,
   borrowedFrameFits,
+  subtypeFrameFits,
   framesForKind,
   isSingleBasicLand,
   kindFromCard,
@@ -160,6 +161,8 @@ export function frameFitsImport(
     return false;
   }
   if (templateIsBasicOnly(template) && !importIsSingleBasic(patch)) return false;
+  // A subtype dress (the Vehicle frame, TODO 4.5c) for its subtype only.
+  if (!subtypeFrameFits(template, parseSubtypes(patch.subtypes_text ?? ""))) return false;
   // The borderless planeswalker's regular or tall box, as the rows pick it
   // (4.33): never the other one.
   if (!walkerRowsFrameFits(kind, template, walkerRowCount({ rulesText: patch.rules_text }))) return false;

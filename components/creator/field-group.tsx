@@ -1,11 +1,11 @@
 "use client";
 
 // Generic form-field building blocks shared by the card-creator step
-// components: the labeled FieldGroup wrapper, the "More options" collapsible,
+// components: the captioned FieldGroup wrapper (a label or a named group), the "More options" collapsible,
 // the shared input/textarea class builders, and form-wide option constants
 // used by more than one step. Extracted from card-creator-form.tsx.
 
-import { createContext, useContext, useEffect, useRef } from "react";
+import { createContext, useContext, useEffect, useId, useRef } from "react";
 import {
   Box,
   Coins,
@@ -96,11 +96,33 @@ export function useFaceLabel(): string | null {
 /** Elements whose own click does something a FieldGroup must not cancel. */
 const NATIVE_CLICK_TARGETS = "a, button, input, select, textarea, summary";
 
+const WRAPPER_CLASS = "flex flex-col gap-1.5";
+const CAPTION_CLASS = "text-xs font-semibold uppercase tracking-wider text-subtle";
+
+/**
+ * A captioned field of a form. Two shapes, ONE look:
+ *
+ *  - `kind="field"` (default) — the field is ONE text input, select or
+ *    textarea (extra buttons beside it are fine as long as that control comes
+ *    first). The wrapper is a real `<label>`: the caption names the control
+ *    and a click on it focuses the control.
+ *  - `kind="group"` — the field is a SET of controls: a chip row, a symbol
+ *    toolbar over an editor, switches, ticks, an uploader. The wrapper is a
+ *    `role="group"` named by the caption (`aria-labelledby`) and described
+ *    by the helper or the error (`aria-describedby`). Never a `<label>`
+ *    there: a label names its FIRST button with the caption (plus the helper
+ *    and every other chip's words), names nothing else, and hands that
+ *    button every click on its plain content.
+ *
+ * Rule of thumb: the first control inside is not an input / select /
+ * textarea → `kind="group"`.
+ */
 export function FieldGroup({
   label,
   helper,
   error,
   showFace = false,
+  kind = "field",
   children,
 }: {
   label: string;
@@ -109,26 +131,52 @@ export function FieldGroup({
   /** Inside a FaceScope: show the face's words before the label instead of
    *  keeping them for screen readers only. */
   showFace?: boolean;
+  kind?: "field" | "group";
   children: React.ReactNode;
 }) {
   const face = useContext(FaceLabelContext);
+  const faceWords = face ? <span className={showFace ? undefined : "sr-only"}>{face} — </span> : null;
+  const id = useId();
+  if (kind === "group") {
+    const captionId = `${id}-caption`;
+    const noteId = `${id}-note`;
+    const note = error || helper;
+    return (
+      <div
+        role="group"
+        aria-labelledby={captionId}
+        aria-describedby={note ? noteId : undefined}
+        className={WRAPPER_CLASS}
+      >
+        <span id={captionId} data-fieldgroup-text className={CAPTION_CLASS}>
+          {faceWords}
+          {label}
+        </span>
+        {children}
+        {error ? (
+          <span id={noteId} data-fieldgroup-text className="text-xs text-danger">{error}</span>
+        ) : helper ? (
+          <span id={noteId} data-fieldgroup-text className="text-xs text-muted">{helper}</span>
+        ) : null}
+      </div>
+    );
+  }
   return (
     <label
-      className="flex flex-col gap-1.5"
+      className={WRAPPER_CLASS}
       onClick={(event) => {
         // A <label> forwards a click on ANY of its non-interactive content
         // to its first labelable descendant — and a BUTTON is labelable.
-        // For groups that wrap a toolbar or chip row, clicking the caption,
-        // the helper text, a gap between two buttons or the rules-text box
-        // (a contenteditable, which is not a form control) used to press
-        // the first button: change the card type, drop a {W} into the empty
-        // rules box… Only forward to real form controls; inputs keep the
-        // click-to-focus behaviour, and a click ON a control is left alone
-        // (cancelling it would undo a checkbox tick or a <summary> toggle).
+        // A set of controls belongs in `kind="group"`; this is the net for a
+        // field that still opens with a button: clicking the caption, the
+        // helper text or a gap must not press it. Only forward to real form
+        // controls; inputs keep the click-to-focus behaviour, and a click ON
+        // a control is left alone (cancelling it would undo a checkbox tick
+        // or a <summary> toggle).
         const target = event.target as HTMLElement;
         if (target.closest(NATIVE_CLICK_TARGETS)) return;
-        // A label of its own inside the group (the watermark's "Large" tick
-        // and "Opacity" slider) forwards to ITS control: leave it alone.
+        // A label of its own inside the field forwards to ITS control: leave
+        // it alone.
         const inner = target.closest("label");
         if (inner && inner !== event.currentTarget) return;
         const first = event.currentTarget.querySelector(
@@ -139,11 +187,8 @@ export function FieldGroup({
         }
       }}
     >
-      <span
-        data-fieldgroup-text
-        className="text-xs font-semibold uppercase tracking-wider text-subtle"
-      >
-        {face ? <span className={showFace ? undefined : "sr-only"}>{face} — </span> : null}
+      <span data-fieldgroup-text className={CAPTION_CLASS}>
+        {faceWords}
         {label}
       </span>
       {children}

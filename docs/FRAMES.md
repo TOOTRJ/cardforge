@@ -178,12 +178,17 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 44 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 45 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the M15 family (4.4, shipped in #380, layout v24): m15, m15artifact,
   m15land, m15snow, m15snowland, m15devoid, m15pw, m15token and
   m15tokenartifact;
+- the Vehicle frame (4.5c): m15vehicle — the accurate M15 pack's bronze
+  'Vehicle Frame' through its Border and Frame masks under the colour's
+  (or the artifact's) bars, box and pinline, its ten two-colour pair
+  masters and the brown 'Vehicle Power/Toughness' plate, toned onto the
+  prints ([The Vehicle frame](#the-vehicle-frame-45c));
 - the borderless M15 frame from 'Borderless (Alt)' (4.32): m15borderless and
   its artifact dress m15borderlessartifact, each with the pack's own P/T
   plates — and, since 4.6f (wave 2a), their pinline-split pair masters and
@@ -1147,6 +1152,10 @@ and the kind decides the rollout:
   collector line and holofoil stamp, the vehicle P/T plate, colour
   indicators, coloured-artifact blends, new frames and treatments.
   - NEW cards get it by default, with a switch to turn it off.
+    (Two switches start OFF instead, because they are a printing's or an
+    owner's choice rather than today's standard look: the text alignment —
+    left — and the white border — black; [The white
+    border](#the-white-border-430).)
   - EXISTING cards keep their look; the owner can open the card and switch
     it on (the editor may hint at it).
   - Scryfall imports follow the printing (a crown only on printings from
@@ -2733,6 +2742,103 @@ byte-identical at 750 and HD, base against head; with the switch forced on,
 the 8 stay identical (their colour is stored `multicolor`, no pair); the
 visual matrix: 1,451 unchanged, 0 changed, 15 new.
 
+### The Vehicle frame (4.5c)
+
+TODO 4.5c (owner 2026-09-29 and 2026-10-12). `m15vehicle` is the printed
+Vehicle frame, Kaladesh 2016 → today: a bronze frame where an artifact has
+the silver one, the card's own bars, text box and pinline (silver for a
+colourless Vehicle, the colour's for a coloured one — War of the Spark
+2019 on — gold for two colours or more), and ONE brown P/T plate with
+WHITE digits whatever the colour.
+
+**What the prints show** (68 Vehicle prints read at 1500 × 2100,
+2026-10-12, from 522 Vehicle printings on the 2015 frame): 67 of them —
+52 of 53 plain black-bordered, 7 of 7 borderless, 8 of 8 extended art —
+wear the brown plate with white digits (ink 252 / 252 / 253 at the median, never under
+241), and every plain one the bronze frame. The one exception is DOM #237
+Weatherlight (bronze frame, a SILVER plate, dark digits): not offered
+(owner 2026-10-12). The plate's brown box reads x 1173–1420, y 1868–1985 px
+at the median; ours, at M15's plate box, 1172–1423 × 1873–1980. Spacecraft
+(EOE 2025) print another frame — the station layout, no brown plate, dark
+digits, 10 of 10 — and are TODO 4.27's, not Vehicles.
+
+**Masters** (the frames bucket; `scripts/lib/cc-frames.mjs`): Card
+Conjurer's own recipe for a type line that says Vehicle
+(`cardFrameProperties`) — the accurate M15 pack's 'Vehicle Frame'
+(`m15/new/v.png`) through its Border and Frame masks, then the colour's
+(colourless: the artifact frame's) text box, title bar, type bar and
+pinline through the pack's masks: m15artifact's recipe with `v.png` for
+`a.png`. The ten two-colour pair masters (owner 2026-10-12) are
+m15artifact's split recipe the same way — gold bars, the text box and the
+pinline in the two colours over the bronze frame (DFT #188–220, NEO #231,
+MKM #215); no hybrid dress. Nothing is synthesised.
+
+**The plate** is the pack's `m15PTV.png` (381 × 209), one image under
+every colour key (`m15vehicle/pt/<k>.png`), TONED onto the prints (owner
+2026-10-12): Card Conjurer's face reads 110 / 73 / 30 where the prints'
+median is 123 / 91 / 67 (52 plain Vehicles, the same box). A per-channel
+gain would need × 2.23 on blue and turns the bevel's light rim lavender, so
+the tone keeps each pixel's hue — `VEHICLE_PLATE_TONE`: its colour pulled
+toward its own luminance (× 0.552) and the whole lifted (× 1.235), the
+least-squares fit of the face (116 / 89 / 64 after). The importer's
+`plateTone` records it in provenance. Its ink row is in
+`lib/cards/plate-ink.ts`, so the rules lines keep out of it like any plate.
+
+**The profile** is m15artifact's with that plate and white digits: the
+same slots, crown (a colourless Vehicle's is the artifact silver — DMU
+#230 — a coloured one's its colour, KHM #169), stamp notch (the bar under
+it is the artifact master's, byte for byte, on all seven keys) and
+collector line; `twoColorMasters: ["split"]`.
+
+**A frame for Vehicles only.** It is a stored template of its own, picked
+under Variations ("Vehicle", beside the Artifact frame) — never a
+render-time pick from the subtype, which would re-dress every stored
+Vehicle, and not a `frame_style` switch (owner 2026-09-29). The Artifact
+kind covers every artifact, so the rule is a per-card one, like the
+basic-only frames: `SUBTYPE_DRESSES` in `lib/creator/card-kinds.ts`
+(`subtypeFrameFits`). The chip is disabled with its reason on any card
+whose subtypes don't say Vehicle, the server's kind gate refuses the save
+(`lib/cards/frame-kind-gate.ts`: also an edit that takes the word off a
+card on the frame), a random, stand-in or AI-fill frame pick never lands on
+it, and a reference printing pinned to it must be a Vehicle.
+
+**Rollout: an addition.** No stored card sits on a new template, so there
+is no layout bump, no sweep and no badge.
+
+- A NEW Vehicle starts on it: in the creator the frame follows the subtype
+  between the artifact frame and its Vehicle dress (`subtypeFrameFor`) —
+  the moment the subtypes first say Vehicle on a card wearing the artifact
+  frame — and the AI jobs land a Vehicle there (`resolveGeneratedFrame`).
+  Only where the frame is verified in the card's colour; until then nothing
+  changes and nothing is said. "Artifact" in Variations is the way back,
+  and a pick made by hand sticks.
+- A STORED Vehicle keeps its frame (the artifact frame's silver plate, or
+  whatever it wears) until its owner picks "Vehicle".
+- An IMPORT follows the printing: the registry's `vehicle/2015` rule lands
+  a plain 2015-frame Vehicle on the artifact frame, as before, until
+  `m15vehicle` is verified in its colour, and from then on names it, exact
+  (`onceVerified` — the `vehicle` gap is drawn there, `gapDrawnBy`). The
+  extended-art and borderless Vehicles and a Vehicle BACK face keep the gap
+  — and so does the one silver-plated print, Dominaria's Weatherlight (DOM
+  #237, its prerelease stamp and its List reprint:
+  `SILVER_PLATE_VEHICLE_PINS`), which is never "exact" on a brown plate and
+  lands on the artifact frame as it did before.
+
+**Sagas are not part of it.** The item's other half — a P/T on the saga
+body — is not built (owner 2026-10-12). The only saga creatures printed
+with the saga layout are Final Fantasy's "Summon:" cards (FIN / FIC 2025),
+and their body is not ours: the textured saga with its type bar raised by
+173 px (its outline at 1588–1722 px of an HD card on all 19 black-bordered
+prints read, 1760–1899 on six plain DOM / DMU sagas and on our master), a
+second text box under it (1723–1947 px) and the plate at the M15 spot (the
+digits' ink there on 19 of 19, none where Card Conjurer puts its saga
+plate), the rail and the art column that much shorter. No plain saga
+ever printed a P/T, and Card Conjurer's `saga/pt` plates sit on the type
+bar's right end, where the set symbol goes. The printed body comes with
+4.5d's textured saga, as a new template; until then the creator's note
+("This frame doesn't draw power / toughness", `lib/cards/pt-drawn.ts`)
+stays true for a saga creature.
+
 ### Printed pieces a card switches on
 
 TODO 4.6.0. The legendary crown (4.6a) and the two-colour frames (4.6b) are
@@ -3842,6 +3948,149 @@ and the one switch a NEW card starts OFF on.
   rules-align-preview.test.tsx` (the preview's margins are the layout's
   px), `rules-align-control.test.tsx`, the centred half of
   `rules-no-clip`, and the visual gate's `@centred` cases.
+
+### The white border (4.30)
+
+TODO 4.30, era step E8 (owner 2026-10-07: "the white border: YES, as the
+last era step"). The printed border of the core sets up to Ninth Edition —
+Fifth, Sixth and Seventh Edition, Anthologies, Battle Royale, Beatdown and
+Deckmasters on the 1997 frame; Eighth and Ninth Edition on the 2003 frame —
+as **a card's own switch**. An addition (above): opt-in per card, no layout
+bump, no sweep, no badge.
+
+- **The switch.** `frame_style.border`: `"white"` or absent (= black, the
+  look every card had). The creator's form and an edit's patch also say
+  `"black"`, which is never stored. It is an anatomy key
+  (`FRAME_ANATOMY_KEYS`), and with the text alignment the second one **no
+  default stamps**: a NEW card starts BLACK — a white border is a printing
+  choice, not a default — an import follows its printing's `border_color`,
+  a remix keeps its parent's. Every save runs `normalizeAnatomy`: the key
+  stays only as `"white"` and only on a template whose `PROFILES` entry
+  declares `whiteBorder`.
+- **Where.** `retro`, `retroland`, `modern`, `modernland` — declared on
+  those four `PROFILES` entries, never on the `RETRO` / `MODERN` bases. Not
+  the 1993 pair (below), not the 2015 frames.
+- **What is drawn** (`lib/cards/white-border.ts`): ONE inline SVG of two
+  flat rings, stretched over the whole card right after the frame master
+  and its overlays, under both finishes and every text layer — the same
+  `data:` URL in the browser preview (`[data-white-border]`), in the Satori
+  bake and in both finish masks, so the three agree by construction:
+  - the **white** `#ececea` from the card's edge to the frame box — exactly
+    the master's own black border (`whiteBorder.insetPx`: 73 / 73 px at the
+    sides, 82 on top, 81 below on the 1997 pair; 70 px all round on the
+    2003 pair). Never Card Conjurer's border mask: on the 8th pack it sits
+    on the frame's edge and erases the keyline, and it fills `#ffffff`;
+  - the black **keyline** just inside it, over the frame's outermost
+    pixels: 3 px on the 1997 frame, 4 px on the 2003 frame
+    (`whiteBorder.keylinePx`). It is drawn, not left to the master's black,
+    so it is that wide on every master (the MSE gold's border is
+    74 / 71 / 80 / 81).
+- **Why inside the frame box.** On the prints the white ends where the black
+  border of the same frame ends (37 prints on the 1997 frame: 73.7 / 73.4 /
+  81.9 / 80.8 px; nine 9ED prints: 70.5 px on all four edges), and a 7ED,
+  8ED or 9ED card and its own black-bordered foil printing put the frame's
+  first light pixel on the same px, 3–4 px inside the white: the core-set
+  plate is the era's frame with its outer edge taken by the line.
+- **The colour is a choice, not a measurement.** Scryfall regenerates the
+  border of its scans: all 88 white-bordered scans measured share two
+  templates (`#ededef`, `#edecea`) to two decimals. `#ececea` is ΔE 0.2 from
+  one and 2.0 from the other, and off-white on purpose — pure white has no
+  edge on a white page. (Review, 2026-10-12, 68 more white-bordered scans:
+  the border PIXELS are the same bytes from scan to scan — 5ED, 7ED, PTK
+  and 2ED agree on all 55,228 border pixels; so do 8ED and 9ED, and the
+  black-bordered TMP / 10E and 7ED★ / 8ED★ — and the `large` / `normal`
+  JPEGs carry the same means. Other templates exist beside the two: Hachette
+  UK's 235 / 235 / 233, the Sega Dreamcast cards' pure 255. In print the
+  border was bare card stock, so `#ececea` — 16 % under paper white in
+  luminance — would print as a faint tint on white paper.)
+- **Two whites: the screen's and the print file's** (owner 2026-10-12).
+  `#ececea` (`WHITE_BORDER_HEX`) on every DISPLAY surface — the stored
+  bake, its thumb, the OG image, the live preview and the plain PNG
+  download, round or square, the free Square included (a stored round bake
+  squared with the same off-white, so its corners match its own border).
+  Pure `#ffffff` (`WHITE_BORDER_PRINT_HEX`) in a PRINT file: everything
+  `lib/render/card-print.ts` makes — the PDF card and sheets, `?bleed=1`,
+  `?bleed=mpc`, `?ppi=800`, the Pro exports' `?print=1` — draws the ring,
+  squares its corners and extends its bleed in it. One switch, the
+  `WhiteBorderMedium` (`"screen"` by default, `"print"` from the print path
+  alone: `renderCardImage` sets it wherever it is handed a `printLayer`,
+  and `renderCardPrint` asks `squareCornerFillsOf(card, "print")`). The
+  keyline is the same `#000000` in both, and inside the frame box a print
+  file is the display Square pixel for pixel
+  (`white-border-bake.test.tsx`).
+- **No ink moves and none changes colour.** On both pairs the artist line,
+  the © slot (the pipglyph.com mark on display, a clean download's footer
+  text), the P/T and the set symbol are INSIDE the frame, as on the prints
+  (no 1997 or 2003 print sets anything on the white). A unit test holds
+  that: a profile may declare `whiteBorder` only beside a `copyrightSlot`
+  whose line, like every text slot, ends above the keyline
+  (`tests/unit/cards/white-border.test.ts`). A frame whose mark sits ON the
+  border (the 1993 pair) must give the mark the brand's dark single-ink
+  treatment before it declares the piece.
+- **Corners, print, finishes.**
+  - The white runs to the PNG's edge; the bake's corner cut rounds it
+    (`applyCardCornerMask`) and the display clip does on screen.
+  - A square output fills its corners with the same white
+    (`squareCornerFillsOf` → `whiteBorderRgb(medium)`): the off-white on
+    the paid Square and the free Square (the stored round bake squared with
+    those fills), the print white on the PDF card and sheets and the Pro
+    exports.
+  - A bleed (1/8 in, MakePlayingCards', 800 ppi) copies the trim edge out,
+    so it is the print white with no rule of its own: `EDGE_CONTRACTS` keeps `border`
+    on these templates (the contract is about the master's opacity).
+  - Foil and etched mask their sheen with the border too (`overlays` of
+    `FoilSheen` / `EtchedSheen`), so the white takes the finish like any
+    light part of the frame and the keyline takes none. (No real foil has a
+    white border — the core sets' foils were black-bordered.)
+  - The thumb and the OG image are the bake. A gallery tile
+    (`BakedCardThumbnail`) backs a white-bordered card's picture with the
+    white instead of `#101015`: on the dark backing the picture's soft
+    corner edge showed as a grey arc round a white card. The surfaces
+    that back a bake with `#101015` in their own markup still show that
+    arc on a white-bordered card in the light theme (reproduced in review):
+    the deck card modal and its card picker, the marketing hero, featured
+    creators, the moderation list and the render-update compare — left
+    as it is (owner 2026-10-12: no follow-up; they do not all carry the
+    card's `frame_style`).
+- **Imports** (`lib/scryfall/frame-signatures.ts`): the `border` gap is one
+  gap for white, silver, gold and yellow, and `gapDrawnBy("border", …)` is
+  true only for a WHITE border on a frame that declares the piece — so a
+  white-bordered 5ED → 7ED, ATH, BRB, BTD, DKM, PTK, S99, 8ED or 9ED
+  printing is `exact` on its frame and imports with the switch on
+  (`printed_border`), its black-bordered foil twin imports black, and a
+  later gap still holds beside it (a 2021+ reprint: `reprint-colours`). A
+  white border on the 1993 or the 2015 frame, and every silver, gold or
+  yellow border, stays `nearest`. A `…+border` request row logged before
+  4.30 stays open (the row doesn't say which border it was). The rule
+  reads the frame and the border, never the set, so the white-bordered
+  printings outside that list land the same way: Starter 2000 (S00, 1997
+  frame), Salvat 2005 (PSAL) and Hachette UK (PHUK) on the 2003 frame, the
+  Sega Dreamcast cards (PSDG). They were not measured for the build; the
+  one S00 scan looked at in review ends its white 4–5 px further out than
+  ours (69 / 68 / 79 / 78 px) with a 4.5 px line. Deckmasters' and
+  Beatdown's foils (DKM #7, BTD #29) are black-bordered and import black.
+- **Verification.** Nothing new to tick: the white border rides its
+  template's colour tick, as a pair rides its `m` tick — the frame inside
+  the keyline is the ticked one, pixel for pixel
+  (`tests/unit/render/white-border-bake.test.tsx`). A white-bordered
+  reference printing is compared with its border drawn
+  (`previewDataFromPatch`).
+- **Not built: the 1993 pair.** Unlimited, Revised, Fourth Edition and
+  Chronicles were measured with the rest (33 prints) and need their own
+  step: the line there is OUTSIDE the frame box, 7 px wide and dark grey
+  (2ED / 3ED); the frame sits 6 px higher than Alpha's (85 px of white
+  below it, 98 px of black on our master); Revised and Fourth Edition are
+  other drawings — flat, no bevel, Fourth Edition on a larger box with a
+  thinner, fainter line; and the mark sits on that frame's border in
+  silver. `agclassic` and `alphaland` declare nothing, the switch is not
+  offered there, and their white-bordered printings import `nearest`.
+- **Tests:** `white-border.test.ts` (the rules), `white-border-save.test.ts`
+  (the actions), `white-border-bake.test.tsx` (real bakes: the rings, the
+  frame inside them unchanged, square corners, bleeds, finishes, and no
+  change with the switch off or on another frame),
+  `white-border-preview.test.tsx` (the preview's image, the creator's
+  switch, the tile's backing), `white-border-import.test.ts`; 23 visual
+  cases (`@white…`).
 
 ### Double-faced cards (TODO 5; the 5.0a plumbing)
 
@@ -5283,8 +5532,10 @@ a **new template key** (4.5b's `extendedartpw` and `tarkirghostfirepw`,
 4.5c's `m15vehicle`), or a stored per-card switch through
 `normalizeAnatomy` ([Printed pieces a card switches
 on](#printed-pieces-a-card-switches-on)). A correction that must add
-anatomy to its own body (4.5c's saga-creature P/T) ships with its layout
-bump and a scoped sweep after the owner's sign-off.
+anatomy to its own body ships with its layout bump and a scoped sweep
+after the owner's sign-off — which 4.5c's saga-creature P/T turned out not
+to be: no plain saga ever printed one, so it becomes a new body with 4.5d
+([The Vehicle frame](#the-vehicle-frame-45c)).
 
 `tests/unit/cards/kind-capability-baseline.test.ts` pins every template's
 capabilities in `tests/unit/cards/fixtures/kind-capabilities.json`: a gain
@@ -5638,11 +5889,11 @@ in the tree: use `{X}` or a colour in a test's expectation.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 45 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 46 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens, the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
-land, the emblem, 5.1a's five transform bodies and 5.1b's four modal
-bodies, new templates that joined without a bump, and the battle, which
+land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
+bodies and 4.5c's Vehicle frame, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card) prints its names,

@@ -354,10 +354,17 @@ describe("imports — the 1997 frame is the ORIGINAL printing (era design D14)",
     expect(frameMatchFromScryfall(printing({ released_at: "2020-12-31" })).gaps).toEqual(["timeshifted-frame"]);
     expect(frameMatchFromScryfall(printing({})).status).toBe("exact");
     // Another gap names itself first; the reprint gap rides along.
-    expect(frameMatchFromScryfall(printing({ released_at: "2023-01-13", border_color: "white" }))).toMatchObject({
+    expect(frameMatchFromScryfall(printing({ released_at: "2023-01-13", border_color: "gold" }))).toMatchObject({
       status: "nearest",
       blockedBy: "4.30",
       gaps: ["border", "reprint-colours"],
+    });
+    // A WHITE border is drawn on this frame since TODO 4.30: no gap of its
+    // own — the reprint gap alone holds.
+    expect(frameMatchFromScryfall(printing({ released_at: "2023-01-13", border_color: "white" }))).toMatchObject({
+      status: "nearest",
+      blockedBy: "4.10e",
+      gaps: ["reprint-colours"],
     });
     // The 2003 and 2015 frames never carry it.
     for (const frame of ["2003", "2015", "1993"]) {

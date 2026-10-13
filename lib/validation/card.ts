@@ -17,6 +17,7 @@ import {
   COLOR_IDENTITY_VALUES,
   DFC_ICON_FAMILY_VALUES,
   RULES_ALIGN_VALUES,
+  CARD_BORDER_VALUES,
   FRAME_TEMPLATE_VALUES,
   RARITY_VALUES,
   RETIRED_CARD_FINISHES,
@@ -329,6 +330,10 @@ const frameStyleBaseSchema = z
     // the form's "left" or "center". The save stores "center" only, and only
     // on a template that offers the choice (normalizeAnatomy).
     rulesAlign: z.enum(RULES_ALIGN_VALUES).optional(),
+    // The border (TODO 4.30, FrameProfile.whiteBorder): the form's "black"
+    // or "white". The save stores "white" only, and only on a template that
+    // draws the white border (normalizeAnatomy).
+    border: z.enum(CARD_BORDER_VALUES).optional(),
   })
   .strict();
 
@@ -364,6 +369,9 @@ export const frameAnatomyPatchSchema = z
     // The rules text's alignment (TODO 4.21e): "center", or "left" to take
     // a stored "center" off.
     rulesAlign: z.enum(RULES_ALIGN_VALUES).optional(),
+    // The border (TODO 4.30): "white", or "black" to take a stored "white"
+    // off.
+    border: z.enum(CARD_BORDER_VALUES).optional(),
     pair: z
       .tuple([pairColorSchema, pairColorSchema])
       .refine(([a, b]) => a !== b, "Pick two different colours.")

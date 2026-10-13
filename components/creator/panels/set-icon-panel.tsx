@@ -111,6 +111,7 @@ export function SetIconPanel({ userId, stored = null }: { userId: string | null;
   return (
     <div className="flex flex-col gap-6">
       <FieldGroup
+        kind="group"
         label="Set icon"
         helper={
           rarityFixed
@@ -314,8 +315,8 @@ export function CollectorInfoFields() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {/* The suggestion sits OUTSIDE the FieldGroup's <label>: a button
-            inside one would take the label's text as its accessible name
-            (and lend its own to the input's). */}
+            inside one would lend its words to the input's accessible
+            name. */}
         <div className="flex flex-col gap-2">
           <FieldGroup
             label="Set code"

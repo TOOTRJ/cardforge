@@ -46,6 +46,7 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   m15land: { front: M15_WINDOW },
   m15token: { front: [1305, 1457] },
   m15artifact: { front: M15_WINDOW },
+  m15vehicle: { front: M15_WINDOW },
   m15snow: { front: M15_WINDOW },
   m15snowland: { front: M15_WINDOW },
   m15devoid: { front: M15_WINDOW },

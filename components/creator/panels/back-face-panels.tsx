@@ -408,6 +408,8 @@ export function BackFaceCostField({ layout }: { layout: DfcLayout }) {
   }
   return (
     <FieldGroup
+      // A set of controls (the cost picker): a named group, never a <label>.
+      kind="group"
       label="Cost"
       // A land prints no mana cost. The field stays (a stored card may
       // hold one, and the front's strip draws it), but says so: left
@@ -442,7 +444,7 @@ export function BackFaceRulesField({
   const { field: backRulesField } = useController({ control, name: "back_face.rules_text" });
   const partWords = partWordsFor(layout);
   return (
-    <FieldGroup label="Rules text" error={errors.back_face?.rules_text?.message}>
+    <FieldGroup kind="group" label="Rules text" error={errors.back_face?.rules_text?.message}>
       <div className="flex flex-col gap-2">
         <RulesSymbolToolbar onInsert={onInsertSymbol} />
         <PipTextEditor

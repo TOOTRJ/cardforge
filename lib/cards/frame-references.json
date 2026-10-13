@@ -247,6 +247,110 @@
           "set": "2xm",
           "scryfallId": "a1b799b2-bb4e-482f-9afd-5aab90090710",
           "curated": true
+        }
+      ]
+    }
+  },
+  "m15vehicle": {
+    "note": "The Vehicle frame (TODO 4.5c): plain black-bordered, non-legendary Vehicle printings, Kaladesh 2016 on — the bronze frame, the colour's bars and box, the brown P/T plate with white digits. m: two-colour Vehicles, which print the split box and pinline over gold bars (the pair masters ride this tick); no three-colour Vehicle was printed on the plain frame.",
+    "colors": {
+      "w": [
+        {
+          "name": "Dragonfly Suit",
+          "set": "neo",
+          "scryfallId": "4900862f-90f4-450b-a775-219da4ce67ef"
+        },
+        {
+          "name": "Mysterious Limousine",
+          "set": "snc",
+          "scryfallId": "a58cb742-0ba7-4795-9772-25d4db0bc4ce"
+        },
+        {
+          "name": "Aerial Surveyor",
+          "set": "nec",
+          "scryfallId": "7c474f31-336d-44df-a7da-27aefd220e22"
+        }
+      ],
+      "u": [
+        {
+          "name": "Futurist Sentinel",
+          "set": "neo",
+          "scryfallId": "8672f626-3e46-447b-841f-6a04cd380653"
+        },
+        {
+          "name": "Meldweb Strider",
+          "set": "one",
+          "scryfallId": "c5efd9b5-05e5-440f-b28c-658e461cf644"
+        },
+        {
+          "name": "Silent Submersible",
+          "set": "war",
+          "scryfallId": "ae2f3dee-1768-4562-9333-a50b9ee7570f"
+        }
+      ],
+      "b": [
+        {
+          "name": "Mukotai Soulripper",
+          "set": "neo",
+          "scryfallId": "166775be-c3b7-4a17-9376-aa4229b147f9"
+        },
+        {
+          "name": "Dreadmobile",
+          "set": "mh3",
+          "scryfallId": "831506ea-017a-40ff-91c1-ff2d70dc0013"
+        },
+        {
+          "name": "Foreboding Steamboat",
+          "set": "mkc",
+          "scryfallId": "cbd9a0cb-e1ea-446e-aa57-4305d4b3b92e"
+        }
+      ],
+      "r": [
+        {
+          "name": "Hoard Hauler",
+          "set": "snc",
+          "scryfallId": "19f190e9-52f3-4e34-8fb6-88174c189ee7"
+        },
+        {
+          "name": "Honeymoon Hearse",
+          "set": "vow",
+          "scryfallId": "04e491a1-b195-45bb-bf06-345eaee30b81"
+        },
+        {
+          "name": "Mizzium Tank",
+          "set": "war",
+          "scryfallId": "5643253b-0996-45a8-9488-5bcc9192f867"
+        }
+      ],
+      "g": [
+        {
+          "name": "Capenna Express",
+          "set": "snc",
+          "scryfallId": "b5530b04-f086-4d09-97e9-eda45f8b1f7b"
+        },
+        {
+          "name": "Dodgy Jalopy",
+          "set": "ncc",
+          "scryfallId": "9b5617c2-6d23-4bfb-bc1f-c27f0cfdb022"
+        }
+      ],
+      "c": [
+        {
+          "name": "Smuggler's Copter",
+          "set": "kld",
+          "scryfallId": "7832abb5-5107-4603-904e-491b221bd3e3"
+        },
+        {
+          "name": "Colossal Plow",
+          "set": "khm",
+          "scryfallId": "fba3fe29-067f-4c7e-8b3b-779f3b37712a"
+        }
+      ],
+      "m": [
+        {
+          "name": "Prodigy's Prototype",
+          "set": "neo",
+          "scryfallId": "be046e0a-6509-450b-b34f-29d5a5e3472e"
         },
         {
           "name": "Debris Beetle",

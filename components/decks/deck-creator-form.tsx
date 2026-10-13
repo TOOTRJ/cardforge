@@ -32,6 +32,7 @@ import {
 import type { Visibility } from "@/types/card";
 import { VisibilityPicker } from "@/components/ui/visibility-picker";
 import { inputClass, textareaClass } from "@/components/ui/field-classes";
+import { FieldGroup } from "@/components/creator/field-group";
 
 type FormValues = {
   title: string;
@@ -275,7 +276,7 @@ export function DeckCreatorForm({ mode, userId, deck,
           )}
         />
 
-        <FieldGroup label="Visibility">
+        <FieldGroup kind="group" label="Visibility">
           <Controller
             control={control}
             name="visibility"
@@ -322,34 +323,6 @@ export function DeckCreatorForm({ mode, userId, deck,
     </Wrapper>
   );
 }
-
-function FieldGroup({
-  label,
-  helper,
-  error,
-  children,
-}: {
-  label: string;
-  helper?: string;
-  error?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
-        {label}
-      </span>
-      {children}
-      {error ? (
-        <span className="text-xs text-danger">{error}</span>
-      ) : helper ? (
-        <span className="text-xs text-muted">{helper}</span>
-      ) : null}
-    </label>
-  );
-}
-
-
 
 export function CoverField({
   userId,

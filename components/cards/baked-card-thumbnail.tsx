@@ -4,6 +4,8 @@ import { CardPreview, type CardPreviewData } from "@/components/cards/card-previ
 import { BakedCardFlip } from "@/components/cards/baked-card-flip";
 import { isLandscapeFrame } from "@/lib/cards/card-orientation";
 import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
+import { getFrameProfile } from "@/lib/cards/template-layout";
+import { resolveWhiteBorder } from "@/lib/cards/white-border";
 import { tileBackThumbOf } from "@/lib/cards/tile-faces";
 
 // ---------------------------------------------------------------------------
@@ -45,7 +47,10 @@ import { tileBackThumbOf } from "@/lib/cards/tile-faces";
 // live preview's root colour), never on the page colour: a v31 bake has
 // transparent rounded corners, and the tile's clip inside its 1 px border is
 // a hair tighter than the image's own arc — over bg-background that sliver
-// showed as a pale rim on every dark-bordered card in LIGHT theme.
+// showed as a pale rim on every dark-bordered card in LIGHT theme. A
+// WHITE-bordered card (TODO 4.30, frame_style.border on a frame that draws
+// it) sits on its own white instead: on #101015 the same sliver was a grey
+// arc round each corner of a white card.
 //
 // A DOUBLE-FACED card (TODO 5.3 + 5.15, owner decisions 2026-10-12): with
 // the back face's thumbnail too (cards.rendered_back_thumb_url — the bake's
@@ -134,6 +139,11 @@ export function BakedCardThumbnail({
   }
 
   const label = alt ?? (title?.trim() || "Card");
+  // The backdrop behind the bake: the card's own border colour — #101015, or
+  // the printed white of a white-bordered card (the header says why).
+  const backdrop = resolveWhiteBorder(getFrameProfile(previewData.frameStyle?.template), previewData.frameStyle)
+    ? "bg-[#ececea]"
+    : "bg-[#101015]";
   // The #101015 backdrop sits directly behind the image (see the header): it
   // only ever shows through a rounded bake's transparent corner sliver.
   const image = backThumbUrl && thumbUrl ? (
@@ -152,7 +162,7 @@ export function BakedCardThumbnail({
       loading={priority ? "eager" : "lazy"}
       fetchPriority={priority ? "high" : "auto"}
       decoding="async"
-      className="absolute inset-0 h-full w-full bg-[#101015] object-cover"
+      className={cn("absolute inset-0 h-full w-full object-cover", backdrop)}
     />
   ) : (
     <Image
@@ -161,7 +171,7 @@ export function BakedCardThumbnail({
       fill
       sizes={sizes}
       priority={priority}
-      className="bg-[#101015] object-cover"
+      className={cn("object-cover", backdrop)}
     />
   );
 

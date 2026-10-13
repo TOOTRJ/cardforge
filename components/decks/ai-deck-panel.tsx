@@ -336,6 +336,7 @@ export function AiDeckPanel({
       </FieldGroup>
 
       <FieldGroup
+        kind="group"
         label="Art style"
         helper={
           mode === "remix"

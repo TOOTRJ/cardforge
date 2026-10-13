@@ -32,8 +32,8 @@ function Harness({ initial = "regular" }: { initial?: CardFinish }) {
 }
 
 const group = () => screen.getByRole("radiogroup", { name: "Finish" });
-// Found by the chip's own text, not its accessible name: FieldGroup is a
-// <label>, so the DOM names the chips inside it after the caption ("Finish …").
+// Found by the chip's own text: a chip's accessible name also carries its
+// description line and its "Soon" badge.
 const chip = (name: RegExp): HTMLButtonElement => {
   const hits = within(group())
     .getAllByRole("radio")

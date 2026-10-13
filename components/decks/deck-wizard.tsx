@@ -526,7 +526,7 @@ export function DeckWizard({
                   disabled={busy}
                 />
               </FieldGroup>
-              <FieldGroup label="Art style" helper="Applied to every card's art and the cover.">
+              <FieldGroup kind="group" label="Art style" helper="Applied to every card's art and the cover.">
                 <StylePicker value={style} onChange={setStyle} disabled={busy} />
               </FieldGroup>
               <BatchSizeField

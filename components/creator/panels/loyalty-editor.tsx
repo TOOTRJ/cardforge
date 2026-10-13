@@ -41,6 +41,7 @@ export function LoyaltyAbilitiesEditor() {
 
   return (
     <FieldGroup
+      kind="group"
       label="Loyalty abilities"
       helper="One row per ability. Real walkers run 1–4 rows (plus/minus/ultimate); leave the cost blank for a static ability line. Symbols go into the row you last clicked."
     >

@@ -44,25 +44,25 @@ describe("where the pieces are declared", () => {
     // body but the ▼ land back, and the modal spell pair; the modal land
     // pair and the ▼ land back draw none (no print).
     const DRAWN = [
-      "m15", "m15land", "m15snowland", "m15artifact", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart",
+      "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
     ];
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => DRAWN.includes(t)));
     // (…and the holofoil stamp's notch, 4.9c, on the seven wave-1 entries —
     // the snow pair included; never extendedart or the borderless land. The
     // transform icon family, 5.0a, on no entry yet.)
-    expect(frameAnatomyOf("extendedart")).toEqual({ crown: true, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: true });
+    expect(frameAnatomyOf("extendedart")).toEqual({ crown: true, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: true, border: false });
     expect(anatomyDefaults("extendedart")).toEqual({ crown: true });
     // The borderless land (TODO 4.56): the split pair alone — no crown, no
     // collector slot, no stamp notch — so a new card on it stores that one
     // switch and nothing else.
-    expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: ["split"], collector: false, stamp: false, dfcIcon: false, rulesAlign: true });
+    expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: ["split"], collector: false, stamp: false, dfcIcon: false, rulesAlign: true, border: false });
     expect(anatomyDefaults("m15borderlessland")).toEqual({ twoColor: true });
     expect(getFrameProfile("m15borderlessland").overlays).toBeUndefined();
     expect(getFrameProfile("m15borderlessland").crownMasters).toBeUndefined();
-    expect(frameAnatomyOf("m15snow")).toEqual({ crown: true, twoColor: ["split"], collector: true, stamp: true, dfcIcon: false, rulesAlign: true });
-    expect(frameAnatomyOf("m15snowland")).toEqual({ crown: true, twoColor: ["split"], collector: true, stamp: true, dfcIcon: false, rulesAlign: true });
-    expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true, stamp: true, dfcIcon: false, rulesAlign: true });
+    expect(frameAnatomyOf("m15snow")).toEqual({ crown: true, twoColor: ["split"], collector: true, stamp: true, dfcIcon: false, rulesAlign: true, border: false });
+    expect(frameAnatomyOf("m15snowland")).toEqual({ crown: true, twoColor: ["split"], collector: true, stamp: true, dfcIcon: false, rulesAlign: true, border: false });
+    expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true, stamp: true, dfcIcon: false, rulesAlign: true, border: false });
     // A legacy template draws the m15 frame, so it has m15's anatomy.
     expect(frameAnatomyOf("regular")).toEqual(frameAnatomyOf("m15"));
   });

@@ -100,6 +100,7 @@ import {
 } from "@/lib/cards/typography";
 import { walkerAnatomy } from "@/lib/cards/kind-anatomy";
 import type { SymbolStyle } from "@/lib/cards/symbol-style";
+import type { WhiteBorderSlot } from "@/lib/cards/white-border";
 import { TYPE_FACES, typeFace, type SlotFace } from "@/lib/cards/type-faces";
 
 /** A rectangle in card-relative percent (0–100), origin top-left. The card's
@@ -703,6 +704,16 @@ export type FrameProfile = {
    *  prints (never beside a collector line). Code-owned (the override
    *  schema refuses it). */
   footerBrush?: { rect: Rect };
+  /** The printed WHITE BORDER a card switches on (TODO 4.30;
+   *  FrameStyle.border "white", opt-in per card: declaring it changes no
+   *  stored card): the master's black border on each edge, which the white
+   *  covers, and the keyline printed inside it — drawn by both renderers
+   *  from lib/cards/white-border.ts. Set only on PROFILES entries, never on
+   *  a base another profile spreads; a profile that declares it keeps the
+   *  pipglyph.com mark OFF the border (a `copyrightSlot` inside the frame —
+   *  tests/unit/cards/white-border.test.ts). Code-owned (the override
+   *  schema refuses it). */
+  whiteBorder?: WhiteBorderSlot;
   pt?: StatSlot;
   loyalty?: StatSlot;
   defense?: StatSlot;
@@ -2484,6 +2495,9 @@ const M15ARTIFACT: FrameProfile = {
   type: { ...M15.type, dy: CC_M15_TYPE_DY },
   pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
 };
+/** The Vehicle plate's digits (TODO 4.5c): white, as every printed Vehicle
+ *  sets them on its brown plate. */
+const VEHICLE_PT_INK = "#ffffff";
 const M15SNOW: FrameProfile = {
   ...M15,
   label: "M15 Snow",
@@ -3062,6 +3076,19 @@ function withPairInk(profile: FrameProfile, from: FrameMasterKey): FrameProfile 
     },
   };
 }
+
+/** The 1997 frame's white border (TODO 4.30): the masters' black border is
+ *  73 px at the sides, 82 px on top and 81 px below on thirteen of the
+ *  fourteen masters of both templates (the MSE gold is 74 / 71 / 80 / 81:
+ *  the keyline is drawn, so it is 3 px there too) — and the white of 36
+ *  prints (5ED, 6ED, 7ED, ATH, BRB, BTD, DKM) ends at 73.6 / 73.4 px, 81.9
+ *  and 80.8. Keyline: 3.1 px on 5ED / 6ED and the box sets, 3.9 on 7ED. */
+const RETRO_WHITE_BORDER: WhiteBorderSlot = { insetPx: { top: 82, right: 73, bottom: 81, left: 73 }, keylinePx: 3 };
+/** The 2003 frame's: the masters' black border is 70–71 px on every edge of
+ *  all 34 masters, and the white of the 9ED prints ends at 70.5 px on all
+ *  four (12 prints; the 8ED scans sit up to 8 px off-centre). Keyline:
+ *  3.9 px on 9ED, 4.3 on 8ED. */
+const MODERN_WHITE_BORDER: WhiteBorderSlot = { insetPx: { top: 70, right: 70, bottom: 70, left: 70 }, keylinePx: 4 };
 
 // Modern land — the 2003 land frame: the same geometry, no mana cost. `c` is
 // the plain land, w–g the basics' coloured frames, `m` the gold land. One
@@ -5260,6 +5287,29 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     twoColorMasters: ["split"],
     collector: M15_COLLECTOR,
   },
+  // The Vehicle frame (TODO 4.5c; owner 2026-09-29: a stored template of
+  // its own, for Vehicles only): Card Conjurer's bronze 'Vehicle Frame'
+  // where m15artifact has the silver one, under the same bars, box and
+  // pinline — so m15artifact's slots, crown (a colourless Vehicle's is the
+  // artifact silver "a": DMU #230, NEC #159; a coloured one's its colour,
+  // KHM #169), stamp notch and collector line. Its ONE plate is the brown
+  // `m15PTV` under every colour key, at M15's plate box, and the digits are
+  // WHITE on it (67 of 68 prints read, KLD 2016 → 2026: ink 241–255 on a
+  // 75–148 luma face). An ADDITION: a new template no stored card sits on —
+  // a Vehicle stored on m15 / m15artifact keeps its frame until its owner
+  // picks this one. Its two-colour dress is m15artifact's split — gold
+  // bars, the box and the pinline in the two colours — over the bronze
+  // frame (owner 2026-10-12; DFT #188–220, NEO #231, MKM #215): ten pair
+  // masters, the card's own switch, no hybrid dress. The plate is toned
+  // onto the prints' brown (scripts/lib/cc-frames.mjs VEHICLE_PLATE_TONE).
+  m15vehicle: {
+    ...M15ARTIFACT,
+    label: "M15 Vehicle",
+    twoColorMasters: ["split"],
+    pt: { ...M15ARTIFACT.pt!, plateAssetPathTemplate: "/frames/m15vehicle/pt/{color}.png", colorHex: VEHICLE_PT_INK },
+    overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }, { ...M15_HOLO_STAMP, keyMap: { c: "a" } }],
+    collector: M15_COLLECTOR,
+  },
   // The borderless frame's crown (TODO 4.6f, wave 2a) is CC's FLOATING crown
   // baked into `<key>-legendary` masters (crownMasters — an overlay can't
   // erase the title-bar ring CC erases under it), and its two-colour dress
@@ -5418,7 +5468,11 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15textlessland: { ...M15TEXTLESSLAND, pickerSampleArt: true },
   expeditionland: EXPEDITIONLAND,
   nyx: { ...NYX, pickerSampleArt: true },
-  retro: RETRO,
+  // The white border (TODO 4.30; `whiteBorder`, opt-in per card —
+  // FrameStyle.border): declared on these four PROFILES entries only, never
+  // on the RETRO / MODERN bases. `insetPx` is each template's own masters'
+  // black border (the white covers exactly it); `keylinePx` the prints'.
+  retro: { ...RETRO, whiteBorder: RETRO_WHITE_BORDER },
   // Two colours on the old frames (TODO 4.6h; `twoColorMasters`, opt-in per
   // card — FrameStyle.twoColor, as on m15): declared on these three PROFILES
   // entries only, never on the RETRO / MODERN bases. The pair masters are
@@ -5436,9 +5490,9 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // `retro` declares none: the 1997 frame printed ONE gold card, whatever
   // its colours. No hybrid dress on any of them (a 2003 hybrid card splits
   // the frame body itself: not built).
-  retroland: { ...withPairInk(RETROLAND, "c"), twoColorMasters: ["split"], twoColorForLands: true },
-  modern: { ...withPairInk(MODERN, "m"), twoColorMasters: ["split"] },
-  modernland: { ...withPairInk(MODERNLAND, "c"), twoColorMasters: ["split"], twoColorForLands: true },
+  retroland: { ...withPairInk(RETROLAND, "c"), twoColorMasters: ["split"], twoColorForLands: true, whiteBorder: RETRO_WHITE_BORDER },
+  modern: { ...withPairInk(MODERN, "m"), twoColorMasters: ["split"], whiteBorder: MODERN_WHITE_BORDER },
+  modernland: { ...withPairInk(MODERNLAND, "c"), twoColorMasters: ["split"], twoColorForLands: true, whiteBorder: MODERN_WHITE_BORDER },
 };
 
 /** Resolve a frame profile, defaulting to M15 for unknown/legacy templates
