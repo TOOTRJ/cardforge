@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import printings from "../scryfall/fixtures/import-printings.json";
 import signaturePrintings from "../scryfall/fixtures/signature-printings.json";
+import tokenPrintings from "../scryfall/fixtures/token-printings.json";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import type { FrameTemplate } from "@/types/card";
 
@@ -193,6 +194,48 @@ describe("executeDeckRemixStep — the frame reaches the save", () => {
     expect(card).toMatchObject({ frame_style: { template: "agclassic" }, card_type: "creature" });
   });
 
+  // The import's verified landing reaches the save (2026-10-13): the step
+  // used to hand over the mapper's static landing, so a Vehicle kept the
+  // silver artifact frame after `m15vehicle` was ticked.
+  const copter = (over: Record<string, unknown> = {}) => ({
+    id: "00000000-0000-4000-8000-000000000235", name: "Smuggler's Copter", layout: "normal", set: "kld", set_type: "expansion", collector_number: "235",
+    frame: "2015", frame_effects: [], border_color: "black", full_art: false, textless: false, keywords: ["Flying", "Crew"],
+    type_line: "Artifact — Vehicle", colors: [], color_identity: [], mana_cost: "{2}", power: "3", toughness: "3", released_at: "2016-09-30",
+    oracle_text: "Flying\nCrew 1", rarity: "rare",
+    ...over,
+  });
+
+  it("a Vehicle saves on the Vehicle frame once it is verified in its colour, at one credit (Smuggler's Copter KLD #235)", async () => {
+    s.verified = keys(["m15artifact", "c"], ["m15vehicle", "c"]);
+    const { step, card } = await remix("lea-255", undefined, { printing: copter() });
+    expect(step.status).toBe("done");
+    expect(card).toMatchObject({ frame_style: { template: "m15vehicle" }, card_type: "artifact", subtypes: ["Vehicle"], power: "3", toughness: "3" });
+    expect(s.reserved).toEqual([1]);
+    expect(s.image).toHaveBeenCalledTimes(1);
+  });
+
+  it("…and on the artifact frame while it isn't (another colour's tick doesn't count)", async () => {
+    s.verified = keys(["m15artifact", "c"], ["m15vehicle", "u"]);
+    const { card } = await remix("lea-255", undefined, { printing: copter() });
+    expect(card).toMatchObject({ frame_style: { template: "m15artifact" }, subtypes: ["Vehicle"] });
+    expect(s.reserved).toEqual([1]);
+  });
+
+  it("a borderless Vehicle lands there too; Dominaria's Weatherlight never does", async () => {
+    s.verified = keys(["m15artifact", "c"], ["m15borderlessartifact", "c"], ["m15vehicle", "c"]);
+    const borderless = await remix("lea-255", undefined, {
+      printing: copter({ set: "sld", collector_number: "446", frame_effects: ["inverted"], border_color: "borderless" }),
+    });
+    expect(borderless.card).toMatchObject({ frame_style: { template: "m15vehicle" } });
+    const weatherlight = await remix("lea-255", undefined, {
+      printing: copter({
+        name: "Weatherlight", set: "dom", collector_number: "237", frame_effects: ["legendary"], type_line: "Legendary Artifact — Vehicle",
+        mana_cost: "{4}", power: "4", toughness: "5", released_at: "2018-04-27",
+      }),
+    });
+    expect(weatherlight.card).toMatchObject({ frame_style: { template: "m15artifact" } });
+  });
+
   it("a layout printing saves on its layout frame with the printed type and its second half (Virtue of Loyalty WOE #38)", async () => {
     s.verified = keys(["adventure", "w"], ["m15", "w"]);
     const { step, card } = await remix("woe-38");
@@ -347,6 +390,94 @@ describe("executeDeckRemixStep — a token's text box follows the saved text", (
       frame_style: { template: "m15tokenartifacttext" },
       rules_text: "{T}, Sacrifice this artifact: Add one mana of any color.",
     });
+  });
+});
+
+// The M20+ full-art token (TODO 4.48) reaches the remix since 2026-10-13 (the
+// import's verified landing, `token/m20`): its HEIGHT follows the text the
+// remix saves — the printing's rules and the AI's flavour — as the arch's
+// text box does. Soldier TFDN #6 is printed with no text (the textless
+// height); Cat TFDN #27 with rules (the regular box); Map TLCI #17 tall.
+describe("executeDeckRemixStep — an M20+ token's height follows the saved text", () => {
+  const every = (colour: string, ...templates: string[]) => templates.map((t): [string, string] => [t, colour]);
+  const ARCH = ["m15token", "m15tokentext"];
+  const FULL_ART = ["m20token", "m20tokentext", "m20tokentall"];
+  const WHITE = keys(...every("w", ...ARCH, ...FULL_ART));
+  const LONG_FLAVOUR =
+    "They marched out of the mist in their hundreds, each one humming the same low note, and by the time the note " +
+    "ended the walls of the old city had forgotten how to stand. Nobody who heard it could say afterwards what it " +
+    "had sounded like, only that the silence which followed was worse, and longer, and still going on.";
+  const token = (key: keyof typeof tokenPrintings) => ({
+    printing: structuredClone(tokenPrintings[key]) as Record<string, unknown>,
+  });
+  const identity = (flavor_text: string | null) =>
+    s.identity.mockResolvedValueOnce({ title: "Remixed Name", flavor_text, art_instruction: "A painted scene." });
+
+  it("a textless printing given the AI's flavour line saves on the regular box, at one credit", async () => {
+    s.verified = WHITE;
+    const { step, card } = await remix("lea-255", undefined, token("tfdn-6"));
+    expect(step.status).toBe("done");
+    expect(card).toMatchObject({
+      frame_style: { template: "m20tokentext" },
+      card_type: "token",
+      flavor_text: "New flavour.",
+      power: "1",
+      toughness: "1",
+    });
+    expect(s.reserved).toEqual([1]);
+    expect(s.image).toHaveBeenCalledTimes(1);
+  });
+
+  it("…on the tall box when the AI's flavour outgrows the regular one, and with no box when it writes none", async () => {
+    s.verified = WHITE;
+    identity(LONG_FLAVOUR);
+    expect((await remix("lea-255", undefined, token("tfdn-6"))).card).toMatchObject({
+      frame_style: { template: "m20tokentall" },
+    });
+    identity(null);
+    const bare = await remix("lea-255", undefined, token("tfdn-6"));
+    expect(bare.card).toMatchObject({ frame_style: { template: "m20token" } });
+    expect(bare.card?.flavor_text).toBeUndefined();
+  });
+
+  it("never keeps text on the textless height: the arch's text box stands in while the regular box isn't published", async () => {
+    s.verified = keys(...every("w", ...ARCH, "m20token"));
+    expect((await remix("lea-255", undefined, token("tfdn-6"))).card).toMatchObject({
+      frame_style: { template: "m15tokentext" },
+      flavor_text: "New flavour.",
+    });
+  });
+
+  it("a printing with rules text keeps a box whatever the flavour, and takes the tall one for a long line", async () => {
+    s.verified = WHITE;
+    identity(null);
+    const plain = await remix("lea-255", undefined, token("tfdn-27"));
+    expect(plain.card).toMatchObject({ frame_style: { template: "m20tokentext" } });
+    expect(String(plain.card?.rules_text)).toContain("Lifelink");
+    identity(LONG_FLAVOUR);
+    expect((await remix("lea-255", undefined, token("tfdn-27"))).card).toMatchObject({
+      frame_style: { template: "m20tokentall" },
+    });
+  });
+
+  it("stays on the 2014–19 arch while the full-art design isn't published in the colour (as before)", async () => {
+    s.verified = keys(...every("w", ...ARCH), ...every("u", ...FULL_ART));
+    expect((await remix("lea-255", undefined, token("tfdn-6"))).card).toMatchObject({
+      frame_style: { template: "m15tokentext" },
+    });
+    identity(null);
+    expect((await remix("lea-255", undefined, token("tfdn-6"))).card).toMatchObject({
+      frame_style: { template: "m15token" },
+    });
+  });
+
+  it("an artifact token keeps its dress at every height (Map TLCI #17, printed tall)", async () => {
+    s.verified = keys(
+      ...every("c", "m15tokenartifact", "m15tokenartifacttext", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall"),
+    );
+    const { card } = await remix("lea-255", undefined, token("tlci-17"));
+    expect(card).toMatchObject({ frame_style: { template: "m20tokenartifacttall" }, card_type: "token" });
+    expect(String(card?.supertype)).toContain("Artifact");
   });
 });
 
