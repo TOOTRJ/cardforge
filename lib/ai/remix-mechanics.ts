@@ -20,7 +20,8 @@
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 import { backFaceFromPatch, splitSubtypes } from "@/lib/scryfall/preview-from-patch";
 import { DFC_REMIX_CREDITS } from "@/lib/scryfall/dfc-import";
-import { remixFrameFor } from "@/lib/creator/frame-resolve";
+import { remixFrameFor, withoutTextlessFrames } from "@/lib/creator/frame-resolve";
+import { getFrameProfile } from "@/lib/cards/template-layout";
 import { templatePaintsSecondFace } from "@/lib/creator/card-kinds";
 import { dfcBodyOf, templateHasBackFace, withTransformBackShape } from "@/lib/cards/dfc";
 import {
@@ -69,6 +70,14 @@ export type ScryfallRemixMechanics = {
    *  picture. A card that fell back to a standard frame never becomes a
    *  double-faced card. */
   back_face?: CardBackFace;
+  /** Set only when `frame_template` draws no rules box (a `textless`
+   *  profile, TODO 1.24): the frame the card saves on INSTEAD when it saves
+   *  with rules or flavour text — this printing's landing with the textless
+   *  frames read as unverified, i.e. the stand-in the registry / the import
+   *  uses until that frame is ticked. The step decides once the final text
+   *  is known (remixSavedFrame); absent on a textless landing = nothing
+   *  else is published in the card's colour. One-faced, like the landing. */
+  text_stand_in?: FrameTemplate;
 };
 
 /**
@@ -85,6 +94,21 @@ export function scryfallRemixMechanics(
 ): { ok: true; mechanics: ScryfallRemixMechanics } | { ok: false; error: string } {
   const frame = remixFrameFor(patch, verifiedKeys, options);
   if (!frame.ok) return frame;
+
+  // A landing that draws no rules box names its stand-in (TODO 1.24): the
+  // same resolution against the list without the textless frames. Only a
+  // one-faced stand-in for a one-faced landing — the second half and the
+  // credits below are decided on `frame.template`.
+  const standIn = getFrameProfile(frame.template).textless
+    ? remixFrameFor(patch, withoutTextlessFrames(verifiedKeys), options)
+    : null;
+  const textStandIn =
+    standIn?.ok &&
+    !getFrameProfile(standIn.template).textless &&
+    !templateHasBackFace(standIn.template) &&
+    !templatePaintsSecondFace(standIn.template)
+      ? standIn.template
+      : undefined;
 
   const doubleFaced = templateHasBackFace(frame.template);
   const back =
@@ -140,6 +164,7 @@ export function scryfallRemixMechanics(
             layout ?? "modal",
           )
         : undefined,
+      ...(textStandIn ? { text_stand_in: textStandIn } : {}),
     },
   };
 }
@@ -266,6 +291,26 @@ export function ownCardRemixFrame(
     return { frame_template: template, back_face: carriedBackFace(back) };
   }
   return { frame_template: template };
+}
+
+/**
+ * Where an own card's remix saves INSTEAD when it saves with rules or
+ * flavour text and its kept frame draws none (a `textless` profile, TODO
+ * 1.24 — remixSavedFrame decides, once the text is known): `null` = the
+ * default landing, no template — where this card lands when its frame is
+ * NOT kept (above), i.e. where it would land with the textless frame
+ * unverified — and only where the save's gates pass that landing in the
+ * card's colour; `undefined` = they don't, so the kept frame stands (a
+ * hidden text, never a refused save after the art). Pure.
+ */
+export function ownCardTextStandIn(
+  source: OwnCardRemixSource,
+  verifiedKeys: ReadonlySet<string>,
+): null | undefined {
+  return frameGateError(undefined, source.color_identity ?? [], verifiedKeys) === null &&
+    frameKindGateError(undefined, cardFieldsFace(source)) === null
+    ? null
+    : undefined;
 }
 
 /** An own card's rules text as the remix copies it: the stored text, or —

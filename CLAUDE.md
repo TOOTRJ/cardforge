@@ -366,6 +366,19 @@ Rules and gotchas:
   body, priced 2 by the estimate through the same function) — else no
   template: the default landing, one face. A fallback, never a refused
   save after the art; a token's height still follows the saved text.
+  A remix never SAVES a text on a frame that draws none (TODO 1.24): where
+  both paths save, `remixSavedFrame` (`lib/creator/frame-resolve.ts`) takes
+  a landing whose PROFILE is `textless` (`frameHidesRulesBoxText` — the
+  renderers' flag and `hasRulesBoxText`; today the full-art token's two
+  textless heights) off it once the final text is known — a printing onto
+  its landing with the textless frames read as unverified
+  (`withoutTextlessFrames`, the registry's own stand-in, `text_stand_in`),
+  an own card onto the default landing where the save's gates pass it
+  (`ownCardTextStandIn`) — and leaves it where the card saves with no text
+  or nothing else is published in the colour; `resolveGeneratedFrame`'s
+  random pool reads the same test. The "M15 Textless" frames are NOT
+  textless profiles (they draw the text on the art), so a landing there
+  stands until a profile gains the flag — never test a template's name.
   An EMBLEM is never remixed (owner 2026-10-13; it prints its walker's
   name, and a remix renames each card by itself): left out at plan time —
   `remixableDeckItems` for an own emblem, a 0 in the estimate's

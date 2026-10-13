@@ -58,7 +58,7 @@ import {
   colorHintsForFrame,
   resolveGeneratedFrame,
 } from "@/lib/creator/frame-random";
-import { autoTokenTextBoxFrame } from "@/lib/creator/frame-resolve";
+import { remixSavedFrame } from "@/lib/creator/frame-resolve";
 import type {
   CardBackFace,
   CardType,
@@ -73,6 +73,7 @@ import {
   REMIX_EMBLEM_LEFT_OUT,
   isEmblemRemixSource,
   ownCardRemixFrame,
+  ownCardTextStandIn,
   ownCardRulesText,
   remixableDeckItems,
   remixCreditsOf,
@@ -1454,6 +1455,12 @@ async function executeDeckRemixStep(
      *  back face — a Scryfall entry's printing's, or an own card's where
      *  its frame is kept (ownCardRemixFrame). */
     back_face?: CardBackFace;
+    /** Where the card saves instead when it saves with text and its frame
+     *  draws none (TODO 1.24, remixSavedFrame): a printing's registry
+     *  stand-in; `null` for an own card = the default landing (no
+     *  template), as it landed before its frame was kept
+     *  (ownCardTextStandIn); absent = none, the landing stands. */
+    text_stand_in?: FrameTemplate | null;
     art_url?: string | null;
   };
   let mechanics: Mechanics;
@@ -1469,7 +1476,8 @@ async function executeDeckRemixStep(
     // card lands as before (no template). ownCardRemixFrame is what the
     // estimate priced the entry with; a one-credit entry stays one-faced.
     const doubleFacedPlan = remixEntryCredits(entry) >= DFC_REMIX_CREDITS;
-    const kept = ownCardRemixFrame(source, new Set(await getVerifiedFrameKeys()), {
+    const ownVerifiedKeys = new Set(await getVerifiedFrameKeys());
+    const kept = ownCardRemixFrame(source, ownVerifiedKeys, {
       singleFace: !doubleFacedPlan,
     });
     // Two credits were reserved for both faces: bodies withdrawn since are
@@ -1496,6 +1504,7 @@ async function executeDeckRemixStep(
       anatomy: storedAnatomyOf(source.frame_style),
       frame_template: kept.frame_template,
       back_face: kept.back_face,
+      text_stand_in: ownCardTextStandIn(source, ownVerifiedKeys),
     };
   } else if (entry.scryfall_id) {
     const scry = await getScryfallCardById(entry.scryfall_id);
@@ -1694,8 +1703,13 @@ async function executeDeckRemixStep(
   // The printing's frame followed its PRINTED text; the remix saves the AI's
   // flavour, so a token's text box follows the text it saves with (TODO 4.49
   // (b), owner decision 5) — the creator's and the other AI jobs' rule.
+  // And no remix saves a text on a frame that draws none (TODO 1.24): a
+  // `textless` landing gives way to its stand-in when the card saves with
+  // rules or flavour text, and stands when it saves with none
+  // (remixSavedFrame — one rule for a printing and an own card).
   const frameTemplate = mechanics.frame_template
-    ? autoTokenTextBoxFrame({
+    ? remixSavedFrame({
+        standIn: mechanics.text_stand_in,
         template: mechanics.frame_template as FrameTemplate,
         cardType: mechanics.card_type as CardType | undefined,
         supertype: mechanics.supertype,
