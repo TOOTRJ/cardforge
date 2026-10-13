@@ -3082,6 +3082,37 @@ the text's ink left out):
   (193,215,185 against 179,214,172), gold 7–12 darker. Left as Card
   Conjurer drew them.
 
+**A second reading** (#544's independent check, 2026-10-13: 238 OTHER
+printings — none of the 677 above — each read twice, by eye on the bars and
+by correlation with both masters):
+
+- **Scope.** 143 of 145 triangle-stamped plain printings of 2021-11 →
+  2025-08 wear the streaked frame and none the M15 one (the two others are
+  the see-through colourless card), every non-full-art basic land among
+  them (40K, LTR, WHO, ACR, the 2021 Secret Lair five). Of 77 Universes
+  Beyond printings WITHOUT the stamp from 2025-09 on, one wears the streaked
+  frame: PMEI 2025-21 (Cloud, Midgar Mercenary, 2025-12) — its scan shows
+  the triangle, Scryfall tags it `oval`, so it imports as M15. A 2026
+  printing that does carry the triangle (PMEI 2026-17) is streaked: the
+  rule has no end date on purpose. The one plain triangle print before
+  2021-11 (SLD #581, 2020) wears a dark brushed frame of its own. In
+  Scryfall's data no plain black-bordered Universes Beyond printing of
+  2021-11 → 2025-08 lacks the stamp.
+- **Stamp.** On 114 prints the triangle's top edge is at 1918 px (1917–
+  1927), its apex at 1991, 686–816 px wide 8 px down; ours read the same
+  way: 1920, 1992, 683–816. Its TONE differs: a common's and an uncommon's
+  is a flat dark grey (97, 97, 97), a rare's and a mythic's hologram reads
+  135–150 — ours is one silver at 214 on every rarity.
+- **Tones, on the cleanest prints** (the digital renders, a few levels of
+  spread): green title bar 187–194, 210–212, 176–182 against our
+  173, 211, 165; gold title bar 238–240, 218–220, 128–140 against
+  241, 227, 157 and gold text box 245, 234, 196 against 249, 242, 213; the
+  COLOURLESS LAND (PIP #254, LTR #261) title bar 198, 187, 178 against
+  214, 210, 194 and text box 231, 227, 221 against 220, 214, 195 — the
+  largest miss. White, blue, black, red and the artifact frame are within
+  about 8. A tone pass on `g`, `m` and the land's `c` is best done BEFORE
+  those colours are ticked: afterwards it is a correction, with a sweep.
+
 **The masters.** Card Conjurer's accurate 'Universes Beyond' pack
 (its `packUBNew` pack, `m15/new/ub/`, 2010 × 2814): the colour frames whole, the
 artifact frame under the colour's bars for a coloured artifact, the land
