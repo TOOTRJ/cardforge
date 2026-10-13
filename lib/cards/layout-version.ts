@@ -1261,6 +1261,49 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            visual matrix: no case changes (none sets a focal of 0 with a
 //            zoom).
 //            Verification-neutral (no slot, master, size or plate moves).
+//   52     — a name's room before a DETACHED cost of Phyrexian symbols
+//            (TODO 6.16d; found by the check of #507, owner decision
+//            2026-10-12). ITS number lives in
+//            TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION below. Since v49 a
+//            Phyrexian symbol — one colour or two — sits on a disc ×1.2
+//            (lib/cards/mana-gem.ts pipScale), and the cost row beside an
+//            INLINE name measured it so (costRowTerms); the name's room on
+//            the frames that place the cost in a box of its own
+//            (FrameProfile.costRect: `modern`, `m15pw`, `m15borderlesspw`,
+//            `m15borderlesspwtall`) still counted every pip as one plain
+//            disc (lib/cards/title-band.ts manaCostWidthPct), so a long
+//            name was fitted to more room than the row left it. From the
+//            end of the longest name the fit kept whole to the first disc,
+//            at HD on a flat master, 1–10 pips: 39–53 px (`modern`) /
+//            27–60 px (`m15pw`) before plain pips; before Phyrexian ones
+//            39 / 19 px at one, 13 / 2 at three, −12 / −45 at five,
+//            −42 / −67 at seven, −91 / −123 at ten (negative: the name ran
+//            UNDER the discs; the two borderless walkers as `m15pw`). Each
+//            pip now counts its own disc — pipScale, the one source — and
+//            the longest name the fit keeps whole ends
+//            36–56 / 23–52 px before the row at 1–10 such symbols. A
+//            plain pip's factor is exactly 1, so a cost without a larger
+//            disc measures to the same float: no other bake moves.
+//            A CORRECTION ("sweep"), never a badge. Template-scoped (the
+//            four above; V52_DETACHED_COST_TEMPLATES) AND card-scoped
+//            (v52Changed): a front cost that holds a Phyrexian symbol —
+//            every other card, and every card on any other template, is
+//            stamped. A second face's cost is never in a detached box (no
+//            second-face slot has one; a double-faced back body is a
+//            template without one), so the front's cost alone is read.
+//            Production (anonymous read, 2026-10-12): 17 public cards
+//            are on the four templates (9 `modern`, 8 `m15pw`) and no
+//            visible card on ANY template has a Phyrexian symbol in its
+//            cost — 0 in scope, no visible stored card changes a pixel
+//            (the 992 rows read on 2026-10-08 — 863 public, 129 unlisted
+//            — replayed art-less at HD on main and on this commit: every
+//            bake byte-identical).
+//            Private cards cannot be read; any in scope re-bake once. The
+//            visual matrix: no existing case changes (none sets a
+//            Phyrexian symbol in a detached cost: the "edge" cards with
+//            {B/P} are on inline-cost templates); the 3- and 5-symbol
+//            cases on `modern` and `m15pw` are new.
+//            Verification-neutral: no slot, master, size or plate moves.
 // ---------------------------------------------------------------------------
 
 /** The 1993 frame on its prints (TODO 4.10c): every text slot and the
@@ -1301,7 +1344,17 @@ export const TYPE_LINE_ORDER_LAYOUT_VERSION = 50;
  *  the card scope and the rollout below read this constant. */
 export const ART_FOCAL_ZERO_LAYOUT_VERSION = 51;
 
-export const CARD_LAYOUT_VERSION = ART_FOCAL_ZERO_LAYOUT_VERSION;
+/** A name's room before a detached cost of Phyrexian symbols (TODO 6.16d):
+ *  ITS version lives here alone — CARD_LAYOUT_VERSION, the template and
+ *  card scopes and the rollout below read this constant. */
+export const TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION = 52;
+/** v52 — every template that draws its cost in a box of its own
+ *  (FrameProfile.costRect, cost not hidden) and so fits the name against
+ *  the measured row. Frozen: v52 is history once it ships (a test holds the
+ *  list to the profiles while it is the latest). */
+export const V52_DETACHED_COST_TEMPLATES: readonly string[] = ["modern", "m15pw", "m15borderlesspw", "m15borderlesspwtall"];
+
+export const CARD_LAYOUT_VERSION = TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -1471,6 +1524,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // (v49 is not here: any template — a card scope, v49Changed.)
   // (v50 is not here: any template — a card scope, v50Changed.)
   // (v51 is not here: any template — a card scope, v51Changed.)
+  // v52 — the name's room before a detached cost (6.16d): only the four
+  // templates that place the cost in its own box — and on them only a card
+  // whose cost holds a Phyrexian symbol (v52Changed). Verification-neutral.
+  [TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION]: V52_DETACHED_COST_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -1607,11 +1664,16 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
  * v51 is: the art moves inside its own window on a card whose focal point
  * is exactly 0 with a zoom — no slot, master, size or plate moves, and a
  * reference card (focal 0.5, zoom 1) bakes to the same pixels.
+ * v52 is (TODO 6.16d): a name before a detached cost of Phyrexian symbols
+ * is fitted to the room their larger discs leave — no slot, master, size
+ * or plate moves, and a card without such a cost bakes to the same pixels
+ * (as v49, which drew those discs larger and stayed neutral).
  * Stored bakes still owe these bumps: this list is read by frame
  * verification only, never by the stale / sweep / download rules.
  */
 export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [
   31, 32, 33, 35, 36, 37, 44, 49, TYPE_LINE_ORDER_LAYOUT_VERSION, ART_FOCAL_ZERO_LAYOUT_VERSION,
+  TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION,
 ];
 
 /** TEMPLATE_SCOPED_VERSIONS with VERIFICATION_TEMPLATE_SCOPES laid over it
@@ -2171,6 +2233,38 @@ function v51Changed(card: ScopeCard): boolean {
   return back !== null && v51FaceChanged(back.art_url, back.art_position);
 }
 
+/** v52 — a symbol whose disc is larger than a plain pip's (pipScale ≠ 1 at
+ *  v52): a Phyrexian symbol ({W/P}) or the two-colour one ({G/U/P}; two
+ *  DIFFERENT colours — the tokenizer reads {G/G/P} as an unknown symbol on
+ *  a plain disc, and {C/P} has no symbol) — and the SLASH-LESS spelling a
+ *  cost typed by hand may hold ({WP}, {rp}, {WPx}): the tokenizer keeps an
+ *  unknown symbol's first two letters, "wp" is the Phyrexian symbol's own
+ *  suffix, and both renderers draw it on the larger disc. Case and outer
+ *  spaces as the tokenizer reads them. A regex, not the tokenizer, so this
+ *  module stays free of the components tree; a test holds it to pipScale
+ *  while v52 is the latest. Frozen: a later change of a disc's size is its
+ *  own bump. */
+const V52_LARGER_DISC = /\{\s*(?:[WUBRG]\/P\s*\}|([WUBRG])\/(?!\1)[WUBRG]\/P\s*\}|[WUBRG]P[^}]*\})/i;
+
+/** Whether a cost holds a symbol v52 measures wider than a plain pip. */
+export function v52HasLargerDisc(value: unknown): boolean {
+  return typeof value === "string" && V52_LARGER_DISC.test(value);
+}
+
+/**
+ * Whether layout v52 (a name's room before a detached cost of Phyrexian
+ * symbols, TODO 6.16d) changed a card's bake, on a template the template
+ * scope lets through (V52_DETACHED_COST_TEMPLATES): its own cost holds a
+ * symbol on a larger disc. Read wider than what moves — a short name keeps
+ * its size and place whatever the cost, and re-bakes to the same pixels —
+ * where telling would mean running the fit. A back face's cost is never
+ * drawn in a detached box. A row that doesn't carry the cost → affected.
+ */
+function v52Changed(card: ScopeCard): boolean {
+  if (card.cost === undefined) return true;
+  return v52HasLargerDisc(card.cost);
+}
+
 /** The frozen v33 template lists, for the test that pins them to the
  *  profiles. */
 export const V33_SCOPE_TEMPLATES = {
@@ -2224,6 +2318,10 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // v51 — the art's zoom about a focal point of exactly 0: a face with
   // art, a zoom ≠ 1 and focalX or focalY 0 — v51Changed.
   [ART_FOCAL_ZERO_LAYOUT_VERSION]: v51Changed,
+  // v52 — a name's room before a detached cost of Phyrexian symbols
+  // (6.16d): on the four detached-cost templates (the template scope), a
+  // cost that holds a larger disc — v52Changed.
+  [TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION]: v52Changed,
 };
 
 /** `frame_style.finish` from the jsonb column, or null when absent (= regular). */
@@ -2353,6 +2451,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [MODERN_2003_LAYOUT_VERSION]: "sweep", // the 2003 frame's one sweep (4.10b): masters, P/T box, sizes, footer, symbols — a correction of a live pair against its prints after the owner's before / after sign-off, never a badge
   [ALPHA_1993_LAYOUT_VERSION]: "sweep", // the 1993 frame on its prints (4.10c): sizes, faces, the `Illus.` credit, the P/T, the original symbols — a correction of a pair against Alpha / Beta after the owner's before / after sheet (4 stored cards), never a badge
   [TYPE_LINE_ORDER_LAYOUT_VERSION]: "sweep", // the type line in its printed order + the P/T of a land creature (1.20) — a correction of what a face prints; 0 public or unlisted stored cards in scope, never a badge
+  [TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION]: "sweep", // a name's room before a detached cost of Phyrexian symbols (6.16d) — a correction of a fit that ran the name under the pips; 0 public or unlisted stored cards in scope, never a badge
   [SYMBOLS_PRINT_LAYOUT_VERSION]: "sweep", // five symbols on the prints' drawings + flat rules-text pips (6.16b) — a correction against the prints after the owner's round-43 sheets, never a badge
   [ART_FOCAL_ZERO_LAYOUT_VERSION]: "sweep", // the art's zoom about a focal point of exactly 0 (Satori dropped a zero transform-origin) — a correction of the bake against the preview after the owner's before / after sheet, never a badge
   [BATTLE_RECUT_LAYOUT_VERSION]: "sweep", // the battle's right side, top block and icon re-cut onto the prints (4.21d) — a correction on a template no public card uses, never a badge
