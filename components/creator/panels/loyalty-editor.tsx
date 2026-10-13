@@ -6,7 +6,7 @@
 // save the rows serialize into face_content AND a canonical rules_text
 // (lib/cards/face-content.ts), so exports/search keep working.
 
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useController, useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,12 +18,30 @@ import {
 import { RulesSymbolToolbar } from "@/components/creator/rules-symbol-toolbar";
 import type { FormValues } from "@/lib/creator/form-types";
 import { structuredRowsSaveAsText } from "@/lib/creator/structured-rules";
+import { walkerBadgesCollide } from "@/lib/creator/walker-crowding";
+import type { LoyaltyAbility } from "@/lib/cards/card-display";
+import type { FrameProfile } from "@/lib/cards/template-layout";
 
 const MAX_ROWS = 6; // Urza, Planeswalker is the printed extreme.
 
 const COST_PRESETS = ["+1", "+2", "0", "-1", "-2", "-3", "X", ""] as const;
 
-export function LoyaltyAbilitiesEditor() {
+export function LoyaltyAbilitiesEditor({
+  drawnRows = "",
+  profile = null,
+}: {
+  /** The rows the card DRAWS (the live preview's), as JSON — and the frame
+   *  profile it draws them on. Where their loyalty badges run into each
+   *  other (so many rows: lib/creator/walker-crowding.ts reads it from the
+   *  layout) the editor says the card will be crowded. A note; nothing is
+   *  blocked. */
+  drawnRows?: string;
+  profile?: Pick<FrameProfile, "rules" | "loyalty" | "loyaltyRows" | "symbolStyle"> | null;
+} = {}) {
+  const crowded = useMemo(
+    () => (drawnRows ? walkerBadgesCollide(profile, JSON.parse(drawnRows) as LoyaltyAbility[], 7 / 5) : false),
+    [drawnRows, profile],
+  );
   const {
     control,
     register,
@@ -109,6 +127,11 @@ export function LoyaltyAbilitiesEditor() {
           <span className="text-[11px] leading-5 text-subtle" data-testid="rows-save-as-text">
             More than six rows: this card saves its abilities as lines of text, one row a line. It
             prints the same.
+          </span>
+        ) : null}
+        {crowded ? (
+          <span className="text-[11px] leading-5 text-subtle" data-testid="rows-crowded">
+            With this many rows the card will be crowded: its loyalty badges touch.
           </span>
         ) : null}
         {fields.length < MAX_ROWS ? (

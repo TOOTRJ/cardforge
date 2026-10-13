@@ -516,6 +516,17 @@ describe("the server's payload", () => {
     );
     expect(edited.rules_text).toBe("(It's a Saga.)\nI — You can't lose.\nVII — Say “done” — twice.");
 
+    // A row saved under its stored marker — a numeral the editor has no
+    // number for, an order of its own (the 3b.25 follow-up): still the
+    // creator's serialization. Read as NUMBERS it lost the XI, no longer
+    // matched, and the whole text was converted.
+    const marked = "I, XI — You can't lose.\nII, I — Say \"done\".\nIII — Win.";
+    const markedEdit = withPrintTypographyUpdate(
+      { rules_text: "I, XI — You can't lose.\nII, I — Say \"done\".\nIII — Win - it's over.", face_content: null },
+      { ...saga, rules_text: marked },
+    );
+    expect(markedEdit.rules_text).toBe("I, XI — You can't lose.\nII, I — Say \"done\".\nIII — Win — it’s over.");
+
     // Not such a save: another kind's text is converted whole, as before…
     const creature = { card_type: "creature", frame_style: { template: "m15" }, rules_text: "It can't block.\nFlying" };
     expect(withPrintTypographyUpdate({ rules_text: "It can't block.\nHaste" }, creature).rules_text).toBe("It can’t block.\nHaste");

@@ -26,6 +26,9 @@ import { RulesSymbolToolbar } from "@/components/creator/rules-symbol-toolbar";
 import { cn } from "@/lib/utils";
 import type { FormValues } from "@/lib/creator/form-types";
 import { structuredRowsSaveAsText } from "@/lib/creator/structured-rules";
+import { keepsStoredMarker, markerText, unreadableMarkerParts } from "@/lib/cards/face-content";
+import { listPhrase } from "@/lib/creator/save-needs";
+import { SAGA_ROW_NEEDS_NUMBER } from "@/lib/creator/form-schema";
 
 const MAX_CHAPTERS = 6; // Long List of the Ents runs I–VI.
 // I–VI are offered; VII–X only on a card whose text already has one (no
@@ -68,7 +71,7 @@ export function SagaChaptersEditor() {
     rules_text: "",
     loyalty_abilities: [],
     saga_intro: "",
-    saga_chapters: rows.map((r) => ({ numerals: r?.numerals ?? [], text: r?.text ?? "" })),
+    saga_chapters: rows.map((r) => ({ numerals: r?.numerals ?? [], text: r?.text ?? "", marker: r?.marker })),
   });
 
   return (
@@ -112,6 +115,13 @@ export function SagaChaptersEditor() {
             const numerals: number[] = rows[i]?.numerals ?? [];
             const numeralsError = errors.saga_chapters?.[i]?.numerals?.message;
             const numeralsErrorId = `saga-row-${i}-numerals-error`;
+            // The marker this row is stored under, where its numbers alone
+            // would not give it back ("II, I", "I, XI"): kept — and saved —
+            // while the numbers are still its own.
+            const storedMarker = rows[i]?.marker || null;
+            const keepsMarker = keepsStoredMarker({ numerals, marker: storedMarker });
+            const lostNumerals = storedMarker && !keepsMarker ? unreadableMarkerParts(storedMarker) : [];
+            const dropsNumerals = numeralsError !== undefined && numeralsError !== SAGA_ROW_NEEDS_NUMBER && lostNumerals.length > 0;
             const toggle = (n: number) => {
               const next = numerals.includes(n)
                 ? numerals.filter((v) => v !== n)
@@ -131,7 +141,12 @@ export function SagaChaptersEditor() {
                   role="group"
                   aria-label={`Chapters of row ${i + 1}`}
                   aria-describedby={numeralsError ? numeralsErrorId : undefined}
-                  className="flex flex-wrap items-center gap-1.5"
+                  // Where a save blocked by this row's numbers puts the
+                  // focus (lib/creator/focus-field.ts): the group itself —
+                  // its name and the message that describes it.
+                  data-field-anchor={`saga_chapters.${i}.numerals`}
+                  tabIndex={-1}
+                  className="flex flex-wrap items-center gap-1.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
                 >
                   {numeralsShown.map((roman, idx) => {
                     const n = idx + 1;
@@ -167,10 +182,34 @@ export function SagaChaptersEditor() {
                     <Trash2 className="h-4 w-4" aria-hidden />
                   </Button>
                 </div>
+                {storedMarker && keepsMarker ? (
+                  <span className="text-[11px] leading-5 text-subtle" data-testid={`saga-row-${i}-stored-marker`}>
+                    Stored as “{markerText(storedMarker)}” — kept as it is while this row’s chapters stay as
+                    they are.
+                  </span>
+                ) : null}
                 {numeralsError ? (
                   <span id={numeralsErrorId} role="alert" className="text-xs text-danger">
                     {numeralsError}
                   </span>
+                ) : null}
+                {dropsNumerals ? (
+                  // The other answer to that message, by name: the numbers
+                  // picked become the row's. (Outside the alert: a control
+                  // is not part of what it announces.)
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="self-start"
+                    onClick={() => {
+                      setValue(`saga_chapters.${i}.marker`, undefined, { shouldDirty: true });
+                      // The message is the numbers': ask them again.
+                      void trigger(`saga_chapters.${i}.numerals`);
+                    }}
+                  >
+                    Drop {listPhrase(lostNumerals)}
+                  </Button>
                 ) : null}
                 <SagaRowText
                   index={i}

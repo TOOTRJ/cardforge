@@ -42,14 +42,50 @@
 //   no print has a seventh walker row or a chapter VII, and what a stored
 //   card draws is unchanged.
 //
+// And a saga row keeps its MARKER AS STORED for as long as its numbers are
+// that marker's (the 3b.25 follow-up, 2026-10-13). The editor holds a
+// chapter as numbers and writes them ascending; a stored marker can say
+// more — an order of its own ("II, I —"), a numeral the editor has no
+// toggle for ("I, XI —", "XI —"). An EDITED save used to write every row
+// from its numbers: editing row A re-ordered row B's "II, I" to "I, II" and
+// took the XI off "I, XI" — on the card too, the rail draws what the marker
+// lists. So the row CARRIES that marker (`marker`, set when the form opens:
+// lib/cards/face-content.ts sagaEditorRows — only where the numbers alone
+// would not give it back, so an ordinary saga carries none) and the save
+// writes it while `numerals` are still the marker's own, whatever else was
+// edited — the row's text included:
+//
+// - a kept marker the rows can store (every numeral I–VI: "II, I" is
+//   `numerals: [2, 1]`, which the renderers read back in that order) is
+//   written as `face_content` like any other row;
+// - one they cannot (the XI) makes the card save as PLAIN TEXT, the path
+//   above: `rules_text` is what draws, marker for marker;
+// - numbers CHANGED on a row whose marker mixes numerals the editor shows
+//   with one it can't ("I, XI": the toggles read "I" and look complete):
+//   the save would drop the XI, so the row says so and the save waits
+//   (sagaRowsLosingMarker) until the numbers are put back or the maker
+//   drops it by name. Changed on a marker that is only out of order, or
+//   PICKED on one with no numeral the editor shows ("XI —": an empty row of
+//   toggles — the unnumbered row the form asks a number for), the numbers
+//   picked are the row's — ascending, as the editor shows them.
+//
+// Why on the row, not a per-card "plain text passthrough": a row can be
+// moved, removed or have its text edited, and its marker has to follow IT —
+// an index into the stored text does not survive a removed row; and the
+// structured rows stay the storage wherever they can say what is drawn.
+//
 // Pure: no form, no React (tests/unit/creator/structured-rules.test.ts).
 
 import {
+  keepsStoredMarker,
+  markerNumerals,
   resolveLoyaltyRows,
   resolveSagaChapters,
+  romanMarker,
   sagaFromRulesText,
   serializeLoyalty,
-  serializeSaga,
+  serializeSagaMarkers,
+  unreadableMarkerParts,
 } from "@/lib/cards/face-content";
 import { faceContentSchema } from "@/lib/validation/card";
 import type { CardKind } from "@/lib/creator/card-kinds";
@@ -106,6 +142,32 @@ function sagaTextRowsOf(rows: readonly { numerals: readonly number[]; text: stri
     .filter((r) => r.text.length > 0);
 }
 
+type SagaFormRow = { numerals: readonly number[]; text: string; marker?: string | null };
+
+/** A saga row as a save WRITES it: its marker (the stored one while the
+ *  row keeps it, else its numbers ascending; "" = no chapter number), the
+ *  numbers in the marker's order, and its text. */
+export type SagaRowOut = { marker: string; numerals: number[]; text: string; kept: boolean };
+
+/** The rows that hold a text, as a save writes them — unnumbered ones
+ *  (`marker: ""`) included, in the editor's order. */
+export function sagaRowsOut(rows: readonly SagaFormRow[]): SagaRowOut[] {
+  return rows
+    .map((row) => {
+      const text = row.text.trim();
+      if (keepsStoredMarker(row)) {
+        const marker = row.marker as string;
+        return { marker, numerals: markerNumerals(marker), text, kept: true };
+      }
+      const numerals = [...row.numerals].sort((a, b) => a - b);
+      return { marker: romanMarker(numerals), numerals, text, kept: false };
+    })
+    .filter((row) => row.text.length > 0);
+}
+
+const carriedMarkersOf = (rows: readonly SagaFormRow[]) =>
+  rows.filter((row) => row.text.trim()).map((row) => row.marker ?? null);
+
 /** `faceContentSchema`'s row count and highest chapter (a test holds them
  *  to the schema). */
 export const MAX_STRUCTURED_ROWS = 6;
@@ -139,7 +201,10 @@ export function structuredRowsUntouched(
   if (kind === "saga") {
     return (
       (from.saga_intro.trim() || null) === (values.saga_intro.trim() || null) &&
-      same(sagaTextRowsOf(values.saga_chapters), sagaTextRowsOf(from.saga_chapters))
+      same(sagaTextRowsOf(values.saga_chapters), sagaTextRowsOf(from.saga_chapters)) &&
+      // …and each still carries the stored marker it opened with: one the
+      // maker dropped by name ("Drop XI") is an edit, whatever the numbers.
+      same(carriedMarkersOf(values.saga_chapters), carriedMarkersOf(from.saga_chapters))
     );
   }
   return false;
@@ -162,8 +227,10 @@ export function sagaRowsNeedingNumber(
   opened?: StructuredRulesValues | null,
 ): number[] {
   if (kind !== "saga" || structuredRowsUntouched(kind, values, opened)) return [];
+  // (A row that keeps a stored marker the editor can't number — "XI —" —
+  // saves under that marker: it is asked nothing.)
   const unnumbered = values.saga_chapters.flatMap((row, index) =>
-    row.text.trim() && row.numerals.length === 0 ? [index] : [],
+    row.text.trim() && row.numerals.length === 0 && !keepsStoredMarker(row) ? [index] : [],
   );
   if (unnumbered.length === 0) return [];
   if (unnumbered.length < sagaTextRowsOf(values.saga_chapters).length) return unnumbered;
@@ -174,6 +241,30 @@ export function sagaRowsNeedingNumber(
   return asHidden ? [] : unnumbered;
 }
 
+/**
+ * The saga rows (their indices) whose NUMBERS were changed while their
+ * stored marker holds, beside numerals the editor shows, one it has no
+ * toggle for ("I, XI —" with II switched on): the save would write the
+ * numbers picked and drop that numeral without a word. The form says so on
+ * the row and waits — the numbers put back keep the marker, and "Drop XI"
+ * (the row's `marker` cleared) makes the numbers picked the row's. Rows with
+ * a text only: an emptied row is not saved at all. Not a marker with no
+ * numeral the editor shows ("XI —"): its row opens with no number picked,
+ * and picking one is the answer the form asks for there.
+ */
+export function sagaRowsLosingMarker(kind: CardKind, values: StructuredRulesValues): number[] {
+  if (kind !== "saga") return [];
+  return values.saga_chapters.flatMap((row, index) =>
+    row.text.trim() &&
+    row.marker &&
+    !keepsStoredMarker(row) &&
+    markerNumerals(row.marker).length > 0 &&
+    unreadableMarkerParts(row.marker).length > 0
+      ? [index]
+      : [],
+  );
+}
+
 /** Rows that hold a text but are more than `face_content` stores (seven
  *  walker rows, a chapter VII…): the card saves as plain text. What the
  *  editors say so from. */
@@ -182,8 +273,12 @@ export function structuredRowsSaveAsText(kind: CardKind, values: StructuredRules
     return values.loyalty_abilities.filter((r) => r.text.trim()).length > MAX_STRUCTURED_ROWS;
   }
   if (kind === "saga") {
-    const rows = sagaTextRowsOf(values.saga_chapters).filter((r) => r.numerals.length > 0);
-    return rows.length > MAX_STRUCTURED_ROWS || rows.some((r) => r.numerals.some((n) => n > MAX_STRUCTURED_ROWS));
+    // …and a kept marker with a numeral the rows cannot hold ("I, XI").
+    const rows = sagaRowsOut(values.saga_chapters).filter((r) => r.marker);
+    return (
+      rows.length > MAX_STRUCTURED_ROWS ||
+      rows.some((r) => r.numerals.some((n) => n > MAX_STRUCTURED_ROWS) || unreadableMarkerParts(r.marker).length > 0)
+    );
   }
   return false;
 }
@@ -228,29 +323,38 @@ export function submittedRulesOf(
   if (kind === "saga") {
     const textRows = sagaTextRowsOf(values.saga_chapters);
     const chapters = textRows.filter((r) => r.numerals.length > 0);
-    if (chapters.length > 0) {
-      const intro = values.saga_intro.trim() || null;
+    const intro = values.saga_intro.trim() || null;
+    if (untouched && chapters.length > 0) {
       const content: FaceContent = { v: 1, saga: { intro, chapters } };
-      if (untouched) {
-        // Untouched: the dual write only where the rows are storable and
-        // say all the text does. A row the chapters cannot carry (a marker
-        // the editor can't number beside ones it can), a chapter VII, a
-        // seventh row, a marker the rows would re-order: the card stays as
-        // it is stored. Writing the numbered rows alone as `face_content` —
-        // which the renderers read BEFORE the text — took that chapter off
-        // the card on a save that only retitled it.
-        const writable =
-          textRows.length === chapters.length &&
-          fits(content) &&
-          ((!stored && !textarea) ||
-            same(resolveSagaChapters(content, textarea), resolveSagaChapters(stored, textarea)));
-        return writable
-          ? { rulesText: textarea, faceContent: content }
-          : { rulesText: textarea, faceContent: stored, keepsStored: true };
-      }
-      return fits(content)
-        ? { rulesText: serializeSaga(intro, chapters), faceContent: content }
-        : { rulesText: serializeSaga(intro, chapters), faceContent: null };
+      // Untouched: the dual write only where the rows are storable and
+      // say all the text does. A row the chapters cannot carry (a marker
+      // the editor can't number beside ones it can), a chapter VII, a
+      // seventh row, a marker the rows would re-order: the card stays as
+      // it is stored. Writing the numbered rows alone as `face_content` —
+      // which the renderers read BEFORE the text — took that chapter off
+      // the card on a save that only retitled it.
+      const writable =
+        textRows.length === chapters.length &&
+        fits(content) &&
+        ((!stored && !textarea) ||
+          same(resolveSagaChapters(content, textarea), resolveSagaChapters(stored, textarea)));
+      return writable
+        ? { rulesText: textarea, faceContent: content }
+        : { rulesText: textarea, faceContent: stored, keepsStored: true };
+    }
+    // EDITED (or new): every row as the editor shows it — and a row whose
+    // numbers are still its stored marker's under THAT marker, order and
+    // numerals as stored (above). Rows the server stores are written as
+    // rows; a marker they cannot hold makes the card plain text.
+    const written = untouched ? [] : sagaRowsOut(values.saga_chapters).filter((r) => r.marker);
+    if (written.length > 0) {
+      const content: FaceContent = {
+        v: 1,
+        saga: { intro, chapters: written.map((r) => ({ numerals: r.numerals, text: r.text })) },
+      };
+      const rulesText = serializeSagaMarkers(intro, written);
+      const storable = written.every((r) => unreadableMarkerParts(r.marker).length === 0) && fits(content);
+      return storable ? { rulesText, faceContent: content } : { rulesText, faceContent: null };
     }
     // A row that holds a text and no chapter number (a marker the editor
     // can't read, "XI — …"; a number not picked yet) is NOT an emptied
@@ -266,9 +370,9 @@ export function submittedRulesOf(
     // text still has, or an intro that was typed, edited or emptied: the
     // editor's intro IS the text ("" = none) — the hidden copy would bring
     // the chapters back and drop the intro.
-    const intro = values.saga_intro.trim();
+    const introText = values.saga_intro.trim();
     const hidden = sagaFromRulesText(values.rules_text);
-    if (hidden.chapters.length > 0 || (hidden.intro ?? "") !== intro) return { rulesText: intro, faceContent: null };
+    if (hidden.chapters.length > 0 || (hidden.intro ?? "") !== introText) return { rulesText: introText, faceContent: null };
     return { rulesText: textarea, faceContent: null };
   }
 
