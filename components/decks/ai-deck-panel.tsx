@@ -188,6 +188,12 @@ export function AiDeckPanel({
       toast.error("Pick or type a style first — that's what the remix is.");
       return;
     }
+    // A deck of emblems alone: nothing to remix, nothing to confirm (the
+    // jobs route answers the same words).
+    if (mode === "remix" && estimate && estimate.cards === 0 && estimate.emblems > 0) {
+      toast.error("That deck has only emblems, and emblems aren't remixed.");
+      return;
+    }
     // The deck page already passes the remixable count and the batch ceiling —
     // the same clamp the jobs route applies (no extra round trip). The
     // estimate (TODO 5.4) prices a double-faced card's two pictures at two
