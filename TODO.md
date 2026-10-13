@@ -41,15 +41,14 @@
 
 ## Frames & card creation plan (2026-09-24)
 
-**What is open** — generated 2026-10-13 from the boxes below (main `9e914fda`,
-PRs to #530 merged; top-level items only). A "partly" item is open and its
-first sentence says what is left. 170 done, 138 open (26 P1, 60 P2, 52 P3).
+**What is open** — generated 2026-10-13 from the boxes below (main `1fea29ee`,
+PRs to #532 merged; top-level items only). A "partly" item is open and its
+first sentence says what is left. 171 done, 139 open (26 P1, 59 P2, 54 P3).
 Counted since the 2026-10-12 table: 4.30b (added by #515), 3.34–3.36 (added
-by #523) and the twelve follow-ups of 2026-10-13 (1.24, 3.37, 3b.24–3b.26,
-4.5f, 5.17, 5.18, 7.13–7.16). No PR is open; three follow-ups are in build on
-their own branches and stay open here until their PRs merge: 3b.25
-(`fix/creator-structured-rows-save`), 3b.26 (`fix/own-card-remix-keeps-frame`)
-and 7.16 (`chore/seed-frame-reviews-refresh`).
+by #523) and the fourteen follow-ups of 2026-10-13 (1.24, 3.37, 3b.24–3b.28,
+4.5f, 5.17, 5.18, 7.13–7.16; 7.16 is done, #532). Open PRs, their items
+still open here: #534 (3b.25, under its independent check) and #533 (3b.26,
+waiting on two owner decisions).
 
 | Phase | Done | Open | partly | P1 | P2 | P3 |
 |---|---|---|---|---|---|---|
@@ -57,11 +56,11 @@ and 7.16 (`chore/seed-frame-reviews-refresh`).
 | 1 Import | 20 | 4 | 3 | 1 | 3 | – |
 | 2 Admin walk-through | 4 | 1 | – | – | – | 1 |
 | 3 Parity | 23 | 16 | 6 | 2 | 10 | 4 |
-| 3b Creator wizard bugs | 13 | 13 | 3 | 1 | 5 | 7 |
+| 3b Creator wizard bugs | 13 | 15 | 3 | 1 | 5 | 9 |
 | 4 Frame factory | 48 | 56 | 17 | 17 | 21 | 18 |
 | 5 Two-sided cards | 15 | 16 | – | – | 7 | 9 |
 | 6 Creator polish and print | 12 | 25 | 5 | 5 | 12 | 8 |
-| 7 Ops and QA | 9 | 7 | – | – | 2 | 5 |
+| 7 Ops and QA | 10 | 6 | – | – | 1 | 5 |
 
 Phase 3 also has two open owner sub-steps under 3.14b; three of Phase 4's open
 items are parked by the owner (4.8c, 4.8d, 4.8e) and one is ask-first (4.30b);
@@ -103,7 +102,7 @@ in the repo). Ordered for execution: each phase unblocks the next. Priorities:
 numbers refer to commit `6077252` (the Card Conjurer audit notes to ~#378);
 PRs #370–#382 moved a lot of code since, so search by symbol.
 
-Status 2026-10-13 (main `9e914fda`, PRs to #530 merged; every top-level box a
+Status 2026-10-13 (main `1fea29ee`, PRs to #532 merged; every top-level box a
 PR since #510 touches was re-checked against the merged PR and the code that
 day — the counts are in "What is open" above). Merged since the last pass:
 the art fits the window by itself and a zoom-out stops at 100 % (3b.18,
@@ -119,12 +118,13 @@ landings (#527) and the deck remix following verified landings (#529); the
 large pips as printed (3.21, #523, **layout v53**, a sweep; 3.32 and 3.33
 closed by the owner, 3.34–3.36 recorded); an emptied field is cleared on an
 edit and an untouched one is never changed (#524, #528); CI — the unit suite
-in six shards, the two slowest groups split (#521, #522, #525). **In build
-(three branches, no PR yet, each will add one line here):** 3b.25 (walkers
-of seven or more lines and sagas past chapter VI cannot be saved; the
-unnumbered-row message; the footer helper copy), 3b.26 (a remix of your own
-card keeps its frame), 7.16 (`supabase/seed.sql` refreshed from production's
-ticks). **Held / ask first:** 6.29 (the stepper) stays the LAST task, ask
+in six shards, the two slowest groups split (#521, #522, #525);
+`supabase/seed.sql` refreshed from production's ticks (7.16, #532). **Open
+PRs:** #534 (3b.25: walkers of seven or more lines and sagas past chapter VI
+cannot be saved; the unnumbered-row message; the footer helper copy — under
+its independent check) and #533 (3b.26: a remix of your own card keeps its
+frame — waits on two owner decisions: 2 credits for the remix of an own
+double-faced card, and whether an own emblem can be remixed). **Held / ask first:** 6.29 (the stepper) stays the LAST task, ask
 first; the walker follow-ups 4.5b, 4.19, 4.33, 4.33a and 5.13 — ask first;
 4.30b (the 1993 white border) — ask which printing first; 7.10 is held;
 4.8c, 4.8d and 4.8e stay parked. **Declined by the owner, recorded as
@@ -132,15 +132,18 @@ closed:** the grey corner arc a white-bordered card shows on five surfaces
 (deck modal and its picker, marketing hero, featured creators, moderation
 list — round 47, under 4.30), a rim for black symbols on the white old
 frames (3.32), an own Phyrexian path (3.33). **Layout version:** v53; the
-next migration is `0138`. **Owner steps the repo cannot show:** the seven
-`m15vehicle` ticks were done on 2026-10-13 (relayed; not yet in
-`supabase/seed.sql`, which still mirrors production as read on 2026-10-06 —
-278 combos — until 7.16). As far as the repo shows, still owed: the first
-ticks of the 1993 pair (`agclassic`, `alphaland`), `retro`, `retroland`,
-`battle` and `split`; the 14 `modern` / `modernland` re-ticks after v47 and
-the saga's seven after v42; and making "Preview parity" a required check
-after about ten green PRs (7.14). Twelve follow-ups were added on 2026-10-13
-(1.24, 3.37, 3b.24–3b.26, 4.5f, 5.17, 5.18, 7.13–7.16). **Ready to build with
+next migration is `0138`. **Owner steps:** `supabase/seed.sql` mirrors
+production as read on 2026-10-13 (313 combos, #532), and it shows the ticks
+the earlier paragraphs listed as owed: `agclassic` and `alphaland` (v48),
+`retro` and `retroland` (v46), `modern` / `modernland` re-ticked (v47), the
+saga re-ticked (v43) and `m15vehicle` in its seven colours (v53); no verified
+tick is stale at layout v53 by the app's `verificationState()`. The ONLY
+frames with no tick are `battle` and `split` — their first ticks are what is
+still owed. Also the owner's: the shared DEV database does not re-run a
+changed seed, so the `-- frame_reviews:begin … end` block of the seed is run
+once in the dev branch's SQL editor (from 7.16); and making "Preview parity"
+a required check after about ten green PRs (7.14). Fourteen follow-ups were
+added on 2026-10-13 (1.24, 3.37, 3b.24–3b.28, 4.5f, 5.17, 5.18, 7.13–7.16). **Ready to build with
 no owner decision pending:** 5.17 (the "2 faces" button out of the tile's
 link — small, and it is invalid markup on every gallery surface today); the
 creator's accessibility leftovers as one PR (3b.19, 3b.24, 3b.10 — #518 laid
@@ -1433,8 +1436,10 @@ Owner decisions 2026-09-28 (the nine PR questions, PR #395):
 - [ ] **3b.22 [P3] Rules editor leftovers** (owner-approved follow-up 2026-10-12, from #505's review; #500, #502 and #505 fixed the rest) — What the rules text box still does: (1) a click on the right half of a symbol puts the caret in FRONT of it; (2) the first character typed at a caret host cannot be undone; (3) Shift+→ needs an extra press at a host; (4) Android soft keyboards bypass the keydown-only delete and arrow handling — handle `beforeinput` `deleteContentBackward` / `deleteContentForward`; (5) Cmd+Z does not restore a symbol removed with Backspace. Creator only.
 - [x] (done 2026-10-13 — #530 merged, owner round 52: a second part's art box is hidden while empty wherever the profile has no `secondFace.artSlot` — flip and adventure (`lib/creator/second-part-fields.ts`, held to both renderers by `tests/unit/render/second-part-never-drawn.test.tsx`). A flip side that already HOLDS a stored picture still shows the box, by the owner's rule that a stored value is what shows a field; the panel is `panels/second-part-panels.tsx` since #526) **3b.23 [P3] Flip's second-face art uploader stores a picture nothing draws** (owner-approved follow-up 2026-10-12) — On a flip card the second-face panel (`components/creator/panels/layout-panel.tsx`) offers an art uploader, and the picture it stores is drawn by neither renderer. Hide the uploader on flip.
 - [ ] **3b.24 [P3] Field groups that say their name twice to a screen reader** (follow-up 2026-10-13, from #518) — #518 made every set of chips a named group (`FieldGroup` `kind="group"`, 24 fields) and dropped the AI fill dialog's inner group because it repeated the field's name. The same doubling is left where a group holds one control with the group's own name (as relayed from the review: check the uploader fields, the rules editor under "Rules text", the cost picker). Listen with VoiceOver / NVDA first, then name the inner control for what it is or drop its name. Creator only; no bake pixel. With 3b.10 and 6.7.
-- [ ] (IN BUILD 2026-10-13 — `fix/creator-structured-rows-save`; do not tick before its PR merges) **3b.25 [P2] A walker with seven or more lines and a saga with chapter VII or later cannot be saved from the editor** (follow-up 2026-10-13, from #528's check; same on `main` before it) — The dual write turns a stored text into rows, and the server refuses more than six rows / a numeral past VI, so the save is refused and nothing is written. With it: a saga row that holds a text and no chapter number is dropped by a save with no message when other chapters are numbered — say so and point at the row; and the Subscriber step's footer helper copy now that an untouched footer stays NULL (#528: blank = no footer mark, untouched = the profile default).
-- [ ] (IN BUILD 2026-10-13 — `fix/own-card-remix-keeps-frame`; do not tick before its PR merges) **3b.26 [P2] A remix of your own card keeps its frame** (follow-up 2026-10-13) — Remixing a card the maker owns should open on the frame the card is stored on, not on a frame re-derived for the kind. Creator only; no stored card changes.
+- [ ] (IN REVIEW 2026-10-13 — PR #534 open, `fix/creator-structured-rows-save`, under its independent check; do not tick before it merges) **3b.25 [P2] A walker with seven or more lines and a saga with chapter VII or later cannot be saved from the editor** (follow-up 2026-10-13, from #528's check; same on `main` before it) — The dual write turns a stored text into rows, and the server refuses more than six rows / a numeral past VI, so the save is refused and nothing is written. With it: a saga row that holds a text and no chapter number is dropped by a save with no message when other chapters are numbered — say so and point at the row; and the Subscriber step's footer helper copy now that an untouched footer stays NULL (#528: blank = no footer mark, untouched = the profile default).
+- [ ] (IN REVIEW 2026-10-13 — PR #533 open, `fix/own-card-remix-keeps-frame`; it waits on two owner decisions: 2 credits for the remix of an own double-faced card, and whether an own emblem can be remixed; do not tick before it merges) **3b.26 [P2] A remix of your own card keeps its frame** (follow-up 2026-10-13) — Remixing a card the maker owns should open on the frame the card is stored on, not on a frame re-derived for the kind. Creator only; no stored card changes.
+- [ ] **3b.27 [P3] The signed-in header overflows between about 768 and 880 px** (recorded 2026-10-13, owner to confirm priority; found on `main` by #520's check) — With a session the site header's row is wider than the viewport in that range (the nav, the search and the account controls together), so the page scrolls sideways or the row is cut. Measure at 768 / 820 / 880 px signed in as each plan, then collapse to the mobile nav earlier or let an item give way. Site chrome; no card pixel.
+- [ ] **3b.28 [P3] A focused field can sit under the creator's sticky Save bar** (recorded 2026-10-13, owner to confirm priority; found on `main` by #520's check) — Tabbing or a "still needed" link can focus a field that the sticky Save bar covers (WCAG 2.2 "Focus Not Obscured"). Give the creator's scroll container a `scroll-padding-bottom` of the bar's height (and the sticky Face switch's at the top), and check the focus jumps of `saveNeedsOf`'s links at 1440 and 375 px. Creator only. With 6.29's layout if that comes first.
 
 ### Phase 4 — The frame factory (6–10 weeks, incremental)
 
@@ -1604,7 +1609,7 @@ rest of the catalogue needs, 4.10–4.11 the catalogue itself.
         - matrix: walker short and long in all 8 colours.
 
         New cases only; every existing walker case keeps its hash.
-- [x] (done 2026-10-13 — the Vehicle frame is merged and verified: #519 (the frame), #527 (borderless and extended-art Vehicles land on it, nearest) and #529 (the AI deck remix follows the verified landing) are merged, the 48 objects were promoted on 2026-10-12 and the owner ticked the seven `m15vehicle` colours on 2026-10-13 (relayed in chat — `supabase/seed.sql` shows them only after its refresh, 7.16). The saga-creature half was NOT built: it is 4.5d's first bullet by the owner's call; what else is left is 4.5f. — History: partly 2026-10-12 — feat/vehicle-saga-pt: the VEHICLE half is built, "As built" below; the saga half is NOT built and moves to 4.5d by the owner's call — the printed saga creature is another body. #519 merged and the 48 objects promoted by the owner on 2026-10-12. Owner step left: the seven colour ticks on `m15vehicle`) **4.5c [P1] Vehicle and saga-creature P/T** (4.5 design 2026-09-29; with 4.6's vehicle treatment and 4.7's saga creatures)
+- [x] (done 2026-10-13 — the Vehicle frame is merged and verified: #519 (the frame), #527 (borderless and extended-art Vehicles land on it, nearest) and #529 (the AI deck remix follows the verified landing) are merged, the 48 objects were promoted on 2026-10-12 and the owner ticked the seven `m15vehicle` colours on 2026-10-13 (in `supabase/seed.sql` since its refresh, #532). The saga-creature half was NOT built: it is 4.5d's first bullet by the owner's call; what else is left is 4.5f. — History: partly 2026-10-12 — feat/vehicle-saga-pt: the VEHICLE half is built, "As built" below; the saga half is NOT built and moves to 4.5d by the owner's call — the printed saga creature is another body. #519 merged and the 48 objects promoted by the owner on 2026-10-12. Owner step left: the seven colour ticks on `m15vehicle`) **4.5c [P1] Vehicle and saga-creature P/T** (4.5 design 2026-09-29; with 4.6's vehicle treatment and 4.7's saga creatures)
       - **As built (2026-10-12, `docs/FRAMES.md` "The Vehicle frame (4.5c)"):**
         - **Measured first** (68 Vehicle prints at HD from 522 Vehicle printings on the 2015 frame, Scryfall, 2026-10-12): 67 of 68 (52 of 53 plain, 7 of 7 borderless, 8 of 8 extended art) wear the brown plate with WHITE digits (ink 252/252/253 at the median), the plain ones the bronze frame; the one exception is DOM #237 Weatherlight (a silver plate, dark digits — not offered, owner 2026-10-12). The plate's brown box: prints x 1173–1420, y 1868–1985 px; ours 1172–1423 × 1873–1980. Spacecraft (10 of 10, EOE / EOC) print the station frame with dark digits and no brown plate: 4.27, as planned.
         - **`m15vehicle`** — a stored template, the artifact kind's variation "Vehicle": Card Conjurer's own Vehicle recipe (`v.png` through the Border and Frame masks under the colour's bars, box and pinline; `cardFrameProperties`), seven colour masters and — owner 2026-10-12 — the TEN two-colour split masters (m15artifact's pair recipe over the bronze frame); the brown `m15PTV` plate under every colour key, TONED onto the prints' median brown with its hue kept (`VEHICLE_PLATE_TONE`: 110/73/30 → 116/89/64 against the prints' 123/91/67; a per-channel gain turned the bevel lavender); white digits; m15artifact's slots, crown (c → the artifact silver), stamp notch (the bar under it is the artifact master's bytes on all seven keys) and collector line. Nothing synthesised. 48 objects to promote.
@@ -3826,7 +3831,7 @@ template/colour as each is verified.)
 - [ ] **7.13 [P3] A parity baseline that two PRs can change without a conflict** (follow-up 2026-10-13, from #514; #527 needed two CI rounds for it) — `tests/parity/baseline.json` is one file with a block per platform that every PR adding or moving a case rewrites, so two open renderer PRs conflict in it and the linux half can only be recorded from CI's `parity-baseline` artifact. Options: one file per case (or per case × platform), or sorted one-line-per-region entries so a merge is line-wise. Tests only.
 - [ ] **7.14 [P3] Make "Preview parity" a required check** (follow-up 2026-10-13, from #514 — the OWNER's GitHub setting, not a code change) — after about ten green PRs in a row on `main` (count from #514, merged 2026-10-13), add CI's **Preview parity** to the `main` ruleset's required checks beside typecheck / lint / unit / e2e. Until then it reports and does not block.
 - [ ] **7.15 [P3] Split `walker-saga-bake` and `mana-gem-parity` across files** (follow-up 2026-10-13, from #525 — optional) — after #522 (six unit shards) and #525 (the art-window masters and the title-room bakes in four files each) these two files are the slowest shard's floor (≈ 5 min). Split them the same way only if 4–5 min is still too long; `frames/edge-contract`, `frames/score-combo` and `frames/art-window-override` cost less and were left.
-- [ ] (IN BUILD 2026-10-13 — `chore/seed-frame-reviews-refresh`; do not tick before its PR merges) **7.16 [P2] `supabase/seed.sql` mirrors production's verified frames again** (follow-up 2026-10-13; 7.9 was the 2026-09-28 pass) — the file is production's list as read on 2026-10-06 (278 combos): it has no `m15vehicle`, and none of the ticks made since. Refresh it from production's `frame_reviews` (the query is in the file's header) so previews and local resets offer what production offers — never ahead of it.
+- [x] (done 2026-10-13 — #532 merged: the file mirrors production as read on 2026-10-13 (313 combos). Owner step left: the shared DEV database does not re-run a changed seed — run the seed's `-- frame_reviews:begin … end` block once in the dev branch's SQL editor) **7.16 [P2] `supabase/seed.sql` mirrors production's verified frames again** (follow-up 2026-10-13; 7.9 was the 2026-09-28 pass) — the file was production's list as read on 2026-10-06 (278 combos): it had no `m15vehicle`, and none of the ticks made since. Refresh it from production's `frame_reviews` (the query is in the file's header) so previews and local resets offer what production offers — never ahead of it.
 
 ## Billing audit follow-ups (2026-09-24)
 
