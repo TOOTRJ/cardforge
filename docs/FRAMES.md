@@ -6419,16 +6419,11 @@ at HD on all four.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 47 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 49 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens, the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame and 4.7's Nyx dress, new templates that joined without a bump, and the battle, which
-`lib/cards/m15-family.ts`: 48 templates — the 23 of v32's frozen scope in
-`lib/cards/layout-version.ts`, plus the two text-box tokens, the six
-full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
-land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame and 4.27a's two station frames, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress and 4.27a's two station frames, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card) prints its names,
