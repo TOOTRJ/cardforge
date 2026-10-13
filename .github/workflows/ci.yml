@@ -25,6 +25,15 @@
 #           (square-corner) changes need only the regenerated baseline.
 #           Frames are fetched from the public bucket by manifest sha and
 #           cached by the manifest's hash — never committed.
+#   parity  the BROWSER preview held to the bake (TODO 3.11): the cards of
+#           tests/parity/cases.ts drawn by components/cards/card-preview.tsx
+#           in headless Chromium (its own `next dev`, no database) and by the
+#           Satori bake, compared region by region at 750 px and HD against
+#           tests/parity/thresholds.ts and the recorded offsets in
+#           tests/parity/baseline.json. The summary has the measured table;
+#           the `parity-baseline` artifact is this run's numbers, and a red
+#           run's `parity-differences` artifact its preview / bake /
+#           difference pictures.
 #
 # The repo is public, so Actions minutes are free. No secrets are needed: the
 # local stack's keys are generated per run and the e2e user is throwaway.
@@ -261,4 +270,69 @@ jobs:
           path: tmp/visual/next/baseline.json
           if-no-files-found: ignore
           retention-days: 14
+          overwrite: true
+
+  parity:
+    name: Preview parity
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      # The same frame cache as the visual jobs (the manifest's PNG objects,
+      # sha-checked as they are read; never committed).
+      - name: Restore the frame cache
+        uses: actions/cache@v4
+        with:
+          path: tmp/visual/frames
+          key: visual-frames-${{ hashFiles('lib/frames/frame-manifest.json') }}
+          restore-keys: visual-frames-
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      # Bake, then the preview in Chromium against its own dev server
+      # (PARITY_HARNESS=1 — the only server /dev/parity is a route of). No
+      # database, no secrets; nothing but the public frames bucket is read.
+      - name: Compare the preview with the bake
+        run: node scripts/parity.mjs
+
+      # What `npm run test:parity -- --update` would write for linux, made on
+      # this runner (a red run prints the command that fetches it).
+      - name: Upload the measured baseline
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: parity-baseline
+          path: tmp/parity/next/baseline.json
+          if-no-files-found: ignore
+          retention-days: 14
+          overwrite: true
+
+      - name: Upload the report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: parity-report
+          path: |
+            tmp/parity/report.md
+            tmp/parity/results/
+          if-no-files-found: ignore
+          retention-days: 7
+          overwrite: true
+
+      # A failing case's preview screenshot, bake and difference map.
+      - name: Upload the differences
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: parity-differences
+          path: tmp/parity/out/
+          if-no-files-found: ignore
+          retention-days: 7
           overwrite: true
