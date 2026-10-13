@@ -13,8 +13,9 @@ import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 //     ("Left half | Right half"), on every step; usable on shared steps;
 //   * the second part's fields out of the "More options" fold: each on the
 //     step of its first-part twin, on the second tab only, writing the form
-//     path it always wrote — and EVERY field the old panel showed is still
-//     offered (which to hide is the owner's decision per field);
+//     path it always wrote; a field the card never draws for the part is
+//     hidden while it is empty (owner round 52 —
+//     creator-second-part-hide.test.tsx holds that rule);
 //   * a part's status ("needs a name"): an adventure's spell and a flip
 //     card's other side have no artwork of their own and are not asked for
 //     any; their tab shows a glyph instead of an art window;
@@ -67,7 +68,6 @@ vi.mock("@/components/cards/card-preview", () => ({
 
 import { CardCreatorForm } from "@/components/creator/card-creator-form";
 import { PartOutline } from "@/components/creator/part-outline";
-import { secondPartArtNotDrawnNote } from "@/components/creator/panels/second-part-panels";
 import { SECOND_PART_WORDS } from "@/lib/creator/second-part";
 import { BACK_FIELD_STEP, PART_FIELD_STEP, faceFieldStepIndex, faceStatusOf } from "@/lib/creator/face-tabs";
 import { partOutlineRects, secondPartHasOwnArt } from "@/lib/creator/part-outline";
@@ -192,16 +192,25 @@ const KINDS = [
   { chip: /^Flip/, template: "flip", kind: "flip", ownArt: false },
 ] as const;
 const wordsOf = (kind: (typeof KINDS)[number]["kind"]) => SECOND_PART_WORDS[kind]!;
-/** What the second part's tab offers, per kind: everything the old panel
- *  showed. An adventure's spell has no flavour, stats, artist or art. */
+/** What the second part's tab offers on a NEW card, per kind: what the
+ *  frame draws for the part (owner round 52 — a field it never draws is
+ *  hidden while empty). A split or aftermath half has a picture of its own;
+ *  a flip side a power / toughness plate; an adventure's spell neither. */
 const IDENTITY_FIELDS = (kind: string) =>
-  kind === "adventure"
-    ? ["back_face.title", "back_face.subtypes_text"]
-    : ["back_face.title", "back_face.subtypes_text", "back_face.art_url", "back_face.artist_credit"];
+  kind === "split" || kind === "aftermath"
+    ? ["back_face.title", "back_face.subtypes_text", "back_face.art_url"]
+    : ["back_face.title", "back_face.subtypes_text"];
 const TEXT_FIELDS = (kind: string) =>
-  kind === "adventure"
-    ? ["back_face.rules_text"]
-    : ["back_face.rules_text", "back_face.flavor_text", "back_face.power", "back_face.toughness", "back_face.loyalty", "back_face.defense"];
+  kind === "flip" ? ["back_face.rules_text", "back_face.power", "back_face.toughness"] : ["back_face.rules_text"];
+/** …and what it never draws: not on the page at all while empty. */
+const HIDDEN_WHILE_EMPTY = (kind: string) => [
+  "back_face.flavor_text",
+  "back_face.loyalty",
+  "back_face.defense",
+  "back_face.artist_credit",
+  ...(kind === "flip" ? [] : ["back_face.power", "back_face.toughness"]),
+  ...(kind === "split" || kind === "aftermath" ? [] : ["back_face.art_url"]),
+];
 
 describe("the pure part", () => {
   it("a half's fields are on the step of their twin — its card type on Identity, a new card and an edit alike", () => {
@@ -364,6 +373,7 @@ describe.each(KINDS)("$kind in the creator", ({ chip, kind, ownArt }) => {
       await click(tab(words.second));
       for (const field of identity) expect(Boolean(named(field)), `${field} on ${here} / second`).toBe(/Identity/.test(here));
       for (const field of text) expect(Boolean(named(field)), `${field} on ${here} / second`).toBe(/Text/.test(here));
+      for (const field of HIDDEN_WHILE_EMPTY(kind)) expect(named(field), `${field} on ${here} / second`).toBeNull();
       expect(costShown(), `cost on ${here} / second`).toBe(/Text/.test(here));
       expect(Boolean(screen.queryByRole("radiogroup", { name: `${words.second} card type` })), `type on ${here}`).toBe(/Identity/.test(here));
       // The first part's own fields are not on the second part's tab.
@@ -378,15 +388,8 @@ describe.each(KINDS)("$kind in the creator", ({ chip, kind, ownArt }) => {
     expect(screen.getByTestId("types-field-input-back")).toBeTruthy();
     expect(within(screen.getByRole("radiogroup", { name: `${words.second} card type` })).getAllByRole("radio")).toHaveLength(9);
     expect(screen.getByRole("button", { name: `Clear ${words.phrase}` })).toBeTruthy();
-    // An adventure's spell shares the creature's picture: no art box, no
-    // artist, no flavour, no stats — as before.
-    if (kind === "adventure") {
-      expect(named("back_face.art_url")).toBeNull();
-      expect(named("back_face.artist_credit")).toBeNull();
-      await goTo(/^text/i);
-      expect(named("back_face.flavor_text")).toBeNull();
-      expect(named("back_face.power")).toBeNull();
-    }
+    // No fold is left for an artist credit the part does not hold.
+    expect(screen.queryByText("More options — artist credit")).toBeNull();
   });
 
   it("the same order on both tabs", async () => {
@@ -404,10 +407,10 @@ describe.each(KINDS)("$kind in the creator", ({ chip, kind, ownArt }) => {
     );
     await click(tab(words.second));
     const secondIdentity = ["back_face.title", `${words.second} card type`, "types-field-input-back", "back_face.subtypes_text", "back_face.art_url", "back_face.artist_credit"];
-    expect(order(secondIdentity)).toEqual(secondIdentity.filter((n) => kind !== "adventure" || !/art/.test(n)));
+    expect(order(secondIdentity)).toEqual(secondIdentity.filter((n) => !HIDDEN_WHILE_EMPTY(kind).includes(n)));
     await goTo(/^text/i);
     const secondText = ["Rarity", "back_face.rules_text", "back_face.flavor_text", "back_face.power", "back_face.toughness", "back_face.loyalty", "back_face.defense"];
-    expect(order(secondText)).toEqual(kind === "adventure" ? ["Rarity", "back_face.rules_text"] : secondText);
+    expect(order(secondText)).toEqual(secondText.filter((n) => !HIDDEN_WHILE_EMPTY(kind).includes(n)));
     // The cost is first, as the first part's is.
     const costGroup = screen.getByRole("group", { name: `${words.second} — Cost` });
     expect(costGroup.compareDocumentPosition(screen.getByRole("radiogroup", { name: "Rarity" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -424,22 +427,16 @@ describe.each(KINDS)("$kind in the creator", ({ chip, kind, ownArt }) => {
       screen.getByRole("radiogroup", { name: `${words.second} card type` }).querySelectorAll("[role='radio']"),
     ).find((el) => /^Sorcery/.test(el.textContent ?? ""))!;
     await click(sorcery);
-    if (kind !== "adventure") await change("back_face.artist_credit", "Bo Marsh");
     await goTo(/^text/i);
-    if (kind !== "adventure") {
-      await change("back_face.flavor_text", "It hums.");
+    if (kind === "flip") {
       await change("back_face.power", "3");
       await change("back_face.toughness", "2");
-      await change("back_face.loyalty", "4");
-      await change("back_face.defense", "5");
     }
     expect(previews()[0].backFace).toMatchObject({
       title: "Second Name",
       subtypes: ["Arcane", "Trap"],
       card_type: "sorcery",
-      ...(kind !== "adventure"
-        ? { artist_credit: "Bo Marsh", flavor_text: "It hums.", power: "3", toughness: "2", loyalty: "4", defense: "5" }
-        : {}),
+      ...(kind === "flip" ? { power: "3", toughness: "2" } : {}),
     });
     // "Clear" empties the part and keeps the kind's own type, as before.
     await goTo(/^identity/i);
@@ -457,10 +454,10 @@ describe.each(KINDS)("$kind in the creator", ({ chip, kind, ownArt }) => {
     await click(tab(words.second));
     expect(screen.getByLabelText(new RegExp(`^${words.second} — Title`))).toBe(named("back_face.title"));
     expect(screen.getByLabelText(new RegExp(`^${words.second} — Subtypes`))).toBe(named("back_face.subtypes_text"));
-    expect(Boolean(screen.queryByText(`${words.second} — Artwork`))).toBe(kind !== "adventure");
-    // A picture the frame never draws is said so, where it is offered.
-    expect(Boolean(screen.queryByTestId("second-part-art-not-drawn"))).toBe(kind === "flip");
-    if (kind === "flip") expect(screen.getByTestId("second-part-art-not-drawn").textContent).toBe(secondPartArtNotDrawnNote(words));
+    expect(Boolean(screen.queryByText(`${words.second} — Artwork`))).toBe(ownArt);
+    // A part with no picture of its own has no art box while it holds none
+    // — and so no line about a picture that is not drawn.
+    expect(screen.queryByTestId("second-part-art-not-drawn")).toBeNull();
     await goTo(/^text/i);
     expect(screen.getByLabelText(`${words.second} rules text`)).toBeTruthy();
     expect(screen.getByRole("group", { name: `${words.second} — Rules text` })).toBeTruthy();

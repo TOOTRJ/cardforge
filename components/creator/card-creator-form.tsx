@@ -226,6 +226,7 @@ import { basicLandManaKey } from "@/lib/cards/watermark";
 import { saveNeedsOf, saveNeedsSentence, type SaveNeed } from "@/lib/creator/save-needs";
 import { secondPartWordsFor, secondPartWordsOfCard } from "@/lib/creator/second-part";
 import { describeSecondPartLoss, type SecondPartLoss } from "@/lib/creator/second-part-loss";
+import { useSecondPartFields } from "@/components/creator/use-second-part-fields";
 import { revealAndFocusField } from "@/lib/creator/focus-field";
 import { resolveFrameProfile, type FrameProfileOverridesMap } from "@/lib/cards/profile-override";
 import {
@@ -956,6 +957,21 @@ export function CardCreatorForm({
   // double-faced back's type and colour on the Card step, a half's type on
   // the Identity step.
   const backFieldSteps = partTabs ? PART_FIELD_STEP : BACK_FIELD_STEP;
+  // Which fields of a one-picture card's second part are on screen (owner
+  // round 52): one the card never draws — a split half's loyalty, a flip
+  // side's own picture — is hidden while it is empty and shown whenever it
+  // holds a value, an error, or was shown earlier in this sitting
+  // (lib/creator/second-part-fields.ts). Nothing is hidden on any other
+  // card; the form keeps every value whatever is on screen.
+  const secondPartFields = useSecondPartFields({
+    profile: partTabs
+      ? resolveFrameProfile(normalizeFrameTemplate(watched.frame_style?.template), profileOverrides)
+      : null,
+    template: normalizeFrameTemplate(watched.frame_style?.template),
+    backFace: watched.back_face,
+    errors: errors.back_face,
+    scope: resetCardId ?? "new",
+  });
   // A card that gains or loses the switch — or goes from two pictures to
   // one — starts on its front (derived during render: a kind change, an
   // import, Start over).
@@ -1437,6 +1453,9 @@ export function CardCreatorForm({
   const fieldStepIndex = (field: string) => faceFieldStepIndex(field, steps, faceTabs, backFieldSteps);
   /** Open a field's step — and, with Face tabs, its face's tab. */
   const showField = (field: string) => {
+    // A field of the second part that is hidden while empty is put back on
+    // screen before anything points at it.
+    secondPartFields.reveal(field);
     goToIndex(fieldStepIndex(field));
     if (faceTabs) setPreviewFace(faceOfField(field));
   };
@@ -2885,6 +2904,7 @@ export function CardCreatorForm({
   const handleStartOver = () => {
     reset(defaults);
     stashedSecondPartRef.current = {};
+    secondPartFields.forget();
     setRemixSource(null);
     setFrameSubstitution(null);
     setImportedArtOrigin(null);
@@ -3899,6 +3919,7 @@ export function CardCreatorForm({
                         artWindow={artWindows.second ?? artWindows.front}
                         isAdventureFrame={isAdventureFrame}
                         ownArt={partOwnArt}
+                        shown={secondPartFields.shown}
                         partWords={partWords}
                         blankSecondFace={blankSecondFaceFor(kind)}
                         // The card's printed-pieces switches, as on the first
@@ -4009,8 +4030,9 @@ export function CardCreatorForm({
               // The second part's tab of a one-picture card (TODO 5.14,
               // part 2): its cost, rules, flavour and stats where the first
               // part's are, in the same order. Rarity and the text alignment
-              // are the card's and stay in their places. An adventure's
-              // spell prints no flavour and no stats (as before).
+              // are the card's and stay in their places. Flavour and the
+              // stats a part never prints show only while they hold a value
+              // (owner round 52, lib/creator/second-part-fields.ts).
               watched.has_back_face ? (
                 <>
                   <FaceScope label={faceWords?.second ?? null}>
@@ -4025,12 +4047,10 @@ export function CardCreatorForm({
                     />
                   </FaceScope>
                   <RulesAlignChoice />
-                  {!isAdventureFrame ? (
-                    <FaceScope label={faceWords?.second ?? null}>
-                      <SecondPartFlavorField />
-                      <SecondPartStatsFields />
-                    </FaceScope>
-                  ) : null}
+                  <FaceScope label={faceWords?.second ?? null}>
+                    {secondPartFields.shown.flavor ? <SecondPartFlavorField /> : null}
+                    <SecondPartStatsFields shown={secondPartFields.shown} />
+                  </FaceScope>
                 </>
               ) : (
                 <SecondPartEmpty isAdventureFrame={isAdventureFrame} partWords={partWords} />

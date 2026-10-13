@@ -18,12 +18,19 @@
 // Every field writes the SAME form path as before (`back_face.*`) with the
 // same control — nothing about what is stored, sent or drawn changes; the
 // fields only moved (tests/unit/components/creator-face-tabs-payload.test.tsx
-// replays saves recorded on `origin/main`). EVERY field the old panel showed
-// is still here, the ones a part never prints included (a split half's
-// loyalty and defense, a flip side's own art box): a stored card may hold a
-// value, and hiding one is the owner's decision per field (TODO 5.14,
-// item 7). An adventure's spell shows no flavour, stats, artist or art, as
-// before — the frame draws none of them.
+// replays saves recorded on `origin/main`).
+//
+// A field the card NEVER DRAWS for the second part is hidden while it is
+// empty and shown whenever it holds a value (owner round 52, 2026-10-13;
+// the rule and what "never drawn" means per frame:
+// lib/creator/second-part-fields.ts — `shown`, from the form's
+// useSecondPartFields): loyalty, defense, flavour text and the artist
+// credit on every second part; power / toughness where the frame has no
+// plate for the part (split, aftermath, adventure — a flip side has one);
+// the art box where the part has no picture of its own (flip, adventure).
+// A hidden field is not rendered at all — no label, no helper, nothing to
+// tab to — and the form keeps its (empty) value, so a save sends what it
+// always sent. A stored value is shown, editable and round-trips.
 //
 // A second part's card type picks no frame and no colour (the card's are
 // shared by both parts), so — unlike a double-faced back's — it is not
@@ -59,6 +66,7 @@ import {
 import { SECOND_FACE_NAME_HINT } from "@/lib/cards/second-face-name";
 import type { ArtWindow } from "@/lib/cards/art-positioner-window";
 import { secondPartFieldName, type SecondPartWords } from "@/lib/creator/second-part";
+import { EVERY_SECOND_PART_UNIT, type SecondPartShown } from "@/lib/creator/second-part-fields";
 import { PtNotDrawnNote } from "@/components/creator/pt-not-drawn-note";
 
 /** Under a second part's art box on a frame that gives the part no picture
@@ -123,12 +131,15 @@ type SecondPartIdentityFieldsProps = {
    *  sideways window — TODO 3b.13), else the front's: the positioner's
    *  surface. */
   artWindow: ArtWindow;
-  /** The Adventure frame: the spell shares the creature's art — no art box
-   *  and no artist credit, as before. */
+  /** The Adventure frame: the name field's helper says "adventure spell". */
   isAdventureFrame: boolean;
-  /** False where the frame gives the part no picture of its own and still
-   *  offers the box (a flip card): one line says the picture is not drawn. */
+  /** False where the frame gives the part no picture of its own (a flip
+   *  card, an adventure): its art box shows only while it holds a picture
+   *  (`shown.art`), with one line saying the picture is not drawn. */
   ownArt: boolean;
+  /** Which never-drawn fields are on screen (the art box, the artist
+   *  credit) — lib/creator/second-part-fields.ts. */
+  shown?: SecondPartShown;
   partWords: SecondPartWords;
   /** What "Clear" leaves behind: a blank part typed for the card's kind
    *  (a split half is an instant, not a creature — TODO 3b.8). */
@@ -146,6 +157,7 @@ export function SecondPartIdentityFields({
   artWindow,
   isAdventureFrame,
   ownArt,
+  shown = EVERY_SECOND_PART_UNIT,
   partWords,
   blankSecondFace = EMPTY_BACK_FACE,
   afterTypeLine,
@@ -217,9 +229,9 @@ export function SecondPartIdentityFields({
 
       {afterTypeLine}
 
-      {/* Art and its artist are the first part's on an adventure — the
-          spell shares the creature's picture (the renderer draws none). */}
-      {!isAdventureFrame ? (
+      {/* A part with no picture of its own (a flip side, an adventure's
+          spell) has no art box until it holds a picture. */}
+      {shown.art ? (
         <>
           {/* The uploader's own heading names the part (no second label). */}
           <div className="flex flex-col gap-1.5" data-testid="second-part-artwork">
@@ -266,7 +278,13 @@ export function SecondPartIdentityFields({
               </p>
             ) : null}
           </div>
+        </>
+      ) : null}
 
+      {/* The footer prints the card's artist, never a second part's: the
+          fold is here only while the part holds a credit. */}
+      {shown.artist ? (
+        <>
           <MoreOptions
             summary="More options — artist credit"
             openWhen={Boolean(errors.back_face?.artist_credit)}
@@ -383,28 +401,46 @@ export function SecondPartFlavorField() {
   );
 }
 
-/** The second part's four stat inputs — all of them, whatever its type, as
- *  before (a stored card may hold any of them; which to hide is the owner's
- *  decision per field, TODO 5.14 item 7). */
-export function SecondPartStatsFields() {
-  const { register } = useFormContext<FormValues>();
+const STAT_GRID_COLS = ["", "", "sm:grid-cols-2", "sm:grid-cols-3", "sm:grid-cols-4"] as const;
+const STAT_NOTE_SPAN = ["", "", "sm:col-span-2", "sm:col-span-3", "sm:col-span-4"] as const;
+
+/** The second part's stat inputs: the ones its frame draws (a flip side's
+ *  power / toughness) and each one it never draws that holds a value
+ *  (`shown` — a stored split half's loyalty). Nothing at all, not an empty
+ *  row, when none is shown. */
+export function SecondPartStatsFields({ shown = EVERY_SECOND_PART_UNIT }: { shown?: SecondPartShown }) {
+  const {
+    register,
+    formState: { errors },
+  } = useFormContext<FormValues>();
+  const count = (shown.pt ? 2 : 0) + (shown.loyalty ? 1 : 0) + (shown.defense ? 1 : 0);
+  if (count === 0) return null;
+  const back = errors.back_face;
   return (
-    <div className="grid gap-4 sm:grid-cols-4">
-      <FieldGroup label="Power">
-        <input {...register("back_face.power")} placeholder="3" className={inputClass(false)} autoComplete="off" />
-      </FieldGroup>
-      <FieldGroup label="Toughness">
-        <input {...register("back_face.toughness")} placeholder="2" className={inputClass(false)} autoComplete="off" />
-      </FieldGroup>
-      <FieldGroup label="Loyalty">
-        <input {...register("back_face.loyalty")} placeholder="—" className={inputClass(false)} autoComplete="off" />
-      </FieldGroup>
-      <FieldGroup label="Defense">
-        <input {...register("back_face.defense")} placeholder="—" className={inputClass(false)} autoComplete="off" />
-      </FieldGroup>
+    <div className={`grid gap-4 ${STAT_GRID_COLS[count]}`}>
+      {shown.pt ? (
+        <>
+          <FieldGroup label="Power" error={back?.power?.message}>
+            <input {...register("back_face.power")} placeholder="3" className={inputClass(Boolean(back?.power))} autoComplete="off" />
+          </FieldGroup>
+          <FieldGroup label="Toughness" error={back?.toughness?.message}>
+            <input {...register("back_face.toughness")} placeholder="2" className={inputClass(Boolean(back?.toughness))} autoComplete="off" />
+          </FieldGroup>
+        </>
+      ) : null}
+      {shown.loyalty ? (
+        <FieldGroup label="Loyalty" error={back?.loyalty?.message}>
+          <input {...register("back_face.loyalty")} placeholder="—" className={inputClass(Boolean(back?.loyalty))} autoComplete="off" />
+        </FieldGroup>
+      ) : null}
+      {shown.defense ? (
+        <FieldGroup label="Defense" error={back?.defense?.message}>
+          <input {...register("back_face.defense")} placeholder="—" className={inputClass(Boolean(back?.defense))} autoComplete="off" />
+        </FieldGroup>
+      ) : null}
       {/* A split or aftermath half has no P/T slot: say so once a number
           is typed (this row isn't gated on the type). */}
-      <PtNotDrawnNote face="second" onlyWithValue className="sm:col-span-4" />
+      {shown.pt ? <PtNotDrawnNote face="second" onlyWithValue className={STAT_NOTE_SPAN[count]} /> : null}
     </div>
   );
 }

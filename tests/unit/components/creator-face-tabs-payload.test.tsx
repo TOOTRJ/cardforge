@@ -33,6 +33,17 @@ import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 // the fields a half never prints included (its loyalty, its defense, a flip
 // side's own picture) — a stored card as the form opens it, and an edit of
 // one part only, then of the other.
+//
+// Round 52 (2026-10-13 — a field the card never draws for the second part is
+// hidden while it is empty): a NEW card's second part is filled through the
+// fields its tab offers on a new card — a split or aftermath half's picture,
+// a flip side's power / toughness; no loyalty, defense, flavour or artist,
+// no picture on a flip side — and each stored split / aftermath / flip card
+// gained an edit of two fields its second part never prints (they hold a
+// value there, so they are on screen). Every PART scenario was recorded
+// again by THIS FILE on `origin/main` 1a4d4f69 (part 2 merged, the hide rule
+// not) from a `git archive` of that commit; part 1's seven came out equal to
+// the fixture.
 // ---------------------------------------------------------------------------
 
 const toast = vi.hoisted(() => ({ info: vi.fn(), error: vi.fn(), success: vi.fn(), message: vi.fn() }));
@@ -484,17 +495,16 @@ async function newPartCard(kind: PartKind) {
   await type("back_face.subtypes_text", "Arcane, Trap");
   await addPips("back_face.cost", ["Blue", "Blue"]);
   await typeRules("back_face.rules_text", "Tap target permanent.\nDraw a card.");
-  if (kind !== "adventure") {
-    // An adventure's spell has no flavour, stats, artist or art (the old
-    // panel offered none either).
-    await type("back_face.flavor_text", "Cold comfort - \"and little of it\".");
+  // What a NEW card's second part is offered (owner round 52): the fields
+  // its frame draws — a flip side's power / toughness, a split or aftermath
+  // half's own picture. Loyalty, defense, flavour, the artist credit, a
+  // half's power / toughness and a flip side's picture are never drawn, so
+  // they are hidden while empty (creator-second-part-hide.test.tsx).
+  if (kind === "flip") {
     await type("back_face.power", "1");
     await type("back_face.toughness", "2");
-    await type("back_face.loyalty", "3");
-    await type("back_face.defense", "4");
-    await type("back_face.artist_credit", "Bo Marsh");
-    await setArt("back_face.art_url");
   }
+  if (kind === "split" || kind === "aftermath") await setArt("back_face.art_url");
   return save("createCardAction");
 }
 
@@ -524,6 +534,22 @@ const PART_SCENARIOS: Record<string, () => Promise<unknown>> = Object.fromEntrie
         return save("updateCardAction");
       },
     ],
+    // A stored value in a field the part never prints is on screen and
+    // editable (an adventure's spell showed none of them on `origin/main`,
+    // so its case is creator-second-part-hide.test.tsx's alone).
+    ...(kind === "adventure"
+      ? []
+      : ([
+          [
+            `stored ${kind} card — an edit of two fields its second part never prints keeps the rest as stored`,
+            async () => {
+              renderForm({ mode: "edit", card: storedPartCard(kind) });
+              await type("back_face.loyalty", "5");
+              await type("back_face.flavor_text", "Colder comfort.");
+              return save("updateCardAction");
+            },
+          ],
+        ] as [string, () => Promise<unknown>][])),
   ]),
 );
 Object.assign(SCENARIOS, PART_SCENARIOS);
