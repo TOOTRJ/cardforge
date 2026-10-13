@@ -51,8 +51,9 @@ describe("the front face, every template", () => {
   it("the answer IS the profile's slot — what both renderers gate on", () => {
     for (const t of FRAME_TEMPLATE_VALUES) {
       const profile = getFrameProfile(t);
-      expect(frontDrawsPowerToughness(t), t).toBe(Boolean(profile.pt));
-      expect(profileDrawsPowerToughness(profile), t).toBe(Boolean(profile.pt));
+      // A corner slot, or the station frame's plate on a tier (TODO 4.27a).
+      expect(frontDrawsPowerToughness(t), t).toBe(Boolean(profile.pt || profile.tiers));
+      expect(profileDrawsPowerToughness(profile), t).toBe(Boolean(profile.pt || profile.tiers));
     }
   });
 

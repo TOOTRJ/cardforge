@@ -2532,6 +2532,12 @@ const M15SNOW: FrameProfile = {
 const UNDER_FRAME_RECT: Rect = { topPct: 2.7, leftPct: 3.7, widthPct: 92.6, heightPct: 93.3 };
 /** The station frame's inks (TODO 4.27a): black text on every key, WHITE
  *  digits on the black plate (255 on 21 of 21 prints; owner round 54). */
+/** The station frame's picture (TODO 4.27a): the under-frame rect, 3 px
+ *  wider — our cut field ends at column 1444 on the right (the M15 masters'
+ *  border is 2 px thinner there than on the left), so the rect that covers
+ *  it with the art-window check's 0.05 % to spare ends at 1447.5 px, as far
+ *  under the right border as it starts under the left one (55.5 / 58). */
+const STATION_ART_RECT: Rect = { ...UNDER_FRAME_RECT, widthPct: 92.8 };
 const STATION_INKS = { textColorHex: "#000000", digitColorHex: "#ffffff" } as const;
 /** A profile without its corner P/T slot (the station frame: the plate is
  *  drawn on a tier, never in the corner). */
@@ -5321,7 +5327,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15station: {
     ...withoutPt(M15ARTIFACT),
     label: "M15 Station (Spacecraft)",
-    underFrameArt: { rect: UNDER_FRAME_RECT, artSlot: UNDER_FRAME_RECT },
+    underFrameArt: { rect: STATION_ART_RECT, artSlot: STATION_ART_RECT },
     rulesAlignSwitch: false,
     tiers: STATION_INKS,
     overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }, { ...M15_HOLO_STAMP, keyMap: { c: "a" } }],
@@ -5330,7 +5336,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15stationland: {
     ...withoutPt(M15LAND),
     label: "M15 Station (Planet)",
-    underFrameArt: { rect: UNDER_FRAME_RECT, artSlot: UNDER_FRAME_RECT },
+    underFrameArt: { rect: STATION_ART_RECT, artSlot: STATION_ART_RECT },
     rulesAlignSwitch: false,
     tiers: STATION_INKS,
     overlays: [{ ...M15_CROWN, keyMap: { c: "l" } }, { ...M15_HOLO_STAMP, keyMap: { c: "l" } }],

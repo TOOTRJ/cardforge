@@ -96,7 +96,14 @@ const PICKS: readonly Pick[] = [
     row: () => ({}),
   },
   { from: "m15station/u/artifact-short@tiers-one", why: "station: one tier, the plate and the reminder's top band over the coded picture" },
-  { from: "m15station/w/artifact-short@tiers-dressed", why: "station: crown, holofoil stamp (its arch in the last band) and the collector line over the cut master" },
+  {
+    from: "m15station/g/artifact-long@crown",
+    as: "@full-box",
+    // A three-pip cost: the long card's five-pip row is the M15 cost row's
+    // own 750 px difference ("750-cost-row-width"), not this frame's.
+    why: "station: the crown over the cut master, a fuller box (a two-paragraph plated tier, 10/10 on the plate)",
+    row: () => ({ cost: "{2}{G}" }),
+  },
   { from: "m15station/r/artifact-short@foil", why: "station: the foil sheen over the box, the bands and the drawn pieces — ink above it" },
   { from: "m15stationland/g/land-short", why: "station: a Planet — the land master, one tier, no plate" },
   // --- art away from its default position (a coded picture) ----------------

@@ -134,6 +134,10 @@ const DOCUMENTED_NULLS = new Set([
   "m15mdfcfront/c", "m15mdfcback/c",
   "m15mdfclandfront/c", "m15mdfclandfront/m",
   "m15mdfclandback/c", "m15mdfclandback/m",
+  // The station frame (TODO 4.27a): Edge of Eternities prints five Planets,
+  // one per colour — no gold or colourless one. The two masters exist so no
+  // colour of a land resolves to a missing master.
+  "m15stationland/m", "m15stationland/c",
 ]);
 
 describe("frame-references.json", () => {

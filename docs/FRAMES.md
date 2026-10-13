@@ -2886,6 +2886,114 @@ bar's right end, where the set symbol goes. The printed body comes with
 ("This frame doesn't draw power / toughness", `lib/cards/pt-drawn.ts`)
 stays true for a saga creature.
 
+### The Station frame (4.27a)
+
+TODO 4.27a (owner 2026-10-13, rounds 53–54). `m15station` and
+`m15stationland` are the frame Edge of Eternities (2025) prints its
+Spacecraft (artifacts) and Planets (lands) on: the M15 bars, pinlines and
+border with **no frame field** — the picture runs under the whole card —
+and a **see-through text box cut into bands**: a top band (abilities and
+the Station reminder), then one band per charge tier, each with an "N+"
+badge on the box's left pinline, and the card's P/T on a black plate with
+white digits on the tier that makes it a creature. PR 1 ships the body
+(masters, profiles, layout, both renderers); the creator's tier editor,
+the import and the AI follow (PRs 2–3). Until the owner verifies a colour
+nobody is offered the frames (an admin: `?previewFrames=m15station`).
+
+**What the prints show** (30 bordered station printings against 16 M15
+controls of the same set, read at 1500 × 2100 on 2026-10-13; the numbers
+and their spreads are `scripts/lib/station-2025.mjs`, the constants the
+renderers read `lib/cards/station.ts` `STATION`): title bar, type bar,
+pinlines, art-window rail and border equal the M15 controls' to 0–4 levels
+and 0–1 px; the field between the border and the bars is the untinted
+picture on 30 of 30; the box is the M15 box at about 0.68 strength; a tier's
+wash is the key's own colour over it at 0.25 (tier 1) and 0.57 (tier 2);
+a badge is a dark disc r 50 in a 10 px ring of the pinline's colour, centred
+x 100 and on its band; the plate is 230 × 112 with a 14 px rim, x 1190–1420,
+centred on its band, its digits white on 21 of 21.
+
+**Masters are PipGlyph's own derivation** (`scripts/build-station-frames.mjs`;
+neither Card Conjurer nor MSE has the frame at print size):
+`m15station/<w u b r g m c>` from the published `m15artifact/<k>`,
+`m15stationland/<w u b r g m c>` from `m15land/<k>`, each with two cuts —
+the frame FIELD to α 0 (its shape is where `m15/<k>` and `m15artifact/<k>`
+differ: the two paint the same bars and boxes over two fields; the run
+refuses a mask whose box is not the recorded one) and the text box's
+interior to α × 0.68. Nothing is drawn into a master. Every WebP's alpha is
+checked equal to its PNG's (the preview reads one, the bake the other: one
+level of alpha is a visible step over bright art). Printed Planets are
+w u b r g; `m` and `c` exist so that no colour of a land resolves to a
+missing master, and stay unticked. Provenance: `frame-sources.json`
+(`source: "pipglyph"`; the Card Conjurer importer leaves another builder's
+entries alone). The bucket is the only home: a master cut from a bucket
+master never enters git.
+
+**Profiles.** The parents' slots, crown, stamp notch and collector line;
+`underFrameArt` with `artSlot` = the under-frame rect (ONE picture, as the
+colourless walker — the art positioner, the AI's art size and the print
+path read the same rect); `tiers` (the inks: black text, white digits);
+**no `pt` slot** — the plate is on a tier, never in the corner — and
+`rulesAlignSwitch: false` (no Centred in the first build, owner round 54).
+The kind gate is the Vehicle's (`SUBTYPE_DRESSES`): `m15station` dresses an
+artifact whose subtypes say Spacecraft, `m15stationland` a land whose
+subtypes say Planet, nothing else; `subtypeFrameFor` reads a base's whole
+family of dresses (m15artifact has two).
+
+**Data.** A station card's text is Scryfall's own shape — the top band's
+lines, then `N+ | text` opening each tier, further lines joining the open
+tier — or structured rows in `face_content.station`
+(`{ intro, tiers: [{ threshold, text, pt? }] }`), read FIRST
+(`resolveStationTiers`). 0–3 tiers (a fourth line stays in the third tier's
+text; the schema refuses a fourth row); a Spacecraft with no tier is a top
+band alone. The plate sits on ONE tier: from plain text the tier the
+reminder names ("creature at N+"), else the last; rows may name another —
+never the top band, and only on a card that prints a P/T
+(`printsPowerToughness`), so a Planet has none.
+
+**The tiers layout** (`lib/cards/station-layout.ts`, the `tiers` anatomy of
+the ONE rules layout): one size for the whole box; each tier band is its
+text + 2 × 20 px, never under 168 px (180 for the last), the top band the
+rest, its text 20 px clear of its edges; every band's lines are
+`layoutRulesAt`'s (both targets), centred in the band, a tier's column from
+x 180; the plate is a FLOAT of its tier (the lines break short of it) and
+the stamp's arch a keep-out of the last band. The fit takes the LARGEST
+size at which everything fits; under 50 px it gives up the bands' floor and
+air (124 px, 12 px) before any text clips. That rule was fitted on the
+prints: the median band edge is 2 px from print's and 22 of 30 are within
+10 (`tests/unit/cards/station-layout.test.ts` holds it; the proof's
+36 px padding left nine cards 10–37 px off). What is left: the three Planets
+with a three-line tier and EOE #35 sit 25–36 px low, EOE #241 70 px (print
+gives its tier more room than any rule here), EOE #249's reading is an
+outlier. Every band, badge and plate box is EVEN in HD px — a whole px at
+the 750 px target.
+
+**Drawing.** `cardStation()` is what both renderers call; they only draw
+its `StationDrawing`: the PIECES — each tier's wash, the badge discs, the
+plate — are our own inline SVGs (`lib/cards/station-art.ts`, the white
+border's pattern: the same `data:` URL in the preview, the bake and both
+finish masks; nothing to warm, nothing to promote), drawn right after the
+frame and UNDER both finishes, which mask with them (the saga rail's
+pattern); the "N+" numerals and the P/T digits are ink through the stat fit
+(a wide value shrinks to the plate's face); the text is `RulesBox` /
+`RulesBoxBake`. The ring and the rim are lit from above with a dark seam
+against a face with a soft lighter middle (the bevel round, owner round 54
+decision 3; `flat` is kept for the comparison sheet only).
+
+**Checks.** The art-window check passes on the under-frame rect; the edge
+contract is the parents' (border on every edge), square corners black.
+Visual matrix: both templates × every colour, short and long, plus
+`@tiers-one` / `-three` (rows, the plate on the middle tier) / `-none` /
+`-wide` (20/20) / `-star`, the crown, stamp and collector-line cases of
+every template that draws them, foil and etched. Parity: six cases — two over a high-contrast STRIPE picture
+(black, white and saturated bars under every band, blue and red keys), one
+tier, the dressed card, foil, a Planet — and a `tiers` region over the box
+with its badges and plate. No limit was raised and no known difference
+added.
+
+**Rollout.** ADDITIONS: new templates no stored card sits on — no layout
+bump, no sweep, no badge, no migration. A stored Spacecraft on the artifact
+frame keeps it.
+
 ### Printed pieces a card switches on
 
 TODO 4.6.0. The legendary crown (4.6a) and the two-colour frames (4.6b) are
@@ -6105,11 +6213,11 @@ at HD on all four.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 46 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 48 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens, the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies and 4.5c's Vehicle frame, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame and 4.27a's two station frames, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card) prints its names,

@@ -111,7 +111,7 @@ import {
   type CopyrightSlotLayout,
 } from "@/lib/cards/copyright-slot";
 import { WHITE_BORDER_RECT, resolveWhiteBorder, whiteBorderDataUrl } from "@/lib/cards/white-border";
-import { cardStation, type StationPiece } from "@/lib/cards/station-layout";
+import { cardStationLayout, stationDrawing, type StationPiece } from "@/lib/cards/station-layout";
 import { inlineSymbolStyle, symbolStyle, symbolStyleOf, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
 import { FOOTER_BRUSH_PATH, FOOTER_BRUSH_VIEWBOX } from "@/lib/cards/footer-brush";
 import { BRAND_FACE, TYPE_FACES, faceOf, footerFace, slotFace } from "@/lib/cards/type-faces";
@@ -1084,10 +1084,11 @@ function CardFace({
   // discs and plate are frame pieces under both finishes (StationPieces),
   // the numerals and digits ink, the text the layout's lines.
   const stationStamp = holoStamp?.keepOut ?? null;
-  const station = useMemo(
-    () => (textless ? null : cardStation(layout, face, masterKey, stationStamp)),
-    [textless, layout, face, masterKey, stationStamp],
+  const stationLaid = useMemo(
+    () => (textless ? null : cardStationLayout(layout, face, stationStamp)),
+    [textless, layout, face, stationStamp],
   );
+  const station = stationLaid ? { layout: stationLaid, drawing: stationDrawing(stationLaid, layout, masterKey) } : null;
   const stationPieces = station?.drawing.pieces ?? NO_STATION_PIECES;
   const drawsRulesBox =
     !textless &&

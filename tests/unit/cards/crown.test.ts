@@ -50,6 +50,8 @@ describe("which card draws the crown", () => {
     // crown cut round their well or housing.
     const DRAWN = [
       "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart",
+      // The station frame (TODO 4.27a): the parents' crown band on its two entries.
+      "m15station", "m15stationland",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
     ];
     expect(crowned).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => DRAWN.includes(t)));

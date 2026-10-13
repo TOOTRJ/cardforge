@@ -152,7 +152,9 @@ describe("the crown slot the profiles draw (M15_CROWN)", () => {
     // Nothing else reads the band (the borderless frames and extended art
     // draw the floating crown; devoid draws none).
     expect(FRAME_TEMPLATE_VALUES.filter((t) => (getFrameProfile(t).overlays ?? []).some((o) => o.assetPathTemplate === M15_CROWN.assetPathTemplate))).toEqual(
-      ["m15", "m15land", "m15artifact", "m15vehicle", "m15snow", "m15snowland"],
+      // (…and the station frame's two entries, TODO 4.27a: m15artifact's and
+      // m15land's band, keyed as theirs.)
+      ["m15", "m15land", "m15artifact", "m15vehicle", "m15station", "m15stationland", "m15snow", "m15snowland"],
     );
   });
 });

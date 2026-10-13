@@ -134,9 +134,11 @@ describe("framesForKind", () => {
       expect(skinsFor(kind)).toEqual(["m15snow", "m15devoid", "m15borderless"]);
     }
     // …and the Vehicle frame (TODO 4.5c), a subtype dress of the artifact frame.
-    expect(skinsFor("artifact")).toEqual(["m15borderlessartifact", "m15vehicle"]);
-    // The land's borderless dress (4.34).
-    expect(skinsFor("land")).toEqual(["m15snowland", "m15borderlessland"]);
+    // …and the station frame (TODO 4.27a), a Spacecraft's.
+    expect(skinsFor("artifact")).toEqual(["m15borderlessartifact", "m15vehicle", "m15station"]);
+    // The land's borderless dress (4.34) — and the station frame (TODO
+    // 4.27a), a Planet's.
+    expect(skinsFor("land")).toEqual(["m15snowland", "m15borderlessland", "m15stationland"]);
     // The artifact dress, 4.49 (b)'s text-box variations and 4.48 / 4.50's
     // full-art heights (the artifact ones are type-word dresses: the pickers
     // hide them, isTypeWordDress).
@@ -759,7 +761,8 @@ describe("the borderless land (4.34)", () => {
     // fullartland's bare art, 0.26).
     expect(templateIsBasicOnly("m15borderlessland")).toBe(false);
     const land = framesForKind("land", all).filter((f) => f.group === "skin").map((f) => f.template);
-    expect(land).toEqual(["m15snowland", "m15borderlessland"]);
+    // (…beside the station frame, TODO 4.27a: a Planet's subtype dress.)
+    expect(land).toEqual(["m15snowland", "m15borderlessland", "m15stationland"]);
     // Offered to no other kind.
     for (const kind of CARD_KIND_VALUES.filter((k) => k !== "land")) {
       expect(framesForKind(kind, all).map((f) => f.template), kind).not.toContain("m15borderlessland");

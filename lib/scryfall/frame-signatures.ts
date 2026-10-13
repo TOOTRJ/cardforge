@@ -2423,6 +2423,50 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     },
     M15_ERA_GAPS.filter((gap) => gap !== "vehicle"),
   ),
+  // A Spacecraft or a Planet on the plain 2015 frame (TODO 4.27a; Edge of
+  // Eternities 2025) prints the STATION frame: no frame field, a see-through
+  // text box banded into charge tiers, the P/T on a plate on a tier. Scryfall
+  // calls them `layout: normal` — the subtype is the signature (31 Spacecraft
+  // and 5 Planets, every one a station card). Until `m15station` /
+  // `m15stationland` is verified in the card's colour the artifact / land
+  // frame is the nearest (it was called exact before this rule: the import
+  // now says what is missing and logs the request); once it is, the rule
+  // names the station frame and is exact — the oracle text is already the
+  // tiers' grammar (lib/cards/station.ts), so the card draws its bands as
+  // imported. Extended-art, borderless and showcase printings keep their
+  // own gaps (step 2 lands them here).
+  ...withGaps(
+    {
+      key: "station/spacecraft",
+      exactLabel: "Station frame (Spacecraft)",
+      match: { frames: ["2015"], kinds: ["artifact"], subtypesAny: ["Spacecraft"] },
+      outcome: {
+        status: "nearest",
+        template: { family: "m15" },
+        onceVerified: "m15station",
+        exactOnceVerified: true,
+        reason: "PipGlyph's station frame isn't verified yet",
+        blockedBy: "4.27a",
+      },
+    },
+    M15_ERA_GAPS,
+  ),
+  ...withGaps(
+    {
+      key: "station/planet",
+      exactLabel: "Station frame (Planet)",
+      match: { frames: ["2015"], kinds: ["land"], subtypesAny: ["Planet"] },
+      outcome: {
+        status: "nearest",
+        template: { family: "m15" },
+        onceVerified: "m15stationland",
+        exactOnceVerified: true,
+        reason: "PipGlyph's station frame isn't verified yet",
+        blockedBy: "4.27a",
+      },
+    },
+    M15_ERA_GAPS,
+  ),
   ...withGaps(
     {
       key: "era/2015",

@@ -280,14 +280,24 @@ export function cardStation(
   stamp: Rect | null = null,
   style: StationArtStyle = "bevel",
 ): { layout: StationLayout; drawing: StationDrawing } | null {
+  const layout = cardStationLayout(profile, card, stamp);
+  return layout ? { layout, drawing: stationDrawing(layout, profile, masterKey, style) } : null;
+}
+
+/** cardStation's first half — the layout alone (what the preview memoises;
+ *  the drawing is a cheap read of it). */
+export function cardStationLayout(
+  profile: Pick<FrameProfile, "rules" | "tiers" | "symbolStyle">,
+  card: StationCard,
+  stamp: Rect | null = null,
+): StationLayout | null {
   if (!profile.tiers) return null;
   const hasPt = printsPowerToughness(card);
-  const layout = stationLayout({
+  return stationLayout({
     profile,
     text: resolveStationTiers(card.faceContent, card.rulesText, hasPt),
     flavorText: card.flavorText,
     ptValue: hasPt ? ptValue(card.power, card.toughness) : null,
     stamp,
   });
-  return { layout, drawing: stationDrawing(layout, profile, masterKey, style) };
 }

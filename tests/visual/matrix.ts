@@ -645,6 +645,10 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // colourless Vehicle (DMU #230), its colour on a coloured one (KHM #169),
   // gold on three colours.
   ["m15vehicle", ["c", "g", "wub"]],
+  // TODO 4.27a: the station frame's crown — the parents' (artifact silver /
+  // land grey on a colourless card, the colour's, gold).
+  ["m15station", ["c", "g", "wub"]],
+  ["m15stationland", ["c", "g"]],
   ["m15land", ["g", "c", "wub"]],
   // TODO 4.6f (wave 2a): the borderless FLOATING crown, baked into the
   // crowned twins (`<key>-legendary`, FrameProfile.crownMasters) — every
@@ -1163,8 +1167,8 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   // (two tiers, the plate on the last) don't hold — one tier; three, as
   // structured rows with the plate on the MIDDLE one (face_content, read
   // before the text); no tier at all (a top band alone, no plate); the
-  // plate's digits at their widest and oddest; the parents' crown, stamp
-  // and collector line over the cut masters.
+  // plate's digits at their widest and oddest. (The parents' crown, stamp
+  // and collector line have their own cases on these templates, below.)
   ["m15station", "artifact", "u", "@tiers-one", { rules_text: `${stationReminder("Spacecraft", 8)}\n8+ | Flying`, power: "4", toughness: "4" }],
   [
     "m15station",
@@ -1190,13 +1194,6 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   ["m15station", "artifact", "c", "@tiers-none", { rules_text: "Flying\nWhenever this Spacecraft attacks, draw a card.", power: "3", toughness: "3" }],
   ["m15station", "artifact", "g", "@tiers-wide", { power: "20", toughness: "20" }],
   ["m15station", "artifact", "b", "@tiers-star", { power: "*", toughness: "7" }],
-  [
-    "m15station",
-    "artifact",
-    "w",
-    "@tiers-dressed",
-    { supertype: "Legendary", rarity: "mythic", frame_style: { template: "m15station", finish: "regular", crown: true, stamp: "oval", collector: "2023" } },
-  ],
   [
     "saga",
     "saga",
@@ -1835,7 +1832,8 @@ export function visualCases(): VisualCase[] {
 
 /** The templates whose PROFILES entry declares the holofoil stamp's notch
  *  (TODO 4.9c; tests/unit/render/visual-matrix.test.ts keeps it in step). */
-export const STAMP_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15snow", "m15devoid", "m15pw"];
+// …and the station frame (TODO 4.27a): the parents' notch over the cut masters.
+export const STAMP_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15station", "m15stationland", "m15snow", "m15devoid", "m15pw"];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's
  *  cases (the 4.9c follow-up; the same test keeps it in step: a template

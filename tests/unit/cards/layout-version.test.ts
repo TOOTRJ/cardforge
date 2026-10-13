@@ -416,6 +416,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
   ...["m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback"],
   // TODO 4.5c's Vehicle frame.
   "m15vehicle",
+  // The station frame (TODO 4.27a).
+  "m15station", "m15stationland",
 ];
 /** Templates added after v36 (TODO 5.1a's transform bodies, 5.1b's modal
  *  bodies): no card was ever baked on them before v37, so v36's frozen
@@ -425,6 +427,8 @@ const POST_V36_TEMPLATES: readonly string[] = [
   "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
   // TODO 4.5c's Vehicle frame.
   "m15vehicle",
+  // The station frame (TODO 4.27a).
+  "m15station", "m15stationland",
 ];
 
 describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
@@ -768,6 +772,8 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
       // …and 4.5c's Vehicle frame.
       "m15vehicle",
+      // …and the station frame (TODO 4.27a).
+      "m15station", "m15stationland",
     ];
     // An EXISTING template that joined brought its own bump: the battle
     // (TODO 4.21b), with layout v43 — its Card Conjurer master and the
@@ -1148,7 +1154,9 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
     // scope's pickFrameColorKey).
     // (flip/c took the rect with its own bump, layout v38 — TODO 4.21a's
     // see-through Card Conjurer master: not v35's business either.)
-    const SEE_THROUGH_SINCE_V35 = ["flip"];
+    // (The station frame, TODO 4.27a, draws ONE picture in the rect on every
+    // key: new templates no card was ever baked on — no bump at all.)
+    const SEE_THROUGH_SINCE_V35 = ["flip", "m15station", "m15stationland"];
     for (const t of ALL) {
       const u = getFrameProfile(t).underFrameArt;
       if (u && (sameRect(u.rect, UNDER) || (u.artSlot && sameRect(u.artSlot, UNDER)))) {

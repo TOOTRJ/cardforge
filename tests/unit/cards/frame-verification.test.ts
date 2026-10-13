@@ -113,6 +113,10 @@ describe("frame reference registry", () => {
       "m15mdfclandfront/m",
       "m15mdfclandback/c",
       "m15mdfclandback/m",
+      // The station frame (TODO 4.27a): EOE prints five Planets, one per
+      // colour — no gold or colourless one.
+      "m15stationland/m",
+      "m15stationland/c",
     ]);
     const m15Templates = FRAME_TEMPLATE_VALUES.filter(
       (t) => eraForTemplate(t) === "m15",
@@ -122,8 +126,8 @@ describe("frame reference registry", () => {
     // 4.50's six full-art tokens + 4.33's two borderless planeswalkers (every
     // colour referenced, the tall one's c by the serialized DFT #376) +
     // 4.52's emblem + 5.1a's five transform bodies + 5.1b's four modal bodies.
-    // + 4.5c's Vehicle frame.
-    expect(m15Templates.length).toBe(39);
+    // + 4.5c's Vehicle frame + the station frame's two (TODO 4.27a).
+    expect(m15Templates.length).toBe(41);
     expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {
