@@ -683,12 +683,18 @@ Rules and gotchas:
   1993 pair — other drawings on another box, its own step). A NEW card
   starts BLACK (with the text alignment, the other anatomy key no default
   stamps), an import follows `border_color`. ONE inline SVG
-  (`lib/cards/white-border.ts`: the white `#ececea` over the master's own
-  black border, the black keyline — 3 px on 1997, 4 px on 2003 — drawn
-  INSIDE the frame box) is the same `data:` URL in the preview, the bake
-  and both finish masks; square corners fill the white
-  (`squareCornerFillsOf`), a bleed copies it out, and a tile backs the
-  picture with it. No ink sits on these frames' borders: a profile may
+  (`lib/cards/white-border.ts`: the white over the master's own black
+  border, the black keyline — 3 px on 1997, 4 px on 2003 — drawn INSIDE the
+  frame box) is the same `data:` URL in the preview, the bake and both
+  finish masks; square corners fill the white (`squareCornerFillsOf`), a
+  bleed copies it out, and a tile backs the picture with it. TWO whites
+  (owner 2026-10-12): `#ececea` on every DISPLAY surface (stored bake,
+  thumb, OG, preview, the plain PNG round or square — the free Square too)
+  and pure `#ffffff` in a PRINT file, i.e. everything
+  `lib/render/card-print.ts` makes (ring, squared corners, bleed) — the
+  `"print"` medium is passed by that path alone (`renderCardImage`'s
+  `printLayer`, `squareCornerFillsOf(card, "print")`); never read a white
+  as a literal. The keyline is the same black in both. No ink sits on these frames' borders: a profile may
   declare the piece only beside a © slot inside the frame (a test holds
   it). Never a sweep or a bump; `docs/FRAMES.md` "The white border".
 - Text alignment (TODO 4.21e): `frame_style.rulesAlign` (`"center"` or

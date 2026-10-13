@@ -17,7 +17,11 @@ import { getFrameProfile } from "@/lib/cards/template-layout";
 import {
   WHITE_BORDER_HEX,
   WHITE_BORDER_KEYLINE_HEX,
+  WHITE_BORDER_PRINT_HEX,
+  WHITE_BORDER_PRINT_RGB,
   WHITE_BORDER_RGB,
+  whiteBorderHex,
+  whiteBorderRgb,
   resolveWhiteBorder,
   wantsWhiteBorder,
   whiteBorderDataUrl,
@@ -100,6 +104,19 @@ describe("the drawing", () => {
     expect(WHITE_BORDER_HEX).toBe("#ececea");
     expect(WHITE_BORDER_KEYLINE_HEX).toBe("#000000");
     expect([...WHITE_BORDER_RGB]).toEqual([0xec, 0xec, 0xea]);
+    // A print file's ring is pure white (owner 2026-10-12): the same two
+    // paths, the same black keyline, one fill changed — and "screen" is the
+    // default, byte for byte.
+    const slot = { insetPx: { top: 82, right: 73, bottom: 81, left: 73 }, keylinePx: 3 };
+    expect(whiteBorderSvg(slot, false, "screen")).toBe(svg);
+    expect(whiteBorderSvg(slot, false, "print")).toBe(svg.replace('fill="#ececea"', 'fill="#ffffff"'));
+    expect(whiteBorderSvg(slot, false, "print")).toContain('<path fill="#000000"');
+    expect(WHITE_BORDER_PRINT_HEX).toBe("#ffffff");
+    expect([...WHITE_BORDER_PRINT_RGB]).toEqual([255, 255, 255]);
+    expect([whiteBorderHex(), whiteBorderHex("screen"), whiteBorderHex("print")]).toEqual(["#ececea", "#ececea", "#ffffff"]);
+    expect([[...whiteBorderRgb()], [...whiteBorderRgb("print")]]).toEqual([[0xec, 0xec, 0xea], [255, 255, 255]]);
+    expect(whiteBorderDataUrl(slot, false, "print")).not.toBe(whiteBorderDataUrl(slot));
+    expect(whiteBorderDataUrl(slot, false, "screen")).toBe(whiteBorderDataUrl(slot));
     // A landscape master's canvas is turned.
     expect(whiteBorderSvg({ insetPx: { top: 70, right: 70, bottom: 70, left: 70 }, keylinePx: 4 }, true)).toContain('viewBox="0 0 2100 1500"');
   });

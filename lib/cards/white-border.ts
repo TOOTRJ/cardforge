@@ -31,10 +31,30 @@
 // and both renderers, the corner fills and the anatomy read the functions.
 // ---------------------------------------------------------------------------
 
-/** The printed white of a white-bordered card. */
+/** The white of a white-bordered card ON SCREEN — every display surface:
+ *  the stored bake, its thumb, the OG image, the live preview and the plain
+ *  PNG download (round or square). */
 export const WHITE_BORDER_HEX = "#ececea";
 /** …as the RGB a square corner fills with (lib/frames/square-corners.ts). */
 export const WHITE_BORDER_RGB = [0xec, 0xec, 0xea] as const;
+/** The white in a PRINT file (owner 2026-10-12): pure white. The printed
+ *  cards' border was bare card stock, and a printer lays the screen's
+ *  off-white down as a faint grey tint (16 % under paper white in
+ *  luminance). Everything lib/render/card-print.ts makes — the PDF card and
+ *  sheets, the bleed files, MakePlayingCards', 800 ppi, the Pro exports'
+ *  `print=1` — draws the ring, squares its corners and extends its bleed in
+ *  this one; nothing else does. The keyline is the same black in both. */
+export const WHITE_BORDER_PRINT_HEX = "#ffffff";
+export const WHITE_BORDER_PRINT_RGB = [0xff, 0xff, 0xff] as const;
+
+/** Which white a render draws: `print` = a lib/render/card-print.ts file. */
+export type WhiteBorderMedium = "screen" | "print";
+export function whiteBorderHex(medium: WhiteBorderMedium = "screen"): string {
+  return medium === "print" ? WHITE_BORDER_PRINT_HEX : WHITE_BORDER_HEX;
+}
+export function whiteBorderRgb(medium: WhiteBorderMedium = "screen"): readonly [number, number, number] {
+  return medium === "print" ? WHITE_BORDER_PRINT_RGB : WHITE_BORDER_RGB;
+}
 /** The keyline between the white and the frame. */
 export const WHITE_BORDER_KEYLINE_HEX = "#000000";
 
@@ -81,9 +101,11 @@ function ring(outer: readonly [number, number, number, number], inner: readonly 
  * the frame master), so it scales with the card at every size. The white
  * runs to the canvas edge: the bake's corner cut and the display clip round
  * it, a square output fills its corners with the same white
- * (squareCornerFillsOf) and a bleed copies it out.
+ * (squareCornerFillsOf) and a bleed copies it out. `medium` picks the white:
+ * the screen's off-white, or a print file's pure white — the bytes are
+ * today's for "screen".
  */
-export function whiteBorderSvg(slot: WhiteBorderSlot, landscape = false): string {
+export function whiteBorderSvg(slot: WhiteBorderSlot, landscape = false, medium: WhiteBorderMedium = "screen"): string {
   const { w, h } = canvasOf(landscape);
   const { top, right, bottom, left } = slot.insetPx;
   const k = slot.keylinePx;
@@ -91,7 +113,7 @@ export function whiteBorderSvg(slot: WhiteBorderSlot, landscape = false): string
   const inner = [left + k, top + k, w - right - k, h - bottom - k] as const;
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none">` +
-    `<path fill="${WHITE_BORDER_HEX}" fill-rule="evenodd" d="${ring([0, 0, w, h], box)}"/>` +
+    `<path fill="${whiteBorderHex(medium)}" fill-rule="evenodd" d="${ring([0, 0, w, h], box)}"/>` +
     `<path fill="${WHITE_BORDER_KEYLINE_HEX}" fill-rule="evenodd" d="${ring(box, inner)}"/>` +
     `</svg>`
   );
@@ -101,8 +123,8 @@ const cache = new Map<string, string>();
 
 /** whiteBorderSvg as a data: URL — what an <img> and an SVG <image> take.
  *  Memoized by its text (a handful of values exist). */
-export function whiteBorderDataUrl(slot: WhiteBorderSlot, landscape = false): string {
-  const svg = whiteBorderSvg(slot, landscape);
+export function whiteBorderDataUrl(slot: WhiteBorderSlot, landscape = false, medium: WhiteBorderMedium = "screen"): string {
+  const svg = whiteBorderSvg(slot, landscape, medium);
   let url = cache.get(svg);
   if (!url) {
     url = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;

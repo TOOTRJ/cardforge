@@ -3900,8 +3900,22 @@ bump, no sweep, no badge.
   JPEGs carry the same means. Other templates exist beside the two: Hachette
   UK's 235 / 235 / 233, the Sega Dreamcast cards' pure 255. In print the
   border was bare card stock, so `#ececea` — 16 % under paper white in
-  luminance — prints as a faint tint on white paper: whether a PRINT export
-  should use `#ffffff` is an open owner question, TODO 4.30.)
+  luminance — would print as a faint tint on white paper.)
+- **Two whites: the screen's and the print file's** (owner 2026-10-12).
+  `#ececea` (`WHITE_BORDER_HEX`) on every DISPLAY surface — the stored
+  bake, its thumb, the OG image, the live preview and the plain PNG
+  download, round or square, the free Square included (a stored round bake
+  squared with the same off-white, so its corners match its own border).
+  Pure `#ffffff` (`WHITE_BORDER_PRINT_HEX`) in a PRINT file: everything
+  `lib/render/card-print.ts` makes — the PDF card and sheets, `?bleed=1`,
+  `?bleed=mpc`, `?ppi=800`, the Pro exports' `?print=1` — draws the ring,
+  squares its corners and extends its bleed in it. One switch, the
+  `WhiteBorderMedium` (`"screen"` by default, `"print"` from the print path
+  alone: `renderCardImage` sets it wherever it is handed a `printLayer`,
+  and `renderCardPrint` asks `squareCornerFillsOf(card, "print")`). The
+  keyline is the same `#000000` in both, and inside the frame box a print
+  file is the display Square pixel for pixel
+  (`white-border-bake.test.tsx`).
 - **No ink moves and none changes colour.** On both pairs the artist line,
   the © slot (the pipglyph.com mark on display, a clean download's footer
   text), the P/T and the set symbol are INSIDE the frame, as on the prints
@@ -3915,11 +3929,12 @@ bump, no sweep, no badge.
   - The white runs to the PNG's edge; the bake's corner cut rounds it
     (`applyCardCornerMask`) and the display clip does on screen.
   - A square output fills its corners with the same white
-    (`squareCornerFillsOf` → `WHITE_BORDER_RGB`): the PDF card and sheets,
-    the Pro exports, the paid Square and the free Square (the stored round
-    bake squared with those fills).
+    (`squareCornerFillsOf` → `whiteBorderRgb(medium)`): the off-white on
+    the paid Square and the free Square (the stored round bake squared with
+    those fills), the print white on the PDF card and sheets and the Pro
+    exports.
   - A bleed (1/8 in, MakePlayingCards', 800 ppi) copies the trim edge out,
-    so it is white with no rule of its own: `EDGE_CONTRACTS` keeps `border`
+    so it is the print white with no rule of its own: `EDGE_CONTRACTS` keeps `border`
     on these templates (the contract is about the master's opacity).
   - Foil and etched mask their sheen with the border too (`overlays` of
     `FoilSheen` / `EtchedSheen`), so the white takes the finish like any
@@ -3932,8 +3947,9 @@ bump, no sweep, no badge.
     that back a bake with `#101015` in their own markup still show that
     arc on a white-bordered card in the light theme (reproduced in review):
     the deck card modal and its card picker, the marketing hero, featured
-    creators, the moderation list and the render-update compare — a
-    follow-up, they do not all carry the card's `frame_style`.
+    creators, the moderation list and the render-update compare — left
+    as it is (owner 2026-10-12: no follow-up; they do not all carry the
+    card's `frame_style`).
 - **Imports** (`lib/scryfall/frame-signatures.ts`): the `border` gap is one
   gap for white, silver, gold and yellow, and `gapDrawnBy("border", …)` is
   true only for a WHITE border on a frame that declares the piece — so a

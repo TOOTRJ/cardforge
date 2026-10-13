@@ -199,7 +199,7 @@ import {
   type CopyrightMarkInk,
   type CopyrightSlotLayout,
 } from "@/lib/cards/copyright-slot";
-import { WHITE_BORDER_RECT, WHITE_BORDER_RGB, resolveWhiteBorder, whiteBorderDataUrl } from "@/lib/cards/white-border";
+import { WHITE_BORDER_RECT, resolveWhiteBorder, whiteBorderDataUrl, whiteBorderRgb, type WhiteBorderMedium } from "@/lib/cards/white-border";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { CardBackFace, ColorIdentity, Rarity } from "@/types/card";
 import { clamp } from "@/lib/utils";
@@ -419,6 +419,7 @@ function CardImage({
   foilArt,
   secondArtSize,
   omitArt = false,
+  whiteBorderMedium = "screen",
 }: {
   card: CardPreviewData;
   width: number;
@@ -441,6 +442,9 @@ function CardImage({
    *  so the print path can composite the full-resolution art under this
    *  layer with the same fit. Off for every stored/display render. */
   omitArt?: boolean;
+  /** Which white a white-bordered card draws (lib/cards/white-border.ts):
+   *  "print" only from lib/render/card-print.ts. */
+  whiteBorderMedium?: WhiteBorderMedium;
   /** NEVER rendered — Satori's image preload list (see renderCardImage). */
   children?: React.ReactNode;
 }) {
@@ -486,7 +490,9 @@ function CardImage({
   // border — the preview's twin, the same bytes (lib/cards/white-border.ts);
   // null on every card whose switch is off or whose frame declares none.
   const whiteBorder = resolveWhiteBorder(layout, card.frameStyle);
-  const whiteBorderHref = whiteBorder ? whiteBorderDataUrl(whiteBorder, layout.orientation === "landscape") : null;
+  // A print file draws it pure white, a display surface the off-white
+  // (owner 2026-10-12; `whiteBorderMedium`, set by the print path alone).
+  const whiteBorderHref = whiteBorder ? whiteBorderDataUrl(whiteBorder, layout.orientation === "landscape", whiteBorderMedium) : null;
   const borderMaskOverlays = whiteBorderHref ? [{ href: whiteBorderHref, rect: WHITE_BORDER_RECT }] : [];
   // The holofoil stamp (TODO 4.9c): its notch is one of the overlays above;
   // the oval is our bitmap, drawn over the sheens (never inside the foil
@@ -3786,7 +3792,7 @@ async function withRenderableImages(
  *  png route squares a free Square from the stored round bake with these
  *  unless one is null (it renders those live: the downscaled bake no longer
  *  carries the pixels outside the arc). */
-export function squareCornerFillsOf(card: CardPreviewData): CardCornerFills {
+export function squareCornerFillsOf(card: CardPreviewData, medium: WhiteBorderMedium = "screen"): CardCornerFills {
   const template = normalizeFrameTemplate(card.frameStyle?.template, card);
   const layout = resolveFrameProfile(template, card.profileOverrides);
   const colors = card.colorIdentity as ColorIdentity[] | undefined;
@@ -3797,9 +3803,12 @@ export function squareCornerFillsOf(card: CardPreviewData): CardCornerFills {
     right: split?.rightKey ?? key,
   });
   // A white-bordered card (TODO 4.30) squares its border corners in the
-  // printed white: the border there IS the white the card drew.
+  // white the card drew: the screen's off-white on a display Square (the
+  // live one and the free one, a stored round bake squared), pure white in
+  // a print file (`medium`, passed by lib/render/card-print.ts alone).
   if (!resolveWhiteBorder(layout, card.frameStyle)) return fills;
-  return fills.map((fill) => (fill === null ? null : WHITE_BORDER_RGB)) as unknown as CardCornerFills;
+  const white = whiteBorderRgb(medium);
+  return fills.map((fill) => (fill === null ? null : white)) as unknown as CardCornerFills;
 }
 
 /** True for frames (Battle) whose canvas is 7:5 instead of 5:7. */
@@ -4000,6 +4009,7 @@ export async function renderCardImage(
       foilArt={isFoil ? { art: foilArt, secondArt: foilSecondArt } : undefined}
       secondArtSize={secondArtSize}
       omitArt={opts.printLayer?.omitArt}
+      whiteBorderMedium={opts.printLayer ? "print" : "screen"}
     >
       {/* Satori serialises an inline SVG's <image href> from its image
           cache, which it fills by pre-walking the ROOT element's children

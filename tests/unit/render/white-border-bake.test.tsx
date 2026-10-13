@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { cardCornerRadiusPx } from "@/lib/cards/card-corner";
 import { getFrameProfile } from "@/lib/cards/template-layout";
-import { WHITE_BORDER_RGB } from "@/lib/cards/white-border";
+import { WHITE_BORDER_PRINT_RGB, WHITE_BORDER_RGB } from "@/lib/cards/white-border";
 import { MPC_BLEED_IN } from "@/lib/cards/print-export";
 import { renderCardImage, squareCornerFillsOf, type RenderPreset } from "@/lib/render/card-image";
 import { renderCardPrint } from "@/lib/render/card-print";
@@ -26,6 +26,8 @@ import { serveStandInFrames, type StandInFrames } from "@/tests/stubs/stand-in-f
 
 const TONE = 128;
 const WHITE = [...WHITE_BORDER_RGB];
+// A print file's white (owner 2026-10-12): pure white, in lib/render/card-print.ts only.
+const PRINT_WHITE = [...WHITE_BORDER_PRINT_RGB];
 type Raw = { data: Buffer; w: number; h: number; png: Buffer };
 
 async function decode(png: Buffer): Promise<Raw> {
@@ -157,11 +159,70 @@ describe("no other card changes", () => {
 });
 
 describe("print", () => {
+  it("the two whites: #ececea on screen, #ffffff in a print file — and the same black keyline in both", async () => {
+    expect(WHITE).toEqual([0xec, 0xec, 0xea]);
+    expect(PRINT_WHITE).toEqual([0xff, 0xff, 0xff]);
+    for (const template of ["retro", "modern"]) {
+      const { insetPx, keylinePx } = getFrameProfile(template).whiteBorder!;
+      const c = card(template, "white");
+      const screen = await bake(c, "hd", "square");
+      const print = await decode(await renderCardPrint(c, { ppi: 600, bleed: false, brandMark: true, watermarkText: null }));
+      expect([print.w, print.h]).toEqual([screen.w, screen.h]);
+      let ring = 0;
+      for (let y = 0; y < 2100; y += 1) {
+        for (let x = 0; x < 1500; x += 1) {
+          const inRing = x < insetPx.left || x >= 1500 - insetPx.right || y < insetPx.top || y >= 2100 - insetPx.bottom;
+          const s = rgb(screen, x, y);
+          const p = rgb(print, x, y);
+          if (inRing) {
+            ring += 1;
+            // The ring, its squared corners included: one white each.
+            if (s[0] !== 0xec || s[1] !== 0xec || s[2] !== 0xea || p[0] !== 255 || p[1] !== 255 || p[2] !== 255) {
+              expect([s, p], `${template} ring ${x},${y}`).toEqual([WHITE, PRINT_WHITE]);
+            }
+          } else if (s[0] !== p[0] || s[1] !== p[1] || s[2] !== p[2]) {
+            // Inside the frame box — the keyline and everything in it — the
+            // print file is the screen's square, pixel for pixel.
+            expect(p, `${template} inside ${x},${y}`).toEqual(s);
+          }
+        }
+      }
+      expect(ring).toBeGreaterThan(400_000);
+      // The keyline, named: black in both, just inside the white.
+      for (let d = 0; d < keylinePx; d += 1) {
+        expect(rgb(screen, insetPx.left + d, 1050)).toEqual([0, 0, 0]);
+        expect(rgb(print, insetPx.left + d, 1050)).toEqual([0, 0, 0]);
+        expect(rgb(print, 750, insetPx.top + d)).toEqual([0, 0, 0]);
+      }
+    }
+    // The corner fills say the same: the display Square's — the live one and
+    // the free one, a stored round bake squared — are the off-white its own
+    // border is; only the print path asks for the print white.
+    const c = card("modern", "white");
+    expect(squareCornerFillsOf(c)).toEqual([WHITE, WHITE, WHITE, WHITE]);
+    expect(squareCornerFillsOf(c, "screen")).toEqual([WHITE, WHITE, WHITE, WHITE]);
+    expect(squareCornerFillsOf(c, "print")).toEqual([PRINT_WHITE, PRINT_WHITE, PRINT_WHITE, PRINT_WHITE]);
+    // A black-bordered card's fills never read the medium.
+    expect(squareCornerFillsOf(card("modern"), "print")).toEqual(squareCornerFillsOf(card("modern")));
+  }, 480_000);
+
+  it("the free Square — the stored round bake squared with the display fills — matches its own off-white border", async () => {
+    const { flattenStoredCorners } = await import("@/lib/render/stored-render");
+    const c = card("modern", "white");
+    const round = await bake(c, "hd");
+    const free = await decode(await flattenStoredCorners(round.png, squareCornerFillsOf(c)));
+    const live = await bake(c, "hd", "square");
+    for (const [x, y] of [[0, 0], [1499, 0], [0, 2099], [1499, 2099], [10, 10], [30, 1050], [750, 30]]) {
+      expect(rgb(free, x, y), `${x},${y}`).toEqual(WHITE);
+      expect(rgb(free, x, y)).toEqual(rgb(live, x, y));
+    }
+  }, 240_000);
+
   it("600 ppi with the 1/8 in bleed: white corners, and white copied out on every edge", async () => {
     const c = card("modern", "white");
     const trim = await decode(await renderCardPrint(c, { ppi: 600, bleed: false, brandMark: true, watermarkText: null }));
     expect([trim.w, trim.h]).toEqual([1500, 2100]);
-    for (const [x, y] of [[0, 0], [1499, 0], [0, 2099], [1499, 2099]]) expect(rgb(trim, x, y), `${x},${y}`).toEqual(WHITE);
+    for (const [x, y] of [[0, 0], [1499, 0], [0, 2099], [1499, 2099]]) expect(rgb(trim, x, y), `${x},${y}`).toEqual(PRINT_WHITE);
     const bleed = await decode(await renderCardPrint(c, { ppi: 600, bleed: true, brandMark: true, watermarkText: null }));
     expect([bleed.w, bleed.h]).toEqual([1650, 2250]);
     // The whole bleed band is the white, corners included.
@@ -169,7 +230,7 @@ describe("print", () => {
       for (let x = 0; x < bleed.w; x += x >= 75 && x < bleed.w - 75 && y >= 75 && y < bleed.h - 75 ? bleed.w - 150 : 1) {
         if (x >= 75 && x < bleed.w - 75 && y >= 75 && y < bleed.h - 75) continue;
         if ((x + y) % 7 !== 0) continue;
-        expect(rgb(bleed, x, y), `${x},${y}`).toEqual(WHITE);
+        expect(rgb(bleed, x, y), `${x},${y}`).toEqual(PRINT_WHITE);
       }
     }
     // …and the trim box inside it is the export without bleed.
@@ -187,11 +248,11 @@ describe("print", () => {
     const mpc = await decode(await renderCardPrint(c, { ppi: 600, bleed: "mpc", brandMark: true, watermarkText: null }));
     expect(mpc.w).toBe(1500 + 2 * Math.round(MPC_BLEED_IN.x * 600));
     for (const [x, y] of [[0, 0], [mpc.w - 1, 0], [0, mpc.h - 1], [mpc.w - 1, mpc.h - 1], [5, Math.round(mpc.h / 2)], [Math.round(mpc.w / 2), 5]]) {
-      expect(rgb(mpc, x, y), `${x},${y}`).toEqual(WHITE);
+      expect(rgb(mpc, x, y), `${x},${y}`).toEqual(PRINT_WHITE);
     }
     const hi = await decode(await renderCardPrint(c, { ppi: 800, bleed: true, brandMark: true, watermarkText: null }));
     expect([hi.w, hi.h]).toEqual([2200, 3000]);
-    for (const [x, y] of [[0, 0], [2199, 2999], [50, 1500], [1100, 50], [150, 1500]]) expect(rgb(hi, x, y), `${x},${y}`).toEqual(WHITE);
+    for (const [x, y] of [[0, 0], [2199, 2999], [50, 1500], [1100, 50], [150, 1500]]) expect(rgb(hi, x, y), `${x},${y}`).toEqual(PRINT_WHITE);
     // The keyline at 800 ppi: 3 px × 4/3 = 4 px, black, where the white ends
     // (73 px × 4/3 = 97.33 px in from the trim edge, 100 px into the bleed).
     expect(rgb(hi, 100 + 99, 1500)).toEqual([0, 0, 0]);
