@@ -5004,10 +5004,16 @@ for any of them; Visual 0 changed / 0 redefined). Additions throughout.
   `renderedBackThumbUrl` (every gallery-style tile passes
   `rendered_back_thumb_url`; `list_gallery_cards()` returns `setof cards`,
   `narrowCard` spreads the row) and, with one of ours beside a front thumb,
-  shows the FRONT with a small corner flip button that turns the tile over
-  in place (`components/cards/baked-card-flip.tsx` — the card page's
-  control; the back's image mounted on the first flip; nothing on hover
-  or by itself). The card page's hero is a client island
+  shows the FRONT with a control that turns the tile over in place
+  (`components/cards/baked-card-flip.tsx`). Q6's control — a small corner
+  flip button, "nothing on hover or by itself" — was REPLACED on
+  2026-10-12 (TODO 5.15): a labelled "2 faces" button, bottom-left and
+  44 px tall, plus a turn when a mouse RESTS on the tile for a third of a
+  second (hovering fine pointers only, never under reduced motion); the
+  back's thumb is mounted on intent only; which cards is ONE predicate,
+  `lib/cards/tile-faces.ts`; list rows too small to turn carry the
+  `TwoFacesMark` text and the deck pop-up a Front / Back switch. The card
+  page's hero is a client island
   (`components/cards/card-hero-preview.tsx`) that reads `?face=back` with
   `useSearchParams` inside its own Suspense boundary — never the server
   component, so the route's rendering stays as it was. `cardPageName(title,

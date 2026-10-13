@@ -36,6 +36,7 @@ import {
 import { buildCardPath } from "@/lib/cards/utils";
 import { isLandscapeFrame } from "@/lib/cards/card-orientation";
 import { isStoredRenderUrl } from "@/lib/cards/render-cdn";
+import { hasBackPicture } from "@/lib/cards/tile-faces";
 import { drawableMediaUrl } from "@/lib/media/media-urls";
 import {
   DECK_BOARD_LABELS,
@@ -93,8 +94,24 @@ export function DeckCardModal({
     setLastPrefer(preferProxy);
   }
 
-  const shownImage =
+  // A proxy with a back PICTURE (TODO 5.15; lib/cards/tile-faces.ts — the
+  // cards a tile gives its "2 faces" button) gets a Front / Back switch
+  // under its picture. The back's file is asked for only once Back is
+  // chosen. One face at a time: the picture column is one card wide at
+  // every size, and a phone has no room for two.
+  const proxyBackImage =
+    proxyImage && card && hasBackPicture(card) && isStoredRenderUrl(card.rendered_back_image_url)
+      ? card.rendered_back_image_url
+      : null;
+  const [proxyFace, setProxyFace] = useState<"front" | "back">("front");
+
+  const shownFront =
     (showProxy ? proxyImage : originalImage) ?? proxyImage ?? originalImage;
+  const showingProxy = Boolean(shownFront && shownFront === proxyImage);
+  const canTurn = showingProxy && Boolean(proxyBackImage);
+  const showingBack = canTurn && proxyFace === "back";
+  const shownImage = showingBack ? proxyBackImage : shownFront;
+  const shownAlt = `${card?.title ?? entry.name}${showingBack ? " (back face)" : ""}`;
   // A 7:5 proxy bake (Battle, Split) is shown whole in its own landscape box
   // inside the 5:7 frame, never cropped to its middle (TODO 3.26 review).
   const landscapeProxy = Boolean(shownImage && shownImage === proxyImage && isLandscapeFrame(card?.frame_style));
@@ -175,7 +192,7 @@ export function DeckCardModal({
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={shownImage}
-                      alt={card?.title ?? entry.name}
+                      alt={shownAlt}
                       className="h-full w-full bg-[#101015] object-cover"
                     />
                   </span>
@@ -184,7 +201,7 @@ export function DeckCardModal({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={shownImage}
-                  alt={card?.title ?? entry.name}
+                  alt={shownAlt}
                   className="h-full w-full bg-[#101015] object-cover"
                 />
               ) : (
@@ -193,6 +210,27 @@ export function DeckCardModal({
                 </span>
               )}
             </CardImageLink>
+            {canTurn ? (
+              <div
+                className="grid grid-cols-2 gap-1 rounded-md border border-border bg-background/60 p-1 text-sm"
+                role="group"
+                aria-label="Card face"
+                data-testid="deck-card-face-switch"
+              >
+                <FlipButton
+                  label="Front"
+                  active={!showingBack}
+                  onClick={() => setProxyFace("front")}
+                  tall
+                />
+                <FlipButton
+                  label="Back"
+                  active={showingBack}
+                  onClick={() => setProxyFace("back")}
+                  tall
+                />
+              </div>
+            ) : null}
             {hasBoth ? (
               <div
                 className="grid grid-cols-2 gap-1 rounded-md border border-border bg-background/60 p-1 text-xs"
@@ -434,10 +472,13 @@ function FlipButton({
   label,
   active,
   onClick,
+  tall = false,
 }: {
   label: string;
   active: boolean;
   onClick: () => void;
+  /** A thumb-sized (44 px) target — the Front / Back switch (TODO 5.15). */
+  tall?: boolean;
 }) {
   return (
     <button
@@ -446,6 +487,7 @@ function FlipButton({
       aria-pressed={active}
       className={cn(
         "rounded px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50",
+        tall && "min-h-11 font-medium",
         active
           ? "bg-primary/15 text-primary-bright"
           : "text-muted hover:text-foreground",

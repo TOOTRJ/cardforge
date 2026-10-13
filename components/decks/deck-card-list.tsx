@@ -12,7 +12,9 @@ import type { DeckItem } from "@/lib/decks/queries";
 import type { DeckBoard } from "@/types/deck";
 import { DECK_BOARD_LABELS } from "@/types/deck";
 import { cn } from "@/lib/utils";
-import { isStoredRenderUrl } from "@/lib/cards/render-cdn";
+import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
+import { hasBackPicture } from "@/lib/cards/tile-faces";
+import { TwoFacesMark } from "@/components/cards/two-faces-mark";
 import { drawableMediaUrl } from "@/lib/media/media-urls";
 
 // ---------------------------------------------------------------------------
@@ -251,7 +253,14 @@ function EntryRow({
   const state = deckEntryState(entry);
   // Only a bake in our card-renders bucket (lib/cards/render-cdn.ts): a row
   // written before migration 0126 could point the card anywhere.
-  const proxyImage = card && isStoredRenderUrl(card.rendered_image_url) ? card.rendered_image_url : null;
+  // The 32 px row draws the 600 px WebP thumb where the bake wrote one —
+  // never the HD PNG when there is a thumb (TODO 5.15).
+  const proxyPng = card && isStoredRenderUrl(card.rendered_image_url) ? card.rendered_image_url : null;
+  const proxyThumb = proxyPng && card && isStoredRenderUrl(card.rendered_thumb_url) ? card.rendered_thumb_url : null;
+  const proxyImage = proxyThumb ? (toRenderCdnUrl(proxyThumb) ?? proxyThumb) : proxyPng;
+  // A proxy with a back picture: the row says so (the picture is too small
+  // to turn; the pop-up has the Front / Back switch).
+  const twoFaces = Boolean(card && hasBackPicture(card));
   // …and a printing image only from Scryfall (migration 0127,
   // lib/media/media-urls.ts), the one outside host a deck entry stores.
   const printImage = drawableMediaUrl("deck-card-image", entry.image_url);
@@ -293,6 +302,7 @@ function EntryRow({
         {entry.mana_cost || card?.cost ? (
           <ManaCostGlyphs cost={entry.mana_cost ?? card?.cost} size="sm" />
         ) : null}
+        {twoFaces && thumb === proxyImage ? <TwoFacesMark /> : null}
         <StateBadge state={state} />
       </button>
     </li>
