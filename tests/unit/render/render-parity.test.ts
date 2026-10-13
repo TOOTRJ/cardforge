@@ -317,7 +317,18 @@ describe("saga chapter rail (TODO 4.21c: the printed rail)", () => {
     expect(PREVIEW_PIECES).toContain("...rectStyle(piece.rect),");
     // Both finishes mask with the frame's overlays AND the rail's pieces.
     // (…and, since TODO 4.30, with the white border's image after them.)
-    expect(BAKE.match(/overlays=\{\[\.\.\.drawnOverlays\(\[\.\.\.overlays, \.\.\.railPieces\]\), \.\.\.borderMaskOverlays\]\}/g)).toHaveLength(2);
+    // (…and, since TODO 4.27a, with the station frame's drawn pieces.)
+    expect(BAKE.match(/overlays=\{\[\.\.\.drawnOverlays\(\[\.\.\.overlays, \.\.\.railPieces, \.\.\.stationPieces\]\), \.\.\.borderMaskOverlays\]\}/g)).toHaveLength(2);
+    expect(PREVIEW.match(/\.\.\.stationPieces\.map\(\(piece\) => \(\{ href: piece\.href, rect: piece\.rect \}\)\),/g)).toHaveLength(2);
+    // The station pieces: ONE layout call in each renderer, the pieces after
+    // the rail's and before the sheens.
+    expect(BAKE).toContain("cardStation(layout, card, masterKey, holoStamp?.keepOut ?? null)");
+    expect(PREVIEW).toContain("cardStationLayout(layout, face, stationStamp)");
+    expect(PREVIEW).toContain("stationDrawing(stationLaid, layout, masterKey)");
+    expect(BAKE.indexOf("{stationPieces.map((piece, i) => (")).toBeGreaterThan(BAKE.indexOf("{railPieces.map((piece, i) =>"));
+    expect(BAKE.indexOf("{stationPieces.map((piece, i) => (")).toBeLessThan(BAKE.indexOf("{isEtched ? ("));
+    expect(PREVIEW.indexOf("<StationPieces pieces={stationPieces} />")).toBeGreaterThan(PREVIEW.indexOf("<SagaRailPieces pieces={railPieces} />"));
+    expect(PREVIEW.indexOf("<StationPieces pieces={stationPieces} />")).toBeLessThan(PREVIEW.indexOf("{isEtched ? ("));
     expect(PREVIEW.match(/\.\.\.\[\.\.\.overlays, \.\.\.railPieces\]\.map\(/g)).toHaveLength(2);
     expect(PREVIEW.match(/\.\.\.borderMaskOverlays,/g)).toHaveLength(2);
     // The bake preloads exactly what the rail draws.

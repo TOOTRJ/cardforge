@@ -1,3 +1,4 @@
+import { STATION_MAX_THRESHOLD, STATION_MAX_TIERS } from "@/lib/cards/station";
 import { z } from "zod";
 import { isWatermarkPresetKey } from "@/lib/cards/watermark";
 import { COLLECTOR_SWITCH_VALUES } from "@/lib/cards/collector-line";
@@ -501,6 +502,25 @@ export const faceContentSchema = z
           .min(1)
           .max(6),
       })
+      .optional(),
+    // The station frame's tiers (TODO 4.27a, lib/cards/station.ts): 0–3 rows
+    // (a FOURTH is refused — owner round 54), thresholds 1–99 rising down
+    // the card, the power / toughness on at most one of them.
+    station: z
+      .object({
+        intro: z.string().trim().max(600).nullable().optional(),
+        tiers: z
+          .array(
+            z.object({
+              threshold: z.number().int().min(1).max(STATION_MAX_THRESHOLD),
+              text: z.string().trim().min(1).max(600),
+              pt: z.literal(true).optional(),
+            }),
+          )
+          .max(STATION_MAX_TIERS, `A card has up to ${STATION_MAX_TIERS} tiers.`),
+      })
+      .refine((v) => v.tiers.filter((t) => t.pt).length <= 1, { message: "Only one tier carries the power and toughness.", path: ["tiers"] })
+      .refine((v) => v.tiers.every((t, i) => i === 0 || t.threshold > v.tiers[i - 1].threshold), { message: "Tier thresholds rise down the card.", path: ["tiers"] })
       .optional(),
   })
   .strict();

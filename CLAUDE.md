@@ -761,6 +761,31 @@ Rules and gotchas:
   (`vehicle/2015`, `onceVerified`) — no bump, no sweep, no badge. The saga
   body still draws no P/T: the printed saga creature (FIN 2025) is another
   body, 4.5d's. `docs/FRAMES.md` "The Vehicle frame".
+- The station frame (`m15station`, `m15stationland`; TODO 4.27a): Edge of
+  Eternities' Spacecraft (an artifact whose subtype says Spacecraft) and
+  Planets (a land whose subtype says Planet) — `SUBTYPE_DRESSES`, the
+  Vehicle's gate, nothing else. Masters are OUR OWN derivation
+  (`scripts/build-station-frames.mjs`, numbers in
+  `scripts/lib/station-2025.mjs`: the published m15artifact / m15land
+  masters with the frame field at α 0 and the text box at × 0.68; bucket
+  only; each WebP's alpha must equal its PNG's). The picture is ONE picture
+  under the whole frame (`underFrameArt.artSlot`). The text box is a top
+  band over 0–3 TIERS (`FrameProfile.tiers`): plain text in Scryfall's shape
+  (`N+ | text` opens a tier) or `face_content.station` rows, read first
+  (`resolveStationTiers`, `lib/cards/station.ts`); the P/T is on a drawn
+  plate on ONE tier (the one the reminder names, else the last; rows may
+  name another; never the top band, never without a printed P/T) — these
+  profiles have NO `pt` slot and no text-alignment switch. ONE layout,
+  `cardStation()` (`lib/cards/station-layout.ts`): one size for the box,
+  bands from the text (20 px of air, floors 168 / 180 — fitted on 30
+  prints), lines by the rules layout, the plate a float; both renderers
+  only draw it. Bands, badge discs and the plate are our own inline SVGs
+  (`lib/cards/station-art.ts`: the same `data:` URL in preview, bake and
+  finish masks) drawn right after the frame, UNDER both finishes; numerals
+  and digits go through the stat fit. Every piece's box is EVEN in HD px
+  (whole px at 750) — never a half-px band edge, never `opacity` /
+  blend modes on the washes. Additions: no bump, no sweep.
+  `docs/FRAMES.md` "The Station frame".
 - The Universes Beyond frames (`m15ub`, `m15ubartifact`, `m15ubland`; TODO
   4.25): STORED templates of their own (owner 2026-10-13), skins of m15 /
   m15artifact / m15land under Variations — never a render-time pick, never
@@ -889,7 +914,7 @@ Rules and gotchas:
   smaller than Left and never clips one Left fits (owner 2026-10-07).
   Both renderers pass the card's value through `rulesAlignOf` and only
   draw the indents. A new template offers
-  it by default — `rules-align.test.ts` names the six that don't. Never a sweep or a bump; `docs/FRAMES.md` "The text alignment".
+  it by default — `rules-align.test.ts` names the eight that don't (the station pair among them). Never a sweep or a bump; `docs/FRAMES.md` "The text alignment".
 - The art's automatic fit (TODO 3b.18): a picture that lands on a card
   (upload, a real card's art, an import, an AI picture) takes
   `fitArtToWindow()` (`lib/cards/art-fit.ts`: fill the window, show the

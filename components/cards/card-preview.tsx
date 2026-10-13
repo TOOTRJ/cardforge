@@ -111,6 +111,7 @@ import {
   type CopyrightSlotLayout,
 } from "@/lib/cards/copyright-slot";
 import { WHITE_BORDER_RECT, resolveWhiteBorder, whiteBorderDataUrl } from "@/lib/cards/white-border";
+import { cardStationLayout, stationDrawing, type StationPiece } from "@/lib/cards/station-layout";
 import { inlineSymbolStyle, symbolStyle, symbolStyleOf, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
 import { FOOTER_BRUSH_PATH, FOOTER_BRUSH_VIEWBOX } from "@/lib/cards/footer-brush";
 import { BRAND_FACE, TYPE_FACES, faceOf, footerFace, slotFace } from "@/lib/cards/type-faces";
@@ -1078,10 +1079,22 @@ function CardFace({
   // textless frame, a basic land, the saga rail or ability rows (an empty
   // walker in the editor shows hint rows instead).
   const rulesPlaceholder = staticInEditor && !face.rulesText?.trim() && !face.flavorText?.trim();
+  // The station frame's tiers (TODO 4.27a; lib/cards/station-layout.ts) —
+  // the bake's twin: the whole text box laid out once; its bands, badge
+  // discs and plate are frame pieces under both finishes (StationPieces),
+  // the numerals and digits ink, the text the layout's lines.
+  const stationStamp = holoStamp?.keepOut ?? null;
+  const stationLaid = useMemo(
+    () => (textless ? null : cardStationLayout(layout, face, stationStamp)),
+    [textless, layout, face, stationStamp],
+  );
+  const station = stationLaid ? { layout: stationLaid, drawing: stationDrawing(stationLaid, layout, masterKey) } : null;
+  const stationPieces = station?.drawing.pieces ?? NO_STATION_PIECES;
   const drawsRulesBox =
     !textless &&
     !isBasicLand &&
     !layout.chapters &&
+    !layout.tiers &&
     !(layout.loyaltyRows && (loyaltyAbilities.length > 0 || (usesLoyaltyRows && staticInEditor)));
   // (Memoised: a long text's fit takes a millisecond or two, and a face
   // re-renders on every flip and hover.)
@@ -1277,6 +1290,10 @@ function CardFace({
           at the layout's boxes — printed frame, under both finishes; the
           bake's railPieces twin. Nothing off a saga. */}
       <SagaRailPieces pieces={railPieces} />
+      {/* The station frame's drawn pieces (TODO 4.27a): tier washes, badge
+          discs and the P/T plate — printed frame, under both finishes; the
+          bake's stationPieces twin. Nothing off a station frame. */}
+      <StationPieces pieces={stationPieces} />
       {/* The colour-indicator dot (TODO 5.1a): over the master, under every
           text layer — the bake's twin (ColorIndicatorBake). */}
       {indicatorFills.length ? <ColorIndicatorOverlay fills={indicatorFills} /> : null}
@@ -1299,6 +1316,7 @@ function CardFace({
           }
           overlays={[
             ...[...overlays, ...railPieces].map((overlay) => ({ href: frameOverlayImageUrl(overlay.path), rect: overlay.rect })),
+            ...stationPieces.map((piece) => ({ href: piece.href, rect: piece.rect })),
             ...borderMaskOverlays,
           ]}
           landscape={layout.orientation === "landscape"}
@@ -1334,6 +1352,7 @@ function CardFace({
           })}
           overlays={[
             ...[...overlays, ...railPieces].map((overlay) => ({ href: frameOverlayImageUrl(overlay.path), rect: overlay.rect })),
+            ...stationPieces.map((piece) => ({ href: piece.href, rect: piece.rect })),
             ...borderMaskOverlays,
           ]}
           landscape={layout.orientation === "landscape"}
@@ -1347,6 +1366,21 @@ function CardFace({
           the notch and above the sheens, at the bake's rect. */}
       {holoStamp ? <HoloStampOval stamp={holoStamp} /> : null}
 
+      {/* The station frame's ink over its pieces (TODO 4.27a): each
+          badge's "N+" and the plate's P/T — the bake's twin. */}
+      {station
+        ? station.drawing.values.map((v, i) => (
+            <StatOverlay
+              key={`station-value-${i}`}
+              slot={v.slot}
+              value={v.value}
+              colorKey={plateKey}
+              masterKey={masterKey}
+              orientation={orientationFromAspect(aspect)}
+              testId={i === station.drawing.values.length - 1 && station.layout.plate ? "station-plate-value" : "station-badge-value"}
+            />
+          ))
+        : null}
       {/* Stat overlays — P/T, loyalty, defense. */}
       {showPT && layout.pt ? (
         <StatOverlay
@@ -1669,6 +1703,13 @@ function CardFace({
           opacity={rulesPlaceholder ? 0.5 : undefined}
         />
       ) : null}
+
+      {/* The station frame's text (TODO 4.27a): every band's lines. */}
+      {station
+        ? station.drawing.texts.map((text, i) => (
+            <RulesBox key={`station-text-${i}`} layout={text} colorHex={station.drawing.textColorHex} overrides={pipOverrides} />
+          ))
+        : null}
 
       {/* Adventure spell — the left storybook page (Adventure frames). */}
       {layout.adventure && adventure ? (
@@ -2421,6 +2462,30 @@ function StatOverlay({
 // boxes) and each badge's numeral, a one-line box the badge's width, one em
 // tall, from the layout's top.
 // ---------------------------------------------------------------------------
+
+const NO_STATION_PIECES: readonly StationPiece[] = [];
+
+/** The station frame's drawn pieces (TODO 4.27a): each an inline SVG of
+ *  lib/cards/station-art.ts stretched over its even HD box — the bake's
+ *  <img>s. Under both finishes, like the saga rail's bitmaps. */
+function StationPieces({ pieces }: { pieces: readonly StationPiece[] }) {
+  if (pieces.length === 0) return null;
+  return (
+    <div aria-hidden data-station-pieces="" className="pointer-events-none absolute inset-0" style={{ zIndex: 5 }}>
+      {pieces.map((piece, i) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={i}
+          alt=""
+          data-station-piece={piece.kind}
+          src={piece.href}
+          className="absolute"
+          style={{ ...rectStyle(piece.rect), position: "absolute" }}
+        />
+      ))}
+    </div>
+  );
+}
 
 function SagaRailPieces({ pieces }: { pieces: readonly { path: string; rect: Rect }[] }) {
   if (pieces.length === 0) return null;

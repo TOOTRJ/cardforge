@@ -36,7 +36,11 @@ export type ParityCase = {
    *  row saved before 3.14 holds it (Chrome turns it; the bake must too);
    *  "uploaded-jpeg" — the same photo through prepareUploadBytes, as every
    *  upload is stored today (upright pixels, no tag). */
-  art?: "tagged-jpeg" | "uploaded-jpeg";
+  /** "stripes" — a high-contrast picture (TODO 4.27a): black, white and
+   *  saturated bars down the whole card, under the station frame's
+   *  see-through box — where a blend that differs between the renderers
+   *  would show in every band. */
+  art?: "tagged-jpeg" | "uploaded-jpeg" | "stripes";
 };
 
 type Pick = {
@@ -76,6 +80,32 @@ const PICKS: readonly Pick[] = [
   // --- the Vehicle frame (TODO 4.5c): its own plate, white digits -----------
   { from: "m15vehicle/c/artifact-short@wide", why: "Vehicle: the brown plate under white digits at their widest (12/12), the bronze frame" },
   { from: "m15vehicle/wu/artifact-long@pair-crown", why: "Vehicle: the two-colour pair master and the crown over the bronze frame" },
+  // --- the station frame (TODO 4.27a): stacked translucency, drawn pieces ---
+  {
+    from: "m15station/u/artifact-short",
+    as: "@stripes",
+    why: "station: the see-through box and two tier washes over black / white / saturated bars (blue key), badges, the plate",
+    art: "stripes",
+    row: () => ({}),
+  },
+  {
+    from: "m15station/r/artifact-short@tiers-three",
+    as: "@stripes",
+    why: "station: three tiers (0.25 / 0.57 / 0.78) over the bars on the red key, the plate on the middle tier",
+    art: "stripes",
+    row: () => ({}),
+  },
+  { from: "m15station/u/artifact-short@tiers-one", why: "station: one tier, the plate and the reminder's top band over the coded picture" },
+  {
+    from: "m15station/g/artifact-long@crown",
+    as: "@full-box",
+    // A three-pip cost: the long card's five-pip row is the M15 cost row's
+    // own 750 px difference ("750-cost-row-width"), not this frame's.
+    why: "station: the crown over the cut master, a fuller box (a two-paragraph plated tier, 10/10 on the plate)",
+    row: () => ({ cost: "{2}{G}" }),
+  },
+  { from: "m15station/r/artifact-short@foil", why: "station: the foil sheen over the box, the bands and the drawn pieces — ink above it" },
+  { from: "m15stationland/g/land-short", why: "station: a Planet — the land master, one tier, no plate" },
   // --- the Universes Beyond frames (TODO 4.25): the triangle stamp ----------
   { from: "m15ub/wu/creature-long@stamp-pair-crown", why: "Universes Beyond: the triangle stamp's notch and art (a new shape in both renderers), the pair master and the split crown band" },
   { from: "m15ub/g/creature-short@wide", why: "Universes Beyond: the pack's own plate under 12/12" },

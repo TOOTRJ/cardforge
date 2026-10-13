@@ -167,9 +167,11 @@ describe("bake path = preview path", () => {
     // M15-family entries (the Vehicle frame's since 4.5c) + the walker's 7 — and none on a DFC body, the
     // transform (5.1a) and modal (5.1b) bodies alike (no holoStamp on a back
     // body, ever; the fronts take it as their own addition later).
+    // …and the station frame's two entries (TODO 4.27a): the parents' notch
+    // slot, so nine M15-family entries;
     // …and the Universes Beyond triangle's 8 bar keys + 10 pairs on its
     // three entries (4.25).
-    expect(notches).toBe((9 + 10) * 7 + 7 + (8 + 10) * 3);
+    expect(notches).toBe((9 + 10) * 9 + 7 + (8 + 10) * 3);
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

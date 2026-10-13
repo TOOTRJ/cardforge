@@ -183,9 +183,46 @@ const LONG_FLAVOR = "\"The sky remembers every wing that crossed it.\"\n—Capta
 type Fields = Partial<CardRowForBake>;
 
 /** The content of one kind in one shape — a stored row's text columns. */
+/** The station frame's cards (TODO 4.27a): the Station reminder as printed,
+ *  for a Spacecraft (which becomes a creature at a tier) or a Planet. */
+const stationReminder = (word: "Spacecraft" | "Planet", creatureAt: number | null) =>
+  `Station (Tap another creature you control: Put charge counters equal to its power on this ${word}. Station only as a sorcery.${creatureAt ? ` It's an artifact creature at ${creatureAt}+.` : ""})`;
+
 function contentFor(kind: CardKind, shape: VisualShape, colour: VisualColour, template?: FrameTemplate): Fields {
   const long = shape === "long";
   const key = frameKeyOf(colour);
+  // A subtype dress's cards ARE its subtype (TODO 4.27a): every case on the
+  // station frame is a Spacecraft (two tiers, the P/T on the last) or a
+  // Planet (one tier, never a P/T) — EOE #25 / #253 short, a fuller box long.
+  const dress = template !== undefined ? subtypeDressOf(template) : null;
+  if (dress === "Spacecraft") {
+    return {
+      title: long ? "Sisay, Captain of the Endless Weatherlight Skies" : "Lumen-Class Frigate",
+      card_type: "artifact",
+      supertype: long ? "Legendary" : null,
+      subtypes: ["Spacecraft"],
+      cost: long ? `{X}${pips(colour, 3, 3)}` : pips(colour, 1, 1),
+      rules_text: long
+        ? `When this Spacecraft enters, surveil 2.\n${stationReminder("Spacecraft", 8)}\n3+ | You may play an additional land on each of your turns.\n8+ | Flying\nWhenever this Spacecraft attacks, draw a card, then discard a card.`
+        : `${stationReminder("Spacecraft", 12)}\n2+ | Other creatures you control get +1/+1.\n12+ | Flying, lifelink`,
+      flavor_text: null,
+      power: long ? "10" : "3",
+      toughness: long ? "10" : "5",
+    };
+  }
+  if (dress === "Planet") {
+    return {
+      title: long ? "Sunken Citadel of the Drowned Archmage" : "Evendo, Waking Haven",
+      card_type: "land",
+      supertype: long ? "Legendary" : null,
+      subtypes: ["Planet"],
+      cost: null,
+      rules_text: long
+        ? `This land enters tapped.\n{T}: Add one mana of any color.\n${stationReminder("Planet", null)}\n12+ | {1}{R}, {T}, Sacrifice a land: Create a 2/2 colorless Robot artifact creature token, then creatures you control get +1/+0 and gain haste until end of turn.`
+        : `This land enters tapped.\n{T}: Add {G}.\n${stationReminder("Planet", null)}\n12+ | {G}, {T}: Add {G} for each creature you control.`,
+      flavor_text: null,
+    };
+  }
   switch (kind) {
     case "transform":
       return transformContent(shape, colour, template === "m15dfclandfront");
@@ -590,7 +627,9 @@ export function kindsByTemplate(): Map<FrameTemplate, CardKind[]> {
  *  differently (M15, walker rows, saga rail, token, Alpha, a showcase, the
  *  old border). Etched skips frames whose art reaches the card edge, as the
  *  creator does (lib/cards/art-framing.ts). */
-const FINISH_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15pw", "saga", "m15token", "agclassic", "lotr", "retro", "m15borderless"];
+// …and the station frame (TODO 4.27a): the sheen over its see-through box
+// and its drawn pieces.
+const FINISH_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15pw", "saga", "m15token", "agclassic", "lotr", "retro", "m15borderless", "m15station"];
 /** The edge card (3.11's content cases) on one frame of each family. */
 const EDGE_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15borderless", "agclassic", "retro", "lotr", "tarkirdragon"];
 /** The legendary crown switched on (TODO 4.6a): the long card (Legendary) on
@@ -606,6 +645,10 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // colourless Vehicle (DMU #230), its colour on a coloured one (KHM #169),
   // gold on three colours.
   ["m15vehicle", ["c", "g", "wub"]],
+  // TODO 4.27a: the station frame's crown — the parents' (artifact silver /
+  // land grey on a colourless card, the colour's, gold).
+  ["m15station", ["c", "g", "wub"]],
+  ["m15stationland", ["c", "g"]],
   // TODO 4.25: the Universes Beyond crown band — a colour, the artifact
   // silver (a colourless card on the spell frame too), a pair, gold and
   // the land grey.
@@ -1126,6 +1169,37 @@ const VEHICLE_ROW: Partial<CardRowForBake> = {
   toughness: "3",
 };
 const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, string, Partial<CardRowForBake>][] = [
+  // TODO 4.27a: the station frame's box in the shapes its two base cards
+  // (two tiers, the plate on the last) don't hold — one tier; three, as
+  // structured rows with the plate on the MIDDLE one (face_content, read
+  // before the text); no tier at all (a top band alone, no plate); the
+  // plate's digits at their widest and oddest. (The parents' crown, stamp
+  // and collector line have their own cases on these templates, below.)
+  ["m15station", "artifact", "u", "@tiers-one", { rules_text: `${stationReminder("Spacecraft", 8)}\n8+ | Flying`, power: "4", toughness: "4" }],
+  [
+    "m15station",
+    "artifact",
+    "r",
+    "@tiers-three",
+    {
+      rules_text: `${stationReminder("Spacecraft", 8)}\n2+ | Haste\n8+ | Flying, first strike\n14+ | Other creatures you control get +2/+0.`,
+      face_content: {
+        station: {
+          intro: stationReminder("Spacecraft", 8),
+          tiers: [
+            { threshold: 2, text: "Haste" },
+            { threshold: 8, text: "Flying, first strike", pt: true },
+            { threshold: 14, text: "Other creatures you control get +2/+0." },
+          ],
+        },
+      },
+      power: "5",
+      toughness: "4",
+    },
+  ],
+  ["m15station", "artifact", "c", "@tiers-none", { rules_text: "Flying\nWhenever this Spacecraft attacks, draw a card.", power: "3", toughness: "3" }],
+  ["m15station", "artifact", "g", "@tiers-wide", { power: "20", toughness: "20" }],
+  ["m15station", "artifact", "b", "@tiers-star", { power: "*", toughness: "7" }],
   [
     "saga",
     "saga",
@@ -1780,8 +1854,9 @@ export function visualCases(): VisualCase[] {
 
 /** The templates whose PROFILES entry declares the holofoil stamp's notch
  *  (TODO 4.9c; tests/unit/render/visual-matrix.test.ts keeps it in step). */
+// …and the station frame (TODO 4.27a): the parents' notch over the cut masters.
 export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
-  "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15snow", "m15devoid", "m15pw",
+  "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15station", "m15stationland", "m15snow", "m15devoid", "m15pw",
   // TODO 4.25: the Universes Beyond frames' TRIANGLE stamp.
   "m15ub", "m15ubartifact", "m15ubland",
 ];

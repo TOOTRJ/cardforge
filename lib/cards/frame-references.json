@@ -686,6 +686,162 @@
       ]
     }
   },
+  "m15station": {
+    "note": "The station frame (TODO 4.27a): Edge of Eternities' black-bordered Spacecraft (EOE 2025) — the artifact frame's bars over a picture that runs under the whole frame, the see-through text box banded into charge tiers, the P/T on a tier's black plate. c: Dawnsire, Sunstar Dreadnought (#238) is a legendary print, so it wears the crown; its alternates are plain. m: the five-colour Infinite Guideline Station (#219), legendary too, is the set's one gold Spacecraft — no alternate.",
+    "colors": {
+      "w": [
+        {
+          "name": "Lumen-Class Frigate",
+          "set": "eoe",
+          "scryfallId": "0cc59b5a-65fa-47cc-8ac7-b7c3f533a782"
+        },
+        {
+          "name": "Rescue Skiff",
+          "set": "eoe",
+          "scryfallId": "6fe86bfb-c67d-4df9-88c9-f083091f4cda"
+        },
+        {
+          "name": "Wedgelight Rammer",
+          "set": "eoe",
+          "scryfallId": "2cb0984f-dc8b-4bb3-a4fd-8d6d4ae20198"
+        }
+      ],
+      "u": [
+        {
+          "name": "Synthesizer Labship",
+          "set": "eoe",
+          "scryfallId": "fba6332c-acba-43f9-877c-ca6c5328aae9"
+        },
+        {
+          "name": "Specimen Freighter",
+          "set": "eoe",
+          "scryfallId": "b862a9f8-2361-4220-99bd-ae2530905195"
+        },
+        {
+          "name": "Uthros Scanship",
+          "set": "eoe",
+          "scryfallId": "1f93887f-35c5-472f-83d0-54227b3bd1d2"
+        }
+      ],
+      "b": [
+        {
+          "name": "Entropic Battlecruiser",
+          "set": "eoe",
+          "scryfallId": "cc59796b-9025-44b6-a188-cf6684ebffb9"
+        },
+        {
+          "name": "Fell Gravship",
+          "set": "eoe",
+          "scryfallId": "e94b130d-3547-43c5-a319-5ebc571c2e2d"
+        },
+        {
+          "name": "Susurian Dirgecraft",
+          "set": "eoe",
+          "scryfallId": "b67cdb6e-9a3b-4887-924d-318faa3c443d"
+        }
+      ],
+      "r": [
+        {
+          "name": "Warmaker Gunship",
+          "set": "eoe",
+          "scryfallId": "9e5957f4-1cae-4989-8b40-27fc6e2fcf5e"
+        },
+        {
+          "name": "Debris Field Crusher",
+          "set": "eoe",
+          "scryfallId": "ea713f35-6442-4388-8839-2714374fb4b6"
+        },
+        {
+          "name": "Galvanizing Sawship",
+          "set": "eoe",
+          "scryfallId": "5bbce9fb-401f-4e78-acd5-9d3b506687fd"
+        }
+      ],
+      "g": [
+        {
+          "name": "Sledge-Class Seedship",
+          "set": "eoe",
+          "scryfallId": "dc0cb4b6-cc20-49ea-84b2-2f3af3b0a19e"
+        },
+        {
+          "name": "Atmospheric Greenhouse",
+          "set": "eoe",
+          "scryfallId": "bf05e378-7a0c-49e3-8c6e-c0fd56796434"
+        },
+        {
+          "name": "Larval Scoutlander",
+          "set": "eoe",
+          "scryfallId": "d6083f43-58dc-46fc-aeff-347b1080417b"
+        }
+      ],
+      "c": [
+        {
+          "name": "Dawnsire, Sunstar Dreadnought",
+          "set": "eoe",
+          "scryfallId": "6133355c-3dcf-466a-b771-fe6c44d4fa4d"
+        },
+        {
+          "name": "Extinguisher Battleship",
+          "set": "eoe",
+          "scryfallId": "5541cdd2-84a6-4667-83eb-fffbe5b3cd3d"
+        },
+        {
+          "name": "Pinnacle Kill-Ship",
+          "set": "eoe",
+          "scryfallId": "bf784de8-5ae2-4c07-92bb-a5b7f593b773"
+        }
+      ],
+      "m": [
+        {
+          "name": "Infinite Guideline Station",
+          "set": "eoe",
+          "scryfallId": "5688894a-bbec-476b-ae2e-94000be258d0"
+        }
+      ]
+    }
+  },
+  "m15stationland": {
+    "note": "The station frame's Planet (TODO 4.27a): Edge of Eternities' five black-bordered Planets (EOE 2025 #250, #253, #255, #259, #260), one per colour — the land frame's bars in the colour of the land's mana, the picture under the whole frame, the text box banded into charge tiers. m, c: no Planet is printed in this colour; the master exists so no colour of a land resolves to a missing master.",
+    "colors": {
+      "w": [
+        {
+          "name": "Adagia, Windswept Bastion",
+          "set": "eoe",
+          "scryfallId": "c634273a-94b0-4104-9d10-ae522ece1fc7"
+        }
+      ],
+      "u": [
+        {
+          "name": "Uthros, Titanic Godcore",
+          "set": "eoe",
+          "scryfallId": "11da39d6-cfa6-498d-91b1-11454cc7e5a3"
+        }
+      ],
+      "b": [
+        {
+          "name": "Susur Secundi, Void Altar",
+          "set": "eoe",
+          "scryfallId": "aefb8c0d-2bc6-4bec-851e-0137b4abfb22"
+        }
+      ],
+      "r": [
+        {
+          "name": "Kavaron, Memorial World",
+          "set": "eoe",
+          "scryfallId": "60f3ca25-9dcc-4781-bf7b-ab6736d8db29"
+        }
+      ],
+      "g": [
+        {
+          "name": "Evendo, Waking Haven",
+          "set": "eoe",
+          "scryfallId": "2fa09104-acbe-4410-b101-2fe6ac28efde"
+        }
+      ],
+      "c": null,
+      "m": null
+    }
+  },
   "m15land": {
     "note": "Basics for w/u/b/r/g, Wastes for c. m is a five-colour gold-plate nonbasic (Command Tower); true dual lands blend two colours, which our single m frame can't express.",
     "colors": {

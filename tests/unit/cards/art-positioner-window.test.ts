@@ -47,6 +47,9 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   m15token: { front: [1305, 1457] },
   m15artifact: { front: M15_WINDOW },
   m15vehicle: { front: M15_WINDOW },
+  // The station frame (TODO 4.27a): ONE picture under the whole frame.
+  m15station: { front: [1392, 1959] },
+  m15stationland: { front: [1392, 1959] },
   m15ub: { front: M15_WINDOW },
   m15ubartifact: { front: M15_WINDOW },
   m15ubland: { front: M15_WINDOW },
@@ -200,10 +203,12 @@ describe("what the fixed 5:4 surface got wrong (before 3b.13)", () => {
     expect(front("battle")).toBeCloseTo(1.3598, 3);
   });
 
-  it("no template's window was 5:4, and 25 were more than a quarter off", () => {
+  it("no template's window was 5:4, and 27 were more than a quarter off", () => {
     const off = FRAME_TEMPLATE_VALUES.map((t) => mismatch(front(t)));
     expect(off.filter((m) => m < 0.005)).toHaveLength(0);
-    expect(off.filter((m) => m > 0.25)).toHaveLength(25);
+    // (25 before the station frame, TODO 4.27a: its two templates' one
+    // picture under the whole frame is far taller than 5:4.)
+    expect(off.filter((m) => m > 0.25)).toHaveLength(27);
   });
 });
 

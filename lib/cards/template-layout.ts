@@ -683,6 +683,17 @@ export type FrameProfile = {
    *  frame without the choice never keeps the key (normalizeAnatomy).
    *  Code-owned: not part of the override schema. */
   rulesAlignSwitch?: false;
+  /** The station frame's TIERS (TODO 4.27a; lib/cards/station.ts): the text
+   *  box is a top band (rules + the Station reminder) over 0–3 charge-tier
+   *  bands, each with its "N+" badge, one of them carrying the card's P/T on
+   *  a drawn plate. A frame that declares it sets ALL its rules text through
+   *  lib/cards/station-layout.ts (one size for the whole box, the ONE rules
+   *  layout's lines per band) — both renderers only draw: bands, badges and
+   *  plate are frame pieces under the finishes, as the saga's badges. Such a
+   *  frame has no `pt` slot (the plate moves with its tier) and offers no
+   *  text alignment. The geometry is STATION's (measured on the prints);
+   *  the profile holds only the inks. Code-owned: not in the override schema. */
+  tiers?: { textColorHex: string; digitColorHex: string };
   /** The printed collector line's slot (TODO 4.9b) — the two lines in the
    *  bottom border a card switches on (FrameStyle.collector, opt-in per
    *  card: declaring it changes no stored card). When the line is drawn it
@@ -2521,6 +2532,22 @@ const M15SNOW: FrameProfile = {
  *  bottom border. The art-window check (lib/frames/art-window.ts) holds it
  *  to the window and the whole see-through body with 0.05 % to spare. */
 const UNDER_FRAME_RECT: Rect = { topPct: 2.7, leftPct: 3.7, widthPct: 92.6, heightPct: 93.3 };
+/** The station frame's inks (TODO 4.27a): black text on every key, WHITE
+ *  digits on the black plate (255 on 21 of 21 prints; owner round 54). */
+/** The station frame's picture (TODO 4.27a): the under-frame rect, 3 px
+ *  wider — our cut field ends at column 1444 on the right (the M15 masters'
+ *  border is 2 px thinner there than on the left), so the rect that covers
+ *  it with the art-window check's 0.05 % to spare ends at 1447.5 px, as far
+ *  under the right border as it starts under the left one (55.5 / 58). */
+const STATION_ART_RECT: Rect = { ...UNDER_FRAME_RECT, widthPct: 92.8 };
+const STATION_INKS = { textColorHex: "#000000", digitColorHex: "#ffffff" } as const;
+/** A profile without its corner P/T slot (the station frame: the plate is
+ *  drawn on a tier, never in the corner). */
+function withoutPt(profile: FrameProfile): FrameProfile {
+  const rest = { ...profile };
+  delete rest.pt;
+  return rest;
+}
 // Devoid re-dresses the M15 frame; the Eldrazi type bar sits 0.1% higher
 // than the plain frame's and the set symbol lives in its own box
 // (production override 2026-07-14, folded 2026-09-25).
@@ -5334,6 +5361,34 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     ...M15ARTIFACT,
     overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }, { ...M15_HOLO_STAMP, keyMap: { c: "a" } }],
     twoColorMasters: ["split"],
+    collector: M15_COLLECTOR,
+  },
+  // The station frame (TODO 4.27a; owner rounds 2026-10-13 and 54): Edge of
+  // Eternities' Spacecraft and Planets. PipGlyph's own masters — the
+  // published m15artifact / m15land masters with the frame field cut clear
+  // and the text box at 0.68 (scripts/build-station-frames.mjs) — so the
+  // parents' slots, crown, stamp notch and collector line; the picture runs
+  // under the whole frame as ONE picture (30 of 30 prints: the art window's
+  // rail has the same picture on both sides). The text box is banded into
+  // charge tiers (`tiers`; lib/cards/station.ts) and the P/T sits on a
+  // drawn plate on one of them: no `pt` slot here. ADDITIONS: new templates
+  // no stored card sits on — no bump, no sweep.
+  m15station: {
+    ...withoutPt(M15ARTIFACT),
+    label: "M15 Station (Spacecraft)",
+    underFrameArt: { rect: STATION_ART_RECT, artSlot: STATION_ART_RECT },
+    rulesAlignSwitch: false,
+    tiers: STATION_INKS,
+    overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }, { ...M15_HOLO_STAMP, keyMap: { c: "a" } }],
+    collector: M15_COLLECTOR,
+  },
+  m15stationland: {
+    ...withoutPt(M15LAND),
+    label: "M15 Station (Planet)",
+    underFrameArt: { rect: STATION_ART_RECT, artSlot: STATION_ART_RECT },
+    rulesAlignSwitch: false,
+    tiers: STATION_INKS,
+    overlays: [{ ...M15_CROWN, keyMap: { c: "l" } }, { ...M15_HOLO_STAMP, keyMap: { c: "l" } }],
     collector: M15_COLLECTOR,
   },
   // The Vehicle frame (TODO 4.5c; owner 2026-09-29: a stored template of

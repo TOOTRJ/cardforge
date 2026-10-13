@@ -34,6 +34,8 @@ export const PARITY_ART2_URL = `${ART_FOLDER}/parity-art2.png`;
  *  and the same file as prepareUploadBytes stores it. */
 export const PARITY_TAGGED_JPEG_URL = `${ART_FOLDER}/parity-exif6-stored.jpg`;
 export const PARITY_UPLOADED_JPEG_URL = `${ART_FOLDER}/parity-exif6-upload.jpg`;
+/** The station cases' picture (TODO 4.27a): high-contrast bars. */
+export const PARITY_STRIPES_URL = `${ART_FOLDER}/parity-stripes.png`;
 /** The art files the browser stage may serve from tmp/parity/art/. */
 export const PARITY_ART_FILE = /^parity-[a-z0-9-]+\.(png|jpg)$/;
 

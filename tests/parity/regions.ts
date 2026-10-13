@@ -1,3 +1,4 @@
+import { STATION } from "@/lib/cards/station";
 import type { FrameProfile, Rect } from "@/lib/cards/template-layout";
 
 // ---------------------------------------------------------------------------
@@ -11,6 +12,7 @@ import type { FrameProfile, Rect } from "@/lib/cards/template-layout";
 //   stat    the P/T, loyalty or defense plate (grown: the plate overhangs)
 //   footer  the artist / collector / © band along the bottom edge
 //   strip   a modal face's flipside strip
+//   tiers   the station frame's box with its badges and plate
 //   second.* / page.*   an UNTURNED second face (split's right half) and the
 //           adventure page
 //
@@ -46,6 +48,14 @@ export function parityRegions(profile: FrameProfile): ParityRegion[] {
     profile.symbolRect ? of("symbol", profile.symbolRect, 0.004) : endOf("symbol", profile.type.rect, 0.12),
     of("rules", profile.rules.rect),
   ];
+  // The station frame's box (TODO 4.27a): the tier washes with the badges
+  // on its left pinline and the plate past its right one — wider than the
+  // rules slot, which holds the text alone.
+  if (profile.tiers) {
+    const { box, badge, plate } = STATION;
+    const left = badge.cx - badge.rRing;
+    out.push({ name: "tiers", x: left / 1500, y: box.top / 2100, w: (plate.x1 - left) / 1500, h: (box.bottom - box.top) / 2100 });
+  }
   const stat = profile.pt ?? profile.loyalty ?? profile.defense;
   if (stat) out.push(of("stat", stat.rect, 0.012));
   // The bottom band: the footer, the collector line, the brand mark and a

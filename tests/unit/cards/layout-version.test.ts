@@ -416,6 +416,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
   ...["m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback"],
   // TODO 4.5c's Vehicle frame and 4.25's Universes Beyond frames.
   "m15vehicle",
+  // The station frame (TODO 4.27a).
+  "m15station", "m15stationland",
   "m15ub", "m15ubartifact", "m15ubland",
 ];
 /** Templates added after v36 (TODO 5.1a's transform bodies, 5.1b's modal
@@ -426,6 +428,8 @@ const POST_V36_TEMPLATES: readonly string[] = [
   "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
   // TODO 4.5c's Vehicle frame and 4.25's Universes Beyond frames.
   "m15vehicle",
+  // The station frame (TODO 4.27a).
+  "m15station", "m15stationland",
   "m15ub", "m15ubartifact", "m15ubland",
 ];
 
@@ -770,6 +774,8 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
       // …and 4.5c's Vehicle frame and 4.25's Universes Beyond frames.
       "m15vehicle",
+      // …and the station frame (TODO 4.27a).
+      "m15station", "m15stationland",
       "m15ub", "m15ubartifact", "m15ubland",
     ];
     // An EXISTING template that joined brought its own bump: the battle
@@ -1151,6 +1157,8 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
     // scope's pickFrameColorKey).
     // (flip/c took the rect with its own bump, layout v38 — TODO 4.21a's
     // see-through Card Conjurer master: not v35's business either.)
+    // (The station frame, TODO 4.27a, draws ONE picture in a rect of its OWN —
+    // STATION_ART_RECT, 3 px wider — so it never reaches this check: no list.)
     const SEE_THROUGH_SINCE_V35 = ["flip"];
     for (const t of ALL) {
       const u = getFrameProfile(t).underFrameArt;

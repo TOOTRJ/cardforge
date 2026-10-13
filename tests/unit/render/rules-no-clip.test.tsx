@@ -239,7 +239,8 @@ function consumersOf(template: FrameTemplate, text: RulesCase, rulesAlign?: "cen
   const out: Consumer[] = [];
   // The saga's rail replaces its box; a walker with abilities draws rows; a
   // textless frame (the full-art token's textless height) draws no box.
-  if (!layout.chapters && !layout.textless) {
+  // (The station frame sets its text through its own tiers layout, never this box — TODO 4.27a; tests/unit/cards/station-layout.test.ts holds its no-clip.)
+  if (!layout.chapters && !layout.textless && !layout.tiers) {
     out.push({ key: `${template}/main`, layout: mainRulesLayout({ layout, rulesText: text.rules, flavorText: text.flavor, aspect, show, rulesAlign }) });
   }
   if (layout.loyalty) {
@@ -364,7 +365,7 @@ describe("rules consumers — no clip, no keep-out ink, the layout's lines (Sato
     const keys = new Set(cases.flatMap((c) => c.keys.map((k) => k.split(" · ")[0])));
     for (const t of FRAME_TEMPLATE_VALUES) {
       const p = getFrameProfile(t);
-      if (!p.chapters && !p.textless) expect(keys.has(`${t}/main`), t).toBe(true);
+      if (!p.chapters && !p.textless && !p.tiers) expect(keys.has(`${t}/main`), t).toBe(true);
       if (p.textless) expect(keys.has(`${t}/main`), t).toBe(false);
     }
     expect(keys.has("adventure/adventure")).toBe(true);

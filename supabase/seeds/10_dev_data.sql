@@ -467,6 +467,33 @@ Crew 3', '12', '12', 11,
      E'Trample
 Crew 2', '5', '4', 14,
      '{"template":"m15artifact","finish":"regular"}'::jsonb, 5),
+  -- TODO 4.27a: the station frame (m15station, m15stationland) — Edge of
+  -- Eternities' Spacecraft and Planets: the picture under the whole frame,
+  -- the see-through text box banded into charge tiers, the P/T on a plate
+  -- on one tier. Stored as PLAIN rules text in Scryfall's own shape
+  -- ("N+ | …" opens a tier; lib/cards/station.ts) — both renderers draw the
+  -- tiers from it. Ids …080–…082: a blue Spacecraft with two tiers, a
+  -- legendary colourless one with one tier, the crown, the stamp and the
+  -- collector line, and a green Planet (a tier, never a plate). Unverified,
+  -- so no maker is offered the frames: an admin opens these with
+  -- `?previewFrames=m15station,m15stationland`.
+  ('c0000000-0000-4000-a000-000000000080'::uuid, 'Tidecaller Frigate', 'tidecaller-frigate', '{1}{U}', array['blue'], null, 'artifact', array['Spacecraft'], 'rare',
+     E'Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It''s an artifact creature at 12+.)
+2+ | Other creatures you control have flying.
+12+ | Flying, lifelink', '3', '5', 7,
+     '{"template":"m15station","finish":"regular","collector":"2023"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000081'::uuid, 'The Lantern of Far Suns', 'the-lantern-of-far-suns', '{4}', array['colorless'], 'Legendary', 'artifact', array['Spacecraft'], 'mythic',
+     E'When The Lantern of Far Suns enters, scry 2.
+Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It''s an artifact creature at 8+.)
+8+ | Flying
+Whenever The Lantern of Far Suns attacks, draw a card.', '4', '4', 12,
+     '{"template":"m15station","finish":"regular","crown":true,"stamp":"auto","collector":"2023"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000082'::uuid, 'Verdance, Waking World', 'verdance-waking-world', null, array['green'], null, 'land', array['Planet'], 'rare',
+     E'This land enters tapped.
+{T}: Add {G}.
+Station (Tap another creature you control: Put charge counters equal to its power on this Planet. Station only as a sorcery.)
+12+ | {G}, {T}: Add {G} for each creature you control.', null, null, 19,
+     '{"template":"m15stationland","finish":"regular"}'::jsonb, 1),
   -- TODO 4.25: the Universes Beyond frames (m15ub, m15ubartifact,
   -- m15ubland) — the smooth streaked dress on M15's slots. Ids …110–…114: a
   -- common red spell with the triangle stamp set to "Always" (print stamps

@@ -62,7 +62,10 @@ function backFace(pt: boolean, body: string | null): BackFace {
     card_type: "creature",
     supertype: null,
     subtypes: ["Beast"],
-    rules_text: "",
+    // A tier for the station frame's plate (TODO 4.27a: its P/T is drawn on
+    // a tier, so a legacy back on that frame needs one); one plain line on
+    // every other frame, the same in both bakes of a pair.
+    rules_text: "5+ | Flying",
     power: pt ? "7" : null,
     toughness: pt ? "7" : null,
     ...(body ? { frame_style: { template: body } } : {}),
@@ -79,7 +82,9 @@ function card(template: string, pt: boolean, back: BackFace | null = null): Card
     subtypes: ["Beast"],
     rarity: "common",
     colorIdentity: ["blue"],
-    rulesText: null,
+    // The station frame draws its P/T on a TIER's plate (TODO 4.27a): the
+    // card on those two templates has one tier. Null everywhere else.
+    rulesText: template.startsWith("m15station") ? "5+ | Flying" : null,
     flavorText: null,
     power: pt ? "7" : null,
     toughness: pt ? "7" : null,
