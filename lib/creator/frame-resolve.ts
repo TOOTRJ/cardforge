@@ -36,6 +36,7 @@ import {
   kindFromCard,
   templateIsBasicOnly,
   isSubtypeDress,
+  isEnchantmentDress,
   tokenFrameFor,
   type CardKind,
   type FrameColorKey,
@@ -135,6 +136,8 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
         !isRowDress(kind, choice.template) &&
         // …nor a subtype dress (the Vehicle frame, TODO 4.5c).
         !isSubtypeDress(choice.template) &&
+        // …nor an enchantment dress (the Nyx frame, TODO 4.7).
+        !isEnchantmentDress(choice.template) &&
         Boolean(dfcBodyOf(choice.template)?.land) === Boolean(dfcBodyOf(wanted)?.land) &&
         choice.availableColorKeys.includes(colorKey),
     );

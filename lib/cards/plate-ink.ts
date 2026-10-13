@@ -30,6 +30,8 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   // one image under every colour key, drawn at M15's plate box — the body
   // with its bevels, none of the soft shadow.
   "/frames/m15vehicle/pt/{color}.png": { left: 0.0761, top: 0.0526, right: 0.9922, bottom: 0.8613 },
+  // The Nyx dress (TODO 4.7) prints M15's own plates: m15's seven images.
+  "/frames/m15nyx/pt/{color}.png": { left: 0.0742, top: 0.0436, right: 0.9974, bottom: 0.8641 },
   "/frames/m15snow/pt/{color}.png": { left: 0.0742, top: 0.0436, right: 0.9974, bottom: 0.8641 },
   "/frames/m15devoid/pt/{color}.png": { left: 0.0742, top: 0.0436, right: 0.9974, bottom: 0.8641 },
   // The transform backs' dark plates (TODO 5.1a; CC's transform pt<K>.png,

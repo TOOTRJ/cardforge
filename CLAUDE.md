@@ -761,6 +761,34 @@ Rules and gotchas:
   (`vehicle/2015`, `onceVerified`) — no bump, no sweep, no badge. The saga
   body still draws no P/T: the printed saga creature (FIN 2025) is another
   body, 4.5d's. `docs/FRAMES.md` "The Vehicle frame".
+- The Nyx dress (`m15nyx`; TODO 4.7): the printed ENCHANTMENT frame — the
+  M15 frame with a starfield in its frame field (every enchantment creature
+  and artifact since 2020, every enchantment since Foundations 2024). A
+  STORED template of its own, never a render-time pick from the type words;
+  not the `nyx` template (the THB constellation showcase) and not the
+  token's Nyx (4.51). Card Conjurer's seven 'Nyx' masters whole (bars, box,
+  pinline and border are M15's own pixels; `c` is the pack's silver
+  starfield, no art under the frame), m15's twenty pair masters over them,
+  m15's slots, plates, stamp notch and collector line, and its OWN crown
+  band (`M15_NYX_CROWN`, `m15nyxcrown/*`: the m15 crown with the starfield
+  strip inside it — one band, never two overlays). It dresses a card whose
+  type words say Enchantment — `card_type` or a `supertype` word, never
+  `printed_types` — in the creature, enchantment and artifact kinds
+  (`ENCHANTMENT_DRESSES` / `enchantmentFrameFits` in
+  `lib/creator/card-kinds.ts`: the server's kind gate, random and stand-in
+  picks, the import chooser). A creature and an artifact BORROW it (picking
+  it writes "Enchantment", as the artifact frame writes "Artifact"); the
+  Enchantment kind wears it as its own skin (`KIND_SKIN_VARIANTS` — never
+  `TEMPLATE_SKIN_VARIANTS.m15`, which an instant shares). An ADDITION: a
+  new Enchantment Creature / Artifact follows its words onto it where it is
+  verified (`enchantmentFrameFor`: the creator's effect,
+  `resolveGeneratedFrame`); a PLAIN enchantment is offered it and never
+  moved (`followsEnchantmentDress` — widening that is an owner decision); a
+  stored card keeps its frame; an import names it once verified
+  (`era/2015+nyx` keeps its key and gains `onceVerified`,
+  `nyxOnceVerified`) — no bump, no sweep, no badge. Borderless and
+  extended-art Nyx printings stay where they land (no frame field, no
+  starfield on the print). `docs/FRAMES.md` "The Nyx dress".
 - The 1997 frame (`retro`, `retroland`; TODO 4.10a, layout v46) is the
   ORIGINAL cards of 1996–2003, never the 2006 timeshifted redrawing or the
   2021+ reprints (imports of those are `nearest`: the `timeshifted-frame`

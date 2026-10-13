@@ -63,6 +63,9 @@ import {
   subtypeDressOf,
   subtypeDressReason,
   subtypeFrameFits,
+  enchantmentDressReason,
+  enchantmentFrameFits,
+  isEnchantmentDress,
   templateIsBasicOnly,
   TOKEN_PICKER_WORDS,
   toggleTokenWord,
@@ -575,6 +578,13 @@ export function CardSetupPanel({
             // of its subtype only — the server's rule too.
             const subtypeRefused = !subtypeFrameFits(choice.template, cardSubtypes);
             const borrowedWord = borrowedTypeWord(kind, choice.template);
+            // An enchantment dress (the Nyx frame, TODO 4.7) is for a card
+            // whose type words say Enchantment — the server's rule too. A
+            // creature or an artifact BORROWS it (picking it writes the
+            // word, below), so only another kind's card could be refused.
+            const enchantmentRefused =
+              !borrowedWord &&
+              !enchantmentFrameFits(choice.template, { cardType, supertype });
             return {
               value: choice.template,
               label,
@@ -582,12 +592,18 @@ export function CardSetupPanel({
                 ? BASIC_ONLY_FRAME_REASON
                 : subtypeRefused
                   ? (subtypeDressReason(choice.template) ?? undefined)
+                : enchantmentRefused
+                  ? (enchantmentDressReason(choice.template) ?? undefined)
                 : !available
                   ? "Awaiting verification"
                   : !colorAvailable
                     ? `Not verified in ${colorWord(colorKey)} yet — picking it switches to ${colorWord(choice.availableColorKeys[0])}`
+                    : borrowedWord && isEnchantmentDress(choice.template)
+                      ? `The printed enchantment frame, for ${borrowedWord} ${KIND_DEFS[kind].label}s: a starfield in the frame`
                     : borrowedWord
                       ? `For ${borrowedWord} ${KIND_DEFS[kind].label}s`
+                    : isEnchantmentDress(choice.template)
+                      ? "The printed enchantment frame: a starfield in the frame"
                       : isTextBoxDress(kind, choice.template)
                         ? "A text box for rules and flavour text"
                         : kind === "token" && m20TokenHeightOf(choice.template)
@@ -614,7 +630,7 @@ export function CardSetupPanel({
                   anatomy={frameAnatomy}
                 />
               ),
-              disabled: !available || basicOnlyRefused || subtypeRefused,
+              disabled: !available || basicOnlyRefused || subtypeRefused || enchantmentRefused,
               badge: available ? undefined : <SoonBadge />,
             };
           };

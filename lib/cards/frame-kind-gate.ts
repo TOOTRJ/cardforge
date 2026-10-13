@@ -4,6 +4,8 @@ import type { BasicLandFace } from "@/lib/cards/watermark";
 import {
   BASIC_ONLY_FRAME_REASON,
   KIND_DEFS,
+  enchantmentDressReason,
+  enchantmentFrameFits,
   isSingleBasicLand,
   kindFromCard,
   subtypeDressReason,
@@ -18,7 +20,9 @@ import { describeFrame } from "@/lib/creator/frame-resolve";
 // never offers a frame for a card it can't draw: a showcase treatment's kind
 // restriction takes it out of the kind's gallery, and a basic-only frame's
 // chip is disabled on anything but a basic land, a subtype dress's (the
-// Vehicle frame, TODO 4.5c) on anything but its subtype. createCardAction and
+// Vehicle frame, TODO 4.5c) on anything but its subtype, and an enchantment
+// dress (the Nyx frame, TODO 4.7) is offered to enchantments only.
+// createCardAction and
 // updateCardAction repeat both checks so a stale client or a crafted payload
 // can't save a planeswalker on the Zendikar Rising hedron frame or a
 // shockland on the full-art basic frame (TODO 0.26).
@@ -70,6 +74,11 @@ export function frameKindGateError(
   // subtype only.
   if (!subtypeFrameFits(resolved, face.subtypes)) {
     return `${subtypeDressReason(resolved)} — pick another frame.`;
+  }
+  // An enchantment dress (TODO 4.7: the Nyx frame) is for the cards whose
+  // type words say Enchantment — the card type or a supertype word.
+  if (!enchantmentFrameFits(resolved, face)) {
+    return `${enchantmentDressReason(resolved)} — pick another frame.`;
   }
   return null;
 }

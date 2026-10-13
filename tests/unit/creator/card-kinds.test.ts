@@ -129,12 +129,18 @@ describe("framesForKind", () => {
       "m15borderless",
       "m15artifact",
       "m15borderlessartifact",
+      // …and the Nyx dress (TODO 4.7), an Enchantment Creature's frame.
+      "m15nyx",
     ]);
-    for (const kind of ["instant", "sorcery", "enchantment"] as CardKind[]) {
+    for (const kind of ["instant", "sorcery"] as CardKind[]) {
       expect(skinsFor(kind)).toEqual(["m15snow", "m15devoid", "m15borderless"]);
     }
-    // …and the Vehicle frame (TODO 4.5c), a subtype dress of the artifact frame.
-    expect(skinsFor("artifact")).toEqual(["m15borderlessartifact", "m15vehicle"]);
+    // The Nyx dress is the Enchantment kind's own skin of m15 — never an
+    // instant's or a sorcery's, whose standard is m15 too.
+    expect(skinsFor("enchantment")).toEqual(["m15snow", "m15devoid", "m15borderless", "m15nyx"]);
+    // …and the Vehicle frame (TODO 4.5c), a subtype dress of the artifact
+    // frame; an Enchantment Artifact borrows the Nyx dress.
+    expect(skinsFor("artifact")).toEqual(["m15borderlessartifact", "m15vehicle", "m15nyx"]);
     // The land's borderless dress (4.34).
     expect(skinsFor("land")).toEqual(["m15snowland", "m15borderlessland"]);
     // The artifact dress, 4.49 (b)'s text-box variations and 4.48 / 4.50's

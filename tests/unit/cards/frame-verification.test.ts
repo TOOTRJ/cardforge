@@ -122,8 +122,8 @@ describe("frame reference registry", () => {
     // 4.50's six full-art tokens + 4.33's two borderless planeswalkers (every
     // colour referenced, the tall one's c by the serialized DFT #376) +
     // 4.52's emblem + 5.1a's five transform bodies + 5.1b's four modal bodies.
-    // + 4.5c's Vehicle frame.
-    expect(m15Templates.length).toBe(39);
+    // + 4.5c's Vehicle frame + 4.7's Nyx dress.
+    expect(m15Templates.length).toBe(40);
     expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {

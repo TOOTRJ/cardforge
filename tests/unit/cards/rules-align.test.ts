@@ -128,7 +128,7 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
     // decide then — `rulesAlignSwitch: false`, or one more frame with it.
     const without = FRAME_TEMPLATE_VALUES.filter((t) => !profileOffersRulesAlign(getFrameProfile(t)));
     expect(without).toEqual(["m15pw", "m20token", "m20tokenartifact", "m15borderlesspw", "m15borderlesspwtall", "saga"]);
-    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(55);
+    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(56);
   });
 
   it("rulesAlignOf is \"center\" only for the card's \"center\" on a frame that offers it", () => {

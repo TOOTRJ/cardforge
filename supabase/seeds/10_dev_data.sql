@@ -238,7 +238,8 @@ on conflict (id) do nothing;
 --     …064–…066 4.10c's, on the 1993 frame; …069–…072 4.6h's pairs on the
 --     old frames; …073–…075 4.30's, with the white border; …076–…079
 --     4.5c's, on the Vehicle frame (and one Vehicle left on the artifact
---     frame).
+--     frame); …080–…084 4.7's, on the Nyx dress (and one Enchantment
+--     Creature left on the plain M15 frame).
 -- ---------------------------------------------------------------------------
 
 insert into public.cards (
@@ -463,7 +464,39 @@ Crew 3', '12', '12', 11,
   ('c0000000-0000-4000-a000-000000000079'::uuid, 'Ironclad Hauler', 'ironclad-hauler', '{4}', array['colorless'], null, 'artifact', array['Vehicle'], 'common',
      E'Trample
 Crew 2', '5', '4', 14,
-     '{"template":"m15artifact","finish":"regular"}'::jsonb, 5)
+     '{"template":"m15artifact","finish":"regular"}'::jsonb, 5),
+  -- TODO 4.7: the Nyx dress (m15nyx) — the printed enchantment frame, a
+  -- starfield in the frame field. Ids …080–…084: an Enchantment Creature
+  -- with its plate, a legendary two-colour one with the Nyx crown, the split
+  -- pair, the stamp and the collector line, a plain Aura (the frame every
+  -- enchantment has printed since Foundations 2024), a Legendary
+  -- Enchantment Artifact (the Enchantment card type with "Artifact" in its
+  -- supertype, as the importer writes Bident of Thassa), and Emberglow
+  -- Eidolon, an Enchantment Creature stored on the plain M15 frame (as every
+  -- enchantment saved before the frame shipped): it keeps that frame until
+  -- its owner picks "Nyx". Unverified on a fresh database: an admin edits
+  -- these with `?previewFrames=m15nyx`.
+  ('c0000000-0000-4000-a000-000000000080'::uuid, 'Starbound Griffin', 'starbound-griffin', '{2}{W}', array['white'], 'Enchantment', 'creature', array['Griffin'], 'common',
+     E'Flying
+Aura spells you cast cost {1} less to cast.', '2', '2', 2,
+     '{"template":"m15nyx","finish":"regular","collector":"2023"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000081'::uuid, 'Ilyra, Loom of the Night Sky', 'ilyra-loom-of-the-night-sky', '{2}{G}{W}', array['green','white'], 'Legendary Enchantment', 'creature', array['Nymph'], 'mythic',
+     E'Vigilance
+Whenever you cast an enchantment spell, you gain 1 life and put a +1/+1 counter on target creature you control.
+{2}{G}{W}: Return target enchantment card from your graveyard to your hand.', '3', '4', 9,
+     '{"template":"m15nyx","finish":"regular","crown":true,"twoColor":true,"stamp":"auto","collector":"2023"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000082'::uuid, 'Veil of Falling Stars', 'veil-of-falling-stars', '{1}{U}', array['blue'], null, 'enchantment', array['Aura'], 'uncommon',
+     E'Enchant creature
+Enchanted creature gets +1/+1 and has flying.
+When Veil of Falling Stars enters, scry 2.', null, null, 7,
+     '{"template":"m15nyx","finish":"regular","collector":"2023"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000083'::uuid, 'Hammer of the Night Forge', 'hammer-of-the-night-forge', '{1}{R}{R}', array['red'], 'Legendary Artifact', 'enchantment', array[]::text[], 'rare',
+     E'Creatures you control have haste.
+{2}{R}, {T}, Sacrifice a land: Create a 3/3 colorless Golem enchantment artifact creature token.', null, null, 12,
+     '{"template":"m15nyx","finish":"regular","crown":true,"stamp":"auto","collector":"2023"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000084'::uuid, 'Emberglow Eidolon', 'emberglow-eidolon', '{1}{R}', array['red'], 'Enchantment', 'creature', array['Spirit'], 'common',
+     E'Whenever a player casts a spell with mana value 3 or less, Emberglow Eidolon deals 1 damage to that player.', '2', '1', 5,
+     '{"template":"m15","finish":"regular"}'::jsonb, 4)
 ) as c (id, title, slug, cost, colors, supertype, card_type, subtypes, rarity,
         rules_text, power, toughness, art, frame_style, age_days)
 on conflict (id) do nothing;

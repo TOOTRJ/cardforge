@@ -76,6 +76,9 @@ const PICKS: readonly Pick[] = [
   // --- the Vehicle frame (TODO 4.5c): its own plate, white digits -----------
   { from: "m15vehicle/c/artifact-short@wide", why: "Vehicle: the brown plate under white digits at their widest (12/12), the bronze frame" },
   { from: "m15vehicle/wu/artifact-long@pair-crown", why: "Vehicle: the two-colour pair master and the crown over the bronze frame" },
+  // --- the Nyx dress (TODO 4.7): the starfield masters, their own crown band --
+  { from: "m15nyx/w/creature-short", why: "Nyx: the starfield master under M15's slots and plate" },
+  { from: "m15nyx/wu/creature-long@pair-crown", why: "Nyx: the two-colour pair master and the Nyx crown band (the starfield strip inside the crown)" },
   // --- art away from its default position (a coded picture) ----------------
   {
     from: "m15/r/creature-short",

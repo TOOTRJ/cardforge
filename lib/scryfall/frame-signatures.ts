@@ -10,6 +10,7 @@ import {
   KIND_DEFS,
   borrowedTypeWord,
   dfcFrontDressesKind,
+  isEnchantmentDress,
   subtypeDressOf,
   subtypeFrameFits,
   templateIsBasicOnly,
@@ -1383,6 +1384,19 @@ const BROWN_PLATE_VEHICLE: Match = {
   notCollectorIds: SILVER_PLATE_VEHICLE_PINS,
 };
 
+/** The gap rule of the Nyx starfield, naming the Nyx frame once it is
+ *  verified (TODO 4.7): `<base>+nyx` keeps its match, status, reason and
+ *  gaps, and gains `onceVerified: "m15nyx"`, exact after the swap unless a
+ *  later gap of the base still holds there (`gapsOnceVerified`: the rule's
+ *  own list — its first, the starfield, is drawn on that frame). */
+function nyxOnceVerified(rules: Rule[]): Rule[] {
+  return rules.map((rule) =>
+    rule.gaps?.[0] === "nyx"
+      ? { ...rule, outcome: { ...rule.outcome, onceVerified: "m15nyx", exactOnceVerified: true }, gapsOnceVerified: rule.gaps }
+      : rule,
+  );
+}
+
 /** Where such a Vehicle lands when its printing wears a dress PipGlyph has
  *  no Vehicle plate for (borderless, extended art — 7 of 7 and 8 of 8 read
  *  print the brown plate; owner 2026-10-12, round 48): the bordered Vehicle
@@ -2487,14 +2501,34 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     },
     M15_ERA_GAPS.filter((gap) => gap !== "vehicle"),
   ),
-  ...withGaps(
-    {
-      key: "era/2015",
-      exactLabel: "M15 (2015) frame",
-      match: { frames: ["2015"] },
-      outcome: { status: "exact", template: { family: "m15" } },
-    },
-    M15_ERA_GAPS,
+  // An enchantment on the plain 2015 frame that prints the Nyx dress (TODO
+  // 4.7; Scryfall's `enchantment` frame effect — `frame:nyxtouched`: every
+  // enchantment creature and enchantment artifact, C15 2015 → today, and
+  // every enchantment since Foundations 2024; 983 plain black-bordered
+  // printings on 2026-10-13) is `era/2015+nyx`, as it always was: the
+  // kind's M15 frame, `nearest`, the starfield its gap. That rule now names
+  // `m15nyx` once it is verified in the card's colour (nyxOnceVerified:
+  // `onceVerified`, exact — the starfield is drawn there, gapDrawnBy; a
+  // legendary one wears the Nyx crown, a two-colour one the frame's pair
+  // masters, both drawn; any later gap that still holds keeps it nearest).
+  // Until then NOTHING about the match changes — signature, reason, gaps,
+  // landing. Only where the Nyx frame dresses the card as it stands
+  // (kindMisfit): the Enchantment kind, a creature or an artifact whose face
+  // says Enchantment. A saga (4.5d), a class, a case and an adventure (the
+  // `layout` gap), a double-faced printing (`dfc`: the flag is the card's,
+  // only one face is the enchantment — FIN's Dominants, NEO's sagas) and a
+  // token (4.51's `nyx-dress`) never reach it, and the borderless,
+  // extended-art and showcase printings are named by earlier rules.
+  ...nyxOnceVerified(
+    withGaps(
+      {
+        key: "era/2015",
+        exactLabel: "M15 (2015) frame",
+        match: { frames: ["2015"] },
+        outcome: { status: "exact", template: { family: "m15" } },
+      },
+      M15_ERA_GAPS,
+    ),
   ),
   {
     key: "unknown-frame",
@@ -2780,6 +2814,9 @@ function gapDrawnBy(gap: GapKey, template: FrameTemplate, border?: string): bool
     // The Vehicle plate (TODO 4.5c): the Vehicle frame draws it.
     case "vehicle":
       return subtypeDressOf(template) === "Vehicle";
+    // The Nyx starfield (TODO 4.7): the Nyx frame draws it.
+    case "nyx":
+      return isEnchantmentDress(template);
     default:
       return false;
   }

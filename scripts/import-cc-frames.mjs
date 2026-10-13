@@ -120,6 +120,8 @@ import {
   cutStripRider,
   cutThroughMask,
   describeCrownBand,
+  describeInnerCrown,
+  innerCrownRecipe,
   describeStripRider,
   describeFinish,
   describeBlockShift,
@@ -863,7 +865,10 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
       continue;
     }
     const r = crownBandRecipe(key);
-    recipe[key] = describeCrownBand(r);
+    // An inner crown (TODO 4.7: the Nyx dress's starfield strip) is the
+    // band's last layer, 1:1 at the composite's size.
+    const innerRecipe = def.inner ? innerCrownRecipe(def.inner, key) : null;
+    recipe[key] = [...describeCrownBand(r), ...(innerRecipe ? [describeInnerCrown(def.inner, innerRecipe)] : [])];
     if (dryRun) {
       console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}`);
       continue;
@@ -874,7 +879,19 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
     // helper the pair masters use (scripts/lib/pair-ramp.mjs blendPair).
     const left = await place(r.left);
     const crown = r.right ? blendPair(left, await place(r.right), W, H, r.ramp) : left;
-    const composite = toRgba8(compositeLayers([{ data: cover }, { data: crown }], W, H));
+    let innerLayer = null;
+    if (innerRecipe) {
+      const box = def.inner.box;
+      const placeInner = async (src) => {
+        const file = await fetchCached(src);
+        const meta = await sharp(file).metadata();
+        if (meta.width !== box.width || meta.height !== box.height) throw new Error(`${src} is ${meta.width}×${meta.height}, the inner crown is ${box.width}×${box.height} (the source moved?)`);
+        return placeOnCanvas(await rgba(file, box.width, box.height), box, W, H);
+      };
+      const leftInner = await placeInner(innerRecipe.left);
+      innerLayer = innerRecipe.right ? blendPair(leftInner, await placeInner(innerRecipe.right), W, H, innerRecipe.ramp) : leftInner;
+    }
+    const composite = toRgba8(compositeLayers([{ data: cover }, { data: crown }, ...(innerLayer ? [{ data: innerLayer }] : [])], W, H));
     const full = await sharp(composite, { raw: { width: W, height: H, channels: 4 } })
       .resize(OUT_W, OUT_H, { fit: "fill", kernel: "lanczos3" })
       .raw()
@@ -909,7 +926,7 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
       ? cutCrownSourceFiles(folder)
       : def.layers
         ? sourceFilesFor({ colors: Object.fromEntries(def.keys.map((key) => [key, def.layers(key)])) })
-        : crownBandSourceFiles(def.keys),
+        : [...new Set([...crownBandSourceFiles(def.keys), ...(def.inner ? def.keys.flatMap((key) => { const i = innerCrownRecipe(def.inner, key); return i.right ? [i.left, i.right] : [i.left]; }) : [])])].sort(),
     ...(def.cut ? { bands: Object.fromEntries(def.keys.map((key) => [key, `m15crown/${key}.png`])) } : {}),
     notes: def.notes,
   };

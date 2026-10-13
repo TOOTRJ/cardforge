@@ -251,6 +251,9 @@ import {
   textBoxFrameFor,
   subtypeFrameFor,
   subtypesSay,
+  enchantmentFrameFor,
+  followsEnchantmentDress,
+  typeLineHasWord,
   typeWordFrameFor,
   KIND_DEFS,
   dfcFrontBodyFor,
@@ -1281,6 +1284,38 @@ export function CardCreatorForm({
     if (!isFrameComboAvailable(next, colorKey, new Set(verifiedFrameKeys))) return;
     setValue("frame_style.template", next, { shouldDirty: true });
   }, [kind, saysVehicle, isRevise, isDirty, vehicleFramePinned, getValues, setValue, verifiedFrameKeys]);
+  // A NEW Enchantment Creature or Enchantment Artifact starts on the Nyx
+  // frame (TODO 4.7, owner decision A4: an addition — the dress those cards
+  // have printed since Theros, with the plain frame one click away in
+  // Variations). The frame follows the TYPE WORDS between the kind's M15
+  // frame and its Nyx dress (enchantmentFrameFor): the moment the words
+  // first say Enchantment AND Creature or Artifact on a card wearing that
+  // frame it takes the Nyx frame, and a card on the Nyx frame whose words
+  // stop saying Enchantment goes back (the server refuses it there). A plain
+  // enchantment is never moved: Nyx is its maker's pick. The Vehicle
+  // follow's rules: real edits only, only when the words change, never an
+  // unverified combo, never an admin's saved frame preview; an import or an
+  // AI fill that names its frame decides it itself (settleTokenTextFollow).
+  const nyxWordsOf = (cardType: string | null | undefined, supertype: string | null | undefined) => {
+    const words = { cardType, supertype };
+    return `${typeLineHasWord(words, "Enchantment")}|${followsEnchantmentDress(words)}`;
+  };
+  const nyxWords = `${kind}|${nyxWordsOf(watched.card_type, watched.supertype)}`;
+  const lastNyxRef = useRef(nyxWords);
+  useEffect(() => {
+    if (lastNyxRef.current === nyxWords) return;
+    lastNyxRef.current = nyxWords;
+    if (isRevise || !isDirty || vehicleFramePinned) return;
+    const current = normalizeFrameTemplate(getValues("frame_style.template"));
+    const next = enchantmentFrameFor(kind, current, {
+      cardType: getValues("card_type"),
+      supertype: getValues("supertype"),
+    });
+    if (next === current) return;
+    const colorKey = pickFrameColorKey(getValues("color_identity"));
+    if (!isFrameComboAvailable(next, colorKey, new Set(verifiedFrameKeys))) return;
+    setValue("frame_style.template", next, { shouldDirty: true });
+  }, [kind, nyxWords, isRevise, isDirty, vehicleFramePinned, getValues, setValue, verifiedFrameKeys]);
   // The token's frame follows its text (TODO 4.49 (b) and 4.48, owner
   // decisions 2026-09-29). On the 2014–19 arch the text box comes and goes
   // with the rules or flavour text; on the full-art design the height (no
@@ -1453,6 +1488,7 @@ export function CardCreatorForm({
     };
     manualTokenFrameRef.current = manual;
     lastVehicleRef.current = `${kindFromCard(getValues("card_type"), getValues("frame_style.template"))}|${subtypesSay(parseSubtypes(getValues("subtypes_text")), "Vehicle")}`;
+    lastNyxRef.current = `${kindFromCard(getValues("card_type"), getValues("frame_style.template"))}|${nyxWordsOf(getValues("card_type"), getValues("supertype"))}`;
     lastWalkerTallRef.current =
       walkerRowCount({ editorRows: getValues("loyalty_abilities"), rulesText: getValues("rules_text") }) >=
       TALL_WALKER_MIN_ROWS;

@@ -523,6 +523,11 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   // dresses an artifact whose subtype says Vehicle (SUBTYPE_DRESSES, below,
   // is the per-card half: the Artifact kind covers every artifact).
   m15vehicle: ["artifact"],
+  // The Nyx dress (TODO 4.7) is new too, and dresses the kinds an
+  // enchantment can be: the Enchantment kind itself, an Enchantment Creature
+  // and an Enchantment Artifact (ENCHANTMENT_DRESSES, below, is the per-card
+  // half: the type words must say Enchantment).
+  m15nyx: ["creature", "enchantment", "artifact"],
 };
 
 /** Kinds that wear ONLY a template whose trade dress names them. */
@@ -667,6 +672,101 @@ export function isSubtypeDress(template: FrameTemplate): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Enchantment dresses (TODO 4.7). A frame that dresses the cards whose TYPE
+// WORDS say Enchantment: the Nyx dress, `m15nyx` — the M15 frame with the
+// starfield in its frame field, the printed enchantment frame. The prints
+// (Scryfall `frame:nyxtouched`, 2026-10-13: 983 plain black-bordered
+// printings on the 2015 frame): every enchantment creature since Theros
+// Beyond Death 2020 (344 of 344 in paper sets; the 2015–19 reprints of
+// Theros cards too), every enchantment artifact, and — since Foundations,
+// November 2024 — every enchantment at all (591 plain enchantments and
+// Auras, 0 on the plain frame in any premier set since). So the frame may
+// dress any card whose words say Enchantment, in the three kinds such a card
+// can be (TREATMENT_KINDS): the Enchantment kind, a creature ("Enchantment
+// Creature": the creature card type with the word in its supertype, as the
+// importer and the creator write it) and an artifact.
+//
+// Like the Vehicle frame it is a per-card check on top of the kind rule —
+// the server refuses it on a card that is not an enchantment, a random or
+// stand-in pick never lands on it by accident — and the dress of a BASE
+// frame with the same slots, which a NEW card FOLLOWS onto
+// (enchantmentFrameFor: the creator's effect, the AI jobs) while a stored
+// card keeps its template until its owner picks the other. What follows is
+// narrower than what may wear it: an Enchantment CREATURE or ARTIFACT
+// (the dress those cards have printed for six years), never a plain
+// enchantment or an Aura, which only gets the choice
+// (ENCHANTMENT_DRESS_FOLLOW_WORDS — an owner question, docs/FRAMES.md "The
+// Nyx dress"). A creature and an artifact BORROW it under their own
+// standard (BORROWED_VARIATIONS, owner decisions A3 / A4: picking it writes
+// "Enchantment" into the type line, as the artifact frame writes
+// "Artifact"); the Enchantment kind wears it as a skin of its own
+// (KIND_SKIN_VARIANTS). The token kind's Nyx is 4.51's dress of the token
+// frames, and the `nyx` template is the Theros Beyond Death constellation
+// SHOWCASE — neither is this.
+// ---------------------------------------------------------------------------
+
+const ENCHANTMENT_DRESSES: Partial<Record<FrameTemplate, { bases: Partial<Record<CardKind, FrameTemplate>> }>> = {
+  m15nyx: { bases: { creature: "m15", enchantment: "m15", artifact: "m15artifact" } },
+};
+
+/** The card-type words, beside Enchantment, whose cards a NEW card follows
+ *  onto an enchantment dress with: an Enchantment Creature, an Enchantment
+ *  Artifact. A plain enchantment is offered the frame and never moved. */
+const ENCHANTMENT_DRESS_FOLLOW_WORDS: readonly ("Creature" | "Artifact")[] = ["Creature", "Artifact"];
+
+/** A card's type words as far as an enchantment dress reads them: the card
+ *  type and the supertype words — never `printed_types`, which is display
+ *  only. */
+export type TypeWordsFace = { cardType?: string | null; supertype?: string | null };
+
+/** True when the template is an enchantment dress (the Nyx frame): never a
+ *  stand-in or a random pick for a card that isn't an enchantment. */
+export function isEnchantmentDress(template: FrameTemplate): boolean {
+  return ENCHANTMENT_DRESSES[template] !== undefined;
+}
+
+/** True when this card may wear the template as far as its type words go: a
+ *  frame that is no enchantment dress, or a card whose words say
+ *  Enchantment (an Enchantment Creature on Nyx — never Llanowar Elves). */
+export function enchantmentFrameFits(template: FrameTemplate, type: TypeWordsFace): boolean {
+  return !isEnchantmentDress(template) || typeLineHasWord(type, "Enchantment");
+}
+
+/** Why an enchantment dress is refused on any other card. */
+export function enchantmentDressReason(template: FrameTemplate): string | null {
+  return isEnchantmentDress(template) ? `The ${FRAME_TEMPLATE_LABELS[template]} frame is for enchantments` : null;
+}
+
+/** True when a NEW card with these words starts on an enchantment dress: an
+ *  Enchantment Creature or an Enchantment Artifact. */
+export function followsEnchantmentDress(type: TypeWordsFace): boolean {
+  return (
+    typeLineHasWord(type, "Enchantment") &&
+    ENCHANTMENT_DRESS_FOLLOW_WORDS.some((word) => typeLineHasWord(type, word))
+  );
+}
+
+/**
+ * The frame the type words pick for a card of `kind` on `template`: on an
+ * enchantment dress's base for that kind (m15 for a creature or an
+ * enchantment, m15artifact for an artifact) the dress when the words say
+ * Enchantment AND Creature or Artifact; on the dress itself the base when
+ * they no longer say Enchantment (the server refuses it there); any other
+ * template as it is — a plain enchantment on the dress keeps it (its
+ * owner's pick), an Enchantment Creature on the 2003 frame or a showcase
+ * keeps that. What a NEW card follows; a stored card is never moved by it.
+ */
+export function enchantmentFrameFor(kind: CardKind, template: FrameTemplate, type: TypeWordsFace): FrameTemplate {
+  for (const [dress, { bases }] of Object.entries(ENCHANTMENT_DRESSES) as [FrameTemplate, { bases: Partial<Record<CardKind, FrameTemplate>> }][]) {
+    const base = bases[kind];
+    if (!base) continue;
+    if (template === base && followsEnchantmentDress(type)) return dress;
+    if (template === dress && !typeLineHasWord(type, "Enchantment")) return base;
+  }
+  return template;
+}
+
+// ---------------------------------------------------------------------------
 // Borrowed variations (TODO 1.7). A frame that is one kind's standard can
 // also dress another kind as a variation of that kind's standard, when both
 // share the geometry. The M15 artifact frame is the Artifact kind's
@@ -682,7 +782,21 @@ const BORROWED_VARIATIONS: Partial<
 > = {
   // …and the borderless artifact dress (4.32), a skin of m15artifact that
   // an Artifact Creature borrows the same way.
-  creature: { m15: ["m15artifact", "m15borderlessartifact"] },
+  // …and the Nyx dress (TODO 4.7, owner decision A4): an Enchantment
+  // Creature's frame, borrowed like the artifact frame — and an Enchantment
+  // Artifact's, under the artifact standard.
+  creature: { m15: ["m15artifact", "m15borderlessartifact", "m15nyx"] },
+  artifact: { m15artifact: ["m15nyx"] },
+};
+
+// Variations ONE kind wears under a base other kinds share (TODO 4.7): the
+// Nyx dress is the Enchantment kind's own skin of m15 — never offered to an
+// instant or a sorcery, whose standard is m15 too (TEMPLATE_SKIN_VARIANTS is
+// keyed by base alone). Not borrowed: the kind IS the word the frame dresses.
+const KIND_SKIN_VARIANTS: Partial<
+  Record<CardKind, Partial<Record<FrameTemplate, readonly FrameTemplate[]>>>
+> = {
+  enchantment: { m15: ["m15nyx"] },
 };
 
 // Showcase frames a kind borrows the same way (owner decision A3,
@@ -702,6 +816,7 @@ const BORROWED_TYPE_WORD: Partial<Record<FrameTemplate, BorrowedTypeWord>> = {
   m15artifact: "Artifact",
   m15borderlessartifact: "Artifact",
   nyx: "Enchantment",
+  m15nyx: "Enchantment",
 };
 
 /** The variations the Variations section offers under `base` for this
@@ -713,6 +828,7 @@ export function skinVariantsFor(
 ): FrameTemplate[] {
   return [
     ...(TEMPLATE_SKIN_VARIANTS[base] ?? []),
+    ...(KIND_SKIN_VARIANTS[kind]?.[base] ?? []),
     ...(BORROWED_VARIATIONS[kind]?.[base] ?? []),
   ];
 }
@@ -750,7 +866,7 @@ export function borrowedTypeWord(
  *  the creator write it). */
 export function typeLineHasWord(
   type: { cardType?: string | null; supertype?: string | null },
-  word: BorrowedTypeWord,
+  word: BorrowedTypeWord | "Creature",
 ): boolean {
   const lower = word.toLowerCase();
   if (type.cardType === lower) return true;
@@ -1291,6 +1407,11 @@ export function baseFrameFor(
   // it under its own M15 standard.
   for (const [base, borrowed] of Object.entries(BORROWED_VARIATIONS[kind] ?? {})) {
     if ((borrowed ?? []).includes(template)) return base as FrameTemplate;
+  }
+  // …and a kind's own skin of a shared base (the Nyx dress on an
+  // enchantment, TODO 4.7).
+  for (const [base, skins] of Object.entries(KIND_SKIN_VARIANTS[kind] ?? {})) {
+    if ((skins ?? []).includes(template)) return base as FrameTemplate;
   }
   const skinBase = SKIN_BASE.get(template);
   if (skinBase) return skinBase;

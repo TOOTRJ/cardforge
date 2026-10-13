@@ -4463,52 +4463,52 @@
       ],
       "wu": [
         "img/frames/m15/holoStamps/m15HoloStampU.png (the arch's geometry: bevel, rim and black) at 43.6/90.4352380952381/12.8×4.58 %",
-        "rim tinted per column to m15/wu.png's bar across x 654–845 (rows 1940–1947; 199,220,228 at x 654 → 122,180,213 at x 750 → 45,140,198 at x 845 — the pinline's procedural:ramp(40→60 %W)), the same bar on m15/wu-h.png, m15artifact/wu.png, m15vehicle/wu.png, m15land/wu.png, m15snow/wu.png, m15snowland/wu.png",
+        "rim tinted per column to m15/wu.png's bar across x 654–845 (rows 1940–1947; 199,220,228 at x 654 → 122,180,213 at x 750 → 45,140,198 at x 845 — the pinline's procedural:ramp(40→60 %W)), the same bar on m15/wu-h.png, m15artifact/wu.png, m15vehicle/wu.png, m15nyx/wu.png, m15nyx/wu-h.png, m15land/wu.png, m15snow/wu.png, m15snowland/wu.png",
         "the oval 45.54/91.72/8.94×3.2 % plus 2 px cut to transparent"
       ],
       "wb": [
         "img/frames/m15/holoStamps/m15HoloStampU.png (the arch's geometry: bevel, rim and black) at 43.6/90.4352380952381/12.8×4.58 %",
-        "rim tinted per column to m15/wb.png's bar across x 654–845 (rows 1940–1947; 210,209,202 at x 654 → 151,149,143 at x 750 → 92,90,84 at x 845 — the pinline's procedural:ramp(40→60 %W)), the same bar on m15/wb-h.png, m15artifact/wb.png, m15vehicle/wb.png, m15land/wb.png, m15snow/wb.png, m15snowland/wb.png",
+        "rim tinted per column to m15/wb.png's bar across x 654–845 (rows 1940–1947; 210,209,202 at x 654 → 151,149,143 at x 750 → 92,90,84 at x 845 — the pinline's procedural:ramp(40→60 %W)), the same bar on m15/wb-h.png, m15artifact/wb.png, m15vehicle/wb.png, m15nyx/wb.png, m15nyx/wb-h.png, m15land/wb.png, m15snow/wb.png, m15snowland/wb.png",
         "the oval 45.54/91.72/8.94×3.2 % plus 2 px cut to transparent"
       ],
       "ub": [
         "img/frames/m15/holoStamps/m15HoloStampU.png (the arch's geometry: bevel, rim and black) at 43.6/90.4352380952381/12.8×4.58 %",
-        "rim tinted per column to m15/ub.png's bar across x 654–845 (rows 1940–1947; 11,106,164 at x 654 → 29,86,120 at x 750 → 47,67,76 at x 845 — the pinline's procedural:ramp(40→60 %W)), the same bar on m15/ub-h.png, m15artifact/ub.png, m15vehicle/ub.png, m15land/ub.png, m15snow/ub.png, m15snowland/ub.png",
+        "rim tinted per column to m15/ub.png's bar across x 654–845 (rows 1940–1947; 11,106,164 at x 654 → 29,86,120 at x 750 → 47,67,76 at x 845 — the pinline's procedural:ramp(40→60 %W)), the same bar on m15/ub-h.png, m15artifact/ub.png, m15vehicle/ub.png, m15nyx/ub.png, m15nyx/ub-h.png, m15land/ub.png, m15snow/ub.png, m15snowland/ub.png",
         "the oval 45.54/91.72/8.94×3.2 % plus 2 px cut to transparent"
       ],
       "ur": [
         "img/frames/m15/holoStamps/m15HoloStampU.png (the arch's geometry: bevel, rim and black) at 43.6/90.4352380952381/12.8×4.58 %",
-        "rim tinted per column to m15/ur.png's bar across x 654–845 (rows 1940–1947; 39,110,165 at x 654 → 105,97,121 at x 750 → 170,84,78 at x 845 — the pinline's procedural:ramp(40→60 %W)), the same bar on m15/ur-h.png, m15artifact/ur.png, m15vehicle/ur.png, m15land/ur.png, m15snow/ur.png, m15snowland/ur.png",
+        "rim tinted per column to m15/ur.png's bar across x 654–845 (rows 1940–1947; 39,110,165 at x 654 → 105,97,121 at x 750 → 170,84,78 at x 845 — the pinline's procedural:ramp(40→60 %W)), the same bar on m15/ur-h.png, m15artifact/ur.png, m15vehicle/ur.png, m15nyx/ur.png, m15nyx/ur-h.png, m15land/ur.png, m15snow/ur.png, m15snowland/ur.png",
         "the oval 45.54/91.72/8.94×3.2 % plus 2 px cut to transparent"
       ],
       "br": [
         "img/frames/m15/holoStamps/m15HoloStampU.png (the arch's geometry: bevel, rim and black) at 43.6/90.4352380952381/12.8×4.58 %",
-        "rim tinted per column to m15/br.png's bar across x 654–845 (rows 1940–1947; 86,60,51 at x 654 → 134,67,52 at x 750 → 181,73,52 at x 845 — the pinline's procedural:ramp(40→60 %W)), the same bar on m15/br-h.png, m15artifact/br.png, m15vehicle/br.png, m15land/br.png, m15snow/br.png, m15snowland/br.png",
+        "rim tinted per column to m15/br.png's bar across x 654–845 (rows 1940–1947; 86,60,51 at x 654 → 134,67,52 at x 750 → 181,73,52 at x 845 — the pinline's procedural:ramp(40→60 %W)), the same bar on m15/br-h.png, m15artifact/br.png, m15vehicle/br.png, m15nyx/br.png, m15nyx/br-h.png, m15land/br.png, m15snow/br.png, m15snowland/br.png",
         "the oval 45.54/91.72/8.94×3.2 % plus 2 px cut to transparent"
       ],
       "bg": [
         "img/frames/m15/holoStamps/m15HoloStampU.png (the arch's geometry: bevel, rim and black) at 43.6/90.4352380952381/12.8×4.58 %",
-        "rim tinted per column to m15/bg.png's bar across x 654–845 (rows 1940–1947; 55,66,54 at x 654 → 50,82,60 at x 750 → 45,98,65 at x 845 — the pinline's procedural:ramp(40→60 %W)), the same bar on m15/bg-h.png, m15artifact/bg.png, m15vehicle/bg.png, m15land/bg.png, m15snow/bg.png, m15snowland/bg.png",
+        "rim tinted per column to m15/bg.png's bar across x 654–845 (rows 1940–1947; 55,66,54 at x 654 → 50,82,60 at x 750 → 45,98,65 at x 845 — the pinline's procedural:ramp(40→60 %W)), the same bar on m15/bg-h.png, m15artifact/bg.png, m15vehicle/bg.png, m15nyx/bg.png, m15nyx/bg-h.png, m15land/bg.png, m15snow/bg.png, m15snowland/bg.png",
         "the oval 45.54/91.72/8.94×3.2 % plus 2 px cut to transparent"
       ],
       "rg": [
         "img/frames/m15/holoStamps/m15HoloStampU.png (the arch's geometry: bevel, rim and black) at 43.6/90.4352380952381/12.8×4.58 %",
-        "rim tinted per column to m15/rg.png's bar across x 654–845 (rows 1940–1947; 178,83,56 at x 654 → 125,93,61 at x 750 → 73,102,66 at x 845 — the pinline's procedural:ramp(40→60 %W)), the same bar on m15/rg-h.png, m15artifact/rg.png, m15vehicle/rg.png, m15land/rg.png, m15snow/rg.png, m15snowland/rg.png",
+        "rim tinted per column to m15/rg.png's bar across x 654–845 (rows 1940–1947; 178,83,56 at x 654 → 125,93,61 at x 750 → 73,102,66 at x 845 — the pinline's procedural:ramp(40→60 %W)), the same bar on m15/rg-h.png, m15artifact/rg.png, m15vehicle/rg.png, m15nyx/rg.png, m15nyx/rg-h.png, m15land/rg.png, m15snow/rg.png, m15snowland/rg.png",
         "the oval 45.54/91.72/8.94×3.2 % plus 2 px cut to transparent"
       ],
       "rw": [
         "img/frames/m15/holoStamps/m15HoloStampU.png (the arch's geometry: bevel, rim and black) at 43.6/90.4352380952381/12.8×4.58 %",
-        "rim tinted per column to m15/rw.png's bar across x 654–845 (rows 1940–1947; 215,108,87 at x 654 → 227,160,145 at x 750 → 238,212,202 at x 845 — the pinline's procedural:ramp(40→60 %W)), the same bar on m15/rw-h.png, m15artifact/rw.png, m15vehicle/rw.png, m15land/rw.png, m15snow/rw.png, m15snowland/rw.png",
+        "rim tinted per column to m15/rw.png's bar across x 654–845 (rows 1940–1947; 215,108,87 at x 654 → 227,160,145 at x 750 → 238,212,202 at x 845 — the pinline's procedural:ramp(40→60 %W)), the same bar on m15/rw-h.png, m15artifact/rw.png, m15vehicle/rw.png, m15nyx/rw.png, m15nyx/rw-h.png, m15land/rw.png, m15snow/rw.png, m15snowland/rw.png",
         "the oval 45.54/91.72/8.94×3.2 % plus 2 px cut to transparent"
       ],
       "gw": [
         "img/frames/m15/holoStamps/m15HoloStampU.png (the arch's geometry: bevel, rim and black) at 43.6/90.4352380952381/12.8×4.58 %",
-        "rim tinted per column to m15/gw.png's bar across x 654–845 (rows 1940–1947; 78,132,100 at x 654 → 143,176,153 at x 750 → 207,218,205 at x 845 — the pinline's procedural:ramp(40→60 %W)), the same bar on m15/gw-h.png, m15artifact/gw.png, m15vehicle/gw.png, m15land/gw.png, m15snow/gw.png, m15snowland/gw.png",
+        "rim tinted per column to m15/gw.png's bar across x 654–845 (rows 1940–1947; 78,132,100 at x 654 → 143,176,153 at x 750 → 207,218,205 at x 845 — the pinline's procedural:ramp(40→60 %W)), the same bar on m15/gw-h.png, m15artifact/gw.png, m15vehicle/gw.png, m15nyx/gw.png, m15nyx/gw-h.png, m15land/gw.png, m15snow/gw.png, m15snowland/gw.png",
         "the oval 45.54/91.72/8.94×3.2 % plus 2 px cut to transparent"
       ],
       "gu": [
         "img/frames/m15/holoStamps/m15HoloStampU.png (the arch's geometry: bevel, rim and black) at 43.6/90.4352380952381/12.8×4.58 %",
-        "rim tinted per column to m15/gu.png's bar across x 654–845 (rows 1940–1947; 34,110,91 at x 654 → 21,113,130 at x 750 → 8,115,168 at x 845 — the pinline's procedural:ramp(40→60 %W)), the same bar on m15/gu-h.png, m15artifact/gu.png, m15vehicle/gu.png, m15land/gu.png, m15snow/gu.png, m15snowland/gu.png",
+        "rim tinted per column to m15/gu.png's bar across x 654–845 (rows 1940–1947; 34,110,91 at x 654 → 21,113,130 at x 750 → 8,115,168 at x 845 — the pinline's procedural:ramp(40→60 %W)), the same bar on m15/gu-h.png, m15artifact/gu.png, m15vehicle/gu.png, m15nyx/gu.png, m15nyx/gu-h.png, m15land/gu.png, m15snow/gu.png, m15snowland/gu.png",
         "the oval 45.54/91.72/8.94×3.2 % plus 2 px cut to transparent"
       ]
     },
@@ -6282,6 +6282,311 @@
         ]
       }
     }
+  },
+  "m15nyx": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packM15NyxNew.js 'Nyx (Theros)' (groupAccurate.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/m15/new/nyx/w.png"
+      ],
+      "u": [
+        "img/frames/m15/new/nyx/u.png"
+      ],
+      "b": [
+        "img/frames/m15/new/nyx/b.png"
+      ],
+      "r": [
+        "img/frames/m15/new/nyx/r.png"
+      ],
+      "g": [
+        "img/frames/m15/new/nyx/g.png"
+      ],
+      "c": [
+        "img/frames/m15/new/nyx/a.png"
+      ],
+      "m": [
+        "img/frames/m15/new/nyx/m.png"
+      ],
+      "wu": [
+        "img/frames/m15/new/nyx/m.png",
+        "(img/frames/m15/new/nyx/w.png | img/frames/m15/new/nyx/u.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/nyx/w.png | img/frames/m15/new/nyx/u.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "wb": [
+        "img/frames/m15/new/nyx/m.png",
+        "(img/frames/m15/new/nyx/w.png | img/frames/m15/new/nyx/b.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/nyx/w.png | img/frames/m15/new/nyx/b.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "ub": [
+        "img/frames/m15/new/nyx/m.png",
+        "(img/frames/m15/new/nyx/u.png | img/frames/m15/new/nyx/b.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/nyx/u.png | img/frames/m15/new/nyx/b.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "ur": [
+        "img/frames/m15/new/nyx/m.png",
+        "(img/frames/m15/new/nyx/u.png | img/frames/m15/new/nyx/r.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/nyx/u.png | img/frames/m15/new/nyx/r.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "br": [
+        "img/frames/m15/new/nyx/m.png",
+        "(img/frames/m15/new/nyx/b.png | img/frames/m15/new/nyx/r.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/nyx/b.png | img/frames/m15/new/nyx/r.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "bg": [
+        "img/frames/m15/new/nyx/m.png",
+        "(img/frames/m15/new/nyx/b.png | img/frames/m15/new/nyx/g.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/nyx/b.png | img/frames/m15/new/nyx/g.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "rg": [
+        "img/frames/m15/new/nyx/m.png",
+        "(img/frames/m15/new/nyx/r.png | img/frames/m15/new/nyx/g.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/nyx/r.png | img/frames/m15/new/nyx/g.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "rw": [
+        "img/frames/m15/new/nyx/m.png",
+        "(img/frames/m15/new/nyx/r.png | img/frames/m15/new/nyx/w.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/nyx/r.png | img/frames/m15/new/nyx/w.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "gw": [
+        "img/frames/m15/new/nyx/m.png",
+        "(img/frames/m15/new/nyx/g.png | img/frames/m15/new/nyx/w.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/nyx/g.png | img/frames/m15/new/nyx/w.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "gu": [
+        "img/frames/m15/new/nyx/m.png",
+        "(img/frames/m15/new/nyx/g.png | img/frames/m15/new/nyx/u.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "(img/frames/m15/new/nyx/g.png | img/frames/m15/new/nyx/u.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "wu-h": [
+        "(img/frames/m15/new/nyx/w.png | img/frames/m15/new/nyx/u.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/new/nyx/w.png | img/frames/m15/new/nyx/u.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/l.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/l.png through img/frames/m15/new/type.png",
+        "(img/frames/m15/new/nyx/w.png | img/frames/m15/new/nyx/u.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "wb-h": [
+        "(img/frames/m15/new/nyx/w.png | img/frames/m15/new/nyx/b.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/new/nyx/w.png | img/frames/m15/new/nyx/b.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/l.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/l.png through img/frames/m15/new/type.png",
+        "(img/frames/m15/new/nyx/w.png | img/frames/m15/new/nyx/b.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "ub-h": [
+        "(img/frames/m15/new/nyx/u.png | img/frames/m15/new/nyx/b.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/new/nyx/u.png | img/frames/m15/new/nyx/b.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/l.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/l.png through img/frames/m15/new/type.png",
+        "(img/frames/m15/new/nyx/u.png | img/frames/m15/new/nyx/b.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "ur-h": [
+        "(img/frames/m15/new/nyx/u.png | img/frames/m15/new/nyx/r.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/new/nyx/u.png | img/frames/m15/new/nyx/r.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/l.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/l.png through img/frames/m15/new/type.png",
+        "(img/frames/m15/new/nyx/u.png | img/frames/m15/new/nyx/r.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "br-h": [
+        "(img/frames/m15/new/nyx/b.png | img/frames/m15/new/nyx/r.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/new/nyx/b.png | img/frames/m15/new/nyx/r.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/l.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/l.png through img/frames/m15/new/type.png",
+        "(img/frames/m15/new/nyx/b.png | img/frames/m15/new/nyx/r.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "bg-h": [
+        "(img/frames/m15/new/nyx/b.png | img/frames/m15/new/nyx/g.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/new/nyx/b.png | img/frames/m15/new/nyx/g.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/l.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/l.png through img/frames/m15/new/type.png",
+        "(img/frames/m15/new/nyx/b.png | img/frames/m15/new/nyx/g.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "rg-h": [
+        "(img/frames/m15/new/nyx/r.png | img/frames/m15/new/nyx/g.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/new/nyx/r.png | img/frames/m15/new/nyx/g.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/l.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/l.png through img/frames/m15/new/type.png",
+        "(img/frames/m15/new/nyx/r.png | img/frames/m15/new/nyx/g.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "rw-h": [
+        "(img/frames/m15/new/nyx/r.png | img/frames/m15/new/nyx/w.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/new/nyx/r.png | img/frames/m15/new/nyx/w.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/l.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/l.png through img/frames/m15/new/type.png",
+        "(img/frames/m15/new/nyx/r.png | img/frames/m15/new/nyx/w.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "gw-h": [
+        "(img/frames/m15/new/nyx/g.png | img/frames/m15/new/nyx/w.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/new/nyx/g.png | img/frames/m15/new/nyx/w.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/l.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/l.png through img/frames/m15/new/type.png",
+        "(img/frames/m15/new/nyx/g.png | img/frames/m15/new/nyx/w.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ],
+      "gu-h": [
+        "(img/frames/m15/new/nyx/g.png | img/frames/m15/new/nyx/u.png across procedural:ramp(44→57 %W))",
+        "(img/frames/m15/new/nyx/g.png | img/frames/m15/new/nyx/u.png across procedural:ramp(45→57 %W)) through img/frames/m15/new/rules.png",
+        "img/frames/m15/new/l.png through img/frames/m15/new/title.png",
+        "img/frames/m15/new/l.png through img/frames/m15/new/type.png",
+        "(img/frames/m15/new/nyx/g.png | img/frames/m15/new/nyx/u.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/m15/regular/m15PTW.png",
+      "u": "img/frames/m15/regular/m15PTU.png",
+      "b": "img/frames/m15/regular/m15PTB.png",
+      "r": "img/frames/m15/regular/m15PTR.png",
+      "g": "img/frames/m15/regular/m15PTG.png",
+      "c": "img/frames/m15/regular/m15PTC.png",
+      "m": "img/frames/m15/regular/m15PTM.png"
+    },
+    "sourceFiles": [
+      "img/frames/m15/new/l.png",
+      "img/frames/m15/new/nyx/a.png",
+      "img/frames/m15/new/nyx/b.png",
+      "img/frames/m15/new/nyx/g.png",
+      "img/frames/m15/new/nyx/m.png",
+      "img/frames/m15/new/nyx/r.png",
+      "img/frames/m15/new/nyx/u.png",
+      "img/frames/m15/new/nyx/w.png",
+      "img/frames/m15/new/pinline.png",
+      "img/frames/m15/new/rules.png",
+      "img/frames/m15/new/title.png",
+      "img/frames/m15/new/type.png",
+      "img/frames/m15/regular/m15PTB.png",
+      "img/frames/m15/regular/m15PTC.png",
+      "img/frames/m15/regular/m15PTG.png",
+      "img/frames/m15/regular/m15PTM.png",
+      "img/frames/m15/regular/m15PTR.png",
+      "img/frames/m15/regular/m15PTU.png",
+      "img/frames/m15/regular/m15PTW.png"
+    ],
+    "notes": [
+      "every colour key = Card Conjurer's whole Nyx master (new/nyx/<k>.png, 2010x2814), downscaled once: the regular M15 master of that letter with its frame field redrawn as a starfield — inside CC's Title, Type, Rules, Pinline and Border masks the two files differ by a mean 0.00-0.20 of 255, inside the Frame mask by 46-62 (measured on all seven, 2026-10-13)",
+      "colourless = the pack's 'Artifact Frame' (new/nyx/a.png): the pack draws no see-through colourless starfield, and the two colourless prints on the plain 2015 frame (CLB #1 Faceless One, SOC #131 Eldrazi Conscription) wear a silver-grey starfield; no art under the frame",
+      "an Enchantment Artifact wears its COLOUR's starfield, never an artifact frame with coloured bars: C15 #86 / A25 #42 / LCC #146 Bident of Thassa (blue), CP2 #5 Whip of Erebos (black), EOC #88 Hammer of Purphoros (red)",
+      "plates = the regular M15 plates (the pack has none: the prints set the P/T on M15's own plate, with no star on it) — m15's seven images under pt/<k>.png; the colourless key keeps the grey m15PTC, which is the hybrid dress's plate too (CLB #1 Faceless One's plate face reads 206/202/202: m15PTC's 210/202/197, not the artifact plate's 203/214/221)",
+      "two-colour pair masters (TODO 4.6b, owner decision 2026-09-29): a recipe over the same CC files as the verified masters — each split region's two colours blended across an UNTILTED ramp (pinline 40→60 %W, a hybrid's frame 44→57, text box 45→57) by a premultiplied lerp (scripts/lib/pair-ramp.mjs), never CC's tilted maskRightHalf.png stacking; first canonical colour on the left (WU WB UB UR BR BG RG RW GW GU); measured against the prints (design 2026-09-29 §1.2). Gold-split <pair> = the gold starfield master (nyx/m.png) with the split text box and pinline (THB #220, NEO #225, C20 #226, FRC #52); hybrid <pair>-h = the two colours' starfield masters split across the frame ramp, the regular pack's grey land bars (l.png title + type: the Nyx pack has no land file and its bars are the regular masters' own), the split text box and pinline (HOB #155, FRA #134, ECC #121)"
+    ]
+  },
+  "m15nyxcrown": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "M15 'Legend Crowns (New)' (packM15LegendCrownsNew.js) + 'Inner Crowns' Nyx (packM15InnerCrownsNew.js), groupAccurate.js",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "1500x410 overlay band: rows 0–409 of a 1500x2100 card composited at 2010x2814, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/w.png at 2.19/1.88/95.62×17.52 %",
+        "img/frames/m15/innerCrowns/new/nyx/w.png at 329,70 1353×64 px of the 2010×2814 composite (1:1), over the crown"
+      ],
+      "u": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/u.png at 2.19/1.88/95.62×17.52 %",
+        "img/frames/m15/innerCrowns/new/nyx/u.png at 329,70 1353×64 px of the 2010×2814 composite (1:1), over the crown"
+      ],
+      "b": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/b.png at 2.19/1.88/95.62×17.52 %",
+        "img/frames/m15/innerCrowns/new/nyx/b.png at 329,70 1353×64 px of the 2010×2814 composite (1:1), over the crown"
+      ],
+      "r": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/r.png at 2.19/1.88/95.62×17.52 %",
+        "img/frames/m15/innerCrowns/new/nyx/r.png at 329,70 1353×64 px of the 2010×2814 composite (1:1), over the crown"
+      ],
+      "g": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/g.png at 2.19/1.88/95.62×17.52 %",
+        "img/frames/m15/innerCrowns/new/nyx/g.png at 329,70 1353×64 px of the 2010×2814 composite (1:1), over the crown"
+      ],
+      "m": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/m.png at 2.19/1.88/95.62×17.52 %",
+        "img/frames/m15/innerCrowns/new/nyx/m.png at 329,70 1353×64 px of the 2010×2814 composite (1:1), over the crown"
+      ],
+      "a": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/a.png at 2.19/1.88/95.62×17.52 %",
+        "img/frames/m15/innerCrowns/new/nyx/a.png at 329,70 1353×64 px of the 2010×2814 composite (1:1), over the crown"
+      ],
+      "wu": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/w.png ⟷ img/frames/m15/crowns/new/u.png lerped through procedural:ramp(45→55 %W) at 2.19/1.88/95.62×17.52 %",
+        "img/frames/m15/innerCrowns/new/nyx/w.png ⟷ img/frames/m15/innerCrowns/new/nyx/u.png lerped through procedural:ramp(45→55 %W) at 329,70 1353×64 px of the 2010×2814 composite (1:1), over the crown"
+      ],
+      "wb": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/w.png ⟷ img/frames/m15/crowns/new/b.png lerped through procedural:ramp(45→55 %W) at 2.19/1.88/95.62×17.52 %",
+        "img/frames/m15/innerCrowns/new/nyx/w.png ⟷ img/frames/m15/innerCrowns/new/nyx/b.png lerped through procedural:ramp(45→55 %W) at 329,70 1353×64 px of the 2010×2814 composite (1:1), over the crown"
+      ],
+      "ub": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/u.png ⟷ img/frames/m15/crowns/new/b.png lerped through procedural:ramp(45→55 %W) at 2.19/1.88/95.62×17.52 %",
+        "img/frames/m15/innerCrowns/new/nyx/u.png ⟷ img/frames/m15/innerCrowns/new/nyx/b.png lerped through procedural:ramp(45→55 %W) at 329,70 1353×64 px of the 2010×2814 composite (1:1), over the crown"
+      ],
+      "ur": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/u.png ⟷ img/frames/m15/crowns/new/r.png lerped through procedural:ramp(45→55 %W) at 2.19/1.88/95.62×17.52 %",
+        "img/frames/m15/innerCrowns/new/nyx/u.png ⟷ img/frames/m15/innerCrowns/new/nyx/r.png lerped through procedural:ramp(45→55 %W) at 329,70 1353×64 px of the 2010×2814 composite (1:1), over the crown"
+      ],
+      "br": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/b.png ⟷ img/frames/m15/crowns/new/r.png lerped through procedural:ramp(45→55 %W) at 2.19/1.88/95.62×17.52 %",
+        "img/frames/m15/innerCrowns/new/nyx/b.png ⟷ img/frames/m15/innerCrowns/new/nyx/r.png lerped through procedural:ramp(45→55 %W) at 329,70 1353×64 px of the 2010×2814 composite (1:1), over the crown"
+      ],
+      "bg": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/b.png ⟷ img/frames/m15/crowns/new/g.png lerped through procedural:ramp(45→55 %W) at 2.19/1.88/95.62×17.52 %",
+        "img/frames/m15/innerCrowns/new/nyx/b.png ⟷ img/frames/m15/innerCrowns/new/nyx/g.png lerped through procedural:ramp(45→55 %W) at 329,70 1353×64 px of the 2010×2814 composite (1:1), over the crown"
+      ],
+      "rg": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/r.png ⟷ img/frames/m15/crowns/new/g.png lerped through procedural:ramp(45→55 %W) at 2.19/1.88/95.62×17.52 %",
+        "img/frames/m15/innerCrowns/new/nyx/r.png ⟷ img/frames/m15/innerCrowns/new/nyx/g.png lerped through procedural:ramp(45→55 %W) at 329,70 1353×64 px of the 2010×2814 composite (1:1), over the crown"
+      ],
+      "rw": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/r.png ⟷ img/frames/m15/crowns/new/w.png lerped through procedural:ramp(45→55 %W) at 2.19/1.88/95.62×17.52 %",
+        "img/frames/m15/innerCrowns/new/nyx/r.png ⟷ img/frames/m15/innerCrowns/new/nyx/w.png lerped through procedural:ramp(45→55 %W) at 329,70 1353×64 px of the 2010×2814 composite (1:1), over the crown"
+      ],
+      "gw": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/g.png ⟷ img/frames/m15/crowns/new/w.png lerped through procedural:ramp(45→55 %W) at 2.19/1.88/95.62×17.52 %",
+        "img/frames/m15/innerCrowns/new/nyx/g.png ⟷ img/frames/m15/innerCrowns/new/nyx/w.png lerped through procedural:ramp(45→55 %W) at 329,70 1353×64 px of the 2010×2814 composite (1:1), over the crown"
+      ],
+      "gu": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/crowns/new/g.png ⟷ img/frames/m15/crowns/new/u.png lerped through procedural:ramp(45→55 %W) at 2.19/1.88/95.62×17.52 %",
+        "img/frames/m15/innerCrowns/new/nyx/g.png ⟷ img/frames/m15/innerCrowns/new/nyx/u.png lerped through procedural:ramp(45→55 %W) at 329,70 1353×64 px of the 2010×2814 composite (1:1), over the crown"
+      ]
+    },
+    "sourceFiles": [
+      "img/black.png",
+      "img/frames/m15/crowns/new/a.png",
+      "img/frames/m15/crowns/new/b.png",
+      "img/frames/m15/crowns/new/g.png",
+      "img/frames/m15/crowns/new/m.png",
+      "img/frames/m15/crowns/new/r.png",
+      "img/frames/m15/crowns/new/u.png",
+      "img/frames/m15/crowns/new/w.png",
+      "img/frames/m15/innerCrowns/new/nyx/a.png",
+      "img/frames/m15/innerCrowns/new/nyx/b.png",
+      "img/frames/m15/innerCrowns/new/nyx/g.png",
+      "img/frames/m15/innerCrowns/new/nyx/m.png",
+      "img/frames/m15/innerCrowns/new/nyx/r.png",
+      "img/frames/m15/innerCrowns/new/nyx/u.png",
+      "img/frames/m15/innerCrowns/new/nyx/w.png"
+    ],
+    "notes": [
+      "the legendary crown of the Nyx dress (TODO 4.7), drawn over the m15nyx masters: the m15crown band's recipe — the black 'Legend Crown Border Cover', then the crown — with Card Conjurer's Nyx inner crown (innerCrowns/new/nyx/<k>.png, 1353x64) on top at the pack's bounds (329/70 px of 2010x2814: 16.37/2.49/67.31x2.27 %), composited at 2010x2814, downscaled once, corners cut, rows 0–409 kept",
+      "keys: w u b r g, m (gold), a (the colourless key's silver: m15nyx maps c → a) and the ten pairs — the first colour's crown and strip on the left, the second's on the right, through m15crown's untilted crown ramp 45→55 %W; never l or c (no Nyx land or see-through master)"
+    ]
   },
   "m15pw": {
     "source": "cardconjurer",

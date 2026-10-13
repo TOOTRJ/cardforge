@@ -297,6 +297,8 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       "m15mdfcfront/main", "m15mdfcback/main", "m15mdfclandfront/main", "m15mdfclandback/main",
       // 4.5c's Vehicle frame: m15artifact's box, its own plate in the corner.
       "m15vehicle/main",
+      // 4.7's Nyx dress: m15's box.
+      "m15nyx/main",
     ],
     ["1200 chars"],
   ],

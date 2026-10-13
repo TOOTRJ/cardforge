@@ -79,6 +79,8 @@ describe("the declared pair masters", () => {
       modern: 10, modernland: 10, retroland: 10,
       // …and the Vehicle frame's ten (TODO 4.5c, owner 2026-10-12).
       m15vehicle: 10,
+      // The Nyx dress (TODO 4.7): m15's two dresses over the starfield.
+      m15nyx: 20,
     });
     // Every pair key is a master key the bake's loader knows (never "c").
     for (const key of TWO_COLOR_MASTER_KEYS) expect(FRAME_MASTER_KEYS as readonly string[]).toContain(key);
