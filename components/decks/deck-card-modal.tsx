@@ -122,6 +122,10 @@ export function DeckCardModal({
     ? buildCardPath({ slug: card.slug, owner: { username: ownerUsername } })
     : null;
   const scryfallHref = entry.scryfall_id ? `/go/scryfall/${entry.scryfall_id}` : null;
+  // The PICTURE's link opens the face it shows (TODO 5.17): with Back chosen
+  // the card page — and the card modal a soft navigation opens — starts
+  // flipped (`?face=back`, components/cards/card-hero-preview.tsx).
+  const picturePath = cardPath && showingBack ? `${cardPath}?face=back` : cardPath;
 
   const [linkPickerOpen, setLinkPickerOpen] = useState(false);
 
@@ -181,9 +185,15 @@ export function DeckCardModal({
           {/* Image + flipper */}
           <div className="flex flex-col gap-2">
             <CardImageLink
-              href={cardPath ?? scryfallHref}
+              href={picturePath ?? scryfallHref}
               external={!cardPath && Boolean(scryfallHref)}
-              label={cardPath ? "Open this card's page" : "View on Scryfall"}
+              label={
+                cardPath
+                  ? showingBack
+                    ? "Open this card's page on its back face"
+                    : "Open this card's page"
+                  : "View on Scryfall"
+              }
               onNavigate={() => onOpenChange(false)}
             >
               {shownImage && landscapeProxy ? (

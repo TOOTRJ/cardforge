@@ -20,6 +20,8 @@ vi.mock("@/components/cards/card-preview", () => ({
 }));
 
 import { PinnedCardsPicker } from "@/components/auth/pinned-cards-picker";
+import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
+import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { CardWithStats } from "@/lib/cards/queries";
 
 const HOST = "https://auth.pipglyph.com";
@@ -79,6 +81,25 @@ describe("PinnedCardsPicker — two-faced cards (TODO 5.15)", () => {
     expect(srcs.some((src) => src.includes(".back."))).toBe(false);
     // The two-faced card's tile is the plain front thumb, like any other.
     expect(srcs).toContain(`/render-cdn/owner-1/${id(1)}.thumb.webp?v=1`);
+  });
+
+  it("…and could not be, even handed the back thumb: a thumbnail outside CardTile draws no button (TODO 5.17)", () => {
+    // The guard is the thumbnail's own: only CardTile — which lays the tile's
+    // link UNDER the picture — asks for the button (`backFaceButton`).
+    render(
+      <button type="button" aria-label="Pin Village Elder">
+        <BakedCardThumbnail
+          renderedImageUrl={cards[0].rendered_image_url}
+          renderedThumbUrl={cards[0].rendered_thumb_url}
+          renderedBackThumbUrl={cards[0].rendered_back_thumb_url}
+          title="Village Elder"
+          previewData={{ title: "Village Elder", frameStyle: { template: "m15dfcfront" } } as CardPreviewData}
+        />
+      </button>,
+    );
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(document.querySelector("[data-testid=two-faces-button]")).toBeNull();
+    expect(document.querySelector("[data-testid=baked-card-flip]")).toBeNull();
   });
 
   it("the whole tile — the mark included — is the pin toggle", async () => {

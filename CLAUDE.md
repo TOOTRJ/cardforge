@@ -322,7 +322,24 @@ Rules and gotchas:
   (`.tile-flip-stage`) takes NO pointer events: inside `CardHoverEffect`'s
   3D tilt a browser hit-tests by depth, and the faces took the button's
   clicks (never "fix" it by lifting the button with translateZ — its hit
-  area then leaves its drawn box). The back's 600 px thumb is mounted only
+  area then leaves its drawn box). The button is NEVER inside the tile's
+  link or `role="button"` (5.17: a control in a control is invalid HTML,
+  axe "nested-interactive"): every gallery-style tile is nested by ONE
+  component, `CardTile` (`components/cards/card-tile.tsx`) — a one-faced
+  tile's link wraps the picture as it always did; a two-faced tile's link
+  (or My Cards' role="button") is an EMPTY element UNDER the picture,
+  first child of `.card-hover-effect` (`CardHoverEffect`'s `under`; the
+  very box the wrapping link was, focus ring included), the tilt's rotor
+  takes no pointer events so the pointer falls through the picture to it,
+  and the button alone is `pointer-events-auto` — keyboard order link →
+  "2 faces" → what follows. The hover-rest is therefore heard on
+  `.card-hover-effect` (native listeners), never on the picture. A
+  `BakedCardThumbnail` draws the button only with `backFaceButton`, which
+  `CardTile` alone sets: a new tile surface uses `CardTile`, never a
+  hand-nested `Link` + `CardHoverEffect` + thumbnail
+  (`card-tile-structure.test.tsx` scans for it). The deck pop-up's picture
+  link opens the face it shows (`?face=back`) and closing the pop-up
+  returns the focus to the row that opened it. The back's 600 px thumb is mounted only
   on intent (the pointer moving on a tile that can hover-turn, the
   button's focus or press) — never at rest, never the HD PNG; a hover
   turns only once it has arrived, and a back that fails to load (removed

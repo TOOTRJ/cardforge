@@ -3,8 +3,7 @@ import Image from "next/image";
 import { Flame, Heart, MessageCircle, Repeat2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { rowTileClass, ROW_GRID_CLASS } from "@/components/gallery/card-row";
-import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
-import { CardHoverEffect } from "@/components/cards/card-hover-effect";
+import { CardTile } from "@/components/cards/card-tile";
 import { CardPreviewSkeleton } from "@/components/cards/card-preview-skeleton";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { TrendingShareButton } from "@/components/gallery/trending-share-button";
@@ -170,23 +169,20 @@ function TrendingTile({
             #{rank}
           </span>
         ) : null}
-        <Link
-          href={buildCardPath(card)}
-          className="block card-corners focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          aria-label={`Open ${card.title}`}
-          style={{ viewTransitionName: `trending-card-${card.id}` }}
-        >
-          <CardHoverEffect>
-            <BakedCardThumbnail
-              renderedImageUrl={card.rendered_image_url}
-              renderedThumbUrl={card.rendered_thumb_url}
-              renderedBackThumbUrl={card.rendered_back_thumb_url}
-              title={card.title}
-              priority={priority}
-              previewData={cardToPreviewData(card, null)}
-            />
-          </CardHoverEffect>
-        </Link>
+        <CardTile
+          viewTransitionName={`trending-card-${card.id}`}
+          body={(slot) => (
+            <Link href={buildCardPath(card)} aria-label={`Open ${card.title}`} {...slot} />
+          )}
+          thumbnail={{
+            renderedImageUrl: card.rendered_image_url,
+            renderedThumbUrl: card.rendered_thumb_url,
+            renderedBackThumbUrl: card.rendered_back_thumb_url,
+            title: card.title,
+            priority,
+            previewData: cardToPreviewData(card, null),
+          }}
+        />
         <div className="absolute right-2 top-2 z-10">
           <TrendingShareButton
             cardId={card.id}

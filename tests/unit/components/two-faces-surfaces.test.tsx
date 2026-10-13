@@ -241,6 +241,67 @@ describe("the deck page — the list's mark and the pop-up's Front / Back switch
     expect(shown()).toEqual([[POINTERS.rendered_image_url, "Village Elder"]]);
   });
 
+  it("the pop-up's PICTURE link opens the face it shows: the card page on its back with Back chosen (TODO 5.17)", async () => {
+    list([item()]);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Open Village Elder" }));
+    });
+    const dialog = screen.getByRole("dialog");
+    const pictureLink = () => dialog.querySelector("img")!.closest("a")!;
+    expect(pictureLink().getAttribute("href")).toBe("/card/kesh/village-elder");
+    expect(pictureLink().getAttribute("aria-label")).toBe("Open this card's page");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    });
+    expect(pictureLink().getAttribute("href")).toBe("/card/kesh/village-elder?face=back");
+    expect(pictureLink().getAttribute("aria-label")).toBe("Open this card's page on its back face");
+    // The title and the text link name the card, not a face.
+    const others = Array.from(dialog.querySelectorAll("a[href^='/card/']")).filter((a) => a !== pictureLink());
+    expect(others.length).toBeGreaterThan(0);
+    for (const a of others) expect(a.getAttribute("href")).toBe("/card/kesh/village-elder");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Front" }));
+    });
+    expect(pictureLink().getAttribute("href")).toBe("/card/kesh/village-elder");
+  });
+
+  it("an older two-faced proxy's picture link never names a face", async () => {
+    list([item(LEGACY)]);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Open Village Elder" }));
+    });
+    const link = screen.getByRole("dialog").querySelector("img")!.closest("a")!;
+    expect(link.getAttribute("href")).toBe("/card/kesh/village-elder");
+  });
+
+  it("closing the pop-up returns the focus to the row that opened it (TODO 5.17) — Escape, and the close button", async () => {
+    const second = "55555555-5555-4555-8555-555555555555";
+    list([item(), item({ title: "Other Card", slug: "other-card" }, { id: second, name: "Other Card" })]);
+    const row = screen.getByRole("button", { name: "Open Other Card" });
+    expect(row.getAttribute("data-deck-entry")).toBe(second);
+    row.focus();
+    await act(async () => {
+      fireEvent.click(row);
+    });
+    const dialog = screen.getByRole("dialog");
+    await act(async () => {
+      fireEvent.keyDown(dialog, { key: "Escape" });
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Open Other Card" }));
+
+    // Opened by a click with the focus elsewhere: still the row that opened it.
+    (document.activeElement as HTMLElement).blur();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Open Village Elder" }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /close/i }));
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Open Village Elder" }));
+  });
+
   it("the switch belongs to the proxy: showing the ORIGINAL printing hides it (and the row's mark)", async () => {
     const original = "https://cards.scryfall.io/normal/front/a/b/abc.jpg";
     list([item({}, { scryfall_id: "44444444-4444-4444-8444-444444444444", image_url: original })]);

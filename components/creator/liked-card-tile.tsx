@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { Check } from "lucide-react";
-import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
+import { CardTile } from "@/components/cards/card-tile";
 import type { FrameProfileOverridesMap } from "@/lib/cards/profile-override";
-import { CardHoverEffect } from "@/components/cards/card-hover-effect";
 import { QuickLikeButton } from "@/components/cards/quick-like-button";
 import { buildCardPath } from "@/lib/cards/utils";
 import type { CardWithStats } from "@/lib/cards/queries";
@@ -49,34 +48,35 @@ export function LikedCardTile({
           selected && "ring-2 ring-primary-bright ring-offset-2 ring-offset-background",
         )}
       >
-        <Link
-          href={buildCardPath(card)}
-          className="block card-corners focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          aria-label={selectMode ? `${selected ? "Deselect" : "Select"} ${card.title}` : `Open ${card.title}`}
-          onClick={
-            selection
-              ? (event) => {
-                  const modified = event.metaKey || event.ctrlKey || event.shiftKey;
-                  if (!selectMode && !modified) return;
-                  event.preventDefault();
-                  selection.onToggle(card.id, {
-                    meta: event.metaKey || event.ctrlKey,
-                    shift: event.shiftKey,
-                  });
-                }
-              : undefined
-          }
-        >
-          <CardHoverEffect>
-            <BakedCardThumbnail
-              renderedImageUrl={card.rendered_image_url}
-              renderedThumbUrl={card.rendered_thumb_url}
-              renderedBackThumbUrl={card.rendered_back_thumb_url}
-              title={card.title}
-              previewData={cardToPreviewData(card, profileOverrides)}
+        <CardTile
+          body={(slot) => (
+            <Link
+              href={buildCardPath(card)}
+              aria-label={selectMode ? `${selected ? "Deselect" : "Select"} ${card.title}` : `Open ${card.title}`}
+              onClick={
+                selection
+                  ? (event) => {
+                      const modified = event.metaKey || event.ctrlKey || event.shiftKey;
+                      if (!selectMode && !modified) return;
+                      event.preventDefault();
+                      selection.onToggle(card.id, {
+                        meta: event.metaKey || event.ctrlKey,
+                        shift: event.shiftKey,
+                      });
+                    }
+                  : undefined
+              }
+              {...slot}
             />
-          </CardHoverEffect>
-        </Link>
+          )}
+          thumbnail={{
+            renderedImageUrl: card.rendered_image_url,
+            renderedThumbUrl: card.rendered_thumb_url,
+            renderedBackThumbUrl: card.rendered_back_thumb_url,
+            title: card.title,
+            previewData: cardToPreviewData(card, profileOverrides),
+          }}
+        />
         {selection ? (
           <button
             type="button"

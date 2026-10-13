@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -41,9 +41,17 @@ import { cn } from "@/lib/utils";
 // never changes size (no layout shift). Under reduced motion the two faces
 // cross-fade instead of spinning (`.tile-flip-*` in app/globals.css).
 //
-// The button stops its own click so the tile's link never follows it. A tile
-// always sits inside a Link, like the live preview's own button when it is
-// the fallback — the same markup, the same behaviour.
+// The button is never INSIDE the tile's link or role="button" (TODO 5.17 —
+// a control nested in a control is invalid HTML and read unreliably by
+// assistive tech). components/cards/card-tile.tsx puts the tile's link UNDER
+// the picture instead: an empty element filling the tile's box
+// (`.card-hover-effect`), before the tilting content in the document, and
+// the content takes no pointer events — the pointer falls through the
+// picture to the link — except this button (`pointer-events-auto`). So the
+// button's click, middle click and keys reach nothing else, and the keyboard
+// goes link, then button. The pointer that rests on the card is therefore
+// on the LINK, not in here: the rest is heard on the tile's box, the one
+// ancestor the link and this picture share.
 // ---------------------------------------------------------------------------
 
 /** How long the pointer must rest on a tile before it turns (about a third
@@ -106,35 +114,54 @@ export function BakedCardFlip({
   const face: "front" | "back" =
     !backFailed && (pinned === "back" || (hoverBack && backLoaded)) ? "back" : "front";
 
-  const startRest = () => {
-    clearRest();
-    restArmed.current = true;
-    if (hoverMuted.current || !hoverTurnAllowed()) return;
-    // The rest has started: fetch the back now so it is there for the turn.
-    setBackMounted(true);
-    restTimer.current = setTimeout(() => {
-      restTimer.current = null;
-      setHoverBack(true);
-    }, HOVER_REST_MS);
-  };
-
   // The rest is armed by a real MOVE of the mouse on the card (see the
   // header) — once per visit, and not while the pointer is on the button.
-  const onTileMove = (event: PointerEvent) => {
-    if (event.pointerType !== "mouse") return;
-    const moved = !lastMouseAt || lastMouseAt.x !== event.clientX || lastMouseAt.y !== event.clientY;
-    lastMouseAt = { x: event.clientX, y: event.clientY };
-    if (!moved || restArmed.current) return;
-    if (buttonRef.current?.contains(event.target as Node)) return;
-    startRest();
-  };
-  const onTileLeave = (event: PointerEvent) => {
-    if (event.pointerType !== "mouse") return;
-    clearRest();
-    restArmed.current = false;
-    hoverMuted.current = false;
-    setHoverBack(false);
-  };
+  // Heard on the tile's box (the header says why), with native listeners:
+  // that box is an ancestor this component does not render.
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const host = root.closest<HTMLElement>(".card-hover-effect") ?? root;
+    const stopRest = () => {
+      if (restTimer.current !== null) {
+        clearTimeout(restTimer.current);
+        restTimer.current = null;
+      }
+    };
+    const startRest = () => {
+      stopRest();
+      restArmed.current = true;
+      if (hoverMuted.current || !hoverTurnAllowed()) return;
+      // The rest has started: fetch the back now so it is there for the turn.
+      setBackMounted(true);
+      restTimer.current = setTimeout(() => {
+        restTimer.current = null;
+        setHoverBack(true);
+      }, HOVER_REST_MS);
+    };
+    const onTileMove = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse") return;
+      const moved = !lastMouseAt || lastMouseAt.x !== event.clientX || lastMouseAt.y !== event.clientY;
+      lastMouseAt = { x: event.clientX, y: event.clientY };
+      if (!moved || restArmed.current) return;
+      if (buttonRef.current?.contains(event.target as Node)) return;
+      startRest();
+    };
+    const onTileLeave = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse") return;
+      stopRest();
+      restArmed.current = false;
+      hoverMuted.current = false;
+      setHoverBack(false);
+    };
+    host.addEventListener("pointermove", onTileMove);
+    host.addEventListener("pointerleave", onTileLeave);
+    return () => {
+      host.removeEventListener("pointermove", onTileMove);
+      host.removeEventListener("pointerleave", onTileLeave);
+    };
+  }, []);
 
   const press = () => {
     clearRest();
@@ -148,13 +175,7 @@ export function BakedCardFlip({
 
   const showingBack = face === "back";
   return (
-    <div
-      className="tile-flip absolute inset-0"
-      data-testid="baked-card-flip"
-      data-face={face}
-      onPointerMove={onTileMove}
-      onPointerLeave={onTileLeave}
-    >
+    <div ref={rootRef} className="tile-flip absolute inset-0" data-testid="baked-card-flip" data-face={face}>
       {/* The stage takes no pointer (.tile-flip-stage, app/globals.css): its
           3D layers would be hit-tested in front of the button. */}
       <div className="tile-flip-stage absolute inset-0" style={{ perspective: "1400px" }}>
@@ -192,27 +213,10 @@ export function BakedCardFlip({
         <button
           ref={buttonRef}
           type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            event.preventDefault();
-            press();
-          }}
-          // The button sits inside the tile's link: a middle click on it is
-          // not a click (no onClick) and would open the card in a new tab,
-          // and a drag would pick the link up. Neither is the button's job.
-          onAuxClick={(event) => {
-            event.stopPropagation();
-            event.preventDefault();
-          }}
-          onDragStart={(event) => event.preventDefault()}
-          onKeyDown={(event) => {
-            // Enter / Space activate the button (the browser follows with a
-            // click, handled above). A tile whose body handles keys itself —
-            // the dashboard tile's role="button" wrapper opens the card on
-            // Enter — must not see them, or the keyboard would navigate where
-            // the pointer flips.
-            if (event.key === "Enter" || event.key === " ") event.stopPropagation();
-          }}
+          // Nothing to stop: the button is outside the tile's link (the
+          // header says how), so its click, middle click, drag and keys are
+          // its own.
+          onClick={press}
           // Focus is intent: have the back ready for the press.
           onFocus={() => setBackMounted(true)}
           // A pointer on its way to the button is not resting on the card:
@@ -226,7 +230,9 @@ export function BakedCardFlip({
           aria-pressed={showingBack}
           data-testid="two-faces-button"
           className={cn(
-            "tile-flip-button absolute bottom-2 left-2 z-40 inline-flex h-11 min-w-11 max-w-[calc(100%-1rem)] items-center gap-2 rounded-full border px-3 text-sm font-semibold shadow-lg transition-colors",
+            // pointer-events-auto: the one thing in the tile's picture a
+            // pointer can hit (the rest lets it through to the link).
+            "tile-flip-button pointer-events-auto absolute bottom-2 left-2 z-40 inline-flex h-11 min-w-11 max-w-[calc(100%-1rem)] items-center gap-2 rounded-full border px-3 text-sm font-semibold shadow-lg transition-colors",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary",
             // The button sits ON the card, not on the page: its colours are
             // the same in both themes.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { HelpCircle, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -49,6 +49,31 @@ export function DeckCardList({
   const [showProxies, setShowProxies] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  // Closing the pop-up hands the focus back to the ROW that opened it (TODO
+  // 5.17). The dialog has no Dialog.Trigger — a row opens it through state —
+  // so Radix has nowhere to return the focus and it fell to <body>: a
+  // keyboard user started again from the top of the page. The row is found
+  // by its entry id once the dialog has unmounted (its focus trap would pull
+  // the focus back before that); a row a filter or a removal has taken away
+  // is simply not there.
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const returnFocusTo = useRef<string | null>(null);
+  useEffect(() => {
+    if (selectedId !== null) {
+      returnFocusTo.current = selectedId;
+      return;
+    }
+    const id = returnFocusTo.current;
+    returnFocusTo.current = null;
+    if (!id) return;
+    for (const row of listRef.current?.querySelectorAll<HTMLElement>("[data-deck-entry]") ?? []) {
+      if (row.dataset.deckEntry === id) {
+        row.focus();
+        break;
+      }
+    }
+  }, [selectedId]);
+
   const anyRemixed = items.some((i) => i.entry.card_id);
   const needsCount = items.filter(
     (i) => deckEntryState(i.entry) === "real",
@@ -78,7 +103,7 @@ export function DeckCardList({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div ref={listRef} className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div
           className="flex flex-wrap items-center gap-1.5"
@@ -273,6 +298,7 @@ function EntryRow({
     <li>
       <button
         type="button"
+        data-deck-entry={entry.id}
         onClick={() => onOpen(entry.id)}
         className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-elevated/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/50"
         aria-label={`Open ${card?.title ?? entry.name}`}
