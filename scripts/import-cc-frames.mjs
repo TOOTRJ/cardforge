@@ -92,6 +92,8 @@ import {
   placeTwin,
   NOTCH_FOOT,
   buildNotch,
+  notchCutOf,
+  snapResampledPiece,
   columnTintGap,
   describeColumnTint,
   describeNotch,
@@ -862,8 +864,8 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
       );
       continue;
     }
-    const r = crownBandRecipe(key);
-    recipe[key] = describeCrownBand(r);
+    const r = crownBandRecipe(key, band);
+    recipe[key] = describeCrownBand(r, band);
     if (dryRun) {
       console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}`);
       continue;
@@ -909,7 +911,7 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
       ? cutCrownSourceFiles(folder)
       : def.layers
         ? sourceFilesFor({ colors: Object.fromEntries(def.keys.map((key) => [key, def.layers(key)])) })
-        : crownBandSourceFiles(def.keys),
+        : crownBandSourceFiles(def.keys, band),
     ...(def.cut ? { bands: Object.fromEntries(def.keys.map((key) => [key, `m15crown/${key}.png`])) } : {}),
     notes: def.notes,
   };
@@ -987,8 +989,13 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
     if (!piece) {
       const file = await fetchCached(def.shape.src);
       const meta = await sharp(file).metadata();
-      if (meta.width !== PW || meta.height !== PH) throw new Error(`${def.shape.src} is ${meta.width}×${meta.height}, the recipe says ${PW}×${PH} (the source moved?)`);
-      piece = await sharp(file).ensureAlpha().raw().toBuffer();
+      const native = def.shape.nativeSize ?? def.shape.size;
+      if (meta.width !== native.width || meta.height !== native.height) throw new Error(`${def.shape.src} is ${meta.width}×${meta.height}, the recipe says ${native.width}×${native.height} (the source moved?)`);
+      // A piece that is not 1:1 at HD (TODO 4.25: the Universes Beyond
+      // stamp) is resampled once to its box and its flat regions snapped.
+      piece = def.shape.nativeSize
+        ? snapResampledPiece(def.shape, await sharp(file).ensureAlpha().resize(PW, PH, { fit: "fill", kernel: "lanczos3" }).raw().toBuffer())
+        : await sharp(file).ensureAlpha().raw().toBuffer();
       // The foot columns every key is checked at must be solid rim in CC's
       // piece: the published-object test reads them without the piece.
       const off = footRunsSolid(def.shape, piece, NOTCH_FOOT[folder]);
@@ -1008,8 +1015,8 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
         }
       }
     }
-    const built = buildNotch(def.shape, piece, tint, def.oval, def.cutMarginPx);
-    const findings = notchFindings(built, def.shape, piece, tint, def.oval, def.cutMarginPx, NOTCH_FOOT[folder]);
+    const built = buildNotch(def.shape, piece, tint, notchCutOf(def), def.cutMarginPx);
+    const findings = notchFindings(built, def.shape, piece, tint, notchCutOf(def), def.cutMarginPx, NOTCH_FOOT[folder]);
     for (const f of findings.failures) notchFailures.push(`${folder}/${key}: ${f}`);
     recipe[key] = describeNotch(def, key, tint);
     fs.mkdirSync(path.dirname(out), { recursive: true });
@@ -1029,9 +1036,11 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
     pack: def.pack,
     converter: "scripts/import-cc-frames.mjs",
     kind: "overlay",
-    output: `${PW}x${PH} notch piece (1:1 at ${OUT_W}x${OUT_H}, stretched over ${def.shape.bounds.leftPct}/${def.shape.bounds.topPct}/${def.shape.bounds.widthPct}×${def.shape.bounds.heightPct} %), the oval region cut to transparent, webp q${WEBP.quality}`,
+    output: `${PW}x${PH} notch piece (1:1 at ${OUT_W}x${OUT_H}, stretched over ${def.shape.bounds.leftPct}/${def.shape.bounds.topPct}/${def.shape.bounds.widthPct}×${def.shape.bounds.heightPct} %), the ${def.triangle ? "triangle" : "oval"} region cut to transparent, webp q${WEBP.quality}`,
     colors: recipe,
-    cut: { oval: def.oval, marginPx: def.cutMarginPx, what: "the hologram capture inside CC's oval (WotC's planeswalker symbol tiled) — never published" },
+    cut: def.triangle
+      ? { triangle: def.triangle, marginPx: def.cutMarginPx, what: "the hologram capture inside CC's triangle — never published" }
+      : { oval: def.oval, marginPx: def.cutMarginPx, what: "the hologram capture inside CC's oval (WotC's planeswalker symbol tiled) — never published" },
     sourceFiles: notchSourceFiles(def),
     notes: def.notes,
   };

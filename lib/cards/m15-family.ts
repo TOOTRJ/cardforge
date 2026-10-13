@@ -37,6 +37,11 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // The Vehicle frame (TODO 4.5c): a new template, no stored card —
   // m15artifact's slots and sizes — so it joined without a bump.
   "m15vehicle",
+  // The Universes Beyond frames (TODO 4.25): new templates, no stored card
+  // — their M15 twins' slots and sizes — so they joined without a bump.
+  "m15ub",
+  "m15ubartifact",
+  "m15ubland",
   "m15snow",
   "m15devoid",
   "m15borderless",

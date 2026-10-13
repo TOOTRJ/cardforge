@@ -523,6 +523,15 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   // dresses an artifact whose subtype says Vehicle (SUBTYPE_DRESSES, below,
   // is the per-card half: the Artifact kind covers every artifact).
   m15vehicle: ["artifact"],
+  // The Universes Beyond frames (TODO 4.25) are new — no legacy card sits
+  // on them — and are skins of the M15 standard, the artifact frame and the
+  // land frame, as the borderless three are: the spell frame for the kinds
+  // m15 dresses, the artifact one for an artifact (an Artifact Creature
+  // borrows it, 1.7), the land one for lands. Print restricts nothing more:
+  // any card of the kind may wear the look.
+  m15ub: ["creature", "instant", "sorcery", "enchantment"],
+  m15ubartifact: ["artifact", "creature"],
+  m15ubland: ["land"],
 };
 
 /** Kinds that wear ONLY a template whose trade dress names them. */
@@ -682,7 +691,8 @@ const BORROWED_VARIATIONS: Partial<
 > = {
   // …and the borderless artifact dress (4.32), a skin of m15artifact that
   // an Artifact Creature borrows the same way.
-  creature: { m15: ["m15artifact", "m15borderlessartifact"] },
+  // …and the Universes Beyond artifact frame (4.25).
+  creature: { m15: ["m15artifact", "m15borderlessartifact", "m15ubartifact"] },
 };
 
 // Showcase frames a kind borrows the same way (owner decision A3,
@@ -701,6 +711,7 @@ export type BorrowedTypeWord = "Artifact" | "Enchantment";
 const BORROWED_TYPE_WORD: Partial<Record<FrameTemplate, BorrowedTypeWord>> = {
   m15artifact: "Artifact",
   m15borderlessartifact: "Artifact",
+  m15ubartifact: "Artifact",
   nyx: "Enchantment",
 };
 

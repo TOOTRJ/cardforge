@@ -133,6 +133,11 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // The Vehicle frame (TODO 4.5c, CC 'Vehicle Frame' through the M15 Border
   // and Frame masks): the M15 black border on every edge.
   m15vehicle: ALL_BORDER,
+  // The Universes Beyond frames (TODO 4.25, CC's accurate 'Universes
+  // Beyond' pack — the accurate M15 pack's border): black on every edge.
+  m15ub: ALL_BORDER,
+  m15ubartifact: ALL_BORDER,
+  m15ubland: ALL_BORDER,
   m15snow: ALL_BORDER,
   m15devoid: ALL_BORDER,
   m15pw: ALL_BORDER,

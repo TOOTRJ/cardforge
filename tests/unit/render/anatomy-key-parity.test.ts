@@ -75,7 +75,8 @@ describe("bake path = preview path", () => {
     // twins of every borderless master (7 + 20 and 7 + 10).
     // …and the old frames' 10 each (4.6h: modern, modernland, retroland).
     // …and the Vehicle frame's 10 (4.5c).
-    expect(pairKeys).toBe(200);
+    // …and the Universes Beyond frames' 20 + 10 + 10 (4.25).
+    expect(pairKeys).toBe(240);
     expect(crownedKeys).toBe(44);
   });
 
@@ -117,6 +118,9 @@ describe("bake path = preview path", () => {
               : template.startsWith("m15dfc")
                 ? "m15dfccrown"
                 : null;
+        // The Universes Beyond frames (4.25): their own crown band and
+        // triangle notch.
+        const ub = template === "m15ub" || template === "m15ubartifact" || template === "m15ubland";
         // The modal strip riders (5.1c): each modal template's own strip
         // folder, <template>/strip/<key>.
         const folder =
@@ -127,10 +131,14 @@ describe("bake path = preview path", () => {
             : slot.anatomy === "holoStamp"
               ? template === "m15pw"
                 ? "m15pwholostamp"
-                : "m15holostamp"
+                : ub
+                  ? "m15ubholostamp"
+                  : "m15holostamp"
               : template === "extendedart"
                 ? "extendedcrown"
-                : (dfcCrown ?? "m15crown");
+                : ub
+                  ? "m15ubcrown"
+                  : (dfcCrown ?? "m15crown");
         for (const key of slot.keys) {
           expect(slot.assetPathTemplate.replace("{key}", key), `${template} ${slot.anatomy}`).toBe(`/frames/${folder}/${key}.png`);
           if (slot.anatomy === "holoStamp") notches += 1;
@@ -159,7 +167,9 @@ describe("bake path = preview path", () => {
     // M15-family entries (the Vehicle frame's since 4.5c) + the walker's 7 — and none on a DFC body, the
     // transform (5.1a) and modal (5.1b) bodies alike (no holoStamp on a back
     // body, ever; the fronts take it as their own addition later).
-    expect(notches).toBe((9 + 10) * 7 + 7);
+    // …and the Universes Beyond triangle's 8 bar keys + 10 pairs on its
+    // three entries (4.25).
+    expect(notches).toBe((9 + 10) * 7 + 7 + (8 + 10) * 3);
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

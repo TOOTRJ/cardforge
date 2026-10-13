@@ -54,6 +54,8 @@
 import type { FrameColorKey, FrameMasterKey } from "@/lib/cards/frame-reference-registry";
 import {
   M15PW_HOLO_STAMP_KEEP_OUT,
+  M15UB_HOLO_STAMP_BOX,
+  M15UB_HOLO_STAMP_KEEP_OUT,
   M15PW_HOLO_STAMP_OVAL,
   M15_HOLO_STAMP_KEEP_OUT,
   M15_HOLO_STAMP_OVAL,
@@ -4678,6 +4680,25 @@ export const M15_CROWN: FrameOverlaySlot = {
 };
 
 /**
+ * The Universes Beyond crown (TODO 4.25): `m15ubcrown/<key>.png`, Card
+ * Conjurer's 'Legend Crowns (Universes Beyond)' of its accurate group — the
+ * standard crown's geometry with the UB pack's smooth art, built by
+ * M15_CROWN's recipe at the same rects (scripts/lib/cc-frames.mjs
+ * UB_CROWN_BAND), so the same slot. Keys: w u b r g, m, a (the artifact
+ * silver — a colourless card on the spell frame too, whose master is the
+ * artifact frame) and l (the land grey), then the ten pairs; no "c". Set
+ * only on the three Universes Beyond PROFILES entries.
+ */
+export const UB_CROWN: FrameOverlaySlot = {
+  anatomy: "crown",
+  rect: M15_CROWN.rect,
+  assetPathTemplate: "/frames/m15ubcrown/{key}.png",
+  // UB_CROWN_BAND_KEYS in scripts/lib/cc-frames.mjs (a unit test holds them
+  // together).
+  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+};
+
+/**
  * The extended-art frame's legendary crown (TODO 4.6f, wave 2b): Card
  * Conjurer's FLOATING crown as an overlay band, `extendedcrown/<key>.png`
  * (1500 × 260): CC's black 'Crown Border Cover' strip (3.94/2.77/92.14×1.77 %,
@@ -4832,6 +4853,34 @@ export const M15_HOLO_STAMP: FrameOverlaySlot = {
   // (TWO_COLOR_PAIRS), as M15_CROWN lists them.
   keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
   stamp: { shape: "oval", oval: M15_HOLO_STAMP_OVAL, keepOut: M15_HOLO_STAMP_KEEP_OUT },
+};
+
+/**
+ * The Universes Beyond TRIANGLE stamp's notch (TODO 4.25): Card Conjurer's
+ * `m15/new/ub/stamp` piece — the text box's bottom pinline stepped up and
+ * over the triangle, with its bevel — resampled once from the pack's
+ * 2015-wide card to 223 × 102 px at 638, 1891 (1:1 at HD from there), the
+ * rim tinted to OUR Universes Beyond master's bar and the triangle (CC's
+ * hologram capture) cut clear (scripts/lib/cc-frames.mjs
+ * HOLO_STAMP_NOTCHES.m15ubholostamp). The art over the cut is our own
+ * silver triangle (lib/cards/holo-stamp-art.ts HOLO_STAMP_TRIANGLE_ART), on
+ * the prints: top edge 1919 px, apex 1991 (61 prints, 40K 2022 → FIN 2025).
+ * Keys: w u b r g, m, a (the artifact silver; the spell frame's colourless
+ * master is the artifact frame) and l (the land taupe), then the ten pairs,
+ * tinted per column as M15_HOLO_STAMP's are. `frame_style.stamp` keeps its
+ * meaning — "auto" is a rare or mythic, "oval" / "triangle" always, and
+ * every "on" value draws THIS frame's shape — although print stamps every
+ * rarity of this frame (docs/FRAMES.md "The Universes Beyond frames").
+ * Set only on the three Universes Beyond PROFILES entries.
+ */
+export const M15UB_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  // UB_NOTCH_BOX in scripts/lib/cc-frames.mjs (a unit test holds them
+  // together).
+  rect: { leftPct: (638 / 1500) * 100, topPct: (1891 / 2100) * 100, widthPct: (223 / 1500) * 100, heightPct: (102 / 2100) * 100 },
+  assetPathTemplate: "/frames/m15ubholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+  stamp: { shape: "triangle", oval: M15UB_HOLO_STAMP_BOX, keepOut: M15UB_HOLO_STAMP_KEEP_OUT },
 };
 
 /** The planeswalker's notch (TODO 4.9c): CC's `planeswalker/holo` piece —
@@ -5308,6 +5357,46 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     twoColorMasters: ["split"],
     pt: { ...M15ARTIFACT.pt!, plateAssetPathTemplate: "/frames/m15vehicle/pt/{color}.png", colorHex: VEHICLE_PT_INK },
     overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }, { ...M15_HOLO_STAMP, keyMap: { c: "a" } }],
+    collector: M15_COLLECTOR,
+  },
+  // The Universes Beyond frames (TODO 4.25; owner 2026-10-13, roadmap Q5:
+  // three frames of their own, reached by a pick or an import only): Card
+  // Conjurer's accurate 'Universes Beyond' pack, which is the accurate M15
+  // pack's geometry, masks and text layout with smooth streaked art — so
+  // each entry is its M15 twin's profile (slots, sizes, art window, pair
+  // dresses, collector line) with the UB masters, the pack's own smooth
+  // plates, the UB crown band and the TRIANGLE stamp's notch
+  // (M15UB_HOLO_STAMP). ADDITIONS: new templates no stored card sits on.
+  // The colourless spell master is the pack's artifact frame (its own
+  // colourless file is missing from Card Conjurer's tree), so `c` is opaque
+  // — no underFrameArt — and crowned / notched in the artifact silver.
+  m15ub: {
+    ...M15,
+    label: "M15 Universes Beyond",
+    costDy: CC_M15_COST_DY,
+    artSlot: CC_M15_ART_SLOT,
+    type: { ...M15.type, dy: CC_M15_TYPE_DY },
+    pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15ub/pt/{color}.png" },
+    overlays: [{ ...UB_CROWN, keyMap: { c: "a" } }, { ...M15UB_HOLO_STAMP, keyMap: { c: "a" } }],
+    twoColorMasters: ["split", "hybrid"],
+    collector: M15_COLLECTOR,
+  },
+  m15ubartifact: {
+    ...M15ARTIFACT,
+    label: "M15 Universes Beyond Artifact",
+    pt: { ...M15ARTIFACT.pt!, plateAssetPathTemplate: "/frames/m15ubartifact/pt/{color}.png" },
+    overlays: [{ ...UB_CROWN, keyMap: { c: "a" } }, { ...M15UB_HOLO_STAMP, keyMap: { c: "a" } }],
+    twoColorMasters: ["split"],
+    collector: M15_COLLECTOR,
+  },
+  // A land creature (Dryad Arbor's kind) draws the spell frame's plates.
+  m15ubland: {
+    ...M15LAND,
+    label: "M15 Universes Beyond Land",
+    pt: { ...M15LAND.pt!, plateAssetPathTemplate: "/frames/m15ub/pt/{color}.png" },
+    overlays: [{ ...UB_CROWN, keyMap: { c: "l" } }, { ...M15UB_HOLO_STAMP, keyMap: { c: "l" } }],
+    twoColorMasters: ["split"],
+    twoColorForLands: true,
     collector: M15_COLLECTOR,
   },
   // The borderless frame's crown (TODO 4.6f, wave 2a) is CC's FLOATING crown

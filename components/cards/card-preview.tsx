@@ -29,7 +29,7 @@ import {
   webpVariant,
 } from "@/components/cards/frame-layer";
 import { EtchedSheen } from "@/lib/cards/etched-finish";
-import { HOLO_STAMP_OVAL_ART } from "@/lib/cards/holo-stamp-art";
+import { holoStampArtOf } from "@/lib/cards/holo-stamp-art";
 import {
   FoilBackdropSheen,
   FoilSheen,
@@ -1882,7 +1882,7 @@ function HoloStampOval({ stamp }: { stamp: ResolvedHoloStamp }) {
         width: `${r.widthPct}%`,
         height: `${r.heightPct}%`,
         zIndex: 7,
-        backgroundImage: `url("${HOLO_STAMP_OVAL_ART.dataUri}")`,
+        backgroundImage: `url("${holoStampArtOf(stamp.shape).dataUri}")`,
         backgroundSize: "100% 100%",
         backgroundRepeat: "no-repeat",
       }}

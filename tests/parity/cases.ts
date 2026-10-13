@@ -76,6 +76,9 @@ const PICKS: readonly Pick[] = [
   // --- the Vehicle frame (TODO 4.5c): its own plate, white digits -----------
   { from: "m15vehicle/c/artifact-short@wide", why: "Vehicle: the brown plate under white digits at their widest (12/12), the bronze frame" },
   { from: "m15vehicle/wu/artifact-long@pair-crown", why: "Vehicle: the two-colour pair master and the crown over the bronze frame" },
+  // --- the Universes Beyond frames (TODO 4.25): the triangle stamp ----------
+  { from: "m15ub/wu/creature-long@stamp-pair-crown", why: "Universes Beyond: the triangle stamp's notch and art (a new shape in both renderers), the pair master and the split crown band" },
+  { from: "m15ub/g/creature-short@wide", why: "Universes Beyond: the pack's own plate under 12/12" },
   // --- art away from its default position (a coded picture) ----------------
   {
     from: "m15/r/creature-short",

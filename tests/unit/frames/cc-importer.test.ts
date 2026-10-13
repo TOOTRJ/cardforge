@@ -187,6 +187,10 @@ describe("Card Conjurer recipe", () => {
       "m15tokenartifact",
       "m15tokenartifacttext",
       "m15tokentext",
+      // The Universes Beyond frames (TODO 4.25; tests/unit/creator/universes-beyond-frame.test.ts).
+      "m15ub",
+      "m15ubartifact",
+      "m15ubland",
       // The Vehicle frame (TODO 4.5c; tests/unit/frames/vehicle-importer.test.ts).
       "m15vehicle",
       "m20token",

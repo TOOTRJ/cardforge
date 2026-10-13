@@ -61,6 +61,11 @@ const templateSchema = z
 // Combos with no real printing — a null here is documented, anything else
 // null is a hole in the research.
 const DOCUMENTED_NULLS = new Set([
+  // The Universes Beyond spell frame (TODO 4.25): its colourless master is
+  // the pack's ARTIFACT frame (Card Conjurer's colourless file is missing),
+  // and the three colourless non-artifact cards in print (ACR #1, FIN #2,
+  // WHO #9) wear a see-through frame — no printing shows this combo.
+  "m15ub/c",
   // The 2014–19 arch tokens (TODO 4.49's re-pin): no textless three-colour
   // arch token, and no white / black / red / green / gold arch artifact token
   // (the M20+ full-art prints are 4.48 / 4.50's).

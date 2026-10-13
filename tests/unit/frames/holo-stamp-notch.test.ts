@@ -9,6 +9,7 @@ import {
   HOLO_STAMP_NOTCHES,
   NOTCH_FOOT,
   buildNotch,
+  notchCutOf,
   columnTintGap,
   cutEllipse,
   cutOval,
@@ -77,7 +78,13 @@ function onDisk(rel: string): Buffer | null {
 type NotchDef = (typeof HOLO_STAMP_NOTCHES)[keyof typeof HOLO_STAMP_NOTCHES] & {
   rampKeys?: readonly string[];
   barSharedBy?: Record<string, string[]>;
+  // The cut: an oval (the M15 and walker folders) or a round triangle (the
+  // Universes Beyond folder, TODO 4.25) — notchCutOf picks it.
+  oval?: { leftPct: number; topPct: number; widthPct: number; heightPct: number };
+  triangle?: unknown;
 };
+/** An oval folder's oval. */
+const ovalOf = (def: NotchDef) => def.oval!;
 const M15: NotchDef = HOLO_STAMP_NOTCHES.m15holostamp;
 const PW: NotchDef = HOLO_STAMP_NOTCHES.m15pwholostamp;
 const PINLINE_RAMP = [...PAIR_RAMPS.pinline] as [number, number];
@@ -88,14 +95,14 @@ describe("the recipe is the profile's slot", () => {
     expect(M15.shape.size).toEqual({ width: 192, height: 96 });
     expect(M15.shape.bounds).toEqual(M15_HOLO_STAMP.rect);
     expect([...M15.keys]).toEqual([...M15_HOLO_STAMP.keys]);
-    expect(M15.oval).toEqual(M15_HOLO_STAMP_OVAL);
+    expect(ovalOf(M15)).toEqual(M15_HOLO_STAMP_OVAL);
     expect(M15.cutMarginPx).toBe(HOLO_STAMP_CUT_MARGIN_PX);
     expect(M15_HOLO_STAMP.assetPathTemplate).toBe("/frames/m15holostamp/{key}.png");
     expect(PW.shape.src).toBe("img/frames/planeswalker/holo/u.png");
     expect(PW.shape.size).toEqual({ width: 182, height: 107 });
     expect(PW.shape.bounds).toEqual(M15PW_HOLO_STAMP.rect);
     expect([...PW.keys]).toEqual([...M15PW_HOLO_STAMP.keys]);
-    expect(PW.oval).toEqual(M15PW_HOLO_STAMP_OVAL);
+    expect(ovalOf(PW)).toEqual(M15PW_HOLO_STAMP_OVAL);
     expect(M15PW_HOLO_STAMP.assetPathTemplate).toBe("/frames/m15pwholostamp/{key}.png");
     // The slot sits 2 px below CC's bounds (the foot on our 12-row bar).
     expect(M15_HOLO_STAMP.rect.topPct).toBeCloseTo(90.34 + (2 / 2100) * 100, 9);
@@ -157,13 +164,13 @@ describe("the recipe is the profile's slot", () => {
   });
 
   it("the cut ellipse is the slot's oval plus the margin, in the piece's own pixels", () => {
-    const e = cutEllipse(M15.shape, M15.oval, M15.cutMarginPx);
+    const e = cutEllipse(M15.shape, ovalOf(M15), M15.cutMarginPx);
     // The oval's centre (750.15, 1959.7) less the piece's origin (654, 1899).
     expect(e.cx).toBeCloseTo(96.15, 6);
     expect(e.cy).toBeCloseTo(60.72, 6);
     expect(e.rx).toBeCloseTo(67.05 + 2, 6);
     expect(e.ry).toBeCloseTo(33.6 + 2, 6);
-    const w = cutEllipse(PW.shape, PW.oval, PW.cutMarginPx);
+    const w = cutEllipse(PW.shape, ovalOf(PW), PW.cutMarginPx);
     expect(w.cx).toBeCloseTo(91.15, 6);
     expect(w.cy).toBeCloseTo(59.72, 6);
   });
@@ -174,7 +181,7 @@ describe("the recipe is the profile's slot", () => {
 function syntheticPiece(def: typeof M15) {
   const { width, height } = def.shape.size;
   const buf = Buffer.alloc(width * height * 4);
-  const e = cutEllipse(def.shape, def.oval, 0);
+  const e = cutEllipse(def.shape, ovalOf(def), 0);
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const o = (y * width + x) * 4;
@@ -193,38 +200,38 @@ describe("the decomposition and the cut", () => {
   it("tints the rim, keeps the bevel and the black, clears the oval, and keeps the alpha", () => {
     const piece = syntheticPiece(M15);
     const tint = [244, 243, 236];
-    const out = buildNotch(M15.shape, piece, tint, M15.oval, M15.cutMarginPx);
+    const out = buildNotch(M15.shape, piece, tint, ovalOf(M15), M15.cutMarginPx);
     const px = (x: number, y: number) => [...out.subarray((y * 192 + x) * 4, (y * 192 + x) * 4 + 4)];
     expect(px(8, 2)).toEqual([255, 255, 255, 120]); // the bevel as it was
     expect(px(8, 8)).toEqual([244, 243, 236, 255]); // the rim in the tint
     expect(px(8, 40)).toEqual([0, 0, 0, 255]); // the black
     expect(px(96, 61)).toEqual([0, 0, 0, 0]); // inside the oval: cleared
-    const f = notchFindings(out, M15.shape, piece, tint, M15.oval, M15.cutMarginPx, { x: 8, y: 8 });
+    const f = notchFindings(out, M15.shape, piece, tint, ovalOf(M15), M15.cutMarginPx, { x: 8, y: 8 });
     expect(f.failures).toEqual([]);
     expect(f).toMatchObject({ cutClear: true, ringBlack: true, footOk: true, alphaKept: true });
     // A half-covered rim pixel decomposes to half the tint (an AA edge).
     const edge = Buffer.from(piece);
     edge.set([0, 58, 95, 255], (8 * 192 + 20) * 4);
-    const soft = buildNotch(M15.shape, edge, tint, M15.oval, M15.cutMarginPx);
+    const soft = buildNotch(M15.shape, edge, tint, ovalOf(M15), M15.cutMarginPx);
     expect([...soft.subarray((8 * 192 + 20) * 4, (8 * 192 + 20) * 4 + 3)]).toEqual([122, 122, 118]);
   });
 
   it("refuses a piece whose cut is not clear, whose ring holds a hologram pixel, or whose foot is not the tint", () => {
     const piece = syntheticPiece(M15);
     const tint = [0, 117, 190];
-    const out = buildNotch(M15.shape, piece, tint, M15.oval, M15.cutMarginPx);
+    const out = buildNotch(M15.shape, piece, tint, ovalOf(M15), M15.cutMarginPx);
     const dirty = Buffer.from(out);
     dirty.set([150, 160, 150, 255], (60 * 192 + 96) * 4);
-    expect(notchFindings(dirty, M15.shape, piece, tint, M15.oval, M15.cutMarginPx, { x: 8, y: 8 }).cutClear).toBe(false);
+    expect(notchFindings(dirty, M15.shape, piece, tint, ovalOf(M15), M15.cutMarginPx, { x: 8, y: 8 }).cutClear).toBe(false);
     const ring = Buffer.from(out);
     // Just outside the cut, at the oval's top: a leftover silver pixel.
-    const e = cutEllipse(M15.shape, M15.oval, M15.cutMarginPx);
+    const e = cutEllipse(M15.shape, ovalOf(M15), M15.cutMarginPx);
     ring.set([200, 200, 200, 255], (Math.round(e.cy - e.ry - 1.5) * 192 + Math.round(e.cx)) * 4);
-    expect(notchFindings(ring, M15.shape, piece, tint, M15.oval, M15.cutMarginPx, { x: 8, y: 8 }).ringBlack).toBe(false);
-    expect(notchFindings(out, M15.shape, piece, [1, 2, 3], M15.oval, M15.cutMarginPx, { x: 8, y: 8 }).footOk).toBe(false);
+    expect(notchFindings(ring, M15.shape, piece, tint, ovalOf(M15), M15.cutMarginPx, { x: 8, y: 8 }).ringBlack).toBe(false);
+    expect(notchFindings(out, M15.shape, piece, [1, 2, 3], ovalOf(M15), M15.cutMarginPx, { x: 8, y: 8 }).footOk).toBe(false);
     // cutOval alone clears the ellipse of any buffer.
     const again = Buffer.from(piece);
-    cutOval(again, M15.shape, M15.oval, M15.cutMarginPx);
+    cutOval(again, M15.shape, ovalOf(M15), M15.cutMarginPx);
     expect([...again.subarray((60 * 192 + 96) * 4, (60 * 192 + 96) * 4 + 4)]).toEqual([0, 0, 0, 0]);
   });
 
@@ -267,7 +274,7 @@ describe("the decomposition and the cut", () => {
     expect(isColumnTint(left)).toBe(false);
     expect(tintAt(columns, 5)).toEqual(columns[5]);
     expect(tintAt(left, 5)).toBe(left);
-    const out = buildNotch(M15.shape, piece, columns, M15.oval, M15.cutMarginPx);
+    const out = buildNotch(M15.shape, piece, columns, ovalOf(M15), M15.cutMarginPx);
     const px = (x: number, y: number) => [...out.subarray((y * 192 + x) * 4, (y * 192 + x) * 4 + 4)];
     expect(px(8, 8)).toEqual([...columns[8], 255]); // the rim: its column's colour
     expect(px(180, 8)).toEqual([...columns[180], 255]); // the other foot's side of the ramp
@@ -278,14 +285,14 @@ describe("the decomposition and the cut", () => {
     // The foot at every column of the synthetic rim band (rows 4–15 are rim
     // across the width): the tint of that column.
     const foot = { y: 8, runs: [[4, 12], [180, 188]] as const };
-    expect(notchFindings(out, M15.shape, piece, columns, M15.oval, M15.cutMarginPx, foot).failures).toEqual([]);
+    expect(notchFindings(out, M15.shape, piece, columns, ovalOf(M15), M15.cutMarginPx, foot).failures).toEqual([]);
     // One column off — the right foot tinted with the left's colour — is refused, naming the column.
-    const flat = buildNotch(M15.shape, piece, left, M15.oval, M15.cutMarginPx);
-    const f = notchFindings(flat, M15.shape, piece, columns, M15.oval, M15.cutMarginPx, foot);
+    const flat = buildNotch(M15.shape, piece, left, ovalOf(M15), M15.cutMarginPx);
+    const f = notchFindings(flat, M15.shape, piece, columns, ovalOf(M15), M15.cutMarginPx, foot);
     expect(f.footOk).toBe(false);
     expect(f.failures.join(" ")).toMatch(/foot at \(\d+, 8\)/);
     // A per-column tint of the wrong width is refused.
-    expect(() => buildNotch(M15.shape, piece, columns.slice(1), M15.oval, M15.cutMarginPx)).toThrow(/192 columns/);
+    expect(() => buildNotch(M15.shape, piece, columns.slice(1), ovalOf(M15), M15.cutMarginPx)).toThrow(/192 columns/);
     // The foot runs must be solid rim in the source piece.
     expect(footRunsSolid(M15.shape, piece, foot)).toEqual([]);
     expect(footRunsSolid(M15.shape, piece, { y: 40, runs: [[4, 5]] })).toEqual([4, 5]);
@@ -317,6 +324,8 @@ describe("published to the frames bucket", () => {
     }
     // 9 bar keys + 10 pair keys, and the walker's 7, PNG and WebP: 52 objects.
     expect(Object.keys(files).filter((k) => /^m15(pw)?holostamp\//.test(k))).toHaveLength(52);
+    // The Universes Beyond triangle's (TODO 4.25): 8 bar keys + 10 pairs.
+    expect(Object.keys(files).filter((k) => /^m15ubholostamp\//.test(k))).toHaveLength(36);
   });
 
   it("provenance records the pinned commit, the one source piece per pack, the tint per key and the cut — never the per-key CC pieces", () => {
@@ -331,13 +340,23 @@ describe("published to the frames bucket", () => {
         expect(p.colors[key][0], `${folder}/${key}`).toContain(def.shape.src);
         const barOf = (def.barOf as Record<string, string>)[key];
         if (def.rampKeys?.includes(key)) {
-          expect(p.colors[key][1], `${folder}/${key}`).toMatch(new RegExp(`^rim tinted per column to ${barOf}\\.png's bar across x 654–845 \\(rows 1940–1947; \\d+,\\d+,\\d+ at x 654 → \\d+,\\d+,\\d+ at x 750 → \\d+,\\d+,\\d+ at x 845 — the pinline's procedural:ramp\\(40→60 %W\\)\\), the same bar on m15/${key}-h\\.png, m15artifact/${key}\\.png, m15vehicle/${key}\\.png, m15land/${key}\\.png, m15snow/${key}\\.png, m15snowland/${key}\\.png$`));
+          // The piece's columns on the card and the masters that share the
+          // bar: M15's 654–845 px, the Universes Beyond piece's 638–860.
+          const [x0, xMid, x1, shared] =
+            folder === "m15ubholostamp"
+              ? [638, 749, 860, `m15ub/${key}-h\\.png, m15ubartifact/${key}\\.png, m15ubland/${key}\\.png`]
+              : [654, 750, 845, `m15/${key}-h\\.png, m15artifact/${key}\\.png, m15vehicle/${key}\\.png, m15land/${key}\\.png, m15snow/${key}\\.png, m15snowland/${key}\\.png`];
+          expect(p.colors[key][1], `${folder}/${key}`).toMatch(new RegExp(`^rim tinted per column to ${barOf}\\.png's bar across x ${x0}–${x1} \\(rows 1940–1947; \\d+,\\d+,\\d+ at x ${x0} → \\d+,\\d+,\\d+ at x ${xMid} → \\d+,\\d+,\\d+ at x ${x1} — the pinline's procedural:ramp\\(40→60 %W\\)\\), the same bar on ${shared}$`));
         } else {
           expect(p.colors[key][1], `${folder}/${key}`).toMatch(new RegExp(`rim tinted to ${barOf}\\.png's bar \\(\\d+,\\d+,\\d+\\)`));
         }
         expect(p.colors[key][2], `${folder}/${key}`).toContain("cut to transparent");
       }
-      expect(p.cut).toEqual({ oval: def.oval, marginPx: def.cutMarginPx, what: expect.stringContaining("hologram") });
+      expect(p.cut).toEqual(
+        def.triangle
+          ? { triangle: def.triangle, marginPx: def.cutMarginPx, what: expect.stringContaining("hologram") }
+          : { oval: def.oval, marginPx: def.cutMarginPx, what: expect.stringContaining("hologram") },
+      );
       expect(p.notes.join(" ")).toMatch(/hologram/);
     }
     // No CC holo piece but the two U shapes is read.
@@ -362,12 +381,16 @@ describe("published to the frames bucket", () => {
       const master = await sharp(onDisk(`${(def.barOf as Record<string, string>)[key]}.png`)!).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
       const perColumn = def.rampKeys?.includes(key) === true;
       const tint = perColumn ? sampleBarColumns(master.data, master.info.width, def.barSample, def.shape) : sampleBar(master.data, master.info.width, def.barSample);
-      const f = notchFindings(data, def.shape, null, tint, def.oval, def.cutMarginPx, NOTCH_FOOT[folder as keyof typeof NOTCH_FOOT]);
+      const f = notchFindings(data, def.shape, null, tint, notchCutOf(def), def.cutMarginPx, NOTCH_FOOT[folder as keyof typeof NOTCH_FOOT]);
       expect(f.failures, `${folder}/${key}`).toEqual([]);
       // …and provenance names this tint.
       if (perColumn) {
         const columns = tint as number[][];
-        expect(provenance[folder].colors[key][1]).toContain(`${columns[0].join(",")} at x 654 → ${columns[96].join(",")} at x 750 → ${columns[191].join(",")} at x 845`);
+        const x0 = Math.round((def.shape.bounds.leftPct / 100) * 1500);
+        const mid = Math.floor(columns.length / 2);
+        expect(provenance[folder].colors[key][1]).toContain(
+          `${columns[0].join(",")} at x ${x0} → ${columns[mid].join(",")} at x ${x0 + mid} → ${columns.at(-1)!.join(",")} at x ${x0 + columns.length - 1}`,
+        );
       } else {
         expect(provenance[folder].colors[key][1]).toContain(`(${(tint as number[]).join(",")})`);
       }

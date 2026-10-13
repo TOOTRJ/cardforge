@@ -119,7 +119,7 @@ describe("pickerSampleArt — the owner's six near-black tiles (and the full-art
 });
 
 describe("FrameThumb — art-first and opted-in tiles draw a sample art under the master", () => {
-  it("draws the sample on exactly 19 of the 61 templates, on every colour and type dress", () => {
+  it("draws the sample on exactly 19 of the 64 templates, on every colour and type dress", () => {
     const drawn = new Set<FrameTemplate>();
     for (const template of FRAME_TEMPLATE_VALUES) {
       const counts = { with: 0, without: 0 };
@@ -139,7 +139,8 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
     // five transform bodies + 5.1b's four modal bodies (opaque M15 masters:
     // no sample).
     // + 4.5c's Vehicle frame (an opaque M15 master: no sample).
-    expect(FRAME_TEMPLATE_VALUES).toHaveLength(61);
+    // + 4.25's three Universes Beyond frames (opaque masters too).
+    expect(FRAME_TEMPLATE_VALUES).toHaveLength(64);
     expect(FRAME_TEMPLATE_VALUES.filter((t) => drawn.has(t))).toEqual(SAMPLED);
   });
 

@@ -38,6 +38,10 @@ describe("frame reference registry", () => {
     // artifact token in blue only (TC18 #7); the nulls are documented in
     // tests/unit/cards/frame-references-data.test.ts too.
     const noRealPrinting = new Set([
+      // The Universes Beyond spell frame's colourless master is the pack's
+      // artifact frame (TODO 4.25); print's three colourless non-artifact
+      // cards wear a see-through frame instead.
+      "m15ub/c",
       "m15token/m",
       "m15tokenartifact/w",
       "m15tokenartifact/b",
@@ -122,8 +126,8 @@ describe("frame reference registry", () => {
     // 4.50's six full-art tokens + 4.33's two borderless planeswalkers (every
     // colour referenced, the tall one's c by the serialized DFT #376) +
     // 4.52's emblem + 5.1a's five transform bodies + 5.1b's four modal bodies.
-    // + 4.5c's Vehicle frame.
-    expect(m15Templates.length).toBe(39);
+    // + 4.5c's Vehicle frame + 4.25's three Universes Beyond frames.
+    expect(m15Templates.length).toBe(42);
     expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {

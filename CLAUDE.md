@@ -761,6 +761,28 @@ Rules and gotchas:
   (`vehicle/2015`, `onceVerified`) — no bump, no sweep, no badge. The saga
   body still draws no P/T: the printed saga creature (FIN 2025) is another
   body, 4.5d's. `docs/FRAMES.md` "The Vehicle frame".
+- The Universes Beyond frames (`m15ub`, `m15ubartifact`, `m15ubland`; TODO
+  4.25): STORED templates of their own (owner 2026-10-13), skins of m15 /
+  m15artifact / m15land under Variations — never a render-time pick, never
+  a new card's default, never an era standard. Card Conjurer's accurate
+  'Universes Beyond' pack (the M15 pack's geometry and masks, smooth
+  streaked art), so each profile is its M15 twin's slots with the pack's
+  masters, pair masters and plates, the Universes Beyond crown band
+  (`UB_CROWN`, `m15ubcrown/*`: no `c` key) and the TRIANGLE stamp's notch
+  (`M15UB_HOLO_STAMP`, `m15ubholostamp/*`: CC's piece resampled once, the
+  triangle cut clear, our own triangle art from `holoStampArtOf`). The
+  pack's colourless frame is missing from Card Conjurer's tree: `m15ub/c`
+  is its ARTIFACT frame, has no reference printing (print's colourless
+  card is see-through) and stays unverified until the owner decides.
+  `frame_style.stamp` keeps its meaning on them — "auto" is a rare or
+  mythic although print stamps every rarity there; every "on" value draws
+  the frame's own shape. An ADDITION: no bump, no sweep, no badge; an
+  import names one only once verified in the colour (`ub/2015`:
+  `security_stamp: triangle`, released 2021-11-01 or later, a plain
+  black-bordered spell, artifact or land — never a Vehicle, a layout, a
+  colourless non-artifact spell or the etched run, which keep their frame
+  with the `universes-beyond` gap). `docs/FRAMES.md` "The Universes Beyond
+  frames".
 - The 1997 frame (`retro`, `retroland`; TODO 4.10a, layout v46) is the
   ORIGINAL cards of 1996–2003, never the 2006 timeshifted redrawing or the
   2021+ reprints (imports of those are `nearest`: the `timeshifted-frame`

@@ -255,7 +255,8 @@ describe("visual-regression matrix", () => {
     }
     for (const c of stamped) {
       const style = c.row.frame_style as { stamp?: string; collector?: string; crown?: boolean; twoColor?: boolean };
-      expect(["auto", "oval"], c.id).toContain(style.stamp);
+      // "triangle" only on the Universes Beyond frame's "Always" case (4.25).
+      expect(c.id === "m15ub/r/creature-short@stamp-always" ? ["triangle"] : ["auto", "oval"], c.id).toContain(style.stamp);
       expect(style.collector, c.id).toBeUndefined();
       // The crown rides only on the crowned pair case (the split crown and
       // the pair notch on one card).

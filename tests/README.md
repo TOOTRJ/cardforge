@@ -162,7 +162,8 @@ checkout first (one in another worktree is fine).
   rules, a walker, a saga, split / aftermath / adventure / flip / battle,
   both faces of a transform and a modal card, tokens, an emblem, the 1993 /
   1997 / 2003 frames, borderless, crown + stamp + pair, the Vehicle frame's
-  brown plate and its pair + crown, the collector line,
+  brown plate and its pair + crown, the Universes Beyond frame's triangle
+  stamp and plate, the collector line,
   centred rules, art off its default position incl. focal 0 with zoom, foil
   and etched, an EXIF orientation-6 photo as stored and as uploaded, 3.24's
   Plains and textless cases). A new rendering feature of BOTH renderers gets

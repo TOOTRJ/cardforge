@@ -31,8 +31,9 @@ export const HOLO_STAMP_SWITCH_VALUES = ["auto", "oval", "triangle", "none"] as 
 export type HoloStampSwitch = (typeof HOLO_STAMP_SWITCH_VALUES)[number];
 
 /** The stamp shapes print uses: the oval (every 2015-frame rare and mythic)
- *  and the Universes Beyond triangle (LTR-style frames, every rarity —
- *  wave 2, TODO 4.9d). */
+ *  and the Universes Beyond triangle (the Universes Beyond frames, TODO
+ *  4.25 — print stamps EVERY rarity there, 191 of 198 read; the switch
+ *  keeps its meaning all the same: "auto" is a rare or mythic). */
 export type HoloStampShape = "oval" | "triangle";
 
 export function isHoloStampSwitch(value: unknown): value is HoloStampSwitch {
@@ -137,12 +138,98 @@ export const M15_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: 43.67, topPct: 90.71, wi
  *  in 4.9d. */
 export const M15PW_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: 43.94, topPct: 90.15, widthPct: 12.14, heightPct: 1.3 };
 
+// ---------------------------------------------------------------------------
+// The Universes Beyond triangle (TODO 4.25). Geometry in HD px on a
+// 1500 × 2100 card, an apex-down triangle with round corners written as an
+// INNER triangle and a corner radius (the shape is every point within
+// `radius` of the inner triangle).
+// ---------------------------------------------------------------------------
+
+/** A round-cornered triangle: three inner vertices (HD px) and the radius. */
+export type RoundTriangle = {
+  points: readonly [readonly [number, number], readonly [number, number], readonly [number, number]];
+  radius: number;
+};
+
+/** The HOLE of Card Conjurer's Universes Beyond stamp piece — its plain
+ *  'Gray Holo Stamp' fitted (the piece is 299 × 137 at 857 / 2015,
+ *  2534 / 2814; mean |α error| 0.5 %): top edge at 1918 px, 680–819 px
+ *  wide, the apex past the piece's last row. The importer cuts the notch
+ *  clear inside it plus HOLO_STAMP_CUT_MARGIN_PX; the art's black covers it
+ *  plus HOLO_STAMP_ART_MARGIN_PX. */
+export const UB_STAMP_HOLE: RoundTriangle = {
+  points: [[687.1, 1924.6], [812.1, 1924.6], [749.6, 1992.5]],
+  radius: 6.7,
+};
+
+/** The silver FACE our art draws, on the prints (61 mono Universes Beyond
+ *  spells, 40K 2022 → FIN 2025, medians at HD): top edge 1919 px, 688–814 px
+ *  wide 8 px below it, 708–793 at row 1950, the apex at 1991 — the hole's
+ *  top corners with the apex 8.5 px higher, 3 px inside the black. */
+export const UB_STAMP_FACE: RoundTriangle = {
+  points: [[687.1, 1924.6], [812.1, 1924.6], [749.6, 1984]],
+  radius: 3.7,
+};
+
+const pctX = (px: number) => (px / 1500) * 100;
+const pctY = (px: number) => (px / 2100) * 100;
+
+/** A round triangle's bounding box, in card percent. */
+export function roundTriangleBounds(t: RoundTriangle): Rect {
+  const xs = t.points.map((p) => p[0]);
+  const ys = t.points.map((p) => p[1]);
+  const left = Math.min(...xs) - t.radius;
+  const top = Math.min(...ys) - t.radius;
+  return {
+    leftPct: pctX(left),
+    topPct: pctY(top),
+    widthPct: pctX(Math.max(...xs) + t.radius - left),
+    heightPct: pctY(Math.max(...ys) + t.radius - top),
+  };
+}
+
+/** Signed distance (HD px) from a point to a round triangle's edge:
+ *  negative inside. Pure — the importer's cut, its checks and the art
+ *  generator read the same shape. */
+export function roundTriangleDistance(t: RoundTriangle, x: number, y: number): number {
+  let d = Infinity;
+  let sign = 0;
+  let inside = true;
+  for (let i = 0; i < 3; i += 1) {
+    const [ax, ay] = t.points[i]!;
+    const [bx, by] = t.points[(i + 1) % 3]!;
+    const ex = bx - ax;
+    const ey = by - ay;
+    const wx = x - ax;
+    const wy = y - ay;
+    const k = Math.max(0, Math.min(1, (wx * ex + wy * ey) / (ex * ex + ey * ey)));
+    d = Math.min(d, Math.hypot(wx - ex * k, wy - ey * k));
+    const cross = ex * wy - ey * wx;
+    if (sign === 0 && cross !== 0) sign = Math.sign(cross);
+    else if (cross !== 0 && Math.sign(cross) !== sign) inside = false;
+  }
+  return (inside ? -d : d) - t.radius;
+}
+
+/** The Universes Beyond stamp's box (the hole's bounds: 680.4–818.8 ×
+ *  1917.9–1999.2 px) — what the slot's `oval` holds for a triangle; the art
+ *  bitmap is stretched over it grown by HOLO_STAMP_ART_MARGIN_PX. */
+export const M15UB_HOLO_STAMP_BOX: Rect = roundTriangleBounds(UB_STAMP_HOLE);
+
+/** The rules keep-out while the Universes Beyond stamp is drawn: the raised
+ *  pinline above the triangle, x 650–850 px from the bevel's top (1897 px;
+ *  the rim 1903–1913, the prints' black from 1911) down past the rules
+ *  box's bottom (1923.6) — as M15_HOLO_STAMP_KEEP_OUT is for the oval's
+ *  arch. */
+export const M15UB_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: pctX(650), topPct: pctY(1897), widthPct: pctX(200), heightPct: pctY(27) };
+
 /** What a `holoStamp` overlay slot declares beside its notch image
  *  (FrameOverlaySlot, lib/cards/template-layout.ts). */
 export type HoloStampArt = {
   /** The shape this frame's notch is cut for — what every "on" value draws. */
   shape: HoloStampShape;
-  /** The oval's rect (the ellipse the art fills). */
+  /** The shape's rect: the ellipse the oval art fills, or the triangle's
+   *  bounding box (M15UB_HOLO_STAMP_BOX). */
   oval: Rect;
   /** The rules keep-out over the arch while the stamp is drawn. */
   keepOut: Rect;

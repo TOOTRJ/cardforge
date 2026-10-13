@@ -297,6 +297,8 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       "m15mdfcfront/main", "m15mdfcback/main", "m15mdfclandfront/main", "m15mdfclandback/main",
       // 4.5c's Vehicle frame: m15artifact's box, its own plate in the corner.
       "m15vehicle/main",
+      // 4.25's Universes Beyond frames: their M15 twins' boxes.
+      "m15ub/main", "m15ubartifact/main", "m15ubland/main",
     ],
     ["1200 chars"],
   ],

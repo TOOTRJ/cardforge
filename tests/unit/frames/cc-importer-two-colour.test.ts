@@ -294,6 +294,16 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
         expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
         continue;
       }
+      // …and the Universes Beyond frames (TODO 4.25): their M15 twins'
+      // dresses over the UB pack's files.
+      if (template === "m15ub") {
+        expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs, ...pairs.map((pair) => `${pair}-h`)]);
+        continue;
+      }
+      if (template === "m15ubartifact" || template === "m15ubland") {
+        expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
+        continue;
+      }
       if (["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15snow", "m15snowland", "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback"].includes(template)) continue;
       expect(Object.keys((def as { colors: object }).colors).filter((k) => k.length > 1), template).toEqual([]);
     }
