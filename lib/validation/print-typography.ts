@@ -309,8 +309,10 @@ type FaceText = {
   /** The Types field as typed (TODO 3b.16); null = the built line. */
   printed_types?: string | null;
   subtypes?: string[];
-  rules_text?: string;
-  flavor_text?: string;
+  /** null = an edit that EMPTIED the field (updateCardSchema): nothing to
+   *  convert, and it passes through to clear the column. */
+  rules_text?: string | null;
+  flavor_text?: string | null;
 };
 
 /** The text of a card payload the conversion reads (a structural slice of
