@@ -4,6 +4,8 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { FormProvider, useForm, useFormContext, useWatch } from "react-hook-form";
 import { AbilitiesPanel } from "@/components/creator/panels/abilities-panel";
 import { PtNotDrawnNote } from "@/components/creator/pt-not-drawn-note";
+import { BackFaceStatsFields } from "@/components/creator/panels/back-face-panels";
+import { SecondPartStatsFields } from "@/components/creator/panels/second-part-panels";
 import { PT_NOT_DRAWN_NOTE } from "@/lib/cards/pt-drawn";
 import { EMPTY_BACK_FACE, type FormValues } from "@/lib/creator/form-types";
 import { parseSubtypes } from "@/lib/creator/card-fields";
@@ -139,5 +141,90 @@ describe("the second face's note", () => {
     expect(note()).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Back power"), { target: { value: " " } });
     expect(note()).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TODO 3b.19 — the note is tied to the inputs it is about. Under them on the
+// screen, it was nothing to a screen reader on the inputs themselves: each
+// of the two now points its `aria-describedby` at the note WHILE it shows
+// (never at an id that is not on the page), in all three panels.
+// ---------------------------------------------------------------------------
+
+/** What `aria-describedby` says for a control: the text of every element it
+ *  names, or null when it has none. Throws on an id that is not on the page. */
+function describedBy(control: Element): string | null {
+  const ids = control.getAttribute("aria-describedby");
+  if (!ids) return null;
+  return ids
+    .split(/\s+/)
+    .map((id) => {
+      const el = document.getElementById(id);
+      if (!el) throw new Error(`aria-describedby names #${id}, which is not on the page`);
+      return el.textContent ?? "";
+    })
+    .join(" ");
+}
+const named = (name: string) => document.querySelector(`[name='${name}']`)!;
+
+function PanelHarness({ values, children }: { values: Partial<FormValues>; children: React.ReactNode }) {
+  const methods = useForm<FormValues>({ defaultValues: defaults(values) });
+  return (
+    <FormProvider {...methods}>
+      <FramePick />
+      {children}
+    </FormProvider>
+  );
+}
+
+describe("the note describes the Power and Toughness inputs (TODO 3b.19)", () => {
+  it("the front (Abilities panel): both inputs while the note shows, neither once the frame draws them", () => {
+    render(
+      <FrontHarness
+        values={{ card_type: "enchantment", supertype: "Creature", subtypes_text: "Saga Dragon", frame_style: { template: "saga" } }}
+      />,
+    );
+    expect(describedBy(named("power"))).toBe(PT_NOT_DRAWN_NOTE);
+    expect(describedBy(named("toughness"))).toBe(PT_NOT_DRAWN_NOTE);
+    // The inputs keep their own short names.
+    expect(screen.getByRole("textbox", { name: "Power" })).toBe(named("power"));
+    expect(screen.getByRole("textbox", { name: "Toughness", description: PT_NOT_DRAWN_NOTE })).toBe(named("toughness"));
+    setTemplate("nyx");
+    expect(note()).toBeNull();
+    expect(named("power").hasAttribute("aria-describedby")).toBe(false);
+    expect(named("toughness").hasAttribute("aria-describedby")).toBe(false);
+  });
+
+  it("a double-faced card's back (back face panel): by the back BODY", () => {
+    const { unmount } = render(
+      <PanelHarness values={{ frame_style: { template: "m15mdfcfront" }, back_face: { ...EMPTY_BACK_FACE, card_type: "creature" } }}>
+        <BackFaceStatsFields backBody="m15mdfclandback" />
+      </PanelHarness>,
+    );
+    expect(describedBy(named("back_face.power"))).toBe(PT_NOT_DRAWN_NOTE);
+    expect(describedBy(named("back_face.toughness"))).toBe(PT_NOT_DRAWN_NOTE);
+    unmount();
+    render(
+      <PanelHarness values={{ frame_style: { template: "m15mdfcfront" }, back_face: { ...EMPTY_BACK_FACE, card_type: "creature" } }}>
+        <BackFaceStatsFields backBody="m15mdfcback" />
+      </PanelHarness>,
+    );
+    expect(note()).toBeNull();
+    expect(named("back_face.power").hasAttribute("aria-describedby")).toBe(false);
+  });
+
+  it("a split half (second part panel): only once a number is typed", () => {
+    render(
+      <PanelHarness values={{ frame_style: { template: "split" } }}>
+        <SecondPartStatsFields />
+      </PanelHarness>,
+    );
+    expect(note()).toBeNull();
+    expect(named("back_face.power").hasAttribute("aria-describedby")).toBe(false);
+    fireEvent.change(named("back_face.power"), { target: { value: "3" } });
+    expect(describedBy(named("back_face.power"))).toBe(PT_NOT_DRAWN_NOTE);
+    expect(describedBy(named("back_face.toughness"))).toBe(PT_NOT_DRAWN_NOTE);
+    // Loyalty and defense are not what the note is about.
+    expect(named("back_face.loyalty").hasAttribute("aria-describedby")).toBe(false);
   });
 });

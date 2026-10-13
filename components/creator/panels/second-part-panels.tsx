@@ -67,7 +67,7 @@ import { SECOND_FACE_NAME_HINT } from "@/lib/cards/second-face-name";
 import type { ArtWindow } from "@/lib/cards/art-positioner-window";
 import { secondPartFieldName, type SecondPartWords } from "@/lib/creator/second-part";
 import { EVERY_SECOND_PART_UNIT, type SecondPartShown } from "@/lib/creator/second-part-fields";
-import { PtNotDrawnNote } from "@/components/creator/pt-not-drawn-note";
+import { PtNotDrawnNote, usePtNotDrawnNoteId } from "@/components/creator/pt-not-drawn-note";
 
 /** Under a second part's art box on a frame that gives the part no picture
  *  of its own (a flip card: one picture, between the two sides). */
@@ -195,20 +195,24 @@ export function SecondPartIdentityFields({
 
       {/* The part's card type: the nine chips, full width (beside another
           field their labels ran into each other — TODO 5.14). */}
-      <FieldGroup kind="group" label="Card type" error={errors.back_face?.card_type?.message}>
-        <Controller
-          control={control}
-          name="back_face.card_type"
-          render={({ field }) => (
-            <ChipGroup
-              ariaLabel={secondPartFieldName(partWords, "card type")}
-              layout="grid-3"
-              value={field.value}
-              onChange={(next) => field.onChange(next)}
-              options={CARD_TYPE_OPTIONS}
-            />
-          )}
-        />
+      <FieldGroup kind="control" label="Card type" error={errors.back_face?.card_type?.message}>
+        {(aria) => (
+          <Controller
+            control={control}
+            name="back_face.card_type"
+            render={({ field }) => (
+              <ChipGroup
+                ariaLabel={secondPartFieldName(partWords, "card type")}
+                ariaDescribedBy={aria["aria-describedby"]}
+                ariaInvalid={aria["aria-invalid"]}
+                layout="grid-3"
+                value={field.value}
+                onChange={(next) => field.onChange(next)}
+                options={CARD_TYPE_OPTIONS}
+              />
+            )}
+          />
+        )}
       </FieldGroup>
 
       <div className="grid gap-4 sm:grid-cols-2" data-testid="second-part-type-line-fields">
@@ -362,24 +366,28 @@ export function SecondPartRulesField({
   } = useFormContext<FormValues>();
   const { field: backRulesField } = useController({ control, name: "back_face.rules_text" });
   return (
-    <FieldGroup kind="group" label="Rules text" error={errors.back_face?.rules_text?.message}>
-      <div className="flex flex-col gap-2">
-        <RulesSymbolToolbar onInsert={onInsertSymbol} />
-        <PipTextEditor
-          ref={(handle) => {
-            backRulesTextRef.current = handle;
-            backRulesField.ref(handle);
-          }}
-          name={backRulesField.name}
-          value={backRulesField.value ?? ""}
-          onChange={backRulesField.onChange}
-          onBlur={backRulesField.onBlur}
-          aria-label={secondPartFieldName(partWords, "rules text")}
-          placeholder={partWords.rulesPlaceholder}
-          rows={4}
-          className={textareaClass(false)}
-        />
-      </div>
+    <FieldGroup kind="control" label="Rules text" error={errors.back_face?.rules_text?.message}>
+      {(aria) => (
+        <div className="flex flex-col gap-2">
+          <RulesSymbolToolbar onInsert={onInsertSymbol} />
+          <PipTextEditor
+            ref={(handle) => {
+              backRulesTextRef.current = handle;
+              backRulesField.ref(handle);
+            }}
+            name={backRulesField.name}
+            value={backRulesField.value ?? ""}
+            onChange={backRulesField.onChange}
+            onBlur={backRulesField.onBlur}
+            aria-label={secondPartFieldName(partWords, "rules text")}
+            aria-describedby={aria["aria-describedby"]}
+            aria-invalid={aria["aria-invalid"]}
+            placeholder={partWords.rulesPlaceholder}
+            rows={4}
+            className={textareaClass(false)}
+          />
+        </div>
+      )}
     </FieldGroup>
   );
 }
@@ -414,6 +422,8 @@ export function SecondPartStatsFields({ shown = EVERY_SECOND_PART_UNIT }: { show
     formState: { errors },
   } = useFormContext<FormValues>();
   const count = (shown.pt ? 2 : 0) + (shown.loyalty ? 1 : 0) + (shown.defense ? 1 : 0);
+  // The "this frame draws no power / toughness" note describes both inputs.
+  const ptNoteId = usePtNotDrawnNoteId({ face: "second", onlyWithValue: true });
   if (count === 0) return null;
   const back = errors.back_face;
   return (
@@ -421,10 +431,10 @@ export function SecondPartStatsFields({ shown = EVERY_SECOND_PART_UNIT }: { show
       {shown.pt ? (
         <>
           <FieldGroup label="Power" error={back?.power?.message}>
-            <input {...register("back_face.power")} placeholder="3" className={inputClass(Boolean(back?.power))} autoComplete="off" />
+            <input {...register("back_face.power")} placeholder="3" aria-describedby={ptNoteId} className={inputClass(Boolean(back?.power))} autoComplete="off" />
           </FieldGroup>
           <FieldGroup label="Toughness" error={back?.toughness?.message}>
-            <input {...register("back_face.toughness")} placeholder="2" className={inputClass(Boolean(back?.toughness))} autoComplete="off" />
+            <input {...register("back_face.toughness")} placeholder="2" aria-describedby={ptNoteId} className={inputClass(Boolean(back?.toughness))} autoComplete="off" />
           </FieldGroup>
         </>
       ) : null}
@@ -440,7 +450,7 @@ export function SecondPartStatsFields({ shown = EVERY_SECOND_PART_UNIT }: { show
       ) : null}
       {/* A split or aftermath half has no P/T slot: say so once a number
           is typed (this row isn't gated on the type). */}
-      {shown.pt ? <PtNotDrawnNote face="second" onlyWithValue className={STAT_NOTE_SPAN[count]} /> : null}
+      {shown.pt ? <PtNotDrawnNote face="second" onlyWithValue id={ptNoteId} className={STAT_NOTE_SPAN[count]} /> : null}
     </div>
   );
 }

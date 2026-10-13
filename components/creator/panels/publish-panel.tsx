@@ -292,12 +292,14 @@ function DeckPicker({ myDecks }: { myDecks: DeckOption[] }) {
       label="Add to deck"
       helper="Drop this card straight into one of your decks (mainboard, ×1)."
     >
+      {(aria) => (
       <Controller
         control={control}
         name="deck_id"
         render={({ field }) => (
           <div className="flex flex-col gap-2">
             <select
+              {...aria}
               value={field.value}
               onChange={(event) => field.onChange(event.target.value)}
               disabled={options.length === 0}
@@ -321,6 +323,9 @@ function DeckPicker({ myDecks }: { myDecks: DeckOption[] }) {
                   onChange={(event) => setNewTitle(event.target.value)}
                   placeholder="Deck name"
                   aria-label="New deck name"
+                  // "＋ New deck" was replaced by this row: the focus it
+                  // held comes here instead of being dropped.
+                  autoFocus
                   disabled={isPending}
                   className={cn(inputClass(false), "h-9 flex-1 min-w-40")}
                   onKeyDown={(event) => {
@@ -379,6 +384,7 @@ function DeckPicker({ myDecks }: { myDecks: DeckOption[] }) {
           </div>
         )}
       />
+      )}
     </FieldGroup>
   );
 }

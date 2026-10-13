@@ -16,6 +16,7 @@ vi.mock("@/components/billing/upgrade-modal-provider", () => ({ useUpgradeModal:
 vi.mock("@/lib/analytics/funnel-client", () => ({ trackFunnelEvent: vi.fn() }));
 
 import { DownloadModal } from "@/components/cards/download-modal";
+import { chipOff } from "../helpers/chip";
 
 afterEach(cleanup);
 
@@ -62,7 +63,7 @@ describe("DownloadModal file type", () => {
     // Always square: Square shown checked, Rounded not selectable.
     expect(radio("Corners", "Square").getAttribute("aria-checked")).toBe("true");
     expect(radio("Corners", "Rounded").getAttribute("aria-checked")).toBe("false");
-    expect((radio("Corners", "Rounded") as HTMLButtonElement).disabled).toBe(true);
+    expect(chipOff(radio("Corners", "Rounded"))).toBe(true);
     await click(radio("Corners", "Rounded"));
     expect(imageLink().getAttribute("href")).toBe(`/api/cards/c1/png?preset=${preset}&format=jpeg`);
     expect(screen.getByTestId("download-corners").textContent).toContain("JPEG has no transparency");

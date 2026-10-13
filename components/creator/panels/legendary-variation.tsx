@@ -91,9 +91,11 @@ export function LegendaryVariationChip() {
   return (
     <div className="flex flex-col gap-2" data-testid="legendary-variation">
       <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Crown</p>
+      {/* ONE chip that says "Legendary" itself: no group named "Legendary"
+          around it (TODO 3b.24). Where the frame has no crown it is
+          aria-disabled, still reachable, and its line says why (3b.10). */}
       <ChipGroup
         multiSelect
-        ariaLabel="Legendary"
         layout="grid-2"
         size="md"
         value={state.selected ? ["legendary"] : []}

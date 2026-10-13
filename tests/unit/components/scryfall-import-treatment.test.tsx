@@ -35,6 +35,7 @@ import {
   ScryfallImportDialog,
   type ScryfallImportPayload,
 } from "@/components/creator/scryfall-import-dialog";
+import { chipOff } from "../helpers/chip";
 
 type OnImport = Mock<(payload: ScryfallImportPayload) => unknown>;
 
@@ -163,7 +164,7 @@ describe("the other outcomes", () => {
     await pickPrinting("one-262", { verified: [...verifiedIn("m15", "m15land"), "m15fullartland/w"] });
     expect(frameRadio(/Basic Land/).getAttribute("aria-checked")).toBe("true");
     // The creature frame the card is on can't dress a land: keep-current is off.
-    expect(frameRadio(/Keep my current frame/).disabled).toBe(true);
+    expect(chipOff(frameRadio(/Keep my current frame/))).toBe(true);
     expect(
       screen.getByText(/M15 \(2015\) Standard isn't published for land cards in white/),
     ).toBeTruthy();

@@ -36,24 +36,29 @@ const RARITY_OPTIONS: ChipOption<Rarity>[] = RARITY_VALUES.map((rarity) => ({
 export function RarityPanel() {
   const { control } = useFormContext<FormValues>();
   return (
+    // ONE control: the chip row is the field — named for it, described by
+    // the helper — with no group around it saying "Rarity" twice (3b.24).
     <FieldGroup
-      kind="group"
+      kind="control"
       label="Rarity"
       helper="Tints the set icon on the type line."
     >
-      <Controller
-        control={control}
-        name="rarity"
-        render={({ field }) => (
-          <ChipGroup
-            ariaLabel="Rarity"
-            layout="grid-4"
-            value={field.value}
-            onChange={(next) => field.onChange(next)}
-            options={RARITY_OPTIONS}
-          />
-        )}
-      />
+      {(aria) => (
+        <Controller
+          control={control}
+          name="rarity"
+          render={({ field }) => (
+            <ChipGroup
+              ariaLabel="Rarity"
+              ariaDescribedBy={aria["aria-describedby"]}
+              layout="grid-4"
+              value={field.value}
+              onChange={(next) => field.onChange(next)}
+              options={RARITY_OPTIONS}
+            />
+          )}
+        />
+      )}
     </FieldGroup>
   );
 }

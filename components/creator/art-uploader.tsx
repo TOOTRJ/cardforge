@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useRef,
   useState,
   type DragEvent,
@@ -543,10 +544,15 @@ export function ArtUploader({
         : `the middle ${Math.round(share.y * 100)}% of its height`
       : null;
 
+  const uploaderId = useId();
+  const headingId = `${uploaderId}-heading`;
+  const promptId = `${uploaderId}-prompt`;
+  const hintsId = `${uploaderId}-hints`;
+
   return (
     <div className={cn("flex flex-col gap-4", className)}>
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
+        <span id={headingId} className="text-xs font-semibold uppercase tracking-wider text-subtle">
           {heading}
         </span>
         <span className="text-[11px] text-subtle">
@@ -593,8 +599,14 @@ export function ArtUploader({
         aria-label={
           artUrl
             ? "Drag to reposition the art. Shift-scroll to zoom. Arrow keys nudge, +/- zoom, R fits it to the frame again."
-            : "Drop an image here or click to upload"
+            : undefined
         }
+        // Empty: named by what it shows — the box's heading ("Artwork",
+        // "Back face — Artwork") and its own prompt — and described by the
+        // hints under the prompt. An aria-label in other words hid all three
+        // from a screen reader and from voice control.
+        aria-labelledby={artUrl ? undefined : `${headingId} ${promptId}`}
+        aria-describedby={artUrl ? undefined : hintsId}
         tabIndex={0}
         data-art-window-aspect={artUrl ? artWindow.aspect.toFixed(4) : undefined}
         style={surfaceStyle}
@@ -650,7 +662,13 @@ export function ArtUploader({
             </div>
           </>
         ) : (
-          <EmptyDropzoneInner uploading={uploading} dragOver={isDragOver} best={best} />
+          <EmptyDropzoneInner
+            uploading={uploading}
+            dragOver={isDragOver}
+            best={best}
+            promptId={promptId}
+            hintsId={hintsId}
+          />
         )}
       </div>
 
@@ -776,10 +794,15 @@ function EmptyDropzoneInner({
   uploading,
   dragOver,
   best,
+  promptId,
+  hintsId,
 }: {
   uploading: boolean;
   dragOver: boolean;
   best: { width: number; height: number };
+  /** Ids for the dropzone's name (the prompt) and description (the hints). */
+  promptId: string;
+  hintsId: string;
 }) {
   return (
     <div className="pointer-events-none flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
@@ -798,8 +821,8 @@ function EmptyDropzoneInner({
           <ImagePlus className="h-5 w-5" />
         )}
       </div>
-      <div className="flex flex-col gap-1">
-        <p className="text-sm font-medium text-foreground">
+      <div id={hintsId} className="flex flex-col gap-1">
+        <p id={promptId} className="text-sm font-medium text-foreground">
           {dragOver ? "Drop to upload" : "Drag art here, or click to choose"}
         </p>
         <p className="text-[11px] uppercase tracking-wider text-subtle">

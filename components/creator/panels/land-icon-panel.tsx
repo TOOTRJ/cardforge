@@ -101,7 +101,9 @@ export function LandIconPanel({ userId, autoKey }: LandIconPanelProps) {
           >
             <div className="flex flex-col gap-3">
               <ChipGroup
-                ariaLabel="Land icon"
+                // Named for what it picks: the group around it (chips + the
+                // uploader) is "Land icon" already (TODO 3b.24).
+                ariaLabel="Mana symbol"
                 layout="grid-3"
                 value={selected}
                 onChange={(key) => {
