@@ -147,7 +147,7 @@ with a throwaway page.
 npx playwright install chromium        # once
 npm run test:parity                    # frames → bake → Chromium → compare (≈ 1½ min)
 npm run test:parity -- --only m15pw,saga --save   # a few cases; pictures in tmp/parity/out/
-npm run test:parity -- --update        # re-record THIS platform's offsets
+npm run test:parity -- --update        # re-record THIS platform's offsets — only the cases that moved
 ```
 
 No database, no account, no `.env`: the suite starts its **own** `next dev`
@@ -193,9 +193,12 @@ Two rasterisers never agree to the pixel, so "the same" is three layers
 2. `KNOWN_DIFFERENCES` — the measurements over a limit **today**: each a
    real, described difference between the renderers with its numbers and
    bounds. They are findings. Fixing one means striking it (an entry nothing
-   needs fails the run).
-3. `tests/parity/baseline.json` — every region's offset as recorded per
-   platform (Chromium draws text differently on linux and macOS; `linux` is
+   needs fails the run). `WITHIN_LIMIT_DIFFERENCES` beside them describes
+   the systematic offsets that are inside the limits (zoomed art, TODO
+   3.37): the unit run fails once a named case no longer records one.
+3. `tests/parity/baseline/<platform>/<case>.json` — every region's offset
+   as recorded per platform, one file per case (`tests/parity/README.md`
+   has the format, why it is files, and the re-record sequence) (Chromium draws text differently on linux and macOS; `linux` is
    CI's and the one that gates a PR). Today's offset must be within ±1 px of
    it, either way — a preview nudged 2 px *towards* the bake fails like one
    nudged away — and no region or tile may differ much more than recorded.
@@ -205,13 +208,16 @@ When the job is red:
 | What it says | What to do |
 | --- | --- |
 | a region "sits at x,y — it was x,y", or tiles "differ more than recorded" | One renderer moved without the other. Look at `tmp/parity/out/<case>@<size>.{preview,bake,diff}.png` (CI: the `parity-differences` artifact) and fix the renderer that is wrong. |
-| the same, and BOTH renderers were changed on purpose (the numbers moved a little with them) | Re-record: `npm run test:parity -- --update` on your machine for its section, and take CI's from the run — `gh run download <run> -n parity-baseline -D tmp/parity/ci && mv tmp/parity/ci/baseline.json tests/parity/baseline.json` (through `tmp/`: `gh` will not overwrite an existing file; the red run prints this command with its id, in the log and the summary; the artifact is the whole file with the linux section replaced, so commit your own section first). Say in the PR what moved. |
+| the same, and BOTH renderers were changed on purpose (the numbers moved a little with them) | Re-record — `tests/parity/README.md` "Re-recording": `npm run test:parity -- --update` for your platform, push, then paste the script the red **Preview parity** run prints for linux, push again. Only the cases that moved change. Say in the PR what moved. |
 | "over the limit and no known difference names it" | A new real difference. Fix it — or, if it stays, describe it in `KNOWN_DIFFERENCES` with its measured numbers and bounds. Never raise a `LIMIT` to make a case pass. |
 | "known difference … is no longer measured anywhere" | It was fixed: strike the entry. |
-| a new case is "not in tests/parity/baseline.json" | Record it (the same two commands). Until the linux section has it, **Preview parity** and the unit test `parity-matrix.test.ts` are both red: push your section, take CI's from that red run, push again. |
+| a new case is "not in tests/parity/baseline/ for this platform" | Record it (the same sequence: one new file per platform). Until `linux/` has it, **Preview parity** and the unit test `parity-matrix.test.ts` are both red. |
+| "The parity baseline cannot be read" | A case file is not the text an update writes: a hand edit, a line doubled by a merge, a file under another case's name, a conflict's leftovers, or #514's `baseline.json` come back from an older branch. Take either side's file whole (or delete it) and re-record. |
 
 An update refuses to record a value over a limit that no known difference
-names, so the baseline cannot quietly absorb a regression. No retries: a
+names, so the baseline cannot quietly absorb a regression; it never touches
+a limit, and it leaves every case that is still inside its recorded
+tolerance byte for byte (`--update --all` re-records them all, and says so). No retries: a
 case that passes only sometimes is a finding.
 
 ## Full e2e coverage (local Supabase stack)

@@ -1,14 +1,13 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { rowToPreviewData } from "@/lib/cards/bake-core";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { backPreviewData } from "@/lib/cards/faces";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import { BASELINE_DIR, loadBaseline } from "@/tests/parity/baseline";
 import { parityCases, parityFileName } from "@/tests/parity/cases";
 import { parityRegions } from "@/tests/parity/regions";
 import { PARITY_SIZES } from "@/tests/parity/shared";
-import { KNOWN_DIFFERENCES, LIMITS, type BaselineFile } from "@/tests/parity/thresholds";
+import { KNOWN_DIFFERENCES, LIMITS, WITHIN_LIMIT_DIFFERENCES } from "@/tests/parity/thresholds";
 
 // ---------------------------------------------------------------------------
 // The preview ⇄ bake parity matrix (tests/parity/cases.ts, TODO 3.11) and its
@@ -20,7 +19,10 @@ import { KNOWN_DIFFERENCES, LIMITS, type BaselineFile } from "@/tests/parity/thr
 // ---------------------------------------------------------------------------
 
 const cases = parityCases();
-const baseline = JSON.parse(readFileSync(join(process.cwd(), "tests/parity/baseline.json"), "utf8")) as BaselineFile;
+// One file per case per platform (tests/parity/baseline.ts): the loader
+// itself fails on a file that is not what an update writes — a duplicated
+// line, another case's name, a stray field, #514's single file come back.
+const baseline = loadBaseline(process.cwd());
 
 /** The regions a case is compared in (as tests/parity/bake.parity.ts). */
 function regionNames(c: (typeof cases)[number]): string[] {
@@ -67,13 +69,15 @@ describe("the parity matrix", () => {
   });
 });
 
-describe("tests/parity/baseline.json", () => {
-  it("has a linux section (CI's platform) for exactly the matrix, region for region", () => {
+describe(BASELINE_DIR, () => {
+  it("has a linux directory (CI's platform) for exactly the matrix, region for region", () => {
     const linux = baseline.platforms.linux;
-    expect(linux, "CI runs on linux: record it from the `parity-baseline` artifact").toBeDefined();
+    expect(linux, "CI runs on linux: record it from the red run (tests/parity/README.md)").toBeDefined();
     const expected = cases.flatMap((c) => PARITY_SIZES.map((size) => `${c.id}@${size.name}`)).sort();
     for (const [platform, section] of Object.entries(baseline.platforms)) {
-      expect(Object.keys(section.cases).sort(), `${platform}: re-record with npm run test:parity -- --update`).toEqual(expected);
+      // A case with no file on a platform, or a file of a case the matrix no
+      // longer has: both red, here and in the run.
+      expect(Object.keys(section.cases).sort(), `${BASELINE_DIR}/${platform}/: record it (tests/parity/README.md)`).toEqual(expected);
     }
     for (const c of cases) {
       const names = regionNames(c).sort();
@@ -133,6 +137,34 @@ describe("KNOWN_DIFFERENCES", () => {
       // (A worst-tile difference is checked by the run itself: the baseline
       // holds tiles as steps, not values.)
       if (k.metric !== "tileMad") expect(needed, `${k.name}: nothing recorded needs it any more — strike it`).toBe(true);
+    }
+  });
+});
+
+describe("WITHIN_LIMIT_DIFFERENCES", () => {
+  it("each is described, inside the limits, and still recorded on every one of its cases on CI's platform", () => {
+    const linux = baseline.platforms.linux.cases;
+    expect(new Set([...KNOWN_DIFFERENCES, ...WITHIN_LIMIT_DIFFERENCES].map((k) => k.name)).size).toBe(KNOWN_DIFFERENCES.length + WITHIN_LIMIT_DIFFERENCES.length);
+    for (const k of WITHIN_LIMIT_DIFFERENCES) {
+      expect(k.why.length, `${k.name}: say what differs and why`).toBeGreaterThan(60);
+      expect(k.metric === "dx" || k.metric === "dy", `${k.name}: an offset`).toBe(true);
+      // Inside the limit (past it, it belongs in KNOWN_DIFFERENCES) and
+      // never zero (then there is nothing to describe).
+      expect(Math.max(Math.abs(k.min), Math.abs(k.max)), k.name).toBeLessThanOrEqual(LIMITS[k.size].shift);
+      expect(k.min * k.max, `${k.name}: one side of zero`).toBeGreaterThan(0);
+      const index = k.metric === "dx" ? 0 : 1;
+      const hits = Object.entries(linux).filter(([key]) => {
+        const at = key.lastIndexOf("@");
+        return key.slice(at + 1) === k.size && k.cases.test(key.slice(0, at));
+      });
+      expect(hits.length, `${k.name}: it names no case of the matrix`).toBeGreaterThan(0);
+      for (const [key, recorded] of hits) {
+        for (const region of k.regions) {
+          const value = recorded.regions[region]?.[index];
+          expect(value, `${key} ${region}`).toBeDefined();
+          expect(value! >= k.min && value! <= k.max, `${k.name}: ${key} ${region} records ${k.metric} ${value} — outside ${k.min} … ${k.max}. Fixed? Strike the entry. Worse? It is a regression.`).toBe(true);
+        }
+      }
     }
   });
 });

@@ -110,6 +110,9 @@ describe("the parity suite's wiring", () => {
   it("the e2e suite and the unit run do not pick the parity specs up", () => {
     expect(read("playwright.config.ts")).toMatch(/testDir: "tests\/e2e"/);
     expect(read("vitest.config.ts")).toMatch(/include: \["tests\/unit\/\*\*\/\*\.test\.\{ts,tsx\}"\]/);
-    expect(existsSync(join(ROOT, "tests/parity/baseline.json"))).toBe(true);
+    // The recorded baseline: a directory of case files (TODO 7.13), never
+    // #514's single file again.
+    expect(existsSync(join(ROOT, "tests/parity/baseline/linux"))).toBe(true);
+    expect(existsSync(join(ROOT, "tests/parity/baseline.json"))).toBe(false);
   });
 });

@@ -1,5 +1,6 @@
 import type { CardRowForBake } from "@/lib/cards/bake-core";
 import { visualCases, type VisualCase, type VisualFace } from "../visual/matrix";
+import { parityFileName } from "./shared";
 
 // ---------------------------------------------------------------------------
 // The preview ⇄ bake parity matrix (TODO 3.11): the cards BOTH renderers draw
@@ -88,6 +89,12 @@ const PICKS: readonly Pick[] = [
     why: "an off-centre focal point at zoom 1.6",
     row: () => ({ art_position: { focalX: 0.8, focalY: 0.2, scale: 1.6 } }),
   },
+  {
+    from: "m15/r/creature-short",
+    as: "@art-zoom-3",
+    why: "zoom 3 about the centre: the zoomed art's offset (3.37) where it is largest in the matrix",
+    row: () => ({ art_position: { focalX: 0.5, focalY: 0.5, scale: 3 } }),
+  },
   // --- an EXIF-turned photo as art (TODO 3.14) ------------------------------
   {
     from: "m15/r/creature-short",
@@ -130,25 +137,18 @@ const PICKS: readonly Pick[] = [
   { from: "modern/g/creature-long", why: "2003: shadowed cost discs, the brush, two-line footer" },
   { from: "modern/wu/creature-short@pair", why: "the synthesised old-frame pair master" },
   // --- a name fitted against a DETACHED cost of ×1.2 discs (TODO 6.16d, v52) -
-  // (The walker's twin, "m15pw/w/planeswalker-long@phyrexian-cost-5", is NOT
-  // here yet: at 750 px its row of five ×1.2 discs starts 4 px further left
-  // in the preview than in the 750 px bake and the cost region measures mad
-  // 32.9 against a limit of 31 — the 750-cost-row-width difference at its
-  // largest (measured 2026-10-12, darwin; HD agrees: 0,1 · 5.2; the name is
-  // cut at the same word in both). It joins with a described known
-  // difference, or once that one is fixed.)
+  // The walker's twin (TODO 3.37): at 750 px its row of five ×1.2 discs is
+  // the widest cost row of the matrix and the two renderers disagree about
+  // it by more than a limit — the two "750-walker-phyrexian-cost" known
+  // differences (tests/parity/thresholds.ts) describe and bound it.
+  { from: "m15pw/w/planeswalker-long@phyrexian-cost-5", why: "v52: a long name's room before five Phyrexian discs in the walker's detached cost (and 3.37's cost-row difference at its largest)" },
   { from: "m15/u/creature-short@large-pips-hd", why: "v53: the large pips on the M15 frame — a hybrid, a twobrid and a Phyrexian disc at 88 px in the cost, 77 px in rules text" },
   { from: "modern/u/creature-short@large-pips-hd", why: "v53: the large pips on the 2003 frame — 85 px discs in a detached cost, ×1.28 in rules text" },
   { from: "retro/u/creature-short@large-pips-hd", why: "v53: the large pips on the 1997 frame — ×1.2 kept in the cost, ×1.28 in rules text, flat discs" },
   { from: "modern/w/creature-long@phyrexian-cost-5", why: "v52: a long name's room before five Phyrexian discs in a detached cost (2003 frame)" },
 ];
 
-function slug(id: string): string {
-  return id.replace(/[/@]/g, "__");
-}
-
-/** File-name-safe form of a case id. */
-export const parityFileName = slug;
+export { parityFileName };
 
 /** The matrix, in order. Throws when a pick names no visual case. */
 export function parityCases(): ParityCase[] {
