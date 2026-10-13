@@ -252,5 +252,14 @@ describe.skipIf(CASES_FILE === null || SAVE_DIR === null)("review bakes", () => 
       report[c.id] = laid ? { sizePx: laid.sizePx, rule: laid.rule, clipped: laid.clipped, tiers: laid.bands.tiers.map((b) => [b.y0, b.y1]), plate: laid.plate } : null;
     }
     fs.writeFileSync(path.join(SAVE_DIR!, "layout-report.json"), JSON.stringify(report, null, 1));
+    // The drawn pieces alone, flat and bevelled (the bevel round's sheet).
+    const { stationBadgeArt, stationPlateArt } = await import("@/lib/cards/station-art");
+    for (const key of ["w", "u", "r"]) {
+      for (const style of ["flat", "bevel"] as const) {
+        const svgOf = (url: string) => decodeURIComponent(url.slice(url.indexOf(",") + 1));
+        fs.writeFileSync(path.join(SAVE_DIR!, `art-badge-${key}-${style}.svg`), svgOf(stationBadgeArt(key, style)));
+        fs.writeFileSync(path.join(SAVE_DIR!, `art-plate-${key}-${style}.svg`), svgOf(stationPlateArt(key, style)));
+      }
+    }
   }, 1_800_000);
 });

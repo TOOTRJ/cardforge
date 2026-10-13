@@ -376,5 +376,15 @@ export function submittedRulesOf(
     return { rulesText: textarea, faceContent: null };
   }
 
+  // A station card's rows (TODO 4.27a: `face_content.station`, written by a
+  // seed, the API or — from PR 2 — the tier editor; they can say what the
+  // text cannot: the plate on a tier other than the one the text plates).
+  // No editor shows them yet, so an EDIT that left the rules text as it
+  // opened keeps them: the column is not sent and the server leaves it
+  // alone (an edit never changes what its maker did not touch). An edited
+  // text is the card's tiers from then on — the rows would contradict it.
+  if (stored?.station && options.opened && options.opened.rules_text.trim() === textarea) {
+    return { rulesText: textarea, faceContent: stored, keepsStored: true };
+  }
   return { rulesText: textarea, faceContent: null };
 }
