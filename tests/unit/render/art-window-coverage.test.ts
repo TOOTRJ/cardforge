@@ -1,8 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import {
   ART_WINDOW_KNOWN_FAILURES,
@@ -26,6 +24,15 @@ import manifestJson from "@/lib/frames/frame-manifest.json";
 import { FRAME_MASTER_KEYS, TWO_COLOR_MASTER_KEYS } from "@/lib/cards/frame-reference-registry";
 import { getFrameProfile, underFrameArtRect, underFrameArtSlot } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
+import {
+  ART_WINDOW_MASTER_PARTS,
+  BUILD,
+  STRICT,
+  artWindowMasterPlan,
+  artWindowTemplatesOfPart,
+  mastersOf,
+  slotsFor,
+} from "./art-window-masters";
 
 // ---------------------------------------------------------------------------
 // TODO 7.6 — art-window coverage, for every template × colour master: the
@@ -48,49 +55,14 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // bucket master FAILS instead of skipping. A known failure must STILL fail,
 // by no more than its entry's maxMissPx: fixing one turns this red until it
 // is struck from the table, and so does a master getting worse behind it.
+//
+// The per-master tests themselves are registered by art-window-masters.ts in
+// art-window-coverage-<n>.test.ts (why: that file's header); this file keeps
+// everything else, and the proof at its end that those parts are, together,
+// exactly the masters one file checked.
 // ---------------------------------------------------------------------------
 
-const manifest = manifestJson as { files: Record<string, { sha256: string }> };
 const ROOT = process.cwd();
-const PUBLIC = path.join(ROOT, "public", "frames");
-const BUILD = process.env.FRAMES_BUILD_DIR ? path.resolve(process.env.FRAMES_BUILD_DIR) : path.join(ROOT, ".frames-build");
-/** CI, with the fetched masters: a bucket master that isn't there is a failure. */
-const STRICT = Boolean(process.env.CI && process.env.FRAMES_BUILD_DIR);
-
-type Master = { template: string; key: string; file: string; bucket: boolean };
-
-/** Every master of `template`: git ones from public/frames, bucket ones from
- *  BUILD when their bytes are the manifest's. `missing` lists the bucket
- *  masters the manifest has and BUILD doesn't (at that sha). */
-function mastersOf(template: string): { masters: Master[]; missing: string[] } {
-  const masters: Master[] = [];
-  const missing: string[] = [];
-  for (const key of FRAME_MASTER_KEYS) {
-    const rel = `${template}/${key}.png`;
-    const entry = manifest.files[rel];
-    if (entry) {
-      const file = path.join(BUILD, rel);
-      const ok = fs.existsSync(file) && createHash("sha256").update(fs.readFileSync(file)).digest("hex") === entry.sha256;
-      if (ok) masters.push({ template, key, file, bucket: true });
-      else missing.push(rel);
-      continue;
-    }
-    const file = path.join(PUBLIC, rel);
-    if (fs.existsSync(file)) masters.push({ template, key, file, bucket: false });
-  }
-  return { masters, missing };
-}
-
-async function rgbaOf(file: string) {
-  const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  return { data, width: info.width, height: info.height };
-}
-
-/** The slots the renderers paint for this master (the check's input). */
-function slotsFor(template: string, key: string): ArtWindowSlot[] {
-  const profile = getFrameProfile(template);
-  return artWindowSlotsOf(profile, underFrameArtRect(profile, key), underFrameArtSlot(profile, key));
-}
 
 // ---------------------------------------------------------------------------
 // The check itself, on synthetic masters (300 × 420: the overscan is
@@ -746,34 +718,87 @@ describe("CI fetches the bucket masters", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Every template × colour master.
+// Every template × colour master — checked in art-window-coverage-<n>.test.ts
+// (art-window-masters.ts). Held here: the parts are, together, exactly the
+// list one file checked — no master dropped, none checked twice, no part
+// file missing or doing anything else.
 // ---------------------------------------------------------------------------
-describe("every frame master's art window is covered by the art that fills it", () => {
-  const bucketTemplates = new Set(Object.keys(manifest.files).map((k) => k.split("/")[0]));
-  for (const template of FRAME_TEMPLATE_VALUES) {
-    const { masters, missing } = mastersOf(template);
-    if (missing.length && !STRICT) {
-      // A bucket template without a local copy: CI fetches it; locally run
-      // `node scripts/frames-fetch.mjs` and set FRAMES_BUILD_DIR=.frames-cache.
-      it.skip(`${template}: ${missing.length} bucket master(s) not available here (set FRAMES_BUILD_DIR)`, () => {});
+describe("the per-master parts are, together, every template × colour master", () => {
+  const parts = Array.from({ length: ART_WINDOW_MASTER_PARTS }, (_, i) => i + 1);
+  const sorted = (list: readonly string[]) => [...list].sort();
+
+  it("every template is in exactly one part, and no part is empty", () => {
+    const perPart = parts.map((part) => artWindowTemplatesOfPart(part));
+    for (const [i, templates] of perPart.entries()) expect(templates.length, `part ${i + 1}`).toBeGreaterThan(0);
+    const all = perPart.flat();
+    expect(all).toHaveLength(FRAME_TEMPLATE_VALUES.length);
+    expect(new Set(all).size).toBe(all.length);
+    expect(sorted(all)).toEqual(sorted(FRAME_TEMPLATE_VALUES));
+    expect(() => artWindowTemplatesOfPart(0)).toThrow();
+    expect(() => artWindowTemplatesOfPart(ART_WINDOW_MASTER_PARTS + 1)).toThrow();
+  });
+
+  it("the parts' tests are the single file's tests: the same titles, each once", () => {
+    // What the one block registered: the plan of every template, in order.
+    const whole = artWindowMasterPlan(FRAME_TEMPLATE_VALUES).map((t) => t.title);
+    const split = parts.flatMap((part) => artWindowMasterPlan(artWindowTemplatesOfPart(part)).map((t) => t.title));
+    expect(new Set(whole).size).toBe(whole.length);
+    expect(split).toHaveLength(whole.length);
+    expect(sorted(split)).toEqual(sorted(whole));
+  });
+
+  it("every master there is — each manifest entry and each git file of a template × key — is checked by exactly one part", () => {
+    // Derived again from the manifest and public/frames, not through
+    // mastersOf: a master a part checks, or (without a local copy) one its
+    // part reports as unavailable — which CI's STRICT run never allows.
+    const manifest = manifestJson as { files: Record<string, unknown> };
+    const expected: string[] = [];
+    for (const template of FRAME_TEMPLATE_VALUES) {
+      for (const key of FRAME_MASTER_KEYS) {
+        const rel = `${template}/${key}.png`;
+        if (manifest.files[rel] || fs.existsSync(path.join(ROOT, "public", "frames", rel))) expected.push(`${template}/${key}`);
+      }
     }
-    if (!bucketTemplates.has(template)) {
-      it(`${template}: every colour master is checked (git)`, () => {
-        // The expeditionland b/g lesson (2026-09-26): never sample one colour.
-        expect(masters.length).toBeGreaterThanOrEqual(7);
-      });
+    const checked: string[] = [];
+    const unavailable: string[] = [];
+    for (const part of parts) {
+      const templates = artWindowTemplatesOfPart(part);
+      for (const planned of artWindowMasterPlan(templates)) {
+        if (planned.kind === "master") checked.push(`${planned.master.template}/${planned.master.key}`);
+      }
+      for (const template of templates) unavailable.push(...mastersOf(template).missing.map((rel) => rel.replace(/\.png$/, "")));
     }
-    for (const m of masters) {
-      const known = isKnownArtWindowFailure(template, m.key);
-      const todo = known ? ` — known failure (TODO ${ART_WINDOW_KNOWN_FAILURES[template].todo.join(", ")})` : "";
-      // Decode + fills on a 3 Mpx master: a generous timeout for CI's V8 coverage.
-      it(`${template}/${m.key}${m.bucket ? " (bucket)" : ""}${todo}`, { timeout: 20_000 }, async () => {
-        const { data, width, height } = await rgbaOf(m.file);
-        expect([width, height]).toEqual(getFrameProfile(template).orientation === "landscape" ? [2100, 1500] : [1500, 2100]);
-        const verdict = artWindowVerdict(template, m.key, artWindowFindings(data, width, height, slotsFor(template, m.key)));
-        expect(verdict.fails).toEqual([]);
-        expect(verdict.fixed, "it passes now — strike it from ART_WINDOW_KNOWN_FAILURES and close its TODO item").toBe(false);
-      });
+    expect(expected.length).toBeGreaterThan(600);
+    expect(new Set(checked).size).toBe(checked.length);
+    expect(sorted([...checked, ...unavailable])).toEqual(sorted(expected));
+    if (STRICT) expect(unavailable).toEqual([]);
+  });
+
+  it("each part has its file, the file registers its own part and nothing else, and nothing else registers one", () => {
+    const dir = path.join(ROOT, "tests", "unit", "render");
+    const partFile = (part: number) => `art-window-coverage-${part}.test.ts`;
+    const onDisk = fs.readdirSync(dir).filter((name) => /^art-window-coverage-.+\.test\.tsx?$/.test(name));
+    expect(sorted(onDisk)).toEqual(sorted(parts.map(partFile)));
+    for (const part of parts) {
+      const code = fs
+        .readFileSync(path.join(dir, partFile(part)), "utf8")
+        .split("\n")
+        .filter((line) => line.trim() && !line.trim().startsWith("//"));
+      expect(code, partFile(part)).toEqual(['import { describeArtWindowMasters } from "./art-window-masters";', `describeArtWindowMasters(${part});`]);
     }
-  }
+    // No other test file calls it (a fifth caller would check a part twice;
+    // this file only names it).
+    const callers: string[] = [];
+    const walk = (folder: string) => {
+      for (const entry of fs.readdirSync(folder, { withFileTypes: true })) {
+        const full = path.join(folder, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.tsx?$/.test(entry.name) && /^\s*describeArtWindowMasters\(/m.test(fs.readFileSync(full, "utf8"))) callers.push(path.relative(dir, full));
+      }
+    };
+    walk(path.join(ROOT, "tests"));
+    expect(sorted(callers)).toEqual(sorted(parts.map(partFile)));
+    // The runner takes them all: one glob, no list (vitest.config.ts).
+    expect(fs.readFileSync(path.join(ROOT, "vitest.config.ts"), "utf8")).toContain('include: ["tests/unit/**/*.test.{ts,tsx}"]');
+  });
 });

@@ -50,8 +50,8 @@
 // loads it through Node's type stripping and runs the same check on every
 // master it builds, after the 2010→1500 downscale has anti-aliased the
 // window edge. CI fetches the bucket masters (scripts/frames-fetch.mjs), so
-// tests/unit/render/art-window-coverage.test.ts checks every template ×
-// colour master there.
+// tests/unit/render/art-window-coverage-<n>.test.ts (the per-master parts of
+// art-window-coverage.test.ts) check every template × colour master there.
 // ---------------------------------------------------------------------------
 
 import { cardCornerRadiusPx } from "../cards/card-corner.ts";
