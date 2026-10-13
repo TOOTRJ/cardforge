@@ -10,6 +10,7 @@ import {
   templateRefusesKind,
 } from "@/lib/creator/card-kinds";
 import { FRAME_COLOR_KEYS, frameComboKey } from "@/lib/cards/frame-reference-registry";
+import { resolveGeneratedFrame } from "@/lib/creator/frame-random";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -111,5 +112,53 @@ describe("where the subtype sends a card (subtypeFrameFor)", () => {
         expect(subtypeFrameFor(t, subtypes), `${t} ${subtypes.join()}`).toBe(t);
       }
     }
+  });
+});
+
+// The independent check of #543: with the station frame as the artifact
+// frame's second dress, a Vehicle retyped as a Spacecraft was sent to the
+// station frame — unpublished — so the creator's follow effect did nothing
+// and the card stayed on the Vehicle frame, which the server refuses for
+// it. Before the station frame existed it went back to the Artifact frame.
+describe("a dress the card cannot wear yet is never where the subtype sends it", () => {
+  const published =
+    (...templates: string[]) =>
+    (dress: string) =>
+      templates.includes(dress);
+
+  it("an unpublished dress gives way to the base — the Vehicle's half as it was before the second dress", () => {
+    // Production today: the Vehicle frame is ticked, the station frame is not.
+    const today = published("m15vehicle");
+    expect(subtypeFrameFor("m15vehicle", ["Spacecraft"], today)).toBe("m15artifact");
+    expect(subtypeFrameFor("m15artifact", ["Spacecraft"], today)).toBe("m15artifact");
+    expect(subtypeFrameFor("m15artifact", ["Vehicle"], today)).toBe("m15vehicle");
+    expect(subtypeFrameFor("m15vehicle", ["Vehicle"], today)).toBe("m15vehicle");
+    expect(subtypeFrameFor("m15vehicle", [], today)).toBe("m15artifact");
+    expect(subtypeFrameFor("m15land", ["Planet"], today)).toBe("m15land");
+    // Once it is ticked the subtype sends the card there.
+    const later = published("m15vehicle", "m15station", "m15stationland");
+    expect(subtypeFrameFor("m15vehicle", ["Spacecraft"], later)).toBe("m15station");
+    expect(subtypeFrameFor("m15land", ["Planet"], later)).toBe("m15stationland");
+    // The base is never tested: a card leaving a dress always has it.
+    expect(subtypeFrameFor("m15station", [], published())).toBe("m15artifact");
+  });
+
+  it("a generated Spacecraft asked for on the Vehicle frame lands on the Artifact frame while the station frame is unpublished", () => {
+    const keys = (...pairs: [string, string][]) => new Set(pairs.map(([t, k]) => frameComboKey(t as never, k as never)));
+    const ship = { cardType: "artifact", subtypes: ["Spacecraft"], title: "Lumen-Class Frigate", power: "3", toughness: "5" };
+    const today = keys(["m15artifact", "c"], ["m15vehicle", "c"]);
+    for (const requested of ["m15vehicle", "m15artifact", "m15station"] as const) {
+      expect(resolveGeneratedFrame({ cardType: "artifact", requested, colorIdentity: [], verifiedKeys: today, face: ship }), requested).toBe("m15artifact");
+    }
+    for (const roll of [0, 0.5, 0.99]) {
+      expect(resolveGeneratedFrame({ cardType: "artifact", requested: "random", colorIdentity: [], verifiedKeys: today, face: ship, random: () => roll })).toBe("m15artifact");
+    }
+    // A Vehicle is untouched by the second dress.
+    const car = { ...ship, subtypes: ["Vehicle"] };
+    expect(resolveGeneratedFrame({ cardType: "artifact", requested: "m15artifact", colorIdentity: [], verifiedKeys: today, face: car })).toBe("m15vehicle");
+    // Ticked: a new Spacecraft follows its subtype, as a new Vehicle does.
+    const later = keys(["m15artifact", "c"], ["m15vehicle", "c"], ["m15station", "c"]);
+    expect(resolveGeneratedFrame({ cardType: "artifact", requested: "m15vehicle", colorIdentity: [], verifiedKeys: later, face: ship })).toBe("m15station");
+    expect(resolveGeneratedFrame({ cardType: "artifact", requested: "m15artifact", colorIdentity: [], verifiedKeys: later, face: ship })).toBe("m15station");
   });
 });

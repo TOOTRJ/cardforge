@@ -4043,7 +4043,7 @@ and the one switch a NEW card starts OFF on.
 - **Which frames.** Every frame that sets its text in plain rules boxes,
   by default — capability data on the profile, read in ONE place:
   `profileOffersRulesAlign` (`lib/cards/template-layout.ts`). A profile
-  opts out with `rulesAlignSwitch: false` (none does). It is never offered
+  opts out with `rulesAlignSwitch: false` (the station pair does, TODO 4.27a). It is never offered
   — and a stored key is dropped at the save and ignored at render
   (`rulesAlignOf`, `lib/cards/rules-box.ts`) — on a `textless` frame, on
   the saga (`chapters`: the text sits in rows beside its hexagons) and on

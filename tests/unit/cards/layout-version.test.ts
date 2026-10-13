@@ -1154,9 +1154,9 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
     // scope's pickFrameColorKey).
     // (flip/c took the rect with its own bump, layout v38 — TODO 4.21a's
     // see-through Card Conjurer master: not v35's business either.)
-    // (The station frame, TODO 4.27a, draws ONE picture in the rect on every
-    // key: new templates no card was ever baked on — no bump at all.)
-    const SEE_THROUGH_SINCE_V35 = ["flip", "m15station", "m15stationland"];
+    // (The station frame, TODO 4.27a, draws ONE picture in a rect of its OWN —
+    // STATION_ART_RECT, 3 px wider — so it never reaches this check: no list.)
+    const SEE_THROUGH_SINCE_V35 = ["flip"];
     for (const t of ALL) {
       const u = getFrameProfile(t).underFrameArt;
       if (u && (sameRect(u.rect, UNDER) || (u.artSlot && sameRect(u.artSlot, UNDER)))) {

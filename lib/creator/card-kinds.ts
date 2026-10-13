@@ -656,10 +656,19 @@ export function subtypeDressReason(template: FrameTemplate): string | null {
  * Vehicle → m15vehicle), on the dress itself the base when they don't; any
  * other template as it is (a Vehicle on the 2003 frame or a showcase keeps
  * it). What a NEW card follows; a stored card is never moved by it.
+ *
+ * `available` (the caller's own test: published in the card's colour, in
+ * the pool…) narrows the DRESSES: one the card cannot wear yet is never
+ * picked, so a card whose subtype names it goes to — or stays on — the
+ * base. Without it a Vehicle retyped as a Spacecraft was sent to the
+ * unpublished station frame, which the creator's follow effect then
+ * dropped: the card stayed on the Vehicle frame the server refuses, where
+ * it used to go back to the Artifact frame. The base is never tested.
  */
 export function subtypeFrameFor(
   template: FrameTemplate,
   subtypes: readonly string[] | null | undefined,
+  available?: (dress: FrameTemplate) => boolean,
 ): FrameTemplate {
   // A base may have several dresses (m15artifact: the Vehicle frame and the
   // station frame, TODO 4.27a): the family is the base and every dress of it.
@@ -668,7 +677,7 @@ export function subtypeFrameFor(
     ([, dress]) => dress.base === base,
   );
   if (family.length === 0) return template;
-  return family.find(([, dress]) => subtypesSay(subtypes, dress.subtype))?.[0] ?? base;
+  return family.find(([dress, { subtype }]) => subtypesSay(subtypes, subtype) && (available?.(dress) ?? true))?.[0] ?? base;
 }
 
 /** True when the template is a subtype dress (the Vehicle frame): never a
