@@ -126,5 +126,17 @@ if (browser !== 0 && !UPDATE) {
       "A real difference: fix the renderer that is wrong. An intended change of both renderers that moved the recorded numbers:\n" +
       "  npm run test:parity -- --update        (or commit CI's `parity-baseline` artifact as tests/parity/baseline.json)",
   );
+  // On CI: the one command that brings this run's numbers (the linux section)
+  // into the branch — nobody has to look the run id up.
+  if (process.env.GITHUB_RUN_ID) {
+    const fetchBaseline = `gh run download ${process.env.GITHUB_RUN_ID} -n parity-baseline -D tests/parity`;
+    console.error(`\nThis run's numbers, if the change is intended (read the diff before committing it):\n  ${fetchBaseline}`);
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      fs.appendFileSync(
+        process.env.GITHUB_STEP_SUMMARY,
+        `\n### If both renderers were changed on purpose\n\nThis run's numbers (linux) as \`tests/parity/baseline.json\` — read the diff before committing it:\n\n\`\`\`bash\n${fetchBaseline}\n\`\`\`\n\nThe artifact is not written when a case could not be measured at all, and a value over a limit still fails the next run (tests/README.md "Preview parity").\n`,
+      );
+    }
+  }
 }
 process.exit(browser);

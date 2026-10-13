@@ -181,7 +181,7 @@ When the job is red:
 | What it says | What to do |
 | --- | --- |
 | a region "sits at x,y — it was x,y", or tiles "differ more than recorded" | One renderer moved without the other. Look at `tmp/parity/out/<case>@<size>.{preview,bake,diff}.png` (CI: the `parity-differences` artifact) and fix the renderer that is wrong. |
-| the same, and BOTH renderers were changed on purpose (the numbers moved a little with them) | Re-record: `npm run test:parity -- --update` on your machine for its section, and take CI's from the run — `gh run download <run> -n parity-baseline -D tests/parity` (the artifact is the whole file with the linux section replaced). Say in the PR what moved. |
+| the same, and BOTH renderers were changed on purpose (the numbers moved a little with them) | Re-record: `npm run test:parity -- --update` on your machine for its section, and take CI's from the run — `gh run download <run> -n parity-baseline -D tests/parity` (the red run prints this command with its id, in the log and the summary; the artifact is the whole file with the linux section replaced, so commit your own section first). Say in the PR what moved. |
 | "over the limit and no known difference names it" | A new real difference. Fix it — or, if it stays, describe it in `KNOWN_DIFFERENCES` with its measured numbers and bounds. Never raise a `LIMIT` to make a case pass. |
 | "known difference … is no longer measured anywhere" | It was fixed: strike the entry. |
 | a new case is "not in tests/parity/baseline.json" | Record it (the same two commands). |
