@@ -3893,7 +3893,15 @@ bump, no sweep, no badge.
   border of its scans: all 88 white-bordered scans measured share two
   templates (`#ededef`, `#edecea`) to two decimals. `#ececea` is ΔE 0.2 from
   one and 2.0 from the other, and off-white on purpose — pure white has no
-  edge on a white page.
+  edge on a white page. (Review, 2026-10-12, 68 more white-bordered scans:
+  the border PIXELS are the same bytes from scan to scan — 5ED, 7ED, PTK
+  and 2ED agree on all 55,228 border pixels; so do 8ED and 9ED, and the
+  black-bordered TMP / 10E and 7ED★ / 8ED★ — and the `large` / `normal`
+  JPEGs carry the same means. Other templates exist beside the two: Hachette
+  UK's 235 / 235 / 233, the Sega Dreamcast cards' pure 255. In print the
+  border was bare card stock, so `#ececea` — 16 % under paper white in
+  luminance — prints as a faint tint on white paper: whether a PRINT export
+  should use `#ffffff` is an open owner question, TODO 4.30.)
 - **No ink moves and none changes colour.** On both pairs the artist line,
   the © slot (the pipglyph.com mark on display, a clean download's footer
   text), the P/T and the set symbol are INSIDE the frame, as on the prints
@@ -3920,7 +3928,12 @@ bump, no sweep, no badge.
   - The thumb and the OG image are the bake. A gallery tile
     (`BakedCardThumbnail`) backs a white-bordered card's picture with the
     white instead of `#101015`: on the dark backing the picture's soft
-    corner edge showed as a grey arc round a white card.
+    corner edge showed as a grey arc round a white card. The surfaces
+    that back a bake with `#101015` in their own markup still show that
+    arc on a white-bordered card in the light theme (reproduced in review):
+    the deck card modal and its card picker, the marketing hero, featured
+    creators, the moderation list and the render-update compare — a
+    follow-up, they do not all carry the card's `frame_style`.
 - **Imports** (`lib/scryfall/frame-signatures.ts`): the `border` gap is one
   gap for white, silver, gold and yellow, and `gapDrawnBy("border", …)` is
   true only for a WHITE border on a frame that declares the piece — so a
@@ -3930,7 +3943,14 @@ bump, no sweep, no badge.
   later gap still holds beside it (a 2021+ reprint: `reprint-colours`). A
   white border on the 1993 or the 2015 frame, and every silver, gold or
   yellow border, stays `nearest`. A `…+border` request row logged before
-  4.30 stays open (the row doesn't say which border it was).
+  4.30 stays open (the row doesn't say which border it was). The rule
+  reads the frame and the border, never the set, so the white-bordered
+  printings outside that list land the same way: Starter 2000 (S00, 1997
+  frame), Salvat 2005 (PSAL) and Hachette UK (PHUK) on the 2003 frame, the
+  Sega Dreamcast cards (PSDG). They were not measured for the build; the
+  one S00 scan looked at in review ends its white 4–5 px further out than
+  ours (69 / 68 / 79 / 78 px) with a 4.5 px line. Deckmasters' and
+  Beatdown's foils (DKM #7, BTD #29) are black-bordered and import black.
 - **Verification.** Nothing new to tick: the white border rides its
   template's colour tick, as a pair rides its `m` tick — the frame inside
   the keyline is the ticked one, pixel for pixel
