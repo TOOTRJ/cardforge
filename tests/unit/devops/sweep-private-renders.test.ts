@@ -488,7 +488,11 @@ describe("applyPrivateRenders", () => {
 
 // --- the CLI against a fake Supabase ------------------------------------------------------
 
-describe("sweep-storage-orphans.mjs --private-renders against a fake Supabase", () => {
+// Each test here starts the script as a child `node` (one to three times):
+// 1.2 to 2.6 s on a quiet CI runner (2026-10-12), and past vitest's default
+// 5 s on a machine busy with the rest of the suite — the tests timed out
+// with nothing wrong. The limit is for a hung child, not a budget.
+describe("sweep-storage-orphans.mjs --private-renders against a fake Supabase", { timeout: 20_000 }, () => {
   let tmp = "";
   let server: Server;
   let supabaseHost = "";

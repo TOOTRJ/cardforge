@@ -17,6 +17,7 @@ import {
 import {
   FieldGroup,
   textareaClass,
+  useFaceLabel,
 } from "@/components/creator/field-group";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import type { FormValues } from "@/lib/creator/form-types";
@@ -58,14 +59,12 @@ export function TextPanel({ rulesTextRef, onInsertSymbol }: TextPanelProps) {
   const {
     control,
     register,
-    setValue,
     formState: { errors },
   } = useFormContext<FormValues>();
   const { field, fieldState } = useController({ control, name: "rules_text" });
   const template = useWatch({ control, name: "frame_style.template" });
-  const rulesAlign = useWatch({ control, name: "frame_style.rulesAlign" });
-  // The frame offers the choice (its CODE profile, like every switch).
-  const offersAlign = frameAnatomyOf(normalizeFrameTemplate(template)).rulesAlign;
+  // "Front face" on a card with Face tabs (TODO 5.14); null elsewhere.
+  const faceLabel = useFaceLabel();
   // Code-owned, never overridden by the admin layout editor.
   const textless = Boolean(getFrameProfile(normalizeFrameTemplate(template)).textless);
 
@@ -97,7 +96,7 @@ export function TextPanel({ rulesTextRef, onInsertSymbol }: TextPanelProps) {
             value={field.value ?? ""}
             onChange={field.onChange}
             onBlur={field.onBlur}
-            aria-label="Rules text"
+            aria-label={faceLabel ? `${faceLabel} rules text` : "Rules text"}
             aria-invalid={Boolean(fieldState.error)}
             placeholder="Add text and rules here."
             rows={6}
@@ -106,6 +105,36 @@ export function TextPanel({ rulesTextRef, onInsertSymbol }: TextPanelProps) {
         </div>
       </FieldGroup>
 
+      <RulesAlignChoice />
+
+      <FieldGroup
+        label="Flavor text"
+        error={errors.flavor_text?.message}
+        helper="Optional — up to 1000 characters."
+      >
+        <textarea
+          {...register("flavor_text")}
+          placeholder="A coil of fire, bound by oath."
+          rows={3}
+          className={textareaClass(Boolean(errors.flavor_text))}
+        />
+      </FieldGroup>
+    </>
+  );
+}
+
+/** The card's text alignment chips — card-wide (every text box of the card,
+ *  both faces of a double-faced one): the Text step shows them between the
+ *  rules and the flavour text of whichever face is being edited. Nothing
+ *  where the frame does not offer the choice. */
+export function RulesAlignChoice() {
+  const { control, setValue } = useFormContext<FormValues>();
+  const template = useWatch({ control, name: "frame_style.template" });
+  const rulesAlign = useWatch({ control, name: "frame_style.rulesAlign" });
+  // The frame offers the choice (its CODE profile, like every switch).
+  const offersAlign = frameAnatomyOf(normalizeFrameTemplate(template)).rulesAlign;
+  return (
+    <>
       {offersAlign ? (
         // A group, not a FieldGroup: that is a <label>, which would name
         // both chips with its caption.
@@ -124,19 +153,6 @@ export function TextPanel({ rulesTextRef, onInsertSymbol }: TextPanelProps) {
           <p className="text-xs leading-5 text-muted">{RULES_ALIGN_HELP}</p>
         </div>
       ) : null}
-
-      <FieldGroup
-        label="Flavor text"
-        error={errors.flavor_text?.message}
-        helper="Optional — up to 1000 characters."
-      >
-        <textarea
-          {...register("flavor_text")}
-          placeholder="A coil of fire, bound by oath."
-          rows={3}
-          className={textareaClass(Boolean(errors.flavor_text))}
-        />
-      </FieldGroup>
     </>
   );
 }

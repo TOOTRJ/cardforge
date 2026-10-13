@@ -5,7 +5,7 @@
 // the shared input/textarea class builders, and form-wide option constants
 // used by more than one step. Extracted from card-creator-form.tsx.
 
-import { useEffect, useId, useRef } from "react";
+import { createContext, useContext, useEffect, useId, useRef } from "react";
 import {
   Box,
   Coins,
@@ -76,6 +76,23 @@ export function MoreOptions({
   );
 }
 
+// The face a group of fields belongs to on a card with Face tabs (TODO
+// 5.14): "Front face" / "Back face" from the kind's words. Every FieldGroup
+// inside names itself with it — "Back face — Title" — so a field is heard
+// with its face; the words are visually hidden except where a FieldGroup
+// asks for them (`showFace`: the name and the artwork, as the approved
+// mock-up). No scope (every one-faced card): nothing is added.
+const FaceLabelContext = createContext<string | null>(null);
+
+export function FaceScope({ label, children }: { label: string | null; children: React.ReactNode }) {
+  return <FaceLabelContext.Provider value={label}>{children}</FaceLabelContext.Provider>;
+}
+
+/** The face label of the enclosing FaceScope, or null. */
+export function useFaceLabel(): string | null {
+  return useContext(FaceLabelContext);
+}
+
 /** Elements whose own click does something a FieldGroup must not cancel. */
 const NATIVE_CLICK_TARGETS = "a, button, input, select, textarea, summary";
 
@@ -104,15 +121,21 @@ export function FieldGroup({
   label,
   helper,
   error,
+  showFace = false,
   kind = "field",
   children,
 }: {
   label: string;
   helper?: string;
   error?: string;
+  /** Inside a FaceScope: show the face's words before the label instead of
+   *  keeping them for screen readers only. */
+  showFace?: boolean;
   kind?: "field" | "group";
   children: React.ReactNode;
 }) {
+  const face = useContext(FaceLabelContext);
+  const faceWords = face ? <span className={showFace ? undefined : "sr-only"}>{face} — </span> : null;
   const id = useId();
   if (kind === "group") {
     const captionId = `${id}-caption`;
@@ -126,6 +149,7 @@ export function FieldGroup({
         className={WRAPPER_CLASS}
       >
         <span id={captionId} data-fieldgroup-text className={CAPTION_CLASS}>
+          {faceWords}
           {label}
         </span>
         {children}
@@ -164,6 +188,7 @@ export function FieldGroup({
       }}
     >
       <span data-fieldgroup-text className={CAPTION_CLASS}>
+        {faceWords}
         {label}
       </span>
       {children}

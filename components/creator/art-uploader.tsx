@@ -108,6 +108,9 @@ type ArtUploaderProps = {
    *  written on the Choose file button as `data-field-anchor`, so a "still
    *  needed" link can put the focus there (lib/creator/focus-field.ts). */
   fieldAnchor?: string;
+  /** The uploader's own heading. "Artwork" unless the card has Face tabs
+   *  (TODO 5.14), where it names its face: "Back face — Artwork". */
+  heading?: string;
 };
 
 export function ArtUploader({
@@ -120,6 +123,7 @@ export function ArtUploader({
   className,
   actionSlot,
   fieldAnchor,
+  heading = "Artwork",
 }: ArtUploaderProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   // The window a NEW picture is fitted to — read when its upload finishes
@@ -543,7 +547,7 @@ export function ArtUploader({
     <div className={cn("flex flex-col gap-4", className)}>
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-wider text-subtle">
-          Artwork
+          {heading}
         </span>
         <span className="text-[11px] text-subtle">
           PNG · JPEG · WebP · GIF · up to {CARD_ART_MAX_LABEL}

@@ -39,6 +39,8 @@ export function IdentityPanel({ revise = false, token = false, emblem = false }:
     <>
       <FieldGroup
         label="Title"
+        // On a card with Face tabs the label reads "Front face — Title".
+        showFace
         helper={
           emblem
             ? "The planeswalker the emblem comes from — its name prints in the title bar."
