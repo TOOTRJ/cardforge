@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { EffectsPanel, FINISH_OPTIONS } from "@/components/creator/panels/effects-panel";
 import { frameStyleRequiresPremium, type CardFinish } from "@/types/card";
+import { chipOff } from "../helpers/chip";
 
 // ---------------------------------------------------------------------------
 // The Publish step's finish picker (TODO 6.5, owner decision 2026-09-26):
@@ -49,11 +50,11 @@ describe("EffectsPanel — finish chips", () => {
     render(<Harness />);
     for (const name of [/^Regular/, /^Foil/, /^Etched/]) {
       const button = chip(name);
-      expect(button.disabled, String(name)).toBe(false);
+      expect(chipOff(button), String(name)).toBe(false);
       expect(button.textContent, String(name)).not.toMatch(/Soon/);
     }
     const showcase = chip(/^Showcase/);
-    expect(showcase.disabled).toBe(true);
+    expect(chipOff(showcase)).toBe(true);
     expect(showcase.textContent).toMatch(/Soon/);
   });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -11,6 +11,24 @@ import { cn } from "@/lib/utils";
 //
 // The two modes use a discriminated union on the `multiSelect` prop so the
 // TypeScript compiler picks the correct `value` / `onChange` signature.
+//
+// Keyboard (TODO 3b.10):
+//   * A chip that cannot be picked is `aria-disabled`, never `disabled`: it
+//     stays reachable, so a keyboard or screen-reader user finds it and hears
+//     why (its description / badge are part of its name). It ignores clicks.
+//   * A single-select row is ONE tab stop — the picked chip, or the first
+//     when none is picked (roving tabindex). The arrow keys, Home and End
+//     move the FOCUS between its chips, wrapping; Space or Enter picks the
+//     focused one. The arrows do not pick by themselves (owner 2026-10-13):
+//     several of these rows change the whole card on a pick (its kind, its
+//     frame), which must not happen while someone is only reading the
+//     choices. It is the WAI-ARIA "radio group in a toolbar" keyboard: a
+//     radio that is focused and not checked is announced as "not checked".
+//   * While the focus is INSIDE the row the tab stop is the focused chip, so
+//     Tab and Shift+Tab leave the row from wherever the arrows went (a tab
+//     stop left on the picked chip made Tab land on it — a second stop in
+//     the same row). It goes back to the picked chip when the focus leaves.
+//   * A multi-select row is independent toggles: every chip is a tab stop.
 // ---------------------------------------------------------------------------
 
 export type ChipOption<T extends string> = {
@@ -39,6 +57,10 @@ type CommonProps<T extends string> = {
   size?: Size;
   className?: string;
   ariaLabel?: string;
+  /** Id(s) of the helper / error text that describes the row. */
+  ariaDescribedBy?: string;
+  /** The row's value was refused (a field error). Single-select only. */
+  ariaInvalid?: boolean;
 };
 
 type SingleProps<T extends string> = CommonProps<T> & {
@@ -80,8 +102,40 @@ export function ChipGroup<T extends string>(props: ChipGroupProps<T>) {
     size = "sm",
     className,
     ariaLabel,
+    ariaDescribedBy,
+    ariaInvalid,
   } = props;
   const multi = props.multiSelect === true;
+  // The chip that holds the focus, while the focus is inside a single-select
+  // row (null outside it, and always for a multi-select row).
+  const [focused, setFocused] = useState<string | null>(null);
+  // Single-select: the one chip Tab lands on — the focused chip while the
+  // focus is in the row, else the picked one, else the first.
+  const tabStop = multi
+    ? null
+    : (
+        options.find((option) => option.value === focused) ??
+        options.find((option) => isActive(props.value, option.value, false)) ??
+        options[0]
+      )?.value;
+
+  const moveFocus = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const step =
+      event.key === "ArrowRight" || event.key === "ArrowDown"
+        ? 1
+        : event.key === "ArrowLeft" || event.key === "ArrowUp"
+          ? -1
+          : 0;
+    if (step === 0 && event.key !== "Home" && event.key !== "End") return;
+    const chips = [...event.currentTarget.querySelectorAll<HTMLElement>(":scope > [role='radio']")];
+    const from = chips.indexOf(event.target as HTMLElement);
+    if (from < 0) return;
+    const to =
+      event.key === "Home" ? 0 : event.key === "End" ? chips.length - 1 : (from + step + chips.length) % chips.length;
+    event.preventDefault();
+    chips[to]?.focus();
+  };
 
   const handleClick = (next: T) => {
     if (multi) {
@@ -99,9 +153,28 @@ export function ChipGroup<T extends string>(props: ChipGroupProps<T>) {
   return (
     <div
       // Multi-select chips are a row of independent toggles → no radiogroup
-      // semantics. Single-select chips behave as a radio group.
-      role={multi ? "group" : "radiogroup"}
+      // semantics. Single-select chips behave as a radio group. A toggle row
+      // nobody named is no group at all: an unnamed group is only noise.
+      role={multi ? (ariaLabel ? "group" : undefined) : "radiogroup"}
       aria-label={ariaLabel}
+      aria-describedby={ariaDescribedBy}
+      aria-invalid={!multi && ariaInvalid ? true : undefined}
+      onKeyDown={multi ? undefined : moveFocus}
+      onFocus={
+        multi
+          ? undefined
+          : (event) => {
+              const value = (event.target as HTMLElement).getAttribute("data-chip-value");
+              if (value !== null) setFocused(value);
+            }
+      }
+      onBlur={
+        multi
+          ? undefined
+          : (event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocused(null);
+            }
+      }
       className={cn(LAYOUT_CLASS[layout], className)}
     >
       {options.map((option) => {
@@ -117,7 +190,9 @@ export function ChipGroup<T extends string>(props: ChipGroupProps<T>) {
           <button
             key={option.value}
             type="button"
-            disabled={disabled}
+            aria-disabled={disabled ? true : undefined}
+            data-chip-value={multi ? undefined : option.value}
+            tabIndex={multi || option.value === tabStop ? undefined : -1}
             {...ariaProps}
             onClick={disabled ? undefined : () => handleClick(option.value)}
             className={cn(

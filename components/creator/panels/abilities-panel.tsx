@@ -10,7 +10,7 @@ import {
   FieldGroup,
   inputClass,
 } from "@/components/creator/field-group";
-import { PtNotDrawnNote } from "@/components/creator/pt-not-drawn-note";
+import { PtNotDrawnNote, usePtNotDrawnNoteId } from "@/components/creator/pt-not-drawn-note";
 import type { FormValues } from "@/lib/creator/form-types";
 
 type AbilitiesPanelProps = {
@@ -24,6 +24,9 @@ export function AbilitiesPanel({ statVis }: AbilitiesPanelProps) {
     register,
     formState: { errors },
   } = useFormContext<FormValues>();
+  // The "this frame draws no power / toughness" note describes both inputs
+  // (TODO 3b.19): heard on the input, not only by reading on past it.
+  const ptNoteId = usePtNotDrawnNoteId({ face: "front" });
 
   return (
     <>
@@ -38,6 +41,7 @@ export function AbilitiesPanel({ statVis }: AbilitiesPanelProps) {
                 <input
                   {...register("power")}
                   placeholder="4"
+                  aria-describedby={ptNoteId}
                   className={inputClass(Boolean(errors.power))}
                   autoComplete="off"
                 />
@@ -46,12 +50,13 @@ export function AbilitiesPanel({ statVis }: AbilitiesPanelProps) {
                 <input
                   {...register("toughness")}
                   placeholder="4"
+                  aria-describedby={ptNoteId}
                   className={inputClass(Boolean(errors.toughness))}
                   autoComplete="off"
                 />
               </FieldGroup>
               {/* The frame has no P/T slot (a saga, a walker frame…): say so. */}
-              <PtNotDrawnNote face="front" className="sm:col-span-2" />
+              <PtNotDrawnNote face="front" id={ptNoteId} className="sm:col-span-2" />
             </>
           ) : null}
           {statVis.loyalty ? (

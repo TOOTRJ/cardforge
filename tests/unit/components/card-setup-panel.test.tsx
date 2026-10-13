@@ -17,6 +17,7 @@ vi.mock("sonner", () => ({ toast }));
 
 import { CardSetupPanel } from "@/components/creator/panels/card-setup-panel";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
+import { chipOff } from "../helpers/chip";
 
 function Harness({
   verified,
@@ -108,7 +109,7 @@ describe("CardSetupPanel frame tiles", () => {
     );
     const tile = within(retroGroup()).getByRole("radio", { name: /Standard/ });
     // The tile is enabled (some colour is published) and says what a pick does.
-    expect((tile as HTMLButtonElement).disabled).toBe(false);
+    expect(chipOff(tile)).toBe(false);
     expect(tile.textContent).toMatch(/picking it switches to white/);
 
     fireEvent.click(tile);
@@ -122,7 +123,7 @@ describe("CardSetupPanel frame tiles", () => {
   it("disables a frame with no published colour at all", () => {
     render(<Harness verified={[frameComboKey("m15", "u")]} onColor={vi.fn()} />);
     const tile = within(retroGroup()).getByRole("radio", { name: /Standard/ });
-    expect((tile as HTMLButtonElement).disabled).toBe(true);
+    expect(chipOff(tile)).toBe(true);
     fireEvent.click(tile);
     expect(screen.getByTestId("template").textContent).toBe("m15");
   });
@@ -205,7 +206,7 @@ describe("CardSetupPanel variation chips — full-art basic lands only", () => {
       />,
     );
     const chip = fullArtBasicChip();
-    expect(chip.disabled).toBe(true);
+    expect(chipOff(chip)).toBe(true);
     expect(chip.textContent).toContain("Full-art basic frames are for basic lands");
     fireEvent.click(chip);
     expect(screen.getByTestId("template").textContent).toBe("m15land");
@@ -219,7 +220,7 @@ describe("CardSetupPanel variation chips — full-art basic lands only", () => {
       />,
     );
     const chip = fullArtBasicChip();
-    expect(chip.disabled).toBe(false);
+    expect(chipOff(chip)).toBe(false);
     expect(chip.textContent).not.toContain("for basic lands");
     fireEvent.click(chip);
     expect(screen.getByTestId("template").textContent).toBe("fullartland");
@@ -503,14 +504,14 @@ describe("CardSetupPanel — the borderless M15 frame and the black-bordered ful
   it("offers Borderless under a creature's M15 frame, awaiting verification until verified", () => {
     render(<Harness verified={[frameComboKey("m15", "u")]} onColor={vi.fn()} />);
     const chip = within(variations()).getByRole("radio", { name: /^Borderless(?! Artifact)/ }) as HTMLButtonElement;
-    expect(chip.disabled).toBe(true);
+    expect(chipOff(chip)).toBe(true);
     expect(chip.textContent).toContain("Awaiting verification");
     cleanup();
     render(
       <Harness verified={[frameComboKey("m15", "u"), frameComboKey("m15borderless", "u")]} onColor={vi.fn()} />,
     );
     const live = within(variations()).getByRole("radio", { name: /^Borderless(?! Artifact)/ }) as HTMLButtonElement;
-    expect(live.disabled).toBe(false);
+    expect(chipOff(live)).toBe(false);
     fireEvent.click(live);
     expect(screen.getByTestId("template").textContent).toBe("m15borderless");
   });
@@ -525,7 +526,7 @@ describe("CardSetupPanel — the borderless M15 frame and the black-bordered ful
         identity={{ title: "Plains", supertype: "Basic", subtypes_text: "Plains", rules_text: "" }}
       />,
     );
-    expect(chip().disabled).toBe(false);
+    expect(chipOff(chip())).toBe(false);
     fireEvent.click(chip());
     expect(screen.getByTestId("template").textContent).toBe("m15fullartland");
     cleanup();
@@ -540,7 +541,7 @@ describe("CardSetupPanel — the borderless M15 frame and the black-bordered ful
         }}
       />,
     );
-    expect(chip().disabled).toBe(true);
+    expect(chipOff(chip())).toBe(true);
     expect(chip().textContent).toContain("Full-art basic frames are for basic lands");
   });
 });

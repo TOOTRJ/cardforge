@@ -444,18 +444,22 @@ describe("a Transform or Modal card in the creator", () => {
     await goTo(/^text/i);
     expect(screen.getByLabelText("Back face rules text")).toBeTruthy();
     expect(screen.getByLabelText(/^Back face — Power/)).toBe(named("back_face.power"));
-    // A field of several controls is a named group (#518): its name carries
-    // the face too.
-    expect(screen.getByRole("group", { name: "Back face — Rules text" })).toBeTruthy();
-    // Rarity is the card's: its group is "Rarity" on both tabs.
-    const rarityGroup = () => screen.getByRole("radiogroup", { name: "Rarity" }).closest("[role='group']")!;
-    expect(rarityGroup().textContent).not.toMatch(/face —/);
-    expect(screen.getByRole("group", { name: "Rarity" })).toBe(rarityGroup());
+    // The rules editor is ONE control under its toolbar: its own name
+    // carries the face, and no group around it says the field a second time
+    // (TODO 3b.24 — #518 had made it a group named "Back face — Rules text").
+    expect(screen.getByRole("textbox", { name: "Back face rules text" })).toBeTruthy();
+    expect(screen.queryByRole("group", { name: /Rules text/ })).toBeNull();
+    // Rarity is the card's: "Rarity" on both tabs, once.
+    const rarityField = () => screen.getByRole("radiogroup", { name: "Rarity" }).parentElement!;
+    expect(rarityField().textContent).toMatch(/^Rarity/);
+    expect(rarityField().textContent).not.toMatch(/face —/);
+    expect(screen.queryByRole("group", { name: "Rarity" })).toBeNull();
     await click(tab(/^Front face/));
     expect(screen.getByLabelText("Front face rules text")).toBeTruthy();
-    expect(screen.getByRole("group", { name: "Front face — Rules text" })).toBeTruthy();
-    expect(rarityGroup().textContent).not.toMatch(/face —/);
-    expect(screen.getByRole("group", { name: "Rarity" })).toBe(rarityGroup());
+    expect(screen.getByRole("textbox", { name: "Front face rules text" })).toBeTruthy();
+    expect(screen.queryByRole("group", { name: /Rules text/ })).toBeNull();
+    expect(rarityField().textContent).not.toMatch(/face —/);
+    expect(screen.queryByRole("group", { name: "Rarity" })).toBeNull();
   });
 
   it("switching moves no focus by itself: a click leaves it on the tab", async () => {

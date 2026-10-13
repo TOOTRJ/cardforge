@@ -16,6 +16,7 @@ import {
   type PipTextEditorHandle,
 } from "@/components/creator/pip-text-editor";
 import { RulesSymbolToolbar } from "@/components/creator/rules-symbol-toolbar";
+import { useRowFocus } from "@/components/creator/use-row-focus";
 import type { FormValues } from "@/lib/creator/form-types";
 import { structuredRowsSaveAsText } from "@/lib/creator/structured-rules";
 import { walkerBadgesCollide } from "@/lib/creator/walker-crowding";
@@ -51,6 +52,8 @@ export function LoyaltyAbilitiesEditor({
     control,
     name: "loyalty_abilities",
   });
+  const rowsRef = useRef<HTMLDivElement | null>(null);
+  const focusRow = useRowFocus(rowsRef);
   const watchedRows = useWatch({ control, name: "loyalty_abilities" }) ?? [];
   const savesAsText = structuredRowsSaveAsText("planeswalker", {
     rules_text: "",
@@ -71,7 +74,7 @@ export function LoyaltyAbilitiesEditor({
       label="Loyalty abilities"
       helper="One row per ability. Real walkers run 1–4 rows (plus/minus/ultimate); leave the cost blank for a static ability line. Symbols go into the row you last clicked."
     >
-      <div className="flex flex-col gap-3">
+      <div ref={rowsRef} className="flex flex-col gap-3">
         <RulesSymbolToolbar onInsert={insertSymbol} />
         {fields.map((row, i) => {
           const rowErrors = errors.loyalty_abilities?.[i];
@@ -100,7 +103,13 @@ export function LoyaltyAbilitiesEditor({
                 size="sm"
                 className="ml-auto"
                 aria-label={`Remove ability ${i + 1}`}
-                onClick={() => remove(i)}
+                data-row-remove
+                onClick={() => {
+                  remove(i);
+                  // The button leaves with its row: keep the focus in the
+                  // editor (the next row's, the one before, or Add).
+                  focusRow(i);
+                }}
               >
                 <Trash2 className="h-4 w-4" aria-hidden />
               </Button>
@@ -140,12 +149,13 @@ export function LoyaltyAbilitiesEditor({
             variant="outline"
             size="sm"
             className="self-start"
-            onClick={() =>
+            data-row-add
+            onClick={() => {
               append({
                 cost: fields.length === 0 ? "+1" : fields.length === 1 ? "-2" : "",
                 text: "",
-              })
-            }
+              });
+            }}
           >
             <Plus className="h-4 w-4" aria-hidden />
             Add ability

@@ -23,6 +23,7 @@ import {
   type PipTextEditorHandle,
 } from "@/components/creator/pip-text-editor";
 import { RulesSymbolToolbar } from "@/components/creator/rules-symbol-toolbar";
+import { useRowFocus } from "@/components/creator/use-row-focus";
 import { cn } from "@/lib/utils";
 import type { FormValues } from "@/lib/creator/form-types";
 import { structuredRowsSaveAsText } from "@/lib/creator/structured-rules";
@@ -50,6 +51,8 @@ export function SagaChaptersEditor() {
   const rows = useWatch({ control, name: "saga_chapters" }) ?? [];
   // One toolbar for the whole editor: symbols go into the box that last had
   // focus (the intro line until one is clicked).
+  const rowsRef = useRef<HTMLDivElement | null>(null);
+  const focusRow = useRowFocus(rowsRef);
   const focusedBox = useRef<PipTextEditorHandle | null>(null);
   const introBox = useRef<PipTextEditorHandle | null>(null);
   const insertSymbol = (token: string) =>
@@ -76,33 +79,38 @@ export function SagaChaptersEditor() {
 
   return (
     <>
+      {/* ONE control under the toolbar: the editor is the field, described
+          by the helper or the error — no group around the two (3b.24). */}
       <FieldGroup
-        kind="group"
+        kind="control"
         label="Intro / reminder"
         helper="The line above chapter I — e.g. the lore-counter reminder. Optional."
         error={errors.saga_intro?.message}
       >
-        <div className="flex flex-col gap-2">
-          <RulesSymbolToolbar onInsert={insertSymbol} />
-          <PipTextEditor
-            ref={(handle) => {
-              introBox.current = handle;
-              intro.field.ref(handle);
-            }}
-            name={intro.field.name}
-            value={intro.field.value ?? ""}
-            onChange={intro.field.onChange}
-            onBlur={intro.field.onBlur}
-            onFocus={() => {
-              focusedBox.current = introBox.current;
-            }}
-            placeholder="(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)"
-            rows={2}
-            aria-label="Saga intro"
-            aria-invalid={Boolean(errors.saga_intro)}
-            className={textareaClass(Boolean(errors.saga_intro))}
-          />
-        </div>
+        {(aria) => (
+          <div className="flex flex-col gap-2">
+            <RulesSymbolToolbar onInsert={insertSymbol} />
+            <PipTextEditor
+              ref={(handle) => {
+                introBox.current = handle;
+                intro.field.ref(handle);
+              }}
+              name={intro.field.name}
+              value={intro.field.value ?? ""}
+              onChange={intro.field.onChange}
+              onBlur={intro.field.onBlur}
+              onFocus={() => {
+                focusedBox.current = introBox.current;
+              }}
+              placeholder="(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)"
+              rows={2}
+              aria-label="Saga intro / reminder"
+              aria-describedby={aria["aria-describedby"]}
+              aria-invalid={Boolean(errors.saga_intro)}
+              className={textareaClass(Boolean(errors.saga_intro))}
+            />
+          </div>
+        )}
       </FieldGroup>
 
       <FieldGroup
@@ -110,7 +118,7 @@ export function SagaChaptersEditor() {
         label="Chapters"
         helper="One row per effect; toggle which chapters trigger it (rows can share, like “I, II —”). Real sagas run II–VI chapters."
       >
-        <div className="flex flex-col gap-3">
+        <div ref={rowsRef} className="flex flex-col gap-3">
           {fields.map((row, i) => {
             const numerals: number[] = rows[i]?.numerals ?? [];
             const numeralsError = errors.saga_chapters?.[i]?.numerals?.message;
@@ -178,7 +186,13 @@ export function SagaChaptersEditor() {
                     size="sm"
                     className="ml-auto"
                     aria-label={`Remove chapter row ${i + 1}`}
-                    onClick={() => remove(i)}
+                    data-row-remove
+                    onClick={() => {
+                      remove(i);
+                      // The button leaves with its row: keep the focus in
+                      // the editor (the next row's, the one before, or Add).
+                      focusRow(i);
+                    }}
                   >
                     <Trash2 className="h-4 w-4" aria-hidden />
                   </Button>
@@ -246,6 +260,7 @@ export function SagaChaptersEditor() {
               variant="outline"
               size="sm"
               className="self-start"
+              data-row-add
               onClick={() => {
                 // Default the new row to the next unused chapter number.
                 const used = new Set(rows.flatMap((r) => r?.numerals ?? []));
