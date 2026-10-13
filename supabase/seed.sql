@@ -18,7 +18,7 @@
 -- (0001) and storage buckets from migrations, so nothing else is required.
 --
 -- This list MIRRORS PRODUCTION: the (template, color_key) combos the owner has
--- verified in /admin/frame-compare, snapshotted 2026-10-06 (278 combos). When
+-- verified in /admin/frame-compare, snapshotted 2026-10-13 (313 combos). When
 -- more frames get verified on prod, refresh it from:
 --
 --   select template, string_agg(color_key, '' order by color_key)
@@ -30,8 +30,9 @@
 -- other combo is its own row in the second.
 --
 -- Do NOT add frames here that aren't verified on production — a preview that
--- offers a frame prod hides is a preview that lies. (The e2e suite needs one
--- extra, agclassic; scripts/seed-e2e.mjs adds that for the local stack only.)
+-- offers a frame prod hides is a preview that lies. (scripts/seed-e2e.mjs
+-- re-asserts the few templates the e2e suite needs, for a local stack whose
+-- database predates a refresh; every one of them is in this list.)
 -- tests/unit/cards/seed-frames.test.ts checks every template below is a real
 -- FrameTemplate, so a rename can't silently orphan a row, and that the count
 -- above matches the rows.
@@ -58,6 +59,8 @@ select t.template, c.color_key, true, now()
 from unnest(array[
   'adventure',
   'aftermath',
+  'agclassic',
+  'alphaland',
   'emblem',
   'flip',
   'm15',
@@ -85,6 +88,7 @@ from unnest(array[
   'm15tokenartifact',
   'm15tokenartifacttext',
   'm15tokentext',
+  'm15vehicle',
   'm20token',
   'm20tokenartifact',
   'm20tokenartifacttall',
@@ -93,6 +97,8 @@ from unnest(array[
   'm20tokentext',
   'modern',
   'modernland',
+  'retro',
+  'retroland',
   'saga'
 ]) as t (template)
 cross join unnest(array['w', 'u', 'b', 'r', 'g', 'c', 'm']) as c (color_key)
