@@ -95,3 +95,5 @@ if (process.env.GITHUB_OUTPUT) {
   const output = [`tier=${verdict.tier}`, ...Object.entries(runs).map(([group, on]) => `${group}=${on ? "true" : "false"}`)];
   appendFileSync(process.env.GITHUB_OUTPUT, `${output.join("\n")}\n`);
 }
+
+// probe: a code change on a draft (throwaway)
