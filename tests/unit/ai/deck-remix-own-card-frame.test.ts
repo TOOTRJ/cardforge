@@ -421,10 +421,68 @@ describe("an own token's deck remix: the height follows the text it saves with",
     expectSavable(card!);
   });
 
-  it("…and keeps the frame it had while the text-box one isn't published in the colour", async () => {
+  // TODO 1.24: the textless height draws no rules box, so the flavour the
+  // remix writes would save unprinted. With no text box published in the
+  // colour the card lands as it did before its frame was kept (#533's
+  // fallback: no template, the default frame) — the text is drawn.
+  it("…and never keeps the remix's text on the textless height: with no text box in the colour it lands on the default frame", async () => {
     s.verified = keys(["m20token", "r"], ["m15", "r"]);
+    const { step, card } = await remix(token("m20token"));
+    expect(step.status).toBe("done");
+    expect(card!.flavor_text).toBe("New flavour.");
+    expect(card!.frame_style).toBeUndefined();
+    expect(reserved()).toBe(1);
+    expect(s.image).toHaveBeenCalledTimes(1);
+    expect(s.refund).not.toHaveBeenCalled();
+    expectSavable(card!);
+  });
+
+  // …and where the 2014–19 arch is published in the colour it is the
+  // stand-in (the text on its scrim), as for a printing of the same token:
+  // a token stays on a token frame; the Artifact word picks the dress.
+  it("…with the arch published in the colour it lands on the arch, not the default frame", async () => {
+    s.verified = keys(["m20token", "r"], ["m15token", "r"], ["m15", "r"]);
+    const { step, card } = await remix(token("m20token"));
+    expect(step.status).toBe("done");
+    expect(card!.flavor_text).toBe("New flavour.");
+    expect((card!.frame_style as Row).template).toBe("m15token");
+    expect(reserved()).toBe(1);
+    expect(s.image).toHaveBeenCalledTimes(1);
+    expect(s.refund).not.toHaveBeenCalled();
+    expectSavable(card!);
+  });
+
+  it("…an artifact token on the textless height lands on the artifact arch", async () => {
+    s.verified = keys(["m20tokenartifact", "r"], ["m15tokenartifact", "r"], ["m15token", "r"], ["m15", "r"]);
+    const { card } = await remix(token("m20tokenartifact", { supertype: "Artifact Creature" }));
+    expect((card!.frame_style as Row).template).toBe("m15tokenartifact");
+    expectSavable(card!);
+  });
+
+  it("…a remix that saves with no text keeps the textless height", async () => {
+    s.verified = keys(["m20token", "r"], ["m15", "r"]);
+    s.identity.mockResolvedValueOnce({ title: "Remixed Name", flavor_text: null, art_instruction: "A painted scene." });
     const { card } = await remix(token("m20token"));
+    expect(card!.flavor_text).toBeUndefined();
     expect((card!.frame_style as Row).template).toBe("m20token");
+    expectSavable(card!);
+  });
+
+  it("…an own token that already carried rules on the textless height is drawn the same way (the copied rules are text)", async () => {
+    s.verified = keys(["m20token", "r"], ["m15", "r"]);
+    s.identity.mockResolvedValueOnce({ title: "Remixed Name", flavor_text: null, art_instruction: "A painted scene." });
+    const { card } = await remix(token("m20token", { rules_text: "Haste" }));
+    expect(card!.rules_text).toBe("Haste");
+    expect(card!.frame_style).toBeUndefined();
+    expectSavable(card!);
+  });
+
+  it("…and where the default frame isn't published in the colour either, the kept frame stands (never a refused save)", async () => {
+    s.verified = keys(["m20token", "r"]);
+    const { step, card } = await remix(token("m20token"));
+    expect(step.status).toBe("done");
+    expect((card!.frame_style as Row).template).toBe("m20token");
+    expect(card!.flavor_text).toBe("New flavour.");
     expectSavable(card!);
   });
 
