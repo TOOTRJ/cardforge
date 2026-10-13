@@ -43,7 +43,8 @@ drifted to 12 failures locally and two of them were production bugs. The
 job summary lists every skipped test and every test that only passed on a
 retry (`scripts/e2e-summary.mjs`) — a flake that keeps appearing there is a
 bug to fix, not noise. The **Visual regression** jobs gate the renderer's
-pixels (next section).
+pixels (next section) and **Preview parity** holds the browser preview to
+the bake (the section after).
 
 ## Visual regression (renderer pixels, TODO 7.1)
 
@@ -110,6 +111,84 @@ that moved. `tests/unit/render/visual-matrix.test.ts` also fails the fast
 unit run when the baseline no longer matches the matrix or the layout
 version. DB frame-profile overrides are outside the suite (their saves null
 the stamps and the platform re-bakes).
+
+## Preview parity (the browser preview ⇄ the bake, TODO 3.11)
+
+The card a person edits is drawn by `components/cards/card-preview.tsx` in
+their browser; the card that is stored, shared and downloaded is drawn by
+`lib/render/card-image.tsx` through Satori. The **Preview parity** job draws
+the same cards in both and compares them — what a reviewer used to do by hand
+with a throwaway page.
+
+```bash
+npx playwright install chromium        # once
+npm run test:parity                    # frames → bake → Chromium → compare (≈ 1½ min)
+npm run test:parity -- --only m15pw,saga --save   # a few cases; pictures in tmp/parity/out/
+npm run test:parity -- --update        # re-record THIS platform's offsets
+```
+
+No database, no account, no `.env`: the suite starts its **own** `next dev`
+on port 3187 with `PARITY_HARNESS=1` and never reuses a running server, and
+the page's storage and frame requests are answered from local files. Next
+allows one dev server per checkout: stop a `npm run dev` running in the SAME
+checkout first (one in another worktree is fine).
+
+- `tests/parity/cases.ts` — the matrix: rows of `tests/visual/matrix.ts`
+  taken **by id** (the two harnesses cannot drift), one per template family
+  and per feature that has drifted before (every symbol kind in cost and
+  rules, a walker, a saga, split / aftermath / adventure / flip / battle,
+  both faces of a transform and a modal card, tokens, an emblem, the 1993 /
+  1997 / 2003 frames, borderless, crown + stamp + pair, the collector line,
+  centred rules, art off its default position incl. focal 0 with zoom, foil
+  and etched, an EXIF orientation-6 photo as stored and as uploaded, 3.24's
+  Plains and textless cases). A new rendering feature of BOTH renderers gets
+  a case here in the PR that adds it (≈ 3 s of CI each).
+- `tests/parity/bake.parity.ts` (vitest) bakes each case at 750 px and HD
+  with the stored bake's contract; `tests/parity/preview.parity.spec.ts`
+  (Playwright, Chromium) mounts the **same data** in the real `CardPreview`
+  on `/dev/parity` and screenshots it at the same pixel size (750 CSS px at
+  1× and at 2×). The preview is given the PNG masters the bake read (it asks
+  for the `.webp` siblings), so the comparison is of the renderers, not of
+  the WebP encode.
+- `/dev/parity` (`app/dev/parity/page.parity.tsx`) exists **only** on that
+  server: `.parity.tsx` is a page extension only when `next.config.ts`'s
+  `parityHarnessEnabled()` says so (development + the flag). A production
+  build never compiles it (`tests/unit/devops/parity-harness-route.test.ts`).
+- `tests/parity/compare.ts` — per **region** (the profile's own slots: title,
+  cost, art, type, set symbol, rules, stat plate, footer, strip, an unturned
+  second face…): `shift` (has the ink moved, by how many px), `mad` (mean
+  absolute difference) and `hot` (share of the region that is another
+  picture); and per 25 px **tile** of the whole card, so one inline pip out
+  of place, a crown or a stamp is seen too.
+
+Two rasterisers never agree to the pixel, so "the same" is three layers
+(`tests/parity/thresholds.ts`):
+
+1. `LIMITS` — what any region may measure (an offset of one CSS pixel or so,
+   and the difference anti-aliasing leaves).
+2. `KNOWN_DIFFERENCES` — the measurements over a limit **today**: each a
+   real, described difference between the renderers with its numbers and
+   bounds. They are findings. Fixing one means striking it (an entry nothing
+   needs fails the run).
+3. `tests/parity/baseline.json` — every region's offset as recorded per
+   platform (Chromium draws text differently on linux and macOS; `linux` is
+   CI's and the one that gates a PR). Today's offset must be within ±1 px of
+   it, either way — a preview nudged 2 px *towards* the bake fails like one
+   nudged away — and no region or tile may differ much more than recorded.
+
+When the job is red:
+
+| What it says | What to do |
+| --- | --- |
+| a region "sits at x,y — it was x,y", or tiles "differ more than recorded" | One renderer moved without the other. Look at `tmp/parity/out/<case>@<size>.{preview,bake,diff}.png` (CI: the `parity-differences` artifact) and fix the renderer that is wrong. |
+| the same, and BOTH renderers were changed on purpose (the numbers moved a little with them) | Re-record: `npm run test:parity -- --update` on your machine for its section, and take CI's from the run — `gh run download <run> -n parity-baseline -D tmp/parity/ci && mv tmp/parity/ci/baseline.json tests/parity/baseline.json` (through `tmp/`: `gh` will not overwrite an existing file; the red run prints this command with its id, in the log and the summary; the artifact is the whole file with the linux section replaced, so commit your own section first). Say in the PR what moved. |
+| "over the limit and no known difference names it" | A new real difference. Fix it — or, if it stays, describe it in `KNOWN_DIFFERENCES` with its measured numbers and bounds. Never raise a `LIMIT` to make a case pass. |
+| "known difference … is no longer measured anywhere" | It was fixed: strike the entry. |
+| a new case is "not in tests/parity/baseline.json" | Record it (the same two commands). Until the linux section has it, **Preview parity** and the unit test `parity-matrix.test.ts` are both red: push your section, take CI's from that red run, push again. |
+
+An update refuses to record a value over a limit that no known difference
+names, so the baseline cannot quietly absorb a regression. No retries: a
+case that passes only sometimes is a finding.
 
 ## Full e2e coverage (local Supabase stack)
 

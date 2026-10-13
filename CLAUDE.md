@@ -155,7 +155,12 @@ Rules and gotchas:
   viewer-dependent (the stored PNG is one public URL).
 - Card preview and the server Satori bake must stay pixel-identical: the
   `.ttf`/PNG masters in `public/` feed the bake — browser-side asset
-  optimizations must not touch what the bake reads.
+  optimizations must not touch what the bake reads. CI's **Preview parity**
+  check holds them together (`npm run test:parity`, `tests/parity/`,
+  `tests/README.md`): a change to ONE renderer that moves a region 2 px
+  fails it — fix the renderer; re-record `tests/parity/baseline.json` only
+  when both were changed on purpose, never raise a limit, and give a new
+  rendering feature of both renderers a case in `tests/parity/cases.ts`.
   Frames listed in `lib/frames/frame-manifest.json` live in the `frames`
   storage bucket, not git (content-addressed; `frameUrl()` resolves every
   preview + bake path; publish → preview → owner `frames:promote` → merge,
