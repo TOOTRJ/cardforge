@@ -326,6 +326,14 @@ Rules and gotchas:
   (`lib/ai/remix-estimate.ts`, `/api/ai/remix-estimate` — the deck's owner
   only, behind the AI rate limit: it calls Scryfall) and shown in the
   estimate before anyone pays; the step reserves what the plan priced.
+  The remix lands where the IMPORT lands: `remixFrameFor` finalizes the
+  mapper's static landing with the database's verified combos through
+  `finalizeImportMatch` (the function `/api/scryfall/named` runs), so a
+  frame the registry names "once verified" (`onceVerified`,
+  `landOnOnceVerified`: Vehicles on `m15vehicle`, M20+ tokens on the
+  full-art design) is taken by a remix the day it is ticked — never read a
+  mapped patch's `frame_template` for a landing without it, and never copy
+  its rules.
   Owner-run scripts reach the app for such work through
   `POST /api/admin/storage-sweep` (cron bearer; `scripts/lib/app-endpoint.mjs`).
 - Automatic re-bake (migration 0120, `docs/FRAMES.md` "Re-bakes after a

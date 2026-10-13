@@ -1137,6 +1137,16 @@ badges to Exact the moment its `frame_reviews` row is ticked.
   borderless or extended-art Vehicle on `m15vehicle`, "The Vehicle frame").
   `withVerification` applies it, and only in place of a stand-in landing: a
   printing on its own verified frame stays there.
+- **The mapper's landing is STATIC** (`patch.frame_template`,
+  `frame_match`): both rules above are applied by `finalizeImportMatch`
+  with the database's verified combos, and EVERY reader that lands a
+  printing calls it — `/api/scryfall/named` for the creator, and the AI
+  deck remix inside `remixFrameFor` (2026-10-13; it used to read the static
+  landing, so a remixed Vehicle kept the silver artifact frame and a remixed
+  M20+ token the 2014–19 arch after their frames were ticked). A new reader
+  of a mapped patch does the same, through that one function — never its
+  own copy of the rules. `remix-mechanics.test.ts` holds the remix's
+  landing to the import's.
 - **Registry references** (`lib/cards/frame-references.json`) must resolve
   to their own template and pass the pin check;
   `tests/unit/cards/frame-reference-signatures.test.ts` holds that over a
@@ -2847,7 +2857,11 @@ is no layout bump, no sweep and no badge.
   artifact frame), or an unverified frame's fallback. An extended-art Vehicle
   whose `extendedart` frame IS verified in its colour stays on that frame
   (no colour is today) — which of the two is nearer then is the owner's to
-  say. Only the Artifact kind with the subtype on its front face, off the
+  say. The AI deck REMIX of a Vehicle printing lands where its import lands
+  (plain, borderless or extended art; Dominaria's Weatherlight on the
+  artifact frame), at the same one credit — `remixFrameFor` finalizes the
+  mapper's landing through `finalizeImportMatch` (2026-10-13). Only the
+  Artifact kind with the subtype on its front face, off the
   pinned silver plate: no Spacecraft (4.27), no back face (5.10).
 - NOT the showcase Vehicles (17 printings: NEO, KHM, MH2, DSK, WHO, OTP,
   LTR's scroll, DFT's Japan showcase, the FCA source-material Copter). Each

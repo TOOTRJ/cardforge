@@ -193,6 +193,48 @@ describe("executeDeckRemixStep — the frame reaches the save", () => {
     expect(card).toMatchObject({ frame_style: { template: "agclassic" }, card_type: "creature" });
   });
 
+  // The import's verified landing reaches the save (2026-10-13): the step
+  // used to hand over the mapper's static landing, so a Vehicle kept the
+  // silver artifact frame after `m15vehicle` was ticked.
+  const copter = (over: Record<string, unknown> = {}) => ({
+    id: "00000000-0000-4000-8000-000000000235", name: "Smuggler's Copter", layout: "normal", set: "kld", set_type: "expansion", collector_number: "235",
+    frame: "2015", frame_effects: [], border_color: "black", full_art: false, textless: false, keywords: ["Flying", "Crew"],
+    type_line: "Artifact — Vehicle", colors: [], color_identity: [], mana_cost: "{2}", power: "3", toughness: "3", released_at: "2016-09-30",
+    oracle_text: "Flying\nCrew 1", rarity: "rare",
+    ...over,
+  });
+
+  it("a Vehicle saves on the Vehicle frame once it is verified in its colour, at one credit (Smuggler's Copter KLD #235)", async () => {
+    s.verified = keys(["m15artifact", "c"], ["m15vehicle", "c"]);
+    const { step, card } = await remix("lea-255", undefined, { printing: copter() });
+    expect(step.status).toBe("done");
+    expect(card).toMatchObject({ frame_style: { template: "m15vehicle" }, card_type: "artifact", subtypes: ["Vehicle"], power: "3", toughness: "3" });
+    expect(s.reserved).toEqual([1]);
+    expect(s.image).toHaveBeenCalledTimes(1);
+  });
+
+  it("…and on the artifact frame while it isn't (another colour's tick doesn't count)", async () => {
+    s.verified = keys(["m15artifact", "c"], ["m15vehicle", "u"]);
+    const { card } = await remix("lea-255", undefined, { printing: copter() });
+    expect(card).toMatchObject({ frame_style: { template: "m15artifact" }, subtypes: ["Vehicle"] });
+    expect(s.reserved).toEqual([1]);
+  });
+
+  it("a borderless Vehicle lands there too; Dominaria's Weatherlight never does", async () => {
+    s.verified = keys(["m15artifact", "c"], ["m15borderlessartifact", "c"], ["m15vehicle", "c"]);
+    const borderless = await remix("lea-255", undefined, {
+      printing: copter({ set: "sld", collector_number: "446", frame_effects: ["inverted"], border_color: "borderless" }),
+    });
+    expect(borderless.card).toMatchObject({ frame_style: { template: "m15vehicle" } });
+    const weatherlight = await remix("lea-255", undefined, {
+      printing: copter({
+        name: "Weatherlight", set: "dom", collector_number: "237", frame_effects: ["legendary"], type_line: "Legendary Artifact — Vehicle",
+        mana_cost: "{4}", power: "4", toughness: "5", released_at: "2018-04-27",
+      }),
+    });
+    expect(weatherlight.card).toMatchObject({ frame_style: { template: "m15artifact" } });
+  });
+
   it("a layout printing saves on its layout frame with the printed type and its second half (Virtue of Loyalty WOE #38)", async () => {
     s.verified = keys(["adventure", "w"], ["m15", "w"]);
     const { step, card } = await remix("woe-38");

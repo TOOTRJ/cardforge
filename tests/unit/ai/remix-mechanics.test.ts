@@ -2,10 +2,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import printings from "../scryfall/fixtures/import-printings.json";
+import tokenPrintings from "../scryfall/fixtures/token-printings.json";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
-import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
-import { scryfallRemixMechanics } from "@/lib/ai/remix-mechanics";
-import { REMIX_FRAME_UNAVAILABLE, remixFrameFor } from "@/lib/creator/frame-resolve";
+import { mapScryfallToFormPatch, type ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
+import { remixCreditsOf, scryfallRemixMechanics } from "@/lib/ai/remix-mechanics";
+import { REMIX_FRAME_UNAVAILABLE, finalizeImportMatch, remixFrameFor, resolveImportFrame } from "@/lib/creator/frame-resolve";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { frameGateError } from "@/lib/cards/frame-availability";
 import { cardFieldsFace, frameKindGateError } from "@/lib/cards/frame-kind-gate";
@@ -209,5 +210,152 @@ describe("remixFrameFor — nothing published in the card's colour", () => {
   it("reads a colourless card with no colour field as colourless", () => {
     const patch = { ...patchOf("lea-255"), color_identity: undefined };
     expect(remixFrameFor(patch, PROD)).toMatchObject({ ok: true, template: "m15artifact" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The remix follows the import's VERIFIED landing (2026-10-13). The mapper's
+// landing is static; /api/scryfall/named finalizes it against the verified
+// combos (finalizeImportMatch) before the creator resolves the frame. The
+// remix read the static landing, so a remixed Vehicle kept the silver
+// artifact frame after `m15vehicle` was ticked in all seven colours.
+// supabase/seed.sql lags production's Vehicle ticks: they are added here.
+// ---------------------------------------------------------------------------
+
+const COLOUR_KEYS = ["w", "u", "b", "r", "g", "c", "m"] as const;
+const VEHICLE_TICKS = COLOUR_KEYS.map((k): [string, string] => ["m15vehicle", k]);
+
+/** The remix of a mapped patch, held to the save's two gates. */
+function remixOfPatch(patch: ScryfallImportPatch, verified: ReadonlySet<string>) {
+  const result = scryfallRemixMechanics(patch, "Entry", verified);
+  if (!result.ok) throw new Error(result.error);
+  const m = result.mechanics;
+  expect(frameGateError(m.frame_template, m.color_identity, verified)).toBeNull();
+  expect(
+    frameKindGateError(
+      m.frame_template,
+      cardFieldsFace({ card_type: m.card_type, supertype: m.supertype, subtypes: m.subtypes, title: m.title, rules_text: m.rules_text }),
+    ),
+  ).toBeNull();
+  return m;
+}
+
+/** Where the creator's import lands the same printing: the named route's
+ *  finalization, then the form's resolveImportFrame. */
+function importLanding(patch: ScryfallImportPatch, verified: ReadonlySet<string>) {
+  const finalized = finalizeImportMatch(patch, verified);
+  const { resolution } = resolveImportFrame({
+    patch: finalized,
+    kind: finalized.kind ?? null,
+    current: { template: null, cardType: finalized.card_type ?? null, colors: finalized.color_identity ?? ["colorless"] },
+    verifiedKeys: verified,
+  });
+  return resolution.status === "exact" || resolution.status === "frame-switched" ? resolution.template : null;
+}
+
+const vehicle = (over: Record<string, unknown> = {}) =>
+  mapScryfallToFormPatch(
+    scryfallCardSchema.parse({
+      id: "00000000-0000-4000-8000-000000000235", name: "Smuggler's Copter", layout: "normal", set: "kld", set_type: "expansion", collector_number: "235",
+      frame: "2015", frame_effects: [], border_color: "black", full_art: false, textless: false, keywords: ["Flying", "Crew"],
+      type_line: "Artifact — Vehicle", colors: [], color_identity: [], mana_cost: "{2}", power: "3", toughness: "3", released_at: "2016-09-30",
+      oracle_text: "Flying\nCrew 1", rarity: "rare",
+      ...over,
+    }),
+  );
+
+describe("remixFrameFor — the remix follows the import's verified landing", () => {
+  const plain = vehicle();
+  const blue = vehicle({ name: "Mindlink Mech", set: "neo", collector_number: "62", colors: ["U"], color_identity: ["U"], mana_cost: "{2}{U}" });
+  const extended = vehicle({ name: "Mindlink Mech", set: "neo", collector_number: "448", frame_effects: ["extendedart"], colors: ["U"], color_identity: ["U"], mana_cost: "{2}{U}" });
+  const borderless = vehicle({ name: "Boommobile", set: "dft", collector_number: "310", frame_effects: ["inverted"], border_color: "borderless", colors: ["R"], color_identity: ["R"], mana_cost: "{2}{R}{R}" });
+  const VERIFIED = plus(...VEHICLE_TICKS);
+
+  it("seed.sql has no Vehicle tick of its own yet (drop VEHICLE_TICKS' part of this suite's setup once it has)", () => {
+    // The unverified side below is built with `without`, so it holds either way.
+    expect(without("m15vehicle").has(frameComboKey("m15vehicle", "c"))).toBe(false);
+  });
+
+  it("a plain Vehicle lands on the Vehicle frame once it is verified in its colour, on the artifact frame until then", () => {
+    const unticked = without("m15vehicle");
+    expect(plain.frame_template).toBe("m15artifact");
+    expect(remixOfPatch(plain, unticked).frame_template).toBe("m15artifact");
+    expect(remixOfPatch(plain, VERIFIED).frame_template).toBe("m15vehicle");
+    expect(remixOfPatch(blue, unticked).frame_template).toBe("m15artifact");
+    expect(remixOfPatch(blue, VERIFIED).frame_template).toBe("m15vehicle");
+  });
+
+  it("keeps the Vehicle's mechanics and price: the subtype, the P/T, one credit", () => {
+    const before = remixOfPatch(plain, without("m15vehicle"));
+    const after = remixOfPatch(plain, VERIFIED);
+    expect(after).toEqual({ ...before, frame_template: "m15vehicle" });
+    expect(after.subtypes).toEqual(["Vehicle"]);
+    expect(remixCreditsOf(after)).toBe(1);
+    expect(remixCreditsOf(before)).toBe(1);
+  });
+
+  it("another colour's tick never counts: an unverified colour stays on the verified artifact frame", () => {
+    const unticked = [...without("m15vehicle")];
+    for (const key of COLOUR_KEYS.filter((k) => k !== "u")) {
+      const verified = new Set([...unticked, frameComboKey("m15vehicle", key)]);
+      expect(remixOfPatch(blue, verified).frame_template).toBe("m15artifact");
+      expect(remixOfPatch(extended, verified).frame_template).toBe("m15artifact");
+    }
+    expect(remixOfPatch(blue, new Set([...unticked, frameComboKey("m15vehicle", "u")])).frame_template).toBe("m15vehicle");
+  });
+
+  it("borderless and extended-art Vehicles land there too (nearest), and on the artifact frame until it is verified", () => {
+    const unticked = without("m15vehicle");
+    expect(remixOfPatch(extended, unticked).frame_template).toBe("m15artifact");
+    expect(remixOfPatch(extended, VERIFIED).frame_template).toBe("m15vehicle");
+    expect(remixOfPatch(borderless, unticked).frame_template).toBe("m15artifact");
+    expect(remixOfPatch(borderless, VERIFIED).frame_template).toBe("m15vehicle");
+    // The match is still the printing's own frame, nearest — only the landing moved.
+    expect(finalizeImportMatch(borderless, VERIFIED).frame_match).toMatchObject({ status: "nearest", template: "m15borderlessartifact", landOn: "m15vehicle" });
+  });
+
+  it("Dominaria's silver-plated Weatherlight stays pinned to the artifact frame, whatever is verified", () => {
+    for (const [set, collector_number] of [["dom", "237"], ["pdom", "237s"], ["plst", "DOM-237"]] as const) {
+      const weatherlight = vehicle({
+        name: "Weatherlight", set, collector_number, frame_effects: ["legendary"], type_line: "Legendary Artifact — Vehicle",
+        mana_cost: "{4}", power: "4", toughness: "5", released_at: "2018-04-27", rarity: "mythic",
+      });
+      expect(remixOfPatch(weatherlight, without("m15vehicle")).frame_template, set).toBe("m15artifact");
+      expect(remixOfPatch(weatherlight, VERIFIED).frame_template, set).toBe("m15artifact");
+    }
+  });
+
+  it("a non-Vehicle artifact is unchanged", () => {
+    const ring = vehicle({ name: "Sol Ring", set: "c21", collector_number: "263", type_line: "Artifact", keywords: [], mana_cost: "{1}", power: undefined, toughness: undefined, oracle_text: "{T}: Add {C}{C}." });
+    const equipment = vehicle({ name: "Bonesplitter", type_line: "Artifact — Equipment", keywords: ["Equip"], mana_cost: "{1}", power: undefined, toughness: undefined, oracle_text: "Equip {1}" });
+    for (const patch of [ring, equipment, patchOf("lea-255")]) {
+      expect(remixOfPatch(patch, VERIFIED)).toEqual(remixOfPatch(patch, without("m15vehicle")));
+      expect(remixOfPatch(patch, VERIFIED).frame_template).not.toBe("m15vehicle");
+    }
+  });
+
+  it("lands where the creator's import lands the same printing, verified or not", () => {
+    const unticked = without("m15vehicle");
+    for (const patch of [plain, blue, extended, borderless, patchOf("lea-255")]) {
+      for (const verified of [unticked, VERIFIED, new Set([...unticked, frameComboKey("m15vehicle", "u")])]) {
+        expect(remixOfPatch(patch, verified).frame_template).toBe(importLanding(patch, verified));
+      }
+    }
+  });
+
+  it("an M20+ token lands on the full-art design where it is verified, and on the arch where it isn't (token/m20)", () => {
+    const soldier = mapScryfallToFormPatch(scryfallCardSchema.parse(tokenPrintings["tfdn-6"]));
+    const landed = remixOfPatch(soldier, PROD).frame_template;
+    expect(landed).toBe(importLanding(soldier, PROD));
+    expect(landed.startsWith("m20token")).toBe(true);
+    const unticked = without("m20token", "m20tokentext", "m20tokentall");
+    expect(remixOfPatch(soldier, unticked).frame_template).toBe(soldier.frame_template);
+    expect(remixOfPatch(soldier, unticked).frame_template.startsWith("m15token")).toBe(true);
+  });
+
+  it("a patch without a match (an older caller) resolves from its frame_template as before", () => {
+    const { frame_match: _match, ...bare } = plain;
+    void _match;
+    expect(remixFrameFor(bare, VERIFIED)).toMatchObject({ ok: true, template: "m15artifact" });
   });
 });
