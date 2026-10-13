@@ -272,7 +272,13 @@ export async function POST(request: Request) {
       // here instead of sizing the job at the ceiling and answering "you
       // need 100 credits" for a 5-card deck.
       return NextResponse.json(
-        { ok: false, error: "That deck has no cards to remix, or it isn't yours." },
+        {
+          ok: false,
+          error:
+            remixEstimate.emblems > 0
+              ? "That deck has only emblems, and emblems aren't remixed."
+              : "That deck has no cards to remix, or it isn't yours.",
+        },
         { status: 400 },
       );
     }

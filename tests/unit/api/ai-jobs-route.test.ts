@@ -15,6 +15,8 @@ const s = vi.hoisted(() => ({
   remixable: 5,
   /** Remixable entries that are double-faced (two credits each, TODO 5.4). */
   doubleFaced: 0,
+  /** Emblems the estimate leaves out (owner 2026-10-13). */
+  emblems: 0,
   /** The AI rate limit's answer. */
   rate: { ok: true } as Record<string, unknown>,
   /** How often the deck remix's estimate (its Scryfall work) ran. */
@@ -59,6 +61,7 @@ vi.mock("@/lib/ai/remix-estimate", () => ({
       credits: s.remixable + s.doubleFaced,
       doubleFaced: s.doubleFaced,
       skipped: 0,
+      emblems: s.emblems,
       unresolved: 0,
       creditsByEntry: Object.fromEntries(
         Array.from({ length: s.remixable }, (_, i) => [`entry-${i}`, i < s.doubleFaced ? 2 : 1]),
@@ -101,6 +104,7 @@ beforeEach(() => {
   s.doubleFaced = 0;
   s.rate = { ok: true };
   s.estimateCalls = 0;
+  s.emblems = 0;
   s.created = [];
 });
 
@@ -148,6 +152,28 @@ describe("POST /api/ai/jobs", () => {
     expect(String(json.error)).toMatch(/no cards to remix/);
     s.remixable = 5;
     expect((await post({ kind: "deck_remix", deck_id: DECK_ID, style: "ink" })).status).toBe(200);
+  });
+
+  // Emblems are not remixed (owner 2026-10-13): the estimate leaves them
+  // out of `cards` and `credits`, so the pre-check never asks a credit for
+  // one, and a deck of emblems alone is refused in plain words.
+  it("never charges for an emblem: a deck of emblems alone is refused, a mixed one needs its other cards' credits only", async () => {
+    s.remixable = 0;
+    s.emblems = 2;
+    const only = await post({ kind: "deck_remix", deck_id: DECK_ID, style: "ink" });
+    expect(only.status).toBe(400);
+    expect(String(only.json.error)).toBe("That deck has only emblems, and emblems aren't remixed.");
+    expect(s.created).toHaveLength(0);
+
+    s.remixable = 2;
+    s.emblems = 1;
+    s.credits = 2;
+    const mixed = await post({ kind: "deck_remix", deck_id: DECK_ID, style: "ink" });
+    expect(mixed.status).toBe(200);
+    s.credits = 1;
+    const short = await post({ kind: "deck_remix", deck_id: DECK_ID, style: "ink" });
+    expect(short.status).toBe(402);
+    expect(short.json).toMatchObject({ needed: 2 });
   });
 
   it("a rate-limited caller is refused BEFORE the deck remix's estimate does its Scryfall work", async () => {

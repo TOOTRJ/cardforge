@@ -23,8 +23,20 @@ import { DFC_REMIX_CREDITS } from "@/lib/scryfall/dfc-import";
 import { remixFrameFor } from "@/lib/creator/frame-resolve";
 import { templatePaintsSecondFace } from "@/lib/creator/card-kinds";
 import { dfcBodyOf, templateHasBackFace, withTransformBackShape } from "@/lib/cards/dfc";
-import type { CardBackFace, CardType, ColorIdentity, FrameTemplate } from "@/types/card";
-import { importedAnatomy, type FrameAnatomyStyle } from "@/lib/cards/anatomy";
+import {
+  FRAME_TEMPLATE_VALUES,
+  PREMIUM_FRAME_TEMPLATES,
+  type Card,
+  type CardBackFace,
+  type CardType,
+  type ColorIdentity,
+  type FrameTemplate,
+} from "@/types/card";
+import { importedAnatomy, storedAnatomyOf, type FrameAnatomyStyle } from "@/lib/cards/anatomy";
+import { frameGateError } from "@/lib/cards/frame-availability";
+import { cardFieldsFace, frameKindGateError } from "@/lib/cards/frame-kind-gate";
+import { dfcFrontColorError, dfcFrontTypeError, resolveDfcBackFace } from "@/lib/cards/dfc-gate";
+import { serializeLoyalty, serializeSaga } from "@/lib/cards/face-content";
 
 export type ScryfallRemixMechanics = {
   title: string;
@@ -136,8 +148,179 @@ export function scryfallRemixMechanics(
  *  2026-10-02): two for a double-faced card — one picture per face — else
  *  one. Decided at plan time (the deck's estimate, the jobs route's
  *  pre-check, the plan entry) and reserved by the step before it runs. */
-export function remixCreditsOf(
-  mechanics: Pick<ScryfallRemixMechanics, "frame_template" | "back_face">,
-): number {
+export function remixCreditsOf(mechanics: {
+  frame_template?: FrameTemplate | string;
+  back_face?: CardBackFace;
+}): number {
   return templateHasBackFace(mechanics.frame_template) && mechanics.back_face ? DFC_REMIX_CREDITS : 1;
+}
+
+// ---------------------------------------------------------------------------
+// An OWN card as the remix's source (a deck entry with `card_id`).
+//
+// A remix is a re-skin: the mechanics, the colour and the type are the
+// source's, so the frame is too (owner 2026-10-13) — the creator's
+// single-card remix keeps its parent's whole frame_style (remixValuesFrom).
+// The own-card deck remix used to carry no template: a card on the Vehicle
+// frame, a borderless frame, the 2003 frame or a full-art token design came
+// back on the default frame. It now keeps the source's template WHEN the
+// save's own gates would pass it — the published-frame gate in the card's
+// colour (frameGateError), the kind gate (frameKindGateError) and, on a
+// double-faced body, the back face's gate (resolveDfcBackFace) — and lands
+// as it did before otherwise (no template: the default frame, one face). A
+// fallback, never a refused save after the art is paid for.
+// ---------------------------------------------------------------------------
+
+/** The fields of the source card the frame choice reads — a `cards` row as
+ *  the caller's own (RLS) client read it; nothing the user couldn't read. */
+export type OwnCardRemixSource = Pick<
+  Card,
+  "frame_style" | "color_identity" | "card_type" | "supertype" | "subtypes" | "title" | "rules_text"
+> & { back_face?: Card["back_face"] };
+
+export type OwnCardRemixFrame = {
+  /** The source's template, kept; absent = the default landing, as before. */
+  frame_template?: FrameTemplate;
+  /** The second half the kept template paints (split, aftermath, adventure,
+   *  flip), or the BACK FACE of a kept double-faced body with its derived
+   *  body and colour — without the source's art or artist (the remix's art
+   *  is new). Never set without `frame_template`: a body-less legacy back
+   *  and a fallen-back card stay one-faced, as before. */
+  back_face?: CardBackFace;
+};
+
+/** A stored back face as the remix carries it: its content, never its
+ *  picture. The body is left for the save's gate to derive. */
+function carriedBackFace(back: CardBackFace): CardBackFace {
+  const {
+    art_url: _art,
+    art_position: _position,
+    artist_credit: _artist,
+    frame_style: _body,
+    ...content
+  } = back;
+  void _art;
+  void _position;
+  void _artist;
+  void _body;
+  return content;
+}
+
+/**
+ * The frame an AI deck remix of the user's own card saves on. `singleFace`
+ * keeps a double-faced source one-faced (the plan reserved one credit: an
+ * older plan, or bodies that were not verified when it was priced) — a
+ * front body can't be kept without its back, so the card lands as before.
+ * Pure: the estimate prices an entry and the step lands it through this one
+ * function (remixCreditsOf of its result).
+ */
+export function ownCardRemixFrame(
+  source: OwnCardRemixSource,
+  verifiedKeys: ReadonlySet<string>,
+  options: { singleFace?: boolean } = {},
+): OwnCardRemixFrame {
+  const stored = (source.frame_style ?? {}) as { template?: unknown };
+  // A current template only: a row that names none, or a retired one
+  // (TODO 4.54), lands as before.
+  if (
+    typeof stored.template !== "string" ||
+    !(FRAME_TEMPLATE_VALUES as readonly string[]).includes(stored.template)
+  ) {
+    return {};
+  }
+  const template = stored.template as FrameTemplate;
+  const colours = source.color_identity ?? [];
+  // A premium frame needs a plan the save checks (none exists yet): never a
+  // refusal after the art.
+  if (PREMIUM_FRAME_TEMPLATES.has(template)) return {};
+  if (frameGateError(template, colours, verifiedKeys) !== null) return {};
+  if (frameKindGateError(template, cardFieldsFace(source)) !== null) return {};
+
+  const back = (source.back_face ?? null) as CardBackFace | null;
+  if (templateHasBackFace(template)) {
+    // Both faces or neither (TODO 5.4's rule): the front body with the back
+    // on its own body, each verified in its colour — exactly what the save
+    // checks (dfcFrontTypeError, dfcFrontColorError, resolveDfcBackFace).
+    if (options.singleFace || !back) return {};
+    if (dfcFrontTypeError(template, source.card_type) !== null) return {};
+    if (
+      dfcFrontColorError(
+        template,
+        { cardType: source.card_type, supertype: source.supertype },
+        colours,
+      ) !== null
+    ) {
+      return {};
+    }
+    const gate = resolveDfcBackFace({
+      frontTemplate: template,
+      back: carriedBackFace(back),
+      family: storedAnatomyOf(source.frame_style).dfcIcon,
+      frontColorIdentity: colours,
+      verifiedKeys,
+    });
+    if (!gate.ok || !gate.back) return {};
+    return { frame_template: template, back_face: gate.back as CardBackFace };
+  }
+  if (templatePaintsSecondFace(template) && back) {
+    return { frame_template: template, back_face: carriedBackFace(back) };
+  }
+  return { frame_template: template };
+}
+
+/** An own card's rules text as the remix copies it: the stored text, or —
+ *  for a walker / saga stored with its rows alone (rules_text NULL, the
+ *  rows in face_content) — the rows in the canonical text the renderers
+ *  parse back. Without it such a card was remixed with no abilities. */
+export function ownCardRulesText(
+  source: Pick<Card, "rules_text" | "face_content">,
+): string | undefined {
+  if (source.rules_text?.trim()) return source.rules_text;
+  const abilities = source.face_content?.loyalty?.abilities;
+  if (abilities && abilities.length > 0) return serializeLoyalty(abilities);
+  const saga = source.face_content?.saga;
+  if (saga && saga.chapters.length > 0) return serializeSaga(saga.intro, saga.chapters);
+  return source.rules_text ?? undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Emblems are NOT remixed (owner 2026-10-13). An emblem prints its
+// planeswalker's name; a remix renames every card by itself, so the emblem
+// would stop matching its (separately renamed) walker — and the AI never
+// designs emblems. The entry is left out at PLAN time (the estimate prices
+// it nothing and counts it; createDeckRemixJob makes no step for it), and a
+// step of an older plan that still names one is refused before anything is
+// generated. The remixed deck simply has no emblem.
+// ---------------------------------------------------------------------------
+
+/** The step error of an emblem entry an older plan still carries. */
+export const REMIX_EMBLEM_LEFT_OUT =
+  "Emblems aren't remixed — this one is left out of the new deck. Nothing was charged.";
+
+/** True when a remix source — an own card's row or a mapped printing — is
+ *  an emblem. */
+export function isEmblemRemixSource(source: { card_type?: string | null } | null | undefined): boolean {
+  return source?.card_type === "emblem";
+}
+
+/** A deck's entries as the remix takes them, in deck order: every entry
+ *  with a source (an own card or a printing) but the user's own EMBLEMS,
+ *  which are counted instead. ONE filter for the estimate and the plan, so
+ *  the batch cap cuts the same list in both. (A printed emblem is known
+ *  only once its printing is resolved: the estimate prices it 0 and the
+ *  plan drops what the estimate priced 0.) */
+export function remixableDeckItems<
+  T extends {
+    entry: { card_id: string | null; scryfall_id: string | null };
+    card: { card_type?: string | null } | null;
+  },
+>(items: readonly T[]): { remixable: T[]; ownEmblems: number } {
+  const remixable: T[] = [];
+  let ownEmblems = 0;
+  for (const item of items) {
+    if (!item.entry.card_id && !item.entry.scryfall_id) continue;
+    if (item.entry.card_id && isEmblemRemixSource(item.card)) ownEmblems += 1;
+    else remixable.push(item);
+  }
+  return { remixable, ownEmblems };
 }

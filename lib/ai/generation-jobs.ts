@@ -69,7 +69,16 @@ import type {
 import type { DesignedCard } from "@/lib/ai/card-design";
 import { getCardById as getScryfallCardById } from "@/lib/scryfall/client";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
-import { remixCreditsOf, scryfallRemixMechanics } from "@/lib/ai/remix-mechanics";
+import {
+  REMIX_EMBLEM_LEFT_OUT,
+  isEmblemRemixSource,
+  ownCardRemixFrame,
+  ownCardRulesText,
+  remixableDeckItems,
+  remixCreditsOf,
+  scryfallRemixMechanics,
+} from "@/lib/ai/remix-mechanics";
+import { cardFieldsFace, frameKindGateError } from "@/lib/cards/frame-kind-gate";
 import { applyRemixNames, remixSecondHalfLayout } from "@/lib/ai/remix-names";
 import { DFC_REMIX_CREDITS } from "@/lib/scryfall/dfc-import";
 import { templateHasBackFace } from "@/lib/cards/dfc";
@@ -1174,17 +1183,23 @@ export async function createDeckRemixJob(
   }
 
   const items = await listDeckCards(deck.id);
-  const remixable = items.filter(
-    (item) => item.entry.card_id || item.entry.scryfall_id,
-  );
-  if (remixable.length === 0) {
+  // Emblems are not remixed (owner 2026-10-13): the user's own are left
+  // out before the batch cap — the estimate's own filter — and a printed
+  // one is what the estimate priced 0. No step, no charge; the new deck
+  // has no emblem.
+  const { remixable, ownEmblems } = remixableDeckItems(items);
+  const capped = remixable.slice(0, input.limit);
+  const taken = capped.filter((item) => input.creditsByEntry?.[item.entry.id] !== 0);
+  if (taken.length === 0) {
     return {
       ok: false,
-      error: "Nothing to remix — the deck has no resolved cards yet.",
+      error:
+        ownEmblems > 0 || capped.length > 0
+          ? "Nothing to remix — emblems aren't remixed."
+          : "Nothing to remix — the deck has no resolved cards yet.",
     };
   }
-  const taken = remixable.slice(0, input.limit);
-  const skipped = remixable.length - taken.length;
+  const skipped = remixable.length - capped.length;
 
   // Remix copies ship PUBLIC too — same posture as generated decks.
   const created = await createDeckAction(
@@ -1384,6 +1399,13 @@ async function runDeckRemixStep(
     return { ...step, status: "done", error: undefined };
   }
 
+  // An EMBLEM is not remixed (owner 2026-10-13). A new plan has no step for
+  // one; an older plan's step is refused here — before the reserve, so no
+  // ledger row is written, and before any AI call.
+  if (entry.card_id && isEmblemRemixSource(await getCardById(entry.card_id))) {
+    return { ...step, status: "failed", error: REMIX_EMBLEM_LEFT_OUT, spend_ref: null };
+  }
+
   // A failed remix step carries no card_id, so its retry reruns the whole
   // pipeline; the credit wrapper refunds every failed attempt. A
   // double-faced entry reserves its two credits (the plan's, TODO 5.4) —
@@ -1428,7 +1450,9 @@ async function executeDeckRemixStep(
      *  creator's remix keeps them too), so a parent switched off stays off.
      *  A switch nobody set gets the new-card default (createCardAction). */
     anatomy?: FrameAnatomyStyle;
-    /** A layout frame's second half (TODO 1.22), Scryfall entries only. */
+    /** A layout frame's second half (TODO 1.22) or a double-faced body's
+     *  back face — a Scryfall entry's printing's, or an own card's where
+     *  its frame is kept (ownCardRemixFrame). */
     back_face?: CardBackFace;
     art_url?: string | null;
   };
@@ -1439,6 +1463,20 @@ async function executeDeckRemixStep(
     if (!source) {
       return { ...step, status: "failed", error: "Source card is gone." };
     }
+    // The source's frame travels (owner 2026-10-13) where the save's own
+    // gates pass it — published in the card's colour, right for the kind,
+    // a double-faced body with its back's body verified too — else the
+    // card lands as before (no template). ownCardRemixFrame is what the
+    // estimate priced the entry with; a one-credit entry stays one-faced.
+    const doubleFacedPlan = remixEntryCredits(entry) >= DFC_REMIX_CREDITS;
+    const kept = ownCardRemixFrame(source, new Set(await getVerifiedFrameKeys()), {
+      singleFace: !doubleFacedPlan,
+    });
+    // Two credits were reserved for both faces: bodies withdrawn since are
+    // refused rather than charged two for one picture (refunded).
+    if (doubleFacedPlan && remixCreditsOf(kept) < DFC_REMIX_CREDITS) {
+      return { ...step, status: "failed", error: REMIX_DFC_FRAMES_GONE };
+    }
     mechanics = {
       title: source.title,
       cost: source.cost ?? undefined,
@@ -1447,7 +1485,7 @@ async function executeDeckRemixStep(
       subtypes: source.subtypes ?? [],
       rarity: source.rarity ?? undefined,
       color_identity: source.color_identity,
-      rules_text: source.rules_text ?? undefined,
+      rules_text: ownCardRulesText(source),
       flavor_text: source.flavor_text ?? undefined,
       power: source.power ?? undefined,
       toughness: source.toughness ?? undefined,
@@ -1456,6 +1494,8 @@ async function executeDeckRemixStep(
       parent_card_id: source.id,
       art_url: source.art_url,
       anatomy: storedAnatomyOf(source.frame_style),
+      frame_template: kept.frame_template,
+      back_face: kept.back_face,
     };
   } else if (entry.scryfall_id) {
     const scry = await getScryfallCardById(entry.scryfall_id);
@@ -1478,6 +1518,11 @@ async function executeDeckRemixStep(
     );
     if (!resolved.ok) {
       return { ...step, status: "failed", error: resolved.error };
+    }
+    // A printed emblem an older plan still carries (a new plan leaves it
+    // out): refused before any AI call — the wrapper hands the credit back.
+    if (isEmblemRemixSource(resolved.mechanics)) {
+      return { ...step, status: "failed", error: REMIX_EMBLEM_LEFT_OUT };
     }
     // The plan reserved two credits for both faces: a landing that lost
     // its bodies since (a tick withdrawn) is refused rather than charged
@@ -1532,6 +1577,29 @@ async function executeDeckRemixStep(
   const named = applyRemixNames(mechanics, identity);
   if (!named.ok) {
     return { ...step, status: "failed", error: named.error };
+  }
+
+  // An own card's kept frame is judged again on the card as it SAVES: the
+  // kind gate reads the name (a basic-only frame: "Wastes" renamed is no
+  // basic land), so a frame the new name no longer fits falls back to the
+  // default landing here — never a refused save after the art. Only a
+  // one-faced frame can be refused by a name.
+  if (
+    entry.card_id &&
+    mechanics.frame_template &&
+    !mechanics.back_face &&
+    frameKindGateError(
+      mechanics.frame_template,
+      cardFieldsFace({
+        card_type: mechanics.card_type,
+        supertype: mechanics.supertype,
+        subtypes: mechanics.subtypes,
+        title: named.title,
+        rules_text: named.rules_text,
+      }),
+    ) !== null
+  ) {
+    mechanics = { ...mechanics, frame_template: undefined };
   }
 
   // ---- Art (REQUIRED — a remix is the art; failures fail the step so the
@@ -1662,10 +1730,10 @@ async function executeDeckRemixStep(
       defense: mechanics.defense,
       art_url: artUrl,
       // The printing's own crown / two-colour switches (importedAnatomy), or
-      // an own card's explicit ones (it carries no template: the remix lands
-      // on its kind's default frame, as before); createCardAction stamps the
-      // new-card default for a switch nobody set and keeps only what the
-      // frame draws.
+      // an own card's explicit ones — with its template where the frame is
+      // kept (ownCardRemixFrame), else none: the default frame, as before;
+      // createCardAction stamps the new-card default for a switch nobody set
+      // and keeps only what the frame draws.
       frame_style: frameTemplate
         ? { template: frameTemplate, ...mechanics.anatomy }
         : mechanics.anatomy && Object.keys(mechanics.anatomy).length > 0

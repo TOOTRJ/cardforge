@@ -5,7 +5,13 @@ import { getCurrentUser } from "@/lib/supabase/server";
 import { getCardCollection, SCRYFALL_COLLECTION_MAX, type ScryfallCard } from "@/lib/scryfall/client";
 import { chunkIdentifiers } from "@/lib/decks/import-resolution";
 import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
-import { remixCreditsOf, scryfallRemixMechanics } from "@/lib/ai/remix-mechanics";
+import {
+  isEmblemRemixSource,
+  ownCardRemixFrame,
+  remixableDeckItems,
+  remixCreditsOf,
+  scryfallRemixMechanics,
+} from "@/lib/ai/remix-mechanics";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 
 // ---------------------------------------------------------------------------
@@ -17,7 +23,10 @@ import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 // endpoint (≤ 75 ids a call, the client's throttle between calls) and maps
 // each through the remix's own frame choice (scryfallRemixMechanics): an
 // entry lands on the double-faced bodies — both verified — and is priced 2;
-// everything else 1. The same numbers size the jobs route's credit
+// everything else 1. An entry that is one of the user's OWN cards (`card_id`
+// — the step reads it before the printing) is priced through the step's own
+// frame choice too (ownCardRemixFrame): a card on the double-faced bodies
+// keeps both faces, at 2, where both are still verified. The same numbers size the jobs route's credit
 // pre-check and the plan's per-entry reserve (createDeckRemixJob), so what
 // the dialog shows is what the steps charge.
 // ---------------------------------------------------------------------------
@@ -31,10 +40,15 @@ export type DeckRemixEstimate = {
   doubleFaced: number;
   /** Entries beyond the batch cap. */
   skipped: number;
+  /** Emblems left out (owner 2026-10-13: emblems are not remixed) — own
+   *  emblem cards and printed emblems. Not in `cards`, priced nothing, no
+   *  step. */
+  emblems: number;
   /** Scryfall entries the lookup couldn't resolve — priced one credit; the
    *  step fails them plainly ("Couldn't resolve the printing") and refunds. */
   unresolved: number;
-  /** The credits per entry, by deck_cards id (every remixable entry). */
+  /** The credits per entry, by deck_cards id (every remixable entry; 0 = a
+   *  printed emblem, which the plan leaves out). */
   creditsByEntry: Record<string, number>;
 };
 
@@ -58,35 +72,57 @@ async function resolvePrintings(ids: readonly string[]): Promise<Map<string, Scr
 export async function estimateDeckRemix(deckId: string, limit: number): Promise<DeckRemixEstimate> {
   const [user, deck] = await Promise.all([getCurrentUser(), getDeckById(deckId)]);
   if (!user || !deck || deck.owner_id !== user.id) {
-    return { cards: 0, credits: 0, doubleFaced: 0, skipped: 0, unresolved: 0, creditsByEntry: {} };
+    return { cards: 0, credits: 0, doubleFaced: 0, skipped: 0, emblems: 0, unresolved: 0, creditsByEntry: {} };
   }
   const items = await listDeckCards(deckId);
-  const remixable = items.filter((item) => item.entry.card_id || item.entry.scryfall_id);
+  // The user's own emblems are left out before the batch cap (they take no
+  // slot); a printed emblem is found below, once its printing is resolved.
+  const { remixable, ownEmblems } = remixableDeckItems(items);
   const taken = remixable.slice(0, Math.max(1, limit));
   const estimate: DeckRemixEstimate = {
     cards: taken.length,
     credits: 0,
     doubleFaced: 0,
     skipped: Math.max(0, remixable.length - taken.length),
+    emblems: ownEmblems,
     unresolved: 0,
     creditsByEntry: {},
   };
   if (taken.length === 0) return estimate;
 
   const ids = Array.from(
-    new Set(taken.map((item) => item.entry.scryfall_id).filter((id): id is string => Boolean(id))),
+    new Set(
+      taken
+        // The step remixes an entry's own card before its printing.
+        .filter((item) => !item.entry.card_id)
+        .map((item) => item.entry.scryfall_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
   );
   const printings = ids.length > 0 ? await resolvePrintings(ids) : new Map<string, ScryfallCard>();
   const verifiedKeys = new Set(await getVerifiedFrameKeys());
 
-  for (const { entry } of taken) {
+  for (const { entry, card: ownCard } of taken) {
     let credits = 1;
-    if (entry.scryfall_id) {
+    if (entry.card_id) {
+      // An unreadable card is priced one; the step fails it plainly
+      // ("Source card is gone") and refunds.
+      if (ownCard) credits = remixCreditsOf(ownCardRemixFrame(ownCard, verifiedKeys));
+    } else if (entry.scryfall_id) {
       const card = printings.get(entry.scryfall_id);
       if (!card) {
         estimate.unresolved += 1;
       } else {
-        const resolved = scryfallRemixMechanics(mapScryfallToFormPatch(card), entry.name, verifiedKeys);
+        const patch = mapScryfallToFormPatch(card);
+        if (isEmblemRemixSource(patch)) {
+          // A printed emblem: left out — no step, no credit. The 0 is what
+          // tells the plan to drop it (createDeckRemixJob).
+          estimate.emblems += 1;
+          estimate.cards -= 1;
+          estimate.creditsByEntry[entry.id] = 0;
+          continue;
+        }
+        const resolved = scryfallRemixMechanics(patch, entry.name, verifiedKeys);
         if (resolved.ok) credits = remixCreditsOf(resolved.mechanics);
       }
     }
