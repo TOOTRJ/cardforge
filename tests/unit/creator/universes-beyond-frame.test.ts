@@ -14,6 +14,7 @@ import {
   roundTriangleDistance,
 } from "@/lib/cards/holo-stamp";
 import { HOLO_STAMP_OVAL_ART, HOLO_STAMP_TRIANGLE_ART, holoStampArtOf } from "@/lib/cards/holo-stamp-art";
+import { TRIANGLE_STAMP_HELP, holoStampChipOptions } from "@/components/creator/panels/collector-panel";
 import { M15_FAMILY_TEMPLATES } from "@/lib/cards/m15-family";
 import { PLATE_INK } from "@/lib/cards/plate-ink";
 import { M15UB_HOLO_STAMP, M15_COLLECTOR, M15_CROWN, M15_HOLO_STAMP, UB_CROWN, getFrameProfile } from "@/lib/cards/template-layout";
@@ -165,6 +166,13 @@ describe("the triangle stamp", () => {
     expect(M15UB_HOLO_STAMP.anatomy === "holoStamp" && M15UB_HOLO_STAMP.stamp.shape).toBe("triangle");
   });
 
+  it("the creator's chips write this frame's shape, and the row says triangle", () => {
+    expect(holoStampChipOptions("triangle").map((o) => o.value)).toEqual(["auto", "triangle", "none"]);
+    expect(holoStampChipOptions("oval").map((o) => o.value)).toEqual(["auto", "oval", "none"]);
+    expect(TRIANGLE_STAMP_HELP).toMatch(/triangle/);
+    expect(TRIANGLE_STAMP_HELP).not.toMatch(/oval/);
+  });
+
   it("each shape has its own art bitmap, at the art rect's proportions", () => {
     expect(holoStampArtOf("oval")).toBe(HOLO_STAMP_OVAL_ART);
     expect(holoStampArtOf("triangle")).toBe(HOLO_STAMP_TRIANGLE_ART);
@@ -189,9 +197,10 @@ describe("the triangle stamp", () => {
         if (roundTriangleDistance(UB_STAMP_FACE, x, y) <= 0) expect(roundTriangleDistance(UB_STAMP_HOLE, x, y), `${x},${y}`).toBeLessThanOrEqual(0);
       }
     }
-    // The prints' face (61 prints): top edge 1919–1921, apex 1987–1991.
-    expect(Math.min(...UB_STAMP_FACE.points.map((p) => p[1])) - UB_STAMP_FACE.radius).toBeCloseTo(1920.9, 1);
-    expect(Math.max(...UB_STAMP_FACE.points.map((p) => p[1])) + UB_STAMP_FACE.radius).toBeCloseTo(1987.7, 1);
+    // The prints' silver (61 prints): top edge 1919, apex 1991 — the face's
+    // edge less its 2 px keyline.
+    expect(Math.min(...UB_STAMP_FACE.points.map((p) => p[1])) - UB_STAMP_FACE.radius + 2).toBeCloseTo(1920.1, 1);
+    expect(Math.max(...UB_STAMP_FACE.points.map((p) => p[1])) + UB_STAMP_FACE.radius - 2).toBeCloseTo(1992, 1);
     expect(HOLO_STAMP_ART_MARGIN_PX).toBeGreaterThan(HOLO_STAMP_CUT_MARGIN_PX);
   });
 

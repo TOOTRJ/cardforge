@@ -162,13 +162,14 @@ export const UB_STAMP_HOLE: RoundTriangle = {
   radius: 6.7,
 };
 
-/** The silver FACE our art draws, on the prints (61 mono Universes Beyond
- *  spells, 40K 2022 → FIN 2025, medians at HD): top edge 1919 px, 688–814 px
- *  wide 8 px below it, 708–793 at row 1950, the apex at 1991 — the hole's
- *  top corners with the apex 8.5 px higher, 3 px inside the black. */
+/** The FACE our art draws (its 2 px keyline included), on the prints (61
+ *  mono Universes Beyond spells, 40K 2022 → FIN 2025, medians at HD): the
+ *  silver's top edge at 1919 px, 688–814 px wide 8 px below it, 708–793 at
+ *  row 1950, the apex at 1991 — the hole's top corners with the apex 5 px
+ *  higher, a hair inside the hole all round. */
 export const UB_STAMP_FACE: RoundTriangle = {
-  points: [[687.1, 1924.6], [812.1, 1924.6], [749.6, 1984]],
-  radius: 3.7,
+  points: [[687.1, 1924.6], [812.1, 1924.6], [749.6, 1987.5]],
+  radius: 6.5,
 };
 
 const pctX = (px: number) => (px / 1500) * 100;
