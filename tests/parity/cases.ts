@@ -79,6 +79,18 @@ const PICKS: readonly Pick[] = [
   // --- the Nyx dress (TODO 4.7): the starfield masters, their own crown band --
   { from: "m15nyx/w/creature-short", why: "Nyx: the starfield master under M15's slots and plate" },
   { from: "m15nyx/wu/creature-long@pair-crown", why: "Nyx: the two-colour pair master and the Nyx crown band (the starfield strip inside the crown)" },
+  // --- Beleren's ffi ligature (found by the independent check of #542) -------
+  // The Nyx dress's first case ("Enchantment Creature — Griffin") measured a
+  // worst tile over the HD limit and was swapped for a plainer card. It is
+  // not the frame: the same line on plain m15 measures the same, and a line
+  // of the same length without "ffi" does not. Held here on the plain frame
+  // (tests/parity/thresholds.ts "hd-beleren-ffi-ligature").
+  {
+    from: "m15/w/creature-short",
+    as: "@ffi-ligature",
+    why: "a type line with \"ffi\" (Griffin): Chromium sets Beleren's ffi ligature, Satori never forms it",
+    row: () => ({ supertype: "Enchantment", subtypes: ["Griffin"] }),
+  },
   // --- art away from its default position (a coded picture) ----------------
   {
     from: "m15/r/creature-short",

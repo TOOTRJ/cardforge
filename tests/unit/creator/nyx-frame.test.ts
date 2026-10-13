@@ -360,6 +360,36 @@ describe("AI and random frames (resolveGeneratedFrame)", () => {
     ).toBe("m15nyx");
   });
 
+  it("an unpublished Nyx frame never costs a card the frame another rule named (production's list today)", () => {
+    // Found by the independent check of #542, enumerating every input on
+    // production's list against main: an Enchantment Artifact that is no
+    // Vehicle, asked onto the Vehicle frame, means that frame's base — the
+    // artifact frame. Chaining the Nyx follow onto that answer named the
+    // unpublished Nyx frame instead and the card fell to a RANDOM frame.
+    const relic = { cardType: "artifact", supertype: "Enchantment", subtypes: [], title: "Relic" };
+    for (const colour of ["white", "blue", "black", "red", "green", "colorless"] as const) {
+      for (const roll of [0, 0.5, 0.99]) {
+        expect(
+          resolveGeneratedFrame({ cardType: "artifact", requested: "m15vehicle", colorIdentity: [colour], verifiedKeys: PROD, face: relic, random: () => roll }),
+          colour,
+        ).toBe("m15artifact");
+      }
+    }
+    // …and once the Nyx frame is published in the colour, the follow wins.
+    expect(
+      resolveGeneratedFrame({ cardType: "artifact", requested: "m15vehicle", colorIdentity: ["blue"], verifiedKeys: withNyx("u"), face: relic }),
+    ).toBe("m15nyx");
+    // On production's list no input lands on the Nyx frame, asked for or not.
+    const creature = { cardType: "creature", supertype: "Enchantment", subtypes: ["Spirit"], title: "Eidolon", power: "2", toughness: "2" };
+    for (const requested of ["m15", "m15nyx", "random"] as const) {
+      for (const roll of [0, 0.25, 0.5, 0.75, 0.99]) {
+        expect(
+          resolveGeneratedFrame({ cardType: "creature", requested, colorIdentity: ["white"], verifiedKeys: PROD, face: creature, random: () => roll }),
+        ).not.toBe("m15nyx");
+      }
+    }
+  });
+
   it("never moves a plain enchantment there by itself — and gives it the frame when it is asked for by name", () => {
     const aura = { cardType: "enchantment", supertype: "", subtypes: ["Aura"], title: "Pacifism" };
     expect(resolveGeneratedFrame({ cardType: "enchantment", requested: "m15", colorIdentity: ["white"], verifiedKeys: both, face: aura })).toBe("m15");

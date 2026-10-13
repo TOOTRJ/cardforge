@@ -157,7 +157,15 @@ export function resolveGeneratedFrame(input: {
   const pool = drawn.length > 0 ? drawn : dressed;
 
   if (requested !== "random") {
-    const vehicle = enchantmentFrameFor(kind, subtypeFrameFor(requested, face?.subtypes), type);
+    // The subtype's answer first (a request for the Vehicle frame on a card
+    // that is no Vehicle means its base), THEN the enchantment dress of
+    // that answer — but only where the dress is published in the card's
+    // colour: an unpublished Nyx frame must never cost the card the base the
+    // subtype rule named (an Enchantment Artifact asked onto the Vehicle
+    // frame lands on the artifact frame, as it did before the Nyx frame).
+    const bySubtype = subtypeFrameFor(requested, face?.subtypes);
+    const byWords = enchantmentFrameFor(kind, bySubtype, type);
+    const vehicle = has(byWords) ? byWords : bySubtype;
     const wanted = has(vehicle) && vehicle !== requested
       ? vehicle
       : walkerRowsFrameFor(kind, tokenFrameFor(kind, requested, tokenFace), rows);

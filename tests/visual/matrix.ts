@@ -1386,6 +1386,15 @@ export function visualCases(): VisualCase[] {
     suffix: "@pair-hybrid-crown",
     row: { ...pairStyle("m15borderless", "regular", true), cost: "{X}{W/U}{W/U}{W/U}" },
   });
+  // The Nyx dress's hybrid dress (TODO 4.7; added by the independent check
+  // of #542 — its ten `<pair>-h` masters were published and baked by no
+  // case): the two starfields across the frame ramp under the grey bars, and
+  // the split Nyx crown band over it.
+  add("m15nyx", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15nyx"), cost: "{W/U}{W/U}" } });
+  add("m15nyx", "creature", "wu", "long", {
+    suffix: "@pair-hybrid-crown",
+    row: { ...pairStyle("m15nyx", "regular", true), cost: "{X}{W/U}{W/U}{W/U}" },
+  });
   add("m15", "creature", "wu", "short", { suffix: "@pair-foil", finish: "foil", row: pairStyle("m15", "foil") });
   add("m15", "creature", "wu", "long", {
     suffix: "@pair-etched",
