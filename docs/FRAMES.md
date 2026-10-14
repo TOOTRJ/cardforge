@@ -3118,8 +3118,8 @@ and a **see-through text box cut into bands**: a top band (abilities and
 the Station reminder), then one band per charge tier, each with an "N+"
 badge on the box's left pinline, and the card's P/T on a black plate with
 white digits on the tier that makes it a creature. PR 1 ships the body
-(masters, profiles, layout, both renderers); the creator's tier editor,
-the import and the AI follow (PRs 2–3). Until the owner verifies a colour
+(masters, profiles, layout, both renderers); PR 2 the creator's tier
+editor and the follow; PR 3 the AI and the editor's notes. Until the owner verifies a colour
 nobody is offered the frames (an admin: `?previewFrames=m15station`).
 
 **What the prints show** (30 bordered station printings against 16 M15
@@ -3331,12 +3331,117 @@ The disabled chips say why ("The Spacecraft frame is for Spacecraft", "…
 for Planets"), and the picker tile draws its sample art under the whole
 frame.
 
-**Before a tick.** After PR 2 a maker can build, edit and remix a station
-card, and a bordered printing's import lands on the frame with its tiers
-drawn from the oracle text. Still open: the AI (a generated Spacecraft
-follows its subtype onto a verified frame, and nothing teaches the designer
-or the lint the tier grammar — it would land with no tier and its P/T
-undrawn) and the mapper's rows — PR 3; the other dresses — PR 4.
+**The tier editor's notes** (PR 3; `lib/creator/station-fit.ts` — readers of
+the layout and of the save's rule, nothing blocked, no renderer reads them;
+both are part of the tier group's description, `aria-describedby`, never a
+live region):
+
+- *The text does not fit* (owner round 58, decision 2): the bands whose
+  text is really CUT, read from the layout of the card the preview draws
+  (the same profile, P/T tier, flavour text and stamp). Not the layout's
+  `clipped` flag, which is also set when no size leaves every band its
+  minimum air — a card that is drawn whole. A band is cut when its own
+  `RulesLayout.clipped` says so at either bake target; a card with more
+  text than the whole box says so once.
+- *A band over 600 characters* (the row limit of `face_content`, the
+  walker's and the saga's — not raised): the save keeps the card's tiers as
+  lines of text, which draw the same bands, and the one thing only the rows
+  hold is lost — a P/T on another tier than the text plates. The save did
+  that without a word; the editor now says so before it, and names the tier
+  the plate goes back to.
+
+A Planet's rows mark no tier (`stationShowsPt`; they carried `pt: true`,
+never drawn). A tier line ending in `\r` reads as a tier
+(`parseStationText` splits on `\r\n`, `\r` and `\n` — a text saved through
+the API with Windows line ends used to draw a top band alone; this is the
+one line of this PR a renderer reads, and it changes no card whose text has
+`\n` line ends). A fourth tier line that becomes a tier of its own when
+another is removed is not typeset by the server (`storedRowTexts` reads
+every tier line the stored text holds).
+
+**The AI and the frame** (PR 3; `lib/ai/station-design.ts`, pure — the
+prompt's rules, the lint, the autofix, the fill's merge and the job's rows
+— on the ONE design engine every flow runs through, `designCards`).
+
+*What print does* (Scryfall `keyword:station`, one row per card,
+2026-10-14: 35 cards — 30 Spacecraft, 5 Planets; 32 in paper, 3 Arena-only;
+`tests/unit/ai/fixtures/station-printed.json`, counted by
+`station-design.test.ts`):
+
+| | print |
+| --- | --- |
+| Type line | "Artifact — Spacecraft" 30 of 30 (8 Legendary), never "Artifact Creature"; "Land — Planet" 5 of 5 |
+| Tiers | one on 27 cards (22 Spacecraft, 5 Planets), two on 8 (all Spacecraft), three on none |
+| Numbers | 1+ … 20+, rising. A lone Spacecraft tier 3+ … 20+ (7+ six times, 8+ five); of two, the first 1+ … 3+ on 7 of 8 and the last 8+ … 20+; every Planet 12+ |
+| The Station line | the LAST line of the top band on 35 of 35; word for word on the 32 paper cards: "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at N+.)" — a Planet "on this Planet", ending at "…as a sorcery.)"; the 3 Arena-only cards the bare word |
+| N | the last tier's number on all 26 paper Spacecraft with a P/T; The Eternity Elevator (no P/T) has no creature sentence |
+| P/T | 29 of 30 Spacecraft, on the last tier, whose first line is a keyword line starting with "Flying" on 28 of 29; no Planet |
+| Before the Station line | nothing on 10 Spacecraft (all 8 two-tier ones), one ability on 19, two on 1; a Planet two ("This land enters tapped." and its mana ability) |
+| Length | whole texts 144–423 characters, a tier 6–183 |
+
+*The designer* is told exactly that (`STATION_DESIGN_RULES`, with one
+example card, in the system prompt of every design call) — only for a card
+it chooses to make a Spacecraft or a Planet. *The lint*
+(`stationDesignProblems`, errors of `lintCardDesign`) holds an ARTIFACT
+whose subtypes say Spacecraft and a LAND whose subtypes say Planet — the
+frames' own gate, `SUBTYPE_DRESSES` — to it: at least one tier line, at
+most three, numbers rising, no empty tier, no band over 600 characters, and
+the Station line as the last line of the top band, word for word, its N one
+of the card's tiers (the creature sentence only with a P/T; never on a
+Planet). Every paper printing passes it. Nothing is said about any other
+card. *The judge* is asked to fix what is named and keep the shape. *The
+autofix* (`repairStationText`) then repairs by machine what is left: tier
+lines spelled another way ("8+: Flying", "8+ — …", "STATION 8+ | …"), empty
+tiers, numbers out of order, tiers past the third (folded into the third)
+and the Station line — and returns a text with NO tier line unchanged: a
+machine does not invent a tier.
+
+*The frame.* `resolveGeneratedFrame` never picks a station frame for a text
+with no tier (`stationFrameFits`): the frame prints the P/T on a tier and
+nowhere else. Such a card falls back to its base — the Artifact / Land
+frame — asked for by name or at random, as every other dress falls back.
+(The creator has no such gate: a maker on the frame sees the tier editor
+and the "add a tier" note.) A generated DECK names no frame at all: its
+Spacecraft save frameless, on the default frame.
+
+*The save.* A card an AI job saves on a station frame is saved as the
+creator saves a new one (`stationSaveFields`): the canonical text beside
+`face_content.station`, the P/T on the tier the text plates. Off the frame,
+or for a text with no tier, nothing is added to the payload.
+
+*The remix* copies its source's rules and only swaps the card's names in
+them, so the tiers are the source's: a printed Spacecraft or Planet lands
+on the station frame once that is verified in its colour (the import's
+landing) with its tiers as rows; an own card keeps its frame, its rows and
+the tier its maker put the P/T on (and, where its rows say another text
+than `rules_text`, the rows — what the card shows). A new name that made or
+unmade a tier line fails the step before the save (`sameStationShape`).
+
+*The per-field fill.* The engine lints the card the MODEL returned; a fill
+keeps only the wanted fields, so `designCardFill` puts the designed text in
+shape for the card the FORM holds. On a card that already has tiers the
+form sends them (`locked.station_text`, on a station frame only): the
+designer is told the layout, and **a tier left empty is the only line a
+fill of the rules text writes** — every other line is kept byte for byte
+(`mergeStationFill`). The maker's "power / toughness on this tier" follows
+its tier by number into the filled text (`stationPtChoiceAfterFill`); a
+fill used to reset it.
+
+*The ideas dialog* runs the same engine: an idea for a Spacecraft carries
+its tiers.
+
+What every other card saves through these paths is pinned to `origin/main`
+byte for byte (`tests/unit/ai/job-payloads-pinned.test.ts`: 54 payloads —
+the card, deck and remix steps, the plans, the fill — recorded on main's
+`lib/`), with the credits each reserves; the station cards are
+`station-jobs.test.ts`.
+
+**Before a tick.** After PR 3 every path that can reach a ticked station
+frame hands it a card it draws: the creator (PR 2), the import of a
+bordered printing, and the AI — generation, fill, ideas and both remixes.
+What is left is PR 4 (the extended-art, borderless and showcase dresses
+keep their own landing until then — never the station frame) and the
+owner's eye on the frame itself.
 
 **Rollout.** PR 1 was an ADDITION: new templates no stored card sits on —
 no layout bump, no sweep, no badge, no migration. PR 2's corrections of the

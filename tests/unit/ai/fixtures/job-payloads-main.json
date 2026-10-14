@@ -1,0 +1,1913 @@
+{
+ "card step · creature": {
+  "saved": {
+   "title": "Emberwake Tyrant",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{3}{R}{R}",
+   "color_identity": [
+    "red"
+   ],
+   "card_type": "creature",
+   "subtypes": [
+    "Dragon"
+   ],
+   "rarity": "rare",
+   "rules_text": "Flying, haste\nWhenever Emberwake Tyrant attacks, it deals 2 damage to each player.",
+   "flavor_text": "Its allies learned to fly behind it.",
+   "power": "4",
+   "toughness": "4",
+   "visibility": "private",
+   "artist_credit": "Tester",
+   "frame_style": {
+    "template": "m15"
+   }
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Card",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_random_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "card step · creature, no frame": {
+  "saved": {
+   "title": "Emberwake Tyrant",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{3}{R}{R}",
+   "color_identity": [
+    "red"
+   ],
+   "card_type": "creature",
+   "subtypes": [
+    "Dragon"
+   ],
+   "rarity": "rare",
+   "rules_text": "Flying, haste\nWhenever Emberwake Tyrant attacks, it deals 2 damage to each player.",
+   "flavor_text": "Its allies learned to fly behind it.",
+   "power": "4",
+   "toughness": "4",
+   "visibility": "private",
+   "artist_credit": "Tester"
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Card",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_random_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "card step · instant": {
+  "saved": {
+   "title": "Riptide Calculus",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{1}{U}{U}",
+   "color_identity": [
+    "blue"
+   ],
+   "card_type": "instant",
+   "subtypes": [],
+   "rarity": "rare",
+   "rules_text": "Counter target spell unless its controller pays {2}. Draw a card.",
+   "flavor_text": "Its allies learned to fly behind it.",
+   "visibility": "private",
+   "artist_credit": "Tester",
+   "frame_style": {
+    "template": "m15"
+   }
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Card",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_random_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "card step · artifact (Equipment)": {
+  "saved": {
+   "title": "Gearwright's Maul",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{2}",
+   "color_identity": [
+    "colorless"
+   ],
+   "card_type": "artifact",
+   "subtypes": [
+    "Equipment"
+   ],
+   "rarity": "rare",
+   "rules_text": "Equipped creature gets +2/+1.\nEquip {2}",
+   "visibility": "private",
+   "artist_credit": "Tester",
+   "frame_style": {
+    "template": "m15artifact"
+   }
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Card",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_random_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "card step · artifact (Vehicle, on its frame)": {
+  "saved": {
+   "title": "Skiff of Nine Lanterns",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{3}",
+   "color_identity": [
+    "colorless"
+   ],
+   "card_type": "artifact",
+   "subtypes": [
+    "Vehicle"
+   ],
+   "rarity": "rare",
+   "rules_text": "Flying\nCrew 2",
+   "power": "3",
+   "toughness": "3",
+   "visibility": "private",
+   "artist_credit": "Tester",
+   "frame_style": {
+    "template": "m15vehicle"
+   }
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Card",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_random_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "card step · artifact with 'N+ |' lines": {
+  "saved": {
+   "title": "Counting Engine",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{4}",
+   "color_identity": [
+    "colorless"
+   ],
+   "card_type": "artifact",
+   "subtypes": [],
+   "rarity": "rare",
+   "rules_text": "Station\n3+ | {T}: Draw a card.\n8+ | {T}: Draw two cards.",
+   "visibility": "private",
+   "artist_credit": "Tester",
+   "frame_style": {
+    "template": "m15artifact"
+   }
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Card",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_random_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "card step · creature that says Spacecraft": {
+  "saved": {
+   "title": "Living Hull",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{4}",
+   "color_identity": [
+    "colorless"
+   ],
+   "supertype": "Artifact",
+   "card_type": "creature",
+   "subtypes": [
+    "Spacecraft"
+   ],
+   "rarity": "rare",
+   "rules_text": "Flying",
+   "flavor_text": "Its allies learned to fly behind it.",
+   "power": "3",
+   "toughness": "3",
+   "visibility": "private",
+   "artist_credit": "Tester",
+   "frame_style": {
+    "template": "m15artifact"
+   }
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Card",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_random_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "card step · land": {
+  "saved": {
+   "title": "Cinderfall Reach",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "—",
+   "color_identity": [
+    "red"
+   ],
+   "card_type": "land",
+   "subtypes": [],
+   "rarity": "rare",
+   "rules_text": "{T}: Add {R}.",
+   "visibility": "private",
+   "artist_credit": "Tester",
+   "frame_style": {
+    "template": "m15land"
+   }
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Card",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_random_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "card step · planeswalker": {
+  "saved": {
+   "title": "Veyra, Tide Oracle",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{2}{U}{U}",
+   "color_identity": [
+    "blue"
+   ],
+   "supertype": "Legendary",
+   "card_type": "planeswalker",
+   "subtypes": [
+    "Veyra"
+   ],
+   "rarity": "rare",
+   "rules_text": "+1: Draw a card.\n-3: Return target creature to its owner's hand.",
+   "loyalty": "4",
+   "visibility": "private",
+   "artist_credit": "Tester",
+   "frame_style": {
+    "template": "m15pw"
+   }
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Card",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_random_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "card step · token (Treasure)": {
+  "saved": {
+   "title": "Treasure",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "—",
+   "color_identity": [
+    "colorless"
+   ],
+   "supertype": "Artifact",
+   "card_type": "token",
+   "subtypes": [
+    "Treasure"
+   ],
+   "rarity": "common",
+   "rules_text": "{T}, Sacrifice this artifact: Add one mana of any color.",
+   "visibility": "private",
+   "artist_credit": "Tester",
+   "frame_style": {
+    "template": "m15tokenartifacttext"
+   }
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Card",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_random_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "card step · enchantment creature": {
+  "saved": {
+   "title": "Lanternhollow Muse",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{1}{W}",
+   "color_identity": [
+    "white"
+   ],
+   "supertype": "Enchantment",
+   "card_type": "creature",
+   "subtypes": [
+    "Spirit"
+   ],
+   "rarity": "rare",
+   "rules_text": "Vigilance",
+   "flavor_text": "Its allies learned to fly behind it.",
+   "power": "2",
+   "toughness": "1",
+   "visibility": "private",
+   "artist_credit": "Tester",
+   "frame_style": {
+    "template": "m15nyx"
+   }
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Card",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_random_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "deck step · creature": {
+  "saved": {
+   "title": "Emberwake Tyrant",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{3}{R}{R}",
+   "color_identity": [
+    "red"
+   ],
+   "supertype": "Legendary",
+   "card_type": "creature",
+   "subtypes": [
+    "Dragon"
+   ],
+   "rarity": "rare",
+   "rules_text": "Flying, haste\nWhenever Emberwake Tyrant attacks, it deals 2 damage to each player.",
+   "flavor_text": "Its allies learned to fly behind it.",
+   "power": "4",
+   "toughness": "4",
+   "visibility": "private",
+   "artist_credit": "Tester",
+   "deck_id": "deck-1"
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Card",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_deck"
+   }
+  ],
+  "refunds": 0
+ },
+ "deck step · artifact (Vehicle, on its frame)": {
+  "saved": {
+   "title": "Skiff of Nine Lanterns",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{3}",
+   "color_identity": [
+    "colorless"
+   ],
+   "card_type": "artifact",
+   "subtypes": [
+    "Vehicle"
+   ],
+   "rarity": "rare",
+   "rules_text": "Flying\nCrew 2",
+   "power": "3",
+   "toughness": "3",
+   "visibility": "private",
+   "artist_credit": "Tester",
+   "deck_id": "deck-1"
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Card",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_deck"
+   }
+  ],
+  "refunds": 0
+ },
+ "deck step · artifact with 'N+ |' lines": {
+  "saved": {
+   "title": "Counting Engine",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{4}",
+   "color_identity": [
+    "colorless"
+   ],
+   "card_type": "artifact",
+   "subtypes": [],
+   "rarity": "rare",
+   "rules_text": "Station\n3+ | {T}: Draw a card.\n8+ | {T}: Draw two cards.",
+   "visibility": "private",
+   "artist_credit": "Tester",
+   "deck_id": "deck-1"
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Card",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_deck"
+   }
+  ],
+  "refunds": 0
+ },
+ "deck step · land": {
+  "saved": {
+   "title": "Cinderfall Reach",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "—",
+   "color_identity": [
+    "red"
+   ],
+   "card_type": "land",
+   "subtypes": [],
+   "rarity": "rare",
+   "rules_text": "{T}: Add {R}.",
+   "visibility": "private",
+   "artist_credit": "Tester",
+   "deck_id": "deck-1"
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Card",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_deck"
+   }
+  ],
+  "refunds": 0
+ },
+ "remix printing · lea-255": {
+  "saved": {
+   "title": "Remixed Name",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{4}",
+   "color_identity": [
+    "colorless"
+   ],
+   "supertype": "Artifact",
+   "card_type": "creature",
+   "subtypes": [
+    "Juggernaut"
+   ],
+   "rarity": "uncommon",
+   "flavor_text": "New flavour.",
+   "power": "5",
+   "toughness": "3",
+   "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+   "frame_style": {
+    "template": "agclassic",
+    "collector": "off",
+    "stamp": "none"
+   },
+   "source_scryfall_id": "dcd6a291-5282-4f49-8203-d9b416083c48",
+   "visibility": "public",
+   "artist_credit": "Tester",
+   "deck_id": "deck-1"
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Remixed Name",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_deck"
+   }
+  ],
+  "refunds": 0
+ },
+ "remix printing · m21-239": {
+  "saved": {
+   "title": "Remixed Name",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{4}",
+   "color_identity": [
+    "colorless"
+   ],
+   "supertype": "Artifact",
+   "card_type": "creature",
+   "subtypes": [
+    "Golem"
+   ],
+   "rarity": "rare",
+   "flavor_text": "New flavour.",
+   "power": "2",
+   "toughness": "2",
+   "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+   "frame_style": {
+    "template": "m15artifact",
+    "collector": "2015",
+    "stamp": "oval"
+   },
+   "source_scryfall_id": "7bbd2cab-538e-4932-a828-150e3e9d52ad",
+   "visibility": "public",
+   "artist_credit": "Tester",
+   "deck_id": "deck-1"
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Remixed Name",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_deck"
+   }
+  ],
+  "refunds": 0
+ },
+ "remix printing · mrd-283": {
+  "saved": {
+   "title": "Remixed Name",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "",
+   "color_identity": [
+    "blue"
+   ],
+   "supertype": "Artifact",
+   "card_type": "land",
+   "subtypes": [],
+   "rarity": "common",
+   "flavor_text": "New flavour.",
+   "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+   "frame_style": {
+    "template": "modernland",
+    "collector": "off",
+    "stamp": "none"
+   },
+   "source_scryfall_id": "5da5587d-6b6c-4645-8cc9-2866d1e6911b",
+   "visibility": "public",
+   "artist_credit": "Tester",
+   "deck_id": "deck-1"
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Remixed Name",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_deck"
+   }
+  ],
+  "refunds": 0
+ },
+ "remix printing · dom-168": {
+  "saved": {
+   "title": "Remixed Name",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{G}",
+   "color_identity": [
+    "green"
+   ],
+   "card_type": "creature",
+   "subtypes": [
+    "Elf",
+    "Druid"
+   ],
+   "rarity": "common",
+   "flavor_text": "New flavour.",
+   "power": "1",
+   "toughness": "1",
+   "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+   "frame_style": {
+    "template": "m15",
+    "collector": "2015",
+    "stamp": "none"
+   },
+   "source_scryfall_id": "581b7327-3215-4a4f-b4ae-d9d4002ba882",
+   "visibility": "public",
+   "artist_credit": "Tester",
+   "deck_id": "deck-1"
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Remixed Name",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_deck"
+   }
+  ],
+  "refunds": 0
+ },
+ "remix printing · c17-11": {
+  "saved": {
+   "title": "Remixed Name",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{3}{U}{U}",
+   "color_identity": [
+    "blue"
+   ],
+   "card_type": "enchantment",
+   "subtypes": [],
+   "rarity": "rare",
+   "flavor_text": "New flavour.",
+   "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+   "frame_style": {
+    "template": "m15",
+    "collector": "2015",
+    "stamp": "oval"
+   },
+   "source_scryfall_id": "ed07b7be-bd3d-4dbc-bc92-b5478d3604c6",
+   "visibility": "public",
+   "artist_credit": "Tester",
+   "deck_id": "deck-1"
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Remixed Name",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_deck"
+   }
+  ],
+  "refunds": 0
+ },
+ "remix printing · tmsh-27": {
+  "saved": {
+   "title": "Remixed Name",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "",
+   "color_identity": [
+    "colorless"
+   ],
+   "supertype": "Artifact",
+   "card_type": "token",
+   "subtypes": [
+    "Treasure"
+   ],
+   "rarity": "common",
+   "flavor_text": "New flavour.",
+   "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+   "frame_style": {
+    "template": "m20tokenartifacttext",
+    "collector": "2023",
+    "star": true,
+    "stamp": "none"
+   },
+   "source_scryfall_id": "cec5cc8b-bc15-415a-bde6-6c783f8d0b0b",
+   "visibility": "public",
+   "artist_credit": "Tester",
+   "deck_id": "deck-1"
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Remixed Name",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_deck"
+   }
+  ],
+  "refunds": 0
+ },
+ "remix printing · eld-115": {
+  "saved": {
+   "title": "Remixed Name",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{2}{R}",
+   "color_identity": [
+    "red"
+   ],
+   "card_type": "creature",
+   "subtypes": [
+    "Giant"
+   ],
+   "rarity": "rare",
+   "flavor_text": "New flavour.",
+   "power": "4",
+   "toughness": "3",
+   "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+   "frame_style": {
+    "template": "adventure",
+    "collector": "2015",
+    "stamp": "oval"
+   },
+   "back_face": {
+    "title": "Remixed Page",
+    "cost": "{1}{R}",
+    "card_type": "instant",
+    "subtypes": [
+     "Adventure"
+    ]
+   },
+   "source_scryfall_id": "09fd2d9c-1793-4beb-a3fb-7a869f660cd4",
+   "visibility": "public",
+   "artist_credit": "Tester",
+   "deck_id": "deck-1"
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Remixed Name // Remixed Page",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_deck"
+   }
+  ],
+  "refunds": 0
+ },
+ "remix printing · dmr-215": {
+  "saved": {
+   "title": "Remixed Name",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{1}{R}",
+   "color_identity": [
+    "multicolor"
+   ],
+   "card_type": "instant",
+   "subtypes": [],
+   "rarity": "uncommon",
+   "flavor_text": "New flavour.",
+   "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+   "frame_style": {
+    "template": "split",
+    "twoColor": true,
+    "collector": "2015",
+    "stamp": "none"
+   },
+   "back_face": {
+    "title": "Remixed Page",
+    "cost": "{1}{U}",
+    "card_type": "instant",
+    "subtypes": []
+   },
+   "source_scryfall_id": "18303862-4726-4136-814f-157aa7006579",
+   "visibility": "public",
+   "artist_credit": "Tester",
+   "deck_id": "deck-1"
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Remixed Name // Remixed Page",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_deck"
+   }
+  ],
+  "refunds": 0
+ },
+ "remix printing · isd-51": {
+  "saved": {
+   "title": "Remixed Name",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{U}",
+   "color_identity": [
+    "blue"
+   ],
+   "card_type": "creature",
+   "subtypes": [
+    "Human",
+    "Wizard"
+   ],
+   "rarity": "common",
+   "flavor_text": "New flavour.",
+   "power": "1",
+   "toughness": "1",
+   "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+   "frame_style": {
+    "template": "m15",
+    "collector": "off",
+    "stamp": "none"
+   },
+   "source_scryfall_id": "11bf83bb-c95b-4b4f-9a56-ce7a1816307a",
+   "visibility": "public",
+   "artist_credit": "Tester",
+   "deck_id": "deck-1"
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Remixed Name",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_deck"
+   }
+  ],
+  "refunds": 0
+ },
+ "remix printing · neo-141": {
+  "saved": {
+   "title": "Remixed Name",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{2}{R}",
+   "color_identity": [
+    "red"
+   ],
+   "card_type": "enchantment",
+   "subtypes": [
+    "Saga"
+   ],
+   "rarity": "rare",
+   "flavor_text": "New flavour.",
+   "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+   "frame_style": {
+    "template": "saga",
+    "collector": "2015",
+    "stamp": "oval"
+   },
+   "source_scryfall_id": "24c0d87b-0049-4beb-b9cb-6f813b7aa7dc",
+   "visibility": "public",
+   "artist_credit": "Tester",
+   "deck_id": "deck-1"
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Remixed Name",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_deck"
+   }
+  ],
+  "refunds": 0
+ },
+ "remix printing · c13-281": {
+  "saved": {
+   "title": "Remixed Name",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "",
+   "color_identity": [
+    "multicolor"
+   ],
+   "card_type": "land",
+   "subtypes": [],
+   "rarity": "common",
+   "flavor_text": "New flavour.",
+   "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+   "frame_style": {
+    "template": "modernland",
+    "collector": "off",
+    "stamp": "none"
+   },
+   "source_scryfall_id": "7b2de1d7-0b13-423b-b0ca-31eb38b5b81f",
+   "visibility": "public",
+   "artist_credit": "Tester",
+   "deck_id": "deck-1"
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Remixed Name",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_deck"
+   }
+  ],
+  "refunds": 0
+ },
+ "remix own card · creature": {
+  "saved": {
+   "title": "Remixed Name",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{2}{R}{R}",
+   "color_identity": [
+    "red"
+   ],
+   "supertype": "Legendary",
+   "card_type": "creature",
+   "subtypes": [
+    "Dwarf"
+   ],
+   "rarity": "rare",
+   "rules_text": "Haste\nWhenever Remixed Name attacks, it deals 1 damage to any target.",
+   "flavor_text": "New flavour.",
+   "power": "3",
+   "toughness": "4",
+   "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+   "frame_style": {
+    "template": "m15"
+   },
+   "parent_card_id": "22222222-2222-4222-8222-222222222222",
+   "visibility": "public",
+   "artist_credit": "Tester",
+   "deck_id": "deck-1"
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Remixed Name",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_deck"
+   }
+  ],
+  "refunds": 0
+ },
+ "remix own card · Vehicle on the Vehicle frame": {
+  "saved": {
+   "title": "Remixed Name",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{3}",
+   "color_identity": [
+    "colorless"
+   ],
+   "card_type": "artifact",
+   "subtypes": [
+    "Vehicle"
+   ],
+   "rarity": "rare",
+   "rules_text": "Flying\nCrew 2",
+   "flavor_text": "New flavour.",
+   "power": "3",
+   "toughness": "4",
+   "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+   "frame_style": {
+    "template": "m15vehicle",
+    "crown": false
+   },
+   "parent_card_id": "22222222-2222-4222-8222-222222222222",
+   "visibility": "public",
+   "artist_credit": "Tester",
+   "deck_id": "deck-1"
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Remixed Name",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_deck"
+   }
+  ],
+  "refunds": 0
+ },
+ "remix own card · walker stored with its rows alone": {
+  "saved": {
+   "title": "Remixed Name",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{2}{U}{U}",
+   "color_identity": [
+    "blue"
+   ],
+   "supertype": "Legendary",
+   "card_type": "planeswalker",
+   "subtypes": [
+    "Veyra"
+   ],
+   "rarity": "rare",
+   "rules_text": "+1: Draw a card.\n-3: Return target creature to its owner's hand.",
+   "flavor_text": "New flavour.",
+   "loyalty": "4",
+   "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+   "frame_style": {
+    "template": "m15pw"
+   },
+   "parent_card_id": "22222222-2222-4222-8222-222222222222",
+   "visibility": "public",
+   "artist_credit": "Tester",
+   "deck_id": "deck-1"
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Remixed Name",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_deck"
+   }
+  ],
+  "refunds": 0
+ },
+ "remix own card · saga with rows": {
+  "saved": {
+   "title": "Remixed Name",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{2}{G}",
+   "color_identity": [
+    "green"
+   ],
+   "card_type": "enchantment",
+   "subtypes": [
+    "Saga"
+   ],
+   "rarity": "rare",
+   "rules_text": "I — Draw a card.\nII, III — Create a 2/2 Bear.",
+   "flavor_text": "New flavour.",
+   "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+   "frame_style": {
+    "template": "saga"
+   },
+   "parent_card_id": "22222222-2222-4222-8222-222222222222",
+   "visibility": "public",
+   "artist_credit": "Tester",
+   "deck_id": "deck-1"
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Remixed Name",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_deck"
+   }
+  ],
+  "refunds": 0
+ },
+ "remix own card · artifact holding station rows off-frame": {
+  "saved": {
+   "title": "Remixed Name",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{4}",
+   "color_identity": [
+    "colorless"
+   ],
+   "card_type": "artifact",
+   "subtypes": [
+    "Spacecraft"
+   ],
+   "rarity": "rare",
+   "rules_text": "Station\n8+ | Flying",
+   "flavor_text": "New flavour.",
+   "power": "3",
+   "toughness": "3",
+   "art_url": "https://example.supabase.co/storage/v1/object/public/card-art/11111111-1111-4111-8111-111111111111/x.png",
+   "frame_style": {
+    "template": "m15artifact"
+   },
+   "parent_card_id": "22222222-2222-4222-8222-222222222222",
+   "visibility": "public",
+   "artist_credit": "Tester",
+   "deck_id": "deck-1"
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Remixed Name",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_deck"
+   }
+  ],
+  "refunds": 0
+ },
+ "card plan · creature": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Emberwake Tyrant",
+    "cost": "{3}{R}{R}",
+    "card_type": "creature",
+    "supertype": null,
+    "subtypes": [
+     "Dragon"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "red"
+    ],
+    "rules_text": "Flying, haste\nWhenever Emberwake Tyrant attacks, it deals 2 damage to each player.",
+    "flavor_text": "Its allies learned to fly behind it.",
+    "power": "4",
+    "toughness": "4",
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "agclassic",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Emberwake Tyrant",
+    "status": "pending"
+   }
+  ],
+  "lastFrame": "fullart",
+  "prompts": [
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type creature.",
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type creature."
+  ]
+ },
+ "card plan · creature, no frame": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Emberwake Tyrant",
+    "cost": "{3}{R}{R}",
+    "card_type": "creature",
+    "supertype": null,
+    "subtypes": [
+     "Dragon"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "red"
+    ],
+    "rules_text": "Flying, haste\nWhenever Emberwake Tyrant attacks, it deals 2 damage to each player.",
+    "flavor_text": "Its allies learned to fly behind it.",
+    "power": "4",
+    "toughness": "4",
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "agclassic",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Emberwake Tyrant",
+    "status": "pending"
+   }
+  ],
+  "lastFrame": "fullart",
+  "prompts": [
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type creature.",
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type creature."
+  ]
+ },
+ "card plan · instant": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Riptide Calculus",
+    "cost": "{1}{U}{U}",
+    "card_type": "instant",
+    "supertype": null,
+    "subtypes": [],
+    "rarity": "rare",
+    "color_identity": [
+     "blue"
+    ],
+    "rules_text": "Counter target spell unless its controller pays {2}. Draw a card.",
+    "flavor_text": "Its allies learned to fly behind it.",
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "agclassic",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Riptide Calculus",
+    "status": "pending"
+   }
+  ],
+  "lastFrame": "fullart",
+  "prompts": [
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type instant.",
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type instant."
+  ]
+ },
+ "card plan · artifact (Equipment)": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Gearwright's Maul",
+    "cost": "{2}",
+    "card_type": "artifact",
+    "supertype": null,
+    "subtypes": [
+     "Equipment"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "colorless"
+    ],
+    "rules_text": "Equipped creature gets +2/+1.\nEquip {2}",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "agclassic",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Gearwright's Maul",
+    "status": "pending"
+   }
+  ],
+  "lastFrame": "fullart",
+  "prompts": [
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type artifact.",
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type artifact."
+  ]
+ },
+ "card plan · artifact (Vehicle, on its frame)": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Skiff of Nine Lanterns",
+    "cost": "{3}",
+    "card_type": "artifact",
+    "supertype": null,
+    "subtypes": [
+     "Vehicle"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "colorless"
+    ],
+    "rules_text": "Flying\nCrew 2",
+    "flavor_text": null,
+    "power": "3",
+    "toughness": "3",
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "agclassic",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Skiff of Nine Lanterns",
+    "status": "pending"
+   }
+  ],
+  "lastFrame": "fullart",
+  "prompts": [
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type artifact.",
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type artifact."
+  ]
+ },
+ "card plan · artifact with 'N+ |' lines": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Counting Engine",
+    "cost": "{4}",
+    "card_type": "artifact",
+    "supertype": null,
+    "subtypes": [],
+    "rarity": "rare",
+    "color_identity": [
+     "colorless"
+    ],
+    "rules_text": "Station\n3+ | {T}: Draw a card.\n8+ | {T}: Draw two cards.",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "agclassic",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Counting Engine",
+    "status": "pending"
+   }
+  ],
+  "lastFrame": "fullart",
+  "prompts": [
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type artifact.",
+   "Card 1: {\"title\":\"Counting Engine\",\"cost\":\"{4}\",\"card_type\":\"artifact\",\"supertype\":null,\"subtypes\":[],\"rarity\":\"rare\",\"color_identity\":[\"colorless\"],\"rules_text\":\"Station\\n3+ | {T}: Draw a card.\\n8+ | {T}: Draw two cards.\",\"flavor_text\":null,\"power\":null,\"toughness\":null,\"loyalty\":null,\"defense\":null,\"art_prompt\":\"A crimson dragon over a caldera at dawn.\"}\nFindings: [rules_text] \"Station\" isn't a known keyword and has no reminder text — add reminder text or use a standard keyword.",
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type artifact.",
+   "Card 1: {\"title\":\"Counting Engine\",\"cost\":\"{4}\",\"card_type\":\"artifact\",\"supertype\":null,\"subtypes\":[],\"rarity\":\"rare\",\"color_identity\":[\"colorless\"],\"rules_text\":\"Station\\n3+ | {T}: Draw a card.\\n8+ | {T}: Draw two cards.\",\"flavor_text\":null,\"power\":null,\"toughness\":null,\"loyalty\":null,\"defense\":null,\"art_prompt\":\"A crimson dragon over a caldera at dawn.\"}\nFindings: [rules_text] \"Station\" isn't a known keyword and has no reminder text — add reminder text or use a standard keyword."
+  ]
+ },
+ "card plan · creature that says Spacecraft": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Living Hull",
+    "cost": "{4}",
+    "card_type": "creature",
+    "supertype": "Artifact",
+    "subtypes": [
+     "Spacecraft"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "colorless"
+    ],
+    "rules_text": "Flying",
+    "flavor_text": "Its allies learned to fly behind it.",
+    "power": "3",
+    "toughness": "3",
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "agclassic",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Living Hull",
+    "status": "pending"
+   }
+  ],
+  "lastFrame": "fullart",
+  "prompts": [
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type creature.",
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type creature."
+  ]
+ },
+ "card plan · land": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Cinderfall Reach",
+    "cost": "—",
+    "card_type": "land",
+    "supertype": null,
+    "subtypes": [],
+    "rarity": "rare",
+    "color_identity": [
+     "red"
+    ],
+    "rules_text": "{T}: Add {R}.",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "alphaland",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Cinderfall Reach",
+    "status": "pending"
+   }
+  ],
+  "lastFrame": "expeditionland",
+  "prompts": [
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type land.",
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type land."
+  ]
+ },
+ "card plan · planeswalker": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Veyra, Tide Oracle",
+    "cost": "{2}{U}{U}",
+    "card_type": "planeswalker",
+    "supertype": "Legendary",
+    "subtypes": [
+     "Veyra"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "blue"
+    ],
+    "rules_text": "+1: Draw a card.\n-3: Return target creature to its owner's hand.",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": "4",
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "m15pw",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Veyra, Tide Oracle",
+    "status": "pending"
+   }
+  ],
+  "lastFrame": "m15borderlesspw",
+  "prompts": [
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type planeswalker.",
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type planeswalker."
+  ]
+ },
+ "card plan · token (Treasure)": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Treasure",
+    "cost": "—",
+    "card_type": "token",
+    "supertype": "Artifact",
+    "subtypes": [
+     "Treasure"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "colorless"
+    ],
+    "rules_text": "{T}, Sacrifice this artifact: Add one mana of any color.",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "m15tokenartifacttext",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Treasure",
+    "status": "pending"
+   }
+  ],
+  "lastFrame": "fullart",
+  "prompts": [
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type token.",
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type token."
+  ]
+ },
+ "card plan · enchantment creature": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Lanternhollow Muse",
+    "cost": "{1}{W}",
+    "card_type": "creature",
+    "supertype": "Enchantment",
+    "subtypes": [
+     "Spirit"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "white"
+    ],
+    "rules_text": "Vigilance",
+    "flavor_text": "Its allies learned to fly behind it.",
+    "power": "2",
+    "toughness": "1",
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "agclassic",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Lanternhollow Muse",
+    "status": "pending"
+   }
+  ],
+  "lastFrame": "nyx",
+  "prompts": [
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type creature.",
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type creature."
+  ]
+ },
+ "fill plan · rules text of a creature": {
+  "kind": "card_fill",
+  "plan": {
+   "want": [
+    "rules_text",
+    "flavor_text"
+   ],
+   "fields": {
+    "rules_text": "Flying, haste\nWhenever Emberwake Tyrant attacks, it deals 2 damage to each player.",
+    "flavor_text": "Its allies learned to fly behind it."
+   },
+   "art_prompt": "A crimson dragon over a caldera at dawn.",
+   "style": null,
+   "frame_template": null,
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "fill:0",
+    "label": "Emberwake Tyrant",
+    "status": "pending"
+   }
+  ],
+  "prompts": [
+   "Design exactly 1 card:\nCard 1: card_type creature. color: red. This card already exists in part. Keep these EXACTLY as given, reproducing them verbatim in your output: title \"Emberwake Tyrant\"; type line \"creature — Dragon\"; color identity red; mana cost {3}{R}{R}; stats 4/4. Design only: rules text, flavor text — make them fit the kept parts naturally."
+  ]
+ },
+ "fill step · rules text of a creature": {
+  "status": "done",
+  "fill": {
+   "rules_text": "Flying, haste\nWhenever Emberwake Tyrant attacks, it deals 2 damage to each player.",
+   "flavor_text": "Its allies learned to fly behind it.",
+   "frame_template": null,
+   "deck_id": null
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "fill plan · everything but the type of an artifact": {
+  "kind": "card_fill",
+  "plan": {
+   "want": [
+    "title",
+    "cost",
+    "rarity",
+    "rules_text",
+    "flavor_text",
+    "stats",
+    "tags"
+   ],
+   "fields": {
+    "title": "Gearwright's Maul",
+    "cost": "{2}",
+    "rarity": "rare",
+    "rules_text": "Equipped creature gets +2/+1.\nEquip {2}",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null,
+    "tags": []
+   },
+   "art_prompt": "A crimson dragon over a caldera at dawn.",
+   "style": null,
+   "frame_template": null,
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "fill:0",
+    "label": "Gearwright's Maul",
+    "status": "pending"
+   }
+  ],
+  "prompts": [
+   "Design exactly 1 card:\nCard 1: card_type artifact. color: colorless. This card already exists in part. Keep these EXACTLY as given, reproducing them verbatim in your output: type line \"artifact — Equipment\"; color identity colorless. Design only: title, mana cost, rarity, rules text, flavor text, power / toughness, tags — make them fit the kept parts naturally."
+  ]
+ },
+ "fill step · everything but the type of an artifact": {
+  "status": "done",
+  "fill": {
+   "title": "Gearwright's Maul",
+   "cost": "{2}",
+   "rarity": "rare",
+   "rules_text": "Equipped creature gets +2/+1.\nEquip {2}",
+   "flavor_text": null,
+   "power": null,
+   "toughness": null,
+   "loyalty": null,
+   "defense": null,
+   "tags": [],
+   "frame_template": null,
+   "deck_id": null
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "fill plan · rules text of a Vehicle": {
+  "kind": "card_fill",
+  "plan": {
+   "want": [
+    "rules_text"
+   ],
+   "fields": {
+    "rules_text": "Flying\nCrew 2"
+   },
+   "art_prompt": "A crimson dragon over a caldera at dawn.",
+   "style": null,
+   "frame_template": null,
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "fill:0",
+    "label": "Skiff of Nine Lanterns",
+    "status": "pending"
+   }
+  ],
+  "prompts": [
+   "Design exactly 1 card:\nCard 1: card_type artifact. color: colorless. This card already exists in part. Keep these EXACTLY as given, reproducing them verbatim in your output: title \"Skiff of Nine Lanterns\"; type line \"artifact — Vehicle\"; color identity colorless; stats 3/3. Design only: rules text — make them fit the kept parts naturally."
+  ]
+ },
+ "fill step · rules text of a Vehicle": {
+  "status": "done",
+  "fill": {
+   "rules_text": "Flying\nCrew 2",
+   "frame_template": null,
+   "deck_id": null
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "fill plan · rules text of a plain artifact whose text has 'N+ |' lines": {
+  "kind": "card_fill",
+  "plan": {
+   "want": [
+    "rules_text"
+   ],
+   "fields": {
+    "rules_text": "Station\n3+ | {T}: Draw a card.\n8+ | {T}: Draw two cards."
+   },
+   "art_prompt": "A crimson dragon over a caldera at dawn.",
+   "style": null,
+   "frame_template": null,
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "fill:0",
+    "label": "Counting Engine",
+    "status": "pending"
+   }
+  ],
+  "prompts": [
+   "Design exactly 1 card:\nCard 1: card_type artifact. color: colorless. This card already exists in part. Keep these EXACTLY as given, reproducing them verbatim in your output: title \"Counting Engine\"; type line \"artifact\"; color identity colorless. Design only: rules text — make them fit the kept parts naturally.",
+   "Card 1: {\"title\":\"Counting Engine\",\"cost\":\"{4}\",\"card_type\":\"artifact\",\"supertype\":null,\"subtypes\":[],\"rarity\":\"rare\",\"color_identity\":[\"colorless\"],\"rules_text\":\"Station\\n3+ | {T}: Draw a card.\\n8+ | {T}: Draw two cards.\",\"flavor_text\":null,\"power\":null,\"toughness\":null,\"loyalty\":null,\"defense\":null,\"art_prompt\":\"A crimson dragon over a caldera at dawn.\"}\nFindings: [rules_text] \"Station\" isn't a known keyword and has no reminder text — add reminder text or use a standard keyword."
+  ]
+ },
+ "fill step · rules text of a plain artifact whose text has 'N+ |' lines": {
+  "status": "done",
+  "fill": {
+   "rules_text": "Station\n3+ | {T}: Draw a card.\n8+ | {T}: Draw two cards.",
+   "frame_template": null,
+   "deck_id": null
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "fill plan · a walker's rows": {
+  "kind": "card_fill",
+  "plan": {
+   "want": [
+    "rules_text",
+    "stats"
+   ],
+   "fields": {
+    "rules_text": "+1: Draw a card.\n-3: Return target creature to its owner's hand.",
+    "power": null,
+    "toughness": null,
+    "loyalty": "4",
+    "defense": null
+   },
+   "art_prompt": "A crimson dragon over a caldera at dawn.",
+   "style": null,
+   "frame_template": null,
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "fill:0",
+    "label": "Veyra, Tide Oracle",
+    "status": "pending"
+   }
+  ],
+  "prompts": [
+   "Design exactly 1 card:\nCard 1: card_type planeswalker. color: blue. This card already exists in part. Keep these EXACTLY as given, reproducing them verbatim in your output: title \"Veyra, Tide Oracle\"; type line \"Legendary planeswalker — Veyra\"; color identity blue; mana cost {2}{U}{U}. Design only: rules text, power / toughness — make them fit the kept parts naturally."
+  ]
+ },
+ "fill step · a walker's rows": {
+  "status": "done",
+  "fill": {
+   "rules_text": "+1: Draw a card.\n-3: Return target creature to its owner's hand.",
+   "power": null,
+   "toughness": null,
+   "loyalty": "4",
+   "defense": null,
+   "frame_template": null,
+   "deck_id": null
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "fill plan · the type too (create)": {
+  "kind": "card_fill",
+  "plan": {
+   "want": [
+    "card_type",
+    "color_identity",
+    "title",
+    "rules_text",
+    "stats"
+   ],
+   "fields": {
+    "title": "Emberwake Tyrant",
+    "card_type": "creature",
+    "supertype": null,
+    "subtypes": [
+     "Dragon"
+    ],
+    "color_identity": [
+     "red"
+    ],
+    "rules_text": "Flying, haste\nWhenever Emberwake Tyrant attacks, it deals 2 damage to each player.",
+    "power": "4",
+    "toughness": "4",
+    "loyalty": null,
+    "defense": null
+   },
+   "art_prompt": "A crimson dragon over a caldera at dawn.",
+   "style": null,
+   "frame_template": "agclassic",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "fill:0",
+    "label": "Emberwake Tyrant",
+    "status": "pending"
+   }
+  ],
+  "prompts": [
+   "Design exactly 1 card:\nCard 1: Design only: card type, colors, title, rules text, power / toughness — make them fit the kept parts naturally."
+  ]
+ },
+ "fill step · the type too (create)": {
+  "status": "done",
+  "fill": {
+   "title": "Emberwake Tyrant",
+   "card_type": "creature",
+   "supertype": null,
+   "subtypes": [
+    "Dragon"
+   ],
+   "color_identity": [
+    "red"
+   ],
+   "rules_text": "Flying, haste\nWhenever Emberwake Tyrant attacks, it deals 2 damage to each player.",
+   "power": "4",
+   "toughness": "4",
+   "loyalty": null,
+   "defense": null,
+   "frame_template": "agclassic",
+   "deck_id": null
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   }
+  ],
+  "refunds": 0
+ }
+}
