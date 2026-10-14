@@ -7409,7 +7409,10 @@
         "img/frames/m15/new/ub/g.png"
       ],
       "c": [
-        "img/frames/m15/new/ub/a.png"
+        "img/frames/m15/new/c.png",
+        "img/frames/m15/ub/regular/c.png through img/frames/m15/new/title.png recolouring the layers below (their alpha kept), weighted by its own luminance from 150 (0) to 190 (full) and by the luminance below from 150 (0) to 190 (full), never where its own alpha is above 245",
+        "img/frames/m15/ub/regular/c.png through img/frames/m15/new/type.png recolouring the layers below (their alpha kept), weighted by its own luminance from 150 (0) to 190 (full) and by the luminance below from 150 (0) to 190 (full), never where its own alpha is above 245",
+        "img/frames/m15/ub/regular/c.png through img/frames/m15/new/rules.png recolouring the layers below (their alpha kept), weighted by its own luminance from 150 (0) to 190 (full) and by the luminance below from 150 (0) to 190 (full), never where its own alpha is above 245"
       ],
       "m": [
         "img/frames/m15/new/ub/m.png"
@@ -7564,11 +7567,11 @@
       }
     },
     "sourceFiles": [
+      "img/frames/m15/new/c.png",
       "img/frames/m15/new/pinline.png",
       "img/frames/m15/new/rules.png",
       "img/frames/m15/new/title.png",
       "img/frames/m15/new/type.png",
-      "img/frames/m15/new/ub/a.png",
       "img/frames/m15/new/ub/b.png",
       "img/frames/m15/new/ub/g.png",
       "img/frames/m15/new/ub/l.png",
@@ -7582,11 +7585,12 @@
       "img/frames/m15/ub/pt/m.png",
       "img/frames/m15/ub/pt/r.png",
       "img/frames/m15/ub/pt/u.png",
-      "img/frames/m15/ub/pt/w.png"
+      "img/frames/m15/ub/pt/w.png",
+      "img/frames/m15/ub/regular/c.png"
     ],
     "notes": [
       "w u b r g m = the pack's colour frames whole (new/ub/<k>.png), as m15's are new/<k>.png",
-      "SUBSTITUTION: colourless (c) = the pack's ARTIFACT frame (new/ub/a.png). The pack lists a 'Colorless Frame' new/ub/c.png that is not in Card Conjurer's tree at this commit (404); the owner's call of 2026-10-13 (roadmap Q5) borrows the artifact one — the same bytes as m15ubartifact/c. The older pack's m15/ub/regular/c.png is not used: a different drawing",
+      "colourless (c) = the print's SEE-THROUGH frame (owner Round 57, decision 3; ACR #1, FIN #2, WHO #9 / #614): the pack lists a 'Colorless Frame' new/ub/c.png that is not in Card Conjurer's tree at this commit (404), so it is built from two of its drawings — the accurate pack's see-through colourless frame (new/c.png, m15/c's own file: every edge, rim, bevel and the alpha, value for value) with the OLDER Universes Beyond pack's see-through colourless frame (m15/ub/regular/c.png) as colour only through the accurate pack's Title, Type and Rules masks, paper onto paper only — weighted by that drawing's own luma AND by the luma of the accurate drawing below (each 0 at or below 150, whole from 190) and never where the older drawing is opaque (its rims): neither drawing's lines, rims or bevels are touched (the older pack's sit 1–5 px off the accurate geometry). The M15UB profile draws the art under the frame for 'c' (underFrameArt), as m15 does. Until 2026-10-14 this key was the pack's artifact frame, borrowed (never verified, no card on it)",
       "plates = the pack's own smooth plates (m15/ub/pt/<k>.png, 282x154, at M15's plate bounds); c = its grey 'Colorless' plate, which the hybrid dress draws too",
       "toned onto the prints before the first tick (owner Round 57, 2026-10-14; UB_PRINT_TONES through CC_SOURCE_TONES, recorded under sourceTones): the pack's green bars (g.png, lg.png), its gold bars and gold text box (m.png, lm.png) and its land-grey bars and text box (l.png) are multiplied by a per-channel gain through the pack's Title, Type and Rules masks as the FILE is loaded, so every master drawn from one of them — the gold-split and artifact pairs' gold bars, the hybrids' and the two-colour lands' grey bars — carries the same pixels; the frame field, the pinline, the border, the plates, the crowns and every other colour as Card Conjurer drew them",
       "two-colour pair masters (TODO 4.25): 4.6b's recipe (twoColorRecipe; the untilted ramps of scripts/lib/pair-ramp.mjs) over the Universes Beyond pack's own files, through the accurate M15 masks the pack shares. Gold-split <pair> = m.png with the split text box and pinline (40K #104, LTR #287, PIP #210); hybrid <pair>-h = the two colours' frames split across the frame ramp, the pack's land-grey bars (l.png title + type), the split text box and pinline, drawn with the grey plate pt/c (ACR #55 / #60, PIP #212)"
@@ -7824,6 +7828,10 @@
         "img/black.png over 0/0/100×4.87 %",
         "img/frames/m15/ub/crowns/new/l.png at 2.19/1.88/95.62×17.52 %"
       ],
+      "c": [
+        "img/black.png over 0/0/100×4.87 %",
+        "img/frames/m15/ub/crowns/new/c.png at 2.19/1.88/95.62×17.52 %"
+      ],
       "wu": [
         "img/black.png over 0/0/100×4.87 %",
         "img/frames/m15/ub/crowns/new/w.png ⟷ img/frames/m15/ub/crowns/new/u.png lerped through procedural:ramp(45→55 %W) at 2.19/1.88/95.62×17.52 %"
@@ -7869,6 +7877,7 @@
       "img/black.png",
       "img/frames/m15/ub/crowns/new/a.png",
       "img/frames/m15/ub/crowns/new/b.png",
+      "img/frames/m15/ub/crowns/new/c.png",
       "img/frames/m15/ub/crowns/new/g.png",
       "img/frames/m15/ub/crowns/new/l.png",
       "img/frames/m15/ub/crowns/new/m.png",
@@ -7878,7 +7887,7 @@
     ],
     "notes": [
       "the Universes Beyond legendary crown, drawn over the m15ub, m15ubartifact and m15ubland masters (TODO 4.25): m15crown's recipe — the black 'Legend Crown Border Cover', then the crown at the same bounds (the pack's own: 44/2010, 53/2814, 1922x493) — over the UB pack's smooth crowns, composited at 2010x2814, downscaled once, corners cut, rows 0–409 kept",
-      "keys: w u b r g, m (gold), a (the artifact silver — also a colourless card on the spell frame, whose master is the artifact frame) and l (the land grey), then the ten pairs, the first colour's crown lerped into the second's through the untilted 45→55 %W crown ramp as m15crown's are; no c (the pack's 'Colorless Legend Crown' is the M15 pack's file)",
+      "keys: w u b r g, m (gold), a (the artifact silver), l (the land grey) and c (the colourless crown of the see-through spell frame, TODO 4.25 follow-up: the pack's ub/crowns/new/c.png, the M15 pack's colourless crown byte for byte — m15crown/c's pixels under this band's name), then the ten pairs, the first colour's crown lerped into the second's through the untilted 45→55 %W crown ramp as m15crown's are",
       "the pack's FLOATING crowns (m15/ub/crowns/floating, packUBLegendCrownsFloating.js) belong to the UB full-art / extended looks and are not imported; the older 'regular' UB crowns (m15/ub/crowns/m15Crown?.png) are a different pack and never mixed in"
     ]
   },
@@ -7929,6 +7938,11 @@
       "l": [
         "img/frames/m15/new/ub/stamp/u.png (the arch's geometry: bevel, rim and black) at 42.53333333333333/90.04761904761904/14.866666666666667×4.857142857142857 %",
         "rim tinted to m15ubland/c.png's bar (165,152,138) sampled at x 750, rows 1940–1947",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent"
+      ],
+      "c": [
+        "img/frames/m15/new/ub/stamp/u.png (the arch's geometry: bevel, rim and black) at 42.53333333333333/90.04761904761904/14.866666666666667×4.857142857142857 %",
+        "rim tinted to m15ub/c.png's bar (223,224,224) sampled at x 750, rows 1940–1947",
         "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent"
       ],
       "wu": [
@@ -8009,7 +8023,7 @@
     "notes": [
       "the Universes Beyond triangle stamp's notch (TODO 4.25): CC's piece — the text box's bottom pinline stepped up and over the stamp with its bevel — is 299x137 on the pack's 2015-wide card (bounds 857/2015, 2534/2814), so it is resampled ONCE (Lanczos) to 223x102 at 638,1891 px of the 1500x2100 card (CC's box is 637.97,1891.04 + 222.58x102.24), the resampling's ringing snapped back onto the flat rim and black (snapResampledPiece), and drawn 1:1 from there",
       "ONE geometry for every key, as m15holostamp: CC's U piece (its rim the exact 0,117,190, decomposed into bevel, rim and black), the rim tinted to OUR master's bar sampled at x 750, rows 1940–1947; CC's own per-key pieces carry the same flat rims (w 244,243,236, r 209,77,53, m 233,212,125, a 223,225,225, l 165,152,138 — the accurate pack's pinlines), so the tinted keys reproduce them outside the cut",
-      "keys: w u b r g, m (gold), a (the artifact silver, sampled from m15ubartifact/c — a colourless card on the spell frame too, whose master is that frame) and l (the land taupe, from m15ubland/c); then the ten pairs, the rim tinted PER COLUMN to m15ub/<pair>.png's bar (the pinline's 40→60 %W ramp, which the notch sits inside), the same bar on the hybrid, artifact and land pair masters (checked column by column)",
+      "keys: w u b r g, m (gold), a (the artifact silver, sampled from m15ubartifact/c), l (the land taupe, from m15ubland/c) and c (the see-through spell frame's white rim, sampled from m15ub/c — TODO 4.25 follow-up, as m15holostamp's c is from m15/c); then the ten pairs, the rim tinted PER COLUMN to m15ub/<pair>.png's bar (the pinline's 40→60 %W ramp, which the notch sits inside), the same bar on the hybrid, artifact and land pair masters (checked column by column)",
       "the triangle — CC's 'Gray Holo Stamp' shape fitted (lib/cards/holo-stamp.ts UB_STAMP_HOLE) plus 2 px — is cut to transparent: every colour piece holds a capture of WotC's hologram there, which is never published; our own triangle bitmap (lib/cards/holo-stamp-art.ts) covers the cut. The pack's gray.png is the fit's reference only and is not read by the build"
     ]
   },

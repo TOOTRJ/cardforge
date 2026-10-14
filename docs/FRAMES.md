@@ -3399,7 +3399,8 @@ the text's ink left out):
   mythic's the hologram.
 - **Colourless.** The three colourless non-artifact cards in print (ACR
   #1, FIN #2, WHO #9) wear a SEE-THROUGH frame, the art under translucent
-  grey bars — not the artifact frame.
+  grey bars — not the artifact frame. Built since (below, "The see-through
+  colourless frame").
 - **Tones** (the bars and box against ours, the medians of 9–13 prints a
   key): within 8 levels a channel on w u b r, the artifact frame and its
   coloured keys; the green title bar prints 14 lighter in red and blue
@@ -3507,21 +3508,64 @@ two prints each.
 artifact frame under the colour's bars for a coloured artifact, the land
 frame and its tints — `m15`, `m15artifact` and `m15land`'s recipes with
 `ubFrameFile` for the file of a letter. The pack lists a 'Colorless Frame'
-that is **missing from Card Conjurer's tree**: `m15ub/c` is the pack's
-ARTIFACT frame (owner 2026-10-13), the same bytes as `m15ubartifact/c`,
-opaque (no `underFrameArt`). Since print's colourless card is see-through,
-`m15ub/c` has NO reference printing and cannot be verified until the owner
-decides (the older pack's `m15/ub/regular/c.png` is that see-through frame
-in another drawing; not used). Plates: the pack's own `m15/ub/pt/<k>.png`
+that is **missing from Card Conjurer's tree**; `m15ub/c` was first the
+pack's ARTIFACT frame, borrowed (owner 2026-10-13), and is now print's
+see-through frame (below). Plates: the pack's own `m15/ub/pt/<k>.png`
 (282 × 154) at M15's plate box — the grey 'Colorless' plate under `c` on
 the spell frame (the hybrid dress's too), the silver 'Artifact' one on the
 artifact frame; the land frame draws the spell frame's. Their ink is
 within a pixel of M15's (`lib/cards/plate-ink.ts`).
 
+**The see-through colourless frame** (owner Round 57, decision 3; layout
+**v55**). Print's only colourless non-artifact cards on this frame — ACR #1
+The Capitoline Triad, FIN #2 Ultima, Origin of Oblivion (and its PFIN #2s
+promo), WHO #9 Clara Oswald (and its #614 surge foil): five printings, all
+LEGENDARY — wear a see-through frame: the art runs under the frame field,
+the bars and the text box are translucent over it, the rims, pinline and
+crown white-silver. `m15ub/c` is built from two Card Conjurer drawings
+(`UB_SEE_THROUGH_LAYERS` in `scripts/lib/cc-frames.mjs`):
+
+- the ACCURATE pack's see-through colourless frame (`m15/new/c.png`, m15/c's
+  own file) gives every edge, line, rim, bevel and the ALPHA — the master's
+  alpha equals m15/c's in every pixel (0 of 3,150,000 differ): the same
+  window, bars at 212 / 255, box at 179 / 255 and the faint wash over the
+  frame field. So the profile declares what m15 declares for `c`
+  (`underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] }`), both
+  renderers and the finish masks read it through `artLayersFor()`, and the
+  art-window check passes on the bucket master as it does on m15/c;
+- the OLDER Universes Beyond pack's see-through colourless frame
+  (`m15/ub/regular/c.png`, its smooth streaked paper) gives the colour of
+  the bars and the box, as colour only (`recolour`, the alpha below kept),
+  through the accurate pack's Title, Type and Rules masks, PAPER ONTO
+  PAPER: weighted by that drawing's own luma and by the luma of the
+  accurate drawing below (each 0 at or below 150, whole from 190), never
+  where the older drawing is opaque (its rims, `maxAlpha`). That drawing
+  is not used whole: measured against the accurate pack its lines sit 1–5
+  px off (2010-wide: the title bar's bottom line 292 against 294, the
+  right rim 1879 against 1883, the box's rim 2596 against 2597) and its
+  bars end in another cap — the crown band, the stamp notch and the plates
+  are cut for the accurate geometry.
+
+The crown is `m15ubcrown/c`: the pack's `ub/crowns/new/c.png`, which IS
+the M15 pack's colourless crown byte for byte, so the object has
+`m15crown/c`'s pixels under this band's name. The notch is
+`m15ubholostamp/c`, its rim sampled from `m15ub/c`'s white rim (as
+`m15holostamp/c` is from m15/c). The plate stays the pack's grey
+'Colorless' one. The artifact and land frames keep their opaque colourless
+masters (their profiles map `c` to `a` / `l`).
+
+*Reference printings*: ACR #1, FIN #2, WHO #9 (all legendary — the crown is
+drawn). *Rollout*: an addition on a combo no card can be on (never ticked,
+offered nowhere), but the visual gate records the master swap as a bump,
+so it is one — v55 (`UB_SEE_THROUGH_C_LAYOUT_VERSION`), "sweep", scoped to
+`m15ub` and to a card that paints the colourless master (`v55Changed`),
+verification-neutral (the owner's ticks on the other colours stay
+fresh). The visual matrix: 4 of 1712 cases change, all `m15ub/c`.
+
 **The crown** is `m15ubcrown/<key>.png`: `m15crown`'s recipe at the same
 rects over the pack's smooth crowns (`UB_CROWN_BAND`), keys w u b r g, m,
-a, l and the ten pairs — no `c` (a colourless card on the spell frame is
-crowned in the artifact silver, as its master is).
+a, l, c (the see-through frame's colourless crown, above) and the ten
+pairs.
 
 **The triangle stamp.** `frame_style.stamp` already held `"triangle"` (an
 import of a triangle-stamped printing has written it since 4.9c); until
@@ -3559,13 +3603,19 @@ badge.
   landed; the answer says "not yet verified") until the Universes Beyond
   frame is verified in the card's colour, then names it and is `exact`
   (the crown, both pair dresses and the stamp are drawn there). The AI
-  deck remix follows (`remixFrameFor` finalizes the same match).
+  deck remix follows (`remixFrameFor` finalizes the same match). A
+  colourless non-artifact spell takes the rule too since `m15ub/c` is the
+  see-through frame: the see-through `m15/c` until `m15ub/c` is ticked,
+  then `m15ub` — 5 printings (ACR #1, FIN #2, PFIN #2s, WHO #9, WHO #614;
+  main against this rule over all 10,661 Universes Beyond and
+  triangle-stamped printings, 2026-10-14: 0 other printings change in any
+  field, under production's list, with every colour ticked, or with every
+  colour but `m15ub/c`).
 - A Universes Beyond printing on another body keeps its frame as the
   `nearest`, with the `universes-beyond` gap: a saga, an adventure or a
   split (`layout/2015`), a Vehicle (`vehicle/2015` — the bronze frame is
-  the closer one), a double-faced card, extended art, a colourless
-  non-artifact spell. The foil-etched and "inverted" runs are dresses of
-  their own and never take the rule.
+  the closer one), a double-faced card, extended art. The foil-etched and
+  "inverted" runs are dresses of their own and never take the rule.
 
 Measured on 19,807 printings (every Universes Beyond printing and 8,312
 others, Scryfall 2026-10-13) through the import path with production's
@@ -3577,7 +3627,7 @@ all Universes Beyond, onto their own frame (2,001 spells, 614 artifacts,
 619 lands).
 
 **Not built** (follow-ups, in 4.25): the Universes Beyond Vehicle frame
-(the pack's `v.png`), the see-through colourless frame, extended art, full
+(the pack's `v.png`), extended art, full
 art, the saga and spree dresses, the floating crowns, borderless.
 
 ### Printed pieces a card switches on

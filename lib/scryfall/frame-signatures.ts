@@ -1133,8 +1133,8 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   // 2025-09, Universes Beyond prints the M15 frame with the oval or no
   // stamp). PipGlyph draws it on the plain spell, artifact and land frames
   // (`ub/2015`); on any other body — a saga, an adventure, a Vehicle, a
-  // double-faced card, extended art, a colourless spell (print's is
-  // see-through) — the printing keeps its frame as the nearest.
+  // double-faced card, extended art — the printing keeps its frame as the
+  // nearest.
   "universes-beyond": {
     match: UB_DRESS,
     reason: "this printing wears the Universes Beyond dress, which PipGlyph draws on its plain spell, artifact and land frames only",
@@ -2613,10 +2613,10 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // names it (`onceVerified`) and is exact (`exactOnceVerified`), every
   // other M15-era gap still naming its own item. Spells, artifacts and
   // lands only: a Vehicle keeps the Vehicle rule above (the bronze frame
-  // is the closer one), and a colourless NON-artifact spell (ACR #1,
-  // FIN #2, WHO #9) prints a see-through frame the Universes Beyond spell
-  // frame's borrowed colourless master is not — it stays on `era/2015`
-  // with the `universes-beyond` gap, as the sagas and adventures do.
+  // is the closer one). A colourless NON-artifact spell (ACR #1, FIN #2,
+  // WHO #9 / #614) takes the rule too since the spell frame's colourless
+  // master is print's see-through frame (TODO 4.25 follow-up, owner Round
+  // 57): the see-through `m15/c` is its nearest until `m15ub/c` is ticked.
   ...withGaps(
     {
       key: "ub/2015",
@@ -2630,7 +2630,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
         // etched run, 40K's, the Fallout serials) are dresses of their own:
         // they stay where they landed.
         effectsNone: ["etched", "inverted"],
-        allOf: [UB_DRESS, { anyOf: [{ kinds: ["land"] }, { typeWordsAny: ["artifact"] }, { colorCount: { min: 1 } }] }],
+        allOf: [UB_DRESS],
       },
       outcome: {
         status: "nearest",

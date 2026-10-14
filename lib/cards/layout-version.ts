@@ -1364,7 +1364,34 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            The visual matrix: 51 of its 52 station cases change, no other
 //            case of 1581. No verification scope: neither template has a
 //            tick.
+//   v55    — the see-through colourless Universes Beyond spell frame (TODO
+//            4.25 follow-up, owner Round 57 decision 3): `m15ub/c` was the
+//            pack's artifact frame, borrowed (opaque); it is now print's
+//            see-through frame (ACR #1, FIN #2, WHO #9) — m15/c's geometry
+//            and alpha with the Universes Beyond paper — drawn with the art
+//            under the frame (underFrameArt for "c", as m15), its own
+//            colourless crown (`m15ubcrown/c`) and a white-rimmed notch
+//            (`m15ubholostamp/c`). UB_SEE_THROUGH_C_LAYOUT_VERSION below —
+//            the ONE constant. An ADDITION in all but name: `m15ub/c` was
+//            never ticked and is offered nowhere (no stored card can be on
+//            it but an admin's `?previewFrames=` save); the visual gate
+//            records the master swap as a bump, so it is one, "sweep",
+//            never a badge — as v41 was. Card-scoped (v55Changed): a card on
+//            `m15ub` whose frame master is colourless; every other card on
+//            the three frames bakes byte-identical. Verification-neutral: it
+//            changes only the one combo no tick holds, and the owner's ticks
+//            on the other colours of the frame stay fresh. NOTE: #558 (the
+//            triangle's tones) ALSO takes v55 — whichever merges second
+//            renumbers its constant to 56 (one place each).
 // ---------------------------------------------------------------------------
+
+/** The see-through colourless Universes Beyond spell frame (TODO 4.25
+ *  follow-up): `m15ub` cards that paint the colourless master. ITS version
+ *  lives here alone — CARD_LAYOUT_VERSION, the template and card scopes,
+ *  the rollout and the verification list read this constant — so a bump
+ *  that merges first moves it in one place. Frozen once it ships. */
+export const UB_SEE_THROUGH_C_LAYOUT_VERSION = 55;
+export const UB_SEE_THROUGH_C_TEMPLATES: readonly string[] = ["m15ub"];
 
 /** The station frame on print's band rule (TODO 4.27a, PR 2): every card
  *  on `m15station` and `m15stationland`. ITS version lives here alone —
@@ -1433,7 +1460,7 @@ export const LARGE_PIPS_LAYOUT_VERSION = 53;
  *  latest). */
 export const V53_LARGER_COST_TEMPLATES: readonly string[] = ["modern", "modernland"];
 
-export const CARD_LAYOUT_VERSION = STATION_BANDS_LAYOUT_VERSION;
+export const CARD_LAYOUT_VERSION = UB_SEE_THROUGH_C_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -1612,6 +1639,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // layout and drawn pieces; every card on it (none stored in production).
   // No narrower verification scope: neither template has a tick.
   [STATION_BANDS_LAYOUT_VERSION]: STATION_BANDS_TEMPLATES,
+  // The see-through colourless Universes Beyond spell frame (4.25
+  // follow-up): `m15ub` — and on it only a card that paints the colourless
+  // master (v55Changed). Verification-neutral.
+  [UB_SEE_THROUGH_C_LAYOUT_VERSION]: UB_SEE_THROUGH_C_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -1756,6 +1787,9 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
  * on the prints' larger disc inside the cost and rules slots a frame
  * already has — no slot, master, size or plate moves, and a card without
  * one bakes to the same pixels.
+ * v55 is (TODO 4.25 follow-up): only `m15ub/c` changes — a combo no tick
+ * holds and that could not be ticked before (its master was the borrowed
+ * artifact frame) — so every tick on the frame's other colours stays fresh.
  * Stored bakes still owe these bumps: this list is read by frame
  * verification only, never by the stale / sweep / download rules.
  */
@@ -1763,6 +1797,7 @@ export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [
   31, 32, 33, 35, 36, 37, 44, 49, TYPE_LINE_ORDER_LAYOUT_VERSION, ART_FOCAL_ZERO_LAYOUT_VERSION,
   TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION,
   LARGE_PIPS_LAYOUT_VERSION,
+  UB_SEE_THROUGH_C_LAYOUT_VERSION,
 ];
 
 /** TEMPLATE_SCOPED_VERSIONS with VERIFICATION_TEMPLATE_SCOPES laid over it
@@ -2016,6 +2051,20 @@ function v35Changed(card: ScopeCard): boolean {
   if (card.color_identity === undefined || card.art_url === undefined) return true;
   const identities = (card.color_identity ?? []).filter(isColorIdentity);
   return pickFrameColorKey(identities) === "c" && Boolean(card.art_url);
+}
+
+/**
+ * v55 — the see-through colourless Universes Beyond spell frame (the
+ * template scope holds it to `m15ub`): a card whose frame master is the
+ * colourless one — pickFrameColorKey of the identities it keeps, the
+ * bake's own pick (`m15ub` dresses no colour by type) — art or none (the
+ * master, its crown and notch changed under an empty art box too). Every
+ * other colour bakes byte-identical. A row without its identities can't be
+ * judged → conservative.
+ */
+function v55Changed(card: ScopeCard): boolean {
+  if (card.color_identity === undefined) return true;
+  return pickFrameColorKey((card.color_identity ?? []).filter(isColorIdentity)) === "c";
 }
 
 /**
@@ -2473,6 +2522,10 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // anywhere, a Phyrexian one in a text, or in a cost on the 2003 pair and
   // the modal bodies — v53Changed.
   [LARGE_PIPS_LAYOUT_VERSION]: v53Changed,
+  // v55 — the see-through colourless Universes Beyond spell frame: on
+  // `m15ub` (the template scope), a card that paints the colourless master
+  // — v55Changed.
+  [UB_SEE_THROUGH_C_LAYOUT_VERSION]: v55Changed,
 };
 
 /** `frame_style.finish` from the jsonb column, or null when absent (= regular). */
@@ -2604,6 +2657,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [TYPE_LINE_ORDER_LAYOUT_VERSION]: "sweep", // the type line in its printed order + the P/T of a land creature (1.20) — a correction of what a face prints; 0 public or unlisted stored cards in scope, never a badge
   [TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION]: "sweep", // a name's room before a detached cost of Phyrexian symbols (6.16d) — a correction of a fit that ran the name under the pips; 0 public or unlisted stored cards in scope, never a badge
   [STATION_BANDS_LAYOUT_VERSION]: "sweep", // the station frame on print's band rule, numeral sizes and ring tone (4.27a, PR 2) — a correction on a frame not offered yet
+  [UB_SEE_THROUGH_C_LAYOUT_VERSION]: "sweep", // the see-through colourless Universes Beyond spell frame (4.25 follow-up): an addition the visual gate records as a bump on a combo no card can be on (never ticked, offered nowhere) — never a badge
   [LARGE_PIPS_LAYOUT_VERSION]: "sweep", // hybrid and twobrid discs large, the large pip's factor per frame and place (3.21) — a correction against the prints after the owner's round-49 sheets, never a badge
   [SYMBOLS_PRINT_LAYOUT_VERSION]: "sweep", // five symbols on the prints' drawings + flat rules-text pips (6.16b) — a correction against the prints after the owner's round-43 sheets, never a badge
   [ART_FOCAL_ZERO_LAYOUT_VERSION]: "sweep", // the art's zoom about a focal point of exactly 0 (Satori dropped a zero transform-origin) — a correction of the bake against the preview after the owner's before / after sheet, never a badge

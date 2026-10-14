@@ -38,10 +38,6 @@ describe("frame reference registry", () => {
     // artifact token in blue only (TC18 #7); the nulls are documented in
     // tests/unit/cards/frame-references-data.test.ts too.
     const noRealPrinting = new Set([
-      // The Universes Beyond spell frame's colourless master is the pack's
-      // artifact frame (TODO 4.25); print's three colourless non-artifact
-      // cards wear a see-through frame instead.
-      "m15ub/c",
       "m15token/m",
       "m15tokenartifact/w",
       "m15tokenartifact/b",

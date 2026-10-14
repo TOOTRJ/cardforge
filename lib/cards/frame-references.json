@@ -361,7 +361,7 @@
     }
   },
   "m15ub": {
-    "note": "The Universes Beyond spell frame (TODO 4.25): plain black-bordered, non-legendary printings with the triangle stamp, 40K 2022 → Final Fantasy 2025 — the smooth streaked frame. m: three colours or more (a two-colour card prints the split box and pinline over gold bars: the pair masters ride this tick). c is null: the frame's colourless master is the pack's ARTIFACT frame (Card Conjurer's own colourless file is missing), and the three colourless non-artifact cards in print (ACR #1, FIN #2, WHO #9) wear a see-through frame instead.",
+    "note": "The Universes Beyond spell frame (TODO 4.25): plain black-bordered, non-legendary printings with the triangle stamp, 40K 2022 → Final Fantasy 2025 — the smooth streaked frame. m: three colours or more (a two-colour card prints the split box and pinline over gold bars: the pair masters ride this tick). c: the see-through colourless frame (TODO 4.25 follow-up) — the only colourless non-artifact cards on the frame, all three LEGENDARY (ACR #1, FIN #2, WHO #9): their crown is the colourless one, m15ubcrown/c.",
     "colors": {
       "w": [
         {
@@ -448,7 +448,23 @@
           "scryfallId": "409c226b-ef01-4ccd-b23e-d94bdc1e4aa5"
         }
       ],
-      "c": null,
+      "c": [
+        {
+          "name": "The Capitoline Triad",
+          "set": "acr",
+          "scryfallId": "fa1b63ce-47d3-4633-9062-3fecd810e85f"
+        },
+        {
+          "name": "Ultima, Origin of Oblivion",
+          "set": "fin",
+          "scryfallId": "d55a4c02-1aa4-454c-9041-84937377a53b"
+        },
+        {
+          "name": "Clara Oswald",
+          "set": "who",
+          "scryfallId": "9a1ee042-6713-4e9e-9901-9b94d99d33f1"
+        }
+      ],
       "m": [
         {
           "name": "Deny the Witch",

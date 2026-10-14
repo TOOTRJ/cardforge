@@ -47,6 +47,7 @@ import {
   notchCutOf,
   snapResampledPiece,
   ubFrameFile,
+  UB_SEE_THROUGH_OLD,
 } from "@/scripts/lib/cc-frames.mjs";
 
 // ---------------------------------------------------------------------------
@@ -125,16 +126,16 @@ describe("the profiles", () => {
       expect(label).not.toBe(twinLabel);
       // The plates are the UB pack's own, at the twin's box and ink.
       expect(pt, t).toEqual({ ...twinPt, plateAssetPathTemplate: t === "m15ubartifact" ? "/frames/m15ubartifact/pt/{color}.png" : "/frames/m15ub/pt/{color}.png" });
-      // The crown and the stamp ride the twin's key map, on the UB pieces.
-      const map = t === "m15ubland" ? { c: "l" } : { c: "a" };
-      expect(overlays, t).toEqual([
-        { ...UB_CROWN, keyMap: map },
-        { ...M15UB_HOLO_STAMP, keyMap: map },
-      ]);
+      // The crown and the stamp ride the twin's key map, on the UB pieces:
+      // the spell frame's colourless key is its own (the see-through
+      // master's crown and white-rimmed notch, TODO 4.25 follow-up), as on m15.
+      const map = t === "m15ubland" ? { c: "l" } : t === "m15ubartifact" ? { c: "a" } : null;
+      expect(overlays, t).toEqual(map ? [{ ...UB_CROWN, keyMap: map }, { ...M15UB_HOLO_STAMP, keyMap: map }] : [UB_CROWN, M15UB_HOLO_STAMP]);
       expect(twinOverlays?.map((o) => o.anatomy)).toEqual(["crown", "holoStamp"]);
-      // The colourless master is the pack's opaque artifact frame: no art under it.
-      expect(underFrameArt, t).toBeUndefined();
-      expect(twinUnder === undefined).toBe(t !== "m15ub");
+      // The colourless SPELL master is see-through, the art under it as m15's
+      // (owner Round 57, decision 3); the artifact and land frames' are opaque.
+      expect(underFrameArt, t).toEqual(twinUnder);
+      expect(underFrameArt === undefined).toBe(t !== "m15ub");
       expect(getFrameProfile(t).collector).toEqual(M15_COLLECTOR);
       expect(frameAnatomyOf(t)).toEqual(frameAnatomyOf(TWIN[t]));
       expect(anatomyDefaults(t)).toEqual(anatomyDefaults(TWIN[t]));
@@ -150,7 +151,9 @@ describe("the profiles", () => {
     expect(UB_CROWN.rect).toEqual(M15_CROWN.rect);
     expect(UB_CROWN.assetPathTemplate).toBe("/frames/m15ubcrown/{key}.png");
     expect([...UB_CROWN.keys]).toEqual([...UB_CROWN_BAND_KEYS]);
-    expect(UB_CROWN.keys).not.toContain("c");
+    // "c": the see-through spell frame's colourless crown (the M15 pack's own).
+    expect(UB_CROWN.keys).toContain("c");
+    expect(M15UB_HOLO_STAMP.keys).toContain("c");
   });
 });
 
@@ -250,14 +253,30 @@ describe("the triangle stamp", () => {
 });
 
 describe("the importer's recipes", () => {
-  it("are the M15 twins' recipes over the Universes Beyond pack's files; the missing colourless frame is the artifact one", () => {
+  it("are the M15 twins' recipes over the Universes Beyond pack's files; the colourless spell master is the see-through one", () => {
     expect(ubFrameFile("r")).toBe("img/frames/m15/new/ub/r.png");
     expect(ubFrameFile("c")).toBe("img/frames/m15/new/ub/a.png");
     expect(ubFrameFile("wl")).toBe("img/frames/m15/new/ub/lw.png");
     const ub = CC_TEMPLATES.m15ub;
-    expect(ub.colors.c).toEqual([{ src: "img/frames/m15/new/ub/a.png" }]);
-    expect(ub.colors.c).toEqual(CC_TEMPLATES.m15ubartifact.colors.c);
-    expect(ub.notes.join(" ")).toMatch(/SUBSTITUTION: colourless/);
+    // The accurate pack's see-through colourless frame (m15/c's own file),
+    // then the older Universes Beyond see-through frame's paper as colour
+    // only — paper onto paper — through the Title, Type and Rules masks.
+    expect(ub.colors.c).toEqual([
+      { src: "img/frames/m15/new/c.png" },
+      ...["title", "type", "rules"].map((m) => ({
+        src: UB_SEE_THROUGH_OLD,
+        mask: `img/frames/m15/new/${m}.png`,
+        recolour: true,
+        opacity: undefined,
+        lumaRamp: [150, 190],
+        belowLumaRamp: [150, 190],
+        maxAlpha: 245 / 255,
+      })),
+    ]);
+    expect(UB_SEE_THROUGH_OLD).toBe("img/frames/m15/ub/regular/c.png");
+    expect(ub.colors.c).not.toEqual(CC_TEMPLATES.m15ubartifact.colors.c);
+    expect(ub.notes.join(" ")).toMatch(/SEE-THROUGH frame/);
+    expect(ub.notes.join(" ")).not.toMatch(/SUBSTITUTION/);
     for (const k of ["w", "u", "b", "r", "g", "m"]) expect(ub.colors[k as "w"]).toEqual([{ src: `img/frames/m15/new/ub/${k}.png` }]);
     expect(CC_TEMPLATES.m15ubland.colors.c).toEqual([{ src: "img/frames/m15/new/ub/l.png" }]);
     expect(CC_TEMPLATES.m15ubland.colors.g).toEqual([{ src: "img/frames/m15/new/ub/lg.png" }]);
@@ -266,9 +285,11 @@ describe("the importer's recipes", () => {
     expect(pairKeys("m15ub")).toHaveLength(20);
     expect(pairKeys("m15ubartifact")).toEqual([...TWO_COLOR_PAIRS]);
     expect(pairKeys("m15ubland")).toEqual([...TWO_COLOR_PAIRS]);
-    // No layer of any key reads a file outside the UB pack or its shared masks.
+    // No layer of any key reads a file outside the UB pack or its shared
+    // masks — the see-through colourless master aside (above).
     for (const t of UB) {
-      for (const layers of Object.values(CC_TEMPLATES[t].colors) as { src: string; right?: string; mask?: string }[][]) {
+      for (const [key, layers] of Object.entries(CC_TEMPLATES[t].colors) as [string, { src: string; right?: string; mask?: string }[]][]) {
+        if (t === "m15ub" && key === "c") continue;
         for (const l of layers) {
           expect(l.src.startsWith("img/frames/m15/new/ub/"), `${t}: ${l.src}`).toBe(true);
           if (l.right) expect(l.right.startsWith("img/frames/m15/new/ub/"), `${t}: ${l.right}`).toBe(true);
@@ -290,7 +311,8 @@ describe("the importer's recipes", () => {
     expect(CC_OVERLAY_BANDS.m15ubcrown.band).toBe(UB_CROWN_BAND);
     expect(crownBandRecipe("a", UB_BAND).left).toBe("img/frames/m15/ub/crowns/new/a.png");
     expect(crownBandRecipe("wu", UB_BAND)).toMatchObject({ left: "img/frames/m15/ub/crowns/new/w.png", right: "img/frames/m15/ub/crowns/new/u.png" });
-    expect(() => crownBandRecipe("c", UB_BAND)).toThrow(/no crown for key c/);
+    // The colourless crown is the pack's file — the M15 pack's own, byte for byte.
+    expect(crownBandRecipe("c", UB_BAND).left).toBe("img/frames/m15/ub/crowns/new/c.png");
     // The standard band is untouched by the parameter.
     expect(crownBandRecipe("c").left).toBe("img/frames/m15/crowns/new/c.png");
     expect(crownBandSourceFiles(UB_CROWN_BAND_KEYS, UB_BAND).filter((f) => f !== "img/black.png").every((f) => f.startsWith("img/frames/m15/ub/crowns/new/"))).toBe(true);
@@ -493,14 +515,6 @@ describe("imports follow the printing (the registry's ub/2015 rule)", () => {
 
   it("a Universes Beyond printing on another body keeps its frame, as the nearest, with the dress as its gap", () => {
     const gap = "this printing wears the Universes Beyond dress, which PipGlyph draws on its plain spell, artifact and land frames only";
-    // A colourless non-artifact spell: print's frame is see-through, the
-    // borrowed colourless master is not.
-    for (const key of ["who-9", "fin-2"]) {
-      const match = frameMatchFromScryfall(printing(key));
-      expect(match, key).toMatchObject({ signature: "era/2015+universes-beyond", status: "nearest", template: "m15", reason: gap, blockedBy: "4.25" });
-      expect(match.onceVerified, key).toBeUndefined();
-      expect(withVerification(match, "c", EVERY), key).toMatchObject({ status: "nearest", template: "m15" });
-    }
     expect(frameMatchFromScryfall(printing("40k-69"))).toMatchObject({ signature: "layout/2015+universes-beyond", status: "nearest", template: "saga", reason: gap });
     expect(frameMatchFromScryfall(printing("fic-264"))).toMatchObject({ signature: "layout/2015+universes-beyond", status: "nearest", template: "adventure" });
     // A Vehicle keeps the Vehicle rule (the bronze frame is the closer one).
@@ -514,6 +528,32 @@ describe("imports follow the printing (the registry's ub/2015 rule)", () => {
     const etched = frameMatchFromScryfall(printing("40k-177"));
     expect(etched.signature).toBe("era/2015+etched");
     expect(etched.onceVerified).toBeUndefined();
+  });
+
+  it("a colourless non-artifact spell takes the rule since its master is the see-through frame: the see-through m15/c until m15ub/c is ticked, then exact there", () => {
+    for (const key of ["who-9", "fin-2"]) {
+      const match = frameMatchFromScryfall(printing(key));
+      // Every colourless non-artifact card on the frame is legendary: the crown is drawn too.
+      expect(match, key).toMatchObject({
+        signature: "ub/2015+crown",
+        status: "nearest",
+        template: "m15",
+        onceVerified: "m15ub",
+        onceVerifiedMatch: { status: "exact", reason: null },
+      });
+      // Before the tick it says so (beside the crown gap the M15 frame's
+      // colourless crown leaves today).
+      expect(match.reason, key).toMatch(/^PipGlyph's Universes Beyond frame isn't verified yet/);
+      expect(withVerification(match, "c", NO_UB), key).toMatchObject({ status: "nearest", template: "m15", unverified: true });
+      expect(withVerification(match, "c", EVERY), key).toMatchObject({ status: "exact", template: "m15ub" });
+      // Ticked in every colour BUT colourless: it stays on m15.
+      const allButC = new Set([...EVERY].filter((k) => k !== frameComboKey("m15ub", "c")));
+      expect(withVerification(match, "c", allButC), key).toMatchObject({ status: "nearest", template: "m15" });
+      const patch = mapScryfallToFormPatch(printing(key));
+      expect(finalizeImportMatch(patch, NO_UB).frame_template, key).toBe("m15");
+      expect(finalizeImportMatch(patch, EVERY).frame_template, key).toBe("m15ub");
+      expect(patch.printed_stamp).toBe("triangle");
+    }
   });
 
   it("only the triangle-stamped printings of 2021-11 on take it: Marvel's Spider-Man and Avatar print the M15 frame", () => {
@@ -539,6 +579,7 @@ describe("the AI deck remix lands where the import lands (#529)", () => {
     ["40k-9", "m15", "m15ub"],
     ["40k-150", "m15artifact", "m15ubartifact"],
     ["40k-264", "m15land", "m15ubland"],
+    ["who-9", "m15", "m15ub"],
   ] as const)("%s: on %s until the Universes Beyond frame is ticked, then on %s — nothing else changes", (key, today, later) => {
     const before = remix(key, NO_UB);
     const after = remix(key, EVERY);
@@ -548,6 +589,6 @@ describe("the AI deck remix lands where the import lands (#529)", () => {
   });
 
   it("a printing that is not on the frame never moves with the ticks", () => {
-    for (const key of ["spm-4", "who-9", "40k-69", "40k-177"]) expect(remix(key, EVERY), key).toEqual(remix(key, NO_UB));
+    for (const key of ["spm-4", "40k-69", "40k-177"]) expect(remix(key, EVERY), key).toEqual(remix(key, NO_UB));
   });
 });
