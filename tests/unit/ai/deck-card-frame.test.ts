@@ -13,7 +13,9 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 // lands each card as a single generated card lands: resolveGeneratedFrame,
 // the same verified set, asked for the card type's M15 standard
 // (deckCardFrameRequest) — subtype and enchantment dresses, a token's text
-// box and height, a walker's rows, wherever published in the card's colour.
+// box and height, a walker's rows, an Artifact Creature's artifact frame —
+// wherever published in the card's colour; where the type's frame is not,
+// NO template (never another border era or a showcase in a deck).
 //
 // Two verified sets: `supabase/seed.sql` (the mirror of production's ticks,
 // snapshotted 2026-10-13 — production may be ahead of it) and EVERY combo
@@ -91,6 +93,7 @@ vi.mock("@/lib/cards/actions", () => ({
 }));
 
 import { runNextJobStep } from "@/lib/ai/generation-jobs";
+import { resolveGeneratedFrame } from "@/lib/creator/frame-random";
 
 /** production's ticks as `supabase/seed.sql` mirrors them. */
 function seedVerified(): string[] {
@@ -133,7 +136,9 @@ const KINDS: Array<[string, ReturnType<typeof card>, string, string, string]> = 
   ["sorcery", card({ card_type: "sorcery", color_identity: ["black"], rules_text: "Destroy target creature." }), "removal", "m15", "m15"],
   ["artifact", card({ card_type: "artifact", cost: "{2}", color_identity: ["colorless"], subtypes: ["Equipment"], rules_text: "Equipped creature gets +2/+1.\nEquip {2}" }), "noncreature", "m15artifact", "m15artifact"],
   ["coloured artifact", card({ card_type: "artifact", cost: "{1}{U}", color_identity: ["blue"], rules_text: "{T}: Scry 1." }), "noncreature", "m15artifact", "m15artifact"],
-  ["artifact creature", card({ supertype: "Artifact", subtypes: ["Golem"], cost: "{4}", color_identity: ["colorless"], power: "3", toughness: "3" }), "creature", "m15", "m15"],
+  ["artifact creature", card({ supertype: "Artifact", subtypes: ["Golem"], cost: "{4}", color_identity: ["colorless"], power: "3", toughness: "3" }), "creature", "m15artifact", "m15artifact"],
+  ["coloured artifact creature", card({ supertype: "Artifact", subtypes: ["Golem"], cost: "{2}{R}", color_identity: ["red"], power: "3", toughness: "3" }), "creature", "m15artifact", "m15artifact"],
+  ["enchantment artifact creature", card({ supertype: "Enchantment Artifact", subtypes: ["Golem"], cost: "{4}", color_identity: ["colorless"], power: "3", toughness: "3" }), "creature", "m15artifact", "m15nyx"],
   ["enchantment", card({ card_type: "enchantment", color_identity: ["white"], rules_text: "Creatures you control get +1/+1." }), "noncreature", "m15", "m15nyx"],
   ["Aura", card({ card_type: "enchantment", subtypes: ["Aura"], color_identity: ["white"], rules_text: "Enchant creature\nEnchanted creature gets +2/+2." }), "noncreature", "m15", "m15nyx"],
   ["enchantment creature", card({ supertype: "Enchantment", subtypes: ["Spirit"], color_identity: ["white"], power: "2", toughness: "1" }), "creature", "m15", "m15nyx"],
@@ -191,6 +196,27 @@ describe("an AI deck card saves with its frame", () => {
     s.verified = [];
     const saved = await deckStep(KINDS[10]![1], "land");
     expect(JSON.parse(JSON.stringify(saved))).not.toHaveProperty("frame_style");
+  });
+
+  it("where the type's M15 frame is unpublished in the card's colour: NO template — never another era or a showcase (owner 2026-10-14)", async () => {
+    // The 1997 / 2003 land frames and full-art lands stay ticked in red;
+    // only m15land/r is taken away.
+    s.verified = SEED.filter((key) => key !== "m15land/r");
+    const land = KINDS.find(([kind]) => kind === "land")![1];
+    const saved = await deckStep(land, "land");
+    expect(JSON.parse(JSON.stringify(saved))).not.toHaveProperty("frame_style");
+    // …while the single-card job's resolver (the default fallback) still
+    // degrades to a random published frame of the type, as on main.
+    const single = resolveGeneratedFrame({
+      cardType: "land",
+      requested: "m15land",
+      colorIdentity: ["red"],
+      verifiedKeys: new Set(s.verified),
+      face: { cardType: "land", title: land.title, rulesText: land.rules_text, subtypes: [] },
+      random: () => 0,
+    });
+    expect(single).not.toBeNull();
+    expect(single).not.toBe("m15land");
   });
 
   it("a station frame saves its rows, as the single-card job does", async () => {

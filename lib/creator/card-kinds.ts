@@ -830,6 +830,19 @@ export function enchantmentFrameFor(kind: CardKind, template: FrameTemplate, typ
   return template;
 }
 
+/**
+ * The frame an ARTIFACT CREATURE's type words pick on the creature's M15
+ * standard: the artifact frame it borrows (TODO 1.7 — print's Artifact
+ * Creatures, Solemn Simulacrum M21 #239), as the import already lands them.
+ * Read by resolveGeneratedFrame alone (owner 2026-10-14: an AI card — a deck
+ * card or a single generated card — saves there wherever it is published in
+ * the card's colour); the creator's pick stays the maker's. Any other kind,
+ * template or type line as it is.
+ */
+export function artifactCreatureFrameFor(kind: CardKind, template: FrameTemplate, type: TypeWordsFace): FrameTemplate {
+  return kind === "creature" && template === "m15" && typeLineHasWord(type, "Artifact") ? "m15artifact" : template;
+}
+
 // ---------------------------------------------------------------------------
 // Borrowed variations (TODO 1.7). A frame that is one kind's standard can
 // also dress another kind as a variation of that kind's standard, when both

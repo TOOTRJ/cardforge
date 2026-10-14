@@ -253,7 +253,7 @@ const TYPED_SYSTEM =
   "You pitch ORIGINAL Magic: The Gathering-style decks for a homebrew tool. Given a theme and format, invent a deck name, a one-sentence pitch and a strategy paragraph (game plan, key mechanics, world/faction names) for a deck in the colors its deck type sets — they are fixed, not yours to pick. Everything must be original — never Wizards-owned proper nouns, never real-world brands.";
 
 type Recorded = {
-  concept: Array<{ system: string; schema: { properties: Record<string, unknown>; required: string[] } }>;
+  concept: Array<{ system: string; prompt: string; schema: { properties: Record<string, unknown>; required: string[] } }>;
   designed: Array<{ slots: Array<{ colorHint?: string }> }>;
   job: Array<{ plan: { cards: Array<{ color_identity: string[] }> } }>;
 };
@@ -265,6 +265,9 @@ function asTyped(record: unknown): Recorded {
   const out = structuredClone(record) as Recorded;
   for (const call of out.concept) {
     call.system = TYPED_SYSTEM;
+    // Add mode: the strategy alone is inferred from the deck's cards — its
+    // colours are its type's (owner 2026-10-14).
+    call.prompt = call.prompt.replace("infer the strategy and colors FROM its current cards", "infer the strategy FROM its current cards");
     delete call.schema.properties.colors;
     call.schema.required = call.schema.required.filter((key) => key !== "colors");
   }
@@ -352,6 +355,19 @@ describe("a typed deck plan takes its colours from its type (owner 2026-10-14)",
     expect(design.slots.map((slot) => slot.colorHint)).toEqual([
       "multicolor", "green", "black", "green", "black", "green", "black", "green", "black", "green", "black", "green",
     ]);
+  });
+
+  it.each([
+    ["spirits", "infer the strategy FROM its current cards:"],
+    ["eldrazi", "infer the strategy FROM its current cards:"],
+    [null, "infer the strategy and colors FROM its current cards:"],
+  ])("add mode (%s): only an untyped deck is asked to infer its colours from its cards", async (deckType, wording) => {
+    s.deck = EXISTING_DECK(deckType);
+    s.items = EXISTING_ITEMS;
+    s.concepts = [concept(deckType ? undefined : ["green"])];
+    const out = await plan({ theme: "", format: "commander", size: 6, deckId: "deck-9" });
+    expect(out.concept[0]!.prompt).toContain(wording);
+    expect(out.concept[0]!.prompt.match(/infer the strategy/g)).toHaveLength(1);
   });
 
   it("adding cards to a typed deck takes the deck's type colours too", async () => {

@@ -269,7 +269,9 @@ export async function generateDeckPlan(input: {
         ? [
             `IMPORTANT: this is an EXISTING deck called "${input.existing.title}"${
               input.existing.description ? ` — ${input.existing.description}` : ""
-            }. Keep its identity (deck_title should echo it) and infer the strategy and colors FROM its current cards:`,
+            }. Keep its identity (deck_title should echo it) and infer the strategy${
+              typedColors ? "" : " and colors"
+            } FROM its current cards:`,
             existingCardLines(input.existing.cards),
           ].join("\n")
         : null,

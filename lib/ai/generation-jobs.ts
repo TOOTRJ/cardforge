@@ -1413,12 +1413,16 @@ async function runDeckCardStep(
   // same verified set and dresses), asked for its type's M15 standard
   // (deckCardFrameRequest). Resolved here, not at plan time, so the stored
   // plan is what it was; a card already created (a retried step) is never
-  // re-framed. Null (nothing published fits) saves no template, as before.
+  // re-framed. Where that frame (or its dress) isn't published in the
+  // card's colour, no template — the default frame, as before — never a
+  // random other era or showcase (owner 2026-10-14).
   const frameTemplate = step.card_id
     ? null
     : resolveGeneratedFrame({
         cardType: card.card_type,
         requested: deckCardFrameRequest(card.card_type),
+        // Never a random other frame of the type: no template instead.
+        fallback: "none",
         colorIdentity: card.color_identity,
         verifiedKeys: new Set(await getVerifiedFrameKeys()),
         face: {
