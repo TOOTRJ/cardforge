@@ -25,6 +25,7 @@ import {
   STAMPLESS_CARD_TYPES,
   grownRect,
   holoStampArtRect,
+  holoStampToneOf,
   holoStampWanted,
   isHoloStampSwitch,
   offersHoloStampForType,
@@ -73,6 +74,32 @@ describe("the switch and the auto rule", () => {
     expect(holoStampWanted("none", { cardType: "creature", rarity: "mythic" })).toBe(false);
     expect(holoStampWanted(undefined, { cardType: "creature", rarity: "mythic" })).toBe(false);
     expect(holoStampWanted("acorn", { cardType: "creature", rarity: "mythic" })).toBe(false);
+  });
+
+  it("on a TRIANGLE frame auto wants a stamp on every rarity (Universes Beyond prints it so); the oval's rule is untouched by the shape fact", () => {
+    for (const rarity of ["common", "uncommon", "rare", "mythic", "special", "", null, undefined]) {
+      expect(holoStampWanted("auto", { cardType: "creature", rarity, shape: "triangle" }), String(rarity)).toBe(true);
+      expect(holoStampWanted("none", { cardType: "creature", rarity, shape: "triangle" })).toBe(false);
+      expect(holoStampWanted(undefined, { cardType: "creature", rarity, shape: "triangle" })).toBe(false);
+      expect(holoStampWanted("auto", { cardType: "token", rarity, shape: "triangle" })).toBe(false);
+      expect(holoStampWanted("auto", { cardType: "emblem", rarity, shape: "triangle" })).toBe(false);
+    }
+    for (const shape of ["oval", null, undefined] as const) {
+      expect(holoStampWanted("auto", { cardType: "creature", rarity: "common", shape })).toBe(false);
+      expect(holoStampWanted("auto", { cardType: "creature", rarity: "uncommon", shape })).toBe(false);
+      expect(holoStampWanted("auto", { cardType: "creature", rarity: "rare", shape })).toBe(true);
+    }
+  });
+
+  it("the tone: a triangle is matte below a rare, the hologram on a rare or mythic; an oval is always the hologram", () => {
+    for (const rarity of ["common", "uncommon", "special", "bonus", "", null, undefined]) {
+      expect(holoStampToneOf("triangle", rarity), String(rarity)).toBe("matte");
+      expect(holoStampToneOf("oval", rarity), String(rarity)).toBe("holo");
+    }
+    for (const rarity of ["rare", "mythic", "Rare", "MYTHIC"]) {
+      expect(holoStampToneOf("triangle", rarity)).toBe("holo");
+      expect(holoStampToneOf("oval", rarity)).toBe("holo");
+    }
   });
 
   it("a token or an emblem never prints one, whatever the switch (their control is hidden)", () => {

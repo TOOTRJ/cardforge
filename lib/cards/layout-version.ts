@@ -1386,7 +1386,38 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            of w b r g and gold change; no other case. Not
 //            verification-neutral (the masters a tick
 //            would judge change) — the frame has no tick.
-//   v56    — the see-through colourless Universes Beyond spell frame (TODO
+//   v56    — the Universes Beyond triangle as printed (TODO 4.25 follow-up,
+//            owner Round 57 decision 2). On `m15ub`, `m15ubartifact` and
+//            `m15ubland` alone: `frame_style.stamp: "auto"` stamps EVERY
+//            rarity (it stamped a rare or a mythic), the triangle of a
+//            common or an uncommon is print's flat matte grey (95, 97, 96)
+//            and the hologram of a rare or a mythic is toned to print's
+//            level (a mean luminance of 151 in the bake where ours read 209; print 148) — 64
+//            prints read 2026-10-14. UB_STAMP_TONES_LAYOUT_VERSION below —
+//            the ONE constant. A CORRECTION ("sweep"), never a badge: the
+//            look was wrong against the frame's own print. Card-scoped
+//            (v56Changed): a card whose stamp switch is "auto", "oval" or
+//            "triangle" and that is no token or emblem — every other card
+//            on the three frames is stamped. The frames merged on
+//            2026-10-14 and are reached by a pick or an import only, so few
+//            stored cards can be in scope; production cannot be read from
+//            here (the count shows on /admin/renders once deployed).
+//            Verification-neutral: no slot, master, notch or plate moves —
+//            only the stamp's own art, which no tick scores — so the ticks
+//            the owner is making on these frames stay fresh. The notch and
+//            its rules keep-out are unchanged: a card that drew the stamp
+//            keeps every line; a common or uncommon on "auto" gains the
+//            notch and with it the keep-out its "Always" twin always had.
+// ---------------------------------------------------------------------------
+
+/** The Universes Beyond triangle as printed (TODO 4.25 follow-up): "auto"
+ *  on every rarity, the matte triangle, the hologram's tone. ITS version
+ *  lives here alone — CARD_LAYOUT_VERSION, the template and card scopes and
+ *  the rollout below read this constant — so a bump that merges first moves
+ *  it in one place. Frozen once it ships. */
+export const UB_STAMP_TONES_LAYOUT_VERSION = 56;
+export const UB_STAMP_TONES_TEMPLATES: readonly string[] = ["m15ub", "m15ubartifact", "m15ubland"];
+//   v57    — the see-through colourless Universes Beyond spell frame (TODO
 //            4.25 follow-up, owner Round 57 decision 3): `m15ub/c` was the
 //            pack's artifact frame, borrowed (opaque); it is now print's
 //            see-through frame (ACR #1, FIN #2, WHO #9) — m15/c's geometry
@@ -1398,13 +1429,13 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            never ticked and is offered nowhere (no stored card can be on
 //            it but an admin's `?previewFrames=` save); the visual gate
 //            records the master swap as a bump, so it is one, "sweep",
-//            never a badge — as v41 was. Card-scoped (v56Changed): a card on
+//            never a badge — as v41 was. Card-scoped (v57Changed): a card on
 //            `m15ub` whose frame master is colourless; every other card on
 //            the three frames bakes byte-identical. Verification-neutral: it
 //            changes only the one combo no tick holds, and the owner's ticks
-//            on the other colours of the frame stay fresh. NOTE: #558 (the
-//            triangle's tones) ALSO takes v56 — whichever merges second
-//            renumbers its constant to 57 (one place each).
+//            on the other colours of the frame stay fresh. (Taken as v55
+//            in the PR, then v56; v55 went to the Nyx Constellation
+//            correction and v56 to the triangle's tones, #558, first in.)
 // ---------------------------------------------------------------------------
 
 /** The see-through colourless Universes Beyond spell frame (TODO 4.25
@@ -1412,7 +1443,7 @@ import { isColorIdentity, type CardType } from "@/types/card";
  *  lives here alone — CARD_LAYOUT_VERSION, the template and card scopes,
  *  the rollout and the verification list read this constant — so a bump
  *  that merges first moves it in one place. Frozen once it ships. */
-export const UB_SEE_THROUGH_C_LAYOUT_VERSION = 56;
+export const UB_SEE_THROUGH_C_LAYOUT_VERSION = 57;
 export const UB_SEE_THROUGH_C_TEMPLATES: readonly string[] = ["m15ub"];
 
 /** The station frame on print's band rule (TODO 4.27a, PR 2): every card
@@ -1672,9 +1703,13 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // The Nyx Constellation frame's rim on its prints (Rounds 59 / 61):
   // every card on `nyx` (none stored in production).
   [NYX_PRINT_TONES_LAYOUT_VERSION]: NYX_PRINT_TONES_TEMPLATES,
+  // The Universes Beyond triangle as printed (4.25 follow-up): the three
+  // Universes Beyond frames — and on them only a card that draws, or now
+  // gains, the stamp (v56Changed). Verification-neutral.
+  [UB_STAMP_TONES_LAYOUT_VERSION]: UB_STAMP_TONES_TEMPLATES,
   // The see-through colourless Universes Beyond spell frame (4.25
   // follow-up): `m15ub` — and on it only a card that paints the colourless
-  // master (v56Changed). Verification-neutral.
+  // master (v57Changed). Verification-neutral.
   [UB_SEE_THROUGH_C_LAYOUT_VERSION]: UB_SEE_THROUGH_C_TEMPLATES,
 };
 
@@ -1749,6 +1784,23 @@ export const V36_TEXTLESS_TEMPLATES: readonly string[] = ["m20token", "m20tokena
 export const V36_BACK_FACE_TEXT_TEMPLATES: readonly string[] = ["adventure", "flip", "split", "aftermath"];
 
 /**
+ * v56 — the Universes Beyond triangle as printed (the template scope holds
+ * it to the three frames): a card whose `frame_style.stamp` asks for a
+ * stamp ("auto", "oval" or "triangle" — every drawn triangle changes its
+ * tone, and "auto" now draws one on a common and an uncommon) and whose
+ * type prints one (never a token or an emblem). "none", an absent key and
+ * the stampless types bake to the same pixels. A row without `frame_style`
+ * or `card_type` can't be judged → conservative.
+ */
+function v56Changed(card: ScopeCard): boolean {
+  if (card.frame_style === undefined) return true;
+  const stamp = card.frame_style && typeof card.frame_style === "object" ? (card.frame_style as { stamp?: unknown }).stamp : undefined;
+  if (stamp !== "auto" && stamp !== "oval" && stamp !== "triangle") return false;
+  if (card.card_type === undefined) return true;
+  return card.card_type !== "token" && card.card_type !== "emblem";
+}
+
+/**
  * Bumps whose frame SLOTS move on fewer templates than their stored bakes
  * change on: frame verification judges a tick by this list instead of the
  * card scope. v34's wording (3b.15, a token's line on any template) moves no
@@ -1820,7 +1872,11 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
  * on the prints' larger disc inside the cost and rules slots a frame
  * already has — no slot, master, size or plate moves, and a card without
  * one bakes to the same pixels.
- * v56 is (TODO 4.25 follow-up): only `m15ub/c` changes — a combo no tick
+ * v56 is (TODO 4.25 follow-up): only the triangle stamp's own art changes
+ * on the three Universes Beyond frames (its tone; its presence on a common
+ * or uncommon under "auto") — no slot, master, notch piece or plate moves,
+ * and no tick scores the stamp.
+ * v57 is (TODO 4.25 follow-up): only `m15ub/c` changes — a combo no tick
  * holds and that could not be ticked before (its master was the borrowed
  * artifact frame) — so every tick on the frame's other colours stays fresh.
  * Stored bakes still owe these bumps: this list is read by frame
@@ -1830,6 +1886,7 @@ export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [
   31, 32, 33, 35, 36, 37, 44, 49, TYPE_LINE_ORDER_LAYOUT_VERSION, ART_FOCAL_ZERO_LAYOUT_VERSION,
   TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION,
   LARGE_PIPS_LAYOUT_VERSION,
+  UB_STAMP_TONES_LAYOUT_VERSION,
   UB_SEE_THROUGH_C_LAYOUT_VERSION,
 ];
 
@@ -2087,7 +2144,7 @@ function v35Changed(card: ScopeCard): boolean {
 }
 
 /**
- * v56 — the see-through colourless Universes Beyond spell frame (the
+ * v57 — the see-through colourless Universes Beyond spell frame (the
  * template scope holds it to `m15ub`): a card whose frame master is the
  * colourless one — pickFrameColorKey of the identities it keeps, the
  * bake's own pick (`m15ub` dresses no colour by type) — art or none (the
@@ -2095,7 +2152,7 @@ function v35Changed(card: ScopeCard): boolean {
  * other colour bakes byte-identical. A row without its identities can't be
  * judged → conservative.
  */
-function v56Changed(card: ScopeCard): boolean {
+function v57Changed(card: ScopeCard): boolean {
   if (card.color_identity === undefined) return true;
   return pickFrameColorKey((card.color_identity ?? []).filter(isColorIdentity)) === "c";
 }
@@ -2555,10 +2612,14 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // anywhere, a Phyrexian one in a text, or in a cost on the 2003 pair and
   // the modal bodies — v53Changed.
   [LARGE_PIPS_LAYOUT_VERSION]: v53Changed,
-  // v56 — the see-through colourless Universes Beyond spell frame: on
+  // v56 — the Universes Beyond triangle as printed: on the three frames
+  // (the template scope), a card whose stamp switch asks for one —
+  // v56Changed.
+  [UB_STAMP_TONES_LAYOUT_VERSION]: v56Changed,
+  // v57 — the see-through colourless Universes Beyond spell frame: on
   // `m15ub` (the template scope), a card that paints the colourless master
-  // — v56Changed.
-  [UB_SEE_THROUGH_C_LAYOUT_VERSION]: v56Changed,
+  // — v57Changed.
+  [UB_SEE_THROUGH_C_LAYOUT_VERSION]: v57Changed,
 };
 
 /** `frame_style.finish` from the jsonb column, or null when absent (= regular). */
@@ -2691,6 +2752,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION]: "sweep", // a name's room before a detached cost of Phyrexian symbols (6.16d) — a correction of a fit that ran the name under the pips; 0 public or unlisted stored cards in scope, never a badge
   [STATION_BANDS_LAYOUT_VERSION]: "sweep", // the station frame on print's band rule, numeral sizes and ring tone (4.27a, PR 2) — a correction on a frame not offered yet
   [NYX_PRINT_TONES_LAYOUT_VERSION]: "sweep", // the Nyx Constellation frame's rim on the family's tones THB #258–268 wear (owner Rounds 59 / 61) — a correction of a look against its own print on a frame never ticked, never a badge
+  [UB_STAMP_TONES_LAYOUT_VERSION]: "sweep", // the Universes Beyond triangle as printed (4.25 follow-up): "auto" on every rarity, the matte triangle of a common / uncommon, the hologram's tone — a correction of the stamp against the frame's own print on three frames a day old, never a badge
   [UB_SEE_THROUGH_C_LAYOUT_VERSION]: "sweep", // the see-through colourless Universes Beyond spell frame (4.25 follow-up): an addition the visual gate records as a bump on a combo no card can be on (never ticked, offered nowhere) — never a badge
   [LARGE_PIPS_LAYOUT_VERSION]: "sweep", // hybrid and twobrid discs large, the large pip's factor per frame and place (3.21) — a correction against the prints after the owner's round-49 sheets, never a badge
   [SYMBOLS_PRINT_LAYOUT_VERSION]: "sweep", // five symbols on the prints' drawings + flat rules-text pips (6.16b) — a correction against the prints after the owner's round-43 sheets, never a badge

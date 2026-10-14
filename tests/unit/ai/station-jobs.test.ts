@@ -467,6 +467,108 @@ describe("the per-field fill job on a station card", () => {
     expectCharged(step, 1, "fill_card");
   });
 
+  it("the empty tier came back EMPTY (model and judge): the fill is refused at plan time — no job, no charge, no refund, no settle, no picture (owner 2026-10-14; main: charged 1 and handed the text back unchanged)", async () => {
+    const station_text = `When this Spacecraft enters,  scry 2.\n${LINE(9)}\n2+ | Whenever you cast an artifact spell, scry 1.\n9+ | `;
+    // Every design / judge answer keeps the gap; art is ticked too.
+    s.answers = [[ship({ rules_text: station_text })], [ship({ rules_text: station_text })], [ship({ rules_text: station_text })]];
+    const out = await createCardFillJob({ want: ["rules_text", "art"], locked: { ...locked, station_text }, steer: {} });
+    // Art was ticked too: the message says nothing was applied.
+    expect(out).toEqual({
+      ok: false,
+      code: "STATION_TIER_UNFILLED",
+      error: "The AI couldn't write that tier, so nothing was applied and nothing was charged. Try again or write it yourself.",
+    });
+    // No job row → no step the client could run, retry or loop on; no
+    // ledger row of any kind (spend, refund) and nothing for patch_job_step
+    // to settle; no image generated.
+    expect(s.inserted).toEqual([]);
+    expect(s.spend).not.toHaveBeenCalled();
+    expect(s.refund).not.toHaveBeenCalled();
+    expect(s.patched).toEqual([]);
+    expect(s.images).toBe(0);
+  });
+
+  it("two gaps, only one written: refused the same way (nothing half-filled is sold)", async () => {
+    const station_text = `${LINE(9)}\n2+ | \n9+ | `;
+    const half = ship({ rules_text: `${LINE(9)}\n2+ | Scry 1.` });
+    s.answers = [[half], [half], [half]];
+    const out = await createCardFillJob({ want: ["rules_text"], locked: { ...locked, station_text }, steer: {} });
+    // The message names the ONE tier still unwritten.
+    expect(out).toMatchObject({ ok: false, code: "STATION_TIER_UNFILLED", error: expect.stringMatching(/^The AI couldn't write that tier — nothing was charged/) });
+    expect(s.inserted).toEqual([]);
+    expect(s.spend).not.toHaveBeenCalled();
+  });
+
+  // F1 of #561's independent check: a gap "filled" by place with a COPY of
+  // a tier the maker already wrote is a gap left — refused, not charged.
+  it("the model drops the empty line and returns the other tier alone: refused (main and 5ce65d00: '3+ | Flying' copied, charged 1)", async () => {
+    const station_text = `${LINE(9)}\n3+ | \n8+ | Flying`;
+    const copy = ship({ rules_text: `${LINE(9)}\n8+ | Flying` });
+    s.answers = [[copy], [copy], [copy]];
+    const out = await createCardFillJob({ want: ["rules_text"], locked: { ...locked, station_text }, steer: {} });
+    expect(out).toEqual({ ok: false, code: "STATION_TIER_UNFILLED", error: "The AI couldn't write that tier — nothing was charged. Try again or write it yourself." });
+    expect(s.inserted).toEqual([]);
+    expect(s.spend).not.toHaveBeenCalled();
+    expect(s.refund).not.toHaveBeenCalled();
+  });
+
+  it("two gaps and only '8+ | B.' comes back: 8+ is written, 3+ is not given a copy of it — refused, not charged", async () => {
+    const station_text = `${LINE(9)}\n3+ | \n8+ | `;
+    const one = ship({ rules_text: `${LINE(9)}\n8+ | Draw a card.` });
+    s.answers = [[one], [one], [one]];
+    const out = await createCardFillJob({ want: ["rules_text"], locked: { ...locked, station_text }, steer: {} });
+    expect(out).toMatchObject({ ok: false, code: "STATION_TIER_UNFILLED" });
+    expect(s.inserted).toEqual([]);
+    expect(s.spend).not.toHaveBeenCalled();
+  });
+
+  it("a by-place fill that is still legitimate (the model renumbered the gap): written and charged once", async () => {
+    const station_text = `${LINE(9)}\n3+ | \n9+ | Flying`;
+    s.answers = [[ship({ rules_text: `${LINE(9)}\n4+ | Draw a card.\n9+ | Flying` })]];
+    const out = await createCardFillJob({ want: ["rules_text"], locked: { ...locked, station_text }, steer: {} });
+    expect(out.ok).toBe(true);
+    const stored = s.inserted[0]! as { plan: { fields: Record<string, unknown> } };
+    expect(stored.plan.fields).toEqual({ rules_text: `${LINE(9)}\n3+ | Draw a card.\n9+ | Flying` });
+    job("card_fill", stored.plan as never, "fill:0");
+    const { step } = await runStep();
+    expectCharged(step, 1, "fill_card");
+  });
+
+  it("refused WHOLE with title, flavour and art ticked beside the gap: none of them is handed over, no picture is painted", async () => {
+    const station_text = `${LINE(9)}\n2+ | Scry 1.\n9+ | `;
+    const keeps = ship({ title: "New Name", flavor_text: "New flavour.", rules_text: `${LINE(9)}\n2+ | Scry 1.` });
+    s.answers = [[keeps], [keeps], [keeps]];
+    const out = await createCardFillJob({ want: ["title", "rules_text", "flavor_text", "art"], locked: { ...locked, station_text }, steer: {} });
+    expect(out).toMatchObject({ ok: false, code: "STATION_TIER_UNFILLED" });
+    expect(s.inserted).toEqual([]);
+    expect(s.spend).not.toHaveBeenCalled();
+    expect(s.images).toBe(0);
+  });
+
+  it("a Planet's gap: refused when it comes back empty, charged once when written", async () => {
+    const planetLocked = { title: "Verdant Orb", card_type: "land" as const, subtypes: ["Planet"], color_identity: ["green" as const] };
+    const planet = (rules_text: string) => ship({ title: "Verdant Orb", cost: "", card_type: "land", subtypes: ["Planet"], color_identity: ["green"], power: null, toughness: null, rules_text });
+    const station_text = `${LINE(null, "Planet")}\n3+ | {T}: Add {G}.\n7+ | `;
+    s.answers = [[planet(station_text)], [planet(station_text)], [planet(station_text)]];
+    expect(await createCardFillJob({ want: ["rules_text"], locked: { ...planetLocked, station_text }, steer: {} })).toMatchObject({ ok: false, code: "STATION_TIER_UNFILLED" });
+    expect(s.inserted).toEqual([]);
+    s.answers = [[planet(`${LINE(null, "Planet")}\n3+ | {T}: Add {G}.\n7+ | Draw a card.`)]];
+    const out = await createCardFillJob({ want: ["rules_text"], locked: { ...planetLocked, station_text }, steer: {} });
+    expect(out.ok).toBe(true);
+    job("card_fill", (s.inserted[0] as { plan: Record<string, unknown> }).plan, "fill:0");
+    const { step } = await runStep();
+    expectCharged(step, 1, "fill_card");
+  });
+
+  it("a fill that designs the type into a NON-station card is never refused for the old gap (the designed text is the answer, as on main)", async () => {
+    const station_text = `${LINE(9)}\n2+ | Scry 1.\n9+ | `;
+    const creature = ship({ card_type: "creature", subtypes: ["Human"], rules_text: "Flying" });
+    s.answers = [[creature], [creature]];
+    const out = await createCardFillJob({ want: ["card_type", "rules_text"], locked: { title: "Halcyon", color_identity: ["blue"], station_text }, steer: {} });
+    expect(out.ok).toBe(true);
+    expect((s.inserted[0] as { plan: { fields: { rules_text: string } } }).plan.fields.rules_text).toBe("Flying");
+  });
+
   it("a fill that designs the type: a Spacecraft with tiers takes the station frame, a tierless one the Artifact frame", async () => {
     s.answers = [[ship()]];
     await createCardFillJob({ want: ["card_type", "color_identity", "rules_text", "stats"], locked: {}, steer: { card_type: "artifact" }, frame: "m15station" });

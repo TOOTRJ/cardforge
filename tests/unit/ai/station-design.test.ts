@@ -12,6 +12,8 @@ import {
   sameStationShape,
   stationDesignProblems,
   stationFillNote,
+  stationGapUnfilledMessage,
+  stationGapsLeftEmpty,
   stationPtChoiceAfterFill,
   stationSaveFields,
   stationWordOf,
@@ -366,6 +368,72 @@ describe("a fill of the rules text on a card that already has tiers", () => {
     expect(mergeStationFill("Station\n3+ | \n8+ | Flying", "Station\n8+ | Trample\n3+ | Draw a card.")).toBe("Station\n3+ | Draw a card.\n8+ | Flying");
     expect(mergeStationFill("Station\n3+ | \n8+ | Flying", "Station\n4+ | Draw two cards.\n10+ | Trample")).toBe("Station\n3+ | Draw two cards.\n8+ | Flying");
     expect(mergeStationFill("Station\n3+ | \n8+ | Flying", "No tiers here.")).toBe("Station\n3+ | \n8+ | Flying");
+  });
+
+  it("the gaps a merged fill still leaves empty: the fill is refused on any (owner 2026-10-14)", () => {
+    // Nothing designed for the gap: the merge is the input, the gap is left.
+    expect(stationGapsLeftEmpty("Station\n3+ | \n8+ | Flying", mergeStationFill("Station\n3+ | \n8+ | Flying", "No tiers here."))).toEqual([0]);
+    // The model wrote the gap: none left.
+    expect(stationGapsLeftEmpty("Station\n3+ | \n8+ | Flying", mergeStationFill("Station\n3+ | \n8+ | Flying", "Station\n3+ | Draw a card."))).toEqual([]);
+    // Two gaps, one written: the other is still left (by its own index).
+    const two = "Station\n3+ | \n8+ | ";
+    // (3+ takes the one designed tier by place; 8+ has none of its own.)
+    expect(stationGapsLeftEmpty(two, mergeStationFill(two, "Station\n9+ | Trample"))).toEqual([1]);
+    expect(stationGapsLeftEmpty(two, mergeStationFill(two, "Station\n2+ | A.\n9+ | B."))).toEqual([]);
+    // A text with no gap (or no tier) is never refused.
+    expect(stationGapsLeftEmpty("Station\n3+ | A.\n8+ | Flying", "anything")).toEqual([]);
+    expect(stationGapsLeftEmpty(null, "")).toEqual([]);
+    expect(stationGapsLeftEmpty("Flying", "Flying")).toEqual([]);
+    expect(stationGapUnfilledMessage(1)).toBe("The AI couldn't write that tier — nothing was charged. Try again or write it yourself.");
+    expect(stationGapUnfilledMessage(2)).toMatch(/those tiers — nothing was charged/);
+  });
+
+  it("the detector's edges (independent check of #561): written is never refused, blank is", () => {
+    const gap = "Station\n2+ | A.\n9+ | ";
+    // Whitespace is not a text: refused.
+    expect(stationGapsLeftEmpty(gap, "Station\n2+ | A.\n9+ |    ")).toEqual([1]);
+    expect(stationGapsLeftEmpty(gap, "Station\n2+ | A.\n9+ | \t")).toEqual([1]);
+    // Renumbered by the model: written by place, not refused.
+    expect(stationGapsLeftEmpty(gap, mergeStationFill(gap, "Station\n2+ | A.\n8+ | Flying"))).toEqual([]);
+    // Tiers out of order: the gap is found by its number.
+    const unordered = "Station\n9+ | \n2+ | A.";
+    expect(stationGapsLeftEmpty(unordered, mergeStationFill(unordered, "Station\n2+ | A.\n9+ | Flying"))).toEqual([]);
+    expect(stationGapsLeftEmpty(unordered, mergeStationFill(unordered, "Station\n9+ | \n2+ | A."))).toEqual([0]);
+    // CRLF (written, and left with a trailing break).
+    const crlf = "Station\r\n2+ | A.\r\n9+ | \r\n";
+    expect(stationGapsLeftEmpty(crlf, mergeStationFill(crlf, "Station\n2+ | A.\n9+ | Flying"))).toEqual([]);
+    expect(stationGapsLeftEmpty(crlf, mergeStationFill(crlf, "Station\n2+ | A."))).toEqual([1]);
+    // A "N+ |" line with a text on the next line is not a gap; a fourth
+    // tier line is read as the third tier's text, not a gap either.
+    expect(stationGapsLeftEmpty("Station\n2+ | A.\n9+ |\nFlying", "x")).toEqual([]);
+    expect(stationGapsLeftEmpty("Station\n2+ | A.\n5+ | B.\n9+ | C.\n12+ |", "x")).toEqual([]);
+  });
+
+  it("F1 (#561's check): a gap is never filled by place with a COPY of a tier the text already has", () => {
+    // The other tier alone comes back: the gap stays, and is refused.
+    const one = "Station\n3+ | \n8+ | Flying";
+    expect(mergeStationFill(one, "Station\n8+ | Flying")).toBe(one);
+    expect(stationGapsLeftEmpty(one, mergeStationFill(one, "Station\n8+ | Flying"))).toEqual([0]);
+    // Two gaps, only 8+ written: 8+ takes it by number, 3+ gets no copy.
+    const two = "Station\n3+ | \n8+ | ";
+    expect(mergeStationFill(two, "Station\n8+ | B.")).toBe("Station\n3+ | \n8+ | B.");
+    expect(stationGapsLeftEmpty(two, mergeStationFill(two, "Station\n8+ | B."))).toEqual([0]);
+    // By place from a NEW number is still a fill.
+    expect(mergeStationFill(one, "Station\n4+ | Draw.\n8+ | Flying")).toBe("Station\n3+ | Draw.\n8+ | Flying");
+  });
+
+  it("a tier 'written' with punctuation alone or the Station reminder alone is a gap left; two tiers with one number are each checked", () => {
+    const gap = "Station\n2+ | A.\n9+ | ";
+    expect(stationGapsLeftEmpty(gap, "Station\n2+ | A.\n9+ | .")).toEqual([1]);
+    expect(stationGapsLeftEmpty(gap, "Station\n2+ | A.\n9+ | — …")).toEqual([1]);
+    expect(stationGapsLeftEmpty(gap, `Station\n2+ | A.\n9+ | ${stationReminder("Spacecraft", 9)}`)).toEqual([1]);
+    expect(stationGapsLeftEmpty(gap, "Station\n2+ | A.\n9+ | {T}")).toEqual([]);
+    expect(stationGapsLeftEmpty(gap, "Station\n2+ | A.\n9+ | 3")).toEqual([]);
+    // Same number twice, the second a gap: the second is the one checked.
+    const twin = "Station\n5+ | A.\n5+ | ";
+    expect(stationGapsLeftEmpty(twin, "Station\n5+ | A.\n5+ | ")).toEqual([1]);
+    expect(stationGapsLeftEmpty(twin, mergeStationFill(twin, "Station\n5+ | A.\n5+ | B."))).toEqual([]);
+    expect(mergeStationFill(twin, "Station\n5+ | A.\n5+ | B.")).toBe("Station\n5+ | A.\n5+ | B.");
   });
 
   it("no gap: the designed text is the answer", () => {

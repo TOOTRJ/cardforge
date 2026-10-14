@@ -4936,14 +4936,15 @@ export const M15_HOLO_STAMP: FrameOverlaySlot = {
  * rim tinted to OUR Universes Beyond master's bar and the triangle (CC's
  * hologram capture) cut clear (scripts/lib/cc-frames.mjs
  * HOLO_STAMP_NOTCHES.m15ubholostamp). The art over the cut is our own
- * silver triangle (lib/cards/holo-stamp-art.ts HOLO_STAMP_TRIANGLE_ART), on
+ * triangle (lib/cards/holo-stamp-art.ts: the silver HOLO_STAMP_TRIANGLE_ART
+ * on a rare or mythic, the matte HOLO_STAMP_TRIANGLE_MATTE_ART below), on
  * the prints: top edge 1919 px, apex 1991 (61 prints, 40K 2022 → FIN 2025).
  * Keys: w u b r g, m, a (the artifact silver), l (the land taupe) and c
  * (the see-through colourless spell frame's white rim), then the ten pairs,
- * tinted per column as M15_HOLO_STAMP's are. `frame_style.stamp` keeps its
- * meaning — "auto" is a rare or mythic, "oval" / "triangle" always, and
- * every "on" value draws THIS frame's shape — although print stamps every
- * rarity of this frame (docs/FRAMES.md "The Universes Beyond frames").
+ * tinted per column as M15_HOLO_STAMP's are. Every "on" value of
+ * `frame_style.stamp` draws THIS frame's shape, and "auto" stamps EVERY
+ * rarity here, as print does (owner Round 57; holoStampWanted reads the
+ * slot's shape — docs/FRAMES.md "The Universes Beyond frames").
  * Set only on the three Universes Beyond PROFILES entries.
  */
 export const M15UB_HOLO_STAMP: FrameOverlaySlot = {

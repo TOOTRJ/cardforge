@@ -2816,9 +2816,69 @@ describe("v55 — the Nyx Constellation frame's rim on its prints (owner Rounds 
   });
 });
 
-describe("v56 — the see-through colourless Universes Beyond spell frame (TODO 4.25 follow-up, owner Round 57)", () => {
+describe("v56 — the Universes Beyond triangle as printed (TODO 4.25 follow-up, owner Round 57)", () => {
   const png = "https://x/y.png";
   const V = 56;
+  const UB = ["m15ub", "m15ubartifact", "m15ubland"];
+  /** A v55 bake: only v56 can be pending. */
+  const at = (template: string, stamp: unknown, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    visibility: "public",
+    layout_version: V - 1,
+    rendered_image_url: png,
+    frame_style: stamp === undefined ? { template, finish: "regular" } : { template, finish: "regular", stamp },
+    card_type: template === "m15ubland" ? "land" : template === "m15ubartifact" ? "artifact" : "creature",
+    rarity: "common",
+    ...over,
+  });
+
+  it("is a sweep, never a badge, scoped to the three frames AND to the card, and verification-neutral", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.UB_STAMP_TONES_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect(lv.VERSION_SCOPES[V]).toBeTypeOf("function");
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual([]);
+    expect([...lv.UB_STAMP_TONES_TEMPLATES].sort()).toEqual([...UB].sort());
+    // Without a card to judge by: the three templates are touched, no other.
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(UB.includes(t));
+  });
+
+  it("the frozen list is the profiles': every template whose stamp is the triangle", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(
+      FRAME_TEMPLATE_VALUES.filter((t) => (getFrameProfile(t).overlays ?? []).some((o) => o.anatomy === "holoStamp" && o.stamp.shape === "triangle")).sort(),
+    ).toEqual([...lv.UB_STAMP_TONES_TEMPLATES].sort());
+  });
+
+  it("only a card whose switch asks for a stamp re-bakes: auto / oval / triangle, never none, an absent key, a token or an emblem", () => {
+    for (const t of UB) {
+      for (const rarity of ["common", "uncommon", "rare", "mythic"]) {
+        for (const stamp of ["auto", "oval", "triangle"]) expect(isRenderStale(V - 1, t, undefined, V, at(t, stamp, { rarity })), `${t} ${stamp} ${rarity}`).toBe(true);
+        expect(isRenderStale(V - 1, t, undefined, V, at(t, "none", { rarity }))).toBe(false);
+        expect(isRenderStale(V - 1, t, undefined, V, at(t, undefined, { rarity }))).toBe(false);
+        expect(isRenderStale(V - 1, t, undefined, V, at(t, "acorn", { rarity }))).toBe(false);
+      }
+      expect(isRenderStale(V - 1, t, undefined, V, at(t, "auto", { card_type: "token" }))).toBe(false);
+      expect(isRenderStale(V - 1, t, undefined, V, at(t, "triangle", { card_type: "emblem" }))).toBe(false);
+      // A row that can't be judged is conservative.
+      expect(isRenderStale(V - 1, t, undefined, V, at(t, "auto", { card_type: undefined }))).toBe(true);
+      expect(isRenderStale(V - 1, t, undefined, V, { ...at(t, "auto"), frame_style: undefined })).toBe(true);
+    }
+    // Off the three frames nothing is owed, whatever the switch.
+    for (const t of ["m15", "m15artifact", "m15land", "m15pw", "m15vehicle", "m15nyx", "m15station"]) {
+      for (const stamp of ["auto", "oval", "triangle", "none", undefined]) expect(isRenderStale(V - 1, t, undefined, V, at(t, stamp, { rarity: "mythic" })), `${t} ${stamp}`).toBe(false);
+    }
+  });
+});
+
+describe("v57 — the see-through colourless Universes Beyond spell frame (TODO 4.25 follow-up, owner Round 57)", () => {
+  const png = "https://x/y.png";
+  const V = 57;
   const at = (template: string, colors: string[] | undefined, over: Record<string, unknown> = {}) => ({
     ...UNTOUCHED_SINCE_V22,
     visibility: "public",

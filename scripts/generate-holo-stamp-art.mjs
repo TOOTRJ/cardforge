@@ -99,10 +99,19 @@ export function holoStampOvalSvg() {
 </svg>`;
 }
 
-// The Universes Beyond triangle (TODO 4.25): the same silver, sheen and
-// keyline in the prints' triangle (UB_STAMP_FACE), over the black that
-// covers the notch piece's cut (UB_STAMP_HOLE plus the art margin). Its
-// box is the hole's bounds grown by the margin, in HD px.
+// The Universes Beyond triangle (TODO 4.25), in the prints' triangle
+// (UB_STAMP_FACE) over the black that covers the notch piece's cut
+// (UB_STAMP_HOLE plus the art margin). Its box is the hole's bounds grown by
+// the margin, in HD px. TWO faces (owner Round 57, decision 2; 64 prints
+// read 2026-10-14, the face 9 px inside its edge at 1500 × 2100):
+//   • the HOLOGRAM of a rare or mythic — print reads a mean luminance of
+//     148 (144–153 on 28 prints), its darker tenth at 113 and its lighter
+//     tenth at 189. Ours: the oval's sheen, lines, tint and keyline over a
+//     DARKER silver (UB_HOLO_SILVER) and a softer glint — a neutral silver,
+//     no symbol, no Wizards artwork;
+//   • the MATTE grey of a common or uncommon — print is one flat tone,
+//     96, 97, 96 (26 prints within 95–101; sd 0–1), with no keyline, sheen
+//     or rim: UB_MATTE_GREY over the whole face.
 const triArt = holoStampArtRect(M15UB_HOLO_STAMP_BOX);
 const TW = (triArt.widthPct / 100) * 1500;
 const TH = (triArt.heightPct / 100) * 2100;
@@ -114,13 +123,33 @@ const triPoints = (t) => t.points.map(([x, y]) => `${(x - TX).toFixed(2)},${(y -
 const triShape = (t, grow, attrs) =>
   `<polygon points="${triPoints(t)}" stroke-width="${(2 * (t.radius + grow)).toFixed(2)}" stroke-linejoin="round" ${attrs}/>`;
 
-/** The triangle's SVG, in HD px units. */
+/** The matte triangle's one tone (print: 95, 97, 96). */
+export const UB_MATTE_GREY = "#5f6160";
+
+/** The hologram triangle's silver: the oval's seven stops, each darker —
+ *  the same single-light sheen at the prints' level. */
+const UB_HOLO_SILVER = `<linearGradient id="silverUb" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#b9bbbf"/>
+      <stop offset="0.18" stop-color="#8a8d93"/>
+      <stop offset="0.38" stop-color="#a6a8ac"/>
+      <stop offset="0.52" stop-color="#63676f"/>
+      <stop offset="0.64" stop-color="#454952"/>
+      <stop offset="0.8" stop-color="#767a81"/>
+      <stop offset="1" stop-color="#a0a3a7"/>
+    </linearGradient>
+    <radialGradient id="glintUb" cx="0.28" cy="0.25" r="0.45">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>`;
+
+/** The hologram triangle's SVG, in HD px units. */
 export function holoStampTriangleSvg() {
   const keyline = 2;
   const oval = holoStampOvalSvg();
   const defs = oval.slice(oval.indexOf("<defs>") + "<defs>".length, oval.indexOf("<clipPath"));
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${TW}" height="${TH}" viewBox="0 0 ${TW} ${TH}">
-  <defs>${defs}<mask id="face" maskUnits="userSpaceOnUse" x="0" y="0" width="${TW}" height="${TH}">${triShape(UB_STAMP_FACE, 0, 'fill="#ffffff" stroke="#ffffff"')}</mask>
+  <defs>${defs}${UB_HOLO_SILVER}
+    <mask id="face" maskUnits="userSpaceOnUse" x="0" y="0" width="${TW}" height="${TH}">${triShape(UB_STAMP_FACE, 0, 'fill="#ffffff" stroke="#ffffff"')}</mask>
     <mask id="inner" maskUnits="userSpaceOnUse" x="0" y="0" width="${TW}" height="${TH}">${triShape(UB_STAMP_FACE, -keyline, 'fill="#ffffff" stroke="#ffffff"')}</mask>
   </defs>
   <!-- the notch's black: the hole plus the art margin (the cut's cover) -->
@@ -128,11 +157,19 @@ export function holoStampTriangleSvg() {
   <!-- the 2 px dark keyline: the face in the keyline's colour, the silver inside it -->
   ${triShape(UB_STAMP_FACE, 0, 'fill="#2a2c31" stroke="#2a2c31"')}
   <g mask="url(#inner)">
-    <rect width="${TW}" height="${TH}" fill="url(#silver)"/>
+    <rect width="${TW}" height="${TH}" fill="url(#silverUb)"/>
     <rect width="${TW}" height="${TH}" fill="url(#lines)"/>
     <rect width="${TW}" height="${TH}" fill="url(#holo)"/>
-    <ellipse cx="${TW * 0.36}" cy="${TH * 0.3}" rx="${TW * 0.36}" ry="${TH * 0.34}" fill="url(#glint)"/>
+    <ellipse cx="${TW * 0.36}" cy="${TH * 0.3}" rx="${TW * 0.36}" ry="${TH * 0.34}" fill="url(#glintUb)"/>
   </g>
+</svg>`;
+}
+
+/** The matte triangle's SVG: the same black cover, the whole face flat. */
+export function holoStampMatteTriangleSvg() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${TW}" height="${TH}" viewBox="0 0 ${TW} ${TH}">
+  ${triShape(UB_STAMP_HOLE, HOLO_STAMP_ART_MARGIN_PX, 'fill="#000000" stroke="#000000"')}
+  ${triShape(UB_STAMP_FACE, 0, `fill="${UB_MATTE_GREY}" stroke="${UB_MATTE_GREY}"`)}
 </svg>`;
 }
 
@@ -150,14 +187,17 @@ async function main() {
   const svg = holoStampOvalSvg();
   const { png, width, height } = await rasterise(svg, W, H);
   const tri = await rasterise(holoStampTriangleSvg(), TW, TH);
+  const matte = await rasterise(holoStampMatteTriangleSvg(), TW, TH);
   if (outPng) {
     fs.writeFileSync(path.resolve(outPng), png);
     fs.writeFileSync(path.resolve(outPng).replace(/\.png$/, "-triangle.png"), tri.png);
+    fs.writeFileSync(path.resolve(outPng).replace(/\.png$/, "-triangle-matte.png"), matte.png);
     console.log(`wrote ${outPng} (${width}×${height}, ${png.length} bytes) and its -triangle.png (${tri.width}×${tri.height}, ${tri.png.length} bytes)`);
     return;
   }
   const dataUri = `data:image/png;base64,${png.toString("base64")}`;
   const triUri = `data:image/png;base64,${tri.png.toString("base64")}`;
+  const matteUri = `data:image/png;base64,${matte.png.toString("base64")}`;
   const source = `// GENERATED by scripts/generate-holo-stamp-art.mjs — do not edit by hand.
 // The holofoil stamp's oval (TODO 4.9c, owner 2026-09-29): our own neutral
 // silver oval with a sheen and no symbol, inside a ring of the notch's black
@@ -176,10 +216,11 @@ export const HOLO_STAMP_OVAL_ART = {
     "${dataUri}",
 } as const;
 
-/** The Universes Beyond triangle (TODO 4.25): the same silver in the
- *  prints' triangle (lib/cards/holo-stamp.ts UB_STAMP_FACE) over the black
- *  that covers the notch piece's cut (UB_STAMP_HOLE plus the margin),
- *  transparent outside it. ${tri.width} × ${tri.height} px = the HD art rect
+/** The Universes Beyond triangle of a rare or mythic (TODO 4.25; toned
+ *  onto print in Round 57's follow-up): our silver sheen at the prints'
+ *  level in the prints' triangle (lib/cards/holo-stamp.ts UB_STAMP_FACE)
+ *  over the black that covers the notch piece's cut (UB_STAMP_HOLE plus the
+ *  margin), transparent outside it. ${tri.width} × ${tri.height} px = the HD art rect
  *  (${TW.toFixed(1)} × ${TH.toFixed(1)} px) at ${HOLO_STAMP_ART_SCALE}×. */
 export const HOLO_STAMP_TRIANGLE_ART = {
   width: ${tri.width},
@@ -188,10 +229,24 @@ export const HOLO_STAMP_TRIANGLE_ART = {
     "${triUri}",
 } as const;
 
-/** The art bitmap of a stamp shape — what both renderers stretch over the
- *  stamp's art rect. */
-export function holoStampArtOf(shape: "oval" | "triangle"): { width: number; height: number; dataUri: string } {
-  return shape === "triangle" ? HOLO_STAMP_TRIANGLE_ART : HOLO_STAMP_OVAL_ART;
+/** The Universes Beyond triangle of a common or uncommon: the same shape
+ *  in print's flat matte grey — no sheen, no keyline. */
+export const HOLO_STAMP_TRIANGLE_MATTE_ART = {
+  width: ${matte.width},
+  height: ${matte.height},
+  dataUri:
+    "${matteUri}",
+} as const;
+
+/** The art bitmap of a stamp shape and tone (lib/cards/holo-stamp.ts
+ *  holoStampToneOf) — what both renderers stretch over the stamp's art
+ *  rect. The oval has one face. */
+export function holoStampArtOf(
+  shape: "oval" | "triangle",
+  tone: "holo" | "matte" = "holo",
+): { width: number; height: number; dataUri: string } {
+  if (shape !== "triangle") return HOLO_STAMP_OVAL_ART;
+  return tone === "matte" ? HOLO_STAMP_TRIANGLE_MATTE_ART : HOLO_STAMP_TRIANGLE_ART;
 }
 `;
   fs.writeFileSync(MODULE, source);

@@ -197,6 +197,20 @@ describe("the per-field fill on a station card", () => {
     expect(fields.rules_text).toBe(`When this Spacecraft enters,  scry 2.\n${LINE(9)}\n2+ | Whenever you cast an artifact spell, scry 1.\n9+ | Flying, vigilance`);
   });
 
+  it("the gap came back empty from the model AND the judge: the fill throws its refusal (owner 2026-10-14)", async () => {
+    const station_text = `When this Spacecraft enters,  scry 2.\n${LINE(9)}\n2+ | Whenever you cast an artifact spell, scry 1.\n9+ | `;
+    // The design returns the tier with no text, and so does every judge pass.
+    s.answers = [[ship({ rules_text: station_text })], [ship({ rules_text: station_text })], [ship({ rules_text: station_text })]];
+    await expect(designCardFill({ want: ["rules_text"], locked: { ...locked, station_text }, steer: {} })).rejects.toMatchObject({
+      name: "StationGapUnfilledError",
+      code: "STATION_TIER_UNFILLED",
+      message: "The AI couldn't write that tier — nothing was charged. Try again or write it yourself.",
+    });
+    // …and a text with no tier at all leaves the gap too.
+    s.answers = [[ship({ rules_text: "Flying" })], [ship({ rules_text: "Flying" })], [ship({ rules_text: "Flying" })]];
+    await expect(designCardFill({ want: ["rules_text"], locked: { ...locked, station_text }, steer: {} })).rejects.toMatchObject({ code: "STATION_TIER_UNFILLED" });
+  });
+
   it("no gap: a new text, in shape, and the designer is told the layout it had", async () => {
     const station_text = `${LINE(9)}\n2+ | Scry 1.\n9+ | Flying`;
     s.answers = [[ship({ rules_text: `${LINE(8)}\n3+ | Draw a card.\n8+ | Flying, trample` })]];

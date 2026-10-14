@@ -22,6 +22,8 @@ const s = vi.hoisted(() => ({
   /** How often the deck remix's estimate (its Scryfall work) ran. */
   estimateCalls: 0,
   created: [] as Array<{ kind: string; input: Record<string, unknown> }>,
+  /** What createCardFillJob answers instead of a job (a refused plan). */
+  fillRefusal: null as Record<string, unknown> | null,
 }));
 
 vi.mock("@/lib/supabase/env", () => ({ isSupabaseConfigured: () => true }));
@@ -76,7 +78,8 @@ vi.mock("@/lib/ai/generation-jobs", () => {
   };
   return {
     createCardGenerationJob: record("card"),
-    createCardFillJob: record("card_fill"),
+    createCardFillJob: async (input: Record<string, unknown>) =>
+      s.fillRefusal ?? record("card_fill")(input),
     createDeckGenerationJob: record("deck"),
     createDeckRemixJob: record("deck_remix"),
   };
@@ -106,6 +109,7 @@ beforeEach(() => {
   s.estimateCalls = 0;
   s.emblems = 0;
   s.created = [];
+  s.fillRefusal = null;
 });
 
 describe("POST /api/ai/jobs", () => {
@@ -227,5 +231,29 @@ describe("POST /api/ai/jobs — an emblem's per-field fill", () => {
     expect(steered.status).toBe(400);
     const designed = await post({ kind: "card", card_type: "emblem" });
     expect(designed.status).toBe(400);
+  });
+});
+
+// Owner 2026-10-14: a station card's per-field fill whose empty tier came
+// back empty is refused at plan time — the route passes the refusal on with
+// its code (no job, no credit) for the fill dialog's message.
+describe("POST /api/ai/jobs — a station fill refused at plan time", () => {
+  it("answers the refusal with 422 (an expected outcome, not a gateway fault), its code and message; no job is created", async () => {
+    s.fillRefusal = {
+      ok: false,
+      code: "STATION_TIER_UNFILLED",
+      error: "The AI couldn't write that tier — nothing was charged. Try again or write it yourself.",
+    };
+    const { status, json } = await post({ kind: "card_fill", want: ["rules_text"], locked: { card_type: "artifact", subtypes: ["Spacecraft"], station_text: "Station\n3+ | " } });
+    expect(status).toBe(422);
+    expect(json).toEqual(s.fillRefusal);
+    expect(s.created).toHaveLength(0);
+  });
+
+  it("any other refused plan answers as it did on main: no code", async () => {
+    s.fillRefusal = { ok: false, error: "AI card design failed: boom" };
+    const { status, json } = await post({ kind: "card_fill", want: ["title"], locked: {} });
+    expect(status).toBe(502);
+    expect(json).toEqual({ ok: false, error: "AI card design failed: boom" });
   });
 });

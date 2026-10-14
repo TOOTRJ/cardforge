@@ -1060,7 +1060,7 @@ function CardImage({
       {holoStamp ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={holoStampArtOf(holoStamp.shape).dataUri}
+          src={holoStampArtOf(holoStamp.shape, holoStamp.tone).dataUri}
           alt=""
           width={Math.round((holoStamp.artRect.widthPct / 100) * width)}
           height={Math.round((holoStamp.artRect.heightPct / 100) * height)}

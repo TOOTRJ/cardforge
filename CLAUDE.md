@@ -900,7 +900,8 @@ Rules and gotchas:
   only). A job that saves on the frame writes rows (`stationSaveFields`);
   a remix keeps its source's tiers and P/T tier; a fill of the rules text
   writes only a tier left empty (`mergeStationFill`) and keeps the P/T
-  choice with its tier. A new AI path that writes rules text goes through
+  choice with its tier — and is refused at PLAN time, before any charge,
+  when that tier comes back empty (`stationGapsLeftEmpty`). A new AI path that writes rules text goes through
   `designCards`, or it knows nothing of tiers. What every OTHER card saves
   through the AI jobs is pinned to main (`job-payloads-pinned.test.ts`).
   The tier editor's notes (`lib/creator/station-fit.ts`: text really cut,
@@ -916,9 +917,15 @@ Rules and gotchas:
   masters, pair masters and plates, the Universes Beyond crown band
   (`UB_CROWN`, `m15ubcrown/*`: no `c` key) and the TRIANGLE stamp's notch
   (`M15UB_HOLO_STAMP`, `m15ubholostamp/*`: CC's piece resampled once, the
-  triangle cut clear, our own triangle art from `holoStampArtOf`). The
+  triangle cut clear, our own triangle art from `holoStampArtOf`). On a
+  TRIANGLE frame `"auto"` stamps EVERY rarity, as print does (owner Round
+  57; layout v56, a sweep scoped to the three frames): `holoStampWanted`
+  reads the slot's shape, and the face's tone is `holoStampToneOf` — the
+  flat MATTE grey on a common or uncommon, our silver at the hologram's
+  printed level on a rare or mythic, whatever "on" value asks for it; an
+  oval frame's rule (a rare or mythic) and its one oval are untouched. The
   pack's colourless frame is missing from Card Conjurer's tree: `m15ub/c`
-  is print's SEE-THROUGH frame all the same (owner Round 57; layout v56,
+  is print's SEE-THROUGH frame all the same (owner Round 57; layout v57,
   scoped to that one master) — the accurate pack's see-through `new/c.png`
   (m15/c's edges and ALPHA, value for value) with the older Universes
   Beyond pack's paper as colour only, paper onto paper
