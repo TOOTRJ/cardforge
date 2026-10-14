@@ -94,7 +94,7 @@ describe("the preview draws the bake's crown", () => {
 
   // TODO 4.6f (wave 2b): the extended-art frame's band — CC's floating
   // crown, 1500 × 260, over rows 0–259 of the card (CC's bounds: the
-  // masters are CC's extended frames since layout v56).
+  // masters are CC's extended frames since layout v58).
   it.each([
     ["white", { frameStyle: { template: "extendedart", crown: true } }, "w"],
     ["three colours: gold", { colorIdentity: ["white", "blue", "black"], cost: "{W}{U}{B}", frameStyle: { template: "extendedart", crown: true } }, "m"],

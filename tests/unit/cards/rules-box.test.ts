@@ -104,7 +104,7 @@ describe("the main box on every template", () => {
         "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
         // …and the modal bodies (5.1b), the same skeleton.
         "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
-        // The extended-art frame (layout v56, TODO 4.7): the pack's box is
+        // The extended-art frame (layout v58, TODO 4.7): the pack's box is
         // M15's; the textless promo pair spreads M15 and draws no box.
         "extendedart", "m15textless", "m15textlessland",
       ].sort(),

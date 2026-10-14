@@ -14,7 +14,7 @@ import { frameAssetPathsFor, renderCardImage, type RenderPreset } from "@/lib/re
 // TODO 4.6f (wave 2b) — the extended-art crown in the Satori BAKE, with the
 // REAL published bands (extendedcrown/<key>.png at the manifest's sha256 —
 // FRAMES_BUILD_DIR, else .frames-build; CI fetches them) over the real
-// extendedart masters (Card Conjurer's extended frames since layout v56, at
+// extendedart masters (Card Conjurer's extended frames since layout v58, at
 // the manifest's sha256 from the same folder) and flat art, from a stubbed
 // frames bucket that serves those files only. At both output sizes:
 //   • a crowned bake differs from the same card with the crown switched off
@@ -188,7 +188,7 @@ describe.skipIf(!available)("the extended-art crown in the bake — the real ban
     expect(cmp.max, `max ${cmp.max}`).toBeLessThanOrEqual(3);
     expect(cmp.mean).toBeLessThan(0.5);
     // The outline's peak is CC's row 36 (the slot at CC's bounds since
-    // layout v56; it was 10 px lower over the MSE masters) — and its dark
+    // layout v58; it was 10 px lower over the MSE masters) — and its dark
     // tip over the master's black top border changes no pixel, so the first
     // row that differs is where the crown's own colour begins (row 40 on
     // white; 46–50 over the MSE masters).

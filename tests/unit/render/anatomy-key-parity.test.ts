@@ -176,9 +176,9 @@ describe("bake path = preview path", () => {
     // body, ever; the fronts take it as their own addition later).
     // …and the station frame's two entries (TODO 4.27a): the parents' notch
     // slot, so — with the Nyx dress (TODO 4.7) — ten M15-family entries;
-    // …and the Universes Beyond triangle's 8 bar keys + 10 pairs on its
+    // …and the Universes Beyond triangle's 9 bar keys + 10 pairs on its
     // three entries (4.25).
-    expect(notches).toBe((9 + 10) * 10 + 7 + (8 + 10) * 3);
+    expect(notches).toBe((9 + 10) * 10 + 7 + (9 + 10) * 3);
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

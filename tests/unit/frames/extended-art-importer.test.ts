@@ -9,7 +9,7 @@ import { EDGE_CONTRACTS } from "@/lib/frames/edge-contract";
 import manifestJson from "@/lib/frames/frame-manifest.json";
 
 // ---------------------------------------------------------------------------
-// TODO 4.7 / 4.35 / 4.42 (owner Q6, 2026-10-13; layout v56): `extendedart`
+// TODO 4.7 / 4.35 / 4.42 (owner Q6, 2026-10-13; layout v58): `extendedart`
 // re-sourced from Card Conjurer's accurate 'Extended Art Frames' pack and the
 // textless pair from its 'Magic Fest Promos' — the recipe (whole files, the
 // colourless dresses), the profiles that ride the new masters, the edge

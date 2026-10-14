@@ -77,7 +77,7 @@ describe("the Phase B allow-list", () => {
     // modern and modernland left it with TODO 4.10b: Card Conjurer's 8th,
     // re-cut and toned by the importer (the frames bucket).
     // extendedart, m15textless and m15textlessland left it with TODO 4.7 /
-    // 4.35 (layout v56): Card Conjurer's packs, cut by the importer.
+    // 4.35 (layout v58): Card Conjurer's packs, cut by the importer.
     for (const t of ["adventure", "aftermath", "flip", "saga", "retro", "retroland", "modern", "modernland", "extendedart", "m15textless", "m15textlessland"]) {
       expect(CORNER_NORMALISE_TEMPLATES, t).not.toHaveProperty(t);
     }

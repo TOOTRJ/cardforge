@@ -337,7 +337,7 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   [["adventure/adventure"], ["1200 chars", "400 chars", "200 chars", "EOE #30", "TLA #112", "level up", "blank lines", "flavor only", "pips + reminder"]],
   // The ~12 %-high boxes (tokens, flip, aftermath's top half, the ZNR
   // hedron panel): a full card's text never fits them. (The textless promo
-  // pair draws no box since layout v56 — no consumer, as the full-art
+  // pair draws no box since layout v58 — no consumer, as the full-art
   // token's textless height.)
   [
     ["aftermath/main", "flip/main", "m15token/main", "m15tokenartifact/main"],

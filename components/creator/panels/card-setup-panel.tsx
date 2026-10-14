@@ -185,7 +185,7 @@ type CardSetupPanelProps = {
 };
 
 /** One line under a chip that has no other hint (owner, Round 60): what the
- *  treatment IS, in a few words. The textless frames (layout v56: the
+ *  treatment IS, in a few words. The textless frames (layout v58: the
  *  black-bordered textless promos) print the name and the art alone — the
  *  card keeps its text, which the Text step says shows on other frames. */
 const FRAME_CHIP_HINTS: Partial<Record<FrameTemplate, string>> = {

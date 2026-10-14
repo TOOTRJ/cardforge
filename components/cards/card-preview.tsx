@@ -1926,6 +1926,7 @@ function HoloStampOval({ stamp }: { stamp: ResolvedHoloStamp }) {
     <div
       aria-hidden
       data-holo-stamp={stamp.shape}
+      data-stamp-tone={stamp.tone}
       data-stamp-key={stamp.notch.key}
       className="pointer-events-none absolute"
       style={{
@@ -1934,7 +1935,7 @@ function HoloStampOval({ stamp }: { stamp: ResolvedHoloStamp }) {
         width: `${r.widthPct}%`,
         height: `${r.heightPct}%`,
         zIndex: 7,
-        backgroundImage: `url("${holoStampArtOf(stamp.shape).dataUri}")`,
+        backgroundImage: `url("${holoStampArtOf(stamp.shape, stamp.tone).dataUri}")`,
         backgroundSize: "100% 100%",
         backgroundRepeat: "no-repeat",
       }}

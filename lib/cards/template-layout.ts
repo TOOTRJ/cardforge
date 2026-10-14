@@ -1159,7 +1159,7 @@ export function brandMarkLayout(
  *  treatment (4.28).
  *
  *  An edge-to-edge treatment's window reaches the card's TOP or BOTTOM
- *  edge. The extended-art frame's (TODO 4.7, layout v56) reaches only the
+ *  edge. The extended-art frame's (TODO 4.7, layout v58) reaches only the
  *  SIDE edges, between its title bar and type bar, and is not one: its bars,
  *  box and border are opaque (the etched mask keeps them), and Scryfall's
  *  art_crop of an extended-art printing is the window's whole width (WOE
@@ -4797,9 +4797,11 @@ export const NYX_CONSTELLATION_CROWN: FrameOverlaySlot = {
  * standard crown's geometry with the UB pack's smooth art, built by
  * M15_CROWN's recipe at the same rects (scripts/lib/cc-frames.mjs
  * UB_CROWN_BAND), so the same slot. Keys: w u b r g, m, a (the artifact
- * silver — a colourless card on the spell frame too, whose master is the
- * artifact frame) and l (the land grey), then the ten pairs; no "c". Set
- * only on the three Universes Beyond PROFILES entries.
+ * silver), l (the land grey) and c (the see-through colourless spell
+ * frame's crown, the M15 colourless crown's pixels — TODO 4.25 follow-up),
+ * then the ten pairs. Set only on the three Universes Beyond PROFILES
+ * entries; the artifact and land entries map their colourless key to "a"
+ * and "l".
  */
 export const UB_CROWN: FrameOverlaySlot = {
   anatomy: "crown",
@@ -4807,7 +4809,7 @@ export const UB_CROWN: FrameOverlaySlot = {
   assetPathTemplate: "/frames/m15ubcrown/{key}.png",
   // UB_CROWN_BAND_KEYS in scripts/lib/cc-frames.mjs (a unit test holds them
   // together).
-  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
 };
 
 /**
@@ -4823,7 +4825,7 @@ export const UB_CROWN: FrameOverlaySlot = {
  * draws no pair masters), the colourless card CC's grey C crown over our MSE
  * colourless master.
  *
- * The slot is CC's bounds, from row 0 (TODO 4.7, layout v56): the
+ * The slot is CC's bounds, from row 0 (TODO 4.7, layout v58): the
  * extendedart masters are Card Conjurer's own extended frames, whose title
  * bar's outline tops out at 4.98 %H as FDN #442 / #455 print it — the peak
  * lands at the print's 2.0 %H. (Over the old MSE masters, whose bar topped
@@ -4975,14 +4977,15 @@ export const M15_HOLO_STAMP: FrameOverlaySlot = {
  * rim tinted to OUR Universes Beyond master's bar and the triangle (CC's
  * hologram capture) cut clear (scripts/lib/cc-frames.mjs
  * HOLO_STAMP_NOTCHES.m15ubholostamp). The art over the cut is our own
- * silver triangle (lib/cards/holo-stamp-art.ts HOLO_STAMP_TRIANGLE_ART), on
+ * triangle (lib/cards/holo-stamp-art.ts: the silver HOLO_STAMP_TRIANGLE_ART
+ * on a rare or mythic, the matte HOLO_STAMP_TRIANGLE_MATTE_ART below), on
  * the prints: top edge 1919 px, apex 1991 (61 prints, 40K 2022 → FIN 2025).
- * Keys: w u b r g, m, a (the artifact silver; the spell frame's colourless
- * master is the artifact frame) and l (the land taupe), then the ten pairs,
- * tinted per column as M15_HOLO_STAMP's are. `frame_style.stamp` keeps its
- * meaning — "auto" is a rare or mythic, "oval" / "triangle" always, and
- * every "on" value draws THIS frame's shape — although print stamps every
- * rarity of this frame (docs/FRAMES.md "The Universes Beyond frames").
+ * Keys: w u b r g, m, a (the artifact silver), l (the land taupe) and c
+ * (the see-through colourless spell frame's white rim), then the ten pairs,
+ * tinted per column as M15_HOLO_STAMP's are. Every "on" value of
+ * `frame_style.stamp` draws THIS frame's shape, and "auto" stamps EVERY
+ * rarity here, as print does (owner Round 57; holoStampWanted reads the
+ * slot's shape — docs/FRAMES.md "The Universes Beyond frames").
  * Set only on the three Universes Beyond PROFILES entries.
  */
 export const M15UB_HOLO_STAMP: FrameOverlaySlot = {
@@ -4991,7 +4994,7 @@ export const M15UB_HOLO_STAMP: FrameOverlaySlot = {
   // together).
   rect: { leftPct: (638 / 1500) * 100, topPct: (1891 / 2100) * 100, widthPct: (223 / 1500) * 100, heightPct: (102 / 2100) * 100 },
   assetPathTemplate: "/frames/m15ubholostamp/{key}.png",
-  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
   stamp: { shape: "triangle", oval: M15UB_HOLO_STAMP_BOX, keepOut: M15UB_HOLO_STAMP_KEEP_OUT },
 };
 
@@ -5534,9 +5537,14 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // dresses, collector line) with the UB masters, the pack's own smooth
   // plates, the UB crown band and the TRIANGLE stamp's notch
   // (M15UB_HOLO_STAMP). ADDITIONS: new templates no stored card sits on.
-  // The colourless spell master is the pack's artifact frame (its own
-  // colourless file is missing from Card Conjurer's tree), so `c` is opaque
-  // — no underFrameArt — and crowned / notched in the artifact silver.
+  // The colourless SPELL master is print's SEE-THROUGH frame (owner Round
+  // 57, decision 3; ACR #1, FIN #2, WHO #9): the accurate pack's
+  // see-through colourless frame with the Universes Beyond paper
+  // (scripts/lib/cc-frames.mjs UB_SEE_THROUGH_LAYERS) — m15/c's alpha value
+  // for value, so the art is drawn under the frame for `c` exactly as m15
+  // draws it (underFrameArt on UNDER_FRAME_RECT), crowned in the colourless
+  // crown and notched in its own white rim. The artifact and land frames
+  // keep their opaque colourless masters.
   m15ub: {
     ...M15,
     label: "M15 Universes Beyond",
@@ -5544,7 +5552,8 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     artSlot: CC_M15_ART_SLOT,
     type: { ...M15.type, dy: CC_M15_TYPE_DY },
     pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15ub/pt/{color}.png" },
-    overlays: [{ ...UB_CROWN, keyMap: { c: "a" } }, { ...M15UB_HOLO_STAMP, keyMap: { c: "a" } }],
+    underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] },
+    overlays: [UB_CROWN, M15UB_HOLO_STAMP],
     twoColorMasters: ["split", "hybrid"],
     collector: M15_COLLECTOR,
   },

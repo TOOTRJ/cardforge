@@ -948,7 +948,7 @@ describe("v33 — rules text laid out by its real lines (TODO 3.29)", () => {
     const card = (over: Record<string, unknown>, template = "m15") => ({ ...at(template), ...over });
     // FrameProfile.textless was set on no profile at v33: the "M15 Textless"
     // frames printed their text straight on the art then, so their cards
-    // owe v33 (the frozen list; they became textless at v56, its own bump).
+    // owe v33 (the frozen list; they became textless at v58, its own bump).
     expect(V33_SCOPE_TEMPLATES.textless).toEqual([]);
     for (const t of ["m15textless", "m15textlessland"]) {
       expect(getFrameProfile(t).textless, t).toBe(true);
@@ -984,7 +984,7 @@ describe("v33 — rules text laid out by its real lines (TODO 3.29)", () => {
     // its own bump: record it here, never in the frozen lists. A NEW
     // textless template no card was ever baked on needs none: 4.48's
     // full-art token's textless height (and its artifact template). The
-    // textless promo pair became textless at v56, with its own bump.
+    // textless promo pair became textless at v58, with its own bump.
     const newTextless = ["m20token", "m20tokenartifact", "m15textless", "m15textlessland"];
     expect([...V33_SCOPE_TEMPLATES.textless, ...newTextless].sort()).toEqual(all.filter((t) => getFrameProfile(t).textless).sort());
     for (const t of newTextless) expect(V33_SCOPE_TEMPLATES.textless, t).not.toContain(t);
@@ -1167,7 +1167,10 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
     // see-through Card Conjurer master: not v35's business either.)
     // (The station frame, TODO 4.27a, draws ONE picture in a rect of its OWN —
     // STATION_ART_RECT, 3 px wider — so it never reaches this check: no list.)
-    const SEE_THROUGH_SINCE_V35 = ["flip"];
+    // (m15ub/c — the see-through Universes Beyond colourless spell master,
+    // TODO 4.25 follow-up — joined later as an addition on a frame no card
+    // could be on: not v35's business either.)
+    const SEE_THROUGH_SINCE_V35 = ["flip", "m15ub"];
     for (const t of ALL) {
       const u = getFrameProfile(t).underFrameArt;
       if (u && (sameRect(u.rect, UNDER) || (u.artSlot && sameRect(u.artSlot, UNDER)))) {
@@ -1315,7 +1318,7 @@ describe("v36 — the second correction round: inline pips, printed set symbols,
     // An unknown code draws the default glyph, which the table doesn't size.
     expect(printedSetSymbolPx(keyruneCodepointFor("zzz9"))).toBeNull();
     expect(lv.v36PrintedSymbolCode("zzz9")).toBe(false);
-    // (The textless promo pair joined the profiles' list at v56, its own bump.)
+    // (The textless promo pair joined the profiles' list at v58, its own bump.)
     expect(lv.V36_TEXTLESS_TEMPLATES).toEqual(ALL.filter((t) => getFrameProfile(t).textless && !lv.CC_RESOURCE_TEMPLATES.includes(t)));
     expect(lv.V36_BACK_FACE_TEXT_TEMPLATES).toEqual(
       ALL.filter((t) => getFrameProfile(t).adventure || getFrameProfile(t).secondFace),
@@ -2816,12 +2819,109 @@ describe("v55 — the Nyx Constellation frame's rim on its prints (owner Rounds 
   });
 });
 
-describe("v56 — the extended-art and textless frames re-sourced from Card Conjurer (TODO 4.7 / 4.35 / 4.42)", () => {
+describe("v56 — the Universes Beyond triangle as printed (TODO 4.25 follow-up, owner Round 57)", () => {
+  const png = "https://x/y.png";
+  const V = 56;
+  const UB = ["m15ub", "m15ubartifact", "m15ubland"];
+  /** A v55 bake: only v56 can be pending. */
+  const at = (template: string, stamp: unknown, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    visibility: "public",
+    layout_version: V - 1,
+    rendered_image_url: png,
+    frame_style: stamp === undefined ? { template, finish: "regular" } : { template, finish: "regular", stamp },
+    card_type: template === "m15ubland" ? "land" : template === "m15ubartifact" ? "artifact" : "creature",
+    rarity: "common",
+    ...over,
+  });
+
+  it("is a sweep, never a badge, scoped to the three frames AND to the card, and verification-neutral", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.UB_STAMP_TONES_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect(lv.VERSION_SCOPES[V]).toBeTypeOf("function");
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual([]);
+    expect([...lv.UB_STAMP_TONES_TEMPLATES].sort()).toEqual([...UB].sort());
+    // Without a card to judge by: the three templates are touched, no other.
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(UB.includes(t));
+  });
+
+  it("the frozen list is the profiles': every template whose stamp is the triangle", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(
+      FRAME_TEMPLATE_VALUES.filter((t) => (getFrameProfile(t).overlays ?? []).some((o) => o.anatomy === "holoStamp" && o.stamp.shape === "triangle")).sort(),
+    ).toEqual([...lv.UB_STAMP_TONES_TEMPLATES].sort());
+  });
+
+  it("only a card whose switch asks for a stamp re-bakes: auto / oval / triangle, never none, an absent key, a token or an emblem", () => {
+    for (const t of UB) {
+      for (const rarity of ["common", "uncommon", "rare", "mythic"]) {
+        for (const stamp of ["auto", "oval", "triangle"]) expect(isRenderStale(V - 1, t, undefined, V, at(t, stamp, { rarity })), `${t} ${stamp} ${rarity}`).toBe(true);
+        expect(isRenderStale(V - 1, t, undefined, V, at(t, "none", { rarity }))).toBe(false);
+        expect(isRenderStale(V - 1, t, undefined, V, at(t, undefined, { rarity }))).toBe(false);
+        expect(isRenderStale(V - 1, t, undefined, V, at(t, "acorn", { rarity }))).toBe(false);
+      }
+      expect(isRenderStale(V - 1, t, undefined, V, at(t, "auto", { card_type: "token" }))).toBe(false);
+      expect(isRenderStale(V - 1, t, undefined, V, at(t, "triangle", { card_type: "emblem" }))).toBe(false);
+      // A row that can't be judged is conservative.
+      expect(isRenderStale(V - 1, t, undefined, V, at(t, "auto", { card_type: undefined }))).toBe(true);
+      expect(isRenderStale(V - 1, t, undefined, V, { ...at(t, "auto"), frame_style: undefined })).toBe(true);
+    }
+    // Off the three frames nothing is owed, whatever the switch.
+    for (const t of ["m15", "m15artifact", "m15land", "m15pw", "m15vehicle", "m15nyx", "m15station"]) {
+      for (const stamp of ["auto", "oval", "triangle", "none", undefined]) expect(isRenderStale(V - 1, t, undefined, V, at(t, stamp, { rarity: "mythic" })), `${t} ${stamp}`).toBe(false);
+    }
+  });
+});
+
+describe("v57 — the see-through colourless Universes Beyond spell frame (TODO 4.25 follow-up, owner Round 57)", () => {
+  const png = "https://x/y.png";
+  const V = 57;
+  const at = (template: string, colors: string[] | undefined, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    visibility: "public",
+    layout_version: V - 1,
+    rendered_image_url: png,
+    frame_style: { template, finish: "regular" },
+    card_type: "creature",
+    color_identity: colors,
+    ...over,
+  });
+
+  it("is a sweep, never a badge, scoped to m15ub AND to its colourless master, and verification-neutral", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.UB_SEE_THROUGH_C_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual([]);
+    expect([...lv.UB_SEE_THROUGH_C_TEMPLATES]).toEqual(["m15ub"]);
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(t === "m15ub");
+  });
+
+  it("only a colourless m15ub card re-bakes; every other colour, and the artifact and land frames, are stamped", () => {
+    expect(isRenderStale(V - 1, "m15ub", undefined, V, at("m15ub", ["colorless"]))).toBe(true);
+    expect(isRenderStale(V - 1, "m15ub", undefined, V, at("m15ub", []))).toBe(true);
+    expect(isRenderStale(V - 1, "m15ub", undefined, V, at("m15ub", undefined))).toBe(true);
+    for (const colors of [["white"], ["blue"], ["black"], ["red"], ["green"], ["white", "blue"], ["white", "blue", "black"]]) {
+      expect(isRenderStale(V - 1, "m15ub", undefined, V, at("m15ub", colors)), colors.join()).toBe(false);
+    }
+    for (const t of ["m15ubartifact", "m15ubland", "m15"]) expect(isRenderStale(V - 1, t, undefined, V, at(t, ["colorless"])), t).toBe(false);
+  });
+});
+
+describe("v58 — the extended-art and textless frames re-sourced from Card Conjurer (TODO 4.7 / 4.35 / 4.42)", () => {
   it("is a sweep, never a badge, scoped to the three templates, and not verification-neutral", async () => {
     const lv = await import("@/lib/cards/layout-version");
-    const V = lv.CC_RESOURCE_LAYOUT_VERSION;
+    const V = 58;
+    expect(lv.CC_RESOURCE_LAYOUT_VERSION).toBe(V);
     const SCOPE = ["extendedart", "m15textless", "m15textlessland"];
-    expect(V).toBeGreaterThan(55);
     expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
     expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
     expect(lv.rolloutPolicy(V)).toBe("sweep");

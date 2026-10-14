@@ -2,6 +2,7 @@ import "server-only";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { judgeModel } from "@/lib/ai/provider";
+import { repairStructuredText, structuredCall } from "@/lib/ai/structured-output";
 import { commanderBracket, type DeckType, describeColors } from "@/lib/decks/deck-types";
 import type { DeckFormat } from "@/types/deck";
 
@@ -14,7 +15,7 @@ import type { DeckFormat } from "@/types/deck";
 
 const DECK_IDEA_COUNT = 3;
 
-const deckIdeasSchema = z
+export const deckIdeasSchema = z
   .object({
     ideas: z
       .array(
@@ -44,9 +45,14 @@ export async function generateDeckIdeas(input: {
   bracket?: number | null;
   hint?: string;
 }): Promise<DeckIdea[]> {
-  const { object } = await generateObject({
+  // The hard .max() limits here are not enforced by the provider: an
+  // overlong field is cut to its limit by the repair (never a failed batch);
+  // a wrong number of ideas is asked for once more. The credit is the
+  // route's — reserved once, refunded on any failure.
+  const { object } = await structuredCall("deck-ideas", repairStructuredText(deckIdeasSchema), (experimental_repairText) => generateObject({
     model: judgeModel(),
     schema: deckIdeasSchema,
+    experimental_repairText,
     system: SYSTEM,
     prompt: [
       `Format: ${input.format}.`,
@@ -60,6 +66,6 @@ export async function generateDeckIdeas(input: {
       .filter(Boolean)
       .join("\n"),
     temperature: 0.95,
-  });
+  }));
   return object.ideas;
 }

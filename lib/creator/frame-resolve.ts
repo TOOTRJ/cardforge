@@ -302,7 +302,7 @@ export function autoTokenTextBoxFrame(input: {
 // The test is the PROFILE's flag, the one the renderers read — not a
 // template's name: the "M15 Textless" frames (`m15textless`,
 // `m15textlessland`, the registry's `textless` family) gained the flag with
-// layout v56 (the black-bordered textless promos, TODO 4.35 / 4.42), and
+// layout v58 (the black-bordered textless promos, TODO 4.35 / 4.42), and
 // this guard covered them with no other change.
 // ---------------------------------------------------------------------------
 

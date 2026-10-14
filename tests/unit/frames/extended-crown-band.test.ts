@@ -86,7 +86,7 @@ describe("the extended-art crown band's recipe", () => {
 });
 
 describe("the slot the extendedart profile draws (EXTENDED_CROWN)", () => {
-  it("stretches the 1500 × 260 band over rows 0–259 of the card — CC's bounds, on CC's extended masters (layout v56)", () => {
+  it("stretches the 1500 × 260 band over rows 0–259 of the card — CC's bounds, on CC's extended masters (layout v58)", () => {
     expect(EXTENDED_CROWN.rect).toEqual({ topPct: 0, leftPct: 0, widthPct: 100, heightPct: (260 / 2100) * 100 });
     expect(EXTENDED_CROWN.assetPathTemplate).toBe("/frames/extendedcrown/{key}.png");
     expect(EXTENDED_CROWN.keyMap).toBeUndefined();

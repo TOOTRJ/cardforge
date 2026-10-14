@@ -8,10 +8,10 @@ import signaturePrintings from "../scryfall/fixtures/signature-printings.json";
 // TODO 1.24 — the guard on the registry's `textless` FAMILY, the day its
 // frames stop drawing text.
 //
-// Since layout v56 (TODO 4.35 / 4.42: CC 'Magic Fest Promos') the two ARE
+// Since layout v58 (TODO 4.35 / 4.42: CC 'Magic Fest Promos') the two ARE
 // `textless` profiles, so the mock below changes nothing any more: it stays
 // so this file keeps pinning the family whatever the profile says. Before
-// v56 they drew their type line and rules on the art, so a remix that lands on one
+// v58 they drew their type line and rules on the art, so a remix that lands on one
 // (textless/2015, textless/future, borderless/textless,
 // borderless/basic/textless statically; textless/old-frame once the frame
 // is verified, owner decision A9) saves a text that IS drawn, and the guard

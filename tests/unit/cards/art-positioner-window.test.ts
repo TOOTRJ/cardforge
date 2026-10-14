@@ -103,7 +103,7 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   tarkirghostfire: { front: [1395, 1932] },
   tarkirdragon: { front: [1242, 935] },
   fullart: { front: [1386, 1896] },
-  // The extended-art frame (layout v56): CC's window to the side edges;
+  // The extended-art frame (layout v58): CC's window to the side edges;
   // its see-through colourless master is ONE picture under the frame.
   extendedart: { front: [1500, 1142], masters: { c: [1500, 1959] } },
   m15fullartland: { front: [1382, 1875] },
@@ -211,7 +211,7 @@ describe("what the fixed 5:4 surface got wrong (before 3b.13)", () => {
     expect(off.filter((m) => m < 0.005)).toHaveLength(0);
     // (25 before the station frame, TODO 4.27a: its two templates' one
     // picture under the whole frame is far taller than 5:4; 27 before the
-    // extended-art frame's see-through colourless master, layout v56.)
+    // extended-art frame's see-through colourless master, layout v58.)
     expect(off.filter((m) => m > 0.25)).toHaveLength(28);
   });
 });

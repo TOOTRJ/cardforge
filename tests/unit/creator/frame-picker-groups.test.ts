@@ -451,14 +451,14 @@ describe("the frame picker's groups: a classification change only", () => {
     expect(changed(section)).toEqual([]);
   });
 
-  // The AI's random pools: identical but for layout v56 (TODO 4.35 / 4.42),
+  // The AI's random pools: identical but for layout v58 (TODO 4.35 / 4.42),
   // which made the textless pair TEXTLESS profiles — `resolveGeneratedFrame`
   // never draws one for a card with text while another frame it fits is
   // published (TODO 1.24). Recorded in full on origin/main (da0b9d1b) and
   // here: the 350 pools that differ differ ONLY by m15textless /
   // m15textlessland leaving a face that carries text (plain, artifactWord,
   // enchantmentWord, vehicle, fourRows); the textless and basic faces are unchanged.
-  it("pools — the frames in the AI's random pool: the same, but the textless pair never offered to a card with text (v56)", () => {
+  it("pools — the frames in the AI's random pool: the same, but the textless pair never offered to a card with text (v58)", () => {
     // Only where the pair is verified (production verifies neither), and only
     // the kinds the pair dresses.
     const kinds = ["artifact", "creature", "enchantment", "instant", "land", "sorcery", "spell", "token"];

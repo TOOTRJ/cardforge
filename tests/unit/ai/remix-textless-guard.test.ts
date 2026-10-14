@@ -57,13 +57,13 @@ const PROD = productionVerifiedKeys();
 const ALL = new Set(every(FRAME_TEMPLATE_VALUES));
 const minus = (keys: ReadonlySet<string>, ...templates: string[]) =>
   new Set([...keys].filter((key) => !templates.some((t) => key.startsWith(`${t}/`))));
-/** The textless promo pair (textless profiles since layout v56). */
+/** The textless promo pair (textless profiles since layout v58). */
 const FAMILY: readonly string[] = ["m15textless", "m15textlessland"];
 const HEIGHTS = ["m20tokentext", "m20tokentall", "m20tokenartifacttext", "m20tokenartifacttall"];
 const ARCH_BOXES = ["m15tokentext", "m15tokenartifacttext"];
 
 describe("which frames hide a card's text", () => {
-  it("the profiles flagged `textless` are the full-art token's two textless heights and, since layout v56, the textless promo pair", () => {
+  it("the profiles flagged `textless` are the full-art token's two textless heights and, since layout v58, the textless promo pair", () => {
     // A new `textless` profile is covered by the guard with no other change;
     // it belongs in docs/FRAMES.md's landings table (TODO 1.24) too.
     expect(TEXTLESS).toEqual(["m20token", "m20tokenartifact", "m15textless", "m15textlessland"]);
@@ -79,7 +79,7 @@ describe("which frames hide a card's text", () => {
     expect(frameHidesRulesBoxText("m15token", { rulesText: "Lifelink" })).toBe(false);
   });
 
-  it("the 'M15 Textless' frames ARE textless profiles since layout v56: a text landing there is hidden, so the guard covers them", () => {
+  it("the 'M15 Textless' frames ARE textless profiles since layout v58: a text landing there is hidden, so the guard covers them", () => {
     // The registry's `textless` family (textless/2015, textless/old-frame
     // once verified, textless/future, borderless/textless,
     // borderless/basic/textless): the black-bordered textless promos (CC
@@ -317,7 +317,7 @@ describe("the sweep over the recorded printings", () => {
     const changed = differing(rows);
     expect(changed.length).toBeGreaterThan(0);
     for (const row of changed) {
-      // Since layout v56 the 'M15 Textless' frames are textless profiles.
+      // Since layout v58 the 'M15 Textless' frames are textless profiles.
       expect(FAMILY).toContain(row.before);
       expect(row.hiddenBefore).toBe(true);
       expect(row.after).toBe(row.standIn);
@@ -329,7 +329,7 @@ describe("the sweep over the recorded printings", () => {
     for (const row of rows.filter((r) => FAMILY.includes(r.after as string))) expect(row.key).toContain("rules=false flavour=false");
   });
 
-  it("without the full-art text heights the arch's text box stood in already (unchanged but for the textless family, v56)", () => {
+  it("without the full-art text heights the arch's text box stood in already (unchanged but for the textless family, v58)", () => {
     for (const base of [PROD, ALL]) {
       const rows = sweep(minus(base, ...HEIGHTS));
       for (const row of differing(rows)) expect(FAMILY).toContain(row.before);

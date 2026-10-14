@@ -73,7 +73,7 @@ describe("frameMasterKey — the one master rule", () => {
     // bytes) and the land pair, one master under every key, dresses none.
     // …and the modal spell pair (5.1b) the same way; its land pair, one
     // land tint per colour with the grey land modal as `c`, dresses none.
-    // …and the extended-art frame (layout v56): its see-through `c` is the
+    // …and the extended-art frame (layout v58): its see-through `c` is the
     // pack's Eldrazi frame, a colourless ARTIFACT paints its silver `a`.
     const DRESSED = new Set(["agclassic", "extendedart", "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback"]);
     for (const t of FRAME_TEMPLATE_VALUES) {
@@ -121,7 +121,7 @@ describe("frameMasterKey — the one master rule", () => {
     // underFrameArtRect is keyed by the master painted: a profile that
     // limits the under-frame art to a colour it also dresses by type must
     // list the dressed master too, or its artifacts would lose the art. No
-    // profile does both but the extended-art frame (layout v56), whose `a`
+    // profile does both but the extended-art frame (layout v58), whose `a`
     // is OPAQUE — the pack's silver artifact frame, no art under it — so it
     // is the one exception, held to that here.
     for (const t of FRAME_TEMPLATE_VALUES) {

@@ -182,11 +182,11 @@ into `.frames-build/` — 52 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the extended-art frame and the textless promo pair (4.7 / 4.35 / 4.42,
-  layout v56): extendedart — the accurate 'Extended Art Frames' pack whole,
+  layout v58): extendedart — the accurate 'Extended Art Frames' pack whole,
   its see-through colourless 'Eldrazi Frame' as `c` and its artifact frame
   as `a` — and m15textless and m15textlessland — 'Magic Fest Promos' whole
   ([The extended-art and textless frames from Card
-  Conjurer](#the-extended-art-and-textless-frames-from-card-conjurer-47--435-v56));
+  Conjurer](#the-extended-art-and-textless-frames-from-card-conjurer-47--435-v58));
 
 - the M15 family (4.4, shipped in #380, layout v24): m15, m15artifact,
   m15land, m15snow, m15snowland, m15devoid, m15pw, m15token and
@@ -3694,7 +3694,8 @@ the text's ink left out):
   mythic's the hologram.
 - **Colourless.** The three colourless non-artifact cards in print (ACR
   #1, FIN #2, WHO #9) wear a SEE-THROUGH frame, the art under translucent
-  grey bars — not the artifact frame.
+  grey bars — not the artifact frame. Built since (below, "The see-through
+  colourless frame").
 - **Tones** (the bars and box against ours, the medians of 9–13 prints a
   key): within 8 levels a channel on w u b r, the artifact frame and its
   coloured keys; the green title bar prints 14 lighter in red and blue
@@ -3802,21 +3803,64 @@ two prints each.
 artifact frame under the colour's bars for a coloured artifact, the land
 frame and its tints — `m15`, `m15artifact` and `m15land`'s recipes with
 `ubFrameFile` for the file of a letter. The pack lists a 'Colorless Frame'
-that is **missing from Card Conjurer's tree**: `m15ub/c` is the pack's
-ARTIFACT frame (owner 2026-10-13), the same bytes as `m15ubartifact/c`,
-opaque (no `underFrameArt`). Since print's colourless card is see-through,
-`m15ub/c` has NO reference printing and cannot be verified until the owner
-decides (the older pack's `m15/ub/regular/c.png` is that see-through frame
-in another drawing; not used). Plates: the pack's own `m15/ub/pt/<k>.png`
+that is **missing from Card Conjurer's tree**; `m15ub/c` was first the
+pack's ARTIFACT frame, borrowed (owner 2026-10-13), and is now print's
+see-through frame (below). Plates: the pack's own `m15/ub/pt/<k>.png`
 (282 × 154) at M15's plate box — the grey 'Colorless' plate under `c` on
 the spell frame (the hybrid dress's too), the silver 'Artifact' one on the
 artifact frame; the land frame draws the spell frame's. Their ink is
 within a pixel of M15's (`lib/cards/plate-ink.ts`).
 
+**The see-through colourless frame** (owner Round 57, decision 3; layout
+**v57**). Print's only colourless non-artifact cards on this frame — ACR #1
+The Capitoline Triad, FIN #2 Ultima, Origin of Oblivion (and its PFIN #2s
+promo), WHO #9 Clara Oswald (and its #614 surge foil): five printings, all
+LEGENDARY — wear a see-through frame: the art runs under the frame field,
+the bars and the text box are translucent over it, the rims, pinline and
+crown white-silver. `m15ub/c` is built from two Card Conjurer drawings
+(`UB_SEE_THROUGH_LAYERS` in `scripts/lib/cc-frames.mjs`):
+
+- the ACCURATE pack's see-through colourless frame (`m15/new/c.png`, m15/c's
+  own file) gives every edge, line, rim, bevel and the ALPHA — the master's
+  alpha equals m15/c's in every pixel (0 of 3,150,000 differ): the same
+  window, bars at 212 / 255, box at 179 / 255 and the faint wash over the
+  frame field. So the profile declares what m15 declares for `c`
+  (`underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] }`), both
+  renderers and the finish masks read it through `artLayersFor()`, and the
+  art-window check passes on the bucket master as it does on m15/c;
+- the OLDER Universes Beyond pack's see-through colourless frame
+  (`m15/ub/regular/c.png`, its smooth streaked paper) gives the colour of
+  the bars and the box, as colour only (`recolour`, the alpha below kept),
+  through the accurate pack's Title, Type and Rules masks, PAPER ONTO
+  PAPER: weighted by that drawing's own luma and by the luma of the
+  accurate drawing below (each 0 at or below 150, whole from 190), never
+  where the older drawing is opaque (its rims, `maxAlpha`). That drawing
+  is not used whole: measured against the accurate pack its lines sit 1–5
+  px off (2010-wide: the title bar's bottom line 292 against 294, the
+  right rim 1879 against 1883, the box's rim 2596 against 2597) and its
+  bars end in another cap — the crown band, the stamp notch and the plates
+  are cut for the accurate geometry.
+
+The crown is `m15ubcrown/c`: the pack's `ub/crowns/new/c.png`, which IS
+the M15 pack's colourless crown byte for byte, so the object has
+`m15crown/c`'s pixels under this band's name. The notch is
+`m15ubholostamp/c`, its rim sampled from `m15ub/c`'s white rim (as
+`m15holostamp/c` is from m15/c). The plate stays the pack's grey
+'Colorless' one. The artifact and land frames keep their opaque colourless
+masters (their profiles map `c` to `a` / `l`).
+
+*Reference printings*: ACR #1, FIN #2, WHO #9 (all legendary — the crown is
+drawn). *Rollout*: an addition on a combo no card can be on (never ticked,
+offered nowhere), but the visual gate records the master swap as a bump,
+so it is one — v57 (`UB_SEE_THROUGH_C_LAYOUT_VERSION`), "sweep", scoped to
+`m15ub` and to a card that paints the colourless master (`v57Changed`),
+verification-neutral (the owner's ticks on the other colours stay
+fresh). The visual matrix: 4 of 1724 cases change, all `m15ub/c`.
+
 **The crown** is `m15ubcrown/<key>.png`: `m15crown`'s recipe at the same
 rects over the pack's smooth crowns (`UB_CROWN_BAND`), keys w u b r g, m,
-a, l and the ten pairs — no `c` (a colourless card on the spell frame is
-crowned in the artifact silver, as its master is).
+a, l, c (the see-through frame's colourless crown, above) and the ten
+pairs.
 
 **The triangle stamp.** `frame_style.stamp` already held `"triangle"` (an
 import of a triangle-stamped printing has written it since 4.9c); until
@@ -3830,13 +3874,47 @@ hologram capture) cut clear (`HOLO_STAMP_NOTCHES.m15ubholostamp`,
 `UB_STAMP_HOLE`) — and the art over it is our own silver triangle on the
 prints' geometry (`UB_STAMP_FACE`; `HOLO_STAMP_TRIANGLE_ART` in
 `lib/cards/holo-stamp-art.ts`, generated by
-`scripts/generate-holo-stamp-art.mjs`). The switch keeps its meaning:
-`"auto"` stamps a rare or a mythic, `"oval"` / `"triangle"` always,
-`"none"` never. Print stamps every rarity on this frame; an IMPORT does so
-too (it writes `"triangle"`), a card made in the creator follows `"auto"`
-until its maker picks "Always" (owner question: should `"auto"` mean every
-rarity here?). The rules keep-out is the raised pinline
-(`M15UB_HOLO_STAMP_KEEP_OUT`).
+`scripts/generate-holo-stamp-art.mjs`). The rules keep-out is the raised
+pinline (`M15UB_HOLO_STAMP_KEEP_OUT`).
+
+*"Auto" is the frame's own print* (owner Round 57, decision 2; layout
+**v56**). On a frame whose notch is cut for the triangle, `"auto"` stamps
+EVERY rarity — `holoStampWanted` reads the slot's shape — where it stamped
+a rare or a mythic; `"oval"` / `"triangle"` ("Always") and `"none"` mean
+what they meant, an absent key stays unstamped, a token, an emblem and a
+back face never draw one, and an oval frame keeps the oval's rule. The
+face has two TONES (`holoStampToneOf`, read from the rarity whatever "on"
+value asked for the stamp):
+
+| | Print (54 digital prints, 2026-10-14) | Ours before | Ours now |
+|---|---|---|---|
+| Common / uncommon | one flat grey, 95, 97, 96 (26 digital prints, 95–101, sd 0–1; no keyline, no sheen) | none on "auto"; silver on "Always" (mean luminance 209 in the bake) | `HOLO_STAMP_TRIANGLE_MATTE_ART`: 95, 97, 96, flat |
+| Rare / mythic | the hologram: mean luminance 148 (144–153 on 28 prints), its darker tenth 113, its lighter tenth 189, a tan cast (157, 150, 113) | one silver, mean 209 in the bake (tenths 163 / 238) | `HOLO_STAMP_TRIANGLE_ART`: our neutral silver sheen at mean 151 in the bake, tenths 107 / 178 |
+
+Read at 1500 × 2100 on the face 9 px inside its edge, 16 printings a
+rarity over 40K, ACR, FIC, FIN, LTC, LTR, PIP and WHO (Scryfall's images;
+none kept). 40K's ten are real scans (surge foils and photographs: 38–130
+below a rare, a gold foil at rare) and are left out of the centres. The
+hologram keeps OUR drawing — a neutral silver with our sheen and no symbol;
+print's tan cast and its artwork are not copied.
+
+- **Rollout: a correction, swept.** The look was wrong against the frame's
+  own print, so v56 is a "sweep" (`UB_STAMP_TONES_LAYOUT_VERSION`), scoped
+  to the three templates and, on them, to a card whose switch asks for a
+  stamp (`v56Changed`: "auto", "oval" or "triangle", no token or emblem).
+  Verification-neutral: no slot, master, notch piece or plate moves, and no
+  tick scores the stamp. The frames were a day old and reached by a pick or
+  an import only; `/admin/renders` shows what the cron re-bakes.
+- **Text.** The notch and its keep-out are the same pieces: a card that
+  drew the stamp keeps every line. A common or uncommon on "auto" GAINS
+  the notch, and with it the keep-out its "Always" twin always had — its
+  bake is that twin's layout, pixel for pixel but the triangle's face.
+- **Imports** keep writing `"triangle"` for a triangle-stamped printing
+  (the printing HAS a stamp: it then draws on either frame — the oval on
+  M15 where the card lands until the colour is ticked — in the rarity's
+  tone here). `"auto"` would un-stamp a common wherever it lands on M15.
+- **The creator** says so: the chip reads "Auto: every rarity" on these
+  frames, the answer line names the tone ("Common → matte grey triangle").
 
 **Who gets it.** An addition: no stored card moves, no bump, no sweep, no
 badge.
@@ -3854,13 +3932,19 @@ badge.
   landed; the answer says "not yet verified") until the Universes Beyond
   frame is verified in the card's colour, then names it and is `exact`
   (the crown, both pair dresses and the stamp are drawn there). The AI
-  deck remix follows (`remixFrameFor` finalizes the same match).
+  deck remix follows (`remixFrameFor` finalizes the same match). A
+  colourless non-artifact spell takes the rule too since `m15ub/c` is the
+  see-through frame: the see-through `m15/c` until `m15ub/c` is ticked,
+  then `m15ub` — 5 printings (ACR #1, FIN #2, PFIN #2s, WHO #9, WHO #614;
+  main against this rule over all 10,661 Universes Beyond and
+  triangle-stamped printings, 2026-10-14: 0 other printings change in any
+  field, under production's list, with every colour ticked, or with every
+  colour but `m15ub/c`).
 - A Universes Beyond printing on another body keeps its frame as the
   `nearest`, with the `universes-beyond` gap: a saga, an adventure or a
   split (`layout/2015`), a Vehicle (`vehicle/2015` — the bronze frame is
-  the closer one), a double-faced card, extended art, a colourless
-  non-artifact spell. The foil-etched and "inverted" runs are dresses of
-  their own and never take the rule.
+  the closer one), a double-faced card, extended art. The foil-etched and
+  "inverted" runs are dresses of their own and never take the rule.
 
 Measured on 19,807 printings (every Universes Beyond printing and 8,312
 others, Scryfall 2026-10-13) through the import path with production's
@@ -3872,7 +3956,7 @@ all Universes Beyond, onto their own frame (2,001 spells, 614 artifacts,
 619 lands).
 
 **Not built** (follow-ups, in 4.25): the Universes Beyond Vehicle frame
-(the pack's `v.png`), the see-through colourless frame, extended art, full
+(the pack's `v.png`), extended art, full
 art, the saga and spree dresses, the floating crowns, borderless.
 
 ### Printed pieces a card switches on
@@ -4420,7 +4504,7 @@ switch absent or off is byte-identical.
   (`CC_OVERLAY_BANDS.extendedcrown`, the importer's generic `layers` /
   `findings` band: the outline's peak at row 36 ± 1 on the centre column,
   the cover strip opaque black in a crown dip, no alpha below the band).
-- **The slot is CC's bounds, from row 0** (layout v56, TODO 4.7): the
+- **The slot is CC's bounds, from row 0** (layout v58, TODO 4.7): the
   print's title bar (FDN #442 / #455) and CC's `m15/new/extended` top out
   at 4.98 %H, and since 4.7 the master IS CC's extended frame, so the
   crown's peak lands on the print's row 42 at 1500 × 2100. (Over the old
@@ -4446,13 +4530,13 @@ switch absent or off is byte-identical.
   inside the slot's rows only, 1:1 at HD, absent / off byte-identical), the
   matrix's `extendedart` `@crown` cases.
 
-#### The extended-art and textless frames from Card Conjurer (4.7 / 4.35, v56)
+#### The extended-art and textless frames from Card Conjurer (4.7 / 4.35, v58)
 
 Owner Q6 (2026-10-13): neither look was verified in any colour, so both left
 their 744 / 375 px MSE masters in git for Card Conjurer's sharper packs
 (frames bucket, `scripts/import-cc-frames.mjs --only
 extendedart,m15textless,m15textlessland`). A CORRECTION of three looks
-against their own prints: layout v56 (`CC_RESOURCE_LAYOUT_VERSION`), sweep,
+against their own prints: layout v58 (`CC_RESOURCE_LAYOUT_VERSION`), sweep,
 never a badge.
 
 - **Measured first** (Scryfall PNGs at 1500 × 2100, 2026-10-14; the median
@@ -4771,7 +4855,9 @@ absent, and the visual gate gained its `@stamp…` cases and changed none.
   wave-1 notch is cut for the oval, so an imported `"triangle"` draws the
   oval here and keeps its key for a frame that prints the triangle (4.9d's
   lotr / lotrscroll). `resolveHoloStamp` (lib/cards/anatomy.ts) answers
-  both renderers, the rules layout and the creator: the notch overlay
+  both renderers, the rules layout and the creator (on a TRIANGLE frame
+  "auto" is every rarity and the face has a tone — "The Universes Beyond
+  frames", layout v55): the notch overlay
   (resolved like the crown — `resolveFrameOverlays`, the master's key
   through the slot's `keyMap`), the oval, the art rect and the keep-out —
   or null. The oval is never drawn without its notch (the straight box edge
@@ -6604,11 +6690,11 @@ before anyone pays. Additions: 0 stored cards change, no bump, no sweep.
   | Landing | Reached by | Textless profile? | With text, the frame verified |
   |---|---|---|---|
   | `m20token`, `m20tokenartifact` | `token/m20`, its gap rules (`+nyx-dress`, `+border`, `+crown`, `+two-colour`, `+two-colour-hybrid`) and `borderless/token`, all `onceVerified`; an own token kept on them | yes | the regular / tall box, else the arch's text box (the height rule, unchanged); with NO text box in the colour: the arch (`m15token` / `m15tokenartifact`, its scrim) — an own card the same, the default frame only where the arch isn't published either |
-  | `m15textless`, `m15textlessland` | `textless/2015`, `textless/future`, `borderless/textless`, `borderless/basic/textless` (static), `textless/old-frame` (`onceVerified`, A9); an own card kept on them | **yes** since layout v56 (the black-bordered textless promos, 4.35 / 4.42) | the stand-in: `m15`, `m15land`, `m15artifact`; `modern` for the 2003 promos |
+  | `m15textless`, `m15textlessland` | `textless/2015`, `textless/future`, `borderless/textless`, `borderless/basic/textless` (static), `textless/old-frame` (`onceVerified`, A9); an own card kept on them | **yes** since layout v58 (the black-bordered textless promos, 4.35 / 4.42) | the stand-in: `m15`, `m15land`, `m15artifact`; `modern` for the 2003 promos |
 
   Production (2026-10-13) ticks every colour of all six full-art token
   templates and both arches, and neither "M15 Textless" frame. Flagging
-  `m15textless*` `textless` (layout v56) made the guard cover that family
+  `m15textless*` `textless` (layout v58) made the guard cover that family
   with no other change — `tests/unit/ai/remix-textless-guard-flagged.test.ts`
   pins the stand-ins. Never test a template's NAME for this.
 - **A remix of the user's OWN card keeps its frame** (2026-10-13; a deck

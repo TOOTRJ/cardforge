@@ -109,7 +109,7 @@ describe("artWindowViolations", () => {
     expect(v).toHaveLength(1);
     expect(v[0]).toMatch(/left 30 > 29\.85, right 270 < 270\.15, top 50 > 49\.79, bottom 200 < 200\.21$/);
     // 0.1 px short of the overscan still fails (m15fullartland; extendedart/m
-    // until its Card Conjurer masters, layout v56).
+    // until its Card Conjurer masters, layout v58).
     expect(artWindowViolations(m, W, H, slot(29.9, 271, 49, 201))).toEqual([expect.stringMatching(/left 29\.9 > 29\.85$/)]);
     expect(artWindowViolations(m, W, H, slot(29.85, 271, 49, 201))).toEqual([]);
   });
@@ -257,7 +257,7 @@ describe("artWindowVerdict: the known-failure table", () => {
   it("passes a listed master within its maxMissPx, and fails one that got worse", () => {
     // (tarkirdraconic, bound 87.5 px — the 2003 pair, this test's first
     // example, left the table with TODO 4.10b; m15textless, its second, with
-    // 4.35's re-source, layout v56.)
+    // 4.35's re-source, layout v58.)
     expect(artWindowVerdict("tarkirdraconic", "w", miss(80))).toEqual({ fails: [], fixed: false });
     expect(artWindowVerdict("tarkirdraconic", "w", miss(90)).fails).toEqual([expect.stringMatching(/^worse than its known failure \(4\.11\): misses by 90 px > 87\.5: /)]);
     // Per-key bounds: expeditionland b/g's missing ring, u/r's 2.5 px apex.
@@ -604,7 +604,7 @@ describe("the art-window known failures", () => {
         "bloomburrow",
         "expeditionland",
         // (extendedart, m15textless and m15textlessland left with their Card
-        // Conjurer masters, layout v56: TODO 4.7 / 4.35.)
+        // Conjurer masters, layout v58: TODO 4.7 / 4.35.)
         "m15fullartland",
         "m15tokenartifact",
         // The see-through slot and seam rules (layout v35) on the

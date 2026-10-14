@@ -161,7 +161,7 @@ describe("artSlotOverrideRefusal", { timeout: 30_000 }, () => {
     // tarkirdraconic (TODO 4.11): the see-through gaps between its dragon
     // ornaments run 68–84 px past the slot 135–1365 — known, bound 87.5 px.
     // (The 2003 pair, this test's first example, left the table with TODO
-    // 4.10b; m15textless, its second, with 4.35's re-source, layout v56.)
+    // 4.10b; m15textless, its second, with 4.35's re-source, layout v58.)
     const slot = getFrameProfile("tarkirdraconic").artSlot;
     const px = (pct: number, of: number) => (pct / 100) * of;
     const draconicWindow: Box = [67, 1449, Math.ceil(px(slot.topPct, 2100)) + 2, Math.floor(px(slot.topPct + slot.heightPct, 2100)) - 2];

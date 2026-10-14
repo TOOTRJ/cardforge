@@ -128,7 +128,7 @@ describe("M15-era display sizes on real bakes (layout v32)", () => {
   const KEPT: [string, number | null, number | null][] = [
     ["m15", 189, null],
     // extendedart: its type line moved onto the prints' with Card
-    // Conjurer's masters (layout v56, below).
+    // Conjurer's masters (layout v58, below).
     ["extendedart", 189, null],
     // Saga: its name keeps v31's baseline; its type line moved onto the
     // prints' in TODO 4.21c (below).

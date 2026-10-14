@@ -440,8 +440,8 @@ describe("the workflow", () => {
     expect(yaml).not.toMatch(/name: Typecheck, lint, unit/);
   });
 
-  it("every job is the classifier, the gate or in one group — a new job picks a side here", () => {
-    expect([...JOB_IDS].sort()).toEqual(["changes", "checks", ...Object.values(GROUP_JOBS).flat()].sort());
+  it("every job is the classifier, the gate, its cancelled-run marker or in one group — a new job picks a side here", () => {
+    expect([...JOB_IDS].sort()).toEqual(["changes", "checks", "superseded", ...Object.values(GROUP_JOBS).flat()].sort());
   });
 
   it("the classifier runs first on every event, on the checkout alone", () => {
@@ -517,12 +517,72 @@ describe("the gate, tier by tier", () => {
   const NEEDS = ["changes", "static", "unit", "coverage", "docs", "frames", "e2e", "visual"];
 
   it("reads every job it covers and the classifier's own word, and finishes after every required job", () => {
-    expect(gate).toContain(`\n    needs: [${NEEDS.join(", ")}]\n`);
-    expect(gate).toMatch(/^ {4}if: \$\{\{ always\(\) \}\}$/m);
+    expect(gate).toContain(`\n    needs: [${[...NEEDS, "superseded"].join(", ")}]\n`);
+    expect(gate.match(/^ {4}if: .*$/gm)).toEqual(["    if: ${{ always() }}"]);
     expect(gate).toContain("NEEDS: ${{ toJSON(needs) }}");
     expect(gate).toContain("TIER: ${{ needs.changes.outputs.tier }}");
+    expect(gate).toContain("SUPERSEDED: ${{ needs.superseded.result }}");
     expect(program).toContain(`length == ${NEEDS.length}`);
     expect(gate).not.toMatch(/continue-on-error|\|\| true/);
+  });
+
+  // The marker: a job whose condition is `cancelled()` runs only in a run
+  // that was cancelled as a whole — the one signal a job's condition sees
+  // and a step's does not. It waits for everything the gate covers (so it is
+  // judged after the cancel), reads no classifier output and judges nothing.
+  it("has a cancelled-run marker that runs only in a cancelled run, after every job the gate covers", () => {
+    const marker = jobOf("superseded");
+    expect(marker).toContain(`\n    needs: [${NEEDS.join(", ")}]\n`);
+    expect(marker.match(/^ {4}if: .*$/gm)).toEqual(["    if: ${{ cancelled() }}"]);
+    expect(marker).not.toMatch(/needs\.|continue-on-error|uses:/);
+    // Nothing else reads it.
+    expect(yaml.match(/needs\.superseded\./g)).toHaveLength(1);
+  });
+
+  // The gate's whole script, run as the runner runs it (bash -eo pipefail).
+  // A cancelled DRAFT run passes as "superseded" — "Draft checks" stayed red
+  // on the pull request for good before (the full run reports under the
+  // other name), though it is not required and a draft cannot merge. Every
+  // other case is judged exactly as before: a draft run that was NOT
+  // cancelled fails on a failure or a timeout, and a cancelled run of any
+  // other tier — or with no tier, reported under the required name — is RED
+  // under "Typecheck, lint, unit".
+  it.skipIf(!hasJq && !process.env.CI)("passes a cancelled draft run as superseded, and nothing else it did not pass before", () => {
+    const script = /\n {8}run: \|\n((?: {10}.*\n|\n)+)/.exec(`${gate}\n`)?.[1]?.replace(/^ {10}/gm, "") ?? "";
+    expect(script).toContain("jq -e --arg tier");
+    const gateSays = (tier: string, superseded: string, results: Record<string, string>) => {
+      const needs = Object.fromEntries(Object.entries({ ...results, superseded }).map(([id, result]) => [id, { result, outputs: {} }]));
+      return (
+        spawnSync("bash", ["--noprofile", "--norc", "-eo", "pipefail", "-c", script], {
+          env: { ...process.env, NEEDS: JSON.stringify(needs), TIER: tier, SUPERSEDED: superseded, GITHUB_STEP_SUMMARY: "/dev/null" },
+          encoding: "utf8",
+        }).status === 0
+      );
+    };
+    const off = { frames: "skipped", e2e: "skipped", visual: "skipped" };
+    const draft = { changes: "success", static: "success", unit: "skipped", coverage: "skipped", docs: "success", ...off };
+    const full = { changes: "success", static: "success", unit: "success", coverage: "success", docs: "skipped", frames: "success", e2e: "success", visual: "success" };
+    const cancelledDraft = { ...draft, static: "cancelled", docs: "cancelled" };
+    const cancelledFull = { ...full, unit: "cancelled", coverage: "cancelled", e2e: "cancelled" };
+
+    // Not cancelled (the marker skipped): judged as before.
+    expect(gateSays("draft", "skipped", draft)).toBe(true);
+    expect(gateSays("draft", "skipped", { ...draft, static: "failure" })).toBe(false);
+    expect(gateSays("draft", "skipped", { ...draft, static: "cancelled" })).toBe(false); // a timeout
+    expect(gateSays("full", "skipped", full)).toBe(true);
+    expect(gateSays("full", "skipped", { ...full, static: "failure" })).toBe(false);
+    // Cancelled: a draft run passes as superseded, whatever its jobs say…
+    expect(gateSays("draft", "success", cancelledDraft)).toBe(true);
+    expect(gateSays("draft", "success", { ...draft, static: "failure" })).toBe(true);
+    // …and every other tier, or none, is judged — red.
+    for (const tier of ["full", "light", "notes", "", "FULL"]) {
+      expect(gateSays(tier, "success", cancelledFull), `cancelled, tier "${tier}"`).toBe(false);
+      expect(gateSays(tier, "success", { ...cancelledFull, changes: "cancelled" }), `cancelled classifier, tier "${tier}"`).toBe(false);
+    }
+    // The marker in any state but "success" is no cancel: a draft is judged.
+    for (const marker of ["skipped", "failure", "cancelled", ""]) {
+      expect(gateSays("draft", marker, cancelledDraft), `marker ${marker}`).toBe(false);
+    }
   });
 
   // CI's runners have jq; a machine without it skips the truth table only

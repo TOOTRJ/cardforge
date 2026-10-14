@@ -237,7 +237,7 @@ describe("CardPreview — a split type line (TODO 3.24)", () => {
 });
 
 describe("CardPreview — a textless frame (TODO 3.24)", () => {
-  // `m15textless` is a textless profile itself since layout v56 (TODO 4.35 /
+  // `m15textless` is a textless profile itself since layout v58 (TODO 4.35 /
   // 4.42); `fullart` (no flag) is the frame "without the flag".
   const titan = (override?: FrameProfileOverride, template: "m15textless" | "fullart" = "m15textless") =>
     render(

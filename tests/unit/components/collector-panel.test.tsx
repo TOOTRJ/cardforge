@@ -226,6 +226,32 @@ describe("the holofoil stamp (TODO 4.9c)", () => {
     expect(screen.getByTestId("collector-switches").textContent).not.toMatch(/no stamp notch/);
   });
 
+  it("on a Universes Beyond frame Auto stamps a common: the switch is on, the chip and the answer say so, Never still writes none", () => {
+    render(<Harness frameStyle={{ template: "m15ub", ...NEW_CARD_ANATOMY }} rarity="common" />);
+    expect(stampSwitch()?.getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("radio", { name: "Auto: every rarity" }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.queryByRole("radio", { name: "Auto: rares & mythics" })).toBeNull();
+    expect(screen.getByTestId("stamp-answer").textContent).toBe("Common → matte grey triangle");
+    fireEvent.click(screen.getByRole("radio", { name: "Always" }));
+    expect(styleOf().stamp).toBe("triangle");
+    expect(screen.getByTestId("stamp-answer").textContent).toBe("Common → matte grey triangle");
+    fireEvent.click(screen.getByRole("radio", { name: "Never" }));
+    expect(styleOf().stamp).toBe("none");
+    expect(screen.getByTestId("stamp-answer").textContent).toBe("Common → no stamp");
+    // Switching it back on writes "auto" (it draws for a common here).
+    fireEvent.click(stampSwitch()!);
+    expect(styleOf().stamp).toBe("auto");
+  });
+
+  it("on a Universes Beyond frame a rare's Auto answers the silver triangle; an M15 common's Auto still answers no stamp", () => {
+    render(<Harness frameStyle={{ template: "m15ub", ...NEW_CARD_ANATOMY }} rarity="rare" />);
+    expect(screen.getByTestId("stamp-answer").textContent).toBe("Rare → silver triangle");
+    cleanup();
+    render(<Harness frameStyle={{ template: "m15", ...NEW_CARD_ANATOMY }} rarity="common" />);
+    expect(stampSwitch()?.getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByTestId("stamp-answer").textContent).toBe("Common → no stamp");
+  });
+
   it("the live answer reads the rarity and the type", () => {
     expect(holoStampAnswer("auto", { cardType: "creature", rarity: "mythic" })).toBe("Mythic → stamp");
     expect(holoStampAnswer("auto", { cardType: "creature", rarity: "uncommon" })).toBe("Uncommon → no stamp");

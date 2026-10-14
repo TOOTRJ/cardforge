@@ -27,7 +27,7 @@
 // (lib/frames/frame-manifest.json) and must never come back to public/frames
 // (tests/unit/frames/frame-manifest.test.ts fails on a frame in both places).
 // `extendedart`, `m15textless` and `m15textlessland` went the same way (TODO
-// 4.7 / 4.35 / 4.42, layout v56): Card Conjurer's 'Extended Art Frames' and
+// 4.7 / 4.35 / 4.42, layout v58): Card Conjurer's 'Extended Art Frames' and
 // 'Magic Fest Promos' through scripts/import-cc-frames.mjs, frames bucket.
 // ---------------------------------------------------------------------------
 import sharp from "sharp";

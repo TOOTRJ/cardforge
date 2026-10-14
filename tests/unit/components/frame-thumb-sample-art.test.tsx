@@ -189,7 +189,7 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
       // Layout v35 (4.17b): nyx's and fullart's art run under the whole text
       // box (fullart's out past its ring's rim too).
       fullart: [92.4, 90.3],
-      // The textless promo pair (layout v56): CC's art bounds.
+      // The textless promo pair (layout v58): CC's art bounds.
       m15textless: [87.6, 86.47],
       m15textlessland: [87.6, 86.47],
       nyx: [88, 81.8],

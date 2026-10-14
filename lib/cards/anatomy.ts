@@ -63,10 +63,12 @@ import { supertypeHasWord } from "@/lib/cards/card-display";
 import { isCollectorStyle, isCollectorSwitch, type CollectorSwitch } from "@/lib/cards/collector-line";
 import {
   holoStampArtRect,
+  holoStampToneOf,
   holoStampWanted,
   isHoloStampSwitch,
   type HoloStampArt,
   type HoloStampShape,
+  type HoloStampTone,
   type HoloStampSwitch,
 } from "@/lib/cards/holo-stamp";
 import { canonicalColorSequence } from "@/lib/cards/mana-order";
@@ -254,7 +256,8 @@ export function twoColorFitsTemplate(
  *  the collector line when its value is a printed style ("off" and absent
  *  are both off); the stamp when its value asks for one ("auto", "oval" or
  *  "triangle" — whether the CARD then draws it is holoStampWanted's call:
- *  "auto" needs a rare or mythic, and a token or emblem never draws one);
+ *  "auto" needs a rare or mythic on an oval frame (any rarity on a triangle
+ *  frame), and a token or emblem never draws one);
  *  the icon family when it names one of the families. */
 export function anatomyOn(
   style: FrameAnatomyStyle | null | undefined,
@@ -587,7 +590,13 @@ export type ResolvedFrameOverlay = {
 };
 
 /** The facts the stamp's rule reads beside the colour key. */
-export type HoloStampFacts = Pick<AnatomyFacts, "cardType"> & { rarity?: string | null };
+export type HoloStampFacts = Pick<AnatomyFacts, "cardType"> & {
+  rarity?: string | null;
+  /** The shape the frame's notch is cut for — set by resolveFrameOverlays
+   *  from the slot, never by a caller ("auto" stamps every rarity on a
+   *  triangle frame: lib/cards/holo-stamp.ts holoStampWanted). */
+  shape?: HoloStampShape | null;
+};
 
 /**
  * The overlays one card face draws over its frame master, in order — the ONE
@@ -601,7 +610,8 @@ export type HoloStampFacts = Pick<AnatomyFacts, "cardType"> & { rarity?: string 
  *     pickFrameColorKey) — "m" for a pair drawn gold — remapped by the
  *     slot's keyMap;
  *   • the holofoil stamp's notch (4.9c) draws when the card's switch wants
- *     a stamp (holoStampWanted: "auto" on a rare or mythic, never a token
+ *     a stamp (holoStampWanted: "auto" on a rare or mythic — on every
+ *     rarity where the slot's shape is the triangle —, never a token
  *     or emblem), keyed the same way — a card drawn as its pair master, in
  *     either dress, asks for the pair's notch (M15_HOLO_STAMP publishes the
  *     ten pairs since the 4.9c follow-up; one piece per pair serves the
@@ -643,7 +653,11 @@ export function resolveFrameOverlays(
       const own = mdfcStripOwnKey(resolveTwoColor(profile, style, facts), facts.colorKey);
       if (own !== null && (slot.keyMap?.[own] ?? own) === key) continue;
     } else {
-      if (!overlayWanted(slot.anatomy, style, facts)) continue;
+      const wanted =
+        slot.anatomy === "holoStamp"
+          ? overlayWanted(slot.anatomy, style, { ...facts, shape: slot.stamp.shape })
+          : overlayWanted(slot.anatomy, style, facts);
+      if (!wanted) continue;
       const look = resolveTwoColor(profile, style, facts);
       const base = look ? look.pair : facts.colorKey;
       key = slot.keyMap?.[base] ?? base;
@@ -689,6 +703,9 @@ function overlayWanted(
  *  the rules layout and the creator read it. */
 export type ResolvedHoloStamp = {
   shape: HoloStampShape;
+  /** The face's tone (holoStampToneOf): the hologram, or the matte grey a
+   *  triangle frame prints on a common and an uncommon. */
+  tone: HoloStampTone;
   /** The notch overlay (its image is drawn by resolveFrameOverlays, inside
    *  both sheen masks). */
   notch: ResolvedFrameOverlay;
@@ -722,7 +739,14 @@ export function resolveHoloStamp(
   );
   if (!slot) return null;
   const art: HoloStampArt = slot.stamp;
-  return { shape: art.shape, notch, oval: art.oval, artRect: holoStampArtRect(art.oval), keepOut: art.keepOut };
+  return {
+    shape: art.shape,
+    tone: holoStampToneOf(art.shape, facts.rarity),
+    notch,
+    oval: art.oval,
+    artRect: holoStampArtRect(art.oval),
+    keepOut: art.keepOut,
+  };
 }
 
 /** The crown's switch is on and the card prints one (the ONE test the

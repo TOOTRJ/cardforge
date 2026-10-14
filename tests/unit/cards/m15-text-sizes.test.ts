@@ -298,7 +298,7 @@ describe("baselines (TextSlot.dy)", () => {
     ["m15mdfcback", base.title, cc],
     ["m15mdfclandfront", base.title, cc],
     ["m15mdfclandback", base.title, cc],
-    // The extended-art frame (layout v56, TODO 4.7): Card Conjurer's
+    // The extended-art frame (layout v58, TODO 4.7): Card Conjurer's
     // extended pack, M15's bars — the CC type line.
     ["extendedart", base.title, cc],
     // MSE-framed: baselines kept (their print offsets are TODO 4.21's).
@@ -321,7 +321,7 @@ describe("baselines (TextSlot.dy)", () => {
     // Siege" 2 px below the bar-centred one. Fractions of ITS 2100 px width.
     ["battle", 2 / 2100, 2 / 2100],
     ["fullart", base.title, mse.type],
-    // The textless promo pair (layout v56): CC 'Magic Fest Promos', the m15
+    // The textless promo pair (layout v58): CC 'Magic Fest Promos', the m15
     // entry's slots (its type line is never drawn: `textless`).
     ["m15textless", base.title, cc],
     ["m15textlessland", base.title, cc],
@@ -404,7 +404,7 @@ describe("baselines (TextSlot.dy)", () => {
       "m15borderlesspw", "m15borderlesspwtall",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
-      // The extended-art frame and the textless promo pair (layout v56).
+      // The extended-art frame and the textless promo pair (layout v58).
       "extendedart", "m15textless", "m15textlessland",
     ]) {
       expect((getFrameProfile(t).type.dy! - kept15) * 1500, t).toBeCloseTo(-4.2, 9);

@@ -14,6 +14,7 @@ import {
   spendCredits,
 } from "@/lib/ai/rate-limit";
 import { generateDeckIdeas } from "@/lib/ai/deck-ideas";
+import { aiErrorMessage, withAiTimeBudget } from "@/lib/ai/structured-output";
 import { deckTypeByKey } from "@/lib/decks/deck-types";
 import { DECK_FORMAT_VALUES } from "@/types/deck";
 import { rateLimitedResponse } from "@/lib/api/responses";
@@ -35,6 +36,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const startedAt = Date.now();
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ ok: false, error: "Supabase isn't configured." }, { status: 503 });
   }
@@ -74,12 +76,16 @@ export async function POST(request: Request) {
   }
   await logAiCall(user.id, "generate_deck_ideas");
   try {
-    const ideas = await generateDeckIdeas({
-      format: parsed.data.format,
-      deckType: deckTypeByKey(parsed.data.deck_type),
-      bracket: parsed.data.bracket,
-      hint: parsed.data.hint,
-    });
+    // A second call only while the 60 s budget still holds it — a kill past
+    // maxDuration would skip the refund below (structured-output.ts).
+    const ideas = await withAiTimeBudget(startedAt, maxDuration, () =>
+      generateDeckIdeas({
+        format: parsed.data.format,
+        deckType: deckTypeByKey(parsed.data.deck_type),
+        bracket: parsed.data.bracket,
+        hint: parsed.data.hint,
+      }),
+    );
     // Keep the batch (migration 0093) so a closed tab doesn't waste the
     // credit — the wizard offers "reopen your last ideas". Best-effort.
     try {
@@ -108,7 +114,7 @@ export async function POST(request: Request) {
     if (spend.charged) {
       await refundCredits(user.id, 1, "generate_deck_ideas", `refund:${ref}`);
     }
-    const message = error instanceof Error ? error.message : "Idea generation failed.";
+    const message = aiErrorMessage(error, (detail) => detail, "Idea generation failed.");
     return NextResponse.json({ ok: false, error: message }, { status: 502 });
   }
 }
