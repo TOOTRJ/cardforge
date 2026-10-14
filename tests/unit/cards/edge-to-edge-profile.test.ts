@@ -32,6 +32,9 @@ describe("opt-in profile fields", () => {
   // 3.24's `textless` has one user: the full-art token's textless height
   // (TODO 4.48), which keeps its type line (`textlessTypeLine`).
   const TEXTLESS_TOKENS = ["m20token", "m20tokenartifact"];
+  // …and, since layout v56, the black-bordered textless promos (TODO 4.35 /
+  // 4.42), which print no type line.
+  const TEXTLESS_PROMOS = ["m15textless", "m15textlessland"];
 
   it("are set only by the full-art basics (and `textless` by the full-art token's textless height)", () => {
     for (const template of FRAME_TEMPLATE_VALUES) {
@@ -39,6 +42,9 @@ describe("opt-in profile fields", () => {
       if (TEXTLESS_TOKENS.includes(template)) {
         expect(p.textless, template).toBe(true);
         expect(p.textlessTypeLine, template).toBe(true);
+      } else if (TEXTLESS_PROMOS.includes(template)) {
+        expect(p.textless, template).toBe(true);
+        expect(p.textlessTypeLine, template).toBeUndefined();
       } else {
         expect(p.textless, template).toBeUndefined();
         expect(p.textlessTypeLine, template).toBeUndefined();
@@ -202,9 +208,10 @@ describe("footerInk on the art (TODO 3.8 / 3.23)", () => {
 describe("the set symbol's keyline on a dark type bar (4.32, owner evidence 2026-09-26)", () => {
   // …and on the borderless land's tinted one (4.34), whose black and gold
   // bars hide a common's #0f0f12 glyph the same way.
-  const BORDERLESS = ["m15borderless", "m15borderlessartifact", "m15borderlessland"];
+  // …and on the extended-art frame's black type bar (layout v56, TODO 4.7).
+  const BORDERLESS = ["m15borderless", "m15borderlessartifact", "m15borderlessland", "extendedart"];
 
-  it("is set by the borderless M15 frames only — every other profile draws the glyph as before", () => {
+  it("is set by the borderless M15 frames and extended art only — every other profile draws the glyph as before", () => {
     for (const template of FRAME_TEMPLATE_VALUES) {
       const p = getFrameProfile(template);
       if (BORDERLESS.includes(template)) expect(p.setSymbolKeyline, template).toBe(SET_SYMBOL_KEYLINE);

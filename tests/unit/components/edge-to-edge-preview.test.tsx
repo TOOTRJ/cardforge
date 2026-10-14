@@ -237,7 +237,9 @@ describe("CardPreview — a split type line (TODO 3.24)", () => {
 });
 
 describe("CardPreview — a textless frame (TODO 3.24)", () => {
-  const titan = (override?: FrameProfileOverride) =>
+  // `m15textless` is a textless profile itself since layout v56 (TODO 4.35 /
+  // 4.42); `fullart` (no flag) is the frame "without the flag".
+  const titan = (override?: FrameProfileOverride, template: "m15textless" | "fullart" = "m15textless") =>
     render(
       <CardPreview
         title="Textless Titan"
@@ -249,8 +251,8 @@ describe("CardPreview — a textless frame (TODO 3.24)", () => {
         flavorText="Big."
         power="6"
         toughness="6"
-        frameStyle={{ template: "m15textless" }}
-        {...(override ? { profileOverrides: { m15textless: override } } : {})}
+        frameStyle={{ template }}
+        {...(override ? { profileOverrides: { [template]: override } } : {})}
       />,
     );
 
@@ -266,7 +268,7 @@ describe("CardPreview — a textless frame (TODO 3.24)", () => {
   });
 
   it("prints them all without the flag", () => {
-    const text = titan().container.textContent ?? "";
+    const text = titan(undefined, "fullart").container.textContent ?? "";
     expect(text).toContain("Giant");
     expect(text).toContain("Trample");
     expect(text).toContain("Big.");
@@ -420,7 +422,7 @@ describe("CardPreview — the borderless M15 frame (4.32)", () => {
   });
 
   it("draws the glyph bare on a profile without the opt-in, and never rings an uploaded icon or the default mark", () => {
-    for (const template of ["m15", "m15artifact", "fullartland", "extendedart"] as const) {
+    for (const template of ["m15", "m15artifact", "fullartland"] as const) {
       const glyph = markup(growthUi(template)).querySelector("i.ss.ss-dom") as HTMLElement;
       expect(decl(glyph, "text-shadow"), template).toBeNull();
       expect(decl(glyph, "color"), template).toBe(RARITY_INK.common);

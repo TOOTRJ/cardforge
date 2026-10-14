@@ -416,9 +416,9 @@ Rules and gotchas:
   onto the default landing, where the save's gates pass it
   (`ownCardTextStandIn`) — and leaves it where the card saves with no text
   or nothing else is published in the colour; `resolveGeneratedFrame`'s
-  random pool reads the same test. The "M15 Textless" frames are NOT
-  textless profiles (they draw the text on the art), so a landing there
-  stands until a profile gains the flag — never test a template's name.
+  random pool reads the same test. The "M15 Textless" frames ARE textless
+  profiles since layout v56 (the black-bordered textless promos, CC 'Magic
+  Fest Promos') — the guard reads the flag; never test a template's name.
   An EMBLEM is never remixed (owner 2026-10-13; it prints its walker's
   name, and a remix renames each card by itself): left out at plan time —
   `remixableDeckItems` for an own emblem, a 0 in the estimate's

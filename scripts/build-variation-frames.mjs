@@ -3,7 +3,6 @@
 // Full-Magic-Pack MSE sources into app frames (public/frames/<name>/{7}.png,
 // 1500×2100):
 //
-//   extendedart  magic-extended-art            *card.jpg,  WHITE art window
 //   expeditionland   magic-m15-expedition          *lcard.jpg, BLACK art window
 //   nyx          …showcase-theros-constellation card/*.png, already alpha-cut
 //   fullart      …showcase-zendikar            *card.png,  already alpha-cut
@@ -27,13 +26,16 @@
 // scripts/import-cc-frames.mjs; it lives in the frames bucket now
 // (lib/frames/frame-manifest.json) and must never come back to public/frames
 // (tests/unit/frames/frame-manifest.test.ts fails on a frame in both places).
+// `extendedart`, `m15textless` and `m15textlessland` went the same way (TODO
+// 4.7 / 4.35 / 4.42, layout v56): Card Conjurer's 'Extended Art Frames' and
+// 'Magic Fest Promos' through scripts/import-cc-frames.mjs, frames bucket.
 // ---------------------------------------------------------------------------
 import sharp from "sharp";
 import path from "node:path";
 import fs from "node:fs";
 // Phase B (TODO 3.26): normalise the card corners at the final size before
-// the write, so a rebuild can't bring the white paper back (extendedart,
-// fullart and m15textless* are allow-listed).
+// the write, so a rebuild can't bring the white paper back (fullart is
+// allow-listed).
 import { normaliseMasterCorners } from "./lib/frame-corners.mjs";
 import { toneNyxMaster } from "./lib/nyx-tone.mjs";
 import { NYX_RIM_TONES, toneNyxRim } from "./lib/nyx-frame.mjs";
@@ -106,15 +108,6 @@ const COLORS = ["w", "u", "b", "r", "g", "c", "m"];
 // 1+2. JPG families with a fill-colored art window ---------------------------
 const JPG_SETS = [
   {
-    out: "public/frames/extendedart",
-    pack: `${DATA}/magic-extended-art.mse-style`,
-    file: (k) => `${k}card.jpg`,
-    fill: "white",
-    seeds: [[0.5, 0.3]],
-    // Stop at the textbox (white paper, connected to the window).
-    maxYFrac: 0.6,
-  },
-  {
     out: "public/frames/expeditionland", // the shipped template is expeditionland
     pack: `${DATA}/magic-m15-expedition.mse-style`,
     file: (k) => `${k}lcard.jpg`,
@@ -153,20 +146,6 @@ const PNG_SETS = [
     out: "public/frames/fullart",
     pack: `${DATA}/magic-m15-showcase-zendikar.mse-style`,
     file: (k) => `${k}card.png`,
-  },
-  // M15 Textless full art — the plain M15 border with an edge-to-edge art
-  // window (no type plate, no text box painted). Already alpha-cut; the
-  // creature/spell art (`{c}card.png`) and land (`{c}lcard.png`) variants
-  // share the same border.
-  {
-    out: "public/frames/m15textless",
-    pack: `${DATA}/magic-m15-textless.mse-style`,
-    file: (k) => `${k}card.png`,
-  },
-  {
-    out: "public/frames/m15textlessland",
-    pack: `${DATA}/magic-m15-textless.mse-style`,
-    file: (k) => `${k}lcard.png`,
   },
 ];
 

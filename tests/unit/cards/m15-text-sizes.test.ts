@@ -298,8 +298,10 @@ describe("baselines (TextSlot.dy)", () => {
     ["m15mdfcback", base.title, cc],
     ["m15mdfclandfront", base.title, cc],
     ["m15mdfclandback", base.title, cc],
+    // The extended-art frame (layout v56, TODO 4.7): Card Conjurer's
+    // extended pack, M15's bars — the CC type line.
+    ["extendedart", base.title, cc],
     // MSE-framed: baselines kept (their print offsets are TODO 4.21's).
-    ["extendedart", base.title, base.type],
     ["expeditionland", base.title, base.type],
     ["nyx", base.title, base.type],
     // Aftermath (v38): a CC master; its text slots stay as print-matched in
@@ -319,8 +321,10 @@ describe("baselines (TextSlot.dy)", () => {
     // Siege" 2 px below the bar-centred one. Fractions of ITS 2100 px width.
     ["battle", 2 / 2100, 2 / 2100],
     ["fullart", base.title, mse.type],
-    ["m15textless", base.title, mse.type],
-    ["m15textlessland", base.title, mse.type],
+    // The textless promo pair (layout v56): CC 'Magic Fest Promos', the m15
+    // entry's slots (its type line is never drawn: `textless`).
+    ["m15textless", base.title, cc],
+    ["m15textlessland", base.title, cc],
     // Already at the family's sizes on print-verified slots: untouched.
     ["m15fullartland", 0, 0],
     ["fullartland", 0, 0],
@@ -356,7 +360,7 @@ describe("baselines (TextSlot.dy)", () => {
     // translates by the exact dy, lands on it).
     expect(at("m15")).toEqual([-2, -5, -1, -3]);
     expect(at("m15pw")).toEqual([0, -5, 0, -3]);
-    expect(at("extendedart")).toEqual([-2, -1, -1, 0]);
+    expect(at("extendedart")).toEqual([-2, -5, -1, -3]);
     // Saga (4.21c): the name kept, the type line 9.3 px lower onto the
     // prints (−5.3 + 9.3 = +4 at HD, +2 at 750).
     expect(at("saga")).toEqual([-5, 4, -3, 2]);
@@ -391,7 +395,7 @@ describe("baselines (TextSlot.dy)", () => {
   });
 
   it("lands the Card Conjurer masters' type line 4.2 px higher than a kept baseline, on the prints' (1259.6 px at HD)", () => {
-    const kept15 = getFrameProfile("extendedart").type.dy!;
+    const kept15 = getFrameProfile("expeditionland").type.dy!;
     for (const t of [
       "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15ub", "m15ubartifact", "m15ubland", "m15snow", "m15devoid", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15pw",
       // The station frame (TODO 4.27a): cut from the published m15artifact /
@@ -400,6 +404,8 @@ describe("baselines (TextSlot.dy)", () => {
       "m15borderlesspw", "m15borderlesspwtall",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
+      // The extended-art frame and the textless promo pair (layout v56).
+      "extendedart", "m15textless", "m15textlessland",
     ]) {
       expect((getFrameProfile(t).type.dy! - kept15) * 1500, t).toBeCloseTo(-4.2, 9);
     }

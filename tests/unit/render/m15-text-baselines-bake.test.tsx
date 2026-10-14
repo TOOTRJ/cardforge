@@ -127,7 +127,9 @@ describe("M15-era display sizes on real bakes (layout v32)", () => {
   // its baseline within 1 px (the bake moves text in whole pixels).
   const KEPT: [string, number | null, number | null][] = [
     ["m15", 189, null],
-    ["extendedart", 189, 1264],
+    // extendedart: its type line moved onto the prints' with Card
+    // Conjurer's masters (layout v56, below).
+    ["extendedart", 189, null],
     // Saga: its name keeps v31's baseline; its type line moved onto the
     // prints' in TODO 4.21c (below).
     ["saga", 185, null],
@@ -188,7 +190,7 @@ describe("M15-era display sizes on real bakes (layout v32)", () => {
   });
 
   it("puts the Card Conjurer masters' type line on the prints' baseline (was 4 px low)", async () => {
-    for (const template of ["m15", "m15artifact", "m15borderless"]) {
+    for (const template of ["m15", "m15artifact", "m15borderless", "extendedart"]) {
       const m = measure(await bake(template, "hd"), getFrameProfile(template).type);
       expect(Math.abs(m.baseline - PRINT_TYPE_BASELINE_HD), `${template} ${m.baseline}`).toBeLessThanOrEqual(1);
       expect(m.baseline).toBeLessThan(1264 - 3); // v31: 1264

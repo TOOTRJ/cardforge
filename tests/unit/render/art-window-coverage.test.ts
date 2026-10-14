@@ -108,7 +108,8 @@ describe("artWindowViolations", () => {
     const v = artWindowViolations(m, W, H, slot(30, 270, 50, 200));
     expect(v).toHaveLength(1);
     expect(v[0]).toMatch(/left 30 > 29\.85, right 270 < 270\.15, top 50 > 49\.79, bottom 200 < 200\.21$/);
-    // 0.1 px short of the overscan still fails (extendedart/m, m15fullartland).
+    // 0.1 px short of the overscan still fails (m15fullartland; extendedart/m
+    // until its Card Conjurer masters, layout v56).
     expect(artWindowViolations(m, W, H, slot(29.9, 271, 49, 201))).toEqual([expect.stringMatching(/left 29\.9 > 29\.85$/)]);
     expect(artWindowViolations(m, W, H, slot(29.85, 271, 49, 201))).toEqual([]);
   });
@@ -254,17 +255,18 @@ describe("artWindowVerdict: the known-failure table", () => {
   });
 
   it("passes a listed master within its maxMissPx, and fails one that got worse", () => {
-    // (m15textless, bound 4.5 px — the 2003 pair, this test's first example,
-    // left the table with TODO 4.10b.)
-    expect(artWindowVerdict("m15textless", "w", miss(3.5))).toEqual({ fails: [], fixed: false });
-    expect(artWindowVerdict("m15textless", "w", miss(5)).fails).toEqual([expect.stringMatching(/^worse than its known failure \(4\.35\): misses by 5 px > 4\.5: /)]);
+    // (tarkirdraconic, bound 87.5 px — the 2003 pair, this test's first
+    // example, left the table with TODO 4.10b; m15textless, its second, with
+    // 4.35's re-source, layout v56.)
+    expect(artWindowVerdict("tarkirdraconic", "w", miss(80))).toEqual({ fails: [], fixed: false });
+    expect(artWindowVerdict("tarkirdraconic", "w", miss(90)).fails).toEqual([expect.stringMatching(/^worse than its known failure \(4\.11\): misses by 90 px > 87\.5: /)]);
     // Per-key bounds: expeditionland b/g's missing ring, u/r's 2.5 px apex.
     expect(artWindowVerdict("expeditionland", "b", miss(300)).fails).toEqual([]);
     expect(artWindowVerdict("expeditionland", "u", miss(300)).fails).toHaveLength(1);
   });
 
   it("marks a listed master with nothing left to find as fixed", () => {
-    expect(artWindowVerdict("m15textless", "w", [])).toEqual({ fails: [], fixed: true });
+    expect(artWindowVerdict("tarkirdraconic", "w", [])).toEqual({ fails: [], fixed: true });
   });
 });
 
@@ -601,10 +603,9 @@ describe("the art-window known failures", () => {
         "bloomanime",
         "bloomburrow",
         "expeditionland",
-        "extendedart",
+        // (extendedart, m15textless and m15textlessland left with their Card
+        // Conjurer masters, layout v56: TODO 4.7 / 4.35.)
         "m15fullartland",
-        "m15textless",
-        "m15textlessland",
         "m15tokenartifact",
         // The see-through slot and seam rules (layout v35) on the
         // colourless tokens: there since v34 (4.17c).

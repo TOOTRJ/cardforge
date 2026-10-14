@@ -21,7 +21,6 @@ const THIN_BORDER: Record<string, { rightPct: number; bottomPct: number }> = {
   // tests/unit/cards/copyright-slot.test.ts — and `brandMark` is not read.)
   // (modern and modernland left it with TODO 4.10b: their mark sits in the
   // left-aligned footer's © slot, under the artist's brush.)
-  extendedart: { rightPct: 3.5, bottomPct: 0.8 },
   // The Card Conjurer landscape masters (TODO 4.21b, layout v43): the mark's
   // 38 px of ink centred in the battle's 54 px bottom border (its right end
   // short of the painted shield) and in the split's 57 px one. The MSE

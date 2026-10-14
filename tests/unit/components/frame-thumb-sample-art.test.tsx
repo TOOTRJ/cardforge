@@ -189,8 +189,9 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
       // Layout v35 (4.17b): nyx's and fullart's art run under the whole text
       // box (fullart's out past its ring's rim too).
       fullart: [92.4, 90.3],
-      m15textless: [84, 80.7],
-      m15textlessland: [84, 80.7],
+      // The textless promo pair (layout v56): CC's art bounds.
+      m15textless: [87.6, 86.47],
+      m15textlessland: [87.6, 86.47],
       nyx: [88, 81.8],
       // The full-art tokens: CC's art bounds with 7.6's overscan.
       ...Object.fromEntries(M20_TOKENS.map((t) => [t, [92.2, 89.6] as [number, number]])),

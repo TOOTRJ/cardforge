@@ -225,7 +225,8 @@ describe("setSymbolSize on the family", () => {
     const axis = SET_SYMBOL_KEYLINE.split(",").map((layer) => layer.trim().split(/\s+/).slice(0, 2).map((v) => Math.abs(parseFloat(v))));
     expect(Math.max(...axis.flat())).toBe(SET_SYMBOL_KEYLINE_EM);
     const keylined = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).setSymbolKeyline);
-    expect(keylined.sort()).toEqual(["m15borderless", "m15borderlessartifact", "m15borderlessland"]);
+    // …and the extended-art frame's black type bar (layout v56, TODO 4.7).
+    expect(keylined.sort()).toEqual(["extendedart", "m15borderless", "m15borderlessartifact", "m15borderlessland"]);
     const m15 = getFrameProfile("m15");
     for (const template of keylined) {
       const p = getFrameProfile(template);

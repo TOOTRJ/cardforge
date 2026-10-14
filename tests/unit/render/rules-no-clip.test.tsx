@@ -336,14 +336,16 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   [["adventure/main"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "level up"]],
   [["adventure/adventure"], ["1200 chars", "400 chars", "200 chars", "EOE #30", "TLA #112", "level up", "blank lines", "flavor only", "pips + reminder"]],
   // The ~12 %-high boxes (tokens, flip, aftermath's top half, the ZNR
-  // hedron and textless panels): a full card's text never fits them.
+  // hedron panel): a full card's text never fits them. (The textless promo
+  // pair draws no box since layout v56 — no consumer, as the full-art
+  // token's textless height.)
   [
     ["aftermath/main", "flip/main", "m15token/main", "m15tokenartifact/main"],
     ["1200 chars", "400 chars", "EOE #30", "TLA #112", "accented first line", "blank lines", "level up", "modal bullets"],
   ],
   [["flip/second face"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "blank lines", "level up", "modal bullets"]],
   [
-    ["fullart/main", "m15textless/main", "m15textlessland/main"],
+    ["fullart/main"],
     ["1200 chars", "400 chars", "EOE #30", "TLA #112", "accented first line", "blank lines", "level up"],
   ],
   // "typed, as printed" (TODO 6.11): five paragraphs — an ability word, a
@@ -353,8 +355,7 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   [
     [
       "adventure/adventure", "adventure/main", "aftermath/main", "avatar/main", "battle/main", "bloomburrow/main", "emblem/main",
-      "expeditionland/main", "flip/main", "flip/second face", "fullart/main", "lotrscroll/main", "m15textless/main",
-      "m15textlessland/main", "m15token/main", "m15tokenartifact/main", "m15tokenartifacttext/main", "m15tokentext/main",
+      "expeditionland/main", "flip/main", "flip/second face", "fullart/main", "lotrscroll/main", "m15token/main", "m15tokenartifact/main", "m15tokenartifacttext/main", "m15tokentext/main",
       "m20tokenartifacttext/main", "m20tokentext/main", "split/main",
     ],
     ["typed, as printed"],

@@ -1386,6 +1386,24 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            of w b r g and gold change; no other case. Not
 //            verification-neutral (the masters a tick
 //            would judge change) — the frame has no tick.
+//   v56    — the extended-art and textless frames re-sourced from Card
+//            Conjurer (TODO 4.7 / 4.35 / 4.42; owner Q6 2026-10-13).
+//            `extendedart`, `m15textless` and `m15textlessland`, every card
+//            on them: the masters (CC 'Extended Art Frames', CC 'Magic Fest
+//            Promos'; the MSE masters leave git) and the slots that ride
+//            them — extendedart takes the m15 entry's slots (cost lift, type
+//            baseline, print margins, brand mark), CC's art window to the
+//            side edges, white type ink, the colourless artifact's silver
+//            master and the see-through colourless master's art under it;
+//            its crown band's slot moves 10 px up onto CC's bounds. The
+//            textless pair prints no type line and no rules (`textless`),
+//            a white name on the dark title bar and CC's art window.
+//            CC_RESOURCE_LAYOUT_VERSION below — the ONE constant (open PRs
+//            #558 and #559 claim 56 and 57: renumbered at merge time, first
+//            in keeps 56). A CORRECTION ("sweep"), never a badge: none of
+//            the three is ticked in any colour, so no tick goes stale. The
+//            dev database holds one card on them (a private extendedart
+//            test card); production cannot be read from here.
 // ---------------------------------------------------------------------------
 
 /** The station frame on print's band rule (TODO 4.27a, PR 2): every card
@@ -1403,6 +1421,14 @@ export const STATION_BANDS_TEMPLATES: readonly string[] = ["m15station", "m15sta
  *  once it ships. */
 export const NYX_PRINT_TONES_LAYOUT_VERSION = 55;
 export const NYX_PRINT_TONES_TEMPLATES: readonly string[] = ["nyx"];
+
+/** The extended-art and textless frames re-sourced from Card Conjurer (TODO
+ *  4.7 / 4.35 / 4.42): every card on `extendedart`, `m15textless` and
+ *  `m15textlessland`. ITS version lives here alone — CARD_LAYOUT_VERSION,
+ *  the scoped table and the rollout below read this constant — so a bump
+ *  that merges first moves it in one place. Frozen once it ships. */
+export const CC_RESOURCE_LAYOUT_VERSION = 56;
+export const CC_RESOURCE_TEMPLATES: readonly string[] = ["extendedart", "m15textless", "m15textlessland"];
 
 /** The 1993 frame on its prints (TODO 4.10c): every text slot and the
  *  symbols of `agclassic` and `alphaland`. ITS version lives here alone —
@@ -1463,7 +1489,7 @@ export const LARGE_PIPS_LAYOUT_VERSION = 53;
  *  latest). */
 export const V53_LARGER_COST_TEMPLATES: readonly string[] = ["modern", "modernland"];
 
-export const CARD_LAYOUT_VERSION = NYX_PRINT_TONES_LAYOUT_VERSION;
+export const CARD_LAYOUT_VERSION = CC_RESOURCE_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -1645,6 +1671,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // The Nyx Constellation frame's rim on its prints (Rounds 59 / 61):
   // every card on `nyx` (none stored in production).
   [NYX_PRINT_TONES_LAYOUT_VERSION]: NYX_PRINT_TONES_TEMPLATES,
+  // The extended-art and textless frames re-sourced from Card Conjurer
+  // (4.7 / 4.35 / 4.42): the masters and the slots that ride them; every
+  // card on the three. No narrower verification scope: none has a tick.
+  [CC_RESOURCE_LAYOUT_VERSION]: CC_RESOURCE_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -2638,6 +2668,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION]: "sweep", // a name's room before a detached cost of Phyrexian symbols (6.16d) — a correction of a fit that ran the name under the pips; 0 public or unlisted stored cards in scope, never a badge
   [STATION_BANDS_LAYOUT_VERSION]: "sweep", // the station frame on print's band rule, numeral sizes and ring tone (4.27a, PR 2) — a correction on a frame not offered yet
   [NYX_PRINT_TONES_LAYOUT_VERSION]: "sweep", // the Nyx Constellation frame's rim on the family's tones THB #258–268 wear (owner Rounds 59 / 61) — a correction of a look against its own print on a frame never ticked, never a badge
+  [CC_RESOURCE_LAYOUT_VERSION]: "sweep", // extendedart and the textless pair re-sourced from Card Conjurer (4.7 / 4.35 / 4.42; owner Q6) — a correction of three looks against their own prints on frames never ticked, never a badge
   [LARGE_PIPS_LAYOUT_VERSION]: "sweep", // hybrid and twobrid discs large, the large pip's factor per frame and place (3.21) — a correction against the prints after the owner's round-49 sheets, never a badge
   [SYMBOLS_PRINT_LAYOUT_VERSION]: "sweep", // five symbols on the prints' drawings + flat rules-text pips (6.16b) — a correction against the prints after the owner's round-43 sheets, never a badge
   [ART_FOCAL_ZERO_LAYOUT_VERSION]: "sweep", // the art's zoom about a focal point of exactly 0 (Satori dropped a zero transform-origin) — a correction of the bake against the preview after the owner's before / after sheet, never a badge

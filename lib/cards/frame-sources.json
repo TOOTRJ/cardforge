@@ -647,6 +647,57 @@
       "the silver is fitted on each side separately (owner decision 2026-09-29, round 12b): CC lights its silver evenly, the prints do not (beside the spark's base 113–122 on the left, 178–187 on the right; CC 160 and 179), so the gain runs on the signed offset from the centre and by row, each half on its own knots, joined across the centre without a seam, each region's median per side on the prints'"
     ]
   },
+  "extendedart": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packM15ExtendedArtNew.js 'Extended Art Frames' (Card Conjurer's Accurate group): the accurate M15 pack's bars, box and text layout with the art window opened to the side edges",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "a": [
+        "img/frames/m15/new/extended/a.png"
+      ],
+      "w": [
+        "img/frames/m15/new/extended/w.png"
+      ],
+      "u": [
+        "img/frames/m15/new/extended/u.png"
+      ],
+      "b": [
+        "img/frames/m15/new/extended/b.png"
+      ],
+      "r": [
+        "img/frames/m15/new/extended/r.png"
+      ],
+      "g": [
+        "img/frames/m15/new/extended/g.png"
+      ],
+      "c": [
+        "img/frames/m15/new/extended/c.png"
+      ],
+      "m": [
+        "img/frames/m15/new/extended/m.png"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/m15/new/extended/a.png",
+      "img/frames/m15/new/extended/b.png",
+      "img/frames/m15/new/extended/c.png",
+      "img/frames/m15/new/extended/g.png",
+      "img/frames/m15/new/extended/m.png",
+      "img/frames/m15/new/extended/r.png",
+      "img/frames/m15/new/extended/u.png",
+      "img/frames/m15/new/extended/w.png"
+    ],
+    "notes": [
+      "re-sourced from Card Conjurer (TODO 4.7, owner Q6 2026-10-13): replaces the 744 px MSE magic-extended-art composite that scripts/build-variation-frames.mjs upscaled into git — its title bar sat 10 px low, its box ended 41 px high and it painted white rails beside the art where every print runs the art to the card's edge",
+      "w u b r g m = the pack's colour frames whole (new/extended/<k>.png), downscaled once; no border is added — the prints have none beside the art (0 px of black border at the art rows: the median on 13 of 14 prints measured, the 14th's art itself dark at the edge)",
+      "c = the pack's see-through 'Eldrazi Frame' (new/extended/c.png): the colourless non-artifact prints (STX #285, CMM #746, MSC #292) show the art through the bars and the box; the profile draws the art under it (underFrameArt)",
+      "a = the pack's silver 'Artifact Frame' (new/extended/a.png), the master a colourless ARTIFACT paints (FrameProfile.artifactMasterKeys { c: 'a' }: BRO #376, CMR #692, BIG #92)",
+      "plates = M15's (the pack draws the regular m15PT plates at M15's bounds): no objects of its own"
+    ]
+  },
   "extendedcrown": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
@@ -704,9 +755,9 @@
       "img/frames/m15/crowns/m15CrownWFloating.png"
     ],
     "notes": [
-      "the extended-art legendary crown (TODO 4.6f, wave 2b): CC's floating crown over its BLACK 'Crown Border Cover' strip (drawn, not erased — the borderless frame erases it) with the outline ON TOP, as autoExtendedArtFrame draws them, composited 1:1 at 1500x2100 (every piece 1500-native) and cropped to rows 0–259 (the outline's extent); an overlay band over the extendedart masters, which are MSE-built and in git — Card Conjurer pixels never join them",
-      "keys = the seven colour keys of the extendedart masters: w u b r g, m (gold: a three-colour card, or a pair, which this frame draws gold — no pair masters), c (CC's colourless crown over our MSE colourless master; CC's own rule would pick the artifact crown for a colourless card, which is the m15artifact dress's call); CC's unlisted 'Artifact Legend Crown (Alt)' is not used",
-      "the band's slot sits 10 px (0.476 %H) lower than CC's bounds (lib/cards/template-layout.ts EXTENDED_CROWN): the MSE master's title bar tops out at 5.43 %H where FDN #442 / #455 and CC's m15/new/extended put it at 4.98, so the crown's hole hugs OUR bar; 4.7's CC-built extendedart master takes the offset back to 0"
+      "the extended-art legendary crown (TODO 4.6f, wave 2b): CC's floating crown over its BLACK 'Crown Border Cover' strip (drawn, not erased — the borderless frame erases it) with the outline ON TOP, as autoExtendedArtFrame draws them, composited 1:1 at 1500x2100 (every piece 1500-native) and cropped to rows 0–259 (the outline's extent); an overlay band over the extendedart masters (Card Conjurer's extended frames since TODO 4.7, frames bucket)",
+      "keys = the seven colour keys of the extendedart template: w u b r g, m (gold: a three-colour card, or a pair, which this frame draws gold — no pair masters), c (CC's colourless crown, over the see-through colourless master and the artifact one alike: the overlay is keyed by the card's colour; CC's own rule would pick the artifact crown for a colourless artifact); CC's unlisted 'Artifact Legend Crown (Alt)' is not used",
+      "the band's slot is CC's bounds (lib/cards/template-layout.ts EXTENDED_CROWN, from row 0): since TODO 4.7 the extendedart masters are Card Conjurer's extended frames, whose title bar tops out at 4.98 %H as FDN #442 / #455 print it (over the old MSE masters, whose bar topped out at 5.43 %H, the slot sat 10 px lower)"
     ]
   },
   "flip": {
@@ -7091,6 +7142,100 @@
       "PipGlyph's own derivation (TODO 4.27a; owner 2026-10-13): neither Card Conjurer nor MSE has a station frame at print size. Nothing is drawn or synthesised in the master: every painted pixel is the parent master's, with its alpha cut.",
       "The numbers are scripts/lib/station-2025.mjs (30 printed station cards measured 2026-10-13); no scan is read by the build.",
       "Tier bands, badges and the P/T plate are DRAWN by both renderers (lib/cards/station.ts, lib/cards/station-art.ts) — not in the master."
+    ]
+  },
+  "m15textless": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packMagicFest.js 'Magic Fest Promos' (groupTextless-4.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, the frame image copied 1:1 (no resample), corners cut at the importer radius",
+    "colors": {
+      "w": [
+        "img/frames/textless/magicFest/w.png"
+      ],
+      "u": [
+        "img/frames/textless/magicFest/u.png"
+      ],
+      "b": [
+        "img/frames/textless/magicFest/b.png"
+      ],
+      "r": [
+        "img/frames/textless/magicFest/r.png"
+      ],
+      "g": [
+        "img/frames/textless/magicFest/g.png"
+      ],
+      "c": [
+        "img/frames/textless/magicFest/a.png"
+      ],
+      "m": [
+        "img/frames/textless/magicFest/m.png"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/textless/magicFest/a.png",
+      "img/frames/textless/magicFest/b.png",
+      "img/frames/textless/magicFest/g.png",
+      "img/frames/textless/magicFest/m.png",
+      "img/frames/textless/magicFest/r.png",
+      "img/frames/textless/magicFest/u.png",
+      "img/frames/textless/magicFest/w.png"
+    ],
+    "notes": [
+      "re-sourced from Card Conjurer (TODO 4.35 / 4.42, owner Q6 2026-10-13): replaces the 375 px MSE masters that scripts/build-variation-frames.mjs upscaled into git — the same black-bordered promo look, sharp, with the prints' DARK title bar (SCH #50, PF26 #7, FDN #718)",
+      "w u b r g m = the pack's colour frames whole (textless/magicFest/<k>.png), native 1500x2100",
+      "colourless = the pack's silver 'Artifact Frame' (a.png): every colourless textless promo wears the silver rim, artifact or not (PF26 #1 Wayfarer's Bauble, SLD #2783 Sol Ring, SCH #32 Void Winnower, SLP #52 Kozilek's Command)",
+      "no type bar and no text box, as printed: the profile is `textless` (TODO 3.24)"
+    ]
+  },
+  "m15textlessland": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packMagicFest.js 'Magic Fest Promos' (groupTextless-4.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, the frame image copied 1:1 (no resample), corners cut at the importer radius",
+    "colors": {
+      "w": [
+        "img/frames/textless/magicFest/w.png"
+      ],
+      "u": [
+        "img/frames/textless/magicFest/u.png"
+      ],
+      "b": [
+        "img/frames/textless/magicFest/b.png"
+      ],
+      "r": [
+        "img/frames/textless/magicFest/r.png"
+      ],
+      "g": [
+        "img/frames/textless/magicFest/g.png"
+      ],
+      "c": [
+        "img/frames/textless/magicFest/l.png"
+      ],
+      "m": [
+        "img/frames/textless/magicFest/m.png"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/textless/magicFest/b.png",
+      "img/frames/textless/magicFest/g.png",
+      "img/frames/textless/magicFest/l.png",
+      "img/frames/textless/magicFest/m.png",
+      "img/frames/textless/magicFest/r.png",
+      "img/frames/textless/magicFest/u.png",
+      "img/frames/textless/magicFest/w.png"
+    ],
+    "notes": [
+      "re-sourced from Card Conjurer (TODO 4.35 / 4.42, owner Q6 2026-10-13): replaces the 375 px MSE masters that scripts/build-variation-frames.mjs upscaled into git — the same black-bordered promo look, sharp, with the prints' DARK title bar (SCH #50, PF26 #7, FDN #718)",
+      "w u b r g m = the pack's colour frames whole (textless/magicFest/<k>.png), native 1500x2100",
+      "colourless = the pack's brown 'Colorless Frame' (l.png), the land rim (PF23 #3 Reliquary Tower, PW25 #17 Command Tower)",
+      "no type bar and no text box, as printed: the profile is `textless` (TODO 3.24)"
     ]
   },
   "m15token": {

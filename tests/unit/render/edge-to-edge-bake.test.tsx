@@ -23,14 +23,16 @@ import { RARITY_INK } from "@/lib/brand/constants";
 // Edge-to-edge and full-art renderer pieces on REAL bakes (TODO 3.23 / 3.24):
 // the basic-land symbol slot, the brand mark's pill and the outlined footer
 // on the art, a split type line and a textless frame. The mechanics are
-// opted into on a HOST that opts into none of them (extendedart, given the
+// opted into on a HOST that opts into none of them (m15 — extendedart until
+// layout v56 gave it the set symbol's keyline —, given the
 // pre-4.39 fullartland's full-bleed geometry) through profileOverrides (the
 // renderers merge them over the code profile, resolveFrameProfile), with a
 // see-through stand-in master, so every pixel that isn't art is the
 // renderer's. The profiles that opt in by themselves — 4.39's full-art
 // basics and 4.32's borderless M15 frame — are baked as they ship at the
 // end, on stand-in masters too (theirs are frames-bucket objects). The
-// textless case uses m15textless's git master. The preview's twin is
+// textless case uses m15textless — a textless profile since layout v56 — on a
+// stand-in master, with the flag overridden off for "before". The preview's twin is
 // tests/unit/components/edge-to-edge-preview.test.tsx.
 //
 // The art is one flat colour, so anything that isn't that colour where the
@@ -57,7 +59,7 @@ async function solid(w: number, h: number, rgb: readonly number[], alpha = 1) {
 
 /** The opt-in cases' host (see the header): no piece of its own, and the
  *  pre-4.39 fullartland's full-bleed geometry. */
-const HOST = "extendedart";
+const HOST = "m15";
 const HOST_GEOMETRY = {
   artSlot: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 100 },
   type: { rect: { topPct: 85.4, leftPct: 18, widthPct: 66, heightPct: 4.2 } },
@@ -82,6 +84,8 @@ beforeAll(async () => {
     "m15borderless/pt/g.png": await solid(274, 140, PLATE_RGB),
     // 4.34's land: its own masters, m15borderless's plates.
     "m15borderlessland/g.png": clear,
+    // The textless case's frame (layout v56: a frames-bucket object).
+    "m15textless/g.png": clear,
   };
   const manifest = {
     version: 1 as const,
@@ -544,8 +548,9 @@ describe("a textless frame (TODO 3.24)", () => {
 
   it("prints only the title, cost and P/T of a creature with four lines of rules", async () => {
     const p = getFrameProfile("m15textless");
-    const today = await bake(titan);
-    const textless = await bake({ ...titan, profileOverrides: { m15textless: { textless: true } } });
+    const today = await bake({ ...titan, profileOverrides: { m15textless: { textless: false } } });
+    const textless = await bake(titan);
+    expect(p.textless).toBe(true);
     const notArt = (b: Bake, rect: Rect) => count(b, rect, (px) => !isArt(px));
     // Today: a type line and cream rules on the art.
     expect(notArt(today, p.type.rect)).toBeGreaterThan(500);
@@ -561,8 +566,9 @@ describe("a textless frame (TODO 3.24)", () => {
     expect(notArt(textless, p.type.rect)).toBe(0);
     expect(notArt(textless, inWindow)).toBe(0);
     expect(notArt(today, inWindow)).toBeGreaterThan(1000);
-    // Kept: the name + cost in the title band, and the P/T on its plate.
-    expect(count(textless, p.title.rect, (px) => lum(px) < 60)).toBeGreaterThan(300);
+    // Kept: the name + cost in the title band (the name WHITE on this frame,
+    // layout v56), and the P/T on its plate.
+    expect(count(textless, p.title.rect, (px) => lum(px) > 230)).toBeGreaterThan(300);
     const plate = p.pt!.plateRect!;
     const gray = ([r, g, b]: [number, number, number]) => Math.abs(r - 128) <= 3 && Math.abs(g - 128) <= 3 && Math.abs(b - 128) <= 3;
     expect(count(textless, plate, gray)).toBeGreaterThan(500);

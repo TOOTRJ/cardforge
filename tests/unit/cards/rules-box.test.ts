@@ -104,11 +104,14 @@ describe("the main box on every template", () => {
         "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
         // …and the modal bodies (5.1b), the same skeleton.
         "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
+        // The extended-art frame (layout v56, TODO 4.7): the pack's box is
+        // M15's; the textless promo pair spreads M15 and draws no box.
+        "extendedart", "m15textless", "m15textlessland",
       ].sort(),
     );
     for (const t of withPrintMargins) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 4, y: 0 });
-    // Borderless and extended art spread M15's rules slot but keep 9 / 18.
-    for (const t of ["m15borderless", "m15borderlessartifact", "extendedart"] as const) {
+    // Borderless spreads M15's rules slot but keeps 9 / 18.
+    for (const t of ["m15borderless", "m15borderlessartifact"] as const) {
       expect(getFrameProfile(t).rules.padPx, t).toBeUndefined();
       const layout = mainRulesLayout({ layout: getFrameProfile(t), rulesText: "Flying", aspect: PORTRAIT, show: {} });
       expect(layout.input.padPx).toEqual(RULES_BOX_PAD_PX);

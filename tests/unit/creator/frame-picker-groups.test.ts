@@ -417,7 +417,8 @@ describe("the frame picker's groups: a classification change only", () => {
     return;
   }
   const main = JSON.parse(fs.readFileSync(FIXTURE, "utf8")) as Dump;
-  const branch = condense(compute());
+  const raw = compute();
+  const branch = condense(raw);
 
   /** The keys of a section whose value differs from main's. */
   const changed = (section: string): string[] =>
@@ -440,7 +441,6 @@ describe("the frame picker's groups: a classification change only", () => {
     ["resolve", "the published-frame resolver, every kind × frame × colour × policy"],
     ["candidates", "the import's candidate frames"],
     ["requested", "an AI card asked for a frame by name"],
-    ["pools", "the frames in the AI's random pool, every type × colour × face"],
     ["imports", "every captured printing's match, landing, chooser and remix landing"],
     ["walkthrough", "the kind a frame's walk-through opens as"],
     ["notice", "the 'bordered' word of an import's treatment notice"],
@@ -449,6 +449,25 @@ describe("the frame picker's groups: a classification change only", () => {
     ["basicFallback", "where a basic-only frame's card goes when it stops being a basic"],
   ])("%s — %s: identical to origin/main", (section) => {
     expect(changed(section)).toEqual([]);
+  });
+
+  // The AI's random pools: identical but for layout v56 (TODO 4.35 / 4.42),
+  // which made the textless pair TEXTLESS profiles — `resolveGeneratedFrame`
+  // never draws one for a card with text while another frame it fits is
+  // published (TODO 1.24). Recorded in full on origin/main (da0b9d1b) and
+  // here: the 350 pools that differ differ ONLY by m15textless /
+  // m15textlessland leaving a face that carries text (plain, artifactWord,
+  // enchantmentWord, vehicle, fourRows); the textless and basic faces are unchanged.
+  it("pools — the frames in the AI's random pool: the same, but the textless pair never offered to a card with text (v56)", () => {
+    // Only where the pair is verified (production verifies neither), and only
+    // the kinds the pair dresses.
+    const kinds = ["artifact", "creature", "enchantment", "instant", "land", "sorcery", "spell", "token"];
+    expect(changed("pools")).toEqual(["all", "prodPlusMoved"].flatMap((policy) => kinds.map((kind) => `${policy}|${kind}`)));
+    for (const [key, pool] of Object.entries(raw.pools) as [string, string[]][]) {
+      const face = key.split("|")[3];
+      if (face === "textless" || face === "none" || face === "basic") continue;
+      expect(pool.filter((t) => t === "m15textless" || t === "m15textlessland"), key).toEqual([]);
+    }
   });
 
   it("a kind's gallery holds the same frames in the same colours, the frames that stayed in the same order", () => {
