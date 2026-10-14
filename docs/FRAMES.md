@@ -3599,7 +3599,13 @@ designer is told the layout, and **a tier left empty is the only line a
 fill of the rules text writes** — every other line is kept byte for byte
 (`mergeStationFill`). The maker's "power / toughness on this tier" follows
 its tier by number into the filled text (`stationPtChoiceAfterFill`); a
-fill used to reset it.
+fill used to reset it. A fill whose empty tier comes back EMPTY (model and judge
+alike: `stationGapsLeftEmpty`) is refused at plan time
+(`StationGapUnfilledError`, code `STATION_TIER_UNFILLED`, HTTP 422): no
+job, so no credit is charged and nothing in the form changes (owner
+2026-10-14). A gap is never filled "by place" with a designed tier whose
+number the text already has (that is a copy, not a fill), and a tier
+written as punctuation or the Station reminder alone is still a gap.
 
 *The ideas dialog* runs the same engine: an idea for a Spacecraft carries
 its tiers.

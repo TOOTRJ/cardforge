@@ -90,7 +90,7 @@ export const REMIX_DFC_FRAMES_GONE =
   "The double-faced frames this card was priced for aren't available any more — retry this card.";
 import type { DeckFormat } from "@/types/deck";
 import { withCreditedStep } from "@/lib/ai/credited-step";
-import { sameStationShape, stationSaveFields } from "@/lib/ai/station-design";
+import { StationGapUnfilledError, sameStationShape, stationSaveFields } from "@/lib/ai/station-design";
 import { printsPowerToughness } from "@/lib/cards/card-display";
 import { isStationFrame } from "@/lib/cards/station-frame";
 import { stationPtChoiceOf } from "@/lib/creator/station-rows";
@@ -663,7 +663,9 @@ export async function loadOwnedDeckContext(
 
 export type CreateCardJobResult =
   | { ok: true; job: GenerationJobRow }
-  | { ok: false; error: string };
+  /** `code` only where the client may tell the refusal apart: a station
+   *  fill whose empty tier came back empty (no job, nothing charged). */
+  | { ok: false; error: string; code?: "STATION_TIER_UNFILLED" };
 
 /** PLAN a single-card job: one fast text call designs the card; the art +
  *  save happen in the job's one step so no HTTP request runs long. */
@@ -795,7 +797,9 @@ export type CreateCardFillJobInput = {
 
 /** PLAN a fill job: design the wanted fields around the pinned ones (fast
  *  text call); the step paints the art if it was wanted. Same 1-credit
- *  price whatever was ticked — charged by the step, refunded on failure. */
+ *  price whatever was ticked — charged by the step, refunded on failure.
+ *  A station card's fill whose empty tier came back empty never becomes a
+ *  job (STATION_TIER_UNFILLED): nothing is charged. */
 export async function createCardFillJob(
   input: CreateCardFillJobInput,
 ): Promise<CreateCardJobResult> {
@@ -840,6 +844,12 @@ export async function createCardFillJob(
       colorHint,
     });
   } catch (error) {
+    // A station card's empty tier came back empty from the model AND the
+    // judge: refused here, at PLAN time — no job row, no step, so no credit
+    // is reserved, settled or refunded, and the form is left as it was.
+    if (error instanceof StationGapUnfilledError) {
+      return { ok: false, error: error.message, code: error.code };
+    }
     const detail =
       error instanceof Error ? error.message : "Card generation failed.";
     return { ok: false, error: `AI card design failed: ${detail}` };

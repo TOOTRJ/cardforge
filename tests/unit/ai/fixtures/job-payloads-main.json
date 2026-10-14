@@ -1909,5 +1909,128 @@
    }
   ],
   "refunds": 0
+ },
+ "fill plan · station · rules text, no gap (a new text)": {
+  "kind": "card_fill",
+  "plan": {
+   "want": [
+    "rules_text"
+   ],
+   "fields": {
+    "rules_text": "Rewritten top.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 9+.)\n2+ | Whenever you cast an artifact spell, scry 1.\n9+ | Flying, vigilance"
+   },
+   "art_prompt": "A teal barge drifting above a ringed planet, cold starlight.",
+   "style": null,
+   "frame_template": null,
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "fill:0",
+    "label": "Halcyon Driftbarge",
+    "status": "pending"
+   }
+  ],
+  "prompts": [
+   "Design exactly 1 card:\nCard 1: card_type artifact. color: blue. This card already exists in part. Keep these EXACTLY as given, reproducing them verbatim in your output: title \"Halcyon Driftbarge\"; type line \"artifact — Spacecraft\"; color identity blue; stats 4/5. The card's text is laid out in tiers (2+, 9+). Keep that layout: the Station line, then \"N+ | text\" lines with rising numbers. Design only: rules text — make them fit the kept parts naturally."
+  ]
+ },
+ "fill step · station · rules text, no gap (a new text)": {
+  "status": "done",
+  "fill": {
+   "rules_text": "Rewritten top.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 9+.)\n2+ | Whenever you cast an artifact spell, scry 1.\n9+ | Flying, vigilance",
+   "frame_template": null,
+   "deck_id": null
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "fill plan · station · rules text, the gap the model writes": {
+  "kind": "card_fill",
+  "plan": {
+   "want": [
+    "rules_text"
+   ],
+   "fields": {
+    "rules_text": "When this Spacecraft enters,  scry 2.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 9+.)\n2+ | Whenever you cast an artifact spell, scry 1.\n9+ | Flying, vigilance"
+   },
+   "art_prompt": "A teal barge drifting above a ringed planet, cold starlight.",
+   "style": null,
+   "frame_template": null,
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "fill:0",
+    "label": "Halcyon Driftbarge",
+    "status": "pending"
+   }
+  ],
+  "prompts": [
+   "Design exactly 1 card:\nCard 1: card_type artifact. color: blue. This card already exists in part. Keep these EXACTLY as given, reproducing them verbatim in your output: title \"Halcyon Driftbarge\"; type line \"artifact — Spacecraft\"; color identity blue; stats 4/5. The card's rules text already reads:\nWhen this Spacecraft enters,  scry 2.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 9+.)\n2+ | Whenever you cast an artifact spell, scry 1.\n9+ |\nWrite ONLY the text of tier 9+ (an empty \"N+ |\" line above). Reproduce every other line exactly as given, keep the tier numbers, and return the whole rules_text. Design only: rules text — make them fit the kept parts naturally."
+  ]
+ },
+ "fill step · station · rules text, the gap the model writes": {
+  "status": "done",
+  "fill": {
+   "rules_text": "When this Spacecraft enters,  scry 2.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 9+.)\n2+ | Whenever you cast an artifact spell, scry 1.\n9+ | Flying, vigilance",
+   "frame_template": null,
+   "deck_id": null
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   }
+  ],
+  "refunds": 0
+ },
+ "fill plan · station · rules text and flavour, the gap written by place": {
+  "kind": "card_fill",
+  "plan": {
+   "want": [
+    "rules_text",
+    "flavor_text"
+   ],
+   "fields": {
+    "rules_text": "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 9+.)\n3+ | Whenever you cast an artifact spell, scry 1.\n9+ | Flying",
+    "flavor_text": "It drifts where the light is coldest."
+   },
+   "art_prompt": "A teal barge drifting above a ringed planet, cold starlight.",
+   "style": null,
+   "frame_template": null,
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "fill:0",
+    "label": "Halcyon Driftbarge",
+    "status": "pending"
+   }
+  ],
+  "prompts": [
+   "Design exactly 1 card:\nCard 1: card_type artifact. color: blue. This card already exists in part. Keep these EXACTLY as given, reproducing them verbatim in your output: title \"Halcyon Driftbarge\"; type line \"artifact — Spacecraft\"; color identity blue; stats 4/5. The card's rules text already reads:\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 9+.)\n3+ | \n9+ | Flying\nWrite ONLY the text of tier 3+ (an empty \"N+ |\" line above). Reproduce every other line exactly as given, keep the tier numbers, and return the whole rules_text. Design only: rules text, flavor text — make them fit the kept parts naturally."
+  ]
+ },
+ "fill step · station · rules text and flavour, the gap written by place": {
+  "status": "done",
+  "fill": {
+   "rules_text": "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 9+.)\n3+ | Whenever you cast an artifact spell, scry 1.\n9+ | Flying",
+   "flavor_text": "It drifts where the light is coldest.",
+   "frame_template": null,
+   "deck_id": null
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "fill_card"
+   }
+  ],
+  "refunds": 0
  }
 }

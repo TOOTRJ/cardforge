@@ -14,7 +14,7 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 // cards that are not station cards and compares, byte for byte, what
 // createCardAction is handed, what the fill hands the creator, the plan a
 // job stores and the credits it reserves with `fixtures/job-payloads-main.json`
-// — recorded by this same file on `origin/main`'s lib/ (re-recorded on a53e4b51 after #556 reordered the random frame pool: only `lastFrame` of the random-frame cases moved), which is
+// — recorded by this same file on `origin/main`'s lib/ (re-recorded on a53e4b51 after #556 reordered the random frame pool: only `lastFrame` of the random-frame cases moved; the three "station ·" fills ADDED on 97481a22's lib/ — main after #557 — when a fill whose empty tier comes back empty began to be refused, every existing entry unchanged), which is
 // why it imports nothing PR 3 added.
 //
 // `JOB_PAYLOADS_UPDATE=1` rewrites the fixture. Do that only with the
@@ -181,6 +181,24 @@ const designed = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+/** A Spacecraft the model designs, for the station fills that are not
+ *  refused (the text spelled out: this file imports nothing PR 3 added). */
+const SHIP_LINE =
+  "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 9+.)";
+const SHIP = designed({
+  title: "Halcyon Driftbarge",
+  cost: "{2}{U}",
+  card_type: "artifact",
+  subtypes: ["Spacecraft"],
+  color_identity: ["blue"],
+  rules_text: `Rewritten top.\n${SHIP_LINE}\n2+ | Whenever you cast an artifact spell, scry 1.\n9+ | Flying, vigilance`,
+  flavor_text: "It drifts where the light is coldest.",
+  power: "4",
+  toughness: "5",
+  art_prompt: "A teal barge drifting above a ringed planet, cold starlight.",
+});
+const SHIP_LOCKED = { title: "Halcyon Driftbarge", card_type: "artifact", subtypes: ["Spacecraft"], color_identity: ["blue"], power: "4", toughness: "5" };
+
 /** Cards that are NOT station cards — among them the ones nearest to one. */
 const CARDS: Record<string, { card: ReturnType<typeof designed>; frame: string | null }> = {
   creature: { card: designed(), frame: "m15" },
@@ -325,6 +343,12 @@ describe("the plans the jobs store, the model mocked", () => {
     "rules text of a plain artifact whose text has 'N+ |' lines": { want: ["rules_text"], locked: { title: "Counting Engine", card_type: "artifact", subtypes: [], color_identity: ["colorless"] }, answer: CARDS["artifact with 'N+ |' lines"]!.card },
     "a walker's rows": { want: ["rules_text", "stats"], locked: { title: "Veyra, Tide Oracle", card_type: "planeswalker", supertype: "Legendary", subtypes: ["Veyra"], color_identity: ["blue"], cost: "{2}{U}{U}" }, answer: CARDS.planeswalker!.card },
     "the type too (create)": { want: ["card_type", "color_identity", "title", "rules_text", "stats"], locked: {}, answer: designed() },
+    // The station fills that are NOT refused (owner 2026-10-14: only a fill
+    // whose empty tier comes back empty is) — recorded on origin/main
+    // 97481a22's lib/, so their plan, fill and credit stay main's.
+    "station · rules text, no gap (a new text)": { want: ["rules_text"], locked: { ...SHIP_LOCKED, station_text: `${SHIP_LINE}\n2+ | Scry 1.\n9+ | Flying` }, answer: SHIP },
+    "station · rules text, the gap the model writes": { want: ["rules_text"], locked: { ...SHIP_LOCKED, station_text: `When this Spacecraft enters,  scry 2.\n${SHIP_LINE}\n2+ | Whenever you cast an artifact spell, scry 1.\n9+ | ` }, answer: SHIP },
+    "station · rules text and flavour, the gap written by place": { want: ["rules_text", "flavor_text"], locked: { ...SHIP_LOCKED, station_text: `${SHIP_LINE}\n3+ | \n9+ | Flying` }, answer: SHIP },
   };
   it.each(Object.keys(FILLS))("fill · %s", async (name) => {
     const { want, locked, answer } = FILLS[name]!;
