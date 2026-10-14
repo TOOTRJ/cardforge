@@ -15,6 +15,7 @@
     "test:coverage": "vitest run --coverage",
     "test:coverage:shard": "vitest run --coverage --reporter=default --reporter=github-actions --reporter=blob",
     "test:coverage:merge": "vitest run --merge-reports --coverage",
+    "test:docs": "vitest run tests/unit/content/frames-doc.test.ts tests/unit/render/art-window-coverage.test.ts",
     "test:e2e": "playwright test",
     "test:visual": "node scripts/visual-regression.mjs",
     "test:parity": "node scripts/parity.mjs",
