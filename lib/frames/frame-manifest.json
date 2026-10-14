@@ -13512,6 +13512,104 @@
       "width": 1500,
       "height": 2100
     },
+    "nyxcrown/a.png": {
+      "hash": "bacdc57ffbcd",
+      "sha256": "bacdc57ffbcdb00823ffd243f332aec968cb7b22a329e4248e3674b5aa5daccb",
+      "bytes": 182120,
+      "width": 1500,
+      "height": 410
+    },
+    "nyxcrown/a.webp": {
+      "hash": "de3ddbeca451",
+      "sha256": "de3ddbeca45158b766b6992fdeb151cb5326db85704433fe6e12fbef7bc8ede2",
+      "bytes": 26486,
+      "width": 1500,
+      "height": 410
+    },
+    "nyxcrown/b.png": {
+      "hash": "ca39ea56341a",
+      "sha256": "ca39ea56341a18806776b6e7b9d557440b520f46f27f371091bed5c7abdd136f",
+      "bytes": 202997,
+      "width": 1500,
+      "height": 410
+    },
+    "nyxcrown/b.webp": {
+      "hash": "c09e22b763a3",
+      "sha256": "c09e22b763a3f272b5193560a25bbb8d674fc0e44968f1401f8d44b9c28b26fe",
+      "bytes": 26032,
+      "width": 1500,
+      "height": 410
+    },
+    "nyxcrown/g.png": {
+      "hash": "715ecf150fdc",
+      "sha256": "715ecf150fdc15e302ba5d2eb0fbfa0c7aa517341e4b3f9c7752ac28da4685b6",
+      "bytes": 219228,
+      "width": 1500,
+      "height": 410
+    },
+    "nyxcrown/g.webp": {
+      "hash": "4666bfe67f74",
+      "sha256": "4666bfe67f7444cbdf6152da9fb445da573e95508276c1e6204f5640e9fed380",
+      "bytes": 30258,
+      "width": 1500,
+      "height": 410
+    },
+    "nyxcrown/m.png": {
+      "hash": "40dacb6637dd",
+      "sha256": "40dacb6637dd06ef6b47ffbd6be177991cf38a9dea05f749322461494e2137b7",
+      "bytes": 219574,
+      "width": 1500,
+      "height": 410
+    },
+    "nyxcrown/m.webp": {
+      "hash": "694d11a38107",
+      "sha256": "694d11a381078d13e43768d138b6d8989350c354a0342589d34353f3aeabfcfd",
+      "bytes": 31926,
+      "width": 1500,
+      "height": 410
+    },
+    "nyxcrown/r.png": {
+      "hash": "36a7b4c467ee",
+      "sha256": "36a7b4c467eef809d07a8559024b14bed65b317f3484be4b5b1354bb26c48174",
+      "bytes": 217276,
+      "width": 1500,
+      "height": 410
+    },
+    "nyxcrown/r.webp": {
+      "hash": "fe40a060eff9",
+      "sha256": "fe40a060eff9a1a6b3a3bdbe772888bc9a826b6ba123fa73baf5052e6e658318",
+      "bytes": 32506,
+      "width": 1500,
+      "height": 410
+    },
+    "nyxcrown/u.png": {
+      "hash": "180112d4cc9e",
+      "sha256": "180112d4cc9eb1f8ddf9051dd6e67498b85183789f02e61999994c668a842034",
+      "bytes": 211777,
+      "width": 1500,
+      "height": 410
+    },
+    "nyxcrown/u.webp": {
+      "hash": "7cf72591e491",
+      "sha256": "7cf72591e49186017e2613b49c6b584af94efba378414cd39bce83c9feddbc98",
+      "bytes": 32258,
+      "width": 1500,
+      "height": 410
+    },
+    "nyxcrown/w.png": {
+      "hash": "a7a0bc31f227",
+      "sha256": "a7a0bc31f2276e032b8b11113e80b77724b3bcb9547b9804551c80be176abc3d",
+      "bytes": 189516,
+      "width": 1500,
+      "height": 410
+    },
+    "nyxcrown/w.webp": {
+      "hash": "dc96b583664a",
+      "sha256": "dc96b583664a8bd653fe561b3affcfcb39912490f54085fb597a356d34d0dbb1",
+      "bytes": 26558,
+      "width": 1500,
+      "height": 410
+    },
     "retro/b.png": {
       "hash": "d1dc0ccce41d",
       "sha256": "d1dc0ccce41d6533e84a47571b0702e9261efe6ae305cdfd1afd94eb581da221",

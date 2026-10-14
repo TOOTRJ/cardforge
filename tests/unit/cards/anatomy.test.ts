@@ -299,6 +299,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart",
       // The station frame (TODO 4.27a): the parents' crown band on its two entries.
       "m15station", "m15stationland",
+      // The Nyx Constellation frame (owner 2026-10-13): the Nyx crown band, its arms faded.
+      "nyx",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
     ].includes(t),
   );
@@ -314,8 +316,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       t === "m15borderlessland" ||
       OLD_FRAME_PAIRED.includes(t) ||
       // (The station frame, TODO 4.27a, draws the crown and no pair masters:
-      // its entries declare no `twoColorMasters`.)
-      (CROWNED.includes(t) && t !== "extendedart" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland"),
+      // its entries declare no `twoColorMasters` — and neither does the Nyx
+      // Constellation frame, whose two-colour card is the gold master.)
+      (CROWNED.includes(t) && t !== "extendedart" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "nyx"),
   );
 
   it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless, extended-art and snow PROFILES entries — never a profile that spreads them", () => {
@@ -392,7 +395,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // (…and the holofoil stamp's notch, 4.9c, on the devoid entry too:
     // STAMP_TEMPLATES below.)
     expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true, stamp: true, dfcIcon: false, rulesAlign: true, border: false });
-    for (const t of ["adventure", "saga", "nyx", "fullart", "expeditionland"]) {
+    for (const t of ["adventure", "saga", "fullart", "expeditionland"]) {
       expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: profileOffersRulesAlign(getFrameProfile(t)), border: false });
     }
     for (const t of ["m15pw", "m15token"] as const) {

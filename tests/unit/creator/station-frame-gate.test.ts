@@ -145,7 +145,14 @@ describe("a dress the card cannot wear yet is never where the subtype sends it",
 
   it("a generated Spacecraft asked for on the Vehicle frame lands on the Artifact frame while the station frame is unpublished", () => {
     const keys = (...pairs: [string, string][]) => new Set(pairs.map(([t, k]) => frameComboKey(t as never, k as never)));
-    const ship = { cardType: "artifact", subtypes: ["Spacecraft"], title: "Lumen-Class Frigate", power: "3", toughness: "5" };
+    const ship = {
+      cardType: "artifact",
+      subtypes: ["Spacecraft"],
+      title: "Lumen-Class Frigate",
+      rulesText: "Station\n2+ | Other creatures you control get +1/+1.\n12+ | Flying, lifelink",
+      power: "3",
+      toughness: "5",
+    };
     const today = keys(["m15artifact", "c"], ["m15vehicle", "c"]);
     for (const requested of ["m15vehicle", "m15artifact", "m15station"] as const) {
       expect(resolveGeneratedFrame({ cardType: "artifact", requested, colorIdentity: [], verifiedKeys: today, face: ship }), requested).toBe("m15artifact");
@@ -160,6 +167,33 @@ describe("a dress the card cannot wear yet is never where the subtype sends it",
     const later = keys(["m15artifact", "c"], ["m15vehicle", "c"], ["m15station", "c"]);
     expect(resolveGeneratedFrame({ cardType: "artifact", requested: "m15vehicle", colorIdentity: [], verifiedKeys: later, face: ship })).toBe("m15station");
     expect(resolveGeneratedFrame({ cardType: "artifact", requested: "m15artifact", colorIdentity: [], verifiedKeys: later, face: ship })).toBe("m15station");
+  });
+
+  it("…and never on the station frame without a tier: the frame prints the P/T on a tier only (PR 3)", () => {
+    const keys = (...pairs: [string, string][]) => new Set(pairs.map(([t, k]) => frameComboKey(t as never, k as never)));
+    const ticked = keys(["m15artifact", "c"], ["m15vehicle", "c"], ["m15station", "c"], ["m15land", "g"], ["m15stationland", "g"]);
+    // Main sent this card to m15station: no tier, so no plate — a 3/5 with
+    // no power / toughness on it.
+    const tierless = { cardType: "artifact", subtypes: ["Spacecraft"], title: "Hollow Hull", rulesText: "Flying\nWhen this Spacecraft enters, draw a card.", power: "3", toughness: "5" };
+    for (const requested of ["m15station", "m15artifact", "m15vehicle", "random"] as const) {
+      for (const roll of [0, 0.5, 0.99]) {
+        expect(
+          resolveGeneratedFrame({ cardType: "artifact", requested, colorIdentity: [], verifiedKeys: ticked, face: tierless, random: () => roll }),
+          `${requested} @ ${roll}`,
+        ).toBe("m15artifact");
+      }
+    }
+    // No text at all (a fill that designed the type alone) is tierless too.
+    expect(resolveGeneratedFrame({ cardType: "artifact", requested: "m15station", colorIdentity: [], verifiedKeys: ticked, face: { ...tierless, rulesText: "" } })).toBe("m15artifact");
+    // One tier line is enough — and a Planet follows the same rule.
+    const oneTier = { ...tierless, rulesText: "Station\n7+ | Flying" };
+    expect(resolveGeneratedFrame({ cardType: "artifact", requested: "random", colorIdentity: [], verifiedKeys: ticked, face: oneTier, random: () => 0 })).toBe("m15station");
+    const planet = { cardType: "land", subtypes: ["Planet"], title: "Evendo", rulesText: "This land enters tapped.\n{T}: Add {G}.\nStation\n12+ | {G}, {T}: Add {G}{G}." };
+    expect(resolveGeneratedFrame({ cardType: "land", requested: "m15land", colorIdentity: ["green"], verifiedKeys: ticked, face: planet })).toBe("m15stationland");
+    expect(resolveGeneratedFrame({ cardType: "land", requested: "m15stationland", colorIdentity: ["green"], verifiedKeys: ticked, face: { ...planet, rulesText: "{T}: Add {G}." } })).toBe("m15land");
+    // A card that is no Spacecraft is where it always was.
+    const ring = { cardType: "artifact", subtypes: [], title: "Sol Ring", rulesText: "{T}: Add {C}{C}." };
+    expect(resolveGeneratedFrame({ cardType: "artifact", requested: "m15station", colorIdentity: [], verifiedKeys: ticked, face: ring })).toBe("m15artifact");
   });
 });
 

@@ -1364,7 +1364,29 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            The visual matrix: 51 of its 52 station cases change, no other
 //            case of 1581. No verification scope: neither template has a
 //            tick.
-//   v55    — the Universes Beyond triangle as printed (TODO 4.25 follow-up,
+//   v55    — the Nyx Constellation frame's rim on its prints (owner Rounds
+//            59 / 61). `nyx` alone, every card on it: the rim of the w b r
+//            g masters toned onto the M15 family's tones, which THB
+//            #258–268 wear once each scan is registered against the same
+//            card's regular printing (white 252,254,255 → 244,243,236;
+//            black 39,38,36 → 58,56,50; red 239,56,39 → 209,77,53; green
+//            0,123,67 → 42,108,69; blue's family tone is MSE's own), and
+//            the gold rim onto the gold crown's arm (246,210,98 →
+//            233,212,125); scripts/lib/nyx-frame.mjs. The frame's crown
+//            bands (nyxcrown/*) are those tones already and are not
+//            touched: crown and rim one tone per colour. No slot, size,
+//            window or plate moves; blue and colourless are unchanged.
+//            NYX_PRINT_TONES_LAYOUT_VERSION below — the ONE constant (other
+//            open PRs claim 55 too: renumbered at merge time, first in
+//            keeps 55). A
+//            CORRECTION ("sweep"), never a badge. Production holds NO card
+//            on the template (never ticked; reachable only through
+//            `?previewFrames=`), so nothing there re-bakes; the dev
+//            database's cards on it do. The visual matrix: the `nyx` cases
+//            of w b r g and gold change; no other case. Not
+//            verification-neutral (the masters a tick
+//            would judge change) — the frame has no tick.
+//   v56    — the Universes Beyond triangle as printed (TODO 4.25 follow-up,
 //            owner Round 57 decision 2). On `m15ub`, `m15ubartifact` and
 //            `m15ubland` alone: `frame_style.stamp: "auto"` stamps EVERY
 //            rarity (it stamped a rare or a mythic), the triangle of a
@@ -1374,7 +1396,7 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            prints read 2026-10-14. UB_STAMP_TONES_LAYOUT_VERSION below —
 //            the ONE constant. A CORRECTION ("sweep"), never a badge: the
 //            look was wrong against the frame's own print. Card-scoped
-//            (v55Changed): a card whose stamp switch is "auto", "oval" or
+//            (v56Changed): a card whose stamp switch is "auto", "oval" or
 //            "triangle" and that is no token or emblem — every other card
 //            on the three frames is stamped. The frames merged on
 //            2026-10-14 and are reached by a pick or an import only, so few
@@ -1393,7 +1415,7 @@ import { isColorIdentity, type CardType } from "@/types/card";
  *  lives here alone — CARD_LAYOUT_VERSION, the template and card scopes and
  *  the rollout below read this constant — so a bump that merges first moves
  *  it in one place. Frozen once it ships. */
-export const UB_STAMP_TONES_LAYOUT_VERSION = 55;
+export const UB_STAMP_TONES_LAYOUT_VERSION = 56;
 export const UB_STAMP_TONES_TEMPLATES: readonly string[] = ["m15ub", "m15ubartifact", "m15ubland"];
 
 /** The station frame on print's band rule (TODO 4.27a, PR 2): every card
@@ -1403,6 +1425,14 @@ export const UB_STAMP_TONES_TEMPLATES: readonly string[] = ["m15ub", "m15ubartif
  *  once it ships. */
 export const STATION_BANDS_LAYOUT_VERSION = 54;
 export const STATION_BANDS_TEMPLATES: readonly string[] = ["m15station", "m15stationland"];
+
+/** The Nyx Constellation frame's rim on its prints (owner Rounds 59 / 61):
+ *  every card on `nyx`. ITS version lives here alone —
+ *  CARD_LAYOUT_VERSION, the scoped table and the rollout below read this
+ *  constant — so a bump that merges first moves it in one place. Frozen
+ *  once it ships. */
+export const NYX_PRINT_TONES_LAYOUT_VERSION = 55;
+export const NYX_PRINT_TONES_TEMPLATES: readonly string[] = ["nyx"];
 
 /** The 1993 frame on its prints (TODO 4.10c): every text slot and the
  *  symbols of `agclassic` and `alphaland`. ITS version lives here alone —
@@ -1642,9 +1672,12 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // layout and drawn pieces; every card on it (none stored in production).
   // No narrower verification scope: neither template has a tick.
   [STATION_BANDS_LAYOUT_VERSION]: STATION_BANDS_TEMPLATES,
+  // The Nyx Constellation frame's rim on its prints (Rounds 59 / 61):
+  // every card on `nyx` (none stored in production).
+  [NYX_PRINT_TONES_LAYOUT_VERSION]: NYX_PRINT_TONES_TEMPLATES,
   // The Universes Beyond triangle as printed (4.25 follow-up): the three
   // Universes Beyond frames — and on them only a card that draws, or now
-  // gains, the stamp (v55Changed). Verification-neutral.
+  // gains, the stamp (v56Changed). Verification-neutral.
   [UB_STAMP_TONES_LAYOUT_VERSION]: UB_STAMP_TONES_TEMPLATES,
 };
 
@@ -1719,7 +1752,7 @@ export const V36_TEXTLESS_TEMPLATES: readonly string[] = ["m20token", "m20tokena
 export const V36_BACK_FACE_TEXT_TEMPLATES: readonly string[] = ["adventure", "flip", "split", "aftermath"];
 
 /**
- * v55 — the Universes Beyond triangle as printed (the template scope holds
+ * v56 — the Universes Beyond triangle as printed (the template scope holds
  * it to the three frames): a card whose `frame_style.stamp` asks for a
  * stamp ("auto", "oval" or "triangle" — every drawn triangle changes its
  * tone, and "auto" now draws one on a common and an uncommon) and whose
@@ -1727,7 +1760,7 @@ export const V36_BACK_FACE_TEXT_TEMPLATES: readonly string[] = ["adventure", "fl
  * the stampless types bake to the same pixels. A row without `frame_style`
  * or `card_type` can't be judged → conservative.
  */
-function v55Changed(card: ScopeCard): boolean {
+function v56Changed(card: ScopeCard): boolean {
   if (card.frame_style === undefined) return true;
   const stamp = card.frame_style && typeof card.frame_style === "object" ? (card.frame_style as { stamp?: unknown }).stamp : undefined;
   if (stamp !== "auto" && stamp !== "oval" && stamp !== "triangle") return false;
@@ -1807,7 +1840,7 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
  * on the prints' larger disc inside the cost and rules slots a frame
  * already has — no slot, master, size or plate moves, and a card without
  * one bakes to the same pixels.
- * v55 is (TODO 4.25 follow-up): only the triangle stamp's own art changes
+ * v56 is (TODO 4.25 follow-up): only the triangle stamp's own art changes
  * on the three Universes Beyond frames (its tone; its presence on a common
  * or uncommon under "auto") — no slot, master, notch piece or plate moves,
  * and no tick scores the stamp.
@@ -2529,10 +2562,10 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // anywhere, a Phyrexian one in a text, or in a cost on the 2003 pair and
   // the modal bodies — v53Changed.
   [LARGE_PIPS_LAYOUT_VERSION]: v53Changed,
-  // v55 — the Universes Beyond triangle as printed: on the three frames
+  // v56 — the Universes Beyond triangle as printed: on the three frames
   // (the template scope), a card whose stamp switch asks for one —
-  // v55Changed.
-  [UB_STAMP_TONES_LAYOUT_VERSION]: v55Changed,
+  // v56Changed.
+  [UB_STAMP_TONES_LAYOUT_VERSION]: v56Changed,
 };
 
 /** `frame_style.finish` from the jsonb column, or null when absent (= regular). */
@@ -2664,6 +2697,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [TYPE_LINE_ORDER_LAYOUT_VERSION]: "sweep", // the type line in its printed order + the P/T of a land creature (1.20) — a correction of what a face prints; 0 public or unlisted stored cards in scope, never a badge
   [TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION]: "sweep", // a name's room before a detached cost of Phyrexian symbols (6.16d) — a correction of a fit that ran the name under the pips; 0 public or unlisted stored cards in scope, never a badge
   [STATION_BANDS_LAYOUT_VERSION]: "sweep", // the station frame on print's band rule, numeral sizes and ring tone (4.27a, PR 2) — a correction on a frame not offered yet
+  [NYX_PRINT_TONES_LAYOUT_VERSION]: "sweep", // the Nyx Constellation frame's rim on the family's tones THB #258–268 wear (owner Rounds 59 / 61) — a correction of a look against its own print on a frame never ticked, never a badge
   [UB_STAMP_TONES_LAYOUT_VERSION]: "sweep", // the Universes Beyond triangle as printed (4.25 follow-up): "auto" on every rarity, the matte triangle of a common / uncommon, the hologram's tone — a correction of the stamp against the frame's own print on three frames a day old, never a badge
   [LARGE_PIPS_LAYOUT_VERSION]: "sweep", // hybrid and twobrid discs large, the large pip's factor per frame and place (3.21) — a correction against the prints after the owner's round-49 sheets, never a badge
   [SYMBOLS_PRINT_LAYOUT_VERSION]: "sweep", // five symbols on the prints' drawings + flat rules-text pips (6.16b) — a correction against the prints after the owner's round-43 sheets, never a badge

@@ -649,6 +649,11 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // strip inside it (m15nyxcrown), in every colour that picks a different
   // band: w u b r g, c (the silver: the frame maps c → a), wu and wub (gold).
   ["m15nyx", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
+  // The Nyx Constellation frame's crown (owner 2026-10-13; THB #258–268):
+  // the Nyx crown band with its arms faded into the MSE masters' rim
+  // (nyxcrown), in every colour that picks a different band — w u b r g, c
+  // (the silver: the frame maps c → a) and wu (gold: no pair masters here).
+  ["nyx", ["w", "u", "b", "r", "g", "c", "wu"]],
   // TODO 4.27a: the station frame's crown — the parents' (artifact silver /
   // land grey on a colourless card, the colour's, gold).
   ["m15station", ["c", "g", "wub"]],
@@ -1443,6 +1448,10 @@ export function visualCases(): VisualCase[] {
   add("extendedart", "creature", "u", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
   // The snow band at the stored bake's size (4.6f, wave 2c).
   add("m15snow", "creature", "u", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
+  // The constellation band at the stored bake's size and on foil (the
+  // faded arms inside the finish mask).
+  add("nyx", "creature", "g", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
+  add("nyx", "creature", "u", "long", { crown: true, finish: "foil", suffix: "@crown-foil" });
   // TODO 4.6b: the two-colour frame, opt-in per card (frame_style.twoColor —
   // no stored card has the switch, so these are NEW cases, no bump): the
   // gold-split pair on every template that draws one, the hybrid dress on

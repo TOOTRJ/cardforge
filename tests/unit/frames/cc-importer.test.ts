@@ -1987,10 +1987,22 @@ describe("provenance and hygiene", () => {
     // imports: PipGlyph's own derivation of the published m15artifact /
     // m15land masters (scripts/build-station-frames.mjs), recorded as such.
     const PIPGLYPH_DERIVED: Record<string, string> = { m15station: "m15artifact", m15stationland: "m15land" };
+    // …and the Nyx Constellation frame's crown bands (owner 2026-10-13):
+    // PipGlyph's own cut of the published m15nyxcrown bands
+    // (scripts/build-nyx-crown.mjs; its own test:
+    // tests/unit/frames/nyx-constellation-crown.test.ts).
+    const PIPGLYPH_DERIVED_BANDS: Record<string, string> = { nyxcrown: "m15nyxcrown" };
+    for (const [band, parent] of Object.entries(PIPGLYPH_DERIVED_BANDS)) {
+      expect(Object.keys(CC_OVERLAY_BANDS), band).not.toContain(band);
+      expect(Object.keys(CC_OVERLAY_BANDS), band).toContain(parent);
+      expect(provenance[band].source, band).toBe("pipglyph");
+      expect(provenance[band].commit, band).toBeUndefined();
+    }
     expect(Object.keys(provenance).sort()).toEqual(
       [
         ...Object.keys(templates),
         ...Object.keys(PIPGLYPH_DERIVED),
+        ...Object.keys(PIPGLYPH_DERIVED_BANDS),
         ...Object.keys(CC_OVERLAY_BANDS),
         ...Object.keys(CC_RIDERS),
         ...Object.keys(HOLO_STAMP_NOTCHES),

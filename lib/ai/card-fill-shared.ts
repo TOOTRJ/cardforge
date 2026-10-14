@@ -7,6 +7,7 @@
 
 import type { CardType, ColorIdentity, Rarity } from "@/types/card";
 import { buildTypeLine } from "@/lib/cards/card-display";
+import { stationFillNote } from "@/lib/ai/station-design";
 
 export const CARD_FILL_FIELDS = [
   "title",
@@ -80,6 +81,13 @@ export type CardFillLocked = {
   loyalty?: string;
   defense?: string;
   tags?: string[];
+  /** The card's CURRENT rules text when the rules text is being generated
+   *  on a station frame and already has tiers (TODO 4.27a, PR 3) — never
+   *  set otherwise, so every other fill's request is what it was. The
+   *  designer is told the tiers; a tier left empty is the only thing
+   *  written, every other line kept byte for byte (lib/ai/station-design.ts
+   *  mergeStationFill). */
+  station_text?: string;
 };
 
 /** Steering for fields that ARE being generated (the dialog's selects). */
@@ -219,6 +227,12 @@ export function fillPromptNote(
     lines.push(
       'It is an emblem (card_type "emblem"): the lasting effect a planeswalker\'s ability leaves behind, named after that planeswalker. An emblem has no mana cost (use "—"), no color (color_identity ["colorless"]) and no power, toughness, loyalty or defense (null).',
     );
+  }
+  // A station card whose text already has tiers (TODO 4.27a, PR 3): the
+  // designer is told them — and, with a tier left empty, to write that one.
+  if (has("rules_text") && locked.station_text) {
+    const note = stationFillNote(locked.station_text);
+    if (note) lines.push(note);
   }
   if (generate.length > 0) {
     lines.push(

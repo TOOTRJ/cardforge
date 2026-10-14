@@ -25,7 +25,7 @@ import {
   type FrameColorKey,
 } from "@/lib/creator/card-kinds";
 import { describeFrame, resolveImportFrame } from "@/lib/creator/frame-resolve";
-import { standardFrameFor } from "@/lib/creator/frame-picker";
+import { isM15Treatment, standardFrameFor } from "@/lib/creator/frame-picker";
 import { colorWord, pickFrameColorKey } from "@/components/cards/frame-layer";
 
 // ---------------------------------------------------------------------------
@@ -203,7 +203,10 @@ function familyOf(template: FrameTemplate, gallery: readonly FrameChoice[]): Fra
     .filter(
       (choice) =>
         familyKey(choice.template) === family &&
-        (choice.group !== "skin" || choice.template === template),
+        // …an M15 treatment (the full-art basics, the textless frames) is
+        // listed as a variation too, but it IS a family: a full-art basic
+        // printing is offered both of them.
+        (choice.group !== "skin" || isM15Treatment(choice.template) || choice.template === template),
     )
     .map((choice) => choice.template);
 }

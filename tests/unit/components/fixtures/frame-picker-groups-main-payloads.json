@@ -1,0 +1,1259 @@
+{
+  "new card — picks extendedart": {
+    "title": "Thornback Stalker",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "green"
+    ],
+    "printed_types": null,
+    "card_type": "creature",
+    "subtypes": [
+      "Beast"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "rules_text": "Trample",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "power": "3",
+    "toughness": "3",
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "extendedart",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new card on extendedart — the colour changes to blue": {
+    "title": "Thornback Stalker",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "blue"
+    ],
+    "printed_types": null,
+    "card_type": "creature",
+    "subtypes": [
+      "Beast"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "rules_text": "Trample",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "power": "3",
+    "toughness": "3",
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "extendedart",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new card on extendedart — the kind changes to Instant": {
+    "title": "Thornback Stalker",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "green"
+    ],
+    "printed_types": null,
+    "card_type": "instant",
+    "subtypes": [
+      "Beast"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "rules_text": "Trample",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "stored card on extendedart — opened for an edit: the values the form holds": {
+    "staticInEditor": true,
+    "pipOverrides": {},
+    "profileOverrides": null,
+    "title": "Thornback Stalker",
+    "cost": "{1}{G}",
+    "cardType": "creature",
+    "supertype": null,
+    "printedTypes": null,
+    "subtypes": [
+      "Beast"
+    ],
+    "rarity": "rare",
+    "colorIdentity": [
+      "green"
+    ],
+    "rulesText": "Trample",
+    "flavorText": "It was here first.",
+    "power": "3",
+    "toughness": "3",
+    "loyalty": "",
+    "defense": "",
+    "artistCredit": "Anya Vale",
+    "artUrl": "https://example.com/front.png",
+    "artPosition": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frameStyle": {
+      "finish": "regular",
+      "template": "extendedart"
+    },
+    "setIconUrl": null,
+    "setCode": null,
+    "collectorNumber": null,
+    "lang": "en",
+    "brandMark": false,
+    "footerWatermark": null,
+    "setIconCode": null,
+    "faceContent": null,
+    "watermark": null,
+    "backFace": null
+  },
+  "stored card on extendedart — an edit of its artist keeps its frame as stored": {
+    "title": "Thornback Stalker",
+    "printed_types": null,
+    "rarity": "rare",
+    "cost": "{1}{G}",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "artist_credit": "Bo Marsh",
+    "rules_text": "Trample",
+    "face_content": null,
+    "flavor_text": "It was here first.",
+    "power": "3",
+    "toughness": "3",
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "tags": [
+      "test"
+    ],
+    "watermark": null,
+    "visibility": "private",
+    "back_face": null
+  },
+  "stored card on extendedart — a remix with a new name": {
+    "title": "Renamed Remix",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "cost": "{1}{G}",
+    "color_identity": [
+      "green"
+    ],
+    "printed_types": null,
+    "card_type": "creature",
+    "subtypes": [
+      "Beast"
+    ],
+    "tags": [
+      "test"
+    ],
+    "rarity": "rare",
+    "rules_text": "Trample",
+    "face_content": null,
+    "watermark": null,
+    "flavor_text": "It was here first.",
+    "power": "3",
+    "toughness": "3",
+    "artist_credit": "Bo Marsh",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "extendedart",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "parent_card_id": "22222222-2222-4222-8222-222222222222",
+    "footer_text": ""
+  },
+  "new card — picks m15fullartland": {
+    "title": "Forest",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "green"
+    ],
+    "supertype": "Basic",
+    "printed_types": null,
+    "card_type": "land",
+    "subtypes": [
+      "Forest"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "face_content": null,
+    "watermark": null,
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15fullartland",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new card on m15fullartland — the colour changes to blue": {
+    "title": "Island",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "blue"
+    ],
+    "supertype": "Basic",
+    "printed_types": null,
+    "card_type": "land",
+    "subtypes": [
+      "Island"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "face_content": null,
+    "watermark": null,
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15fullartland",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new card on m15fullartland — the kind changes to Creature": {
+    "title": "Mossy Walker",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "green"
+    ],
+    "printed_types": null,
+    "card_type": "creature",
+    "subtypes": [],
+    "tags": [],
+    "rarity": "common",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "power": "2",
+    "toughness": "2",
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "stored card on m15fullartland — opened for an edit: the values the form holds": {
+    "staticInEditor": true,
+    "pipOverrides": {},
+    "profileOverrides": null,
+    "title": "Forest",
+    "cost": "",
+    "cardType": "land",
+    "supertype": "Basic",
+    "printedTypes": null,
+    "subtypes": [
+      "Forest"
+    ],
+    "rarity": "rare",
+    "colorIdentity": [
+      "green"
+    ],
+    "rulesText": "",
+    "flavorText": "",
+    "power": "",
+    "toughness": "",
+    "loyalty": "",
+    "defense": "",
+    "artistCredit": "Anya Vale",
+    "artUrl": "https://example.com/front.png",
+    "artPosition": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frameStyle": {
+      "finish": "regular",
+      "template": "m15fullartland"
+    },
+    "setIconUrl": null,
+    "setCode": null,
+    "collectorNumber": null,
+    "lang": "en",
+    "brandMark": false,
+    "footerWatermark": null,
+    "setIconCode": null,
+    "faceContent": null,
+    "watermark": null,
+    "backFace": null
+  },
+  "stored card on m15fullartland — an edit of its artist keeps its frame as stored": {
+    "title": "Forest",
+    "printed_types": null,
+    "rarity": "rare",
+    "cost": null,
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "artist_credit": "Bo Marsh",
+    "rules_text": null,
+    "face_content": null,
+    "flavor_text": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "tags": [
+      "test"
+    ],
+    "watermark": null,
+    "visibility": "private",
+    "back_face": null
+  },
+  "stored card on m15fullartland — a remix with a new name": {
+    "title": "Forest",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "green"
+    ],
+    "supertype": "Basic",
+    "printed_types": null,
+    "card_type": "land",
+    "subtypes": [
+      "Forest"
+    ],
+    "tags": [
+      "test"
+    ],
+    "rarity": "rare",
+    "face_content": null,
+    "watermark": null,
+    "artist_credit": "Bo Marsh",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15fullartland",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "parent_card_id": "22222222-2222-4222-8222-222222222222",
+    "footer_text": ""
+  },
+  "new card — picks fullartland": {
+    "title": "Forest",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "green"
+    ],
+    "supertype": "Basic",
+    "printed_types": null,
+    "card_type": "land",
+    "subtypes": [
+      "Forest"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "face_content": null,
+    "watermark": null,
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "fullartland",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new card on fullartland — the colour changes to blue": {
+    "title": "Island",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "blue"
+    ],
+    "supertype": "Basic",
+    "printed_types": null,
+    "card_type": "land",
+    "subtypes": [
+      "Island"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "face_content": null,
+    "watermark": null,
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "fullartland",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new card on fullartland — the kind changes to Creature": {
+    "title": "Mossy Walker",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "green"
+    ],
+    "printed_types": null,
+    "card_type": "creature",
+    "subtypes": [],
+    "tags": [],
+    "rarity": "common",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "power": "2",
+    "toughness": "2",
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "stored card on fullartland — opened for an edit: the values the form holds": {
+    "staticInEditor": true,
+    "pipOverrides": {},
+    "profileOverrides": null,
+    "title": "Forest",
+    "cost": "",
+    "cardType": "land",
+    "supertype": "Basic",
+    "printedTypes": null,
+    "subtypes": [
+      "Forest"
+    ],
+    "rarity": "rare",
+    "colorIdentity": [
+      "green"
+    ],
+    "rulesText": "",
+    "flavorText": "",
+    "power": "",
+    "toughness": "",
+    "loyalty": "",
+    "defense": "",
+    "artistCredit": "Anya Vale",
+    "artUrl": "https://example.com/front.png",
+    "artPosition": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frameStyle": {
+      "finish": "regular",
+      "template": "fullartland"
+    },
+    "setIconUrl": null,
+    "setCode": null,
+    "collectorNumber": null,
+    "lang": "en",
+    "brandMark": false,
+    "footerWatermark": null,
+    "setIconCode": null,
+    "faceContent": null,
+    "watermark": null,
+    "backFace": null
+  },
+  "stored card on fullartland — an edit of its artist keeps its frame as stored": {
+    "title": "Forest",
+    "printed_types": null,
+    "rarity": "rare",
+    "cost": null,
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "artist_credit": "Bo Marsh",
+    "rules_text": null,
+    "face_content": null,
+    "flavor_text": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "tags": [
+      "test"
+    ],
+    "watermark": null,
+    "visibility": "private",
+    "back_face": null
+  },
+  "stored card on fullartland — a remix with a new name": {
+    "title": "Forest",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "green"
+    ],
+    "supertype": "Basic",
+    "printed_types": null,
+    "card_type": "land",
+    "subtypes": [
+      "Forest"
+    ],
+    "tags": [
+      "test"
+    ],
+    "rarity": "rare",
+    "face_content": null,
+    "watermark": null,
+    "artist_credit": "Bo Marsh",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "fullartland",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "parent_card_id": "22222222-2222-4222-8222-222222222222",
+    "footer_text": ""
+  },
+  "new card — picks m15textless": {
+    "title": "Thornback Stalker",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "green"
+    ],
+    "printed_types": null,
+    "card_type": "creature",
+    "subtypes": [
+      "Beast"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "rules_text": "Trample",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "power": "3",
+    "toughness": "3",
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15textless",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new card on m15textless — the colour changes to blue": {
+    "title": "Thornback Stalker",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "blue"
+    ],
+    "printed_types": null,
+    "card_type": "creature",
+    "subtypes": [
+      "Beast"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "rules_text": "Trample",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "power": "3",
+    "toughness": "3",
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15textless",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new card on m15textless — the kind changes to Instant": {
+    "title": "Thornback Stalker",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "green"
+    ],
+    "printed_types": null,
+    "card_type": "instant",
+    "subtypes": [
+      "Beast"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "rules_text": "Trample",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "stored card on m15textless — opened for an edit: the values the form holds": {
+    "staticInEditor": true,
+    "pipOverrides": {},
+    "profileOverrides": null,
+    "title": "Thornback Stalker",
+    "cost": "{1}{G}",
+    "cardType": "creature",
+    "supertype": null,
+    "printedTypes": null,
+    "subtypes": [
+      "Beast"
+    ],
+    "rarity": "rare",
+    "colorIdentity": [
+      "green"
+    ],
+    "rulesText": "Trample",
+    "flavorText": "It was here first.",
+    "power": "3",
+    "toughness": "3",
+    "loyalty": "",
+    "defense": "",
+    "artistCredit": "Anya Vale",
+    "artUrl": "https://example.com/front.png",
+    "artPosition": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frameStyle": {
+      "finish": "regular",
+      "template": "m15textless"
+    },
+    "setIconUrl": null,
+    "setCode": null,
+    "collectorNumber": null,
+    "lang": "en",
+    "brandMark": false,
+    "footerWatermark": null,
+    "setIconCode": null,
+    "faceContent": null,
+    "watermark": null,
+    "backFace": null
+  },
+  "stored card on m15textless — an edit of its artist keeps its frame as stored": {
+    "title": "Thornback Stalker",
+    "printed_types": null,
+    "rarity": "rare",
+    "cost": "{1}{G}",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "artist_credit": "Bo Marsh",
+    "rules_text": "Trample",
+    "face_content": null,
+    "flavor_text": "It was here first.",
+    "power": "3",
+    "toughness": "3",
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "tags": [
+      "test"
+    ],
+    "watermark": null,
+    "visibility": "private",
+    "back_face": null
+  },
+  "stored card on m15textless — a remix with a new name": {
+    "title": "Renamed Remix",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "cost": "{1}{G}",
+    "color_identity": [
+      "green"
+    ],
+    "printed_types": null,
+    "card_type": "creature",
+    "subtypes": [
+      "Beast"
+    ],
+    "tags": [
+      "test"
+    ],
+    "rarity": "rare",
+    "rules_text": "Trample",
+    "face_content": null,
+    "watermark": null,
+    "flavor_text": "It was here first.",
+    "power": "3",
+    "toughness": "3",
+    "artist_credit": "Bo Marsh",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15textless",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "parent_card_id": "22222222-2222-4222-8222-222222222222",
+    "footer_text": ""
+  },
+  "new card — picks m15textlessland": {
+    "title": "Mossy Reach",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "green"
+    ],
+    "printed_types": null,
+    "card_type": "land",
+    "subtypes": [],
+    "tags": [],
+    "rarity": "common",
+    "rules_text": "{T}: Add {G}.",
+    "face_content": null,
+    "watermark": null,
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15textlessland",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new card on m15textlessland — the colour changes to blue": {
+    "title": "Mossy Reach",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "blue"
+    ],
+    "printed_types": null,
+    "card_type": "land",
+    "subtypes": [],
+    "tags": [],
+    "rarity": "common",
+    "rules_text": "{T}: Add {G}.",
+    "face_content": null,
+    "watermark": null,
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15textlessland",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new card on m15textlessland — the kind changes to Creature": {
+    "title": "Mossy Walker",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "green"
+    ],
+    "printed_types": null,
+    "card_type": "creature",
+    "subtypes": [],
+    "tags": [],
+    "rarity": "common",
+    "rules_text": "{T}: Add {G}.",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "power": "2",
+    "toughness": "2",
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "stored card on m15textlessland — opened for an edit: the values the form holds": {
+    "staticInEditor": true,
+    "pipOverrides": {},
+    "profileOverrides": null,
+    "title": "Mossy Reach",
+    "cost": "",
+    "cardType": "land",
+    "supertype": null,
+    "printedTypes": null,
+    "subtypes": [],
+    "rarity": "rare",
+    "colorIdentity": [
+      "green"
+    ],
+    "rulesText": "{T}: Add {G}.",
+    "flavorText": "It was here first.",
+    "power": "",
+    "toughness": "",
+    "loyalty": "",
+    "defense": "",
+    "artistCredit": "Anya Vale",
+    "artUrl": "https://example.com/front.png",
+    "artPosition": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frameStyle": {
+      "finish": "regular",
+      "template": "m15textlessland"
+    },
+    "setIconUrl": null,
+    "setCode": null,
+    "collectorNumber": null,
+    "lang": "en",
+    "brandMark": false,
+    "footerWatermark": null,
+    "setIconCode": null,
+    "faceContent": null,
+    "watermark": null,
+    "backFace": null
+  },
+  "stored card on m15textlessland — an edit of its artist keeps its frame as stored": {
+    "title": "Mossy Reach",
+    "printed_types": null,
+    "rarity": "rare",
+    "cost": null,
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "artist_credit": "Bo Marsh",
+    "rules_text": "{T}: Add {G}.",
+    "face_content": null,
+    "flavor_text": "It was here first.",
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "tags": [
+      "test"
+    ],
+    "watermark": null,
+    "visibility": "private",
+    "back_face": null
+  },
+  "stored card on m15textlessland — a remix with a new name": {
+    "title": "Renamed Remix",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "green"
+    ],
+    "printed_types": null,
+    "card_type": "land",
+    "subtypes": [],
+    "tags": [
+      "test"
+    ],
+    "rarity": "rare",
+    "rules_text": "{T}: Add {G}.",
+    "face_content": null,
+    "watermark": null,
+    "flavor_text": "It was here first.",
+    "artist_credit": "Bo Marsh",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15textlessland",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "parent_card_id": "22222222-2222-4222-8222-222222222222",
+    "footer_text": ""
+  }
+}

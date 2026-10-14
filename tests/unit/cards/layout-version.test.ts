@@ -2794,11 +2794,30 @@ describe("v53 — the large pips as printed (TODO 3.21, owner round 49)", () => 
   });
 });
 
-describe("v55 — the Universes Beyond triangle as printed (TODO 4.25 follow-up, owner Round 57)", () => {
-  const png = "https://x/y.png";
+describe("v55 — the Nyx Constellation frame's rim on its prints (owner Rounds 59 / 61)", () => {
   const V = 55;
+  it("is a sweep, never a badge, scoped to `nyx` alone, and not verification-neutral", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.NYX_PRINT_TONES_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect([...lv.NYX_PRINT_TONES_TEMPLATES]).toEqual(["nyx"]);
+    // The masters a tick would judge change: the tick (none yet) re-opens.
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).not.toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual(["nyx"]);
+    // A v54 bake on `nyx` owes it; on every other template nothing is owed.
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(t === "nyx");
+  });
+});
+
+describe("v56 — the Universes Beyond triangle as printed (TODO 4.25 follow-up, owner Round 57)", () => {
+  const png = "https://x/y.png";
+  const V = 56;
   const UB = ["m15ub", "m15ubartifact", "m15ubland"];
-  /** A v54 bake: only v55 can be pending. */
+  /** A v55 bake: only v56 can be pending. */
   const at = (template: string, stamp: unknown, over: Record<string, unknown> = {}) => ({
     ...UNTOUCHED_SINCE_V22,
     visibility: "public",

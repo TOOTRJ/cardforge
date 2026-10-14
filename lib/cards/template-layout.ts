@@ -4726,6 +4726,31 @@ export const M15_NYX_CROWN: FrameOverlaySlot = {
 };
 
 /**
+ * The Nyx Constellation frame's legendary crown (template `nyx`; owner
+ * 2026-10-13): `nyxcrown/<key>.png`. The eleven Theros Beyond Death
+ * constellation showcase prints (THB #258–268, every one legendary) wear
+ * the STANDARD 2015 crown in the card's colour with the Nyx starfield strip
+ * inside it — the Nyx dress's band (M15_NYX_CROWN), which registers on this
+ * frame's title bar as it does on m15's (the MSE masters' bar outline sits
+ * 1 px below the M15 pack's, under the band's own outline). The bands here
+ * are that band with ONE cut (scripts/lib/nyx-crown.mjs,
+ * scripts/build-nyx-crown.mjs): the arms' last rows fade out, because the
+ * `nyx` masters' side rim is 3 px narrower than the crown's arm and another
+ * tone on four keys — the crown hands over to the master's rim instead of
+ * ending in a jog. Keys (NYX_CONSTELLATION_CROWN_RECIPE.keys; a unit test
+ * holds them together): the masters' letters — w u b r g, m — and the
+ * artifact silver `a`, which the entry maps its colourless key to. No pairs:
+ * the frame draws no pair masters, so a two-colour card wears the gold
+ * crown on the gold master. Set on the nyx entry only; opt-in per card like
+ * every crown (FrameStyle.crown) — declaring it changes no stored card.
+ */
+export const NYX_CONSTELLATION_CROWN: FrameOverlaySlot = {
+  ...M15_CROWN,
+  assetPathTemplate: "/frames/nyxcrown/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "a"],
+};
+
+/**
  * The Universes Beyond crown (TODO 4.25): `m15ubcrown/<key>.png`, Card
  * Conjurer's 'Legend Crowns (Universes Beyond)' of its accurate group — the
  * standard crown's geometry with the UB pack's smooth art, built by
@@ -5658,7 +5683,10 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15textless: { ...M15TEXTLESS, pickerSampleArt: true },
   m15textlessland: { ...M15TEXTLESSLAND, pickerSampleArt: true },
   expeditionland: EXPEDITIONLAND,
-  nyx: { ...NYX, pickerSampleArt: true },
+  // The constellation showcase prints its legendary crown (THB #258–268):
+  // the Nyx crown band with its arms faded into this frame's own rim
+  // (NYX_CONSTELLATION_CROWN). On this entry only — never on the NYX base.
+  nyx: { ...NYX, pickerSampleArt: true, overlays: [{ ...NYX_CONSTELLATION_CROWN, keyMap: { c: "a" } }] },
   // The white border (TODO 4.30; `whiteBorder`, opt-in per card —
   // FrameStyle.border): declared on these four PROFILES entries only, never
   // on the RETRO / MODERN bases. `insetPx` is each template's own masters'

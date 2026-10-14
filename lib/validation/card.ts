@@ -1,4 +1,4 @@
-import { STATION_MAX_THRESHOLD, STATION_MAX_TIERS } from "@/lib/cards/station";
+import { STATION_MAX_THRESHOLD, STATION_MAX_TIERS, STATION_ROW_MAX_CHARS } from "@/lib/cards/station";
 import { z } from "zod";
 import { isWatermarkPresetKey } from "@/lib/cards/watermark";
 import { COLLECTOR_SWITCH_VALUES } from "@/lib/cards/collector-line";
@@ -509,12 +509,12 @@ export const faceContentSchema = z
     // the card, the power / toughness on at most one of them.
     station: z
       .object({
-        intro: z.string().trim().max(600).nullable().optional(),
+        intro: z.string().trim().max(STATION_ROW_MAX_CHARS).nullable().optional(),
         tiers: z
           .array(
             z.object({
               threshold: z.number().int().min(1).max(STATION_MAX_THRESHOLD),
-              text: z.string().trim().min(1).max(600),
+              text: z.string().trim().min(1).max(STATION_ROW_MAX_CHARS),
               pt: z.literal(true).optional(),
             }),
           )

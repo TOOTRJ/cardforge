@@ -149,7 +149,7 @@ describe("the preview draws the bake's stamp", () => {
 // frames, with the matte bitmap on a common or uncommon and the silver one
 // on a rare or mythic; the M15 twin's "auto" common still draws nothing.
 // ---------------------------------------------------------------------------
-describe("the Universes Beyond triangle's tone in the preview (layout v55)", () => {
+describe("the Universes Beyond triangle's tone in the preview (layout v56)", () => {
   for (const [rarity, tone, art] of [
     ["common", "matte", HOLO_STAMP_TRIANGLE_MATTE_ART],
     ["uncommon", "matte", HOLO_STAMP_TRIANGLE_MATTE_ART],

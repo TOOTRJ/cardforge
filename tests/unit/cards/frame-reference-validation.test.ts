@@ -116,10 +116,10 @@ describe("validateReferenceForCombo", () => {
     });
     const result = validateReferenceForCombo(fountain, "fullartland", "m");
     expect(result.errors).toEqual([
-      "Hallowed Fountain isn't a basic land; the Full Art — Borderless Basic Land frame dresses basic lands only.",
+      "Hallowed Fountain isn't a basic land; the Borderless Full-Art Basic Land frame dresses basic lands only.",
     ]);
     expect(validateReferenceForCombo(fountain, "m15fullartland", "m").errors).toEqual([
-      "Hallowed Fountain isn't a basic land; the Full Art — Basic Land frame dresses basic lands only.",
+      "Hallowed Fountain isn't a basic land; the Full-Art Basic Land frame dresses basic lands only.",
     ]);
     // Any other land frame still takes it.
     expect(validateReferenceForCombo(fountain, "m15land", "m").errors).toEqual([]);
@@ -140,7 +140,7 @@ describe("validateReferenceForCombo", () => {
     expect(validateReferenceForCombo(faces(plains, bear), "fullartland", "w").errors).toEqual([]);
     const tower = { name: "Watchtower", type_line: "Land", oracle_text: "{T}: Add {W}." };
     expect(validateReferenceForCombo(faces(tower, plains), "fullartland", "w").errors).toEqual([
-      "Watchtower // Plains isn't a basic land; the Full Art — Borderless Basic Land frame dresses basic lands only.",
+      "Watchtower // Plains isn't a basic land; the Borderless Full-Art Basic Land frame dresses basic lands only.",
     ]);
   });
 
