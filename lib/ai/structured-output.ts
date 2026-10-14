@@ -157,7 +157,7 @@ function setAt(root: unknown, path: PropertyKey[], value: unknown): boolean {
 const fold = (value: string) => value.trim().toLowerCase().replace(/colour/g, "color");
 
 /** One generic repair of one issue, in place. True when it changed something. */
-function repairIssue(root: unknown, issue: Issue, tried: Set<string>): boolean {
+function repairIssue(root: unknown, issue: Issue, tried: Set<string>, options: RepairOptions): boolean {
   const path = issue.path ?? [];
   const key = `${issue.code}:${path.map(String).join(".")}`;
   switch (issue.code) {
@@ -183,6 +183,9 @@ function repairIssue(root: unknown, issue: Issue, tried: Set<string>): boolean {
       const value = valueAt(root, path);
       const max = Number(issue.maximum);
       if (!Number.isFinite(max)) return false;
+      // A value that is cut is a different value (a mana cost cut mid-symbol
+      // saves a broken cost): such a field is asked for again instead.
+      if (options.keepWhole?.(path)) return false;
       if (typeof value === "string" && value.length > max) return setAt(root, path, value.slice(0, max).trimEnd());
       if (Array.isArray(value) && value.length > max) return setAt(root, path, value.slice(0, max));
       return false;
@@ -201,6 +204,12 @@ function repairIssue(root: unknown, issue: Issue, tried: Set<string>): boolean {
 
 export type StructuredFixup = (root: unknown) => unknown;
 
+export type RepairOptions = {
+  /** Fields never cut to their limit (a cost, a name the card prints):
+   *  an overlong one fails the repair, and the call is made once more. */
+  keepWhole?: (path: PropertyKey[]) => boolean;
+};
+
 /**
  * The `experimental_repairText` for `schema`: the model's text → a repaired
  * JSON text, or null when nothing a machine may change makes it fit. The SDK
@@ -208,7 +217,7 @@ export type StructuredFixup = (root: unknown) => unknown;
  * wrong shape through. `fixup` is a call's own knowledge (a land's empty
  * cost is "—"); it runs first and must never invent content.
  */
-export function repairStructuredText(schema: z.ZodType, fixup?: StructuredFixup) {
+export function repairStructuredText(schema: z.ZodType, fixup?: StructuredFixup, options: RepairOptions = {}) {
   return async ({ text }: { text: string; error?: unknown }): Promise<string | null> => {
     let root = extractJson(text);
     if (root === null) return null;
@@ -219,7 +228,7 @@ export function repairStructuredText(schema: z.ZodType, fixup?: StructuredFixup)
       if (result.success) return JSON.stringify(root);
       let changed = false;
       for (const issue of result.error.issues as Issue[]) {
-        if (repairIssue(root, issue, tried)) changed = true;
+        if (repairIssue(root, issue, tried, options)) changed = true;
       }
       if (!changed) return null;
     }

@@ -142,12 +142,15 @@ export function designedCardsSchema(allowEmblem: boolean) {
     .strict();
 }
 
+/** The card types whose empty cost is the "—" main stores and never draws. */
+const NO_COST_TYPES = new Set(["land", "token", "emblem"]);
+
 /**
  * What a machine may set right on a design answer before the generic repair
  * (lib/ai/structured-output.ts) — only what has ONE right value, never new
  * content: a cards list sent bare is wrapped in `cards`; an empty cost is the
- * "—" the prompt asks for on a land or token (the lint judges it on any other
- * card); an empty colour list is "colorless" (the lint derives the real
+ * "—" the prompt asks for on a land, token or emblem (any other card's
+ * empty cost is asked for again: "—" would print there); an empty colour list is "colorless" (the lint derives the real
  * colours from the cost and text and repairs a mismatch). Runs only on an
  * answer that already failed the schema.
  */
@@ -158,7 +161,12 @@ export function fixupDesignedCards(root: unknown): unknown {
   for (const card of cards) {
     if (!card || typeof card !== "object") continue;
     const c = card as Record<string, unknown>;
-    if (typeof c.cost === "string" && c.cost.trim() === "") c.cost = "—";
+    // "—" only where it is what main stores AND draws nothing: a land, a
+    // token (every token profile hides its cost) or an emblem (the save
+    // clears it). Any other card would PRINT a dash in its cost row
+    // (CostGlyphs draws text) — its empty cost is asked for again.
+    const type = typeof c.card_type === "string" ? c.card_type.trim().toLowerCase() : "";
+    if (typeof c.cost === "string" && c.cost.trim() === "" && NO_COST_TYPES.has(type)) c.cost = "—";
     if (Array.isArray(c.color_identity) && c.color_identity.length === 0) c.color_identity = ["colorless"];
   }
   return wrapped;
@@ -166,7 +174,11 @@ export function fixupDesignedCards(root: unknown): unknown {
 
 /** The repair for a design / judge answer. */
 function designRepair(allowEmblem: boolean) {
-  return repairStructuredText(designedCardsSchema(allowEmblem), fixupDesignedCards);
+  // A cost is never cut to its 40 characters: "{W}…{W}{" saved as a broken
+  // cost (and the autofix then read it as colourless).
+  return repairStructuredText(designedCardsSchema(allowEmblem), fixupDesignedCards, {
+    keepWhole: (path) => path[path.length - 1] === "cost",
+  });
 }
 
 export type DesignReport = {
