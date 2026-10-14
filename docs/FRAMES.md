@@ -674,9 +674,11 @@ frame change](#shipping-a-frame-change)).
 3. **Register the template** in `types/card.ts`: `FRAME_TEMPLATE_VALUES`,
    `FRAME_TEMPLATE_LABELS` and `FRAME_TEMPLATE_SET` (exhaustive: the
    compiler names what is missing), and where the picker offers it:
-   `ERA_TYPE_FRAME`, `TEMPLATE_SKIN_VARIANTS`, a showcase set, or a kind's
-   `layoutTemplates` in `lib/creator/card-kinds.ts`. Which kinds a showcase
-   or Borderless frame dresses follows from the anatomy its profile draws
+   `ERA_TYPE_FRAME`, `TEMPLATE_SKIN_VARIANTS`, an M15 treatment set or a
+   showcase set ([Which group a frame sits in](#which-group-a-frame-sits-in)),
+   or a kind's `layoutTemplates` in `lib/creator/card-kinds.ts`. Which kinds
+   a showcase, an M15 treatment or a Borderless frame dresses follows from
+   the anatomy its profile draws
    (a showcase with no `loyalty` + `loyaltyRows` refuses planeswalkers, one
    with no `defense` battles), plus a trade-dress row in `TREATMENT_KINDS`
    when the print is one kind's dress ([Kind anatomy and
@@ -3297,8 +3299,8 @@ and a **see-through text box cut into bands**: a top band (abilities and
 the Station reminder), then one band per charge tier, each with an "N+"
 badge on the box's left pinline, and the card's P/T on a black plate with
 white digits on the tier that makes it a creature. PR 1 ships the body
-(masters, profiles, layout, both renderers); the creator's tier editor,
-the import and the AI follow (PRs 2–3). Until the owner verifies a colour
+(masters, profiles, layout, both renderers); PR 2 the creator's tier
+editor and the follow; PR 3 the AI and the editor's notes. Until the owner verifies a colour
 nobody is offered the frames (an admin: `?previewFrames=m15station`).
 
 **What the prints show** (30 bordered station printings against 16 M15
@@ -3510,12 +3512,117 @@ The disabled chips say why ("The Spacecraft frame is for Spacecraft", "…
 for Planets"), and the picker tile draws its sample art under the whole
 frame.
 
-**Before a tick.** After PR 2 a maker can build, edit and remix a station
-card, and a bordered printing's import lands on the frame with its tiers
-drawn from the oracle text. Still open: the AI (a generated Spacecraft
-follows its subtype onto a verified frame, and nothing teaches the designer
-or the lint the tier grammar — it would land with no tier and its P/T
-undrawn) and the mapper's rows — PR 3; the other dresses — PR 4.
+**The tier editor's notes** (PR 3; `lib/creator/station-fit.ts` — readers of
+the layout and of the save's rule, nothing blocked, no renderer reads them;
+both are part of the tier group's description, `aria-describedby`, never a
+live region):
+
+- *The text does not fit* (owner round 58, decision 2): the bands whose
+  text is really CUT, read from the layout of the card the preview draws
+  (the same profile, P/T tier, flavour text and stamp). Not the layout's
+  `clipped` flag, which is also set when no size leaves every band its
+  minimum air — a card that is drawn whole. A band is cut when its own
+  `RulesLayout.clipped` says so at either bake target; a card with more
+  text than the whole box says so once.
+- *A band over 600 characters* (the row limit of `face_content`, the
+  walker's and the saga's — not raised): the save keeps the card's tiers as
+  lines of text, which draw the same bands, and the one thing only the rows
+  hold is lost — a P/T on another tier than the text plates. The save did
+  that without a word; the editor now says so before it, and names the tier
+  the plate goes back to.
+
+A Planet's rows mark no tier (`stationShowsPt`; they carried `pt: true`,
+never drawn). A tier line ending in `\r` reads as a tier
+(`parseStationText` splits on `\r\n`, `\r` and `\n` — a text saved through
+the API with Windows line ends used to draw a top band alone; this is the
+one line of this PR a renderer reads, and it changes no card whose text has
+`\n` line ends). A fourth tier line that becomes a tier of its own when
+another is removed is not typeset by the server (`storedRowTexts` reads
+every tier line the stored text holds).
+
+**The AI and the frame** (PR 3; `lib/ai/station-design.ts`, pure — the
+prompt's rules, the lint, the autofix, the fill's merge and the job's rows
+— on the ONE design engine every flow runs through, `designCards`).
+
+*What print does* (Scryfall `keyword:station`, one row per card,
+2026-10-14: 35 cards — 30 Spacecraft, 5 Planets; 32 in paper, 3 Arena-only;
+`tests/unit/ai/fixtures/station-printed.json`, counted by
+`station-design.test.ts`):
+
+| | print |
+| --- | --- |
+| Type line | "Artifact — Spacecraft" 30 of 30 (8 Legendary), never "Artifact Creature"; "Land — Planet" 5 of 5 |
+| Tiers | one on 27 cards (22 Spacecraft, 5 Planets), two on 8 (all Spacecraft), three on none |
+| Numbers | 1+ … 20+, rising. A lone Spacecraft tier 3+ … 20+ (7+ six times, 8+ five); of two, the first 1+ … 3+ on 7 of 8 and the last 8+ … 20+; every Planet 12+ |
+| The Station line | the LAST line of the top band on 35 of 35; word for word on the 32 paper cards: "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at N+.)" — a Planet "on this Planet", ending at "…as a sorcery.)"; the 3 Arena-only cards the bare word |
+| N | the last tier's number on all 26 paper Spacecraft with a P/T; The Eternity Elevator (no P/T) has no creature sentence |
+| P/T | 29 of 30 Spacecraft, on the last tier, whose first line is a keyword line starting with "Flying" on 28 of 29; no Planet |
+| Before the Station line | nothing on 10 Spacecraft (all 8 two-tier ones), one ability on 19, two on 1; a Planet two ("This land enters tapped." and its mana ability) |
+| Length | whole texts 144–423 characters, a tier 6–183 |
+
+*The designer* is told exactly that (`STATION_DESIGN_RULES`, with one
+example card, in the system prompt of every design call) — only for a card
+it chooses to make a Spacecraft or a Planet. *The lint*
+(`stationDesignProblems`, errors of `lintCardDesign`) holds an ARTIFACT
+whose subtypes say Spacecraft and a LAND whose subtypes say Planet — the
+frames' own gate, `SUBTYPE_DRESSES` — to it: at least one tier line, at
+most three, numbers rising, no empty tier, no band over 600 characters, and
+the Station line as the last line of the top band, word for word, its N one
+of the card's tiers (the creature sentence only with a P/T; never on a
+Planet). Every paper printing passes it. Nothing is said about any other
+card. *The judge* is asked to fix what is named and keep the shape. *The
+autofix* (`repairStationText`) then repairs by machine what is left: tier
+lines spelled another way ("8+: Flying", "8+ — …", "STATION 8+ | …"), empty
+tiers, numbers out of order, tiers past the third (folded into the third)
+and the Station line — and returns a text with NO tier line unchanged: a
+machine does not invent a tier.
+
+*The frame.* `resolveGeneratedFrame` never picks a station frame for a text
+with no tier (`stationFrameFits`): the frame prints the P/T on a tier and
+nowhere else. Such a card falls back to its base — the Artifact / Land
+frame — asked for by name or at random, as every other dress falls back.
+(The creator has no such gate: a maker on the frame sees the tier editor
+and the "add a tier" note.) A generated DECK names no frame at all: its
+Spacecraft save frameless, on the default frame.
+
+*The save.* A card an AI job saves on a station frame is saved as the
+creator saves a new one (`stationSaveFields`): the canonical text beside
+`face_content.station`, the P/T on the tier the text plates. Off the frame,
+or for a text with no tier, nothing is added to the payload.
+
+*The remix* copies its source's rules and only swaps the card's names in
+them, so the tiers are the source's: a printed Spacecraft or Planet lands
+on the station frame once that is verified in its colour (the import's
+landing) with its tiers as rows; an own card keeps its frame, its rows and
+the tier its maker put the P/T on (and, where its rows say another text
+than `rules_text`, the rows — what the card shows). A new name that made or
+unmade a tier line fails the step before the save (`sameStationShape`).
+
+*The per-field fill.* The engine lints the card the MODEL returned; a fill
+keeps only the wanted fields, so `designCardFill` puts the designed text in
+shape for the card the FORM holds. On a card that already has tiers the
+form sends them (`locked.station_text`, on a station frame only): the
+designer is told the layout, and **a tier left empty is the only line a
+fill of the rules text writes** — every other line is kept byte for byte
+(`mergeStationFill`). The maker's "power / toughness on this tier" follows
+its tier by number into the filled text (`stationPtChoiceAfterFill`); a
+fill used to reset it.
+
+*The ideas dialog* runs the same engine: an idea for a Spacecraft carries
+its tiers.
+
+What every other card saves through these paths is pinned to `origin/main`
+byte for byte (`tests/unit/ai/job-payloads-pinned.test.ts`: 54 payloads —
+the card, deck and remix steps, the plans, the fill — recorded on main's
+`lib/`), with the credits each reserves; the station cards are
+`station-jobs.test.ts`.
+
+**Before a tick.** After PR 3 every path that can reach a ticked station
+frame hands it a card it draws: the creator (PR 2), the import of a
+bordered printing, and the AI — generation, fill, ideas and both remixes.
+What is left is PR 4 (the extended-art, borderless and showcase dresses
+keep their own landing until then — never the station frame) and the
+owner's eye on the frame itself.
 
 **Rollout.** PR 1 was an ADDITION: new templates no stored card sits on —
 no layout bump, no sweep, no badge, no migration. PR 2's corrections of the
@@ -6515,13 +6622,82 @@ before anyone pays. Additions: 0 stored cards change, no bump, no sweep.
   `tests/e2e/scryfall-import.spec.ts` (MID #7 through the admin preview:
   the transform body, both arts, the family). Visual: 0 changed / 0 new.
 
+### Which group a frame sits in
+
+The picker has two groups for a frame that is not an era's standard or a
+layout, and print decides which (audit of 2026-10-13, Scryfall the same day):
+
+- **An M15 variation** — a treatment of the 2015 frame that ANY set prints
+  on any card of its kind: Snow, Devoid, Borderless, the Nyx dress, the
+  Vehicle and station frames, the Universes Beyond dress (`m15ub*`, 4.25:
+  one dress across every crossover of 2022–25, never one IP's showcase),
+  and since 2026-10-13 **extended art**
+  (`frame_effects ∋ extendedart`: 4,235 printings in 86 sets, 2018 → today),
+  the **full-art basics** (`full_art` basics on the 2015 frame: 688
+  printings, 588 black-bordered in 52 sets) and the **textless** frames
+  (`textless` on the 2015 frame, no token or basic: 78 printings in 24
+  promo sets). Its era is "M15 (2015)", its chip sits with the kind's other
+  variations and carries no set name.
+- **A showcase** ("Showcase & Universes Beyond") — a frame ONE set, one
+  block or one crossover printed: the Ring and Scroll (LTR), Avatar's
+  elemental frame, Bloomburrow's woodland and anime, Tarkir: Dragonstorm's
+  two, Multiverse Legends' Dragon Wing, Zendikar Rising's hedron, the
+  Zendikar Expeditions (EXP: 45 printings, 2015–16) and **the constellation
+  frame** (`nyx`: THB #258–268 alone — Scryfall `showcase`, BLACK border;
+  it is not a borderless Nyx frame, and the printed enchantment frame is
+  `m15nyx`). Its chip names its set ("Zendikar Rising — Hedron").
+
+How the move of 2026-10-13 was made, for the next one. A frame's group is
+its SET's era (`FRAME_SET_ERA`), so the two sets `extended` and
+`fullartset` went to `m15`; `FRAME_TEMPLATE_SET` did not change (the
+admin's treatment batches and the import chooser's families read it). Each
+of those frames is ONE body several kinds wear (`extendedart` dresses a
+creature, an artifact, a land and a token), where Borderless has a template
+per kind — so they are not `TEMPLATE_SKIN_VARIANTS` rows: they are listed in
+`M15_TREATMENT_SETS` (`types/card.ts`) and `skinVariantsFor` offers them
+under whichever M15 standard the kind has, to exactly the kinds
+`templateRefusesKind` lets them dress. Everything that read "is this a
+showcase" to decide BEHAVIOUR reads `isTreatmentBody()`
+(`lib/creator/frame-picker.ts`: a showcase or an M15 treatment) — the
+capability rule below, the import's candidate frames, the import chooser's
+families, the treatment notice's "bordered" — so a move changes a frame's
+place and label and nothing a card wears or a save stores. What a user sees
+change:
+
+- the chip sits among the M15 variations, before every showcase, under the
+  kind's M15 standard only (a card on the 1997 frame is no longer offered
+  it: picking it changed the card's era, which the Frame section owns — as
+  for Borderless since 4.32);
+- labels: "Extended Art", "Full-Art Basic Land", "Borderless Full-Art Basic
+  Land", "Textless", "Textless Land" (were "Full Art — Basic Land", …);
+  copy says "M15 (2015) Extended Art";
+- a kind change on a NEW card wearing one keeps the M15 era without the
+  "Switch frame era?" question (the same frame as its "Switch to M15") —
+  so it can no longer be refused, as on Borderless — and an import onto
+  such a card no longer toasts "Switched to the M15 frame…";
+- lists in gallery order follow the new order: an import's "Show all
+  frames", the AI's pool (drawn uniformly), and the resolver's LAST resort
+  (`resolvePublishedFrame`: the first published frame of the gallery,
+  reached only where no era standard of the kind is published in the
+  card's colour — never with production's list) now meets an M15 treatment
+  before another set's showcase.
+
+`tests/unit/creator/frame-picker-groups.test.ts` holds every frame decision
+(gallery, kind gate, bases, resolver, import, remix, AI pools; production's
+verified list and everything verified) to a recording of `origin/main`
+before the move, the differences above asserted exactly;
+`tests/unit/components/creator-frame-picker-groups-payload.test.tsx` does
+the same for what a save sends. A frame that moves group later re-records
+both on the commit before it.
+
 ### The kind gate
 
 `templateRefusesKind` (`lib/creator/card-kinds.ts`) is two rules; either
 refuses:
 
-1. **Capability** — on a showcase treatment or a Borderless skin, the body
-   must draw what the kind needs. So the ZNR hedron, the textless and
+1. **Capability** — on a showcase treatment, an M15 treatment (extended
+   art, the textless frames, the full-art basics) or a Borderless skin, the
+   body must draw what the kind needs. So the ZNR hedron, the textless and
    extended-art frames and the IP showcases (the Ring and Scroll, Avatar,
    Bloomburrow woodland and Anime, the three Tarkir frames) — P/T only —
    refuse planeswalkers, battles and every layout kind. Border-era

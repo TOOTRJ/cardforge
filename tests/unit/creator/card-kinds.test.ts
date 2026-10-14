@@ -134,28 +134,43 @@ describe("framesForKind", () => {
       // …and the Nyx dress (TODO 4.7), an Enchantment Creature's frame.
       "m15nyx",
       "m15ubartifact",
+      // …and the M15 treatments (the picker's groups, 2026-10-13): extended
+      // art and the textless frame, variations of the kind's M15 standard
+      // since they left the showcase group — last, after the kind's own.
+      "extendedart",
+      "m15textless",
     ]);
     for (const kind of ["instant", "sorcery"] as CardKind[]) {
-      expect(skinsFor(kind)).toEqual(["m15snow", "m15devoid", "m15borderless", "m15ub"]);
+      expect(skinsFor(kind)).toEqual(["m15snow", "m15devoid", "m15borderless", "m15ub", "extendedart", "m15textless"]);
     }
     // The Nyx dress is the Enchantment kind's own skin of m15 — never an
     // instant's or a sorcery's, whose standard is m15 too.
     // (…after m15's own skins, the Universes Beyond frame among them.)
-    expect(skinsFor("enchantment")).toEqual(["m15snow", "m15devoid", "m15borderless", "m15ub", "m15nyx"]);
+    expect(skinsFor("enchantment")).toEqual([
+      "m15snow", "m15devoid", "m15borderless", "m15ub", "m15nyx", "extendedart", "m15textless",
+    ]);
     // …and the Vehicle frame (TODO 4.5c), a subtype dress of the artifact frame.
     // …and the station frame (TODO 4.27a), a Spacecraft's, and the
     // Universes Beyond artifact frame (4.25); an Enchantment Artifact
     // borrows the Nyx dress.
-    expect(skinsFor("artifact")).toEqual(["m15borderlessartifact", "m15vehicle", "m15station", "m15ubartifact", "m15nyx"]);
+    expect(skinsFor("artifact")).toEqual([
+      "m15borderlessartifact", "m15vehicle", "m15station", "m15ubartifact", "m15nyx", "extendedart", "m15textless",
+    ]);
     // The land's borderless dress (4.34) — and the station frame (TODO
     // 4.27a), a Planet's — and the Universes Beyond land frame (4.25).
-    expect(skinsFor("land")).toEqual(["m15snowland", "m15borderlessland", "m15stationland", "m15ubland"]);
+    // …and the land's M15 treatments: the full-art basics and the textless
+    // land join extended art and the textless frame.
+    expect(skinsFor("land")).toEqual([
+      "m15snowland", "m15borderlessland", "m15stationland", "m15ubland",
+      "extendedart", "m15fullartland", "fullartland", "m15textless", "m15textlessland",
+    ]);
     // The artifact dress, 4.49 (b)'s text-box variations and 4.48 / 4.50's
     // full-art heights (the artifact ones are type-word dresses: the pickers
     // hide them, isTypeWordDress).
     expect(skinsFor("token")).toEqual([
       "m15tokenartifact", "m15tokentext", "m15tokenartifacttext",
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
+      "extendedart", "m15textless",
     ]);
     // 4.33's borderless planeswalkers; the tall one is a row dress (the
     // pickers hide it, isRowDress).
@@ -772,8 +787,11 @@ describe("the borderless land (4.34)", () => {
     // fullartland's bare art, 0.26).
     expect(templateIsBasicOnly("m15borderlessland")).toBe(false);
     const land = framesForKind("land", all).filter((f) => f.group === "skin").map((f) => f.template);
-    // (…beside the station frame, TODO 4.27a: a Planet's subtype dress.)
-    expect(land).toEqual(["m15snowland", "m15borderlessland", "m15stationland", "m15ubland"]);
+    // (…beside the station frame, TODO 4.27a: a Planet's subtype dress, and
+    // the Universes Beyond land frame, 4.25 — and, after them, the land's
+    // M15 treatments, 2026-10-13.)
+    expect(land.slice(0, 4)).toEqual(["m15snowland", "m15borderlessland", "m15stationland", "m15ubland"]);
+    expect(land.slice(4)).toEqual(["extendedart", "m15fullartland", "fullartland", "m15textless", "m15textlessland"]);
     // Offered to no other kind.
     for (const kind of CARD_KIND_VALUES.filter((k) => k !== "land")) {
       expect(framesForKind(kind, all).map((f) => f.template), kind).not.toContain("m15borderlessland");

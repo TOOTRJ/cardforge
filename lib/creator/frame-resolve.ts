@@ -23,7 +23,7 @@ import {
 import type { FrameMatch } from "@/lib/scryfall/frame-signatures";
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 import { dfcImportLanding, isDfcImportPatch, withoutDfcLanding } from "@/lib/scryfall/dfc-import";
-import { eraForTemplate, standardFrameFor } from "@/lib/creator/frame-picker";
+import { eraForTemplate, isM15Treatment, isTreatmentBody, standardFrameFor } from "@/lib/creator/frame-picker";
 import {
   KIND_DEFS,
   baseFrameFor,
@@ -220,7 +220,11 @@ export function importFrameCandidates(input: {
       [
         wanted,
         TEXT_BOX_TOKEN_FALLBACK[wanted] ?? null,
-        standardFrameFor(eraForTemplate(wanted), cardType),
+        // A treatment body (a showcase, extended art, a textless frame, a
+        // full-art basic) has no era standard of its own to stand in: the
+        // card's M15 landing below is its stand-in, the artifact frame and
+        // the token's text box first.
+        isTreatmentBody(wanted) ? null : standardFrameFor(eraForTemplate(wanted), cardType),
         artifactCreature ? ("m15artifact" as const) : null,
         m15Token,
         m15Token ? (TEXT_BOX_TOKEN_FALLBACK[m15Token] ?? null) : null,
@@ -746,8 +750,12 @@ export function basicOnlyFrameFallback(
  *  (Multiverse Legends)", is returned unchanged so the set isn't printed
  *  twice. Used by the showcase chips and the Variations summary. */
 export function setQualifiedFrameLabel(template: FrameTemplate, separator = " — "): string {
-  const setLabel = FRAME_SET_LABELS[FRAME_TEMPLATE_SET[template]];
   const label = FRAME_TEMPLATE_LABELS[template];
+  // An M15 treatment (extended art, the full-art basics, the textless
+  // frames) is no set's frame: its label stands alone ("Full Art — Textless"
+  // named a set that never was).
+  if (isM15Treatment(template)) return label;
+  const setLabel = FRAME_SET_LABELS[FRAME_TEMPLATE_SET[template]];
   return label.includes(setLabel) ? label : `${setLabel}${separator}${label}`;
 }
 

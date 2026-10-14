@@ -35,6 +35,8 @@ import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import { printsPowerToughness } from "@/lib/cards/card-display";
 import { isM20TokenTemplate } from "@/lib/cards/token-height";
 import { frameHidesRulesBoxText } from "@/lib/creator/frame-resolve";
+import { isStationFrame } from "@/lib/cards/station-frame";
+import { parseStationText } from "@/lib/cards/station";
 import type { BasicLandFace } from "@/lib/cards/watermark";
 
 export type FrameRequest = FrameTemplate | "random" | undefined;
@@ -125,6 +127,13 @@ export function resolveGeneratedFrame(input: {
       // than the plain artifact frame wherever it is published in the
       // card's colour (subtypeFrameFor).
       subtypeFrameFits(choice.template, face?.subtypes) &&
+      // …and the STATION frame (TODO 4.27a, PR 3) only for a card whose text
+      // has a tier: the frame prints the power / toughness on a tier and
+      // nowhere else, so a generated Spacecraft with no "N+ | text" line
+      // would land with its P/T undrawn. Left out of the pool, it falls
+      // back as every dress does — to the base (the Artifact / Land frame,
+      // where the P/T has its corner), asked for by name or at random.
+      stationFrameFits(choice.template, face?.rulesText) &&
       // An enchantment dress (TODO 4.7: the Nyx frame) is for a card whose
       // type words say Enchantment — and a NEW Enchantment Creature or
       // Enchantment Artifact wears it rather than its plain frame wherever
@@ -189,6 +198,15 @@ export function resolveGeneratedFrame(input: {
   if (pool.length === 0) return null;
   const rng = input.random ?? Math.random;
   return pool[Math.floor(rng() * pool.length) % pool.length].template;
+}
+
+/** True when a GENERATED card may land on `template` as far as the station
+ *  frame goes: any other frame, or a station frame for a text with at least
+ *  one tier (lib/cards/station.ts — the grammar both renderers draw). The
+ *  creator has no such gate: a maker on the frame sees the tier editor and
+ *  the "add a tier" note; a job saves with nobody looking. */
+export function stationFrameFits(template: FrameTemplate, rulesText: string | null | undefined): boolean {
+  return !isStationFrame(template) || parseStationText(rulesText).tiers.length > 0;
 }
 
 /** Color words a specific frame can render, for steering generation toward

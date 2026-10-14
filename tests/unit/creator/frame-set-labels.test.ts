@@ -81,23 +81,34 @@ describe("the hedron frame lives in its own Zendikar Rising set", () => {
     expect(fullArt).toEqual(["m15fullartland", "fullartland", "m15textless", "m15textlessland"]);
   });
 
-  it("is offered with the showcase set frames, before the treatments", () => {
+  it("is offered with the showcase set frames — and extended art no longer is", () => {
     const everything = new Set(
       FRAME_TEMPLATE_VALUES.flatMap((t) => ["w", "u", "b", "r", "g", "c", "m"].map((k) => frameComboKey(t, k))),
     );
-    const showcase = framesForKind("creature", everything)
-      .filter((c) => c.group === "showcase")
-      .map((c) => c.template);
+    const gallery = framesForKind("creature", everything);
+    const showcase = gallery.filter((c) => c.group === "showcase").map((c) => c.template);
     expect(showcase.indexOf("fullart")).toBe(showcase.indexOf("tarkirdragon") + 1);
-    expect(showcase.indexOf("extendedart")).toBe(showcase.indexOf("fullart") + 1);
+    // Extended art is a treatment of the 2015 frame every set prints: an M15
+    // variation since 2026-10-13 (frame-picker-groups.test.ts), listed
+    // before every showcase.
+    expect(showcase).not.toContain("extendedart");
+    const extended = gallery.find((c) => c.template === "extendedart");
+    expect([extended?.era, extended?.group]).toEqual(["m15", "skin"]);
+    expect(gallery.findIndex((c) => c.template === "extendedart")).toBeLessThan(
+      gallery.findIndex((c) => c.group === "showcase"),
+    );
   });
 });
 
 describe("eraGroupFrameLabel", () => {
   it("names the set of a showcase frame and nothing else", () => {
     expect(eraGroupFrameLabel("lotr")).toBe("The Lord of the Rings — Ring");
-    expect(eraGroupFrameLabel("m15fullartland")).toBe("Full Art — Basic Land");
-    expect(eraGroupFrameLabel("fullartland")).toBe("Full Art — Borderless Basic Land");
+    // The full-art basics are M15 variations (2026-10-13): no set in
+    // front, and a label that says "Full-Art" itself.
+    expect(eraGroupFrameLabel("m15fullartland")).toBe("Full-Art Basic Land");
+    expect(eraGroupFrameLabel("fullartland")).toBe("Borderless Full-Art Basic Land");
+    expect(eraGroupFrameLabel("expeditionland")).toBe("Expeditions — Land");
+    expect(eraGroupFrameLabel("nyx")).toBe("Nyx — Constellation");
     expect(eraGroupFrameLabel("m15borderless")).toBe("Borderless");
     expect(eraGroupFrameLabel("tarkirdragon")).toBe("Dragon Wing (Multiverse Legends)");
     expect(eraGroupFrameLabel("m15snow")).toBe("Snow");
@@ -124,9 +135,14 @@ describe("setQualifiedFrameLabel / describeFrame", () => {
   it("only the labels that already name their set skip the prefix", () => {
     const showcase = FRAME_TEMPLATE_VALUES.filter((t) => eraForTemplate(t) === "showcase");
     const unprefixed = showcase.filter((t) => setQualifiedFrameLabel(t) === FRAME_TEMPLATE_LABELS[t]);
-    // extendedart's label IS its set's ("Extended Art"), which was already
-    // collapsed before this change.
-    expect(unprefixed).toEqual(["tarkirdragon", "extendedart"]);
+    // (extendedart's label is its set's too, but it is an M15 variation
+    // since 2026-10-13 — and no M15 treatment is ever set-qualified.)
+    expect(unprefixed).toEqual(["tarkirdragon"]);
+    for (const template of ["extendedart", "m15fullartland", "fullartland", "m15textless", "m15textlessland"] as const) {
+      expect(eraForTemplate(template)).toBe("m15");
+      expect(setQualifiedFrameLabel(template)).toBe(FRAME_TEMPLATE_LABELS[template]);
+      expect(describeFrame(template)).toBe(`M15 (2015) ${FRAME_TEMPLATE_LABELS[template]}`);
+    }
   });
 
   it("border-era frames are still described by their era", () => {
