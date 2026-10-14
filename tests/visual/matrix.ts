@@ -1649,6 +1649,12 @@ export function visualCases(): VisualCase[] {
   add("m15ub", "creature", "c", "short", { suffix: "@stamp-c", row: stampRow("m15ub", "auto", { rarity: "rare" }) });
   add("m15ub", "creature", "w", "short", { suffix: "@stamp-foil", finish: "foil", row: stampRow("m15ub", "auto", { rarity: "rare", frame_style: { finish: "foil" } as CardRowForBake["frame_style"] }) });
   add("m15ubland", "land", "u", "short", { suffix: "@stamp-square", corners: "square", row: stampRow("m15ubland", "auto", { rarity: "rare" }) });
+  // TODO 4.25 follow-up (owner Round 57): "auto" stamps EVERY rarity on the
+  // triangle frames — a common's and an uncommon's MATTE grey triangle
+  // (new cases), at the 750 bake and at the stored bake's size.
+  add("m15ub", "creature", "u", "short", { suffix: "@stamp-auto-common", row: stampRow("m15ub", "auto", { rarity: "common" }) });
+  add("m15ubartifact", "artifact", "c", "short", { suffix: "@stamp-auto-uncommon", row: stampRow("m15ubartifact", "auto", { rarity: "uncommon" }) });
+  add("m15ub", "creature", "r", "long", { suffix: "@stamp-matte-hd", preset: "hd", row: stampRow("m15ub", "auto", { rarity: "common" }) });
   add("m15ub", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15ub"), cost: "{W/U}{W/U}" } });
   // A token with the key: the switch on, nothing drawn — the plain look,
   // pinned.

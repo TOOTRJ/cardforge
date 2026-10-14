@@ -12,8 +12,9 @@
 // printed styles; the ★ switch prints a foil-only printing's star between
 // the set code and the language (owner 2026-09-29: a separate flag, no
 // sheen, free for every plan — a Foil finish prints it too). The stamp's
-// chips: "Auto" (rares and mythics), "Always" (the frame's own shape),
-// "Never". Shown only where the template has the slot (COLLECTOR_TEMPLATES)
+// chips: "Auto" (as the frame's print: rares and mythics on an oval frame,
+// every rarity on a triangle frame — matte grey below a rare), "Always"
+// (the frame's own shape), "Never". Shown only where the template has the slot (COLLECTOR_TEMPLATES)
 // and, for the stamp, the notch (frameAnatomyOf(template).stamp) — never
 // on a token or an emblem (STAMPLESS_CARD_TYPES); elsewhere the frame
 // prints its own footer.
@@ -29,7 +30,14 @@ import {
   isCollectorStyle,
   type CollectorStyle,
 } from "@/lib/cards/collector-line";
-import { holoStampWanted, isHoloStampSwitch, offersHoloStampForType, type HoloStampSwitch } from "@/lib/cards/holo-stamp";
+import {
+  holoStampToneOf,
+  holoStampWanted,
+  isHoloStampSwitch,
+  offersHoloStampForType,
+  type HoloStampShape,
+  type HoloStampSwitch,
+} from "@/lib/cards/holo-stamp";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import type { FormValues } from "@/lib/creator/form-types";
 import type { FrameStyle } from "@/types/card";
@@ -40,11 +48,12 @@ export const NO_COLLECTOR_SLOT_NOTE = "This frame prints its own footer. The col
 /** Shown under the ★ switch while the card's finish is Foil. */
 export const FOIL_FINISH_STAR_NOTE = "A Foil or Etched finish prints the ★ already.";
 
-/** The stamp's chips (lib/cards/holo-stamp.ts): "Always" writes the frame's
- *  own shape — the oval on every wave-1 frame. */
-export function holoStampChipOptions(shape: "oval" | "triangle"): ChipOption<HoloStampSwitch>[] {
+/** The stamp's chips (lib/cards/holo-stamp.ts): "Auto" says what it stamps
+ *  on THIS frame (a triangle frame prints the stamp on every rarity);
+ *  "Always" writes the frame's own shape — the oval on every wave-1 frame. */
+export function holoStampChipOptions(shape: HoloStampShape): ChipOption<HoloStampSwitch>[] {
   return [
-    { value: "auto", label: "Auto: rares & mythics" },
+    { value: "auto", label: shape === "triangle" ? "Auto: every rarity" : "Auto: rares & mythics" },
     { value: shape, label: "Always" },
     { value: "none", label: "Never" },
   ];
@@ -53,13 +62,20 @@ export function holoStampChipOptions(shape: "oval" | "triangle"): ChipOption<Hol
 /** The stamp row's help on a frame whose stamp is the TRIANGLE (the
  *  Universes Beyond frames, TODO 4.25); the oval's is the row's own. */
 export const TRIANGLE_STAMP_HELP =
-  "The silver triangle Universes Beyond printed in the bottom border from 2021 to 2025 — on every rarity; pick Always for that. Our own neutral triangle, no symbol.";
+  "The triangle Universes Beyond printed in the bottom border from 2021 to 2025, on every rarity. Auto does the same: matte grey on a common or uncommon, silver on a rare or mythic. Our own neutral triangle, no symbol.";
 
-/** The live answer under the chips: what the card draws now. */
-export function holoStampAnswer(stamp: unknown, card: { cardType?: string | null; rarity?: string | null }): string {
+/** The live answer under the chips: what the card draws now on a frame
+ *  whose stamp is `shape` (the oval when it isn't said). */
+export function holoStampAnswer(
+  stamp: unknown,
+  card: { cardType?: string | null; rarity?: string | null },
+  shape: HoloStampShape = "oval",
+): string {
   const rarity = (card.rarity ?? "").trim();
   const label = rarity ? rarity.charAt(0).toUpperCase() + rarity.slice(1) : "No rarity";
-  return holoStampWanted(stamp, card) ? `${label} → stamp` : `${label} → no stamp`;
+  if (!holoStampWanted(stamp, { ...card, shape })) return `${label} → no stamp`;
+  if (shape !== "triangle") return `${label} → stamp`;
+  return holoStampToneOf(shape, card.rarity) === "matte" ? `${label} → matte grey triangle` : `${label} → silver triangle`;
 }
 
 /** Each style's example line 1 for the chips, from the card's own letter
@@ -130,16 +146,17 @@ export function CollectorSwitches({ stored = null }: { stored?: FrameStyle | nul
   // the card draws (the renderers key the notch by the master drawn — the
   // colour's, or the pair's on a two-colour card since the 4.9c follow-up).
   const profile = getFrameProfile(template);
-  const stampOn = showStamp && holoStampWanted(stamp, { cardType, rarity });
+  const shape = (profile.overlays ?? []).find((slot) => slot.anatomy === "holoStamp")?.stamp.shape ?? "oval";
+  const stampOn = showStamp && holoStampWanted(stamp, { cardType, rarity, shape });
   // The hint while the stored card names no stamp and the form still
   // holds none (a click on the switch or a chip sets a value and hides it).
   const stampHint = showStamp && editing && stored?.stamp === undefined && !isHoloStampSwitch(stamp) ? (ANATOMY_HINTS.stamp ?? null) : null;
-  const shape = (profile.overlays ?? []).find((slot) => slot.anatomy === "holoStamp")?.stamp.shape ?? "oval";
   // The switch's "on" is a value that DRAWS for this card: "auto" where the
-  // auto rule stamps it (a rare or mythic), else the frame's own shape (the
-  // chips' "Always") — on a common, "auto" would leave the switch off and the
-  // click dead. "Off" is the owner's Never.
-  const switchOn: HoloStampSwitch = holoStampWanted("auto", { cardType, rarity }) ? "auto" : shape;
+  // auto rule stamps it (a rare or mythic; every rarity on a triangle
+  // frame), else the frame's own shape (the chips' "Always") — on an oval
+  // frame's common, "auto" would leave the switch off and the click dead.
+  // "Off" is the owner's Never.
+  const switchOn: HoloStampSwitch = holoStampWanted("auto", { cardType, rarity, shape }) ? "auto" : shape;
   return (
     <div className="flex flex-col gap-3" data-testid="collector-switches">
       <SwitchRow
@@ -196,7 +213,7 @@ export function CollectorSwitches({ stored = null }: { stored?: FrameStyle | nul
               options={holoStampChipOptions(shape)}
             />
             <p className="text-[11px] leading-4 text-subtle" data-testid="stamp-answer">
-              {holoStampAnswer(stamp, { cardType, rarity })}
+              {holoStampAnswer(stamp, { cardType, rarity }, shape)}
             </p>
           </div>
         </SwitchRow>

@@ -4,7 +4,7 @@ import { cleanup, render } from "@testing-library/react";
 import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
 import { frameOverlayImageUrl, pickFrameColorKey } from "@/components/cards/frame-layer";
 import { resolveHoloStamp } from "@/lib/cards/anatomy";
-import { HOLO_STAMP_OVAL_ART } from "@/lib/cards/holo-stamp-art";
+import { HOLO_STAMP_OVAL_ART, HOLO_STAMP_TRIANGLE_ART, HOLO_STAMP_TRIANGLE_MATTE_ART } from "@/lib/cards/holo-stamp-art";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import type { ColorIdentity } from "@/types/card";
 
@@ -140,5 +140,52 @@ describe("the preview draws the bake's stamp", () => {
     expect(masks).toContain(frameOverlayImageUrl("/frames/m15crown/b.png"));
     const oval = container.querySelector<HTMLElement>("[data-holo-stamp]")!;
     expect(oval.closest("svg")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TODO 4.25 follow-up (owner Round 57) — the Universes Beyond triangle in the
+// preview, as the bake draws it: "auto" stamps every rarity on the triangle
+// frames, with the matte bitmap on a common or uncommon and the silver one
+// on a rare or mythic; the M15 twin's "auto" common still draws nothing.
+// ---------------------------------------------------------------------------
+describe("the Universes Beyond triangle's tone in the preview (layout v56)", () => {
+  for (const [rarity, tone, art] of [
+    ["common", "matte", HOLO_STAMP_TRIANGLE_MATTE_ART],
+    ["uncommon", "matte", HOLO_STAMP_TRIANGLE_MATTE_ART],
+    ["rare", "holo", HOLO_STAMP_TRIANGLE_ART],
+    ["mythic", "holo", HOLO_STAMP_TRIANGLE_ART],
+  ] as const) {
+    for (const stamp of ["auto", "triangle"] as const) {
+      it(`${stamp} on a ${rarity}: the ${tone} triangle, what the bake resolves`, () => {
+        const data = card({ rarity, frameStyle: { template: "m15ub", finish: "regular", stamp } });
+        const want = bakeStamp(data)!;
+        expect(want).not.toBeNull();
+        expect(want.tone).toBe(tone);
+        const { container } = render(<CardPreview {...data} />);
+        const drawn = container.querySelector<HTMLElement>("[data-holo-stamp]")!;
+        expect(drawn).not.toBeNull();
+        expect(drawn.getAttribute("data-holo-stamp")).toBe("triangle");
+        expect(drawn.getAttribute("data-stamp-tone")).toBe(tone);
+        expect(drawn.getAttribute("data-stamp-key")).toBe(want.notch.key);
+        expect(drawn.style.backgroundImage).toBe(`url("${art.dataUri}")`);
+        expect(drawn.style.top).toBe(pct(want.artRect.topPct));
+        expect(drawn.style.zIndex).toBe("7");
+      });
+    }
+  }
+
+  it("none, an absent key and a token draw nothing on the frame; the M15 twin's auto common draws nothing", () => {
+    for (const data of [
+      card({ rarity: "common", frameStyle: { template: "m15ub", finish: "regular", stamp: "none" } }),
+      card({ rarity: "common", frameStyle: { template: "m15ub", finish: "regular" } }),
+      card({ rarity: "common", cardType: "token", frameStyle: { template: "m15ub", finish: "regular", stamp: "auto" } }),
+      card({ rarity: "common", frameStyle: { template: "m15", finish: "regular", stamp: "auto" } }),
+    ]) {
+      expect(bakeStamp(data)).toBeNull();
+      const { container } = render(<CardPreview {...data} />);
+      expect(container.querySelector("[data-holo-stamp]"), JSON.stringify(data.frameStyle)).toBeNull();
+      cleanup();
+    }
   });
 });
