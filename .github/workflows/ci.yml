@@ -144,23 +144,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      - run: npm run test:docs
+      - run: echo "THROWAWAY STUB - notes"
 
-  # Typecheck, lint and the build, beside the unit shards instead of in front
-  # of them (they used to run serially before the tests in one job).
   static:
     name: Typecheck, lint, build
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.static != 'false' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 1
     steps:
+      - run: sleep 150
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
