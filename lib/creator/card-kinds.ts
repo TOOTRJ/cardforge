@@ -60,7 +60,7 @@ import {
   isBasicLandTitle,
   type BasicLandFace,
 } from "@/lib/cards/watermark";
-import { eraForTemplate, standardFrameFor } from "@/lib/creator/frame-picker";
+import { eraForTemplate, isM15Treatment, isTreatmentBody, standardFrameFor } from "@/lib/creator/frame-picker";
 
 // ---------------------------------------------------------------------------
 // Kind taxonomy
@@ -497,8 +497,8 @@ export function frameColorKeyForKind(kind: CardKind, colorKey: FrameColorKey): F
 //         planeswalkers only;
 //       • the emblem frame dresses the emblem alone, and the emblem is an
 //         EXCLUSIVE kind: it wears only a template whose dress names it.
-//     No row: the capability rule alone on a showcase or Borderless body,
-//     no refusal anywhere else.
+//     No row: the capability rule alone on a showcase, M15-treatment or
+//     Borderless body, no refusal anywhere else.
 //
 // `basicOnly` (BASIC_ONLY_TEMPLATES, below) stays its own per-card check:
 // the Land kind covers basics and nonbasics alike, so no kind rule can tell
@@ -506,7 +506,7 @@ export function frameColorKeyForKind(kind: CardKind, colorKey: FrameColorKey): F
 // ---------------------------------------------------------------------------
 
 /** The kinds a template's trade dress lets it dress (the capability rule
- *  still applies on top on a showcase or Borderless body). */
+ *  still applies on top on a showcase, M15-treatment or Borderless body). */
 const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   expeditionland: ["land"],
   m15fullartland: ["land"],
@@ -546,11 +546,14 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
 /** Kinds that wear ONLY a template whose trade dress names them. */
 const EXCLUSIVE_KINDS: ReadonlySet<CardKind> = new Set<CardKind>(["emblem"]);
 
-/** True when the capability rule judges the template: a showcase treatment
- *  or a Borderless skin — the bodies whose anatomy decides their kinds. */
+/** True when the capability rule judges the template: a showcase, an M15
+ *  treatment or a Borderless skin — the bodies whose anatomy decides their
+ *  kinds. */
 function capabilityJudges(template: FrameTemplate): boolean {
-  const set = FRAME_TEMPLATE_SET[template];
-  return FRAME_SET_ERA[set] === "showcase" || set === "borderless";
+  // …and the M15 treatments (extended art, the full-art basics, the
+  // textless frames): bodies of their own, judged as when the picker listed
+  // them with the showcases.
+  return isTreatmentBody(template) || FRAME_TEMPLATE_SET[template] === "borderless";
 }
 
 /** True when the template refuses this kind: its trade dress leaves the
@@ -882,9 +885,31 @@ const BORROWED_TYPE_WORD: Partial<Record<FrameTemplate, BorrowedTypeWord>> = {
   m15nyx: "Enchantment",
 };
 
+// The M15 TREATMENTS (the picker's groups, 2026-10-13): extended art, the
+// full-art basics and the textless frames — general treatments of the 2015
+// frame, so variations of the M15 standard like Borderless, not showcases.
+// Each is ONE body several kinds wear, so it is a variation of whichever M15
+// standard the kind has (m15 for a creature, m15artifact for an artifact,
+// m15land for a land, m15token for a token) rather than a skin keyed by one
+// base — and WHICH kinds is still the body's own answer (templateRefusesKind:
+// the capability rule and the trade dress, as when they were listed with the
+// showcases), never a list kept here.
+const M15_TREATMENT_TEMPLATES: readonly FrameTemplate[] = FRAME_TEMPLATE_VALUES.filter(isM15Treatment);
+
+/** The M15 treatments `kind` wears under `base`: all the kind's body draws,
+ *  under its M15 standard alone (a card on the 1997 frame is offered none —
+ *  picking one would change its era, which the Frame section owns). */
+function m15TreatmentsFor(kind: CardKind, base: FrameTemplate): FrameTemplate[] {
+  const def = KIND_DEFS[kind];
+  if (def.layoutTemplates || base !== standardFrameFor("m15", def.cardType)) return [];
+  return M15_TREATMENT_TEMPLATES.filter((template) => !templateRefusesKind(template, kind));
+}
+
 /** The variations the Variations section offers under `base` for this
  *  kind: the base's skins (TEMPLATE_SKIN_VARIANTS) plus the frames the kind
- *  borrows for it (the artifact frame under a creature's M15 standard). */
+ *  borrows for it (the artifact frame under a creature's M15 standard), then
+ *  the M15 treatments its body draws (extended art, the textless frames, a
+ *  land's full-art basics). */
 export function skinVariantsFor(
   kind: CardKind,
   base: FrameTemplate,
@@ -893,6 +918,7 @@ export function skinVariantsFor(
     ...(TEMPLATE_SKIN_VARIANTS[base] ?? []),
     ...(KIND_SKIN_VARIANTS[kind]?.[base] ?? []),
     ...(BORROWED_VARIATIONS[kind]?.[base] ?? []),
+    ...m15TreatmentsFor(kind, base),
   ];
 }
 
@@ -1384,8 +1410,9 @@ export function withoutArtifactWord(supertype: string | null | undefined): strin
 }
 
 /** All frames offered for a kind, across every era, in gallery display
- *  order: border-era standards (+ their skin variants) oldest→newest, then
- *  layout templates, then showcase treatments. There is deliberately NO
+ *  order: border-era standards (+ their skin variants — under the M15
+ *  standard, the M15 treatments last) oldest→newest, then layout
+ *  templates, then showcase treatments. There is deliberately NO
  *  fallback here — an era with no frame for the kind simply doesn't appear,
  *  which removes the picker's dead ends by construction. */
 export function framesForKind(
@@ -1478,7 +1505,9 @@ export function baseFrameFor(
   }
   const skinBase = SKIN_BASE.get(template);
   if (skinBase) return skinBase;
-  if (FRAME_SET_ERA[FRAME_TEMPLATE_SET[template]] === "showcase") {
+  // …and an M15 treatment (extended art, the textless frames, a full-art
+  // basic) to the same standard: it is that standard's variation.
+  if (isTreatmentBody(template)) {
     return standardFrameFor("m15", KIND_DEFS[kind].cardType) ?? template;
   }
   return template;

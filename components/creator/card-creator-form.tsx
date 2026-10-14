@@ -227,6 +227,8 @@ import {
 } from "@/lib/cards/face-content";
 import { keptStationRows, sagaRowsOut, submittedRulesOf } from "@/lib/creator/structured-rules";
 import { isStationFrame } from "@/lib/cards/station-frame";
+import { parseStationText } from "@/lib/cards/station";
+import { stationPtChoiceAfterFill } from "@/lib/ai/station-design";
 import { basicLandManaKey } from "@/lib/cards/watermark";
 import { saveNeedsOf, saveNeedsSentence, type SaveNeed } from "@/lib/creator/save-needs";
 import { secondPartWordsFor, secondPartWordsOfCard } from "@/lib/creator/second-part";
@@ -2818,6 +2820,13 @@ export function CardCreatorForm({
           ? undefined
           : values.color_identity,
       rules_text: has("rules_text") ? undefined : str(rulesNow),
+      // A station card whose text already has tiers (TODO 4.27a, PR 3): the
+      // designer is told them, and a tier left empty is the one thing a
+      // fill of the rules text writes (lib/ai/station-design.ts). Absent on
+      // every other card — the request is what it always was.
+      ...(has("rules_text") && isStationFrame(values.frame_style?.template) && parseStationText(values.rules_text).tiers.length > 0
+        ? { station_text: values.rules_text }
+        : {}),
       flavor_text: has("flavor_text") ? undefined : str(values.flavor_text),
       power: has("stats") || !statVis.pt ? undefined : str(values.power),
       toughness: has("stats") || !statVis.pt ? undefined : str(values.toughness),
@@ -2883,8 +2892,14 @@ export function CardCreatorForm({
     if (fill.rarity !== undefined) setValue("rarity", fill.rarity, { shouldDirty: true });
     if (fill.rules_text !== undefined) {
       const filledRules = printTypography(fill.rules_text, "rules");
+      // The maker's "power / toughness on this tier" follows its tier by
+      // number into the filled text (TODO 4.27a, PR 3: a fill used to reset
+      // it); a fill that also changed the card's type starts afresh.
+      const ptTier = fill.card_type
+        ? null
+        : stationPtChoiceAfterFill(getValues("rules_text"), getValues("station_pt_tier"), filledRules);
       setValue("rules_text", filledRules, { shouldDirty: true });
-      setValue("station_pt_tier", null, { shouldDirty: true });
+      setValue("station_pt_tier", ptTier, { shouldDirty: true });
       const k = kindFromCard(getValues("card_type"), getValues("frame_style.template"));
       if (k === "planeswalker" || k === "saga") seedStructuredRows(k, filledRules);
     }
@@ -3196,6 +3211,8 @@ export function CardCreatorForm({
       storedFaceContent: isEdit ? (card?.face_content ?? null) : null,
       // The station frame's tier editor (TODO 4.27a).
       stationFrame: isStationFrame(values.frame_style?.template),
+      // A Planet shows no P/T: its rows mark no tier.
+      stationShowsPt: showsPowerToughness((values.card_type || null) as CardType | null, parseSubtypes(values.subtypes_text), values.supertype),
       ...(isEdit ? { storedRulesText: card?.rules_text ?? null } : {}),
     });
 
@@ -3637,6 +3654,7 @@ export function CardCreatorForm({
           opened: isEdit ? defaults : null,
           storedFaceContent: isEdit ? (card?.face_content ?? null) : null,
           stationFrame: onStationFrame,
+          stationShowsPt: showsPowerToughness((watched.card_type || null) as CardType | null, parseSubtypes(watched.subtypes_text ?? ""), watched.supertype),
           ...(isEdit ? { storedRulesText: card?.rules_text ?? null } : {}),
         })
       : null);

@@ -428,6 +428,12 @@ function storedRowTexts(stored: StoredTypographyText | null): Set<string> {
     const station = parseStationText(stored.rules_text.replace(/\r/g, ""));
     for (const row of station.tiers) texts.add(asResent(row.text));
     if (station.intro) texts.add(asResent(station.intro));
+    // …and every tier LINE the text holds, past the three a card draws: a
+    // fourth line sits in tier 3's text as typed, and becomes a tier of its
+    // own when its maker removes another — a box they never typed in, which
+    // a save must not typeset (the independent check of #549).
+    const every = parseStationText(stored.rules_text.replace(/\r/g, ""), false, Number.POSITIVE_INFINITY);
+    for (const row of every.tiers) texts.add(asResent(row.text));
   }
   if (stored?.rules_text) {
     const text = stored.rules_text.replace(/\r/g, "");

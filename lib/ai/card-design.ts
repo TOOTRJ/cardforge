@@ -17,6 +17,11 @@ import {
   type LintIssue,
   type SkeletonSlot,
 } from "@/lib/ai/mtg-rules";
+import {
+  STATION_DESIGN_EXAMPLE,
+  STATION_DESIGN_RULES,
+  STATION_JUDGE_RULE,
+} from "@/lib/ai/station-design";
 
 // ---------------------------------------------------------------------------
 // Card-design engine — the one text pipeline behind every AI generation flow
@@ -197,6 +202,9 @@ TOKENS (card_type "token"):
 - A token's card types go in supertype, after Legendary/Snow, in printed order Enchantment, Artifact, Creature: "Creature" for a 1/1 Soldier, "Artifact" for a Treasure, Clue, Food or Map, "Enchantment" for a Shard, "Artifact Creature" for a Thopter, "Legendary Creature" for a named one. The card prints "Token" first: "Token Artifact — Treasure".
 - A token is named after its subtypes ("Soldier", "Rabbit Knight") unless it is a legendary one with a proper name. It has no mana cost ("—").
 
+${STATION_DESIGN_RULES}
+Example: ${STATION_DESIGN_EXAMPLE}
+
 OUTPUT RULES:
 - A card with two card types keeps ONE in card_type and the other word in supertype, after Legendary/Snow: an Artifact Creature or an Enchantment Creature is card_type "creature" with "Artifact" / "Enchantment" in supertype; a land that is also a creature is card_type "land" with "Creature" in supertype. The card prints the words in their printed order ("Legendary Enchantment Creature — God", "Land Creature — Forest Dryad").
 - power/toughness only for creatures, any other card whose supertype includes "Creature" (a creature token, a land creature) and Vehicles; loyalty only for planeswalkers; defense only for battles; otherwise null.
@@ -245,7 +253,7 @@ function batchPrompt(input: DesignBatchInput): string {
 // Judge → fix
 // ---------------------------------------------------------------------------
 
-const JUDGE_SYSTEM = `You are the rules editor for a Magic: The Gathering-style card designer. You receive drafted cards plus lint findings. Fix every ERROR exactly (mana-cost grammar, stat slots per card type, color identity). Address WARNINGS with the lightest possible touch: adjust a cost or stat line for balance flags, modernize templating, add reminder text to unknown keywords — keep each card's concept, name, and feel intact. Return the corrected cards in the SAME order, complete (every field, changed or not).`;
+const JUDGE_SYSTEM = `You are the rules editor for a Magic: The Gathering-style card designer. You receive drafted cards plus lint findings. Fix every ERROR exactly (mana-cost grammar, stat slots per card type, color identity). Address WARNINGS with the lightest possible touch: adjust a cost or stat line for balance flags, modernize templating, add reminder text to unknown keywords — keep each card's concept, name, and feel intact. ${STATION_JUDGE_RULE} Return the corrected cards in the SAME order, complete (every field, changed or not).`;
 
 async function judgeRepair(
   flawed: Array<{ card: DesignedCard; issues: LintIssue[] }>,
