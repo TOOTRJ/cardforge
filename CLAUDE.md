@@ -1053,7 +1053,7 @@ Rules and gotchas:
   smaller than Left and never clips one Left fits (owner 2026-10-07).
   Both renderers pass the card's value through `rulesAlignOf` and only
   draw the indents. A new template offers
-  it by default — `rules-align.test.ts` names the eight that don't (the station pair among them). Never a sweep or a bump; `docs/FRAMES.md` "The text alignment".
+  it by default — `rules-align.test.ts` names the ten that don't (the station pair and the textless promo pair among them). Never a sweep or a bump; `docs/FRAMES.md` "The text alignment".
 - The art's automatic fit (TODO 3b.18): a picture that lands on a card
   (upload, a real card's art, an import, an AI picture) takes
   `fitArtToWindow()` (`lib/cards/art-fit.ts`: fill the window, show the
