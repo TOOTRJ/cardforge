@@ -13513,16 +13513,16 @@
       "height": 2100
     },
     "nyxcrown/a.png": {
-      "hash": "7536bc66adc6",
-      "sha256": "7536bc66adc664deefebeea87a569042b600bc4ec0fc9325047da45fdeb72f8b",
-      "bytes": 195550,
+      "hash": "bacdc57ffbcd",
+      "sha256": "bacdc57ffbcdb00823ffd243f332aec968cb7b22a329e4248e3674b5aa5daccb",
+      "bytes": 182120,
       "width": 1500,
       "height": 410
     },
     "nyxcrown/a.webp": {
-      "hash": "7d069a406f3e",
-      "sha256": "7d069a406f3e3f1d8d70c498fa68c0a44e8f07927825f5211cf55f5c15f3e34c",
-      "bytes": 26716,
+      "hash": "de3ddbeca451",
+      "sha256": "de3ddbeca45158b766b6992fdeb151cb5326db85704433fe6e12fbef7bc8ede2",
+      "bytes": 26486,
       "width": 1500,
       "height": 410
     },

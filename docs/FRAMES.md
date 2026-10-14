@@ -3151,17 +3151,37 @@ the band's own outline.
 published bands, recorded as such in `lib/cards/frame-sources.json`). Our
 `nyx` masters' side rim is 10 px wide (x 101–110; 1389–1399 on the right)
 where the prints' and the crown's arm are 13 (x 98–110; 1391–1402), and it
-is another tone on four keys (green 0,124,67; black 39,38,36; red 241,56,39;
-the colourless master's bronze 173,149,132 under the silver crown). Drawn as
+is another tone on three keys (green 0,124,67; black 39,38,36; red 241,56,39
+— and, until Round 59's tint below, the colourless master's bronze under
+the silver crown). Drawn as
 published, the arms end on row 408 in a 3 px jog and a tone step. So the
 arms' last rows fade out — alpha × (1 − t) over rows 372–408 — and the crown
-hands over to the master's own rim. Alpha only: every colour is the parent
-band's, every pixel above row 372 is the parent's byte for byte, and the
+hands over to the master's own rim. Alpha only: every colour is the (toned,
+for `a`) parent band's, every pixel above row 372 is the parent's byte for byte, and the
 WebP's alpha equals the PNG's (the build checks both).
 
+**The one tint** (owner Round 59, 2026-10-14). There is no printed
+colourless constellation card, and the colourless master is a bronze drawing
+(rim beside the art 172,148,132) under what was Card Conjurer's artifact
+silver (arm 223,225,225): two metals on one card. So `nyxcrown/a` — that
+band only — has its metal toned onto the master's rim, 223,225,225 →
+172,148,132 (`RECIPE.tint`, `tintNyxCrownBand`). The tone is
+`toneSourceRegions`' (the Universes Beyond tones'): the colour multiplied by
+to ÷ from, the colour part of the gain fading out toward white, so the
+bevel's highlights stay highlights of the same metal instead of turning (a
+plain per-channel gain is the Vehicle plate's lesson); darker bevel pixels
+take the same gains, black stays black. The starfield strip is not toned:
+every pixel where the Nyx band differs from the published plain crown band
+`m15crown/a` is the parent's byte — but for the strip's soft edge (strip
+pixels within 2 px of metal), which takes the share of the tone the crown
+shows through it; left alone it stays a silver hairline round the stars.
+Alpha is never touched. Measured on the bake: crown arm 172,148,132, the
+frame's rim beside it 172,148,132. The other six bands are byte-identical
+to before (their sha256 unchanged in the manifest).
+
 **Declared** as `NYX_CONSTELLATION_CROWN` on the `nyx` entry only (`keyMap`
-c → a, the artifact silver — no printed colourless card), at `M15_CROWN`'s
-rect. It is the frame's one overlay: no stamp, no collector line, no pairs —
+c → a, the artifact band toned to the master's bronze — no printed
+colourless card), at `M15_CROWN`'s rect. It is the frame's one overlay: no stamp, no collector line, no pairs —
 a two-colour card is drawn on the gold master and wears the gold crown
 (print splits it; that is the pair masters' step). Nothing else moves: no
 slot, no keep-out (the band has a hole for the title bar and reaches the art
@@ -3176,7 +3196,10 @@ template (`legendaryVariationOf` reads the declared overlay). An import of
 one of the eleven names the switch ON: `showcase/thb/constellation` is the
 one showcase signature that prints the standard crown
 (`CROWNED_SHOWCASE_SIGNATURES` in `lib/scryfall/import-mapper.ts`) — every
-other legendary showcase still imports with it off, as its scan.
+other legendary showcase still imports with it off, as its scan. Until the
+`nyx` frame is ticked, such an import lands on its fallback, M15, **with the
+crown on** — M15's own crown, as any legendary M15 card (owner Round 59:
+fine).
 
 **Not done here**, on purpose: the masters are not re-cut. Against the
 scans, their title bar sits 5–8 px low (the scans' top outline on rows

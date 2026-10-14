@@ -8,8 +8,10 @@
 //   nyxcrown/<w u b r g m a>      from the published m15nyxcrown/<key>
 //
 // One cut: the arms' last rows fade out (alpha only), so the crown hands
-// over to the `nyx` masters' own, narrower rim. Every other pixel is the
-// published band's.
+// over to the `nyx` masters' own, narrower rim. One tint: the colourless
+// card's silver `a` is toned onto the colourless master's bronze, hue kept,
+// its starfield strip untouched (owner Round 59; needs the published plain
+// m15crown/a beside it). Every other pixel is the published band's.
 //
 //   node scripts/build-nyx-crown.mjs                # → .frames-build
 //   node scripts/build-nyx-crown.mjs --out <dir> [--masters <dir>] [--dry-run]
@@ -30,7 +32,7 @@ import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
 import { WEBP } from "./lib/cc-frames.mjs";
-import { NYX_CONSTELLATION_CROWN_RECIPE as RECIPE, fadeNyxCrownBand } from "./lib/nyx-crown.mjs";
+import { NYX_CONSTELLATION_CROWN_RECIPE as RECIPE, fadeNyxCrownBand, tintNyxCrownBand } from "./lib/nyx-crown.mjs";
 
 const args = process.argv.slice(2);
 const flag = (name) => {
@@ -73,17 +75,30 @@ const colors = {};
 for (const key of RECIPE.keys) {
   const src = published(`${from}/${key}`);
   const data = await raw(src.file);
-  const out = Buffer.from(data);
+  const tint = RECIPE.tint[key] ?? null;
+  let toned = data;
+  let tintLine = null;
+  if (tint) {
+    const plain = published(`${tint.plain}/${key}`);
+    const done = tintNyxCrownBand(data, await raw(plain.file), tint, RECIPE);
+    toned = done.out;
+    tintLine = `metal toned ${tint.from.join(", ")} → ${tint.to.join(", ")} (toneSourceRegions: hue kept toward white; ${done.changed} px) wherever the band equals ${tint.plain}/${key}.png (published, sha256 ${plain.sha.slice(0, 12)}); the starfield strip (${done.strip} px) untouched but for its soft edge against the metal (${done.edged} px, by the share of the crown they show)`;
+  }
+  const out = Buffer.from(toned);
   const { changed } = fadeNyxCrownBand(out, RECIPE);
-  // Nothing but alpha, and nothing above the fade.
+  // The fade: nothing but alpha, and nothing above its first row. The tint:
+  // never alpha — and no colour at all on a band that takes none.
   for (let i = 0; i < W * H; i++) {
     const o = i * 4;
-    if (out[o] !== data[o] || out[o + 1] !== data[o + 1] || out[o + 2] !== data[o + 2]) throw new Error(`${key}: a colour changed at ${i % W},${Math.floor(i / W)}`);
+    if (out[o] !== toned[o] || out[o + 1] !== toned[o + 1] || out[o + 2] !== toned[o + 2]) throw new Error(`${key}: the fade changed a colour at ${i % W},${Math.floor(i / W)}`);
+    if (!tint && (out[o] !== data[o] || out[o + 1] !== data[o + 1] || out[o + 2] !== data[o + 2])) throw new Error(`${key}: a colour changed at ${i % W},${Math.floor(i / W)}`);
+    if (toned[o + 3] !== data[o + 3]) throw new Error(`${key}: the tint changed alpha at ${i % W},${Math.floor(i / W)}`);
     if (Math.floor(i / W) <= fade.from && out[o + 3] !== data[o + 3]) throw new Error(`${key}: alpha changed above the fade at ${i % W},${Math.floor(i / W)}`);
   }
   colors[key] = [
     `${from}/${key}.png (published, sha256 ${src.sha.slice(0, 12)})`,
     `alpha × (1 − t) on rows ${fade.from}–${fade.to}, t 0 → 1 (the arms; ${changed} px), 0 below`,
+    ...(tintLine ? [tintLine] : []),
   ];
   if (dryRun) {
     console.log(`${folder}/${key}: ${changed} px faded (dry run)`);
@@ -112,15 +127,17 @@ if (!dryRun) {
     output: `${W}x${H} overlay band: rows 0–${H - 1} of a 1500x2100 card, the parent's corners, webp q${WEBP.quality} with the PNG's alpha exactly`,
     recipe: {
       fade: `alpha × (1 − t) on rows ${fade.from}–${fade.to} (t 0 → 1), 0 below; colours untouched`,
+      tint: Object.fromEntries(Object.entries(RECIPE.tint).map(([key, t]) => [key, `${t.from.join(", ")} → ${t.to.join(", ")} on the metal (every pixel equal to ${t.plain}/${key}.png), hue kept toward white; the strip (but its soft edge) and alpha untouched`])),
       arms: `nothing but the two arms is painted from row ${fade.from} down: x ${RECIPE.arms.left.join("–")} and ${RECIPE.arms.right.join("–")}`,
     },
     colors,
-    sourceFiles: RECIPE.keys.map((key) => `${from}/${key}.png`).sort(),
+    sourceFiles: [...RECIPE.keys.map((key) => `${from}/${key}.png`), ...Object.entries(RECIPE.tint).map(([key, t]) => `${t.plain}/${key}.png`)].sort(),
     notes: [
       "PipGlyph's own cut (owner 2026-10-13): the Theros Beyond Death constellation showcase prints (THB #258–268) wear the standard 2015 legendary crown in the card's colour with the Nyx starfield strip inside it — the piece Card Conjurer's 'Nyx Showcase' pack (packM15NyxShowcase.js) lists beside its crownless masters, and the band the Nyx dress publishes as m15nyxcrown. Nothing is drawn or synthesised: every painted pixel is the parent band's.",
       "The one cut: the `nyx` masters are MSE's and their side rim is 3 px narrower than the crown's arm (and another tone on b, r, g and the colourless master), so the arms fade out over their last rows instead of ending in a jog. The masters are not re-cut.",
       "The numbers are scripts/lib/nyx-crown.mjs (eleven prints measured 2026-10-13); no scan is read by the build.",
-      "No pairs: the frame draws no pair masters, so a two-colour card wears the gold crown over the gold master (THB #268 prints red | green over a gold bar — the pair masters' step, not this one). The colourless master takes the artifact silver `a` (no printed colourless constellation card).",
+      "No pairs: the frame draws no pair masters, so a two-colour card wears the gold crown over the gold master (THB #268 prints red | green over a gold bar — the pair masters' step, not this one). The colourless master takes the artifact band `a` (no printed colourless constellation card).",
+      "Owner Round 59 (2026-10-14): the `a` band's silver read as a second metal over the colourless master's bronze, so its metal is toned onto the master's rim (223,225,225 → 172,148,132; toneSourceRegions, the colour part of the gain fading out toward white so the bevel keeps its hue). The starfield strip — every pixel where the band differs from the plain m15crown/a — is the parent's byte for byte but for its soft edge against the metal (within 2 px of it: the share of the tone the crown shows through), and every alpha is the parent's. No other band is tinted.",
     ],
   };
   const sorted = Object.fromEntries(Object.keys(provenance).sort().map((k) => [k, provenance[k]]));

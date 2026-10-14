@@ -817,9 +817,13 @@ Rules and gotchas:
   the `nyx` entry only (never the NYX base; `keyMap` c → a), bands
   `nyxcrown/<w u b r g m a>`: PipGlyph's own cut of the published
   `m15nyxcrown` bands (`scripts/build-nyx-crown.mjs`, numbers in
-  `scripts/lib/nyx-crown.mjs`; bucket only) whose ONE change is the arms
+  `scripts/lib/nyx-crown.mjs`; bucket only) whose ONE cut is the arms
   fading out over rows 372–408 — alpha only, never a colour — because the
-  MSE masters' side rim is 3 px narrower than the crown's arm. No pairs (a
+  MSE masters' side rim is 3 px narrower than the crown's arm, and whose ONE
+  tint (owner Round 59) is the colourless card's `a`: its silver toned onto
+  the colourless master's bronze (`RECIPE.tint`, `tintNyxCrownBand`: hue
+  kept toward white, the starfield strip — where the band differs from the
+  plain `m15crown/a` — left alone, alpha never). No pairs (a
   two-colour card wears gold on the gold master), no stamp, no collector
   line. An ADDITION: opt-in per card, no bump, no sweep; a stored card on
   the frame keeps its look. The one showcase whose import names the crown

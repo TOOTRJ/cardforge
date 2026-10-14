@@ -20,7 +20,7 @@
       "public/fonts/mplantin-italic.ttf": "e81d83608cfa12d5",
       "public/fonts/Montserrat-Medium.ttf": "4a5a218d2b8efa4f"
     },
-    "manifest": "749e8310256f2912"
+    "manifest": "24aeb3831b0dd613"
   },
   "cases": {
     "adventure/b/adventure-long": "62fb854bb9fd30f8:42614af9",
@@ -1532,7 +1532,7 @@
     "nyx/b/creature-long@crown": "78f32a7b3dda4e62:5341184f",
     "nyx/b/creature-short": "2a07ebe105d85f5e:9e901e6d",
     "nyx/c/creature-long": "83cad552ca70e6c4:68220d16",
-    "nyx/c/creature-long@crown": "1b4dcb32f6b02b39:a9c67990",
+    "nyx/c/creature-long@crown": "b36688189cadb0ca:a9c67990",
     "nyx/c/creature-short": "8d13f94f094e14f9:77a84461",
     "nyx/g/creature-long": "a9c4a4b874e46606:25b64da2",
     "nyx/g/creature-long@crown": "0664f40e6d11093d:2ee2fff7",
