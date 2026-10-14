@@ -88,7 +88,9 @@ describe("article MDX rendering", () => {
     // No autolinked bare URLs: every rendered href is a link the source wrote.
     for (const [, href] of html.matchAll(/<a [^>]*href="([^"]*)"/g)) {
       const raw = href.replace(/&amp;/g, "&");
-      expect(content, `${slug}: unexpected link ${raw}`).toContain(`](${raw}`);
+      // …as Markdown, or as the `href` of a component it placed (<CardScan>).
+      const written = content.includes(`](${raw}`) || content.includes(`href="${raw}"`);
+      expect(written, `${slug}: unexpected link ${raw}`).toBe(true);
     }
 
     // The TOC is lifted from the raw Markdown; each anchor must hit a heading.
