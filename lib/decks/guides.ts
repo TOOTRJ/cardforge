@@ -9,6 +9,7 @@ import {
   type DeckGuideCard,
   type DeckGuideContent,
 } from "@/lib/ai/deck-guide";
+import { aiErrorMessage } from "@/lib/ai/structured-output";
 
 // ---------------------------------------------------------------------------
 // Deck guides — storage + the one shared "build a guide for this deck"
@@ -90,7 +91,7 @@ export async function buildAndStoreDeckGuide(
       analytics: computeDeckAnalytics(items),
     });
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "Guide generation failed." };
+    return { ok: false, error: aiErrorMessage(error, (detail) => detail, "Guide generation failed.") };
   }
   const admin = createAdminClient();
   const { error } = await admin.from("deck_guides").upsert(

@@ -14,6 +14,7 @@ import {
   spendCredits,
 } from "@/lib/ai/rate-limit";
 import { generateCardIdeas } from "@/lib/ai/card-ideas";
+import { aiErrorMessage, withAiTimeBudget } from "@/lib/ai/structured-output";
 import { buildDeckBrief } from "@/lib/ai/deck-brief";
 import { loadOwnedDeckContext } from "@/lib/ai/generation-jobs";
 import { computeDeckAnalytics } from "@/lib/decks/analytics";
@@ -46,6 +47,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const startedAt = Date.now();
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ ok: false, error: "Supabase isn't configured." }, { status: 503 });
   }
@@ -118,12 +120,16 @@ export async function POST(request: Request) {
   await logAiCall(user.id, "generate_card_ideas");
 
   try {
-    const ideas = await generateCardIdeas({
-      theme: parsed.data.theme,
-      cardType: parsed.data.card_type,
-      rarity: parsed.data.rarity,
-      deckContext,
-    });
+    // A second design only while the 60 s budget still holds it — a kill
+    // past maxDuration would skip the refund below (structured-output.ts).
+    const ideas = await withAiTimeBudget(startedAt, maxDuration, () =>
+      generateCardIdeas({
+        theme: parsed.data.theme,
+        cardType: parsed.data.card_type,
+        rarity: parsed.data.rarity,
+        deckContext,
+      }),
+    );
     // Keep the batch (migration 0092) so a closed tab doesn't waste the
     // credit — the dialog offers "reopen your last ideas". Best-effort.
     try {
@@ -152,9 +158,12 @@ export async function POST(request: Request) {
     if (spend.charged) {
       await refundCredits(user.id, 1, "generate_card_ideas", `refund:${ref}`);
     }
-    const detail = error instanceof Error ? error.message : "Idea generation failed.";
     return NextResponse.json(
-      { ok: false, error: `Couldn't generate ideas: ${detail}`, credits: await getFreshCreditBalance() },
+      {
+        ok: false,
+        error: aiErrorMessage(error, (detail) => `Couldn't generate ideas: ${detail}`, "Idea generation failed."),
+        credits: await getFreshCreditBalance(),
+      },
       { status: 502 },
     );
   }

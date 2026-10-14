@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { Card, CardBackFace } from "@/types/card";
 import { designModel } from "@/lib/ai/provider";
 import { clampedText } from "@/lib/ai/card-design";
+import { repairStructuredText, structuredCall } from "@/lib/ai/structured-output";
 import { REMIX_DOUBLE_FACED_LAYOUTS, shortNameOf, type RemixSecondHalfLayout } from "@/lib/ai/remix-names";
 
 // ---------------------------------------------------------------------------
@@ -221,8 +222,15 @@ export async function generateRemixIdentity(
   input: RemixIdentityInput,
 ): Promise<RemixIdentity> {
   const request = buildRemixIdentityRequest(input);
-  const { object } = await generateObject({
+  // Repaired where a machine can; ONE call only (a second would stack
+  // another 30 s on the step's budget) — a miss fails the step, whose
+  // credit wrapper refunds it.
+  const { object } = await structuredCall(
+    "remix/identity",
+    repairStructuredText(request.schema),
+    (experimental_repairText) => generateObject({
     model: designModel(),
+    experimental_repairText,
     // Remix steps stack this call + an art fetch + up to two image calls
     // inside the step route's 180s budget — every leg must be bounded or the
     // composition rides into the platform kill (the original double-charge
@@ -233,6 +241,8 @@ export async function generateRemixIdentity(
     system: request.system,
     prompt: request.prompt,
     temperature: 0.8,
-  });
+  }),
+    { attempts: 1 },
+  );
   return object as RemixIdentity;
 }

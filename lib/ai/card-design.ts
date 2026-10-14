@@ -22,6 +22,7 @@ import {
   STATION_DESIGN_RULES,
   STATION_JUDGE_RULE,
 } from "@/lib/ai/station-design";
+import { repairStructuredText, structuredCall } from "@/lib/ai/structured-output";
 
 // ---------------------------------------------------------------------------
 // Card-design engine — the one text pipeline behind every AI generation flow
@@ -139,6 +140,52 @@ export function designedCardsSchema(allowEmblem: boolean) {
       cards: z.array(allowEmblem ? designedCardSchema : freshDesignedCardSchema).min(1),
     })
     .strict();
+}
+
+/** The card types whose empty cost is the "—" main stores and never draws. */
+const NO_COST_TYPES = new Set(["land", "token", "emblem"]);
+
+/**
+ * What a machine may set right on a design answer before the generic repair
+ * (lib/ai/structured-output.ts) — only what has ONE right value, never new
+ * content: a cards list sent bare is wrapped in `cards`; an empty cost is the
+ * "—" the prompt asks for on a land, token or emblem (any other card's
+ * empty cost is asked for again: "—" would print there); an empty colour list is "colorless" (the lint derives the real
+ * colours from the cost and text and repairs a mismatch). Runs only on an
+ * answer that already failed the schema.
+ */
+export function fixupDesignedCards(root: unknown): unknown {
+  const wrapped = Array.isArray(root) ? { cards: root } : root;
+  const cards = (wrapped as { cards?: unknown } | null)?.cards;
+  if (!Array.isArray(cards)) return wrapped;
+  for (const card of cards) {
+    if (!card || typeof card !== "object") continue;
+    const c = card as Record<string, unknown>;
+    // "—" only where it is what main stores AND draws nothing: a land, a
+    // token (every token profile hides its cost) or an emblem (the save
+    // clears it). Any other card would PRINT a dash in its cost row
+    // (CostGlyphs draws text) — its empty cost is asked for again.
+    const type = typeof c.card_type === "string" ? c.card_type.trim().toLowerCase() : "";
+    if (typeof c.cost === "string" && c.cost.trim() === "" && NO_COST_TYPES.has(type)) c.cost = "—";
+    if (Array.isArray(c.color_identity) && c.color_identity.length === 0) c.color_identity = ["colorless"];
+  }
+  return wrapped;
+}
+
+/** The design schema's stat fields (a test holds the list to the schema). */
+export const DESIGN_STAT_FIELDS: ReadonlySet<string> = new Set(["power", "toughness", "loyalty", "defense"]);
+
+/** The repair for a design / judge answer. */
+export function designRepair(allowEmblem: boolean) {
+  // A cost is never cut to its 40 characters: "{W}…{W}{" saved as a broken
+  // cost (and the autofix then read it as colourless).
+  // A missing STAT is never nulled: the autofix fills a creature's null
+  // power / toughness (a planeswalker's loyalty, a battle's defense) with
+  // numbers the model never wrote — asked for again instead.
+  return repairStructuredText(designedCardsSchema(allowEmblem), fixupDesignedCards, {
+    keepWhole: (path) => path[path.length - 1] === "cost",
+    neverNull: (path) => DESIGN_STAT_FIELDS.has(String(path[path.length - 1])),
+  });
 }
 
 export type DesignReport = {
@@ -266,16 +313,25 @@ async function judgeRepair(
       ].join("\n"),
     )
     .join("\n\n");
+  // The judge keeps each card's type: an emblem only when one is under
+  // repair (a fill on an open emblem is a batch of one).
+  const allowEmblem = flawed.some(({ card }) => card.card_type === "emblem");
   try {
-    const { object } = await generateObject({
-      model: judgeModel(),
-      // The judge keeps each card's type: an emblem only when one is under
-      // repair (a fill on an open emblem is a batch of one).
-      schema: designedCardsSchema(flawed.some(({ card }) => card.card_type === "emblem")),
-      system: JUDGE_SYSTEM,
-      prompt,
-      temperature: 0.2,
-    });
+    // Best-effort: one call (repaired where a machine can), never a second.
+    const { object } = await structuredCall(
+      "card-design/judge",
+      designRepair(allowEmblem),
+      (experimental_repairText) =>
+        generateObject({
+          model: judgeModel(),
+          schema: designedCardsSchema(allowEmblem),
+          system: JUDGE_SYSTEM,
+          prompt,
+          temperature: 0.2,
+          experimental_repairText,
+        }),
+      { attempts: 1 },
+    );
     if (object.cards.length !== flawed.length) return null;
     return object.cards;
   } catch {
@@ -358,13 +414,20 @@ export async function designCards(
 }
 
 async function designChunk(input: DesignBatchInput): Promise<DesignBatchResult> {
-  const { object } = await generateObject({
-    model: designModel(),
-    schema: designedCardsSchema(input.slots.some((slot) => slot.cardType === "emblem")),
-    system: SYSTEM_PROMPT,
-    prompt: batchPrompt(input),
-    temperature: 0.9,
-  });
+  const allowEmblem = input.slots.some((slot) => slot.cardType === "emblem");
+  // An answer outside the schema is repaired where a machine can, else the
+  // design is asked for once more (lib/ai/structured-output.ts); a second
+  // miss throws AiOutputError, whose message is the client's.
+  const { object } = await structuredCall("card-design/design", designRepair(allowEmblem), (experimental_repairText) =>
+    generateObject({
+      model: designModel(),
+      schema: designedCardsSchema(allowEmblem),
+      system: SYSTEM_PROMPT,
+      prompt: batchPrompt(input),
+      temperature: 0.9,
+      experimental_repairText,
+    }),
+  );
 
   // Trim/pad drift: the model occasionally overshoots the requested count.
   let cards = object.cards.slice(0, input.slots.length);
@@ -457,20 +520,29 @@ export async function ensureUniqueTitles<T extends { title: string; rules_text: 
   try {
     const allNames = new Set(reserved);
     for (const card of result) allNames.add(card.title.trim().toLowerCase());
-    const { object } = await generateObject({
-      model: judgeModel(),
-      schema: z.object({ titles: z.array(clampedText(80)).min(1) }).strict(),
-      system: RENAME_SYSTEM,
-      prompt: [
-        `Reserved names (do NOT use any of these):\n${[...allNames].join(", ")}`,
-        `Cards needing new names:`,
-        ...initialCollisions.map(
-          (index, n) =>
-            `${n + 1}. "${result[index].title}" — ${result[index].rules_text.slice(0, 160)}`,
-        ),
-      ].join("\n"),
-      temperature: 0.9,
-    });
+    const titlesSchema = z.object({ titles: z.array(clampedText(80)).min(1) }).strict();
+    // Best-effort (the numeral sweep below backs it): one call, repaired.
+    const { object } = await structuredCall(
+      "card-design/rename",
+      repairStructuredText(titlesSchema),
+      (experimental_repairText) =>
+        generateObject({
+          model: judgeModel(),
+          schema: titlesSchema,
+          system: RENAME_SYSTEM,
+          prompt: [
+            `Reserved names (do NOT use any of these):\n${[...allNames].join(", ")}`,
+            `Cards needing new names:`,
+            ...initialCollisions.map(
+              (index, n) =>
+                `${n + 1}. "${result[index].title}" — ${result[index].rules_text.slice(0, 160)}`,
+            ),
+          ].join("\n"),
+          temperature: 0.9,
+          experimental_repairText,
+        }),
+      { attempts: 1 },
+    );
     initialCollisions.forEach((cardIndex, n) => {
       const fresh = object.titles[n]?.trim();
       if (fresh) result[cardIndex] = { ...result[cardIndex], title: fresh };
