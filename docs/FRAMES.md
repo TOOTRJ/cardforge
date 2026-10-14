@@ -3285,7 +3285,7 @@ the text's ink left out):
   key): within 8 levels a channel on w u b r, the artifact frame and its
   coloured keys; the green title bar prints 14 lighter in red and blue
   (193,215,185 against 179,214,172), gold 7–12 darker. Left as Card
-  Conjurer drew them.
+  Conjurer drew them in this reading; toned since (the tone pass, below).
 
 **A second reading** (#544's independent check, 2026-10-13: 238 OTHER
 printings — none of the 677 above — each read twice, by eye on the bars and
@@ -3317,6 +3317,71 @@ by correlation with both masters):
   largest miss. White, blue, black, red and the artifact frame are within
   about 8. A tone pass on `g`, `m` and the land's `c` is best done BEFORE
   those colours are ticked: afterwards it is a correction, with a sweep.
+  ("Ours" in this bullet is the pack as drawn; the pass is below.)
+
+**The tone pass** (owner Round 57, 2026-10-14: tone them before the frames
+are promoted, so no stored card ever wore the old tones — no bump, no
+sweep). Print was read a THIRD time first, on 190 printings neither earlier
+reading used (Scryfall's images of FIN, FIC, ACR, PIP, WHO, LTR, LTC and
+their promos, 40K, the Secret Lair), by the second reading's method — the
+per-channel median of the region's paper at 1500 × 2100, the brightest 5 %
+and the darker 40 % (ink, rims) left out; title bar x 140–1360 × y 118–198,
+type bar y 1198–1272, text box x 150–1350 × y 1350–1880. 47 were set aside
+for a cast of their own (the date-stamped promos, the surge foils, 40K's
+and the Secret Lair's scans); the other 143 agree within a few levels a
+set. Medians [min–max]; "before" and "after" are our master read the same
+way:
+
+| Place | Before | Print: builder | Print: second reader | Print: Round 57 | After |
+|---|---|---|---|---|---|
+| Green title bar | 173, 211, 165 | 193, 215, 185 | 187–194, 210–212, 176–182 | 185, 211, 178 [180–194, 209–213, 173–182] (27 spells) | 188, 211, 179 |
+| Green type bar | 170, 209, 162 | — | — | 180, 209, 173 [175–188, 206–212, 165–178] (27) | 182, 209, 173 |
+| Gold title bar | 241, 227, 157 | "7–12 darker" | 238–240, 218–220, 128–140 | 237, 219, 139 [231–241, 216–222, 127–145] (29 spells of 3+ colours); 239, 221, 134 (11 two-colour spells); 241, 221, 135 (6 two-colour artifacts); 240, 222, 133 (20 gold lands) | 239, 220, 135 |
+| Gold type bar | 241, 226, 154 | — | — | 237, 219, 135; 239, 219, 130; 241, 219, 129; 241, 222, 130 (the same four groups) | 238, 219, 132 |
+| Gold text box | 249, 242, 213 | — | 245, 234, 196 | 244, 234, 198 [241–246, 233–235, 196–202] (29); 243, 234, 198 (20 gold lands) | 244, 234, 197 |
+| Colourless land title bar | 214, 210, 194 | — | 198, 187, 178 (2 lands) | 197, 185, 176 [192–200, 182–187, 174–177] (32 lands); 197, 184, 176 (12 two-colour lands) | 197, 186, 177 |
+| Colourless land type bar | 212, 208, 191 | — | — | 197, 185, 176 (32); 197, 184, 175 (12) | 197, 185, 176 |
+| Colourless land text box | 220, 214, 195 | — | 231, 227, 221 (2) | 230, 226, 219 [229–232, 224–227, 217–221] (32) | 230, 226, 220 |
+
+Gold prints in two inks — WHO / ACR / LTC with blue at 122–131, FIN / FIC /
+PIP / LTR at 133–145 — and the target sits between them. Untouched: the
+green text box (215, 227, 215 against our 219, 229, 218); white, blue,
+black, red and the artifact frame, within about 8 on the two earlier
+readings (not read again here); the white and the black land, within 6 on
+two prints each.
+
+- **How.** `UB_PRINT_TONES` (`scripts/lib/cc-frames.mjs`) is the recipe:
+  per region `from` (what the pack's file reads) and `to` (the centre the
+  three readings agree on) — numbers, no scan is read by a build. The
+  importer tones the FILE as it loads it (`CC_SOURCE_TONES`,
+  `toneSourceRegions`), through the pack's own Title, Type and Rules masks,
+  before any mask, ramp or composite: the colour is multiplied by
+  to ÷ from, so streaks, bevels and rims keep their shading and black stays
+  black, and the gain's colour part fades out between the region's tone and
+  white, where only the luminance gain is left. (A plain per-channel gain
+  was tried first: green's × 1.087 / 1 / 1.085 turned the bar's light
+  streaks pink — the Vehicle plate's lesson.) Alpha is never touched.
+- **What shares the pixels.** Five files are toned: `g.png` and `lg.png`
+  (the green land's bars are the green frame's, pixel for pixel), `m.png`
+  and `lm.png` (the gold land's bars AND box are the gold frame's), and
+  `l.png`. So one tone reaches every master built from them: `m15ub/g`,
+  `m15ub/m`, the ten gold-split pairs (their bars are `m.png`'s) and the ten
+  hybrids (their grey bars are `l.png`'s — PIP #212 / #740 and ACR #55
+  print them at 198–202, 187–191, 177–179); `m15ubartifact/g`, `m15ubartifact/m` and
+  its ten pairs (gold bars); `m15ubland/c`, `m15ubland/g`, `m15ubland/m` and its ten pairs
+  (the land's grey bars). 47 masters and their 47 WebP twins, 94 objects.
+- **What did not move.** The frame field, the pinline and the border of
+  every master (the changed pixels are rows 97–225, 1178–1307 and
+  1312–1939 only, x 84–1416; 0 alpha values), so the stamp notches — their
+  rim is tinted to the pinline — rebuild to the same bytes, as do the 36
+  crown pieces, the 28 plates and the other 28 masters (w, u, b, r and the
+  artifact silver): 128 of the 222 objects are byte-identical, and nothing
+  outside the three templates changed in the manifest. Every WebP's alpha
+  still equals its PNG's.
+- **Left as it is.** The green LAND's two prints read (LTR #260, LTC #341)
+  agree with the green bar's new tone, on two prints only. The gold
+  pinline, the crowns' gold and the plates were not measured against print
+  in this pass.
 
 **The masters.** Card Conjurer's accurate 'Universes Beyond' pack
 (its `packUBNew` pack, `m15/new/ub/`, 2010 × 2814): the colour frames whole, the

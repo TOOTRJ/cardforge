@@ -847,7 +847,13 @@ Rules and gotchas:
   triangle cut clear, our own triangle art from `holoStampArtOf`). The
   pack's colourless frame is missing from Card Conjurer's tree: `m15ub/c`
   is its ARTIFACT frame, has no reference printing (print's colourless
-  card is see-through) and stays unverified until the owner decides.
+  card is see-through) and stays unverified until the owner decides. Three
+  of the pack's tones are TONED onto print before the first tick (owner
+  Round 57): the green bars, the gold bars and gold box, the land-grey
+  bars and box — `UB_PRINT_TONES`, applied to the pack FILE as the importer
+  loads it (`CC_SOURCE_TONES`: g / lg, m / lm, l), so every master drawn
+  from one follows; never tone one master of a family by itself, and once
+  a colour is ticked a tone change is a correction (bump + sweep).
   `frame_style.stamp` keeps its meaning on them — "auto" is a rare or
   mythic although print stamps every rarity there; every "on" value draws
   the frame's own shape. An ADDITION: no bump, no sweep, no badge; an

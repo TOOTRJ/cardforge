@@ -373,7 +373,7 @@ describe("the three tones onto print (Round 57)", () => {
     expect(Object.keys(describeSourceTones(CC_TEMPLATES.m15ub)!).sort()).toEqual([`${UBP}/g.png`, `${UBP}/l.png`, `${UBP}/m.png`]);
     expect(Object.keys(describeSourceTones(CC_TEMPLATES.m15ubartifact)!).sort()).toEqual([`${UBP}/g.png`, `${UBP}/m.png`]);
     expect(Object.keys(describeSourceTones(CC_TEMPLATES.m15ubland)!).sort()).toEqual([`${UBP}/l.png`, `${UBP}/lg.png`, `${UBP}/lm.png`]);
-    expect(describeSourceTones(CC_TEMPLATES.m15ub)![`${UBP}/g.png`]).toEqual({
+    expect((describeSourceTones(CC_TEMPLATES.m15ub) as Record<string, unknown>)[`${UBP}/g.png`]).toEqual({
       table: "UB_PRINT_TONES.g",
       title: `through ${MASK.title}: × 1.087 / 1.000 / 1.085 (173, 211, 165 → 188, 211, 179), fading to × 1.021 on every channel at white`,
       type: `through ${MASK.type}: × 1.071 / 1.000 / 1.068 (170, 209, 162 → 182, 209, 173), fading to × 1.017 on every channel at white`,
