@@ -22,7 +22,7 @@ import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 // the form opens a stored card with.
 //
 // `fixtures/frame-picker-groups-main-payloads.json` is what THIS FILE
-// recorded on `origin/main` c1c7b2e7, the commit before the move — the
+// recorded on `origin/main` c1c7b2e7 (and again, byte-identical, on 00bc2ca7 after #544) — the
 // same file runs unchanged on both (a chip is found by either commit's
 // label; the kind change answers main's "Switch frame era?" question, which
 // the branch no longer asks, with "Switch to M15"). To re-record there:

@@ -67,7 +67,7 @@ import {
 // every template × kind × colour, with production's verified list
 // (supabase/seed.sql) and with everything verified, and holds it to
 // `fixtures/frame-picker-groups-main.json`: what THIS FILE recorded on
-// `origin/main` (c1c7b2e7 / a6d1a486 — the frame code of the two is the same — before the move). Everything is equal
+// `origin/main` (00bc2ca7, after #544 — the commit this branch was last folded onto; first on c1c7b2e7 / a6d1a486). Everything is equal
 // but the differences listed under "what changed", each asserted exactly.
 // To re-record on a checkout of that commit:
 //   FRAME_GROUPS_CAPTURE=<path/to/out.json> npx vitest run <this file>
@@ -99,8 +99,9 @@ function productionVerifiedKeys(): Set<string> {
 }
 const ALL = new Set(FRAME_TEMPLATE_VALUES.flatMap((t) => FRAME_COLOR_KEYS.map((k) => frameComboKey(t, k))));
 const PROD = productionVerifiedKeys();
-/** Production's list plus every colour of the frames that moved (none of
- *  the five is verified in production today): the day they are ticked. */
+/** Production's list plus every colour of the frames that moved (today
+ *  production has only the two full-art basics ticked, in w u b r g c): the
+ *  day they are all ticked. */
 const PROD_PLUS_MOVED = new Set([...PROD, ...MOVED.flatMap((t) => FRAME_COLOR_KEYS.map((k) => frameComboKey(t, k)))]);
 const VERIFIED: Record<string, ReadonlySet<string>> = { prod: PROD, prodPlusMoved: PROD_PLUS_MOVED, all: ALL };
 

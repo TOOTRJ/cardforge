@@ -6335,7 +6335,9 @@ layout, and print decides which (audit of 2026-10-13, Scryfall the same day):
 
 - **An M15 variation** — a treatment of the 2015 frame that ANY set prints
   on any card of its kind: Snow, Devoid, Borderless, the Nyx dress, the
-  Vehicle and station frames, and since 2026-10-13 **extended art**
+  Vehicle and station frames, the Universes Beyond dress (`m15ub*`, 4.25:
+  one dress across every crossover of 2022–25, never one IP's showcase),
+  and since 2026-10-13 **extended art**
   (`frame_effects ∋ extendedart`: 4,235 printings in 86 sets, 2018 → today),
   the **full-art basics** (`full_art` basics on the 2015 frame: 688
   printings, 588 black-bordered in 52 sets) and the **textless** frames
@@ -6376,7 +6378,15 @@ change:
   Land", "Textless", "Textless Land" (were "Full Art — Basic Land", …);
   copy says "M15 (2015) Extended Art";
 - a kind change on a NEW card wearing one keeps the M15 era without the
-  "Switch frame era?" question (the same frame as its "Switch to M15").
+  "Switch frame era?" question (the same frame as its "Switch to M15") —
+  so it can no longer be refused, as on Borderless — and an import onto
+  such a card no longer toasts "Switched to the M15 frame…";
+- lists in gallery order follow the new order: an import's "Show all
+  frames", the AI's pool (drawn uniformly), and the resolver's LAST resort
+  (`resolvePublishedFrame`: the first published frame of the gallery,
+  reached only where no era standard of the kind is published in the
+  card's colour — never with production's list) now meets an M15 treatment
+  before another set's showcase.
 
 `tests/unit/creator/frame-picker-groups.test.ts` holds every frame decision
 (gallery, kind gate, bases, resolver, import, remix, AI pools; production's
