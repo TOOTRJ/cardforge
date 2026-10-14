@@ -14,7 +14,6 @@ import type { HoloStampSwitch } from "@/lib/cards/holo-stamp";
 import {
   CARD_TYPE_VALUES,
   COLOR_IDENTITY_VALUES,
-  FRAME_SET_ERA,
   FRAME_TEMPLATE_SET,
   RARITY_VALUES,
   type CardType,
@@ -44,6 +43,7 @@ import {
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { isArtifactFrameType, pickFrameColorKey } from "@/components/cards/frame-layer";
 import { describeFrame, finalizeImportMatch, withVerification } from "@/lib/creator/frame-resolve";
+import { isTreatmentBody } from "@/lib/creator/frame-picker";
 import { qualifiesForCrown, twoColorDressOf, twoColorPairOf, type TwoColorPair } from "@/lib/cards/anatomy";
 import { supertypeHasWord } from "@/lib/cards/card-display";
 import {
@@ -1181,9 +1181,8 @@ export function printingTreatmentNotice(
   landed: FrameTemplate,
 ): string {
   const frame = describeFrame(landed);
-  const set = FRAME_TEMPLATE_SET[landed];
   const bordered =
-    treatment === "borderless" && set !== "borderless" && FRAME_SET_ERA[set] !== "showcase";
+    treatment === "borderless" && FRAME_TEMPLATE_SET[landed] !== "borderless" && !isTreatmentBody(landed);
   return `This printing ${PRINTING_TREATMENT_PHRASES[treatment]} — PipGlyph used the ${
     bordered ? `bordered ${frame}` : frame
   } frame.`;
