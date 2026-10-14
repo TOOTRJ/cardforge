@@ -863,6 +863,22 @@ Rules and gotchas:
   land follows its subtype onto the frame where it is verified
   (`SUBTYPE_DRESS_WORDS`, `subtypeFrameFor`: a card on a dress its
   subtypes still say keeps it); "Standard" is the way back.
+  The AI (PR 3, `lib/ai/station-design.ts`): the designer is told print's
+  shape and the lint holds an artifact that says Spacecraft / a land that
+  says Planet to it as ERRORS (a tier line, at most three, rising numbers,
+  the Station line word for word as the top band's last line); the autofix
+  repairs spelling and order and never invents a tier, so
+  `resolveGeneratedFrame` keeps a text with no tier OFF the frame
+  (`stationFrameFits` — never weaken it: the frame prints a P/T on a tier
+  only). A job that saves on the frame writes rows (`stationSaveFields`);
+  a remix keeps its source's tiers and P/T tier; a fill of the rules text
+  writes only a tier left empty (`mergeStationFill`) and keeps the P/T
+  choice with its tier. A new AI path that writes rules text goes through
+  `designCards`, or it knows nothing of tiers. What every OTHER card saves
+  through the AI jobs is pinned to main (`job-payloads-pinned.test.ts`).
+  The tier editor's notes (`lib/creator/station-fit.ts`: text really cut,
+  a band over the 600-character row limit) read the layout and the save's
+  rule; nothing reads them back.
   `docs/FRAMES.md` "The Station frame".
 - The Universes Beyond frames (`m15ub`, `m15ubartifact`, `m15ubland`; TODO
   4.25): STORED templates of their own (owner 2026-10-13), skins of m15 /

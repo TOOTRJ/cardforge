@@ -67,13 +67,13 @@ export type StationText = {
  *  fourth band). `maxTiers` is for READERS of the text only (every tier
  *  line it holds: the AI lint, the typography pass's "what did the stored
  *  card say") — a card never draws more than STATION_MAX_TIERS.
- *  Lines end at "\n" or "\r\n": a text saved through the API with Windows
+ *  Lines end at "\n", "\r\n" or a lone "\r": a text saved through the API with Windows
  *  line ends used to read as a top band alone ("8+ | Flying\r" is no tier
  *  line to a `.` that stops at "\r" — the independent check of #549). */
 export function parseStationText(rulesText: string | null | undefined, hasPt = false, maxTiers: number = STATION_MAX_TIERS): StationText {
   const intro: string[] = [];
   const tiers: StationTier[] = [];
-  for (const line of (rulesText ?? "").split(/\r?\n/)) {
+  for (const line of (rulesText ?? "").split(/\r\n|\r|\n/)) {
     const match = TIER_LINE.exec(line);
     const threshold = match ? Number(match[1]) : 0;
     if (match && threshold >= 1 && tiers.length < maxTiers) {

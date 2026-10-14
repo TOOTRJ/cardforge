@@ -45,7 +45,7 @@ import type { CardType } from "@/types/card";
 export const STATION_TOP_BAND_HELP =
   "The top band: the card's own abilities and the Station reminder. Click a symbol to drop it in at the cursor — or type its code ({T}, {2}, {W/U}). The tiers go in the rows below.";
 export const STATION_TIERS_HELP =
-  "Up to three. A tier's text switches on once the card holds that many charge counters; each tier is a band of its own on the card.";
+  "Up to three. A tier's text switches on once the card holds that many charge counters; each tier is a band of its own on the card. Leave a tier's text empty and the AI's rules text fills that tier alone — the other bands stay as written.";
 export const STATION_PT_HELP =
   "The power / toughness is printed on ONE tier — the one that makes the card a creature. Never on the top band.";
 

@@ -102,8 +102,13 @@ export function stationCutOf(card: StationFitCard): StationCut | null {
 
 const listOf = (parts: string[]) => (parts.length <= 1 ? parts.join("") : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`);
 
-/** The note under the tiers: which bands are cut, and what helps. */
+/** The note under the tiers: which bands are cut, and what helps. A card
+ *  with more text than its whole box holds shares the box between its bands
+ *  — each one's end is cut — so it is said once, not band by band. */
 export function stationCutNote(cut: StationCut, thresholds: readonly number[]): string {
+  if (cut.top && thresholds.length > 0 && cut.tiers.length === thresholds.length) {
+    return "This text doesn't fit: the card has more text than its box holds, so the end of every band is cut off. Shorten the text.";
+  }
   const bands = [...(cut.top ? ["the top band"] : []), ...cut.tiers.map((i) => `tier ${i + 1} (${thresholds[i] ?? "?"}+)`)];
   const what = listOf(bands);
   return `This text doesn't fit: the card cuts off the end of ${what}. Shorten ${bands.length > 1 ? "them" : "it"}, or move text to another band.`;
