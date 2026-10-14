@@ -8,7 +8,7 @@
 // (template, color) combos are ever chosen, using the color key the
 // generated card will actually render with.
 
-import type { CardType, ColorIdentity, FrameTemplate } from "@/types/card";
+import { ERA_TYPE_FRAME, type CardType, type ColorIdentity, type FrameTemplate } from "@/types/card";
 import {
   borrowedFrameFits,
   enchantmentFrameFits,
@@ -198,6 +198,20 @@ export function resolveGeneratedFrame(input: {
   if (pool.length === 0) return null;
   const rng = input.random ?? Math.random;
   return pool[Math.floor(rng() * pool.length) % pool.length].template;
+}
+
+/** What an AI DECK card asks resolveGeneratedFrame for (owner 2026-10-14):
+ *  the M15 standard of its card type — m15land for a land, m15artifact for
+ *  an artifact, m15pw for a walker, m15token for a token — which the
+ *  resolver then dresses exactly as it dresses a single generated card (a
+ *  Vehicle's or a Spacecraft's subtype frame, the Nyx dress, a token's text
+ *  box and height, a walker's rows, never a textless frame for a text)
+ *  wherever that frame is published in the card's colour, and degrades to a
+ *  random published frame of the type where it is not. Undefined (no
+ *  template saved: the default frame, as every deck card saved before) for
+ *  a type the M15 era has no frame for. */
+export function deckCardFrameRequest(cardType: CardType): FrameRequest {
+  return ERA_TYPE_FRAME.m15?.[cardType];
 }
 
 /** True when a GENERATED card may land on `template` as far as the station

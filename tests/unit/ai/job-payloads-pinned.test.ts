@@ -257,12 +257,19 @@ describe("the single-card job's step saves what main saved", () => {
   });
 });
 
-describe("the deck job's card step saves what main saved", () => {
+describe("the deck job's card step saves what main saved, and its frame", () => {
+  // Since the AI deck cards got their FRAME (owner 2026-10-14) the save
+  // carries `frame_style` — the frame resolveGeneratedFrame gives the card
+  // (tests/unit/ai/deck-card-frame.test.ts); main saved none. Everything
+  // else is main's record, byte for byte (the record is untouched).
   it.each(["creature", "artifact (Vehicle, on its frame)", "artifact with 'N+ |' lines", "land"])("%s", async (name) => {
-    const { card } = CARDS[name]!;
+    const { card, frame } = CARDS[name]!;
     const plan = { deck_title: "Deck", strategy: "Go wide.", theme: "embers", style: null, cards: [card], roles: [name === "creature" ? "commander" : "noncreature"], quantities: [1] };
     job("deck", plan, "card:0", { deck_id: "deck-1" });
-    pinned(`deck step · ${name}`, await runStep());
+    const out = await runStep();
+    const { frame_style: frameStyle, ...saved } = out.saved as Record<string, unknown>;
+    expect(frameStyle).toEqual({ template: frame });
+    pinned(`deck step · ${name}`, { ...out, saved });
   });
 });
 
