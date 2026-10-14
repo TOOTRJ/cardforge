@@ -2879,7 +2879,10 @@ that count.
         ellipsizes a character earlier in the bake (Satori fits unkerned
         widths); centred stat values keep the same half-kerning offset (P/T
         "4/4" kerns −271/2048 em: ~4 px left at HD); Satori never forms
-        Beleren's ffi ligature the browser draws ("Office").
+        Beleren's ffi ligature the browser draws ("Office") — CLOSED
+        2026-10-13 on the preview's side: ffi and ffl are all the font has,
+        and `CardPreview` now sets `font-variant-ligatures: none`
+        (tests/parity `@ffi-ligature`, `@ffl-ligature`).
       - **Round-5 open tail (pre-existing, found by the v29 tracks; none is
         a v29 regression):** a walker whose abilities don't fit even at 5 pt
         still overprints or clips (warn in the editor);

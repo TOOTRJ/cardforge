@@ -644,7 +644,18 @@ export function CardPreview(rawProps: CardPreviewProps) {
           "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         className,
       )}
-      style={{ containerType: "inline-size" }}
+      // Ligatures OFF on every text of the card: the bake never forms one.
+      // Beleren (CardDisplay) has two in its GSUB 'liga' — ffi and ffl —
+      // which a browser sets by default on any line with no letter-spacing
+      // (a type line; tracking switches them off by itself, so M15's names
+      // never had them) and Satori's opentype.js does not: "Griffin",
+      // "Officer", "Shuffler" drew another glyph, 0.095 em (ffi) / 0.15 em
+      // (ffl) shorter than the three kerned letters, and the rest of the line
+      // sat left of the stored image's. MPlantin and the collector face have
+      // no GSUB at all. Kerning is another property (font-kerning, GPOS) and
+      // stays on, as in the bake. Held by tests/parity "@ffi-ligature" /
+      // "@ffl-ligature" and tests/unit/render/card-font-ligatures.test.tsx.
+      style={{ containerType: "inline-size", fontVariantLigatures: "none" }}
       {...(clickToFlip
         ? {
             role: "button",

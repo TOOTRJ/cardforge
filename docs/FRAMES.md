@@ -3045,7 +3045,15 @@ by hand in the Types field stays; a new card only. (4) Faceless One
 (CLB #1) and the ten `inverted`-only promo-pack printings become
 `nearest` in a follow-up. (5) Beleren's "ffi" ligature in the preview
 (`hd-beleren-ffi-ligature`, tests/parity) is its own PR, after fi / ff / fl
-are measured.
+are measured. — DONE in that PR: Beleren's GSUB `liga` holds two ligatures,
+ffi and ffl, and nothing else (no fi, fl or ff; MPlantin and the collector
+face have no GSUB). Chromium and WebKit form both on a line with no
+letter-spacing — a type line; a tracked name never had them — and Satori
+forms neither, so the PREVIEW switches them off (`font-variant-ligatures:
+none` on `CardPreview`'s root; kerning stays on). No bake changed: no bump,
+no sweep. The known difference is struck; `@ffi-ligature` and
+`@ffl-ligature` (tests/parity) and
+`tests/unit/render/card-font-ligatures.test.tsx` hold it.
 
 **Rollout: an addition.** No stored card sits on a new template: no layout
 bump, no sweep, no badge.
