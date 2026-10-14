@@ -873,7 +873,13 @@ Rules and gotchas:
   masters, pair masters and plates, the Universes Beyond crown band
   (`UB_CROWN`, `m15ubcrown/*`: no `c` key) and the TRIANGLE stamp's notch
   (`M15UB_HOLO_STAMP`, `m15ubholostamp/*`: CC's piece resampled once, the
-  triangle cut clear, our own triangle art from `holoStampArtOf`). The
+  triangle cut clear, our own triangle art from `holoStampArtOf`). On a
+  TRIANGLE frame `"auto"` stamps EVERY rarity, as print does (owner Round
+  57; layout v55, a sweep scoped to the three frames): `holoStampWanted`
+  reads the slot's shape, and the face's tone is `holoStampToneOf` — the
+  flat MATTE grey on a common or uncommon, our silver at the hologram's
+  printed level on a rare or mythic, whatever "on" value asks for it; an
+  oval frame's rule (a rare or mythic) and its one oval are untouched. The
   pack's colourless frame is missing from Card Conjurer's tree: `m15ub/c`
   is its ARTIFACT frame, has no reference printing (print's colourless
   card is see-through) and stays unverified until the owner decides. Three

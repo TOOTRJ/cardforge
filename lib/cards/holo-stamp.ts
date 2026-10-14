@@ -32,9 +32,15 @@ export type HoloStampSwitch = (typeof HOLO_STAMP_SWITCH_VALUES)[number];
 
 /** The stamp shapes print uses: the oval (every 2015-frame rare and mythic)
  *  and the Universes Beyond triangle (the Universes Beyond frames, TODO
- *  4.25 — print stamps EVERY rarity there, 191 of 198 read; the switch
- *  keeps its meaning all the same: "auto" is a rare or mythic). */
+ *  4.25 — print stamps EVERY rarity there, so "auto" does too on a frame
+ *  whose notch is cut for the triangle: owner Round 57, decision 2). */
 export type HoloStampShape = "oval" | "triangle";
+
+/** How the stamp's face is printed: the hologram (every oval; the
+ *  triangle of a rare or mythic) or the flat MATTE grey the Universes
+ *  Beyond frames print on a common and an uncommon (26 digital prints read
+ *  2026-10-14: 95, 97, 96, no sheen). */
+export type HoloStampTone = "holo" | "matte";
 
 export function isHoloStampSwitch(value: unknown): value is HoloStampSwitch {
   return (HOLO_STAMP_SWITCH_VALUES as readonly unknown[]).includes(value);
@@ -54,22 +60,39 @@ export const STAMPLESS_CARD_TYPES: ReadonlySet<string> = new Set(["token", "embl
 export type HoloStampFacts = {
   cardType?: string | null;
   rarity?: string | null;
+  /** The shape the FRAME's notch is cut for (the profile's `holoStamp`
+   *  slot). Absent = the oval — every caller that knows the frame passes
+   *  it; one that doesn't gets the oval's rule. */
+  shape?: HoloStampShape | null;
 };
 
 /**
  * Whether the switch value draws the stamp for a card (the template's
  * notch aside — resolveHoloStamp in lib/cards/anatomy.ts asks the profile):
- * "auto" on a rare or mythic; "oval" and "triangle" always; "none" and an
- * absent key never; never on a token or an emblem. The SHAPE drawn is the
- * template's own (the notch is cut for one shape): an imported "triangle"
- * on a wave-1 frame draws that frame's oval, and keeps its key for a frame
- * that prints the triangle (4.9d).
+ * "auto" as the frame's own print does — a rare or mythic on an oval frame,
+ * EVERY rarity on a triangle frame (Universes Beyond stamps commons and
+ * uncommons too; owner Round 57); "oval" and "triangle" always; "none" and
+ * an absent key never; never on a token or an emblem. The SHAPE drawn is
+ * the template's own (the notch is cut for one shape): an imported
+ * "triangle" on an oval frame draws that frame's oval.
  */
 export function holoStampWanted(stamp: unknown, facts: HoloStampFacts): boolean {
   if (!isHoloStampSwitch(stamp) || stamp === "none") return false;
   if (STAMPLESS_CARD_TYPES.has(facts.cardType ?? "")) return false;
-  if (stamp === "auto") return AUTO_RARITIES.has((facts.rarity ?? "").toLowerCase());
+  if (stamp === "auto") return facts.shape === "triangle" || AUTO_RARITIES.has((facts.rarity ?? "").toLowerCase());
   return true;
+}
+
+/**
+ * The tone a drawn stamp's face takes: the triangle is MATTE on every
+ * rarity print does not hologram (anything but a rare or a mythic — a card
+ * with no rarity too), the hologram otherwise; the oval is always the
+ * hologram (print stamps no oval below a rare, so "Always" on a common is
+ * the maker's own call and draws the one oval there is).
+ */
+export function holoStampToneOf(shape: HoloStampShape, rarity: string | null | undefined): HoloStampTone {
+  if (shape !== "triangle") return "holo";
+  return AUTO_RARITIES.has((rarity ?? "").toLowerCase()) ? "holo" : "matte";
 }
 
 /** True when the creator offers the stamp control for a card type at all

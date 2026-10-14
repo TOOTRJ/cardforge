@@ -1364,7 +1364,37 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            The visual matrix: 51 of its 52 station cases change, no other
 //            case of 1581. No verification scope: neither template has a
 //            tick.
+//   v55    — the Universes Beyond triangle as printed (TODO 4.25 follow-up,
+//            owner Round 57 decision 2). On `m15ub`, `m15ubartifact` and
+//            `m15ubland` alone: `frame_style.stamp: "auto"` stamps EVERY
+//            rarity (it stamped a rare or a mythic), the triangle of a
+//            common or an uncommon is print's flat matte grey (95, 97, 96)
+//            and the hologram of a rare or a mythic is toned to print's
+//            level (a mean luminance of 151 in the bake where ours read 209; print 148) — 64
+//            prints read 2026-10-14. UB_STAMP_TONES_LAYOUT_VERSION below —
+//            the ONE constant. A CORRECTION ("sweep"), never a badge: the
+//            look was wrong against the frame's own print. Card-scoped
+//            (v55Changed): a card whose stamp switch is "auto", "oval" or
+//            "triangle" and that is no token or emblem — every other card
+//            on the three frames is stamped. The frames merged on
+//            2026-10-14 and are reached by a pick or an import only, so few
+//            stored cards can be in scope; production cannot be read from
+//            here (the count shows on /admin/renders once deployed).
+//            Verification-neutral: no slot, master, notch or plate moves —
+//            only the stamp's own art, which no tick scores — so the ticks
+//            the owner is making on these frames stay fresh. The notch and
+//            its rules keep-out are unchanged: a card that drew the stamp
+//            keeps every line; a common or uncommon on "auto" gains the
+//            notch and with it the keep-out its "Always" twin always had.
 // ---------------------------------------------------------------------------
+
+/** The Universes Beyond triangle as printed (TODO 4.25 follow-up): "auto"
+ *  on every rarity, the matte triangle, the hologram's tone. ITS version
+ *  lives here alone — CARD_LAYOUT_VERSION, the template and card scopes and
+ *  the rollout below read this constant — so a bump that merges first moves
+ *  it in one place. Frozen once it ships. */
+export const UB_STAMP_TONES_LAYOUT_VERSION = 55;
+export const UB_STAMP_TONES_TEMPLATES: readonly string[] = ["m15ub", "m15ubartifact", "m15ubland"];
 
 /** The station frame on print's band rule (TODO 4.27a, PR 2): every card
  *  on `m15station` and `m15stationland`. ITS version lives here alone —
@@ -1433,7 +1463,7 @@ export const LARGE_PIPS_LAYOUT_VERSION = 53;
  *  latest). */
 export const V53_LARGER_COST_TEMPLATES: readonly string[] = ["modern", "modernland"];
 
-export const CARD_LAYOUT_VERSION = STATION_BANDS_LAYOUT_VERSION;
+export const CARD_LAYOUT_VERSION = UB_STAMP_TONES_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -1612,6 +1642,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // layout and drawn pieces; every card on it (none stored in production).
   // No narrower verification scope: neither template has a tick.
   [STATION_BANDS_LAYOUT_VERSION]: STATION_BANDS_TEMPLATES,
+  // The Universes Beyond triangle as printed (4.25 follow-up): the three
+  // Universes Beyond frames — and on them only a card that draws, or now
+  // gains, the stamp (v55Changed). Verification-neutral.
+  [UB_STAMP_TONES_LAYOUT_VERSION]: UB_STAMP_TONES_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -1685,6 +1719,23 @@ export const V36_TEXTLESS_TEMPLATES: readonly string[] = ["m20token", "m20tokena
 export const V36_BACK_FACE_TEXT_TEMPLATES: readonly string[] = ["adventure", "flip", "split", "aftermath"];
 
 /**
+ * v55 — the Universes Beyond triangle as printed (the template scope holds
+ * it to the three frames): a card whose `frame_style.stamp` asks for a
+ * stamp ("auto", "oval" or "triangle" — every drawn triangle changes its
+ * tone, and "auto" now draws one on a common and an uncommon) and whose
+ * type prints one (never a token or an emblem). "none", an absent key and
+ * the stampless types bake to the same pixels. A row without `frame_style`
+ * or `card_type` can't be judged → conservative.
+ */
+function v55Changed(card: ScopeCard): boolean {
+  if (card.frame_style === undefined) return true;
+  const stamp = card.frame_style && typeof card.frame_style === "object" ? (card.frame_style as { stamp?: unknown }).stamp : undefined;
+  if (stamp !== "auto" && stamp !== "oval" && stamp !== "triangle") return false;
+  if (card.card_type === undefined) return true;
+  return card.card_type !== "token" && card.card_type !== "emblem";
+}
+
+/**
  * Bumps whose frame SLOTS move on fewer templates than their stored bakes
  * change on: frame verification judges a tick by this list instead of the
  * card scope. v34's wording (3b.15, a token's line on any template) moves no
@@ -1756,6 +1807,10 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
  * on the prints' larger disc inside the cost and rules slots a frame
  * already has — no slot, master, size or plate moves, and a card without
  * one bakes to the same pixels.
+ * v55 is (TODO 4.25 follow-up): only the triangle stamp's own art changes
+ * on the three Universes Beyond frames (its tone; its presence on a common
+ * or uncommon under "auto") — no slot, master, notch piece or plate moves,
+ * and no tick scores the stamp.
  * Stored bakes still owe these bumps: this list is read by frame
  * verification only, never by the stale / sweep / download rules.
  */
@@ -1763,6 +1818,7 @@ export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [
   31, 32, 33, 35, 36, 37, 44, 49, TYPE_LINE_ORDER_LAYOUT_VERSION, ART_FOCAL_ZERO_LAYOUT_VERSION,
   TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION,
   LARGE_PIPS_LAYOUT_VERSION,
+  UB_STAMP_TONES_LAYOUT_VERSION,
 ];
 
 /** TEMPLATE_SCOPED_VERSIONS with VERIFICATION_TEMPLATE_SCOPES laid over it
@@ -2473,6 +2529,10 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // anywhere, a Phyrexian one in a text, or in a cost on the 2003 pair and
   // the modal bodies — v53Changed.
   [LARGE_PIPS_LAYOUT_VERSION]: v53Changed,
+  // v55 — the Universes Beyond triangle as printed: on the three frames
+  // (the template scope), a card whose stamp switch asks for one —
+  // v55Changed.
+  [UB_STAMP_TONES_LAYOUT_VERSION]: v55Changed,
 };
 
 /** `frame_style.finish` from the jsonb column, or null when absent (= regular). */
@@ -2604,6 +2664,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [TYPE_LINE_ORDER_LAYOUT_VERSION]: "sweep", // the type line in its printed order + the P/T of a land creature (1.20) — a correction of what a face prints; 0 public or unlisted stored cards in scope, never a badge
   [TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION]: "sweep", // a name's room before a detached cost of Phyrexian symbols (6.16d) — a correction of a fit that ran the name under the pips; 0 public or unlisted stored cards in scope, never a badge
   [STATION_BANDS_LAYOUT_VERSION]: "sweep", // the station frame on print's band rule, numeral sizes and ring tone (4.27a, PR 2) — a correction on a frame not offered yet
+  [UB_STAMP_TONES_LAYOUT_VERSION]: "sweep", // the Universes Beyond triangle as printed (4.25 follow-up): "auto" on every rarity, the matte triangle of a common / uncommon, the hologram's tone — a correction of the stamp against the frame's own print on three frames a day old, never a badge
   [LARGE_PIPS_LAYOUT_VERSION]: "sweep", // hybrid and twobrid discs large, the large pip's factor per frame and place (3.21) — a correction against the prints after the owner's round-49 sheets, never a badge
   [SYMBOLS_PRINT_LAYOUT_VERSION]: "sweep", // five symbols on the prints' drawings + flat rules-text pips (6.16b) — a correction against the prints after the owner's round-43 sheets, never a badge
   [ART_FOCAL_ZERO_LAYOUT_VERSION]: "sweep", // the art's zoom about a focal point of exactly 0 (Satori dropped a zero transform-origin) — a correction of the bake against the preview after the owner's before / after sheet, never a badge

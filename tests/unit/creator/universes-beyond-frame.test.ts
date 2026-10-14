@@ -13,8 +13,8 @@ import {
   roundTriangleBounds,
   roundTriangleDistance,
 } from "@/lib/cards/holo-stamp";
-import { HOLO_STAMP_OVAL_ART, HOLO_STAMP_TRIANGLE_ART, holoStampArtOf } from "@/lib/cards/holo-stamp-art";
-import { TRIANGLE_STAMP_HELP, holoStampChipOptions } from "@/components/creator/panels/collector-panel";
+import { HOLO_STAMP_OVAL_ART, HOLO_STAMP_TRIANGLE_ART, HOLO_STAMP_TRIANGLE_MATTE_ART, holoStampArtOf } from "@/lib/cards/holo-stamp-art";
+import { TRIANGLE_STAMP_HELP, holoStampAnswer, holoStampChipOptions } from "@/components/creator/panels/collector-panel";
 import { M15_FAMILY_TEMPLATES } from "@/lib/cards/m15-family";
 import { PLATE_INK } from "@/lib/cards/plate-ink";
 import { M15UB_HOLO_STAMP, M15_COLLECTOR, M15_CROWN, M15_HOLO_STAMP, UB_CROWN, getFrameProfile } from "@/lib/cards/template-layout";
@@ -157,7 +157,7 @@ describe("the profiles", () => {
 describe("the triangle stamp", () => {
   const facts = { cardType: "creature", supertype: null, colors: ["red"], colorKey: "r" } as const;
 
-  it("is this frame's shape: every 'on' value draws the triangle; 'auto' is still a rare or mythic", () => {
+  it("is this frame's shape: every 'on' value draws the triangle; 'auto' stamps EVERY rarity here, matte below a rare (Round 57)", () => {
     const profile = getFrameProfile("m15ub");
     for (const stamp of ["oval", "triangle"] as const) {
       const drawn = resolveHoloStamp(profile, { stamp }, { ...facts, rarity: "common" });
@@ -166,9 +166,29 @@ describe("the triangle stamp", () => {
       expect(drawn?.artRect).toEqual(holoStampArtRect(M15UB_HOLO_STAMP_BOX));
       expect(drawn?.keepOut).toEqual(M15UB_HOLO_STAMP_KEEP_OUT);
     }
-    expect(resolveHoloStamp(profile, { stamp: "auto" }, { ...facts, rarity: "common" })).toBeNull();
-    expect(resolveHoloStamp(profile, { stamp: "auto" }, { ...facts, rarity: "uncommon" })).toBeNull();
-    expect(resolveHoloStamp(profile, { stamp: "auto" }, { ...facts, rarity: "rare" })?.shape).toBe("triangle");
+    // "auto" is the frame's own print: every rarity carries the triangle —
+    // matte grey on a common or uncommon, the hologram on a rare or mythic —
+    // and "Always" takes the same tone from the rarity.
+    for (const template of ["m15ub", "m15ubartifact", "m15ubland"] as const) {
+      const p = getFrameProfile(template);
+      const f = { ...facts, cardType: template === "m15ubland" ? "land" : template === "m15ubartifact" ? "artifact" : "creature" };
+      for (const stamp of ["auto", "oval", "triangle"] as const) {
+        for (const [rarity, tone] of [["common", "matte"], ["uncommon", "matte"], ["rare", "holo"], ["mythic", "holo"], [null, "matte"], ["special", "matte"]] as const) {
+          const drawn = resolveHoloStamp(p, { stamp }, { ...f, rarity });
+          expect(drawn?.shape, `${template} ${stamp} ${rarity}`).toBe("triangle");
+          expect(drawn?.tone, `${template} ${stamp} ${rarity}`).toBe(tone);
+          expect(drawn?.keepOut).toEqual(M15UB_HOLO_STAMP_KEEP_OUT);
+        }
+      }
+      // Never a token or an emblem, never "none", never an absent key.
+      for (const cardType of ["token", "emblem"]) expect(resolveHoloStamp(p, { stamp: "auto" }, { ...f, cardType, rarity: "common" })).toBeNull();
+      expect(resolveHoloStamp(p, { stamp: "none" }, { ...f, rarity: "common" })).toBeNull();
+      expect(resolveHoloStamp(p, {}, { ...f, rarity: "common" })).toBeNull();
+    }
+    // The M15 twin keeps the oval's rule: "auto" is a rare or mythic there.
+    expect(resolveHoloStamp(getFrameProfile("m15"), { stamp: "auto" }, { ...facts, rarity: "common" })).toBeNull();
+    expect(resolveHoloStamp(getFrameProfile("m15"), { stamp: "auto" }, { ...facts, rarity: "rare" })?.tone).toBe("holo");
+    expect(resolveHoloStamp(getFrameProfile("m15"), { stamp: "oval" }, { ...facts, rarity: "common" })?.tone).toBe("holo");
     expect(resolveHoloStamp(profile, { stamp: "none" }, { ...facts, rarity: "mythic" })).toBeNull();
     expect(resolveHoloStamp(profile, {}, { ...facts, rarity: "mythic" })).toBeNull();
     // The M15 twin keeps its oval, whatever the stored word.
@@ -182,11 +202,32 @@ describe("the triangle stamp", () => {
     expect(holoStampChipOptions("oval").map((o) => o.value)).toEqual(["auto", "oval", "none"]);
     expect(TRIANGLE_STAMP_HELP).toMatch(/triangle/);
     expect(TRIANGLE_STAMP_HELP).not.toMatch(/oval/);
+    // The copy says what Auto does on each frame, and the live answer names the tone.
+    expect(TRIANGLE_STAMP_HELP).toMatch(/every rarity/);
+    expect(TRIANGLE_STAMP_HELP).toMatch(/matte grey on a common or uncommon/);
+    expect(holoStampChipOptions("triangle")[0]!.label).toBe("Auto: every rarity");
+    expect(holoStampChipOptions("oval")[0]!.label).toBe("Auto: rares & mythics");
+    const card = (rarity: string | null) => ({ cardType: "creature", rarity });
+    expect(holoStampAnswer("auto", card("common"), "triangle")).toBe("Common → matte grey triangle");
+    expect(holoStampAnswer("triangle", card("uncommon"), "triangle")).toBe("Uncommon → matte grey triangle");
+    expect(holoStampAnswer("auto", card("rare"), "triangle")).toBe("Rare → silver triangle");
+    expect(holoStampAnswer("auto", card("mythic"), "triangle")).toBe("Mythic → silver triangle");
+    expect(holoStampAnswer("none", card("mythic"), "triangle")).toBe("Mythic → no stamp");
+    expect(holoStampAnswer(undefined, card("common"), "triangle")).toBe("Common → no stamp");
+    expect(holoStampAnswer("auto", { cardType: "token", rarity: "common" }, "triangle")).toBe("Common → no stamp");
+    expect(holoStampAnswer("auto", card("common"))).toBe("Common → no stamp");
   });
 
   it("each shape has its own art bitmap, at the art rect's proportions", () => {
     expect(holoStampArtOf("oval")).toBe(HOLO_STAMP_OVAL_ART);
     expect(holoStampArtOf("triangle")).toBe(HOLO_STAMP_TRIANGLE_ART);
+    expect(holoStampArtOf("triangle", "holo")).toBe(HOLO_STAMP_TRIANGLE_ART);
+    expect(holoStampArtOf("triangle", "matte")).toBe(HOLO_STAMP_TRIANGLE_MATTE_ART);
+    // The oval has one face, whatever tone is asked.
+    expect(holoStampArtOf("oval", "matte")).toBe(HOLO_STAMP_OVAL_ART);
+    expect(HOLO_STAMP_TRIANGLE_MATTE_ART.width).toBe(HOLO_STAMP_TRIANGLE_ART.width);
+    expect(HOLO_STAMP_TRIANGLE_MATTE_ART.height).toBe(HOLO_STAMP_TRIANGLE_ART.height);
+    expect(HOLO_STAMP_TRIANGLE_MATTE_ART.dataUri).not.toBe(HOLO_STAMP_TRIANGLE_ART.dataUri);
     const art = holoStampArtRect(M15UB_HOLO_STAMP_BOX);
     expect(HOLO_STAMP_TRIANGLE_ART.width).toBe(Math.round((art.widthPct / 100) * 1500 * 2));
     expect(HOLO_STAMP_TRIANGLE_ART.height).toBe(Math.round((art.heightPct / 100) * 2100 * 2));

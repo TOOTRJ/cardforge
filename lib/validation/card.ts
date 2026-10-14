@@ -319,7 +319,8 @@ const frameStyleBaseSchema = z
     collector: z.enum(COLLECTOR_SWITCH_VALUES).optional(),
     star: z.literal(true).optional(),
     // The holofoil stamp's switch (TODO 4.9c, lib/cards/holo-stamp.ts):
-    // "auto" (rares and mythics), "oval" / "triangle" (always), "none", or
+    // "auto" (rares and mythics; every rarity on a triangle frame), "oval" /
+    // "triangle" (always), "none", or
     // absent (a card from before the stamp).
     stamp: z.enum(HOLO_STAMP_SWITCH_VALUES).optional(),
     // The transform icon family (TODO 5.0a, lib/cards/dfc.ts): one of the
