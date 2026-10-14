@@ -24,6 +24,10 @@ import {
   type RulesTarget,
 } from "@/lib/cards/rules-layout";
 import { sagaRail, sagaRailDrawing, type SagaRail } from "@/lib/cards/saga-rail";
+import { M15_HOLO_STAMP_KEEP_OUT } from "@/lib/cards/holo-stamp";
+import { STATION, parseStationText, type StationText } from "@/lib/cards/station";
+import { stationLayout, type StationLayout } from "@/lib/cards/station-layout";
+import stationOracle from "@/tests/unit/cards/fixtures/station-oracle.json";
 import { getFrameProfile, profileOffersRulesAlign, type FrameProfile } from "@/lib/cards/template-layout";
 import { RULES_HD_WIDTH, RULES_SIZE_PX } from "@/lib/cards/typography";
 import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
@@ -239,7 +243,7 @@ function consumersOf(template: FrameTemplate, text: RulesCase, rulesAlign?: "cen
   const out: Consumer[] = [];
   // The saga's rail replaces its box; a walker with abilities draws rows; a
   // textless frame (the full-art token's textless height) draws no box.
-  // (The station frame sets its text through its own tiers layout, never this box — TODO 4.27a; tests/unit/cards/station-layout.test.ts holds its no-clip.)
+  // (The station frame sets its text through its own tiers layout, never this box — TODO 4.27a; "the station box" below holds its bands to the same rules.)
   if (!layout.chapters && !layout.textless && !layout.tiers) {
     out.push({ key: `${template}/main`, layout: mainRulesLayout({ layout, rulesText: text.rules, flavorText: text.flavor, aspect, show, rulesAlign }) });
   }
@@ -583,6 +587,105 @@ describe("the saga rail — its reminder block and every chapter row (TODO 4.21c
         expect(b.fontPx * 2, name).toBe(a.fontPx);
         expect(b.blocks.map((x) => (x.kind === "blank" ? 0 : x.lines))).toEqual(a.blocks.map((x) => (x.kind === "blank" ? 0 : x.lines)));
       });
+    }
+  });
+});
+
+describe("the station box — the top band and every tier band (TODO 4.27a)", () => {
+  const PROFILE = getFrameProfile("m15station");
+  const REMINDER =
+    "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 8+.)";
+  const lay = (text: StationText, pt: string | null, stamped: boolean, flavorText: string | null = null): StationLayout =>
+    stationLayout({ profile: PROFILE, text, flavorText, ptValue: pt, stamp: stamped ? M15_HOLO_STAMP_KEEP_OUT : null });
+  /** A matrix text as a station card: the reminder over (at most three)
+   *  tiers its paragraphs are dealt on, the plate on the last, stamped. */
+  function stationOf(text: RulesCase): StationLayout {
+    // (The fallback-glyph line stays a FIRST line, as it is in the matrix:
+    // its ink is taller than the face's, which only a first line allows for.)
+    const paragraphs = text.name === "non-Latin + emoji" ? [text.rules!] : (text.rules ?? "Flying").split(/\n+/).filter((p) => p.trim());
+    const tiers = paragraphs.slice(0, 3).map((p, i, all) => ({ threshold: 3 * (i + 1), text: i === 2 ? paragraphs.slice(2).join("\n") : p, pt: i === all.length - 1 }));
+    return lay({ intro: REMINDER, tiers }, "4/4", true, text.flavor);
+  }
+  const one = (word: string, threshold: number, pt = false) => ({ threshold, text: word, pt });
+  const SHAPES: Record<string, StationLayout> = {
+    // The card the independent check of #543 clipped at 42 px.
+    "two keyword lines, the reminder, three one-word tiers": lay({ intro: `Flash\nWard {2}\n${REMINDER}`, tiers: [one("Flying", 2), one("Vigilance", 6), one("Trample", 10, true)] }, "5/5", true),
+    "three full tiers, the plate on the middle one": lay(
+      {
+        intro: REMINDER,
+        tiers: [
+          one("Flying", 2),
+          one("Whenever this Spacecraft attacks, draw a card, then discard a card.", 8, true),
+          one("Other creatures you control get +2/+2 and have vigilance.", 14),
+        ],
+      },
+      "20/20",
+      true,
+    ),
+    "no tier": lay({ intro: `Flying\n${REMINDER}`, tiers: [] }, null, true),
+    "no top text": lay({ intro: "", tiers: [one("{T}: Add {G}{G}.", 4), one("Flying, trample", 9, true)] }, "6/6", false),
+    "a Planet (no plate), stamped": lay({ intro: "{T}: Add {W}.", tiers: [one("{3}{W}, {T}: Create a token that's a copy of target artifact or enchantment you control, except it's legendary. Activate only as a sorcery.", 12)] }, null, true),
+    "pips beside the plate": lay({ intro: REMINDER, tiers: [one("{2}{U}{U}, {T}: Draw two cards. {W/U}{W/U}: This Spacecraft gains flying until end of turn.", 8, true)] }, "10/10", true),
+  };
+  const printed = (stationOracle as { name: string; oracle_text: string; power: string | null; toughness: string | null }[]).map((card): [string, StationLayout] => {
+    const pt = card.power !== null && card.toughness !== null ? `${card.power}/${card.toughness}` : null;
+    return [card.name, lay(parseStationText(card.oracle_text, pt !== null), pt, true)];
+  });
+  const stations = (): [string, StationLayout][] => [...RULES_MATRIX.map((text): [string, StationLayout] => [text.name, stationOf(text)]), ...Object.entries(SHAPES), ...printed];
+
+  it("clips only the texts no box can hold at the floor — and says so, its bands still inside the box", () => {
+    const clipped = stations().filter(([, laid]) => laid.clipped);
+    // Three texts that fill an ORDINARY box to its floor, here under a whole
+    // Station reminder and with tier bands to pay for: 1,200 characters, the
+    // seven-paragraph level-up text, and a full card of typed rules + flavor.
+    expect(clipped.map(([name]) => name).sort()).toEqual(["1200 chars", "level up", "typed, as printed"]);
+    for (const [name, laid] of clipped) {
+      expect(laid.sizePx, name).toBe(RULES_SIZE_PX.floor);
+      expect(laid.rule, name).toBe(STATION.bandRules.length - 1);
+    }
+    for (const [name, laid] of stations()) {
+      expect(laid.bands.top.y0, name).toBe(STATION.box.top);
+      let y = laid.bands.top.y1;
+      for (const band of laid.bands.tiers) {
+        expect(band.y0, name).toBe(y);
+        expect(band.y1, name).toBeGreaterThan(band.y0);
+        y = band.y1;
+      }
+      expect(y, name).toBe(STATION.box.bottom);
+    }
+  });
+
+  for (const target of ["default", "hd"] as const) {
+    it(`draws every fitted band's text inside its band, clear of the stamp, line for line (${target})`, async () => {
+      let boxes = 0;
+      const scale = RULES_TARGET_SCALE[target];
+      for (const [name, laid] of stations()) {
+        if (laid.clipped) continue;
+        // The HD bake: the shapes and the matrix; the 36 printed cards at 750 px only.
+        if (target === "hd" && printed.some(([n]) => n === name)) continue;
+        const bands = [laid.bands.top, ...laid.bands.tiers];
+        const texts = [laid.top, ...laid.tiers.map((t) => t.text)];
+        for (const [i, text] of texts.entries()) {
+          if (!text || text.blocks.every((b) => b.lines.length === 0)) continue;
+          const { placed } = await checkDrawn(text, target, `station · ${name} · band ${i}`);
+          // …inside its OWN band: the box the ink is held to is the band's rows.
+          expect(placed.box.top, `${name} band ${i}`).toBeGreaterThanOrEqual(bands[i]!.y0 * scale - EPS);
+          expect(placed.box.top + placed.box.height, `${name} band ${i}`).toBeLessThanOrEqual(bands[i]!.y1 * scale + EPS);
+          boxes += 1;
+        }
+      }
+      expect(boxes).toBeGreaterThan(target === "hd" ? 30 : 100);
+    }, 300_000);
+  }
+
+  it("draws the same lines at both targets, the 750 font exactly half the HD one", () => {
+    for (const [name, laid] of stations()) {
+      for (const text of [laid.top, ...laid.tiers.map((t) => t.text)]) {
+        if (!text) continue;
+        const [a, b] = [rulesDraw(text, "hd"), rulesDraw(text, "default")];
+        expect(b.fontPx * 2, name).toBe(a.fontPx);
+        expect(b.blocks.map((x) => (x.kind === "blank" ? 0 : x.lines))).toEqual(a.blocks.map((x) => (x.kind === "blank" ? 0 : x.lines)));
+      }
     }
   });
 });

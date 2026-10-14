@@ -3171,21 +3171,70 @@ never the top band, and only on a card that prints a P/T
 (`printsPowerToughness`), so a Planet has none.
 
 **The tiers layout** (`lib/cards/station-layout.ts`, the `tiers` anatomy of
-the ONE rules layout): one size for the whole box; each tier band is its
-text + 2 × 20 px, never under 168 px (180 for the last), the top band the
-rest, its text 20 px clear of its edges; every band's lines are
-`layoutRulesAt`'s (both targets), centred in the band, a tier's column from
-x 180; the plate is a FLOAT of its tier (the lines break short of it) and
-the stamp's arch a keep-out of the last band. The fit takes the LARGEST
-size at which everything fits; under 50 px it gives up the bands' floor and
-air (124 px, 12 px) before any text clips. That rule was fitted on the
-prints: the median band edge is 2 px from print's and 22 of 30 are within
-10 (`tests/unit/cards/station-layout.test.ts` holds it; the proof's
-36 px padding left nine cards 10–37 px off). What is left: the three Planets
-with a three-line tier and EOE #35 sit 25–36 px low, EOE #241 70 px (print
-gives its tier more room than any rule here), EOE #249's reading is an
-outlier. Every band, badge and plate box is EVEN in HD px — a whole px at
-the 750 px target.
+the ONE rules layout): one size for the whole box; every band's lines are
+`layoutRulesAt`'s (both targets), a tier's column from x 180; the plate is a
+FLOAT of its tier (the lines break short of it) and the stamp's arch a
+keep-out of the last band. Every band, badge and plate box is EVEN in HD
+px — a whole px at the 750 px target.
+
+*The bands are print's rule* (`stationBands`, layout v54 — PR 2, after the
+independent check of #543): **every band of a card — the top band and each
+tier — has the same air above and below its text**, whatever the box has
+left once the text is set; a tier is never shorter than its floor (168 px,
+a one-line upper tier; 180 px, a one-line last tier); and under a STAMPED
+last tier print leaves 22 px more, the text sitting that much above the
+arch while the badge and the plate stay on the band's centre. A size is
+taken while that air is at least 14 px (the fit takes the LARGEST such
+size, 50 px or more). The bands are re-solved on the heights the text
+really has beside its keep-outs, so the stamp is part of the fit — PR 1's
+rule (text + 2 × 20 px, the top band the rest) had been fitted on a layout
+that left the stamp's keep-out out, and its real bakes sat 37–84 px off
+print on the stamped rares (EOE #250, #208, #259, #35, EOC #7).
+
+Measured on the REAL bake against the check's re-measured prints
+(`tests/unit/cards/fixtures/station-print-edges.json`; the table is
+`station-layout.test.ts`'s, `STATION_REPORT_FILE=<path>` writes it):
+
+| ours − print, band edges | PR 1 | now |
+| --- | --- | --- |
+| 36 edges of the 30 bordered printings (fitted on): within 10 px | 28 | 25 |
+| … within 20 px | 29 | **34** |
+| … worst | 84 px | **25 px** |
+| 23 edges of 13 extended-art + 2 borderless printings (not fitted on): within 10 px | 11 | 12 |
+| … within 20 px | 14 | **19** |
+| … worst | 89 px | **42 px** |
+
+What is left: print does not always take the largest size that fits (EOE
+#253 and #260 set a one-line tier at 60–64 px where ours takes 70 and wraps
+it: 14 px high), and the extended-art printings keep their bordered
+printing's size with the reminder gone — neither is a rule a custom card
+could follow. Three in-sample cards are a little further from print than
+PR 1 had them (#253, #260: +2 → −14; #255: 0 → −12).
+
+*The ceiling — the box is the box.* A card fuller than any print gives way
+in this order, and text clips only after all of it: (1) the size steps down
+to 50 px on print's rule; (2) the tiers give up their FLOOR (124 px: a
+badge still fits) but keep print's 14 px of air, down to 42 px; (3) at 42–46
+px a band may be shorter than a badge — the badge and the plate are then
+drawn smaller (the saga's rail gives up its badge stacks the same way);
+(4) past that the bands share the box in proportion to their text, each
+text clipped to its own band, the layout `clipped` — never a band over the
+type bar or the art. PR 1 clipped a realistic three-tier card (two keyword
+lines, the reminder, three one-word tiers) at 42 px and grew the bands of a
+very long text over the type bar. `tests/unit/render/rules-no-clip.test.tsx`
+now holds every band of the matrix's texts, six shapes and the 36 printed
+cards to the no-clip rules at both targets (PR 1 skipped the frame).
+
+*Sizes and tones* (the same check): a two-digit numeral ("10+", "20+") is
+set as tall as a one-digit one where the face allows (ink span 92 of the
+disc's 100 px: 39–42 px against print's 43; PR 1: 35–39); a wide plate value
+shrinks as print's does ("20/20": 47 px, PR 1: 54 — the digits' span is the
+plate less 34 px a side); numerals and digits sit 2–3 px right, where
+print's are; the ring and the rim are drawn in the PRINTED ring's median
+tone (`STATION_COLOURS.rim`, about 35 levels under PR 1's), the bevel's
+shape kept, its highlight and shade half as strong (owner round 55). The
+tier washes are unchanged: the check read tier 1 nearer 0.19 than 0.25, a
+reading this PR did not repeat on the scans, so it was not re-fitted.
 
 **Drawing.** `cardStation()` is what both renderers call; they only draw
 its `StationDrawing`: the PIECES — each tier's wash, the badge discs, the
@@ -3197,7 +3246,8 @@ pattern); the "N+" numerals and the P/T digits are ink through the stat fit
 (a wide value shrinks to the plate's face); the text is `RulesBox` /
 `RulesBoxBake`. The ring and the rim are lit from above with a dark seam
 against a face with a soft lighter middle (the bevel round, owner round 54
-decision 3; `flat` is kept for the comparison sheet only).
+decision 3 — darkened to the printed ring's tone in PR 2, round 55; `flat`
+is kept for the comparison sheet only).
 
 **Checks.** The art-window check passes on the under-frame rect; the edge
 contract is the parents' (border on every edge), square corners black.
@@ -3220,9 +3270,78 @@ the station frame, exact — the oracle text is already the tiers' grammar,
 so the bands draw as imported. The other dresses (extended art, borderless,
 showcase) keep their own rules and the `station` gap (step 2).
 
-**Rollout.** ADDITIONS: new templates no stored card sits on — no layout
-bump, no sweep, no badge, no migration. A stored Spacecraft on the artifact
-frame keeps it.
+**The tier editor** (PR 2; `components/creator/panels/station-editor.tsx`,
+shown on the Text step for any frame whose profile has `tiers` —
+`isStationFrame`). The top band (the ordinary rules box, with a button that
+adds the Station reminder) and 0–3 tier rows, each a number of charge
+counters and its text; ONE "Power / toughness on this tier" choice, shown
+when the card shows a P/T; a fourth tier is refused with a message.
+
+- **One source.** The editor is a VIEW of the form's one `rules_text`
+  (`lib/creator/station-rows.ts`): the rows are read from the text and every
+  change is written back into it. Nothing is written by opening a card, and
+  every other way a text arrives — an AI fill, an import, a frame or kind
+  change away and back, a remix — shows up as rows by itself; off the frame
+  the same text is in the ordinary rules box. The boxes keep the maker's
+  keystrokes as typed (a trailing space, a number box that is empty for a
+  moment) for as long as the text is still the one they wrote.
+- **The P/T tier** is the one thing the text cannot always say (it plates
+  the tier its reminder names, else the last): the form's `station_pt_tier`
+  (null = as the text says), written into the rows by a save.
+- **What a save writes** (`submittedRulesOf` with `stationFrame`):
+  UNTOUCHED — the text and the P/T tier as the form opened — the stored text
+  byte for byte and `face_content` not sent; a card stored as plain text is
+  given no rows by a save that only retitled it. EDITED, new or a remix —
+  the rows the text holds, the plate on the maker's tier, beside the
+  canonical text (`serializeStation`). No tier left: the text alone, and
+  `face_content: null`. PR 1 dropped the rows on ANY edit of the text — one
+  word typed moved the plate back to the tier the text plates; that path is
+  closed, and `creator-station-tiers-save.test.tsx` holds it through the
+  real form and the server's schema.
+- **Shapes the rows cannot show are kept.** A fourth tier LINE stays in the
+  third tier's text as typed and the editor names it; stored rows that say
+  another text than `rules_text` (written by the API) open as the rows —
+  they are what the card draws — and an untouched save still keeps the
+  stored text; rows that plate no tier keep plating none. A tier with no
+  text and numbers that do not rise are asked for before the save goes out.
+- **Typography.** A box is set in print typography when it loses focus, and
+  on an edit only a box whose text is not one the card opened with; the
+  server's pass does the same per box (`lib/validation/print-typography.ts`).
+- **No tier and a P/T** (allowed — owner round 54): the frame prints the
+  P/T on a tier, so none is drawn; the note under the inputs says to add a
+  tier, and the card page's details list no stats
+  (`frontDrawsPowerToughness(template, text)`).
+
+**The follow** (PR 2). A NEW artifact whose subtypes first say Spacecraft
+and a NEW land whose subtypes first say Planet take the frame where it is
+VERIFIED in the card's colour (`subtypeFrameFor`, the Vehicle's effect —
+it now watches every dress word, `SUBTYPE_DRESS_WORDS`). Nothing is ticked,
+so only an admin's `?previewFrames=m15station,m15stationland` shows it.
+"Standard" in Variations is the way back and sticks until the word comes or
+goes; a stored card keeps its frame. The dresses coexist: a Vehicle retyped
+as a Spacecraft goes to the station frame (before its tick: back to the
+Artifact frame, never left on the Vehicle frame); a card already on a dress
+its subtypes still say keeps it, so an artifact that is both a Vehicle and
+a Spacecraft is never flipped (from the Artifact frame it takes the Vehicle
+frame, the station frame a Variations pick); a card on any other frame (an
+Enchantment Artifact on Nyx, a Spacecraft on the 2003 frame) is not moved.
+The disabled chips say why ("The Spacecraft frame is for Spacecraft", "…
+for Planets"), and the picker tile draws its sample art under the whole
+frame.
+
+**Before a tick.** After PR 2 a maker can build, edit and remix a station
+card, and a bordered printing's import lands on the frame with its tiers
+drawn from the oracle text. Still open: the AI (a generated Spacecraft
+follows its subtype onto a verified frame, and nothing teaches the designer
+or the lint the tier grammar — it would land with no tier and its P/T
+undrawn) and the mapper's rows — PR 3; the other dresses — PR 4.
+
+**Rollout.** PR 1 was an ADDITION: new templates no stored card sits on —
+no layout bump, no sweep, no badge, no migration. PR 2's corrections of the
+look are layout **v54**, scoped to the two templates
+(`STATION_BANDS_LAYOUT_VERSION`, "sweep"): production holds no card on
+either, the dev database's seeds re-bake. A stored Spacecraft on the
+artifact frame keeps it.
 
 ### The Universes Beyond frames (4.25)
 

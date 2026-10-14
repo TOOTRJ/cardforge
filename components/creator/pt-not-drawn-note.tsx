@@ -14,6 +14,8 @@ import { useFormContext, useWatch } from "react-hook-form";
 import type { FormValues } from "@/lib/creator/form-types";
 import {
   frontDrawsPowerToughness,
+  frontPrintsPowerToughnessOnTier,
+  PT_NEEDS_TIER_NOTE,
   PT_NOT_DRAWN_NOTE,
   secondFaceDrawsPowerToughness,
 } from "@/lib/cards/pt-drawn";
@@ -35,16 +37,19 @@ type PtNotDrawnNoteProps = {
  *  with `onlyWithValue`, the face holds a number). */
 function usePtNotDrawn({ face, backBody = null, onlyWithValue = false }: PtNotDrawnNoteProps): boolean {
   const { control } = useFormContext<FormValues>();
-  const [template, power, toughness] = useWatch({
+  const [template, power, toughness, rulesText] = useWatch({
     control,
     name: [
       "frame_style.template",
       face === "front" ? "power" : "back_face.power",
       face === "front" ? "toughness" : "back_face.toughness",
+      "rules_text",
     ],
   });
+  // (The station frame prints the P/T on a tier: with no tier in the text,
+  // none is drawn — the tier editor's rows ARE this text.)
   const drawn =
-    face === "front" ? frontDrawsPowerToughness(template) : secondFaceDrawsPowerToughness(template, backBody);
+    face === "front" ? frontDrawsPowerToughness(template, { rulesText }) : secondFaceDrawsPowerToughness(template, backBody);
   if (drawn) return false;
   if (onlyWithValue && !String(power ?? "").trim() && !String(toughness ?? "").trim()) return false;
   return true;
@@ -71,10 +76,11 @@ export function PtNotDrawnNote({
   className,
   ...props
 }: PtNotDrawnNoteProps & { id?: string; className?: string }) {
+  const template = useWatch({ control: useFormContext<FormValues>().control, name: "frame_style.template" });
   if (!usePtNotDrawn(props)) return null;
   return (
     <p id={id} data-testid={`pt-not-drawn-note-${props.face}`} className={cn("text-xs text-muted", className)}>
-      {PT_NOT_DRAWN_NOTE}
+      {props.face === "front" && frontPrintsPowerToughnessOnTier(template) ? PT_NEEDS_TIER_NOTE : PT_NOT_DRAWN_NOTE}
     </p>
   );
 }

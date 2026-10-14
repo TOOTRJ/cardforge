@@ -1,0 +1,660 @@
+[
+ {
+  "id": "eoc-1",
+  "name": "Hearthhull, the Worldseed",
+  "sample": "out",
+  "printing": "borderless",
+  "stamped": true,
+  "pt": "6/7",
+  "edges": [
+   1527,
+   1685
+  ],
+  "pr1": [
+   1558,
+   1726
+  ]
+ },
+ {
+  "id": "eoc-2",
+  "name": "Inspirit, Flagship Vessel",
+  "sample": "out",
+  "printing": "borderless",
+  "stamped": true,
+  "pt": "5/5",
+  "edges": [
+   1517,
+   1714
+  ],
+  "pr1": [
+   1514,
+   1714
+  ]
+ },
+ {
+  "id": "eoc-7",
+  "name": "Uthros Research Craft",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": true,
+  "pt": "0/8",
+  "edges": [
+   1509,
+   1674
+  ],
+  "pr1": [
+   1546,
+   1714
+  ]
+ },
+ {
+  "id": "eoc-14",
+  "name": "Exploration Broodship",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": true,
+  "pt": "4/4",
+  "edges": [
+   1509,
+   1636
+  ],
+  "pr1": [
+   1508,
+   1634
+  ]
+ },
+ {
+  "id": "eoc-27",
+  "name": "Uthros Research Craft",
+  "sample": "out",
+  "printing": "extended",
+  "stamped": true,
+  "pt": "0/8",
+  "edges": [
+   1448,
+   1654
+  ],
+  "pr1": [
+   1430,
+   1672
+  ]
+ },
+ {
+  "id": "eoc-34",
+  "name": "Exploration Broodship",
+  "sample": "out",
+  "printing": "extended",
+  "stamped": true,
+  "pt": "4/4",
+  "edges": [
+   1448,
+   1608
+  ],
+  "pr1": [
+   1450,
+   1618
+  ]
+ },
+ {
+  "id": "eoe-25",
+  "name": "Lumen-Class Frigate",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": true,
+  "pt": "3/5",
+  "edges": [
+   1592,
+   1759
+  ],
+  "pr1": [
+   1590,
+   1758
+  ]
+ },
+ {
+  "id": "eoe-32",
+  "name": "Rescue Skiff",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": false,
+  "pt": "5/6",
+  "edges": [
+   1757
+  ],
+  "pr1": [
+   1758
+  ]
+ },
+ {
+  "id": "eoe-35",
+  "name": "The Seriema",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": true,
+  "pt": "5/5",
+  "edges": [
+   1684
+  ],
+  "pr1": [
+   1726
+  ]
+ },
+ {
+  "id": "eoe-43",
+  "name": "Wedgelight Rammer",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": false,
+  "pt": "3/4",
+  "edges": [
+   1759
+  ],
+  "pr1": [
+   1758
+  ]
+ },
+ {
+  "id": "eoe-76",
+  "name": "Specimen Freighter",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": false,
+  "pt": "4/7",
+  "edges": [
+   1703
+  ],
+  "pr1": [
+   1708
+  ]
+ },
+ {
+  "id": "eoe-81",
+  "name": "Synthesizer Labship",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": true,
+  "pt": "4/4",
+  "edges": [
+   1514,
+   1757
+  ],
+  "pr1": [
+   1514,
+   1758
+  ]
+ },
+ {
+  "id": "eoe-85",
+  "name": "Uthros Scanship",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": false,
+  "pt": "4/4",
+  "edges": [
+   1756
+  ],
+  "pr1": [
+   1758
+  ]
+ },
+ {
+  "id": "eoe-99",
+  "name": "Entropic Battlecruiser",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": true,
+  "pt": "3/10",
+  "edges": [
+   1519,
+   1670
+  ],
+  "pr1": [
+   1510,
+   1678
+  ]
+ },
+ {
+  "id": "eoe-101",
+  "name": "Fell Gravship",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": false,
+  "pt": "3/2",
+  "edges": [
+   1757
+  ],
+  "pr1": [
+   1758
+  ]
+ },
+ {
+  "id": "eoe-117",
+  "name": "Susurian Dirgecraft",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": false,
+  "pt": "4/3",
+  "edges": [
+   1756
+  ],
+  "pr1": [
+   1758
+  ]
+ },
+ {
+  "id": "eoe-131",
+  "name": "Debris Field Crusher",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": false,
+  "pt": "1/5",
+  "edges": [
+   1716
+  ],
+  "pr1": [
+   1708
+  ]
+ },
+ {
+  "id": "eoe-136",
+  "name": "Galvanizing Sawship",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": false,
+  "pt": "6/5",
+  "edges": [
+   1757
+  ],
+  "pr1": [
+   1758
+  ]
+ },
+ {
+  "id": "eoe-167",
+  "name": "Warmaker Gunship",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": true,
+  "pt": "4/3",
+  "edges": [
+   1757
+  ],
+  "pr1": [
+   1758
+  ]
+ },
+ {
+  "id": "eoe-171",
+  "name": "Atmospheric Greenhouse",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": false,
+  "pt": "5/4",
+  "edges": [
+   1756
+  ],
+  "pr1": [
+   1758
+  ]
+ },
+ {
+  "id": "eoe-194",
+  "name": "Larval Scoutlander",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": false,
+  "pt": "3/3",
+  "edges": [
+   1756
+  ],
+  "pr1": [
+   1758
+  ]
+ },
+ {
+  "id": "eoe-208",
+  "name": "Sledge-Class Seedship",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": true,
+  "pt": "4/5",
+  "edges": [
+   1602
+  ],
+  "pr1": [
+   1662
+  ]
+ },
+ {
+  "id": "eoe-219",
+  "name": "Infinite Guideline Station",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": true,
+  "pt": "7/15",
+  "edges": [
+   1680
+  ],
+  "pr1": [
+   1678
+  ]
+ },
+ {
+  "id": "eoe-238",
+  "name": "Dawnsire, Sunstar Dreadnought",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": true,
+  "pt": "20/20",
+  "edges": [
+   1538,
+   1757
+  ],
+  "pr1": [
+   1552,
+   1758
+  ]
+ },
+ {
+  "id": "eoe-241",
+  "name": "The Eternity Elevator",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": true,
+  "pt": null,
+  "edges": [
+   1662
+  ],
+  "pr1": [
+   1690
+  ]
+ },
+ {
+  "id": "eoe-242",
+  "name": "Extinguisher Battleship",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": true,
+  "pt": "10/10",
+  "edges": [
+   1756
+  ],
+  "pr1": [
+   1758
+  ]
+ },
+ {
+  "id": "eoe-244",
+  "name": "Pinnacle Kill-Ship",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": false,
+  "pt": "7/7",
+  "edges": [
+   1758
+  ],
+  "pr1": [
+   1758
+  ]
+ },
+ {
+  "id": "eoe-249",
+  "name": "Wurmwall Sweeper",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": false,
+  "pt": "2/2",
+  "edges": [
+   1756
+  ],
+  "pr1": [
+   1758
+  ]
+ },
+ {
+  "id": "eoe-250",
+  "name": "Adagia, Windswept Bastion",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": true,
+  "pt": null,
+  "edges": [
+   1688
+  ],
+  "pr1": [
+   1772
+  ]
+ },
+ {
+  "id": "eoe-253",
+  "name": "Evendo, Waking Haven",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": true,
+  "pt": null,
+  "edges": [
+   1756
+  ],
+  "pr1": [
+   1758
+  ]
+ },
+ {
+  "id": "eoe-255",
+  "name": "Kavaron, Memorial World",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": true,
+  "pt": null,
+  "edges": [
+   1678
+  ],
+  "pr1": [
+   1678
+  ]
+ },
+ {
+  "id": "eoe-259",
+  "name": "Susur Secundi, Void Altar",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": true,
+  "pt": null,
+  "edges": [
+   1678
+  ],
+  "pr1": [
+   1738
+  ]
+ },
+ {
+  "id": "eoe-260",
+  "name": "Uthros, Titanic Godcore",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": true,
+  "pt": null,
+  "edges": [
+   1756
+  ],
+  "pr1": [
+   1758
+  ]
+ },
+ {
+  "id": "eoe-321",
+  "name": "Lumen-Class Frigate",
+  "sample": "out",
+  "printing": "extended",
+  "stamped": true,
+  "pt": "3/5",
+  "edges": [
+   1508,
+   1729
+  ],
+  "pr1": [
+   1570,
+   1758
+  ]
+ },
+ {
+  "id": "eoe-323",
+  "name": "The Seriema",
+  "sample": "out",
+  "printing": "extended",
+  "stamped": true,
+  "pt": "5/5",
+  "edges": [
+   1637
+  ],
+  "pr1": [
+   1678
+  ]
+ },
+ {
+  "id": "eoe-329",
+  "name": "Synthesizer Labship",
+  "sample": "out",
+  "printing": "extended",
+  "stamped": true,
+  "pt": "4/4",
+  "edges": [
+   1435,
+   1757
+  ],
+  "pr1": [
+   1422,
+   1758
+  ]
+ },
+ {
+  "id": "eoe-332",
+  "name": "Entropic Battlecruiser",
+  "sample": "out",
+  "printing": "extended",
+  "stamped": true,
+  "pt": "3/10",
+  "edges": [
+   1435,
+   1606
+  ],
+  "pr1": [
+   1432,
+   1606
+  ]
+ },
+ {
+  "id": "eoe-339",
+  "name": "Warmaker Gunship",
+  "sample": "out",
+  "printing": "extended",
+  "stamped": true,
+  "pt": "4/3",
+  "edges": [
+   1756
+  ],
+  "pr1": [
+   1758
+  ]
+ },
+ {
+  "id": "eoe-346",
+  "name": "Sledge-Class Seedship",
+  "sample": "out",
+  "printing": "extended",
+  "stamped": true,
+  "pt": "4/5",
+  "edges": [
+   1466
+  ],
+  "pr1": [
+   1518
+  ]
+ },
+ {
+  "id": "eoe-348",
+  "name": "Infinite Guideline Station",
+  "sample": "out",
+  "printing": "extended",
+  "stamped": true,
+  "pt": "7/15",
+  "edges": [
+   1616
+  ],
+  "pr1": [
+   1678
+  ]
+ },
+ {
+  "id": "eoe-351",
+  "name": "Dawnsire, Sunstar Dreadnought",
+  "sample": "out",
+  "printing": "extended",
+  "stamped": true,
+  "pt": "20/20",
+  "edges": [
+   1474,
+   1753
+  ],
+  "pr1": [
+   1496,
+   1758
+  ]
+ },
+ {
+  "id": "eoe-354",
+  "name": "The Eternity Elevator",
+  "sample": "out",
+  "printing": "extended",
+  "stamped": true,
+  "pt": null,
+  "edges": [
+   1587
+  ],
+  "pr1": [
+   1676
+  ]
+ },
+ {
+  "id": "eoe-355",
+  "name": "Extinguisher Battleship",
+  "sample": "out",
+  "printing": "extended",
+  "stamped": true,
+  "pt": "10/10",
+  "edges": [
+   1756
+  ],
+  "pr1": [
+   1758
+  ]
+ },
+ {
+  "id": "trk-273",
+  "name": "U.S.S. Enterprise-D, Galaxy-Class",
+  "sample": "in",
+  "printing": "bordered",
+  "stamped": true,
+  "pt": "4/5",
+  "edges": [
+   1767
+  ],
+  "pr1": [
+   1758
+  ]
+ },
+ {
+  "id": "trk-481",
+  "name": "U.S.S. Enterprise-D, Galaxy-Class",
+  "sample": "out",
+  "printing": "extended",
+  "stamped": true,
+  "pt": "4/5",
+  "edges": [
+   1758
+  ],
+  "pr1": [
+   1758
+  ]
+ }
+]
