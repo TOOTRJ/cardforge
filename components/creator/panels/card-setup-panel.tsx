@@ -100,7 +100,7 @@ import {
   type FrameEra,
   type FrameTemplate,
 } from "@/types/card";
-import { eraForTemplate } from "@/lib/creator/frame-picker";
+import { eraForTemplate, isM15Treatment } from "@/lib/creator/frame-picker";
 import { buildTypeLine, normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { parseSubtypes } from "@/lib/creator/card-fields";
 import { tokenFrameText } from "@/lib/creator/token-frame-auto";
@@ -182,6 +182,16 @@ type CardSetupPanelProps = {
    *  its variations are the card's (shared) and stay. Absent on every card
    *  without the switch and on the Front face tab. */
   backFace?: { type: React.ReactNode; color: React.ReactNode } | null;
+};
+
+/** One line under a chip that has no other hint (owner, Round 60): what the
+ *  treatment IS, in a few words. The textless frames draw their text on the
+ *  art — they have no text BOX, they are not without text. */
+const FRAME_CHIP_HINTS: Partial<Record<FrameTemplate, string>> = {
+  extendedart: "Art to the side edges",
+  m15textless: "No text box: the text sits on the art",
+  m15textlessland: "No text box: the text sits on the art",
+  nyx: "Theros Beyond Death showcase",
 };
 
 export function CardSetupPanel({
@@ -595,7 +605,9 @@ export function CardSetupPanel({
                     : borrowedWord && isEnchantmentDress(choice.template)
                       ? `The printed enchantment frame, for ${borrowedWord} ${KIND_DEFS[kind].label}s: a starfield in the frame`
                     : borrowedWord
-                      ? `For ${borrowedWord} ${KIND_DEFS[kind].label}s`
+                      ? FRAME_CHIP_HINTS[choice.template]
+                        ? `${FRAME_CHIP_HINTS[choice.template]}, for ${borrowedWord} ${KIND_DEFS[kind].label}s`
+                        : `For ${borrowedWord} ${KIND_DEFS[kind].label}s`
                     : isEnchantmentDress(choice.template)
                       ? "The printed enchantment frame: a starfield in the frame"
                       : isTextBoxDress(kind, choice.template)
@@ -604,9 +616,9 @@ export function CardSetupPanel({
                           ? M20_TOKEN_HEIGHT_HINTS[m20TokenHeightOf(choice.template)!]
                           : subtypeDressOf(choice.template)
                             ? (subtypeDressHint(choice.template) ?? undefined)
-                          : choice.group === "skin"
+                          : choice.group === "skin" && !isM15Treatment(choice.template)
                             ? "Same layout, different dress"
-                            : undefined,
+                            : FRAME_CHIP_HINTS[choice.template],
               leading: (
                 <FrameThumb
                   template={
