@@ -156,7 +156,7 @@ export function StationEditor({ rulesTextRef, onInsertSymbol }: StationEditorPro
             <div key={i} data-testid={`station-tier-${i}`} className="flex flex-col gap-2 rounded-lg border border-border bg-surface/40 p-3">
               <div className="flex flex-wrap items-center gap-3">
                 <label className="flex items-center gap-2 text-sm text-foreground">
-                  <span>Tier {i + 1} at</span>
+                  <span className="whitespace-nowrap">Tier {i + 1} at</span>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -180,7 +180,8 @@ export function StationEditor({ rulesTextRef, onInsertSymbol }: StationEditorPro
                     onBlur={() => {
                       if (badNumber) setTier(i, { input: String(tier.n) });
                     }}
-                    className={`${inputClass(badNumber)} h-11 w-16 text-center`}
+                    className={`${inputClass(badNumber)} h-11 shrink-0 text-center`}
+                    style={{ width: "4.5rem" }}
                   />
                   <span aria-hidden>+</span>
                 </label>

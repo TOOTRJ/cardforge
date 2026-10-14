@@ -106,7 +106,9 @@ export function FrameThumb({
         <span
           data-frame-sample-art
           className="absolute bg-cover bg-center"
-          style={{ ...rectStyle(profile.artSlot), backgroundImage: `url("${FRAME_THUMB_SAMPLE_ART}")` }}
+          // (ONE picture under the whole frame — the station pair, TODO 4.27a:
+          // the sample fills that rect, as the card's art does.)
+          style={{ ...rectStyle(profile.underFrameArt?.artSlot ?? profile.artSlot), backgroundImage: `url("${FRAME_THUMB_SAMPLE_ART}")` }}
         />
       ) : null}
       {sampleArt && !split ? (

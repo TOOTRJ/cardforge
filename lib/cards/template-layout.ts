@@ -5327,6 +5327,9 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15station: {
     ...withoutPt(M15ARTIFACT),
     label: "M15 Station (Spacecraft)",
+    // The picture runs under the whole frame: an empty tile is bars over
+    // nothing (the independent check of #543).
+    pickerSampleArt: true,
     underFrameArt: { rect: STATION_ART_RECT, artSlot: STATION_ART_RECT },
     rulesAlignSwitch: false,
     tiers: STATION_INKS,
@@ -5336,6 +5339,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15stationland: {
     ...withoutPt(M15LAND),
     label: "M15 Station (Planet)",
+    pickerSampleArt: true,
     underFrameArt: { rect: STATION_ART_RECT, artSlot: STATION_ART_RECT },
     rulesAlignSwitch: false,
     tiers: STATION_INKS,

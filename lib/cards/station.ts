@@ -147,10 +147,10 @@ export const STATION = {
    *  tier), and under a STAMPED last tier print leaves `stampAirPx` more —
    *  the holofoil stamp's arch — and centres the tier's text, badge and
    *  plate on what is above it. A size is taken while the air is at least
-   *  `minAirPx`. Rule 0 is print's; rule 1 is what the bands give up —
-   *  floor and air — before any text clips on a card fuller than any print
-   *  (three tiers under a whole reminder): a badge (120 px) still fits its
-   *  band. Rule 2 is the last step before a clip, at the two smallest sizes
+   *  `minAirPx`. Rule 0 is print's; rule 1 is what the bands give up — their
+   *  floor, never print's air — before any text clips on a card fuller than
+   *  any print (three tiers under a whole reminder; EOC #14, the fullest
+   *  print): a badge (120 px) still fits its band. Rule 2 is the last step before a clip, at the two smallest sizes
    *  only: a band may be shorter than a badge, which is then drawn smaller
    *  (as the saga's rail gives up its badge stacks before its text). Past
    *  rule 2 at the smallest size the bands share the box by their text
@@ -158,8 +158,8 @@ export const STATION = {
    *  Tier heights are EVEN px. */
   bandRules: [
     { tierFloorPx: 168, lastFloorPx: 180, stampAirPx: 22, minAirPx: 14 },
-    { tierFloorPx: 124, lastFloorPx: 124, stampAirPx: 22, minAirPx: 5 },
-    { tierFloorPx: 84, lastFloorPx: 84, stampAirPx: 22, minAirPx: 4 },
+    { tierFloorPx: 124, lastFloorPx: 124, stampAirPx: 22, minAirPx: 14 },
+    { tierFloorPx: 84, lastFloorPx: 84, stampAirPx: 22, minAirPx: 8 },
   ],
   /** With no top text the tiers do not stretch over the whole box: their air
    *  stops here (print's roomiest band has 45 px) and the top band is the
@@ -184,9 +184,9 @@ export const STATION = {
    *  box's left pinline and on its band (31 read: x 99.5–101, r 49.4–50.9).
    *  Numeral: white, cap height 42 px — Beleren at 58 px; a two-digit
    *  numeral ("12+", "20+") prints as tall, so the ink's span is nearly the
-   *  whole face (94 of 100 px). Print's ink sits 2–3 px right of the disc's
+   *  whole face (92 of 100 px). Print's ink sits 2–3 px right of the disc's
    *  centre (`valueDxEm`; the plate's digits 2 px, its own `valueDxEm`). */
-  badge: { cx: 100, rFill: 50, rRing: 60, numeralPx: 58, inkHalfWidth: 47, valueDxEm: 0.04 },
+  badge: { cx: 100, rFill: 50, rRing: 60, numeralPx: 58, inkHalfWidth: 46, valueDxEm: 0.04 },
   /** Plate: outer 230 × 112 (x 1190–1420 on 21 prints, centre 1305.5) with
    *  a 14 px rim, its two ends arcs; y its band's centre. WHITE digits,
    *  52 px tall (255 on 21 of 21) — Beleren at 70 px; a wider value shrinks

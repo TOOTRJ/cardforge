@@ -50,7 +50,7 @@ describe("the printed cards", () => {
   // reminder). Laid out as the BAKE lays them: with the holofoil stamp's
   // keep-out on every stamped rare / mythic. `pr1` is where PR 1's bake put
   // the same edge. STATION_REPORT_FILE=<path> writes the table.
-  it("puts the bands where print puts them: 32 of 36 edges within 20 px on the cards it was fitted on, 19 of 23 on the others", () => {
+  it("puts the bands where print puts them: 34 of 36 edges within 20 px on the cards it was fitted on, 19 of 23 on the others", () => {
     const rows: string[] = [];
     const stats = { in: [] as number[], out: [] as number[] };
     const before = { in: [] as number[], out: [] as number[] };
@@ -82,7 +82,7 @@ describe("the printed cards", () => {
     const within20 = (d: number[]) => d.filter((v) => v <= 20).length;
     expect(stats.in).toHaveLength(36);
     expect(stats.out).toHaveLength(23);
-    expect(within20(stats.in)).toBeGreaterThanOrEqual(32);
+    expect(within20(stats.in)).toBeGreaterThanOrEqual(34);
     expect(Math.max(...stats.in)).toBeLessThanOrEqual(26);
     expect(within20(stats.out)).toBeGreaterThanOrEqual(19);
     // Never worse than PR 1's rule on either sample.

@@ -251,6 +251,7 @@ import {
   supertypeLeavingToken,
   textBoxFrameFor,
   subtypeFrameFor,
+  SUBTYPE_DRESS_WORDS,
   subtypesSay,
   typeWordFrameFor,
   KIND_DEFS,
@@ -1267,7 +1268,13 @@ export function CardCreatorForm({
   // unverified combo (silently: until the owner ticks the frame nothing
   // changes), never an admin's saved frame preview. An import or an AI fill
   // that names its frame decides it itself (settleTokenTextFollow).
-  const saysVehicle = subtypesSay(parseSubtypes(watched.subtypes_text), "Vehicle");
+  // The station frame follows the same way (TODO 4.27a, PR 2): a NEW
+  // artifact whose subtypes first say Spacecraft, a NEW land whose subtypes
+  // first say Planet — where the frame is verified in the card's colour
+  // (until its tick: an admin's `?previewFrames=` only). "Standard" in
+  // Variations is the way back, and it sticks until the word comes or goes.
+  const dressSubtypes = parseSubtypes(watched.subtypes_text);
+  const saysVehicle = SUBTYPE_DRESS_WORDS.filter((word) => subtypesSay(dressSubtypes, word)).join("+");
   const lastVehicleRef = useRef(`${kind}|${saysVehicle}`);
   const vehicleFramePinned = isEdit && card?.frame_preview === true;
   useEffect(() => {
