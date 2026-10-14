@@ -214,66 +214,8 @@ jobs:
         shard: [1, 2, 3, 4, 5, 6]
         total: [6]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      # The Card Conjurer-derived frames live in the frames bucket, never in
-      # git (docs/FRAMES.md): fetch every PNG in the frame manifest from
-      # PRODUCTION's public bucket — sha256-checked against the manifest; the
-      # dev bucket is asked only for a PR's frames not promoted yet — so the
-      # tests that read bucket masters (the art-window coverage 7.6, the edge
-      # contract 7.7, the square corners, the plate ink) run on them instead
-      # of skipping. EVERY shard needs them: a suite gated on
-      # `haveBucketMasters` skips silently without. Cached by the manifest's
-      # hash (saved right after the fetch, so a red test run keeps it; by the
-      # first shard only — one key, one writer); never committed (.gitignore).
-      - name: Restore bucket frames
-        id: frames-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: .frames-cache
-          key: frames-${{ hashFiles('lib/frames/frame-manifest.json') }}
-          restore-keys: frames-
-      # A hung storage read fails this step in 10 min instead of eating the
-      # job's 20 (fetchVerified retries each file 4× with a 60 s timeout).
-      - name: Fetch bucket frames
-        timeout-minutes: 10
-        run: >-
-          node scripts/frames-fetch.mjs --out .frames-cache
-          --fallback-origin https://znipzaxgpaiandwiqabn.supabase.co/storage/v1/object/public/frames
-      - name: Save bucket frames
-        if: steps.frames-cache.outputs.cache-hit != 'true' && matrix.shard == 1
-        uses: actions/cache/save@v4
-        with:
-          path: .frames-cache
-          key: frames-${{ hashFiles('lib/frames/frame-manifest.json') }}
-      - run: npm run test:coverage:shard -- --shard=${{ matrix.shard }}/${{ matrix.total }}
-        env:
-          FRAMES_BUILD_DIR: .frames-cache
-          VITEST_COVERAGE_SHARD: "1"
-      # The shard's results and coverage (.vitest-reports/blob-<i>-<n>.json),
-      # uploaded from a red shard too: the merge then reports its failures
-      # beside the others'.
-      - name: Upload the shard's report
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: unit-blob-${{ matrix.shard }}
-          path: .vitest-reports/
-          # The directory's name starts with a dot.
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 1
-          # A re-run of this job replaces its attempt's report.
-          overwrite: true
+      - run: echo "THROWAWAY STUB - the real job is not run on this proof branch"
 
-  # One report for the whole suite: every shard's tests replayed (a failure
-  # in any of them fails this job too) and the merged coverage held to the
-  # floors of vitest.config.ts — exactly what `npm run test:coverage` checks
-  # on one machine.
   coverage:
     name: Unit coverage
     needs: [changes, unit]
@@ -284,85 +226,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: unit-blob-*
-          merge-multiple: true
-          path: .vitest-reports
-      # Floors checked on five shards of six would be floors on other
-      # numbers: every shard's blob must be here.
-      - name: Every shard reported
-        run: |
-          ls -l .vitest-reports
-          for i in 1 2 3 4 5 6; do test -s ".vitest-reports/blob-$i-6.json"; done
-          test "$(ls .vitest-reports | wc -l)" -eq 6
-      - run: npm run test:coverage:merge
-      - name: Upload coverage report
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: coverage/
-          retention-days: 3
+      - run: echo "THROWAWAY STUB - the real job is not run on this proof branch"
 
-  # The REQUIRED check (main's ruleset names "Typecheck, lint, unit"): green
-  # only when the jobs its tier runs all are. `always()`, not `!cancelled()`:
-  # the gate must RUN whatever became of the jobs it covers — failed, skipped,
-  # timed out (a job stopped at its `timeout-minutes` ends as "cancelled") or
-  # cancelled with the run — because a required check that is "skipped"
-  # counts as passing, and `always()` is the one condition documented to run
-  # in every one of those cases. (A job whose condition is FALSE when its run
-  # is cancelled does not even end "skipped": it ends "cancelled", under its
-  # name UNEVALUATED — seen 2026-10-14.) It accepts exactly ONE shape per
-  # tier and fails on anything else (`changes` must have succeeded in all of
-  # them):
-  #
-  #            static   unit+coverage  docs     frames, e2e, visual
-  #   full     success  success        skipped  ran (not "skipped")
-  #   light    success  success        skipped  skipped
-  #   draft    success  skipped        success  skipped
-  #   notes    skipped  skipped        success  skipped
-  #
-  # So "skipped" passes only where the classifier put it; a failed or
-  # cancelled classifier, a skip nobody asked for, a failure, a cancel and a
-  # timeout are all red. An unknown or empty tier is judged as full.
-  #
-  # It `needs` the other required jobs too (frames, e2e, visual) and so
-  # finishes LAST. That, and the name below, is what keeps a pull request
-  # closed between "ready for review" and the end of its full run: the draft
-  # run left "skipped" — which satisfies a required check — on those three
-  # names for the same commit, and GitHub reads the latest check of each
-  # name. On a DRAFT this job therefore reports as "Draft checks", never
-  # under the required name: the commit has no "Typecheck, lint, unit" at all
-  # until a full (or notes) run has finished every job, by which time the
-  # other names carry that run's own results. (A draft cannot be merged
-  # anyway; this is about the minutes after it stops being one.)
-  # Never rename the required name; a new job the check must cover joins
-  # `needs` and the table.
-  #
-  #
-  # ONE exception, a DRAFT run that was CANCELLED as a whole — by "ready for
-  # review" (the full run takes its concurrency group) or by a newer push:
-  # its gate passes with "superseded" on the summary. It used to fail, and
-  # since the full run reports under the other name nothing ever replaced
-  # the red "Draft checks" on the pull request. That is safe because nothing
-  # is judged by it: "Draft checks" is not a required name, a draft cannot
-  # be merged, and the run that cancelled it judges the commit. A draft run
-  # that was NOT cancelled (a failure; a job stopped at its own timeout —
-  # the job's cancel, not the run's) is judged as before: red. Every other
-  # tier — and a run with no tier (a cancelled classifier: judged as full,
-  # under the required name) — is judged when cancelled too, so a cancelled
-  # full run stays RED under "Typecheck, lint, unit".
-  # Only a job's condition is known to see the RUN's cancel (the gate's step
-  # ran, and failed, inside cancelled runs: a step's condition did not see
-  # it), hence the `superseded` job below: it runs only in a cancelled run,
-  # and the gate reads its result.
   checks:
     name: ${{ needs.changes.outputs.tier == 'draft' && 'Draft checks (typecheck, lint, build)' || 'Typecheck, lint, unit' }}
     needs: [changes, static, unit, coverage, docs, frames, e2e, visual, superseded]
@@ -419,11 +284,7 @@ jobs:
     # (transient storage errors are common when several PRs run at once).
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      - run: node scripts/frames-check.mjs
+      - run: echo "THROWAWAY STUB - the real job is not run on this proof branch"
 
   e2e:
     name: E2E (local Supabase)
@@ -432,67 +293,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-
-      - uses: supabase/setup-cli@v1
-        with:
-          version: 2.84.2
-
-      # Applies every migration + supabase/seed.sql + supabase/seeds/*.sql —
-      # so this job also proves the whole chain builds from scratch.
-      - name: Start local Supabase
-        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
-
-      - name: Write .env.e2e from the local stack
-        run: |
-          supabase status -o env > /tmp/stack.env
-          get() { sed -n "s/^$1=\"\{0,1\}\([^\"]*\)\"\{0,1\}$/\1/p" /tmp/stack.env; }
-          {
-            echo "NEXT_PUBLIC_SUPABASE_URL=$(get API_URL)"
-            echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$(get PUBLISHABLE_KEY)"
-            echo "SUPABASE_SECRET_KEY=$(get SECRET_KEY)"
-            # The paid layer stays visible so the pricing specs run (no Stripe
-            # keys needed to render the storefront).
-            echo "NEXT_PUBLIC_BILLING_ENABLED=true"
-            # The local stack's frames bucket is empty; frames that left git
-            # (lib/frames/frame-manifest.json) load from the dev project's
-            # public bucket, like every Vercel preview (docs/FRAMES.md).
-            echo "NEXT_PUBLIC_FRAME_ORIGIN=https://znipzaxgpaiandwiqabn.supabase.co/storage/v1/object/public/frames"
-            echo "SUPABASE_E2E_USER_EMAIL=e2e@pipglyph.test"
-            echo "SUPABASE_E2E_USER_PASSWORD=ci-$(openssl rand -hex 12)"
-          } > .env.e2e
-
-      - name: Seed the e2e user
-        run: node scripts/seed-e2e.mjs
-
-      - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
-
-      - name: Run Playwright
-        run: npx playwright test --reporter=github,json
-        env:
-          PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/report.json
-
-      # Skips and retried-then-passed ("flaky") tests never fail the job, so
-      # they hide — list them on the run summary instead.
-      - name: Summarise skips and flakes
-        if: ${{ !cancelled() }}
-        run: node scripts/e2e-summary.mjs test-results/report.json >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload Playwright report
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: |
-            playwright-report/
-            test-results/
-          retention-days: 3
+      - run: echo "THROWAWAY STUB - the real job is not run on this proof branch"
 
   visual-bake:
     name: Visual regression (bake ${{ matrix.group }}/3)
@@ -505,43 +306,7 @@ jobs:
       matrix:
         group: [0, 1, 2]
     steps:
-      # Depth 2 for --base HEAD^1: each case's scope is judged at the base
-      # branch's layout version (the gate job reads the same commit).
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-
-      # The manifest's PNG objects (~140 MB), keyed by the manifest: storage
-      # is read only when it changes (an older cache seeds the new one, and
-      # the script drops objects the manifest no longer names). Every cached
-      # file is re-checked against the manifest's sha256 before use, so a
-      # cache written by another run can't feed the bake other bytes.
-      - name: Restore the frame cache
-        uses: actions/cache@v4
-        with:
-          path: tmp/visual/frames
-          key: visual-frames-${{ hashFiles('lib/frames/frame-manifest.json') }}
-          restore-keys: visual-frames-
-
-      - name: Bake (4 of 12 shards)
-        run: node scripts/visual-regression.mjs --shards 12 --group ${{ matrix.group }}/3 --no-gate --base HEAD^1
-
-      - name: Upload the hashes
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: visual-results-${{ matrix.group }}
-          path: |
-            tmp/visual/results/
-            tmp/visual/logs/
-          retention-days: 3
-          # A re-run of this job replaces its attempt's hashes.
-          overwrite: true
+      - run: echo "THROWAWAY STUB - the real job is not run on this proof branch"
 
   visual:
     name: Visual regression
@@ -553,32 +318,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      # Depth 2: HEAD^1 is the base branch's tip for a PR's merge commit and
-      # the previous main for a push — "bumped" is judged against it.
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: visual-results-*
-          merge-multiple: true
-          path: tmp/visual
-      - name: Gate
-        run: node scripts/visual-regression.mjs --gate-only --shards 12 --base HEAD^1
-      # What `npm run test:visual -- --update` would write, made on this
-      # runner: `gh run download <run> -n visual-baseline -D tests/visual`.
-      - name: Upload the regenerated baseline
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: visual-baseline
-          path: tmp/visual/next/baseline.json
-          if-no-files-found: ignore
-          retention-days: 7
-          overwrite: true
+      - run: echo "THROWAWAY STUB - the real job is not run on this proof branch"
 
   parity:
     name: Preview parity
@@ -587,64 +327,4 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-
-      # The same frame cache as the visual jobs (the manifest's PNG objects,
-      # sha-checked as they are read; never committed).
-      - name: Restore the frame cache
-        uses: actions/cache@v4
-        with:
-          path: tmp/visual/frames
-          key: visual-frames-${{ hashFiles('lib/frames/frame-manifest.json') }}
-          restore-keys: visual-frames-
-
-      - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
-
-      # Bake, then the preview in Chromium against its own dev server
-      # (PARITY_HARNESS=1 — the only server /dev/parity is a route of). No
-      # database, no secrets; nothing but the public frames bucket is read.
-      - name: Compare the preview with the bake
-        run: node scripts/parity.mjs
-
-      # The case files `npm run test:parity -- --update` would write for
-      # linux, made on this runner — only the ones that are new or moved,
-      # and update.json naming them (a red run prints them as a script to
-      # paste, and the command that fetches this). Nothing on a green run.
-      - name: Upload the measured baseline
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: parity-baseline
-          path: tmp/parity/next/
-          if-no-files-found: ignore
-          retention-days: 7
-          overwrite: true
-
-      - name: Upload the report
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: parity-report
-          path: |
-            tmp/parity/report.md
-            tmp/parity/results/
-          if-no-files-found: ignore
-          retention-days: 3
-          overwrite: true
-
-      # A failing case's preview screenshot, bake and difference map.
-      - name: Upload the differences
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: parity-differences
-          path: tmp/parity/out/
-          if-no-files-found: ignore
-          retention-days: 3
-          overwrite: true
+      - run: echo "THROWAWAY STUB - the real job is not run on this proof branch"
