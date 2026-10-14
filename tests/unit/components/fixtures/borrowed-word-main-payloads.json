@@ -1,0 +1,778 @@
+{
+  "new creature — no borrowed frame, steps walked back and forth": {
+    "title": "Brass Sentinel",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "white"
+    ],
+    "printed_types": null,
+    "card_type": "creature",
+    "subtypes": [
+      "Golem"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "power": "2",
+    "toughness": "3",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new creature — \"Artifact Creature\" typed by hand, on the Standard frame": {
+    "title": "Brass Sentinel",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "white"
+    ],
+    "supertype": "Artifact",
+    "printed_types": "Artifact Creature",
+    "card_type": "creature",
+    "subtypes": [],
+    "tags": [],
+    "rarity": "common",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "power": "1",
+    "toughness": "1",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new creature — \"Legendary Enchantment Creature\" typed by hand: the frame follows onto Nyx": {
+    "title": "Brass Sentinel",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "white"
+    ],
+    "supertype": "Legendary Enchantment",
+    "printed_types": "Legendary Enchantment Creature",
+    "card_type": "creature",
+    "subtypes": [],
+    "tags": [],
+    "rarity": "common",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "power": "1",
+    "toughness": "1",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15nyx",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new creature — the word typed by hand, then Standard picked: the word stays": {
+    "title": "Brass Sentinel",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "white"
+    ],
+    "supertype": "Enchantment",
+    "printed_types": "Enchantment Creature",
+    "card_type": "creature",
+    "subtypes": [],
+    "tags": [],
+    "rarity": "common",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "power": "1",
+    "toughness": "1",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new artifact — its own frame, no borrow": {
+    "title": "Brass Sentinel",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "white"
+    ],
+    "printed_types": null,
+    "card_type": "artifact",
+    "subtypes": [
+      "Equipment"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15artifact",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new enchantment — the kind's own Nyx skin": {
+    "title": "Brass Sentinel",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "white"
+    ],
+    "printed_types": null,
+    "card_type": "enchantment",
+    "subtypes": [
+      "Aura"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15nyx",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new enchantment — back to Standard by hand": {
+    "title": "Brass Sentinel",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "white"
+    ],
+    "printed_types": null,
+    "card_type": "enchantment",
+    "subtypes": [],
+    "tags": [],
+    "rarity": "common",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new instant — no Variations of its own": {
+    "title": "Brass Sentinel",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "white"
+    ],
+    "printed_types": null,
+    "card_type": "instant",
+    "subtypes": [],
+    "tags": [],
+    "rarity": "common",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new creature — the Artifact frame picked and kept": {
+    "title": "Brass Sentinel",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "white"
+    ],
+    "supertype": "Artifact",
+    "printed_types": null,
+    "card_type": "creature",
+    "subtypes": [
+      "Golem"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "power": "1",
+    "toughness": "1",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15artifact",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new creature — Nyx picked and kept": {
+    "title": "Brass Sentinel",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "white"
+    ],
+    "supertype": "Enchantment",
+    "printed_types": null,
+    "card_type": "creature",
+    "subtypes": [
+      "Spirit"
+    ],
+    "tags": [],
+    "rarity": "common",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "power": "1",
+    "toughness": "1",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15nyx",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new artifact — Nyx picked and kept": {
+    "title": "Brass Sentinel",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "white"
+    ],
+    "supertype": "Enchantment",
+    "printed_types": null,
+    "card_type": "artifact",
+    "subtypes": [],
+    "tags": [],
+    "rarity": "common",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15nyx",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new creature — the Artifact frame picked, Standard on the SAME visit": {
+    "title": "Brass Sentinel",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "white"
+    ],
+    "printed_types": null,
+    "card_type": "creature",
+    "subtypes": [],
+    "tags": [],
+    "rarity": "common",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "power": "1",
+    "toughness": "1",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new creature — Nyx picked, Standard on the SAME visit": {
+    "title": "Brass Sentinel",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "white"
+    ],
+    "printed_types": null,
+    "card_type": "creature",
+    "subtypes": [],
+    "tags": [],
+    "rarity": "common",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "power": "1",
+    "toughness": "1",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "new creature — Artifact then Nyx on the SAME visit": {
+    "title": "Brass Sentinel",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "color_identity": [
+      "white"
+    ],
+    "supertype": "Enchantment",
+    "printed_types": null,
+    "card_type": "creature",
+    "subtypes": [],
+    "tags": [],
+    "rarity": "common",
+    "face_content": null,
+    "watermark": {
+      "kind": "preset",
+      "key": "pipglyph-rose",
+      "size": "normal"
+    },
+    "power": "1",
+    "toughness": "1",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15nyx",
+      "crown": true,
+      "twoColor": true,
+      "collector": "2023",
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "footer_text": ""
+  },
+  "stored Artifact Creature on the artifact frame — opened for an edit: the values the form holds": {
+    "staticInEditor": true,
+    "pipOverrides": {},
+    "profileOverrides": null,
+    "title": "Brass Sentinel",
+    "cost": "{2}{W}",
+    "cardType": "creature",
+    "supertype": "Legendary Artifact",
+    "printedTypes": null,
+    "subtypes": [
+      "Golem"
+    ],
+    "rarity": "rare",
+    "colorIdentity": [
+      "white"
+    ],
+    "rulesText": "Vigilance",
+    "flavorText": "It never sleeps.",
+    "power": "2",
+    "toughness": "3",
+    "loyalty": "",
+    "defense": "",
+    "artistCredit": "Anya Vale",
+    "artUrl": "https://example.com/front.png",
+    "artPosition": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frameStyle": {
+      "finish": "regular",
+      "template": "m15artifact",
+      "collector": "2023"
+    },
+    "setIconUrl": null,
+    "setCode": null,
+    "collectorNumber": null,
+    "lang": "en",
+    "brandMark": false,
+    "footerWatermark": null,
+    "setIconCode": null,
+    "faceContent": null,
+    "watermark": null,
+    "backFace": null
+  },
+  "stored Artifact Creature on the artifact frame — an edit of one field": {
+    "title": "Brass Sentinel",
+    "printed_types": null,
+    "rarity": "rare",
+    "cost": "{2}{W}",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "artist_credit": "Anya Vale",
+    "rules_text": "Vigilance",
+    "face_content": null,
+    "flavor_text": "It never slept.",
+    "power": "2",
+    "toughness": "3",
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "tags": [
+      "test"
+    ],
+    "watermark": null,
+    "visibility": "private",
+    "back_face": null
+  },
+  "stored Enchantment Creature on Nyx — an edit of the printed type line": {
+    "title": "Brass Sentinel",
+    "printed_types": "Creature Enchantment",
+    "rarity": "rare",
+    "cost": "{2}{W}",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "artist_credit": "Anya Vale",
+    "rules_text": "Vigilance",
+    "face_content": null,
+    "flavor_text": "It never sleeps.",
+    "power": "2",
+    "toughness": "3",
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "tags": [
+      "test"
+    ],
+    "watermark": null,
+    "visibility": "private",
+    "back_face": null
+  },
+  "stored Enchantment Creature on Nyx — a remix saves the source's words and frame": {
+    "title": "Brass Sentinel, Remade",
+    "game_system_id": "33333333-3333-4333-8333-333333333333",
+    "cost": "{2}{W}",
+    "color_identity": [
+      "white"
+    ],
+    "supertype": "Enchantment",
+    "printed_types": null,
+    "card_type": "creature",
+    "subtypes": [
+      "Golem"
+    ],
+    "tags": [
+      "test"
+    ],
+    "rarity": "rare",
+    "rules_text": "Vigilance",
+    "face_content": null,
+    "watermark": null,
+    "flavor_text": "It never sleeps.",
+    "power": "2",
+    "toughness": "3",
+    "artist_credit": "Anya Vale",
+    "art_url": "https://example.com/front.png",
+    "art_position": {
+      "focalX": 0.31,
+      "focalY": 0.62,
+      "scale": 1.4
+    },
+    "frame_style": {
+      "finish": "regular",
+      "template": "m15nyx",
+      "collector": "2023",
+      "crown": true,
+      "twoColor": true,
+      "stamp": "auto"
+    },
+    "visibility": "public",
+    "back_face": null,
+    "source_scryfall_id": null,
+    "set_icon_url": null,
+    "set_icon_code": null,
+    "set_code": null,
+    "collector_number": null,
+    "lang": "en",
+    "deck_id": null,
+    "parent_card_id": "22222222-2222-4222-8222-222222222222",
+    "footer_text": ""
+  }
+}

@@ -83,17 +83,25 @@ const PICKS: readonly Pick[] = [
   // --- the Nyx dress (TODO 4.7): the starfield masters, their own crown band --
   { from: "m15nyx/w/creature-short", why: "Nyx: the starfield master under M15's slots and plate" },
   { from: "m15nyx/wu/creature-long@pair-crown", why: "Nyx: the two-colour pair master and the Nyx crown band (the starfield strip inside the crown)" },
-  // --- Beleren's ffi ligature (found by the independent check of #542) -------
-  // The Nyx dress's first case ("Enchantment Creature — Griffin") measured a
-  // worst tile over the HD limit and was swapped for a plainer card. It is
-  // not the frame: the same line on plain m15 measures the same, and a line
-  // of the same length without "ffi" does not. Held here on the plain frame
-  // (tests/parity/thresholds.ts "hd-beleren-ffi-ligature").
+  // --- Beleren's ligatures: ffi and ffl, all its GSUB 'liga' holds ----------
+  // A browser sets them by default on a line with no letter-spacing (M15's
+  // type line; its name is tracked 0.01 em, which switches them off by
+  // itself); Satori never forms one, so the preview switches them off
+  // (font-variant-ligatures: none on CardPreview's root). Found by the
+  // independent check of #542 on "Enchantment Creature — Griffin" (a worst
+  // HD tile of 75.5 against 65, then a known difference; "Shuffler" measured
+  // 82). These two cases fail again if the preview ever forms either.
   {
     from: "m15/w/creature-short",
     as: "@ffi-ligature",
-    why: "a type line with \"ffi\" (Griffin): Chromium sets Beleren's ffi ligature, Satori never forms it",
+    why: "a type line with \"ffi\" (Griffin): the preview sets f, f, i as the bake does, never Beleren's ffi ligature",
     row: () => ({ supertype: "Enchantment", subtypes: ["Griffin"] }),
+  },
+  {
+    from: "m15/w/creature-short",
+    as: "@ffl-ligature",
+    why: "a type line with \"ffl\" (Shuffler), and a name with it twice (Baffling Scuffle): the preview sets f, f, l as the bake does, never Beleren's ffl ligature",
+    row: () => ({ title: "Baffling Scuffle", subtypes: ["Shuffler"] }),
   },
   // --- the station frame (TODO 4.27a): stacked translucency, drawn pieces ---
   {

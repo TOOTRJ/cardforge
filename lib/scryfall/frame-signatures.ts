@@ -232,6 +232,13 @@ const NYX_TOKEN_PINS: Readonly<Record<string, readonly string[]>> = {
   sld: ["1835"],
 };
 
+/** Nyx printings whose frame is their own, not the starfield of their
+ *  colour key (the "nyx-own-frame" gap; owner decision 4, Round 56):
+ *  Faceless One, CLB #1 — a tan frame on a colourless card. */
+export const NYX_OWN_FRAME_PINS: Readonly<Record<string, readonly string[]>> = {
+  clb: ["1"],
+};
+
 /** The 2014–19 arch tokens that print the TALL text box — the type pill at
  *  ~56–62 %H over a box twice the regular one's, not m15tokentext's pill at
  *  67–73.5 %H (TODO 4.55: no Card Conjurer source, P3 by the 1.6 log).
@@ -1026,6 +1033,8 @@ type GapKey =
   | "nickname"
   | "nyx-dress"
   | "nyx"
+  | "nyx-inverted"
+  | "nyx-own-frame"
   | "light-box"
   | "dark-type-and-box"
   | "dark-type-bar"
@@ -1283,6 +1292,32 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
     reason: "PipGlyph doesn't draw the Nyx starfield on this frame yet",
     blockedBy: "4.7",
   },
+  // Two groups of Nyx printings the Nyx frame (`m15nyx`) doesn't match
+  // (owner decision 4, Round 56, 2026-10-13): gaps of the frame the match
+  // takes ONCE VERIFIED (nyxOnceVerified), so they land on it, with the
+  // starfield, as its NEAREST and say why. Neither is a gap rule of its own
+  // (no signature key) and neither is listed before the swap.
+  //   • Scryfall's `inverted` effect beside `enchantment` on the plain 2015
+  //     frame: ten printings on 2026-10-13 with no other gap — seven promo
+  //     packs (THB #353, NEO #508 / #510, DSK #415, TDM #420 / #421 / #424),
+  //     PRM #79863, SLD #340 and SCH #45 — and nine more a gap before it
+  //     already names (six foil-etched, three yellow-bordered). The flags
+  //     suffice: no id is pinned.
+  "nyx-inverted": {
+    match: { effectsAll: ["enchantment", "inverted"], notKinds: ["token"] },
+    reason: "Scryfall marks this printing's frame inverted, which PipGlyph's Nyx frame doesn't claim to match yet",
+    blockedBy: "4.7",
+  },
+  //   • Faceless One (CLB #1, its one printing) prints a tan frame of its
+  //     own (189/173/127 on the scan) where the frame's colourless key is
+  //     the silver starfield Eldrazi Conscription wears (SOC #131). No
+  //     Scryfall field tells the two apart — both colourless, black-
+  //     bordered, `enchantment` — so it is pinned.
+  "nyx-own-frame": {
+    match: { collectorIds: NYX_OWN_FRAME_PINS },
+    reason: "this printing has a Nyx frame of its own colour, and PipGlyph's Nyx frame draws the silver one for a colourless card",
+    blockedBy: "4.7",
+  },
   "light-box": {
     match: { effectsNone: ["inverted"] },
     reason: "this printing has the light text box, and PipGlyph's has the dark one",
@@ -1441,10 +1476,20 @@ const BROWN_PLATE_VEHICLE: Match = {
 function nyxOnceVerified(rules: Rule[]): Rule[] {
   return rules.map((rule) =>
     rule.gaps?.[0] === "nyx"
-      ? { ...rule, outcome: { ...rule.outcome, onceVerified: "m15nyx", exactOnceVerified: true }, gapsOnceVerified: rule.gaps }
+      ? {
+          ...rule,
+          outcome: { ...rule.outcome, onceVerified: "m15nyx", exactOnceVerified: true },
+          gapsOnceVerified: [...rule.gaps, ...NYX_FRAME_GAPS],
+        }
       : rule,
   );
 }
+
+/** What the Nyx frame doesn't match of a printing it draws the starfield
+ *  for (GAPS): read after the swap only, and LAST — a gap of the base that
+ *  still holds there (foil-etched, a yellow border) keeps naming the
+ *  reason. */
+const NYX_FRAME_GAPS: readonly GapKey[] = ["nyx-inverted", "nyx-own-frame"];
 
 /** Where such a Vehicle lands when its printing wears a dress PipGlyph has
  *  no Vehicle plate for (borderless, extended art — 7 of 7 and 8 of 8 read
