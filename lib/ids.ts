@@ -23,3 +23,4 @@ export function randomId(): string {
     : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 // THROWAWAY proof line B (never merged)
+export const throwawayTypeError: number = "not a number";
