@@ -14,7 +14,7 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 // cards that are not station cards and compares, byte for byte, what
 // createCardAction is handed, what the fill hands the creator, the plan a
 // job stores and the credits it reserves with `fixtures/job-payloads-main.json`
-// — recorded by this same file on `origin/main`'s lib/ (00bc2ca7), which is
+// — recorded by this same file on `origin/main`'s lib/ (re-recorded on a53e4b51 after #556 reordered the random frame pool: only `lastFrame` of the random-frame cases moved), which is
 // why it imports nothing PR 3 added.
 //
 // `JOB_PAYLOADS_UPDATE=1` rewrites the fixture. Do that only with the
