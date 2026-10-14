@@ -3037,7 +3037,11 @@ other card, and on an edit that takes the word off a card on the frame.
 **Owner decisions, Round 56 (2026-10-13).** (1) a new plain enchantment
 follows — built here. (2) The label stays "Nyx". (3) The word a borrowed
 frame wrote ("Enchantment", like "Artifact") stays after a step change:
-accepted for now, a follow-up with the artifact borrow. (4) Faceless One
+accepted for now, a follow-up with the artifact borrow — DONE: the words a
+frame pick wrote are remembered by the creator form
+(`components/creator/borrowed-words.tsx`), so the word comes out when the
+card leaves that frame on any later visit; a word the maker typed or kept
+by hand in the Types field stays; a new card only. (4) Faceless One
 (CLB #1) and the ten `inverted`-only promo-pack printings become
 `nearest` in a follow-up. (5) Beleren's "ffi" ligature in the preview
 (`hd-beleren-ffi-ligature`, tests/parity) is its own PR, after fi / ff / fl
@@ -3062,7 +3066,13 @@ verified" instead of "Missing" (the frame exists). With `m15nyx` verified
 in seven colours those 994 land on it — 984 exact, 10 nearest for a later
 gap (6 foil-etched, 3 yellow-bordered, 1 white-bordered) — and no other
 printing moves. The AI deck remix lands where the import lands
-(`remixFrameFor`).
+(`remixFrameFor`). Since the follow-up (owner decision 4, Round 56) eleven
+of those 984 are `nearest` on the Nyx frame instead — the ten whose only
+other frame effect is Scryfall's `inverted` (the `nyx-inverted` gap, by the
+flags) and Faceless One (CLB #1, pinned: `nyx-own-frame`) — so 973 exact,
+21 nearest; both gaps belong to the frame taken once verified
+(`NYX_FRAME_GAPS`, no signature of their own), and until then those eleven
+say the starfield isn't drawn and log as "Missing".
 
 Not moved, on purpose:
 

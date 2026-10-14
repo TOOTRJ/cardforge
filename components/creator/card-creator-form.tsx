@@ -98,6 +98,7 @@ import {
 } from "@/components/creator/start-with-hero";
 import { IdentityPanel } from "@/components/creator/panels/identity-panel";
 import { useTypesFieldSync } from "@/components/creator/types-field";
+import { BorrowedWordSeedsProvider, useBorrowedWordSeedsOwner } from "@/components/creator/borrowed-words";
 import { PipsPanel } from "@/components/creator/panels/pips-panel";
 import { RarityPanel } from "@/components/creator/panels/rarity-panel";
 import { LoyaltyAbilitiesEditor } from "@/components/creator/panels/loyalty-editor";
@@ -1216,6 +1217,25 @@ export function CardCreatorForm({
     verifiedFrameKeys,
   ]);
 
+  // The words a borrowed frame wrote (the artifact frame's "Artifact", the
+  // Nyx frame's "Enchantment" on a creature or an artifact): remembered HERE
+  // — the Card step's panel unmounts on a step change and used to forget —
+  // and taken out again when the card leaves the frame that wrote them,
+  // whichever step is open (components/creator/borrowed-words.tsx; owner
+  // decision 3, Round 56). A NEW card only: an edit or a remix has no Card
+  // step and its type words are locked. Declared before the follows below,
+  // so it runs first, as the panel's own effect did. Another card forgets:
+  // a reset here, Start over, and every import, AI fill or idea that writes
+  // the type words (forgetBorrowedWords at each).
+  const borrowedSeeds = useBorrowedWordSeedsOwner(
+    { getValues, setValue },
+    { kind, template: watched.frame_style?.template, enabled: !isRevise },
+  );
+  const forgetBorrowedWords = borrowedSeeds.forget;
+  useEffect(() => {
+    forgetBorrowedWords();
+  }, [forgetBorrowedWords, resetKey]);
+
   // The Types field (TODO 3b.16): a text the maker typed follows the other
   // controls that write a face's type words — a token's toggles, a borrowed
   // frame's Artifact word, a kind change — and never while revising the
@@ -1503,6 +1523,9 @@ export function CardCreatorForm({
       TALL_WALKER_MIN_ROWS;
     walkerRowsPinnedRef.current = manual;
     setTokenDefaultFrame(false);
+    // …and its type words are its own: nothing a borrowed frame wrote on
+    // the card before it is remembered.
+    forgetBorrowedWords();
   };
 
   // Name follows the subtypes: a printed token is named after them
@@ -2195,6 +2218,9 @@ export function CardCreatorForm({
     // An idea's type words print in the built order (TODO 1.20); a typed
     // Types text gives way to them (TODO 3b.16). Locked while revising.
     if (patch.supertype !== undefined && !isRevise) setValue("printed_types", null, { shouldDirty: true });
+    // …and they are the idea's: no word among them is a borrowed frame's to
+    // take out again.
+    if (patch.supertype !== undefined) forgetBorrowedWords();
     setIfPresent("supertype", patch.supertype);
     setIfPresent("subtypes_text", patch.subtypes_text);
     setIfPresent("rarity", patch.rarity);
@@ -2824,6 +2850,8 @@ export function CardCreatorForm({
       }
       // The AI's line is the BUILT one (printed order, TODO 1.20): a text
       // the maker typed in the Types field gives way to it (TODO 3b.16).
+      // …and so does a word a borrowed frame wrote: the line is the fill's.
+      forgetBorrowedWords();
       setValue("printed_types", null, { shouldDirty: true });
       setValue("supertype", printTypography(fill.supertype ?? "", "type"), { shouldDirty: true });
       setValue("subtypes_text", printTypography((fill.subtypes ?? []).join(", "), "type"), {
@@ -3020,6 +3048,7 @@ export function CardCreatorForm({
     reset(defaults);
     stashedSecondPartRef.current = {};
     secondPartFields.forget();
+    forgetBorrowedWords();
     setRemixSource(null);
     setFrameSubstitution(null);
     setImportedArtOrigin(null);
@@ -4660,6 +4689,7 @@ export function CardCreatorForm({
     // form state, panels, dialogs, save rules and AI as the stepper.
     return (
       <FormProvider {...methods}>
+        <BorrowedWordSeedsProvider value={borrowedSeeds}>
         <form
           noValidate
           onSubmit={formSubmit}
@@ -4706,12 +4736,14 @@ export function CardCreatorForm({
             {actionBar}
           </SurfaceCard>
         </form>
+        </BorrowedWordSeedsProvider>
       </FormProvider>
     );
   }
 
   return (
     <FormProvider {...methods}>
+      <BorrowedWordSeedsProvider value={borrowedSeeds}>
       <form
         noValidate
         onSubmit={formSubmit}
@@ -4831,6 +4863,7 @@ export function CardCreatorForm({
           </div>
         </aside>
       </form>
+      </BorrowedWordSeedsProvider>
     </FormProvider>
   );
 }
