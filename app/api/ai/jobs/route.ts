@@ -441,7 +441,10 @@ export async function POST(request: Request) {
       scope: parsed.data.scope,
     });
     if (!result.ok) {
-      return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
+      return NextResponse.json(
+        { ok: false, error: result.error, ...(result.code ? { code: result.code } : {}) },
+        { status: 502 },
+      );
     }
     await recordGeneration(user.id, parsed.data.kind);
     return NextResponse.json(

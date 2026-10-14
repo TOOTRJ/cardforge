@@ -3425,7 +3425,10 @@ designer is told the layout, and **a tier left empty is the only line a
 fill of the rules text writes** — every other line is kept byte for byte
 (`mergeStationFill`). The maker's "power / toughness on this tier" follows
 its tier by number into the filled text (`stationPtChoiceAfterFill`); a
-fill used to reset it.
+fill used to reset it. A fill whose empty tier comes back EMPTY (model and judge
+alike: `stationGapsLeftEmpty`) is refused at plan time
+(`StationGapUnfilledError`, code `STATION_TIER_UNFILLED`): no job, so no
+credit is charged and nothing in the form changes (owner 2026-10-14).
 
 *The ideas dialog* runs the same engine: an idea for a Spacecraft carries
 its tiers.

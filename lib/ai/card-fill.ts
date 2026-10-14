@@ -14,6 +14,8 @@ import {
   emptyStationTiers,
   mergeStationFill,
   repairStationText,
+  StationGapUnfilledError,
+  stationGapsLeftEmpty,
   stationWordOf,
 } from "@/lib/ai/station-design";
 import type { ColorIdentity } from "@/types/card";
@@ -59,7 +61,15 @@ function stationFillRules(input: DesignCardFillInput, designed: DesignedLike, te
   };
   if (!stationWordOf(card)) return text;
   const current = input.locked.station_text;
-  if (current && emptyStationTiers(current).length > 0) return mergeStationFill(current, text);
+  if (current && emptyStationTiers(current).length > 0) {
+    const merged = mergeStationFill(current, text);
+    // The gap the maker left is what this fill was asked for: came back
+    // unwritten, the fill is refused HERE — at plan time, before the job
+    // (and its one credit) exists (owner 2026-10-14).
+    const left = stationGapsLeftEmpty(current, merged);
+    if (left.length > 0) throw new StationGapUnfilledError(left.length);
+    return merged;
+  }
   return repairStationText(card);
 }
 

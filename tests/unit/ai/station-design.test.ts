@@ -12,6 +12,8 @@ import {
   sameStationShape,
   stationDesignProblems,
   stationFillNote,
+  stationGapUnfilledMessage,
+  stationGapsLeftEmpty,
   stationPtChoiceAfterFill,
   stationSaveFields,
   stationWordOf,
@@ -366,6 +368,24 @@ describe("a fill of the rules text on a card that already has tiers", () => {
     expect(mergeStationFill("Station\n3+ | \n8+ | Flying", "Station\n8+ | Trample\n3+ | Draw a card.")).toBe("Station\n3+ | Draw a card.\n8+ | Flying");
     expect(mergeStationFill("Station\n3+ | \n8+ | Flying", "Station\n4+ | Draw two cards.\n10+ | Trample")).toBe("Station\n3+ | Draw two cards.\n8+ | Flying");
     expect(mergeStationFill("Station\n3+ | \n8+ | Flying", "No tiers here.")).toBe("Station\n3+ | \n8+ | Flying");
+  });
+
+  it("the gaps a merged fill still leaves empty: the fill is refused on any (owner 2026-10-14)", () => {
+    // Nothing designed for the gap: the merge is the input, the gap is left.
+    expect(stationGapsLeftEmpty("Station\n3+ | \n8+ | Flying", mergeStationFill("Station\n3+ | \n8+ | Flying", "No tiers here."))).toEqual([0]);
+    // The model wrote the gap: none left.
+    expect(stationGapsLeftEmpty("Station\n3+ | \n8+ | Flying", mergeStationFill("Station\n3+ | \n8+ | Flying", "Station\n3+ | Draw a card."))).toEqual([]);
+    // Two gaps, one written: the other is still left (by its own index).
+    const two = "Station\n3+ | \n8+ | ";
+    // (3+ takes the one designed tier by place; 8+ has none of its own.)
+    expect(stationGapsLeftEmpty(two, mergeStationFill(two, "Station\n9+ | Trample"))).toEqual([1]);
+    expect(stationGapsLeftEmpty(two, mergeStationFill(two, "Station\n2+ | A.\n9+ | B."))).toEqual([]);
+    // A text with no gap (or no tier) is never refused.
+    expect(stationGapsLeftEmpty("Station\n3+ | A.\n8+ | Flying", "anything")).toEqual([]);
+    expect(stationGapsLeftEmpty(null, "")).toEqual([]);
+    expect(stationGapsLeftEmpty("Flying", "Flying")).toEqual([]);
+    expect(stationGapUnfilledMessage(1)).toBe("The AI couldn't write that tier — nothing was charged. Try again or write it yourself.");
+    expect(stationGapUnfilledMessage(2)).toMatch(/those tiers — nothing was charged/);
   });
 
   it("no gap: the designed text is the answer", () => {

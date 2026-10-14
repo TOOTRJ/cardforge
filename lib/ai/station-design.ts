@@ -292,6 +292,44 @@ export function mergeStationFill(current: string | null | undefined, designed: s
 }
 
 /**
+ * The gaps of `current` (their indices) that the merged fill text still
+ * leaves EMPTY — the model and the judge came back without writing them
+ * (mergeStationFill keeps such a line as it was). [] when every gap was
+ * written, and for a text with no gap. A fill that leaves one is refused
+ * before it is charged (owner 2026-10-14; createCardFillJob).
+ */
+export function stationGapsLeftEmpty(current: string | null | undefined, merged: string): number[] {
+  const gaps = emptyStationTiers(current);
+  if (gaps.length === 0) return [];
+  const had = parseStationText(current);
+  const now = parseStationText(merged);
+  return gaps.filter((i) => {
+    const threshold = had.tiers[i]!.threshold;
+    const tier = now.tiers.find((t) => t.threshold === threshold);
+    return !tier || tier.text.trim() === "";
+  });
+}
+
+/** What the fill dialog says when a fill was refused because the empty
+ *  tier came back empty — nothing was charged, nothing in the form moved. */
+export function stationGapUnfilledMessage(count: number): string {
+  return count > 1
+    ? "The AI couldn't write those tiers — nothing was charged. Try again or write them yourself."
+    : "The AI couldn't write that tier — nothing was charged. Try again or write it yourself.";
+}
+
+/** Thrown by designCardFill (lib/ai/card-fill.ts) when a station card's empty tier came back
+ *  empty. createCardFillJob turns it into a refused plan: no job row, no
+ *  step, no spend — so nothing to refund or settle. */
+export class StationGapUnfilledError extends Error {
+  readonly code = "STATION_TIER_UNFILLED" as const;
+  constructor(count: number) {
+    super(stationGapUnfilledMessage(count));
+    this.name = "StationGapUnfilledError";
+  }
+}
+
+/**
  * The maker's "power / toughness on this tier" choice after a NEW rules
  * text arrived from a fill: it follows its tier by NUMBER (the tier may
  * have moved), and is dropped — null, "as the text says" — only when the

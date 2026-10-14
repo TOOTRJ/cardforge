@@ -873,7 +873,8 @@ Rules and gotchas:
   only). A job that saves on the frame writes rows (`stationSaveFields`);
   a remix keeps its source's tiers and P/T tier; a fill of the rules text
   writes only a tier left empty (`mergeStationFill`) and keeps the P/T
-  choice with its tier. A new AI path that writes rules text goes through
+  choice with its tier — and is refused at PLAN time, before any charge,
+  when that tier comes back empty (`stationGapsLeftEmpty`). A new AI path that writes rules text goes through
   `designCards`, or it knows nothing of tiers. What every OTHER card saves
   through the AI jobs is pinned to main (`job-payloads-pinned.test.ts`).
   The tier editor's notes (`lib/creator/station-fit.ts`: text really cut,

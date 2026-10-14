@@ -154,18 +154,33 @@ const craft = (rules_text: string, face_content: unknown = null, over: Record<st
     ...over,
   });
 
-const jobs = { posted: [] as Record<string, unknown>[], fill: {} as Record<string, unknown> };
+const jobs = {
+  posted: [] as Record<string, unknown>[],
+  fill: {} as Record<string, unknown>,
+  /** Every step request the form made. */
+  stepCalls: 0,
+  /** The plan's answer instead of a job (a refused plan), once. */
+  refusal: null as Record<string, unknown> | null,
+};
 
 beforeEach(() => {
   jobs.posted = [];
+  jobs.stepCalls = 0;
+  jobs.refusal = null;
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: { body?: string }) => {
       if (url === "/api/ai/jobs") {
         jobs.posted.push(JSON.parse(init!.body!) as Record<string, unknown>);
+        if (jobs.refusal) {
+          const refusal = jobs.refusal;
+          jobs.refusal = null;
+          return new Response(JSON.stringify(refusal), { status: 502 });
+        }
         return new Response(JSON.stringify({ ok: true, job: { id: "job-1" }, credits: 5 }), { status: 200 });
       }
       if (String(url).startsWith("/api/ai/jobs/job-1/step")) {
+        jobs.stepCalls += 1;
         return new Response(JSON.stringify({ ok: true, credits: 4, job: { steps: [{ status: "done", fill: jobs.fill }] } }), { status: 200 });
       }
       return new Response(JSON.stringify({ ok: false }), { status: 200 });
@@ -248,6 +263,25 @@ describe("an AI fill of the rules text on a station card", () => {
     await runFill({ rules_text: `Flying\n${REMINDER}\n2+ | Scry 1.\n9+ | Flying, lifelink` });
     expect(tierRadio(2).checked).toBe(true);
     expect(platedOf(await sentUpdate())).toBe(1);
+  });
+
+  it("the empty tier came back empty: the refusal is the one message, nothing charged, nothing in the form moves (owner 2026-10-14)", async () => {
+    const GAP = `Flying\n${REMINDER}\n3+ | \n6+ | Whenever this Spacecraft attacks, draw a card.\n9+ | Flying, lifelink`;
+    renderForm("edit", craft(GAP));
+    await goTo("Text & stats");
+    const message = "The AI couldn't write that tier — nothing was charged. Try again or write it yourself.";
+    jobs.refusal = { ok: false, code: "STATION_TIER_UNFILLED", error: message };
+    await click(screen.getByTestId("run-fill"));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledTimes(1));
+    // The server's words, as they are — never "Your credit was refunded"
+    // (there was no charge) — and no upgrade prompt, no step, no success.
+    expect(toast.error).toHaveBeenCalledWith(message);
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(jobs.stepCalls).toBe(0);
+    expect(jobs.posted[0]).toMatchObject({ kind: "card_fill", locked: { station_text: GAP } });
+    // The form is as it was: the next fill is sent the same text, gap and all.
+    await runFill({ rules_text: GAP.replace("3+ | ", "3+ | Scry 1.") });
+    expect(jobs.posted[1]!.locked).toMatchObject({ station_text: GAP });
   });
 
   it("a fill on any other card sends what it always sent — no `station_text`", async () => {
