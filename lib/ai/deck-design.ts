@@ -50,7 +50,24 @@ const deckConceptSchema = z
 
 type DeckConcept = z.infer<typeof deckConceptSchema>;
 
+// A COLOURLESS deck type (Eldrazi — `DeckType.colors` empty) is planned
+// with no colour field at all: the coloured schema's 1–3 of WUBRG left the
+// model two wrong answers — none (the whole plan failed the schema) or
+// colours the user never asked for, which every card slot then followed.
+// The plan's colours are then `[]` (a colourless identity, as `DeckType` and
+// `deck_cards.color_identity` spell it) and every card slot is hinted
+// "colorless", a card's own colourless identity. Every other request keeps
+// the schema and system prompt above and below, byte for byte.
+const colourlessDeckConceptSchema = deckConceptSchema.omit({ colors: true });
+
 const DECK_CONCEPT_SYSTEM = `You pitch ORIGINAL Magic: The Gathering-style decks for a homebrew tool. Given a theme and format, invent a deck name, a one-sentence pitch, a strategy paragraph (game plan, key mechanics, world/faction names), and pick 1-3 colors that fit. Everything must be original — never Wizards-owned proper nouns, never real-world brands.`;
+
+const DECK_CONCEPT_SYSTEM_COLOURLESS = `You pitch ORIGINAL Magic: The Gathering-style decks for a homebrew tool. Given a theme and format, invent a deck name, a one-sentence pitch and a strategy paragraph (game plan, key mechanics, world/faction names) for a COLORLESS deck: it has no colors, so its game plan never needs colored mana. Everything must be original — never Wizards-owned proper nouns, never real-world brands.`;
+
+/** The deck type asks for a colourless deck (Eldrazi). */
+function isColourlessDeckType(deckType: DeckType | null | undefined): boolean {
+  return deckType != null && deckType.colors.length === 0;
+}
 
 // One line of real deck-construction rules per format — mirrored from
 // lib/decks/format-rules.ts FORMAT_SPECS so generated cards respect the
@@ -88,6 +105,7 @@ function slotFromDeckSlot(
   colors: ColorIdentity[],
   index: number,
 ): DesignSlot {
+  if (colors.length === 0) return colourlessSlotFromDeckSlot(slot);
   const colorHint = colors[index % colors.length];
   if (slot.role === "commander") {
     return {
@@ -103,6 +121,38 @@ function slotFromDeckSlot(
       rarity: "rare",
       colorHint,
       note: "A nonbasic land supporting the deck's colors and strategy.",
+    };
+  }
+  return {
+    cardType: slot.role === "creature" ? "creature" : undefined,
+    roleHint: slot.role,
+    colorHint,
+    note:
+      slot.manaValueHint != null
+        ? `Target mana value ≈ ${slot.manaValueHint}.`
+        : undefined,
+  };
+}
+
+/** slotFromDeckSlot for a colourless plan (no colours: `index % 0` would
+ *  hint nothing): every slot the card's colourless identity, the
+ *  commander's and the lands' notes saying so. */
+function colourlessSlotFromDeckSlot(slot: DeckSlot): DesignSlot {
+  const colorHint = "colorless" as const;
+  if (slot.role === "commander") {
+    return {
+      cardType: "creature",
+      rarity: "mythic",
+      colorHint,
+      note: "This is the deck's LEGENDARY COMMANDER (supertype Legendary) — the strategy's centerpiece. It is COLORLESS: no colored mana symbol in its cost or text.",
+    };
+  }
+  if (slot.role === "land") {
+    return {
+      cardType: "land",
+      rarity: "rare",
+      colorHint,
+      note: "A nonbasic land for a colorless deck: it makes colorless mana ({C}) and supports the strategy.",
     };
   }
   return {
@@ -180,10 +230,11 @@ export async function generateDeckPlan(input: {
       ? "extend the deck's existing theme"
       : "a flavorful, fun-to-pilot original deck — surprise me");
 
-  const { object: concept } = await generateObject({
+  const colourless = isColourlessDeckType(input.deckType);
+  const { object: answer } = await generateObject({
     model: judgeModel(),
-    schema: deckConceptSchema,
-    system: DECK_CONCEPT_SYSTEM,
+    schema: colourless ? colourlessDeckConceptSchema : deckConceptSchema,
+    system: colourless ? DECK_CONCEPT_SYSTEM_COLOURLESS : DECK_CONCEPT_SYSTEM,
     prompt: [
       `Theme: ${theme}`,
       `Format: ${FORMAT_NOTES[input.format]}`,
@@ -206,6 +257,10 @@ export async function generateDeckPlan(input: {
       .join("\n"),
     temperature: 0.9,
   });
+  // A colourless plan has no colours — never ones the model wasn't asked for.
+  const concept: DeckConcept = colourless
+    ? { ...answer, colors: [] }
+    : (answer as DeckConcept);
 
   let slots = buildDeckSkeleton(input.format, input.size);
   // Adding to a deck that already has a commander → never design another.
