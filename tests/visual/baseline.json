@@ -1,6 +1,6 @@
 {
   "about": "Visual-regression baseline (TODO 7.1): every case in tests/visual/matrix.ts as <pixel hash>:<input fingerprint> (the case's row, preset and corners). Generated — never edit by hand; `npm run test:visual -- --update` (or the CI job's visual-baseline artifact) rewrites it. Hashes only: no pixels, no frame art.",
-  "layoutVersion": 56,
+  "layoutVersion": 57,
   "generatedOn": {
     "platform": "darwin-arm64",
     "node": "v25.6.1",
@@ -20,7 +20,7 @@
       "public/fonts/mplantin-italic.ttf": "e81d83608cfa12d5",
       "public/fonts/Montserrat-Medium.ttf": "4a5a218d2b8efa4f"
     },
-    "manifest": "24aeb3831b0dd613"
+    "manifest": "46b83d28f88fb604"
   },
   "cases": {
     "adventure/b/adventure-long": "62fb854bb9fd30f8:42614af9",
@@ -1246,10 +1246,10 @@
     "m15ub/b/creature-long@stamp-arch": "d236026b09874312:33b34a06",
     "m15ub/b/creature-short": "0ce2aaa079fa6d80:f834d50b",
     "m15ub/b/sorcery-short": "2a268f7507622c48:4106e41a",
-    "m15ub/c/creature-long": "acc68a727ee84664:1e3011a6",
-    "m15ub/c/creature-long@crown": "408719e145dd0450:fee9907d",
-    "m15ub/c/creature-short": "ae7b536cb1f1f172:7c38105d",
-    "m15ub/c/creature-short@stamp-c": "966d4c2e239da0bf:930e049e",
+    "m15ub/c/creature-long": "bf3a9419a65d76a2:1e3011a6",
+    "m15ub/c/creature-long@crown": "a7287a0a73ba00b2:fee9907d",
+    "m15ub/c/creature-short": "30b7a1bba1ce62ad:7c38105d",
+    "m15ub/c/creature-short@stamp-c": "68b1de08464fd80d:930e049e",
     "m15ub/g/creature-long": "5f08ecb924594726:2b82c27d",
     "m15ub/g/creature-long@collector": "db9244cf9cc3d094:12e909ba",
     "m15ub/g/creature-long@hd": "382bd4857bde51bf:96f70c90",

@@ -1165,7 +1165,10 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
     // see-through Card Conjurer master: not v35's business either.)
     // (The station frame, TODO 4.27a, draws ONE picture in a rect of its OWN —
     // STATION_ART_RECT, 3 px wider — so it never reaches this check: no list.)
-    const SEE_THROUGH_SINCE_V35 = ["flip"];
+    // (m15ub/c — the see-through Universes Beyond colourless spell master,
+    // TODO 4.25 follow-up — joined later as an addition on a frame no card
+    // could be on: not v35's business either.)
+    const SEE_THROUGH_SINCE_V35 = ["flip", "m15ub"];
     for (const t of ALL) {
       const u = getFrameProfile(t).underFrameArt;
       if (u && (sameRect(u.rect, UNDER) || (u.artSlot && sameRect(u.artSlot, UNDER)))) {
@@ -2870,5 +2873,42 @@ describe("v56 — the Universes Beyond triangle as printed (TODO 4.25 follow-up,
     for (const t of ["m15", "m15artifact", "m15land", "m15pw", "m15vehicle", "m15nyx", "m15station"]) {
       for (const stamp of ["auto", "oval", "triangle", "none", undefined]) expect(isRenderStale(V - 1, t, undefined, V, at(t, stamp, { rarity: "mythic" })), `${t} ${stamp}`).toBe(false);
     }
+  });
+});
+
+describe("v57 — the see-through colourless Universes Beyond spell frame (TODO 4.25 follow-up, owner Round 57)", () => {
+  const png = "https://x/y.png";
+  const V = 57;
+  const at = (template: string, colors: string[] | undefined, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    visibility: "public",
+    layout_version: V - 1,
+    rendered_image_url: png,
+    frame_style: { template, finish: "regular" },
+    card_type: "creature",
+    color_identity: colors,
+    ...over,
+  });
+
+  it("is a sweep, never a badge, scoped to m15ub AND to its colourless master, and verification-neutral", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.UB_SEE_THROUGH_C_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual([]);
+    expect([...lv.UB_SEE_THROUGH_C_TEMPLATES]).toEqual(["m15ub"]);
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(t === "m15ub");
+  });
+
+  it("only a colourless m15ub card re-bakes; every other colour, and the artifact and land frames, are stamped", () => {
+    expect(isRenderStale(V - 1, "m15ub", undefined, V, at("m15ub", ["colorless"]))).toBe(true);
+    expect(isRenderStale(V - 1, "m15ub", undefined, V, at("m15ub", []))).toBe(true);
+    expect(isRenderStale(V - 1, "m15ub", undefined, V, at("m15ub", undefined))).toBe(true);
+    for (const colors of [["white"], ["blue"], ["black"], ["red"], ["green"], ["white", "blue"], ["white", "blue", "black"]]) {
+      expect(isRenderStale(V - 1, "m15ub", undefined, V, at("m15ub", colors)), colors.join()).toBe(false);
+    }
+    for (const t of ["m15ubartifact", "m15ubland", "m15"]) expect(isRenderStale(V - 1, t, undefined, V, at(t, ["colorless"])), t).toBe(false);
   });
 });

@@ -207,16 +207,54 @@ const snowFrameFile = packFrameFile(SNOW);
 // (2025-06), through the SAME six masks and the same text layout — so the
 // three templates are m15 / m15artifact / m15land's recipes over the UB
 // files (packFrameFile), pairs included. The pack names a 'Colorless
-// Frame' (`new/ub/c.png`) that is MISSING from Card Conjurer's tree: the
-// colourless spell master is the pack's ARTIFACT frame (owner 2026-10-13,
-// roadmap Q5), which is also what the six colourless non-artifact prints
-// wear (ACR #1, FIN #2, WHO #9: docs/FRAMES.md "The Universes Beyond
-// frames").
+// Frame' (`new/ub/c.png`) that is MISSING from Card Conjurer's tree. The
+// colourless SPELL master is the print's SEE-THROUGH frame all the same
+// (owner Round 57, decision 3; ACR #1, FIN #2, WHO #9 / #614 — every
+// colourless non-artifact card on the frame): UB_SEE_THROUGH_LAYERS below.
+// Recipes that ask the pack for a letter's FILE (the hybrid dress's grey
+// bars, the plates' borrowings) still read the artifact frame for "c".
 const UB = "img/frames/m15/new/ub";
 const ubPackFile = packFrameFile(UB);
 /** A recipe letter → the UB pack's file; the missing colourless frame is
- *  the pack's artifact frame. */
+ *  the pack's artifact frame (the colourless SPELL master is not built
+ *  from it: UB_SEE_THROUGH_LAYERS). */
 export const ubFrameFile = (letter) => ubPackFile(letter === "c" ? "a" : letter);
+
+/**
+ * The see-through colourless Universes Beyond frame (TODO 4.25 follow-up,
+ * owner Round 57 decision 3). Two Card Conjurer drawings meet in it:
+ *   • the ACCURATE pack's see-through 'Colorless Frame' (`new/c.png`, m15/c's
+ *     own file) gives every edge, line, rim, bevel and ALPHA — the accurate
+ *     Universes Beyond pack is that pack's geometry, so the Universes
+ *     Beyond crown band, stamp notch and plates sit on it as on every other
+ *     key;
+ *   • the OLDER Universes Beyond pack's see-through colourless frame
+ *     (`m15/ub/regular/c.png`, packUB.js) gives the PAPER — the smooth
+ *     streaked bars and text box Universes Beyond prints — as COLOUR ONLY
+ *     (`recolour`: the alpha below is kept), through the accurate pack's
+ *     Title, Type and Rules masks and only PAPER ONTO PAPER: where that
+ *     drawing is paper (its luma ≥ 190, nothing at or below 150; never its
+ *     opaque rims, `maxAlpha`) AND the accurate drawing below is paper too
+ *     (the same luma ramp on what is below). So neither drawing's lines,
+ *     rims and bevels are touched — the older pack's sit 1–5 px off the
+ *     accurate pack's and its bars end in another cap — and none of them
+ *     reaches the master.
+ * So the master's alpha is m15/c's, value for value: the same window, the
+ * same translucent bars (212 / 255) and box (179 / 255), the same faint
+ * wash over the frame field — and the same `underFrameArt` on the profile.
+ */
+export const UB_SEE_THROUGH_OLD = "img/frames/m15/ub/regular/c.png";
+export const UB_SEE_THROUGH_PAPER = Object.freeze({ lumaRamp: Object.freeze([150, 190]), maxAlpha: 245 / 255 });
+const UB_SEE_THROUGH_LAYERS = [
+  layer(`${NEW}/c.png`),
+  ...[`${NEW}/title.png`, `${NEW}/type.png`, `${NEW}/rules.png`].map((mask) =>
+    ({
+      ...recolour(UB_SEE_THROUGH_OLD, mask, { opacity: undefined, lumaRamp: [...UB_SEE_THROUGH_PAPER.lumaRamp] }),
+      belowLumaRamp: [...UB_SEE_THROUGH_PAPER.lumaRamp],
+      maxAlpha: UB_SEE_THROUGH_PAPER.maxAlpha,
+    }),
+  ),
+];
 /** The UB plates (packUBNew.js '… Power/Toughness', `m15/ub/pt/<k>.png`,
  *  282 × 154, drawn at M15's plate bounds): the colour's, gold, and for
  *  the colourless key the pack's grey 'Colorless' plate on the spell frame
@@ -3119,14 +3157,14 @@ export const CC_TEMPLATES = {
   // pack's files.
   m15ub: {
     colors: {
-      ...perColor((k) => [layer(ubFrameFile(k))]),
+      ...perColor((k) => (k === "c" ? UB_SEE_THROUGH_LAYERS : [layer(ubFrameFile(k))])),
       ...pairMasters("m15", ["split", "hybrid"], ubPairLayers),
     },
     plates: UB_PT,
     pack: UB_PACK,
     notes: [
       "w u b r g m = the pack's colour frames whole (new/ub/<k>.png), as m15's are new/<k>.png",
-      "SUBSTITUTION: colourless (c) = the pack's ARTIFACT frame (new/ub/a.png). The pack lists a 'Colorless Frame' new/ub/c.png that is not in Card Conjurer's tree at this commit (404); the owner's call of 2026-10-13 (roadmap Q5) borrows the artifact one — the same bytes as m15ubartifact/c. The older pack's m15/ub/regular/c.png is not used: a different drawing",
+      "colourless (c) = the print's SEE-THROUGH frame (owner Round 57, decision 3; ACR #1, FIN #2, WHO #9 / #614): the pack lists a 'Colorless Frame' new/ub/c.png that is not in Card Conjurer's tree at this commit (404), so it is built from two of its drawings — the accurate pack's see-through colourless frame (new/c.png, m15/c's own file: every edge, rim, bevel and the alpha, value for value) with the OLDER Universes Beyond pack's see-through colourless frame (m15/ub/regular/c.png) as colour only through the accurate pack's Title, Type and Rules masks, paper onto paper only — weighted by that drawing's own luma AND by the luma of the accurate drawing below (each 0 at or below 150, whole from 190) and never where the older drawing is opaque (its rims): neither drawing's lines, rims or bevels are touched (the older pack's sit 1–5 px off the accurate geometry). The M15UB profile draws the art under the frame for 'c' (underFrameArt), as m15 does. Until 2026-10-14 this key was the pack's artifact frame, borrowed (never verified, no card on it)",
       "plates = the pack's own smooth plates (m15/ub/pt/<k>.png, 282x154, at M15's plate bounds); c = its grey 'Colorless' plate, which the hybrid dress draws too",
       UB_TONE_NOTE,
       `${UB_PAIR_NOTE}. Gold-split <pair> = m.png with the split text box and pinline (40K #104, LTR #287, PIP #210); hybrid <pair>-h = the two colours' frames split across the frame ramp, the pack's land-grey bars (l.png title + type), the split text box and pinline, drawn with the grey plate pt/c (ACR #55 / #60, PIP #212)`,
@@ -3839,6 +3877,17 @@ export function compositeLayers(images, width, height) {
         if (img.lumaRamp) {
           const [lo, hi] = img.lumaRamp;
           const lum = 0.299 * img.data[o] + 0.587 * img.data[o + 1] + 0.114 * img.data[o + 2];
+          w *= Math.min(1, Math.max(0, (lum - lo) / (hi - lo)));
+        }
+        // Paper onto paper only (the see-through Universes Beyond frame):
+        // a layer pixel more opaque than `maxAlpha` is that drawing's rim,
+        // never its paper; and the colour BELOW must be paper too — its
+        // luma ramps the weight the same way, so the lines, rims and bevels
+        // of the layers below keep their own pixels.
+        if (img.maxAlpha !== undefined && a > img.maxAlpha) continue;
+        if (img.belowLumaRamp) {
+          const [lo, hi] = img.belowLumaRamp;
+          const lum = 0.299 * acc[o] + 0.587 * acc[o + 1] + 0.114 * acc[o + 2];
           w *= Math.min(1, Math.max(0, (lum - lo) / (hi - lo)));
         }
         if (w === 0) continue;
@@ -4596,7 +4645,9 @@ export function describeLayer(l) {
   if (l.erase) return `${src}${at} erased from the layers below (CC's erase: destination-out)`;
   if (l.recolour) {
     const ramp = l.lumaRamp ? `, weighted by its own luminance from ${l.lumaRamp[0]} (0) to ${l.lumaRamp[1]} (full)` : "";
-    return `${src}${mask} recolouring the layers below (their alpha kept)${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}${ramp}`;
+    const below = l.belowLumaRamp ? ` and by the luminance below from ${l.belowLumaRamp[0]} (0) to ${l.belowLumaRamp[1]} (full)` : "";
+    const cap = l.maxAlpha !== undefined ? `, never where its own alpha is above ${Math.round(l.maxAlpha * 255)}` : "";
+    return `${src}${mask} recolouring the layers below (their alpha kept)${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}${ramp}${below}${cap}`;
   }
   return `${src}${at}${moved}${tint}${mask}${l.opacity !== undefined ? ` at ${Math.round(l.opacity * 100)}%` : ""}${gain}`;
 }
@@ -4891,14 +4942,17 @@ export function describeInnerCrown(inner, recipe) {
  * (Universes Beyond)' of its accurate group (packUBLegendCrownsNew.js,
  * `img/frames/m15/ub/crowns/new/<key>.png`) — the standard crown's
  * geometry, bounds, masks and border cover with the UB pack's smooth art,
- * so the same recipe at the same rects. No "c": that pack's colourless
- * crown is the M15 one (it names m15/crowns/new/c.png), and the UB spell
- * frame's colourless master is the artifact frame, crowned in silver "a".
+ * so the same recipe at the same rects. "c" is the colourless crown of
+ * the see-through spell frame (TODO 4.25 follow-up): the pack's
+ * `ub/crowns/new/c.png`, which is the M15 pack's colourless crown byte for
+ * byte (sha1 7861428e…) — so `m15ubcrown/c` is `m15crown/c`'s pixels, under
+ * this band's own name. The artifact and land frames map their colourless
+ * key to "a" and "l".
  */
 export const UB_CROWN_BAND = Object.freeze({
   ...CROWN_BAND,
   source: "img/frames/m15/ub/crowns/new",
-  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "a", "l"]),
+  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "a", "l", "c"]),
 });
 export const UB_CROWN_BAND_KEYS = [...UB_CROWN_BAND.keys, ...TWO_COLOR_PAIRS];
 
@@ -5360,7 +5414,7 @@ export const CC_OVERLAY_BANDS = {
     keys: UB_CROWN_BAND_KEYS,
     notes: [
       "the Universes Beyond legendary crown, drawn over the m15ub, m15ubartifact and m15ubland masters (TODO 4.25): m15crown's recipe — the black 'Legend Crown Border Cover', then the crown at the same bounds (the pack's own: 44/2010, 53/2814, 1922x493) — over the UB pack's smooth crowns, composited at 2010x2814, downscaled once, corners cut, rows 0–409 kept",
-      "keys: w u b r g, m (gold), a (the artifact silver — also a colourless card on the spell frame, whose master is the artifact frame) and l (the land grey), then the ten pairs, the first colour's crown lerped into the second's through the untilted 45→55 %W crown ramp as m15crown's are; no c (the pack's 'Colorless Legend Crown' is the M15 pack's file)",
+      "keys: w u b r g, m (gold), a (the artifact silver), l (the land grey) and c (the colourless crown of the see-through spell frame, TODO 4.25 follow-up: the pack's ub/crowns/new/c.png, the M15 pack's colourless crown byte for byte — m15crown/c's pixels under this band's name), then the ten pairs, the first colour's crown lerped into the second's through the untilted 45→55 %W crown ramp as m15crown's are",
       "the pack's FLOATING crowns (m15/ub/crowns/floating, packUBLegendCrownsFloating.js) belong to the UB full-art / extended looks and are not imported; the older 'regular' UB crowns (m15/ub/crowns/m15Crown?.png) are a different pack and never mixed in",
     ],
   },
@@ -5613,7 +5667,7 @@ const M15_NOTCH_MONO_KEYS = ["w", "u", "b", "r", "g", "m", "a", "l", "c"];
 export const UB_NOTCH_BOX = Object.freeze({ x: 638, y: 1891, width: 223, height: 102 });
 /** The piece row its feet are read at (the bar's rows 1940–1947 at HD). */
 const UB_NOTCH_FOOT_Y = 1944 - UB_NOTCH_BOX.y;
-const UB_NOTCH_MONO_KEYS = ["w", "u", "b", "r", "g", "m", "a", "l"];
+const UB_NOTCH_MONO_KEYS = ["w", "u", "b", "r", "g", "m", "a", "l", "c"];
 
 /** The notch pieces the importer builds, by bucket folder. `shape` is the
  *  CC piece whose geometry every key takes, at CC's bounds (1:1 at HD);
@@ -5697,6 +5751,7 @@ export const HOLO_STAMP_NOTCHES = {
       r: "m15ub/r",
       g: "m15ub/g",
       m: "m15ub/m",
+      c: "m15ub/c",
       a: "m15ubartifact/c",
       l: "m15ubland/c",
       ...Object.fromEntries(TWO_COLOR_PAIRS.map((pair) => [pair, `m15ub/${pair}`])),
@@ -5709,7 +5764,7 @@ export const HOLO_STAMP_NOTCHES = {
     notes: [
       `the Universes Beyond triangle stamp's notch (TODO 4.25): CC's piece — the text box's bottom pinline stepped up and over the stamp with its bevel — is 299x137 on the pack's 2015-wide card (bounds 857/2015, 2534/2814), so it is resampled ONCE (Lanczos) to ${UB_NOTCH_BOX.width}x${UB_NOTCH_BOX.height} at ${UB_NOTCH_BOX.x},${UB_NOTCH_BOX.y} px of the 1500x2100 card (CC's box is 637.97,1891.04 + 222.58x102.24), the resampling's ringing snapped back onto the flat rim and black (snapResampledPiece), and drawn 1:1 from there`,
       "ONE geometry for every key, as m15holostamp: CC's U piece (its rim the exact 0,117,190, decomposed into bevel, rim and black), the rim tinted to OUR master's bar sampled at x 750, rows 1940–1947; CC's own per-key pieces carry the same flat rims (w 244,243,236, r 209,77,53, m 233,212,125, a 223,225,225, l 165,152,138 — the accurate pack's pinlines), so the tinted keys reproduce them outside the cut",
-      "keys: w u b r g, m (gold), a (the artifact silver, sampled from m15ubartifact/c — a colourless card on the spell frame too, whose master is that frame) and l (the land taupe, from m15ubland/c); then the ten pairs, the rim tinted PER COLUMN to m15ub/<pair>.png's bar (the pinline's 40→60 %W ramp, which the notch sits inside), the same bar on the hybrid, artifact and land pair masters (checked column by column)",
+      "keys: w u b r g, m (gold), a (the artifact silver, sampled from m15ubartifact/c), l (the land taupe, from m15ubland/c) and c (the see-through spell frame's white rim, sampled from m15ub/c — TODO 4.25 follow-up, as m15holostamp's c is from m15/c); then the ten pairs, the rim tinted PER COLUMN to m15ub/<pair>.png's bar (the pinline's 40→60 %W ramp, which the notch sits inside), the same bar on the hybrid, artifact and land pair masters (checked column by column)",
       "the triangle — CC's 'Gray Holo Stamp' shape fitted (lib/cards/holo-stamp.ts UB_STAMP_HOLE) plus 2 px — is cut to transparent: every colour piece holds a capture of WotC's hologram there, which is never published; our own triangle bitmap (lib/cards/holo-stamp-art.ts) covers the cut. The pack's gray.png is the fit's reference only and is not read by the build",
     ],
   },

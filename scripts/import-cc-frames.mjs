@@ -364,6 +364,8 @@ async function finishedMaster(template, def, key, printRecipe) {
       gain: l.gain,
       recolour: l.recolour,
       lumaRamp: l.lumaRamp,
+      belowLumaRamp: l.belowLumaRamp,
+      maxAlpha: l.maxAlpha,
     });
   }
   const flat = toRgba8(compositeLayers(images, OUT_W, OUT_H));
@@ -506,6 +508,8 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
           gain: l.gain,
           recolour: l.recolour,
           lumaRamp: l.lumaRamp,
+          belowLumaRamp: l.belowLumaRamp,
+          maxAlpha: l.maxAlpha,
         });
       }
       const flat = toRgba8(compositeLayers(images, W, H));

@@ -324,8 +324,9 @@ describe("published to the frames bucket", () => {
     }
     // 9 bar keys + 10 pair keys, and the walker's 7, PNG and WebP: 52 objects.
     expect(Object.keys(files).filter((k) => /^m15(pw)?holostamp\//.test(k))).toHaveLength(52);
-    // The Universes Beyond triangle's (TODO 4.25): 8 bar keys + 10 pairs.
-    expect(Object.keys(files).filter((k) => /^m15ubholostamp\//.test(k))).toHaveLength(36);
+    // The Universes Beyond triangle's (TODO 4.25): 9 bar keys (c since the
+    // see-through colourless master) + 10 pairs.
+    expect(Object.keys(files).filter((k) => /^m15ubholostamp\//.test(k))).toHaveLength(38);
   });
 
   it("provenance records the pinned commit, the one source piece per pack, the tint per key and the cut — never the per-key CC pieces", () => {

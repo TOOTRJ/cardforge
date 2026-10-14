@@ -925,8 +925,13 @@ Rules and gotchas:
   printed level on a rare or mythic, whatever "on" value asks for it; an
   oval frame's rule (a rare or mythic) and its one oval are untouched. The
   pack's colourless frame is missing from Card Conjurer's tree: `m15ub/c`
-  is its ARTIFACT frame, has no reference printing (print's colourless
-  card is see-through) and stays unverified until the owner decides. Three
+  is print's SEE-THROUGH frame all the same (owner Round 57; layout v57,
+  scoped to that one master) — the accurate pack's see-through `new/c.png`
+  (m15/c's edges and ALPHA, value for value) with the older Universes
+  Beyond pack's paper as colour only, paper onto paper
+  (`UB_SEE_THROUGH_LAYERS`), `underFrameArt` for `c` as m15, its own
+  colourless crown and notch keys; the artifact and land frames keep their
+  opaque colourless masters (keyMap c → a / l). Three
   of the pack's tones are TONED onto print before the first tick (owner
   Round 57): the green bars, the gold bars and gold box, the land-grey
   bars and box — `UB_PRINT_TONES`, applied to the pack FILE as the importer

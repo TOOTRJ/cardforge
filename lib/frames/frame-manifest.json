@@ -10461,16 +10461,16 @@
       "height": 2100
     },
     "m15ub/c.png": {
-      "hash": "0f0c36ffef32",
-      "sha256": "0f0c36ffef32096a91854339300ec1d51754474cf06748bb993ebf9c302aec7d",
-      "bytes": 751196,
+      "hash": "db320ea5bc6b",
+      "sha256": "db320ea5bc6b13e8fc28e1155140039cf04b15958210c674ea4d2163c947b224",
+      "bytes": 276568,
       "width": 1500,
       "height": 2100
     },
     "m15ub/c.webp": {
-      "hash": "3812319b8b12",
-      "sha256": "3812319b8b126b8b3f166130b30ebea79b267559498c5f83cf447df8ffcd6571",
-      "bytes": 40070,
+      "hash": "d94e8395712a",
+      "sha256": "d94e8395712a0fc0737feb249695ce5a2516fd7b0b428be84a2d98c31e726f38",
+      "bytes": 33210,
       "width": 1500,
       "height": 2100
     },
@@ -11258,6 +11258,20 @@
       "width": 1500,
       "height": 410
     },
+    "m15ubcrown/c.png": {
+      "hash": "c6a601a2a7eb",
+      "sha256": "c6a601a2a7eb7424418fb5846e68d61e3b8ada8e3e6123f8ae18b51bbab3c08d",
+      "bytes": 64600,
+      "width": 1500,
+      "height": 410
+    },
+    "m15ubcrown/c.webp": {
+      "hash": "3bf125eeba9b",
+      "sha256": "3bf125eeba9bd2cb02260fc6e122ffbdb10a7ce1253c1daccb4776a24644b438",
+      "bytes": 16500,
+      "width": 1500,
+      "height": 410
+    },
     "m15ubcrown/g.png": {
       "hash": "fadc9c58db2b",
       "sha256": "fadc9c58db2bf70b1b63c174829658a2e39ede70f76d07d0651ef069892e32a5",
@@ -11507,6 +11521,20 @@
       "hash": "00b819896a73",
       "sha256": "00b819896a730f7a1a9a60a4e3149c66803ac6854fddac0df599e8cf7aadea79",
       "bytes": 2324,
+      "width": 223,
+      "height": 102
+    },
+    "m15ubholostamp/c.png": {
+      "hash": "583f9174b431",
+      "sha256": "583f9174b431fffdc84eb7545f4fd9c632b4af5b11eef74948d94e23056cdf17",
+      "bytes": 3120,
+      "width": 223,
+      "height": 102
+    },
+    "m15ubholostamp/c.webp": {
+      "hash": "28b06b498e99",
+      "sha256": "28b06b498e99cd1a5690dfc8a316793c6a6c6d303b3e23b5dd4adebc49783298",
+      "bytes": 1972,
       "width": 223,
       "height": 102
     },
