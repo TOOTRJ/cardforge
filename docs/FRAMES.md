@@ -3062,7 +3062,13 @@ verified" instead of "Missing" (the frame exists). With `m15nyx` verified
 in seven colours those 994 land on it — 984 exact, 10 nearest for a later
 gap (6 foil-etched, 3 yellow-bordered, 1 white-bordered) — and no other
 printing moves. The AI deck remix lands where the import lands
-(`remixFrameFor`).
+(`remixFrameFor`). Since the follow-up (owner decision 4, Round 56) eleven
+of those 984 are `nearest` on the Nyx frame instead — the ten whose only
+other frame effect is Scryfall's `inverted` (the `nyx-inverted` gap, by the
+flags) and Faceless One (CLB #1, pinned: `nyx-own-frame`) — so 973 exact,
+21 nearest; both gaps belong to the frame taken once verified
+(`NYX_FRAME_GAPS`, no signature of their own), and until then those eleven
+say the starfield isn't drawn and log as "Missing".
 
 Not moved, on purpose:
 
