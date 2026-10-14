@@ -69,6 +69,12 @@ gh pr ready 123 --undo     # back to draft: the NEXT push runs the draft tier
 - A pull request opened ready, and every push to a ready one, is a full run.
   A newer push (or "ready for review") cancels the run in flight for that
   pull request. Merges to `main` never cancel each other.
+- A cancelled DRAFT run leaves its gate **skipped**, not red: "Draft checks"
+  is not required and the run that cancelled it judges the commit. A
+  cancelled run of any other tier still FAILS "Typecheck, lint, unit" — a
+  skipped required check would count as passing — so a superseded ready
+  push shows red on its old commit (not on the pull request's head), and a
+  draft run that fails for real is red as before.
 - `--undo` starts no run (`converted_to_draft` is not a trigger): the commit
   keeps the results it has, and a full run already in flight finishes —
   cancel it by hand if you want the minutes back.

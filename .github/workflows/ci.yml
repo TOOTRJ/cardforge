@@ -312,12 +312,13 @@ jobs:
           retention-days: 3
 
   # The REQUIRED check (main's ruleset names "Typecheck, lint, unit"): green
-  # only when the jobs its tier runs all are. `always()`, not `!cancelled()`:
-  # the gate must RUN whatever became of the jobs it covers — failed, skipped,
+  # only when the jobs its tier runs all are. Not `!cancelled()` alone: the
+  # gate must RUN whatever became of the jobs it covers — failed, skipped,
   # timed out (a job stopped at its `timeout-minutes` ends as "cancelled") or
   # cancelled with the run — because a required check that is "skipped"
-  # counts as passing, and `always()` is the one condition documented to run
-  # in every one of those cases. It accepts exactly ONE shape per tier and
+  # counts as passing. Its condition names a status function (so a failed
+  # need does not skip it) and is true in every one of those cases but the
+  # one exception below (it was `always()` until then). It accepts exactly ONE shape per tier and
   # fails on anything else (`changes` must have succeeded in all of them):
   #
   #            static   unit+coverage  docs     frames, e2e, visual
@@ -342,10 +343,24 @@ jobs:
   # anyway; this is about the minutes after it stops being one.)
   # Never rename the required name; a new job the check must cover joins
   # `needs` and the table.
+  #
+  # ONE exception to "always runs": a DRAFT run that was CANCELLED — by
+  # "ready for review" (the full run takes its concurrency group) or by a
+  # newer push — skips the gate instead of failing it. Its "Draft checks"
+  # stayed red on the pull request for good (the full run reports under the
+  # other name, so nothing replaced it). That is safe because nothing is
+  # judged by it: "Draft checks" is not a required name, a draft cannot be
+  # merged, and the run that cancelled it judges the commit. Everything else
+  # still runs the gate: a draft run that was NOT cancelled (a failure, a job
+  # stopped at its timeout — that is the job's cancel, not the run's) is red,
+  # and every other tier — and a run whose classifier never said "draft"
+  # (empty tier: judged as full, under the required name) — runs it when
+  # cancelled too, so a cancelled full run stays RED under the required name
+  # and never becomes a "skipped" (= passing) "Typecheck, lint, unit".
   checks:
     name: ${{ needs.changes.outputs.tier == 'draft' && 'Draft checks (typecheck, lint, build)' || 'Typecheck, lint, unit' }}
     needs: [changes, static, unit, coverage, docs, frames, e2e, visual]
-    if: ${{ always() }}
+    if: ${{ !cancelled() || needs.changes.outputs.tier != 'draft' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

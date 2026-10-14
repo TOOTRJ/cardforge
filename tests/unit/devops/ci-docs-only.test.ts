@@ -476,9 +476,9 @@ describe("the workflow", () => {
       }
     }
     // Nothing else reads the classifier: these conditions, the notes job's,
-    // the gate's name and its TIER.
+    // the gate's name, its condition and its TIER.
     const skippable = GROUP_JOBS.static.length + GROUP_JOBS.unit.length + GROUP_JOBS.heavy.length;
-    expect(yaml.match(/needs\.changes\.outputs\.\w+/g)).toHaveLength(skippable + 3);
+    expect(yaml.match(/needs\.changes\.outputs\.\w+/g)).toHaveLength(skippable + 4);
     expect(yaml.match(/needs\.changes\.outputs\.\w+ != 'false'/g)).toHaveLength(skippable);
   });
 
@@ -518,11 +518,36 @@ describe("the gate, tier by tier", () => {
 
   it("reads every job it covers and the classifier's own word, and finishes after every required job", () => {
     expect(gate).toContain(`\n    needs: [${NEEDS.join(", ")}]\n`);
-    expect(gate).toMatch(/^ {4}if: \$\{\{ always\(\) \}\}$/m);
     expect(gate).toContain("NEEDS: ${{ toJSON(needs) }}");
     expect(gate).toContain("TIER: ${{ needs.changes.outputs.tier }}");
     expect(program).toContain(`length == ${NEEDS.length}`);
     expect(gate).not.toMatch(/continue-on-error|\|\| true/);
+  });
+
+  // It runs whatever became of the jobs it covers, but for ONE case: a DRAFT
+  // run that was cancelled (by "ready for review" or a newer push) skips it,
+  // so "Draft checks" does not stay red on the pull request — it is not a
+  // required name and nothing else replaces it. A cancelled run of any other
+  // tier, or with no tier at all, still runs it: a "skipped" required check
+  // counts as passing, so a cancelled full run must stay RED under
+  // "Typecheck, lint, unit".
+  it("runs in every case but a cancelled draft run — a cancelled full run stays red", () => {
+    const conditions = gate.match(/^ {4}if: .*$/gm) ?? [];
+    expect(conditions).toEqual(["    if: ${{ !cancelled() || needs.changes.outputs.tier != 'draft' }}"]);
+    // The condition as written, read as GitHub reads it: a status function
+    // is in it (else a failed need would skip the gate), and these are its
+    // only terms — so it can be evaluated here.
+    const expression = /^ {4}if: \$\{\{ (.*) \}\}$/.exec(conditions[0] ?? "")?.[1] ?? "";
+    expect(expression.replace(/!cancelled\(\)|needs\.changes\.outputs\.tier|'draft'|!=|\|\||\s/g, "")).toBe("");
+    const runs = (cancelled: boolean, tier: string) =>
+      new Function("cancelled", "tier", `return ${expression.replace("needs.changes.outputs.tier", "tier")};`)(() => cancelled, tier) as boolean;
+    for (const tier of ["full", "light", "notes", "draft", ""]) {
+      // Not cancelled: always runs (a failed, skipped or timed-out job is
+      // judged — a job's own timeout is not the run's cancel).
+      expect(runs(false, tier), `not cancelled, tier "${tier}"`).toBe(true);
+      // Cancelled: skipped only for a draft.
+      expect(runs(true, tier), `cancelled, tier "${tier}"`).toBe(tier !== "draft");
+    }
   });
 
   // CI's runners have jq; a machine without it skips the truth table only
