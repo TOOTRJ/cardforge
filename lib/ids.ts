@@ -22,3 +22,4 @@ export function randomId(): string {
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
+// THROWAWAY proof line B (never merged)
