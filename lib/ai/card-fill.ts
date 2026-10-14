@@ -67,7 +67,9 @@ function stationFillRules(input: DesignCardFillInput, designed: DesignedLike, te
     // unwritten, the fill is refused HERE — at plan time, before the job
     // (and its one credit) exists (owner 2026-10-14).
     const left = stationGapsLeftEmpty(current, merged);
-    if (left.length > 0) throw new StationGapUnfilledError(left.length);
+    if (left.length > 0) {
+      throw new StationGapUnfilledError(left.length, input.want.some((field) => field !== "rules_text"));
+    }
     return merged;
   }
   return repairStationText(card);

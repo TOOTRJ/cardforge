@@ -279,16 +279,46 @@ export function mergeStationFill(current: string | null | undefined, designed: s
   if (gaps.length === 0) return designed;
   const had = parseStationText(now);
   const got = parseStationText(designed);
+  // A designed tier whose number the current text ALREADY has belongs to
+  // that tier: it is never taken "by place" for a gap of another number —
+  // that would fill the gap with a copy of a tier the maker wrote (the
+  // independent check of #561: "3+ | \n8+ | Flying" answered with "8+ |
+  // Flying" alone is a gap left, not "3+ | Flying").
+  const known = new Set(had.tiers.map((tier) => tier.threshold));
   const lines = tierLines(now);
   return lines
     .map((line) => {
       if (line.tier === null || !gaps.includes(line.tier)) return line.raw;
       const threshold = had.tiers[line.tier]!.threshold;
-      const source = got.tiers.find((tier) => tier.threshold === threshold) ?? got.tiers[line.tier];
+      const byPlace = got.tiers[line.tier];
+      const source =
+        nthWithThreshold(got.tiers, threshold, occurrenceOf(had.tiers, line.tier)) ??
+        (byPlace && !known.has(byPlace.threshold) ? byPlace : undefined);
       const text = source?.text.trim() ?? "";
       return text ? `${threshold}+ | ${text}` : line.raw;
     })
     .join("\n");
+}
+
+/** Which occurrence of its number tier `index` is (0 for the first tier
+ *  with that number) — two tiers may share one. */
+function occurrenceOf(tiers: readonly { threshold: number }[], index: number): number {
+  const threshold = tiers[index]!.threshold;
+  return tiers.slice(0, index).filter((tier) => tier.threshold === threshold).length;
+}
+
+/** The `n`-th tier (0-based) with `threshold`, if any. */
+function nthWithThreshold<T extends { threshold: number }>(tiers: readonly T[], threshold: number, n: number): T | undefined {
+  return tiers.filter((tier) => tier.threshold === threshold)[n];
+}
+
+/** A tier text that says nothing: blank, punctuation alone, or the Station
+ *  reminder alone — a gap "written" so is still a gap. */
+function saysNothing(text: string): boolean {
+  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length === 0) return true;
+  if (lines.every((line) => isStationLine(line))) return true;
+  return !/[\p{L}\p{N}{]/u.test(text);
 }
 
 /**
@@ -303,19 +333,24 @@ export function stationGapsLeftEmpty(current: string | null | undefined, merged:
   if (gaps.length === 0) return [];
   const had = parseStationText(current);
   const now = parseStationText(merged);
+  // Each gap is looked up by its number AND which occurrence of it it is,
+  // so two tiers with one number are each checked.
   return gaps.filter((i) => {
-    const threshold = had.tiers[i]!.threshold;
-    const tier = now.tiers.find((t) => t.threshold === threshold);
-    return !tier || tier.text.trim() === "";
+    const tier = nthWithThreshold(now.tiers, had.tiers[i]!.threshold, occurrenceOf(had.tiers, i));
+    return !tier || saysNothing(tier.text);
   });
 }
 
 /** What the fill dialog says when a fill was refused because the empty
- *  tier came back empty — nothing was charged, nothing in the form moved. */
-export function stationGapUnfilledMessage(count: number): string {
-  return count > 1
-    ? "The AI couldn't write those tiers — nothing was charged. Try again or write them yourself."
-    : "The AI couldn't write that tier — nothing was charged. Try again or write it yourself.";
+ *  tier came back empty — nothing was charged, nothing in the form moved.
+ *  `others`: the fill also asked for other fields (title, flavour, art…),
+ *  which are not applied either. */
+export function stationGapUnfilledMessage(count: number, others = false): string {
+  const which = count > 1 ? "those tiers" : "that tier";
+  const it = count > 1 ? "them" : "it";
+  return others
+    ? `The AI couldn't write ${which}, so nothing was applied and nothing was charged. Try again or write ${it} yourself.`
+    : `The AI couldn't write ${which} — nothing was charged. Try again or write ${it} yourself.`;
 }
 
 /** Thrown by designCardFill (lib/ai/card-fill.ts) when a station card's empty tier came back
@@ -323,8 +358,8 @@ export function stationGapUnfilledMessage(count: number): string {
  *  step, no spend — so nothing to refund or settle. */
 export class StationGapUnfilledError extends Error {
   readonly code = "STATION_TIER_UNFILLED" as const;
-  constructor(count: number) {
-    super(stationGapUnfilledMessage(count));
+  constructor(count: number, others = false) {
+    super(stationGapUnfilledMessage(count, others));
     this.name = "StationGapUnfilledError";
   }
 }

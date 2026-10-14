@@ -409,6 +409,33 @@ describe("a fill of the rules text on a card that already has tiers", () => {
     expect(stationGapsLeftEmpty("Station\n2+ | A.\n5+ | B.\n9+ | C.\n12+ |", "x")).toEqual([]);
   });
 
+  it("F1 (#561's check): a gap is never filled by place with a COPY of a tier the text already has", () => {
+    // The other tier alone comes back: the gap stays, and is refused.
+    const one = "Station\n3+ | \n8+ | Flying";
+    expect(mergeStationFill(one, "Station\n8+ | Flying")).toBe(one);
+    expect(stationGapsLeftEmpty(one, mergeStationFill(one, "Station\n8+ | Flying"))).toEqual([0]);
+    // Two gaps, only 8+ written: 8+ takes it by number, 3+ gets no copy.
+    const two = "Station\n3+ | \n8+ | ";
+    expect(mergeStationFill(two, "Station\n8+ | B.")).toBe("Station\n3+ | \n8+ | B.");
+    expect(stationGapsLeftEmpty(two, mergeStationFill(two, "Station\n8+ | B."))).toEqual([0]);
+    // By place from a NEW number is still a fill.
+    expect(mergeStationFill(one, "Station\n4+ | Draw.\n8+ | Flying")).toBe("Station\n3+ | Draw.\n8+ | Flying");
+  });
+
+  it("a tier 'written' with punctuation alone or the Station reminder alone is a gap left; two tiers with one number are each checked", () => {
+    const gap = "Station\n2+ | A.\n9+ | ";
+    expect(stationGapsLeftEmpty(gap, "Station\n2+ | A.\n9+ | .")).toEqual([1]);
+    expect(stationGapsLeftEmpty(gap, "Station\n2+ | A.\n9+ | — …")).toEqual([1]);
+    expect(stationGapsLeftEmpty(gap, `Station\n2+ | A.\n9+ | ${stationReminder("Spacecraft", 9)}`)).toEqual([1]);
+    expect(stationGapsLeftEmpty(gap, "Station\n2+ | A.\n9+ | {T}")).toEqual([]);
+    expect(stationGapsLeftEmpty(gap, "Station\n2+ | A.\n9+ | 3")).toEqual([]);
+    // Same number twice, the second a gap: the second is the one checked.
+    const twin = "Station\n5+ | A.\n5+ | ";
+    expect(stationGapsLeftEmpty(twin, "Station\n5+ | A.\n5+ | ")).toEqual([1]);
+    expect(stationGapsLeftEmpty(twin, mergeStationFill(twin, "Station\n5+ | A.\n5+ | B."))).toEqual([]);
+    expect(mergeStationFill(twin, "Station\n5+ | A.\n5+ | B.")).toBe("Station\n5+ | A.\n5+ | B.");
+  });
+
   it("no gap: the designed text is the answer", () => {
     const full = `${top}\n2+ | A.\n9+ | Flying`;
     expect(emptyStationTiers(full)).toEqual([]);

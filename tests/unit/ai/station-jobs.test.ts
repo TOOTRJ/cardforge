@@ -472,10 +472,11 @@ describe("the per-field fill job on a station card", () => {
     // Every design / judge answer keeps the gap; art is ticked too.
     s.answers = [[ship({ rules_text: station_text })], [ship({ rules_text: station_text })], [ship({ rules_text: station_text })]];
     const out = await createCardFillJob({ want: ["rules_text", "art"], locked: { ...locked, station_text }, steer: {} });
+    // Art was ticked too: the message says nothing was applied.
     expect(out).toEqual({
       ok: false,
       code: "STATION_TIER_UNFILLED",
-      error: "The AI couldn't write that tier — nothing was charged. Try again or write it yourself.",
+      error: "The AI couldn't write that tier, so nothing was applied and nothing was charged. Try again or write it yourself.",
     });
     // No job row → no step the client could run, retry or loop on; no
     // ledger row of any kind (spend, refund) and nothing for patch_job_step
@@ -496,6 +497,41 @@ describe("the per-field fill job on a station card", () => {
     expect(out).toMatchObject({ ok: false, code: "STATION_TIER_UNFILLED", error: expect.stringMatching(/^The AI couldn't write that tier — nothing was charged/) });
     expect(s.inserted).toEqual([]);
     expect(s.spend).not.toHaveBeenCalled();
+  });
+
+  // F1 of #561's independent check: a gap "filled" by place with a COPY of
+  // a tier the maker already wrote is a gap left — refused, not charged.
+  it("the model drops the empty line and returns the other tier alone: refused (main and 5ce65d00: '3+ | Flying' copied, charged 1)", async () => {
+    const station_text = `${LINE(9)}\n3+ | \n8+ | Flying`;
+    const copy = ship({ rules_text: `${LINE(9)}\n8+ | Flying` });
+    s.answers = [[copy], [copy], [copy]];
+    const out = await createCardFillJob({ want: ["rules_text"], locked: { ...locked, station_text }, steer: {} });
+    expect(out).toEqual({ ok: false, code: "STATION_TIER_UNFILLED", error: "The AI couldn't write that tier — nothing was charged. Try again or write it yourself." });
+    expect(s.inserted).toEqual([]);
+    expect(s.spend).not.toHaveBeenCalled();
+    expect(s.refund).not.toHaveBeenCalled();
+  });
+
+  it("two gaps and only '8+ | B.' comes back: 8+ is written, 3+ is not given a copy of it — refused, not charged", async () => {
+    const station_text = `${LINE(9)}\n3+ | \n8+ | `;
+    const one = ship({ rules_text: `${LINE(9)}\n8+ | Draw a card.` });
+    s.answers = [[one], [one], [one]];
+    const out = await createCardFillJob({ want: ["rules_text"], locked: { ...locked, station_text }, steer: {} });
+    expect(out).toMatchObject({ ok: false, code: "STATION_TIER_UNFILLED" });
+    expect(s.inserted).toEqual([]);
+    expect(s.spend).not.toHaveBeenCalled();
+  });
+
+  it("a by-place fill that is still legitimate (the model renumbered the gap): written and charged once", async () => {
+    const station_text = `${LINE(9)}\n3+ | \n9+ | Flying`;
+    s.answers = [[ship({ rules_text: `${LINE(9)}\n4+ | Draw a card.\n9+ | Flying` })]];
+    const out = await createCardFillJob({ want: ["rules_text"], locked: { ...locked, station_text }, steer: {} });
+    expect(out.ok).toBe(true);
+    const stored = s.inserted[0]! as { plan: { fields: Record<string, unknown> } };
+    expect(stored.plan.fields).toEqual({ rules_text: `${LINE(9)}\n3+ | Draw a card.\n9+ | Flying` });
+    job("card_fill", stored.plan as never, "fill:0");
+    const { step } = await runStep();
+    expectCharged(step, 1, "fill_card");
   });
 
   it("refused WHOLE with title, flavour and art ticked beside the gap: none of them is handed over, no picture is painted", async () => {

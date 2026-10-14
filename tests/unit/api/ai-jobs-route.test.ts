@@ -238,14 +238,14 @@ describe("POST /api/ai/jobs — an emblem's per-field fill", () => {
 // back empty is refused at plan time — the route passes the refusal on with
 // its code (no job, no credit) for the fill dialog's message.
 describe("POST /api/ai/jobs — a station fill refused at plan time", () => {
-  it("answers the refusal with its code and message; no job is created", async () => {
+  it("answers the refusal with 422 (an expected outcome, not a gateway fault), its code and message; no job is created", async () => {
     s.fillRefusal = {
       ok: false,
       code: "STATION_TIER_UNFILLED",
       error: "The AI couldn't write that tier — nothing was charged. Try again or write it yourself.",
     };
     const { status, json } = await post({ kind: "card_fill", want: ["rules_text"], locked: { card_type: "artifact", subtypes: ["Spacecraft"], station_text: "Station\n3+ | " } });
-    expect(status).toBe(502);
+    expect(status).toBe(422);
     expect(json).toEqual(s.fillRefusal);
     expect(s.created).toHaveLength(0);
   });

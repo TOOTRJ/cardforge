@@ -441,9 +441,11 @@ export async function POST(request: Request) {
       scope: parsed.data.scope,
     });
     if (!result.ok) {
+      // A station fill whose empty tier came back empty is an expected
+      // outcome (422), not a gateway fault; every other refusal stays 502.
       return NextResponse.json(
         { ok: false, error: result.error, ...(result.code ? { code: result.code } : {}) },
-        { status: 502 },
+        { status: result.code === "STATION_TIER_UNFILLED" ? 422 : 502 },
       );
     }
     await recordGeneration(user.id, parsed.data.kind);

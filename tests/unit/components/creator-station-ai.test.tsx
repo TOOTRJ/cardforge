@@ -175,7 +175,8 @@ beforeEach(() => {
         if (jobs.refusal) {
           const refusal = jobs.refusal;
           jobs.refusal = null;
-          return new Response(JSON.stringify(refusal), { status: 502 });
+          const { status = 502, ...body } = refusal as { status?: number };
+          return new Response(JSON.stringify(body), { status });
         }
         return new Response(JSON.stringify({ ok: true, job: { id: "job-1" }, credits: 5 }), { status: 200 });
       }
@@ -270,7 +271,7 @@ describe("an AI fill of the rules text on a station card", () => {
     renderForm("edit", craft(GAP));
     await goTo("Text & stats");
     const message = "The AI couldn't write that tier — nothing was charged. Try again or write it yourself.";
-    jobs.refusal = { ok: false, code: "STATION_TIER_UNFILLED", error: message };
+    jobs.refusal = { ok: false, code: "STATION_TIER_UNFILLED", error: message, status: 422 };
     await click(screen.getByTestId("run-fill"));
     await waitFor(() => expect(toast.error).toHaveBeenCalledTimes(1));
     // The server's words, as they are — never "Your credit was refunded"
