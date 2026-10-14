@@ -14,7 +14,7 @@
 // maker's keystrokes as typed (a `draft`) for exactly as long as the text is
 // still the one they wrote.
 
-import { useId, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,8 @@ import {
   type StationEditorRows,
 } from "@/lib/creator/station-rows";
 import { printTypography } from "@/lib/validation/print-typography";
+import { stationCutNote, stationCutOf, stationOverLimit, stationOverLimitNote } from "@/lib/creator/station-fit";
+import { previewFrameStyleOf } from "@/lib/creator/legendary-variation";
 import type { CardType } from "@/types/card";
 
 export const STATION_TOP_BAND_HELP =
@@ -94,6 +96,46 @@ export function StationEditor({ rulesTextRef, onInsertSymbol }: StationEditorPro
   const hasReminder = /\bStation\b/i.test(rows.intro);
   const error = errors.rules_text?.message;
 
+  // Two notes under the tiers — nothing is blocked, no renderer reads them
+  // (lib/creator/station-fit.ts). Both are part of the tier group's
+  // DESCRIPTION (aria-describedby), never a live region: they come and go
+  // as the maker types.
+  // 1. The text does not fit its bands (owner round 58, decision 2): read
+  //    from the layout of the card the preview draws — real cut text only.
+  const [frameStyle, colorIdentity, cost, rarity, flavorText, power, toughness] = useWatch({
+    control,
+    name: ["frame_style", "color_identity", "cost", "rarity", "flavor_text", "power", "toughness"],
+  });
+  const fitKey = JSON.stringify([frameStyle, colorIdentity, cost, rarity, flavorText, power, toughness, cardType, subtypesText, supertype, rulesText, choice]);
+  const cut = useMemo(
+    () =>
+      stationCutOf({
+        template: frameStyle?.template,
+        frameStyle: frameStyle ? previewFrameStyleOf(frameStyle) : null,
+        cardType,
+        supertype,
+        subtypes: parseSubtypes(subtypesText ?? ""),
+        colorIdentity,
+        cost,
+        rarity,
+        rulesText,
+        flavorText,
+        power,
+        toughness,
+        ptTier: choice,
+      }),
+    // (The values by their JSON: the watched objects are new every render,
+    // and a full box's layout takes a few ms.)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [fitKey],
+  );
+  // 2. A band over the row limit: the save keeps the card as lines of text
+  //    and the P/T goes back to the tier the text names (the independent
+  //    check of #549 — it used to happen without a word).
+  const overLimit = stationOverLimit(rulesText, choice, hasPt);
+  const thresholds = rows.tiers.map((t) => t.n);
+  const noteIds = [cut ? `${groupId}-cut` : null, overLimit ? `${groupId}-over` : null].filter(Boolean).join(" ");
+
   return (
     <>
       <FieldGroup kind="control" label="Rules text — top band" error={error} helper={STATION_TOP_BAND_HELP}>
@@ -139,7 +181,13 @@ export function StationEditor({ rulesTextRef, onInsertSymbol }: StationEditorPro
         )}
       </FieldGroup>
 
-      <div role="group" aria-labelledby={`${groupId}-label`} aria-describedby={`${groupId}-help`} className="flex flex-col gap-3" data-testid="station-tiers">
+      <div
+        role="group"
+        aria-labelledby={`${groupId}-label`}
+        aria-describedby={noteIds ? `${groupId}-help ${noteIds}` : `${groupId}-help`}
+        className="flex flex-col gap-3"
+        data-testid="station-tiers"
+      >
         <div className="flex flex-col gap-1">
           <span id={`${groupId}-label`} className="text-xs font-semibold uppercase tracking-wider text-subtle">
             Tiers
@@ -238,6 +286,17 @@ export function StationEditor({ rulesTextRef, onInsertSymbol }: StationEditorPro
           <p role="status" data-testid="station-extra-tier" className="text-xs text-muted">
             This text has a fourth tier line ({extra.map((line) => `“${line.trim()}”`).join(", ")}). A card draws three tiers, so it
             stays in tier 3&rsquo;s text as typed — nothing is dropped.
+          </p>
+        ) : null}
+
+        {overLimit ? (
+          <p id={`${groupId}-over`} data-testid="station-over-limit" className="text-xs text-muted">
+            {stationOverLimitNote(overLimit, thresholds)}
+          </p>
+        ) : null}
+        {cut ? (
+          <p id={`${groupId}-cut`} data-testid="station-text-cut" className="text-xs text-muted">
+            {stationCutNote(cut, thresholds)}
           </p>
         ) : null}
 

@@ -90,6 +90,10 @@ export const REMIX_DFC_FRAMES_GONE =
   "The double-faced frames this card was priced for aren't available any more — retry this card.";
 import type { DeckFormat } from "@/types/deck";
 import { withCreditedStep } from "@/lib/ai/credited-step";
+import { sameStationShape, stationSaveFields } from "@/lib/ai/station-design";
+import { printsPowerToughness } from "@/lib/cards/card-display";
+import { isStationFrame } from "@/lib/cards/station-frame";
+import { stationPtChoiceOf } from "@/lib/creator/station-rows";
 import { getCardCapacity } from "@/lib/cards/capacity";
 import { describeCapacity, remainingCapacity } from "@/lib/billing/capacity-copy";
 
@@ -496,6 +500,24 @@ async function runGeneratedCardStep(
         return { ...step, status: "failed", error: "No game system configured." };
       }
 
+      // A card that lands on a STATION frame (TODO 4.27a, PR 3) saves as the
+      // creator saves a new one: the canonical text beside its rows
+      // (`face_content.station`), the power / toughness on the tier the
+      // text plates. Null for every other card — the payload is then what
+      // it always was (stationSaveFields; a Spacecraft with no tier never
+      // lands there: resolveGeneratedFrame).
+      const extras = config.createExtras ?? {};
+      const station = stationSaveFields({
+        template: (extras.frame_style as { template?: string } | undefined)?.template,
+        rulesText: card.rules_text,
+        hasPt: printsPowerToughness({
+          cardType: card.card_type,
+          supertype: (extras.supertype as string | undefined) ?? card.supertype,
+          subtypes: card.subtypes,
+          power: card.power,
+          toughness: card.toughness,
+        }),
+      });
       const result = await createCardAction(
         {
           title: card.title,
@@ -512,6 +534,7 @@ async function runGeneratedCardStep(
           // be set back in the creator.
           rarity: card.card_type === "token" ? "common" : card.rarity,
           rules_text: card.rules_text ?? undefined,
+          ...(station ?? {}),
           flavor_text: card.flavor_text ?? undefined,
           power: card.power ?? undefined,
           toughness: card.toughness ?? undefined,
@@ -1387,6 +1410,11 @@ async function runDeckCardStep(
   });
 }
 
+/** The step error of a remix whose renamed text no longer has its source's
+ *  tiers (a station card: Spacecraft, Planets). */
+export const REMIX_STATION_SHAPE_LOST =
+  "The new name changed this card's tiers — retry this card.";
+
 async function runDeckRemixStep(
   userId: string,
   job: GenerationJobRow,
@@ -1461,6 +1489,10 @@ async function executeDeckRemixStep(
      *  = the default landing (no template), as it landed before its frame
      *  was kept (ownCardTextStandIn); absent = none, the landing stands. */
     text_stand_in?: FrameTemplate | null;
+    /** An own STATION card's "power / toughness on this tier" choice where
+     *  its rows say more than its text (stationPtChoiceOf) — the remix
+     *  keeps the plate where its maker put it (TODO 4.27a, PR 3). */
+    station_pt_tier?: number | null;
     art_url?: string | null;
   };
   let mechanics: Mechanics;
@@ -1505,6 +1537,9 @@ async function executeDeckRemixStep(
       frame_template: kept.frame_template,
       back_face: kept.back_face,
       text_stand_in: ownCardTextStandIn(source, ownVerifiedKeys),
+      ...(isStationFrame(kept.frame_template)
+        ? { station_pt_tier: stationPtChoiceOf(source.rules_text, source.face_content) }
+        : {}),
     };
   } else if (entry.scryfall_id) {
     const scry = await getScryfallCardById(entry.scryfall_id);
@@ -1722,6 +1757,28 @@ async function executeDeckRemixStep(
         verifiedKeys: new Set(await getVerifiedFrameKeys()),
       })
     : undefined;
+  // A remix that lands on a STATION frame (TODO 4.27a, PR 3) keeps its
+  // source's tiers — the rules are copied, only the card's names in them
+  // change — and saves them as the creator saves a new card: the canonical
+  // text beside `face_content.station`, the P/T on the tier the text plates,
+  // or on the tier the maker of an own card chose. A new name that made or
+  // unmade a tier line (it never should) fails the step before the save:
+  // the wrapper refunds it. Null off the frame: the payload is unchanged.
+  if (frameTemplate && isStationFrame(frameTemplate) && !sameStationShape(mechanics.rules_text, named.rules_text)) {
+    return { ...step, status: "failed", error: REMIX_STATION_SHAPE_LOST };
+  }
+  const station = stationSaveFields({
+    template: frameTemplate,
+    rulesText: named.rules_text,
+    hasPt: printsPowerToughness({
+      cardType: mechanics.card_type as CardType | undefined,
+      supertype: mechanics.supertype,
+      subtypes: mechanics.subtypes,
+      power: mechanics.power,
+      toughness: mechanics.toughness,
+    }),
+    ptTier: mechanics.station_pt_tier,
+  });
   const gameSystemId = await activeGameSystemId();
   if (!gameSystemId) {
     return { ...step, status: "failed", error: "No game system configured." };
@@ -1737,6 +1794,7 @@ async function executeDeckRemixStep(
       subtypes: mechanics.subtypes,
       rarity: mechanics.rarity as never,
       rules_text: named.rules_text,
+      ...(station ?? {}),
       flavor_text: identity.flavor_text ?? undefined,
       power: mechanics.power,
       toughness: mechanics.toughness,
