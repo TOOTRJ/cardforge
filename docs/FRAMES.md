@@ -3203,12 +3203,84 @@ other legendary showcase still imports with it off, as its scan. Until the
 crown on** — M15's own crown, as any legendary M15 card (owner Round 59:
 fine).
 
-**Not done here**, on purpose: the masters are not re-cut. Against the
-scans, their title bar sits 5–8 px low (the scans' top outline on rows
-93–96, ours on 101–104 — Scryfall's crop varies by a few px, so part of it
-is the scan), their side rim is 3 px narrow and their rim tone is off on
-green, black and red. That is a CORRECTION of the frame, with its own
-before/after and sweep. Nor are pair masters built (#268's red | green).
+**Not done here**, on purpose: the masters are not re-cut, and pair masters
+are not built (#268's red | green). The frame's own correction against
+print followed (Round 59): [the constellation frame on its prints](#the-constellation-frame-on-its-prints-round-59).
+
+### The constellation frame on its prints (Round 59)
+
+Owner Rounds 59 (decision 1: correct the `nyx` masters against the eleven
+printings before the frame is ticked) and 61 (the rim takes the M15
+FAMILY's tones). Layout **v55** (`NYX_PRINT_TONES_LAYOUT_VERSION`, `nyx`
+only, "sweep"; a correction of a look against its own print). Recipe as
+data: `scripts/lib/nyx-frame.mjs`.
+
+**How print was read** (2026-10-14; Scryfall's `highres_scan` PNGs, 745 ×
+1040, measured at that native size with our masters downscaled by the same
+kernel, reported in 1500 × 2100 px; nothing kept). A scan's crop AND its
+colour are the scan's, so both are registered PER CARD: the showcase scan
+is read against our `nyx` master, and the SAME card's regular printing
+(THB #9, #18, #45, #71, #93, #119, #125, #150, #185, #196, #220 — the Nyx
+dress) against our print-verified `m15nyx` master; the second reading is
+taken off the first.
+
+**Colour.** The rim (both sides, the plateau beside the art) read on the
+showcase scan minus the same card's regular scan, laid on the family's rim:
+
+| Key | Family rim (m15nyx) | showcase − regular, median (readings) | Registered | MSE before | After |
+|---|---|---|---|---|---|
+| w | 244,243,236 | +1.5,+1.5,+1 (4) | 246,245,237 | 252,254,255 | 244,243,236 |
+| u | 0,117,190 | +5,−2,−3 (3) | 5,115,187 | 0,117,190 | unchanged |
+| b | 58,56,50 | −2.5,−4,−1 (4) | 56,52,49 | 39,38,36 | 58,56,50 |
+| r | 209,77,53 | −3,−2,−4 (3) | 206,75,49 | 239,56,39 | 209,77,53 |
+| g | 42,108,69 | 0,−2,−7.5 (4) | 42,106,62 | 0,123,67 | 42,108,69 |
+
+Every median is inside one print's spread (card to card a channel moves
+by up to 8–11): the constellation rim IS the family's rim, and `to` is the
+family's tone itself. The independent check read the same (w ≈ 246,244,238;
+u ≈ 1,119,190; b ≈ 54,52,48; r ≈ 209,76,50; g ≈ 42,107,64). The raw scan
+colours (e.g. red 220,59,22) are the scans' and are not used. Gold has no
+print (#268 is red | green): its rim goes onto the gold crown band's own
+flat arm, 246,210,98 → 233,212,125. Colourless keeps MSE's bronze (Round
+59's `a` crown is toned to it); there is no artifact key.
+
+**The crown bands are not touched**: `nyxcrown/*` are cut from the family's
+`m15nyxcrown`, whose arms ARE the family's rims (w 244,243,236 · u 0,117,190
+· b 58,56,50 · r 209,77,53 · g 42,108,69 · m 233,212,125), so with the rims
+on those tones crown and rim are one tone on every key with no tint —
+`nyxcrown/*` stay #555's bytes (only `a` is tinted, Round 59).
+
+**Geometry**, registered the same way, is NOT changed:
+
+| Finding (median of 11) | Raw against the scans | Registered | Verdict |
+|---|---|---|---|
+| Title bar | −6.5 px | −0.9 (control −6.1) | the scans', not the frame's |
+| Side rim width | — | print 12.2 (11.1–13.6), ours 11.9 | equal — no re-cut |
+| Rim position | L −2.3 / R +2.1 | L −1.3 / R +1.1 | under a re-cut |
+| Type bar top / bottom | −4.0 / −4.1 | −5.2 / −3.7 | real — a later step (TODO.md) |
+| Text box bottom | −5.0 | −6.0 | as above |
+
+Card Conjurer's 'Nyx Showcase' masters (the same drawing, same tones, on the
+regular M15 pack's geometry) sit on print at the type bar and box bottom
+(−0.2 / +1.8 / +2.1). Re-sourcing from them moves every lower-frame slot;
+the owner deferred it (Round 61; TODO.md), as the title bar's and box's
+redraw (print's title bar is the card's colour with sparkles).
+
+**The tone** (`toneNyxRim`, run by `scripts/build-variation-frames.mjs`
+after the type bar / box tone): the rim is ONE flat colour in each master,
+drawn over black outlines. Its region is that flat colour in pieces of ≥
+2000 px (a white star in the field is white's rim colour and is left alone)
+plus every pixel within 2 px of it that is a rim / black mix; each moves by
+t × (to − from), t its coverage of the rim — the flat rim lands on `to`
+exactly, an edge keeps its coverage, black stays black. A flat colour has
+no bevel, so no highlight can change hue. Nothing else of a master changes.
+
+**Rollout**: after the deploy the automatic re-bake runs, as after any
+sweep, over every card up to the new latest sweep version: a card on `nyx`
+re-bakes (production has none — the frame was never ticked), every other
+card is only STAMPED to v55 (no render). `/admin/renders` therefore shows
+stamp-only batches, not "idle", until every card is stamped. The visual
+matrix: the `nyx` cases of w b r g and gold change, nothing else.
 
 ### The Station frame (4.27a)
 
