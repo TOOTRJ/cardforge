@@ -83,7 +83,7 @@ describe("text that does not fit its bands", () => {
     }
     expect(seen.airOnly).toBeGreaterThan(0);
     expect(seen.cut).toBeGreaterThan(0);
-  });
+  }, 30_000); // lays the card out once per added sentence: ~9 s on a CI runner
 
   it("names the bands that are cut: a tier, the top band, both", () => {
     const tier = stationCutOf(ship(`${REMINDER}\n2+ | Scry 1.\n9+ | Flying\n${words(40)}`))!;
