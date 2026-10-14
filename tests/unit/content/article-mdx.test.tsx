@@ -89,7 +89,10 @@ describe("article MDX rendering", () => {
     for (const [, href] of html.matchAll(/<a [^>]*href="([^"]*)"/g)) {
       const raw = href.replace(/&amp;/g, "&");
       // …as Markdown, or as the `href` of a component it placed (<CardScan>).
-      const written = content.includes(`](${raw}`) || content.includes(`href="${raw}"`);
+      // …or the two anchors GFM draws for a footnote the source wrote.
+      const footnote = content.includes("[^") && raw.startsWith("#user-content-fn");
+      const written =
+        footnote || content.includes(`](${raw}`) || content.includes(`href="${raw}"`);
       expect(written, `${slug}: unexpected link ${raw}`).toBe(true);
     }
 

@@ -35,8 +35,10 @@ function childrenToString(node: ReactNode): string {
   return "";
 }
 
-function Heading2({ children }: { children?: ReactNode }) {
-  return <h2 id={slugifyTag(childrenToString(children))}>{children}</h2>;
+/** `id` is given only by generated headings (GFM's "Footnotes", whose
+ *  references point at it); a heading the guide wrote gets its slug. */
+function Heading2({ id, children }: { id?: string; children?: ReactNode }) {
+  return <h2 id={id ?? slugifyTag(childrenToString(children))}>{children}</h2>;
 }
 
 function Heading3({ children }: { children?: ReactNode }) {
@@ -106,7 +108,7 @@ function CardScan({
 }) {
   if (!src.startsWith(CARD_SCAN_HOST)) return null;
   return (
-    <figure className="m-0 flex w-36 flex-col gap-2 sm:w-44">
+    <figure className="m-0 flex w-36 flex-col gap-2 sm:w-44 group-data-[size=large]:w-40 sm:group-data-[size=large]:w-64">
       <a href={href} target="_blank" rel="noopener noreferrer">
         {/* A remote scan, shown as Scryfall serves it: next/image would
             re-encode Wizards' picture through our optimizer. */}
@@ -132,9 +134,18 @@ function CardScan({
 }
 
 /** A row of printed cards with one line saying what to look at. */
-function CardRow({ caption, children }: { caption?: string; children?: ReactNode }) {
+function CardRow({
+  caption,
+  size,
+  children,
+}: {
+  caption?: string;
+  /** "large" for a comparison whose point is a detail of the frame. */
+  size?: "large";
+  children?: ReactNode;
+}) {
   return (
-    <div className="my-3 flex flex-col gap-3">
+    <div data-size={size} className="group my-3 flex flex-col gap-3">
       <div className="flex flex-wrap justify-center gap-4 sm:gap-6">{children}</div>
       <p className="m-0 text-center text-sm leading-6 text-muted">
         {caption ? `${caption} ` : null}

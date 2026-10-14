@@ -27,6 +27,7 @@ const routeRoots = new Set(
 /** Same markdown → plain-text rule the FAQ lift uses. */
 function plain(text: string): string {
   return text
+    .replace(/\[\^[^\]]+\]/g, "")
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
     .replace(/<[^>]+>/g, "")
     .replace(/\*\*([^*]+)\*\*/g, "$1")
@@ -37,10 +38,11 @@ function plain(text: string): string {
 }
 
 function faqFromBody(body: string): Array<{ q: string; a: string }> {
-  const start = body.search(/^## (FAQ|Frequently asked questions)\s*$/m);
+  const start = body.search(/^## ((?:[^\n]* )?FAQ|Frequently asked questions)\s*$/m);
   if (start < 0) return [];
   let section = body.slice(start).replace(/^## [^\n]*\n/, "");
-  const next = section.search(/^## /m);
+  // The section ends at the next heading — or at the footnote definitions.
+  const next = section.search(/^(## |\[\^[^\]]+\]:)/m);
   if (next >= 0) section = section.slice(0, next);
   const out: Array<{ q: string; a: string }> = [];
   let q: string | null = null;
