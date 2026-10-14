@@ -2794,7 +2794,7 @@ describe("v53 — the large pips as printed (TODO 3.21, owner round 49)", () => 
   });
 });
 
-describe("v55 — the Nyx Constellation frame's rim and crown on its prints (owner Round 59)", () => {
+describe("v55 — the Nyx Constellation frame's rim on its prints (owner Rounds 59 / 61)", () => {
   const V = 55;
   it("is a sweep, never a badge, scoped to `nyx` alone, and not verification-neutral", async () => {
     const lv = await import("@/lib/cards/layout-version");

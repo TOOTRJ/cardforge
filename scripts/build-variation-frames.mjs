@@ -14,9 +14,9 @@
 // nyx's type bar and text box are darkened to the THB constellation prints
 // before the corner normalisation (scripts/lib/nyx-tone.mjs, TODO 4.17e:
 // MSE's 50 % black → α 150 on the bar, α 171 in the box; both are far from
-// the corners), and then its RIM is toned onto the prints (owner Round 59,
-// scripts/lib/nyx-frame.mjs: w u b r g; gold and colourless are not printed
-// and keep MSE's).
+// the corners), and then its RIM is toned onto the M15 family's tones the
+// prints wear (owner Rounds 59 / 61, scripts/lib/nyx-frame.mjs: w b r g;
+// blue's is MSE's own; gold onto the gold crown's arm; colourless untouched).
 //
 // All of them start UNVERIFIED — they surface to users only after the owner
 // checks them in /admin/frame-compare.

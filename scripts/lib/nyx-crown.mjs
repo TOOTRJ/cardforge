@@ -42,30 +42,15 @@
 // starfield strip is NOT toned: every pixel where the Nyx band differs from
 // the plain crown band of the same key (`m15crown/a`) stays the parent's
 // byte — but for the strip's soft edge, which takes the share of the tone
-// the crown shows through it (tintNyxCrownBand). Alpha untouched.
+// the crown shows through it (tintNyxCrownBand). Alpha untouched. The other
+// six bands take no tint.
 //
-// ONE TONE PER COLOUR (owner Round 59, decision 1 — the frame's correction,
-// scripts/lib/nyx-frame.mjs): the masters' rims are toned onto the prints
-// (w u b r g), so every band's metal is toned onto ITS master's rim — the
-// corrected rim for w u b r g (which brings the crown's red and blue onto
-// print: 209,77,53 → 220,59,22; 0,117,190 → 10,93,193), the gold master's
-// own for m (233,212,125 → 246,210,98). These use `shiftTone` (the move
-// (to − from) scaled by the pixel's luminance and faded out toward white):
-// unlike a per-channel gain it can lift blue's and green's 0 red. The
-// colourless `a` keeps Round 59's gain tint above, byte for byte. Only this
-// frame's bands: the Nyx dress's m15nyxcrown/* are the parents and never
-// change.
-//
-// The masters' GEOMETRY is not re-cut (rim width measured equal to print's;
-// the title bar's offset is the scans'; the lower frame's 4–6 px is reported
-// to the owner — fixing it moves text).
+// The masters themselves are NOT re-cut here (their rim, and the 5–8 px the
+// scans' title bar sits above ours, are a correction of the frame — another
+// step, with its own before/after).
 // ---------------------------------------------------------------------------
 
 import { toneSourceRegions } from "./cc-frames.mjs";
-import { NYX_RIM_TONES, shiftTone } from "./nyx-frame.mjs";
-
-/** A shift tint of one key's band: its arm's flat tone → its master's rim. */
-const shift = (from, to) => Object.freeze({ plain: "m15crown", method: "shift", from: Object.freeze([...from]), to: Object.freeze([...to]) });
 
 export const NYX_CONSTELLATION_CROWN_RECIPE = Object.freeze({
   /** The folder the bands are published under (`nyxcrown/<key>.png`). */
@@ -80,20 +65,12 @@ export const NYX_CONSTELLATION_CROWN_RECIPE = Object.freeze({
   rows: 410,
   /** The arms' fade: full strength on `from`, gone on `to` (and below). */
   fade: Object.freeze({ from: 372, to: 408 }),
-  /** The tints, key → `{ plain, from, to, method? }`: the band's metal
-   *  toned from `from` (what the band's arm reads) to `to` (what the `nyx`
-   *  master's rim reads beside the art), everywhere the band equals the
-   *  published plain crown band `<plain>/<key>.png` — i.e. everywhere but the
-   *  starfield strip. `a` (Round 59's colourless tint) through
-   *  toneSourceRegions' gain; the rest (`method: "shift"`) through
-   *  shiftTone. */
+  /** The tints, key → `{ plain, from, to }`: the band's metal toned from
+   *  `from` (what the band's arm reads) to `to` (what the `nyx` master's rim
+   *  reads beside the art), everywhere the band equals the published plain
+   *  crown band `<plain>/<key>.png` — i.e. everywhere but the starfield
+   *  strip. Only the colourless card's silver. */
   tint: Object.freeze({
-    w: shift([244, 243, 236], NYX_RIM_TONES.w.to),
-    u: shift([0, 117, 190], NYX_RIM_TONES.u.to),
-    b: shift([58, 56, 50], NYX_RIM_TONES.b.to),
-    r: shift([209, 77, 53], NYX_RIM_TONES.r.to),
-    g: shift([42, 108, 69], NYX_RIM_TONES.g.to),
-    m: shift([233, 212, 125], [246, 210, 98]),
     a: Object.freeze({ plain: "m15crown", from: Object.freeze([223, 225, 225]), to: Object.freeze([172, 148, 132]) }),
   }),
   /** The rows the starfield strip may occupy (measured: 50–101). */
@@ -149,8 +126,7 @@ const luma = (d, o) => 0.2126 * d[o] + 0.7152 * d[o + 1] + 0.0722 * d[o + 2];
  * starfield strip left alone. `plain` is the published plain crown band of
  * the same key (the crown with no strip over it):
  *   • METAL — a pixel whose four bytes equal the plain band's — takes the
- *     tone (toneSourceRegions' gain, or shiftTone for `method: "shift"`;
- *     both faded out toward white);
+ *     tone (toneSourceRegions, hue kept toward white);
  *   • the STRIP — every other pixel — is the parent's byte, but for its
  *     EDGE (a strip pixel within `edge.reach` px of metal): there the strip
  *     only part-covers the crown, so the pixel takes the part of the tone
@@ -181,29 +157,9 @@ export function tintNyxCrownBand(data, plain, tint, recipe = NYX_CONSTELLATION_C
     strip++;
   }
   if (strip === 0) throw new Error("tintNyxCrownBand: the band has no starfield strip (it equals the plain crown)");
-  let out;
-  let tonedPlain;
-  if (tint.method === "shift") {
-    const toneAll = (buf, only) => {
-      const res = Buffer.from(buf);
-      for (let p = 0; p < n; p++) {
-        if (only && !only[p]) continue;
-        const o = p * 4;
-        if (res[o + 3] === 0) continue;
-        const [r, g, b] = shiftTone(res[o], res[o + 1], res[o + 2], tint.from, tint.to);
-        res[o] = r;
-        res[o + 1] = g;
-        res[o + 2] = b;
-      }
-      return res;
-    };
-    out = toneAll(data, metal);
-    tonedPlain = toneAll(plain, null);
-  } else {
-    const tones = { metal: { from: [...tint.from], to: [...tint.to] } };
-    out = toneSourceRegions(data, width, rows, { metal }, tones);
-    tonedPlain = toneSourceRegions(plain, width, rows, { metal: new Uint8Array(n).fill(255) }, tones);
-  }
+  const tones = { metal: { from: [...tint.from], to: [...tint.to] } };
+  const out = toneSourceRegions(data, width, rows, { metal }, tones);
+  const tonedPlain = toneSourceRegions(plain, width, rows, { metal: new Uint8Array(n).fill(255) }, tones);
   let edged = 0;
   for (let y = stripRows[0]; y <= Math.min(rows - 1, stripRows[1]); y++) {
     for (let x = 0; x < width; x++) {

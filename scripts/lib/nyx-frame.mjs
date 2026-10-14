@@ -1,35 +1,46 @@
 // ---------------------------------------------------------------------------
-// The Nyx Constellation frame (template `nyx`) corrected onto its prints —
-// the RIM's tone (owner Round 59, decision 1: "correct the nyx frame itself
-// against print"). A correction of a look against its own print: layout
-// bump scoped to `nyx`, "sweep" (lib/cards/layout-version.ts).
-// scripts/build-variation-frames.mjs applies it to the MSE masters after
-// the type bar / text box tone (scripts/lib/nyx-tone.mjs), and
-// scripts/build-nyx-crown.mjs brings the crown bands onto the same tones.
+// The Nyx Constellation frame (template `nyx`) on its prints — the RIM's
+// tone (owner Round 59, decision 1; Round 61: the FAMILY's tones). A
+// correction of a look against its own print: layout bump scoped to `nyx`,
+// "sweep" (lib/cards/layout-version.ts). scripts/build-variation-frames.mjs
+// applies it to the MSE masters after the type bar / text box tone
+// (scripts/lib/nyx-tone.mjs).
 //
-// WHAT PRINT DOES — the eleven printings, THB #258–268 (Scryfall's
-// highres_scan PNGs, 745 × 1040, read 2026-10-14 at that native size; our
-// masters downscaled with the same kernel; reported in 1500 × 2100 px;
-// nothing kept). Positions are registered PER CARD: each showcase scan is
-// read against our master, and the same card's REGULAR printing (THB #9,
-// #18, #45, #71, #93, #119, #125, #150, #185, #196, #220 — the Nyx dress)
-// against our print-verified m15nyx master; the second offset (what
-// Scryfall's scan of that card does to a frame we know is right) is taken
-// off the first.
-//   • The rim is a flat colour in print as in our masters. Its tone — the
-//     median of the side rims' plateau beside the art, both sides, every
-//     print of the colour (4, 3, 4, 3, 4 readings) — is `to` below. #268
-//     Klothys (red | green) reads 223,58,24 and 50,110,69: the same.
-//   • The rim's WIDTH is the prints': 12.2 px (11.1–13.6) against our 11.9
-//     (both read by one detector at one resolution). Not re-cut.
-//   • The title bar sits where the regular printing's does once registered
-//     (−0.9 px, median of 11): the "5–8 px low" against the raw scans is
-//     what every THB scan does to the verified M15 frame too (−5.6).
-//   • NOT corrected here (it moves text — reported to the owner): the MSE
-//     masters' lower frame sits LOW against print — the type bar's top
-//     −5.2, its bottom −3.7, the text box's bottom −6.0 px (median of 11,
-//     registered); Card Conjurer's 'Nyx Showcase' drawing sits on print
-//     there (−0.2, +1.8, +2.1).
+// WHAT PRINT DOES — the eleven printings, THB #258–268, against the same
+// cards' REGULAR printings (THB #9, #18, #45, #71, #93, #119, #125, #150,
+// #185, #196, #220 — the Nyx dress, which our print-verified m15nyx masters
+// draw), all Scryfall highres_scan PNGs read 2026-10-14 at their native
+// 745 × 1040 (our masters downscaled with the same kernel; 1500 × 2100 px;
+// nothing kept).
+//   • COLOUR, registered per card the way positions are: a scan's colour is
+//     the scan's, so the rim is read on the showcase scan AND on the same
+//     card's regular scan, both sides, and the difference is laid on our
+//     verified m15nyx rim — the M15 family's tone:
+//
+//       key  family rim     showcase − regular (median; per reading)   → registered
+//       w    244,243,236    +1.5,+1.5,+1  (2,2,1 2,2,2 1,1,1 0,−1,−1)   246,245,237
+//       u      0,117,190    +5,−2,−3      (−3,−3,−4 6,8,7 5,−2,−3)      5,115,187
+//       b     58,56,50      −2.5,−4,−1    (−2,−2,−1 0,0,1 −3,−6,−2 −8,−8,−1) 56,52,49
+//       r    209,77,53      −3,−2,−4      (3,2,−4 −4,−4,−3 −3,−2,−7)    206,75,49
+//       g     42,108,69     0,−2,−7.5     (1,0,−3 1,−1,−5 −1,−3,−10 −6,−5,−11) 42,106,62
+//
+//     Every median is inside a single print's spread (one card to the next
+//     moves a channel by up to 8–11): the constellation rim IS the family's
+//     rim, so `to` is the family's tone itself — which is what the frame's
+//     crown bands (nyxcrown/*, cut from the family's m15nyxcrown) already
+//     are: crown and rim one tone, the bands untinted. Blue's family tone is
+//     MSE's own: blue is not toned.
+//   • GOLD has no print (THB's one two-colour card, #268, is red | green);
+//     its rim is put on the gold crown band's own flat arm, 233,212,125, so
+//     crown and rim match with no tint on the band (owner Round 61).
+//   • Colourless `c` has no print and keeps MSE's bronze, which Round 59's
+//     `a` crown band is toned to. The frame has no artifact key.
+//   • GEOMETRY, registered the same way, is not changed: the rim's width is
+//     print's (12.2 px, 11.1–13.6, against our 11.9) and the title bar's
+//     "5–8 px low" is what every THB scan does to the verified M15 frame
+//     (−0.9 px once registered). The MSE lower frame sits 4–6 px low (type
+//     bar −5.2 / −3.7, box bottom −6.0; Card Conjurer's drawing is on
+//     print): fixing it moves text — a later step (TODO.md).
 //
 // THE TONE: the rim is ONE flat colour in each master (`from`, read off the
 // master), drawn over black outlines with anti-aliased edges. Every pixel
@@ -37,28 +48,20 @@
 // black (a projection p = t × from, residual under `residual`) is moved by
 // t × (to − from): the flat rim lands on `to` exactly, an edge pixel keeps
 // its coverage over the black (t × to), black stays black, and a pixel that
-// mixes the rim with something else takes the share its residual allows.
-// No other region of a master changes. A flat colour has no bevel, so there
-// is no highlight to keep the hue of; the crown band (which has one) is
-// toned by `shiftTone`, the same move faded out toward white.
-//
-// NOT PRINTED: gold `m` (THB prints its one two-colour card red | green)
-// and colourless `c` (no colourless constellation card) keep MSE's rims —
-// nothing to derive them from; the frame has no artifact key (a colourless
-// card is `c`, whose crown is Round 59's bronze-toned `a`).
+// mixes the rim with something else takes the share its residual allows. A
+// flat colour has no bevel: there is no highlight whose hue could turn. No
+// other region of a master changes.
 // ---------------------------------------------------------------------------
 
-/** Rec. 709 luminance. */
-const luma = (r, g, b) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
-
-/** The rim, key → `{ from, to }`: `from` the master's flat rim (exact),
- *  `to` the prints' (see above). */
+/** The rim, key → `{ from, to }`: `from` the master's flat rim (exact), `to`
+ *  the family's tone (see above; gold: the gold crown band's arm). Blue is
+ *  absent — its family tone is MSE's — and so is colourless. */
 export const NYX_RIM_TONES = Object.freeze({
-  w: Object.freeze({ from: Object.freeze([252, 254, 255]), to: Object.freeze([238, 236, 240]) }),
-  u: Object.freeze({ from: Object.freeze([0, 117, 190]), to: Object.freeze([10, 93, 193]) }),
-  b: Object.freeze({ from: Object.freeze([39, 38, 36]), to: Object.freeze([62, 57, 54]) }),
-  r: Object.freeze({ from: Object.freeze([239, 56, 39]), to: Object.freeze([220, 59, 22]) }),
-  g: Object.freeze({ from: Object.freeze([0, 123, 67]), to: Object.freeze([45, 107, 71]) }),
+  w: Object.freeze({ from: Object.freeze([252, 254, 255]), to: Object.freeze([244, 243, 236]) }),
+  b: Object.freeze({ from: Object.freeze([39, 38, 36]), to: Object.freeze([58, 56, 50]) }),
+  r: Object.freeze({ from: Object.freeze([239, 56, 39]), to: Object.freeze([209, 77, 53]) }),
+  g: Object.freeze({ from: Object.freeze([0, 123, 67]), to: Object.freeze([42, 108, 69]) }),
+  m: Object.freeze({ from: Object.freeze([246, 210, 98]), to: Object.freeze([233, 212, 125]) }),
 });
 
 /** How the rim region is found: `flat` = the most a channel may differ from
@@ -180,21 +183,4 @@ export function toneNyxRim(data, width, height, tone, { minFlat = 50_000, region
     if (moved) changed++;
   }
   return { changed, flat };
-}
-
-/**
- * One pixel moved from `from` toward `to`, for a SHADED piece (the crown
- * band's bevels): by (to − from) × t, t = luma(p) ÷ luma(from) up to 1 (a
- * darker bevel moves less, black not at all), and above `from`'s
- * luminance faded out toward white ((255 − luma(p)) ÷ (255 − luma(from))),
- * so a highlight stays a highlight instead of taking the colour. A pixel at
- * `from` lands on `to` exactly. Unlike a per-channel gain it can lift a
- * channel that is 0 (blue's red, green's red).
- */
-export function shiftTone(r, g, b, from, to) {
-  const lf = luma(...from);
-  const lp = luma(r, g, b);
-  let k = lf > 0 ? Math.min(1, lp / lf) : 1;
-  if (lp > lf) k = Math.max(0, Math.min(1, (255 - lp) / Math.max(1, 255 - lf)));
-  return [r, g, b].map((v, c) => Math.min(255, Math.max(0, Math.round(v + k * (to[c] - from[c])))));
 }
