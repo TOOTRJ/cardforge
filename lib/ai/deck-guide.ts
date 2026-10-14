@@ -2,6 +2,7 @@ import "server-only";
 import { generateObject } from "ai";
 import { z } from "zod";
 import { judgeModel } from "@/lib/ai/provider";
+import { repairStructuredText, structuredCall } from "@/lib/ai/structured-output";
 import { commanderBracket, deckTypeByKey } from "@/lib/decks/deck-types";
 import type { DeckAnalytics } from "@/lib/decks/analytics";
 
@@ -82,9 +83,12 @@ export async function generateDeckGuide(input: DeckGuideInput): Promise<DeckGuid
   const type = deckTypeByKey(input.deckType);
   const bracket = commanderBracket(input.bracket);
   const a = input.analytics;
-  const { object } = await generateObject({
+  // Repaired where a machine can (a seventh combo or key card cut off), else
+  // asked once more; a second miss is AiOutputError.
+  const { object } = await structuredCall("deck-guide", repairStructuredText(deckGuideSchema), (experimental_repairText) => generateObject({
     model: judgeModel(),
     schema: deckGuideSchema,
+    experimental_repairText,
     system: SYSTEM,
     prompt: [
       `Deck: "${input.title}"${input.description ? ` — ${input.description}` : ""}`,
@@ -98,6 +102,6 @@ export async function generateDeckGuide(input: DeckGuideInput): Promise<DeckGuid
       .filter(Boolean)
       .join("\n"),
     temperature: 0.6,
-  });
+  }));
   return object;
 }
