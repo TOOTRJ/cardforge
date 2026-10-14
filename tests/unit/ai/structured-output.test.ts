@@ -67,7 +67,7 @@ vi.mock("@/lib/ai/provider", () => ({ designModel: () => "test/design", judgeMod
 
 import { zodSchema } from "ai";
 import type { z } from "zod";
-import { designCards, designedCardsSchema, fixupDesignedCards } from "@/lib/ai/card-design";
+import { designCards, designedCardsSchema, designRepair } from "@/lib/ai/card-design";
 import { deckConceptSchema } from "@/lib/ai/deck-design";
 import { deckIdeasSchema, generateDeckIdeas } from "@/lib/ai/deck-ideas";
 import { deckGuideSchema } from "@/lib/ai/deck-guide";
@@ -77,7 +77,6 @@ import {
   AiOutputError,
   aiErrorMessage,
   extractJson,
-  repairStructuredText,
   structuredCall,
 } from "@/lib/ai/structured-output";
 import { stationReminder } from "@/lib/creator/station-rows";
@@ -276,8 +275,10 @@ const BAD: Array<{ name: string; answer: unknown; field: string; repaired: boole
   { name: "a nullable field left out", answer: { cards: [Object.fromEntries(Object.entries(card()).filter(([key]) => key !== "defense" && key !== "loyalty"))] }, field: "cards.0.loyalty", repaired: true },
   { name: "a key the schema doesn't know", answer: { cards: [card({ station_tiers: [{ n: 9 }] })] }, field: "cards.0", repaired: true },
   { name: "the cards list sent bare", answer: [card()], field: "", repaired: true },
-  { name: "a cost past 40 characters", answer: { cards: [card({ cost: "{W}".repeat(14) })] }, field: "cards.0.cost", repaired: true },
-  { name: "a vanilla creature with no rules text", answer: { cards: [card({ rules_text: "" })] }, field: "cards.0.rules_text", repaired: false },
+  // Never cut: "{W}…{W}{" would save a broken cost (asked for again instead).
+  { name: "a cost past 40 characters", answer: { cards: [card({ cost: "{W}".repeat(14) })] }, field: "cards.0.cost", repaired: false },
+  // "—" would PRINT in a sorcery's cost row: asked for again.
+  { name: "a sorcery's cost left empty", answer: { cards: [card({ card_type: "sorcery", cost: "", power: null, toughness: null })] }, field: "cards.0.cost", repaired: false },  { name: "a vanilla creature with no rules text", answer: { cards: [card({ rules_text: "" })] }, field: "cards.0.rules_text", repaired: false },
 ];
 
 describe("realistic design answers", () => {
@@ -293,13 +294,13 @@ describe("realistic design answers", () => {
   });
 
   it.each(BAD)("$name: the repair sets it right = $repaired", async ({ answer, repaired }) => {
-    const text = await repairStructuredText(schema, fixupDesignedCards)({ text: JSON.stringify(answer) });
+    const text = await designRepair(false)({ text: JSON.stringify(answer) });
     expect(text !== null).toBe(repaired);
     if (text) expect(schema.safeParse(JSON.parse(text)).success).toBe(true);
   });
 
   it("a repair never invents content: the fixed card keeps every value the model wrote", async () => {
-    const text = await repairStructuredText(schema, fixupDesignedCards)({
+    const text = await designRepair(false)({
       text: JSON.stringify({ cards: [{ ...planet, cost: "", extra: 1 }] }),
     });
     expect(JSON.parse(text!)).toEqual({ cards: [{ ...planet, cost: "—" }] });

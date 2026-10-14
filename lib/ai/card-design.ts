@@ -173,7 +173,7 @@ export function fixupDesignedCards(root: unknown): unknown {
 }
 
 /** The repair for a design / judge answer. */
-function designRepair(allowEmblem: boolean) {
+export function designRepair(allowEmblem: boolean) {
   // A cost is never cut to its 40 characters: "{W}…{W}{" saved as a broken
   // cost (and the autofix then read it as colourless).
   return repairStructuredText(designedCardsSchema(allowEmblem), fixupDesignedCards, {
