@@ -184,6 +184,16 @@ type CardSetupPanelProps = {
   backFace?: { type: React.ReactNode; color: React.ReactNode } | null;
 };
 
+/** One line under a chip that has no other hint (owner, Round 60): what the
+ *  treatment IS, in a few words. The textless frames draw their text on the
+ *  art — they have no text BOX, they are not without text. */
+const FRAME_CHIP_HINTS: Partial<Record<FrameTemplate, string>> = {
+  extendedart: "Art to the side edges",
+  m15textless: "No text box: the text sits on the art",
+  m15textlessland: "No text box: the text sits on the art",
+  nyx: "Theros Beyond Death showcase",
+};
+
 export function CardSetupPanel({
   kind,
   colorIdentity,
@@ -595,7 +605,9 @@ export function CardSetupPanel({
                     : borrowedWord && isEnchantmentDress(choice.template)
                       ? `The printed enchantment frame, for ${borrowedWord} ${KIND_DEFS[kind].label}s: a starfield in the frame`
                     : borrowedWord
-                      ? `For ${borrowedWord} ${KIND_DEFS[kind].label}s`
+                      ? FRAME_CHIP_HINTS[choice.template]
+                        ? `${FRAME_CHIP_HINTS[choice.template]}, for ${borrowedWord} ${KIND_DEFS[kind].label}s`
+                        : `For ${borrowedWord} ${KIND_DEFS[kind].label}s`
                     : isEnchantmentDress(choice.template)
                       ? "The printed enchantment frame: a starfield in the frame"
                       : isTextBoxDress(kind, choice.template)
@@ -606,7 +618,7 @@ export function CardSetupPanel({
                             ? (subtypeDressHint(choice.template) ?? undefined)
                           : choice.group === "skin" && !isM15Treatment(choice.template)
                             ? "Same layout, different dress"
-                            : undefined,
+                            : FRAME_CHIP_HINTS[choice.template],
               leading: (
                 <FrameThumb
                   template={

@@ -440,7 +440,7 @@ describe("CardSetupPanel — Nyx is a creature variation for Enchantment Creatur
 
   it("offers Nyx to a creature, saying who it is for", () => {
     render(<Harness verified={verified} onColor={vi.fn()} initialColor="white" />);
-    expect(nyxChip().textContent).toContain("For Enchantment Creatures");
+    expect(nyxChip().textContent).toContain("Theros Beyond Death showcase, for Enchantment Creatures");
   });
 
   it("picking it makes a creature an Enchantment Creature, and leaving it undoes that", () => {
