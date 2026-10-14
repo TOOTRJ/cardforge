@@ -617,14 +617,23 @@ export function isSingleBasicLand(face: BasicLandFace): boolean {
 // (EOE 2025's station layout, TODO 4.27) and are not Vehicles.
 // ---------------------------------------------------------------------------
 
-const SUBTYPE_DRESSES: Partial<Record<FrameTemplate, { subtype: string; plural: string; base: FrameTemplate }>> = {
-  m15vehicle: { subtype: "Vehicle", plural: "Vehicles", base: "m15artifact" },
+const SUBTYPE_DRESSES: Partial<Record<FrameTemplate, { subtype: string; plural: string; base: FrameTemplate; look: string }>> = {
+  m15vehicle: { subtype: "Vehicle", plural: "Vehicles", base: "m15artifact", look: "bronze, with white numbers on a brown plate" },
   // The station frame (TODO 4.27a; owner 2026-10-13, Q1): a Spacecraft is an
   // artifact, a Planet a land — the Vehicle's pattern, twice. ("Spacecraft"
   // is its own plural.)
-  m15station: { subtype: "Spacecraft", plural: "Spacecraft", base: "m15artifact" },
-  m15stationland: { subtype: "Planet", plural: "Planets", base: "m15land" },
+  m15station: { subtype: "Spacecraft", plural: "Spacecraft", base: "m15artifact", look: "the picture under the whole frame, tiers in the text box" },
+  m15stationland: { subtype: "Planet", plural: "Planets", base: "m15land", look: "the picture under the whole frame, tiers in the text box" },
 };
+
+/** What a subtype dress's chip says of the frame once the card may wear it
+ *  ("The printed Vehicle frame: bronze, …") — each dress its OWN look: the
+ *  station pair is not bronze and a Planet has no plate (the independent
+ *  check of #549 read the Vehicle's words on all three chips). */
+export function subtypeDressHint(template: FrameTemplate): string | null {
+  const dress = SUBTYPE_DRESSES[template];
+  return dress ? `The printed ${dress.subtype} frame: ${dress.look}` : null;
+}
 
 /** Every subtype word a dress follows ("Vehicle", "Spacecraft", "Planet") —
  *  what the creator's follow effect watches come and go. */

@@ -60,6 +60,7 @@ import {
   isTypeWordDress,
   rowDressBaseFor,
   skinVariantsFor,
+  subtypeDressHint,
   subtypeDressOf,
   subtypeDressReason,
   subtypeFrameFits,
@@ -609,7 +610,7 @@ export function CardSetupPanel({
                         : kind === "token" && m20TokenHeightOf(choice.template)
                           ? M20_TOKEN_HEIGHT_HINTS[m20TokenHeightOf(choice.template)!]
                           : subtypeDressOf(choice.template)
-                            ? `The printed ${subtypeDressOf(choice.template)} frame: bronze, with white numbers on a brown plate`
+                            ? (subtypeDressHint(choice.template) ?? undefined)
                           : choice.group === "skin"
                             ? "Same layout, different dress"
                             : undefined,

@@ -209,6 +209,14 @@ describe("the follow and its words (TODO 4.27a, PR 2)", () => {
     expect(subtypeFrameFor("modern", ["Spacecraft"], all)).toBe("modern");
   });
 
+  it("each subtype dress's chip names its OWN look — the station pair is not the Vehicle's bronze and brown plate", async () => {
+    const { subtypeDressHint } = await import("@/lib/creator/card-kinds");
+    expect(subtypeDressHint("m15vehicle")).toBe("The printed Vehicle frame: bronze, with white numbers on a brown plate");
+    expect(subtypeDressHint("m15station")).toBe("The printed Spacecraft frame: the picture under the whole frame, tiers in the text box");
+    expect(subtypeDressHint("m15stationland")).toBe("The printed Planet frame: the picture under the whole frame, tiers in the text box");
+    expect(subtypeDressHint("m15artifact")).toBeNull();
+  });
+
   it("an Enchantment Artifact Spacecraft: the Nyx dress (#542) and the station frame never move a card off each other", async () => {
     const { subtypeFrameFor, enchantmentFrameFor } = await import("@/lib/creator/card-kinds");
     const all = () => true;

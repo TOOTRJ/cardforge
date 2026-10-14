@@ -454,4 +454,19 @@ describe("stored rows that say another text than the rules text (written by the 
     expect(tiersOf(sent)[2]).toEqual([9, "Flying, lifelink, trample"]);
     expect(sent.rules_text).toContain("6+ | Whenever this Spacecraft attacks, draw a card.");
   });
+
+  // The independent check of #549: OFF the station frame nothing draws the
+  // rows — the card draws its rules text. The form opened such a card with
+  // the rows' text all the same, and a title-only edit stored it in place
+  // of the card's own (on main: the stored text, byte for byte).
+  it("on a card that is NOT on a station frame the rules box shows the card's own text, and a title-only edit keeps it", async () => {
+    const other = "Flying\n3+ | An older wording.";
+    const card = craft(other, ROWS, { frame_style: { finish: "regular", template: "m15artifact" } });
+    renderForm("edit", card);
+    await type("title", "Lumen-Class Cruiser");
+    const sent = await sentUpdate();
+    expect(sent.rules_text).toBe(other);
+    expect("face_content" in sent).toBe(false);
+    expect(afterServer(sent, card).rules_text).toBe(other);
+  });
 });
