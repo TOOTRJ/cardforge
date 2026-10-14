@@ -47,6 +47,7 @@ import {
   serializeSaga,
   serializeSagaMarkers,
 } from "@/lib/cards/face-content";
+import { parseStationText, serializeStation } from "@/lib/cards/station";
 import { kindFromCard } from "@/lib/creator/card-kinds";
 
 /** How a field is read: a card name, a type-line part (supertype, subtype),
@@ -306,9 +307,12 @@ const INTRO_MAX = 400;
 
 type LoyaltyRow = { cost: string | null; text: string };
 type SagaRow = { numerals: number[]; text: string };
+type StationRow = { threshold: number; text: string; pt?: true };
 type FaceContentText = {
   loyalty?: { abilities: LoyaltyRow[] };
   saga?: { intro?: string | null; chapters: SagaRow[] };
+  /** The station frame's top band and tiers (TODO 4.27a). */
+  station?: { intro?: string | null; tiers: StationRow[] };
 };
 
 type FaceText = {
@@ -349,6 +353,7 @@ export type StoredTypographyText = {
 function serializedRows(face: FaceContentText): string | null {
   if (face.loyalty) return serializeLoyalty(face.loyalty.abilities);
   if (face.saga) return serializeSaga(face.saga.intro, face.saga.chapters);
+  if (face.station) return serializeStation(face.station.intro, face.station.tiers);
   return null;
 }
 
@@ -415,6 +420,15 @@ function storedRowTexts(stored: StoredTypographyText | null): Set<string> {
   for (const row of face?.loyalty?.abilities ?? []) if (typeof row?.text === "string") texts.add(asResent(row.text));
   for (const row of face?.saga?.chapters ?? []) if (typeof row?.text === "string") texts.add(asResent(row.text));
   if (typeof face?.saga?.intro === "string") texts.add(asResent(face.saga.intro));
+  // A station card's top band and tiers, each a box of the tier editor — its
+  // rows, and the rows its text holds (a card stored as plain text).
+  for (const row of face?.station?.tiers ?? []) if (typeof row?.text === "string") texts.add(asResent(row.text));
+  if (typeof face?.station?.intro === "string") texts.add(asResent(face.station.intro));
+  if (stored?.rules_text && /^\d{1,2}\+\s*\|/m.test(stored.rules_text)) {
+    const station = parseStationText(stored.rules_text.replace(/\r/g, ""));
+    for (const row of station.tiers) texts.add(asResent(row.text));
+    if (station.intro) texts.add(asResent(station.intro));
+  }
   if (stored?.rules_text) {
     const text = stored.rules_text.replace(/\r/g, "");
     for (const row of loyaltyFromRulesText(text)) texts.add(asResent(row.text));
@@ -485,6 +499,15 @@ function apply<T extends TypographyPayload>(data: T, stored: StoredTypographyTex
               ...rawFace.saga,
               intro: typeof rawFace.saga.intro === "string" ? row(rawFace.saga.intro, INTRO_MAX) : rawFace.saga.intro,
               chapters: rawFace.saga.chapters.map((r) => ({ ...r, text: row(r.text, ROW_MAX) })),
+            },
+          }
+        : {}),
+      ...(rawFace.station
+        ? {
+            station: {
+              ...rawFace.station,
+              intro: typeof rawFace.station.intro === "string" ? row(rawFace.station.intro, ROW_MAX) : rawFace.station.intro,
+              tiers: rawFace.station.tiers.map((r) => ({ ...r, text: row(r.text, ROW_MAX) })),
             },
           }
         : {}),

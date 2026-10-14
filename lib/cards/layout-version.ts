@@ -1346,7 +1346,33 @@ import { isColorIdentity, type CardType } from "@/types/card";
 //            once. The visual matrix: 340 of 1526 cases change, each with a
 //            symbol in scope; three `@large-pips-hd` cases are new.
 //            Verification-neutral: no slot, master, size or plate moves.
+//   v54    — the station frame on print's band rule (TODO 4.27a, PR 2; the
+//            independent check of #543 and owner round 55). `m15station`
+//            and `m15stationland` alone, every card on them: the bands of
+//            the text box (the same air round every band's text, floors
+//            168 / 180 px, 22 px more under a stamped last tier — and the
+//            holofoil stamp's keep-out counted, which PR 1's own table left
+//            out), a two-digit badge numeral and a wide plate value at
+//            print's heights, both 2 px right, the ring and the rim in the
+//            printed ring's tone, and the ceiling (the bands never leave
+//            the box; the badges give way before any text clips).
+//            STATION_BANDS_LAYOUT_VERSION below — the ONE constant. A
+//            CORRECTION ("sweep"), never a badge: the frame is not offered
+//            to makers and has no tick. Production holds NO card on either
+//            template (the frame is reachable only through
+//            `?previewFrames=`); the dev database's three seeds re-bake.
+//            The visual matrix: 51 of its 52 station cases change, no other
+//            case of 1581. No verification scope: neither template has a
+//            tick.
 // ---------------------------------------------------------------------------
+
+/** The station frame on print's band rule (TODO 4.27a, PR 2): every card
+ *  on `m15station` and `m15stationland`. ITS version lives here alone —
+ *  CARD_LAYOUT_VERSION, the scoped table and the rollout below read this
+ *  constant — so a bump that merges first moves it in one place. Frozen
+ *  once it ships. */
+export const STATION_BANDS_LAYOUT_VERSION = 54;
+export const STATION_BANDS_TEMPLATES: readonly string[] = ["m15station", "m15stationland"];
 
 /** The 1993 frame on its prints (TODO 4.10c): every text slot and the
  *  symbols of `agclassic` and `alphaland`. ITS version lives here alone —
@@ -1407,7 +1433,7 @@ export const LARGE_PIPS_LAYOUT_VERSION = 53;
  *  latest). */
 export const V53_LARGER_COST_TEMPLATES: readonly string[] = ["modern", "modernland"];
 
-export const CARD_LAYOUT_VERSION = LARGE_PIPS_LAYOUT_VERSION;
+export const CARD_LAYOUT_VERSION = STATION_BANDS_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -1582,6 +1608,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // whose cost holds a Phyrexian symbol (v52Changed). Verification-neutral.
   [TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION]: V52_DETACHED_COST_TEMPLATES,
   // (v53 is not here: any template — a card scope, v53Changed.)
+  // The station frame on print's band rule (4.27a, PR 2): the pair's tier
+  // layout and drawn pieces; every card on it (none stored in production).
+  // No narrower verification scope: neither template has a tick.
+  [STATION_BANDS_LAYOUT_VERSION]: STATION_BANDS_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -2573,6 +2603,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [ALPHA_1993_LAYOUT_VERSION]: "sweep", // the 1993 frame on its prints (4.10c): sizes, faces, the `Illus.` credit, the P/T, the original symbols — a correction of a pair against Alpha / Beta after the owner's before / after sheet (4 stored cards), never a badge
   [TYPE_LINE_ORDER_LAYOUT_VERSION]: "sweep", // the type line in its printed order + the P/T of a land creature (1.20) — a correction of what a face prints; 0 public or unlisted stored cards in scope, never a badge
   [TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION]: "sweep", // a name's room before a detached cost of Phyrexian symbols (6.16d) — a correction of a fit that ran the name under the pips; 0 public or unlisted stored cards in scope, never a badge
+  [STATION_BANDS_LAYOUT_VERSION]: "sweep", // the station frame on print's band rule, numeral sizes and ring tone (4.27a, PR 2) — a correction on a frame not offered yet
   [LARGE_PIPS_LAYOUT_VERSION]: "sweep", // hybrid and twobrid discs large, the large pip's factor per frame and place (3.21) — a correction against the prints after the owner's round-49 sheets, never a badge
   [SYMBOLS_PRINT_LAYOUT_VERSION]: "sweep", // five symbols on the prints' drawings + flat rules-text pips (6.16b) — a correction against the prints after the owner's round-43 sheets, never a badge
   [ART_FOCAL_ZERO_LAYOUT_VERSION]: "sweep", // the art's zoom about a focal point of exactly 0 (Satori dropped a zero transform-origin) — a correction of the bake against the preview after the owner's before / after sheet, never a badge

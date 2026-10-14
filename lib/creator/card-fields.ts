@@ -40,6 +40,8 @@ import { remixTitleFor } from "@/lib/creator/revise";
 import { secondPartWordsFor } from "@/lib/creator/second-part";
 import { defaultWatermarkFor } from "@/lib/cards/watermark";
 import { DEFAULT_CARD_LANG } from "@/lib/cards/collector-fields";
+import { stationOpenText, stationPtChoiceOf } from "@/lib/creator/station-rows";
+import { isStationFrame } from "@/lib/cards/station-frame";
 import {
   NEW_CARD_ANATOMY,
   pairColorIdentity,
@@ -207,6 +209,7 @@ export function defaultValuesFor(
       loyalty_abilities: [],
       saga_intro: "",
       saga_chapters: [],
+      station_pt_tier: null,
       flavor_text: "",
       // A fresh card is a 1/1 creature until the maker says otherwise — the
       // preview shows a real P/T box instead of an empty corner. Non-P/T
@@ -279,8 +282,16 @@ export function defaultValuesFor(
     subtypes_text: card.subtypes.join(", "),
     tags_text: card.tags?.join(", ") ?? "",
     rarity: card.rarity ?? "",
-    rules_text: card.rules_text ?? "",
+    // (A station card stored with rows that say another text than its
+    // rules text opens with the ROWS' text: they are what it draws. Only ON
+    // a station frame: off it nothing draws the rows — the card draws its
+    // rules text, and a title-only edit sent the rows' text in its place
+    // (the independent check of #549).)
+    rules_text: isStationFrame(persistedFrame.template)
+      ? stationOpenText(card.rules_text, card.face_content)
+      : (card.rules_text ?? ""),
     ...structuredRowsFrom(card),
+    station_pt_tier: stationPtChoiceOf(card.rules_text, card.face_content),
     flavor_text: card.flavor_text ?? "",
     power: card.power ?? "",
     toughness: card.toughness ?? "",

@@ -15,7 +15,10 @@ import { STATION, STATION_COLOURS, type StationKey } from "@/lib/cards/station";
 // The bevel (owner round 54, decision 3 — the one drawing round inside the
 // build): the prints' ring and rim are lit from above (a lighter upper edge,
 // a darker lower one, a thin dark seam against the face) and the dark face
-// has a soft lighter middle. `flat` is kept for the review sheet's
+// has a soft lighter middle. PR 2 (owner round 55, decision 1) keeps that
+// shape and darkens it toward print: the ring's mean is the printed ring's
+// tone (STATION_COLOURS.rim), the highlight and the shade half as strong —
+// print's ring is nearly flat. `flat` is kept for the review sheet's
 // print / flat / bevelled comparison and for nothing else.
 // ---------------------------------------------------------------------------
 
@@ -70,8 +73,8 @@ export function stationBadgeArt(key: string, style: StationArtStyle = "bevel"): 
     return (
       open +
       `<defs>` +
-      `<linearGradient id="r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${rgb(toward(rim, 255, 0.32))}"/><stop offset="0.5" stop-color="${rgb(rim)}"/><stop offset="1" stop-color="${rgb(rim, 0.72)}"/></linearGradient>` +
-      `<linearGradient id="h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${rgb(toward(rim, 255, 0.62))}"/><stop offset="0.55" stop-color="${rgb(toward(rim, 255, 0.2))}"/><stop offset="1" stop-color="${rgb(rim, 0.86)}"/></linearGradient>` +
+      `<linearGradient id="r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${rgb(toward(rim, 255, 0.14))}"/><stop offset="0.5" stop-color="${rgb(rim)}"/><stop offset="1" stop-color="${rgb(rim, 0.84)}"/></linearGradient>` +
+      `<linearGradient id="h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${rgb(toward(rim, 255, 0.34))}"/><stop offset="0.55" stop-color="${rgb(toward(rim, 255, 0.06))}"/><stop offset="1" stop-color="${rgb(rim, 0.94)}"/></linearGradient>` +
       `<radialGradient id="f" cx="0.5" cy="0.46" r="0.56"><stop offset="0" stop-color="${rgb(FACE.mid)}"/><stop offset="0.7" stop-color="${rgb(FACE.flat)}"/><stop offset="1" stop-color="${rgb(FACE.edge)}"/></radialGradient>` +
       `</defs>` +
       `<circle cx="${c}" cy="${c}" r="${rRing}" fill="${rgb(rim, 0.5)}"/>` +
@@ -107,8 +110,8 @@ export function stationPlateArt(key: string, style: StationArtStyle = "bevel"): 
     return (
       open +
       `<defs>` +
-      `<linearGradient id="r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${rgb(toward(rim, 255, 0.3))}"/><stop offset="0.5" stop-color="${rgb(rim)}"/><stop offset="1" stop-color="${rgb(rim, 0.72)}"/></linearGradient>` +
-      `<linearGradient id="h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${rgb(toward(rim, 255, 0.62))}"/><stop offset="0.55" stop-color="${rgb(toward(rim, 255, 0.2))}"/><stop offset="1" stop-color="${rgb(rim, 0.86)}"/></linearGradient>` +
+      `<linearGradient id="r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${rgb(toward(rim, 255, 0.14))}"/><stop offset="0.5" stop-color="${rgb(rim)}"/><stop offset="1" stop-color="${rgb(rim, 0.84)}"/></linearGradient>` +
+      `<linearGradient id="h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${rgb(toward(rim, 255, 0.34))}"/><stop offset="0.55" stop-color="${rgb(toward(rim, 255, 0.06))}"/><stop offset="1" stop-color="${rgb(rim, 0.94)}"/></linearGradient>` +
       `<radialGradient id="f" cx="0.5" cy="0.5" r="0.62"><stop offset="0" stop-color="${rgb(FACE.mid)}"/><stop offset="0.65" stop-color="${rgb(FACE.flat)}"/><stop offset="1" stop-color="${rgb(FACE.edge)}"/></radialGradient>` +
       `</defs>` +
       `<path d="${shape(0)}" fill="${rgb(rim, 0.5)}"/>` +

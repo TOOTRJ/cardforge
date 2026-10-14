@@ -87,6 +87,8 @@ import {
   serializeSagaMarkers,
   unreadableMarkerParts,
 } from "@/lib/cards/face-content";
+import { parseStationText, serializeStation } from "@/lib/cards/station";
+import { stationPlatedTier } from "@/lib/creator/station-rows";
 import { faceContentSchema } from "@/lib/validation/card";
 import type { CardKind } from "@/lib/creator/card-kinds";
 import type { FormValues } from "@/lib/creator/form-types";
@@ -95,7 +97,11 @@ import type { FaceContent, LoyaltyRowContent, SagaChapterContent } from "@/types
 export type StructuredRulesValues = Pick<
   FormValues,
   "rules_text" | "loyalty_abilities" | "saga_intro" | "saga_chapters"
->;
+> & {
+  /** The station frame's "which tier carries the P/T" choice (null / absent
+   *  = as the text says; lib/creator/station-rows.ts). */
+  station_pt_tier?: number | null;
+};
 
 export type SubmittedRules = {
   /** The rules text the save carries, trimmed; "" = none. */
@@ -117,6 +123,13 @@ export type SubmittedRulesOptions = {
   /** An EDIT: the stored card's `face_content` — what an untouched saga
    *  keeps when its rows cannot say everything its text does (below). */
   storedFaceContent?: FaceContent | null;
+  /** The card is on a STATION frame (its profile has `tiers`): the tier
+   *  editor owns the text, and a save writes its rows. */
+  stationFrame?: boolean;
+  /** An EDIT of a station card: the stored `rules_text`, which an untouched
+   *  save keeps byte for byte — the form may have opened with the stored
+   *  ROWS' text where the two disagreed (stationOpenText). */
+  storedRulesText?: string | null;
 };
 
 /** The rows a save carries: trimmed, textless ones dropped, the cost with
@@ -376,13 +389,49 @@ export function submittedRulesOf(
     return { rulesText: textarea, faceContent: null };
   }
 
-  // A station card's rows (TODO 4.27a: `face_content.station`, written by a
-  // seed, the API or — from PR 2 — the tier editor; they can say what the
-  // text cannot: the plate on a tier other than the one the text plates).
-  // No editor shows them yet, so an EDIT that left the rules text as it
-  // opened keeps them: the column is not sent and the server leaves it
-  // alone (an edit never changes what its maker did not touch). An edited
-  // text is the card's tiers from then on — the rows would contradict it.
+  // A card on a STATION frame (TODO 4.27a, PR 2 — the tier editor). The
+  // editor is a view of the rules text, so the text always says the tiers;
+  // the rows (`face_content.station`, read BEFORE the text by both
+  // renderers) add the one thing it cannot: the P/T on another tier.
+  //
+  // - UNTOUCHED (the text and the P/T tier as the form opened): the card
+  //   stays exactly as stored — its text byte for byte, `face_content` not
+  //   sent. A card stored as plain text is NOT given rows by a save that
+  //   only retitled it.
+  // - EDITED (or new, or a remix): the rows the text holds, the P/T on the
+  //   maker's tier, beside the canonical text. PR 1 dropped the rows here —
+  //   one word typed anywhere moved the plate back to the tier the text
+  //   plates (the independent check of #543); now every edit carries the
+  //   choice with it. With no tier left there are no rows (null clears the
+  //   column: the maker removed them). Rows the server cannot store (a
+  //   tier with no text, thresholds that do not rise — the form asks for
+  //   those first, lib/creator/form-schema.ts) save as the text alone,
+  //   which draws the same tiers.
+  if (options.stationFrame) {
+    const choice = values.station_pt_tier ?? null;
+    if (options.opened && options.opened.rules_text === values.rules_text && (options.opened.station_pt_tier ?? null) === choice) {
+      const kept = options.storedRulesText !== undefined ? (options.storedRulesText ?? "").trim() : textarea;
+      return { rulesText: kept, faceContent: stored, keepsStored: true };
+    }
+    const parsed = parseStationText(values.rules_text);
+    if (parsed.tiers.length === 0) return { rulesText: textarea, faceContent: null };
+    const plated = stationPlatedTier(values.rules_text, choice);
+    const content: FaceContent = {
+      v: 1,
+      station: {
+        intro: parsed.intro || null,
+        tiers: parsed.tiers.map((t, i) => ({ threshold: t.threshold, text: t.text, ...(i === plated ? { pt: true as const } : {}) })),
+      },
+    };
+    return fits(content)
+      ? { rulesText: serializeStation(parsed.intro, parsed.tiers), faceContent: content }
+      : { rulesText: textarea, faceContent: null };
+  }
+
+  // A card stored WITH station rows that is NOT on a station frame (its
+  // frame was changed): an EDIT that left the rules text as it opened keeps
+  // them — the column is not sent and the server leaves it alone. An edited
+  // text is the card's own from then on: off the frame nothing draws rows.
   if (stored?.station && options.opened && options.opened.rules_text.trim() === textarea) {
     return { rulesText: textarea, faceContent: stored, keepsStored: true };
   }
@@ -390,10 +439,11 @@ export function submittedRulesOf(
 }
 
 /**
- * The station rows the creator's PREVIEW draws (TODO 4.27a, the independent
- * check of #543): the stored card's, exactly while a save would keep them
- * (`submittedRulesOf` above — an edit whose rules text is as it opened),
- * else null (the text's own tiers, which is what the save then stores).
+ * The station rows the creator's PREVIEW draws (TODO 4.27a): what a save
+ * would store (`submittedRulesOf` above) — the stored card's while the edit
+ * is untouched, the editor's rows with the maker's P/T tier once it is not,
+ * null where the text alone says the card (no tier; off the frame, a text
+ * that was edited).
  * Without it the editor drew a card stored with rows from its text alone —
  * the plate on the tier the TEXT plates, other line breaks — while the bake,
  * the card page and the download drew the rows: the preview showed a card
@@ -407,5 +457,5 @@ export function keptStationRows(
 ): FaceContent | null {
   if (kind === "planeswalker" || kind === "saga") return null;
   const out = submittedRulesOf(kind, values, options);
-  return out.keepsStored && out.faceContent?.station ? out.faceContent : null;
+  return out.faceContent?.station ? out.faceContent : null;
 }

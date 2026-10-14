@@ -21,8 +21,9 @@ import type { FaceContent } from "@/types/card";
 // ONCE for the whole box and for both bake targets:
 //
 //   the size    — one rung of the rules ladder for every band of the card;
-//   the bands   — each tier its text + padding (never under its floor), the
-//                 top band the rest (lib/cards/station.ts stationBands);
+//   the bands   — print's rule: the same air round every band's text, a
+//                 tier never under its floor, more air under a stamped
+//                 last tier (lib/cards/station.ts stationBands);
 //   the lines   — every band's text is a box of lib/cards/rules-layout.ts
 //                 (layoutRulesAt: MPlantin's real advances, both targets),
 //                 centred in its band; a tier's column starts past its badge;
@@ -89,10 +90,20 @@ export type StationLayout = {
   clipped: boolean;
 };
 
-function plateBox(cy: number, value: string): StationPlate {
+/** A piece's scale in a band `bandH` tall: 1, or what fits (rule 2). */
+function pieceScale(bandH: number, pieceH: number): number {
+  return Math.min(1, Math.max(0.4, (bandH - STATION.pieceAirPx) / pieceH));
+}
+
+/** The plate on a band: its right end where print's is, its size the
+ *  plate's own unless the band is shorter. */
+function plateBox(cy: number, value: string, bandH: number = Number.POSITIVE_INFINITY): StationPlate {
   const { plate } = STATION;
-  const y0 = even(cy - plate.outerH / 2);
-  return { x0: plate.x0, y0, x1: plate.x1, y1: y0 + plate.outerH, value };
+  const k = pieceScale(bandH, plate.outerH);
+  const h = even(plate.outerH * k);
+  const w = even(plate.outerW * k);
+  const y0 = even(cy - h / 2);
+  return { x0: plate.x1 - w, y0, x1: plate.x1, y1: y0 + h, value };
 }
 
 /** What the plated tier's lines keep clear of: the plate and its air. */
@@ -129,42 +140,55 @@ function layAt(input: StationLayoutInput, sizePx: number, rule: StationBandRule,
   // tier with the plate floated at a provisional centre: its lines break
   // short of the plate's column wherever the band lands), then the bands.
   const tall = (layoutInput: RulesLayoutInput) => blockHeightPx(layoutRulesAt(layoutInput, sizePx), "hd");
-  const topH = hasTop ? tall(base(text.intro, flavor, slotLeft, 0, HD_H)) : 0;
-  const tierH = text.tiers.map((tier, i) => {
+  let topH = hasTop ? tall(base(text.intro, flavor, slotLeft, 0, HD_H)) : 0;
+  let tierH = text.tiers.map((tier, i) => {
     if (tier.text === "") return 0;
     const probe = i === plated ? [plateKeepOut(plateBox(HD_H / 2, ""))] : [];
     return tall({ ...base(tier.text, null, tierLeft, 0, HD_H), ...(probe.length ? { floats: probe } : {}) });
   });
-  const bands = stationBands(topH, tierH, rule);
-
   const stamp = input.stamp ? [input.stamp] : [];
   const lastBand = text.tiers.length - 1;
-  const top = hasTop
-    ? layoutRulesAt({ ...base(text.intro, flavor, slotLeft, bands.top.y0, bands.top.y1), ...(lastBand < 0 && stamp.length ? { keepOuts: stamp } : {}) }, sizePx)
-    : null;
-  let plate: StationPlate | null = null;
-  const tiers = text.tiers.map((tier, i) => {
-    const band = bands.tiers[i]!;
-    const floats: Rect[] = [];
-    if (i === plated) {
-      plate = plateBox(band.cy, input.ptValue!);
-      floats.push(plateKeepOut(plate));
-    }
-    const keepOuts = i === lastBand ? stamp : [];
-    const layout =
-      tier.text === ""
-        ? null
-        : layoutRulesAt(
-            { ...base(tier.text, null, tierLeft, band.y0, band.y1), ...(keepOuts.length ? { keepOuts } : {}), ...(floats.length ? { floats } : {}) },
-            sizePx,
-          );
-    return { threshold: tier.threshold, text: layout };
-  });
-  const clipped = !bands.fits || Boolean(top?.clipped) || tiers.some((t) => t.text?.clipped);
-  return { sizePx, rule: ruleIndex, bands, top, tiers, plate, clipped };
+  // The bands, then every band's text in its own rows. A keep-out can break
+  // a tier's lines shorter than the measure did (the stamp's arch, the plate
+  // at its real centre): the bands are then solved again on the heights the
+  // text really has — a fixed point in two or three rounds.
+  let laid: Omit<StationLayout, "sizePx" | "rule" | "clipped"> & { textClipped: boolean };
+  for (let round = 0; ; round++) {
+    const bands = stationBands(topH, tierH, rule, stamp.length > 0);
+    const top = hasTop
+      ? layoutRulesAt({ ...base(text.intro, flavor, slotLeft, bands.top.y0, bands.top.y1), ...(lastBand < 0 && stamp.length ? { keepOuts: stamp } : {}) }, sizePx)
+      : null;
+    let plate: StationPlate | null = null;
+    const tiers = text.tiers.map((tier, i) => {
+      const band = bands.tiers[i]!;
+      const floats: Rect[] = [];
+      if (i === plated) {
+        plate = plateBox(band.cy, input.ptValue!, band.y1 - band.y0);
+        floats.push(plateKeepOut(plate));
+      }
+      const keepOuts = i === lastBand ? stamp : [];
+      const layout =
+        tier.text === ""
+          ? null
+          : layoutRulesAt(
+              { ...base(tier.text, null, tierLeft, band.y0, band.textY1), ...(keepOuts.length ? { keepOuts } : {}), ...(floats.length ? { floats } : {}) },
+              sizePx,
+            );
+      return { threshold: tier.threshold, text: layout };
+    });
+    laid = { bands, top, tiers, plate, textClipped: Boolean(top?.clipped) || tiers.some((t) => t.text?.clipped) };
+    const realTop = top ? blockHeightPx(top, "hd") : 0;
+    const realTier = tiers.map((t) => (t.text ? blockHeightPx(t.text, "hd") : 0));
+    const grew = realTop > topH + 0.5 || realTier.some((h, i) => h > tierH[i]! + 0.5);
+    if (!grew || round >= 3) break;
+    topH = Math.max(topH, realTop);
+    tierH = tierH.map((h, i) => Math.max(h, realTier[i]!));
+  }
+  const { textClipped, ...rest } = laid;
+  return { sizePx, rule: ruleIndex, ...rest, clipped: !rest.bands.fits || textClipped };
 }
 
-export type StationFitOrder = readonly (readonly [rule: number, minSizePx: number])[];
+export type StationFitOrder = readonly (readonly [rule: number, minSizePx: number, maxSizePx?: number])[];
 
 /** The station box laid out: band rule by band rule (STATION.fitOrder —
  *  roomy first), each at the largest size down to that rule's smallest, the
@@ -176,8 +200,9 @@ export function stationLayout(
 ): StationLayout {
   const ladder = rulesLadderPx(input.profile.rules.sizePct, "portrait");
   let last: StationLayout | null = null;
-  for (const [r, minSizePx] of order) {
+  for (const [r, minSizePx, maxSizePx = Number.POSITIVE_INFINITY] of order) {
     for (const sizePx of ladder) {
+      if (sizePx > maxSizePx) continue;
       if (sizePx < minSizePx) break;
       last = layAt(input, sizePx, rules[r]!, r);
       if (!last.clipped) return last;
@@ -224,18 +249,21 @@ export function stationDrawing(
     pieces.push({ kind: "band", href: stationBandArt(masterKey, i), rect: pct(box.left, band.y0, box.right, band.y1) });
   });
   layout.bands.tiers.forEach((band, i) => {
-    const top = even(band.cy - badge.rRing);
-    const rect = pct(badge.cx - badge.rRing, top, badge.cx + badge.rRing, top + 2 * badge.rRing);
+    const k = pieceScale(band.y1 - band.y0, 2 * badge.rRing);
+    const r = even(badge.rRing * k);
+    const top = even(band.cy - r);
+    const rect = pct(badge.cx - r, top, badge.cx + r, top + 2 * r);
     pieces.push({ kind: "badge", href: stationBadgeArt(masterKey, style), rect });
     values.push({
       value: `${layout.tiers[i]!.threshold}+`,
       slot: {
         rect,
-        sizePct: badge.numeralPx / HD_W,
+        sizePct: (badge.numeralPx * k) / HD_W,
         colorHex: inks.digitColorHex,
         weight: 700,
         valueDyEm: BADGE_VALUE_DY_EM,
-        inkSpanPct: { leftPct: ((badge.cx - badge.inkHalfWidth) / HD_W) * 100, rightPct: ((badge.cx + badge.inkHalfWidth) / HD_W) * 100 },
+        valueDxEm: badge.valueDxEm,
+        inkSpanPct: { leftPct: ((badge.cx - badge.inkHalfWidth * k) / HD_W) * 100, rightPct: ((badge.cx + badge.inkHalfWidth * k) / HD_W) * 100 },
       },
     });
   });
@@ -243,15 +271,17 @@ export function stationDrawing(
     const p = layout.plate;
     const rect = pct(p.x0, p.y0, p.x1, p.y1);
     pieces.push({ kind: "plate", href: stationPlateArt(masterKey, style), rect });
+    const k = (p.y1 - p.y0) / P.outerH;
     values.push({
       value: p.value,
       slot: {
         rect,
-        sizePct: P.digitPx / HD_W,
+        sizePct: (P.digitPx * k) / HD_W,
         colorHex: inks.digitColorHex,
         weight: 700,
         valueDyEm: PLATE_VALUE_DY_EM,
-        inkSpanPct: { leftPct: ((p.x0 + P.rim + 8) / HD_W) * 100, rightPct: ((p.x1 - P.rim - 8) / HD_W) * 100 },
+        valueDxEm: P.valueDxEm,
+        inkSpanPct: { leftPct: ((p.x0 + P.digitInset * k) / HD_W) * 100, rightPct: ((p.x1 - P.digitInset * k) / HD_W) * 100 },
       },
     });
   }
