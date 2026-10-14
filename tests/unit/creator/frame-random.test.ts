@@ -45,6 +45,18 @@ describe("resolveGeneratedFrame", () => {
     ).toBe("retro");
   });
 
+  it("never honours a request for a frame that prints no text when the designed card has some (TODO 1.24; the textless promo pair since layout v58)", () => {
+    const verified = keys(["m15textless", "r"], ["m15", "r"]);
+    const base = { cardType: "creature" as const, requested: "m15textless" as const, colorIdentity: ["red" as const], verifiedKeys: verified, random: () => 0 };
+    // With rules or flavour text: the pool picks, and keeps the textless frame out.
+    expect(resolveGeneratedFrame({ ...base, face: { cardType: "creature", rulesText: "Haste" } })).toBe("m15");
+    expect(resolveGeneratedFrame({ ...base, face: { cardType: "creature", flavorText: "Fast." } })).toBe("m15");
+    // With none: the frame asked for by name.
+    expect(resolveGeneratedFrame({ ...base, face: { cardType: "creature" } })).toBe("m15textless");
+    // Only the textless frame published: it stays (the pool's last resort, as for a random request).
+    expect(resolveGeneratedFrame({ ...base, verifiedKeys: keys(["m15textless", "r"]), face: { cardType: "creature", rulesText: "Haste" } })).toBe("m15textless");
+  });
+
   it("falls back to a published frame when the requested color isn't", () => {
     const resolved = resolveGeneratedFrame({
       cardType: "creature",

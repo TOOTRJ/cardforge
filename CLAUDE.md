@@ -409,14 +409,14 @@ Rules and gotchas:
   both paths save, `remixSavedFrame` (`lib/creator/frame-resolve.ts`) takes
   a landing whose PROFILE is `textless` (`frameHidesRulesBoxText` — the
   renderers' flag and `hasRulesBoxText`; today the full-art token's two
-  textless heights) off it once the final text is known — a printing onto
+  textless heights and the textless promo pair) off it once the final text is known — a printing onto
   its landing with the textless frames read as unverified
   (`withoutTextlessFrames`, the registry's own stand-in, `text_stand_in`),
   an own token onto the 2014–19 arch its type words pick, else an own card
   onto the default landing, where the save's gates pass it
   (`ownCardTextStandIn`) — and leaves it where the card saves with no text
   or nothing else is published in the colour; `resolveGeneratedFrame`'s
-  random pool reads the same test. The "M15 Textless" frames ARE textless
+  random pool and a frame it is asked for by name read the same test. The "M15 Textless" frames ARE textless
   profiles since layout v58 (the black-bordered textless promos, CC 'Magic
   Fest Promos') — the guard reads the flag; never test a template's name.
   An EMBLEM is never remixed (owner 2026-10-13; it prints its walker's

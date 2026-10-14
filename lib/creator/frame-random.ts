@@ -190,7 +190,12 @@ export function resolveGeneratedFrame(input: {
     const match =
       typed.find((choice) => choice.template === wanted) ??
       (isM20TokenTemplate(asked) ? undefined : typed.find((choice) => choice.template === asked));
-    if (match) return match.template;
+    // A frame that prints no text (a `textless` profile — the textless promo
+    // pair since layout v58) is asked for by name only while the designed
+    // card has no rules or flavour text to hide (TODO 1.24): with some, the
+    // pool below — which keeps such a frame out while any other is
+    // published — picks, as it does for a random request.
+    if (match && !frameHidesRulesBoxText(match.template, tokenFace)) return match.template;
     // Requested frame can't dress this card (wrong type after generation, or
     // that color isn't published) — degrade to a random valid one.
   }

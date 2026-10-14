@@ -440,7 +440,6 @@ describe("the frame picker's groups: a classification change only", () => {
     ["base", "the Frame-section base of every frame, per kind"],
     ["resolve", "the published-frame resolver, every kind × frame × colour × policy"],
     ["candidates", "the import's candidate frames"],
-    ["requested", "an AI card asked for a frame by name"],
     ["imports", "every captured printing's match, landing, chooser and remix landing"],
     ["walkthrough", "the kind a frame's walk-through opens as"],
     ["notice", "the 'bordered' word of an import's treatment notice"],
@@ -467,6 +466,26 @@ describe("the frame picker's groups: a classification change only", () => {
       const face = key.split("|")[3];
       if (face === "textless" || face === "none" || face === "basic") continue;
       expect(pool.filter((t) => t === "m15textless" || t === "m15textlessland"), key).toEqual([]);
+    }
+  });
+
+  // An AI card asked for a frame by name: identical but for the textless
+  // pair (layout v58): a request for m15textless / m15textlessland is
+  // honoured only for a face with no rules or flavour text — a face with
+  // some is given the pool's pick, as a random request is (TODO 1.24).
+  // Recorded in full on origin/main (a6415e5e) and here: the 392 decisions
+  // that differ are all a request for the pair on a face that carries text
+  // (plain, artifactWord, enchantmentWord, vehicle), each now off the pair.
+  it("requested — an AI card asked for a frame by name: the same, but the textless pair never given to a card with text (v58)", () => {
+    const kinds = ["artifact", "creature", "enchantment", "instant", "land", "sorcery", "spell", "token"];
+    expect(changed("requested")).toEqual(["all", "prodPlusMoved"].flatMap((policy) => kinds.map((kind) => `${policy}|${kind}`)));
+    for (const [key, frame] of Object.entries(raw.requested) as [string, string | null][]) {
+      const parts = key.split("|");
+      const face = parts[3];
+      const requested = parts[parts.length - 1];
+      if (requested !== "m15textless" && requested !== "m15textlessland") continue;
+      if (face === "textless" || face === "none" || face === "basic") continue;
+      expect(frame === "m15textless" || frame === "m15textlessland", key).toBe(false);
     }
   });
 
