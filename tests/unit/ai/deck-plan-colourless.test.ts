@@ -22,8 +22,9 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 //
 // `DECK_PLAN_UPDATE=1` rewrites the fixture — only with the reason in the PR.
 // Stubbed: Supabase, the deck actions/queries, the model (`ai`
-// generateObject — the answer is checked against the schema the call sent,
-// as the SDK does) and the card designer (captured). No generation is run.
+// generateObject — the answer is checked against the schema the call sent
+// and, failing it, run through the call's own repair, as the SDK does) and
+// the card designer (captured). No generation is run.
 // ---------------------------------------------------------------------------
 
 const USER = "11111111-1111-4111-8111-111111111111";
@@ -73,7 +74,12 @@ vi.mock("ai", async (importOriginal) => {
   const actual = await importOriginal<typeof import("ai")>();
   return {
     ...actual,
-    generateObject: async (args: { system: string; prompt: string; schema: { safeParse: (v: unknown) => { success: boolean; data?: unknown } } }) => {
+    generateObject: async (args: {
+      system: string;
+      prompt: string;
+      schema: { safeParse: (v: unknown) => { success: boolean; data?: unknown } };
+      experimental_repairText?: (input: { text: string; error: unknown }) => Promise<string | null>;
+    }) => {
       const answer = s.concepts.shift();
       const parsed = args.schema.safeParse(answer);
       s.calls.push({
@@ -82,9 +88,16 @@ vi.mock("ai", async (importOriginal) => {
         schema: await actual.zodSchema(args.schema as never).jsonSchema,
         ok: parsed.success,
       });
-      // What the SDK does with an answer outside the schema.
-      if (!parsed.success) throw new Error("No object generated: response did not match schema.");
-      return { object: parsed.data };
+      if (parsed.success) return { object: parsed.data };
+      // What the SDK does with an answer outside the schema: the call's
+      // repair (#565's repairStructuredText), validated again with the same
+      // schema, else NoObjectGeneratedError (structuredCall asks once more).
+      const repaired = await args.experimental_repairText?.({ text: JSON.stringify(answer ?? null), error: null });
+      if (repaired != null) {
+        const again = args.schema.safeParse(JSON.parse(repaired));
+        if (again.success) return { object: again.data };
+      }
+      throw Object.assign(new Error("No object generated: response did not match schema."), { name: "AI_NoObjectGeneratedError" });
     },
   };
 });
@@ -124,6 +137,7 @@ vi.mock("@/lib/ai/card-design", async (importOriginal) => {
 });
 
 import { createDeckGenerationJob } from "@/lib/ai/generation-jobs";
+import { AI_OUTPUT_ERROR_MESSAGE } from "@/lib/ai/structured-output";
 
 const FIXTURE = join(process.cwd(), "tests/unit/ai/fixtures/deck-plan-main.json");
 const UPDATE = process.env.DECK_PLAN_UPDATE === "1";
@@ -233,17 +247,22 @@ describe("a coloured deck plan is main's", () => {
   });
 
   it("still refuses a coloured answer with no colours, as main does", async () => {
-    s.concepts = [concept([])];
+    // No repair can add a colour: asked once more (structuredCall), then the
+    // plain AiOutputError — no deck, no job, nothing charged.
+    s.concepts = [concept([]), concept([])];
     const out = await plan({ theme: "", format: "commander", size: 12, deckType: "gorgons" });
-    expect(out.result).toEqual({ ok: false, error: "AI deck planning failed: No object generated: response did not match schema." });
+    expect(out.result).toEqual({ ok: false, error: AI_OUTPUT_ERROR_MESSAGE });
+    expect(out.concept).toHaveLength(2);
     expect(out.deck).toEqual([]);
     expect(out.job).toEqual([]);
   });
 
-  it("still refuses more than three colours, as main does", async () => {
+  it("still cuts more than three colours to the first three, as main does (#565's repair)", async () => {
     s.concepts = [concept(["white", "blue", "black", "red"])];
     const out = await plan({ theme: "", format: "commander", size: 12, deckType: "slivers" });
-    expect(out.result.ok).toBe(false);
+    expect(out.result.ok).toBe(true);
+    const design = out.designed[0] as { slots: Array<{ colorHint?: string }> };
+    expect(new Set(design.slots.map((slot) => slot.colorHint))).toEqual(new Set(["multicolor", "white", "blue", "black"]));
   });
 });
 
@@ -281,18 +300,18 @@ describe("a colourless deck plan (Eldrazi)", () => {
     expect(cards.every((card) => card.color_identity.join() === "colorless")).toBe(true);
   });
 
-  it("never takes colours from the model — a stray `colors` is outside the closed schema", async () => {
-    // Main took this answer and hinted every slot black. The colourless
-    // schema is a closed object without the field (the provider holds the
-    // model to it); an answer that carries one anyway is refused — no deck,
-    // no job, nothing charged — never planned in colours.
-    s.concepts = [concept(["black"])];
+  it.each([[["black"]], [[]]])("never takes colours from the model — a stray `colors` (%j) is dropped, never planned in", async (colors) => {
+    // Main took ["black"] and hinted every slot black. The colourless schema
+    // is a closed object without the field (the provider holds the model to
+    // it); an answer that carries one anyway loses it to #565's repair (an
+    // unknown key is dropped) and the plan is colourless.
+    s.concepts = [concept(colors)];
     const out = await plan({ theme: "", format: "standard", size: 12, deckType: "eldrazi" });
-    expect(out.result.ok).toBe(false);
+    expect(out.result).toEqual({ ok: true, deckSlug: "made-deck" });
+    expect(out.concept).toHaveLength(1);
     expect(out.concept[0]!.schema).toMatchObject({ additionalProperties: false });
-    expect(out.designed).toEqual([]);
-    expect(out.deck).toEqual([]);
-    expect(out.job).toEqual([]);
+    const design = out.designed[0] as { slots: Array<{ colorHint?: string }> };
+    expect(design.slots.every((slot) => slot.colorHint === "colorless")).toBe(true);
   });
 
   it("adding cards to an Eldrazi deck plans colourless too", async () => {
