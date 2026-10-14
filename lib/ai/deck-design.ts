@@ -231,7 +231,7 @@ export async function generateDeckPlan(input: {
       : "a flavorful, fun-to-pilot original deck — surprise me");
 
   const colourless = isColourlessDeckType(input.deckType);
-  const { object: answer } = await generateObject({
+  const { object: concept } = await generateObject({
     model: judgeModel(),
     schema: colourless ? colourlessDeckConceptSchema : deckConceptSchema,
     system: colourless ? DECK_CONCEPT_SYSTEM_COLOURLESS : DECK_CONCEPT_SYSTEM,
@@ -257,10 +257,6 @@ export async function generateDeckPlan(input: {
       .join("\n"),
     temperature: 0.9,
   });
-  // A colourless plan has no colours — never ones the model wasn't asked for.
-  const concept: DeckConcept = colourless
-    ? { ...answer, colors: [] }
-    : (answer as DeckConcept);
 
   let slots = buildDeckSkeleton(input.format, input.size);
   // Adding to a deck that already has a commander → never design another.
@@ -272,8 +268,12 @@ export async function generateDeckPlan(input: {
     );
   }
 
+  // A colourless plan has no colours — never ones the model wasn't asked for.
+  const planColors: DeckConcept["colors"] = colourless
+    ? []
+    : (concept as DeckConcept).colors;
   const designSlots = slots.map((slot, index) =>
-    slotFromDeckSlot(slot, concept.colors, index),
+    slotFromDeckSlot(slot, planColors, index),
   );
   // Pauper is commons-only — the format rule, not a suggestion.
   const finalSlots =
@@ -310,5 +310,5 @@ export async function generateDeckPlan(input: {
     input.existing?.cards.map((card) => card.name) ?? [],
   );
 
-  return { concept, cards: uniqueCards, slots };
+  return { concept: { ...concept, colors: planColors }, cards: uniqueCards, slots };
 }
