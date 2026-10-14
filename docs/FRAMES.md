@@ -674,9 +674,11 @@ frame change](#shipping-a-frame-change)).
 3. **Register the template** in `types/card.ts`: `FRAME_TEMPLATE_VALUES`,
    `FRAME_TEMPLATE_LABELS` and `FRAME_TEMPLATE_SET` (exhaustive: the
    compiler names what is missing), and where the picker offers it:
-   `ERA_TYPE_FRAME`, `TEMPLATE_SKIN_VARIANTS`, a showcase set, or a kind's
-   `layoutTemplates` in `lib/creator/card-kinds.ts`. Which kinds a showcase
-   or Borderless frame dresses follows from the anatomy its profile draws
+   `ERA_TYPE_FRAME`, `TEMPLATE_SKIN_VARIANTS`, an M15 treatment set or a
+   showcase set ([Which group a frame sits in](#which-group-a-frame-sits-in)),
+   or a kind's `layoutTemplates` in `lib/creator/card-kinds.ts`. Which kinds
+   a showcase, an M15 treatment or a Borderless frame dresses follows from
+   the anatomy its profile draws
    (a showcase with no `loyalty` + `loyaltyRows` refuses planeswalkers, one
    with no `defense` battles), plus a trade-dress row in `TREATMENT_KINDS`
    when the print is one kind's dress ([Kind anatomy and
@@ -2911,7 +2913,8 @@ TODO 4.7 (owner decisions A3 / A4, 2026-09-29; the frame roadmap of
 2026-10-13, block 3). `m15nyx` is the printed ENCHANTMENT frame on the 2015
 frame: the M15 frame with a starfield in its frame field. It is not the
 `nyx` template (the Theros Beyond Death constellation showcase, THB
-#258–268, which stays) and not the token kind's Nyx (4.51).
+#258–268, which stays — its own crown is [The constellation
+crown](#the-constellation-crown)) and not the token kind's Nyx (4.51).
 
 **Which printings** (Scryfall `frame:nyxtouched` — the `enchantment` frame
 effect — 2026-10-13: 1,746 printings). 131 are on the 2003 frame (Theros,
@@ -3106,6 +3109,179 @@ Not moved, on purpose:
 One m15 reference left the registry with this: Obsessive Pursuit (TLA
 #112), an alternate of `m15/b`, is a Nyx printing and would have had the
 owner compare a starfield against the plain frame.
+
+### The constellation crown
+
+Owner 2026-10-13. The `nyx` template ("Nyx Constellation", the Theros
+Beyond Death showcase) drew no legendary crown; print has one on every
+card of the frame.
+
+**What print does** — the eleven printings of the frame, THB #258–268, all
+legendary (Scryfall: `enchantment` + `showcase` + `legendary` + `inverted`);
+there is no nonlegendary constellation card to compare against. Read
+2026-10-13 from Scryfall's 745 × 1040 scans scaled to 1500 × 2100, nothing
+kept:
+
+- It is the STANDARD 2015 legendary crown — the scallops, wings and arms of
+  FDN's — **in the card's colour**: silver on white (#258 / #259), blue
+  (#260 / #261), dark grey on black (#262 / #263), red (#264 / #265), green
+  (#266 / #267). Not one dark, silver-edged crown for every colour. The one
+  two-colour card, #268 Klothys, splits it red | green over a GOLD title
+  bar and inner strip.
+- Inside the crown, between the arch and the title bar, runs the Nyx
+  starfield strip (rows 60–92 at x = 600) — the Nyx dress's "inner crown".
+- Edges on the 1500 × 2100 card at x = 600: crown top edge row 51–53, the
+  bar's top outline 93–96, its bottom outline 214–216, the rim under it
+  217–225, the art from 227. The side rim beside the art is 13 px wide
+  (x 98–110). The name does not move: it sits in the bar as on any card of
+  the frame.
+- Tones of the arm / rim beside the art: white 233,230,234; blue 12,86,179;
+  black 56,51,47; red 213,57,23; green 47,108,69.
+
+**The source.** Card Conjurer's own 'Nyx Showcase' pack (the fork's
+js/frames/packM15NyxShowcase.js) has seven crownless masters — the same drawing as
+our MSE ones — and lists the Nyx 'Inner Crown' beside them: its crown is the
+M15 'Legend Crown' with that strip, which is exactly the band the Nyx dress
+publishes (`m15nyxcrown/<key>`, [above](#the-nyx-dress-47)). Its tones match
+the prints (green arm 42,108,69; black 58,56,50; red 209,77,53; blue
+0,117,190; white 244,243,236), and it registers on our masters' title bar:
+the MSE bar's outline sits on rows 101–104, the M15 pack's on 100–103, under
+the band's own outline.
+
+**The one cut** (`scripts/lib/nyx-crown.mjs`, `scripts/build-nyx-crown.mjs`
+→ `nyxcrown/<w u b r g m a>`, bucket only; PipGlyph's own derivation of the
+published bands, recorded as such in `lib/cards/frame-sources.json`). Our
+`nyx` masters' side rim is 10 px wide (x 101–110; 1389–1399 on the right)
+where the prints' and the crown's arm are 13 (x 98–110; 1391–1402), and it
+is another tone on three keys (green 0,124,67; black 39,38,36; red 241,56,39
+— and, until Round 59's tint below, the colourless master's bronze under
+the silver crown). Drawn as
+published, the arms end on row 408 in a 3 px jog and a tone step. So the
+arms' last rows fade out — alpha × (1 − t) over rows 372–408 — and the crown
+hands over to the master's own rim. Alpha only: every colour is the (toned,
+for `a`) parent band's, every pixel above row 372 is the parent's byte for byte, and the
+WebP's alpha equals the PNG's (the build checks both).
+
+**The one tint** (owner Round 59, 2026-10-14). There is no printed
+colourless constellation card, and the colourless master is a bronze drawing
+(rim beside the art 172,148,132) under what was Card Conjurer's artifact
+silver (arm 223,225,225): two metals on one card. So `nyxcrown/a` — that
+band only — has its metal toned onto the master's rim, 223,225,225 →
+172,148,132 (`RECIPE.tint`, `tintNyxCrownBand`). The tone is
+`toneSourceRegions`' (the Universes Beyond tones'): the colour multiplied by
+to ÷ from, the colour part of the gain fading out toward white, so the
+bevel's highlights stay highlights of the same metal instead of turning (a
+plain per-channel gain is the Vehicle plate's lesson); darker bevel pixels
+take the same gains, black stays black. The starfield strip is not toned:
+every pixel where the Nyx band differs from the published plain crown band
+`m15crown/a` is the parent's byte — but for the strip's soft edge (strip
+pixels within 2 px of metal), which takes the share of the tone the crown
+shows through it; left alone it stays a silver hairline round the stars.
+Alpha is never touched. Measured on the bake: crown arm 172,148,132, the
+frame's rim beside it 172,148,132. The other six bands are byte-identical
+to before (their sha256 unchanged in the manifest).
+
+**Declared** as `NYX_CONSTELLATION_CROWN` on the `nyx` entry only (`keyMap`
+c → a, the artifact band toned to the master's bronze — no printed
+colourless card), at `M15_CROWN`'s rect. It is the frame's one overlay: no stamp, no collector line, no pairs —
+a two-colour card is drawn on the gold master and wears the gold crown
+(print splits it; that is the pair masters' step). Nothing else moves: no
+slot, no keep-out (the band has a hole for the title bar and reaches the art
+only as the crown's soft shadow on its top rows, as on m15).
+
+**An addition** ([Additions vs corrections](#additions-vs-corrections)):
+opt-in per card through `frame_style.crown`, no bump, no sweep, no badge. A
+card stored on the frame names no switch and bakes byte for byte as before; a
+new legendary card on it starts with the crown on; the Variations section's
+"Legendary" chip and the "Legendary crown" switch are offered on the
+template (`legendaryVariationOf` reads the declared overlay). An import of
+one of the eleven names the switch ON: `showcase/thb/constellation` is the
+one showcase signature that prints the standard crown
+(`CROWNED_SHOWCASE_SIGNATURES` in `lib/scryfall/import-mapper.ts`) — every
+other legendary showcase still imports with it off, as its scan. Until the
+`nyx` frame is ticked, such an import lands on its fallback, M15, **with the
+crown on** — M15's own crown, as any legendary M15 card (owner Round 59:
+fine).
+
+**Not done here**, on purpose: the masters are not re-cut, and pair masters
+are not built (#268's red | green). The frame's own correction against
+print followed (Round 59): [the constellation frame on its prints](#the-constellation-frame-on-its-prints-round-59).
+
+### The constellation frame on its prints (Round 59)
+
+Owner Rounds 59 (decision 1: correct the `nyx` masters against the eleven
+printings before the frame is ticked) and 61 (the rim takes the M15
+FAMILY's tones). Layout **v55** (`NYX_PRINT_TONES_LAYOUT_VERSION`, `nyx`
+only, "sweep"; a correction of a look against its own print). Recipe as
+data: `scripts/lib/nyx-frame.mjs`.
+
+**How print was read** (2026-10-14; Scryfall's `highres_scan` PNGs, 745 ×
+1040, measured at that native size with our masters downscaled by the same
+kernel, reported in 1500 × 2100 px; nothing kept). A scan's crop AND its
+colour are the scan's, so both are registered PER CARD: the showcase scan
+is read against our `nyx` master, and the SAME card's regular printing
+(THB #9, #18, #45, #71, #93, #119, #125, #150, #185, #196, #220 — the Nyx
+dress) against our print-verified `m15nyx` master; the second reading is
+taken off the first.
+
+**Colour.** The rim (both sides, the plateau beside the art) read on the
+showcase scan minus the same card's regular scan, laid on the family's rim:
+
+| Key | Family rim (m15nyx) | showcase − regular, median (readings) | Registered | MSE before | After |
+|---|---|---|---|---|---|
+| w | 244,243,236 | +1.5,+1.5,+1 (4) | 246,245,237 | 252,254,255 | 244,243,236 |
+| u | 0,117,190 | +5,−2,−3 (3) | 5,115,187 | 0,117,190 | unchanged |
+| b | 58,56,50 | −2.5,−4,−1 (4) | 56,52,49 | 39,38,36 | 58,56,50 |
+| r | 209,77,53 | −3,−2,−4 (3) | 206,75,49 | 239,56,39 | 209,77,53 |
+| g | 42,108,69 | 0,−2,−7.5 (4) | 42,106,62 | 0,123,67 | 42,108,69 |
+
+Every median is inside one print's spread (card to card a channel moves
+by up to 8–11): the constellation rim IS the family's rim, and `to` is the
+family's tone itself. The independent check read the same (w ≈ 246,244,238;
+u ≈ 1,119,190; b ≈ 54,52,48; r ≈ 209,76,50; g ≈ 42,107,64). The raw scan
+colours (e.g. red 220,59,22) are the scans' and are not used. Gold has no
+print (#268 is red | green): its rim goes onto the gold crown band's own
+flat arm, 246,210,98 → 233,212,125. Colourless keeps MSE's bronze (Round
+59's `a` crown is toned to it); there is no artifact key.
+
+**The crown bands are not touched**: `nyxcrown/*` are cut from the family's
+`m15nyxcrown`, whose arms ARE the family's rims (w 244,243,236 · u 0,117,190
+· b 58,56,50 · r 209,77,53 · g 42,108,69 · m 233,212,125), so with the rims
+on those tones crown and rim are one tone on every key with no tint —
+`nyxcrown/*` stay #555's bytes (only `a` is tinted, Round 59).
+
+**Geometry**, registered the same way, is NOT changed:
+
+| Finding (median of 11) | Raw against the scans | Registered | Verdict |
+|---|---|---|---|
+| Title bar | −6.5 px | −0.9 (control −6.1) | the scans', not the frame's |
+| Side rim width | — | print 12.2 (11.1–13.6), ours 11.9 | equal — no re-cut |
+| Rim position | L −2.3 / R +2.1 | L −1.3 / R +1.1 | under a re-cut |
+| Type bar top / bottom | −4.0 / −4.1 | −5.2 / −3.7 | real — a later step (TODO.md) |
+| Text box bottom | −5.0 | −6.0 | as above |
+
+Card Conjurer's 'Nyx Showcase' masters (the same drawing, same tones, on the
+regular M15 pack's geometry) sit on print at the type bar and box bottom
+(−0.2 / +1.8 / +2.1). Re-sourcing from them moves every lower-frame slot;
+the owner deferred it (Round 61; TODO.md), as the title bar's and box's
+redraw (print's title bar is the card's colour with sparkles).
+
+**The tone** (`toneNyxRim`, run by `scripts/build-variation-frames.mjs`
+after the type bar / box tone): the rim is ONE flat colour in each master,
+drawn over black outlines. Its region is that flat colour in pieces of ≥
+2000 px (a white star in the field is white's rim colour and is left alone)
+plus every pixel within 2 px of it that is a rim / black mix; each moves by
+t × (to − from), t its coverage of the rim — the flat rim lands on `to`
+exactly, an edge keeps its coverage, black stays black. A flat colour has
+no bevel, so no highlight can change hue. Nothing else of a master changes.
+
+**Rollout**: after the deploy the automatic re-bake runs, as after any
+sweep, over every card up to the new latest sweep version: a card on `nyx`
+re-bakes (production has none — the frame was never ticked), every other
+card is only STAMPED to v55 (no render). `/admin/renders` therefore shows
+stamp-only batches, not "idle", until every card is stamped. The visual
+matrix: the `nyx` cases of w b r g and gold change, nothing else.
+
 ### The Station frame (4.27a)
 
 TODO 4.27a (owner 2026-10-13, rounds 53–54). `m15station` and
@@ -3116,8 +3292,8 @@ and a **see-through text box cut into bands**: a top band (abilities and
 the Station reminder), then one band per charge tier, each with an "N+"
 badge on the box's left pinline, and the card's P/T on a black plate with
 white digits on the tier that makes it a creature. PR 1 ships the body
-(masters, profiles, layout, both renderers); the creator's tier editor,
-the import and the AI follow (PRs 2–3). Until the owner verifies a colour
+(masters, profiles, layout, both renderers); PR 2 the creator's tier
+editor and the follow; PR 3 the AI and the editor's notes. Until the owner verifies a colour
 nobody is offered the frames (an admin: `?previewFrames=m15station`).
 
 **What the prints show** (30 bordered station printings against 16 M15
@@ -3329,12 +3505,117 @@ The disabled chips say why ("The Spacecraft frame is for Spacecraft", "…
 for Planets"), and the picker tile draws its sample art under the whole
 frame.
 
-**Before a tick.** After PR 2 a maker can build, edit and remix a station
-card, and a bordered printing's import lands on the frame with its tiers
-drawn from the oracle text. Still open: the AI (a generated Spacecraft
-follows its subtype onto a verified frame, and nothing teaches the designer
-or the lint the tier grammar — it would land with no tier and its P/T
-undrawn) and the mapper's rows — PR 3; the other dresses — PR 4.
+**The tier editor's notes** (PR 3; `lib/creator/station-fit.ts` — readers of
+the layout and of the save's rule, nothing blocked, no renderer reads them;
+both are part of the tier group's description, `aria-describedby`, never a
+live region):
+
+- *The text does not fit* (owner round 58, decision 2): the bands whose
+  text is really CUT, read from the layout of the card the preview draws
+  (the same profile, P/T tier, flavour text and stamp). Not the layout's
+  `clipped` flag, which is also set when no size leaves every band its
+  minimum air — a card that is drawn whole. A band is cut when its own
+  `RulesLayout.clipped` says so at either bake target; a card with more
+  text than the whole box says so once.
+- *A band over 600 characters* (the row limit of `face_content`, the
+  walker's and the saga's — not raised): the save keeps the card's tiers as
+  lines of text, which draw the same bands, and the one thing only the rows
+  hold is lost — a P/T on another tier than the text plates. The save did
+  that without a word; the editor now says so before it, and names the tier
+  the plate goes back to.
+
+A Planet's rows mark no tier (`stationShowsPt`; they carried `pt: true`,
+never drawn). A tier line ending in `\r` reads as a tier
+(`parseStationText` splits on `\r\n`, `\r` and `\n` — a text saved through
+the API with Windows line ends used to draw a top band alone; this is the
+one line of this PR a renderer reads, and it changes no card whose text has
+`\n` line ends). A fourth tier line that becomes a tier of its own when
+another is removed is not typeset by the server (`storedRowTexts` reads
+every tier line the stored text holds).
+
+**The AI and the frame** (PR 3; `lib/ai/station-design.ts`, pure — the
+prompt's rules, the lint, the autofix, the fill's merge and the job's rows
+— on the ONE design engine every flow runs through, `designCards`).
+
+*What print does* (Scryfall `keyword:station`, one row per card,
+2026-10-14: 35 cards — 30 Spacecraft, 5 Planets; 32 in paper, 3 Arena-only;
+`tests/unit/ai/fixtures/station-printed.json`, counted by
+`station-design.test.ts`):
+
+| | print |
+| --- | --- |
+| Type line | "Artifact — Spacecraft" 30 of 30 (8 Legendary), never "Artifact Creature"; "Land — Planet" 5 of 5 |
+| Tiers | one on 27 cards (22 Spacecraft, 5 Planets), two on 8 (all Spacecraft), three on none |
+| Numbers | 1+ … 20+, rising. A lone Spacecraft tier 3+ … 20+ (7+ six times, 8+ five); of two, the first 1+ … 3+ on 7 of 8 and the last 8+ … 20+; every Planet 12+ |
+| The Station line | the LAST line of the top band on 35 of 35; word for word on the 32 paper cards: "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at N+.)" — a Planet "on this Planet", ending at "…as a sorcery.)"; the 3 Arena-only cards the bare word |
+| N | the last tier's number on all 26 paper Spacecraft with a P/T; The Eternity Elevator (no P/T) has no creature sentence |
+| P/T | 29 of 30 Spacecraft, on the last tier, whose first line is a keyword line starting with "Flying" on 28 of 29; no Planet |
+| Before the Station line | nothing on 10 Spacecraft (all 8 two-tier ones), one ability on 19, two on 1; a Planet two ("This land enters tapped." and its mana ability) |
+| Length | whole texts 144–423 characters, a tier 6–183 |
+
+*The designer* is told exactly that (`STATION_DESIGN_RULES`, with one
+example card, in the system prompt of every design call) — only for a card
+it chooses to make a Spacecraft or a Planet. *The lint*
+(`stationDesignProblems`, errors of `lintCardDesign`) holds an ARTIFACT
+whose subtypes say Spacecraft and a LAND whose subtypes say Planet — the
+frames' own gate, `SUBTYPE_DRESSES` — to it: at least one tier line, at
+most three, numbers rising, no empty tier, no band over 600 characters, and
+the Station line as the last line of the top band, word for word, its N one
+of the card's tiers (the creature sentence only with a P/T; never on a
+Planet). Every paper printing passes it. Nothing is said about any other
+card. *The judge* is asked to fix what is named and keep the shape. *The
+autofix* (`repairStationText`) then repairs by machine what is left: tier
+lines spelled another way ("8+: Flying", "8+ — …", "STATION 8+ | …"), empty
+tiers, numbers out of order, tiers past the third (folded into the third)
+and the Station line — and returns a text with NO tier line unchanged: a
+machine does not invent a tier.
+
+*The frame.* `resolveGeneratedFrame` never picks a station frame for a text
+with no tier (`stationFrameFits`): the frame prints the P/T on a tier and
+nowhere else. Such a card falls back to its base — the Artifact / Land
+frame — asked for by name or at random, as every other dress falls back.
+(The creator has no such gate: a maker on the frame sees the tier editor
+and the "add a tier" note.) A generated DECK names no frame at all: its
+Spacecraft save frameless, on the default frame.
+
+*The save.* A card an AI job saves on a station frame is saved as the
+creator saves a new one (`stationSaveFields`): the canonical text beside
+`face_content.station`, the P/T on the tier the text plates. Off the frame,
+or for a text with no tier, nothing is added to the payload.
+
+*The remix* copies its source's rules and only swaps the card's names in
+them, so the tiers are the source's: a printed Spacecraft or Planet lands
+on the station frame once that is verified in its colour (the import's
+landing) with its tiers as rows; an own card keeps its frame, its rows and
+the tier its maker put the P/T on (and, where its rows say another text
+than `rules_text`, the rows — what the card shows). A new name that made or
+unmade a tier line fails the step before the save (`sameStationShape`).
+
+*The per-field fill.* The engine lints the card the MODEL returned; a fill
+keeps only the wanted fields, so `designCardFill` puts the designed text in
+shape for the card the FORM holds. On a card that already has tiers the
+form sends them (`locked.station_text`, on a station frame only): the
+designer is told the layout, and **a tier left empty is the only line a
+fill of the rules text writes** — every other line is kept byte for byte
+(`mergeStationFill`). The maker's "power / toughness on this tier" follows
+its tier by number into the filled text (`stationPtChoiceAfterFill`); a
+fill used to reset it.
+
+*The ideas dialog* runs the same engine: an idea for a Spacecraft carries
+its tiers.
+
+What every other card saves through these paths is pinned to `origin/main`
+byte for byte (`tests/unit/ai/job-payloads-pinned.test.ts`: 54 payloads —
+the card, deck and remix steps, the plans, the fill — recorded on main's
+`lib/`), with the credits each reserves; the station cards are
+`station-jobs.test.ts`.
+
+**Before a tick.** After PR 3 every path that can reach a ticked station
+frame hands it a card it draws: the creator (PR 2), the import of a
+bordered printing, and the AI — generation, fill, ideas and both remixes.
+What is left is PR 4 (the extended-art, borderless and showcase dresses
+keep their own landing until then — never the station frame) and the
+owner's eye on the frame itself.
 
 **Rollout.** PR 1 was an ADDITION: new templates no stored card sits on —
 no layout bump, no sweep, no badge, no migration. PR 2's corrections of the
@@ -3517,7 +3798,7 @@ artifact frame; the land frame draws the spell frame's. Their ink is
 within a pixel of M15's (`lib/cards/plate-ink.ts`).
 
 **The see-through colourless frame** (owner Round 57, decision 3; layout
-**v55**). Print's only colourless non-artifact cards on this frame — ACR #1
+**v56**). Print's only colourless non-artifact cards on this frame — ACR #1
 The Capitoline Triad, FIN #2 Ultima, Origin of Oblivion (and its PFIN #2s
 promo), WHO #9 Clara Oswald (and its #614 surge foil): five printings, all
 LEGENDARY — wear a see-through frame: the art runs under the frame field,
@@ -3557,8 +3838,8 @@ masters (their profiles map `c` to `a` / `l`).
 *Reference printings*: ACR #1, FIN #2, WHO #9 (all legendary — the crown is
 drawn). *Rollout*: an addition on a combo no card can be on (never ticked,
 offered nowhere), but the visual gate records the master swap as a bump,
-so it is one — v55 (`UB_SEE_THROUGH_C_LAYOUT_VERSION`), "sweep", scoped to
-`m15ub` and to a card that paints the colourless master (`v55Changed`),
+so it is one — v56 (`UB_SEE_THROUGH_C_LAYOUT_VERSION`), "sweep", scoped to
+`m15ub` and to a card that paints the colourless master (`v56Changed`),
 verification-neutral (the owner's ticks on the other colours stay
 fresh). The visual matrix: 4 of 1712 cases change, all `m15ub/c`.
 
@@ -3654,7 +3935,10 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
   17, 2026-09-30: printing-only; `importedAnatomy`): `printed_crown` is
   `true` for Scryfall's `legendary` frame effect, `false` for a Legendary
   card printed without it (M15–RIX, List reprints) and for a Legendary
-  showcase, and absent for a nonlegendary printing, a showcase one included
+  showcase — but the THB constellation showcase, which prints the standard
+  crown and imports with it on ([The constellation
+  crown](#the-constellation-crown)) — and absent for a nonlegendary
+  printing, a showcase one included
   (owner 2026-09-30); `printed_two_color` is `true` (with
   its pair) for a 2015-frame printing of exactly two colours — and, since
   4.6h, for an old-frame printing that prints them
@@ -3781,6 +4065,9 @@ default.
 masters share the M15 pack's geometry ([Devoid and
 snow](#devoid-and-snow-46f-wave-2c)) — never devoid (the owner's call),
 adventure, saga, the tokens or a showcase (4.6f and the token items; the
+one showcase that prints it, the Theros constellation frame, draws the Nyx
+crown band with faded arms — [The constellation
+crown](#the-constellation-crown); the
 borderless frames draw CC's FLOATING crown from crowned twin masters and
 the extended-art frame the same crown as its own band, `EXTENDED_CROWN` —
 [The borderless crown and pair
@@ -3804,7 +4091,9 @@ them (a tick still records the combo's own reference). An import's switch is
 off for a Legendary card printed without it (M15–RIX, List and playtest
 reprints) and for a Legendary showcase, by Scryfall's `showcase` effect or
 the registry's showcase signature (MUL's etched run carries only
-`legendary` + `etched`); not named for a nonlegendary printing, a showcase
+`legendary` + `etched`) — except the showcases that print the standard
+crown (`CROWNED_SHOWCASE_SIGNATURES`: the THB constellation frame), which
+follow their `legendary` effect like any 2015-frame printing; not named for a nonlegendary printing, a showcase
 one included (owner 2026-09-30), which gets the new-card default (owner
 round 17: printing-only). The standard crowns are Card
 Conjurer's as they are — u / r / g too, untinted (owner round 17). No tick
@@ -6376,13 +6665,82 @@ before anyone pays. Additions: 0 stored cards change, no bump, no sweep.
   `tests/e2e/scryfall-import.spec.ts` (MID #7 through the admin preview:
   the transform body, both arts, the family). Visual: 0 changed / 0 new.
 
+### Which group a frame sits in
+
+The picker has two groups for a frame that is not an era's standard or a
+layout, and print decides which (audit of 2026-10-13, Scryfall the same day):
+
+- **An M15 variation** — a treatment of the 2015 frame that ANY set prints
+  on any card of its kind: Snow, Devoid, Borderless, the Nyx dress, the
+  Vehicle and station frames, the Universes Beyond dress (`m15ub*`, 4.25:
+  one dress across every crossover of 2022–25, never one IP's showcase),
+  and since 2026-10-13 **extended art**
+  (`frame_effects ∋ extendedart`: 4,235 printings in 86 sets, 2018 → today),
+  the **full-art basics** (`full_art` basics on the 2015 frame: 688
+  printings, 588 black-bordered in 52 sets) and the **textless** frames
+  (`textless` on the 2015 frame, no token or basic: 78 printings in 24
+  promo sets). Its era is "M15 (2015)", its chip sits with the kind's other
+  variations and carries no set name.
+- **A showcase** ("Showcase & Universes Beyond") — a frame ONE set, one
+  block or one crossover printed: the Ring and Scroll (LTR), Avatar's
+  elemental frame, Bloomburrow's woodland and anime, Tarkir: Dragonstorm's
+  two, Multiverse Legends' Dragon Wing, Zendikar Rising's hedron, the
+  Zendikar Expeditions (EXP: 45 printings, 2015–16) and **the constellation
+  frame** (`nyx`: THB #258–268 alone — Scryfall `showcase`, BLACK border;
+  it is not a borderless Nyx frame, and the printed enchantment frame is
+  `m15nyx`). Its chip names its set ("Zendikar Rising — Hedron").
+
+How the move of 2026-10-13 was made, for the next one. A frame's group is
+its SET's era (`FRAME_SET_ERA`), so the two sets `extended` and
+`fullartset` went to `m15`; `FRAME_TEMPLATE_SET` did not change (the
+admin's treatment batches and the import chooser's families read it). Each
+of those frames is ONE body several kinds wear (`extendedart` dresses a
+creature, an artifact, a land and a token), where Borderless has a template
+per kind — so they are not `TEMPLATE_SKIN_VARIANTS` rows: they are listed in
+`M15_TREATMENT_SETS` (`types/card.ts`) and `skinVariantsFor` offers them
+under whichever M15 standard the kind has, to exactly the kinds
+`templateRefusesKind` lets them dress. Everything that read "is this a
+showcase" to decide BEHAVIOUR reads `isTreatmentBody()`
+(`lib/creator/frame-picker.ts`: a showcase or an M15 treatment) — the
+capability rule below, the import's candidate frames, the import chooser's
+families, the treatment notice's "bordered" — so a move changes a frame's
+place and label and nothing a card wears or a save stores. What a user sees
+change:
+
+- the chip sits among the M15 variations, before every showcase, under the
+  kind's M15 standard only (a card on the 1997 frame is no longer offered
+  it: picking it changed the card's era, which the Frame section owns — as
+  for Borderless since 4.32);
+- labels: "Extended Art", "Full-Art Basic Land", "Borderless Full-Art Basic
+  Land", "Textless", "Textless Land" (were "Full Art — Basic Land", …);
+  copy says "M15 (2015) Extended Art";
+- a kind change on a NEW card wearing one keeps the M15 era without the
+  "Switch frame era?" question (the same frame as its "Switch to M15") —
+  so it can no longer be refused, as on Borderless — and an import onto
+  such a card no longer toasts "Switched to the M15 frame…";
+- lists in gallery order follow the new order: an import's "Show all
+  frames", the AI's pool (drawn uniformly), and the resolver's LAST resort
+  (`resolvePublishedFrame`: the first published frame of the gallery,
+  reached only where no era standard of the kind is published in the
+  card's colour — never with production's list) now meets an M15 treatment
+  before another set's showcase.
+
+`tests/unit/creator/frame-picker-groups.test.ts` holds every frame decision
+(gallery, kind gate, bases, resolver, import, remix, AI pools; production's
+verified list and everything verified) to a recording of `origin/main`
+before the move, the differences above asserted exactly;
+`tests/unit/components/creator-frame-picker-groups-payload.test.tsx` does
+the same for what a save sends. A frame that moves group later re-records
+both on the commit before it.
+
 ### The kind gate
 
 `templateRefusesKind` (`lib/creator/card-kinds.ts`) is two rules; either
 refuses:
 
-1. **Capability** — on a showcase treatment or a Borderless skin, the body
-   must draw what the kind needs. So the ZNR hedron, the textless and
+1. **Capability** — on a showcase treatment, an M15 treatment (extended
+   art, the textless frames, the full-art basics) or a Borderless skin, the
+   body must draw what the kind needs. So the ZNR hedron, the textless and
    extended-art frames and the IP showcases (the Ring and Scroll, Avatar,
    Bloomburrow woodland and Anime, the three Tarkir frames) — P/T only —
    refuse planeswalkers, battles and every layout kind. Border-era

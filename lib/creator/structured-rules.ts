@@ -130,6 +130,11 @@ export type SubmittedRulesOptions = {
    *  save keeps byte for byte — the form may have opened with the stored
    *  ROWS' text where the two disagreed (stationOpenText). */
   storedRulesText?: string | null;
+  /** A station card that shows NO power / toughness (a Planet: a land):
+   *  `false` — its rows then mark no tier. Absent = it shows one. (A
+   *  Planet's rows used to carry `pt: true` on the last tier: never drawn,
+   *  noise in the row — the independent check of #549.) */
+  stationShowsPt?: boolean;
 };
 
 /** The rows a save carries: trimmed, textless ones dropped, the cost with
@@ -415,7 +420,7 @@ export function submittedRulesOf(
     }
     const parsed = parseStationText(values.rules_text);
     if (parsed.tiers.length === 0) return { rulesText: textarea, faceContent: null };
-    const plated = stationPlatedTier(values.rules_text, choice);
+    const plated = options.stationShowsPt === false ? -1 : stationPlatedTier(values.rules_text, choice);
     const content: FaceContent = {
       v: 1,
       station: {

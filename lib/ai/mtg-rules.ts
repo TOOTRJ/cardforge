@@ -25,6 +25,7 @@ import {
   showsPowerToughness,
   withSupertypeWord,
 } from "@/lib/cards/card-display";
+import { repairStationText, stationDesignProblems } from "@/lib/ai/station-design";
 
 // ---------------------------------------------------------------------------
 // Mana costs
@@ -396,6 +397,16 @@ export function lintCardDesign(card: LintableCard): LintResult {
     });
   }
 
+  // ---- Spacecraft and Planets: the printed tier shape (TODO 4.27a) ----
+  // An artifact whose subtypes say Spacecraft, a land whose subtypes say
+  // Planet: the Station line, then "N+ | text" tiers with rising numbers —
+  // the grammar the station frame draws its bands and its P/T plate from
+  // (lib/ai/station-design.ts). Errors: a Spacecraft with no tier would land
+  // with its power / toughness undrawn. Nothing for any other card.
+  for (const message of stationDesignProblems(card)) {
+    errors.push({ field: "rules_text", message });
+  }
+
   // ---- Keyword line ----
   const firstLine = card.rules_text.split("\n")[0]?.trim() ?? "";
   const looksLikeKeywordLine =
@@ -533,6 +544,11 @@ export function autofixCard<T extends LintableCard>(card: T): T {
   fixed.rules_text = fixed.rules_text
     .replace(/\bhis or her\b/gi, "their")
     .replace(/\bcannot\b/g, "can't");
+
+  // A Spacecraft / Planet the judge left out of shape: the tier lines
+  // respelled and ordered, the Station line set as print words it — on the
+  // stats as repaired above (repairStationText; any other card: untouched).
+  fixed.rules_text = repairStationText(fixed);
 
   // The last resort for a symbol the card can't draw (the judge had its
   // pass): the nearest symbol it can — see drawableSymbolFor.

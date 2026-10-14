@@ -130,6 +130,9 @@ const requestSchema = z.discriminatedUnion("kind", [
         loyalty: z.string().trim().max(16).optional(),
         defense: z.string().trim().max(16).optional(),
         tags: z.array(z.string().trim().max(30)).max(12).optional(),
+        // A station card's current text, sent only when its rules text is
+        // being generated and already has tiers (TODO 4.27a, PR 3).
+        station_text: z.string().max(4000).optional(),
       })
       .default({}),
     steer: z

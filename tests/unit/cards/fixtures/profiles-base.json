@@ -8241,6 +8241,30 @@
     "uppercase": true
    },
    "label": "Nyx Constellation",
+   "overlays": [
+    {
+     "anatomy": "crown",
+     "assetPathTemplate": "/frames/nyxcrown/{key}.png",
+     "keyMap": {
+      "c": "a"
+     },
+     "keys": [
+      "w",
+      "u",
+      "b",
+      "r",
+      "g",
+      "m",
+      "a"
+     ],
+     "rect": {
+      "heightPct": 19.523809523809526,
+      "leftPct": 0,
+      "topPct": 0,
+      "widthPct": 100
+     }
+    }
+   ],
    "pt": {
     "colorHex": "#17120c",
     "inkSpanPct": {

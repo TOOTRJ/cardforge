@@ -19,6 +19,7 @@ import { M15_FAMILY_TEMPLATES } from "@/lib/cards/m15-family";
 import { PLATE_INK } from "@/lib/cards/plate-ink";
 import { M15UB_HOLO_STAMP, M15_COLLECTOR, M15_CROWN, M15_HOLO_STAMP, UB_CROWN, getFrameProfile } from "@/lib/cards/template-layout";
 import { CARD_KIND_VALUES, borrowedFrameFits, framesForKind, isSubtypeDress, templateRefusesKind, templateSupportsKind } from "@/lib/creator/card-kinds";
+import { isM15Treatment } from "@/lib/creator/frame-picker";
 import { finalizeImportMatch, withVerification } from "@/lib/creator/frame-resolve";
 import { scryfallRemixMechanics } from "@/lib/ai/remix-mechanics";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
@@ -101,9 +102,12 @@ describe("three templates of their own", () => {
   });
 
   it("are offered under Variations only where they are verified in the colour, after the kind's other skins", () => {
+    // (The M15 treatments — extended art, the full-art basics, the textless
+    // frames: bodies several kinds wear — are listed after every skin of the
+    // kind's own, the picker's groups of 2026-10-13; they are left out here.)
     const skins = (kind: Parameters<typeof framesForKind>[0], verified: ReadonlySet<string>) =>
       framesForKind(kind, verified)
-        .filter((f) => f.group === "skin")
+        .filter((f) => f.group === "skin" && !isM15Treatment(f.template))
         .map((f) => f.template);
     expect(skins("instant", EVERY).at(-1)).toBe("m15ub");
     expect(skins("land", EVERY).at(-1)).toBe("m15ubland");

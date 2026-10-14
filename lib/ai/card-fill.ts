@@ -8,7 +8,14 @@ import {
   type CardFillLocked,
   type CardFillResult,
   type CardFillSteer,
+  type DesignedLike,
 } from "@/lib/ai/card-fill-shared";
+import {
+  emptyStationTiers,
+  mergeStationFill,
+  repairStationText,
+  stationWordOf,
+} from "@/lib/ai/station-design";
 import type { ColorIdentity } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -27,6 +34,34 @@ export type DesignCardFillInput = {
   context?: string;
   colorHint?: ColorIdentity;
 };
+
+/**
+ * The rules text a fill hands back for a Spacecraft / Planet (TODO 4.27a,
+ * PR 3) — the designed text for every other card, untouched.
+ *
+ * The design engine lints the card the MODEL returned; a fill keeps only the
+ * wanted fields and the rest is the form's — so the card that is really
+ * being written is the pinned identity with the designed text. That card is
+ * put into the printed tier shape here (repairStationText: the autofix of
+ * lib/ai/mtg-rules.ts, on the identity the form holds), and where the form's
+ * text already has tiers, a tier left empty is the only line written
+ * (mergeStationFill).
+ */
+function stationFillRules(input: DesignCardFillInput, designed: DesignedLike, text: string): string {
+  const wantsType = input.want.includes("card_type");
+  const wantsStats = input.want.includes("stats");
+  const card = {
+    card_type: (wantsType ? designed.card_type : input.locked.card_type) ?? designed.card_type,
+    subtypes: (wantsType ? designed.subtypes : input.locked.subtypes) ?? designed.subtypes,
+    rules_text: text,
+    power: wantsStats ? designed.power : (input.locked.power ?? null),
+    toughness: wantsStats ? designed.toughness : (input.locked.toughness ?? null),
+  };
+  if (!stationWordOf(card)) return text;
+  const current = input.locked.station_text;
+  if (current && emptyStationTiers(current).length > 0) return mergeStationFill(current, text);
+  return repairStationText(card);
+}
 
 export async function designCardFill(
   input: DesignCardFillInput,
@@ -50,8 +85,9 @@ export async function designCardFill(
     ],
   });
   const designed = cards[0];
-  return {
-    fields: pickFillResult(designed, input.want),
-    art_prompt: designed.art_prompt,
-  };
+  const fields = pickFillResult(designed, input.want);
+  if (fields.rules_text !== undefined) {
+    fields.rules_text = stationFillRules(input, designed, fields.rules_text);
+  }
+  return { fields, art_prompt: designed.art_prompt };
 }

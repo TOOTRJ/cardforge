@@ -143,10 +143,22 @@ describe("imports = printing-only (owner round 17, 2026-09-30)", () => {
     );
     let defaultedOnCrownFrames = 0;
     let offOnCrownFrames = 0;
+    let crownedShowcases = 0;
     for (const key of showcases) {
       const { patch, template, ai, creator, style } = stored(key, all[key]);
       expect(creator, key).toEqual(ai);
       const legendary = /\bLegendary\b/.test(all[key].type_line ?? "");
+      // The one showcase that PRINTS the standard crown (owner 2026-10-13):
+      // the THB constellation frame, #258–268 — its import follows the
+      // printing onto `nyx`, crown on.
+      if (/^thb-2(5[89]|6[0-8])$/.test(key)) {
+        expect(legendary, key).toBe(true);
+        expect(template, key).toBe("nyx");
+        expect(patch.printed_crown, key).toBe(true);
+        expect(ai.crown, key).toBe(true);
+        crownedShowcases += 1;
+        continue;
+      }
       if (legendary) {
         expect(patch.printed_crown, key).toBe(false);
       } else {
@@ -167,6 +179,7 @@ describe("imports = printing-only (owner round 17, 2026-09-30)", () => {
     }
     expect(defaultedOnCrownFrames).toBeGreaterThanOrEqual(4);
     expect(offOnCrownFrames).toBeGreaterThanOrEqual(3);
+    expect(crownedShowcases).toBeGreaterThanOrEqual(1);
   });
 
   it("made Legendary later, a nonlegendary showcase import wears the crown like any new card (DSK #389 on m15)", () => {

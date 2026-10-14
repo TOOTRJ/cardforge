@@ -551,7 +551,24 @@ Briarhowl Stalker gets +1/+1 as long as you control another Wolf.', '3', '2', 12
   ('c0000000-0000-4000-a000-000000000114'::uuid, 'Gloamwater Crossing', 'gloamwater-crossing', null, array['blue','black'], null, 'land', array[]::text[], 'rare',
      E'Gloamwater Crossing enters tapped unless you control two or more other lands.
 {T}: Add {U} or {B}.', null, null, 18,
-     '{"template":"m15ubland","finish":"regular","twoColor":true,"stamp":"auto","collector":"2023"}'::jsonb, 1)
+     '{"template":"m15ubland","finish":"regular","twoColor":true,"stamp":"auto","collector":"2023"}'::jsonb, 1),
+  -- The Nyx Constellation frame's legendary crown (template `nyx`; owner
+  -- 2026-10-13) — the Theros Beyond Death showcase prints wear the 2015
+  -- crown in their colour with the starfield strip inside it. Ids …115 /
+  -- …116: Astraia with the crown switched on (as a new legendary card on
+  -- the frame starts), and Orrin, a legendary card stored on the frame
+  -- with NO switch (as every card saved before the crown shipped): it keeps
+  -- its look until its owner turns "Legendary crown" on. Unverified on a
+  -- fresh database: an admin edits these with `?previewFrames=nyx`.
+  ('c0000000-0000-4000-a000-000000000115'::uuid, 'Astraia, Crowned in Starlight', 'astraia-crowned-in-starlight', '{2}{G}', array['green'], 'Legendary Enchantment', 'creature', array['God'], 'mythic',
+     E'Indestructible
+As long as your devotion to green is less than five, Astraia isn''t a creature.
+Whenever another enchantment enters under your control, put a +1/+1 counter on target creature.', '5', '6', 9,
+     '{"template":"nyx","finish":"regular","crown":true}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000116'::uuid, 'Orrin, Keeper of the Low Tide', 'orrin-keeper-of-the-low-tide', '{1}{U}{U}', array['blue'], 'Legendary Enchantment', 'creature', array['Demigod'], 'uncommon',
+     E'Orrin''s power is equal to your devotion to blue.
+Spells your opponents cast that target a creature or enchantment you control cost {1} more to cast.', '*', '3', 7,
+     '{"template":"nyx","finish":"regular"}'::jsonb, 6)
 ) as c (id, title, slug, cost, colors, supertype, card_type, subtypes, rarity,
         rules_text, power, toughness, art, frame_style, age_days)
 on conflict (id) do nothing;

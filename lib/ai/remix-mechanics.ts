@@ -38,6 +38,8 @@ import { frameGateError } from "@/lib/cards/frame-availability";
 import { cardFieldsFace, frameKindGateError } from "@/lib/cards/frame-kind-gate";
 import { dfcFrontColorError, dfcFrontTypeError, resolveDfcBackFace } from "@/lib/cards/dfc-gate";
 import { serializeLoyalty, serializeSaga } from "@/lib/cards/face-content";
+import { isStationFrame } from "@/lib/cards/station-frame";
+import { stationOpenText } from "@/lib/creator/station-rows";
 
 export type ScryfallRemixMechanics = {
   title: string;
@@ -329,8 +331,17 @@ export function ownCardTextStandIn(
  *  rows in face_content) — the rows in the canonical text the renderers
  *  parse back. Without it such a card was remixed with no abilities. */
 export function ownCardRulesText(
-  source: Pick<Card, "rules_text" | "face_content">,
+  source: Pick<Card, "rules_text" | "face_content"> & { frame_style?: Card["frame_style"] },
 ): string | undefined {
+  // A STATION card draws its rows BEFORE its text (TODO 4.27a): where the
+  // two disagree (rows written through the API beside another text) the
+  // remix copies what the card shows — the rows, as the editor opens them
+  // (stationOpenText). The stored text everywhere else, byte for byte.
+  const template = (source.frame_style as { template?: unknown } | null | undefined)?.template;
+  if (source.face_content?.station && typeof template === "string" && isStationFrame(template)) {
+    const shown = stationOpenText(source.rules_text, source.face_content);
+    if (shown.trim()) return shown;
+  }
   if (source.rules_text?.trim()) return source.rules_text;
   const abilities = source.face_content?.loyalty?.abilities;
   if (abilities && abilities.length > 0) return serializeLoyalty(abilities);

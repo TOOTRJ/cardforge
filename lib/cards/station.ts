@@ -38,6 +38,11 @@ import type { FaceContent, StationTierContent } from "@/types/card";
 export const STATION_MAX_TIERS = 3;
 /** Thresholds printed: 1+ … 20+. Two digits fit the badge. */
 export const STATION_MAX_THRESHOLD = 99;
+/** The most characters a ROW holds — the top band, or one tier's text
+ *  (`faceContentSchema`, lib/validation/card.ts: the walker's and the saga's
+ *  row limit). A longer box is not refused: the card then saves its tiers as
+ *  lines of text, which draw the same bands (the tier editor says so). */
+export const STATION_ROW_MAX_CHARS = 600;
 
 const TIER_LINE = /^(\d{1,2})\+\s*\|\s?(.*)$/;
 const CREATURE_AT = /creature at (\d{1,2})\+/i;
@@ -59,14 +64,19 @@ export type StationText = {
  *  `hasPt`: the card prints a power / toughness — without one no tier is
  *  plated. More than STATION_MAX_TIERS tier lines: the extra lines stay in
  *  the last tier's text as typed (nothing is dropped, nothing is drawn as a
- *  fourth band). */
-export function parseStationText(rulesText: string | null | undefined, hasPt = false): StationText {
+ *  fourth band). `maxTiers` is for READERS of the text only (every tier
+ *  line it holds: the AI lint, the typography pass's "what did the stored
+ *  card say") — a card never draws more than STATION_MAX_TIERS.
+ *  Lines end at "\n", "\r\n" or a lone "\r": a text saved through the API with Windows
+ *  line ends used to read as a top band alone ("8+ | Flying\r" is no tier
+ *  line to a `.` that stops at "\r" — the independent check of #549). */
+export function parseStationText(rulesText: string | null | undefined, hasPt = false, maxTiers: number = STATION_MAX_TIERS): StationText {
   const intro: string[] = [];
   const tiers: StationTier[] = [];
-  for (const line of (rulesText ?? "").split("\n")) {
+  for (const line of (rulesText ?? "").split(/\r\n|\r|\n/)) {
     const match = TIER_LINE.exec(line);
     const threshold = match ? Number(match[1]) : 0;
-    if (match && threshold >= 1 && tiers.length < STATION_MAX_TIERS) {
+    if (match && threshold >= 1 && tiers.length < maxTiers) {
       tiers.push({ threshold, text: match[2] ?? "", pt: false });
     } else if (tiers.length > 0) {
       const open = tiers[tiers.length - 1]!;
