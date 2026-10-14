@@ -164,6 +164,18 @@ export const CROWN_REFERENCES: Partial<Record<FrameTemplate, Partial<Record<stri
   m15snowland: {
     c: ref("Dark Depths", "dmr", "244", "3a8b11ad-d077-40b6-988c-0462e118fe3d"),
   },
+  // The Nyx Constellation frame (owner 2026-10-13): the Theros Beyond Death
+  // showcase's five gods — every printing of the frame is legendary — and
+  // its one two-colour card for the gold key (#268 prints red | green over a
+  // gold bar; this frame draws no pair masters). No colourless print.
+  nyx: {
+    w: ref("Heliod, Sun-Crowned", "thb", "259", "e11cf760-da35-41f2-8cf5-a5141103eeb3"),
+    u: ref("Thassa, Deep-Dwelling", "thb", "261", "27b52628-de05-4ec1-9978-e998cf17bb26"),
+    b: ref("Erebos, Bleak-Hearted", "thb", "262", "68f3c60d-2fcb-476f-bcc6-eec5879b08ee"),
+    r: ref("Purphoros, Bronze-Blooded", "thb", "265", "176596fd-fc6d-46ae-a64d-d9147430fe0f"),
+    g: ref("Nylea, Keen-Eyed", "thb", "266", "2a022e36-5074-4875-ac30-aaa09b7ef421"),
+    m: ref("Klothys, God of Destiny", "thb", "268", "4d747889-04db-4e7a-ad4c-7549514b5112"),
+  },
   // The artifact dress: a crowned borderless artifact per colour where one
   // was printed; its colourless crown is CC's artifact crown (2XM #362).
   // The double-faced bodies (TODO 5.1d): a crowned printing per face per

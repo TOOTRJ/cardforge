@@ -810,6 +810,27 @@ Rules and gotchas:
   `nyxOnceVerified`) — no bump, no sweep, no badge. Borderless and
   extended-art Nyx printings stay where they land (no frame field, no
   starfield on the print). `docs/FRAMES.md` "The Nyx dress".
+- The constellation crown (template `nyx`, owner 2026-10-13): every print of
+  the Theros constellation showcase (THB #258–268, all legendary) wears the
+  STANDARD 2015 crown in the card's colour with the Nyx starfield strip
+  inside it — never one dark / silver crown. `NYX_CONSTELLATION_CROWN` on
+  the `nyx` entry only (never the NYX base; `keyMap` c → a), bands
+  `nyxcrown/<w u b r g m a>`: PipGlyph's own cut of the published
+  `m15nyxcrown` bands (`scripts/build-nyx-crown.mjs`, numbers in
+  `scripts/lib/nyx-crown.mjs`; bucket only) whose ONE cut is the arms
+  fading out over rows 372–408 — alpha only, never a colour — because the
+  MSE masters' side rim is 3 px narrower than the crown's arm, and whose ONE
+  tint (owner Round 59) is the colourless card's `a`: its silver toned onto
+  the colourless master's bronze (`RECIPE.tint`, `tintNyxCrownBand`: hue
+  kept toward white, the starfield strip — where the band differs from the
+  plain `m15crown/a` — left alone, alpha never). No pairs (a
+  two-colour card wears gold on the gold master), no stamp, no collector
+  line. An ADDITION: opt-in per card, no bump, no sweep; a stored card on
+  the frame keeps its look. The one showcase whose import names the crown
+  ON (`CROWNED_SHOWCASE_SIGNATURES`, `lib/scryfall/import-mapper.ts`) —
+  every other legendary showcase still imports with it off. The masters are
+  not re-cut by it (rim width and tone, bar height: a correction of its
+  own). `docs/FRAMES.md` "The constellation crown".
 - The station frame (`m15station`, `m15stationland`; TODO 4.27a): Edge of
   Eternities' Spacecraft (an artifact whose subtype says Spacecraft) and
   Planets (a land whose subtype says Planet) — `SUBTYPE_DRESSES`, the

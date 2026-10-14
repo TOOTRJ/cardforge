@@ -2913,7 +2913,8 @@ TODO 4.7 (owner decisions A3 / A4, 2026-09-29; the frame roadmap of
 2026-10-13, block 3). `m15nyx` is the printed ENCHANTMENT frame on the 2015
 frame: the M15 frame with a starfield in its frame field. It is not the
 `nyx` template (the Theros Beyond Death constellation showcase, THB
-#258–268, which stays) and not the token kind's Nyx (4.51).
+#258–268, which stays — its own crown is [The constellation
+crown](#the-constellation-crown)) and not the token kind's Nyx (4.51).
 
 **Which printings** (Scryfall `frame:nyxtouched` — the `enchantment` frame
 effect — 2026-10-13: 1,746 printings). 131 are on the 2003 frame (Theros,
@@ -3108,6 +3109,107 @@ Not moved, on purpose:
 One m15 reference left the registry with this: Obsessive Pursuit (TLA
 #112), an alternate of `m15/b`, is a Nyx printing and would have had the
 owner compare a starfield against the plain frame.
+
+### The constellation crown
+
+Owner 2026-10-13. The `nyx` template ("Nyx Constellation", the Theros
+Beyond Death showcase) drew no legendary crown; print has one on every
+card of the frame.
+
+**What print does** — the eleven printings of the frame, THB #258–268, all
+legendary (Scryfall: `enchantment` + `showcase` + `legendary` + `inverted`);
+there is no nonlegendary constellation card to compare against. Read
+2026-10-13 from Scryfall's 745 × 1040 scans scaled to 1500 × 2100, nothing
+kept:
+
+- It is the STANDARD 2015 legendary crown — the scallops, wings and arms of
+  FDN's — **in the card's colour**: silver on white (#258 / #259), blue
+  (#260 / #261), dark grey on black (#262 / #263), red (#264 / #265), green
+  (#266 / #267). Not one dark, silver-edged crown for every colour. The one
+  two-colour card, #268 Klothys, splits it red | green over a GOLD title
+  bar and inner strip.
+- Inside the crown, between the arch and the title bar, runs the Nyx
+  starfield strip (rows 60–92 at x = 600) — the Nyx dress's "inner crown".
+- Edges on the 1500 × 2100 card at x = 600: crown top edge row 51–53, the
+  bar's top outline 93–96, its bottom outline 214–216, the rim under it
+  217–225, the art from 227. The side rim beside the art is 13 px wide
+  (x 98–110). The name does not move: it sits in the bar as on any card of
+  the frame.
+- Tones of the arm / rim beside the art: white 233,230,234; blue 12,86,179;
+  black 56,51,47; red 213,57,23; green 47,108,69.
+
+**The source.** Card Conjurer's own 'Nyx Showcase' pack (the fork's
+js/frames/packM15NyxShowcase.js) has seven crownless masters — the same drawing as
+our MSE ones — and lists the Nyx 'Inner Crown' beside them: its crown is the
+M15 'Legend Crown' with that strip, which is exactly the band the Nyx dress
+publishes (`m15nyxcrown/<key>`, [above](#the-nyx-dress-47)). Its tones match
+the prints (green arm 42,108,69; black 58,56,50; red 209,77,53; blue
+0,117,190; white 244,243,236), and it registers on our masters' title bar:
+the MSE bar's outline sits on rows 101–104, the M15 pack's on 100–103, under
+the band's own outline.
+
+**The one cut** (`scripts/lib/nyx-crown.mjs`, `scripts/build-nyx-crown.mjs`
+→ `nyxcrown/<w u b r g m a>`, bucket only; PipGlyph's own derivation of the
+published bands, recorded as such in `lib/cards/frame-sources.json`). Our
+`nyx` masters' side rim is 10 px wide (x 101–110; 1389–1399 on the right)
+where the prints' and the crown's arm are 13 (x 98–110; 1391–1402), and it
+is another tone on three keys (green 0,124,67; black 39,38,36; red 241,56,39
+— and, until Round 59's tint below, the colourless master's bronze under
+the silver crown). Drawn as
+published, the arms end on row 408 in a 3 px jog and a tone step. So the
+arms' last rows fade out — alpha × (1 − t) over rows 372–408 — and the crown
+hands over to the master's own rim. Alpha only: every colour is the (toned,
+for `a`) parent band's, every pixel above row 372 is the parent's byte for byte, and the
+WebP's alpha equals the PNG's (the build checks both).
+
+**The one tint** (owner Round 59, 2026-10-14). There is no printed
+colourless constellation card, and the colourless master is a bronze drawing
+(rim beside the art 172,148,132) under what was Card Conjurer's artifact
+silver (arm 223,225,225): two metals on one card. So `nyxcrown/a` — that
+band only — has its metal toned onto the master's rim, 223,225,225 →
+172,148,132 (`RECIPE.tint`, `tintNyxCrownBand`). The tone is
+`toneSourceRegions`' (the Universes Beyond tones'): the colour multiplied by
+to ÷ from, the colour part of the gain fading out toward white, so the
+bevel's highlights stay highlights of the same metal instead of turning (a
+plain per-channel gain is the Vehicle plate's lesson); darker bevel pixels
+take the same gains, black stays black. The starfield strip is not toned:
+every pixel where the Nyx band differs from the published plain crown band
+`m15crown/a` is the parent's byte — but for the strip's soft edge (strip
+pixels within 2 px of metal), which takes the share of the tone the crown
+shows through it; left alone it stays a silver hairline round the stars.
+Alpha is never touched. Measured on the bake: crown arm 172,148,132, the
+frame's rim beside it 172,148,132. The other six bands are byte-identical
+to before (their sha256 unchanged in the manifest).
+
+**Declared** as `NYX_CONSTELLATION_CROWN` on the `nyx` entry only (`keyMap`
+c → a, the artifact band toned to the master's bronze — no printed
+colourless card), at `M15_CROWN`'s rect. It is the frame's one overlay: no stamp, no collector line, no pairs —
+a two-colour card is drawn on the gold master and wears the gold crown
+(print splits it; that is the pair masters' step). Nothing else moves: no
+slot, no keep-out (the band has a hole for the title bar and reaches the art
+only as the crown's soft shadow on its top rows, as on m15).
+
+**An addition** ([Additions vs corrections](#additions-vs-corrections)):
+opt-in per card through `frame_style.crown`, no bump, no sweep, no badge. A
+card stored on the frame names no switch and bakes byte for byte as before; a
+new legendary card on it starts with the crown on; the Variations section's
+"Legendary" chip and the "Legendary crown" switch are offered on the
+template (`legendaryVariationOf` reads the declared overlay). An import of
+one of the eleven names the switch ON: `showcase/thb/constellation` is the
+one showcase signature that prints the standard crown
+(`CROWNED_SHOWCASE_SIGNATURES` in `lib/scryfall/import-mapper.ts`) — every
+other legendary showcase still imports with it off, as its scan. Until the
+`nyx` frame is ticked, such an import lands on its fallback, M15, **with the
+crown on** — M15's own crown, as any legendary M15 card (owner Round 59:
+fine).
+
+**Not done here**, on purpose: the masters are not re-cut. Against the
+scans, their title bar sits 5–8 px low (the scans' top outline on rows
+93–96, ours on 101–104 — Scryfall's crop varies by a few px, so part of it
+is the scan), their side rim is 3 px narrow and their rim tone is off on
+green, black and red. That is a CORRECTION of the frame, with its own
+before/after and sweep. Nor are pair masters built (#268's red | green).
+
 ### The Station frame (4.27a)
 
 TODO 4.27a (owner 2026-10-13, rounds 53–54). `m15station` and
@@ -3711,7 +3813,10 @@ m15, m15artifact and m15land — [below](#the-two-colour-frames-46b)).
   17, 2026-09-30: printing-only; `importedAnatomy`): `printed_crown` is
   `true` for Scryfall's `legendary` frame effect, `false` for a Legendary
   card printed without it (M15–RIX, List reprints) and for a Legendary
-  showcase, and absent for a nonlegendary printing, a showcase one included
+  showcase — but the THB constellation showcase, which prints the standard
+  crown and imports with it on ([The constellation
+  crown](#the-constellation-crown)) — and absent for a nonlegendary
+  printing, a showcase one included
   (owner 2026-09-30); `printed_two_color` is `true` (with
   its pair) for a 2015-frame printing of exactly two colours — and, since
   4.6h, for an old-frame printing that prints them
@@ -3838,6 +3943,9 @@ default.
 masters share the M15 pack's geometry ([Devoid and
 snow](#devoid-and-snow-46f-wave-2c)) — never devoid (the owner's call),
 adventure, saga, the tokens or a showcase (4.6f and the token items; the
+one showcase that prints it, the Theros constellation frame, draws the Nyx
+crown band with faded arms — [The constellation
+crown](#the-constellation-crown); the
 borderless frames draw CC's FLOATING crown from crowned twin masters and
 the extended-art frame the same crown as its own band, `EXTENDED_CROWN` —
 [The borderless crown and pair
@@ -3861,7 +3969,9 @@ them (a tick still records the combo's own reference). An import's switch is
 off for a Legendary card printed without it (M15–RIX, List and playtest
 reprints) and for a Legendary showcase, by Scryfall's `showcase` effect or
 the registry's showcase signature (MUL's etched run carries only
-`legendary` + `etched`); not named for a nonlegendary printing, a showcase
+`legendary` + `etched`) — except the showcases that print the standard
+crown (`CROWNED_SHOWCASE_SIGNATURES`: the THB constellation frame), which
+follow their `legendary` effect like any 2015-frame printing; not named for a nonlegendary printing, a showcase
 one included (owner 2026-09-30), which gets the new-card default (owner
 round 17: printing-only). The standard crowns are Card
 Conjurer's as they are — u / r / g too, untinted (owner round 17). No tick

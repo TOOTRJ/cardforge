@@ -83,6 +83,15 @@ const PICKS: readonly Pick[] = [
   // --- the Nyx dress (TODO 4.7): the starfield masters, their own crown band --
   { from: "m15nyx/w/creature-short", why: "Nyx: the starfield master under M15's slots and plate" },
   { from: "m15nyx/wu/creature-long@pair-crown", why: "Nyx: the two-colour pair master and the Nyx crown band (the starfield strip inside the crown)" },
+  // --- the Nyx Constellation frame's crown (owner 2026-10-13) ---------------
+  {
+    from: "nyx/g/creature-long@crown",
+    as: "@three-pips",
+    // A three-pip cost: the long card's five-pip row is the M15 cost row's
+    // own 750 px difference ("750-cost-row-width"), not this frame's.
+    why: "Nyx Constellation: the crown band over the MSE starfield master, its arms faded into the master's rim, light ink on the translucent bars",
+    row: () => ({ cost: "{2}{G}" }),
+  },
   // --- Beleren's ligatures: ffi and ffl, all its GSUB 'liga' holds ----------
   // A browser sets them by default on a line with no letter-spacing (M15's
   // type line; its name is tracked 0.01 em, which switches them off by

@@ -104,8 +104,18 @@ describe("printed_crown", () => {
     );
     let legendary = 0;
     let nonlegendary = 0;
+    let crowned = 0;
     for (const [key, card] of showcases) {
       const got = mapScryfallToFormPatch(card).printed_crown;
+      // …but the one showcase that prints the standard crown: the THB
+      // constellation frame (#258–268, owner 2026-10-13), which follows its
+      // printing like any 2015-frame legendary.
+      if (/^thb-2(5[89]|6[0-8])$/.test(key)) {
+        expect(mapScryfallToFormPatch(card).frame_match?.signature, key).toBe("showcase/thb/constellation");
+        expect(got, key).toBe(true);
+        crowned += 1;
+        continue;
+      }
       if (/\bLegendary\b/.test(card.type_line ?? "")) {
         expect(got, key).toBe(false);
         legendary += 1;
@@ -117,6 +127,21 @@ describe("printed_crown", () => {
     // Both kinds are in the fixtures (not a vacuous pass).
     expect(legendary).toBeGreaterThanOrEqual(10);
     expect(nonlegendary).toBeGreaterThanOrEqual(10);
+    expect(crowned).toBeGreaterThanOrEqual(1);
+    // The rule itself: the constellation signature follows the printing —
+    // on for the `legendary` effect, off for a Legendary face without it,
+    // nothing for a face the crown never prints on.
+    const legend = P["fdn-2"];
+    const constellation = { ...mapScryfallToFormPatch(legend).frame_match!, signature: "showcase/thb/constellation" };
+    const showcased = { ...legend, frame_effects: ["enchantment", "showcase", "legendary", "inverted"] } as ScryfallCard;
+    expect(printsStandardCrown(showcased, constellation)).toBe(true);
+    expect(crownSwitchFromPrinting(showcased, constellation, { cardType: "creature", supertype: "Legendary Enchantment" })).toBe(true);
+    const uncrowned = { ...legend, frame_effects: ["enchantment", "showcase", "inverted"] } as ScryfallCard;
+    expect(printsStandardCrown(uncrowned, constellation)).toBe(false);
+    expect(crownSwitchFromPrinting(uncrowned, constellation, { cardType: "creature", supertype: "Legendary Enchantment" })).toBe(false);
+    expect(crownSwitchFromPrinting(uncrowned, constellation, { cardType: "creature", supertype: "Enchantment" })).toBeUndefined();
+    // Any other showcase with the same effects still stores it off.
+    expect(crownSwitchFromPrinting(showcased, { ...constellation, signature: "showcase/mul" }, { cardType: "creature", supertype: "Legendary" })).toBe(false);
   });
 
   it("is off for a showcase frame the registry knows without Scryfall's `showcase` effect", () => {
