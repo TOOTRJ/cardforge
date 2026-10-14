@@ -12,6 +12,7 @@ import manifestJson from "@/lib/frames/frame-manifest.json";
 import { resetFrameAssetCacheForTests } from "@/lib/render/card-frames";
 import { frameAssetPathsFor, renderCardImage, type RenderPreset } from "@/lib/render/card-image";
 import { NYX_CONSTELLATION_CROWN_RECIPE as RECIPE, fadeNyxCrownBand, nyxCrownFade, tintNyxCrownBand } from "@/scripts/lib/nyx-crown.mjs";
+import { NYX_RIM_TONES } from "@/scripts/lib/nyx-frame.mjs";
 import { FRAME_TEMPLATE_VALUES, type FrameStyle } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -112,7 +113,7 @@ describe("the recipe, the slot and the entry", () => {
   });
 });
 
-describe("the colourless card's tint (owner Round 59)", () => {
+describe("the bands' tints (owner Round 59)", () => {
   const W = 1500;
   const H = 410;
   const band = () => {
@@ -136,9 +137,16 @@ describe("the colourless card's tint (owner Round 59)", () => {
   };
   const at = (buf: Buffer, x: number, y: number) => [...buf.subarray((y * W + x) * 4, (y * W + x) * 4 + 4)];
 
-  it("tints the artifact silver `a` and no other band, onto the colourless master's rim", () => {
-    expect(Object.keys(RECIPE.tint)).toEqual(["a"]);
+  it("tints the artifact silver `a` onto the colourless master's rim by the gain, and every other band onto its master's rim by the shift", () => {
+    expect(Object.keys(RECIPE.tint).sort()).toEqual([...KEYS].sort());
     expect(RECIPE.tint.a).toEqual({ plain: "m15crown", from: [223, 225, 225], to: [172, 148, 132] });
+    // w u b r g land on the rims corrected to print; gold on the gold
+    // master's own (not printed). One tone per colour: crown = rim.
+    for (const k of ["w", "u", "b", "r", "g"] as const) {
+      expect(RECIPE.tint[k], k).toMatchObject({ plain: "m15crown", method: "shift" });
+      expect(RECIPE.tint[k].to, k).toEqual(NYX_RIM_TONES[k].to);
+    }
+    expect(RECIPE.tint.m).toMatchObject({ plain: "m15crown", method: "shift", from: [233, 212, 125], to: [246, 210, 98] });
     // The plain band it reads is a published one, and the key the nyx entry
     // maps the colourless master to.
     expect(M15_CROWN.keys).toContain("a");
@@ -205,7 +213,7 @@ describe("published to the frames bucket", () => {
       source: "pipglyph",
       converter: "scripts/build-nyx-crown.mjs",
       kind: "overlay",
-      sourceFiles: [...KEYS.map((k) => `m15nyxcrown/${k}.png`), "m15crown/a.png"].sort(),
+      sourceFiles: [...KEYS.map((k) => `m15nyxcrown/${k}.png`), ...KEYS.map((k) => `m15crown/${k}.png`)].sort(),
     });
     expect(provenance.commit).toBeUndefined();
     expect(provenance.output).toMatch(/^1500x410 overlay band: /);
@@ -215,10 +223,10 @@ describe("published to the frames bucket", () => {
       // lists for it today.
       expect(provenance.colors[key][0], key).toBe(`m15nyxcrown/${key}.png (published, sha256 ${REAL[`m15nyxcrown/${key}.png`].sha256.slice(0, 12)})`);
       expect(provenance.colors[key][1], key).toMatch(/^alpha × \(1 − t\) on rows 372–408/);
-      // Only the tinted band says a third thing.
-      expect(provenance.colors[key].length, key).toBe(key === "a" ? 3 : 2);
+      // Every band says how it was tinted, against which plain crown.
+      expect(provenance.colors[key].length, key).toBe(3);
+      expect(provenance.colors[key][2], key).toContain(`m15crown/${key}.png (published, sha256 ${REAL[`m15crown/${key}.png`].sha256.slice(0, 12)})`);
     }
-    expect(provenance.colors.a[2]).toContain(`m15crown/a.png (published, sha256 ${REAL["m15crown/a.png"].sha256.slice(0, 12)})`);
     expect(provenance.colors.a[2]).toMatch(/^metal toned 223, 225, 225 → 172, 148, 132 /);
   });
 
@@ -243,13 +251,14 @@ describe("published to the frames bucket", () => {
       expect(band.subarray(0, head).equals(toned.subarray(0, head)), key).toBe(true);
       for (let i = RECIPE.fade.to * 1500 * 4 + 3; i < band.length; i += 4) expect(band[i]).toBe(0);
       if (!tint) continue;
-      // The tinted band: the parent's alpha above the fade, the master's
-      // bronze on its arm (not the silver), and the parent's starfield —
-      // every strip pixel more than the edge's reach from metal — untouched.
+      // The tinted band: the parent's alpha above the fade, its master's
+      // rim on its arm (crown and rim one tone), and the parent's starfield
+      // — every strip pixel more than the edge's reach from metal —
+      // untouched.
       for (let i = 3; i < head; i += 4) if (band[i] !== parent[i]) throw new Error(`${key}: alpha moved at ${i}`);
       const px = (buf: Buffer, x: number, y: number) => [...buf.subarray((y * 1500 + x) * 4, (y * 1500 + x) * 4 + 3)];
-      expect(px(parent, 100, 300)).toEqual([223, 225, 225]);
-      expect(px(band, 100, 300)).toEqual([172, 148, 132]);
+      expect(px(parent, 105, 300), key).toEqual([...tint.from]);
+      expect(px(band, 105, 300), key).toEqual([...tint.to]);
       const differs = (x: number, y: number) => {
         const o = (y * 1500 + x) * 4;
         return parent[o] !== plain![o] || parent[o + 1] !== plain![o + 1] || parent[o + 2] !== plain![o + 2] || parent[o + 3] !== plain![o + 3];

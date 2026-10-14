@@ -14,7 +14,9 @@
 // nyx's type bar and text box are darkened to the THB constellation prints
 // before the corner normalisation (scripts/lib/nyx-tone.mjs, TODO 4.17e:
 // MSE's 50 % black → α 150 on the bar, α 171 in the box; both are far from
-// the corners).
+// the corners), and then its RIM is toned onto the prints (owner Round 59,
+// scripts/lib/nyx-frame.mjs: w u b r g; gold and colourless are not printed
+// and keep MSE's).
 //
 // All of them start UNVERIFIED — they surface to users only after the owner
 // checks them in /admin/frame-compare.
@@ -34,6 +36,7 @@ import fs from "node:fs";
 // fullart and m15textless* are allow-listed).
 import { normaliseMasterCorners } from "./lib/frame-corners.mjs";
 import { toneNyxMaster } from "./lib/nyx-tone.mjs";
+import { NYX_RIM_TONES, toneNyxRim } from "./lib/nyx-frame.mjs";
 
 // `--only a,b` rebuilds only those families (the output dir's basename).
 const onlyArg = process.argv.indexOf("--only");
@@ -93,7 +96,7 @@ async function writeOut(outDir, key, buf, transform) {
   // A family's own pass (nyx's type bar and text box) — away from the
   // corners, so it runs before their normalisation and the write stays the
   // gated pixels.
-  if (transform) transform(data, W, H);
+  if (transform) transform(data, W, H, key);
   normaliseMasterCorners(path.basename(outDir), key, data, W, H);
   await sharp(data, { raw: { width: W, height: H, channels: 4 } }).png().toFile(path.join(outDir, `${key}.png`));
 }
@@ -141,7 +144,10 @@ const PNG_SETS = [
     out: "public/frames/nyx",
     pack: `${DATA}/magic-m15-showcase-theros-constellation.mse-style/card`,
     file: (k) => `${k}card.png`,
-    transform: toneNyxMaster,
+    transform: (data, width, height, key) => {
+      toneNyxMaster(data, width, height);
+      if (NYX_RIM_TONES[key]) toneNyxRim(data, width, height, NYX_RIM_TONES[key]);
+    },
   },
   {
     out: "public/frames/fullart",

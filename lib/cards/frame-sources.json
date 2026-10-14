@@ -10113,43 +10113,61 @@
     "recipe": {
       "fade": "alpha × (1 − t) on rows 372–408 (t 0 → 1), 0 below; colours untouched",
       "tint": {
-        "a": "223, 225, 225 → 172, 148, 132 on the metal (every pixel equal to m15crown/a.png), hue kept toward white; the strip (but its soft edge) and alpha untouched"
+        "w": "244, 243, 236 → 238, 236, 240 on the metal (every pixel equal to m15crown/w.png) by shiftTone, faded out toward white; the strip (but its soft edge) and alpha untouched",
+        "u": "0, 117, 190 → 10, 93, 193 on the metal (every pixel equal to m15crown/u.png) by shiftTone, faded out toward white; the strip (but its soft edge) and alpha untouched",
+        "b": "58, 56, 50 → 62, 57, 54 on the metal (every pixel equal to m15crown/b.png) by shiftTone, faded out toward white; the strip (but its soft edge) and alpha untouched",
+        "r": "209, 77, 53 → 220, 59, 22 on the metal (every pixel equal to m15crown/r.png) by shiftTone, faded out toward white; the strip (but its soft edge) and alpha untouched",
+        "g": "42, 108, 69 → 45, 107, 71 on the metal (every pixel equal to m15crown/g.png) by shiftTone, faded out toward white; the strip (but its soft edge) and alpha untouched",
+        "m": "233, 212, 125 → 246, 210, 98 on the metal (every pixel equal to m15crown/m.png) by shiftTone, faded out toward white; the strip (but its soft edge) and alpha untouched",
+        "a": "223, 225, 225 → 172, 148, 132 on the metal (every pixel equal to m15crown/a.png) by toneSourceRegions' gain, faded out toward white; the strip (but its soft edge) and alpha untouched"
       },
       "arms": "nothing but the two arms is painted from row 372 down: x 60–125 and 1375–1440"
     },
     "colors": {
       "w": [
         "m15nyxcrown/w.png (published, sha256 0be33ca7f865)",
-        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below",
+        "metal toned 244, 243, 236 → 238, 236, 240 (shiftTone, scripts/lib/nyx-frame.mjs: faded out toward white; 57339 px) wherever the band equals m15crown/w.png (published, sha256 9310ceac2b5c); the starfield strip (24440 px) untouched but for its soft edge against the metal (2512 px, by the share of the crown they show)"
       ],
       "u": [
         "m15nyxcrown/u.png (published, sha256 f00f804b24c8)",
-        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below",
+        "metal toned 0, 117, 190 → 10, 93, 193 (shiftTone, scripts/lib/nyx-frame.mjs: faded out toward white; 63427 px) wherever the band equals m15crown/u.png (published, sha256 00b5e90d266a); the starfield strip (24432 px) untouched but for its soft edge against the metal (2638 px, by the share of the crown they show)"
       ],
       "b": [
         "m15nyxcrown/b.png (published, sha256 5631e5a294d2)",
-        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below",
+        "metal toned 58, 56, 50 → 62, 57, 54 (shiftTone, scripts/lib/nyx-frame.mjs: faded out toward white; 58513 px) wherever the band equals m15crown/b.png (published, sha256 441795575262); the starfield strip (24044 px) untouched but for its soft edge against the metal (2628 px, by the share of the crown they show)"
       ],
       "r": [
         "m15nyxcrown/r.png (published, sha256 7d7840dac8b3)",
-        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below",
+        "metal toned 209, 77, 53 → 220, 59, 22 (shiftTone, scripts/lib/nyx-frame.mjs: faded out toward white; 62981 px) wherever the band equals m15crown/r.png (published, sha256 d9a3215c1931); the starfield strip (24402 px) untouched but for its soft edge against the metal (2711 px, by the share of the crown they show)"
       ],
       "g": [
         "m15nyxcrown/g.png (published, sha256 a621e0a7b476)",
-        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below",
+        "metal toned 42, 108, 69 → 45, 107, 71 (shiftTone, scripts/lib/nyx-frame.mjs: faded out toward white; 58620 px) wherever the band equals m15crown/g.png (published, sha256 992548e92722); the starfield strip (24247 px) untouched but for its soft edge against the metal (2560 px, by the share of the crown they show)"
       ],
       "m": [
         "m15nyxcrown/m.png (published, sha256 bd1d4d299ecf)",
-        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below",
+        "metal toned 233, 212, 125 → 246, 210, 98 (shiftTone, scripts/lib/nyx-frame.mjs: faded out toward white; 63265 px) wherever the band equals m15crown/m.png (published, sha256 c7f61a87305b); the starfield strip (24499 px) untouched but for its soft edge against the metal (2785 px, by the share of the crown they show)"
       ],
       "a": [
         "m15nyxcrown/a.png (published, sha256 381f370a7d28)",
         "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below",
-        "metal toned 223, 225, 225 → 172, 148, 132 (toneSourceRegions: hue kept toward white; 65785 px) wherever the band equals m15crown/a.png (published, sha256 a4062886c598); the starfield strip (24435 px) untouched but for its soft edge against the metal (2780 px, by the share of the crown they show)"
+        "metal toned 223, 225, 225 → 172, 148, 132 (toneSourceRegions: faded out toward white; 65785 px) wherever the band equals m15crown/a.png (published, sha256 a4062886c598); the starfield strip (24435 px) untouched but for its soft edge against the metal (2780 px, by the share of the crown they show)"
       ]
     },
     "sourceFiles": [
       "m15crown/a.png",
+      "m15crown/b.png",
+      "m15crown/g.png",
+      "m15crown/m.png",
+      "m15crown/r.png",
+      "m15crown/u.png",
+      "m15crown/w.png",
       "m15nyxcrown/a.png",
       "m15nyxcrown/b.png",
       "m15nyxcrown/g.png",
@@ -10160,10 +10178,11 @@
     ],
     "notes": [
       "PipGlyph's own cut (owner 2026-10-13): the Theros Beyond Death constellation showcase prints (THB #258–268) wear the standard 2015 legendary crown in the card's colour with the Nyx starfield strip inside it — the piece Card Conjurer's 'Nyx Showcase' pack (packM15NyxShowcase.js) lists beside its crownless masters, and the band the Nyx dress publishes as m15nyxcrown. Nothing is drawn or synthesised: every painted pixel is the parent band's.",
-      "The one cut: the `nyx` masters are MSE's and their side rim is 3 px narrower than the crown's arm (and another tone on b, r, g and the colourless master), so the arms fade out over their last rows instead of ending in a jog. The masters are not re-cut.",
+      "The one cut: the `nyx` masters are MSE's and their side rim sits 1–2 px inward of the crown's arm, so the arms fade out over their last rows instead of ending in a jog. The masters are not re-cut (their rim is the prints' width: 11.9 px against 12.2, owner Round 59's measurement).",
       "The numbers are scripts/lib/nyx-crown.mjs (eleven prints measured 2026-10-13); no scan is read by the build.",
       "No pairs: the frame draws no pair masters, so a two-colour card wears the gold crown over the gold master (THB #268 prints red | green over a gold bar — the pair masters' step, not this one). The colourless master takes the artifact band `a` (no printed colourless constellation card).",
-      "Owner Round 59 (2026-10-14): the `a` band's silver read as a second metal over the colourless master's bronze, so its metal is toned onto the master's rim (223,225,225 → 172,148,132; toneSourceRegions, the colour part of the gain fading out toward white so the bevel keeps its hue). The starfield strip — every pixel where the band differs from the plain m15crown/a — is the parent's byte for byte but for its soft edge against the metal (within 2 px of it: the share of the tone the crown shows through), and every alpha is the parent's. No other band is tinted."
+      "Owner Round 59 (2026-10-14): the `a` band's silver read as a second metal over the colourless master's bronze, so its metal is toned onto the master's rim (223,225,225 → 172,148,132; toneSourceRegions, the colour part of the gain fading out toward white so the bevel keeps its hue). The starfield strip — every pixel where the band differs from the plain m15crown/a — is the parent's byte for byte but for its soft edge against the metal (within 2 px of it: the share of the tone the crown shows through), and every alpha is the parent's.",
+      "Owner Round 59, decision 1 (the frame corrected against print, scripts/lib/nyx-frame.mjs): every other band's metal is toned onto its master's rim the same way — w u b r g onto the rims toned to the prints (the crown's red 209,77,53 and blue 0,117,190 land on print's 220,59,22 and 10,93,193), m onto the gold master's own 246,210,98 — by shiftTone (the move scaled by the pixel's luminance and faded out toward white; it lifts blue's and green's 0 red, which a gain cannot). Crown and rim are one tone per colour. The parents, the Nyx dress's m15nyxcrown bands, are untouched."
     ]
   },
   "retro": {

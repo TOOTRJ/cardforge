@@ -13527,86 +13527,86 @@
       "height": 410
     },
     "nyxcrown/b.png": {
-      "hash": "ca39ea56341a",
-      "sha256": "ca39ea56341a18806776b6e7b9d557440b520f46f27f371091bed5c7abdd136f",
-      "bytes": 202997,
+      "hash": "d61b6af4d7b8",
+      "sha256": "d61b6af4d7b8656761a90ee65146b737e65d1850358156571feffb93dc487f2a",
+      "bytes": 202999,
       "width": 1500,
       "height": 410
     },
     "nyxcrown/b.webp": {
-      "hash": "c09e22b763a3",
-      "sha256": "c09e22b763a3f272b5193560a25bbb8d674fc0e44968f1401f8d44b9c28b26fe",
-      "bytes": 26032,
+      "hash": "2d8184a50be3",
+      "sha256": "2d8184a50be3d658f64729d78255d775e8d544ced71faf9af09f897614ffe121",
+      "bytes": 26016,
       "width": 1500,
       "height": 410
     },
     "nyxcrown/g.png": {
-      "hash": "715ecf150fdc",
-      "sha256": "715ecf150fdc15e302ba5d2eb0fbfa0c7aa517341e4b3f9c7752ac28da4685b6",
-      "bytes": 219228,
+      "hash": "d7331c62d142",
+      "sha256": "d7331c62d142e950e4446cace7402870245c2b110ee27ad009472404e9d4cc8e",
+      "bytes": 219155,
       "width": 1500,
       "height": 410
     },
     "nyxcrown/g.webp": {
-      "hash": "4666bfe67f74",
-      "sha256": "4666bfe67f7444cbdf6152da9fb445da573e95508276c1e6204f5640e9fed380",
-      "bytes": 30258,
+      "hash": "cc118b109249",
+      "sha256": "cc118b1092498570869b2d4b1219717cd20e03020841c0d21fea6c841ac1f620",
+      "bytes": 30176,
       "width": 1500,
       "height": 410
     },
     "nyxcrown/m.png": {
-      "hash": "40dacb6637dd",
-      "sha256": "40dacb6637dd06ef6b47ffbd6be177991cf38a9dea05f749322461494e2137b7",
-      "bytes": 219574,
+      "hash": "937329f8b93d",
+      "sha256": "937329f8b93d0c767afb2f4a6957b6665e0cb0dfa03ea0487a2e4f202fb91014",
+      "bytes": 218703,
       "width": 1500,
       "height": 410
     },
     "nyxcrown/m.webp": {
-      "hash": "694d11a38107",
-      "sha256": "694d11a381078d13e43768d138b6d8989350c354a0342589d34353f3aeabfcfd",
-      "bytes": 31926,
+      "hash": "185c47bc72b9",
+      "sha256": "185c47bc72b9c513bc4a36cc45fabf67cef74a06ffd0e4eef994a228ba2221c7",
+      "bytes": 32524,
       "width": 1500,
       "height": 410
     },
     "nyxcrown/r.png": {
-      "hash": "36a7b4c467ee",
-      "sha256": "36a7b4c467eef809d07a8559024b14bed65b317f3484be4b5b1354bb26c48174",
-      "bytes": 217276,
+      "hash": "f53dd2646dda",
+      "sha256": "f53dd2646ddae4b4c4199d97620b3abb988299516637434118558dae4e0eccd0",
+      "bytes": 216114,
       "width": 1500,
       "height": 410
     },
     "nyxcrown/r.webp": {
-      "hash": "fe40a060eff9",
-      "sha256": "fe40a060eff9a1a6b3a3bdbe772888bc9a826b6ba123fa73baf5052e6e658318",
-      "bytes": 32506,
+      "hash": "2610c581d167",
+      "sha256": "2610c581d16748c6c1cffee5761d7ac3f96785cc496b0dd057eff2abd650ca93",
+      "bytes": 32938,
       "width": 1500,
       "height": 410
     },
     "nyxcrown/u.png": {
-      "hash": "180112d4cc9e",
-      "sha256": "180112d4cc9eb1f8ddf9051dd6e67498b85183789f02e61999994c668a842034",
-      "bytes": 211777,
+      "hash": "f5615061fcae",
+      "sha256": "f5615061fcaeef1b2030a71ce084b1afdc4d53d009e67e12961ba7519cf7057a",
+      "bytes": 212070,
       "width": 1500,
       "height": 410
     },
     "nyxcrown/u.webp": {
-      "hash": "7cf72591e491",
-      "sha256": "7cf72591e49186017e2613b49c6b584af94efba378414cd39bce83c9feddbc98",
-      "bytes": 32258,
+      "hash": "77dfbdb6573b",
+      "sha256": "77dfbdb6573bab9745e32a17459831dfee09fa4efc529fc9369c2083ef830517",
+      "bytes": 31864,
       "width": 1500,
       "height": 410
     },
     "nyxcrown/w.png": {
-      "hash": "a7a0bc31f227",
-      "sha256": "a7a0bc31f2276e032b8b11113e80b77724b3bcb9547b9804551c80be176abc3d",
-      "bytes": 189516,
+      "hash": "5d1780f7af48",
+      "sha256": "5d1780f7af48c1da0ebb4c21578ae5353d18c946cc73c4e71dab296072b80ad2",
+      "bytes": 190357,
       "width": 1500,
       "height": 410
     },
     "nyxcrown/w.webp": {
-      "hash": "dc96b583664a",
-      "sha256": "dc96b583664a8bd653fe561b3affcfcb39912490f54085fb597a356d34d0dbb1",
-      "bytes": 26558,
+      "hash": "0d85f3f20dae",
+      "sha256": "0d85f3f20dae6ef0fd536813421a4ccfa8c3f528578fde57b0fdfe8bdc745773",
+      "bytes": 26866,
       "width": 1500,
       "height": 410
     },

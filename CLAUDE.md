@@ -828,9 +828,15 @@ Rules and gotchas:
   line. An ADDITION: opt-in per card, no bump, no sweep; a stored card on
   the frame keeps its look. The one showcase whose import names the crown
   ON (`CROWNED_SHOWCASE_SIGNATURES`, `lib/scryfall/import-mapper.ts`) —
-  every other legendary showcase still imports with it off. The masters are
-  not re-cut by it (rim width and tone, bar height: a correction of its
-  own). `docs/FRAMES.md` "The constellation crown".
+  every other legendary showcase still imports with it off. The masters'
+  RIM is on print since v55 (owner Round 59: `scripts/lib/nyx-frame.mjs`,
+  `toneNyxRim` in `build-variation-frames.mjs`, w u b r g; gold and
+  colourless not printed, MSE's) and every band's metal on its master's rim
+  (`shiftTone`; crown = rim per colour); geometry is not re-cut — the rim's
+  width is print's, the title bar's offset is the scans', and the MSE lower
+  frame's 4–6 px low is an open owner question because fixing it moves
+  text. `docs/FRAMES.md` "The constellation crown" and "The constellation
+  frame on its prints".
 - The station frame (`m15station`, `m15stationland`; TODO 4.27a): Edge of
   Eternities' Spacecraft (an artifact whose subtype says Spacecraft) and
   Planets (a land whose subtype says Planet) — `SUBTYPE_DRESSES`, the
