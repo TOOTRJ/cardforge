@@ -21,6 +21,9 @@ const s = vi.hoisted(() => ({
   texts: [] as string[],
   calls: 0,
   repaired: 0,
+  /** The fake clock (Date.now) and how long each call takes, in order. */
+  now: 1_000_000,
+  callMs: [] as number[],
 }));
 
 /** A stand-in for the SDK's generateObject: parse → validate with the zod
@@ -35,6 +38,7 @@ vi.mock("ai", async (importOriginal) => {
       experimental_repairText?: (o: { text: string; error: unknown }) => Promise<string | null>;
     }) => {
       s.calls += 1;
+      s.now += s.callMs.shift() ?? 0;
       const text = s.texts.shift() ?? "";
       const check = (raw: string) => {
         try {
@@ -67,7 +71,7 @@ vi.mock("@/lib/ai/provider", () => ({ designModel: () => "test/design", judgeMod
 
 import { zodSchema } from "ai";
 import type { z } from "zod";
-import { designCards, designedCardsSchema, designRepair } from "@/lib/ai/card-design";
+import { DESIGN_STAT_FIELDS, designCards, designedCardsSchema, designRepair } from "@/lib/ai/card-design";
 import { deckConceptSchema } from "@/lib/ai/deck-design";
 import { deckIdeasSchema, generateDeckIdeas } from "@/lib/ai/deck-ideas";
 import { deckGuideSchema } from "@/lib/ai/deck-guide";
@@ -76,9 +80,14 @@ import {
   AI_OUTPUT_ERROR_MESSAGE,
   AiOutputError,
   aiErrorMessage,
+  AI_RETRY_TAIL_MS,
   extractJson,
+  retryFitsBudget,
   structuredCall,
+  withAiTimeBudget,
 } from "@/lib/ai/structured-output";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { stationReminder } from "@/lib/creator/station-rows";
 
 let errors: unknown[][] = [];
@@ -86,6 +95,9 @@ beforeEach(() => {
   s.texts = [];
   s.calls = 0;
   s.repaired = 0;
+  s.now = 1_000_000;
+  s.callMs = [];
+  vi.spyOn(Date, "now").mockImplementation(() => s.now);
   errors = [];
   vi.spyOn(console, "error").mockImplementation((...args: unknown[]) => {
     errors.push(args);
@@ -263,6 +275,9 @@ const GOOD: Record<string, unknown> = {
   "tags": card({ tags: ["Spirits", "lifegain"] }),
 };
 
+const without = (value: Record<string, unknown>, ...keys: string[]) =>
+  Object.fromEntries(Object.entries(value).filter(([key]) => !keys.includes(key)));
+
 /** Correct-looking answers the schema refused on main — what can make the
  *  owner's error, field by field. `repaired` = set right by the repair
  *  (no second call); false = only a second call helps. */
@@ -272,13 +287,20 @@ const BAD: Array<{ name: string; answer: unknown; field: string; repaired: boole
   { name: "a colourless Spacecraft with no colour", answer: { cards: [{ ...spacecraft, cost: "{4}", color_identity: [] }] }, field: "cards.0.color_identity", repaired: true },
   { name: "nine tags", answer: { cards: [card({ tags: ["a", "b", "c", "d", "e", "f", "g", "h", "i"] })] }, field: "cards.0.tags", repaired: true },
   { name: "an enum in capitals", answer: { cards: [card({ card_type: "Creature", rarity: "Common", color_identity: ["White"] })] }, field: "cards.0.card_type", repaired: true },
-  { name: "a nullable field left out", answer: { cards: [Object.fromEntries(Object.entries(card()).filter(([key]) => key !== "defense" && key !== "loyalty"))] }, field: "cards.0.loyalty", repaired: true },
+  { name: "a nullable text left out (flavour)", answer: { cards: [without(card(), "flavor_text")] }, field: "cards.0.flavor_text", repaired: true },
+  // Never nulled: the autofix would fill a null stat with numbers the model
+  // never wrote (a 2/2, loyalty 3, defense 3) — asked for again instead.
+  { name: "a creature's power left out", answer: { cards: [without(card(), "power")] }, field: "cards.0.power", repaired: false },
+  { name: "a non-creature's stats left out (still a stat)", answer: { cards: [without(card({ card_type: "instant", power: null, toughness: null }), "loyalty", "defense")] }, field: "cards.0.loyalty", repaired: false },
+  { name: "a planeswalker's loyalty left out", answer: { cards: [without(card({ card_type: "planeswalker", power: null, toughness: null }), "loyalty")] }, field: "cards.0.loyalty", repaired: false },
+  { name: "a battle's defense left out", answer: { cards: [without(card({ card_type: "battle", power: null, toughness: null }), "defense")] }, field: "cards.0.defense", repaired: false },
   { name: "a key the schema doesn't know", answer: { cards: [card({ station_tiers: [{ n: 9 }] })] }, field: "cards.0", repaired: true },
   { name: "the cards list sent bare", answer: [card()], field: "", repaired: true },
   // Never cut: "{W}…{W}{" would save a broken cost (asked for again instead).
   { name: "a cost past 40 characters", answer: { cards: [card({ cost: "{W}".repeat(14) })] }, field: "cards.0.cost", repaired: false },
   // "—" would PRINT in a sorcery's cost row: asked for again.
-  { name: "a sorcery's cost left empty", answer: { cards: [card({ card_type: "sorcery", cost: "", power: null, toughness: null })] }, field: "cards.0.cost", repaired: false },  { name: "a vanilla creature with no rules text", answer: { cards: [card({ rules_text: "" })] }, field: "cards.0.rules_text", repaired: false },
+  { name: "a sorcery's cost left empty", answer: { cards: [card({ card_type: "sorcery", cost: "", power: null, toughness: null })] }, field: "cards.0.cost", repaired: false },
+  { name: "a vanilla creature with no rules text", answer: { cards: [card({ rules_text: "" })] }, field: "cards.0.rules_text", repaired: false },
 ];
 
 describe("realistic design answers", () => {
@@ -419,5 +441,138 @@ describe("designCards with the guard", () => {
     const ideas = await generateDeckIdeas({ format: "commander" as never });
     expect(s.calls).toBe(1);
     expect(ideas[0].pitch).toHaveLength(200);
+  });
+
+  it("a missing stat is asked for again — never nulled and then filled with an invented 2/2", async () => {
+    s.texts = [
+      JSON.stringify({ cards: [without(card(), "power", "toughness")] }),
+      JSON.stringify({ cards: [card({ power: "3", toughness: "1" })] }),
+    ];
+    const { cards } = await designCards({ slots: [{ cardType: "creature" }] });
+    expect(s.calls).toBe(2);
+    expect(s.repaired).toBe(0);
+    expect(cards[0]).toMatchObject({ power: "3", toughness: "1" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// (5) Never invents: the stat fields
+// ---------------------------------------------------------------------------
+
+describe("the design repair never nulls a stat", () => {
+  it("DESIGN_STAT_FIELDS is every nullable field of the design schema but its two texts", () => {
+    const shape = (designedCardsSchema(false).shape.cards.element as unknown as { shape: Record<string, z.ZodType> }).shape;
+    const nullable = Object.keys(shape).filter((key) => shape[key].safeParse(null).success);
+    expect(nullable.filter((key) => !DESIGN_STAT_FIELDS.has(key)).sort()).toEqual(["flavor_text", "supertype"]);
+    for (const stat of DESIGN_STAT_FIELDS) expect(Object.keys(shape)).toContain(stat);
+  });
+
+  it("the generic repair still nulls a missing text field where no option says otherwise", async () => {
+    const text = await designRepair(false)({ text: JSON.stringify({ cards: [without(card(), "flavor_text", "supertype")] }) });
+    expect(JSON.parse(text!).cards[0]).toMatchObject({ flavor_text: null, supertype: null, power: "2" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// (6) The time budget: a second call only where the route can still finish
+// ---------------------------------------------------------------------------
+
+describe("retry and the route's time budget", () => {
+  const fail = () =>
+    Object.assign(new Error("No object generated: response did not match schema."), { name: "AI_NoObjectGeneratedError", text: "{}" });
+  const slowFailure = (ms: number) =>
+    vi.fn(async () => {
+      s.now += ms;
+      throw fail();
+    });
+
+  it("outside a budget (job steps, the jobs route) the retry is never limited by time", async () => {
+    const run = slowFailure(120_000);
+    await expect(structuredCall("t", async () => null, run)).rejects.toBeInstanceOf(AiOutputError);
+    expect(run).toHaveBeenCalledTimes(2);
+  });
+
+  it("60 s route, first call failed after 10 s: 50 s left ≥ 1.5 × 10 + 20 → retried", async () => {
+    const start = s.now;
+    const run = slowFailure(10_000);
+    await expect(withAiTimeBudget(start, 60, () => structuredCall("t", async () => null, run))).rejects.toBeInstanceOf(AiOutputError);
+    expect(run).toHaveBeenCalledTimes(2);
+  });
+
+  it("60 s route, first call failed after 25 s: 35 s left < 37.5 + 20 → no second call, plain error at once", async () => {
+    const start = s.now;
+    const run = slowFailure(25_000);
+    const error = await withAiTimeBudget(start, 60, () => structuredCall("t", async () => null, run)).catch((e) => e);
+    expect(error).toBeInstanceOf(AiOutputError);
+    expect(error.message).toBe(AI_OUTPUT_ERROR_MESSAGE);
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(errors.some((args) => String(args[0]).includes("time budget"))).toBe(true);
+  });
+
+  it("the budget runs from the REQUEST's start: time spent before the call counts", async () => {
+    const start = s.now;
+    s.now += 30_000; // auth, rate limit, deck brief, credit reserve…
+    const run = slowFailure(8_000);
+    await expect(withAiTimeBudget(start, 60, () => structuredCall("t", async () => null, run))).rejects.toBeInstanceOf(AiOutputError);
+    // 22 s left < 12 + 20: one call.
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it("retryFitsBudget at the edge, and the tail is conservative", () => {
+    expect(AI_RETRY_TAIL_MS).toBeGreaterThanOrEqual(20_000);
+    const start = s.now;
+    return withAiTimeBudget(start, 90, async () => {
+      // 90 s budget: 20 s used; first call 20 s → needs 30 + 20 = 50 ≤ 70.
+      expect(retryFitsBudget(20_000, start + 20_000)).toBe(true);
+      // 41 s used: 49 s left < 50.
+      expect(retryFitsBudget(20_000, start + 41_000)).toBe(false);
+    });
+  });
+
+  it("card ideas under a 60 s budget: a slow failed design gives the plain error with ONE design call (the route's catch refunds in time)", async () => {
+    const start = s.now;
+    s.texts = [JSON.stringify({ cards: [card({ rules_text: "" })] }), JSON.stringify({ cards: [card()] })];
+    s.callMs = [28_000];
+    const error = await withAiTimeBudget(start, 60, () => designCards({ slots: [{ cardType: "creature" }] })).catch((e) => e);
+    expect(error).toBeInstanceOf(AiOutputError);
+    expect(s.calls).toBe(1);
+  });
+
+  it("the same failure, fast: retried inside the budget and the second design is the card", async () => {
+    const start = s.now;
+    s.texts = [JSON.stringify({ cards: [card({ rules_text: "" })] }), JSON.stringify({ cards: [card()] })];
+    s.callMs = [9_000, 9_000];
+    const { cards } = await withAiTimeBudget(start, 60, () => designCards({ slots: [{ cardType: "creature" }] }));
+    expect(s.calls).toBe(2);
+    expect(cards[0].rules_text).toBe(base.rules_text);
+  });
+
+  // Every route with a short maxDuration that makes a structured AI call
+  // runs it under its budget, measured from the request's start.
+  it("every app/api route with maxDuration ≤ 90 that calls the AI wraps it in withAiTimeBudget", () => {
+    // An AI module, or the guides module's GENERATING entry (its reads —
+    // getDeckGuide in the deck download — make no call).
+    const AI_ENTRY = /from "@\/lib\/ai\/(card-ideas|deck-ideas|deck-guide|deck-design|card-design|card-fill|remix|random-card|generation-jobs)"|buildAndStoreDeckGuide\(/;
+    const files: string[] = [];
+    const walkDir = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const path = join(dir, name);
+        if (statSync(path).isDirectory()) walkDir(path);
+        else if (name === "route.ts") files.push(path);
+      }
+    };
+    walkDir(join(process.cwd(), "app/api"));
+    const short = files
+      .map((path) => ({ path, source: readFileSync(path, "utf8") }))
+      .filter(({ source }) => {
+        const max = /export const maxDuration = (\d+)/.exec(source);
+        return max && Number(max[1]) <= 90 && AI_ENTRY.test(source);
+      });
+    const names = short.map(({ path }) => path.slice(path.indexOf("app/api")));
+    expect(names.sort()).toEqual(["app/api/ai/card-ideas/route.ts", "app/api/ai/deck-ideas/route.ts", "app/api/decks/[id]/guide/route.ts"]);
+    for (const { path, source } of short) {
+      expect({ path, starts: /POST\([^)]*\)[^{]*\{\s*const startedAt = Date\.now\(\);/.test(source) }).toEqual({ path, starts: true });
+      expect({ path, wraps: source.includes("withAiTimeBudget(startedAt, maxDuration,") }).toEqual({ path, wraps: true });
+    }
   });
 });

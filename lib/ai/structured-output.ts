@@ -31,6 +31,7 @@
 // `generateObject`, and the SDK's errors are recognised by their names.
 // ---------------------------------------------------------------------------
 
+import { AsyncLocalStorage } from "node:async_hooks";
 import type { z } from "zod";
 
 /** The one thing a client is told when the model's answer can't be read. */
@@ -193,6 +194,9 @@ function repairIssue(root: unknown, issue: Issue, tried: Set<string>, options: R
     case "invalid_type": {
       // A field the model left out that may be null: null (tried once — a
       // field that refuses null keeps its issue and the repair gives up).
+      // Never for a field whose null the pipeline later FILLS (a stat the
+      // autofix would invent): that one is asked for again.
+      if (options.neverNull?.(path)) return false;
       if (valueAt(root, path) !== undefined || tried.has(key)) return false;
       tried.add(key);
       return setAt(root, path, null);
@@ -208,6 +212,9 @@ export type RepairOptions = {
   /** Fields never cut to their limit (a cost, a name the card prints):
    *  an overlong one fails the repair, and the call is made once more. */
   keepWhole?: (path: PropertyKey[]) => boolean;
+  /** Fields a missing value is never set to null for: an absent one fails
+   *  the repair, and the call is made once more. */
+  neverNull?: (path: PropertyKey[]) => boolean;
 };
 
 /**
@@ -254,14 +261,63 @@ export async function structuredCall<T>(
   { attempts = 2 }: { attempts?: 1 | 2 } = {},
 ): Promise<T> {
   for (let attempt = 1; ; attempt += 1) {
+    const startedAt = Date.now();
     try {
       return await run(repair);
     } catch (error) {
       if (!isNoObjectGeneratedError(error)) throw error;
       logStructuredFailure(label, error, attempt);
       if (attempt >= attempts) throw new AiOutputError(label);
+      if (!retryFitsBudget(Date.now() - startedAt)) {
+        console.error(`[ai:structured] ${label}: no second call — the route's time budget can't hold it`);
+        throw new AiOutputError(label);
+      }
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Time budget — a second call only where the route can still finish
+// ---------------------------------------------------------------------------
+//
+// A route with a short `maxDuration` (60 / 90 s) that reserves a credit
+// refunds it in its own catch. If a retry carries the function past its
+// maxDuration, the platform kills it, the catch never runs, and the user
+// waits a day for the reconcile cron to hand the credit back. Such a route
+// runs its AI work inside `withAiTimeBudget`, and a retry is made only when
+// what is left of the budget holds a second call AND the tail after it.
+
+/** Kept free after a second call, before the platform's kill: the judge
+ *  pass (Haiku, one call), the DB writes and the refund. Conservative. */
+export const AI_RETRY_TAIL_MS = 20_000;
+/** A second call is assumed to take this many times the first one. */
+export const AI_RETRY_DURATION_FACTOR = 1.5;
+
+type TimeBudget = { deadline: number; tailMs: number };
+const budgetStore = new AsyncLocalStorage<TimeBudget>();
+
+/**
+ * Run `work` (a route's AI calls) under the route's time budget: the
+ * deadline is `startedAt` (the request's start, `Date.now()` at the top of
+ * the handler) + `maxDurationSeconds`. Outside it (job steps, crons, the
+ * jobs route) a retry is never limited by time.
+ */
+export function withAiTimeBudget<T>(
+  startedAt: number,
+  maxDurationSeconds: number,
+  work: () => Promise<T>,
+  tailMs: number = AI_RETRY_TAIL_MS,
+): Promise<T> {
+  return budgetStore.run({ deadline: startedAt + maxDurationSeconds * 1000, tailMs }, work);
+}
+
+/** True when a second call fits: no budget in force, or the time left
+ *  covers 1.5 × the first call + the tail. */
+export function retryFitsBudget(firstAttemptMs: number, now: number = Date.now()): boolean {
+  const budget = budgetStore.getStore();
+  if (!budget) return true;
+  const left = budget.deadline - now;
+  return left >= firstAttemptMs * AI_RETRY_DURATION_FACTOR + budget.tailMs;
 }
 
 /** What a client is shown for an AI error: the plain message for an

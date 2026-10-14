@@ -13,6 +13,7 @@ import {
   spendCredits,
 } from "@/lib/ai/rate-limit";
 import { buildAndStoreDeckGuide } from "@/lib/decks/guides";
+import { withAiTimeBudget } from "@/lib/ai/structured-output";
 import { rateLimitedResponse } from "@/lib/api/responses";
 
 // ---------------------------------------------------------------------------
@@ -26,6 +27,7 @@ export const runtime = "nodejs";
 export const maxDuration = 90;
 
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const startedAt = Date.now();
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ ok: false, error: "Supabase isn't configured." }, { status: 503 });
   }
@@ -68,7 +70,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     );
   }
   await logAiCall(user.id, "analyze_deck");
-  const result = await buildAndStoreDeckGuide(id, "analysis");
+  // A second call only while the 90 s budget still holds it — a kill past
+  // maxDuration would skip the refund below (structured-output.ts).
+  const result = await withAiTimeBudget(startedAt, maxDuration, () => buildAndStoreDeckGuide(id, "analysis"));
   if (!result.ok) {
     if (spend.charged) await refundCredits(user.id, 1, "analyze_deck", `refund:${ref}`);
     return NextResponse.json({ ok: false, error: result.error }, { status: 502 });

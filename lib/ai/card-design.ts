@@ -172,12 +172,19 @@ export function fixupDesignedCards(root: unknown): unknown {
   return wrapped;
 }
 
+/** The design schema's stat fields (a test holds the list to the schema). */
+export const DESIGN_STAT_FIELDS: ReadonlySet<string> = new Set(["power", "toughness", "loyalty", "defense"]);
+
 /** The repair for a design / judge answer. */
 export function designRepair(allowEmblem: boolean) {
   // A cost is never cut to its 40 characters: "{W}…{W}{" saved as a broken
   // cost (and the autofix then read it as colourless).
+  // A missing STAT is never nulled: the autofix fills a creature's null
+  // power / toughness (a planeswalker's loyalty, a battle's defense) with
+  // numbers the model never wrote — asked for again instead.
   return repairStructuredText(designedCardsSchema(allowEmblem), fixupDesignedCards, {
     keepWhole: (path) => path[path.length - 1] === "cost",
+    neverNull: (path) => DESIGN_STAT_FIELDS.has(String(path[path.length - 1])),
   });
 }
 
