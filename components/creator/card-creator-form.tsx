@@ -226,6 +226,7 @@ import {
   serializeLoyalty,
 } from "@/lib/cards/face-content";
 import { keptStationRows, sagaRowsOut, submittedRulesOf } from "@/lib/creator/structured-rules";
+import { isStationFrame } from "@/lib/cards/station-frame";
 import { basicLandManaKey } from "@/lib/cards/watermark";
 import { saveNeedsOf, saveNeedsSentence, type SaveNeed } from "@/lib/creator/save-needs";
 import { secondPartWordsFor, secondPartWordsOfCard } from "@/lib/creator/second-part";
@@ -251,6 +252,7 @@ import {
   supertypeLeavingToken,
   textBoxFrameFor,
   subtypeFrameFor,
+  SUBTYPE_DRESS_WORDS,
   subtypesSay,
   enchantmentFrameFor,
   followsEnchantmentDress,
@@ -1289,7 +1291,13 @@ export function CardCreatorForm({
   // unverified combo (silently: until the owner ticks the frame nothing
   // changes), never an admin's saved frame preview. An import or an AI fill
   // that names its frame decides it itself (settleTokenTextFollow).
-  const saysVehicle = subtypesSay(parseSubtypes(watched.subtypes_text), "Vehicle");
+  // The station frame follows the same way (TODO 4.27a, PR 2): a NEW
+  // artifact whose subtypes first say Spacecraft, a NEW land whose subtypes
+  // first say Planet — where the frame is verified in the card's colour
+  // (until its tick: an admin's `?previewFrames=` only). "Standard" in
+  // Variations is the way back, and it sticks until the word comes or goes.
+  const dressSubtypes = parseSubtypes(watched.subtypes_text);
+  const saysVehicle = SUBTYPE_DRESS_WORDS.filter((word) => subtypesSay(dressSubtypes, word)).join("+");
   const lastVehicleRef = useRef(`${kind}|${saysVehicle}`);
   const vehicleFramePinned = isEdit && card?.frame_preview === true;
   useEffect(() => {
@@ -2225,6 +2233,8 @@ export function CardCreatorForm({
     setIfPresent("subtypes_text", patch.subtypes_text);
     setIfPresent("rarity", patch.rarity);
     setIfPresent("rules_text", patch.rules_text);
+    // (A text that ARRIVES plates its own tier: lib/creator/station-rows.ts.)
+    if (patch.rules_text !== undefined) setValue("station_pt_tier", null, { shouldDirty: true });
     setIfPresent("flavor_text", patch.flavor_text);
     setIfPresent("power", patch.power);
     setIfPresent("toughness", patch.toughness);
@@ -2455,6 +2465,8 @@ export function CardCreatorForm({
     }
     setIfPresent("rarity", patch.rarity);
     setIfPresent("rules_text", patch.rules_text);
+    // (A text that ARRIVES plates its own tier: lib/creator/station-rows.ts.)
+    if (patch.rules_text !== undefined) setValue("station_pt_tier", null, { shouldDirty: true });
     setIfPresent("flavor_text", patch.flavor_text);
     setIfPresent("power", patch.power);
     setIfPresent("toughness", patch.toughness);
@@ -2872,6 +2884,7 @@ export function CardCreatorForm({
     if (fill.rules_text !== undefined) {
       const filledRules = printTypography(fill.rules_text, "rules");
       setValue("rules_text", filledRules, { shouldDirty: true });
+      setValue("station_pt_tier", null, { shouldDirty: true });
       const k = kindFromCard(getValues("card_type"), getValues("frame_style.template"));
       if (k === "planeswalker" || k === "saga") seedStructuredRows(k, filledRules);
     }
@@ -3181,6 +3194,9 @@ export function CardCreatorForm({
     } = submittedRulesOf(submitKind, values, {
       opened: isEdit ? defaults : null,
       storedFaceContent: isEdit ? (card?.face_content ?? null) : null,
+      // The station frame's tier editor (TODO 4.27a).
+      stationFrame: isStationFrame(values.frame_style?.template),
+      ...(isEdit ? { storedRulesText: card?.rules_text ?? null } : {}),
     });
 
     // Design watermark: the form's flat shape → the discriminated union
@@ -3609,10 +3625,21 @@ export function CardCreatorForm({
   // …and a station card stored WITH rows (TODO 4.27a; no editor shows them
   // yet) previews the rows a save keeps — as the bake draws the saved row —
   // until its text is edited (lib/creator/structured-rules.ts keptStationRows).
+  // From PR 2 the tier editor owns them on a station frame: the rows a save
+  // would write — the stored ones while nothing was touched, the editor's
+  // with the maker's P/T tier after.
+  const onStationFrame = isStationFrame(watched.frame_style?.template);
   const storedStationRows = isEdit && card?.face_content?.station ? card.face_content : null;
   const liveFaceContent: FaceContent | null =
     liveRules?.faceContent ??
-    (storedStationRows ? keptStationRows(kind, watched, { opened: defaults, storedFaceContent: storedStationRows }) : null);
+    (onStationFrame || storedStationRows
+      ? keptStationRows(kind, watched, {
+          opened: isEdit ? defaults : null,
+          storedFaceContent: isEdit ? (card?.face_content ?? null) : null,
+          stationFrame: onStationFrame,
+          ...(isEdit ? { storedRulesText: card?.rules_text ?? null } : {}),
+        })
+      : null);
   // A walker whose loyalty badges run into each other on the frame it wears
   // (lib/creator/walker-crowding.ts — read from the layout of the rows the
   // card draws, never a count): the row editor says the card will be

@@ -6,6 +6,8 @@ import {
   profileSecondFaceDrawsPowerToughness,
   PT_NOT_DRAWN_NOTE,
   secondFaceDrawsPowerToughness,
+  frontPrintsPowerToughnessOnTier,
+  PT_NEEDS_TIER_NOTE,
 } from "@/lib/cards/pt-drawn";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
@@ -113,5 +115,23 @@ describe("the note", () => {
       "This frame doesn't draw power / toughness. The numbers are saved with the card, but the picture won't show them.",
     );
     expect(PT_NOT_DRAWN_NOTE).not.toMatch(/yet|soon/i);
+  });
+});
+
+describe("the station frame prints its P/T on a tier (TODO 4.27a)", () => {
+  it("a card with no tier draws none — whichever way its tiers are stored — and says which note to show", () => {
+    for (const template of ["m15station", "m15stationland"]) {
+      expect(frontPrintsPowerToughnessOnTier(template)).toBe(true);
+      expect(frontDrawsPowerToughness(template, { rulesText: "Flying\nStation (…)" })).toBe(false);
+      expect(frontDrawsPowerToughness(template, { rulesText: null })).toBe(false);
+      expect(frontDrawsPowerToughness(template, { rulesText: "Flying\n8+ | Trample" })).toBe(true);
+      expect(frontDrawsPowerToughness(template, { rulesText: "Flying", faceContent: { v: 1, station: { intro: "Flying", tiers: [{ threshold: 8, text: "Trample", pt: true }] } } })).toBe(true);
+      expect(frontDrawsPowerToughness(template, { rulesText: "8+ | Trample", faceContent: { v: 1, station: { intro: null, tiers: [] } } })).toBe(false);
+    }
+    // Every other frame: the text changes nothing.
+    expect(frontPrintsPowerToughnessOnTier("m15")).toBe(false);
+    expect(frontDrawsPowerToughness("m15", { rulesText: null })).toBe(true);
+    expect(frontDrawsPowerToughness("saga", { rulesText: "8+ | Trample" })).toBe(false);
+    expect(PT_NEEDS_TIER_NOTE).toMatch(/Add a tier/);
   });
 });
