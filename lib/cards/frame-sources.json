@@ -7544,6 +7544,25 @@
       "c": "img/frames/m15/ub/pt/c.png",
       "m": "img/frames/m15/ub/pt/m.png"
     },
+    "sourceTones": {
+      "img/frames/m15/new/ub/g.png": {
+        "table": "UB_PRINT_TONES.g",
+        "title": "through img/frames/m15/new/title.png: × 1.087 / 1.000 / 1.085 (173, 211, 165 → 188, 211, 179), fading to × 1.021 on every channel at white",
+        "type": "through img/frames/m15/new/type.png: × 1.071 / 1.000 / 1.068 (170, 209, 162 → 182, 209, 173), fading to × 1.017 on every channel at white"
+      },
+      "img/frames/m15/new/ub/l.png": {
+        "table": "UB_PRINT_TONES.l",
+        "title": "through img/frames/m15/new/title.png: × 0.921 / 0.886 / 0.912 (214, 210, 194 → 197, 186, 177), fading to × 0.895 on every channel at white",
+        "type": "through img/frames/m15/new/type.png: × 0.929 / 0.889 / 0.921 (212, 208, 191 → 197, 185, 176), fading to × 0.900 on every channel at white",
+        "rules": "through img/frames/m15/new/rules.png: × 1.045 / 1.056 / 1.128 (220, 214, 195 → 230, 226, 220), fading to × 1.059 on every channel at white"
+      },
+      "img/frames/m15/new/ub/m.png": {
+        "table": "UB_PRINT_TONES.m",
+        "title": "through img/frames/m15/new/title.png: × 0.992 / 0.969 / 0.860 (241, 227, 157 → 239, 220, 135), fading to × 0.969 on every channel at white",
+        "type": "through img/frames/m15/new/type.png: × 0.988 / 0.969 / 0.857 (241, 226, 154 → 238, 219, 132), fading to × 0.968 on every channel at white",
+        "rules": "through img/frames/m15/new/rules.png: × 0.980 / 0.967 / 0.925 (249, 242, 213 → 244, 234, 197), fading to × 0.967 on every channel at white"
+      }
+    },
     "sourceFiles": [
       "img/frames/m15/new/pinline.png",
       "img/frames/m15/new/rules.png",
@@ -7569,6 +7588,7 @@
       "w u b r g m = the pack's colour frames whole (new/ub/<k>.png), as m15's are new/<k>.png",
       "SUBSTITUTION: colourless (c) = the pack's ARTIFACT frame (new/ub/a.png). The pack lists a 'Colorless Frame' new/ub/c.png that is not in Card Conjurer's tree at this commit (404); the owner's call of 2026-10-13 (roadmap Q5) borrows the artifact one — the same bytes as m15ubartifact/c. The older pack's m15/ub/regular/c.png is not used: a different drawing",
       "plates = the pack's own smooth plates (m15/ub/pt/<k>.png, 282x154, at M15's plate bounds); c = its grey 'Colorless' plate, which the hybrid dress draws too",
+      "toned onto the prints before the first tick (owner Round 57, 2026-10-14; UB_PRINT_TONES through CC_SOURCE_TONES, recorded under sourceTones): the pack's green bars (g.png, lg.png), its gold bars and gold text box (m.png, lm.png) and its land-grey bars and text box (l.png) are multiplied by a per-channel gain through the pack's Title, Type and Rules masks as the FILE is loaded, so every master drawn from one of them — the gold-split and artifact pairs' gold bars, the hybrids' and the two-colour lands' grey bars — carries the same pixels; the frame field, the pinline, the border, the plates, the crowns and every other colour as Card Conjurer drew them",
       "two-colour pair masters (TODO 4.25): 4.6b's recipe (twoColorRecipe; the untilted ramps of scripts/lib/pair-ramp.mjs) over the Universes Beyond pack's own files, through the accurate M15 masks the pack shares. Gold-split <pair> = m.png with the split text box and pinline (40K #104, LTR #287, PIP #210); hybrid <pair>-h = the two colours' frames split across the frame ramp, the pack's land-grey bars (l.png title + type), the split text box and pinline, drawn with the grey plate pt/c (ACR #55 / #60, PIP #212)"
     ]
   },
@@ -7721,6 +7741,19 @@
       "c": "img/frames/m15/ub/pt/a.png",
       "m": "img/frames/m15/ub/pt/m.png"
     },
+    "sourceTones": {
+      "img/frames/m15/new/ub/g.png": {
+        "table": "UB_PRINT_TONES.g",
+        "title": "through img/frames/m15/new/title.png: × 1.087 / 1.000 / 1.085 (173, 211, 165 → 188, 211, 179), fading to × 1.021 on every channel at white",
+        "type": "through img/frames/m15/new/type.png: × 1.071 / 1.000 / 1.068 (170, 209, 162 → 182, 209, 173), fading to × 1.017 on every channel at white"
+      },
+      "img/frames/m15/new/ub/m.png": {
+        "table": "UB_PRINT_TONES.m",
+        "title": "through img/frames/m15/new/title.png: × 0.992 / 0.969 / 0.860 (241, 227, 157 → 239, 220, 135), fading to × 0.969 on every channel at white",
+        "type": "through img/frames/m15/new/type.png: × 0.988 / 0.969 / 0.857 (241, 226, 154 → 238, 219, 132), fading to × 0.968 on every channel at white",
+        "rules": "through img/frames/m15/new/rules.png: × 0.980 / 0.967 / 0.925 (249, 242, 213 → 244, 234, 197), fading to × 0.967 on every channel at white"
+      }
+    },
     "sourceFiles": [
       "img/frames/m15/new/border.png",
       "img/frames/m15/new/frame.png",
@@ -7746,6 +7779,7 @@
     "notes": [
       "colourless = the pack's artifact frame whole (new/ub/a.png); coloured artifacts = that frame + border with the colour's pinline, title bar, type bar and text box through CC's accurate-M15 masks — m15artifact's recipe over the UB files (40K #25 / #54, FIN #23, PIP #538)",
       "plates = the pack's plates; c = its silver 'Artifact' plate (m15/ub/pt/a.png)",
+      "toned onto the prints before the first tick (owner Round 57, 2026-10-14; UB_PRINT_TONES through CC_SOURCE_TONES, recorded under sourceTones): the pack's green bars (g.png, lg.png), its gold bars and gold text box (m.png, lm.png) and its land-grey bars and text box (l.png) are multiplied by a per-channel gain through the pack's Title, Type and Rules masks as the FILE is loaded, so every master drawn from one of them — the gold-split and artifact pairs' gold bars, the hybrids' and the two-colour lands' grey bars — carries the same pixels; the frame field, the pinline, the border, the plates, the crowns and every other colour as Card Conjurer drew them",
       "two-colour pair masters (TODO 4.25): 4.6b's recipe (twoColorRecipe; the untilted ramps of scripts/lib/pair-ramp.mjs) over the Universes Beyond pack's own files, through the accurate M15 masks the pack shares. <pair> = the artifact frame + border, GOLD title and type bars (m.png), the split text box and pinline, drawn with the gold plate pt/m (40K #106 / #110, WHO #119, PIP #211); no hybrid dress"
     ]
   },
@@ -8059,6 +8093,25 @@
         "(img/frames/m15/new/ub/lg.png | img/frames/m15/new/ub/lu.png across procedural:ramp(40→60 %W)) through img/frames/m15/new/pinline.png"
       ]
     },
+    "sourceTones": {
+      "img/frames/m15/new/ub/l.png": {
+        "table": "UB_PRINT_TONES.l",
+        "title": "through img/frames/m15/new/title.png: × 0.921 / 0.886 / 0.912 (214, 210, 194 → 197, 186, 177), fading to × 0.895 on every channel at white",
+        "type": "through img/frames/m15/new/type.png: × 0.929 / 0.889 / 0.921 (212, 208, 191 → 197, 185, 176), fading to × 0.900 on every channel at white",
+        "rules": "through img/frames/m15/new/rules.png: × 1.045 / 1.056 / 1.128 (220, 214, 195 → 230, 226, 220), fading to × 1.059 on every channel at white"
+      },
+      "img/frames/m15/new/ub/lg.png": {
+        "table": "UB_PRINT_TONES.g",
+        "title": "through img/frames/m15/new/title.png: × 1.087 / 1.000 / 1.085 (173, 211, 165 → 188, 211, 179), fading to × 1.021 on every channel at white",
+        "type": "through img/frames/m15/new/type.png: × 1.071 / 1.000 / 1.068 (170, 209, 162 → 182, 209, 173), fading to × 1.017 on every channel at white"
+      },
+      "img/frames/m15/new/ub/lm.png": {
+        "table": "UB_PRINT_TONES.m",
+        "title": "through img/frames/m15/new/title.png: × 0.992 / 0.969 / 0.860 (241, 227, 157 → 239, 220, 135), fading to × 0.969 on every channel at white",
+        "type": "through img/frames/m15/new/type.png: × 0.988 / 0.969 / 0.857 (241, 226, 154 → 238, 219, 132), fading to × 0.968 on every channel at white",
+        "rules": "through img/frames/m15/new/rules.png: × 0.980 / 0.967 / 0.925 (249, 242, 213 → 244, 234, 197), fading to × 0.967 on every channel at white"
+      }
+    },
     "sourceFiles": [
       "img/frames/m15/new/pinline.png",
       "img/frames/m15/new/rules.png",
@@ -8072,6 +8125,7 @@
     ],
     "notes": [
       "colourless land = the pack's land frame new/ub/l.png; a coloured land its tinted one (new/ub/l<k>.png; gold lm for three colours or more)",
+      "toned onto the prints before the first tick (owner Round 57, 2026-10-14; UB_PRINT_TONES through CC_SOURCE_TONES, recorded under sourceTones): the pack's green bars (g.png, lg.png), its gold bars and gold text box (m.png, lm.png) and its land-grey bars and text box (l.png) are multiplied by a per-channel gain through the pack's Title, Type and Rules masks as the FILE is loaded, so every master drawn from one of them — the gold-split and artifact pairs' gold bars, the hybrids' and the two-colour lands' grey bars — carries the same pixels; the frame field, the pinline, the border, the plates, the crowns and every other colour as Card Conjurer drew them",
       "two-colour pair masters (TODO 4.25): 4.6b's recipe (twoColorRecipe; the untilted ramps of scripts/lib/pair-ramp.mjs) over the Universes Beyond pack's own files, through the accurate M15 masks the pack shares. <pair> = the land frame l.png with the split text box and pinline in the two land tints, as 40K #268, PIP #297 and LTR #258 print",
       "no plates of its own: a land creature draws the UB spell frame's plates (the profile's plateAssetPathTemplate)"
     ]

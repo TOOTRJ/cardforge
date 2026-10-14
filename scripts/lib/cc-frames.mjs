@@ -227,8 +227,188 @@ const UB_PT = Object.fromEntries(COLORS.map((k) => [k, `${UB_PT_DIR}/${k}.png`])
 const UB_ARTIFACT_PT = { ...UB_PT, c: `${UB_PT_DIR}/a.png` };
 const ubPairLayers = (pair, dress, kind) => pairMasterLayers(pair, dress, kind, ubFrameFile);
 const UB_PACK = "packUBNew.js 'Universes Beyond' (groupAccurate.js): the accurate M15 pack's masks and text layout over the m15/new/ub files";
+const UB_TONE_NOTE =
+  "toned onto the prints before the first tick (owner Round 57, 2026-10-14; UB_PRINT_TONES through CC_SOURCE_TONES, recorded under sourceTones): the pack's green bars (g.png, lg.png), its gold bars and gold text box (m.png, lm.png) and its land-grey bars and text box (l.png) are multiplied by a per-channel gain through the pack's Title, Type and Rules masks as the FILE is loaded, so every master drawn from one of them — the gold-split and artifact pairs' gold bars, the hybrids' and the two-colour lands' grey bars — carries the same pixels; the frame field, the pinline, the border, the plates, the crowns and every other colour as Card Conjurer drew them";
 const UB_PAIR_NOTE =
   "two-colour pair masters (TODO 4.25): 4.6b's recipe (twoColorRecipe; the untilted ramps of scripts/lib/pair-ramp.mjs) over the Universes Beyond pack's own files, through the accurate M15 masks the pack shares";
+
+/**
+ * The pack's green, gold and land-grey toned onto the prints BEFORE the
+ * first tick (owner Round 57, 2026-10-14; afterwards it would be a
+ * correction with a sweep). Card Conjurer drew three of the pack's tones
+ * off the prints; every other region of every file is within about 8
+ * levels a channel and stays as drawn. Each entry is one region of one
+ * drawing: `from` = what the pack's file reads there, `to` = the prints'
+ * centre, both the per-channel median of the region's paper (x 140–1360 ×
+ * y 118–198 for the title bar, y 1198–1272 for the type bar; x 150–1350 ×
+ * y 1350–1880 for the text box, at 1500 × 2100; sampled every 2 px, the
+ * brightest 5 % and the darker 40 % — ink, rims — left out). The tone
+ * (toneSourceRegions) multiplies the region's colour by to ÷ from through
+ * the pack's OWN mask (its soft edge the weight), so the streaks, bevels
+ * and rims keep their shading and black stays black — with the HUE kept on
+ * the highlights: a plain per-channel gain turns a bevel's white (green:
+ * × 1.087 / 1 / 1.085 makes the bar's streaks pink — tried, 2026-10-14; the
+ * Vehicle plate's lesson, VEHICLE_PLATE_TONE), so the gain's COLOUR part
+ * fades out between the region's own tone and white, where only the
+ * luminance gain (luma(to) ÷ luma(from), one number for the three
+ * channels) is left. A pixel at `from` lands on `to` exactly. Alpha
+ * untouched.
+ *
+ * Three readings of print — Scryfall's images of the sets that wear the
+ * frame (no scan is read by a build; the numbers are the recipe):
+ *   • the builder's (9–13 prints a key, scans included): green title
+ *     193, 215, 185; gold "7–12 darker";
+ *   • the second reader's (#544's independent check; 8 green, 13 gold, 2
+ *     grey-land prints): green title 187–194, 210–212, 176–182; gold title
+ *     238–240, 218–220, 128–140, box 245, 234, 196; land title
+ *     198, 187, 178, box 231, 227, 221;
+ *   • Round 57's (143 OTHER printings, none of the 915 above, of 190 read —
+ *     the date-stamped promos, the surge foils and 40K's and the Secret
+ *     Lair's scans set aside for their cast; FIN, FIC, ACR, PIP, WHO, LTR,
+ *     LTC; medians [min–max]):
+ *       green, 27 spells — title 185, 211, 178 [180–194, 209–213, 173–182],
+ *         type 180, 209, 173 [175–188, 206–212, 165–178] (box 215, 227, 215
+ *         against the file's 219, 229, 218: left alone);
+ *       gold, 29 spells of three colours or more — title 237, 219, 139
+ *         [231–241, 216–222, 127–145], type 237, 219, 135, box 244, 234, 198
+ *         [241–246, 233–235, 196–202]; the gold bars of 11 two-colour
+ *         spells 239, 221, 134 / 239, 219, 130, of 6 two-colour artifacts
+ *         241, 221, 135 / 241, 219, 129; 20 gold LANDS 240, 222, 133 /
+ *         241, 222, 130, box 243, 234, 198. Two printings of one gold:
+ *         WHO / ACR / LTC blue 122–131, FIN / FIC / PIP / LTR 133–145 —
+ *         the target is between them;
+ *       land grey, 32 lands with no colour — title 197, 185, 176
+ *         [192–200, 182–187, 174–177], type 197, 185, 176, box 230, 226, 219
+ *         [229–232, 224–227, 217–221]; the bars of 12 two-colour lands
+ *         197, 184, 176 / 197, 184, 175; the three hybrid prints' grey bars
+ *         (PIP #212 / #740, ACR #55) 198–202, 187–191, 177–179.
+ * `to` is the centre the three readings agree on (the second reader's and
+ * Round 57's use one method; the builder's green is 5 lighter in red).
+ */
+export const UB_PRINT_TONES = Object.freeze({
+  g: Object.freeze({
+    title: Object.freeze({ from: [173, 211, 165], to: [188, 211, 179] }),
+    type: Object.freeze({ from: [170, 209, 162], to: [182, 209, 173] }),
+  }),
+  m: Object.freeze({
+    title: Object.freeze({ from: [241, 227, 157], to: [239, 220, 135] }),
+    type: Object.freeze({ from: [241, 226, 154], to: [238, 219, 132] }),
+    rules: Object.freeze({ from: [249, 242, 213], to: [244, 234, 197] }),
+  }),
+  l: Object.freeze({
+    title: Object.freeze({ from: [214, 210, 194], to: [197, 186, 177] }),
+    type: Object.freeze({ from: [212, 208, 191], to: [197, 185, 176] }),
+    rules: Object.freeze({ from: [220, 214, 195], to: [230, 226, 220] }),
+  }),
+});
+
+/**
+ * A pack FILE toned wherever it is drawn (the importer tones the file as it
+ * loads it, before any mask, ramp or composite): file → `{ masks, tones }`,
+ * region name → the pack's mask and the region's `{ from, to }`. Toning the
+ * file, not a master, is what keeps every master built from it in step by
+ * construction: the gold bars of the gold-split pairs and of a two-colour
+ * artifact are m.png's, the grey bars of a hybrid and of a two-colour land
+ * l.png's. The pack's tinted lands carry the SAME bars — lg.png's are
+ * g.png's pixel for pixel, lm.png's bars and box m.png's (measured: 0 of
+ * 563,640 and 0 of 2,471,640 channel values differ at 1500 × 2100) — so
+ * they take the same tones (the prints agree: the 20 gold lands above; LTR
+ * #260 and LTC #341, the green lands, 192 / 184, 211 / 210, 180 / 173).
+ */
+const ubSourceTone = (letter) =>
+  Object.freeze({
+    masks: Object.freeze(Object.fromEntries(Object.keys(UB_PRINT_TONES[letter]).map((region) => [region, M15_MASK[region]]))),
+    tones: UB_PRINT_TONES[letter],
+    table: `UB_PRINT_TONES.${letter}`,
+  });
+export const CC_SOURCE_TONES = Object.freeze({
+  [`${UB}/g.png`]: ubSourceTone("g"),
+  [`${UB}/lg.png`]: ubSourceTone("g"),
+  [`${UB}/m.png`]: ubSourceTone("m"),
+  [`${UB}/lm.png`]: ubSourceTone("m"),
+  [`${UB}/l.png`]: ubSourceTone("l"),
+});
+/** Rec. 709 luminance of an RGB triple (tonePlateRgba8's). */
+const luma709 = (r, g, b) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
+/** One source tone, checked: `{ from, to }`, RGB 0–255, `from` no channel
+ *  at 0 and darker than white. */
+export function checkSourceTone(name, tone) {
+  const rgb = (v) => Array.isArray(v) && v.length === 3 && v.every((c) => Number.isFinite(c) && c >= 0 && c <= 255);
+  if (!tone || !rgb(tone.from) || !rgb(tone.to)) throw new Error(`toneSourceRegions: ${name} needs from / to as RGB (0–255)`);
+  if (tone.from.some((c) => c < 1) || luma709(...tone.from) > 254) throw new Error(`toneSourceRegions: ${name} can't be toned from ${tone.from.join(", ")}`);
+  return tone;
+}
+/** The gains of a source tone: per channel (to ÷ from) and the neutral one
+ *  (luma(to) ÷ luma(from)) the highlights converge on. */
+export function sourceToneGain(tone) {
+  return {
+    channel: tone.to.map((t, c) => t / tone.from[c]),
+    neutral: luma709(...tone.to) / luma709(...tone.from),
+    fromLuma: luma709(...tone.from),
+  };
+}
+/**
+ * Tone a pack file region by region (UB_PRINT_TONES; see it for the why).
+ * `regions` maps a name to its coverage (bytes, 0–255, the image's size:
+ * the pack's mask alpha), `tones` the same names to `{ from, to }`. Per
+ * pixel and region: h = (255 − luma) ÷ (255 − luma(from)), clamped to
+ * 0 … 1 (1 at the region's tone and below, 0 at white); the gain of a
+ * channel is neutral + (to ÷ from − neutral) × h; the pixel's colour is
+ * multiplied by 1 + (gain − 1) × coverage. Rounded, clamped; alpha kept.
+ * Regions are applied in the table's order (the pack's masks don't
+ * overlap but for their soft edges). A region with no tone, or a tone with
+ * no region, throws. Returns a new buffer.
+ */
+export function toneSourceRegions(buf, width, height, regions, tones) {
+  const n = width * height;
+  if (buf.length !== n * 4) throw new Error(`toneSourceRegions: the image is not ${width}x${height} RGBA`);
+  for (const name of Object.keys(regions)) if (!tones[name]) throw new Error(`toneSourceRegions: region ${name} has no tone`);
+  const out = Buffer.from(buf);
+  for (const [name, tone] of Object.entries(tones)) {
+    checkSourceTone(name, tone);
+    const m = regions[name];
+    if (!m || m.length !== n) throw new Error(`toneSourceRegions: tone ${name} has no ${width}x${height} region`);
+    const { channel, neutral, fromLuma } = sourceToneGain(tone);
+    for (let p = 0; p < n; p += 1) {
+      if (m[p] === 0) continue;
+      const o = p * 4;
+      if (out[o + 3] === 0) continue;
+      const w = m[p] / 255;
+      const h = Math.min(1, Math.max(0, (255 - luma709(out[o], out[o + 1], out[o + 2])) / (255 - fromLuma)));
+      const px = [out[o], out[o + 1], out[o + 2]];
+      for (let c = 0; c < 3; c += 1) {
+        const gain = neutral + (channel[c] - neutral) * h;
+        out[o + c] = Math.min(255, Math.max(0, Math.round(px[c] * (1 + (gain - 1) * w))));
+      }
+    }
+  }
+  return out;
+}
+/** How provenance prints a source tone table: name → gains and from → to. */
+export function describeSourceToneTable(tones) {
+  return Object.fromEntries(
+    Object.entries(tones).map(([name, t]) => {
+      const { channel, neutral } = sourceToneGain(t);
+      return [name, `× ${channel.map((g) => g.toFixed(3)).join(" / ")} (${t.from.join(", ")} → ${t.to.join(", ")}), fading to × ${neutral.toFixed(3)} on every channel at white`];
+    }),
+  );
+}
+/** A pack file's tones (CC_SOURCE_TONES), or null. */
+export function sourceTonesOf(src) {
+  return Object.hasOwn(CC_SOURCE_TONES, src) ? CC_SOURCE_TONES[src] : null;
+}
+/** The toned files a recipe draws, as provenance prints them: file → the
+ *  table's name, each region's mask and its gain (describeSourceToneTable). */
+export function describeSourceTones(def) {
+  const out = {};
+  for (const file of sourceFilesFor(def)) {
+    const tone = sourceTonesOf(file);
+    if (!tone) continue;
+    const gains = describeSourceToneTable(tone.tones);
+    out[file] = { table: tone.table, ...Object.fromEntries(Object.keys(tone.tones).map((region) => [region, `through ${tone.masks[region]}: ${gains[region]}`])) };
+  }
+  return Object.keys(out).length ? out : null;
+}
 
 /** A pair layer: the recipe region's left file blended into its right file
  *  across the region's ramp (lerpLayers over rampMask), through `mask`. */
@@ -2948,6 +3128,7 @@ export const CC_TEMPLATES = {
       "w u b r g m = the pack's colour frames whole (new/ub/<k>.png), as m15's are new/<k>.png",
       "SUBSTITUTION: colourless (c) = the pack's ARTIFACT frame (new/ub/a.png). The pack lists a 'Colorless Frame' new/ub/c.png that is not in Card Conjurer's tree at this commit (404); the owner's call of 2026-10-13 (roadmap Q5) borrows the artifact one — the same bytes as m15ubartifact/c. The older pack's m15/ub/regular/c.png is not used: a different drawing",
       "plates = the pack's own smooth plates (m15/ub/pt/<k>.png, 282x154, at M15's plate bounds); c = its grey 'Colorless' plate, which the hybrid dress draws too",
+      UB_TONE_NOTE,
       `${UB_PAIR_NOTE}. Gold-split <pair> = m.png with the split text box and pinline (40K #104, LTR #287, PIP #210); hybrid <pair>-h = the two colours' frames split across the frame ramp, the pack's land-grey bars (l.png title + type), the split text box and pinline, drawn with the grey plate pt/c (ACR #55 / #60, PIP #212)`,
     ],
   },
@@ -2962,6 +3143,7 @@ export const CC_TEMPLATES = {
     notes: [
       "colourless = the pack's artifact frame whole (new/ub/a.png); coloured artifacts = that frame + border with the colour's pinline, title bar, type bar and text box through CC's accurate-M15 masks — m15artifact's recipe over the UB files (40K #25 / #54, FIN #23, PIP #538)",
       "plates = the pack's plates; c = its silver 'Artifact' plate (m15/ub/pt/a.png)",
+      UB_TONE_NOTE,
       `${UB_PAIR_NOTE}. <pair> = the artifact frame + border, GOLD title and type bars (m.png), the split text box and pinline, drawn with the gold plate pt/m (40K #106 / #110, WHO #119, PIP #211); no hybrid dress`,
     ],
   },
@@ -2973,6 +3155,7 @@ export const CC_TEMPLATES = {
     pack: UB_PACK,
     notes: [
       "colourless land = the pack's land frame new/ub/l.png; a coloured land its tinted one (new/ub/l<k>.png; gold lm for three colours or more)",
+      UB_TONE_NOTE,
       `${UB_PAIR_NOTE}. <pair> = the land frame l.png with the split text box and pinline in the two land tints, as 40K #268, PIP #297 and LTR #258 print`,
       "no plates of its own: a land creature draws the UB spell frame's plates (the profile's plateAssetPathTemplate)",
     ],

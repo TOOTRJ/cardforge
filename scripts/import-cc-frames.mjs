@@ -163,6 +163,9 @@ import {
   roundCornersRgba8,
   shiftRows,
   sourceFilesFor,
+  sourceTonesOf,
+  toneSourceRegions,
+  describeSourceTones,
   toRgba8,
   tonesFor,
   stripRiderInterior,
@@ -236,6 +239,28 @@ async function rgba(file, width, height) {
     .raw()
     .toBuffer({ resolveWithObject: true });
   return data;
+}
+
+/**
+ * A whole-canvas layer's file at the working size — toned onto the prints
+ * first when the recipe says so (CC_SOURCE_TONES; owner Round 57: the
+ * Universes Beyond pack's green, gold and land grey): each region's colour
+ * multiplied by its gain through the pack's own mask, the hue of the
+ * highlights kept (toneSourceRegions), BEFORE any layer mask, ramp or composite, so
+ * every master drawn from the file carries the same pixels.
+ */
+async function loadSource(src, W, H) {
+  const data = await rgba(await fetchCached(src), W, H);
+  const tone = sourceTonesOf(src);
+  if (!tone) return data;
+  const regions = {};
+  for (const [name, maskFile] of Object.entries(tone.masks)) {
+    const mask = await rgba(await fetchCached(maskFile), W, H);
+    const plane = new Uint8Array(W * H);
+    for (let p = 0; p < W * H; p += 1) plane[p] = mask[p * 4 + 3];
+    regions[name] = plane;
+  }
+  return toneSourceRegions(data, W, H, regions, tone.tones);
 }
 
 async function writeMaster(bytes, pngFile, width = OUT_W, height = OUT_H) {
@@ -440,8 +465,13 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
         // (scripts/lib/pair-ramp.mjs) first — a placed pair on the canvas, so
         // the ramp's % of the card's width is the card's.
         const box = l.at ? rectPx(l.at, W, H) : null;
-        const load = async (src) =>
-          box ? placeOnCanvas(await rgba(await fetchCached(src), box.width, box.height), box, W, H) : await rgba(await fetchCached(src), W, H);
+        const load = async (src) => {
+          if (!box) return loadSource(src, W, H);
+          // A file toned through the pack's whole-card masks is never drawn
+          // at bounds of its own.
+          if (sourceTonesOf(src)) throw new Error(`${template}/${key}: ${src} is toned through whole-card masks and can't be placed at bounds`);
+          return placeOnCanvas(await rgba(await fetchCached(src), box.width, box.height), box, W, H);
+        };
         let data = l.right ? blendPair(await load(l.src), await load(l.right), W, H, l.ramp) : await load(l.src);
         if (l.retint) {
           // 4.34's tinted box: a neutral structure re-tinted to the flat tint
@@ -690,6 +720,8 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     ...(def.tones
       ? { tones: typeof def.tones === "function" ? Object.fromEntries(builtColors(def).map((key) => [key, def.tones(key)])) : def.tones }
       : {}),
+    // Files toned as they are loaded (CC_SOURCE_TONES), each region's gain.
+    ...(describeSourceTones(def) ? { sourceTones: describeSourceTones(def) } : {}),
     sourceFiles: sourceFilesFor(def),
     notes: def.notes,
   };

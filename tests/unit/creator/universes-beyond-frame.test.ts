@@ -27,8 +27,15 @@ import { frameMatchFromScryfall, mapScryfallToFormPatch } from "@/lib/scryfall/i
 import { ERA_TYPE_FRAME, FRAME_TEMPLATE_LABELS, FRAME_TEMPLATE_SET, FRAME_TEMPLATE_VALUES, TEMPLATE_SKIN_VARIANTS, type FrameTemplate } from "@/types/card";
 import {
   CC_OVERLAY_BANDS,
+  CC_SOURCE_TONES,
   CC_TEMPLATES,
   CROWN_BAND,
+  UB_PRINT_TONES,
+  checkSourceTone,
+  describeSourceTones,
+  sourceToneGain,
+  sourceTonesOf,
+  toneSourceRegions,
   HOLO_STAMP_NOTCHES,
   NOTCH_FOOT,
   UB_CROWN_BAND,
@@ -287,6 +294,141 @@ describe("the importer's recipes", () => {
     // The standard band is untouched by the parameter.
     expect(crownBandRecipe("c").left).toBe("img/frames/m15/crowns/new/c.png");
     expect(crownBandSourceFiles(UB_CROWN_BAND_KEYS, UB_BAND).filter((f) => f !== "img/black.png").every((f) => f.startsWith("img/frames/m15/ub/crowns/new/"))).toBe(true);
+  });
+});
+
+// Owner Round 57 (2026-10-14): the pack's green bars, gold bars + gold text
+// box and land-grey bars + text box are toned onto the prints BEFORE the
+// first tick — as the FILE is loaded, so every master drawn from it follows.
+describe("the three tones onto print (Round 57)", () => {
+  const UBP = "img/frames/m15/new/ub";
+  const MASK = { title: "img/frames/m15/new/title.png", type: "img/frames/m15/new/type.png", rules: "img/frames/m15/new/rules.png" };
+
+  it("tones five files of the pack and no other: green and gold with their land twins, and the land grey", () => {
+    expect(Object.keys(CC_SOURCE_TONES).sort()).toEqual([`${UBP}/g.png`, `${UBP}/l.png`, `${UBP}/lg.png`, `${UBP}/lm.png`, `${UBP}/m.png`]);
+    // The tinted lands carry their colour's own bars (and lm the gold box).
+    expect(CC_SOURCE_TONES[`${UBP}/lg.png`].tones).toBe(UB_PRINT_TONES.g);
+    expect(CC_SOURCE_TONES[`${UBP}/lm.png`].tones).toBe(UB_PRINT_TONES.m);
+    expect(Object.keys(UB_PRINT_TONES.g)).toEqual(["title", "type"]);
+    expect(Object.keys(UB_PRINT_TONES.m)).toEqual(["title", "type", "rules"]);
+    expect(Object.keys(UB_PRINT_TONES.l)).toEqual(["title", "type", "rules"]);
+    // Each region goes through the pack's own mask of that name.
+    for (const tone of Object.values(CC_SOURCE_TONES)) {
+      for (const region of Object.keys(tone.tones)) expect(tone.masks[region as "title"]).toBe(MASK[region as "title"]);
+    }
+    // White, blue, black, red and the artifact frame stay as drawn.
+    for (const k of ["w", "u", "b", "r", "a", "lw", "lu", "lb", "lr"]) expect(sourceTonesOf(`${UBP}/${k}.png`), k).toBeNull();
+    // …and no file outside the Universes Beyond pack is toned this way.
+    expect(sourceTonesOf("img/frames/m15/new/g.png")).toBeNull();
+    expect(sourceTonesOf("img/frames/m15/new/l.png")).toBeNull();
+    expect(sourceTonesOf("toString")).toBeNull();
+  });
+
+  it("the numbers are the recipe: what the file reads, and the prints' centre", () => {
+    expect(UB_PRINT_TONES).toEqual({
+      g: { title: { from: [173, 211, 165], to: [188, 211, 179] }, type: { from: [170, 209, 162], to: [182, 209, 173] } },
+      m: {
+        title: { from: [241, 227, 157], to: [239, 220, 135] },
+        type: { from: [241, 226, 154], to: [238, 219, 132] },
+        rules: { from: [249, 242, 213], to: [244, 234, 197] },
+      },
+      l: {
+        title: { from: [214, 210, 194], to: [197, 186, 177] },
+        type: { from: [212, 208, 191], to: [197, 185, 176] },
+        rules: { from: [220, 214, 195], to: [230, 226, 220] },
+      },
+    });
+    // No region moves a channel by more than 28 levels (the largest miss the
+    // second reading found), and no gain is past ± 15 %.
+    for (const table of Object.values(UB_PRINT_TONES)) {
+      for (const tone of Object.values(table) as { from: number[]; to: number[] }[]) {
+        const { channel, neutral } = sourceToneGain(tone);
+        for (let c = 0; c < 3; c += 1) {
+          expect(Math.abs(tone.to[c] - tone.from[c])).toBeLessThanOrEqual(28);
+          expect(channel[c]).toBeGreaterThan(0.85);
+          expect(channel[c]).toBeLessThan(1.15);
+        }
+        expect(neutral).toBeGreaterThan(0.88);
+        expect(neutral).toBeLessThan(1.07);
+      }
+    }
+  });
+
+  it("every master built from a toned file is drawn from it: the pairs' gold bars, the hybrids' and two-colour lands' grey bars", () => {
+    const files = (t: (typeof UB)[number], key: string) =>
+      (CC_TEMPLATES[t].colors as Record<string, { src: string; right?: string; mask?: string }[]>)[key].flatMap((l) => [[l.src, l.mask], ...(l.right ? [[l.right, l.mask]] : [])]);
+    // A gold-split pair is m.png whole: its bars are the gold's.
+    expect(files("m15ub", "wu")[0]).toEqual([`${UBP}/m.png`, undefined]);
+    // A hybrid's bars are l.png through the Title and Type masks.
+    expect(files("m15ub", "wu-h")).toContainEqual([`${UBP}/l.png`, MASK.title]);
+    expect(files("m15ub", "wu-h")).toContainEqual([`${UBP}/l.png`, MASK.type]);
+    // A two-colour artifact's bars are m.png through the same masks; a
+    // green or gold artifact's are g.png / m.png.
+    expect(files("m15ubartifact", "ur")).toContainEqual([`${UBP}/m.png`, MASK.title]);
+    expect(files("m15ubartifact", "g")).toContainEqual([`${UBP}/g.png`, MASK.title]);
+    expect(files("m15ubartifact", "m")).toContainEqual([`${UBP}/m.png`, MASK.rules]);
+    // A two-colour land is l.png whole under its split box.
+    expect(files("m15ubland", "bg")[0]).toEqual([`${UBP}/l.png`, undefined]);
+    // The provenance lists the toned files of each template with their gains.
+    expect(Object.keys(describeSourceTones(CC_TEMPLATES.m15ub)!).sort()).toEqual([`${UBP}/g.png`, `${UBP}/l.png`, `${UBP}/m.png`]);
+    expect(Object.keys(describeSourceTones(CC_TEMPLATES.m15ubartifact)!).sort()).toEqual([`${UBP}/g.png`, `${UBP}/m.png`]);
+    expect(Object.keys(describeSourceTones(CC_TEMPLATES.m15ubland)!).sort()).toEqual([`${UBP}/l.png`, `${UBP}/lg.png`, `${UBP}/lm.png`]);
+    expect(describeSourceTones(CC_TEMPLATES.m15ub)![`${UBP}/g.png`]).toEqual({
+      table: "UB_PRINT_TONES.g",
+      title: `through ${MASK.title}: × 1.087 / 1.000 / 1.085 (173, 211, 165 → 188, 211, 179), fading to × 1.021 on every channel at white`,
+      type: `through ${MASK.type}: × 1.071 / 1.000 / 1.068 (170, 209, 162 → 182, 209, 173), fading to × 1.017 on every channel at white`,
+    });
+    expect(describeSourceTones(CC_TEMPLATES.m15)).toBeNull();
+    for (const t of UB) expect(CC_TEMPLATES[t].notes.join(" ")).toMatch(/toned onto the prints before the first tick \(owner Round 57/);
+  });
+
+  it("a pixel at the file's tone lands on the prints'; black stays black, white keeps its hue, the mask is the weight, alpha is kept", () => {
+    const tone = UB_PRINT_TONES.g.title;
+    // Six pixels: the bar's tone, black, white, a light streak, the tone
+    // under half a mask, the tone outside the mask.
+    const px = [
+      [173, 211, 165, 255],
+      [0, 0, 0, 255],
+      [255, 255, 255, 255],
+      [225, 240, 222, 200],
+      [173, 211, 165, 255],
+      [173, 211, 165, 255],
+    ];
+    const out = toneSourceRegions(Buffer.from(px.flat()), 6, 1, { title: Uint8Array.from([255, 255, 255, 255, 128, 0]) }, { title: tone });
+    const at = (i: number) => [...out.subarray(i * 4, i * 4 + 4)];
+    expect(at(0)).toEqual([188, 211, 179, 255]);
+    expect(at(1)).toEqual([0, 0, 0, 255]);
+    // White stays white (a plain gain of × 1.087 / 1 / 1.085 would not move
+    // it either, but a near-white turns pink under it: the streak below).
+    expect(at(2)).toEqual([255, 255, 255, 255]);
+    // The streak is lifted with its hue: still greenest, red and blue equal
+    // within 3 as they were (a plain gain gives 245, 240, 241 — pink).
+    const streak = at(3);
+    expect(streak[3]).toBe(200);
+    expect(streak[1]).toBeGreaterThan(streak[0]);
+    expect(streak[1]).toBeGreaterThan(streak[2]);
+    expect(Math.abs(streak[0] - streak[2])).toBeLessThanOrEqual(3);
+    // Half a mask, half the move; no mask, no move.
+    expect(at(4)).toEqual([181, 211, 172, 255]);
+    expect(at(5)).toEqual([173, 211, 165, 255]);
+    // Every table entry maps its own `from` onto its `to`, exactly.
+    for (const table of Object.values(UB_PRINT_TONES)) {
+      for (const t of Object.values(table) as { from: number[]; to: number[] }[]) {
+        const one = toneSourceRegions(Buffer.from([...t.from, 255]), 1, 1, { r: Uint8Array.from([255]) }, { r: t });
+        expect([...one.subarray(0, 3)]).toEqual(t.to);
+      }
+    }
+  });
+
+  it("refuses a region with no tone, a tone with no region and a tone it can't apply", () => {
+    const one = Buffer.from([10, 10, 10, 255]);
+    const tone = { from: [10, 10, 10], to: [12, 12, 12] };
+    expect(() => toneSourceRegions(one, 1, 1, { a: Uint8Array.from([255]) }, {})).toThrow(/region a has no tone/);
+    expect(() => toneSourceRegions(one, 1, 1, {}, { a: tone })).toThrow(/tone a has no 1x1 region/);
+    expect(() => toneSourceRegions(one, 2, 1, { a: Uint8Array.from([255]) }, { a: tone })).toThrow(/not 2x1 RGBA/);
+    expect(() => checkSourceTone("a", { from: [0, 10, 10], to: [1, 1, 1] })).toThrow(/can't be toned from/);
+    expect(() => checkSourceTone("a", { from: [255, 255, 255], to: [1, 1, 1] })).toThrow(/can't be toned from/);
+    expect(() => checkSourceTone("a", { from: [1, 2], to: [1, 1, 1] } as never)).toThrow(/needs from \/ to as RGB/);
   });
 });
 
