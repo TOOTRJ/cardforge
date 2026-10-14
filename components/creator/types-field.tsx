@@ -22,6 +22,7 @@
 import { useEffect, useRef } from "react";
 import { useFormContext, useWatch, type UseFormReturn } from "react-hook-form";
 import { RotateCcw } from "lucide-react";
+import { useProvidedBorrowedWordSeeds } from "@/components/creator/borrowed-words";
 import { FieldGroup, inputClass, joinIds } from "@/components/creator/field-group";
 import { supertypeWords, withSupertypeWord } from "@/lib/cards/card-display";
 import {
@@ -158,9 +159,15 @@ export function TypesField({
       : undefined);
   const invalid = Boolean(error);
 
+  const borrowedSeeds = useProvidedBorrowedWordSeeds();
   const write = (typed: string) => {
     setValue(paths.printed, typed, { shouldDirty: true, shouldValidate: invalid });
     if (printedOnly) return;
+    // The front face's words typed BY HAND are the maker's from here on: a
+    // word a borrowed frame wrote ("Artifact", "Enchantment") that the maker
+    // keeps or types here is never taken out again when the card leaves
+    // that frame (components/creator/borrowed-words.tsx).
+    if (face === "front") borrowedSeeds?.forget();
     const next = supertypeFromTypes(typed, getValues(paths.cardType));
     if (next !== (getValues(paths.supertype) ?? "")) {
       setValue(paths.supertype, next, { shouldDirty: true, shouldValidate: invalid });
