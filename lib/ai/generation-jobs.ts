@@ -45,6 +45,7 @@ import {
   type AiActionLabel,
 } from "@/lib/ai/rate-limit";
 import { generateRandomCard } from "@/lib/ai/random-card";
+import { aiErrorMessage } from "@/lib/ai/structured-output";
 import { designCardFill } from "@/lib/ai/card-fill";
 import type {
   CardFillField,
@@ -719,9 +720,13 @@ export async function createCardGenerationJob(
       context: deckBrief?.context,
     });
   } catch (error) {
-    const detail =
-      error instanceof Error ? error.message : "Card generation failed.";
-    return { ok: false, error: `AI card design failed: ${detail}` };
+    // Plan time: no job row, nothing reserved — nothing to refund. An
+    // unreadable answer reads as plain words (structured-output.ts logged
+    // its zod issues and text server-side).
+    return {
+      ok: false,
+      error: aiErrorMessage(error, (detail) => `AI card design failed: ${detail}`, "Card generation failed."),
+    };
   }
 
   const frameTemplate = resolveGeneratedFrame({
@@ -850,9 +855,10 @@ export async function createCardFillJob(
     if (error instanceof StationGapUnfilledError) {
       return { ok: false, error: error.message, code: error.code };
     }
-    const detail =
-      error instanceof Error ? error.message : "Card generation failed.";
-    return { ok: false, error: `AI card design failed: ${detail}` };
+    return {
+      ok: false,
+      error: aiErrorMessage(error, (detail) => `AI card design failed: ${detail}`, "Card generation failed."),
+    };
   }
 
   // A generated card type needs a frame that can wear it (create only —
@@ -1062,8 +1068,10 @@ export async function createDeckGenerationJob(
       bracket: input.bracket ?? existingDeck?.bracket ?? null,
     });
   } catch (error) {
-    const detail = error instanceof Error ? error.message : "Generation failed.";
-    return { ok: false, error: `AI deck planning failed: ${detail}` };
+    return {
+      ok: false,
+      error: aiErrorMessage(error, (detail) => `AI deck planning failed: ${detail}`, "Generation failed."),
+    };
   }
 
   let deckId = existingDeck?.id;
@@ -1622,8 +1630,7 @@ async function executeDeckRemixStep(
       theme: plan.theme ?? undefined,
     });
   } catch (error) {
-    const detail = error instanceof Error ? error.message : "Remix failed.";
-    return { ...step, status: "failed", error: detail };
+    return { ...step, status: "failed", error: aiErrorMessage(error, (detail) => detail, "Remix failed.") };
   }
   // The new names on the card: the rules text follows them (no source name
   // left on a renamed card), and a second half without a new name fails

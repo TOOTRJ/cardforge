@@ -14,6 +14,7 @@ import {
   spendCredits,
 } from "@/lib/ai/rate-limit";
 import { generateDeckIdeas } from "@/lib/ai/deck-ideas";
+import { aiErrorMessage } from "@/lib/ai/structured-output";
 import { deckTypeByKey } from "@/lib/decks/deck-types";
 import { DECK_FORMAT_VALUES } from "@/types/deck";
 import { rateLimitedResponse } from "@/lib/api/responses";
@@ -108,7 +109,7 @@ export async function POST(request: Request) {
     if (spend.charged) {
       await refundCredits(user.id, 1, "generate_deck_ideas", `refund:${ref}`);
     }
-    const message = error instanceof Error ? error.message : "Idea generation failed.";
+    const message = aiErrorMessage(error, (detail) => detail, "Idea generation failed.");
     return NextResponse.json({ ok: false, error: message }, { status: 502 });
   }
 }

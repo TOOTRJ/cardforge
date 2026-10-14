@@ -10,6 +10,7 @@ import {
   type DesignedCard,
   type DesignSlot,
 } from "@/lib/ai/card-design";
+import { repairStructuredText, structuredCall } from "@/lib/ai/structured-output";
 import { judgeModel } from "@/lib/ai/provider";
 import { buildDeckSkeleton, type DeckSlot } from "@/lib/ai/mtg-rules";
 import type { ColorIdentity } from "@/types/card";
@@ -31,7 +32,7 @@ export const AI_DECK_FORMATS = ["commander", "standard", "limited"] as const;
 export type AiDeckFormat = (typeof AI_DECK_FORMATS)[number];
 
 // Prose lengths are clamped, never hard-failed — see clampedText.
-const deckConceptSchema = z
+export const deckConceptSchema = z
   .object({
     deck_title: clampedText(80).describe("Original deck name."),
     deck_description: clampedText(300, 0).describe(
@@ -180,9 +181,12 @@ export async function generateDeckPlan(input: {
       ? "extend the deck's existing theme"
       : "a flavorful, fun-to-pilot original deck — surprise me");
 
-  const { object: concept } = await generateObject({
+  // Repaired where a machine can, else asked once more; a second miss is
+  // AiOutputError (lib/ai/structured-output.ts).
+  const { object: concept } = await structuredCall("deck-design/concept", repairStructuredText(deckConceptSchema), (experimental_repairText) => generateObject({
     model: judgeModel(),
     schema: deckConceptSchema,
+    experimental_repairText,
     system: DECK_CONCEPT_SYSTEM,
     prompt: [
       `Theme: ${theme}`,
@@ -205,7 +209,7 @@ export async function generateDeckPlan(input: {
       .filter(Boolean)
       .join("\n"),
     temperature: 0.9,
-  });
+  }));
 
   let slots = buildDeckSkeleton(input.format, input.size);
   // Adding to a deck that already has a commander → never design another.
