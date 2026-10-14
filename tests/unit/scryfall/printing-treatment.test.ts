@@ -168,7 +168,7 @@ describe("printingTreatmentNotice — the creator's toast after the frame lands"
     // FRA #382–396 land on the borderless full-art basic; a full-art poster
     // or source-material printing on Borderless; BLB woodland on its showcase.
     expect(printingTreatmentNotice("borderless", "fullartland")).toBe(
-      "This printing is borderless — PipGlyph used the Full Art Borderless Basic Land frame.",
+      "This printing is borderless — PipGlyph used the M15 (2015) Borderless Full-Art Basic Land frame.",
     );
     expect(printingTreatmentNotice("borderless", "m15borderless")).toBe(
       "This printing is borderless — PipGlyph used the M15 (2015) Borderless frame.",

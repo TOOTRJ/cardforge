@@ -668,9 +668,11 @@ frame change](#shipping-a-frame-change)).
 3. **Register the template** in `types/card.ts`: `FRAME_TEMPLATE_VALUES`,
    `FRAME_TEMPLATE_LABELS` and `FRAME_TEMPLATE_SET` (exhaustive: the
    compiler names what is missing), and where the picker offers it:
-   `ERA_TYPE_FRAME`, `TEMPLATE_SKIN_VARIANTS`, a showcase set, or a kind's
-   `layoutTemplates` in `lib/creator/card-kinds.ts`. Which kinds a showcase
-   or Borderless frame dresses follows from the anatomy its profile draws
+   `ERA_TYPE_FRAME`, `TEMPLATE_SKIN_VARIANTS`, an M15 treatment set or a
+   showcase set ([Which group a frame sits in](#which-group-a-frame-sits-in)),
+   or a kind's `layoutTemplates` in `lib/creator/card-kinds.ts`. Which kinds
+   a showcase, an M15 treatment or a Borderless frame dresses follows from
+   the anatomy its profile draws
    (a showcase with no `loyalty` + `loyaltyRows` refuses planeswalkers, one
    with no `defense` battles), plus a trade-dress row in `TREATMENT_KINDS`
    when the print is one kind's dress ([Kind anatomy and
@@ -5964,13 +5966,72 @@ before anyone pays. Additions: 0 stored cards change, no bump, no sweep.
   `tests/e2e/scryfall-import.spec.ts` (MID #7 through the admin preview:
   the transform body, both arts, the family). Visual: 0 changed / 0 new.
 
+### Which group a frame sits in
+
+The picker has two groups for a frame that is not an era's standard or a
+layout, and print decides which (audit of 2026-10-13, Scryfall the same day):
+
+- **An M15 variation** — a treatment of the 2015 frame that ANY set prints
+  on any card of its kind: Snow, Devoid, Borderless, the Nyx dress, the
+  Vehicle and station frames, and since 2026-10-13 **extended art**
+  (`frame_effects ∋ extendedart`: 4,235 printings in 86 sets, 2018 → today),
+  the **full-art basics** (`full_art` basics on the 2015 frame: 688
+  printings, 588 black-bordered in 52 sets) and the **textless** frames
+  (`textless` on the 2015 frame, no token or basic: 78 printings in 24
+  promo sets). Its era is "M15 (2015)", its chip sits with the kind's other
+  variations and carries no set name.
+- **A showcase** ("Showcase & Universes Beyond") — a frame ONE set, one
+  block or one crossover printed: the Ring and Scroll (LTR), Avatar's
+  elemental frame, Bloomburrow's woodland and anime, Tarkir: Dragonstorm's
+  two, Multiverse Legends' Dragon Wing, Zendikar Rising's hedron, the
+  Zendikar Expeditions (EXP: 45 printings, 2015–16) and **the constellation
+  frame** (`nyx`: THB #258–268 alone — Scryfall `showcase`, BLACK border;
+  it is not a borderless Nyx frame, and the printed enchantment frame is
+  `m15nyx`). Its chip names its set ("Zendikar Rising — Hedron").
+
+How the move of 2026-10-13 was made, for the next one. A frame's group is
+its SET's era (`FRAME_SET_ERA`), so the two sets `extended` and
+`fullartset` went to `m15`; `FRAME_TEMPLATE_SET` did not change (the
+admin's treatment batches and the import chooser's families read it). Each
+of those frames is ONE body several kinds wear (`extendedart` dresses a
+creature, an artifact, a land and a token), where Borderless has a template
+per kind — so they are not `TEMPLATE_SKIN_VARIANTS` rows: they are listed in
+`M15_TREATMENT_SETS` (`types/card.ts`) and `skinVariantsFor` offers them
+under whichever M15 standard the kind has, to exactly the kinds
+`templateRefusesKind` lets them dress. Everything that read "is this a
+showcase" to decide BEHAVIOUR reads `isTreatmentBody()`
+(`lib/creator/frame-picker.ts`: a showcase or an M15 treatment) — the
+capability rule below, the import's candidate frames, the import chooser's
+families, the treatment notice's "bordered" — so a move changes a frame's
+place and label and nothing a card wears or a save stores. What a user sees
+change:
+
+- the chip sits among the M15 variations, before every showcase, under the
+  kind's M15 standard only (a card on the 1997 frame is no longer offered
+  it: picking it changed the card's era, which the Frame section owns — as
+  for Borderless since 4.32);
+- labels: "Extended Art", "Full-Art Basic Land", "Borderless Full-Art Basic
+  Land", "Textless", "Textless Land" (were "Full Art — Basic Land", …);
+  copy says "M15 (2015) Extended Art";
+- a kind change on a NEW card wearing one keeps the M15 era without the
+  "Switch frame era?" question (the same frame as its "Switch to M15").
+
+`tests/unit/creator/frame-picker-groups.test.ts` holds every frame decision
+(gallery, kind gate, bases, resolver, import, remix, AI pools; production's
+verified list and everything verified) to a recording of `origin/main`
+before the move, the differences above asserted exactly;
+`tests/unit/components/creator-frame-picker-groups-payload.test.tsx` does
+the same for what a save sends. A frame that moves group later re-records
+both on the commit before it.
+
 ### The kind gate
 
 `templateRefusesKind` (`lib/creator/card-kinds.ts`) is two rules; either
 refuses:
 
-1. **Capability** — on a showcase treatment or a Borderless skin, the body
-   must draw what the kind needs. So the ZNR hedron, the textless and
+1. **Capability** — on a showcase treatment, an M15 treatment (extended
+   art, the textless frames, the full-art basics) or a Borderless skin, the
+   body must draw what the kind needs. So the ZNR hedron, the textless and
    extended-art frames and the IP showcases (the Ring and Scroll, Avatar,
    Bloomburrow woodland and Anime, the three Tarkir frames) — P/T only —
    refuse planeswalkers, battles and every layout kind. Border-era

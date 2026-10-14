@@ -360,8 +360,9 @@ export const RETIRED_CARD_FINISHES: ReadonlyMap<string, CardFinish> = new Map([
 // Adding a frame (the full checklist: docs/FRAMES.md "Adding a frame"): add
 // a value here, a label in FRAME_TEMPLATE_LABELS, a set in FRAME_TEMPLATE_SET
 // (both exhaustive — the compiler will tell you), a picker mapping
-// (ERA_TYPE_FRAME / TEMPLATE_SKIN_VARIANTS / a showcase set / a kind's
-// layoutTemplates in lib/creator/card-kinds.ts), and one profile entry in
+// (ERA_TYPE_FRAME / TEMPLATE_SKIN_VARIANTS / an M15 treatment set / a
+// showcase set / a kind's layoutTemplates in lib/creator/card-kinds.ts —
+// docs/FRAMES.md "Which group a frame sits in"), and one profile entry in
 // lib/cards/template-layout.ts. No renderer changes needed (landscape frames
 // just set orientation: "landscape" in their profile). It stays hidden until
 // each color is verified in /admin/frame-compare.
@@ -606,9 +607,11 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   // "Zendikar Rising — Hedron" (setQualifiedFrameLabel).
   fullart: "Hedron",
   // Two full-art basics in the Full Art set: the black-bordered print (the
-  // common one, 263 printings) and the borderless one (FRA #382–396).
-  m15fullartland: "Basic Land",
-  fullartland: "Borderless Basic Land",
+  // common one, 263 printings) and the borderless one (FRA #382–396). They
+  // are variations of the M15 land frame (the picker's groups, 2026-10-13),
+  // so their chips carry no set name: the label says "Full-Art" itself.
+  m15fullartland: "Full-Art Basic Land",
+  fullartland: "Borderless Full-Art Basic Land",
   m15textless: "Textless",
   m15textlessland: "Textless Land",
   expeditionland: "Land",
@@ -739,8 +742,12 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
 // frame's color.
 //
 // Eras group the existing FrameSets: alpha→classic, m15→m15, and the
-// Universes Beyond / showcase IP sets (lotr/avatar/bloomburrow/tarkir/
-// multiverselegends/zendikarrising) plus the treatment sets→showcase.
+// Universes Beyond / showcase sets — a frame ONE set or one crossover printed
+// (lotr/avatar/bloomburrow/tarkir/multiverselegends/zendikarrising, the
+// Zendikar Expeditions, Theros Beyond Death's constellation frame)→showcase.
+// A TREATMENT of the 2015 frame that any set prints — Borderless, extended
+// art, the full-art basics, the textless promos — is M15-era
+// (M15_TREATMENT_SETS, below).
 // ---------------------------------------------------------------------------
 export const FRAME_ERA_VALUES = ["classic", "retro", "modern", "m15", "showcase"] as const;
 export type FrameEra = (typeof FRAME_ERA_VALUES)[number];
@@ -773,17 +780,40 @@ export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
   // the M15 standard (TEMPLATE_SKIN_VARIANTS), not a showcase treatment:
   // a kind change keeps the M15 era (frames plan 4.32).
   borderless: "m15",
+  // Extended art, the full-art basics and the textless frames (the picker's
+  // groups, 2026-10-13): treatments of the 2015 frame that every set prints
+  // — Scryfall 2026-10-13: `extendedart` on 4,235 printings in 86 sets since
+  // 2018, black-bordered full-art basics on 588 in 52, 2015-frame textless
+  // promos on 78 in 24 — never one set's showcase. Variations of the M15
+  // standard like Borderless (M15_TREATMENT_SETS, below).
+  extended: "m15",
+  fullartset: "m15",
   lotr: "showcase",
   avatar: "showcase",
   bloomburrow: "showcase",
   tarkir: "showcase",
   multiverselegends: "showcase",
   zendikarrising: "showcase",
-  extended: "showcase",
-  fullartset: "showcase",
+  // One block's masterpiece series (BFZ / OGW 2015–16, 45 printings).
   expeditions: "showcase",
+  // Theros Beyond Death's constellation SHOWCASE (THB #258–268: Scryfall
+  // `showcase`, black border, 11 printings) — not the printed enchantment
+  // frame (m15nyx, an M15 variation) and not a borderless frame.
   nyxset: "showcase",
 };
+
+// The M15-era TREATMENT sets that left the showcase era on 2026-10-13. Each
+// frame in them is a body of its own that several kinds wear — one
+// `extendedart` for a creature, an artifact, a land and a token, where
+// Borderless has a template per kind — so the picker offers them as
+// variations of whichever M15 standard the kind has
+// (lib/creator/card-kinds.ts skinVariantsFor), and everything that judged
+// them as a showcase BODY still does (lib/creator/frame-picker.ts
+// isTreatmentBody: the kind-capability rule, the import's candidates and its
+// treatment notice). Only the group and the labels moved: FRAME_TEMPLATE_SET
+// is untouched, so the admin's treatment batches and the import chooser's
+// families are too.
+export const M15_TREATMENT_SETS: readonly FrameSet[] = ["extended", "fullartset"];
 
 // The standard / type-specific frame for a BORDER era + card type. The showcase
 // era is intentionally absent — its frames are chosen by a set→treatment

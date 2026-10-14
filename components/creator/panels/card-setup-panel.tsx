@@ -99,7 +99,7 @@ import {
   type FrameEra,
   type FrameTemplate,
 } from "@/types/card";
-import { eraForTemplate } from "@/lib/creator/frame-picker";
+import { eraForTemplate, isM15Treatment } from "@/lib/creator/frame-picker";
 import { buildTypeLine, normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { parseSubtypes } from "@/lib/creator/card-fields";
 import { tokenFrameText } from "@/lib/creator/token-frame-auto";
@@ -603,7 +603,7 @@ export function CardSetupPanel({
                           ? M20_TOKEN_HEIGHT_HINTS[m20TokenHeightOf(choice.template)!]
                           : subtypeDressOf(choice.template)
                             ? `The printed ${subtypeDressOf(choice.template)} frame: bronze, with white numbers on a brown plate`
-                          : choice.group === "skin"
+                          : choice.group === "skin" && !isM15Treatment(choice.template)
                             ? "Same layout, different dress"
                             : undefined,
               leading: (

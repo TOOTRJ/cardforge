@@ -189,7 +189,7 @@ function LandHarness({
 const landVerified = [frameComboKey("m15land", "w"), frameComboKey("fullartland", "w")];
 const fullArtBasicChip = () =>
   within(screen.getByRole("radiogroup", { name: /Frame variations/ })).getByRole("radio", {
-    name: /Full Art — Borderless Basic Land/,
+    name: /^Borderless Full-Art Basic Land/,
   }) as HTMLButtonElement;
 
 describe("CardSetupPanel variation chips — full-art basic lands only", () => {
@@ -519,7 +519,7 @@ describe("CardSetupPanel — the borderless M15 frame and the black-bordered ful
   it("offers the black-bordered full-art basic to a basic land and refuses it on a nonbasic", () => {
     const verified = [frameComboKey("m15land", "w"), frameComboKey("m15fullartland", "w")];
     const chip = () =>
-      within(variations()).getByRole("radio", { name: /^Full Art — Basic Land/ }) as HTMLButtonElement;
+      within(variations()).getByRole("radio", { name: /^Full-Art Basic Land/ }) as HTMLButtonElement;
     render(
       <LandHarness
         verified={verified}

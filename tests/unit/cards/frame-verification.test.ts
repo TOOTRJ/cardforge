@@ -38,6 +38,17 @@ describe("frame reference registry", () => {
     // artifact token in blue only (TC18 #7); the nulls are documented in
     // tests/unit/cards/frame-references-data.test.ts too.
     const noRealPrinting = new Set([
+      // The M15 treatments (in this era since 2026-10-13; their references
+      // are unchanged): a basic land is one colour — Wastes is the only
+      // colourless one and prints no borderless full-art or textless basic —
+      // and no blue or colourless textless 2015-frame promo is pinned.
+      "m15fullartland/m",
+      "fullartland/c",
+      "fullartland/m",
+      "m15textless/u",
+      "m15textless/c",
+      "m15textlessland/c",
+      "m15textlessland/m",
       "m15token/m",
       "m15tokenartifact/w",
       "m15tokenartifact/b",
@@ -128,7 +139,9 @@ describe("frame reference registry", () => {
     // 4.52's emblem + 5.1a's five transform bodies + 5.1b's four modal bodies.
     // + 4.5c's Vehicle frame + 4.7's Nyx dress + the station frame's two
     // (TODO 4.27a).
-    expect(m15Templates.length).toBe(42);
+    // + the five M15 treatments that left the showcase era on 2026-10-13
+    // (extended art, the two full-art basics, the two textless frames).
+    expect(m15Templates.length).toBe(47);
     expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {
