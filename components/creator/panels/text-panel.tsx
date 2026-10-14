@@ -24,6 +24,7 @@ import type { FormValues } from "@/lib/creator/form-types";
 import { frameAnatomyOf } from "@/lib/cards/anatomy";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import { StationEditor } from "@/components/creator/panels/station-editor";
 import type { RulesAlign } from "@/types/card";
 
 /** Said on the Text step when the frame is textless (FrameProfile.textless,
@@ -66,7 +67,11 @@ export function TextPanel({ rulesTextRef, onInsertSymbol }: TextPanelProps) {
   // "Front face" on a card with Face tabs (TODO 5.14); null elsewhere.
   const faceLabel = useFaceLabel();
   // Code-owned, never overridden by the admin layout editor.
-  const textless = Boolean(getFrameProfile(normalizeFrameTemplate(template)).textless);
+  const profile = getFrameProfile(normalizeFrameTemplate(template));
+  const textless = Boolean(profile.textless);
+  // The station frame (TODO 4.27a): its text box is a top band over tiers,
+  // and the tier editor is the rules field (a view of the same `rules_text`).
+  const station = Boolean(profile.tiers) && !textless;
 
   return (
     <>
@@ -82,6 +87,8 @@ export function TextPanel({ rulesTextRef, onInsertSymbol }: TextPanelProps) {
       {/* ONE control under its toolbar: the editor is the field — named for
           it, described by the helper or the error. No group around the two
           that would say "Rules text" twice (TODO 3b.24). */}
+      {station ? <StationEditor rulesTextRef={rulesTextRef} onInsertSymbol={onInsertSymbol} /> : null}
+      {station ? null : (
       <FieldGroup
         kind="control"
         label="Rules text"
@@ -110,6 +117,7 @@ export function TextPanel({ rulesTextRef, onInsertSymbol }: TextPanelProps) {
           </div>
         )}
       </FieldGroup>
+      )}
 
       <RulesAlignChoice />
 

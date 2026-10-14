@@ -49,11 +49,11 @@ export async function generateMetadata({
   if (!article) return { title: "Article not found" };
   const { meta } = article;
   return {
-    title: meta.title,
+    title: meta.seoTitle ?? meta.title,
     description: meta.description,
     alternates: { canonical: `/articles/${meta.slug}` },
     openGraph: {
-      title: `${meta.title} · PipGlyph`,
+      title: `${meta.seoTitle ?? meta.title} · PipGlyph`,
       description: meta.description,
       type: "article",
       url: `/articles/${meta.slug}`,
@@ -74,7 +74,7 @@ export default async function ArticlePage({
   if (!article) notFound();
 
   const { meta, content } = article;
-  const toc = extractToc(content);
+  const toc = extractToc(content).filter((item) => item.depth <= (meta.tocDepth ?? 3));
   const others = getRelatedArticles(meta.slug, 3);
 
   return (
@@ -119,7 +119,7 @@ export default async function ArticlePage({
         <h1 className="font-display text-3xl font-semibold leading-tight tracking-tight text-foreground sm:text-4xl">
           {meta.title}
         </h1>
-        <p className="text-base leading-7 text-muted">{meta.description}</p>
+        <p className="text-base leading-7 text-muted">{meta.excerpt ?? meta.description}</p>
         {meta.tags.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
             {meta.tags.map((tag) => (
@@ -146,7 +146,7 @@ export default async function ArticlePage({
 
       {/* Body — prose styling via arbitrary variants, same approach as
           LegalPageShell but tuned for long-form reading. */}
-      <article className="mt-10 flex flex-col gap-5 text-[0.95rem] leading-7 text-muted [&_h2]:font-display [&_h2]:mt-8 [&_h2]:scroll-mt-24 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-foreground [&_h3]:font-display [&_h3]:mt-5 [&_h3]:scroll-mt-24 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-foreground [&_a]:text-primary-bright [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-primary-bright/50 hover:[&_a]:decoration-primary-bright [&_strong]:font-semibold [&_strong]:text-foreground [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1.5 [&_code]:rounded [&_code]:bg-elevated/80 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em] [&_code]:text-foreground [&_blockquote]:border-l-2 [&_blockquote]:border-gold/50 [&_blockquote]:pl-4 [&_blockquote]:italic [&_table]:w-full [&_table]:border-collapse [&_table]:text-sm [&_th]:border-b [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-foreground [&_td]:border-b [&_td]:border-border/50 [&_td]:px-3 [&_td]:py-2 [&_td]:align-top">
+      <article className="mt-10 flex flex-col gap-5 text-[0.95rem] leading-7 text-muted [&_h2]:font-display [&_h2]:mt-8 [&_h2]:scroll-mt-24 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2]:text-foreground [&_h3]:font-display [&_h3]:mt-5 [&_h3]:scroll-mt-24 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-foreground [&_a]:text-primary-bright [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-primary-bright/50 hover:[&_a]:decoration-primary-bright [&_strong]:font-semibold [&_strong]:text-foreground [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1.5 [&_code]:rounded [&_code]:bg-elevated/80 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em] [&_code]:text-foreground [&_blockquote]:border-l-2 [&_blockquote]:border-gold/50 [&_blockquote]:pl-4 [&_blockquote]:italic [&_table]:w-full [&_table]:border-collapse [&_table]:text-sm [&_th]:border-b [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:text-foreground [&_td]:border-b [&_td]:border-border/50 [&_td]:px-3 [&_td]:py-2 [&_td]:align-top [&_sup]:text-[0.7em] [&_sup_a]:no-underline [&_section.footnotes]:mt-6 [&_section.footnotes]:border-t [&_section.footnotes]:border-border [&_section.footnotes]:pt-2 [&_section.footnotes]:text-sm [&_section.footnotes]:leading-6 [&_section.footnotes_p]:inline">
         <MDXRemote
           source={content}
           components={mdxComponents}
@@ -160,14 +160,14 @@ export default async function ArticlePage({
         <div className="absolute inset-0 bg-radial-glow opacity-60" aria-hidden />
         <div className="relative flex flex-col gap-3">
           <h2 className="font-display text-xl font-semibold text-foreground">
-            Put it into practice
+            {meta.cta?.title ?? "Put it into practice"}
           </h2>
           <p className="max-w-lg text-sm leading-6 text-muted">
-            Sign up free and try what you just read on a real card.
+            {meta.cta?.body ?? "Sign up free and try what you just read on a real card."}
           </p>
           <div className="flex flex-wrap gap-3 pt-1">
             <Button asChild>
-              <Link href="/create">Open the card creator</Link>
+              <Link href="/create">{meta.cta?.label ?? "Open the card creator"}</Link>
             </Button>
             <Button asChild variant="ghost">
               <Link href="/faq">Read the FAQ</Link>

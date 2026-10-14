@@ -16,6 +16,7 @@
 // The one card corner (TODO 3.26). Import-free .ts, loaded through Node's
 // type stripping like import-cc-frames.mjs's edge-contract import.
 import { applyCardCornerMask, cardCornerRadiusPx } from "../../lib/cards/card-corner.ts";
+import { UB_STAMP_HOLE, roundTriangleDistance } from "../../lib/cards/holo-stamp.ts";
 import { GOLD_2003_NARROW_PAIRS, PAIR_RAMPS, TWO_COLOR_PAIRS, pairSides, rampName, rampShare } from "./pair-ramp.mjs";
 import { describeRegionTones, regionGain, stretchRange } from "./print-cut.mjs";
 import { SEVENTH_BOX_BY_COLOUR, SEVENTH_TONES, retroGoldCut, seventhCut } from "./seventh-1997.mjs";
@@ -198,6 +199,216 @@ function m15FrameFile(letter) {
 }
 /** The snow pack's file of a letter (4.6f, wave 2c). */
 const snowFrameFile = packFrameFile(SNOW);
+
+// --- TODO 4.25: the Universes Beyond frames. Card Conjurer's accurate
+// 'Universes Beyond' pack (packUBNew.js, groupAccurate.js: `m15/new/ub/`,
+// 2010 × 2814) is the accurate M15 pack's geometry with the smooth,
+// streaked art Universes Beyond printed from 40K (2022-10) to Final Fantasy
+// (2025-06), through the SAME six masks and the same text layout — so the
+// three templates are m15 / m15artifact / m15land's recipes over the UB
+// files (packFrameFile), pairs included. The pack names a 'Colorless
+// Frame' (`new/ub/c.png`) that is MISSING from Card Conjurer's tree: the
+// colourless spell master is the pack's ARTIFACT frame (owner 2026-10-13,
+// roadmap Q5), which is also what the six colourless non-artifact prints
+// wear (ACR #1, FIN #2, WHO #9: docs/FRAMES.md "The Universes Beyond
+// frames").
+const UB = "img/frames/m15/new/ub";
+const ubPackFile = packFrameFile(UB);
+/** A recipe letter → the UB pack's file; the missing colourless frame is
+ *  the pack's artifact frame. */
+export const ubFrameFile = (letter) => ubPackFile(letter === "c" ? "a" : letter);
+/** The UB plates (packUBNew.js '… Power/Toughness', `m15/ub/pt/<k>.png`,
+ *  282 × 154, drawn at M15's plate bounds): the colour's, gold, and for
+ *  the colourless key the pack's grey 'Colorless' plate on the spell frame
+ *  (the hybrid dress's plate too, as m15's pt/c is) and its silver
+ *  'Artifact' plate on the artifact frame. */
+const UB_PT_DIR = "img/frames/m15/ub/pt";
+const UB_PT = Object.fromEntries(COLORS.map((k) => [k, `${UB_PT_DIR}/${k}.png`]));
+const UB_ARTIFACT_PT = { ...UB_PT, c: `${UB_PT_DIR}/a.png` };
+const ubPairLayers = (pair, dress, kind) => pairMasterLayers(pair, dress, kind, ubFrameFile);
+const UB_PACK = "packUBNew.js 'Universes Beyond' (groupAccurate.js): the accurate M15 pack's masks and text layout over the m15/new/ub files";
+const UB_TONE_NOTE =
+  "toned onto the prints before the first tick (owner Round 57, 2026-10-14; UB_PRINT_TONES through CC_SOURCE_TONES, recorded under sourceTones): the pack's green bars (g.png, lg.png), its gold bars and gold text box (m.png, lm.png) and its land-grey bars and text box (l.png) are multiplied by a per-channel gain through the pack's Title, Type and Rules masks as the FILE is loaded, so every master drawn from one of them — the gold-split and artifact pairs' gold bars, the hybrids' and the two-colour lands' grey bars — carries the same pixels; the frame field, the pinline, the border, the plates, the crowns and every other colour as Card Conjurer drew them";
+const UB_PAIR_NOTE =
+  "two-colour pair masters (TODO 4.25): 4.6b's recipe (twoColorRecipe; the untilted ramps of scripts/lib/pair-ramp.mjs) over the Universes Beyond pack's own files, through the accurate M15 masks the pack shares";
+
+/**
+ * The pack's green, gold and land-grey toned onto the prints BEFORE the
+ * first tick (owner Round 57, 2026-10-14; afterwards it would be a
+ * correction with a sweep). Card Conjurer drew three of the pack's tones
+ * off the prints; every other region of every file is within about 8
+ * levels a channel and stays as drawn. Each entry is one region of one
+ * drawing: `from` = what the pack's file reads there, `to` = the prints'
+ * centre, both the per-channel median of the region's paper (x 140–1360 ×
+ * y 118–198 for the title bar, y 1198–1272 for the type bar; x 150–1350 ×
+ * y 1350–1880 for the text box, at 1500 × 2100; sampled every 2 px, the
+ * brightest 5 % and the darker 40 % — ink, rims — left out). The tone
+ * (toneSourceRegions) multiplies the region's colour by to ÷ from through
+ * the pack's OWN mask (its soft edge the weight), so the streaks, bevels
+ * and rims keep their shading and black stays black — with the HUE kept on
+ * the highlights: a plain per-channel gain turns a bevel's white (green:
+ * × 1.087 / 1 / 1.085 makes the bar's streaks pink — tried, 2026-10-14; the
+ * Vehicle plate's lesson, VEHICLE_PLATE_TONE), so the gain's COLOUR part
+ * fades out between the region's own tone and white, where only the
+ * luminance gain (luma(to) ÷ luma(from), one number for the three
+ * channels) is left. A pixel at `from` lands on `to` exactly. Alpha
+ * untouched.
+ *
+ * Three readings of print — Scryfall's images of the sets that wear the
+ * frame (no scan is read by a build; the numbers are the recipe):
+ *   • the builder's (9–13 prints a key, scans included): green title
+ *     193, 215, 185; gold "7–12 darker";
+ *   • the second reader's (#544's independent check; 8 green, 13 gold, 2
+ *     grey-land prints): green title 187–194, 210–212, 176–182; gold title
+ *     238–240, 218–220, 128–140, box 245, 234, 196; land title
+ *     198, 187, 178, box 231, 227, 221;
+ *   • Round 57's (143 OTHER printings, none of the 915 above, of 190 read —
+ *     the date-stamped promos, the surge foils and 40K's and the Secret
+ *     Lair's scans set aside for their cast; FIN, FIC, ACR, PIP, WHO, LTR,
+ *     LTC; medians [min–max]):
+ *       green, 27 spells — title 185, 211, 178 [180–194, 209–213, 173–182],
+ *         type 180, 209, 173 [175–188, 206–212, 165–178] (box 215, 227, 215
+ *         against the file's 219, 229, 218: left alone);
+ *       gold, 29 spells of three colours or more — title 237, 219, 139
+ *         [231–241, 216–222, 127–145], type 237, 219, 135, box 244, 234, 198
+ *         [241–246, 233–235, 196–202]; the gold bars of 11 two-colour
+ *         spells 239, 221, 134 / 239, 219, 130, of 6 two-colour artifacts
+ *         241, 221, 135 / 241, 219, 129; 20 gold LANDS 240, 222, 133 /
+ *         241, 222, 130, box 243, 234, 198. Two printings of one gold:
+ *         WHO / ACR / LTC blue 122–131, FIN / FIC / PIP / LTR 133–145 —
+ *         the target is between them;
+ *       land grey, 32 lands with no colour — title 197, 185, 176
+ *         [192–200, 182–187, 174–177], type 197, 185, 176, box 230, 226, 219
+ *         [229–232, 224–227, 217–221]; the bars of 12 two-colour lands
+ *         197, 184, 176 / 197, 184, 175; the three hybrid prints' grey bars
+ *         (PIP #212 / #740, ACR #55) 198–202, 187–191, 177–179.
+ * `to` is the centre the three readings agree on (the second reader's and
+ * Round 57's use one method; the builder's green is 5 lighter in red).
+ */
+export const UB_PRINT_TONES = Object.freeze({
+  g: Object.freeze({
+    title: Object.freeze({ from: [173, 211, 165], to: [188, 211, 179] }),
+    type: Object.freeze({ from: [170, 209, 162], to: [182, 209, 173] }),
+  }),
+  m: Object.freeze({
+    title: Object.freeze({ from: [241, 227, 157], to: [239, 220, 135] }),
+    type: Object.freeze({ from: [241, 226, 154], to: [238, 219, 132] }),
+    rules: Object.freeze({ from: [249, 242, 213], to: [244, 234, 197] }),
+  }),
+  l: Object.freeze({
+    title: Object.freeze({ from: [214, 210, 194], to: [197, 186, 177] }),
+    type: Object.freeze({ from: [212, 208, 191], to: [197, 185, 176] }),
+    rules: Object.freeze({ from: [220, 214, 195], to: [230, 226, 220] }),
+  }),
+});
+
+/**
+ * A pack FILE toned wherever it is drawn (the importer tones the file as it
+ * loads it, before any mask, ramp or composite): file → `{ masks, tones }`,
+ * region name → the pack's mask and the region's `{ from, to }`. Toning the
+ * file, not a master, is what keeps every master built from it in step by
+ * construction: the gold bars of the gold-split pairs and of a two-colour
+ * artifact are m.png's, the grey bars of a hybrid and of a two-colour land
+ * l.png's. The pack's tinted lands carry the SAME bars — lg.png's are
+ * g.png's pixel for pixel, lm.png's bars and box m.png's (measured: 0 of
+ * 563,640 and 0 of 2,471,640 channel values differ at 1500 × 2100) — so
+ * they take the same tones (the prints agree: the 20 gold lands above; LTR
+ * #260 and LTC #341, the green lands, 192 / 184, 211 / 210, 180 / 173).
+ */
+const ubSourceTone = (letter) =>
+  Object.freeze({
+    masks: Object.freeze(Object.fromEntries(Object.keys(UB_PRINT_TONES[letter]).map((region) => [region, M15_MASK[region]]))),
+    tones: UB_PRINT_TONES[letter],
+    table: `UB_PRINT_TONES.${letter}`,
+  });
+export const CC_SOURCE_TONES = Object.freeze({
+  [`${UB}/g.png`]: ubSourceTone("g"),
+  [`${UB}/lg.png`]: ubSourceTone("g"),
+  [`${UB}/m.png`]: ubSourceTone("m"),
+  [`${UB}/lm.png`]: ubSourceTone("m"),
+  [`${UB}/l.png`]: ubSourceTone("l"),
+});
+/** Rec. 709 luminance of an RGB triple (tonePlateRgba8's). */
+const luma709 = (r, g, b) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
+/** One source tone, checked: `{ from, to }`, RGB 0–255, `from` no channel
+ *  at 0 and darker than white. */
+export function checkSourceTone(name, tone) {
+  const rgb = (v) => Array.isArray(v) && v.length === 3 && v.every((c) => Number.isFinite(c) && c >= 0 && c <= 255);
+  if (!tone || !rgb(tone.from) || !rgb(tone.to)) throw new Error(`toneSourceRegions: ${name} needs from / to as RGB (0–255)`);
+  if (tone.from.some((c) => c < 1) || luma709(...tone.from) > 254) throw new Error(`toneSourceRegions: ${name} can't be toned from ${tone.from.join(", ")}`);
+  return tone;
+}
+/** The gains of a source tone: per channel (to ÷ from) and the neutral one
+ *  (luma(to) ÷ luma(from)) the highlights converge on. */
+export function sourceToneGain(tone) {
+  return {
+    channel: tone.to.map((t, c) => t / tone.from[c]),
+    neutral: luma709(...tone.to) / luma709(...tone.from),
+    fromLuma: luma709(...tone.from),
+  };
+}
+/**
+ * Tone a pack file region by region (UB_PRINT_TONES; see it for the why).
+ * `regions` maps a name to its coverage (bytes, 0–255, the image's size:
+ * the pack's mask alpha), `tones` the same names to `{ from, to }`. Per
+ * pixel and region: h = (255 − luma) ÷ (255 − luma(from)), clamped to
+ * 0 … 1 (1 at the region's tone and below, 0 at white); the gain of a
+ * channel is neutral + (to ÷ from − neutral) × h; the pixel's colour is
+ * multiplied by 1 + (gain − 1) × coverage. Rounded, clamped; alpha kept.
+ * Regions are applied in the table's order (the pack's masks don't
+ * overlap but for their soft edges). A region with no tone, or a tone with
+ * no region, throws. Returns a new buffer.
+ */
+export function toneSourceRegions(buf, width, height, regions, tones) {
+  const n = width * height;
+  if (buf.length !== n * 4) throw new Error(`toneSourceRegions: the image is not ${width}x${height} RGBA`);
+  for (const name of Object.keys(regions)) if (!tones[name]) throw new Error(`toneSourceRegions: region ${name} has no tone`);
+  const out = Buffer.from(buf);
+  for (const [name, tone] of Object.entries(tones)) {
+    checkSourceTone(name, tone);
+    const m = regions[name];
+    if (!m || m.length !== n) throw new Error(`toneSourceRegions: tone ${name} has no ${width}x${height} region`);
+    const { channel, neutral, fromLuma } = sourceToneGain(tone);
+    for (let p = 0; p < n; p += 1) {
+      if (m[p] === 0) continue;
+      const o = p * 4;
+      if (out[o + 3] === 0) continue;
+      const w = m[p] / 255;
+      const h = Math.min(1, Math.max(0, (255 - luma709(out[o], out[o + 1], out[o + 2])) / (255 - fromLuma)));
+      const px = [out[o], out[o + 1], out[o + 2]];
+      for (let c = 0; c < 3; c += 1) {
+        const gain = neutral + (channel[c] - neutral) * h;
+        out[o + c] = Math.min(255, Math.max(0, Math.round(px[c] * (1 + (gain - 1) * w))));
+      }
+    }
+  }
+  return out;
+}
+/** How provenance prints a source tone table: name → gains and from → to. */
+export function describeSourceToneTable(tones) {
+  return Object.fromEntries(
+    Object.entries(tones).map(([name, t]) => {
+      const { channel, neutral } = sourceToneGain(t);
+      return [name, `× ${channel.map((g) => g.toFixed(3)).join(" / ")} (${t.from.join(", ")} → ${t.to.join(", ")}), fading to × ${neutral.toFixed(3)} on every channel at white`];
+    }),
+  );
+}
+/** A pack file's tones (CC_SOURCE_TONES), or null. */
+export function sourceTonesOf(src) {
+  return Object.hasOwn(CC_SOURCE_TONES, src) ? CC_SOURCE_TONES[src] : null;
+}
+/** The toned files a recipe draws, as provenance prints them: file → the
+ *  table's name, each region's mask and its gain (describeSourceToneTable). */
+export function describeSourceTones(def) {
+  const out = {};
+  for (const file of sourceFilesFor(def)) {
+    const tone = sourceTonesOf(file);
+    if (!tone) continue;
+    const gains = describeSourceToneTable(tone.tones);
+    out[file] = { table: tone.table, ...Object.fromEntries(Object.keys(tone.tones).map((region) => [region, `through ${tone.masks[region]}: ${gains[region]}`])) };
+  }
+  return Object.keys(out).length ? out : null;
+}
 
 /** A pair layer: the recipe region's left file blended into its right file
  *  across the region's ramp (lerpLayers over rampMask), through `mask`. */
@@ -2903,6 +3114,52 @@ export const CC_TEMPLATES = {
       `${PAIR_NOTE}. Gold-split <pair> = the gold starfield master (nyx/m.png) with the split text box and pinline (THB #220, NEO #225, C20 #226, FRC #52); hybrid <pair>-h = the two colours' starfield masters split across the frame ramp, the regular pack's grey land bars (l.png title + type: the Nyx pack has no land file and its bars are the regular masters' own), the split text box and pinline (HOB #155, FRA #134, ECC #121)`,
     ],
   },
+  // TODO 4.25: the Universes Beyond frames — three NEW templates (no stored
+  // card sits on them), m15 / m15artifact / m15land's recipes over the UB
+  // pack's files.
+  m15ub: {
+    colors: {
+      ...perColor((k) => [layer(ubFrameFile(k))]),
+      ...pairMasters("m15", ["split", "hybrid"], ubPairLayers),
+    },
+    plates: UB_PT,
+    pack: UB_PACK,
+    notes: [
+      "w u b r g m = the pack's colour frames whole (new/ub/<k>.png), as m15's are new/<k>.png",
+      "SUBSTITUTION: colourless (c) = the pack's ARTIFACT frame (new/ub/a.png). The pack lists a 'Colorless Frame' new/ub/c.png that is not in Card Conjurer's tree at this commit (404); the owner's call of 2026-10-13 (roadmap Q5) borrows the artifact one — the same bytes as m15ubartifact/c. The older pack's m15/ub/regular/c.png is not used: a different drawing",
+      "plates = the pack's own smooth plates (m15/ub/pt/<k>.png, 282x154, at M15's plate bounds); c = its grey 'Colorless' plate, which the hybrid dress draws too",
+      UB_TONE_NOTE,
+      `${UB_PAIR_NOTE}. Gold-split <pair> = m.png with the split text box and pinline (40K #104, LTR #287, PIP #210); hybrid <pair>-h = the two colours' frames split across the frame ramp, the pack's land-grey bars (l.png title + type), the split text box and pinline, drawn with the grey plate pt/c (ACR #55 / #60, PIP #212)`,
+    ],
+  },
+  m15ubartifact: {
+    colors: {
+      c: [layer(`${UB}/a.png`)],
+      ...perColor((k) => colouredArtifact(`${UB}/a.png`, `${UB}/${k}.png`, M15_BASE_MASKS, M15_INTERIOR_MASKS), WUBRGM),
+      ...pairMasters("artifact", ["split"], ubPairLayers),
+    },
+    plates: UB_ARTIFACT_PT,
+    pack: UB_PACK,
+    notes: [
+      "colourless = the pack's artifact frame whole (new/ub/a.png); coloured artifacts = that frame + border with the colour's pinline, title bar, type bar and text box through CC's accurate-M15 masks — m15artifact's recipe over the UB files (40K #25 / #54, FIN #23, PIP #538)",
+      "plates = the pack's plates; c = its silver 'Artifact' plate (m15/ub/pt/a.png)",
+      UB_TONE_NOTE,
+      `${UB_PAIR_NOTE}. <pair> = the artifact frame + border, GOLD title and type bars (m.png), the split text box and pinline, drawn with the gold plate pt/m (40K #106 / #110, WHO #119, PIP #211); no hybrid dress`,
+    ],
+  },
+  m15ubland: {
+    colors: {
+      ...perColor((k) => [layer(k === "c" ? `${UB}/l.png` : `${UB}/l${k}.png`)]),
+      ...pairMasters("land", ["split"], ubPairLayers),
+    },
+    pack: UB_PACK,
+    notes: [
+      "colourless land = the pack's land frame new/ub/l.png; a coloured land its tinted one (new/ub/l<k>.png; gold lm for three colours or more)",
+      UB_TONE_NOTE,
+      `${UB_PAIR_NOTE}. <pair> = the land frame l.png with the split text box and pinline in the two land tints, as 40K #268, PIP #297 and LTR #258 print`,
+      "no plates of its own: a land creature draws the UB spell frame's plates (the profile's plateAssetPathTemplate)",
+    ],
+  },
   m15land: {
     colors: {
       ...perColor((k) => [layer(k === "c" ? `${NEW}/l.png` : `${NEW}/l${k}.png`)]),
@@ -4629,6 +4886,22 @@ export function describeInnerCrown(inner, recipe) {
   return `${strip} at ${inner.box.x},${inner.box.y} ${inner.box.width}×${inner.box.height} px of the 2010×2814 composite (1:1), over the crown`;
 }
 
+/**
+ * The Universes Beyond crown band (TODO 4.25): CC's 'Legend Crowns
+ * (Universes Beyond)' of its accurate group (packUBLegendCrownsNew.js,
+ * `img/frames/m15/ub/crowns/new/<key>.png`) — the standard crown's
+ * geometry, bounds, masks and border cover with the UB pack's smooth art,
+ * so the same recipe at the same rects. No "c": that pack's colourless
+ * crown is the M15 one (it names m15/crowns/new/c.png), and the UB spell
+ * frame's colourless master is the artifact frame, crowned in silver "a".
+ */
+export const UB_CROWN_BAND = Object.freeze({
+  ...CROWN_BAND,
+  source: "img/frames/m15/ub/crowns/new",
+  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "a", "l"]),
+});
+export const UB_CROWN_BAND_KEYS = [...UB_CROWN_BAND.keys, ...TWO_COLOR_PAIRS];
+
 /** CC's 'Legend Crown Border Cover': img/black.png (1×1 black) stretched
  *  over the cover rect, drawn under the crown and over the frame. */
 const CROWN_COVER_SRC = "img/black.png";
@@ -5079,6 +5352,18 @@ export const CC_OVERLAY_BANDS = {
     inner: NYX_INNER_CROWN,
     notes: NYX_CROWN_NOTES,
   },
+  // TODO 4.25: the Universes Beyond crown — the same recipe over the UB
+  // pack's crowns.
+  m15ubcrown: {
+    pack: "'Legend Crowns (Universes Beyond)' (packUBLegendCrownsNew.js, groupAccurate.js — the pack the Universes Beyond masters come from)",
+    band: UB_CROWN_BAND,
+    keys: UB_CROWN_BAND_KEYS,
+    notes: [
+      "the Universes Beyond legendary crown, drawn over the m15ub, m15ubartifact and m15ubland masters (TODO 4.25): m15crown's recipe — the black 'Legend Crown Border Cover', then the crown at the same bounds (the pack's own: 44/2010, 53/2814, 1922x493) — over the UB pack's smooth crowns, composited at 2010x2814, downscaled once, corners cut, rows 0–409 kept",
+      "keys: w u b r g, m (gold), a (the artifact silver — also a colourless card on the spell frame, whose master is the artifact frame) and l (the land grey), then the ten pairs, the first colour's crown lerped into the second's through the untilted 45→55 %W crown ramp as m15crown's are; no c (the pack's 'Colorless Legend Crown' is the M15 pack's file)",
+      "the pack's FLOATING crowns (m15/ub/crowns/floating, packUBLegendCrownsFloating.js) belong to the UB full-art / extended looks and are not imported; the older 'regular' UB crowns (m15/ub/crowns/m15Crown?.png) are a different pack and never mixed in",
+    ],
+  },
   // TODO 5.1d: the double-faced bodies' crowns — our m15crown band cut
   // through CC's DFC crown twins' alpha round the well / housing (`cut`).
   m15dfccrown: {
@@ -5181,35 +5466,35 @@ export function placeOnCanvas(img, box, width, height) {
  * the second's through the crown ramp. Throws for a key the band doesn't
  * build.
  */
-export function crownBandRecipe(key) {
+export function crownBandRecipe(key, band = CROWN_BAND) {
   if (TWO_COLOR_PAIRS.includes(key)) {
     const [a, b] = key.split("");
     return {
       cover: CROWN_COVER_SRC,
-      left: `${CROWN_BAND.source}/${a}.png`,
-      right: `${CROWN_BAND.source}/${b}.png`,
+      left: `${band.source}/${a}.png`,
+      right: `${band.source}/${b}.png`,
       ramp: PAIR_RAMPS.crown,
     };
   }
-  if (!CROWN_BAND.keys.includes(key)) throw new Error(`crownBandRecipe: no crown for key ${key}`);
-  return { cover: CROWN_COVER_SRC, left: `${CROWN_BAND.source}/${key}.png`, right: null, ramp: null };
+  if (!band.keys.includes(key)) throw new Error(`crownBandRecipe: no crown for key ${key}`);
+  return { cover: CROWN_COVER_SRC, left: `${band.source}/${key}.png`, right: null, ramp: null };
 }
 
 const pctBox = (r) => `${r.leftPct}/${r.topPct}/${r.widthPct}×${r.heightPct} %`;
 
 /** How provenance prints a crown band key's recipe. */
-export function describeCrownBand(recipe) {
+export function describeCrownBand(recipe, band = CROWN_BAND) {
   const crown = recipe.right
     ? `${recipe.left} ⟷ ${recipe.right} lerped through ${rampName(recipe.ramp)}`
     : recipe.left;
-  return [`${recipe.cover} over ${pctBox(CROWN_BAND.cover)}`, `${crown} at ${pctBox(CROWN_BAND.crown)}`];
+  return [`${recipe.cover} over ${pctBox(band.cover)}`, `${crown} at ${pctBox(band.crown)}`];
 }
 
 /** Every Card Conjurer file the crown band reads. */
-export function crownBandSourceFiles(keys = CROWN_BAND_KEYS) {
+export function crownBandSourceFiles(keys = CROWN_BAND_KEYS, band = CROWN_BAND) {
   const files = new Set();
   for (const key of keys) {
-    const recipe = crownBandRecipe(key);
+    const recipe = crownBandRecipe(key, band);
     files.add(recipe.cover);
     files.add(recipe.left);
     if (recipe.right) files.add(recipe.right);
@@ -5323,6 +5608,13 @@ const M15PW_BAR_SAMPLE = Object.freeze({ x: 750, rows: [1932, 1935], tolerance: 
  *  colourless grey; a the artifact silver; l the land taupe). */
 const M15_NOTCH_MONO_KEYS = ["w", "u", "b", "r", "g", "m", "a", "l", "c"];
 
+/** The Universes Beyond notch's box on the 1500 × 2100 card (TODO 4.25):
+ *  CC's 637.97, 1891.04 + 222.58 × 102.24 on whole pixels. */
+export const UB_NOTCH_BOX = Object.freeze({ x: 638, y: 1891, width: 223, height: 102 });
+/** The piece row its feet are read at (the bar's rows 1940–1947 at HD). */
+const UB_NOTCH_FOOT_Y = 1944 - UB_NOTCH_BOX.y;
+const UB_NOTCH_MONO_KEYS = ["w", "u", "b", "r", "g", "m", "a", "l"];
+
 /** The notch pieces the importer builds, by bucket folder. `shape` is the
  *  CC piece whose geometry every key takes, at CC's bounds (1:1 at HD);
  *  `arc` its rim colour; `barOf` the master (template/key under the build
@@ -5380,6 +5672,45 @@ export const HOLO_STAMP_NOTCHES = {
       "a = the artifact silver sampled from m15artifact/c (the nearest of CC's three artifact rims is A2, 222,223,224); l = the land taupe from m15land/c; the snow frames' bars are these pixels and the devoid frames' the colourless grey, so their PROFILES entries map onto these keys",
       "the ten two-colour PAIR keys (the 4.9c follow-up, owner round 26, 2026-10-03): the same geometry with the rim tinted PER COLUMN to the pair master's own bar — the pinline layer lerped across the untilted 40→60 %W ramp (scripts/lib/pair-ramp.mjs), which the notch's 654–846 px sit inside — read off m15/<pair>.png at rows 1940–1947 for every column of the piece's bounds (each column flat within 2 levels), so the foot is the bar it stands on at every column of both feet and the arch runs through the ramp as the pinline does; one piece per pair serves m15/<pair>-h (the hybrid dress's grey L bars are its title and type bars; its text-box pinline is the pair's), m15artifact/<pair>, m15land/<pair> and the snow pairs m15snow/<pair> and m15snowland/<pair> (4.6f wave 2c: their WHITE bars are the title and type bars too; the snow pack's pinline is M15's, so the bar under the notch is m15's pair bar byte for byte at every column), whose bars are checked against the sample at every column (the land and snow pairs differ only on the bar's anti-aliased top rows above the sampled ones — row 1938, ≤ 5 levels — like the mono l key on m15land) — the importer refuses a pair whose shared masters drift",
       "the oval region — the slot's oval 45.54/91.72/8.94×3.2 % (683–817 × 1926–1993) plus 2 px — is cut to transparent in CARD coordinates (the piece's hologram, 685–815 × 1930–1993 once placed, sits inside), whatever CC's piece held there (its hologram capture: the planeswalker symbol tiled, WotC's mark), and the black around it is CC's own; our oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut with a 3 px black margin",
+    ],
+  },
+  // TODO 4.25: the Universes Beyond TRIANGLE stamp's notch.
+  m15ubholostamp: {
+    pack: "'Universes Beyond' holo stamps (packUBNew.js '… Holo Stamp', groupAccurate.js)",
+    shape: {
+      src: "img/frames/m15/new/ub/stamp/u.png",
+      nativeSize: { width: 299, height: 137 },
+      size: { width: UB_NOTCH_BOX.width, height: UB_NOTCH_BOX.height },
+      bounds: {
+        leftPct: (UB_NOTCH_BOX.x / 1500) * 100,
+        topPct: (UB_NOTCH_BOX.y / 2100) * 100,
+        widthPct: (UB_NOTCH_BOX.width / 1500) * 100,
+        heightPct: (UB_NOTCH_BOX.height / 2100) * 100,
+      },
+      arc: [0, 117, 190],
+    },
+    keys: [...UB_NOTCH_MONO_KEYS, ...TWO_COLOR_PAIRS],
+    barOf: {
+      w: "m15ub/w",
+      u: "m15ub/u",
+      b: "m15ub/b",
+      r: "m15ub/r",
+      g: "m15ub/g",
+      m: "m15ub/m",
+      a: "m15ubartifact/c",
+      l: "m15ubland/c",
+      ...Object.fromEntries(TWO_COLOR_PAIRS.map((pair) => [pair, `m15ub/${pair}`])),
+    },
+    rampKeys: [...TWO_COLOR_PAIRS],
+    barSharedBy: Object.fromEntries(TWO_COLOR_PAIRS.map((pair) => [pair, [`m15ub/${pair}-h`, `m15ubartifact/${pair}`, `m15ubland/${pair}`]])),
+    barSample: M15_BAR_SAMPLE,
+    triangle: UB_STAMP_HOLE,
+    cutMarginPx: 2,
+    notes: [
+      `the Universes Beyond triangle stamp's notch (TODO 4.25): CC's piece — the text box's bottom pinline stepped up and over the stamp with its bevel — is 299x137 on the pack's 2015-wide card (bounds 857/2015, 2534/2814), so it is resampled ONCE (Lanczos) to ${UB_NOTCH_BOX.width}x${UB_NOTCH_BOX.height} at ${UB_NOTCH_BOX.x},${UB_NOTCH_BOX.y} px of the 1500x2100 card (CC's box is 637.97,1891.04 + 222.58x102.24), the resampling's ringing snapped back onto the flat rim and black (snapResampledPiece), and drawn 1:1 from there`,
+      "ONE geometry for every key, as m15holostamp: CC's U piece (its rim the exact 0,117,190, decomposed into bevel, rim and black), the rim tinted to OUR master's bar sampled at x 750, rows 1940–1947; CC's own per-key pieces carry the same flat rims (w 244,243,236, r 209,77,53, m 233,212,125, a 223,225,225, l 165,152,138 — the accurate pack's pinlines), so the tinted keys reproduce them outside the cut",
+      "keys: w u b r g, m (gold), a (the artifact silver, sampled from m15ubartifact/c — a colourless card on the spell frame too, whose master is that frame) and l (the land taupe, from m15ubland/c); then the ten pairs, the rim tinted PER COLUMN to m15ub/<pair>.png's bar (the pinline's 40→60 %W ramp, which the notch sits inside), the same bar on the hybrid, artifact and land pair masters (checked column by column)",
+      "the triangle — CC's 'Gray Holo Stamp' shape fitted (lib/cards/holo-stamp.ts UB_STAMP_HOLE) plus 2 px — is cut to transparent: every colour piece holds a capture of WotC's hologram there, which is never published; our own triangle bitmap (lib/cards/holo-stamp-art.ts) covers the cut. The pack's gray.png is the fit's reference only and is not read by the build",
     ],
   },
   m15pwholostamp: {
@@ -5499,6 +5830,56 @@ export function buildNotch(shape, piece, tint, oval, cutMarginPx) {
   return out;
 }
 
+/**
+ * Whether a piece pixel's centre lies inside a notch's cut grown by `grow`
+ * px — the slot's oval (a card-percent rect: an ellipse) or a round
+ * triangle in card px (`{ points, radius }`: the Universes Beyond stamp,
+ * TODO 4.25), each grown by the margin first.
+ */
+export function cutInside(shape, cut, marginPx) {
+  const origin = rectPx(shape.bounds, OUT_W, OUT_H);
+  if (cut.points) {
+    return (x, y, grow = 0) => roundTriangleDistance(cut, x + 0.5 + origin.x, y + 0.5 + origin.y) <= marginPx + grow;
+  }
+  const e = cutEllipse(shape, cut, marginPx);
+  return (x, y, grow = 0) => {
+    const dx = (x + 0.5 - e.cx) / (e.rx + grow);
+    const dy = (y + 0.5 - e.cy) / (e.ry + grow);
+    return dx * dx + dy * dy <= 1;
+  };
+}
+
+/** The cut a notch folder declares: its triangle, else its oval. */
+export const notchCutOf = (def) => def.triangle ?? def.oval;
+
+/**
+ * A shape piece that is NOT 1:1 at HD (`shape.nativeSize`: the Universes
+ * Beyond stamp is 299 × 137 on a 2015-wide card) brought to `shape.size`:
+ * the caller resamples it (Lanczos), and this takes the resampling's
+ * ringing back out of the flat regions — an opaque pixel within `slack`
+ * levels of the rim colour becomes the rim colour, one within `slack` of
+ * black becomes black — so the rim decomposes exactly as a native piece's
+ * does. In place.
+ */
+export function snapResampledPiece(shape, piece, slack = 10) {
+  const [ar, ag, ab] = shape.arc;
+  for (let o = 0; o < piece.length; o += 4) {
+    if (piece[o + 3] < 250) continue;
+    if (Math.abs(piece[o] - ar) <= slack && Math.abs(piece[o + 1] - ag) <= slack && Math.abs(piece[o + 2] - ab) <= slack) {
+      piece[o] = ar;
+      piece[o + 1] = ag;
+      piece[o + 2] = ab;
+      piece[o + 3] = 255;
+    } else if (piece[o] <= slack && piece[o + 1] <= slack && piece[o + 2] <= slack) {
+      piece[o] = 0;
+      piece[o + 1] = 0;
+      piece[o + 2] = 0;
+      piece[o + 3] = 255;
+    }
+  }
+  return piece;
+}
+
 /** The cut ellipse of a shape's slot oval, in the piece's pixels. */
 export function cutEllipse(shape, oval, marginPx) {
   const origin = rectPx(shape.bounds, OUT_W, OUT_H);
@@ -5507,15 +5888,14 @@ export function cutEllipse(shape, oval, marginPx) {
   return { cx, cy, rx: ((oval.widthPct / 100) * OUT_W) / 2 + marginPx, ry: ((oval.heightPct / 100) * OUT_H) / 2 + marginPx };
 }
 
-/** Make every pixel whose centre lies inside the cut ellipse transparent. */
+/** Make every pixel whose centre lies inside the cut (the ellipse, or the
+ *  round triangle — cutInside) transparent. */
 export function cutOval(buf, shape, oval, marginPx) {
   const { width, height } = shape.size;
-  const e = cutEllipse(shape, oval, marginPx);
+  const inside = cutInside(shape, oval, marginPx);
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
-      const dx = (x + 0.5 - e.cx) / e.rx;
-      const dy = (y + 0.5 - e.cy) / e.ry;
-      if (dx * dx + dy * dy <= 1) buf.fill(0, (y * width + x) * 4, (y * width + x) * 4 + 4);
+      if (inside(x, y)) buf.fill(0, (y * width + x) * 4, (y * width + x) * 4 + 4);
     }
   }
 }
@@ -5537,12 +5917,7 @@ export function cutOval(buf, shape, oval, marginPx) {
  */
 export function notchFindings(buf, shape, piece, tint, oval, cutMarginPx, foot) {
   const { width, height } = shape.size;
-  const e = cutEllipse(shape, oval, cutMarginPx);
-  const inside = (x, y, grow) => {
-    const dx = (x + 0.5 - e.cx) / (e.rx + grow);
-    const dy = (y + 0.5 - e.cy) / (e.ry + grow);
-    return dx * dx + dy * dy <= 1;
-  };
+  const inside = cutInside(shape, oval, cutMarginPx);
   let cutClear = true;
   let ringBlack = true;
   let alphaKept = true;
@@ -5607,6 +5982,9 @@ export function footRunsSolid(shape, piece, foot) {
  *  ramp on its own side. */
 export const NOTCH_FOOT = Object.freeze({
   m15holostamp: Object.freeze({ y: 44, runs: Object.freeze([Object.freeze([4, 12]), Object.freeze([180, 188])]) }),
+  // The Universes Beyond notch (TODO 4.25): both feet of the resampled
+  // piece, 638 + 2…10 and 638 + 212…220 at HD.
+  m15ubholostamp: Object.freeze({ y: UB_NOTCH_FOOT_Y, runs: Object.freeze([Object.freeze([2, 10]), Object.freeze([212, 220])]) }),
   m15pwholostamp: Object.freeze({ y: 36, runs: Object.freeze([Object.freeze([2, 12]), Object.freeze([170, 181])]) }),
 });
 
@@ -5636,6 +6014,8 @@ export function describeNotch(def, key, tint) {
   return [
     `${def.shape.src} (the arch's geometry: bevel, rim and black) at ${def.shape.bounds.leftPct}/${def.shape.bounds.topPct}/${def.shape.bounds.widthPct}×${def.shape.bounds.heightPct} %`,
     rim,
-    `the oval ${def.oval.leftPct}/${def.oval.topPct.toFixed(2)}/${def.oval.widthPct}×${def.oval.heightPct} % plus ${def.cutMarginPx} px cut to transparent`,
+    def.triangle
+      ? `the triangle ${def.triangle.points.map((p) => p.join(",")).join(" / ")} px, corner radius ${def.triangle.radius}, plus ${def.cutMarginPx} px cut to transparent`
+      : `the oval ${def.oval.leftPct}/${def.oval.topPct.toFixed(2)}/${def.oval.widthPct}×${def.oval.heightPct} % plus ${def.cutMarginPx} px cut to transparent`,
   ];
 }

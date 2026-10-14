@@ -138,6 +138,9 @@ const PICKS: readonly Pick[] = [
   },
   { from: "m15station/r/artifact-short@foil", why: "station: the foil sheen over the box, the bands and the drawn pieces — ink above it" },
   { from: "m15stationland/g/land-short", why: "station: a Planet — the land master, one tier, no plate" },
+  // --- the Universes Beyond frames (TODO 4.25): the triangle stamp ----------
+  { from: "m15ub/wu/creature-long@stamp-pair-crown", why: "Universes Beyond: the triangle stamp's notch and art (a new shape in both renderers), the pair master and the split crown band" },
+  { from: "m15ub/g/creature-short@wide", why: "Universes Beyond: the pack's own plate under 12/12" },
   // --- art away from its default position (a coded picture) ----------------
   {
     from: "m15/r/creature-short",

@@ -39,6 +39,7 @@ export const REVISABLE_FIELDS = [
   "loyalty_abilities",
   "saga_intro",
   "saga_chapters",
+  "station_pt_tier",
   "flavor_text",
   "power",
   "toughness",

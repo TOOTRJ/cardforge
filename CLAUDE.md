@@ -843,15 +843,72 @@ Rules and gotchas:
   name another; never the top band, never without a printed P/T) — these
   profiles have NO `pt` slot and no text-alignment switch. ONE layout,
   `cardStation()` (`lib/cards/station-layout.ts`): one size for the box,
-  bands from the text (20 px of air, floors 168 / 180 — fitted on 30
-  prints), lines by the rules layout, the plate a float; both renderers
-  only draw it. Bands, badge discs and the plate are our own inline SVGs
+  the bands by PRINT'S RULE (`stationBands`, layout v54 — PR 2): the SAME
+  air above and below every band's text, a tier never under its floor
+  (168 / 180 px), 22 px more under a STAMPED last tier, whose text sits
+  above the arch — the holofoil stamp's keep-out is part of the fit, never
+  measure a band without it; lines by the rules layout, the plate a float;
+  both renderers only draw it. The box is the box: before any text clips
+  the bands give up their floor (never print's 14 px of air), then the
+  badge and the plate are drawn smaller, and past the smallest size the
+  bands share the box by their text — never a band over the type bar
+  (`rules-no-clip.test.tsx` holds every band). Bands, badge discs and the
+  plate are our own inline SVGs
   (`lib/cards/station-art.ts`: the same `data:` URL in preview, bake and
-  finish masks) drawn right after the frame, UNDER both finishes; numerals
-  and digits go through the stat fit. Every piece's box is EVEN in HD px
-  (whole px at 750) — never a half-px band edge, never `opacity` /
-  blend modes on the washes. Additions: no bump, no sweep.
+  finish masks; the ring and rim in the PRINTED ring's tone) drawn right
+  after the frame, UNDER both finishes; numerals and digits go through the
+  stat fit. Every piece's box is EVEN in HD px (whole px at 750) — never a
+  half-px band edge, never `opacity` / blend modes on the washes. A
+  correction of the look is a bump scoped to the pair
+  (`STATION_BANDS_LAYOUT_VERSION`). In the creator the TIER EDITOR
+  (`panels/station-editor.tsx`, on any frame with `tiers`:
+  `isStationFrame`) is a VIEW of the ONE `rules_text` — the top band and
+  0–3 tier rows read from the text, every change written back into it
+  (`lib/creator/station-rows.ts`); never a second copy of the tiers in the
+  form. The one thing the text cannot always say, the P/T on another tier,
+  is `station_pt_tier` (null = as the text says). A save
+  (`submittedRulesOf`, `stationFrame`): UNTOUCHED = the stored text byte
+  for byte and `face_content` not sent (a plain-text card is given no rows
+  by a retitle); EDITED / new / remix = the rows the text holds with the
+  plate on the maker's tier, beside the canonical text — an edit never
+  drops the rows (PR 1 did: one word typed moved the plate); a fourth tier
+  line stays in the third tier's text and is named, a tier with no text or
+  numbers that do not rise are asked for first. The server's typography
+  pass reads the top band and each tier as boxes of their own. A card with
+  a P/T and NO tier prints none: `frontDrawsPowerToughness(template,
+  text)` (the note under the inputs, the card page). A NEW artifact /
+  land follows its subtype onto the frame where it is verified
+  (`SUBTYPE_DRESS_WORDS`, `subtypeFrameFor`: a card on a dress its
+  subtypes still say keeps it); "Standard" is the way back.
   `docs/FRAMES.md` "The Station frame".
+- The Universes Beyond frames (`m15ub`, `m15ubartifact`, `m15ubland`; TODO
+  4.25): STORED templates of their own (owner 2026-10-13), skins of m15 /
+  m15artifact / m15land under Variations — never a render-time pick, never
+  a new card's default, never an era standard. Card Conjurer's accurate
+  'Universes Beyond' pack (the M15 pack's geometry and masks, smooth
+  streaked art), so each profile is its M15 twin's slots with the pack's
+  masters, pair masters and plates, the Universes Beyond crown band
+  (`UB_CROWN`, `m15ubcrown/*`: no `c` key) and the TRIANGLE stamp's notch
+  (`M15UB_HOLO_STAMP`, `m15ubholostamp/*`: CC's piece resampled once, the
+  triangle cut clear, our own triangle art from `holoStampArtOf`). The
+  pack's colourless frame is missing from Card Conjurer's tree: `m15ub/c`
+  is its ARTIFACT frame, has no reference printing (print's colourless
+  card is see-through) and stays unverified until the owner decides. Three
+  of the pack's tones are TONED onto print before the first tick (owner
+  Round 57): the green bars, the gold bars and gold box, the land-grey
+  bars and box — `UB_PRINT_TONES`, applied to the pack FILE as the importer
+  loads it (`CC_SOURCE_TONES`: g / lg, m / lm, l), so every master drawn
+  from one follows; never tone one master of a family by itself, and once
+  a colour is ticked a tone change is a correction (bump + sweep).
+  `frame_style.stamp` keeps its meaning on them — "auto" is a rare or
+  mythic although print stamps every rarity there; every "on" value draws
+  the frame's own shape. An ADDITION: no bump, no sweep, no badge; an
+  import names one only once verified in the colour (`ub/2015`:
+  `security_stamp: triangle`, released 2021-11-01 or later, a plain
+  black-bordered spell, artifact or land — never a Vehicle, a layout, a
+  colourless non-artifact spell or the etched run, which keep their frame
+  with the `universes-beyond` gap). `docs/FRAMES.md` "The Universes Beyond
+  frames".
 - The 1997 frame (`retro`, `retroland`; TODO 4.10a, layout v46) is the
   ORIGINAL cards of 1996–2003, never the 2006 timeshifted redrawing or the
   2021+ reprints (imports of those are `nearest`: the `timeshifted-frame`

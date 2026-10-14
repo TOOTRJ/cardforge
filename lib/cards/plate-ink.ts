@@ -32,6 +32,11 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   "/frames/m15vehicle/pt/{color}.png": { left: 0.0761, top: 0.0526, right: 0.9922, bottom: 0.8613 },
   // The Nyx dress (TODO 4.7) prints M15's own plates: m15's seven images.
   "/frames/m15nyx/pt/{color}.png": { left: 0.0742, top: 0.0436, right: 0.9974, bottom: 0.8641 },
+  // The Universes Beyond plates (TODO 4.25): Card Conjurer's smooth
+  // `m15/ub/pt` set (282 × 154), drawn at M15's plate box — the same body
+  // within a pixel of M15's at HD.
+  "/frames/m15ub/pt/{color}.png": { left: 0.0744, top: 0.0454, right: 0.9965, bottom: 0.8637 },
+  "/frames/m15ubartifact/pt/{color}.png": { left: 0.0744, top: 0.0454, right: 0.9965, bottom: 0.8637 },
   "/frames/m15snow/pt/{color}.png": { left: 0.0742, top: 0.0436, right: 0.9974, bottom: 0.8641 },
   "/frames/m15devoid/pt/{color}.png": { left: 0.0742, top: 0.0436, right: 0.9974, bottom: 0.8641 },
   // The transform backs' dark plates (TODO 5.1a; CC's transform pt<K>.png,

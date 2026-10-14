@@ -240,7 +240,8 @@ on conflict (id) do nothing;
 --     4.5c's, on the Vehicle frame (and one Vehicle left on the artifact
 --     frame); …080–…082 4.27a's, on the station frame; …090–…094 4.7's,
 --     on the Nyx dress (and one Enchantment Creature left on the plain
---     M15 frame) — …083–…089 are free.
+--     M15 frame) — …083–…089 are free; …110–…114 4.25's, on the
+--     Universes Beyond frames.
 -- ---------------------------------------------------------------------------
 
 insert into public.cards (
@@ -525,6 +526,32 @@ When Veil of Falling Stars enters, scry 2.', null, null, 7,
   ('c0000000-0000-4000-a000-000000000094'::uuid, 'Emberglow Eidolon', 'emberglow-eidolon', '{1}{R}', array['red'], 'Enchantment', 'creature', array['Spirit'], 'common',
      E'Whenever a player casts a spell with mana value 3 or less, Emberglow Eidolon deals 1 damage to that player.', '2', '1', 5,
      '{"template":"m15","finish":"regular"}'::jsonb, 4),
+  -- TODO 4.25: the Universes Beyond frames (m15ub, m15ubartifact,
+  -- m15ubland) — the smooth streaked dress on M15's slots. Ids …110–…114: a
+  -- common red spell with the triangle stamp set to "Always" (print stamps
+  -- every rarity), a legendary two-colour creature with the crown, the
+  -- split pair, the stamp and the collector line, a hybrid one, a
+  -- colourless artifact and a two-colour land. The frames are UNVERIFIED on
+  -- a preview branch: the cards draw (a stored card keeps its frame), the
+  -- pickers offer the frames to an admin through ?previewFrames= only.
+  ('c0000000-0000-4000-a000-000000000110'::uuid, 'Cinder Volley', 'cinder-volley', '{1}{R}', array['red'], null, 'instant', array[]::text[], 'common',
+     E'Cinder Volley deals 3 damage to target creature or planeswalker.', null, null, 3,
+     '{"template":"m15ub","finish":"regular","stamp":"triangle","collector":"2023"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000111'::uuid, 'Vael, Lantern of Two Courts', 'vael-lantern-of-two-courts', '{2}{W}{U}', array['white','blue'], 'Legendary', 'creature', array['Human','Advisor'], 'mythic',
+     E'Flying, vigilance
+Whenever you cast your second spell each turn, draw a card.', '3', '4', 9,
+     '{"template":"m15ub","finish":"regular","crown":true,"twoColor":true,"stamp":"auto","collector":"2023"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000112'::uuid, 'Briarhowl Stalker', 'briarhowl-stalker', '{R/G}{R/G}', array['red','green'], null, 'creature', array['Wolf'], 'uncommon',
+     E'Trample
+Briarhowl Stalker gets +1/+1 as long as you control another Wolf.', '3', '2', 12,
+     '{"template":"m15ub","finish":"regular","twoColor":true,"stamp":"auto","collector":"2023"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000113'::uuid, 'Resonance Engine', 'resonance-engine', '{3}', array['colorless'], null, 'artifact', array[]::text[], 'rare',
+     E'{T}: Add {C}{C}. Spend this mana only to cast artifact spells or activate abilities of artifacts.', null, null, 7,
+     '{"template":"m15ubartifact","finish":"regular","stamp":"auto","collector":"2023"}'::jsonb, 1),
+  ('c0000000-0000-4000-a000-000000000114'::uuid, 'Gloamwater Crossing', 'gloamwater-crossing', null, array['blue','black'], null, 'land', array[]::text[], 'rare',
+     E'Gloamwater Crossing enters tapped unless you control two or more other lands.
+{T}: Add {U} or {B}.', null, null, 18,
+     '{"template":"m15ubland","finish":"regular","twoColor":true,"stamp":"auto","collector":"2023"}'::jsonb, 1),
   -- The Nyx Constellation frame's legendary crown (template `nyx`; owner
   -- 2026-10-13) — the Theros Beyond Death showcase prints wear the 2015
   -- crown in their colour with the starfield strip inside it. Ids …115 /

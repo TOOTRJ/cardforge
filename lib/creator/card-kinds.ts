@@ -532,6 +532,15 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   // says Spacecraft, a land whose subtype says Planet (SUBTYPE_DRESSES).
   m15station: ["artifact"],
   m15stationland: ["land"],
+  // The Universes Beyond frames (TODO 4.25) are new — no legacy card sits
+  // on them — and are skins of the M15 standard, the artifact frame and the
+  // land frame, as the borderless three are: the spell frame for the kinds
+  // m15 dresses, the artifact one for an artifact (an Artifact Creature
+  // borrows it, 1.7), the land one for lands. Print restricts nothing more:
+  // any card of the kind may wear the look.
+  m15ub: ["creature", "instant", "sorcery", "enchantment"],
+  m15ubartifact: ["artifact", "creature"],
+  m15ubland: ["land"],
 };
 
 /** Kinds that wear ONLY a template whose trade dress names them. */
@@ -617,13 +626,27 @@ export function isSingleBasicLand(face: BasicLandFace): boolean {
 // (EOE 2025's station layout, TODO 4.27) and are not Vehicles.
 // ---------------------------------------------------------------------------
 
-const SUBTYPE_DRESSES: Partial<Record<FrameTemplate, { subtype: string; base: FrameTemplate }>> = {
-  m15vehicle: { subtype: "Vehicle", base: "m15artifact" },
+const SUBTYPE_DRESSES: Partial<Record<FrameTemplate, { subtype: string; plural: string; base: FrameTemplate; look: string }>> = {
+  m15vehicle: { subtype: "Vehicle", plural: "Vehicles", base: "m15artifact", look: "bronze, with white numbers on a brown plate" },
   // The station frame (TODO 4.27a; owner 2026-10-13, Q1): a Spacecraft is an
-  // artifact, a Planet a land — the Vehicle's pattern, twice.
-  m15station: { subtype: "Spacecraft", base: "m15artifact" },
-  m15stationland: { subtype: "Planet", base: "m15land" },
+  // artifact, a Planet a land — the Vehicle's pattern, twice. ("Spacecraft"
+  // is its own plural.)
+  m15station: { subtype: "Spacecraft", plural: "Spacecraft", base: "m15artifact", look: "the picture under the whole frame, tiers in the text box" },
+  m15stationland: { subtype: "Planet", plural: "Planets", base: "m15land", look: "the picture under the whole frame, tiers in the text box" },
 };
+
+/** What a subtype dress's chip says of the frame once the card may wear it
+ *  ("The printed Vehicle frame: bronze, …") — each dress its OWN look: the
+ *  station pair is not bronze and a Planet has no plate (the independent
+ *  check of #549 read the Vehicle's words on all three chips). */
+export function subtypeDressHint(template: FrameTemplate): string | null {
+  const dress = SUBTYPE_DRESSES[template];
+  return dress ? `The printed ${dress.subtype} frame: ${dress.look}` : null;
+}
+
+/** Every subtype word a dress follows ("Vehicle", "Spacecraft", "Planet") —
+ *  what the creator's follow effect watches come and go. */
+export const SUBTYPE_DRESS_WORDS: readonly string[] = [...new Set(Object.values(SUBTYPE_DRESSES).map((dress) => dress.subtype))];
 
 /** The subtype a template dresses ("Vehicle" for the Vehicle frame), or
  *  null for a frame any card of its kind may wear. */
@@ -651,8 +674,8 @@ export function subtypeFrameFits(
 
 /** Why a subtype dress's chip is disabled on any other card. */
 export function subtypeDressReason(template: FrameTemplate): string | null {
-  const word = subtypeDressOf(template);
-  return word === null ? null : `The ${FRAME_TEMPLATE_LABELS[template]} frame is for ${word}s`;
+  const dress = SUBTYPE_DRESSES[template];
+  return dress ? `The ${FRAME_TEMPLATE_LABELS[template]} frame is for ${dress.plural}` : null;
 }
 
 /**
@@ -669,6 +692,13 @@ export function subtypeDressReason(template: FrameTemplate): string | null {
  * unpublished station frame, which the creator's follow effect then
  * dropped: the card stayed on the Vehicle frame the server refuses, where
  * it used to go back to the Artifact frame. The base is never tested.
+ *
+ * Two dresses of one base (m15artifact: the Vehicle frame and the station
+ * frame): a card already ON a dress its subtypes still say keeps it — an
+ * artifact that is both a Vehicle and a Spacecraft is never flipped between
+ * the two by a word typed elsewhere; from the base, the first dress in the
+ * table whose word is said (the Vehicle frame), the other one a Variations
+ * pick.
  */
 export function subtypeFrameFor(
   template: FrameTemplate,
@@ -682,6 +712,8 @@ export function subtypeFrameFor(
     ([, dress]) => dress.base === base,
   );
   if (family.length === 0) return template;
+  const worn = SUBTYPE_DRESSES[template];
+  if (worn && subtypesSay(subtypes, worn.subtype) && (available?.(template) ?? true)) return template;
   return family.find(([dress, { subtype }]) => subtypesSay(subtypes, subtype) && (available?.(dress) ?? true))?.[0] ?? base;
 }
 
@@ -814,7 +846,8 @@ const BORROWED_VARIATIONS: Partial<
   // …and the Nyx dress (TODO 4.7, owner decision A4): an Enchantment
   // Creature's frame, borrowed like the artifact frame — and an Enchantment
   // Artifact's, under the artifact standard.
-  creature: { m15: ["m15artifact", "m15borderlessartifact", "m15nyx"] },
+  // …and the Universes Beyond artifact frame (4.25), the last.
+  creature: { m15: ["m15artifact", "m15borderlessartifact", "m15nyx", "m15ubartifact"] },
   artifact: { m15artifact: ["m15nyx"] },
 };
 
@@ -844,6 +877,7 @@ export type BorrowedTypeWord = "Artifact" | "Enchantment";
 const BORROWED_TYPE_WORD: Partial<Record<FrameTemplate, BorrowedTypeWord>> = {
   m15artifact: "Artifact",
   m15borderlessartifact: "Artifact",
+  m15ubartifact: "Artifact",
   nyx: "Enchantment",
   m15nyx: "Enchantment",
 };

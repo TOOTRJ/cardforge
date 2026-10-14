@@ -87,7 +87,7 @@ describe("the subtype dress", () => {
     expect(FRAME_TEMPLATE_VALUES.filter(isSubtypeDress)).toEqual(["m15vehicle", "m15station", "m15stationland"]);
     expect(subtypeDressOf("m15vehicle")).toBe("Vehicle");
     expect(subtypeDressOf("m15artifact")).toBeNull();
-    expect(TEMPLATE_SKIN_VARIANTS.m15artifact).toEqual(["m15borderlessartifact", "m15vehicle", "m15station"]);
+    expect(TEMPLATE_SKIN_VARIANTS.m15artifact).toEqual(["m15borderlessartifact", "m15vehicle", "m15station", "m15ubartifact"]);
     expect(subtypeDressReason("m15vehicle")).toBe("The Vehicle frame is for Vehicles");
     expect(subtypeDressReason("m15")).toBeNull();
   });

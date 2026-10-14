@@ -360,6 +360,327 @@
       ]
     }
   },
+  "m15ub": {
+    "note": "The Universes Beyond spell frame (TODO 4.25): plain black-bordered, non-legendary printings with the triangle stamp, 40K 2022 → Final Fantasy 2025 — the smooth streaked frame. m: three colours or more (a two-colour card prints the split box and pinline over gold bars: the pair masters ride this tick). c is null: the frame's colourless master is the pack's ARTIFACT frame (Card Conjurer's own colourless file is missing), and the three colourless non-artifact cards in print (ACR #1, FIN #2, WHO #9) wear a see-through frame instead.",
+    "colors": {
+      "w": [
+        {
+          "name": "And They Shall Know No Fear",
+          "set": "40k",
+          "scryfallId": "84d1bcef-907c-4c3a-8b52-6e633fa19667"
+        },
+        {
+          "name": "Banish from Edoras",
+          "set": "ltr",
+          "scryfallId": "a4410076-e1fe-45f3-a0ca-a91ab0133ff4"
+        },
+        {
+          "name": "Champions of Minas Tirith",
+          "set": "ltc",
+          "scryfallId": "34301efe-7085-476b-90e6-7ecd778b2970"
+        }
+      ],
+      "u": [
+        {
+          "name": "Genestealer Locus",
+          "set": "40k",
+          "scryfallId": "4cdc3172-6df0-48a8-85d6-c4b727202f83"
+        },
+        {
+          "name": "Bewitching Leechcraft",
+          "set": "ltr",
+          "scryfallId": "b612452e-b8a8-4a5a-82a8-01fd463cfc77"
+        },
+        {
+          "name": "Archivist of Gondor",
+          "set": "ltc",
+          "scryfallId": "ec691418-1075-477f-b0df-f0d064588baf"
+        }
+      ],
+      "b": [
+        {
+          "name": "Arco-Flagellant",
+          "set": "40k",
+          "scryfallId": "0894d21c-d44c-4c7c-8693-f32dde67b336"
+        },
+        {
+          "name": "Bitter Downfall",
+          "set": "ltr",
+          "scryfallId": "e4b83aa1-33ce-4b8d-ae5a-72f64eef5f09"
+        },
+        {
+          "name": "Rapacious Guest",
+          "set": "ltc",
+          "scryfallId": "ff9dfba4-07d2-4407-a441-88acc7284d43"
+        }
+      ],
+      "r": [
+        {
+          "name": "Acolyte Hybrid",
+          "set": "40k",
+          "scryfallId": "b229697e-b6ff-450b-8020-45c454da9b3e"
+        },
+        {
+          "name": "Battle-Scarred Goblin",
+          "set": "ltr",
+          "scryfallId": "b91859de-1983-4c9c-a9e6-289c7dba1eb4"
+        },
+        {
+          "name": "Call for Aid",
+          "set": "ltc",
+          "scryfallId": "7072b75a-64ab-4894-943e-fc0b779ca60e"
+        }
+      ],
+      "g": [
+        {
+          "name": "Aberrant",
+          "set": "40k",
+          "scryfallId": "49dfee68-c242-4579-94b1-c23238f8c87d"
+        },
+        {
+          "name": "Bag End Porter",
+          "set": "ltr",
+          "scryfallId": "b7557170-39a2-49df-823e-958c3eb34801"
+        },
+        {
+          "name": "Assemble the Entmoot",
+          "set": "ltc",
+          "scryfallId": "409c226b-ef01-4ccd-b23e-d94bdc1e4aa5"
+        }
+      ],
+      "c": null,
+      "m": [
+        {
+          "name": "Deny the Witch",
+          "set": "40k",
+          "scryfallId": "d3e5b091-2aa7-4aca-9855-bb802d3d563e"
+        },
+        {
+          "name": "Fervent Charge",
+          "set": "pip",
+          "scryfallId": "dd2a0286-a16d-4e48-a295-da8232ddc9c7"
+        }
+      ]
+    }
+  },
+  "m15ubartifact": {
+    "note": "The Universes Beyond artifact frame (TODO 4.25): plain black-bordered, non-legendary, non-Vehicle artifacts with the triangle stamp. Coloured artifacts verify the silver frame under the colour's bars, box and pinline; m: two colours or more.",
+    "colors": {
+      "w": [
+        {
+          "name": "Dúnedain Blade",
+          "set": "ltr",
+          "scryfallId": "3d5f92bf-e4e7-487a-834c-964fdd6ad674"
+        },
+        {
+          "name": "Field-Tested Frying Pan",
+          "set": "ltc",
+          "scryfallId": "1d770a59-1c54-407e-9c58-8d8b6f44c90a"
+        },
+        {
+          "name": "Wedding Ring",
+          "set": "who",
+          "scryfallId": "6d8fd9a7-d1bd-43bd-a136-49dc26621e4d"
+        }
+      ],
+      "u": [
+        {
+          "name": "Sicarian Infiltrator",
+          "set": "40k",
+          "scryfallId": "cc0aa0eb-dc26-49d8-bbff-74fb3d597a72"
+        },
+        {
+          "name": "Auton Soldier",
+          "set": "who",
+          "scryfallId": "4cc35b82-a233-4460-968e-d90980fb2074"
+        },
+        {
+          "name": "Robobrain War Mind",
+          "set": "pip",
+          "scryfallId": "19c0791d-f0c5-4673-a0c5-40540c1e6d8c"
+        }
+      ],
+      "b": [
+        {
+          "name": "Chronomancer",
+          "set": "40k",
+          "scryfallId": "a960acea-3404-4834-9296-d6715add49af"
+        },
+        {
+          "name": "Mordor Trebuchet",
+          "set": "ltr",
+          "scryfallId": "648bc8ae-1798-4c2f-a372-0487a90ba4d3"
+        },
+        {
+          "name": "Dalek Drone",
+          "set": "who",
+          "scryfallId": "ba77763c-b50c-4787-b352-68af16e4c741"
+        }
+      ],
+      "r": [
+        {
+          "name": "Knight Rampager",
+          "set": "40k",
+          "scryfallId": "6105271d-76ae-4df0-bc95-fcccc229fc21"
+        },
+        {
+          "name": "Gimli's Axe",
+          "set": "ltr",
+          "scryfallId": "d8999b6c-e501-48d0-ae51-a35b96f996ec"
+        },
+        {
+          "name": "Cursed Mirror",
+          "set": "who",
+          "scryfallId": "efb9aadf-a50e-4542-82e8-6d8cbc2ea350"
+        }
+      ],
+      "g": [
+        {
+          "name": "Bone Sabres",
+          "set": "40k",
+          "scryfallId": "73d9374d-72b8-4397-9c46-be9216fab911"
+        },
+        {
+          "name": "Galadhrim Bow",
+          "set": "ltr",
+          "scryfallId": "9df34f21-798f-440d-8b09-ec5b5c0b8c12"
+        },
+        {
+          "name": "Power Fist",
+          "set": "pip",
+          "scryfallId": "9e8f7fbc-bf2a-43c1-a88d-807c1e7dab69"
+        }
+      ],
+      "c": [
+        {
+          "name": "Canoptek Scarab Swarm",
+          "set": "40k",
+          "scryfallId": "3ce2021c-1422-4901-a554-2d4fab72c8e4"
+        },
+        {
+          "name": "Barrow-Blade",
+          "set": "ltr",
+          "scryfallId": "f0eb7284-78a5-4b5e-8f6d-6be540e0bef8"
+        },
+        {
+          "name": "Hithlain Rope",
+          "set": "ltc",
+          "scryfallId": "bbe6e907-eafb-402c-8b8f-4c01fb168a0b"
+        }
+      ],
+      "m": [
+        {
+          "name": "Chaos Defiler",
+          "set": "40k",
+          "scryfallId": "1c0f2873-5849-4cab-855a-2fbbc41dbb6c"
+        },
+        {
+          "name": "Weeping Angel",
+          "set": "who",
+          "scryfallId": "e0fd7b66-28f1-407b-bd60-6bcc577288cb"
+        },
+        {
+          "name": "Behemoth Sledge",
+          "set": "pip",
+          "scryfallId": "0053d366-fc35-443b-a8dd-4ab0c3362c81"
+        }
+      ]
+    }
+  },
+  "m15ubland": {
+    "note": "The Universes Beyond land frame (TODO 4.25): plain black-bordered, non-legendary nonbasic lands with the triangle stamp. w/u/b/r/g: a land that makes one colour (the tinted box; basics, as on m15land); c: a land that makes none; m: a land that makes three colours or more (two-colour lands blend two tints: the pair masters).",
+    "colors": {
+      "w": [
+        {
+          "name": "Memorial to Glory",
+          "set": "40k",
+          "scryfallId": "409560cb-ecf1-4df2-91b2-75464dc1fe7d"
+        },
+        {
+          "name": "Plains",
+          "set": "ltr",
+          "scryfallId": "f724ae86-b968-4f49-8267-c2c34c22f1b6"
+        }
+      ],
+      "u": [
+        {
+          "name": "Island",
+          "set": "40k",
+          "scryfallId": "bcddeb71-3109-4a08-852f-b437c0a0c4ab"
+        }
+      ],
+      "b": [
+        {
+          "name": "Tomb Fortress",
+          "set": "40k",
+          "scryfallId": "5ffd1a43-5613-4058-9e51-fd3cc1585651"
+        },
+        {
+          "name": "Swamp",
+          "set": "ltr",
+          "scryfallId": "2a0fba6e-54d2-498c-83bc-41024307e608"
+        },
+        {
+          "name": "Mortuary Mire",
+          "set": "pip",
+          "scryfallId": "31b7472f-48f5-4ab5-8896-3eee29d13d59"
+        }
+      ],
+      "r": [
+        {
+          "name": "Forgotten Cave",
+          "set": "40k",
+          "scryfallId": "02c07a1b-1669-42f3-930a-8a4957e6a97b"
+        },
+        {
+          "name": "Mountain",
+          "set": "ltr",
+          "scryfallId": "e3731001-4e6a-4a91-9e7d-fc2ea039a60b"
+        }
+      ],
+      "g": [
+        {
+          "name": "Forest",
+          "set": "40k",
+          "scryfallId": "d1d15705-981c-44db-9070-592dbeace299"
+        }
+      ],
+      "c": [
+        {
+          "name": "Ash Barrens",
+          "set": "40k",
+          "scryfallId": "2816a820-bde0-404a-ba2c-86fbe461e01b"
+        },
+        {
+          "name": "Shire Terrace",
+          "set": "ltr",
+          "scryfallId": "25932483-58cd-4ae5-82bf-ab455177d117"
+        },
+        {
+          "name": "Ominous Cemetery",
+          "set": "who",
+          "scryfallId": "2e843c57-fae3-4127-94e7-cad8c8bb9486"
+        }
+      ],
+      "m": [
+        {
+          "name": "Arcane Sanctum",
+          "set": "40k",
+          "scryfallId": "fa675944-8400-4468-bacc-a0d63c767e01"
+        },
+        {
+          "name": "Great Hall of the Citadel",
+          "set": "ltr",
+          "scryfallId": "219c7b57-b62b-42d1-85d9-4b57624a3f54"
+        },
+        {
+          "name": "Command Tower",
+          "set": "who",
+          "scryfallId": "811d6e5d-c8a3-41ae-910e-e0f194f42292"
+        }
+      ]
+    }
+  },
   "m15nyx": {
     "note": "The Nyx dress (TODO 4.7): plain black-bordered, non-legendary printings that wear the starfield on the 2015 frame — an enchantment creature first (Theros Beyond Death 2020, with its P/T plate), then a plain enchantment from Foundations 2024 on, then another creature. c: the one colourless print on the silver starfield (SOC #131; CLB #1 Faceless One prints a tan frame of its own). m: gold — five colours, three colours, and a two-colour card, which prints the split box and pinline over the gold starfield (the pair masters ride this tick).",
     "colors": {

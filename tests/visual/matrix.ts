@@ -658,6 +658,12 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // land grey on a colourless card, the colour's, gold).
   ["m15station", ["c", "g", "wub"]],
   ["m15stationland", ["c", "g"]],
+  // TODO 4.25: the Universes Beyond crown band — a colour, the artifact
+  // silver (a colourless card on the spell frame too), a pair, gold and
+  // the land grey.
+  ["m15ub", ["w", "c", "wu", "wub"]],
+  ["m15ubartifact", ["c", "u"]],
+  ["m15ubland", ["g", "c"]],
   ["m15land", ["g", "c", "wub"]],
   // TODO 4.6f (wave 2a): the borderless FLOATING crown, baked into the
   // crowned twins (`<key>-legendary`, FrameProfile.crownMasters) — every
@@ -1235,6 +1241,8 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   ["m15nyx", "creature", "w", "@nyx-wide", { supertype: "Enchantment", subtypes: ["Griffin"], power: "12", toughness: "12" }],
   ["m15nyx", "enchantment", "u", "@nyx-artifact", { supertype: "Legendary Artifact", subtypes: [] }],
   ["m15nyx", "artifact", "c", "@nyx-silver", { supertype: "Enchantment", subtypes: ["Equipment"] }],
+  // TODO 4.25: the Universes Beyond plate at its widest.
+  ["m15ub", "creature", "g", "@wide", { power: "12", toughness: "12" }],
   [
     "m15artifact",
     "artifact",
@@ -1628,6 +1636,20 @@ export function visualCases(): VisualCase[] {
   add("m15", "creature", "wu", "long", { suffix: "@stamp-pair-crown", row: stampRow("m15", "auto", { rarity: "mythic", frame_style: { crown: true, twoColor: true } as CardRowForBake["frame_style"] }) });
   add("m15", "creature", "wu", "long", { suffix: "@stamp-pair-hd", preset: "hd", row: stampRow("m15", "auto", { rarity: "rare", frame_style: { twoColor: true } as CardRowForBake["frame_style"] }) });
   add("m15", "creature", "wu", "short", { suffix: "@stamp-pair-foil", finish: "foil", row: stampRow("m15", "auto", { rarity: "rare", frame_style: { finish: "foil", twoColor: true } as CardRowForBake["frame_style"] }) });
+  // TODO 4.25: the Universes Beyond TRIANGLE (new templates, no stored
+  // card: new cases, no bump) beyond the loops above — "Always" on a common
+  // (print stamps every rarity there), the hybrid dress under the pair
+  // notch, a crowned pair, a full box whose last line reaches the raised
+  // pinline, the stored bake's size, a foil and the squared print.
+  add("m15ub", "creature", "r", "short", { suffix: "@stamp-always", row: stampRow("m15ub", "triangle", { rarity: "common" }) });
+  add("m15ub", "creature", "wu", "short", { suffix: "@stamp-pair-hybrid", row: stampRow("m15ub", "auto", { rarity: "rare", cost: "{W/U}{W/U}", frame_style: { twoColor: true } as CardRowForBake["frame_style"] }) });
+  add("m15ub", "creature", "wu", "long", { suffix: "@stamp-pair-crown", row: stampRow("m15ub", "auto", { rarity: "mythic", frame_style: { crown: true, twoColor: true } as CardRowForBake["frame_style"] }) });
+  add("m15ub", "creature", "b", "long", { suffix: "@stamp-arch", row: stampRow("m15ub", "auto", { rarity: "rare", rules_text: STAMP_ARCH_RULES, flavor_text: null }) });
+  add("m15ub", "creature", "g", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("m15ub", "auto", { rarity: "mythic" }) });
+  add("m15ub", "creature", "c", "short", { suffix: "@stamp-c", row: stampRow("m15ub", "auto", { rarity: "rare" }) });
+  add("m15ub", "creature", "w", "short", { suffix: "@stamp-foil", finish: "foil", row: stampRow("m15ub", "auto", { rarity: "rare", frame_style: { finish: "foil" } as CardRowForBake["frame_style"] }) });
+  add("m15ubland", "land", "u", "short", { suffix: "@stamp-square", corners: "square", row: stampRow("m15ubland", "auto", { rarity: "rare" }) });
+  add("m15ub", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15ub"), cost: "{W/U}{W/U}" } });
   // A token with the key: the switch on, nothing drawn — the plain look,
   // pinned.
   add("m15token", "token", "g", "short", { suffix: "@stamp-token", row: stampRow("m15token", "oval", { rarity: "rare" }) });
@@ -1862,12 +1884,19 @@ export function visualCases(): VisualCase[] {
 /** The templates whose PROFILES entry declares the holofoil stamp's notch
  *  (TODO 4.9c; tests/unit/render/visual-matrix.test.ts keeps it in step). */
 // …and the station frame (TODO 4.27a): the parents' notch over the cut masters.
-export const STAMP_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15stationland", "m15snow", "m15devoid", "m15pw"];
+export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
+  "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15stationland", "m15snow", "m15devoid", "m15pw",
+  // TODO 4.25: the Universes Beyond frames' TRIANGLE stamp.
+  "m15ub", "m15ubartifact", "m15ubland",
+];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's
  *  cases (the 4.9c follow-up; the same test keeps it in step: a template
  *  that gains pairs with the notch declared joins by itself). */
-export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15artifact", "m15vehicle", "m15nyx", "m15land", "m15snow", "m15snowland"];
+export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = [
+  "m15", "m15artifact", "m15vehicle", "m15nyx", "m15land", "m15snow", "m15snowland",
+  "m15ub", "m15ubartifact", "m15ubland",
+];
 
 /** A rules text whose fitted last line enters the arch on m15 (found on the
  *  real layout, 2026-10-02: 50 px, the last line's ink 132–839 × …–1910 at
@@ -2087,6 +2116,8 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   "m15vehicle",
   // The Nyx dress (TODO 4.7): m15's split and hybrid over the starfield.
   "m15nyx",
+  // The Universes Beyond frames (TODO 4.25): their M15 twins' dresses.
+  "m15ub", "m15ubartifact", "m15ubland",
   // The double-faced spell faces (5.1d): their cases carry a back face
   // (the DFC block below), never the generic pair loop's rows.
   "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback",

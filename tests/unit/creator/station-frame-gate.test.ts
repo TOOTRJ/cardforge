@@ -162,3 +162,73 @@ describe("a dress the card cannot wear yet is never where the subtype sends it",
     expect(resolveGeneratedFrame({ cardType: "artifact", requested: "m15artifact", colorIdentity: [], verifiedKeys: later, face: ship })).toBe("m15station");
   });
 });
+
+describe("the follow and its words (TODO 4.27a, PR 2)", () => {
+  it("says who each dress is for — Spacecraft is its own plural", async () => {
+    const { subtypeDressReason, SUBTYPE_DRESS_WORDS } = await import("@/lib/creator/card-kinds");
+    expect(subtypeDressReason("m15station")).toBe("The Spacecraft frame is for Spacecraft");
+    expect(subtypeDressReason("m15stationland")).toBe("The Planet frame is for Planets");
+    expect(subtypeDressReason("m15vehicle")).toBe("The Vehicle frame is for Vehicles");
+    expect(subtypeDressReason("m15artifact")).toBeNull();
+    expect([...SUBTYPE_DRESS_WORDS].sort()).toEqual(["Planet", "Spacecraft", "Vehicle"]);
+  });
+
+  it("a new artifact follows Spacecraft, a new land Planet — only onto a frame the card can wear, and back to the base", async () => {
+    const { subtypeFrameFor } = await import("@/lib/creator/card-kinds");
+    const all = () => true;
+    const none = () => false;
+    expect(subtypeFrameFor("m15artifact", ["Spacecraft"], all)).toBe("m15station");
+    expect(subtypeFrameFor("m15land", ["Planet"], all)).toBe("m15stationland");
+    // Not verified in the colour: nothing moves.
+    expect(subtypeFrameFor("m15artifact", ["Spacecraft"], none)).toBe("m15artifact");
+    expect(subtypeFrameFor("m15land", ["Planet"], none)).toBe("m15land");
+    // The word goes: back to the base.
+    expect(subtypeFrameFor("m15station", ["Equipment"], all)).toBe("m15artifact");
+    expect(subtypeFrameFor("m15stationland", ["Forest"], all)).toBe("m15land");
+    // A Planet is not an artifact's dress, a Spacecraft not a land's.
+    expect(subtypeFrameFor("m15artifact", ["Planet"], all)).toBe("m15artifact");
+    expect(subtypeFrameFor("m15land", ["Spacecraft"], all)).toBe("m15land");
+  });
+
+  it("the dresses coexist: a Vehicle retyped, an artifact that is both, a card on another frame", async () => {
+    const { subtypeFrameFor } = await import("@/lib/creator/card-kinds");
+    const all = () => true;
+    // A Vehicle retyped as a Spacecraft: the station frame — or, before its tick, the Artifact frame.
+    expect(subtypeFrameFor("m15vehicle", ["Spacecraft"], all)).toBe("m15station");
+    expect(subtypeFrameFor("m15vehicle", ["Spacecraft"], (dress) => dress === "m15vehicle")).toBe("m15artifact");
+    // Both words: the dress the card is ON stays (never flipped by a word typed elsewhere)…
+    expect(subtypeFrameFor("m15vehicle", ["Vehicle", "Spacecraft"], all)).toBe("m15vehicle");
+    expect(subtypeFrameFor("m15station", ["Vehicle", "Spacecraft"], all)).toBe("m15station");
+    // …from the base the Vehicle frame, the other one a Variations pick; with only one wearable, that one.
+    expect(subtypeFrameFor("m15artifact", ["Vehicle", "Spacecraft"], all)).toBe("m15vehicle");
+    expect(subtypeFrameFor("m15artifact", ["Vehicle", "Spacecraft"], (dress) => dress === "m15station")).toBe("m15station");
+    // A dress the card is on but can no longer wear in its colour: the other, else the base.
+    expect(subtypeFrameFor("m15station", ["Vehicle", "Spacecraft"], (dress) => dress === "m15vehicle")).toBe("m15vehicle");
+    // An Enchantment Artifact Spacecraft on the Nyx frame, a Spacecraft on the 2003 frame: no family, no move.
+    expect(subtypeFrameFor("nyx", ["Spacecraft"], all)).toBe("nyx");
+    expect(subtypeFrameFor("modern", ["Spacecraft"], all)).toBe("modern");
+  });
+
+  it("each subtype dress's chip names its OWN look — the station pair is not the Vehicle's bronze and brown plate", async () => {
+    const { subtypeDressHint } = await import("@/lib/creator/card-kinds");
+    expect(subtypeDressHint("m15vehicle")).toBe("The printed Vehicle frame: bronze, with white numbers on a brown plate");
+    expect(subtypeDressHint("m15station")).toBe("The printed Spacecraft frame: the picture under the whole frame, tiers in the text box");
+    expect(subtypeDressHint("m15stationland")).toBe("The printed Planet frame: the picture under the whole frame, tiers in the text box");
+    expect(subtypeDressHint("m15artifact")).toBeNull();
+  });
+
+  it("an Enchantment Artifact Spacecraft: the Nyx dress (#542) and the station frame never move a card off each other", async () => {
+    const { subtypeFrameFor, enchantmentFrameFor } = await import("@/lib/creator/card-kinds");
+    const all = () => true;
+    const words = { cardType: "artifact", supertype: "Enchantment", subtypes: ["Spacecraft"] };
+    // Whichever word came first has the card; the other frame is a Variations pick.
+    expect(subtypeFrameFor("m15nyx", ["Spacecraft"], all)).toBe("m15nyx");
+    expect(enchantmentFrameFor("artifact", "m15station", words)).toBe("m15station");
+    // From the Artifact frame each follow takes its own dress…
+    expect(subtypeFrameFor("m15artifact", ["Spacecraft"], all)).toBe("m15station");
+    expect(enchantmentFrameFor("artifact", "m15artifact", words)).toBe("m15nyx");
+    // …and a word that goes takes back only its own.
+    expect(enchantmentFrameFor("artifact", "m15station", { ...words, supertype: null })).toBe("m15station");
+    expect(subtypeFrameFor("m15nyx", [], all)).toBe("m15nyx");
+  });
+});

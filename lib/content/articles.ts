@@ -26,6 +26,18 @@ export type ArticleMeta = {
   /** Optional `faq` frontmatter — the questions the guide also renders as
    *  headings; the article page emits them as FAQPage JSON-LD. */
   faq?: Array<{ q: string; a: string }>;
+  /** Optional `seoTitle` — the <title> / social title when it should differ
+   *  from the headline on the page (the site's " · PipGlyph" is appended). */
+  seoTitle?: string;
+  /** Optional `excerpt` — the line under the headline when it should differ
+   *  from the search-result `description`. */
+  excerpt?: string;
+  /** Optional `tocDepth: 2` — "On this page" lists the top-level headings
+   *  only (a long guide with many sub-headings and FAQ questions). */
+  tocDepth?: 2 | 3;
+  /** Optional `cta` — the closing box's own words for this guide; the button
+   *  still opens the card creator. */
+  cta?: { title: string; body: string; label: string };
   /** Rough read time from word count — display sugar only. */
   readingMinutes: number;
 };
@@ -68,6 +80,15 @@ function parseFaq(value: unknown): ArticleMeta["faq"] {
   return items.length > 0 ? items : undefined;
 }
 
+function parseCta(value: unknown): ArticleMeta["cta"] {
+  if (!value || typeof value !== "object") return undefined;
+  const { title, body, label } = value as Record<string, unknown>;
+  if (typeof title !== "string" || typeof body !== "string" || typeof label !== "string") {
+    return undefined;
+  }
+  return { title, body, label };
+}
+
 function readArticleFile(filename: string): Article | null {
   const slug = filename.replace(/\.mdx$/, "");
   try {
@@ -86,6 +107,10 @@ function readArticleFile(filename: string): Article | null {
           : undefined,
         tags: Array.isArray(data.tags) ? data.tags.map(String) : [],
         faq: parseFaq(data.faq),
+        seoTitle: data.seoTitle ? String(data.seoTitle) : undefined,
+        excerpt: data.excerpt ? String(data.excerpt) : undefined,
+        tocDepth: data.tocDepth === 2 ? 2 : undefined,
+        cta: parseCta(data.cta),
         readingMinutes: Math.max(1, Math.round(words / 220)),
       },
       content,

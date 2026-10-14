@@ -133,13 +133,13 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
   {
     name: "750-cost-row-width",
     size: "750",
-    cases: /^m15(borderless|textless)?\//,
+    cases: /^m15(borderless|textless|ub)?\//,
     regions: ["cost"],
     metric: "dx",
     min: -4,
     max: -3,
     why:
-      "At 750 px a cost row of five or more pips starts 2–3 px further LEFT in the preview than in the bake (its right end agrees): the preview's row is wider by about half a pixel a pip. The HD comparison of the same cards measures 0, which points at the 750 px bake's whole-pixel disc and gap sizes (the preview keeps fractions); not traced to the line. Measured −3 on the M15 long card (collector, symbols, etched), m15borderless and m15textless; −2 on four more.",
+      "At 750 px a cost row of five or more pips starts 2–3 px further LEFT in the preview than in the bake (its right end agrees): the preview's row is wider by about half a pixel a pip. The HD comparison of the same cards measures 0, which points at the 750 px bake's whole-pixel disc and gap sizes (the preview keeps fractions); not traced to the line. Measured −3 on the M15 long card (collector, symbols, etched), m15borderless and m15textless, and on the Universes Beyond long pair card (TODO 4.25: m15's cost row on the m15ub frame — its M15 twin, m15/wu/creature-long@stamp-pair-crown, measures −2); −2 on four more.",
   },
   {
     name: "750-emblem-title-end",

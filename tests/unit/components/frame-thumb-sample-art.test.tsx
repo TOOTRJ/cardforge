@@ -41,11 +41,15 @@ const M20_TOKENS: FrameTemplate[] = [
 ];
 /** The owner's six (2026-09-27) and the full-art tokens, in
  *  FRAME_TEMPLATE_VALUES order. */
-const OPT_IN: FrameTemplate[] = [...M20_TOKENS, "bloomanime", "tarkirghostfire", "fullart", "m15textless", "m15textlessland", "nyx"];
+/** The station frame's two (TODO 4.27a, PR 2): the picture runs under the
+ *  whole frame, so an empty tile was bars over nothing. */
+const STATION: FrameTemplate[] = ["m15station", "m15stationland"];
+const OPT_IN: FrameTemplate[] = [...STATION, ...M20_TOKENS, "bloomanime", "tarkirghostfire", "fullart", "m15textless", "m15textlessland", "nyx"];
 /** Every tile that draws the sample — exactly these 19 of the 52 templates,
  *  in FRAME_TEMPLATE_VALUES order. Spelled out, not derived, so a flag that
  *  leaks through a profile spread (or a widened rule) fails here. */
 const SAMPLED: FrameTemplate[] = [
+  ...STATION,
   ...M20_TOKENS,
   "m15borderless",
   "m15borderlessartifact",
@@ -100,7 +104,7 @@ describe("artFillsCard — which frames are art-first", () => {
 });
 
 describe("pickerSampleArt — the owner's six near-black tiles (and the full-art tokens) opt in by name", () => {
-  it("is set (to true) on exactly the six profiles and the six full-art tokens, none of them art-first", () => {
+  it("is set (to true) on exactly the six profiles, the six full-art tokens and the station pair, none of them art-first", () => {
     const flagged = FRAME_TEMPLATE_VALUES.filter((t) => "pickerSampleArt" in getFrameProfile(t));
     expect(flagged).toEqual(OPT_IN);
     for (const t of OPT_IN) {
@@ -119,7 +123,7 @@ describe("pickerSampleArt — the owner's six near-black tiles (and the full-art
 });
 
 describe("FrameThumb — art-first and opted-in tiles draw a sample art under the master", () => {
-  it("draws the sample on exactly 19 of the 64 templates, on every colour and type dress", () => {
+  it("draws the sample on exactly 21 of the 67 templates, on every colour and type dress", () => {
     const drawn = new Set<FrameTemplate>();
     for (const template of FRAME_TEMPLATE_VALUES) {
       const counts = { with: 0, without: 0 };
@@ -139,13 +143,15 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
     // five transform bodies + 5.1b's four modal bodies (opaque M15 masters:
     // no sample).
     // + 4.5c's Vehicle frame (an opaque M15 master: no sample).
-    // + the station frame's two (TODO 4.27a) + the Nyx dress (TODO 4.7).
-    expect(FRAME_TEMPLATE_VALUES).toHaveLength(64);
+    // + the station frame's two (TODO 4.27a) + the Nyx dress (TODO 4.7)
+    // + 4.25's three Universes Beyond frames (opaque masters too).
+    expect(FRAME_TEMPLATE_VALUES).toHaveLength(67);
     expect(FRAME_TEMPLATE_VALUES.filter((t) => drawn.has(t))).toEqual(SAMPLED);
   });
 
   it.each(SAMPLED)("%s: sample art in the art slot, the frame on a layer above it", (template) => {
-    const slot = getFrameProfile(template).artSlot;
+    // (ONE picture under the whole frame samples that rect: the station pair.)
+    const slot = getFrameProfile(template).underFrameArt?.artSlot ?? getFrameProfile(template).artSlot;
     for (const key of KEYS) {
       for (const type of TYPES) {
         const el = tile(template, key, type);
@@ -188,6 +194,8 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
       nyx: [88, 81.8],
       // The full-art tokens: CC's art bounds with 7.6's overscan.
       ...Object.fromEntries(M20_TOKENS.map((t) => [t, [92.2, 89.6] as [number, number]])),
+      // The station pair: the picture under the whole frame (its `underFrameArt` rect).
+      ...Object.fromEntries(STATION.map((t) => [t, [getFrameProfile(t).underFrameArt!.rect.widthPct, getFrameProfile(t).underFrameArt!.rect.heightPct] as [number, number]])),
     };
     for (const t of OPT_IN) {
       const art = tile(t, "u", null).querySelector<HTMLElement>("[data-frame-sample-art]")!;

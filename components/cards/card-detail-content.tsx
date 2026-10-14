@@ -87,7 +87,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { downloadDiffersFromGallery } from "@/lib/cards/layout-version";
 import { getSiteBaseUrl } from "@/lib/site-url";
 import { breadcrumbJsonLd, JsonLd, serializeJsonLd } from "@/components/seo/json-ld";
-import type { CardBackFace, FrameStyle } from "@/types/card";
+import type { CardBackFace, FrameStyle, FaceContent } from "@/types/card";
 import { formatShortDate } from "@/lib/format/dates";
 
 // ---------------------------------------------------------------------------
@@ -1126,6 +1126,10 @@ export function CardDetails({
     artist_credit: string | null;
     created_at: string;
     updated_at: string;
+    /** What a station card's tiers are read from (TODO 4.27a): with no tier
+     *  the picture shows no power / toughness, so the details list none. */
+    rules_text?: string | null;
+    face_content?: unknown;
     /** The collector line (TODO 4.9b): its fields and the switch, shown
      *  only when the render draws the line. */
     set_code?: string | null;
@@ -1152,9 +1156,10 @@ export function CardDetails({
   // carrying a stray P/T prints none, so its details list none (TODO 3b.15).
   // And only on a frame that draws one (lib/cards/pt-drawn.ts): a saga whose
   // type says Creature keeps its 9/9 in the row, the picture shows none, so
-  // the details list none either — the stored value is untouched.
+  // the details list none either — the stored value is untouched. (So does
+  // a station card with no tier: its P/T is printed on a tier's plate.)
   const frontTemplate = (card.frame_style as { template?: string | null } | null | undefined)?.template;
-  const stats = frontDrawsPowerToughness(frontTemplate) && printsPowerToughness({
+  const stats = frontDrawsPowerToughness(frontTemplate, { rulesText: card.rules_text ?? null, faceContent: (card.face_content ?? null) as FaceContent | null }) && printsPowerToughness({
     cardType: card.card_type as CardType | null,
     supertype: card.supertype,
     subtypes: card.subtypes ?? [],

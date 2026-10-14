@@ -152,15 +152,43 @@ describe("band rows against print (HD px)", () => {
     expect(bands.fits).toBe(true);
   });
 
-  it("a taller tier grows its band; the top band takes the rest and says when it can't", () => {
+  it("the same air round every band's text: a taller tier grows its band, and the box says when it can't", () => {
+    // 624 px of box, 360 of text: 66 px of air above and below each.
     const bands = stationBands(100, [260]);
-    expect(bands.tiers[0]).toMatchObject({ y0: STATION.box.bottom - 300, y1: STATION.box.bottom });
-    expect(stationBands(400, [260]).fits).toBe(false);
+    expect(bands.airPx).toBeCloseTo(66, 0);
+    expect(bands.tiers[0]).toMatchObject({ y0: STATION.box.bottom - 392, y1: STATION.box.bottom });
+    expect(bands.fits).toBe(true);
+    // 2 x 2 x 14 px of air no longer fit: not at this size.
+    expect(stationBands(310, [260]).fits).toBe(false);
+    expect(stationBands(300, [260]).fits).toBe(true);
   });
 
-  it("no tier: the top band is the whole box; compact bands still hold a badge", () => {
+  it("under the stamp a full last tier is 22 px taller and its text ends that much higher; a one-line tier is unchanged", () => {
+    const [bare, stamped] = [stationBands(330, [200]), stationBands(330, [200], STATION.bandRules[0], true)];
+    const h = (b: { y0: number; y1: number }) => b.y1 - b.y0;
+    // The air is shared by two bands: the stamp's 22 px cost each 5.5 px of it.
+    expect(bare.airPx - stamped.airPx).toBeCloseTo(5.5, 1);
+    expect(h(stamped.tiers[0]!) - h(bare.tiers[0]!)).toBeGreaterThanOrEqual(10);
+    expect(STATION.box.bottom - stamped.tiers[0]!.textY1).toBeGreaterThanOrEqual(20); // 22, on even px
+    expect(STATION.box.bottom - stamped.tiers[0]!.textY1).toBeLessThanOrEqual(24);
+    expect(stamped.tiers[0]!.cy).toBe((stamped.tiers[0]!.y0 + stamped.tiers[0]!.y1) / 2);
+    expect(stationBands(236, [60, 60], STATION.bandRules[0], true)).toEqual(stationBands(236, [60, 60]));
+  });
+
+  it("no tier: the top band is the whole box; the tight rule still holds a badge, the last one gives it up", () => {
     expect(stationBands(200, []).top).toMatchObject({ y0: STATION.box.top, y1: STATION.box.bottom });
-    const compact = stationBands(0, [40, 40, 40], STATION.bandRules[STATION.bandRules.length - 1]);
-    for (const b of compact.tiers) expect(b.y1 - b.y0).toBeGreaterThanOrEqual(2 * STATION.badge.rRing);
+    for (const b of stationBands(0, [40, 40, 40], STATION.bandRules[1]).tiers) expect(b.y1 - b.y0).toBeGreaterThanOrEqual(2 * STATION.badge.rRing);
+    const last = stationBands(330, [44, 44, 44], STATION.bandRules[2]);
+    expect(last.fits).toBe(true);
+    for (const b of last.tiers) expect(b.y1 - b.y0).toBeLessThan(2 * STATION.badge.rRing);
+  });
+
+  it("text no size holds: the bands share the box by their text, every edge inside it", () => {
+    const bands = stationBands(500, [400, 300], STATION.bandRules[2]);
+    expect(bands.fits).toBe(false);
+    expect(bands.top.y0).toBe(STATION.box.top);
+    expect(bands.tiers[1]!.y1).toBe(STATION.box.bottom);
+    expect(bands.tiers[0]!.y0).toBeGreaterThan(STATION.box.top);
+    expect((bands.tiers[0]!.y1 - bands.tiers[0]!.y0) / (bands.tiers[1]!.y1 - bands.tiers[1]!.y0)).toBeCloseTo(400 / 300, 1);
   });
 });

@@ -92,6 +92,8 @@ import {
   placeTwin,
   NOTCH_FOOT,
   buildNotch,
+  notchCutOf,
+  snapResampledPiece,
   columnTintGap,
   describeColumnTint,
   describeNotch,
@@ -161,6 +163,9 @@ import {
   roundCornersRgba8,
   shiftRows,
   sourceFilesFor,
+  sourceTonesOf,
+  toneSourceRegions,
+  describeSourceTones,
   toRgba8,
   tonesFor,
   stripRiderInterior,
@@ -234,6 +239,28 @@ async function rgba(file, width, height) {
     .raw()
     .toBuffer({ resolveWithObject: true });
   return data;
+}
+
+/**
+ * A whole-canvas layer's file at the working size — toned onto the prints
+ * first when the recipe says so (CC_SOURCE_TONES; owner Round 57: the
+ * Universes Beyond pack's green, gold and land grey): each region's colour
+ * multiplied by its gain through the pack's own mask, the hue of the
+ * highlights kept (toneSourceRegions), BEFORE any layer mask, ramp or composite, so
+ * every master drawn from the file carries the same pixels.
+ */
+async function loadSource(src, W, H) {
+  const data = await rgba(await fetchCached(src), W, H);
+  const tone = sourceTonesOf(src);
+  if (!tone) return data;
+  const regions = {};
+  for (const [name, maskFile] of Object.entries(tone.masks)) {
+    const mask = await rgba(await fetchCached(maskFile), W, H);
+    const plane = new Uint8Array(W * H);
+    for (let p = 0; p < W * H; p += 1) plane[p] = mask[p * 4 + 3];
+    regions[name] = plane;
+  }
+  return toneSourceRegions(data, W, H, regions, tone.tones);
 }
 
 async function writeMaster(bytes, pngFile, width = OUT_W, height = OUT_H) {
@@ -438,8 +465,13 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
         // (scripts/lib/pair-ramp.mjs) first — a placed pair on the canvas, so
         // the ramp's % of the card's width is the card's.
         const box = l.at ? rectPx(l.at, W, H) : null;
-        const load = async (src) =>
-          box ? placeOnCanvas(await rgba(await fetchCached(src), box.width, box.height), box, W, H) : await rgba(await fetchCached(src), W, H);
+        const load = async (src) => {
+          if (!box) return loadSource(src, W, H);
+          // A file toned through the pack's whole-card masks is never drawn
+          // at bounds of its own.
+          if (sourceTonesOf(src)) throw new Error(`${template}/${key}: ${src} is toned through whole-card masks and can't be placed at bounds`);
+          return placeOnCanvas(await rgba(await fetchCached(src), box.width, box.height), box, W, H);
+        };
         let data = l.right ? blendPair(await load(l.src), await load(l.right), W, H, l.ramp) : await load(l.src);
         if (l.retint) {
           // 4.34's tinted box: a neutral structure re-tinted to the flat tint
@@ -688,6 +720,8 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     ...(def.tones
       ? { tones: typeof def.tones === "function" ? Object.fromEntries(builtColors(def).map((key) => [key, def.tones(key)])) : def.tones }
       : {}),
+    // Files toned as they are loaded (CC_SOURCE_TONES), each region's gain.
+    ...(describeSourceTones(def) ? { sourceTones: describeSourceTones(def) } : {}),
     sourceFiles: sourceFilesFor(def),
     notes: def.notes,
   };
@@ -867,11 +901,11 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
       );
       continue;
     }
-    const r = crownBandRecipe(key);
+    const r = crownBandRecipe(key, band);
     // An inner crown (TODO 4.7: the Nyx dress's starfield strip) is the
     // band's last layer, 1:1 at the composite's size.
     const innerRecipe = def.inner ? innerCrownRecipe(def.inner, key) : null;
-    recipe[key] = [...describeCrownBand(r), ...(innerRecipe ? [describeInnerCrown(def.inner, innerRecipe)] : [])];
+    recipe[key] = [...describeCrownBand(r, band), ...(innerRecipe ? [describeInnerCrown(def.inner, innerRecipe)] : [])];
     if (dryRun) {
       console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}`);
       continue;
@@ -929,7 +963,7 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
       ? cutCrownSourceFiles(folder)
       : def.layers
         ? sourceFilesFor({ colors: Object.fromEntries(def.keys.map((key) => [key, def.layers(key)])) })
-        : [...new Set([...crownBandSourceFiles(def.keys), ...(def.inner ? def.keys.flatMap((key) => { const i = innerCrownRecipe(def.inner, key); return i.right ? [i.left, i.right] : [i.left]; }) : [])])].sort(),
+        : [...new Set([...crownBandSourceFiles(def.keys, band), ...(def.inner ? def.keys.flatMap((key) => { const i = innerCrownRecipe(def.inner, key); return i.right ? [i.left, i.right] : [i.left]; }) : [])])].sort(),
     ...(def.cut ? { bands: Object.fromEntries(def.keys.map((key) => [key, `m15crown/${key}.png`])) } : {}),
     notes: def.notes,
   };
@@ -1007,8 +1041,13 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
     if (!piece) {
       const file = await fetchCached(def.shape.src);
       const meta = await sharp(file).metadata();
-      if (meta.width !== PW || meta.height !== PH) throw new Error(`${def.shape.src} is ${meta.width}×${meta.height}, the recipe says ${PW}×${PH} (the source moved?)`);
-      piece = await sharp(file).ensureAlpha().raw().toBuffer();
+      const native = def.shape.nativeSize ?? def.shape.size;
+      if (meta.width !== native.width || meta.height !== native.height) throw new Error(`${def.shape.src} is ${meta.width}×${meta.height}, the recipe says ${native.width}×${native.height} (the source moved?)`);
+      // A piece that is not 1:1 at HD (TODO 4.25: the Universes Beyond
+      // stamp) is resampled once to its box and its flat regions snapped.
+      piece = def.shape.nativeSize
+        ? snapResampledPiece(def.shape, await sharp(file).ensureAlpha().resize(PW, PH, { fit: "fill", kernel: "lanczos3" }).raw().toBuffer())
+        : await sharp(file).ensureAlpha().raw().toBuffer();
       // The foot columns every key is checked at must be solid rim in CC's
       // piece: the published-object test reads them without the piece.
       const off = footRunsSolid(def.shape, piece, NOTCH_FOOT[folder]);
@@ -1028,8 +1067,8 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
         }
       }
     }
-    const built = buildNotch(def.shape, piece, tint, def.oval, def.cutMarginPx);
-    const findings = notchFindings(built, def.shape, piece, tint, def.oval, def.cutMarginPx, NOTCH_FOOT[folder]);
+    const built = buildNotch(def.shape, piece, tint, notchCutOf(def), def.cutMarginPx);
+    const findings = notchFindings(built, def.shape, piece, tint, notchCutOf(def), def.cutMarginPx, NOTCH_FOOT[folder]);
     for (const f of findings.failures) notchFailures.push(`${folder}/${key}: ${f}`);
     recipe[key] = describeNotch(def, key, tint);
     fs.mkdirSync(path.dirname(out), { recursive: true });
@@ -1049,9 +1088,11 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
     pack: def.pack,
     converter: "scripts/import-cc-frames.mjs",
     kind: "overlay",
-    output: `${PW}x${PH} notch piece (1:1 at ${OUT_W}x${OUT_H}, stretched over ${def.shape.bounds.leftPct}/${def.shape.bounds.topPct}/${def.shape.bounds.widthPct}×${def.shape.bounds.heightPct} %), the oval region cut to transparent, webp q${WEBP.quality}`,
+    output: `${PW}x${PH} notch piece (1:1 at ${OUT_W}x${OUT_H}, stretched over ${def.shape.bounds.leftPct}/${def.shape.bounds.topPct}/${def.shape.bounds.widthPct}×${def.shape.bounds.heightPct} %), the ${def.triangle ? "triangle" : "oval"} region cut to transparent, webp q${WEBP.quality}`,
     colors: recipe,
-    cut: { oval: def.oval, marginPx: def.cutMarginPx, what: "the hologram capture inside CC's oval (WotC's planeswalker symbol tiled) — never published" },
+    cut: def.triangle
+      ? { triangle: def.triangle, marginPx: def.cutMarginPx, what: "the hologram capture inside CC's triangle — never published" }
+      : { oval: def.oval, marginPx: def.cutMarginPx, what: "the hologram capture inside CC's oval (WotC's planeswalker symbol tiled) — never published" },
     sourceFiles: notchSourceFiles(def),
     notes: def.notes,
   };

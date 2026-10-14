@@ -88,7 +88,19 @@ describe("article MDX rendering", () => {
     // No autolinked bare URLs: every rendered href is a link the source wrote.
     for (const [, href] of html.matchAll(/<a [^>]*href="([^"]*)"/g)) {
       const raw = href.replace(/&amp;/g, "&");
-      expect(content, `${slug}: unexpected link ${raw}`).toContain(`](${raw}`);
+      // …as Markdown, or as the `href` of a component it placed (<CardScan>).
+      // …or the two anchors GFM draws for a footnote the source wrote.
+      const footnote = content.includes("[^") && raw.startsWith("#user-content-fn");
+      const written =
+        footnote || content.includes(`](${raw}`) || content.includes(`href="${raw}"`);
+      expect(written, `${slug}: unexpected link ${raw}`).toBe(true);
+    }
+
+    // A link that leaves the site opens a new tab and never takes the reader
+    // away (owner 2026-10-14) — body links, footnotes and card pictures alike.
+    for (const [tag, href] of html.matchAll(/<a ([^>]*href="(?:https?:)?\/\/[^"]*"[^>]*)>/g)) {
+      expect(tag, `${slug}: ${href}`).toContain('target="_blank"');
+      expect(tag, `${slug}: ${href}`).toMatch(/rel="[^"]*noopener[^"]*"/);
     }
 
     // The TOC is lifted from the raw Markdown; each anchor must hit a heading.
