@@ -1,0 +1,517 @@
+{
+  "thb-353": {
+    "id": "0ad40aed-f247-41b3-8198-6367fdeee953",
+    "name": "Alseid of Life's Bounty",
+    "layout": "normal",
+    "set": "thb",
+    "set_name": "Theros Beyond Death",
+    "set_type": "expansion",
+    "collector_number": "353",
+    "released_at": "2020-01-24",
+    "frame": "2015",
+    "frame_effects": [
+      "enchantment",
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "promopack"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "keywords": [
+      "Lifelink"
+    ],
+    "type_line": "Enchantment Creature — Nymph",
+    "mana_cost": "{W}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ]
+  },
+  "prm-79863": {
+    "id": "63f2fd1e-849c-42c7-9bc0-7f6021be49b2",
+    "name": "Anax, Hardened in the Forge",
+    "layout": "normal",
+    "set": "prm",
+    "set_name": "Magic Online Promos",
+    "set_type": "promo",
+    "collector_number": "79863",
+    "released_at": "2020-02-07",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "enchantment",
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Enchantment Creature — Demigod",
+    "mana_cost": "{1}{R}{R}",
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ]
+  },
+  "sld-340": {
+    "id": "0fbaa2f0-9ad0-4ce2-8ce6-359d01bd524c",
+    "name": "Arvinox, the Mind Flail",
+    "layout": "normal",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "set_type": "box",
+    "collector_number": "340",
+    "released_at": "2021-10-15",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "inverted",
+      "enchantment"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "upsidedown",
+      "universesbeyond"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Enchantment Creature — Horror",
+    "mana_cost": "{4}{B}{B}{B}",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ]
+  },
+  "neo-508": {
+    "id": "9ae5aecd-f1e3-4a1a-92a7-69235437102d",
+    "name": "Spirited Companion",
+    "layout": "normal",
+    "set": "neo",
+    "set_name": "Kamigawa: Neon Dynasty",
+    "set_type": "expansion",
+    "collector_number": "508",
+    "released_at": "2022-02-18",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted",
+      "enchantment"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "promopack"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "keywords": [],
+    "type_line": "Enchantment Creature — Dog",
+    "mana_cost": "{1}{W}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ]
+  },
+  "neo-510": {
+    "id": "aa567185-e0f2-4fe1-82a8-57b7fb277ab9",
+    "name": "Jukai Naturalist",
+    "layout": "normal",
+    "set": "neo",
+    "set_name": "Kamigawa: Neon Dynasty",
+    "set_type": "expansion",
+    "collector_number": "510",
+    "released_at": "2022-02-18",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted",
+      "enchantment"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "promopack"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "keywords": [
+      "Lifelink"
+    ],
+    "type_line": "Enchantment Creature — Human Monk",
+    "mana_cost": "{G}{W}",
+    "colors": [
+      "G",
+      "W"
+    ],
+    "color_identity": [
+      "G",
+      "W"
+    ]
+  },
+  "dsk-415": {
+    "id": "e8cc1465-ee00-40f4-aaa9-02f0465beb88",
+    "name": "Inquisitive Glimmer",
+    "layout": "normal",
+    "set": "dsk",
+    "set_name": "Duskmourn: House of Horror",
+    "set_type": "expansion",
+    "collector_number": "415",
+    "released_at": "2024-09-27",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted",
+      "enchantment"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "promopack"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "keywords": [],
+    "type_line": "Enchantment Creature — Fox Glimmer",
+    "mana_cost": "{W}{U}",
+    "colors": [
+      "U",
+      "W"
+    ],
+    "color_identity": [
+      "U",
+      "W"
+    ]
+  },
+  "tdm-420": {
+    "id": "4cf3c128-e4a9-4d21-8cf4-dfc122cc0957",
+    "name": "Static Snare",
+    "layout": "normal",
+    "set": "tdm",
+    "set_name": "Tarkir: Dragonstorm",
+    "set_type": "expansion",
+    "collector_number": "420",
+    "released_at": "2025-04-11",
+    "frame": "2015",
+    "frame_effects": [
+      "enchantment",
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "promopack"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "keywords": [
+      "Flash"
+    ],
+    "type_line": "Enchantment",
+    "mana_cost": "{4}{W}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ]
+  },
+  "tdm-421": {
+    "id": "31cd0d01-8d3f-4a00-acfd-a43a93e14e7d",
+    "name": "Roiling Dragonstorm",
+    "layout": "normal",
+    "set": "tdm",
+    "set_name": "Tarkir: Dragonstorm",
+    "set_type": "expansion",
+    "collector_number": "421",
+    "released_at": "2025-04-11",
+    "frame": "2015",
+    "frame_effects": [
+      "enchantment",
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "promopack"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "keywords": [],
+    "type_line": "Enchantment",
+    "mana_cost": "{1}{U}",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ]
+  },
+  "tdm-424": {
+    "id": "f07d668d-bff0-4bae-a42e-4130fdc1016d",
+    "name": "Encroaching Dragonstorm",
+    "layout": "normal",
+    "set": "tdm",
+    "set_name": "Tarkir: Dragonstorm",
+    "set_type": "expansion",
+    "collector_number": "424",
+    "released_at": "2025-04-11",
+    "frame": "2015",
+    "frame_effects": [
+      "enchantment",
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "promopack"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "keywords": [],
+    "type_line": "Enchantment",
+    "mana_cost": "{3}{G}",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ]
+  },
+  "sch-45": {
+    "id": "18a9fb7b-780c-46c7-9a5f-f9abb3c353df",
+    "name": "Goblin Bombardment",
+    "layout": "normal",
+    "set": "sch",
+    "set_name": "Store Championships",
+    "set_type": "promo",
+    "collector_number": "45",
+    "released_at": "2026-02-06",
+    "frame": "2015",
+    "frame_effects": [
+      "enchantment",
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "storechampionship"
+    ],
+    "finishes": [
+      "nonfoil"
+    ],
+    "keywords": [],
+    "type_line": "Enchantment",
+    "mana_cost": "{1}{R}",
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ]
+  },
+  "clb-1": {
+    "id": "25564fba-5765-457b-8dd3-f26b877221b8",
+    "name": "Faceless One",
+    "layout": "normal",
+    "set": "clb",
+    "set_name": "Commander Legends: Battle for Baldur's Gate",
+    "set_type": "draft_innovation",
+    "collector_number": "1",
+    "released_at": "2022-06-10",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "enchantment"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "finishes": [
+      "nonfoil"
+    ],
+    "keywords": [
+      "Choose a background"
+    ],
+    "type_line": "Legendary Enchantment Creature — Background",
+    "mana_cost": "{5}",
+    "colors": [],
+    "color_identity": []
+  },
+  "cmr-522": {
+    "id": "5bb07085-0dcd-43c9-8355-270a77c573e1",
+    "name": "Karametra, God of Harvests",
+    "layout": "normal",
+    "set": "cmr",
+    "set_name": "Commander Legends",
+    "set_type": "draft_innovation",
+    "collector_number": "522",
+    "released_at": "2020-11-20",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted",
+      "etched",
+      "legendary",
+      "enchantment"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "finishes": [
+      "etched"
+    ],
+    "keywords": [
+      "Indestructible"
+    ],
+    "type_line": "Legendary Enchantment Creature — God",
+    "mana_cost": "{3}{G}{W}",
+    "colors": [
+      "G",
+      "W"
+    ],
+    "color_identity": [
+      "G",
+      "W"
+    ]
+  },
+  "dft-442": {
+    "id": "62a95aeb-b1b0-42cd-ad67-fd13717d3c6c",
+    "name": "Unstoppable Plan",
+    "layout": "normal",
+    "set": "dft",
+    "set_name": "Aetherdrift",
+    "set_type": "expansion",
+    "collector_number": "442",
+    "released_at": "2025-02-14",
+    "frame": "2015",
+    "frame_effects": [
+      "enchantment",
+      "inverted"
+    ],
+    "border_color": "yellow",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "firstplacefoil",
+      "boxtopper"
+    ],
+    "finishes": [
+      "foil"
+    ],
+    "keywords": [],
+    "type_line": "Enchantment",
+    "mana_cost": "{2}{U}",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ]
+  },
+  "soc-131": {
+    "id": "33965c48-a7ce-4a04-8251-8eeb2d908c0b",
+    "name": "Eldrazi Conscription",
+    "layout": "normal",
+    "set": "soc",
+    "set_name": "Secrets of Strixhaven Commander",
+    "set_type": "commander",
+    "collector_number": "131",
+    "released_at": "2026-04-24",
+    "frame": "2015",
+    "frame_effects": [
+      "enchantment"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "finishes": [
+      "nonfoil"
+    ],
+    "keywords": [
+      "Enchant"
+    ],
+    "type_line": "Kindred Enchantment — Eldrazi Aura",
+    "mana_cost": "{8}",
+    "colors": [],
+    "color_identity": []
+  },
+  "thb-259": {
+    "id": "e11cf760-da35-41f2-8cf5-a5141103eeb3",
+    "name": "Heliod, Sun-Crowned",
+    "layout": "normal",
+    "set": "thb",
+    "set_name": "Theros Beyond Death",
+    "set_type": "expansion",
+    "collector_number": "259",
+    "released_at": "2020-01-24",
+    "frame": "2015",
+    "frame_effects": [
+      "enchantment",
+      "showcase",
+      "legendary",
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "boosterfun"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "keywords": [
+      "Indestructible"
+    ],
+    "type_line": "Legendary Enchantment Creature — God",
+    "mana_cost": "{2}{W}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ]
+  }
+}

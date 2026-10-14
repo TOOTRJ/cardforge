@@ -13,7 +13,7 @@
 // never move an element. And there's no fallback logic anywhere here —
 // framesForKind() simply doesn't include an era that can't frame the kind.
 
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { Controller, useFormContext, useFormState, useWatch } from "react-hook-form";
 import { Replace } from "lucide-react";
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ import {
   type LandMode,
 } from "@/components/creator/panels/land-mode-panel";
 import { SetupSection } from "@/components/creator/panels/setup-section";
+import { useBorrowedWordSeedsOwner, useProvidedBorrowedWordSeeds } from "@/components/creator/borrowed-words";
 import { ColorSection } from "@/components/creator/panels/color-section";
 import {
   DfcFaceTypeSection,
@@ -78,8 +79,6 @@ import {
   typeWordBaseFor,
   typeWordFrameFor,
   withTypeWord,
-  withoutTypeWord,
-  type BorrowedTypeWord,
   type TokenPickerWord,
   type CardKind,
   type FrameChoice,
@@ -250,28 +249,22 @@ export function CardSetupPanel({
   // creature whose type line doesn't say that word puts the word into the
   // supertype, and once the card leaves that frame — Standard, another
   // variation, another kind — the word it put there comes out again. A word
-  // the user typed is never touched: the ref remembers only this visit's
-  // seeds (Artifact → Nyx takes "Artifact" out and puts "Enchantment" in).
-  const seededWords = useRef<Set<BorrowedTypeWord>>(new Set());
+  // the user typed is never touched: only the words a pick WROTE are
+  // remembered (Artifact → Nyx takes "Artifact" out and puts "Enchantment"
+  // in). The memory is the creator form's (components/creator/
+  // borrowed-words.tsx: it outlives this panel, which unmounts on a step
+  // change — owner decision 3, Round 56); a panel with no form above it
+  // keeps its own.
+  const providedSeeds = useProvidedBorrowedWordSeeds();
   const watchedTemplate = useWatch({ control, name: "frame_style.template" });
+  const ownSeeds = useBorrowedWordSeedsOwner(
+    { getValues, setValue },
+    { kind, template: watchedTemplate, enabled: providedSeeds === null },
+  );
+  const seededWords = providedSeeds ?? ownSeeds;
   const showSubstitution =
     frameSubstitution !== null &&
     normalizeFrameTemplate(watchedTemplate) === frameSubstitution.template;
-  useEffect(() => {
-    if (seededWords.current.size === 0) return;
-    const current = normalizeFrameTemplate(
-      (watchedTemplate ?? DEFAULT_FRAME_TEMPLATE) as FrameTemplate,
-    );
-    const wearing = borrowedTypeWord(kind, current);
-    const before = getValues("supertype") ?? "";
-    let next = before;
-    for (const word of [...seededWords.current]) {
-      if (word === wearing) continue;
-      seededWords.current.delete(word);
-      next = withoutTypeWord(next, word);
-    }
-    if (next !== before) setValue("supertype", next, { shouldDirty: true });
-  }, [kind, watchedTemplate, getValues, setValue]);
 
   const kindOptions: ChipOption<CardKind>[] = KIND_PICKER_KINDS.map((k) => {
     // A kind is pickable only when at least one of its frames has a
@@ -544,7 +537,7 @@ export function CardSetupPanel({
               setValue("supertype", withTypeWord(getValues("supertype"), word), {
                 shouldDirty: true,
               });
-              seededWords.current.add(word);
+              seededWords.seed(word);
             }
             if (resolution.status === "colour-switched") {
               const identity = colorIdentityForKey(resolution.colorKey);

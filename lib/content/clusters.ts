@@ -22,6 +22,16 @@ export type Cluster = {
 };
 
 const CLUSTERS: Record<string, Cluster> = {
+  lore: {
+    slug: "lore",
+    title: "MTG Lore for Card Designers",
+    intro:
+      "Magic's worlds explain its cards. These guides follow a piece of the story — a plane, its gods, a turning point — to the place it shows up on cardboard: a frame, a mechanic, a card type. They are written from Wizards of the Coast's own published story and design articles, with the sources listed, for people who want their custom cards to belong to a world as well as to the rules.",
+    blurb:
+      "MTG lore explained for custom card makers — the stories behind frames, mechanics and card types, with sources.",
+    toolHref: "/create",
+    toolLabel: "Open the card creator",
+  },
   "card-design": {
     slug: "card-design",
     title: "Custom Card Design",

@@ -14,6 +14,7 @@ import { slugifyTag } from "@/lib/content/articles";
 // Available to authors inside .mdx:
 //   <Mana cost="{2}{R}{R}" />            inline mana pips (real Mana font)
 //   <Callout tone="tip|note|warning">…</Callout>   boxed aside
+//   <CardRow caption="…"><CardScan … /></CardRow>  printed cards, side by side
 //
 // h2/h3 are overridden to carry slugified ids so the table of contents (built
 // from the same slugifyTag in extractToc) links to real anchors. Links to
@@ -34,8 +35,10 @@ function childrenToString(node: ReactNode): string {
   return "";
 }
 
-function Heading2({ children }: { children?: ReactNode }) {
-  return <h2 id={slugifyTag(childrenToString(children))}>{children}</h2>;
+/** `id` is given only by generated headings (GFM's "Footnotes", whose
+ *  references point at it); a heading the guide wrote gets its slug. */
+function Heading2({ id, children }: { id?: string; children?: ReactNode }) {
+  return <h2 id={id ?? slugifyTag(childrenToString(children))}>{children}</h2>;
 }
 
 function Heading3({ children }: { children?: ReactNode }) {
@@ -80,6 +83,80 @@ function Callout({
   );
 }
 
+/** Scryfall's image host — the only place a printed card's picture may come
+ *  from. Never a file in git: the pictures are Wizards of the Coast's. */
+const CARD_SCAN_HOST = "https://cards.scryfall.io/";
+
+/**
+ * One printed card, whole and unaltered (Scryfall's image guidelines: no
+ * crop, no overlay, the artist line and copyright left readable), linked to
+ * its Scryfall page and credited to its illustrator.
+ */
+function CardScan({
+  name,
+  printing,
+  artist,
+  src,
+  href,
+}: {
+  name: string;
+  /** Set and year as printed, e.g. "Theros, 2013". */
+  printing: string;
+  artist: string;
+  src: string;
+  href: string;
+}) {
+  if (!src.startsWith(CARD_SCAN_HOST)) return null;
+  return (
+    <figure className="m-0 flex w-36 flex-col gap-2 sm:w-44 group-data-[size=large]:w-40 sm:group-data-[size=large]:w-64">
+      <a href={href} target="_blank" rel="noopener noreferrer">
+        {/* A remote scan, shown as Scryfall serves it: next/image would
+            re-encode Wizards' picture through our optimizer. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={`${name} (${printing}), a printed Magic card`}
+          width={488}
+          height={680}
+          loading="lazy"
+          decoding="async"
+          className="m-0 block h-auto w-full"
+          style={{ borderRadius: "4.75% / 3.5%" }}
+        />
+      </a>
+      <figcaption className="m-0 text-xs leading-5 text-muted">
+        <span className="font-semibold text-foreground">{name}</span>
+        <br />
+        {printing}. Illustrated by {artist}.
+      </figcaption>
+    </figure>
+  );
+}
+
+/** A row of printed cards with one line saying what to look at. */
+function CardRow({
+  caption,
+  size,
+  children,
+}: {
+  caption?: string;
+  /** "large" for a comparison whose point is a detail of the frame. */
+  size?: "large";
+  children?: ReactNode;
+}) {
+  return (
+    <div data-size={size} className="group my-3 flex flex-col gap-3">
+      <div className="flex flex-wrap justify-center gap-4 sm:gap-6">{children}</div>
+      <p className="m-0 text-center text-sm leading-6 text-muted">
+        {caption ? `${caption} ` : null}
+        <span className="text-xs">
+          Card images © Wizards of the Coast, shown via Scryfall.
+        </span>
+      </p>
+    </div>
+  );
+}
+
 function MdxLink({
   href = "",
   children,
@@ -119,6 +196,8 @@ export const mdxComponents = {
   table: Table,
   Mana,
   Callout,
+  CardRow,
+  CardScan,
 };
 
 /** Compile options for article bodies. next-mdx-remote parses CommonMark

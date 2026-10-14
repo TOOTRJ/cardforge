@@ -789,7 +789,13 @@ Rules and gotchas:
   (`ENCHANTMENT_DRESSES` / `enchantmentFrameFits` in
   `lib/creator/card-kinds.ts`: the server's kind gate, random and stand-in
   picks, the import chooser). A creature and an artifact BORROW it (picking
-  it writes "Enchantment", as the artifact frame writes "Artifact"); the
+  it writes "Enchantment", as the artifact frame writes "Artifact" — a word
+  a pick WROTE is remembered by the FORM, never by the Card step's panel
+  (`components/creator/borrowed-words.tsx`: it comes out when the card
+  leaves that frame, on any step; a hand edit of the front Types field makes
+  the words the maker's, and another card — an import, an AI fill, an idea,
+  Start over — forgets; a new card only, and a new writer of `supertype`
+  calls `forgetBorrowedWords()`); the
   Enchantment kind wears it as its own skin (`KIND_SKIN_VARIANTS` — never
   `TEMPLATE_SKIN_VARIANTS.m15`, which an instant shares). An ADDITION: a
   new card whose words say Enchantment follows them onto it where it is
