@@ -3037,7 +3037,11 @@ other card, and on an edit that takes the word off a card on the frame.
 **Owner decisions, Round 56 (2026-10-13).** (1) a new plain enchantment
 follows — built here. (2) The label stays "Nyx". (3) The word a borrowed
 frame wrote ("Enchantment", like "Artifact") stays after a step change:
-accepted for now, a follow-up with the artifact borrow. (4) Faceless One
+accepted for now, a follow-up with the artifact borrow — DONE: the words a
+frame pick wrote are remembered by the creator form
+(`components/creator/borrowed-words.tsx`), so the word comes out when the
+card leaves that frame on any later visit; a word the maker typed or kept
+by hand in the Types field stays; a new card only. (4) Faceless One
 (CLB #1) and the ten `inverted`-only promo-pack printings become
 `nearest` in a follow-up. (5) Beleren's "ffi" ligature in the preview
 (`hd-beleren-ffi-ligature`, tests/parity) is its own PR, after fi / ff / fl
