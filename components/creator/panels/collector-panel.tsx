@@ -50,6 +50,11 @@ export function holoStampChipOptions(shape: "oval" | "triangle"): ChipOption<Hol
   ];
 }
 
+/** The stamp row's help on a frame whose stamp is the TRIANGLE (the
+ *  Universes Beyond frames, TODO 4.25); the oval's is the row's own. */
+export const TRIANGLE_STAMP_HELP =
+  "The silver triangle Universes Beyond printed in the bottom border from 2021 to 2025 — on every rarity; pick Always for that. Our own neutral triangle, no symbol.";
+
 /** The live answer under the chips: what the card draws now. */
 export function holoStampAnswer(stamp: unknown, card: { cardType?: string | null; rarity?: string | null }): string {
   const rarity = (card.rarity ?? "").trim();
@@ -178,6 +183,7 @@ export function CollectorSwitches({ stored = null }: { stored?: FrameStyle | nul
           anatomy="stamp"
           on={stampOn}
           hint={stampHint}
+          help={shape === "triangle" ? TRIANGLE_STAMP_HELP : undefined}
           onToggle={(next) => setValue("frame_style.stamp", next ? switchOn : "none", { shouldDirty: true })}
         >
           <div className="flex flex-col gap-2" data-testid="stamp-rule">

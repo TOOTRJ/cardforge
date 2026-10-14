@@ -294,6 +294,16 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
         expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
         continue;
       }
+      // …and the Universes Beyond frames (TODO 4.25): their M15 twins'
+      // dresses over the UB pack's files.
+      if (template === "m15ub") {
+        expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs, ...pairs.map((pair) => `${pair}-h`)]);
+        continue;
+      }
+      if (template === "m15ubartifact" || template === "m15ubland") {
+        expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
+        continue;
+      }
       // …and the Nyx dress's twenty (TODO 4.7): m15's two dresses over the
       // starfield masters (tests/unit/creator/nyx-frame.test.ts).
       if (template === "m15nyx") {

@@ -141,6 +141,11 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // by the cut (the field ends at the border's inner edge).
   m15station: ALL_BORDER,
   m15stationland: ALL_BORDER,
+  // The Universes Beyond frames (TODO 4.25, CC's accurate 'Universes
+  // Beyond' pack — the accurate M15 pack's border): black on every edge.
+  m15ub: ALL_BORDER,
+  m15ubartifact: ALL_BORDER,
+  m15ubland: ALL_BORDER,
   m15snow: ALL_BORDER,
   m15devoid: ALL_BORDER,
   m15pw: ALL_BORDER,

@@ -220,16 +220,19 @@ export function SwitchRow({
   anatomy,
   on,
   hint,
+  help,
   onToggle,
   children,
 }: {
   anatomy: SwitchKey;
   on: boolean;
   hint: string | null;
+  /** The row's help where it depends on the frame (the stamp's shape). */
+  help?: string;
   onToggle: (next: boolean) => void;
   children?: React.ReactNode;
 }) {
-  const copy = ANATOMY_COPY[anatomy];
+  const copy = help ? { ...ANATOMY_COPY[anatomy], help } : ANATOMY_COPY[anatomy];
   const helpId = `anatomy-${anatomy}-help`;
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-elevated/30 px-4 py-3" data-anatomy={anatomy}>

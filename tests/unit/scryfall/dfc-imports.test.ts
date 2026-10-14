@@ -216,8 +216,10 @@ describe("the registry", () => {
     ["vow-157", "transform/2015", "exact", "m15dfcfront", undefined, undefined],
     ["mom-36", "transform/2015", "exact", "m15dfcfront", undefined, undefined],
     // A legendary BOT convert: the crown is drawn by the body since 5.1d;
-    // its Vehicle back (5.10) is still a gap.
-    ["bot-1", "transform/2015+vehicle", "nearest", "m15dfcfront", undefined, "4.6"],
+    // its Vehicle back (5.10) is still a gap — behind the Universes Beyond
+    // dress (TODO 4.25: Transformers prints it, triangle stamp and all),
+    // which no double-faced body draws.
+    ["bot-1", "transform/2015+universes-beyond", "nearest", "m15dfcfront", undefined, "4.25"],
     // The Ixalan parchment land back (5.8) — on XLN's compass printings and
     // LCI's plain ones alike; the land front lands on the land pair.
     ["xln-22", "transform/2015+parchment-land-back", "nearest", "m15dfcfront", undefined, "5.8"],
@@ -255,7 +257,7 @@ describe("the registry", () => {
   });
 
   it("names the Vehicle plate on a convert's back; the crown is the body's since 5.1d", () => {
-    expect(frameMatchFromScryfall(printing("bot-1")).gaps).toEqual(["vehicle"]);
+    expect(frameMatchFromScryfall(printing("bot-1")).gaps).toEqual(["universes-beyond", "vehicle"]);
   });
 
   it("the double-faced marks are drawn by the bodies: the old dfc rows are answered there, never the standard's", () => {

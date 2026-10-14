@@ -304,6 +304,8 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       "m15vehicle/main",
       // 4.7's Nyx dress: m15's box.
       "m15nyx/main",
+      // 4.25's Universes Beyond frames: their M15 twins' boxes.
+      "m15ub/main", "m15ubartifact/main", "m15ubland/main",
     ],
     ["1200 chars"],
   ],

@@ -522,6 +522,9 @@ type Match = {
    *  case. */
   keywordsAny?: readonly string[];
   layouts?: readonly string[];
+  /** Scryfall's `security_stamp` is in the list ("triangle": the
+   *  Universes Beyond stamp, TODO 4.25). */
+  stamps?: readonly string[];
   /** `full_art`, or the `fullart` frame effect. */
   fullArt?: boolean;
   textless?: boolean;
@@ -557,7 +560,7 @@ type Match = {
 };
 
 /** A family of templates picked by kind (and dress). */
-type Family = "m15" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "m20" | "dfc" | "station";
+type Family = "m15" | "ub" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "m20" | "dfc" | "station";
 
 type TemplateSpec = FrameTemplate | { family: Family };
 
@@ -705,6 +708,7 @@ function matches(match: Match, ctx: Ctx): boolean {
     if (!match.keywordsAny.some((keyword) => keywords.has(keyword.toLowerCase()))) return false;
   }
   if (match.layouts && !match.layouts.includes((card.layout ?? "").toLowerCase())) return false;
+  if (match.stamps && !match.stamps.includes((card.security_stamp ?? "").trim().toLowerCase())) return false;
   if (match.fullArt !== undefined && ctx.fullArt !== match.fullArt) return false;
   if (match.textless !== undefined && (card.textless === true) !== match.textless) return false;
   if (match.m20Design !== undefined && ctx.m20Design !== match.m20Design) return false;
@@ -797,6 +801,9 @@ function archTokenFrame(ctx: Ctx): FrameTemplate {
   return text ? "m15tokentext" : "m15token";
 }
 
+/** The kinds the Universes Beyond spell frame dresses (TODO 4.25). */
+const UB_SPELL_KINDS: readonly CardKind[] = ["creature", "instant", "sorcery", "enchantment"];
+
 const FAMILIES: Record<
   Family,
   { produces: readonly FrameTemplate[]; pick: (ctx: Ctx) => FrameTemplate }
@@ -842,6 +849,20 @@ const FAMILIES: Record<
       if (effects.has("devoid")) return "m15devoid";
       if (isArtifactCreature(facts)) return "m15artifact";
       return "m15";
+    },
+  },
+  // The Universes Beyond frames (TODO 4.25): the land frame for a land, the
+  // artifact frame for an artifact or an Artifact Creature, the spell frame
+  // for the rest — named only by the rule whose match keeps to those kinds
+  // (`ub/2015`); anything else takes its M15 frame.
+  ub: {
+    produces: ["m15ubland", "m15ubartifact", "m15ub"],
+    pick: (ctx) => {
+      const { facts } = ctx;
+      if (facts.kind === "land") return "m15ubland";
+      if (facts.kind === "artifact" || isArtifactCreature(facts)) return "m15ubartifact";
+      if (facts.kind && UB_SPELL_KINDS.includes(facts.kind) && !layoutTemplateOf(facts)) return "m15ub";
+      return FAMILIES.m15.pick(ctx);
     },
   },
   // The 2019+ borderless dress (4.32, the planeswalkers 4.33, and 4.34's
@@ -985,6 +1006,11 @@ const BORDERED_EQUIVALENT: Partial<Record<FrameTemplate, FrameTemplate>> = {
 
 export type FrameGap = GapKey;
 
+/** A printing in the Universes Beyond dress (TODO 4.25; see the
+ *  `universes-beyond` gap): the triangle stamp, from the 2021-11 drops on
+ *  (the 2020 Secret Lair prints with the stamp wear the M15 frame). */
+const UB_DRESS: Match = { stamps: ["triangle"], releasedFrom: "2021-11-01" };
+
 type GapKey =
   | "crown"
   | "two-colour"
@@ -992,6 +1018,7 @@ type GapKey =
   | "colour-indicator"
   | "vehicle"
   | "station"
+  | "universes-beyond"
   | "dfc"
   | "parchment-land-back"
   | "layout"
@@ -1097,6 +1124,21 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
     match: { colorIndicator: true },
     reason: "PipGlyph doesn't draw the colour indicator yet",
     blockedBy: "4.6",
+  },
+  // The Universes Beyond dress (TODO 4.25): the smooth, streaked frame
+  // Universes Beyond printed from the 2021-11 Secret Lair drops and 40K
+  // (2022-10) to Final Fantasy (2025-06), always with the triangle stamp —
+  // Scryfall's `security_stamp` is the one field that names it (219 of 224
+  // triangle-stamped plain prints read wear it; from Marvel's Spider-Man,
+  // 2025-09, Universes Beyond prints the M15 frame with the oval or no
+  // stamp). PipGlyph draws it on the plain spell, artifact and land frames
+  // (`ub/2015`); on any other body — a saga, an adventure, a Vehicle, a
+  // double-faced card, extended art, a colourless spell (print's is
+  // see-through) — the printing keeps its frame as the nearest.
+  "universes-beyond": {
+    match: UB_DRESS,
+    reason: "this printing wears the Universes Beyond dress, which PipGlyph draws on its plain spell, artifact and land frames only",
+    blockedBy: "4.25",
   },
   vehicle: {
     // On either face: a BOT convert's Vehicle back (5.10) prints the plate
@@ -1396,6 +1438,7 @@ const M15_ERA_GAPS: readonly GapKey[] = [
   "etched",
   "border",
   "colourshifted",
+  "universes-beyond",
   "crown",
   "vehicle",
   "colour-indicator",
@@ -2301,7 +2344,9 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     // An extended-art Spacecraft (13 printings: EOE #321–355, EOC #27 / #34,
     // TRK #481) prints the station frame without the art window's rails: the
     // `station` gap, before the pieces the extended-art frame lacks.
-    ["layout", "dfc", "station", "etched", "border", "crown", "vehicle", "two-colour", "two-colour-hybrid"],
+    // …and a Universes Beyond extended-art printing (1,124) the streaked
+    // dress the extended-art frame has no twin for (TODO 4.25).
+    ["layout", "dfc", "station", "etched", "border", "universes-beyond", "crown", "vehicle", "two-colour", "two-colour-hybrid"],
   ),
   {
     key: "nyx/2003",
@@ -2438,7 +2483,9 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     // that is 4.26's per-part colour, not the two-colour dress, so the gap's
     // item follows the frame the printing lands on (as the registry's
     // aftermath/m note says).
-    ["omen", "dfc", "etched", "border", "crown", "two-colour", "two-colour-hybrid"],
+    // A Universes Beyond saga (254 printings), adventure or split wears
+    // the streaked dress the layout frames have no twin for (TODO 4.25).
+    ["omen", "dfc", "etched", "border", "universes-beyond", "crown", "two-colour", "two-colour-hybrid"],
     { "two-colour": LAYOUT_TWO_COLOUR_ITEM, "two-colour-hybrid": LAYOUT_TWO_COLOUR_ITEM },
   ),
   {
@@ -2557,6 +2604,44 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       },
     },
     M15_ERA_GAPS.filter((gap) => gap !== "vehicle"),
+  ),
+  // A Universes Beyond printing on the plain 2015 frame (TODO 4.25; the
+  // 2021-11 Secret Lair drops and 40K 2022 → Final Fantasy 2025: 3,784
+  // printings, Scryfall 2026-10-13) prints the Universes Beyond frame.
+  // Until its template is verified in the card's colour the M15 frame is
+  // the nearest — where the import always landed; once it is, this rule
+  // names it (`onceVerified`) and is exact (`exactOnceVerified`), every
+  // other M15-era gap still naming its own item. Spells, artifacts and
+  // lands only: a Vehicle keeps the Vehicle rule above (the bronze frame
+  // is the closer one), and a colourless NON-artifact spell (ACR #1,
+  // FIN #2, WHO #9) prints a see-through frame the Universes Beyond spell
+  // frame's borrowed colourless master is not — it stays on `era/2015`
+  // with the `universes-beyond` gap, as the sagas and adventures do.
+  ...withGaps(
+    {
+      key: "ub/2015",
+      exactLabel: "Universes Beyond frame (2021–25)",
+      match: {
+        frames: ["2015"],
+        borders: ["black"],
+        kinds: ["land", "artifact", ...UB_SPELL_KINDS],
+        layouts: ["normal"],
+        // The foil-etched and "inverted" Universes Beyond printings (ACR's
+        // etched run, 40K's, the Fallout serials) are dresses of their own:
+        // they stay where they landed.
+        effectsNone: ["etched", "inverted"],
+        allOf: [UB_DRESS, { anyOf: [{ kinds: ["land"] }, { typeWordsAny: ["artifact"] }, { colorCount: { min: 1 } }] }],
+      },
+      outcome: {
+        status: "nearest",
+        template: { family: "m15" },
+        onceVerified: { family: "ub" },
+        exactOnceVerified: true,
+        reason: "PipGlyph's Universes Beyond frame isn't verified yet",
+        blockedBy: "4.25",
+      },
+    },
+    M15_ERA_GAPS.filter((gap) => gap !== "universes-beyond"),
   ),
   // An enchantment on the plain 2015 frame that prints the Nyx dress (TODO
   // 4.7; Scryfall's `enchantment` frame effect — `frame:nyxtouched`: every
@@ -2849,6 +2934,8 @@ const GOLD_PAIR_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<FrameTemplate>([
  *  crown, 4.6a, and the pairs, 4.6b; the borderless, extended-art and snow
  *  frames theirs, 4.6f) — or, for the gold-split gap, where the frame's
  *  two-colour printings are its plain gold master (GOLD_PAIR_TEMPLATES). */
+const UB_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<FrameTemplate>(["m15ub", "m15ubartifact", "m15ubland"]);
+
 function gapDrawnBy(gap: GapKey, template: FrameTemplate, border?: string): boolean {
   switch (gap) {
     // The border gap is ONE gap for white, silver, gold and yellow (TODO
@@ -2874,6 +2961,9 @@ function gapDrawnBy(gap: GapKey, template: FrameTemplate, border?: string): bool
     // The Nyx starfield (TODO 4.7): the Nyx frame draws it.
     case "nyx":
       return isEnchantmentDress(template);
+    // The Universes Beyond dress (TODO 4.25): its three frames draw it.
+    case "universes-beyond":
+      return UB_TEMPLATES.has(template);
     default:
       return false;
   }

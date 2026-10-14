@@ -178,7 +178,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 46 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 49 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the M15 family (4.4, shipped in #380, layout v24): m15, m15artifact,
@@ -193,6 +193,12 @@ into `.frames-build/` — 46 templates today (`CC_TEMPLATES` in
   (Theros)' masters whole, m15's twenty pair masters over them, and
   m15nyxcrown, the crown band with the pack's Nyx inner crown on top
   ([The Nyx dress](#the-nyx-dress-47));
+- the Universes Beyond frames (4.25): m15ub, m15ubartifact and m15ubland —
+  the accurate 'Universes Beyond' pack (`m15/new/ub/`, the accurate M15
+  pack's geometry and masks with smooth streaked art), their M15 twins'
+  recipes over its files with the pair masters, its own plates, its crown
+  band (`m15ubcrown`) and the triangle stamp's notch (`m15ubholostamp`)
+  ([The Universes Beyond frames](#the-universes-beyond-frames-425));
 - the borderless M15 frame from 'Borderless (Alt)' (4.32): m15borderless and
   its artifact dress m15borderlessartifact, each with the pack's own P/T
   plates — and, since 4.6f (wave 2a), their pinline-split pair masters and
@@ -3338,6 +3344,243 @@ look are layout **v54**, scoped to the two templates
 (`STATION_BANDS_LAYOUT_VERSION`, "sweep"): production holds no card on
 either, the dev database's seeds re-bake. A stored Spacecraft on the
 artifact frame keeps it.
+
+### The Universes Beyond frames (4.25)
+
+TODO 4.25 (owner 2026-10-13, roadmap Q5: three frames of their own — spell,
+artifact, land — reached by a pick or an import only). `m15ub`,
+`m15ubartifact` and `m15ubland` are the frame Universes Beyond printed from
+the 2021-11 Secret Lair drops and Warhammer 40,000 (2022-10) to Final
+Fantasy (2025-06): M15's card with smooth, streaked bars, box and frame
+where M15 has its mottled paper, a smooth crown, smooth P/T plates, and the
+TRIANGLE holofoil stamp on every rarity.
+
+**What the prints show** (677 plain black-bordered printings read at
+1500 × 2100, 2026-10-13: 545 across every Universes Beyond set and stamp,
+53 more of the Secret Lair and promo sets, 79 DSK / FDN / DMU controls;
+each compared with our Universes Beyond master AND our M15 master of its
+colour key by a normalised cross-correlation of the bars and the text box,
+the text's ink left out):
+
+- **Which sets wear it.** Every triangle-stamped set from 40K to FIN
+  correlates with the Universes Beyond drawing (median 0.68–0.76; the M15
+  drawing 0.20–0.38): 40K, LTR / LTC and their promos, WHO, PIP, ACR, FIN /
+  FIC and their promos, the Secret Lair drops from 2021-11 on (21 of 22):
+  179 of 189 prints of those sets clearly, none on the M15 side (the other
+  ten are gold, hybrid and colourless cards the measure reads poorly). Every set from Marvel's
+  Spider-Man (2025-09) on correlates with M15 (0.51–0.70; ours 0.24–0.48),
+  as the 79 controls do (0.42–0.70): SPM, SPE, TLA, TLE, TMT, TMC, MSH,
+  MSC, HOB, HOC, TRK, TRC print the plain M15 frame with the OVAL stamp on
+  rares and none below. Scryfall's `security_stamp: triangle` is the one
+  field that names the frame (3,784 plain printings; 1 without it before
+  2025-09). Not covered by it: one 2020 Secret Lair print with the triangle
+  on another frame (the rule starts at 2021-11-01), Heroes of the Realm
+  2021, and a handful of late Final Fantasy promos (`pmei`) that keep the
+  streaked frame under an oval stamp — those import as M15, as before.
+- **Same slots as M15.** Against the master, the Universes Beyond prints'
+  title bar sits at +1.5 px, the type bar at +0.2, the box's bottom at
+  −1.1 (the controls: +1.5 / +0.2 / −1.2), the name's ink starts at row 128
+  on both and the type line's at 1209 / 1212 (medians at HD; p10–p90 within
+  3 px of each other). Card Conjurer's pack says the same thing: the M15
+  pack's six masks, art bounds and text boxes. So each profile is its M15
+  twin's, slot for slot.
+- **Pairs.** A two-colour card prints the split box and pinline over gold
+  bars (40K #104, LTR #287), a hybrid one the two frames under grey bars
+  (PIP #212, ACR #55), a two-colour artifact the silver frame under gold
+  bars (40K #110), a two-colour land the land frame with the split box
+  (40K #268) — M15's dresses, so the pair masters are 4.6b's recipe over
+  the pack's files.
+- **Crown.** Every legendary printing on the frame wears the STANDARD
+  crown's shape in the smooth art (40K #10, LTR #173, FIN #558; gold 40K
+  #2; a land's LTR #257). Card Conjurer's floating Universes Beyond crowns
+  belong to its full-art and extended looks and are not imported.
+- **Stamp.** The triangle sits at 688–814 px under a top edge at 1919 px,
+  its apex at 1991 (61 prints), under a pinline that steps up and over it
+  (the black from 1911 px), on 191 of 198 prints read — every rarity; a
+  common's and an uncommon's is a matte grey triangle, a rare's and a
+  mythic's the hologram.
+- **Colourless.** The three colourless non-artifact cards in print (ACR
+  #1, FIN #2, WHO #9) wear a SEE-THROUGH frame, the art under translucent
+  grey bars — not the artifact frame.
+- **Tones** (the bars and box against ours, the medians of 9–13 prints a
+  key): within 8 levels a channel on w u b r, the artifact frame and its
+  coloured keys; the green title bar prints 14 lighter in red and blue
+  (193,215,185 against 179,214,172), gold 7–12 darker. Left as Card
+  Conjurer drew them in this reading; toned since (the tone pass, below).
+
+**A second reading** (#544's independent check, 2026-10-13: 238 OTHER
+printings — none of the 677 above — each read twice, by eye on the bars and
+by correlation with both masters):
+
+- **Scope.** 143 of 145 triangle-stamped plain printings of 2021-11 →
+  2025-08 wear the streaked frame and none the M15 one (the two others are
+  the see-through colourless card), every non-full-art basic land among
+  them (40K, LTR, WHO, ACR, the 2021 Secret Lair five). Of 77 Universes
+  Beyond printings WITHOUT the stamp from 2025-09 on, one wears the streaked
+  frame: PMEI 2025-21 (Cloud, Midgar Mercenary, 2025-12) — its scan shows
+  the triangle, Scryfall tags it `oval`, so it imports as M15. A 2026
+  printing that does carry the triangle (PMEI 2026-17) is streaked: the
+  rule has no end date on purpose. The one plain triangle print before
+  2021-11 (SLD #581, 2020) wears a dark brushed frame of its own. In
+  Scryfall's data no plain black-bordered Universes Beyond printing of
+  2021-11 → 2025-08 lacks the stamp.
+- **Stamp.** On 114 prints the triangle's top edge is at 1918 px (1917–
+  1927), its apex at 1991, 686–816 px wide 8 px down; ours read the same
+  way: 1920, 1992, 683–816. Its TONE differs: a common's and an uncommon's
+  is a flat dark grey (97, 97, 97), a rare's and a mythic's hologram reads
+  135–150 — ours is one silver at 214 on every rarity.
+- **Tones, on the cleanest prints** (the digital renders, a few levels of
+  spread): green title bar 187–194, 210–212, 176–182 against our
+  173, 211, 165; gold title bar 238–240, 218–220, 128–140 against
+  241, 227, 157 and gold text box 245, 234, 196 against 249, 242, 213; the
+  COLOURLESS LAND (PIP #254, LTR #261) title bar 198, 187, 178 against
+  214, 210, 194 and text box 231, 227, 221 against 220, 214, 195 — the
+  largest miss. White, blue, black, red and the artifact frame are within
+  about 8. A tone pass on `g`, `m` and the land's `c` is best done BEFORE
+  those colours are ticked: afterwards it is a correction, with a sweep.
+  ("Ours" in this bullet is the pack as drawn; the pass is below.)
+
+**The tone pass** (owner Round 57, 2026-10-14: tone them before the frames
+are promoted, so no stored card ever wore the old tones — no bump, no
+sweep). Print was read a THIRD time first, on 190 printings neither earlier
+reading used (Scryfall's images of FIN, FIC, ACR, PIP, WHO, LTR, LTC and
+their promos, 40K, the Secret Lair), by the second reading's method — the
+per-channel median of the region's paper at 1500 × 2100, the brightest 5 %
+and the darker 40 % (ink, rims) left out; title bar x 140–1360 × y 118–198,
+type bar y 1198–1272, text box x 150–1350 × y 1350–1880. 47 were set aside
+for a cast of their own (the date-stamped promos, the surge foils, 40K's
+and the Secret Lair's scans); the other 143 agree within a few levels a
+set. Medians [min–max]; "before" and "after" are our master read the same
+way:
+
+| Place | Before | Print: builder | Print: second reader | Print: Round 57 | After |
+|---|---|---|---|---|---|
+| Green title bar | 173, 211, 165 | 193, 215, 185 | 187–194, 210–212, 176–182 | 185, 211, 178 [180–194, 209–213, 173–182] (27 spells) | 188, 211, 179 |
+| Green type bar | 170, 209, 162 | — | — | 180, 209, 173 [175–188, 206–212, 165–178] (27) | 182, 209, 173 |
+| Gold title bar | 241, 227, 157 | "7–12 darker" | 238–240, 218–220, 128–140 | 237, 219, 139 [231–241, 216–222, 127–145] (29 spells of 3+ colours); 239, 221, 134 (11 two-colour spells); 241, 221, 135 (6 two-colour artifacts); 240, 222, 133 (20 gold lands) | 239, 220, 135 |
+| Gold type bar | 241, 226, 154 | — | — | 237, 219, 135; 239, 219, 130; 241, 219, 129; 241, 222, 130 (the same four groups) | 238, 219, 132 |
+| Gold text box | 249, 242, 213 | — | 245, 234, 196 | 244, 234, 198 [241–246, 233–235, 196–202] (29); 243, 234, 198 (20 gold lands) | 244, 234, 197 |
+| Colourless land title bar | 214, 210, 194 | — | 198, 187, 178 (2 lands) | 197, 185, 176 [192–200, 182–187, 174–177] (32 lands); 197, 184, 176 (12 two-colour lands) | 197, 186, 177 |
+| Colourless land type bar | 212, 208, 191 | — | — | 197, 185, 176 (32); 197, 184, 175 (12) | 197, 185, 176 |
+| Colourless land text box | 220, 214, 195 | — | 231, 227, 221 (2) | 230, 226, 219 [229–232, 224–227, 217–221] (32) | 230, 226, 220 |
+
+Gold prints in two inks — WHO / ACR / LTC with blue at 122–131, FIN / FIC /
+PIP / LTR at 133–145 — and the target sits between them. Untouched: the
+green text box (215, 227, 215 against our 219, 229, 218); white, blue,
+black, red and the artifact frame, within about 8 on the two earlier
+readings (not read again here); the white and the black land, within 6 on
+two prints each.
+
+- **How.** `UB_PRINT_TONES` (`scripts/lib/cc-frames.mjs`) is the recipe:
+  per region `from` (what the pack's file reads) and `to` (the centre the
+  three readings agree on) — numbers, no scan is read by a build. The
+  importer tones the FILE as it loads it (`CC_SOURCE_TONES`,
+  `toneSourceRegions`), through the pack's own Title, Type and Rules masks,
+  before any mask, ramp or composite: the colour is multiplied by
+  to ÷ from, so streaks, bevels and rims keep their shading and black stays
+  black, and the gain's colour part fades out between the region's tone and
+  white, where only the luminance gain is left. (A plain per-channel gain
+  was tried first: green's × 1.087 / 1 / 1.085 turned the bar's light
+  streaks pink — the Vehicle plate's lesson.) Alpha is never touched.
+- **What shares the pixels.** Five files are toned: `g.png` and `lg.png`
+  (the green land's bars are the green frame's, pixel for pixel), `m.png`
+  and `lm.png` (the gold land's bars AND box are the gold frame's), and
+  `l.png`. So one tone reaches every master built from them: `m15ub/g`,
+  `m15ub/m`, the ten gold-split pairs (their bars are `m.png`'s) and the ten
+  hybrids (their grey bars are `l.png`'s — PIP #212 / #740 and ACR #55
+  print them at 198–202, 187–191, 177–179); `m15ubartifact/g`, `m15ubartifact/m` and
+  its ten pairs (gold bars); `m15ubland/c`, `m15ubland/g`, `m15ubland/m` and its ten pairs
+  (the land's grey bars). 47 masters and their 47 WebP twins, 94 objects.
+- **What did not move.** The frame field, the pinline and the border of
+  every master (the changed pixels are rows 97–225, 1178–1307 and
+  1312–1939 only, x 84–1416; 0 alpha values), so the stamp notches — their
+  rim is tinted to the pinline — rebuild to the same bytes, as do the 36
+  crown pieces, the 28 plates and the other 28 masters (w, u, b, r and the
+  artifact silver): 128 of the 222 objects are byte-identical, and nothing
+  outside the three templates changed in the manifest. Every WebP's alpha
+  still equals its PNG's.
+- **Left as it is.** The green LAND's two prints read (LTR #260, LTC #341)
+  agree with the green bar's new tone, on two prints only. The gold
+  pinline, the crowns' gold and the plates were not measured against print
+  in this pass.
+
+**The masters.** Card Conjurer's accurate 'Universes Beyond' pack
+(its `packUBNew` pack, `m15/new/ub/`, 2010 × 2814): the colour frames whole, the
+artifact frame under the colour's bars for a coloured artifact, the land
+frame and its tints — `m15`, `m15artifact` and `m15land`'s recipes with
+`ubFrameFile` for the file of a letter. The pack lists a 'Colorless Frame'
+that is **missing from Card Conjurer's tree**: `m15ub/c` is the pack's
+ARTIFACT frame (owner 2026-10-13), the same bytes as `m15ubartifact/c`,
+opaque (no `underFrameArt`). Since print's colourless card is see-through,
+`m15ub/c` has NO reference printing and cannot be verified until the owner
+decides (the older pack's `m15/ub/regular/c.png` is that see-through frame
+in another drawing; not used). Plates: the pack's own `m15/ub/pt/<k>.png`
+(282 × 154) at M15's plate box — the grey 'Colorless' plate under `c` on
+the spell frame (the hybrid dress's too), the silver 'Artifact' one on the
+artifact frame; the land frame draws the spell frame's. Their ink is
+within a pixel of M15's (`lib/cards/plate-ink.ts`).
+
+**The crown** is `m15ubcrown/<key>.png`: `m15crown`'s recipe at the same
+rects over the pack's smooth crowns (`UB_CROWN_BAND`), keys w u b r g, m,
+a, l and the ten pairs — no `c` (a colourless card on the spell frame is
+crowned in the artifact silver, as its master is).
+
+**The triangle stamp.** `frame_style.stamp` already held `"triangle"` (an
+import of a triangle-stamped printing has written it since 4.9c); until
+this frame it drew the M15 frame's OVAL, because every "on" value draws the
+shape the frame's notch is cut for. It still does on M15; on the three
+Universes Beyond frames the notch is the triangle's:
+`m15ubholostamp/<key>.png` is Card Conjurer's stamp piece (299 × 137 on
+its 2015-wide card) resampled once to 223 × 102 px at 638, 1891 — the rim
+tinted to our master's bar, per column on a pair, the triangle (the
+hologram capture) cut clear (`HOLO_STAMP_NOTCHES.m15ubholostamp`,
+`UB_STAMP_HOLE`) — and the art over it is our own silver triangle on the
+prints' geometry (`UB_STAMP_FACE`; `HOLO_STAMP_TRIANGLE_ART` in
+`lib/cards/holo-stamp-art.ts`, generated by
+`scripts/generate-holo-stamp-art.mjs`). The switch keeps its meaning:
+`"auto"` stamps a rare or a mythic, `"oval"` / `"triangle"` always,
+`"none"` never. Print stamps every rarity on this frame; an IMPORT does so
+too (it writes `"triangle"`), a card made in the creator follows `"auto"`
+until its maker picks "Always" (owner question: should `"auto"` mean every
+rarity here?). The rules keep-out is the raised pinline
+(`M15UB_HOLO_STAMP_KEEP_OUT`).
+
+**Who gets it.** An addition: no stored card moves, no bump, no sweep, no
+badge.
+
+- A NEW card never starts on one: none is an era's standard. Each is the
+  last skin of its M15 twin under Variations (`TEMPLATE_SKIN_VARIANTS`),
+  offered where it is verified in the card's colour — the spell frame to a
+  creature, instant, sorcery or enchantment, the artifact frame to an
+  artifact (an Artifact Creature borrows it, as it borrows `m15artifact`),
+  the land frame to a land. Print restricts nothing more, so any card of
+  the kind may pick the look.
+- An import: the registry's `ub/2015` rule — a plain black-bordered
+  2015-frame spell, artifact or land with the triangle stamp, released
+  2021-11-01 or later — is `nearest` on the M15 frame (where it always
+  landed; the answer says "not yet verified") until the Universes Beyond
+  frame is verified in the card's colour, then names it and is `exact`
+  (the crown, both pair dresses and the stamp are drawn there). The AI
+  deck remix follows (`remixFrameFor` finalizes the same match).
+- A Universes Beyond printing on another body keeps its frame as the
+  `nearest`, with the `universes-beyond` gap: a saga, an adventure or a
+  split (`layout/2015`), a Vehicle (`vehicle/2015` — the bronze frame is
+  the closer one), a double-faced card, extended art, a colourless
+  non-artifact spell. The foil-etched and "inverted" runs are dresses of
+  their own and never take the rule.
+
+Measured on 19,807 printings (every Universes Beyond printing and 8,312
+others, Scryfall 2026-10-13) through the import path with production's
+verified list: 0 landings change before the ticks (4,752 Universes Beyond
+printings change their ANSWER — exact on M15 becomes "not yet verified",
+or the `universes-beyond` gap — and no other printing changes at all);
+with the three templates verified in every colour 3,234 printings move,
+all Universes Beyond, onto their own frame (2,001 spells, 614 artifacts,
+619 lands).
+
+**Not built** (follow-ups, in 4.25): the Universes Beyond Vehicle frame
+(the pack's `v.png`), the see-through colourless frame, extended art, full
+art, the saga and spree dresses, the floating crowns, borderless.
 
 ### Printed pieces a card switches on
 
@@ -6617,11 +6860,11 @@ at HD on all four.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 49 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 52 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens, the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress and 4.27a's two station frames, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and 4.25's three Universes Beyond frames, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card) prints its names,

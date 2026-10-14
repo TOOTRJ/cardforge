@@ -51,6 +51,9 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   // The station frame (TODO 4.27a): ONE picture under the whole frame.
   m15station: { front: [1392, 1959] },
   m15stationland: { front: [1392, 1959] },
+  m15ub: { front: M15_WINDOW },
+  m15ubartifact: { front: M15_WINDOW },
+  m15ubland: { front: M15_WINDOW },
   m15snow: { front: M15_WINDOW },
   m15snowland: { front: M15_WINDOW },
   m15devoid: { front: M15_WINDOW },

@@ -44,7 +44,7 @@ describe("where the pieces are declared", () => {
     // body but the ▼ land back, and the modal spell pair; the modal land
     // pair and the ▼ land back draw none (no print).
     const DRAWN = [
-      "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart",
+      "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart",
       // The station frame (TODO 4.27a): the parents' crown band on its two entries.
       "m15station", "m15stationland",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",

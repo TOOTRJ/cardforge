@@ -49,6 +49,10 @@ describe("frame reference registry", () => {
       "m15textless/c",
       "m15textlessland/c",
       "m15textlessland/m",
+      // The Universes Beyond spell frame's colourless master is the pack's
+      // artifact frame (TODO 4.25); print's three colourless non-artifact
+      // cards wear a see-through frame instead.
+      "m15ub/c",
       "m15token/m",
       "m15tokenartifact/w",
       "m15tokenartifact/b",
@@ -138,10 +142,10 @@ describe("frame reference registry", () => {
     // colour referenced, the tall one's c by the serialized DFT #376) +
     // 4.52's emblem + 5.1a's five transform bodies + 5.1b's four modal bodies.
     // + 4.5c's Vehicle frame + 4.7's Nyx dress + the station frame's two
-    // (TODO 4.27a).
+    // (TODO 4.27a) + 4.25's three Universes Beyond frames.
     // + the five M15 treatments that left the showcase era on 2026-10-13
     // (extended art, the two full-art basics, the two textless frames).
-    expect(m15Templates.length).toBe(47);
+    expect(m15Templates.length).toBe(50);
     expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {

@@ -532,6 +532,15 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   // says Spacecraft, a land whose subtype says Planet (SUBTYPE_DRESSES).
   m15station: ["artifact"],
   m15stationland: ["land"],
+  // The Universes Beyond frames (TODO 4.25) are new — no legacy card sits
+  // on them — and are skins of the M15 standard, the artifact frame and the
+  // land frame, as the borderless three are: the spell frame for the kinds
+  // m15 dresses, the artifact one for an artifact (an Artifact Creature
+  // borrows it, 1.7), the land one for lands. Print restricts nothing more:
+  // any card of the kind may wear the look.
+  m15ub: ["creature", "instant", "sorcery", "enchantment"],
+  m15ubartifact: ["artifact", "creature"],
+  m15ubland: ["land"],
 };
 
 /** Kinds that wear ONLY a template whose trade dress names them. */
@@ -840,7 +849,8 @@ const BORROWED_VARIATIONS: Partial<
   // …and the Nyx dress (TODO 4.7, owner decision A4): an Enchantment
   // Creature's frame, borrowed like the artifact frame — and an Enchantment
   // Artifact's, under the artifact standard.
-  creature: { m15: ["m15artifact", "m15borderlessartifact", "m15nyx"] },
+  // …and the Universes Beyond artifact frame (4.25), the last.
+  creature: { m15: ["m15artifact", "m15borderlessartifact", "m15nyx", "m15ubartifact"] },
   artifact: { m15artifact: ["m15nyx"] },
 };
 
@@ -870,6 +880,7 @@ export type BorrowedTypeWord = "Artifact" | "Enchantment";
 const BORROWED_TYPE_WORD: Partial<Record<FrameTemplate, BorrowedTypeWord>> = {
   m15artifact: "Artifact",
   m15borderlessartifact: "Artifact",
+  m15ubartifact: "Artifact",
   nyx: "Enchantment",
   m15nyx: "Enchantment",
 };
