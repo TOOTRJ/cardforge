@@ -51,19 +51,18 @@ describe("the required check", () => {
   });
 
   it("covers the classifier, typecheck + lint + build, every unit shard, the coverage floors and the notes job — and waits for the other required jobs", () => {
-    expect(gate).toMatch(/^ {4}needs: \[changes, static, unit, coverage, docs, frames, e2e, visual\]$/m);
+    expect(gate).toMatch(/^ {4}needs: \[changes, static, unit, coverage, docs, frames, e2e, visual, superseded\]$/m);
   });
 
   it("runs when a job it covers failed (a skipped required check counts as passing) and passes only when all succeeded", () => {
-    // The gate runs whatever became of its needs — failed, skipped, stopped
-    // at a timeout ("cancelled") or cancelled with the run — and then fails
-    // on anything but its tier's shape. The one case it is skipped is a
-    // DRAFT run cancelled as a whole (by "ready for review" or a newer push):
-    // its name there is "Draft checks", never the required one. Any other
-    // tier, or no tier, runs it — a cancelled full run is RED under the
-    // required name, never a skipped (= passing) one. The condition's truth
-    // table is in ci-docs-only.test.ts.
-    expect(gate).toMatch(/^ {4}if: \$\{\{ !cancelled\(\) \|\| needs\.changes\.outputs\.tier != 'draft' \}\}$/m);
+    // `always()`: the gate runs whatever became of its needs — failed,
+    // skipped, stopped at a timeout ("cancelled") or cancelled with the run —
+    // and then fails on anything but its tier's shape (a cancelled DRAFT run
+    // alone passes as "superseded"; ci-docs-only.test.ts runs the gate's
+    // script). `!cancelled()` leans on how a timed-out need is counted, which
+    // nothing documents — and a job whose condition is false in a cancelled
+    // run ends "cancelled", not "skipped".
+    expect(gate).toMatch(/^ {4}if: \$\{\{ always\(\) \}\}$/m);
     expect(gate).toContain("NEEDS: ${{ toJSON(needs) }}");
     expect(gate).toContain("TIER: ${{ needs.changes.outputs.tier }}");
     // The full tier (and any tier nobody knows): the classifier succeeded

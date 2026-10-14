@@ -312,14 +312,16 @@ jobs:
           retention-days: 3
 
   # The REQUIRED check (main's ruleset names "Typecheck, lint, unit"): green
-  # only when the jobs its tier runs all are. Not `!cancelled()` alone: the
-  # gate must RUN whatever became of the jobs it covers — failed, skipped,
+  # only when the jobs its tier runs all are. `always()`, not `!cancelled()`:
+  # the gate must RUN whatever became of the jobs it covers — failed, skipped,
   # timed out (a job stopped at its `timeout-minutes` ends as "cancelled") or
   # cancelled with the run — because a required check that is "skipped"
-  # counts as passing. Its condition names a status function (so a failed
-  # need does not skip it) and is true in every one of those cases but the
-  # one exception below (it was `always()` until then). It accepts exactly ONE shape per tier and
-  # fails on anything else (`changes` must have succeeded in all of them):
+  # counts as passing, and `always()` is the one condition documented to run
+  # in every one of those cases. (A job whose condition is FALSE when its run
+  # is cancelled does not even end "skipped": it ends "cancelled", under its
+  # name UNEVALUATED — seen 2026-10-14.) It accepts exactly ONE shape per
+  # tier and fails on anything else (`changes` must have succeeded in all of
+  # them):
   #
   #            static   unit+coverage  docs     frames, e2e, visual
   #   full     success  success        skipped  ran (not "skipped")
@@ -344,23 +346,27 @@ jobs:
   # Never rename the required name; a new job the check must cover joins
   # `needs` and the table.
   #
-  # ONE exception to "always runs": a DRAFT run that was CANCELLED — by
-  # "ready for review" (the full run takes its concurrency group) or by a
-  # newer push — skips the gate instead of failing it. Its "Draft checks"
-  # stayed red on the pull request for good (the full run reports under the
-  # other name, so nothing replaced it). That is safe because nothing is
-  # judged by it: "Draft checks" is not a required name, a draft cannot be
-  # merged, and the run that cancelled it judges the commit. Everything else
-  # still runs the gate: a draft run that was NOT cancelled (a failure, a job
-  # stopped at its timeout — that is the job's cancel, not the run's) is red,
-  # and every other tier — and a run whose classifier never said "draft"
-  # (empty tier: judged as full, under the required name) — runs it when
-  # cancelled too, so a cancelled full run stays RED under the required name
-  # and never becomes a "skipped" (= passing) "Typecheck, lint, unit".
+  #
+  # ONE exception, a DRAFT run that was CANCELLED as a whole — by "ready for
+  # review" (the full run takes its concurrency group) or by a newer push:
+  # its gate passes with "superseded" on the summary. It used to fail, and
+  # since the full run reports under the other name nothing ever replaced
+  # the red "Draft checks" on the pull request. That is safe because nothing
+  # is judged by it: "Draft checks" is not a required name, a draft cannot
+  # be merged, and the run that cancelled it judges the commit. A draft run
+  # that was NOT cancelled (a failure; a job stopped at its own timeout —
+  # the job's cancel, not the run's) is judged as before: red. Every other
+  # tier — and a run with no tier (a cancelled classifier: judged as full,
+  # under the required name) — is judged when cancelled too, so a cancelled
+  # full run stays RED under "Typecheck, lint, unit".
+  # Only a job's condition is known to see the RUN's cancel (the gate's step
+  # ran, and failed, inside cancelled runs: a step's condition did not see
+  # it), hence the `superseded` job below: it runs only in a cancelled run,
+  # and the gate reads its result.
   checks:
     name: ${{ needs.changes.outputs.tier == 'draft' && 'Draft checks (typecheck, lint, build)' || 'Typecheck, lint, unit' }}
-    needs: [changes, static, unit, coverage, docs, frames, e2e, visual]
-    if: ${{ !cancelled() || needs.changes.outputs.tier != 'draft' }}
+    needs: [changes, static, unit, coverage, docs, frames, e2e, visual, superseded]
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -368,10 +374,15 @@ jobs:
         env:
           NEEDS: ${{ toJSON(needs) }}
           TIER: ${{ needs.changes.outputs.tier }}
+          SUPERSEDED: ${{ needs.superseded.result }}
         run: |
           echo "tier: ${TIER:-(none: judged as full)}" | tee -a "$GITHUB_STEP_SUMMARY"
           echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"' | tee -a "$GITHUB_STEP_SUMMARY"
-          echo "$NEEDS" | jq -e --arg tier "$TIER" '
+          if [ "$TIER" = "draft" ] && [ "$SUPERSEDED" = "success" ]; then
+            echo "superseded: this draft run was cancelled (marked ready for review, or a newer push); the run that cancelled it judges the commit" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "$NEEDS" | jq 'del(.superseded)' | jq -e --arg tier "$TIER" '
             ( if   $tier == "notes" then ["skipped", "skipped", "success", "skipped"]
               elif $tier == "draft" then ["success", "skipped", "success", "skipped"]
               elif $tier == "light" then ["success", "success", "skipped", "skipped"]
@@ -383,6 +394,21 @@ jobs:
             and .docs.result == $want[2]
             and ([.frames, .e2e, .visual] | all(if $want[3] == "ran" then .result != "skipped" else .result == "skipped" end))
           ' > /dev/null
+
+  # A marker for the gate: did this RUN get cancelled? `cancelled()` is true
+  # only then (not when a job stops at its own `timeout-minutes`), and the
+  # condition is evaluated once every job the gate covers is over — so it
+  # runs (~5 s) in a cancelled run and is "skipped" in every other. It reads
+  # no classifier output and judges nothing: only a cancelled DRAFT run's
+  # gate uses it (see the gate).
+  superseded:
+    name: Cancelled-run marker
+    needs: [changes, static, unit, coverage, docs, frames, e2e, visual]
+    if: ${{ cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: echo "This run was cancelled (a newer push, or ready for review)." >> "$GITHUB_STEP_SUMMARY"
 
   frames:
     name: Frames published
