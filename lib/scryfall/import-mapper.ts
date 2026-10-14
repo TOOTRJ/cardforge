@@ -1538,18 +1538,29 @@ function isShowcaseSignature(signature: string): boolean {
   return signature === "showcase" || signature.startsWith("showcase/") || signature === "japan-showcase";
 }
 
+/** The showcase frames of the registry that DO print the standard legendary
+ *  crown, and whose template draws it: the Theros Beyond Death constellation
+ *  showcase (THB #258–268 — all eleven legendary, each under the 2015 crown
+ *  in its colour with the Nyx starfield strip inside; owner 2026-10-13,
+ *  NYX_CONSTELLATION_CROWN in lib/cards/template-layout.ts). A printing with
+ *  one of these signatures imports as its scan with the crown ON. */
+const CROWNED_SHOWCASE_SIGNATURES: ReadonlySet<string> = new Set(["showcase/thb/constellation"]);
+
 /** Whether a printing prints the STANDARD legendary crown (see
  *  ScryfallImportPatch.printed_crown): the `legendary` frame effect, on a
  *  printing that isn't a showcase — neither Scryfall's `showcase` effect nor
  *  a showcase frame of the registry (`match`, THIS printing's signature),
  *  which prints its own frame and no standard crown (owner decision
- *  2026-09-29: showcase printings import with the crown off, as the scan). */
+ *  2026-09-29: showcase printings import with the crown off, as the scan) —
+ *  or on one of the showcases that print it (CROWNED_SHOWCASE_SIGNATURES). */
 export function printsStandardCrown(
   card: ScryfallCard,
   match: FrameMatch = frameMatchFromScryfall(card),
 ): boolean {
   const effects = (card.frame_effects ?? []).map((e) => e.toLowerCase());
-  return effects.includes("legendary") && !effects.includes("showcase") && !isShowcaseSignature(match.signature);
+  if (!effects.includes("legendary")) return false;
+  if (CROWNED_SHOWCASE_SIGNATURES.has(match.signature)) return true;
+  return !effects.includes("showcase") && !isShowcaseSignature(match.signature);
 }
 
 /** The first day a two-colour GOLD card of the 2003 frame printed its two
@@ -1606,7 +1617,10 @@ export function printsTwoColorFrame(card: ScryfallCard): boolean {
  *   • a SHOWCASE printing: `false` when the card is Legendary (Q6 → b: it
  *     prints no standard crown, and imports as its scan), and nothing when it
  *     isn't (owner 2026-09-30, pick (b): like any nonlegendary printing, so
- *     the card gets the new-card default if it is made Legendary later);
+ *     the card gets the new-card default if it is made Legendary later) —
+ *     but for the showcases that print the standard crown
+ *     (CROWNED_SHOWCASE_SIGNATURES: the THB constellation frame), which
+ *     follow the next two rules like any 2015-frame printing;
  *   • `true` for a printing with the standard crown (printsStandardCrown);
  *   • `false` for a Legendary card printed without one (owner 2026-09-29:
  *     "OFF for M15–RIX legendaries"; the List reprints too — kept as built,
@@ -1621,6 +1635,12 @@ export function crownSwitchFromPrinting(
   face: { cardType?: string | null; supertype?: string | null },
 ): boolean | undefined {
   const effects = (card.frame_effects ?? []).map((e) => e.toLowerCase());
+  // A showcase that prints the standard crown (the THB constellation frame)
+  // follows its printing like any crowned card.
+  if (CROWNED_SHOWCASE_SIGNATURES.has(match.signature)) {
+    if (printsStandardCrown(card, match)) return true;
+    return qualifiesForCrown(face) ? false : undefined;
+  }
   if (effects.includes("showcase") || isShowcaseSignature(match.signature)) {
     return supertypeHasWord(face.supertype, "Legendary") ? false : undefined;
   }

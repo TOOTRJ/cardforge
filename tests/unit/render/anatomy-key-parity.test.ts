@@ -134,7 +134,10 @@ describe("bake path = preview path", () => {
                 : template === "m15nyx"
                   ? // The Nyx dress's crown (4.7): the band with the starfield strip.
                     "m15nyxcrown"
-                  : (dfcCrown ?? "m15crown");
+                  : template === "nyx"
+                    ? // The Nyx Constellation frame's crown: that band, its arms faded.
+                      "nyxcrown"
+                    : (dfcCrown ?? "m15crown");
         for (const key of slot.keys) {
           expect(slot.assetPathTemplate.replace("{key}", key), `${template} ${slot.anatomy}`).toBe(`/frames/${folder}/${key}.png`);
           if (slot.anatomy === "holoStamp") notches += 1;

@@ -9359,6 +9359,62 @@
       "two-colour pair masters <pair>.png (TODO 4.6h): SYNTHESISED, no Card Conjurer two-colour file exists for this frame — the finished plain land whole (its body and grey bars: the dual lands' bars read 202/190/182 against the plain land's 196/182/171 and the basics' 40 further off), with the pair's two finished coloured-land masters blended left to right across one straight ramp 42→59 %W inside the text box and the pinline (the pack's Rules and Pinline masks, moved with the cut). Measured on 36 two-colour lands, Eighth Edition 2003 → Theros 2013, all ten pairs: pinline 41.5→58.5, box 41.8→58.8"
     ]
   },
+  "nyxcrown": {
+    "source": "pipglyph",
+    "converter": "scripts/build-nyx-crown.mjs",
+    "kind": "overlay",
+    "derivedFrom": "the published m15nyxcrown/<key> bands of the frames bucket (themselves Card Conjurer imports: see \"m15nyxcrown\")",
+    "output": "1500x410 overlay band: rows 0–409 of a 1500x2100 card, the parent's corners, webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "fade": "alpha × (1 − t) on rows 372–408 (t 0 → 1), 0 below; colours untouched",
+      "arms": "nothing but the two arms is painted from row 372 down: x 60–125 and 1375–1440"
+    },
+    "colors": {
+      "w": [
+        "m15nyxcrown/w.png (published, sha256 0be33ca7f865)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "u": [
+        "m15nyxcrown/u.png (published, sha256 f00f804b24c8)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "b": [
+        "m15nyxcrown/b.png (published, sha256 5631e5a294d2)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "r": [
+        "m15nyxcrown/r.png (published, sha256 7d7840dac8b3)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "g": [
+        "m15nyxcrown/g.png (published, sha256 a621e0a7b476)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "m": [
+        "m15nyxcrown/m.png (published, sha256 bd1d4d299ecf)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ],
+      "a": [
+        "m15nyxcrown/a.png (published, sha256 381f370a7d28)",
+        "alpha × (1 − t) on rows 372–408, t 0 → 1 (the arms; 1262 px), 0 below"
+      ]
+    },
+    "sourceFiles": [
+      "m15nyxcrown/a.png",
+      "m15nyxcrown/b.png",
+      "m15nyxcrown/g.png",
+      "m15nyxcrown/m.png",
+      "m15nyxcrown/r.png",
+      "m15nyxcrown/u.png",
+      "m15nyxcrown/w.png"
+    ],
+    "notes": [
+      "PipGlyph's own cut (owner 2026-10-13): the Theros Beyond Death constellation showcase prints (THB #258–268) wear the standard 2015 legendary crown in the card's colour with the Nyx starfield strip inside it — the piece Card Conjurer's 'Nyx Showcase' pack (packM15NyxShowcase.js) lists beside its crownless masters, and the band the Nyx dress publishes as m15nyxcrown. Nothing is drawn or synthesised: every painted pixel is the parent band's.",
+      "The one cut: the `nyx` masters are MSE's and their side rim is 3 px narrower than the crown's arm (and another tone on b, r, g and the colourless master), so the arms fade out over their last rows instead of ending in a jog. The masters are not re-cut.",
+      "The numbers are scripts/lib/nyx-crown.mjs (eleven prints measured 2026-10-13); no scan is read by the build.",
+      "No pairs: the frame draws no pair masters, so a two-colour card wears the gold crown over the gold master (THB #268 prints red | green over a gold bar — the pair masters' step, not this one). The colourless master takes the artifact silver `a` (no printed colourless constellation card)."
+    ]
+  },
   "retro": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
