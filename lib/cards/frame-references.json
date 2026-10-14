@@ -49,11 +49,6 @@
           "name": "Scorpion's Sting",
           "set": "spm",
           "scryfallId": "0fb03437-32cf-4c97-bf91-ea8b2ad3f964"
-        },
-        {
-          "name": "Obsessive Pursuit",
-          "set": "tla",
-          "scryfallId": "e837e29c-d241-43c8-8f45-05056e082b60"
         }
       ],
       "r": [
@@ -361,6 +356,120 @@
           "name": "Dune Drifter",
           "set": "dft",
           "scryfallId": "36185de4-55c2-4e5d-9bcc-ea12b7052728"
+        }
+      ]
+    }
+  },
+  "m15nyx": {
+    "note": "The Nyx dress (TODO 4.7): plain black-bordered, non-legendary printings that wear the starfield on the 2015 frame — an enchantment creature first (Theros Beyond Death 2020, with its P/T plate), then a plain enchantment from Foundations 2024 on, then another creature. c: the one colourless print on the silver starfield (SOC #131; CLB #1 Faceless One prints a tan frame of its own). m: gold — five colours, three colours, and a two-colour card, which prints the split box and pinline over the gold starfield (the pair masters ride this tick).",
+    "colors": {
+      "w": [
+        {
+          "name": "Transcendent Envoy",
+          "set": "thb",
+          "scryfallId": "a9241289-28d2-4827-970e-81bdecbb5c16"
+        },
+        {
+          "name": "Twinblade Blessing",
+          "set": "fdn",
+          "scryfallId": "ecf01cbe-9fcb-4f35-bc6b-2280620b06ff"
+        },
+        {
+          "name": "Indebted Spirit",
+          "set": "mh3",
+          "scryfallId": "bfdbef00-bc1b-4dd6-aef5-aeb5ce454344"
+        }
+      ],
+      "u": [
+        {
+          "name": "Shimmerwing Chimera",
+          "set": "thb",
+          "scryfallId": "f3b54bea-f2c5-4000-9cbd-04c03a1d2ea2"
+        },
+        {
+          "name": "Extravagant Replication",
+          "set": "fdn",
+          "scryfallId": "6a41dfae-bc7e-4105-8f7e-fd0109197ad8"
+        },
+        {
+          "name": "Clammy Prowler",
+          "set": "dsk",
+          "scryfallId": "237f0b93-f12e-4c5f-a3d7-83e8f20f8493"
+        }
+      ],
+      "b": [
+        {
+          "name": "Gravebreaker Lamia",
+          "set": "thb",
+          "scryfallId": "408a2073-d068-44bc-b596-5a3a3a446ee1"
+        },
+        {
+          "name": "Midnight Snack",
+          "set": "fdn",
+          "scryfallId": "c9b7543f-2a45-4db6-b560-d15507a58c91"
+        },
+        {
+          "name": "Appendage Amalgam",
+          "set": "dsk",
+          "scryfallId": "d16b3cf3-7b85-4153-b25a-e6b5fce725cf"
+        }
+      ],
+      "r": [
+        {
+          "name": "Nyxborn Brute",
+          "set": "thb",
+          "scryfallId": "05bc4236-566f-401b-b9d7-f58126fa228b"
+        },
+        {
+          "name": "Rite of the Dragoncaller",
+          "set": "fdn",
+          "scryfallId": "673e4561-8dfd-46db-b492-878009666ac7"
+        },
+        {
+          "name": "Akki Ember-Keeper",
+          "set": "neo",
+          "scryfallId": "4d83e837-fcd1-4833-9117-e6f1bb53caad"
+        }
+      ],
+      "g": [
+        {
+          "name": "Nylea's Forerunner",
+          "set": "thb",
+          "scryfallId": "2cf2b6be-80a8-4464-a909-8cc658196a14"
+        },
+        {
+          "name": "Sylvan Scavenging",
+          "set": "fdn",
+          "scryfallId": "c35b683c-d3b2-46a1-876a-81b34e8ba2fc"
+        },
+        {
+          "name": "Fang of Shigeki",
+          "set": "neo",
+          "scryfallId": "2dd0fef1-209f-4de5-a736-8f9bca2faa0a"
+        }
+      ],
+      "c": [
+        {
+          "name": "Eldrazi Conscription",
+          "set": "soc",
+          "scryfallId": "33965c48-a7ce-4a04-8251-8eeb2d908c0b"
+        }
+      ],
+      "m": [
+        {
+          "name": "Chromanticore",
+          "set": "dmc",
+          "scryfallId": "f1182463-348b-45b3-a662-68f06ac53699"
+        },
+        {
+          "name": "Whirlwind of Thought",
+          "set": "frc",
+          "scryfallId": "e1de5fb8-7206-44a6-b827-5c6a21c25296"
+        },
+        {
+          "name": "Jukai Naturalist",
+          "set": "neo",
+          "scryfallId": "5366900b-2abf-4e5c-8507-f51aca9c7ce8"
         }
       ]
     }

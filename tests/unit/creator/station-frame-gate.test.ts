@@ -208,4 +208,19 @@ describe("the follow and its words (TODO 4.27a, PR 2)", () => {
     expect(subtypeFrameFor("nyx", ["Spacecraft"], all)).toBe("nyx");
     expect(subtypeFrameFor("modern", ["Spacecraft"], all)).toBe("modern");
   });
+
+  it("an Enchantment Artifact Spacecraft: the Nyx dress (#542) and the station frame never move a card off each other", async () => {
+    const { subtypeFrameFor, enchantmentFrameFor } = await import("@/lib/creator/card-kinds");
+    const all = () => true;
+    const words = { cardType: "artifact", supertype: "Enchantment", subtypes: ["Spacecraft"] };
+    // Whichever word came first has the card; the other frame is a Variations pick.
+    expect(subtypeFrameFor("m15nyx", ["Spacecraft"], all)).toBe("m15nyx");
+    expect(enchantmentFrameFor("artifact", "m15station", words)).toBe("m15station");
+    // From the Artifact frame each follow takes its own dress…
+    expect(subtypeFrameFor("m15artifact", ["Spacecraft"], all)).toBe("m15station");
+    expect(enchantmentFrameFor("artifact", "m15artifact", words)).toBe("m15nyx");
+    // …and a word that goes takes back only its own.
+    expect(enchantmentFrameFor("artifact", "m15station", { ...words, supertype: null })).toBe("m15station");
+    expect(subtypeFrameFor("m15nyx", [], all)).toBe("m15nyx");
+  });
 });

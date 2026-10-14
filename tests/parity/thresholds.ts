@@ -185,6 +185,19 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
     why:
       "The artist line (letter-spaced small capitals; `Illus. …` on the 1993 frame) is WIDER in the preview at 750 px: it ends 2 px further right on most cases and 3 px on the 1993 frame (and on the arch token on macOS). At HD the same line is NARROWER in the preview by about 6 px — within the limits there, but the worst tile of most HD cases (56.9). Both renderers start the line at the same x; they disagree about its letter-spacing or advances. Not traced.",
   },
+  // --- Found by the independent check of #542 (2026-10-13): the Nyx dress's
+  // first case failed on it and was swapped out unexplained. ----------------
+  {
+    name: "hd-beleren-ffi-ligature",
+    size: "hd",
+    cases: /^m15\/w\/creature-short@ffi-ligature$/,
+    regions: ["card"],
+    metric: "tileMad",
+    min: 65,
+    max: 80,
+    why:
+      "A Beleren line that holds \"ffi\" is drawn with the font's ffi LIGATURE in the preview and as three letters in the bake: Chromium applies the font's 'liga' feature, Satori's opentype.js never forms that ligature (lib/render/satori-text.ts says so, and measures the bake's line without it). On \"Enchantment Creature — Griffin\" the word ends about 8 px earlier in the preview at HD, and the 50 px tile over \"ffin\" (x 1050, y 1200) measures 75.5 against a limit of 65; the type region itself stays inside its limits (mad 15.2, the line's start and rise as on every card). The same card with \"Gryphon\" — the same length, no ffi — measures 56.4 on its usual worst tile (the footer), and the frame plays no part: m15 and m15nyx measure the same 75.5. At 750 px the tile measures 69.4, inside that size's limit. Every stored bake of a title or type line with \"ffi\" (Griffin, Sheriff, Officer, Traffic) is the three-letter form, so the bake is the reference; the fix is the preview's (ligatures off on the display face, if Satori forms none of Beleren's — fi, ff, fl were not measured here) and is not made in a frame PR.",
+  },
   // --- TODO 3.37: seen by #514, measured again 2026-10-13 (after #523's
   // large pips; the numbers did not move) and listed with their case. -------
   {

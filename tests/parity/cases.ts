@@ -80,6 +80,21 @@ const PICKS: readonly Pick[] = [
   // --- the Vehicle frame (TODO 4.5c): its own plate, white digits -----------
   { from: "m15vehicle/c/artifact-short@wide", why: "Vehicle: the brown plate under white digits at their widest (12/12), the bronze frame" },
   { from: "m15vehicle/wu/artifact-long@pair-crown", why: "Vehicle: the two-colour pair master and the crown over the bronze frame" },
+  // --- the Nyx dress (TODO 4.7): the starfield masters, their own crown band --
+  { from: "m15nyx/w/creature-short", why: "Nyx: the starfield master under M15's slots and plate" },
+  { from: "m15nyx/wu/creature-long@pair-crown", why: "Nyx: the two-colour pair master and the Nyx crown band (the starfield strip inside the crown)" },
+  // --- Beleren's ffi ligature (found by the independent check of #542) -------
+  // The Nyx dress's first case ("Enchantment Creature — Griffin") measured a
+  // worst tile over the HD limit and was swapped for a plainer card. It is
+  // not the frame: the same line on plain m15 measures the same, and a line
+  // of the same length without "ffi" does not. Held here on the plain frame
+  // (tests/parity/thresholds.ts "hd-beleren-ffi-ligature").
+  {
+    from: "m15/w/creature-short",
+    as: "@ffi-ligature",
+    why: "a type line with \"ffi\" (Griffin): Chromium sets Beleren's ffi ligature, Satori never forms it",
+    row: () => ({ supertype: "Enchantment", subtypes: ["Griffin"] }),
+  },
   // --- the station frame (TODO 4.27a): stacked translucency, drawn pieces ---
   {
     from: "m15station/u/artifact-short",
