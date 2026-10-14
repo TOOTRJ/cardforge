@@ -69,8 +69,9 @@ describe("one M15-era display size (layout v32)", () => {
     // land, 4.48 / 4.50's six full-art tokens, 4.33's two borderless
     // planeswalkers, 4.52's emblem, 5.1a / 5.1b's nine double-faced bodies
     // and 4.21b's battle — 4.5c's Vehicle frame, 4.7's Nyx dress — and the
-    // station frame's two (TODO 4.27a).
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(49);
+    // station frame's two (TODO 4.27a) — and 4.25's three Universes Beyond
+    // frames.
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(52);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       expect(p.title.sizePct, t).toBe(sized(t, TITLE_SIZE_PCT));
@@ -227,6 +228,10 @@ describe("baselines (TextSlot.dy)", () => {
     // The station frame (TODO 4.27a): m15artifact's and m15land's bands.
     ["m15station", base.title, cc],
     ["m15stationland", base.title, cc],
+    // The Universes Beyond frames (TODO 4.25): their M15 twins' rows.
+    ["m15ub", base.title, cc],
+    ["m15ubartifact", base.title, cc],
+    ["m15ubland", base.title, cc],
     ["m15snow", base.title, cc],
     ["m15devoid", base.title, cc],
     ["m15borderless", base.title, cc],
@@ -388,7 +393,7 @@ describe("baselines (TextSlot.dy)", () => {
   it("lands the Card Conjurer masters' type line 4.2 px higher than a kept baseline, on the prints' (1259.6 px at HD)", () => {
     const kept15 = getFrameProfile("extendedart").type.dy!;
     for (const t of [
-      "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15snow", "m15devoid", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15pw",
+      "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15ub", "m15ubartifact", "m15ubland", "m15snow", "m15devoid", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15pw",
       // The station frame (TODO 4.27a): cut from the published m15artifact /
       // m15land masters, so their type bar.
       "m15station", "m15stationland",

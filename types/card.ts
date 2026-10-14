@@ -391,6 +391,15 @@ export const FRAME_TEMPLATE_VALUES = [
   // (lib/cards/station.ts). Stored templates of their own, as the Vehicle's.
   "m15station",
   "m15stationland",
+  // The Universes Beyond frames (TODO 4.25, Card Conjurer 'Universes
+  // Beyond' accurate pack): the smooth, streaked dress Universes Beyond
+  // printed from 40K (2022-10) to Final Fantasy (2025-06) on M15's geometry —
+  // three looks of their own (owner 2026-10-13), a skin each of the M15
+  // standard, the artifact frame and the land frame. A card wears one only
+  // by its maker's pick or an import; no new card starts on them.
+  "m15ub",
+  "m15ubartifact",
+  "m15ubland",
   "m15snow",
   "m15snowland",
   "m15devoid",
@@ -546,6 +555,9 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m15nyx: "Nyx",
   m15station: "Spacecraft",
   m15stationland: "Planet",
+  m15ub: "Universes Beyond",
+  m15ubartifact: "Universes Beyond Artifact",
+  m15ubland: "Universes Beyond Land",
   m15snow: "Snow",
   m15snowland: "Snow Land",
   m15devoid: "Devoid",
@@ -671,6 +683,9 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   m15nyx: "m15",
   m15station: "m15",
   m15stationland: "m15",
+  m15ub: "m15",
+  m15ubartifact: "m15",
+  m15ubland: "m15",
   m15snow: "m15",
   m15snowland: "m15",
   m15devoid: "m15",
@@ -849,18 +864,19 @@ export const ERA_TYPE_FRAME: Partial<
 export const TEMPLATE_SKIN_VARIANTS: Partial<
   Record<FrameTemplate, FrameTemplate[]>
 > = {
-  m15: ["m15snow", "m15devoid", "m15borderless"],
+  // …and the Universes Beyond dress of each standard (TODO 4.25).
+  m15: ["m15snow", "m15devoid", "m15borderless", "m15ub"],
   // The artifact kind's own borderless dress (frames plan 4.32), and the
   // Vehicle frame (TODO 4.5c) — offered to a card whose subtype says Vehicle
   // (lib/creator/card-kinds.ts templateSubtypeDress).
   // …and the station frame (TODO 4.27a), a Spacecraft's.
-  m15artifact: ["m15borderlessartifact", "m15vehicle", "m15station"],
+  m15artifact: ["m15borderlessartifact", "m15vehicle", "m15station", "m15ubartifact"],
   // The planeswalker kind's borderless dresses (frames plan 4.33): the tall
   // one follows the ability rows (walkerRowsFrameFor).
   m15pw: ["m15borderlesspw", "m15borderlesspwtall"],
   // The land kind's own borderless dress (frames plan 4.34).
   // …and the station frame (TODO 4.27a), a Planet's.
-  m15land: ["m15snowland", "m15borderlessland", "m15stationland"],
+  m15land: ["m15snowland", "m15borderlessland", "m15stationland", "m15ubland"],
   // The text-box variations (TODO 4.49 (b)); the artifact ones are dressed
   // by the Artifact type word (lib/creator/card-kinds.ts TYPE_WORD_DRESSES).
   // The full-art token design (TODO 4.48) and its heights, variations of the

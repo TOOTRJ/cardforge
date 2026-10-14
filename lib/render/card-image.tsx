@@ -112,7 +112,7 @@ import {
   drawsColorIndicator,
   typeRectWithIndicator,
 } from "@/lib/cards/color-indicator";
-import { HOLO_STAMP_OVAL_ART } from "@/lib/cards/holo-stamp-art";
+import { holoStampArtOf } from "@/lib/cards/holo-stamp-art";
 import { COLLECTOR_FACES } from "@/lib/cards/collector-metrics";
 import {
   COLLECTOR_BRUSH_PATH,
@@ -1060,7 +1060,7 @@ function CardImage({
       {holoStamp ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={HOLO_STAMP_OVAL_ART.dataUri}
+          src={holoStampArtOf(holoStamp.shape).dataUri}
           alt=""
           width={Math.round((holoStamp.artRect.widthPct / 100) * width)}
           height={Math.round((holoStamp.artRect.heightPct / 100) * height)}
