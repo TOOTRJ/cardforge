@@ -96,6 +96,13 @@ describe("article MDX rendering", () => {
       expect(written, `${slug}: unexpected link ${raw}`).toBe(true);
     }
 
+    // A link that leaves the site opens a new tab and never takes the reader
+    // away (owner 2026-10-14) — body links, footnotes and card pictures alike.
+    for (const [tag, href] of html.matchAll(/<a ([^>]*href="(?:https?:)?\/\/[^"]*"[^>]*)>/g)) {
+      expect(tag, `${slug}: ${href}`).toContain('target="_blank"');
+      expect(tag, `${slug}: ${href}`).toMatch(/rel="[^"]*noopener[^"]*"/);
+    }
+
     // The TOC is lifted from the raw Markdown; each anchor must hit a heading.
     for (const { depth, id } of extractToc(content)) {
       expect(html, `${slug}: TOC anchor #${id}`).toContain(`<h${depth} id="${id}">`);

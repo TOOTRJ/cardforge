@@ -1,7 +1,8 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { listArticles, listTags } from "@/lib/content/articles";
+import { listArticles, listTags, slugifyTag } from "@/lib/content/articles";
+import { getCluster } from "@/lib/content/clusters";
 
 // ---------------------------------------------------------------------------
 // Every guide: complete frontmatter, a FAQ block that mirrors the visible
@@ -107,8 +108,9 @@ describe("guides", () => {
       for (const tag of article.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
     }
     for (const [tag, count] of counts) {
-      // "card makers" is a cluster with a single member today — allowed.
-      if (tag === "card makers") continue;
+      // A defined cluster may have a single member today ("card makers",
+      // "lore"): its hub has pillar copy of its own.
+      if (getCluster(slugifyTag(tag))) continue;
       expect(count, `tag "${tag}" is a one-off hub`).toBeGreaterThanOrEqual(2);
     }
   });
