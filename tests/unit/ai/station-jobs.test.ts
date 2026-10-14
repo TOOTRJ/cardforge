@@ -35,6 +35,8 @@ const s = vi.hoisted(() => ({
   stepKey: "card:0",
   answers: [] as (unknown[] | null)[],
   prompts: [] as string[],
+  /** Image-model calls (the art a step pays for). */
+  images: 0,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -99,7 +101,10 @@ vi.mock("@/lib/ai/provider", async (importOriginal) => ({
 }));
 vi.mock("@/lib/ai/remix", () => ({ generateRemixIdentity: s.identity }));
 vi.mock("@/lib/ai/image-gen", async (importOriginal) => {
-  const image = async () => ({ ok: true, bytes: new Uint8Array([1, 2, 3]), contentType: "image/png" });
+  const image = async () => {
+    s.images += 1;
+    return { ok: true, bytes: new Uint8Array([1, 2, 3]), contentType: "image/png" };
+  };
   return {
     ...(await importOriginal<typeof import("@/lib/ai/image-gen")>()),
     generatePlainImage: image,
@@ -204,6 +209,7 @@ beforeEach(() => {
   s.inserted = [];
   s.answers = [];
   s.prompts = [];
+  s.images = 0;
   s.verified = TICKED;
   s.spend.mockReset().mockResolvedValue({ ok: true, balance: 4, charged: true });
   s.refund.mockReset().mockResolvedValue(undefined);
@@ -359,6 +365,9 @@ describe("the deck remix of a printed Spacecraft / Planet", () => {
     expect(saved).toBeUndefined();
     expect(s.refund).toHaveBeenCalledTimes(1);
     expect(s.refund.mock.calls[0]![1]).toBe(1);
+    // …and BEFORE the art, like every other naming refusal: no picture is
+    // generated for a card that is not saved (the independent check).
+    expect(s.images).toBe(0);
   });
 });
 
@@ -413,6 +422,23 @@ describe("the deck remix of the user's own Spacecraft", () => {
     const { saved } = await remix(row({ face_content: rows }));
     expect(saved!.rules_text).toBe("Vigilance\n6+ | Trample");
     expect(saved!.face_content).toEqual(rows);
+  });
+
+  it("a title that is a tier's number (\"9\" in \"9+ | Flying\"): the rename would unmake the tier — refused before the art, refunded (main: saved a broken card)", async () => {
+    const { step, saved } = await remix(row({ title: "9" }));
+    expect(step).toMatchObject({ status: "failed", error: REMIX_STATION_SHAPE_LOST, spend_ref: null });
+    // No plan-limit code: the runner stops on nothing and opens no modal.
+    expect(step.error_code ?? null).toBeNull();
+    expect(saved).toBeUndefined();
+    expect(s.images).toBe(0);
+    expect(s.spend).toHaveBeenCalledTimes(1);
+    expect(s.refund).toHaveBeenCalledTimes(1);
+    expect(s.refund.mock.calls[0]!.slice(1, 4)).toEqual([1, "generate_deck", `refund:${(s.spend.mock.calls[0]![2] as { ref: string }).ref}`]);
+  });
+
+  it("a kept remix pays for its one picture", async () => {
+    await remix(row());
+    expect(s.images).toBe(1);
   });
 
   it("the station frame unticked since: the default landing, no rows — as an own card always fell back", async () => {

@@ -295,6 +295,9 @@ describe("the tier editor's notes", () => {
     expect(over.textContent).toContain("Tier 3 (9+) is over 600 characters");
     expect(over.textContent).toContain("the power / toughness goes back to tier 3 (9+), the tier the text names");
     expect(describedBy()).toContain(over.id);
+    // Described in the order they are drawn (the independent check).
+    const drawn = [...group().querySelectorAll("[data-testid=station-over-limit], [data-testid=station-text-cut]")].map((el) => el.id);
+    expect(describedBy().slice(1)).toEqual(drawn);
     const sent = await sentUpdate();
     // Saved as lines of text, as the note said — the tiers still draw.
     expect(sent.face_content).toBeNull();

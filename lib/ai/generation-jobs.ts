@@ -1646,6 +1646,18 @@ async function executeDeckRemixStep(
     mechanics = { ...mechanics, frame_template: undefined };
   }
 
+  // A remix that lands on a STATION frame (TODO 4.27a, PR 3) keeps its
+  // source's tiers: the rules are copied, only the card's names in them
+  // change. A new name that made or unmade a tier line (an own card whose
+  // title is a tier's number: "9" in "9+ | Flying") fails the step HERE —
+  // before the art is paid for, like every other naming refusal — and the
+  // wrapper refunds it. (The landing is final as far as the station frame
+  // goes: remixSavedFrame below only ever moves a token or a textless
+  // frame.)
+  if (isStationFrame(mechanics.frame_template) && !sameStationShape(mechanics.rules_text, named.rules_text)) {
+    return { ...step, status: "failed", error: REMIX_STATION_SHAPE_LOST };
+  }
+
   // ---- Art (REQUIRED — a remix is the art; failures fail the step so the
   //      user can retry, rather than silently shipping the old artwork) ----
   await logAiCall(userId, "remix_art");
@@ -1761,12 +1773,9 @@ async function executeDeckRemixStep(
   // source's tiers — the rules are copied, only the card's names in them
   // change — and saves them as the creator saves a new card: the canonical
   // text beside `face_content.station`, the P/T on the tier the text plates,
-  // or on the tier the maker of an own card chose. A new name that made or
-  // unmade a tier line (it never should) fails the step before the save:
-  // the wrapper refunds it. Null off the frame: the payload is unchanged.
-  if (frameTemplate && isStationFrame(frameTemplate) && !sameStationShape(mechanics.rules_text, named.rules_text)) {
-    return { ...step, status: "failed", error: REMIX_STATION_SHAPE_LOST };
-  }
+  // or on the tier the maker of an own card chose. (A new name that made or
+  // unmade a tier line failed the step above, before the art.) Null off the
+  // frame: the payload is unchanged.
   const station = stationSaveFields({
     template: frameTemplate,
     rulesText: named.rules_text,

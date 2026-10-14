@@ -134,7 +134,9 @@ export function StationEditor({ rulesTextRef, onInsertSymbol }: StationEditorPro
   //    check of #549 — it used to happen without a word).
   const overLimit = stationOverLimit(rulesText, choice, hasPt);
   const thresholds = rows.tiers.map((t) => t.n);
-  const noteIds = [cut ? `${groupId}-cut` : null, overLimit ? `${groupId}-over` : null].filter(Boolean).join(" ");
+  // In the order the notes are drawn (the row limit first), so a screen
+  // reader hears them as they read on the page.
+  const noteIds = [overLimit ? `${groupId}-over` : null, cut ? `${groupId}-cut` : null].filter(Boolean).join(" ");
 
   return (
     <>
