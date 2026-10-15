@@ -59,14 +59,21 @@ export function smallCapsRuns(line: string, { smallCapEm, letterSpacingEm = 0, f
   const spaceEm = displayTextWidthEm(" ", { face }) + letterSpacingEm;
   const runs: Omit<SmallCapsRun, "widthEm">[] = [];
   let gap = 0;
-  for (const ch of line.trim()) {
+  // Composed first (a pasted "e" + U+0301 is "é", one small letter), and a
+  // combining mark left over rides in its letter's run: drawn in a run of
+  // its own it floats over the next letter, at a place each engine picks.
+  for (const ch of line.trim().normalize("NFC")) {
     if (isSpace(ch)) {
       gap += spaceEm;
       continue;
     }
+    const last = runs[runs.length - 1];
+    if (last && gap === 0 && /\p{M}/u.test(ch)) {
+      last.text += ch;
+      continue;
+    }
     const small = isSmall(ch);
     const text = ch.toUpperCase();
-    const last = runs[runs.length - 1];
     if (last && last.small === small && gap === 0) last.text += text;
     else runs.push({ text, small, gapBeforeEm: gap });
     gap = 0;
