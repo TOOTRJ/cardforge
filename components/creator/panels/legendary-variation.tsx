@@ -35,7 +35,7 @@ import type { ColorIdentity } from "@/types/card";
  *  Variations summary and the anatomy panel's switch all read this. */
 export function useLegendaryVariation({ typeLineLocked = false }: { typeLineLocked?: boolean } = {}): LegendaryVariation {
   const { control } = useFormContext<FormValues>();
-  const [template, crown, twoColor, cardType, supertype, cost, colorIdentity, dfcIcon, backType, backSupertype] = useWatch({
+  const [template, crown, twoColor, cardType, supertype, cost, colorIdentity, dfcIcon, backType, backSupertype, hasBackFace] = useWatch({
     control,
     name: [
       "frame_style.template",
@@ -48,6 +48,7 @@ export function useLegendaryVariation({ typeLineLocked = false }: { typeLineLock
       "frame_style.dfcIcon",
       "back_face.card_type",
       "back_face.supertype",
+      "has_back_face",
     ],
   });
   return legendaryVariationOf({
@@ -61,6 +62,7 @@ export function useLegendaryVariation({ typeLineLocked = false }: { typeLineLock
     dfcIcon,
     backCardType: backType,
     backSupertype,
+    hasBackFace: Boolean(hasBackFace),
     typeLineLocked,
   });
 }

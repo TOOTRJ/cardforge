@@ -6380,6 +6380,68 @@ this section).
   `m15dfcbackleft` show ▼ for the moon) and its scorer bakes a front
   without its cross-face block — both 5.1a's, neither this change's.
 
+### The battle's back (5.5 (a))
+
+TODO 5.5 (a), 2026-10-14 (`feat/dfc-battle-backs`). An ADDITION: no layout
+bump, no sweep, no badge, no new master.
+
+- **The body.** The `battle` PROFILES entry declares
+  `dfc: { layout: "transform", role: "front", well: "left", battle: true }`:
+  a transform FRONT whose back is the portrait ▼ back `bodyFor` derives
+  (`m15dfcback`; a land back the land back). A battle wears no icon
+  family (every battle printed — MOM 2023, INR #120 — is the plain ▲ / ▼):
+  `anatomy.dfcIcon` is false there, the gate and the import use the
+  default. It is not a front of the Transform kind (`dfcFront` capability,
+  `dfcKindFor`, `frontBodyFor` leave it out): it stays the Battle kind.
+- **The back is OPTIONAL** (`DfcProfile.battle`, `isBattleFront`). A battle
+  with no back, or with a LEGACY back (its content and no body — what every
+  battle import stored before 5.5), is what it was: the gate
+  (`resolveDfcBackFace`) keeps it as sent (a legacy back's colour is never
+  stored), the faces draw no cross-face block (`faces.ts dfcBlock`: a battle
+  only beside a back with a body), nothing is baked for the back and the
+  page keeps its name. A back that names its body is gated like any
+  double-faced back: the ▼ back of its type, verified in its colour, its
+  stored body and colour winning on an edit, no cost. `hasBackOfItsOwn`
+  is the one predicate for "two pictures" (the remix's price and second
+  picture, the page name).
+- **The front's tab.** The battle master already paints the grey tab at the
+  text box's right end (above the shield); the back's P/T is drawn there as
+  the transform front's is (`BATTLE_REVERSE_PT`: #777, 61 px, end-aligned,
+  a rules FLOAT), only while the back prints one. Measured on seventeen MOM
+  fronts with a creature back (Scryfall PNGs turned and scaled to 2100 ×
+  1500): the digits' ink ends at 1940–1943 px (median 1941.5) and spans
+  1223–1269 px down; ours end at 1942 and span 1221–1269. An enchantment,
+  sorcery or artifact back leaves the tab empty, as print does (MOM #64).
+- **The crown** is the card's switch (`frame_style.crown`) and the ▼ back
+  draws it: `frameAnatomyOf("battle").crown` is true so the save keeps it,
+  the battle front itself draws none (its profile declares no crown band).
+  The import names it from the printing's `legendary` effect (the ten MOM /
+  PMOM legendary backs). A two-colour back wears the gold master: the
+  battle declares no pair masters (its front has none) — a follow-up.
+- **The import** (`dfcImportOf`): a battle printing lands on the battle
+  frame with its back on the ▼ back once BOTH combos are verified (the
+  battle in the front's colour, the ▼ back in the back's), else as before —
+  the battle with a legacy back (`withoutDfcLanding` keeps the battle's
+  kind and frame; the patch keeps the printing's back colour so the creator
+  knows the back's body isn't published in it). A walker back (MOM #239
+  Teferi) imports the front alone (5.13). The registry's `dfc` gap is
+  drawn by the battle frame now (`era/2015`), the Nyx, Vehicle and
+  two-colour gaps stay.
+- **The creator** (`lib/creator/battle-back.ts`): a NEW battle edits its
+  back on the Front | Back switch (BACK_FIELD_STEP; the Card step's back
+  type and colour) once the ▼ back is published in some colour, with its
+  back on from the start; an edit or remix only where the stored back has a
+  body. A battle saved with one face, or with a legacy back, keeps today's
+  editor: the switch with its Back tab greyed and the reason. The back
+  saves on its body only while that is published in its colour, else as a
+  legacy back — the live preview reads the same rule.
+- **Shapes.** The preview shows a battle's portrait back in a portrait box
+  (a plain swap of the faces, not a turn); a tile turns it in the portrait
+  tile, the landscape front letterboxed as a one-faced battle's is
+  (`BakedCardFlip frontLandscape`); `?faces=both` sets the landscape front
+  beside the portrait back, centred on its height, the gutter the portrait
+  card's (60 / 30 px); the PDF turns the landscape page as before.
+
 ### The editor (5.2)
 
 TODO 5.2, 2026-10-02 (`feat/dfc-editor`, stacked on 5.1a). The Transform

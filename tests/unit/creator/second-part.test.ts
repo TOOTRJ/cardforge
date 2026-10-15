@@ -36,7 +36,7 @@ describe("the second-part words, per kind", () => {
     });
   });
 
-  it("covers exactly the kinds whose frame carries a second part — plus the battle, whose back is not built yet", () => {
+  it("covers exactly the kinds whose frame carries a second part — plus the battle, whose back is optional (TODO 5.5)", () => {
     const withPart = CARD_KIND_VALUES.filter(
       (kind) => KIND_DEFS[kind].inlineSecondFace || dfcLayoutForKind(kind) !== null,
     );
@@ -44,7 +44,10 @@ describe("the second-part words, per kind", () => {
     for (const kind of CARD_KIND_VALUES) {
       expect(secondPartWordsFor(kind) !== null, kind).toBe(kind === "battle" || withPart.includes(kind));
     }
-    expect(SECOND_PART_WORDS.battle).toMatchObject({ available: false, unavailableNote: "Battle backs are coming" });
+    // Every kind's back is built since TODO 5.5: a battle whose back can't
+    // be a face of its own is greyed by the form (lib/creator/battle-back.ts).
+    expect(SECOND_PART_WORDS.battle).toMatchObject({ available: true, unavailableNote: null, blankCardType: "creature" });
+    for (const words of Object.values(SECOND_PART_WORDS)) expect(words!.available).toBe(true);
     for (const kind of withPart) expect(SECOND_PART_WORDS[kind]!.available, kind).toBe(true);
   });
 
@@ -66,12 +69,12 @@ describe("the second-part words, per kind", () => {
     }
   });
 
-  it("a form's words follow its frame; a back kept on a one-part frame (and a battle's) is a “Back face”", () => {
+  it("a form's words follow its frame; a back kept on a one-part frame is a “Back face”, a battle's its own (TODO 5.5)", () => {
     expect(secondPartWordsOfCard("instant", "split").second).toBe("Right half");
     expect(secondPartWordsOfCard("creature", "adventure").second).toBe("Adventure spell");
     expect(secondPartWordsOfCard("creature", "m15dfcfront").second).toBe("Back face");
     expect(secondPartWordsOfCard("creature", "m15")).toBe(LEGACY_SECOND_PART_WORDS);
-    expect(secondPartWordsOfCard("battle", "battle")).toBe(LEGACY_SECOND_PART_WORDS);
+    expect(secondPartWordsOfCard("battle", "battle")).toBe(SECOND_PART_WORDS.battle);
     expect(secondPartFieldName(SECOND_PART_WORDS.split!, "rules text")).toBe("Right half rules text");
   });
 

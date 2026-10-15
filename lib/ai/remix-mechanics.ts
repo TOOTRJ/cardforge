@@ -23,7 +23,7 @@ import { DFC_REMIX_CREDITS } from "@/lib/scryfall/dfc-import";
 import { remixFrameFor, withoutTextlessFrames } from "@/lib/creator/frame-resolve";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { extendedArtDressFor, kindFromCard, templatePaintsSecondFace, typeWordFrameFor } from "@/lib/creator/card-kinds";
-import { dfcBodyOf, templateHasBackFace, withTransformBackShape } from "@/lib/cards/dfc";
+import { bodyFor, dfcBodyOf, hasBackOfItsOwn, isBattleFront, templateHasBackFace, withTransformBackShape } from "@/lib/cards/dfc";
 import {
   FRAME_TEMPLATE_VALUES,
   PREMIUM_FRAME_TEMPLATES,
@@ -112,7 +112,9 @@ export function scryfallRemixMechanics(
       ? standIn.template
       : undefined;
 
-  const doubleFaced = templateHasBackFace(frame.template);
+  // (A battle — TODO 5.5 — is two-faced only with a back of its own: a
+  // legacy back is left out, as every battle remix did before.)
+  const doubleFaced = hasBackOfItsOwn(frame.template, patch.back_face);
   const back =
     doubleFaced || templatePaintsSecondFace(frame.template)
       ? backFaceFromPatch(patch.back_face)
@@ -179,7 +181,7 @@ export function remixCreditsOf(mechanics: {
   frame_template?: FrameTemplate | string;
   back_face?: CardBackFace;
 }): number {
-  return templateHasBackFace(mechanics.frame_template) && mechanics.back_face ? DFC_REMIX_CREDITS : 1;
+  return hasBackOfItsOwn(mechanics.frame_template, mechanics.back_face) ? DFC_REMIX_CREDITS : 1;
 }
 
 // ---------------------------------------------------------------------------
@@ -269,12 +271,20 @@ export function ownCardRemixFrame(
   if (frameKindGateError(template, cardFieldsFace(source)) !== null) return {};
 
   const back = (source.back_face ?? null) as CardBackFace | null;
+  // A battle with no back of its own (TODO 5.5: none, or a legacy back)
+  // remixes as it did before — the battle frame, one face; one whose back
+  // can't follow it (a single-face plan, an unverified back) the same.
+  if (isBattleFront(template) && !hasBackOfItsOwn(template, back)) {
+    return dfcFrontTypeError(template, source.card_type) === null ? { frame_template: template } : {};
+  }
   if (templateHasBackFace(template)) {
     // Both faces or neither (TODO 5.4's rule): the front body with the back
     // on its own body, each verified in its colour — exactly what the save
     // checks (dfcFrontTypeError, dfcFrontColorError, resolveDfcBackFace).
-    if (options.singleFace || !back) return {};
     if (dfcFrontTypeError(template, source.card_type) !== null) return {};
+    // (A battle whose back can't follow it is the one-faced battle.)
+    const oneFaced = isBattleFront(template) ? { frame_template: template } : {};
+    if (options.singleFace || !back) return oneFaced;
     if (
       dfcFrontColorError(
         template,
@@ -286,12 +296,17 @@ export function ownCardRemixFrame(
     }
     const gate = resolveDfcBackFace({
       frontTemplate: template,
-      back: carriedBackFace(back),
+      // (A battle's back — TODO 5.5 — names the ▼ back it derives: a back
+      // with no body there is the legacy back, which the gate keeps as it
+      // is and a remix leaves behind.)
+      back: isBattleFront(template)
+        ? { ...carriedBackFace(back), frame_style: { template: bodyFor("transform", "back", back.card_type ?? null) ?? undefined } }
+        : carriedBackFace(back),
       family: storedAnatomyOf(source.frame_style).dfcIcon,
       frontColorIdentity: colours,
       verifiedKeys,
     });
-    if (!gate.ok || !gate.back) return {};
+    if (!gate.ok || !gate.back || !gate.layout) return oneFaced;
     return { frame_template: template, back_face: gate.back as CardBackFace };
   }
   if (templatePaintsSecondFace(template) && back) {

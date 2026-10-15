@@ -204,6 +204,8 @@ const PICKS: readonly Pick[] = [
   { from: "battle/g/battle-long", why: "battle: landscape, the painted defense shield, the turned credit" },
   { from: "m15dfcfront/g/transform-long", why: "transform front: icon rider, reverse P/T float" },
   { from: "m15dfcback/g/transform-long", why: "transform back: its own body, through the flip" },
+  { from: "battle/w/battle-short@back", why: "battle with a back of its own (5.5): the back's P/T in the master's tab, a rules float" },
+  { from: "m15dfcback/b/battle-long@crown-battle", why: "a battle's back (5.5): the portrait ▼ back behind a landscape front, its legendary crown" },
   { from: "m15mdfcfront/w/mdfc-long@strip-u", why: "modal front: the flipside strip in the other face's colour" },
   { from: "m15mdfcback/g/mdfc-long", why: "modal back: the strip on a back, through the flip" },
   { from: "m15tokentext/g/token-long", why: "token with a text box" },

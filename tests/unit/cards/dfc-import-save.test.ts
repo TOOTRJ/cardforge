@@ -3,6 +3,7 @@ import { called, chainClient, payloadOf, type ChainAnswer } from "@/tests/stubs/
 import dfcPrintings from "../scryfall/fixtures/dfc-import-printings.json";
 import importPrintings from "../scryfall/fixtures/import-printings.json";
 import signaturePrintings from "../scryfall/fixtures/signature-printings.json";
+import battlePrintings from "../scryfall/fixtures/battle-printings.json";
 
 // ---------------------------------------------------------------------------
 // TODO 5.4 skeptic pass — every fixture printing MAPPED, FINALIZED against a
@@ -67,7 +68,7 @@ import { backFaceFromPatch, splitSubtypes } from "@/lib/scryfall/preview-from-pa
 import { resolveDfcBackFace } from "@/lib/cards/dfc-gate";
 import type { FrameTemplate } from "@/types/card";
 
-const ALL = { ...dfcPrintings, ...importPrintings, ...signaturePrintings } as Record<string, unknown>;
+const ALL = { ...battlePrintings, ...dfcPrintings, ...importPrintings, ...signaturePrintings } as Record<string, unknown>;
 const printing = (key: string): ScryfallCard => {
   const raw = ALL[key];
   if (!raw) throw new Error(`no fixture ${key}`);
@@ -201,6 +202,77 @@ describe("transform printings land on the bodies and SAVE there", () => {
     const row = inserted(stub)!;
     expect(row.visibility).toBe("private");
     expect(row.back_face).toMatchObject({ frame_style: { template: "m15dfcback" } });
+  });
+});
+
+describe("battle printings (TODO 5.5 (a)): the battle frame with its back on the ▼ back once BOTH are verified, else exactly as before", () => {
+  // [key, back colour stored, the crown the printing names]
+  const rows: Array<[string, string[], boolean | undefined]> = [
+    ["mom-21", ["white"], undefined],
+    ["mom-20", ["white"], undefined],
+    ["mom-114", ["black"], true],
+    ["pmom-190s", ["green"], true],
+    ["mom-1", ["colorless"], undefined],
+    ["mom-23", ["multicolor"], true],
+    ["mom-235", ["multicolor"], undefined],
+  ];
+
+  it.each(rows)("%s saves on battle // m15dfcback, the back's colour stored", async (key, backColour, crown) => {
+    state.verified = allColours("battle", "m15dfcback");
+    const patch = finalizeImportMatch(mapScryfallToFormPatch(printing(key)), new Set(state.verified));
+    expect(patch.kind, key).toBe("battle");
+    expect(patch.printed_dfc_icon, key).toBeUndefined();
+    const stub = db();
+    const result = await createCardAction(payloadFor(patch) as never);
+    expect(result.ok, `${key}: ${JSON.stringify(result)}`).toBe(true);
+    const row = inserted(stub)!;
+    expect((row.frame_style as Record<string, unknown>).template, key).toBe("battle");
+    // A battle wears no family.
+    expect((row.frame_style as Record<string, unknown>).dfcIcon, key).toBeUndefined();
+    expect(row.back_face, key).toMatchObject({ frame_style: { template: "m15dfcback" }, color_identity: backColour, art_url: ART.back });
+    expect(row.back_face, key).not.toHaveProperty("cost");
+    // The crown switch is the card's and the ▼ back draws it: the printing's
+    // `legendary` effect names it on; a nonlegendary back keeps the
+    // new-card default (on — drawn only on a legendary back).
+    expect((row.frame_style as Record<string, unknown>).crown, key).toBe(crown ?? true);
+    expect(row.visibility, key).toBe("public");
+  });
+
+  it.each(["mom-21", "mom-114", "mom-1"])("%s with the ▼ back unverified saves exactly as before: the battle, a legacy back (no body, no colour)", async (key) => {
+    state.verified = allColours("battle");
+    const patch = finalizeImportMatch(mapScryfallToFormPatch(printing(key)), new Set(state.verified));
+    expect(patch.kind, key).toBe("battle");
+    expect(patch.frame_match, key).toMatchObject({ status: "nearest", unverified: true });
+    const stub = db();
+    const result = await createCardAction(payloadFor(patch) as never);
+    expect(result.ok, `${key}: ${JSON.stringify(result)}`).toBe(true);
+    const row = inserted(stub)!;
+    expect((row.frame_style as Record<string, unknown>).template, key).toBe("battle");
+    expect(row.back_face, key).toBeTruthy();
+    expect(row.back_face, key).not.toHaveProperty("frame_style");
+    expect(row.back_face, key).not.toHaveProperty("color_identity");
+  });
+
+  it("a walker-backed battle (MOM #239 Teferi Akosa) imports its front alone, as before (5.13)", async () => {
+    state.verified = allColours("battle", "m15dfcback");
+    const patch = finalizeImportMatch(mapScryfallToFormPatch(printing("mom-239")), new Set(state.verified));
+    expect(patch).toMatchObject({ kind: "battle", dropped_face: "walker-face" });
+    expect(patch.back_face).toBeUndefined();
+    const stub = db();
+    const result = await createCardAction(payloadFor(patch) as never);
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    expect(inserted(stub)!.back_face ?? null).toBeNull();
+  });
+
+  it("a battle with no back saves as one face (its back is optional); a body named on a non-battle front is refused", async () => {
+    state.verified = allColours("battle", "m15dfcback");
+    const patch = finalizeImportMatch(mapScryfallToFormPatch(printing("mom-21")), new Set(state.verified));
+    const stub = db();
+    const result = await createCardAction({ ...payloadFor(patch), back_face: undefined } as never);
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    expect(inserted(stub)!.back_face ?? null).toBeNull();
+    const crafted = await createCardAction({ ...payloadFor(patch), card_type: "creature", power: "2", toughness: "2" } as never);
+    expect(crafted.ok).toBe(false);
   });
 });
 

@@ -31,7 +31,14 @@
 //     naming none keeps it; the family (frame_anatomy.dfcIcon) stays the ONE
 //     look change an edit may make. A back with no stored body — a legacy
 //     back, a half-moved row — and a create take the colour as sent;
-//   • a transform back saves with no mana cost (withTransformBackShape).
+//   • a transform back saves with no mana cost (withTransformBackShape);
+//   • a BATTLE front (TODO 5.5, DfcProfile.battle) is a transform front
+//     whose back is OPTIONAL: a battle with no back saves as one; a back
+//     that names NO body — and none is stored — is a LEGACY back, kept as
+//     sent (its content drawn on the battle frame, as every battle import
+//     before 5.5 stored it); a back that names a body (or whose stored back
+//     has one) is a back of its own and meets every rule above, on the
+//     ▼ back (the battle wears no family: always the default).
 //
 // Pure: no I/O. The caller fetches the verified keys and decides whether an
 // admin's frame preview skips verification.
@@ -129,6 +136,7 @@ export const DFC_COLORLESS_FRONT_NEEDS_ARTIFACT =
   "A colourless double-faced card needs “Artifact” on its type line — pick a colour.";
 export const DFC_FRONT_TYPE_REFUSED =
   "A double-faced card's front can be a creature, artifact, enchantment, land, instant or sorcery.";
+export const DFC_BATTLE_FRONT_TYPE_REFUSED = "The battle frame dresses battles only.";
 export const DFC_FRONT_BODY_MISMATCH =
   "This double-faced frame doesn't dress that card type — the land frame is for lands, the other for everything else.";
 
@@ -151,6 +159,10 @@ export function dfcFrontTypeError(
   const front = normalizeFrameTemplate(frontTemplate);
   const body = dfcBodyOf(front);
   if (body?.role !== "front") return null;
+  // The battle front (TODO 5.5) dresses a battle and nothing else — what
+  // the kind gate says of it already (KIND_REQUIRES: the defense shield on
+  // the landscape card), said here too so the two never disagree.
+  if (body.battle) return cardType === "battle" ? null : DFC_BATTLE_FRONT_TYPE_REFUSED;
   if (!isDfcFaceType(cardType)) return DFC_FRONT_TYPE_REFUSED;
   if (Boolean(body.land) !== (cardType === "land")) return DFC_FRONT_BODY_MISMATCH;
   return null;
@@ -221,13 +233,27 @@ export function resolveDfcBackFace(input: DfcBackGateInput): DfcBackGateResult {
     return { ok: true, back, layout: null };
   }
 
+  // The battle's back is optional (TODO 5.5): none, or a legacy back (no
+  // body sent and none stored), is kept as it is — the card stays what it
+  // was, one face or a legacy back on the battle frame.
+  if (body?.battle) {
+    if (!back) return { ok: true, back: null, layout };
+    const storedBattleBody = input.stored?.back?.frame_style?.template;
+    if (!back.frame_style?.template && !(storedBattleBody && isDfcBackBody(storedBattleBody))) {
+      // (Its colour is never drawn — a legacy back draws on the battle's
+      // frame and colour — and never stored: as every battle before 5.5.)
+      return { ok: true, back: stripBackBody(back) as DfcBackFacePayload, layout: null };
+    }
+  }
   if (!back) return { ok: false, field: "back_face.frame_style", message: DFC_NEEDS_BACK_FACE };
   const backType = back.card_type ?? null;
   if (!isDfcFaceType(backType)) {
     return { ok: false, field: "back_face.card_type", message: DFC_BACK_TYPE_REFUSED };
   }
 
-  const family = dfcFamilyOf(input.family);
+  // A battle wears no family (every battle printed is the plain ▲ / ▼): its
+  // back is the default's whatever the key says.
+  const family = body?.battle ? DEFAULT_DFC_ICON : dfcFamilyOf(input.family);
   const derived = bodyFor(layout, "back", backType, family);
   if (!derived) return { ok: false, field: "back_face.frame_style", message: DFC_NO_BACK_BODY_YET };
 
@@ -316,6 +342,11 @@ export function dfcBackArtMissing(
   frontTemplate: FrameTemplate | string | null | undefined,
   back: DfcBackFacePayload | null | undefined,
 ): boolean {
-  if (dfcBodyOf(normalizeFrameTemplate(frontTemplate))?.role !== "front") return false;
+  const body = dfcBodyOf(normalizeFrameTemplate(frontTemplate));
+  if (body?.role !== "front") return false;
+  // A battle's back is optional (TODO 5.5): only a back of its own — one
+  // with a body — must have its picture; none, or a legacy back, keeps
+  // today's rule (the front's art alone).
+  if (body.battle && !(back?.frame_style?.template && isDfcBackBody(back.frame_style.template))) return false;
   return !back?.art_url;
 }

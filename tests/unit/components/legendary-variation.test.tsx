@@ -85,7 +85,7 @@ function Harness({
       title: "Kesh",
       subtypes_text: "",
       rules_text: "",
-      ...(backFace ? { back_face: backFace } : {}),
+      ...(backFace ? { back_face: backFace, has_back_face: true } : {}),
     } as Partial<FormValues> as FormValues,
   });
   const [colors, style, word, type, back] = useWatch({
@@ -288,7 +288,8 @@ describe("one state with the anatomy panel's switch", () => {
   });
 
   it("an edit, on every template: the switch shows exactly where the frame declares a crown, with the stored value — never a chip, never the reason on a legendary card", () => {
-    for (const template of FRAME_TEMPLATE_VALUES.filter((t) => dfcBodyOf(t)?.role !== "back")) {
+    // (The battle's crown is its back's — TODO 5.5: the next test.)
+    for (const template of FRAME_TEMPLATE_VALUES.filter((t) => dfcBodyOf(t)?.role !== "back" && !dfcBodyOf(t)?.battle)) {
       for (const crown of [true, false]) {
         render(<Harness stored={{ template, crown } as FrameStyle} supertype="Legendary" />);
         expect(chipCount(), template).toBe(0);
@@ -298,6 +299,19 @@ describe("one state with the anatomy panel's switch", () => {
         cleanup();
       }
     }
+  });
+
+  it("an edit of a battle (TODO 5.5): the switch shows for a legendary BACK with the stored value; a battle with no back has none to crown", () => {
+    const back = { title: "Marchesa, Resolute Monarch", card_type: "creature", supertype: "Legendary" } as unknown as FormValues["back_face"];
+    for (const crown of [true, false]) {
+      render(<Harness stored={{ template: "battle", crown } as FrameStyle} cardType="battle" supertype="" backFace={back} />);
+      expect(reason(), String(crown)).toBeNull();
+      expect(crownSwitch()?.getAttribute("aria-checked"), String(crown)).toBe(String(crown));
+      cleanup();
+    }
+    render(<Harness stored={{ template: "battle", crown: true } as FrameStyle} cardType="battle" supertype="" />);
+    expect(crownSwitch()).toBeNull();
+    cleanup();
   });
 
   it("a new card, on every standard-kind crowned frame: the switch's value is the chip's", () => {

@@ -11,7 +11,9 @@ import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 // its own:
 //   * ONE Front face | Back face switch (a tab list from SECOND_PART_WORDS),
 //     each tab with the face's name and what it still needs; arrow keys;
-//     a battle's Back face tab greyed out with "Battle backs are coming";
+//     a battle's Back face tab greyed out with the reason where its back
+//     can't be a face of its own (TODO 5.5: the ▼ back unpublished), and a
+//     working Back face tab where it can;
 //   * every back field on the step of its front twin, writing the form path
 //     it always wrote;
 //   * the preview: the edited face large, the other small — a click on it
@@ -94,7 +96,7 @@ const VERIFIED = [
   "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
 ].flatMap((template) => EVERY_COLOUR.map((key) => frameComboKey(template, key)));
 
-function renderForm() {
+function renderForm(verified: string[] = VERIFIED) {
   return render(
     <CardCreatorForm
       mode="create"
@@ -102,7 +104,7 @@ function renderForm() {
       ownerUsername="tester"
       gameSystems={GAME_SYSTEMS}
       aiConfigured={false}
-      verifiedFrameKeys={VERIFIED}
+      verifiedFrameKeys={verified}
     />,
   );
 }
@@ -203,11 +205,12 @@ describe("the switch on its own (components/creator/face-switch.tsx)", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it("a battle: the Back face tab is greyed out, says “Battle backs are coming”, and cannot be selected", () => {
+  it("a battle whose back can't be a face of its own: the Back face tab is greyed out, says why, and cannot be selected", () => {
     const onChange = vi.fn();
+    const words = { ...SECOND_PART_WORDS.battle!, available: false, unavailableNote: "Battle backs are coming" };
     render(
       <>
-        <FaceSwitch words={SECOND_PART_WORDS.battle!} value="back" onChange={onChange} panelId="panel" noteId="note" front={{ name: "Siege", status: null }} back={{ name: "", status: null }} />
+        <FaceSwitch words={words} value="back" onChange={onChange} panelId="panel" noteId="note" front={{ name: "Siege", status: null }} back={{ name: "", status: null }} />
         <p id="note">Battle backs are coming.</p>
       </>,
     );
@@ -733,15 +736,15 @@ describe("cards without the switch, and the battle's greyed tab", () => {
   // Split, Aftermath, Adventure and Flip have the switch since part 2:
   // creator-part-tabs.test.tsx.
 
-  it("a battle: the switch with its Back face tab greyed out and one line; nothing else changes", async () => {
-    renderForm();
+  it("a battle while the ▼ back is published nowhere (TODO 5.5): the switch with its Back face tab greyed out and one line; nothing else changes", async () => {
+    renderForm(VERIFIED.filter((key) => !key.startsWith("m15dfcback/")));
     await pickKind(/^Battle/);
     for (const step of [/^card/i, /^identity/i, /^text/i, /^publish/i]) {
       await goTo(step);
       const back = tab(/^Back face/);
       expect(back.getAttribute("aria-disabled")).toBe("true");
       expect(tab(/^Battle/).getAttribute("aria-selected")).toBe("true");
-      expect(screen.getByTestId("face-switch-note").textContent).toBe("Battle backs are coming.");
+      expect(screen.getByTestId("face-switch-note").textContent).toBe("The back face's frame isn't published yet.");
       await click(back);
       expect(selected()).toBe("front");
     }
@@ -751,5 +754,25 @@ describe("cards without the switch, and the battle's greyed tab", () => {
     await goTo(/^identity/i);
     expect(named("title")!.closest("label")!.textContent).not.toMatch(/face —/);
     expect(named("back_face.title")).toBeNull();
+  });
+
+  it("a battle once the ▼ back is published (TODO 5.5): a Back face tab of its own — the back's type and colour on the Card step, its name on Identity, its stats on Text — and the two-face preview", async () => {
+    renderForm();
+    await pickKind(/^Battle/);
+    await goTo(/^card/i);
+    const back = tab(/^Back face/);
+    expect(back.getAttribute("aria-disabled")).toBeNull();
+    await click(back);
+    expect(selected()).toBe("back");
+    expect(screen.getByTestId("dfc-back-type")).toBeTruthy();
+    expect(screen.getByTestId("dfc-back-color")).toBeTruthy();
+    await goTo(/^identity/i);
+    expect(named("back_face.title")).toBeTruthy();
+    await goTo(/^text/i);
+    expect(named("back_face.power")).toBeTruthy();
+    expect(screen.queryAllByTestId("face-preview").length).toBeGreaterThan(0);
+    // The back is the ▼ back in the live preview (no family on a battle).
+    const props = screen.getAllByTestId("card-preview").map(propsOf);
+    expect(props.some((p) => (p.backFace as { frame_style?: { template?: string } } | null)?.frame_style?.template === "m15dfcback")).toBe(true);
   });
 });

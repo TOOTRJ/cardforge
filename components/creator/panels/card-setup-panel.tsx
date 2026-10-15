@@ -374,6 +374,10 @@ export function CardSetupPanel({
             />
           ) : null}
         </>
+      ) : backFace ? (
+        // A battle's back (TODO 5.5): the back's type on its Back face tab
+        // — the battle itself has no face-type row (it is the Battle kind).
+        backFace.type
       ) : null}
 
       {/* 1c · The token's types (TODO 3b.15) — the words its type line

@@ -255,10 +255,15 @@ export function dfcIconOf(card: Pick<CardPreviewData, "frameStyle">): DfcIconFam
 function dfcBlock(card: CardPreviewData, role: DfcRole, other: FaceContentFacts): DfcFace | null {
   const body = dfcBodyOf(card.frameStyle?.template);
   if (!body || body.role !== "front") return null;
+  // A battle (TODO 5.5) is two-faced only with a back of its own — one
+  // with a body: a legacy back (every battle import before 5.5) is drawn
+  // on the battle frame as it always was, and the front prints no reverse
+  // P/T for it.
+  if (body.battle && !backBodyOf(card)) return null;
   return {
     layout: body.layout,
     role,
-    icon: body.layout === "transform" ? dfcIconOf(card) : null,
+    icon: body.layout === "transform" ? (body.battle ? DEFAULT_DFC_ICON : dfcIconOf(card)) : null,
     otherFace: otherFaceOf(other),
   };
 }
