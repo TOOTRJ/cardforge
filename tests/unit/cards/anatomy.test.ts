@@ -297,6 +297,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
   const CROWNED = FRAME_TEMPLATE_VALUES.filter((t) =>
     [
       "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart", "extendedartland",
+      // The textless promo pair (TODO 4.35 follow-up, owner Round 63): the standard band.
+      "m15textless", "m15textlessland",
       // The station frame (TODO 4.27a): the parents' crown band on its two entries.
       "m15station", "m15stationland",
       // …and its dresses (step 2): the extended-art band, the borderless twins.
@@ -309,8 +311,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
     ].includes(t),
   );
-  /** …and the pair masters (extendedart draws none: a pair wears gold there;
-   *  the transform land front none: no two-colour land face in print) — and
+  /** …and the pair masters (the textless promo pair draws none: a pair
+   *  wears gold there, under a split crown; the transform land front none: no two-colour land face in print) — and
    *  the borderless land's, which draws pairs and no crown (TODO 4.56), and
    *  the old frames' (TODO 4.6h: the 2003 gold card, the 2003 and 1997
    *  lands — pairs and no crown; `retro` none, its gold cards print one
@@ -323,15 +325,15 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // (The station frame, TODO 4.27a, draws the crown and no pair masters:
       // its entries declare no `twoColorMasters` — and neither does the Nyx
       // Constellation frame, whose two-colour card is the gold master.)
-      (CROWNED.includes(t) && t !== "extendedart" && t !== "extendedartland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx"),
+      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx"),
   );
 
   it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless, extended-art and snow PROFILES entries — never a profile that spreads them", () => {
     const crowned = FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown);
     expect(crowned).toEqual(CROWNED);
     // The extended-art frame draws its floating crown as a band (wave 2b)
-    // and no pair masters.
-    expect(frameAnatomyOf("extendedart")).toEqual({ crown: true, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: true, border: false });
+    // and, since the TODO 4.7 follow-up (owner Round 63), both pair dresses.
+    expect(frameAnatomyOf("extendedart")).toEqual({ crown: true, twoColor: ["split", "hybrid"], collector: false, stamp: false, dfcIcon: false, rulesAlign: true, border: false });
     const paired = Object.fromEntries(
       FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).twoColor.length > 0).map((t) => [t, frameAnatomyOf(t).twoColor]),
     );
@@ -359,6 +361,10 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // the grey land bars; a land has no hybrid dress.
       m15borderlessland: ["split"],
       m15snow: ["split"],
+      // The extended-art frame (4.7 follow-up, owner Round 63): m15's two
+      // dresses over the extended masters; its land dress the land's split.
+      extendedart: ["split", "hybrid"],
+      extendedartland: ["split"],
       // The double-faced spell faces (5.1d): the split on every one — the
       // prints split a back's rings and box over its gold bars too — and the
       // hybrid dress on the modal front alone (MH3 #252–261); never the land
@@ -684,7 +690,7 @@ describe("a LAND wears the two-colour frame only on a land frame (owner round 17
       expect(twoColorFits(profile, "land"), template).toBe(templateSupportsKind(template, "land"));
       expect(twoColorFits(profile, "creature"), template).toBe(true);
     }
-    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).twoColorForLands === true)).toEqual(["m15land", "m15ubland", "m15snowland", "m15borderlessland", "retroland", "modernland"]);
+    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).twoColorForLands === true)).toEqual(["m15land", "m15ubland", "m15snowland", "m15borderlessland", "extendedartland", "retroland", "modernland"]);
     expect(parseFrameProfileOverride({ twoColorForLands: true })).toBeNull();
   });
 });

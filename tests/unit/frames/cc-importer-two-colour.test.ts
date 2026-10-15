@@ -317,6 +317,17 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
         expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(builtColors(CC_TEMPLATES.m15));
         continue;
       }
+      // …and the extended-art frame's (TODO 4.7 follow-up, owner Round 63):
+      // m15's two dresses over the extended pack, the land's split on its
+      // land dress (tests/unit/frames/extended-art-importer.test.ts).
+      if (template === "extendedart") {
+        expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["a", "w", "u", "b", "r", "g", "c", "m", ...pairs, ...pairs.map((pair) => `${pair}-h`)]);
+        continue;
+      }
+      if (template === "extendedartland") {
+        expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
+        continue;
+      }
       if (["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15snow", "m15snowland", "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback"].includes(template)) continue;
       expect(Object.keys((def as { colors: object }).colors).filter((k) => k.length > 1), template).toEqual([]);
     }

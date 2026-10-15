@@ -40,6 +40,8 @@ const provenance = JSON.parse(fs.readFileSync("lib/cards/frame-sources.json", "u
 const TEMPLATES = ["m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall"] as const;
 const PLAIN = TEMPLATES.slice(0, 3);
 const crowns = "img/frames/m15/crowns";
+/** A recipe, typed loosely (cc-frames.mjs is untyped JS). */
+const tpl = (t: string) => (CC_TEMPLATES as unknown as Record<string, { colors: Record<string, Array<Record<string, unknown>>>; finish: Array<{ colors?: string[] }> }>)[t];
 
 function real(rel: string): Buffer | null {
   const file = path.join(BUILD, rel);
@@ -130,22 +132,22 @@ describe("the slot the full-art token profiles draw (M20_TOKEN_CROWN)", () => {
 describe("the pair masters' recipe", () => {
   it("lerps the two colour masters whole across the token's split, then CC's grey L type pill (plain); the silver A frame and the split pinline (artifact)", () => {
     expect(PAIR_RAMPS.m20Token).toEqual([40, 60]);
-    expect(CC_TEMPLATES.m20tokentext.colors.gw).toEqual([
+    expect(tpl("m20tokentext").colors.gw).toEqual([
       { src: "img/frames/token/short/tokenFrameGShort.png", right: "img/frames/token/short/tokenFrameWShort.png", ramp: [40, 60] },
       { src: "img/frames/token/short/tokenFrameLShort.png", mask: "img/frames/token/short/m15MaskTypeShort.png", replace: true },
     ]);
-    expect(CC_TEMPLATES.m20token.colors.rg[0]).toMatchObject({ src: "img/frames/token/textless/tokenFrameRTextless.png", right: "img/frames/token/textless/tokenFrameGTextless.png" });
-    expect(CC_TEMPLATES.m20tokenartifacttall.colors.wu).toEqual([
+    expect(tpl("m20token").colors.rg[0]).toMatchObject({ src: "img/frames/token/textless/tokenFrameRTextless.png", right: "img/frames/token/textless/tokenFrameGTextless.png" });
+    expect(tpl("m20tokenartifacttall").colors.wu).toEqual([
       { src: "img/frames/token/tall/tokenFrameATall.png" },
       { src: "img/frames/token/tall/tokenFrameWTall.png", right: "img/frames/token/tall/tokenFrameUTall.png", ramp: [40, 60], mask: "img/frames/m15/regular/m15MaskPinline.png" },
     ]);
     for (const t of TEMPLATES) {
-      expect(Object.keys(CC_TEMPLATES[t].colors).sort(), t).toEqual([..."wubrgcm".split(""), ...TWO_COLOR_PAIRS].sort());
+      expect(Object.keys(tpl(t).colors).sort(), t).toEqual([..."wubrgcm".split(""), ...TWO_COLOR_PAIRS].sort());
     }
     // The grey pill's tint is the plain templates' pairs' alone.
     expect(M20_PAIR_TYPE_TINT).toMatchObject({ op: "tint", rgb: [184, 178, 180], opacity: 0.65, colors: [...TWO_COLOR_PAIRS] });
-    for (const t of PLAIN) expect(CC_TEMPLATES[t].finish.filter((f: { colors?: string[] }) => f.colors?.includes("gw")), t).toHaveLength(1);
-    for (const t of TEMPLATES.slice(3)) expect(CC_TEMPLATES[t].finish.filter((f: { colors?: string[] }) => f.colors?.includes("gw")), t).toHaveLength(0);
+    for (const t of PLAIN) expect(tpl(t).finish.filter((f) => f.colors?.includes("gw")), t).toHaveLength(1);
+    for (const t of TEMPLATES.slice(3)) expect(tpl(t).finish.filter((f) => f.colors?.includes("gw")), t).toHaveLength(0);
   });
 });
 

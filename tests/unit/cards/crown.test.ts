@@ -50,6 +50,8 @@ describe("which card draws the crown", () => {
     // crown cut round their well or housing.
     const DRAWN = [
       "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart", "extendedartland",
+      // The textless promo pair (TODO 4.35 follow-up, owner Round 63): the standard band.
+      "m15textless", "m15textlessland",
       // The station frame (TODO 4.27a): the parents' crown band on its two entries.
       "m15station", "m15stationland",
       // …and its dresses (step 2): the extended-art band, the borderless twins.
@@ -177,6 +179,9 @@ describe("the crowned prints the crown is judged against", () => {
     expect(crownReferenceFor("m15snowland", "c")).toMatchObject({ set: "dmr", collectorNumber: "244" });
     expect(crownReferenceFor("m15snow", "w")).toBeNull();
     expect(crownReferenceFor("m15devoid", "m")).toBeNull();
+    // The textless promos (4.35 follow-up): blue, red and gold crowned promos.
+    expect(Object.keys(CROWN_REFERENCES.m15textless ?? {}).sort()).toEqual(["m", "r", "u"]);
+    expect(crownReferenceFor("m15textless", "u")).toMatchObject({ set: "pspl", collectorNumber: "8" });
     // Scryfall ids only (never a scan).
     for (const refs of Object.values(CROWN_REFERENCES)) {
       for (const ref of Object.values(refs ?? {})) expect(ref?.scryfallId).toMatch(/^[0-9a-f-]{36}$/);
