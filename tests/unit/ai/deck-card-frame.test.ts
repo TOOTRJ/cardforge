@@ -25,7 +25,7 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 // — each only where verified in the card's colour.
 //
 // Two verified sets: `supabase/seed.sql` (the mirror of production's ticks,
-// snapshotted 2026-10-13 — production may be ahead of it) and EVERY combo
+// snapshotted 2026-10-14 — production may be ahead of it) and EVERY combo
 // ticked (what each card lands on once its dress is verified).
 //
 // Stubbed: Supabase, the ledger, the image generators and the card actions
@@ -145,10 +145,10 @@ const KINDS: Array<[string, ReturnType<typeof card>, string, string, string]> = 
   ["coloured artifact", card({ card_type: "artifact", cost: "{1}{U}", color_identity: ["blue"], rules_text: "{T}: Scry 1." }), "noncreature", "m15artifact", "m15artifact"],
   ["artifact creature", card({ supertype: "Artifact", subtypes: ["Golem"], cost: "{4}", color_identity: ["colorless"], power: "3", toughness: "3" }), "creature", "m15artifact", "m15artifact"],
   ["coloured artifact creature", card({ supertype: "Artifact", subtypes: ["Golem"], cost: "{2}{R}", color_identity: ["red"], power: "3", toughness: "3" }), "creature", "m15artifact", "m15artifact"],
-  ["enchantment artifact creature", card({ supertype: "Enchantment Artifact", subtypes: ["Golem"], cost: "{4}", color_identity: ["colorless"], power: "3", toughness: "3" }), "creature", "m15artifact", "m15nyx"],
-  ["enchantment", card({ card_type: "enchantment", color_identity: ["white"], rules_text: "Creatures you control get +1/+1." }), "noncreature", "m15", "m15nyx"],
-  ["Aura", card({ card_type: "enchantment", subtypes: ["Aura"], color_identity: ["white"], rules_text: "Enchant creature\nEnchanted creature gets +2/+2." }), "noncreature", "m15", "m15nyx"],
-  ["enchantment creature", card({ supertype: "Enchantment", subtypes: ["Spirit"], color_identity: ["white"], power: "2", toughness: "1" }), "creature", "m15", "m15nyx"],
+  ["enchantment artifact creature", card({ supertype: "Enchantment Artifact", subtypes: ["Golem"], cost: "{4}", color_identity: ["colorless"], power: "3", toughness: "3" }), "creature", "m15nyx", "m15nyx"],
+  ["enchantment", card({ card_type: "enchantment", color_identity: ["white"], rules_text: "Creatures you control get +1/+1." }), "noncreature", "m15nyx", "m15nyx"],
+  ["Aura", card({ card_type: "enchantment", subtypes: ["Aura"], color_identity: ["white"], rules_text: "Enchant creature\nEnchanted creature gets +2/+2." }), "noncreature", "m15nyx", "m15nyx"],
+  ["enchantment creature", card({ supertype: "Enchantment", subtypes: ["Spirit"], color_identity: ["white"], power: "2", toughness: "1" }), "creature", "m15nyx", "m15nyx"],
   ["land", card({ card_type: "land", cost: "—", color_identity: ["red"], rules_text: "{T}: Add {R}." }), "land", "m15land", "m15land"],
   ["colourless land", card({ card_type: "land", cost: "—", color_identity: ["colorless"], rules_text: "{T}: Add {C}." }), "land", "m15land", "m15land"],
   ["two-colour land", card({ card_type: "land", cost: "—", color_identity: ["black", "green"], rules_text: "{T}: Add {B} or {G}." }), "land", "m15land", "m15land"],
@@ -156,7 +156,7 @@ const KINDS: Array<[string, ReturnType<typeof card>, string, string, string]> = 
   ["colourless creature", card({ cost: "{7}", color_identity: ["colorless"], subtypes: ["Eldrazi"], power: "7", toughness: "7" }), "creature", "m15", "m15"],
   ["multicolour creature", card({ cost: "{B}{G}", color_identity: ["black", "green"], subtypes: ["Gorgon"], power: "2", toughness: "2" }), "commander", "m15", "m15"],
   ["Vehicle", card({ card_type: "artifact", cost: "{3}", color_identity: ["colorless"], subtypes: ["Vehicle"], rules_text: "Flying\nCrew 2", power: "3", toughness: "3" }), "noncreature", "m15vehicle", "m15vehicle"],
-  ["Spacecraft with a tier", card({ card_type: "artifact", cost: "{3}", color_identity: ["colorless"], subtypes: ["Spacecraft"], rules_text: `${STATION_LINE}\n9+ | Flying`, power: "4", toughness: "4" }), "noncreature", "m15artifact", "m15station"],
+  ["Spacecraft with a tier", card({ card_type: "artifact", cost: "{3}", color_identity: ["colorless"], subtypes: ["Spacecraft"], rules_text: `${STATION_LINE}\n9+ | Flying`, power: "4", toughness: "4" }), "noncreature", "m15station", "m15station"],
   ["Spacecraft without a tier", card({ card_type: "artifact", cost: "{3}", color_identity: ["colorless"], subtypes: ["Spacecraft"], rules_text: "Flying", power: "4", toughness: "4" }), "noncreature", "m15artifact", "m15artifact"],
   ["Planet with a tier", card({ card_type: "land", cost: "—", color_identity: ["colorless"], subtypes: ["Planet"], rules_text: `{T}: Add {C}.\n${PLANET_LINE}\n6+ | {T}: Add {C}{C}.` }), "land", "m15land", "m15stationland"],
   ["token (creature)", card({ card_type: "token", cost: "—", supertype: "Creature", subtypes: ["Soldier"], color_identity: ["white"], rules_text: null, power: "1", toughness: "1" }), "creature", "m20token", "m20token"],
@@ -172,7 +172,7 @@ const KINDS: Array<[string, ReturnType<typeof card>, string, string, string]> = 
   ["snow basic-like land (Basic Snow Land — Island)", card({ title: "Snow-Covered Island", card_type: "land", cost: "—", supertype: "Basic Snow", subtypes: ["Island"], color_identity: ["blue"], rules_text: "({T}: Add {U}.)" }), "land", "m15snowland", "m15snowland"],
   ["snow artifact creature", card({ supertype: "Snow Artifact", subtypes: ["Golem"], cost: "{4}", color_identity: ["colorless"], power: "3", toughness: "3" }), "creature", "m15snow", "m15snow"],
   ["snow artifact (the artifact frame: the snow frame doesn't dress an artifact)", card({ card_type: "artifact", cost: "{3}", supertype: "Snow", color_identity: ["colorless"], rules_text: "{T}: Add {C}." }), "noncreature", "m15artifact", "m15artifact"],
-  ["snow enchantment (an enchantment dress keeps its frame)", card({ card_type: "enchantment", supertype: "Snow", color_identity: ["white"], rules_text: "Creatures you control get +1/+1." }), "noncreature", "m15snow", "m15nyx"],
+  ["snow enchantment (an enchantment dress keeps its frame)", card({ card_type: "enchantment", supertype: "Snow", color_identity: ["white"], rules_text: "Creatures you control get +1/+1." }), "noncreature", "m15nyx", "m15nyx"],
   ["snow Vehicle (a subtype dress keeps its frame)", card({ card_type: "artifact", cost: "{3}", supertype: "Snow", color_identity: ["colorless"], subtypes: ["Vehicle"], rules_text: "Crew 2", power: "3", toughness: "3" }), "noncreature", "m15vehicle", "m15vehicle"],
   ["snow token (the token's own frame)", card({ card_type: "token", cost: "—", supertype: "Snow Creature", subtypes: ["Elemental"], color_identity: ["blue"], rules_text: null, power: "1", toughness: "1" }), "creature", "m20token", "m20token"],
   ["battle", card({ card_type: "battle", subtypes: ["Siege"], color_identity: ["red"], rules_text: "When this enters, it deals 2 damage to any target.", defense: "5" }), "noncreature", "none", "battle"],

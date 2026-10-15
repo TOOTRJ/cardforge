@@ -43,7 +43,13 @@ function productionVerifiedKeys(): Set<string> {
   return out;
 }
 const PROD = productionVerifiedKeys();
-const NYX_VERIFIED = new Set([...PROD, ...FRAME_COLOR_KEYS.map((c) => frameComboKey("m15nyx", c))]);
+/**
+ * The unverified side of this suite: production's list WITHOUT its Nyx ticks
+ * (production verified `m15nyx` in every colour on 2026-10-14, the seed
+ * mirror of that date — so its own list is the verified side now).
+ */
+const PROD_BEFORE_NYX = new Set([...PROD].filter((key) => !key.startsWith("m15nyx/")));
+const NYX_VERIFIED = new Set([...PROD_BEFORE_NYX, ...FRAME_COLOR_KEYS.map((c) => frameComboKey("m15nyx", c))]);
 
 const INVERTED_ONLY = ["thb-353", "prm-79863", "sld-340", "neo-508", "neo-510", "dsk-415", "tdm-420", "tdm-421", "tdm-424", "sch-45"] as const;
 const INVERTED_REASON = "Scryfall marks this printing's frame inverted, which PipGlyph's Nyx frame doesn't claim to match yet";
@@ -52,8 +58,12 @@ const OWN_FRAME_REASON = "this printing has a Nyx frame of its own colour, and P
 const imported = (key: string, verified: ReadonlySet<string>) => finalizeImportMatch(mapScryfallToFormPatch(P[key]), verified);
 
 describe("Nyx printings the Nyx frame doesn't match land on it as its nearest", () => {
-  it("production has not verified the frame: the unverified side is production's own list", () => {
-    for (const key of FRAME_COLOR_KEYS) expect(PROD.has(frameComboKey("m15nyx", key)), key).toBe(false);
+  it("production has verified the frame in every colour: the unverified side is production's list without those ticks", () => {
+    for (const key of FRAME_COLOR_KEYS) {
+      expect(PROD.has(frameComboKey("m15nyx", key)), key).toBe(true);
+      expect(PROD_BEFORE_NYX.has(frameComboKey("m15nyx", key)), key).toBe(false);
+    }
+    expect([...NYX_VERIFIED].sort()).toEqual([...PROD].sort());
   });
 
   it("adds no signature: both are gaps of the frame taken once verified, under era/2015+nyx", () => {
@@ -133,7 +143,7 @@ describe("Nyx printings the Nyx frame doesn't match land on it as its nearest", 
 
   it("while the frame is unverified they land on M15 as before, saying the starfield isn't drawn — a 'missing' row, not 'not yet verified'", () => {
     for (const key of [...INVERTED_ONLY, "clb-1"]) {
-      const patch = imported(key, PROD);
+      const patch = imported(key, PROD_BEFORE_NYX);
       expect(patch.frame_template === "m15" || patch.frame_template === "m15artifact", key).toBe(true);
       expect(patch.frame_match, key).toMatchObject({
         status: "nearest",
