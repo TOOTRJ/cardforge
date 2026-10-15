@@ -261,7 +261,7 @@ const COMMANDER_COLOURS_LINE: Record<string, string> = {
   "commander · gorgons (B/G) · bracket 3 · 12":
     "Its color identity is EXACTLY the deck's: black-green (B/G) — mana symbols of each of those 2 colors in its cost or rules text, and of no other color.",
   "commander · slivers (five colours) · 12":
-    "Its color identity is EXACTLY the deck's: all five colours (W/U/B/R/G) — mana symbols of each of those 5 colors in its cost or rules text, and of no other color.",
+    "Its color identity is EXACTLY the deck's: all five colors (W/U/B/R/G) — mana symbols of each of those 5 colors in its cost or rules text, and of no other color.",
 };
 
 type Recorded = {

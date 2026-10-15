@@ -93,7 +93,7 @@ export const REMIX_DFC_FRAMES_GONE =
 import type { DeckFormat } from "@/types/deck";
 import { withCreditedStep } from "@/lib/ai/credited-step";
 import { StationGapUnfilledError, sameStationShape, stationSaveFields } from "@/lib/ai/station-design";
-import { printsPowerToughness } from "@/lib/cards/card-display";
+import { printsPowerToughness, withSupertypeWord } from "@/lib/cards/card-display";
 import { isStationFrame } from "@/lib/cards/station-frame";
 import { stationPtChoiceOf } from "@/lib/creator/station-rows";
 import { getCardCapacity } from "@/lib/cards/capacity";
@@ -1402,10 +1402,12 @@ async function runDeckCardStep(
   cardIndex: number,
 ): Promise<JobStep> {
   const card = plan.cards[cardIndex];
-  // Commander slot: force the Legendary supertype the frame renders.
+  // Commander slot: force the Legendary supertype the frame renders — added
+  // to whatever words the design gave it (a "Snow" commander was saved
+  // non-legendary when only an EMPTY supertype got the word).
   const isCommander = plan.roles[cardIndex] === "commander";
   const supertype = isCommander
-    ? card.supertype || "Legendary"
+    ? withSupertypeWord(card.supertype, "Legendary")
     : card.supertype ?? undefined;
   // The card's FRAME (owner 2026-10-14): before, a deck card saved none and
   // every one drew the default creature frame — a land, an artifact too.

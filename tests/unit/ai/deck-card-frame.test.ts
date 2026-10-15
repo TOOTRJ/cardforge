@@ -210,6 +210,19 @@ describe("an AI deck card saves with its frame", () => {
     expect(s.spend.mock.calls.map((call) => call[0])).toEqual([1, 1]);
   });
 
+  it("a commander is always Legendary — added to the words the design gave it (a Snow commander saved non-legendary before)", async () => {
+    s.verified = SEED;
+    const snow = await deckStep(card({ supertype: "Snow", subtypes: ["Troll"], color_identity: ["green"], power: "3", toughness: "3" }), "commander");
+    expect(snow!.supertype).toBe("Legendary Snow");
+    const plain = await deckStep(card({ subtypes: ["Dragon"], power: "4", toughness: "4" }), "commander");
+    expect(plain!.supertype).toBe("Legendary");
+    const already = await deckStep(card({ supertype: "Legendary", subtypes: ["Elf"], power: "2", toughness: "2" }), "commander");
+    expect(already!.supertype).toBe("Legendary");
+    // A non-commander keeps the design's words untouched.
+    const notCommander = await deckStep(card({ supertype: "Snow", subtypes: ["Troll"], color_identity: ["green"], power: "3", toughness: "3" }), "creature");
+    expect(notCommander!.supertype).toBe("Snow");
+  });
+
   it("saves no template where nothing published fits (the verified read failed): the default frame, as before", async () => {
     s.verified = [];
     const saved = await deckStep(KINDS[10]![1], "land");

@@ -158,7 +158,7 @@ function slotFromDeckSlot(
  *  for the five-colour Slivers. */
 function commanderColorsLine(typeColors: readonly ManaColor[]): string {
   const each = typeColors.length === 1 ? "that color" : `each of those ${typeColors.length} colors`;
-  return `Its color identity is EXACTLY the deck's: ${describeColors(typeColors)} — mana symbols of ${each} in its cost or rules text, and of no other color.`;
+  return `Its color identity is EXACTLY the deck's: ${describeColors(typeColors).replace("colours", "colors")} — mana symbols of ${each} in its cost or rules text, and of no other color.`;
 }
 
 /** slotFromDeckSlot for a colourless plan (no colours: `index % 0` would
