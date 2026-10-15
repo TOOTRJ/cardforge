@@ -1156,10 +1156,18 @@ export function brandMarkLayout(
  *  test 7.7's edge contract makes of an `art` edge. The etched finish masks
  *  by the frame's luminance, so on a mostly see-through frame it all but
  *  vanishes: the creator hides it on these frames until the etched frame
- *  treatment (4.28). */
+ *  treatment (4.28).
+ *
+ *  An edge-to-edge treatment's window reaches the card's TOP or BOTTOM
+ *  edge. The extended-art frame's (TODO 4.7, layout v58) reaches only the
+ *  SIDE edges, between its title bar and type bar, and is not one: its bars,
+ *  box and border are opaque (the etched mask keeps them), and Scryfall's
+ *  art_crop of an extended-art printing is the window's whole width (WOE
+ *  #325: 745 × 460), so its import keeps the frame and never lands on a
+ *  bordered twin. (7.7's edge contract states every edge itself.) */
 export function artReachesCardEdge(profile: Pick<FrameProfile, "artSlot">): boolean {
   const a = profile.artSlot;
-  return a.topPct <= 0 || a.leftPct <= 0 || a.leftPct + a.widthPct >= 100 || a.topPct + a.heightPct >= 100;
+  return a.topPct <= 0 || a.topPct + a.heightPct >= 100;
 }
 
 /** A full-art basic's window spans at least this much of the card on both
@@ -4437,20 +4445,58 @@ const TARKIRGHOSTFIRE: FrameProfile = {
 // admin layout editor before verifying — all five start unpublished.
 // ---------------------------------------------------------------------------
 
-// Extended Art — M15 skeleton; the art window is tall and the frame has no
-// side borders, so art bleeds to the card edges beside the white text box.
+// Extended Art (TODO 4.7, layout EXTENDED_ART_LAYOUT_VERSION) — Card
+// Conjurer's accurate 'Extended Art Frames' pack (frames bucket; the 744 px
+// MSE masters in git are retired): the accurate M15 pack's title bar, black
+// type bar, text box and bottom border — its text layout is the M15 pack's,
+// number for number — with the art window opened to the card's SIDE EDGES
+// from the title bar to the type bar, as every print runs it (0 px of black
+// beside the art on 13 of 14 measured prints, WOE #325 … TLA #367). So the
+// m15 entry's slots carry over (its cost lift, type baseline and print
+// margins), with:
+//   • the art slot = CC's artBounds (0 / 8.39 % × 100 / 54.37 %, rows
+//     176–1318 at HD): the window and the soft shade the pack draws over the
+//     art under the title bar (rows 183–236) and above the type bar (from
+//     row 1180) — the art-window check holds it to both;
+//   • WHITE type ink and the set symbol's white keyline on the black type
+//     bar (Moonshaker Cavalry WOE #325, Artificer's Dragon BRO #376);
+//   • the colourless dress of print: a colourless ARTIFACT paints the pack's
+//     silver artifact frame (`a`, artifactMasterKeys), any other colourless
+//     card the see-through 'Eldrazi Frame' (`c`) with the art under it as
+//     ONE picture from the border's inner edge to the card's sides
+//     (EXTENDED_UNDER_FRAME_RECT: STX #285, CMM #746, MSC #292 show the art
+//     through the bars and the box).
+const EXTENDED_ART_SLOT: Rect = { topPct: 8.39, leftPct: 0, widthPct: 100, heightPct: 54.37 };
+/** The see-through colourless extended frame's picture: UNDER_FRAME_RECT's
+ *  rows (the border's inner edge to under the bottom border) across the
+ *  card's whole width — the window beside the art reaches the side edges. */
+const EXTENDED_UNDER_FRAME_RECT: Rect = { topPct: UNDER_FRAME_RECT.topPct, leftPct: 0, widthPct: 100, heightPct: UNDER_FRAME_RECT.heightPct };
 const EXTENDEDART: FrameProfile = {
   ...M15,
   label: "Extended Art",
-  // Frame edge at 96.76%H (lower than M15's 92.86%).
-  brandMark: { rightPct: 3.5, bottomPct: 0.8 },
-  artSlot: { topPct: 11.9, leftPct: 4, widthPct: 92, heightPct: 48.4 },
-  // The default rules padding, not M15's print margins (layout v33).
-  rules: {
-    ...M15.rules,
-    rect: { topPct: 60.5, leftPct: 9.1, widthPct: 82.9, heightPct: 29 },
-    padPx: undefined,
-  },
+  costDy: CC_M15_COST_DY,
+  setSymbolKeyline: SET_SYMBOL_KEYLINE,
+  artSlot: EXTENDED_ART_SLOT,
+  underFrameArt: { rect: EXTENDED_UNDER_FRAME_RECT, colors: ["c"], artSlot: EXTENDED_UNDER_FRAME_RECT },
+  artifactMasterKeys: { c: "a" },
+  type: { ...M15.type, dy: CC_M15_TYPE_DY, colorHex: "#ffffff" },
+};
+
+// The extended-art LAND frame (TODO 4.7, owner Round 63 2026-10-14): the
+// same pack's land frames (the grey `l`, the land tints `l<k>`, the gold
+// any-colour `lm`), as m15land is M15's — a land on extended art prints
+// them (FDN #487, NEO #501–505, CMR #705). EXTENDEDART's slots with the
+// land entry's differences: no cost, M15LAND's wider title band. No
+// see-through colourless master (the grey land frame is opaque) and no
+// artifact master; no pair masters yet (a two-colour land wears the gold
+// land frame, as m15land does with its switch off — a follow-up).
+const EXTENDEDARTLAND: FrameProfile = {
+  ...EXTENDEDART,
+  label: "Extended Art Land",
+  hideCost: true,
+  title: M15LAND.title,
+  underFrameArt: undefined,
+  artifactMasterKeys: undefined,
 };
 
 // Zendikar Expedition land — dark stone frame, art fills the upper 2/3,
@@ -4752,15 +4798,27 @@ const M15FULLARTLANDTHB: FrameProfile = {
   basicSymbol: { rect: BASIC_SYMBOL_CC_2022.rect, style: "none" },
 };
 
-// M15 Textless — the plain M15 border around a tall art window (no type
-// plate, no text box painted). Shares FULLART's over-art ink treatment: light
-// type and light rules straight on the art. FULLART has no `backdropHex`, so
-// no scrim backs the rules yet. The art window is inset to the M15 border
-// rather than bleeding to the card edge.
+// M15 Textless (TODO 4.35 / 4.42, layout EXTENDED_ART_LAYOUT_VERSION) — the
+// black-bordered textless promos (Store Championship, MagicFest, MagicCon,
+// Secret Lair: SCH #3 / #50, PF24 #1, PF26 #1, FDN #718), from Card
+// Conjurer's 'Magic Fest Promos' (frames bucket; the 375 px MSE masters in
+// git are retired): the black ring, a dark translucent title bar with the
+// name in WHITE, and the art down to the bottom ring inside a rim in the
+// card's colour. No type line and no text box, as printed: `textless`
+// (TODO 3.24) — the card keeps its text and prints it on any other frame.
+// The art slot is CC's artBounds (6.2 / 4.96 × 87.6 %), 1.7 px taller than
+// CC's 86.39 % so it covers the window (115–1385 × 237–1918 px) with the
+// art-window check's 0.05 % to spare, and the translucent title bar above it. Title,
+// cost, P/T plate (M15's, at M15's bounds — the prints' light plate with
+// dark digits), footer and brand mark keep the m15 entry's places.
 const M15TEXTLESS: FrameProfile = {
-  ...FULLART,
+  ...M15,
   label: "M15 Textless",
-  artSlot: { topPct: 11.3, leftPct: 7.7, widthPct: 84.0, heightPct: 80.7 },
+  costDy: CC_M15_COST_DY,
+  artSlot: { topPct: 4.96, leftPct: 6.2, widthPct: 87.6, heightPct: 86.47 },
+  title: { ...M15.title, colorHex: "#ffffff" },
+  type: { ...M15.type, dy: CC_M15_TYPE_DY },
+  textless: true,
 };
 
 const M15TEXTLESSLAND: FrameProfile = {
@@ -4892,16 +4950,16 @@ export const UB_CROWN: FrameOverlaySlot = {
  * draws no pair masters), the colourless card CC's grey C crown over our MSE
  * colourless master.
  *
- * The slot sits 10 px (0.476 %H) LOWER than CC's bounds: our extendedart
- * master is MSE-built, and its title bar's top edge sits 0.45 %H below the
- * print's (FDN #442 / #455 and CC's m15/new/extended put the bar's outline at
- * 4.98 %H, ours at 5.43), so the crown's hole hugs OUR bar — the peak lands
- * at 2.2 %H against the print's 2.0. 4.7's CC-built master takes the offset
- * back to 0. Set on the extendedart entry only.
+ * The slot is CC's bounds, from row 0 (TODO 4.7, layout v58): the
+ * extendedart masters are Card Conjurer's own extended frames, whose title
+ * bar's outline tops out at 4.98 %H as FDN #442 / #455 print it — the peak
+ * lands at the print's 2.0 %H. (Over the old MSE masters, whose bar topped
+ * out at 5.43 %H, the slot sat 10 px lower.) Set on the extendedart entry
+ * only.
  */
 export const EXTENDED_CROWN: FrameOverlaySlot = {
   anatomy: "crown",
-  rect: { topPct: (10 / 2100) * 100, leftPct: 0, widthPct: 100, heightPct: (260 / 2100) * 100 },
+  rect: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: (260 / 2100) * 100 },
   assetPathTemplate: "/frames/extendedcrown/{key}.png",
   // EXTENDED_CROWN_BAND.keys in scripts/lib/cc-frames.mjs (a unit test holds
   // them together).
@@ -5793,6 +5851,10 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // card changes (and production holds none on this frame). No pairs: a
   // two-colour legend wears the gold crown.
   extendedart: { ...EXTENDEDART, overlays: [EXTENDED_CROWN] },
+  // A legendary land's crown is its colour's (NEO #503 Otawara, MH2 #480
+  // Yavimaya); a colourless legend wears CC's grey C crown, as on
+  // extendedart (keyed by the card's colour).
+  extendedartland: { ...EXTENDEDARTLAND, overlays: [EXTENDED_CROWN] },
   fullart: { ...FULLART, pickerSampleArt: true },
   m15fullartland: M15FULLARTLAND,
   fullartland: FULLARTLAND,

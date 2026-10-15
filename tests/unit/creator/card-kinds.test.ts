@@ -162,7 +162,7 @@ describe("framesForKind", () => {
     // land join extended art and the textless frame.
     expect(skinsFor("land")).toEqual([
       "m15snowland", "m15borderlessland", "m15stationland", "m15ubland",
-      "extendedart", "m15fullartland", "fullartland",
+      "extendedartland", "m15fullartland", "fullartland",
       // …and the older full-art basic designs (TODO 4.40 / 4.41).
       "m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb",
       "m15textless", "m15textlessland",
@@ -473,10 +473,14 @@ describe("templateSupportsKind", () => {
     for (const template of ["fullart", "m15textless", "extendedart"] as const) {
       expect(templateSupportsKind(template, "planeswalker")).toBe(false);
       expect(templateSupportsKind(template, "battle")).toBe(false);
-      // Every other standard kind still gets them.
+      // Every other standard kind still gets them — but a land on extended
+      // art wears its land dress (TODO 4.7, owner Round 63).
       for (const kind of ["creature", "instant", "sorcery", "artifact", "enchantment", "land", "token"] as const) {
-        expect(templateSupportsKind(template, kind)).toBe(true);
+        expect(templateSupportsKind(template, kind), `${template} ${kind}`).toBe(!(template === "extendedart" && kind === "land"));
       }
+    }
+    for (const kind of CARD_KIND_VALUES) {
+      expect(templateSupportsKind("extendedartland", kind), kind).toBe(kind === "land");
     }
     // The planeswalker/battle galleries lose exactly those three.
     const pw = framesForKind("planeswalker", NO_VERIFIED).map((f) => f.template);
@@ -795,7 +799,7 @@ describe("the borderless land (4.34)", () => {
     // M15 treatments, 2026-10-13.)
     expect(land.slice(0, 4)).toEqual(["m15snowland", "m15borderlessland", "m15stationland", "m15ubland"]);
     expect(land.slice(4)).toEqual([
-      "extendedart", "m15fullartland", "fullartland",
+      "extendedartland", "m15fullartland", "fullartland",
       "m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb",
       "m15textless", "m15textlessland",
     ]);

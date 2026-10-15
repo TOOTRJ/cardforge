@@ -574,7 +574,7 @@ type Match = {
 };
 
 /** A family of templates picked by kind (and dress). */
-type Family = "m15" | "ub" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "m20" | "dfc" | "station";
+type Family = "m15" | "ub" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "extended" | "m20" | "dfc" | "station";
 
 type TemplateSpec = FrameTemplate | { family: Family };
 
@@ -932,6 +932,13 @@ const FAMILIES: Record<
   textless: {
     produces: ["m15textlessland", "m15textless"],
     pick: ({ facts }) => (facts.kind === "land" ? "m15textlessland" : "m15textless"),
+  },
+  // The extended-art frame and its land dress (TODO 4.7, owner Round 63):
+  // a land prints the pack's land frames (FDN #487, NEO #501–505), every
+  // other kind the spell frame.
+  extended: {
+    produces: ["extendedartland", "extendedart"],
+    pick: ({ facts }) => (facts.kind === "land" ? "extendedartland" : "extendedart"),
   },
   // The full-art token design, M20 → today (TODO 4.48 / 4.50).
   m20: {
@@ -2414,7 +2421,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       key: "extendedart",
       exactLabel: "Extended-art frame",
       match: { effectsAny: ["extendedart"] },
-      outcome: { status: "exact", template: "extendedart", landOnOnceVerified: vehicleStandIn("extended art") },
+      outcome: { status: "exact", template: { family: "extended" }, landOnOnceVerified: vehicleStandIn("extended art") },
     },
     // An extended-art Spacecraft (13 printings: EOE #321–355, EOC #27 / #34,
     // TRK #481) prints the station frame without the art window's rails: the

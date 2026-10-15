@@ -92,6 +92,45 @@ const isMoved = (template: string) => (MOVED as readonly string[]).includes(temp
 const ADDED_SINCE: readonly FrameTemplate[] = ["m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb"];
 const isAdded = (template: string) => (ADDED_SINCE as readonly string[]).includes(template);
 const TEMPLATES = FRAME_TEMPLATE_VALUES.filter((t) => !isAdded(t));
+/** Extended art's LAND dress (TODO 4.7, owner Round 63, 2026-10-14), made
+ *  after the recording: `extendedart` split by kind — a land on extended art
+ *  wears `extendedartland`, the pack's land frames. That changes WHICH
+ *  template a land wears, not the picker's groups, so every comparison below
+ *  reads the dump with the land dress folded back onto `extendedart`
+ *  (asOneExtendedFrame). The split itself — the kind gate, the gallery, the
+ *  import over every extended-art printing, the AI request, the own-card
+ *  remix — is pinned in tests/unit/creator/extended-art-land.test.ts. */
+const LAND_DRESS: FrameTemplate = "extendedartland";
+
+/** The dump with the land dress folded onto `extendedart`: every VALUE that
+ *  names it names `extendedart`; the kind gate's land answers for
+ *  `extendedart` are the dress's; a resolver row for a land on the dress is
+ *  the row a land on `extendedart` had (renamed); every other decision about
+ *  the dress as a template of its own (its kind gate for other kinds, its
+ *  base, label, kind change…) is new, and dropped. */
+function asOneExtendedFrame(dump: Dump): Dump {
+  const fold = (text: string) => text.split(`"${LAND_DRESS}"`).join('"extendedart"').split(`${LAND_DRESS}|`).join("extendedart|");
+  const out: Dump = {};
+  for (const [section, rows] of Object.entries(dump)) {
+    out[section] = {};
+    for (const [key, value] of Object.entries(rows)) {
+      const parts = key.split("|");
+      const folded = JSON.parse(fold(JSON.stringify(value ?? null))) as unknown;
+      if (!parts.includes(LAND_DRESS)) {
+        out[section][key] = value === undefined ? undefined : folded;
+        continue;
+      }
+      if (section === "resolve") out[section][parts.map((p) => (p === LAND_DRESS ? "extendedart" : p)).join("|")] = folded;
+    }
+  }
+  for (const section of ["refuses", "supports", "kindGate"]) {
+    for (const face of ["land", "basic"]) {
+      const own = dump[section][`${LAND_DRESS}|${face}`];
+      if (own !== undefined) out[section][`extendedart|${face}`] = own;
+    }
+  }
+  return out;
+}
 
 function productionVerifiedKeys(): Set<string> {
   const sql = fs.readFileSync(path.join(process.cwd(), "supabase/seed.sql"), "utf8");
@@ -112,7 +151,9 @@ const PROD = productionVerifiedKeys();
 /** Production's list plus every colour of the frames that moved (today
  *  production has only the two full-art basics ticked, in w u b r g c): the
  *  day they are all ticked. */
-const PROD_PLUS_MOVED = new Set([...PROD, ...MOVED.flatMap((t) => FRAME_COLOR_KEYS.map((k) => frameComboKey(t, k)))]);
+// …and extended art's LAND dress (TODO 4.7, owner Round 63, after the
+// recording): the land half of a moved frame, ticked the same day.
+const PROD_PLUS_MOVED = new Set([...PROD, ...[...MOVED, LAND_DRESS].flatMap((t) => FRAME_COLOR_KEYS.map((k) => frameComboKey(t, k)))]);
 const VERIFIED: Record<string, ReadonlySet<string>> = { prod: PROD, prodPlusMoved: PROD_PLUS_MOVED, all: ALL };
 
 const IDENTITY: Record<FrameColorKey, ColorIdentity[]> = {
@@ -345,7 +386,7 @@ function compute(): Dump {
 
   // The server's kind gate and the remix of an own card, for a card stored
   // on each moved frame (and the frames that stayed).
-  const stored: FrameTemplate[] = [...MOVED, "nyx", "expeditionland", "fullart", "lotr", "m15borderless"];
+  const stored: FrameTemplate[] = [...MOVED, LAND_DRESS, "nyx", "expeditionland", "fullart", "lotr", "m15borderless"];
   const storedFaces: Record<string, { card_type: CardType; supertype: string; subtypes: string[]; title: string; rules_text: string }> = {
     creature: { card_type: "creature", supertype: "", subtypes: ["Elf"], title: "Test Card", rules_text: "Flying" },
     enchantment: { card_type: "enchantment", supertype: "", subtypes: [], title: "Test Card", rules_text: "Flying" },
@@ -429,7 +470,8 @@ describe("the frame picker's groups: a classification change only", () => {
     return;
   }
   const main = JSON.parse(fs.readFileSync(FIXTURE, "utf8")) as Dump;
-  const branch = condense(compute());
+  const raw = asOneExtendedFrame(compute());
+  const branch = condense(raw);
 
   /** The keys of a section whose value differs from main's. */
   const changed = (section: string): string[] =>
@@ -451,8 +493,6 @@ describe("the frame picker's groups: a classification change only", () => {
     ["base", "the Frame-section base of every frame, per kind"],
     ["resolve", "the published-frame resolver, every kind × frame × colour × policy"],
     ["candidates", "the import's candidate frames"],
-    ["requested", "an AI card asked for a frame by name"],
-    ["pools", "the frames in the AI's random pool, every type × colour × face"],
     ["imports", "every captured printing's match, landing, chooser and remix landing"],
     ["walkthrough", "the kind a frame's walk-through opens as"],
     ["notice", "the 'bordered' word of an import's treatment notice"],
@@ -461,6 +501,45 @@ describe("the frame picker's groups: a classification change only", () => {
     ["basicFallback", "where a basic-only frame's card goes when it stops being a basic"],
   ])("%s — %s: identical to origin/main", (section) => {
     expect(changed(section)).toEqual([]);
+  });
+
+  // The AI's random pools: identical but for layout v58 (TODO 4.35 / 4.42),
+  // which made the textless pair TEXTLESS profiles — `resolveGeneratedFrame`
+  // never draws one for a card with text while another frame it fits is
+  // published (TODO 1.24). Recorded in full on origin/main (da0b9d1b) and
+  // here: the 350 pools that differ differ ONLY by m15textless /
+  // m15textlessland leaving a face that carries text (plain, artifactWord,
+  // enchantmentWord, vehicle, fourRows); the textless and basic faces are unchanged.
+  it("pools — the frames in the AI's random pool: the same, but the textless pair never offered to a card with text (v58)", () => {
+    // Only where the pair is verified (production verifies neither), and only
+    // the kinds the pair dresses.
+    const kinds = ["artifact", "creature", "enchantment", "instant", "land", "sorcery", "spell", "token"];
+    expect(changed("pools")).toEqual(["all", "prodPlusMoved"].flatMap((policy) => kinds.map((kind) => `${policy}|${kind}`)));
+    for (const [key, pool] of Object.entries(raw.pools) as [string, string[]][]) {
+      const face = key.split("|")[3];
+      if (face === "textless" || face === "none" || face === "basic") continue;
+      expect(pool.filter((t) => t === "m15textless" || t === "m15textlessland"), key).toEqual([]);
+    }
+  });
+
+  // An AI card asked for a frame by name: identical but for the textless
+  // pair (layout v58): a request for m15textless / m15textlessland is
+  // honoured only for a face with no rules or flavour text — a face with
+  // some is given the pool's pick, as a random request is (TODO 1.24).
+  // Recorded in full on origin/main (a6415e5e) and here: the 392 decisions
+  // that differ are all a request for the pair on a face that carries text
+  // (plain, artifactWord, enchantmentWord, vehicle), each now off the pair.
+  it("requested — an AI card asked for a frame by name: the same, but the textless pair never given to a card with text (v58)", () => {
+    const kinds = ["artifact", "creature", "enchantment", "instant", "land", "sorcery", "spell", "token"];
+    expect(changed("requested")).toEqual(["all", "prodPlusMoved"].flatMap((policy) => kinds.map((kind) => `${policy}|${kind}`)));
+    for (const [key, frame] of Object.entries(raw.requested) as [string, string | null][]) {
+      const parts = key.split("|");
+      const face = parts[3];
+      const requested = parts[parts.length - 1];
+      if (requested !== "m15textless" && requested !== "m15textlessland") continue;
+      if (face === "textless" || face === "none" || face === "basic") continue;
+      expect(frame === "m15textless" || frame === "m15textlessland", key).toBe(false);
+    }
   });
 
   it("a kind's gallery holds the same frames in the same colours, the frames that stayed in the same order", () => {
@@ -517,7 +596,9 @@ describe("the frame picker's groups: a classification change only", () => {
 
   it("no frame is left in or added to the showcase group but by the move", () => {
     const showcase = (dump: Dump) =>
-      TEMPLATES.filter((t) => (dump.labels[t] as { era: string }).era === "showcase");
+      TEMPLATES.filter((t) => (dump.labels[t] as { era: string } | undefined)?.era === "showcase");
+    // (The land dress, folded away, is an M15 variation like extendedart.)
+    expect(eraForTemplate(LAND_DRESS)).toBe("m15");
     expect(showcase(main).filter((t) => !showcase(branch).includes(t))).toEqual([...MOVED]);
     expect(showcase(branch).filter((t) => !showcase(main).includes(t))).toEqual([]);
     // Their frame SETS (the admin's treatment batches, the import's

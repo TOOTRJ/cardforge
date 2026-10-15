@@ -301,11 +301,9 @@ export function autoTokenTextBoxFrame(input: {
 //
 // The test is the PROFILE's flag, the one the renderers read — not a
 // template's name: the "M15 Textless" frames (`m15textless`,
-// `m15textlessland`, the registry's `textless` family) carry no flag and
-// draw their type line and rules straight on the art
-// (tests/unit/render/edge-to-edge-bake.test.tsx), so a text landing there
-// is drawn and stands. Give one of them the flag and this guard covers it
-// with no other change.
+// `m15textlessland`, the registry's `textless` family) gained the flag with
+// layout v58 (the black-bordered textless promos, TODO 4.35 / 4.42), and
+// this guard covered them with no other change.
 // ---------------------------------------------------------------------------
 
 /** True when a card saved on `template` would carry rules-box text (the

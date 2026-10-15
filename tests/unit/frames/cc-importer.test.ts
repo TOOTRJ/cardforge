@@ -157,6 +157,9 @@ describe("Card Conjurer recipe", () => {
       // The landscape pair (TODO 4.21b; tests/unit/frames/landscape-importer.test.ts).
       "battle",
       "emblem",
+      // The extended-art frame (TODO 4.7, layout v58; tests/unit/frames/extended-art-importer.test.ts).
+      "extendedart",
+      "extendedartland",
       "flip",
       "fullartland",
       "m15",
@@ -189,6 +192,9 @@ describe("Card Conjurer recipe", () => {
       "m15pw",
       "m15snow",
       "m15snowland",
+      // The textless promo pair (TODO 4.35 / 4.42, layout v58).
+      "m15textless",
+      "m15textlessland",
       "m15token",
       "m15tokenartifact",
       "m15tokenartifacttext",

@@ -135,7 +135,7 @@ describe("bake path = preview path", () => {
                 : ub
                   ? "m15ubholostamp"
                   : "m15holostamp"
-              : template === "extendedart"
+              : template === "extendedart" || template === "extendedartland"
                 ? "extendedcrown"
                 : ub
                   ? "m15ubcrown"

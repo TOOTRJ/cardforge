@@ -152,7 +152,9 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
     // + 4.5c's Vehicle frame (an opaque M15 master: no sample).
     // + the station frame's two (TODO 4.27a) + the Nyx dress (TODO 4.7)
     // + 4.25's three Universes Beyond frames (opaque masters too).
-    expect(FRAME_TEMPLATE_VALUES).toHaveLength(70);
+    // + extended art's land dress (TODO 4.7, owner Round 63: opaque masters)
+    // + 4.40 / 4.41's three older full-art basics.
+    expect(FRAME_TEMPLATE_VALUES).toHaveLength(71);
     expect(FRAME_TEMPLATE_VALUES.filter((t) => drawn.has(t))).toEqual(SAMPLED);
   });
 
@@ -196,8 +198,9 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
       // Layout v35 (4.17b): nyx's and fullart's art run under the whole text
       // box (fullart's out past its ring's rim too).
       fullart: [92.4, 90.3],
-      m15textless: [84, 80.7],
-      m15textlessland: [84, 80.7],
+      // The textless promo pair (layout v58): CC's art bounds.
+      m15textless: [87.6, 86.47],
+      m15textlessland: [87.6, 86.47],
       nyx: [88, 81.8],
       // 4.40's stone ring: the window's box.
       m15fullartlandzen: [85.2, 72.4],

@@ -57,14 +57,16 @@ const PROD = productionVerifiedKeys();
 const ALL = new Set(every(FRAME_TEMPLATE_VALUES));
 const minus = (keys: ReadonlySet<string>, ...templates: string[]) =>
   new Set([...keys].filter((key) => !templates.some((t) => key.startsWith(`${t}/`))));
+/** The textless promo pair (textless profiles since layout v58). */
+const FAMILY: readonly string[] = ["m15textless", "m15textlessland"];
 const HEIGHTS = ["m20tokentext", "m20tokentall", "m20tokenartifacttext", "m20tokenartifacttall"];
 const ARCH_BOXES = ["m15tokentext", "m15tokenartifacttext"];
 
 describe("which frames hide a card's text", () => {
-  it("the profiles flagged `textless` are the full-art token's two textless heights — and nothing else today", () => {
+  it("the profiles flagged `textless` are the full-art token's two textless heights and, since layout v58, the textless promo pair", () => {
     // A new `textless` profile is covered by the guard with no other change;
     // it belongs in docs/FRAMES.md's landings table (TODO 1.24) too.
-    expect(TEXTLESS).toEqual(["m20token", "m20tokenartifact"]);
+    expect(TEXTLESS).toEqual(["m20token", "m20tokenartifact", "m15textless", "m15textlessland"]);
   });
 
   it("the test is the renderers': the flag AND rules-box text (rules or flavour, not blank)", () => {
@@ -77,21 +79,24 @@ describe("which frames hide a card's text", () => {
     expect(frameHidesRulesBoxText("m15token", { rulesText: "Lifelink" })).toBe(false);
   });
 
-  it("the 'M15 Textless' frames are NOT textless profiles: they draw their text on the art, so a text landing there stands", () => {
+  it("the 'M15 Textless' frames ARE textless profiles since layout v58: a text landing there is hidden, so the guard covers them", () => {
     // The registry's `textless` family (textless/2015, textless/old-frame
     // once verified, textless/future, borderless/textless,
-    // borderless/basic/textless). tests/unit/render/edge-to-edge-bake
-    // .test.tsx bakes the proof ("Today: a type line and cream rules on the
-    // art"). The day one gains the flag: remix-textless-guard-flagged.test.ts.
+    // borderless/basic/textless): the black-bordered textless promos (CC
+    // 'Magic Fest Promos', TODO 4.35 / 4.42) print no type line and no
+    // rules. remix-textless-guard-flagged.test.ts pins the stand-ins.
     for (const template of ["m15textless", "m15textlessland"] as const) {
-      expect(getFrameProfile(template).textless).toBeFalsy();
-      expect(frameHidesRulesBoxText(template, { rulesText: "Destroy all creatures.", flavorText: "A line." })).toBe(false);
+      expect(getFrameProfile(template).textless).toBe(true);
+      expect(frameHidesRulesBoxText(template, { rulesText: "Destroy all creatures.", flavorText: "A line." })).toBe(true);
+      expect(frameHidesRulesBoxText(template, { rulesText: null, flavorText: null })).toBe(false);
     }
   });
 
-  it("the registry rules that can reach a text-hiding frame are the M20+ token design's (all `onceVerified`)", () => {
+  it("the registry rules that can reach a text-hiding frame are the M20+ token design's (all `onceVerified`) and the textless family's", () => {
     const reaching = FRAME_SIGNATURE_RULES.filter((rule) => templatesOfRule(rule).some((t) => TEXTLESS.includes(t)));
     expect(reaching.map((rule) => rule.key)).toEqual([
+      "borderless/basic/textless",
+      "borderless/textless",
       "borderless/token",
       "token/m20+nyx-dress",
       "token/m20+border",
@@ -99,6 +104,9 @@ describe("which frames hide a card's text", () => {
       "token/m20+two-colour",
       "token/m20+two-colour-hybrid",
       "token/m20",
+      "textless/2015",
+      "textless/old-frame",
+      "textless/future",
     ]);
   });
 
@@ -107,7 +115,8 @@ describe("which frames hide a card's text", () => {
     expect(ALL.size - kept.size).toBe(TEXTLESS.length * FRAME_COLOR_KEYS.length);
     for (const template of TEXTLESS) expect(kept.has(frameComboKey(template, "w"))).toBe(false);
     expect(kept.has(frameComboKey("m20tokentext", "w"))).toBe(true);
-    expect(kept.has(frameComboKey("m15textless", "w"))).toBe(true);
+    expect(kept.has(frameComboKey("m15textless", "w"))).toBe(false);
+    expect(kept.has(frameComboKey("m15", "w"))).toBe(true);
     // A key of no current template (a retired one in an old list) is kept.
     expect(withoutTextlessFrames(new Set(["regular/w"])).has("regular/w")).toBe(true);
   });
@@ -303,19 +312,27 @@ describe("the sweep over the recorded printings", () => {
     expect(rows.some((row) => TEXTLESS.includes(row.landing))).toBe(true);
   });
 
-  it("with EVERY template verified nothing differs either: the textless-family landings draw their text, the tokens find a box", () => {
+  it("with EVERY template verified only the textless-family landings that carry text differ — onto the registry's stand-in; the tokens find a box", () => {
     const rows = sweep(ALL);
-    expect(differing(rows)).toEqual([]);
+    const changed = differing(rows);
+    expect(changed.length).toBeGreaterThan(0);
+    for (const row of changed) {
+      // Since layout v58 the 'M15 Textless' frames are textless profiles.
+      expect(FAMILY).toContain(row.before);
+      expect(row.hiddenBefore).toBe(true);
+      expect(row.after).toBe(row.standIn);
+    }
     expect(rows.filter((row) => row.hiddenAfter)).toEqual([]);
-    // …and the 'M15 Textless' landings ARE taken there, with text.
+    // …and a remix that saves with NO text keeps the textless landing.
     expect(rows.some((row) => row.after === "m15textless")).toBe(true);
     expect(rows.some((row) => row.after === "m15textlessland")).toBe(true);
+    for (const row of rows.filter((r) => FAMILY.includes(r.after as string))) expect(row.key).toContain("rules=false flavour=false");
   });
 
-  it("without the full-art text heights the arch's text box stood in already (unchanged)", () => {
+  it("without the full-art text heights the arch's text box stood in already (unchanged but for the textless family, v58)", () => {
     for (const base of [PROD, ALL]) {
       const rows = sweep(minus(base, ...HEIGHTS));
-      expect(differing(rows)).toEqual([]);
+      for (const row of differing(rows)) expect(FAMILY).toContain(row.before);
       expect(rows.filter((row) => row.hiddenAfter)).toEqual([]);
     }
   });
@@ -331,9 +348,10 @@ describe("the sweep over the recorded printings", () => {
         expect(row.hiddenBefore).toBe(true);
         expect(row.hiddenAfter).toBe(false);
         // The stand-in is the import's landing with the textless frames
-        // unverified: the 2014–19 arch, whose scrim keeps the text.
+        // unverified: for a token the 2014–19 arch, whose scrim keeps the
+        // text (the textless promo family's: remix-textless-guard-flagged).
         expect(row.after).toBe(row.standIn);
-        expect(["m15token", "m15tokenartifact"]).toContain(row.after);
+        if (!FAMILY.includes(row.before)) expect(["m15token", "m15tokenartifact"]).toContain(row.after);
       }
       // Everything hidden before is drawn now; nothing else moved.
       expect(rows.filter((row) => row.hiddenBefore).length).toBe(changed.length);

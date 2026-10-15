@@ -22,7 +22,7 @@ import { backFaceFromPatch, splitSubtypes } from "@/lib/scryfall/preview-from-pa
 import { DFC_REMIX_CREDITS } from "@/lib/scryfall/dfc-import";
 import { remixFrameFor, withoutTextlessFrames } from "@/lib/creator/frame-resolve";
 import { getFrameProfile } from "@/lib/cards/template-layout";
-import { templatePaintsSecondFace, typeWordFrameFor } from "@/lib/creator/card-kinds";
+import { extendedArtDressFor, kindFromCard, templatePaintsSecondFace, typeWordFrameFor } from "@/lib/creator/card-kinds";
 import { dfcBodyOf, templateHasBackFace, withTransformBackShape } from "@/lib/cards/dfc";
 import {
   FRAME_TEMPLATE_VALUES,
@@ -255,7 +255,12 @@ export function ownCardRemixFrame(
   ) {
     return {};
   }
-  const template = stored.template as FrameTemplate;
+  // A land stored on the extended-art frame before its land dress existed
+  // keeps the look on that dress (TODO 4.7, owner Round 63).
+  const template = extendedArtDressFor(
+    kindFromCard(source.card_type ?? undefined, stored.template as FrameTemplate),
+    stored.template as FrameTemplate,
+  );
   const colours = source.color_identity ?? [];
   // A premium frame needs a plan the save checks (none exists yet): never a
   // refusal after the art.

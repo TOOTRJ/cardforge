@@ -500,6 +500,9 @@ export const FRAME_TEMPLATE_VALUES = [
   "fullart",
   // Variation treatments (2026-07): extended/full art, premium lands, Nyx.
   "extendedart",
+  // Its land dress (TODO 4.7, owner Round 63): the pack's land frames, as
+  // m15land is M15's.
+  "extendedartland",
   // Full-art basic lands, Card Conjurer 'Fullart Basics (2022)' (frames plan
   // 4.39): the black-bordered frame of ONE / MOM / … (2023+) and the same
   // frame without its border (fullartland, borderless — owner decision
@@ -624,6 +627,7 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   tarkirdraconic: "Draconic",
   tarkirghostfire: "Ghostfire",
   extendedart: "Extended Art",
+  extendedartland: "Extended Art Land",
   // Set-relative like the other showcase labels: the picker prints
   // "Zendikar Rising — Hedron" (setQualifiedFrameLabel).
   fullart: "Hedron",
@@ -744,6 +748,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   tarkirghostfire: "tarkir",
   tarkirdragon: "multiverselegends",
   extendedart: "extended",
+  extendedartland: "extended",
   fullart: "zendikarrising",
   m15fullartland: "fullartset",
   fullartland: "fullartset",

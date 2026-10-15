@@ -1436,6 +1436,24 @@ export const UB_STAMP_TONES_TEMPLATES: readonly string[] = ["m15ub", "m15ubartif
 //            on the other colours of the frame stay fresh. (Taken as v55
 //            in the PR, then v56; v55 went to the Nyx Constellation
 //            correction and v56 to the triangle's tones, #558, first in.)
+//   v58    — the extended-art and textless frames re-sourced from Card
+//            Conjurer (TODO 4.7 / 4.35 / 4.42; owner Q6 2026-10-13).
+//            `extendedart`, `m15textless` and `m15textlessland`, every card
+//            on them: the masters (CC 'Extended Art Frames', CC 'Magic Fest
+//            Promos'; the MSE masters leave git) and the slots that ride
+//            them — extendedart takes the m15 entry's slots (cost lift, type
+//            baseline, print margins, brand mark), CC's art window to the
+//            side edges, white type ink, the colourless artifact's silver
+//            master and the see-through colourless master's art under it;
+//            its crown band's slot moves 10 px up onto CC's bounds. The
+//            textless pair prints no type line and no rules (`textless`),
+//            a white name on the dark title bar and CC's art window.
+//            CC_RESOURCE_LAYOUT_VERSION below — the ONE constant (taken as
+//            v56 in the PR; v56 went to the triangle's tones, #558, and v57
+//            to the see-through colourless frame, #559, first in). A CORRECTION ("sweep"), never a badge: none of
+//            the three is ticked in any colour, so no tick goes stale. The
+//            dev database holds one card on them (a private extendedart
+//            test card); production cannot be read from here.
 // ---------------------------------------------------------------------------
 
 /** The see-through colourless Universes Beyond spell frame (TODO 4.25
@@ -1461,6 +1479,14 @@ export const STATION_BANDS_TEMPLATES: readonly string[] = ["m15station", "m15sta
  *  once it ships. */
 export const NYX_PRINT_TONES_LAYOUT_VERSION = 55;
 export const NYX_PRINT_TONES_TEMPLATES: readonly string[] = ["nyx"];
+
+/** The extended-art and textless frames re-sourced from Card Conjurer (TODO
+ *  4.7 / 4.35 / 4.42): every card on `extendedart`, `m15textless` and
+ *  `m15textlessland`. ITS version lives here alone — CARD_LAYOUT_VERSION,
+ *  the scoped table and the rollout below read this constant — so a bump
+ *  that merges first moves it in one place. Frozen once it ships. */
+export const CC_RESOURCE_LAYOUT_VERSION = 58;
+export const CC_RESOURCE_TEMPLATES: readonly string[] = ["extendedart", "m15textless", "m15textlessland"];
 
 /** The 1993 frame on its prints (TODO 4.10c): every text slot and the
  *  symbols of `agclassic` and `alphaland`. ITS version lives here alone —
@@ -1521,7 +1547,7 @@ export const LARGE_PIPS_LAYOUT_VERSION = 53;
  *  latest). */
 export const V53_LARGER_COST_TEMPLATES: readonly string[] = ["modern", "modernland"];
 
-export const CARD_LAYOUT_VERSION = UB_SEE_THROUGH_C_LAYOUT_VERSION;
+export const CARD_LAYOUT_VERSION = CC_RESOURCE_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -1711,6 +1737,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // follow-up): `m15ub` — and on it only a card that paints the colourless
   // master (v57Changed). Verification-neutral.
   [UB_SEE_THROUGH_C_LAYOUT_VERSION]: UB_SEE_THROUGH_C_TEMPLATES,
+  // The extended-art and textless frames re-sourced from Card Conjurer
+  // (4.7 / 4.35 / 4.42): the masters and the slots that ride them; every
+  // card on the three. No narrower verification scope: none has a tick.
+  [CC_RESOURCE_LAYOUT_VERSION]: CC_RESOURCE_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -2754,6 +2784,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [NYX_PRINT_TONES_LAYOUT_VERSION]: "sweep", // the Nyx Constellation frame's rim on the family's tones THB #258–268 wear (owner Rounds 59 / 61) — a correction of a look against its own print on a frame never ticked, never a badge
   [UB_STAMP_TONES_LAYOUT_VERSION]: "sweep", // the Universes Beyond triangle as printed (4.25 follow-up): "auto" on every rarity, the matte triangle of a common / uncommon, the hologram's tone — a correction of the stamp against the frame's own print on three frames a day old, never a badge
   [UB_SEE_THROUGH_C_LAYOUT_VERSION]: "sweep", // the see-through colourless Universes Beyond spell frame (4.25 follow-up): an addition the visual gate records as a bump on a combo no card can be on (never ticked, offered nowhere) — never a badge
+  [CC_RESOURCE_LAYOUT_VERSION]: "sweep", // extendedart and the textless pair re-sourced from Card Conjurer (4.7 / 4.35 / 4.42; owner Q6) — a correction of three looks against their own prints on frames never ticked, never a badge
   [LARGE_PIPS_LAYOUT_VERSION]: "sweep", // hybrid and twobrid discs large, the large pip's factor per frame and place (3.21) — a correction against the prints after the owner's round-49 sheets, never a badge
   [SYMBOLS_PRINT_LAYOUT_VERSION]: "sweep", // five symbols on the prints' drawings + flat rules-text pips (6.16b) — a correction against the prints after the owner's round-43 sheets, never a badge
   [ART_FOCAL_ZERO_LAYOUT_VERSION]: "sweep", // the art's zoom about a focal point of exactly 0 (Satori dropped a zero transform-origin) — a correction of the bake against the preview after the owner's before / after sheet, never a badge

@@ -93,8 +93,8 @@ describe("the preview draws the bake's crown", () => {
   });
 
   // TODO 4.6f (wave 2b): the extended-art frame's band — CC's floating
-  // crown, 1500 × 260, over rows 10–269 of the card (its slot sits 10 px
-  // below CC's bounds, on our MSE master's title bar).
+  // crown, 1500 × 260, over rows 0–259 of the card (CC's bounds: the
+  // masters are CC's extended frames since layout v58).
   it.each([
     ["white", { frameStyle: { template: "extendedart", crown: true } }, "w"],
     ["three colours: gold", { colorIdentity: ["white", "blue", "black"], cost: "{W}{U}{B}", frameStyle: { template: "extendedart", crown: true } }, "m"],
@@ -109,7 +109,7 @@ describe("the preview draws the bake's crown", () => {
     expect(rest).toHaveLength(0);
     expect(crown.dataset.overlayKey).toBe(key);
     expect(crown.style.backgroundImage).toContain(frameOverlayImageUrl(bake.path));
-    expect(parseFloat(crown.style.top)).toBeCloseTo((10 / 2100) * 100, 6);
+    expect(parseFloat(crown.style.top)).toBeCloseTo(0, 6);
     expect(parseFloat(crown.style.height)).toBeCloseTo((260 / 2100) * 100, 6);
     expect(container.querySelector("[data-frame-key]")!.nextElementSibling).toBe(crown.parentElement);
     cleanup();

@@ -103,7 +103,10 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   tarkirghostfire: { front: [1395, 1932] },
   tarkirdragon: { front: [1242, 935] },
   fullart: { front: [1386, 1896] },
-  extendedart: { front: [1380, 1016] },
+  // The extended-art frame (layout v58): CC's window to the side edges;
+  // its see-through colourless master is ONE picture under the frame.
+  extendedart: { front: [1500, 1142], masters: { c: [1500, 1959] } },
+  extendedartland: { front: [1500, 1142] },
   m15fullartland: { front: [1382, 1875] },
   fullartland: { front: [1500, 2100] },
   // The older full-art basics (TODO 4.40 / 4.41): the stone ring's window,
@@ -111,8 +114,8 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   m15fullartlandzen: { front: [1278, 1520] },
   m15fullartlandsnc: { front: [1382, 1880] },
   m15fullartlandthb: { front: [1382, 1876] },
-  m15textless: { front: [1260, 1695] },
-  m15textlessland: { front: [1260, 1695] },
+  m15textless: { front: [1314, 1816] },
+  m15textlessland: { front: [1314, 1816] },
   expeditionland: { front: [1380, 1470] },
   nyx: { front: [1320, 1718] },
   retro: { front: [1154, 931] },
@@ -209,13 +212,14 @@ describe("what the fixed 5:4 surface got wrong (before 3b.13)", () => {
     expect(front("battle")).toBeCloseTo(1.3598, 3);
   });
 
-  it("no template's window was 5:4, and 30 were more than a quarter off", () => {
+  it("no template's window was 5:4, and 31 were more than a quarter off", () => {
     const off = FRAME_TEMPLATE_VALUES.map((t) => mismatch(front(t)));
     expect(off.filter((m) => m < 0.005)).toHaveLength(0);
     // (25 before the station frame, TODO 4.27a: its two templates' one
     // picture under the whole frame is far taller than 5:4; 27 before the
-    // older full-art basics, TODO 4.40 / 4.41: three tall windows more.)
-    expect(off.filter((m) => m > 0.25)).toHaveLength(30);
+    // extended-art frame's see-through colourless master, layout v58; 28
+    // before the older full-art basics, TODO 4.40 / 4.41: three tall windows more.)
+    expect(off.filter((m) => m > 0.25)).toHaveLength(31);
   });
 });
 

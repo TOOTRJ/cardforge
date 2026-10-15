@@ -4576,6 +4576,94 @@
       ]
     }
   },
+  "extendedartland": {
+    "colors": {
+      "w": [
+        {
+          "name": "Eiganjo, Seat of the Empire",
+          "set": "neo",
+          "scryfallId": "ecb53f59-d89b-481c-af98-75c11c30ee17"
+        },
+        {
+          "name": "Castle Ardenvale",
+          "set": "eld",
+          "scryfallId": "6f1383eb-aa7d-4d3b-bee4-8cffba9ae846"
+        }
+      ],
+      "u": [
+        {
+          "name": "Otawara, Soaring City",
+          "set": "neo",
+          "scryfallId": "dbcdbf15-7578-465e-afa2-f65c01fb4802"
+        },
+        {
+          "name": "Sunken Palace",
+          "set": "m3c",
+          "scryfallId": "e44ee47c-95de-4090-97b6-188585d86b0c"
+        }
+      ],
+      "b": [
+        {
+          "name": "Takenuma, Abandoned Mire",
+          "set": "neo",
+          "scryfallId": "13410bd5-acee-4cc9-90e3-dbcf8415bcaf"
+        },
+        {
+          "name": "Castle Locthwain",
+          "set": "eld",
+          "scryfallId": "12b8c2e6-5256-4e7e-8d7d-4b386419780a"
+        }
+      ],
+      "r": [
+        {
+          "name": "Sokenzan, Crucible of Defiance",
+          "set": "neo",
+          "scryfallId": "eca9f8ae-838f-4a9c-9341-38e39da68926"
+        },
+        {
+          "name": "Castle Embereth",
+          "set": "eld",
+          "scryfallId": "9954b9bb-21e7-40af-aaa7-b2001b8d1d45"
+        }
+      ],
+      "g": [
+        {
+          "name": "Boseiju, Who Endures",
+          "set": "neo",
+          "scryfallId": "2488a80b-6882-4b59-8232-f02f800204a9"
+        },
+        {
+          "name": "Yavimaya, Cradle of Growth",
+          "set": "mh2",
+          "scryfallId": "ee7c2820-e36e-4024-a542-02ca42bb7e2f"
+        }
+      ],
+      "c": [
+        {
+          "name": "Soulstone Sanctuary",
+          "set": "fdn",
+          "scryfallId": "4620f95e-fc95-4643-ba11-7f9116176253"
+        },
+        {
+          "name": "Fountainport",
+          "set": "blb",
+          "scryfallId": "dd04367b-59d8-4ee6-8b5a-abfb1373c226"
+        }
+      ],
+      "m": [
+        {
+          "name": "Command Tower",
+          "set": "cmr",
+          "scryfallId": "148abd94-e752-4394-abce-21d594318b41"
+        },
+        {
+          "name": "Exotic Orchard",
+          "set": "msc",
+          "scryfallId": "ed4c1e31-caa5-4cda-adc3-57d65c800a29"
+        }
+      ]
+    }
+  },
   "fullart": {
     "note": "ZNR showcase (hedron) frame — confirm the thumbnail shows the hedron treatment.",
     "confirm": true,
