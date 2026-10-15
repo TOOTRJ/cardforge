@@ -26,7 +26,7 @@ type Key = keyof typeof printingsData;
 const printing = (key: Key) => scryfallCardSchema.parse(printingsData[key]);
 const match = (key: Key) => frameMatchFromScryfall(printing(key));
 
-const STATION_REASON = "PipGlyph doesn't draw the Station frame yet";
+const STATION_REASON = "PipGlyph doesn't draw this printing's Station frame yet";
 /** The bordered rule's reason since the frame exists (4.27a step 1). */
 const UNVERIFIED_REASON = "PipGlyph's Station frame isn't verified yet";
 const EVERY: ReadonlySet<string> = new Set(

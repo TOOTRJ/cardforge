@@ -1161,11 +1161,14 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   // has no layout for it (`layout: normal`): the Station keyword is the one
   // field that names it, on every such printing and on nothing else (91 of
   // 91, Scryfall 2026-10-13 — Doctor Who's "Plane — Spacecraft" cards carry
-  // no keyword and no PipGlyph card type). No PipGlyph frame draws it, on
-  // any dress (STATION_MATCH's rule below is the bordered printings').
+  // no keyword and no PipGlyph card type). The gap is the DRESSES': the
+  // bordered printings have their own rule (`station/2015`, below); the
+  // extended-art ones a frame of their own once verified, the borderless and
+  // showcase ones the bordered frame as their landing (stationDress; TODO
+  // 4.27a step 2) — "this printing's" frame is the dress PipGlyph lacks.
   station: {
     match: { keywordsAny: ["Station"] },
-    reason: "PipGlyph doesn't draw the Station frame yet",
+    reason: "PipGlyph doesn't draw this printing's Station frame yet",
     blockedBy: "4.27a",
   },
   // The double-faced marks on a frame that isn't a double-faced body (TODO
