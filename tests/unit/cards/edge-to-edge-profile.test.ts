@@ -28,6 +28,10 @@ import { setSymbolSize, setSymbolSource } from "@/lib/cards/set-symbol-size";
 
 describe("opt-in profile fields", () => {
   const FULL_ART_BASICS = ["m15fullartland", "fullartland"];
+  // The older designs (TODO 4.40 / 4.41) set the basic-symbol slot too (the
+  // medallion, or "none" on the plain bar), and the split bars their type line's split.
+  const OLDER_FULL_ART_BASICS = ["m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb"];
+  const SPLIT_BAR_BASICS = ["m15fullartlandzen", "m15fullartlandsnc"];
 
   // 3.24's `textless` has one user: the full-art token's textless height
   // (TODO 4.48), which keeps its type line (`textlessTypeLine`).
@@ -49,8 +53,13 @@ describe("opt-in profile fields", () => {
         expect(p.textless, template).toBeUndefined();
         expect(p.textlessTypeLine, template).toBeUndefined();
       }
+      // The split type line (3.24) has its users: the split bars of 4.40.
+      if (SPLIT_BAR_BASICS.includes(template)) {
+        expect(p.type.split, template).toBeDefined();
+        continue;
+      }
       expect(p.type.split, template).toBeUndefined();
-      if (FULL_ART_BASICS.includes(template)) continue;
+      if (FULL_ART_BASICS.includes(template) || OLDER_FULL_ART_BASICS.includes(template)) continue;
       expect(p.basicSymbol, template).toBeUndefined();
       expect(p.footerOnArt, template).toBeUndefined();
       expect(brandMarkLayout(p).pill, template).toBeUndefined();
