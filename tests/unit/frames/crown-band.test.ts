@@ -149,12 +149,18 @@ describe("the crown slot the profiles draw (M15_CROWN)", () => {
     expect(crownOf("m15snow")).toEqual([{ ...M15_CROWN, keyMap: { c: "a" } }]);
     expect(crownOf("m15snowland")).toEqual([{ ...M15_CROWN, keyMap: { c: "l" } }]);
     expect(getFrameProfile("m15").overlays?.[0]).toBe(M15_CROWN);
+    // The textless promo pair (TODO 4.35 follow-up, owner Round 63): the
+    // band over the promo masters — the spell's colourless rim is the
+    // artifact silver, the land's the land grey — and a pair's split crown
+    // over the gold rim (pairCrownOnGold: no pair masters there).
+    expect(crownOf("m15textless")).toEqual([{ ...M15_CROWN, keyMap: { c: "a" }, pairCrownOnGold: true }]);
+    expect(crownOf("m15textlessland")).toEqual([{ ...M15_CROWN, keyMap: { c: "l" }, pairCrownOnGold: true }]);
     // Nothing else reads the band (the borderless frames and extended art
     // draw the floating crown; devoid draws none).
     expect(FRAME_TEMPLATE_VALUES.filter((t) => (getFrameProfile(t).overlays ?? []).some((o) => o.assetPathTemplate === M15_CROWN.assetPathTemplate))).toEqual(
       // (…and the station frame's two entries, TODO 4.27a: m15artifact's and
       // m15land's band, keyed as theirs.)
-      ["m15", "m15land", "m15artifact", "m15vehicle", "m15station", "m15stationland", "m15snow", "m15snowland"],
+      ["m15", "m15land", "m15artifact", "m15vehicle", "m15station", "m15stationland", "m15snow", "m15snowland", "m15textless", "m15textlessland"],
     );
   });
 });

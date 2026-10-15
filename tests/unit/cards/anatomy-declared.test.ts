@@ -45,6 +45,8 @@ describe("where the pieces are declared", () => {
     // pair and the ▼ land back draw none (no print).
     const DRAWN = [
       "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart", "extendedartland",
+      // The textless promo pair (TODO 4.35 follow-up, owner Round 63): the standard band.
+      "m15textless", "m15textlessland",
       // The station frame (TODO 4.27a): the parents' crown band on its two entries.
       "m15station", "m15stationland",
       // The Nyx Constellation frame (owner 2026-10-13): the Nyx crown band, its arms faded.
@@ -55,8 +57,15 @@ describe("where the pieces are declared", () => {
     // (…and the holofoil stamp's notch, 4.9c, on the seven wave-1 entries —
     // the snow pair included; never extendedart or the borderless land. The
     // transform icon family, 5.0a, on no entry yet.)
-    expect(frameAnatomyOf("extendedart")).toEqual({ crown: true, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: true, border: false });
-    expect(anatomyDefaults("extendedart")).toEqual({ crown: true });
+    // Since the TODO 4.7 follow-up (owner Round 63) extendedart draws the
+    // gold-split and hybrid pairs too, its land dress the land's split.
+    expect(frameAnatomyOf("extendedart")).toEqual({ crown: true, twoColor: ["split", "hybrid"], collector: false, stamp: false, dfcIcon: false, rulesAlign: true, border: false });
+    expect(anatomyDefaults("extendedart")).toEqual({ crown: true, twoColor: true });
+    expect(frameAnatomyOf("extendedartland").twoColor).toEqual(["split"]);
+    // The textless promo pair: the crown alone (a pair's crown split over
+    // the gold rim, no pair masters), no rules-box switches.
+    expect(frameAnatomyOf("m15textless")).toEqual({ crown: true, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: false, border: false });
+    expect(anatomyDefaults("m15textless")).toEqual({ crown: true });
     // The borderless land (TODO 4.56): the split pair alone — no crown, no
     // collector slot, no stamp notch — so a new card on it stores that one
     // switch and nothing else.

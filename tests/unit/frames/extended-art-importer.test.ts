@@ -3,8 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
-import { CC_TEMPLATES, EXTENDED, extendedFrameFile, sourceFilesFor } from "../../../scripts/lib/cc-frames.mjs";
-import { artReachesCardEdge, getFrameProfile, underFrameArtRect, underFrameArtSlot } from "@/lib/cards/template-layout";
+import { CC_TEMPLATES, EXTENDED, EXTENDED_MASK, extendedFrameFile, extendedPairLayers, sourceFilesFor } from "../../../scripts/lib/cc-frames.mjs";
+import { M15_CROWN, artReachesCardEdge, getFrameProfile, underFrameArtRect, underFrameArtSlot } from "@/lib/cards/template-layout";
 import { EDGE_CONTRACTS } from "@/lib/frames/edge-contract";
 import manifestJson from "@/lib/frames/frame-manifest.json";
 
@@ -33,9 +33,10 @@ function published(rel: string): Buffer | null {
 describe("the extended-art recipe", () => {
   it("is the pack's whole file per key — no border added — with the see-through `c` and the artifact `a`", () => {
     const def = templates.extendedart;
-    expect(Object.keys(def.colors).sort()).toEqual(["a", "b", "c", "g", "m", "r", "u", "w"]);
-    for (const [key, layers] of Object.entries(def.colors)) {
-      expect(layers, key).toEqual([{ src: `${EXTENDED}/${key}.png` }]);
+    const singles = Object.keys(def.colors).filter((k) => k.length === 1);
+    expect(singles.sort()).toEqual(["a", "b", "c", "g", "m", "r", "u", "w"]);
+    for (const key of singles) {
+      expect(def.colors[key], key).toEqual([{ src: `${EXTENDED}/${key}.png` }]);
     }
     expect(def.plates).toBeUndefined();
     expect(EXTENDED).toBe("img/frames/m15/new/extended");
@@ -43,7 +44,7 @@ describe("the extended-art recipe", () => {
 
   it("its land dress (owner Round 63): the pack's land frames whole — the grey `l` for colourless, `l<k>`, the gold `lm`", () => {
     const def = templates.extendedartland;
-    expect(Object.keys(def.colors).sort()).toEqual(["b", "c", "g", "m", "r", "u", "w"]);
+    expect(Object.keys(def.colors).filter((k) => k.length === 1).sort()).toEqual(["b", "c", "g", "m", "r", "u", "w"]);
     expect(def.colors.c).toEqual([{ src: `${EXTENDED}/l.png` }]);
     for (const key of ["w", "u", "b", "r", "g", "m"]) expect(def.colors[key], key).toEqual([{ src: `${EXTENDED}/l${key}.png` }]);
     expect(def.plates).toBeUndefined();
@@ -63,9 +64,55 @@ describe("the extended-art recipe", () => {
     }
     expect(templates.m15textless.colors.c).toEqual([{ src: "img/frames/textless/magicFest/a.png" }]);
     expect(templates.m15textlessland.colors.c).toEqual([{ src: "img/frames/textless/magicFest/l.png" }]);
-    for (const template of ["extendedart", "m15textless", "m15textlessland"]) {
-      for (const file of sourceFilesFor(templates[template] as never)) expect(file).toMatch(/^img\/frames\/(m15\/new\/extended|textless\/magicFest)\/[a-z]+\.png$/);
+    for (const template of ["m15textless", "m15textlessland"]) {
+      for (const file of sourceFilesFor(templates[template] as never)) expect(file).toMatch(/^img\/frames\/textless\/magicFest\/[a-z]+\.png$/);
     }
+    // The extended pair masters (TODO 4.7 follow-up) read the extended pack's
+    // files and the accurate M15 pack's masks — its own Pinline mask.
+    for (const template of ["extendedart", "extendedartland"]) {
+      for (const file of sourceFilesFor(templates[template] as never)) {
+        expect(file).toMatch(/^img\/frames\/m15\/new\/(extended\/[a-z]+|rules|title|type|frame|border)\.png$/);
+      }
+    }
+  });
+
+  it("the pair masters (TODO 4.7 follow-up, owner Round 63): 4.6b's recipe over the extended pack's files and its own Pinline mask", () => {
+    expect(EXTENDED_MASK).toEqual({
+      border: "img/frames/m15/new/border.png",
+      frame: "img/frames/m15/new/frame.png",
+      rules: "img/frames/m15/new/rules.png",
+      title: "img/frames/m15/new/title.png",
+      type: "img/frames/m15/new/type.png",
+      pinline: `${EXTENDED}/pinline.png`,
+    });
+    const pairs = ["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"];
+    expect(Object.keys(templates.extendedart.colors).filter((k) => k.length > 1)).toEqual([...pairs, ...pairs.map((p) => `${p}-h`)]);
+    expect(Object.keys(templates.extendedartland.colors).filter((k) => k.length > 1)).toEqual(pairs);
+    for (const pair of pairs) {
+      expect(templates.extendedart.colors[pair], pair).toEqual(extendedPairLayers(pair, "split", "m15"));
+      expect(templates.extendedart.colors[`${pair}-h`], pair).toEqual(extendedPairLayers(pair, "hybrid", "m15"));
+      expect(templates.extendedartland.colors[pair], pair).toEqual(extendedPairLayers(pair, "split", "land"));
+    }
+    // Gold-split: the gold frame whole, the box and pinline split.
+    expect(extendedPairLayers("wu", "split", "m15")).toEqual([
+      { src: `${EXTENDED}/m.png` },
+      { src: `${EXTENDED}/w.png`, right: `${EXTENDED}/u.png`, ramp: [45, 57], mask: "img/frames/m15/new/rules.png" },
+      { src: `${EXTENDED}/w.png`, right: `${EXTENDED}/u.png`, ramp: [40, 60], mask: `${EXTENDED}/pinline.png` },
+    ]);
+    // Hybrid: the two frames split, the grey land bars, the box and pinline split.
+    expect(extendedPairLayers("rw", "hybrid", "m15")).toEqual([
+      { src: `${EXTENDED}/r.png`, right: `${EXTENDED}/w.png`, ramp: [44, 57] },
+      { src: `${EXTENDED}/r.png`, right: `${EXTENDED}/w.png`, ramp: [45, 57], mask: "img/frames/m15/new/rules.png" },
+      { src: `${EXTENDED}/l.png`, mask: "img/frames/m15/new/title.png" },
+      { src: `${EXTENDED}/l.png`, mask: "img/frames/m15/new/type.png" },
+      { src: `${EXTENDED}/r.png`, right: `${EXTENDED}/w.png`, ramp: [40, 60], mask: `${EXTENDED}/pinline.png` },
+    ]);
+    // A land pair: the grey land frame whole, the box and pinline in the two land tints.
+    expect(extendedPairLayers("bg", "split", "land")).toEqual([
+      { src: `${EXTENDED}/l.png` },
+      { src: `${EXTENDED}/lb.png`, right: `${EXTENDED}/lg.png`, ramp: [45, 57], mask: "img/frames/m15/new/rules.png" },
+      { src: `${EXTENDED}/lb.png`, right: `${EXTENDED}/lg.png`, ramp: [40, 60], mask: `${EXTENDED}/pinline.png` },
+    ]);
   });
 });
 
@@ -103,7 +150,11 @@ describe("the profiles on the new masters", () => {
     expect(land.underFrameArt).toBeUndefined();
     expect(land.artifactMasterKeys).toBeUndefined();
     expect(land.overlays).toEqual(spell.overlays);
-    expect(land.twoColorMasters).toBeUndefined();
+    // A land's pairs (TODO 4.7 follow-up): the split alone, worn by a land.
+    expect(land.twoColorMasters).toEqual(["split"]);
+    expect(land.twoColorForLands).toBe(true);
+    expect(spell.twoColorMasters).toEqual(["split", "hybrid"]);
+    expect(spell.twoColorForLands).toBeUndefined();
     expect(artReachesCardEdge(land)).toBe(false);
   });
 
@@ -118,6 +169,10 @@ describe("the profiles on the new masters", () => {
     }
     expect(getFrameProfile("m15textlessland").hideCost).toBe(true);
     expect(getFrameProfile("m15textless").hideCost).toBeUndefined();
+    // The legendary promos' crown (TODO 4.35 follow-up, owner Round 63): the
+    // standard band, the colourless rim's key, a pair's split crown on gold.
+    expect(getFrameProfile("m15textless").overlays).toEqual([{ ...M15_CROWN, keyMap: { c: "a" }, pairCrownOnGold: true }]);
+    expect(getFrameProfile("m15textlessland").overlays).toEqual([{ ...M15_CROWN, keyMap: { c: "l" }, pairCrownOnGold: true }]);
   });
 
   it("the edge contracts: extended art's sides are art between its bars; the textless pair is black-bordered", () => {
@@ -171,5 +226,57 @@ describe.skipIf(masters.some(([, buf]) => buf === null))("the published extended
     let diff = 0;
     for (let i = 3; i < data.length; i += 4) diff = Math.max(diff, Math.abs(data[i] - w[i]));
     expect(diff, `${key} WebP alpha`).toBeLessThanOrEqual(2);
+  });
+});
+
+// The pair masters (TODO 4.7 follow-up, owner Round 63): the same alpha as
+// the mono masters (clear at the side edges between the bars, the WebP's
+// alpha the PNG's) — and the split where print has it: left of the ramps the
+// first colour's master, right of them the second's, the gold dress's bars
+// gold, the hybrid's grey, the land's grey with its box in the land tints.
+const pairMasters = [
+  ...["wu", "rg", "wu-h", "gu-h"].map((key) => [`extendedart/${key}`, published(`extendedart/${key}.png`)] as const),
+  ...["wu", "br"].map((key) => [`extendedartland/${key}`, published(`extendedartland/${key}.png`)] as const),
+];
+const pairSides = ["extendedart/w", "extendedart/u", "extendedart/r", "extendedart/g", "extendedart/m", "extendedartland/w", "extendedartland/u", "extendedartland/b", "extendedartland/r", "extendedartland/c"].map(
+  (key) => [key, published(`${key}.png`)] as const,
+);
+describe.skipIf([...pairMasters, ...pairSides].some(([, buf]) => buf === null))("the published extended-art pair masters (set FRAMES_BUILD_DIR if skipped)", () => {
+  const raw = async (buf: Buffer) => (await sharp(buf).ensureAlpha().raw().toBuffer({ resolveWithObject: true })).data;
+  const side = (key: string) => pairSides.find(([k]) => k === key)![1]!;
+  const px = (data: Buffer, x: number, y: number) => [...data.subarray((y * 1500 + x) * 4, (y * 1500 + x) * 4 + 4)];
+
+  it.each(pairMasters)("%s: clear at the side edges between the bars; the WebP's alpha is the PNG's", async (key, buf) => {
+    const data = await raw(buf!);
+    const alpha = (x: number, y: number) => data[(y * 1500 + x) * 4 + 3];
+    for (const x of [0, 10, 1489, 1499]) {
+      for (const y of [260, 600, 1000, 1200]) expect(alpha(x, y), `${key} ${x},${y}`).toBe(0);
+      for (const y of [120, 1400, 1800]) expect(alpha(x, y), `${key} ${x},${y}`).toBe(255);
+    }
+    const webp = published(`${key}.webp`);
+    if (!webp) return;
+    const w = await raw(webp);
+    let diff = 0;
+    for (let i = 3; i < data.length; i += 4) diff = Math.max(diff, Math.abs(data[i] - w[i]));
+    expect(diff, `${key} WebP alpha`).toBeLessThanOrEqual(2);
+  });
+
+  it("the split: the box and pinline the first colour's left of the ramps and the second's right of them; the bars the dress's", async () => {
+    const cases: [string, string, string, string][] = [
+      // [pair master, left side, right side, bars]
+      ["extendedart/wu", "extendedart/w", "extendedart/u", "extendedart/m"],
+      ["extendedart/rg", "extendedart/r", "extendedart/g", "extendedart/m"],
+      ["extendedartland/wu", "extendedartland/w", "extendedartland/u", "extendedartland/c"],
+      ["extendedartland/br", "extendedartland/b", "extendedartland/r", "extendedartland/c"],
+    ];
+    for (const [key, left, right, bars] of cases) {
+      const pair = await raw(pairMasters.find(([k]) => k === key)![1]!);
+      const [l, r, b] = await Promise.all([raw(side(left)), raw(side(right)), raw(side(bars))]);
+      // The text box at 25 %W (left of 45) and 75 %W (right of 57), row 1600.
+      expect(px(pair, 375, 1600), `${key} box left`).toEqual(px(l, 375, 1600));
+      expect(px(pair, 1125, 1600), `${key} box right`).toEqual(px(r, 1125, 1600));
+      // The title bar's paper at 25 %W, row 150: the dress's bars.
+      expect(px(pair, 375, 150), `${key} title bar`).toEqual(px(b, 375, 150));
+    }
   });
 });

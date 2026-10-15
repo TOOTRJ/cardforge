@@ -109,12 +109,20 @@ describe("imports: an extended-art land printing lands on the land dress", () =>
     expect((patch.color_identity ?? []).map((c) => KEY[c]), ref.name).toEqual([colour]);
   });
 
-  it("a two-colour land: the land dress, `nearest` through the two-colour gap (no pair masters yet)", () => {
+  it("a two-colour land: the land dress's pair master, exact once verified (TODO 4.7 follow-up: no two-colour gap)", () => {
     const soulstone = printings[references.c[0].scryfallId] as Record<string, unknown>;
     const dual = scryfallCardSchema.parse({ ...soulstone, name: "Test Dual", produced_mana: ["B", "R"], color_identity: ["B", "R"], oracle_text: "{T}: Add {B} or {R}." });
     const match = frameMatchFromScryfall(dual);
     expect(match.template).toBe("extendedartland");
-    expect(match.status).toBe("nearest");
+    expect(match.status).toBe("exact");
+    expect(match.gaps ?? []).not.toContain("two-colour");
+    // The import names the two-colour frame (the 2015 frame always prints
+    // it), so the save keeps the switch on this land frame.
+    const patch = finalizeImportMatch(mapScryfallToFormPatch(dual), ALL);
+    expect(patch.frame_template).toBe("extendedartland");
+    expect(patch.frame_match?.status).toBe("exact");
+    expect(patch.printed_two_color).toBe(true);
+    expect(finalizeImportMatch(mapScryfallToFormPatch(dual), new Set<string>()).frame_match?.status).toBe("nearest");
   });
 
   it("a non-land extended-art printing stays on extendedart", () => {

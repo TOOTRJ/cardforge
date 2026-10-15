@@ -199,6 +199,9 @@ const PICKS: readonly Pick[] = [
   { from: "extendedart/w/creature-long@crown", why: "v58 extended art: the window to the side edges, white type ink + keyline, the crown at CC's bounds" },
   { from: "extendedart/c/creature-long", why: "v58 extended art: the see-through colourless master, the art under it as one picture" },
   { from: "extendedart/c/artifact-short", why: "v58 extended art: a colourless artifact paints the silver `a` master (artifactMasterKeys)" },
+  // Its follow-ups (owner Round 63): the two-colour pair and the textless crown.
+  { from: "extendedart/wu/creature-long@pair-crown", why: "extended art: the gold-split pair master and the split floating crown (4.7 follow-up)" },
+  { from: "m15textless/u/creature-long@crown", why: "textless promo: the standard crown band over the promo master (4.35 follow-up)" },
   { from: "m15borderless/b/creature-long", why: "borderless: art to the edge, white ink, the keylined set symbol" },
   // --- the old frames (era symbol styles, footers, © slots) ----------------
   { from: "agclassic/g/creature-long", why: "1993: image pips, the Illus. line, right-set P/T" },

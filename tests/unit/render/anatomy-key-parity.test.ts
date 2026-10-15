@@ -76,7 +76,8 @@ describe("bake path = preview path", () => {
     // …and the old frames' 10 each (4.6h: modern, modernland, retroland).
     // …and the Vehicle frame's 10 (4.5c), the Nyx dress's 20 (4.7).
     // …and the Universes Beyond frames' 20 + 10 + 10 (4.25).
-    expect(pairKeys).toBe(260);
+    // …and the extended-art frame's 20 and its land dress's 10 (4.7 follow-up).
+    expect(pairKeys).toBe(290);
     expect(crownedKeys).toBe(44);
   });
 
