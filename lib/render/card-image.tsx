@@ -1687,7 +1687,7 @@ function smallCapsRunsBake(slot: TextSlot, line: string, fontPx: number): React.
           fontSize: box.sizeEm * fontPx,
           lineHeight: `${box.lineHeightEm * fontPx}px`,
           marginBottom: box.liftEm * fontPx,
-          marginLeft: run.gapBeforeEm * fontPx,
+          marginLeft: (run.gapBeforeEm + run.kernBeforeEm) * fontPx,
           letterSpacing: trackingPx,
           whiteSpace: "nowrap",
           flexShrink: 0,

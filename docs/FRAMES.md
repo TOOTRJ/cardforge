@@ -7597,20 +7597,33 @@ and without a text box; Scryfall PNGs, for measuring only):
   62.6 px tall: Beleren's 0.7002 em capital at 89.4 px;
   `TOKEN_ARCH_TITLE_SIZE_PCT`), every lower-case letter as its capital at
   0.78 of it (the prints' 48.4 px small capitals, `TOKEN_ARCH_SMALL_CAP_EM`),
-  tracking 0.035 em of the capital size (`TOKEN_ARCH_TITLE_TRACKING_EM`: 24
-  clean names baked through Satori against the prints' ink, median 1.000).
+  tracking 0.047 em of the capital size (`TOKEN_ARCH_TITLE_TRACKING_EM`: 24
+  clean names set through Satori as the bake sets them, against the
+  prints' ink — median 1.001, mean 0.999, with the kerning below).
   No font file is added, no glyph: the runs are Beleren's capitals.
 - **How both renderers draw it.** One row of runs (`smallCapsRuns`), each
-  a flex item with an EXPLICIT width (its advances at its size + the
-  tracking), in its face's own content box (`line-height` = ascent +
-  descent), on the row's BOTTOM, a small run lifted by the descent it
-  lacks (`smallCapsRunBox`), a word's gap as its left margin. Never a
-  baseline alignment (Satori sets inline spans of two sizes top-aligned)
-  and never the engine's own run box (Satori sized a small run narrower
-  than it drew it, and the next run started under its last letter); the
-  row is the same box in both renderers, so it centres alike and needs no
-  kerned-width margin. The fit (`fitTitleBand`) measures the same runs
-  (`smallCapsWidthEm`). The creator's glyph check judges the name as
+  a flex item with an EXPLICIT width, in its face's own content box
+  (`line-height` = ascent + descent), on the row's BOTTOM, a small run
+  lifted by the descent it lacks (`smallCapsRunBox`), a word's gap as its
+  left margin. Never a baseline alignment (Satori sets inline spans of two
+  sizes top-aligned) and never the engine's own run box (Satori sized a
+  small run narrower than it drew it, and the next run started under its
+  last letter); the row is the same box in both renderers, so it centres
+  alike and needs no kerned-width margin. The fit (`fitTitleBand`)
+  measures the same runs (`smallCapsWidthEm`).
+- **Kerning (owner Round 65).** Each engine kerns INSIDE a run, so a run's
+  width is its KERNED width — each glyph's real advance and every pair the
+  face kerns, tightening ones included — from
+  `lib/cards/small-caps-metrics.ts`, generated from Beleren Bold by
+  `scripts/generate-font-metrics.mjs` ("The SMALL-CAPS tables": 249
+  drawable characters, the face's GPOS pairs). The line tables
+  (`lib/cards/font-metrics.ts`) are untouched: they count only the pairs a
+  face kerns apart and guess 1 em for a character they don't list, which
+  left "Long-W inded", "SERVO  2.0" and "Cat  Dragon" with holes, Æ / Œ /
+  Ø / Ω with gaps and "Avatar" 15 px left of centre. Two touching runs are
+  two boxes no engine kerns across, so their pair — a capital and the small
+  letter after it (W·A, V·A, T·A: −0.22 em) — is the second run's left
+  margin (`kernBeforeEm`), at the small size, in both renderers. The creator's glyph check judges the name as
   capitals on these frames. Parity: `m15token/c/token-long@small-caps`
   (two words) and `m15tokenartifact/u/token-long@small-caps-lower` (a name
   all in lower case).

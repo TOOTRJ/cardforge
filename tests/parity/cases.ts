@@ -203,6 +203,16 @@ const PICKS: readonly Pick[] = [
     why: "4.53: a name typed all in lower case — every run small, lifted onto the full-size baseline",
     row: () => ({ title: "thopter" }),
   },
+  // The kerning (owner Round 65): a pair kerned inside a run ("-W", −0.198
+  // em), the capital → small pair across runs (W·A, V·A: −0.22 em at the
+  // small size, a negative margin in both renderers), a capital the line
+  // tables don't list (Æ).
+  {
+    from: "m15tokentext/w/token-long",
+    as: "@small-caps-kerned",
+    why: "4.53: kerned runs and the capital→small pair across runs (a negative margin), Æ's own advance",
+    row: () => ({ title: "Æther Vampire Long-Winded" }),
+  },
   { from: "m20tokentall/g/token-long", why: "M20 token, tall box (squeezed paragraph gaps)" },
   { from: "emblem/g/emblem-long", why: "emblem: the toned master, the walker's name, no cost or stats" },
   // 3.24's cases, by name (the Zendikar split type line waits for 4.40, the

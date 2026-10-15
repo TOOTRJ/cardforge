@@ -22,16 +22,78 @@
 // Tracking: `letterSpacingEm` is of the CAPITAL size on every run (each
 // renderer sets it in px / cqw on every run, never an em that each run
 // would resolve against its own size).
+//
+// Kerning (owner Round 65): each engine KERNS inside a run, so a run's box
+// is its kerned width — every pair of the face, tightening ones included,
+// and each glyph's real advance (lib/cards/small-caps-metrics.ts, generated
+// from the face: the line tables count only the pairs a face kerns apart and
+// guess 1 em for a character they don't list). Between two touching runs —
+// a capital and the small letters after it, or back — no engine kerns (they
+// are two boxes), so the pair is applied HERE, as the second run's left
+// margin (`kernBeforeEm`, negative for W·A), at the small size: the pair's
+// own units scaled by the smaller of the two letters. Both renderers set it
+// with the word gap (gapBeforeEm + kernBeforeEm) and the fit counts it.
 // ---------------------------------------------------------------------------
 
 import { displayTextWidthEm } from "@/lib/cards/display-metrics";
 import type { LineFaceId } from "@/lib/cards/font-metrics";
+import { SMALL_CAPS_ADVANCE_UNITS, SMALL_CAPS_KERNING, SMALL_CAPS_UNITS_PER_EM } from "@/lib/cards/small-caps-metrics";
 
 /** One run of a small-caps line: its text as DRAWN (upper case, no spaces),
- *  whether it is set at the small size, the word gap before it and its own
- *  box's width (em of the capital size: the spaces' advances and tracking;
- *  the run's advances at its size and the tracking after each character). */
-export type SmallCapsRun = { text: string; small: boolean; gapBeforeEm: number; widthEm: number };
+ *  whether it is set at the small size, the word gap before it, the kerning
+ *  between it and the run it touches before it, and its own box's width
+ *  (em of the capital size: the spaces' advances and tracking; the pair's
+ *  kerning at the smaller size; the run's kerned advances at its size and
+ *  the tracking after each character). */
+export type SmallCapsRun = { text: string; small: boolean; gapBeforeEm: number; kernBeforeEm: number; widthEm: number };
+
+let kerningTable: Map<string, Map<string, number>> | null = null;
+
+/** The display face's kerning, em, between two drawn characters (0 for a
+ *  pair it does not kern). Parsed once from the generated table. */
+function kernEm(left: string, right: string): number {
+  if (!kerningTable) {
+    kerningTable = new Map();
+    for (const [l, items] of Object.entries(SMALL_CAPS_KERNING)) {
+      const row = new Map<string, number>();
+      for (const item of items.split(" ")) {
+        const [r] = Array.from(item);
+        row.set(r, Number(item.slice(r.length)));
+      }
+      kerningTable.set(l, row);
+    }
+  }
+  return (kerningTable.get(left)?.get(right) ?? 0) / SMALL_CAPS_UNITS_PER_EM;
+}
+
+const isMark = (ch: string) => /\p{M}/u.test(ch);
+
+/** A drawn character's advance, em: the display face's own; a character it
+ *  lacks (a fallback face draws it) as the line tables measure it. */
+function advanceEm(ch: string, face: LineFaceId | undefined): number {
+  if (isMark(ch)) return 0;
+  const units = SMALL_CAPS_ADVANCE_UNITS[ch];
+  return units === undefined ? displayTextWidthEm(ch, { face }) : units / SMALL_CAPS_UNITS_PER_EM;
+}
+
+/** A run's kerned advances at 1 em (marks ride on their letter). */
+function runAdvanceEm(text: string, face: LineFaceId | undefined): number {
+  const chars = Array.from(text);
+  if (face && face !== "display") return displayTextWidthEm(text, { face });
+  let em = 0;
+  let prev: string | null = null;
+  for (const ch of chars) {
+    em += advanceEm(ch, face);
+    if (isMark(ch)) continue;
+    if (prev !== null) em += kernEm(prev, ch);
+    prev = ch;
+  }
+  return em;
+}
+
+/** The last / first character of a run that kerns (not a mark). */
+const lastLetter = (text: string) => Array.from(text).filter((ch) => !isMark(ch)).pop() ?? "";
+const firstLetter = (text: string) => Array.from(text).find((ch) => !isMark(ch)) ?? "";
 
 type Options = { smallCapEm: number; letterSpacingEm?: number; face?: LineFaceId };
 
@@ -57,7 +119,7 @@ function isSpace(ch: string): boolean {
  *  kerned, as it draws any line. */
 export function smallCapsRuns(line: string, { smallCapEm, letterSpacingEm = 0, face }: Options): SmallCapsRun[] {
   const spaceEm = displayTextWidthEm(" ", { face }) + letterSpacingEm;
-  const runs: Omit<SmallCapsRun, "widthEm">[] = [];
+  const runs: Omit<SmallCapsRun, "widthEm" | "kernBeforeEm">[] = [];
   let gap = 0;
   // Composed first (a pasted "e" + U+0301 is "é", one small letter), and a
   // combining mark left over rides in its letter's run: drawn in a run of
@@ -78,18 +140,28 @@ export function smallCapsRuns(line: string, { smallCapEm, letterSpacingEm = 0, f
     else runs.push({ text, small, gapBeforeEm: gap });
     gap = 0;
   }
-  return runs.map((run) => ({
-    ...run,
-    widthEm: displayTextWidthEm(run.text, { face }) * (run.small ? smallCapEm : 1) + Array.from(run.text).length * letterSpacingEm,
-  }));
+  const kerns = face === undefined || face === "display";
+  return runs.map((run, i) => {
+    const before = runs[i - 1];
+    // Touching runs (no word gap) are a capital and small letters, or back:
+    // their pair kerned at the small size.
+    const kernBeforeEm =
+      kerns && before && run.gapBeforeEm === 0 ? kernEm(lastLetter(before.text), firstLetter(run.text)) * smallCapEm : 0;
+    return {
+      ...run,
+      kernBeforeEm,
+      widthEm: runAdvanceEm(run.text, face) * (run.small ? smallCapEm : 1) + Array.from(run.text).filter((ch) => !isMark(ch)).length * letterSpacingEm,
+    };
+  });
 }
 
 /** The width of `text` in synthesized small caps, in em of the CAPITAL
- *  size: the runs' boxes (their advances — a small run's at `smallCapEm` —
- *  and the tracking after every character, of the capital size on every
- *  run) and the word gaps: exactly the row both renderers lay out. */
+ *  size: the runs' boxes (their kerned advances — a small run's at
+ *  `smallCapEm` — and the tracking after every character, of the capital
+ *  size on every run), the word gaps and the pairs kerned between touching
+ *  runs: exactly the row both renderers lay out. */
 export function smallCapsWidthEm(text: string, options: Options): number {
-  return smallCapsRuns(text, options).reduce((em, run) => em + run.gapBeforeEm + run.widthEm, 0);
+  return smallCapsRuns(text, options).reduce((em, run) => em + run.gapBeforeEm + run.kernBeforeEm + run.widthEm, 0);
 }
 
 /** Where a run sits, in em of the CAPITAL size: its font size, its line box

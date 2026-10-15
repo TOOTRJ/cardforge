@@ -2989,7 +2989,7 @@ function smallCapsRunsPreview(slot: TextSlot, sizePct: number, line: string): Re
           fontSize: cqw(box.sizeEm * sizePct),
           lineHeight: cqw(box.lineHeightEm * sizePct),
           marginBottom: box.liftEm ? cqw(box.liftEm * sizePct) : undefined,
-          marginLeft: run.gapBeforeEm ? cqw(run.gapBeforeEm * sizePct) : undefined,
+          marginLeft: run.gapBeforeEm + run.kernBeforeEm ? cqw((run.gapBeforeEm + run.kernBeforeEm) * sizePct) : undefined,
           letterSpacing: tracking,
           whiteSpace: "pre",
           flexShrink: 0,

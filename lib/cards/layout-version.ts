@@ -1469,7 +1469,7 @@ export const UB_SEE_THROUGH_C_TEMPLATES: readonly string[] = ["m15ub"];
 //            (c) the name GOLD (#fde367, CC's; the 49 prints' ink median
 //            254,222,102) in small caps synthesized from Beleren Bold
 //            (TextSlot.smallCaps — capitals at 90 px, lower-case letters
-//            as capitals at 0.78, tracking 0.035 em; no font file is
+//            as capitals at 0.78, tracking 0.047 em, kerned; no font file is
 //            added: Beleren Small Caps stays parked with 4.8e) on the
 //            prints' baseline (192.5 px), where it was light Beleren Bold
 //            at 80 px; (e) the art slot onto the prints' window — the
