@@ -554,25 +554,23 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
   // a hard seam the frame shows; ONE picture (m15pw/c's fix) would zoom the
   // token window 1.34× (textless) to 1.69× (text box) for a landscape
   // picture — an owner decision (4.17c). missPx = the seam's length.
+  // Since 4.53 (e) (layout v59) the c master's own window slot is its
+  // window with the overscan (110–1390 × 257–1711, TOKEN_WIDE_ART_SLOT):
+  // the bottom seam is gone and the sides mostly end on the outline; the
+  // arch above the window and 286 rows of each side are still silver.
   m15token: {
     keys: ["c"],
     todo: ["4.17c"],
     why:
-      "c: slot 97.5–1402.5 × 252–1709 in the translucent silver (the outline is x 100–110; the arch above the window is α 89): " +
-      "a seam on all four sides (columns 96 / 1402 all 1457 px, row 251 1155 px, row 1709 1283 px), and the slot's bottom flush with the window's (1709)",
-    maxMissPx: 1457.5,
+      "c: slot 110–1390 × 257–1711 (the window + 7.6's overscan) meets the translucent silver: the arch above the window is α 89 " +
+      "(row 256, 1036 of 1280 px) and 286 of 1454 px down each side (columns 109 / 1390)",
+    maxMissPx: 1036.5,
   },
   m15tokentext: {
     keys: ["c"],
     todo: ["4.17c"],
-    why: "c: slot 97.5–1402.5 × 252–1411.2 in the translucent silver: a seam down both sides (columns 96 / 1402, 1159 px) and along the arch (row 251, 1155 px)",
-    maxMissPx: 1159.5,
-  },
-  m15tokenartifact: {
-    keys: ["w", "u", "b", "r", "g", "m"],
-    todo: ["4.53"],
-    why: "the artifact-dress window ends at 1709 px, exactly the slot's bottom: no overscan (4.53 (e): CC artBounds)",
-    maxMissPx: 1.5,
+    why: "c: slot 110–1390 × 257–1411 in the translucent silver: along the arch (row 256, 1036 of 1280 px) and 286 of 1154 px down each side (columns 109 / 1390)",
+    maxMissPx: 1036.5,
   },
   m15fullartland: {
     keys: "all",

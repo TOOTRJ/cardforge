@@ -228,7 +228,9 @@ export function cardGlyphFields(v: GlyphCheckValues): GlyphCheckField[] {
   // judged as typed.
   const footerUpper = !(profile.copyrightSlot && !profile.footer?.uppercase);
   const fields: GlyphCheckField[] = [
-    { label: "Name", face: glyphFace("name"), value: v.title },
+    // A small-caps name (TextSlot.smallCaps — the 2014–19 arch token, TODO
+    // 4.53) is drawn as capitals: judged as such.
+    { label: "Name", face: glyphFace("name"), value: v.title, ...(profile.title.smallCaps ? { uppercase: true } : {}) },
     { label: "Type line", face: glyphFace("typeLine"), value: `${v.supertype} ${v.subtypes_text}` },
     { label: "Rules text", face: "rules", value: v.rules_text },
     ...abilities.map((row, i) => ({ label: `Loyalty ability ${i + 1}`, face: "rules" as const, value: row.text })),

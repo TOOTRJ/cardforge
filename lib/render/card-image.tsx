@@ -99,6 +99,7 @@ import { KEYRUNE_DEFAULT_GLYPH, cardFonts, getKeyruneCodepoint, getManaCodepoint
 import { costPipGapPx, discShadowCss, inlineSymbolStyle, symbolStyle, symbolStyleOf, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
 import { SNOW_FLAKE_MITRE, manaGemSpec, pipRisePx, symbolImagePathsIn, type ManaGemHalf, type SnowFlakeSpec } from "@/lib/cards/mana-gem";
 import { FOOTER_BRUSH_PATH, FOOTER_BRUSH_VIEWBOX } from "@/lib/cards/footer-brush";
+import { smallCapsRowEm, smallCapsRunBox, smallCapsRuns } from "@/lib/cards/small-caps";
 import { BRAND_FACE, TYPE_FACES, faceOf, footerFace, slotFace, type TypeFace } from "@/lib/cards/type-faces";
 import { displayRunPx } from "@/lib/render/satori-text";
 import { collectorLayout, type CollectorLayout, type CollectorMarkAnchor } from "@/lib/cards/collector-layout";
@@ -1126,13 +1127,17 @@ function CardImage({
       <Band slot={titleSlot} cardWidth={width} italic={isShowcase}>
         <span
           style={{
-            ...alignedText(titleSlot, displayLine(titleFit ? titleFit.text : title), fpx(titleSlot.sizePct, width), titleRoom),
+            ...(titleSlot.smallCaps
+              ? smallCapsRowBake(titleSlot, fpx(titleSlot.sizePct, width))
+              : alignedText(titleSlot, displayLine(titleFit ? titleFit.text : title), fpx(titleSlot.sizePct, width), titleRoom)),
             ...titleInk,
             ...textDyBake(layout.title, width, titleSlot.sizePct),
             ...(titleFit ? { maxWidth: Math.round(titleFit.widthPct * width) } : {}),
           }}
         >
-          {displayLine(titleFit ? titleFit.text : title)}
+          {titleSlot.smallCaps
+            ? smallCapsRunsBake(titleSlot, displayLine(titleFit ? titleFit.text : title), fpx(titleSlot.sizePct, width))
+            : displayLine(titleFit ? titleFit.text : title)}
         </span>
         {showCost && card.cost && !layout.costRect ? (
           <CostGlyphs
@@ -1652,6 +1657,46 @@ function alignedText(
     face.id,
   );
   return ink > roomPx || box === ink ? ELLIPSIS : { ...ELLIPSIS, marginRight: ink - box };
+}
+
+/** A small-caps name's row (TextSlot.smallCaps, TODO 4.53; the preview's
+ *  smallCapsRowStyle twin): its runs as flex items on the row's bottom, a
+ *  full-size line box tall (lib/cards/small-caps.ts). Every run has an
+ *  explicit width, so the row is the same box in Satori and the browser and
+ *  centres alike — no kerned-width margin (alignedText's) is needed. */
+function smallCapsRowBake(slot: TextSlot, fontPx: number): typeof ELLIPSIS & { alignItems: "flex-end"; height: number } {
+  return { ...ELLIPSIS, alignItems: "flex-end" as const, height: smallCapsRowEm(slotFace(slot)) * fontPx };
+}
+
+/** The runs of a small-caps name (the preview's smallCapsRunsPreview twin):
+ *  each run in its own box (the shared width) and its face's content box at
+ *  its size, a small run lifted by the descent it lacks, a word's gap as its
+ *  left margin, the capital size's tracking on every run — an array of
+ *  spans, never a Fragment (a Satori layout trap: render-parity.test.ts). */
+function smallCapsRunsBake(slot: TextSlot, line: string, fontPx: number): React.ReactElement[] {
+  const face = slotFace(slot);
+  const smallCapEm = slot.smallCaps ?? 1;
+  const trackingPx = (slot.letterSpacingEm ?? 0) * fontPx;
+  return smallCapsRuns(line, { smallCapEm, letterSpacingEm: slot.letterSpacingEm, face: face.metricsId }).map((run, i) => {
+    const box = smallCapsRunBox(run, smallCapEm, face);
+    return (
+      <span
+        key={i}
+        style={{
+          width: run.widthEm * fontPx,
+          fontSize: box.sizeEm * fontPx,
+          lineHeight: `${box.lineHeightEm * fontPx}px`,
+          marginBottom: box.liftEm * fontPx,
+          marginLeft: (run.gapBeforeEm + run.kernBeforeEm) * fontPx,
+          letterSpacing: trackingPx,
+          whiteSpace: "nowrap",
+          flexShrink: 0,
+        }}
+      >
+        {run.text}
+      </span>
+    );
+  });
 }
 
 /** The footer — artist line + the owner's custom mark (the preview's footer
