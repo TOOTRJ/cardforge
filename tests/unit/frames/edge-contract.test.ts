@@ -18,7 +18,7 @@ import {
 import { applyCardCornerMask } from "@/lib/cards/card-corner";
 import manifestJson from "@/lib/frames/frame-manifest.json";
 import { FRAME_MASTER_KEYS } from "@/lib/cards/frame-reference-registry";
-import { getFrameProfile } from "@/lib/cards/template-layout";
+import { artLayersFor, getFrameProfile } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -430,8 +430,13 @@ describe("the text-box tokens' re-cut window and 7.6's art-window coverage", () 
     }
     it(`${template}: every colour's window ends ~1404 px, the pill and box below it, inside the art slot`, async () => {
       expect(masters).toHaveLength(7);
-      const slot = getFrameProfile(template).artSlot;
+      const profile = getFrameProfile(template);
       for (const m of masters) {
+        // The slot the renderers DRAW this master's window in (artLayersFor):
+        // the see-through `c` has its own window slot since layout v59 (TODO
+        // 4.53 (e): its window is 4 px wider each side than the opaque
+        // masters'), every other master the profile's artSlot.
+        const slot = artLayersFor(profile, m.key, true).slot;
         const { data, width, height } = await rgbaOf(m.file);
         const cx = Math.round(((slot.leftPct + slot.widthPct / 2) / 100) * width);
         const cy = Math.round(((slot.topPct + slot.heightPct / 2) / 100) * height);

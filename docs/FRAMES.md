@@ -7746,8 +7746,79 @@ TODO 4.49, 3b.15, layout v34: the 2014–19 frame and the type words.
   centre theirs on their pill the same way), M15's 86 px box with the ink
   fit, clear of the pill's bevels (`TOKEN_PILL_INTERIOR_PX`). Its colour
   stays the card's rarity (a new token and a token's remix save as common);
-- still to come: the TALL text box (4.55), the gold small-caps name and
-  the art slot (4.53).
+- still to come: the TALL text box (4.55).
+
+### The arch token's name and art slot (4.53, layout v59)
+
+The rest of the print match, on all four arch frames (`m15token`,
+`m15tokentext`, `m15tokenartifact`, `m15tokenartifacttext`), measured on 49
+prints of 2014–19 (TDOM, TM19, TRNA, TGRN, TWAR, TMH1, TXLN, TBFZ, TOGW,
+TEMN, TKLD, TC16: every colour, gold, colourless, the artifact dress, with
+and without a text box; Scryfall PNGs, for measuring only):
+
+- **The name** is GOLD (`TOKEN_ARCH_TITLE_INK`, Card Conjurer's `#fde367`;
+  the prints' ink median 254, 222, 102 — the scans run 226, 200, 85 to
+  255, 244, 159 as they are lit) in **small caps**, centred, on the prints'
+  baseline (192.5 px; the band-centred 90 px line sets it 1 px lower,
+  `TOKEN_ARCH_TITLE_PRINT_DY`). The prints set Beleren Small Caps, which the
+  repo does not have (4.8e, parked): the name is SYNTHESIZED from Beleren
+  Bold — `TextSlot.smallCaps`, `lib/cards/small-caps.ts`, the collector
+  line's artist's recipe (4.9b) — capitals at 90 px (the prints' capital is
+  62.6 px tall: Beleren's 0.7002 em capital at 89.4 px;
+  `TOKEN_ARCH_TITLE_SIZE_PCT`), every lower-case letter as its capital at
+  0.78 of it (the prints' 48.4 px small capitals, `TOKEN_ARCH_SMALL_CAP_EM`),
+  tracking 0.047 em of the capital size (`TOKEN_ARCH_TITLE_TRACKING_EM`: 24
+  clean names set through Satori as the bake sets them, against the
+  prints' ink — median 1.001, mean 0.999, with the kerning below).
+  No font file is added, no glyph: the runs are Beleren's capitals.
+- **How both renderers draw it.** One row of runs (`smallCapsRuns`), each
+  a flex item with an EXPLICIT width, in its face's own content box
+  (`line-height` = ascent + descent), on the row's BOTTOM, a small run
+  lifted by the descent it lacks (`smallCapsRunBox`), a word's gap as its
+  left margin. Never a baseline alignment (Satori sets inline spans of two
+  sizes top-aligned) and never the engine's own run box (Satori sized a
+  small run narrower than it drew it, and the next run started under its
+  last letter); the row is the same box in both renderers, so it centres
+  alike and needs no kerned-width margin. The fit (`fitTitleBand`)
+  measures the same runs (`smallCapsWidthEm`).
+- **Kerning (owner Round 65).** Each engine kerns INSIDE a run, so a run's
+  width is its KERNED width — each glyph's real advance and every pair the
+  face kerns, tightening ones included — from
+  `lib/cards/small-caps-metrics.ts`, generated from Beleren Bold by
+  `scripts/generate-font-metrics.mjs` ("The SMALL-CAPS tables": 249
+  drawable characters, the face's GPOS pairs). The line tables
+  (`lib/cards/font-metrics.ts`) are untouched: they count only the pairs a
+  face kerns apart and guess 1 em for a character they don't list, which
+  left "Long-W inded", "SERVO  2.0" and "Cat  Dragon" with holes, Æ / Œ /
+  Ø / Ω with gaps and "Avatar" 15 px left of centre. Two touching runs are
+  two boxes no engine kerns across, so their pair — a capital and the small
+  letter after it (W·A, V·A, T·A: −0.22 em) — is the second run's left
+  margin (`kernBeforeEm`), at the small size, in both renderers. The creator's glyph check judges the name as
+  capitals on these frames. Parity: `m15token/c/token-long@small-caps`
+  (two words) and `m15tokenartifact/u/token-long@small-caps-lower` (a name
+  all in lower case).
+- **The art slot** is the window the art fills on the prints, with 7.6's
+  overscan — never a larger box (until v58: 6.5 / 12 / 87 × 69.4, 17 px
+  wider each side than the window, which drew every picture 2.7 % larger
+  than print and cropped it past the window). The prints' keyline round the
+  window (left 113.1, right 1386.8, bottom 1708.1 / 1406.3 px with a text
+  box) is the masters' within 1 px, so the slot is the masters' window +
+  1 px across and 2 px down (`tokenArtSlot`): 114–1386 × 261–1707 px on the
+  opaque colours (`TOKEN_ART_SLOT`; the text box to 1407,
+  `TOKEN_TEXT_ART_SLOT`), and 110–1390 × 257–1711 on the masters whose
+  window is 4 px wider each side — the see-through `c` (its own window slot,
+  `underFrameArt.artSlot`) and the coloured artifact dresses (the artifact
+  templates' slot, `TOKEN_WIDE_ART_SLOT`). Card Conjurer's artBounds
+  (7.67 / 12.48 / 84.76 × 68.43) is that window on its un-re-cut master.
+  It strikes 4.53 (e) from `ART_WINDOW_KNOWN_FAILURES`; the see-through
+  `c`'s seam (4.17c) shrinks (1457 → 1036 px: the arch above the window is
+  still silver).
+- **Rollout.** A CORRECTION — the look was wrong against the frame's own
+  print — so layout v59 (`TOKEN_ARCH_PRINT_LAYOUT_VERSION`), "sweep",
+  scoped to the four templates (every card on them; every other template
+  bakes byte-identical), never a badge. NOT verification-neutral: the name
+  and the art slot are what a tick judges, so the arch tokens' ticks go
+  stale and are re-made once (4.53 "Rollout").
 
 ### The text-box token
 

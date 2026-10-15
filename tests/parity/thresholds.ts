@@ -177,7 +177,9 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
   {
     name: "750-artist-line-end",
     size: "750",
-    cases: /^(agclassic|m15tokentext)\//,
+    // (The two arch-token cases of TODO 4.53 draw the same artist line as
+    // m15tokentext's: the footer is M15TOKEN's on all four arch frames.)
+    cases: /^(agclassic|m15tokentext)\/|^m15token\/c\/token-long@small-caps$|^m15tokenartifact\/u\/token-long@small-caps-lower$/,
     regions: ["footer"],
     metric: "dx",
     min: 3,

@@ -135,8 +135,8 @@ describe("M15-era display sizes on real bakes (layout v32)", () => {
     ["saga", 185, null],
     // (flip: its name and type line moved onto the prints' in layout v38,
     // TODO 4.21a — below.)
-    // Its type line moved onto the prints' in TODO 4.49 (d) (below).
-    ["m15token", 189, null],
+    // (m15token: its type line moved onto the prints' in TODO 4.49 (d), its
+    // name in TODO 4.53 (layout v59) — below.)
     ["fullart", null, 1608],
     ["aftermath", 191, 805],
   ];
@@ -208,6 +208,19 @@ describe("M15-era display sizes on real bakes (layout v32)", () => {
     }
     const m = measure(await bake("m15token", "default"), getFrameProfile("m15token").type);
     expect(Math.abs(m.baseline - TOKEN_PRINT_TYPE_BASELINE_HD / 2)).toBeLessThanOrEqual(1);
+  });
+
+  it("sets the arch token's name on its prints' baseline at its capital size (TODO 4.53, layout v59; v31–v58: 189 px at 80 px)", async () => {
+    // 49 prints of 2014–19: the name's baseline 192.5 px at HD, its capitals
+    // 62.6 px tall (Beleren's 1434/2048 em at 90 px: 63). The probe is all
+    // capitals, so the small caps don't enter.
+    for (const template of ["m15token", "m15tokentext", "m15tokenartifact", "m15tokenartifacttext"]) {
+      const p = getFrameProfile(template);
+      const b = await bake(template, "hd");
+      const m = measure(b, p.title);
+      expect(Math.abs(m.baseline - 192.5), `${template} baseline ${m.baseline}`).toBeLessThanOrEqual(1);
+      expect(Math.abs(m.baseline - m.capTop - (1434 / 2048) * p.title.sizePct * b.w), `${template} caps`).toBeLessThanOrEqual(1.5);
+    }
   });
 
   it("keeps the planeswalker's grown name centred where its v31 name was (133.6 px, level with the pips) and its type line on M15's", async () => {
