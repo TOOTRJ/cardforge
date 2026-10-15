@@ -1710,6 +1710,35 @@ export function visualCases(): VisualCase[] {
   add("m15ubartifact", "artifact", "c", "short", { suffix: "@stamp-auto-uncommon", row: stampRow("m15ubartifact", "auto", { rarity: "uncommon" }) });
   add("m15ub", "creature", "r", "long", { suffix: "@stamp-matte-hd", preset: "hd", row: stampRow("m15ub", "auto", { rarity: "common" }) });
   add("m15ub", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15ub"), cost: "{W/U}{W/U}" } });
+  // TODO 4.9d: the borderless frames (new keys on templates whose stored
+  // cards carry none: new cases, no bump) beyond the loops above — the
+  // see-through colourless frame and the artifact's silver, a crowned
+  // mythic (the crowned twin under the same piece), the hybrid dress under
+  // the pair's piece, a full box whose last line reaches the arch, the
+  // stored bake's size, a foil, the squared print, "Always" on a common,
+  // and the line and the stamp together, with and without a plate.
+  add("m15borderless", "creature", "c", "short", { suffix: "@stamp-c", row: stampRow("m15borderless", "auto", { rarity: "rare" }) });
+  add("m15borderlessartifact", "artifact", "c", "short", { suffix: "@stamp-c", row: stampRow("m15borderlessartifact", "auto", { rarity: "rare" }) });
+  add("m15borderless", "creature", "r", "long", { suffix: "@stamp-crown", row: stampRow("m15borderless", "auto", { rarity: "mythic", frame_style: { crown: true } as CardRowForBake["frame_style"] }) });
+  add("m15borderless", "creature", "wu", "short", { suffix: "@stamp-pair-hybrid", row: stampRow("m15borderless", "auto", { rarity: "rare", cost: "{W/U}{W/U}", frame_style: { twoColor: true } as CardRowForBake["frame_style"] }) });
+  add("m15borderless", "creature", "b", "long", { suffix: "@stamp-arch", row: stampRow("m15borderless", "auto", { rarity: "rare", rules_text: STAMP_ARCH_RULES, flavor_text: null }) });
+  add("m15borderless", "creature", "g", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("m15borderless", "auto", { rarity: "mythic" }) });
+  add("m15borderless", "creature", "r", "short", { suffix: "@stamp-foil", finish: "foil", row: stampRow("m15borderless", "auto", { rarity: "rare", frame_style: { finish: "foil" } as CardRowForBake["frame_style"] }) });
+  add("m15borderless", "creature", "u", "short", { suffix: "@stamp-square", corners: "square", row: stampRow("m15borderless", "auto", { rarity: "rare" }) });
+  add("m15borderless", "creature", "w", "short", { suffix: "@stamp-always", row: stampRow("m15borderless", "oval", { rarity: "common" }) });
+  add("m15borderlessland", "land", "g", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("m15borderlessland", "auto", { rarity: "rare" }) });
+  add("m15borderlessstation", "artifact", "c", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("m15borderlessstation", "auto", { rarity: "mythic" }) });
+  add("m15borderless", "instant", "u", "short", { suffix: "@collector-noplate", row: collectorRow("m15borderless", "2023") });
+  add("m15borderless", "creature", "g", "long", { suffix: "@collector-hd", preset: "hd", row: collectorRow("m15borderless", "2023") });
+  add("m15borderless", "creature", "r", "long", {
+    suffix: "@stamp-collector-hd",
+    preset: "hd",
+    row: collectorRow("m15borderless", "2023", { rarity: "rare", frame_style: { stamp: "auto" } as CardRowForBake["frame_style"] }),
+  });
+  add("m15borderless", "instant", "b", "short", {
+    suffix: "@stamp-collector-2015",
+    row: collectorRow("m15borderless", "2015", { rarity: "mythic", frame_style: { stamp: "auto" } as CardRowForBake["frame_style"] }),
+  });
   // A token with the key: the switch on, nothing drawn — the plain look,
   // pinned.
   add("m15token", "token", "g", "short", { suffix: "@stamp-token", row: stampRow("m15token", "oval", { rarity: "rare" }) });
@@ -1956,6 +1985,8 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "extendedartstation",
   // TODO 4.25: the Universes Beyond frames' TRIANGLE stamp.
   "m15ub", "m15ubartifact", "m15ubland",
+  // TODO 4.9d: the borderless frames' arch (our own lifted pinline).
+  "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlessstation",
 ];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's
@@ -1964,6 +1995,8 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
 export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = [
   "m15", "m15artifact", "m15vehicle", "m15nyx", "m15land", "m15snow", "m15snowland",
   "m15ub", "m15ubartifact", "m15ubland",
+  // TODO 4.9d: the borderless pairs (the split pinline; the land's own).
+  "m15borderless", "m15borderlessartifact", "m15borderlessland",
 ];
 
 /** A rules text whose fitted last line enters the arch on m15 (found on the

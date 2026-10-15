@@ -154,6 +154,15 @@ export function holoStampArtRect(oval: Rect): Rect {
  *  short block ≈ 9 px off the prints. */
 export const M15_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: 43.67, topPct: 90.71, widthPct: 12.67, heightPct: 0.93 };
 
+/** The rules keep-out while the BORDERLESS stamp is drawn (TODO 4.9d): the
+ *  printed arch over the oval — the bar lifted 32.6 px at the centre, so its
+ *  bevel's top at 1897.4 px (scripts/lib/borderless-stamp.mjs ARCH_LIFT_PX;
+ *  the prints' rim ends at 1916 there) — with 5 px of air above it, x
+ *  655–845 px as M15's, down past the rules box's bottom (1923.6): 1892–1925.
+ *  Taller than M15's: the borderless bevel is a bright line over the art,
+ *  where the bordered frame's is white on its cream box. */
+export const M15BORDERLESS_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: 43.67, topPct: (1892 / 2100) * 100, widthPct: 12.67, heightPct: (33 / 2100) * 100 };
+
 /** The walker's: from its notch piece's top (1893 px: the piece draws a
  *  black line above the rim) past its rules rect's bottom (1919.4). Read by
  *  the plain box only (a non-walker card on the frame, a walker with no

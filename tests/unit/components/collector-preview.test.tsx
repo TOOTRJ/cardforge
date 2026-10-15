@@ -144,7 +144,7 @@ describe("the preview draws the bake's collector line", () => {
     for (const data of [
       card({ frameStyle: { template: "m15", finish: "regular" } }),
       card({ frameStyle: { template: "m15", finish: "regular", collector: "off", star: true } }),
-      card({ frameStyle: { template: "m15borderless", finish: "regular", collector: "2023" } }),
+      card({ frameStyle: { template: "extendedart", finish: "regular", collector: "2023" } }),
     ]) {
       expect(bakeLayout(data, { kind: "display" }), JSON.stringify(data.frameStyle)).toBeNull();
       const { container } = render(<CardPreview {...data} />);

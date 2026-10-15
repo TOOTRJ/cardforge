@@ -250,6 +250,11 @@ const PICKS: readonly Pick[] = [
   { from: "extendedart/wu/creature-long@pair-crown", why: "extended art: the gold-split pair master and the split floating crown (4.7 follow-up)" },
   { from: "m15textless/u/creature-long@crown", why: "textless promo: the standard crown band over the promo master (4.35 follow-up)" },
   { from: "m15borderless/b/creature-long", why: "borderless: art to the edge, white ink, the keylined set symbol" },
+  // --- the borderless stamp and collector line (TODO 4.9d) -----------------
+  { from: "m15borderless/r/creature-long@stamp-collector-hd", why: "borderless: the lifted-pinline arch, the oval over the black, the collector line with the mark on line 2 beside the plate" },
+  { from: "m15borderless/b/instant-short@stamp-collector-2015", why: "borderless: the 2015 style's letter column and, with no plate, the mark on line 1 beside the arch" },
+  { from: "m15borderlessland/wu/land-short@stamp-pair-split", why: "borderless land: the pair's own piece (the box and pinline split across the ramp) under the stamp" },
+  { from: "m15borderlessstation/u/artifact-short@stamp", why: "borderless station: the arch over the station box, the tier washes over it as on m15station" },
   // --- the old frames (era symbol styles, footers, © slots) ----------------
   { from: "agclassic/g/creature-long", why: "1993: image pips, the Illus. line, right-set P/T" },
   { from: "retro/r/creature-long", why: "1997: shadowed white ink, flat discs, centred © slot" },

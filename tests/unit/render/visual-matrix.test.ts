@@ -65,7 +65,7 @@ describe("visual-regression matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
       expect(id).toMatch(
-        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|land|artifact|vehicle|wide|star|spacecraft|nopt|nodefense|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|legacyland|sunmoon|moon|compass|fan|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd|square|br|gw|ub))?(-crown(-hd)?)?|centred(-hd)?|white(-(hd|foil|etched|square|pair))?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|auto-common|auto-uncommon|matte-hd|pair-(split|hybrid|crown|hd|foil)))?|tiers-(one|three|none|wide|star)|large-pips-hd|phyrexian-cost-(3|5)(-hd)?|nyx-(wide|artifact|silver)))?$/,
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|land|artifact|vehicle|wide|star|spacecraft|nopt|nodefense|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|legacyland|sunmoon|moon|compass|fan|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd|square|br|gw|ub))?(-crown(-hd)?)?|centred(-hd)?|white(-(hd|foil|etched|square|pair))?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|crown|collector-(hd|2015)|auto-common|auto-uncommon|matte-hd|pair-(split|hybrid|crown|hd|foil)))?|tiers-(one|three|none|wide|star)|large-pips-hd|phyrexian-cost-(3|5)(-hd)?|nyx-(wide|artifact|silver)))?$/,
       );
     }
     expect(ids).toEqual([...ids].sort());
@@ -389,6 +389,8 @@ describe("visual-regression matrix", () => {
       "m15borderlessland/wu/land-short@pair-br",
       "m15borderlessland/wu/land-short@pair-foil",
       "m15borderlessland/wu/land-short@pair-square",
+      // …and its stamp on the pair (4.9d).
+      "m15borderlessland/wu/land-short@stamp-pair-split",
     ]);
     const byId = new Map(cases.map((c) => [c.id, c]));
     expect(byId.get("m15borderlessland/wu/land-short@pair-br")?.row.color_identity).toEqual(["black", "red"]);

@@ -53,6 +53,7 @@
 
 import type { FrameColorKey, FrameMasterKey } from "@/lib/cards/frame-reference-registry";
 import {
+  M15BORDERLESS_HOLO_STAMP_KEEP_OUT,
   M15PW_HOLO_STAMP_KEEP_OUT,
   M15UB_HOLO_STAMP_BOX,
   M15UB_HOLO_STAMP_KEEP_OUT,
@@ -5210,6 +5211,58 @@ export const M15UB_HOLO_STAMP: FrameOverlaySlot = {
   stamp: { shape: "triangle", oval: M15UB_HOLO_STAMP_BOX, keepOut: M15UB_HOLO_STAMP_KEEP_OUT },
 };
 
+/**
+ * The holofoil stamp's notch on the BORDERLESS frames (TODO 4.9d, owner
+ * Round 66, 2026-10-14): every stamped borderless print arches the text
+ * box's bottom pinline over the oval, and Card Conjurer's borderless pack has
+ * no piece for it. Ours is PipGlyph's own derivation
+ * (scripts/build-borderless-stamp.mjs, the arch in
+ * scripts/lib/borderless-stamp.mjs): each piece is its master's own pinline
+ * LIFTED along the printed arch (32.6 px at the centre, rising from x 666 to
+ * x 834; fourteen prints measured 2026-10-15) — the layer that, over the
+ * master, shows the bevel, the rim and the black under them moved up, while
+ * the translucent box above keeps its own pixels — so both feet are the bar
+ * itself and a pair's ramp, a land's tinted bevel and the station's light
+ * rim come with their masters. 180 × 52 px at 660, 1896, 1:1 at HD. The
+ * oval is M15's (the physical prints put it where the bordered frame's
+ * sits), our own art over the black. Keys: the colour's bar (w u b r g, m
+ * gold, c the see-through colourless frame), a (the colourless ARTIFACT's
+ * silver — the artifact dress's keyMap) and the ten pairs (one piece serves
+ * the split and hybrid dresses, the artifact pairs and every crowned twin:
+ * the same pixels where the piece reads, checked by the build). Opt-in per
+ * card (FrameStyle.stamp): declaring it changes no stored card.
+ * Set only on the m15borderless and m15borderlessartifact PROFILES entries.
+ */
+export const M15BORDERLESS_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  // BORDERLESS_NOTCH_BOX in scripts/lib/borderless-stamp.mjs (a unit test
+  // holds them together).
+  rect: { leftPct: (660 / 1500) * 100, topPct: (1896 / 2100) * 100, widthPct: (180 / 1500) * 100, heightPct: (52 / 2100) * 100 },
+  assetPathTemplate: "/frames/m15borderlessholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "a", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+  stamp: { shape: "oval", oval: M15_HOLO_STAMP_OVAL, keepOut: M15BORDERLESS_HOLO_STAMP_KEEP_OUT },
+};
+
+/** …the borderless LAND's (TODO 4.9d): the same arch over its own masters
+ *  — the land prints its colour on the text box and the bevel, and its
+ *  pairs split the box and the pinline across their ramp, so every key is
+ *  its own piece (m15borderlessland/<key>). */
+export const M15BORDERLESSLAND_HOLO_STAMP: FrameOverlaySlot = {
+  ...M15BORDERLESS_HOLO_STAMP,
+  assetPathTemplate: "/frames/m15borderlesslandholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+};
+
+/** …and the borderless STATION's (TODO 4.9d; EOC #1 / #2 print it): the
+ *  arch over the station box — the light rim lifted, the box's paper left
+ *  as it is (m15borderlessstation/<key>, its crowned twins the same pixels
+ *  there). */
+export const M15BORDERLESSSTATION_HOLO_STAMP: FrameOverlaySlot = {
+  ...M15BORDERLESS_HOLO_STAMP,
+  assetPathTemplate: "/frames/m15borderlessstationholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c"],
+};
+
 /** The planeswalker's notch (TODO 4.9c): CC's `planeswalker/holo` piece —
  *  a flat rim with a black line above it, no bevel, as the walker's box
  *  prints — 182 × 107 px at 43.94 / 90.15 / 12.14 × 5.1 % (659–841 ×
@@ -5738,8 +5791,8 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // type ink, the floating crown baked into `<key>-legendary` twins — with
   // the station box in place of its dark one (black text, the bands,
   // badges and plate drawn as on every station frame). Its rules slot is
-  // M15's, the box being M15's. No stamp notch and no collector line: the
-  // borderless frames have neither yet (the prints do).
+  // M15's, the box being M15's. The stamp's notch and the collector line
+  // since TODO 4.9d (the borderless family's, below).
   m15borderlessstation: {
     ...withoutPt(M15BORDERLESSARTIFACT),
     label: "Borderless Station (Spacecraft)",
@@ -5747,6 +5800,10 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     crownMasters: true,
     rulesAlignSwitch: false,
     tiers: STATION_INKS,
+    // TODO 4.9d: the stamp's arch over the station box and the collector
+    // line in the black bottom bar, where EOC #1 / #2 print them.
+    overlays: [M15BORDERLESSSTATION_HOLO_STAMP],
+    collector: M15_COLLECTOR,
   },
   // The Vehicle frame (TODO 4.5c; owner 2026-09-29: a stored template of
   // its own, for Vehicles only): Card Conjurer's bronze 'Vehicle Frame'
@@ -5852,12 +5909,30 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // #142 / #144, ECL #292–296: Card Conjurer's 'Land Frame' bars for a
   // hybrid pair), so m15borderless draws print's hybrid dress too
   // (`<pair>-h.png`, the grey plate `pt/c` = the pack's colourless plate).
-  m15borderless: { ...M15BORDERLESS, crownMasters: true, twoColorMasters: ["split", "hybrid"] },
+  //
+  // The holofoil stamp and the collector line (TODO 4.9d, owner Round 66):
+  // every borderless print has both — the arch over the oval
+  // (M15BORDERLESS_HOLO_STAMP, our own lifted pinline) and the two lines in
+  // the black bottom bar exactly where the bordered frame prints them
+  // (M15_COLLECTOR, white on the black). Additions, opt-in per card.
+  m15borderless: {
+    ...M15BORDERLESS,
+    crownMasters: true,
+    twoColorMasters: ["split", "hybrid"],
+    overlays: [M15BORDERLESS_HOLO_STAMP],
+    collector: M15_COLLECTOR,
+  },
   // The artifact dress: the same crowned twins and split pairs (its
   // colourless twin wears CC's artifact crown on the artifact frame); a
   // hybrid artifact falls back to the split, like m15artifact. Its `m`
   // tick's references print this pinline split (frame-references.json).
-  m15borderlessartifact: { ...M15BORDERLESSARTIFACT, crownMasters: true, twoColorMasters: ["split"] },
+  m15borderlessartifact: {
+    ...M15BORDERLESSARTIFACT,
+    crownMasters: true,
+    twoColorMasters: ["split"],
+    overlays: [{ ...M15BORDERLESS_HOLO_STAMP, keyMap: { c: "a" } }],
+    collector: M15_COLLECTOR,
+  },
   // The borderless land's two-colour dress (TODO 4.56): ten pair masters
   // `<pair>.png` — the grey 'Land Frame' bars with the pinline AND the text
   // box split between the two colours across one ramp (39→61 %W), as MID
@@ -5867,9 +5942,16 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // gate keeps every other kind off the frame. Opt-in per card: a stored
   // two-colour land on this frame keeps the gold `m` master until its owner
   // switches the two-colour frame on. No crown (the frame has no crowned
-  // twins: the crowned and nicknamed two-colour prints stay `nearest`), no
-  // stamp notch, no collector line here.
-  m15borderlessland: { ...M15BORDERLESSLAND, twoColorMasters: ["split"], twoColorForLands: true },
+  // twins: the crowned and nicknamed two-colour prints stay `nearest`). The
+  // stamp's notch over its own masters and the collector line since TODO
+  // 4.9d.
+  m15borderlessland: {
+    ...M15BORDERLESSLAND,
+    twoColorMasters: ["split"],
+    twoColorForLands: true,
+    overlays: [M15BORDERLESSLAND_HOLO_STAMP],
+    collector: M15_COLLECTOR,
+  },
   m15borderlesspw: M15BORDERLESSPW,
   m15borderlesspwtall: M15BORDERLESSPWTALL,
   // The transform bodies (TODO 5.1a): each declares its `dfc` on its own
