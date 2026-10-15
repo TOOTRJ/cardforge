@@ -2143,7 +2143,9 @@ function dfcFamilyRow(body: FrameTemplate, colour: VisualColour, family: DfcIcon
   // front with the back retyped onto the spell back.
   if ((MDFC_BACK_BODIES as readonly string[]).includes(body)) {
     const landBack = body === "m15mdfclandback";
-    const content = modalContent(shape, colour, landBack);
+    // (The back on THIS body: a borderless back's long case drew the bordered
+    // m15mdfcback, modalContent's default, before the skeptic check of #578.)
+    const content = modalContent(shape, colour, landBack, landBack ? undefined : body);
     const back = landBack
       ? content.back_face
       : shape === "long"
