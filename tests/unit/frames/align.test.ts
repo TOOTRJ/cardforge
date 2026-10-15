@@ -218,11 +218,10 @@ describe("alignAndScore", () => {
     expect(alignAndScore({ ours, scan, slots: SLOTS, exclude: [] })).toEqual(without);
   });
 
-  it("excludes the arch only for the borderless M15 frames and the borderless planeswalkers", () => {
-    expect(scoreExclusionsFor("m15borderless")).toEqual([HOLO_STAMP_ARCH]);
-    expect(scoreExclusionsFor("m15borderlessartifact")).toEqual([HOLO_STAMP_ARCH]);
-    // 4.34's land: nearly every borderless nonbasic land is rare.
-    expect(scoreExclusionsFor("m15borderlessland")).toEqual([HOLO_STAMP_ARCH]);
+  it("excludes the arch only for the borderless planeswalkers (the borderless M15 frames draw theirs since 4.9d)", () => {
+    for (const template of ["m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlessstation"]) {
+      expect(scoreExclusionsFor(template), template).toEqual([]);
+    }
     // 4.33: the walkers' ability-window rim arches over the stamp too.
     expect(scoreExclusionsFor("m15borderlesspw")).toEqual([HOLO_STAMP_ARCH]);
     expect(scoreExclusionsFor("m15borderlesspwtall")).toEqual([HOLO_STAMP_ARCH]);

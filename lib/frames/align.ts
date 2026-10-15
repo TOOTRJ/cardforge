@@ -435,19 +435,19 @@ export function slotKindFor(path: string): SlotKind {
  *  the oval sits in an ARCH of the rules-box pinline (x ≈ 656–850 px on 1500,
  *  top ≈ 1905 px against the straight pinline at ≈ 1945; FRA #447, FDN #292;
  *  print review 2026-09-26), with the stamp below it in the bottom bar. Our
- *  Card Conjurer master's pinline is straight — 4.9's stamp overlay must draw
- *  the arch — so until then the score leaves this box out. */
+ *  Card Conjurer master's pinline is straight, so the score left this box out
+ *  until the stamp overlay drew the arch — since TODO 4.9d it does on the
+ *  borderless spell, artifact and land frames (the comparison card draws the
+ *  stamp wherever the reference printing carries one, previewFromImportPatch),
+ *  so only the borderless walkers, whose arch is not built, keep it out. */
 export const HOLO_STAMP_ARCH: Rect = { topPct: 90, leftPct: 42.67, widthPct: 14.67, heightPct: 5.24 };
 
-/** The templates whose prints arch a pinline around the holo stamp: the
- *  borderless M15 pair and its land (nearly every borderless nonbasic land
- *  is rare, 4.34), and 4.33's borderless planeswalkers, whose ability
+/** The templates whose prints arch a pinline around the holo stamp that
+ *  their frame does not draw: 4.33's borderless planeswalkers, whose ability
  *  window's bottom rim arches the same way over the stamp (Basri Ket M21
- *  #280, Liliana FDN #359: ≈ 640–870 px, from ≈ 1915 px). */
+ *  #280, Liliana FDN #359: ≈ 640–870 px, from ≈ 1915 px). The borderless
+ *  M15 pair and its land draw their arch since TODO 4.9d. */
 const HOLO_STAMP_ARCH_TEMPLATES: ReadonlySet<string> = new Set([
-  "m15borderless",
-  "m15borderlessartifact",
-  "m15borderlessland",
   "m15borderlesspw",
   "m15borderlesspwtall",
 ]);

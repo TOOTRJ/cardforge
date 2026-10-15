@@ -5256,11 +5256,15 @@ export const M15BORDERLESSLAND_HOLO_STAMP: FrameOverlaySlot = {
 /** …and the borderless STATION's (TODO 4.9d; EOC #1 / #2 print it): the
  *  arch over the station box — the light rim lifted, the box's paper left
  *  as it is (m15borderlessstation/<key>, its crowned twins the same pixels
- *  there). */
+ *  there). Its master has no bevel (the station box replaced it), so the
+ *  arch's top is the rim's, 1904.4 px at the centre: M15's keep-out (from
+ *  1905), the one the station layout's stamped last band is built round —
+ *  the dress lays out every text exactly as m15station. */
 export const M15BORDERLESSSTATION_HOLO_STAMP: FrameOverlaySlot = {
   ...M15BORDERLESS_HOLO_STAMP,
   assetPathTemplate: "/frames/m15borderlessstationholostamp/{key}.png",
   keys: ["w", "u", "b", "r", "g", "m", "c"],
+  stamp: { shape: "oval", oval: M15_HOLO_STAMP_OVAL, keepOut: M15_HOLO_STAMP_KEEP_OUT },
 };
 
 /** The planeswalker's notch (TODO 4.9c): CC's `planeswalker/holo` piece —

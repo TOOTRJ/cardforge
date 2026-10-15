@@ -16,7 +16,7 @@ import {
   pinlineTop,
 } from "@/scripts/lib/borderless-stamp.mjs";
 import { resolveHoloStamp } from "@/lib/cards/anatomy";
-import { M15BORDERLESS_HOLO_STAMP_KEEP_OUT, M15_HOLO_STAMP_OVAL } from "@/lib/cards/holo-stamp";
+import { M15BORDERLESS_HOLO_STAMP_KEEP_OUT, M15_HOLO_STAMP_KEEP_OUT, M15_HOLO_STAMP_OVAL } from "@/lib/cards/holo-stamp";
 import {
   M15BORDERLESSLAND_HOLO_STAMP,
   M15BORDERLESSSTATION_HOLO_STAMP,
@@ -76,7 +76,7 @@ const SLOTS = {
 } as const;
 
 describe("the recipe is the profiles' slots", () => {
-  it("one box, the folder's keys, M15's oval and the borderless keep-out on every slot", () => {
+  it("one box, the folder's keys, M15's oval; the borderless keep-out (M15's on the bevel-less station box)", () => {
     const box = BORDERLESS_NOTCH_BOX;
     for (const [folder, slot] of Object.entries(SLOTS)) {
       expect(slot.anatomy).toBe("holoStamp");
@@ -87,7 +87,8 @@ describe("the recipe is the profiles' slots", () => {
       expect(slot.rect.heightPct).toBeCloseTo((box.height / 2100) * 100, 10);
       expect(slot.assetPathTemplate).toBe(`/frames/${folder}/{key}.png`);
       expect([...slot.keys].sort()).toEqual(Object.keys(BORDERLESS_STAMP_FOLDERS[folder as keyof typeof BORDERLESS_STAMP_FOLDERS].keys).sort());
-      expect(slot.stamp).toEqual({ shape: "oval", oval: M15_HOLO_STAMP_OVAL, keepOut: M15BORDERLESS_HOLO_STAMP_KEEP_OUT });
+      const keepOut = folder === "m15borderlessstationholostamp" ? M15_HOLO_STAMP_KEEP_OUT : M15BORDERLESS_HOLO_STAMP_KEEP_OUT;
+      expect(slot.stamp).toEqual({ shape: "oval", oval: M15_HOLO_STAMP_OVAL, keepOut });
     }
     // Even HD px: the 750 bake halves the box exactly.
     for (const v of Object.values(box)) expect(v % 2).toBe(0);

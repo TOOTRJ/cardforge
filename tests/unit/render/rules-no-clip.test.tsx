@@ -400,6 +400,43 @@ describe("rules consumers — no clip, no keep-out ink, the layout's lines (Sato
   }, 120_000);
 });
 
+describe("the holofoil stamp's arch on the borderless frames (TODO 4.9d) — a keep-out never adds a clip", () => {
+  // The renderers pass the profile's keep-out while the stamp is drawn
+  // (DrawnStats.stamp): the borderless frames' is taller than M15's (their
+  // bevel is a bright line over the art, from 1892 px).
+  const stamped = (template: FrameTemplate, text: RulesCase) => {
+    const layout = getFrameProfile(template);
+    const slot = (layout.overlays ?? []).find((o) => o.anatomy === "holoStamp");
+    if (!slot || slot.anatomy !== "holoStamp") throw new Error(`${template} has no notch`);
+    const show: DrawnStats = { pt: Boolean(layout.pt) };
+    const plain = mainRulesLayout({ layout, rulesText: text.rules, flavorText: text.flavor, aspect: aspectOf(layout), show });
+    const arch = mainRulesLayout({ layout, rulesText: text.rules, flavorText: text.flavor, aspect: aspectOf(layout), show: { ...show, stamp: slot.stamp.keepOut } });
+    return { plain, arch };
+  };
+  const TEMPLATES = ["m15borderless", "m15borderlessartifact", "m15borderlessland"] as const;
+
+  it("clips exactly the texts the box clips without the stamp, never sets one larger", () => {
+    for (const template of TEMPLATES) {
+      for (const text of RULES_MATRIX) {
+        const { plain, arch } = stamped(template, text);
+        expect(arch.clipped, `${template} · ${text.name}`).toBe(plain.clipped);
+        expect(arch.sizePx, `${template} · ${text.name}`).toBeLessThanOrEqual(plain.sizePx);
+      }
+    }
+  });
+
+  it("draws every stamped layout inside its box, clear of the arch, line for line (750 px)", async () => {
+    let n = 0;
+    for (const text of RULES_MATRIX) {
+      const { arch } = stamped("m15borderless", text);
+      if (arch.clipped) continue;
+      await checkDrawn(arch, "default", `m15borderless stamped · ${text.name}`);
+      n += 1;
+    }
+    expect(n).toBeGreaterThan(10);
+  }, 120_000);
+});
+
 describe("rules consumers — the HD bake (subset)", () => {
   const TEMPLATES: FrameTemplate[] = ["m15", "m15pw", "m15token", "adventure", "flip", "split", "aftermath", "battle", "retro", "m15borderless"];
   // "symbols as printed" (layout v49): the Phyrexian pip's larger disc is drawn

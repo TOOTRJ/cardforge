@@ -486,8 +486,9 @@ template stays out of the picker until the owner verifies each colour
 ([Verifying a frame](#verifying-a-frame)); an import never lands on one (the
 creator only offers it, once verified). The compare page's alignment score
 leaves out printed details a master doesn't draw (`scoreExclusionsFor` in
-`lib/frames/align.ts`: on the borderless templates, the arch the rules-box
-pinline makes around a rare's holo stamp, until 4.9 draws it).
+`lib/frames/align.ts`: on the borderless walkers, the arch their ability
+window makes around a rare's holo stamp; the borderless spell, artifact and
+land frames draw theirs since 4.9d, so their score includes it).
 
 ## The card corner
 
@@ -5298,6 +5299,100 @@ absent, and the visual gate gained its `@stamp…` cases and changed none.
   quantising the advances too would move the chunk after a lower-case run
   by ≈ 1 px per five letters on every collector card — a correction for the
   first collector-scoped sweep.
+
+#### The borderless stamp and collector line (4.9d)
+
+TODO 4.9d, owner Round 66 (2026-10-14): every borderless print carries the
+holofoil stamp (a rare or mythic) and the collector line, and our borderless
+frames had neither — one follow-up for the family. `m15borderless`,
+`m15borderlessartifact`, `m15borderlessland` and `m15borderlessstation`
+declare both since; the borderless planeswalkers (`m15borderlesspw`,
+`m15borderlesspwtall`) do NOT yet — walker follow-ups are asked first (they
+were measured, below). An ADDITION, exactly as 4.9b / 4.9c: the same
+switches (`frame_style.stamp` / `collector` / `star`), new cards on by
+default, a stored borderless card keeps its look (it was saved with neither
+key — `normalizeAnatomy` dropped them on a template without the slot — so
+none draws until its owner switches them on), imports follow the printing
+(`printed_stamp` / `printed_collector` already name the printing's; a
+"Use Borderless" switch now keeps them), no `CARD_LAYOUT_VERSION` bump, no
+sweep, no badge, no verification tick.
+
+- **Measured on print** (2026-10-15, Scryfall PNGs at 1500 × 2100; numbers
+  in `scripts/lib/borderless-stamp.mjs`): the collector line sits exactly
+  where the bordered frame prints it — line 1's ink 1965–1988 px, line 2's
+  2003–2026, from x 99, on the borderless printings AND their bordered twins
+  (FDN, DFT, INR, DSK…), white on the black bottom bar; the © line ends at x
+  1394–1395, on line 2 beside a P/T plate and on line 1 without one (INR
+  #311, 2X2 #381). Both styles print there (2015: M21 #318, MH2 #321, 2X2
+  #381; 2023: FDN #376, INR #311). So the four entries take `M15_COLLECTOR`
+  unchanged, the mark in its © slot. The stamp is the OVAL on every plain
+  borderless printing (a Universes Beyond borderless printing prints the
+  triangle — FIC #444, PW25 #16, FCA #56 — and the frame draws its own
+  oval for an imported `"triangle"`, as every oval frame does); commons and
+  uncommons print none (INR #311, FDN #325, DFT #300). The pinline ARCHES
+  over it as on the bordered frame: the rim's lower edge rises from x 666 to
+  32.6 px above the straight bar at the centre (1916.0 px against 1948.6;
+  fourteen clean renders, symmetric about x 750 within 1–2.6 px), the rim
+  and the bevel keeping the bar's vertical thickness; the physical scans
+  agree (FDN #376: 1917). The oval sits where the bordered frame's does on
+  the physical scans (FDN #376 1928/1930–1991, MH2 #321 1928–1994), so the
+  slot draws `M15_HOLO_STAMP_OVAL` with our own art; Scryfall's clean
+  renders draw it 7 px higher on bordered and borderless alike, which no
+  physical print shows.
+- **The notch is our own** (`scripts/build-borderless-stamp.mjs`, DATA in
+  `scripts/lib/borderless-stamp.mjs`): Card Conjurer's borderless pack has
+  no stamp piece, and its bordered arch (cut for a bar 12 rows thick) stood
+  2–3 px proud of the borderless bar's 11-row rim at the feet. Each piece is
+  its published master's own pinline LIFTED along the printed arch
+  (`ARCH_LIFT_PX`): per pixel, the layer that, composited over the master,
+  shows the master `lift` rows further down — the bevel, the rim, then the
+  black under them — while the translucent box above the arch keeps its own
+  pixels (the pinline's first row is read per column, `pinlineTop`: a
+  station box's paper is never moved). The cover is exact wherever covering
+  can do it; the one loss is a bevel's shaded edge row lifted a fraction of
+  a row into its lighter middle, which no cover can thin (≤ 4.1 levels, the
+  nearest cover over every art, `bestCover`). Both feet are the bar itself;
+  a pair's ramp, a land's tinted box and bevel and the station's light rim
+  come with their masters. 180 × 52 px at 660, 1896, 1:1 at HD. Three
+  folders: `m15borderlessholostamp/<w u b r g m c a + 10 pairs>` (the
+  spells and the artifact dress — `a` is the colourless artifact's silver,
+  its keyMap; one piece serves the split and hybrid dresses, the artifact
+  pairs and every crowned twin, the same pixels where the piece reads,
+  which the build checks), `m15borderlesslandholostamp/<7 + 10 pairs>` and
+  `m15borderlessstationholostamp/<w u b r g m c>` — 42 pieces, 84 objects
+  with their WebPs (alpha equal to the PNG's, checked), in the DEV bucket
+  until the owner's `frames:promote`. Nothing of a hologram is in a piece.
+- **The keep-out** (`M15BORDERLESS_HOLO_STAMP_KEEP_OUT`): x 655–845 px from
+  1892 (the lifted bevel's top at 1897.4, 5 px of air) past the rules box's
+  bottom — taller than M15's, whose white bevel vanishes on the cream box;
+  the borderless bevel is a bright line over the art. Glyph-level, as M15's:
+  the rules rect never shrinks, and a stamp never adds a clip
+  (`rules-no-clip.test.tsx`). The borderless STATION keeps M15's keep-out:
+  its master has no bevel (the station box replaced it), so the arch's top
+  is the rim's, 1904.4 px at the centre, and the dress lays out every text
+  exactly as `m15station` (the stamped last band is built round that
+  keep-out). Its tier washes are drawn over the arch as on `m15station`
+  (the bands are UNDER both finishes, after the frame and its overlays);
+  EOC #1 / #2 keep the arch clear of the washes — an owner question.
+- **Tests and cases.** `tests/unit/frames/borderless-holo-stamp.test.ts`
+  (the recipe, the published pieces byte for byte against a rebuild from
+  their masters, the manifest, provenance, the profiles); the visual gate's
+  new `m15borderless*` `@stamp…` / `@collector…` cases (every existing case
+  unchanged); parity cases for the stamp and the line on the borderless
+  frame (darwin).
+- **Left for the owner:** the borderless walkers, measured but not built
+  (IKO #277, AFR #285, FDN #417, UNF #276, SLP #55, MH3 #444): the line at
+  the same two rows from x 99, the © line on line 2 beside the loyalty
+  shield; the ability window's bottom rim ends at ≈ 1917 px and arches
+  ≈ 24 px over the oval (to ≈ 1893 at the centre, SLP #55), and the oval
+  sits at ≈ 1931–1996 on the physical scans — M15's place, not the 7 px
+  higher one `M15PW_HOLO_STAMP_OVAL` takes from Card Conjurer's walker
+  piece. The alignment score keeps its arch exclusion (`HOLO_STAMP_ARCH`,
+  `lib/frames/align.ts`) on the walkers alone: the three borderless frames
+  that draw the arch now score it (the comparison card draws the stamp
+  wherever the reference printing carries one), as TODO 4.9d planned. No
+  stored tick changes; a re-score of a borderless combo reads the box's
+  bottom edge too.
 
 ### The text alignment (4.21e)
 
