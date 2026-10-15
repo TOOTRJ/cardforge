@@ -211,7 +211,9 @@ describe("visual-regression matrix", () => {
   });
 
   it("switches the collector line on only in its collector cases: both styles on every slotted template, the line's shapes on m15 (TODO 4.9b)", () => {
-    const lined = cases.filter((c) => c.id.includes("@collector"));
+    // (…and the borderless frames' two cases with the line AND the stamp,
+    // TODO 4.9d: "@stamp-collector-hd" / "@stamp-collector-2015".)
+    const lined = cases.filter((c) => c.id.includes("@collector") || c.id.includes("@stamp-collector"));
     const keyed = cases.filter((c) => "collector" in (c.row.frame_style as object));
     expect(keyed.map((c) => c.id)).toEqual(lined.map((c) => c.id));
     expect([...new Set(lined.map((c) => c.template))].sort()).toEqual([...COLLECTOR_TEMPLATES].sort());
@@ -257,10 +259,13 @@ describe("visual-regression matrix", () => {
       const style = c.row.frame_style as { stamp?: string; collector?: string; crown?: boolean; twoColor?: boolean };
       // "triangle" only on the Universes Beyond frame's "Always" case (4.25).
       expect(c.id === "m15ub/r/creature-short@stamp-always" ? ["triangle"] : ["auto", "oval"], c.id).toContain(style.stamp);
-      expect(style.collector, c.id).toBeUndefined();
+      // The line rides only on the borderless frames' two combined cases
+      // (TODO 4.9d).
+      expect(style.collector, c.id).toBe(c.id.endsWith("@stamp-collector-hd") ? "2023" : c.id.endsWith("@stamp-collector-2015") ? "2015" : undefined);
       // The crown rides only on the crowned pair case (the split crown and
-      // the pair notch on one card).
-      expect(style.crown, c.id).toBe(c.id.endsWith("@stamp-pair-crown") ? true : undefined);
+      // the pair notch on one card) and the borderless crowned mythic (4.9d:
+      // the crowned twin under the same piece).
+      expect(style.crown, c.id).toBe(c.id.endsWith("@stamp-pair-crown") || c.id === "m15borderless/r/creature-long@stamp-crown" ? true : undefined);
     }
     // The pair notch (the 4.9c follow-up): a rare on auto drawn as its pair
     // master on every template with BOTH pairs and the notch — and on no
