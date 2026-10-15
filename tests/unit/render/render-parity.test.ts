@@ -167,8 +167,13 @@ describe("display-font lines", () => {
     for (const src of [BAKE, PREVIEW]) expect(src).not.toMatch(/["'`]Art: /);
     // The name: whole, or as fitted (fitTitleBand: before a detached cost,
     // and anywhere on a measured slot, TODO 4.20).
-    expect(BAKE).toContain("{displayLine(titleFit ? titleFit.text : title)}");
-    expect(PREVIEW).toContain("{displayLine(titleFit ? titleFit.text : safeTitle)}");
+    expect(BAKE).toContain(": displayLine(titleFit ? titleFit.text : title)}");
+    expect(PREVIEW).toContain(": displayLine(titleFit ? titleFit.text : safeTitle)}");
+    // …and a small-caps name (TODO 4.53) draws the same line in its runs.
+    expect(BAKE).toContain("? smallCapsRunsBake(titleSlot, displayLine(titleFit ? titleFit.text : title), fpx(titleSlot.sizePct, width))");
+    expect(PREVIEW).toContain(
+      "? smallCapsRunsPreview(layout.title, titleFit ? titleSizePct : layout.title.sizePct, displayLine(titleFit ? titleFit.text : safeTitle))",
+    );
     // The type line as fitted (cut with a "…" only past the floor, the same
     // string in both): the front's, the adventure panel's, a second face's.
     expect(BAKE).toContain("{displayLine(typeText)}");
@@ -194,13 +199,15 @@ describe("display-font lines", () => {
     // 3.24; its right half centres).
     // The text's dy (TextSlot.dy, TODO 4.20) is spread last: a transform,
     // which leaves the margin alone.
-    expect(BAKE.match(/style=\{\{\s*\.\.\.alignedText\(/g)).toHaveLength(3);
+    expect(BAKE.match(/style=\{\{\s*\.\.\.alignedText\(/g)).toHaveLength(2);
     expect(BAKE).toMatch(
       /\.\.\.alignedText\(band, line, fpx\(slot\.sizePct, cardWidth\), bandWidth\(band, cardWidth\)\),\n\s*\.\.\.ink,\n\s*\.\.\.textDyBake\(slot, cardWidth\),\n/,
     );
-    // The name centres as it is drawn: fitted text at the fitted size.
+    // The name centres as it is drawn: fitted text at the fitted size — a
+    // small-caps name (TODO 4.53) on its runs' explicit boxes, the same in
+    // both renderers (smallCapsRowBake), any other through alignedText.
     expect(BAKE).toMatch(
-      /\.\.\.alignedText\(titleSlot, displayLine\(titleFit \? titleFit\.text : title\), fpx\(titleSlot\.sizePct, width\),[^\n]*\n\s*\.\.\.titleInk,\n/,
+      /\? smallCapsRowBake\(titleSlot, fpx\(titleSlot\.sizePct, width\)\)\n\s*: alignedText\(titleSlot, displayLine\(titleFit \? titleFit\.text : title\), fpx\(titleSlot\.sizePct, width\), titleRoom\)\),\n\s*\.\.\.titleInk,\n/,
     );
     expect(BAKE).toMatch(/\.\.\.alignedText\(typeSlot, displayLine\(typeText\),[^\n]*\n\s*\.\.\.typeInk,\n/);
     // A measured title band with no inline cost draws no filler either
@@ -346,8 +353,8 @@ describe("the name's fit", () => {
     expect(PREVIEW).not.toContain("fitDetachedCostTitle(");
     expect(BAKE).not.toContain("fitDetachedCostTitle(");
     // ...joined for one kerned run like every display line (displayLine).
-    expect(PREVIEW).toContain("{displayLine(titleFit ? titleFit.text : safeTitle)}");
-    expect(BAKE).toContain("{displayLine(titleFit ? titleFit.text : title)}");
+    expect(PREVIEW).toContain(": displayLine(titleFit ? titleFit.text : safeTitle)}");
+    expect(BAKE).toContain(": displayLine(titleFit ? titleFit.text : title)}");
     // A measured name the fit shrank shows at the stored HD bake's whole
     // px; the old path (modern) at its fitted size.
     expect(PREVIEW).toContain("slot={titleFit ? { ...layout.title, sizePct: titleSizePct } : layout.title}");

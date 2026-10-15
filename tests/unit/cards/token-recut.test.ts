@@ -26,11 +26,21 @@ describe("the textless token re-cut (TODO 4.49)", () => {
   });
 
   it.each(TEMPLATES)("%s: the art slot ends where the re-cut window does, 8 px lower than on CC's master", (t) => {
-    const art = getFrameProfile(t).artSlot;
-    expect(art.topPct).toBe(12.0);
-    // CC's window: last clear row 1700 on the see-through and coloured
-    // artifact masters (the slot ended at 1701); re-cut, 1708 → 1709.
-    expect(px(art.topPct + art.heightPct)).toBeCloseTo(1701 + TOKEN_RECUT_PX, 9);
+    // TODO 4.53 (e), layout v59: the slot is the window + 7.6's overscan
+    // (2 px down). CC's window: last clear row 1696 on the opaque masters,
+    // 1700 on the see-through and coloured artifact ones; re-cut 8 px lower
+    // (1704 / 1708), so the slot ends 2 px past the row after it.
+    const p = getFrameProfile(t);
+    const opaqueLast = 1696 + TOKEN_RECUT_PX;
+    const wideLast = 1700 + TOKEN_RECUT_PX;
+    const slot = p.artSlot;
+    const last = t === "m15token" ? opaqueLast : wideLast;
+    expect(px(slot.topPct + slot.heightPct)).toBeCloseTo(last + 1 + 2, 9);
+    // m15token's see-through `c` has its own, wide window's slot.
+    if (t === "m15token") {
+      const c = p.underFrameArt!.artSlot!;
+      expect(px(c.topPct + c.heightPct)).toBeCloseTo(wideLast + 1 + 2, 9);
+    }
   });
 
   it.each(TEMPLATES)("%s: the type band centres on the re-cut pill", (t) => {

@@ -19,6 +19,7 @@ import {
   SPLIT_TITLE_SIZE_PCT,
   SPLIT_TYPE_SIZE_PCT,
   TITLE_SIZE_PCT,
+  TOKEN_ARCH_TITLE_SIZE_PCT,
   TYPE_SIZE_PCT,
   displayPct,
   ptToPct,
@@ -42,6 +43,11 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 // ---------------------------------------------------------------------------
 
 const FAMILY = new Set<string>(M15_FAMILY_TEMPLATES);
+/** The 2014–19 arch tokens: their name is its prints' (TODO 4.53, v59). */
+const ARCH_TOKENS = new Set<string>(["m15token", "m15tokentext", "m15tokenartifact", "m15tokenartifacttext"]);
+/** Their name's dy: 1 px up at HD from the band-centred 90 px line onto the
+ *  prints' baseline (TOKEN_ARCH_TITLE_PRINT_DY). */
+const ARCH_TITLE_DY = -1 / 1500;
 /** A family constant (a fraction of a PORTRAIT card's width) as `t` carries
  *  it: the same px on the page, × 5/7 on the landscape battle. */
 const sized = (t: FrameTemplate, pct: number) =>
@@ -74,7 +80,9 @@ describe("one M15-era display size (layout v32)", () => {
     expect(M15_FAMILY_TEMPLATES).toHaveLength(52);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
-      expect(p.title.sizePct, t).toBe(sized(t, TITLE_SIZE_PCT));
+      // The 2014–19 arch token's name is its prints' small capitals (TODO
+      // 4.53, layout v59): TOKEN_ARCH_TITLE_SIZE_PCT, the capital size.
+      expect(p.title.sizePct, t).toBe(sized(t, ARCH_TOKENS.has(t) ? TOKEN_ARCH_TITLE_SIZE_PCT : TITLE_SIZE_PCT));
       expect(p.type.sizePct, t).toBe(sized(t, TYPE_SIZE_PCT));
       if (p.secondFace) {
         expect(p.secondFace.title.sizePct, t).toBe(sized(t, TITLE_SIZE_PCT));
@@ -246,22 +254,24 @@ describe("baselines (TextSlot.dy)", () => {
     // band 138 px higher, its text on the same baseline in the band).
     ["m15borderlesspw", undefined, cc],
     ["m15borderlesspwtall", undefined, cc],
-    // The tokens: the name's baseline kept; the type line's kept through its
-    // band's move up onto CC's pill (82.6 → 82.14 %H), then onto the prints'
-    // (TODO 4.49 (d)) from the re-cut pill's band (82.52 %H).
-    ["m15token", base.title, kept(V31.tokenType, TYPE_SIZE_PCT) + TOKEN_PILL_LIFT + TOKEN_TYPE_PRINT_DY],
-    ["m15tokenartifact", base.title, kept(V31.tokenType, TYPE_SIZE_PCT) + TOKEN_PILL_LIFT + TOKEN_TYPE_PRINT_DY],
+    // The tokens: the name on the prints' baseline in its own size (TODO
+    // 4.53, layout v59: 1 px up from the band-centred 90 px line); the type
+    // line's kept through its band's move up onto CC's pill (82.6 → 82.14
+    // %H), then onto the prints' (TODO 4.49 (d)) from the re-cut pill's band
+    // (82.52 %H).
+    ["m15token", ARCH_TITLE_DY, kept(V31.tokenType, TYPE_SIZE_PCT) + TOKEN_PILL_LIFT + TOKEN_TYPE_PRINT_DY],
+    ["m15tokenartifact", ARCH_TITLE_DY, kept(V31.tokenType, TYPE_SIZE_PCT) + TOKEN_PILL_LIFT + TOKEN_TYPE_PRINT_DY],
     // The text-box tokens (TODO 4.49 (b)): CC's token band (on CC's own
     // pill, not the textless re-cut's) on its re-cut pill, 292 px up, and the
     // text 8 px higher to the prints' 1500.
     [
       "m15tokentext",
-      base.title,
+      ARCH_TITLE_DY,
       kept(V31.tokenType, TYPE_SIZE_PCT) + TOKEN_PILL_LIFT + TOKEN_CC_TYPE_PRINT_DY + TOKEN_TEXT_TYPE_PRINT_DY,
     ],
     [
       "m15tokenartifacttext",
-      base.title,
+      ARCH_TITLE_DY,
       kept(V31.tokenType, TYPE_SIZE_PCT) + TOKEN_PILL_LIFT + TOKEN_CC_TYPE_PRINT_DY + TOKEN_TEXT_TYPE_PRINT_DY,
     ],
     // The emblem (TODO 4.52): a new template on Card Conjurer's master, set
@@ -368,12 +378,14 @@ describe("baselines (TextSlot.dy)", () => {
     // band's lift — where v31 drew it — +4 / +2 onto the prints' baseline
     // (TODO 4.49 (d)) and −8 / −4 back up from the band, which rides the
     // re-cut pill 8 / 4 px lower: the text stays where it was.
-    expect(at("m15token")).toEqual([-2, 0, -1, 0]);
+    // The name (TODO 4.53, v59): 1 px up at HD onto the prints' baseline,
+    // 0 at 750 (the half pixel rounds away).
+    expect(at("m15token")).toEqual([-1, 0, 0, 0]);
     // The text-box token's: CC's band moved with its pill, +4 / +2 onto the
     // prints' baseline, then 8 / 4 px higher (TODO 4.49 (b)) — no pull-back:
     // its band does not ride the textless re-cut (its master has its own,
     // TOKEN_REGULAR_RECUT).
-    expect(at("m15tokentext")).toEqual([-2, 0, -1, 0]);
+    expect(at("m15tokentext")).toEqual([-1, 0, 0, 0]);
     expect(at("fullart")).toEqual([-2, -5, -1, -3]);
     expect(at("aftermath")).toEqual([-2, -1, -1, 0]);
     expect(at("m15fullartland")).toEqual([0, 0, 0, 0]);

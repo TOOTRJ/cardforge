@@ -520,18 +520,22 @@ describe("layout v35 covers the Card Conjurer masters' measured art windows", { 
   });
 
   it("finds the colourless tokens' seam in their translucent silver (4.17c, there since v34) — a known failure, no worse", () => {
-    // The token window inside an outline 100–1399 (the silver runs on
-    // outside it, α 89 on the masters); the shared token slot 97.5–1402.5
-    // ends 2.5 px short of it.
+    // The token window inside an outline (the silver runs on outside it,
+    // α 89 on the masters). Since v59 (TODO 4.53 (e)) the c master has its
+    // own window slot, 110–1390: on a synthetic outline 104–1395 it still
+    // ends in the silver beyond the outline's inner edge — the arch above
+    // the window (row 256) is the seam that stays.
     for (const [template, window] of [
       ["m15token", [111, 1389, 259, 1709]],
       ["m15tokentext", [111, 1389, 259, 1409]],
     ] as const) {
-      const m = master([...window], [59, 1441, 59, 1949], [100, 1400, 248, window[3] + 11]);
-      expect(underFrameArtSlot(getFrameProfile(template), "c"), template).toBeNull();
+      const m = master([...window], [59, 1441, 59, 1949], [104, 1395, 258, window[3] + 11]);
+      expect(underFrameArtSlot(getFrameProfile(template), "c"), template).not.toBeNull();
       const f = artWindowFindings(m, W, H, slotsFor(template, "c"));
-      expect(f.map((x) => x.message).join(" | "), template).toMatch(/meets the under-frame art where the frame lets it through .*: left \(column 96\) \d+ of \d+ px, right \(column 1402\)/);
-      expect(artWindowVerdict(template, "c", f).fails, template).toEqual([]);
+      expect(f.map((x) => x.message).join(" | "), template).toMatch(/meets the under-frame art where the frame lets it through .*top \(row 256\)/);
+      // (This synthetic arch is silver all the way across — 1280 px; the
+      // masters' is 1036, the bound the per-master check holds them to.)
+      expect(isKnownArtWindowFailure(template, "c"), template).toBe(true);
     }
   });
 });
@@ -605,7 +609,8 @@ describe("the art-window known failures", () => {
         "m15fullartland",
         "m15textless",
         "m15textlessland",
-        "m15tokenartifact",
+        // (m15tokenartifact's flush bottom — 4.53 (e) — struck by layout
+        // v59's art slot on the window.)
         // The see-through slot and seam rules (layout v35) on the
         // colourless tokens: there since v34 (4.17c).
         "m15token",
@@ -628,6 +633,9 @@ describe("the art-window known failures", () => {
       expect(ART_WINDOW_KNOWN_FAILURES[template], template).toBeUndefined();
     }
     for (const template of ["m15token", "m15tokentext"]) expect(ART_WINDOW_KNOWN_FAILURES[template].keys, template).toEqual(["c"]);
+    // Layout v59 (TODO 4.53 (e)) struck the artifact dress: every arch token
+    // master but the see-through c's is covered.
+    for (const template of ["m15tokenartifact", "m15tokenartifacttext"]) expect(ART_WINDOW_KNOWN_FAILURES[template], template).toBeUndefined();
     // Layout v43 (TODO 4.21b) struck the landscape pair: split's two
     // windows and the battle's — with the see-through sliver beside its
     // shield, and the colourless master's whole translucent body — are

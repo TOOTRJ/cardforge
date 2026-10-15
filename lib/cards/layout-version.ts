@@ -1445,6 +1445,55 @@ export const UB_STAMP_TONES_TEMPLATES: readonly string[] = ["m15ub", "m15ubartif
  *  that merges first moves it in one place. Frozen once it ships. */
 export const UB_SEE_THROUGH_C_LAYOUT_VERSION = 57;
 export const UB_SEE_THROUGH_C_TEMPLATES: readonly string[] = ["m15ub"];
+//   v59    — the 2014–19 arch token on its prints, the rest of the match
+//            (TODO 4.53, after 4.49's v34). On `m15token`, `m15tokentext`,
+//            `m15tokenartifact` and `m15tokenartifacttext`, every card:
+//            (c) the name GOLD (#fde367, CC's; the 49 prints' ink median
+//            254,222,102) in small caps synthesized from Beleren Bold
+//            (TextSlot.smallCaps — capitals at 90 px, lower-case letters
+//            as capitals at 0.78, tracking 0.035 em; no font file is
+//            added: Beleren Small Caps stays parked with 4.8e) on the
+//            prints' baseline (192.5 px), where it was light Beleren Bold
+//            at 80 px; (e) the art slot onto the prints' window — the
+//            window + 7.6's overscan (114–1386 × 261–1707 px; the see-
+//            through `c` and the coloured artifact dresses 110–1390 ×
+//            257–1711; the text box ends 300 px higher), where it was
+//            6.5 / 12 / 87 × 69.4, 17 px wider each side, which drew
+//            every picture 2.7 % larger than print. Strikes 4.53 (e) from
+//            ART_WINDOW_KNOWN_FAILURES (the artifact dress's flush bottom).
+//            TOKEN_ARCH_PRINT_LAYOUT_VERSION below — the ONE constant (v58
+//            is open PR #566's: renumbered at merge time, first in keeps
+//            its number — this constant, the test's `V` and the docs move
+//            together). A CORRECTION ("sweep"), never a badge: the look
+//            was wrong against the frame's own print (docs/FRAMES.md
+//            "Additions vs corrections"). Template-scoped: every card on
+//            the four frames re-bakes (every card draws a name; the empty
+//            art box moves with the slot), every other template bakes
+//            byte-identical. NOT verification-neutral: the name and the
+//            art slot are what a tick judges, so the arch tokens' ticks go
+//            stale and are re-made once (4.53 "Rollout": as 4.49's did).
+// ---------------------------------------------------------------------------
+
+/** The 2014–19 arch token on its prints (TODO 4.53): the gold small-caps
+ *  name and the art slot on the window. ITS version lives here alone —
+ *  CARD_LAYOUT_VERSION, the scoped table and the rollout below read this
+ *  constant — so a bump that merges first moves it in one place. Frozen
+ *  once it ships. */
+export const TOKEN_ARCH_PRINT_LAYOUT_VERSION = 59;
+/** v58 is open PR #566's. Until it merges, nothing in this tree drew a v58,
+ *  so the number is RESERVED with no template and no card in scope — else a
+ *  v57 bake on any template would owe the missing bump and the sweep would
+ *  re-bake every card. Whichever PR merges second drops this (if this one
+ *  merges first: renumber TOKEN_ARCH_PRINT_LAYOUT_VERSION to 58 and delete
+ *  the reservation; if #566 merges first: delete the reservation, its v58
+ *  takes the slot). */
+export const RESERVED_LAYOUT_VERSION_58 = 58;
+export const TOKEN_ARCH_PRINT_TEMPLATES: readonly string[] = [
+  "m15token",
+  "m15tokentext",
+  "m15tokenartifact",
+  "m15tokenartifacttext",
+];
 
 /** The station frame on print's band rule (TODO 4.27a, PR 2): every card
  *  on `m15station` and `m15stationland`. ITS version lives here alone —
@@ -1521,7 +1570,7 @@ export const LARGE_PIPS_LAYOUT_VERSION = 53;
  *  latest). */
 export const V53_LARGER_COST_TEMPLATES: readonly string[] = ["modern", "modernland"];
 
-export const CARD_LAYOUT_VERSION = UB_SEE_THROUGH_C_LAYOUT_VERSION;
+export const CARD_LAYOUT_VERSION = TOKEN_ARCH_PRINT_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -1711,6 +1760,13 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // follow-up): `m15ub` — and on it only a card that paints the colourless
   // master (v57Changed). Verification-neutral.
   [UB_SEE_THROUGH_C_LAYOUT_VERSION]: UB_SEE_THROUGH_C_TEMPLATES,
+  // The 2014–19 arch token on its prints (4.53): the four arch templates'
+  // name and art slot; every card on them. Not verification-neutral: the
+  // arch tokens' ticks are judged by this scope and re-made once.
+  // v58 — reserved for open PR #566 (RESERVED_LAYOUT_VERSION_58): no
+  // template drew it in this tree.
+  [RESERVED_LAYOUT_VERSION_58]: [],
+  [TOKEN_ARCH_PRINT_LAYOUT_VERSION]: TOKEN_ARCH_PRINT_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -2754,6 +2810,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [NYX_PRINT_TONES_LAYOUT_VERSION]: "sweep", // the Nyx Constellation frame's rim on the family's tones THB #258–268 wear (owner Rounds 59 / 61) — a correction of a look against its own print on a frame never ticked, never a badge
   [UB_STAMP_TONES_LAYOUT_VERSION]: "sweep", // the Universes Beyond triangle as printed (4.25 follow-up): "auto" on every rarity, the matte triangle of a common / uncommon, the hologram's tone — a correction of the stamp against the frame's own print on three frames a day old, never a badge
   [UB_SEE_THROUGH_C_LAYOUT_VERSION]: "sweep", // the see-through colourless Universes Beyond spell frame (4.25 follow-up): an addition the visual gate records as a bump on a combo no card can be on (never ticked, offered nowhere) — never a badge
+  [TOKEN_ARCH_PRINT_LAYOUT_VERSION]: "sweep", // the 2014–19 arch token on its prints (4.53): the gold small-caps name and the art slot on the window — a correction of the four arch frames against their own prints, never a badge
   [LARGE_PIPS_LAYOUT_VERSION]: "sweep", // hybrid and twobrid discs large, the large pip's factor per frame and place (3.21) — a correction against the prints after the owner's round-49 sheets, never a badge
   [SYMBOLS_PRINT_LAYOUT_VERSION]: "sweep", // five symbols on the prints' drawings + flat rules-text pips (6.16b) — a correction against the prints after the owner's round-43 sheets, never a badge
   [ART_FOCAL_ZERO_LAYOUT_VERSION]: "sweep", // the art's zoom about a focal point of exactly 0 (Satori dropped a zero transform-origin) — a correction of the bake against the preview after the owner's before / after sheet, never a badge

@@ -31,6 +31,7 @@ import {
 import { pipScale } from "@/lib/cards/mana-gem";
 import { symbolStyleOf, type SymbolStyle, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
 import type { FrameProfile } from "@/lib/cards/template-layout";
+import { smallCapsWidthEm } from "@/lib/cards/small-caps";
 import { slotFace } from "@/lib/cards/type-faces";
 import type { CardOrientation } from "@/lib/cards/typography";
 
@@ -236,7 +237,13 @@ export function fitTitleBand(
   const metrics: Metrics = { letterSpacingEm: slot.letterSpacingEm, uppercase: slot.uppercase, face: slotFace(slot).metricsId };
   const detached = Boolean(drawn && layout.costRect);
   const headroom = detached ? 1 : TITLE_FIT_HEADROOM;
-  const measure = (s: string) => displayTextWidthEm(s, metrics) * headroom;
+  // A small-caps name (TextSlot.smallCaps, TODO 4.53) is measured as it is
+  // drawn: its runs, the lower-case letters as small capitals.
+  const smallCapEm = slot.smallCaps;
+  const measure = (s: string) =>
+    (smallCapEm
+      ? smallCapsWidthEm(s, { smallCapEm, letterSpacingEm: slot.letterSpacingEm, face: metrics.face })
+      : displayTextWidthEm(s, metrics)) * headroom;
   const nameEm = measure(name);
   const floor = measuredLineFloorPct(orientation);
   // However long the cost, the name keeps a few letters at the floor — at

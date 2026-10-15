@@ -188,6 +188,21 @@ const PICKS: readonly Pick[] = [
   { from: "m15mdfcfront/w/mdfc-long@strip-u", why: "modal front: the flipside strip in the other face's colour" },
   { from: "m15mdfcback/g/mdfc-long", why: "modal back: the strip on a back, through the flip" },
   { from: "m15tokentext/g/token-long", why: "token with a text box" },
+  // The arch token's gold small-caps name (TODO 4.53, v59): the runs on one
+  // baseline, a word gap, the see-through c's own art slot; and a name all
+  // in lower case — every run small, each lifted onto the full-size baseline.
+  {
+    from: "m15token/c/token-long",
+    as: "@small-caps",
+    why: "4.53: two words in synthesized small caps, the see-through c's own window slot",
+    row: () => ({ title: "Eldrazi Scion" }),
+  },
+  {
+    from: "m15tokenartifact/u/token-long",
+    as: "@small-caps-lower",
+    why: "4.53: a name typed all in lower case — every run small, lifted onto the full-size baseline",
+    row: () => ({ title: "thopter" }),
+  },
   { from: "m20tokentall/g/token-long", why: "M20 token, tall box (squeezed paragraph gaps)" },
   { from: "emblem/g/emblem-long", why: "emblem: the toned master, the walker's name, no cost or stats" },
   // 3.24's cases, by name (the Zendikar split type line waits for 4.40, the
