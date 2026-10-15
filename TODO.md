@@ -150,8 +150,10 @@ list — round 47, under 4.30), a rim for black symbols on the white old
 frames (3.32), an own Phyrexian path (3.33), the foil-etched frame
 treatment (4.28, 2026-10-13). **Layout version:** v53; the
 next migration is `0138`. **Owner steps:** `supabase/seed.sql` mirrors
-production as read on 2026-10-13 (313 combos, #532), and it shows the ticks
-the earlier paragraphs listed as owed: `agclassic` and `alphaland` (v48),
+production as read on 2026-10-14 (353 combos; #532 was 313 on 2026-10-13, then
+`m15nyx`, the three Universes Beyond frames, `m15station` and `m15stationland`
+in w u b r g joined), and it shows the ticks the earlier paragraphs listed as
+owed: `agclassic` and `alphaland` (v48),
 `retro` and `retroland` (v46), `modern` / `modernland` re-ticked (v47), the
 saga re-ticked (v43) and `m15vehicle` in its seven colours (v53); no verified
 tick is stale at layout v53 by the app's `verificationState()`. The ONLY

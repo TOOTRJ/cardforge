@@ -18,7 +18,7 @@
 -- (0001) and storage buckets from migrations, so nothing else is required.
 --
 -- This list MIRRORS PRODUCTION: the (template, color_key) combos the owner has
--- verified in /admin/frame-compare, snapshotted 2026-10-13 (313 combos). When
+-- verified in /admin/frame-compare, snapshotted 2026-10-14 (353 combos). When
 -- more frames get verified on prod, refresh it from:
 --
 --   select template, string_agg(color_key, '' order by color_key)
@@ -81,13 +81,18 @@ from unnest(array[
   'm15mdfcfront',
   'm15mdfclandback',
   'm15mdfclandfront',
+  'm15nyx',
   'm15pw',
   'm15snow',
   'm15snowland',
+  'm15station',
   'm15token',
   'm15tokenartifact',
   'm15tokenartifacttext',
   'm15tokentext',
+  'm15ub',
+  'm15ubartifact',
+  'm15ubland',
   'm15vehicle',
   'm20token',
   'm20tokenartifact',
@@ -105,7 +110,8 @@ cross join unnest(array['w', 'u', 'b', 'r', 'g', 'c', 'm']) as c (color_key)
 on conflict (template, color_key) do nothing;
 
 -- Partially verified templates: only the listed colors. The two full-art
--- basics are verified in every colour but gold (m).
+-- basics are verified in every colour but gold (m); the Planet frame
+-- (m15stationland) in the five colours, not colourless (c) or gold (m).
 insert into public.frame_reviews (template, color_key, verified, verified_at)
 values
   ('fullartland', 'w', true, now()),
@@ -119,6 +125,11 @@ values
   ('m15fullartland', 'b', true, now()),
   ('m15fullartland', 'r', true, now()),
   ('m15fullartland', 'g', true, now()),
-  ('m15fullartland', 'c', true, now())
+  ('m15fullartland', 'c', true, now()),
+  ('m15stationland', 'w', true, now()),
+  ('m15stationland', 'u', true, now()),
+  ('m15stationland', 'b', true, now()),
+  ('m15stationland', 'r', true, now()),
+  ('m15stationland', 'g', true, now())
 on conflict (template, color_key) do nothing;
 -- frame_reviews:end
