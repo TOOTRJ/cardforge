@@ -12,11 +12,20 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 // into them. A colourless deck type now asks for no colours at all and
 // hints every slot "colorless" — the card's own colourless identity.
 //
-// Every OTHER request is pinned to origin/main byte for byte
-// (`fixtures/deck-plan-main.json`, recorded by this file on main's lib/):
-// the concept call (system, prompt, the schema as the SDK sends it), what
-// the card designer is handed (slots + context), the deck createDeckAction
-// is asked for and the job row stored. Planning charges nothing (the jobs
+// Since the follow-up (owner 2026-10-14) EVERY typed deck is planned that
+// way: its colours are its TYPE's, set in code (Gorgons black-green,
+// Slivers all five — the coloured schema's cap of 3 built them in three),
+// and the model is asked for none. An UNTYPED deck still lets the model
+// pick 1–3.
+//
+// The record (`fixtures/deck-plan-main.json`, recorded by this file on
+// #567's main lib/, UNTOUCHED since) pins: the untyped requests byte for
+// byte; the typed ones byte for byte minus the colour question (no `colors`
+// in the schema, the typed system line — `asTyped`), and Slivers minus the
+// colour hints the five colours move. Pinned: the concept call (system,
+// prompt, the schema as the SDK sends it), what the card designer is
+// handed (slots + context), the deck createDeckAction is asked for and the
+// job row stored. Planning charges nothing (the jobs
 // route pre-checks the balance; steps charge) — so a failed plan has
 // nothing to refund, as on main.
 //
@@ -156,7 +165,8 @@ function pinned(name: string, value: unknown) {
 }
 
 afterAll(() => {
-  if (UPDATE) writeFileSync(FIXTURE, `${JSON.stringify(fresh, null, 2)}\n`);
+  // Only the untyped records are re-recorded; the typed ones stay main's.
+  if (UPDATE) writeFileSync(FIXTURE, `${JSON.stringify({ ...recorded, ...fresh }, null, 2)}\n`);
 });
 
 const concept = (colors: string[] | undefined) => ({
@@ -205,7 +215,8 @@ async function plan(input: Parameters<typeof createDeckGenerationJob>[0]) {
   };
 }
 
-/** Coloured requests — and one with no type at all — are main's, byte for byte. */
+/** Coloured requests — typed and untyped — recorded on main (`colors` =
+ *  what the model answered there). */
 const COLOURED: Record<string, { input: Parameters<typeof createDeckGenerationJob>[0]; colors: string[]; existing?: string | null }> = {
   "commander · gorgons (B/G) · bracket 3 · 12": {
     input: { theme: "petrified gardens", style: "oil painting", format: "commander", size: 12, deckType: "gorgons", bracket: 3 },
@@ -235,8 +246,36 @@ const COLOURED: Record<string, { input: Parameters<typeof createDeckGenerationJo
   },
 };
 
-describe("a coloured deck plan is main's", () => {
-  it.each(Object.keys(COLOURED))("%s", async (name) => {
+const UNTYPED = ["standard · no deck type · 12", "add mode · deck with no type · 6"];
+const TYPED = Object.keys(COLOURED).filter((name) => !UNTYPED.includes(name));
+
+const TYPED_SYSTEM =
+  "You pitch ORIGINAL Magic: The Gathering-style decks for a homebrew tool. Given a theme and format, invent a deck name, a one-sentence pitch and a strategy paragraph (game plan, key mechanics, world/faction names) for a deck in the colors its deck type sets — they are fixed, not yours to pick. Everything must be original — never Wizards-owned proper nouns, never real-world brands.";
+
+type Recorded = {
+  concept: Array<{ system: string; prompt: string; schema: { properties: Record<string, unknown>; required: string[] } }>;
+  designed: Array<{ slots: Array<{ colorHint?: string }> }>;
+  job: Array<{ plan: { cards: Array<{ color_identity: string[] }> } }>;
+};
+
+/** Main's record of a TYPED request as this branch sends it: the concept
+ *  call asks for no colours (the schema without `colors`, the typed system
+ *  line) — nothing else moves while the model's colours were the type's. */
+function asTyped(record: unknown): Recorded {
+  const out = structuredClone(record) as Recorded;
+  for (const call of out.concept) {
+    call.system = TYPED_SYSTEM;
+    // Add mode: the strategy alone is inferred from the deck's cards — its
+    // colours are its type's (owner 2026-10-14).
+    call.prompt = call.prompt.replace("infer the strategy and colors FROM its current cards", "infer the strategy FROM its current cards");
+    delete call.schema.properties.colors;
+    call.schema.required = call.schema.required.filter((key) => key !== "colors");
+  }
+  return out;
+}
+
+describe("an untyped deck plan is main's", () => {
+  it.each(UNTYPED)("%s", async (name) => {
     const { input, colors, existing } = COLOURED[name]!;
     if (existing !== undefined) {
       s.deck = EXISTING_DECK(existing);
@@ -246,11 +285,11 @@ describe("a coloured deck plan is main's", () => {
     pinned(`plan · ${name}`, await plan(input));
   });
 
-  it("still refuses a coloured answer with no colours, as main does", async () => {
+  it("still refuses an answer with no colours, as main does", async () => {
     // No repair can add a colour: asked once more (structuredCall), then the
     // plain AiOutputError — no deck, no job, nothing charged.
     s.concepts = [concept([]), concept([])];
-    const out = await plan({ theme: "", format: "commander", size: 12, deckType: "gorgons" });
+    const out = await plan({ theme: "", format: "commander", size: 12 });
     expect(out.result).toEqual({ ok: false, error: AI_OUTPUT_ERROR_MESSAGE });
     expect(out.concept).toHaveLength(2);
     expect(out.deck).toEqual([]);
@@ -259,10 +298,86 @@ describe("a coloured deck plan is main's", () => {
 
   it("still cuts more than three colours to the first three, as main does (#565's repair)", async () => {
     s.concepts = [concept(["white", "blue", "black", "red"])];
-    const out = await plan({ theme: "", format: "commander", size: 12, deckType: "slivers" });
+    const out = await plan({ theme: "", format: "commander", size: 12 });
     expect(out.result.ok).toBe(true);
     const design = out.designed[0] as { slots: Array<{ colorHint?: string }> };
     expect(new Set(design.slots.map((slot) => slot.colorHint))).toEqual(new Set(["multicolor", "white", "blue", "black"]));
+  });
+});
+
+describe("a typed deck plan takes its colours from its type (owner 2026-10-14)", () => {
+  // The provider holds the model to the closed schema: a typed answer has no
+  // `colors`. Main's record, minus the colour question, byte for byte.
+  it.each(TYPED.filter((name) => !name.includes("slivers")))("%s — main's, without the colour question", async (name) => {
+    const { input, existing } = COLOURED[name]!;
+    if (existing !== undefined) {
+      s.deck = EXISTING_DECK(existing);
+      s.items = EXISTING_ITEMS;
+    }
+    s.concepts = [concept(undefined)];
+    const out = JSON.parse(JSON.stringify(await plan(input))) as unknown;
+    const want = asTyped(recorded[`plan · ${name}`]);
+    expect(out).toEqual(want);
+    expect(JSON.stringify(out)).toBe(JSON.stringify(want));
+  });
+
+  it("Slivers plans all FIVE colours — main built them in three (the cap of 3)", async () => {
+    const name = "commander · slivers (five colours) · 12";
+    s.concepts = [concept(undefined)];
+    const out = JSON.parse(JSON.stringify(await plan(COLOURED[name]!.input))) as Recorded;
+    const main = asTyped(recorded[`plan · ${name}`]);
+    // The commander is multicolour; the other slots cycle W U B R G.
+    const hints = out.designed[0]!.slots.map((slot) => slot.colorHint);
+    expect(hints).toEqual(["multicolor", "blue", "black", "red", "green", "white", "blue", "black", "red", "green", "white", "blue"]);
+    expect(main.designed[0]!.slots.map((slot) => slot.colorHint)).toEqual(["multicolor", "blue", "black", "white", "blue", "black", "white", "blue", "black", "white", "blue", "black"]);
+    // Only the hints — and the designed cards' colours they give — moved.
+    const withoutColours = (record: Recorded) => {
+      const copy = structuredClone(record);
+      for (const slot of copy.designed[0]!.slots) delete slot.colorHint;
+      for (const card of copy.job[0]!.plan.cards) card.color_identity = [];
+      return copy;
+    };
+    expect(JSON.stringify(withoutColours(out))).toBe(JSON.stringify(withoutColours(main)));
+  });
+
+  it.each([
+    ["the type's own", ["black", "green"]],
+    ["off the type", ["red"]],
+    ["none", []],
+    ["five", ["white", "blue", "black", "red", "green"]],
+  ])("never takes colours from the model (%s) — a stray `colors` is dropped", async (_label, colors) => {
+    s.concepts = [concept(colors)];
+    const out = await plan({ theme: "", format: "commander", size: 12, deckType: "gorgons" });
+    expect(out.result).toEqual({ ok: true, deckSlug: "made-deck" });
+    expect(out.concept).toHaveLength(1);
+    expect(JSON.stringify(out.concept[0]!.schema)).not.toContain("colors");
+    const design = out.designed[0] as { slots: Array<{ colorHint?: string }> };
+    expect(design.slots.map((slot) => slot.colorHint)).toEqual([
+      "multicolor", "green", "black", "green", "black", "green", "black", "green", "black", "green", "black", "green",
+    ]);
+  });
+
+  it.each([
+    ["spirits", "infer the strategy FROM its current cards:"],
+    ["eldrazi", "infer the strategy FROM its current cards:"],
+    [null, "infer the strategy and colors FROM its current cards:"],
+  ])("add mode (%s): only an untyped deck is asked to infer its colours from its cards", async (deckType, wording) => {
+    s.deck = EXISTING_DECK(deckType);
+    s.items = EXISTING_ITEMS;
+    s.concepts = [concept(deckType ? undefined : ["green"])];
+    const out = await plan({ theme: "", format: "commander", size: 6, deckId: "deck-9" });
+    expect(out.concept[0]!.prompt).toContain(wording);
+    expect(out.concept[0]!.prompt.match(/infer the strategy/g)).toHaveLength(1);
+  });
+
+  it("adding cards to a typed deck takes the deck's type colours too", async () => {
+    s.deck = EXISTING_DECK("spirits");
+    s.items = EXISTING_ITEMS;
+    s.concepts = [concept(["red"])];
+    const out = await plan({ theme: "", format: "commander", size: 6, deckId: "deck-9" });
+    expect(out.result).toEqual({ ok: true, deckSlug: "old-deck" });
+    const design = out.designed[0] as { slots: Array<{ colorHint?: string }> };
+    expect(new Set(design.slots.map((slot) => slot.colorHint))).toEqual(new Set(["white", "blue"]));
   });
 });
 

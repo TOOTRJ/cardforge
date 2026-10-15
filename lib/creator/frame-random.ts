@@ -8,8 +8,9 @@
 // (template, color) combos are ever chosen, using the color key the
 // generated card will actually render with.
 
-import type { CardType, ColorIdentity, FrameTemplate } from "@/types/card";
+import { ERA_TYPE_FRAME, type CardType, type ColorIdentity, type FrameTemplate } from "@/types/card";
 import {
+  artifactCreatureFrameFor,
   borrowedFrameFits,
   enchantmentFrameFits,
   enchantmentFrameFor,
@@ -78,6 +79,12 @@ export function resolveGeneratedFrame(input: {
   face?: BasicLandFace & { flavorText?: string | null; power?: string | null; toughness?: string | null };
   /** Injectable RNG for tests. Defaults to Math.random. */
   random?: () => number;
+  /** Where a SPECIFIC request can't dress the card: "random" (the default —
+   *  the single-card job and the fill) degrades to a random published frame
+   *  the card fits; "none" (the AI deck's cards, owner 2026-10-14) returns
+   *  null — no template, the default frame — so no other border era or
+   *  showcase lands in a deck. */
+  fallback?: "random" | "none";
 }): FrameTemplate | null {
   const { cardType, requested, colorIdentity, verifiedKeys, face } = input;
   if (!requested) return null;
@@ -177,7 +184,10 @@ export function resolveGeneratedFrame(input: {
     // Vehicle frame lands on the artifact frame, as it did before the Nyx
     // frame).
     const bySubtype = subtypeFrameFor(requested, face?.subtypes, has);
-    const byWords = enchantmentFrameFor(kind, bySubtype, type);
+    // …the Nyx dress before the artifact frame an Artifact Creature borrows
+    // (owner 2026-10-14): an Enchantment Artifact Creature prints on Nyx.
+    const byNyx = enchantmentFrameFor(kind, bySubtype, type);
+    const byWords = byNyx !== bySubtype && has(byNyx) ? byNyx : artifactCreatureFrameFor(kind, bySubtype, type);
     const vehicle = has(byWords) ? byWords : bySubtype;
     const wanted = has(vehicle) && vehicle !== requested
       ? vehicle
@@ -192,12 +202,28 @@ export function resolveGeneratedFrame(input: {
       (isM20TokenTemplate(asked) ? undefined : typed.find((choice) => choice.template === asked));
     if (match) return match.template;
     // Requested frame can't dress this card (wrong type after generation, or
-    // that color isn't published) — degrade to a random valid one.
+    // that color isn't published) — degrade to a random valid one, or to
+    // none where the caller asked for that.
+    if (input.fallback === "none") return null;
   }
 
   if (pool.length === 0) return null;
   const rng = input.random ?? Math.random;
   return pool[Math.floor(rng() * pool.length) % pool.length].template;
+}
+
+/** What an AI DECK card asks resolveGeneratedFrame for (owner 2026-10-14):
+ *  the M15 standard of its card type — m15land for a land, m15artifact for
+ *  an artifact, m15pw for a walker, m15token for a token — which the
+ *  resolver then dresses exactly as it dresses a single generated card (a
+ *  Vehicle's or a Spacecraft's subtype frame, the Nyx dress, a token's text
+ *  box and height, a walker's rows, an Artifact Creature's artifact frame,
+ *  never a textless frame for a text) wherever that frame is published in
+ *  the card's colour. Where it is not, the deck asks for NO template
+ *  (`fallback: "none"` — owner 2026-10-14: no other border era or showcase
+ *  mixed into a deck): the default frame, as every deck card saved before. */
+export function deckCardFrameRequest(cardType: CardType): FrameRequest {
+  return ERA_TYPE_FRAME.m15?.[cardType];
 }
 
 /** True when a GENERATED card may land on `template` as far as the station

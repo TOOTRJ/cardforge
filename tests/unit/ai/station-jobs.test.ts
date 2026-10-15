@@ -285,15 +285,37 @@ describe("AI card generation: a Spacecraft on a ticked station frame", () => {
   });
 });
 
-describe("AI deck generation: a designed Spacecraft never names a frame", () => {
-  it("the deck step saves it frameless — the default frame, its P/T in the corner — with the tier text as lines; one credit", async () => {
-    const plan = { deck_title: "Deck", strategy: "Charge up.", theme: "void", style: null, cards: [ship()], roles: ["noncreature"], quantities: [1] };
-    job("deck", plan, "card:0", { deck_id: "44444444-4444-4444-8444-444444444444" });
+describe("AI deck generation: a designed Spacecraft lands as a single generated card lands", () => {
+  // Since the AI deck cards got their frame (owner 2026-10-14; main saved
+  // none — the default frame, its P/T in the corner, the tier text as
+  // lines): resolveGeneratedFrame, asked for the Artifact frame.
+  const plan = (card: ReturnType<typeof ship>) => ({ deck_title: "Deck", strategy: "Charge up.", theme: "void", style: null, cards: [card], roles: ["noncreature"], quantities: [1] });
+
+  it("on a ticked station frame: the station frame, its tiers as rows; one credit", async () => {
+    job("deck", plan(ship()), "card:0", { deck_id: "44444444-4444-4444-8444-444444444444" });
     const { step, saved } = await runStep();
-    expect(saved!.frame_style).toBeUndefined();
+    expect(saved!.frame_style).toEqual({ template: "m15station" });
+    expect((saved!.face_content as FaceContent).station!.tiers.length).toBeGreaterThan(0);
+    expectSavable(saved!);
+    expectCharged(step, 1, "generate_deck");
+  });
+
+  it("the station frame unticked: the Artifact frame, the text as lines, no rows; one credit", async () => {
+    s.verified = UNTICKED;
+    job("deck", plan(ship()), "card:0", { deck_id: "44444444-4444-4444-8444-444444444444" });
+    const { step, saved } = await runStep();
+    expect(saved!.frame_style).toEqual({ template: "m15artifact" });
     expect("face_content" in saved!).toBe(false);
     expect(saved!.rules_text).toBe(ship().rules_text);
+    expectSavable(saved!);
     expectCharged(step, 1, "generate_deck");
+  });
+
+  it("a tierless Spacecraft never lands on the station frame (its P/T would go undrawn)", async () => {
+    job("deck", plan(ship({ rules_text: "Flying\nWhen this Spacecraft enters, draw a card." })), "card:0", { deck_id: "44444444-4444-4444-8444-444444444444" });
+    const { saved } = await runStep();
+    expect(saved!.frame_style).toEqual({ template: "m15artifact" });
+    expect("face_content" in saved!).toBe(false);
   });
 });
 

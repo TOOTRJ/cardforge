@@ -384,6 +384,43 @@
   ],
   "refunds": 0
  },
+ "card step · artifact creature": {
+  "saved": {
+   "title": "Ironclad Golem",
+   "game_system_id": "33333333-3333-4333-8333-333333333333",
+   "cost": "{4}",
+   "color_identity": [
+    "colorless"
+   ],
+   "supertype": "Artifact",
+   "card_type": "creature",
+   "subtypes": [
+    "Golem"
+   ],
+   "rarity": "rare",
+   "rules_text": "Trample",
+   "power": "3",
+   "toughness": "3",
+   "visibility": "private",
+   "artist_credit": "Tester",
+   "frame_style": {
+    "template": "m15artifact"
+   }
+  },
+  "step": {
+   "status": "done",
+   "error": null,
+   "label": "Card",
+   "settles": true
+  },
+  "credits": [
+   {
+    "amount": 1,
+    "reason": "generate_random_card"
+   }
+  ],
+  "refunds": 0
+ },
  "deck step · creature": {
   "saved": {
    "title": "Emberwake Tyrant",
@@ -1603,6 +1640,46 @@
    "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type creature."
   ]
  },
+ "card plan · artifact creature": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Ironclad Golem",
+    "cost": "{4}",
+    "card_type": "creature",
+    "supertype": "Artifact",
+    "subtypes": [
+     "Golem"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "colorless"
+    ],
+    "rules_text": "Trample",
+    "flavor_text": null,
+    "power": "3",
+    "toughness": "3",
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "agclassic",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Ironclad Golem",
+    "status": "pending"
+   }
+  ],
+  "lastFrame": "fullart",
+  "prompts": [
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type creature.",
+   "Theme: embers\nDesign exactly 1 card:\nCard 1: card_type creature."
+  ]
+ },
  "fill plan · rules text of a creature": {
   "kind": "card_fill",
   "plan": {
@@ -2032,5 +2109,1006 @@
    }
   ],
   "refunds": 0
+ },
+ "card plan by name · creature · m15": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Emberwake Tyrant",
+    "cost": "{3}{R}{R}",
+    "card_type": "creature",
+    "supertype": null,
+    "subtypes": [
+     "Dragon"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "red"
+    ],
+    "rules_text": "Flying, haste\nWhenever Emberwake Tyrant attacks, it deals 2 damage to each player.",
+    "flavor_text": "Its allies learned to fly behind it.",
+    "power": "4",
+    "toughness": "4",
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "m15",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Emberwake Tyrant",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · creature · m15artifact": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Emberwake Tyrant",
+    "cost": "{3}{R}{R}",
+    "card_type": "creature",
+    "supertype": null,
+    "subtypes": [
+     "Dragon"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "red"
+    ],
+    "rules_text": "Flying, haste\nWhenever Emberwake Tyrant attacks, it deals 2 damage to each player.",
+    "flavor_text": "Its allies learned to fly behind it.",
+    "power": "4",
+    "toughness": "4",
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "agclassic",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Emberwake Tyrant",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · creature, no frame · m15": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Emberwake Tyrant",
+    "cost": "{3}{R}{R}",
+    "card_type": "creature",
+    "supertype": null,
+    "subtypes": [
+     "Dragon"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "red"
+    ],
+    "rules_text": "Flying, haste\nWhenever Emberwake Tyrant attacks, it deals 2 damage to each player.",
+    "flavor_text": "Its allies learned to fly behind it.",
+    "power": "4",
+    "toughness": "4",
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "m15",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Emberwake Tyrant",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · creature, no frame · m15artifact": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Emberwake Tyrant",
+    "cost": "{3}{R}{R}",
+    "card_type": "creature",
+    "supertype": null,
+    "subtypes": [
+     "Dragon"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "red"
+    ],
+    "rules_text": "Flying, haste\nWhenever Emberwake Tyrant attacks, it deals 2 damage to each player.",
+    "flavor_text": "Its allies learned to fly behind it.",
+    "power": "4",
+    "toughness": "4",
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "agclassic",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Emberwake Tyrant",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · instant · m15": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Riptide Calculus",
+    "cost": "{1}{U}{U}",
+    "card_type": "instant",
+    "supertype": null,
+    "subtypes": [],
+    "rarity": "rare",
+    "color_identity": [
+     "blue"
+    ],
+    "rules_text": "Counter target spell unless its controller pays {2}. Draw a card.",
+    "flavor_text": "Its allies learned to fly behind it.",
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "m15",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Riptide Calculus",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · instant · m15artifact": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Riptide Calculus",
+    "cost": "{1}{U}{U}",
+    "card_type": "instant",
+    "supertype": null,
+    "subtypes": [],
+    "rarity": "rare",
+    "color_identity": [
+     "blue"
+    ],
+    "rules_text": "Counter target spell unless its controller pays {2}. Draw a card.",
+    "flavor_text": "Its allies learned to fly behind it.",
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "agclassic",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Riptide Calculus",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · artifact (Equipment) · m15": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Gearwright's Maul",
+    "cost": "{2}",
+    "card_type": "artifact",
+    "supertype": null,
+    "subtypes": [
+     "Equipment"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "colorless"
+    ],
+    "rules_text": "Equipped creature gets +2/+1.\nEquip {2}",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "agclassic",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Gearwright's Maul",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · artifact (Equipment) · m15artifact": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Gearwright's Maul",
+    "cost": "{2}",
+    "card_type": "artifact",
+    "supertype": null,
+    "subtypes": [
+     "Equipment"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "colorless"
+    ],
+    "rules_text": "Equipped creature gets +2/+1.\nEquip {2}",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "m15artifact",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Gearwright's Maul",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · artifact (Vehicle, on its frame) · m15": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Skiff of Nine Lanterns",
+    "cost": "{3}",
+    "card_type": "artifact",
+    "supertype": null,
+    "subtypes": [
+     "Vehicle"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "colorless"
+    ],
+    "rules_text": "Flying\nCrew 2",
+    "flavor_text": null,
+    "power": "3",
+    "toughness": "3",
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "agclassic",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Skiff of Nine Lanterns",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · artifact (Vehicle, on its frame) · m15artifact": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Skiff of Nine Lanterns",
+    "cost": "{3}",
+    "card_type": "artifact",
+    "supertype": null,
+    "subtypes": [
+     "Vehicle"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "colorless"
+    ],
+    "rules_text": "Flying\nCrew 2",
+    "flavor_text": null,
+    "power": "3",
+    "toughness": "3",
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "m15vehicle",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Skiff of Nine Lanterns",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · artifact (Vehicle, on its frame) · m15vehicle": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Skiff of Nine Lanterns",
+    "cost": "{3}",
+    "card_type": "artifact",
+    "supertype": null,
+    "subtypes": [
+     "Vehicle"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "colorless"
+    ],
+    "rules_text": "Flying\nCrew 2",
+    "flavor_text": null,
+    "power": "3",
+    "toughness": "3",
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "m15vehicle",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Skiff of Nine Lanterns",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · artifact with 'N+ |' lines · m15": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Counting Engine",
+    "cost": "{4}",
+    "card_type": "artifact",
+    "supertype": null,
+    "subtypes": [],
+    "rarity": "rare",
+    "color_identity": [
+     "colorless"
+    ],
+    "rules_text": "Station\n3+ | {T}: Draw a card.\n8+ | {T}: Draw two cards.",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "agclassic",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Counting Engine",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · artifact with 'N+ |' lines · m15artifact": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Counting Engine",
+    "cost": "{4}",
+    "card_type": "artifact",
+    "supertype": null,
+    "subtypes": [],
+    "rarity": "rare",
+    "color_identity": [
+     "colorless"
+    ],
+    "rules_text": "Station\n3+ | {T}: Draw a card.\n8+ | {T}: Draw two cards.",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "m15artifact",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Counting Engine",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · creature that says Spacecraft · m15": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Living Hull",
+    "cost": "{4}",
+    "card_type": "creature",
+    "supertype": "Artifact",
+    "subtypes": [
+     "Spacecraft"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "colorless"
+    ],
+    "rules_text": "Flying",
+    "flavor_text": "Its allies learned to fly behind it.",
+    "power": "3",
+    "toughness": "3",
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "m15",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Living Hull",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · creature that says Spacecraft · m15artifact": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Living Hull",
+    "cost": "{4}",
+    "card_type": "creature",
+    "supertype": "Artifact",
+    "subtypes": [
+     "Spacecraft"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "colorless"
+    ],
+    "rules_text": "Flying",
+    "flavor_text": "Its allies learned to fly behind it.",
+    "power": "3",
+    "toughness": "3",
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "m15artifact",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Living Hull",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · land · m15": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Cinderfall Reach",
+    "cost": "—",
+    "card_type": "land",
+    "supertype": null,
+    "subtypes": [],
+    "rarity": "rare",
+    "color_identity": [
+     "red"
+    ],
+    "rules_text": "{T}: Add {R}.",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "alphaland",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Cinderfall Reach",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · land · m15artifact": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Cinderfall Reach",
+    "cost": "—",
+    "card_type": "land",
+    "supertype": null,
+    "subtypes": [],
+    "rarity": "rare",
+    "color_identity": [
+     "red"
+    ],
+    "rules_text": "{T}: Add {R}.",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "alphaland",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Cinderfall Reach",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · land · m15land": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Cinderfall Reach",
+    "cost": "—",
+    "card_type": "land",
+    "supertype": null,
+    "subtypes": [],
+    "rarity": "rare",
+    "color_identity": [
+     "red"
+    ],
+    "rules_text": "{T}: Add {R}.",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "m15land",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Cinderfall Reach",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · planeswalker · m15": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Veyra, Tide Oracle",
+    "cost": "{2}{U}{U}",
+    "card_type": "planeswalker",
+    "supertype": "Legendary",
+    "subtypes": [
+     "Veyra"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "blue"
+    ],
+    "rules_text": "+1: Draw a card.\n-3: Return target creature to its owner's hand.",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": "4",
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "m15pw",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Veyra, Tide Oracle",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · planeswalker · m15artifact": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Veyra, Tide Oracle",
+    "cost": "{2}{U}{U}",
+    "card_type": "planeswalker",
+    "supertype": "Legendary",
+    "subtypes": [
+     "Veyra"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "blue"
+    ],
+    "rules_text": "+1: Draw a card.\n-3: Return target creature to its owner's hand.",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": "4",
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "m15pw",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Veyra, Tide Oracle",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · planeswalker · m15pw": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Veyra, Tide Oracle",
+    "cost": "{2}{U}{U}",
+    "card_type": "planeswalker",
+    "supertype": "Legendary",
+    "subtypes": [
+     "Veyra"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "blue"
+    ],
+    "rules_text": "+1: Draw a card.\n-3: Return target creature to its owner's hand.",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": "4",
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "m15pw",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Veyra, Tide Oracle",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · token (Treasure) · m15": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Treasure",
+    "cost": "—",
+    "card_type": "token",
+    "supertype": "Artifact",
+    "subtypes": [
+     "Treasure"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "colorless"
+    ],
+    "rules_text": "{T}, Sacrifice this artifact: Add one mana of any color.",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "m15tokenartifacttext",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Treasure",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · token (Treasure) · m15artifact": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Treasure",
+    "cost": "—",
+    "card_type": "token",
+    "supertype": "Artifact",
+    "subtypes": [
+     "Treasure"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "colorless"
+    ],
+    "rules_text": "{T}, Sacrifice this artifact: Add one mana of any color.",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "m15tokenartifacttext",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Treasure",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · token (Treasure) · m15tokenartifacttext": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Treasure",
+    "cost": "—",
+    "card_type": "token",
+    "supertype": "Artifact",
+    "subtypes": [
+     "Treasure"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "colorless"
+    ],
+    "rules_text": "{T}, Sacrifice this artifact: Add one mana of any color.",
+    "flavor_text": null,
+    "power": null,
+    "toughness": null,
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "m15tokenartifacttext",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Treasure",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · enchantment creature · m15": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Lanternhollow Muse",
+    "cost": "{1}{W}",
+    "card_type": "creature",
+    "supertype": "Enchantment",
+    "subtypes": [
+     "Spirit"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "white"
+    ],
+    "rules_text": "Vigilance",
+    "flavor_text": "Its allies learned to fly behind it.",
+    "power": "2",
+    "toughness": "1",
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "m15nyx",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Lanternhollow Muse",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · enchantment creature · m15artifact": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Lanternhollow Muse",
+    "cost": "{1}{W}",
+    "card_type": "creature",
+    "supertype": "Enchantment",
+    "subtypes": [
+     "Spirit"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "white"
+    ],
+    "rules_text": "Vigilance",
+    "flavor_text": "Its allies learned to fly behind it.",
+    "power": "2",
+    "toughness": "1",
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "agclassic",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Lanternhollow Muse",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · enchantment creature · m15nyx": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Lanternhollow Muse",
+    "cost": "{1}{W}",
+    "card_type": "creature",
+    "supertype": "Enchantment",
+    "subtypes": [
+     "Spirit"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "white"
+    ],
+    "rules_text": "Vigilance",
+    "flavor_text": "Its allies learned to fly behind it.",
+    "power": "2",
+    "toughness": "1",
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "m15nyx",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Lanternhollow Muse",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · artifact creature · m15": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Ironclad Golem",
+    "cost": "{4}",
+    "card_type": "creature",
+    "supertype": "Artifact",
+    "subtypes": [
+     "Golem"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "colorless"
+    ],
+    "rules_text": "Trample",
+    "flavor_text": null,
+    "power": "3",
+    "toughness": "3",
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "m15",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Ironclad Golem",
+    "status": "pending"
+   }
+  ]
+ },
+ "card plan by name · artifact creature · m15artifact": {
+  "kind": "card",
+  "plan": {
+   "card": {
+    "title": "Ironclad Golem",
+    "cost": "{4}",
+    "card_type": "creature",
+    "supertype": "Artifact",
+    "subtypes": [
+     "Golem"
+    ],
+    "rarity": "rare",
+    "color_identity": [
+     "colorless"
+    ],
+    "rules_text": "Trample",
+    "flavor_text": null,
+    "power": "3",
+    "toughness": "3",
+    "loyalty": null,
+    "defense": null,
+    "art_prompt": "A crimson dragon over a caldera at dawn."
+   },
+   "style": null,
+   "frame_template": "m15artifact",
+   "deck_id": null
+  },
+  "steps": [
+   {
+    "key": "card:0",
+    "label": "Ironclad Golem",
+    "status": "pending"
+   }
+  ]
  }
 }

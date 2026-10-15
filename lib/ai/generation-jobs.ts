@@ -57,6 +57,7 @@ import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import {
   colorHintsForFrame,
+  deckCardFrameRequest,
   resolveGeneratedFrame,
 } from "@/lib/creator/frame-random";
 import { remixSavedFrame } from "@/lib/creator/frame-resolve";
@@ -1403,6 +1404,38 @@ async function runDeckCardStep(
   const card = plan.cards[cardIndex];
   // Commander slot: force the Legendary supertype the frame renders.
   const isCommander = plan.roles[cardIndex] === "commander";
+  const supertype = isCommander
+    ? card.supertype || "Legendary"
+    : card.supertype ?? undefined;
+  // The card's FRAME (owner 2026-10-14): before, a deck card saved none and
+  // every one drew the default creature frame — a land, an artifact too.
+  // It lands as a single generated card lands (resolveGeneratedFrame, the
+  // same verified set and dresses), asked for its type's M15 standard
+  // (deckCardFrameRequest). Resolved here, not at plan time, so the stored
+  // plan is what it was; a card already created (a retried step) is never
+  // re-framed. Where that frame (or its dress) isn't published in the
+  // card's colour, no template — the default frame, as before — never a
+  // random other era or showcase (owner 2026-10-14).
+  const frameTemplate = step.card_id
+    ? null
+    : resolveGeneratedFrame({
+        cardType: card.card_type,
+        requested: deckCardFrameRequest(card.card_type),
+        // Never a random other frame of the type: no template instead.
+        fallback: "none",
+        colorIdentity: card.color_identity,
+        verifiedKeys: new Set(await getVerifiedFrameKeys()),
+        face: {
+          cardType: card.card_type,
+          supertype,
+          subtypes: card.subtypes,
+          title: card.title,
+          rulesText: card.rules_text,
+          flavorText: card.flavor_text,
+          power: card.power,
+          toughness: card.toughness,
+        },
+      });
   return runGeneratedCardStep(userId, job.id, step, {
     reason: "generate_deck",
     artLogAction: "generate_deck_cards",
@@ -1410,10 +1443,9 @@ async function runDeckCardStep(
     artPrompt: deckArtPrompt(plan, card),
     style: plan.style,
     createExtras: {
-      supertype: isCommander
-        ? card.supertype || "Legendary"
-        : card.supertype ?? undefined,
+      supertype,
       deck_id: job.deck_id ?? undefined,
+      frame_style: frameTemplate ? { template: frameTemplate } : undefined,
     },
     afterCreate: async (cardId) => {
       if (job.deck_id) {
