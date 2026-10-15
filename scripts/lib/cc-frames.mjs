@@ -1213,6 +1213,62 @@ const basics2022Frame = (k) => `${BASICS_2022}/${k === "c" ? "l" : k}.png`;
  *  is no multicolour basic land. */
 const BASICS_2022_SYMBOLS = Object.fromEntries(["w", "u", "b", "r", "g", "c"].map((k) => [k, `${BASICS_2022}/s${k}.png`]));
 
+// --- 4.40 / 4.41 — the older full-art basic designs, black-bordered.
+// 'Fullart Basics (ZEN)' (packZendikarBasic-1.js, groupTextless-4.js:7):
+// the stone ring around a window, the title bar, and the split type bar with
+// a centred medallion (BFZ, OGW, AKH, HOU, ZNR; MH1's snow and ZEN / J14 on
+// the 2003 frame are the same design, nearest). 'Fullart Basics (SNC)'
+// (packTextlessBasicsSNC.js, :5): the same bars with the art under a white
+// ring, no stone. 'Fullart Basics (THB)' (packTextlessBasics.js, :6): the
+// title bar and a plain "Basic Land — Plains" bar, no symbol (THB, 2XM,
+// DMU, SPM, SOS, PLG25). All 1500×2100 native with an opaque black border.
+const ZEN_BASICS = "img/frames/textless/zendikar";
+const SNC_BASICS = "img/frames/snc/basics";
+const THB_BASICS = "img/frames/textless/basics";
+/** Frame per colour key: no colourless basic in these packs either, so `c`
+ *  (Wastes — OGW #183 / #184 print the stone design) wears the packs'
+ *  'Colorless Frame' l.png. */
+const olderBasicFrame = (folder, k) => `${folder}/${k === "c" ? "l" : k}.png`;
+/** The ZEN pack's Frame mask: the field around the window, the title bar and
+ *  the type bar (the stone ring on the prints). */
+const ZEN_BASICS_FRAME_MASK = `${ZEN_BASICS}/frame.png`;
+/** The medallion's mana symbols, both split-bar packs' (600×600 SVG, drawn
+ *  at bounds 42/78.67/16×11.43 %), published as `symbol/<key>.png`. No `m`. */
+const ZEN_BASICS_SYMBOLS = Object.fromEntries(["w", "u", "b", "r", "g", "c"].map((k) => [k, `${ZEN_BASICS}/s${k}.svg`]));
+/** The medallion of both split-bar packs, measured on their masters (the
+ *  same circle: α 1 from 1621 px at x 750, half-widths 36 / 74 / 101 / 120 px
+ *  at rows 1625 / 1640 / 1660 / 1680 — centre (750, 1772), r 151). */
+const SPLIT_BAR_MEDALLION = { cx: 750, cy: 1772, r: 151, pad: 2, feather: 2 };
+/**
+ * The ZEN pack onto its prints (TODO 4.40; the 52 black-bordered stone-ring
+ * printings BFZ #250–274, OGW #183–184, AKH #250–254, HOU #185–189, ZNR
+ * #266–280, Scryfall PNGs at 1500×2100, medians — measured 2026-10-14): the
+ * title bar (top 104 / 104, bottom 232 / 233), the window's sides (112 / 115,
+ * 1386 / 1387), the medallion (top 1640 / 1640, bottom 1917 / 1918) and the
+ * black border (1948 / 1947) sit where the pack draws them; the TYPE BAR sits
+ * 7 px lower on every printing (inner top 1716 → 1723, range 1721–1729;
+ * bottom 1845 → 1851). So the bar moves 7 px down and the medallion stays.
+ */
+export const ZEN_BASIC_RECUT = { bar: { fromY: 1690, toY: 1868, dy: 7 }, medallion: { ...SPLIT_BAR_MEDALLION, dy: 0 } };
+/**
+ * The SNC pack onto its prints (SNC #272–281; measured 2026-10-14): the bar
+ * prints 13 px higher than the pack draws it (dark rim 1711 → 1698–1701,
+ * inner top 1716 → 1702–1706, bottom rim 1833 / 1845 → 1820 / 1832) and the
+ * medallion 18 px higher (top rim 1636 → 1616–1617, inner 1640 → 1620–1622;
+ * bottom 1901 / 1905 / 1916 → 1884 / 1888 / 1900). The title bar and the
+ * window's sides are the pack's within 1–4 px. BRO #278–287 is NOT this
+ * look (no ring round the window, the bars ~80 px lower): nearest.
+ * The art's lower edge rides the bar: the prints end it 13–17 px above the
+ * pack (x 300: 1930–1932 vs 1948; x 100, in the rounded corner: ~1862 vs
+ * 1868), so the moved band runs on through the corners to the border's
+ * black (row 1960), and the medallion's old cap below the bar (rows from
+ * 1856) is cleared to the art before it moves.
+ */
+export const SNC_BASIC_RECUT = {
+  bar: { fromY: 1690, toY: 1960, dy: -13 },
+  medallion: { ...SPLIT_BAR_MEDALLION, dy: -18, keepRows: [1696, 1856] },
+};
+
 // --- 4.52 'Planeswalker Emblems' — CC packEmblem.js: ONE master, the M20
 // design (2019-07-12 on: TM20 #11, TFDN #24 / #25, TBLB #30, TDSK #17,
 // TFRA #16). 1500×2100 native, opaque black border; the planeswalker spark
@@ -3475,6 +3531,50 @@ export const CC_TEMPLATES = {
       "m = the pack's 'Multicolored Frame' m.png, built so the key keeps a master (the MSE build dressed m as colourless); no multicolour basic exists, so no symbol disc and never offered",
     ],
   },
+  // 4.40 — the Zendikar-style full-art basic: the stone ring, the split
+  // type bar and its centred medallion (BFZ, OGW, AKH, HOU, ZNR).
+  m15fullartlandzen: {
+    colors: perColor((k) => [
+      { ...layer(olderBasicFrame(ZEN_BASICS, k)), barRecut: true },
+      { ...replacing(olderBasicFrame(ZEN_BASICS, "c"), ZEN_BASICS_FRAME_MASK), maskBarRecut: true },
+    ]),
+    barRecut: ZEN_BASIC_RECUT,
+    symbols: ZEN_BASICS_SYMBOLS,
+    pack: "packZendikarBasic-1.js 'Fullart Basics (ZEN)' (groupTextless-4.js:7)",
+    transforms: "native 1500x2100, no resample; the colour's frame with its type bar moved onto the prints (ZEN_BASIC_RECUT), the 'Colorless Frame' stone laid over the frame field through the pack's Frame mask (moved with the bar), corners rounded to the importer radius; medallion symbols rasterised from the pack's 600x600 SVGs",
+    notes: [
+      "the stone ring: every print of the look wears the SAME brown stone round the window whatever its colour (BFZ #250 / #255 / #260 / #265 / #270, OGW #183, AKH, HOU, ZNR); the pack paints each colour's own frame texture there, so every key takes the pack's 'Colorless Frame' (l.png) stone through its Frame mask — Card Conjurer's own pixels, the tone checked against the prints in the PR's sheet",
+      "the type bar moved 7 px down onto the 52 prints (ZEN_BASIC_RECUT): the title bar, the window, the medallion and the border were the pack's within 1 px; the medallion is drawn back over the moved bar from the pack's own pixels",
+      "colourless (Wastes, OGW #183 / #184) = the pack's 'Colorless Frame' l.png + the colourless medallion symbol sc.svg",
+      "m = the pack's 'Multicolored Frame' m.png, built so the key has a master; no multicolour basic exists, so no symbol and never offered",
+      "MH1's snow basics (#250–254) print this design with snow-covered bars (CC textless/snowBasics, whose masters paint their symbol into the medallion): nearest on this frame, not imported here",
+    ],
+  },
+  // 4.40 — the plain-ring full-art basic (SNC): the same bars, the art under
+  // a white ring.
+  m15fullartlandsnc: {
+    colors: perColor((k) => [{ ...layer(olderBasicFrame(SNC_BASICS, k)), barRecut: true }]),
+    barRecut: SNC_BASIC_RECUT,
+    symbols: ZEN_BASICS_SYMBOLS,
+    pack: "packTextlessBasicsSNC.js 'Fullart Basics (SNC)' (groupTextless-4.js:5)",
+    transforms: "native 1500x2100, no resample; the colour's frame with its type bar and medallion moved onto the prints (SNC_BASIC_RECUT), corners rounded to the importer radius; medallion symbols rasterised from the ZEN pack's 600x600 SVGs (the SNC pack names the same files)",
+    notes: [
+      "the bar moved 13 px up and the medallion 18 px up onto SNC #272–281 (SNC_BASIC_RECUT); the medallion's old place below the bar is cleared to the art (α 0), as the pack leaves it beside",
+      "BRO #278–287 is another look (no ring round the window, the bars lower): nearest on this frame",
+      "colourless = the pack's 'Colorless Frame' l.png (no SNC Wastes was printed); m = the pack's 'Multicolored Frame', never offered",
+    ],
+  },
+  // 4.41 — the plain-bar full-art basic: the title bar and a "Basic Land —
+  // Plains" bar, no symbol (THB, 2XM, DMU, SPM, SOS, PLG25).
+  m15fullartlandthb: {
+    colors: perColor((k) => [layer(olderBasicFrame(THB_BASICS, k))]),
+    pack: "packTextlessBasics.js 'Fullart Basics (THB)' (groupTextless-4.js:6)",
+    transforms: "native 1500x2100, the full frame image copied 1:1 (no resample), corners rounded to the importer radius",
+    notes: [
+      "the pack's geometry is the prints' (31 printings, 2026-10-14): type bar inner top 1778 / 1779 (range 1776–1782), bottom 1906 / 1906, title bar 104 / 104 and 232 / 235 — no re-cut",
+      "colourless = the pack's 'Colorless Frame' l.png (no plain-bar Wastes was printed; PLG25 #2's 'Basic Land' prints the white frame); the pack's 'Artifact Frame' a.png is not imported; m = the 'Multicolored Frame', never offered",
+    ],
+  },
   // 4.52 — the emblem (M20 design, today's look). CR 114: an emblem has no
   // colour, and every printed one is on this silver frame whatever the
   // planeswalker's colour; the emblem kind forces colourless, so `c` is
@@ -3969,6 +4069,91 @@ export function recutBand(buf, width, height, { fromY, toY, shift, blend, blendB
     else buf.copy(out, y * row, src * row, (src + 1) * row);
   }
   return out;
+}
+
+/**
+ * The split-bar full-art basics (TODO 4.40): move the type BAR and the
+ * MEDALLION that sits on it onto the prints, each by its own whole-px
+ * distance (ZEN_BASIC_RECUT, SNC_BASIC_RECUT — measured on every printing
+ * of the look). Three steps on an 8-bit RGBA image, nothing resampled:
+ *   1. where the medallion is moved (`medallion.dy` ≠ 0), its disc
+ *      (radius r + pad) outside the bar's rows (`medallion.keepRows`, else
+ *      the moved band's) is cleared to the row's own
+ *      pixel just beside the disc (`clearAt`, the art window's α 0 on
+ *      these packs — asserted: a cleared pixel must come from α 0);
+ *   2. the bar's rows [fromY, toY) move by `bar.dy` (either way); the rows
+ *      it leaves repeat the nearest row outside the band (the window's α 0
+ *      and the border's black, which run straight down there);
+ *   3. the medallion's disc is drawn back from the SOURCE at its own move,
+ *      over the moved bar, its edge feathered over `feather` px from the
+ *      radius r + pad.
+ * Returns a new buffer.
+ */
+export function recutBarAndMedallion(buf, width, height, { bar, medallion }) {
+  const { fromY, toY, dy } = bar;
+  const { cx, cy, r, pad, feather, dy: mdy } = medallion;
+  const ints = [fromY, toY, dy, cx, cy, r, pad, feather, mdy];
+  if (!ints.every(Number.isInteger) || !(toY > fromY) || fromY + Math.min(dy, 0) < 0 || toY + Math.max(dy, 0) > height || !(r > 0) || pad < 0 || feather < 1) {
+    throw new Error(`recutBarAndMedallion: bad recut ${JSON.stringify({ bar, medallion, height })}`);
+  }
+  const row = width * 4;
+  const out = Buffer.from(buf);
+  const R = r + pad;
+  // The bar's own rows inside the disc (default: the moved band's).
+  const [keepFrom, keepTo] = medallion.keepRows ?? [fromY, toY];
+  // 1. the old medallion's caps, outside the bar, cleared.
+  if (mdy !== 0) {
+    for (let y = Math.max(0, cy - R); y <= Math.min(height - 1, cy + R); y += 1) {
+      if (y >= keepFrom && y < keepTo) continue;
+      const half = Math.sqrt(Math.max(0, R * R - (y - cy) * (y - cy)));
+      const x0 = Math.max(0, Math.floor(cx - half) - 1);
+      const x1 = Math.min(width - 1, Math.ceil(cx + half) + 1);
+      const beside = y * row + Math.max(0, x0 - 1) * 4;
+      if (buf[beside + 3] !== 0) {
+        throw new Error(`recutBarAndMedallion: the pixel beside the medallion at (${x0 - 1}, ${y}) is not clear (α ${buf[beside + 3]})`);
+      }
+      for (let x = x0; x <= x1; x += 1) buf.copy(out, y * row + x * 4, beside, beside + 4);
+    }
+  }
+  // 2. the bar's rows moved; the rows it leaves repeat the nearest row
+  // outside the band.
+  const moved = Buffer.from(out);
+  const lo = Math.min(fromY, fromY + dy);
+  const hi = Math.max(toY, toY + dy);
+  for (let y = lo; y < hi; y += 1) {
+    let src = y - dy;
+    if (src >= fromY && src < toY) {
+      moved.copy(out, y * row, src * row, (src + 1) * row);
+    } else {
+      src = dy > 0 ? fromY - 1 : toY;
+      moved.copy(out, y * row, src * row, (src + 1) * row);
+    }
+  }
+  // 3. the medallion, from the source, at its own move.
+  const ncy = cy + mdy;
+  for (let y = Math.max(0, ncy - R - feather); y <= Math.min(height - 1, ncy + R + feather); y += 1) {
+    const sy = y - mdy;
+    if (sy < 0 || sy >= height) continue;
+    for (let x = Math.max(0, cx - R - feather); x <= Math.min(width - 1, cx + R + feather); x += 1) {
+      const d = Math.hypot(x - cx, y - ncy);
+      const t = d <= R ? 1 : d >= R + feather ? 0 : 1 - (d - R) / feather;
+      if (t === 0) continue;
+      const o = y * row + x * 4;
+      const s = sy * row + x * 4;
+      const as = (buf[s + 3] / 255) * t;
+      const ao = (out[o + 3] / 255) * (1 - t);
+      const a = as + ao;
+      for (let c = 0; c < 3; c += 1) out[o + c] = a === 0 ? 0 : Math.round((buf[s + c] * as + out[o + c] * ao) / a);
+      out[o + 3] = Math.round(a * 255);
+    }
+  }
+  return out;
+}
+
+/** The provenance line of a recutBarAndMedallion recipe. */
+export function describeBarRecut({ bar, medallion }) {
+  const way = (d) => (d === 0 ? "kept in place" : `moved ${Math.abs(d)} px ${d > 0 ? "down" : "up"}`);
+  return `the type bar (rows ${bar.fromY}–${bar.toY - 1}) ${way(bar.dy)} and the medallion (centre ${medallion.cx}, ${medallion.cy}, r ${medallion.r} + ${medallion.pad}) ${way(medallion.dy)}, onto the prints (no resample; the rows the bar leaves repeat the window's clear row / the border's black, the medallion drawn back over the bar with a ${medallion.feather} px feathered edge)`;
 }
 
 /**
@@ -4627,7 +4812,7 @@ export function describeLayer(l) {
       ? `(built:${l.built} | built:${l.right} across ${rampName(l.ramp)})${on} through the regions ${l.regions.join(" + ")}`
       : `built:${l.built}`;
   }
-  const moved = l.dy ? ` moved down ${l.dy} px` : "";
+  const moved = l.dy ? ` moved down ${l.dy} px` : l.barRecut ? " with its bar and medallion moved onto the prints (barRecut)" : "";
   // A pair's box (TODO 4.56): re-tinted twice, the two lerped across a ramp.
   const tintAt = (t) => `${t.src} at (${t.x}, ${t.y})`;
   const tint = l.retint
@@ -4636,7 +4821,7 @@ export function describeLayer(l) {
       : ` re-tinted from ${l.retint.from.join(",")} to the tint of ${tintAt(l.retint.tintOf)}`
     : "";
   const masks = Array.isArray(l.mask) ? l.mask.join(" ∩ ") : l.mask;
-  const mask = masks ? ` ${l.replace ? "replacing through" : l.invert ? "outside" : "through"} ${masks}` : "";
+  const mask = masks ? ` ${l.replace ? "replacing through" : l.invert ? "outside" : "through"} ${masks}${l.maskBarRecut ? " (the mask's bar and medallion moved as the frame's: barRecut)" : ""}` : "";
   const gain = l.gain !== undefined ? ` with its alpha ×${l.gain.toFixed(4)} (clamped at 1)` : "";
   // A pair layer (pairLayer, TODO 4.6b): two files blended across a ramp.
   const src = l.right ? `(${l.src} | ${l.right} across ${rampName(l.ramp)})` : l.src;

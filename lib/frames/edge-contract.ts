@@ -225,6 +225,11 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // seven masters); the re-sourced `fullartland` drops it (ALL_ART above;
   // its two bars float inside the card, clear of every edge band).
   m15fullartland: ALL_BORDER,
+  // The older full-art basic designs (4.40 / 4.41; CC ZEN, SNC and THB
+  // packs, frames bucket): an opaque black border on every edge.
+  m15fullartlandzen: ALL_BORDER,
+  m15fullartlandsnc: ALL_BORDER,
+  m15fullartlandthb: ALL_BORDER,
 };
 
 /**

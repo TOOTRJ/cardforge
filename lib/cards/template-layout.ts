@@ -4644,6 +4644,109 @@ const FULLARTLAND: FrameProfile = {
   },
 };
 
+// The older black-bordered full-art basic designs (TODO 4.40 / 4.41), Card
+// Conjurer packs re-cut onto the prints (scripts/lib/cc-frames.mjs
+// ZEN_BASIC_RECUT / SNC_BASIC_RECUT; frames bucket only). The title bar is
+// the 2022 design's (the same CC box and size, within 1 px of the prints'
+// bars), so each spreads FULL_ART_BASIC and moves only the type line, the set
+// symbol and the basic's symbol. Basic lands only (BASIC_ONLY_TEMPLATES).
+// Every vertical move below is the masters' own re-cut in % of the card's
+// height (px / 2100): the slots ride the bars they sit on.
+/** The ZEN pack's bar moved 7 px down (ZEN_BASIC_RECUT); its medallion stays. */
+export const ZEN_BASIC_BAR_DY_PCT = (7 / 2100) * 100;
+/** The SNC pack's bar moved 13 px up and its medallion 18 px up (SNC_BASIC_RECUT). */
+export const SNC_BASIC_BAR_DY_PCT = (-13 / 2100) * 100;
+export const SNC_BASIC_MEDALLION_DY_PCT = (-18 / 2100) * 100;
+const movedRect = (rect: Rect, dyPct: number): Rect => ({ ...rect, topPct: rect.topPct + dyPct });
+/** The medallion's symbol box on the prints: CC's medallion bounds
+ *  (240 × 240 px about the medallion's centre, 750 / 1772) draw the symbol
+ *  6–13 % larger than BFZ / SNC print it (the drop 119 × 191 px of ink vs
+ *  114–115 × 178–179; the flame and the tree wider still) and the drop's
+ *  ink 6–15 px low (its centre 1770 vs 1758 on BFZ #255; 1755 vs 1746 on
+ *  SNC #274 before the move), so the box is 228 px square, 10 px higher. */
+const SPLIT_BAR_SYMBOL_RECT: Rect = {
+  topPct: (1648 / 2100) * 100,
+  leftPct: (636 / 1500) * 100,
+  widthPct: (228 / 1500) * 100,
+  heightPct: (228 / 2100) * 100,
+};
+
+/** A split-bar basic's slots (4.40): "Basic Land" left of the medallion, the
+ *  subtype centred right of it (CC's `type` / `typeright` boxes at y 81.96 %,
+ *  set as FULL_ART_BASIC sets its CC box: the text rect 0.29 % under the
+ *  box's top, 4.2 % tall), the medallion's mana symbol (the template's copy
+ *  of CC's s?.svg, `<template>/symbol/<key>.png`) in CC's medallion bounds,
+ *  and the set symbol right-anchored at 92.13 %W, centred on CC's 84.39 %H —
+ *  each moved with the bar or the medallion it sits on. */
+function splitBarBasic(
+  template: "m15fullartlandzen" | "m15fullartlandsnc",
+  barDyPct: number,
+  medallionDyPct: number,
+  rightLeftPct = 58,
+): Partial<FrameProfile> {
+  const typeTop = 81.96 + 0.29 + barDyPct;
+  return {
+    type: {
+      ...FULL_ART_BASIC.type,
+      rect: { topPct: typeTop, leftPct: 8.54, widthPct: 71.59, heightPct: 4.2 },
+      split: {
+        leftRect: { topPct: typeTop, leftPct: 8.54, widthPct: 33.47, heightPct: 4.2 },
+        rightRect: { topPct: typeTop, leftPct: rightLeftPct, widthPct: 28, heightPct: 4.2 },
+      },
+    },
+    symbolRect: { topPct: 84.39 - 2.05 + barDyPct, leftPct: 80.13, widthPct: 12, heightPct: 4.1 },
+    basicSymbol: {
+      ...BASIC_SYMBOL_ZEN_MEDALLION,
+      rect: movedRect(SPLIT_BAR_SYMBOL_RECT, medallionDyPct),
+      assetPathTemplate: `/frames/${template}/symbol/{symbol}.png`,
+    },
+  };
+}
+
+// …the Zendikar-style split bar on the stone ring (4.40: BFZ, OGW, AKH,
+// HOU, ZNR). The art shows through the window only: the slot is the
+// window's box (the pack's α 0 from 117 to 1383 px across, from 237 px down
+// to the bar), under the stone and the bars.
+const M15FULLARTLANDZEN: FrameProfile = {
+  ...FULL_ART_BASIC,
+  ...splitBarBasic("m15fullartlandzen", ZEN_BASIC_BAR_DY_PCT, 0),
+  label: "Zendikar Full-Art Basic Land",
+  artSlot: { topPct: 10.9, leftPct: 7.4, widthPct: 85.2, heightPct: 72.4 },
+};
+
+// …the same bars with the art under a white ring, no stone (4.40: SNC). The
+// art runs under the whole frame inside the black border (CC artBounds
+// 4/2.86/92×90).
+const M15FULLARTLANDSNC: FrameProfile = {
+  ...FULL_ART_BASIC,
+  // The subtype centres 9 px left of CC's box on SNC #272–280 (ink 5–12 px,
+  // both edges): the right box starts at 57.4 % (CC 58).
+  ...splitBarBasic("m15fullartlandsnc", SNC_BASIC_BAR_DY_PCT, SNC_BASIC_MEDALLION_DY_PCT, 57.4),
+  label: "New Capenna Full-Art Basic Land",
+  // The window runs 60–1440 × 60–1935 px on the re-cut masters (the clear
+  // band under the bar included); 1.05 px of overscan or more each way.
+  artSlot: { topPct: 2.8, leftPct: 3.94, widthPct: 92.14, heightPct: 89.5 },
+};
+
+// …the plain bar (4.41: THB, 2XM, DMU, SPM, SOS, PLG25): the 2022 design's
+// title bar and a "Basic Land — Plains" bar from the left end, no symbol on
+// it (`basicSymbol` "none": nothing drawn, no watermark on the art). CC's
+// type box is the 2022 pack's row (y 84.81 %) from x 8.54 %; the set symbol
+// the 2022 design's (centred on 87.39 %H). The art runs to the black ring
+// (CC artBounds 3.94/2.81/92.14 × 89.29, the 2022 design's).
+const M15FULLARTLANDTHB: FrameProfile = {
+  ...FULL_ART_BASIC,
+  label: "Plain-Bar Full-Art Basic Land",
+  // The window runs 60–1440 × 60–1933 px; 1.05 px of overscan each way
+  // (m15fullartland's 2.81 % top leaves 0.99, a known art-window failure).
+  artSlot: { topPct: 2.8, leftPct: 3.94, widthPct: 92.14, heightPct: 89.35 },
+  type: {
+    ...FULL_ART_BASIC.type,
+    rect: { ...FULL_ART_BASIC.type.rect, leftPct: 8.54, widthPct: 75.46 },
+  },
+  basicSymbol: { rect: BASIC_SYMBOL_CC_2022.rect, style: "none" },
+};
+
 // M15 Textless — the plain M15 border around a tall art window (no type
 // plate, no text box painted). Shares FULLART's over-art ink treatment: light
 // type and light rules straight on the art. FULLART has no `backdropHex`, so
@@ -5688,6 +5791,9 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   fullart: { ...FULLART, pickerSampleArt: true },
   m15fullartland: M15FULLARTLAND,
   fullartland: FULLARTLAND,
+  m15fullartlandzen: M15FULLARTLANDZEN,
+  m15fullartlandsnc: M15FULLARTLANDSNC,
+  m15fullartlandthb: M15FULLARTLANDTHB,
   m15textless: { ...M15TEXTLESS, pickerSampleArt: true },
   m15textlessland: { ...M15TEXTLESSLAND, pickerSampleArt: true },
   expeditionland: EXPEDITIONLAND,

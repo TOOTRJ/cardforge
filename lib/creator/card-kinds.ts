@@ -511,6 +511,10 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   expeditionland: ["land"],
   m15fullartland: ["land"],
   fullartland: ["land"],
+  // The older full-art basic designs (TODO 4.40 / 4.41): basics only too.
+  m15fullartlandzen: ["land"],
+  m15fullartlandsnc: ["land"],
+  m15fullartlandthb: ["land"],
   m15textlessland: ["land"],
   m15borderless: ["creature", "instant", "sorcery", "enchantment", "artifact"],
   m15borderlessartifact: ["artifact", "creature"],
@@ -591,6 +595,9 @@ export function templateRefusesKind(
 const BASIC_ONLY_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<FrameTemplate>([
   "m15fullartland",
   "fullartland",
+  "m15fullartlandzen",
+  "m15fullartlandsnc",
+  "m15fullartlandthb",
 ]);
 
 /** Why a basic-only frame's chip is disabled on any other card. */
