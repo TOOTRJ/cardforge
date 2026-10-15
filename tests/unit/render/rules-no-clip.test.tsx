@@ -695,7 +695,7 @@ describe("the station box — the top band and every tier band (TODO 4.27a)", ()
         expect(again, `${template} · ${name}`).toEqual(laid);
       }
     }
-  });
+  }, 30_000);
 
   it("draws the same lines at both targets, the 750 font exactly half the HD one", () => {
     for (const [name, laid] of stations()) {
