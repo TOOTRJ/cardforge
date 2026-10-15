@@ -127,6 +127,8 @@ describe("declared and published", () => {
       "m15ub", "m15ubartifact", "m15ubland",
       "m15snow", "m15snowland", "m15borderless", "m15borderlessartifact", "m15borderlessland",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback",
+      // …and the extended-art frame and its land dress since the TODO 4.7 follow-up (owner Round 63).
+      "extendedart", "extendedartland",
       // …and the borderless double-faced bodies since 5.7 (m15borderless's split).
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
       // …and the old frames since 4.6h (the 2003 gold card, the 2003 and 1997 lands).

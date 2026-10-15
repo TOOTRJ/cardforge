@@ -161,6 +161,16 @@ export const CROWN_REFERENCES: Partial<Record<FrameTemplate, Partial<Record<stri
     m: ref("Baldur's Gate", "clb", "600", "a890abef-5291-4ffd-9c15-41c776ea9a00"),
     c: ref("Dark Depths", "puma", "U35", "e8fa97f8-2f52-426a-84f3-a7b85fda1344"),
   },
+  // The black-bordered textless promos (TODO 4.35 follow-up, owner Round
+  // 63): the standard band over the promo masters — Magic Spotlight's
+  // Vendilion Clique (PSPL #8), the Store Championship legends (SCH #38 red,
+  // SCH #12 three colours, gold); a pair's split crown over the gold rim is
+  // Tymna (PF26 #16) and Jedit (PL22 #2), judged with the gold key's tick.
+  m15textless: {
+    u: ref("Vendilion Clique", "pspl", "8", "d05a2b18-f562-4aa5-8979-4c6942ce7edf"),
+    r: ref("Goddric, Cloaked Reveler", "sch", "38", "02f38271-114f-4c00-a959-7dbccca76eb9"),
+    m: ref("Thalia and The Gitrog Monster", "sch", "12", "b2880f80-b0c5-46a8-b08b-d331bb7967f3"),
+  },
   // The Spacecraft's extended-art dress (TODO 4.27a step 2) wears that band:
   // its crowned printings — a white one, the five-colour gold one, a
   // colourless one (the grey C crown over the silver artifact frame;

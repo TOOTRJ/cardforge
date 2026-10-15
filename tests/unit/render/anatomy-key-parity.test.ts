@@ -76,9 +76,10 @@ describe("bake path = preview path", () => {
     // …and the old frames' 10 each (4.6h: modern, modernland, retroland).
     // …and the Vehicle frame's 10 (4.5c), the Nyx dress's 20 (4.7).
     // …and the Universes Beyond frames' 20 + 10 + 10 (4.25).
+    // …and the extended-art frame's 20 and its land dress's 10 (4.7 follow-up).
     // …and the Spacecraft's borderless dress's 7 crowned twins (4.27a step 2).
     // …and the borderless double-faced bodies' 10 each (TODO 5.7).
-    expect(pairKeys).toBe(300);
+    expect(pairKeys).toBe(330);
     // …and the borderless double-faced bodies' 18 crowned twins each (TODO
     // 5.7: the seven colour keys, the artifact stand-in's `a`, ten pairs).
     expect(crownedKeys).toBe(51 + 4 * 18);

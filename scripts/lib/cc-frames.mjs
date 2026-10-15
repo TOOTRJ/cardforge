@@ -213,19 +213,32 @@ const snowFrameFile = packFrameFile(SNOW);
 // Spacecraft, 4.27a step 2; an extended-art land frame).
 export const EXTENDED = `${NEW}/extended`;
 export const extendedFrameFile = packFrameFile(EXTENDED);
+/** The extended pack's masks (packM15ExtendedArtNew.js): the accurate M15
+ *  pack's Title, Type, Rules, Frame and Border, and its OWN Pinline (the
+ *  pinline stops at the art's side edges). */
+export const EXTENDED_MASK = Object.freeze({ ...M15_MASK, pinline: `${EXTENDED}/pinline.png` });
+/** The extended frames' two-colour pair masters (TODO 4.7 follow-up, owner
+ *  Round 63): 4.6b's recipe (pairMasterLayers) over the extended pack's own
+ *  files and masks — kind "m15" for extendedart (the gold-split and hybrid
+ *  dresses), "land" for extendedartland (the grey land frame with the box
+ *  and pinline in the two land tints). */
+export const extendedPairLayers = (pair, dress, kind) => pairMasterLayers(pair, dress, kind, extendedFrameFile, EXTENDED_MASK);
 const EXTENDED_ART_PACK =
   "packM15ExtendedArtNew.js 'Extended Art Frames' (Card Conjurer's Accurate group): the accurate M15 pack's bars, box and text layout with the art window opened to the side edges";
+const EXTENDED_ART_PAIR_NOTE =
+  "two-colour pair masters (TODO 4.7 follow-up, owner Round 63): 4.6b's recipe (twoColorRecipe kind 'm15'; the untilted ramps of scripts/lib/pair-ramp.mjs) over the pack's own files through its own masks (EXTENDED_MASK: the M15 Title, Type, Rules, Frame, Border and the pack's own Pinline) — gold-split <pair> = m.png whole with the text box (45→57 %W) and the pinline (40→60 %W) lerped between the two colour frames; hybrid <pair>-h = the two colour frames lerped across the frame ramp (44→57 %W) under the pack's grey l.png title and type bars, the split box and pinline (the grey plate pt/c). Measured 2026-10-14 (median |ΔRGB| over the master's opaque, non-black pixels): 20 gold-split prints, two per pair (SOS #353 / #357 / #358 / #359, FRC #96, FDN #476–483, OTJ #348 / #366 / #367, WOE #360, MKM #413, SOC #98, DSC #65, WOC #39) 10.0–22.7 for the pair against 15.3–38.0 for gold m.png, the pair lower on every one; 5 hybrid prints (STX #334 / #341, IKO #360, ECL #372 / #374) 8.7–15.7 for <pair>-h against 9.0–17.3 for the gold-split and 16.7–26.0 for gold";
 const EXTENDED_ART_NOTES = [
   "re-sourced from Card Conjurer (TODO 4.7, owner Q6 2026-10-13): replaces the 744 px MSE magic-extended-art composite that scripts/build-variation-frames.mjs upscaled into git — its title bar sat 10 px low, its box ended 41 px high and it painted white rails beside the art where every print runs the art to the card's edge",
   "w u b r g m = the pack's colour frames whole (new/extended/<k>.png), downscaled once; no border is added — the prints have none beside the art (0 px of black border at the art rows: the median on 13 of 14 prints measured, the 14th's art itself dark at the edge)",
   "c = the pack's see-through 'Eldrazi Frame' (new/extended/c.png): the colourless non-artifact prints (STX #285, CMM #746, MSC #292) show the art through the bars and the box; the profile draws the art under it (underFrameArt)",
   "a = the pack's silver 'Artifact Frame' (new/extended/a.png), the master a colourless ARTIFACT paints (FrameProfile.artifactMasterKeys { c: 'a' }: BRO #376, CMR #692, BIG #92)",
   "plates = M15's (the pack draws the regular m15PT plates at M15's bounds): no objects of its own",
+  EXTENDED_ART_PAIR_NOTE,
 ];
 const EXTENDED_ART_LAND_NOTES = [
   "the extended-art LAND frame (TODO 4.7, owner Round 63 2026-10-14): the pack's land frames whole (new/extended/l.png, l<k>.png), downscaled once; no border added, as extendedart",
   "colourless land = the pack's grey 'Land Frame' l.png (FDN #487 Soulstone Sanctuary, BLB #368 Fountainport, DFT #425 Avishkar Raceway, MSC #491 Scavenger Grounds: median |ΔRGB| 3.3–3.7 against the print over the master's opaque pixels); w u b r g = l<k>.png (NEO #501–505, MH2 #480, ELD #386–389, M3C #81: 2.0–19.7); gold m = lm.png, the any-colour land (CMR #705 Command Tower, MSC #470 Exotic Orchard, KHM #373 The World Tree: 10.3–19.0)",
-  "no pair masters: a two-colour land prints the grey frame with a split box in the two land tints (MSC #468 / #477 / #489 / #499, STX #360, THB #348) — a follow-up (owner Round 63); until then it wears the gold land frame, as m15land does with its two-colour switch off",
+  "two-colour pair masters (TODO 4.7 follow-up, owner Round 63): 4.6b's LAND recipe (twoColorRecipe kind 'land') over the pack's files and its own masks (EXTENDED_MASK: the M15 Title, Type, Rules, Frame, Border and the pack's own Pinline) — <pair> = the grey land frame l.png whole with the text box (45→57 %W) and the pinline (40→60 %W) lerped between the two land tints l<a>.png / l<b>.png, first canonical colour on the left; measured 2026-10-14 on 17 two-colour extended-art lands (SOC #101 / #103 / #107, FRC #102, BRO #370, CLB #602 / #606, STX #360 / #365, CMR #709 / #711, M21 #390, THB #348 / #351, EOC #43, MSC #468 / #477): median |ΔRGB| over the master's opaque, non-black pixels 4.0–15.0 for the pair against 20.3–67.3 for the gold land frame lm.png and 22.0–44.0 for the grey l.png",
   "plates = M15's (a land creature: Dryad Arbor's kind)",
 ];
 // The black-bordered textless promos (Store Championship, MagicFest,
@@ -3567,6 +3580,7 @@ export const CC_TEMPLATES = {
       // { c: "a" }): the pack's silver 'Artifact Frame'. `c` itself is the
       // see-through 'Eldrazi Frame' a colourless non-artifact prints.
       a: [layer(extendedFrameFile("a"))],
+      ...pairMasters("m15", ["split", "hybrid"], extendedPairLayers),
     },
     pack: EXTENDED_ART_PACK,
     notes: EXTENDED_ART_NOTES,
@@ -3580,6 +3594,7 @@ export const CC_TEMPLATES = {
   extendedartland: {
     colors: {
       ...perColor((k) => [layer(extendedFrameFile(k === "c" ? "l" : `${k}l`))]),
+      ...pairMasters("land", ["split"], extendedPairLayers),
     },
     pack: EXTENDED_ART_PACK,
     notes: EXTENDED_ART_LAND_NOTES,
@@ -5329,7 +5344,13 @@ const CROWN_COVER_SRC = "img/black.png";
 // starts at row 0; it sat 10 px lower over the old MSE masters).
 export const EXTENDED_CROWN_BAND = Object.freeze({
   source: CROWNS,
-  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "c"]),
+  // The seven colour keys, then (TODO 4.7 follow-up, owner Round 63) the
+  // ten pairs, the first colour's crown lerped into the second's across
+  // PAIR_RAMPS.crownFloating (40→60 %W, the borderless pairs'; FRC #96 R|W,
+  // FDN #479 W|B print the split crown over the pair masters). No `a`: a
+  // colourless artifact keeps CC's grey C crown (owner Round 67 — C measured
+  // closer on 8 of 11 scans).
+  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "c", ...TWO_COLOR_PAIRS]),
   cover: BORDERLESS_CROWN.erase,
   crown: BORDERLESS_CROWN.crown,
   outline: BORDERLESS_CROWN.outline,
@@ -5342,9 +5363,12 @@ export const EXTENDED_CROWN_BAND = Object.freeze({
  *  on top. */
 export function extendedCrownLayers(key) {
   if (!EXTENDED_CROWN_BAND.keys.includes(key)) throw new Error(`extendedCrownLayers: no crown for key ${key}`);
+  const pair = TWO_COLOR_PAIRS.includes(key) ? key.split("") : null;
   return [
     placed(BORDERLESS_CROWN.eraseSrc, EXTENDED_CROWN_BAND.cover),
-    placed(floatingCrown(key), EXTENDED_CROWN_BAND.crown),
+    pair
+      ? placed(floatingCrown(pair[0]), EXTENDED_CROWN_BAND.crown, { right: floatingCrown(pair[1]), ramp: [...BORDERLESS_CROWN.ramp] })
+      : placed(floatingCrown(key), EXTENDED_CROWN_BAND.crown),
     placed(BORDERLESS_CROWN.outlineSrc, EXTENDED_CROWN_BAND.outline),
   ];
 }
@@ -5733,7 +5757,8 @@ export const CC_OVERLAY_BANDS = {
     findings: extendedCrownFindings,
     notes: [
       "the extended-art legendary crown (TODO 4.6f, wave 2b): CC's floating crown over its BLACK 'Crown Border Cover' strip (drawn, not erased — the borderless frame erases it) with the outline ON TOP, as autoExtendedArtFrame draws them, composited 1:1 at 1500x2100 (every piece 1500-native) and cropped to rows 0–259 (the outline's extent); an overlay band over the extendedart masters (Card Conjurer's extended frames since TODO 4.7, frames bucket)",
-      "keys = the seven colour keys of the extendedart template: w u b r g, m (gold: a three-colour card, or a pair, which this frame draws gold — no pair masters), c (CC's colourless crown, over the see-through colourless master and the artifact one alike: the overlay is keyed by the card's colour; CC's own rule would pick the artifact crown for a colourless artifact); CC's unlisted 'Artifact Legend Crown (Alt)' is not used",
+      "keys = the seven colour keys of the extendedart template: w u b r g, m (gold: a three-colour card, or a pair drawn gold), c (CC's colourless crown, over the see-through colourless master and the artifact one alike: the overlay is keyed by the card's colour — owner Round 67 kept it after CC's artifact crown measured no closer: C nearer on 8 of 11 colourless legendary artifacts); CC's artifact crowns (and their 'Alt') are not used",
+      "the ten pairs (TODO 4.7 follow-up): the pair's two floating crowns lerped across PAIR_RAMPS.crownFloating (40→60 %W, the borderless pairs' measure), first canonical colour on the left, drawn over the pair masters; measured 2026-10-14 on ten crowned two-colour extended-art prints (FRC #96, FDN #476 / #479 / #481–483, WOE #360, OTJ #366 / #367, WOC #39): median |ΔRGB| over the band's visible pixels 15.3–24.0 against 51.0–121.7 for the gold crown",
       "the band's slot is CC's bounds (lib/cards/template-layout.ts EXTENDED_CROWN, from row 0): since TODO 4.7 the extendedart masters are Card Conjurer's extended frames, whose title bar tops out at 4.98 %H as FDN #442 / #455 print it (over the old MSE masters, whose bar topped out at 5.43 %H, the slot sat 10 px lower)",
     ],
   },

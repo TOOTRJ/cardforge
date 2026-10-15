@@ -9,6 +9,7 @@ import {
   oldFramePairLayers,
   pairMasterLayers,
   snowPairLayers,
+  extendedPairLayers,
 } from "@/scripts/lib/cc-frames.mjs";
 import {
   FRAME_MASTER_KEYS,
@@ -46,13 +47,17 @@ const SNOW_KIND: Record<string, "snow" | "snowland"> = { m15snow: "snow", m15sno
  *  through its own mono recipe with a letter pair (borderlessLandLayers,
  *  TODO 4.56). */
 const OLD_FRAME = ["modern", "modernland", "retroland"];
-const PAIR_TEMPLATES = ["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15snow", "m15snowland", "modern", "modernland", "retroland"] as const;
+const PAIR_TEMPLATES = ["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15snow", "m15snowland", "extendedart", "extendedartland", "modern", "modernland", "retroland"] as const;
+/** The extended-art frame's (TODO 4.7 follow-up): 4.6b's recipe over the
+ *  extended pack (extendedPairLayers), its land dress the land's. */
+const EXTENDED_KIND: Record<string, "m15" | "land"> = { extendedart: "m15", extendedartland: "land" };
 function recipeOf(template: string, key: string) {
   const [pair, hybrid] = key.split("-");
   const dress = hybrid ? "hybrid" : "split";
   // The old frames (TODO 4.6h): made of the template's own finished masters.
   if (OLD_FRAME.includes(template)) return oldFramePairLayers(template, pair);
   if (KIND[template]) return pairMasterLayers(pair, dress, KIND[template]);
+  if (EXTENDED_KIND[template]) return extendedPairLayers(pair, dress, EXTENDED_KIND[template]);
   if (SNOW_KIND[template]) return snowPairLayers(pair, dress, SNOW_KIND[template]);
   if (template === "m15borderlessland") return borderlessLandLayers({ frame: "l", box: pair.split(""), pinline: pair.split("") });
   return borderlessPairLayers(pair, dress);
@@ -84,6 +89,9 @@ describe("the declared pair masters", () => {
       // …and the Universes Beyond frames' forty (TODO 4.25): their M15
       // twins' dresses.
       m15ub: 20, m15ubartifact: 10, m15ubland: 10,
+      // …and the extended-art frame's thirty (TODO 4.7 follow-up, owner
+      // Round 63): m15's two dresses, the land dress's split.
+      extendedart: 20, extendedartland: 10,
       // …and the borderless double-faced bodies' forty (TODO 5.7):
       // m15borderless's pinline split, grafted.
       m15borderlessdfcfront: 10, m15borderlessdfcback: 10, m15borderlessmdfcfront: 10, m15borderlessmdfcback: 10,

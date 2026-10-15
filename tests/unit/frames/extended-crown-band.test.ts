@@ -35,16 +35,30 @@ const provenance = JSON.parse(fs.readFileSync("lib/cards/frame-sources.json", "u
   string,
   { colors: Record<string, string[]>; kind?: string; notes: string[]; sourceFiles: string[] }
 >;
-const KEYS = ["w", "u", "b", "r", "g", "m", "c"];
+// The seven colour keys and the ten pairs (TODO 4.7 follow-up, owner Round
+// 63); no artifact crown (owner Round 67: a colourless artifact keeps C).
+const PAIRS = ["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"];
+const KEYS = ["w", "u", "b", "r", "g", "m", "c", ...PAIRS];
 const crowns = "img/frames/m15/crowns";
 
 describe("the extended-art crown band's recipe", () => {
-  it("builds the seven colour keys of the extendedart masters — no pairs — the slot's keys", () => {
+  it("builds the seven colour keys and the ten pairs — the slot's keys; never CC's artifact crown", () => {
     expect([...EXTENDED_CROWN_BAND.keys]).toEqual(KEYS);
     expect(CC_OVERLAY_BANDS.extendedcrown.keys).toEqual(EXTENDED_CROWN_BAND.keys);
     expect([...EXTENDED_CROWN.keys]).toEqual(KEYS);
-    expect(() => extendedCrownLayers("wu")).toThrow();
+    expect(() => extendedCrownLayers("l")).toThrow();
     expect(() => extendedCrownLayers("a")).toThrow();
+    expect(() => extendedCrownLayers("uw")).toThrow();
+    expect(() => extendedCrownLayers("wu-h")).toThrow();
+  });
+
+  it("a pair is its two floating crowns lerped 40→60 %W", () => {
+    expect(extendedCrownLayers("rw")).toEqual([
+      { src: "img/black.png", at: { leftPct: 3.94, topPct: 2.77, widthPct: 92.14, heightPct: 1.77 } },
+      { src: `${crowns}/m15CrownRFloating.png`, at: { leftPct: 3.07, topPct: 1.91, widthPct: 93.87, heightPct: 10.24 }, right: `${crowns}/m15CrownWFloating.png`, ramp: [40, 60] },
+      { src: `${crowns}/m15CrownFloatingOutline.png`, at: { leftPct: 2.8, topPct: 1.72, widthPct: 94.4, heightPct: 10.62 } },
+    ]);
+    expect(BORDERLESS_CROWN.ramp).toEqual([40, 60]);
   });
 
   it("is CC's floating crown over the black cover strip with the outline ON TOP, at CC's bounds, 1:1 at the card's size", () => {

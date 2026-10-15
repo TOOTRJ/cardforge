@@ -100,9 +100,12 @@ describe("CardPreview — the text-box token's rules (TODO 4.49 (b))", () => {
       // then its re-cut's 8 px pull-back). Spread from M15TOKEN it would be
       // 8 px higher still, on a band 8 px lower.
       expect(p.type.dy).toBeCloseTo(getFrameProfile("m15token").type.dy!, 12);
-      // The art slot is its own (the window ends at 1408 px), not the
-      // textless re-cut's taller one.
-      expect(p.artSlot).toEqual({ topPct: 12.0, leftPct: 6.5, widthPct: 87, heightPct: 55.2 });
+      // The art slot is its own (the window ends at 1404 / 1408 px), not the
+      // textless re-cut's taller one: since v59 (TODO 4.53 (e)) the window +
+      // 7.6's overscan, ending 2 px past it (1407 / 1411).
+      const bottom = ((p.artSlot.topPct + p.artSlot.heightPct) / 100) * 2100;
+      expect(bottom).toBeCloseTo(template === "m15tokentext" ? 1407 : 1411, 6);
+      expect(bottom).toBeLessThan(((getFrameProfile("m15token").artSlot.topPct + getFrameProfile("m15token").artSlot.heightPct) / 100) * 2100);
     },
   );
 

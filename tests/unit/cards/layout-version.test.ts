@@ -1185,9 +1185,12 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
     for (const key of ["w", "u", "b", "r", "g", "c", "m"]) expect(underFrameArtRect(getFrameProfile("m15devoid"), key), key).toEqual(UNDER);
     // m15pw/c draws ONE picture — its window in the under-frame rect too
     // (only under art, like the layer: the scope's "colourless with art");
-    // no other see-through master has its own window slot.
+    // no other v35 see-through master has its own window slot. (Since v59,
+    // TODO 4.53 (e), the arch tokens' `c` has one: its window, 4 px wider
+    // each side than the opaque masters' — never the under-frame rect.)
     expect(underFrameArtSlot(getFrameProfile("m15pw"), "c")).toEqual(UNDER);
-    for (const t of ["m15", "m15devoid", "m15token", "m15tokentext"]) expect(underFrameArtSlot(getFrameProfile(t), "c"), t).toBeNull();
+    for (const t of ["m15", "m15devoid"]) expect(underFrameArtSlot(getFrameProfile(t), "c"), t).toBeNull();
+    for (const t of ["m15token", "m15tokentext"]) expect(underFrameArtSlot(getFrameProfile(t), "c"), t).not.toEqual(UNDER);
     // Every template that draws v35's under-frame rect is in the scope (one
     // with a rect of its own — an emblem's — is not v35's business), and the
     // three see-through-c templates paint the colour key itself (the
@@ -2964,5 +2967,43 @@ describe("v58 — the extended-art and textless frames re-sourced from Card Conj
     expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual(SCOPE);
     // A bake one version older owes it on the three; nothing else is owed.
     for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(SCOPE.includes(t));
+  });
+});
+
+describe("v59 — the 2014–19 arch token on its prints (TODO 4.53)", () => {
+  // Renumbered with TOKEN_ARCH_PRINT_LAYOUT_VERSION if another bump merges
+  // first.
+  const V = 59;
+  const ARCH = ["m15token", "m15tokentext", "m15tokenartifact", "m15tokenartifacttext"];
+  it("is a sweep, never a badge, scoped to the four arch token frames, and not verification-neutral", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.TOKEN_ARCH_PRINT_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect([...lv.TOKEN_ARCH_PRINT_TEMPLATES]).toEqual(ARCH);
+    // The name and the art slot a tick judges move: the arch ticks re-open.
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).not.toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual(ARCH);
+    // A bake from before it on an arch frame owes it; on every other
+    // template nothing is owed.
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(ARCH.includes(t));
+  });
+
+  it("puts the arch name in gold small caps and its art slot on the window (7.6's overscan)", () => {
+    for (const t of ARCH) {
+      const p = getFrameProfile(t);
+      expect(p.title.colorHex, t).toBe("#fde367");
+      expect(p.title.smallCaps, t).toBe(0.78);
+      expect(Math.round(p.title.sizePct * 1500), t).toBe(90);
+      // The slot's edges on whole HD px.
+      const px = { left: (p.artSlot.leftPct / 100) * 1500, top: (p.artSlot.topPct / 100) * 2100 };
+      expect(px.left, t).toBeCloseTo(Math.round(px.left), 6);
+      expect(px.top, t).toBeCloseTo(Math.round(px.top), 6);
+    }
+    // No other frame sets its name in small caps.
+    for (const t of FRAME_TEMPLATE_VALUES) if (!ARCH.includes(t)) expect(getFrameProfile(t).title.smallCaps, t).toBeUndefined();
   });
 });

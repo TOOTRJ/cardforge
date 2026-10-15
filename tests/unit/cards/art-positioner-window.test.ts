@@ -44,7 +44,9 @@ const BORDERLESS: [number, number] = [1500, 1937];
 const WINDOWS: Record<FrameTemplate, Row> = {
   m15: { front: M15_WINDOW },
   m15land: { front: M15_WINDOW },
-  m15token: { front: [1305, 1457] },
+  // The arch tokens on their windows (TODO 4.53 (e), v59): the see-through
+  // c and the coloured artifact dresses 4 px wider each side.
+  m15token: { front: [1272, 1446], masters: { c: [1280, 1454] } },
   m15artifact: { front: M15_WINDOW },
   m15vehicle: { front: M15_WINDOW },
   m15nyx: { front: M15_WINDOW },
@@ -64,9 +66,9 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   m15devoid: { front: M15_WINDOW },
   // The colourless walker is ONE picture under the whole frame (v35).
   m15pw: { front: [1296, 1716], masters: { c: [1389, 1959] } },
-  m15tokenartifact: { front: [1305, 1457] },
-  m15tokentext: { front: [1305, 1159] },
-  m15tokenartifacttext: { front: [1305, 1159] },
+  m15tokenartifact: { front: [1280, 1454] },
+  m15tokentext: { front: [1272, 1146], masters: { c: [1280, 1154] } },
+  m15tokenartifacttext: { front: [1280, 1154] },
   emblem: { front: [1216, 1163] },
   m20token: { front: M20_TOKEN },
   m20tokentext: { front: M20_TOKEN },
