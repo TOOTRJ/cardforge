@@ -181,11 +181,25 @@ export const FULL_ART_BASIC_2022_SETS: ReadonlySet<string> = new Set([
  *  (bars 6–13 px off, colours up to 43 levels: the 4.39 print review). */
 const FULL_ART_BASIC_OLDER_BARS = ["one", "mom"] as const;
 
-/** Zendikar-style split type bar with a centred medallion (4.40). */
-const SPLIT_BAR_BASIC_SETS = ["bfz", "ogw", "akh", "hou", "mh1", "znr", "snc", "bro", "mid", "vow"] as const;
+/** Zendikar-style split type bar with a centred medallion (4.40), by look —
+ *  each checked on every printing (Scryfall PNGs, 2026-10-14):
+ *  the stone ring (`m15fullartlandzen`'s own: 52 printings), */
+const SPLIT_BAR_STONE_BASIC_SETS = ["bfz", "ogw", "akh", "hou", "znr"] as const;
+/** …the same design with snow-covered bars, "Basic Snow Land" (MH1 #250–254), */
+const SPLIT_BAR_SNOW_BASIC_SETS = ["mh1"] as const;
+/** …the white ring round the art, no stone (`m15fullartlandsnc`'s own: SNC
+ *  #272–281), */
+const SPLIT_BAR_RING_BASIC_SETS = ["snc"] as const;
+/** …BRO's (#278–287): the art to the black border with no ring and the bars
+ *  ~80 px lower, */
+const SPLIT_BAR_BRO_BASIC_SETS = ["bro"] as const;
+/** …and Innistrad's dark "Eternal Night" bars on the ring's shape (MID
+ *  #268–277, VOW #268–277 and #408–412). */
+const SPLIT_BAR_DARK_BASIC_SETS = ["mid", "vow"] as const;
 /** The same design on the 2003 frame (4.40 on 4.43's border). */
 const SPLIT_BAR_BASIC_2003_SETS = ["zen", "j14"] as const;
-/** A title bar and a plain "Basic Land — Plains" bar, no symbol (4.41). */
+/** A title bar and a plain "Basic Land — Plains" bar, no symbol (4.41;
+ *  `m15fullartlandthb`'s own: 31 printings). */
 const PLAIN_BAR_BASIC_SETS = ["thb", "2xm", "dmu", "spm", "sos", "plg25"] as const;
 /** Per-set full-art basic designs (4.11). */
 const PER_SET_BASIC_SETS = ["ugl", "unh", "und", "neo", "lci"] as const;
@@ -1051,7 +1065,8 @@ type GapKey =
   | "dark-bars"
   | "lettered-name"
   | "row-box"
-  | "tall-box";
+  | "tall-box"
+  | "znr-type-line";
 
 const BORDER_WORD: Record<string, string> = {
   white: "white",
@@ -1289,6 +1304,15 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   // The arch token's tall text box (TODO 4.55, P3 — split out of 4.49 (b),
   // owner 2026-09-29): the import lands on the regular box, the text
   // shrinking to fit (3.29), and the 1.6 log counts the demand.
+  // Zendikar Rising's full-art basics (TODO 4.40, owner Round 64): the
+  // stone-ring design, but every ZNR printing sets its subtype 22–28 px
+  // further right than `m15fullartlandzen` (BFZ's) and its bars and name
+  // 3–5 px off — NEAREST on that frame even once it is verified.
+  "znr-type-line": {
+    match: { sets: ["znr"] },
+    reason: "Zendikar Rising sets this design's type line further right than PipGlyph's Zendikar full-art basic",
+    blockedBy: "4.40",
+  },
   "tall-box": {
     match: { kinds: ["token"], collectorIds: TALL_BOX_TOKEN_PINS },
     reason: "PipGlyph doesn't have the tall text box of this token frame yet",
@@ -2105,6 +2129,13 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       blockedBy: "4.11",
     },
   },
+  // The older full-art basic designs (TODO 4.40 / 4.41). Each lands where it
+  // always did — the 2022 design, `m15fullartland` — until its own template
+  // is verified in the card's colour; then the rule names it
+  // (`onceVerified`): exact for the looks it reproduces (the stone ring, the
+  // SNC ring, the plain bar), still nearest for the ones it only comes
+  // closest to (MH1's snow bars, BRO, MID / VOW's dark bars, ZEN / J14 on
+  // the 2003 frame) — their reasons hold on either frame.
   {
     key: "fullart/basic/split-bar/2003",
     exactLabel: "Zendikar full-art basic land (2003 frame)",
@@ -2112,18 +2143,76 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     outcome: {
       status: "nearest",
       template: "m15fullartland",
-      reason: "PipGlyph doesn't have the split-bar full-art basic or the 2003 border yet",
+      onceVerified: "m15fullartlandzen",
+      reason: "PipGlyph doesn't have this full-art basic on the 2003 border yet",
       blockedBy: "4.43",
     },
   },
+  // ZNR is the same design with its type line set further right (owner
+  // Round 64): `fullart/basic/split-bar+znr-type-line`, nearest on the
+  // stone ring before and after it is verified.
+  ...withGaps(
+    {
+      key: "fullart/basic/split-bar",
+      exactLabel: "Zendikar-style full-art basic land (split type bar)",
+      match: { fullArt: true, singleBasic: true, sets: SPLIT_BAR_STONE_BASIC_SETS },
+      outcome: {
+        status: "nearest",
+        template: "m15fullartland",
+        onceVerified: "m15fullartlandzen",
+        exactOnceVerified: true,
+        reason: "PipGlyph's Zendikar full-art basic isn't verified yet",
+        blockedBy: "4.40",
+      },
+    },
+    ["znr-type-line"],
+  ),
   {
-    key: "fullart/basic/split-bar",
-    exactLabel: "Zendikar-style full-art basic land (split type bar)",
-    match: { fullArt: true, singleBasic: true, sets: SPLIT_BAR_BASIC_SETS },
+    key: "fullart/basic/split-bar/snow",
+    exactLabel: "Zendikar-style full-art snow basic land (split type bar)",
+    match: { fullArt: true, singleBasic: true, sets: SPLIT_BAR_SNOW_BASIC_SETS },
     outcome: {
       status: "nearest",
       template: "m15fullartland",
-      reason: "PipGlyph doesn't have the split-bar full-art basic yet",
+      onceVerified: "m15fullartlandzen",
+      reason: "PipGlyph doesn't print this design's snow-covered bars yet",
+      blockedBy: "4.40",
+    },
+  },
+  {
+    key: "fullart/basic/split-bar/ring",
+    exactLabel: "Full-art basic land (split type bar, ringed art)",
+    match: { fullArt: true, singleBasic: true, sets: SPLIT_BAR_RING_BASIC_SETS },
+    outcome: {
+      status: "nearest",
+      template: "m15fullartland",
+      onceVerified: "m15fullartlandsnc",
+      exactOnceVerified: true,
+      reason: "PipGlyph's New Capenna full-art basic isn't verified yet",
+      blockedBy: "4.40",
+    },
+  },
+  {
+    key: "fullart/basic/split-bar/bro",
+    exactLabel: "The Brothers' War full-art basic land (split type bar)",
+    match: { fullArt: true, singleBasic: true, sets: SPLIT_BAR_BRO_BASIC_SETS },
+    outcome: {
+      status: "nearest",
+      template: "m15fullartland",
+      onceVerified: "m15fullartlandsnc",
+      reason: "PipGlyph doesn't have this set's lower bars yet",
+      blockedBy: "4.40",
+    },
+  },
+  {
+    key: "fullart/basic/split-bar/dark",
+    exactLabel: "Innistrad full-art basic land (dark split type bar)",
+    match: { fullArt: true, singleBasic: true, sets: SPLIT_BAR_DARK_BASIC_SETS },
+    outcome: {
+      status: "nearest",
+      template: "m15fullartland",
+      onceVerified: "m15fullartlandsnc",
+      reason: "PipGlyph doesn't have this set's dark bars yet",
       blockedBy: "4.40",
     },
   },
@@ -2134,7 +2223,9 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     outcome: {
       status: "nearest",
       template: "m15fullartland",
-      reason: "PipGlyph doesn't have the plain-bar full-art basic yet",
+      onceVerified: "m15fullartlandthb",
+      exactOnceVerified: true,
+      reason: "PipGlyph's plain-bar full-art basic isn't verified yet",
       blockedBy: "4.41",
     },
   },

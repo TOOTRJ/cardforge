@@ -57,8 +57,9 @@ from (values
   -- Oko, Thief of Crowns ELD #271: borderless planeswalker (4.33) in two
   -- colours, whose split frame is 4.6's
   ('fa000000-0000-4000-a000-000000000004', null, 'borderless/planeswalker+two-colour', 'Borderless planeswalker', 'eld', '271', '95da027e-34c1-4098-827d-1647693ad8f4', 'nearest', 'missing', 'm15pw', 'window-cropped', 'import', now() - interval '3 days'),
-  -- Plains ZNR #266: split-bar full-art basic (4.40)
-  ('fa000000-0000-4000-a000-000000000005', null, 'fullart/basic/split-bar', 'Zendikar-style full-art basic land (split type bar)', 'znr', '266', '9591fd15-78d9-4089-a075-031ab2affd2d', 'nearest', 'missing', 'm15fullartland', 'frame-in-crop', 'import', now() - interval '9 days'),
+  -- Plains ZNR #266: split-bar full-art basic (4.40) — Zendikar Rising's
+  -- type line sits further right than the stone-ring frame (owner Round 64)
+  ('fa000000-0000-4000-a000-000000000005', null, 'fullart/basic/split-bar+znr-type-line', 'Zendikar-style full-art basic land (split type bar)', 'znr', '266', '9591fd15-78d9-4089-a075-031ab2affd2d', 'nearest', 'missing', 'm15fullartland', 'frame-in-crop', 'import', now() - interval '9 days'),
   -- (Valkyrie's Call FDN #27, era/2015+nyx, sat here — id …0007 — until
   -- production ticked m15nyx in every colour on 2026-10-14: it imports exact
   -- now, so no import logs it.)

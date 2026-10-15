@@ -4885,6 +4885,218 @@
       "m": null
     }
   },
+  "m15fullartlandzen": {
+    "note": "Black-bordered Zendikar-style full-art basics: the stone ring round the window, the title bar and the split type bar with the centred medallion (Card Conjurer 'Fullart Basics (ZEN)', TODO 4.40; BFZ, OGW, AKH, HOU, ZNR). The master's bar is re-cut 7 px down onto the 52 printings (ZEN_BASIC_RECUT); BFZ sits within 1 px of it, AKH / HOU 3–4 px lower. ZNR (2020) sets its subtype 22–28 px further right and is this design's nearest only (owner Round 64), so its printings are not references. c: OGW #183 / #184, the stone-ring Wastes. m: no basic is multicolour. MH1 (snow bars), ZEN / J14 (2003 frame) are this design's nearest only.",
+    "colors": {
+      "w": [
+        {
+          "name": "Plains",
+          "set": "bfz",
+          "scryfallId": "58a735c9-08a1-4950-bf8c-ed1cfba76765"
+        },
+        {
+          "name": "Plains",
+          "set": "akh",
+          "scryfallId": "c7191d23-b68f-406b-8c28-8dadbaef6562"
+        }
+      ],
+      "u": [
+        {
+          "name": "Island",
+          "set": "bfz",
+          "scryfallId": "8490261d-4246-4232-b7fc-23204c14a7b5"
+        },
+        {
+          "name": "Island",
+          "set": "akh",
+          "scryfallId": "bec6fced-62bb-4a99-9ea1-374056b5781b"
+        }
+      ],
+      "b": [
+        {
+          "name": "Swamp",
+          "set": "bfz",
+          "scryfallId": "132155ae-f7a4-4957-91cb-e51ff52716f9"
+        },
+        {
+          "name": "Swamp",
+          "set": "akh",
+          "scryfallId": "60b7c997-e520-4ff6-8b3b-705c2f12a9d4"
+        }
+      ],
+      "r": [
+        {
+          "name": "Mountain",
+          "set": "bfz",
+          "scryfallId": "0c9cbae1-6b04-4408-82fe-3fcf61dffbe2"
+        },
+        {
+          "name": "Mountain",
+          "set": "akh",
+          "scryfallId": "d3112990-3919-46b0-b927-14566c689a81"
+        }
+      ],
+      "g": [
+        {
+          "name": "Forest",
+          "set": "bfz",
+          "scryfallId": "642102a2-abde-4e76-a6d6-08f7befe1196"
+        },
+        {
+          "name": "Forest",
+          "set": "akh",
+          "scryfallId": "2c2fc9f7-21af-4416-abf5-6fcb4f543680"
+        }
+      ],
+      "c": [
+        {
+          "name": "Wastes",
+          "set": "ogw",
+          "scryfallId": "7019912c-bd9b-4b96-9388-400794909aa1"
+        },
+        {
+          "name": "Wastes",
+          "set": "ogw",
+          "scryfallId": "69b215fe-0d97-4ca1-9490-174220fd454b"
+        }
+      ],
+      "m": null
+    }
+  },
+  "m15fullartlandsnc": {
+    "note": "Black-bordered full-art basics with the split type bar and centred medallion over the art, a white ring round the window and no stone (Card Conjurer 'Fullart Basics (SNC)', TODO 4.40; SNC #272–281). The master's bar is re-cut 13 px up and its medallion 18 px up onto the prints (SNC_BASIC_RECUT). BRO #278–287 (no ring, lower bars) and MID / VOW (dark bars) are this frame's nearest only. c: no SNC Wastes was printed; m: no basic is multicolour.",
+    "colors": {
+      "w": [
+        {
+          "name": "Plains",
+          "set": "snc",
+          "scryfallId": "e882099c-63cd-42f0-b160-35e6922106b1"
+        },
+        {
+          "name": "Plains",
+          "set": "snc",
+          "scryfallId": "aa69cedc-49ce-48f3-88e1-94b9bc061bf4"
+        }
+      ],
+      "u": [
+        {
+          "name": "Island",
+          "set": "snc",
+          "scryfallId": "8221d15c-c993-4345-a6bb-6a7d215e3273"
+        },
+        {
+          "name": "Island",
+          "set": "snc",
+          "scryfallId": "5aaba7cd-c1dc-49cf-8d63-8bb3594a6541"
+        }
+      ],
+      "b": [
+        {
+          "name": "Swamp",
+          "set": "snc",
+          "scryfallId": "5f917d8d-7037-4f11-91f6-1ef96b3541bb"
+        },
+        {
+          "name": "Swamp",
+          "set": "snc",
+          "scryfallId": "b4569823-af23-4eea-acc9-2a2c62bce3b0"
+        }
+      ],
+      "r": [
+        {
+          "name": "Mountain",
+          "set": "snc",
+          "scryfallId": "6a58066e-f9a2-4508-9cc0-908b1cf747e3"
+        },
+        {
+          "name": "Mountain",
+          "set": "snc",
+          "scryfallId": "2e97dadd-0849-4c18-9523-4775d09fca9a"
+        }
+      ],
+      "g": [
+        {
+          "name": "Forest",
+          "set": "snc",
+          "scryfallId": "c726424a-3336-4e15-9055-4a26371df361"
+        },
+        {
+          "name": "Forest",
+          "set": "snc",
+          "scryfallId": "633eb269-916e-4d79-821e-1f304283416c"
+        }
+      ],
+      "c": null,
+      "m": null
+    }
+  },
+  "m15fullartlandthb": {
+    "note": "Black-bordered full-art basics with the title bar and a plain 'Basic Land — Plains' bar, no symbol (Card Conjurer 'Fullart Basics (THB)', TODO 4.41; THB, 2XM, DMU, SPM, SOS, PLG25). The pack's geometry is the prints' within 1–3 px (31 printings, 2026-10-14). c: no plain-bar Wastes was printed; m: no basic is multicolour.",
+    "colors": {
+      "w": [
+        {
+          "name": "Plains",
+          "set": "thb",
+          "scryfallId": "a9891b7b-fc52-470c-9f74-292ae665f378"
+        },
+        {
+          "name": "Plains",
+          "set": "2xm",
+          "scryfallId": "cc3db531-3f21-49a2-8aeb-d98b7db94397"
+        }
+      ],
+      "u": [
+        {
+          "name": "Island",
+          "set": "thb",
+          "scryfallId": "acf7b664-3e75-4018-81f6-2a14ab59f258"
+        },
+        {
+          "name": "Island",
+          "set": "2xm",
+          "scryfallId": "91595b00-6233-48be-a012-1e87bd704aca"
+        }
+      ],
+      "b": [
+        {
+          "name": "Swamp",
+          "set": "thb",
+          "scryfallId": "02cb5cfd-018e-4c5e-bef1-166262aa5f1d"
+        },
+        {
+          "name": "Swamp",
+          "set": "dmu",
+          "scryfallId": "f1b8c9a6-62eb-436e-9277-e2b8075d482d"
+        }
+      ],
+      "r": [
+        {
+          "name": "Mountain",
+          "set": "thb",
+          "scryfallId": "53fb7b99-9e47-46a6-9c8a-88e28b5197f1"
+        },
+        {
+          "name": "Mountain",
+          "set": "dmu",
+          "scryfallId": "0aaf15b9-1bf5-424a-a994-67beaae29d36"
+        }
+      ],
+      "g": [
+        {
+          "name": "Forest",
+          "set": "thb",
+          "scryfallId": "32af9f41-89e2-4e7a-9fec-fffe79cae077"
+        },
+        {
+          "name": "Forest",
+          "set": "dmu",
+          "scryfallId": "e8e9959a-b422-4906-8d35-8b05c5dd6de1"
+        }
+      ],
+      "c": null,
+      "m": null
+    }
+  },
   "m15textless": {
     "note": "Textless M15 spells exist only as foil-only/promo prints (Secret Lair, Marvel, Avatar) — treat as approximate.",
     "colors": {

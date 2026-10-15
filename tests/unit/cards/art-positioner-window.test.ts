@@ -109,6 +109,11 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   extendedartland: { front: [1500, 1142] },
   m15fullartland: { front: [1382, 1875] },
   fullartland: { front: [1500, 2100] },
+  // The older full-art basics (TODO 4.40 / 4.41): the stone ring's window,
+  // the art under SNC's ring, the plain bar's art to the black ring.
+  m15fullartlandzen: { front: [1278, 1520] },
+  m15fullartlandsnc: { front: [1382, 1880] },
+  m15fullartlandthb: { front: [1382, 1876] },
   m15textless: { front: [1314, 1816] },
   m15textlessland: { front: [1314, 1816] },
   expeditionland: { front: [1380, 1470] },
@@ -207,13 +212,14 @@ describe("what the fixed 5:4 surface got wrong (before 3b.13)", () => {
     expect(front("battle")).toBeCloseTo(1.3598, 3);
   });
 
-  it("no template's window was 5:4, and 28 were more than a quarter off", () => {
+  it("no template's window was 5:4, and 31 were more than a quarter off", () => {
     const off = FRAME_TEMPLATE_VALUES.map((t) => mismatch(front(t)));
     expect(off.filter((m) => m < 0.005)).toHaveLength(0);
     // (25 before the station frame, TODO 4.27a: its two templates' one
     // picture under the whole frame is far taller than 5:4; 27 before the
-    // extended-art frame's see-through colourless master, layout v58.)
-    expect(off.filter((m) => m > 0.25)).toHaveLength(28);
+    // extended-art frame's see-through colourless master, layout v58; 28
+    // before the older full-art basics, TODO 4.40 / 4.41: three tall windows more.)
+    expect(off.filter((m) => m > 0.25)).toHaveLength(31);
   });
 });
 
