@@ -48,7 +48,13 @@ function productionVerifiedKeys(): Set<string> {
   }
   return keys;
 }
-const PROD_VERIFIED = productionVerifiedKeys();
+const PROD = productionVerifiedKeys();
+/**
+ * The unverified side of these cases: production's list WITHOUT its station
+ * ticks. Production verified `m15station` in every colour and
+ * `m15stationland` in w/u/b/r/g on 2026-10-14 (the seed mirror of that date).
+ */
+const PROD_BEFORE_STATION = new Set([...PROD].filter((key) => !key.startsWith("m15station/") && !key.startsWith("m15stationland/")));
 
 describe("a bordered station printing is the artifact / land frame's nearest (station/2015)", () => {
   const spacecraft: Key[] = ["eoe-25", "eoe-208", "eoe-219", "eoe-238", "eoe-241", "peoe-25s", "plst-eoe-101", "trk-273"];
@@ -97,15 +103,22 @@ describe("a bordered station printing is the artifact / land frame's nearest (st
   });
 
   it("the import keeps its landing, its kind and its tiers as plain rules text", () => {
-    const frigate = finalizeImportMatch(mapScryfallToFormPatch(printing("eoe-25")), PROD_VERIFIED);
+    const frigate = finalizeImportMatch(mapScryfallToFormPatch(printing("eoe-25")), PROD_BEFORE_STATION);
     expect(frigate).toMatchObject({ kind: "artifact", frame_template: "m15artifact", power: "3", toughness: "5" });
     expect(frigate.rules_text).toContain("12+ | Flying, lifelink");
-    const planet = finalizeImportMatch(mapScryfallToFormPatch(printing("eoe-253")), PROD_VERIFIED);
+    const planet = finalizeImportMatch(mapScryfallToFormPatch(printing("eoe-253")), PROD_BEFORE_STATION);
     expect(planet).toMatchObject({ kind: "land", frame_template: "m15land" });
   });
 
+  it("on production's own list (2026-10-14) a Spacecraft lands on the station frame, exact", () => {
+    for (const key of ["w", "u", "b", "r", "g", "c", "m"]) expect(PROD.has(frameComboKey("m15station", key)), key).toBe(true);
+    const frigate = finalizeImportMatch(mapScryfallToFormPatch(printing("eoe-25")), PROD);
+    expect(frigate).toMatchObject({ kind: "artifact", frame_template: "m15station" });
+    expect(frigate.frame_match).toMatchObject({ status: "exact", signature: "station/2015", template: "m15station" });
+  });
+
   it("…and writes a row in the request log (none before step 0) — 'unverified' since the frame exists", () => {
-    const patch = finalizeImportMatch(mapScryfallToFormPatch(printing("eoe-208")), PROD_VERIFIED);
+    const patch = finalizeImportMatch(mapScryfallToFormPatch(printing("eoe-208")), PROD_BEFORE_STATION);
     const row = frameRequestFromImport(patch, { artImported: true, source: "import" });
     expect(row).toMatchObject({
       signature: "station/2015",

@@ -59,10 +59,9 @@ from (values
   ('fa000000-0000-4000-a000-000000000004', null, 'borderless/planeswalker+two-colour', 'Borderless planeswalker', 'eld', '271', '95da027e-34c1-4098-827d-1647693ad8f4', 'nearest', 'missing', 'm15pw', 'window-cropped', 'import', now() - interval '3 days'),
   -- Plains ZNR #266: split-bar full-art basic (4.40)
   ('fa000000-0000-4000-a000-000000000005', null, 'fullart/basic/split-bar', 'Zendikar-style full-art basic land (split type bar)', 'znr', '266', '9591fd15-78d9-4089-a075-031ab2affd2d', 'nearest', 'missing', 'm15fullartland', 'frame-in-crop', 'import', now() - interval '9 days'),
-  -- Valkyrie's Call FDN #27: the Nyx starfield on a modern enchantment (4.7):
-  -- the Nyx frame exists since 2026-10-13, so the import logs it as not yet
-  -- verified until m15nyx is ticked in white
-  ('fa000000-0000-4000-a000-000000000007', null, 'era/2015+nyx', 'M15 (2015) frame', 'fdn', '27', '0e1f1ff2-fa8f-4d38-b631-2d6e08e614c8', 'nearest', 'unverified', 'm15', null, 'deck_prefill', now() - interval '20 days'),
+  -- (Valkyrie's Call FDN #27, era/2015+nyx, sat here — id …0007 — until
+  -- production ticked m15nyx in every colour on 2026-10-14: it imports exact
+  -- now, so no import logs it.)
   -- Aven Mindcensor FUT #18: the Future Sight frame (4.15)
   ('fa000000-0000-4000-a000-000000000008', null, 'future', 'Future Sight frame', 'fut', '18', '5b8ede8a-5317-4662-b964-a9bd202a4aab', 'unsupported', 'missing', 'm15', null, 'import', now() - interval '120 days'),
   -- Overlord of the Floodpits DSK #389: Japan showcase, full art — two dev accounts
