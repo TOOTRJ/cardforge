@@ -913,6 +913,18 @@ Rules and gotchas:
   The tier editor's notes (`lib/creator/station-fit.ts`: text really cut,
   a band over the 600-character row limit) read the layout and the save's
   rule; nothing reads them back.
+  Its Spacecraft DRESSES (step 2, PR 4): `extendedartstation` (the
+  published extended-art masters with the same two cuts — the pack is M15's
+  pixels below the type bar) and `m15borderlessstation` (the borderless
+  artifact masters and crowned twins with m15station's box swapped in) —
+  same `cardStation()`, never a second tier layout. A PICK, never followed
+  (`SUBTYPE_DRESSES` `follow: false`, `isPickOnlyDress`: no new card, random
+  pool or deck lands there; a card on one goes back to the frame it
+  re-dresses); imports: extended art names its own frame once verified
+  (exact), else the bordered one as its landing; borderless and the
+  showcases land on the bordered frame once verified (`stationDress`), an
+  edge-to-edge frame never being an import's landing. No dress for Planets
+  (none printed); the viewport Planets / TRK #557 showcases stay 4.11's.
   `docs/FRAMES.md` "The Station frame".
 - The Universes Beyond frames (`m15ub`, `m15ubartifact`, `m15ubland`; TODO
   4.25): STORED templates of their own (owner 2026-10-13), skins of m15 /

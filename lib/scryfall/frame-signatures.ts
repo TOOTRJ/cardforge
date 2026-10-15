@@ -111,8 +111,12 @@ export type FrameMatch = {
    *  (lib/creator/frame-resolve.ts) leaves a printing on its OWN frame where
    *  that one is verified in the colour and its art fits it. `reason` is
    *  what the match says after the swap — null keeps the reason it had (a
-   *  gap named before the plate: the nickname line). */
-  landOnOnceVerified?: { template: FrameTemplate; reason: string | null };
+   *  gap named before the plate: the nickname line). `overOwnFrame`: the
+   *  landing replaces the printing's own frame too, verified or not — the
+   *  station frame's stand-in (TODO 4.27a step 2, owner Round 66): the
+   *  extended-art frame draws a Spacecraft's tiers as plain lines, so a
+   *  verified `extendedart` is no landing for one. */
+  landOnOnceVerified?: { template: FrameTemplate; reason: string | null; overOwnFrame?: true };
   /** Set by withVerification only: the registry answered `exact`, but that
    *  frame isn't verified in the card's colour yet, so the match was
    *  downgraded to `nearest`. The frame request log files it under "Not yet
@@ -614,7 +618,7 @@ type Outcome = {
    *  printing's own frame and the status its own. A match whose reason is
    *  `gap`'s (the piece that landing draws) says `reason` after the swap;
    *  one a gap before it named keeps its reason. */
-  landOnOnceVerified?: { template: FrameTemplate; match: Match; gap: GapKey; reason: Text };
+  landOnOnceVerified?: { template: FrameTemplate; match: Match; gap: GapKey; reason: Text; overOwnFrame?: true };
 };
 
 type Rule = {
@@ -1176,11 +1180,14 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   // has no layout for it (`layout: normal`): the Station keyword is the one
   // field that names it, on every such printing and on nothing else (91 of
   // 91, Scryfall 2026-10-13 — Doctor Who's "Plane — Spacecraft" cards carry
-  // no keyword and no PipGlyph card type). No PipGlyph frame draws it, on
-  // any dress (STATION_MATCH's rule below is the bordered printings').
+  // no keyword and no PipGlyph card type). The gap is the DRESSES': the
+  // bordered printings have their own rule (`station/2015`, below); the
+  // extended-art ones a frame of their own once verified, the borderless and
+  // showcase ones the bordered frame as their landing (stationDress; TODO
+  // 4.27a step 2) — "this printing's" frame is the dress PipGlyph lacks.
   station: {
     match: { keywordsAny: ["Station"] },
-    reason: "PipGlyph doesn't draw the Station frame yet",
+    reason: "PipGlyph doesn't draw this printing's Station frame yet",
     blockedBy: "4.27a",
   },
   // The double-faced marks on a frame that isn't a double-faced body (TODO
@@ -1534,6 +1541,66 @@ const vehicleStandIn = (dress: string): NonNullable<Outcome["landOnOnceVerified"
   reason: `this printing is ${dress}, and PipGlyph draws the Vehicle plate on its bordered Vehicle frame only`,
 });
 
+/** Where a station printing in a dress lands when that dress has no
+ *  station frame of its own to land on (TODO 4.27a step 2, as the Vehicle's
+ *  stand-in above): the bordered station frame once it is verified in the
+ *  card's colour, still `nearest` — the dress's own landing until then.
+ *  `template` is the bordered frame of the printings the dress has: the
+ *  Spacecraft's (extended art, borderless, TRK #557's showcase) or the
+ *  Planet's (the viewport Planets, a showcase of their own). `dress` names
+ *  the print, `why` says why the print's own frame is not the landing. */
+const stationStandIn = (
+  dress: string,
+  why: string,
+  template: "m15station" | "m15stationland" = "m15station",
+): NonNullable<Outcome["landOnOnceVerified"]> => ({
+  template,
+  match: { allOf: [GAPS.station.match, template === "m15stationland" ? { kinds: ["land"] } : { notKinds: ["land"] }] },
+  gap: "station",
+  reason: `this printing is ${dress}, and ${why}`,
+  // A frame that draws no tiers (extended art, the borderless artifact
+  // frame, a showcase stand-in) is never kept over the station frame, even
+  // verified (owner Round 66): the tiers would print as plain lines.
+  overOwnFrame: true,
+});
+
+/** The gap rule of the station frame on a DRESS (TODO 4.27a step 2): `<base>
+ *  +station` keeps its match, status, reason and gaps, and gains
+ *    • `standIn` — the bordered station frame as its stand-in LANDING once
+ *      verified (`landOnOnceVerified`), where the rule's frame is the print's
+ *      own dress or an edge-to-edge one (extended art, borderless, the
+ *      borderless viewport Planets);
+ *    • `own` — the frame named INSTEAD once verified (`onceVerified`): the
+ *      extended-art station frame, exact (`exact`) unless a later gap of the
+ *      base still holds there (`gapsOnceVerified`: the rule's own list — its
+ *      first, the tiers, is drawn on that frame, gapDrawnBy); or, on a
+ *      black-bordered showcase whose frame is only the M15 stand-in (TRK
+ *      #557), the bordered station frame, still nearest (the showcase's
+ *      reason and item stand).
+ *  The dress's own verified frame wins over the stand-in (withVerification).
+ *  A gap rule of a `nearest` base (the showcases) records no gaps: it is
+ *  found by its key. */
+function stationDress(
+  rules: Rule[],
+  dress: { standIn?: NonNullable<Outcome["landOnOnceVerified"]>; own?: TemplateSpec; exact?: true },
+): Rule[] {
+  const { standIn, own, exact } = dress;
+  return rules.map((rule) =>
+    rule.key.endsWith("+station")
+      ? {
+          ...rule,
+          outcome: {
+            ...rule.outcome,
+            ...(standIn ? { landOnOnceVerified: standIn } : {}),
+            ...(own ? { onceVerified: own } : {}),
+            ...(own && exact ? { exactOnceVerified: true as const } : {}),
+          },
+          ...(own && exact ? { gapsOnceVerified: rule.gaps } : {}),
+        }
+      : rule,
+  );
+}
+
 /** The item a showcase station printing waits on: its own showcase frame
  *  (4.11) — the `station` gap there only says what else the print has. */
 const STATION_SHOWCASE: Partial<Record<GapKey, BlockedBy>> = { station: "4.11" };
@@ -1791,20 +1858,26 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // Edge of Eternities' ten "viewport" Planets (EOE #277–285, #372–380) are
   // station cards on a showcase of their own: they keep this rule's landing
   // and item, and say the station frame is missing too (STATION_SHOWCASE).
-  ...withGaps(
-    {
-      key: "borderless/showcase",
-      exactLabel: (ctx) => `${showcaseLabel(ctx)} (borderless)`,
-      match: { borders: ["borderless"], effectsAny: ["showcase"] },
-      outcome: {
-        status: "nearest",
-        template: { family: "borderless" },
-        reason: "PipGlyph doesn't have this set's showcase frame yet",
-        blockedBy: "4.11",
+  // Since TODO 4.27a step 2 their import lands on the bordered Planet frame
+  // once that is verified in the card's colour (stationDress: the tiers
+  // drawn, still nearest — the viewport design itself is 4.11's).
+  ...stationDress(
+    withGaps(
+      {
+        key: "borderless/showcase",
+        exactLabel: (ctx) => `${showcaseLabel(ctx)} (borderless)`,
+        match: { borders: ["borderless"], effectsAny: ["showcase"] },
+        outcome: {
+          status: "nearest",
+          template: { family: "borderless" },
+          reason: "PipGlyph doesn't have this set's showcase frame yet",
+          blockedBy: "4.11",
+        },
       },
-    },
-    ["station"],
-    STATION_SHOWCASE,
+      ["station"],
+      STATION_SHOWCASE,
+    ),
+    { standIn: stationStandIn("a showcase", "PipGlyph draws the tiers on its bordered Planet frame", "m15stationland") },
   ),
   {
     key: "borderless/basic/textless",
@@ -1996,17 +2069,25 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // plate exists), and its bordered landing (1.18) is the Vehicle frame once
   // that is verified in its colour, the silver artifact frame until then
   // (`landOnOnceVerified`; the gap rules inherit it).
-  ...withGaps(
-    {
-      key: "borderless/standard",
-      exactLabel: "Borderless frame",
-      match: { borders: ["borderless"] },
-      outcome: { status: "exact", template: { family: "borderless" }, landOnOnceVerified: vehicleStandIn("borderless") },
-    },
-    // A borderless Spacecraft (EOC #1 Hearthhull, #2 Inspirit) floats the
-    // station frame's bands, badges and plate over the art: the `station`
-    // gap first — the most visible miss.
-    ["station", "etched", "nickname", "crown", "nyx", "vehicle", "colour-indicator", "two-colour", "two-colour-hybrid", "light-box"],
+  // A borderless Spacecraft (EOC #1 Hearthhull, #2 Inspirit) floats the
+  // station frame's bands, badges and plate over the art: the `station`
+  // gap first — the most visible miss. PipGlyph draws that dress since TODO
+  // 4.27a step 2 (`m15borderlessstation`), but as every edge-to-edge frame
+  // it is no import's landing (Scryfall's art crop is the window: 1.18), so
+  // the import lands on the BORDERED station frame once that is verified in
+  // the card's colour (stationDress, as the borderless Vehicle does), the
+  // artifact frame before.
+  ...stationDress(
+    withGaps(
+      {
+        key: "borderless/standard",
+        exactLabel: "Borderless frame",
+        match: { borders: ["borderless"] },
+        outcome: { status: "exact", template: { family: "borderless" }, landOnOnceVerified: vehicleStandIn("borderless") },
+      },
+      ["station", "etched", "nickname", "crown", "nyx", "vehicle", "colour-indicator", "two-colour", "two-colour-hybrid", "light-box"],
+    ),
+    { standIn: stationStandIn("borderless", "an import draws its picture in the bordered Station frame's window") },
   ),
 
   // --- 1.19 steps 3–7: the other full-art and textless printings ----------
@@ -2395,24 +2476,32 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       blockedBy: "4.11",
     },
   },
-  // A showcase station printing (TRK #557 U.S.S. Enterprise-D) says both.
-  ...withGaps(
-    {
-      key: "showcase",
-      exactLabel: showcaseLabel,
-      match: { effectsAny: ["showcase"] },
-      outcome: {
-        status: "nearest",
-        template: { family: "m15" },
-        reason: ({ border }) =>
-          border === "white"
-            ? "PipGlyph doesn't have this set's showcase frame or a white border yet"
-            : "PipGlyph doesn't have this set's showcase frame yet",
-        blockedBy: "4.11",
+  // A showcase station printing (TRK #557 U.S.S. Enterprise-D) says both —
+  // and since TODO 4.27a step 2 lands on the bordered Spacecraft frame once
+  // that is verified in its colour (stationDress: the tiers drawn, still
+  // nearest — the one-off design is 4.11's).
+  ...stationDress(
+    withGaps(
+      {
+        key: "showcase",
+        exactLabel: showcaseLabel,
+        match: { effectsAny: ["showcase"] },
+        outcome: {
+          status: "nearest",
+          template: { family: "m15" },
+          reason: ({ border }) =>
+            border === "white"
+              ? "PipGlyph doesn't have this set's showcase frame or a white border yet"
+              : "PipGlyph doesn't have this set's showcase frame yet",
+          blockedBy: "4.11",
+        },
       },
-    },
-    ["station"],
-    STATION_SHOWCASE,
+      ["station"],
+      STATION_SHOWCASE,
+    ),
+    // The frame here is the M15 stand-in itself, so the station frame is
+    // named instead (a landing would never replace a verified stand-in).
+    { own: { family: "station" } },
   ),
 
   // --- 1.4: Future Sight, extended art, Nyx, coloured artifacts -----------
@@ -2432,19 +2521,31 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // gap): while that frame isn't verified in the card's colour the import
   // lands on the Vehicle frame once THAT is, instead of the silver artifact
   // frame (`landOnOnceVerified`).
-  ...withGaps(
+  // An extended-art Spacecraft (13 printings: EOE #321–355, EOC #27 / #34,
+  // TRK #481) prints the station frame without the art window's rails: the
+  // `station` gap, before the pieces the extended-art frame lacks. Its own
+  // frame exists since TODO 4.27a step 2 (`extendedartstation`): once that
+  // is verified in the card's colour the gap rule names it and is exact
+  // (stationDress) — the oracle text is already the tiers' grammar; until
+  // then the bordered station frame is its landing once THAT is verified,
+  // the extended-art frame before (still nearest either way).
+  // …and a Universes Beyond extended-art printing (1,124) the streaked
+  // dress the extended-art frame has no twin for (TODO 4.25).
+  ...stationDress(
+    withGaps(
+      {
+        key: "extendedart",
+        exactLabel: "Extended-art frame",
+        match: { effectsAny: ["extendedart"] },
+        outcome: { status: "exact", template: { family: "extended" }, landOnOnceVerified: vehicleStandIn("extended art") },
+      },
+      ["layout", "dfc", "station", "etched", "border", "universes-beyond", "crown", "vehicle", "two-colour", "two-colour-hybrid"],
+    ),
     {
-      key: "extendedart",
-      exactLabel: "Extended-art frame",
-      match: { effectsAny: ["extendedart"] },
-      outcome: { status: "exact", template: { family: "extended" }, landOnOnceVerified: vehicleStandIn("extended art") },
+      standIn: stationStandIn("extended art", "PipGlyph's extended-art Station frame isn't verified in its colour yet"),
+      own: "extendedartstation",
+      exact: true,
     },
-    // An extended-art Spacecraft (13 printings: EOE #321–355, EOC #27 / #34,
-    // TRK #481) prints the station frame without the art window's rails: the
-    // `station` gap, before the pieces the extended-art frame lacks.
-    // …and a Universes Beyond extended-art printing (1,124) the streaked
-    // dress the extended-art frame has no twin for (TODO 4.25).
-    ["layout", "dfc", "station", "etched", "border", "universes-beyond", "crown", "vehicle", "two-colour", "two-colour-hybrid"],
   ),
   {
     key: "nyx/2003",
@@ -2838,8 +2939,12 @@ export function signatureDrawnOn(signature: string, template: string | null | un
  *  transform (TODO 5.1a) and modal (5.1b) BACK bodies — a printing resolves
  *  to its FRONT template; its back wears the body the family and the back's
  *  type derive (lib/cards/dfc.ts bodyFor, the mapper's business in 5.4),
- *  never a signature of its own. */
-export const TEMPLATES_WITHOUT_PRINTED_SIGNATURE: readonly FrameTemplate[] = ["m15dfcback", "m15dfcbackleft", "m15dfclandback", "m15mdfcback", "m15mdfclandback"];
+ *  never a signature of its own. And the Spacecraft's BORDERLESS dress
+ *  (TODO 4.27a step 2): its two printings (EOC #1 / #2) resolve to the
+ *  borderless artifact frame and land on the bordered station frame — as
+ *  every edge-to-edge frame, it is never an import's landing (Scryfall's art
+ *  crop is the window, 1.18): a maker's pick only. */
+export const TEMPLATES_WITHOUT_PRINTED_SIGNATURE: readonly FrameTemplate[] = ["m15dfcback", "m15dfcbackleft", "m15dfclandback", "m15mdfcback", "m15mdfclandback", "m15borderlessstation"];
 
 const textOf = (text: Text | undefined, ctx: Ctx): string | null =>
   text === undefined ? null : typeof text === "string" ? text : text(ctx);
@@ -2941,7 +3046,11 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
     matches(standIn.match, ctx) &&
     !(kind && kindMisfit(standIn.template, kind, ctx)) &&
     !artReachesCardEdge(getFrameProfile(standIn.template))
-      ? { template: standIn.template, reason: rule.gaps?.[0] === standIn.gap ? textOf(standIn.reason, ctx) : null }
+      ? {
+          template: standIn.template,
+          reason: rule.gaps?.[0] === standIn.gap ? textOf(standIn.reason, ctx) : null,
+          ...(standIn.overOwnFrame ? { overOwnFrame: true as const } : {}),
+        }
       : undefined;
 
   // Every anatomy gap that holds: the matched gap rule's own, then the
@@ -3062,6 +3171,10 @@ function gapDrawnBy(gap: GapKey, template: FrameTemplate, border?: string): bool
     // The Universes Beyond dress (TODO 4.25): its three frames draw it.
     case "universes-beyond":
       return UB_TEMPLATES.has(template);
+    // The station frame's tiers (TODO 4.27a): every frame that lays them
+    // out (FrameProfile.tiers — the bordered pair and its dresses).
+    case "station":
+      return getFrameProfile(template).tiers !== undefined;
     default:
       return false;
   }

@@ -1,25 +1,39 @@
 #!/usr/bin/env node
 // ---------------------------------------------------------------------------
 // build-station-frames.mjs — the station frame's masters (TODO 4.27a):
-// PipGlyph's OWN derivation from M15 masters already published in the frames
+// PipGlyph's OWN derivation from masters already published in the frames
 // bucket. No Card Conjurer file and no scan is read; every number is DATA in
 // scripts/lib/station-2025.mjs (STATION_RECIPE).
 //
-//   m15station/<w u b r g m c>      from the published m15artifact/<key>
-//   m15stationland/<w u b r g>      from the published m15land/<key>
+//   m15station/<w u b r g m c>            from the published m15artifact/<key>
+//   m15stationland/<w u b r g m c>        from the published m15land/<key>
+//   extendedartstation/<w u b r g m c>    from the published extendedart/<key>
+//                                         (c: the pack's silver artifact `a`)
+//   m15borderlessstation/<w u b r g m c>  the published m15borderlessartifact/
+//   (+ <key>-legendary)                   <key> and its crowned twin, with
+//                                         m15station/<key>'s text box
 //
-// Two cuts:
+// The bordered frames and the extended-art dress take two cuts:
 //   1. the frame FIELD → alpha 0 (the picture runs under the whole card). Its
 //      shape is read off the masters themselves: m15/<k> and m15artifact/<k>
 //      paint the same bars, pinlines and boxes over two different fields, so
 //      the pixels where they differ ARE the field (union over six keys, 1 px
 //      holes closed). The run refuses a mask whose bounding box is not the
 //      recorded one — a re-sourced M15 master means a new look at the recipe.
+//      The extended-art masters are M15's pixels from row 1320 down and paint
+//      their bars where M15 does, so the same mask cuts their field (the run
+//      refuses an extended master that is opaque and not M15's colour where
+//      the mask cuts below the type bar).
 //   2. the TEXT BOX interior → alpha × washAlpha: the box's own colour,
 //      texture and top shadow stay, see-through.
+// The borderless dress (TODO 4.27a step 2, EOC #1 / #2) has no field to cut:
+// its bars float on the art. Its dark translucent text-box interior — the
+// pixels inside the box rect the master paints at less than full alpha — is
+// replaced by m15station/<key>'s pixels there (the station box: M15's paper
+// at × washAlpha), in the plain master and in its crowned twin alike.
 //
 //   node scripts/build-station-frames.mjs                # → .frames-build
-//   node scripts/build-station-frames.mjs --out <dir> [--masters <dir>] [--dry-run]
+//   node scripts/build-station-frames.mjs --out <dir> [--masters <dir>] [--only a,b] [--dry-run]
 //   npm run frames:publish -- --source .frames-build --only m15station,m15stationland --write
 //
 // The sources are local copies of the PUBLISHED masters, each sha256-checked
@@ -46,12 +60,19 @@ const flag = (name) => {
   return at >= 0 ? args[at + 1] : undefined;
 };
 const dryRun = args.includes("--dry-run");
+const only = flag("--only")?.split(",").filter(Boolean) ?? null;
 const outDir = path.resolve(flag("--out") ?? ".frames-build");
 const PROVENANCE = "lib/cards/frame-sources.json";
 const MANIFEST = JSON.parse(fs.readFileSync("lib/frames/frame-manifest.json", "utf8")).files;
 const W = 1500;
 const H = 2100;
 const STATION_WEBP = { ...WEBP, alphaQuality: 100 };
+const LEGENDARY = "-legendary";
+
+if (only) {
+  const unknown = only.filter((t) => !STATION_RECIPE.templates[t]);
+  if (unknown.length) throw new Error(`unknown template(s) ${unknown.join(", ")}: known ${Object.keys(STATION_RECIPE.templates).join(", ")}`);
+}
 
 const sourceDirs = [
   ...(flag("--masters") ? [path.resolve(flag("--masters"))] : []),
@@ -122,51 +143,151 @@ for (const side of ["x0", "x1", "y0", "y1"]) {
 }
 console.log(`field mask: ${found.px} px, box ${found.x0}..${found.x1} × ${found.y0}..${found.y1}`);
 
+/** The two cuts (field, box) on a parent master's pixels. */
+function cutFieldAndBox(data) {
+  const out = Buffer.from(data);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = y * W + x;
+      if (closed[i]) out[i * 4 + 3] = 0;
+      else if (x >= BOX.left && x <= BOX.right && y >= BOX.top && y <= BOX.bottom) out[i * 4 + 3] = Math.round(data[i * 4 + 3] * WASH);
+    }
+  }
+  return out;
+}
+
+/** An extended-art master is M15's below the type bar: where the field mask
+ *  cuts there it must be clear or M15's own colour, or the pack moved. */
+function assertM15BelowTypeBar(ext, m15, label) {
+  let checked = 0;
+  let bad = 0;
+  for (let y = 1320; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = y * W + x;
+      if (!closed[i] || ext[i * 4 + 3] < 250) continue;
+      checked++;
+      const o = i * 4;
+      if (Math.abs(ext[o] - m15[o]) + Math.abs(ext[o + 1] - m15[o + 1]) + Math.abs(ext[o + 2] - m15[o + 2]) > 30) bad++;
+    }
+  }
+  if (checked === 0 || bad > checked * 0.01) throw new Error(`${label}: ${bad} of ${checked} field pixels below the type bar are not M15's — the extended pack moved; look at the recipe again`);
+  return checked;
+}
+
+/** The borderless dress's box: inside the station box rect, every pixel the
+ *  borderless master paints translucent (its dark box interior and the
+ *  interior's own soft inner edge) takes the station master's pixel there.
+ *  The rim (α ≥ 250) is never touched. */
+function swapBox(base, station) {
+  const out = Buffer.from(base);
+  let swapped = 0;
+  for (let y = BOX.top; y <= BOX.bottom; y++) {
+    for (let x = BOX.left; x <= BOX.right; x++) {
+      const o = (y * W + x) * 4;
+      if (base[o + 3] >= 250) continue;
+      station.copy(out, o, o, o + 4);
+      swapped++;
+    }
+  }
+  return { out, swapped };
+}
+
+async function write(template, key, out) {
+  const png = path.join(outDir, template, `${key}.png`);
+  fs.mkdirSync(path.dirname(png), { recursive: true });
+  const image = sharp(out, { raw: { width: W, height: H, channels: 4 } });
+  await image.clone().png({ compressionLevel: 9 }).toFile(png);
+  const webp = png.replace(/\.png$/, ".webp");
+  await image.clone().webp(STATION_WEBP).toFile(webp);
+  const back = await raw(webp);
+  for (let i = 0; i < W * H; i++) {
+    if (back[i * 4 + 3] !== out[i * 4 + 3]) throw new Error(`${webp}: alpha differs from the PNG's at ${i % W},${Math.floor(i / W)} (${back[i * 4 + 3]} ≠ ${out[i * 4 + 3]})`);
+  }
+  return png;
+}
+
 // ---- 2. the masters -----------------------------------------------------------
 const provenance = fs.existsSync(PROVENANCE) ? JSON.parse(fs.readFileSync(PROVENANCE, "utf8")) : {};
 for (const [template, def] of Object.entries(STATION_RECIPE.templates)) {
+  if (only && !only.includes(template)) continue;
   const colors = {};
+  const sourceFiles = new Set(def.boxFrom ? [] : FIELD.keys.flatMap((key) => [`m15/${key}.png`, `m15artifact/${key}.png`]));
+  const notes = [];
   for (const key of def.keys) {
-    const src = published(`${def.from}/${key}`);
-    const data = await raw(src.file);
-    const out = Buffer.from(data);
-    for (let y = 0; y < H; y++) {
-      for (let x = 0; x < W; x++) {
-        const i = y * W + x;
-        if (closed[i]) out[i * 4 + 3] = 0;
-        else if (x >= BOX.left && x <= BOX.right && y >= BOX.top && y <= BOX.bottom) out[i * 4 + 3] = Math.round(data[i * 4 + 3] * WASH);
+    const sourceKey = def.sourceKeys?.[key] ?? key;
+    if (def.boxFrom) {
+      // The borderless dress: the master (and its crowned twin) with the
+      // station box.
+      const box = published(`${def.boxFrom}/${key}`);
+      const stationPixels = await raw(box.file);
+      sourceFiles.add(`${def.boxFrom}/${key}.png`);
+      for (const name of def.crownTwins ? [key, `${key}${LEGENDARY}`] : [key]) {
+        const src = published(`${def.from}/${name}`);
+        sourceFiles.add(`${def.from}/${name}.png`);
+        const { out, swapped } = swapBox(await raw(src.file), stationPixels);
+        colors[name] = [
+          `${def.from}/${name}.png (published, sha256 ${src.sha.slice(0, 12)})`,
+          `its translucent box interior (${swapped} px) from ${def.boxFrom}/${key}.png (sha256 ${box.sha.slice(0, 12)})`,
+        ];
+        if (!dryRun) {
+          const png = await write(template, name, out);
+          console.log(`wrote ${path.relative(process.cwd(), png)} (+ .webp, alpha equal): ${swapped} box px from ${def.boxFrom}/${key}`);
+        }
       }
+      continue;
     }
-    colors[key] = [`${def.from}/${key}.png (published, sha256 ${src.sha.slice(0, 12)})`];
-    if (dryRun) continue;
-    const png = path.join(outDir, template, `${key}.png`);
-    fs.mkdirSync(path.dirname(png), { recursive: true });
-    const image = sharp(out, { raw: { width: W, height: H, channels: 4 } });
-    await image.clone().png({ compressionLevel: 9 }).toFile(png);
-    const webp = png.replace(/\.png$/, ".webp");
-    await image.clone().webp(STATION_WEBP).toFile(webp);
-    const back = await raw(webp);
-    for (let i = 0; i < W * H; i++) {
-      if (back[i * 4 + 3] !== out[i * 4 + 3]) throw new Error(`${webp}: alpha differs from the PNG's at ${i % W},${Math.floor(i / W)} (${back[i * 4 + 3]} ≠ ${out[i * 4 + 3]})`);
+    const src = published(`${def.from}/${sourceKey}`);
+    sourceFiles.add(`${def.from}/${sourceKey}.png`);
+    const data = await raw(src.file);
+    if (def.from === "extendedart") {
+      // Its M15 twin: the colour frame, or the silver artifact one for `a`.
+      const twinRel = sourceKey === "a" ? "m15artifact/c" : `m15/${sourceKey}`;
+      sourceFiles.add(`${twinRel}.png`);
+      assertM15BelowTypeBar(data, await raw(published(twinRel).file), `${def.from}/${sourceKey}`);
     }
-    console.log(`wrote ${path.relative(process.cwd(), png)} (+ .webp, alpha equal) from ${def.from}/${key}`);
+    const out = cutFieldAndBox(data);
+    colors[key] = [`${def.from}/${sourceKey}.png (published, sha256 ${src.sha.slice(0, 12)})`];
+    if (!dryRun) {
+      const png = await write(template, key, out);
+      console.log(`wrote ${path.relative(process.cwd(), png)} (+ .webp, alpha equal) from ${def.from}/${sourceKey}`);
+    }
+  }
+  if (def.from === "extendedart") {
+    notes.push(
+      "The dress of the extended-art printings (TODO 4.27a step 2; EOE #321–355, EOC #27 / #34, TRK #481): Card Conjurer's extended-art masters are M15's pixels from row 1320 down (checked by the run where the field mask cuts), so the station recipe's two cuts apply unchanged; above, the pack's own title bar and BLACK type bar stay whole. A colourless Spacecraft is the pack's silver artifact frame `a` (EOE #351 / #354 / #355, TRK #481).",
+    );
+  }
+  if (def.boxFrom) {
+    notes.push(
+      `The borderless dress (TODO 4.27a step 2; EOC #1 / #2): the published ${def.from} masters whole — no field to cut, bars floating on the art, the black bottom bar and fins, the crowned twins — with their dark translucent text-box interior (the pixels inside ${BOX.left}..${BOX.right} x ${BOX.top}..${BOX.bottom} painted at alpha < 250) replaced by ${def.boxFrom}/<key>'s pixels there: the station box, M15's paper at x ${WASH}.`,
+    );
   }
   provenance[template] = {
     source: "pipglyph",
     converter: "scripts/build-station-frames.mjs",
-    derivedFrom: `the published ${def.from}/<key> masters of the frames bucket (themselves Card Conjurer imports: see "${def.from}")`,
+    derivedFrom: def.boxFrom
+      ? `the published ${def.from}/<key> masters and their -legendary twins (Card Conjurer imports: see "${def.from}"), with the published ${def.boxFrom}/<key> box`
+      : `the published ${def.from}/<key> masters of the frames bucket (themselves Card Conjurer imports: see "${def.from}")`,
     output: `${W}x${H}, the parent's corners, webp q${WEBP.quality} with the PNG's alpha exactly`,
-    recipe: {
-      field: `alpha 0 where m15/<k> and m15artifact/<k> differ by more than ${FIELD.threshold} (|dR|+|dG|+|dB|+|dA|), union over ${FIELD.keys.join(" ")}, 1 px holes closed: ${found.px} px, box ${found.x0}..${found.x1} x ${found.y0}..${found.y1}`,
-      box: `alpha x ${WASH} inside ${BOX.left}..${BOX.right} x ${BOX.top}..${BOX.bottom}`,
-      maskSources,
-    },
+    recipe: def.boxFrom
+      ? { box: `alpha < 250 inside ${BOX.left}..${BOX.right} x ${BOX.top}..${BOX.bottom} -> ${def.boxFrom}/<key>'s RGBA` }
+      : {
+          field: `alpha 0 where m15/<k> and m15artifact/<k> differ by more than ${FIELD.threshold} (|dR|+|dG|+|dB|+|dA|), union over ${FIELD.keys.join(" ")}, 1 px holes closed: ${found.px} px, box ${found.x0}..${found.x1} x ${found.y0}..${found.y1}`,
+          box: `alpha x ${WASH} inside ${BOX.left}..${BOX.right} x ${BOX.top}..${BOX.bottom}`,
+          ...(def.sourceKeys ? { sourceKeys: def.sourceKeys } : {}),
+          maskSources,
+        },
     colors,
-    sourceFiles: [...def.keys.map((key) => `${def.from}/${key}.png`), ...FIELD.keys.flatMap((key) => [`m15/${key}.png`, `m15artifact/${key}.png`])].filter((file, at, all) => all.indexOf(file) === at).sort(),
+    sourceFiles: [...sourceFiles].sort(),
     notes: [
-      "PipGlyph's own derivation (TODO 4.27a; owner 2026-10-13): neither Card Conjurer nor MSE has a station frame at print size. Nothing is drawn or synthesised in the master: every painted pixel is the parent master's, with its alpha cut.",
-      "The numbers are scripts/lib/station-2025.mjs (30 printed station cards measured 2026-10-13); no scan is read by the build.",
+      notes.length === 0
+        ? "PipGlyph's own derivation (TODO 4.27a; owner 2026-10-13): neither Card Conjurer nor MSE has a station frame at print size. Nothing is drawn or synthesised in the master: every painted pixel is the parent master's, with its alpha cut."
+        : "PipGlyph's own derivation (TODO 4.27a; owner 2026-10-13): neither Card Conjurer nor MSE has a station frame at print size. Nothing is drawn or synthesised in the master: every painted pixel is a published master's.",
+      notes.length === 0
+        ? "The numbers are scripts/lib/station-2025.mjs (30 printed station cards measured 2026-10-13); no scan is read by the build."
+        : "The numbers are scripts/lib/station-2025.mjs (30 printed station cards measured 2026-10-13; the dresses' 15 printings: scripts/lib/station-dresses-2025.mjs); no scan is read by the build.",
       "Tier bands, badges and the P/T plate are DRAWN by both renderers (lib/cards/station.ts, lib/cards/station-art.ts) — not in the master.",
+      ...notes,
     ],
   };
 }

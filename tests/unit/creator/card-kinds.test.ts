@@ -153,8 +153,11 @@ describe("framesForKind", () => {
     // …and the station frame (TODO 4.27a), a Spacecraft's, and the
     // Universes Beyond artifact frame (4.25); an Enchantment Artifact
     // borrows the Nyx dress.
+    // …and the Spacecraft's borderless and extended-art dresses (4.27a step
+    // 2), after the station frame (the extended-art one a treatment, in
+    // template order).
     expect(skinsFor("artifact")).toEqual([
-      "m15borderlessartifact", "m15vehicle", "m15station", "m15ubartifact", "m15nyx", "extendedart", "m15textless",
+      "m15borderlessartifact", "m15vehicle", "m15station", "m15borderlessstation", "m15ubartifact", "m15nyx", "extendedart", "extendedartstation", "m15textless",
     ]);
     // The land's borderless dress (4.34) — and the station frame (TODO
     // 4.27a), a Planet's — and the Universes Beyond land frame (4.25).

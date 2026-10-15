@@ -226,7 +226,8 @@ describe("setSymbolSize on the family", () => {
     expect(Math.max(...axis.flat())).toBe(SET_SYMBOL_KEYLINE_EM);
     const keylined = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).setSymbolKeyline);
     // …and the extended-art frame's black type bar (layout v58, TODO 4.7).
-    expect(keylined.sort()).toEqual(["extendedart", "extendedartland", "m15borderless", "m15borderlessartifact", "m15borderlessland"]);
+    // …and the Spacecraft's two dresses on them (TODO 4.27a step 2).
+    expect(keylined.sort()).toEqual(["extendedart", "extendedartland", "extendedartstation", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlessstation"]);
     const m15 = getFrameProfile("m15");
     for (const template of keylined) {
       const p = getFrameProfile(template);

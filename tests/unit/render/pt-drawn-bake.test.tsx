@@ -84,7 +84,7 @@ function card(template: string, pt: boolean, back: BackFace | null = null): Card
     colorIdentity: ["blue"],
     // The station frame draws its P/T on a TIER's plate (TODO 4.27a): the
     // card on those two templates has one tier. Null everywhere else.
-    rulesText: template.startsWith("m15station") ? "5+ | Flying" : null,
+    rulesText: ["m15station", "m15stationland", "extendedartstation", "m15borderlessstation"].includes(template) ? "5+ | Flying" : null,
     flavorText: null,
     power: pt ? "7" : null,
     toughness: pt ? "7" : null,

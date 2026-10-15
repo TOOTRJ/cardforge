@@ -80,8 +80,9 @@ describe("one M15-era display size (layout v32)", () => {
     // station frame's two (TODO 4.27a) — and 4.25's three Universes Beyond
     // frames.
     // …and extended art's land dress (TODO 4.7, owner Round 63) — and
-    // 4.40 / 4.41's three older full-art basics.
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(56);
+    // 4.40 / 4.41's three older full-art basics, and the Spacecraft's
+    // extended-art and borderless dresses (4.27a step 2).
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(58);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -239,6 +240,10 @@ describe("baselines (TextSlot.dy)", () => {
     ["m15nyx", base.title, cc],
     // The station frame (TODO 4.27a): m15artifact's and m15land's bands.
     ["m15station", base.title, cc],
+    // Its dresses (TODO 4.27a step 2): extendedart's and the borderless
+    // artifact frame's slots.
+    ["extendedartstation", base.title, cc],
+    ["m15borderlessstation", base.title, cc],
     ["m15stationland", base.title, cc],
     // The Universes Beyond frames (TODO 4.25): their M15 twins' rows.
     ["m15ub", base.title, cc],

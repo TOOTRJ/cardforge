@@ -423,6 +423,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
   "m15ub", "m15ubartifact", "m15ubland",
   // Extended art's land dress (TODO 4.7, owner Round 63; with v58).
   "extendedartland",
+  // The Spacecraft's extended-art and borderless dresses (TODO 4.27a step 2).
+  "extendedartstation", "m15borderlessstation",
   // TODO 4.40 / 4.41's older full-art basics.
   "m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb",
 ];
@@ -441,6 +443,8 @@ const POST_V36_TEMPLATES: readonly string[] = [
   "m15ub", "m15ubartifact", "m15ubland",
   // Extended art's land dress (TODO 4.7, owner Round 63; with v58).
   "extendedartland",
+  // The Spacecraft's extended-art and borderless dresses (TODO 4.27a step 2).
+  "extendedartstation", "m15borderlessstation",
   // TODO 4.40 / 4.41's older full-art basics.
   "m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb",
 ];
@@ -793,6 +797,9 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "m15ub", "m15ubartifact", "m15ubland",
       // Extended art's land dress (TODO 4.7, owner Round 63; with v58).
       "extendedartland",
+      // The Spacecraft's extended-art and borderless dresses (TODO 4.27a
+      // step 2): new templates, no stored card — no bump.
+      "extendedartstation", "m15borderlessstation",
       // …and 4.40 / 4.41's older full-art basics.
       "m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb",
     ];
