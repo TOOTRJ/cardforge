@@ -119,4 +119,9 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // The full-art basics (Card Conjurer 'Fullart Basics (2022)', 4.39).
   "m15fullartland",
   "fullartland",
+  // …and the older designs (TODO 4.40 / 4.41): the same CC title and type
+  // sizes (FULL_ART_BASIC).
+  "m15fullartlandzen",
+  "m15fullartlandsnc",
+  "m15fullartlandthb",
 ];

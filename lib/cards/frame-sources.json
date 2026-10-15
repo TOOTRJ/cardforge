@@ -4678,6 +4678,225 @@
       "m = the pack's 'Multicolored Frame' m.png, built so the key has a master; no multicolour basic exists, so no symbol disc and never offered"
     ]
   },
+  "m15fullartlandsnc": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packTextlessBasicsSNC.js 'Fullart Basics (SNC)' (groupTextless-4.js:5)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, no resample; the colour's frame with its type bar and medallion moved onto the prints (SNC_BASIC_RECUT), corners rounded to the importer radius; medallion symbols rasterised from the ZEN pack's 600x600 SVGs (the SNC pack names the same files)",
+    "colors": {
+      "w": [
+        "img/frames/snc/basics/w.png with its bar and medallion moved onto the prints (barRecut)"
+      ],
+      "u": [
+        "img/frames/snc/basics/u.png with its bar and medallion moved onto the prints (barRecut)"
+      ],
+      "b": [
+        "img/frames/snc/basics/b.png with its bar and medallion moved onto the prints (barRecut)"
+      ],
+      "r": [
+        "img/frames/snc/basics/r.png with its bar and medallion moved onto the prints (barRecut)"
+      ],
+      "g": [
+        "img/frames/snc/basics/g.png with its bar and medallion moved onto the prints (barRecut)"
+      ],
+      "c": [
+        "img/frames/snc/basics/l.png with its bar and medallion moved onto the prints (barRecut)"
+      ],
+      "m": [
+        "img/frames/snc/basics/m.png with its bar and medallion moved onto the prints (barRecut)"
+      ]
+    },
+    "symbols": {
+      "w": "img/frames/textless/zendikar/sw.svg",
+      "u": "img/frames/textless/zendikar/su.svg",
+      "b": "img/frames/textless/zendikar/sb.svg",
+      "r": "img/frames/textless/zendikar/sr.svg",
+      "g": "img/frames/textless/zendikar/sg.svg",
+      "c": "img/frames/textless/zendikar/sc.svg",
+      "output": "symbol/<colour>.png, native size"
+    },
+    "symbolShading": {
+      "w": "PipGlyph's own shading of CC's white sun: its alpha (shape) only, filled 246,244,234, over a shadow of the shape moved -8,14 px, blurred 3 px ×3, in 38,30,24 at 100 % (owner Round 64: the prints' shaded cream sun, BFZ #250 / AKH #250 / MH1 #250 / SNC #272 / BRO #278)"
+    },
+    "barRecut": {
+      "bar": {
+        "fromY": 1690,
+        "toY": 1960,
+        "dy": -13
+      },
+      "medallion": {
+        "cx": 750,
+        "cy": 1772,
+        "r": 151,
+        "pad": 2,
+        "feather": 2,
+        "dy": -18,
+        "keepRows": [
+          1696,
+          1856
+        ]
+      },
+      "effect": "the type bar (rows 1690–1959) moved 13 px up and the medallion (centre 750, 1772, r 151 + 2) moved 18 px up, onto the prints (no resample; the rows the bar leaves repeat the window's clear row / the border's black, the medallion drawn back over the bar with a 2 px feathered edge)"
+    },
+    "sourceFiles": [
+      "img/frames/snc/basics/b.png",
+      "img/frames/snc/basics/g.png",
+      "img/frames/snc/basics/l.png",
+      "img/frames/snc/basics/m.png",
+      "img/frames/snc/basics/r.png",
+      "img/frames/snc/basics/u.png",
+      "img/frames/snc/basics/w.png",
+      "img/frames/textless/zendikar/sb.svg",
+      "img/frames/textless/zendikar/sc.svg",
+      "img/frames/textless/zendikar/sg.svg",
+      "img/frames/textless/zendikar/sr.svg",
+      "img/frames/textless/zendikar/su.svg",
+      "img/frames/textless/zendikar/sw.svg"
+    ],
+    "notes": [
+      "the bar moved 13 px up and the medallion 18 px up onto SNC #272–281 (SNC_BASIC_RECUT); the medallion's old place below the bar is cleared to the art (α 0), as the pack leaves it beside",
+      "BRO #278–287 is another look (no ring round the window, the bars lower): nearest on this frame",
+      "colourless = the pack's 'Colorless Frame' l.png (no SNC Wastes was printed); m = the pack's 'Multicolored Frame', never offered"
+    ]
+  },
+  "m15fullartlandthb": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packTextlessBasics.js 'Fullart Basics (THB)' (groupTextless-4.js:6)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, the full frame image copied 1:1 (no resample), corners rounded to the importer radius",
+    "colors": {
+      "w": [
+        "img/frames/textless/basics/w.png"
+      ],
+      "u": [
+        "img/frames/textless/basics/u.png"
+      ],
+      "b": [
+        "img/frames/textless/basics/b.png"
+      ],
+      "r": [
+        "img/frames/textless/basics/r.png"
+      ],
+      "g": [
+        "img/frames/textless/basics/g.png"
+      ],
+      "c": [
+        "img/frames/textless/basics/l.png"
+      ],
+      "m": [
+        "img/frames/textless/basics/m.png"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/textless/basics/b.png",
+      "img/frames/textless/basics/g.png",
+      "img/frames/textless/basics/l.png",
+      "img/frames/textless/basics/m.png",
+      "img/frames/textless/basics/r.png",
+      "img/frames/textless/basics/u.png",
+      "img/frames/textless/basics/w.png"
+    ],
+    "notes": [
+      "the pack's geometry is the prints' (31 printings, 2026-10-14): type bar inner top 1778 / 1779 (range 1776–1782), bottom 1906 / 1906, title bar 104 / 104 and 232 / 235 — no re-cut",
+      "colourless = the pack's 'Colorless Frame' l.png (no plain-bar Wastes was printed; PLG25 #2's 'Basic Land' prints the white frame); the pack's 'Artifact Frame' a.png is not imported; m = the 'Multicolored Frame', never offered"
+    ]
+  },
+  "m15fullartlandzen": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packZendikarBasic-1.js 'Fullart Basics (ZEN)' (groupTextless-4.js:7)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, no resample; the colour's frame with its type bar moved onto the prints (ZEN_BASIC_RECUT), the 'Colorless Frame' stone laid over the frame field through the pack's Frame mask (moved with the bar), corners rounded to the importer radius; medallion symbols rasterised from the pack's 600x600 SVGs",
+    "colors": {
+      "w": [
+        "img/frames/textless/zendikar/w.png with its bar and medallion moved onto the prints (barRecut)",
+        "img/frames/textless/zendikar/l.png replacing through img/frames/textless/zendikar/frame.png (the mask's bar and medallion moved as the frame's: barRecut)"
+      ],
+      "u": [
+        "img/frames/textless/zendikar/u.png with its bar and medallion moved onto the prints (barRecut)",
+        "img/frames/textless/zendikar/l.png replacing through img/frames/textless/zendikar/frame.png (the mask's bar and medallion moved as the frame's: barRecut)"
+      ],
+      "b": [
+        "img/frames/textless/zendikar/b.png with its bar and medallion moved onto the prints (barRecut)",
+        "img/frames/textless/zendikar/l.png replacing through img/frames/textless/zendikar/frame.png (the mask's bar and medallion moved as the frame's: barRecut)"
+      ],
+      "r": [
+        "img/frames/textless/zendikar/r.png with its bar and medallion moved onto the prints (barRecut)",
+        "img/frames/textless/zendikar/l.png replacing through img/frames/textless/zendikar/frame.png (the mask's bar and medallion moved as the frame's: barRecut)"
+      ],
+      "g": [
+        "img/frames/textless/zendikar/g.png with its bar and medallion moved onto the prints (barRecut)",
+        "img/frames/textless/zendikar/l.png replacing through img/frames/textless/zendikar/frame.png (the mask's bar and medallion moved as the frame's: barRecut)"
+      ],
+      "c": [
+        "img/frames/textless/zendikar/l.png with its bar and medallion moved onto the prints (barRecut)",
+        "img/frames/textless/zendikar/l.png replacing through img/frames/textless/zendikar/frame.png (the mask's bar and medallion moved as the frame's: barRecut)"
+      ],
+      "m": [
+        "img/frames/textless/zendikar/m.png with its bar and medallion moved onto the prints (barRecut)",
+        "img/frames/textless/zendikar/l.png replacing through img/frames/textless/zendikar/frame.png (the mask's bar and medallion moved as the frame's: barRecut)"
+      ]
+    },
+    "symbols": {
+      "w": "img/frames/textless/zendikar/sw.svg",
+      "u": "img/frames/textless/zendikar/su.svg",
+      "b": "img/frames/textless/zendikar/sb.svg",
+      "r": "img/frames/textless/zendikar/sr.svg",
+      "g": "img/frames/textless/zendikar/sg.svg",
+      "c": "img/frames/textless/zendikar/sc.svg",
+      "output": "symbol/<colour>.png, native size"
+    },
+    "symbolShading": {
+      "w": "PipGlyph's own shading of CC's white sun: its alpha (shape) only, filled 246,244,234, over a shadow of the shape moved -8,14 px, blurred 3 px ×3, in 38,30,24 at 100 % (owner Round 64: the prints' shaded cream sun, BFZ #250 / AKH #250 / MH1 #250 / SNC #272 / BRO #278)"
+    },
+    "barRecut": {
+      "bar": {
+        "fromY": 1690,
+        "toY": 1868,
+        "dy": 7
+      },
+      "medallion": {
+        "cx": 750,
+        "cy": 1772,
+        "r": 151,
+        "pad": 2,
+        "feather": 2,
+        "dy": 0
+      },
+      "effect": "the type bar (rows 1690–1867) moved 7 px down and the medallion (centre 750, 1772, r 151 + 2) kept in place, onto the prints (no resample; the rows the bar leaves repeat the window's clear row / the border's black, the medallion drawn back over the bar with a 2 px feathered edge)"
+    },
+    "sourceFiles": [
+      "img/frames/textless/zendikar/b.png",
+      "img/frames/textless/zendikar/frame.png",
+      "img/frames/textless/zendikar/g.png",
+      "img/frames/textless/zendikar/l.png",
+      "img/frames/textless/zendikar/m.png",
+      "img/frames/textless/zendikar/r.png",
+      "img/frames/textless/zendikar/sb.svg",
+      "img/frames/textless/zendikar/sc.svg",
+      "img/frames/textless/zendikar/sg.svg",
+      "img/frames/textless/zendikar/sr.svg",
+      "img/frames/textless/zendikar/su.svg",
+      "img/frames/textless/zendikar/sw.svg",
+      "img/frames/textless/zendikar/u.png",
+      "img/frames/textless/zendikar/w.png"
+    ],
+    "notes": [
+      "the stone ring: every print of the look wears the SAME brown stone round the window whatever its colour (BFZ #250 / #255 / #260 / #265 / #270, OGW #183, AKH, HOU, ZNR); the pack paints each colour's own frame texture there, so every key takes the pack's 'Colorless Frame' (l.png) stone through its Frame mask — Card Conjurer's own pixels, the tone checked against the prints in the PR's sheet",
+      "the type bar moved 7 px down onto the 52 prints (ZEN_BASIC_RECUT): the title bar, the window, the medallion and the border were the pack's within 1 px; the medallion is drawn back over the moved bar from the pack's own pixels",
+      "colourless (Wastes, OGW #183 / #184) = the pack's 'Colorless Frame' l.png + the colourless medallion symbol sc.svg",
+      "m = the pack's 'Multicolored Frame' m.png, built so the key has a master; no multicolour basic exists, so no symbol and never offered",
+      "MH1's snow basics (#250–254) print this design with snow-covered bars (CC textless/snowBasics, whose masters paint their symbol into the medallion): nearest on this frame, not imported here"
+    ]
+  },
   "m15holostamp": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",

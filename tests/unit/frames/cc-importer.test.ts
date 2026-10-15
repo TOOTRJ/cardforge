@@ -177,6 +177,10 @@ describe("Card Conjurer recipe", () => {
       "m15dfclandback",
       "m15dfclandfront",
       "m15fullartland",
+      // The older full-art basics (TODO 4.40 / 4.41).
+      "m15fullartlandsnc",
+      "m15fullartlandthb",
+      "m15fullartlandzen",
       "m15land",
       // The modal bodies (TODO 5.1b; tests/unit/frames/mdfc-importer.test.ts).
       "m15mdfcback",
@@ -1938,7 +1942,10 @@ describe("published to the frames bucket", () => {
     const out: Array<[string, number, number]> = builtColors(def as never).map((k) => [`${template}/${k}.png`, master.width, master.height]);
     const plateSize: [number, number] = template.startsWith("m15borderless") ? [274, 140] : [0, 0];
     for (const k of Object.keys(def.plates ?? {})) out.push([`${template}/pt/${k}.png`, ...plateSize]);
-    for (const k of Object.keys(def.symbols ?? {})) out.push([`${template}/symbol/${k}.png`, 168, 168]);
+    // The 2022 basics' discs are 168 px PNGs; the split-bar basics' medallion
+    // symbols (TODO 4.40) are the ZEN pack's 600 × 600 SVGs, rasterised as drawn.
+    const symbolPx = template === "m15fullartlandzen" || template === "m15fullartlandsnc" ? 600 : 168;
+    for (const k of Object.keys(def.symbols ?? {})) out.push([`${template}/symbol/${k}.png`, symbolPx, symbolPx]);
     if (def.shield) for (const k of builtColors(def as never)) out.push([`${template}/loyalty/${k}.png`, def.shield.box.width, def.shield.box.height]);
     // The modal strip riders (TODO 5.1c): the template's own keys and its extras, at the piece's box.
     if (def.strip) for (const k of stripRiderKeys(def.strip)) out.push([`${template}/strip/${k}.png`, def.strip.box.width, def.strip.box.height]);

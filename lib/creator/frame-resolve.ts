@@ -469,7 +469,10 @@ export function withVerification<
   // that frame when it is — the stand-in landing is for until then.
   const ownVerified = match.onceVerified !== undefined && verifiedKeys.has(frameComboKey(match.onceVerified, colorKey));
   if (landing && !ownVerified && match.status !== "exact" && verifiedKeys.has(frameComboKey(landing.template, colorKey))) {
-    const onOwnFrame = !match.landOn && verifiedKeys.has(frameComboKey(match.template, colorKey));
+    // …unless the landing says it replaces the own frame too (the station
+    // frame's stand-in: a verified extended-art frame would print a
+    // Spacecraft's tiers as plain lines — owner Round 66).
+    const onOwnFrame = !landing.overOwnFrame && !match.landOn && verifiedKeys.has(frameComboKey(match.template, colorKey));
     if (!onOwnFrame) {
       const rest: Partial<FrameMatch> = { ...match };
       delete rest.landOnOnceVerified;

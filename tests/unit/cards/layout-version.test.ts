@@ -425,6 +425,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
   "extendedartland",
   // The Spacecraft's extended-art and borderless dresses (TODO 4.27a step 2).
   "extendedartstation", "m15borderlessstation",
+  // TODO 4.40 / 4.41's older full-art basics.
+  "m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb",
 ];
 /** Templates added after v36 (TODO 5.1a's transform bodies, 5.1b's modal
  *  bodies): no card was ever baked on them before v37, so v36's frozen
@@ -443,6 +445,8 @@ const POST_V36_TEMPLATES: readonly string[] = [
   "extendedartland",
   // The Spacecraft's extended-art and borderless dresses (TODO 4.27a step 2).
   "extendedartstation", "m15borderlessstation",
+  // TODO 4.40 / 4.41's older full-art basics.
+  "m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb",
 ];
 
 describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
@@ -796,6 +800,8 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       // The Spacecraft's extended-art and borderless dresses (TODO 4.27a
       // step 2): new templates, no stored card — no bump.
       "extendedartstation", "m15borderlessstation",
+      // …and 4.40 / 4.41's older full-art basics.
+      "m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb",
     ];
     // An EXISTING template that joined brought its own bump: the battle
     // (TODO 4.21b), with layout v43 — its Card Conjurer master and the

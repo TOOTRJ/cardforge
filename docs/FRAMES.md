@@ -178,7 +178,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 53 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 56 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the extended-art frame and the textless promo pair (4.7 / 4.35 / 4.42,
@@ -220,6 +220,13 @@ into `.frames-build/` — 53 templates today (`CC_TEMPLATES` in
   black-bordered m15fullartland and the borderless fullartland (the same
   frame with its Border mask erased), each with CC's mana symbols at
   `<template>/symbol/{w,u,b,r,g,c}.png` for the profile's basic-symbol slot;
+- the older full-art basic designs (4.40 / 4.41): m15fullartlandzen from
+  'Fullart Basics (ZEN)' (the stone ring of the pack's 'Colorless Frame'
+  under every colour, the type bar re-cut 7 px down), m15fullartlandsnc
+  from 'Fullart Basics (SNC)' (the bar 13 px and the medallion 18 px up)
+  — both with the ZEN pack's medallion symbols at `<template>/symbol/` —
+  and m15fullartlandthb from 'Fullart Basics (THB)', as drawn ([The older
+  full-art basics](#the-older-full-art-basics-440--441));
 - the 2014–19 text-box tokens from 'Regular (Bordered M15)' (4.49 (b)):
   m15tokentext and its artifact dress m15tokenartifacttext;
 - the full-art tokens (M20 → today) from the 'Textless', 'Short' and 'Tall'
@@ -3686,7 +3693,12 @@ never draws one at random and a deck never asks for one
   verified in the card's colour — exact (the crown is drawn); until then the
   bordered station frame is its landing once THAT is verified
   (`landOnOnceVerified`), `extendedart` before. A verified own frame wins
-  over the stand-in (`withVerification`).
+  over the stand-in (`withVerification`). The plain `extendedart` frame
+  never does (owner Round 66): verified in the colour or not, it would print
+  the tiers as plain lines, so the station stand-in replaces it too
+  (`overOwnFrame` — the Vehicle stand-in still keeps a verified extended-art
+  frame). The remix follows (it finalizes through the same function); a
+  maker's own pick of plain extended art in the creator is still allowed.
 - borderless: lands on the bordered station frame once verified, the
   artifact frame before. Never on `m15borderlessstation`: an edge-to-edge
   frame is no import's landing (Scryfall's art crop is the window, 1.18) —
@@ -3695,9 +3707,14 @@ never draws one at random and a deck never asks for one
 - showcase: still nearest with 4.11's item; the viewport Planets land on
   the bordered Planet frame once verified (the land frame before), TRK #557
   names the bordered Spacecraft frame (`onceVerified`, nearest).
-- Main against this branch over all 95 printings of the search (four
-  verified states — production's ticks; plus the bordered pair; every
-  main template; every template): the 65 black-bordered 2015-frame station
+- Main (after #571) against this branch over all 95 printings of the
+  search, five verified states — production's ticks without the station
+  ones, production's ticks (the bordered pair ticked, #570), those plus
+  `extendedart` in every colour, every main template, every template: the
+  13 extended-art printings land on `m15station` in the middle three
+  (main: `extendedart`), on `extendedartstation` in the last; the borderless
+  and showcase ones on `m15station` / `m15stationland` wherever the
+  bordered pair is ticked (main: the artifact / land frame); the 65 black-bordered 2015-frame station
   printings (61 paper, the playtest card, 3 Arena-only) and the 4 Doctor Who
   planes are identical in every state; the 26 above move, and only as
   described.
@@ -4038,6 +4055,80 @@ all Universes Beyond, onto their own frame (2,001 spells, 614 artifacts,
 **Not built** (follow-ups, in 4.25): the Universes Beyond Vehicle frame
 (the pack's `v.png`), extended art, full
 art, the saga and spree dresses, the floating crowns, borderless.
+
+### The older full-art basics (4.40 / 4.41)
+
+Three black-bordered full-art basic designs older than the 2022 one
+(`m15fullartland`), each a STORED template of its own in the Full Art set
+(an M15 treatment in the picker, #556), basic lands only
+(`BASIC_ONLY_TEMPLATES`, the kind gate's rule for every full-art basic):
+
+| Template | The look | Printings it reproduces | Nearest only |
+|---|---|---|---|
+| `m15fullartlandzen` | a brown stone ring round the window, the title bar, "Basic Land" left of a centred medallion and the subtype right of it | BFZ, OGW (the Wastes), AKH, HOU — 37 | ZNR's type line (15), MH1's snow bars, ZEN / J14 on the 2003 frame |
+| `m15fullartlandsnc` | the same bars and medallion over the art, a white ring round the window, no stone | SNC — 10 | BRO (no ring, the bars ~80 px lower), MID / VOW (dark bars) |
+| `m15fullartlandthb` | the title bar and a plain "Basic Land — Plains" bar, no symbol | THB, 2XM, DMU, SPM, SOS, PLG25 — 31 | — |
+
+Measured on print FIRST (Scryfall PNGs at 1500 × 2100, every printing of
+each look, 2026-10-14), then the pack:
+
+- **ZEN.** The pack's title bar (104 / 232 px vs the prints' medians 104 /
+  233), window (112 / 1386 vs 115 / 1387), medallion (1640 / 1917 vs 1640 /
+  1918) and border (1948 vs 1947) are the prints'; its TYPE BAR is 7 px
+  high on every printing (inner top 1716 vs 1723, range 1721–1729; bottom
+  1845 vs 1851). The pack paints each colour's own frame texture round the
+  window where every print wears the same brown stone, which is the pack's
+  own 'Colorless Frame' (`l.png`): every key lays it over the field through
+  the pack's Frame mask. `ZEN_BASIC_RECUT` moves the bar (and the mask with
+  it, so the stone keeps its own pixels) and draws the medallion back over
+  it (`recutBarAndMedallion`, `scripts/lib/cc-frames.mjs`). On the re-cut
+  master BFZ's bar edges sit within 1 px; AKH / HOU / ZNR print 3–4 px
+  lower still (a set-to-set offset; the type line follows BFZ's). ZNR
+  also sets its SUBTYPE 22–28 px further right than BFZ / AKH / HOU / OGW
+  do — on every ZNR printing measured (#266, #267, #270, #273, #276, #279;
+  the independent check of #571), not one printing's quirk, and its bars
+  and name 3–5 px off — so ZNR is this frame's NEAREST (owner Round 64):
+  `fullart/basic/split-bar+znr-type-line`, the `znr-type-line` gap, before
+  and after the frame is verified; its printings are no references.
+- **SNC.** The pack draws the bar 13 px and the medallion 18 px low (bar
+  rim 1711 vs 1698–1701, medallion top 1636 vs 1616–1617), and the art's
+  lower edge 13–17 px low: `SNC_BASIC_RECUT` moves the band down to the
+  border's black, clears the medallion's old cap to the art and draws it
+  back 18 px up. The re-cut master matches SNC #272–281 within 1–2 px. The
+  subtype centres 9 px left of the pack's box (`rightRect` from 57.4 %).
+- **THB.** The pack is the prints' within 1–3 px (bar 1778 / 1906 vs 1779 /
+  1906); no re-cut. Its basic-symbol slot is `"none"`: nothing is drawn
+  and no watermark lands on the art.
+
+The medallion's symbol is the ZEN pack's `s?.svg` (both split-bar packs
+name it), published as `<template>/symbol/<key>.png` (bucket only) and
+drawn in a 228 px box 10 px above CC's centre (`SPLIT_BAR_SYMBOL_RECT`:
+CC's 240 px box drew it 6–13 % larger and ~10 px lower than BFZ / SNC
+print it). The WHITE sun is PipGlyph's own shading of CC's shape (owner
+Round 64; `WHITE_MEDALLION_SYMBOL`, `shadeWhiteMedallionSymbol`): CC's is
+white with a lavender rim, faint on the cream medallion, where BFZ #250,
+AKH #250, MH1 #250, SNC #272 and BRO #278 print a cream sun set off by a
+dark shadow down and to the left — its alpha kept, repainted 246,244,234
+over a shadow of the shape (5 px down, 3 px left, softened) in 38,30,24;
+bucket only, `design-backup/fullart-basics/plains-medallion.png`. The type line is 3.24's split (`type.split`): one size for both
+halves, cut at the em dash; a Wastes prints "Basic Land" alone.
+
+**Imports** (`lib/scryfall/frame-signatures.ts`): each printing lands on
+`m15fullartland` as before until its own template is verified in the
+card's colour, then on it (`onceVerified`): exact for the looks above
+(`fullart/basic/split-bar`, `…/split-bar/ring`, `fullart/basic/plain-bar`),
+nearest for the ones it only comes closest to (`…/split-bar+znr-type-line`,
+`…/split-bar/snow`, `…/bro`, `…/dark`, `…/split-bar/2003`). No other
+full-art basic moves: of all 680 full-art and borderless basics, 158 move
+once everything is verified — 78 exact (the stone ring 37: BFZ 25, OGW 2,
+AKH 5, HOU 5; SNC 10; the plain bar 31) and 80 nearest (ZNR 15, MH1 5,
+BRO 10, MID / VOW 25, ZEN / J14 25).
+
+**Rollout.** ADDITIONS: no stored card sits on them, so no layout bump, no
+sweep and no badge; their visual cases are new. The owner verifies each
+colour (references: `lib/cards/frame-references.json`); `m` is never
+verified (no multicolour basic), nor `c` on the SNC and plain-bar frames
+(no such Wastes was printed).
 
 ### Printed pieces a card switches on
 
@@ -7409,11 +7500,11 @@ at HD on all four.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 55 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 58 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens, the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames and extended art's land dress (4.7, owner Round 63), new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63) and 4.40 / 4.41's three older full-art basics, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card) prints its names,

@@ -391,6 +391,14 @@ describe("the deck remix of a printed Spacecraft / Planet", () => {
     expect(borderless.saved).toMatchObject({ frame_style: { template: "m15station" } });
   });
 
+  it("…and with the plain extended-art frame ticked in its colour too, the extended-art one STILL lands on the bordered station frame (owner Round 66)", async () => {
+    s.verified = [...TICKED, ...keys(["extendedart", "w"])];
+    const { saved } = await remix("eoe-321");
+    expect(saved).toMatchObject({ frame_style: { template: "m15station" } });
+    expect((saved!.face_content as FaceContent).station!.tiers.length).toBeGreaterThan(0);
+    expectSavable(saved!);
+  });
+
   it("…and where neither is ticked they keep their landing, with no rows", async () => {
     s.verified = UNTICKED;
     for (const key of ["eoe-321", "eoc-1"] as PrintingKey[]) {

@@ -587,6 +587,12 @@ describe("full-art and textless families (TODO 1.19)", () => {
         expect(match.onceVerified, key).toBe("m15nyx");
         continue;
       }
+      // …and the older full-art basics, whose own templates take over once
+      // verified (TODO 4.40 / 4.41; tests/unit/creator/older-fullart-basics.test.ts).
+      if (match.signature.startsWith("fullart/basic/split-bar") || match.signature === "fullart/basic/plain-bar") {
+        expect(match.onceVerified, key).toMatch(/^m15fullartland(zen|snc|thb)$/);
+        continue;
+      }
       expect(match.signature, key).toBe("textless/old-frame");
     }
   });

@@ -164,6 +164,19 @@ describe("the other dresses (TODO 4.27a step 2): their own rule and the station 
       expect(standIn.reason, key).toMatch(/extended art/);
       // Production's own list (2026-10-14: the bordered pair ticked) is that state.
       expect(land(withVerification(found, colour, PROD)), key).toBe("m15station");
+      // The plain extended-art frame ticked in the colour too (owner Round
+      // 66): STILL the bordered station frame — extended art would print the
+      // tiers as plain lines, so it is never kept as a stand-in.
+      const ext = (keys: ReadonlySet<string>) => new Set([...keys, frameComboKey("extendedart", colour)]);
+      const overPlain = withVerification(found, colour, ext(PROD));
+      expect(overPlain, key).toMatchObject({ status: "nearest", template: "extendedart", landOn: "m15station" });
+      expect(land(withVerification(found, colour, ext(withStation))), key).toBe("m15station");
+      // …and every main template ticked (extendedart included), the dress not.
+      const everyButDress = new Set([...EVERY].filter((k) => !k.startsWith("extendedartstation/") && !k.startsWith("m15borderlessstation/")));
+      expect(land(withVerification(found, colour, everyButDress)), key).toBe("m15station");
+      // The extended-art frame ticked and the bordered station frame NOT: no
+      // landing to take — the import stays where it was, not yet verified.
+      expect(land(withVerification(found, colour, ext(PROD_BEFORE_STATION))), key).toBe("extendedart");
       // Its own frame ticked: exact on it, whatever else is.
       for (const keys of [withDresses, EVERY]) {
         const own = withVerification(found, colour, keys);

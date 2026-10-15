@@ -109,6 +109,11 @@ const DOCUMENTED_NULLS = new Set([
   // sign-off instead).
   "m15fullartland/m",
   "fullartland/c", "fullartland/m",
+  // The older full-art basics (4.40 / 4.41): no multicolour basic; the
+  // stone-ring Wastes is OGW's, and no SNC or plain-bar Wastes was printed.
+  "m15fullartlandzen/m",
+  "m15fullartlandsnc/c", "m15fullartlandsnc/m",
+  "m15fullartlandthb/c", "m15fullartlandthb/m",
   // No colourless borderless textless printing exists (TODO 1.4: the Aang
   // reference was multicolour).
   "m15textless/u", "m15textless/c",

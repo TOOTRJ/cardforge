@@ -37,6 +37,9 @@ const ART_FIRST: FrameTemplate[] = [
   "m15borderlesspwtall",
   "m15fullartland",
   "fullartland",
+  // 4.40's New Capenna ring and 4.41's plain bar: the art to the black ring.
+  "m15fullartlandsnc",
+  "m15fullartlandthb",
 ];
 /** The full-art tokens (4.48 / 4.50), in FRAME_TEMPLATE_VALUES order. */
 const M20_TOKENS: FrameTemplate[] = [
@@ -48,7 +51,8 @@ const M20_TOKENS: FrameTemplate[] = [
  *  whole frame, so an empty tile was bars over nothing. */
 // …and its extended-art dress (step 2), whose picture runs under it too.
 const STATION: FrameTemplate[] = ["m15station", "m15stationland", "extendedartstation"];
-const OPT_IN: FrameTemplate[] = ["m15station", "m15stationland", ...M20_TOKENS, "bloomanime", "tarkirghostfire", "fullart", "extendedartstation", "m15textless", "m15textlessland", "nyx"];
+// …and 4.40's stone ring, whose window is 72 % of the card's height.
+const OPT_IN: FrameTemplate[] = ["m15station", "m15stationland", ...M20_TOKENS, "bloomanime", "tarkirghostfire", "fullart", "extendedartstation", "m15fullartlandzen", "m15textless", "m15textlessland", "nyx"];
 /** Every tile that draws the sample — exactly these 19 of the 52 templates,
  *  in FRAME_TEMPLATE_VALUES order. Spelled out, not derived, so a flag that
  *  leaks through a profile spread (or a widened rule) fails here. */
@@ -69,6 +73,9 @@ const SAMPLED: FrameTemplate[] = [
   "extendedartstation",
   "m15fullartland",
   "fullartland",
+  "m15fullartlandzen",
+  "m15fullartlandsnc",
+  "m15fullartlandthb",
   "m15textless",
   "m15textlessland",
   "nyx",
@@ -86,7 +93,7 @@ function tile(template: FrameTemplate, colorKey: string, type: TileType) {
 }
 
 describe("artFillsCard — which frames are art-first", () => {
-  it("is the borderless M15 skins, the borderless land, the borderless planeswalkers and both full-art basics, nothing else", () => {
+  it("is the borderless M15 skins, the borderless land, the borderless planeswalkers and the full-art basics with art to the ring, nothing else", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => artFillsCard(getFrameProfile(t)))).toEqual(ART_FIRST);
   });
 
@@ -130,7 +137,7 @@ describe("pickerSampleArt — the owner's six near-black tiles (and the full-art
 });
 
 describe("FrameThumb — art-first and opted-in tiles draw a sample art under the master", () => {
-  it("draws the sample on exactly 21 of the 67 templates, on every colour and type dress", () => {
+  it("draws the sample on exactly 24 of the 70 templates, on every colour and type dress", () => {
     const drawn = new Set<FrameTemplate>();
     for (const template of FRAME_TEMPLATE_VALUES) {
       const counts = { with: 0, without: 0 };
@@ -153,8 +160,9 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
     // + the station frame's two (TODO 4.27a) + the Nyx dress (TODO 4.7)
     // + 4.25's three Universes Beyond frames (opaque masters too).
     // + extended art's land dress (TODO 4.7, owner Round 63: opaque masters).
-    // + the Spacecraft's two dresses (TODO 4.27a step 2: sampled, above).
-    expect(FRAME_TEMPLATE_VALUES).toHaveLength(70);
+    // + the Spacecraft's two dresses (TODO 4.27a step 2: sampled, above)
+    // + 4.40 / 4.41's three older full-art basics.
+    expect(FRAME_TEMPLATE_VALUES).toHaveLength(73);
     expect(FRAME_TEMPLATE_VALUES.filter((t) => drawn.has(t))).toEqual(SAMPLED);
   });
 
@@ -202,6 +210,8 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
       m15textless: [87.6, 86.47],
       m15textlessland: [87.6, 86.47],
       nyx: [88, 81.8],
+      // 4.40's stone ring: the window's box.
+      m15fullartlandzen: [85.2, 72.4],
       // The full-art tokens: CC's art bounds with 7.6's overscan.
       ...Object.fromEntries(M20_TOKENS.map((t) => [t, [92.2, 89.6] as [number, number]])),
       // The station pair: the picture under the whole frame (its `underFrameArt` rect).

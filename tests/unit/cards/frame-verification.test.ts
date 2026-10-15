@@ -45,6 +45,13 @@ describe("frame reference registry", () => {
       "m15fullartland/m",
       "fullartland/c",
       "fullartland/m",
+      // …and the older designs (TODO 4.40 / 4.41): OGW prints the stone-ring
+      // Wastes; no SNC or plain-bar Wastes exists.
+      "m15fullartlandzen/m",
+      "m15fullartlandsnc/c",
+      "m15fullartlandsnc/m",
+      "m15fullartlandthb/c",
+      "m15fullartlandthb/m",
       "m15textless/u",
       "m15textless/c",
       "m15textlessland/c",
@@ -150,7 +157,8 @@ describe("frame reference registry", () => {
     // (extended art, the two full-art basics, the two textless frames).
     // + extended art's land dress (TODO 4.7, owner Round 63).
     // + the Spacecraft's extended-art and borderless dresses (4.27a step 2).
-    expect(m15Templates.length).toBe(53);
+    // + 4.40 / 4.41's three older full-art basics.
+    expect(m15Templates.length).toBe(56);
     expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {

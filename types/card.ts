@@ -519,6 +519,15 @@ export const FRAME_TEMPLATE_VALUES = [
   // 4.35(a)). Basic lands only.
   "m15fullartland",
   "fullartland",
+  // The older black-bordered full-art basic designs (TODO 4.40 / 4.41):
+  // the Zendikar-style split type bar with a centred medallion on a stone
+  // ring (BFZ, OGW, AKH, HOU, ZNR), the same bars with the art under a white
+  // ring (SNC), and the plain "Basic Land — Plains" bar with no symbol (THB,
+  // 2XM, DMU, SPM, SOS, PLG25). Card Conjurer packs re-cut onto the prints;
+  // basic lands only. Additions: no stored card sits on them.
+  "m15fullartlandzen",
+  "m15fullartlandsnc",
+  "m15fullartlandthb",
   "m15textless",
   "m15textlessland",
   "expeditionland",
@@ -640,6 +649,9 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   // so their chips carry no set name: the label says "Full-Art" itself.
   m15fullartland: "Full-Art Basic Land",
   fullartland: "Borderless Full-Art Basic Land",
+  m15fullartlandzen: "Zendikar Full-Art Basic Land",
+  m15fullartlandsnc: "New Capenna Full-Art Basic Land",
+  m15fullartlandthb: "Plain-Bar Full-Art Basic Land",
   m15textless: "Textless",
   m15textlessland: "Textless Land",
   expeditionland: "Land",
@@ -754,6 +766,9 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   fullart: "zendikarrising",
   m15fullartland: "fullartset",
   fullartland: "fullartset",
+  m15fullartlandzen: "fullartset",
+  m15fullartlandsnc: "fullartset",
+  m15fullartlandthb: "fullartset",
   m15textless: "fullartset",
   m15textlessland: "fullartset",
   expeditionland: "expeditions",
