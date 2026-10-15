@@ -31,7 +31,7 @@ import {
   type FrameTemplate,
 } from "@/types/card";
 import { resolveLoyaltyRows } from "@/lib/cards/face-content";
-import { DEFAULT_DFC_ICON, DFC_FACE_TYPES, bodyFor, dfcBodyOf, type DfcLayout } from "@/lib/cards/dfc";
+import { DEFAULT_DFC_ICON, DEFAULT_DFC_LOOK, DFC_FACE_TYPES, bodyFor, dfcBodyOf, type DfcLayout, type DfcLook } from "@/lib/cards/dfc";
 import {
   TOKEN_TYPE_WORDS,
   hasRulesBoxText,
@@ -220,7 +220,9 @@ const RAW_KIND_DEFS: Record<CardKind, Omit<KindDef, "inlineSecondFace">> = {
   transform: {
     label: "Transform",
     cardType: "creature",
-    layoutTemplates: ["m15dfcfront", "m15dfclandfront"],
+    // …and the borderless front (TODO 5.7), never the kind's default: a
+    // card wears it by its maker's pick or an import.
+    layoutTemplates: ["m15dfcfront", "m15dfclandfront", "m15borderlessdfcfront"],
     previewTemplate: "m15dfcfront",
   },
   // The modal double-faced card (TODO 5.1b's bodies; 5.2's editor): the
@@ -231,7 +233,7 @@ const RAW_KIND_DEFS: Record<CardKind, Omit<KindDef, "inlineSecondFace">> = {
   mdfc: {
     label: "Modal double-faced",
     cardType: "creature",
-    layoutTemplates: ["m15mdfcfront", "m15mdfclandfront"],
+    layoutTemplates: ["m15mdfcfront", "m15mdfclandfront", "m15borderlessmdfcfront"],
     previewTemplate: "m15mdfcfront",
   },
 };
@@ -1652,10 +1654,15 @@ export function dfcLayoutForKind(kind: CardKind): DfcLayout | null {
  *  land front for a land, the spell front otherwise), or null for a kind
  *  with no bodies (none since 5.1b's modal pair; a wave-2 kind until its
  *  rows exist) — what the Card step's face-type row writes beside the
- *  type. */
-export function dfcFrontBodyFor(kind: CardKind, cardType: CardType | "" | null | undefined): FrameTemplate | null {
+ *  type. A borderless card (TODO 5.7: `look`) stays borderless: null where
+ *  that look has no body for the type (a land front). */
+export function dfcFrontBodyFor(
+  kind: CardKind,
+  cardType: CardType | "" | null | undefined,
+  look: DfcLook = DEFAULT_DFC_LOOK,
+): FrameTemplate | null {
   const layout = dfcLayoutForKind(kind);
-  return layout ? bodyFor(layout, "front", cardType || null) : null;
+  return layout ? bodyFor(layout, "front", cardType || null, DEFAULT_DFC_ICON, look) : null;
 }
 
 /** True when a double-faced FRONT body (TODO 5.1a) dresses a card of

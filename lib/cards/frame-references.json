@@ -5932,5 +5932,283 @@
         }
       ]
     }
+  },
+  "m15borderlessdfcfront": {
+    "note": "The dark (`inverted`) borderless transform FRONT body (TODO 5.7): plain borderless printings of 2021-11 → 2026 — ECL's Lorwyn Eclipsed legends, FIN's, SLD / SLX / PR23 / LMAR — each the printing's FRONT face. m: the gold frame (FIN #394's U|B is the split pair's — a pair rides the m tick). c: none — no colourless Artifact front was printed in the look (TLA #298–363's colourless Aang backs are see-through faces, TODO 5.11).",
+    "colors": {
+      "w": [
+        {
+          "name": "Brigid, Clachan's Heart",
+          "set": "ecl",
+          "scryfallId": "887002ae-794b-427c-9f98-e909b22313d9"
+        },
+        {
+          "name": "Eirdu, Carrier of Dawn",
+          "set": "ecl",
+          "scryfallId": "ec3c80c4-4935-455c-a14f-a0532b6a41a8"
+        },
+        {
+          "name": "Venat, Heart of Hydaelyn",
+          "set": "fin",
+          "scryfallId": "a9a432dc-6e53-48d2-8fbe-b01bd2cab6dd"
+        }
+      ],
+      "u": [
+        {
+          "name": "Sygg, Wanderwine Wisdom",
+          "set": "ecl",
+          "scryfallId": "62b5ab41-7a85-49aa-8669-8a09a09d02fa"
+        },
+        {
+          "name": "Thing in the Ice",
+          "set": "pr23",
+          "scryfallId": "dcc8c8e7-385d-485c-bcdf-95af113a433a"
+        }
+      ],
+      "b": [
+        {
+          "name": "Cecil, Dark Knight",
+          "set": "fin",
+          "scryfallId": "d8c5c414-c7a0-489b-9cb8-1b910aa89b8e"
+        },
+        {
+          "name": "Grub, Storied Matriarch",
+          "set": "ecl",
+          "scryfallId": "0f836c3b-d1fb-4b3b-9c14-cc9052be3a94"
+        },
+        {
+          "name": "Sephiroth, Fabled SOLDIER",
+          "set": "fin",
+          "scryfallId": "83c82209-47d5-4c4c-b8ec-96ab907e15d3"
+        }
+      ],
+      "r": [
+        {
+          "name": "Ashling, Rekindled",
+          "set": "ecl",
+          "scryfallId": "7110cae6-b0ed-4495-9f36-751ce25c9538"
+        }
+      ],
+      "g": [
+        {
+          "name": "Avabruck Caretaker",
+          "set": "sld",
+          "scryfallId": "da5ecf95-b360-4bc6-8706-de350736b7e3"
+        },
+        {
+          "name": "Casal, Lurkwood Pathfinder",
+          "set": "slx",
+          "scryfallId": "d571c367-c786-41f9-9cdb-cb02594fa413"
+        },
+        {
+          "name": "Trystan, Callous Cultivator",
+          "set": "ecl",
+          "scryfallId": "4086c9a8-f9bf-4359-a67a-9f7b45528ccf"
+        }
+      ],
+      "m": [
+        {
+          "name": "Kefka, Court Mage",
+          "set": "fin",
+          "scryfallId": "0cadfe0e-9cdf-4e64-b143-f996c76bf93b"
+        },
+        {
+          "name": "Huntmaster of the Fells",
+          "set": "lmar",
+          "scryfallId": "64b5818e-7d5d-42ac-8d81-e3ad625eb11d"
+        },
+        {
+          "name": "Tovolar, Dire Overlord",
+          "set": "sld",
+          "scryfallId": "54c92a0d-ab6e-45b2-b7a8-e13a5dd4e74e"
+        }
+      ],
+      "c": null
+    }
+  },
+  "m15borderlessdfcback": {
+    "note": "The dark borderless transform BACK body, the ▼ at the right (TODO 5.7): every reference is the printing's BACK face (face 1). c: none — the look's colourless backs (TLA's Aang) are see-through faces without the Artifact word (TODO 5.11).",
+    "colors": {
+      "w": [
+        {
+          "name": "Sygg, Wanderbrine Shield",
+          "set": "ecl",
+          "scryfallId": "62b5ab41-7a85-49aa-8669-8a09a09d02fa",
+          "face": 1
+        },
+        {
+          "name": "Cecil, Redeemed Paladin",
+          "set": "fin",
+          "scryfallId": "d8c5c414-c7a0-489b-9cb8-1b910aa89b8e",
+          "face": 1
+        },
+        {
+          "name": "Hydaelyn, the Mothercrystal",
+          "set": "fin",
+          "scryfallId": "a9a432dc-6e53-48d2-8fbe-b01bd2cab6dd",
+          "face": 1
+        }
+      ],
+      "u": [
+        {
+          "name": "Ashling, Rimebound",
+          "set": "ecl",
+          "scryfallId": "7110cae6-b0ed-4495-9f36-751ce25c9538",
+          "face": 1
+        }
+      ],
+      "b": [
+        {
+          "name": "Isilu, Carrier of Twilight",
+          "set": "ecl",
+          "scryfallId": "ec3c80c4-4935-455c-a14f-a0532b6a41a8",
+          "face": 1
+        },
+        {
+          "name": "Trystan, Penitent Culler",
+          "set": "ecl",
+          "scryfallId": "4086c9a8-f9bf-4359-a67a-9f7b45528ccf",
+          "face": 1
+        },
+        {
+          "name": "Sephiroth, One-Winged Angel",
+          "set": "fin",
+          "scryfallId": "83c82209-47d5-4c4c-b8ec-96ab907e15d3",
+          "face": 1
+        }
+      ],
+      "r": [
+        {
+          "name": "Grub, Notorious Auntie",
+          "set": "ecl",
+          "scryfallId": "0f836c3b-d1fb-4b3b-9c14-cc9052be3a94",
+          "face": 1
+        }
+      ],
+      "g": [
+        {
+          "name": "Brigid, Doun's Mind",
+          "set": "ecl",
+          "scryfallId": "887002ae-794b-427c-9f98-e909b22313d9",
+          "face": 1
+        },
+        {
+          "name": "Hollowhenge Huntmaster",
+          "set": "sld",
+          "scryfallId": "da5ecf95-b360-4bc6-8706-de350736b7e3",
+          "face": 1
+        },
+        {
+          "name": "Casal, Pathbreaker Owlbear",
+          "set": "slx",
+          "scryfallId": "d571c367-c786-41f9-9cdb-cb02594fa413",
+          "face": 1
+        }
+      ],
+      "m": [
+        {
+          "name": "Kefka, Ruler of Ruin",
+          "set": "fin",
+          "scryfallId": "0cadfe0e-9cdf-4e64-b143-f996c76bf93b",
+          "face": 1
+        },
+        {
+          "name": "Ravager of the Fells",
+          "set": "lmar",
+          "scryfallId": "64b5818e-7d5d-42ac-8d81-e3ad625eb11d",
+          "face": 1
+        },
+        {
+          "name": "Tovolar, the Midnight Scourge",
+          "set": "sld",
+          "scryfallId": "54c92a0d-ab6e-45b2-b7a8-e13a5dd4e74e",
+          "face": 1
+        }
+      ],
+      "c": null
+    }
+  },
+  "m15borderlessmdfcfront": {
+    "note": "The dark borderless modal FRONT body (TODO 5.7): Marvel Super Heroes' and Marvel's Spider-Man's borderless legends (their strip is the Marvel P/T form, not built — a nearest look on the strip only) (SLD #2655 is the look too, but its LAND back has no borderless body yet). b and c: no printing in the look (SPM #233 is an artist-lettered poster).",
+    "colors": {
+      "w": [
+        {
+          "name": "Jennifer Walters",
+          "set": "msh",
+          "scryfallId": "eec216e1-971b-490f-aba7-2d5bd5085023"
+        },
+        {
+          "name": "Monica Rambeau",
+          "set": "msh",
+          "scryfallId": "7be20870-ccdc-4285-920d-739cafb60465"
+        }
+      ],
+      "u": [
+        {
+          "name": "Bruce Banner",
+          "set": "msh",
+          "scryfallId": "eb2d2d35-4956-42fa-94e0-b241ed666683"
+        },
+        {
+          "name": "Tony Stark",
+          "set": "msh",
+          "scryfallId": "7a85467d-5693-4cf7-b38d-d42c57242f48"
+        }
+      ],
+      "b": null,
+      "r": [
+        {
+          "name": "Gwen Stacy",
+          "set": "spm",
+          "scryfallId": "9126dfa0-b681-44c7-9ae1-7926df8a2767"
+        }
+      ],
+      "g": [
+        {
+          "name": "Miles Morales",
+          "set": "spm",
+          "scryfallId": "b6c129a7-59d3-499e-8279-f374266150be"
+        }
+      ],
+      "m": [
+        {
+          "name": "King T'Challa",
+          "set": "msh",
+          "scryfallId": "eeedc3a9-e5c0-4234-8653-1a005df095e1"
+        }
+      ],
+      "c": null
+    }
+  },
+  "m15borderlessmdfcback": {
+    "note": "The dark borderless modal BACK body (TODO 5.7): every reference is the printing's BACK face (face 1). Every back printed in the look is gold (MSH's two-colour backs; SPM #200 / #202's three-colour backs); SLD #2655's is a LAND back, which has no borderless body yet. w u b r g c: no printing.",
+    "colors": {
+      "w": null,
+      "u": null,
+      "b": null,
+      "r": null,
+      "g": null,
+      "m": [
+        {
+          "name": "The Sensational She-Hulk",
+          "set": "msh",
+          "scryfallId": "eec216e1-971b-490f-aba7-2d5bd5085023",
+          "face": 1
+        },
+        {
+          "name": "Black Panther, Hope Enduring",
+          "set": "msh",
+          "scryfallId": "eeedc3a9-e5c0-4234-8653-1a005df095e1",
+          "face": 1
+        },
+        {
+          "name": "Ultimate Spider-Man",
+          "set": "spm",
+          "scryfallId": "b6c129a7-59d3-499e-8279-f374266150be",
+          "face": 1
+        }
+      ],
+      "c": null
+    }
   }
 }

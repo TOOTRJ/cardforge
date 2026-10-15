@@ -39,6 +39,7 @@ import {
   isDfcFaceType,
   type DfcIconFamily,
   type DfcLayout,
+  type DfcLook,
 } from "@/lib/cards/dfc";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { isArtifactFrameType, pickFrameColorKey } from "@/components/cards/frame-layer";
@@ -563,6 +564,15 @@ export type DfcImportFacts = {
   layout: DfcLayout;
   /** The printing's icon family (dfcIconFamilyFromEffects). */
   family: DfcIconFamily;
+  /** The look of the bodies below (TODO 5.7): `borderless` when the
+   *  printing wears the dark borderless look (`border_color: borderless` +
+   *  the `inverted` effect — dfcPrintedLookOf) AND both faces have a
+   *  borderless body; `bordered` otherwise (the M15 bodies — today's
+   *  landing for a borderless printing whose face has no borderless body
+   *  yet: a land face, a sun / moon back, the light look). */
+  look: DfcLook;
+  /** The look the printing WEARS, whether or not its bodies exist. */
+  printedLook: DfcLook;
   frontType: CardType | undefined;
   backType: CardType | undefined;
   /** Null when the printing lands on the bodies. */
@@ -606,9 +616,12 @@ export function dfcImportOf(card: ScryfallCard): DfcImportFacts | null {
   const front = faceTypeInfo(faces[0]?.type_line ?? card.type_line);
   const back = faceTypeInfo(faces[1]?.type_line);
   const family = dfcIconFamilyFromEffects(card.frame_effects);
+  const printedLook = dfcPrintedLookOf(card);
   const facts: DfcImportFacts = {
     layout,
     family,
+    look: "bordered",
+    printedLook,
     frontType: front.cardType,
     backType: back.cardType,
     blocked: null,
@@ -621,8 +634,14 @@ export function dfcImportOf(card: ScryfallCard): DfcImportFacts | null {
   if (faces.length < 2 || !isDfcFaceType(front.cardType) || !isDfcFaceType(back.cardType) || front.saga || back.saga) {
     return blocked("face-type");
   }
-  const frontBody = bodyFor(layout, "front", front.cardType, family);
-  const backBody = bodyFor(layout, "back", back.cardType, family);
+  // The borderless bodies (TODO 5.7) where the printing wears that look and
+  // both faces have one; else the bordered bodies, as before.
+  const borderlessFront = printedLook === "borderless" ? bodyFor(layout, "front", front.cardType, family, "borderless") : null;
+  const borderlessBack = printedLook === "borderless" ? bodyFor(layout, "back", back.cardType, family, "borderless") : null;
+  const look: DfcLook = borderlessFront && borderlessBack ? "borderless" : "bordered";
+  facts.look = look;
+  const frontBody = borderlessFront && borderlessBack ? borderlessFront : bodyFor(layout, "front", front.cardType, family);
+  const backBody = borderlessFront && borderlessBack ? borderlessBack : bodyFor(layout, "back", back.cardType, family);
   if (!frontBody || !backBody) return blocked("no-body");
   // A colourless face wears the body's `c` only with an Artifact word (D2);
   // a land face's colour is its body's one master (always allowed). The
@@ -643,6 +662,28 @@ export function dfcImportOf(card: ScryfallCard): DfcImportFacts | null {
   if (effects.has("devoid") || effects.has("snow")) return { ...blocked("dress"), frontBody, backBody };
   return { ...facts, kind: layout === "transform" ? "transform" : "mdfc", frontBody, backBody };
 }
+
+/** The look a double-faced printing WEARS (TODO 5.7): the dark borderless
+ *  look — `border_color: borderless` with Scryfall's `inverted` effect (98
+ *  of the 134 plain borderless transform / modal printings; the other 36
+ *  print the light look, which PipGlyph doesn't draw yet) — else the
+ *  bordered M15 look. */
+export function dfcPrintedLookOf(card: Pick<ScryfallCard, "border_color" | "frame_effects" | "promo_types" | "set">): DfcLook {
+  const borderless = (card.border_color ?? "").toLowerCase() === "borderless";
+  const effects = new Set((card.frame_effects ?? []).map((e) => e.toLowerCase()));
+  if (!borderless || !effects.has("inverted")) return "bordered";
+  // A showcase, a shattered-glass or one-off set's frame and an artist-
+  // lettered poster are their own designs (the registry's borderless rules
+  // before `borderless/dfc`): they keep the bordered bodies' landing.
+  if (effects.has("showcase") || effects.has("shatteredglass")) return "bordered";
+  if ((card.promo_types ?? []).some((p) => p.toLowerCase() === "poster")) return "bordered";
+  if (DFC_BORDERLESS_ONE_OFF_SETS.has((card.set ?? "").toLowerCase())) return "bordered";
+  return "borderless";
+}
+
+/** The sets whose borderless frame is a one-off design (the registry's
+ *  `borderless/unsupported-set`: BOT's shattered glass). */
+const DFC_BORDERLESS_ONE_OFF_SETS: ReadonlySet<string> = new Set(["mp2", "ust", "bot"]);
 
 /** A face's STORED colour on a double-faced body: colourless on the
  *  TRANSFORM land bodies (the 5.1a land pair has one master under every

@@ -52,6 +52,8 @@ describe("where the pieces are declared", () => {
       // The Nyx Constellation frame (owner 2026-10-13): the Nyx crown band, its arms faded.
       "nyx",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
+      // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
+      "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
     ];
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => DRAWN.includes(t)));
     // (…and the holofoil stamp's notch, 4.9c, on the seven wave-1 entries —

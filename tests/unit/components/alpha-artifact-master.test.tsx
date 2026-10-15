@@ -75,7 +75,8 @@ describe("frameMasterKey — the one master rule", () => {
     // land tint per colour with the grey land modal as `c`, dresses none.
     // …and the extended-art frame (layout v58): its see-through `c` is the
     // pack's Eldrazi frame, a colourless ARTIFACT paints its silver `a`.
-    const DRESSED = new Set(["agclassic", "extendedart", "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback"]);
+    // …and the borderless double-faced bodies (TODO 5.7), the same stand-in.
+    const DRESSED = new Set(["agclassic", "extendedart", "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback", "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback"]);
     for (const t of FRAME_TEMPLATE_VALUES) {
       const profile = getFrameProfile(t);
       expect(Boolean(profile.artifactMasterKeys), t).toBe(DRESSED.has(t));

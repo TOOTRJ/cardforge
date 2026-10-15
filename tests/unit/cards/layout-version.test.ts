@@ -427,7 +427,13 @@ const POST_V29_TEMPLATES: readonly string[] = [
   "extendedartstation", "m15borderlessstation",
   // TODO 4.40 / 4.41's older full-art basics.
   "m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb",
+  // TODO 5.7's borderless double-faced bodies.
+  "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
 ];
+/** The modal bodies added after v53 (TODO 5.7's borderless pair): the v49
+ *  and v53 frozen lists never name them. */
+const POST_V53_FLIPSIDE: readonly string[] = ["m15borderlessmdfcfront", "m15borderlessmdfcback"];
+
 /** Templates added after v36 (TODO 5.1a's transform bodies, 5.1b's modal
  *  bodies): no card was ever baked on them before v37, so v36's frozen
  *  lists never name them. */
@@ -447,6 +453,8 @@ const POST_V36_TEMPLATES: readonly string[] = [
   "extendedartstation", "m15borderlessstation",
   // TODO 4.40 / 4.41's older full-art basics.
   "m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb",
+  // TODO 5.7's borderless double-faced bodies.
+  "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
 ];
 
 describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
@@ -802,6 +810,8 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "extendedartstation", "m15borderlessstation",
       // …and 4.40 / 4.41's older full-art basics.
       "m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb",
+      // …and TODO 5.7's borderless double-faced bodies.
+      "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
     ];
     // An EXISTING template that joined brought its own bump: the battle
     // (TODO 4.21b), with layout v43 — its Card Conjurer master and the
@@ -2308,7 +2318,8 @@ describe("v49 — the symbols as printed: five redrawn symbols and flat rules-te
     // of those ("1997", "2003", "original") was flat already.
     expect(FRAME_TEMPLATE_VALUES.filter((t) => ["1997", "2003", "original"].includes(getFrameProfile(t).symbolStyle ?? "")).sort()).toEqual([...FLAT].sort());
     expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).symbolStyle !== undefined).sort()).toEqual([...FLAT].sort());
-    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).flipside).sort()).toEqual([...MODAL].sort());
+    // (…the borderless modal pair, TODO 5.7, joined after: no card on it.)
+    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).flipside && !POST_V53_FLIPSIDE.includes(t)).sort()).toEqual([...MODAL].sort());
   });
 
   it("the redrawn-symbol test is the renderers' own answer: exactly the symbols whose pip changed", async () => {
@@ -2726,7 +2737,8 @@ describe("v53 — the large pips as printed (TODO 3.21, owner round 49)", () => 
       expect(inlineSymbolStyle(inline), s.id).toBe(inline);
     }
     expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).symbolStyle === "2003").sort()).toEqual([...lv.V53_LARGER_COST_TEMPLATES].sort());
-    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).flipside).sort()).toEqual([...MODAL].sort());
+    // (…the borderless modal pair, TODO 5.7, joined after: no card on it.)
+    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).flipside && !POST_V53_FLIPSIDE.includes(t)).sort()).toEqual([...MODAL].sort());
   });
 
   it("the frozen symbol tests are isLargePip's, as the tokenizer reads a text", async () => {

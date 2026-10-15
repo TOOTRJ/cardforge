@@ -43,6 +43,7 @@ import {
   bodyFor,
   colorlessFaceAllowed,
   dfcBodyOf,
+  dfcLookOf,
   isDfcBackBody,
   isDfcFaceType,
   isDfcIconFamily,
@@ -228,7 +229,9 @@ export function resolveDfcBackFace(input: DfcBackGateInput): DfcBackGateResult {
   }
 
   const family = dfcFamilyOf(input.family);
-  const derived = bodyFor(layout, "back", backType, family);
+  // The back follows the front's look (TODO 5.7): a borderless front's back
+  // is borderless — none yet for a land back or a 2016–22 family.
+  const derived = bodyFor(layout, "back", backType, family, dfcLookOf(front));
   if (!derived) return { ok: false, field: "back_face.frame_style", message: DFC_NO_BACK_BODY_YET };
 
   const storedBody = input.stored?.back?.frame_style?.template;

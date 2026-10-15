@@ -132,7 +132,9 @@ export class FrameCompareFaceError extends Error {
 function withComparedBack(front: CardPreviewData, card: ScryfallCard, legacyBack: boolean): CardPreviewData {
   const body = dfcBodyOf(front.frameStyle?.template);
   if (!front.backFace || body?.role !== "front" || body.layout !== "modal") return front;
-  const backBody = legacyBack ? null : bodyFor(body.layout, "back", front.backFace.card_type ?? null);
+  const backBody = legacyBack
+    ? null
+    : bodyFor(body.layout, "back", front.backFace.card_type ?? null, undefined, body.look === "borderless" ? "borderless" : "bordered");
   return {
     ...front,
     backFace: {

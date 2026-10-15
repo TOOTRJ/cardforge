@@ -115,7 +115,7 @@ import {
   frameSubstitutionLabel,
   type FrameSubstitution,
 } from "@/lib/creator/import-frame-choice";
-import { colorlessFaceAllowed } from "@/lib/cards/dfc";
+import { colorlessFaceAllowed, dfcLookOf } from "@/lib/cards/dfc";
 import {
   LegendaryVariationChip,
   useLegendaryVariation,
@@ -362,11 +362,13 @@ export function CardSetupPanel({
               colorKey={colorKey as FrameColorKey}
               verifiedKeys={verifiedKeys}
               onPick={onDfcFaceTypePick}
+              look={dfcLookOf(watchedTemplate)}
             />
           )}
           {dfcLayoutForKind(kind) === "transform" ? (
             <DfcIconFamilySection
               family={dfcIcon}
+              look={dfcLookOf(watchedTemplate)}
               onChange={(next) => {
                 clearErrors("frame_style");
                 setValue("frame_style.dfcIcon", next, { shouldDirty: true });

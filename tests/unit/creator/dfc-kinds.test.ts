@@ -37,7 +37,7 @@ describe("the two double-faced kinds", () => {
     expect(CARD_KIND_VALUES).toContain("mdfc");
     expect(KIND_PICKER_KINDS).toContain("transform");
     expect(KIND_PICKER_KINDS).toContain("mdfc");
-    expect(KIND_DEFS.mdfc).toMatchObject({ label: "Modal double-faced", cardType: "creature", layoutTemplates: ["m15mdfcfront", "m15mdfclandfront"], previewTemplate: "m15mdfcfront", inlineSecondFace: false });
+    expect(KIND_DEFS.mdfc).toMatchObject({ label: "Modal double-faced", cardType: "creature", layoutTemplates: ["m15mdfcfront", "m15mdfclandfront", "m15borderlessmdfcfront"], previewTemplate: "m15mdfcfront", inlineSecondFace: false });
     expect(KIND_REQUIRES.mdfc).toEqual(["dfcFront"]);
     expect(LAYOUT_KIND_CARD_TYPES.mdfc).toEqual(DFC_FACE_TYPES);
     expect(LAYOUT_KIND_CARD_TYPES.transform).toEqual(DFC_FACE_TYPES);
@@ -65,7 +65,8 @@ describe("the two double-faced kinds", () => {
     expect(kindHasAvailableFrame("mdfc", new Set([frameComboKey("m15mdfcfront", "u")]))).toBe(false);
     expect(kindHasAvailableFrame("mdfc", new Set([frameComboKey("m15mdfcfront", "u"), frameComboKey("m15mdfcback", "u")]))).toBe(true);
     expect(kindHasAvailableFrame("mdfc", new Set([frameComboKey("m15mdfclandfront", "w"), frameComboKey("m15mdfcback", "w")]))).toBe(true);
-    expect(framesForKind("mdfc", new Set([frameComboKey("m15mdfcfront", "u")])).map((f) => f.template)).toEqual(["m15mdfcfront", "m15mdfclandfront"]);
+    // (…and the borderless front, TODO 5.7: a third body, never the default.)
+    expect(framesForKind("mdfc", new Set([frameComboKey("m15mdfcfront", "u")])).map((f) => f.template)).toEqual(["m15mdfcfront", "m15mdfclandfront", "m15borderlessmdfcfront"]);
     // Picking the modal kind moves the card onto the modal front.
     expect(planKindChange("mdfc", { cardType: "creature", template: "m15" })).toEqual({ action: "apply", patch: { card_type: "creature", template: "m15mdfcfront" } });
     expect(kindFromCard("creature", "m15mdfcfront")).toBe("mdfc");

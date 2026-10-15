@@ -76,7 +76,8 @@ describe("one M15-era display size (layout v32)", () => {
     // …and extended art's land dress (TODO 4.7, owner Round 63) — and
     // 4.40 / 4.41's three older full-art basics, and the Spacecraft's
     // extended-art and borderless dresses (4.27a step 2).
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(58);
+    // …and TODO 5.7's four borderless double-faced bodies.
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(62);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       expect(p.title.sizePct, t).toBe(sized(t, TITLE_SIZE_PCT));
@@ -305,6 +306,11 @@ describe("baselines (TextSlot.dy)", () => {
     // …and the modal bodies (5.1b), on the same skeleton.
     ["m15mdfcfront", base.title, cc],
     ["m15mdfcback", base.title, cc],
+    // The borderless double-faced bodies (TODO 5.7): m15borderless's slots.
+    ["m15borderlessdfcfront", base.title, cc],
+    ["m15borderlessdfcback", base.title, cc],
+    ["m15borderlessmdfcfront", base.title, cc],
+    ["m15borderlessmdfcback", base.title, cc],
     ["m15mdfclandfront", base.title, cc],
     ["m15mdfclandback", base.title, cc],
     // The extended-art frame (layout v58, TODO 4.7): Card Conjurer's
@@ -419,6 +425,8 @@ describe("baselines (TextSlot.dy)", () => {
       "m15borderlesspw", "m15borderlesspwtall",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
+      // The borderless double-faced bodies (TODO 5.7).
+      "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
       // The extended-art frame and the textless promo pair (layout v58).
       "extendedart", "extendedartland", "m15textless", "m15textlessland",
     ]) {

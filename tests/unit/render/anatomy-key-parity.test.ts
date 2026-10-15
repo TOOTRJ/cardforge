@@ -77,8 +77,11 @@ describe("bake path = preview path", () => {
     // …and the Vehicle frame's 10 (4.5c), the Nyx dress's 20 (4.7).
     // …and the Universes Beyond frames' 20 + 10 + 10 (4.25).
     // …and the Spacecraft's borderless dress's 7 crowned twins (4.27a step 2).
-    expect(pairKeys).toBe(260);
-    expect(crownedKeys).toBe(51);
+    // …and the borderless double-faced bodies' 10 each (TODO 5.7).
+    expect(pairKeys).toBe(300);
+    // …and the borderless double-faced bodies' 18 crowned twins each (TODO
+    // 5.7: the seven colour keys, the artifact stand-in's `a`, ten pairs).
+    expect(crownedKeys).toBe(51 + 4 * 18);
   });
 
   it("every stat plate a profile can paint (a hybrid pair's grey 'c' included)", () => {
@@ -166,8 +169,9 @@ describe("bake path = preview path", () => {
         for (const to of Object.values(slot.keyMap ?? {})) expect(slot.keys, `${template} ${slot.anatomy} keyMap → ${to}`).toContain(to);
       }
     }
-    // The three rider slots × 12 glyphs (m15dfcfront, m15dfclandfront, m15dfcbackleft).
-    expect(riders).toBe(36);
+    // The four rider slots × 12 glyphs (m15dfcfront, m15dfclandfront,
+    // m15dfcbackleft, and the borderless front's, TODO 5.7).
+    expect(riders).toBe(48);
     // The four modal strip slots (5.1c): 8 keys on each spell body (w u b r
     // g m a + l), 7 on each land body (w u b r g m c).
     expect(strips).toBe(8 + 8 + 7 + 7);

@@ -573,6 +573,9 @@ type Match = {
   /** A transform / modal printing that does NOT land on the double-faced
    *  bodies for one of these reasons (PrintingFacts.dfc.blocked, TODO 5.4). */
   dfcBlocked?: readonly DfcImportBlock[];
+  /** The look of the bodies the printing lands on (PrintingFacts.dfc.look,
+   *  TODO 5.7): `bordered` also for a printing that isn't double-faced. */
+  dfcLook?: "bordered" | "borderless";
   anyOf?: readonly Match[];
   allOf?: readonly Match[];
 };
@@ -747,6 +750,7 @@ function matches(match: Match, ctx: Ctx): boolean {
   if (match.backTypes && (!facts.backType || !match.backTypes.includes(facts.backType))) return false;
   if (match.backSubtypesAny && !match.backSubtypesAny.some((s) => facts.backSubtypes.includes(s))) return false;
   if (match.dfcBlocked && (!facts.dfc?.blocked || !match.dfcBlocked.includes(facts.dfc.blocked))) return false;
+  if (match.dfcLook && (facts.dfc?.look ?? "bordered") !== match.dfcLook) return false;
   if (match.colorCount) {
     const n = facts.colors.length;
     if (match.colorCount.min !== undefined && n < match.colorCount.min) return false;
@@ -960,7 +964,7 @@ const FAMILIES: Record<
   // through bodyFor). A printing that doesn't land on the bodies (a blocked
   // face) takes its kind's standard instead, as kindFallback does.
   dfc: {
-    produces: ["m15dfclandfront", "m15dfcfront", "m15mdfclandfront", "m15mdfcfront"],
+    produces: ["m15dfclandfront", "m15dfcfront", "m15mdfclandfront", "m15mdfcfront", "m15borderlessdfcfront", "m15borderlessmdfcfront"],
     pick: (ctx) => ctx.facts.dfc?.frontBody ?? kindFallback(ctx),
   },
 };
@@ -1070,7 +1074,8 @@ type GapKey =
   | "lettered-name"
   | "row-box"
   | "tall-box"
-  | "znr-type-line";
+  | "znr-type-line"
+  | "borderless-dfc-face";
 
 const BORDER_WORD: Record<string, string> = {
   white: "white",
@@ -1207,6 +1212,14 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   // land backs print their own frame (uppercase name, a banner type line,
   // the "(Transforms from …)" line); PipGlyph's land back is the plain one,
   // so the import lands nearest on it (design 2026-10-02, 5.8).
+  // A dark borderless double-faced printing (TODO 5.7) whose face has no
+  // borderless body yet — a land face (SLD #1502, SLD #2655's backs) or a
+  // sun / moon back (VOW #332–341) — lands on the bordered bodies.
+  "borderless-dfc-face": {
+    match: { dfcLook: "bordered" },
+    reason: "PipGlyph's borderless double-faced frames don't have this face yet (a land face, or the 2016–22 icons), so it lands on the bordered frame",
+    blockedBy: "5.7",
+  },
   "parchment-land-back": {
     match: {
       layouts: ["transform"],
@@ -1958,13 +1971,31 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       blockedBy: "5.11",
     },
   },
-  // The borderless transform / modal faces (5.7): nearest on the double-faced
-  // body the printing's faces wear (TODO 5.4 — the bordered twin of the
-  // borderless look, with the marks), or on the kind's standard while the
-  // modal bodies don't exist (5.1b).
+  // The borderless transform / modal faces (TODO 5.7). The DARK look
+  // (`inverted`: 98 of the 134 plain printings — ECL, FIN, TLA, MSH, SPM …)
+  // is exact on the borderless bodies the mapper puts the faces on
+  // (dfcImportOf: both faces need one) once both are verified in their
+  // colours (finalizeImportMatch: until then the import lands on the
+  // bordered bodies, as before 5.7); a face with no borderless body (a land
+  // face, a sun / moon back) lands on the bordered bodies with the
+  // `borderless-dfc-face` gap. The LIGHT look (ZNR / KHM pathways, SLD
+  // #1155–1212, STX's walkers) stays nearest on the bordered bodies.
+  ...withGaps(
+    {
+      key: "borderless/dfc",
+      exactLabel: "Borderless double-faced card",
+      match: {
+        borders: ["borderless"],
+        effectsAny: ["inverted"],
+        anyOf: [{ layouts: ["transform", "modal_dfc"] }, { effectsAny: DFC_EFFECTS }],
+      },
+      outcome: { status: "exact", template: { family: "dfc" } },
+    },
+    ["borderless-dfc-face", ...DFC_BODY_GAPS.filter((gap) => gap !== "border" && gap !== "universes-beyond")],
+  ),
   {
-    key: "borderless/dfc",
-    exactLabel: "Borderless double-faced card",
+    key: "borderless/dfc/light",
+    exactLabel: "Borderless double-faced card (light)",
     match: {
       borders: ["borderless"],
       anyOf: [{ layouts: ["transform", "modal_dfc"] }, { effectsAny: DFC_EFFECTS }],
@@ -1972,7 +2003,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     outcome: {
       status: "nearest",
       template: { family: "dfc" },
-      reason: "PipGlyph doesn't have the borderless double-faced frames yet",
+      reason: "PipGlyph doesn't draw the light borderless double-faced look yet",
       blockedBy: "5.7",
     },
   },
@@ -2944,7 +2975,7 @@ export function signatureDrawnOn(signature: string, template: string | null | un
  *  borderless artifact frame and land on the bordered station frame — as
  *  every edge-to-edge frame, it is never an import's landing (Scryfall's art
  *  crop is the window, 1.18): a maker's pick only. */
-export const TEMPLATES_WITHOUT_PRINTED_SIGNATURE: readonly FrameTemplate[] = ["m15dfcback", "m15dfcbackleft", "m15dfclandback", "m15mdfcback", "m15mdfclandback", "m15borderlessstation"];
+export const TEMPLATES_WITHOUT_PRINTED_SIGNATURE: readonly FrameTemplate[] = ["m15dfcback", "m15dfcbackleft", "m15dfclandback", "m15mdfcback", "m15mdfclandback", "m15borderlessstation", "m15borderlessdfcback", "m15borderlessmdfcback"];
 
 const textOf = (text: Text | undefined, ctx: Ctx): string | null =>
   text === undefined ? null : typeof text === "string" ? text : text(ctx);

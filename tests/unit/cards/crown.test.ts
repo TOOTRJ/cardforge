@@ -57,6 +57,8 @@ describe("which card draws the crown", () => {
       // The Nyx Constellation frame (owner 2026-10-13): the Nyx crown band, its arms faded.
       "nyx",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
+      // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
+      "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
     ];
     expect(crowned).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => DRAWN.includes(t)));
     expect(showsCrown(legendary(["white"]), getFrameProfile("regular"))).toBe(true);

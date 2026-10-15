@@ -133,6 +133,11 @@ describe("the Etched finish on edge-to-edge frames", () => {
       "m15borderlessstation",
       "m15borderlesspw",
       "m15borderlesspwtall",
+      // The borderless double-faced bodies (TODO 5.7).
+      "m15borderlessdfcfront",
+      "m15borderlessdfcback",
+      "m15borderlessmdfcfront",
+      "m15borderlessmdfcback",
       "fullartland",
     ]);
     expect(finishAvailableOn(getFrameProfile("m15borderlessland"), "etched")).toBe(false);

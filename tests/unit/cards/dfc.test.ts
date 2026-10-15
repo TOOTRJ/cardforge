@@ -8,6 +8,8 @@ import {
   bodyFor,
   colorlessFaceAllowed,
   dfcBodyOf,
+  dfcLookOf,
+  isDeclaredDfcBody,
   faceUnderTest,
   frontBodyFor,
   isDfcBackBody,
@@ -38,11 +40,11 @@ describe("the vocabulary", () => {
   });
 });
 
-const TRANSFORM_FRONTS = ["m15dfcfront", "m15dfclandfront"] as const;
-const TRANSFORM_BACKS = ["m15dfcback", "m15dfcbackleft", "m15dfclandback"] as const;
+const TRANSFORM_FRONTS = ["m15dfcfront", "m15dfclandfront", "m15borderlessdfcfront"] as const;
+const TRANSFORM_BACKS = ["m15dfcback", "m15dfcbackleft", "m15dfclandback", "m15borderlessdfcback"] as const;
 // The modal bodies (TODO 5.1b).
-const MODAL_FRONTS = ["m15mdfcfront", "m15mdfclandfront"] as const;
-const MODAL_BACKS = ["m15mdfcback", "m15mdfclandback"] as const;
+const MODAL_FRONTS = ["m15mdfcfront", "m15mdfclandfront", "m15borderlessmdfcfront"] as const;
+const MODAL_BACKS = ["m15mdfcback", "m15mdfclandback", "m15borderlessmdfcback"] as const;
 const DFC_FRONTS = [...TRANSFORM_FRONTS, ...MODAL_FRONTS] as const;
 const DFC_BACKS = [...TRANSFORM_BACKS, ...MODAL_BACKS] as const;
 const DFC_BODIES = [...DFC_FRONTS, ...DFC_BACKS] as const;
@@ -54,7 +56,7 @@ describe("the transform bodies (5.1a), the modal bodies (5.1b) and every other t
       const body = getFrameProfile(template).dfc;
       if ((DFC_BODIES as readonly string[]).includes(template)) {
         expect(body, template).toBeDefined();
-        expect(body!.layout, template).toBe(template.startsWith("m15mdfc") ? "modal" : "transform");
+        expect(body!.layout, template).toBe(template.includes("mdfc") ? "modal" : "transform");
         expect(dfcBodyOf(template), template).toEqual(body);
         continue;
       }
@@ -222,16 +224,54 @@ describe("the face under test (TODO 5.0b) on the real profiles: a back body is a
     // A spell front wears the transform front, a land front the land front
     // — for every back body (the compare view and the walk-through build
     // the card this way, from the printing's front type).
-    for (const back of TRANSFORM_BACKS) {
+    for (const back of TRANSFORM_BACKS.filter((b) => dfcLookOf(b) === "bordered")) {
       expect(frontBodyFor(back), back).toBe("m15dfcfront");
       expect(frontBodyFor(back, "creature"), back).toBe("m15dfcfront");
       expect(frontBodyFor(back, "land"), back).toBe("m15dfclandfront");
     }
     // …and a modal back with the modal fronts (5.1b).
-    for (const back of MODAL_BACKS) {
+    for (const back of MODAL_BACKS.filter((b) => dfcLookOf(b) === "bordered")) {
       expect(frontBodyFor(back), back).toBe("m15mdfcfront");
       expect(frontBodyFor(back, "creature"), back).toBe("m15mdfcfront");
       expect(frontBodyFor(back, "land"), back).toBe("m15mdfclandfront");
+    }
+    // A borderless back (TODO 5.7) pairs with the borderless front of its
+    // layout — its look's one front, whatever the front's type (no
+    // borderless land front exists).
+    for (const [back, front] of [
+      ["m15borderlessdfcback", "m15borderlessdfcfront"],
+      ["m15borderlessmdfcback", "m15borderlessmdfcfront"],
+    ] as const) {
+      expect(frontBodyFor(back), back).toBe(front);
+      expect(frontBodyFor(back, "creature"), back).toBe(front);
+      expect(frontBodyFor(back, "land"), back).toBe(front);
+    }
+  });
+
+  it("the look (TODO 5.7): a borderless front's back is borderless — the spell faces and today's arrows only; the bordered table is unchanged", () => {
+    for (const template of FRAME_TEMPLATE_VALUES) {
+      const borderless = ["m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback"].includes(template);
+      expect(dfcLookOf(template), template).toBe(borderless ? "borderless" : "bordered");
+    }
+    for (const faceType of ["creature", "artifact", "enchantment", "instant", "sorcery"]) {
+      expect(bodyFor("transform", "front", faceType, "arrows", "borderless"), faceType).toBe("m15borderlessdfcfront");
+      expect(bodyFor("transform", "back", faceType, "arrows", "borderless"), faceType).toBe("m15borderlessdfcback");
+      for (const family of DFC_ICON_FAMILY_VALUES.filter((f) => f !== "arrows")) {
+        expect(bodyFor("transform", "back", faceType, family, "borderless"), `${faceType} ${family}`).toBeNull();
+      }
+      expect(bodyFor("modal", "front", faceType, "arrows", "borderless"), faceType).toBe("m15borderlessmdfcfront");
+      expect(bodyFor("modal", "back", faceType, "arrows", "borderless"), faceType).toBe("m15borderlessmdfcback");
+      // The default look is the bordered table, as before.
+      expect(bodyFor("transform", "front", faceType), faceType).toBe("m15dfcfront");
+    }
+    for (const role of ["front", "back"] as const) {
+      expect(bodyFor("transform", role, "land", "arrows", "borderless"), role).toBeNull();
+      expect(bodyFor("modal", role, "land", "arrows", "borderless"), role).toBeNull();
+    }
+    expect(transformBackBodyFor("arrows", "creature", "borderless")).toBe("m15borderlessdfcback");
+    expect(dfcIconFamilyForBackBody("m15borderlessdfcback")).toBe("arrows");
+    for (const t of ["m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback"]) {
+      expect(isDeclaredDfcBody(t), t).toBe(true);
     }
   });
 

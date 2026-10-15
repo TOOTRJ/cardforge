@@ -304,6 +304,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // The Nyx Constellation frame (owner 2026-10-13): the Nyx crown band, its arms faded.
       "nyx",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
+      // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
+      "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
     ].includes(t),
   );
   /** …and the pair masters (extendedart draws none: a pair wears gold there;
@@ -365,6 +367,11 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       m15dfcbackleft: ["split"],
       m15mdfcfront: ["split", "hybrid"],
       m15mdfcback: ["split"],
+      // The borderless double-faced bodies (5.7): m15borderless's pinline split.
+      m15borderlessdfcfront: ["split"],
+      m15borderlessdfcback: ["split"],
+      m15borderlessmdfcfront: ["split"],
+      m15borderlessmdfcback: ["split"],
     });
     // The borderless frames draw their crown from the crowned twins, not a
     // band (4.6f): no overlay slot, crownMasters set.
@@ -428,7 +435,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       const stamp = STAMP_TEMPLATES.includes(template) ? { stamp: "auto" as const } : {};
       // …and the transform icon family's default (`arrows`, TODO 5.2) on the
       // two transform FRONT bodies, the templates that draw it.
-      const family = template === "m15dfcfront" || template === "m15dfclandfront" ? { dfcIcon: "arrows" as const } : {};
+      const family = template === "m15dfcfront" || template === "m15dfclandfront" || template === "m15borderlessdfcfront" ? { dfcIcon: "arrows" as const } : {};
       expect(anatomyDefaults(template), template).toEqual({ ...(crown ? { crown: true } : {}), ...(pair ? { twoColor: true } : {}), ...line, ...stamp, ...family });
       expect(normalizeAnatomy({ template, finish: "foil", crown: true, twoColor: false, stamp: "oval" }, template, "creature"), template).toEqual({
         template,

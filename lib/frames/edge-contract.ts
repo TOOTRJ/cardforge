@@ -245,6 +245,12 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // The Spacecraft's borderless dress (TODO 4.27a step 2): the artifact
   // dress's masters with the station box inside — the same edges.
   m15borderlessstation: BORDERLESS_M15,
+  // The borderless double-faced bodies (TODO 5.7): m15borderless's masters
+  // with the double-faced pieces grafted inside — the same edges.
+  m15borderlessdfcfront: BORDERLESS_M15,
+  m15borderlessdfcback: BORDERLESS_M15,
+  m15borderlessmdfcfront: BORDERLESS_M15,
+  m15borderlessmdfcback: BORDERLESS_M15,
   // 4.33's borderless planeswalkers, regular and tall (the same packs'
   // bottom bar and fins).
   m15borderlesspw: BORDERLESS_PW,
@@ -274,6 +280,10 @@ export const CROWNED_EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   m15borderless: { ...BORDERLESS_M15, top: { kind: "art", except: [[45, 55]] } },
   m15borderlessartifact: { ...BORDERLESS_M15, top: { kind: "art", except: [[45, 55]] } },
   m15borderlessstation: { ...BORDERLESS_M15, top: { kind: "art", except: [[45, 55]] } },
+  m15borderlessdfcfront: { ...BORDERLESS_M15, top: { kind: "art", except: [[45, 55]] } },
+  m15borderlessdfcback: { ...BORDERLESS_M15, top: { kind: "art", except: [[45, 55]] } },
+  m15borderlessmdfcfront: { ...BORDERLESS_M15, top: { kind: "art", except: [[45, 55]] } },
+  m15borderlessmdfcback: { ...BORDERLESS_M15, top: { kind: "art", except: [[45, 55]] } },
 };
 
 /** The suffix of a crowned twin's key (lib/cards/frame-reference-registry.ts

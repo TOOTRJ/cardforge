@@ -65,6 +65,7 @@ import {
   stripRiderKeys,
   RETRO_GOLD_MSE,
 } from "@/scripts/lib/cc-frames.mjs";
+import { DFC_BORDERLESS_TEMPLATES } from "@/scripts/lib/dfc-borderless.mjs";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { TWO_COLOR_PAIRS } from "@/lib/cards/frame-reference-registry";
 import { getFrameProfile, M20_TOKEN_TEXTLESS_RECUT_PX } from "@/lib/cards/template-layout";
@@ -2041,8 +2042,20 @@ describe("provenance and hygiene", () => {
         ...Object.keys(CC_OVERLAY_BANDS),
         ...Object.keys(CC_RIDERS),
         ...Object.keys(HOLO_STAMP_NOTCHES),
+        ...Object.keys(DFC_BORDERLESS_TEMPLATES),
       ].sort(),
     );
+    // …and the borderless double-faced bodies (TODO 5.7): PipGlyph's
+    // derivation (scripts/build-dfc-borderless-frames.mjs) of the published
+    // m15borderless masters with pieces of Card Conjurer's light packs at
+    // the pinned commit — every key's sources recorded, its own test:
+    // tests/unit/frames/dfc-borderless-masters.test.ts.
+    for (const template of Object.keys(DFC_BORDERLESS_TEMPLATES)) {
+      expect(Object.keys(templates), template).not.toContain(template);
+      expect(provenance[template].source, template).toBe("pipglyph");
+      expect(provenance[template].converter, template).toBe("scripts/build-dfc-borderless-frames.mjs");
+      expect(provenance[template].commit, template).toBe(CC_COMMIT);
+    }
     for (const [template, parent] of Object.entries(PIPGLYPH_DERIVED)) {
       expect(Object.keys(templates), template).not.toContain(template);
       expect(provenance[template].source, template).toBe("pipglyph");

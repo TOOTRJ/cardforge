@@ -2060,6 +2060,747 @@
       "colourless artifact crown = CC's 'Artifact Legend Crown' (m15CrownAFloating.png) on the artifact frame; the coloured and pair masters are the same bytes as m15borderless's"
     ]
   },
+  "m15borderlessdfcback": {
+    "source": "pipglyph",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "converter": "scripts/build-dfc-borderless-frames.mjs",
+    "derivedFrom": "the published m15borderless / m15borderlessartifact masters of the frames bucket (Card Conjurer imports: see \"m15borderless\") with pieces of Card Conjurer's LIGHT borderless double-faced packs grafted in (and, on the ▼ back, the published m15dfcback disc)",
+    "output": "1500x2100, the dark master's corners, webp q90 with the PNG's alpha exactly",
+    "colors": {
+      "w": [
+        "m15borderless/w.png@531155a88e6a",
+        "cc:img/frames/m15/transform/borderless/wf.png@35ed8e67d7cf (mirrored)",
+        "m15dfcback/w.png@fae725a6ad69 (disc)"
+      ],
+      "u": [
+        "m15borderless/u.png@87c400f4d071",
+        "cc:img/frames/m15/transform/borderless/uf.png@4c7fe3807f3c (mirrored)",
+        "m15dfcback/u.png@988e035dcf02 (disc)"
+      ],
+      "b": [
+        "m15borderless/b.png@c573d23b57ee",
+        "cc:img/frames/m15/transform/borderless/bf.png@48a4d4fe34c8 (mirrored)",
+        "m15dfcback/b.png@cd529342ee3e (disc)"
+      ],
+      "r": [
+        "m15borderless/r.png@571db4dcff8b",
+        "cc:img/frames/m15/transform/borderless/rf.png@9c7c5a6e22e4 (mirrored)",
+        "m15dfcback/r.png@fe5a929fd235 (disc)"
+      ],
+      "g": [
+        "m15borderless/g.png@1a9b6b421832",
+        "cc:img/frames/m15/transform/borderless/gf.png@10656f28b9e6 (mirrored)",
+        "m15dfcback/g.png@3cddb652b6e8 (disc)"
+      ],
+      "m": [
+        "m15borderless/m.png@f82882504e2b",
+        "cc:img/frames/m15/transform/borderless/mf.png@a219f816786a (mirrored)",
+        "m15dfcback/m.png@6e2dbe62fe42 (disc)"
+      ],
+      "a": [
+        "m15borderlessartifact/c.png@83d24afa8ea2",
+        "cc:img/frames/m15/transform/borderless/af.png@e8717074666b (mirrored)",
+        "m15dfcback/a.png@18945d44dd2e (disc)"
+      ],
+      "c": [
+        "m15borderlessartifact/c.png@83d24afa8ea2",
+        "cc:img/frames/m15/transform/borderless/af.png@e8717074666b (mirrored)",
+        "m15dfcback/a.png@18945d44dd2e (disc)"
+      ],
+      "wu": [
+        "m15borderless/wu.png@95aa39c2c561",
+        "cc:img/frames/m15/transform/borderless/uf.png@4c7fe3807f3c (mirrored)",
+        "m15dfcback/u.png@988e035dcf02 (disc)"
+      ],
+      "wb": [
+        "m15borderless/wb.png@744afd438bf6",
+        "cc:img/frames/m15/transform/borderless/bf.png@48a4d4fe34c8 (mirrored)",
+        "m15dfcback/b.png@cd529342ee3e (disc)"
+      ],
+      "ub": [
+        "m15borderless/ub.png@dac2ed38904e",
+        "cc:img/frames/m15/transform/borderless/bf.png@48a4d4fe34c8 (mirrored)",
+        "m15dfcback/b.png@cd529342ee3e (disc)"
+      ],
+      "ur": [
+        "m15borderless/ur.png@df5079258896",
+        "cc:img/frames/m15/transform/borderless/rf.png@9c7c5a6e22e4 (mirrored)",
+        "m15dfcback/r.png@fe5a929fd235 (disc)"
+      ],
+      "br": [
+        "m15borderless/br.png@e43b96f257d2",
+        "cc:img/frames/m15/transform/borderless/rf.png@9c7c5a6e22e4 (mirrored)",
+        "m15dfcback/r.png@fe5a929fd235 (disc)"
+      ],
+      "bg": [
+        "m15borderless/bg.png@fcb5cc668aed",
+        "cc:img/frames/m15/transform/borderless/gf.png@10656f28b9e6 (mirrored)",
+        "m15dfcback/g.png@3cddb652b6e8 (disc)"
+      ],
+      "rg": [
+        "m15borderless/rg.png@905ced29fb27",
+        "cc:img/frames/m15/transform/borderless/gf.png@10656f28b9e6 (mirrored)",
+        "m15dfcback/g.png@3cddb652b6e8 (disc)"
+      ],
+      "rw": [
+        "m15borderless/rw.png@472fe278e3bc",
+        "cc:img/frames/m15/transform/borderless/wf.png@35ed8e67d7cf (mirrored)",
+        "m15dfcback/w.png@fae725a6ad69 (disc)"
+      ],
+      "gw": [
+        "m15borderless/gw.png@9f22312597c8",
+        "cc:img/frames/m15/transform/borderless/wf.png@35ed8e67d7cf (mirrored)",
+        "m15dfcback/w.png@fae725a6ad69 (disc)"
+      ],
+      "gu": [
+        "m15borderless/gu.png@6bdae4a713ad",
+        "cc:img/frames/m15/transform/borderless/uf.png@4c7fe3807f3c (mirrored)",
+        "m15dfcback/u.png@988e035dcf02 (disc)"
+      ],
+      "w-legendary": [
+        "m15borderless/w-legendary.png@640a7774d288",
+        "cc:img/frames/m15/transform/borderless/wf.png@35ed8e67d7cf (mirrored)",
+        "m15dfcback/w.png@fae725a6ad69 (disc)"
+      ],
+      "u-legendary": [
+        "m15borderless/u-legendary.png@0cfb8847c9d5",
+        "cc:img/frames/m15/transform/borderless/uf.png@4c7fe3807f3c (mirrored)",
+        "m15dfcback/u.png@988e035dcf02 (disc)"
+      ],
+      "b-legendary": [
+        "m15borderless/b-legendary.png@73094e5458ba",
+        "cc:img/frames/m15/transform/borderless/bf.png@48a4d4fe34c8 (mirrored)",
+        "m15dfcback/b.png@cd529342ee3e (disc)"
+      ],
+      "r-legendary": [
+        "m15borderless/r-legendary.png@f6df4dde434a",
+        "cc:img/frames/m15/transform/borderless/rf.png@9c7c5a6e22e4 (mirrored)",
+        "m15dfcback/r.png@fe5a929fd235 (disc)"
+      ],
+      "g-legendary": [
+        "m15borderless/g-legendary.png@638f8af926eb",
+        "cc:img/frames/m15/transform/borderless/gf.png@10656f28b9e6 (mirrored)",
+        "m15dfcback/g.png@3cddb652b6e8 (disc)"
+      ],
+      "m-legendary": [
+        "m15borderless/m-legendary.png@9682c98077a3",
+        "cc:img/frames/m15/transform/borderless/mf.png@a219f816786a (mirrored)",
+        "m15dfcback/m.png@6e2dbe62fe42 (disc)"
+      ],
+      "a-legendary": [
+        "m15borderlessartifact/c-legendary.png@c4d72397d6ce",
+        "cc:img/frames/m15/transform/borderless/af.png@e8717074666b (mirrored)",
+        "m15dfcback/a.png@18945d44dd2e (disc)"
+      ],
+      "c-legendary": [
+        "m15borderlessartifact/c-legendary.png@c4d72397d6ce",
+        "cc:img/frames/m15/transform/borderless/af.png@e8717074666b (mirrored)",
+        "m15dfcback/a.png@18945d44dd2e (disc)"
+      ],
+      "wu-legendary": [
+        "m15borderless/wu-legendary.png@66e072fc623a",
+        "cc:img/frames/m15/transform/borderless/uf.png@4c7fe3807f3c (mirrored)",
+        "m15dfcback/u.png@988e035dcf02 (disc)"
+      ],
+      "wb-legendary": [
+        "m15borderless/wb-legendary.png@5cbbdec540db",
+        "cc:img/frames/m15/transform/borderless/bf.png@48a4d4fe34c8 (mirrored)",
+        "m15dfcback/b.png@cd529342ee3e (disc)"
+      ],
+      "ub-legendary": [
+        "m15borderless/ub-legendary.png@252fabc99094",
+        "cc:img/frames/m15/transform/borderless/bf.png@48a4d4fe34c8 (mirrored)",
+        "m15dfcback/b.png@cd529342ee3e (disc)"
+      ],
+      "ur-legendary": [
+        "m15borderless/ur-legendary.png@3e9517d6ac70",
+        "cc:img/frames/m15/transform/borderless/rf.png@9c7c5a6e22e4 (mirrored)",
+        "m15dfcback/r.png@fe5a929fd235 (disc)"
+      ],
+      "br-legendary": [
+        "m15borderless/br-legendary.png@4300d58d889f",
+        "cc:img/frames/m15/transform/borderless/rf.png@9c7c5a6e22e4 (mirrored)",
+        "m15dfcback/r.png@fe5a929fd235 (disc)"
+      ],
+      "bg-legendary": [
+        "m15borderless/bg-legendary.png@37dc0b3b57b9",
+        "cc:img/frames/m15/transform/borderless/gf.png@10656f28b9e6 (mirrored)",
+        "m15dfcback/g.png@3cddb652b6e8 (disc)"
+      ],
+      "rg-legendary": [
+        "m15borderless/rg-legendary.png@0f46d7f1af25",
+        "cc:img/frames/m15/transform/borderless/gf.png@10656f28b9e6 (mirrored)",
+        "m15dfcback/g.png@3cddb652b6e8 (disc)"
+      ],
+      "rw-legendary": [
+        "m15borderless/rw-legendary.png@269c713353df",
+        "cc:img/frames/m15/transform/borderless/wf.png@35ed8e67d7cf (mirrored)",
+        "m15dfcback/w.png@fae725a6ad69 (disc)"
+      ],
+      "gw-legendary": [
+        "m15borderless/gw-legendary.png@af5e00d7bcba",
+        "cc:img/frames/m15/transform/borderless/wf.png@35ed8e67d7cf (mirrored)",
+        "m15dfcback/w.png@fae725a6ad69 (disc)"
+      ],
+      "gu-legendary": [
+        "m15borderless/gu-legendary.png@d37cf90c2bf5",
+        "cc:img/frames/m15/transform/borderless/uf.png@4c7fe3807f3c (mirrored)",
+        "m15dfcback/u.png@988e035dcf02 (disc)"
+      ]
+    },
+    "changedPixels": {
+      "w": {
+        "rightWell": 17462
+      },
+      "u": {
+        "rightWell": 17388
+      },
+      "b": {
+        "rightWell": 17252
+      },
+      "r": {
+        "rightWell": 17453
+      },
+      "g": {
+        "rightWell": 17413
+      },
+      "m": {
+        "rightWell": 18193
+      },
+      "a": {
+        "rightWell": 23458
+      },
+      "c": {
+        "rightWell": 23458
+      },
+      "wu": {
+        "rightWell": 17281
+      },
+      "wb": {
+        "rightWell": 17173
+      },
+      "ub": {
+        "rightWell": 17173
+      },
+      "ur": {
+        "rightWell": 17370
+      },
+      "br": {
+        "rightWell": 17370
+      },
+      "bg": {
+        "rightWell": 17348
+      },
+      "rg": {
+        "rightWell": 17348
+      },
+      "rw": {
+        "rightWell": 17374
+      },
+      "gw": {
+        "rightWell": 17374
+      },
+      "gu": {
+        "rightWell": 17281
+      },
+      "w-legendary": {
+        "rightWell": 17376
+      },
+      "u-legendary": {
+        "rightWell": 17316
+      },
+      "b-legendary": {
+        "rightWell": 17139
+      },
+      "r-legendary": {
+        "rightWell": 17385
+      },
+      "g-legendary": {
+        "rightWell": 17326
+      },
+      "m-legendary": {
+        "rightWell": 17417
+      },
+      "a-legendary": {
+        "rightWell": 21622
+      },
+      "c-legendary": {
+        "rightWell": 21622
+      },
+      "wu-legendary": {
+        "rightWell": 17294
+      },
+      "wb-legendary": {
+        "rightWell": 17164
+      },
+      "ub-legendary": {
+        "rightWell": 17164
+      },
+      "ur-legendary": {
+        "rightWell": 17389
+      },
+      "br-legendary": {
+        "rightWell": 17389
+      },
+      "bg-legendary": {
+        "rightWell": 17353
+      },
+      "rg-legendary": {
+        "rightWell": 17353
+      },
+      "rw-legendary": {
+        "rightWell": 17379
+      },
+      "gw-legendary": {
+        "rightWell": 17379
+      },
+      "gu-legendary": {
+        "rightWell": 17294
+      }
+    },
+    "sourceFiles": [
+      "cc:img/frames/m15/transform/borderless/af.png",
+      "cc:img/frames/m15/transform/borderless/bf.png",
+      "cc:img/frames/m15/transform/borderless/gf.png",
+      "cc:img/frames/m15/transform/borderless/mf.png",
+      "cc:img/frames/m15/transform/borderless/rf.png",
+      "cc:img/frames/m15/transform/borderless/uf.png",
+      "cc:img/frames/m15/transform/borderless/wf.png",
+      "m15borderless/b-legendary.png",
+      "m15borderless/b.png",
+      "m15borderless/bg-legendary.png",
+      "m15borderless/bg.png",
+      "m15borderless/br-legendary.png",
+      "m15borderless/br.png",
+      "m15borderless/g-legendary.png",
+      "m15borderless/g.png",
+      "m15borderless/gu-legendary.png",
+      "m15borderless/gu.png",
+      "m15borderless/gw-legendary.png",
+      "m15borderless/gw.png",
+      "m15borderless/m-legendary.png",
+      "m15borderless/m.png",
+      "m15borderless/r-legendary.png",
+      "m15borderless/r.png",
+      "m15borderless/rg-legendary.png",
+      "m15borderless/rg.png",
+      "m15borderless/rw-legendary.png",
+      "m15borderless/rw.png",
+      "m15borderless/u-legendary.png",
+      "m15borderless/u.png",
+      "m15borderless/ub-legendary.png",
+      "m15borderless/ub.png",
+      "m15borderless/ur-legendary.png",
+      "m15borderless/ur.png",
+      "m15borderless/w-legendary.png",
+      "m15borderless/w.png",
+      "m15borderless/wb-legendary.png",
+      "m15borderless/wb.png",
+      "m15borderless/wu-legendary.png",
+      "m15borderless/wu.png",
+      "m15borderlessartifact/c-legendary.png",
+      "m15borderlessartifact/c.png",
+      "m15dfcback/a.png",
+      "m15dfcback/b.png",
+      "m15dfcback/g.png",
+      "m15dfcback/m.png",
+      "m15dfcback/r.png",
+      "m15dfcback/u.png",
+      "m15dfcback/w.png"
+    ],
+    "transforms": "native 1500x2100, no resample: the published dark master whole; in each graft rect the light pack's pixels with its translucent interior re-coloured to the dark master's interior of the same row (shade transfer), the ▼ back's disc the bordered back's; a crowned twin's or pair's own pixels kept over a copied rim (scripts/lib/dfc-borderless.mjs)",
+    "notes": [
+      "transform back (▼ right): grafts rightWell",
+      "the dark (`inverted`) look of 98 of the 134 plain borderless transform / modal printings (Scryfall 2026-10-14); Card Conjurer draws only the light one",
+      "c = a (the artifact stand-in, as on the bordered bodies); pairs = m15borderless's split pairs, the well's / housing's side in the colour on that side"
+    ]
+  },
+  "m15borderlessdfcfront": {
+    "source": "pipglyph",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "converter": "scripts/build-dfc-borderless-frames.mjs",
+    "derivedFrom": "the published m15borderless / m15borderlessartifact masters of the frames bucket (Card Conjurer imports: see \"m15borderless\") with pieces of Card Conjurer's LIGHT borderless double-faced packs grafted in (and, on the ▼ back, the published m15dfcback disc)",
+    "output": "1500x2100, the dark master's corners, webp q90 with the PNG's alpha exactly",
+    "colors": {
+      "w": [
+        "m15borderless/w.png@531155a88e6a",
+        "cc:img/frames/m15/transform/borderless/wf.png@35ed8e67d7cf",
+        "cc:img/frames/m15/transform/borderless/wf.png@35ed8e67d7cf"
+      ],
+      "u": [
+        "m15borderless/u.png@87c400f4d071",
+        "cc:img/frames/m15/transform/borderless/uf.png@4c7fe3807f3c",
+        "cc:img/frames/m15/transform/borderless/uf.png@4c7fe3807f3c"
+      ],
+      "b": [
+        "m15borderless/b.png@c573d23b57ee",
+        "cc:img/frames/m15/transform/borderless/bf.png@48a4d4fe34c8",
+        "cc:img/frames/m15/transform/borderless/bf.png@48a4d4fe34c8"
+      ],
+      "r": [
+        "m15borderless/r.png@571db4dcff8b",
+        "cc:img/frames/m15/transform/borderless/rf.png@9c7c5a6e22e4",
+        "cc:img/frames/m15/transform/borderless/rf.png@9c7c5a6e22e4"
+      ],
+      "g": [
+        "m15borderless/g.png@1a9b6b421832",
+        "cc:img/frames/m15/transform/borderless/gf.png@10656f28b9e6",
+        "cc:img/frames/m15/transform/borderless/gf.png@10656f28b9e6"
+      ],
+      "m": [
+        "m15borderless/m.png@f82882504e2b",
+        "cc:img/frames/m15/transform/borderless/mf.png@a219f816786a",
+        "cc:img/frames/m15/transform/borderless/mf.png@a219f816786a"
+      ],
+      "a": [
+        "m15borderlessartifact/c.png@83d24afa8ea2",
+        "cc:img/frames/m15/transform/borderless/af.png@e8717074666b",
+        "cc:img/frames/m15/transform/borderless/af.png@e8717074666b"
+      ],
+      "c": [
+        "m15borderlessartifact/c.png@83d24afa8ea2",
+        "cc:img/frames/m15/transform/borderless/af.png@e8717074666b",
+        "cc:img/frames/m15/transform/borderless/af.png@e8717074666b"
+      ],
+      "wu": [
+        "m15borderless/wu.png@95aa39c2c561",
+        "cc:img/frames/m15/transform/borderless/wf.png@35ed8e67d7cf",
+        "cc:img/frames/m15/transform/borderless/uf.png@4c7fe3807f3c"
+      ],
+      "wb": [
+        "m15borderless/wb.png@744afd438bf6",
+        "cc:img/frames/m15/transform/borderless/wf.png@35ed8e67d7cf",
+        "cc:img/frames/m15/transform/borderless/bf.png@48a4d4fe34c8"
+      ],
+      "ub": [
+        "m15borderless/ub.png@dac2ed38904e",
+        "cc:img/frames/m15/transform/borderless/uf.png@4c7fe3807f3c",
+        "cc:img/frames/m15/transform/borderless/bf.png@48a4d4fe34c8"
+      ],
+      "ur": [
+        "m15borderless/ur.png@df5079258896",
+        "cc:img/frames/m15/transform/borderless/uf.png@4c7fe3807f3c",
+        "cc:img/frames/m15/transform/borderless/rf.png@9c7c5a6e22e4"
+      ],
+      "br": [
+        "m15borderless/br.png@e43b96f257d2",
+        "cc:img/frames/m15/transform/borderless/bf.png@48a4d4fe34c8",
+        "cc:img/frames/m15/transform/borderless/rf.png@9c7c5a6e22e4"
+      ],
+      "bg": [
+        "m15borderless/bg.png@fcb5cc668aed",
+        "cc:img/frames/m15/transform/borderless/bf.png@48a4d4fe34c8",
+        "cc:img/frames/m15/transform/borderless/gf.png@10656f28b9e6"
+      ],
+      "rg": [
+        "m15borderless/rg.png@905ced29fb27",
+        "cc:img/frames/m15/transform/borderless/rf.png@9c7c5a6e22e4",
+        "cc:img/frames/m15/transform/borderless/gf.png@10656f28b9e6"
+      ],
+      "rw": [
+        "m15borderless/rw.png@472fe278e3bc",
+        "cc:img/frames/m15/transform/borderless/rf.png@9c7c5a6e22e4",
+        "cc:img/frames/m15/transform/borderless/wf.png@35ed8e67d7cf"
+      ],
+      "gw": [
+        "m15borderless/gw.png@9f22312597c8",
+        "cc:img/frames/m15/transform/borderless/gf.png@10656f28b9e6",
+        "cc:img/frames/m15/transform/borderless/wf.png@35ed8e67d7cf"
+      ],
+      "gu": [
+        "m15borderless/gu.png@6bdae4a713ad",
+        "cc:img/frames/m15/transform/borderless/gf.png@10656f28b9e6",
+        "cc:img/frames/m15/transform/borderless/uf.png@4c7fe3807f3c"
+      ],
+      "w-legendary": [
+        "m15borderless/w-legendary.png@640a7774d288",
+        "cc:img/frames/m15/transform/borderless/wf.png@35ed8e67d7cf",
+        "cc:img/frames/m15/transform/borderless/wf.png@35ed8e67d7cf"
+      ],
+      "u-legendary": [
+        "m15borderless/u-legendary.png@0cfb8847c9d5",
+        "cc:img/frames/m15/transform/borderless/uf.png@4c7fe3807f3c",
+        "cc:img/frames/m15/transform/borderless/uf.png@4c7fe3807f3c"
+      ],
+      "b-legendary": [
+        "m15borderless/b-legendary.png@73094e5458ba",
+        "cc:img/frames/m15/transform/borderless/bf.png@48a4d4fe34c8",
+        "cc:img/frames/m15/transform/borderless/bf.png@48a4d4fe34c8"
+      ],
+      "r-legendary": [
+        "m15borderless/r-legendary.png@f6df4dde434a",
+        "cc:img/frames/m15/transform/borderless/rf.png@9c7c5a6e22e4",
+        "cc:img/frames/m15/transform/borderless/rf.png@9c7c5a6e22e4"
+      ],
+      "g-legendary": [
+        "m15borderless/g-legendary.png@638f8af926eb",
+        "cc:img/frames/m15/transform/borderless/gf.png@10656f28b9e6",
+        "cc:img/frames/m15/transform/borderless/gf.png@10656f28b9e6"
+      ],
+      "m-legendary": [
+        "m15borderless/m-legendary.png@9682c98077a3",
+        "cc:img/frames/m15/transform/borderless/mf.png@a219f816786a",
+        "cc:img/frames/m15/transform/borderless/mf.png@a219f816786a"
+      ],
+      "a-legendary": [
+        "m15borderlessartifact/c-legendary.png@c4d72397d6ce",
+        "cc:img/frames/m15/transform/borderless/af.png@e8717074666b",
+        "cc:img/frames/m15/transform/borderless/af.png@e8717074666b"
+      ],
+      "c-legendary": [
+        "m15borderlessartifact/c-legendary.png@c4d72397d6ce",
+        "cc:img/frames/m15/transform/borderless/af.png@e8717074666b",
+        "cc:img/frames/m15/transform/borderless/af.png@e8717074666b"
+      ],
+      "wu-legendary": [
+        "m15borderless/wu-legendary.png@66e072fc623a",
+        "cc:img/frames/m15/transform/borderless/wf.png@35ed8e67d7cf",
+        "cc:img/frames/m15/transform/borderless/uf.png@4c7fe3807f3c"
+      ],
+      "wb-legendary": [
+        "m15borderless/wb-legendary.png@5cbbdec540db",
+        "cc:img/frames/m15/transform/borderless/wf.png@35ed8e67d7cf",
+        "cc:img/frames/m15/transform/borderless/bf.png@48a4d4fe34c8"
+      ],
+      "ub-legendary": [
+        "m15borderless/ub-legendary.png@252fabc99094",
+        "cc:img/frames/m15/transform/borderless/uf.png@4c7fe3807f3c",
+        "cc:img/frames/m15/transform/borderless/bf.png@48a4d4fe34c8"
+      ],
+      "ur-legendary": [
+        "m15borderless/ur-legendary.png@3e9517d6ac70",
+        "cc:img/frames/m15/transform/borderless/uf.png@4c7fe3807f3c",
+        "cc:img/frames/m15/transform/borderless/rf.png@9c7c5a6e22e4"
+      ],
+      "br-legendary": [
+        "m15borderless/br-legendary.png@4300d58d889f",
+        "cc:img/frames/m15/transform/borderless/bf.png@48a4d4fe34c8",
+        "cc:img/frames/m15/transform/borderless/rf.png@9c7c5a6e22e4"
+      ],
+      "bg-legendary": [
+        "m15borderless/bg-legendary.png@37dc0b3b57b9",
+        "cc:img/frames/m15/transform/borderless/bf.png@48a4d4fe34c8",
+        "cc:img/frames/m15/transform/borderless/gf.png@10656f28b9e6"
+      ],
+      "rg-legendary": [
+        "m15borderless/rg-legendary.png@0f46d7f1af25",
+        "cc:img/frames/m15/transform/borderless/rf.png@9c7c5a6e22e4",
+        "cc:img/frames/m15/transform/borderless/gf.png@10656f28b9e6"
+      ],
+      "rw-legendary": [
+        "m15borderless/rw-legendary.png@269c713353df",
+        "cc:img/frames/m15/transform/borderless/rf.png@9c7c5a6e22e4",
+        "cc:img/frames/m15/transform/borderless/wf.png@35ed8e67d7cf"
+      ],
+      "gw-legendary": [
+        "m15borderless/gw-legendary.png@af5e00d7bcba",
+        "cc:img/frames/m15/transform/borderless/gf.png@10656f28b9e6",
+        "cc:img/frames/m15/transform/borderless/wf.png@35ed8e67d7cf"
+      ],
+      "gu-legendary": [
+        "m15borderless/gu-legendary.png@d37cf90c2bf5",
+        "cc:img/frames/m15/transform/borderless/gf.png@10656f28b9e6",
+        "cc:img/frames/m15/transform/borderless/uf.png@4c7fe3807f3c"
+      ]
+    },
+    "changedPixels": {
+      "w": {
+        "leftWell": 17766,
+        "tab": 6322
+      },
+      "u": {
+        "leftWell": 17709,
+        "tab": 6322
+      },
+      "b": {
+        "leftWell": 17540,
+        "tab": 6322
+      },
+      "r": {
+        "leftWell": 17768,
+        "tab": 6322
+      },
+      "g": {
+        "leftWell": 17715,
+        "tab": 6322
+      },
+      "m": {
+        "leftWell": 18491,
+        "tab": 6369
+      },
+      "a": {
+        "leftWell": 23752,
+        "tab": 8511
+      },
+      "c": {
+        "leftWell": 23752,
+        "tab": 8511
+      },
+      "wu": {
+        "leftWell": 17670,
+        "tab": 6181
+      },
+      "wb": {
+        "leftWell": 17670,
+        "tab": 6181
+      },
+      "ub": {
+        "leftWell": 17590,
+        "tab": 6181
+      },
+      "ur": {
+        "leftWell": 17590,
+        "tab": 6181
+      },
+      "br": {
+        "leftWell": 17461,
+        "tab": 6181
+      },
+      "bg": {
+        "leftWell": 17461,
+        "tab": 6181
+      },
+      "rg": {
+        "leftWell": 17665,
+        "tab": 6181
+      },
+      "rw": {
+        "leftWell": 17665,
+        "tab": 6181
+      },
+      "gw": {
+        "leftWell": 17637,
+        "tab": 6181
+      },
+      "gu": {
+        "leftWell": 17637,
+        "tab": 6181
+      },
+      "w-legendary": {
+        "leftWell": 17387,
+        "tab": 6322
+      },
+      "u-legendary": {
+        "leftWell": 17513,
+        "tab": 6322
+      },
+      "b-legendary": {
+        "leftWell": 17352,
+        "tab": 6322
+      },
+      "r-legendary": {
+        "leftWell": 17422,
+        "tab": 6322
+      },
+      "g-legendary": {
+        "leftWell": 17495,
+        "tab": 6322
+      },
+      "m-legendary": {
+        "leftWell": 17443,
+        "tab": 6369
+      },
+      "a-legendary": {
+        "leftWell": 20993,
+        "tab": 8511
+      },
+      "c-legendary": {
+        "leftWell": 20993,
+        "tab": 8511
+      },
+      "wu-legendary": {
+        "leftWell": 17390,
+        "tab": 6181
+      },
+      "wb-legendary": {
+        "leftWell": 17390,
+        "tab": 6181
+      },
+      "ub-legendary": {
+        "leftWell": 17493,
+        "tab": 6181
+      },
+      "ur-legendary": {
+        "leftWell": 17493,
+        "tab": 6181
+      },
+      "br-legendary": {
+        "leftWell": 17369,
+        "tab": 6181
+      },
+      "bg-legendary": {
+        "leftWell": 17369,
+        "tab": 6181
+      },
+      "rg-legendary": {
+        "leftWell": 17426,
+        "tab": 6181
+      },
+      "rw-legendary": {
+        "leftWell": 17426,
+        "tab": 6181
+      },
+      "gw-legendary": {
+        "leftWell": 17522,
+        "tab": 6181
+      },
+      "gu-legendary": {
+        "leftWell": 17522,
+        "tab": 6181
+      }
+    },
+    "sourceFiles": [
+      "cc:img/frames/m15/transform/borderless/af.png",
+      "cc:img/frames/m15/transform/borderless/bf.png",
+      "cc:img/frames/m15/transform/borderless/gf.png",
+      "cc:img/frames/m15/transform/borderless/mf.png",
+      "cc:img/frames/m15/transform/borderless/rf.png",
+      "cc:img/frames/m15/transform/borderless/uf.png",
+      "cc:img/frames/m15/transform/borderless/wf.png",
+      "m15borderless/b-legendary.png",
+      "m15borderless/b.png",
+      "m15borderless/bg-legendary.png",
+      "m15borderless/bg.png",
+      "m15borderless/br-legendary.png",
+      "m15borderless/br.png",
+      "m15borderless/g-legendary.png",
+      "m15borderless/g.png",
+      "m15borderless/gu-legendary.png",
+      "m15borderless/gu.png",
+      "m15borderless/gw-legendary.png",
+      "m15borderless/gw.png",
+      "m15borderless/m-legendary.png",
+      "m15borderless/m.png",
+      "m15borderless/r-legendary.png",
+      "m15borderless/r.png",
+      "m15borderless/rg-legendary.png",
+      "m15borderless/rg.png",
+      "m15borderless/rw-legendary.png",
+      "m15borderless/rw.png",
+      "m15borderless/u-legendary.png",
+      "m15borderless/u.png",
+      "m15borderless/ub-legendary.png",
+      "m15borderless/ub.png",
+      "m15borderless/ur-legendary.png",
+      "m15borderless/ur.png",
+      "m15borderless/w-legendary.png",
+      "m15borderless/w.png",
+      "m15borderless/wb-legendary.png",
+      "m15borderless/wb.png",
+      "m15borderless/wu-legendary.png",
+      "m15borderless/wu.png",
+      "m15borderlessartifact/c-legendary.png",
+      "m15borderlessartifact/c.png"
+    ],
+    "transforms": "native 1500x2100, no resample: the published dark master whole; in each graft rect the light pack's pixels with its translucent interior re-coloured to the dark master's interior of the same row (shade transfer), the ▼ back's disc the bordered back's; a crowned twin's or pair's own pixels kept over a copied rim (scripts/lib/dfc-borderless.mjs)",
+    "notes": [
+      "transform front: grafts leftWell, tab",
+      "the dark (`inverted`) look of 98 of the 134 plain borderless transform / modal printings (Scryfall 2026-10-14); Card Conjurer draws only the light one",
+      "c = a (the artifact stand-in, as on the bordered bodies); pairs = m15borderless's split pairs, the well's / housing's side in the colour on that side"
+    ]
+  },
   "m15borderlessland": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
@@ -2191,6 +2932,850 @@
       "m = the three-and-more-colour land (gold bars, box and pinline: CMM #659, SNC #291); two-colour lands print grey L bars with a split pinline and box — the pair masters below",
       "two-colour pair masters <pair>.png (TODO 4.56): the same function with the grey 'Land Frame' L for the frame (its title bar, the type bar moved from it, the bottom bar and fins) and the pair's two letters for the box and the pinline — the box structure re-tinted to each colour's title-bar tint and the two colours' frames through the pack's Pinline mask, each pair blended across ONE UNTILTED ramp 39→61 %W by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left; measured on the 119 two-colour borderless lands that print the tinted look (MID #281, OTJ #304, the RVR shocks, the MKM surveil lands, CLU …; Scryfall 2026-10-06): the rings read 41.3 / 50.2 / 58.9 %W and the box's top band 40.9 / 49.8 / 59.0 at 10 / 50 / 90 %, the bars the colourless land's grey",
       "no P/T plates of its own: a land creature prints on m15borderless's plates (the profile's plateAssetPathTemplate)"
+    ]
+  },
+  "m15borderlessmdfcback": {
+    "source": "pipglyph",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "converter": "scripts/build-dfc-borderless-frames.mjs",
+    "derivedFrom": "the published m15borderless / m15borderlessartifact masters of the frames bucket (Card Conjurer imports: see \"m15borderless\") with pieces of Card Conjurer's LIGHT borderless double-faced packs grafted in (and, on the ▼ back, the published m15dfcback disc)",
+    "output": "1500x2100, the dark master's corners, webp q90 with the PNG's alpha exactly",
+    "colors": {
+      "w": [
+        "m15borderless/w.png@531155a88e6a",
+        "cc:img/frames/modal/borderless/wb.png@16c0f1251973",
+        "cc:img/frames/modal/borderless/wb.png@16c0f1251973",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "u": [
+        "m15borderless/u.png@87c400f4d071",
+        "cc:img/frames/modal/borderless/ub.png@61b9aaac03fa",
+        "cc:img/frames/modal/borderless/ub.png@61b9aaac03fa",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "b": [
+        "m15borderless/b.png@c573d23b57ee",
+        "cc:img/frames/modal/borderless/bb.png@220cb2c337e1",
+        "cc:img/frames/modal/borderless/bb.png@220cb2c337e1",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "r": [
+        "m15borderless/r.png@571db4dcff8b",
+        "cc:img/frames/modal/borderless/rb.png@47f01c3d84dd",
+        "cc:img/frames/modal/borderless/rb.png@47f01c3d84dd",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "g": [
+        "m15borderless/g.png@1a9b6b421832",
+        "cc:img/frames/modal/borderless/gb.png@e6257943a0e7",
+        "cc:img/frames/modal/borderless/gb.png@e6257943a0e7",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "m": [
+        "m15borderless/m.png@f82882504e2b",
+        "cc:img/frames/modal/borderless/mb.png@81c9d6b0f5ac",
+        "cc:img/frames/modal/borderless/mb.png@81c9d6b0f5ac",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "a": [
+        "m15borderlessartifact/c.png@83d24afa8ea2",
+        "cc:img/frames/modal/borderless/ab.png@2bd0149156aa",
+        "cc:img/frames/modal/borderless/ab.png@2bd0149156aa",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "c": [
+        "m15borderlessartifact/c.png@83d24afa8ea2",
+        "cc:img/frames/modal/borderless/ab.png@2bd0149156aa",
+        "cc:img/frames/modal/borderless/ab.png@2bd0149156aa",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "wu": [
+        "m15borderless/wu.png@95aa39c2c561",
+        "cc:img/frames/modal/borderless/wb.png@16c0f1251973",
+        "cc:img/frames/modal/borderless/wb.png@16c0f1251973",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "wb": [
+        "m15borderless/wb.png@744afd438bf6",
+        "cc:img/frames/modal/borderless/wb.png@16c0f1251973",
+        "cc:img/frames/modal/borderless/wb.png@16c0f1251973",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "ub": [
+        "m15borderless/ub.png@dac2ed38904e",
+        "cc:img/frames/modal/borderless/ub.png@61b9aaac03fa",
+        "cc:img/frames/modal/borderless/ub.png@61b9aaac03fa",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "ur": [
+        "m15borderless/ur.png@df5079258896",
+        "cc:img/frames/modal/borderless/ub.png@61b9aaac03fa",
+        "cc:img/frames/modal/borderless/ub.png@61b9aaac03fa",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "br": [
+        "m15borderless/br.png@e43b96f257d2",
+        "cc:img/frames/modal/borderless/bb.png@220cb2c337e1",
+        "cc:img/frames/modal/borderless/bb.png@220cb2c337e1",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "bg": [
+        "m15borderless/bg.png@fcb5cc668aed",
+        "cc:img/frames/modal/borderless/bb.png@220cb2c337e1",
+        "cc:img/frames/modal/borderless/bb.png@220cb2c337e1",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "rg": [
+        "m15borderless/rg.png@905ced29fb27",
+        "cc:img/frames/modal/borderless/rb.png@47f01c3d84dd",
+        "cc:img/frames/modal/borderless/rb.png@47f01c3d84dd",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "rw": [
+        "m15borderless/rw.png@472fe278e3bc",
+        "cc:img/frames/modal/borderless/rb.png@47f01c3d84dd",
+        "cc:img/frames/modal/borderless/rb.png@47f01c3d84dd",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "gw": [
+        "m15borderless/gw.png@9f22312597c8",
+        "cc:img/frames/modal/borderless/gb.png@e6257943a0e7",
+        "cc:img/frames/modal/borderless/gb.png@e6257943a0e7",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "gu": [
+        "m15borderless/gu.png@6bdae4a713ad",
+        "cc:img/frames/modal/borderless/gb.png@e6257943a0e7",
+        "cc:img/frames/modal/borderless/gb.png@e6257943a0e7",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "w-legendary": [
+        "m15borderless/w-legendary.png@640a7774d288",
+        "cc:img/frames/modal/borderless/wb.png@16c0f1251973",
+        "cc:img/frames/modal/borderless/wb.png@16c0f1251973",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "u-legendary": [
+        "m15borderless/u-legendary.png@0cfb8847c9d5",
+        "cc:img/frames/modal/borderless/ub.png@61b9aaac03fa",
+        "cc:img/frames/modal/borderless/ub.png@61b9aaac03fa",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "b-legendary": [
+        "m15borderless/b-legendary.png@73094e5458ba",
+        "cc:img/frames/modal/borderless/bb.png@220cb2c337e1",
+        "cc:img/frames/modal/borderless/bb.png@220cb2c337e1",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "r-legendary": [
+        "m15borderless/r-legendary.png@f6df4dde434a",
+        "cc:img/frames/modal/borderless/rb.png@47f01c3d84dd",
+        "cc:img/frames/modal/borderless/rb.png@47f01c3d84dd",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "g-legendary": [
+        "m15borderless/g-legendary.png@638f8af926eb",
+        "cc:img/frames/modal/borderless/gb.png@e6257943a0e7",
+        "cc:img/frames/modal/borderless/gb.png@e6257943a0e7",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "m-legendary": [
+        "m15borderless/m-legendary.png@9682c98077a3",
+        "cc:img/frames/modal/borderless/mb.png@81c9d6b0f5ac",
+        "cc:img/frames/modal/borderless/mb.png@81c9d6b0f5ac",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "a-legendary": [
+        "m15borderlessartifact/c-legendary.png@c4d72397d6ce",
+        "cc:img/frames/modal/borderless/ab.png@2bd0149156aa",
+        "cc:img/frames/modal/borderless/ab.png@2bd0149156aa",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "c-legendary": [
+        "m15borderlessartifact/c-legendary.png@c4d72397d6ce",
+        "cc:img/frames/modal/borderless/ab.png@2bd0149156aa",
+        "cc:img/frames/modal/borderless/ab.png@2bd0149156aa",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "wu-legendary": [
+        "m15borderless/wu-legendary.png@66e072fc623a",
+        "cc:img/frames/modal/borderless/wb.png@16c0f1251973",
+        "cc:img/frames/modal/borderless/wb.png@16c0f1251973",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "wb-legendary": [
+        "m15borderless/wb-legendary.png@5cbbdec540db",
+        "cc:img/frames/modal/borderless/wb.png@16c0f1251973",
+        "cc:img/frames/modal/borderless/wb.png@16c0f1251973",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "ub-legendary": [
+        "m15borderless/ub-legendary.png@252fabc99094",
+        "cc:img/frames/modal/borderless/ub.png@61b9aaac03fa",
+        "cc:img/frames/modal/borderless/ub.png@61b9aaac03fa",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "ur-legendary": [
+        "m15borderless/ur-legendary.png@3e9517d6ac70",
+        "cc:img/frames/modal/borderless/ub.png@61b9aaac03fa",
+        "cc:img/frames/modal/borderless/ub.png@61b9aaac03fa",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "br-legendary": [
+        "m15borderless/br-legendary.png@4300d58d889f",
+        "cc:img/frames/modal/borderless/bb.png@220cb2c337e1",
+        "cc:img/frames/modal/borderless/bb.png@220cb2c337e1",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "bg-legendary": [
+        "m15borderless/bg-legendary.png@37dc0b3b57b9",
+        "cc:img/frames/modal/borderless/bb.png@220cb2c337e1",
+        "cc:img/frames/modal/borderless/bb.png@220cb2c337e1",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "rg-legendary": [
+        "m15borderless/rg-legendary.png@0f46d7f1af25",
+        "cc:img/frames/modal/borderless/rb.png@47f01c3d84dd",
+        "cc:img/frames/modal/borderless/rb.png@47f01c3d84dd",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "rw-legendary": [
+        "m15borderless/rw-legendary.png@269c713353df",
+        "cc:img/frames/modal/borderless/rb.png@47f01c3d84dd",
+        "cc:img/frames/modal/borderless/rb.png@47f01c3d84dd",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "gw-legendary": [
+        "m15borderless/gw-legendary.png@af5e00d7bcba",
+        "cc:img/frames/modal/borderless/gb.png@e6257943a0e7",
+        "cc:img/frames/modal/borderless/gb.png@e6257943a0e7",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "gu-legendary": [
+        "m15borderless/gu-legendary.png@d37cf90c2bf5",
+        "cc:img/frames/modal/borderless/gb.png@e6257943a0e7",
+        "cc:img/frames/modal/borderless/gb.png@e6257943a0e7",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ]
+    },
+    "changedPixels": {
+      "w": {
+        "housing": 14430,
+        "strip": 51028
+      },
+      "u": {
+        "housing": 14693,
+        "strip": 51019
+      },
+      "b": {
+        "housing": 14128,
+        "strip": 51009
+      },
+      "r": {
+        "housing": 14549,
+        "strip": 51029
+      },
+      "g": {
+        "housing": 14276,
+        "strip": 51015
+      },
+      "m": {
+        "housing": 15424,
+        "strip": 51014
+      },
+      "a": {
+        "housing": 20578,
+        "strip": 51030
+      },
+      "c": {
+        "housing": 20578,
+        "strip": 51030
+      },
+      "wu": {
+        "housing": 14443,
+        "strip": 51028
+      },
+      "wb": {
+        "housing": 14443,
+        "strip": 51015
+      },
+      "ub": {
+        "housing": 14569,
+        "strip": 51017
+      },
+      "ur": {
+        "housing": 14569,
+        "strip": 51019
+      },
+      "br": {
+        "housing": 14486,
+        "strip": 51014
+      },
+      "bg": {
+        "housing": 14486,
+        "strip": 51011
+      },
+      "rg": {
+        "housing": 14628,
+        "strip": 51026
+      },
+      "rw": {
+        "housing": 14628,
+        "strip": 51029
+      },
+      "gw": {
+        "housing": 14615,
+        "strip": 51016
+      },
+      "gu": {
+        "housing": 14615,
+        "strip": 51016
+      },
+      "w-legendary": {
+        "housing": 14345,
+        "strip": 51028
+      },
+      "u-legendary": {
+        "housing": 14205,
+        "strip": 51019
+      },
+      "b-legendary": {
+        "housing": 12899,
+        "strip": 51009
+      },
+      "r-legendary": {
+        "housing": 14314,
+        "strip": 51029
+      },
+      "g-legendary": {
+        "housing": 13397,
+        "strip": 51015
+      },
+      "m-legendary": {
+        "housing": 14316,
+        "strip": 51014
+      },
+      "a-legendary": {
+        "housing": 17693,
+        "strip": 51030
+      },
+      "c-legendary": {
+        "housing": 17693,
+        "strip": 51030
+      },
+      "wu-legendary": {
+        "housing": 14413,
+        "strip": 51028
+      },
+      "wb-legendary": {
+        "housing": 14413,
+        "strip": 51015
+      },
+      "ub-legendary": {
+        "housing": 14116,
+        "strip": 51017
+      },
+      "ur-legendary": {
+        "housing": 14116,
+        "strip": 51019
+      },
+      "br-legendary": {
+        "housing": 13314,
+        "strip": 51014
+      },
+      "bg-legendary": {
+        "housing": 13314,
+        "strip": 51011
+      },
+      "rg-legendary": {
+        "housing": 14448,
+        "strip": 51026
+      },
+      "rw-legendary": {
+        "housing": 14448,
+        "strip": 51029
+      },
+      "gw-legendary": {
+        "housing": 13790,
+        "strip": 51016
+      },
+      "gu-legendary": {
+        "housing": 13790,
+        "strip": 51016
+      }
+    },
+    "sourceFiles": [
+      "cc:img/frames/modal/borderless/ab.png",
+      "cc:img/frames/modal/borderless/bb.png",
+      "cc:img/frames/modal/borderless/gb.png",
+      "cc:img/frames/modal/borderless/mb.png",
+      "cc:img/frames/modal/borderless/rb.png",
+      "cc:img/frames/modal/borderless/ub.png",
+      "cc:img/frames/modal/borderless/wb.png",
+      "cc:img/frames/modal/regular/reminder.svg",
+      "m15borderless/b-legendary.png",
+      "m15borderless/b.png",
+      "m15borderless/bg-legendary.png",
+      "m15borderless/bg.png",
+      "m15borderless/br-legendary.png",
+      "m15borderless/br.png",
+      "m15borderless/g-legendary.png",
+      "m15borderless/g.png",
+      "m15borderless/gu-legendary.png",
+      "m15borderless/gu.png",
+      "m15borderless/gw-legendary.png",
+      "m15borderless/gw.png",
+      "m15borderless/m-legendary.png",
+      "m15borderless/m.png",
+      "m15borderless/r-legendary.png",
+      "m15borderless/r.png",
+      "m15borderless/rg-legendary.png",
+      "m15borderless/rg.png",
+      "m15borderless/rw-legendary.png",
+      "m15borderless/rw.png",
+      "m15borderless/u-legendary.png",
+      "m15borderless/u.png",
+      "m15borderless/ub-legendary.png",
+      "m15borderless/ub.png",
+      "m15borderless/ur-legendary.png",
+      "m15borderless/ur.png",
+      "m15borderless/w-legendary.png",
+      "m15borderless/w.png",
+      "m15borderless/wb-legendary.png",
+      "m15borderless/wb.png",
+      "m15borderless/wu-legendary.png",
+      "m15borderless/wu.png",
+      "m15borderlessartifact/c-legendary.png",
+      "m15borderlessartifact/c.png"
+    ],
+    "transforms": "native 1500x2100, no resample: the published dark master whole; in each graft rect the light pack's pixels with its translucent interior re-coloured to the dark master's interior of the same row (shade transfer), the ▼ back's disc the bordered back's; a crowned twin's or pair's own pixels kept over a copied rim (scripts/lib/dfc-borderless.mjs)",
+    "notes": [
+      "modal back: grafts housing, strip",
+      "the dark (`inverted`) look of 98 of the 134 plain borderless transform / modal printings (Scryfall 2026-10-14); Card Conjurer draws only the light one",
+      "c = a (the artifact stand-in, as on the bordered bodies); pairs = m15borderless's split pairs, the well's / housing's side in the colour on that side"
+    ]
+  },
+  "m15borderlessmdfcfront": {
+    "source": "pipglyph",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "converter": "scripts/build-dfc-borderless-frames.mjs",
+    "derivedFrom": "the published m15borderless / m15borderlessartifact masters of the frames bucket (Card Conjurer imports: see \"m15borderless\") with pieces of Card Conjurer's LIGHT borderless double-faced packs grafted in (and, on the ▼ back, the published m15dfcback disc)",
+    "output": "1500x2100, the dark master's corners, webp q90 with the PNG's alpha exactly",
+    "colors": {
+      "w": [
+        "m15borderless/w.png@531155a88e6a",
+        "cc:img/frames/modal/borderless/wf.png@4be18b01a8a8",
+        "cc:img/frames/modal/borderless/wf.png@4be18b01a8a8",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "u": [
+        "m15borderless/u.png@87c400f4d071",
+        "cc:img/frames/modal/borderless/uf.png@7c9c79d6cf00",
+        "cc:img/frames/modal/borderless/uf.png@7c9c79d6cf00",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "b": [
+        "m15borderless/b.png@c573d23b57ee",
+        "cc:img/frames/modal/borderless/bf.png@5846b1e43fdf",
+        "cc:img/frames/modal/borderless/bf.png@5846b1e43fdf",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "r": [
+        "m15borderless/r.png@571db4dcff8b",
+        "cc:img/frames/modal/borderless/rf.png@b068275d4fba",
+        "cc:img/frames/modal/borderless/rf.png@b068275d4fba",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "g": [
+        "m15borderless/g.png@1a9b6b421832",
+        "cc:img/frames/modal/borderless/gf.png@c0597761f6d9",
+        "cc:img/frames/modal/borderless/gf.png@c0597761f6d9",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "m": [
+        "m15borderless/m.png@f82882504e2b",
+        "cc:img/frames/modal/borderless/mf.png@df0146512989",
+        "cc:img/frames/modal/borderless/mf.png@df0146512989",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "a": [
+        "m15borderlessartifact/c.png@83d24afa8ea2",
+        "cc:img/frames/modal/borderless/af.png@1c288bb504ab",
+        "cc:img/frames/modal/borderless/af.png@1c288bb504ab",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "c": [
+        "m15borderlessartifact/c.png@83d24afa8ea2",
+        "cc:img/frames/modal/borderless/af.png@1c288bb504ab",
+        "cc:img/frames/modal/borderless/af.png@1c288bb504ab",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "wu": [
+        "m15borderless/wu.png@95aa39c2c561",
+        "cc:img/frames/modal/borderless/wf.png@4be18b01a8a8",
+        "cc:img/frames/modal/borderless/wf.png@4be18b01a8a8",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "wb": [
+        "m15borderless/wb.png@744afd438bf6",
+        "cc:img/frames/modal/borderless/wf.png@4be18b01a8a8",
+        "cc:img/frames/modal/borderless/wf.png@4be18b01a8a8",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "ub": [
+        "m15borderless/ub.png@dac2ed38904e",
+        "cc:img/frames/modal/borderless/uf.png@7c9c79d6cf00",
+        "cc:img/frames/modal/borderless/uf.png@7c9c79d6cf00",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "ur": [
+        "m15borderless/ur.png@df5079258896",
+        "cc:img/frames/modal/borderless/uf.png@7c9c79d6cf00",
+        "cc:img/frames/modal/borderless/uf.png@7c9c79d6cf00",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "br": [
+        "m15borderless/br.png@e43b96f257d2",
+        "cc:img/frames/modal/borderless/bf.png@5846b1e43fdf",
+        "cc:img/frames/modal/borderless/bf.png@5846b1e43fdf",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "bg": [
+        "m15borderless/bg.png@fcb5cc668aed",
+        "cc:img/frames/modal/borderless/bf.png@5846b1e43fdf",
+        "cc:img/frames/modal/borderless/bf.png@5846b1e43fdf",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "rg": [
+        "m15borderless/rg.png@905ced29fb27",
+        "cc:img/frames/modal/borderless/rf.png@b068275d4fba",
+        "cc:img/frames/modal/borderless/rf.png@b068275d4fba",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "rw": [
+        "m15borderless/rw.png@472fe278e3bc",
+        "cc:img/frames/modal/borderless/rf.png@b068275d4fba",
+        "cc:img/frames/modal/borderless/rf.png@b068275d4fba",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "gw": [
+        "m15borderless/gw.png@9f22312597c8",
+        "cc:img/frames/modal/borderless/gf.png@c0597761f6d9",
+        "cc:img/frames/modal/borderless/gf.png@c0597761f6d9",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "gu": [
+        "m15borderless/gu.png@6bdae4a713ad",
+        "cc:img/frames/modal/borderless/gf.png@c0597761f6d9",
+        "cc:img/frames/modal/borderless/gf.png@c0597761f6d9",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "w-legendary": [
+        "m15borderless/w-legendary.png@640a7774d288",
+        "cc:img/frames/modal/borderless/wf.png@4be18b01a8a8",
+        "cc:img/frames/modal/borderless/wf.png@4be18b01a8a8",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "u-legendary": [
+        "m15borderless/u-legendary.png@0cfb8847c9d5",
+        "cc:img/frames/modal/borderless/uf.png@7c9c79d6cf00",
+        "cc:img/frames/modal/borderless/uf.png@7c9c79d6cf00",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "b-legendary": [
+        "m15borderless/b-legendary.png@73094e5458ba",
+        "cc:img/frames/modal/borderless/bf.png@5846b1e43fdf",
+        "cc:img/frames/modal/borderless/bf.png@5846b1e43fdf",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "r-legendary": [
+        "m15borderless/r-legendary.png@f6df4dde434a",
+        "cc:img/frames/modal/borderless/rf.png@b068275d4fba",
+        "cc:img/frames/modal/borderless/rf.png@b068275d4fba",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "g-legendary": [
+        "m15borderless/g-legendary.png@638f8af926eb",
+        "cc:img/frames/modal/borderless/gf.png@c0597761f6d9",
+        "cc:img/frames/modal/borderless/gf.png@c0597761f6d9",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "m-legendary": [
+        "m15borderless/m-legendary.png@9682c98077a3",
+        "cc:img/frames/modal/borderless/mf.png@df0146512989",
+        "cc:img/frames/modal/borderless/mf.png@df0146512989",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "a-legendary": [
+        "m15borderlessartifact/c-legendary.png@c4d72397d6ce",
+        "cc:img/frames/modal/borderless/af.png@1c288bb504ab",
+        "cc:img/frames/modal/borderless/af.png@1c288bb504ab",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "c-legendary": [
+        "m15borderlessartifact/c-legendary.png@c4d72397d6ce",
+        "cc:img/frames/modal/borderless/af.png@1c288bb504ab",
+        "cc:img/frames/modal/borderless/af.png@1c288bb504ab",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "wu-legendary": [
+        "m15borderless/wu-legendary.png@66e072fc623a",
+        "cc:img/frames/modal/borderless/wf.png@4be18b01a8a8",
+        "cc:img/frames/modal/borderless/wf.png@4be18b01a8a8",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "wb-legendary": [
+        "m15borderless/wb-legendary.png@5cbbdec540db",
+        "cc:img/frames/modal/borderless/wf.png@4be18b01a8a8",
+        "cc:img/frames/modal/borderless/wf.png@4be18b01a8a8",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "ub-legendary": [
+        "m15borderless/ub-legendary.png@252fabc99094",
+        "cc:img/frames/modal/borderless/uf.png@7c9c79d6cf00",
+        "cc:img/frames/modal/borderless/uf.png@7c9c79d6cf00",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "ur-legendary": [
+        "m15borderless/ur-legendary.png@3e9517d6ac70",
+        "cc:img/frames/modal/borderless/uf.png@7c9c79d6cf00",
+        "cc:img/frames/modal/borderless/uf.png@7c9c79d6cf00",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "br-legendary": [
+        "m15borderless/br-legendary.png@4300d58d889f",
+        "cc:img/frames/modal/borderless/bf.png@5846b1e43fdf",
+        "cc:img/frames/modal/borderless/bf.png@5846b1e43fdf",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "bg-legendary": [
+        "m15borderless/bg-legendary.png@37dc0b3b57b9",
+        "cc:img/frames/modal/borderless/bf.png@5846b1e43fdf",
+        "cc:img/frames/modal/borderless/bf.png@5846b1e43fdf",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "rg-legendary": [
+        "m15borderless/rg-legendary.png@0f46d7f1af25",
+        "cc:img/frames/modal/borderless/rf.png@b068275d4fba",
+        "cc:img/frames/modal/borderless/rf.png@b068275d4fba",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "rw-legendary": [
+        "m15borderless/rw-legendary.png@269c713353df",
+        "cc:img/frames/modal/borderless/rf.png@b068275d4fba",
+        "cc:img/frames/modal/borderless/rf.png@b068275d4fba",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "gw-legendary": [
+        "m15borderless/gw-legendary.png@af5e00d7bcba",
+        "cc:img/frames/modal/borderless/gf.png@c0597761f6d9",
+        "cc:img/frames/modal/borderless/gf.png@c0597761f6d9",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ],
+      "gu-legendary": [
+        "m15borderless/gu-legendary.png@d37cf90c2bf5",
+        "cc:img/frames/modal/borderless/gf.png@c0597761f6d9",
+        "cc:img/frames/modal/borderless/gf.png@c0597761f6d9",
+        "cc:img/frames/modal/regular/reminder.svg@66f11866d0ea (mask)"
+      ]
+    },
+    "changedPixels": {
+      "w": {
+        "housing": 18830,
+        "strip": 51294
+      },
+      "u": {
+        "housing": 18948,
+        "strip": 51299
+      },
+      "b": {
+        "housing": 18839,
+        "strip": 51281
+      },
+      "r": {
+        "housing": 19004,
+        "strip": 51302
+      },
+      "g": {
+        "housing": 18966,
+        "strip": 51289
+      },
+      "m": {
+        "housing": 19766,
+        "strip": 51295
+      },
+      "a": {
+        "housing": 24985,
+        "strip": 44433
+      },
+      "c": {
+        "housing": 24985,
+        "strip": 44433
+      },
+      "wu": {
+        "housing": 18767,
+        "strip": 51294
+      },
+      "wb": {
+        "housing": 18767,
+        "strip": 51292
+      },
+      "ub": {
+        "housing": 18896,
+        "strip": 51297
+      },
+      "ur": {
+        "housing": 18896,
+        "strip": 51299
+      },
+      "br": {
+        "housing": 18830,
+        "strip": 51287
+      },
+      "bg": {
+        "housing": 18830,
+        "strip": 51284
+      },
+      "rg": {
+        "housing": 18958,
+        "strip": 51299
+      },
+      "rw": {
+        "housing": 18958,
+        "strip": 51302
+      },
+      "gw": {
+        "housing": 18945,
+        "strip": 51290
+      },
+      "gu": {
+        "housing": 18945,
+        "strip": 51235
+      },
+      "w-legendary": {
+        "housing": 18743,
+        "strip": 51294
+      },
+      "u-legendary": {
+        "housing": 18459,
+        "strip": 51299
+      },
+      "b-legendary": {
+        "housing": 17635,
+        "strip": 51281
+      },
+      "r-legendary": {
+        "housing": 18769,
+        "strip": 51302
+      },
+      "g-legendary": {
+        "housing": 18083,
+        "strip": 51289
+      },
+      "m-legendary": {
+        "housing": 18656,
+        "strip": 51295
+      },
+      "a-legendary": {
+        "housing": 22099,
+        "strip": 44433
+      },
+      "c-legendary": {
+        "housing": 22099,
+        "strip": 44433
+      },
+      "wu-legendary": {
+        "housing": 18735,
+        "strip": 51294
+      },
+      "wb-legendary": {
+        "housing": 18735,
+        "strip": 51292
+      },
+      "ub-legendary": {
+        "housing": 18442,
+        "strip": 51297
+      },
+      "ur-legendary": {
+        "housing": 18442,
+        "strip": 51299
+      },
+      "br-legendary": {
+        "housing": 17659,
+        "strip": 51287
+      },
+      "bg-legendary": {
+        "housing": 17659,
+        "strip": 51284
+      },
+      "rg-legendary": {
+        "housing": 18778,
+        "strip": 51299
+      },
+      "rw-legendary": {
+        "housing": 18778,
+        "strip": 51302
+      },
+      "gw-legendary": {
+        "housing": 18116,
+        "strip": 51290
+      },
+      "gu-legendary": {
+        "housing": 18116,
+        "strip": 51235
+      }
+    },
+    "sourceFiles": [
+      "cc:img/frames/modal/borderless/af.png",
+      "cc:img/frames/modal/borderless/bf.png",
+      "cc:img/frames/modal/borderless/gf.png",
+      "cc:img/frames/modal/borderless/mf.png",
+      "cc:img/frames/modal/borderless/rf.png",
+      "cc:img/frames/modal/borderless/uf.png",
+      "cc:img/frames/modal/borderless/wf.png",
+      "cc:img/frames/modal/regular/reminder.svg",
+      "m15borderless/b-legendary.png",
+      "m15borderless/b.png",
+      "m15borderless/bg-legendary.png",
+      "m15borderless/bg.png",
+      "m15borderless/br-legendary.png",
+      "m15borderless/br.png",
+      "m15borderless/g-legendary.png",
+      "m15borderless/g.png",
+      "m15borderless/gu-legendary.png",
+      "m15borderless/gu.png",
+      "m15borderless/gw-legendary.png",
+      "m15borderless/gw.png",
+      "m15borderless/m-legendary.png",
+      "m15borderless/m.png",
+      "m15borderless/r-legendary.png",
+      "m15borderless/r.png",
+      "m15borderless/rg-legendary.png",
+      "m15borderless/rg.png",
+      "m15borderless/rw-legendary.png",
+      "m15borderless/rw.png",
+      "m15borderless/u-legendary.png",
+      "m15borderless/u.png",
+      "m15borderless/ub-legendary.png",
+      "m15borderless/ub.png",
+      "m15borderless/ur-legendary.png",
+      "m15borderless/ur.png",
+      "m15borderless/w-legendary.png",
+      "m15borderless/w.png",
+      "m15borderless/wb-legendary.png",
+      "m15borderless/wb.png",
+      "m15borderless/wu-legendary.png",
+      "m15borderless/wu.png",
+      "m15borderlessartifact/c-legendary.png",
+      "m15borderlessartifact/c.png"
+    ],
+    "transforms": "native 1500x2100, no resample: the published dark master whole; in each graft rect the light pack's pixels with its translucent interior re-coloured to the dark master's interior of the same row (shade transfer), the ▼ back's disc the bordered back's; a crowned twin's or pair's own pixels kept over a copied rim (scripts/lib/dfc-borderless.mjs)",
+    "notes": [
+      "modal front: grafts housing, strip",
+      "the dark (`inverted`) look of 98 of the 134 plain borderless transform / modal printings (Scryfall 2026-10-14); Card Conjurer draws only the light one",
+      "c = a (the artifact stand-in, as on the bordered bodies); pairs = m15borderless's split pairs, the well's / housing's side in the colour on that side"
     ]
   },
   "m15borderlesspw": {

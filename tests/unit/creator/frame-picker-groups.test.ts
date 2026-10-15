@@ -140,11 +140,27 @@ function asOneExtendedFrame(dump: Dump): Dump {
  *  Their gate, follow, pool and import are pinned in
  *  tests/unit/creator/station-dresses.test.ts and
  *  tests/unit/scryfall/station-imports.test.ts. */
-const STATION_DRESSES: readonly string[] = ["extendedartstation", "m15borderlessstation"];
+// …and the borderless double-faced bodies (TODO 5.7), new templates of
+// their own the same way — pinned in tests/unit/creator/dfc-borderless.test.ts
+// and tests/unit/scryfall/dfc-borderless-imports.test.ts.
+const STATION_DRESSES: readonly string[] = [
+  "extendedartstation",
+  "m15borderlessstation",
+  "m15borderlessdfcfront",
+  "m15borderlessdfcback",
+  "m15borderlessmdfcfront",
+  "m15borderlessmdfcback",
+];
 function withoutStationDresses(dump: Dump): Dump {
   const named = (text: string) => STATION_DRESSES.some((t) => text === t || text.startsWith(`${t}|`));
+  // (…recursing into an import row's plan: the chooser's more options list a
+  // DFC kind's every front body, the borderless ones since TODO 5.7.)
   const strip = (value: unknown): unknown =>
-    Array.isArray(value) ? value.filter((v) => !(typeof v === "string" && named(v))).map(strip) : value;
+    Array.isArray(value)
+      ? value.filter((v) => !(typeof v === "string" && named(v))).map(strip)
+      : value && typeof value === "object"
+        ? Object.fromEntries(Object.entries(value).map(([k, v]) => [k, strip(v)]))
+        : value;
   const out: Dump = {};
   for (const [section, rows] of Object.entries(dump)) {
     out[section] = {};

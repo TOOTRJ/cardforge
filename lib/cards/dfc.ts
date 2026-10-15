@@ -38,6 +38,16 @@ export { DFC_ICON_FAMILY_VALUES, DFC_ICON_GLYPHS, dfcIconGlyph, type DfcIconFami
 
 export type DfcLayout = DfcProfile["layout"];
 export type DfcRole = DfcProfile["role"];
+/** A body's look (TODO 5.7): the bordered M15 bodies, or the dark
+ *  borderless ones. A card's back follows its FRONT's look. */
+export type DfcLook = "bordered" | "borderless";
+export const DEFAULT_DFC_LOOK: DfcLook = "bordered";
+
+/** The look of a DFC body (a front's decides its back's): `borderless` for
+ *  the borderless bodies, `bordered` for every other template. */
+export function dfcLookOf(template: FrameTemplate | string | null | undefined): DfcLook {
+  return dfcBodyOf(template)?.look === "borderless" ? "borderless" : "bordered";
+}
 
 /** The face types a double-faced card's EITHER face may be in wave 1
  *  (owner 2026-10-02, Q2: planeswalker faces wait — 5.13, ask first; sagas
@@ -117,13 +127,14 @@ export function frontBodyFor(
 ): FrameTemplate | null {
   const body = dfcBodyOf(backTemplate);
   if (!body || body.role !== "back") return null;
+  const look = dfcLookOf(backTemplate);
   const fronts = FRAME_TEMPLATE_VALUES.filter((template) => {
     const candidate = dfcBodyOf(template);
-    return candidate?.layout === body.layout && candidate.role === "front";
+    return candidate?.layout === body.layout && candidate.role === "front" && dfcLookOf(template) === look;
   });
   const landFront = frontFaceType === "land";
   return (
-    bodyFor(body.layout, "front", frontFaceType, family) ??
+    bodyFor(body.layout, "front", frontFaceType, family, look) ??
     fronts.find((template) => Boolean(dfcBodyOf(template)?.land) === landFront) ??
     fronts[0] ??
     null
@@ -162,6 +173,17 @@ const DFC_BODIES: Partial<Record<DfcBodyKey, FrameTemplate | Partial<Record<DfcI
   "modal/back/land": "m15mdfclandback",
 };
 
+/** The borderless bodies (TODO 5.7): the spell faces only, and on the
+ *  transform back only today's ▼-right look (`arrows`) — a land face, and
+ *  a sun / moon, moon / Emrakul, compass or fan back, have no borderless
+ *  body yet (null: the card stays on the bordered bodies). */
+const DFC_BORDERLESS_BODIES: Partial<Record<DfcBodyKey, FrameTemplate | Partial<Record<DfcIconFamily, FrameTemplate>>>> = {
+  "transform/front/spell": "m15borderlessdfcfront",
+  "transform/back/spell": { arrows: "m15borderlessdfcback" },
+  "modal/front/spell": "m15borderlessmdfcfront",
+  "modal/back/spell": "m15borderlessmdfcback",
+};
+
 /** The icon family a printing's `frame_effects` name (frames.md §4.6): the
  *  sun / moon (SOI, EMN, MID, VOW), moon / Emrakul (EMN), compass / land
  *  (XLN, RIX, LCI) and fan (NEO) families by their effect; `convertdfc`
@@ -182,7 +204,7 @@ export function dfcIconFamilyFromEffects(effects: readonly string[] | null | und
  *  in the table) is a body by role but has no row here. */
 export function isDeclaredDfcBody(template: FrameTemplate | string | null | undefined): boolean {
   if (!template) return false;
-  for (const entry of Object.values(DFC_BODIES)) {
+  for (const entry of [...Object.values(DFC_BODIES), ...Object.values(DFC_BORDERLESS_BODIES)]) {
     if (typeof entry === "string" ? entry === template : Object.values(entry).includes(template as FrameTemplate)) return true;
   }
   return false;
@@ -192,8 +214,12 @@ export function isDeclaredDfcBody(template: FrameTemplate | string | null | unde
  *  creator's family chips, the save and the import ask which back the card
  *  wears (bodyFor's transform/back/spell row), or null for a land back
  *  (which is the land back whatever the family). */
-export function transformBackBodyFor(family: DfcIconFamily, backFaceType: string | null | undefined): FrameTemplate | null {
-  return bodyFor("transform", "back", backFaceType, family);
+export function transformBackBodyFor(
+  family: DfcIconFamily,
+  backFaceType: string | null | undefined,
+  look: DfcLook = DEFAULT_DFC_LOOK,
+): FrameTemplate | null {
+  return bodyFor("transform", "back", backFaceType, family, look);
 }
 
 /** The FIRST icon family whose transform back is `template` (`arrows` for
@@ -204,7 +230,8 @@ export function transformBackBodyFor(family: DfcIconFamily, backFaceType: string
  *  preview draws the body under test. */
 export function dfcIconFamilyForBackBody(template: FrameTemplate | string | null | undefined): DfcIconFamily | null {
   if (!template) return null;
-  return DFC_ICON_FAMILY_VALUES.find((family) => bodyFor("transform", "back", "creature", family) === template) ?? null;
+  const look = dfcLookOf(template);
+  return DFC_ICON_FAMILY_VALUES.find((family) => bodyFor("transform", "back", "creature", family, look) === template) ?? null;
 }
 
 /** A transform back saves with NO mana cost (TODO 5.2, design §2.2: the
@@ -225,15 +252,19 @@ export function withTransformBackShape<T extends { cost?: string | null }>(back:
  * card type (a land face wears the land pair, whatever the family — the
  * 2016–22 parchment land back is wave 2, TODO 5.8) and, for a transform
  * back, the card's icon family (D6: the icon side is the body, the glyph the
- * rider). null when no body exists for that face yet.
+ * rider) and the LOOK (TODO 5.7: a borderless front's back is borderless —
+ * dfcLookOf(the front's template)). null when no body exists for that face
+ * yet — on the borderless look, a land face and the left-well families.
  */
 export function bodyFor(
   layout: DfcLayout,
   role: DfcRole,
   faceType: string | null | undefined,
   family: DfcIconFamily = DEFAULT_DFC_ICON,
+  look: DfcLook = DEFAULT_DFC_LOOK,
 ): FrameTemplate | null {
-  const entry = DFC_BODIES[`${layout}/${role}/${faceType === "land" ? "land" : "spell"}`];
+  const table = look === "borderless" ? DFC_BORDERLESS_BODIES : DFC_BODIES;
+  const entry = table[`${layout}/${role}/${faceType === "land" ? "land" : "spell"}`];
   if (!entry) return null;
   if (typeof entry === "string") return entry;
   return entry[family] ?? null;

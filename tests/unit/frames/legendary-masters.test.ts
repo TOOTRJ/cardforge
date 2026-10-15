@@ -58,7 +58,9 @@ const BUILD = process.env.FRAMES_BUILD_DIR ? path.resolve(process.env.FRAMES_BUI
 // borderless dress (TODO 4.27a step 2) has crowned twins too, but they are
 // PipGlyph's own derivation of m15borderlessartifact's (scripts/build-station-
 // frames.mjs; tests/unit/render/station-dresses-bake.test.tsx).
-const DERIVED_TWINS: readonly string[] = ["m15borderlessstation"];
+// …and the borderless double-faced bodies (TODO 5.7: scripts/build-dfc-
+// borderless-frames.mjs grafts m15borderless's twins).
+const DERIVED_TWINS: readonly string[] = ["m15borderlessstation", "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback"];
 const CROWNED = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).crownMasters === true && !DERIVED_TWINS.includes(t));
 
 /** Every master a template paints: the colours and its declared pair keys. */
@@ -73,8 +75,9 @@ function plainKeysOf(template: string): string[] {
 describe("the crowned twin's key", () => {
   it("is the master's key with -legendary: the seven colours and the pair masters of both dresses, in FRAME_MASTER_KEYS", () => {
     expect(LEGENDARY_MASTER_SUFFIX).toBe("-legendary");
-    expect([...LEGENDARY_MASTER_KEYS]).toEqual([...FRAME_COLOR_KEYS, ...TWO_COLOR_MASTER_KEYS].map((k) => `${k}-legendary`));
-    expect(LEGENDARY_MASTER_KEYS).toHaveLength(27);
+    // …and the artifact stand-in's twin `a-legendary` (TODO 5.7, last).
+    expect([...LEGENDARY_MASTER_KEYS]).toEqual([...FRAME_COLOR_KEYS, ...TWO_COLOR_MASTER_KEYS, "a"].map((k) => `${k}-legendary`));
+    expect(LEGENDARY_MASTER_KEYS).toHaveLength(28);
     for (const key of LEGENDARY_MASTER_KEYS) expect(FRAME_MASTER_KEYS as readonly string[]).toContain(key);
     expect(legendaryMasterKey("w")).toBe("w-legendary");
     expect(legendaryMasterKey("wu-h")).toBe("wu-h-legendary");

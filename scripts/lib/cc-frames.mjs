@@ -5066,7 +5066,9 @@ export function compositeFinish(buf, width, height, finish, masks) {
  *  build (TODO 4.6f: the borderless floating crown): the seven colours, the
  *  ten pairs and the ten hybrid pairs, each `-legendary`
  *  (lib/cards/frame-reference-registry.ts LEGENDARY_MASTER_KEYS). */
-export const LEGENDARY_MASTER_KEYS = [...COLORS, ...TWO_COLOR_PAIRS, ...TWO_COLOR_PAIRS.map((pair) => `${pair}-h`)].map(legendaryKey);
+// …and `a-legendary`: the artifact stand-in's crowned twin on the borderless
+// double-faced bodies (TODO 5.7; built by scripts/build-dfc-borderless-frames.mjs).
+export const LEGENDARY_MASTER_KEYS = [...[...COLORS, ...TWO_COLOR_PAIRS, ...TWO_COLOR_PAIRS.map((pair) => `${pair}-h`)].map(legendaryKey), legendaryKey("a")];
 
 /** Every master key a recipe may name, in build order: the seven colours,
  *  then the two-colour pair masters (TODO 4.6b: gold-split `<pair>`, hybrid

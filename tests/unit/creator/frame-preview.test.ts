@@ -138,7 +138,7 @@ describe("walkthroughKindFor", () => {
         // The kind whose cards the back body dresses the back of: the
         // Transform kind for the transform backs, the Modal kind for the
         // modal backs (5.1b).
-        expect(kind, template).toBe(template.startsWith("m15mdfc") ? "mdfc" : "transform");
+        expect(kind, template).toBe(template.includes("mdfc") ? "mdfc" : "transform");
         expect(templateSupportsKind(template, kind), template).toBe(false);
         continue;
       }

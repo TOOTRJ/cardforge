@@ -35,6 +35,11 @@ const ART_FIRST: FrameTemplate[] = [
   // 4.33's borderless planeswalkers: art to the edges, so art-first by rule.
   "m15borderlesspw",
   "m15borderlesspwtall",
+  // The borderless double-faced bodies (TODO 5.7): art to the edges.
+  "m15borderlessdfcfront",
+  "m15borderlessdfcback",
+  "m15borderlessmdfcfront",
+  "m15borderlessmdfcback",
   "m15fullartland",
   "fullartland",
   // 4.40's New Capenna ring and 4.41's plain bar: the art to the black ring.
@@ -67,6 +72,10 @@ const SAMPLED: FrameTemplate[] = [
   "m15borderlessstation",
   "m15borderlesspw",
   "m15borderlesspwtall",
+  "m15borderlessdfcfront",
+  "m15borderlessdfcback",
+  "m15borderlessmdfcfront",
+  "m15borderlessmdfcback",
   "bloomanime",
   "tarkirghostfire",
   "fullart",
@@ -137,7 +146,7 @@ describe("pickerSampleArt — the owner's six near-black tiles (and the full-art
 });
 
 describe("FrameThumb — art-first and opted-in tiles draw a sample art under the master", () => {
-  it("draws the sample on exactly 24 of the 70 templates, on every colour and type dress", () => {
+  it("draws the sample on exactly 28 of the 77 templates, on every colour and type dress", () => {
     const drawn = new Set<FrameTemplate>();
     for (const template of FRAME_TEMPLATE_VALUES) {
       const counts = { with: 0, without: 0 };
@@ -162,7 +171,8 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
     // + extended art's land dress (TODO 4.7, owner Round 63: opaque masters).
     // + the Spacecraft's two dresses (TODO 4.27a step 2: sampled, above)
     // + 4.40 / 4.41's three older full-art basics.
-    expect(FRAME_TEMPLATE_VALUES).toHaveLength(73);
+    // + the borderless double-faced bodies (TODO 5.7: art to the edges, sampled).
+    expect(FRAME_TEMPLATE_VALUES).toHaveLength(77);
     expect(FRAME_TEMPLATE_VALUES.filter((t) => drawn.has(t))).toEqual(SAMPLED);
   });
 

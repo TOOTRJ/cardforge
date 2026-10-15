@@ -243,7 +243,7 @@ describe("the registry", () => {
     ["znr-259", "modal/2015", "exact", "m15mdfclandfront", undefined, undefined],
     ["mh3-253", "dfc/devoid", "nearest", "m15mdfcfront", "m15devoid", "5.11"],
     // A borderless modal Pathway: nearest on the modal land front (5.7).
-    ["znr-284", "borderless/dfc", "nearest", "m15mdfclandfront", undefined, "5.7"],
+    ["znr-284", "borderless/dfc/light", "nearest", "m15mdfclandfront", undefined, "5.7"],
     // A battle front and a Saga front keep their frames; the marks are 5.5's.
     ["mom-20", "era/2015+dfc", "nearest", "battle", undefined, "5.5"],
     ["neo-141", "layout/2015+dfc", "nearest", "saga", undefined, "5.5"],
