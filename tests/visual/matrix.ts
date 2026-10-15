@@ -679,8 +679,9 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   ["m15borderless", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
   ["m15borderlessartifact", ["c", "u", "wub"]],
   // TODO 4.6f (wave 2b): the extended-art frame's floating crown, an
-  // overlay band (extendedcrown/<key>) on the MSE masters — every colour,
-  // the grey colourless crown, gold (a pair wears gold: no pair masters).
+  // overlay band (extendedcrown/<key>) on Card Conjurer's extended masters —
+  // every colour, the grey colourless crown, gold (a pair with its
+  // two-colour switch off wears gold; the split crown is "@pair-crown").
   ["extendedart", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
   // Its land dress (TODO 4.7, owner Round 63): the same band over the land
   // frames — a colour's (NEO #503 Otawara), the grey C crown over the grey
@@ -693,6 +694,12 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // snow land's green and its colourless land grey (DMR #244).
   ["m15snow", ["u", "g", "c", "wu", "wub"]],
   ["m15snowland", ["g", "c"]],
+  // TODO 4.35 follow-up (owner Round 63): the legendary textless promos'
+  // STANDARD band over the promo masters — a colour, the colourless spell's
+  // artifact silver (c → a), a pair (its split crown over the gold rim:
+  // pairCrownOnGold) and gold; the land's colour and its land grey (c → l).
+  ["m15textless", ["u", "c", "wu", "wub"]],
+  ["m15textlessland", ["g", "c"]],
 ];
 /** Square corners (print): a black border, a ring, art to the edge, landscape. */
 /** No art (`art_url` null): the empty-art box, and no under-frame layer on a
@@ -1482,6 +1489,8 @@ export function visualCases(): VisualCase[] {
   add("m15borderless", "creature", "b", "long", { crown: true, corners: "square", suffix: "@crown-square" });
   // The extended-art band at the stored bake's size (4.6f, wave 2b).
   add("extendedart", "creature", "u", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
+  // The textless promo's band at the stored bake's size.
+  add("m15textless", "creature", "r", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
   // The snow band at the stored bake's size (4.6f, wave 2c).
   add("m15snow", "creature", "u", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
   // The constellation band at the stored bake's size and on foil (the
@@ -1522,6 +1531,15 @@ export function visualCases(): VisualCase[] {
     suffix: "@pair-hybrid-crown",
     row: { ...pairStyle("m15nyx", "regular", true), cost: "{X}{W/U}{W/U}{W/U}" },
   });
+  // The extended-art frame's hybrid dress (TODO 4.7 follow-up, owner Round
+  // 63): the two frames split over the grey bars, with the split floating
+  // crown; and a land pair at the stored bake's size.
+  add("extendedart", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("extendedart"), cost: "{W/U}{W/U}" } });
+  add("extendedart", "creature", "wu", "long", {
+    suffix: "@pair-hybrid-crown",
+    row: { ...pairStyle("extendedart", "regular", true), cost: "{X}{W/U}{W/U}{W/U}" },
+  });
+  add("extendedartland", "land", "wu", "long", { suffix: "@pair-hd", preset: "hd", row: pairStyle("extendedartland") });
   add("m15", "creature", "wu", "short", { suffix: "@pair-foil", finish: "foil", row: pairStyle("m15", "foil") });
   add("m15", "creature", "wu", "long", {
     suffix: "@pair-etched",
@@ -2168,6 +2186,9 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   "m15nyx",
   // The Universes Beyond frames (TODO 4.25): their M15 twins' dresses.
   "m15ub", "m15ubartifact", "m15ubland",
+  // The extended-art frame and its land dress (TODO 4.7 follow-up, owner
+  // Round 63): m15's two dresses over the extended pack, the land's split.
+  "extendedart", "extendedartland",
   // The double-faced spell faces (5.1d): their cases carry a back face
   // (the DFC block below), never the generic pair loop's rows.
   "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback",
