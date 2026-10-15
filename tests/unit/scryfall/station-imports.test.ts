@@ -136,7 +136,7 @@ describe("a bordered station printing is the artifact / land frame's nearest (st
 
 describe("the other dresses (TODO 4.27a step 2): their own rule and the station gap — then the bordered station frame, or their own once verified", () => {
   /** Production's ticks plus the bordered station frame in every colour. */
-  const withStation = new Set([...PROD_VERIFIED, ...["w", "u", "b", "r", "g", "m", "c"].flatMap((k) => [frameComboKey("m15station", k), frameComboKey("m15stationland", k)])]);
+  const withStation = new Set([...PROD_BEFORE_STATION, ...["w", "u", "b", "r", "g", "m", "c"].flatMap((k) => [frameComboKey("m15station", k), frameComboKey("m15stationland", k)])]);
   const withDresses = new Set([...withStation, ...["w", "u", "b", "r", "g", "m", "c"].map((k) => frameComboKey("extendedartstation", k))]);
   const land = (found: ReturnType<typeof match>) => found.landOn ?? found.template;
 
@@ -155,13 +155,15 @@ describe("the other dresses (TODO 4.27a step 2): their own rule and the station 
       });
       expect(found.gaps, key).toContain("station");
       // Nothing ticked: the same landing, now "not yet verified" (the frame exists).
-      const none = withVerification(found, colour, PROD_VERIFIED);
+      const none = withVerification(found, colour, PROD_BEFORE_STATION);
       expect(land(none), key).toBe("extendedart");
       expect(none, key).toMatchObject({ status: "nearest", reason: `not yet verified in ${colour === "w" ? "white" : "multicolor"}`, unverified: true });
       // The bordered station frame ticked: its stand-in landing, still nearest.
       const standIn = withVerification(found, colour, withStation);
       expect(standIn, key).toMatchObject({ status: "nearest", template: "extendedart", landOn: "m15station" });
       expect(standIn.reason, key).toMatch(/extended art/);
+      // Production's own list (2026-10-14: the bordered pair ticked) is that state.
+      expect(land(withVerification(found, colour, PROD)), key).toBe("m15station");
       // Its own frame ticked: exact on it, whatever else is.
       for (const keys of [withDresses, EVERY]) {
         const own = withVerification(found, colour, keys);
@@ -184,7 +186,7 @@ describe("the other dresses (TODO 4.27a step 2): their own rule and the station 
     });
     expect(found.onceVerified).toBeUndefined();
     expect(found.gaps?.[0]).toBe("station");
-    expect(land(withVerification(found, "m", PROD_VERIFIED))).toBe("m15artifact");
+    expect(land(withVerification(found, "m", PROD_BEFORE_STATION))).toBe("m15artifact");
     expect(land(withVerification(found, "m", withStation))).toBe("m15station");
     expect(land(withVerification(found, "m", EVERY))).toBe("m15station");
   });
@@ -211,9 +213,9 @@ describe("the other dresses (TODO 4.27a step 2): their own rule and the station 
     });
     expect(signatureBlockedBy("borderless/showcase+station", "m15land")).toBe("4.11");
     // Adagia's frame colour is its mana's, white; the Enterprise is colourless.
-    expect(land(withVerification(planet, "w", PROD_VERIFIED))).toBe("m15land");
+    expect(land(withVerification(planet, "w", PROD_BEFORE_STATION))).toBe("m15land");
     expect(land(withVerification(planet, "w", withStation))).toBe("m15stationland");
-    expect(land(withVerification(ship, "c", PROD_VERIFIED))).toBe("m15artifact");
+    expect(land(withVerification(ship, "c", PROD_BEFORE_STATION))).toBe("m15artifact");
     const shipOn = withVerification(ship, "c", withStation);
     expect(land(shipOn)).toBe("m15station");
     // The showcase's own reason stands: the one-off design is 4.11's.
