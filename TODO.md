@@ -98,8 +98,10 @@ detail):
   dark-bar walker dress — ask first), 4.35 (the master fixes: bloomanime,
   Ghostfire, Dragon Wing, `m15textless`), 4.48 (the M20 token's pill crown
   and two-colour split), 4.52 (the emblem's 0.6 px art-window call, the black
-  symbol with 4.9d), 4.53 (the arch token's gold small-caps name — parked
-  with 4.8e — and its art slot).
+  symbol with 4.9d), 4.53 (the arch token's gold small-caps name and its
+  art slot — built 2026-10-14 as layout v59 with SYNTHESIZED small caps,
+  waiting on the owner's sheet; Beleren Small Caps itself stays parked with
+  4.8e).
 - Phase 5: none (5.14 and 5.15 are done).
 - Phase 6: 6.1a (showcase margin art and the borderless bar edge for the
   bleed), 6.1b (the native 2010 × 2814 masters for 800 ppi), 6.10 (the stored
@@ -3947,7 +3949,7 @@ that count.
       **Built 2026-09-29 (every colour of every master; px at 1500 × 2100, 2100 × 1500 for split and battle).** Besides the α < 16 window, every translucent region (α < 250) with a pixel under the slot must stay inside it, give or take a 0.2 % anti-aliased rim (every rim measured ≤ 2 px, every seam ≥ 13.5 px) — the skeptic pass added it after nyx, fullart and m15pw/c passed the window check with visible seams (4.17b). Passing: agclassic (incl. `a`), alphaland, fullartland, m15borderless, m15borderlessartifact, m15pw but `c`, m15tokenartifacttext, retro, retroland, tarkirdragon; m15token and m15tokentext but `c`; m15tokenartifact `c`; expeditionland w/c/m; extendedart but `m`. The known failures (`ART_WINDOW_KNOWN_FAILURES`), each to fix in its item — striking one from the table is part of that fix:
       - ~~**4.4 (2)** — m15, m15artifact, m15land, m15snow, m15snowland (CC masters now): window 116–1384 × 238–1165 vs the inherited slot 117–1383 × 239.4–1163.4, a 1–1.6 px hairline on every side.~~ Fixed in layout v35 (`CC_M15_ART_SLOT`), struck.
       - ~~**4.17a (new)** — the see-through masters (m15/c, m15devoid all, m15token/c, m15tokentext/c): the under-frame rect starts at 84 px, the see-through body at 59 px — a 25 px #101015 band above the title bar.~~ Fixed in layout v35 (`UNDER_FRAME_RECT` from the border's inner edge), struck. The "asserted differently" rule stays: the under-frame rect, not the slot, covers the window AND every pixel the frame lets ≥ 2 % through (α < 250), outside the corner cut.
-      - **4.53 (e)** — m15tokenartifact w/u/b/r/g/m: the artifact dress's window ends at 1709 px, exactly the slot's bottom (no overscan). The coloured m15token masters pass since 4.49's re-cut (the 0.24 % H hairline is gone).
+      - ~~**4.53 (e)** — m15tokenartifact w/u/b/r/g/m: the artifact dress's window ends at 1709 px, exactly the slot's bottom (no overscan).~~ Fixed in layout v59 (the arch tokens' art slot on the window + overscan), struck.
       - **4.21** — split (both windows from 200–202 px, slots from 220.5: the 1.2 % H strip), saga (1.5 px at the divider + a top hairline to x 715), flip (2–5 px every side), adventure (0.4–0.6 px short of the overscan top and bottom), aftermath (the top window flush with its slot on the right, 1 px over on one colour; the sideways window 0.4 px inside its rotated slot), battle (the ring: the window is the whole card). These six rows are 4.21's: 4.21a/b/c strike them with their masters; the art-area round (v35) leaves them.
       - **4.35 / 4.11** — lotr (ring 9.8–90.5 × 11.24–55.62 % vs slot 14–86 × 13–58), lotrscroll, bloomanime, tarkirghostfire (ring: the whole card), avatar and bloomburrow (the window leaks into the transparent band and sides), tarkirdraconic (the gaps between the dragon ornaments run 68–84 px past the slot on each side), expeditionland b/g (no ring, 4.35 (3)) and u/r (the arch's apex at 239 px vs slot top 241.5, 2.5 px).
       - **4.35 (2)** — m15textless, m15textlessland: 3.5 px right, 3 px bottom.
