@@ -19,8 +19,8 @@
 
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 import { backFaceFromPatch, splitSubtypes } from "@/lib/scryfall/preview-from-patch";
-import { DFC_REMIX_CREDITS } from "@/lib/scryfall/dfc-import";
-import { remixFrameFor, withoutTextlessFrames } from "@/lib/creator/frame-resolve";
+import { DFC_REMIX_CREDITS, dfcImportLanding } from "@/lib/scryfall/dfc-import";
+import { finalizeImportMatch, remixFrameFor, withoutTextlessFrames } from "@/lib/creator/frame-resolve";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { extendedArtDressFor, kindFromCard, templatePaintsSecondFace, typeWordFrameFor } from "@/lib/creator/card-kinds";
 import { bodyFor, dfcBodyOf, hasBackOfItsOwn, isBattleFront, templateHasBackFace, withTransformBackShape } from "@/lib/cards/dfc";
@@ -113,8 +113,14 @@ export function scryfallRemixMechanics(
       : undefined;
 
   // (A battle — TODO 5.5 — is two-faced only with a back of its own: a
-  // legacy back is left out, as every battle remix did before.)
-  const doubleFaced = hasBackOfItsOwn(frame.template, patch.back_face);
+  // legacy back is left out, as every battle remix did before. The battle
+  // keeps its frame either way, so remixFrameFor's template can't say
+  // whether the back landed: the import's own landing does — both bodies
+  // verified, each in its colour — and a one-credit plan stays one-faced,
+  // as a transform printing's does.)
+  const doubleFaced = isBattleFront(frame.template)
+    ? !options.singleFace && dfcImportLanding(finalizeImportMatch(patch, verifiedKeys), verifiedKeys).ok
+    : hasBackOfItsOwn(frame.template, patch.back_face);
   const back =
     doubleFaced || templatePaintsSecondFace(frame.template)
       ? backFaceFromPatch(patch.back_face)

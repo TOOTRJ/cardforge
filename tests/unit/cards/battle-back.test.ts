@@ -20,6 +20,11 @@ import { battleBackBodyFor, battleBackUnavailableNote } from "@/lib/creator/batt
 import { dfcKindFor, kindFromCard } from "@/lib/creator/card-kinds";
 import { sideBySideSize } from "@/lib/render/faces-side-by-side";
 import { FRAME_TEMPLATE_VALUES, type ColorIdentity } from "@/types/card";
+import { remixCreditsOf, scryfallRemixMechanics } from "@/lib/ai/remix-mechanics";
+import { remixSecondHalfLayout } from "@/lib/ai/remix-names";
+import { scryfallCardSchema } from "@/lib/scryfall/client";
+import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
+import battlePrintings from "../scryfall/fixtures/battle-printings.json";
 
 // ---------------------------------------------------------------------------
 // TODO 5.5 (a) — the battle's back face, through the ONE gates: the battle
@@ -191,5 +196,34 @@ describe("the creator's rule (lib/creator/battle-back.ts)", () => {
     expect(battleBackBodyFor({ ...args, backType: "land", backColorIdentity: ["colorless"], verifiedKeys: verified("m15dfclandback") })).toBe("m15dfclandback");
     expect(battleBackBodyFor({ ...args, mode: "edit", backColorIdentity: [], verifiedKeys: new Set() })).toBe("m15dfcback");
     expect(bodyFor("transform", "back", "creature")).toBe("m15dfcback");
+  });
+});
+
+describe("the AI deck remix of a battle PRINTING (scryfallRemixMechanics)", () => {
+  // The battle keeps its frame whether its back landed or not, so the remix
+  // reads the import's own landing: a ▼ back unverified in the back's
+  // colour, or a one-credit plan, remixes one-faced (one picture, one
+  // credit) as every battle remix did before — never a back the save's gate
+  // refuses after two pictures were painted.
+  const serra = () => mapScryfallToFormPatch(scryfallCardSchema.parse((battlePrintings as Record<string, unknown>)["mom-21"]));
+
+  it("lands on its back only when the ▼ back is verified in the back's colour", () => {
+    const onlyBattle = scryfallRemixMechanics(serra(), "x", verified("battle"));
+    expect(onlyBattle.ok && onlyBattle.mechanics.frame_template).toBe("battle");
+    expect(onlyBattle.ok && onlyBattle.mechanics.back_face).toBeUndefined();
+    expect(onlyBattle.ok && remixCreditsOf(onlyBattle.mechanics)).toBe(1);
+    const both = scryfallRemixMechanics(serra(), "x", EVERYTHING);
+    expect(both.ok && both.mechanics.back_face?.frame_style?.template).toBe("m15dfcback");
+    expect(both.ok && remixCreditsOf(both.mechanics)).toBe(2);
+  });
+
+  it("a one-credit plan stays one-faced", () => {
+    const single = scryfallRemixMechanics(serra(), "x", EVERYTHING, { singleFace: true });
+    expect(single.ok && single.mechanics.back_face).toBeUndefined();
+    expect(single.ok && remixCreditsOf(single.mechanics)).toBe(1);
+  });
+
+  it("names and paints the back as a transform back (its own art instruction)", () => {
+    expect(remixSecondHalfLayout("battle")).toBe("transform");
   });
 });
