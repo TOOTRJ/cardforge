@@ -1818,6 +1818,12 @@ export function visualCases(): VisualCase[] {
   add("m15mdfclandback", "mdfc", "w", "short", { suffix: "@strip-g", back: { frontTemplate: "m15mdfclandfront" }, row: stripRow("m15mdfclandback", "g", "w") });
   add("m15mdfcfront", "mdfc", "wu", "short", { suffix: "@strip-l", row: stripRow("m15mdfclandback", "wu", "wu", "short", { rules_text: "{T}: Add {W} or {U}." }, { cost: "{W/U}{W/U}", rules_text: "Draw two cards, then discard a card.", frame_style: { template: "m15mdfcfront", finish: "regular", twoColor: true } as CardRowForBake["frame_style"] }) });
   add("m15mdfclandback", "mdfc", "wu", "short", { suffix: "@strip-c", back: { frontTemplate: "m15mdfcfront" }, row: stripRow("m15mdfclandback", "wu", "wu", "short", { rules_text: "{T}: Add {W} or {U}." }, { cost: "{W/U}{W/U}", rules_text: "Draw two cards, then discard a card.", frame_style: { template: "m15mdfcfront", finish: "regular", twoColor: true } as CardRowForBake["frame_style"] }) });
+  // A land STORED on the extended-art spell frame before its land dress
+  // existed (TODO 4.7, owner Round 63): the gallery offers the land
+  // `extendedartland` now, so the generated `extendedart/g/land-short` left
+  // the matrix — this keeps the stored card's look pinned (its hash is the
+  // removed case's: the split moved no stored land).
+  add("extendedart", "land", "g", "short", { suffix: "@legacyland" });
   // A legacy-shaped back_face on m15 (the 8 imported DFCs' shape: content,
   // no body): the FRONT bake is today's, byte for byte (its hash must not
   // move against the base this PR was cut from: the corpus proof).

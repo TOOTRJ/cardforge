@@ -190,6 +190,7 @@ type CardSetupPanelProps = {
  *  card keeps its text, which the Text step says shows on other frames. */
 const FRAME_CHIP_HINTS: Partial<Record<FrameTemplate, string>> = {
   extendedart: "Art to the side edges",
+  extendedartland: "Art to the side edges",
   m15textless: "Name and art only: no type line or text box",
   m15textlessland: "Name and art only: no type line or text box",
   nyx: "Theros Beyond Death showcase",
