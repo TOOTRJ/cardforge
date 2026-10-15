@@ -1,5 +1,5 @@
 import "server-only";
-import { commanderBracket, describeColors, type DeckType } from "@/lib/decks/deck-types";
+import { commanderBracket, describeColors, type DeckType, type ManaColor } from "@/lib/decks/deck-types";
 
 import { generateObject } from "ai";
 import { z } from "zod";
@@ -13,14 +13,15 @@ import {
 import { repairStructuredText, structuredCall } from "@/lib/ai/structured-output";
 import { judgeModel } from "@/lib/ai/provider";
 import { buildDeckSkeleton, type DeckSlot } from "@/lib/ai/mtg-rules";
-import type { ColorIdentity } from "@/types/card";
+import { COLOR_LETTER_IDENTITY, type ColorIdentity } from "@/types/card";
 import type { DeckFormat } from "@/types/deck";
 
 // ---------------------------------------------------------------------------
 // AI deck design — concept + card batch for "generate a whole deck".
 //
 // Two-step shape: a cheap concept call picks the
-// deck's name, colors, and strategy; the shared card-design engine then
+// deck's name and strategy (and, for an UNTYPED deck only, its colors — a
+// typed deck's are its type's); the shared card-design engine then
 // fills a format-aware skeleton (commander slot, land share, 55/45
 // creature/spell split along a real mana curve — lib/ai/mtg-rules.ts).
 // All cards are ORIGINAL customs. Generated decks — and their cards, once
@@ -51,7 +52,35 @@ export const deckConceptSchema = z
 
 type DeckConcept = z.infer<typeof deckConceptSchema>;
 
+// A TYPED deck (a `DeckType` — Gorgons, Slivers, Eldrazi…) is planned with
+// no colour field at all: its colours are the TYPE's, set here in code, in
+// the type's order (owner 2026-10-14) — Gorgons is always black-green,
+// Slivers all five (the coloured schema's cap of 3, which #565's repair
+// enforced by cutting, built a five-colour type in three), and a colourless
+// type (Eldrazi, `colors: []`) `[]`, a colourless identity as `DeckType` and
+// `deck_cards.color_identity` spell it: every card slot hinted "colorless"
+// (#567). An UNTYPED deck keeps the schema above: the model picks 1–3.
+const typedDeckConceptSchema = deckConceptSchema.omit({ colors: true });
+
 const DECK_CONCEPT_SYSTEM = `You pitch ORIGINAL Magic: The Gathering-style decks for a homebrew tool. Given a theme and format, invent a deck name, a one-sentence pitch, a strategy paragraph (game plan, key mechanics, world/faction names), and pick 1-3 colors that fit. Everything must be original — never Wizards-owned proper nouns, never real-world brands.`;
+
+const DECK_CONCEPT_SYSTEM_TYPED = `You pitch ORIGINAL Magic: The Gathering-style decks for a homebrew tool. Given a theme and format, invent a deck name, a one-sentence pitch and a strategy paragraph (game plan, key mechanics, world/faction names) for a deck in the colors its deck type sets — they are fixed, not yours to pick. Everything must be original — never Wizards-owned proper nouns, never real-world brands.`;
+
+const DECK_CONCEPT_SYSTEM_COLOURLESS = `You pitch ORIGINAL Magic: The Gathering-style decks for a homebrew tool. Given a theme and format, invent a deck name, a one-sentence pitch and a strategy paragraph (game plan, key mechanics, world/faction names) for a COLORLESS deck: it has no colors, so its game plan never needs colored mana. Everything must be original — never Wizards-owned proper nouns, never real-world brands.`;
+
+/** The deck type asks for a colourless deck (Eldrazi). */
+function isColourlessDeckType(deckType: DeckType | null | undefined): boolean {
+  return deckType != null && deckType.colors.length === 0;
+}
+
+/** A typed deck's colours, in the type's order (`[]` = colourless); null
+ *  for an untyped deck, whose colours the model picks. */
+export function deckTypePlanColors(
+  deckType: DeckType | null | undefined,
+): DeckConcept["colors"] | null {
+  if (deckType == null) return null;
+  return deckType.colors.map((letter) => COLOR_LETTER_IDENTITY[letter]);
+}
 
 // One line of real deck-construction rules per format — mirrored from
 // lib/decks/format-rules.ts FORMAT_SPECS so generated cards respect the
@@ -88,14 +117,20 @@ function slotFromDeckSlot(
   slot: DeckSlot,
   colors: ColorIdentity[],
   index: number,
+  /** A typed deck's own colours (its type's letters) — the commander's note
+   *  names them; null for an untyped deck, whose note is as it was. */
+  typeColors: readonly ManaColor[] | null = null,
 ): DesignSlot {
+  if (colors.length === 0) return colourlessSlotFromDeckSlot(slot);
   const colorHint = colors[index % colors.length];
   if (slot.role === "commander") {
     return {
       cardType: "creature",
       rarity: "mythic",
       colorHint: colors.length > 1 ? "multicolor" : colorHint,
-      note: "This is the deck's LEGENDARY COMMANDER (supertype Legendary) — the strategy's centerpiece.",
+      note: `This is the deck's LEGENDARY COMMANDER (supertype Legendary) — the strategy's centerpiece.${
+        typeColors && typeColors.length > 0 ? ` ${commanderColorsLine(typeColors)}` : ""
+      }`,
     };
   }
   if (slot.role === "land") {
@@ -104,6 +139,47 @@ function slotFromDeckSlot(
       rarity: "rare",
       colorHint,
       note: "A nonbasic land supporting the deck's colors and strategy.",
+    };
+  }
+  return {
+    cardType: slot.role === "creature" ? "creature" : undefined,
+    roleHint: slot.role,
+    colorHint,
+    note:
+      slot.manaValueHint != null
+        ? `Target mana value ≈ ${slot.manaValueHint}.`
+        : undefined,
+  };
+}
+
+/** What a typed deck's commander slot says of its colours (the #568
+ *  follow-up, owner 2026-10-14): the commander's colour identity IS the
+ *  deck's — "multicolor" alone let the designer make a two-colour commander
+ *  for the five-colour Slivers. */
+function commanderColorsLine(typeColors: readonly ManaColor[]): string {
+  const each = typeColors.length === 1 ? "that color" : `each of those ${typeColors.length} colors`;
+  return `Its color identity is EXACTLY the deck's: ${describeColors(typeColors).replace("colours", "colors")} — mana symbols of ${each} in its cost or rules text, and of no other color.`;
+}
+
+/** slotFromDeckSlot for a colourless plan (no colours: `index % 0` would
+ *  hint nothing): every slot the card's colourless identity, the
+ *  commander's and the lands' notes saying so. */
+function colourlessSlotFromDeckSlot(slot: DeckSlot): DesignSlot {
+  const colorHint = "colorless" as const;
+  if (slot.role === "commander") {
+    return {
+      cardType: "creature",
+      rarity: "mythic",
+      colorHint,
+      note: "This is the deck's LEGENDARY COMMANDER (supertype Legendary) — the strategy's centerpiece. It is COLORLESS: no colored mana symbol in its cost or text.",
+    };
+  }
+  if (slot.role === "land") {
+    return {
+      cardType: "land",
+      rarity: "rare",
+      colorHint,
+      note: "A nonbasic land for a colorless deck: it makes colorless mana ({C}) and supports the strategy.",
     };
   }
   return {
@@ -181,13 +257,20 @@ export async function generateDeckPlan(input: {
       ? "extend the deck's existing theme"
       : "a flavorful, fun-to-pilot original deck — surprise me");
 
+  const colourless = isColourlessDeckType(input.deckType);
+  const typedColors = deckTypePlanColors(input.deckType);
+  const conceptSchema = typedColors ? typedDeckConceptSchema : deckConceptSchema;
   // Repaired where a machine can, else asked once more; a second miss is
   // AiOutputError (lib/ai/structured-output.ts).
-  const { object: concept } = await structuredCall("deck-design/concept", repairStructuredText(deckConceptSchema), (experimental_repairText) => generateObject({
+  const { object: concept } = await structuredCall("deck-design/concept", repairStructuredText(conceptSchema), (experimental_repairText) => generateObject({
     model: judgeModel(),
-    schema: deckConceptSchema,
+    schema: conceptSchema,
     experimental_repairText,
-    system: DECK_CONCEPT_SYSTEM,
+    system: colourless
+      ? DECK_CONCEPT_SYSTEM_COLOURLESS
+      : typedColors
+        ? DECK_CONCEPT_SYSTEM_TYPED
+        : DECK_CONCEPT_SYSTEM,
     prompt: [
       `Theme: ${theme}`,
       `Format: ${FORMAT_NOTES[input.format]}`,
@@ -200,7 +283,9 @@ export async function generateDeckPlan(input: {
         ? [
             `IMPORTANT: this is an EXISTING deck called "${input.existing.title}"${
               input.existing.description ? ` — ${input.existing.description}` : ""
-            }. Keep its identity (deck_title should echo it) and infer the strategy and colors FROM its current cards:`,
+            }. Keep its identity (deck_title should echo it) and infer the strategy${
+              typedColors ? "" : " and colors"
+            } FROM its current cards:`,
             existingCardLines(input.existing.cards),
           ].join("\n")
         : null,
@@ -221,8 +306,12 @@ export async function generateDeckPlan(input: {
     );
   }
 
+  // A typed plan's colours are its type's — never ones the model picked; an
+  // untyped plan's are the model's 1–3.
+  const planColors: DeckConcept["colors"] =
+    typedColors ?? (concept as DeckConcept).colors;
   const designSlots = slots.map((slot, index) =>
-    slotFromDeckSlot(slot, concept.colors, index),
+    slotFromDeckSlot(slot, planColors, index, typedColors ? input.deckType?.colors ?? null : null),
   );
   // Pauper is commons-only — the format rule, not a suggestion.
   const finalSlots =
@@ -259,5 +348,5 @@ export async function generateDeckPlan(input: {
     input.existing?.cards.map((card) => card.name) ?? [],
   );
 
-  return { concept, cards: uniqueCards, slots };
+  return { concept: { ...concept, colors: planColors }, cards: uniqueCards, slots };
 }

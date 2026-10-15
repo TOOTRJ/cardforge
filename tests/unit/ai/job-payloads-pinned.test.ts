@@ -214,6 +214,9 @@ const CARDS: Record<string, { card: ReturnType<typeof designed>; frame: string |
   planeswalker: { card: designed({ title: "Veyra, Tide Oracle", cost: "{2}{U}{U}", card_type: "planeswalker", supertype: "Legendary", subtypes: ["Veyra"], color_identity: ["blue"], rules_text: "+1: Draw a card.\n-3: Return target creature to its owner's hand.", flavor_text: null, power: null, toughness: null, loyalty: "4" }), frame: "m15pw" },
   "token (Treasure)": { card: designed({ title: "Treasure", cost: "—", card_type: "token", supertype: "Artifact", subtypes: ["Treasure"], color_identity: ["colorless"], rules_text: "{T}, Sacrifice this artifact: Add one mana of any color.", flavor_text: null, power: null, toughness: null }), frame: "m15tokenartifacttext" },
   "enchantment creature": { card: designed({ title: "Lanternhollow Muse", cost: "{1}{W}", supertype: "Enchantment", subtypes: ["Spirit"], color_identity: ["white"], rules_text: "Vigilance", power: "2", toughness: "1" }), frame: "m15nyx" },
+  // (ADDED on #568, recorded on origin/main ad4de3bc's lib/ — every entry
+  // above unchanged.)
+  "artifact creature": { card: designed({ title: "Ironclad Golem", cost: "{4}", supertype: "Artifact", subtypes: ["Golem"], color_identity: ["colorless"], rules_text: "Trample", flavor_text: null, power: "3", toughness: "3" }), frame: "m15artifact" },
 };
 
 function job(kind: string, plan: Record<string, unknown>, stepKey: string, extra: Record<string, unknown> = {}) {
@@ -257,12 +260,19 @@ describe("the single-card job's step saves what main saved", () => {
   });
 });
 
-describe("the deck job's card step saves what main saved", () => {
+describe("the deck job's card step saves what main saved, and its frame", () => {
+  // Since the AI deck cards got their FRAME (owner 2026-10-14) the save
+  // carries `frame_style` — the frame resolveGeneratedFrame gives the card
+  // (tests/unit/ai/deck-card-frame.test.ts); main saved none. Everything
+  // else is main's record, byte for byte (the record is untouched).
   it.each(["creature", "artifact (Vehicle, on its frame)", "artifact with 'N+ |' lines", "land"])("%s", async (name) => {
-    const { card } = CARDS[name]!;
+    const { card, frame } = CARDS[name]!;
     const plan = { deck_title: "Deck", strategy: "Go wide.", theme: "embers", style: null, cards: [card], roles: [name === "creature" ? "commander" : "noncreature"], quantities: [1] };
     job("deck", plan, "card:0", { deck_id: "deck-1" });
-    pinned(`deck step · ${name}`, await runStep());
+    const out = await runStep();
+    const { frame_style: frameStyle, ...saved } = out.saved as Record<string, unknown>;
+    pinned(`deck step · ${name}`, { ...out, saved });
+    expect(frameStyle).toEqual({ template: frame });
   });
 });
 
@@ -364,6 +374,33 @@ describe("the plans the jobs store, the model mocked", () => {
     expect(result.ok).toBe(true);
     const step = s.patched.at(-1)!;
     pinned(`fill step · ${name}`, { status: step.status, fill: step.fill ?? null, credits: s.spend.mock.calls.map((call) => ({ amount: call[0], reason: call[1] })), refunds: s.refund.mock.calls.length });
+  });
+});
+
+/** The ONE single-card change (owner 2026-10-14): an Artifact Creature
+ *  asked onto the creature's M15 frame by name lands on the artifact frame
+ *  it borrows (resolveGeneratedFrame, artifactCreatureFrameFor) — main kept
+ *  m15. Every other case of the by-name matrix is main's, byte for byte;
+ *  these differ from main's record in `frame_template` alone. */
+const ARTIFACT_CREATURE_MOVES: Record<string, { main: string; branch: string }> = {
+  "card plan by name · artifact creature · m15": { main: "m15", branch: "m15artifact" },
+  "card plan by name · creature that says Spacecraft · m15": { main: "m15", branch: "m15artifact" },
+};
+
+describe("the single-card job's plan, a frame asked for by name", () => {
+  const cases = Object.keys(CARDS).flatMap((name) => ["m15", "m15artifact", CARDS[name]!.frame ?? "m15"].filter((frame, index, all) => all.indexOf(frame) === index).map((frame) => [name, frame] as const));
+  it.each(cases)("%s · %s", async (name, frame) => {
+    s.answers = [[CARDS[name]!.card], [CARDS[name]!.card]];
+    const out = await createCardGenerationJob({ theme: "embers", frame: frame as FrameTemplate, cardType: CARDS[name]!.card.card_type as never });
+    expect(out.ok).toBe(true);
+    const row = s.inserted.at(-1)!;
+    const value = { kind: row.kind, plan: row.plan, steps: row.steps };
+    const key = `card plan by name · ${name} · ${frame}`;
+    const moved = ARTIFACT_CREATURE_MOVES[key];
+    if (!moved || UPDATE) return pinned(key, value);
+    expect((value.plan as { frame_template: string }).frame_template).toBe(moved.branch);
+    expect((recorded[key] as { plan: { frame_template: string } }).plan.frame_template).toBe(moved.main);
+    pinned(key, { ...value, plan: { ...(value.plan as object), frame_template: moved.main } });
   });
 });
 

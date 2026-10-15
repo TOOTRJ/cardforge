@@ -8,8 +8,9 @@
 // (template, color) combos are ever chosen, using the color key the
 // generated card will actually render with.
 
-import type { CardType, ColorIdentity, FrameTemplate } from "@/types/card";
+import { ERA_TYPE_FRAME, type CardType, type ColorIdentity, type FrameTemplate } from "@/types/card";
 import {
+  artifactCreatureFrameFor,
   borrowedFrameFits,
   enchantmentFrameFits,
   enchantmentFrameFor,
@@ -17,6 +18,7 @@ import {
   isEnchantmentDress,
   subtypeFrameFits,
   subtypeFrameFor,
+  subtypesSay,
   framesForKind,
   extendedArtDressFor,
   isSingleBasicLand,
@@ -33,7 +35,9 @@ import {
   type TokenFrameFace,
 } from "@/lib/creator/card-kinds";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
-import { printsPowerToughness } from "@/lib/cards/card-display";
+import { printsPowerToughness, supertypeHasWord } from "@/lib/cards/card-display";
+import { resolveSagaChapters } from "@/lib/cards/face-content";
+import { defaultTokenFrameIn, tokenFrameText } from "@/lib/creator/token-frame-auto";
 import { isM20TokenTemplate } from "@/lib/cards/token-height";
 import { frameHidesRulesBoxText } from "@/lib/creator/frame-resolve";
 import { isStationFrame } from "@/lib/cards/station-frame";
@@ -79,6 +83,12 @@ export function resolveGeneratedFrame(input: {
   face?: BasicLandFace & { flavorText?: string | null; power?: string | null; toughness?: string | null };
   /** Injectable RNG for tests. Defaults to Math.random. */
   random?: () => number;
+  /** Where a SPECIFIC request can't dress the card: "random" (the default —
+   *  the single-card job and the fill) degrades to a random published frame
+   *  the card fits; "none" (the AI deck's cards, owner 2026-10-14) returns
+   *  null — no template, the default frame — so no other border era or
+   *  showcase lands in a deck. */
+  fallback?: "random" | "none";
 }): FrameTemplate | null {
   const { cardType, colorIdentity, verifiedKeys, face } = input;
   if (!input.requested) return null;
@@ -182,7 +192,10 @@ export function resolveGeneratedFrame(input: {
     // Vehicle frame lands on the artifact frame, as it did before the Nyx
     // frame).
     const bySubtype = subtypeFrameFor(requested, face?.subtypes, has);
-    const byWords = enchantmentFrameFor(kind, bySubtype, type);
+    // …the Nyx dress before the artifact frame an Artifact Creature borrows
+    // (owner 2026-10-14): an Enchantment Artifact Creature prints on Nyx.
+    const byNyx = enchantmentFrameFor(kind, bySubtype, type);
+    const byWords = byNyx !== bySubtype && has(byNyx) ? byNyx : artifactCreatureFrameFor(kind, bySubtype, type);
     const vehicle = has(byWords) ? byWords : bySubtype;
     const wanted = has(vehicle) && vehicle !== requested
       ? vehicle
@@ -202,12 +215,102 @@ export function resolveGeneratedFrame(input: {
     // published — picks, as it does for a random request.
     if (match && !frameHidesRulesBoxText(match.template, tokenFace)) return match.template;
     // Requested frame can't dress this card (wrong type after generation, or
-    // that color isn't published) — degrade to a random valid one.
+    // that color isn't published) — degrade to a random valid one, or to
+    // none where the caller asked for that.
+    if (input.fallback === "none") return null;
   }
 
   if (pool.length === 0) return null;
   const rng = input.random ?? Math.random;
   return pool[Math.floor(rng() * pool.length) % pool.length].template;
+}
+
+/** What an AI DECK card asks resolveGeneratedFrame for (owner 2026-10-14):
+ *  the M15 standard of its card type — m15land for a land, m15artifact for
+ *  an artifact, m15pw for a walker, m15token for a token — which the
+ *  resolver then dresses exactly as it dresses a single generated card (a
+ *  Vehicle's or a Spacecraft's subtype frame, the Nyx dress, a token's text
+ *  box and height, a walker's rows, an Artifact Creature's artifact frame,
+ *  never a textless frame for a text) wherever that frame is published in
+ *  the card's colour. Where it is not, the deck asks for NO template
+ *  (`fallback: "none"` — owner 2026-10-14: no other border era or showcase
+ *  mixed into a deck): the default frame, as every deck card saved before. */
+export function deckCardFrameRequest(cardType: CardType): FrameRequest {
+  return ERA_TYPE_FRAME.m15?.[cardType];
+}
+
+/**
+ * The frame an AI DECK card saves with: resolveGeneratedFrame asked for the
+ * card type's M15 standard (deckCardFrameRequest, `fallback: "none"`), and
+ * three looks a NEW deck card follows where they are VERIFIED in its colour
+ * (owner 2026-10-14, the #568 follow-up) — decks only; the single-card job
+ * asks for the frame its maker named, or a random one:
+ *
+ *   - a SAGA (an enchantment whose subtypes say Saga and whose text has at
+ *     least one chapter line, read as the renderers read it) → the `saga`
+ *     frame. A text with no chapter would leave its rail empty: it keeps the
+ *     standard's landing.
+ *   - a SNOW card (a Snow word in its type line) → `m15snow`, or
+ *     `m15snowland` for a land — only where the standard's landing is the
+ *     plain frame the snow skin re-dresses (m15, m15land, and the artifact
+ *     frame an Artifact Creature borrows, as the import lands a snow
+ *     printing); a subtype or enchantment dress keeps its frame, and an
+ *     artifact or a token, whose kind the snow frame doesn't dress, its own.
+ *   - a TOKEN → the frame a new token starts on in the creator
+ *     (defaultTokenFrameIn): the full-art design at the height its text asks
+ *     for where that is verified in the card's colour, else the 2014–19 arch
+ *     its words and text pick, as before.
+ *
+ * Where a look isn't verified, the standard's landing — as #568 saved it.
+ */
+export function resolveDeckCardFrame(
+  input: Omit<Parameters<typeof resolveGeneratedFrame>[0], "requested" | "fallback" | "random">,
+): FrameTemplate | null {
+  const { cardType, colorIdentity, verifiedKeys, face } = input;
+  const colorKey = pickFrameColorKey(colorIdentity);
+  const resolve = (requested: FrameRequest) =>
+    resolveGeneratedFrame({ ...input, requested, fallback: "none" });
+
+  if (
+    cardType === "enchantment" &&
+    subtypesSay(face?.subtypes, "Saga") &&
+    resolveSagaChapters(null, face?.rulesText).chapters.length > 0 &&
+    framesForKind("saga", verifiedKeys).some(
+      (choice) => choice.template === "saga" && choice.availableColorKeys.includes(colorKey as never),
+    )
+  ) {
+    return "saga";
+  }
+
+  if (cardType === "token") {
+    const start = defaultTokenFrameIn(
+      tokenFrameText({
+        cardType,
+        supertype: face?.supertype,
+        subtypes: face?.subtypes,
+        rulesText: face?.rulesText,
+        flavorText: face?.flavorText,
+        power: face?.power,
+        toughness: face?.toughness,
+      }),
+      "m15token",
+      colorKey,
+      verifiedKeys,
+    );
+    return resolve(start ?? deckCardFrameRequest(cardType));
+  }
+
+  const landed = resolve(deckCardFrameRequest(cardType));
+  if (supertypeHasWord(face?.supertype, "Snow")) {
+    const snow: FrameTemplate | null =
+      landed === "m15land"
+        ? "m15snowland"
+        : landed === "m15" || (landed === "m15artifact" && cardType === "creature")
+          ? "m15snow"
+          : null;
+    if (snow && resolve(snow) === snow) return snow;
+  }
+  return landed;
 }
 
 /** True when a GENERATED card may land on `template` as far as the station
