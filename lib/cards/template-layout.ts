@@ -4482,6 +4482,23 @@ const EXTENDEDART: FrameProfile = {
   type: { ...M15.type, dy: CC_M15_TYPE_DY, colorHex: "#ffffff" },
 };
 
+// The extended-art LAND frame (TODO 4.7, owner Round 63 2026-10-14): the
+// same pack's land frames (the grey `l`, the land tints `l<k>`, the gold
+// any-colour `lm`), as m15land is M15's — a land on extended art prints
+// them (FDN #487, NEO #501–505, CMR #705). EXTENDEDART's slots with the
+// land entry's differences: no cost, M15LAND's wider title band. No
+// see-through colourless master (the grey land frame is opaque) and no
+// artifact master; no pair masters yet (a two-colour land wears the gold
+// land frame, as m15land does with its switch off — a follow-up).
+const EXTENDEDARTLAND: FrameProfile = {
+  ...EXTENDEDART,
+  label: "Extended Art Land",
+  hideCost: true,
+  title: M15LAND.title,
+  underFrameArt: undefined,
+  artifactMasterKeys: undefined,
+};
+
 // Zendikar Expedition land — dark stone frame, art fills the upper 2/3,
 // translucent dark text box over the art (MSE text 29,315 314×112).
 const EXPEDITIONLAND: FrameProfile = {
@@ -5726,6 +5743,10 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // card changes (and production holds none on this frame). No pairs: a
   // two-colour legend wears the gold crown.
   extendedart: { ...EXTENDEDART, overlays: [EXTENDED_CROWN] },
+  // A legendary land's crown is its colour's (NEO #503 Otawara, MH2 #480
+  // Yavimaya); a colourless legend wears CC's grey C crown, as on
+  // extendedart (keyed by the card's colour).
+  extendedartland: { ...EXTENDEDARTLAND, overlays: [EXTENDED_CROWN] },
   fullart: { ...FULLART, pickerSampleArt: true },
   m15fullartland: M15FULLARTLAND,
   fullartland: FULLARTLAND,

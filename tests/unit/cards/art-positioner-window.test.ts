@@ -106,6 +106,7 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   // The extended-art frame (layout v58): CC's window to the side edges;
   // its see-through colourless master is ONE picture under the frame.
   extendedart: { front: [1500, 1142], masters: { c: [1500, 1959] } },
+  extendedartland: { front: [1500, 1142] },
   m15fullartland: { front: [1382, 1875] },
   fullartland: { front: [1500, 2100] },
   m15textless: { front: [1314, 1816] },

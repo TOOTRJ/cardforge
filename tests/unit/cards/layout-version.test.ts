@@ -421,6 +421,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
   // The station frame (TODO 4.27a).
   "m15station", "m15stationland",
   "m15ub", "m15ubartifact", "m15ubland",
+  // Extended art's land dress (TODO 4.7, owner Round 63; with v58).
+  "extendedartland",
 ];
 /** Templates added after v36 (TODO 5.1a's transform bodies, 5.1b's modal
  *  bodies): no card was ever baked on them before v37, so v36's frozen
@@ -435,6 +437,8 @@ const POST_V36_TEMPLATES: readonly string[] = [
   // The station frame (TODO 4.27a).
   "m15station", "m15stationland",
   "m15ub", "m15ubartifact", "m15ubland",
+  // Extended art's land dress (TODO 4.7, owner Round 63; with v58).
+  "extendedartland",
 ];
 
 describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
@@ -783,6 +787,8 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       // …and the station frame (TODO 4.27a).
       "m15station", "m15stationland",
       "m15ub", "m15ubartifact", "m15ubland",
+      // Extended art's land dress (TODO 4.7, owner Round 63; with v58).
+      "extendedartland",
     ];
     // An EXISTING template that joined brought its own bump: the battle
     // (TODO 4.21b), with layout v43 — its Card Conjurer master and the

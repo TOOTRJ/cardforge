@@ -18,6 +18,7 @@ import {
   subtypeFrameFits,
   subtypeFrameFor,
   framesForKind,
+  extendedArtDressFor,
   isSingleBasicLand,
   kindFromCard,
   templateIsBasicOnly,
@@ -79,8 +80,12 @@ export function resolveGeneratedFrame(input: {
   /** Injectable RNG for tests. Defaults to Math.random. */
   random?: () => number;
 }): FrameTemplate | null {
-  const { cardType, requested, colorIdentity, verifiedKeys, face } = input;
-  if (!requested) return null;
+  const { cardType, colorIdentity, verifiedKeys, face } = input;
+  if (!input.requested) return null;
+  // A land asked onto the extended-art frame means its land dress, as the
+  // picker and the import put it there (TODO 4.7, owner Round 63).
+  const requested: FrameTemplate | "random" =
+    input.requested === "random" ? "random" : extendedArtDressFor(kindFromCard(cardType, undefined), input.requested);
 
   const colorKey = pickFrameColorKey(colorIdentity);
   const choices = frameChoicesForType(cardType, verifiedKeys);

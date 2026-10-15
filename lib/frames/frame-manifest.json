@@ -674,6 +674,104 @@
       "width": 1500,
       "height": 2100
     },
+    "extendedartland/b.png": {
+      "hash": "257262ec5d82",
+      "sha256": "257262ec5d824670c5ee39cb4aef6aef6294b91c516013feb6803db795a8f734",
+      "bytes": 1433170,
+      "width": 1500,
+      "height": 2100
+    },
+    "extendedartland/b.webp": {
+      "hash": "2a55b1ca25f1",
+      "sha256": "2a55b1ca25f1c40f2e34b752ab22a51261803e01715b4297794ec7cd8ad95755",
+      "bytes": 98320,
+      "width": 1500,
+      "height": 2100
+    },
+    "extendedartland/c.png": {
+      "hash": "d67d376fd305",
+      "sha256": "d67d376fd3052d2de2305a10568692ccee78cf4c22c8ae65aec98fec075171be",
+      "bytes": 1169518,
+      "width": 1500,
+      "height": 2100
+    },
+    "extendedartland/c.webp": {
+      "hash": "be2a27c6ff50",
+      "sha256": "be2a27c6ff5050fd8f8910d62d0a6f6f9b4bd0412d0482e9389398df889a1f0d",
+      "bytes": 91816,
+      "width": 1500,
+      "height": 2100
+    },
+    "extendedartland/g.png": {
+      "hash": "28c41c402470",
+      "sha256": "28c41c40247096e3242b95171790b85fd10840b6d0e37569828e4129ab17ce91",
+      "bytes": 1647883,
+      "width": 1500,
+      "height": 2100
+    },
+    "extendedartland/g.webp": {
+      "hash": "cee25823443e",
+      "sha256": "cee25823443e04607af69cf1b96e4c95b8570d390d842fc60fba274e3f398a5c",
+      "bytes": 112630,
+      "width": 1500,
+      "height": 2100
+    },
+    "extendedartland/m.png": {
+      "hash": "46a0f64ab5b7",
+      "sha256": "46a0f64ab5b7929610deac1b38055bbbc34d2bace77ef8980e5b461f25ebec71",
+      "bytes": 1877098,
+      "width": 1500,
+      "height": 2100
+    },
+    "extendedartland/m.webp": {
+      "hash": "a0b36b6f82b4",
+      "sha256": "a0b36b6f82b47fc127e1cfe74d9b5b923b5dd56a09f4eda0fd04d88a9b8a9b35",
+      "bytes": 137424,
+      "width": 1500,
+      "height": 2100
+    },
+    "extendedartland/r.png": {
+      "hash": "07ba5a14416e",
+      "sha256": "07ba5a14416ea85bc7eb3478e71b9df9e894686b3b67bd7425a2bb0ce2c4a5f4",
+      "bytes": 1640027,
+      "width": 1500,
+      "height": 2100
+    },
+    "extendedartland/r.webp": {
+      "hash": "8e7a02b8c4a6",
+      "sha256": "8e7a02b8c4a6fce3b577f20e12d88ee1b02a1ecf13355fb8f4692b1347be8a69",
+      "bytes": 115464,
+      "width": 1500,
+      "height": 2100
+    },
+    "extendedartland/u.png": {
+      "hash": "69e7466cd866",
+      "sha256": "69e7466cd866075401860e49f98d41c17226d2bfbcd4033e727871e82119b68e",
+      "bytes": 1378997,
+      "width": 1500,
+      "height": 2100
+    },
+    "extendedartland/u.webp": {
+      "hash": "74511cb490d2",
+      "sha256": "74511cb490d27ef0452203171262efabde846c03a3c4405fb54d2406c8b0837e",
+      "bytes": 88614,
+      "width": 1500,
+      "height": 2100
+    },
+    "extendedartland/w.png": {
+      "hash": "66812076cc58",
+      "sha256": "66812076cc58873801dc3e23683950bece25bd836a7c53051042d75956c6c79d",
+      "bytes": 1525995,
+      "width": 1500,
+      "height": 2100
+    },
+    "extendedartland/w.webp": {
+      "hash": "d64e15e1df78",
+      "sha256": "d64e15e1df78cc527166aa045133dd9b7679bce0349b15de5720f8bcfd93093e",
+      "bytes": 103786,
+      "width": 1500,
+      "height": 2100
+    },
     "extendedcrown/b.png": {
       "hash": "3f4ac30f1aee",
       "sha256": "3f4ac30f1aeec158f5d7f870b3d41a8f8b638400c464c6768dbff39728a0246c",

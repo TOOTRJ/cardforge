@@ -145,7 +145,8 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
     // + 4.5c's Vehicle frame (an opaque M15 master: no sample).
     // + the station frame's two (TODO 4.27a) + the Nyx dress (TODO 4.7)
     // + 4.25's three Universes Beyond frames (opaque masters too).
-    expect(FRAME_TEMPLATE_VALUES).toHaveLength(67);
+    // + extended art's land dress (TODO 4.7, owner Round 63: opaque masters).
+    expect(FRAME_TEMPLATE_VALUES).toHaveLength(68);
     expect(FRAME_TEMPLATE_VALUES.filter((t) => drawn.has(t))).toEqual(SAMPLED);
   });
 

@@ -41,6 +41,14 @@ describe("the extended-art recipe", () => {
     expect(EXTENDED).toBe("img/frames/m15/new/extended");
   });
 
+  it("its land dress (owner Round 63): the pack's land frames whole — the grey `l` for colourless, `l<k>`, the gold `lm`", () => {
+    const def = templates.extendedartland;
+    expect(Object.keys(def.colors).sort()).toEqual(["b", "c", "g", "m", "r", "u", "w"]);
+    expect(def.colors.c).toEqual([{ src: `${EXTENDED}/l.png` }]);
+    for (const key of ["w", "u", "b", "r", "g", "m"]) expect(def.colors[key], key).toEqual([{ src: `${EXTENDED}/l${key}.png` }]);
+    expect(def.plates).toBeUndefined();
+  });
+
   it("names the pack's other files by letter for the dresses that build on it (Vehicle, lands)", () => {
     expect(extendedFrameFile("v")).toBe(`${EXTENDED}/v.png`);
     expect(extendedFrameFile("l")).toBe(`${EXTENDED}/l.png`);
@@ -83,6 +91,22 @@ describe("the profiles on the new masters", () => {
     for (const key of ["a", "w", "m"]) expect(underFrameArtRect(p, key), key).toBeNull();
   });
 
+  it("extendedartland: extendedart's slots, no cost, M15LAND's title band, no see-through or artifact master, the same crown band", () => {
+    const land = getFrameProfile("extendedartland");
+    const spell = getFrameProfile("extendedart");
+    expect(land.artSlot).toEqual(spell.artSlot);
+    expect(land.type).toEqual(spell.type);
+    expect(land.rules).toEqual(spell.rules);
+    expect(land.setSymbolKeyline).toBe(spell.setSymbolKeyline);
+    expect(land.hideCost).toBe(true);
+    expect(land.title).toEqual(getFrameProfile("m15land").title);
+    expect(land.underFrameArt).toBeUndefined();
+    expect(land.artifactMasterKeys).toBeUndefined();
+    expect(land.overlays).toEqual(spell.overlays);
+    expect(land.twoColorMasters).toBeUndefined();
+    expect(artReachesCardEdge(land)).toBe(false);
+  });
+
   it("the textless pair: textless (no type line, no rules), a white name, CC's art window", () => {
     for (const template of ["m15textless", "m15textlessland"]) {
       const p = getFrameProfile(template);
@@ -103,6 +127,7 @@ describe("the profiles on the new masters", () => {
       bottom: { kind: "border" },
       left: { kind: "art", except: [[0, 11.3], [59.2, 100]] },
     });
+    expect(EDGE_CONTRACTS.extendedartland).toEqual(EDGE_CONTRACTS.extendedart);
     for (const t of ["m15textless", "m15textlessland"]) for (const edge of Object.values(EDGE_CONTRACTS[t])) expect(edge, t).toEqual({ kind: "border" });
   });
 
@@ -114,12 +139,21 @@ describe("the profiles on the new masters", () => {
         expect(MANIFEST[`${t}/${key}.webp`], `${t}/${key}.webp`).toBeDefined();
       }
     }
+    expect(fs.existsSync(path.join(process.cwd(), "public", "frames", "extendedartland"))).toBe(false);
+    for (const key of ["w", "u", "b", "r", "g", "c", "m"]) {
+      expect(MANIFEST[`extendedartland/${key}.png`], key).toBeDefined();
+      expect(MANIFEST[`extendedartland/${key}.webp`], key).toBeDefined();
+    }
     expect(MANIFEST["extendedart/a.png"]).toBeDefined();
     expect(MANIFEST["extendedart/a.webp"]).toBeDefined();
   });
 });
 
-const masters = ["w", "c", "a"].map((key) => [key, published(`extendedart/${key}.png`)] as const);
+const masters = [
+  ...["w", "c", "a"].map((key) => [`extendedart/${key}`, published(`extendedart/${key}.png`)] as const),
+  // The land dress (owner Round 63): the grey land frame, a colour's, gold.
+  ...["c", "u", "m"].map((key) => [`extendedartland/${key}`, published(`extendedartland/${key}.png`)] as const),
+];
 describe.skipIf(masters.some(([, buf]) => buf === null))("the published extended-art masters (set FRAMES_BUILD_DIR if skipped)", () => {
   it.each(masters)("%s: clear at the side edges between the bars, opaque above and below; the WebP's alpha is the PNG's", async (key, buf) => {
     const { data, info } = await sharp(buf!).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -131,7 +165,7 @@ describe.skipIf(masters.some(([, buf]) => buf === null))("the published extended
     }
     // (frames-fetch brings the PNGs only: the WebP is checked where the
     // importer's own build is.)
-    const webp = published(`extendedart/${key}.webp`);
+    const webp = published(`${key}.webp`);
     if (!webp) return;
     const w = await sharp(webp).ensureAlpha().raw().toBuffer();
     let diff = 0;

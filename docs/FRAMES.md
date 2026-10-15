@@ -178,13 +178,14 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 52 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 53 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the extended-art frame and the textless promo pair (4.7 / 4.35 / 4.42,
   layout v58): extendedart — the accurate 'Extended Art Frames' pack whole,
   its see-through colourless 'Eldrazi Frame' as `c` and its artifact frame
-  as `a` — and m15textless and m15textlessland — 'Magic Fest Promos' whole
+  as `a` — its land dress extendedartland (the same pack's land frames:
+  `l` grey, `l<k>`, `lm` gold) — and m15textless and m15textlessland — 'Magic Fest Promos' whole
   ([The extended-art and textless frames from Card
   Conjurer](#the-extended-art-and-textless-frames-from-card-conjurer-47--435-v58));
 
@@ -4573,12 +4574,36 @@ never a badge.
   the land's the brown land rim. This is 4.42's look on the existing
   templates — not 4.35 (a)'s borderless re-source, which no print fits
   (an owner question on the PR).
-- **Not built (owner questions on the PR):** pair masters (gold-split /
-  hybrid extended-art printings stay `nearest` through the `two-colour`
-  gaps), an extended-art LAND dress (CC's `l` / `l<k>` files are named by
-  `extendedFrameFile` but no profile paints them: a land on the frame wears
-  its colour's spell master), the Vehicle's `v` (4.27a step 2 builds on
-  `extendedFrameFile`), the collector line and the stamp notch.
+- **`extendedartland` (owner Round 63, 2026-10-14):** the land dress, a
+  template of its own as m15land is M15's — the pack's land frames whole:
+  `c` = the grey 'Land Frame' `l`, w u b r g = `l<k>`, gold `m` = `lm` (the
+  any-colour land). EXTENDEDART's slots with the land entry's differences
+  (no cost, M15LAND's title band), no see-through or artifact master, the
+  same crown band (a colourless legend wears the grey C crown). The kind
+  gate splits the pair: `extendedart` dresses every kind its body draws but
+  the land, `extendedartland` the land alone (`TREATMENT_KINDS`); the
+  registry's `extendedart` rule names the `extended` family, which picks
+  the land frame for a land. A land stored on `extendedart` before the
+  split keeps it and stays editable. Measured on 32 extended-art land
+  printings (median |ΔRGB| over the master's opaque pixels, at 0 px):
+  colourless utility lands on `l` 3.3–5.3 (FDN #487, BLB #368, DFT #425,
+  MSC #491, M3C #83; the MSE masters 51.7–54.0), mono lands on `l<k>`
+  2.0–19.7 against the spell masters' 12.3–57.3 (NEO #501–505, ELD
+  #386–389, MH2 #480, M3C #81; ELD #390 Castle Vantress prints the blue
+  SPELL frame: 27.3 vs 12.3), any-colour lands on `lm` 10.3–19.0 (CMR
+  #705, MSC #470, DMU #421, KHM #373; the grey `l` 20.7–30.7). A
+  two-colour land (264 of the 409 single-faced extended-art land
+  printings) prints the grey frame with a split box in its two land tints
+  (MSC #468 / #477 / #489 / #499, STX #360, THB #348, CMR #709, M21 #390,
+  SOC #101; grey `l` 17.0–42.0, gold `lm` 27.0–64.0) — the pair masters
+  are a follow-up; until then it wears the gold land frame and the
+  registry's `two-colour` gap keeps it `nearest`, as on m15land with the
+  switch off. Fetch lands print the colours they fetch (MH3 #464).
+- **Not built (follow-ups, owner Round 63):** pair masters on both
+  templates (gold-split / hybrid extended-art printings and the two-colour
+  lands stay `nearest` through the `two-colour` gaps), the Vehicle's `v`
+  (4.27a step 2 builds on `extendedFrameFile`), the collector line and the
+  stamp notch.
 
 #### Devoid and snow (4.6f, wave 2c)
 
@@ -7305,11 +7330,11 @@ at HD on all four.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 52 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 53 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens, the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and 4.25's three Universes Beyond frames, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames, 4.25's three Universes Beyond frames and extended art's land dress (4.7, owner Round 63), new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card) prints its names,

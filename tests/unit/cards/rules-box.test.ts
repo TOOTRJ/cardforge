@@ -106,7 +106,7 @@ describe("the main box on every template", () => {
         "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
         // The extended-art frame (layout v58, TODO 4.7): the pack's box is
         // M15's; the textless promo pair spreads M15 and draws no box.
-        "extendedart", "m15textless", "m15textlessland",
+        "extendedart", "extendedartland", "m15textless", "m15textlessland",
       ].sort(),
     );
     for (const t of withPrintMargins) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 4, y: 0 });

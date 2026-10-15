@@ -512,7 +512,15 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   m15fullartland: ["land"],
   fullartland: ["land"],
   m15textlessland: ["land"],
-  m15borderless: ["creature", "instant", "sorcery", "enchantment", "artifact"],
+  // The extended-art frame and its land dress (TODO 4.7, owner Round 63
+  // 2026-10-14): a land on extended art prints the pack's LAND frames
+  // (FDN #487, NEO #501–505), so the land kind wears `extendedartland`
+  // alone and the spell frame every other kind its body draws. A land
+  // stored on `extendedart` before the split keeps its frame and stays
+  // editable (frameKindUpdateGateError's legacy pin).
+  extendedart: ["creature", "instant", "sorcery", "enchantment", "artifact", "token"],
+  extendedartland: ["land"],
+  m15borderless:["creature", "instant", "sorcery", "enchantment", "artifact"],
   m15borderlessartifact: ["artifact", "creature"],
   m15borderlessland: ["land"],
   m15borderlesspw: ["planeswalker"],
@@ -542,6 +550,17 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   m15ubartifact: ["artifact", "creature"],
   m15ubland: ["land"],
 };
+
+/** The extended-art frame's land dress (TODO 4.7, owner Round 63): the one
+ *  treatment split by kind after cards were made on it. A LAND asked onto
+ *  `extendedart` — a stored land's own-card remix, an AI request by name —
+ *  means `extendedartland`, and any other kind asked onto the land dress
+ *  means `extendedart`; every other template is itself. */
+export function extendedArtDressFor(kind: CardKind, template: FrameTemplate): FrameTemplate {
+  if (template === "extendedart" && kind === "land") return "extendedartland";
+  if (template === "extendedartland" && kind !== "land") return "extendedart";
+  return template;
+}
 
 /** Kinds that wear ONLY a template whose trade dress names them. */
 const EXCLUSIVE_KINDS: ReadonlySet<CardKind> = new Set<CardKind>(["emblem"]);

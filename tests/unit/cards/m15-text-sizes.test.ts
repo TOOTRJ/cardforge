@@ -71,7 +71,8 @@ describe("one M15-era display size (layout v32)", () => {
     // and 4.21b's battle — 4.5c's Vehicle frame, 4.7's Nyx dress — and the
     // station frame's two (TODO 4.27a) — and 4.25's three Universes Beyond
     // frames.
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(52);
+    // …and extended art's land dress (TODO 4.7, owner Round 63).
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(53);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       expect(p.title.sizePct, t).toBe(sized(t, TITLE_SIZE_PCT));
@@ -301,6 +302,8 @@ describe("baselines (TextSlot.dy)", () => {
     // The extended-art frame (layout v58, TODO 4.7): Card Conjurer's
     // extended pack, M15's bars — the CC type line.
     ["extendedart", base.title, cc],
+    // …and its land dress (owner Round 63): the same pack's land frames.
+    ["extendedartland", base.title, cc],
     // MSE-framed: baselines kept (their print offsets are TODO 4.21's).
     ["expeditionland", base.title, base.type],
     ["nyx", base.title, base.type],
@@ -405,7 +408,7 @@ describe("baselines (TextSlot.dy)", () => {
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
       // The extended-art frame and the textless promo pair (layout v58).
-      "extendedart", "m15textless", "m15textlessland",
+      "extendedart", "extendedartland", "m15textless", "m15textlessland",
     ]) {
       expect((getFrameProfile(t).type.dy! - kept15) * 1500, t).toBeCloseTo(-4.2, 9);
     }

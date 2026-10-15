@@ -222,6 +222,12 @@ const EXTENDED_ART_NOTES = [
   "a = the pack's silver 'Artifact Frame' (new/extended/a.png), the master a colourless ARTIFACT paints (FrameProfile.artifactMasterKeys { c: 'a' }: BRO #376, CMR #692, BIG #92)",
   "plates = M15's (the pack draws the regular m15PT plates at M15's bounds): no objects of its own",
 ];
+const EXTENDED_ART_LAND_NOTES = [
+  "the extended-art LAND frame (TODO 4.7, owner Round 63 2026-10-14): the pack's land frames whole (new/extended/l.png, l<k>.png), downscaled once; no border added, as extendedart",
+  "colourless land = the pack's grey 'Land Frame' l.png (FDN #487 Soulstone Sanctuary, BLB #368 Fountainport, DFT #425 Avishkar Raceway, MSC #491 Scavenger Grounds: median |ΔRGB| 3.3–3.7 against the print over the master's opaque pixels); w u b r g = l<k>.png (NEO #501–505, MH2 #480, ELD #386–389, M3C #81: 2.0–19.7); gold m = lm.png, the any-colour land (CMR #705 Command Tower, MSC #470 Exotic Orchard, KHM #373 The World Tree: 10.3–19.0)",
+  "no pair masters: a two-colour land prints the grey frame with a split box in the two land tints (MSC #468 / #477 / #489 / #499, STX #360, THB #348) — a follow-up (owner Round 63); until then it wears the gold land frame, as m15land does with its two-colour switch off",
+  "plates = M15's (a land creature: Dryad Arbor's kind)",
+];
 // The black-bordered textless promos (Store Championship, MagicFest,
 // MagicCon, Secret Lair): Card Conjurer's 'Magic Fest Promos'
 // (packMagicFest.js, groupTextless-4.js) — 1500 × 2100 masters with the
@@ -3502,6 +3508,19 @@ export const CC_TEMPLATES = {
     },
     pack: EXTENDED_ART_PACK,
     notes: EXTENDED_ART_NOTES,
+  },
+  // The extended-art LAND frame (TODO 4.7, owner Round 63 2026-10-14): the
+  // same pack's land frames — the grey frame and bars of `l` with the box
+  // and title bar in the land tints of `l<k>` — as m15land is M15's. A land
+  // on extended art prints these (FDN #487, NEO #501–505, MSC #470); on the
+  // spell masters a colourless land showed its art through the see-through
+  // `c` frame.
+  extendedartland: {
+    colors: {
+      ...perColor((k) => [layer(extendedFrameFile(k === "c" ? "l" : `${k}l`))]),
+    },
+    pack: EXTENDED_ART_PACK,
+    notes: EXTENDED_ART_LAND_NOTES,
   },
   // TODO 4.35 / 4.42 (owner Q6 2026-10-13): the textless pair re-sourced
   // from Card Conjurer's 'Magic Fest Promos' (TEXTLESS_PROMO_PACK) — the

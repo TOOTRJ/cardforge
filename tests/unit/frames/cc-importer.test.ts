@@ -159,6 +159,7 @@ describe("Card Conjurer recipe", () => {
       "emblem",
       // The extended-art frame (TODO 4.7, layout v58; tests/unit/frames/extended-art-importer.test.ts).
       "extendedart",
+      "extendedartland",
       "flip",
       "fullartland",
       "m15",

@@ -288,7 +288,7 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // 1,200 characters fill no box at 5 pt (the widest full boxes hold ~1,000).
   [
     [
-      "agclassic/main", "alphaland/main", "bloomanime/main", "extendedart/main", "lotr/main", "m15/main",
+      "agclassic/main", "alphaland/main", "bloomanime/main", "extendedart/main", "extendedartland/main", "lotr/main", "m15/main",
       "m15artifact/main", "m15borderless/main", "m15borderlessartifact/main", "m15borderlessland/main", "m15devoid/main", "m15land/main",
       "m15pw/main", "m15pw/walker", "m15snow/main", "m15snowland/main", "modern/main", "modernland/main",
       // 4.33's borderless planeswalkers: m15pw's box, and the tall one's

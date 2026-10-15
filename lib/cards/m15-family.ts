@@ -105,6 +105,7 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   "flip",
   "aftermath",
   "extendedart",
+  "extendedartland",
   "expeditionland",
   "nyx",
   "fullart",

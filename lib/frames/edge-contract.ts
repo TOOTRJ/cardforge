@@ -195,6 +195,9 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // bucket): EXTENDED_ART_EDGES — the art runs to the side edges between the
   // title bar and the type bar, as every print runs it.
   extendedart: EXTENDED_ART_EDGES,
+  // Its land dress (owner Round 63): the same pack's land frames, the same
+  // edges.
+  extendedartland: EXTENDED_ART_EDGES,
   // The black-bordered textless promos (TODO 4.35 / 4.42, CC 'Magic Fest
   // Promos', frames bucket): the black ring on every edge, as SCH / PF print
   // it. (The borderless textless printings are one-off designs that land

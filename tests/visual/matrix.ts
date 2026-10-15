@@ -675,6 +675,10 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // overlay band (extendedcrown/<key>) on the MSE masters — every colour,
   // the grey colourless crown, gold (a pair wears gold: no pair masters).
   ["extendedart", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
+  // Its land dress (TODO 4.7, owner Round 63): the same band over the land
+  // frames — a colour's (NEO #503 Otawara), the grey C crown over the grey
+  // land frame, gold.
+  ["extendedartland", ["u", "c", "wub"]],
   // TODO 4.6f (wave 2c): the STANDARD band over the snow frames — the
   // crowned snow prints' keys (u: J22 #12, g: PH19 #5, the gold pair wears
   // gold with its two-colour switch off: KHM #224) and the keys no print

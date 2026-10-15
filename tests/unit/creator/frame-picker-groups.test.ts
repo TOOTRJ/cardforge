@@ -83,6 +83,46 @@ const MOVED: readonly FrameTemplate[] = [
 ];
 const isMoved = (template: string) => (MOVED as readonly string[]).includes(template);
 
+/** Extended art's LAND dress (TODO 4.7, owner Round 63, 2026-10-14), made
+ *  after the recording: `extendedart` split by kind — a land on extended art
+ *  wears `extendedartland`, the pack's land frames. That changes WHICH
+ *  template a land wears, not the picker's groups, so every comparison below
+ *  reads the dump with the land dress folded back onto `extendedart`
+ *  (asOneExtendedFrame). The split itself — the kind gate, the gallery, the
+ *  import over every extended-art printing, the AI request, the own-card
+ *  remix — is pinned in tests/unit/creator/extended-art-land.test.ts. */
+const LAND_DRESS: FrameTemplate = "extendedartland";
+
+/** The dump with the land dress folded onto `extendedart`: every VALUE that
+ *  names it names `extendedart`; the kind gate's land answers for
+ *  `extendedart` are the dress's; a resolver row for a land on the dress is
+ *  the row a land on `extendedart` had (renamed); every other decision about
+ *  the dress as a template of its own (its kind gate for other kinds, its
+ *  base, label, kind change…) is new, and dropped. */
+function asOneExtendedFrame(dump: Dump): Dump {
+  const fold = (text: string) => text.split(`"${LAND_DRESS}"`).join('"extendedart"').split(`${LAND_DRESS}|`).join("extendedart|");
+  const out: Dump = {};
+  for (const [section, rows] of Object.entries(dump)) {
+    out[section] = {};
+    for (const [key, value] of Object.entries(rows)) {
+      const parts = key.split("|");
+      const folded = JSON.parse(fold(JSON.stringify(value ?? null))) as unknown;
+      if (!parts.includes(LAND_DRESS)) {
+        out[section][key] = value === undefined ? undefined : folded;
+        continue;
+      }
+      if (section === "resolve") out[section][parts.map((p) => (p === LAND_DRESS ? "extendedart" : p)).join("|")] = folded;
+    }
+  }
+  for (const section of ["refuses", "supports", "kindGate"]) {
+    for (const face of ["land", "basic"]) {
+      const own = dump[section][`${LAND_DRESS}|${face}`];
+      if (own !== undefined) out[section][`extendedart|${face}`] = own;
+    }
+  }
+  return out;
+}
+
 function productionVerifiedKeys(): Set<string> {
   const sql = fs.readFileSync(path.join(process.cwd(), "supabase/seed.sql"), "utf8");
   const block = /-- frame_reviews:begin\n([\s\S]*?)-- frame_reviews:end/.exec(sql)?.[1].replace(/--.*$/gm, "");
@@ -102,7 +142,9 @@ const PROD = productionVerifiedKeys();
 /** Production's list plus every colour of the frames that moved (today
  *  production has only the two full-art basics ticked, in w u b r g c): the
  *  day they are all ticked. */
-const PROD_PLUS_MOVED = new Set([...PROD, ...MOVED.flatMap((t) => FRAME_COLOR_KEYS.map((k) => frameComboKey(t, k)))]);
+// …and extended art's LAND dress (TODO 4.7, owner Round 63, after the
+// recording): the land half of a moved frame, ticked the same day.
+const PROD_PLUS_MOVED = new Set([...PROD, ...[...MOVED, LAND_DRESS].flatMap((t) => FRAME_COLOR_KEYS.map((k) => frameComboKey(t, k)))]);
 const VERIFIED: Record<string, ReadonlySet<string>> = { prod: PROD, prodPlusMoved: PROD_PLUS_MOVED, all: ALL };
 
 const IDENTITY: Record<FrameColorKey, ColorIdentity[]> = {
@@ -333,7 +375,7 @@ function compute(): Dump {
 
   // The server's kind gate and the remix of an own card, for a card stored
   // on each moved frame (and the frames that stayed).
-  const stored: FrameTemplate[] = [...MOVED, "nyx", "expeditionland", "fullart", "lotr", "m15borderless"];
+  const stored: FrameTemplate[] = [...MOVED, LAND_DRESS, "nyx", "expeditionland", "fullart", "lotr", "m15borderless"];
   const storedFaces: Record<string, { card_type: CardType; supertype: string; subtypes: string[]; title: string; rules_text: string }> = {
     creature: { card_type: "creature", supertype: "", subtypes: ["Elf"], title: "Test Card", rules_text: "Flying" },
     enchantment: { card_type: "enchantment", supertype: "", subtypes: [], title: "Test Card", rules_text: "Flying" },
@@ -417,7 +459,7 @@ describe("the frame picker's groups: a classification change only", () => {
     return;
   }
   const main = JSON.parse(fs.readFileSync(FIXTURE, "utf8")) as Dump;
-  const raw = compute();
+  const raw = asOneExtendedFrame(compute());
   const branch = condense(raw);
 
   /** The keys of a section whose value differs from main's. */
@@ -543,7 +585,9 @@ describe("the frame picker's groups: a classification change only", () => {
 
   it("no frame is left in or added to the showcase group but by the move", () => {
     const showcase = (dump: Dump) =>
-      FRAME_TEMPLATE_VALUES.filter((t) => (dump.labels[t] as { era: string }).era === "showcase");
+      FRAME_TEMPLATE_VALUES.filter((t) => (dump.labels[t] as { era: string } | undefined)?.era === "showcase");
+    // (The land dress, folded away, is an M15 variation like extendedart.)
+    expect(eraForTemplate(LAND_DRESS)).toBe("m15");
     expect(showcase(main).filter((t) => !showcase(branch).includes(t))).toEqual([...MOVED]);
     expect(showcase(branch).filter((t) => !showcase(main).includes(t))).toEqual([]);
     // Their frame SETS (the admin's treatment batches, the import's
