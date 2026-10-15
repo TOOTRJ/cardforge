@@ -190,9 +190,12 @@ const PICKS: readonly Pick[] = [
   { from: "m15tokentext/g/token-long", why: "token with a text box" },
   { from: "m20tokentall/g/token-long", why: "M20 token, tall box (squeezed paragraph gaps)" },
   { from: "emblem/g/emblem-long", why: "emblem: the toned master, the walker's name, no cost or stats" },
-  // 3.24's cases, by name (the Zendikar split type line waits for 4.40, the
-  // first profile to use `type.split`).
+  // 3.24's cases, by name — the Zendikar split type line since 4.40, the
+  // first profile to use `type.split`.
   { from: "fullartland/w/land-short", why: "3.24: the full-art Plains — the basic symbol disc, footer on the art" },
+  { from: "m15fullartlandzen/w/land-short", why: "3.24 / 4.40: the Zendikar split type line — \"Basic Land\" left, the subtype centred right — and the medallion's symbol" },
+  { from: "m15fullartlandsnc/u/land-short", why: "4.40: the split bar and the medallion moved apart onto SNC's prints (the symbol box rides the medallion)" },
+  { from: "m15fullartlandthb/g/land-short", why: "4.41: the plain bar — a basic's symbol slot that draws nothing, no watermark on the art" },
   { from: "m15land/w/land-short", why: "3.24: the m15land Plains — its watermark, unchanged by the disc slot" },
   { from: "m15textless/g/creature-long", why: "3.24: a textless creature — rules kept in the data, hidden in both renderers" },
   { from: "m15borderless/b/creature-long", why: "borderless: art to the edge, white ink, the keylined set symbol" },
