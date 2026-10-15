@@ -26,7 +26,11 @@ const withSlot = { basicSymbol: BASIC_SYMBOL_MSE_SOCKET };
 describe("basicSymbolFor", () => {
   it("is null on a profile without a slot — every profile but the full-art basics", () => {
     for (const template of FRAME_TEMPLATE_VALUES) {
-      if (template === "m15fullartland" || template === "fullartland") continue;
+      if (getFrameProfile(template).basicSymbol) {
+        // The full-art basics only: 4.39's two and 4.40 / 4.41's three.
+        expect(["m15fullartland", "fullartland", "m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb"]).toContain(template);
+        continue;
+      }
       expect(basicSymbolFor(getFrameProfile(template), plains, null), template).toBeNull();
     }
   });

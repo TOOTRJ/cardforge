@@ -4712,6 +4712,11 @@ const M15FULLARTLANDZEN: FrameProfile = {
   ...splitBarBasic("m15fullartlandzen", ZEN_BASIC_BAR_DY_PCT, 0),
   label: "Zendikar Full-Art Basic Land",
   artSlot: { topPct: 10.9, leftPct: 7.4, widthPct: 85.2, heightPct: 72.4 },
+  // Its window is 72 % of the card's height — not art-first (artFillsCard) —
+  // and see-through, so the bare master is a stone ring round nothing: the
+  // picker's tile draws the sample art under it, as the other tall-window
+  // frames' do (picker-only).
+  pickerSampleArt: true,
 };
 
 // …the same bars with the art under a white ring, no stone (4.40: SNC). The

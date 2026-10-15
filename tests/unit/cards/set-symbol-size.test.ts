@@ -300,7 +300,7 @@ describe("setSymbolSize on the family", () => {
     }
     // The cap still holds for an unlisted glyph (the synthetic wide one
     // above) and for the full-art basics, which never read the table.
-    for (const template of ["m15fullartland", "fullartland"]) {
+    for (const template of ["m15fullartland", "fullartland", "m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb"]) {
       expect(setSymbolSize(getFrameProfile(template), glyph("m20")).sizePct, template).toBe(0.065);
     }
   });
@@ -320,7 +320,7 @@ describe("setSymbolSize on the family", () => {
     // its own "ink-height" (TODO 4.21b), never the family's printed sizes.
     for (const template of FRAME_TEMPLATE_VALUES) {
       const p = getFrameProfile(template);
-      const basic = template === "m15fullartland" || template === "fullartland";
+      const basic = template.startsWith("m15fullartland") || template === "fullartland";
       const outside = template === "split" ? "ink-height" : undefined;
       expect(p.setSymbolFit, template).toBe(M15_FAMILY_TEMPLATES.includes(template) ? (basic ? "ink-box" : "ink") : outside);
     }
@@ -349,7 +349,7 @@ describe("setSymbolSize on the family", () => {
   });
 
   it("keeps the full-art basics' glyph at 0.065 W unless its ink is taller than the box", () => {
-    for (const template of ["m15fullartland", "fullartland"]) {
+    for (const template of ["m15fullartland", "fullartland", "m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb"]) {
       const p = getFrameProfile(template);
       // Measured sets too: the printed-size table is the type bars' (v36).
       for (const code of ["m20", "fdn", "tdm", "dsk", "fin"]) {

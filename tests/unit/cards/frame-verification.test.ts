@@ -45,6 +45,13 @@ describe("frame reference registry", () => {
       "m15fullartland/m",
       "fullartland/c",
       "fullartland/m",
+      // …and the older designs (TODO 4.40 / 4.41): OGW prints the stone-ring
+      // Wastes; no SNC or plain-bar Wastes exists.
+      "m15fullartlandzen/m",
+      "m15fullartlandsnc/c",
+      "m15fullartlandsnc/m",
+      "m15fullartlandthb/c",
+      "m15fullartlandthb/m",
       "m15textless/u",
       "m15textless/c",
       "m15textlessland/c",
@@ -140,8 +147,9 @@ describe("frame reference registry", () => {
     // + 4.5c's Vehicle frame + 4.7's Nyx dress + the station frame's two
     // (TODO 4.27a) + 4.25's three Universes Beyond frames.
     // + the five M15 treatments that left the showcase era on 2026-10-13
-    // (extended art, the two full-art basics, the two textless frames).
-    expect(m15Templates.length).toBe(50);
+    // (extended art, the two full-art basics, the two textless frames)
+    // + 4.40 / 4.41's three older full-art basics.
+    expect(m15Templates.length).toBe(53);
     expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {

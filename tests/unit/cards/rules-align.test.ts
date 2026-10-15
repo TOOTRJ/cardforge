@@ -134,7 +134,9 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
     // The station frame (TODO 4.27a): tier bands beside "N+" badges —
     // `rulesAlignSwitch: false` on its two entries.
     expect(without).toEqual(["m15station", "m15stationland", "m15pw", "m20token", "m20tokenartifact", "m15borderlesspw", "m15borderlesspwtall", "saga"]);
-    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(59);
+    // (…and 4.40 / 4.41's three older full-art basics offer it: a basic
+    // prints no rules, but the switch is harmless on a frame that draws none.)
+    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(62);
   });
 
   it("rulesAlignOf is \"center\" only for the card's \"center\" on a frame that offers it", () => {

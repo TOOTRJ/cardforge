@@ -83,6 +83,16 @@ const MOVED: readonly FrameTemplate[] = [
 ];
 const isMoved = (template: string) => (MOVED as readonly string[]).includes(template);
 
+/** Templates ADDED after the recording (TODO 4.40 / 4.41: the older
+ *  full-art basics, new and unverified). This file pins #556's
+ *  classification, so it computes over the recording's templates: an added
+ *  frame is left out of every policy ("all verified" included) and out of
+ *  the variations lists — its own decisions are its own PR's tests'
+ *  (tests/unit/creator/older-fullart-basics.test.ts). */
+const ADDED_SINCE: readonly FrameTemplate[] = ["m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb"];
+const isAdded = (template: string) => (ADDED_SINCE as readonly string[]).includes(template);
+const TEMPLATES = FRAME_TEMPLATE_VALUES.filter((t) => !isAdded(t));
+
 function productionVerifiedKeys(): Set<string> {
   const sql = fs.readFileSync(path.join(process.cwd(), "supabase/seed.sql"), "utf8");
   const block = /-- frame_reviews:begin\n([\s\S]*?)-- frame_reviews:end/.exec(sql)?.[1].replace(/--.*$/gm, "");
@@ -97,7 +107,7 @@ function productionVerifiedKeys(): Set<string> {
   }
   return out;
 }
-const ALL = new Set(FRAME_TEMPLATE_VALUES.flatMap((t) => FRAME_COLOR_KEYS.map((k) => frameComboKey(t, k))));
+const ALL = new Set(TEMPLATES.flatMap((t) => FRAME_COLOR_KEYS.map((k) => frameComboKey(t, k))));
 const PROD = productionVerifiedKeys();
 /** Production's list plus every colour of the frames that moved (today
  *  production has only the two full-art basics ticked, in w u b r g c): the
@@ -143,16 +153,18 @@ function compute(): Dump {
 
   for (const [name, keys] of Object.entries(VERIFIED)) {
     for (const kind of CARD_KIND_VALUES) {
-      out.gallery[`${name}|${kind}`] = framesForKind(kind, keys).map(
+      out.gallery[`${name}|${kind}`] = framesForKind(kind, keys).filter((c) => !isAdded(c.template)).map(
         (c) => `${c.template}|${c.era}|${c.group}|${c.availableColorKeys.join("")}`,
       );
     }
     for (const cardType of CARD_TYPE_VALUES) {
-      out.aiChoices[`${name}|${cardType}`] = frameChoicesForType(cardType, keys).map((c) => c.template);
+      out.aiChoices[`${name}|${cardType}`] = frameChoicesForType(cardType, keys)
+        .map((c) => c.template)
+        .filter((t) => !isAdded(t));
     }
   }
 
-  for (const template of FRAME_TEMPLATE_VALUES) {
+  for (const template of TEMPLATES) {
     for (const kind of CARD_KIND_VALUES) {
       out.refuses[`${template}|${kind}`] = templateRefusesKind(template, kind);
       out.supports[`${template}|${kind}`] = templateSupportsKind(template, kind);
@@ -175,8 +187,8 @@ function compute(): Dump {
     }
   }
   for (const kind of CARD_KIND_VALUES) {
-    for (const base of FRAME_TEMPLATE_VALUES) {
-      const skins = skinVariantsFor(kind, base);
+    for (const base of TEMPLATES) {
+      const skins = skinVariantsFor(kind, base).filter((t) => !isAdded(t));
       if (skins.length > 0) out.skins[`${kind}|${base}`] = skins;
     }
   }
@@ -186,7 +198,7 @@ function compute(): Dump {
   for (const [name, keys] of Object.entries(VERIFIED)) {
     for (const kind of CARD_KIND_VALUES) {
       const standard = framesForKind(kind, ALL).find((c) => c.era === "m15")?.template;
-      for (const wanted of FRAME_TEMPLATE_VALUES) {
+      for (const wanted of TEMPLATES) {
         if (!templateSupportsKind(wanted, kind)) continue;
         for (const colorKey of FRAME_COLOR_KEYS) {
           for (const prefer of ["frame", "colour"] as const) {
@@ -213,7 +225,7 @@ function compute(): Dump {
   }
 
   // The import's candidates.
-  for (const wanted of FRAME_TEMPLATE_VALUES) {
+  for (const wanted of TEMPLATES) {
     for (const cardType of CARD_TYPE_VALUES) {
       for (const supertype of ["", "Artifact", "Enchantment"]) {
         for (const rulesText of ["", "Flying"]) {
@@ -505,7 +517,7 @@ describe("the frame picker's groups: a classification change only", () => {
 
   it("no frame is left in or added to the showcase group but by the move", () => {
     const showcase = (dump: Dump) =>
-      FRAME_TEMPLATE_VALUES.filter((t) => (dump.labels[t] as { era: string }).era === "showcase");
+      TEMPLATES.filter((t) => (dump.labels[t] as { era: string }).era === "showcase");
     expect(showcase(main).filter((t) => !showcase(branch).includes(t))).toEqual([...MOVED]);
     expect(showcase(branch).filter((t) => !showcase(main).includes(t))).toEqual([]);
     // Their frame SETS (the admin's treatment batches, the import's
