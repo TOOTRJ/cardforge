@@ -77,7 +77,14 @@ function productionVerifiedKeys(): Set<string> {
   return out;
 }
 const PROD = productionVerifiedKeys();
-const withNyx = (...colours: string[]) => new Set([...PROD, ...colours.map((c) => frameComboKey("m15nyx", c))]);
+/**
+ * The unverified side of this suite: production's list WITHOUT its Nyx ticks.
+ * Production verified the frame in every colour on 2026-10-14 (the seed
+ * mirror of that date), so the list itself is now the verified side; this
+ * keeps every "before the tick" case reading the rest of production's list.
+ */
+const PROD_BEFORE_NYX = new Set([...PROD].filter((key) => !key.startsWith("m15nyx/")));
+const withNyx = (...colours: string[]) => new Set([...PROD_BEFORE_NYX, ...colours.map((c) => frameComboKey("m15nyx", c))]);
 const NYX_VERIFIED = withNyx(...FRAME_COLOR_KEYS);
 
 const ENVOY = byName("Transcendent Envoy"); // THB #40: Enchantment Creature, white, 1/2
@@ -385,7 +392,7 @@ describe("AI and random frames (resolveGeneratedFrame)", () => {
     ).toBe("m15nyx");
   });
 
-  it("an unpublished Nyx frame never costs a card the frame another rule named (production's list today)", () => {
+  it("an unpublished Nyx frame never costs a card the frame another rule named (production's list before its Nyx ticks)", () => {
     // Found by the independent check of #542, enumerating every input on
     // production's list against main: an Enchantment Artifact that is no
     // Vehicle, asked onto the Vehicle frame, means that frame's base — the
@@ -395,7 +402,7 @@ describe("AI and random frames (resolveGeneratedFrame)", () => {
     for (const colour of ["white", "blue", "black", "red", "green", "colorless"] as const) {
       for (const roll of [0, 0.5, 0.99]) {
         expect(
-          resolveGeneratedFrame({ cardType: "artifact", requested: "m15vehicle", colorIdentity: [colour], verifiedKeys: PROD, face: relic, random: () => roll }),
+          resolveGeneratedFrame({ cardType: "artifact", requested: "m15vehicle", colorIdentity: [colour], verifiedKeys: PROD_BEFORE_NYX, face: relic, random: () => roll }),
           colour,
         ).toBe("m15artifact");
       }
@@ -404,12 +411,12 @@ describe("AI and random frames (resolveGeneratedFrame)", () => {
     expect(
       resolveGeneratedFrame({ cardType: "artifact", requested: "m15vehicle", colorIdentity: ["blue"], verifiedKeys: withNyx("u"), face: relic }),
     ).toBe("m15nyx");
-    // On production's list no input lands on the Nyx frame, asked for or not.
+    // On production's list before its Nyx ticks no input lands on the Nyx frame, asked for or not.
     const creature = { cardType: "creature", supertype: "Enchantment", subtypes: ["Spirit"], title: "Eidolon", power: "2", toughness: "2" };
     for (const requested of ["m15", "m15nyx", "random"] as const) {
       for (const roll of [0, 0.25, 0.5, 0.75, 0.99]) {
         expect(
-          resolveGeneratedFrame({ cardType: "creature", requested, colorIdentity: ["white"], verifiedKeys: PROD, face: creature, random: () => roll }),
+          resolveGeneratedFrame({ cardType: "creature", requested, colorIdentity: ["white"], verifiedKeys: PROD_BEFORE_NYX, face: creature, random: () => roll }),
         ).not.toBe("m15nyx");
       }
     }
@@ -424,7 +431,7 @@ describe("AI and random frames (resolveGeneratedFrame)", () => {
       ).toBe("m15nyx");
     }
     expect(resolveGeneratedFrame({ cardType: "enchantment", requested: "m15nyx", colorIdentity: ["white"], verifiedKeys: both, face: aura })).toBe("m15nyx");
-    // Unpublished in the card's colour (production today; another colour's tick): the plain frame.
+    // Unpublished in the card's colour (production before 2026-10-14; another colour's tick): the plain frame.
     for (const verified of [keys(["m15", "w"]), keys(["m15", "w"], ["m15nyx", "u"])]) {
       for (const requested of ["m15", "random"] as const) {
         expect(resolveGeneratedFrame({ cardType: "enchantment", requested, colorIdentity: ["white"], verifiedKeys: verified, face: aura })).toBe("m15");
@@ -432,7 +439,7 @@ describe("AI and random frames (resolveGeneratedFrame)", () => {
     }
     for (const requested of ["m15", "m15nyx", "random"] as const) {
       for (const roll of [0, 0.5, 0.99]) {
-        expect(resolveGeneratedFrame({ cardType: "enchantment", requested, colorIdentity: ["white"], verifiedKeys: PROD, face: aura, random: () => roll })).not.toBe("m15nyx");
+        expect(resolveGeneratedFrame({ cardType: "enchantment", requested, colorIdentity: ["white"], verifiedKeys: PROD_BEFORE_NYX, face: aura, random: () => roll })).not.toBe("m15nyx");
       }
     }
     // A body of its own in print: never moved, never a random pick — the frame only by name.
@@ -472,9 +479,14 @@ describe("AI and random frames (resolveGeneratedFrame)", () => {
 });
 
 describe("imports follow the printing (the registry's era/2015+nyx rule)", () => {
-  it("production has not verified the frame: this suite's unverified side is production's own list", () => {
-    for (const key of FRAME_COLOR_KEYS) expect(PROD.has(frameComboKey("m15nyx", key)), key).toBe(false);
-    expect(PROD.has(frameComboKey("m15", "w"))).toBe(true);
+  it("production has verified the frame in every colour: this suite's unverified side is production's list without those ticks", () => {
+    for (const key of FRAME_COLOR_KEYS) {
+      expect(PROD.has(frameComboKey("m15nyx", key)), key).toBe(true);
+      expect(PROD_BEFORE_NYX.has(frameComboKey("m15nyx", key)), key).toBe(false);
+    }
+    expect(PROD_BEFORE_NYX.has(frameComboKey("m15", "w"))).toBe(true);
+    // Production's own list is the verified side: the printing's frame, exact.
+    expect(finalizeImportMatch(mapScryfallToFormPatch(ENVOY), PROD).frame_template).toBe("m15nyx");
   });
 
   it("keeps its signature: no new rule key, the starfield gap named as before", () => {
@@ -496,9 +508,9 @@ describe("imports follow the printing (the registry's era/2015+nyx rule)", () =>
 
   it("an enchantment creature lands on its M15 frame until the Nyx frame is verified in its colour, then on it, exact", () => {
     const match = frameMatchFromScryfall(ENVOY);
-    const before = withVerification(match, "w", PROD);
+    const before = withVerification(match, "w", PROD_BEFORE_NYX);
     expect(before).toMatchObject({ status: "nearest", template: "m15", reason: "not yet verified in white", unverified: true });
-    expect(finalizeImportMatch(mapScryfallToFormPatch(ENVOY), PROD).frame_template).toBe("m15");
+    expect(finalizeImportMatch(mapScryfallToFormPatch(ENVOY), PROD_BEFORE_NYX).frame_template).toBe("m15");
     // Another colour's tick never counts.
     expect(finalizeImportMatch(mapScryfallToFormPatch(ENVOY), withNyx("u", "c", "m")).frame_template).toBe("m15");
     const after = withVerification(match, "w", withNyx("w"));
@@ -511,7 +523,7 @@ describe("imports follow the printing (the registry's era/2015+nyx rule)", () =>
   it("a plain enchantment of Foundations 2024 on is the same printing of the frame", () => {
     const match = frameMatchFromScryfall(BLESSING);
     expect(match).toMatchObject({ signature: "era/2015+nyx", template: "m15", onceVerified: "m15nyx", onceVerifiedMatch: { status: "exact" } });
-    expect(finalizeImportMatch(mapScryfallToFormPatch(BLESSING), PROD).frame_template).toBe("m15");
+    expect(finalizeImportMatch(mapScryfallToFormPatch(BLESSING), PROD_BEFORE_NYX).frame_template).toBe("m15");
     expect(finalizeImportMatch(mapScryfallToFormPatch(BLESSING), withNyx("w")).frame_template).toBe("m15nyx");
   });
 
@@ -533,7 +545,7 @@ describe("imports follow the printing (the registry's era/2015+nyx rule)", () =>
   it("an Enchantment Artifact is the Enchantment kind with the word, and lands there in its colour; a colourless enchantment on the silver key", () => {
     const patch = mapScryfallToFormPatch(BIDENT);
     expect({ card_type: patch.card_type, supertype: patch.supertype }).toEqual({ card_type: "enchantment", supertype: "Legendary Artifact" });
-    expect(finalizeImportMatch(patch, PROD).frame_template).toBe("m15");
+    expect(finalizeImportMatch(patch, PROD_BEFORE_NYX).frame_template).toBe("m15");
     expect(finalizeImportMatch(patch, withNyx("u")).frame_template).toBe("m15nyx");
     const conscription = mapScryfallToFormPatch(CONSCRIPTION);
     expect(finalizeImportMatch(conscription, withNyx("c")).frame_template).toBe("m15nyx");
@@ -541,7 +553,7 @@ describe("imports follow the printing (the registry's era/2015+nyx rule)", () =>
 
   it("the remix-safe gates take every landing: verified or not, the frame gate and the kind gate pass", () => {
     for (const card of [ENVOY, BLESSING, DAXOS, KLOTHYS, RESCUE, BIDENT, CONSCRIPTION]) {
-      for (const verified of [PROD, NYX_VERIFIED]) {
+      for (const verified of [PROD_BEFORE_NYX, NYX_VERIFIED]) {
         const patch = finalizeImportMatch(mapScryfallToFormPatch(card), verified);
         expect(frameGateError(patch.frame_template, patch.color_identity ?? [], verified), card.name).toBeNull();
         expect(
@@ -575,7 +587,7 @@ describe("imports follow the printing (the registry's era/2015+nyx rule)", () =>
       expect(match.signature.startsWith("era/2015"), JSON.stringify(over)).toBe(false);
       expect(match.onceVerified, JSON.stringify(over)).toBeUndefined();
       const patch = mapScryfallToFormPatch(synthetic(over));
-      expect(finalizeImportMatch(patch, NYX_VERIFIED).frame_template, JSON.stringify(over)).toBe(finalizeImportMatch(patch, PROD).frame_template);
+      expect(finalizeImportMatch(patch, NYX_VERIFIED).frame_template, JSON.stringify(over)).toBe(finalizeImportMatch(patch, PROD_BEFORE_NYX).frame_template);
     }
   });
 
@@ -589,7 +601,7 @@ describe("imports follow the printing (the registry's era/2015+nyx rule)", () =>
       const card = synthetic(over);
       expect(frameMatchFromScryfall(card).onceVerified, JSON.stringify(over)).not.toBe("m15nyx");
       const patch = mapScryfallToFormPatch(card);
-      expect(finalizeImportMatch(patch, NYX_VERIFIED).frame_template, JSON.stringify(over)).toBe(finalizeImportMatch(patch, PROD).frame_template);
+      expect(finalizeImportMatch(patch, NYX_VERIFIED).frame_template, JSON.stringify(over)).toBe(finalizeImportMatch(patch, PROD_BEFORE_NYX).frame_template);
     }
   });
 
@@ -620,8 +632,8 @@ describe("imports follow the printing (the registry's era/2015+nyx rule)", () =>
     expect(frameFitsImport("m15nyx", { ...input, patch })).toBe(true);
     expect(frameFitsImport("m15nyx", { ...input, patch: { ...patch, supertype: "" } })).toBe(false);
     expect(frameFitsImport("m15nyx", { kind: "enchantment", colorKey: "w", verifiedKeys: EVERY, patch: { ...patch, card_type: "enchantment", supertype: "" } })).toBe(true);
-    // Unverified (production today): the chooser, as before this frame.
-    const today = importFramePlan(finalizeImportMatch(mapScryfallToFormPatch(ENVOY), PROD), PROD);
+    // Unverified (production before 2026-10-14): the chooser, as before this frame.
+    const today = importFramePlan(finalizeImportMatch(mapScryfallToFormPatch(ENVOY), PROD_BEFORE_NYX), PROD_BEFORE_NYX);
     expect(today.mode).toBe("choose");
     // Verified: the printing's own frame, exact — nothing to choose.
     const verified = withNyx("w");
@@ -653,7 +665,7 @@ describe("the AI deck remix lands where the import lands (remixFrameFor)", () =>
 
   it("a Nyx printing remixes onto its M15 frame until the Nyx frame is verified in its colour, then onto it — at one credit", () => {
     const envoy = mapScryfallToFormPatch(ENVOY);
-    const before = remixOfPatch(envoy, PROD);
+    const before = remixOfPatch(envoy, PROD_BEFORE_NYX);
     const after = remixOfPatch(envoy, withNyx("w"));
     expect(before.frame_template).toBe("m15");
     expect(after).toEqual({ ...before, frame_template: "m15nyx" });
@@ -665,7 +677,7 @@ describe("the AI deck remix lands where the import lands (remixFrameFor)", () =>
   it("every captured Nyx printing lands where the creator's import lands it, verified or not", () => {
     for (const card of [ENVOY, BLESSING, DAXOS, KLOTHYS, RESCUE, BIDENT, CONSCRIPTION]) {
       const patch = mapScryfallToFormPatch(card);
-      for (const verified of [PROD, NYX_VERIFIED]) {
+      for (const verified of [PROD_BEFORE_NYX, NYX_VERIFIED]) {
         expect(remixOfPatch(patch, verified).frame_template, card.name).toBe(importLanding(patch, verified));
       }
       expect(remixOfPatch(patch, NYX_VERIFIED).frame_template, card.name).toBe("m15nyx");
