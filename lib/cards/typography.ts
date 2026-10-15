@@ -72,6 +72,25 @@ export const TITLE_SIZE_PCT = 0.0533;
 /** Type line — CC 0.0324 H, 68 px at HD. */
 export const TYPE_SIZE_PCT = 0.0453;
 
+// The 2014–19 arch token's name (TODO 4.53): gold Beleren Small Caps on 49
+// prints of 2014–19 (TDOM, TM19, TRNA, TGRN, TWAR, TMH1, TXLN, TBFZ, TOGW,
+// TEMN, TKLD, TC16 — every colour, artifact, colourless, with and without a
+// text box; Scryfall PNGs, HD px): a capital 62.6 px tall (129.2 → 191.8),
+// a lower-case letter's small capital 48.4 px (0.773 of it). Synthesized
+// from Beleren Bold (TextSlot.smallCaps): its 0.7002 em capital is 62.6 px
+// at 89.4 px, so the capital size is 90 px (whole at 750 and HD), the small
+// capitals 0.78 of it, and the tracking what makes the names as wide as the
+// prints' with the face's full kerning (owner Round 65): 24 clean names set
+// through Satori as the bake sets them, their ink against the prints' —
+// median 1.001, mean 0.999 at 0.047 em (0.035 before the kerning was
+// counted; kerned, 0.035 left the names 2 % narrow).
+/** The arch token's name, capital size — 90 px at HD. */
+export const TOKEN_ARCH_TITLE_SIZE_PCT = 90 / 1500;
+/** Its lower-case letters as capitals at this fraction of the capital size. */
+export const TOKEN_ARCH_SMALL_CAP_EM = 0.78;
+/** Its tracking, em of the capital size on every run. */
+export const TOKEN_ARCH_TITLE_TRACKING_EM = 0.047;
+
 /** The modal double-faced flipside strip's two texts (TODO 5.1b; Card
  *  Conjurer's packModalRegular.js, fractions of H turned into HD px): the
  *  other face's type word in Beleren Bold — CC 0.0234 H, 49 px — and its

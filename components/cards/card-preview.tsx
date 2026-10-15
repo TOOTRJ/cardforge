@@ -114,6 +114,7 @@ import { WHITE_BORDER_RECT, resolveWhiteBorder, whiteBorderDataUrl } from "@/lib
 import { cardStationLayout, stationDrawing, type StationPiece } from "@/lib/cards/station-layout";
 import { inlineSymbolStyle, symbolStyle, symbolStyleOf, type SymbolStyleSpec } from "@/lib/cards/symbol-style";
 import { FOOTER_BRUSH_PATH, FOOTER_BRUSH_VIEWBOX } from "@/lib/cards/footer-brush";
+import { smallCapsRowEm, smallCapsRunBox, smallCapsRuns } from "@/lib/cards/small-caps";
 import { BRAND_FACE, TYPE_FACES, faceOf, footerFace, slotFace } from "@/lib/cards/type-faces";
 import {
   resolveLoyaltyRows,
@@ -1466,14 +1467,19 @@ function CardFace({
         italic={isShowcase}
       >
         <span
-          style={
-            titleFit
+          style={{
+            ...(titleFit
               ? { ...ELLIPSIS, ...titleInk, ...textDy(layout.title, titleSizePct), maxWidth: cqw(titleFit.widthPct) }
-              : { ...ELLIPSIS, ...titleInk, ...textDy(layout.title) }
-          }
+              : { ...ELLIPSIS, ...titleInk, ...textDy(layout.title) }),
+            // A small-caps name (TODO 4.53): its runs on one baseline — the
+            // bake's smallCapsRowBake twin (lib/cards/small-caps.ts).
+            ...(layout.title.smallCaps ? smallCapsRowStyle(layout.title, titleFit ? titleSizePct : layout.title.sizePct) : {}),
+          }}
           title={safeTitle}
         >
-          {displayLine(titleFit ? titleFit.text : safeTitle)}
+          {layout.title.smallCaps
+            ? smallCapsRunsPreview(layout.title, titleFit ? titleSizePct : layout.title.sizePct, displayLine(titleFit ? titleFit.text : safeTitle))
+            : displayLine(titleFit ? titleFit.text : safeTitle)}
         </span>
         {showCost && !layout.costRect ? (
           <ManaCostGlyphs
@@ -2969,6 +2975,44 @@ function rectStyle(rect: Rect): CSSProperties {
     width: `${rect.widthPct}%`,
     height: `${rect.heightPct}%`,
   };
+}
+
+/** A small-caps name's row (TextSlot.smallCaps, TODO 4.53): a flex row of
+ *  runs on its bottom, a full-size line box tall — the bake's
+ *  smallCapsRowBake twin (lib/cards/small-caps.ts). */
+function smallCapsRowStyle(slot: TextSlot, sizePct: number): CSSProperties {
+  return { display: "flex", alignItems: "flex-end", height: cqw(smallCapsRowEm(slotFace(slot)) * sizePct) };
+}
+
+/** The runs of a small-caps name — the bake's smallCapsRunsBake twin: each
+ *  run in its face's content box (capitals at `sizePct`, lower-case letters
+ *  as capitals at `slot.smallCaps` of it), a small run lifted by the descent
+ *  it lacks, a word's gap as its left margin, the capital size's tracking on
+ *  every run. */
+function smallCapsRunsPreview(slot: TextSlot, sizePct: number, line: string): ReactNode[] {
+  const face = slotFace(slot);
+  const smallCapEm = slot.smallCaps ?? 1;
+  const tracking = cqw((slot.letterSpacingEm ?? 0) * sizePct);
+  return smallCapsRuns(line, { smallCapEm, letterSpacingEm: slot.letterSpacingEm, face: face.metricsId }).map((run, i) => {
+    const box = smallCapsRunBox(run, smallCapEm, face);
+    return (
+      <span
+        key={i}
+        style={{
+          width: cqw(run.widthEm * sizePct),
+          fontSize: cqw(box.sizeEm * sizePct),
+          lineHeight: cqw(box.lineHeightEm * sizePct),
+          marginBottom: box.liftEm ? cqw(box.liftEm * sizePct) : undefined,
+          marginLeft: run.gapBeforeEm + run.kernBeforeEm ? cqw((run.gapBeforeEm + run.kernBeforeEm) * sizePct) : undefined,
+          letterSpacing: tracking,
+          whiteSpace: "pre",
+          flexShrink: 0,
+        }}
+      >
+        {run.text}
+      </span>
+    );
+  });
 }
 
 // Font size as container-query width units, so text scales with the card.

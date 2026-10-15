@@ -667,7 +667,8 @@ export function resolveFrameOverlays(
           : overlayWanted(slot.anatomy, style, facts);
       if (!wanted) continue;
       const look = resolveTwoColor(profile, style, facts);
-      const base = look ? look.pair : facts.colorKey;
+      const goldPair = slot.anatomy === "crown" && slot.pairCrownOnGold ? twoColorPairOf(facts.colors) : null;
+      const base = look ? look.pair : goldPair ?? facts.colorKey;
       key = slot.keyMap?.[base] ?? base;
     }
     if (!slot.keys.includes(key)) continue;

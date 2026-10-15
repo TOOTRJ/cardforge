@@ -76,6 +76,9 @@ import {
   SPLIT_TITLE_SIZE_PCT,
   SPLIT_TYPE_SIZE_PCT,
   TITLE_SIZE_PCT,
+  TOKEN_ARCH_SMALL_CAP_EM,
+  TOKEN_ARCH_TITLE_SIZE_PCT,
+  TOKEN_ARCH_TITLE_TRACKING_EM,
   ALPHA_ARTIST_SIZE_PCT,
   ALPHA_COPYRIGHT_SIZE_PCT,
   ALPHA_COST_DISC_PCT,
@@ -242,6 +245,17 @@ export type TextSlot = {
    *  gap it placed, so both renderers draw it. Unset: the gap never moves
    *  (every other box). Code-owned: not part of the override schema. */
   paragraphGapMinPx?: number;
+  /** FRONT-FACE TITLE only (TODO 4.53): the name set in SYNTHESIZED small
+   *  caps of the slot's face — every capital at the slot's size, every
+   *  lower-case letter as its capital at this fraction of it (the 2014–19
+   *  arch token's Beleren Small Caps name, TDOM #3, TM19 #6 … — the same
+   *  synthesis as the collector line's artist, 4.9b; no font file is
+   *  added). `letterSpacingEm` is of the CAPITAL size on every run. The
+   *  fit measures it (lib/cards/small-caps.ts smallCapsWidthEm, through
+   *  fitTitleBand) and both renderers draw its runs (smallCapsRuns) on one
+   *  baseline. Unset = the name as typed (every other profile). Code-owned:
+   *  not part of the override schema. */
+  smallCaps?: number;
 };
 
 /** TextSlot.fit's policies. */
@@ -498,7 +512,15 @@ export type TwoColorDress = "split" | "hybrid";
  *  (M15 is spread by 11 profiles, M15LAND by m15snowland), so a template
  *  gains an overlay only on purpose. */
 export type FrameOverlaySlot =
-  | (FrameOverlaySlotBase & { anatomy: "crown" })
+  | (FrameOverlaySlotBase & {
+      anatomy: "crown";
+      /** A two-colour card wears the PAIR's split crown although the
+       *  template draws no pair masters (its frame stays the gold "m"):
+       *  print's legendary textless promos split the crown over the gold
+       *  rim (PF26 #15 / #16, PL22 #2). Absent = the pair's crown only where
+       *  the two-colour look is drawn (resolveTwoColor). */
+      pairCrownOnGold?: true;
+    })
   | (FrameOverlaySlotBase & { anatomy: "dfcIcon" })
   /** The modal flipside strip rider (TODO 5.1c): the OTHER face's colour's
    *  tab over the one the master paints, keyed by `dfc.otherFace.stripKey`
@@ -1985,15 +2007,71 @@ const TOKEN_CC_SYMBOL_RECT: Rect = { topPct: 82.34, leftPct: 80.13, widthPct: 12
  *  value box stays M15's (4.18) — the digits were already on the prints
  *  (1291 × 1929.8 px, 15 prints; ours 1291.5 × 1928.5). */
 const TOKEN_PLATE_PRINT_DY_PCT = 0.13;
+
+/** TODO 4.53 (e): the arch token's art slot onto the print — the window the
+ *  art fills on the prints, with 7.6's overscan, instead of a box 17 px
+ *  wider each side and 11 px taller (6.5 / 12 / 87 × 69.4, which drew every
+ *  picture 2.7 % larger than the print and cropped it past the window).
+ *  The prints' keyline round the window (49 prints of 2014–19, its darkest
+ *  line at mid-height and across the bottom; HD px): left 113.1, right
+ *  1386.8, bottom 1708.1 textless / 1406.3 with a text box — the masters'
+ *  own within 1 px (112.5 / 1387.5 / 1708.3; 1407.6), so the windows are
+ *  the prints' and the slot is the window. Card Conjurer's artBounds
+ *  (7.67 / 12.48 / 84.76 × 68.43) is that window on its un-re-cut master;
+ *  ours is measured on the masters (HD px, the see-through window's first
+ *  and last clear columns and rows + 1, exclusive):
+ *    • every opaque colour master of m15token / m15tokentext and the
+ *      colourless artifact dress: 115–1385 × 263–1705 (textless; 1405 with
+ *      the text box);
+ *    • the see-through colourless masters (m15token/c, m15tokentext/c) and
+ *      the coloured artifact dresses (m15tokenartifact*, w u b r g m):
+ *      111–1389 × 259–1709 (1409) — 4 px more each side.
+ *  Each slot is its window plus 1 px across and 2 px down (7.6's 0.75 /
+ *  1.05 px), on whole HD px. */
+type TokenArtWindowPx = { left: number; right: number; top: number; bottom: number };
+const TOKEN_ART_WINDOW_PX: TokenArtWindowPx = { left: 115, right: 1385, top: 263, bottom: 1705 };
+const TOKEN_ART_WIDE_WINDOW_PX: TokenArtWindowPx = { left: 111, right: 1389, top: 259, bottom: 1709 };
+/** How far the text-box arch's window ends above the textless one's (HD px):
+ *  1405 / 1409 against 1705 / 1709. */
+const TOKEN_TEXT_WINDOW_UP_PX = 300;
+/** A token art slot: `window` + 1 px across and 2 px down, in card %. */
+function tokenArtSlot(window: TokenArtWindowPx, textBox = false): Rect {
+  const bottom = window.bottom - (textBox ? TOKEN_TEXT_WINDOW_UP_PX : 0);
+  return {
+    topPct: ((window.top - 2) / 2100) * 100,
+    leftPct: ((window.left - 1) / 1500) * 100,
+    widthPct: ((window.right + 1 - (window.left - 1)) / 1500) * 100,
+    heightPct: ((bottom + 2 - (window.top - 2)) / 2100) * 100,
+  };
+}
+/** The arch token's slots (TODO 4.53 (e)): the opaque windows', and the
+ *  wider see-through / artifact-dress windows'. */
+export const TOKEN_ART_SLOT: Rect = tokenArtSlot(TOKEN_ART_WINDOW_PX);
+export const TOKEN_TEXT_ART_SLOT: Rect = tokenArtSlot(TOKEN_ART_WINDOW_PX, true);
+export const TOKEN_WIDE_ART_SLOT: Rect = tokenArtSlot(TOKEN_ART_WIDE_WINDOW_PX);
+export const TOKEN_TEXT_WIDE_ART_SLOT: Rect = tokenArtSlot(TOKEN_ART_WIDE_WINDOW_PX, true);
+
+/** TODO 4.53 (c): the arch token's name is GOLD on its black bar, as all 49
+ *  prints measured set it (the ink's median 254, 222, 102; the scans run
+ *  226,200,85 → 255,244,159 as they are lit) — Card Conjurer's #fde367
+ *  (253, 227, 103). */
+export const TOKEN_ARCH_TITLE_INK = "#fde367";
+/** The name's baseline onto the prints' (see TOKEN_ARCH_TITLE_SIZE_PCT): the
+ *  band centres a 90 px line box on the bar and sets the baseline at
+ *  193.8 px; the prints' is 192.5 (the 49 prints' last full row of ink,
+ *  191.8 / 193.8 at the scans' 2 px rows). A fraction of card WIDTH (dy's
+ *  unit): whole HD px. */
+const TOKEN_ARCH_TITLE_PRINT_DY = -1 / 1500;
+
 const M15TOKEN: FrameProfile = {
   label: "M15 Token",
   hideCost: true,
-  // The window's bottom edge moved down with the re-cut (TOKEN_RECUT_PX), and
-  // the slot's bottom with it (1701 → 1709 px): the window's last clear row
-  // is 1708 on the see-through and coloured-artifact masters (1704 on the
-  // opaque ones), as 1700 / 1696 were on CC's. The art's cover fit follows
-  // the taller slot (+0.55 %).
-  artSlot: { topPct: 12.0, leftPct: 6.5, widthPct: 87, heightPct: 69.0 + TOKEN_RECUT_PCT },
+  // TODO 4.53 (e): the window the art fills on the prints, with 7.6's
+  // overscan (TOKEN_ART_SLOT, 114–1386 × 261–1707 px). Until v59 the slot
+  // was 6.5 / 12 / 87 × 69.4 (97.5–1402.5 × 252–1709): 17 px wider each
+  // side than the window, so the cover fit drew every picture 2.7 % larger
+  // than the print and cropped it past the window's edges.
+  artSlot: TOKEN_ART_SLOT,
   // CC's token symbol box, M15's (0.041 H = 86 px; layout v32).
   symbolSizePct: SET_SYMBOL_BOX_PCT,
   setSymbolFit: "ink",
@@ -2005,16 +2083,23 @@ const M15TOKEN: FrameProfile = {
   // 1780.7); the print pass's 84.78 %H on CC's un-moved pill put tall glyphs
   // on its bottom bevel, 8 px above the prints'.
   symbolRect: { ...TOKEN_CC_SYMBOL_RECT, topPct: TOKEN_CC_SYMBOL_RECT.topPct + TOKEN_RECUT_PCT },
+  // TODO 4.53 (c): the name as the prints set it — gold
+  // (TOKEN_ARCH_TITLE_INK), centred, in small caps synthesized from Beleren
+  // Bold (TextSlot.smallCaps: capitals at 90 px, lower-case letters as
+  // capitals at 0.78 of it; lib/cards/typography.ts
+  // TOKEN_ARCH_TITLE_SIZE_PCT), on the prints' baseline. Until v59: light
+  // Beleren Bold at the M15 name size (80 px), 1.8 px higher.
   title: {
     rect: { topPct: 4.6, leftPct: 9, widthPct: 82, heightPct: 6.4 },
-    sizePct: TITLE_SIZE_PCT,
-    dy: keepBaseline(0.05, TITLE_SIZE_PCT),
+    sizePct: TOKEN_ARCH_TITLE_SIZE_PCT,
+    dy: TOKEN_ARCH_TITLE_PRINT_DY,
     fit: "measured",
-    colorHex: INK_LIGHT,
+    colorHex: TOKEN_ARCH_TITLE_INK,
     weight: 600,
     align: "center",
     font: "display",
-    letterSpacingEm: 0.01,
+    letterSpacingEm: TOKEN_ARCH_TITLE_TRACKING_EM,
+    smallCaps: TOKEN_ARCH_SMALL_CAP_EM,
   },
   // Measured: the cream type pill spans 82.2–87.0% (was rendered at 87.5+,
   // a band too low); MSE token type font is 14/375.
@@ -2098,10 +2183,11 @@ const TOKEN_TEXT_TYPE_PRINT_DY = -8 / 1500;
 const M15TOKENTEXT: FrameProfile = {
   ...M15TOKEN,
   label: "M15 Token, text box",
-  // The re-cut window runs 111–1389 px across and ends at 1408 px (the `c`
-  // composite; 1404 on the opaque masters): M15TOKEN's slot, ending 3 px
-  // below it (7.6's overscan).
-  artSlot: { topPct: 12.0, leftPct: 6.5, widthPct: 87, heightPct: 55.2 },
+  // The re-cut window runs 115–1385 × 263–1405 px on the opaque masters
+  // (111–1389 × 259–1409 on the see-through `c` and the coloured artifact
+  // dresses): TODO 4.53 (e)'s slot, the window with 7.6's overscan
+  // (TOKEN_TEXT_ART_SLOT). Until v59: 6.5 / 12 / 87 × 55.2.
+  artSlot: TOKEN_TEXT_ART_SLOT,
   // CC's setSymbolBounds (y 0.6743, centre) moved down with the band:
   // centred 70.48 %H on the pill, right edge 92.13 %W as on M15TOKEN. From
   // CC's own box (TOKEN_CC_SYMBOL_RECT), not M15TOKEN's: the re-cut moved
@@ -4498,8 +4584,7 @@ const EXTENDEDART: FrameProfile = {
 // them (FDN #487, NEO #501–505, CMR #705). EXTENDEDART's slots with the
 // land entry's differences: no cost, M15LAND's wider title band. No
 // see-through colourless master (the grey land frame is opaque) and no
-// artifact master; no pair masters yet (a two-colour land wears the gold
-// land frame, as m15land does with its switch off — a follow-up).
+// artifact master. Its two-colour pairs are declared on its PROFILES entry.
 const EXTENDEDARTLAND: FrameProfile = {
   ...EXTENDEDART,
   label: "Extended Art Land",
@@ -4956,9 +5041,11 @@ export const UB_CROWN: FrameOverlaySlot = {
  * autoExtendedArtFrame pushes it first and drawFrames draws the list
  * reversed), all 1500-native, 1:1. The prints (FDN #442 / #455 / #463 /
  * #466 / #470) stop the crown under the title bar with art beside and below
- * it. Keys: the seven colour keys — a pair wears the gold crown (this frame
- * draws no pair masters), the colourless card CC's grey C crown over our MSE
- * colourless master.
+ * it. Keys: the seven colour keys and the ten pairs (TODO 4.7 follow-up), the
+ * two floating crowns split 40→60 %W over the pair masters (FRC #96, FDN
+ * #476 / #479 / #481–483). A colourless card wears CC's grey C crown, the
+ * artifact master included (owner Round 67: C is closer on 8 of 11 scanned
+ * colourless legendary artifacts; the overlay is keyed by the card's colour).
  *
  * The slot is CC's bounds, from row 0 (TODO 4.7, layout v58): the
  * extendedart masters are Card Conjurer's own extended frames, whose title
@@ -4973,7 +5060,7 @@ export const EXTENDED_CROWN: FrameOverlaySlot = {
   assetPathTemplate: "/frames/extendedcrown/{key}.png",
   // EXTENDED_CROWN_BAND.keys in scripts/lib/cc-frames.mjs (a unit test holds
   // them together).
-  keys: ["w", "u", "b", "r", "g", "m", "c"],
+  keys: ["w", "u", "b", "r", "g", "m", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
 };
 
 /**
@@ -5569,12 +5656,21 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     collector: M15_COLLECTOR,
   },
   // Colourless creature tokens print a see-through frame (BFZ, MH1, WAR).
-  m15token: { ...M15TOKEN, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] }, collector: M15_COLLECTOR },
+  // Its window is 4 px wider each side than the opaque masters' (TODO 4.53
+  // (e)): the master's own window slot (TOKEN_WIDE_ART_SLOT).
+  m15token: {
+    ...M15TOKEN,
+    underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"], artSlot: TOKEN_WIDE_ART_SLOT },
+    collector: M15_COLLECTOR,
+  },
   // The artifact token's plate is M15's artifact set (TODO 4.49 (a)): CC's
   // silver m15PTa for colourless (TKLD #2, TMH1 #18), the colour's plate on
-  // a coloured one (TC18 #7), as on m15artifact.
+  // a coloured one (TC18 #7), as on m15artifact. The coloured artifact
+  // dresses' window is the wide one (TODO 4.53 (e)); the colourless dress's,
+  // the opaque masters' 4 px inside it, is covered by the same slot.
   m15tokenartifact: {
     ...M15TOKEN,
+    artSlot: TOKEN_WIDE_ART_SLOT,
     label: "M15 Artifact Token",
     pt: { ...M15TOKEN.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
     collector: M15_COLLECTOR,
@@ -5582,9 +5678,14 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // TODO 4.49 (b): the text-box token; its colourless master is see-through
   // like m15token's (BFZ #2 / OGW #1 Eldrazi Scion), the artifact dress's
   // silver (TXLN #7 Treasure) and its plates M15's artifact set.
-  m15tokentext: { ...M15TOKENTEXT, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] }, collector: M15_COLLECTOR },
+  m15tokentext: {
+    ...M15TOKENTEXT,
+    underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"], artSlot: TOKEN_TEXT_WIDE_ART_SLOT },
+    collector: M15_COLLECTOR,
+  },
   m15tokenartifacttext: {
     ...M15TOKENTEXT,
+    artSlot: TOKEN_TEXT_WIDE_ART_SLOT,
     label: "M15 Artifact Token, text box",
     pt: { ...M15TOKENTEXT.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
     collector: M15_COLLECTOR,
@@ -5928,21 +6029,38 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   tarkirghostfire: { ...TARKIRGHOSTFIRE, pickerSampleArt: true },
   // The extended-art frame draws the floating crown as an overlay band
   // (TODO 4.6f, wave 2b; EXTENDED_CROWN) — opt-in per card, so no stored
-  // card changes (and production holds none on this frame). No pairs: a
-  // two-colour legend wears the gold crown.
-  extendedart: { ...EXTENDEDART, overlays: [EXTENDED_CROWN] },
+  // card changes (and production holds none on this frame). The two-colour
+  // pair masters (TODO 4.7 follow-up, owner Round 63; `twoColorMasters`,
+  // opt-in per card — FrameStyle.twoColor): print's gold-split dress (gold
+  // bars, the box and pinline split: FDN #476–483, OTJ #348 / #366 / #367,
+  // SOS #353–359) and its hybrid dress (the two frames split over grey bars:
+  // STX #334 / #341, IKO #360, ECL #372 / #374), recipes over the extended
+  // pack's own files (scripts/lib/cc-frames.mjs extendedPairLayers); a card
+  // drawn as its pair master wears the pair's split crown.
+  extendedart: { ...EXTENDEDART, overlays: [EXTENDED_CROWN], twoColorMasters: ["split", "hybrid"] },
   // A legendary land's crown is its colour's (NEO #503 Otawara, MH2 #480
   // Yavimaya); a colourless legend wears CC's grey C crown, as on
-  // extendedart (keyed by the card's colour).
-  extendedartland: { ...EXTENDEDARTLAND, overlays: [EXTENDED_CROWN] },
+  // extendedart (keyed by the card's colour). Its pairs are a LAND's (the
+  // grey land frame with the box and pinline in the two land tints: SOC
+  // #101–108, FRC #102, STX #360 / #365, EOC #43 — twoColorForLands, like
+  // m15land), opt-in per card.
+  extendedartland: { ...EXTENDEDARTLAND, overlays: [EXTENDED_CROWN], twoColorMasters: ["split"], twoColorForLands: true },
   fullart: { ...FULLART, pickerSampleArt: true },
   m15fullartland: M15FULLARTLAND,
   fullartland: FULLARTLAND,
+  // The legendary textless promos print the STANDARD crown (TODO 4.35
+  // follow-up, owner Round 63: PSPL #8, SCH #20 / #38, SCH #6 / #12 gold,
+  // PF26 #15 / #16 and PL22 #2 pairs): the m15crown band over the promo
+  // masters, whose title bar and side rim sit on M15's rows — opt-in per
+  // card, so no stored card changes. A pair's crown is split over the GOLD
+  // rim (pairCrownOnGold: the template draws no pair masters); the
+  // colourless rim is the artifact silver on the spell, the land's on the
+  // land (keyMap).
+  m15textless: { ...M15TEXTLESS, pickerSampleArt: true, overlays: [{ ...M15_CROWN, keyMap: { c: "a" }, pairCrownOnGold: true }] },
+  m15textlessland: { ...M15TEXTLESSLAND, pickerSampleArt: true, overlays: [{ ...M15_CROWN, keyMap: { c: "l" }, pairCrownOnGold: true }] },
   m15fullartlandzen: M15FULLARTLANDZEN,
   m15fullartlandsnc: M15FULLARTLANDSNC,
   m15fullartlandthb: M15FULLARTLANDTHB,
-  m15textless: { ...M15TEXTLESS, pickerSampleArt: true },
-  m15textlessland: { ...M15TEXTLESSLAND, pickerSampleArt: true },
   expeditionland: EXPEDITIONLAND,
   // The constellation showcase prints its legendary crown (THB #258–268):
   // the Nyx crown band with its arms faded into this frame's own rim

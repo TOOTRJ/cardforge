@@ -209,6 +209,31 @@ const PICKS: readonly Pick[] = [
   { from: "m15mdfcfront/w/mdfc-long@strip-u", why: "modal front: the flipside strip in the other face's colour" },
   { from: "m15mdfcback/g/mdfc-long", why: "modal back: the strip on a back, through the flip" },
   { from: "m15tokentext/g/token-long", why: "token with a text box" },
+  // The arch token's gold small-caps name (TODO 4.53, v59): the runs on one
+  // baseline, a word gap, the see-through c's own art slot; and a name all
+  // in lower case — every run small, each lifted onto the full-size baseline.
+  {
+    from: "m15token/c/token-long",
+    as: "@small-caps",
+    why: "4.53: two words in synthesized small caps, the see-through c's own window slot",
+    row: () => ({ title: "Eldrazi Scion" }),
+  },
+  {
+    from: "m15tokenartifact/u/token-long",
+    as: "@small-caps-lower",
+    why: "4.53: a name typed all in lower case — every run small, lifted onto the full-size baseline",
+    row: () => ({ title: "thopter" }),
+  },
+  // The kerning (owner Round 65): a pair kerned inside a run ("-W", −0.198
+  // em), the capital → small pair across runs (W·A, V·A: −0.22 em at the
+  // small size, a negative margin in both renderers), a capital the line
+  // tables don't list (Æ).
+  {
+    from: "m15tokentext/w/token-long",
+    as: "@small-caps-kerned",
+    why: "4.53: kerned runs and the capital→small pair across runs (a negative margin), Æ's own advance",
+    row: () => ({ title: "Æther Vampire Long-Winded" }),
+  },
   { from: "m20tokentall/g/token-long", why: "M20 token, tall box (squeezed paragraph gaps)" },
   { from: "emblem/g/emblem-long", why: "emblem: the toned master, the walker's name, no cost or stats" },
   // 3.24's cases, by name — the Zendikar split type line since 4.40, the
@@ -223,6 +248,9 @@ const PICKS: readonly Pick[] = [
   { from: "extendedart/w/creature-long@crown", why: "v58 extended art: the window to the side edges, white type ink + keyline, the crown at CC's bounds" },
   { from: "extendedart/c/creature-long", why: "v58 extended art: the see-through colourless master, the art under it as one picture" },
   { from: "extendedart/c/artifact-short", why: "v58 extended art: a colourless artifact paints the silver `a` master (artifactMasterKeys)" },
+  // Its follow-ups (owner Round 63): the two-colour pair and the textless crown.
+  { from: "extendedart/wu/creature-long@pair-crown", why: "extended art: the gold-split pair master and the split floating crown (4.7 follow-up)" },
+  { from: "m15textless/u/creature-long@crown", why: "textless promo: the standard crown band over the promo master (4.35 follow-up)" },
   { from: "m15borderless/b/creature-long", why: "borderless: art to the edge, white ink, the keylined set symbol" },
   // --- the old frames (era symbol styles, footers, © slots) ----------------
   { from: "agclassic/g/creature-long", why: "1993: image pips, the Illus. line, right-set P/T" },

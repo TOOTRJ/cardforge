@@ -31,7 +31,8 @@ const ORIGIN = "https://frames.test";
 const BUILD = process.env.FRAMES_BUILD_DIR ? path.resolve(process.env.FRAMES_BUILD_DIR) : path.join(process.cwd(), ".frames-build");
 type Entry = { hash: string; sha256: string; bytes: number; width: number; height: number };
 const REAL = (manifestJson as { files: Record<string, Entry> }).files;
-const KEYS = ["w", "u", "b", "r", "g", "m", "c"];
+// …and since the TODO 4.7 follow-up (owner Round 63) a pair's split crown.
+const KEYS = ["w", "u", "b", "r", "g", "m", "c", "wu"];
 
 function realBand(key: string): Buffer | null {
   return realFile(`extendedcrown/${key}.png`);
@@ -45,7 +46,7 @@ function realFile(rel: string): Buffer | null {
 }
 const bands = Object.fromEntries(KEYS.map((k) => [k, realBand(k)]));
 // The masters the cases paint (w, u, gold, the see-through colourless).
-const MASTER_KEYS = ["w", "u", "m", "c"];
+const MASTER_KEYS = ["w", "u", "m", "c", "a", "wu"];
 const masters = Object.fromEntries(MASTER_KEYS.map((k) => [`extendedart/${k}.png`, realFile(`extendedart/${k}.png`)]));
 const available = KEYS.every((k) => bands[k] !== null) && Object.values(masters).every((m) => m !== null);
 
@@ -154,8 +155,10 @@ const cases: Array<[string, Partial<CardPreviewData>, string]> = [
   ["legendary white creature", {}, "w"],
   ["legendary blue creature", { colorIdentity: ["blue"], cost: "{2}{U}" }, "u"],
   ["legendary three-colour creature (gold)", { colorIdentity: ["white", "blue", "black"], cost: "{W}{U}{B}" }, "m"],
-  ["legendary pair, two-colour on: gold (this frame draws no pair masters)", { colorIdentity: ["white", "blue"], cost: "{1}{W}{U}", frameStyle: { template: "extendedart", finish: "regular", crown: true, twoColor: true } }, "m"],
+  ["legendary pair, two-colour off: gold", { colorIdentity: ["white", "blue"], cost: "{1}{W}{U}" }, "m"],
+  ["legendary pair, two-colour on: the pair master and the split crown (4.7 follow-up)", { colorIdentity: ["white", "blue"], cost: "{1}{W}{U}", frameStyle: { template: "extendedart", finish: "regular", crown: true, twoColor: true } }, "wu"],
   ["legendary colourless creature (the grey crown)", { colorIdentity: ["colorless"], cost: "{10}" }, "c"],
+  ["legendary colourless artifact (the grey C crown over the silver master: owner Round 67)", { colorIdentity: ["colorless"], cost: "{3}", cardType: "artifact", power: null, toughness: null }, "c"],
 ];
 const off = (data: CardPreviewData): CardPreviewData => ({ ...data, frameStyle: { ...data.frameStyle, crown: false } });
 /** The slot's rows at each output: 0–259 of 2100 → 0–129 of 1050. */
