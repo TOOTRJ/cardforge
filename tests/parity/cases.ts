@@ -195,6 +195,10 @@ const PICKS: readonly Pick[] = [
   { from: "fullartland/w/land-short", why: "3.24: the full-art Plains — the basic symbol disc, footer on the art" },
   { from: "m15land/w/land-short", why: "3.24: the m15land Plains — its watermark, unchanged by the disc slot" },
   { from: "m15textless/g/creature-long", why: "3.24: a textless creature — rules kept in the data, hidden in both renderers" },
+  // The extended-art frame from Card Conjurer (TODO 4.7, layout v58).
+  { from: "extendedart/w/creature-long@crown", why: "v58 extended art: the window to the side edges, white type ink + keyline, the crown at CC's bounds" },
+  { from: "extendedart/c/creature-long", why: "v58 extended art: the see-through colourless master, the art under it as one picture" },
+  { from: "extendedart/c/artifact-short", why: "v58 extended art: a colourless artifact paints the silver `a` master (artifactMasterKeys)" },
   { from: "m15borderless/b/creature-long", why: "borderless: art to the edge, white ink, the keylined set symbol" },
   // --- the old frames (era symbol styles, footers, © slots) ----------------
   { from: "agclassic/g/creature-long", why: "1993: image pips, the Illus. line, right-set P/T" },

@@ -20,6 +20,7 @@ import {
   subtypeFrameFor,
   subtypesSay,
   framesForKind,
+  extendedArtDressFor,
   isSingleBasicLand,
   kindFromCard,
   templateIsBasicOnly,
@@ -89,8 +90,12 @@ export function resolveGeneratedFrame(input: {
    *  showcase lands in a deck. */
   fallback?: "random" | "none";
 }): FrameTemplate | null {
-  const { cardType, requested, colorIdentity, verifiedKeys, face } = input;
-  if (!requested) return null;
+  const { cardType, colorIdentity, verifiedKeys, face } = input;
+  if (!input.requested) return null;
+  // A land asked onto the extended-art frame means its land dress, as the
+  // picker and the import put it there (TODO 4.7, owner Round 63).
+  const requested: FrameTemplate | "random" =
+    input.requested === "random" ? "random" : extendedArtDressFor(kindFromCard(cardType, undefined), input.requested);
 
   const colorKey = pickFrameColorKey(colorIdentity);
   const choices = frameChoicesForType(cardType, verifiedKeys);
@@ -203,7 +208,12 @@ export function resolveGeneratedFrame(input: {
     const match =
       typed.find((choice) => choice.template === wanted) ??
       (isM20TokenTemplate(asked) ? undefined : typed.find((choice) => choice.template === asked));
-    if (match) return match.template;
+    // A frame that prints no text (a `textless` profile — the textless promo
+    // pair since layout v58) is asked for by name only while the designed
+    // card has no rules or flavour text to hide (TODO 1.24): with some, the
+    // pool below — which keeps such a frame out while any other is
+    // published — picks, as it does for a random request.
+    if (match && !frameHidesRulesBoxText(match.template, tokenFace)) return match.template;
     // Requested frame can't dress this card (wrong type after generation, or
     // that color isn't published) — degrade to a random valid one, or to
     // none where the caller asked for that.

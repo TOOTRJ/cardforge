@@ -158,14 +158,17 @@ describe("artSlotOverrideRefusal", { timeout: 30_000 }, () => {
   });
 
   it("holds a known failure to its bound, as CI does: no worse is saved, worse is refused", async () => {
-    // m15textless (TODO 4.35): window 118–1379 × 239–1935 vs its slot's
-    // 115.5–1375.5 × 237.3–1932 — known, bound 4.5 px. (The 2003 pair, this
-    // test's first example, left the table with TODO 4.10b.)
-    const textlessWindow: Box = [118, 1379, 239, 1935];
-    const load: MasterLoader = async () => master(textlessWindow);
-    expect(await artSlotOverrideRefusal("m15textless", { artSlot: { topPct: 11.3 } }, load)).toBeNull();
-    expect(await artSlotOverrideRefusal("m15textless", { artSlot: { heightPct: 79.7 } }, load)).toMatch(
-      /m15textless\/w frame's art window uncovered .*worse than its known failure \(4\.35\): misses by [\d.]+ px > 4\.5/,
+    // tarkirdraconic (TODO 4.11): the see-through gaps between its dragon
+    // ornaments run 68–84 px past the slot 135–1365 — known, bound 87.5 px.
+    // (The 2003 pair, this test's first example, left the table with TODO
+    // 4.10b; m15textless, its second, with 4.35's re-source, layout v58.)
+    const slot = getFrameProfile("tarkirdraconic").artSlot;
+    const px = (pct: number, of: number) => (pct / 100) * of;
+    const draconicWindow: Box = [67, 1449, Math.ceil(px(slot.topPct, 2100)) + 2, Math.floor(px(slot.topPct + slot.heightPct, 2100)) - 2];
+    const load: MasterLoader = async () => master(draconicWindow);
+    expect(await artSlotOverrideRefusal("tarkirdraconic", { artSlot: { topPct: slot.topPct } }, load)).toBeNull();
+    expect(await artSlotOverrideRefusal("tarkirdraconic", { artSlot: { leftPct: slot.leftPct + 2, widthPct: slot.widthPct - 4 } }, load)).toMatch(
+      /tarkirdraconic\/w frame's art window uncovered .*worse than its known failure \(4\.11\): misses by [\d.]+ px > 87\.5/,
     );
   });
 

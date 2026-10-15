@@ -148,6 +148,19 @@ export const CROWN_REFERENCES: Partial<Record<FrameTemplate, Partial<Record<stri
     m: ref("Rin and Seri, Inseparable", "m21", "278", "d605c780-a42a-4816-8fb9-63e3114a8246"),
     c: ref("Emrakul, the Aeons Torn", "puma", "U1", "38cd438d-be12-40aa-bd6c-be55e88b63ce"),
   },
+  // Its land dress (TODO 4.7, owner Round 63): the same band over the land
+  // frames — Kamigawa: Neon Dynasty's five legendary lands (NEO #501–505),
+  // the any-colour Baldur's Gate (CLB #600, gold) and the colourless Dark
+  // Depths of the Ultimate Masters box toppers (PUMA U35).
+  extendedartland: {
+    w: ref("Eiganjo, Seat of the Empire", "neo", "502", "ecb53f59-d89b-481c-af98-75c11c30ee17"),
+    u: ref("Otawara, Soaring City", "neo", "503", "dbcdbf15-7578-465e-afa2-f65c01fb4802"),
+    b: ref("Takenuma, Abandoned Mire", "neo", "505", "13410bd5-acee-4cc9-90e3-dbcf8415bcaf"),
+    r: ref("Sokenzan, Crucible of Defiance", "neo", "504", "eca9f8ae-838f-4a9c-9341-38e39da68926"),
+    g: ref("Boseiju, Who Endures", "neo", "501", "2488a80b-6882-4b59-8232-f02f800204a9"),
+    m: ref("Baldur's Gate", "clb", "600", "a890abef-5291-4ffd-9c15-41c776ea9a00"),
+    c: ref("Dark Depths", "puma", "U35", "e8fa97f8-2f52-426a-84f3-a7b85fda1344"),
+  },
   // The snow frame (TODO 4.6f, wave 2c): the twelve crowned snow printings
   // are three KHM pairs (U|B, G|U, R|G — the m key's references, and the
   // pair bands'), two mono blues (J22 #12 Isu, #319 Marit Lage's Slumber),

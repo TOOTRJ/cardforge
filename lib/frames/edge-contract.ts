@@ -102,6 +102,20 @@ const BORDERLESS_PW: EdgeContract = {
   left: { kind: "art", except: [[78, 100]] },
 };
 
+/** CC's accurate 'Extended Art Frames' (TODO 4.7; measured on every master
+ *  at 1500 × 2100): the black border top and bottom; at the side edges the
+ *  frame is opaque above row 189 (the title bar's border) and from row 1295
+ *  (the type bar and the box's border), its soft shade over the art runs
+ *  rows 183–236 and 1247–1301, and the art alone shows between — 11.24 → 59.38
+ *  % H in the 2 % band. The prints: no border beside the art (WOE #325, TLA
+ *  #367, BRO #376 …). */
+const EXTENDED_ART_EDGES: EdgeContract = {
+  top: BORDER,
+  right: { kind: "art", except: [[0, 11.3], [59.2, 100]] },
+  bottom: BORDER,
+  left: { kind: "art", except: [[0, 11.3], [59.2, 100]] },
+};
+
 /**
  * The declared edges of every frame template (FRAME_TEMPLATE_VALUES —
  * tests/unit/frames/edge-contract.test.ts fails for a template missing
@@ -174,12 +188,20 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   adventure: ALL_BORDER,
   flip: ALL_BORDER,
   aftermath: ALL_BORDER,
-  extendedart: ALL_BORDER,
   fullart: ALL_BORDER,
   nyx: ALL_BORDER,
   expeditionland: ALL_BORDER,
-  // Printed black-bordered: 4.35 re-sources these borderless (decision (a)
-  // for m15textless*), when their contract becomes ALL_ART.
+  // The extended-art frame (TODO 4.7, CC 'Extended Art Frames', frames
+  // bucket): EXTENDED_ART_EDGES — the art runs to the side edges between the
+  // title bar and the type bar, as every print runs it.
+  extendedart: EXTENDED_ART_EDGES,
+  // Its land dress (owner Round 63): the same pack's land frames, the same
+  // edges.
+  extendedartland: EXTENDED_ART_EDGES,
+  // The black-bordered textless promos (TODO 4.35 / 4.42, CC 'Magic Fest
+  // Promos', frames bucket): the black ring on every edge, as SCH / PF print
+  // it. (The borderless textless printings are one-off designs that land
+  // `nearest` here — lib/scryfall/frame-signatures.ts.)
   m15textless: ALL_BORDER,
   m15textlessland: ALL_BORDER,
   // The only edge-to-edge master today (4.35 (a): it stays borderless).

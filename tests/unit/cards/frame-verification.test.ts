@@ -141,7 +141,8 @@ describe("frame reference registry", () => {
     // (TODO 4.27a) + 4.25's three Universes Beyond frames.
     // + the five M15 treatments that left the showcase era on 2026-10-13
     // (extended art, the two full-art basics, the two textless frames).
-    expect(m15Templates.length).toBe(50);
+    // + extended art's land dress (TODO 4.7, owner Round 63).
+    expect(m15Templates.length).toBe(51);
     expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {

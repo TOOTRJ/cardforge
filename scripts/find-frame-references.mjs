@@ -268,6 +268,16 @@ const TEMPLATES = {
   extendedart: {
     q: (k) => `is:extended frame:2015 -is:showcase -t:land -t:token (st:expansion or st:core) ${spellColor(k)}`,
   },
+  // A land's frame follows the mana it makes: a utility land that taps for
+  // {C} is the grey `l`, a land that taps for any colour the gold `lm`.
+  extendedartland: {
+    q: (k) =>
+      k === "m"
+        ? `is:extended frame:2015 t:land -t:basic produces=wubrg`
+        : k === "c"
+          ? `is:extended frame:2015 t:land -t:basic produces=c`
+          : `is:extended frame:2015 t:land -t:basic produces=${k}`,
+  },
   fullart: {
     confirm: "ZNR showcase (hedron) frame — check the thumbnail is the hedron treatment, not a full-art land.",
     q: (k) => `set:znr is:showcase -t:land ${spellColor(k)}`,

@@ -421,6 +421,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
   // The station frame (TODO 4.27a).
   "m15station", "m15stationland",
   "m15ub", "m15ubartifact", "m15ubland",
+  // Extended art's land dress (TODO 4.7, owner Round 63; with v58).
+  "extendedartland",
 ];
 /** Templates added after v36 (TODO 5.1a's transform bodies, 5.1b's modal
  *  bodies): no card was ever baked on them before v37, so v36's frozen
@@ -435,6 +437,8 @@ const POST_V36_TEMPLATES: readonly string[] = [
   // The station frame (TODO 4.27a).
   "m15station", "m15stationland",
   "m15ub", "m15ubartifact", "m15ubland",
+  // Extended art's land dress (TODO 4.7, owner Round 63; with v58).
+  "extendedartland",
 ];
 
 describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
@@ -783,6 +787,8 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       // …and the station frame (TODO 4.27a).
       "m15station", "m15stationland",
       "m15ub", "m15ubartifact", "m15ubland",
+      // Extended art's land dress (TODO 4.7, owner Round 63; with v58).
+      "extendedartland",
     ];
     // An EXISTING template that joined brought its own bump: the battle
     // (TODO 4.21b), with layout v43 — its Card Conjurer master and the
@@ -946,11 +952,12 @@ describe("v33 — rules text laid out by its real lines (TODO 3.29)", () => {
     const v33 = await scope();
     const { V33_SCOPE_TEMPLATES } = await import("@/lib/cards/layout-version");
     const card = (over: Record<string, unknown>, template = "m15") => ({ ...at(template), ...over });
-    // FrameProfile.textless is set on no profile yet: the "M15 Textless"
-    // frames print their text straight on the art, so their cards re-bake.
+    // FrameProfile.textless was set on no profile at v33: the "M15 Textless"
+    // frames printed their text straight on the art then, so their cards
+    // owe v33 (the frozen list; they became textless at v58, its own bump).
     expect(V33_SCOPE_TEMPLATES.textless).toEqual([]);
     for (const t of ["m15textless", "m15textlessland"]) {
-      expect(getFrameProfile(t).textless, t).toBeUndefined();
+      expect(getFrameProfile(t).textless, t).toBe(true);
       expect(v33(card({ rules_text: "Flying", flavor_text: "Hm." }, t)), t).toBe(true);
     }
     const forest = { title: "Forest", card_type: "land", supertype: "Basic", subtypes: ["Forest"] };
@@ -982,8 +989,9 @@ describe("v33 — rules text laid out by its real lines (TODO 3.29)", () => {
     // A template that becomes textless or gains a chapter rail later brings
     // its own bump: record it here, never in the frozen lists. A NEW
     // textless template no card was ever baked on needs none: 4.48's
-    // full-art token's textless height (and its artifact template).
-    const newTextless = ["m20token", "m20tokenartifact"];
+    // full-art token's textless height (and its artifact template). The
+    // textless promo pair became textless at v58, with its own bump.
+    const newTextless = ["m20token", "m20tokenartifact", "m15textless", "m15textlessland"];
     expect([...V33_SCOPE_TEMPLATES.textless, ...newTextless].sort()).toEqual(all.filter((t) => getFrameProfile(t).textless).sort());
     for (const t of newTextless) expect(V33_SCOPE_TEMPLATES.textless, t).not.toContain(t);
     expect([...V33_SCOPE_TEMPLATES.chapters].sort()).toEqual(all.filter((t) => getFrameProfile(t).chapters).sort());
@@ -1316,7 +1324,8 @@ describe("v36 — the second correction round: inline pips, printed set symbols,
     // An unknown code draws the default glyph, which the table doesn't size.
     expect(printedSetSymbolPx(keyruneCodepointFor("zzz9"))).toBeNull();
     expect(lv.v36PrintedSymbolCode("zzz9")).toBe(false);
-    expect(lv.V36_TEXTLESS_TEMPLATES).toEqual(ALL.filter((t) => getFrameProfile(t).textless));
+    // (The textless promo pair joined the profiles' list at v58, its own bump.)
+    expect(lv.V36_TEXTLESS_TEMPLATES).toEqual(ALL.filter((t) => getFrameProfile(t).textless && !lv.CC_RESOURCE_TEMPLATES.includes(t)));
     expect(lv.V36_BACK_FACE_TEXT_TEMPLATES).toEqual(
       ALL.filter((t) => getFrameProfile(t).adventure || getFrameProfile(t).secondFace),
     );
@@ -2910,5 +2919,25 @@ describe("v57 — the see-through colourless Universes Beyond spell frame (TODO 
       expect(isRenderStale(V - 1, "m15ub", undefined, V, at("m15ub", colors)), colors.join()).toBe(false);
     }
     for (const t of ["m15ubartifact", "m15ubland", "m15"]) expect(isRenderStale(V - 1, t, undefined, V, at(t, ["colorless"])), t).toBe(false);
+  });
+});
+
+describe("v58 — the extended-art and textless frames re-sourced from Card Conjurer (TODO 4.7 / 4.35 / 4.42)", () => {
+  it("is a sweep, never a badge, scoped to the three templates, and not verification-neutral", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const V = 58;
+    expect(lv.CC_RESOURCE_LAYOUT_VERSION).toBe(V);
+    const SCOPE = ["extendedart", "m15textless", "m15textlessland"];
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect([...lv.CC_RESOURCE_TEMPLATES]).toEqual(SCOPE);
+    // The masters a tick would judge change: a tick (none yet) re-opens.
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).not.toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual(SCOPE);
+    // A bake one version older owes it on the three; nothing else is owed.
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(SCOPE.includes(t));
   });
 });

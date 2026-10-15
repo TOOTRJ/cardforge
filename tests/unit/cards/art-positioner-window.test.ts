@@ -103,11 +103,14 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   tarkirghostfire: { front: [1395, 1932] },
   tarkirdragon: { front: [1242, 935] },
   fullart: { front: [1386, 1896] },
-  extendedart: { front: [1380, 1016] },
+  // The extended-art frame (layout v58): CC's window to the side edges;
+  // its see-through colourless master is ONE picture under the frame.
+  extendedart: { front: [1500, 1142], masters: { c: [1500, 1959] } },
+  extendedartland: { front: [1500, 1142] },
   m15fullartland: { front: [1382, 1875] },
   fullartland: { front: [1500, 2100] },
-  m15textless: { front: [1260, 1695] },
-  m15textlessland: { front: [1260, 1695] },
+  m15textless: { front: [1314, 1816] },
+  m15textlessland: { front: [1314, 1816] },
   expeditionland: { front: [1380, 1470] },
   nyx: { front: [1320, 1718] },
   retro: { front: [1154, 931] },
@@ -204,12 +207,13 @@ describe("what the fixed 5:4 surface got wrong (before 3b.13)", () => {
     expect(front("battle")).toBeCloseTo(1.3598, 3);
   });
 
-  it("no template's window was 5:4, and 27 were more than a quarter off", () => {
+  it("no template's window was 5:4, and 28 were more than a quarter off", () => {
     const off = FRAME_TEMPLATE_VALUES.map((t) => mismatch(front(t)));
     expect(off.filter((m) => m < 0.005)).toHaveLength(0);
     // (25 before the station frame, TODO 4.27a: its two templates' one
-    // picture under the whole frame is far taller than 5:4.)
-    expect(off.filter((m) => m > 0.25)).toHaveLength(27);
+    // picture under the whole frame is far taller than 5:4; 27 before the
+    // extended-art frame's see-through colourless master, layout v58.)
+    expect(off.filter((m) => m > 0.25)).toHaveLength(28);
   });
 });
 

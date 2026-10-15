@@ -296,7 +296,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
    *  (every transform body but the ▼ land back; the modal spell pair). */
   const CROWNED = FRAME_TEMPLATE_VALUES.filter((t) =>
     [
-      "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart",
+      "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15snow", "extendedart", "extendedartland",
       // The station frame (TODO 4.27a): the parents' crown band on its two entries.
       "m15station", "m15stationland",
       // The Nyx Constellation frame (owner 2026-10-13): the Nyx crown band, its arms faded.
@@ -318,7 +318,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // (The station frame, TODO 4.27a, draws the crown and no pair masters:
       // its entries declare no `twoColorMasters` — and neither does the Nyx
       // Constellation frame, whose two-colour card is the gold master.)
-      (CROWNED.includes(t) && t !== "extendedart" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "nyx"),
+      (CROWNED.includes(t) && t !== "extendedart" && t !== "extendedartland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "nyx"),
   );
 
   it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless, extended-art and snow PROFILES entries — never a profile that spreads them", () => {

@@ -72,7 +72,8 @@
   { "template": "m15stationland", "change": "new-template", "capabilities": [], "reason": "TODO 4.27a (owner 2026-10-13): a NEW template — the station frame, a Planet's (PipGlyph's own master, cut from the published m15land one): m15land's slots without its corner P/T slot, so no `pt` capability — the tier bands are drawn by the tiers layout (FrameProfile.tiers) and no corner plate is. An addition: no stored card sits on it." },
   { "template": "m15ub", "change": "new-template", "capabilities": ["pt"], "reason": "TODO 4.25 (owner 2026-10-13, roadmap Q5): a NEW template — a Universes Beyond frame (Card Conjurer's accurate 'Universes Beyond' pack, the M15 pack's geometry with the smooth streaked art): its M15 twin's slots, so it draws a P/T. An addition: no stored card sits on it; a card wears it only by its maker's pick or an import." },
   { "template": "m15ubartifact", "change": "new-template", "capabilities": ["pt"], "reason": "TODO 4.25 (owner 2026-10-13, roadmap Q5): a NEW template — a Universes Beyond frame (Card Conjurer's accurate 'Universes Beyond' pack, the M15 pack's geometry with the smooth streaked art): its M15 twin's slots, so it draws a P/T. An addition: no stored card sits on it; a card wears it only by its maker's pick or an import." },
-  { "template": "m15ubland", "change": "new-template", "capabilities": ["pt"], "reason": "TODO 4.25 (owner 2026-10-13, roadmap Q5): a NEW template — a Universes Beyond frame (Card Conjurer's accurate 'Universes Beyond' pack, the M15 pack's geometry with the smooth streaked art): its M15 twin's slots, so it draws a P/T. An addition: no stored card sits on it; a card wears it only by its maker's pick or an import." }
+  { "template": "m15ubland", "change": "new-template", "capabilities": ["pt"], "reason": "TODO 4.25 (owner 2026-10-13, roadmap Q5): a NEW template — a Universes Beyond frame (Card Conjurer's accurate 'Universes Beyond' pack, the M15 pack's geometry with the smooth streaked art): its M15 twin's slots, so it draws a P/T. An addition: no stored card sits on it; a card wears it only by its maker's pick or an import." },
+  { "template": "extendedartland", "change": "new-template", "capabilities": ["pt"], "reason": "TODO 4.7 (owner Round 63, 2026-10-14): a NEW template — the extended-art frame's land dress (Card Conjurer's 'Extended Art Frames' land files), as m15land is M15's: extendedart's slots, so it draws a P/T (a land creature). An addition: no stored card sits on it; a card wears it only by its maker's pick or an import." }
  ],
  "capabilities": {
   "m15": ["pt"],
@@ -132,6 +133,7 @@
   "tarkirdragon": ["pt"],
   "fullart": ["pt"],
   "extendedart": ["pt"],
+  "extendedartland": ["pt"],
   "m15fullartland": ["pt", "basicSymbol"],
   "fullartland": ["pt", "basicSymbol"],
   "m15textless": ["pt"],
