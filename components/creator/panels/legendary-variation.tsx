@@ -19,6 +19,7 @@
 // frame that prints the crown, LegendaryCrownReason says why, in one line.
 
 import { Crown } from "lucide-react";
+import { createContext, useContext } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { ChipGroup } from "@/components/ui/chip-group";
@@ -30,6 +31,14 @@ import {
   type LegendaryVariation,
 } from "@/lib/creator/legendary-variation";
 import type { ColorIdentity } from "@/types/card";
+
+/** Whether the card's BACK is a face of its own, where the form knows
+ *  better than `has_back_face` (TODO 5.5, owner Round 68): a battle's back
+ *  is optional, and a legacy back (an older battle's, drawn on the battle
+ *  frame) or a switched-off one is no face to crown — the form provides it
+ *  for a battle, null everywhere else (the back is the form's
+ *  `has_back_face`). */
+export const BackIsOwnFaceContext = createContext<boolean | null>(null);
 
 /** The entry's state for the form's current values — the chip, the
  *  Variations summary and the anatomy panel's switch all read this. */
@@ -51,6 +60,7 @@ export function useLegendaryVariation({ typeLineLocked = false }: { typeLineLock
       "has_back_face",
     ],
   });
+  const backIsOwnFace = useContext(BackIsOwnFaceContext);
   return legendaryVariationOf({
     template,
     crown,
@@ -62,7 +72,7 @@ export function useLegendaryVariation({ typeLineLocked = false }: { typeLineLock
     dfcIcon,
     backCardType: backType,
     backSupertype,
-    hasBackFace: Boolean(hasBackFace),
+    hasBackFace: backIsOwnFace ?? Boolean(hasBackFace),
     typeLineLocked,
   });
 }

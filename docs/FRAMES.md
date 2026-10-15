@@ -6511,7 +6511,8 @@ bump, no sweep, no badge, no new master.
   the battle front itself draws none (its profile declares no crown band).
   The import names it from the printing's `legendary` effect (the ten MOM /
   PMOM legendary backs). A two-colour back wears the gold master: the
-  battle declares no pair masters (its front has none) — a follow-up.
+  battle declares no pair masters (its front has none) — and stays so
+  (owner Round 68: no follow-up).
 - **The import** (`dfcImportOf`): a battle printing lands on the battle
   frame with its back on the ▼ back once BOTH combos are verified (the
   battle in the front's colour, the ▼ back in the back's), else as before —
@@ -6529,6 +6530,24 @@ bump, no sweep, no badge, no new master.
   editor: the switch with its Back tab greyed and the reason. The back
   saves on its body only while that is published in its colour, else as a
   legacy back — the live preview reads the same rule.
+- **The back is the maker's choice** (owner Round 68): a new battle's Card
+  step has a **Faces** row — "Two faces" | "One face", a single-select
+  `ChipGroup` (one tab stop, arrows move, Space / Enter picks), under the
+  card type (`BattleBackSection`, `panels/dfc-setup-sections.tsx`). "One
+  face" is `has_back_face` off: the Back tab greys with "This battle has
+  one face — choose Two faces on the Card step to give it a back", nothing
+  of the back is asked for, and the battle saves one-faced — no
+  `back_face`, one PNG — exactly as on main; the back's fields stay in the
+  form for the visit, so "Two faces" brings them back. Nothing forces a
+  battle's back on (the form's forced-second-part effect skips a battle);
+  an import of a battle with no back the import keeps (a walker back) is
+  one-faced. An edit has no row: the card keeps the faces it was saved
+  with.
+- **The crown switch** is shown only for a back that is a face of its own
+  (`BackIsOwnFaceContext`, provided by the form for a battle): an edit of a
+  battle with a legacy back — legendary or not — shows no switch, as main.
+- **Older stored battles** keep their legacy back (owner Round 68: no
+  move onto the ▼ back is offered).
 - **Shapes.** The preview shows a battle's portrait back in a portrait box
   (a plain swap of the faces, not a turn); a tile turns it in the portrait
   tile, the landscape front letterboxed as a one-faced battle's is

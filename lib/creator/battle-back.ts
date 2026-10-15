@@ -13,8 +13,10 @@
 // | Back face switch, BACK_FIELD_STEP) only where that back IS one:
 //   • a NEW battle (create, an import, a draft) — once the ▼ back is
 //     published in some colour (the back's colour chips offer only its
-//     published ones), with its back face on from the start, as a Transform
-//     card's is;
+//     published ones), with its back face on from the start (every printed
+//     battle has one) and a "Faces" switch on the Card step (owner Round 68:
+//     the back is OPTIONAL — "One face" saves the battle alone, no
+//     back_face, one PNG, exactly as before 5.5);
 //   • an edit or remix of a battle whose STORED back has a body.
 // An edit or remix of a battle with no back, or a legacy one, keeps today's
 // editor: the switch with its Back tab greyed and the reason under it.
@@ -36,6 +38,10 @@ import { templateHasAvailableColor } from "@/lib/creator/card-kinds";
 import type { ColorIdentity, FrameTemplate } from "@/types/card";
 
 type StoredBack = { frame_style?: { template?: string } | null } | null | undefined;
+
+/** The Back tab's line while a NEW battle's back is switched off (owner
+ *  Round 68: a battle's back is optional — the Card step's "Faces"). */
+export const BATTLE_ONE_FACE_NOTE = "This battle has one face — choose Two faces on the Card step to give it a back";
 
 /** The ▼ back a battle's back face wears for its type (a land back the land
  *  back), or null when none exists. */

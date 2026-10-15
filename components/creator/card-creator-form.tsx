@@ -99,6 +99,7 @@ import {
 import { IdentityPanel } from "@/components/creator/panels/identity-panel";
 import { useTypesFieldSync } from "@/components/creator/types-field";
 import { BorrowedWordSeedsProvider, useBorrowedWordSeedsOwner } from "@/components/creator/borrowed-words";
+import { BackIsOwnFaceContext } from "@/components/creator/panels/legendary-variation";
 import { PipsPanel } from "@/components/creator/panels/pips-panel";
 import { RarityPanel } from "@/components/creator/panels/rarity-panel";
 import { LoyaltyAbilitiesEditor } from "@/components/creator/panels/loyalty-editor";
@@ -141,7 +142,7 @@ import {
   BackFaceStatsFields,
   BackFaceTypeSection,
 } from "@/components/creator/panels/back-face-panels";
-import { DfcIconFamilySection } from "@/components/creator/panels/dfc-setup-sections";
+import { BattleBackSection, DfcIconFamilySection } from "@/components/creator/panels/dfc-setup-sections";
 import { FaceScope } from "@/components/creator/field-group";
 import { FaceSwitch, FaceSwitchNote, FaceThumb, faceTabId } from "@/components/creator/face-switch";
 import { FacePreview } from "@/components/creator/face-preview";
@@ -281,7 +282,7 @@ import {
   type DfcIconFamily,
 } from "@/lib/cards/dfc";
 import { dfcIconOf } from "@/lib/cards/faces";
-import { battleBackBodyFor, battleBackUnavailableNote } from "@/lib/creator/battle-back";
+import { BATTLE_ONE_FACE_NOTE, battleBackBodyFor, battleBackUnavailableNote } from "@/lib/creator/battle-back";
 import { dfcAdoptionOffer } from "@/lib/cards/dfc-adopt";
 // The emblem kind (TODO 6.23): its entry values and the hidden rarity chips.
 import {
@@ -1037,7 +1038,11 @@ export function CardCreatorForm({
   /** Whether a battle on this form edits its back as a face of its own. */
   const battleBackOffered = battleOfferNote === null;
   const battleCard = isBattleFront(watched.frame_style?.template);
-  const battleBackNote = battleCard ? battleOfferNote : null;
+  // …and while the maker keeps it on (owner Round 68: a battle's back is
+  // optional — "One face" on the Card step switches it off).
+  const battleBackNote = battleCard
+    ? (battleOfferNote ?? (watched.has_back_face ? null : BATTLE_ONE_FACE_NOTE))
+    : null;
   const dfcLayout = templateHasBackFace(watched.frame_style?.template)
     ? battleCard
       ? battleBackNote === null
@@ -1825,6 +1830,9 @@ export function CardCreatorForm({
   };
   /** A frame that carries a second part: an inline one (adventure, split,
    *  aftermath, flip) or a double-faced front body. */
+  // (A battle's back is OPTIONAL — owner Round 68: entering the Battle kind
+  // starts its back, as every printed battle has one, but nothing forces it
+  // on afterwards: "One face" switches it off.)
   const frameOwnsSecondPart = (template: FrameTemplate | string | null | undefined) =>
     hasInlineBackFace(template ?? undefined) ||
     (templateHasBackFace(template) && (!isBattleFront(template) || battleBackOffered));
@@ -2192,15 +2200,15 @@ export function CardCreatorForm({
   // load of a legacy card this is a repair, not a user change (submit sends
   // values, not dirty flags, so it still persists on the next save).
   useEffect(() => {
-    // (A battle's back is forced only where it is a face of its own — TODO
-    // 5.5: a battle saved with one face stays one-faced.)
+    // (Never a battle's — TODO 5.5, owner Round 68: its back is optional;
+    // the kind change starts it and "One face" switches it off.)
     const owns =
       hasInlineBackFace(currentTemplate) ||
-      (templateHasBackFace(currentTemplate) && (!isBattleFront(currentTemplate) || battleBackOffered));
+      (templateHasBackFace(currentTemplate) && !isBattleFront(currentTemplate));
     if (owns && !watched.has_back_face) {
       setValue("has_back_face", true);
     }
-  }, [currentTemplate, watched.has_back_face, setValue, battleBackOffered]);
+  }, [currentTemplate, watched.has_back_face, setValue]);
 
   // Symbol insertion for the rules editors (front + back): the PipTextEditor
   // owns the caret and drops the pip in place, then reports the new
@@ -2568,6 +2576,12 @@ export function CardCreatorForm({
     // returns `patch.back_face`. Enable has_back_face and populate the
     // nested object. The back-face art import is a separate explicit step
     // (mode: "art-back") — for now we just seed the text fields.
+    // A battle printing with no back the import keeps (a walker back, 5.13)
+    // is one-faced, as on main (TODO 5.5: the Battle kind's change started
+    // its back).
+    if (!patch.back_face && isBattleFront(getValues("frame_style.template"))) {
+      setValue("has_back_face", false, { shouldDirty: true });
+    }
     if (patch.back_face) {
       const bf = patch.back_face;
       setValue("has_back_face", true, { shouldDirty: true });
@@ -3193,7 +3207,7 @@ export function CardCreatorForm({
     const submitBattle = isBattleFront(submitTemplate);
     const submitDfcLayout = templateHasBackFace(submitTemplate)
       ? submitBattle
-        ? battleBackOffered
+        ? battleBackOffered && values.has_back_face
           ? "transform"
           : null
         : dfcLayoutForKind(kindFromCard(values.card_type, submitTemplate))
@@ -4087,6 +4101,20 @@ export function CardCreatorForm({
                 }
                 onLandModeChange={handleLandModeChange}
                 onDfcFaceTypePick={handleDfcFaceTypePick}
+                // A NEW battle's faces (TODO 5.5 (a), owner Round 68): its
+                // back is optional — "One face" saves it alone.
+                battleFaces={
+                  battleCard && battleBackOffered && !isRevise ? (
+                    <BattleBackSection
+                      on={Boolean(watched.has_back_face)}
+                      onChange={(on) => {
+                        clearErrors("back_face");
+                        setValue("has_back_face", on, { shouldDirty: true });
+                        if (!on) setPreviewFace("front");
+                      }}
+                    />
+                  ) : null
+                }
                 // The Back face tab (TODO 5.14): the back's own type and
                 // colour stand where the front's are.
                 backFace={
@@ -4794,6 +4822,7 @@ export function CardCreatorForm({
     return (
       <FormProvider {...methods}>
         <BorrowedWordSeedsProvider value={borrowedSeeds}>
+        <BackIsOwnFaceContext.Provider value={battleCard ? dfcLayout !== null : null}>
         <form
           noValidate
           onSubmit={formSubmit}
@@ -4840,6 +4869,7 @@ export function CardCreatorForm({
             {actionBar}
           </SurfaceCard>
         </form>
+        </BackIsOwnFaceContext.Provider>
         </BorrowedWordSeedsProvider>
       </FormProvider>
     );
@@ -4848,6 +4878,7 @@ export function CardCreatorForm({
   return (
     <FormProvider {...methods}>
       <BorrowedWordSeedsProvider value={borrowedSeeds}>
+      <BackIsOwnFaceContext.Provider value={battleCard ? dfcLayout !== null : null}>
       <form
         noValidate
         onSubmit={formSubmit}
@@ -4967,6 +4998,7 @@ export function CardCreatorForm({
           </div>
         </aside>
       </form>
+      </BackIsOwnFaceContext.Provider>
       </BorrowedWordSeedsProvider>
     </FormProvider>
   );

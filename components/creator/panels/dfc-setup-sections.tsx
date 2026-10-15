@@ -143,3 +143,42 @@ export function DfcIconFamilySection({
     </SetupSection>
   );
 }
+
+/** A battle's faces (TODO 5.5 (a), owner Round 68): its back is OPTIONAL —
+ *  a new battle starts with its back (every printed battle has one), and
+ *  "One face" switches it off, so the battle saves one-faced exactly as it
+ *  did before 5.5 (no back_face, one PNG). Shown on a NEW battle's Card step
+ *  only while its back can be a face of its own (lib/creator/battle-back.ts);
+ *  an edit keeps the faces it was saved with. A single-select chip row (one
+ *  tab stop, arrows move, Space / Enter picks — components/ui/chip-group). */
+export function BattleBackSection({
+  on,
+  onChange,
+  testId = "battle-back-faces",
+}: {
+  on: boolean;
+  onChange: (next: boolean) => void;
+  testId?: string;
+}) {
+  const options: ChipOption<"two" | "one">[] = [
+    { value: "two", label: "Two faces", description: "A back face on the transform frame" },
+    { value: "one", label: "One face", description: "The battle alone, no back" },
+  ];
+  return (
+    <SetupSection title="Faces" value={on ? "Two faces" : "One face"} testId={testId}>
+      <ChipGroup
+        ariaLabel="Battle faces"
+        layout="grid-2"
+        size="md"
+        value={on ? "two" : "one"}
+        onChange={(next) => onChange(next === "two")}
+        options={options}
+      />
+      <p className="text-[11px] leading-4 text-subtle">
+        A battle transforms into its back face once it is defeated. Switch the
+        back off to save the battle on its own; the back&apos;s fields are kept
+        while you stay on this card.
+      </p>
+    </SetupSection>
+  );
+}

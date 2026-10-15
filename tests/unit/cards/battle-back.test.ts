@@ -144,6 +144,11 @@ describe("the faces (lib/cards/faces.ts) — what both renderers and both bakes 
 
   it("no back, or a legacy back: the battle as it always was — no cross-face block, no bake of a back, the old flip", () => {
     expect(frontPreviewData(card(null)).dfc).toBeUndefined();
+    // A battle switched to "One face" (owner Round 68) saves no back_face:
+    // one PNG, one picture everywhere.
+    expect(bakedBackOf(card(null))).toBeNull();
+    expect(exportFacesOf({ frame_style: { template: "battle" }, back_face: null })).toEqual(["front"]);
+    expect(rowHasBakedBack({ frame_style: { template: "battle" }, back_face: null })).toBe(false);
     const legacy = card({ ...ANTHEM, subtypes: [] } as never);
     expect(frontPreviewData(legacy)).toBe(legacy);
     expect(backBodyOf(legacy)).toBeNull();
