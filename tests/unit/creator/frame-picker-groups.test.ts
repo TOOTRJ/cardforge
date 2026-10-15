@@ -123,6 +123,30 @@ function asOneExtendedFrame(dump: Dump): Dump {
   return out;
 }
 
+/** The Spacecraft's extended-art and borderless dresses (TODO 4.27a step 2),
+ *  made after the recording: two NEW templates — pick-only subtype dresses
+ *  a Spacecraft alone may wear. They change no group and no other frame's
+ *  decision, so every comparison below reads the dump without them: every
+ *  row about them dropped, every list that names them without their name.
+ *  Their gate, follow, pool and import are pinned in
+ *  tests/unit/creator/station-dresses.test.ts and
+ *  tests/unit/scryfall/station-imports.test.ts. */
+const STATION_DRESSES: readonly string[] = ["extendedartstation", "m15borderlessstation"];
+function withoutStationDresses(dump: Dump): Dump {
+  const named = (text: string) => STATION_DRESSES.some((t) => text === t || text.startsWith(`${t}|`));
+  const strip = (value: unknown): unknown =>
+    Array.isArray(value) ? value.filter((v) => !(typeof v === "string" && named(v))).map(strip) : value;
+  const out: Dump = {};
+  for (const [section, rows] of Object.entries(dump)) {
+    out[section] = {};
+    for (const [key, value] of Object.entries(rows)) {
+      if (key.split("|").some((part) => STATION_DRESSES.includes(part))) continue;
+      out[section][key] = value === undefined ? undefined : strip(value);
+    }
+  }
+  return out;
+}
+
 function productionVerifiedKeys(): Set<string> {
   const sql = fs.readFileSync(path.join(process.cwd(), "supabase/seed.sql"), "utf8");
   const block = /-- frame_reviews:begin\n([\s\S]*?)-- frame_reviews:end/.exec(sql)?.[1].replace(/--.*$/gm, "");
@@ -459,7 +483,7 @@ describe("the frame picker's groups: a classification change only", () => {
     return;
   }
   const main = JSON.parse(fs.readFileSync(FIXTURE, "utf8")) as Dump;
-  const raw = asOneExtendedFrame(compute());
+  const raw = withoutStationDresses(asOneExtendedFrame(compute()));
   const branch = condense(raw);
 
   /** The keys of a section whose value differs from main's. */

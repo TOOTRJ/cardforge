@@ -1998,6 +1998,27 @@ describe("provenance and hygiene", () => {
     // (scripts/build-nyx-crown.mjs; its own test:
     // tests/unit/frames/nyx-constellation-crown.test.ts).
     const PIPGLYPH_DERIVED_BANDS: Record<string, string> = { nyxcrown: "m15nyxcrown" };
+    // …and the Spacecraft's two dresses (TODO 4.27a step 2), the same
+    // builder's: extended art cut from the published extendedart masters (a
+    // colourless one from the silver artifact `a`), borderless the published
+    // borderless artifact masters and their crowned twins with the station
+    // box (tests/unit/render/station-dresses-bake.test.tsx holds the pixels).
+    const STATION_DRESSES: Record<string, { parent: string; keys: (key: string) => string[] }> = {
+      extendedartstation: { parent: "extendedart", keys: (k) => [k === "c" ? "a" : k] },
+      m15borderlessstation: { parent: "m15borderlessartifact", keys: (k) => [k, `${k}-legendary`] },
+    };
+    for (const [template, { parent, keys }] of Object.entries(STATION_DRESSES)) {
+      expect(Object.keys(templates), template).not.toContain(template);
+      expect(provenance[template].source, template).toBe("pipglyph");
+      expect(provenance[template].converter, template).toBe("scripts/build-station-frames.mjs");
+      expect(provenance[template].commit, template).toBeUndefined();
+      const names = COLORS.flatMap((key) => (template === "m15borderlessstation" ? [key, `${key}-legendary`] : [key]));
+      expect(Object.keys(provenance[template].colors).sort(), template).toEqual(names.sort());
+      for (const key of COLORS) {
+        const [from] = keys(key);
+        expect(provenance[template].colors[key][0], `${template}/${key}`).toMatch(new RegExp(`^${parent}/${from}\\.png \\(published, sha256 [0-9a-f]{12}\\)$`));
+      }
+    }
     for (const [band, parent] of Object.entries(PIPGLYPH_DERIVED_BANDS)) {
       expect(Object.keys(CC_OVERLAY_BANDS), band).not.toContain(band);
       expect(Object.keys(CC_OVERLAY_BANDS), band).toContain(parent);
@@ -2008,6 +2029,7 @@ describe("provenance and hygiene", () => {
       [
         ...Object.keys(templates),
         ...Object.keys(PIPGLYPH_DERIVED),
+        ...Object.keys(STATION_DRESSES),
         ...Object.keys(PIPGLYPH_DERIVED_BANDS),
         ...Object.keys(CC_OVERLAY_BANDS),
         ...Object.keys(CC_RIDERS),

@@ -440,6 +440,12 @@ export const FRAME_TEMPLATE_VALUES = [
   // whose title bar, type bar AND text box wear the colour's tint, as the
   // borderless land prints do (MID #281, OTJ #304, CMM #659).
   "m15borderlessland",
+  // The Spacecraft's borderless dress (TODO 4.27a step 2; EOC #1 / #2): the
+  // borderless artifact frame's bars floating on the art over the station
+  // frame's box. A Variations pick for a Spacecraft, never a new card's
+  // default: a new Spacecraft follows its subtype onto the bordered station
+  // frame only.
+  "m15borderlessstation",
   // The borderless planeswalkers (frames plan 4.33, Card Conjurer
   // 'Borderless' and 'Tall Borderless' planeswalker packs): art to the card
   // edge under the planeswalker's light title and type bars, light ability
@@ -503,6 +509,10 @@ export const FRAME_TEMPLATE_VALUES = [
   // Its land dress (TODO 4.7, owner Round 63): the pack's land frames, as
   // m15land is M15's.
   "extendedartland",
+  // …and the Spacecraft's (TODO 4.27a step 2; EOE #321–355, EOC #27 / #34,
+  // TRK #481): the extended-art bars and black type bar over the station
+  // frame's box. A pick, like the borderless one.
+  "extendedartstation",
   // Full-art basic lands, Card Conjurer 'Fullart Basics (2022)' (frames plan
   // 4.39): the black-bordered frame of ONE / MOM / … (2023+) and the same
   // frame without its border (fullartland, borderless — owner decision
@@ -559,6 +569,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m15nyx: "Nyx",
   m15station: "Spacecraft",
   m15stationland: "Planet",
+  extendedartstation: "Extended Art Spacecraft",
+  m15borderlessstation: "Borderless Spacecraft",
   m15ub: "Universes Beyond",
   m15ubartifact: "Universes Beyond Artifact",
   m15ubland: "Universes Beyond Land",
@@ -690,6 +702,8 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   m15nyx: "m15",
   m15station: "m15",
   m15stationland: "m15",
+  extendedartstation: "extended",
+  m15borderlessstation: "borderless",
   m15ub: "m15",
   m15ubartifact: "m15",
   m15ubland: "m15",
@@ -904,8 +918,10 @@ export const TEMPLATE_SKIN_VARIANTS: Partial<
   // The artifact kind's own borderless dress (frames plan 4.32), and the
   // Vehicle frame (TODO 4.5c) — offered to a card whose subtype says Vehicle
   // (lib/creator/card-kinds.ts templateSubtypeDress).
-  // …and the station frame (TODO 4.27a), a Spacecraft's.
-  m15artifact: ["m15borderlessartifact", "m15vehicle", "m15station", "m15ubartifact"],
+  // …and the station frame (TODO 4.27a), a Spacecraft's, with its
+  // borderless dress (step 2; the extended-art one is an M15 treatment,
+  // offered through its set).
+  m15artifact: ["m15borderlessartifact", "m15vehicle", "m15station", "m15borderlessstation", "m15ubartifact"],
   // The planeswalker kind's borderless dresses (frames plan 4.33): the tall
   // one follows the ability rows (walkerRowsFrameFor).
   m15pw: ["m15borderlesspw", "m15borderlesspwtall"],

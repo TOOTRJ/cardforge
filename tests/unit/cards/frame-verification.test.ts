@@ -128,6 +128,13 @@ describe("frame reference registry", () => {
       // colour — no gold or colourless one.
       "m15stationland/m",
       "m15stationland/c",
+      // …and its borderless Spacecraft dress (step 2): gold only (EOC #1 / #2).
+      "m15borderlessstation/w",
+      "m15borderlessstation/u",
+      "m15borderlessstation/b",
+      "m15borderlessstation/r",
+      "m15borderlessstation/g",
+      "m15borderlessstation/c",
     ]);
     const m15Templates = FRAME_TEMPLATE_VALUES.filter(
       (t) => eraForTemplate(t) === "m15",
@@ -142,7 +149,8 @@ describe("frame reference registry", () => {
     // + the five M15 treatments that left the showcase era on 2026-10-13
     // (extended art, the two full-art basics, the two textless frames).
     // + extended art's land dress (TODO 4.7, owner Round 63).
-    expect(m15Templates.length).toBe(51);
+    // + the Spacecraft's extended-art and borderless dresses (4.27a step 2).
+    expect(m15Templates.length).toBe(53);
     expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {

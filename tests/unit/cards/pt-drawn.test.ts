@@ -120,7 +120,7 @@ describe("the note", () => {
 
 describe("the station frame prints its P/T on a tier (TODO 4.27a)", () => {
   it("a card with no tier draws none — whichever way its tiers are stored — and says which note to show", () => {
-    for (const template of ["m15station", "m15stationland"]) {
+    for (const template of ["m15station", "m15stationland", "extendedartstation", "m15borderlessstation"]) {
       expect(frontPrintsPowerToughnessOnTier(template)).toBe(true);
       expect(frontDrawsPowerToughness(template, { rulesText: "Flying\nStation (…)" })).toBe(false);
       expect(frontDrawsPowerToughness(template, { rulesText: null })).toBe(false);

@@ -372,10 +372,30 @@ describe("the deck remix of a printed Spacecraft / Planet", () => {
     expect("face_content" in saved!).toBe(false);
   });
 
-  it("the other dresses keep their landing (PR 4): an extended-art and a borderless Spacecraft are not on the station frame", async () => {
+  it("the other dresses (PR 4): an extended-art and a borderless Spacecraft land on the bordered station frame once it is ticked, with their tiers as rows", async () => {
     for (const key of ["eoe-321", "eoc-1"] as PrintingKey[]) {
       const { saved } = await remix(key);
-      expect((saved!.frame_style as { template: string }).template, key).not.toBe("m15station");
+      expect((saved!.frame_style as { template: string }).template, key).toBe("m15station");
+      expect((saved!.face_content as FaceContent).station!.tiers.length, key).toBeGreaterThan(0);
+      expectSavable(saved!);
+    }
+  });
+
+  it("…an extended-art Spacecraft on its OWN station frame once THAT is ticked in its colour; a borderless one never (an edge-to-edge frame)", async () => {
+    s.verified = [...TICKED, ...keys(["extendedartstation", "w"], ["m15borderlessstation", "m"])];
+    const ext = await remix("eoe-321");
+    expect(ext.saved).toMatchObject({ frame_style: { template: "extendedartstation" } });
+    expect((ext.saved!.face_content as FaceContent).station!.tiers.length).toBeGreaterThan(0);
+    expectSavable(ext.saved!);
+    const borderless = await remix("eoc-1");
+    expect(borderless.saved).toMatchObject({ frame_style: { template: "m15station" } });
+  });
+
+  it("…and where neither is ticked they keep their landing, with no rows", async () => {
+    s.verified = UNTICKED;
+    for (const key of ["eoe-321", "eoc-1"] as PrintingKey[]) {
+      const { saved } = await remix(key);
+      expect((saved!.frame_style as { template: string }).template, key).not.toMatch(/station/);
       expect("face_content" in saved!, key).toBe(false);
     }
   });

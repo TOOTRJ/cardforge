@@ -73,7 +73,9 @@
   { "template": "m15ub", "change": "new-template", "capabilities": ["pt"], "reason": "TODO 4.25 (owner 2026-10-13, roadmap Q5): a NEW template — a Universes Beyond frame (Card Conjurer's accurate 'Universes Beyond' pack, the M15 pack's geometry with the smooth streaked art): its M15 twin's slots, so it draws a P/T. An addition: no stored card sits on it; a card wears it only by its maker's pick or an import." },
   { "template": "m15ubartifact", "change": "new-template", "capabilities": ["pt"], "reason": "TODO 4.25 (owner 2026-10-13, roadmap Q5): a NEW template — a Universes Beyond frame (Card Conjurer's accurate 'Universes Beyond' pack, the M15 pack's geometry with the smooth streaked art): its M15 twin's slots, so it draws a P/T. An addition: no stored card sits on it; a card wears it only by its maker's pick or an import." },
   { "template": "m15ubland", "change": "new-template", "capabilities": ["pt"], "reason": "TODO 4.25 (owner 2026-10-13, roadmap Q5): a NEW template — a Universes Beyond frame (Card Conjurer's accurate 'Universes Beyond' pack, the M15 pack's geometry with the smooth streaked art): its M15 twin's slots, so it draws a P/T. An addition: no stored card sits on it; a card wears it only by its maker's pick or an import." },
-  { "template": "extendedartland", "change": "new-template", "capabilities": ["pt"], "reason": "TODO 4.7 (owner Round 63, 2026-10-14): a NEW template — the extended-art frame's land dress (Card Conjurer's 'Extended Art Frames' land files), as m15land is M15's: extendedart's slots, so it draws a P/T (a land creature). An addition: no stored card sits on it; a card wears it only by its maker's pick or an import." }
+  { "template": "extendedartland", "change": "new-template", "capabilities": ["pt"], "reason": "TODO 4.7 (owner Round 63, 2026-10-14): a NEW template — the extended-art frame's land dress (Card Conjurer's 'Extended Art Frames' land files), as m15land is M15's: extendedart's slots, so it draws a P/T (a land creature). An addition: no stored card sits on it; a card wears it only by its maker's pick or an import." },
+  { "template": "extendedartstation", "change": "new-template", "capabilities": [], "reason": "TODO 4.27a step 2 (owner 2026-10-13 Q4, built in PR 4): a NEW template — the Spacecraft's extended-art dress of the station frame (PipGlyph's own masters, derived from published bucket masters): its parent's slots WITHOUT the corner P/T slot, so no `pt` capability — the P/T is drawn on a tier's plate by the tiers layout (FrameProfile.tiers). An addition: a Variations pick; no stored card sits on it." },
+  { "template": "m15borderlessstation", "change": "new-template", "capabilities": [], "reason": "TODO 4.27a step 2 (owner 2026-10-13 Q4, built in PR 4): a NEW template — the Spacecraft's borderless dress of the station frame (PipGlyph's own masters, derived from published bucket masters): its parent's slots WITHOUT the corner P/T slot, so no `pt` capability — the P/T is drawn on a tier's plate by the tiers layout (FrameProfile.tiers). An addition: a Variations pick; no stored card sits on it." }
  ],
  "capabilities": {
   "m15": ["pt"],
@@ -84,6 +86,8 @@
   "m15nyx": ["pt"],
   "m15station": [],
   "m15stationland": [],
+  "extendedartstation": [],
+  "m15borderlessstation": [],
   "m15ub": ["pt"],
   "m15ubartifact": ["pt"],
   "m15ubland": ["pt"],

@@ -540,6 +540,10 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   // says Spacecraft, a land whose subtype says Planet (SUBTYPE_DRESSES).
   m15station: ["artifact"],
   m15stationland: ["land"],
+  // …and the Spacecraft's extended-art and borderless dresses (TODO 4.27a
+  // step 2): artifacts too, and only a Spacecraft (SUBTYPE_DRESSES).
+  extendedartstation: ["artifact"],
+  m15borderlessstation: ["artifact"],
   // The Universes Beyond frames (TODO 4.25) are new — no legacy card sits
   // on them — and are skins of the M15 standard, the artifact frame and the
   // land frame, as the borderless three are: the spell frame for the kinds
@@ -648,13 +652,21 @@ export function isSingleBasicLand(face: BasicLandFace): boolean {
 // (EOE 2025's station layout, TODO 4.27) and are not Vehicles.
 // ---------------------------------------------------------------------------
 
-const SUBTYPE_DRESSES: Partial<Record<FrameTemplate, { subtype: string; plural: string; base: FrameTemplate; look: string }>> = {
+const SUBTYPE_DRESSES: Partial<Record<FrameTemplate, { subtype: string; plural: string; base: FrameTemplate; look: string; follow?: false }>> = {
   m15vehicle: { subtype: "Vehicle", plural: "Vehicles", base: "m15artifact", look: "bronze, with white numbers on a brown plate" },
   // The station frame (TODO 4.27a; owner 2026-10-13, Q1): a Spacecraft is an
   // artifact, a Planet a land — the Vehicle's pattern, twice. ("Spacecraft"
   // is its own plural.)
   m15station: { subtype: "Spacecraft", plural: "Spacecraft", base: "m15artifact", look: "the picture under the whole frame, tiers in the text box" },
   m15stationland: { subtype: "Planet", plural: "Planets", base: "m15land", look: "the picture under the whole frame, tiers in the text box" },
+  // The Spacecraft's other printed dresses (TODO 4.27a step 2): the same
+  // gate, but a PICK, never followed (`follow: false`) — a new Spacecraft
+  // follows its subtype onto the bordered station frame only. Each one's
+  // base is the frame it re-dresses, where a card goes back when its
+  // subtypes stop saying Spacecraft (extended art, the borderless artifact
+  // frame), never the M15 artifact frame.
+  extendedartstation: { subtype: "Spacecraft", plural: "Spacecraft", base: "extendedart", look: "extended art, tiers in the text box", follow: false },
+  m15borderlessstation: { subtype: "Spacecraft", plural: "Spacecraft", base: "m15borderlessartifact", look: "borderless, tiers in the text box", follow: false },
 };
 
 /** What a subtype dress's chip says of the frame once the card may wear it
@@ -730,13 +742,23 @@ export function subtypeFrameFor(
   // A base may have several dresses (m15artifact: the Vehicle frame and the
   // station frame, TODO 4.27a): the family is the base and every dress of it.
   const base = SUBTYPE_DRESSES[template]?.base ?? template;
-  const family = (Object.entries(SUBTYPE_DRESSES) as [FrameTemplate, { subtype: string; base: FrameTemplate }][]).filter(
+  const family = (Object.entries(SUBTYPE_DRESSES) as [FrameTemplate, { subtype: string; base: FrameTemplate; follow?: false }][]).filter(
     ([, dress]) => dress.base === base,
   );
   if (family.length === 0) return template;
   const worn = SUBTYPE_DRESSES[template];
   if (worn && subtypesSay(subtypes, worn.subtype) && (available?.(template) ?? true)) return template;
-  return family.find(([dress, { subtype }]) => subtypesSay(subtypes, subtype) && (available?.(dress) ?? true))?.[0] ?? base;
+  // A pick-only dress (the Spacecraft's extended-art and borderless ones,
+  // `follow: false`) is never a card's destination — only kept while worn.
+  return family.find(([dress, { subtype, follow }]) => follow !== false && subtypesSay(subtypes, subtype) && (available?.(dress) ?? true))?.[0] ?? base;
+}
+
+/** True when the template is a subtype dress its card only ever PICKS (the
+ *  Spacecraft's extended-art and borderless dresses, TODO 4.27a step 2):
+ *  no new card follows its subtype onto it and no random pick lands on it
+ *  — a frame named by its maker, an import or an AI request by name. */
+export function isPickOnlyDress(template: FrameTemplate): boolean {
+  return SUBTYPE_DRESSES[template]?.follow === false;
 }
 
 /** True when the template is a subtype dress (the Vehicle frame): never a

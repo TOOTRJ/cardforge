@@ -138,6 +138,9 @@ const DOCUMENTED_NULLS = new Set([
   // one per colour — no gold or colourless one. The two masters exist so no
   // colour of a land resolves to a missing master.
   "m15stationland/m", "m15stationland/c",
+  // Its borderless Spacecraft dress (step 2): two printings, both
+  // three-colour commanders (EOC #1 / #2) — gold only.
+  "m15borderlessstation/w", "m15borderlessstation/u", "m15borderlessstation/b", "m15borderlessstation/r", "m15borderlessstation/g", "m15borderlessstation/c",
 ]);
 
 describe("frame-references.json", () => {

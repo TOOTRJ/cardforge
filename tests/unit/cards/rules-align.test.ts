@@ -116,7 +116,8 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
     // The opt-out is read: the station frame's two (TODO 4.27a) — their
     // text is set in tier bands beside badges, never a plain rules box.
     const optedOut = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).rulesAlignSwitch === false);
-    expect(optedOut).toEqual(["m15station", "m15stationland"]);
+    // …and its two dresses (step 2).
+    expect(optedOut).toEqual(["m15station", "m15stationland", "m15borderlessstation", "extendedartstation"]);
     for (const t of optedOut) expect(getFrameProfile(t).tiers, t).toBeDefined();
     expect(profileOffersRulesAlign({ ...getFrameProfile("m15"), rulesAlignSwitch: false })).toBe(false);
     for (const t of FRAME_TEMPLATE_VALUES) expect(frameAnatomyOf(t).rulesAlign, t).toBe(profileOffersRulesAlign(getFrameProfile(t)));
@@ -135,8 +136,8 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
     // `rulesAlignSwitch: false` on its two entries.
     // The textless promo pair (layout v58, TODO 4.35 / 4.42): no rules box.
     expect(without).toEqual([
-      "m15station", "m15stationland", "m15pw", "m20token", "m20tokenartifact", "m15borderlesspw", "m15borderlesspwtall", "saga",
-      "m15textless", "m15textlessland",
+      "m15station", "m15stationland", "m15pw", "m20token", "m20tokenartifact", "m15borderlessstation", "m15borderlesspw", "m15borderlesspwtall", "saga",
+      "extendedartstation", "m15textless", "m15textlessland",
     ]);
     expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(58);
   });

@@ -16,6 +16,7 @@ import {
   enchantmentFrameFor,
   followsEnchantmentDress,
   isEnchantmentDress,
+  isPickOnlyDress,
   subtypeFrameFits,
   subtypeFrameFor,
   subtypesSay,
@@ -167,6 +168,9 @@ export function resolveGeneratedFrame(input: {
   // prints on a body of its own (a Class, a Case…) follows nothing: the Nyx
   // frame is its maker's pick, never a random one.
   const dressed = (boxed.length > 0 ? boxed : typed).filter((choice) => {
+    // A pick-only dress (the Spacecraft's extended-art and borderless ones,
+    // TODO 4.27a step 2) is never drawn at random: asked for by name only.
+    if (isPickOnlyDress(choice.template)) return false;
     const dress = subtypeFrameFor(choice.template, face?.subtypes);
     if (dress !== choice.template && has(dress)) return false;
     const nyx = enchantmentFrameFor(kind, choice.template, type);

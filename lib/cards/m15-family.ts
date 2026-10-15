@@ -44,6 +44,11 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // m15land's slots and sizes — no stored card, no bump.
   "m15station",
   "m15stationland",
+  // …and its extended-art and borderless dresses (TODO 4.27a step 2): new
+  // templates on extendedart's and m15borderlessartifact's slots and sizes
+  // — no stored card, no bump.
+  "extendedartstation",
+  "m15borderlessstation",
   // The Universes Beyond frames (TODO 4.25): new templates, no stored card
   // — their M15 twins' slots and sizes — so they joined without a bump.
   "m15ub",

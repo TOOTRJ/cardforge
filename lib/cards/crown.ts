@@ -161,6 +161,15 @@ export const CROWN_REFERENCES: Partial<Record<FrameTemplate, Partial<Record<stri
     m: ref("Baldur's Gate", "clb", "600", "a890abef-5291-4ffd-9c15-41c776ea9a00"),
     c: ref("Dark Depths", "puma", "U35", "e8fa97f8-2f52-426a-84f3-a7b85fda1344"),
   },
+  // The Spacecraft's extended-art dress (TODO 4.27a step 2) wears that band:
+  // its crowned printings — a white one, the five-colour gold one, a
+  // colourless one (the grey C crown over the silver artifact frame;
+  // print's is silver, as on extendedart).
+  extendedartstation: {
+    w: ref("The Seriema", "eoe", "323", "9361996c-414b-4d0d-9d94-b6d5fe04e987"),
+    m: ref("Infinite Guideline Station", "eoe", "348", "334654be-c433-43b6-bf33-8ba040c3c3a8"),
+    c: ref("Dawnsire, Sunstar Dreadnought", "eoe", "351", "8a242c45-07a7-48bf-8cd0-159fd9f5ecbc"),
+  },
   // The snow frame (TODO 4.6f, wave 2c): the twelve crowned snow printings
   // are three KHM pairs (U|B, G|U, R|G — the m key's references, and the
   // pair bands'), two mono blues (J22 #12 Isu, #319 Marit Lage's Slumber),
@@ -297,6 +306,12 @@ export const CROWN_REFERENCES: Partial<Record<FrameTemplate, Partial<Record<stri
     g: ref("The Skullspore Nexus", "lci", "340", "85c4b837-1557-4dda-a324-9646ce702dfd"),
     m: ref("Breya, Etherium Shaper", "mh3", "372", "468e5d5a-01cc-4d01-88fb-ab556e2383cb"),
     c: ref("Mox Opal", "2xm", "362", "547e3aa5-d88a-4418-ab9d-dd65385f031b"),
+  },
+  // …and the Spacecraft's borderless dress (TODO 4.27a step 2): its crowned
+  // twins are the artifact dress's; its two printings are three-colour
+  // commanders, gold.
+  m15borderlessstation: {
+    m: ref("Hearthhull, the Worldseed", "eoc", "1", "6b913e79-a9f6-44d4-bb37-c4f6f66b8151"),
   },
 };
 

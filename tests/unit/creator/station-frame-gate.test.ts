@@ -104,8 +104,23 @@ describe("where the subtype sends a card (subtypeFrameFor)", () => {
     expect(subtypeFrameFor("m15artifact", ["Planet"])).toBe("m15artifact");
   });
 
+  it("the Spacecraft's dresses (step 2): kept while worn, never followed onto, back to their own base", () => {
+    expect(subtypeFrameFor("extendedartstation", ["Spacecraft"])).toBe("extendedartstation");
+    expect(subtypeFrameFor("extendedartstation", ["Planet"])).toBe("extendedart");
+    expect(subtypeFrameFor("extendedartstation", [])).toBe("extendedart");
+    expect(subtypeFrameFor("m15borderlessstation", ["Spacecraft"])).toBe("m15borderlessstation");
+    expect(subtypeFrameFor("m15borderlessstation", ["Vehicle"])).toBe("m15borderlessartifact");
+    // Never a destination: a Spacecraft on extended art or the borderless
+    // artifact frame stays there; from the artifact frame it follows onto
+    // the BORDERED station frame only.
+    expect(subtypeFrameFor("extendedart", ["Spacecraft"])).toBe("extendedart");
+    expect(subtypeFrameFor("m15borderlessartifact", ["Spacecraft"])).toBe("m15borderlessartifact");
+    expect(subtypeFrameFor("m15artifact", ["Spacecraft"])).toBe("m15station");
+    expect(subtypeFrameFor("m15artifact", ["Spacecraft"], (t) => t !== "m15station")).toBe("m15artifact");
+  });
+
   it("returns every other template unchanged, whatever the subtype", () => {
-    const families = ["m15artifact", "m15vehicle", "m15station", "m15land", "m15stationland"];
+    const families = ["m15artifact", "m15vehicle", "m15station", "m15land", "m15stationland", "extendedartstation", "m15borderlessstation"];
     for (const t of FRAME_TEMPLATE_VALUES) {
       if (families.includes(t)) continue;
       for (const subtypes of [["Spacecraft"], ["Planet"], ["Vehicle"], []]) {

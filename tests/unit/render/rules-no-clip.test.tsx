@@ -596,8 +596,14 @@ describe("the station box — the top band and every tier band (TODO 4.27a)", ()
   const PROFILE = getFrameProfile("m15station");
   const REMINDER =
     "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 8+.)";
-  const lay = (text: StationText, pt: string | null, stamped: boolean, flavorText: string | null = null): StationLayout =>
-    stationLayout({ profile: PROFILE, text, flavorText, ptValue: pt, stamp: stamped ? M15_HOLO_STAMP_KEEP_OUT : null });
+  /** Each layout's inputs, for its dresses' twin (below). */
+  const laidInputs = new Map<StationLayout, Parameters<typeof stationLayout>[0]>();
+  const lay = (text: StationText, pt: string | null, stamped: boolean, flavorText: string | null = null): StationLayout => {
+    const input = { profile: PROFILE, text, flavorText, ptValue: pt, stamp: stamped ? M15_HOLO_STAMP_KEEP_OUT : null };
+    const laid = stationLayout(input);
+    laidInputs.set(laid, input);
+    return laid;
+  };
   /** A matrix text as a station card: the reminder over (at most three)
    *  tiers its paragraphs are dealt on, the plate on the last, stamped. */
   function stationOf(text: RulesCase): StationLayout {
@@ -678,6 +684,18 @@ describe("the station box — the top band and every tier band (TODO 4.27a)", ()
       expect(boxes).toBeGreaterThan(target === "hd" ? 30 : 100);
     }, 300_000);
   }
+
+  it("its Spacecraft dresses (TODO 4.27a step 2) lay out every one of these texts exactly as the bordered frame — the holds above are theirs", () => {
+    for (const template of ["extendedartstation", "m15borderlessstation"] as const) {
+      const dress = getFrameProfile(template);
+      expect(dress.tiers, template).toEqual(PROFILE.tiers);
+      for (const [name, laid] of stations()) {
+        // The same inputs on the dress's profile: the layout is the same, band for band and line for line.
+        const again = stationLayout({ ...laidInputs.get(laid)!, profile: dress });
+        expect(again, `${template} · ${name}`).toEqual(laid);
+      }
+    }
+  });
 
   it("draws the same lines at both targets, the 750 font exactly half the HD one", () => {
     for (const [name, laid] of stations()) {
