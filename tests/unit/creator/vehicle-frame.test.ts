@@ -84,10 +84,11 @@ describe("the subtype dress", () => {
   it("names the Vehicle frame, a variation of the artifact frame", () => {
     // (Alone until the station frame, TODO 4.27a: a Spacecraft's and a
     // Planet's dress — tests/unit/creator/station-frame-gate.test.ts.)
-    expect(FRAME_TEMPLATE_VALUES.filter(isSubtypeDress)).toEqual(["m15vehicle", "m15station", "m15stationland"]);
+    // (…and the Spacecraft's two dresses, 4.27a step 2.)
+    expect(FRAME_TEMPLATE_VALUES.filter(isSubtypeDress)).toEqual(["m15vehicle", "m15station", "m15stationland", "m15borderlessstation", "extendedartstation"]);
     expect(subtypeDressOf("m15vehicle")).toBe("Vehicle");
     expect(subtypeDressOf("m15artifact")).toBeNull();
-    expect(TEMPLATE_SKIN_VARIANTS.m15artifact).toEqual(["m15borderlessartifact", "m15vehicle", "m15station", "m15ubartifact"]);
+    expect(TEMPLATE_SKIN_VARIANTS.m15artifact).toEqual(["m15borderlessartifact", "m15vehicle", "m15station", "m15borderlessstation", "m15ubartifact"]);
     expect(subtypeDressReason("m15vehicle")).toBe("The Vehicle frame is for Vehicles");
     expect(subtypeDressReason("m15")).toBeNull();
   });
@@ -117,7 +118,9 @@ describe("the subtype dress", () => {
       if (t === "m15artifact" || t === "m15vehicle" || t === "m15station") continue;
       // (A Planet's frame under a card that says Vehicle and not Planet goes
       // back to ITS base, the land frame.)
-      expect(subtypeFrameFor(t, ["Vehicle"]), t).toBe(t === "m15stationland" ? "m15land" : t);
+      // (…and the Spacecraft's dresses, 4.27a step 2, to theirs.)
+      const base: Partial<Record<string, string>> = { m15stationland: "m15land", extendedartstation: "extendedart", m15borderlessstation: "m15borderlessartifact" };
+      expect(subtypeFrameFor(t, ["Vehicle"]), t).toBe(base[t] ?? t);
     }
   });
 

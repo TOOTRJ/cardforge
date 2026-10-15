@@ -54,7 +54,12 @@ const provenance = JSON.parse(fs.readFileSync("lib/cards/frame-sources.json", "u
 >;
 const BUILD = process.env.FRAMES_BUILD_DIR ? path.resolve(process.env.FRAMES_BUILD_DIR) : path.join(process.cwd(), ".frames-build");
 
-const CROWNED = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).crownMasters === true);
+// The Card Conjurer importer's crowned templates. The Spacecraft's
+// borderless dress (TODO 4.27a step 2) has crowned twins too, but they are
+// PipGlyph's own derivation of m15borderlessartifact's (scripts/build-station-
+// frames.mjs; tests/unit/render/station-dresses-bake.test.tsx).
+const DERIVED_TWINS: readonly string[] = ["m15borderlessstation"];
+const CROWNED = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).crownMasters === true && !DERIVED_TWINS.includes(t));
 
 /** Every master a template paints: the colours and its declared pair keys. */
 function plainKeysOf(template: string): string[] {
@@ -237,7 +242,7 @@ describe("the crowned twins' edges", () => {
       expect(edgeContractFor(t, "w-legendary")).toBe(CROWNED_EDGE_CONTRACTS[t]);
       expect(CROWNED_EDGE_CONTRACTS[t]).toEqual({ ...EDGE_CONTRACTS[t], top: { kind: "art", except: [[45, 55]] } });
     }
-    expect(Object.keys(CROWNED_EDGE_CONTRACTS).sort()).toEqual([...CROWNED].sort());
+    expect(Object.keys(CROWNED_EDGE_CONTRACTS).sort()).toEqual([...CROWNED, ...DERIVED_TWINS].sort());
     // A template without crowned twins never reads the table.
     expect(edgeContractFor("m15", "w-legendary")).toBe(EDGE_CONTRACTS.m15);
   });
@@ -257,7 +262,8 @@ describe("published to the frames bucket", () => {
     for (const key of Object.keys(files)) {
       const [template, name] = key.split("/");
       if (!name || key.split("/").length !== 2 || !isLegendaryMasterKey(name.replace(/\.(png|webp)$/, ""))) continue;
-      expect(CROWNED as readonly string[], key).toContain(template);
+      expect([...CROWNED, ...DERIVED_TWINS], key).toContain(template);
+      if (DERIVED_TWINS.includes(template)) continue;
       expect(plainKeysOf(template).map(legendaryKey), key).toContain(name.replace(/\.(png|webp)$/, ""));
     }
   });

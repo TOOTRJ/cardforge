@@ -58,6 +58,8 @@ describe("the switch values", () => {
       // The station frame (TODO 4.27a): the parents' slot on its two entries.
       "m15station",
       "m15stationland",
+      // …and its extended-art dress (step 2): M15's bottom border.
+      "extendedartstation",
       "m15ub",
       "m15ubartifact",
       "m15ubland",

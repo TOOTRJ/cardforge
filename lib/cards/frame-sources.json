@@ -922,6 +922,84 @@
       "plates = M15's (a land creature: Dryad Arbor's kind)"
     ]
   },
+  "extendedartstation": {
+    "source": "pipglyph",
+    "converter": "scripts/build-station-frames.mjs",
+    "derivedFrom": "the published extendedart/<key> masters of the frames bucket (themselves Card Conjurer imports: see \"extendedart\")",
+    "output": "1500x2100, the parent's corners, webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "field": "alpha 0 where m15/<k> and m15artifact/<k> differ by more than 12 (|dR|+|dG|+|dB|+|dA|), union over w u b r g m, 1 px holes closed: 172278 px, box 58..1444 x 59..1856",
+      "box": "alpha x 0.68 inside 110..1390 x 1314..1937",
+      "sourceKeys": {
+        "c": "a"
+      },
+      "maskSources": [
+        "m15/w.png@3818b6c0d274",
+        "m15artifact/w.png@d1159c684dc2",
+        "m15/u.png@80cb122e0539",
+        "m15artifact/u.png@318cc6817303",
+        "m15/b.png@d5578ecb1927",
+        "m15artifact/b.png@3d3a690b53c0",
+        "m15/r.png@e6cbb495cf62",
+        "m15artifact/r.png@4e7866b3b112",
+        "m15/g.png@f6d980508b95",
+        "m15artifact/g.png@8af763244e2f",
+        "m15/m.png@0b21a694ab48",
+        "m15artifact/m.png@768c91762d4a"
+      ]
+    },
+    "colors": {
+      "w": [
+        "extendedart/w.png (published, sha256 27c9e942b754)"
+      ],
+      "u": [
+        "extendedart/u.png (published, sha256 51e200ceebc6)"
+      ],
+      "b": [
+        "extendedart/b.png (published, sha256 3a7044512bcc)"
+      ],
+      "r": [
+        "extendedart/r.png (published, sha256 2ec2150ffd1f)"
+      ],
+      "g": [
+        "extendedart/g.png (published, sha256 d7e942d442ee)"
+      ],
+      "m": [
+        "extendedart/m.png (published, sha256 b804a306bb1a)"
+      ],
+      "c": [
+        "extendedart/a.png (published, sha256 44a87b85d75e)"
+      ]
+    },
+    "sourceFiles": [
+      "extendedart/a.png",
+      "extendedart/b.png",
+      "extendedart/g.png",
+      "extendedart/m.png",
+      "extendedart/r.png",
+      "extendedart/u.png",
+      "extendedart/w.png",
+      "m15/b.png",
+      "m15/g.png",
+      "m15/m.png",
+      "m15/r.png",
+      "m15/u.png",
+      "m15/w.png",
+      "m15artifact/b.png",
+      "m15artifact/c.png",
+      "m15artifact/g.png",
+      "m15artifact/m.png",
+      "m15artifact/r.png",
+      "m15artifact/u.png",
+      "m15artifact/w.png"
+    ],
+    "notes": [
+      "PipGlyph's own derivation (TODO 4.27a; owner 2026-10-13): neither Card Conjurer nor MSE has a station frame at print size. Nothing is drawn or synthesised in the master: every painted pixel is a published master's.",
+      "The numbers are scripts/lib/station-2025.mjs (30 printed station cards measured 2026-10-13; the dresses' 15 printings: scripts/lib/station-dresses-2025.mjs); no scan is read by the build.",
+      "Tier bands, badges and the P/T plate are DRAWN by both renderers (lib/cards/station.ts, lib/cards/station-art.ts) — not in the master.",
+      "The dress of the extended-art printings (TODO 4.27a step 2; EOE #321–355, EOC #27 / #34, TRK #481): Card Conjurer's extended-art masters are M15's pixels from row 1320 down (checked by the run where the field mask cuts), so the station recipe's two cuts apply unchanged; above, the pack's own title bar and BLACK type bar stay whole. A colourless Spacecraft is the pack's silver artifact frame `a` (EOE #351 / #354 / #355, TRK #481)."
+    ]
+  },
   "extendedcrown": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
@@ -2467,6 +2545,102 @@
       "gold (m) = MATCHED TO THE PRINTS (owner round 15, 2026-09-29): the pack's 'Multicolored Frame' with its title and type faces recoloured by the pack's 'White Frame' through CC's Title and Type masks at 90 %, weighted by the white face's luminance from 235 (its grey veins: the gold shows) to 250 (PW_GOLD_FACE), fitted to the prints. The 13 exact mono-gold borderless walker prints (BLC #100, IKO #278, MED #GR4/#WS6/#WS8, FRC #1, MH2 #304/#305, SLC #2017, SLD #1184/#1246/#1421, SPG #14; 26 bars; Scryfall scans registered on the gold rims, text left out) print pale cream faces veined with the gold: mean 221/201/160, luma 202 per bar (168–235, interquartile 189–212), red − blue 60 (interquartile 44–78). Ours: 219/204/163, luma 204, red − blue 56. CC's flat tan was 205/182/125, luma 183, red − blue 80. Rims, window, shield, bottom bar and alpha are the m frame's (its see-through faces stay α 0.85)",
       "the pack's 'Artifact Frame' (tallBorderless/a.png) and 'Land Frame' (tallBorderless/l.png) are not imported: no artifact or land walker dress",
       "the loyalty shield is the master's own pixels cut out through CC's maskLoyalty.png (loyalty/<colour>.png), drawn above the ability stripes, as on m15pw"
+    ]
+  },
+  "m15borderlessstation": {
+    "source": "pipglyph",
+    "converter": "scripts/build-station-frames.mjs",
+    "derivedFrom": "the published m15borderlessartifact/<key> masters and their -legendary twins (Card Conjurer imports: see \"m15borderlessartifact\"), with the published m15station/<key> box",
+    "output": "1500x2100, the parent's corners, webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "box": "alpha < 250 inside 110..1390 x 1314..1937 -> m15station/<key>'s RGBA"
+    },
+    "colors": {
+      "w": [
+        "m15borderlessartifact/w.png (published, sha256 531155a88e6a)",
+        "its translucent box interior (796194 px) from m15station/w.png (sha256 53c92c90f1fa)"
+      ],
+      "w-legendary": [
+        "m15borderlessartifact/w-legendary.png (published, sha256 640a7774d288)",
+        "its translucent box interior (796194 px) from m15station/w.png (sha256 53c92c90f1fa)"
+      ],
+      "u": [
+        "m15borderlessartifact/u.png (published, sha256 87c400f4d071)",
+        "its translucent box interior (796194 px) from m15station/u.png (sha256 6a14adea79a6)"
+      ],
+      "u-legendary": [
+        "m15borderlessartifact/u-legendary.png (published, sha256 0cfb8847c9d5)",
+        "its translucent box interior (796194 px) from m15station/u.png (sha256 6a14adea79a6)"
+      ],
+      "b": [
+        "m15borderlessartifact/b.png (published, sha256 c573d23b57ee)",
+        "its translucent box interior (796194 px) from m15station/b.png (sha256 b7a58ddc8330)"
+      ],
+      "b-legendary": [
+        "m15borderlessartifact/b-legendary.png (published, sha256 73094e5458ba)",
+        "its translucent box interior (796194 px) from m15station/b.png (sha256 b7a58ddc8330)"
+      ],
+      "r": [
+        "m15borderlessartifact/r.png (published, sha256 571db4dcff8b)",
+        "its translucent box interior (796194 px) from m15station/r.png (sha256 750ea81db13b)"
+      ],
+      "r-legendary": [
+        "m15borderlessartifact/r-legendary.png (published, sha256 f6df4dde434a)",
+        "its translucent box interior (796194 px) from m15station/r.png (sha256 750ea81db13b)"
+      ],
+      "g": [
+        "m15borderlessartifact/g.png (published, sha256 1a9b6b421832)",
+        "its translucent box interior (796194 px) from m15station/g.png (sha256 0f1779323c25)"
+      ],
+      "g-legendary": [
+        "m15borderlessartifact/g-legendary.png (published, sha256 638f8af926eb)",
+        "its translucent box interior (796194 px) from m15station/g.png (sha256 0f1779323c25)"
+      ],
+      "m": [
+        "m15borderlessartifact/m.png (published, sha256 f82882504e2b)",
+        "its translucent box interior (794916 px) from m15station/m.png (sha256 40bbe9f18b57)"
+      ],
+      "m-legendary": [
+        "m15borderlessartifact/m-legendary.png (published, sha256 9682c98077a3)",
+        "its translucent box interior (794916 px) from m15station/m.png (sha256 40bbe9f18b57)"
+      ],
+      "c": [
+        "m15borderlessartifact/c.png (published, sha256 83d24afa8ea2)",
+        "its translucent box interior (796194 px) from m15station/c.png (sha256 0679d46131da)"
+      ],
+      "c-legendary": [
+        "m15borderlessartifact/c-legendary.png (published, sha256 c4d72397d6ce)",
+        "its translucent box interior (796194 px) from m15station/c.png (sha256 0679d46131da)"
+      ]
+    },
+    "sourceFiles": [
+      "m15borderlessartifact/b-legendary.png",
+      "m15borderlessartifact/b.png",
+      "m15borderlessartifact/c-legendary.png",
+      "m15borderlessartifact/c.png",
+      "m15borderlessartifact/g-legendary.png",
+      "m15borderlessartifact/g.png",
+      "m15borderlessartifact/m-legendary.png",
+      "m15borderlessartifact/m.png",
+      "m15borderlessartifact/r-legendary.png",
+      "m15borderlessartifact/r.png",
+      "m15borderlessartifact/u-legendary.png",
+      "m15borderlessartifact/u.png",
+      "m15borderlessartifact/w-legendary.png",
+      "m15borderlessartifact/w.png",
+      "m15station/b.png",
+      "m15station/c.png",
+      "m15station/g.png",
+      "m15station/m.png",
+      "m15station/r.png",
+      "m15station/u.png",
+      "m15station/w.png"
+    ],
+    "notes": [
+      "PipGlyph's own derivation (TODO 4.27a; owner 2026-10-13): neither Card Conjurer nor MSE has a station frame at print size. Nothing is drawn or synthesised in the master: every painted pixel is a published master's.",
+      "The numbers are scripts/lib/station-2025.mjs (30 printed station cards measured 2026-10-13; the dresses' 15 printings: scripts/lib/station-dresses-2025.mjs); no scan is read by the build.",
+      "Tier bands, badges and the P/T plate are DRAWN by both renderers (lib/cards/station.ts, lib/cards/station-art.ts) — not in the master.",
+      "The borderless dress (TODO 4.27a step 2; EOC #1 / #2): the published m15borderlessartifact masters whole — no field to cut, bars floating on the art, the black bottom bar and fins, the crowned twins — with their dark translucent text-box interior (the pixels inside 110..1390 x 1314..1937 painted at alpha < 250) replaced by m15station/<key>'s pixels there: the station box, M15's paper at x 0.68."
     ]
   },
   "m15crown": {

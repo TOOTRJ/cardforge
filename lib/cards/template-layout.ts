@@ -5617,6 +5617,45 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     overlays: [{ ...M15_CROWN, keyMap: { c: "l" } }, { ...M15_HOLO_STAMP, keyMap: { c: "l" } }],
     collector: M15_COLLECTOR,
   },
+  // The Spacecraft's extended-art dress (TODO 4.27a step 2; EOE #321–355,
+  // EOC #27 / #34, TRK #481): the extended-art pack's bars — the art to the
+  // side edges between the title bar and the BLACK type bar, white type
+  // ink — over the station box. The masters are the published extendedart
+  // ones with the station's two cuts (scripts/build-station-frames.mjs:
+  // the pack is M15's pixels from row 1320 down, so the box, bands, badges,
+  // plate, stamp notch and collector line sit exactly where m15station's
+  // do); a colourless Spacecraft's `c` IS the pack's silver artifact frame,
+  // so no artifact master key here. ONE picture under the whole frame, from
+  // the border's inner edge to the card's sides. The crown is the extended-
+  // art band (a colourless legend's the grey C, as on extendedart). An
+  // ADDITION: a Variations pick for a Spacecraft, never a default.
+  extendedartstation: {
+    ...withoutPt(EXTENDEDART),
+    label: "Extended Art Station (Spacecraft)",
+    pickerSampleArt: true,
+    artifactMasterKeys: undefined,
+    underFrameArt: { rect: EXTENDED_UNDER_FRAME_RECT, artSlot: EXTENDED_UNDER_FRAME_RECT },
+    rulesAlignSwitch: false,
+    tiers: STATION_INKS,
+    overlays: [EXTENDED_CROWN, { ...M15_HOLO_STAMP, keyMap: { c: "a" } }],
+    collector: M15_COLLECTOR,
+  },
+  // …and its borderless dress (EOC #1 / #2, the Edge of Eternities
+  // commanders): the borderless artifact frame — bars with thick rims
+  // floating on the art, the black bottom bar and fins, white title and
+  // type ink, the floating crown baked into `<key>-legendary` twins — with
+  // the station box in place of its dark one (black text, the bands,
+  // badges and plate drawn as on every station frame). Its rules slot is
+  // M15's, the box being M15's. No stamp notch and no collector line: the
+  // borderless frames have neither yet (the prints do).
+  m15borderlessstation: {
+    ...withoutPt(M15BORDERLESSARTIFACT),
+    label: "Borderless Station (Spacecraft)",
+    rules: M15ARTIFACT.rules,
+    crownMasters: true,
+    rulesAlignSwitch: false,
+    tiers: STATION_INKS,
+  },
   // The Vehicle frame (TODO 4.5c; owner 2026-09-29: a stored template of
   // its own, for Vehicles only): Card Conjurer's bronze 'Vehicle Frame'
   // where m15artifact has the silver one, under the same bars, box and

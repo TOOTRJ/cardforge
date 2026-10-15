@@ -138,6 +138,25 @@ const PICKS: readonly Pick[] = [
   },
   { from: "m15station/r/artifact-short@foil", why: "station: the foil sheen over the box, the bands and the drawn pieces — ink above it" },
   { from: "m15stationland/g/land-short", why: "station: a Planet — the land master, one tier, no plate" },
+  // --- its Spacecraft dresses (TODO 4.27a step 2) ----------------------------
+  // (The coded picture, not the stripes: on this frame's 1500 px wide picture
+  // the stripes are cropped top and bottom, and the art region's shift
+  // estimate aliases on their period — dy −3 at HD with the pixels agreeing,
+  // mean difference 1.0. The box over the stripes is m15station's case: the
+  // same master pixels from row 1320 down.)
+  {
+    from: "extendedartstation/u/artifact-short",
+    why: "extended-art station: the art to the side edges, the see-through box and two tier washes over the coded picture, the black type bar's white ink",
+  },
+  { from: "extendedartstation/w/artifact-long@crown", why: "extended-art station: the extended-art crown band over the cut master, a fuller box" },
+  {
+    from: "m15borderlessstation/r/artifact-short@tiers-three",
+    as: "@stripes",
+    why: "borderless station: the floating bars, the station box swapped in, three tiers over the bars, the plate on the middle tier",
+    art: "stripes",
+    row: () => ({}),
+  },
+  { from: "m15borderlessstation/wub/artifact-long@crown", why: "borderless station: the crowned twin (its key `m-legendary`: the bands in gold), white title ink" },
   // --- the Universes Beyond frames (TODO 4.25): the triangle stamp ----------
   { from: "m15ub/wu/creature-long@stamp-pair-crown", why: "Universes Beyond: the triangle stamp's notch and art (a new shape in both renderers), the pair master and the split crown band" },
   { from: "m15ub/g/creature-short@wide", why: "Universes Beyond: the pack's own plate under 12/12" },

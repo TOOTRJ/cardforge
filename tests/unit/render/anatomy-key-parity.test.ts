@@ -77,8 +77,9 @@ describe("bake path = preview path", () => {
     // …and the Vehicle frame's 10 (4.5c), the Nyx dress's 20 (4.7).
     // …and the Universes Beyond frames' 20 + 10 + 10 (4.25).
     // …and the extended-art frame's 20 and its land dress's 10 (4.7 follow-up).
+    // …and the Spacecraft's borderless dress's 7 crowned twins (4.27a step 2).
     expect(pairKeys).toBe(290);
-    expect(crownedKeys).toBe(44);
+    expect(crownedKeys).toBe(51);
   });
 
   it("every stat plate a profile can paint (a hybrid pair's grey 'c' included)", () => {
@@ -136,7 +137,7 @@ describe("bake path = preview path", () => {
                 : ub
                   ? "m15ubholostamp"
                   : "m15holostamp"
-              : template === "extendedart" || template === "extendedartland"
+              : template === "extendedart" || template === "extendedartland" || template === "extendedartstation"
                 ? "extendedcrown"
                 : ub
                   ? "m15ubcrown"
@@ -178,8 +179,9 @@ describe("bake path = preview path", () => {
     // …and the station frame's two entries (TODO 4.27a): the parents' notch
     // slot, so — with the Nyx dress (TODO 4.7) — ten M15-family entries;
     // …and the Universes Beyond triangle's 9 bar keys + 10 pairs on its
-    // three entries (4.25).
-    expect(notches).toBe((9 + 10) * 10 + 7 + (9 + 10) * 3);
+    // three entries (4.25); and the Spacecraft's extended-art dress's (4.27a
+    // step 2: M15's bottom border) — eleven.
+    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3);
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

@@ -29,10 +29,17 @@ const clamp = (v: number) => Math.max(0, Math.min(255, Math.round(v)));
 const rgb = (c: readonly number[], gain = 1) => `rgb(${c.map((v) => clamp(v * gain)).join(",")})`;
 const toward = (c: readonly number[], to: number, t: number) => c.map((v) => v + (to - v) * t);
 
+/** A crowned twin's suffix (lib/cards/frame-reference-registry.ts
+ *  LEGENDARY_MASTER_SUFFIX; this module stays import-light). */
+const LEGENDARY_SUFFIX = "-legendary";
+
 /** The colours of a master key — any key the table doesn't know (an
- *  artifact "a", a land "l") reads as colourless. */
+ *  artifact "a", a land "l") reads as colourless. A crowned twin's key
+ *  ("m-legendary": the borderless dress, FrameProfile.crownMasters) is its
+ *  colour's. */
 export function stationColours(key: string) {
-  return STATION_COLOURS[(key in STATION_COLOURS ? key : "c") as StationKey];
+  const colour = key.endsWith(LEGENDARY_SUFFIX) ? key.slice(0, -LEGENDARY_SUFFIX.length) : key;
+  return STATION_COLOURS[(colour in STATION_COLOURS ? colour : "c") as StationKey];
 }
 
 const cache = new Map<string, string>();

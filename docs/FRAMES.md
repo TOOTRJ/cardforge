@@ -3460,7 +3460,8 @@ always did (the artifact / land frame, `nearest`, "not yet verified in
 <colour>", an `unverified` row in the request log); once it is, it lands on
 the station frame, exact — the oracle text is already the tiers' grammar,
 so the bands draw as imported. The other dresses (extended art, borderless,
-showcase) keep their own rules and the `station` gap (step 2).
+showcase) keep their own rules and the `station` gap — and land as "The
+other dresses" (step 2, PR 4) below says.
 
 **The tier editor** (PR 2; `components/creator/panels/station-editor.tsx`,
 shown on the Text step for any frame whose profile has `tiers` —
@@ -3635,9 +3636,97 @@ the card, deck and remix steps, the plans, the fill — recorded on main's
 **Before a tick.** After PR 3 every path that can reach a ticked station
 frame hands it a card it draws: the creator (PR 2), the import of a
 bordered printing, and the AI — generation, fill, ideas and both remixes.
-What is left is PR 4 (the extended-art, borderless and showcase dresses
-keep their own landing until then — never the station frame) and the
-owner's eye on the frame itself.
+PR 4 (below) added the dresses; what is left is the owner's eye on the
+frames themselves.
+
+**The other dresses** (TODO 4.27a step 2, PR 4; owner 2026-10-13 Q4). The
+26 paper station printings that are NOT the black-bordered frame, measured
+first (`scripts/lib/station-dresses-2025.mjs`, the numbers; 2026-10-14):
+
+| Printings | What print is | Built |
+| --- | --- | --- |
+| Extended art, 13 (EOE #321–355, EOC #27 / #34, TRK #481) — w ×2, u ×2, b, r, g ×2, gold (five colours), colourless ×4 | Card Conjurer's extended-art bars (no rails: the art to the side edges; the BLACK type bar with white ink) over the station box; the field beside the box the picture; black border beside and under the box. Its bars against the masters (median \|ΔRGB\| over their opaque non-black pixels): **4.3–10.0** on the new dress, 59.0–81.0 on today's landing (`extendedart`), 38.0–81.0 on the bordered station frame | `extendedartstation` (w u b r g m c) |
+| Borderless, 2 (EOC #1 / #2: three-colour legendary commanders) | Card Conjurer's borderless pack — bars with thick gold rims floating on the art, the black bottom bar and fins, the floating crown, white title and type ink — with the STATION box (the light paper, the tier washes, black text) in place of the pack's dark one: **16.0 / 16.7** (today's landing, the bordered artifact frame: 121.7 / 122.3) | `m15borderlessstation` (w u b r g m c, and the crowned twins) |
+| Showcase, 11: the ten "viewport" Planets (EOE #277–285, #372–380 galaxy foil: five cards) and TRK #557 | No frame to master. The Planets: borderless, the picture the whole card, its lower part PAINTED near-black (each card's window — struts, ribs, arches — is the art), white name, type and text set on it, the badge alone. TRK #557: a one-off schematic design (linework, small caps, no bars) | nothing — `nearest`, 4.11's |
+
+No extended-art or borderless PLANET is printed (the borderless Planets are
+the viewport showcase), so neither dress has a land twin.
+
+*Masters* (`scripts/build-station-frames.mjs`, the same builder; PipGlyph's
+own derivation, bucket only, provenance `source: "pipglyph"`):
+`extendedartstation/<key>` is the published `extendedart/<key>` (the
+colourless one from the pack's silver artifact `a`) with the station
+recipe's two cuts — the pack is M15's pixels from row 1320 down (the run
+refuses a pack that moved), so the field mask and the box cut are the
+bordered frame's, and so are the bands, badges, plate, stamp notch and
+collector line; `m15borderlessstation/<key>` and `<key>-legendary` are the
+published `m15borderlessartifact` masters and crowned twins whose
+translucent box interior takes `m15station/<key>`'s pixels (the box paper at
+× 0.68). Re-running the builder rebuilds `m15station` / `m15stationland`
+byte for byte.
+
+*Profiles*: `extendedartstation` = extendedart's slots (white type ink, the
+set symbol's keyline, the crown band `EXTENDED_CROWN` — a colourless legend's
+grey C, as on extendedart) without the corner P/T slot, ONE picture under
+the whole frame from the border's inner edge to the card's sides
+(`EXTENDED_UNDER_FRAME_RECT`), M15's stamp notch and collector line;
+`m15borderlessstation` = the borderless artifact frame's slots and crowned
+twins (`crownMasters`), M15's rules slot (its box is M15's), no stamp notch
+and no collector line (the borderless frames have neither yet; the prints
+do). Both: `tiers`, `rulesAlignSwitch: false`. A crowned twin's master key
+(`m-legendary`) washes its tiers in its colour (`stationColours`).
+
+*Gates and follow*: `SUBTYPE_DRESSES` — an artifact whose subtypes say
+Spacecraft, nothing else — with `follow: false`: a PICK (Variations, after
+the station frame; the extended-art one is listed as an M15 treatment). A
+new Spacecraft follows its subtype onto the BORDERED frame only; a card on
+`extendedart` or `m15borderlessartifact` stays there; a card on a dress
+keeps it while it says Spacecraft and goes back to the frame the dress
+re-dresses (`extendedart`, `m15borderlessartifact`) when it doesn't. The AI
+never draws one at random and a deck never asks for one
+(`isPickOnlyDress`); asked for by name, a Spacecraft with a tier gets it.
+
+*Import* (`stationDress` in `lib/scryfall/frame-signatures.ts`; the
+`station` gap's reason now says "this printing's Station frame"):
+
+- extended art: `extendedart+station` names `extendedartstation` once it is
+  verified in the card's colour — exact (the crown is drawn); until then the
+  bordered station frame is its landing once THAT is verified
+  (`landOnOnceVerified`), `extendedart` before. A verified own frame wins
+  over the stand-in (`withVerification`). The plain `extendedart` frame
+  never does (owner Round 66): verified in the colour or not, it would print
+  the tiers as plain lines, so the station stand-in replaces it too
+  (`overOwnFrame` — the Vehicle stand-in still keeps a verified extended-art
+  frame). The remix follows (it finalizes through the same function); a
+  maker's own pick of plain extended art in the creator is still allowed.
+- borderless: lands on the bordered station frame once verified, the
+  artifact frame before. Never on `m15borderlessstation`: an edge-to-edge
+  frame is no import's landing (Scryfall's art crop is the window, 1.18) —
+  the template is listed in `TEMPLATES_WITHOUT_PRINTED_SIGNATURE`, and its
+  two references are allowlisted in the reference test.
+- showcase: still nearest with 4.11's item; the viewport Planets land on
+  the bordered Planet frame once verified (the land frame before), TRK #557
+  names the bordered Spacecraft frame (`onceVerified`, nearest).
+- Main (after #571) against this branch over all 95 printings of the
+  search, five verified states — production's ticks without the station
+  ones, production's ticks (the bordered pair ticked, #570), those plus
+  `extendedart` in every colour, every main template, every template: the
+  13 extended-art printings land on `m15station` in the middle three
+  (main: `extendedart`), on `extendedartstation` in the last; the borderless
+  and showcase ones on `m15station` / `m15stationland` wherever the
+  bordered pair is ticked (main: the artifact / land frame); the 65 black-bordered 2015-frame station
+  printings (61 paper, the playtest card, 3 Arena-only) and the 4 Doctor Who
+  planes are identical in every state; the 26 above move, and only as
+  described.
+
+*Checks*: visual matrix +49 cases (both templates × every colour and shape,
+the crown, the stamp, the tier shapes, foil / etched), 0 changed; parity +4
+cases (darwin recorded; the linux half is CI's red round); `rules-no-clip`
+holds the dresses to the bordered frame's layout text for text (their
+inputs are the same); `station-dresses-bake.test.tsx` (the box pixels, the
+edges, a crowned gold card's washes, a print file with bleed);
+`tests/unit/creator/station-dresses.test.ts` (gate, follow, AI). The
+art-window and edge-contract checks pass on the published masters.
 
 **Rollout.** PR 1 was an ADDITION: new templates no stored card sits on —
 no layout bump, no sweep, no badge, no migration. PR 2's corrections of the
@@ -7505,11 +7594,11 @@ at HD on all four.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 56 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 58 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens, the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames, 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63) and 4.40 / 4.41's three older full-art basics, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63) and 4.40 / 4.41's three older full-art basics, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card) prints its names,

@@ -106,11 +106,12 @@ describe("the slot the extendedart profile draws (EXTENDED_CROWN)", () => {
     expect(EXTENDED_CROWN.keyMap).toBeUndefined();
   });
 
-  it("is on the extendedart entry and its land dress only (owner Round 63), and no other template reads the extended-art band", () => {
+  it("is on the extendedart entry, its land dress (owner Round 63) and its Spacecraft dress (4.27a step 2) only, and no other template reads the extended-art band", () => {
     expect(getFrameProfile("extendedart").overlays).toEqual([EXTENDED_CROWN]);
     expect(getFrameProfile("extendedartland").overlays).toEqual([EXTENDED_CROWN]);
+    expect(getFrameProfile("extendedartstation").overlays?.[0]).toEqual(EXTENDED_CROWN);
     for (const t of FRAME_TEMPLATE_VALUES) {
-      if (t === "extendedart" || t === "extendedartland") continue;
+      if (t === "extendedart" || t === "extendedartland" || t === "extendedartstation") continue;
       for (const slot of getFrameProfile(t).overlays ?? []) expect(slot.assetPathTemplate, t).not.toContain("extendedcrown");
     }
   });

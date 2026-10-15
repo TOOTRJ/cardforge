@@ -26,7 +26,7 @@ type Key = keyof typeof printingsData;
 const printing = (key: Key) => scryfallCardSchema.parse(printingsData[key]);
 const match = (key: Key) => frameMatchFromScryfall(printing(key));
 
-const STATION_REASON = "PipGlyph doesn't draw the Station frame yet";
+const STATION_REASON = "PipGlyph doesn't draw this printing's Station frame yet";
 /** The bordered rule's reason since the frame exists (4.27a step 1). */
 const UNVERIFIED_REASON = "PipGlyph's Station frame isn't verified yet";
 const EVERY: ReadonlySet<string> = new Set(
@@ -134,26 +134,59 @@ describe("a bordered station printing is the artifact / land frame's nearest (st
   });
 });
 
-describe("the other dresses keep their own rule and say the station frame is missing", () => {
-  it("extended art: the extended-art frame, with the station gap first", () => {
+describe("the other dresses (TODO 4.27a step 2): their own rule and the station gap — then the bordered station frame, or their own once verified", () => {
+  /** Production's ticks plus the bordered station frame in every colour. */
+  const withStation = new Set([...PROD_BEFORE_STATION, ...["w", "u", "b", "r", "g", "m", "c"].flatMap((k) => [frameComboKey("m15station", k), frameComboKey("m15stationland", k)])]);
+  const withDresses = new Set([...withStation, ...["w", "u", "b", "r", "g", "m", "c"].map((k) => frameComboKey("extendedartstation", k))]);
+  const land = (found: ReturnType<typeof match>) => found.landOn ?? found.template;
+
+  it("extended art: the extended-art frame, with the station gap first — its own station frame named once verified", () => {
     for (const key of ["eoe-321", "eoe-348"] as Key[]) {
       const found = match(key);
+      const colour = key === "eoe-321" ? "w" : "m";
       expect(found, key).toMatchObject({
         status: "nearest",
         signature: "extendedart+station",
         template: "extendedart",
         reason: STATION_REASON,
         blockedBy: "4.27a",
+        onceVerified: "extendedartstation",
+        landOnOnceVerified: { template: "m15station" },
       });
       expect(found.gaps, key).toContain("station");
-      // Not "not yet verified": the frame would not be exact once ticked.
-      const final = withVerification(found, key === "eoe-321" ? "w" : "m", EVERY);
-      expect(final, key).toMatchObject({ status: "nearest", reason: STATION_REASON });
-      expect(final.unverified, key).toBeUndefined();
+      // Nothing ticked: the same landing, now "not yet verified" (the frame exists).
+      const none = withVerification(found, colour, PROD_BEFORE_STATION);
+      expect(land(none), key).toBe("extendedart");
+      expect(none, key).toMatchObject({ status: "nearest", reason: `not yet verified in ${colour === "w" ? "white" : "multicolor"}`, unverified: true });
+      // The bordered station frame ticked: its stand-in landing, still nearest.
+      const standIn = withVerification(found, colour, withStation);
+      expect(standIn, key).toMatchObject({ status: "nearest", template: "extendedart", landOn: "m15station" });
+      expect(standIn.reason, key).toMatch(/extended art/);
+      // Production's own list (2026-10-14: the bordered pair ticked) is that state.
+      expect(land(withVerification(found, colour, PROD)), key).toBe("m15station");
+      // The plain extended-art frame ticked in the colour too (owner Round
+      // 66): STILL the bordered station frame — extended art would print the
+      // tiers as plain lines, so it is never kept as a stand-in.
+      const ext = (keys: ReadonlySet<string>) => new Set([...keys, frameComboKey("extendedart", colour)]);
+      const overPlain = withVerification(found, colour, ext(PROD));
+      expect(overPlain, key).toMatchObject({ status: "nearest", template: "extendedart", landOn: "m15station" });
+      expect(land(withVerification(found, colour, ext(withStation))), key).toBe("m15station");
+      // …and every main template ticked (extendedart included), the dress not.
+      const everyButDress = new Set([...EVERY].filter((k) => !k.startsWith("extendedartstation/") && !k.startsWith("m15borderlessstation/")));
+      expect(land(withVerification(found, colour, everyButDress)), key).toBe("m15station");
+      // The extended-art frame ticked and the bordered station frame NOT: no
+      // landing to take — the import stays where it was, not yet verified.
+      expect(land(withVerification(found, colour, ext(PROD_BEFORE_STATION))), key).toBe("extendedart");
+      // Its own frame ticked: exact on it, whatever else is.
+      for (const keys of [withDresses, EVERY]) {
+        const own = withVerification(found, colour, keys);
+        expect(own, key).toMatchObject({ status: "exact", template: "extendedartstation", reason: null });
+        expect(own.landOn, key).toBeUndefined();
+      }
     }
   });
 
-  it("borderless: the borderless artifact frame, landing on the artifact frame as before", () => {
+  it("borderless: the borderless artifact frame, landing on the artifact frame as before — on the bordered station frame once it is verified (never its own: edge to edge)", () => {
     const found = match("eoc-1");
     expect(found).toMatchObject({
       status: "nearest",
@@ -162,27 +195,44 @@ describe("the other dresses keep their own rule and say the station frame is mis
       landOn: "m15artifact",
       reason: STATION_REASON,
       blockedBy: "4.27a",
+      landOnOnceVerified: { template: "m15station" },
     });
+    expect(found.onceVerified).toBeUndefined();
     expect(found.gaps?.[0]).toBe("station");
+    expect(land(withVerification(found, "m", PROD_BEFORE_STATION))).toBe("m15artifact");
+    expect(land(withVerification(found, "m", withStation))).toBe("m15station");
+    expect(land(withVerification(found, "m", EVERY))).toBe("m15station");
   });
 
-  it("showcase (the viewport Planets, TRK #557): the showcase rule's landing and item, both reasons", () => {
-    expect(match("eoe-277")).toMatchObject({
+  it("showcase (the viewport Planets, TRK #557): the showcase rule's landing and item, both reasons — the bordered Planet / Spacecraft frame once verified", () => {
+    const planet = match("eoe-277");
+    expect(planet).toMatchObject({
       status: "nearest",
       signature: "borderless/showcase+station",
       template: "m15borderlessland",
       landOn: "m15land",
       reason: `PipGlyph doesn't have this set's showcase frame yet; ${STATION_REASON}`,
       blockedBy: "4.11",
+      landOnOnceVerified: { template: "m15stationland" },
     });
-    expect(match("trk-557")).toMatchObject({
+    const ship = match("trk-557");
+    expect(ship).toMatchObject({
       status: "nearest",
       signature: "showcase+station",
       template: "m15artifact",
       reason: `PipGlyph doesn't have this set's showcase frame yet; ${STATION_REASON}`,
       blockedBy: "4.11",
+      onceVerified: "m15station",
     });
     expect(signatureBlockedBy("borderless/showcase+station", "m15land")).toBe("4.11");
+    // Adagia's frame colour is its mana's, white; the Enterprise is colourless.
+    expect(land(withVerification(planet, "w", PROD_BEFORE_STATION))).toBe("m15land");
+    expect(land(withVerification(planet, "w", withStation))).toBe("m15stationland");
+    expect(land(withVerification(ship, "c", PROD_BEFORE_STATION))).toBe("m15artifact");
+    const shipOn = withVerification(ship, "c", withStation);
+    expect(land(shipOn)).toBe("m15station");
+    // The showcase's own reason stands: the one-off design is 4.11's.
+    expect(shipOn.reason).toBe(`PipGlyph doesn't have this set's showcase frame yet; ${STATION_REASON}`);
   });
 
   it("every station signature is in the request log's vocabulary", () => {

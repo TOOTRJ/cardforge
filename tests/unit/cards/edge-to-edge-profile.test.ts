@@ -218,7 +218,8 @@ describe("the set symbol's keyline on a dark type bar (4.32, owner evidence 2026
   // …and on the borderless land's tinted one (4.34), whose black and gold
   // bars hide a common's #0f0f12 glyph the same way.
   // …and on the extended-art frame's black type bar (layout v58, TODO 4.7).
-  const BORDERLESS = ["m15borderless", "m15borderlessartifact", "m15borderlessland", "extendedart", "extendedartland"];
+  // …and the Spacecraft's two dresses (TODO 4.27a step 2), on those bars.
+  const BORDERLESS = ["m15borderless", "m15borderlessartifact", "m15borderlessland", "extendedart", "extendedartland", "extendedartstation", "m15borderlessstation"];
 
   it("is set by the borderless M15 frames and extended art only — every other profile draws the glyph as before", () => {
     for (const template of FRAME_TEMPLATE_VALUES) {

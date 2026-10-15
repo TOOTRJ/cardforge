@@ -49,6 +49,8 @@ describe("where the pieces are declared", () => {
       "m15textless", "m15textlessland",
       // The station frame (TODO 4.27a): the parents' crown band on its two entries.
       "m15station", "m15stationland",
+      // …and its dresses (step 2): the extended-art band, the borderless twins.
+      "extendedartstation", "m15borderlessstation",
       // The Nyx Constellation frame (owner 2026-10-13): the Nyx crown band, its arms faded.
       "nyx",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",

@@ -63,6 +63,8 @@ describe("buildTreatmentView", () => {
       "m15borderless",
       "m15borderlessartifact",
       "m15borderlessland",
+      // The Spacecraft's borderless dress (TODO 4.27a step 2).
+      "m15borderlessstation",
       "m15borderlesspw",
       "m15borderlesspwtall",
     ]);
@@ -71,15 +73,16 @@ describe("buildTreatmentView", () => {
     expect(states).toMatchObject({ w: "scored", u: "scored", b: "stale", r: "unscored" });
 
     // Every colour the five frames have a printing for (all seven, per the
-    // registry).
-    expect(view!.combos).toHaveLength(35);
+    // registry) — and the Spacecraft's borderless dress's one (gold, 4.27a
+    // step 2).
+    expect(view!.combos).toHaveLength(36);
 
     // The artifact kind and the land spread the borderless profile: title is
     // ONE slot, voted on by the three current colours of the scored frames
     // (the walkers' title is m15pw's, another rect).
     const title = view!.shared.find((row) => row.path === "title");
     expect(title).toMatchObject({
-      templates: ["m15borderless", "m15borderlessartifact", "m15borderlessland"],
+      templates: ["m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlessstation"],
       samples: 3,
       nudge: expect.objectContaining({ dyPct: 0.3, agree: 3, of: 3 }),
     });
@@ -102,7 +105,8 @@ describe("buildTreatmentView", () => {
     // still one row of theirs.
     const titles = view!.shared.filter((row) => row.path === "title");
     expect(titles.map((row) => row.templates)).toEqual([
-      ["m15borderless", "m15borderlessland"],
+      // (…and the Spacecraft's borderless dress, 4.27a step 2: the same bars.)
+      ["m15borderless", "m15borderlessland", "m15borderlessstation"],
       ["m15borderlesspw", "m15borderlesspwtall"],
     ]);
     // The type bar stays one slot: the land's and the regular walker's share
@@ -111,6 +115,7 @@ describe("buildTreatmentView", () => {
       "m15borderless",
       "m15borderlessartifact",
       "m15borderlessland",
+      "m15borderlessstation",
       "m15borderlesspw",
     ]);
   });

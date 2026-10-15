@@ -198,6 +198,9 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // Its land dress (owner Round 63): the same pack's land frames, the same
   // edges.
   extendedartland: EXTENDED_ART_EDGES,
+  // The Spacecraft's extended-art dress (TODO 4.27a step 2): the same pack
+  // with the station's cuts, which never reach the border.
+  extendedartstation: EXTENDED_ART_EDGES,
   // The black-bordered textless promos (TODO 4.35 / 4.42, CC 'Magic Fest
   // Promos', frames bucket): the black ring on every edge, as SCH / PF print
   // it. (The borderless textless printings are one-off designs that land
@@ -239,6 +242,9 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // The nonbasic land (4.34): the same pack's frames, re-tinted inside —
   // the same edges.
   m15borderlessland: BORDERLESS_M15,
+  // The Spacecraft's borderless dress (TODO 4.27a step 2): the artifact
+  // dress's masters with the station box inside — the same edges.
+  m15borderlessstation: BORDERLESS_M15,
   // 4.33's borderless planeswalkers, regular and tall (the same packs'
   // bottom bar and fins).
   m15borderlesspw: BORDERLESS_PW,
@@ -267,6 +273,7 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
 export const CROWNED_EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   m15borderless: { ...BORDERLESS_M15, top: { kind: "art", except: [[45, 55]] } },
   m15borderlessartifact: { ...BORDERLESS_M15, top: { kind: "art", except: [[45, 55]] } },
+  m15borderlessstation: { ...BORDERLESS_M15, top: { kind: "art", except: [[45, 55]] } },
 };
 
 /** The suffix of a crowned twin's key (lib/cards/frame-reference-registry.ts

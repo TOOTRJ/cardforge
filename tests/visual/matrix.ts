@@ -629,7 +629,9 @@ export function kindsByTemplate(): Map<FrameTemplate, CardKind[]> {
  *  creator does (lib/cards/art-framing.ts). */
 // …and the station frame (TODO 4.27a): the sheen over its see-through box
 // and its drawn pieces.
-const FINISH_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15pw", "saga", "m15token", "agclassic", "lotr", "retro", "m15borderless", "m15nyx", "m15station"];
+// …and its two Spacecraft dresses (TODO 4.27a step 2): the sheen over the
+// extended-art one's see-through box and the borderless one's floating bars.
+const FINISH_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15pw", "saga", "m15token", "agclassic", "lotr", "retro", "m15borderless", "m15nyx", "m15station", "extendedartstation", "m15borderlessstation"];
 /** The edge card (3.11's content cases) on one frame of each family. */
 const EDGE_TEMPLATES: readonly FrameTemplate[] = ["m15", "m15borderless", "agclassic", "retro", "lotr", "tarkirdragon"];
 /** The legendary crown switched on (TODO 4.6a): the long card (Legendary) on
@@ -658,6 +660,11 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // land grey on a colourless card, the colour's, gold).
   ["m15station", ["c", "g", "wub"]],
   ["m15stationland", ["c", "g"]],
+  // TODO 4.27a step 2: its dresses' crowns — the extended-art band (the grey
+  // C on a colourless card, as extendedart; the colour's; gold), the
+  // borderless artifact dress's crowned twins.
+  ["extendedartstation", ["c", "w", "wub"]],
+  ["m15borderlessstation", ["c", "g", "wub"]],
   // TODO 4.25: the Universes Beyond crown band — a colour, the artifact
   // silver (a colourless card on the spell frame too), a pair, gold and
   // the land grey.
@@ -1220,6 +1227,31 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   ["m15station", "artifact", "c", "@tiers-none", { rules_text: "Flying\nWhenever this Spacecraft attacks, draw a card.", power: "3", toughness: "3" }],
   ["m15station", "artifact", "g", "@tiers-wide", { power: "20", toughness: "20" }],
   ["m15station", "artifact", "b", "@tiers-star", { power: "*", toughness: "7" }],
+  // TODO 4.27a step 2: the dresses' box in the same shapes — one tier, the
+  // three-tier rows with the plate on the middle one, none.
+  ["extendedartstation", "artifact", "u", "@tiers-one", { rules_text: `Station\n8+ | Flying`, power: "4", toughness: "4" }],
+  [
+    "m15borderlessstation",
+    "artifact",
+    "r",
+    "@tiers-three",
+    {
+      rules_text: `${stationReminder("Spacecraft", 8)}\n2+ | Haste\n8+ | Flying, first strike\n14+ | Other creatures you control get +2/+0.`,
+      face_content: {
+        station: {
+          intro: stationReminder("Spacecraft", 8),
+          tiers: [
+            { threshold: 2, text: "Haste" },
+            { threshold: 8, text: "Flying, first strike", pt: true },
+            { threshold: 14, text: "Other creatures you control get +2/+0." },
+          ],
+        },
+      },
+      power: "5",
+      toughness: "4",
+    },
+  ],
+  ["extendedartstation", "artifact", "c", "@tiers-none", { rules_text: "Flying\nWhenever this Spacecraft attacks, draw a card.", power: "3", toughness: "3" }],
   [
     "saga",
     "saga",
@@ -1920,6 +1952,8 @@ export function visualCases(): VisualCase[] {
 // …and the station frame (TODO 4.27a): the parents' notch over the cut masters.
 export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15stationland", "m15snow", "m15devoid", "m15pw",
+  // TODO 4.27a step 2: the Spacecraft's extended-art dress (M15's bottom border).
+  "extendedartstation",
   // TODO 4.25: the Universes Beyond frames' TRIANGLE stamp.
   "m15ub", "m15ubartifact", "m15ubland",
 ];
