@@ -39,7 +39,16 @@ const printings = printingsData as Record<string, unknown>;
 // Winter KHM #193, which are now their defaults; the non-snow printings
 // (Axgard Braggart, Deathknell Berserker, Sarulf's Packmate) left the
 // registry.
+// The Spacecraft's borderless dress (TODO 4.27a step 2) is no import's
+// landing: as every edge-to-edge frame its printings land on the bordered
+// equivalent (Scryfall's art crop is the window, 1.18) — the bordered station
+// frame once verified. Its two printings are still the look it is verified
+// against.
 const ALLOWLIST: Record<string, string> = {
+  "m15borderlessstation/m#0":
+    "an edge-to-edge frame (borderless): EOC #1 resolves to the borderless artifact frame and lands on the bordered station frame; it is the printing the dress is verified against",
+  "m15borderlessstation/m#1":
+    "an edge-to-edge frame (borderless): EOC #2 resolves to the borderless artifact frame and lands on the bordered station frame; it is the printing the dress is verified against",
   "m15devoid/c#0":
     "verified default; no colourless devoid printing exists, so the row is referenced to BFZ's colourless Eldrazi frame (Kozilek's Channeler BFZ #10)",
 };

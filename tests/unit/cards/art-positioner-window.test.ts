@@ -51,6 +51,11 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   // The station frame (TODO 4.27a): ONE picture under the whole frame.
   m15station: { front: [1392, 1959] },
   m15stationland: { front: [1392, 1959] },
+  // The Spacecraft's dresses (TODO 4.27a step 2): one picture under the
+  // whole frame — from the border's inner edge to the card's sides on
+  // extended art; the borderless frame's own window.
+  extendedartstation: { front: [1500, 1959] },
+  m15borderlessstation: { front: BORDERLESS },
   m15ub: { front: M15_WINDOW },
   m15ubartifact: { front: M15_WINDOW },
   m15ubland: { front: M15_WINDOW },
@@ -212,14 +217,15 @@ describe("what the fixed 5:4 surface got wrong (before 3b.13)", () => {
     expect(front("battle")).toBeCloseTo(1.3598, 3);
   });
 
-  it("no template's window was 5:4, and 31 were more than a quarter off", () => {
+  it("no template's window was 5:4, and 33 were more than a quarter off", () => {
     const off = FRAME_TEMPLATE_VALUES.map((t) => mismatch(front(t)));
     expect(off.filter((m) => m < 0.005)).toHaveLength(0);
     // (25 before the station frame, TODO 4.27a: its two templates' one
     // picture under the whole frame is far taller than 5:4; 27 before the
     // extended-art frame's see-through colourless master, layout v58; 28
-    // before the older full-art basics, TODO 4.40 / 4.41: three tall windows more.)
-    expect(off.filter((m) => m > 0.25)).toHaveLength(31);
+    // before the older full-art basics, TODO 4.40 / 4.41: three tall windows more; 31 before the Spacecraft's
+    // extended-art and borderless dresses, 4.27a step 2.)
+    expect(off.filter((m) => m > 0.25)).toHaveLength(33);
   });
 });
 

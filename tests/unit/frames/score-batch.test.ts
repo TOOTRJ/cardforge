@@ -49,6 +49,8 @@ describe("scope", () => {
       "m15borderless",
       "m15borderlessartifact",
       "m15borderlessland",
+      // The Spacecraft's borderless dress (TODO 4.27a step 2).
+      "m15borderlessstation",
       "m15borderlesspw",
       "m15borderlesspwtall",
     ]);

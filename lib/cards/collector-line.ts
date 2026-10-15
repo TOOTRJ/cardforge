@@ -70,6 +70,9 @@ export const COLLECTOR_TEMPLATES = [
   "m15nyx",
   "m15station",
   "m15stationland",
+  // The Spacecraft's extended-art dress (TODO 4.27a step 2): its bottom
+  // border is M15's, pixel for pixel, and its prints carry the line.
+  "extendedartstation",
   "m15ub",
   "m15ubartifact",
   "m15ubland",

@@ -29,6 +29,9 @@ const ART_FIRST: FrameTemplate[] = [
   "m15borderless",
   "m15borderlessartifact",
   "m15borderlessland",
+  // The Spacecraft's borderless dress (TODO 4.27a step 2): the borderless
+  // artifact frame's art to the edges.
+  "m15borderlessstation",
   // 4.33's borderless planeswalkers: art to the edges, so art-first by rule.
   "m15borderlesspw",
   "m15borderlesspwtall",
@@ -46,24 +49,28 @@ const M20_TOKENS: FrameTemplate[] = [
  *  FRAME_TEMPLATE_VALUES order. */
 /** The station frame's two (TODO 4.27a, PR 2): the picture runs under the
  *  whole frame, so an empty tile was bars over nothing. */
-const STATION: FrameTemplate[] = ["m15station", "m15stationland"];
+// …and its extended-art dress (step 2), whose picture runs under it too.
+const STATION: FrameTemplate[] = ["m15station", "m15stationland", "extendedartstation"];
 // …and 4.40's stone ring, whose window is 72 % of the card's height.
-const OPT_IN: FrameTemplate[] = [...STATION, ...M20_TOKENS, "bloomanime", "tarkirghostfire", "fullart", "m15fullartlandzen", "m15textless", "m15textlessland", "nyx"];
+const OPT_IN: FrameTemplate[] = ["m15station", "m15stationland", ...M20_TOKENS, "bloomanime", "tarkirghostfire", "fullart", "extendedartstation", "m15fullartlandzen", "m15textless", "m15textlessland", "nyx"];
 /** Every tile that draws the sample — exactly these 19 of the 52 templates,
  *  in FRAME_TEMPLATE_VALUES order. Spelled out, not derived, so a flag that
  *  leaks through a profile spread (or a widened rule) fails here. */
 const SAMPLED: FrameTemplate[] = [
-  ...STATION,
+  "m15station",
+  "m15stationland",
   ...M20_TOKENS,
   "m15borderless",
   "m15borderlessartifact",
   // 4.34's borderless land: art-first like the other borderless frames.
   "m15borderlessland",
+  "m15borderlessstation",
   "m15borderlesspw",
   "m15borderlesspwtall",
   "bloomanime",
   "tarkirghostfire",
   "fullart",
+  "extendedartstation",
   "m15fullartland",
   "fullartland",
   "m15fullartlandzen",
@@ -152,9 +159,10 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
     // + 4.5c's Vehicle frame (an opaque M15 master: no sample).
     // + the station frame's two (TODO 4.27a) + the Nyx dress (TODO 4.7)
     // + 4.25's three Universes Beyond frames (opaque masters too).
-    // + extended art's land dress (TODO 4.7, owner Round 63: opaque masters)
+    // + extended art's land dress (TODO 4.7, owner Round 63: opaque masters).
+    // + the Spacecraft's two dresses (TODO 4.27a step 2: sampled, above)
     // + 4.40 / 4.41's three older full-art basics.
-    expect(FRAME_TEMPLATE_VALUES).toHaveLength(71);
+    expect(FRAME_TEMPLATE_VALUES).toHaveLength(73);
     expect(FRAME_TEMPLATE_VALUES.filter((t) => drawn.has(t))).toEqual(SAMPLED);
   });
 

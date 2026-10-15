@@ -124,11 +124,13 @@ describe("the Etched finish on edge-to-edge frames", () => {
     const edge = FRAME_TEMPLATE_VALUES.filter((t) => artReachesCardEdge(getFrameProfile(t)));
     // 4.32's borderless M15 skins, 4.34's borderless land, 4.33's borderless
     // planeswalkers and 4.39's borderless full-art basic; the black-bordered
-    // m15fullartland keeps Etched.
+    // m15fullartland keeps Etched. (…and the Spacecraft's borderless dress,
+    // TODO 4.27a step 2.)
     expect(edge).toEqual([
       "m15borderless",
       "m15borderlessartifact",
       "m15borderlessland",
+      "m15borderlessstation",
       "m15borderlesspw",
       "m15borderlesspwtall",
       "fullartland",

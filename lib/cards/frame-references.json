@@ -967,6 +967,113 @@
       "m": null
     }
   },
+  "extendedartstation": {
+    "note": "The Spacecraft's extended-art dress (TODO 4.27a step 2): Edge of Eternities' extended-art Spacecraft (EOE #321–355, the EOC commander deck's #27 / #34, Star Trek TRK #481) — the extended-art pack's bars and black type bar over the station frame's see-through box, banded into charge tiers, the P/T on a tier's black plate; the picture runs under the whole frame. Every listed print is its colour's only extended-art Spacecraft or one of two. w: The Seriema (#323) is legendary (the crown); m: Infinite Guideline Station (#348), five colours, legendary. c: the silver artifact frame — Extinguisher Battleship (#355) plain; Dawnsire (#351), The Eternity Elevator (#354, no P/T) and the Enterprise (TRK #481) legendary.",
+    "colors": {
+      "w": [
+        {
+          "name": "Lumen-Class Frigate",
+          "set": "eoe",
+          "scryfallId": "7fffe390-d16c-4891-b94a-99e895f219d0"
+        },
+        {
+          "name": "The Seriema",
+          "set": "eoe",
+          "scryfallId": "9361996c-414b-4d0d-9d94-b6d5fe04e987"
+        }
+      ],
+      "u": [
+        {
+          "name": "Synthesizer Labship",
+          "set": "eoe",
+          "scryfallId": "85bbbbed-1dbb-4c85-b585-cde6713890ef"
+        },
+        {
+          "name": "Uthros Research Craft",
+          "set": "eoc",
+          "scryfallId": "2063f688-ab86-4c7c-9237-bdb47f56a618"
+        }
+      ],
+      "b": [
+        {
+          "name": "Entropic Battlecruiser",
+          "set": "eoe",
+          "scryfallId": "c3cf23c5-cef9-4d78-9f09-a737e59b8d70"
+        }
+      ],
+      "r": [
+        {
+          "name": "Warmaker Gunship",
+          "set": "eoe",
+          "scryfallId": "515c0b63-c710-4419-a84d-4777d874bf19"
+        }
+      ],
+      "g": [
+        {
+          "name": "Sledge-Class Seedship",
+          "set": "eoe",
+          "scryfallId": "4d0c21a9-033c-42af-acbe-84284e0849f7"
+        },
+        {
+          "name": "Exploration Broodship",
+          "set": "eoc",
+          "scryfallId": "3410f9c6-ac11-4e7f-aefd-69fba43e1315"
+        }
+      ],
+      "c": [
+        {
+          "name": "Extinguisher Battleship",
+          "set": "eoe",
+          "scryfallId": "5062b3a3-0ec6-4c1b-9394-e2f2e2301c43"
+        },
+        {
+          "name": "Dawnsire, Sunstar Dreadnought",
+          "set": "eoe",
+          "scryfallId": "8a242c45-07a7-48bf-8cd0-159fd9f5ecbc"
+        },
+        {
+          "name": "The Eternity Elevator",
+          "set": "eoe",
+          "scryfallId": "23d2c721-42a6-4108-91c2-93f59b645313"
+        },
+        {
+          "name": "U.S.S. Enterprise-D, Galaxy-Class",
+          "set": "trk",
+          "scryfallId": "12a2e90a-6776-4213-b696-fd48a4bcf0a2"
+        }
+      ],
+      "m": [
+        {
+          "name": "Infinite Guideline Station",
+          "set": "eoe",
+          "scryfallId": "334654be-c433-43b6-bf33-8ba040c3c3a8"
+        }
+      ]
+    }
+  },
+  "m15borderlessstation": {
+    "note": "The Spacecraft's borderless dress (TODO 4.27a step 2): the Edge of Eternities commanders EOC #1 Hearthhull, the Worldseed (B/R/G) and #2 Inspirit, Flagship Vessel (R/U/W) — the borderless artifact frame's bars with thick gold rims floating on the art, the black bottom bar and fins, over the station frame's see-through box. Both are three-colour and legendary: m only. w u b r g c: no borderless Spacecraft is printed in a single colour or colourless.",
+    "colors": {
+      "w": null,
+      "u": null,
+      "b": null,
+      "r": null,
+      "g": null,
+      "c": null,
+      "m": [
+        {
+          "name": "Hearthhull, the Worldseed",
+          "set": "eoc",
+          "scryfallId": "6b913e79-a9f6-44d4-bb37-c4f6f66b8151"
+        },
+        {
+          "name": "Inspirit, Flagship Vessel",
+          "set": "eoc",
+          "scryfallId": "46900ec7-eb18-45c4-8e90-a48b665cfdee"
+        }
+      ]
+    }
+  },
   "m15land": {
     "note": "Basics for w/u/b/r/g, Wastes for c. m is a five-colour gold-plate nonbasic (Command Tower); true dual lands blend two colours, which our single m frame can't express.",
     "colors": {
@@ -4567,11 +4674,6 @@
           "name": "Danitha, New Benalia's Light",
           "set": "mat",
           "scryfallId": "5e94685e-e8a0-46a5-83cf-41ccebed62cc"
-        },
-        {
-          "name": "Infinite Guideline Station",
-          "set": "eoe",
-          "scryfallId": "334654be-c433-43b6-bf33-8ba040c3c3a8"
         }
       ]
     }

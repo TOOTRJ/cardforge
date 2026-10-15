@@ -96,8 +96,9 @@ describe("the main box on every template", () => {
         "m15vehicle",
         // The Nyx dress (TODO 4.7): m15's box.
         "m15nyx",
-        // The station frame (TODO 4.27a): m15artifact's and m15land's box.
-        "m15station", "m15stationland",
+        // The station frame (TODO 4.27a): m15artifact's and m15land's box —
+        // and its dresses' (step 2), the same box.
+        "m15station", "m15stationland", "extendedartstation", "m15borderlessstation",
         // The Universes Beyond frames (TODO 4.25): their M15 twins' boxes.
         "m15ub", "m15ubartifact", "m15ubland",
         // The transform bodies (TODO 5.1a): M15's box and margins on both faces.

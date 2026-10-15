@@ -28,6 +28,21 @@ export const STATION_RECIPE = {
     // template has every key); with no print to verify against they stay
     // unticked, so nobody is offered them.
     m15stationland: { from: "m15land", keys: ["w", "u", "b", "r", "g", "m", "c"] },
+    // The extended-art and borderless DRESSES of the Spacecraft frame (TODO
+    // 4.27a step 2, PR 4; scripts/lib/station-dresses-2025.mjs holds what
+    // their 15 printings measured). The extended-art masters are Card
+    // Conjurer's accurate pack — M15's pixels byte for byte from row 1320
+    // down, the type bar the pack's BLACK one — so the same two cuts apply
+    // unchanged. A colourless Spacecraft wears the pack's silver ARTIFACT
+    // frame (`a`: EOE #351 / #354 / #355, TRK #481).
+    extendedartstation: { from: "extendedart", keys: ["w", "u", "b", "r", "g", "m", "c"], sourceKeys: { c: "a" } },
+    // …and BORDERLESS (EOC #1 / #2): the published borderless artifact
+    // masters — Card Conjurer's borderless pack: no field, translucent bars
+    // with thick rims floating on the art, the black bottom bar and its side
+    // fins, the crowned `<key>-legendary` twins — whose dark translucent
+    // text-box interior is swapped for the station box: m15station/<key>'s
+    // own pixels there (M15's box paper at × 0.68). Nothing else moves.
+    m15borderlessstation: { from: "m15borderlessartifact", keys: ["w", "u", "b", "r", "g", "m", "c"], boxFrom: "m15station", crownTwins: true },
   },
   /** The field: pixels where m15/<k> and m15artifact/<k> differ by more than
    *  this (sum of |dR| + |dG| + |dB| + |dA|), union over these keys, 1 px
