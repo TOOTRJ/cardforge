@@ -3994,7 +3994,12 @@ each look, 2026-10-14), then the pack:
   it, so the stone keeps its own pixels) and draws the medallion back over
   it (`recutBarAndMedallion`, `scripts/lib/cc-frames.mjs`). On the re-cut
   master BFZ's bar edges sit within 1 px; AKH / HOU / ZNR print 3–4 px
-  lower still (a set-to-set offset; the type line follows BFZ's).
+  lower still (a set-to-set offset; the type line follows BFZ's). ZNR
+  also sets its SUBTYPE 22–28 px further right than BFZ / AKH / HOU / OGW
+  do — on every ZNR printing measured (#266, #267, #270, #273, #276, #279;
+  the independent check of #571), not one printing's quirk — so a ZNR
+  import that lands exact here prints its subtype ~25 px left of the
+  print's (the 15 ZNR printings of the 52; owner's call at verification).
 - **SNC.** The pack draws the bar 13 px and the medallion 18 px low (bar
   rim 1711 vs 1698–1701, medallion top 1636 vs 1616–1617), and the art's
   lower edge 13–17 px low: `SNC_BASIC_RECUT` moves the band down to the
