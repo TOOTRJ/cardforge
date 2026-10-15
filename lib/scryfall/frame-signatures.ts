@@ -2173,10 +2173,13 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       },
     },
     ["nyx-dress", "border", "crown", "two-colour", "two-colour-hybrid"],
-    // The M20 token's crown is its own pill crown (TFDN #13; 4.48), never
-    // the standard band 4.6a draws; its two-colour look is a central split
-    // of the rims (TMKM #10), 4.48's too — not the M15 pair masters 4.6b
-    // draws (design 2026-09-29 hand-offs).
+    // The M20 token's crown is its own floating crown round the name pill
+    // (TFDN #13) and its two-colour look a central split (TMKM #10) —
+    // never the arch's (4.6f): 4.48's, drawn by the m20token* templates
+    // since its last pieces (M20_TOKEN_CROWN, the `<pair>` masters). Until
+    // the full-art template is verified in the card's colour the arch stands
+    // in and the gap names 4.48; after, the gap is drawn there (gapDrawnBy:
+    // onceVerifiedMatch is exact). No token prints the hybrid dress (no cost).
     { crown: "4.48", "two-colour": "4.48", "two-colour-hybrid": "4.48" },
   ),
   {
@@ -2910,8 +2913,9 @@ const RULE_BY_KEY: ReadonlyMap<string, Rule> = new Map(FRAME_SIGNATURE_RULES.map
  * the row as answered, not as open and blocked by an item. Only when that
  * frame is one the signature's own rule names (a borderless printing that
  * landed on its bordered equivalent is still not exact) and draws the gap's
- * piece (gapDrawnBy — never for a family that waits on another item for it,
- * the M20 token's crown). A "two-colour" row logged before the hybrid dress
+ * piece (gapDrawnBy — for a family that waits on another item for it, only
+ * on the frame the rule names once verified: the M20 token's crown and pairs
+ * on the full-art templates, never on the arch). A "two-colour" row logged before the hybrid dress
  * had its own gap may be a hybrid printing: it counts only where the frame
  * draws both dresses, or only lands (a land's split is never hybrid), or
  * where the frame's gold-split printings are its gold master
@@ -2928,7 +2932,12 @@ export function signatureDrawnOn(signature: string, template: string | null | un
   if (!Object.prototype.hasOwnProperty.call(GAPS, gap)) return false;
   const key = gap as GapKey;
   const on = template as FrameTemplate;
-  if (rule.gapBlockedBy?.[key] || !templatesOfRule(rule).includes(on) || !gapDrawnBy(key, on)) return false;
+  // A gap the family waits on another item for counts as drawn only on the
+  // frame the rule names once verified (the M20 token's crown and pairs on
+  // the full-art templates, TODO 4.48) — never on its stand-in.
+  const later = rule.outcome.onceVerified;
+  const onLater = later !== undefined && (typeof later === "string" ? [later] : FAMILIES[later.family].produces).includes(on);
+  if ((rule.gapBlockedBy?.[key] && !onLater) || !templatesOfRule(rule).includes(on) || !gapDrawnBy(key, on)) return false;
   if (key === "two-colour" && !gapDrawnBy("two-colour-hybrid", on)) {
     return GOLD_PAIR_TEMPLATES.has(on) || (templateSupportsKind(on, "land") && !templateSupportsKind(on, "creature"));
   }

@@ -72,6 +72,18 @@ export const PAIR_RAMPS = Object.freeze({
   crown: Object.freeze([45, 55]),
   crownFloating: Object.freeze([40, 60]),
   borderlessLand: Object.freeze([39, 61]),
+  // --- the M20 full-art token (TODO 4.48's two-colour split; measured
+  // 2026-10-15 on Scryfall's PNGs at 1500 × 2100, each ring's left-end and
+  // right-end colours taken as 0 and 1, the column profile smoothed over
+  // 9 px): 32 two-colour M20+ prints (all ten pairs, the three heights,
+  // 2019 → 2026; the 26–27 whose two colours differ enough to read) cross
+  // 10 / 50 / 90 % at 42.9 / 50.3 / 58.3 %W on the colour strip under the
+  // box (rows 1939–1946) and 42.6 / 50.1 / 58.2 on the name pill's top rim
+  // (rows 91–97), the regular type pill's top rim 42.4 / 50.0 / 58.9 (11
+  // prints) — where the same reading of a 40→60 master gives 42 / 50 / 58. ONE ramp for every part the split crosses (the name
+  // pill, the rims, the box, the strip), as the borderless pinline's and
+  // the floating crown's.
+  m20Token: Object.freeze([40, 60]),
   // --- the old frames (TODO 4.6h; measured 2026-10-08 on Scryfall's scans,
   // each print pixel's share between OUR two single-colour masters of the
   // frame, the profile's own ends taken as 0 and 1, a ramp fitted by least

@@ -825,6 +825,49 @@ export const M20_ARTIFACT_SOLID_NAME_PILL = { op: "opaque" };
 export const M20_COLOURLESS_TYPE_TINT = { op: "tint", rgb: [164, 149, 143], opacity: 0.65, alphaFull: 168, alphaNone: 186, colors: ["c"] };
 export const M20_ARTIFACT_TYPE_TINT = { op: "tint", rgb: [151, 170, 181], opacity: 0.65, alphaFull: 205, alphaNone: 216 };
 
+/**
+ * The two-colour full-art token (TODO 4.48's central split; measured
+ * 2026-10-15 on Scryfall's PNGs at 1500 × 2100, 32 two-colour M20+ prints,
+ * all ten pairs, 2019 → 2026). A pair prints its two colours left to right
+ * across ONE untilted ramp (PAIR_RAMPS.m20Token, 40→60 %W) on everything the
+ * colour paints — the name pill, the rims, the translucent box and the
+ * colour strip (TMKM #10 W|U, TMKM #13 G|W, TDMU #21 R|G) — while its TYPE
+ * pill is neither colour: a neutral warm grey, the same on every pair
+ * (median rgb 193/187/187, luminance 188, behind the type line on 16 regular
+ * prints — 183–203; a mono white pill reads 217/214/207, black 182/167/168),
+ * and its P/T plate is M15's grey colourless plate (204/197/192 on 11
+ * prints; `m15/pt/c` reads 203/196/191 — FrameProfile.twoColorPlate).
+ *
+ * The master: the two colours' frames lerped whole (premultiplied,
+ * blendPair), then CC's grey 'Land Frame' type pill IN PLACE of the lerped
+ * one (`replace`, through the pack's Type mask — L's bevels and outline are
+ * the pack's own), tinted to the prints and made solid like every pill
+ * (M20_PAIR_TYPE_TINT, then M20_TOKEN_SOLID_TYPE_PILL). CC's L pill is a flat
+ * rgb 214/207/203 at α 204; the tint puts it on 193/187/187. The artifact
+ * templates keep their silver pills and box (4.50): the A frame whole and
+ * the two colours' pinlines lerped through the pack's Pinline mask.
+ */
+export const M20_PAIR_TYPE_TINT = { op: "tint", rgb: [184, 178, 180], opacity: 0.65, alphaFull: 205, alphaNone: 216, colors: [...TWO_COLOR_PAIRS] };
+
+/** A plain full-art token pair master's layers (see M20_PAIR_TYPE_TINT). */
+function m20TokenPairLayers(dir, H, height, pair) {
+  const [a, b] = pair.split("");
+  return [
+    { src: m20TokenFrame(dir, H, a), right: m20TokenFrame(dir, H, b), ramp: [...PAIR_RAMPS.m20Token] },
+    { src: m20TokenFrame(dir, H, "l"), mask: M20_TOKEN_TYPE_MASK[height], replace: true },
+  ];
+}
+
+/** An artifact full-art token pair master's layers: the silver A frame
+ *  whole, the two colours' pinlines lerped (4.50's mono recipe, split). */
+function m20TokenArtifactPairLayers(dir, H, height, pair) {
+  const [a, b] = pair.split("");
+  return [
+    layer(m20TokenFrame(dir, H, "a")),
+    { src: m20TokenFrame(dir, H, a), right: m20TokenFrame(dir, H, b), ramp: [...PAIR_RAMPS.m20Token], mask: M20_TOKEN_PINLINE[height] },
+  ];
+}
+
 /** One full-art token template: the height's pack, plain or artifact. */
 function m20TokenTemplate(height, artifact) {
   const { dir, height: H, pack } = M20_TOKEN_PACKS[height];
@@ -838,6 +881,8 @@ function m20TokenTemplate(height, artifact) {
   const typeMask = M20_TOKEN_TYPE_MASK[dir];
   const finish = [
     { ...(artifact ? M20_ARTIFACT_TYPE_TINT : M20_COLOURLESS_TYPE_TINT), mask: typeMask },
+    // TODO 4.48: a plain pair's grey type pill, tinted to the prints.
+    ...(artifact ? [] : [{ ...M20_PAIR_TYPE_TINT, mask: typeMask }]),
     { ...M20_TOKEN_SOLID_TYPE_PILL, mask: typeMask },
     ...(artifact
       ? [
@@ -853,8 +898,14 @@ function m20TokenTemplate(height, artifact) {
         // takes the colour on the pill rims, the pinline and the strip
         // (TDSK #7 Toy w, TSOC #8 Phyrexian Myr u, TMH3 #18 b, TMOC #25 r).
         ...perColor((k) => [layer(m20TokenFrame(dir, H, "a")), layer(m20TokenFrame(dir, H, k), M20_TOKEN_PINLINE[height])], WUBRGM),
+        // TODO 4.48: the ten pairs, their pinlines split (FrameProfile.twoColorMasters).
+        ...Object.fromEntries(TWO_COLOR_PAIRS.map((pair) => [pair, m20TokenArtifactPairLayers(dir, H, height, pair)])),
       }
-    : perColor((k) => [layer(m20TokenFrame(dir, H, k))]);
+    : {
+        ...perColor((k) => [layer(m20TokenFrame(dir, H, k))]),
+        // TODO 4.48: the ten pairs (FrameProfile.twoColorMasters).
+        ...Object.fromEntries(TWO_COLOR_PAIRS.map((pair) => [pair, m20TokenPairLayers(dir, H, height, pair)])),
+      };
   const notes = artifact
     ? [
         `source: CC '${H}' token pack Artifact Frame (tokenFrameA${H}.png) — TODO 4.50`,
@@ -864,6 +915,11 @@ function m20TokenTemplate(height, artifact) {
         `source: CC '${H}' token pack (tokenFrame{W,U,B,R,G,M}${H}.png) — the full-art token design, M20 → today (TODO 4.48)`,
         `colourless = CC's frameC.png (charcoal pills, box α≈166; TEOE #1 Sliver, TMH3 #38 Eldrazi Spawn)`,
       ];
+  notes.push(
+    artifact
+      ? "two-colour pair masters <pair>.png (TODO 4.48, measured on 32 two-colour M20+ prints): the silver artifact master whole + the pair's two colour masters lerped left to right across PAIR_RAMPS.m20Token (40→60 %W, untilted, premultiplied) through the pack's Pinline mask — the colours on the rims, pinline and strip, the pills and box silver; the plate is the artifact set's colourless one (FrameProfile.twoColorPlate) — PipGlyph composite of CC pixels"
+      : `two-colour pair masters <pair>.png (TODO 4.48, measured on 32 two-colour M20+ prints: TMKM #10 W|U, TMKM #13 G|W, TDMU #21 R|G …): the pair's two colour masters lerped WHOLE left to right across PAIR_RAMPS.m20Token (40→60 %W, untilted, premultiplied — the name pill, rims, box and strip split there on the prints, 42.9 / 50.3 / 58.3 %W at 10 / 50 / 90 % on the strip), then CC's grey 'Land Frame' type pill (tokenFrameL${H}.png) in place of the lerped one through the pack's Type mask, tinted to the prints' neutral pill (median rgb 193/187/187 on 16 regular prints, every pair alike) and made solid; the plate is M15's grey colourless one (FrameProfile.twoColorPlate: the prints' 204/197/192) — PipGlyph composite of CC pixels`,
+  );
   if (height === "short") notes.push("CC's 'Short' pack is the printed REGULAR box (type pill 66.9–73.7 %H; its 'Regular' pack at 64 %H matches no print, TODO 4.48); measured on 19 prints: pill +0.9 px, name pill +1.3, strip −1.0 — used as drawn");
   if (height === "tall") notes.push("measured on 16 tall prints: pill +0.7 px, name pill +1.3 — used as drawn");
   if (recut) notes.push("re-cut onto the prints (TODO 4.48, measure first): the type pill 5 px lower, as 28 M20+ textless prints print it (+4.8 px, correlation); PipGlyph composite of CC pixels");
@@ -5719,8 +5775,97 @@ const NYX_CROWN_NOTES = [
   "keys: w u b r g, m (gold), a (the colourless key's silver: m15nyx maps c → a) and the ten pairs — the first colour's crown and strip on the left, the second's on the right, through m15crown's untilted crown ramp 45→55 %W; never l or c (no Nyx land or see-through master)",
 ];
 
+// --- TODO 4.48: the M20 full-art token's legendary crown, an OVERLAY band.
+// Every crowned M20+ token (51 printings, 2020 → 2026: TFDN #13 Scion of the
+// Deep, TTDC #18, TCMM #60, TAFR #8 / #13, TOTJ #6, TLTR #20, TM3C #11 …)
+// wears Card Conjurer's FLOATING crown — the borderless frame's — round its
+// name pill: at CC's borderless bounds (crown 3.07/1.91/93.87×10.24 %, the
+// outline UNDER it at 2.8/1.72/94.4×10.62 %, both 1500-native, 1:1) its
+// scallops, wings and wrap sit on the prints' (measured 2026-10-15 against
+// the crown's edge into the black border, 1500 × 2100: the top edge +2.5 px
+// on the 2023+ prints — the name pill itself prints +1.3 px below CC's, used
+// as drawn (4.48) — the wings +4 / +1 px; the 2021 AFR scans −1 px). The
+// crown's hole is the pill's interior: it repaints only the pill's rims and
+// ends (rows 89–103 and 218–232 at full width, ~36 px at each end), as the
+// prints' crown carries the rims. Nothing is erased or covered: the token
+// master has no ring at the top for the crown to replace (its border is the
+// black card edge). Composited over a clear canvas and cropped to the
+// outline's rows 0–259. Keys: the colours, gold (`m`, also a pair drawn
+// gold), CC's grey C crown (the plain templates' charcoal `c`), CC's silver
+// A crown (the artifact templates' `c` → `a`: TNEO #16 Tamiyo's Notebook,
+// TONE #9) and the ten pairs — the first colour's crown on the left, the
+// second's on the right, lerped across the token's own split
+// (PAIR_RAMPS.m20Token, 40→60 %W: TDMU #21 R|G, TMKM #13 G|W).
+export const M20_TOKEN_CROWN_BAND = Object.freeze({
+  source: CROWNS,
+  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "c", "a", ...TWO_COLOR_PAIRS]),
+  crown: BORDERLESS_CROWN.crown,
+  outline: BORDERLESS_CROWN.outline,
+  compositeSize: Object.freeze({ width: OUT_W, height: OUT_H }),
+  rows: 260,
+});
+
+/** The M20 token crown band's layers for a key, in CC's draw order (the
+ *  borderless frame's): the outline, then the crown — a pair's two crowns
+ *  lerped across the token's split. */
+export function m20TokenCrownLayers(key) {
+  if (!M20_TOKEN_CROWN_BAND.keys.includes(key)) throw new Error(`m20TokenCrownLayers: no crown for key ${key}`);
+  const crown = TWO_COLOR_PAIRS.includes(key)
+    ? placed(floatingCrown(key[0]), M20_TOKEN_CROWN_BAND.crown, { right: floatingCrown(key[1]), ramp: [...PAIR_RAMPS.m20Token] })
+    : placed(floatingCrown(key), M20_TOKEN_CROWN_BAND.crown);
+  return [placed(BORDERLESS_CROWN.outlineSrc, M20_TOKEN_CROWN_BAND.outline), crown];
+}
+
+/** The pill interior the crown must leave alone (1500 × 2100 px): CC's
+ *  name pill between its rims, inside its rounded ends. */
+export const M20_TOKEN_PILL_HOLE = Object.freeze({ x0: 120, x1: 1380, y0: 106, y1: 216 });
+
+/**
+ * What the importer checks on the full 1500 × 2100 M20 token crown
+ * composite before it crops the band (pure): `lastAlphaRow` below the
+ * band's rows; `peakRow`, the first opaque row at the centre column, the
+ * outline's peak at 36 ± 1 (CC's 0.0172 × 2100); and NOTHING over the name
+ * pill's interior (M20_TOKEN_PILL_HOLE: the pill and its text show through).
+ */
+export function m20TokenCrownFindings(buf, width, height, rows) {
+  let lastAlphaRow = -1;
+  for (let y = height - 1; y >= 0 && lastAlphaRow < 0; y -= 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (buf[(y * width + x) * 4 + 3] > 0) {
+        lastAlphaRow = y;
+        break;
+      }
+    }
+  }
+  const cx = Math.floor(width / 2);
+  let peakRow = -1;
+  for (let y = 0; y < rows && peakRow < 0; y += 1) if (buf[(y * width + cx) * 4 + 3] >= 250) peakRow = y;
+  const h = M20_TOKEN_PILL_HOLE;
+  let holeMaxAlpha = 0;
+  for (let y = h.y0; y < h.y1; y += 1) for (let x = h.x0; x < h.x1; x += 1) holeMaxAlpha = Math.max(holeMaxAlpha, buf[(y * width + x) * 4 + 3]);
+  const failures = [];
+  if (lastAlphaRow >= rows) failures.push(`alpha down to row ${lastAlphaRow}, past the band's ${rows} rows`);
+  if (Math.abs(peakRow - 36) > 1) failures.push(`the outline's peak at row ${peakRow}, CC's is 36 ± 1`);
+  if (holeMaxAlpha > 0) failures.push(`α ${holeMaxAlpha} over the name pill's interior`);
+  return { lastAlphaRow, peakRow, holeMaxAlpha, failures, summary: `pill interior α ≤ ${holeMaxAlpha}` };
+}
+
 /** The overlay bands the importer builds, by bucket folder. */
 export const CC_OVERLAY_BANDS = {
+  // TODO 4.48: the M20 full-art token's crown — a generic band, the
+  // borderless frame's floating crown at its own bounds.
+  m20tokencrown: {
+    pack: "M15 'Legend Crowns (Floating)' (packM15LegendCrownsFloating.js), drawn as CC's autoBorderlessFrame draws the crown and its outline (creator-23.js:1227–1266) — over the full-art token masters (groupToken-2.js)",
+    band: M20_TOKEN_CROWN_BAND,
+    keys: M20_TOKEN_CROWN_BAND.keys,
+    layers: m20TokenCrownLayers,
+    findings: m20TokenCrownFindings,
+    notes: [
+      "the full-art token's legendary crown (TODO 4.48): CC's floating crown with its outline UNDER it, at CC's borderless bounds (crown 3.07/1.91/93.87x10.24 %, outline 2.8/1.72/94.4x10.62 %), composited 1:1 at 1500x2100 (every piece 1500-native) over a clear canvas and cropped to rows 0–259 (the outline's extent); nothing erased or covered — an overlay band over the m20token* masters (frames bucket)",
+      "measured 2026-10-15 on 11 crowned M20+ prints (Scryfall PNGs at 1500x2100; TFDN #13, TOTJ #6, TTDC #18 / #19, TMOM #6, TLCC #7, TLTR #20, TCMM #60, TAFR #8 / #13, TM3C #11): the crown's top edge into the black border +2.5 px from CC's on the 2023+ prints (median), its wings +4 / +1 px — used as drawn, as the name pill (+1.3 px, TODO 4.48); the crown's hole is the pill's interior (rows 104–217 between the ends: α 0 there, checked), so it repaints only the pill's rims and ends, as the prints' crown carries them",
+      "keys = w u b r g, m (gold: three or more colours, or a pair drawn gold), c (CC's grey C crown, on the plain templates' charcoal colourless), a (CC's silver A crown, the artifact templates' colourless: keyMap c → a; TNEO #16, TONE #9) and the ten pairs — the first colour's crown on the left, the second's on the right, lerped (premultiplied) across PAIR_RAMPS.m20Token (40→60 %W, the token's own split: TDMU #21 R|G, TMKM #13 G|W)",
+    ],
+  },
   // 4.6f (wave 2b): the extended-art crown — a generic band (`layers` /
   // `findings`), composited 1:1 at the card's size.
   extendedcrown: {

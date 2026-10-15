@@ -8917,7 +8917,7 @@
     "pack": "packTokenTextless-1.js 'Textless' (groupToken-2.js)",
     "converter": "scripts/import-cc-frames.mjs",
     "output": "1500x2100, corners rounded to 64.5px, webp q90",
-    "transforms": "native 1500x2100, no resample; composited in CC's order, then re-cut: rows 1687–1844 (the type pill with its glow and bottom rim) moved down 5 px as one piece over the top 5 rows of the clear lower window, the rows opened above them repeating the clear window and the black ring (hard cuts: only the ring and clear art meet either seam); corners rounded to the importer radius; before any re-cut, PipGlyph composites over the flattened pixels: a flat rgb(164, 149, 143) at 65% source-over through img/frames/token/tokenMaskTextlessType.png, on the pixels CC draws translucent (full weight at α ≤ 168, none at α ≥ 186) (colour c only); every pixel through img/frames/token/tokenMaskTextlessType.png made opaque in its own colour (α' = α + (255 − α) × mask)",
+    "transforms": "native 1500x2100, no resample; composited in CC's order, then re-cut: rows 1687–1844 (the type pill with its glow and bottom rim) moved down 5 px as one piece over the top 5 rows of the clear lower window, the rows opened above them repeating the clear window and the black ring (hard cuts: only the ring and clear art meet either seam); corners rounded to the importer radius; before any re-cut, PipGlyph composites over the flattened pixels: a flat rgb(164, 149, 143) at 65% source-over through img/frames/token/tokenMaskTextlessType.png, on the pixels CC draws translucent (full weight at α ≤ 168, none at α ≥ 186) (colour c only); a flat rgb(184, 178, 180) at 65% source-over through img/frames/token/tokenMaskTextlessType.png, on the pixels CC draws translucent (full weight at α ≤ 205, none at α ≥ 216) (colours wu, wb, ub, ur, br, bg, rg, rw, gw, gu only); every pixel through img/frames/token/tokenMaskTextlessType.png made opaque in its own colour (α' = α + (255 − α) × mask)",
     "colors": {
       "w": [
         "img/frames/token/textless/tokenFrameWTextless.png"
@@ -8939,10 +8939,51 @@
       ],
       "m": [
         "img/frames/token/textless/tokenFrameMTextless.png"
+      ],
+      "wu": [
+        "(img/frames/token/textless/tokenFrameWTextless.png | img/frames/token/textless/tokenFrameUTextless.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/textless/tokenFrameLTextless.png replacing through img/frames/token/tokenMaskTextlessType.png"
+      ],
+      "wb": [
+        "(img/frames/token/textless/tokenFrameWTextless.png | img/frames/token/textless/tokenFrameBTextless.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/textless/tokenFrameLTextless.png replacing through img/frames/token/tokenMaskTextlessType.png"
+      ],
+      "ub": [
+        "(img/frames/token/textless/tokenFrameUTextless.png | img/frames/token/textless/tokenFrameBTextless.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/textless/tokenFrameLTextless.png replacing through img/frames/token/tokenMaskTextlessType.png"
+      ],
+      "ur": [
+        "(img/frames/token/textless/tokenFrameUTextless.png | img/frames/token/textless/tokenFrameRTextless.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/textless/tokenFrameLTextless.png replacing through img/frames/token/tokenMaskTextlessType.png"
+      ],
+      "br": [
+        "(img/frames/token/textless/tokenFrameBTextless.png | img/frames/token/textless/tokenFrameRTextless.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/textless/tokenFrameLTextless.png replacing through img/frames/token/tokenMaskTextlessType.png"
+      ],
+      "bg": [
+        "(img/frames/token/textless/tokenFrameBTextless.png | img/frames/token/textless/tokenFrameGTextless.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/textless/tokenFrameLTextless.png replacing through img/frames/token/tokenMaskTextlessType.png"
+      ],
+      "rg": [
+        "(img/frames/token/textless/tokenFrameRTextless.png | img/frames/token/textless/tokenFrameGTextless.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/textless/tokenFrameLTextless.png replacing through img/frames/token/tokenMaskTextlessType.png"
+      ],
+      "rw": [
+        "(img/frames/token/textless/tokenFrameRTextless.png | img/frames/token/textless/tokenFrameWTextless.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/textless/tokenFrameLTextless.png replacing through img/frames/token/tokenMaskTextlessType.png"
+      ],
+      "gw": [
+        "(img/frames/token/textless/tokenFrameGTextless.png | img/frames/token/textless/tokenFrameWTextless.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/textless/tokenFrameLTextless.png replacing through img/frames/token/tokenMaskTextlessType.png"
+      ],
+      "gu": [
+        "(img/frames/token/textless/tokenFrameGTextless.png | img/frames/token/textless/tokenFrameUTextless.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/textless/tokenFrameLTextless.png replacing through img/frames/token/tokenMaskTextlessType.png"
       ]
     },
     "finish": [
       "a flat rgb(164, 149, 143) at 65% source-over through img/frames/token/tokenMaskTextlessType.png, on the pixels CC draws translucent (full weight at α ≤ 168, none at α ≥ 186) (colour c only)",
+      "a flat rgb(184, 178, 180) at 65% source-over through img/frames/token/tokenMaskTextlessType.png, on the pixels CC draws translucent (full weight at α ≤ 205, none at α ≥ 216) (colours wu, wb, ub, ur, br, bg, rg, rw, gw, gu only)",
       "every pixel through img/frames/token/tokenMaskTextlessType.png made opaque in its own colour (α' = α + (255 − α) × mask)"
     ],
     "recut": {
@@ -8956,6 +8997,7 @@
       "img/frames/token/textless/frameC.png",
       "img/frames/token/textless/tokenFrameBTextless.png",
       "img/frames/token/textless/tokenFrameGTextless.png",
+      "img/frames/token/textless/tokenFrameLTextless.png",
       "img/frames/token/textless/tokenFrameMTextless.png",
       "img/frames/token/textless/tokenFrameRTextless.png",
       "img/frames/token/textless/tokenFrameUTextless.png",
@@ -8965,6 +9007,7 @@
     "notes": [
       "source: CC 'Textless' token pack (tokenFrame{W,U,B,R,G,M}Textless.png) — the full-art token design, M20 → today (TODO 4.48)",
       "colourless = CC's frameC.png (charcoal pills, box α≈166; TEOE #1 Sliver, TMH3 #38 Eldrazi Spawn)",
+      "two-colour pair masters <pair>.png (TODO 4.48, measured on 32 two-colour M20+ prints: TMKM #10 W|U, TMKM #13 G|W, TDMU #21 R|G …): the pair's two colour masters lerped WHOLE left to right across PAIR_RAMPS.m20Token (40→60 %W, untilted, premultiplied — the name pill, rims, box and strip split there on the prints, 42.9 / 50.3 / 58.3 %W at 10 / 50 / 90 % on the strip), then CC's grey 'Land Frame' type pill (tokenFrameLTextless.png) in place of the lerped one through the pack's Type mask, tinted to the prints' neutral pill (median rgb 193/187/187 on 16 regular prints, every pair alike) and made solid; the plate is M15's grey colourless one (FrameProfile.twoColorPlate: the prints' 204/197/192) — PipGlyph composite of CC pixels",
       "re-cut onto the prints (TODO 4.48, measure first): the type pill 5 px lower, as 28 M20+ textless prints print it (+4.8 px, correlation); PipGlyph composite of CC pixels",
       "the colourless (c) type pill darkened to the prints (owner decision round 14, 2026-09-29): a flat rgb 164/149/143 at 65 % source-over frameC's flat grey interior (209, α 166) through the pack's Type mask — the interior on rgb 176/165/160 (luminance 168), the median of 4 M20+ colourless prints (luminance 157–180); the bevel, outline and rim keep CC's pixels; the five coloured pills keep CC's colour — PipGlyph composite of CC pixels",
       "the type pill SOLID, as every M20+ print's (owner decision 2026-09-29): CC's interior α 204 (c 166) made opaque in its own colour through the pack's Type mask — PipGlyph composite of CC pixels"
@@ -9005,6 +9048,46 @@
       "m": [
         "img/frames/token/textless/tokenFrameATextless.png",
         "img/frames/token/textless/tokenFrameMTextless.png through img/frames/token/tokenMaskTextlessPinline.png"
+      ],
+      "wu": [
+        "img/frames/token/textless/tokenFrameATextless.png",
+        "(img/frames/token/textless/tokenFrameWTextless.png | img/frames/token/textless/tokenFrameUTextless.png across procedural:ramp(40→60 %W)) through img/frames/token/tokenMaskTextlessPinline.png"
+      ],
+      "wb": [
+        "img/frames/token/textless/tokenFrameATextless.png",
+        "(img/frames/token/textless/tokenFrameWTextless.png | img/frames/token/textless/tokenFrameBTextless.png across procedural:ramp(40→60 %W)) through img/frames/token/tokenMaskTextlessPinline.png"
+      ],
+      "ub": [
+        "img/frames/token/textless/tokenFrameATextless.png",
+        "(img/frames/token/textless/tokenFrameUTextless.png | img/frames/token/textless/tokenFrameBTextless.png across procedural:ramp(40→60 %W)) through img/frames/token/tokenMaskTextlessPinline.png"
+      ],
+      "ur": [
+        "img/frames/token/textless/tokenFrameATextless.png",
+        "(img/frames/token/textless/tokenFrameUTextless.png | img/frames/token/textless/tokenFrameRTextless.png across procedural:ramp(40→60 %W)) through img/frames/token/tokenMaskTextlessPinline.png"
+      ],
+      "br": [
+        "img/frames/token/textless/tokenFrameATextless.png",
+        "(img/frames/token/textless/tokenFrameBTextless.png | img/frames/token/textless/tokenFrameRTextless.png across procedural:ramp(40→60 %W)) through img/frames/token/tokenMaskTextlessPinline.png"
+      ],
+      "bg": [
+        "img/frames/token/textless/tokenFrameATextless.png",
+        "(img/frames/token/textless/tokenFrameBTextless.png | img/frames/token/textless/tokenFrameGTextless.png across procedural:ramp(40→60 %W)) through img/frames/token/tokenMaskTextlessPinline.png"
+      ],
+      "rg": [
+        "img/frames/token/textless/tokenFrameATextless.png",
+        "(img/frames/token/textless/tokenFrameRTextless.png | img/frames/token/textless/tokenFrameGTextless.png across procedural:ramp(40→60 %W)) through img/frames/token/tokenMaskTextlessPinline.png"
+      ],
+      "rw": [
+        "img/frames/token/textless/tokenFrameATextless.png",
+        "(img/frames/token/textless/tokenFrameRTextless.png | img/frames/token/textless/tokenFrameWTextless.png across procedural:ramp(40→60 %W)) through img/frames/token/tokenMaskTextlessPinline.png"
+      ],
+      "gw": [
+        "img/frames/token/textless/tokenFrameATextless.png",
+        "(img/frames/token/textless/tokenFrameGTextless.png | img/frames/token/textless/tokenFrameWTextless.png across procedural:ramp(40→60 %W)) through img/frames/token/tokenMaskTextlessPinline.png"
+      ],
+      "gu": [
+        "img/frames/token/textless/tokenFrameATextless.png",
+        "(img/frames/token/textless/tokenFrameGTextless.png | img/frames/token/textless/tokenFrameUTextless.png across procedural:ramp(40→60 %W)) through img/frames/token/tokenMaskTextlessPinline.png"
       ]
     },
     "finish": [
@@ -9035,6 +9118,7 @@
     "notes": [
       "source: CC 'Textless' token pack Artifact Frame (tokenFrameATextless.png) — TODO 4.50",
       "coloured artifact tokens = the silver artifact master whole + the colour's master through the pack's Pinline mask (img/frames/token/tokenMaskTextlessPinline.png): silver pills and box, the colour on the rims, pinline and strip, as TDSK #7 / TSOC #8 print; NOT 4.16's m15artifact recipe (the token pills stay silver)",
+      "two-colour pair masters <pair>.png (TODO 4.48, measured on 32 two-colour M20+ prints): the silver artifact master whole + the pair's two colour masters lerped left to right across PAIR_RAMPS.m20Token (40→60 %W, untilted, premultiplied) through the pack's Pinline mask — the colours on the rims, pinline and strip, the pills and box silver; the plate is the artifact set's colourless one (FrameProfile.twoColorPlate) — PipGlyph composite of CC pixels",
       "re-cut onto the prints (TODO 4.48, measure first): the type pill 5 px lower, as 28 M20+ textless prints print it (+4.8 px, correlation); PipGlyph composite of CC pixels",
       "the type pill darkened to the prints (owner decision round 14, 2026-09-29): a flat rgb 151/170/181 at 65 % source-over CC's flat silver interior (rgb 181/197/203, luminance 193, α 204) through the pack's Type mask, every colour — the interior on rgb 160/178/188 (luminance 174), the median of 16 M20+ artifact prints (luminance 160–190); the bevel, outline and rim keep CC's pixels — PipGlyph composite of CC pixels",
       "the type pill SOLID, as every M20+ print's (owner decision 2026-09-29): CC's interior α 204 (c 166) made opaque in its own colour through the pack's Type mask — PipGlyph composite of CC pixels",
@@ -9077,6 +9161,46 @@
       "m": [
         "img/frames/token/tall/tokenFrameATall.png",
         "img/frames/token/tall/tokenFrameMTall.png through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "wu": [
+        "img/frames/token/tall/tokenFrameATall.png",
+        "(img/frames/token/tall/tokenFrameWTall.png | img/frames/token/tall/tokenFrameUTall.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "wb": [
+        "img/frames/token/tall/tokenFrameATall.png",
+        "(img/frames/token/tall/tokenFrameWTall.png | img/frames/token/tall/tokenFrameBTall.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "ub": [
+        "img/frames/token/tall/tokenFrameATall.png",
+        "(img/frames/token/tall/tokenFrameUTall.png | img/frames/token/tall/tokenFrameBTall.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "ur": [
+        "img/frames/token/tall/tokenFrameATall.png",
+        "(img/frames/token/tall/tokenFrameUTall.png | img/frames/token/tall/tokenFrameRTall.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "br": [
+        "img/frames/token/tall/tokenFrameATall.png",
+        "(img/frames/token/tall/tokenFrameBTall.png | img/frames/token/tall/tokenFrameRTall.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "bg": [
+        "img/frames/token/tall/tokenFrameATall.png",
+        "(img/frames/token/tall/tokenFrameBTall.png | img/frames/token/tall/tokenFrameGTall.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "rg": [
+        "img/frames/token/tall/tokenFrameATall.png",
+        "(img/frames/token/tall/tokenFrameRTall.png | img/frames/token/tall/tokenFrameGTall.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "rw": [
+        "img/frames/token/tall/tokenFrameATall.png",
+        "(img/frames/token/tall/tokenFrameRTall.png | img/frames/token/tall/tokenFrameWTall.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "gw": [
+        "img/frames/token/tall/tokenFrameATall.png",
+        "(img/frames/token/tall/tokenFrameGTall.png | img/frames/token/tall/tokenFrameWTall.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinline.png"
+      ],
+      "gu": [
+        "img/frames/token/tall/tokenFrameATall.png",
+        "(img/frames/token/tall/tokenFrameGTall.png | img/frames/token/tall/tokenFrameUTall.png across procedural:ramp(40→60 %W)) through img/frames/m15/regular/m15MaskPinline.png"
       ]
     },
     "finish": [
@@ -9100,6 +9224,7 @@
     "notes": [
       "source: CC 'Tall' token pack Artifact Frame (tokenFrameATall.png) — TODO 4.50",
       "coloured artifact tokens = the silver artifact master whole + the colour's master through the pack's Pinline mask (img/frames/m15/regular/m15MaskPinline.png): silver pills and box, the colour on the rims, pinline and strip, as TDSK #7 / TSOC #8 print; NOT 4.16's m15artifact recipe (the token pills stay silver)",
+      "two-colour pair masters <pair>.png (TODO 4.48, measured on 32 two-colour M20+ prints): the silver artifact master whole + the pair's two colour masters lerped left to right across PAIR_RAMPS.m20Token (40→60 %W, untilted, premultiplied) through the pack's Pinline mask — the colours on the rims, pinline and strip, the pills and box silver; the plate is the artifact set's colourless one (FrameProfile.twoColorPlate) — PipGlyph composite of CC pixels",
       "measured on 16 tall prints: pill +0.7 px, name pill +1.3 — used as drawn",
       "the type pill darkened to the prints (owner decision round 14, 2026-09-29): a flat rgb 151/170/181 at 65 % source-over CC's flat silver interior (rgb 181/197/203, luminance 193, α 204) through the pack's Type mask, every colour — the interior on rgb 160/178/188 (luminance 174), the median of 16 M20+ artifact prints (luminance 160–190); the bevel, outline and rim keep CC's pixels — PipGlyph composite of CC pixels",
       "the type pill SOLID, as every M20+ print's (owner decision 2026-09-29): CC's interior α 204 (c 166) made opaque in its own colour through the pack's Type mask — PipGlyph composite of CC pixels",
@@ -9142,6 +9267,46 @@
       "m": [
         "img/frames/token/short/tokenFrameAShort.png",
         "img/frames/token/short/tokenFrameMShort.png through img/frames/token/short/m15MaskPinlineSuperShort.png"
+      ],
+      "wu": [
+        "img/frames/token/short/tokenFrameAShort.png",
+        "(img/frames/token/short/tokenFrameWShort.png | img/frames/token/short/tokenFrameUShort.png across procedural:ramp(40→60 %W)) through img/frames/token/short/m15MaskPinlineSuperShort.png"
+      ],
+      "wb": [
+        "img/frames/token/short/tokenFrameAShort.png",
+        "(img/frames/token/short/tokenFrameWShort.png | img/frames/token/short/tokenFrameBShort.png across procedural:ramp(40→60 %W)) through img/frames/token/short/m15MaskPinlineSuperShort.png"
+      ],
+      "ub": [
+        "img/frames/token/short/tokenFrameAShort.png",
+        "(img/frames/token/short/tokenFrameUShort.png | img/frames/token/short/tokenFrameBShort.png across procedural:ramp(40→60 %W)) through img/frames/token/short/m15MaskPinlineSuperShort.png"
+      ],
+      "ur": [
+        "img/frames/token/short/tokenFrameAShort.png",
+        "(img/frames/token/short/tokenFrameUShort.png | img/frames/token/short/tokenFrameRShort.png across procedural:ramp(40→60 %W)) through img/frames/token/short/m15MaskPinlineSuperShort.png"
+      ],
+      "br": [
+        "img/frames/token/short/tokenFrameAShort.png",
+        "(img/frames/token/short/tokenFrameBShort.png | img/frames/token/short/tokenFrameRShort.png across procedural:ramp(40→60 %W)) through img/frames/token/short/m15MaskPinlineSuperShort.png"
+      ],
+      "bg": [
+        "img/frames/token/short/tokenFrameAShort.png",
+        "(img/frames/token/short/tokenFrameBShort.png | img/frames/token/short/tokenFrameGShort.png across procedural:ramp(40→60 %W)) through img/frames/token/short/m15MaskPinlineSuperShort.png"
+      ],
+      "rg": [
+        "img/frames/token/short/tokenFrameAShort.png",
+        "(img/frames/token/short/tokenFrameRShort.png | img/frames/token/short/tokenFrameGShort.png across procedural:ramp(40→60 %W)) through img/frames/token/short/m15MaskPinlineSuperShort.png"
+      ],
+      "rw": [
+        "img/frames/token/short/tokenFrameAShort.png",
+        "(img/frames/token/short/tokenFrameRShort.png | img/frames/token/short/tokenFrameWShort.png across procedural:ramp(40→60 %W)) through img/frames/token/short/m15MaskPinlineSuperShort.png"
+      ],
+      "gw": [
+        "img/frames/token/short/tokenFrameAShort.png",
+        "(img/frames/token/short/tokenFrameGShort.png | img/frames/token/short/tokenFrameWShort.png across procedural:ramp(40→60 %W)) through img/frames/token/short/m15MaskPinlineSuperShort.png"
+      ],
+      "gu": [
+        "img/frames/token/short/tokenFrameAShort.png",
+        "(img/frames/token/short/tokenFrameGShort.png | img/frames/token/short/tokenFrameUShort.png across procedural:ramp(40→60 %W)) through img/frames/token/short/m15MaskPinlineSuperShort.png"
       ]
     },
     "finish": [
@@ -9165,11 +9330,111 @@
     "notes": [
       "source: CC 'Short' token pack Artifact Frame (tokenFrameAShort.png) — TODO 4.50",
       "coloured artifact tokens = the silver artifact master whole + the colour's master through the pack's Pinline mask (img/frames/token/short/m15MaskPinlineSuperShort.png): silver pills and box, the colour on the rims, pinline and strip, as TDSK #7 / TSOC #8 print; NOT 4.16's m15artifact recipe (the token pills stay silver)",
+      "two-colour pair masters <pair>.png (TODO 4.48, measured on 32 two-colour M20+ prints): the silver artifact master whole + the pair's two colour masters lerped left to right across PAIR_RAMPS.m20Token (40→60 %W, untilted, premultiplied) through the pack's Pinline mask — the colours on the rims, pinline and strip, the pills and box silver; the plate is the artifact set's colourless one (FrameProfile.twoColorPlate) — PipGlyph composite of CC pixels",
       "CC's 'Short' pack is the printed REGULAR box (type pill 66.9–73.7 %H; its 'Regular' pack at 64 %H matches no print, TODO 4.48); measured on 19 prints: pill +0.9 px, name pill +1.3, strip −1.0 — used as drawn",
       "the type pill darkened to the prints (owner decision round 14, 2026-09-29): a flat rgb 151/170/181 at 65 % source-over CC's flat silver interior (rgb 181/197/203, luminance 193, α 204) through the pack's Type mask, every colour — the interior on rgb 160/178/188 (luminance 174), the median of 16 M20+ artifact prints (luminance 160–190); the bevel, outline and rim keep CC's pixels — PipGlyph composite of CC pixels",
       "the type pill SOLID, as every M20+ print's (owner decision 2026-09-29): CC's interior α 204 (c 166) made opaque in its own colour through the pack's Type mask — PipGlyph composite of CC pixels",
       "the name pill darkened to the prints' slate (owner decision 2026-09-29, TODO 4.50): a flat slate rgb 30/40/48 at 65 % source-over CC's translucent silver interior through M15's Title mask (the rims and outline keep CC's pixels) — behind the name luminance 63 and white ink 10.5 : 1, as 16 M20+ artifact prints (luminance 54–71, 9–11 : 1); CC's silver pill was 102–137 (3.5–5.7 : 1) — PipGlyph composite of CC pixels",
       "the name pill SOLID (owner decision round 14, 2026-09-29): after the slate its interior was α ≈ 246; every pixel M15's Title mask covers made opaque in its own colour (the mask covers nothing CC draws below α 230) — PipGlyph composite of CC pixels"
+    ]
+  },
+  "m20tokencrown": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "M15 'Legend Crowns (Floating)' (packM15LegendCrownsFloating.js), drawn as CC's autoBorderlessFrame draws the crown and its outline (creator-23.js:1227–1266) — over the full-art token masters (groupToken-2.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "1500x260 overlay band: rows 0–259 of a 1500x2100 card composited at 1500x2100, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
+        "img/frames/m15/crowns/m15CrownWFloating.png at 3.07/1.91/93.87×10.24 %"
+      ],
+      "u": [
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
+        "img/frames/m15/crowns/m15CrownUFloating.png at 3.07/1.91/93.87×10.24 %"
+      ],
+      "b": [
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
+        "img/frames/m15/crowns/m15CrownBFloating.png at 3.07/1.91/93.87×10.24 %"
+      ],
+      "r": [
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
+        "img/frames/m15/crowns/m15CrownRFloating.png at 3.07/1.91/93.87×10.24 %"
+      ],
+      "g": [
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
+        "img/frames/m15/crowns/m15CrownGFloating.png at 3.07/1.91/93.87×10.24 %"
+      ],
+      "m": [
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
+        "img/frames/m15/crowns/m15CrownMFloating.png at 3.07/1.91/93.87×10.24 %"
+      ],
+      "c": [
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
+        "img/frames/m15/crowns/m15CrownCFloating.png at 3.07/1.91/93.87×10.24 %"
+      ],
+      "a": [
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
+        "img/frames/m15/crowns/m15CrownAFloating.png at 3.07/1.91/93.87×10.24 %"
+      ],
+      "wu": [
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
+        "(img/frames/m15/crowns/m15CrownWFloating.png | img/frames/m15/crowns/m15CrownUFloating.png across procedural:ramp(40→60 %W)) at 3.07/1.91/93.87×10.24 %"
+      ],
+      "wb": [
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
+        "(img/frames/m15/crowns/m15CrownWFloating.png | img/frames/m15/crowns/m15CrownBFloating.png across procedural:ramp(40→60 %W)) at 3.07/1.91/93.87×10.24 %"
+      ],
+      "ub": [
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
+        "(img/frames/m15/crowns/m15CrownUFloating.png | img/frames/m15/crowns/m15CrownBFloating.png across procedural:ramp(40→60 %W)) at 3.07/1.91/93.87×10.24 %"
+      ],
+      "ur": [
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
+        "(img/frames/m15/crowns/m15CrownUFloating.png | img/frames/m15/crowns/m15CrownRFloating.png across procedural:ramp(40→60 %W)) at 3.07/1.91/93.87×10.24 %"
+      ],
+      "br": [
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
+        "(img/frames/m15/crowns/m15CrownBFloating.png | img/frames/m15/crowns/m15CrownRFloating.png across procedural:ramp(40→60 %W)) at 3.07/1.91/93.87×10.24 %"
+      ],
+      "bg": [
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
+        "(img/frames/m15/crowns/m15CrownBFloating.png | img/frames/m15/crowns/m15CrownGFloating.png across procedural:ramp(40→60 %W)) at 3.07/1.91/93.87×10.24 %"
+      ],
+      "rg": [
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
+        "(img/frames/m15/crowns/m15CrownRFloating.png | img/frames/m15/crowns/m15CrownGFloating.png across procedural:ramp(40→60 %W)) at 3.07/1.91/93.87×10.24 %"
+      ],
+      "rw": [
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
+        "(img/frames/m15/crowns/m15CrownRFloating.png | img/frames/m15/crowns/m15CrownWFloating.png across procedural:ramp(40→60 %W)) at 3.07/1.91/93.87×10.24 %"
+      ],
+      "gw": [
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
+        "(img/frames/m15/crowns/m15CrownGFloating.png | img/frames/m15/crowns/m15CrownWFloating.png across procedural:ramp(40→60 %W)) at 3.07/1.91/93.87×10.24 %"
+      ],
+      "gu": [
+        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %",
+        "(img/frames/m15/crowns/m15CrownGFloating.png | img/frames/m15/crowns/m15CrownUFloating.png across procedural:ramp(40→60 %W)) at 3.07/1.91/93.87×10.24 %"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/m15/crowns/m15CrownAFloating.png",
+      "img/frames/m15/crowns/m15CrownBFloating.png",
+      "img/frames/m15/crowns/m15CrownCFloating.png",
+      "img/frames/m15/crowns/m15CrownFloatingOutline.png",
+      "img/frames/m15/crowns/m15CrownGFloating.png",
+      "img/frames/m15/crowns/m15CrownMFloating.png",
+      "img/frames/m15/crowns/m15CrownRFloating.png",
+      "img/frames/m15/crowns/m15CrownUFloating.png",
+      "img/frames/m15/crowns/m15CrownWFloating.png"
+    ],
+    "notes": [
+      "the full-art token's legendary crown (TODO 4.48): CC's floating crown with its outline UNDER it, at CC's borderless bounds (crown 3.07/1.91/93.87x10.24 %, outline 2.8/1.72/94.4x10.62 %), composited 1:1 at 1500x2100 (every piece 1500-native) over a clear canvas and cropped to rows 0–259 (the outline's extent); nothing erased or covered — an overlay band over the m20token* masters (frames bucket)",
+      "measured 2026-10-15 on 11 crowned M20+ prints (Scryfall PNGs at 1500x2100; TFDN #13, TOTJ #6, TTDC #18 / #19, TMOM #6, TLCC #7, TLTR #20, TCMM #60, TAFR #8 / #13, TM3C #11): the crown's top edge into the black border +2.5 px from CC's on the 2023+ prints (median), its wings +4 / +1 px — used as drawn, as the name pill (+1.3 px, TODO 4.48); the crown's hole is the pill's interior (rows 104–217 between the ends: α 0 there, checked), so it repaints only the pill's rims and ends, as the prints' crown carries them",
+      "keys = w u b r g, m (gold: three or more colours, or a pair drawn gold), c (CC's grey C crown, on the plain templates' charcoal colourless), a (CC's silver A crown, the artifact templates' colourless: keyMap c → a; TNEO #16, TONE #9) and the ten pairs — the first colour's crown on the left, the second's on the right, lerped (premultiplied) across PAIR_RAMPS.m20Token (40→60 %W, the token's own split: TDMU #21 R|G, TMKM #13 G|W)"
     ]
   },
   "m20tokentall": {
@@ -9179,7 +9444,7 @@
     "pack": "packTokenTall-1.js 'Tall' (groupToken-2.js)",
     "converter": "scripts/import-cc-frames.mjs",
     "output": "1500x2100, corners rounded to 64.5px, webp q90",
-    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), composited in CC's order, corners rounded to the importer radius; before any re-cut, PipGlyph composites over the flattened pixels: a flat rgb(164, 149, 143) at 65% source-over through img/frames/m15/regular/m15MaskType.png, on the pixels CC draws translucent (full weight at α ≤ 168, none at α ≥ 186) (colour c only); every pixel through img/frames/m15/regular/m15MaskType.png made opaque in its own colour (α' = α + (255 − α) × mask)",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), composited in CC's order, corners rounded to the importer radius; before any re-cut, PipGlyph composites over the flattened pixels: a flat rgb(164, 149, 143) at 65% source-over through img/frames/m15/regular/m15MaskType.png, on the pixels CC draws translucent (full weight at α ≤ 168, none at α ≥ 186) (colour c only); a flat rgb(184, 178, 180) at 65% source-over through img/frames/m15/regular/m15MaskType.png, on the pixels CC draws translucent (full weight at α ≤ 205, none at α ≥ 216) (colours wu, wb, ub, ur, br, bg, rg, rw, gw, gu only); every pixel through img/frames/m15/regular/m15MaskType.png made opaque in its own colour (α' = α + (255 − α) × mask)",
     "colors": {
       "w": [
         "img/frames/token/tall/tokenFrameWTall.png"
@@ -9201,10 +9466,51 @@
       ],
       "m": [
         "img/frames/token/tall/tokenFrameMTall.png"
+      ],
+      "wu": [
+        "(img/frames/token/tall/tokenFrameWTall.png | img/frames/token/tall/tokenFrameUTall.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/tall/tokenFrameLTall.png replacing through img/frames/m15/regular/m15MaskType.png"
+      ],
+      "wb": [
+        "(img/frames/token/tall/tokenFrameWTall.png | img/frames/token/tall/tokenFrameBTall.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/tall/tokenFrameLTall.png replacing through img/frames/m15/regular/m15MaskType.png"
+      ],
+      "ub": [
+        "(img/frames/token/tall/tokenFrameUTall.png | img/frames/token/tall/tokenFrameBTall.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/tall/tokenFrameLTall.png replacing through img/frames/m15/regular/m15MaskType.png"
+      ],
+      "ur": [
+        "(img/frames/token/tall/tokenFrameUTall.png | img/frames/token/tall/tokenFrameRTall.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/tall/tokenFrameLTall.png replacing through img/frames/m15/regular/m15MaskType.png"
+      ],
+      "br": [
+        "(img/frames/token/tall/tokenFrameBTall.png | img/frames/token/tall/tokenFrameRTall.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/tall/tokenFrameLTall.png replacing through img/frames/m15/regular/m15MaskType.png"
+      ],
+      "bg": [
+        "(img/frames/token/tall/tokenFrameBTall.png | img/frames/token/tall/tokenFrameGTall.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/tall/tokenFrameLTall.png replacing through img/frames/m15/regular/m15MaskType.png"
+      ],
+      "rg": [
+        "(img/frames/token/tall/tokenFrameRTall.png | img/frames/token/tall/tokenFrameGTall.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/tall/tokenFrameLTall.png replacing through img/frames/m15/regular/m15MaskType.png"
+      ],
+      "rw": [
+        "(img/frames/token/tall/tokenFrameRTall.png | img/frames/token/tall/tokenFrameWTall.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/tall/tokenFrameLTall.png replacing through img/frames/m15/regular/m15MaskType.png"
+      ],
+      "gw": [
+        "(img/frames/token/tall/tokenFrameGTall.png | img/frames/token/tall/tokenFrameWTall.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/tall/tokenFrameLTall.png replacing through img/frames/m15/regular/m15MaskType.png"
+      ],
+      "gu": [
+        "(img/frames/token/tall/tokenFrameGTall.png | img/frames/token/tall/tokenFrameUTall.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/tall/tokenFrameLTall.png replacing through img/frames/m15/regular/m15MaskType.png"
       ]
     },
     "finish": [
       "a flat rgb(164, 149, 143) at 65% source-over through img/frames/m15/regular/m15MaskType.png, on the pixels CC draws translucent (full weight at α ≤ 168, none at α ≥ 186) (colour c only)",
+      "a flat rgb(184, 178, 180) at 65% source-over through img/frames/m15/regular/m15MaskType.png, on the pixels CC draws translucent (full weight at α ≤ 205, none at α ≥ 216) (colours wu, wb, ub, ur, br, bg, rg, rw, gw, gu only)",
       "every pixel through img/frames/m15/regular/m15MaskType.png made opaque in its own colour (α' = α + (255 − α) × mask)"
     ],
     "sourceFiles": [
@@ -9212,6 +9518,7 @@
       "img/frames/token/tall/frameC.png",
       "img/frames/token/tall/tokenFrameBTall.png",
       "img/frames/token/tall/tokenFrameGTall.png",
+      "img/frames/token/tall/tokenFrameLTall.png",
       "img/frames/token/tall/tokenFrameMTall.png",
       "img/frames/token/tall/tokenFrameRTall.png",
       "img/frames/token/tall/tokenFrameUTall.png",
@@ -9220,6 +9527,7 @@
     "notes": [
       "source: CC 'Tall' token pack (tokenFrame{W,U,B,R,G,M}Tall.png) — the full-art token design, M20 → today (TODO 4.48)",
       "colourless = CC's frameC.png (charcoal pills, box α≈166; TEOE #1 Sliver, TMH3 #38 Eldrazi Spawn)",
+      "two-colour pair masters <pair>.png (TODO 4.48, measured on 32 two-colour M20+ prints: TMKM #10 W|U, TMKM #13 G|W, TDMU #21 R|G …): the pair's two colour masters lerped WHOLE left to right across PAIR_RAMPS.m20Token (40→60 %W, untilted, premultiplied — the name pill, rims, box and strip split there on the prints, 42.9 / 50.3 / 58.3 %W at 10 / 50 / 90 % on the strip), then CC's grey 'Land Frame' type pill (tokenFrameLTall.png) in place of the lerped one through the pack's Type mask, tinted to the prints' neutral pill (median rgb 193/187/187 on 16 regular prints, every pair alike) and made solid; the plate is M15's grey colourless one (FrameProfile.twoColorPlate: the prints' 204/197/192) — PipGlyph composite of CC pixels",
       "measured on 16 tall prints: pill +0.7 px, name pill +1.3 — used as drawn",
       "the colourless (c) type pill darkened to the prints (owner decision round 14, 2026-09-29): a flat rgb 164/149/143 at 65 % source-over frameC's flat grey interior (209, α 166) through the pack's Type mask — the interior on rgb 176/165/160 (luminance 168), the median of 4 M20+ colourless prints (luminance 157–180); the bevel, outline and rim keep CC's pixels; the five coloured pills keep CC's colour — PipGlyph composite of CC pixels",
       "the type pill SOLID, as every M20+ print's (owner decision 2026-09-29): CC's interior α 204 (c 166) made opaque in its own colour through the pack's Type mask — PipGlyph composite of CC pixels"
@@ -9232,7 +9540,7 @@
     "pack": "packTokenShort-1.js 'Short' (groupToken-2.js) — the printed regular box",
     "converter": "scripts/import-cc-frames.mjs",
     "output": "1500x2100, corners rounded to 64.5px, webp q90",
-    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), composited in CC's order, corners rounded to the importer radius; before any re-cut, PipGlyph composites over the flattened pixels: a flat rgb(164, 149, 143) at 65% source-over through img/frames/token/short/m15MaskTypeShort.png, on the pixels CC draws translucent (full weight at α ≤ 168, none at α ≥ 186) (colour c only); every pixel through img/frames/token/short/m15MaskTypeShort.png made opaque in its own colour (α' = α + (255 − α) × mask)",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), composited in CC's order, corners rounded to the importer radius; before any re-cut, PipGlyph composites over the flattened pixels: a flat rgb(164, 149, 143) at 65% source-over through img/frames/token/short/m15MaskTypeShort.png, on the pixels CC draws translucent (full weight at α ≤ 168, none at α ≥ 186) (colour c only); a flat rgb(184, 178, 180) at 65% source-over through img/frames/token/short/m15MaskTypeShort.png, on the pixels CC draws translucent (full weight at α ≤ 205, none at α ≥ 216) (colours wu, wb, ub, ur, br, bg, rg, rw, gw, gu only); every pixel through img/frames/token/short/m15MaskTypeShort.png made opaque in its own colour (α' = α + (255 − α) × mask)",
     "colors": {
       "w": [
         "img/frames/token/short/tokenFrameWShort.png"
@@ -9254,10 +9562,51 @@
       ],
       "m": [
         "img/frames/token/short/tokenFrameMShort.png"
+      ],
+      "wu": [
+        "(img/frames/token/short/tokenFrameWShort.png | img/frames/token/short/tokenFrameUShort.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/short/tokenFrameLShort.png replacing through img/frames/token/short/m15MaskTypeShort.png"
+      ],
+      "wb": [
+        "(img/frames/token/short/tokenFrameWShort.png | img/frames/token/short/tokenFrameBShort.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/short/tokenFrameLShort.png replacing through img/frames/token/short/m15MaskTypeShort.png"
+      ],
+      "ub": [
+        "(img/frames/token/short/tokenFrameUShort.png | img/frames/token/short/tokenFrameBShort.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/short/tokenFrameLShort.png replacing through img/frames/token/short/m15MaskTypeShort.png"
+      ],
+      "ur": [
+        "(img/frames/token/short/tokenFrameUShort.png | img/frames/token/short/tokenFrameRShort.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/short/tokenFrameLShort.png replacing through img/frames/token/short/m15MaskTypeShort.png"
+      ],
+      "br": [
+        "(img/frames/token/short/tokenFrameBShort.png | img/frames/token/short/tokenFrameRShort.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/short/tokenFrameLShort.png replacing through img/frames/token/short/m15MaskTypeShort.png"
+      ],
+      "bg": [
+        "(img/frames/token/short/tokenFrameBShort.png | img/frames/token/short/tokenFrameGShort.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/short/tokenFrameLShort.png replacing through img/frames/token/short/m15MaskTypeShort.png"
+      ],
+      "rg": [
+        "(img/frames/token/short/tokenFrameRShort.png | img/frames/token/short/tokenFrameGShort.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/short/tokenFrameLShort.png replacing through img/frames/token/short/m15MaskTypeShort.png"
+      ],
+      "rw": [
+        "(img/frames/token/short/tokenFrameRShort.png | img/frames/token/short/tokenFrameWShort.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/short/tokenFrameLShort.png replacing through img/frames/token/short/m15MaskTypeShort.png"
+      ],
+      "gw": [
+        "(img/frames/token/short/tokenFrameGShort.png | img/frames/token/short/tokenFrameWShort.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/short/tokenFrameLShort.png replacing through img/frames/token/short/m15MaskTypeShort.png"
+      ],
+      "gu": [
+        "(img/frames/token/short/tokenFrameGShort.png | img/frames/token/short/tokenFrameUShort.png across procedural:ramp(40→60 %W))",
+        "img/frames/token/short/tokenFrameLShort.png replacing through img/frames/token/short/m15MaskTypeShort.png"
       ]
     },
     "finish": [
       "a flat rgb(164, 149, 143) at 65% source-over through img/frames/token/short/m15MaskTypeShort.png, on the pixels CC draws translucent (full weight at α ≤ 168, none at α ≥ 186) (colour c only)",
+      "a flat rgb(184, 178, 180) at 65% source-over through img/frames/token/short/m15MaskTypeShort.png, on the pixels CC draws translucent (full weight at α ≤ 205, none at α ≥ 216) (colours wu, wb, ub, ur, br, bg, rg, rw, gw, gu only)",
       "every pixel through img/frames/token/short/m15MaskTypeShort.png made opaque in its own colour (α' = α + (255 − α) × mask)"
     ],
     "sourceFiles": [
@@ -9265,6 +9614,7 @@
       "img/frames/token/short/m15MaskTypeShort.png",
       "img/frames/token/short/tokenFrameBShort.png",
       "img/frames/token/short/tokenFrameGShort.png",
+      "img/frames/token/short/tokenFrameLShort.png",
       "img/frames/token/short/tokenFrameMShort.png",
       "img/frames/token/short/tokenFrameRShort.png",
       "img/frames/token/short/tokenFrameUShort.png",
@@ -9273,6 +9623,7 @@
     "notes": [
       "source: CC 'Short' token pack (tokenFrame{W,U,B,R,G,M}Short.png) — the full-art token design, M20 → today (TODO 4.48)",
       "colourless = CC's frameC.png (charcoal pills, box α≈166; TEOE #1 Sliver, TMH3 #38 Eldrazi Spawn)",
+      "two-colour pair masters <pair>.png (TODO 4.48, measured on 32 two-colour M20+ prints: TMKM #10 W|U, TMKM #13 G|W, TDMU #21 R|G …): the pair's two colour masters lerped WHOLE left to right across PAIR_RAMPS.m20Token (40→60 %W, untilted, premultiplied — the name pill, rims, box and strip split there on the prints, 42.9 / 50.3 / 58.3 %W at 10 / 50 / 90 % on the strip), then CC's grey 'Land Frame' type pill (tokenFrameLShort.png) in place of the lerped one through the pack's Type mask, tinted to the prints' neutral pill (median rgb 193/187/187 on 16 regular prints, every pair alike) and made solid; the plate is M15's grey colourless one (FrameProfile.twoColorPlate: the prints' 204/197/192) — PipGlyph composite of CC pixels",
       "CC's 'Short' pack is the printed REGULAR box (type pill 66.9–73.7 %H; its 'Regular' pack at 64 %H matches no print, TODO 4.48); measured on 19 prints: pill +0.9 px, name pill +1.3, strip −1.0 — used as drawn",
       "the colourless (c) type pill darkened to the prints (owner decision round 14, 2026-09-29): a flat rgb 164/149/143 at 65 % source-over frameC's flat grey interior (209, α 166) through the pack's Type mask — the interior on rgb 176/165/160 (luminance 168), the median of 4 M20+ colourless prints (luminance 157–180); the bevel, outline and rim keep CC's pixels; the five coloured pills keep CC's colour — PipGlyph composite of CC pixels",
       "the type pill SOLID, as every M20+ print's (owner decision 2026-09-29): CC's interior α 204 (c 166) made opaque in its own colour through the pack's Type mask — PipGlyph composite of CC pixels"

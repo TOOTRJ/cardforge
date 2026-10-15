@@ -855,7 +855,8 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
   const { band } = def;
   const recipe = {};
   const { width: W, height: H } = band.compositeSize;
-  const coverBox = rectPx(band.cover, W, H);
+  // A generic band (`layers`) places its own pieces; the others draw a cover strip.
+  const coverBox = band.cover ? rectPx(band.cover, W, H) : null;
   const crownBox = rectPx(band.crown, W, H);
   let cover = null;
   const bandFailures = [];
@@ -893,7 +894,7 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
       await image.clone().png({ compressionLevel: 9 }).toFile(out);
       await image.clone().webp(WEBP).toFile(out.replace(/\.png$/, ".webp"));
       console.log(
-        `wrote ${path.relative(process.cwd(), out)} (+ .webp) ${OUT_W}×${band.rows} at ${W}×${H}: last alpha row ${findings.lastAlphaRow}, outline peak row ${findings.peakRow}, cover ${findings.cover.join(",")}`,
+        `wrote ${path.relative(process.cwd(), out)} (+ .webp) ${OUT_W}×${band.rows} at ${W}×${H}: last alpha row ${findings.lastAlphaRow}, outline peak row ${findings.peakRow}, ${findings.summary ?? `cover ${findings.cover.join(",")}`}`,
       );
       continue;
     }
