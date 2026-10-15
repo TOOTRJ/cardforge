@@ -84,6 +84,8 @@ describe("the declared pair masters", () => {
       // …and the Universes Beyond frames' forty (TODO 4.25): their M15
       // twins' dresses.
       m15ub: 20, m15ubartifact: 10, m15ubland: 10,
+      // …and the full-art tokens' sixty (TODO 4.48's central split).
+      m20token: 10, m20tokentext: 10, m20tokentall: 10, m20tokenartifact: 10, m20tokenartifacttext: 10, m20tokenartifacttall: 10,
     });
     // Every pair key is a master key the bake's loader knows (never "c").
     for (const key of TWO_COLOR_MASTER_KEYS) expect(FRAME_MASTER_KEYS as readonly string[]).toContain(key);

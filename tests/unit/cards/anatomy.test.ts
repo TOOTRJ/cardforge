@@ -304,6 +304,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // The Nyx Constellation frame (owner 2026-10-13): the Nyx crown band, its arms faded.
       "nyx",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
+      // The full-art tokens (TODO 4.48's last pieces): their floating crown
+      // band (a Legendary TOKEN draws it there) and their split pairs.
+      "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
     ].includes(t),
   );
   /** …and the pair masters (extendedart draws none: a pair wears gold there;
@@ -365,6 +368,14 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       m15dfcbackleft: ["split"],
       m15mdfcfront: ["split", "hybrid"],
       m15mdfcback: ["split"],
+      // The full-art tokens (4.48): the central split; a token has no cost,
+      // so no hybrid dress.
+      m20token: ["split"],
+      m20tokentext: ["split"],
+      m20tokentall: ["split"],
+      m20tokenartifact: ["split"],
+      m20tokenartifacttext: ["split"],
+      m20tokenartifacttall: ["split"],
     });
     // The borderless frames draw their crown from the crowned twins, not a
     // band (4.6f): no overlay slot, crownMasters set.

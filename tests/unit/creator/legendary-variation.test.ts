@@ -59,10 +59,10 @@ describe("offered where the frame declares a crown — from the PROFILES data", 
   it("the crowned templates are the ones this entry was specified for (and no crownless one sneaks in)", () => {
     // Named by the item's text: m15, m15artifact, m15land, the wave-2
     // treatments of 4.6f and the DFC bodies of 5.1d.
-    for (const named of ["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "extendedart", "m15snow", "m15snowland", "m15dfcfront", "m15dfclandfront", "m15mdfcfront"]) {
+    for (const named of ["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "extendedart", "m15snow", "m15snowland", "m15dfcfront", "m15dfclandfront", "m15mdfcfront", "m20token", "m20tokenartifacttext"]) {
       expect(crowned, named).toContain(named);
     }
-    for (const named of ["m15pw", "saga", "m15token", "m20token", "emblem", "retro", "modern", "alpha", "m15devoid", "m15borderlessland", "battle", "split", "m15mdfclandfront"]) {
+    for (const named of ["m15pw", "saga", "m15token", "emblem", "retro", "modern", "alpha", "m15devoid", "m15borderlessland", "battle", "split", "m15mdfclandfront"]) {
       if (!(FRAME_TEMPLATE_VALUES as readonly string[]).includes(named)) continue;
       expect(crownless, named).toContain(named);
     }

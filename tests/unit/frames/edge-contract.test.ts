@@ -517,9 +517,10 @@ describe("the full-art tokens' windows, pills and 7.6's art-window coverage", ()
       it.skip(`${template}: masters not available here (frames bucket; set FRAMES_BUILD_DIR)`, () => {});
       continue;
     }
-    // Seven 3 Mpx masters decoded: a generous timeout for CI's V8 coverage.
-    it(`${template}: every colour's window runs from the ring to its pill (rim at ${rim} px), inside the art slot`, { timeout: 60_000 }, async () => {
-      expect(masters).toHaveLength(7);
+    // Seventeen 3 Mpx masters decoded (the seven colours and, since 4.48's
+    // central split, the ten pairs): a generous timeout for CI's V8 coverage.
+    it(`${template}: every colour's window runs from the ring to its pill (rim at ${rim} px), inside the art slot`, { timeout: 120_000 }, async () => {
+      expect(masters).toHaveLength(17);
       const { M20_TOKEN_PILL_INTERIOR_PX } = await import("@/lib/cards/template-layout");
       const pill = M20_TOKEN_PILL_INTERIOR_PX[height];
       const slot = getFrameProfile(template).artSlot;
@@ -587,6 +588,13 @@ describe("the full-art tokens' windows, pills and 7.6's art-window coverage", ()
           expect(pillLum, `${m.key} artifact type pill luminance`).toBeGreaterThanOrEqual(160);
           expect(pillLum, `${m.key} artifact type pill luminance`).toBeLessThanOrEqual(190);
           expect(Math.abs(pillLum - 174), `${m.key} artifact type pill vs the prints' median`).toBeLessThanOrEqual(2);
+        } else if (m.key.length === 2) {
+          // A pair (TODO 4.48's central split): CC's grey L pill tinted to the
+          // prints' neutral grey, median rgb 193/187/187 (luminance 189) on
+          // 16 two-colour regular prints (183–203), every pair alike.
+          expect(pillLum, `${m.key} pair type pill luminance`).toBeGreaterThanOrEqual(183);
+          expect(pillLum, `${m.key} pair type pill luminance`).toBeLessThanOrEqual(203);
+          expect(Math.abs(pillLum - 189), `${m.key} pair type pill vs the prints' median`).toBeLessThanOrEqual(2);
         } else if (m.key === "c") {
           expect(pillLum, "colourless type pill luminance").toBeGreaterThanOrEqual(157);
           expect(pillLum, "colourless type pill luminance").toBeLessThanOrEqual(180);

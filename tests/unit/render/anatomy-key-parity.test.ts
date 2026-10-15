@@ -77,7 +77,8 @@ describe("bake path = preview path", () => {
     // …and the Vehicle frame's 10 (4.5c), the Nyx dress's 20 (4.7).
     // …and the Universes Beyond frames' 20 + 10 + 10 (4.25).
     // …and the Spacecraft's borderless dress's 7 crowned twins (4.27a step 2).
-    expect(pairKeys).toBe(260);
+    // …and the full-art tokens' 10 each (4.48's central split: 60).
+    expect(pairKeys).toBe(320);
     expect(crownedKeys).toBe(51);
   });
 
@@ -146,7 +147,10 @@ describe("bake path = preview path", () => {
                   : template === "nyx"
                     ? // The Nyx Constellation frame's crown: that band, its arms faded.
                       "nyxcrown"
-                    : (dfcCrown ?? "m15crown");
+                    : template.startsWith("m20token")
+                      ? // The full-art token's floating crown band (4.48).
+                        "m20tokencrown"
+                      : (dfcCrown ?? "m15crown");
         for (const key of slot.keys) {
           expect(slot.assetPathTemplate.replace("{key}", key), `${template} ${slot.anatomy}`).toBe(`/frames/${folder}/${key}.png`);
           if (slot.anatomy === "holoStamp") notches += 1;

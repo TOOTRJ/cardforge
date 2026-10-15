@@ -57,9 +57,49 @@ describe("which card draws the crown", () => {
       // The Nyx Constellation frame (owner 2026-10-13): the Nyx crown band, its arms faded.
       "nyx",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
+      // The full-art tokens' own floating crown (TODO 4.48).
+      "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
     ];
     expect(crowned).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => DRAWN.includes(t)));
     expect(showsCrown(legendary(["white"]), getFrameProfile("regular"))).toBe(true);
+  });
+
+  // TODO 4.48: a Legendary TOKEN prints a crown on the full-art design only
+  // (51 printings: TFDN #13, TTDC #18, TMKM #13 …) — the token design's own
+  // band (M20_TOKEN_CROWN, `tokens`). Every other crown is never a token's.
+  it("a Legendary token: only on the full-art token frames, whose band is the token design's own", () => {
+    const token = (colors: ColorIdentity[], _template: string, over: Partial<CrownCard> = {}): CrownCard => ({
+      ...legendary(colors),
+      cardType: "token",
+      supertype: "Legendary Creature",
+      frameStyle: { crown: true },
+      ...over,
+    });
+    const tokenCrowned = FRAME_TEMPLATE_VALUES.filter((t) => showsCrown(token(["white"], t), getFrameProfile(t)));
+    expect(tokenCrowned).toEqual(["m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall"]);
+    expect(crownKeyFor(token(["blue"], "m20token"), getFrameProfile("m20token"))).toBe("u");
+    expect(crownKeyFor(token(["colorless"], "m20tokentext"), getFrameProfile("m20tokentext"))).toBe("c");
+    // The artifact templates' colourless wears the silver A crown (TNEO #16).
+    expect(crownKeyFor(token(["colorless"], "m20tokenartifacttext"), getFrameProfile("m20tokenartifacttext"))).toBe("a");
+    expect(crownKeyFor(token(["red"], "m20tokenartifact"), getFrameProfile("m20tokenartifact"))).toBe("r");
+    // Not legendary, or the switch off or absent (a stored card): none.
+    expect(crownKeyFor(token(["white"], "m20token", { supertype: "Creature" }), getFrameProfile("m20token"))).toBeNull();
+    expect(crownKeyFor(token(["white"], "m20token", { frameStyle: {} }), getFrameProfile("m20token"))).toBeNull();
+    expect(crownKeyFor(token(["white"], "m20token", { frameStyle: { crown: false } }), getFrameProfile("m20token"))).toBeNull();
+    // The 2014–19 arch draws none (its crown is 4.6f's), nor does m15.
+    expect(showsCrown(token(["white"], "m15token"), getFrameProfile("m15token"))).toBe(false);
+    expect(showsCrown(token(["white"], "m15"), m15)).toBe(false);
+  });
+
+  it("a two-colour Legendary token drawn as its pair wears the pair's crown; drawn gold, the gold one", () => {
+    const pair = {
+      ...legendary(["green", "white"]),
+      cardType: "token",
+      supertype: "Legendary Creature",
+      frameStyle: { crown: true, twoColor: true },
+    };
+    expect(crownKeyFor(pair, getFrameProfile("m20tokentext"))).toBe("gw");
+    expect(crownKeyFor({ ...pair, frameStyle: { crown: true } }, getFrameProfile("m20tokentext"))).toBe("m");
   });
 });
 
