@@ -2934,12 +2934,24 @@ export function signatureDrawnOn(signature: string, template: string | null | un
   const on = template as FrameTemplate;
   // A gap the family waits on another item for counts as drawn only on the
   // frame the rule names once verified (the M20 token's crown and pairs on
-  // the full-art templates, TODO 4.48) — never on its stand-in.
+  // the full-art templates, TODO 4.48) — never on its stand-in, and only
+  // where that frame is EXACT once verified (`exactOnceVerified`): a
+  // showcase station printing on the bordered Spacecraft frame is still
+  // nearest, its row open on 4.11.
   const later = rule.outcome.onceVerified;
-  const onLater = later !== undefined && (typeof later === "string" ? [later] : FAMILIES[later.family].produces).includes(on);
+  const onLater =
+    later !== undefined &&
+    rule.outcome.exactOnceVerified === true &&
+    (typeof later === "string" ? [later] : FAMILIES[later.family].produces).includes(on);
   if ((rule.gapBlockedBy?.[key] && !onLater) || !templatesOfRule(rule).includes(on) || !gapDrawnBy(key, on)) return false;
   if (key === "two-colour" && !gapDrawnBy("two-colour-hybrid", on)) {
-    return GOLD_PAIR_TEMPLATES.has(on) || (templateSupportsKind(on, "land") && !templateSupportsKind(on, "creature"));
+    // …nor a token's (no cost: a token never prints the hybrid dress — the
+    // M20 token's pairs on the full-art templates, TODO 4.48).
+    return (
+      GOLD_PAIR_TEMPLATES.has(on) ||
+      (templateSupportsKind(on, "land") && !templateSupportsKind(on, "creature")) ||
+      (templateSupportsKind(on, "token") && !templateSupportsKind(on, "creature"))
+    );
   }
   return true;
 }

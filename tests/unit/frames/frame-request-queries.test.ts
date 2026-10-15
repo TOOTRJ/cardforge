@@ -217,6 +217,12 @@ describe("window helpers", () => {
       ["era/2015+crown", "m15snowland"],
       ["era/2015+two-colour", "m15snowland"],
       ["era/2015+two-colour", "m15devoid"],
+      // TODO 4.48: the full-art token templates draw the token's own crown
+      // and its split (a token is never hybrid: no cost).
+      ["token/m20+crown", "m20token"],
+      ["token/m20+crown", "m20tokenartifacttext"],
+      ["token/m20+two-colour", "m20token"],
+      ["token/m20+two-colour", "m20tokentall"],
     ]) {
       expect(at(signature, template), `${signature} on ${template}`).toMatchObject({ drawnNow: true, blockedBy: null });
     }
@@ -232,6 +238,10 @@ describe("window helpers", () => {
       // exact however the landing frame is dressed.
       ["borderless/standard+crown", "m15"],
       ["token/m20+crown", "m15token"], // 4.48's pill crown
+      // A showcase station printing on the bordered Spacecraft frame (TRK
+      // #557): the tiers are drawn there, but the row is still nearest — the
+      // showcase's own design is 4.11's.
+      ["showcase+station", "m15station"],
       // Logged before the hybrid dress had its own gap: may be a hybrid
       // artifact, which m15artifact doesn't draw yet.
       ["era/2015+two-colour", "m15artifact"],
