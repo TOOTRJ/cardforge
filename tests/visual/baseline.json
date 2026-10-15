@@ -20,7 +20,7 @@
       "public/fonts/mplantin-italic.ttf": "e81d83608cfa12d5",
       "public/fonts/Montserrat-Medium.ttf": "4a5a218d2b8efa4f"
     },
-    "manifest": "37098bee9b382a1a"
+    "manifest": "82118f3953a1b0e5"
   },
   "cases": {
     "adventure/b/adventure-long": "62fb854bb9fd30f8:42614af9",
@@ -825,7 +825,7 @@
     "m15fullartlandsnc/u/land-long": "3a8f7a443a96c4e1:ee8fd428",
     "m15fullartlandsnc/u/land-short": "38fb8a335a8241e0:063a208d",
     "m15fullartlandsnc/w/land-long": "5e9b4738ba75ad5a:cff1ca85",
-    "m15fullartlandsnc/w/land-short": "7121cfd8e5910e22:ad55b07e",
+    "m15fullartlandsnc/w/land-short": "875a358ff0742303:ad55b07e",
     "m15fullartlandsnc/wu/land-long": "c51486e617ae25c3:bc202c49",
     "m15fullartlandsnc/wu/land-short": "9a8de6e4c93b5655:710aa35d",
     "m15fullartlandsnc/wub/land-long": "c51486e617ae25c3:5a65c9bb",
@@ -859,7 +859,7 @@
     "m15fullartlandzen/u/land-long": "30282bf40bdd4033:4585f7d6",
     "m15fullartlandzen/u/land-short": "6bc984e7836b93c1:00fb87a9",
     "m15fullartlandzen/w/land-long": "73f66e8c5efbef52:b7d3c108",
-    "m15fullartlandzen/w/land-short": "cc660384a95e376b:88ddaebe",
+    "m15fullartlandzen/w/land-short": "e995786f990c3f3e:88ddaebe",
     "m15fullartlandzen/wu/land-long": "d25680ad818e2491:e00eed60",
     "m15fullartlandzen/wu/land-short": "cd7362405ed27729:84fd3303",
     "m15fullartlandzen/wub/land-long": "d25680ad818e2491:4e53e6ae",

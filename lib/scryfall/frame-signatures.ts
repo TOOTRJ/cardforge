@@ -1065,7 +1065,8 @@ type GapKey =
   | "dark-bars"
   | "lettered-name"
   | "row-box"
-  | "tall-box";
+  | "tall-box"
+  | "znr-type-line";
 
 const BORDER_WORD: Record<string, string> = {
   white: "white",
@@ -1303,6 +1304,15 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   // The arch token's tall text box (TODO 4.55, P3 — split out of 4.49 (b),
   // owner 2026-09-29): the import lands on the regular box, the text
   // shrinking to fit (3.29), and the 1.6 log counts the demand.
+  // Zendikar Rising's full-art basics (TODO 4.40, owner Round 64): the
+  // stone-ring design, but every ZNR printing sets its subtype 22–28 px
+  // further right than `m15fullartlandzen` (BFZ's) and its bars and name
+  // 3–5 px off — NEAREST on that frame even once it is verified.
+  "znr-type-line": {
+    match: { sets: ["znr"] },
+    reason: "Zendikar Rising sets this design's type line further right than PipGlyph's Zendikar full-art basic",
+    blockedBy: "4.40",
+  },
   "tall-box": {
     match: { kinds: ["token"], collectorIds: TALL_BOX_TOKEN_PINS },
     reason: "PipGlyph doesn't have the tall text box of this token frame yet",
@@ -2138,19 +2148,25 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       blockedBy: "4.43",
     },
   },
-  {
-    key: "fullart/basic/split-bar",
-    exactLabel: "Zendikar-style full-art basic land (split type bar)",
-    match: { fullArt: true, singleBasic: true, sets: SPLIT_BAR_STONE_BASIC_SETS },
-    outcome: {
-      status: "nearest",
-      template: "m15fullartland",
-      onceVerified: "m15fullartlandzen",
-      exactOnceVerified: true,
-      reason: "PipGlyph's Zendikar full-art basic isn't verified yet",
-      blockedBy: "4.40",
+  // ZNR is the same design with its type line set further right (owner
+  // Round 64): `fullart/basic/split-bar+znr-type-line`, nearest on the
+  // stone ring before and after it is verified.
+  ...withGaps(
+    {
+      key: "fullart/basic/split-bar",
+      exactLabel: "Zendikar-style full-art basic land (split type bar)",
+      match: { fullArt: true, singleBasic: true, sets: SPLIT_BAR_STONE_BASIC_SETS },
+      outcome: {
+        status: "nearest",
+        template: "m15fullartland",
+        onceVerified: "m15fullartlandzen",
+        exactOnceVerified: true,
+        reason: "PipGlyph's Zendikar full-art basic isn't verified yet",
+        blockedBy: "4.40",
+      },
     },
-  },
+    ["znr-type-line"],
+  ),
   {
     key: "fullart/basic/split-bar/snow",
     exactLabel: "Zendikar-style full-art snow basic land (split type bar)",

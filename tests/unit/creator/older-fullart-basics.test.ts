@@ -14,7 +14,13 @@ import {
 import { CARD_KIND_VALUES, templateIsBasicOnly, templateRefusesKind } from "@/lib/creator/card-kinds";
 import { FRAME_COLOR_KEYS } from "@/lib/creator/card-kinds";
 import { FRAME_TEMPLATE_SET, type FrameTemplate } from "@/types/card";
-import { SNC_BASIC_RECUT, ZEN_BASIC_RECUT, recutBarAndMedallion } from "@/scripts/lib/cc-frames.mjs";
+import {
+  SNC_BASIC_RECUT,
+  WHITE_MEDALLION_SYMBOL,
+  ZEN_BASIC_RECUT,
+  recutBarAndMedallion,
+  shadeWhiteMedallionSymbol,
+} from "@/scripts/lib/cc-frames.mjs";
 
 // ---------------------------------------------------------------------------
 // The older full-art basics (TODO 4.40 / 4.41): three NEW stored templates —
@@ -79,8 +85,8 @@ describe("the templates", () => {
 describe("the imports (frame-signatures: onceVerified)", () => {
   const rows: Array<[Key, Record<string, unknown>, string, FrameTemplate, "exact" | "nearest"]> = [
     ["bfz-250", {}, "fullart/basic/split-bar", "m15fullartlandzen", "exact"],
-    ["znr-269", {}, "fullart/basic/split-bar", "m15fullartlandzen", "exact"],
-    ["znr-266", {}, "fullart/basic/split-bar", "m15fullartlandzen", "exact"],
+    // BFZ's own (OGW / AKH / HOU likewise): exact once verified.
+    ["bfz-250", { collector_number: "255", name: "Island" }, "fullart/basic/split-bar", "m15fullartlandzen", "exact"],
     ["snc-272", {}, "fullart/basic/split-bar/ring", "m15fullartlandsnc", "exact"],
     ["thb-250", {}, "fullart/basic/plain-bar", "m15fullartlandthb", "exact"],
     ["spm-189", {}, "fullart/basic/plain-bar", "m15fullartlandthb", "exact"],
@@ -106,12 +112,52 @@ describe("the imports (frame-signatures: onceVerified)", () => {
     if (status === "nearest") expect(later.reason, "the reason holds on the new frame too").toBe(match.reason);
   });
 
+  it("keeps Zendikar Rising nearest on the stone ring even once verified: its type line sits ~25 px right (owner Round 64)", () => {
+    for (const key of ["znr-266", "znr-269"] as Key[]) {
+      const card = printing(key);
+      const match = frameMatchFromScryfall(card);
+      expect(match).toMatchObject({
+        signature: "fullart/basic/split-bar+znr-type-line",
+        status: "nearest",
+        template: "m15fullartland",
+        onceVerified: "m15fullartlandzen",
+      });
+      const today = verifiedFrameMatchFromScryfall(card, TODAY);
+      expect({ template: today.template, status: today.status }, key).toEqual({ template: "m15fullartland", status: "nearest" });
+      const later = verifiedFrameMatchFromScryfall(card, VERIFIED);
+      expect({ template: later.template, status: later.status, blockedBy: later.blockedBy }, key).toEqual({
+        template: "m15fullartlandzen",
+        status: "nearest",
+        blockedBy: "4.40",
+      });
+      expect(later.reason, key).toBe("Zendikar Rising sets this design's type line further right than PipGlyph's Zendikar full-art basic");
+      expect(later.gaps, key).toEqual(["znr-type-line"]);
+    }
+  });
+
   it("moves no other full-art basic", () => {
     for (const key of ["fdn-282", "hob-194", "one-262", "neo-293", "dft-507"] as Key[]) {
       if (!(key in printingsData)) continue;
       const card = printing(key);
       expect(frameMatchFromScryfall(card).onceVerified, key).toBeUndefined();
     }
+  });
+});
+
+describe("shadeWhiteMedallionSymbol (the white sun, owner Round 64)", () => {
+  it("keeps CC's shape, repaints it cream, and lays a dark shadow down and to the left under it", () => {
+    const W = 80;
+    const buf = Buffer.alloc(W * W * 4);
+    // A lavender square (CC's rim colour) in the middle, fully opaque.
+    for (let y = 30; y < 50; y += 1) for (let x = 30; x < 50; x += 1) buf.set([200, 190, 230, 255], (y * W + x) * 4);
+    const out = shadeWhiteMedallionSymbol(buf, W, W, WHITE_MEDALLION_SYMBOL);
+    const px = (x: number, y: number) => [...out.subarray((y * W + x) * 4, (y * W + x) * 4 + 4)];
+    expect(px(40, 40)).toEqual([...WHITE_MEDALLION_SYMBOL.fill, 255]);
+    // Below-left of the shape: the shadow (dark, partly opaque); above-right: nothing.
+    const below = px(28, 58);
+    expect(below[3]).toBeGreaterThan(100);
+    expect(below[0]).toBe(WHITE_MEDALLION_SYMBOL.shadow[0]);
+    expect(px(52, 25)[3]).toBe(0);
   });
 });
 

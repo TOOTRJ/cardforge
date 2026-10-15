@@ -4544,6 +4544,9 @@
       "c": "img/frames/textless/zendikar/sc.svg",
       "output": "symbol/<colour>.png, native size"
     },
+    "symbolShading": {
+      "w": "PipGlyph's own shading of CC's white sun: its alpha (shape) only, filled 246,244,234, over a shadow of the shape moved -8,14 px, blurred 3 px ×3, in 38,30,24 at 100 % (owner Round 64: the prints' shaded cream sun, BFZ #250 / AKH #250 / MH1 #250 / SNC #272 / BRO #278)"
+    },
     "barRecut": {
       "bar": {
         "fromY": 1690,
@@ -4676,6 +4679,9 @@
       "g": "img/frames/textless/zendikar/sg.svg",
       "c": "img/frames/textless/zendikar/sc.svg",
       "output": "symbol/<colour>.png, native size"
+    },
+    "symbolShading": {
+      "w": "PipGlyph's own shading of CC's white sun: its alpha (shape) only, filled 246,244,234, over a shadow of the shape moved -8,14 px, blurred 3 px ×3, in 38,30,24 at 100 % (owner Round 64: the prints' shaded cream sun, BFZ #250 / AKH #250 / MH1 #250 / SNC #272 / BRO #278)"
     },
     "barRecut": {
       "bar": {

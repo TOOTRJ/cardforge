@@ -1277,6 +1277,12 @@ const olderBasicFrame = (folder, k) => `${folder}/${k === "c" ? "l" : k}.png`;
 const ZEN_BASICS_FRAME_MASK = `${ZEN_BASICS}/frame.png`;
 /** The medallion's mana symbols, both split-bar packs' (600×600 SVG, drawn
  *  at bounds 42/78.67/16×11.43 %), published as `symbol/<key>.png`. No `m`. */
+/** The white sun, PipGlyph's shading over CC's shape (owner Round 64:
+ *  CC's is white with a lavender rim, fainter than print's shaded cream sun
+ *  on the cream medallion). Px of the 600 × 600 symbol, which the
+ *  medallion draws at 228 px of the HD card (× 0.38): the shadow 4 px left
+ *  and 5 px down at HD, blurred ~2 px, near-black, as BFZ #250 / SNC #272 print it. */
+export const WHITE_MEDALLION_SYMBOL = { fill: [246, 244, 234], shadow: [38, 30, 24], shadowOpacity: 1, dx: -8, dy: 14, blur: 3 };
 const ZEN_BASICS_SYMBOLS = Object.fromEntries(["w", "u", "b", "r", "g", "c"].map((k) => [k, `${ZEN_BASICS}/s${k}.svg`]));
 /** The medallion of both split-bar packs, measured on their masters (the
  *  same circle: α 1 from 1621 px at x 750, half-widths 36 / 74 / 101 / 120 px
@@ -3635,6 +3641,7 @@ export const CC_TEMPLATES = {
     ]),
     barRecut: ZEN_BASIC_RECUT,
     symbols: ZEN_BASICS_SYMBOLS,
+    symbolShading: { w: WHITE_MEDALLION_SYMBOL },
     pack: "packZendikarBasic-1.js 'Fullart Basics (ZEN)' (groupTextless-4.js:7)",
     transforms: "native 1500x2100, no resample; the colour's frame with its type bar moved onto the prints (ZEN_BASIC_RECUT), the 'Colorless Frame' stone laid over the frame field through the pack's Frame mask (moved with the bar), corners rounded to the importer radius; medallion symbols rasterised from the pack's 600x600 SVGs",
     notes: [
@@ -3651,6 +3658,7 @@ export const CC_TEMPLATES = {
     colors: perColor((k) => [{ ...layer(olderBasicFrame(SNC_BASICS, k)), barRecut: true }]),
     barRecut: SNC_BASIC_RECUT,
     symbols: ZEN_BASICS_SYMBOLS,
+    symbolShading: { w: WHITE_MEDALLION_SYMBOL },
     pack: "packTextlessBasicsSNC.js 'Fullart Basics (SNC)' (groupTextless-4.js:5)",
     transforms: "native 1500x2100, no resample; the colour's frame with its type bar and medallion moved onto the prints (SNC_BASIC_RECUT), corners rounded to the importer radius; medallion symbols rasterised from the ZEN pack's 600x600 SVGs (the SNC pack names the same files)",
     notes: [
@@ -4243,6 +4251,67 @@ export function recutBarAndMedallion(buf, width, height, { bar, medallion }) {
     }
   }
   return out;
+}
+
+/**
+ * PipGlyph's own WHITE medallion symbol (TODO 4.40, owner Round 64): CC's
+ * white sun (`sw.svg`) keeps only its SHAPE — its alpha — and is repainted
+ * as the prints draw it (BFZ #250, AKH #250, MH1 #250, SNC #272, BRO #278:
+ * a cream-white sun barely lighter than the bar, set off by a soft dark
+ * shadow down and to the left and a dark line round the central disc):
+ * every covered pixel takes `fill`, and under the shape a shadow of the
+ * shape — moved by (dx, dy) px, box-blurred `blur` px three times (≈ a
+ * gaussian), in `shadow` at `shadowOpacity` — shows through its gaps and
+ * past its edges. 8-bit RGBA in, a new buffer out; nothing else of CC's
+ * pixels (its lavender rim) is kept.
+ */
+export function shadeWhiteMedallionSymbol(buf, width, height, { fill, shadow, shadowOpacity, dx, dy, blur }) {
+  const n = width * height;
+  const shape = new Float32Array(n);
+  for (let p = 0; p < n; p += 1) shape[p] = buf[p * 4 + 3] / 255;
+  // The shadow's coverage: the shape moved, then blurred (separable boxes).
+  let sh = new Float32Array(n);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const sx = x - dx;
+      const sy = y - dy;
+      if (sx >= 0 && sy >= 0 && sx < width && sy < height) sh[y * width + x] = shape[sy * width + sx];
+    }
+  }
+  const boxPass = (src, horizontal) => {
+    const out = new Float32Array(n);
+    const len = horizontal ? width : height;
+    const lines = horizontal ? height : width;
+    for (let l = 0; l < lines; l += 1) {
+      let acc = 0;
+      const at = (i) => (horizontal ? l * width + i : i * width + l);
+      for (let i = -blur; i <= blur; i += 1) acc += i >= 0 && i < len ? src[at(i)] : 0;
+      for (let i = 0; i < len; i += 1) {
+        out[at(i)] = acc / (2 * blur + 1);
+        const add = i + blur + 1;
+        const drop = i - blur;
+        if (add < len) acc += src[at(add)];
+        if (drop >= 0) acc -= src[at(drop)];
+      }
+    }
+    return out;
+  };
+  for (let k = 0; k < 3; k += 1) sh = boxPass(boxPass(sh, true), false);
+  const out = Buffer.alloc(n * 4);
+  for (let p = 0; p < n; p += 1) {
+    const a = shape[p];
+    const s = Math.min(1, sh[p]) * shadowOpacity * (1 - a);
+    const alpha = a + s;
+    const o = p * 4;
+    for (let c = 0; c < 3; c += 1) out[o + c] = alpha === 0 ? 0 : Math.round((fill[c] * a + shadow[c] * s) / alpha);
+    out[o + 3] = Math.round(alpha * 255);
+  }
+  return out;
+}
+
+/** The provenance line of a white medallion symbol's shading. */
+export function describeWhiteMedallionSymbol({ fill, shadow, shadowOpacity, dx, dy, blur }) {
+  return `PipGlyph's own shading of CC's white sun: its alpha (shape) only, filled ${fill.join(",")}, over a shadow of the shape moved ${dx},${dy} px, blurred ${blur} px ×3, in ${shadow.join(",")} at ${Math.round(shadowOpacity * 100)} % (owner Round 64: the prints' shaded cream sun, BFZ #250 / AKH #250 / MH1 #250 / SNC #272 / BRO #278)`;
 }
 
 /** The provenance line of a recutBarAndMedallion recipe. */

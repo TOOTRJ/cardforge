@@ -4886,7 +4886,7 @@
     }
   },
   "m15fullartlandzen": {
-    "note": "Black-bordered Zendikar-style full-art basics: the stone ring round the window, the title bar and the split type bar with the centred medallion (Card Conjurer 'Fullart Basics (ZEN)', TODO 4.40; BFZ, OGW, AKH, HOU, ZNR). The master's bar is re-cut 7 px down onto the 52 printings (ZEN_BASIC_RECUT); BFZ sits within 1 px of it, AKH / HOU / ZNR 3–4 px lower. c: OGW #183 / #184, the stone-ring Wastes. m: no basic is multicolour. MH1 (snow bars), ZEN / J14 (2003 frame) are this design's nearest only.",
+    "note": "Black-bordered Zendikar-style full-art basics: the stone ring round the window, the title bar and the split type bar with the centred medallion (Card Conjurer 'Fullart Basics (ZEN)', TODO 4.40; BFZ, OGW, AKH, HOU, ZNR). The master's bar is re-cut 7 px down onto the 52 printings (ZEN_BASIC_RECUT); BFZ sits within 1 px of it, AKH / HOU 3–4 px lower. ZNR (2020) sets its subtype 22–28 px further right and is this design's nearest only (owner Round 64), so its printings are not references. c: OGW #183 / #184, the stone-ring Wastes. m: no basic is multicolour. MH1 (snow bars), ZEN / J14 (2003 frame) are this design's nearest only.",
     "colors": {
       "w": [
         {
@@ -4896,8 +4896,8 @@
         },
         {
           "name": "Plains",
-          "set": "znr",
-          "scryfallId": "9591fd15-78d9-4089-a075-031ab2affd2d"
+          "set": "akh",
+          "scryfallId": "c7191d23-b68f-406b-8c28-8dadbaef6562"
         }
       ],
       "u": [
@@ -4908,8 +4908,8 @@
         },
         {
           "name": "Island",
-          "set": "znr",
-          "scryfallId": "77ea783b-adaa-47be-9918-ca2f161c5d9e"
+          "set": "akh",
+          "scryfallId": "bec6fced-62bb-4a99-9ea1-374056b5781b"
         }
       ],
       "b": [
@@ -4920,8 +4920,8 @@
         },
         {
           "name": "Swamp",
-          "set": "znr",
-          "scryfallId": "95a58ce4-e07f-4c9c-98ae-3173d6d63cc5"
+          "set": "akh",
+          "scryfallId": "60b7c997-e520-4ff6-8b3b-705c2f12a9d4"
         }
       ],
       "r": [
@@ -4932,8 +4932,8 @@
         },
         {
           "name": "Mountain",
-          "set": "znr",
-          "scryfallId": "96297bcc-8480-4b14-8612-1c395d481bce"
+          "set": "akh",
+          "scryfallId": "d3112990-3919-46b0-b927-14566c689a81"
         }
       ],
       "g": [
@@ -4944,8 +4944,8 @@
         },
         {
           "name": "Forest",
-          "set": "znr",
-          "scryfallId": "d949485e-5188-49f4-9d30-5e135532d445"
+          "set": "akh",
+          "scryfallId": "2c2fc9f7-21af-4416-abf5-6fcb4f543680"
         }
       ],
       "c": [

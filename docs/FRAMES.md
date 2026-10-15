@@ -3976,7 +3976,7 @@ Three black-bordered full-art basic designs older than the 2022 one
 
 | Template | The look | Printings it reproduces | Nearest only |
 |---|---|---|---|
-| `m15fullartlandzen` | a brown stone ring round the window, the title bar, "Basic Land" left of a centred medallion and the subtype right of it | BFZ, OGW (the Wastes), AKH, HOU, ZNR — 52 | MH1's snow bars, ZEN / J14 on the 2003 frame |
+| `m15fullartlandzen` | a brown stone ring round the window, the title bar, "Basic Land" left of a centred medallion and the subtype right of it | BFZ, OGW (the Wastes), AKH, HOU — 37 | ZNR's type line (15), MH1's snow bars, ZEN / J14 on the 2003 frame |
 | `m15fullartlandsnc` | the same bars and medallion over the art, a white ring round the window, no stone | SNC — 10 | BRO (no ring, the bars ~80 px lower), MID / VOW (dark bars) |
 | `m15fullartlandthb` | the title bar and a plain "Basic Land — Plains" bar, no symbol | THB, 2XM, DMU, SPM, SOS, PLG25 — 31 | — |
 
@@ -3997,9 +3997,10 @@ each look, 2026-10-14), then the pack:
   lower still (a set-to-set offset; the type line follows BFZ's). ZNR
   also sets its SUBTYPE 22–28 px further right than BFZ / AKH / HOU / OGW
   do — on every ZNR printing measured (#266, #267, #270, #273, #276, #279;
-  the independent check of #571), not one printing's quirk — so a ZNR
-  import that lands exact here prints its subtype ~25 px left of the
-  print's (the 15 ZNR printings of the 52; owner's call at verification).
+  the independent check of #571), not one printing's quirk, and its bars
+  and name 3–5 px off — so ZNR is this frame's NEAREST (owner Round 64):
+  `fullart/basic/split-bar+znr-type-line`, the `znr-type-line` gap, before
+  and after the frame is verified; its printings are no references.
 - **SNC.** The pack draws the bar 13 px and the medallion 18 px low (bar
   rim 1711 vs 1698–1701, medallion top 1636 vs 1616–1617), and the art's
   lower edge 13–17 px low: `SNC_BASIC_RECUT` moves the band down to the
@@ -4014,15 +4015,25 @@ The medallion's symbol is the ZEN pack's `s?.svg` (both split-bar packs
 name it), published as `<template>/symbol/<key>.png` (bucket only) and
 drawn in a 228 px box 10 px above CC's centre (`SPLIT_BAR_SYMBOL_RECT`:
 CC's 240 px box drew it 6–13 % larger and ~10 px lower than BFZ / SNC
-print it). The type line is 3.24's split (`type.split`): one size for both
+print it). The WHITE sun is PipGlyph's own shading of CC's shape (owner
+Round 64; `WHITE_MEDALLION_SYMBOL`, `shadeWhiteMedallionSymbol`): CC's is
+white with a lavender rim, faint on the cream medallion, where BFZ #250,
+AKH #250, MH1 #250, SNC #272 and BRO #278 print a cream sun set off by a
+dark shadow down and to the left — its alpha kept, repainted 246,244,234
+over a shadow of the shape (5 px down, 3 px left, softened) in 38,30,24;
+bucket only, `design-backup/fullart-basics/plains-medallion.png`. The type line is 3.24's split (`type.split`): one size for both
 halves, cut at the em dash; a Wastes prints "Basic Land" alone.
 
 **Imports** (`lib/scryfall/frame-signatures.ts`): each printing lands on
 `m15fullartland` as before until its own template is verified in the
 card's colour, then on it (`onceVerified`): exact for the looks above
 (`fullart/basic/split-bar`, `…/split-bar/ring`, `fullart/basic/plain-bar`),
-nearest for the ones it only comes closest to (`…/split-bar/snow`, `…/bro`,
-`…/dark`, `…/split-bar/2003`). No other full-art basic moves.
+nearest for the ones it only comes closest to (`…/split-bar+znr-type-line`,
+`…/split-bar/snow`, `…/bro`, `…/dark`, `…/split-bar/2003`). No other
+full-art basic moves: of all 680 full-art and borderless basics, 158 move
+once everything is verified — 78 exact (the stone ring 37: BFZ 25, OGW 2,
+AKH 5, HOU 5; SNC 10; the plain bar 31) and 80 nearest (ZNR 15, MH1 5,
+BRO 10, MID / VOW 25, ZEN / J14 25).
 
 **Rollout.** ADDITIONS: no stored card sits on them, so no layout bump, no
 sweep and no badge; their visual cases are new. The owner verifies each
