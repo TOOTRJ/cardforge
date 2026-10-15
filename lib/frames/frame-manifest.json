@@ -1192,20 +1192,6 @@
       "width": 1500,
       "height": 2100
     },
-    "extendedcrown/a.png": {
-      "hash": "750c85977581",
-      "sha256": "750c8597758105c6a2d44762a843b6ea1a0cd144bbf2c7872e4ca7cef913e4c7",
-      "bytes": 96847,
-      "width": 1500,
-      "height": 260
-    },
-    "extendedcrown/a.webp": {
-      "hash": "91cda3b61c02",
-      "sha256": "91cda3b61c02cb20e0038118b7c825852b6af912efef93c2c84f39486801b7c3",
-      "bytes": 18266,
-      "width": 1500,
-      "height": 260
-    },
     "extendedcrown/b.png": {
       "hash": "3f4ac30f1aee",
       "sha256": "3f4ac30f1aeec158f5d7f870b3d41a8f8b638400c464c6768dbff39728a0246c",

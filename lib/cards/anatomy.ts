@@ -137,7 +137,6 @@ export type FrameAnatomy = {
 type AnatomyProfile = Pick<
   FrameProfile,
   | "overlays"
-  | "artifactMasterKeys"
   | "twoColorMasters"
   | "twoColorForLands"
   | "crownMasters"
@@ -661,33 +660,13 @@ export function resolveFrameOverlays(
       if (!wanted) continue;
       const look = resolveTwoColor(profile, style, facts);
       const goldPair = slot.anatomy === "crown" && slot.pairCrownOnGold ? twoColorPairOf(facts.colors) : null;
-      const base = look ? look.pair : goldPair ?? artifactDressedKey(profile, facts.colorKey, facts);
+      const base = look ? look.pair : goldPair ?? facts.colorKey;
       key = slot.keyMap?.[base] ?? base;
     }
     if (!slot.keys.includes(key)) continue;
     out.push({ anatomy: slot.anatomy, rect: slot.rect, key, path: slot.assetPathTemplate.replace("{key}", key) });
   }
   return out;
-}
-
-/** The key a crown or stamp notch is keyed by when the card is drawn on a
- *  single master: the pinline of the master PAINTED — the card's colour
- *  key, or the master the profile dresses an ARTIFACT of that colour in
- *  (FrameProfile.artifactMasterKeys: extended art's colourless artifact
- *  paints the silver `a` and wears CC's artifact crown, BRO #367, ONE #394;
- *  a colourless non-artifact the see-through `c` and the grey C crown).
- *  The artifact test is components/cards/frame-layer.tsx
- *  isArtifactFrameType's, inlined (that module imports this one). */
-function artifactDressedKey(
-  profile: AnatomyProfile,
-  colorKey: string,
-  facts: Pick<AnatomyFacts, "cardType" | "supertype">,
-): string {
-  const dressed = profile.artifactMasterKeys?.[colorKey as keyof NonNullable<AnatomyProfile["artifactMasterKeys"]>];
-  if (!dressed) return colorKey;
-  const artifact =
-    facts.cardType === "artifact" || (facts.supertype ?? "").split(/\s+/).some((w) => w.toLowerCase() === "artifact");
-  return artifact ? dressed : colorKey;
 }
 
 /** The strip key a modal face's MASTER already paints (TODO 5.1c): the

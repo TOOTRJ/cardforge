@@ -35,24 +35,24 @@ const provenance = JSON.parse(fs.readFileSync("lib/cards/frame-sources.json", "u
   string,
   { colors: Record<string, string[]>; kind?: string; notes: string[]; sourceFiles: string[] }
 >;
-// The seven colour keys, CC's artifact crown `a` and the ten pairs (TODO 4.7
-// follow-up, owner Round 63).
+// The seven colour keys and the ten pairs (TODO 4.7 follow-up, owner Round
+// 63); no artifact crown (owner Round 67: a colourless artifact keeps C).
 const PAIRS = ["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"];
-const KEYS = ["w", "u", "b", "r", "g", "m", "c", "a", ...PAIRS];
+const KEYS = ["w", "u", "b", "r", "g", "m", "c", ...PAIRS];
 const crowns = "img/frames/m15/crowns";
 
 describe("the extended-art crown band's recipe", () => {
-  it("builds the seven colour keys, the artifact crown and the ten pairs — the slot's keys", () => {
+  it("builds the seven colour keys and the ten pairs — the slot's keys; never CC's artifact crown", () => {
     expect([...EXTENDED_CROWN_BAND.keys]).toEqual(KEYS);
     expect(CC_OVERLAY_BANDS.extendedcrown.keys).toEqual(EXTENDED_CROWN_BAND.keys);
     expect([...EXTENDED_CROWN.keys]).toEqual(KEYS);
     expect(() => extendedCrownLayers("l")).toThrow();
+    expect(() => extendedCrownLayers("a")).toThrow();
     expect(() => extendedCrownLayers("uw")).toThrow();
     expect(() => extendedCrownLayers("wu-h")).toThrow();
   });
 
-  it("the artifact key is CC's artifact crown (never the Alt); a pair is its two floating crowns lerped 40→60 %W", () => {
-    expect(extendedCrownLayers("a")[1]).toEqual({ src: `${crowns}/m15CrownAFloating.png`, at: { leftPct: 3.07, topPct: 1.91, widthPct: 93.87, heightPct: 10.24 } });
+  it("a pair is its two floating crowns lerped 40→60 %W", () => {
     expect(extendedCrownLayers("rw")).toEqual([
       { src: "img/black.png", at: { leftPct: 3.94, topPct: 2.77, widthPct: 92.14, heightPct: 1.77 } },
       { src: `${crowns}/m15CrownRFloating.png`, at: { leftPct: 3.07, topPct: 1.91, widthPct: 93.87, heightPct: 10.24 }, right: `${crowns}/m15CrownWFloating.png`, ramp: [40, 60] },
@@ -129,7 +129,7 @@ describe("published to the frames bucket", () => {
     expect(provenance.extendedcrown.kind).toBe("overlay");
     expect(provenance.extendedcrown.sourceFiles).toEqual([
       "img/black.png",
-      ...["A", "C", "G", "M", "B", "R", "U", "W"].map((k) => `${crowns}/m15Crown${k}Floating.png`).sort(),
+      ...["C", "G", "M", "B", "R", "U", "W"].map((k) => `${crowns}/m15Crown${k}Floating.png`).sort(),
       `${crowns}/m15CrownFloatingOutline.png`,
     ].sort());
     expect(provenance.extendedcrown.notes.join(" ")).toMatch(/outline ON TOP/);

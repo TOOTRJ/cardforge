@@ -2,15 +2,15 @@ import { describe, expect, it } from "vitest";
 import { normalizeAnatomy, resolveFrameOverlays, resolveTwoColor } from "@/lib/cards/anatomy";
 import { frameMasterKey } from "@/components/cards/frame-layer";
 import { getFrameProfile } from "@/lib/cards/template-layout";
-import { FRAME_TEMPLATE_VALUES, type ColorIdentity } from "@/types/card";
+import type { ColorIdentity } from "@/types/card";
 
 // ---------------------------------------------------------------------------
 // Follow-ups to #566 (owner Round 63, 2026-10-14):
 //   • the two-colour (gold-split and hybrid) extended art and its land
 //     dress's pairs — opt-in per card (frame_style.twoColor), the split
 //     floating crown over a pair master;
-//   • a colourless legendary ARTIFACT on extended art wears CC's artifact
-//     crown: the crown is keyed by the master PAINTED (artifactMasterKeys);
+//   • a colourless legendary ARTIFACT on extended art keeps the grey C
+//     crown (owner Round 67);
 //   • the legendary textless promos' crown: the standard band, a pair's
 //     crown split over the gold rim (pairCrownOnGold).
 // ---------------------------------------------------------------------------
@@ -27,35 +27,16 @@ const facts = (colors: ColorIdentity[], over: Record<string, unknown> = {}) => (
 const crownKey = (template: string, style: Record<string, unknown>, f: ReturnType<typeof facts>) =>
   resolveFrameOverlays(getFrameProfile(template), style, f).find((o) => o.anatomy === "crown")?.key ?? null;
 
-describe("extended art: the crown is keyed by the master painted", () => {
-  it("a colourless ARTIFACT paints the silver `a` and wears CC's artifact crown; any other colourless card the see-through `c` and the grey C crown", () => {
+describe("extended art: a colourless artifact keeps the grey C crown (owner Round 67)", () => {
+  it("paints the silver `a` master under CC's grey C crown, as before — the crown is keyed by the card's colour", () => {
     const p = getFrameProfile("extendedart");
     const artifact = facts(["colorless"], { cardType: "artifact" });
     const artifactCreature = facts(["colorless"], { supertype: "Legendary Artifact" });
-    const creature = facts(["colorless"]);
     expect(frameMasterKey(p, artifact.colors, artifact)).toBe("a");
-    expect(crownKey("extendedart", { crown: true }, artifact)).toBe("a");
-    expect(crownKey("extendedart", { crown: true }, artifactCreature)).toBe("a");
-    expect(frameMasterKey(p, creature.colors, creature)).toBe("c");
-    expect(crownKey("extendedart", { crown: true }, creature)).toBe("c");
-    // A coloured artifact keeps its colour's crown (no artifact dress there).
-    expect(crownKey("extendedart", { crown: true }, facts(["blue"], { cardType: "artifact" }))).toBe("u");
-    // The land dress has no artifact master: its colourless crown stays C.
-    expect(crownKey("extendedartland", { crown: true }, facts(["colorless"], { cardType: "land", supertype: "Legendary Artifact" }))).toBe("c");
-  });
-
-  it("changes no other template's crown: every crowned template keys a colourless artifact as before", () => {
-    // The only crowned profiles with a type-dressed master are extended art
-    // and the double-faced bodies, whose keyMap already maps c → a.
-    for (const t of FRAME_TEMPLATE_VALUES) {
-      const p = getFrameProfile(t);
-      if (!p.artifactMasterKeys || !(p.overlays ?? []).length) continue;
-      expect(["extendedart", "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback"], t).toContain(t);
-    }
-    for (const t of ["m15dfcfront", "m15mdfcfront"]) {
-      expect(crownKey(t, { crown: true }, facts(["colorless"], { cardType: "artifact" })), t).toBe("a");
-      expect(crownKey(t, { crown: true }, facts(["colorless"])), t).toBe("a");
-    }
+    expect(crownKey("extendedart", { crown: true }, artifact)).toBe("c");
+    expect(crownKey("extendedart", { crown: true }, artifactCreature)).toBe("c");
+    expect(crownKey("extendedart", { crown: true }, facts(["colorless"]))).toBe("c");
+    expect(getFrameProfile("extendedart").overlays![0].keys).not.toContain("a");
   });
 });
 

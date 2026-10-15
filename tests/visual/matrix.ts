@@ -1457,10 +1457,6 @@ export function visualCases(): VisualCase[] {
   add("m15borderless", "creature", "b", "long", { crown: true, corners: "square", suffix: "@crown-square" });
   // The extended-art band at the stored bake's size (4.6f, wave 2b).
   add("extendedart", "creature", "u", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
-  // …and a colourless ARTIFACT's: the silver artifact master under CC's
-  // artifact crown (extendedcrown/a — the band is keyed by the master
-  // painted; owner Round 63).
-  add("extendedart", "artifact", "c", "long", { crown: true, suffix: "@crown-artifact" });
   // The textless promo's band at the stored bake's size.
   add("m15textless", "creature", "r", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
   // The snow band at the stored bake's size (4.6f, wave 2c).

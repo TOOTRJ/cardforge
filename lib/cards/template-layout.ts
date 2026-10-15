@@ -4953,12 +4953,11 @@ export const UB_CROWN: FrameOverlaySlot = {
  * autoExtendedArtFrame pushes it first and drawFrames draws the list
  * reversed), all 1500-native, 1:1. The prints (FDN #442 / #455 / #463 /
  * #466 / #470) stop the crown under the title bar with art beside and below
- * it. Keys: the seven colour keys; `a`, CC's ARTIFACT crown, which a
- * colourless artifact wears on the silver artifact master (resolveFrameOverlays
- * keys the crown by the master painted — artifactMasterKeys — owner Round 63;
- * BRO #367, ONE #394, LCI #389); and the ten pairs (TODO 4.7 follow-up), the
+ * it. Keys: the seven colour keys and the ten pairs (TODO 4.7 follow-up), the
  * two floating crowns split 40→60 %W over the pair masters (FRC #96, FDN
- * #476 / #479 / #481–483). A colourless non-artifact keeps CC's grey C crown.
+ * #476 / #479 / #481–483). A colourless card wears CC's grey C crown, the
+ * artifact master included (owner Round 67: C is closer on 8 of 11 scanned
+ * colourless legendary artifacts; the overlay is keyed by the card's colour).
  *
  * The slot is CC's bounds, from row 0 (TODO 4.7, layout v58): the
  * extendedart masters are Card Conjurer's own extended frames, whose title
@@ -4973,7 +4972,7 @@ export const EXTENDED_CROWN: FrameOverlaySlot = {
   assetPathTemplate: "/frames/extendedcrown/{key}.png",
   // EXTENDED_CROWN_BAND.keys in scripts/lib/cc-frames.mjs (a unit test holds
   // them together).
-  keys: ["w", "u", "b", "r", "g", "m", "c", "a", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+  keys: ["w", "u", "b", "r", "g", "m", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
 };
 
 /**

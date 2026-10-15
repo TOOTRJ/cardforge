@@ -100,7 +100,7 @@ describe("the preview draws the bake's crown", () => {
     ["three colours: gold", { colorIdentity: ["white", "blue", "black"], cost: "{W}{U}{B}", frameStyle: { template: "extendedart", crown: true } }, "m"],
     ["a pair, two-colour off: gold", { colorIdentity: ["white", "blue"], cost: "{1}{W}{U}", frameStyle: { template: "extendedart", crown: true } }, "m"],
     ["a pair, two-colour on: the split crown (4.7 follow-up)", { colorIdentity: ["white", "blue"], cost: "{1}{W}{U}", frameStyle: { template: "extendedart", crown: true, twoColor: true } }, "wu"],
-    ["a colourless artifact: CC's artifact crown", { colorIdentity: ["colorless"], cost: "{3}", cardType: "artifact", power: null, toughness: null, frameStyle: { template: "extendedart", crown: true } }, "a"],
+    ["a colourless artifact: the grey C crown (owner Round 67)", { colorIdentity: ["colorless"], cost: "{3}", cardType: "artifact", power: null, toughness: null, frameStyle: { template: "extendedart", crown: true } }, "c"],
     ["colourless: the grey crown", { colorIdentity: ["colorless"], cost: "{10}", frameStyle: { template: "extendedart", crown: true } }, "c"],
   ] as Array<[string, Partial<CardPreviewData>, string]>)("extended art, %s → the %s band at the extended-art slot", (_label, over, key) => {
     const data = card(over);

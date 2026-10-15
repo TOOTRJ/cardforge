@@ -4568,7 +4568,7 @@ land starts on its pair, with the off switch. No bump, no sweep, no badge.
 `extendedart` draws the same floating crown as the borderless frames, as an
 OVERLAY band rather than crowned twins (`EXTENDED_CROWN` on its `PROFILES`
 entry: `extendedcrown/<key>.png`, 1500 × 260, keys `w u b r g m c`, and
-since the 4.7 follow-up `a` and the ten pairs),
+since the 4.7 follow-up the ten pairs),
 through the same switch, hints, import rule and registry gap. Opt-in per
 card: production holds no visible card on the frame, and the bake with the
 switch absent or off is byte-identical.
@@ -4594,9 +4594,9 @@ switch absent or off is byte-identical.
   MSE masters, whose bar topped out at 5.43 %H, it sat 10 px lower.) The
   band's bytes did not change.
 - **Keys:** the template's seven colour keys; since the 4.7 follow-up
-  (below) `a`, CC's artifact crown on the silver artifact master, and the
-  ten pairs over the pair masters. A colourless non-artifact wears CC's
-  grey C crown (PUMA U1).
+  (below) the ten pairs over the pair masters. A colourless card wears
+  CC's grey C crown (PUMA U1), the artifact master included — the overlay
+  is keyed by the card's colour, not the master painted (owner Round 67).
 - **References:** `CROWN_REFERENCES.extendedart` — w FDN #442, u #455,
   b #463, r #466, g #470, m M21 #278, c PUMA U1; the crown rides the
   colour's tick.
@@ -4685,7 +4685,7 @@ never a badge.
 
 #### Two-colour extended art and the textless crown (4.7 / 4.35 follow-ups)
 
-Owner Round 63 (2026-10-14). ADDITIONS, opt-in per card: no layout bump,
+Owner Rounds 63 and 67 (2026-10-14). ADDITIONS, opt-in per card: no layout bump,
 no sweep, no badge. A stored card keeps its look — every save dropped the
 `twoColor` key on these frames while they drew no pairs and the `crown`
 key on the textless pair while it drew none (`normalizeAnatomy`), so a
@@ -4707,18 +4707,17 @@ textless pair (owner SQL 2026-10-14) and neither is ticked.
     BRO #370, CLB #602 / #606, STX #360 / #365, CMR #709 / #711, M21 #390,
     THB #348 / #351, EOC #43, MSC #468 / #477): the land pair 4.0–15.0
     against the gold land frame's 20.3–67.3 and the grey `l`'s 22.0–44.0.
-    (The 2020–22 prints — CMR, M21, THB, CLB — set their type bar and box
-    lower than CC's pack on EVERY colour: a geometry question of its own,
-    not a pair one.)
   - The crown of a crowned pair (FRC #96, FDN #476 / #479 / #481–483, WOE
     #360, OTJ #366 / #367, WOC #39), over the band's own pixels: the split
     crown 15.3–24.0 against the gold crown's 51.0–121.7.
   - A colourless legendary artifact's crown (BRO #367, ONE #394, LCI #389,
     WOE #369, NEO #496, MID #377, AFR #394): CC's artifact crown 17.0–42.0
     (median 22.7), the grey C crown 18.3–29.0 (median 22.0), CC's 'Artifact
-    Legend Crown (Alt)' 29.3–45.0. A tie the scans can't break (C wins 4 of
-    7); the owner chose CC's artifact crown, the one CC's own
-    `autoExtendedArtFrame` picks, and the prints are silver like it.
+    Legend Crown (Alt)' 29.3–45.0. The independent check added FRA #431,
+    MSH #428, TLA #385 and WOE #368, all closer to C: C on 8 of 11. Owner
+    Round 67: a colourless legendary artifact KEEPS the grey C crown (as
+    before this follow-up — no stored card changes); CC's artifact crowns
+    are not built.
   - Legendary black-bordered textless promos (PSPL #8, SCH #20 / #38, SCH
     #6 / #12 gold, PF26 #15 / #16 and PL22 #2 pairs): the STANDARD crown
     (our `m15crown` band) over the promo master 9.0–14.0 against CC's older
@@ -4740,13 +4739,21 @@ textless pair (owner SQL 2026-10-14) and neither is ticked.
   by themselves. 30 masters, frames bucket.
 - **The crown:** `extendedcrown/<pair>` — the pair's two floating crowns
   lerped across `PAIR_RAMPS.crownFloating` (40→60 %W, the borderless
-  pairs'); `extendedcrown/a` — CC's `m15CrownAFloating.png`. The crown is
-  now keyed by the master PAINTED (`resolveFrameOverlays`: a profile's
-  `artifactMasterKeys` dress the key too): a colourless artifact paints
-  `a` and wears the `a` crown, any other colourless card `c` / `c`. Only
-  extended art and the double-faced bodies have both an artifact dress and
-  a crown, and the bodies' `keyMap` already sends `c` to `a`: no other
-  crown moves (`tests/unit/cards/extended-textless-crowns.test.ts`).
+  pairs'), drawn where the card is drawn as its pair master. The crown is
+  still keyed by the card's colour (`resolveFrameOverlays` unchanged but
+  for `pairCrownOnGold`, below): a colourless artifact on its silver `a`
+  master wears the grey C crown, as before.
+- **No stored style changes:** main against this branch over every
+  template × colour (w, c, three colours, a pair with a split cost and with
+  a hybrid one, a land pair) × card type (7) × supertype (none, Legendary,
+  Legendary Artifact, Artifact) × crown / two-colour switch (absent, on,
+  off) × stamp (absent, auto, none) × rarity (common, rare) — 644,183
+  combinations, the master painted, every overlay, the plate, the save's
+  `normalizeAnatomy` and the new-card style: 34,996 differ, ALL on the four
+  frames and all additions — each one either a style main's save never
+  stores (the `twoColor` switch on the extended frames, the `crown` switch
+  on the textless pair) or the new-card default that now starts them on;
+  every style main can store draws and saves identically (0 exceptions).
 - **The textless crown:** the `m15crown` band on `m15textless` (keyMap c →
   a: the silver rim) and `m15textlessland` (c → l: the land rim) — the
   promo master's title bar and side rim sit on M15's rows, so the band's
@@ -4761,15 +4768,16 @@ textless pair (owner SQL 2026-10-14) and neither is ticked.
   `extendedartland`); the rest keep another gap (Universes Beyond, a
   Vehicle, a layout). Template, colour, switches and every other field are
   identical. The textless rows don't change: the registry's `textless/2015`
-  rule is still `nearest` (`blockedBy` 4.42) — but their patch already
+  rule is still `nearest` (`blockedBy` 4.42; making it `exact` is later,
+  TODO 4.42a) — but their patch already
   names `printed_crown` (the `legendary` effect), which a save now keeps on
   the textless pair, so an imported legendary promo draws its crown.
 - **Tests:** `tests/unit/frames/extended-art-importer.test.ts` (the pair
   recipe, the published pair masters' alpha and split),
-  `tests/unit/frames/extended-crown-band.test.ts` (the `a` and pair keys),
+  `tests/unit/frames/extended-crown-band.test.ts` (the pair keys, no `a`),
   `tests/unit/cards/extended-textless-crowns.test.ts`, the matrix's new
-  `extendedart` / `extendedartland` `@pair*`, `@crown-artifact` and
-  `m15textless*` `@crown*` cases; parity `extendedart/wu/creature-long@pair-crown`
+  `extendedart` / `extendedartland` `@pair*` and `m15textless*` `@crown*`
+  cases; parity `extendedart/wu/creature-long@pair-crown`
   and `m15textless/u/creature-long@crown`.
 
 #### Devoid and snow (4.6f, wave 2c)

@@ -966,11 +966,6 @@
         "img/frames/m15/crowns/m15CrownCFloating.png at 3.07/1.91/93.87×10.24 %",
         "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
       ],
-      "a": [
-        "img/black.png at 3.94/2.77/92.14×1.77 %",
-        "img/frames/m15/crowns/m15CrownAFloating.png at 3.07/1.91/93.87×10.24 %",
-        "img/frames/m15/crowns/m15CrownFloatingOutline.png at 2.8/1.72/94.4×10.62 %"
-      ],
       "wu": [
         "img/black.png at 3.94/2.77/92.14×1.77 %",
         "(img/frames/m15/crowns/m15CrownWFloating.png | img/frames/m15/crowns/m15CrownUFloating.png across procedural:ramp(40→60 %W)) at 3.07/1.91/93.87×10.24 %",
@@ -1024,7 +1019,6 @@
     },
     "sourceFiles": [
       "img/black.png",
-      "img/frames/m15/crowns/m15CrownAFloating.png",
       "img/frames/m15/crowns/m15CrownBFloating.png",
       "img/frames/m15/crowns/m15CrownCFloating.png",
       "img/frames/m15/crowns/m15CrownFloatingOutline.png",
@@ -1036,7 +1030,7 @@
     ],
     "notes": [
       "the extended-art legendary crown (TODO 4.6f, wave 2b): CC's floating crown over its BLACK 'Crown Border Cover' strip (drawn, not erased — the borderless frame erases it) with the outline ON TOP, as autoExtendedArtFrame draws them, composited 1:1 at 1500x2100 (every piece 1500-native) and cropped to rows 0–259 (the outline's extent); an overlay band over the extendedart masters (Card Conjurer's extended frames since TODO 4.7, frames bucket)",
-      "keys = the seven colour keys of the extendedart template: w u b r g, m (gold: a three-colour card, or a pair drawn gold), c (CC's colourless crown, over the see-through colourless master); a (TODO 4.7 follow-up, owner Round 63: CC's ARTIFACT crown m15CrownAFloating.png, the crown autoExtendedArtFrame picks for a colourless artifact — the overlay is keyed by the master painted, so the silver artifact master wears it); CC's 'Artifact Legend Crown (Alt)' is not used (measured worst of the three on BRO #367, ONE #394, LCI #389, WOE #369, NEO #496, MID #377, AFR #394)",
+      "keys = the seven colour keys of the extendedart template: w u b r g, m (gold: a three-colour card, or a pair drawn gold), c (CC's colourless crown, over the see-through colourless master and the artifact one alike: the overlay is keyed by the card's colour — owner Round 67 kept it after CC's artifact crown measured no closer: C nearer on 8 of 11 colourless legendary artifacts); CC's artifact crowns (and their 'Alt') are not used",
       "the ten pairs (TODO 4.7 follow-up): the pair's two floating crowns lerped across PAIR_RAMPS.crownFloating (40→60 %W, the borderless pairs' measure), first canonical colour on the left, drawn over the pair masters; measured 2026-10-14 on ten crowned two-colour extended-art prints (FRC #96, FDN #476 / #479 / #481–483, WOE #360, OTJ #366 / #367, WOC #39): median |ΔRGB| over the band's visible pixels 15.3–24.0 against 51.0–121.7 for the gold crown",
       "the band's slot is CC's bounds (lib/cards/template-layout.ts EXTENDED_CROWN, from row 0): since TODO 4.7 the extendedart masters are Card Conjurer's extended frames, whose title bar tops out at 4.98 %H as FDN #442 / #455 print it (over the old MSE masters, whose bar topped out at 5.43 %H, the slot sat 10 px lower)"
     ]
