@@ -252,6 +252,18 @@ const TYPED = Object.keys(COLOURED).filter((name) => !UNTYPED.includes(name));
 const TYPED_SYSTEM =
   "You pitch ORIGINAL Magic: The Gathering-style decks for a homebrew tool. Given a theme and format, invent a deck name, a one-sentence pitch and a strategy paragraph (game plan, key mechanics, world/faction names) for a deck in the colors its deck type sets — they are fixed, not yours to pick. Everything must be original — never Wizards-owned proper nouns, never real-world brands.";
 
+/** The commander slot's note as main hands it to the designer. */
+const COMMANDER_NOTE_ON_MAIN = "This is the deck's LEGENDARY COMMANDER (supertype Legendary) — the strategy's centerpiece.";
+
+/** What a typed deck's commander note adds: the type's colours, word for
+ *  word (an untyped deck's and Eldrazi's notes are main's). */
+const COMMANDER_COLOURS_LINE: Record<string, string> = {
+  "commander · gorgons (B/G) · bracket 3 · 12":
+    "Its color identity is EXACTLY the deck's: black-green (B/G) — mana symbols of each of those 2 colors in its cost or rules text, and of no other color.",
+  "commander · slivers (five colours) · 12":
+    "Its color identity is EXACTLY the deck's: all five colors (W/U/B/R/G) — mana symbols of each of those 5 colors in its cost or rules text, and of no other color.",
+};
+
 type Recorded = {
   concept: Array<{ system: string; prompt: string; schema: { properties: Record<string, unknown>; required: string[] } }>;
   designed: Array<{ slots: Array<{ colorHint?: string }> }>;
@@ -261,8 +273,17 @@ type Recorded = {
 /** Main's record of a TYPED request as this branch sends it: the concept
  *  call asks for no colours (the schema without `colors`, the typed system
  *  line) — nothing else moves while the model's colours were the type's. */
-function asTyped(record: unknown): Recorded {
+function asTyped(record: unknown, name?: string): Recorded {
   const out = structuredClone(record) as Recorded;
+  // The commander slot's note names the type's colours (the #568 follow-up,
+  // owner 2026-10-14): "multicolor" alone let the designer make a
+  // two-colour commander for the five-colour Slivers.
+  const line = name ? COMMANDER_COLOURS_LINE[name] : undefined;
+  for (const design of out.designed as Array<{ slots: Array<{ note?: string }> }>) {
+    for (const slot of design.slots) {
+      if (line && slot.note === COMMANDER_NOTE_ON_MAIN) slot.note = `${slot.note} ${line}`;
+    }
+  }
   for (const call of out.concept) {
     call.system = TYPED_SYSTEM;
     // Add mode: the strategy alone is inferred from the deck's cards — its
@@ -316,7 +337,7 @@ describe("a typed deck plan takes its colours from its type (owner 2026-10-14)",
     }
     s.concepts = [concept(undefined)];
     const out = JSON.parse(JSON.stringify(await plan(input))) as unknown;
-    const want = asTyped(recorded[`plan · ${name}`]);
+    const want = asTyped(recorded[`plan · ${name}`], name);
     expect(out).toEqual(want);
     expect(JSON.stringify(out)).toBe(JSON.stringify(want));
   });
@@ -325,7 +346,7 @@ describe("a typed deck plan takes its colours from its type (owner 2026-10-14)",
     const name = "commander · slivers (five colours) · 12";
     s.concepts = [concept(undefined)];
     const out = JSON.parse(JSON.stringify(await plan(COLOURED[name]!.input))) as Recorded;
-    const main = asTyped(recorded[`plan · ${name}`]);
+    const main = asTyped(recorded[`plan · ${name}`], name);
     // The commander is multicolour; the other slots cycle W U B R G.
     const hints = out.designed[0]!.slots.map((slot) => slot.colorHint);
     expect(hints).toEqual(["multicolor", "blue", "black", "red", "green", "white", "blue", "black", "red", "green", "white", "blue"]);
@@ -338,6 +359,19 @@ describe("a typed deck plan takes its colours from its type (owner 2026-10-14)",
       return copy;
     };
     expect(JSON.stringify(withoutColours(out))).toBe(JSON.stringify(withoutColours(main)));
+  });
+
+  it.each([
+    ["angels", "white", `${COMMANDER_NOTE_ON_MAIN} Its color identity is EXACTLY the deck's: white (W) — mana symbols of that color in its cost or rules text, and of no other color.`],
+    ["slivers", "multicolor", `${COMMANDER_NOTE_ON_MAIN} ${COMMANDER_COLOURS_LINE["commander · slivers (five colours) · 12"]}`],
+    [null, "multicolor", COMMANDER_NOTE_ON_MAIN],
+  ])("the commander slot of a %s deck names the type's colours (an untyped deck's is main's)", async (deckType, hint, note) => {
+    s.concepts = [concept(deckType ? undefined : ["black", "green"])];
+    const out = await plan({ theme: "", format: "commander", size: 12, deckType: deckType ?? undefined });
+    const design = out.designed[0] as { slots: Array<{ colorHint?: string; note?: string }> };
+    expect(design.slots[0]).toMatchObject({ colorHint: hint, note });
+    // …and no other slot's note moves.
+    expect(design.slots.slice(1).some((slot) => /color identity is EXACTLY/.test(slot.note ?? ""))).toBe(false);
   });
 
   it.each([

@@ -1,5 +1,5 @@
 import "server-only";
-import { commanderBracket, describeColors, type DeckType } from "@/lib/decks/deck-types";
+import { commanderBracket, describeColors, type DeckType, type ManaColor } from "@/lib/decks/deck-types";
 
 import { generateObject } from "ai";
 import { z } from "zod";
@@ -117,6 +117,9 @@ function slotFromDeckSlot(
   slot: DeckSlot,
   colors: ColorIdentity[],
   index: number,
+  /** A typed deck's own colours (its type's letters) — the commander's note
+   *  names them; null for an untyped deck, whose note is as it was. */
+  typeColors: readonly ManaColor[] | null = null,
 ): DesignSlot {
   if (colors.length === 0) return colourlessSlotFromDeckSlot(slot);
   const colorHint = colors[index % colors.length];
@@ -125,7 +128,9 @@ function slotFromDeckSlot(
       cardType: "creature",
       rarity: "mythic",
       colorHint: colors.length > 1 ? "multicolor" : colorHint,
-      note: "This is the deck's LEGENDARY COMMANDER (supertype Legendary) — the strategy's centerpiece.",
+      note: `This is the deck's LEGENDARY COMMANDER (supertype Legendary) — the strategy's centerpiece.${
+        typeColors && typeColors.length > 0 ? ` ${commanderColorsLine(typeColors)}` : ""
+      }`,
     };
   }
   if (slot.role === "land") {
@@ -145,6 +150,15 @@ function slotFromDeckSlot(
         ? `Target mana value ≈ ${slot.manaValueHint}.`
         : undefined,
   };
+}
+
+/** What a typed deck's commander slot says of its colours (the #568
+ *  follow-up, owner 2026-10-14): the commander's colour identity IS the
+ *  deck's — "multicolor" alone let the designer make a two-colour commander
+ *  for the five-colour Slivers. */
+function commanderColorsLine(typeColors: readonly ManaColor[]): string {
+  const each = typeColors.length === 1 ? "that color" : `each of those ${typeColors.length} colors`;
+  return `Its color identity is EXACTLY the deck's: ${describeColors(typeColors).replace("colours", "colors")} — mana symbols of ${each} in its cost or rules text, and of no other color.`;
 }
 
 /** slotFromDeckSlot for a colourless plan (no colours: `index % 0` would
@@ -297,7 +311,7 @@ export async function generateDeckPlan(input: {
   const planColors: DeckConcept["colors"] =
     typedColors ?? (concept as DeckConcept).colors;
   const designSlots = slots.map((slot, index) =>
-    slotFromDeckSlot(slot, planColors, index),
+    slotFromDeckSlot(slot, planColors, index, typedColors ? input.deckType?.colors ?? null : null),
   );
   // Pauper is commons-only — the format rule, not a suggestion.
   const finalSlots =

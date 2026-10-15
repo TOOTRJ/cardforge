@@ -57,7 +57,7 @@ import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import {
   colorHintsForFrame,
-  deckCardFrameRequest,
+  resolveDeckCardFrame,
   resolveGeneratedFrame,
 } from "@/lib/creator/frame-random";
 import { remixSavedFrame } from "@/lib/creator/frame-resolve";
@@ -93,7 +93,7 @@ export const REMIX_DFC_FRAMES_GONE =
 import type { DeckFormat } from "@/types/deck";
 import { withCreditedStep } from "@/lib/ai/credited-step";
 import { StationGapUnfilledError, sameStationShape, stationSaveFields } from "@/lib/ai/station-design";
-import { printsPowerToughness } from "@/lib/cards/card-display";
+import { printsPowerToughness, withSupertypeWord } from "@/lib/cards/card-display";
 import { isStationFrame } from "@/lib/cards/station-frame";
 import { stationPtChoiceOf } from "@/lib/creator/station-rows";
 import { getCardCapacity } from "@/lib/cards/capacity";
@@ -1402,10 +1402,12 @@ async function runDeckCardStep(
   cardIndex: number,
 ): Promise<JobStep> {
   const card = plan.cards[cardIndex];
-  // Commander slot: force the Legendary supertype the frame renders.
+  // Commander slot: force the Legendary supertype the frame renders — added
+  // to whatever words the design gave it (a "Snow" commander was saved
+  // non-legendary when only an EMPTY supertype got the word).
   const isCommander = plan.roles[cardIndex] === "commander";
   const supertype = isCommander
-    ? card.supertype || "Legendary"
+    ? withSupertypeWord(card.supertype, "Legendary")
     : card.supertype ?? undefined;
   // The card's FRAME (owner 2026-10-14): before, a deck card saved none and
   // every one drew the default creature frame — a land, an artifact too.
@@ -1415,14 +1417,13 @@ async function runDeckCardStep(
   // plan is what it was; a card already created (a retried step) is never
   // re-framed. Where that frame (or its dress) isn't published in the
   // card's colour, no template — the default frame, as before — never a
-  // random other era or showcase (owner 2026-10-14).
+  // random other era or showcase (owner 2026-10-14). A saga, a snow card and
+  // a token follow their own looks where verified (resolveDeckCardFrame:
+  // the saga frame, the snow frames, a new token's full-art design).
   const frameTemplate = step.card_id
     ? null
-    : resolveGeneratedFrame({
+    : resolveDeckCardFrame({
         cardType: card.card_type,
-        requested: deckCardFrameRequest(card.card_type),
-        // Never a random other frame of the type: no template instead.
-        fallback: "none",
         colorIdentity: card.color_identity,
         verifiedKeys: new Set(await getVerifiedFrameKeys()),
         face: {
