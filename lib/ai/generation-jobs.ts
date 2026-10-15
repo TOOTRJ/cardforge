@@ -57,7 +57,7 @@ import { isAllowedServerImageFetchUrl } from "@/lib/validation/card";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import {
   colorHintsForFrame,
-  deckCardFrameRequest,
+  resolveDeckCardFrame,
   resolveGeneratedFrame,
 } from "@/lib/creator/frame-random";
 import { remixSavedFrame } from "@/lib/creator/frame-resolve";
@@ -1415,14 +1415,13 @@ async function runDeckCardStep(
   // plan is what it was; a card already created (a retried step) is never
   // re-framed. Where that frame (or its dress) isn't published in the
   // card's colour, no template — the default frame, as before — never a
-  // random other era or showcase (owner 2026-10-14).
+  // random other era or showcase (owner 2026-10-14). A saga, a snow card and
+  // a token follow their own looks where verified (resolveDeckCardFrame:
+  // the saga frame, the snow frames, a new token's full-art design).
   const frameTemplate = step.card_id
     ? null
-    : resolveGeneratedFrame({
+    : resolveDeckCardFrame({
         cardType: card.card_type,
-        requested: deckCardFrameRequest(card.card_type),
-        // Never a random other frame of the type: no template instead.
-        fallback: "none",
         colorIdentity: card.color_identity,
         verifiedKeys: new Set(await getVerifiedFrameKeys()),
         face: {

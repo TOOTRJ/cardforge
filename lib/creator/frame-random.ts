@@ -18,6 +18,7 @@ import {
   isEnchantmentDress,
   subtypeFrameFits,
   subtypeFrameFor,
+  subtypesSay,
   framesForKind,
   isSingleBasicLand,
   kindFromCard,
@@ -33,7 +34,9 @@ import {
   type TokenFrameFace,
 } from "@/lib/creator/card-kinds";
 import { pickFrameColorKey } from "@/components/cards/frame-layer";
-import { printsPowerToughness } from "@/lib/cards/card-display";
+import { printsPowerToughness, supertypeHasWord } from "@/lib/cards/card-display";
+import { resolveSagaChapters } from "@/lib/cards/face-content";
+import { defaultTokenFrameIn, tokenFrameText } from "@/lib/creator/token-frame-auto";
 import { isM20TokenTemplate } from "@/lib/cards/token-height";
 import { frameHidesRulesBoxText } from "@/lib/creator/frame-resolve";
 import { isStationFrame } from "@/lib/cards/station-frame";
@@ -224,6 +227,80 @@ export function resolveGeneratedFrame(input: {
  *  mixed into a deck): the default frame, as every deck card saved before. */
 export function deckCardFrameRequest(cardType: CardType): FrameRequest {
   return ERA_TYPE_FRAME.m15?.[cardType];
+}
+
+/**
+ * The frame an AI DECK card saves with: resolveGeneratedFrame asked for the
+ * card type's M15 standard (deckCardFrameRequest, `fallback: "none"`), and
+ * three looks a NEW deck card follows where they are VERIFIED in its colour
+ * (owner 2026-10-14, the #568 follow-up) — decks only; the single-card job
+ * asks for the frame its maker named, or a random one:
+ *
+ *   - a SAGA (an enchantment whose subtypes say Saga and whose text has at
+ *     least one chapter line, read as the renderers read it) → the `saga`
+ *     frame. A text with no chapter would leave its rail empty: it keeps the
+ *     standard's landing.
+ *   - a SNOW card (a Snow word in its type line) → `m15snow`, or
+ *     `m15snowland` for a land — only where the standard's landing is the
+ *     plain frame the snow skin re-dresses (m15, m15land, and the artifact
+ *     frame an Artifact Creature borrows, as the import lands a snow
+ *     printing); a subtype or enchantment dress keeps its frame, and an
+ *     artifact or a token, whose kind the snow frame doesn't dress, its own.
+ *   - a TOKEN → the frame a new token starts on in the creator
+ *     (defaultTokenFrameIn): the full-art design at the height its text asks
+ *     for where that is verified in the card's colour, else the 2014–19 arch
+ *     its words and text pick, as before.
+ *
+ * Where a look isn't verified, the standard's landing — as #568 saved it.
+ */
+export function resolveDeckCardFrame(
+  input: Omit<Parameters<typeof resolveGeneratedFrame>[0], "requested" | "fallback" | "random">,
+): FrameTemplate | null {
+  const { cardType, colorIdentity, verifiedKeys, face } = input;
+  const colorKey = pickFrameColorKey(colorIdentity);
+  const resolve = (requested: FrameRequest) =>
+    resolveGeneratedFrame({ ...input, requested, fallback: "none" });
+
+  if (
+    cardType === "enchantment" &&
+    subtypesSay(face?.subtypes, "Saga") &&
+    resolveSagaChapters(null, face?.rulesText).chapters.length > 0 &&
+    framesForKind("saga", verifiedKeys).some(
+      (choice) => choice.template === "saga" && choice.availableColorKeys.includes(colorKey as never),
+    )
+  ) {
+    return "saga";
+  }
+
+  if (cardType === "token") {
+    const start = defaultTokenFrameIn(
+      tokenFrameText({
+        cardType,
+        supertype: face?.supertype,
+        subtypes: face?.subtypes,
+        rulesText: face?.rulesText,
+        flavorText: face?.flavorText,
+        power: face?.power,
+        toughness: face?.toughness,
+      }),
+      "m15token",
+      colorKey,
+      verifiedKeys,
+    );
+    return resolve(start ?? deckCardFrameRequest(cardType));
+  }
+
+  const landed = resolve(deckCardFrameRequest(cardType));
+  if (supertypeHasWord(face?.supertype, "Snow")) {
+    const snow: FrameTemplate | null =
+      landed === "m15land"
+        ? "m15snowland"
+        : landed === "m15" || (landed === "m15artifact" && cardType === "creature")
+          ? "m15snow"
+          : null;
+    if (snow && resolve(snow) === snow) return snow;
+  }
+  return landed;
 }
 
 /** True when a GENERATED card may land on `template` as far as the station

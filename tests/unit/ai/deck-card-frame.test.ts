@@ -17,6 +17,13 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 // wherever published in the card's colour; where the type's frame is not,
 // NO template (never another border era or a showcase in a deck).
 //
+// The follow-up (owner 2026-10-14, resolveDeckCardFrame): a saga with a
+// chapter line lands on the saga frame, a Snow card on the snow frames
+// (where its landing is the plain m15 / m15land, or the artifact frame an
+// Artifact Creature borrows), and a token on the frame a new creator token
+// starts on (defaultTokenFrameIn: the full-art design at its text's height)
+// — each only where verified in the card's colour.
+//
 // Two verified sets: `supabase/seed.sql` (the mirror of production's ticks,
 // snapshotted 2026-10-13 — production may be ahead of it) and EVERY combo
 // ticked (what each card lands on once its dress is verified).
@@ -152,11 +159,22 @@ const KINDS: Array<[string, ReturnType<typeof card>, string, string, string]> = 
   ["Spacecraft with a tier", card({ card_type: "artifact", cost: "{3}", color_identity: ["colorless"], subtypes: ["Spacecraft"], rules_text: `${STATION_LINE}\n9+ | Flying`, power: "4", toughness: "4" }), "noncreature", "m15artifact", "m15station"],
   ["Spacecraft without a tier", card({ card_type: "artifact", cost: "{3}", color_identity: ["colorless"], subtypes: ["Spacecraft"], rules_text: "Flying", power: "4", toughness: "4" }), "noncreature", "m15artifact", "m15artifact"],
   ["Planet with a tier", card({ card_type: "land", cost: "—", color_identity: ["colorless"], subtypes: ["Planet"], rules_text: `{T}: Add {C}.\n${PLANET_LINE}\n6+ | {T}: Add {C}{C}.` }), "land", "m15land", "m15stationland"],
-  ["token (creature)", card({ card_type: "token", cost: "—", supertype: "Creature", subtypes: ["Soldier"], color_identity: ["white"], rules_text: null, power: "1", toughness: "1" }), "creature", "m15token", "m15token"],
-  ["token (creature with text)", card({ card_type: "token", cost: "—", supertype: "Creature", subtypes: ["Soldier"], color_identity: ["white"], rules_text: "Vigilance", power: "1", toughness: "1" }), "creature", "m15tokentext", "m15tokentext"],
-  ["token (Treasure)", card({ card_type: "token", cost: "—", supertype: "Artifact", subtypes: ["Treasure"], color_identity: ["colorless"], rules_text: "{T}, Sacrifice this artifact: Add one mana of any color." }), "noncreature", "m15tokenartifacttext", "m15tokenartifacttext"],
+  ["token (creature)", card({ card_type: "token", cost: "—", supertype: "Creature", subtypes: ["Soldier"], color_identity: ["white"], rules_text: null, power: "1", toughness: "1" }), "creature", "m20token", "m20token"],
+  ["token (creature with text)", card({ card_type: "token", cost: "—", supertype: "Creature", subtypes: ["Soldier"], color_identity: ["white"], rules_text: "Vigilance", power: "1", toughness: "1" }), "creature", "m20tokentext", "m20tokentext"],
+  ["token (Treasure)", card({ card_type: "token", cost: "—", supertype: "Artifact", subtypes: ["Treasure"], color_identity: ["colorless"], rules_text: "{T}, Sacrifice this artifact: Add one mana of any color." }), "noncreature", "m20tokenartifacttext", "m20tokenartifacttext"],
   ["planeswalker", card({ card_type: "planeswalker", supertype: "Legendary", subtypes: ["Veyra"], color_identity: ["blue"], rules_text: "+1: Draw a card.\n-3: Return target creature to its owner's hand.", loyalty: "4" }), "noncreature", "m15pw", "m15pw"],
-  ["saga (enchantment — Saga)", card({ card_type: "enchantment", subtypes: ["Saga"], color_identity: ["green"], rules_text: "I — Draw a card.\nII, III — Create a 2/2 Bear." }), "noncreature", "m15", "m15"],
+  ["saga (enchantment — Saga)", card({ card_type: "enchantment", subtypes: ["Saga"], color_identity: ["green"], rules_text: "I — Draw a card.\nII, III — Create a 2/2 Bear." }), "noncreature", "saga", "saga"],
+  ["saga with no chapter line", card({ card_type: "enchantment", subtypes: ["Saga"], color_identity: ["green"], rules_text: "Draw a card, then create a 2/2 Bear." }), "noncreature", "m15", "m15"],
+  ["token (artifact creature, tall text)", card({ card_type: "token", cost: "—", supertype: "Artifact Creature", subtypes: ["Construct"], color_identity: ["colorless"], rules_text: "This creature gets +1/+1 for each artifact you control.\nWhenever another artifact you control enters, put a +1/+1 counter on target creature you control. Then if you control five or more artifacts, draw a card.\nWhen this creature dies, create a Treasure token.", power: "0", toughness: "0" }), "creature", "m20tokenartifacttall", "m20tokenartifacttall"],
+  ["snow creature", card({ supertype: "Snow", subtypes: ["Troll"], color_identity: ["green"], power: "3", toughness: "3" }), "creature", "m15snow", "m15snow"],
+  ["snow instant", card({ card_type: "instant", supertype: "Snow", color_identity: ["blue"], rules_text: "Counter target spell unless its controller pays {S}." }), "removal", "m15snow", "m15snow"],
+  ["snow land", card({ card_type: "land", cost: "—", supertype: "Snow", color_identity: ["blue"], rules_text: "{T}: Add {U}." }), "land", "m15snowland", "m15snowland"],
+  ["snow basic-like land (Basic Snow Land — Island)", card({ title: "Snow-Covered Island", card_type: "land", cost: "—", supertype: "Basic Snow", subtypes: ["Island"], color_identity: ["blue"], rules_text: "({T}: Add {U}.)" }), "land", "m15snowland", "m15snowland"],
+  ["snow artifact creature", card({ supertype: "Snow Artifact", subtypes: ["Golem"], cost: "{4}", color_identity: ["colorless"], power: "3", toughness: "3" }), "creature", "m15snow", "m15snow"],
+  ["snow artifact (the artifact frame: the snow frame doesn't dress an artifact)", card({ card_type: "artifact", cost: "{3}", supertype: "Snow", color_identity: ["colorless"], rules_text: "{T}: Add {C}." }), "noncreature", "m15artifact", "m15artifact"],
+  ["snow enchantment (an enchantment dress keeps its frame)", card({ card_type: "enchantment", supertype: "Snow", color_identity: ["white"], rules_text: "Creatures you control get +1/+1." }), "noncreature", "m15snow", "m15nyx"],
+  ["snow Vehicle (a subtype dress keeps its frame)", card({ card_type: "artifact", cost: "{3}", supertype: "Snow", color_identity: ["colorless"], subtypes: ["Vehicle"], rules_text: "Crew 2", power: "3", toughness: "3" }), "noncreature", "m15vehicle", "m15vehicle"],
+  ["snow token (the token's own frame)", card({ card_type: "token", cost: "—", supertype: "Snow Creature", subtypes: ["Elemental"], color_identity: ["blue"], rules_text: null, power: "1", toughness: "1" }), "creature", "m20token", "m20token"],
   ["battle", card({ card_type: "battle", subtypes: ["Siege"], color_identity: ["red"], rules_text: "When this enters, it deals 2 damage to any target.", defense: "5" }), "noncreature", "none", "battle"],
 ];
 
@@ -217,6 +235,54 @@ describe("an AI deck card saves with its frame", () => {
     });
     expect(single).not.toBeNull();
     expect(single).not.toBe("m15land");
+  });
+
+  // The #568 follow-up (owner 2026-10-14): a saga, a snow card and a token
+  // follow their own looks in a deck only where VERIFIED in the card's
+  // colour — else the landing #568 gave them — and the single-card job,
+  // which asks for the frame its maker named, is unchanged.
+  it.each([
+    ["saga (enchantment — Saga)", "saga/g", "m15"],
+    ["snow creature", "m15snow/g", "m15"],
+    ["snow land", "m15snowland/u", "m15land"],
+    ["snow artifact creature", "m15snow/c", "m15artifact"],
+    ["token (creature)", "m20token/w", "m15token"],
+    ["token (creature with text)", "m20tokentext/w", "m15tokentext"],
+    ["token (Treasure)", "m20tokenartifacttext/c", "m15tokenartifacttext"],
+  ])("%s: with %s unticked, the standard's landing (%s), as #568 saved it", async (kind, unticked, landing) => {
+    s.verified = SEED.filter((key) => key !== unticked);
+    const [, designed, role] = KINDS.find(([name]) => name === kind)!;
+    const saved = await deckStep(designed, role);
+    expect((saved!.frame_style as { template?: string }).template).toBe(landing);
+  });
+
+  it.each([
+    ["saga (enchantment — Saga)", "m15", "m15"],
+    ["snow creature", "m15", "m15"],
+    ["snow land", "m15land", "m15land"],
+    ["token (creature)", "m15token", "m15token"],
+    ["token (creature with text)", "m15token", "m15tokentext"],
+    ["token (Treasure)", "m15token", "m15tokenartifacttext"],
+  ])("the single-card job asked for %s's %s lands where it did (%s): the deck's looks are the deck's", (kind, requested, landing) => {
+    const [, designed] = KINDS.find(([name]) => name === kind)!;
+    const single = resolveGeneratedFrame({
+      cardType: designed.card_type as never,
+      requested: requested as FrameTemplate,
+      colorIdentity: designed.color_identity as never,
+      verifiedKeys: new Set(SEED),
+      face: {
+        cardType: designed.card_type,
+        supertype: designed.supertype,
+        subtypes: designed.subtypes,
+        title: designed.title,
+        rulesText: designed.rules_text,
+        flavorText: designed.flavor_text,
+        power: designed.power,
+        toughness: designed.toughness,
+      },
+      random: () => 0,
+    });
+    expect(single).toBe(landing);
   });
 
   it("a station frame saves its rows, as the single-card job does", async () => {
