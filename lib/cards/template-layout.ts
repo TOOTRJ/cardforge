@@ -5622,6 +5622,26 @@ export const DFC_BORDERLESS_REVERSE_PT: StatSlot = {
   colorHex: "#828282",
 };
 
+/** The borderless modal bodies' flipside strip RIDER (TODO 5.1c's model):
+ *  the light pack's tab in each colour, `<template>/strip/<key>.png`
+ *  (scripts/build-dfc-borderless-frames.mjs: cut from the published masters
+ *  through CC's Flipside mask, eroded 1 px, snapped to 2 × 2 blocks), drawn
+ *  in the OTHER face's colour — print's strip follows the face it describes
+ *  (MSH #331's blue front: a light-blue strip on its gold back). No `l`: a
+ *  borderless modal face is never a land. */
+const MDFC_BORDERLESS_STRIP_KEYS = ["w", "u", "b", "r", "g", "m", "a"] as const;
+export const MDFC_BORDERLESS_STRIP_RIDER_FRONT: FrameOverlaySlot = {
+  anatomy: "mdfcStrip",
+  rect: MDFC_STRIP_RIDER_RECT,
+  assetPathTemplate: "/frames/m15borderlessmdfcfront/strip/{key}.png",
+  keys: MDFC_BORDERLESS_STRIP_KEYS,
+  keyMap: { c: "a" },
+};
+export const MDFC_BORDERLESS_STRIP_RIDER_BACK: FrameOverlaySlot = {
+  ...MDFC_BORDERLESS_STRIP_RIDER_FRONT,
+  assetPathTemplate: "/frames/m15borderlessmdfcback/strip/{key}.png",
+};
+
 const M15BORDERLESSDFC_SKELETON: FrameProfile = {
   ...M15BORDERLESS,
   artifactMasterKeys: { c: "a" },
@@ -5999,8 +6019,8 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // twins and split pairs, grafted (scripts/lib/dfc-borderless.mjs).
   m15borderlessdfcfront: { ...M15BORDERLESSDFCFRONT, crownMasters: true, twoColorMasters: ["split"] },
   m15borderlessdfcback: { ...M15BORDERLESSDFCBACK, crownMasters: true, twoColorMasters: ["split"] },
-  m15borderlessmdfcfront: { ...M15BORDERLESSMDFCFRONT, crownMasters: true, twoColorMasters: ["split"] },
-  m15borderlessmdfcback: { ...M15BORDERLESSMDFCBACK, crownMasters: true, twoColorMasters: ["split"] },
+  m15borderlessmdfcfront: { ...M15BORDERLESSMDFCFRONT, crownMasters: true, twoColorMasters: ["split"], overlays: [MDFC_BORDERLESS_STRIP_RIDER_FRONT] },
+  m15borderlessmdfcback: { ...M15BORDERLESSMDFCBACK, crownMasters: true, twoColorMasters: ["split"], overlays: [MDFC_BORDERLESS_STRIP_RIDER_BACK] },
   // The snow frame (TODO 4.6f, wave 2c; owner round 20, 2026-10-01, option
   // A): the STANDARD crown band over the snow bars — KHM #224 / #223 / #230,
   // J22 #12, PH19 #5 print the standard crown's shape and registration

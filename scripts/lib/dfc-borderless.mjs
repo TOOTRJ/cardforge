@@ -46,6 +46,9 @@ export const MONO_KEYS = ["w", "u", "b", "r", "g", "m", "a", "c"];
 /** The ten split pairs (first canonical colour on the LEFT, as m15borderless). */
 export const PAIR_KEYS = ["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"];
 export const LEGENDARY_SUFFIX = "-legendary";
+/** The modal bodies' strip rider keys (the other face's colour; a
+ *  colourless other face is the artifact stand-in's `a`). */
+export const STRIP_RIDER_KEYS = ["w", "u", "b", "r", "g", "m", "a"];
 
 /** The published dark master a body key starts from. */
 export function darkBaseOf(key) {

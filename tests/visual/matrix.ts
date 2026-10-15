@@ -1903,6 +1903,10 @@ export function visualCases(): VisualCase[] {
   add("m15mdfcback", "mdfc", "wu", "short", { suffix: "@strip-w", back: { frontTemplate: "m15mdfcfront" }, row: stripRow("m15mdfcback", "w", "wu") });
   add("m15mdfclandfront", "mdfc", "g", "short", { suffix: "@strip-w", row: stripRow("m15mdfclandback", "g", "w") });
   add("m15mdfclandback", "mdfc", "w", "short", { suffix: "@strip-g", back: { frontTemplate: "m15mdfclandfront" }, row: stripRow("m15mdfclandback", "g", "w") });
+  // …and the borderless modal pair's rider (TODO 5.7): a W front // U back,
+  // the front's strip in the light pack's blue tab, the back's in white.
+  add("m15borderlessmdfcfront", "mdfc", "w", "short", { suffix: "@strip-u", row: stripRow("m15borderlessmdfcback", "w", "u") });
+  add("m15borderlessmdfcback", "mdfc", "u", "short", { suffix: "@strip-w", back: { frontTemplate: "m15borderlessmdfcfront" }, row: stripRow("m15borderlessmdfcback", "w", "u") });
   add("m15mdfcfront", "mdfc", "wu", "short", { suffix: "@strip-l", row: stripRow("m15mdfclandback", "wu", "wu", "short", { rules_text: "{T}: Add {W} or {U}." }, { cost: "{W/U}{W/U}", rules_text: "Draw two cards, then discard a card.", frame_style: { template: "m15mdfcfront", finish: "regular", twoColor: true } as CardRowForBake["frame_style"] }) });
   add("m15mdfclandback", "mdfc", "wu", "short", { suffix: "@strip-c", back: { frontTemplate: "m15mdfcfront" }, row: stripRow("m15mdfclandback", "wu", "wu", "short", { rules_text: "{T}: Add {W} or {U}." }, { cost: "{W/U}{W/U}", rules_text: "Draw two cards, then discard a card.", frame_style: { template: "m15mdfcfront", finish: "regular", twoColor: true } as CardRowForBake["frame_style"] }) });
   // A land STORED on the extended-art spell frame before its land dress

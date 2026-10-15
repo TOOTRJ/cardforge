@@ -33,13 +33,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import sharp from "sharp";
-import { CC_COMMIT, CC_RAW, WEBP } from "./lib/cc-frames.mjs";
+import { CC_COMMIT, CC_RAW, MDFC_STRIP_CUTS, WEBP, cutStripRider, stripRiderFindings, stripRiderInterior } from "./lib/cc-frames.mjs";
 import {
   DFC_BORDERLESS_TEMPLATES,
   GRAFTS,
   H,
   W,
   applyGraft,
+  STRIP_RIDER_KEYS,
   bodyKeys,
   borderedBackDiscOf,
   darkBaseOf,
@@ -189,6 +190,34 @@ for (const template of templates) {
     "c = a (the artifact stand-in, as on the bordered bodies); pairs = m15borderless's split pairs, the well's / housing's side in the colour on that side",
   ];
   record.sourceFiles = [...files].sort();
+  // The modal bodies' flipside strip RIDERS (TODO 5.1c's model): this
+  // template's own mono masters' tabs cut through CC's Flipside mask, eroded
+  // 1 px and snapped to the HD grid's 2 × 2 blocks (cc-frames.mjs
+  // cutStripRider) — the light pack's tab in each colour, drawn over the
+  // strip the master paints in the OTHER face's colour.
+  if (template.includes("mdfc")) {
+    const spec = { ...MDFC_STRIP_CUTS.m15mdfcfront, keys: STRIP_RIDER_KEYS, extra: undefined };
+    const inside = stripRiderInterior(await raw(await ccFile(spec.mask)), W, H, spec);
+    const strip = { mask: spec.mask, box: spec.box, erodePx: spec.erode, snapPx: spec.snap, keys: STRIP_RIDER_KEYS, output: "strip/<key>.png (+ .webp), the piece's box at 1:1", colors: {} };
+    for (const key of STRIP_RIDER_KEYS) {
+      const masterFile = path.join(outDir, template, `${key}.png`);
+      const master = await sharp(masterFile).ensureAlpha().raw().toBuffer();
+      const piece = cutStripRider(master, inside, W, spec.box);
+      const findings = stripRiderFindings(piece, master, inside, W, H, spec.box);
+      // (A light pack's tab is not opaque everywhere a bordered master's is:
+      // its few anti-aliased pixels inside the cut are kept as they are.)
+      const failures = findings.failures.filter((f) => !/partial-alpha/.test(f));
+      if (failures.length) throw new Error(`${template}/strip/${key}: ${failures.join("; ")}`);
+      const out = path.join(outDir, template, "strip", `${key}.png`);
+      fs.mkdirSync(path.dirname(out), { recursive: true });
+      const image = sharp(piece, { raw: { width: spec.box.width, height: spec.box.height, channels: 4 } });
+      await image.clone().png({ compressionLevel: 9 }).toFile(out);
+      await image.clone().webp(BODY_WEBP).toFile(out.replace(/\.png$/, ".webp"));
+      strip.colors[key] = [`${template}/${key}.png (this run) cut through ${spec.mask}, eroded ${spec.erode} px, snapped to ${spec.snap} px blocks`];
+      console.log(`✓ ${template}/strip/${key}  ${findings.opaque} opaque px`);
+    }
+    record.strip = strip;
+  }
   provenance[template] = record;
 }
 if (templates.length) {

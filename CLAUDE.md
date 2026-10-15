@@ -256,7 +256,14 @@ Rules and gotchas:
   a BACK's rings and box over its gold bars too: MOM #43, MID #246), the
   modal front the hybrid dress as well; opt-in per card like m15's, the
   rider drawn after the crown; the land pair and the ▼ land back draw
-  neither (no print). A back face's
+  neither (no print). The DARK borderless bodies (5.7:
+  `m15borderlessdfcfront` / `…dfcback` / `…mdfcfront` / `…mdfcback`) are
+  PipGlyph's own masters (`scripts/build-dfc-borderless-frames.mjs`:
+  m15borderless's with Card Conjurer's light DFC pieces grafted, moved onto
+  print); `bodyFor`'s `look` makes a borderless front's back borderless
+  (spell faces, the arrows only — a face with no borderless body is refused,
+  never drawn on the other look), and an `inverted` borderless import lands
+  there only once BOTH combos are verified, the bordered bodies until then. A back face's
   body and colour pass ONE gate on every save (5.2, `lib/cards/dfc-gate.ts`
   `resolveDfcBackFace`: the body is `bodyFor(layout, "back", type, family)`
   — the STORED one wins on an edit, re-derived only by `frame_anatomy.dfcIcon`,

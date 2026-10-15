@@ -390,8 +390,19 @@ describe("what the profiles declare and the renderers resolve (TODO 5.1c)", () =
     expect(MDFC_STRIP_RIDER_BACK.keyMap).toEqual({ c: "a" });
     expect(MDFC_STRIP_RIDER_LAND_FRONT.keyMap).toEqual({ l: "c" });
     expect(MDFC_STRIP_RIDER_LAND_BACK.keyMap).toEqual({ l: "c" });
+    // …and the borderless modal pair (TODO 5.7): their own pieces, cut by
+    // scripts/build-dfc-borderless-frames.mjs at the same box (its own
+    // test: tests/unit/frames/dfc-borderless-masters.test.ts).
+    const BORDERLESS = ["m15borderlessmdfcfront", "m15borderlessmdfcback"];
+    for (const t of BORDERLESS) {
+      const slot = getFrameProfile(t).overlays!.find((o) => o.anatomy === "mdfcStrip")!;
+      expect(slot.assetPathTemplate, t).toBe(`/frames/${t}/strip/{key}.png`);
+      expect(slot.rect, t).toEqual(MDFC_STRIP_RIDER_FRONT.rect);
+      expect([...slot.keys], t).toEqual(["w", "u", "b", "r", "g", "m", "a"]);
+      expect(slot.keyMap, t).toEqual({ c: "a" });
+    }
     for (const t of FRAME_TEMPLATE_VALUES) {
-      if ((STRIP_TEMPLATES as readonly string[]).includes(t)) continue;
+      if ((STRIP_TEMPLATES as readonly string[]).includes(t) || BORDERLESS.includes(t)) continue;
       expect(getFrameProfile(t).overlays?.some((o) => o.anatomy === "mdfcStrip") ?? false, t).toBe(false);
     }
     expect(MDFC_FLIPSIDE_FRONT.keepOut).toEqual({ leftPct: 3.0, topPct: 88.67, widthPct: 43.8, heightPct: 4.43 });

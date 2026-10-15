@@ -3583,7 +3583,51 @@
       "modal back: grafts housing, strip",
       "the dark (`inverted`) look of 98 of the 134 plain borderless transform / modal printings (Scryfall 2026-10-14); Card Conjurer draws only the light one",
       "c = a (the artifact stand-in, as on the bordered bodies); pairs = m15borderless's split pairs, the well's / housing's side in the colour on that side"
-    ]
+    ],
+    "strip": {
+      "mask": "img/frames/modal/regular/reminder.svg",
+      "box": {
+        "x": 44,
+        "y": 1866,
+        "width": 658,
+        "height": 90
+      },
+      "erodePx": 1,
+      "snapPx": 2,
+      "keys": [
+        "w",
+        "u",
+        "b",
+        "r",
+        "g",
+        "m",
+        "a"
+      ],
+      "output": "strip/<key>.png (+ .webp), the piece's box at 1:1",
+      "colors": {
+        "w": [
+          "m15borderlessmdfcback/w.png (this run) cut through img/frames/modal/regular/reminder.svg, eroded 1 px, snapped to 2 px blocks"
+        ],
+        "u": [
+          "m15borderlessmdfcback/u.png (this run) cut through img/frames/modal/regular/reminder.svg, eroded 1 px, snapped to 2 px blocks"
+        ],
+        "b": [
+          "m15borderlessmdfcback/b.png (this run) cut through img/frames/modal/regular/reminder.svg, eroded 1 px, snapped to 2 px blocks"
+        ],
+        "r": [
+          "m15borderlessmdfcback/r.png (this run) cut through img/frames/modal/regular/reminder.svg, eroded 1 px, snapped to 2 px blocks"
+        ],
+        "g": [
+          "m15borderlessmdfcback/g.png (this run) cut through img/frames/modal/regular/reminder.svg, eroded 1 px, snapped to 2 px blocks"
+        ],
+        "m": [
+          "m15borderlessmdfcback/m.png (this run) cut through img/frames/modal/regular/reminder.svg, eroded 1 px, snapped to 2 px blocks"
+        ],
+        "a": [
+          "m15borderlessmdfcback/a.png (this run) cut through img/frames/modal/regular/reminder.svg, eroded 1 px, snapped to 2 px blocks"
+        ]
+      }
+    }
   },
   "m15borderlessmdfcfront": {
     "source": "pipglyph",
@@ -4005,7 +4049,51 @@
       "modal front: grafts housing, strip",
       "the dark (`inverted`) look of 98 of the 134 plain borderless transform / modal printings (Scryfall 2026-10-14); Card Conjurer draws only the light one",
       "c = a (the artifact stand-in, as on the bordered bodies); pairs = m15borderless's split pairs, the well's / housing's side in the colour on that side"
-    ]
+    ],
+    "strip": {
+      "mask": "img/frames/modal/regular/reminder.svg",
+      "box": {
+        "x": 44,
+        "y": 1866,
+        "width": 658,
+        "height": 90
+      },
+      "erodePx": 1,
+      "snapPx": 2,
+      "keys": [
+        "w",
+        "u",
+        "b",
+        "r",
+        "g",
+        "m",
+        "a"
+      ],
+      "output": "strip/<key>.png (+ .webp), the piece's box at 1:1",
+      "colors": {
+        "w": [
+          "m15borderlessmdfcfront/w.png (this run) cut through img/frames/modal/regular/reminder.svg, eroded 1 px, snapped to 2 px blocks"
+        ],
+        "u": [
+          "m15borderlessmdfcfront/u.png (this run) cut through img/frames/modal/regular/reminder.svg, eroded 1 px, snapped to 2 px blocks"
+        ],
+        "b": [
+          "m15borderlessmdfcfront/b.png (this run) cut through img/frames/modal/regular/reminder.svg, eroded 1 px, snapped to 2 px blocks"
+        ],
+        "r": [
+          "m15borderlessmdfcfront/r.png (this run) cut through img/frames/modal/regular/reminder.svg, eroded 1 px, snapped to 2 px blocks"
+        ],
+        "g": [
+          "m15borderlessmdfcfront/g.png (this run) cut through img/frames/modal/regular/reminder.svg, eroded 1 px, snapped to 2 px blocks"
+        ],
+        "m": [
+          "m15borderlessmdfcfront/m.png (this run) cut through img/frames/modal/regular/reminder.svg, eroded 1 px, snapped to 2 px blocks"
+        ],
+        "a": [
+          "m15borderlessmdfcfront/a.png (this run) cut through img/frames/modal/regular/reminder.svg, eroded 1 px, snapped to 2 px blocks"
+        ]
+      }
+    }
   },
   "m15borderlesspw": {
     "source": "cardconjurer",
