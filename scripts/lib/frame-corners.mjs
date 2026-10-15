@@ -69,13 +69,12 @@ import {
  * bucket, cut at the one corner by the importer. Saga left it with 4.21c, the
  * same way — and retro and retroland with 4.10a: the 1997 masters are the
  * importer's too, the MSE gold among them; modern and modernland with 4.10b:
- * Card Conjurer's 8th, re-cut and toned by the importer.)
+ * Card Conjurer's 8th, re-cut and toned by the importer; extendedart,
+ * m15textless and m15textlessland with 4.7 / 4.35: Card Conjurer's 'Extended
+ * Art Frames' and 'Magic Fest Promos', cut at the one corner by the importer.)
  */
 export const CORNER_NORMALISE_TEMPLATES = Object.freeze({
-  extendedart: "all",
   fullart: "all",
-  m15textless: "all",
-  m15textlessland: "all",
   expeditionland: Object.freeze(["w", "u", "r", "c", "m"]),
 });
 

@@ -178,8 +178,16 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 49 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 53 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
+
+- the extended-art frame and the textless promo pair (4.7 / 4.35 / 4.42,
+  layout v58): extendedart — the accurate 'Extended Art Frames' pack whole,
+  its see-through colourless 'Eldrazi Frame' as `c` and its artifact frame
+  as `a` — its land dress extendedartland (the same pack's land frames:
+  `l` grey, `l<k>`, `lm` gold) — and m15textless and m15textlessland — 'Magic Fest Promos' whole
+  ([The extended-art and textless frames from Card
+  Conjurer](#the-extended-art-and-textless-frames-from-card-conjurer-47--435-v58));
 
 - the M15 family (4.4, shipped in #380, layout v24): m15, m15artifact,
   m15land, m15snow, m15snowland, m15devoid, m15pw, m15token and
@@ -508,8 +516,9 @@ bake's transparent corner mask and the frame masters all read it.
   anti-aliased fringe and the fringe's dark tail, then cuts the corner —
   only on the allow-list (`CORNER_NORMALISE_TEMPLATES` in
   `scripts/lib/frame-corners.mjs`: (retro and retroland left it with TODO
-  4.10a, modern and modernland with 4.10b: the importer cuts their corner)
-  extendedart, fullart, m15textless, m15textlessland, and
+  4.10a, modern and modernland with 4.10b, extendedart, m15textless and
+  m15textlessland with 4.7 / 4.35: the importer cuts their corner)
+  fullart, and
   expeditionland w/u/r/c/m, whose paper reached 1–2 px inside the cut;
   adventure — its 1–2 px grey paper rim just inside the arc, added
   2026-09-28 — flip and aftermath left the list with 4.21a and saga with
@@ -4489,24 +4498,24 @@ switch absent or off is byte-identical.
   — then the floating crown (3.07/1.91/93.87×10.24 %) with the outline ON
   TOP (2.8/1.72/94.4×10.62 %: pushed first, and `drawFrames` draws the
   list reversed). Nothing is removed from the master, so an overlay can add
-  it — and the extendedart masters are MSE-built, in git: CC's pixels stay
-  in the bucket. The importer composites the three pieces 1:1 at
+  it (the extendedart masters were MSE-built when the band was cut; since
+  4.7 they are Card Conjurer's own extended frames — both in the bucket).
+  The importer composites the three pieces 1:1 at
   1500 × 2100 (every piece 1500-native) and crops rows 0–259
   (`CC_OVERLAY_BANDS.extendedcrown`, the importer's generic `layers` /
   `findings` band: the outline's peak at row 36 ± 1 on the centre column,
   the cover strip opaque black in a crown dip, no alpha below the band).
-- **The slot sits 10 px lower than CC's bounds** (`topPct` = 10/2100): the
+- **The slot is CC's bounds, from row 0** (layout v58, TODO 4.7): the
   print's title bar (FDN #442 / #455) and CC's `m15/new/extended` top out
-  at 4.98 %H, our MSE master's at 5.43, so the band is registered on OUR
-  bar — the crown's peak lands at row 50 against the print's 42 at
-  1500 × 2100, the bar's top at 110 against 99. 4.7's CC-built extendedart
-  master takes the offset back to 0 (and brings the print's floating title
-  plate and the non-legendary 'Title Cutout', neither of which ours draws).
-- **Keys:** the masters' seven colour keys. No pair masters: a pair wears
+  at 4.98 %H, and since 4.7 the master IS CC's extended frame, so the
+  crown's peak lands on the print's row 42 at 1500 × 2100. (Over the old
+  MSE masters, whose bar topped out at 5.43 %H, it sat 10 px lower.) The
+  band's bytes did not change.
+- **Keys:** the template's seven colour keys. No pair masters: a pair wears
   the gold crown and the two-colour switch is not offered
   (`frameAnatomyOf("extendedart")` is the crown alone); a colourless card
-  wears CC's grey C crown over our grey master (PUMA U1), not the artifact
-  crown.
+  wears CC's grey C crown (PUMA U1), the artifact master included — the
+  overlay is keyed by the card's colour, not the master painted.
 - **References:** `CROWN_REFERENCES.extendedart` — w FDN #442, u #455,
   b #463, r #466, g #470, m M21 #278, c PUMA U1; the crown rides the
   colour's tick.
@@ -4521,6 +4530,80 @@ switch absent or off is byte-identical.
   `tests/unit/render/extended-crown-bake.test.tsx` (real bakes: the band
   inside the slot's rows only, 1:1 at HD, absent / off byte-identical), the
   matrix's `extendedart` `@crown` cases.
+
+#### The extended-art and textless frames from Card Conjurer (4.7 / 4.35, v58)
+
+Owner Q6 (2026-10-13): neither look was verified in any colour, so both left
+their 744 / 375 px MSE masters in git for Card Conjurer's sharper packs
+(frames bucket, `scripts/import-cc-frames.mjs --only
+extendedart,m15textless,m15textlessland`). A CORRECTION of three looks
+against their own prints: layout v58 (`CC_RESOURCE_LAYOUT_VERSION`), sweep,
+never a badge.
+
+- **Measured first** (Scryfall PNGs at 1500 × 2100, 2026-10-14; the median
+  |ΔRGB| over each master's opaque pixels, and the vertical offset that
+  minimises it):
+  - extended art, 48 printings (WOE, TLA, CMR, NEC, MAT, EOE, NCC, MOC,
+    TDC, KHM, CLB, SLD, MID, LCC, ECL, OTJ, BRO, BIG, MSC, AFC, ONC, M21,
+    DFT, STX, CMM, MSH, SPM, MOM, ONE; every colour, gold, artifacts, lands,
+    colourless, 11 legendary): the MSE masters 45.4 (best −10 px), CC's
+    'Extended Art Frames' 14.2 (best 0 px). The prints run the art to the
+    card's SIDE edges between the title bar and the type bar (0 px of black
+    there, the median on 13 of 14 measured); the MSE masters painted white
+    rails there, set the title bar 10 px low and ended the box 41 px high.
+  - textless on the 2015 frame, 57 printings: the 38 black-bordered promos
+    (SCH, PF19–PF27, PSPL, PLG24, PL22, SLD, SLP, FDN #718, HOB #249) —
+    MSE 47.0, CC 'Magic Fest Promos' 18.5, CC 'Generic Showcase' textless
+    32.5; the 19 borderless (TLA, TRK, MSH, SPM, FIN, SLD, EOE, and basics)
+    — none fits (55–76): they are one-off designs with outlined pills, and
+    keep landing `nearest` (`borderless/textless`).
+- **`extendedart`:** each master is CC's whole extended file, downscaled
+  once (no border added); `c` is the pack's see-through 'Eldrazi Frame'
+  with the art under it as ONE picture (`EXTENDED_UNDER_FRAME_RECT`) and a
+  colourless ARTIFACT paints the silver `a` (`artifactMasterKeys`). The
+  slots are the m15 entry's (the pack's text layout is M15's), with CC's
+  art window (`EXTENDED_ART_SLOT`, to the side edges), white type ink and
+  the set symbol's keyline on the black type bar. Edge contract:
+  `EXTENDED_ART_EDGES` (art on the sides from 11.3 to 59.2 %H). Its crown
+  band is unchanged; its slot moved 10 px up onto CC's bounds.
+- **`m15textless`, `m15textlessland`:** CC's 'Magic Fest Promos' whole
+  (1500 × 2100, no resample): the black ring, a dark translucent title bar,
+  the art to the bottom ring in a rim of the card's colour. `textless`
+  (3.24): no type line, no rules, a white name; M15's plate and footer. The
+  spell's `c` is the pack's silver rim (every colourless promo wears it),
+  the land's the brown land rim. This is 4.42's look on the existing
+  templates — not 4.35 (a)'s borderless re-source, which no print fits
+  (an owner question on the PR).
+- **`extendedartland` (owner Round 63, 2026-10-14):** the land dress, a
+  template of its own as m15land is M15's — the pack's land frames whole:
+  `c` = the grey 'Land Frame' `l`, w u b r g = `l<k>`, gold `m` = `lm` (the
+  any-colour land). EXTENDEDART's slots with the land entry's differences
+  (no cost, M15LAND's title band), no see-through or artifact master, the
+  same crown band (a colourless legend wears the grey C crown). The kind
+  gate splits the pair: `extendedart` dresses every kind its body draws but
+  the land, `extendedartland` the land alone (`TREATMENT_KINDS`); the
+  registry's `extendedart` rule names the `extended` family, which picks
+  the land frame for a land. A land stored on `extendedart` before the
+  split keeps it and stays editable. Measured on 32 extended-art land
+  printings (median |ΔRGB| over the master's opaque pixels, at 0 px):
+  colourless utility lands on `l` 3.3–5.3 (FDN #487, BLB #368, DFT #425,
+  MSC #491, M3C #83; the MSE masters 51.7–54.0), mono lands on `l<k>`
+  2.0–19.7 against the spell masters' 12.3–57.3 (NEO #501–505, ELD
+  #386–389, MH2 #480, M3C #81; ELD #390 Castle Vantress prints the blue
+  SPELL frame: 27.3 vs 12.3), any-colour lands on `lm` 10.3–19.0 (CMR
+  #705, MSC #470, DMU #421, KHM #373; the grey `l` 20.7–30.7). A
+  two-colour land (264 of the 409 single-faced extended-art land
+  printings) prints the grey frame with a split box in its two land tints
+  (MSC #468 / #477 / #489 / #499, STX #360, THB #348, CMR #709, M21 #390,
+  SOC #101; grey `l` 17.0–42.0, gold `lm` 27.0–64.0) — the pair masters
+  are a follow-up; until then it wears the gold land frame and the
+  registry's `two-colour` gap keeps it `nearest`, as on m15land with the
+  switch off. Fetch lands print the colours they fetch (MH3 #464).
+- **Not built (follow-ups, owner Round 63):** pair masters on both
+  templates (gold-split / hybrid extended-art printings and the two-colour
+  lands stay `nearest` through the `two-colour` gaps), the Vehicle's `v`
+  (4.27a step 2 builds on `extendedFrameFile`), the collector line and the
+  stamp notch.
 
 #### Devoid and snow (4.6f, wave 2c)
 
@@ -6632,15 +6715,13 @@ before anyone pays. Additions: 0 stored cards change, no bump, no sweep.
   | Landing | Reached by | Textless profile? | With text, the frame verified |
   |---|---|---|---|
   | `m20token`, `m20tokenartifact` | `token/m20`, its gap rules (`+nyx-dress`, `+border`, `+crown`, `+two-colour`, `+two-colour-hybrid`) and `borderless/token`, all `onceVerified`; an own token kept on them | yes | the regular / tall box, else the arch's text box (the height rule, unchanged); with NO text box in the colour: the arch (`m15token` / `m15tokenartifact`, its scrim) — an own card the same, the default frame only where the arch isn't published either |
-  | `m15textless`, `m15textlessland` | `textless/2015`, `textless/future`, `borderless/textless`, `borderless/basic/textless` (static), `textless/old-frame` (`onceVerified`, A9); an own card kept on them | **no** — they draw the type line and the rules on the art | the landing stands, the text drawn on the art |
+  | `m15textless`, `m15textlessland` | `textless/2015`, `textless/future`, `borderless/textless`, `borderless/basic/textless` (static), `textless/old-frame` (`onceVerified`, A9); an own card kept on them | **yes** since layout v58 (the black-bordered textless promos, 4.35 / 4.42) | the stand-in: `m15`, `m15land`, `m15artifact`; `modern` for the 2003 promos |
 
   Production (2026-10-13) ticks every colour of all six full-art token
-  templates and both arches, and neither "M15 Textless" frame: nothing a
-  remix does today changes. Flagging `m15textless*` `textless` (the real
-  textless frames, 4.37 / 4.42) makes the guard cover that family with no
-  other change — `tests/unit/ai/remix-textless-guard-flagged.test.ts` pins
-  the stand-ins (`m15`, `m15land`, `m15artifact`; `modern` for the 2003
-  promos). Never test a template's NAME for this.
+  templates and both arches, and neither "M15 Textless" frame. Flagging
+  `m15textless*` `textless` (layout v58) made the guard cover that family
+  with no other change — `tests/unit/ai/remix-textless-guard-flagged.test.ts`
+  pins the stand-ins. Never test a template's NAME for this.
 - **A remix of the user's OWN card keeps its frame** (2026-10-13; a deck
   entry's `card_id`, which the step reads before its printing — it used to
   carry no template, so a card on the Vehicle frame, the 2003 frame, a
@@ -7249,11 +7330,11 @@ at HD on all four.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 52 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 53 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens, the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and 4.25's three Universes Beyond frames, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames, 4.25's three Universes Beyond frames and extended art's land dress (4.7, owner Round 63), new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card) prints its names,

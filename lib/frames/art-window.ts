@@ -578,18 +578,6 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
     why: "slot top 2.81 % = 59.01 px vs the window from 60 px: 0.99 px of overscan, 1.05 needed",
     maxMissPx: 0.5,
   },
-  m15textless: {
-    keys: "all",
-    todo: ["4.35"],
-    why: "window 118–1379 × 239–1935 vs slot 115.5–1375.5 × 237.3–1932: 3.5 px right and 3 px bottom (4.35 (2): re-source)",
-    maxMissPx: 4.5,
-  },
-  m15textlessland: {
-    keys: "all",
-    todo: ["4.35"],
-    why: "window 118–1379 × 239–1935 vs slot 115.5–1375.5 × 237.3–1932: 3.5 px right and 3 px bottom (4.35 (2): re-source)",
-    maxMissPx: 4.5,
-  },
   // The MSE layout templates — 4.21 re-sources all six from Card Conjurer
   // (4.21a struck flip, adventure and aftermath: their CC masters' windows
   // are covered with 1.45–2.25 px to spare; 4.21b struck split — both
@@ -620,7 +608,6 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
     why: "b/g: no ring, the window is the whole card (4.35 (3)); u/r: the arch's apex at 239 px vs slot top 241.5 (4.11 re-source)",
     maxMissPx: { u: 4, r: 4, b: 389, g: 389 },
   },
-  extendedart: { keys: ["m"], todo: ["4.7"], why: "m: the window starts at 250 px, the slot at 249.9: 0.1 px of overscan, 1.05 needed (4.7: CC extended)", maxMissPx: 1.5 },
   // The emblem (found by v35's see-through slot rule when #421 merged main):
   // two owner decisions (2026-09-29) meet at the window's top — the slot is
   // Scryfall's art_crop box exactly (from 250.4 px, never grown) and the

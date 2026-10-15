@@ -541,11 +541,11 @@ describe("executeDeckRemixStep — a textless promo and the 'M15 Textless' frame
     expect(s.reserved).toEqual([1]);
   });
 
-  it("lands on it once it is verified in the colour: that frame draws the text it saves with", async () => {
+  it("keeps the bordered stand-in once it is verified in the colour: since layout v58 that frame prints no text, and the remix saves with some (TODO 1.24)", async () => {
     s.verified = keys(["m15", "b"], ["m15textless", "b"]);
     const { step, card } = await remix("lea-255", undefined, confidant());
     expect(step.status).toBe("done");
-    expect(card).toMatchObject({ frame_style: { template: "m15textless" }, flavor_text: "New flavour." });
+    expect(card).toMatchObject({ frame_style: { template: "m15" }, flavor_text: "New flavour." });
     expect(String(card?.rules_text)).toContain("At the beginning of your upkeep");
     expect(s.reserved).toEqual([1]);
   });

@@ -200,6 +200,49 @@ function m15FrameFile(letter) {
 /** The snow pack's file of a letter (4.6f, wave 2c). */
 const snowFrameFile = packFrameFile(SNOW);
 
+// --- TODO 4.7 (wave 1): the extended-art frame. Card Conjurer's accurate
+// 'Extended Art Frames' pack (packM15ExtendedArtNew.js, 2010 × 2814): the
+// accurate M15 pack's title bar, type bar, text box and text layout (its
+// loadTextOptions are packM15RegularNew.js's, number for number) with the
+// art window opened to the card's side edges from the title bar to the type
+// bar, and the M15 masks but its own Pinline. Files by letter as the M15
+// pack's (packFrameFile): w u b r g m, `a` the artifact frame, `c` the
+// see-through 'Eldrazi Frame', `v` the Vehicle frame, `l` / `l<k>` the land
+// frames. PipGlyph builds w u b r g m c a today; `v` and the land frames are
+// there for the dresses that build on this recipe (the extended-art
+// Spacecraft, 4.27a step 2; an extended-art land frame).
+export const EXTENDED = `${NEW}/extended`;
+export const extendedFrameFile = packFrameFile(EXTENDED);
+const EXTENDED_ART_PACK =
+  "packM15ExtendedArtNew.js 'Extended Art Frames' (Card Conjurer's Accurate group): the accurate M15 pack's bars, box and text layout with the art window opened to the side edges";
+const EXTENDED_ART_NOTES = [
+  "re-sourced from Card Conjurer (TODO 4.7, owner Q6 2026-10-13): replaces the 744 px MSE magic-extended-art composite that scripts/build-variation-frames.mjs upscaled into git — its title bar sat 10 px low, its box ended 41 px high and it painted white rails beside the art where every print runs the art to the card's edge",
+  "w u b r g m = the pack's colour frames whole (new/extended/<k>.png), downscaled once; no border is added — the prints have none beside the art (0 px of black border at the art rows: the median on 13 of 14 prints measured, the 14th's art itself dark at the edge)",
+  "c = the pack's see-through 'Eldrazi Frame' (new/extended/c.png): the colourless non-artifact prints (STX #285, CMM #746, MSC #292) show the art through the bars and the box; the profile draws the art under it (underFrameArt)",
+  "a = the pack's silver 'Artifact Frame' (new/extended/a.png), the master a colourless ARTIFACT paints (FrameProfile.artifactMasterKeys { c: 'a' }: BRO #376, CMR #692, BIG #92)",
+  "plates = M15's (the pack draws the regular m15PT plates at M15's bounds): no objects of its own",
+];
+const EXTENDED_ART_LAND_NOTES = [
+  "the extended-art LAND frame (TODO 4.7, owner Round 63 2026-10-14): the pack's land frames whole (new/extended/l.png, l<k>.png), downscaled once; no border added, as extendedart",
+  "colourless land = the pack's grey 'Land Frame' l.png (FDN #487 Soulstone Sanctuary, BLB #368 Fountainport, DFT #425 Avishkar Raceway, MSC #491 Scavenger Grounds: median |ΔRGB| 3.3–3.7 against the print over the master's opaque pixels); w u b r g = l<k>.png (NEO #501–505, MH2 #480, ELD #386–389, M3C #81: 2.0–19.7); gold m = lm.png, the any-colour land (CMR #705 Command Tower, MSC #470 Exotic Orchard, KHM #373 The World Tree: 10.3–19.0)",
+  "no pair masters: a two-colour land prints the grey frame with a split box in the two land tints (MSC #468 / #477 / #489 / #499, STX #360, THB #348) — a follow-up (owner Round 63); until then it wears the gold land frame, as m15land does with its two-colour switch off",
+  "plates = M15's (a land creature: Dryad Arbor's kind)",
+];
+// The black-bordered textless promos (Store Championship, MagicFest,
+// MagicCon, Secret Lair): Card Conjurer's 'Magic Fest Promos'
+// (packMagicFest.js, groupTextless-4.js) — 1500 × 2100 masters with the
+// black ring, a dark translucent title bar and the art down to the bottom
+// ring inside a rim in the card's colour.
+const TEXTLESS_PROMO = "img/frames/textless/magicFest";
+const textlessPromoFile = (letter) => `${TEXTLESS_PROMO}/${letter}.png`;
+const TEXTLESS_PROMO_PACK = "packMagicFest.js 'Magic Fest Promos' (groupTextless-4.js)";
+const TEXTLESS_PROMO_NOTES = (colourless) => [
+  "re-sourced from Card Conjurer (TODO 4.35 / 4.42, owner Q6 2026-10-13): replaces the 375 px MSE masters that scripts/build-variation-frames.mjs upscaled into git — the same black-bordered promo look, sharp, with the prints' DARK title bar (SCH #50, PF26 #7, FDN #718)",
+  "w u b r g m = the pack's colour frames whole (textless/magicFest/<k>.png), native 1500x2100",
+  colourless,
+  "no type bar and no text box, as printed: the profile is `textless` (TODO 3.24)",
+];
+
 // --- TODO 4.25: the Universes Beyond frames. Card Conjurer's accurate
 // 'Universes Beyond' pack (packUBNew.js, groupAccurate.js: `m15/new/ub/`,
 // 2010 × 2814) is the accurate M15 pack's geometry with the smooth,
@@ -3448,6 +3491,58 @@ export const CC_TEMPLATES = {
       "the loyalty shield is the master's own pixels cut out through CC's maskLoyalty.png (loyalty/<colour>.png), drawn above the ability stripes, as on m15pw",
     ],
   },
+  // TODO 4.7 (wave 1, owner Q6 2026-10-13): the extended-art frame
+  // re-sourced from Card Conjurer's accurate 'Extended Art Frames' pack
+  // (EXTENDED_ART_PACK; it replaces the 744 px MSE masters that
+  // scripts/build-variation-frames.mjs upscaled into git). Each master is
+  // the pack's whole file, downscaled once — no border is added: the prints
+  // run the art to the card's side edges between the title bar and the type
+  // bar (EXTENDED_ART_EDGES in lib/frames/edge-contract.ts).
+  extendedart: {
+    colors: {
+      ...perColor((k) => [layer(extendedFrameFile(k))]),
+      // The colourless ARTIFACT's master (FrameProfile.artifactMasterKeys
+      // { c: "a" }): the pack's silver 'Artifact Frame'. `c` itself is the
+      // see-through 'Eldrazi Frame' a colourless non-artifact prints.
+      a: [layer(extendedFrameFile("a"))],
+    },
+    pack: EXTENDED_ART_PACK,
+    notes: EXTENDED_ART_NOTES,
+  },
+  // The extended-art LAND frame (TODO 4.7, owner Round 63 2026-10-14): the
+  // same pack's land frames — the grey frame and bars of `l` with the box
+  // and title bar in the land tints of `l<k>` — as m15land is M15's. A land
+  // on extended art prints these (FDN #487, NEO #501–505, MSC #470); on the
+  // spell masters a colourless land showed its art through the see-through
+  // `c` frame.
+  extendedartland: {
+    colors: {
+      ...perColor((k) => [layer(extendedFrameFile(k === "c" ? "l" : `${k}l`))]),
+    },
+    pack: EXTENDED_ART_PACK,
+    notes: EXTENDED_ART_LAND_NOTES,
+  },
+  // TODO 4.35 / 4.42 (owner Q6 2026-10-13): the textless pair re-sourced
+  // from Card Conjurer's 'Magic Fest Promos' (TEXTLESS_PROMO_PACK) — the
+  // black-bordered textless promos' look the MSE masters drew softly. One
+  // set of masters for both templates; the land's colourless key is the
+  // pack's brown land rim, the spell's the silver one.
+  m15textless: {
+    colors: {
+      ...perColor((k) => [layer(textlessPromoFile(k === "c" ? "a" : k))]),
+    },
+    pack: TEXTLESS_PROMO_PACK,
+    transforms: "native 1500x2100, the frame image copied 1:1 (no resample), corners cut at the importer radius",
+    notes: TEXTLESS_PROMO_NOTES("colourless = the pack's silver 'Artifact Frame' (a.png): every colourless textless promo wears the silver rim, artifact or not (PF26 #1 Wayfarer's Bauble, SLD #2783 Sol Ring, SCH #32 Void Winnower, SLP #52 Kozilek's Command)"),
+  },
+  m15textlessland: {
+    colors: {
+      ...perColor((k) => [layer(textlessPromoFile(k === "c" ? "l" : k))]),
+    },
+    pack: TEXTLESS_PROMO_PACK,
+    transforms: "native 1500x2100, the frame image copied 1:1 (no resample), corners cut at the importer radius",
+    notes: TEXTLESS_PROMO_NOTES("colourless = the pack's brown 'Colorless Frame' (l.png), the land rim (PF23 #3 Reliquary Tower, PW25 #17 Command Tower)"),
+  },
   // 4.39 — the black-bordered full-art basic (P23+ left-medallion design).
   m15fullartland: {
     colors: perColor((k) => [layer(basics2022Frame(k))]),
@@ -4969,14 +5064,13 @@ const CROWN_COVER_SRC = "img/black.png";
 // 10.62 %: pushed first, and drawFrames draws the list reversed, :388). The
 // prints: FDN #442 / #455 / #463 / #466 / #470 stop the crown under the title
 // bar with art beside and below it. Nothing is erased, so the crown is an
-// overlay band over the extendedart masters (MSE-built, in git — the CC
-// pieces never join them): composited 1:1 at 1500×2100 (every piece is
-// 1500-native), cropped to the outline's rows 0–259. One key per master:
-// the colours, gold, and the colourless grey (CC's C crown over our MSE
-// colourless master; no pair keys — the frame draws no pair masters, so a
-// two-colour legend wears the gold crown). The band's slot sits 10 px lower
-// than CC's bounds (lib/cards/template-layout.ts EXTENDED_CROWN): our MSE
-// master's title bar tops out 0.45 %H below the print's.
+// overlay band over the extendedart masters: composited 1:1 at 1500×2100
+// (every piece is 1500-native), cropped to the outline's rows 0–259. One key
+// per colour: the colours, gold, and the colourless grey (CC's C crown; no
+// pair keys — the frame draws no pair masters, so a two-colour legend wears
+// the gold crown). Since TODO 4.7 the masters are Card Conjurer's own
+// extended frames, so the band sits at CC's bounds (EXTENDED_CROWN's slot
+// starts at row 0; it sat 10 px lower over the old MSE masters).
 export const EXTENDED_CROWN_BAND = Object.freeze({
   source: CROWNS,
   keys: Object.freeze(["w", "u", "b", "r", "g", "m", "c"]),
@@ -5382,9 +5476,9 @@ export const CC_OVERLAY_BANDS = {
     layers: extendedCrownLayers,
     findings: extendedCrownFindings,
     notes: [
-      "the extended-art legendary crown (TODO 4.6f, wave 2b): CC's floating crown over its BLACK 'Crown Border Cover' strip (drawn, not erased — the borderless frame erases it) with the outline ON TOP, as autoExtendedArtFrame draws them, composited 1:1 at 1500x2100 (every piece 1500-native) and cropped to rows 0–259 (the outline's extent); an overlay band over the extendedart masters, which are MSE-built and in git — Card Conjurer pixels never join them",
-      "keys = the seven colour keys of the extendedart masters: w u b r g, m (gold: a three-colour card, or a pair, which this frame draws gold — no pair masters), c (CC's colourless crown over our MSE colourless master; CC's own rule would pick the artifact crown for a colourless card, which is the m15artifact dress's call); CC's unlisted 'Artifact Legend Crown (Alt)' is not used",
-      "the band's slot sits 10 px (0.476 %H) lower than CC's bounds (lib/cards/template-layout.ts EXTENDED_CROWN): the MSE master's title bar tops out at 5.43 %H where FDN #442 / #455 and CC's m15/new/extended put it at 4.98, so the crown's hole hugs OUR bar; 4.7's CC-built extendedart master takes the offset back to 0",
+      "the extended-art legendary crown (TODO 4.6f, wave 2b): CC's floating crown over its BLACK 'Crown Border Cover' strip (drawn, not erased — the borderless frame erases it) with the outline ON TOP, as autoExtendedArtFrame draws them, composited 1:1 at 1500x2100 (every piece 1500-native) and cropped to rows 0–259 (the outline's extent); an overlay band over the extendedart masters (Card Conjurer's extended frames since TODO 4.7, frames bucket)",
+      "keys = the seven colour keys of the extendedart template: w u b r g, m (gold: a three-colour card, or a pair, which this frame draws gold — no pair masters), c (CC's colourless crown, over the see-through colourless master and the artifact one alike: the overlay is keyed by the card's colour; CC's own rule would pick the artifact crown for a colourless artifact); CC's unlisted 'Artifact Legend Crown (Alt)' is not used",
+      "the band's slot is CC's bounds (lib/cards/template-layout.ts EXTENDED_CROWN, from row 0): since TODO 4.7 the extendedart masters are Card Conjurer's extended frames, whose title bar tops out at 4.98 %H as FDN #442 / #455 print it (over the old MSE masters, whose bar topped out at 5.43 %H, the slot sat 10 px lower)",
     ],
   },
   m15crown: {

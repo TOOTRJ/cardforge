@@ -35,7 +35,7 @@ import {
   loyaltyFromRulesText,
   sagaEditorRows,
 } from "@/lib/cards/face-content";
-import { KIND_DEFS, dfcLayoutForKind, kindFromCard, type CardKind } from "@/lib/creator/card-kinds";
+import { KIND_DEFS, dfcLayoutForKind, extendedArtDressFor, kindFromCard, type CardKind } from "@/lib/creator/card-kinds";
 import { remixTitleFor } from "@/lib/creator/revise";
 import { secondPartWordsFor } from "@/lib/creator/second-part";
 import { defaultWatermarkFor } from "@/lib/cards/watermark";
@@ -344,11 +344,19 @@ export function remixValuesFrom(
   options: DefaultValueOptions = {},
 ): FormValues {
   const base = defaultValuesFor(parent, gameSystems, options);
+  // A land stored on the extended-art spell frame before its land dress
+  // existed (TODO 4.7, owner Round 63) is remixed onto that dress: a remix
+  // keeps its parent's frame and can't change it, and the kind gate refuses
+  // a NEW land on `extendedart` — the AI remix's ownCardRemixFrame does the
+  // same.
+  const template = base.frame_style.template
+    ? extendedArtDressFor(kindFromCard(parent.card_type, base.frame_style.template), base.frame_style.template)
+    : base.frame_style.template;
   return {
     ...base,
     // A remix is a NEW card: every anatomy switch starts on, except one the
     // parent's owner switched off (owner rule 2026-09-29).
-    frame_style: { ...base.frame_style, ...NEW_CARD_ANATOMY, ...storedAnatomyOf(parent.frame_style) },
+    frame_style: { ...base.frame_style, template, ...NEW_CARD_ANATOMY, ...storedAnatomyOf(parent.frame_style) },
     title: remixTitleFor(parent.title),
     slug: "",
     visibility: "public",

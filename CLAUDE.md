@@ -409,16 +409,16 @@ Rules and gotchas:
   both paths save, `remixSavedFrame` (`lib/creator/frame-resolve.ts`) takes
   a landing whose PROFILE is `textless` (`frameHidesRulesBoxText` — the
   renderers' flag and `hasRulesBoxText`; today the full-art token's two
-  textless heights) off it once the final text is known — a printing onto
+  textless heights and the textless promo pair) off it once the final text is known — a printing onto
   its landing with the textless frames read as unverified
   (`withoutTextlessFrames`, the registry's own stand-in, `text_stand_in`),
   an own token onto the 2014–19 arch its type words pick, else an own card
   onto the default landing, where the save's gates pass it
   (`ownCardTextStandIn`) — and leaves it where the card saves with no text
   or nothing else is published in the colour; `resolveGeneratedFrame`'s
-  random pool reads the same test. The "M15 Textless" frames are NOT
-  textless profiles (they draw the text on the art), so a landing there
-  stands until a profile gains the flag — never test a template's name.
+  random pool and a frame it is asked for by name read the same test. The "M15 Textless" frames ARE textless
+  profiles since layout v58 (the black-bordered textless promos, CC 'Magic
+  Fest Promos') — the guard reads the flag; never test a template's name.
   An EMBLEM is never remixed (owner 2026-10-13; it prints its walker's
   name, and a remix renames each card by itself): left out at plan time —
   `remixableDeckItems` for an own emblem, a 0 in the estimate's
@@ -1053,7 +1053,7 @@ Rules and gotchas:
   smaller than Left and never clips one Left fits (owner 2026-10-07).
   Both renderers pass the card's value through `rulesAlignOf` and only
   draw the indents. A new template offers
-  it by default — `rules-align.test.ts` names the eight that don't (the station pair among them). Never a sweep or a bump; `docs/FRAMES.md` "The text alignment".
+  it by default — `rules-align.test.ts` names the ten that don't (the station pair and the textless promo pair among them). Never a sweep or a bump; `docs/FRAMES.md` "The text alignment".
 - The art's automatic fit (TODO 3b.18): a picture that lands on a card
   (upload, a real card's art, an import, an AI picture) takes
   `fitArtToWindow()` (`lib/cards/art-fit.ts`: fill the window, show the

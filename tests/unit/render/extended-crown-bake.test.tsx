@@ -14,11 +14,12 @@ import { frameAssetPathsFor, renderCardImage, type RenderPreset } from "@/lib/re
 // TODO 4.6f (wave 2b) — the extended-art crown in the Satori BAKE, with the
 // REAL published bands (extendedcrown/<key>.png at the manifest's sha256 —
 // FRAMES_BUILD_DIR, else .frames-build; CI fetches them) over the real
-// extendedart masters (MSE-built, read from public/frames) and flat art, from
-// a stubbed frames bucket that serves the bands only. At both output sizes:
+// extendedart masters (Card Conjurer's extended frames since layout v58, at
+// the manifest's sha256 from the same folder) and flat art, from a stubbed
+// frames bucket that serves those files only. At both output sizes:
 //   • a crowned bake differs from the same card with the crown switched off
-//     ONLY inside the slot's rows (10–269 of 2100: the band 10 px below CC's
-//     bounds) — the title, type line, art and every slot move 0 px;
+//     ONLY inside the slot's rows (0–259 of 2100: CC's bounds) — the title,
+//     type line, art and every slot move 0 px;
 //   • in those rows it IS the band composited over the uncrowned bake (1:1
 //     at HD, ±3 levels of blending);
 //   • the key follows the colour — a pair wears gold (no pair masters);
@@ -33,14 +34,20 @@ const REAL = (manifestJson as { files: Record<string, Entry> }).files;
 const KEYS = ["w", "u", "b", "r", "g", "m", "c"];
 
 function realBand(key: string): Buffer | null {
-  const rel = `extendedcrown/${key}.png`;
+  return realFile(`extendedcrown/${key}.png`);
+}
+/** A published file at the manifest's sha256 from the build folder, or null. */
+function realFile(rel: string): Buffer | null {
   const file = path.join(BUILD, rel);
   if (!REAL[rel] || !fs.existsSync(file)) return null;
   const bytes = fs.readFileSync(file);
   return createHash("sha256").update(bytes).digest("hex") === REAL[rel].sha256 ? bytes : null;
 }
 const bands = Object.fromEntries(KEYS.map((k) => [k, realBand(k)]));
-const available = KEYS.every((k) => bands[k] !== null);
+// The masters the cases paint (w, u, gold, the see-through colourless).
+const MASTER_KEYS = ["w", "u", "m", "c"];
+const masters = Object.fromEntries(MASTER_KEYS.map((k) => [`extendedart/${k}.png`, realFile(`extendedart/${k}.png`)]));
+const available = KEYS.every((k) => bands[k] !== null) && Object.values(masters).every((m) => m !== null);
 
 const ART_RGB = [40, 160, 200] as const;
 let artUrl = "";
@@ -52,7 +59,7 @@ beforeAll(async () => {
   const art = await sharp({ create: { width: 1500, height: 1100, channels: 4, background: { r: ART_RGB[0], g: ART_RGB[1], b: ART_RGB[2], alpha: 1 } } }).png().toBuffer();
   artUrl = `data:image/png;base64,${art.toString("base64")}`;
   const { frameObjectKey, setFrameStorageForTests } = await import("@/lib/frames/frame-url");
-  const files = Object.fromEntries(KEYS.map((k) => [`extendedcrown/${k}.png`, bands[k]!]));
+  const files = { ...Object.fromEntries(KEYS.map((k) => [`extendedcrown/${k}.png`, bands[k]!])), ...(masters as Record<string, Buffer>) };
   const manifest = { version: 1 as const, bucket: "frames", files: Object.fromEntries(Object.keys(files).map((key) => [key, REAL[key]])) };
   const byUrl = new Map(Object.entries(files).map(([key, buf]) => [`${ORIGIN}/${frameObjectKey(key, REAL[key].hash)}`, [key, buf] as const]));
   vi.stubGlobal(
@@ -151,8 +158,8 @@ const cases: Array<[string, Partial<CardPreviewData>, string]> = [
   ["legendary colourless creature (the grey crown)", { colorIdentity: ["colorless"], cost: "{10}" }, "c"],
 ];
 const off = (data: CardPreviewData): CardPreviewData => ({ ...data, frameStyle: { ...data.frameStyle, crown: false } });
-/** The slot's rows at each output: 10–269 of 2100 → 5–134 of 1050. */
-const SLOT = { default: [5, 135], hd: [10, 270] } as const;
+/** The slot's rows at each output: 0–259 of 2100 → 0–129 of 1050. */
+const SLOT = { default: [0, 130], hd: [0, 260] } as const;
 
 describe.skipIf(!available)("the extended-art crown in the bake — the real bands (set FRAMES_BUILD_DIR if skipped)", () => {
   it.each(cases)("%s: the %s band, inside the slot's rows only, at 750", async (_label, over, key) => {
@@ -171,7 +178,7 @@ describe.skipIf(!available)("the extended-art crown in the bake — the real ban
     expect(cmp.mean, `mean ${cmp.mean.toFixed(2)}`).toBeLessThan(1.5);
   }, 90_000);
 
-  it.each(cases.slice(0, 2))("%s: at HD the band is composited 1:1 over the uncrowned card, 10 px below CC's bounds", async (_label, over, key) => {
+  it.each(cases.slice(0, 2))("%s: at HD the band is composited 1:1 over the uncrowned card, at CC's bounds", async (_label, over, key) => {
     const crowned = card(over);
     const [a, b] = [await bake(crowned, "hd"), await bake(off(crowned), "hd")];
     const rows = differingRows(a, b);
@@ -180,12 +187,13 @@ describe.skipIf(!available)("the extended-art crown in the bake — the real ban
     const cmp = await offComposite(a, b, key);
     expect(cmp.max, `max ${cmp.max}`).toBeLessThanOrEqual(3);
     expect(cmp.mean).toBeLessThan(0.5);
-    // The outline's peak is CC's row 36, shifted by the slot's 10 px — and
-    // its dark tip over the master's black top border changes no pixel, so
-    // the first row that differs is where the crown's own colour begins
-    // (rows 46–50 on every master).
-    expect(rows[0]).toBeGreaterThanOrEqual(46);
-    expect(rows[0]).toBeLessThanOrEqual(50);
+    // The outline's peak is CC's row 36 (the slot at CC's bounds since
+    // layout v58; it was 10 px lower over the MSE masters) — and its dark
+    // tip over the master's black top border changes no pixel, so the first
+    // row that differs is where the crown's own colour begins (row 40 on
+    // white; 46–50 over the MSE masters).
+    expect(rows[0]).toBeGreaterThanOrEqual(36);
+    expect(rows[0]).toBeLessThanOrEqual(42);
   }, 150_000);
 
   it("absent, off and a planeswalker type bake byte-identical to the plain card", async () => {
