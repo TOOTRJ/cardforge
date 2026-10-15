@@ -8269,14 +8269,34 @@ dress 7, the arch's tall box 21).
   pinlines lerped (4.50's recipe, split). A pair's P/T plate is the grey
   colourless one, `c` (`FrameProfile.twoColorPlate`; the prints'
   204/197/192, `m15/pt/c` 203/196/191).
+- **The white half of a white pair's name pill** (owner Round 69: tone,
+  never an outline on the name) is toned to print's metal: CC's white pill
+  reads 220/221/221 there, where 17 white-pair prints (WU, WB, RW, GW on the
+  plain templates; the pill's interior rows 110–212 on the white side,
+  x 150–450 or 1050–1350, the darker 60 % so the name's ink is left out)
+  read rgb 109/109/105 (luminance 108, 87–122) — a white name on near-white
+  read 1.16 : 1 at its worst column. A per-channel gain × 0.495 / 0.493 /
+  0.475 (`M20_PAIR_WHITE_PILL_GAIN`) in the importer's `finish` step
+  (`rampGain`): full on the white side of the split, fading across 40→60 %W,
+  only on the pill's translucent interior (α ≤ 230; the rims and outline keep
+  CC's pixels), so the pill keeps its own hue and bevel. After: the same
+  reading 109/109/105 on every white pair master; white name ink against the
+  pill, column by column over x 200–1300 on the name's rows: worst 4.21 : 1
+  over mid-grey art and 3.55 : 1 over white art (the pill is α 230), median
+  5.6–6.0 — every other pair 5.36 : 1 or more (the artifact templates' slate
+  6.2). The black half and every non-white pair are the monos' lerp.
 - **Import** (1.23): `token/m20`'s `crown` and `two-colour` gaps still name
   4.48 while the arch stands in (unverified), and are drawn on the full-art
   template (`gapDrawnBy`), so the 181 printings are `exact` once their
   template is verified in the card's colour — all of them on production's
   ticks (`supabase/seed.sql`). One printing prints the crown without the
   word: T2XM #28 Tuktuk the Returned ("Token Artifact Creature — Goblin
-  Golem", the rules text makes it legendary) imports exact with its crown
-  switch on and draws no crown (no Legendary word) — an owner question.
+  Golem", the rules text makes it legendary). Owner Round 69: it imports
+  legendary — "Legendary" in `supertype` (`legendaryTokenSupertype`: a
+  token with Scryfall's `legendary` frame effect and no Legendary word),
+  which draws the crown — and its line prints as the card does through
+  `printed_types` ("Artifact Creature", `printedTypesOfPrinting` →
+  `resolvePrintedTypes`).
 - **Creator**: the anatomy panel's crown and two-colour switches and the
   Variations "Legendary" entry read the profile like any frame's; a new
   token starts with both on (`anatomyDefaults`).

@@ -1,0 +1,31 @@
+{
+  "t2xm-28": {
+    "id": "c7e7822b-f155-4f3f-b835-ec64f3a71307",
+    "oracle_id": "9ccb2b2a-23a9-42c4-947f-47c7eafdb018",
+    "name": "Tuktuk the Returned",
+    "layout": "token",
+    "set": "t2xm",
+    "set_name": "Double Masters Tokens",
+    "set_type": "token",
+    "collector_number": "28",
+    "released_at": "2020-08-07",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "keywords": [],
+    "type_line": "Token Artifact Creature — Goblin Golem",
+    "mana_cost": "",
+    "oracle_text": "Tuktuk the Returned is legendary.",
+    "power": "5",
+    "toughness": "5",
+    "colors": [],
+    "color_identity": [],
+    "rarity": "common",
+    "artist": "Franz Vohwinkel",
+    "image_status": "highres_scan"
+  }
+}

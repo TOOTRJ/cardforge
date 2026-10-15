@@ -9,6 +9,9 @@ import {
   CC_OVERLAY_BANDS,
   CC_TEMPLATES,
   M20_PAIR_TYPE_TINT,
+  M20_PAIR_WHITE_PILL_GAIN,
+  compositeFinish,
+  describeFinish,
   M20_TOKEN_CROWN_BAND,
   M20_TOKEN_PILL_HOLE,
   describeLayer,
@@ -146,8 +149,26 @@ describe("the pair masters' recipe", () => {
     }
     // The grey pill's tint is the plain templates' pairs' alone.
     expect(M20_PAIR_TYPE_TINT).toMatchObject({ op: "tint", rgb: [184, 178, 180], opacity: 0.65, colors: [...TWO_COLOR_PAIRS] });
-    for (const t of PLAIN) expect(tpl(t).finish.filter((f) => f.colors?.includes("gw")), t).toHaveLength(1);
-    for (const t of TEMPLATES.slice(3)) expect(tpl(t).finish.filter((f) => f.colors?.includes("gw")), t).toHaveLength(0);
+    for (const t of PLAIN) expect(tpl(t).finish.filter((f) => (f as { op?: string }).op === "tint" && f.colors?.includes("gw")), t).toHaveLength(1);
+    for (const t of TEMPLATES.slice(3)) expect(tpl(t).finish.filter((f) => (f as { op?: string }).op === "tint" && f.colors?.includes("gw")), t).toHaveLength(0);
+  });
+});
+
+describe("the white half's tone (rampGain, owner Round 69)", () => {
+  it("multiplies one side of the ramp, fading across it, on the translucent pixels only", () => {
+    const W = 100;
+    const buf = Buffer.alloc(W * 4);
+    for (let x = 0; x < W; x += 1) buf.set([200, 200, 200, x < 90 ? 230 : 255], x * 4);
+    const mask = Buffer.alloc(W * 4, 255);
+    const f = { op: "rampGain", gain: [0.5, 0.5, 0.25], side: "right", ramp: [40, 60], alphaFull: 230, alphaNone: 244, mask: "m" };
+    const out = compositeFinish(buf, W, 1, [f], { m: mask });
+    const at = (x: number) => [...out.subarray(x * 4, x * 4 + 4)];
+    expect(at(10)).toEqual([200, 200, 200, 230]); // the left side: untouched
+    expect(at(50)).toEqual([148, 148, 121, 230]); // the ramp's middle (50.5 %W: a share of 0.525)
+    expect(at(80)).toEqual([100, 100, 50, 230]); // the right side: the gain
+    expect(at(95)).toEqual([200, 200, 200, 255]); // an opaque rim: untouched
+    expect(describeFinish({ ...f, colors: ["gw"] } as never)).toMatch(/gain × 0\.5 \/ 0\.5 \/ 0\.25 on the right side of the 40→60 %W ramp/);
+    expect([...M20_PAIR_WHITE_PILL_GAIN]).toEqual([0.495, 0.493, 0.475]);
   });
 });
 
@@ -203,6 +224,8 @@ describe("published to the frames bucket", () => {
       for (let y = 0; y < 2100; y += 7) {
         if (pill && !(t.includes("artifact")) && y >= pill[0] && y < pill[1]) continue;
         for (const [x, side] of [[300, a], [500, a], [1000, b], [1200, b]] as const) {
+          // The white half of the name pill is toned (owner Round 69): below.
+          if (!t.includes("artifact") && side === b && y >= 100 && y < 222) continue;
           const o = (y * 1500 + x) * 4;
           // (A fully clear pixel's colour is no colour: the lerp is premultiplied.)
           if (p[o + 3] === 0 && side[o + 3] === 0) continue;
@@ -220,6 +243,38 @@ describe("published to the frames bucket", () => {
           expect(p[o + 3], `${t} pill at ${x}`).toBe(255);
         }
       }
+    }
+  });
+
+  // Owner Round 69: the white half of a white pair's name pill is toned to
+  // print's metal — the median of 17 white-pair prints, rgb 109/109/105,
+  // read the same way (the pill's interior rows 110–212 on the white side,
+  // the darker 60 %, over black); the black half and every non-white pair's
+  // pill are the monos' lerp, the artifact templates' slate untouched.
+  const whiteAvailable = PLAIN.every((t) => ["wu", "wb", "rw", "gw", "bg", "w", "b", "g"].every((k) => real(`${t}/${k}.png`) !== null));
+  it.skipIf(!whiteAvailable)("a white pair's name pill: its white half toned to print's metal, everything else the lerp", async () => {
+    const lum = (p: number[]) => 0.2126 * p[0] + 0.7152 * p[1] + 0.0722 * p[2];
+    const read = async (buf: Buffer, x0: number) => {
+      const { data } = await sharp(buf).flatten({ background: "#000" }).removeAlpha().extract({ left: x0, top: 110, width: 300, height: 102 }).raw().toBuffer({ resolveWithObject: true });
+      const px: number[][] = [];
+      for (let i = 0; i < data.length; i += 3) px.push([data[i], data[i + 1], data[i + 2]]);
+      px.sort((p, q) => lum(p) - lum(q));
+      const keep = px.slice(0, Math.floor(px.length * 0.6));
+      return [0, 1, 2].map((c) => keep.map((p) => p[c]).sort((p, q) => p - q)[keep.length >> 1]);
+    };
+    for (const t of PLAIN) {
+      for (const [pair, x0] of [["wu", 150], ["wb", 150], ["rw", 1050], ["gw", 1050]] as const) {
+        const got = await read(real(`${t}/${pair}.png`)!, x0);
+        expect(Math.max(...got.map((v, c) => Math.abs(v - [109, 109, 105][c]))), `${t}/${pair}: ${got}`).toBeLessThanOrEqual(2);
+      }
+      // The black half of a white pair, and a non-white pair, keep the lerp.
+      const [wb, b, bg, g] = await Promise.all(["wb", "b", "bg", "g"].map(async (k) => raw(real(`${t}/${k}.png`)!)));
+      let worst = 0;
+      for (let y = 104; y < 218; y += 3) for (const x of [1100, 1300]) {
+        const o = (y * 1500 + x) * 4;
+        for (let c = 0; c < 4; c += 1) worst = Math.max(worst, Math.abs(wb[o + c] - b[o + c]), Math.abs(bg[o + c] - g[o + c]));
+      }
+      expect(worst, t).toBeLessThanOrEqual(1);
     }
   });
 });

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import tokenData from "./fixtures/token-printings.json";
+// T2XM #28 Tuktuk the Returned (owner Round 69), captured from Scryfall 2026-10-15
+// and trimmed as the others — a file of its own, so the frame picker's recorded
+// import cases (frame-picker-groups.test.ts) stay main's.
+import legendaryWordData from "./fixtures/token-legendary-word.json";
 import plstData from "./fixtures/plst-token-prefixes.json";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
 import {
@@ -19,6 +23,9 @@ import {
 import { onlyUndrawnDetailsMissing } from "@/lib/creator/import-frame-choice";
 import { finalizeImportMatch, withVerification } from "@/lib/creator/frame-resolve";
 import { importedAnatomy } from "@/lib/cards/anatomy";
+import { buildTypeLine } from "@/lib/cards/card-display";
+import { crownKeyFor } from "@/lib/cards/crown";
+import { getFrameProfile } from "@/lib/cards/template-layout";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { frameRequestFromImport } from "@/lib/frames/frame-requests";
 import type { FrameTemplate } from "@/types/card";
@@ -242,6 +249,32 @@ describe("the full-art templates once verified (TODO 4.48 / 1.23)", () => {
       expect(done.blockedBy, key).toBeUndefined();
       expect(done.gaps, key).toBeUndefined();
     }
+  });
+
+  // Owner Round 69: T2XM #28 Tuktuk the Returned prints the crown, but its
+  // type line has no "Legendary" (its rules text makes it legendary). The
+  // import makes it legendary — the word in `supertype`, which draws the
+  // crown — and keeps the printed line through `printed_types`.
+  it("a token the printing makes legendary without the word (T2XM #28): Legendary in supertype, the type line as printed, the crown drawn", () => {
+    const patch = finalizeImportMatch(mapScryfallToFormPatch(scryfallCardSchema.parse(legendaryWordData["t2xm-28"])), new Set([frameComboKey("m20tokenartifacttext", "c")]));
+    expect(patch).toMatchObject({ card_type: "token", supertype: "Legendary Artifact Creature", printed_types: "Artifact Creature", printed_crown: true, frame_template: "m20tokenartifacttext" });
+    expect(patch.frame_match).toMatchObject({ status: "exact", template: "m20tokenartifacttext" });
+    // The line prints exactly as the card: "Token Artifact Creature — Goblin Golem".
+    expect(
+      buildTypeLine({ cardType: "token", supertype: patch.supertype, printedTypes: patch.printed_types, subtypes: ["Goblin", "Golem"] }),
+    ).toBe("Token Artifact Creature — Goblin Golem");
+    // …and the crown draws: the silver A crown of the artifact template.
+    const anatomy = importedAnatomy(patch, patch.frame_template);
+    expect(
+      crownKeyFor(
+        { colorIdentity: anatomy.colorIdentity ?? [], cardType: "token", supertype: patch.supertype, frameStyle: anatomy.style },
+        getFrameProfile("m20tokenartifacttext"),
+      ),
+    ).toBe("a");
+    // A token that prints the word keeps its parse; a non-legendary one too.
+    expect(mapScryfallToFormPatch(printing("tmkm-13"))).toMatchObject({ supertype: "Legendary Creature" });
+    expect(mapScryfallToFormPatch(printing("tmkm-13")).printed_types).toBeUndefined();
+    expect(mapScryfallToFormPatch(printing("tfdn-6")).supertype).toBe("Creature");
   });
 
   it("the import names the crown and the pair where the print has them, and keeps the pair on the full-art template", () => {

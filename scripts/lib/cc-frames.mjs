@@ -862,6 +862,41 @@ export const M20_ARTIFACT_TYPE_TINT = { op: "tint", rgb: [151, 170, 181], opacit
  */
 export const M20_PAIR_TYPE_TINT = { op: "tint", rgb: [184, 178, 180], opacity: 0.65, alphaFull: 205, alphaNone: 216, colors: [...TWO_COLOR_PAIRS] };
 
+/**
+ * The WHITE half of a two-colour name pill, toned to print's metal (owner
+ * Round 69, 2026-10-15: tone, never an outline on the name). CC's white pill
+ * is near-white (our pair masters read 220/221/221 there), where every
+ * white-pair print sets its white name on a mid metallic grey: on 17 prints
+ * of the plain templates (TFRC #11, TECL #7 / #8, TINR #20, TMKM #10 / #12 /
+ * #13, TRVR #15 / #17 / #19, TMOM #12, TVOW #15 / #16, TSOS #7 / #10 / #11,
+ * TLCI #14 — Scryfall PNGs at 1500 × 2100, the pill's interior rows 110–212
+ * on the white side, x 150–450 or 1050–1350, the darker 60 % so the name's
+ * ink is left out) the median is rgb 109/109/105, luminance 108 (87–122),
+ * the same on WU, WB, RW and GW. A per-channel GAIN (× target / ours) keeps
+ * the white pill's own hue and its bevel's shading, applied only where the
+ * white colour's share of the split is (rampGain: full on the white side,
+ * fading across PAIR_RAMPS.m20Token) and only on the pill's translucent
+ * interior (α ≤ 230 full, none from 244 — the rims and outline keep CC's
+ * pixels). The black half stays as drawn; the artifact templates' slate pill
+ * is untouched.
+ */
+export const M20_PAIR_WHITE_PILL_GAIN = Object.freeze([0.495, 0.493, 0.475]);
+/** The pairs with a white half, and that half's side of the split. */
+const WHITE_PAIR_SIDES = Object.freeze({ wu: "left", wb: "left", rw: "right", gw: "right" });
+/** The finish entries that tone the white half (one per white pair). */
+const m20PairWhitePillTone = () =>
+  Object.entries(WHITE_PAIR_SIDES).map(([pair, side]) => ({
+    op: "rampGain",
+    gain: [...M20_PAIR_WHITE_PILL_GAIN],
+    side,
+    ramp: [...PAIR_RAMPS.m20Token],
+    alphaFull: 230,
+    alphaNone: 244,
+    colors: [pair],
+    mask: M20_TOKEN_TITLE_MASK,
+  }));
+export { WHITE_PAIR_SIDES as M20_WHITE_PAIR_SIDES };
+
 /** A plain full-art token pair master's layers (see M20_PAIR_TYPE_TINT). */
 function m20TokenPairLayers(dir, H, height, pair) {
   const [a, b] = pair.split("");
@@ -897,6 +932,9 @@ function m20TokenTemplate(height, artifact) {
     // TODO 4.48: a plain pair's grey type pill, tinted to the prints.
     ...(artifact ? [] : [{ ...M20_PAIR_TYPE_TINT, mask: typeMask }]),
     { ...M20_TOKEN_SOLID_TYPE_PILL, mask: typeMask },
+    // TODO 4.48 (owner Round 69): a white pair's name pill, its white half
+    // toned to print's metal (the artifact templates' pill is slate).
+    ...(artifact ? [] : m20PairWhitePillTone()),
     ...(artifact
       ? [
           { ...M20_ARTIFACT_NAME_SLATE, mask: M20_TOKEN_TITLE_MASK },
@@ -933,6 +971,11 @@ function m20TokenTemplate(height, artifact) {
       ? "two-colour pair masters <pair>.png (TODO 4.48, measured on 32 two-colour M20+ prints): the silver artifact master whole + the pair's two colour masters lerped left to right across PAIR_RAMPS.m20Token (40→60 %W, untilted, premultiplied) through the pack's Pinline mask — the colours on the rims, pinline and strip, the pills and box silver; the plate is the artifact set's colourless one (FrameProfile.twoColorPlate) — PipGlyph composite of CC pixels"
       : `two-colour pair masters <pair>.png (TODO 4.48, measured on 32 two-colour M20+ prints: TMKM #10 W|U, TMKM #13 G|W, TDMU #21 R|G …): the pair's two colour masters lerped WHOLE left to right across PAIR_RAMPS.m20Token (40→60 %W, untilted, premultiplied — the name pill, rims, box and strip split there on the prints, 42.9 / 50.3 / 58.3 %W at 10 / 50 / 90 % on the strip), then CC's grey 'Land Frame' type pill (tokenFrameL${H}.png) in place of the lerped one through the pack's Type mask, tinted to the prints' neutral pill (median rgb 193/187/187 on 16 regular prints, every pair alike) and made solid; the plate is M15's grey colourless one (FrameProfile.twoColorPlate: the prints' 204/197/192) — PipGlyph composite of CC pixels`,
   );
+  if (!artifact) {
+    notes.push(
+      `the WHITE half of a white pair's name pill (wu, wb: left; rw, gw: right) toned to print's metal (owner Round 69, 2026-10-15): a per-channel gain × ${M20_PAIR_WHITE_PILL_GAIN.join(" / ")} on the white side of PAIR_RAMPS.m20Token, fading across it, on the pill's translucent interior through M15's Title mask (α ≤ 230 full, none from 244: the rims and outline keep CC's pixels) — CC's 220/221/221 onto the median of 17 white-pair prints, rgb 109/109/105 (luminance 108, 87–122); hue and bevel kept; the black half and the artifact templates untouched — PipGlyph composite of CC pixels`,
+    );
+  }
   if (height === "short") notes.push("CC's 'Short' pack is the printed REGULAR box (type pill 66.9–73.7 %H; its 'Regular' pack at 64 %H matches no print, TODO 4.48); measured on 19 prints: pill +0.9 px, name pill +1.3, strip −1.0 — used as drawn");
   if (height === "tall") notes.push("measured on 16 tall prints: pill +0.7 px, name pill +1.3 — used as drawn");
   if (recut) notes.push("re-cut onto the prints (TODO 4.48, measure first): the type pill 5 px lower, as 28 M20+ textless prints print it (+4.8 px, correlation); PipGlyph composite of CC pixels");
@@ -5079,6 +5122,9 @@ export function describeFinish(f) {
   if (f.op === "tint") {
     return `a flat rgb(${f.rgb.join(", ")}) at ${Math.round(f.opacity * 100)}% source-over through ${f.mask}, on the pixels CC draws translucent (full weight at α ≤ ${f.alphaFull}, none at α ≥ ${f.alphaNone})${only}`;
   }
+  if (f.op === "rampGain") {
+    return `a gain × ${f.gain.join(" / ")} on the ${f.side} side of the ${f.ramp.join("→")} %W ramp (fading across it) through ${f.mask}, on the pixels CC draws translucent (full weight at α ≤ ${f.alphaFull}, none at α ≥ ${f.alphaNone})${only}`;
+  }
   throw new Error(`describeFinish: unknown op ${JSON.stringify(f)}`);
 }
 
@@ -5115,6 +5161,21 @@ export function compositeFinish(buf, width, height, finish, masks) {
       const a = out[o + 3];
       if (f.op === "opaque") {
         out[o + 3] = Math.round(a + (255 - a) * m);
+        continue;
+      }
+      if (f.op === "rampGain") {
+        // A per-channel gain on one SIDE of a pair's ramp (TODO 4.48: the
+        // white half of a two-colour name pill toned to print's metal): full
+        // weight where that side's share is 1, fading across the ramp, only on
+        // what CC draws translucent (alphaFull / alphaNone, as "tint"); hue
+        // and bevel kept (a multiplication, not a flat colour).
+        const x = p % width;
+        const share = rampShare(((x + 0.5) / width) * 100, f.ramp);
+        const side = f.side === "left" ? 1 - share : share;
+        const wa = a <= f.alphaFull ? 1 : a >= f.alphaNone ? 0 : (f.alphaNone - a) / (f.alphaNone - f.alphaFull);
+        const w = m * side * wa;
+        if (w === 0) continue;
+        for (let c = 0; c < 3; c += 1) out[o + c] = Math.min(255, Math.max(0, Math.round(out[o + c] * (1 + (f.gain[c] - 1) * w))));
         continue;
       }
       if (f.op !== "tint") throw new Error(`compositeFinish: unknown op ${f.op}`);
