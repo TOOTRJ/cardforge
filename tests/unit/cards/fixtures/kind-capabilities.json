@@ -73,7 +73,10 @@
   { "template": "m15ub", "change": "new-template", "capabilities": ["pt"], "reason": "TODO 4.25 (owner 2026-10-13, roadmap Q5): a NEW template — a Universes Beyond frame (Card Conjurer's accurate 'Universes Beyond' pack, the M15 pack's geometry with the smooth streaked art): its M15 twin's slots, so it draws a P/T. An addition: no stored card sits on it; a card wears it only by its maker's pick or an import." },
   { "template": "m15ubartifact", "change": "new-template", "capabilities": ["pt"], "reason": "TODO 4.25 (owner 2026-10-13, roadmap Q5): a NEW template — a Universes Beyond frame (Card Conjurer's accurate 'Universes Beyond' pack, the M15 pack's geometry with the smooth streaked art): its M15 twin's slots, so it draws a P/T. An addition: no stored card sits on it; a card wears it only by its maker's pick or an import." },
   { "template": "m15ubland", "change": "new-template", "capabilities": ["pt"], "reason": "TODO 4.25 (owner 2026-10-13, roadmap Q5): a NEW template — a Universes Beyond frame (Card Conjurer's accurate 'Universes Beyond' pack, the M15 pack's geometry with the smooth streaked art): its M15 twin's slots, so it draws a P/T. An addition: no stored card sits on it; a card wears it only by its maker's pick or an import." },
-  { "template": "extendedartland", "change": "new-template", "capabilities": ["pt"], "reason": "TODO 4.7 (owner Round 63, 2026-10-14): a NEW template — the extended-art frame's land dress (Card Conjurer's 'Extended Art Frames' land files), as m15land is M15's: extendedart's slots, so it draws a P/T (a land creature). An addition: no stored card sits on it; a card wears it only by its maker's pick or an import." }
+  { "template": "extendedartland", "change": "new-template", "capabilities": ["pt"], "reason": "TODO 4.7 (owner Round 63, 2026-10-14): a NEW template — the extended-art frame's land dress (Card Conjurer's 'Extended Art Frames' land files), as m15land is M15's: extendedart's slots, so it draws a P/T (a land creature). An addition: no stored card sits on it; a card wears it only by its maker's pick or an import." },
+  { "template": "m15fullartlandzen", "change": "new-template", "capabilities": ["pt", "basicSymbol"], "reason": "TODO 4.40: a NEW template — the Zendikar-style full-art basic (stone ring, split type bar, centred medallion), Card Conjurer's pack re-cut onto the prints (frames bucket only): FULL_ART_BASIC's slots like m15fullartland's, so a P/T slot and the basic-symbol slot. Basic lands only (BASIC_ONLY_TEMPLATES). An addition: no stored card sits on it." },
+  { "template": "m15fullartlandsnc", "change": "new-template", "capabilities": ["pt", "basicSymbol"], "reason": "TODO 4.40: a NEW template — the New Capenna full-art basic (the split bar and medallion, the art under a white ring), Card Conjurer's pack re-cut onto the prints (frames bucket only): FULL_ART_BASIC's slots like m15fullartland's, so a P/T slot and the basic-symbol slot. Basic lands only (BASIC_ONLY_TEMPLATES). An addition: no stored card sits on it." },
+  { "template": "m15fullartlandthb", "change": "new-template", "capabilities": ["pt", "basicSymbol"], "reason": "TODO 4.41: a NEW template — the plain-bar full-art basic (no symbol: its basic-symbol slot is \"none\"), Card Conjurer's pack re-cut onto the prints (frames bucket only): FULL_ART_BASIC's slots like m15fullartland's, so a P/T slot and the basic-symbol slot. Basic lands only (BASIC_ONLY_TEMPLATES). An addition: no stored card sits on it." }
  ],
  "capabilities": {
   "m15": ["pt"],
@@ -136,6 +139,9 @@
   "extendedartland": ["pt"],
   "m15fullartland": ["pt", "basicSymbol"],
   "fullartland": ["pt", "basicSymbol"],
+  "m15fullartlandzen": ["pt", "basicSymbol"],
+  "m15fullartlandsnc": ["pt", "basicSymbol"],
+  "m15fullartlandthb": ["pt", "basicSymbol"],
   "m15textless": ["pt"],
   "m15textlessland": ["pt"],
   "expeditionland": ["pt"],

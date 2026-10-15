@@ -52,7 +52,9 @@ const ARCH_TITLE_DY = -1 / 1500;
  *  it: the same px on the page, × 5/7 on the landscape battle. */
 const sized = (t: FrameTemplate, pct: number) =>
   getFrameProfile(t).orientation === "landscape" ? displayPct(pct, "landscape") : pct;
-const FULL_ART_BASICS = ["m15fullartland", "fullartland"] as const;
+// …and the older full-art basic designs (TODO 4.40 / 4.41): the same CC
+// title and type slots (FULL_ART_BASIC), print-checked on their own bars.
+const FULL_ART_BASICS = ["m15fullartland", "fullartland", "m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb"] as const;
 /** The layout-v31 sizes each family band grew from (fractions of the width). */
 const V31 = {
   m15Title: 0.05,
@@ -77,8 +79,9 @@ describe("one M15-era display size (layout v32)", () => {
     // and 4.21b's battle — 4.5c's Vehicle frame, 4.7's Nyx dress — and the
     // station frame's two (TODO 4.27a) — and 4.25's three Universes Beyond
     // frames.
-    // …and extended art's land dress (TODO 4.7, owner Round 63).
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(53);
+    // …and extended art's land dress (TODO 4.7, owner Round 63) — and
+    // 4.40 / 4.41's three older full-art basics.
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(56);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -341,6 +344,10 @@ describe("baselines (TextSlot.dy)", () => {
     // Already at the family's sizes on print-verified slots: untouched.
     ["m15fullartland", 0, 0],
     ["fullartland", 0, 0],
+    // …and the older designs (TODO 4.40 / 4.41), measured on their own prints.
+    ["m15fullartlandzen", 0, 0],
+    ["m15fullartlandsnc", 0, 0],
+    ["m15fullartlandthb", 0, 0],
   ];
 
   it("covers every family frame", () => {

@@ -953,6 +953,22 @@ Rules and gotchas:
   colourless non-artifact spell or the etched run, which keep their frame
   with the `universes-beyond` gap). `docs/FRAMES.md` "The Universes Beyond
   frames".
+- The older full-art basics (`m15fullartlandzen`, `m15fullartlandsnc`,
+  `m15fullartlandthb`; TODO 4.40 / 4.41): STORED templates of their own in
+  the Full Art set, basic lands only (`BASIC_ONLY_TEMPLATES`), from Card
+  Conjurer's ZEN, SNC and THB basic packs (bucket only) — measured on every
+  printing first: the ZEN bar re-cut 7 px down and the stone the pack's own
+  colourless frame under every colour (`ZEN_BASIC_RECUT`), the SNC bar 13 px
+  and its medallion 18 px up (`SNC_BASIC_RECUT`, `recutBarAndMedallion` in
+  `scripts/lib/cc-frames.mjs`); the slots ride the same px
+  (`ZEN_BASIC_BAR_DY_PCT`, `SNC_BASIC_*_DY_PCT`). The split bar is 3.24's
+  `type.split`, the medallion's symbol the template's own image
+  (`SPLIT_BAR_SYMBOL_RECT`), the plain bar's symbol slot `"none"`. An
+  ADDITION: no bump, no sweep, no badge; imports keep landing on
+  `m15fullartland` until a template is verified in the colour
+  (`onceVerified`: exact on the stone ring, SNC, the plain bar; nearest for
+  MH1's snow bars, BRO, MID / VOW's dark bars and ZEN / J14).
+  `docs/FRAMES.md` "The older full-art basics".
 - The 1997 frame (`retro`, `retroland`; TODO 4.10a, layout v46) is the
   ORIGINAL cards of 1996–2003, never the 2006 timeshifted redrawing or the
   2021+ reprints (imports of those are `nearest`: the `timeshifted-frame`

@@ -55,6 +55,10 @@ describe("scope", () => {
     expect(templatesForTreatment("fullartset")).toEqual([
       "m15fullartland",
       "fullartland",
+      // …and the older full-art basics (TODO 4.40 / 4.41).
+      "m15fullartlandzen",
+      "m15fullartlandsnc",
+      "m15fullartlandthb",
       "m15textless",
       "m15textlessland",
     ]);

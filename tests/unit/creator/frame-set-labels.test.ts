@@ -78,7 +78,10 @@ describe("the hedron frame lives in its own Zendikar Rising set", () => {
 
   it("leaves the Full Art set with the full-art basic and textless frames only", () => {
     const fullArt = FRAME_TEMPLATE_VALUES.filter((t) => FRAME_TEMPLATE_SET[t] === "fullartset");
-    expect(fullArt).toEqual(["m15fullartland", "fullartland", "m15textless", "m15textlessland"]);
+    // (…and the older full-art basic designs, TODO 4.40 / 4.41.)
+    expect(fullArt).toEqual([
+      "m15fullartland", "fullartland", "m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb", "m15textless", "m15textlessland",
+    ]);
   });
 
   it("is offered with the showcase set frames — and extended art no longer is", () => {

@@ -147,6 +147,10 @@ import {
   flatPixelAt,
   placeOnCanvas,
   recutBand,
+  recutBarAndMedallion,
+  describeBarRecut,
+  shadeWhiteMedallionSymbol,
+  describeWhiteMedallionSymbol,
   recutBlockUp,
   REPO_SOURCE_PREFIX,
   cutMaps,
@@ -498,9 +502,18 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
         }
         // 4.34's type bar: the title bar moved down onto it.
         if (l.dy) data = shiftRows(data, W, H, l.dy);
+        // 4.40's split-bar basics: the bar and the medallion moved onto the
+        // prints — on the layer (barRecut) and/or on its mask (maskBarRecut),
+        // so a stone laid through the moved mask keeps its own pixels.
+        if ((l.barRecut || l.maskBarRecut) && (!def.barRecut || W !== OUT_W || H !== OUT_H)) {
+          throw new Error(`${template}/${key}: a barRecut layer needs the recipe's barRecut at ${OUT_W}×${OUT_H}`);
+        }
+        if (l.barRecut) data = recutBarAndMedallion(data, W, H, def.barRecut);
+        let layerMask = l.mask ? await rgba(await fetchCached(l.mask), W, H) : undefined;
+        if (layerMask && l.maskBarRecut) layerMask = recutBarAndMedallion(layerMask, W, H, def.barRecut);
         images.push({
           data,
-          mask: l.mask ? await rgba(await fetchCached(l.mask), W, H) : undefined,
+          mask: layerMask,
           invert: l.invert,
           opacity: l.opacity,
           replace: l.replace,
@@ -655,7 +668,16 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
   const symbols = def.symbols ? { ...def.symbols } : undefined;
   if (symbols && !dryRun) {
     for (const [key, src] of Object.entries(symbols)) {
-      await writePlate(src, path.join(outDir, template, "symbol", `${key}.png`));
+      const shading = def.symbolShading?.[key];
+      if (!shading) {
+        await writePlate(src, path.join(outDir, template, "symbol", `${key}.png`));
+        continue;
+      }
+      // PipGlyph's own shading over CC's shape (4.40's white sun, owner
+      // Round 64): the symbol at its native size, repainted.
+      const { data, info } = await sharp(await fetchCached(src)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      const shaded = shadeWhiteMedallionSymbol(data, info.width, info.height, shading);
+      await writeCutout(shaded, { width: info.width, height: info.height }, path.join(outDir, template, "symbol", `${key}.png`));
     }
     console.log(`wrote ${template} symbol discs (${Object.keys(symbols).join(", ")})`);
   }
@@ -712,12 +734,14 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     ...(def.plateGains ? { plateGains: def.plateGains } : {}),
     ...(def.plateTone ? { plateTone: { ...def.plateTone } } : {}),
     ...(symbols ? { symbols: { ...symbols, output: "symbol/<colour>.png, native size" } } : {}),
+    ...(def.symbolShading ? { symbolShading: Object.fromEntries(Object.entries(def.symbolShading).map(([k, s]) => [k, describeWhiteMedallionSymbol(s)])) } : {}),
     ...(def.shield ? { shield: { mask: def.shield.mask, box: def.shield.box, output: "loyalty/<colour>.png" } } : {}),
     ...(def.ptCut ? { ptCut: describePtCut(def.ptCut, OUT_W, OUT_H) } : {}),
     ...(pieces ? { pieces: { ...pieces, output: "<name>.png, native size" } } : {}),
     ...(def.maskInputs ? { maskInputs: { ...def.maskInputs, output: "not published — importer inputs for a later recipe" } } : {}),
     ...(def.printRecipe ? { printRecipe: Object.fromEntries(builtColors(def).filter((key) => !isBuiltRecipe(def.colors[key])).map((key) => [key, describePrintRecipe(def.printRecipe(key))])) } : {}),
     ...(def.recut ? { recut: def.recut } : {}),
+    ...(def.barRecut ? { barRecut: { ...def.barRecut, effect: describeBarRecut(def.barRecut) } } : {}),
     ...(def.recutUp ? { recutUp: def.recutUp } : {}),
     ...(def.bridge ? { bridge: def.bridge } : {}),
     // Per-key tones (a function) are recorded key by key.

@@ -131,7 +131,7 @@ describe("layout v32 — the live family profiles with the measured fits and the
   it("puts every family title and type slot on the measured fit except the full-art basics", () => {
     for (const template of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(template);
-      const basic = template === "m15fullartland" || template === "fullartland";
+      const basic = template.startsWith("m15fullartland") || template === "fullartland";
       expect(p.title.fit, template).toBe(basic ? undefined : "measured");
       expect(p.type.fit, template).toBe(basic ? undefined : "measured");
     }

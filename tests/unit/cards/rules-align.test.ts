@@ -138,7 +138,9 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
       "m15station", "m15stationland", "m15pw", "m20token", "m20tokenartifact", "m15borderlesspw", "m15borderlesspwtall", "saga",
       "m15textless", "m15textlessland",
     ]);
-    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(58);
+    // (…and 4.40 / 4.41's three older full-art basics offer it: a basic
+    // prints no rules, but the switch is harmless on a frame that draws none.)
+    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(61);
   });
 
   it("rulesAlignOf is \"center\" only for the card's \"center\" on a frame that offers it", () => {
