@@ -178,14 +178,16 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
     name: "750-artist-line-end",
     size: "750",
     // (The two arch-token cases of TODO 4.53 draw the same artist line as
-    // m15tokentext's: the footer is M15TOKEN's on all four arch frames.)
-    cases: /^(agclassic|m15tokentext)\/|^m15token\/c\/token-long@small-caps$|^m15tokenartifact\/u\/token-long@small-caps-lower$/,
+    // m15tokentext's: the footer is M15TOKEN's on all four arch frames. The
+    // short battle — TODO 5.5 (a)'s case, the one short battle the matrix
+    // has — draws it TURNED down the left border.)
+    cases: /^(agclassic|m15tokentext)\/|^m15token\/c\/token-long@small-caps$|^m15tokenartifact\/u\/token-long@small-caps-lower$|^battle\/w\/battle-short@back$/,
     regions: ["footer"],
     metric: "dx",
     min: 3,
     max: 4,
     why:
-      "The artist line (letter-spaced small capitals; `Illus. …` on the 1993 frame) is WIDER in the preview at 750 px: it ends 2 px further right on most cases and 3 px on the 1993 frame (and on the arch token on macOS). At HD the same line is NARROWER in the preview by about 6 px — within the limits there, but the worst tile of most HD cases (56.9). Both renderers start the line at the same x; they disagree about its letter-spacing or advances. Not traced.",
+      "The artist line (letter-spaced small capitals; `Illus. …` on the 1993 frame) is WIDER in the preview at 750 px: it ends 2 px further right on most cases and 3 px on the 1993 frame (and on the arch token on macOS). At HD the same line is NARROWER in the preview by about 6 px — within the limits there, but the worst tile of most HD cases (56.9). Both renderers start the line at the same x; they disagree about its letter-spacing or advances. Not traced. The short battle's line — the same small capitals turned a quarter turn down the left border (FrameProfile.footerTurn) — sits 3 px further right in the preview at 750 px on CI's runner (2 on macOS; 0 across and 1–2 down at HD); measured 2026-10-16 the same on EVERY short battle, the one-faced ones (battle/w, u and r/battle-short, main's look) as on battle/w/battle-short@back — the back of its own (TODO 5.5 (a)) moves nothing in that band (darwin: footer 2,0 · 2.3 on all four at 750, 2,-1 · 1.8 at HD).",
   },
   // --- TODO 3.37: seen by #514, measured again 2026-10-13 (after #523's
   // large pips; the numbers did not move) and listed with their case. -------
