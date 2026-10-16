@@ -1,4 +1,5 @@
 import { isLandscapeFrame } from "@/lib/cards/card-orientation";
+import { isBattleFront } from "@/lib/cards/dfc";
 import { isStoredRenderUrl } from "@/lib/cards/render-cdn";
 
 // ---------------------------------------------------------------------------
@@ -14,8 +15,11 @@ import { isStoredRenderUrl } from "@/lib/cards/render-cdn";
 // just cleared: for those seconds its tile is the live front, with no button
 // — there is no back picture to turn to until the new bake lands.
 //
-// Only our own bakes count (isStoredRenderUrl); only a portrait pair turns
-// (every double-faced body is portrait).
+// Only our own bakes count (isStoredRenderUrl). Every double-faced body is
+// portrait on both faces but the BATTLE (TODO 5.5): a landscape front whose
+// back is portrait — its tile turns too, the front letterboxed in the
+// portrait tile as a one-faced battle's is, the back filling it
+// (BakedCardFlip `frontLandscape`). The back is always portrait.
 // ---------------------------------------------------------------------------
 
 /** The render pointers a tile reads, as the queries hand them over. */
@@ -27,12 +31,13 @@ export type TileRenderPointers = {
 };
 
 /** The back face's tile-sized WebP when the tile may turn to it, else null:
- *  beside a stored front bake AND its thumb, on a portrait frame. */
+ *  beside a stored front bake AND its thumb — a portrait front, or the
+ *  battle's landscape one (its back is portrait). */
 export function tileBackThumbOf(card: TileRenderPointers): string | null {
   if (!isStoredRenderUrl(card.rendered_image_url)) return null;
   if (!isStoredRenderUrl(card.rendered_thumb_url)) return null;
   if (!isStoredRenderUrl(card.rendered_back_thumb_url)) return null;
-  if (isLandscapeFrame(card.frame_style)) return null;
+  if (isLandscapeFrame(card.frame_style) && !isBattleFront((card.frame_style as { template?: string } | null)?.template)) return null;
   return card.rendered_back_thumb_url;
 }
 

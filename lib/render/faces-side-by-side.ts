@@ -32,14 +32,25 @@ export function faceGutterPx(faceWidth: number): number {
 }
 
 /** The composite's size for two faces: the widths plus the gutter, the
- *  taller face's height (the faces are top-aligned; every DFC body today is
- *  the same size on both faces). */
+ *  taller face's height, and where each face's top row goes. Every DFC body
+ *  is the same size on both faces (both tops 0, the gutter 1/25 of the
+ *  face's width); a BATTLE (TODO 5.5) is a landscape front beside a
+ *  portrait back — the shorter face is centred on the taller one's height
+ *  (whole px) and the gutter is 1/25 of the NARROWER face's width, the
+ *  portrait card's: the same 60 / 30 px as every other two-faced card. */
 export function sideBySideSize(
   front: { width: number; height: number },
   back: { width: number; height: number },
-): { width: number; height: number; gutter: number } {
-  const gutter = faceGutterPx(front.width);
-  return { width: front.width + gutter + back.width, height: Math.max(front.height, back.height), gutter };
+): { width: number; height: number; gutter: number; frontTop: number; backTop: number } {
+  const gutter = faceGutterPx(Math.min(front.width, back.width));
+  const height = Math.max(front.height, back.height);
+  return {
+    width: front.width + gutter + back.width,
+    height,
+    gutter,
+    frontTop: Math.floor((height - front.height) / 2),
+    backTop: Math.floor((height - back.height) / 2),
+  };
 }
 
 async function decodeRgba(png: Uint8Array): Promise<{ data: Buffer; width: number; height: number }> {
@@ -53,16 +64,16 @@ async function decodeRgba(png: Uint8Array): Promise<{ data: Buffer; width: numbe
  */
 export async function composeFacesSideBySide(frontPng: Uint8Array, backPng: Uint8Array): Promise<Buffer> {
   const [front, back] = await Promise.all([decodeRgba(frontPng), decodeRgba(backPng)]);
-  const { width, height, gutter } = sideBySideSize(front, back);
+  const { width, height, gutter, frontTop, backTop } = sideBySideSize(front, back);
   // Transparent black everywhere a face isn't (Buffer.alloc zero-fills).
   const canvas = Buffer.alloc(width * height * 4);
-  const blit = (face: { data: Buffer; width: number; height: number }, left: number) => {
+  const blit = (face: { data: Buffer; width: number; height: number }, left: number, top: number) => {
     const rowBytes = face.width * 4;
     for (let y = 0; y < face.height; y++) {
-      face.data.copy(canvas, (y * width + left) * 4, y * rowBytes, (y + 1) * rowBytes);
+      face.data.copy(canvas, ((y + top) * width + left) * 4, y * rowBytes, (y + 1) * rowBytes);
     }
   };
-  blit(front, 0);
-  blit(back, front.width + gutter);
+  blit(front, 0, frontTop);
+  blit(back, front.width + gutter, backTop);
   return sharp(canvas, { raw: { width, height, channels: 4 } }).png().toBuffer();
 }

@@ -95,7 +95,7 @@ describe("which cards are two-faced with a back picture (lib/cards/tile-faces.ts
     expect(hasBackPicture(card())).toBe(true);
   });
 
-  it("not an older two-faced card, a card mid-save, a front without its thumb, a URL that isn't our bake, or a landscape frame", () => {
+  it("not an older two-faced card, a card mid-save, a front without its thumb, a URL that isn't our bake, or a landscape frame — but the BATTLE (TODO 5.5: its back is portrait)", () => {
     expect(hasBackPicture(card(LEGACY))).toBe(false);
     expect(hasBackPicture(card(MID_SAVE))).toBe(false);
     expect(hasBackPicture(card({ rendered_thumb_url: null }))).toBe(false);
@@ -103,7 +103,9 @@ describe("which cards are two-faced with a back picture (lib/cards/tile-faces.ts
     expect(
       hasBackPicture(card({ rendered_back_thumb_url: `${HOST}/storage/v1/object/public/card-art/owner-1/raw.png` })),
     ).toBe(false);
-    expect(hasBackPicture(card({ frame_style: { template: "battle" } }))).toBe(false);
+    expect(hasBackPicture(card({ frame_style: { template: "split" } }))).toBe(false);
+    expect(hasBackPicture(card({ frame_style: { template: "battle" } }))).toBe(true);
+    expect(hasBackPicture(card({ frame_style: { template: "battle" }, rendered_back_thumb_url: null }))).toBe(false);
   });
 });
 

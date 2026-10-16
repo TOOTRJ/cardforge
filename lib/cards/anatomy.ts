@@ -181,14 +181,22 @@ export function frameAnatomyOfProfile(profile: AnatomyProfile): FrameAnatomy {
   return {
     // The crown is drawn either as an overlay band (4.6a) or baked into the
     // template's `-legendary` masters (4.6f, FrameProfile.crownMasters).
-    crown: (profile.overlays ?? []).some((slot) => slot.anatomy === "crown") || profile.crownMasters === true,
+    // A battle front draws none itself, but the switch is the CARD's and its
+    // back — the ▼ back, which draws the crown (TODO 5.5: the ten MOM /
+    // PMOM battles with a legendary back) — reads it through the front.
+    crown:
+      (profile.overlays ?? []).some((slot) => slot.anatomy === "crown") ||
+      profile.crownMasters === true ||
+      profile.dfc?.battle === true,
     twoColor: profile.twoColorMasters ?? [],
     collector: profile.collector !== undefined,
     stamp: (profile.overlays ?? []).some((slot) => slot.anatomy === "holoStamp"),
     // The icon family is a TRANSFORM FRONT body's (the family picks the
     // back body too, lib/cards/dfc.ts bodyFor); a modal card's housing has
     // no family, and a back body reads the card's key through the front.
-    dfcIcon: profile.dfc?.role === "front" && profile.dfc.layout === "transform",
+    // (Not the battle front: every battle printed wears the plain ▲ / ▼, and
+    // its back is the ▼ back whatever the key says — TODO 5.5.)
+    dfcIcon: profile.dfc?.role === "front" && profile.dfc.layout === "transform" && profile.dfc.battle !== true,
     // The text alignment choice (4.21e): every frame with plain rules
     // boxes, unless it opts out (profileOffersRulesAlign).
     rulesAlign: profileOffersRulesAlign(profile),

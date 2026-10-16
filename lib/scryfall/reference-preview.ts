@@ -127,11 +127,16 @@ export class FrameCompareFaceError extends Error {
  * honours a body only), it only keys the front's strip. A TRANSFORM front
  * draws nothing from its back's colour or body (the tab's digits and the
  * strip's texts read content alone), so it — like every other template and
- * a printing with no second face — keeps the card as it is.
+ * a printing with no second face — keeps the card as it is. The battle
+ * (TODO 5.5) is compared like a modal front: its tab's digits are drawn
+ * only beside a back with a body.
  */
 function withComparedBack(front: CardPreviewData, card: ScryfallCard, legacyBack: boolean): CardPreviewData {
   const body = dfcBodyOf(front.frameStyle?.template);
-  if (!front.backFace || body?.role !== "front" || body.layout !== "modal") return front;
+  // A BATTLE front (TODO 5.5) is two-faced only with a back of its own: its
+  // reverse P/T is drawn from a back with a body, so the compared front
+  // carries the ▼ back the import stores (the battle wears no family).
+  if (!front.backFace || body?.role !== "front" || (body.layout !== "modal" && !body.battle)) return front;
   const backBody = legacyBack ? null : bodyFor(body.layout, "back", front.backFace.card_type ?? null);
   return {
     ...front,

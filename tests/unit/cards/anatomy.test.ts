@@ -306,6 +306,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // The Nyx Constellation frame (owner 2026-10-13): the Nyx crown band, its arms faded.
       "nyx",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
+      // The battle (TODO 5.5): the switch is the card's and its ▼ back draws
+      // it — the battle front itself draws none.
+      "battle",
     ].includes(t),
   );
   /** …and the pair masters (the textless promo pair draws none: a pair
@@ -321,8 +324,10 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       OLD_FRAME_PAIRED.includes(t) ||
       // (The station frame, TODO 4.27a, draws the crown and no pair masters:
       // its entries declare no `twoColorMasters` — and neither does the Nyx
-      // Constellation frame, whose two-colour card is the gold master.)
-      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx"),
+      // Constellation frame, whose two-colour card is the gold master — nor
+      // the battle, TODO 5.5: its back draws the crown through the card's
+      // switch, but its two-colour back wears the gold master for now.)
+      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "battle"),
   );
 
   it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless, extended-art and snow PROFILES entries — never a profile that spreads them", () => {
