@@ -189,6 +189,22 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
     why:
       "The artist line (letter-spaced small capitals; `Illus. …` on the 1993 frame) is WIDER in the preview at 750 px: it ends 2 px further right on most cases and 3 px on the 1993 frame (and on the arch token on macOS). At HD the same line is NARROWER in the preview by about 6 px — within the limits there, but the worst tile of most HD cases (56.9). Both renderers start the line at the same x; they disagree about its letter-spacing or advances. Not traced. The short battle's line — the same small capitals turned a quarter turn down the left border (FrameProfile.footerTurn) — sits 3 px further right in the preview at 750 px on CI's runner (2 on macOS; 0 across and 1–2 down at HD); measured 2026-10-16 the same on EVERY short battle, the one-faced ones (battle/w, u and r/battle-short, main's look) as on battle/w/battle-short@back — the back of its own (TODO 5.5 (a)) moves nothing in that band (darwin: footer 2,0 · 2.3 on all four at 750, 2,-1 · 1.8 at HD).",
   },
+  // --- TODO 4.9d: the first parity case with the collector line's mark on
+  // LINE 1 (no plate). Not introduced by 4.9d: m15's own no-plate collector
+  // card (m15/u/instant-short@collector-noplate, 4.9b, no parity pick of its
+  // own) measures the same +3 / −1 at 750 and +2 / −2 at HD (darwin,
+  // 2026-10-15). --------------------------------------------------------------
+  {
+    name: "750-collector-mark-line-1",
+    size: "750",
+    cases: /^m15borderless\/b\/instant-short@stamp-collector-2015$/,
+    regions: ["stat"],
+    metric: "dx",
+    min: 3,
+    max: 4,
+    why:
+      "The © slot's pipglyph.com mark on line 1 (a card that draws no plate: its right end at 93.54 %W, inside the P/T slot's region) is NARROWER in the preview at 750 px: the right end agrees, the star starts 3 px further right. At HD the region measures +2 across, within the limit. It is the mark as 4.9b draws it on every collector card without a plate — m15's no-plate instant measures the same +3 — seen here because this is the first parity case whose line-1 mark falls inside a scored region. A width difference of the 750 px bake's mark text, like the other 750-only entries; not traced to a constant.",
+  },
   // --- TODO 3.37: seen by #514, measured again 2026-10-13 (after #523's
   // large pips; the numbers did not move) and listed with their case. -------
   {

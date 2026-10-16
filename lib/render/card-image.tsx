@@ -635,7 +635,9 @@ function CardImage({
     loyalty: showLoyalty,
     defense: showDefense,
     secondFacePt: Boolean(layout.secondFace?.pt && card.backFace && (card.backFace.power || card.backFace.toughness)),
-    stamp: holoStamp?.keepOut ?? null,
+    // The arch's shape where the frame declares one (the borderless
+    // frames, TODO 4.9d), else its one rect — the preview's twin.
+    stamp: holoStamp?.keepOutShape ?? holoStamp?.keepOut ?? null,
     // The modal strip (5.1b): the lines keep out of the painted tab.
     strip: layout.flipside?.keepOut ?? null,
     // The transform front's reverse P/T digits (5.1d): the lines wrap round

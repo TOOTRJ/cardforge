@@ -137,7 +137,15 @@ describe("bake path = preview path", () => {
                 ? "m15pwholostamp"
                 : ub
                   ? "m15ubholostamp"
-                  : "m15holostamp"
+                  : // The borderless frames (4.9d): their own lifted arch,
+                    // the land's and the station's over their own masters.
+                    template === "m15borderless" || template === "m15borderlessartifact"
+                    ? "m15borderlessholostamp"
+                    : template === "m15borderlessland"
+                      ? "m15borderlesslandholostamp"
+                      : template === "m15borderlessstation"
+                        ? "m15borderlessstationholostamp"
+                        : "m15holostamp"
               : template === "extendedart" || template === "extendedartland" || template === "extendedartstation"
                 ? "extendedcrown"
                 : ub
@@ -185,7 +193,10 @@ describe("bake path = preview path", () => {
     // …and the Universes Beyond triangle's 9 bar keys + 10 pairs on its
     // three entries (4.25); and the Spacecraft's extended-art dress's (4.27a
     // step 2: M15's bottom border) — eleven.
-    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3);
+    // …and the borderless family's own pieces (4.9d): 8 bar keys + 10
+    // pairs on m15borderless and its artifact dress, the land's 7 + 10, the
+    // station's 7.
+    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7);
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

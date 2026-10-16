@@ -212,8 +212,14 @@ describe("the creator form after the pick (CardCreatorForm)", () => {
     expect(style()).toMatchObject({ template: "m15borderlessland", twoColor: true });
     expect(colors()).toEqual(pair);
     expect(master()).toBe(pairMaster);
-    // What a save stores: the frame, its finish and the one switch it draws.
-    expect(newCardFrameStyle(style(), "land")).toEqual({ template: "m15borderlessland", finish: "regular", twoColor: true });
+    // What a save stores: the frame, its finish and the switches it draws —
+    // the pair, and since 4.9d the printing's collector line and stamp
+    // (imports follow the printing).
+    const saved = newCardFrameStyle(style(), "land") as Record<string, unknown>;
+    expect(Object.keys(saved).sort()).toEqual(["collector", "finish", "stamp", "template", "twoColor"]);
+    expect(saved).toMatchObject({ template: "m15borderlessland", finish: "regular", twoColor: true });
+    expect(["2015", "2023"]).toContain(saved.collector);
+    expect(["oval", "none"]).toContain(saved.stamp);
   });
 
   it("a mono land keeps its colour; the default landing (no pick) stays the bordered land frame with its pair", async () => {
@@ -237,7 +243,7 @@ describe("the creator form after the pick (CardCreatorForm)", () => {
     expect(colors()).toEqual(["white", "blue"]);
   });
 
-  it("offers the two-colour switch there and nothing the frame doesn't draw (no crown, collector line or stamp)", async () => {
+  it("offers the two-colour switch there and nothing the frame doesn't draw (no crown; the collector line and the stamp since 4.9d)", async () => {
     renderForm();
     await importKey("mid-281", { frameChoice: { template: "m15borderlessland" } });
     const switches = new Set<string>();
@@ -249,6 +255,7 @@ describe("the creator form after the pick (CardCreatorForm)", () => {
       });
       for (const el of screen.queryAllByRole("switch")) switches.add(`${el.getAttribute("aria-label")}=${el.getAttribute("aria-checked")}`);
     }
-    expect([...switches]).toEqual(["Two-colour frame=true"]);
+    // (MID #281 names no stamp: its import writes "none", the switch off.)
+    expect([...switches]).toEqual(["Two-colour frame=true", "Collector line=true", "Foil printing (★)=false", "Holofoil stamp=false"]);
   });
 });

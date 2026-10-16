@@ -66,6 +66,7 @@ import {
   holoStampToneOf,
   holoStampWanted,
   isHoloStampSwitch,
+  stampValueForFrame,
   type HoloStampArt,
   type HoloStampShape,
   type HoloStampTone,
@@ -345,7 +346,24 @@ export function normalizeAnatomy<T extends FrameAnatomyStyle>(
       delete out[key];
     }
   }
+  // A stamp naming the other shape on a frame that draws only its own (a
+  // triangle printing on a borderless frame, owner Round 70): "none".
+  if ("stamp" in out) {
+    const stamp = stampForTemplate(out.stamp, template);
+    if (stamp !== out.stamp) out = { ...out, stamp } as T;
+  }
   return out;
+}
+
+/**
+ * The stamp value a card keeps on `template` (owner Round 70): "none" for a
+ * shape the frame does not draw on a frame that draws only its own (a
+ * Universes Beyond printing's "triangle" on a borderless frame — the import
+ * and the "Use Borderless" offer), else the value as given.
+ */
+export function stampForTemplate<T>(stamp: T, template: FrameTemplate | string | null | undefined): T | "none" {
+  const slot = (getFrameProfile(template ?? undefined).overlays ?? []).find((s) => s.anatomy === "holoStamp");
+  return slot && slot.anatomy === "holoStamp" ? stampValueForFrame(stamp, slot.stamp) : stamp;
 }
 
 /**
@@ -628,6 +646,13 @@ export type HoloStampFacts = Pick<AnatomyFacts, "cardType"> & {
    *  from the slot, never by a caller ("auto" stamps every rarity on a
    *  triangle frame: lib/cards/holo-stamp.ts holoStampWanted). */
   shape?: HoloStampShape | null;
+  /** The frame draws only its own shape (the borderless frames, TODO 4.9d)
+   *  — set by resolveFrameOverlays from the slot, never by a caller. */
+  ownShapeOnly?: boolean | null;
+};
+
+/**
+ * The overlays one card face| null;
 };
 
 /**
@@ -687,7 +712,7 @@ export function resolveFrameOverlays(
     } else {
       const wanted =
         slot.anatomy === "holoStamp"
-          ? overlayWanted(slot.anatomy, style, { ...facts, shape: slot.stamp.shape })
+          ? overlayWanted(slot.anatomy, style, { ...facts, shape: slot.stamp.shape, ownShapeOnly: slot.stamp.ownShapeOnly === true })
           : overlayWanted(slot.anatomy, style, facts, slot.anatomy === "crown" && slot.tokens === true);
       if (!wanted) continue;
       const look = resolveTwoColor(profile, style, facts);
@@ -749,8 +774,12 @@ export type ResolvedHoloStamp = {
   /** Where the art bitmap is stretched (the oval and its black margin),
    *  drawn above the sheens — outside the foil mask. */
   artRect: Rect;
-  /** The rules keep-out over the arch, for DrawnStats.stamp. */
+  /** The rules keep-out over the arch, for DrawnStats.stamp (its bounds,
+   *  where the slot declares a shape — the station layout reads this). */
   keepOut: Rect;
+  /** The keep-out as the arch's shape (the borderless frames, TODO 4.9d):
+   *  the rules boxes read it in place of `keepOut` when set. */
+  keepOutShape?: readonly Rect[];
 };
 
 /**
@@ -781,6 +810,7 @@ export function resolveHoloStamp(
     oval: art.oval,
     artRect: holoStampArtRect(art.oval),
     keepOut: art.keepOut,
+    ...(art.keepOutShape ? { keepOutShape: art.keepOutShape } : {}),
   };
 }
 

@@ -59,7 +59,7 @@ export type DrawnStats = {
    *  M15_HOLO_STAMP_KEEP_OUT: x 655–845 px from the arch top at 1905 past
    *  the box's bottom). Glyph-level like the badges — the rules rect never
    *  shrinks, so a short block never moves. */
-  stamp?: Rect | null;
+  stamp?: Rect | readonly Rect[] | null;
   /** The modal flipside strip's painted rect (TODO 5.1b,
    *  FlipsideSlots.keepOut), or null / absent on every other body: the
    *  strip is cut into the text box's paper, so the lines keep out of it
@@ -94,7 +94,9 @@ export function drawnFloats(show: DrawnStats): Rect[] {
 export function drawnStatInk(layout: FrameProfile, show: DrawnStats, aspect: number): Rect[] {
   const out = statKeepOuts(layout, show);
   // The holofoil stamp's arch (4.9c), beside the badges, only while drawn.
-  if (show.stamp) out.push(show.stamp);
+  // (A list on the borderless frames, TODO 4.9d: the arch's shape as
+  // columns, ResolvedHoloStamp.keepOutShape.)
+  if (show.stamp) out.push(...(Array.isArray(show.stamp) ? show.stamp : [show.stamp as Rect]));
   // The modal strip (5.1b): painted on every modal face, text or not.
   if (show.strip) out.push(show.strip);
   const face = layout.secondFace;

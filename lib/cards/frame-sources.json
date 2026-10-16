@@ -2289,6 +2289,237 @@
       "colourless artifact crown = CC's 'Artifact Legend Crown' (m15CrownAFloating.png) on the artifact frame; the coloured and pair masters are the same bytes as m15borderless's"
     ]
   },
+  "m15borderlessholostamp": {
+    "source": "pipglyph",
+    "converter": "scripts/build-borderless-stamp.mjs",
+    "derivedFrom": "the published borderless masters named per key below (Card Conjurer imports: see \"m15borderless\", \"m15borderlessartifact\", \"m15borderlessland\", and PipGlyph's \"m15borderlessstation\")",
+    "output": "180x52 at 660,1896 of the 1500x2100 card (1:1 at HD), webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "lift": "the master's own column, read 2-px samples of ARCH_LIFT_PX rows further down (|x - 750| = 0, 2, 4, …; linear between): 32.6 32.6 32.6 32.5 32.5 32.4 32.4 32.3 32 31.7 31.3 30.9 30.6 30.4 30.1 29.6 29.1 28.5 27.8 27.2 26.6 25.9 25.1 24.3 23.5 22.6 21.7 20.8 19.7 18.6 17.5 16.4 15.3 14.1 12.7 11.2 9.7 8.2 6.6 4.8 3 1.4 0.4 0.1 0",
+      "layer": "per pixel, the layer that over the master gives the lifted master (premultiplied): alpha (want − under) / (1 − under), clear where the master already shows it; rows from the black bar (1948) down are the master's black"
+    },
+    "colors": {
+      "w": [
+        "m15borderless/w.png (published, sha256 531155a88e6a): its pinline lifted along the printed arch; worst 3.75 levels from the lifted master over four flat arts",
+        "drawn over m15borderless/w-legendary.png (sha256 640a7774d288; within 0 levels) too",
+        "drawn over m15borderlessartifact/w.png (sha256 531155a88e6a; within 0 levels) too",
+        "drawn over m15borderlessartifact/w-legendary.png (sha256 640a7774d288; within 0 levels) too"
+      ],
+      "u": [
+        "m15borderless/u.png (published, sha256 87c400f4d071): its pinline lifted along the printed arch; worst 4.03 levels from the lifted master over four flat arts",
+        "drawn over m15borderless/u-legendary.png (sha256 0cfb8847c9d5; within 0 levels) too",
+        "drawn over m15borderlessartifact/u.png (sha256 87c400f4d071; within 0 levels) too",
+        "drawn over m15borderlessartifact/u-legendary.png (sha256 0cfb8847c9d5; within 0 levels) too"
+      ],
+      "b": [
+        "m15borderless/b.png (published, sha256 c573d23b57ee): its pinline lifted along the printed arch; worst 3.75 levels from the lifted master over four flat arts",
+        "drawn over m15borderless/b-legendary.png (sha256 73094e5458ba; within 0 levels) too",
+        "drawn over m15borderlessartifact/b.png (sha256 c573d23b57ee; within 0 levels) too",
+        "drawn over m15borderlessartifact/b-legendary.png (sha256 73094e5458ba; within 0 levels) too"
+      ],
+      "r": [
+        "m15borderless/r.png (published, sha256 571db4dcff8b): its pinline lifted along the printed arch; worst 3.75 levels from the lifted master over four flat arts",
+        "drawn over m15borderless/r-legendary.png (sha256 f6df4dde434a; within 0 levels) too",
+        "drawn over m15borderlessartifact/r.png (sha256 571db4dcff8b; within 0 levels) too",
+        "drawn over m15borderlessartifact/r-legendary.png (sha256 f6df4dde434a; within 0 levels) too"
+      ],
+      "g": [
+        "m15borderless/g.png (published, sha256 1a9b6b421832): its pinline lifted along the printed arch; worst 4.07 levels from the lifted master over four flat arts",
+        "drawn over m15borderless/g-legendary.png (sha256 638f8af926eb; within 0 levels) too",
+        "drawn over m15borderlessartifact/g.png (sha256 1a9b6b421832; within 0 levels) too",
+        "drawn over m15borderlessartifact/g-legendary.png (sha256 638f8af926eb; within 0 levels) too"
+      ],
+      "m": [
+        "m15borderless/m.png (published, sha256 f82882504e2b): its pinline lifted along the printed arch; worst 3.75 levels from the lifted master over four flat arts",
+        "drawn over m15borderless/m-legendary.png (sha256 9682c98077a3; within 0 levels) too",
+        "drawn over m15borderlessartifact/m.png (sha256 f82882504e2b; within 0 levels) too",
+        "drawn over m15borderlessartifact/m-legendary.png (sha256 9682c98077a3; within 0 levels) too"
+      ],
+      "c": [
+        "m15borderless/c.png (published, sha256 253ec4f70feb): its pinline lifted along the printed arch; worst 0.53 levels from the lifted master over four flat arts",
+        "drawn over m15borderless/c-legendary.png (sha256 35bf313659c2; within 0 levels) too"
+      ],
+      "a": [
+        "m15borderlessartifact/c.png (published, sha256 83d24afa8ea2): its pinline lifted along the printed arch; worst 3.75 levels from the lifted master over four flat arts",
+        "drawn over m15borderlessartifact/c-legendary.png (sha256 c4d72397d6ce; within 0 levels) too"
+      ],
+      "wu": [
+        "m15borderless/wu.png (published, sha256 95aa39c2c561): its pinline lifted along the printed arch; worst 3.75 levels from the lifted master over four flat arts",
+        "drawn over m15borderless/wu-legendary.png (sha256 66e072fc623a; within 0 levels) too",
+        "drawn over m15borderless/wu-h.png (sha256 5bf62461724b; within 0 levels) too",
+        "drawn over m15borderless/wu-h-legendary.png (sha256 0630f3f06a3a; within 0 levels) too",
+        "drawn over m15borderlessartifact/wu.png (sha256 95aa39c2c561; within 0 levels) too",
+        "drawn over m15borderlessartifact/wu-legendary.png (sha256 66e072fc623a; within 0 levels) too"
+      ],
+      "wb": [
+        "m15borderless/wb.png (published, sha256 744afd438bf6): its pinline lifted along the printed arch; worst 3.75 levels from the lifted master over four flat arts",
+        "drawn over m15borderless/wb-legendary.png (sha256 5cbbdec540db; within 0 levels) too",
+        "drawn over m15borderless/wb-h.png (sha256 674b7804a73b; within 0 levels) too",
+        "drawn over m15borderless/wb-h-legendary.png (sha256 db4cbe1f151e; within 0 levels) too",
+        "drawn over m15borderlessartifact/wb.png (sha256 744afd438bf6; within 0 levels) too",
+        "drawn over m15borderlessartifact/wb-legendary.png (sha256 5cbbdec540db; within 0 levels) too"
+      ],
+      "ub": [
+        "m15borderless/ub.png (published, sha256 dac2ed38904e): its pinline lifted along the printed arch; worst 3.89 levels from the lifted master over four flat arts",
+        "drawn over m15borderless/ub-legendary.png (sha256 252fabc99094; within 0 levels) too",
+        "drawn over m15borderless/ub-h.png (sha256 1a8bd4c99c21; within 0 levels) too",
+        "drawn over m15borderless/ub-h-legendary.png (sha256 91b835295037; within 0 levels) too",
+        "drawn over m15borderlessartifact/ub.png (sha256 dac2ed38904e; within 0 levels) too",
+        "drawn over m15borderlessartifact/ub-legendary.png (sha256 252fabc99094; within 0 levels) too"
+      ],
+      "ur": [
+        "m15borderless/ur.png (published, sha256 df5079258896): its pinline lifted along the printed arch; worst 3.75 levels from the lifted master over four flat arts",
+        "drawn over m15borderless/ur-legendary.png (sha256 3e9517d6ac70; within 0 levels) too",
+        "drawn over m15borderless/ur-h.png (sha256 3b9f72210bb9; within 0 levels) too",
+        "drawn over m15borderless/ur-h-legendary.png (sha256 43589aa410dc; within 0 levels) too",
+        "drawn over m15borderlessartifact/ur.png (sha256 df5079258896; within 0 levels) too",
+        "drawn over m15borderlessartifact/ur-legendary.png (sha256 3e9517d6ac70; within 0 levels) too"
+      ],
+      "br": [
+        "m15borderless/br.png (published, sha256 e43b96f257d2): its pinline lifted along the printed arch; worst 3.75 levels from the lifted master over four flat arts",
+        "drawn over m15borderless/br-legendary.png (sha256 4300d58d889f; within 0 levels) too",
+        "drawn over m15borderless/br-h.png (sha256 04d4d34b2d1c; within 0 levels) too",
+        "drawn over m15borderless/br-h-legendary.png (sha256 e3fee72eea54; within 0 levels) too",
+        "drawn over m15borderlessartifact/br.png (sha256 e43b96f257d2; within 0 levels) too",
+        "drawn over m15borderlessartifact/br-legendary.png (sha256 4300d58d889f; within 0 levels) too"
+      ],
+      "bg": [
+        "m15borderless/bg.png (published, sha256 fcb5cc668aed): its pinline lifted along the printed arch; worst 3.91 levels from the lifted master over four flat arts",
+        "drawn over m15borderless/bg-legendary.png (sha256 37dc0b3b57b9; within 0 levels) too",
+        "drawn over m15borderless/bg-h.png (sha256 058afa935c52; within 0 levels) too",
+        "drawn over m15borderless/bg-h-legendary.png (sha256 45000086da1e; within 0 levels) too",
+        "drawn over m15borderlessartifact/bg.png (sha256 fcb5cc668aed; within 0 levels) too",
+        "drawn over m15borderlessartifact/bg-legendary.png (sha256 37dc0b3b57b9; within 0 levels) too"
+      ],
+      "rg": [
+        "m15borderless/rg.png (published, sha256 905ced29fb27): its pinline lifted along the printed arch; worst 3.75 levels from the lifted master over four flat arts",
+        "drawn over m15borderless/rg-legendary.png (sha256 0f46d7f1af25; within 0 levels) too",
+        "drawn over m15borderless/rg-h.png (sha256 e6229da7b557; within 0 levels) too",
+        "drawn over m15borderless/rg-h-legendary.png (sha256 903cc1377c33; within 0 levels) too",
+        "drawn over m15borderlessartifact/rg.png (sha256 905ced29fb27; within 0 levels) too",
+        "drawn over m15borderlessartifact/rg-legendary.png (sha256 0f46d7f1af25; within 0 levels) too"
+      ],
+      "rw": [
+        "m15borderless/rw.png (published, sha256 472fe278e3bc): its pinline lifted along the printed arch; worst 3.75 levels from the lifted master over four flat arts",
+        "drawn over m15borderless/rw-legendary.png (sha256 269c713353df; within 0 levels) too",
+        "drawn over m15borderless/rw-h.png (sha256 9e7f4af2df97; within 0 levels) too",
+        "drawn over m15borderless/rw-h-legendary.png (sha256 c26fbd3bebfa; within 0 levels) too",
+        "drawn over m15borderlessartifact/rw.png (sha256 472fe278e3bc; within 0 levels) too",
+        "drawn over m15borderlessartifact/rw-legendary.png (sha256 269c713353df; within 0 levels) too"
+      ],
+      "gw": [
+        "m15borderless/gw.png (published, sha256 9f22312597c8): its pinline lifted along the printed arch; worst 3.75 levels from the lifted master over four flat arts",
+        "drawn over m15borderless/gw-legendary.png (sha256 af5e00d7bcba; within 0 levels) too",
+        "drawn over m15borderless/gw-h.png (sha256 c49ad7574e00; within 0 levels) too",
+        "drawn over m15borderless/gw-h-legendary.png (sha256 c043f8c8da47; within 0 levels) too",
+        "drawn over m15borderlessartifact/gw.png (sha256 9f22312597c8; within 0 levels) too",
+        "drawn over m15borderlessartifact/gw-legendary.png (sha256 af5e00d7bcba; within 0 levels) too"
+      ],
+      "gu": [
+        "m15borderless/gu.png (published, sha256 6bdae4a713ad): its pinline lifted along the printed arch; worst 4.07 levels from the lifted master over four flat arts",
+        "drawn over m15borderless/gu-legendary.png (sha256 d37cf90c2bf5; within 0 levels) too",
+        "drawn over m15borderless/gu-h.png (sha256 f8629494941d; within 0 levels) too",
+        "drawn over m15borderless/gu-h-legendary.png (sha256 b9b8c2b363eb; within 0 levels) too",
+        "drawn over m15borderlessartifact/gu.png (sha256 6bdae4a713ad; within 0 levels) too",
+        "drawn over m15borderlessartifact/gu-legendary.png (sha256 d37cf90c2bf5; within 0 levels) too"
+      ]
+    },
+    "sourceFiles": [
+      "m15borderless/b-legendary.png",
+      "m15borderless/b.png",
+      "m15borderless/bg-h-legendary.png",
+      "m15borderless/bg-h.png",
+      "m15borderless/bg-legendary.png",
+      "m15borderless/bg.png",
+      "m15borderless/br-h-legendary.png",
+      "m15borderless/br-h.png",
+      "m15borderless/br-legendary.png",
+      "m15borderless/br.png",
+      "m15borderless/c-legendary.png",
+      "m15borderless/c.png",
+      "m15borderless/g-legendary.png",
+      "m15borderless/g.png",
+      "m15borderless/gu-h-legendary.png",
+      "m15borderless/gu-h.png",
+      "m15borderless/gu-legendary.png",
+      "m15borderless/gu.png",
+      "m15borderless/gw-h-legendary.png",
+      "m15borderless/gw-h.png",
+      "m15borderless/gw-legendary.png",
+      "m15borderless/gw.png",
+      "m15borderless/m-legendary.png",
+      "m15borderless/m.png",
+      "m15borderless/r-legendary.png",
+      "m15borderless/r.png",
+      "m15borderless/rg-h-legendary.png",
+      "m15borderless/rg-h.png",
+      "m15borderless/rg-legendary.png",
+      "m15borderless/rg.png",
+      "m15borderless/rw-h-legendary.png",
+      "m15borderless/rw-h.png",
+      "m15borderless/rw-legendary.png",
+      "m15borderless/rw.png",
+      "m15borderless/u-legendary.png",
+      "m15borderless/u.png",
+      "m15borderless/ub-h-legendary.png",
+      "m15borderless/ub-h.png",
+      "m15borderless/ub-legendary.png",
+      "m15borderless/ub.png",
+      "m15borderless/ur-h-legendary.png",
+      "m15borderless/ur-h.png",
+      "m15borderless/ur-legendary.png",
+      "m15borderless/ur.png",
+      "m15borderless/w-legendary.png",
+      "m15borderless/w.png",
+      "m15borderless/wb-h-legendary.png",
+      "m15borderless/wb-h.png",
+      "m15borderless/wb-legendary.png",
+      "m15borderless/wb.png",
+      "m15borderless/wu-h-legendary.png",
+      "m15borderless/wu-h.png",
+      "m15borderless/wu-legendary.png",
+      "m15borderless/wu.png",
+      "m15borderlessartifact/b-legendary.png",
+      "m15borderlessartifact/b.png",
+      "m15borderlessartifact/bg-legendary.png",
+      "m15borderlessartifact/bg.png",
+      "m15borderlessartifact/br-legendary.png",
+      "m15borderlessartifact/br.png",
+      "m15borderlessartifact/c-legendary.png",
+      "m15borderlessartifact/c.png",
+      "m15borderlessartifact/g-legendary.png",
+      "m15borderlessartifact/g.png",
+      "m15borderlessartifact/gu-legendary.png",
+      "m15borderlessartifact/gu.png",
+      "m15borderlessartifact/gw-legendary.png",
+      "m15borderlessartifact/gw.png",
+      "m15borderlessartifact/m-legendary.png",
+      "m15borderlessartifact/m.png",
+      "m15borderlessartifact/r-legendary.png",
+      "m15borderlessartifact/r.png",
+      "m15borderlessartifact/rg-legendary.png",
+      "m15borderlessartifact/rg.png",
+      "m15borderlessartifact/rw-legendary.png",
+      "m15borderlessartifact/rw.png",
+      "m15borderlessartifact/u-legendary.png",
+      "m15borderlessartifact/u.png",
+      "m15borderlessartifact/ub-legendary.png",
+      "m15borderlessartifact/ub.png",
+      "m15borderlessartifact/ur-legendary.png",
+      "m15borderlessartifact/ur.png",
+      "m15borderlessartifact/w-legendary.png",
+      "m15borderlessartifact/w.png",
+      "m15borderlessartifact/wb-legendary.png",
+      "m15borderlessartifact/wb.png",
+      "m15borderlessartifact/wu-legendary.png",
+      "m15borderlessartifact/wu.png"
+    ],
+    "notes": [
+      "PipGlyph's own derivation (TODO 4.9d, owner Round 66, 2026-10-14): the holofoil stamp's notch on the borderless frames — the text box's bottom pinline arched over the oval as every stamped borderless print draws it. Card Conjurer's borderless pack has no stamp piece; no CC piece and no scan is read by the build — every painted pixel is the published master's own bar, moved up.",
+      "The arch is scripts/lib/borderless-stamp.mjs ARCH_LIFT_PX: fourteen stamped borderless printings measured 2026-10-15 (the rim's lower edge 1916.0 px at the centre against the straight bar's 1948.6, rising from x 666 to x 834).",
+      "The oval is drawn by both renderers over the black (our own art, lib/cards/holo-stamp-art.ts) at M15_HOLO_STAMP_OVAL: the physical prints put it where the bordered frame's sits. Nothing of a hologram is in a piece."
+    ]
+  },
   "m15borderlessland": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
@@ -2420,6 +2651,93 @@
       "m = the three-and-more-colour land (gold bars, box and pinline: CMM #659, SNC #291); two-colour lands print grey L bars with a split pinline and box — the pair masters below",
       "two-colour pair masters <pair>.png (TODO 4.56): the same function with the grey 'Land Frame' L for the frame (its title bar, the type bar moved from it, the bottom bar and fins) and the pair's two letters for the box and the pinline — the box structure re-tinted to each colour's title-bar tint and the two colours' frames through the pack's Pinline mask, each pair blended across ONE UNTILTED ramp 39→61 %W by a premultiplied lerp (scripts/lib/pair-ramp.mjs), first canonical colour on the left; measured on the 119 two-colour borderless lands that print the tinted look (MID #281, OTJ #304, the RVR shocks, the MKM surveil lands, CLU …; Scryfall 2026-10-06): the rings read 41.3 / 50.2 / 58.9 %W and the box's top band 40.9 / 49.8 / 59.0 at 10 / 50 / 90 %, the bars the colourless land's grey",
       "no P/T plates of its own: a land creature prints on m15borderless's plates (the profile's plateAssetPathTemplate)"
+    ]
+  },
+  "m15borderlesslandholostamp": {
+    "source": "pipglyph",
+    "converter": "scripts/build-borderless-stamp.mjs",
+    "derivedFrom": "the published borderless masters named per key below (Card Conjurer imports: see \"m15borderless\", \"m15borderlessartifact\", \"m15borderlessland\", and PipGlyph's \"m15borderlessstation\")",
+    "output": "180x52 at 660,1896 of the 1500x2100 card (1:1 at HD), webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "lift": "the master's own column, read 2-px samples of ARCH_LIFT_PX rows further down (|x - 750| = 0, 2, 4, …; linear between): 32.6 32.6 32.6 32.5 32.5 32.4 32.4 32.3 32 31.7 31.3 30.9 30.6 30.4 30.1 29.6 29.1 28.5 27.8 27.2 26.6 25.9 25.1 24.3 23.5 22.6 21.7 20.8 19.7 18.6 17.5 16.4 15.3 14.1 12.7 11.2 9.7 8.2 6.6 4.8 3 1.4 0.4 0.1 0",
+      "layer": "per pixel, the layer that over the master gives the lifted master (premultiplied): alpha (want − under) / (1 − under), clear where the master already shows it; rows from the black bar (1948) down are the master's black"
+    },
+    "colors": {
+      "w": [
+        "m15borderlessland/w.png (published, sha256 7300c1ebda5f): its pinline lifted along the printed arch; worst 0.59 levels from the lifted master over four flat arts"
+      ],
+      "u": [
+        "m15borderlessland/u.png (published, sha256 0557e5bd94f3): its pinline lifted along the printed arch; worst 0.53 levels from the lifted master over four flat arts"
+      ],
+      "b": [
+        "m15borderlessland/b.png (published, sha256 b5e11ca0c6e1): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts"
+      ],
+      "r": [
+        "m15borderlessland/r.png (published, sha256 8f6925840a60): its pinline lifted along the printed arch; worst 0.54 levels from the lifted master over four flat arts"
+      ],
+      "g": [
+        "m15borderlessland/g.png (published, sha256 ecd4ee669685): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts"
+      ],
+      "m": [
+        "m15borderlessland/m.png (published, sha256 0049cdc46fb5): its pinline lifted along the printed arch; worst 0.72 levels from the lifted master over four flat arts"
+      ],
+      "c": [
+        "m15borderlessland/c.png (published, sha256 2b1d593aff06): its pinline lifted along the printed arch; worst 0.52 levels from the lifted master over four flat arts"
+      ],
+      "wu": [
+        "m15borderlessland/wu.png (published, sha256 e98cb903fe76): its pinline lifted along the printed arch; worst 0.63 levels from the lifted master over four flat arts"
+      ],
+      "wb": [
+        "m15borderlessland/wb.png (published, sha256 47cb4625bb65): its pinline lifted along the printed arch; worst 0.60 levels from the lifted master over four flat arts"
+      ],
+      "ub": [
+        "m15borderlessland/ub.png (published, sha256 6a2df66620cf): its pinline lifted along the printed arch; worst 0.57 levels from the lifted master over four flat arts"
+      ],
+      "ur": [
+        "m15borderlessland/ur.png (published, sha256 e3bdb867d332): its pinline lifted along the printed arch; worst 0.54 levels from the lifted master over four flat arts"
+      ],
+      "br": [
+        "m15borderlessland/br.png (published, sha256 4ae1b2f6c524): its pinline lifted along the printed arch; worst 0.65 levels from the lifted master over four flat arts"
+      ],
+      "bg": [
+        "m15borderlessland/bg.png (published, sha256 e5bea5609008): its pinline lifted along the printed arch; worst 0.54 levels from the lifted master over four flat arts"
+      ],
+      "rg": [
+        "m15borderlessland/rg.png (published, sha256 4d645468bf05): its pinline lifted along the printed arch; worst 0.57 levels from the lifted master over four flat arts"
+      ],
+      "rw": [
+        "m15borderlessland/rw.png (published, sha256 dca4d21a5932): its pinline lifted along the printed arch; worst 0.65 levels from the lifted master over four flat arts"
+      ],
+      "gw": [
+        "m15borderlessland/gw.png (published, sha256 c665db402e15): its pinline lifted along the printed arch; worst 0.63 levels from the lifted master over four flat arts"
+      ],
+      "gu": [
+        "m15borderlessland/gu.png (published, sha256 69a901e2250c): its pinline lifted along the printed arch; worst 0.65 levels from the lifted master over four flat arts"
+      ]
+    },
+    "sourceFiles": [
+      "m15borderlessland/b.png",
+      "m15borderlessland/bg.png",
+      "m15borderlessland/br.png",
+      "m15borderlessland/c.png",
+      "m15borderlessland/g.png",
+      "m15borderlessland/gu.png",
+      "m15borderlessland/gw.png",
+      "m15borderlessland/m.png",
+      "m15borderlessland/r.png",
+      "m15borderlessland/rg.png",
+      "m15borderlessland/rw.png",
+      "m15borderlessland/u.png",
+      "m15borderlessland/ub.png",
+      "m15borderlessland/ur.png",
+      "m15borderlessland/w.png",
+      "m15borderlessland/wb.png",
+      "m15borderlessland/wu.png"
+    ],
+    "notes": [
+      "PipGlyph's own derivation (TODO 4.9d, owner Round 66, 2026-10-14): the holofoil stamp's notch on the borderless frames — the text box's bottom pinline arched over the oval as every stamped borderless print draws it. Card Conjurer's borderless pack has no stamp piece; no CC piece and no scan is read by the build — every painted pixel is the published master's own bar, moved up.",
+      "The arch is scripts/lib/borderless-stamp.mjs ARCH_LIFT_PX: fourteen stamped borderless printings measured 2026-10-15 (the rim's lower edge 1916.0 px at the centre against the straight bar's 1948.6, rising from x 666 to x 834).",
+      "The oval is drawn by both renderers over the black (our own art, lib/cards/holo-stamp-art.ts) at M15_HOLO_STAMP_OVAL: the physical prints put it where the bordered frame's sits. Nothing of a hologram is in a piece."
     ]
   },
   "m15borderlesspw": {
@@ -2641,6 +2959,67 @@
       "The numbers are scripts/lib/station-2025.mjs (30 printed station cards measured 2026-10-13; the dresses' 15 printings: scripts/lib/station-dresses-2025.mjs); no scan is read by the build.",
       "Tier bands, badges and the P/T plate are DRAWN by both renderers (lib/cards/station.ts, lib/cards/station-art.ts) — not in the master.",
       "The borderless dress (TODO 4.27a step 2; EOC #1 / #2): the published m15borderlessartifact masters whole — no field to cut, bars floating on the art, the black bottom bar and fins, the crowned twins — with their dark translucent text-box interior (the pixels inside 110..1390 x 1314..1937 painted at alpha < 250) replaced by m15station/<key>'s pixels there: the station box, M15's paper at x 0.68."
+    ]
+  },
+  "m15borderlessstationholostamp": {
+    "source": "pipglyph",
+    "converter": "scripts/build-borderless-stamp.mjs",
+    "derivedFrom": "the published borderless masters named per key below (Card Conjurer imports: see \"m15borderless\", \"m15borderlessartifact\", \"m15borderlessland\", and PipGlyph's \"m15borderlessstation\")",
+    "output": "180x52 at 660,1896 of the 1500x2100 card (1:1 at HD), webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "lift": "the master's own column, read 2-px samples of ARCH_LIFT_PX rows further down (|x - 750| = 0, 2, 4, …; linear between): 32.6 32.6 32.6 32.5 32.5 32.4 32.4 32.3 32 31.7 31.3 30.9 30.6 30.4 30.1 29.6 29.1 28.5 27.8 27.2 26.6 25.9 25.1 24.3 23.5 22.6 21.7 20.8 19.7 18.6 17.5 16.4 15.3 14.1 12.7 11.2 9.7 8.2 6.6 4.8 3 1.4 0.4 0.1 0",
+      "layer": "per pixel, the layer that over the master gives the lifted master (premultiplied): alpha (want − under) / (1 − under), clear where the master already shows it; rows from the black bar (1948) down are the master's black"
+    },
+    "colors": {
+      "w": [
+        "m15borderlessstation/w.png (published, sha256 6bbe17383fac): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over m15borderlessstation/w-legendary.png (sha256 08d3338aff57; within 0 levels) too"
+      ],
+      "u": [
+        "m15borderlessstation/u.png (published, sha256 d78bd7e7e4fb): its pinline lifted along the printed arch; worst 0.51 levels from the lifted master over four flat arts",
+        "drawn over m15borderlessstation/u-legendary.png (sha256 849026d7b9ea; within 0 levels) too"
+      ],
+      "b": [
+        "m15borderlessstation/b.png (published, sha256 1c55bfffa151): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over m15borderlessstation/b-legendary.png (sha256 7f62db44ba48; within 0 levels) too"
+      ],
+      "r": [
+        "m15borderlessstation/r.png (published, sha256 050ee5c7f735): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over m15borderlessstation/r-legendary.png (sha256 c49adf67cbdb; within 0 levels) too"
+      ],
+      "g": [
+        "m15borderlessstation/g.png (published, sha256 74ae3286d4f5): its pinline lifted along the printed arch; worst 0.52 levels from the lifted master over four flat arts",
+        "drawn over m15borderlessstation/g-legendary.png (sha256 4c41eb6337f6; within 0 levels) too"
+      ],
+      "m": [
+        "m15borderlessstation/m.png (published, sha256 c5f068d8dc4c): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over m15borderlessstation/m-legendary.png (sha256 9d8ef132429d; within 0 levels) too"
+      ],
+      "c": [
+        "m15borderlessstation/c.png (published, sha256 a21e61173ee9): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over m15borderlessstation/c-legendary.png (sha256 8c7c4a4d21de; within 0 levels) too"
+      ]
+    },
+    "sourceFiles": [
+      "m15borderlessstation/b-legendary.png",
+      "m15borderlessstation/b.png",
+      "m15borderlessstation/c-legendary.png",
+      "m15borderlessstation/c.png",
+      "m15borderlessstation/g-legendary.png",
+      "m15borderlessstation/g.png",
+      "m15borderlessstation/m-legendary.png",
+      "m15borderlessstation/m.png",
+      "m15borderlessstation/r-legendary.png",
+      "m15borderlessstation/r.png",
+      "m15borderlessstation/u-legendary.png",
+      "m15borderlessstation/u.png",
+      "m15borderlessstation/w-legendary.png",
+      "m15borderlessstation/w.png"
+    ],
+    "notes": [
+      "PipGlyph's own derivation (TODO 4.9d, owner Round 66, 2026-10-14): the holofoil stamp's notch on the borderless frames — the text box's bottom pinline arched over the oval as every stamped borderless print draws it. Card Conjurer's borderless pack has no stamp piece; no CC piece and no scan is read by the build — every painted pixel is the published master's own bar, moved up.",
+      "The arch is scripts/lib/borderless-stamp.mjs ARCH_LIFT_PX: fourteen stamped borderless printings measured 2026-10-15 (the rim's lower edge 1916.0 px at the centre against the straight bar's 1948.6, rising from x 666 to x 834).",
+      "The oval is drawn by both renderers over the black (our own art, lib/cards/holo-stamp-art.ts) at M15_HOLO_STAMP_OVAL: the physical prints put it where the bordered frame's sits. Nothing of a hologram is in a piece."
     ]
   },
   "m15crown": {

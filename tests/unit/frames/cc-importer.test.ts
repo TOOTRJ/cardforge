@@ -1,3 +1,4 @@
+import { BORDERLESS_STAMP_FOLDERS } from "@/scripts/lib/borderless-stamp.mjs";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -2058,6 +2059,15 @@ describe("provenance and hygiene", () => {
         expect(provenance[template].colors[key][0], `${template}/${key}`).toMatch(new RegExp(`^${parent}/${from}\\.png \\(published, sha256 [0-9a-f]{12}\\)$`));
       }
     }
+    // …and the borderless frames' stamp notches (TODO 4.9d): PipGlyph's own
+    // lift of the published borderless masters' pinline
+    // (scripts/build-borderless-stamp.mjs; its own test:
+    // tests/unit/frames/borderless-holo-stamp.test.ts).
+    for (const folder of Object.keys(BORDERLESS_STAMP_FOLDERS)) {
+      expect(provenance[folder].source, folder).toBe("pipglyph");
+      expect(provenance[folder].converter, folder).toBe("scripts/build-borderless-stamp.mjs");
+      expect(provenance[folder].commit, folder).toBeUndefined();
+    }
     for (const [band, parent] of Object.entries(PIPGLYPH_DERIVED_BANDS)) {
       expect(Object.keys(CC_OVERLAY_BANDS), band).not.toContain(band);
       expect(Object.keys(CC_OVERLAY_BANDS), band).toContain(parent);
@@ -2073,6 +2083,7 @@ describe("provenance and hygiene", () => {
         ...Object.keys(CC_OVERLAY_BANDS),
         ...Object.keys(CC_RIDERS),
         ...Object.keys(HOLO_STAMP_NOTCHES),
+        ...Object.keys(BORDERLESS_STAMP_FOLDERS),
       ].sort(),
     );
     for (const [template, parent] of Object.entries(PIPGLYPH_DERIVED)) {

@@ -81,8 +81,8 @@ describe("when the line is drawn", () => {
     expect(collectorDrawn(m15, { collector: "off" })).toBeNull();
     expect(collectorDrawn(m15, {})).toBeNull();
     expect(collectorDrawn(m15, null)).toBeNull();
-    expect(collectorDrawn(getFrameProfile("m15borderless"), { collector: "2023" })).toBeNull();
-    expect(collectorLayout(getFrameProfile("m15borderless"), dmu({ collector: "2023" }), display)).toBeNull();
+    expect(collectorDrawn(getFrameProfile("extendedart"), { collector: "2023" })).toBeNull();
+    expect(collectorLayout(getFrameProfile("extendedart"), dmu({ collector: "2023" }), display)).toBeNull();
     expect(collectorLayout(m15, dmu({ collector: "off" }), display)).toBeNull();
     expect(collectorLayout(m15, dmu({ collector: undefined }), display)).toBeNull();
   });

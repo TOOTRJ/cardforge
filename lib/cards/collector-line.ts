@@ -73,6 +73,14 @@ export const COLLECTOR_TEMPLATES = [
   // The Spacecraft's extended-art dress (TODO 4.27a step 2): its bottom
   // border is M15's, pixel for pixel, and its prints carry the line.
   "extendedartstation",
+  // The borderless frames (TODO 4.9d, owner Round 66): the prints set both
+  // lines in the black bottom bar exactly where the bordered frame does.
+  // (The borderless planeswalkers wait for the owner: walker follow-ups are
+  // asked first.)
+  "m15borderless",
+  "m15borderlessartifact",
+  "m15borderlessland",
+  "m15borderlessstation",
   "m15ub",
   "m15ubartifact",
   "m15ubland",
