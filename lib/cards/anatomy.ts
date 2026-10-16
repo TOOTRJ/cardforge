@@ -140,6 +140,7 @@ type AnatomyProfile = Pick<
   | "overlays"
   | "twoColorMasters"
   | "twoColorForLands"
+  | "twoColorPlate"
   | "crownMasters"
   | "collector"
   | "dfc"
@@ -558,6 +559,9 @@ export type TwoColorLook = {
   dress: TwoColorDress;
   /** The pair master painted instead of the gold "m" (TWO_COLOR_MASTER_KEYS). */
   masterKey: string;
+  /** The stat plate the pair paints where its profile names one
+   *  (FrameProfile.twoColorPlate; plateKeyFor). */
+  plateKey?: string;
 };
 
 /**
@@ -581,13 +585,21 @@ export function resolveTwoColor(
   const wanted = twoColorDressOf(facts.cost, facts.cardType);
   const dress = dresses.includes(wanted) ? wanted : dresses.includes("split") ? "split" : null;
   if (!dress) return null;
-  return { pair, dress, masterKey: dress === "hybrid" ? `${pair}-h` : pair };
+  return {
+    pair,
+    dress,
+    masterKey: dress === "hybrid" ? `${pair}-h` : pair,
+    ...(profile.twoColorPlate ? { plateKey: profile.twoColorPlate } : {}),
+  };
 }
 
 /** The stat plate (`pt/{color}.png`) a card paints: its colour key, except
- *  the hybrid dress's grey plate ("c", m15PTC). A gold-split pair keeps the
- *  gold "m" plate its colour key already is. */
+ *  the hybrid dress's grey plate ("c", m15PTC) and a pair on a profile that
+ *  names its pairs' plate (FrameProfile.twoColorPlate — the full-art
+ *  token's grey "c", 4.48). A gold-split pair elsewhere keeps the gold "m"
+ *  plate its colour key already is. */
 export function plateKeyFor(colorKey: string, look: TwoColorLook | null): string {
+  if (look?.plateKey) return look.plateKey;
   return look?.dress === "hybrid" ? "c" : colorKey;
 }
 
@@ -596,14 +608,26 @@ export function plateKeyFor(colorKey: string, look: TwoColorLook | null): string
 // ---------------------------------------------------------------------------
 
 /** Card types that never print the standard crown: a planeswalker (0 of
- *  1,271 legendary walker printings on the 2015 frame), a token (the token
- *  crowns are 4.48 / 4.49), a battle, an emblem. */
+ *  1,271 legendary walker printings on the 2015 frame), a token (a token's
+ *  crown is its own design's: the M20 full-art token's, 4.48 — `tokens`
+ *  below; the 2014–19 arch's is 4.6f's), a battle, an emblem. */
 const CROWNLESS_CARD_TYPES: ReadonlySet<string> = new Set(["planeswalker", "token", "battle", "emblem"]);
 
 /** A card the crown prints on: the whole word Legendary in the supertype
- *  ("Lengendary" is not), and a card type that prints one. */
-export function qualifiesForCrown(facts: Pick<AnatomyFacts, "cardType" | "supertype">): boolean {
-  return supertypeHasWord(facts.supertype, "Legendary") && !CROWNLESS_CARD_TYPES.has(facts.cardType ?? "");
+ *  ("Lengendary" is not), and a card type that prints one — a TOKEN only
+ *  where the crown is a token design's own (`tokens`: the frame's crown
+ *  slot says so, FrameOverlaySlot `tokens` — crownsTokens). */
+export function qualifiesForCrown(facts: Pick<AnatomyFacts, "cardType" | "supertype">, tokens = false): boolean {
+  if (!supertypeHasWord(facts.supertype, "Legendary")) return false;
+  const cardType = facts.cardType ?? "";
+  return !CROWNLESS_CARD_TYPES.has(cardType) || (tokens && cardType === "token");
+}
+
+/** True when `profile`'s crown is a token design's own (TODO 4.48: the M20
+ *  full-art token's band, FrameOverlaySlot `tokens`), so a Legendary token
+ *  draws it. */
+export function crownsTokens(profile: Pick<FrameProfile, "overlays">): boolean {
+  return (profile.overlays ?? []).some((slot) => slot.anatomy === "crown" && slot.tokens === true);
 }
 
 /** An overlay a render draws: `path` is the image (a frames-bucket or
@@ -689,7 +713,7 @@ export function resolveFrameOverlays(
       const wanted =
         slot.anatomy === "holoStamp"
           ? overlayWanted(slot.anatomy, style, { ...facts, shape: slot.stamp.shape, ownShapeOnly: slot.stamp.ownShapeOnly === true })
-          : overlayWanted(slot.anatomy, style, facts);
+          : overlayWanted(slot.anatomy, style, facts, slot.anatomy === "crown" && slot.tokens === true);
       if (!wanted) continue;
       const look = resolveTwoColor(profile, style, facts);
       const goldPair = slot.anatomy === "crown" && slot.pairCrownOnGold ? twoColorPairOf(facts.colors) : null;
@@ -724,10 +748,12 @@ function overlayWanted(
   anatomy: Exclude<FrameOverlaySlot["anatomy"], "dfcIcon" | "mdfcStrip">,
   style: FrameAnatomyStyle | null | undefined,
   facts: AnatomyFacts & HoloStampFacts,
+  /** The crown slot is a token design's own (FrameOverlaySlot `tokens`). */
+  tokens = false,
 ): boolean {
   switch (anatomy) {
     case "crown":
-      return anatomyOn(style, "crown") && qualifiesForCrown(facts);
+      return anatomyOn(style, "crown") && qualifiesForCrown(facts, tokens);
     case "holoStamp":
       return anatomyOn(style, "stamp") && holoStampWanted(style?.stamp, facts);
   }

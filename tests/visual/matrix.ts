@@ -1497,6 +1497,31 @@ export function visualCases(): VisualCase[] {
   // faded arms inside the finish mask).
   add("nyx", "creature", "g", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
   add("nyx", "creature", "u", "long", { crown: true, finish: "foil", suffix: "@crown-foil" });
+  // TODO 4.48's last pieces: the full-art token's floating crown round its
+  // name pill (m20tokencrown/<key>), opt-in per card — NEW cases, no stored
+  // token names the switch. A Legendary token on each height, the artifact
+  // templates' colourless (the silver A crown) and a coloured artifact, at
+  // the stored bake's size and on foil; the pairs are the generic
+  // "@pair" / "@pair-crown" cases below (PAIR_TEMPLATES).
+  const legendaryToken = (template: FrameTemplate, extra: Record<string, unknown> = {}, text = false): Partial<CardRowForBake> => ({
+    title: "Scion of the Deep",
+    supertype: template.includes("artifact") ? "Legendary Artifact Creature" : "Legendary Creature",
+    subtypes: ["Octopus"],
+    power: "8",
+    toughness: "8",
+    rules_text: text ? "Flying\nWhenever this token attacks, draw a card." : null,
+    flavor_text: null,
+    frame_style: { template, finish: "regular", crown: true, ...extra },
+  });
+  add("m20token", "token", "u", "short", { suffix: "@crown", row: legendaryToken("m20token") });
+  add("m20token", "token", "u", "short", { suffix: "@crown-hd", preset: "hd", row: legendaryToken("m20token") });
+  add("m20token", "token", "r", "short", { suffix: "@crown-foil", finish: "foil", row: legendaryToken("m20token", { finish: "foil" }) });
+  add("m20tokentext", "token", "w", "short", { suffix: "@crown", row: legendaryToken("m20tokentext", {}, true) });
+  add("m20tokentall", "token", "b", "short", { suffix: "@crown", row: legendaryToken("m20tokentall", {}, true) });
+  add("m20tokenartifact", "token", "c", "short", { suffix: "@crown", row: legendaryToken("m20tokenartifact") });
+  add("m20tokenartifacttext", "token", "u", "short", { suffix: "@crown", row: legendaryToken("m20tokenartifacttext", {}, true) });
+  add("m20tokentext", "token", "wu", "short", { suffix: "@pair-crown", row: legendaryToken("m20tokentext", { twoColor: true }, true) });
+  add("m20tokentext", "token", "wu", "short", { suffix: "@pair-crown-hd", preset: "hd", row: legendaryToken("m20tokentext", { twoColor: true }, true) });
   // TODO 4.6b: the two-colour frame, opt-in per card (frame_style.twoColor —
   // no stored card has the switch, so these are NEW cases, no bump): the
   // gold-split pair on every template that draws one, the hybrid dress on
@@ -1512,7 +1537,10 @@ export function visualCases(): VisualCase[] {
     // A two-colour legend with both switches on: the split crown over its
     // pair master (4.6a + 4.6b, one release) — where the template draws a
     // crown at all (the borderless land draws its pairs and none: 4.56).
-    if (frameAnatomyOf(template).crown) add(template, primary, "wu", "long", { suffix: "@pair-crown", row: pairStyle(template, "regular", true) });
+    // (The token's long row is a Treasure: an Artifact, made Legendary here —
+    // the full-art token's crown, 4.48.)
+    const legend = template.startsWith("m20token") ? { supertype: "Legendary Artifact" } : {};
+    if (frameAnatomyOf(template).crown) add(template, primary, "wu", "long", { suffix: "@pair-crown", row: { ...pairStyle(template, "regular", true), ...legend } });
   }
   add("m15", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15"), cost: "{W/U}{W/U}" } });
   // The borderless hybrid dress (grey bars, the split pinline) and its
@@ -2320,6 +2348,8 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   // The old frames (TODO 4.6h): the 2003 gold card, the 2003 and the 1997
   // two-colour lands.
   "modern", "modernland", "retroland",
+  // The full-art tokens (TODO 4.48's central split): the six templates.
+  "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
 ];
 
 /** The collector line's fields on its cases (TODO 4.9b): a real printing's

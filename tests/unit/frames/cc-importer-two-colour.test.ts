@@ -85,6 +85,7 @@ describe("the untilted ramp", () => {
       gold2003Rules: [25, 73, "smooth"],
       land2003: [42, 59],
       land1997: [40, 60],
+      m20Token: [40, 60],
     });
     expect(rampName([45, 57])).toBe("procedural:ramp(45→57 %W)");
     expect(() => rampMask(10, 1, [50, 50])).toThrow();
@@ -301,6 +302,12 @@ describe("pairMasterLayers — the pair masters, over the verified masters' file
         continue;
       }
       if (template === "m15ubartifact" || template === "m15ubland") {
+        expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
+        continue;
+      }
+      // …and the full-art tokens' ten each (TODO 4.48's central split;
+      // tests/unit/frames/m20-token-anatomy-frames.test.ts).
+      if (template.startsWith("m20token")) {
         expect(builtColors(def as Parameters<typeof builtColors>[0]), template).toEqual(["w", "u", "b", "r", "g", "c", "m", ...pairs]);
         continue;
       }

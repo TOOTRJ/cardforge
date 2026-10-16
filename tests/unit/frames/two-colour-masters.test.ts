@@ -89,6 +89,8 @@ describe("the declared pair masters", () => {
       // …and the Universes Beyond frames' forty (TODO 4.25): their M15
       // twins' dresses.
       m15ub: 20, m15ubartifact: 10, m15ubland: 10,
+      // …and the full-art tokens' sixty (TODO 4.48's central split).
+      m20token: 10, m20tokentext: 10, m20tokentall: 10, m20tokenartifact: 10, m20tokenartifacttext: 10, m20tokenartifacttall: 10,
       // …and the extended-art frame's thirty (TODO 4.7 follow-up, owner
       // Round 63): m15's two dresses, the land dress's split.
       extendedart: 20, extendedartland: 10,

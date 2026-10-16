@@ -8273,8 +8273,9 @@ frames bucket — never git:
   the profile rides it (`M20_TOKEN_TEXTLESS_RECUT_PX`). After: −0.2 px
   (median) on the textless prints.
 - **Colours.** w/u/b/r/g/m are CC's masters, `c` its charcoal `frameC`.
-  Two colours land on gold (`m`) until 4.6's gradient; legends wait for
-  4.6's crown. The artifact templates are the silver `A` master whole plus
+  Two colours draw gold (`m`) with the two-colour switch off, and their
+  central split with it on; a Legendary token its floating crown with the
+  crown switch on (both since 4.48's last pieces, below). The artifact templates are the silver `A` master whole plus
   the colour's master through the pack's Pinline mask — silver pills and
   box, the colour on the rims, pinline and strip (TDSK #7, TSOC #8) — not
   4.16's `m15artifact` recipe; their plates are M15's artifact set.
@@ -8369,8 +8370,12 @@ frames bucket — never git:
   request log's "Not yet verified") when the full-art template would be
   exact; once it is, `withVerification` makes the match `exact` on it
   (`FrameMatch.onceVerifiedMatch`) — or `nearest` with the gap's own
-  reason for a crown, two colours or the Nyx dress (logged "missing"
-  either way). A borderless token (`borderless/token`: WONE, WMOM, SLD —
+  reason for the Nyx dress or a white border (logged "missing" either
+  way). A crown and two colours are drawn there since 4.48's last pieces:
+  their gaps close on the full-art template (`gapDrawnBy`), so those
+  printings are exact once verified, and the import names the switches
+  (`printed_crown` from the `legendary` frame effect, `printed_two_color`
+  with the pair as the colour). A borderless token (`borderless/token`: WONE, WMOM, SLD —
   every one an M20+ printing) names the full-art design the same way once
   it is verified, still `nearest` (the borderless dress is 4.37).
 - **Creator** (wired 2026-09-29, `lib/creator/token-frame-auto.ts` inside
@@ -8414,6 +8419,84 @@ frames bucket — never git:
 - **Rollout.** New templates, no stored card: no layout bump, no sweep. The
   owner runs `frames:promote`, then verifies each colour (0.9 → 2.2 → 2.4)
   against the references in `lib/cards/frame-references.json`.
+
+### The full-art token's crown and two-colour split (TODO 4.48's last pieces)
+
+Both are ADDITIONS ([Additions vs corrections](#additions-vs-corrections)):
+switches on the card (`frame_style.crown`, `frame_style.twoColor`), on by
+default for a new token, absent — off — on every token stored before them,
+named by an import only where the print has them; no layout bump, no sweep,
+no badge. Scryfall 2026-10-15 (3,037 token and emblem printings, through the
+registry): 181 M20+ printings — 51 crowned, 138 two-colour, 8 of them
+both — the largest of 1.23's three remaining `nearest` groups (the Nyx
+dress 7, the arch's tall box 21).
+
+- **The crown** is Card Conjurer's FLOATING crown, the borderless frame's,
+  round the name pill — an overlay band `m20tokencrown/<key>.png`
+  (`M20_TOKEN_CROWN`, 1500 × 260 over rows 0–259; `CC_OVERLAY_BANDS
+  .m20tokencrown` in the importer): the outline UNDER the crown at CC's
+  borderless bounds (2.8/1.72/94.4 × 10.62 % and 3.07/1.91/93.87 ×
+  10.24 %), 1:1, nothing erased or covered (the token master has no ring at
+  the top to replace). Its hole is the pill's interior — the importer
+  checks α 0 there (`M20_TOKEN_PILL_HOLE`) — so it repaints only the
+  pill's rims and ends, as the prints' crown carries them. Measured on 11
+  crowned prints (TFDN #13, TOTJ #6, TTDC #18 / #19, TMOM #6, TLCC #7, TLTR
+  #20, TCMM #60, TAFR #8 / #13, TM3C #11; Scryfall PNGs at 1500 × 2100): the
+  crown's top edge into the black border +2.5 px from CC's on the 2023+
+  prints, its wings +4 / +1 px — used as drawn, as the name pill (+1.3).
+  Keys: the colours, gold, CC's grey C crown (the plain templates' charcoal
+  colourless), CC's silver A crown (the artifact templates map `c` → `a`:
+  TNEO #16 Tamiyo's Notebook) and the ten pairs (the two crowns across the
+  token's split: TDMU #21). The slot says `tokens: true`: a Legendary TOKEN
+  qualifies for this crown only (`qualifiesForCrown(facts, tokens)`,
+  `crownsTokens`) — every other crown is never a token's, and the 2014–19
+  arch draws none (its crown would be 4.6f's).
+- **The two-colour split** (`twoColorMasters: ["split"]`, `<pair>.png` on
+  all six templates): 32 two-colour prints measured (all ten pairs, three
+  heights, 2019 → 2026) split the name pill, the rims, the box and the
+  colour strip on ONE untilted ramp, `PAIR_RAMPS.m20Token` 40→60 %W (strip
+  42.9 / 50.3 / 58.3 at 10 / 50 / 90 %, the name pill's rim 42.6 / 50.1 /
+  58.2, the regular type pill's rim 42.4 / 50.0 / 58.9 — a 40→60 master
+  reads 42 / 50 / 58). The plain templates' pair is the two colour masters
+  lerped WHOLE (premultiplied), then CC's grey 'Land Frame' type pill in its
+  place through the pack's Type mask — the prints' type pill is neither
+  colour but one neutral warm grey on every pair (median 193/187/187 on 16
+  regular prints) — tinted to it (`M20_PAIR_TYPE_TINT`) and made solid. The
+  artifact templates' pair is the silver A frame whole with the two colours'
+  pinlines lerped (4.50's recipe, split). A pair's P/T plate is the grey
+  colourless one, `c` (`FrameProfile.twoColorPlate`; the prints'
+  204/197/192, `m15/pt/c` 203/196/191).
+- **The white half of a white pair's name pill** (owner Round 69: tone,
+  never an outline on the name) is toned to print's metal: CC's white pill
+  reads 220/221/221 there, where 17 white-pair prints (WU, WB, RW, GW on the
+  plain templates; the pill's interior rows 110–212 on the white side,
+  x 150–450 or 1050–1350, the darker 60 % so the name's ink is left out)
+  read rgb 109/109/105 (luminance 108, 87–122) — a white name on near-white
+  read 1.16 : 1 at its worst column. A per-channel gain × 0.495 / 0.493 /
+  0.475 (`M20_PAIR_WHITE_PILL_GAIN`) in the importer's `finish` step
+  (`rampGain`): full on the white side of the split, fading across 40→60 %W,
+  only on the pill's translucent interior (α ≤ 230; the rims and outline keep
+  CC's pixels), so the pill keeps its own hue and bevel. After: the same
+  reading 109/109/105 on every white pair master; white name ink against the
+  pill, column by column over x 200–1300 on the name's rows: worst 4.21 : 1
+  over mid-grey art and 3.55 : 1 over white art (the pill is α 230), median
+  5.6–6.0 — every other pair 5.36 : 1 or more (the artifact templates' slate
+  6.2). The black half and every non-white pair are the monos' lerp.
+- **Import** (1.23): `token/m20`'s `crown` and `two-colour` gaps still name
+  4.48 while the arch stands in (unverified), and are drawn on the full-art
+  template (`gapDrawnBy`), so the 181 printings are `exact` once their
+  template is verified in the card's colour — all of them on production's
+  ticks (`supabase/seed.sql`). One printing prints the crown without the
+  word: T2XM #28 Tuktuk the Returned ("Token Artifact Creature — Goblin
+  Golem", the rules text makes it legendary). Owner Round 69: it imports
+  legendary — "Legendary" in `supertype` (`legendaryTokenSupertype`: a
+  token with Scryfall's `legendary` frame effect and no Legendary word),
+  which draws the crown — and its line prints as the card does through
+  `printed_types` ("Artifact Creature", `printedTypesOfPrinting` →
+  `resolvePrintedTypes`).
+- **Creator**: the anatomy panel's crown and two-colour switches and the
+  Variations "Legendary" entry read the profile like any frame's; a new
+  token starts with both on (`anatomyDefaults`).
 
 ## Art under and around the frame
 

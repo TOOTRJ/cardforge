@@ -51,6 +51,7 @@ describe("the ramps", () => {
       gold2003Rules: [25, 73, "smooth"],
       land2003: [42, 59],
       land1997: [40, 60],
+      m20Token: [40, 60],
     });
     // The pair masters (4.6b) and the pair crown bands (4.6a) read the same
     // helpers: no second name for them anywhere in the importer's library.
@@ -87,6 +88,10 @@ describe("the ramps", () => {
       ["crown", [46.4, 49.4, 53.6]],
       ["borderlessLand", [41.3, 50.2, 58.9]],
       ["borderlessLand", [40.9, 49.8, 59.0]],
+      // The full-art token's central split (TODO 4.48): the colour strip and
+      // the name pill's top rim on 26–27 two-colour M20+ prints.
+      ["m20Token", [42.9, 50.3, 58.3]],
+      ["m20Token", [42.6, 50.1, 58.2]],
     ];
     for (const [region, measured] of prints) {
       const mask = rampMask(1500, 3, PAIR_RAMPS[region]);

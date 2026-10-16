@@ -636,7 +636,11 @@ Rules and gotchas:
   picked after the type, until a frame pick (`defaultTokenFrameIn`) — and
   its height follows the text until a Variations pick
   (`lib/creator/token-frame-auto.ts`, wired into the form's round-11 effect;
-  `docs/FRAMES.md` "Full-art tokens").
+  `docs/FRAMES.md` "Full-art tokens"). Its crown and two-colour split are
+  ADDITIONS (4.48's last pieces): CC's floating crown band
+  (`M20_TOKEN_CROWN`, `tokens: true` — the ONE crown a Legendary token
+  qualifies for, `qualifiesForCrown(facts, tokens)`) and `<pair>` masters
+  whose P/T is the grey `c` plate (`FrameProfile.twoColorPlate`).
 - The type line (layout v50, TODO 1.20): `supertype` holds every word left
   of the dash but the card type's own (the importer's rule, 1.3) and
   `typeLineWords` / `buildTypeLine` (`lib/cards/card-display.ts`) put the
