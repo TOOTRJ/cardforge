@@ -93,7 +93,8 @@ describe("the crowned twin's key", () => {
 
   it("is declared on exactly the two borderless frames, which draw no crown band", () => {
     expect(CROWNED).toEqual(["m15borderless", "m15borderlessartifact"]);
-    for (const t of CROWNED) expect(getFrameProfile(t).overlays).toBeUndefined();
+    // (Their one overlay is the stamp's notch since 4.9d — never a crown band.)
+    for (const t of CROWNED) expect((getFrameProfile(t).overlays ?? []).map((slot) => slot.anatomy)).toEqual(["holoStamp"]);
     // The land dress spreads M15BORDERLESS and must not inherit it: it
     // declares its own split pairs (4.56) and no crown — its masters have no
     // crowned twin.

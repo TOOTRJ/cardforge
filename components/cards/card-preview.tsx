@@ -1000,7 +1000,9 @@ function CardFace({
   // The stat badges this face draws — the rules boxes keep their lines out
   // of them (lib/cards/rules-box.ts), the bake's twin.
   const secondFacePtShown = Boolean(secondFace?.power || secondFace?.toughness);
-  const stampKeepOut = holoStamp?.keepOut ?? null;
+  // The arch's shape where the frame declares one (the borderless frames,
+  // TODO 4.9d), else its one rect — the bake's twin.
+  const stampKeepOut = holoStamp?.keepOutShape ?? holoStamp?.keepOut ?? null;
   // The modal strip (5.1b): the lines keep out of the painted tab.
   const stripKeepOut = layout.flipside?.keepOut ?? null;
   // The transform front's reverse P/T digits (5.1d): the lines wrap round

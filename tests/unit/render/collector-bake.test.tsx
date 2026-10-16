@@ -274,8 +274,8 @@ describe("the collector line on real bakes (TODO 4.9b)", () => {
       expect(inkCols(a, 90, 700, 1965, 1998), preset).toBeNull();
     }
     // …and nothing of the line on a frame with no slot, whatever the key.
-    const noSlot = card({ frameStyle: { template: "m15borderless", finish: "regular", collector: "2023" } });
-    expect(collectorLayout(getFrameProfile("m15borderless"), { ...noSlot, collector: "2023", plates: { pt: true, loyalty: false, defense: false } }, { kind: "display" })).toBeNull();
+    const noSlot = card({ frameStyle: { template: "extendedart", finish: "regular", collector: "2023" } });
+    expect(collectorLayout(getFrameProfile("extendedart"), { ...noSlot, collector: "2023", plates: { pt: true, loyalty: false, defense: false } }, { kind: "display" })).toBeNull();
   }, 120_000);
 
   it("the ★ separator for the star flag and for a foil finish; the • otherwise", async () => {

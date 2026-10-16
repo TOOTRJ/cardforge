@@ -65,7 +65,7 @@ describe("visual-regression matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
       expect(id).toMatch(
-        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|land|artifact|vehicle|wide|star|spacecraft|nopt|nodefense|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|legacyland|sunmoon|moon|compass|fan|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square|battle))?|back(-(hd|nopt))?|battle(-(nopt|hd))?|pair(-(hybrid|foil|etched|hd|square|br|gw|ub))?(-crown(-hd)?)?|centred(-(hd|back))?|white(-(hd|foil|etched|square|pair))?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|auto-common|auto-uncommon|matte-hd|pair-(split|hybrid|crown|hd|foil)))?|tiers-(one|three|none|wide|star)|large-pips-hd|phyrexian-cost-(3|5)(-hd)?|nyx-(wide|artifact|silver)))?$/,
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|land|artifact|vehicle|wide|star|spacecraft|nopt|nodefense|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|legacyland|sunmoon|moon|compass|fan|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square|battle))?|back(-(hd|nopt))?|battle(-(nopt|hd))?|pair(-(hybrid|foil|etched|hd|square|br|gw|ub))?(-crown(-hd)?)?|centred(-(hd|back))?|white(-(hd|foil|etched|square|pair))?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|crown|triangle|collector-(hd|2015)|auto-common|auto-uncommon|matte-hd|pair-(split|hybrid|crown|hd|foil)))?|tiers-(one|three|none|wide|star)|large-pips-hd|phyrexian-cost-(3|5)(-hd)?|nyx-(wide|artifact|silver)))?$/,
       );
     }
     expect(ids).toEqual([...ids].sort());
@@ -211,7 +211,9 @@ describe("visual-regression matrix", () => {
   });
 
   it("switches the collector line on only in its collector cases: both styles on every slotted template, the line's shapes on m15 (TODO 4.9b)", () => {
-    const lined = cases.filter((c) => c.id.includes("@collector"));
+    // (…and the borderless frames' two cases with the line AND the stamp,
+    // TODO 4.9d: "@stamp-collector-hd" / "@stamp-collector-2015".)
+    const lined = cases.filter((c) => c.id.includes("@collector") || c.id.includes("@stamp-collector"));
     const keyed = cases.filter((c) => "collector" in (c.row.frame_style as object));
     expect(keyed.map((c) => c.id)).toEqual(lined.map((c) => c.id));
     expect([...new Set(lined.map((c) => c.template))].sort()).toEqual([...COLLECTOR_TEMPLATES].sort());
@@ -256,11 +258,16 @@ describe("visual-regression matrix", () => {
     for (const c of stamped) {
       const style = c.row.frame_style as { stamp?: string; collector?: string; crown?: boolean; twoColor?: boolean };
       // "triangle" only on the Universes Beyond frame's "Always" case (4.25).
-      expect(c.id === "m15ub/r/creature-short@stamp-always" ? ["triangle"] : ["auto", "oval"], c.id).toContain(style.stamp);
-      expect(style.collector, c.id).toBeUndefined();
+      // …and on the borderless frame's pinned triangle (owner Round 70: it
+      // draws nothing there).
+      expect(c.id === "m15ub/r/creature-short@stamp-always" || c.id === "m15borderless/u/creature-short@stamp-triangle" ? ["triangle"] : ["auto", "oval"], c.id).toContain(style.stamp);
+      // The line rides only on the borderless frames' two combined cases
+      // (TODO 4.9d).
+      expect(style.collector, c.id).toBe(c.id.endsWith("@stamp-collector-hd") ? "2023" : c.id.endsWith("@stamp-collector-2015") ? "2015" : undefined);
       // The crown rides only on the crowned pair case (the split crown and
-      // the pair notch on one card).
-      expect(style.crown, c.id).toBe(c.id.endsWith("@stamp-pair-crown") ? true : undefined);
+      // the pair notch on one card) and the borderless crowned mythic (4.9d:
+      // the crowned twin under the same piece).
+      expect(style.crown, c.id).toBe(c.id.endsWith("@stamp-pair-crown") || c.id === "m15borderless/r/creature-long@stamp-crown" ? true : undefined);
     }
     // The pair notch (the 4.9c follow-up): a rare on auto drawn as its pair
     // master on every template with BOTH pairs and the notch — and on no
@@ -395,6 +402,8 @@ describe("visual-regression matrix", () => {
       "m15borderlessland/wu/land-short@pair-br",
       "m15borderlessland/wu/land-short@pair-foil",
       "m15borderlessland/wu/land-short@pair-square",
+      // …and its stamp on the pair (4.9d).
+      "m15borderlessland/wu/land-short@stamp-pair-split",
     ]);
     const byId = new Map(cases.map((c) => [c.id, c]));
     expect(byId.get("m15borderlessland/wu/land-short@pair-br")?.row.color_identity).toEqual(["black", "red"]);

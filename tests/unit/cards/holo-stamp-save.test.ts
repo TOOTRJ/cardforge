@@ -9,7 +9,7 @@ import { called, chainClient, payloadOf, type ChainAnswer } from "@/tests/stubs/
 //     import and every AI job — stamps `stamp: "auto"` where the saved
 //     template has the notch (the walker included), keeps an explicit
 //     "oval" / "triangle" / "none", and stores no key on a template without
-//     the notch (a token frame, the emblem, a borderless frame), whatever
+//     the notch (a token frame, the emblem, an extended-art frame), whatever
 //     the payload says;
 //   • updateCardAction never touches a stored card's frame_style unless the
 //     payload names it: a key-less card stays key-less byte for byte (cards
@@ -132,7 +132,7 @@ function stored(over: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
-  state.verified = ["m15/r", "m15/c", "m15borderless/r", "saga/r", "m15snow/r", "m15devoid/r", "m15pw/r", "m15token/r", "emblem/c", "modern/r", "m15land/c"];
+  state.verified = ["m15/r", "m15/c", "extendedart/r", "saga/r", "m15snow/r", "m15devoid/r", "m15pw/r", "m15token/r", "emblem/c", "modern/r", "m15land/c"];
   state.existing = null;
 });
 
@@ -145,7 +145,7 @@ describe("createCardAction — the new-card default", () => {
       expect(result.ok, template).toBe(true);
       expect((written(stub, "insert")?.frame_style as Record<string, unknown>).stamp, template).toBe("auto");
     }
-    for (const template of ["m15token", "emblem", "m15borderless", "saga", "modern"] as const) {
+    for (const template of ["m15token", "emblem", "extendedart", "saga", "modern"] as const) {
       const stub = db();
       const cardType = template === "m15token" ? "token" : template === "emblem" ? "emblem" : template === "saga" ? "enchantment" : "creature";
       const result = await createCardAction(payload({ card_type: cardType, rarity: "rare", frame_style: { template, stamp: "oval" } }));
@@ -229,7 +229,7 @@ describe("updateCardAction — a stored card keeps its look", () => {
   });
 
   it("a flip on a template without the notch stores no key", async () => {
-    for (const template of ["m15token", "emblem", "m15borderless"] as const) {
+    for (const template of ["m15token", "emblem", "extendedart"] as const) {
       state.existing = stored({ card_type: template === "m15token" ? "token" : template === "emblem" ? "emblem" : "creature", frame_style: { template, finish: "regular" } });
       const stub = db();
       const result = await updateCardAction(CARD, { frame_anatomy: { stamp: "oval" } });
@@ -256,11 +256,11 @@ describe("updateCardAction — a stored card keeps its look", () => {
   it("a whole frame_style (a non-revise update): notched → notch-less drops the key; notch-less → notched never switches the card on", async () => {
     state.existing = stored({ frame_style: { template: "m15", stamp: "oval" } });
     const toBorderless = db();
-    const moved = await updateCardAction(CARD, { frame_style: { template: "m15borderless", stamp: "oval" } });
+    const moved = await updateCardAction(CARD, { frame_style: { template: "extendedart", stamp: "oval" } });
     expect(moved.ok).toBe(true);
-    expect(written(toBorderless, "update")?.frame_style).toEqual({ template: "m15borderless" });
+    expect(written(toBorderless, "update")?.frame_style).toEqual({ template: "extendedart" });
 
-    state.existing = stored({ frame_style: { template: "m15borderless", finish: "regular" } });
+    state.existing = stored({ frame_style: { template: "extendedart", finish: "regular" } });
     const toM15 = db();
     const back = await updateCardAction(CARD, { frame_style: { template: "m15", finish: "regular" } });
     expect(back.ok).toBe(true);

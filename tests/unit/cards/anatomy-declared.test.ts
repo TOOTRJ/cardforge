@@ -71,12 +71,11 @@ describe("where the pieces are declared", () => {
     // the gold rim, no pair masters), no rules-box switches.
     expect(frameAnatomyOf("m15textless")).toEqual({ crown: true, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: false, border: false });
     expect(anatomyDefaults("m15textless")).toEqual({ crown: true });
-    // The borderless land (TODO 4.56): the split pair alone — no crown, no
-    // collector slot, no stamp notch — so a new card on it stores that one
-    // switch and nothing else.
-    expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: ["split"], collector: false, stamp: false, dfcIcon: false, rulesAlign: true, border: false });
-    expect(anatomyDefaults("m15borderlessland")).toEqual({ twoColor: true });
-    expect(getFrameProfile("m15borderlessland").overlays).toBeUndefined();
+    // The borderless land (TODO 4.56): the split pair — no crown — and,
+    // since 4.9d, the collector slot and its own stamp notch.
+    expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: ["split"], collector: true, stamp: true, dfcIcon: false, rulesAlign: true, border: false });
+    expect(anatomyDefaults("m15borderlessland")).toEqual({ twoColor: true, collector: "2023", stamp: "auto" });
+    expect(getFrameProfile("m15borderlessland").overlays?.map((slot) => slot.anatomy)).toEqual(["holoStamp"]);
     expect(getFrameProfile("m15borderlessland").crownMasters).toBeUndefined();
     expect(frameAnatomyOf("m15snow")).toEqual({ crown: true, twoColor: ["split"], collector: true, stamp: true, dfcIcon: false, rulesAlign: true, border: false });
     expect(frameAnatomyOf("m15snowland")).toEqual({ crown: true, twoColor: ["split"], collector: true, stamp: true, dfcIcon: false, rulesAlign: true, border: false });
@@ -141,10 +140,11 @@ describe("a new card (createCardAction, the creator's initial state)", () => {
       collector: "2023",
       stamp: "auto",
     });
-    // A frame with no collector slot drops the line's keys too (m15borderless
-    // keeps the crown and pair switches it draws since 4.6f wave 2a).
-    expect(newCardFrameStyle({ template: "m15borderless", finish: "regular", ...NEW_CARD_ANATOMY, star: true }, "creature")).toEqual({
-      template: "m15borderless",
+    // A frame with no collector slot drops the line's keys too (extendedart
+    // keeps the crown and pair switches it draws; m15borderless has the
+    // line since 4.9d).
+    expect(newCardFrameStyle({ template: "extendedart", finish: "regular", ...NEW_CARD_ANATOMY, star: true }, "creature")).toEqual({
+      template: "extendedart",
       finish: "regular",
       crown: true,
       twoColor: true,
@@ -156,16 +156,18 @@ describe("a new card (createCardAction, the creator's initial state)", () => {
       collector: "2023",
       stamp: "auto",
     });
-    // The borderless land (4.56) keeps the two-colour switch alone — a NEW
-    // two-colour land on it draws the pair by default — and an explicit off
-    // stays off.
+    // The borderless land (4.56) keeps the two-colour switch — a NEW
+    // two-colour land on it draws the pair by default — and, since 4.9d, the
+    // collector line and the stamp; an explicit off stays off.
     expect(newCardFrameStyle({ template: "m15borderlessland", finish: "regular", ...NEW_CARD_ANATOMY }, "land")).toEqual({
       template: "m15borderlessland",
       finish: "regular",
       twoColor: true,
+      collector: "2023",
+      stamp: "auto",
     });
-    expect(newCardFrameStyle({ template: "m15borderlessland" }, "land")).toEqual({ template: "m15borderlessland", twoColor: true });
-    expect(newCardFrameStyle({ template: "m15borderlessland", twoColor: false }, "land")).toEqual({ template: "m15borderlessland", twoColor: false });
+    expect(newCardFrameStyle({ template: "m15borderlessland" }, "land")).toEqual({ template: "m15borderlessland", twoColor: true, collector: "2023", stamp: "auto" });
+    expect(newCardFrameStyle({ template: "m15borderlessland", twoColor: false }, "land")).toEqual({ template: "m15borderlessland", twoColor: false, collector: "2023", stamp: "auto" });
     // A token frame has the collector slot but no notch: the stamp's key
     // is dropped (4.9c — tokens print no stamp).
     expect(newCardFrameStyle({ template: "m15token", finish: "regular", ...NEW_CARD_ANATOMY }, "token")).toEqual({

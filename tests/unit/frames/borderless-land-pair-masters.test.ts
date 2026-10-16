@@ -143,14 +143,15 @@ describe("the recipe (borderlessLandLayers with a letter pair)", () => {
 });
 
 describe("declared and published", () => {
-  it("the borderless land declares the split dress, a land's — and no crown, overlay, collector slot or stamp notch", () => {
+  it("the borderless land declares the split dress, a land's — no crown; the collector slot and its own stamp notch (4.9d)", () => {
     const profile = getFrameProfile(TEMPLATE);
     expect(profile.twoColorMasters).toEqual(["split"]);
     expect(profile.twoColorForLands).toBe(true);
     expect(twoColorFits(profile, "land")).toBe(true);
     expect(profile.crownMasters).toBeUndefined();
-    expect(profile.overlays).toBeUndefined();
-    expect(frameAnatomyOf(TEMPLATE)).toEqual({ crown: false, twoColor: ["split"], collector: false, stamp: false, dfcIcon: false, rulesAlign: true, border: false });
+    // (…the collector slot and its own stamp notch since 4.9d.)
+    expect((profile.overlays ?? []).map((slot) => slot.anatomy)).toEqual(["holoStamp"]);
+    expect(frameAnatomyOf(TEMPLATE)).toEqual({ crown: false, twoColor: ["split"], collector: true, stamp: true, dfcIcon: false, rulesAlign: true, border: false });
     // The spells' frame it spreads keeps its own dresses, and its pairs stay
     // a nonland's.
     expect(getFrameProfile("m15borderless").twoColorMasters).toEqual(["split", "hybrid"]);
