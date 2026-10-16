@@ -37,8 +37,11 @@ export type SecondPartWords = {
    *  is not the kind's own (an adventure's spell is an instant, never the
    *  creature it rides on). Null = the kind's own card type. */
   blankCardType: CardType | null;
-  /** False while the creator has no editor for this second part (a battle's
-   *  back, TODO 5.5): a switch shows it greyed out with `unavailableNote`. */
+  /** False while the creator has no editor for this second part: a switch
+   *  shows it greyed out with `unavailableNote`. Every kind's is available
+   *  since TODO 5.5 — a battle whose back can't be edited as a face (one
+   *  saved with none, or a legacy back; lib/creator/battle-back.ts) gets
+   *  these words with `available: false` and its own note. */
   available: boolean;
   unavailableNote: string | null;
 };
@@ -94,11 +97,12 @@ export const SECOND_PART_WORDS: Readonly<Partial<Record<CardKind, SecondPartWord
     rulesPlaceholder: "Protection from red. (The rules once the card is flipped.)",
     both: "both sides",
   }),
+  // A battle's back (TODO 5.5): the portrait ▼ back, a creature to start
+  // (MOM #21's Serra Faithkeeper — most battle backs are).
   battle: words("Battle", "Back face", {
-    namePlaceholder: "",
-    rulesPlaceholder: "",
-    available: false,
-    unavailableNote: "Battle backs are coming",
+    namePlaceholder: "Serra Faithkeeper",
+    rulesPlaceholder: "Flying, vigilance. (The back face's rules.)",
+    blankCardType: "creature",
   }),
 };
 
@@ -116,8 +120,7 @@ export function secondPartWordsFor(kind: CardKind): SecondPartWords | null {
 
 /** The words for the second part a FORM holds: the kind's own, else — for
  *  a card that has a back face on a one-part kind's frame (a legacy
- *  double-faced back) — "Back face". A battle's back has no editor, so a
- *  back found on one is the legacy kind too. */
+ *  double-faced back) — "Back face". */
 export function secondPartWordsOfCard(
   cardType: CardType | "" | null | undefined,
   template: string | null | undefined,

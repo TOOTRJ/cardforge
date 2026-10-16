@@ -1948,11 +1948,39 @@ export function visualCases(): VisualCase[] {
   ];
   for (const [template, colour] of CENTRED) {
     const primary = (hosted.get(template) ?? ["creature"])[0];
-    const dfcRow = getFrameProfile(template).dfc ? dfcBodyRow("m15dfcback", colour, "short") : {};
+    // (A battle's back is optional — TODO 5.5: its centred cases are the
+    // one-faced battle's, as before.)
+    const twoFaced = Boolean(getFrameProfile(template).dfc) && !getFrameProfile(template).dfc?.battle;
+    const dfcRow = twoFaced ? dfcBodyRow("m15dfcback", colour, "short") : {};
     add(template, primary, colour, "short", { suffix: "@centred", row: { ...dfcRow, ...centredStyle(template) } });
-    if (!getFrameProfile(template).dfc) add(template, primary, colour, "long", { suffix: "@centred", row: centredStyle(template) });
+    if (!twoFaced) add(template, primary, colour, "long", { suffix: "@centred", row: centredStyle(template) });
   }
   add("split", "split", "r", "short", { suffix: "@centred-hd", preset: "hd", row: centredStyle("split") });
+  // TODO 5.5 (a): the battle's back — NEW cases (an addition: no stored
+  // battle has a back with a body, and the plain battle cases above, one
+  // face, stay byte-identical). The front with a back of its own prints the
+  // back's P/T in the master's tab (BATTLE_REVERSE_PT), short and long, the
+  // stored bake's size, a back with no P/T (the tab empty), a colourless
+  // artifact creature back, the centred text beside the digits; the BACK on
+  // the ▼ back in each shape — a creature, a legendary one with the crown
+  // switched on (the ten MOM legendary backs), a gold back, an enchantment
+  // back (no plate), the HD size. And a LEGACY back (no body: every battle
+  // import before 5.5) whose front must bake as the plain battle does.
+  for (const colour of ["w", "r", "c"] as const) {
+    add("battle", "battle", colour, "short", { suffix: "@back", row: battleBackRow(colour, "short") });
+  }
+  add("battle", "battle", "u", "long", { suffix: "@back", row: battleBackRow("u", "long") });
+  add("battle", "battle", "g", "long", { suffix: "@back-hd", preset: "hd", row: battleBackRow("g", "long") });
+  add("battle", "battle", "w", "short", { suffix: "@back-nopt", row: battleBackRow("w", "short", BATTLE_ENCHANTMENT_BACK) });
+  add("battle", "battle", "r", "short", { suffix: "@centred-back", row: { ...battleBackRow("r", "short"), ...centredStyle("battle") } });
+  add("battle", "battle", "u", "short", { suffix: "@legacyback", row: { back_face: BATTLE_LEGACY_BACK } });
+  const battleFront = { frontTemplate: "battle" as FrameTemplate };
+  for (const colour of ["w", "r", "c", "wu"] as const) {
+    add("m15dfcback", "battle", colour, "short", { suffix: "@battle", back: battleFront, row: battleBackRow(colour, "short") });
+  }
+  add("m15dfcback", "battle", "b", "long", { suffix: "@crown-battle", back: battleFront, row: dfcSwitches(battleBackRow("b", "long"), { crown: true }) });
+  add("m15dfcback", "battle", "w", "short", { suffix: "@battle-nopt", back: battleFront, row: battleBackRow("w", "short", BATTLE_ENCHANTMENT_BACK) });
+  add("m15dfcback", "battle", "g", "long", { suffix: "@battle-hd", preset: "hd", back: battleFront, row: battleBackRow("g", "long") });
   add("m15", "creature", "w", "long", { suffix: "@centred-hd", preset: "hd", row: centredStyle("m15") });
   // TODO 4.30: the white border (frame_style.border — an ADDITION, opt-in
   // per card; no stored card has the key, so these are NEW cases and every
@@ -2092,6 +2120,66 @@ const MDFC_TIBALT_BACK: Partial<CardRowForBake> = {
 /** The holofoil stamp's switch on a case (TODO 4.9c): `frame_style.stamp`
  *  and the rarity the auto rule reads, on top of a stored row — nothing
  *  else on the row changes. */
+/** A battle row's BACK of its own (TODO 5.5): the ▼ back the battle derives
+ *  (lib/cards/dfc.ts bodyFor — a battle wears no family) in `colour` (a
+ *  two-colour back on a mono front, as MOM #23 Invasion of Theros), its art
+ *  and artist. Short: MOM #21's Serra Faithkeeper (4/4, flying, vigilance);
+ *  long: a legendary back (MOM #114 Marchesa's shape, a long name and the
+ *  dense rules; 3/3 and a three-word subtype line — a short line beside the
+ *  set symbol, and a kerned value like 3/6 on the dark plate, draw a few px
+ *  apart in the two renderers on every ▼ back, transform's too: reported,
+ *  not this case's to hold); colourless: MOM #1's Guildpact Paragon, an
+ *  Artifact Creature. `over` replaces the back's content (an enchantment
+ *  back). */
+function battleBackRow(colour: VisualColour, shape: VisualShape, over: Partial<NonNullable<CardRowForBake["back_face"]>> = {}): Partial<CardRowForBake> {
+  const long = shape === "long";
+  const front = colour === "wu" ? "w" : colour;
+  return {
+    frame_style: { template: "battle", finish: "regular" } as CardRowForBake["frame_style"],
+    color_identity: IDENTITY[front],
+    back_face: {
+      title: long ? "Marchesa, Resolute Monarch of the Shattered Sky" : colour === "c" ? "Guildpact Paragon" : "Serra Faithkeeper",
+      cost: "",
+      card_type: "creature",
+      supertype: colour === "c" ? "Artifact" : long ? "Legendary" : null,
+      subtypes: colour === "c" ? ["Construct"] : long ? ["Human", "Noble", "Advisor"] : ["Angel"],
+      rules_text: long ? LONG_RULES : "Flying, vigilance",
+      flavor_text: long ? null : "“I was there when Phyrexia doomed Serra’s realm with a single touch.”",
+      power: long ? "3" : colour === "c" ? "5" : "4",
+      toughness: long ? "3" : colour === "c" ? "5" : "4",
+      frame_style: { template: "m15dfcback" as FrameTemplate },
+      color_identity: IDENTITY[colour],
+      art_url: "ART2",
+      artist_credit: "Visual Regression",
+      ...over,
+    } as CardRowForBake["back_face"],
+  };
+}
+
+/** An enchantment back (MOM #20 Belenon War Anthem): no P/T — the front's
+ *  tab prints empty, the back draws no plate. */
+const BATTLE_ENCHANTMENT_BACK: Partial<NonNullable<CardRowForBake["back_face"]>> = {
+  title: "Belenon War Anthem",
+  card_type: "enchantment",
+  supertype: null,
+  subtypes: [],
+  rules_text: "Creatures you control get +1/+1.",
+  flavor_text: null,
+  power: null,
+  toughness: null,
+};
+
+/** A battle's LEGACY back (no body, no colour — what every battle import
+ *  stored before TODO 5.5): drawn on the battle frame by the flip, never
+ *  baked; the front bakes as the one-faced battle. */
+const BATTLE_LEGACY_BACK = {
+  title: "Belenon War Anthem",
+  cost: "",
+  card_type: "enchantment",
+  subtypes: [],
+  rules_text: "Creatures you control get +1/+1.",
+} as unknown as CardRowForBake["back_face"];
+
 function stampRow(
   template: FrameTemplate,
   stamp: "auto" | "oval" | "triangle" | "none",

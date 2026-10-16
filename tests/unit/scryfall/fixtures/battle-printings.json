@@ -1,0 +1,3825 @@
+{
+ "_note": "Every paper printing of a battle (Scryfall /cards/search?q=t:battle game:paper&unique=prints, captured 2026-10-14 for TODO 5.5 (a), User-Agent PipGlyph-measure), trimmed to the fields the importer, the frame signature registry and the art import read. Keys are set-collector_number. 53 printings: MOM's 37 battles, their 15 prerelease promos (pmom, 'datestamped') and INR #120 Invasion of Innistrad. Backs: creatures (legendary on MOM #63 / #114 / #116 / #190 / #234 and their promos), enchantments, sorceries, artifacts, and two planeswalkers (MOM #239 Teferi Akosa of Zhalfir and its promo — a walker face, 5.13).",
+ "mom-230": {
+  "id": "318c363b-61cc-4e2f-8f86-a4287539ea07",
+  "name": "Invasion of Alara // Awaken the Maelstrom",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "230",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Sorcery",
+  "color_identity": [
+   "B",
+   "G",
+   "R",
+   "U",
+   "W"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/230/invasion-of-alara-awaken-the-maelstrom?utm_source=api",
+  "artist": "Mathias Kollros",
+  "card_faces": [
+   {
+    "name": "Invasion of Alara",
+    "mana_cost": "{W}{U}{B}{R}{G}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "When this Siege enters, exile cards from the top of your library until you exile two nonland cards with mana value 4 or less. You may cast one of those two cards without paying its mana cost. Put one of them into your hand. Then put the other cards exiled this way on the bottom of your library in a random order.",
+    "colors": [
+     "B",
+     "G",
+     "R",
+     "U",
+     "W"
+    ],
+    "defense": "7",
+    "artist": "Mathias Kollros",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/3/1/318c363b-61cc-4e2f-8f86-a4287539ea07.png?1783951955",
+     "normal": "https://cards.scryfall.io/normal/front/3/1/318c363b-61cc-4e2f-8f86-a4287539ea07.jpg?1783951955",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/3/1/318c363b-61cc-4e2f-8f86-a4287539ea07.jpg?1783951955"
+    }
+   },
+   {
+    "name": "Awaken the Maelstrom",
+    "mana_cost": "",
+    "type_line": "Sorcery",
+    "oracle_text": "Awaken the Maelstrom is all colors.\nTarget player draws two cards. You may put an artifact card from your hand onto the battlefield. Create a token that's a copy of a permanent you control. Distribute three +1/+1 counters among one, two, or three creatures you control. Destroy target permanent an opponent controls.",
+    "colors": [
+     "B",
+     "G",
+     "R",
+     "U",
+     "W"
+    ],
+    "artist": "Mathias Kollros",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/3/1/318c363b-61cc-4e2f-8f86-a4287539ea07.png?1783951955",
+     "normal": "https://cards.scryfall.io/normal/back/3/1/318c363b-61cc-4e2f-8f86-a4287539ea07.jpg?1783951955",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/3/1/318c363b-61cc-4e2f-8f86-a4287539ea07.jpg?1783951955"
+    }
+   }
+  ]
+ },
+ "pmom-230s": {
+  "id": "4b717f04-4162-4d80-a739-5d848481d2bf",
+  "name": "Invasion of Alara // Awaken the Maelstrom",
+  "layout": "transform",
+  "set": "pmom",
+  "set_name": "March of the Machine Promos",
+  "set_type": "promo",
+  "collector_number": "230s",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": true,
+  "promo_types": [
+   "prerelease",
+   "datestamped"
+  ],
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Sorcery",
+  "color_identity": [
+   "B",
+   "G",
+   "R",
+   "U",
+   "W"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/pmom/230s/invasion-of-alara-awaken-the-maelstrom?utm_source=api",
+  "artist": "Mathias Kollros",
+  "card_faces": [
+   {
+    "name": "Invasion of Alara",
+    "mana_cost": "{W}{U}{B}{R}{G}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "When this Siege enters, exile cards from the top of your library until you exile two nonland cards with mana value 4 or less. You may cast one of those two cards without paying its mana cost. Put one of them into your hand. Then put the other cards exiled this way on the bottom of your library in a random order.",
+    "colors": [
+     "B",
+     "G",
+     "R",
+     "U",
+     "W"
+    ],
+    "defense": "7",
+    "artist": "Mathias Kollros",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/4/b/4b717f04-4162-4d80-a739-5d848481d2bf.png?1783916690",
+     "normal": "https://cards.scryfall.io/normal/front/4/b/4b717f04-4162-4d80-a739-5d848481d2bf.jpg?1783916690",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/4/b/4b717f04-4162-4d80-a739-5d848481d2bf.jpg?1783916690"
+    }
+   },
+   {
+    "name": "Awaken the Maelstrom",
+    "mana_cost": "",
+    "type_line": "Sorcery",
+    "oracle_text": "Awaken the Maelstrom is all colors.\nTarget player draws two cards. You may put an artifact card from your hand onto the battlefield. Create a token that's a copy of a permanent you control. Distribute three +1/+1 counters among one, two, or three creatures you control. Destroy target permanent an opponent controls.",
+    "colors": [
+     "B",
+     "G",
+     "R",
+     "U",
+     "W"
+    ],
+    "artist": "Mathias Kollros",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/4/b/4b717f04-4162-4d80-a739-5d848481d2bf.png?1783916690",
+     "normal": "https://cards.scryfall.io/normal/back/4/b/4b717f04-4162-4d80-a739-5d848481d2bf.jpg?1783916690",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/4/b/4b717f04-4162-4d80-a739-5d848481d2bf.jpg?1783916690"
+    }
+   }
+  ]
+ },
+ "mom-231": {
+  "id": "981f091a-17f8-412e-9752-69070ebed4ea",
+  "name": "Invasion of Amonkhet // Lazotep Convert",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "231",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "keywords": [
+   "Transform",
+   "Mill"
+  ],
+  "type_line": "Battle — Siege // Creature — Zombie",
+  "color_identity": [
+   "B",
+   "U"
+  ],
+  "rarity": "uncommon",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/231/invasion-of-amonkhet-lazotep-convert?utm_source=api",
+  "artist": "Jokubas Uogintas",
+  "card_faces": [
+   {
+    "name": "Invasion of Amonkhet",
+    "mana_cost": "{1}{U}{B}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, each player mills three cards, then each opponent discards a card and you draw a card. (To mill three cards, a player puts the top three cards of their library into their graveyard.)",
+    "colors": [
+     "B",
+     "U"
+    ],
+    "defense": "4",
+    "artist": "Jokubas Uogintas",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/9/8/981f091a-17f8-412e-9752-69070ebed4ea.png?1783916953",
+     "normal": "https://cards.scryfall.io/normal/front/9/8/981f091a-17f8-412e-9752-69070ebed4ea.jpg?1783916953",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/9/8/981f091a-17f8-412e-9752-69070ebed4ea.jpg?1783916953"
+    }
+   },
+   {
+    "name": "Lazotep Convert",
+    "mana_cost": "",
+    "type_line": "Creature — Zombie",
+    "oracle_text": "You may have this creature enter as a copy of any creature card in a graveyard, except it's a 4/4 black Zombie in addition to its other colors and types.",
+    "flavor_text": "As the lazotep covered his body, he heard Norn's voice fade from a deafening clarion to a distant whisper.",
+    "colors": [
+     "B",
+     "U"
+    ],
+    "color_indicator": [
+     "B",
+     "U"
+    ],
+    "power": "4",
+    "toughness": "4",
+    "artist": "Jokubas Uogintas",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/9/8/981f091a-17f8-412e-9752-69070ebed4ea.png?1783916953",
+     "normal": "https://cards.scryfall.io/normal/back/9/8/981f091a-17f8-412e-9752-69070ebed4ea.jpg?1783916953",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/9/8/981f091a-17f8-412e-9752-69070ebed4ea.jpg?1783916953"
+    }
+   }
+  ]
+ },
+ "mom-61": {
+  "id": "1c3f661d-b9f7-48e7-afe3-3eaea1022bc1",
+  "name": "Invasion of Arcavios // Invocation of the Founders",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "61",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Enchantment",
+  "color_identity": [
+   "U"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/61/invasion-of-arcavios-invocation-of-the-founders?utm_source=api",
+  "artist": "Dmitry Burmak",
+  "card_faces": [
+   {
+    "name": "Invasion of Arcavios",
+    "mana_cost": "{3}{U}{U}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, search your library, graveyard, and/or outside the game for an instant or sorcery card you own, reveal it, and put it into your hand. If you search your library this way, shuffle.",
+    "colors": [
+     "U"
+    ],
+    "defense": "7",
+    "artist": "Dmitry Burmak",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/1/c/1c3f661d-b9f7-48e7-afe3-3eaea1022bc1.png?1783917042",
+     "normal": "https://cards.scryfall.io/normal/front/1/c/1c3f661d-b9f7-48e7-afe3-3eaea1022bc1.jpg?1783917042",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/1/c/1c3f661d-b9f7-48e7-afe3-3eaea1022bc1.jpg?1783917042"
+    }
+   },
+   {
+    "name": "Invocation of the Founders",
+    "mana_cost": "",
+    "type_line": "Enchantment",
+    "oracle_text": "Whenever you cast an instant or sorcery spell from your hand, you may copy that spell. You may choose new targets for the copy.",
+    "flavor_text": "No professors, no grades, no room for mistakes.",
+    "colors": [
+     "U"
+    ],
+    "color_indicator": [
+     "U"
+    ],
+    "artist": "Dmitry Burmak",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/1/c/1c3f661d-b9f7-48e7-afe3-3eaea1022bc1.png?1783917042",
+     "normal": "https://cards.scryfall.io/normal/back/1/c/1c3f661d-b9f7-48e7-afe3-3eaea1022bc1.jpg?1783917042",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/1/c/1c3f661d-b9f7-48e7-afe3-3eaea1022bc1.jpg?1783917042"
+    }
+   }
+  ]
+ },
+ "pmom-61s": {
+  "id": "94598f7c-5142-49f2-b3b8-137b246492b9",
+  "name": "Invasion of Arcavios // Invocation of the Founders",
+  "layout": "transform",
+  "set": "pmom",
+  "set_name": "March of the Machine Promos",
+  "set_type": "promo",
+  "collector_number": "61s",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": true,
+  "promo_types": [
+   "prerelease",
+   "datestamped"
+  ],
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Enchantment",
+  "color_identity": [
+   "U"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/pmom/61s/invasion-of-arcavios-invocation-of-the-founders?utm_source=api",
+  "artist": "Dmitry Burmak",
+  "card_faces": [
+   {
+    "name": "Invasion of Arcavios",
+    "mana_cost": "{3}{U}{U}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, search your library, graveyard, and/or outside the game for an instant or sorcery card you own, reveal it, and put it into your hand. If you search your library this way, shuffle.",
+    "colors": [
+     "U"
+    ],
+    "defense": "7",
+    "artist": "Dmitry Burmak",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/9/4/94598f7c-5142-49f2-b3b8-137b246492b9.png?1783916731",
+     "normal": "https://cards.scryfall.io/normal/front/9/4/94598f7c-5142-49f2-b3b8-137b246492b9.jpg?1783916731",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/9/4/94598f7c-5142-49f2-b3b8-137b246492b9.jpg?1783916731"
+    }
+   },
+   {
+    "name": "Invocation of the Founders",
+    "mana_cost": "",
+    "type_line": "Enchantment",
+    "oracle_text": "Whenever you cast an instant or sorcery spell from your hand, you may copy that spell. You may choose new targets for the copy.",
+    "flavor_text": "No professors, no grades, no room for mistakes.",
+    "colors": [
+     "U"
+    ],
+    "color_indicator": [
+     "U"
+    ],
+    "artist": "Dmitry Burmak",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/9/4/94598f7c-5142-49f2-b3b8-137b246492b9.png?1783916731",
+     "normal": "https://cards.scryfall.io/normal/back/9/4/94598f7c-5142-49f2-b3b8-137b246492b9.jpg?1783916731",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/9/4/94598f7c-5142-49f2-b3b8-137b246492b9.jpg?1783916731"
+    }
+   }
+  ]
+ },
+ "mom-232": {
+  "id": "ae2e1244-f05b-45f9-8afc-59f190524798",
+  "name": "Invasion of Azgol // Ashen Reaper",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "232",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "keywords": [
+   "Transform",
+   "Menace"
+  ],
+  "type_line": "Battle — Siege // Creature — Zombie Elemental",
+  "color_identity": [
+   "B",
+   "R"
+  ],
+  "rarity": "uncommon",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/232/invasion-of-azgol-ashen-reaper?utm_source=api",
+  "artist": "Joshua Raphael",
+  "card_faces": [
+   {
+    "name": "Invasion of Azgol",
+    "mana_cost": "{B}{R}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, target player sacrifices a creature or planeswalker of their choice and loses 1 life.",
+    "colors": [
+     "B",
+     "R"
+    ],
+    "defense": "4",
+    "artist": "Joshua Raphael",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/a/e/ae2e1244-f05b-45f9-8afc-59f190524798.png?1783916952",
+     "normal": "https://cards.scryfall.io/normal/front/a/e/ae2e1244-f05b-45f9-8afc-59f190524798.jpg?1783916952",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/a/e/ae2e1244-f05b-45f9-8afc-59f190524798.jpg?1783916952"
+    }
+   },
+   {
+    "name": "Ashen Reaper",
+    "mana_cost": "",
+    "type_line": "Creature — Zombie Elemental",
+    "oracle_text": "Menace\nAt the beginning of your end step, put a +1/+1 counter on this creature if a permanent was put into a graveyard from the battlefield this turn.",
+    "flavor_text": "Eternal hatred fuels eternal fire.",
+    "colors": [
+     "B",
+     "R"
+    ],
+    "color_indicator": [
+     "B",
+     "R"
+    ],
+    "power": "2",
+    "toughness": "1",
+    "artist": "Joshua Raphael",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/a/e/ae2e1244-f05b-45f9-8afc-59f190524798.png?1783916952",
+     "normal": "https://cards.scryfall.io/normal/back/a/e/ae2e1244-f05b-45f9-8afc-59f190524798.jpg?1783916952",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/a/e/ae2e1244-f05b-45f9-8afc-59f190524798.jpg?1783916952"
+    }
+   }
+  ]
+ },
+ "mom-20": {
+  "id": "4fb0eb2d-9cb7-4e72-a970-5009b046df2a",
+  "name": "Invasion of Belenon // Belenon War Anthem",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "20",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Enchantment",
+  "color_identity": [
+   "W"
+  ],
+  "rarity": "uncommon",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/20/invasion-of-belenon-belenon-war-anthem?utm_source=api",
+  "artist": "Antonio José Manzanedo",
+  "card_faces": [
+   {
+    "name": "Invasion of Belenon",
+    "mana_cost": "{2}{W}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, create a 2/2 white and blue Knight creature token with vigilance.",
+    "colors": [
+     "W"
+    ],
+    "defense": "5",
+    "artist": "Antonio José Manzanedo",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/4/f/4fb0eb2d-9cb7-4e72-a970-5009b046df2a.png?1783917065",
+     "normal": "https://cards.scryfall.io/normal/front/4/f/4fb0eb2d-9cb7-4e72-a970-5009b046df2a.jpg?1783917065",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/4/f/4fb0eb2d-9cb7-4e72-a970-5009b046df2a.jpg?1783917065"
+    }
+   },
+   {
+    "name": "Belenon War Anthem",
+    "mana_cost": "",
+    "type_line": "Enchantment",
+    "oracle_text": "Creatures you control get +1/+1.",
+    "flavor_text": "\"Just as a flute turns breath into music, we are the vessel through which the Sacred Winds produce glorious justice.\"",
+    "colors": [
+     "W"
+    ],
+    "color_indicator": [
+     "W"
+    ],
+    "artist": "Antonio José Manzanedo",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/4/f/4fb0eb2d-9cb7-4e72-a970-5009b046df2a.png?1783917065",
+     "normal": "https://cards.scryfall.io/normal/back/4/f/4fb0eb2d-9cb7-4e72-a970-5009b046df2a.jpg?1783917065",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/4/f/4fb0eb2d-9cb7-4e72-a970-5009b046df2a.jpg?1783917065"
+    }
+   }
+  ]
+ },
+ "mom-21": {
+  "id": "7e784d3d-0c6d-4ce5-beb5-edd2adb32385",
+  "name": "Invasion of Dominaria // Serra Faithkeeper",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "21",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "keywords": [
+   "Flying",
+   "Vigilance",
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Creature — Angel",
+  "color_identity": [
+   "W"
+  ],
+  "rarity": "uncommon",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/21/invasion-of-dominaria-serra-faithkeeper?utm_source=api",
+  "artist": "Denys Tsiperko",
+  "card_faces": [
+   {
+    "name": "Invasion of Dominaria",
+    "mana_cost": "{2}{W}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, you gain 4 life and draw a card.",
+    "colors": [
+     "W"
+    ],
+    "defense": "5",
+    "artist": "Denys Tsiperko",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/7/e/7e784d3d-0c6d-4ce5-beb5-edd2adb32385.png?1783917066",
+     "normal": "https://cards.scryfall.io/normal/front/7/e/7e784d3d-0c6d-4ce5-beb5-edd2adb32385.jpg?1783917066",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/7/e/7e784d3d-0c6d-4ce5-beb5-edd2adb32385.jpg?1783917066"
+    }
+   },
+   {
+    "name": "Serra Faithkeeper",
+    "mana_cost": "",
+    "type_line": "Creature — Angel",
+    "oracle_text": "Flying, vigilance",
+    "flavor_text": "\"I was there when Phyrexia doomed Serra's realm with a single touch. I was there when Yawgmoth tried and failed to conquer Dominaria. And I will still be here when Elesh Norn lies dead.\"",
+    "colors": [
+     "W"
+    ],
+    "color_indicator": [
+     "W"
+    ],
+    "power": "4",
+    "toughness": "4",
+    "artist": "Denys Tsiperko",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/7/e/7e784d3d-0c6d-4ce5-beb5-edd2adb32385.png?1783917066",
+     "normal": "https://cards.scryfall.io/normal/back/7/e/7e784d3d-0c6d-4ce5-beb5-edd2adb32385.jpg?1783917066",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/7/e/7e784d3d-0c6d-4ce5-beb5-edd2adb32385.jpg?1783917066"
+    }
+   }
+  ]
+ },
+ "mom-113": {
+  "id": "92f5b177-b0c6-4573-b860-f75dad1941bd",
+  "name": "Invasion of Eldraine // Prickle Faeries",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "113",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "keywords": [
+   "Flying",
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Creature — Faerie",
+  "color_identity": [
+   "B"
+  ],
+  "rarity": "uncommon",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/113/invasion-of-eldraine-prickle-faeries?utm_source=api",
+  "artist": "Cristi Balanescu",
+  "card_faces": [
+   {
+    "name": "Invasion of Eldraine",
+    "mana_cost": "{3}{B}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, target opponent discards two cards.",
+    "colors": [
+     "B"
+    ],
+    "defense": "4",
+    "artist": "Cristi Balanescu",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/9/2/92f5b177-b0c6-4573-b860-f75dad1941bd.png?1783917011",
+     "normal": "https://cards.scryfall.io/normal/front/9/2/92f5b177-b0c6-4573-b860-f75dad1941bd.jpg?1783917011",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/9/2/92f5b177-b0c6-4573-b860-f75dad1941bd.jpg?1783917011"
+    }
+   },
+   {
+    "name": "Prickle Faeries",
+    "mana_cost": "",
+    "type_line": "Creature — Faerie",
+    "oracle_text": "Flying\nAt the beginning of each opponent's upkeep, if that player has two or fewer cards in hand, this creature deals 2 damage to them.",
+    "flavor_text": "When the courts fell, Eldraine's fae turned from their usual pranks to deadlier tricks.",
+    "colors": [
+     "B"
+    ],
+    "color_indicator": [
+     "B"
+    ],
+    "power": "2",
+    "toughness": "2",
+    "artist": "Cristi Balanescu",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/9/2/92f5b177-b0c6-4573-b860-f75dad1941bd.png?1783917011",
+     "normal": "https://cards.scryfall.io/normal/back/9/2/92f5b177-b0c6-4573-b860-f75dad1941bd.jpg?1783917011",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/9/2/92f5b177-b0c6-4573-b860-f75dad1941bd.jpg?1783917011"
+    }
+   }
+  ]
+ },
+ "mom-233": {
+  "id": "b3e0fc49-f765-4bd1-a2b9-23e703388b50",
+  "name": "Invasion of Ergamon // Truga Cliffcharger",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "233",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "keywords": [
+   "Transform",
+   "Treasure",
+   "Trample"
+  ],
+  "type_line": "Battle — Siege // Creature — Rhino",
+  "color_identity": [
+   "G",
+   "R"
+  ],
+  "rarity": "uncommon",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/233/invasion-of-ergamon-truga-cliffcharger?utm_source=api",
+  "artist": "Manuel Castañón",
+  "card_faces": [
+   {
+    "name": "Invasion of Ergamon",
+    "mana_cost": "{R}{G}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, create a Treasure token. Then you may discard a card. If you do, draw a card.",
+    "colors": [
+     "G",
+     "R"
+    ],
+    "defense": "5",
+    "artist": "Manuel Castañón",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/b/3/b3e0fc49-f765-4bd1-a2b9-23e703388b50.png?1783916953",
+     "normal": "https://cards.scryfall.io/normal/front/b/3/b3e0fc49-f765-4bd1-a2b9-23e703388b50.jpg?1783916953",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/b/3/b3e0fc49-f765-4bd1-a2b9-23e703388b50.jpg?1783916953"
+    }
+   },
+   {
+    "name": "Truga Cliffcharger",
+    "mana_cost": "",
+    "type_line": "Creature — Rhino",
+    "oracle_text": "Trample\nWhen this creature enters, you may discard a card. If you do, search your library for a land or battle card, reveal it, put it into your hand, then shuffle.",
+    "flavor_text": "Throughout Ergamon's wild Truga Jungle, predator-prey relationships stopped until every last invader was crushed to dust.",
+    "colors": [
+     "G",
+     "R"
+    ],
+    "color_indicator": [
+     "G",
+     "R"
+    ],
+    "power": "3",
+    "toughness": "4",
+    "artist": "Manuel Castañón",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/b/3/b3e0fc49-f765-4bd1-a2b9-23e703388b50.png?1783916953",
+     "normal": "https://cards.scryfall.io/normal/back/b/3/b3e0fc49-f765-4bd1-a2b9-23e703388b50.jpg?1783916953",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/b/3/b3e0fc49-f765-4bd1-a2b9-23e703388b50.jpg?1783916953"
+    }
+   }
+  ]
+ },
+ "mom-114": {
+  "id": "b3af679b-6ee6-4a1d-8ec3-b659bdd90b4a",
+  "name": "Invasion of Fiora // Marchesa, Resolute Monarch",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "114",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "frame_effects": [
+   "legendary"
+  ],
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform",
+   "Menace",
+   "Deathtouch"
+  ],
+  "type_line": "Battle — Siege // Legendary Creature — Human Noble",
+  "color_identity": [
+   "B"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/114/invasion-of-fiora-marchesa-resolute-monarch?utm_source=api",
+  "artist": "Joshua Raphael",
+  "card_faces": [
+   {
+    "name": "Invasion of Fiora",
+    "mana_cost": "{4}{B}{B}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, choose one or both —\n• Destroy all legendary creatures.\n• Destroy all nonlegendary creatures.",
+    "colors": [
+     "B"
+    ],
+    "defense": "4",
+    "artist": "Joshua Raphael",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/b/3/b3af679b-6ee6-4a1d-8ec3-b659bdd90b4a.png?1783917011",
+     "normal": "https://cards.scryfall.io/normal/front/b/3/b3af679b-6ee6-4a1d-8ec3-b659bdd90b4a.jpg?1783917011",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/b/3/b3af679b-6ee6-4a1d-8ec3-b659bdd90b4a.jpg?1783917011"
+    }
+   },
+   {
+    "name": "Marchesa, Resolute Monarch",
+    "mana_cost": "",
+    "type_line": "Legendary Creature — Human Noble",
+    "oracle_text": "Menace, deathtouch\nWhenever Marchesa attacks, remove all counters from up to one target permanent.\nAt the beginning of your upkeep, if you haven't been dealt combat damage since your last turn, you draw a card and you lose 1 life.",
+    "colors": [
+     "B"
+    ],
+    "color_indicator": [
+     "B"
+    ],
+    "power": "3",
+    "toughness": "6",
+    "artist": "Joshua Raphael",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/b/3/b3af679b-6ee6-4a1d-8ec3-b659bdd90b4a.png?1783917011",
+     "normal": "https://cards.scryfall.io/normal/back/b/3/b3af679b-6ee6-4a1d-8ec3-b659bdd90b4a.jpg?1783917011",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/b/3/b3af679b-6ee6-4a1d-8ec3-b659bdd90b4a.jpg?1783917011"
+    }
+   }
+  ]
+ },
+ "pmom-114s": {
+  "id": "05a292df-4323-4789-bba4-7f4599e24027",
+  "name": "Invasion of Fiora // Marchesa, Resolute Monarch",
+  "layout": "transform",
+  "set": "pmom",
+  "set_name": "March of the Machine Promos",
+  "set_type": "promo",
+  "collector_number": "114s",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "frame_effects": [
+   "legendary"
+  ],
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": true,
+  "promo_types": [
+   "prerelease",
+   "datestamped"
+  ],
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform",
+   "Menace",
+   "Deathtouch"
+  ],
+  "type_line": "Battle — Siege // Legendary Creature — Human Noble",
+  "color_identity": [
+   "B"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/pmom/114s/invasion-of-fiora-marchesa-resolute-monarch?utm_source=api",
+  "artist": "Joshua Raphael",
+  "card_faces": [
+   {
+    "name": "Invasion of Fiora",
+    "mana_cost": "{4}{B}{B}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, choose one or both —\n• Destroy all legendary creatures.\n• Destroy all nonlegendary creatures.",
+    "colors": [
+     "B"
+    ],
+    "defense": "4",
+    "artist": "Joshua Raphael",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/0/5/05a292df-4323-4789-bba4-7f4599e24027.png?1783916722",
+     "normal": "https://cards.scryfall.io/normal/front/0/5/05a292df-4323-4789-bba4-7f4599e24027.jpg?1783916722",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/0/5/05a292df-4323-4789-bba4-7f4599e24027.jpg?1783916722"
+    }
+   },
+   {
+    "name": "Marchesa, Resolute Monarch",
+    "mana_cost": "",
+    "type_line": "Legendary Creature — Human Noble",
+    "oracle_text": "Menace, deathtouch\nWhenever Marchesa attacks, remove all counters from up to one target permanent.\nAt the beginning of your upkeep, if you haven't been dealt combat damage since your last turn, you draw a card and you lose 1 life.",
+    "colors": [
+     "B"
+    ],
+    "color_indicator": [
+     "B"
+    ],
+    "power": "3",
+    "toughness": "6",
+    "artist": "Joshua Raphael",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/0/5/05a292df-4323-4789-bba4-7f4599e24027.png?1783916722",
+     "normal": "https://cards.scryfall.io/normal/back/0/5/05a292df-4323-4789-bba4-7f4599e24027.jpg?1783916722",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/0/5/05a292df-4323-4789-bba4-7f4599e24027.jpg?1783916722"
+    }
+   }
+  ]
+ },
+ "mom-22": {
+  "id": "11798730-6788-4e0b-a828-b46cab1a4fa7",
+  "name": "Invasion of Gobakhan // Lightshield Array",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "22",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Enchantment",
+  "color_identity": [
+   "W"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/22/invasion-of-gobakhan-lightshield-array?utm_source=api",
+  "artist": "Andreas Zafiratos",
+  "card_faces": [
+   {
+    "name": "Invasion of Gobakhan",
+    "mana_cost": "{1}{W}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, look at target opponent's hand. You may exile a nonland card from it. For as long as that card remains exiled, its owner may play it. A spell cast this way costs {2} more to cast.",
+    "colors": [
+     "W"
+    ],
+    "defense": "3",
+    "artist": "Andreas Zafiratos",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/1/1/11798730-6788-4e0b-a828-b46cab1a4fa7.png?1783917064",
+     "normal": "https://cards.scryfall.io/normal/front/1/1/11798730-6788-4e0b-a828-b46cab1a4fa7.jpg?1783917064",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/1/1/11798730-6788-4e0b-a828-b46cab1a4fa7.jpg?1783917064"
+    }
+   },
+   {
+    "name": "Lightshield Array",
+    "mana_cost": "",
+    "type_line": "Enchantment",
+    "oracle_text": "At the beginning of your end step, put a +1/+1 counter on each creature that attacked this turn.\nSacrifice this enchantment: Creatures you control gain hexproof and indestructible until end of turn.",
+    "flavor_text": "The weight of Phyrexia crashed down upon Gobakhan, but the will of its people endured.",
+    "colors": [
+     "W"
+    ],
+    "color_indicator": [
+     "W"
+    ],
+    "artist": "Andreas Zafiratos",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/1/1/11798730-6788-4e0b-a828-b46cab1a4fa7.png?1783917064",
+     "normal": "https://cards.scryfall.io/normal/back/1/1/11798730-6788-4e0b-a828-b46cab1a4fa7.jpg?1783917064",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/1/1/11798730-6788-4e0b-a828-b46cab1a4fa7.jpg?1783917064"
+    }
+   }
+  ]
+ },
+ "pmom-22s": {
+  "id": "a0baccde-b9ca-42e5-9ed6-29d1acf43d7f",
+  "name": "Invasion of Gobakhan // Lightshield Array",
+  "layout": "transform",
+  "set": "pmom",
+  "set_name": "March of the Machine Promos",
+  "set_type": "promo",
+  "collector_number": "22s",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": true,
+  "promo_types": [
+   "prerelease",
+   "datestamped"
+  ],
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Enchantment",
+  "color_identity": [
+   "W"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/pmom/22s/invasion-of-gobakhan-lightshield-array?utm_source=api",
+  "artist": "Andreas Zafiratos",
+  "card_faces": [
+   {
+    "name": "Invasion of Gobakhan",
+    "mana_cost": "{1}{W}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, look at target opponent's hand. You may exile a nonland card from it. For as long as that card remains exiled, its owner may play it. A spell cast this way costs {2} more to cast.",
+    "colors": [
+     "W"
+    ],
+    "defense": "3",
+    "artist": "Andreas Zafiratos",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/a/0/a0baccde-b9ca-42e5-9ed6-29d1acf43d7f.png?1783916742",
+     "normal": "https://cards.scryfall.io/normal/front/a/0/a0baccde-b9ca-42e5-9ed6-29d1acf43d7f.jpg?1783916742",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/a/0/a0baccde-b9ca-42e5-9ed6-29d1acf43d7f.jpg?1783916742"
+    }
+   },
+   {
+    "name": "Lightshield Array",
+    "mana_cost": "",
+    "type_line": "Enchantment",
+    "oracle_text": "At the beginning of your end step, put a +1/+1 counter on each creature that attacked this turn.\nSacrifice this enchantment: Creatures you control gain hexproof and indestructible until end of turn.",
+    "flavor_text": "The weight of Phyrexia crashed down upon Gobakhan, but the will of its people endured.",
+    "colors": [
+     "W"
+    ],
+    "color_indicator": [
+     "W"
+    ],
+    "artist": "Andreas Zafiratos",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/a/0/a0baccde-b9ca-42e5-9ed6-29d1acf43d7f.png?1783916742",
+     "normal": "https://cards.scryfall.io/normal/back/a/0/a0baccde-b9ca-42e5-9ed6-29d1acf43d7f.jpg?1783916742",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/a/0/a0baccde-b9ca-42e5-9ed6-29d1acf43d7f.jpg?1783916742"
+    }
+   }
+  ]
+ },
+ "mom-190": {
+  "id": "5d59c8f2-f6af-40a6-8dfe-8cc45bf231ce",
+  "name": "Invasion of Ikoria // Zilortha, Apex of Ikoria",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "190",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "frame_effects": [
+   "legendary"
+  ],
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "security_stamp": "oval",
+  "keywords": [
+   "Reach",
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Legendary Creature — Dinosaur",
+  "color_identity": [
+   "G"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/190/invasion-of-ikoria-zilortha-apex-of-ikoria?utm_source=api",
+  "artist": "Antonio José Manzanedo",
+  "card_faces": [
+   {
+    "name": "Invasion of Ikoria",
+    "mana_cost": "{X}{G}{G}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, search your library and/or graveyard for a non-Human creature card with mana value X or less and put it onto the battlefield. If you search your library this way, shuffle.",
+    "colors": [
+     "G"
+    ],
+    "defense": "6",
+    "artist": "Antonio José Manzanedo",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/5/d/5d59c8f2-f6af-40a6-8dfe-8cc45bf231ce.png?1783916974",
+     "normal": "https://cards.scryfall.io/normal/front/5/d/5d59c8f2-f6af-40a6-8dfe-8cc45bf231ce.jpg?1783916974",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/5/d/5d59c8f2-f6af-40a6-8dfe-8cc45bf231ce.jpg?1783916974"
+    }
+   },
+   {
+    "name": "Zilortha, Apex of Ikoria",
+    "mana_cost": "",
+    "type_line": "Legendary Creature — Dinosaur",
+    "oracle_text": "Reach\nFor each non-Human creature you control, you may have that creature assign its combat damage as though it weren't blocked.",
+    "flavor_text": "Phyrexia's largest goliaths stormed Ikoria, ready to challenge the world's great monsters. Zilortha was unimpressed.",
+    "colors": [
+     "G"
+    ],
+    "color_indicator": [
+     "G"
+    ],
+    "power": "8",
+    "toughness": "8",
+    "artist": "Antonio José Manzanedo",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/5/d/5d59c8f2-f6af-40a6-8dfe-8cc45bf231ce.png?1783916974",
+     "normal": "https://cards.scryfall.io/normal/back/5/d/5d59c8f2-f6af-40a6-8dfe-8cc45bf231ce.jpg?1783916974",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/5/d/5d59c8f2-f6af-40a6-8dfe-8cc45bf231ce.jpg?1783916974"
+    }
+   }
+  ]
+ },
+ "pmom-190s": {
+  "id": "e277f9d2-b809-4edd-aa8f-e28e13a6d349",
+  "name": "Invasion of Ikoria // Zilortha, Apex of Ikoria",
+  "layout": "transform",
+  "set": "pmom",
+  "set_name": "March of the Machine Promos",
+  "set_type": "promo",
+  "collector_number": "190s",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "frame_effects": [
+   "legendary"
+  ],
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": true,
+  "promo_types": [
+   "prerelease",
+   "datestamped"
+  ],
+  "security_stamp": "oval",
+  "keywords": [
+   "Reach",
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Legendary Creature — Dinosaur",
+  "color_identity": [
+   "G"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/pmom/190s/invasion-of-ikoria-zilortha-apex-of-ikoria?utm_source=api",
+  "artist": "Antonio José Manzanedo",
+  "card_faces": [
+   {
+    "name": "Invasion of Ikoria",
+    "mana_cost": "{X}{G}{G}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, search your library and/or graveyard for a non-Human creature card with mana value X or less and put it onto the battlefield. If you search your library this way, shuffle.",
+    "colors": [
+     "G"
+    ],
+    "defense": "6",
+    "artist": "Antonio José Manzanedo",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/e/2/e277f9d2-b809-4edd-aa8f-e28e13a6d349.png?1783916703",
+     "normal": "https://cards.scryfall.io/normal/front/e/2/e277f9d2-b809-4edd-aa8f-e28e13a6d349.jpg?1783916703",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/e/2/e277f9d2-b809-4edd-aa8f-e28e13a6d349.jpg?1783916703"
+    }
+   },
+   {
+    "name": "Zilortha, Apex of Ikoria",
+    "mana_cost": "",
+    "type_line": "Legendary Creature — Dinosaur",
+    "oracle_text": "Reach\nFor each non-Human creature you control, you may have that creature assign its combat damage as though it weren't blocked.",
+    "flavor_text": "Phyrexia's largest goliaths stormed Ikoria, ready to challenge the world's great monsters. Zilortha was unimpressed.",
+    "colors": [
+     "G"
+    ],
+    "color_indicator": [
+     "G"
+    ],
+    "power": "8",
+    "toughness": "8",
+    "artist": "Antonio José Manzanedo",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/e/2/e277f9d2-b809-4edd-aa8f-e28e13a6d349.png?1783916703",
+     "normal": "https://cards.scryfall.io/normal/back/e/2/e277f9d2-b809-4edd-aa8f-e28e13a6d349.jpg?1783916703",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/e/2/e277f9d2-b809-4edd-aa8f-e28e13a6d349.jpg?1783916703"
+    }
+   }
+  ]
+ },
+ "inr-120": {
+  "id": "370412b1-85ec-42a9-90fe-c35a6249e149",
+  "name": "Invasion of Innistrad // Deluge of the Dead",
+  "layout": "transform",
+  "set": "inr",
+  "set_name": "Innistrad Remastered",
+  "set_type": "masters",
+  "collector_number": "120",
+  "released_at": "2025-01-24",
+  "frame": "2015",
+  "frame_effects": [
+   "enchantment"
+  ],
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform",
+   "Flash"
+  ],
+  "type_line": "Battle — Siege // Enchantment",
+  "color_identity": [
+   "B"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/inr/120/invasion-of-innistrad-deluge-of-the-dead?utm_source=api",
+  "artist": "Alexey Kruglov",
+  "card_faces": [
+   {
+    "name": "Invasion of Innistrad",
+    "mana_cost": "{2}{B}{B}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nFlash\nWhen this Siege enters, target creature an opponent controls gets -13/-13 until end of turn.",
+    "colors": [
+     "B"
+    ],
+    "defense": "5",
+    "artist": "Alexey Kruglov",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/3/7/370412b1-85ec-42a9-90fe-c35a6249e149.png?1783908148",
+     "normal": "https://cards.scryfall.io/normal/front/3/7/370412b1-85ec-42a9-90fe-c35a6249e149.jpg?1783908148",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/3/7/370412b1-85ec-42a9-90fe-c35a6249e149.jpg?1783908148"
+    }
+   },
+   {
+    "name": "Deluge of the Dead",
+    "mana_cost": "",
+    "type_line": "Enchantment",
+    "oracle_text": "When this enchantment enters, create two 2/2 black Zombie creature tokens.\n{2}{B}: Exile target card from a graveyard. If it was a creature card, create a 2/2 black Zombie creature token.",
+    "flavor_text": "The eerie magic animating Innistrad's zombies rendered them immune to phyresis, making them crucial to the plane's defense.",
+    "colors": [
+     "B"
+    ],
+    "color_indicator": [
+     "B"
+    ],
+    "artist": "Alexey Kruglov",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/3/7/370412b1-85ec-42a9-90fe-c35a6249e149.png?1783908148",
+     "normal": "https://cards.scryfall.io/normal/back/3/7/370412b1-85ec-42a9-90fe-c35a6249e149.jpg?1783908148",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/3/7/370412b1-85ec-42a9-90fe-c35a6249e149.jpg?1783908148"
+    }
+   }
+  ]
+ },
+ "mom-115": {
+  "id": "77720d2e-2b7b-492b-852c-eea5061eb31b",
+  "name": "Invasion of Innistrad // Deluge of the Dead",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "115",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform",
+   "Flash"
+  ],
+  "type_line": "Battle — Siege // Enchantment",
+  "color_identity": [
+   "B"
+  ],
+  "rarity": "mythic",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/115/invasion-of-innistrad-deluge-of-the-dead?utm_source=api",
+  "artist": "Alexey Kruglov",
+  "card_faces": [
+   {
+    "name": "Invasion of Innistrad",
+    "mana_cost": "{2}{B}{B}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nFlash\nWhen this Siege enters, target creature an opponent controls gets -13/-13 until end of turn.",
+    "colors": [
+     "B"
+    ],
+    "defense": "5",
+    "artist": "Alexey Kruglov",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/7/7/77720d2e-2b7b-492b-852c-eea5061eb31b.png?1783917010",
+     "normal": "https://cards.scryfall.io/normal/front/7/7/77720d2e-2b7b-492b-852c-eea5061eb31b.jpg?1783917010",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/7/7/77720d2e-2b7b-492b-852c-eea5061eb31b.jpg?1783917010"
+    }
+   },
+   {
+    "name": "Deluge of the Dead",
+    "mana_cost": "",
+    "type_line": "Enchantment",
+    "oracle_text": "When this enchantment enters, create two 2/2 black Zombie creature tokens.\n{2}{B}: Exile target card from a graveyard. If it was a creature card, create a 2/2 black Zombie creature token.",
+    "flavor_text": "The eerie magic animating Innistrad's zombies rendered them immune to phyresis, making them crucial to the plane's defense.",
+    "colors": [
+     "B"
+    ],
+    "color_indicator": [
+     "B"
+    ],
+    "artist": "Alexey Kruglov",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/7/7/77720d2e-2b7b-492b-852c-eea5061eb31b.png?1783917010",
+     "normal": "https://cards.scryfall.io/normal/back/7/7/77720d2e-2b7b-492b-852c-eea5061eb31b.jpg?1783917010",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/7/7/77720d2e-2b7b-492b-852c-eea5061eb31b.jpg?1783917010"
+    }
+   }
+  ]
+ },
+ "pmom-115s": {
+  "id": "144c4e3b-1679-4937-8637-05a98295168a",
+  "name": "Invasion of Innistrad // Deluge of the Dead",
+  "layout": "transform",
+  "set": "pmom",
+  "set_name": "March of the Machine Promos",
+  "set_type": "promo",
+  "collector_number": "115s",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": true,
+  "promo_types": [
+   "prerelease",
+   "datestamped"
+  ],
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform",
+   "Flash"
+  ],
+  "type_line": "Battle — Siege // Enchantment",
+  "color_identity": [
+   "B"
+  ],
+  "rarity": "mythic",
+  "finishes": [
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/pmom/115s/invasion-of-innistrad-deluge-of-the-dead?utm_source=api",
+  "artist": "Alexey Kruglov",
+  "card_faces": [
+   {
+    "name": "Invasion of Innistrad",
+    "mana_cost": "{2}{B}{B}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nFlash\nWhen this Siege enters, target creature an opponent controls gets -13/-13 until end of turn.",
+    "colors": [
+     "B"
+    ],
+    "defense": "5",
+    "artist": "Alexey Kruglov",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/1/4/144c4e3b-1679-4937-8637-05a98295168a.png?1783916721",
+     "normal": "https://cards.scryfall.io/normal/front/1/4/144c4e3b-1679-4937-8637-05a98295168a.jpg?1783916721",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/1/4/144c4e3b-1679-4937-8637-05a98295168a.jpg?1783916721"
+    }
+   },
+   {
+    "name": "Deluge of the Dead",
+    "mana_cost": "",
+    "type_line": "Enchantment",
+    "oracle_text": "When this enchantment enters, create two 2/2 black Zombie creature tokens.\n{2}{B}: Exile target card from a graveyard. If it was a creature card, create a 2/2 black Zombie creature token.",
+    "flavor_text": "The eerie magic animating Innistrad's zombies rendered them immune to phyresis, making them crucial to the plane's defense.",
+    "colors": [
+     "B"
+    ],
+    "color_indicator": [
+     "B"
+    ],
+    "artist": "Alexey Kruglov",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/1/4/144c4e3b-1679-4937-8637-05a98295168a.png?1783916721",
+     "normal": "https://cards.scryfall.io/normal/back/1/4/144c4e3b-1679-4937-8637-05a98295168a.jpg?1783916721",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/1/4/144c4e3b-1679-4937-8637-05a98295168a.jpg?1783916721"
+    }
+   }
+  ]
+ },
+ "mom-191": {
+  "id": "fa20fc16-e106-4953-ace4-5ac9c7fec97b",
+  "name": "Invasion of Ixalan // Belligerent Regisaur",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "191",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform",
+   "Trample"
+  ],
+  "type_line": "Battle — Siege // Creature — Dinosaur",
+  "color_identity": [
+   "G"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/191/invasion-of-ixalan-belligerent-regisaur?utm_source=api",
+  "artist": "Viktor Titov",
+  "card_faces": [
+   {
+    "name": "Invasion of Ixalan",
+    "mana_cost": "{1}{G}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, look at the top five cards of your library. You may reveal a permanent card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.",
+    "colors": [
+     "G"
+    ],
+    "defense": "4",
+    "artist": "Viktor Titov",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/f/a/fa20fc16-e106-4953-ace4-5ac9c7fec97b.png?1783916974",
+     "normal": "https://cards.scryfall.io/normal/front/f/a/fa20fc16-e106-4953-ace4-5ac9c7fec97b.jpg?1783916974",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/f/a/fa20fc16-e106-4953-ace4-5ac9c7fec97b.jpg?1783916974"
+    }
+   },
+   {
+    "name": "Belligerent Regisaur",
+    "mana_cost": "",
+    "type_line": "Creature — Dinosaur",
+    "oracle_text": "Trample\nWhenever you cast a spell, this creature gains indestructible until end of turn.",
+    "flavor_text": "\"Careful. Its vision is based on fear, and it can smell movement . . . or something like that.\"\n—Gregor, amateur zoologist",
+    "colors": [
+     "G"
+    ],
+    "color_indicator": [
+     "G"
+    ],
+    "power": "4",
+    "toughness": "3",
+    "artist": "Viktor Titov",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/f/a/fa20fc16-e106-4953-ace4-5ac9c7fec97b.png?1783916974",
+     "normal": "https://cards.scryfall.io/normal/back/f/a/fa20fc16-e106-4953-ace4-5ac9c7fec97b.jpg?1783916974",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/f/a/fa20fc16-e106-4953-ace4-5ac9c7fec97b.jpg?1783916974"
+    }
+   }
+  ]
+ },
+ "pmom-191s": {
+  "id": "3befb543-547a-46ac-8488-a7f2069d3d88",
+  "name": "Invasion of Ixalan // Belligerent Regisaur",
+  "layout": "transform",
+  "set": "pmom",
+  "set_name": "March of the Machine Promos",
+  "set_type": "promo",
+  "collector_number": "191s",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": true,
+  "promo_types": [
+   "prerelease",
+   "datestamped"
+  ],
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform",
+   "Trample"
+  ],
+  "type_line": "Battle — Siege // Creature — Dinosaur",
+  "color_identity": [
+   "G"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/pmom/191s/invasion-of-ixalan-belligerent-regisaur?utm_source=api",
+  "artist": "Viktor Titov",
+  "card_faces": [
+   {
+    "name": "Invasion of Ixalan",
+    "mana_cost": "{1}{G}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, look at the top five cards of your library. You may reveal a permanent card from among them and put it into your hand. Put the rest on the bottom of your library in a random order.",
+    "colors": [
+     "G"
+    ],
+    "defense": "4",
+    "artist": "Viktor Titov",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/3/b/3befb543-547a-46ac-8488-a7f2069d3d88.png?1783916705",
+     "normal": "https://cards.scryfall.io/normal/front/3/b/3befb543-547a-46ac-8488-a7f2069d3d88.jpg?1783916705",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/3/b/3befb543-547a-46ac-8488-a7f2069d3d88.jpg?1783916705"
+    }
+   },
+   {
+    "name": "Belligerent Regisaur",
+    "mana_cost": "",
+    "type_line": "Creature — Dinosaur",
+    "oracle_text": "Trample\nWhenever you cast a spell, this creature gains indestructible until end of turn.",
+    "flavor_text": "\"Careful. Its vision is based on fear, and it can smell movement . . . or something like that.\"\n—Gregor, amateur zoologist",
+    "colors": [
+     "G"
+    ],
+    "color_indicator": [
+     "G"
+    ],
+    "power": "4",
+    "toughness": "3",
+    "artist": "Viktor Titov",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/3/b/3befb543-547a-46ac-8488-a7f2069d3d88.png?1783916705",
+     "normal": "https://cards.scryfall.io/normal/back/3/b/3befb543-547a-46ac-8488-a7f2069d3d88.jpg?1783916705",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/3/b/3befb543-547a-46ac-8488-a7f2069d3d88.jpg?1783916705"
+    }
+   }
+  ]
+ },
+ "mom-234": {
+  "id": "4f7231f6-8adc-4a68-9984-e56b974c087b",
+  "name": "Invasion of Kaladesh // Aetherwing, Golden-Scale Flagship",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "234",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "frame_effects": [
+   "legendary"
+  ],
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "keywords": [
+   "Flying",
+   "Transform",
+   "Crew"
+  ],
+  "type_line": "Battle — Siege // Legendary Artifact — Vehicle",
+  "color_identity": [
+   "R",
+   "U"
+  ],
+  "rarity": "uncommon",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/234/invasion-of-kaladesh-aetherwing-golden-scale-flagship?utm_source=api",
+  "artist": "Leon Tukker",
+  "card_faces": [
+   {
+    "name": "Invasion of Kaladesh",
+    "mana_cost": "{U}{R}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, create a 1/1 colorless Thopter artifact creature token with flying.",
+    "colors": [
+     "R",
+     "U"
+    ],
+    "defense": "4",
+    "artist": "Leon Tukker",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/4/f/4f7231f6-8adc-4a68-9984-e56b974c087b.png?1783916951",
+     "normal": "https://cards.scryfall.io/normal/front/4/f/4f7231f6-8adc-4a68-9984-e56b974c087b.jpg?1783916951",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/4/f/4f7231f6-8adc-4a68-9984-e56b974c087b.jpg?1783916951"
+    }
+   },
+   {
+    "name": "Aetherwing, Golden-Scale Flagship",
+    "mana_cost": "",
+    "type_line": "Legendary Artifact — Vehicle",
+    "oracle_text": "Flying\nAetherwing's power is equal to the number of artifacts you control.\nCrew 1 (Tap any number of creatures you control with total power 1 or more: This Vehicle becomes an artifact creature until end of turn.)",
+    "flavor_text": "Inspired by the grace of Ixalan's pterodons, Saheeli built one of her own.",
+    "colors": [
+     "R",
+     "U"
+    ],
+    "color_indicator": [
+     "R",
+     "U"
+    ],
+    "power": "*",
+    "toughness": "4",
+    "artist": "Leon Tukker",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/4/f/4f7231f6-8adc-4a68-9984-e56b974c087b.png?1783916951",
+     "normal": "https://cards.scryfall.io/normal/back/4/f/4f7231f6-8adc-4a68-9984-e56b974c087b.jpg?1783916951",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/4/f/4f7231f6-8adc-4a68-9984-e56b974c087b.jpg?1783916951"
+    }
+   }
+  ]
+ },
+ "mom-145": {
+  "id": "f7cedd62-efc8-464d-8387-220bb55e07e9",
+  "name": "Invasion of Kaldheim // Pyre of the World Tree",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "145",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Enchantment",
+  "color_identity": [
+   "R"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/145/invasion-of-kaldheim-pyre-of-the-world-tree?utm_source=api",
+  "artist": "Bryan Sola",
+  "card_faces": [
+   {
+    "name": "Invasion of Kaldheim",
+    "mana_cost": "{3}{R}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, exile all cards from your hand, then draw that many cards. Until the end of your next turn, you may play cards exiled this way.",
+    "colors": [
+     "R"
+    ],
+    "defense": "4",
+    "artist": "Bryan Sola",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/f/7/f7cedd62-efc8-464d-8387-220bb55e07e9.png?1783916996",
+     "normal": "https://cards.scryfall.io/normal/front/f/7/f7cedd62-efc8-464d-8387-220bb55e07e9.jpg?1783916996",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/f/7/f7cedd62-efc8-464d-8387-220bb55e07e9.jpg?1783916996"
+    }
+   },
+   {
+    "name": "Pyre of the World Tree",
+    "mana_cost": "",
+    "type_line": "Enchantment",
+    "oracle_text": "Discard a land card: This enchantment deals 2 damage to any target.\nWhenever you discard a land card, exile the top card of your library. You may play that card this turn.",
+    "flavor_text": "The warriors of Kaldheim burned the soul of their world to keep it out of Phyrexia's hands.",
+    "colors": [
+     "R"
+    ],
+    "color_indicator": [
+     "R"
+    ],
+    "artist": "Bryan Sola",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/f/7/f7cedd62-efc8-464d-8387-220bb55e07e9.png?1783916996",
+     "normal": "https://cards.scryfall.io/normal/back/f/7/f7cedd62-efc8-464d-8387-220bb55e07e9.jpg?1783916996",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/f/7/f7cedd62-efc8-464d-8387-220bb55e07e9.jpg?1783916996"
+    }
+   }
+  ]
+ },
+ "pmom-145s": {
+  "id": "b7848601-5b0d-4c1a-b3b3-79572d7a0a1c",
+  "name": "Invasion of Kaldheim // Pyre of the World Tree",
+  "layout": "transform",
+  "set": "pmom",
+  "set_name": "March of the Machine Promos",
+  "set_type": "promo",
+  "collector_number": "145s",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": true,
+  "promo_types": [
+   "prerelease",
+   "datestamped"
+  ],
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Enchantment",
+  "color_identity": [
+   "R"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/pmom/145s/invasion-of-kaldheim-pyre-of-the-world-tree?utm_source=api",
+  "artist": "Bryan Sola",
+  "card_faces": [
+   {
+    "name": "Invasion of Kaldheim",
+    "mana_cost": "{3}{R}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, exile all cards from your hand, then draw that many cards. Until the end of your next turn, you may play cards exiled this way.",
+    "colors": [
+     "R"
+    ],
+    "defense": "4",
+    "artist": "Bryan Sola",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/b/7/b7848601-5b0d-4c1a-b3b3-79572d7a0a1c.png?1783916713",
+     "normal": "https://cards.scryfall.io/normal/front/b/7/b7848601-5b0d-4c1a-b3b3-79572d7a0a1c.jpg?1783916713",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/b/7/b7848601-5b0d-4c1a-b3b3-79572d7a0a1c.jpg?1783916713"
+    }
+   },
+   {
+    "name": "Pyre of the World Tree",
+    "mana_cost": "",
+    "type_line": "Enchantment",
+    "oracle_text": "Discard a land card: This enchantment deals 2 damage to any target.\nWhenever you discard a land card, exile the top card of your library. You may play that card this turn.",
+    "flavor_text": "The warriors of Kaldheim burned the soul of their world to keep it out of Phyrexia's hands.",
+    "colors": [
+     "R"
+    ],
+    "color_indicator": [
+     "R"
+    ],
+    "artist": "Bryan Sola",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/b/7/b7848601-5b0d-4c1a-b3b3-79572d7a0a1c.png?1783916713",
+     "normal": "https://cards.scryfall.io/normal/back/b/7/b7848601-5b0d-4c1a-b3b3-79572d7a0a1c.jpg?1783916713",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/b/7/b7848601-5b0d-4c1a-b3b3-79572d7a0a1c.jpg?1783916713"
+    }
+   }
+  ]
+ },
+ "mom-62": {
+  "id": "3140320d-b932-441f-bff3-9bdf4419b88a",
+  "name": "Invasion of Kamigawa // Rooftop Saboteurs",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "62",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "keywords": [
+   "Flying",
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Creature — Moonfolk Ninja",
+  "color_identity": [
+   "U"
+  ],
+  "rarity": "uncommon",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/62/invasion-of-kamigawa-rooftop-saboteurs?utm_source=api",
+  "artist": "Kekai Kotaki",
+  "card_faces": [
+   {
+    "name": "Invasion of Kamigawa",
+    "mana_cost": "{3}{U}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, tap target artifact or creature an opponent controls and put a stun counter on it. (If a permanent with a stun counter would become untapped, remove one from it instead.)",
+    "colors": [
+     "U"
+    ],
+    "defense": "4",
+    "artist": "Kekai Kotaki",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/3/1/3140320d-b932-441f-bff3-9bdf4419b88a.png?1783917040",
+     "normal": "https://cards.scryfall.io/normal/front/3/1/3140320d-b932-441f-bff3-9bdf4419b88a.jpg?1783917040",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/3/1/3140320d-b932-441f-bff3-9bdf4419b88a.jpg?1783917040"
+    }
+   },
+   {
+    "name": "Rooftop Saboteurs",
+    "mana_cost": "",
+    "type_line": "Creature — Moonfolk Ninja",
+    "oracle_text": "Flying\nWhenever this creature deals combat damage to a player or battle, draw a card.",
+    "flavor_text": "The pace of Kamigawa's development meant that Jin-Gitaxias's intel was already outdated when the invaders arrived.",
+    "colors": [
+     "U"
+    ],
+    "color_indicator": [
+     "U"
+    ],
+    "power": "2",
+    "toughness": "3",
+    "artist": "Kekai Kotaki",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/3/1/3140320d-b932-441f-bff3-9bdf4419b88a.png?1783917040",
+     "normal": "https://cards.scryfall.io/normal/back/3/1/3140320d-b932-441f-bff3-9bdf4419b88a.jpg?1783917040",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/3/1/3140320d-b932-441f-bff3-9bdf4419b88a.jpg?1783917040"
+    }
+   }
+  ]
+ },
+ "mom-146": {
+  "id": "776b8951-cf15-47ff-b36f-f47706eddb6f",
+  "name": "Invasion of Karsus // Refraction Elemental",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "146",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform",
+   "Ward"
+  ],
+  "type_line": "Battle — Siege // Creature — Elemental",
+  "color_identity": [
+   "R"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/146/invasion-of-karsus-refraction-elemental?utm_source=api",
+  "artist": "Zoltan Boros",
+  "card_faces": [
+   {
+    "name": "Invasion of Karsus",
+    "mana_cost": "{2}{R}{R}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, it deals 3 damage to each creature and each planeswalker.",
+    "colors": [
+     "R"
+    ],
+    "defense": "4",
+    "artist": "Zoltan Boros",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/7/7/776b8951-cf15-47ff-b36f-f47706eddb6f.png?1783916995",
+     "normal": "https://cards.scryfall.io/normal/front/7/7/776b8951-cf15-47ff-b36f-f47706eddb6f.jpg?1783916995",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/7/7/776b8951-cf15-47ff-b36f-f47706eddb6f.jpg?1783916995"
+    }
+   },
+   {
+    "name": "Refraction Elemental",
+    "mana_cost": "",
+    "type_line": "Creature — Elemental",
+    "oracle_text": "Ward—Pay 2 life.\nWhenever you cast a spell, this creature deals 2 damage to each opponent.",
+    "flavor_text": "The crystal landslide stirred over the shattered forms of the Machine Legion vanguard, and then it rose and rearranged itself into an avenging colossus.",
+    "colors": [
+     "R"
+    ],
+    "color_indicator": [
+     "R"
+    ],
+    "power": "4",
+    "toughness": "4",
+    "artist": "Zoltan Boros",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/7/7/776b8951-cf15-47ff-b36f-f47706eddb6f.png?1783916995",
+     "normal": "https://cards.scryfall.io/normal/back/7/7/776b8951-cf15-47ff-b36f-f47706eddb6f.jpg?1783916995",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/7/7/776b8951-cf15-47ff-b36f-f47706eddb6f.jpg?1783916995"
+    }
+   }
+  ]
+ },
+ "pmom-146s": {
+  "id": "cdcf86b1-2dbd-457a-b1ac-368e107b2180",
+  "name": "Invasion of Karsus // Refraction Elemental",
+  "layout": "transform",
+  "set": "pmom",
+  "set_name": "March of the Machine Promos",
+  "set_type": "promo",
+  "collector_number": "146s",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": true,
+  "promo_types": [
+   "prerelease",
+   "datestamped"
+  ],
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform",
+   "Ward"
+  ],
+  "type_line": "Battle — Siege // Creature — Elemental",
+  "color_identity": [
+   "R"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/pmom/146s/invasion-of-karsus-refraction-elemental?utm_source=api",
+  "artist": "Zoltan Boros",
+  "card_faces": [
+   {
+    "name": "Invasion of Karsus",
+    "mana_cost": "{2}{R}{R}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, it deals 3 damage to each creature and each planeswalker.",
+    "colors": [
+     "R"
+    ],
+    "defense": "4",
+    "artist": "Zoltan Boros",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/c/d/cdcf86b1-2dbd-457a-b1ac-368e107b2180.png?1783916713",
+     "normal": "https://cards.scryfall.io/normal/front/c/d/cdcf86b1-2dbd-457a-b1ac-368e107b2180.jpg?1783916713",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/c/d/cdcf86b1-2dbd-457a-b1ac-368e107b2180.jpg?1783916713"
+    }
+   },
+   {
+    "name": "Refraction Elemental",
+    "mana_cost": "",
+    "type_line": "Creature — Elemental",
+    "oracle_text": "Ward—Pay 2 life.\nWhenever you cast a spell, this creature deals 2 damage to each opponent.",
+    "flavor_text": "The crystal landslide stirred over the shattered forms of the Machine Legion vanguard, and then it rose and rearranged itself into an avenging colossus.",
+    "colors": [
+     "R"
+    ],
+    "color_indicator": [
+     "R"
+    ],
+    "power": "4",
+    "toughness": "4",
+    "artist": "Zoltan Boros",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/c/d/cdcf86b1-2dbd-457a-b1ac-368e107b2180.png?1783916713",
+     "normal": "https://cards.scryfall.io/normal/back/c/d/cdcf86b1-2dbd-457a-b1ac-368e107b2180.jpg?1783916713",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/c/d/cdcf86b1-2dbd-457a-b1ac-368e107b2180.jpg?1783916713"
+    }
+   }
+  ]
+ },
+ "mom-235": {
+  "id": "a7ac3a39-b6a6-4647-bb6e-e82057704f8b",
+  "name": "Invasion of Kylem // Valor's Reach Tag Team",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "235",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Sorcery",
+  "color_identity": [
+   "R",
+   "W"
+  ],
+  "rarity": "uncommon",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/235/invasion-of-kylem-valors-reach-tag-team?utm_source=api",
+  "artist": "Johann Bodin",
+  "card_faces": [
+   {
+    "name": "Invasion of Kylem",
+    "mana_cost": "{2}{R}{W}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, up to two target creatures each get +2/+0 and gain vigilance and haste until end of turn.",
+    "colors": [
+     "R",
+     "W"
+    ],
+    "defense": "5",
+    "artist": "Johann Bodin",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/a/7/a7ac3a39-b6a6-4647-bb6e-e82057704f8b.png?1783916950",
+     "normal": "https://cards.scryfall.io/normal/front/a/7/a7ac3a39-b6a6-4647-bb6e-e82057704f8b.jpg?1783916950",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/a/7/a7ac3a39-b6a6-4647-bb6e-e82057704f8b.jpg?1783916950"
+    }
+   },
+   {
+    "name": "Valor's Reach Tag Team",
+    "mana_cost": "",
+    "type_line": "Sorcery",
+    "oracle_text": "Create two 3/2 red and white Warrior creature tokens with \"Whenever this token and at least one other creature token attack, put a +1/+1 counter on this token.\"",
+    "flavor_text": "\"Let's give these creeps the old one-two!\"",
+    "colors": [
+     "R",
+     "W"
+    ],
+    "color_indicator": [
+     "R",
+     "W"
+    ],
+    "artist": "Johann Bodin",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/a/7/a7ac3a39-b6a6-4647-bb6e-e82057704f8b.png?1783916950",
+     "normal": "https://cards.scryfall.io/normal/back/a/7/a7ac3a39-b6a6-4647-bb6e-e82057704f8b.jpg?1783916950",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/a/7/a7ac3a39-b6a6-4647-bb6e-e82057704f8b.jpg?1783916950"
+    }
+   }
+  ]
+ },
+ "mom-236": {
+  "id": "93f623da-616e-4067-9ea8-5dfbeef8ce0b",
+  "name": "Invasion of Lorwyn // Winnowing Forces",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "236",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Creature — Elf Warrior",
+  "color_identity": [
+   "B",
+   "G"
+  ],
+  "rarity": "uncommon",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/236/invasion-of-lorwyn-winnowing-forces?utm_source=api",
+  "artist": "Dan Murayama Scott",
+  "card_faces": [
+   {
+    "name": "Invasion of Lorwyn",
+    "mana_cost": "{4}{B}{G}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, destroy target non-Elf creature an opponent controls with power X or less, where X is the number of lands you control.",
+    "colors": [
+     "B",
+     "G"
+    ],
+    "defense": "5",
+    "artist": "Dan Murayama Scott",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/9/3/93f623da-616e-4067-9ea8-5dfbeef8ce0b.png?1783916950",
+     "normal": "https://cards.scryfall.io/normal/front/9/3/93f623da-616e-4067-9ea8-5dfbeef8ce0b.jpg?1783916950",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/9/3/93f623da-616e-4067-9ea8-5dfbeef8ce0b.jpg?1783916950"
+    }
+   },
+   {
+    "name": "Winnowing Forces",
+    "mana_cost": "",
+    "type_line": "Creature — Elf Warrior",
+    "oracle_text": "Winnowing Forces's power and toughness are each equal to the number of lands you control.",
+    "flavor_text": "The Phyrexian appearance was so offensive that perfects and eyeblights worked together in unprecedented kinship to destroy them.",
+    "colors": [
+     "B",
+     "G"
+    ],
+    "color_indicator": [
+     "B",
+     "G"
+    ],
+    "power": "*",
+    "toughness": "*",
+    "artist": "Dan Murayama Scott",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/9/3/93f623da-616e-4067-9ea8-5dfbeef8ce0b.png?1783916950",
+     "normal": "https://cards.scryfall.io/normal/back/9/3/93f623da-616e-4067-9ea8-5dfbeef8ce0b.jpg?1783916950",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/9/3/93f623da-616e-4067-9ea8-5dfbeef8ce0b.jpg?1783916950"
+    }
+   }
+  ]
+ },
+ "mom-147": {
+  "id": "407d6723-bf58-403e-b2ac-ba52c51d356f",
+  "name": "Invasion of Mercadia // Kyren Flamewright",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "147",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Creature — Goblin Spellshaper",
+  "color_identity": [
+   "R"
+  ],
+  "rarity": "uncommon",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/147/invasion-of-mercadia-kyren-flamewright?utm_source=api",
+  "artist": "Cristi Balanescu",
+  "card_faces": [
+   {
+    "name": "Invasion of Mercadia",
+    "mana_cost": "{1}{R}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, you may discard a card. If you do, draw two cards.",
+    "colors": [
+     "R"
+    ],
+    "defense": "4",
+    "artist": "Cristi Balanescu",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/4/0/407d6723-bf58-403e-b2ac-ba52c51d356f.png?1783916993",
+     "normal": "https://cards.scryfall.io/normal/front/4/0/407d6723-bf58-403e-b2ac-ba52c51d356f.jpg?1783916993",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/4/0/407d6723-bf58-403e-b2ac-ba52c51d356f.jpg?1783916993"
+    }
+   },
+   {
+    "name": "Kyren Flamewright",
+    "mana_cost": "",
+    "type_line": "Creature — Goblin Spellshaper",
+    "oracle_text": "{2}{R}, {T}, Discard a card: Create two 1/1 blue and red Elemental creature tokens. Creatures you control get +1/+0 and gain haste until end of turn.",
+    "flavor_text": "Inspired by tales of the legendary hero Squee, many young Kyren goblins strove to emulate his magical skill and courage in the face of danger.",
+    "colors": [
+     "R"
+    ],
+    "color_indicator": [
+     "R"
+    ],
+    "power": "3",
+    "toughness": "3",
+    "artist": "Cristi Balanescu",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/4/0/407d6723-bf58-403e-b2ac-ba52c51d356f.png?1783916993",
+     "normal": "https://cards.scryfall.io/normal/back/4/0/407d6723-bf58-403e-b2ac-ba52c51d356f.jpg?1783916993",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/4/0/407d6723-bf58-403e-b2ac-ba52c51d356f.jpg?1783916993"
+    }
+   }
+  ]
+ },
+ "mom-237": {
+  "id": "e454bf31-5aa0-4109-a3f5-c3f9cc838682",
+  "name": "Invasion of Moag // Bloomwielder Dryads",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "237",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "keywords": [
+   "Transform",
+   "Ward"
+  ],
+  "type_line": "Battle — Siege // Creature — Dryad",
+  "color_identity": [
+   "G",
+   "W"
+  ],
+  "rarity": "uncommon",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/237/invasion-of-moag-bloomwielder-dryads?utm_source=api",
+  "artist": "Filip Burburan",
+  "card_faces": [
+   {
+    "name": "Invasion of Moag",
+    "mana_cost": "{2}{G}{W}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, put a +1/+1 counter on each creature you control.",
+    "colors": [
+     "G",
+     "W"
+    ],
+    "defense": "5",
+    "artist": "Filip Burburan",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/e/4/e454bf31-5aa0-4109-a3f5-c3f9cc838682.png?1783916950",
+     "normal": "https://cards.scryfall.io/normal/front/e/4/e454bf31-5aa0-4109-a3f5-c3f9cc838682.jpg?1783916950",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/e/4/e454bf31-5aa0-4109-a3f5-c3f9cc838682.jpg?1783916950"
+    }
+   },
+   {
+    "name": "Bloomwielder Dryads",
+    "mana_cost": "",
+    "type_line": "Creature — Dryad",
+    "oracle_text": "Ward {2} (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {2}.)\nAt the beginning of your end step, put a +1/+1 counter on target creature you control.",
+    "flavor_text": "Against the implacable will of Phyrexia, the dryads of Moag raised a shield of living summer.",
+    "colors": [
+     "G",
+     "W"
+    ],
+    "color_indicator": [
+     "G",
+     "W"
+    ],
+    "power": "3",
+    "toughness": "3",
+    "artist": "Filip Burburan",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/e/4/e454bf31-5aa0-4109-a3f5-c3f9cc838682.png?1783916950",
+     "normal": "https://cards.scryfall.io/normal/back/e/4/e454bf31-5aa0-4109-a3f5-c3f9cc838682.jpg?1783916950",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/e/4/e454bf31-5aa0-4109-a3f5-c3f9cc838682.jpg?1783916950"
+    }
+   }
+  ]
+ },
+ "mom-192": {
+  "id": "93345804-dda4-42a2-84d4-8fcd376dd2d4",
+  "name": "Invasion of Muraganda // Primordial Plasm",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "192",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "keywords": [
+   "Transform",
+   "Fight"
+  ],
+  "type_line": "Battle — Siege // Creature — Ooze",
+  "color_identity": [
+   "G"
+  ],
+  "rarity": "uncommon",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/192/invasion-of-muraganda-primordial-plasm?utm_source=api",
+  "artist": "Adam Paquette",
+  "card_faces": [
+   {
+    "name": "Invasion of Muraganda",
+    "mana_cost": "{4}{G}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, put a +1/+1 counter on target creature you control. Then that creature fights up to one target creature you don't control.",
+    "colors": [
+     "G"
+    ],
+    "defense": "6",
+    "artist": "Adam Paquette",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/9/3/93345804-dda4-42a2-84d4-8fcd376dd2d4.png?1783916973",
+     "normal": "https://cards.scryfall.io/normal/front/9/3/93345804-dda4-42a2-84d4-8fcd376dd2d4.jpg?1783916973",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/9/3/93345804-dda4-42a2-84d4-8fcd376dd2d4.jpg?1783916973"
+    }
+   },
+   {
+    "name": "Primordial Plasm",
+    "mana_cost": "",
+    "type_line": "Creature — Ooze",
+    "oracle_text": "At the beginning of combat on your turn, another target creature gets +2/+2 and loses all abilities until end of turn.",
+    "flavor_text": "Before the tree of life branched into predators and prey, there was only shapeless hunger.",
+    "colors": [
+     "G"
+    ],
+    "color_indicator": [
+     "G"
+    ],
+    "power": "4",
+    "toughness": "4",
+    "artist": "Adam Paquette",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/9/3/93345804-dda4-42a2-84d4-8fcd376dd2d4.png?1783916973",
+     "normal": "https://cards.scryfall.io/normal/back/9/3/93345804-dda4-42a2-84d4-8fcd376dd2d4.jpg?1783916973",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/9/3/93345804-dda4-42a2-84d4-8fcd376dd2d4.jpg?1783916973"
+    }
+   }
+  ]
+ },
+ "mom-238": {
+  "id": "f5926c8e-8049-418e-9a84-f8558e5ba9d1",
+  "name": "Invasion of New Capenna // Holy Frazzle-Cannon",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "238",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "keywords": [
+   "Transform",
+   "Equip"
+  ],
+  "type_line": "Battle — Siege // Artifact — Equipment",
+  "color_identity": [
+   "B",
+   "W"
+  ],
+  "rarity": "uncommon",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/238/invasion-of-new-capenna-holy-frazzle-cannon?utm_source=api",
+  "artist": "Diego Gisbert",
+  "card_faces": [
+   {
+    "name": "Invasion of New Capenna",
+    "mana_cost": "{W}{B}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, you may sacrifice an artifact or creature. When you do, exile target artifact or creature an opponent controls.",
+    "colors": [
+     "B",
+     "W"
+    ],
+    "defense": "4",
+    "artist": "Diego Gisbert",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/f/5/f5926c8e-8049-418e-9a84-f8558e5ba9d1.png?1783916949",
+     "normal": "https://cards.scryfall.io/normal/front/f/5/f5926c8e-8049-418e-9a84-f8558e5ba9d1.jpg?1783916949",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/f/5/f5926c8e-8049-418e-9a84-f8558e5ba9d1.jpg?1783916949"
+    }
+   },
+   {
+    "name": "Holy Frazzle-Cannon",
+    "mana_cost": "",
+    "type_line": "Artifact — Equipment",
+    "oracle_text": "Whenever equipped creature attacks, put a +1/+1 counter on that creature and each other creature you control that shares a creature type with it.\nEquip {1}",
+    "flavor_text": "\"They're using my Halo stockpile for what?\"\n—Jetmir",
+    "colors": [
+     "B",
+     "W"
+    ],
+    "color_indicator": [
+     "B",
+     "W"
+    ],
+    "artist": "Diego Gisbert",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/f/5/f5926c8e-8049-418e-9a84-f8558e5ba9d1.png?1783916949",
+     "normal": "https://cards.scryfall.io/normal/back/f/5/f5926c8e-8049-418e-9a84-f8558e5ba9d1.jpg?1783916949",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/f/5/f5926c8e-8049-418e-9a84-f8558e5ba9d1.jpg?1783916949"
+    }
+   }
+  ]
+ },
+ "mom-239": {
+  "id": "1b83af86-e1a9-4be1-83dc-0c1ab81b129e",
+  "name": "Invasion of New Phyrexia // Teferi Akosa of Zhalfir",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "239",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Legendary Planeswalker — Teferi",
+  "color_identity": [
+   "U",
+   "W"
+  ],
+  "rarity": "mythic",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/239/invasion-of-new-phyrexia-teferi-akosa-of-zhalfir?utm_source=api",
+  "artist": "Chris Rallis",
+  "card_faces": [
+   {
+    "name": "Invasion of New Phyrexia",
+    "mana_cost": "{X}{W}{U}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, create X 2/2 white and blue Knight creature tokens with vigilance.",
+    "colors": [
+     "U",
+     "W"
+    ],
+    "defense": "6",
+    "artist": "Chris Rallis",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/1/b/1b83af86-e1a9-4be1-83dc-0c1ab81b129e.png?1783916950",
+     "normal": "https://cards.scryfall.io/normal/front/1/b/1b83af86-e1a9-4be1-83dc-0c1ab81b129e.jpg?1783916950",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/1/b/1b83af86-e1a9-4be1-83dc-0c1ab81b129e.jpg?1783916950"
+    }
+   },
+   {
+    "name": "Teferi Akosa of Zhalfir",
+    "mana_cost": "",
+    "type_line": "Legendary Planeswalker — Teferi",
+    "oracle_text": "+1: Draw two cards. Then discard two cards unless you discard a creature card.\n−2: You get an emblem with \"Knights you control get +1/+0 and have ward {1}.\"\n−3: Tap any number of untapped creatures you control. When you do, shuffle target nonland permanent an opponent controls with mana value X or less into its owner's library, where X is the number of creatures tapped this way.",
+    "colors": [
+     "U",
+     "W"
+    ],
+    "color_indicator": [
+     "U",
+     "W"
+    ],
+    "loyalty": "4",
+    "artist": "Chris Rallis",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/1/b/1b83af86-e1a9-4be1-83dc-0c1ab81b129e.png?1783916950",
+     "normal": "https://cards.scryfall.io/normal/back/1/b/1b83af86-e1a9-4be1-83dc-0c1ab81b129e.jpg?1783916950",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/1/b/1b83af86-e1a9-4be1-83dc-0c1ab81b129e.jpg?1783916950"
+    }
+   }
+  ]
+ },
+ "pmom-239s": {
+  "id": "cc0c163b-1fce-422d-bd70-ee8aa7f250f2",
+  "name": "Invasion of New Phyrexia // Teferi Akosa of Zhalfir",
+  "layout": "transform",
+  "set": "pmom",
+  "set_name": "March of the Machine Promos",
+  "set_type": "promo",
+  "collector_number": "239s",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": true,
+  "promo_types": [
+   "prerelease",
+   "datestamped"
+  ],
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Legendary Planeswalker — Teferi",
+  "color_identity": [
+   "U",
+   "W"
+  ],
+  "rarity": "mythic",
+  "finishes": [
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/pmom/239s/invasion-of-new-phyrexia-teferi-akosa-of-zhalfir?utm_source=api",
+  "artist": "Chris Rallis",
+  "card_faces": [
+   {
+    "name": "Invasion of New Phyrexia",
+    "mana_cost": "{X}{W}{U}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, create X 2/2 white and blue Knight creature tokens with vigilance.",
+    "colors": [
+     "U",
+     "W"
+    ],
+    "defense": "6",
+    "artist": "Chris Rallis",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/c/c/cc0c163b-1fce-422d-bd70-ee8aa7f250f2.png?1783916691",
+     "normal": "https://cards.scryfall.io/normal/front/c/c/cc0c163b-1fce-422d-bd70-ee8aa7f250f2.jpg?1783916691",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/c/c/cc0c163b-1fce-422d-bd70-ee8aa7f250f2.jpg?1783916691"
+    }
+   },
+   {
+    "name": "Teferi Akosa of Zhalfir",
+    "mana_cost": "",
+    "type_line": "Legendary Planeswalker — Teferi",
+    "oracle_text": "+1: Draw two cards. Then discard two cards unless you discard a creature card.\n−2: You get an emblem with \"Knights you control get +1/+0 and have ward {1}.\"\n−3: Tap any number of untapped creatures you control. When you do, shuffle target nonland permanent an opponent controls with mana value X or less into its owner's library, where X is the number of creatures tapped this way.",
+    "colors": [
+     "U",
+     "W"
+    ],
+    "color_indicator": [
+     "U",
+     "W"
+    ],
+    "loyalty": "4",
+    "artist": "Chris Rallis",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/c/c/cc0c163b-1fce-422d-bd70-ee8aa7f250f2.png?1783916691",
+     "normal": "https://cards.scryfall.io/normal/back/c/c/cc0c163b-1fce-422d-bd70-ee8aa7f250f2.jpg?1783916691",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/c/c/cc0c163b-1fce-422d-bd70-ee8aa7f250f2.jpg?1783916691"
+    }
+   }
+  ]
+ },
+ "mom-240": {
+  "id": "50180fda-6d67-41e9-8b2b-2e7c5876b8ab",
+  "name": "Invasion of Pyrulea // Gargantuan Slabhorn",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "240",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "keywords": [
+   "Transform",
+   "Trample",
+   "Ward",
+   "Scry"
+  ],
+  "type_line": "Battle — Siege // Creature — Beast",
+  "color_identity": [
+   "G",
+   "U"
+  ],
+  "rarity": "uncommon",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/240/invasion-of-pyrulea-gargantuan-slabhorn?utm_source=api",
+  "artist": "Nicholas Gregory",
+  "card_faces": [
+   {
+    "name": "Invasion of Pyrulea",
+    "mana_cost": "{G}{U}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, scry 3, then reveal the top card of your library. If it's a land or double-faced card, draw a card.",
+    "colors": [
+     "G",
+     "U"
+    ],
+    "defense": "4",
+    "artist": "Nicholas Gregory",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/5/0/50180fda-6d67-41e9-8b2b-2e7c5876b8ab.png?1783916949",
+     "normal": "https://cards.scryfall.io/normal/front/5/0/50180fda-6d67-41e9-8b2b-2e7c5876b8ab.jpg?1783916949",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/5/0/50180fda-6d67-41e9-8b2b-2e7c5876b8ab.jpg?1783916949"
+    }
+   },
+   {
+    "name": "Gargantuan Slabhorn",
+    "mana_cost": "",
+    "type_line": "Creature — Beast",
+    "oracle_text": "Trample, ward {2}\nOther transformed permanents you control have trample and ward {2}.",
+    "flavor_text": "To the slabhorn, the branches of the Invasion Tree were as brittle as the stems of a Pyrulean fern.",
+    "colors": [
+     "G",
+     "U"
+    ],
+    "color_indicator": [
+     "G",
+     "U"
+    ],
+    "power": "4",
+    "toughness": "4",
+    "artist": "Nicholas Gregory",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/5/0/50180fda-6d67-41e9-8b2b-2e7c5876b8ab.png?1783916949",
+     "normal": "https://cards.scryfall.io/normal/back/5/0/50180fda-6d67-41e9-8b2b-2e7c5876b8ab.jpg?1783916949",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/5/0/50180fda-6d67-41e9-8b2b-2e7c5876b8ab.jpg?1783916949"
+    }
+   }
+  ]
+ },
+ "mom-1": {
+  "id": "73f8fc4f-2f36-4932-8d04-3c2651c116dc",
+  "name": "Invasion of Ravnica // Guildpact Paragon",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "1",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Artifact Creature — Construct",
+  "color_identity": [],
+  "rarity": "mythic",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/1/invasion-of-ravnica-guildpact-paragon?utm_source=api",
+  "artist": "Leon Tukker",
+  "card_faces": [
+   {
+    "name": "Invasion of Ravnica",
+    "mana_cost": "{5}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, exile target nonland permanent an opponent controls that isn't exactly two colors.",
+    "colors": [],
+    "defense": "4",
+    "artist": "Leon Tukker",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/7/3/73f8fc4f-2f36-4932-8d04-3c2651c116dc.png?1783917079",
+     "normal": "https://cards.scryfall.io/normal/front/7/3/73f8fc4f-2f36-4932-8d04-3c2651c116dc.jpg?1783917079",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/7/3/73f8fc4f-2f36-4932-8d04-3c2651c116dc.jpg?1783917079"
+    }
+   },
+   {
+    "name": "Guildpact Paragon",
+    "mana_cost": "",
+    "type_line": "Artifact Creature — Construct",
+    "oracle_text": "Whenever you cast a spell that's exactly two colors, look at the top six cards of your library. You may reveal a card that's exactly two colors from among them and put it into your hand. Put the rest on the bottom of your library in a random order.",
+    "colors": [],
+    "power": "5",
+    "toughness": "5",
+    "artist": "Leon Tukker",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/7/3/73f8fc4f-2f36-4932-8d04-3c2651c116dc.png?1783917079",
+     "normal": "https://cards.scryfall.io/normal/back/7/3/73f8fc4f-2f36-4932-8d04-3c2651c116dc.jpg?1783917079",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/7/3/73f8fc4f-2f36-4932-8d04-3c2651c116dc.jpg?1783917079"
+    }
+   }
+  ]
+ },
+ "pmom-1s": {
+  "id": "573cc5ec-4892-4f24-ba65-82d51198af89",
+  "name": "Invasion of Ravnica // Guildpact Paragon",
+  "layout": "transform",
+  "set": "pmom",
+  "set_name": "March of the Machine Promos",
+  "set_type": "promo",
+  "collector_number": "1s",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": true,
+  "promo_types": [
+   "prerelease",
+   "datestamped"
+  ],
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Artifact Creature — Construct",
+  "color_identity": [],
+  "rarity": "mythic",
+  "finishes": [
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/pmom/1s/invasion-of-ravnica-guildpact-paragon?utm_source=api",
+  "artist": "Leon Tukker",
+  "card_faces": [
+   {
+    "name": "Invasion of Ravnica",
+    "mana_cost": "{5}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, exile target nonland permanent an opponent controls that isn't exactly two colors.",
+    "colors": [],
+    "defense": "4",
+    "artist": "Leon Tukker",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/5/7/573cc5ec-4892-4f24-ba65-82d51198af89.png?1783916744",
+     "normal": "https://cards.scryfall.io/normal/front/5/7/573cc5ec-4892-4f24-ba65-82d51198af89.jpg?1783916744",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/5/7/573cc5ec-4892-4f24-ba65-82d51198af89.jpg?1783916744"
+    }
+   },
+   {
+    "name": "Guildpact Paragon",
+    "mana_cost": "",
+    "type_line": "Artifact Creature — Construct",
+    "oracle_text": "Whenever you cast a spell that's exactly two colors, look at the top six cards of your library. You may reveal a card that's exactly two colors from among them and put it into your hand. Put the rest on the bottom of your library in a random order.",
+    "colors": [],
+    "power": "5",
+    "toughness": "5",
+    "artist": "Leon Tukker",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/5/7/573cc5ec-4892-4f24-ba65-82d51198af89.png?1783916744",
+     "normal": "https://cards.scryfall.io/normal/back/5/7/573cc5ec-4892-4f24-ba65-82d51198af89.jpg?1783916744",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/5/7/573cc5ec-4892-4f24-ba65-82d51198af89.jpg?1783916744"
+    }
+   }
+  ]
+ },
+ "mom-148": {
+  "id": "ada79e04-bb69-4c92-a829-014f02b1e06a",
+  "name": "Invasion of Regatha // Disciples of the Inferno",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "148",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "keywords": [
+   "Prowess",
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Creature — Human Monk",
+  "color_identity": [
+   "R"
+  ],
+  "rarity": "uncommon",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/148/invasion-of-regatha-disciples-of-the-inferno?utm_source=api",
+  "artist": "Daarken",
+  "card_faces": [
+   {
+    "name": "Invasion of Regatha",
+    "mana_cost": "{2}{R}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, it deals 4 damage to another target battle or opponent and 1 damage to up to one target creature.",
+    "colors": [
+     "R"
+    ],
+    "defense": "5",
+    "artist": "Daarken",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/a/d/ada79e04-bb69-4c92-a829-014f02b1e06a.png?1783916994",
+     "normal": "https://cards.scryfall.io/normal/front/a/d/ada79e04-bb69-4c92-a829-014f02b1e06a.jpg?1783916994",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/a/d/ada79e04-bb69-4c92-a829-014f02b1e06a.jpg?1783916994"
+    }
+   },
+   {
+    "name": "Disciples of the Inferno",
+    "mana_cost": "",
+    "type_line": "Creature — Human Monk",
+    "oracle_text": "Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)\nIf a noncreature source you control would deal damage to a creature, battle, or opponent, it deals that much damage plus 2 instead.",
+    "colors": [
+     "R"
+    ],
+    "color_indicator": [
+     "R"
+    ],
+    "power": "4",
+    "toughness": "4",
+    "artist": "Daarken",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/a/d/ada79e04-bb69-4c92-a829-014f02b1e06a.png?1783916994",
+     "normal": "https://cards.scryfall.io/normal/back/a/d/ada79e04-bb69-4c92-a829-014f02b1e06a.jpg?1783916994",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/a/d/ada79e04-bb69-4c92-a829-014f02b1e06a.jpg?1783916994"
+    }
+   }
+  ]
+ },
+ "mom-63": {
+  "id": "9df3e743-7bb8-482a-afd1-4d51119d416c",
+  "name": "Invasion of Segovia // Caetus, Sea Tyrant of Segovia",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "63",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "frame_effects": [
+   "legendary"
+  ],
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Legendary Creature — Serpent",
+  "color_identity": [
+   "U"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/63/invasion-of-segovia-caetus-sea-tyrant-of-segovia?utm_source=api",
+  "artist": "Edgar Sánchez Hidalgo",
+  "card_faces": [
+   {
+    "name": "Invasion of Segovia",
+    "mana_cost": "{2}{U}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, create two 1/1 blue Kraken creature tokens with trample.",
+    "colors": [
+     "U"
+    ],
+    "defense": "4",
+    "artist": "Edgar Sánchez Hidalgo",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/9/d/9df3e743-7bb8-482a-afd1-4d51119d416c.png?1783917037",
+     "normal": "https://cards.scryfall.io/normal/front/9/d/9df3e743-7bb8-482a-afd1-4d51119d416c.jpg?1783917037",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/9/d/9df3e743-7bb8-482a-afd1-4d51119d416c.jpg?1783917037"
+    }
+   },
+   {
+    "name": "Caetus, Sea Tyrant of Segovia",
+    "mana_cost": "",
+    "type_line": "Legendary Creature — Serpent",
+    "oracle_text": "Noncreature spells you cast have convoke. (Your creatures can help cast those spells. Each creature you tap while casting a noncreature spell pays for {1} or one mana of that creature's color.)\nAt the beginning of your end step, untap up to four target creatures.",
+    "colors": [
+     "U"
+    ],
+    "color_indicator": [
+     "U"
+    ],
+    "power": "3",
+    "toughness": "3",
+    "artist": "Edgar Sánchez Hidalgo",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/9/d/9df3e743-7bb8-482a-afd1-4d51119d416c.png?1783917037",
+     "normal": "https://cards.scryfall.io/normal/back/9/d/9df3e743-7bb8-482a-afd1-4d51119d416c.jpg?1783917037",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/9/d/9df3e743-7bb8-482a-afd1-4d51119d416c.jpg?1783917037"
+    }
+   }
+  ]
+ },
+ "pmom-63s": {
+  "id": "f622a58b-e41f-4173-81b2-7e24afd235ec",
+  "name": "Invasion of Segovia // Caetus, Sea Tyrant of Segovia",
+  "layout": "transform",
+  "set": "pmom",
+  "set_name": "March of the Machine Promos",
+  "set_type": "promo",
+  "collector_number": "63s",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "frame_effects": [
+   "legendary"
+  ],
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": true,
+  "promo_types": [
+   "prerelease",
+   "datestamped"
+  ],
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Legendary Creature — Serpent",
+  "color_identity": [
+   "U"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/pmom/63s/invasion-of-segovia-caetus-sea-tyrant-of-segovia?utm_source=api",
+  "artist": "Edgar Sánchez Hidalgo",
+  "card_faces": [
+   {
+    "name": "Invasion of Segovia",
+    "mana_cost": "{2}{U}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, create two 1/1 blue Kraken creature tokens with trample.",
+    "colors": [
+     "U"
+    ],
+    "defense": "4",
+    "artist": "Edgar Sánchez Hidalgo",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/f/6/f622a58b-e41f-4173-81b2-7e24afd235ec.png?1783916732",
+     "normal": "https://cards.scryfall.io/normal/front/f/6/f622a58b-e41f-4173-81b2-7e24afd235ec.jpg?1783916732",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/f/6/f622a58b-e41f-4173-81b2-7e24afd235ec.jpg?1783916732"
+    }
+   },
+   {
+    "name": "Caetus, Sea Tyrant of Segovia",
+    "mana_cost": "",
+    "type_line": "Legendary Creature — Serpent",
+    "oracle_text": "Noncreature spells you cast have convoke. (Your creatures can help cast those spells. Each creature you tap while casting a noncreature spell pays for {1} or one mana of that creature's color.)\nAt the beginning of your end step, untap up to four target creatures.",
+    "colors": [
+     "U"
+    ],
+    "color_indicator": [
+     "U"
+    ],
+    "power": "3",
+    "toughness": "3",
+    "artist": "Edgar Sánchez Hidalgo",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/f/6/f622a58b-e41f-4173-81b2-7e24afd235ec.png?1783916732",
+     "normal": "https://cards.scryfall.io/normal/back/f/6/f622a58b-e41f-4173-81b2-7e24afd235ec.jpg?1783916732",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/f/6/f622a58b-e41f-4173-81b2-7e24afd235ec.jpg?1783916732"
+    }
+   }
+  ]
+ },
+ "mom-193": {
+  "id": "5f80764e-8fa2-44e2-84c6-3b55f1c40ee7",
+  "name": "Invasion of Shandalar // Leyline Surge",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "193",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Enchantment",
+  "color_identity": [
+   "G"
+  ],
+  "rarity": "mythic",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/193/invasion-of-shandalar-leyline-surge?utm_source=api",
+  "artist": "Adam Paquette",
+  "card_faces": [
+   {
+    "name": "Invasion of Shandalar",
+    "mana_cost": "{3}{G}{G}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, return up to three target permanent cards from your graveyard to your hand.",
+    "colors": [
+     "G"
+    ],
+    "defense": "4",
+    "artist": "Adam Paquette",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/5/f/5f80764e-8fa2-44e2-84c6-3b55f1c40ee7.png?1783916974",
+     "normal": "https://cards.scryfall.io/normal/front/5/f/5f80764e-8fa2-44e2-84c6-3b55f1c40ee7.jpg?1783916974",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/5/f/5f80764e-8fa2-44e2-84c6-3b55f1c40ee7.jpg?1783916974"
+    }
+   },
+   {
+    "name": "Leyline Surge",
+    "mana_cost": "",
+    "type_line": "Enchantment",
+    "oracle_text": "At the beginning of your upkeep, you may put a permanent card from your hand onto the battlefield.",
+    "flavor_text": "Shandalar's wild magic stripped away the unnatural Phyrexian carapaces, reclaiming the true forms hidden underneath.",
+    "colors": [
+     "G"
+    ],
+    "color_indicator": [
+     "G"
+    ],
+    "artist": "Adam Paquette",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/5/f/5f80764e-8fa2-44e2-84c6-3b55f1c40ee7.png?1783916974",
+     "normal": "https://cards.scryfall.io/normal/back/5/f/5f80764e-8fa2-44e2-84c6-3b55f1c40ee7.jpg?1783916974",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/5/f/5f80764e-8fa2-44e2-84c6-3b55f1c40ee7.jpg?1783916974"
+    }
+   }
+  ]
+ },
+ "pmom-193s": {
+  "id": "a210f17a-154b-457b-a89f-d60c583ccbf5",
+  "name": "Invasion of Shandalar // Leyline Surge",
+  "layout": "transform",
+  "set": "pmom",
+  "set_name": "March of the Machine Promos",
+  "set_type": "promo",
+  "collector_number": "193s",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": true,
+  "promo_types": [
+   "prerelease",
+   "datestamped"
+  ],
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Enchantment",
+  "color_identity": [
+   "G"
+  ],
+  "rarity": "mythic",
+  "finishes": [
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/pmom/193s/invasion-of-shandalar-leyline-surge?utm_source=api",
+  "artist": "Adam Paquette",
+  "card_faces": [
+   {
+    "name": "Invasion of Shandalar",
+    "mana_cost": "{3}{G}{G}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, return up to three target permanent cards from your graveyard to your hand.",
+    "colors": [
+     "G"
+    ],
+    "defense": "4",
+    "artist": "Adam Paquette",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/a/2/a210f17a-154b-457b-a89f-d60c583ccbf5.png?1783916704",
+     "normal": "https://cards.scryfall.io/normal/front/a/2/a210f17a-154b-457b-a89f-d60c583ccbf5.jpg?1783916704",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/a/2/a210f17a-154b-457b-a89f-d60c583ccbf5.jpg?1783916704"
+    }
+   },
+   {
+    "name": "Leyline Surge",
+    "mana_cost": "",
+    "type_line": "Enchantment",
+    "oracle_text": "At the beginning of your upkeep, you may put a permanent card from your hand onto the battlefield.",
+    "flavor_text": "Shandalar's wild magic stripped away the unnatural Phyrexian carapaces, reclaiming the true forms hidden underneath.",
+    "colors": [
+     "G"
+    ],
+    "color_indicator": [
+     "G"
+    ],
+    "artist": "Adam Paquette",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/a/2/a210f17a-154b-457b-a89f-d60c583ccbf5.png?1783916704",
+     "normal": "https://cards.scryfall.io/normal/back/a/2/a210f17a-154b-457b-a89f-d60c583ccbf5.jpg?1783916704",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/a/2/a210f17a-154b-457b-a89f-d60c583ccbf5.jpg?1783916704"
+    }
+   }
+  ]
+ },
+ "mom-149": {
+  "id": "a98f71a0-7c99-4cee-8f70-877e698cca84",
+  "name": "Invasion of Tarkir // Defiant Thundermaw",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "149",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "security_stamp": "oval",
+  "keywords": [
+   "Flying",
+   "Transform",
+   "Trample"
+  ],
+  "type_line": "Battle — Siege // Creature — Dragon",
+  "color_identity": [
+   "R"
+  ],
+  "rarity": "mythic",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/149/invasion-of-tarkir-defiant-thundermaw?utm_source=api",
+  "artist": "Darren Tan",
+  "card_faces": [
+   {
+    "name": "Invasion of Tarkir",
+    "mana_cost": "{1}{R}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, reveal any number of Dragon cards from your hand. When you do, this Siege deals X plus 2 damage to any other target, where X is the number of cards revealed this way. (X can be 0.)",
+    "colors": [
+     "R"
+    ],
+    "defense": "5",
+    "artist": "Darren Tan",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/a/9/a98f71a0-7c99-4cee-8f70-877e698cca84.png?1783916995",
+     "normal": "https://cards.scryfall.io/normal/front/a/9/a98f71a0-7c99-4cee-8f70-877e698cca84.jpg?1783916995",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/a/9/a98f71a0-7c99-4cee-8f70-877e698cca84.jpg?1783916995"
+    }
+   },
+   {
+    "name": "Defiant Thundermaw",
+    "mana_cost": "",
+    "type_line": "Creature — Dragon",
+    "oracle_text": "Flying, trample\nWhenever a Dragon you control attacks, it deals 2 damage to any target.",
+    "flavor_text": "\"The Phyrexians are fools if they believe they can weather such a storm.\"\n—Sarkhan Vol",
+    "colors": [
+     "R"
+    ],
+    "color_indicator": [
+     "R"
+    ],
+    "power": "4",
+    "toughness": "4",
+    "artist": "Darren Tan",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/a/9/a98f71a0-7c99-4cee-8f70-877e698cca84.png?1783916995",
+     "normal": "https://cards.scryfall.io/normal/back/a/9/a98f71a0-7c99-4cee-8f70-877e698cca84.jpg?1783916995",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/a/9/a98f71a0-7c99-4cee-8f70-877e698cca84.jpg?1783916995"
+    }
+   }
+  ]
+ },
+ "pmom-149s": {
+  "id": "f90afaac-dd66-42b0-bde7-74a829fb6689",
+  "name": "Invasion of Tarkir // Defiant Thundermaw",
+  "layout": "transform",
+  "set": "pmom",
+  "set_name": "March of the Machine Promos",
+  "set_type": "promo",
+  "collector_number": "149s",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": true,
+  "promo_types": [
+   "prerelease",
+   "datestamped"
+  ],
+  "security_stamp": "oval",
+  "keywords": [
+   "Flying",
+   "Transform",
+   "Trample"
+  ],
+  "type_line": "Battle — Siege // Creature — Dragon",
+  "color_identity": [
+   "R"
+  ],
+  "rarity": "mythic",
+  "finishes": [
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/pmom/149s/invasion-of-tarkir-defiant-thundermaw?utm_source=api",
+  "artist": "Darren Tan",
+  "card_faces": [
+   {
+    "name": "Invasion of Tarkir",
+    "mana_cost": "{1}{R}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, reveal any number of Dragon cards from your hand. When you do, this Siege deals X plus 2 damage to any other target, where X is the number of cards revealed this way. (X can be 0.)",
+    "colors": [
+     "R"
+    ],
+    "defense": "5",
+    "artist": "Darren Tan",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/f/9/f90afaac-dd66-42b0-bde7-74a829fb6689.png?1783916713",
+     "normal": "https://cards.scryfall.io/normal/front/f/9/f90afaac-dd66-42b0-bde7-74a829fb6689.jpg?1783916713",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/f/9/f90afaac-dd66-42b0-bde7-74a829fb6689.jpg?1783916713"
+    }
+   },
+   {
+    "name": "Defiant Thundermaw",
+    "mana_cost": "",
+    "type_line": "Creature — Dragon",
+    "oracle_text": "Flying, trample\nWhenever a Dragon you control attacks, it deals 2 damage to any target.",
+    "flavor_text": "\"The Phyrexians are fools if they believe they can weather such a storm.\"\n—Sarkhan Vol",
+    "colors": [
+     "R"
+    ],
+    "color_indicator": [
+     "R"
+    ],
+    "power": "4",
+    "toughness": "4",
+    "artist": "Darren Tan",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/f/9/f90afaac-dd66-42b0-bde7-74a829fb6689.png?1783916713",
+     "normal": "https://cards.scryfall.io/normal/back/f/9/f90afaac-dd66-42b0-bde7-74a829fb6689.jpg?1783916713",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/f/9/f90afaac-dd66-42b0-bde7-74a829fb6689.jpg?1783916713"
+    }
+   }
+  ]
+ },
+ "mom-23": {
+  "id": "433e9f1c-9d6c-4c7e-89d0-79595b4331f2",
+  "name": "Invasion of Theros // Ephara, Ever-Sheltering",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "23",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "frame_effects": [
+   "legendary",
+   "enchantment"
+  ],
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Legendary Enchantment Creature — God",
+  "color_identity": [
+   "U",
+   "W"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/23/invasion-of-theros-ephara-ever-sheltering?utm_source=api",
+  "artist": "Johan Grenier",
+  "card_faces": [
+   {
+    "name": "Invasion of Theros",
+    "mana_cost": "{2}{W}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, search your library for an Aura, God, or Demigod card, reveal it, put it into your hand, then shuffle.",
+    "colors": [
+     "W"
+    ],
+    "defense": "4",
+    "artist": "Johan Grenier",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/4/3/433e9f1c-9d6c-4c7e-89d0-79595b4331f2.png?1783917071",
+     "normal": "https://cards.scryfall.io/normal/front/4/3/433e9f1c-9d6c-4c7e-89d0-79595b4331f2.jpg?1783917071",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/4/3/433e9f1c-9d6c-4c7e-89d0-79595b4331f2.jpg?1783917071"
+    }
+   },
+   {
+    "name": "Ephara, Ever-Sheltering",
+    "mana_cost": "",
+    "type_line": "Legendary Enchantment Creature — God",
+    "oracle_text": "Ephara has lifelink and indestructible as long as you control at least three other enchantments.\nWhenever another enchantment you control enters, draw a card.",
+    "flavor_text": "When the sun falters and the seas disperse, when the wilds wither and the forges go cold, when death itself succumbs, she endures.",
+    "colors": [
+     "U",
+     "W"
+    ],
+    "color_indicator": [
+     "U",
+     "W"
+    ],
+    "power": "4",
+    "toughness": "4",
+    "artist": "Johan Grenier",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/4/3/433e9f1c-9d6c-4c7e-89d0-79595b4331f2.png?1783917071",
+     "normal": "https://cards.scryfall.io/normal/back/4/3/433e9f1c-9d6c-4c7e-89d0-79595b4331f2.jpg?1783917071",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/4/3/433e9f1c-9d6c-4c7e-89d0-79595b4331f2.jpg?1783917071"
+    }
+   }
+  ]
+ },
+ "pmom-23s": {
+  "id": "b45a1e7b-716a-4a32-b573-765e4f677476",
+  "name": "Invasion of Theros // Ephara, Ever-Sheltering",
+  "layout": "transform",
+  "set": "pmom",
+  "set_name": "March of the Machine Promos",
+  "set_type": "promo",
+  "collector_number": "23s",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "frame_effects": [
+   "legendary",
+   "enchantment"
+  ],
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": true,
+  "promo_types": [
+   "prerelease",
+   "datestamped"
+  ],
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Legendary Enchantment Creature — God",
+  "color_identity": [
+   "U",
+   "W"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/pmom/23s/invasion-of-theros-ephara-ever-sheltering?utm_source=api",
+  "artist": "Johan Grenier",
+  "card_faces": [
+   {
+    "name": "Invasion of Theros",
+    "mana_cost": "{2}{W}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, search your library for an Aura, God, or Demigod card, reveal it, put it into your hand, then shuffle.",
+    "colors": [
+     "W"
+    ],
+    "defense": "4",
+    "artist": "Johan Grenier",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/b/4/b45a1e7b-716a-4a32-b573-765e4f677476.png?1783916741",
+     "normal": "https://cards.scryfall.io/normal/front/b/4/b45a1e7b-716a-4a32-b573-765e4f677476.jpg?1783916741",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/b/4/b45a1e7b-716a-4a32-b573-765e4f677476.jpg?1783916741"
+    }
+   },
+   {
+    "name": "Ephara, Ever-Sheltering",
+    "mana_cost": "",
+    "type_line": "Legendary Enchantment Creature — God",
+    "oracle_text": "Ephara has lifelink and indestructible as long as you control at least three other enchantments.\nWhenever another enchantment you control enters, draw a card.",
+    "flavor_text": "When the sun falters and the seas disperse, when the wilds wither and the forges go cold, when death itself succumbs, she endures.",
+    "colors": [
+     "U",
+     "W"
+    ],
+    "color_indicator": [
+     "U",
+     "W"
+    ],
+    "power": "4",
+    "toughness": "4",
+    "artist": "Johan Grenier",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/b/4/b45a1e7b-716a-4a32-b573-765e4f677476.png?1783916741",
+     "normal": "https://cards.scryfall.io/normal/back/b/4/b45a1e7b-716a-4a32-b573-765e4f677476.jpg?1783916741",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/b/4/b45a1e7b-716a-4a32-b573-765e4f677476.jpg?1783916741"
+    }
+   }
+  ]
+ },
+ "mom-241": {
+  "id": "00255899-aaaf-46c6-8037-bd0e3c06250c",
+  "name": "Invasion of Tolvada // The Broken Sky",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "241",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Enchantment",
+  "color_identity": [
+   "B",
+   "W"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/241/invasion-of-tolvada-the-broken-sky?utm_source=api",
+  "artist": "Henry Peters",
+  "card_faces": [
+   {
+    "name": "Invasion of Tolvada",
+    "mana_cost": "{3}{W}{B}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, return target nonbattle permanent card from your graveyard to the battlefield.",
+    "colors": [
+     "B",
+     "W"
+    ],
+    "defense": "5",
+    "artist": "Henry Peters",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/0/0/00255899-aaaf-46c6-8037-bd0e3c06250c.png?1783916950",
+     "normal": "https://cards.scryfall.io/normal/front/0/0/00255899-aaaf-46c6-8037-bd0e3c06250c.jpg?1783916950",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/0/0/00255899-aaaf-46c6-8037-bd0e3c06250c.jpg?1783916950"
+    }
+   },
+   {
+    "name": "The Broken Sky",
+    "mana_cost": "",
+    "type_line": "Enchantment",
+    "oracle_text": "Creature tokens you control get +1/+0 and have lifelink.\nAt the beginning of your end step, create a 1/1 white and black Spirit creature token with flying.",
+    "flavor_text": "Angry ghosts poured through and pummeled the Invasion Tree, filling the heavens with the rhythms of war.",
+    "colors": [
+     "B",
+     "W"
+    ],
+    "color_indicator": [
+     "B",
+     "W"
+    ],
+    "artist": "Henry Peters",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/0/0/00255899-aaaf-46c6-8037-bd0e3c06250c.png?1783916950",
+     "normal": "https://cards.scryfall.io/normal/back/0/0/00255899-aaaf-46c6-8037-bd0e3c06250c.jpg?1783916950",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/0/0/00255899-aaaf-46c6-8037-bd0e3c06250c.jpg?1783916950"
+    }
+   }
+  ]
+ },
+ "pmom-241s": {
+  "id": "bb7bbe0f-3b19-42a4-981c-97164711f63c",
+  "name": "Invasion of Tolvada // The Broken Sky",
+  "layout": "transform",
+  "set": "pmom",
+  "set_name": "March of the Machine Promos",
+  "set_type": "promo",
+  "collector_number": "241s",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": true,
+  "promo_types": [
+   "prerelease",
+   "datestamped"
+  ],
+  "security_stamp": "oval",
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Enchantment",
+  "color_identity": [
+   "B",
+   "W"
+  ],
+  "rarity": "rare",
+  "finishes": [
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/pmom/241s/invasion-of-tolvada-the-broken-sky?utm_source=api",
+  "artist": "Henry Peters",
+  "card_faces": [
+   {
+    "name": "Invasion of Tolvada",
+    "mana_cost": "{3}{W}{B}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, return target nonbattle permanent card from your graveyard to the battlefield.",
+    "colors": [
+     "B",
+     "W"
+    ],
+    "defense": "5",
+    "artist": "Henry Peters",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/b/b/bb7bbe0f-3b19-42a4-981c-97164711f63c.png?1783916692",
+     "normal": "https://cards.scryfall.io/normal/front/b/b/bb7bbe0f-3b19-42a4-981c-97164711f63c.jpg?1783916692",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/b/b/bb7bbe0f-3b19-42a4-981c-97164711f63c.jpg?1783916692"
+    }
+   },
+   {
+    "name": "The Broken Sky",
+    "mana_cost": "",
+    "type_line": "Enchantment",
+    "oracle_text": "Creature tokens you control get +1/+0 and have lifelink.\nAt the beginning of your end step, create a 1/1 white and black Spirit creature token with flying.",
+    "flavor_text": "Angry ghosts poured through and pummeled the Invasion Tree, filling the heavens with the rhythms of war.",
+    "colors": [
+     "B",
+     "W"
+    ],
+    "color_indicator": [
+     "B",
+     "W"
+    ],
+    "artist": "Henry Peters",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/b/b/bb7bbe0f-3b19-42a4-981c-97164711f63c.png?1783916692",
+     "normal": "https://cards.scryfall.io/normal/back/b/b/bb7bbe0f-3b19-42a4-981c-97164711f63c.jpg?1783916692",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/b/b/bb7bbe0f-3b19-42a4-981c-97164711f63c.jpg?1783916692"
+    }
+   }
+  ]
+ },
+ "mom-116": {
+  "id": "49ec5e00-22f4-486e-8e99-e950725f6fbc",
+  "name": "Invasion of Ulgrotha // Grandmother Ravi Sengir",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "116",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "frame_effects": [
+   "legendary"
+  ],
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "keywords": [
+   "Flying",
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Legendary Creature — Human Wizard",
+  "color_identity": [
+   "B"
+  ],
+  "rarity": "uncommon",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/116/invasion-of-ulgrotha-grandmother-ravi-sengir?utm_source=api",
+  "artist": "Viko Menezes",
+  "card_faces": [
+   {
+    "name": "Invasion of Ulgrotha",
+    "mana_cost": "{4}{B}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, it deals 3 damage to any other target and you gain 3 life.",
+    "colors": [
+     "B"
+    ],
+    "defense": "5",
+    "artist": "Viko Menezes",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/4/9/49ec5e00-22f4-486e-8e99-e950725f6fbc.png?1783917012",
+     "normal": "https://cards.scryfall.io/normal/front/4/9/49ec5e00-22f4-486e-8e99-e950725f6fbc.jpg?1783917012",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/4/9/49ec5e00-22f4-486e-8e99-e950725f6fbc.jpg?1783917012"
+    }
+   },
+   {
+    "name": "Grandmother Ravi Sengir",
+    "mana_cost": "",
+    "type_line": "Legendary Creature — Human Wizard",
+    "oracle_text": "Flying\nWhenever a creature an opponent controls dies, put a +1/+1 counter on Grandmother Ravi Sengir and you gain 1 life.",
+    "flavor_text": "\"I do enjoy a good apocalypse.\"",
+    "colors": [
+     "B"
+    ],
+    "color_indicator": [
+     "B"
+    ],
+    "power": "3",
+    "toughness": "3",
+    "artist": "Viko Menezes",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/4/9/49ec5e00-22f4-486e-8e99-e950725f6fbc.png?1783917012",
+     "normal": "https://cards.scryfall.io/normal/back/4/9/49ec5e00-22f4-486e-8e99-e950725f6fbc.jpg?1783917012",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/4/9/49ec5e00-22f4-486e-8e99-e950725f6fbc.jpg?1783917012"
+    }
+   }
+  ]
+ },
+ "mom-64": {
+  "id": "c0ef6737-8e85-42ca-8ee6-6a34f9462de3",
+  "name": "Invasion of Vryn // Overloaded Mage-Ring",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "64",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "keywords": [
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Artifact",
+  "color_identity": [
+   "U"
+  ],
+  "rarity": "uncommon",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/64/invasion-of-vryn-overloaded-mage-ring?utm_source=api",
+  "artist": "Leon Tukker",
+  "card_faces": [
+   {
+    "name": "Invasion of Vryn",
+    "mana_cost": "{3}{U}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, draw three cards, then discard a card.",
+    "colors": [
+     "U"
+    ],
+    "defense": "4",
+    "artist": "Leon Tukker",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/c/0/c0ef6737-8e85-42ca-8ee6-6a34f9462de3.png?1783917038",
+     "normal": "https://cards.scryfall.io/normal/front/c/0/c0ef6737-8e85-42ca-8ee6-6a34f9462de3.jpg?1783917038",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/c/0/c0ef6737-8e85-42ca-8ee6-6a34f9462de3.jpg?1783917038"
+    }
+   },
+   {
+    "name": "Overloaded Mage-Ring",
+    "mana_cost": "",
+    "type_line": "Artifact",
+    "oracle_text": "{1}, {T}, Sacrifice this artifact: Copy target spell you control. You may choose new targets for the copy. (A copy of a permanent spell becomes a token.)",
+    "flavor_text": "\"On my signal, disable the safeguards. Let's blow these metal freaks right back to their own world!\"\n—Gav Beleren, mage-ring engineer",
+    "colors": [
+     "U"
+    ],
+    "color_indicator": [
+     "U"
+    ],
+    "artist": "Leon Tukker",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/c/0/c0ef6737-8e85-42ca-8ee6-6a34f9462de3.png?1783917038",
+     "normal": "https://cards.scryfall.io/normal/back/c/0/c0ef6737-8e85-42ca-8ee6-6a34f9462de3.jpg?1783917038",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/c/0/c0ef6737-8e85-42ca-8ee6-6a34f9462de3.jpg?1783917038"
+    }
+   }
+  ]
+ },
+ "mom-242": {
+  "id": "6c8c9c33-569c-4b67-a18d-4cd0f18d01f4",
+  "name": "Invasion of Xerex // Vertex Paladin",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "242",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "keywords": [
+   "Flying",
+   "Transform"
+  ],
+  "type_line": "Battle — Siege // Creature — Angel Knight",
+  "color_identity": [
+   "U",
+   "W"
+  ],
+  "rarity": "uncommon",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/242/invasion-of-xerex-vertex-paladin?utm_source=api",
+  "artist": "Fajareka Setiawan",
+  "card_faces": [
+   {
+    "name": "Invasion of Xerex",
+    "mana_cost": "{2}{W}{U}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, return up to one target creature to its owner's hand.",
+    "colors": [
+     "U",
+     "W"
+    ],
+    "defense": "4",
+    "artist": "Fajareka Setiawan",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/6/c/6c8c9c33-569c-4b67-a18d-4cd0f18d01f4.png?1783916949",
+     "normal": "https://cards.scryfall.io/normal/front/6/c/6c8c9c33-569c-4b67-a18d-4cd0f18d01f4.jpg?1783916949",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/6/c/6c8c9c33-569c-4b67-a18d-4cd0f18d01f4.jpg?1783916949"
+    }
+   },
+   {
+    "name": "Vertex Paladin",
+    "mana_cost": "",
+    "type_line": "Creature — Angel Knight",
+    "oracle_text": "Flying\nVertex Paladin's power and toughness are each equal to the number of creatures you control.",
+    "flavor_text": "The literal-minded Phyrexians made the greatest mistake possible on Xerex: they tried to understand what they were seeing.",
+    "colors": [
+     "U",
+     "W"
+    ],
+    "color_indicator": [
+     "U",
+     "W"
+    ],
+    "power": "*",
+    "toughness": "*",
+    "artist": "Fajareka Setiawan",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/6/c/6c8c9c33-569c-4b67-a18d-4cd0f18d01f4.png?1783916949",
+     "normal": "https://cards.scryfall.io/normal/back/6/c/6c8c9c33-569c-4b67-a18d-4cd0f18d01f4.jpg?1783916949",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/6/c/6c8c9c33-569c-4b67-a18d-4cd0f18d01f4.jpg?1783916949"
+    }
+   }
+  ]
+ },
+ "mom-194": {
+  "id": "8fed056f-a8f5-41ec-a7d2-a80a238872d1",
+  "name": "Invasion of Zendikar // Awakened Skyclave",
+  "layout": "transform",
+  "set": "mom",
+  "set_name": "March of the Machine",
+  "set_type": "expansion",
+  "collector_number": "194",
+  "released_at": "2023-04-21",
+  "frame": "2015",
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo": false,
+  "keywords": [
+   "Vigilance",
+   "Transform",
+   "Haste"
+  ],
+  "type_line": "Battle — Siege // Creature — Elemental",
+  "color_identity": [
+   "G"
+  ],
+  "rarity": "uncommon",
+  "finishes": [
+   "nonfoil",
+   "foil"
+  ],
+  "image_status": "highres_scan",
+  "scryfall_uri": "https://scryfall.com/card/mom/194/invasion-of-zendikar-awakened-skyclave?utm_source=api",
+  "artist": "Diego Gisbert",
+  "card_faces": [
+   {
+    "name": "Invasion of Zendikar",
+    "mana_cost": "{3}{G}",
+    "type_line": "Battle — Siege",
+    "oracle_text": "(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it's defeated, exile it, then cast it transformed.)\nWhen this Siege enters, search your library for up to two basic land cards, put them onto the battlefield tapped, then shuffle.",
+    "colors": [
+     "G"
+    ],
+    "defense": "3",
+    "artist": "Diego Gisbert",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/8/f/8fed056f-a8f5-41ec-a7d2-a80a238872d1.png?1783916973",
+     "normal": "https://cards.scryfall.io/normal/front/8/f/8fed056f-a8f5-41ec-a7d2-a80a238872d1.jpg?1783916973",
+     "art_crop": "https://cards.scryfall.io/art_crop/front/8/f/8fed056f-a8f5-41ec-a7d2-a80a238872d1.jpg?1783916973"
+    }
+   },
+   {
+    "name": "Awakened Skyclave",
+    "mana_cost": "",
+    "type_line": "Creature — Elemental",
+    "oracle_text": "Vigilance, haste\nAs long as this creature is on the battlefield, it's a land in addition to its other types.\n{T}: Add one mana of any color.",
+    "flavor_text": "Nahiri tried to bend Zendikar to Phyrexia's will. In response, the world rose against her.",
+    "colors": [
+     "G"
+    ],
+    "color_indicator": [
+     "G"
+    ],
+    "power": "4",
+    "toughness": "4",
+    "artist": "Diego Gisbert",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/8/f/8fed056f-a8f5-41ec-a7d2-a80a238872d1.png?1783916973",
+     "normal": "https://cards.scryfall.io/normal/back/8/f/8fed056f-a8f5-41ec-a7d2-a80a238872d1.jpg?1783916973",
+     "art_crop": "https://cards.scryfall.io/art_crop/back/8/f/8fed056f-a8f5-41ec-a7d2-a80a238872d1.jpg?1783916973"
+    }
+   }
+  ]
+ }
+}

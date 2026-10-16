@@ -65,7 +65,7 @@ describe("visual-regression matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
       expect(id).toMatch(
-        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|land|artifact|vehicle|wide|star|spacecraft|nopt|nodefense|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|legacyland|sunmoon|moon|compass|fan|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd|square|br|gw|ub))?(-crown(-hd)?)?|centred(-hd)?|white(-(hd|foil|etched|square|pair))?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|crown|triangle|collector-(hd|2015)|auto-common|auto-uncommon|matte-hd|pair-(split|hybrid|crown|hd|foil)))?|tiers-(one|three|none|wide|star)|large-pips-hd|phyrexian-cost-(3|5)(-hd)?|nyx-(wide|artifact|silver)))?$/,
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|land|artifact|vehicle|wide|star|spacecraft|nopt|nodefense|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|legacyland|sunmoon|moon|compass|fan|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square|battle))?|back(-(hd|nopt))?|battle(-(nopt|hd))?|pair(-(hybrid|foil|etched|hd|square|br|gw|ub))?(-crown(-hd)?)?|centred(-(hd|back))?|white(-(hd|foil|etched|square|pair))?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|crown|triangle|collector-(hd|2015)|auto-common|auto-uncommon|matte-hd|pair-(split|hybrid|crown|hd|foil)))?|tiers-(one|three|none|wide|star)|large-pips-hd|phyrexian-cost-(3|5)(-hd)?|nyx-(wide|artifact|silver)))?$/,
       );
     }
     expect(ids).toEqual([...ids].sort());
@@ -317,11 +317,17 @@ describe("visual-regression matrix", () => {
     const crowned = cases.filter((c) => (c.row.frame_style as { crown?: boolean }).crown === true);
     expect(crowned.map((c) => c.id)).toEqual(cases.filter((c) => /@(stamp-)?(pair(-hybrid)?-)?crown/.test(c.id)).map((c) => c.id));
     expect([...new Set(crowned.map((c) => c.template))].sort()).toEqual(
-      FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown).sort(),
+      // (The battle's crown is drawn by its ▼ back — its own cases are the
+      // back body's, TODO 5.5.)
+      FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown && t !== "battle").sort(),
     );
     // Every one is Legendary (it draws the crown), in every finish and at HD;
     // every case with neither switch is a stored card, which names none.
-    for (const c of crowned) expect(c.row.supertype, c.id).toMatch(/Legendary/);
+    // (A battle's crown is its BACK's — TODO 5.5: the legendary word is there.)
+    for (const c of crowned) {
+      const words = [c.row.supertype, (c.row.back_face as { supertype?: string | null } | null)?.supertype].join(" ");
+      expect(words, c.id).toMatch(/Legendary/);
+    }
     expect(new Set(crowned.map((c) => `${c.preset}/${c.finish}/${c.corners}`))).toEqual(
       new Set(["default/regular/round", "hd/regular/round", "default/foil/round", "default/etched/round", "default/regular/square"]),
     );

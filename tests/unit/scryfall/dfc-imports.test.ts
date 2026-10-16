@@ -170,11 +170,12 @@ describe("dfcImportOf — the one landing rule", () => {
     expect(mapScryfallToFormPatch(lanternColourless).back_face).toMatchObject({ color_identity: ["colorless"] });
   });
 
-  it("a Saga, battle or token face keeps its own kind, as today (5.5)", () => {
-    expect(dfcImportOf(printing("mom-20"))).toMatchObject({ blocked: "face-type", kind: null });
+  it("a battle lands on the battle frame with its back on the ▼ back (5.5 (a)); a Saga or token face keeps its own kind, as today", () => {
+    expect(dfcImportOf(printing("mom-20"))).toMatchObject({ blocked: null, kind: "battle", frontBody: "battle", backBody: "m15dfcback", family: "arrows" });
     expect(patchOf("mom-20")).toMatchObject({ kind: "battle", card_type: "battle" });
-    expect(patchOf("mom-20").back_face).toMatchObject({ title: "Belenon War Anthem", card_type: "enchantment" });
-    expect(patchOf("mom-20").back_face?.frame_style).toBeUndefined();
+    expect(patchOf("mom-20").back_face).toMatchObject({ title: "Belenon War Anthem", card_type: "enchantment", frame_style: { template: "m15dfcback" }, color_identity: ["white"] });
+    // A battle wears no family: none rides on the patch.
+    expect(patchOf("mom-20").printed_dfc_icon).toBeUndefined();
     expect(kindFromScryfall(printing("neo-141"))).toBe("saga");
     expect(dfcImportOf(printing("neo-141"))).toMatchObject({ blocked: "face-type" });
     // A double-faced token is not a transform / modal layout at all.
@@ -244,8 +245,10 @@ describe("the registry", () => {
     ["mh3-253", "dfc/devoid", "nearest", "m15mdfcfront", "m15devoid", "5.11"],
     // A borderless modal Pathway: nearest on the modal land front (5.7).
     ["znr-284", "borderless/dfc", "nearest", "m15mdfclandfront", undefined, "5.7"],
-    // A battle front and a Saga front keep their frames; the marks are 5.5's.
-    ["mom-20", "era/2015+dfc", "nearest", "battle", undefined, "5.5"],
+    // A battle draws the double-faced marks since 5.5 (a) (its tab, its ▼
+    // back): exact on the battle frame. A Saga front keeps its frame; its
+    // marks are 5.5 (b)'s.
+    ["mom-20", "era/2015", "exact", "battle", undefined, undefined],
     ["neo-141", "layout/2015+dfc", "nearest", "saga", undefined, "5.5"],
   ];
 
@@ -263,8 +266,9 @@ describe("the registry", () => {
   it("the double-faced marks are drawn by the bodies: the old dfc rows are answered there, never the standard's", () => {
     expect(signatureDrawnOn("era/2015+dfc", "m15dfcfront")).toBe(false);
     expect(signatureDrawnOn("era/2015+dfc", "m15")).toBe(false);
-    const battle = frameMatchFromScryfall(printing("mom-20"));
-    expect(battle.reason).toBe("PipGlyph doesn't draw the double-faced marks on this frame yet");
+    // The battle frame draws them since 5.5 (a); the NEO saga front not yet.
+    expect(frameMatchFromScryfall(printing("mom-20")).gaps ?? []).not.toContain("dfc");
+    expect(frameMatchFromScryfall(printing("neo-141")).reason).toBe("PipGlyph doesn't draw the double-faced marks on this frame yet");
   });
 
   it("logs a `dfc/walker` request row for a walker-faced import (the asks are counted)", () => {

@@ -100,7 +100,9 @@ export function capabilitiesOf(profile: FrameProfile): ReadonlySet<AnatomyCapabi
   if (profile.adventure) caps.add("adventure");
   if (profile.secondFace) caps.add("secondFace");
   if (profile.basicSymbol) caps.add("basicSymbol");
-  if (profile.dfc?.role === "front") caps.add("dfcFront");
+  // (The battle front's back is its own and optional — TODO 5.5: it is not
+  // a front of the Transform kind.)
+  if (profile.dfc?.role === "front" && profile.dfc.battle !== true) caps.add("dfcFront");
   return caps;
 }
 

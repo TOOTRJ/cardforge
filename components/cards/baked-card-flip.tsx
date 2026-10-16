@@ -107,9 +107,15 @@ export function BakedCardFlip({
   label,
   title,
   priority = false,
+  frontLandscape = false,
 }: {
   frontSrc: string;
   backSrc: string;
+  /** The front is a LANDSCAPE card (a battle, TODO 5.5) and the back a
+   *  portrait one: the stage is the portrait tile, the back fills it, and
+   *  the front sits letterboxed in it — centred in its own 7:5 card box,
+   *  rounded at the card's corner — as a one-faced battle's tile does. */
+  frontLandscape?: boolean;
   /** The front image's alt text; the back is "<label> (back face)". */
   label: string;
   /** The card's title, for the button's name ("Show back face of <title>"). */
@@ -210,16 +216,33 @@ export function BakedCardFlip({
           3D layers would be hit-tested in front of the button. */}
       <div className="tile-flip-stage absolute inset-0" style={{ perspective: "1400px" }}>
         <div className="tile-flip-rotor relative h-full w-full">
-          <div className="tile-flip-face tile-flip-front absolute inset-0" aria-hidden={showingBack}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={frontSrc}
-              alt={label}
-              loading={priority ? "eager" : "lazy"}
-              fetchPriority={priority ? "high" : "auto"}
-              decoding="async"
-              className="absolute inset-0 h-full w-full bg-[#101015] object-cover"
-            />
+          <div
+            className={cn("tile-flip-face tile-flip-front absolute inset-0", frontLandscape && "flex items-center")}
+            aria-hidden={showingBack}
+          >
+            {frontLandscape ? (
+              <div className="relative aspect-[7/5] w-full overflow-hidden card-corners-landscape" data-testid="baked-card-flip-landscape">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={frontSrc}
+                  alt={label}
+                  loading={priority ? "eager" : "lazy"}
+                  fetchPriority={priority ? "high" : "auto"}
+                  decoding="async"
+                  className="absolute inset-0 h-full w-full bg-[#101015] object-cover"
+                />
+              </div>
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={frontSrc}
+                alt={label}
+                loading={priority ? "eager" : "lazy"}
+                fetchPriority={priority ? "high" : "auto"}
+                decoding="async"
+                className="absolute inset-0 h-full w-full bg-[#101015] object-cover"
+              />
+            )}
           </div>
           <div className="tile-flip-face tile-flip-back absolute inset-0" aria-hidden={!showingBack}>
             {backMounted && !backFailed ? (
