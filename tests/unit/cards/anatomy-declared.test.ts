@@ -54,6 +54,9 @@ describe("where the pieces are declared", () => {
       // The Nyx Constellation frame (owner 2026-10-13): the Nyx crown band, its arms faded.
       "nyx",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
+      // The battle (TODO 5.5): the switch is the card's and its ▼ back draws
+      // it — the battle front itself draws none.
+      "battle",
       // The full-art tokens (TODO 4.48's last pieces): their own floating
       // crown band and their split pairs, on all six entries.
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",

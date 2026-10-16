@@ -572,6 +572,24 @@ export function finalizeImportMatch<
     const landing = dfcImportLanding(finalized, verifiedKeys);
     if (!landing.ok) {
       const fallback = withoutDfcLanding(finalized);
+      // A battle (TODO 5.5) keeps its frame either way: short of its front
+      // (the battle frame unverified in the colour) the import is exactly
+      // what it was before 5.5 — the front's own verification above, a
+      // legacy back; short of its back, the same legacy back and the match
+      // says why (nearest, the back's colour named).
+      if (finalized.kind === "battle") {
+        if (landing.reason !== "back-unverified") return { ...fallback, frame_match: match } as P;
+        return {
+          ...fallback,
+          frame_match: {
+            ...match,
+            status: "nearest",
+            ...(match.status === "exact" || match.unverified === true
+              ? { reason: `the back face's frame isn't verified in ${colorWord(landing.colorKey ?? "c")} yet`, unverified: true as const }
+              : {}),
+          },
+        } as P;
+      }
       const unverifiedBack =
         landing.reason === "back-unverified" && (match.status === "exact" || match.unverified === true);
       const downgraded: FrameMatch = {

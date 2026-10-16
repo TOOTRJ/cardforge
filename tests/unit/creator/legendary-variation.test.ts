@@ -52,7 +52,9 @@ function typeFor(template: FrameTemplate): string {
 }
 
 describe("offered where the frame declares a crown — from the PROFILES data", () => {
-  const fronts = FRAME_TEMPLATE_VALUES.filter((t) => dfcBodyOf(t)?.role !== "back");
+  // (The battle — TODO 5.5 — wears the crown on its optional back alone:
+  // its own block below.)
+  const fronts = FRAME_TEMPLATE_VALUES.filter((t) => dfcBodyOf(t)?.role !== "back" && !dfcBodyOf(t)?.battle);
   const crowned = fronts.filter((t) => frameAnatomyOf(t).crown);
   const crownless = fronts.filter((t) => !frameAnatomyOf(t).crown);
 
@@ -62,7 +64,7 @@ describe("offered where the frame declares a crown — from the PROFILES data", 
     for (const named of ["m15", "m15artifact", "m15land", "m15borderless", "m15borderlessartifact", "extendedart", "m15snow", "m15snowland", "m15dfcfront", "m15dfclandfront", "m15mdfcfront", "m20token", "m20tokenartifacttext"]) {
       expect(crowned, named).toContain(named);
     }
-    for (const named of ["m15pw", "saga", "m15token", "emblem", "retro", "modern", "alpha", "m15devoid", "m15borderlessland", "battle", "split", "m15mdfclandfront"]) {
+    for (const named of ["m15pw", "saga", "m15token", "emblem", "retro", "modern", "alpha", "m15devoid", "m15borderlessland", "split", "m15mdfclandfront"]) {
       if (!(FRAME_TEMPLATE_VALUES as readonly string[]).includes(named)) continue;
       expect(crownless, named).toContain(named);
     }
@@ -94,6 +96,36 @@ describe("offered where the frame declares a crown — from the PROFILES data", 
   });
 });
 
+describe("the battle (TODO 5.5): the crown is its back's — the ten MOM legendary backs", () => {
+  const battle = (over: Partial<LegendaryVariationInput> = {}) =>
+    input({ template: "battle", cardType: "battle", supertype: "", cost: "{2}{W}", backCardType: "creature", backSupertype: "", hasBackFace: true, ...over });
+
+  it("the battle front draws none, so the entry offers the BACK: it adds the word to the back", () => {
+    expect(legendaryVariationOf(battle())).toEqual({ available: true, reason: null, selected: false, switchShown: false, addsWordTo: "back" });
+    expect(legendaryVariationOf(battle({ backSupertype: "Legendary" }))).toEqual({ available: true, reason: null, selected: true, switchShown: true, addsWordTo: null });
+  });
+
+  it("a battle with no back, a back that prints no crown (an enchantment is fine — a planeswalker's isn't built), or a locked type line without the word: not offered", () => {
+    expect(legendaryVariationOf(battle({ hasBackFace: false, backSupertype: "Legendary" }))).toMatchObject({ available: false, reason: NO_CROWN_REASON });
+    expect(legendaryVariationOf(battle({ backCardType: "enchantment", backSupertype: "Legendary" }))).toMatchObject({ available: true, switchShown: true });
+    expect(legendaryVariationOf(battle({ typeLineLocked: true }))).toMatchObject({ available: false, reason: NOT_LEGENDARY_LOCKED_REASON });
+  });
+
+  it("a family on a battle is ignored: the back is the ▼ back", () => {
+    expect(legendaryVariationOf(battle({ dfcIcon: "sunmoon", backSupertype: "Legendary" }))).toMatchObject({ available: true, selected: true });
+  });
+
+  it("the save keeps the switch on a battle (normalizeAnatomy); the battle front's renderer rule draws none", () => {
+    expect(normalizeAnatomy({ template: "battle", crown: true }, "battle", "battle")).toMatchObject({ crown: true });
+    expect(
+      crownKeyFor(
+        { colorIdentity: ["white"], cost: "{2}{W}", cardType: "battle", supertype: "Legendary", frameStyle: { crown: true } },
+        getFrameProfile("battle"),
+      ),
+    ).toBeNull();
+  });
+});
+
 describe("the card type and the colour", () => {
   it.each(["planeswalker", "token", "battle", "emblem"])("a %s never prints the standard crown, even on a frame that draws one", (cardType) => {
     expect(legendaryVariationOf(input({ cardType, supertype: "Legendary" }))).toMatchObject({ available: false, reason: NO_CROWN_REASON });
@@ -101,7 +133,7 @@ describe("the card type and the colour", () => {
 
   it("every colour key of every crowned template is published — or the reason names the colour", () => {
     const colours: ColorIdentity[][] = [["white"], ["blue"], ["black"], ["red"], ["green"], ["multicolor"], ["colorless"], ["white", "blue"], ["white", "blue", "black"]];
-    for (const template of FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown && dfcBodyOf(t)?.role !== "back")) {
+    for (const template of FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown && dfcBodyOf(t)?.role !== "back" && !dfcBodyOf(t)?.battle)) {
       for (const colorIdentity of colours) {
         const cardType = typeFor(template);
         const state = legendaryVariationOf(input({ template, cardType, colorIdentity, supertype: "Legendary" }));

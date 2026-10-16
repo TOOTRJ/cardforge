@@ -581,6 +581,16 @@ export type DfcProfile = {
   well: "left" | "right";
   /** A land body: no mana cost, and on the back no P/T or indicator. */
   land?: true;
+  /** The BATTLE front (TODO 5.5): the landscape Siege card, whose face is a
+   *  battle (never one of the wave-1 face types) and whose back is the
+   *  portrait transform back `bodyFor` derives (the ▼ at the right: every
+   *  battle printed, MOM 2023, is the plain family). Its back is OPTIONAL:
+   *  a battle saved before 5.5 has none, or a LEGACY back (its content with
+   *  no body, drawn on the battle frame as it always was), and keeps it —
+   *  only a back that names a body is a back of its own (lib/cards/dfc-gate.ts
+   *  resolveDfcBackFace). The front prints no icon rider (the master paints
+   *  its ▲) and no family; it is not a front of the Transform kind. */
+  battle?: true;
 };
 
 /** The modal strip's two text slots (FrameProfile.flipside) and the painted
@@ -5377,6 +5387,29 @@ export const DFC_REVERSE_PT: StatSlot = {
   align: "end",
 };
 
+/** The battle reverse P/T's rect, HD px of the 2100 × 1500 card: its top
+ *  row and its right end (BATTLE_REVERSE_PT). */
+const BATTLE_REVERSE_PT_TOP_PX = 1214.5;
+const BATTLE_REVERSE_PT_RIGHT_PX = 1953.5;
+/** The battle front's grey reverse P/T (TODO 5.5): the BACK face's P/T in
+ *  the tab the master paints at the text box's right end, just above the
+ *  shield — the transform front's ink (DFC_REVERSE_PT: 61 px, #777, no
+ *  plate, end-aligned), measured on seventeen MOM battle fronts with a
+ *  creature back (Scryfall's PNGs turned and scaled to 2100 × 1500): the
+ *  digits' ink ends at 1940–1943 px (median 1941.5) and runs 1223–1269 px
+ *  down (the slash's top to the baseline), a 46–47 px block as on the
+ *  transform prints (1784–1830), in the same neutral grey (ink core luma
+ *  50–55 on both). Card Conjurer's 'Reverse PT' box is 12.24 / 81.27 % ×
+ *  79.38 × 2.86 %; ours keeps its left and sets its right end and rows on
+ *  the prints. Drawn only while the back prints a P/T — the tab prints
+ *  empty otherwise (MOM #64 Invasion of Vryn's artifact back), and a
+ *  battle with no back of its own draws nothing (lib/cards/faces.ts). */
+export const BATTLE_REVERSE_PT: StatSlot = {
+  ...DFC_REVERSE_PT,
+  rect: { topPct: BATTLE_REVERSE_PT_TOP_PX / 15, leftPct: 12.24, widthPct: BATTLE_REVERSE_PT_RIGHT_PX / 21 - 12.24, heightPct: 64 / 15 },
+  sizePct: 61 / 2100,
+};
+
 const DFC_BACK_INK = "#ffffff";
 /** M15's plate box and the dark plates' lit face on the digits' rows
  *  (measured on the pack's pt<K>.png: from 55 to 262 of 285 px, drawn at
@@ -6017,7 +6050,15 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // has no outline to hide a second crop's seam on, and the profile's art
   // slot is that rect on every colour already). The art-window check holds
   // the rect to every see-through pixel of the master.
-  battle: { ...BATTLE, underFrameArt: { rect: BATTLE_ART_RECT, colors: ["c"], artSlot: BATTLE_ART_RECT } },
+  // The battle's back (TODO 5.5): a battle is the FRONT of a transform card
+  // whose back — optional, `dfc.battle` — is the portrait ▼ back; the front
+  // prints the back's P/T in the master's tab (BATTLE_REVERSE_PT).
+  battle: {
+    ...BATTLE,
+    underFrameArt: { rect: BATTLE_ART_RECT, colors: ["c"], artSlot: BATTLE_ART_RECT },
+    dfc: { layout: "transform", role: "front", well: "left", battle: true },
+    reversePt: BATTLE_REVERSE_PT,
+  },
   saga: SAGA,
   adventure: ADVENTURE,
   // CC's colourless flip frame is see-through (layout v38, TODO 4.21a; owner

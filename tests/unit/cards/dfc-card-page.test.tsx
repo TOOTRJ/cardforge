@@ -106,11 +106,19 @@ describe("cardPageName — Front // Back (TODO 5.3)", () => {
   });
 
   it("cardPageFacesOf reads a stored row's columns", () => {
-    expect(cardPageFacesOf(DFC)).toEqual({ frameTemplate: "m15dfcfront", backTitle: "Elder Wolf" });
-    expect(cardPageFacesOf({ frame_style: null, back_face: null })).toEqual({ frameTemplate: null, backTitle: null });
-    expect(cardPageFacesOf({ frame_style: {}, back_face: { title: 7 } })).toEqual({ frameTemplate: null, backTitle: null });
+    expect(cardPageFacesOf(DFC)).toEqual({ frameTemplate: "m15dfcfront", backTitle: "Elder Wolf", backBody: "m15dfcback" });
+    expect(cardPageFacesOf({ frame_style: null, back_face: null })).toEqual({ frameTemplate: null, backTitle: null, backBody: null });
+    expect(cardPageFacesOf({ frame_style: {}, back_face: { title: 7 } })).toEqual({ frameTemplate: null, backTitle: null, backBody: null });
     expect(cardPageName(DFC.title, DFC.card_type, cardPageFacesOf(DFC))).toBe("Village Elder // Elder Wolf");
     expect(cardPageName(LEGACY.title, LEGACY.card_type, cardPageFacesOf(LEGACY))).toBe("Village Elder");
+  });
+
+  it("a battle (TODO 5.5) is “Front // Back” only with a back of its own: a legacy back keeps the battle's name", () => {
+    const battle = { frame_style: { template: "battle" }, back_face: { title: "Serra Faithkeeper", card_type: "creature", frame_style: { template: "m15dfcback" } } };
+    expect(cardPageName("Invasion of Dominaria", "battle", cardPageFacesOf(battle))).toBe("Invasion of Dominaria // Serra Faithkeeper");
+    const legacy = { frame_style: { template: "battle" }, back_face: { title: "Serra Faithkeeper", card_type: "creature" } };
+    expect(cardPageName("Invasion of Dominaria", "battle", cardPageFacesOf(legacy))).toBe("Invasion of Dominaria");
+    expect(cardPageName("Invasion of Dominaria", "battle", cardPageFacesOf({ frame_style: { template: "battle" }, back_face: null }))).toBe("Invasion of Dominaria");
   });
 });
 
