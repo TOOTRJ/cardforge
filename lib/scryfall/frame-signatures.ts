@@ -1075,7 +1075,8 @@ type GapKey =
   | "row-box"
   | "tall-box"
   | "znr-type-line"
-  | "borderless-dfc-face";
+  | "borderless-dfc-face"
+  | "marvel-variant-face";
 
 const BORDER_WORD: Record<string, string> = {
   white: "white",
@@ -1215,6 +1216,15 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   // A dark borderless double-faced printing (TODO 5.7) whose face has no
   // borderless body yet — a land face (SLD #1502, SLD #2655's backs) or a
   // sun / moon back (VOW #332–341) — lands on the bordered bodies.
+  // Marvel Super Heroes' variant borderless legends (TODO 5.7, the #578
+  // check): #355–363 print no title bar (the name floats on the art) and
+  // #388–399's backs are comic covers — neither is the borderless title bar
+  // the bodies draw; #328–350 are.
+  "marvel-variant-face": {
+    match: { collectors: { msh: [[355, 363], [388, 399]] } },
+    reason: "this Marvel printing's faces aren't the borderless title bar (a floating name, a comic-cover back)",
+    blockedBy: "5.7d",
+  },
   "borderless-dfc-face": {
     match: { dfcLook: "bordered" },
     reason: "PipGlyph's borderless double-faced frames don't have this face yet (a land face, or the 2016–22 icons), so it lands on the bordered frame",
@@ -1991,7 +2001,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       },
       outcome: { status: "exact", template: { family: "dfc" } },
     },
-    ["borderless-dfc-face", ...DFC_BODY_GAPS.filter((gap) => gap !== "border" && gap !== "universes-beyond")],
+    ["marvel-variant-face", "borderless-dfc-face", ...DFC_BODY_GAPS.filter((gap) => gap !== "border" && gap !== "universes-beyond")],
   ),
   {
     key: "borderless/dfc/light",

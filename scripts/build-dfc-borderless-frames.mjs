@@ -47,6 +47,7 @@ import {
   lightLetterOf,
   mirrorX,
   monoBaseOf,
+  seamsOf,
 } from "./lib/dfc-borderless.mjs";
 
 const args = process.argv.slice(2);
@@ -162,7 +163,13 @@ for (const template of templates) {
         sources.push(`cc:${spec.mask}@${sha(m).slice(0, 12)} (mask)`);
         mask = await maskPlane(m);
       }
-      changes[spec.graft] = applyGraft(out, dark, light, mono, spec, { disc, mask });
+      changes[spec.graft] = applyGraft(out, dark, light, mono, spec, { disc, mask, legendary: key.endsWith("-legendary") });
+    }
+    // No step at any graft's edge (the light pack's rim re-coloured, the
+    // mono master's own pixels kept): the run refuses a seam.
+    for (const spec of def.grafts) {
+      const seams = seamsOf(out, dark, spec.graft);
+      if (seams) throw new Error(`${template}/${key}: ${seams} px of seam at the ${spec.graft} graft's edge`);
     }
     const pngFile = path.join(outDir, template, `${key}.png`);
     fs.mkdirSync(path.dirname(pngFile), { recursive: true });
@@ -213,6 +220,12 @@ for (const template of templates) {
       const image = sharp(piece, { raw: { width: spec.box.width, height: spec.box.height, channels: 4 } });
       await image.clone().png({ compressionLevel: 9 }).toFile(out);
       await image.clone().webp(BODY_WEBP).toFile(out.replace(/\.png$/, ".webp"));
+      // The piece's WebP alpha must equal its PNG's, as a master's.
+      const pa = await sharp(out).ensureAlpha().raw().toBuffer();
+      const wa = await sharp(out.replace(/\.png$/, ".webp")).ensureAlpha().raw().toBuffer();
+      for (let i = 3; i < pa.length; i += 4) {
+        if (pa[i] !== wa[i]) throw new Error(`${template}/strip/${key}: WebP alpha differs from the PNG's at px ${(i - 3) / 4}`);
+      }
       strip.colors[key] = [`${template}/${key}.png (this run) cut through ${spec.mask}, eroded ${spec.erode} px, snapped to ${spec.snap} px blocks`];
       console.log(`✓ ${template}/strip/${key}  ${findings.opaque} opaque px`);
     }

@@ -6515,16 +6515,21 @@ masks:
 | `m15borderlessmdfcfront` | the housing with its ▲ (its light interior kept, as print's); the flipside strip through CC's Flipside mask |
 | `m15borderlessmdfcback` | the housing with its ▲▼ (its interior re-coloured to the bar's, as print's); the light strip |
 
-In each graft rect a light pixel that is the light pack's translucent
-INTERIOR (α < 250, the colour of its row's interior) is re-coloured to the
-dark master's interior on the same row (its luma over the light
-interior's, times the dark interior's colour; alpha the same ratio), so the
-concave bar end, its shadow and the tab's bevel keep Card Conjurer's
-shading in the dark colour; every other light pixel is copied; where the
-dark master's own pixels differ from its plain mono master (a crown) they
-win over a copied rim — never over the ring, the housing or the tab.
-Pairs: the well's side in the colour on that side (the left well / housing
-the pair's first colour, the ▼ well and the tab its second). Pixels
+Only the PIECE comes from the light pack: the ring and disc, the well's or
+housing's rim and outline, the tab, the strip. Its rim is re-coloured to
+the dark master's (`recolourRim`: the light packs paint the artifact rim
+(246,247,245) where the dark master paints (197,203,217)), and the gold
+masters' rim rows sit 1 px off the light pack's, so each band row of the
+piece is read from the light row that matches the dark master's on the
+bar's straight part; a piece pixel the mono master already paints is the
+dark master's own; the bar's concave end keeps the light pack's shading
+in the dark interior's colour out to 96 px from the well's centre;
+everything else is the dark master's. So no graft edge shows a step — the
+builder refuses a master with one (`seamsOf`: a pixel just inside a graft
+rect that differs from its neighbour outside where the dark master's two
+do not) and the masters test checks every key. On a crowned twin the
+well's rim and outline are drawn over the crown; a plain or pair master's
+round pill end is cut by the clear light pixels round the well. Pixels
 outside the graft rects are the dark master's byte for byte
 (`tests/unit/frames/dfc-borderless-masters.test.ts`).
 
@@ -6535,10 +6540,15 @@ well 6 px right, its disc at × 0.95 (radius 56.5 against 59.5); 1295–1408
 on 39 backs (bordered 1296–1415) — 4 px left, × 0.95; the tab 4 px down;
 the housing 5 px right (gradient correlation of each face against its
 master, the type bar's offset taken off). After the moves the same
-correlation reads the wells and the tab within 1 px, the housing 2 px
-high (left: a vertical move breaks the bar's rim rows), the strip +4 / −3
-px on 9 weak faces (most modal faces are MSH's Marvel strip form; not
-moved). The rider (`DFC_BORDERLESS_ICON_RIDER`) is the bordered rider
+correlation reads the wells and the tab within 1 px. The housing reads 2 px
+high, and so does the WHOLE title bar it sits in: the bar's top outline is
+at 87–90 px on SLD #2655 and 89–92 on SLD #1608, m15borderless's at 85–88
+— the borderless frame's own title bar (4.32), not the housing, so the
+housing keeps the bar's rows (a housing moved alone would jog against
+them). The strip is where print has it: on the one standard-form print,
+SLD #2655, its top edge, chevron tip (700 px) and bottom sit on ours
+within 1 px on both faces; the +4 / −3 px the correlation read rested on
+MSH's Marvel strip form, another shape. The rider (`DFC_BORDERLESS_ICON_RIDER`) is the bordered rider
 scaled × 0.95 about its centre and moved 6 px; the reverse P/T
 (`DFC_BORDERLESS_REVERSE_PT`) prints #828282 (the digits' grey on the dark
 box, median 128–133 on the clean scans) ending at 1378 px (ink end
@@ -6558,7 +6568,8 @@ the strip RIDER in the other face's colour (5.1c's model: the light pack's
 tab per colour, `<template>/strip/<key>.png` cut from the published
 masters through CC's Flipside mask — print's strip follows the face it
 describes, MSH #331's blue front a light-blue strip on its gold back; no
-`l`, a borderless modal face is never a land). No holofoil stamp, no
+`l`, a borderless modal face is never a land; each piece's WebP alpha is
+checked against its PNG's by the builder). No holofoil stamp, no
 collector line (m15borderless has neither — 4.9d's follow-up).
 
 **The look a back follows.** `bodyFor(layout, role, type, family, look)`:
@@ -6570,7 +6581,9 @@ and #2655's backs) and a 2016–22 family (VOW #332–341's sun / moon) have no
 borderless body — the gate refuses them by name (`DFC_NO_BACK_BODY_YET`),
 the creator's Land chips and the other icon pairs are off on a borderless
 card, and the import lands those printings on the bordered bodies with the
-`borderless-dfc-face` gap.
+`borderless-dfc-face` gap. An EDIT that moves a stored double-faced
+card's front onto the other look while its back keeps its stored body is
+refused (`DFC_LOOK_MISMATCH`): one card never draws two looks.
 
 **Kinds.** The fronts are the third body of the Transform and Modal kinds
 (`layoutTemplates`, never the default `[0]`); the backs refuse every kind.
@@ -6582,7 +6595,10 @@ and not a showcase, a shattered-glass or one-off set (BOT), or an
 artist-lettered poster — the registry's earlier borderless rules. The
 registry's `borderless/dfc` is EXACT on the borderless front body
 (`withGaps`: `borderless-dfc-face` first, then the M15 era's); the light
-look is `borderless/dfc/light`, nearest on the bordered body (5.7). Until
+look is `borderless/dfc/light`, nearest on the bordered body (5.7). Marvel
+Super Heroes' variant faces — #355–363's floating name (no title bar),
+#388–399's comic-cover backs — are nearest on the borderless bodies with
+the `marvel-variant-face` gap (5.7d); #328–350 are exact. Until
 the borderless front AND back are verified in their colours
 `finalizeImportMatch` lands the printing on the BORDERED bodies — where it
 landed before 5.7 — and says "the borderless double-faced frame isn't

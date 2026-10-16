@@ -101,10 +101,9 @@ export const RIGHT_WELL = Object.freeze({ cx: 1355.5, cy: 160.5, rimRadius: 72.5
 /** The housing never reaches past this column (its outline ends at 226).
  *  */
 export const HOUSING_MAX_X = 240;
+/** Right of this column the housing's piece is on the bar's side. */
+export const HOUSING_BAR_SIDE_X = 110;
 
-/** How far past the rim radius the light master's opaque outline still
- *  belongs to the well. */
-export const WELL_OUTLINE_PX = 6;
 
 /** The graft rects (HD px, half-open), the column each row's interior
  *  reference is read at, and the shift (dx, dy) the light pack's piece is
@@ -120,17 +119,26 @@ export const WELL_OUTLINE_PX = 6;
  *      1296–1415): −4 px and the same × 0.95;
  *    • the reverse-P/T tab +4 px down, the modal housing +5 px right
  *      (gradient correlation against each face's master, the type bar's
- *      offset taken off; the strip's −3 px / +4 px rests on a weak
- *      correlation and is not moved).
+ *      offset taken off). The housing reads 2 px high against print, and so
+ *      does the whole title bar it sits in: its top outline is at 87–90 px
+ *      on SLD #2655, 89–92 on SLD #1608, m15borderless's at 85–88 — the
+ *      borderless frame's own title bar (4.32), not the housing, so the
+ *      housing keeps the bar's rows;
+ *    • the strip where it is: on the one standard-form print (SLD #2655,
+ *      front and back) its top edge, chevron tip (700 px) and bottom sit on
+ *      ours within 1 px; the +4 / −3 px the correlation read rests on MSH's
+ *      Marvel strip form, another shape.
+ *  Only the PIECE moves (applyGraft): every pixel the mono master already
+ *  paints is the dark master's own, so a shift leaves no step.
  *  A horizontal shift keeps the title bar's rim rows continuous across the
  *  graft's edge (the rows are uniform along x); the tab's vertical shift
  *  slides along the box's vertical pinline. */
 export const GRAFTS = Object.freeze({
-  leftWell: { x0: 0, x1: 330, y0: 40, y1: 245, refX: 400, side: "left", dx: 6, dy: 0 },
-  rightWell: { x0: 1170, x1: 1500, y0: 40, y1: 245, refX: 1100, side: "right", dx: -4, dy: 0 },
+  leftWell: { x0: 0, x1: 330, y0: 40, y1: 268, refX: 400, side: "left", dx: 6, dy: 0 },
+  rightWell: { x0: 1170, x1: 1500, y0: 40, y1: 268, refX: 1100, side: "right", dx: -4, dy: 0 },
   housing: { x0: 0, x1: 330, y0: 30, y1: 245, refX: 400, side: "left", dx: 5, dy: 0 },
-  // (Ends above the bottom bar, 1937 px: the shifted piece never reaches it.)
-  tab: { x0: 1330, x1: 1500, y0: 1640, y1: 1925, refX: 1250, side: "right", dx: 0, dy: 4 },
+  // (Ends above the bottom bar, 1937 px: the moved piece never reaches it.)
+  tab: { x0: 1330, x1: 1500, y0: 1690, y1: 1925, refX: 1250, side: "right", dx: 0, dy: 4 },
   strip: { x0: 30, x1: 720, y0: 1850, y1: 1975, side: "left", dx: 0, dy: 0 },
 });
 
@@ -254,24 +262,90 @@ export function differs(a, b) {
   return Math.abs(a[3] - b[3]) > KEEP_TOLERANCE;
 }
 
+/** How far past the well's rim radius its piece reaches (its outline);
+ *  between that and SHADE_RADIUS only the bar's concave end's shading is
+ *  carried (in the dark interior's colour) — every other pixel is the dark
+ *  master's, so no step remains where the graft ends. */
+export const WELL_PIECE_PX = 6;
+export const WELL_SHADE_RADIUS = 96;
+/** On the bar's side of this column (mirrored for the ▼ well) the bar's
+ *  straight rows are the dark master's (the pill's own round end lies left
+ *  of it). */
+export const WELL_BAR_SIDE_X = 110;
+
+/** Past the housing's right outline its piece reaches this far; its bar
+ *  end's shading this far again. */
+export const HOUSING_PIECE_PX = 5;
+export const HOUSING_SHADE_PX = 26;
+
+/** The title bar's two rim bands (rows) and the column on the bar's
+ *  straight part where light and dark rows are matched. */
+export const BAND_ROWS = [[80, 106], [205, 240]];
+export const BAND_X = 520;
+
+/** Where each graft reads the rim / pinline colour it re-colours: the title
+ *  bar's top rim, the box's right pinline (before any shift). */
+const RIM_POINT = { leftWell: [750, 93], rightWell: [750, 93], housing: [750, 93], tab: [1394, 1600] };
+
+/**
+ * The dark master's rim for a light piece: Card Conjurer's light packs paint
+ * the rims and pinlines in the light colours of their own palette — the
+ * artifact `a` (246,247,245) where the dark masters paint (197,203,217) —
+ * so a copied rim pixel is re-coloured to the dark master's, and an
+ * anti-aliased one (the rim towards its black outline) by the same ratio.
+ * Any other pixel (the white ring, the glyph, the outline) is returned as
+ * it is.
+ */
+export function recolourRim(p, rimL, rimD) {
+  if (p[3] === 0) return p;
+  const near = (q, t) => Math.max(Math.abs(q[0] - rimL[0] * t), Math.abs(q[1] - rimL[1] * t), Math.abs(q[2] - rimL[2] * t)) <= 6;
+  if (near(p, 1)) return [rimD[0], rimD[1], rimD[2], p[3]];
+  const t = luma(p[0], p[1], p[2]) / Math.max(1, luma(rimL[0], rimL[1], rimL[2]));
+  if (t >= 0.08 && t <= 0.97 && near(p, t)) return [Math.round(rimD[0] * t), Math.round(rimD[1] * t), Math.round(rimD[2] * t), p[3]];
+  return p;
+}
+
 /**
  * Apply one graft to `out` (a copy of the dark master `dark`), in place.
  *   light  — the light master's RGBA (already mirrored when the graft says)
- *   mono   — the plain mono dark master of the graft's colour (keep rule)
+ *   mono   — the plain mono dark master of the graft's colour
  *   disc   — the bordered back's RGBA (the ▼ back) or null
  *   mask   — a Uint8Array alpha plane (the strip) or null
- * Returns how many pixels changed.
+ * The PIECE (the ring and disc, the well's or housing's rim and outline,
+ * the tab) is the light pack's, its rim re-coloured to the dark master's;
+ * a piece pixel the mono master already paints is the dark master's own
+ * pixel, and so are the bar's straight rows beside the piece (the gold
+ * masters draw them 1 px off the light pack's), and so is
+ * everything outside the piece but the bar end's shading — so a graft's
+ * edge never shows. Returns how many pixels changed.
  */
-export function applyGraft(out, dark, light, mono, spec, { disc = null, mask = null } = {}) {
+export function applyGraft(out, dark, light, mono, spec, { disc = null, mask = null, legendary = false } = {}) {
   const g = GRAFTS[spec.graft];
+  const sx = g.dx ?? 0;
+  const sy = g.dy ?? 0;
+  // The light pack's pixel at (x, y) after its shift onto print.
+  // The light pack's rim and outline ROWS onto the dark master's: the gold
+  // `m` masters draw the title bar's top rim 1 px higher and its bottom rim
+  // 1 px shorter than the light pack — so each row of the bar's two bands
+  // reads the light row (within 2) whose re-coloured pixel on the bar's
+  // straight part matches the mono master's there (BAND_ROWS).
+  const rowOf = new Int32Array(H);
+  for (let y = 0; y < H; y++) rowOf[y] = y;
   let changed = 0;
+  const lpx = (x, y) => {
+    const xs = x - sx;
+    const ys = rowOf[y] - sy;
+    return xs < 0 || ys < 0 || xs >= W || ys >= H ? [0, 0, 0, 0] : px(light, xs, ys);
+  };
   if (spec.graft === "strip") {
     for (let y = g.y0; y < g.y1; y++) {
       for (let x = g.x0; x < g.x1; x++) {
-        const m = mask[y * W + x] / 255;
+        const xs = x - sx;
+        const ys = y - sy;
+        const m = xs < 0 || ys < 0 || xs >= W || ys >= H ? 0 : mask[ys * W + xs] / 255;
         if (m === 0) continue;
         const d = px(dark, x, y);
-        const l = px(light, x, y);
+        const l = lpx(x, y);
         // Premultiplied lerp dark → light by the mask.
         const a = d[3] * (1 - m) + l[3] * m;
         const v = a === 0 ? [0, 0, 0, 0] : [0, 1, 2].map((c) => Math.round((d[c] * d[3] * (1 - m) + l[c] * l[3] * m) / a));
@@ -282,16 +356,29 @@ export function applyGraft(out, dark, light, mono, spec, { disc = null, mask = n
     }
     return changed;
   }
+  const monoAt = (x, y) => (mono ? px(mono, x, y) : px(dark, x, y));
+  const [rpx, rpy] = RIM_POINT[spec.graft];
+  const rimL = px(light, rpx, rpy);
+  const rimD = monoAt(rpx, rpy);
+  const rc = (p) => recolourRim(p, rimL, rimD);
+  if (spec.graft !== "tab") {
+    const barX = g.side === "left" ? BAND_X : W - 1 - BAND_X;
+    for (const [a, b] of BAND_ROWS) {
+      for (let y = a; y <= b; y++) {
+        const want = monoAt(barX, y);
+        for (const k of [0, 1, -1, 2, -2]) {
+          const ys = y + k - sy;
+          if (ys < 0 || ys >= H) continue;
+          if (!differs(rc(px(light, barX - sx, ys)), want)) {
+            rowOf[y] = y + k;
+            break;
+          }
+        }
+      }
+    }
+  }
   // The housing's interior reference: the bar's flat paint on the title's
   // middle row (the housing's rows reach above and below the bar's).
-  const sx = g.dx ?? 0;
-  const sy = g.dy ?? 0;
-  // The light pack's pixel at (x, y) after its shift onto print.
-  const lpx = (x, y) => {
-    const xs = x - sx;
-    const ys = y - sy;
-    return xs < 0 || ys < 0 || xs >= W || ys >= H ? [0, 0, 0, 0] : px(light, xs, ys);
-  };
   const globalLr = lpx(g.refX, 160);
   const globalDr = px(dark, g.refX, 160);
   // The well's centre on print, and its disc's source and centre there.
@@ -304,84 +391,115 @@ export function applyGraft(out, dark, light, mono, spec, { disc = null, mask = n
     const lr = lpx(g.refX, y);
     const dr = px(dark, g.refX, y);
     // The housing's right outline on this row: the first opaque light pixel
-    // scanning left from the graft's inner edge (spec.housing only).
+    // scanning left from HOUSING_MAX_X (spec.housing only).
     let housingEnd = -1;
     if (spec.housing) {
-      for (let x = g.x1 - 1; x >= g.x0; x--) {
+      for (let x = HOUSING_MAX_X; x >= g.x0; x--) {
         if (lpx(x, y)[3] >= INTERIOR_ALPHA) {
-          // (A row above or below the bar meets the rim at once: no housing.)
-          housingEnd = x < HOUSING_MAX_X ? x : -1;
+          housingEnd = x;
           break;
         }
       }
     }
     for (let x = g.x0; x < g.x1; x++) {
       const d = px(dark, x, y);
-      const l = lpx(x, y);
-      const m = mono ? px(mono, x, y) : d;
-      // A copied light pixel is the graft's own piece (drawn over a crown)
-      // only where it brings something the plain mono master lacks — the
-      // ring, the housing, the tab's outline — and is not transparent; a
-      // rim or outline the mono master already paints yields to a crown.
-      // (Within a row either way: the modal pack draws the bar's top rim 1 px
-      // lower than the dark masters.)
-      const own =
-        l[3] > 0 && differs(l, m) && (!mono || ((y === 0 || differs(l, px(mono, x, y - 1))) && (y === H - 1 || differs(l, px(mono, x, y + 1)))));
-      let v;
-      let drawn = false; // the disc / a re-coloured interior: always drawn
+      const m = monoAt(x, y);
+      const raw = lpx(x, y);
+      const l = rc(raw);
+      // A piece pixel is the graft's OWN where it brings what the mono
+      // master lacks; else the dark master's.
+      const own = l[3] > 0 && differs(l, m);
+      // A transparent piece pixel cuts the dark master's shape (the pill's
+      // round end round the well), unless the dark master's own piece (a
+      // crown, a pair's pinline) is there.
+      // (Only a crowned twin keeps its own pixels under a clear light one:
+      // a plain or pair master's round end is always cut.)
+      const kept = legendary && differs(d, m);
+      const pieceOf = () => (own ? l : l[3] === 0 ? (kept ? d : l) : d);
+      let v = d;
       if (well) {
         const ux = x + 0.5 - (ecx + 0.5);
         const uy = y + 0.5 - (ecy + 0.5);
         const r = Math.hypot(ux, uy);
+        const crowned = kept;
+        const barSide = g.side === "left" ? x >= WELL_BAR_SIDE_X : x <= W - 1 - WELL_BAR_SIDE_X;
         if (r <= well.ringRadius * discScale) {
           // The disc (ring, black, glyph), drawn at its print size about the
           // print's centre from its source's own centre.
           v = sampleBilinear(discSource, well.cx + 0.5 + ux / discScale, well.cy + 0.5 + uy / discScale);
-          drawn = true;
         } else if (r <= well.discRadius) {
           // What the smaller disc leaves: the rim, read further out on the
           // same ray of the (unshifted) light piece.
           const k = (well.rimRadius - 5) / Math.max(r, 1e-6);
-          v = sampleBilinear(light, well.cx + 0.5 + ux * k, well.cy + 0.5 + uy * k);
-          drawn = true;
-        } else if (r <= well.rimRadius) {
-          v = l;
-          drawn = own;
-        } else if (r <= well.rimRadius + WELL_OUTLINE_PX && l[3] >= INTERIOR_ALPHA) {
-          // The well's own outline, just past the rim: drawn over a crown
-          // too (a crown's pixels would leave it dotted).
-          v = l;
-          drawn = true;
+          v = rc(sampleBilinear(light, well.cx + 0.5 + ux * k, well.cy + 0.5 + uy * k));
+        } else if (r <= well.rimRadius + WELL_PIECE_PX) {
+          // The rim and the well's own outline — but on the bar's side of the
+          // well, where the light piece runs the bar's straight rim and
+          // outline rows, the dark master's own rows (the gold `m` masters
+          // draw those rows 1 px off the light pack's).
+          const barX = Math.round(g.side === "left" ? ecx + 100 : ecx - 100);
+          // On a crowned twin the well's opaque piece (its rim and outline) is
+          // drawn over the crown, as the approved first pass drew it.
+          v = barSide && m[3] > 0 && !differs(raw, lpx(barX, y)) ? d : crowned && l[3] >= INTERIOR_ALPHA ? l : pieceOf();
+        } else if (r <= WELL_SHADE_RADIUS && isInteriorLike(raw, lr)) {
+          v = shadeTransfer(raw, lr, dr);
+        } else if (raw[3] === 0 && !kept) {
+          // Past the bulge, away from the bar: the dark pill's round end is
+          // cut (the light piece is clear there).
+          v = raw;
         }
-      }
-      if (!v) {
-        const inHousing = spec.housing && x < housingEnd;
-        if (inHousing) {
-          if (spec.housing === "dark" && isInteriorLike(l, globalLr)) {
-            v = shadeTransfer(l, globalLr, globalDr);
-            drawn = true;
-          } else {
-            v = l;
-            // Inside the housing every opaque piece is the housing's own (its
-            // outline, ring and rim): a crown never shows through it.
-            drawn = own || l[3] >= INTERIOR_ALPHA;
+      } else if (spec.housing) {
+        if (housingEnd >= 0 && x < housingEnd + HOUSING_PIECE_PX) {
+          if (spec.housing === "dark" && isInteriorLike(raw, globalLr)) v = shadeTransfer(raw, globalLr, globalDr);
+          else if (spec.housing === "dark" && whiteBlend(raw, globalLr) !== null) {
+            // The white ▲▼'s anti-aliased edge over the housing's interior:
+            // the same blend over the dark interior (no light-pack tint).
+            const t = whiteBlend(raw, globalLr);
+            v = [0, 1, 2].map((c) => Math.round(255 * t + globalDr[c] * (1 - t)));
+            v.push(Math.max(raw[3], globalDr[3]));
           }
-        } else if (isInteriorLike(l, lr)) {
-          v = shadeTransfer(l, lr, dr);
-          drawn = true;
-        } else {
-          v = l;
-          drawn = own;
+          else if (x < housingEnd && spec.housing === "light" && raw[3] > 0 && raw[3] < INTERIOR_ALPHA) v = raw; // its light interior
+          // (The bar's straight rows on the housing's bar side: the dark
+          // master's own, as at the wells.)
+          else if (x >= HOUSING_BAR_SIDE_X && m[3] > 0 && !differs(raw, lpx(HOUSING_MAX_X + 60, y))) v = d;
+          else v = pieceOf();
+        } else if (housingEnd >= 0 && x < housingEnd + HOUSING_SHADE_PX && isInteriorLike(raw, lr)) {
+          v = shadeTransfer(raw, lr, dr);
+        } else if (x < HOUSING_BAR_SIDE_X && raw[3] === 0 && !kept) {
+          v = raw; // the dark pill's round end, cut past the housing
         }
+      } else {
+        // The tab: its outline and pinline the piece's; its interior the
+        // dark box's paint where the mono master is box too (no step in the
+        // box's own shading), shade-transferred only out in the tab.
+        const monoIsBox = m[3] > 0 && m[3] < INTERIOR_ALPHA;
+        // (A clear light pixel is never a cut here: the tab only adds to the
+        // box, and the moved piece's own fin edge must not cut the master's.)
+        // (Black on the master's own black — the fin's edge, which the moved
+        // piece carries 4 px lower — is the master's.)
+        const blackOnBlack = m[3] === 255 && Math.max(m[0], m[1], m[2]) < 24 && Math.max(raw[0], raw[1], raw[2]) < 24;
+        if (raw[3] === 0 || blackOnBlack) v = d;
+        else if (isInteriorLike(raw, lr)) v = monoIsBox ? d : shadeTransfer(raw, lr, dr);
+        else v = pieceOf();
       }
-      // The keep rule: the dark master's own piece (a crown, a pair's
-      // pinline) wins over a copied rim or a transparent light pixel.
-      if (!drawn && differs(d, m)) v = d;
       if (differs(v, d)) changed++;
       put(out, x, y, v);
     }
   }
   return changed;
+}
+
+/** The share of white in a pixel that blends white with the interior paint
+ *  \`lr\` (within 6 levels a channel), or null. */
+export function whiteBlend(p, lr) {
+  if (p[3] < INTERIOR_ALPHA - 60) return null;
+  let best = null;
+  for (let i = 1; i < 20; i++) {
+    const t = i / 20;
+    const err = Math.max(...[0, 1, 2].map((c) => Math.abs(p[c] - (255 * t + lr[c] * (1 - t)))));
+    if (err <= 6 && (best === null || err < best[1])) best = [t, err];
+  }
+  return best ? best[0] : null;
 }
 
 /** Mirror an RGBA canvas left ↔ right (x → W − 1 − x). */
@@ -398,4 +516,29 @@ export function mirrorX(buf) {
     }
   }
   return out;
+}
+
+/**
+ * Steps a graft left at its rect's edges: pixels just inside the rect that
+ * differ from their neighbour just outside where the dark master's same two
+ * pixels do not. Zero on a clean graft (tests/unit/frames/dfc-borderless-
+ * masters.test.ts; the builder refuses a master with any).
+ */
+export function seamsOf(out, dark, graft) {
+  const g = GRAFTS[graft];
+  const step = (a, b) => differs(a, b);
+  let n = 0;
+  const pairs = [];
+  for (let y = g.y0; y < g.y1; y++) {
+    if (g.x0 > 0) pairs.push([g.x0, y, g.x0 - 1, y]);
+    if (g.x1 < W) pairs.push([g.x1 - 1, y, g.x1, y]);
+  }
+  for (let x = g.x0; x < g.x1; x++) {
+    if (g.y0 > 0) pairs.push([x, g.y0, x, g.y0 - 1]);
+    if (g.y1 < H) pairs.push([x, g.y1 - 1, x, g.y1]);
+  }
+  for (const [xi, yi, xo, yo] of pairs) {
+    if (step(px(out, xi, yi), px(out, xo, yo)) && !step(px(dark, xi, yi), px(dark, xo, yo))) n++;
+  }
+  return n;
 }

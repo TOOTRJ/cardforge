@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bodyFor, colorlessFaceAllowed, dfcLookOf, frontBodyFor, isDfcBackBody, templateHasBackFace } from "@/lib/cards/dfc";
-import { DFC_BACK_BODY_MISMATCH, DFC_NO_BACK_BODY_YET, resolveDfcBackFace } from "@/lib/cards/dfc-gate";
+import { DFC_BACK_BODY_MISMATCH, DFC_LOOK_MISMATCH, DFC_NO_BACK_BODY_YET, resolveDfcBackFace } from "@/lib/cards/dfc-gate";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import {
   DFC_BORDERLESS_ICON_RIDER,
@@ -145,6 +145,32 @@ describe("the look a back follows", () => {
     });
     expect(modal.ok && modal.back?.frame_style?.template).toBe("m15borderlessmdfcback");
     expect(modal.ok && (modal.back as { cost?: string }).cost).toBe("{4}{W}{U}");
+  });
+});
+
+describe("a mixed look is refused (the #578 check)", () => {
+  const back = { title: "Ashling, Rimebound", card_type: "creature", color_identity: ["blue"] } as const;
+  const verifiedKeys = every(["m15dfcback", "m15borderlessdfcback", "m15mdfcback", "m15borderlessmdfcback"]);
+  it("an edit that moves a stored DFC's front onto the other look while its back keeps its body", () => {
+    for (const [front, storedBody] of [
+      ["m15borderlessdfcfront", "m15dfcback"],
+      ["m15dfcfront", "m15borderlessdfcback"],
+      ["m15borderlessmdfcfront", "m15mdfcback"],
+      ["m15mdfcfront", "m15borderlessmdfcback"],
+    ] as const) {
+      const stored = { back: { ...back, frame_style: { template: storedBody } }, familyChanged: false };
+      expect(
+        resolveDfcBackFace({ frontTemplate: front, back: stored.back, family: "arrows", frontColorIdentity: ["red"], verifiedKeys, stored }),
+        `${front} over ${storedBody}`,
+      ).toMatchObject({ ok: false, field: "back_face.frame_style", message: DFC_LOOK_MISMATCH });
+    }
+  });
+  it("the same look keeps its stored body; a create derives the front's look", () => {
+    const stored = { back: { ...back, frame_style: { template: "m15borderlessdfcback" } }, familyChanged: false };
+    const same = resolveDfcBackFace({ frontTemplate: "m15borderlessdfcfront", back: stored.back, family: "arrows", frontColorIdentity: ["red"], verifiedKeys, stored });
+    expect(same.ok && same.back?.frame_style?.template).toBe("m15borderlessdfcback");
+    const create = resolveDfcBackFace({ frontTemplate: "m15dfcfront", back, family: "arrows", frontColorIdentity: ["red"], verifiedKeys });
+    expect(create.ok && create.back?.frame_style?.template).toBe("m15dfcback");
   });
 });
 

@@ -131,6 +131,15 @@ describe("borderless double-faced imports (TODO 5.7)", () => {
     expect(after.frame_template).toBe("m15borderlessdfcfront");
     expect(after.back_face?.frame_style?.template).toBe("m15borderlessdfcback");
     expect(after.frame_match.status).toBe("exact");
+    // MSH's variant faces (the #578 check): #355–363's floating name and
+    // #388–399's comic-cover backs are nearest with a gap of their own;
+    // #328–350 stay exact.
+    for (const key of ["msh-355", "msh-356", "msh-359", "msh-363", "msh-388", "msh-390", "msh-392", "msh-399"]) {
+      expect(frameMatchFromScryfall(printings[key]), key).toMatchObject({ signature: "borderless/dfc+marvel-variant-face", status: "nearest", template: "m15borderlessmdfcfront", blockedBy: "5.7d" });
+    }
+    for (const key of ["msh-328", "msh-331", "msh-345", "msh-346", "msh-350"]) {
+      expect(frameMatchFromScryfall(printings[key]), key).toMatchObject({ signature: "borderless/dfc", status: "exact" });
+    }
     // The light look stays nearest on the bordered body.
     expect(frameMatchFromScryfall(printings["znr-284"])).toMatchObject({ signature: "borderless/dfc/light", status: "nearest", blockedBy: "5.7" });
   });
