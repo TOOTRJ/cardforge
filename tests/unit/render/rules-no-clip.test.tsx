@@ -402,17 +402,23 @@ describe("rules consumers — no clip, no keep-out ink, the layout's lines (Sato
 
 describe("the holofoil stamp's arch on the borderless frames (TODO 4.9d) — a keep-out never adds a clip", () => {
   // The renderers pass the profile's keep-out while the stamp is drawn
-  // (DrawnStats.stamp): the borderless frames' is taller than M15's (their
-  // bevel is a bright line over the art, from 1892 px).
-  const stamped = (template: FrameTemplate, text: RulesCase) => {
+  // (DrawnStats.stamp): on the borderless frames the ARCH'S SHAPE (owner
+  // Round 70: 4 px columns 2 px above the lifted bevel, keepOutShape).
+  const stampedText = (template: FrameTemplate, rulesText: string | null | undefined, flavorText: string | null | undefined) => {
     const layout = getFrameProfile(template);
     const slot = (layout.overlays ?? []).find((o) => o.anatomy === "holoStamp");
     if (!slot || slot.anatomy !== "holoStamp") throw new Error(`${template} has no notch`);
+    expect(slot.stamp.keepOutShape?.length, template).toBeGreaterThan(30);
     const show: DrawnStats = { pt: Boolean(layout.pt) };
-    const plain = mainRulesLayout({ layout, rulesText: text.rules, flavorText: text.flavor, aspect: aspectOf(layout), show });
-    const arch = mainRulesLayout({ layout, rulesText: text.rules, flavorText: text.flavor, aspect: aspectOf(layout), show: { ...show, stamp: slot.stamp.keepOut } });
+    const plain = mainRulesLayout({ layout, rulesText, flavorText, aspect: aspectOf(layout), show });
+    const arch = mainRulesLayout({ layout, rulesText, flavorText, aspect: aspectOf(layout), show: { ...show, stamp: slot.stamp.keepOutShape ?? slot.stamp.keepOut } });
     return { plain, arch };
   };
+  const stamped = (template: FrameTemplate, text: RulesCase) => stampedText(template, text.rules, text.flavor);
+  /** The owner's sweep (Round 70): a text of 1 … 95 words. */
+  const SWEEP_WORDS =
+    "Whenever this creature attacks each opponent loses two life and you gain two life then draw a card and discard a card unless you control an artifact Flying vigilance and trample until end of turn target creature gets plus three plus three and gains first strike when it dies return it to the battlefield under its owner's control at the beginning of your upkeep scry two then you may sacrifice a land if you do create a treasure token search your library for a basic land card reveal it put it into your hand then shuffle".split(" ");
+  const sweepText = (n: number) => `${Array.from({ length: n }, (_, i) => SWEEP_WORDS[i % SWEEP_WORDS.length]).join(" ")}.`;
   const TEMPLATES = ["m15borderless", "m15borderlessartifact", "m15borderlessland"] as const;
 
   it("clips exactly the texts the box clips without the stamp, never sets one larger", () => {
@@ -424,6 +430,27 @@ describe("the holofoil stamp's arch on the borderless frames (TODO 4.9d) — a k
       }
     }
   });
+
+  it("the sweep of 1 … 95 words: no new clip, a step down only where glyphs meet the arch (2 of 95 on each frame)", () => {
+    for (const template of TEMPLATES) {
+      const stepped: number[] = [];
+      for (let n = 1; n <= 95; n += 1) {
+        const { plain, arch } = stampedText(template, sweepText(n), null);
+        expect(arch.clipped, `${template} · ${n} words`).toBe(plain.clipped);
+        if (arch.sizePx < plain.sizePx) stepped.push(n);
+      }
+      // (The same sweep on m15 with its one-rect keep-out steps 10.)
+      expect(stepped, template).toEqual([68, 69]);
+    }
+  });
+
+  it("draws the sweep's stamped layouts clear of the arch, glyph by glyph (750 px)", async () => {
+    for (let n = 1; n <= 95; n += 1) {
+      const { arch } = stampedText("m15borderless", sweepText(n), null);
+      if (arch.clipped) continue;
+      await checkDrawn(arch, "default", `m15borderless stamped · ${n} words`);
+    }
+  }, 300_000);
 
   it("draws every stamped layout inside its box, clear of the arch, line for line (750 px)", async () => {
     let n = 0;

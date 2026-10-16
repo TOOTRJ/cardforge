@@ -54,6 +54,7 @@
 import type { FrameColorKey, FrameMasterKey } from "@/lib/cards/frame-reference-registry";
 import {
   M15BORDERLESS_HOLO_STAMP_KEEP_OUT,
+  M15BORDERLESS_HOLO_STAMP_KEEP_OUT_SHAPE,
   M15PW_HOLO_STAMP_KEEP_OUT,
   M15UB_HOLO_STAMP_BOX,
   M15UB_HOLO_STAMP_KEEP_OUT,
@@ -5240,7 +5241,16 @@ export const M15BORDERLESS_HOLO_STAMP: FrameOverlaySlot = {
   rect: { leftPct: (660 / 1500) * 100, topPct: (1896 / 2100) * 100, widthPct: (180 / 1500) * 100, heightPct: (52 / 2100) * 100 },
   assetPathTemplate: "/frames/m15borderlessholostamp/{key}.png",
   keys: ["w", "u", "b", "r", "g", "m", "a", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
-  stamp: { shape: "oval", oval: M15_HOLO_STAMP_OVAL, keepOut: M15BORDERLESS_HOLO_STAMP_KEEP_OUT },
+  // The keep-out FOLLOWS THE ARCH (owner Round 70): 4 px columns from 2 px
+  // above the lifted bevel (borderlessArchKeepOut); `keepOut` is their
+  // bounds. A triangle draws nothing here (no notch cut for it yet).
+  stamp: {
+    shape: "oval",
+    oval: M15_HOLO_STAMP_OVAL,
+    keepOut: M15BORDERLESS_HOLO_STAMP_KEEP_OUT,
+    keepOutShape: M15BORDERLESS_HOLO_STAMP_KEEP_OUT_SHAPE,
+    ownShapeOnly: true,
+  },
 };
 
 /** …the borderless LAND's (TODO 4.9d): the same arch over its own masters
@@ -5264,7 +5274,7 @@ export const M15BORDERLESSSTATION_HOLO_STAMP: FrameOverlaySlot = {
   ...M15BORDERLESS_HOLO_STAMP,
   assetPathTemplate: "/frames/m15borderlessstationholostamp/{key}.png",
   keys: ["w", "u", "b", "r", "g", "m", "c"],
-  stamp: { shape: "oval", oval: M15_HOLO_STAMP_OVAL, keepOut: M15_HOLO_STAMP_KEEP_OUT },
+  stamp: { shape: "oval", oval: M15_HOLO_STAMP_OVAL, keepOut: M15_HOLO_STAMP_KEEP_OUT, ownShapeOnly: true },
 };
 
 /** The planeswalker's notch (TODO 4.9c): CC's `planeswalker/holo` piece —

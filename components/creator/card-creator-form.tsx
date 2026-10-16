@@ -320,6 +320,7 @@ import {
   frameAnatomyOf,
   importedAnatomy,
   importedFormAnatomy,
+  stampForTemplate,
 } from "@/lib/cards/anatomy";
 import { fitArtToWindow } from "@/lib/cards/art-fit";
 import { artPositionerWindows } from "@/lib/cards/art-positioner-window";
@@ -2438,6 +2439,11 @@ export function CardCreatorForm({
                   setValue("frame_style.template", offer.template, {
                     shouldDirty: true,
                   });
+                  // A triangle-stamped printing on a borderless frame keeps
+                  // no stamp (owner Round 70: no triangle notch there yet).
+                  const stamp = getValues("frame_style.stamp");
+                  const kept = stampForTemplate(stamp, offer.template);
+                  if (kept !== stamp) setValue("frame_style.stamp", kept, { shouldDirty: true });
                   setFrameSubstitution(null);
                 },
               },

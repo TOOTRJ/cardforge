@@ -1726,6 +1726,10 @@ export function visualCases(): VisualCase[] {
   add("m15borderless", "creature", "r", "short", { suffix: "@stamp-foil", finish: "foil", row: stampRow("m15borderless", "auto", { rarity: "rare", frame_style: { finish: "foil" } as CardRowForBake["frame_style"] }) });
   add("m15borderless", "creature", "u", "short", { suffix: "@stamp-square", corners: "square", row: stampRow("m15borderless", "auto", { rarity: "rare" }) });
   add("m15borderless", "creature", "w", "short", { suffix: "@stamp-always", row: stampRow("m15borderless", "oval", { rarity: "common" }) });
+  // A Universes Beyond printing's triangle on the borderless frame draws
+  // NOTHING (owner Round 70: no triangle notch there yet) — the plain look,
+  // pinned.
+  add("m15borderless", "creature", "u", "short", { suffix: "@stamp-triangle", row: stampRow("m15borderless", "triangle", { rarity: "rare" }) });
   add("m15borderlessland", "land", "g", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("m15borderlessland", "auto", { rarity: "rare" }) });
   add("m15borderlessstation", "artifact", "c", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("m15borderlessstation", "auto", { rarity: "mythic" }) });
   add("m15borderless", "instant", "u", "short", { suffix: "@collector-noplate", row: collectorRow("m15borderless", "2023") });

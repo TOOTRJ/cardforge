@@ -65,7 +65,7 @@ describe("visual-regression matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
       expect(id).toMatch(
-        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|land|artifact|vehicle|wide|star|spacecraft|nopt|nodefense|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|legacyland|sunmoon|moon|compass|fan|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd|square|br|gw|ub))?(-crown(-hd)?)?|centred(-hd)?|white(-(hd|foil|etched|square|pair))?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|crown|collector-(hd|2015)|auto-common|auto-uncommon|matte-hd|pair-(split|hybrid|crown|hd|foil)))?|tiers-(one|three|none|wide|star)|large-pips-hd|phyrexian-cost-(3|5)(-hd)?|nyx-(wide|artifact|silver)))?$/,
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|land|artifact|vehicle|wide|star|spacecraft|nopt|nodefense|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|legacyland|sunmoon|moon|compass|fan|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square))?|pair(-(hybrid|foil|etched|hd|square|br|gw|ub))?(-crown(-hd)?)?|centred(-hd)?|white(-(hd|foil|etched|square|pair))?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|crown|triangle|collector-(hd|2015)|auto-common|auto-uncommon|matte-hd|pair-(split|hybrid|crown|hd|foil)))?|tiers-(one|three|none|wide|star)|large-pips-hd|phyrexian-cost-(3|5)(-hd)?|nyx-(wide|artifact|silver)))?$/,
       );
     }
     expect(ids).toEqual([...ids].sort());
@@ -258,7 +258,9 @@ describe("visual-regression matrix", () => {
     for (const c of stamped) {
       const style = c.row.frame_style as { stamp?: string; collector?: string; crown?: boolean; twoColor?: boolean };
       // "triangle" only on the Universes Beyond frame's "Always" case (4.25).
-      expect(c.id === "m15ub/r/creature-short@stamp-always" ? ["triangle"] : ["auto", "oval"], c.id).toContain(style.stamp);
+      // …and on the borderless frame's pinned triangle (owner Round 70: it
+      // draws nothing there).
+      expect(c.id === "m15ub/r/creature-short@stamp-always" || c.id === "m15borderless/u/creature-short@stamp-triangle" ? ["triangle"] : ["auto", "oval"], c.id).toContain(style.stamp);
       // The line rides only on the borderless frames' two combined cases
       // (TODO 4.9d).
       expect(style.collector, c.id).toBe(c.id.endsWith("@stamp-collector-hd") ? "2023" : c.id.endsWith("@stamp-collector-2015") ? "2015" : undefined);

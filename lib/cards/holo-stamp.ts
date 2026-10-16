@@ -64,6 +64,10 @@ export type HoloStampFacts = {
    *  slot). Absent = the oval — every caller that knows the frame passes
    *  it; one that doesn't gets the oval's rule. */
   shape?: HoloStampShape | null;
+  /** The frame draws ONLY its own shape (HoloStampArt.ownShapeOnly — the
+   *  borderless frames, TODO 4.9d): a value naming the other shape draws
+   *  nothing there. */
+  ownShapeOnly?: boolean | null;
 };
 
 /**
@@ -79,6 +83,11 @@ export type HoloStampFacts = {
 export function holoStampWanted(stamp: unknown, facts: HoloStampFacts): boolean {
   if (!isHoloStampSwitch(stamp) || stamp === "none") return false;
   if (STAMPLESS_CARD_TYPES.has(facts.cardType ?? "")) return false;
+  // A frame that draws only its own shape (the borderless frames, owner
+  // Round 70): the other shape — a Universes Beyond printing's triangle on
+  // the oval-arched borderless frame — draws nothing, until that frame has
+  // a notch cut for it.
+  if (facts.ownShapeOnly && stamp !== "auto" && stamp !== (facts.shape ?? "oval")) return false;
   if (stamp === "auto") return facts.shape === "triangle" || AUTO_RARITIES.has((facts.rarity ?? "").toLowerCase());
   return true;
 }
@@ -154,14 +163,81 @@ export function holoStampArtRect(oval: Rect): Rect {
  *  short block ≈ 9 px off the prints. */
 export const M15_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: 43.67, topPct: 90.71, widthPct: 12.67, heightPct: 0.93 };
 
-/** The rules keep-out while the BORDERLESS stamp is drawn (TODO 4.9d): the
- *  printed arch over the oval — the bar lifted 32.6 px at the centre, so its
- *  bevel's top at 1897.4 px (scripts/lib/borderless-stamp.mjs ARCH_LIFT_PX;
- *  the prints' rim ends at 1916 there) — with 5 px of air above it, x
- *  655–845 px as M15's, down past the rules box's bottom (1923.6): 1892–1925.
- *  Taller than M15's: the borderless bevel is a bright line over the art,
- *  where the bordered frame's is white on its cream box. */
-export const M15BORDERLESS_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: 43.67, topPct: (1892 / 2100) * 100, widthPct: 12.67, heightPct: (33 / 2100) * 100 };
+/**
+ * The borderless arch (TODO 4.9d) — how far the pinline is lifted (HD px)
+ * at |x − 750| = 0, 2, 4, … px (linear between; nothing from the last entry
+ * on): fourteen prints measured 2026-10-15. The build's own copy is
+ * scripts/lib/borderless-stamp.mjs ARCH_LIFT_PX (the pieces are lifted by
+ * it); a unit test holds the two equal.
+ */
+export const BORDERLESS_ARCH_LIFT_PX: readonly number[] = [
+  32.6, 32.6, 32.6, 32.5, 32.5, 32.4, 32.4, 32.3, 32.0, 31.7, 31.3, 30.9, 30.6, 30.4, 30.1, 29.6, 29.1, 28.5, 27.8, 27.2,
+  26.6, 25.9, 25.1, 24.3, 23.5, 22.6, 21.7, 20.8, 19.7, 18.6, 17.5, 16.4, 15.3, 14.1, 12.7, 11.2, 9.7, 8.2, 6.6, 4.8,
+  3.0, 1.4, 0.4, 0.1, 0,
+];
+
+/** The borderless arch's lift at card column `x` (HD px, the pixel's
+ *  centre x + 0.5). */
+export function borderlessArchLiftAt(x: number): number {
+  const d = Math.abs(x + 0.5 - 750) / 2;
+  const i = Math.floor(d);
+  if (i >= BORDERLESS_ARCH_LIFT_PX.length - 1) return 0;
+  const t = d - i;
+  return BORDERLESS_ARCH_LIFT_PX[i]! * (1 - t) + BORDERLESS_ARCH_LIFT_PX[i + 1]! * t;
+}
+
+/** The borderless bar's bevel top (HD px): the masters' first bevel row. */
+const BORDERLESS_BEVEL_TOP_PX = 1930;
+/** The air a glyph keeps over the arch's bevel, HD px. */
+export const BORDERLESS_ARCH_AIR_PX = 2;
+/** The keep-out's column width, HD px (each column's top is the arch's
+ *  highest point inside it, so the stair never cuts into the air). */
+const BORDERLESS_ARCH_STRIP_PX = 4;
+/** Past the rules box's bottom (1923.6). */
+const BORDERLESS_ARCH_KEEP_OUT_BOTTOM_PX = 1925;
+
+/**
+ * The borderless stamp's keep-out as the ARCH'S SHAPE (TODO 4.9d, owner
+ * Round 70): 4 px columns over the arch, each from BORDERLESS_ARCH_AIR_PX
+ * above the lifted bevel's top in that column down past the rules box — so
+ * a line steps down only where its glyphs would really meet the arch (a
+ * single rect over the arch's highest point made a line whose ink cleared
+ * the slopes step down too). Columns whose top falls below the box are
+ * left out. Glyph-level like every badge (lib/cards/rules-box.ts).
+ */
+export function borderlessArchKeepOut(air = BORDERLESS_ARCH_AIR_PX): Rect[] {
+  const out: Rect[] = [];
+  for (let x0 = 660; x0 < 840; x0 += BORDERLESS_ARCH_STRIP_PX) {
+    let lift = 0;
+    for (let x = x0; x < x0 + BORDERLESS_ARCH_STRIP_PX; x += 1) lift = Math.max(lift, borderlessArchLiftAt(x));
+    const top = BORDERLESS_BEVEL_TOP_PX - lift - air;
+    if (top >= BORDERLESS_ARCH_KEEP_OUT_BOTTOM_PX) continue;
+    out.push({
+      leftPct: (x0 / 1500) * 100,
+      topPct: (top / 2100) * 100,
+      widthPct: (BORDERLESS_ARCH_STRIP_PX / 1500) * 100,
+      heightPct: ((BORDERLESS_ARCH_KEEP_OUT_BOTTOM_PX - top) / 2100) * 100,
+    });
+  }
+  return out;
+}
+
+/** The borderless arch's keep-out as columns (borderlessArchKeepOut at
+ *  BORDERLESS_ARCH_AIR_PX): what the rules boxes read on the borderless
+ *  frames (HoloStampArt.keepOutShape). */
+export const M15BORDERLESS_HOLO_STAMP_KEEP_OUT_SHAPE: readonly Rect[] = borderlessArchKeepOut();
+
+/** …and their bounds (HoloStampArt.keepOut): x 668–832 px from the lifted
+ *  bevel's top at the centre (1897.4) less 2 px of air, past the rules
+ *  box's bottom (1925). */
+export const M15BORDERLESS_HOLO_STAMP_KEEP_OUT: Rect = (() => {
+  const shape = M15BORDERLESS_HOLO_STAMP_KEEP_OUT_SHAPE;
+  const left = Math.min(...shape.map((r) => r.leftPct));
+  const top = Math.min(...shape.map((r) => r.topPct));
+  const right = Math.max(...shape.map((r) => r.leftPct + r.widthPct));
+  const bottom = Math.max(...shape.map((r) => r.topPct + r.heightPct));
+  return { leftPct: left, topPct: top, widthPct: right - left, heightPct: bottom - top };
+})();
 
 /** The walker's: from its notch piece's top (1893 px: the piece draws a
  *  black line above the rim) past its rules rect's bottom (1919.4). Read by
@@ -264,6 +340,25 @@ export type HoloStampArt = {
   /** The shape's rect: the ellipse the oval art fills, or the triangle's
    *  bounding box (M15UB_HOLO_STAMP_BOX). */
   oval: Rect;
-  /** The rules keep-out over the arch while the stamp is drawn. */
+  /** The rules keep-out over the arch while the stamp is drawn: one rect
+   *  (its bounds, where `keepOutShape` is set). */
   keepOut: Rect;
+  /** The keep-out as the arch's SHAPE (TODO 4.9d: the borderless frames'
+   *  columns, borderlessArchKeepOut) — what the rules boxes read in place
+   *  of `keepOut` when set. */
+  keepOutShape?: readonly Rect[];
+  /** Every "on" value draws THIS shape — unless it names the other one: the
+   *  frame then draws nothing (the borderless frames, owner Round 70: no
+   *  triangle notch yet). */
+  ownShapeOnly?: true;
 };
+
+/**
+ * The stamp value a frame stores (normalizeAnatomy): "none" for a value
+ * naming the other shape on a frame that draws only its own (a triangle
+ * printing on a borderless frame, owner Round 70), else the value as given.
+ */
+export function stampValueForFrame<T>(stamp: T, art: Pick<HoloStampArt, "shape" | "ownShapeOnly"> | null | undefined): T | "none" {
+  if (!art?.ownShapeOnly) return stamp;
+  return (stamp === "oval" || stamp === "triangle") && stamp !== art.shape ? "none" : stamp;
+}

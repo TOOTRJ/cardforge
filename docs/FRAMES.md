@@ -5327,8 +5327,10 @@ sweep, no badge, no verification tick.
   #381; 2023: FDN #376, INR #311). So the four entries take `M15_COLLECTOR`
   unchanged, the mark in its © slot. The stamp is the OVAL on every plain
   borderless printing (a Universes Beyond borderless printing prints the
-  triangle — FIC #444, PW25 #16, FCA #56 — and the frame draws its own
-  oval for an imported `"triangle"`, as every oval frame does); commons and
+  triangle — FIC #444, PW25 #16, FCA #56; about 1,116 printings, e.g. FIN
+  #374 — and on these four frames a `"triangle"` draws NO stamp, owner
+  Round 70: no triangle notch is cut for the borderless arch yet; see
+  below); commons and
   uncommons print none (INR #311, FDN #325, DFT #300). The pinline ARCHES
   over it as on the bordered frame: the rim's lower edge rises from x 666 to
   32.6 px above the straight bar at the centre (1916.0 px against 1948.6;
@@ -5362,12 +5364,22 @@ sweep, no badge, no verification tick.
   `m15borderlessstationholostamp/<w u b r g m c>` — 42 pieces, 84 objects
   with their WebPs (alpha equal to the PNG's, checked), in the DEV bucket
   until the owner's `frames:promote`. Nothing of a hologram is in a piece.
-- **The keep-out** (`M15BORDERLESS_HOLO_STAMP_KEEP_OUT`): x 655–845 px from
-  1892 (the lifted bevel's top at 1897.4, 5 px of air) past the rules box's
-  bottom — taller than M15's, whose white bevel vanishes on the cream box;
-  the borderless bevel is a bright line over the art. Glyph-level, as M15's:
-  the rules rect never shrinks, and a stamp never adds a clip
-  (`rules-no-clip.test.tsx`). The borderless STATION keeps M15's keep-out:
+- **The keep-out FOLLOWS THE ARCH** (owner Round 70;
+  `M15BORDERLESS_HOLO_STAMP_KEEP_OUT_SHAPE`, `borderlessArchKeepOut` in
+  `lib/cards/holo-stamp.ts`): 4 px columns over the arch, each from 2 px
+  above the lifted bevel's highest point in it (1895.4 px at the centre)
+  down past the rules box's bottom (1925), the columns below the box left
+  out — read by both renderers through `ResolvedHoloStamp.keepOutShape`
+  (`DrawnStats.stamp` takes a list), glyph by glyph like every badge, so a
+  line steps down only where its glyphs would really meet the arch. A single
+  rect over the arch's highest point (the first cut: x 655–845 from 1892)
+  stepped down 17 of a 1–95-word sweep on m15borderless where the arch's
+  shape steps 2 (68 and 69 words) — the same sweep steps 10 on m15 with its
+  one rect; no text clips that the box doesn't clip without the stamp, and
+  every glyph is drawn clear of the columns (`rules-no-clip.test.tsx`).
+  `M15BORDERLESS_HOLO_STAMP_KEEP_OUT` is the columns' bounds. The lift
+  table is copied in `BORDERLESS_ARCH_LIFT_PX` beside the build's own
+  (`ARCH_LIFT_PX`); a unit test holds them equal. The borderless STATION keeps M15's keep-out:
   its master has no bevel (the station box replaced it), so the arch's top
   is the rim's, 1904.4 px at the centre, and the dress lays out every text
   exactly as `m15station` (the stamped last band is built round that
@@ -5380,7 +5392,16 @@ sweep, no badge, no verification tick.
   new `m15borderless*` `@stamp…` / `@collector…` cases (every existing case
   unchanged); parity cases for the stamp and the line on the borderless
   frame (darwin).
-- **Left for the owner:** the borderless walkers, measured but not built
+- **A triangle draws nothing here** (owner Round 70): every slot of the
+  four frames declares `ownShapeOnly` — `holoStampWanted` refuses the other
+  shape, and a save keeps `"none"` for it (`normalizeAnatomy` /
+  `stampForTemplate`; the import's "Use Borderless" offer writes it too),
+  so a Universes Beyond printing moved onto a borderless frame shows no
+  stamp rather than an oval it never printed. The borderless triangle's
+  notch is a follow-up (TODO 4.9d). Visual case
+  `m15borderless/u/creature-short@stamp-triangle` pins the plain look.
+- **The borderless walkers come NEXT** (owner Round 70: a separate PR after
+  this one), measured but not built here
   (IKO #277, AFR #285, FDN #417, UNF #276, SLP #55, MH3 #444): the line at
   the same two rows from x 99, the © line on line 2 beside the loyalty
   shield; the ability window's bottom rim ends at ≈ 1917 px and arches

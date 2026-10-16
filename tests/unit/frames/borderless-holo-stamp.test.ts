@@ -15,8 +15,19 @@ import {
   liftError,
   pinlineTop,
 } from "@/scripts/lib/borderless-stamp.mjs";
-import { resolveHoloStamp } from "@/lib/cards/anatomy";
-import { M15BORDERLESS_HOLO_STAMP_KEEP_OUT, M15_HOLO_STAMP_KEEP_OUT, M15_HOLO_STAMP_OVAL } from "@/lib/cards/holo-stamp";
+import { importedAnatomy, newCardFrameStyle, normalizeAnatomy, resolveHoloStamp, stampForTemplate } from "@/lib/cards/anatomy";
+import {
+  BORDERLESS_ARCH_LIFT_PX,
+  M15BORDERLESS_HOLO_STAMP_KEEP_OUT,
+  M15BORDERLESS_HOLO_STAMP_KEEP_OUT_SHAPE,
+  M15_HOLO_STAMP_KEEP_OUT,
+  M15_HOLO_STAMP_OVAL,
+  borderlessArchLiftAt,
+  holoStampWanted,
+} from "@/lib/cards/holo-stamp";
+import { scryfallCardSchema } from "@/lib/scryfall/client";
+import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
+import styles from "@/tests/unit/scryfall/fixtures/collector-style-printings.json";
 import {
   M15BORDERLESSLAND_HOLO_STAMP,
   M15BORDERLESSSTATION_HOLO_STAMP,
@@ -87,8 +98,11 @@ describe("the recipe is the profiles' slots", () => {
       expect(slot.rect.heightPct).toBeCloseTo((box.height / 2100) * 100, 10);
       expect(slot.assetPathTemplate).toBe(`/frames/${folder}/{key}.png`);
       expect([...slot.keys].sort()).toEqual(Object.keys(BORDERLESS_STAMP_FOLDERS[folder as keyof typeof BORDERLESS_STAMP_FOLDERS].keys).sort());
-      const keepOut = folder === "m15borderlessstationholostamp" ? M15_HOLO_STAMP_KEEP_OUT : M15BORDERLESS_HOLO_STAMP_KEEP_OUT;
-      expect(slot.stamp).toEqual({ shape: "oval", oval: M15_HOLO_STAMP_OVAL, keepOut });
+      expect(slot.stamp).toEqual(
+        folder === "m15borderlessstationholostamp"
+          ? { shape: "oval", oval: M15_HOLO_STAMP_OVAL, keepOut: M15_HOLO_STAMP_KEEP_OUT, ownShapeOnly: true }
+          : { shape: "oval", oval: M15_HOLO_STAMP_OVAL, keepOut: M15BORDERLESS_HOLO_STAMP_KEEP_OUT, keepOutShape: M15BORDERLESS_HOLO_STAMP_KEEP_OUT_SHAPE, ownShapeOnly: true },
+      );
     }
     // Even HD px: the 750 bake halves the box exactly.
     for (const v of Object.values(box)) expect(v % 2).toBe(0);
@@ -116,6 +130,64 @@ describe("the recipe is the profiles' slots", () => {
       expect(getFrameProfile(t).collector, t).toBeUndefined();
       expect((getFrameProfile(t).overlays ?? []).some((o) => o.anatomy === "holoStamp"), t).toBe(false);
     }
+  });
+});
+
+describe("the keep-out follows the arch (owner Round 70)", () => {
+  it("the renderers' lift table is the build's", () => {
+    expect([...BORDERLESS_ARCH_LIFT_PX]).toEqual([...ARCH_LIFT_PX]);
+    for (let x = 600; x < 900; x += 1) expect(borderlessArchLiftAt(x)).toBeCloseTo(archLiftAt(x), 10);
+  });
+
+  it("4 px columns, each from 2 px above the arch's highest bevel point in it down past the rules box; their bounds are keepOut", () => {
+    const shape = M15BORDERLESS_HOLO_STAMP_KEEP_OUT_SHAPE;
+    expect(shape.length).toBeGreaterThan(30);
+    for (const r of shape) {
+      const x0 = Math.round((r.leftPct / 100) * 1500);
+      expect(Math.round((r.widthPct / 100) * 1500)).toBe(4);
+      let lift = 0;
+      for (let x = x0; x < x0 + 4; x += 1) lift = Math.max(lift, archLiftAt(x));
+      expect((r.topPct / 100) * 2100).toBeCloseTo(1930 - lift - 2, 6);
+      expect(((r.topPct + r.heightPct) / 100) * 2100).toBeCloseTo(1925, 6);
+    }
+    // The centre column: the bevel's top at 1897.4, 2 px of air.
+    expect(Math.min(...shape.map((r) => (r.topPct / 100) * 2100))).toBeCloseTo(1895.4, 1);
+    const k = M15BORDERLESS_HOLO_STAMP_KEEP_OUT;
+    expect((k.topPct / 100) * 2100).toBeCloseTo(1895.4, 1);
+    expect(Math.min(...shape.map((r) => r.leftPct))).toBeCloseTo(k.leftPct, 10);
+  });
+});
+
+describe("a triangle draws nothing on the borderless frames (owner Round 70)", () => {
+  const facts = { colorKey: "u", colors: ["blue"], rarity: "rare", cost: "{2}{U}", cardType: "creature", supertype: null } as Parameters<typeof resolveHoloStamp>[2];
+  const TEMPLATES = ["m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlessstation"] as const;
+
+  it("the renderers draw no stamp for a triangle there; the oval and auto still draw; a bordered frame draws its oval for a triangle as before", () => {
+    for (const t of TEMPLATES) {
+      expect(resolveHoloStamp(getFrameProfile(t), { stamp: "triangle" }, facts), t).toBeNull();
+      expect(resolveHoloStamp(getFrameProfile(t), { stamp: "oval" }, facts), t).not.toBeNull();
+      expect(resolveHoloStamp(getFrameProfile(t), { stamp: "auto" }, facts), t).not.toBeNull();
+    }
+    expect(resolveHoloStamp(getFrameProfile("m15"), { stamp: "triangle" }, facts)).not.toBeNull();
+    expect(holoStampWanted("triangle", { rarity: "rare", shape: "oval", ownShapeOnly: true })).toBe(false);
+    expect(holoStampWanted("triangle", { rarity: "rare", shape: "oval" })).toBe(true);
+  });
+
+  it("a save and the Use Borderless offer keep \"none\" for a triangle there, and keep it elsewhere", () => {
+    for (const t of TEMPLATES) {
+      expect(normalizeAnatomy({ template: t, stamp: "triangle" }, t, "creature"), t).toEqual({ template: t, stamp: "none" });
+      expect(stampForTemplate("triangle", t), t).toBe("none");
+      expect(stampForTemplate("oval", t), t).toBe("oval");
+    }
+    expect(normalizeAnatomy({ template: "m15", stamp: "triangle" }, "m15", "creature")).toEqual({ template: "m15", stamp: "triangle" });
+    expect(stampForTemplate("triangle", "m15")).toBe("triangle");
+    expect(stampForTemplate("triangle", "m15ub")).toBe("triangle");
+    // A real triangle printing (SLD #1242): the import names "triangle"; on
+    // the borderless frame the saved style says "none".
+    const sld = mapScryfallToFormPatch(scryfallCardSchema.parse((styles as Record<string, unknown>)["sld-1242"]), { artPreviewUrl: null });
+    expect(sld.printed_stamp).toBe("triangle");
+    expect(newCardFrameStyle({ template: "m15borderless", ...importedAnatomy(sld, "m15borderless").style }, "creature").stamp).toBe("none");
+    expect(newCardFrameStyle({ template: "m15", ...importedAnatomy(sld, "m15").style }, "creature").stamp).toBe("triangle");
   });
 });
 
