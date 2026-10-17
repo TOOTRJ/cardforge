@@ -85,3 +85,10 @@ export function formatReleaseDate(iso: string): string {
     timeZone: "UTC",
   });
 }
+
+/** An update's link: an https:// URL or a path on this site. A second slash
+ *  or a backslash after the first ("//evil.example", "/\evil.example") is a
+ *  protocol-relative URL to another host in a browser, never a site path. */
+export function isAllowedUpdateLink(href: string): boolean {
+  return /^(https:\/\/[^\s]+|\/(?![/\\])[^\s]*)$/.test(href);
+}

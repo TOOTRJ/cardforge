@@ -83,6 +83,25 @@ gh pr ready 123 --undo     # back to draft: the NEXT push runs the draft tier
   cancel it by hand if you want the minutes back.
 - A full run that is not needed is the expensive mistake: marking ready and
   then pushing three fixes costs three full runs. Push the fixes as a draft.
+- **Re-run the FAILED jobs, never the whole run** — after `frames:promote`
+  turns "Frames published" green, or after a runner hiccup:
+  `gh run rerun <run> --failed -R TOOTRJ/cardforge` (the page's "Re-run
+  failed jobs"). It re-runs the failed jobs and the gate behind them
+  (~5 min) and keeps every passed job's result; "Re-run all jobs" is a
+  second full run (~70 min). In 2026-10-02 → 16, 25 whole-run re-runs —
+  most of them after a promote — cost ~1,300 billed minutes.
+- **A new or moved parity case: record the linux half while still a
+  draft.** Run `gh workflow run parity-record.yml --ref <branch>` (the
+  commands are at the top of `.github/workflows/parity-record.yml`), commit
+  the `parity-baseline` artifact's files next to your `darwin/` ones, THEN
+  `gh pr ready`. The first full run is then green instead of red on Preview
+  parity and `parity-matrix.test.ts`, and the second full run that only
+  committed the linux files is gone (~6 minutes instead of ~70).
+- `main`'s ruleset does NOT require a branch to be up to date before
+  merging, and every pull request run already tests the merge with the
+  `main` of that moment. Merge `main` in when it conflicts (or a change on
+  `main` is one your pull request must be tested against), not as a routine
+  step before merging: each merge is another full run.
 
 **Notes** are an allow-list — a pull request is notes-only when EVERY changed
 file is on it:

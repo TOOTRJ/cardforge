@@ -29,7 +29,7 @@ import { getFunnelSummary } from "@/lib/admin/funnel-queries";
 import { NewMessageDialog } from "@/components/admin/new-message-dialog";
 import { ThreadList } from "@/components/messages/thread-list";
 import { formatRelativeTime } from "@/components/messages/format";
-import { formatUtcDateTime } from "@/lib/format/dates";
+import { formatUtcDate, formatUtcDateTime } from "@/lib/format/dates";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import {
@@ -187,7 +187,7 @@ export default async function AdminUsersPage({
                         {user.lastActiveAt ? formatRelativeTime(user.lastActiveAt) : "—"}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-muted">
-                        {new Date(user.createdAt).toLocaleDateString()}
+                        {formatUtcDate(user.createdAt)}
                       </td>
                     </tr>
                   ))}

@@ -130,6 +130,7 @@ describe("POST /api/admin/rebake-marked", () => {
     state.acquire.mockResolvedValue({ ok: false, holder: "cron", expiresAt: null, waitedMs: 120_000 });
     const res = await post({});
     expect(res.status).toBe(503);
+    expect(res.headers.get("Retry-After")).toBe("60");
     const body = await res.json();
     expect(body.ok).toBe(false);
     expect(body.error).toMatch(/automatic re-bake is mid-batch/);
