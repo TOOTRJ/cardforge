@@ -1442,7 +1442,7 @@ Rules and gotchas:
   session like its grant, `on conflict do nothing` — a pack has no invoice);
   the admin Revenue panel reads both, counts only money taken (a $0 trial
   invoice is listed as "Trial start", never totalled) and totals per
-  currency. It also resyncs the subscription, and
+  currency. `invoice.paid` also resyncs the subscription, and
   notifies `payment_received` only when money was taken; a
   `checkout.session.expired` session becomes ONE `checkout_reminder`
   notification + email per user per 30 days, skipped once the plan/pack was

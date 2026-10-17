@@ -140,6 +140,34 @@ describe("summarizeRevenue", () => {
     });
   });
 
+  it("the 30-day window starts at exactly now − 30 days (inclusive), to the millisecond", () => {
+    // The dev seed puts a renewal at the seed's own now() − 30 days: any read
+    // after the seed ran (a later `now`) leaves it outside — never flaky,
+    // since the read can't precede the seed.
+    const edge = new Date(now - 30 * day).toISOString();
+    const payments = [row("in_edge", 0, 1500, "u1", { paid_at: edge })];
+    const read = (ms: number) => summarizeRevenue({ payments, packs: [] }, new Map(), now + ms);
+    expect(read(0).last30DaysCount).toBe(1);
+    expect(read(1).last30DaysCount).toBe(0);
+    expect(read(1000).last30Days).toEqual([]);
+    expect(read(1000).allTime).toEqual([{ currency: "usd", cents: 1500, count: 1 }]);
+  });
+
+  it("the dev seed's rows give the figures the PR's manual test expects", () => {
+    // supabase/seeds/10_dev_data.sql §7, read one second after it ran.
+    const payments = [
+      row("in_dev_pro_0001", 90, 1500, "p", { billing_reason: "subscription_create" }),
+      row("in_dev_pro_0002", 60, 1500, "p"),
+      row("in_dev_pro_0003", 30, 1500, "p"),
+      row("in_dev_artist_trial", 5, 0, "a", { billing_reason: "subscription_create", tier: "plus" }),
+    ];
+    const packs = [pack("cs_dev_free_pack_0001", 3, 400), pack("cs_dev_pro_pack_0001", 12, 640)];
+    const summary = summarizeRevenue({ payments, packs }, new Map(), now + 1000);
+    expect(summary.last30Days).toEqual([{ currency: "usd", cents: 1040, count: 2 }]);
+    expect(summary.allTime).toEqual([{ currency: "usd", cents: 5540, count: 5 }]);
+    expect(summary.trialStarts).toBe(1);
+  });
+
   it("caps the recent list across both logs", () => {
     const payments = Array.from({ length: 10 }, (_, i) => row(`i${i}`, i * 2, 100));
     const packs = Array.from({ length: 10 }, (_, i) => pack(`p${i}`, i * 2 + 1, 100));

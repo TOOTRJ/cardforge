@@ -1318,7 +1318,7 @@ describe("handleStripeEvent — funnel rows for subscription lifecycle", () => {
 // and out-of-order deliveries are judged on the rows they leave.
 // ---------------------------------------------------------------------------
 describe("handleStripeEvent — pack sales in the revenue log", () => {
-  function makePackAdmin(opts: { upsertError?: string; grantError?: string } = {}) {
+  function makePackAdmin(opts: { upsertError?: string; grantError?: string; missingUser?: string } = {}) {
     const table = new Map<string, Record<string, unknown>>();
     const upsertCalls: Array<{ table: string; row: Record<string, unknown>; opts: unknown }> = [];
     const grants = new Set<string>();
@@ -1337,6 +1337,9 @@ describe("handleStripeEvent — pack sales in the revenue log", () => {
           upsert: async (row: Record<string, unknown>, o: { onConflict?: string; ignoreDuplicates?: boolean }) => {
             upsertCalls.push({ table: name, row, opts: o });
             if (opts.upsertError) return { error: { message: opts.upsertError } };
+            if (opts.missingUser && row.user_id === opts.missingUser) {
+              return { error: { code: "23503", message: "violates foreign key constraint" } };
+            }
             const key = String(row[o.onConflict ?? ""]);
             if (!(table.has(key) && o.ignoreDuplicates)) table.set(key, row);
             return { error: null };
@@ -1451,6 +1454,13 @@ describe("handleStripeEvent — pack sales in the revenue log", () => {
     await expect(run(ev("evt_c", "checkout.session.completed", session(), 1790130100), admin)).rejects.toThrow(
       /billing_pack_payments write failed for cs_live_pack_1/,
     );
+  });
+
+  it("logs the sale unlinked when the buyer's account is gone (FK 23503), never 500s on every retry", async () => {
+    const { admin, table, upsertCalls } = makePackAdmin({ missingUser: "user-1" });
+    await run(ev("evt_c", "checkout.session.completed", session(), 1790130100), admin);
+    expect(upsertCalls.map((c) => c.row.user_id)).toEqual(["user-1", null]);
+    expect(table.get("cs_live_pack_1")).toMatchObject({ user_id: null, amount_cents: 640, credits: 30 });
   });
 
   it("writes no revenue row when the credit grant failed (no sale logged without its credits)", async () => {

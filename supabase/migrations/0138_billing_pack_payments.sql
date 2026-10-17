@@ -58,7 +58,12 @@ create policy "Billing pack payments: admin read"
 
 -- Grants (every migration states them — new projects don't auto-grant).
 -- Reads by signed-in admins through RLS; every write is the webhook's
--- service role. anon gets nothing.
+-- service role. anon gets nothing. Production auto-grants every privilege
+-- on a new table to the API roles, so authenticated's writes are revoked
+-- too (as 0123 does) — RLS alone would still leave TRUNCATE, which RLS
+-- does not cover.
 revoke all on public.billing_pack_payments from anon;
 grant select on public.billing_pack_payments to authenticated;
+revoke insert, update, delete, truncate, references, trigger
+  on public.billing_pack_payments from authenticated;
 grant select, insert, update, delete on public.billing_pack_payments to service_role;

@@ -654,22 +654,28 @@ async function recordPackPayment(
   const meta = session.metadata ?? {};
   const paidAtSeconds = sale.eventCreated ?? session.created ?? Math.floor(Date.now() / 1000);
   const paymentIntent = session.payment_intent;
-  const { error } = await admin.from("billing_pack_payments").upsert(
-    {
-      checkout_session_id: session.id,
-      user_id: sale.userId,
-      stripe_customer_id: customerIdOf(session.customer ?? undefined),
-      payment_intent_id:
-        typeof paymentIntent === "string" ? paymentIntent : (paymentIntent?.id ?? null),
-      pack: meta.pack ?? null,
-      credits: sale.credits,
-      amount_cents: Math.max(0, session.amount_total ?? 0),
-      currency: (session.currency ?? "usd").toLowerCase(),
-      discount: meta.discount ?? null,
-      paid_at: new Date(paidAtSeconds * 1000).toISOString(),
-    },
-    { onConflict: "checkout_session_id", ignoreDuplicates: true },
-  );
+  const write = (userId: string | null) =>
+    admin.from("billing_pack_payments").upsert(
+      {
+        checkout_session_id: session.id,
+        user_id: userId,
+        stripe_customer_id: customerIdOf(session.customer ?? undefined),
+        payment_intent_id:
+          typeof paymentIntent === "string" ? paymentIntent : (paymentIntent?.id ?? null),
+        pack: meta.pack ?? null,
+        credits: sale.credits,
+        amount_cents: Math.max(0, session.amount_total ?? 0),
+        currency: (session.currency ?? "usd").toLowerCase(),
+        discount: meta.discount ?? null,
+        paid_at: new Date(paidAtSeconds * 1000).toISOString(),
+      },
+      { onConflict: "checkout_session_id", ignoreDuplicates: true },
+    );
+  let { error } = await write(sale.userId);
+  // 23503 = the user is gone (account deleted between checkout and this
+  // event; user_id references auth.users). The sale still happened: log it
+  // unlinked, as `on delete set null` would have — never 500 on every retry.
+  if (error?.code === "23503") ({ error } = await write(null));
   if (error) {
     throw new Error(`billing_pack_payments write failed for ${session.id}: ${error.message}`);
   }
