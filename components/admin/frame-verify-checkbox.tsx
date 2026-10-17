@@ -24,6 +24,9 @@ type FrameVerifyCheckboxProps = {
   /** Larger hit target + label for the compare-view header. */
   withLabel?: boolean;
   className?: string;
+  /** Told once the action has SAVED the new state (never on a refusal) —
+   *  the checklist moves the row to its group then. Presentation only. */
+  onVerifiedChange?: (verified: boolean) => void;
 };
 
 export function FrameVerifyCheckbox({
@@ -33,6 +36,7 @@ export function FrameVerifyCheckbox({
   referenceId = null,
   withLabel = false,
   className,
+  onVerifiedChange,
 }: FrameVerifyCheckboxProps) {
   // Optimistic local state; reverted if the action fails.
   const [verified, setVerified] = useState(initialVerified);
@@ -57,6 +61,7 @@ export function FrameVerifyCheckbox({
           ? `${template}/${colorKey} verified — now available to all users.${result.scored ? "" : " (Alignment score unavailable for the record.)"}`
           : `${template}/${colorKey} withdrawn from the picker.`,
       );
+      onVerifiedChange?.(next);
     });
   };
 

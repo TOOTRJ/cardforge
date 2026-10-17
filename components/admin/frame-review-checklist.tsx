@@ -1,7 +1,20 @@
 "use client";
 
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, ChevronDown, Footprints } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  ChevronDown,
+  Footprints,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { FrameVerifyCheckbox } from "@/components/admin/frame-verify-checkbox";
@@ -9,6 +22,12 @@ import {
   FramePreviewList,
   type FramePreviewListItem,
 } from "@/components/admin/frame-preview-list";
+import {
+  countStatuses,
+  groupCombos,
+  groupTemplates,
+  statusCountsLabel,
+} from "@/lib/admin/frame-checklist-groups";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -19,6 +38,17 @@ import { cn } from "@/lib/utils";
 // "Walk" opens the creator on the combo in admin preview mode, prefilled
 // from the reference (TODO 2.2). Under each template: its walked preview
 // cards (2.3) and the link to the per-template sign-off (2.4).
+//
+// The ORDER (owner 2026-10-16, lib/admin/frame-checklist-groups.ts): inside
+// each template, the rows that need a RE-tick (a layout bump scoped to the
+// template, a changed override) come first, then the unverified ones, then
+// an "Approved (N)" group, collapsed; inside each era, the templates with a
+// row to (re-)verify stay open at the top and the fully approved ones sit in
+// a collapsed "Approved frames (N)" group at the bottom. A tick moves its row
+// (and, with its last row, its template) to the approved group as soon as
+// the action has saved it, and hands the focus on to what followed it. Each
+// disclosure's open / closed choice is remembered per viewer (localStorage,
+// best effort). Presentation only: a tick writes exactly what it always did.
 //
 // All data arrives serialized from the server page (reviews + references
 // resolved there) — this component only renders and mutates.
@@ -95,13 +125,456 @@ function ColorDot({ colorKey }: { colorKey: string }) {
   );
 }
 
-export function FrameReviewChecklist({ eras }: { eras: ChecklistEra[] }) {
+const STORAGE_PREFIX = "pipglyph.frameChecklist.open.";
+
+function readStored(key: string): string | null {
+  try {
+    return window.localStorage.getItem(STORAGE_PREFIX + key);
+  } catch {
+    return null;
+  }
+}
+
+function subscribeStorage(onChange: () => void): () => void {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
+}
+
+/** A collapsed group with a real disclosure button (`aria-expanded` +
+ *  `aria-controls`; the region is `hidden`, so nothing inside it is in the
+ *  tab order while it is shut). Closed by default — the server's HTML and
+ *  the first render — and opened after hydration for a viewer who left it
+ *  open (localStorage; a blocked store just means closed). */
+function Disclosure({
+  storageKey,
+  label,
+  count,
+  children,
+  className,
+}: {
+  storageKey: string;
+  label: string;
+  count: number;
+  children: ReactNode;
+  className?: string;
+}) {
+  const regionId = useId();
+  const stored = useSyncExternalStore(
+    subscribeStorage,
+    () => readStored(storageKey),
+    () => null,
+  );
+  const [choice, setChoice] = useState<boolean | null>(null);
+  const open = choice ?? stored === "1";
+  const toggle = () => {
+    const next = !open;
+    setChoice(next);
+    try {
+      if (next) window.localStorage.setItem(STORAGE_PREFIX + storageKey, "1");
+      else window.localStorage.removeItem(STORAGE_PREFIX + storageKey);
+    } catch {
+      // storage blocked — the choice lasts for this visit only
+    }
+  };
   return (
-    <div className="flex flex-col gap-10">
+    <div className={className}>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={regionId}
+        onClick={toggle}
+        data-focus-stop
+        className="flex w-full items-center gap-2 rounded-md py-1.5 text-left text-[11px] font-semibold uppercase tracking-wider text-subtle transition-colors hover:text-foreground"
+      >
+        <ChevronDown
+          className={cn(
+            "h-3.5 w-3.5 shrink-0 transition-transform",
+            open ? "rotate-0" : "-rotate-90",
+          )}
+          aria-hidden
+        />
+        {label} ({count})
+      </button>
+      <div id={regionId} hidden={!open}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+type OnVerifiedChange = (
+  template: string,
+  colorKey: string,
+  verified: boolean,
+) => void;
+
+/** One row: the tick, the colour, the reference, the badges, Walk, Compare. */
+function ComboRow({
+  tpl,
+  combo,
+  onVerifiedChange,
+}: {
+  tpl: ChecklistTemplate;
+  combo: ChecklistCombo;
+  onVerifiedChange: OnVerifiedChange;
+}) {
+  return (
+    <li
+      data-combo={`${tpl.template}/${combo.colorKey}`}
+      data-focus-stop
+      className="flex items-center gap-3 border-t border-border/40 py-2 first:border-t-0"
+    >
+      <span title="Tick when this frame + color renders near-perfectly — verified combos of unreleased frames become available to all users in the card creator.">
+        <FrameVerifyCheckbox
+          template={tpl.template}
+          colorKey={combo.colorKey}
+          verified={combo.verified}
+          referenceId={combo.referenceId ?? null}
+          onVerifiedChange={(verified) =>
+            onVerifiedChange(tpl.template, combo.colorKey, verified)
+          }
+        />
+      </span>
+      <ColorDot colorKey={combo.colorKey} />
+      {combo.reference ? (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={combo.reference.thumbUrl}
+            alt=""
+            loading="lazy"
+            className="h-11 w-8 shrink-0 rounded-[2px] border border-border/50 object-cover"
+          />
+          <span className="flex min-w-0 flex-1 flex-col leading-tight">
+            <span className="truncate text-xs text-foreground">
+              {combo.reference.name}
+            </span>
+            <span
+              className="text-[10px] uppercase tracking-wider text-subtle"
+              title={combo.tier ?? undefined}
+            >
+              {combo.reference.set}
+              {combo.isCustomReference ? " · custom" : ""}
+              {combo.alternates ? ` · +${combo.alternates}` : ""}
+              {combo.tier ? " · ⚠" : ""}
+            </span>
+          </span>
+        </>
+      ) : (
+        <span className="min-w-0 flex-1 text-xs italic text-subtle">
+          No real printing — sample render only
+        </span>
+      )}
+      {combo.verified && combo.stale ? (
+        <span
+          className="shrink-0 rounded-full border border-gold/50 bg-gold/10 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-gold-strong"
+          title={(combo.staleReasons ?? []).join(" ")}
+        >
+          re-verify
+        </span>
+      ) : combo.verified && combo.legacy ? (
+        <span
+          className="shrink-0 text-[9px] uppercase tracking-wide text-subtle"
+          title="Verified before ticks recorded the layout version and override — tick again to record it."
+        >
+          no record
+        </span>
+      ) : null}
+      {combo.verified ? (
+        <CheckCircle2
+          className="h-4 w-4 shrink-0 text-primary-bright"
+          aria-hidden
+        />
+      ) : null}
+      {combo.walkHref ? (
+        <Link
+          href={combo.walkHref}
+          title={`Walk the stepper: open the creator on this frame and colour as an admin preview, prefilled from the reference printing${
+            tpl.face === "back" ? ", with the preview on the back face" : ""
+          }.`}
+          aria-label={`Walk the stepper on ${tpl.template}/${combo.colorKey}${
+            tpl.face === "back" ? " (back face)" : ""
+          }`}
+          className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border/50 px-2 py-1 text-[11px] font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground"
+        >
+          <Footprints className="h-3 w-3" aria-hidden /> Walk
+        </Link>
+      ) : null}
+      <Link
+        href={`/admin/frame-compare?template=${tpl.template}&color=${combo.colorKey}`}
+        title="Open the compare & edit view: overlay the real printing on our render, adjust the layout, score the alignment."
+        className={cn(
+          "inline-flex shrink-0 items-center gap-1 rounded-md border border-border/50 px-2 py-1 text-[11px] font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground",
+        )}
+      >
+        Compare <ArrowRight className="h-3 w-3" aria-hidden />
+      </Link>
+    </li>
+  );
+}
+
+const ROW_GROUP_LABEL: Record<"stale" | "todo", string> = {
+  stale: "Needs re-verification",
+  todo: "To verify",
+};
+
+/** A template's rows: re-verify, then to verify (open), then the collapsed
+ *  "Approved (N)" group. The sub-labels show only where a template has both
+ *  kinds of open rows. */
+function TemplateRows({
+  tpl,
+  onVerifiedChange,
+}: {
+  tpl: ChecklistTemplate;
+  onVerifiedChange: OnVerifiedChange;
+}) {
+  const groups = groupCombos(tpl.combos);
+  const labelled = groups.stale.length > 0 && groups.todo.length > 0;
+  const list = (combos: ChecklistCombo[], testId: string) => (
+    <ul className="flex flex-col" data-testid={testId}>
+      {combos.map((combo) => (
+        <ComboRow
+          key={combo.colorKey}
+          tpl={tpl}
+          combo={combo}
+          onVerifiedChange={onVerifiedChange}
+        />
+      ))}
+    </ul>
+  );
+  return (
+    <div className="flex flex-col">
+      {(["stale", "todo"] as const).map((status) =>
+        groups[status].length > 0 ? (
+          <div key={status} className="flex flex-col">
+            {labelled ? (
+              <p className="pt-1 text-[10px] font-semibold uppercase tracking-wider text-subtle">
+                {ROW_GROUP_LABEL[status]} ({groups[status].length})
+              </p>
+            ) : null}
+            {list(groups[status], `rows-${status}`)}
+          </div>
+        ) : null,
+      )}
+      {groups.approved.length > 0 ? (
+        <Disclosure
+          storageKey={`template:${tpl.template}`}
+          label="Approved"
+          count={groups.approved.length}
+          className={cn(
+            groups.stale.length + groups.todo.length > 0 &&
+              "mt-1 border-t border-border/40 pt-1",
+          )}
+        >
+          {list(groups.approved, "rows-approved")}
+        </Disclosure>
+      ) : null}
+    </div>
+  );
+}
+
+function TemplateCard({
+  tpl,
+  onVerifiedChange,
+}: {
+  tpl: ChecklistTemplate;
+  onVerifiedChange: OnVerifiedChange;
+}) {
+  return (
+    <SurfaceCard
+      className="flex flex-col p-4"
+      data-template-card={tpl.template}
+    >
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="flex min-w-0 flex-col">
+          <span className="text-sm font-medium text-foreground">
+            {tpl.label}
+            <span className="ml-2 font-mono text-[11px] text-subtle">
+              {tpl.template}
+            </span>
+          </span>
+          <span
+            className="text-[11px] text-subtle"
+            data-testid="template-counts"
+          >
+            {statusCountsLabel(countStatuses(tpl.combos))}
+          </span>
+        </span>
+        {tpl.face === "back" ? (
+          <span
+            className="mr-2 rounded-full border border-border-strong/60 bg-elevated px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-foreground"
+            title="A back-face frame: every row is compared, scored, walked and ticked against the printing's BACK face."
+            data-testid="checklist-face-back"
+          >
+            back face
+          </span>
+        ) : null}
+        {tpl.hasOverride ? (
+          <span
+            className="mr-2 rounded-full border border-sky-400/50 bg-sky-400/10 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-sky-300"
+            title="A layout override from the visual editor is active for this template (DB, not code)."
+          >
+            override active
+          </span>
+        ) : null}
+        {tpl.confirm ? (
+          <span
+            className="mr-2 rounded-full border border-gold/50 bg-gold/10 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-gold-strong"
+            title={
+              tpl.note ??
+              "Confirm the thumbnail before trusting these references."
+            }
+          >
+            confirm refs
+          </span>
+        ) : tpl.note ? (
+          <span
+            className="mr-2 cursor-help text-[10px] text-subtle"
+            title={tpl.note}
+          >
+            note
+          </span>
+        ) : null}
+        <span className="text-[10px] uppercase tracking-wider text-gold-strong">
+          publishes on verify
+        </span>
+      </div>
+      <TemplateRows tpl={tpl} onVerifiedChange={onVerifiedChange} />
+      {tpl.walkHref || tpl.signOffHref ? (
+        <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-border/40 pt-2">
+          {tpl.walkHref ? (
+            <Link
+              href={tpl.walkHref}
+              title="Walk the stepper on this frame (first colour still to verify), prefilled from its reference printing."
+              className="inline-flex items-center gap-1 rounded-md border border-border/50 px-2 py-1 text-[11px] font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground"
+            >
+              <Footprints className="h-3 w-3" aria-hidden /> Walk the stepper
+            </Link>
+          ) : null}
+          {tpl.signOffHref ? (
+            <Link
+              href={tpl.signOffHref}
+              title="Score every colour, see the walked previews and publish the whole template."
+              className="inline-flex items-center gap-1 rounded-md border border-border/50 px-2 py-1 text-[11px] font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground"
+            >
+              Sign off template <ArrowRight className="h-3 w-3" aria-hidden />
+            </Link>
+          ) : null}
+          {tpl.previews && tpl.previews.length > 0 ? (
+            <span className="ml-auto text-[10px] uppercase tracking-wider text-subtle">
+              {tpl.previews.length} walked preview
+              {tpl.previews.length === 1 ? "" : "s"}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+      {tpl.previews && tpl.previews.length > 0 ? (
+        <FramePreviewList items={tpl.previews} className="mt-2" />
+      ) : null}
+    </SurfaceCard>
+  );
+}
+
+/** Focus a stop the plan picked: a row's own checkbox (else its first
+ *  control), or the disclosure button itself. */
+function focusStop(stop: HTMLElement): void {
+  if (stop.matches("[data-combo]")) {
+    const control =
+      stop.querySelector<HTMLElement>('input[type="checkbox"]') ??
+      stop.querySelector<HTMLElement>("a[href], button, input");
+    control?.focus();
+    return;
+  }
+  stop.focus();
+}
+
+type ComboPatch = Record<string, boolean>;
+
+/** The rows with the ticks saved since the page's data was read applied —
+ *  a fresh tick records the current layout and override, so it is current
+ *  (neither stale nor legacy); a withdrawn one is simply unverified. */
+function patchedEras(eras: ChecklistEra[], patch: ComboPatch): ChecklistEra[] {
+  if (Object.keys(patch).length === 0) return eras;
+  return eras.map((era) => ({
+    ...era,
+    templates: era.templates.map((tpl) => ({
+      ...tpl,
+      combos: tpl.combos.map((combo) => {
+        const verified = patch[`${tpl.template}/${combo.colorKey}`];
+        if (verified === undefined) return combo;
+        return {
+          ...combo,
+          verified,
+          stale: false,
+          staleReasons: [],
+          legacy: false,
+        };
+      }),
+    })),
+  }));
+}
+
+export function FrameReviewChecklist({
+  eras: serverEras,
+}: {
+  eras: ChecklistEra[];
+}) {
+  // Ticks saved on this page since `serverEras` was read. The action
+  // revalidates this route, so fresh data follows and supersedes them.
+  const [patch, setPatch] = useState<ComboPatch>({});
+  const [patchedFrom, setPatchedFrom] = useState(serverEras);
+  if (patchedFrom !== serverEras) {
+    setPatchedFrom(serverEras);
+    setPatch({});
+  }
+  const eras = patchedEras(serverEras, patch);
+
+  // After a row moved: the stops that followed it (then the ones before
+  // it, nearest first), read BEFORE the move; the first still on the page
+  // and outside a shut group takes the focus (CLAUDE.md "a control that
+  // removes itself hands the focus on").
+  const rootRef = useRef<HTMLDivElement>(null);
+  const focusPlan = useRef<HTMLElement[] | null>(null);
+  const [moves, setMoves] = useState(0);
+  useEffect(() => {
+    const plan = focusPlan.current;
+    focusPlan.current = null;
+    if (!plan) return;
+    const target = plan.find((el) => el.isConnected && !el.closest("[hidden]"));
+    if (target) focusStop(target);
+  }, [moves]);
+
+  const onVerifiedChange: OnVerifiedChange = (template, colorKey, verified) => {
+    const root = rootRef.current;
+    const key = `${template}/${colorKey}`;
+    const row = root?.querySelector<HTMLElement>(`[data-combo="${key}"]`);
+    const active = document.activeElement;
+    // Only when the focus was on the row (or lost — a disabled box drops it).
+    if (
+      root &&
+      row &&
+      (!active || active === document.body || row.contains(active))
+    ) {
+      const stops = Array.from(
+        root.querySelectorAll<HTMLElement>("[data-focus-stop]"),
+      );
+      const at = stops.indexOf(row);
+      focusPlan.current =
+        at < 0
+          ? null
+          : [...stops.slice(at + 1), ...stops.slice(0, at).reverse()];
+    }
+    setPatch((last) => ({ ...last, [key]: verified }));
+    setMoves((n) => n + 1);
+  };
+
+  return (
+    <div ref={rootRef} className="flex flex-col gap-10">
       {eras.map((era) => {
         const combos = era.templates.flatMap((t) => t.combos);
         const done = combos.filter((c) => c.verified).length;
         const stale = combos.filter((c) => c.verified && c.stale).length;
+        const { open, approved } = groupTemplates(era.templates);
         return (
           <details
             key={era.era}
@@ -119,7 +592,8 @@ export function FrameReviewChecklist({ eras }: { eras: ChecklistEra[] }) {
                 {era.label}
               </h2>
               <span className="text-xs text-subtle">
-                {era.templates.length} frame{era.templates.length === 1 ? "" : "s"}
+                {era.templates.length} frame
+                {era.templates.length === 1 ? "" : "s"}
               </span>
               <span className="ml-auto flex items-center gap-2">
                 {stale > 0 ? (
@@ -130,175 +604,44 @@ export function FrameReviewChecklist({ eras }: { eras: ChecklistEra[] }) {
                 </Badge>
               </span>
             </summary>
-            <div className="grid gap-4 border-t border-border/40 p-4 lg:grid-cols-2">
-              {era.templates.map((tpl) => (
-                <SurfaceCard key={tpl.template} className="flex flex-col p-4">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium text-foreground">
-                      {tpl.label}
-                      <span className="ml-2 font-mono text-[11px] text-subtle">
-                        {tpl.template}
-                      </span>
-                    </span>
-                    {tpl.face === "back" ? (
-                      <span
-                        className="mr-2 rounded-full border border-border-strong/60 bg-elevated px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-foreground"
-                        title="A back-face frame: every row is compared, scored, walked and ticked against the printing's BACK face."
-                        data-testid="checklist-face-back"
-                      >
-                        back face
-                      </span>
-                    ) : null}
-                    {tpl.hasOverride ? (
-                      <span
-                        className="mr-2 rounded-full border border-sky-400/50 bg-sky-400/10 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-sky-300"
-                        title="A layout override from the visual editor is active for this template (DB, not code)."
-                      >
-                        override active
-                      </span>
-                    ) : null}
-                    {tpl.confirm ? (
-                      <span
-                        className="mr-2 rounded-full border border-gold/50 bg-gold/10 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-gold-strong"
-                        title={tpl.note ?? "Confirm the thumbnail before trusting these references."}
-                      >
-                        confirm refs
-                      </span>
-                    ) : tpl.note ? (
-                      <span
-                        className="mr-2 cursor-help text-[10px] text-subtle"
-                        title={tpl.note}
-                      >
-                        note
-                      </span>
-                    ) : null}
-                    <span className="text-[10px] uppercase tracking-wider text-gold-strong">
-                      publishes on verify
-                    </span>
-                  </div>
-                  <ul className="flex flex-col">
-                    {tpl.combos.map((combo) => (
-                      <li
-                        key={combo.colorKey}
-                        className="flex items-center gap-3 border-t border-border/40 py-2 first:border-t-0"
-                      >
-                        <span title="Tick when this frame + color renders near-perfectly — verified combos of unreleased frames become available to all users in the card creator.">
-                          <FrameVerifyCheckbox
-                            template={tpl.template}
-                            colorKey={combo.colorKey}
-                            verified={combo.verified}
-                            referenceId={combo.referenceId ?? null}
-                          />
-                        </span>
-                        <ColorDot colorKey={combo.colorKey} />
-                        {combo.reference ? (
-                          <>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={combo.reference.thumbUrl}
-                              alt=""
-                              loading="lazy"
-                              className="h-11 w-8 shrink-0 rounded-[2px] border border-border/50 object-cover"
-                            />
-                            <span className="flex min-w-0 flex-1 flex-col leading-tight">
-                              <span className="truncate text-xs text-foreground">
-                                {combo.reference.name}
-                              </span>
-                              <span
-                                className="text-[10px] uppercase tracking-wider text-subtle"
-                                title={combo.tier ?? undefined}
-                              >
-                                {combo.reference.set}
-                                {combo.isCustomReference ? " · custom" : ""}
-                                {combo.alternates ? ` · +${combo.alternates}` : ""}
-                                {combo.tier ? " · ⚠" : ""}
-                              </span>
-                            </span>
-                          </>
-                        ) : (
-                          <span className="min-w-0 flex-1 text-xs italic text-subtle">
-                            No real printing — sample render only
-                          </span>
-                        )}
-                        {combo.verified && combo.stale ? (
-                          <span
-                            className="shrink-0 rounded-full border border-gold/50 bg-gold/10 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-gold-strong"
-                            title={(combo.staleReasons ?? []).join(" ")}
-                          >
-                            re-verify
-                          </span>
-                        ) : combo.verified && combo.legacy ? (
-                          <span
-                            className="shrink-0 text-[9px] uppercase tracking-wide text-subtle"
-                            title="Verified before ticks recorded the layout version and override — tick again to record it."
-                          >
-                            no record
-                          </span>
-                        ) : null}
-                        {combo.verified ? (
-                          <CheckCircle2
-                            className="h-4 w-4 shrink-0 text-primary-bright"
-                            aria-hidden
-                          />
-                        ) : null}
-                        {combo.walkHref ? (
-                          <Link
-                            href={combo.walkHref}
-                            title={`Walk the stepper: open the creator on this frame and colour as an admin preview, prefilled from the reference printing${
-                              tpl.face === "back" ? ", with the preview on the back face" : ""
-                            }.`}
-                            aria-label={`Walk the stepper on ${tpl.template}/${combo.colorKey}${
-                              tpl.face === "back" ? " (back face)" : ""
-                            }`}
-                            className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border/50 px-2 py-1 text-[11px] font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground"
-                          >
-                            <Footprints className="h-3 w-3" aria-hidden /> Walk
-                          </Link>
-                        ) : null}
-                        <Link
-                          href={`/admin/frame-compare?template=${tpl.template}&color=${combo.colorKey}`}
-                          title="Open the compare & edit view: overlay the real printing on our render, adjust the layout, score the alignment."
-                          className={cn(
-                            "inline-flex shrink-0 items-center gap-1 rounded-md border border-border/50 px-2 py-1 text-[11px] font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground",
-                          )}
-                        >
-                          Compare <ArrowRight className="h-3 w-3" aria-hidden />
-                        </Link>
-                      </li>
+            <div className="flex flex-col gap-4 border-t border-border/40 p-4">
+              {open.length > 0 ? (
+                <div
+                  className="grid gap-4 lg:grid-cols-2"
+                  data-testid="templates-open"
+                >
+                  {open.map((tpl) => (
+                    <TemplateCard
+                      key={tpl.template}
+                      tpl={tpl}
+                      onVerifiedChange={onVerifiedChange}
+                    />
+                  ))}
+                </div>
+              ) : null}
+              {approved.length > 0 ? (
+                <Disclosure
+                  storageKey={`era:${era.era}`}
+                  label="Approved frames"
+                  count={approved.length}
+                  className={cn(
+                    open.length > 0 && "border-t border-border/40 pt-2",
+                  )}
+                >
+                  <div
+                    className="grid gap-4 pt-2 lg:grid-cols-2"
+                    data-testid="templates-approved"
+                  >
+                    {approved.map((tpl) => (
+                      <TemplateCard
+                        key={tpl.template}
+                        tpl={tpl}
+                        onVerifiedChange={onVerifiedChange}
+                      />
                     ))}
-                  </ul>
-                  {tpl.walkHref || tpl.signOffHref ? (
-                    <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-border/40 pt-2">
-                      {tpl.walkHref ? (
-                        <Link
-                          href={tpl.walkHref}
-                          title="Walk the stepper on this frame (first colour still to verify), prefilled from its reference printing."
-                          className="inline-flex items-center gap-1 rounded-md border border-border/50 px-2 py-1 text-[11px] font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground"
-                        >
-                          <Footprints className="h-3 w-3" aria-hidden /> Walk the stepper
-                        </Link>
-                      ) : null}
-                      {tpl.signOffHref ? (
-                        <Link
-                          href={tpl.signOffHref}
-                          title="Score every colour, see the walked previews and publish the whole template."
-                          className="inline-flex items-center gap-1 rounded-md border border-border/50 px-2 py-1 text-[11px] font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground"
-                        >
-                          Sign off template <ArrowRight className="h-3 w-3" aria-hidden />
-                        </Link>
-                      ) : null}
-                      {tpl.previews && tpl.previews.length > 0 ? (
-                        <span className="ml-auto text-[10px] uppercase tracking-wider text-subtle">
-                          {tpl.previews.length} walked preview{tpl.previews.length === 1 ? "" : "s"}
-                        </span>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  {tpl.previews && tpl.previews.length > 0 ? (
-                    <FramePreviewList items={tpl.previews} className="mt-2" />
-                  ) : null}
-                </SurfaceCard>
-              ))}
+                  </div>
+                </Disclosure>
+              ) : null}
             </div>
           </details>
         );
