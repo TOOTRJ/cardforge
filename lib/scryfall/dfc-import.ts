@@ -2,7 +2,7 @@ import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 import { isArtifactFrameType } from "@/components/cards/frame-layer";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
-import { DEFAULT_DFC_ICON, bodyFor, dfcBodyOf, isBattleFront, isDfcBackBody, templateHasBackFace, type DfcLayout } from "@/lib/cards/dfc";
+import { DEFAULT_DFC_ICON, bodyFor, dfcBodyOf, dfcLookOf, isBattleFront, isDfcBackBody, templateHasBackFace, type DfcLayout } from "@/lib/cards/dfc";
 import { dfcFamilyOf } from "@/lib/cards/dfc-gate";
 import { dfcLayoutForKind, kindFromCard, type CardKind } from "@/lib/creator/card-kinds";
 import { standardFrameFor } from "@/lib/creator/frame-picker";
@@ -107,6 +107,30 @@ export function dfcImportLanding(patch: DfcPatch, verifiedKeys: ReadonlySet<stri
     return { ok: false, reason: "back-unverified", template: backBody, colorKey: backKey };
   }
   return { ok: true, kind, frontBody, backBody, backColorIdentity };
+}
+
+/**
+ * The same patch on the BORDERED bodies (TODO 5.7): a dark borderless
+ * printing's faces moved onto the M15 bodies its layout, types and family
+ * derive — where every borderless DFC import landed before 5.7, and where
+ * it still lands until both borderless combos are verified
+ * (finalizeImportMatch). The patch itself for any other patch, or when a
+ * face has no bordered body.
+ */
+export function withBorderedDfcBodies<P extends DfcPatch>(patch: P): P {
+  if (!isDfcImportPatch(patch) || dfcLookOf(patch.frame_template) !== "borderless") return patch;
+  const layout = dfcBodyOf(patch.frame_template)?.layout;
+  if (!layout) return patch;
+  const family = dfcFamilyOf(patch.printed_dfc_icon);
+  const front = bodyFor(layout, "front", patch.card_type ?? null, family);
+  const backType = patch.back_face?.card_type ?? null;
+  const back = bodyFor(layout, "back", backType, family);
+  if (!front || !back) return patch;
+  return {
+    ...patch,
+    frame_template: front,
+    ...(patch.back_face ? { back_face: { ...patch.back_face, frame_style: { template: back } } } : {}),
+  };
 }
 
 /** The kind an import falls back to when its double-faced landing isn't

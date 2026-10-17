@@ -5,7 +5,7 @@ import { scryfallCardSchema } from "@/lib/scryfall/client";
 import { frameMatchFromScryfall, frontFacePairFromScryfall, printsTwoColorFrame } from "@/lib/scryfall/import-mapper";
 import { TWO_COLOR_PAIRS, framePairReferenceOptions } from "@/lib/cards/frame-reference-registry";
 import { validateReferenceForCombo } from "@/lib/cards/frame-reference-validation";
-import { bodyFor, dfcIconFamilyFromEffects, templateHasBackFace } from "@/lib/cards/dfc";
+import { bodyFor, dfcIconFamilyFromEffects, dfcLookOf, templateHasBackFace } from "@/lib/cards/dfc";
 import { parseTypeLine } from "@/lib/scryfall/import-mapper";
 import type { FrameTemplate } from "@/types/card";
 
@@ -88,7 +88,8 @@ describe("frame registry references vs the signature registry (TODO 1.4 (c))", (
       const back = card.card_faces?.[1];
       const { card_type } = parseTypeLine(back?.type_line);
       const layout = card.layout === "modal_dfc" ? "modal" : "transform";
-      expect(bodyFor(layout, "back", card_type, dfcIconFamilyFromEffects(card.frame_effects)), row.combo).toBe(row.template);
+      // (…in the body's look: a borderless front's back is borderless, 5.7.)
+      expect(bodyFor(layout, "back", card_type, dfcIconFamilyFromEffects(card.frame_effects), dfcLookOf(row.template)), row.combo).toBe(row.template);
       return;
     }
     if (row.combo in ALLOWLIST) {

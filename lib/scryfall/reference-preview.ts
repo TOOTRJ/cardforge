@@ -137,7 +137,9 @@ function withComparedBack(front: CardPreviewData, card: ScryfallCard, legacyBack
   // reverse P/T is drawn from a back with a body, so the compared front
   // carries the ▼ back the import stores (the battle wears no family).
   if (!front.backFace || body?.role !== "front" || (body.layout !== "modal" && !body.battle)) return front;
-  const backBody = legacyBack ? null : bodyFor(body.layout, "back", front.backFace.card_type ?? null);
+  const backBody = legacyBack
+    ? null
+    : bodyFor(body.layout, "back", front.backFace.card_type ?? null, undefined, body.look === "borderless" ? "borderless" : "bordered");
   return {
     ...front,
     backFace: {

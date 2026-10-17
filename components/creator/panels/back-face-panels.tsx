@@ -51,7 +51,7 @@ import { statVisibility } from "@/lib/creator/steps";
 import { PtNotDrawnNote, usePtNotDrawnNoteId } from "@/components/creator/pt-not-drawn-note";
 import { SECOND_FACE_NAME_HINT } from "@/lib/cards/second-face-name";
 import type { ArtWindow } from "@/lib/cards/art-positioner-window";
-import { DFC_FACE_TYPES, colorlessFaceAllowed, type DfcLayout } from "@/lib/cards/dfc";
+import { DFC_FACE_TYPES, colorlessFaceAllowed, dfcLookOf, type DfcLayout } from "@/lib/cards/dfc";
 import { DFC_COLORLESS_NEEDS_ARTIFACT } from "@/lib/cards/dfc-gate";
 import {
   EMPTY_BACK_FACE,
@@ -118,7 +118,17 @@ export function BackFaceFrameError() {
 export function BackFaceTypeSection({ layout, backBody }: { layout: DfcLayout; backBody: FrameTemplate | null }) {
   const { control, setValue, clearErrors } = useFormContext<FormValues>();
   const backType = useWatch({ control, name: "back_face.card_type" });
+  const frontTemplate = useWatch({ control, name: "frame_style.template" });
   const typeLabel = BACK_TYPE_OPTIONS.find((option) => option.value === backType)?.label ?? "Creature";
+  // A borderless card (TODO 5.7) has no borderless land back yet.
+  const borderless = dfcLookOf(frontTemplate) === "borderless";
+  const options = borderless
+    ? BACK_TYPE_OPTIONS.map((option) =>
+        option.value === "land" && backType !== "land"
+          ? { ...option, disabled: true, description: "The borderless frame has no land face yet" }
+          : option,
+      )
+    : BACK_TYPE_OPTIONS;
   return (
     <SetupSection title="Back face" value={typeLabel} testId="dfc-back-type">
       <Controller
@@ -148,7 +158,7 @@ export function BackFaceTypeSection({ layout, backBody }: { layout: DfcLayout; b
               }
               field.onChange(next);
             }}
-            options={BACK_TYPE_OPTIONS}
+            options={options}
           />
         )}
       />

@@ -142,6 +142,18 @@ describe("frame reference registry", () => {
       "m15borderlessstation/r",
       "m15borderlessstation/g",
       "m15borderlessstation/c",
+      // The borderless double-faced bodies (TODO 5.7): the combos no
+      // printing in the dark look has (frame-references.json's notes).
+      "m15borderlessdfcfront/c",
+      "m15borderlessdfcback/c",
+      "m15borderlessmdfcfront/b",
+      "m15borderlessmdfcfront/c",
+      "m15borderlessmdfcback/w",
+      "m15borderlessmdfcback/u",
+      "m15borderlessmdfcback/b",
+      "m15borderlessmdfcback/r",
+      "m15borderlessmdfcback/g",
+      "m15borderlessmdfcback/c",
     ]);
     const m15Templates = FRAME_TEMPLATE_VALUES.filter(
       (t) => eraForTemplate(t) === "m15",
@@ -158,7 +170,8 @@ describe("frame reference registry", () => {
     // + extended art's land dress (TODO 4.7, owner Round 63).
     // + the Spacecraft's extended-art and borderless dresses (4.27a step 2).
     // + 4.40 / 4.41's three older full-art basics.
-    expect(m15Templates.length).toBe(56);
+    // + 5.7's four borderless double-faced bodies.
+    expect(m15Templates.length).toBe(60);
     expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {

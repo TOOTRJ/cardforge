@@ -225,9 +225,10 @@ function contentFor(kind: CardKind, shape: VisualShape, colour: VisualColour, te
   }
   switch (kind) {
     case "transform":
-      return transformContent(shape, colour, template === "m15dfclandfront");
+      // (The borderless front's back is the borderless back, TODO 5.7.)
+      return transformContent(shape, colour, template === "m15dfclandfront", template === "m15borderlessdfcfront" ? "m15borderlessdfcback" : "m15dfcback");
     case "mdfc":
-      return modalContent(shape, colour, template === "m15mdfclandfront");
+      return modalContent(shape, colour, template === "m15mdfclandfront", template === "m15borderlessmdfcfront" ? "m15borderlessmdfcback" : "m15mdfcback");
     case "land": {
       if (!long && key !== "m") {
         const name = BASIC_LAND_NAME_BY_KEY[key];
@@ -417,12 +418,12 @@ function contentFor(kind: CardKind, shape: VisualShape, colour: VisualColour, te
  *  long: a Legendary front (no crown: the DFC bodies draw none) with the
  *  long rules // a dense back; the land front: Westvale Abbey // Ormendahl
  *  (INR #287, the tab prints 9/7). */
-function transformContent(shape: VisualShape, colour: VisualColour, land: boolean): Fields {
+function transformContent(shape: VisualShape, colour: VisualColour, land: boolean, backBody: FrameTemplate = "m15dfcback"): Fields {
   const long = shape === "long";
   // The back's own body and colour, its art (the harness's second picture)
   // and artist.
   const backStyle = {
-    frame_style: { template: "m15dfcback" as FrameTemplate },
+    frame_style: { template: backBody },
     color_identity: IDENTITY[colour],
     art_url: "ART2",
     artist_credit: "Visual Regression",
@@ -484,11 +485,11 @@ function transformContent(shape: VisualShape, colour: VisualColour, land: boolea
  *  Murkwater's shape: both strips a land's mana line). The long card: a
  *  creature // creature with a cost on the back (MSH #18's shape without
  *  the Marvel strip form) — the dark plate and the long strip texts. */
-function modalContent(shape: VisualShape, colour: VisualColour, land: boolean): Fields {
+function modalContent(shape: VisualShape, colour: VisualColour, land: boolean, backBody: FrameTemplate = "m15mdfcback"): Fields {
   const long = shape === "long";
   const pip = pips(colour, 0, 1);
   const backStyle = {
-    frame_style: { template: "m15mdfcback" as FrameTemplate },
+    frame_style: { template: backBody },
     color_identity: IDENTITY[colour],
     art_url: "ART2",
     artist_credit: "Visual Regression",
@@ -1813,6 +1814,42 @@ export function visualCases(): VisualCase[] {
   add("m15dfcfront", "transform", "r", "short", { finish: "foil", suffix: "@foil", row: dfcBodyRow("m15dfcback", "r", "short", "foil") });
   add("m15dfcback", "transform", "r", "short", { finish: "foil", suffix: "@foil", back: { frontTemplate: "m15dfcfront" }, row: dfcBodyRow("m15dfcback", "r", "short", "foil") });
   add("m15dfcfront", "transform", "b", "short", { corners: "square", suffix: "@square" });
+  // TODO 5.7: the borderless double-faced bodies — NEW cases (new
+  // templates, no stored card: no bump). The fronts come out of the
+  // per-template loop (their rows carry the borderless back). Here: the
+  // transform back × colour, short and long, and the stored bake's size;
+  // the crowned twins (the floating crown with the well / housing), the
+  // pinline-split pairs and their crowned twins on every face; the front's
+  // empty tab; a foil and a square front.
+  for (const colour of VISUAL_COLOURS) {
+    add("m15borderlessdfcback", "transform", colour, "short", { back: { frontTemplate: "m15borderlessdfcfront" }, row: dfcBodyRow("m15borderlessdfcback", colour) });
+    add("m15borderlessdfcback", "transform", colour, "long", { back: { frontTemplate: "m15borderlessdfcfront" }, row: dfcBodyRow("m15borderlessdfcback", colour, "long") });
+  }
+  add("m15borderlessdfcback", "transform", "g", "long", { preset: "hd", suffix: "@hd", back: { frontTemplate: "m15borderlessdfcfront" }, row: dfcBodyRow("m15borderlessdfcback", "g", "long") });
+  add("m15borderlessdfcfront", "transform", "w", "short", { suffix: "@emptytab", row: { ...DFC_AURA_BACK, frame_style: { template: "m15borderlessdfcfront", finish: "regular" }, back_face: { ...(DFC_AURA_BACK.back_face as NonNullable<CardRowForBake["back_face"]>), frame_style: { template: "m15borderlessdfcback" } } } });
+  add("m15borderlessdfcfront", "transform", "r", "short", { finish: "foil", suffix: "@foil", row: dfcBodyRow("m15borderlessdfcback", "r", "short", "foil") });
+  add("m15borderlessdfcfront", "transform", "b", "short", { corners: "square", suffix: "@square" });
+  add("m15borderlessmdfcfront", "mdfc", "r", "short", { finish: "foil", suffix: "@foil", row: dfcBodyRow("m15borderlessmdfcback", "r", "short", "foil") });
+  add("m15borderlessmdfcfront", "mdfc", "u", "short", { corners: "square", suffix: "@square" });
+  {
+    const switched = (row: Partial<CardRowForBake>, on: { crown?: true; twoColor?: true }): Partial<CardRowForBake> => ({
+      ...row,
+      frame_style: { ...(row.frame_style as object), ...on } as CardRowForBake["frame_style"],
+    });
+    const PAIRS = [["m15borderlessdfcfront", "transform", "m15borderlessdfcback"], ["m15borderlessmdfcfront", "mdfc", "m15borderlessmdfcback"]] as const;
+    for (const [front, kind, back] of PAIRS) {
+      for (const colour of ["w", "u", "b", "r", "g", "c", "wu", "wub"] as const) {
+        add(front, kind, colour, "long", { suffix: "@crown", row: switched(dfcBodyRow(back, colour, "long"), { crown: true }) });
+        add(back, kind, colour, "long", { suffix: "@crown", back: { frontTemplate: front }, row: switched(dfcBodyRow(back, colour, "long"), { crown: true }) });
+      }
+      add(front, kind, "wu", "short", { suffix: "@pair", row: switched(dfcBodyRow(back, "wu"), { twoColor: true }) });
+      add(front, kind, "wu", "long", { suffix: "@pair-crown", row: switched(dfcBodyRow(back, "wu", "long"), { crown: true, twoColor: true }) });
+      add(back, kind, "wu", "short", { suffix: "@pair", back: { frontTemplate: front }, row: switched(dfcBodyRow(back, "wu"), { twoColor: true }) });
+      add(back, kind, "wu", "long", { suffix: "@pair-crown", back: { frontTemplate: front }, row: switched(dfcBodyRow(back, "wu", "long"), { crown: true, twoColor: true }) });
+      add(front, kind, "g", "long", { suffix: "@crown-hd", preset: "hd", row: switched(dfcBodyRow(back, "g", "long"), { crown: true }) });
+      add(back, kind, "g", "long", { suffix: "@crown-hd", preset: "hd", back: { frontTemplate: front }, row: switched(dfcBodyRow(back, "g", "long"), { crown: true }) });
+    }
+  }
   // TODO 5.1b: the modal bodies — NEW cases (new templates, no stored
   // card: no bump). The front bodies come out of the per-template loop
   // above (the modal kind's rows carry a back with a body, so the strip
@@ -1824,7 +1861,7 @@ export function visualCases(): VisualCase[] {
   // square, and the strip's word cases: Equipment (KHM #15's shape), God
   // (its back's), Enchantment (the longest wave-1 type word) and Tibalt.
   for (const body of MDFC_BACK_BODIES) {
-    const front: FrameTemplate = body === "m15mdfclandback" ? "m15mdfclandfront" : "m15mdfcfront";
+    const front: FrameTemplate = body === "m15mdfclandback" ? "m15mdfclandfront" : (MODAL_FRONT_OF[body] ?? "m15mdfcfront");
     for (const colour of VISUAL_COLOURS) {
       add(body, "mdfc", colour, "short", { back: { frontTemplate: front }, row: dfcBodyRow(body, colour) });
       add(body, "mdfc", colour, "long", { back: { frontTemplate: front }, row: dfcBodyRow(body, colour, "long") });
@@ -1927,6 +1964,10 @@ export function visualCases(): VisualCase[] {
   add("m15mdfcback", "mdfc", "wu", "short", { suffix: "@strip-w", back: { frontTemplate: "m15mdfcfront" }, row: stripRow("m15mdfcback", "w", "wu") });
   add("m15mdfclandfront", "mdfc", "g", "short", { suffix: "@strip-w", row: stripRow("m15mdfclandback", "g", "w") });
   add("m15mdfclandback", "mdfc", "w", "short", { suffix: "@strip-g", back: { frontTemplate: "m15mdfclandfront" }, row: stripRow("m15mdfclandback", "g", "w") });
+  // …and the borderless modal pair's rider (TODO 5.7): a W front // U back,
+  // the front's strip in the light pack's blue tab, the back's in white.
+  add("m15borderlessmdfcfront", "mdfc", "w", "short", { suffix: "@strip-u", row: stripRow("m15borderlessmdfcback", "w", "u") });
+  add("m15borderlessmdfcback", "mdfc", "u", "short", { suffix: "@strip-w", back: { frontTemplate: "m15borderlessmdfcfront" }, row: stripRow("m15borderlessmdfcback", "w", "u") });
   add("m15mdfcfront", "mdfc", "wu", "short", { suffix: "@strip-l", row: stripRow("m15mdfclandback", "wu", "wu", "short", { rules_text: "{T}: Add {W} or {U}." }, { cost: "{W/U}{W/U}", rules_text: "Draw two cards, then discard a card.", frame_style: { template: "m15mdfcfront", finish: "regular", twoColor: true } as CardRowForBake["frame_style"] }) });
   add("m15mdfclandback", "mdfc", "wu", "short", { suffix: "@strip-c", back: { frontTemplate: "m15mdfcfront" }, row: stripRow("m15mdfclandback", "wu", "wu", "short", { rules_text: "{T}: Add {W} or {U}." }, { cost: "{W/U}{W/U}", rules_text: "Draw two cards, then discard a card.", frame_style: { template: "m15mdfcfront", finish: "regular", twoColor: true } as CardRowForBake["frame_style"] }) });
   // A land STORED on the extended-art spell frame before its land dress
@@ -2223,7 +2264,11 @@ function stampRow(
 /** The transform BACK bodies (TODO 5.1a; FrameProfile.dfc role "back"). */
 export const DFC_BACK_BODIES: readonly FrameTemplate[] = ["m15dfcback", "m15dfcbackleft", "m15dfclandback"];
 /** The modal BACK bodies (TODO 5.1b). */
-export const MDFC_BACK_BODIES: readonly FrameTemplate[] = ["m15mdfcback", "m15mdfclandback"];
+export const MDFC_BACK_BODIES: readonly FrameTemplate[] = ["m15mdfcback", "m15mdfclandback", "m15borderlessmdfcback"];
+/** The borderless BACK bodies (TODO 5.7) and the front each pairs with. */
+export const BORDERLESS_DFC_BACK_BODIES: readonly FrameTemplate[] = ["m15borderlessdfcback", "m15borderlessmdfcback"];
+const TRANSFORM_FRONT_OF: Partial<Record<FrameTemplate, FrameTemplate>> = { m15borderlessdfcback: "m15borderlessdfcfront" };
+const MODAL_FRONT_OF: Partial<Record<FrameTemplate, FrameTemplate>> = { m15borderlessmdfcback: "m15borderlessmdfcfront" };
 
 /** The family whose default back is `body` (lib/cards/dfc.ts bodyFor). */
 function dfcFamilyFor(body: FrameTemplate): DfcIconFamily {
@@ -2251,7 +2296,9 @@ function dfcFamilyRow(body: FrameTemplate, colour: VisualColour, family: DfcIcon
   // front with the back retyped onto the spell back.
   if ((MDFC_BACK_BODIES as readonly string[]).includes(body)) {
     const landBack = body === "m15mdfclandback";
-    const content = modalContent(shape, colour, landBack);
+    // (The back on THIS body: a borderless back's long case drew the bordered
+    // m15mdfcback, modalContent's default, before the skeptic check of #578.)
+    const content = modalContent(shape, colour, landBack, landBack ? undefined : body);
     const back = landBack
       ? content.back_face
       : shape === "long"
@@ -2266,13 +2313,13 @@ function dfcFamilyRow(body: FrameTemplate, colour: VisualColour, family: DfcIcon
             frame_style: { template: body },
           };
     return {
-      frame_style: { template: landBack ? "m15mdfclandfront" : "m15mdfcfront", finish },
+      frame_style: { template: landBack ? "m15mdfclandfront" : (MODAL_FRONT_OF[body] ?? "m15mdfcfront"), finish },
       back_face: back as CardRowForBake["back_face"],
     };
   }
   const land = body === "m15dfclandback";
   const long = shape === "long";
-  const front: FrameTemplate = land ? "m15dfclandfront" : "m15dfcfront";
+  const front: FrameTemplate = land ? "m15dfclandfront" : (TRANSFORM_FRONT_OF[body] ?? "m15dfcfront");
   // The land BACK's cases are FIN #31's shape — a land // land (Cooking
   // Campsite: a mana ability, no P/T), so the land front's tab is empty
   // there; the land front's own loop cases keep INR #287's creature back.
@@ -2345,6 +2392,8 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   // The double-faced spell faces (5.1d): their cases carry a back face
   // (the DFC block below), never the generic pair loop's rows.
   "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback",
+  // …and the borderless double-faced bodies (TODO 5.7), the same way.
+  "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
   // The old frames (TODO 4.6h): the 2003 gold card, the 2003 and the 1997
   // two-colour lands.
   "modern", "modernland", "retroland",

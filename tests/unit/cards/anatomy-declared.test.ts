@@ -54,6 +54,8 @@ describe("where the pieces are declared", () => {
       // The Nyx Constellation frame (owner 2026-10-13): the Nyx crown band, its arms faded.
       "nyx",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
+      // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
+      "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
       // The battle (TODO 5.5): the switch is the card's and its ▼ back draws
       // it — the battle front itself draws none.
       "battle",

@@ -22,7 +22,7 @@ import {
 } from "@/components/cards/frame-layer";
 import type { FrameMatch } from "@/lib/scryfall/frame-signatures";
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
-import { dfcImportLanding, isDfcImportPatch, withoutDfcLanding } from "@/lib/scryfall/dfc-import";
+import { dfcImportLanding, isDfcImportPatch, withBorderedDfcBodies, withoutDfcLanding } from "@/lib/scryfall/dfc-import";
 import { eraForTemplate, isM15Treatment, isTreatmentBody, standardFrameFor } from "@/lib/creator/frame-picker";
 import {
   KIND_DEFS,
@@ -569,7 +569,32 @@ export function finalizeImportMatch<
   // "Not yet verified" cause, D1), a nearest one keeps its own reason; both
   // land on the standard (`landOn`).
   if (isDfcImportPatch(finalized)) {
-    const landing = dfcImportLanding(finalized, verifiedKeys);
+    let landing = dfcImportLanding(finalized, verifiedKeys);
+    // A dark borderless printing (TODO 5.7) on the borderless bodies: short
+    // of either combo it lands on the BORDERED bodies — where it landed
+    // before 5.7 — when those are verified, the match saying the borderless
+    // frame is the one not yet verified.
+    const bordered = withBorderedDfcBodies(finalized);
+    if (!landing.ok && bordered !== finalized) {
+      const borderlessLanding = landing;
+      landing = dfcImportLanding(bordered, verifiedKeys);
+      if (landing.ok) {
+        const unverified = match.status === "exact" || match.unverified === true;
+        const downgraded: FrameMatch = {
+          ...match,
+          // (An unsupported or nearest answer keeps its own status and reason.)
+          status: match.status === "exact" ? "nearest" : match.status,
+          ...(bordered.frame_template ? { landOn: bordered.frame_template } : {}),
+          ...(unverified
+            ? {
+                reason: `the borderless double-faced frame isn't verified in ${colorWord(borderlessLanding.colorKey ?? "c")} yet`,
+                unverified: true as const,
+              }
+            : {}),
+        };
+        return { ...bordered, frame_match: downgraded } as P;
+      }
+    }
     if (!landing.ok) {
       const fallback = withoutDfcLanding(finalized);
       // A battle (TODO 5.5) keeps its frame either way: short of its front

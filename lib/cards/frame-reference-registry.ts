@@ -85,6 +85,10 @@ export const TWO_COLOR_MASTER_KEYS = [
 export const LEGENDARY_MASTER_KEYS = [
   ...FRAME_COLOR_KEYS.map((key) => `${key}${LEGENDARY_MASTER_SUFFIX}` as const),
   ...TWO_COLOR_MASTER_KEYS.map((key) => `${key}${LEGENDARY_MASTER_SUFFIX}` as const),
+  // …and the artifact dress's crowned twin, `a-legendary`, on a profile
+  // with BOTH crowned twins and the artifact stand-in (the borderless
+  // double-faced bodies, TODO 5.7: a colourless Artifact face paints `a`).
+  `a${LEGENDARY_MASTER_SUFFIX}` as const,
 ] as const;
 
 export type LegendaryMasterKey = (typeof LEGENDARY_MASTER_KEYS)[number];

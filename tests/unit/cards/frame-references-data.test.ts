@@ -146,6 +146,11 @@ const DOCUMENTED_NULLS = new Set([
   // Its borderless Spacecraft dress (step 2): two printings, both
   // three-colour commanders (EOC #1 / #2) — gold only.
   "m15borderlessstation/w", "m15borderlessstation/u", "m15borderlessstation/b", "m15borderlessstation/r", "m15borderlessstation/g", "m15borderlessstation/c",
+  // The borderless double-faced bodies (TODO 5.7): no colourless Artifact
+  // face in the dark look (TLA's Aang backs are see-through faces, 5.11), no
+  // black modal front outside a poster (SPM #233), and every modal back in
+  // the look is gold (MSH's pairs, SPM #200 / #202) or a land (SLD #2655).
+  "m15borderlessdfcfront/c", "m15borderlessdfcback/c", "m15borderlessmdfcfront/b", "m15borderlessmdfcfront/c", "m15borderlessmdfcback/w", "m15borderlessmdfcback/u", "m15borderlessmdfcback/b", "m15borderlessmdfcback/r", "m15borderlessmdfcback/g", "m15borderlessmdfcback/c",
 ]);
 
 describe("frame-references.json", () => {

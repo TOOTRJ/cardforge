@@ -87,9 +87,10 @@ describe("a modal printing on the modal bodies (5.1b)", () => {
     expect(dfcImportOf(printing("khm-179"))).toMatchObject({ blocked: "dress", frontBody: "m15mdfcfront", backBody: "m15mdfcback" });
     expect(frameMatchFromScryfall(printing("khm-179"))).toMatchObject({ signature: "dfc/snow", status: "nearest", template: "m15mdfcfront", landOn: "m15snow", blockedBy: "5.11" });
     expect(mapScryfallToFormPatch(printing("khm-179"))).toMatchObject({ kind: "creature", frame_template: "m15snow" });
-    // ZNR #284 Branchloft Pathway, borderless: nearest on the land front
+    // ZNR #284 Branchloft Pathway, borderless in the LIGHT look (no
+    // `inverted`; TODO 5.7 draws the dark one): nearest on the land front
     // (no bordered twin to land on).
-    expect(frameMatchFromScryfall(printing("znr-284"))).toMatchObject({ signature: "borderless/dfc", status: "nearest", template: "m15mdfclandfront", blockedBy: "5.7" });
+    expect(frameMatchFromScryfall(printing("znr-284"))).toMatchObject({ signature: "borderless/dfc/light", status: "nearest", template: "m15mdfclandfront", blockedBy: "5.7" });
     expect(frameMatchFromScryfall(printing("znr-284")).landOn).toBeUndefined();
     // ZNR #305 Kazandu Mammoth, the hedron showcase: the showcase frame
     // can't dress the Modal kind, so it lands on the body.

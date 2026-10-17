@@ -583,6 +583,11 @@ export type DfcProfile = {
   well: "left" | "right";
   /** A land body: no mana cost, and on the back no P/T or indicator. */
   land?: true;
+  /** The body's LOOK (TODO 5.7): `borderless` — the dark borderless bodies
+   *  (m15borderless's floating bars with the double-faced pieces). Absent =
+   *  the bordered M15 bodies. A card's back follows its FRONT's look
+   *  (lib/cards/dfc.ts bodyFor / dfcLookOf). */
+  look?: "borderless";
   /** The BATTLE front (TODO 5.5): the landscape Siege card, whose face is a
    *  battle (never one of the wave-1 face types) and whose back is the
    *  portrait transform back `bodyFor` derives (the ▼ at the right: every
@@ -5714,6 +5719,117 @@ const M15MDFCLANDBACK: FrameProfile = {
   artifactMasterKeys: undefined,
 };
 
+// ---------------------------------------------------------------------------
+// The borderless double-faced bodies (TODO 5.7): the DARK (`inverted`)
+// borderless look — 98 of the 134 plain borderless transform / modal
+// printings (Scryfall 2026-10-14: ECL #285–291, FIN #317–399 / #525–544,
+// TLA #298–363, MSH #328–399, SLD #1608 / #2655, LMAR #3, PR23 #3 …).
+// m15borderless's geometry and ink (art to the edges, white name, type,
+// rules and P/T on the dark bars and box, the pack's own plates) with the
+// double-faced slots of the bordered bodies, whose pieces sit where they do
+// on print (the masters graft Card Conjurer's light borderless DFC packs,
+// which share the bordered transform packs' masks: the well at (143.5,
+// 160.5), the tab on the box's right edge, the housing and the strip):
+//   • the transform front: the icon rider in the left well, the name from
+//     the icon face's inset, the back's P/T in the tab (the reverse P/T);
+//   • the transform back (▼ right, every set since 2022): no cost, the
+//     colour indicator, the name band ending before the well;
+//   • the modal pair: the name from the housing's inset, the strip's two
+//     texts (white on the front's dark strip, dark on the back's light one).
+// The crown is m15borderless's floating crown baked into `<key>-legendary`
+// masters (crownMasters) and the two-colour dress its pinline split.
+// No land pair and no 2016–22 left-well back (sun / moon: VOW #332–341,
+// whose nickname line is a gap anyway) — those faces land on the bordered
+// bodies, as today. No holoStamp, no collector line (m15borderless has
+// neither). Additions: no stored card sits on them, no bump.
+// ---------------------------------------------------------------------------
+
+/** The borderless front's icon rider: print's well sits 6 px right of the
+ *  bordered packs' and its disc is drawn at × 0.95 (the white ring 93–206 ×
+ *  104–217 px on 38 dark fronts, the bordered 84–203 × 101–220 — the
+ *  masters' WELL in scripts/lib/dfc-borderless.mjs), so the glyph's box is
+ *  DFC_ICON_RIDER's scaled about its centre by 0.95 and moved 6 px right. */
+export const DFC_BORDERLESS_ICON_RIDER: FrameOverlaySlot = {
+  ...DFC_ICON_RIDER,
+  rect: {
+    leftPct: DFC_ICON_RIDER.rect.leftPct + DFC_ICON_RIDER.rect.widthPct / 2 + 6 / 15 - (DFC_ICON_RIDER.rect.widthPct * 0.95) / 2,
+    topPct: DFC_ICON_RIDER.rect.topPct + DFC_ICON_RIDER.rect.heightPct / 2 - (DFC_ICON_RIDER.rect.heightPct * 0.95) / 2,
+    widthPct: DFC_ICON_RIDER.rect.widthPct * 0.95,
+    heightPct: DFC_ICON_RIDER.rect.heightPct * 0.95,
+  },
+};
+
+/** The borderless front's reverse P/T, read on the dark prints (TODO 5.7;
+ *  ECL #285–291, FIN #380 / #383 / #394, LMAR #3 …, 2026-10-15): the
+ *  digits a mid grey on the dark box (median 128–133 on the clean scans,
+ *  where the bordered tab's paper prints #777), their ink ending at 1375–1380
+ *  px (median 1378; ours on the bordered rect 1387–1389) and their caps on
+ *  rows 1780–1822, 3 px above the bordered tab's — so the rect's right edge
+ *  runs to 92.23 %W and its top moves up 3 px. */
+export const DFC_BORDERLESS_REVERSE_PT: StatSlot = {
+  ...DFC_REVERSE_PT,
+  rect: { ...DFC_REVERSE_PT.rect, topPct: DFC_REVERSE_PT.rect.topPct - 3 / 21, widthPct: 92.23 - DFC_REVERSE_PT.rect.leftPct },
+  colorHex: "#828282",
+};
+
+/** The borderless modal bodies' flipside strip RIDER (TODO 5.1c's model):
+ *  the light pack's tab in each colour, `<template>/strip/<key>.png`
+ *  (scripts/build-dfc-borderless-frames.mjs: cut from the published masters
+ *  through CC's Flipside mask, eroded 1 px, snapped to 2 × 2 blocks), drawn
+ *  in the OTHER face's colour — print's strip follows the face it describes
+ *  (MSH #331's blue front: a light-blue strip on its gold back). No `l`: a
+ *  borderless modal face is never a land. */
+const MDFC_BORDERLESS_STRIP_KEYS = ["w", "u", "b", "r", "g", "m", "a"] as const;
+export const MDFC_BORDERLESS_STRIP_RIDER_FRONT: FrameOverlaySlot = {
+  anatomy: "mdfcStrip",
+  rect: MDFC_STRIP_RIDER_RECT,
+  assetPathTemplate: "/frames/m15borderlessmdfcfront/strip/{key}.png",
+  keys: MDFC_BORDERLESS_STRIP_KEYS,
+  keyMap: { c: "a" },
+};
+export const MDFC_BORDERLESS_STRIP_RIDER_BACK: FrameOverlaySlot = {
+  ...MDFC_BORDERLESS_STRIP_RIDER_FRONT,
+  assetPathTemplate: "/frames/m15borderlessmdfcback/strip/{key}.png",
+};
+
+const M15BORDERLESSDFC_SKELETON: FrameProfile = {
+  ...M15BORDERLESS,
+  artifactMasterKeys: { c: "a" },
+};
+
+const M15BORDERLESSDFCFRONT: FrameProfile = {
+  ...M15BORDERLESSDFC_SKELETON,
+  label: "Borderless transform front",
+  dfc: { layout: "transform", role: "front", well: "left", look: "borderless" },
+  title: { ...M15BORDERLESS.title, rect: M15DFCFRONT.title.rect },
+  overlays: [DFC_BORDERLESS_ICON_RIDER],
+  reversePt: DFC_BORDERLESS_REVERSE_PT,
+};
+
+const M15BORDERLESSDFCBACK: FrameProfile = {
+  ...M15BORDERLESSDFC_SKELETON,
+  label: "Borderless transform back",
+  dfc: { layout: "transform", role: "back", well: "right", look: "borderless" },
+  hideCost: true,
+  title: { ...M15BORDERLESS.title, rect: M15DFCBACK.title.rect },
+  indicator: "coloured",
+};
+
+const M15BORDERLESSMDFCFRONT: FrameProfile = {
+  ...M15BORDERLESSDFC_SKELETON,
+  label: "Borderless modal front",
+  dfc: { layout: "modal", role: "front", well: "left", look: "borderless" },
+  title: { ...M15BORDERLESS.title, rect: M15DFCFRONT.title.rect },
+  flipside: MDFC_FLIPSIDE_FRONT,
+};
+
+const M15BORDERLESSMDFCBACK: FrameProfile = {
+  ...M15BORDERLESSMDFCFRONT,
+  label: "Borderless modal back",
+  dfc: { layout: "modal", role: "back", well: "left", look: "borderless" },
+  flipside: MDFC_FLIPSIDE_BACK,
+};
+
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // Colourless M15 is CC's see-through "Eldrazi" frame: art under the frame
   // for "c" only (4.17). Set here, not on M15, so the many profiles that
@@ -6082,6 +6198,12 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15mdfcback: { ...M15MDFCBACK, collector: M15_COLLECTOR, overlays: [{ ...MDFC_CROWN, keyMap: { c: "a" } }, MDFC_STRIP_RIDER_BACK], twoColorMasters: ["split"] },
   m15mdfclandfront: { ...M15MDFCLANDFRONT, collector: M15_COLLECTOR, overlays: [MDFC_STRIP_RIDER_LAND_FRONT] },
   m15mdfclandback: { ...M15MDFCLANDBACK, collector: M15_COLLECTOR, overlays: [MDFC_STRIP_RIDER_LAND_BACK] },
+  // The borderless double-faced bodies (TODO 5.7): m15borderless's crowned
+  // twins and split pairs, grafted (scripts/lib/dfc-borderless.mjs).
+  m15borderlessdfcfront: { ...M15BORDERLESSDFCFRONT, crownMasters: true, twoColorMasters: ["split"] },
+  m15borderlessdfcback: { ...M15BORDERLESSDFCBACK, crownMasters: true, twoColorMasters: ["split"] },
+  m15borderlessmdfcfront: { ...M15BORDERLESSMDFCFRONT, crownMasters: true, twoColorMasters: ["split"], overlays: [MDFC_BORDERLESS_STRIP_RIDER_FRONT] },
+  m15borderlessmdfcback: { ...M15BORDERLESSMDFCBACK, crownMasters: true, twoColorMasters: ["split"], overlays: [MDFC_BORDERLESS_STRIP_RIDER_BACK] },
   // The snow frame (TODO 4.6f, wave 2c; owner round 20, 2026-10-01, option
   // A): the STANDARD crown band over the snow bars — KHM #224 / #223 / #230,
   // J22 #12, PH19 #5 print the standard crown's shape and registration

@@ -26,7 +26,7 @@ import { FrameThumb, SoonBadge } from "@/components/creator/frame-pickers";
 import { SetupSection } from "@/components/creator/panels/setup-section";
 import { CARD_TYPE_OPTIONS } from "@/components/creator/field-group";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
-import { DFC_ICON_FAMILY_VALUES, type DfcIconFamily } from "@/lib/cards/dfc";
+import { DEFAULT_DFC_ICON, DEFAULT_DFC_LOOK, DFC_ICON_FAMILY_VALUES, type DfcIconFamily, type DfcLook } from "@/lib/cards/dfc";
 import {
   DFC_FACE_TYPES,
   KIND_DEFS,
@@ -51,18 +51,22 @@ export function DfcFaceTypeSection({
   colorKey,
   verifiedKeys,
   onPick,
+  look = DEFAULT_DFC_LOOK,
 }: {
   kind: CardKind;
   cardType: CardType | "" | null | undefined;
   colorKey: FrameColorKey;
   verifiedKeys: ReadonlySet<string>;
   onPick?: (next: CardType) => void;
+  /** The card's look (TODO 5.7): a borderless card keeps it — a type with
+   *  no borderless front (a land) is off. */
+  look?: DfcLook;
 }) {
   const current = (cardType || KIND_DEFS[kind].cardType) as CardType;
   const options: ChipOption<CardType>[] = CARD_TYPE_OPTIONS.filter((option) =>
     (DFC_FACE_TYPES as readonly string[]).includes(option.value),
   ).map((option) => {
-    const body = dfcFrontBodyFor(kind, option.value);
+    const body = dfcFrontBodyFor(kind, option.value, look);
     // A type whose front body isn't verified in ANY colour is dark; one
     // verified only in another colour switches the colour (the orchestrator
     // says so), like a frame tile.
@@ -74,7 +78,9 @@ export function DfcFaceTypeSection({
     return {
       ...option,
       description: !available
-        ? "Frames awaiting verification"
+        ? body === null && look === "borderless"
+          ? BORDERLESS_NO_FACE
+          : "Frames awaiting verification"
         : body && !inColour && option.value !== current
           ? `${FRAME_TEMPLATE_LABELS[body]} isn't verified in this colour yet — picking it switches the colour`
           : body
@@ -82,7 +88,7 @@ export function DfcFaceTypeSection({
             : undefined,
       leading: body ? <FrameThumb template={body} colorKey={colorKey} type={{ cardType: option.value }} /> : undefined,
       disabled: !available,
-      badge: available ? undefined : <SoonBadge />,
+      badge: available || (body === null && look === "borderless") ? undefined : <SoonBadge />,
     };
   });
   const label = CARD_TYPE_OPTIONS.find((option) => option.value === current)?.label ?? current;
@@ -104,26 +110,38 @@ export function DfcFaceTypeSection({
   );
 }
 
+/** Why a face is off on a borderless double-faced card (TODO 5.7). */
+export const BORDERLESS_NO_FACE = "The borderless frame has no land face yet";
+export const BORDERLESS_ARROWS_ONLY = "The borderless frame prints the arrows only";
+
 export function DfcIconFamilySection({
   family,
   onChange,
   title = "Transform icons",
   testId = "dfc-icon-family",
+  look = DEFAULT_DFC_LOOK,
 }: {
   /** The card's family (frame_style.dfcIcon); absent reads as `arrows`. */
   family: DfcIconFamily | string | null | undefined;
   onChange: (next: DfcIconFamily) => void;
   title?: string;
   testId?: string;
+  /** The card's look (TODO 5.7): the borderless back exists for the
+   *  arrows only, so the other pairs are off there. */
+  look?: DfcLook;
 }) {
   const current: DfcIconFamily = (DFC_ICON_FAMILY_VALUES as readonly string[]).includes(family ?? "")
     ? (family as DfcIconFamily)
     : "arrows";
-  const options: ChipOption<DfcIconFamily>[] = DFC_ICON_FAMILY_VALUES.map((value) => ({
-    value,
-    label: DFC_ICON_FAMILY_COPY[value].label,
-    description: DFC_ICON_FAMILY_COPY[value].description,
-  }));
+  const options: ChipOption<DfcIconFamily>[] = DFC_ICON_FAMILY_VALUES.map((value) => {
+    const off = look === "borderless" && value !== DEFAULT_DFC_ICON && value !== current;
+    return {
+      value,
+      label: DFC_ICON_FAMILY_COPY[value].label,
+      description: off ? BORDERLESS_ARROWS_ONLY : DFC_ICON_FAMILY_COPY[value].description,
+      ...(off ? { disabled: true } : {}),
+    };
+  });
   return (
     <SetupSection title={title} value={DFC_ICON_FAMILY_COPY[current].label} testId={testId}>
       <ChipGroup

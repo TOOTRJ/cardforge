@@ -50,6 +50,7 @@ import {
   bodyFor,
   colorlessFaceAllowed,
   dfcBodyOf,
+  dfcLookOf,
   isDfcBackBody,
   isDfcFaceType,
   isDfcIconFamily,
@@ -130,6 +131,10 @@ export const DFC_BACK_BODY_SET =
 export const DFC_BACK_COLOR_SET =
   "The back face's colour is set when the card is created, like the front's — to change it, forge a new card.";
 export const DFC_NO_BACK_BODY_YET = "No back-face frame exists for this card yet.";
+/** An edit that moves a double-faced card's front onto the other look
+ *  (borderless / bordered) while its back keeps its stored body (TODO 5.7). */
+export const DFC_LOOK_MISMATCH =
+  "This card's back face is on the other look's frame — a borderless front needs a borderless back, and a bordered front a bordered one. Keep the front's look, or make a new card.";
 export const DFC_COLORLESS_NEEDS_ARTIFACT =
   "A colourless back face needs “Artifact” on its type line — pick a colour.";
 export const DFC_COLORLESS_FRONT_NEEDS_ARTIFACT =
@@ -254,13 +259,21 @@ export function resolveDfcBackFace(input: DfcBackGateInput): DfcBackGateResult {
   // A battle wears no family (every battle printed is the plain ▲ / ▼): its
   // back is the default's whatever the key says.
   const family = body?.battle ? DEFAULT_DFC_ICON : dfcFamilyOf(input.family);
-  const derived = bodyFor(layout, "back", backType, family);
+  // The back follows the front's look (TODO 5.7): a borderless front's back
+  // is borderless — none yet for a land back or a 2016–22 family.
+  const derived = bodyFor(layout, "back", backType, family, dfcLookOf(front));
   if (!derived) return { ok: false, field: "back_face.frame_style", message: DFC_NO_BACK_BODY_YET };
 
   const storedBody = input.stored?.back?.frame_style?.template;
   const storedHasBody = Boolean(input.stored && storedBody && isDfcBackBody(storedBody));
   const storedWins = storedHasBody && !input.stored?.familyChanged;
   let template: FrameTemplate;
+  if (storedWins && dfcLookOf(storedBody) !== dfcLookOf(front)) {
+    // A front moved onto a body of the OTHER look (TODO 5.7: the borderless
+    // front over a stored bordered back, or back) would draw two looks on one
+    // card: refused — the back's body is structure and stays.
+    return { ok: false, field: "back_face.frame_style", message: DFC_LOOK_MISMATCH };
+  }
   if (storedWins) {
     // The stored body is structure: a type that would derive another body
     // is refused; the same type keeps the body as stored.

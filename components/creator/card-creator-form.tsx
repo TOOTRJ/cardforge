@@ -275,6 +275,7 @@ import {
   bodyFor,
   colorlessFaceAllowed,
   dfcIconFamilyForBackBody,
+  dfcLookOf,
   isBattleFront,
   isDfcBackBody,
   templateHasBackFace,
@@ -1061,7 +1062,7 @@ export function CardCreatorForm({
           frontColorIdentity: watched.color_identity,
           verifiedKeys: battleVerifiedKeys,
         })
-      : bodyFor(dfcLayout, "back", watched.back_face.card_type || null, dfcFamily)
+      : bodyFor(dfcLayout, "back", watched.back_face.card_type || null, dfcFamily, dfcLookOf(watched.frame_style?.template))
     : null;
   // The kind's own words for its second part — "back face", "right half",
   // "adventure spell" (lib/creator/second-part.ts, TODO 5.14).
@@ -2102,7 +2103,7 @@ export function CardCreatorForm({
    *  the card where it is. */
   const handleDfcFaceTypePick = (next: CardType) => {
     if (next === watched.card_type) return;
-    const body = dfcFrontBodyFor(kind, next);
+    const body = dfcFrontBodyFor(kind, next, dfcLookOf(watched.frame_style?.template));
     if (!body) return;
     const currentColorKey = pickFrameColorKey(getValues("color_identity")) as FrameColorKey;
     const resolution = resolvePublishedFrame({
@@ -3227,7 +3228,13 @@ export function CardCreatorForm({
             frontColorIdentity: values.color_identity,
             verifiedKeys: battleVerifiedKeys,
           })
-        : bodyFor(submitDfcLayout, "back", values.back_face.card_type || null, dfcIconOf({ frameStyle: values.frame_style }))
+        : bodyFor(
+            submitDfcLayout,
+            "back",
+            values.back_face.card_type || null,
+            dfcIconOf({ frameStyle: values.frame_style }),
+            dfcLookOf(submitTemplate),
+          )
       : null;
     const backFaceContent = values.has_back_face
       ? {
@@ -4157,6 +4164,7 @@ export function CardCreatorForm({
                 {isRevise && dfcLayout === "transform" && !battleCard ? (
                   <DfcIconFamilySection
                     family={watched.frame_style?.dfcIcon ?? null}
+                    look={dfcLookOf(watched.frame_style?.template)}
                     onChange={(next) => setValue("frame_style.dfcIcon", next, { shouldDirty: true })}
                     testId="dfc-icon-family-revise"
                   />

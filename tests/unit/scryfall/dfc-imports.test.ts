@@ -244,7 +244,7 @@ describe("the registry", () => {
     ["znr-259", "modal/2015", "exact", "m15mdfclandfront", undefined, undefined],
     ["mh3-253", "dfc/devoid", "nearest", "m15mdfcfront", "m15devoid", "5.11"],
     // A borderless modal Pathway: nearest on the modal land front (5.7).
-    ["znr-284", "borderless/dfc", "nearest", "m15mdfclandfront", undefined, "5.7"],
+    ["znr-284", "borderless/dfc/light", "nearest", "m15mdfclandfront", undefined, "5.7"],
     // A battle draws the double-faced marks since 5.5 (a) (its tab, its ▼
     // back): exact on the battle frame. A Saga front keeps its frame; its
     // marks are 5.5 (b)'s.

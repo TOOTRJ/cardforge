@@ -208,6 +208,14 @@ const PICKS: readonly Pick[] = [
   { from: "m15dfcback/b/battle-long@crown-battle", why: "a battle's back (5.5): the portrait ▼ back behind a landscape front, its legendary crown" },
   { from: "m15mdfcfront/w/mdfc-long@strip-u", why: "modal front: the flipside strip in the other face's colour" },
   { from: "m15mdfcback/g/mdfc-long", why: "modal back: the strip on a back, through the flip" },
+  // The borderless double-faced bodies (TODO 5.7): the grafted masters'
+  // crowned twin under the borderless rider (6 px right, × 0.95) and the
+  // borderless reverse P/T; the ▼ back's indicator and white ink; the modal
+  // pair's split pinline with the floating crown and the strip's texts.
+  { from: "m15borderlessdfcfront/r/transform-long@crown", why: "borderless transform front: the crowned twin, the moved rider, the borderless reverse P/T" },
+  { from: "m15borderlessdfcback/u/transform-long", why: "borderless transform back: the ▼ well in the master, the indicator, white ink on the dark bars" },
+  { from: "m15borderlessmdfcfront/wu/mdfc-long@pair-crown", why: "borderless modal front: the split pinline's crowned twin, the housing, the strip's white texts" },
+  { from: "m15borderlessmdfcback/g/mdfc-long", why: "borderless modal back: its own cost, the light strip's dark texts, through the flip" },
   { from: "m15tokentext/g/token-long", why: "token with a text box" },
   // The arch token's gold small-caps name (TODO 4.53, v59): the runs on one
   // baseline, a word gap, the see-through c's own art slot; and a name all

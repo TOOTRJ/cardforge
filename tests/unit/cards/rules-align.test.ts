@@ -141,7 +141,9 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
     ]);
     // (…and 4.40 / 4.41's three older full-art basics offer it: a basic
     // prints no rules, but the switch is harmless on a frame that draws none.)
-    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(61);
+    // (…and the borderless double-faced bodies, TODO 5.7, offer it as their
+    // bordered twins do.)
+    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(65);
   });
 
   it("rulesAlignOf is \"center\" only for the card's \"center\" on a frame that offers it", () => {

@@ -6671,6 +6671,149 @@ bump, no sweep, no badge, no new master.
   beside the portrait back, centred on its height, the gutter the portrait
   card's (60 / 30 px); the PDF turns the landscape page as before.
 
+### The borderless double-faced bodies (5.7)
+
+TODO 5.7, 2026-10-15 (`feat/dfc-borderless`). Four templates for the DARK
+borderless look of the transform and modal cards — `m15borderlessdfcfront`,
+`m15borderlessdfcback` (the ▼ at the right), `m15borderlessmdfcfront`,
+`m15borderlessmdfcback`. Additions under the owner rule: no stored card
+changes, no bump, no sweep, no badge; nothing is offered until the owner
+ticks each colour of the front AND the back.
+
+**Print (Scryfall, 2026-10-14; scans at 745 × 1040 resized to 1500 ×
+2100, measured, never committed).** 162 borderless transform / modal
+printings; 134 plain (no showcase, full-art or shattered-glass effect): 91
+transform, 43 modal. 98 of the 134 carry `inverted` — the DARK look:
+m15borderless's floating bars, its dark box (median rules-box luma 10–93
+on every inverted face but PR23 #3's light front) and white ink. The other
+36 print the LIGHT look Card Conjurer draws ('Borderless (Front)' /
+'(Back)', 'Modal Borderless': light pills, a light front box, a grey back
+box — box luma 134–218): the ZNR / KHM / SLU pathways, SLD #1155–1212, STX
+#277 / #278 — not built (owner question). Of the 98, 57 have faces the
+bodies can dress (no walker, saga, battle or Vehicle face); almost all are
+legendary and print m15borderless's FLOATING crown — the crowned twins —
+around the well.
+
+**The masters** are PipGlyph's own derivation
+(`scripts/build-dfc-borderless-frames.mjs`, every number in
+`scripts/lib/dfc-borderless.mjs`): the published `m15borderless/<key>`
+master (its `-legendary` twin, its pair; `a` and `c` the
+`m15borderlessartifact` colourless — the artifact stand-in, as on the
+bordered bodies) with the double-faced pieces GRAFTED from Card Conjurer's
+light packs, which share the dark masters' outline pixel for pixel
+everywhere else (rims, outlines, box, fins, bottom bar — identical RGBA on
+every key) because they are cut through the bordered transform packs'
+masks:
+
+| body | grafts |
+|---|---|
+| `m15borderlessdfcfront` | the icon well at the title bar's left end (ring, black disc, rim bulge, the bar's concave end); the reverse-P/T tab out of the box's right edge |
+| `m15borderlessdfcback` | the ▼ well at the right end: the light FRONT's well mirrored, its disc (ring, black, ▼) the published `m15dfcback`'s |
+| `m15borderlessmdfcfront` | the housing with its ▲ (its light interior kept, as print's); the flipside strip through CC's Flipside mask |
+| `m15borderlessmdfcback` | the housing with its ▲▼ (its interior re-coloured to the bar's, as print's); the light strip |
+
+Only the PIECE comes from the light pack: the ring and disc, the well's or
+housing's rim and outline, the tab, the strip. Its rim is re-coloured to
+the dark master's (`recolourRim`: the light packs paint the artifact rim
+(246,247,245) where the dark master paints (197,203,217)), and the gold
+masters' rim rows sit 1 px off the light pack's, so each band row of the
+piece is read from the light row that matches the dark master's on the
+bar's straight part; a piece pixel the mono master already paints is the
+dark master's own; the bar's concave end keeps the light pack's shading
+in the dark interior's colour out to 96 px from the well's centre;
+everything else is the dark master's. So no graft edge shows a step — the
+builder refuses a master with one (`seamsOf`: a pixel just inside a graft
+rect that differs from its neighbour outside where the dark master's two
+do not) and the masters test checks every key. On a crowned twin the
+well's rim and outline are drawn over the crown; a plain or pair master's
+round pill end is cut by the clear light pixels round the well. Pixels
+outside the graft rects are the dark master's byte for byte
+(`tests/unit/frames/dfc-borderless-masters.test.ts`).
+
+**Moved onto print** (the light pieces sit where the bordered packs put
+them; print's borderless pieces elsewhere): the white ring 93–206 × 104–217
+px on 38 dark fronts (median; the bordered geometry 84–203 × 101–220) — the
+well 6 px right, its disc at × 0.95 (radius 56.5 against 59.5); 1295–1408
+on 39 backs (bordered 1296–1415) — 4 px left, × 0.95; the tab 4 px down;
+the housing 5 px right (gradient correlation of each face against its
+master, the type bar's offset taken off). After the moves the same
+correlation reads the wells and the tab within 1 px. The housing reads 2 px
+high, and so does the WHOLE title bar it sits in: the bar's top outline is
+at 87–90 px on SLD #2655 and 89–92 on SLD #1608, m15borderless's at 85–88
+— the borderless frame's own title bar (4.32), not the housing, so the
+housing keeps the bar's rows (a housing moved alone would jog against
+them). The strip is where print has it: on the one standard-form print,
+SLD #2655, its top edge, chevron tip (700 px) and bottom sit on ours
+within 1 px on both faces; the +4 / −3 px the correlation read rested on
+MSH's Marvel strip form, another shape. The rider (`DFC_BORDERLESS_ICON_RIDER`) is the bordered rider
+scaled × 0.95 about its centre and moved 6 px; the reverse P/T
+(`DFC_BORDERLESS_REVERSE_PT`) prints #828282 (the digits' grey on the dark
+box, median 128–133 on the clean scans) ending at 1378 px (ink end
+1375–1380 on ECL #290 / #291, FIN #383, LMAR #3 …; the bordered rect
+ended them at 1387–1389), its caps 3 px higher (rows 1780–1822). The name
+ink starts at 252 px on the fronts (median of 38; the band at 16.45 %W
+draws it at 250–251) and 132 px on the ▼ backs: the bordered bodies' bands.
+
+**Profiles** (`lib/cards/template-layout.ts`): m15borderless's geometry and
+ink (full-bleed art, the keylined set symbol, its plates and white P/T),
+`dfc.look: "borderless"`, `crownMasters`, the split pair, the artifact
+stand-in (`a-legendary` joins `LEGENDARY_MASTER_KEYS`); the front the
+rider, the icon face's name band and the borderless reverse P/T; the back
+no cost, the colour indicator and the ▼ band; the modal pair the strip's
+texts (white on the front's dark strip, dark on the back's light one) and
+the strip RIDER in the other face's colour (5.1c's model: the light pack's
+tab per colour, `<template>/strip/<key>.png` cut from the published
+masters through CC's Flipside mask — print's strip follows the face it
+describes, MSH #331's blue front a light-blue strip on its gold back; no
+`l`, a borderless modal face is never a land; each piece's WebP alpha is
+checked against its PNG's by the builder). No holofoil stamp, no
+collector line (m15borderless has neither — 4.9d's follow-up).
+
+**The look a back follows.** `bodyFor(layout, role, type, family, look)`:
+a borderless front's back is borderless (`dfcLookOf(front)` — the gate,
+the creator's live preview and submit, the legendary switch, the import,
+the reference pin check). The borderless table has the SPELL faces only
+and, on the transform back, today's arrows only: a land face (SLD #1502's
+and #2655's backs) and a 2016–22 family (VOW #332–341's sun / moon) have no
+borderless body — the gate refuses them by name (`DFC_NO_BACK_BODY_YET`),
+the creator's Land chips and the other icon pairs are off on a borderless
+card, and the import lands those printings on the bordered bodies with the
+`borderless-dfc-face` gap. An EDIT that moves a stored double-faced
+card's front onto the other look while its back keeps its stored body is
+refused (`DFC_LOOK_MISMATCH`): one card never draws two looks.
+
+**Kinds.** The fronts are the third body of the Transform and Modal kinds
+(`layoutTemplates`, never the default `[0]`); the backs refuse every kind.
+The kind chips still need the bordered default back verified
+(`kindHasAvailableFrame`).
+
+**Import.** `dfcPrintedLookOf`: `border_color: borderless` + `inverted`,
+and not a showcase, a shattered-glass or one-off set (BOT), or an
+artist-lettered poster — the registry's earlier borderless rules. The
+registry's `borderless/dfc` is EXACT on the borderless front body
+(`withGaps`: `borderless-dfc-face` first, then the M15 era's); the light
+look is `borderless/dfc/light`, nearest on the bordered body (5.7). Marvel
+Super Heroes' variant faces — #355–363's floating name (no title bar),
+#388–399's comic-cover backs — are nearest on the borderless bodies with
+the `marvel-variant-face` gap (5.7d); #328–350 are exact. Until
+the borderless front AND back are verified in their colours
+`finalizeImportMatch` lands the printing on the BORDERED bodies — where it
+landed before 5.7 — and says "the borderless double-faced frame isn't
+verified in <colour> yet"; short of those too, the standard frame, as
+before. Over all 162 printings with production's list: 0 landings change
+(the answer text changes on 112); with the four bodies ticked: 44 move —
+28 transform (ECL, FIN, SLD #1608 / #1612, SLX #29, LMAR #3, PR23 #3), 16
+modal (MSH, SPM #200 / #202) — and only their bodies
+(`tests/unit/scryfall/dfc-borderless-imports.test.ts` against the
+recording made on origin/main).
+
+**What waits:** the light look (36 printings; owner question), the
+borderless land faces and the 2016–22 left-well back (VOW's sun / moon,
+which also print the nickname line), the Marvel strip form (MSH / SPM's
+"3/3 Creature" strip), the extended-art double-faced faces (CC's
+'Extended Art (Front / Back)' and the modal extended pack: 60 transform +
+24 modal printings — a follow-up), the walker faces (5.13, ask first).
+
 ### The editor (5.2)
 
 TODO 5.2, 2026-10-02 (`feat/dfc-editor`, stacked on 5.1a). The Transform
@@ -7791,11 +7934,11 @@ at HD on all four.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 58 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 62 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens, the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63) and 4.40 / 4.41's three older full-art basics, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics and 5.7's four borderless double-faced bodies, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card) prints its names,

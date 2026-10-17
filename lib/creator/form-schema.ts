@@ -35,7 +35,7 @@ import {
   loyaltyCostSchema,
 } from "@/lib/validation/card";
 import { dfcFrontBodyFor, dfcLayoutForKind, kindFromCard } from "@/lib/creator/card-kinds";
-import { bodyFor, colorlessFaceAllowed, isDfcFaceType } from "@/lib/cards/dfc";
+import { bodyFor, colorlessFaceAllowed, dfcLookOf, isDfcFaceType } from "@/lib/cards/dfc";
 import { dfcFamilyOf, dfcFrontColorError, dfcFrontTypeError, DFC_BACK_TYPE_REFUSED, DFC_COLORLESS_NEEDS_ARTIFACT } from "@/lib/cards/dfc-gate";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import {
@@ -263,11 +263,12 @@ export function cardFormSchemaFor(
       // verification is the server's gate (the chips hide what isn't).
       const dfcKind = kindFromCard(values.card_type, values.frame_style?.template);
       const dfcLayout = dfcLayoutForKind(dfcKind);
-      if (dfcLayout && dfcFrontBodyFor(dfcKind, values.card_type)) {
+      const dfcLook = dfcLookOf(values.frame_style?.template);
+      if (dfcLayout && dfcFrontBodyFor(dfcKind, values.card_type, dfcLook)) {
         if (!isDfcFaceType(back.card_type)) {
           ctx.addIssue({ code: "custom", path: ["back_face", "card_type"], message: DFC_BACK_TYPE_REFUSED });
         } else {
-          const body = bodyFor(dfcLayout, "back", back.card_type, dfcFamilyOf(values.frame_style?.dfcIcon));
+          const body = bodyFor(dfcLayout, "back", back.card_type, dfcFamilyOf(values.frame_style?.dfcIcon), dfcLook);
           const colour = back.color_identity.length > 0 ? back.color_identity : values.color_identity;
           if (
             body &&

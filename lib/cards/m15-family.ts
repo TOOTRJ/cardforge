@@ -100,6 +100,12 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   "m15mdfcback",
   "m15mdfclandfront",
   "m15mdfclandback",
+  // The borderless double-faced bodies (TODO 5.7): new templates, no stored
+  // card — m15borderless's slots and the family's sizes — no bump.
+  "m15borderlessdfcfront",
+  "m15borderlessdfcback",
+  "m15borderlessmdfcfront",
+  "m15borderlessmdfcback",
   // The battle (TODO 4.21b, CC's 'Battle' pack; layout v43): the family's
   // sizes on a landscape card — it joined WITH its bump (0 stored public or
   // unlisted cards).

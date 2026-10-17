@@ -34,13 +34,14 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 const EVERY_COMBO: ReadonlySet<string> = new Set(
   FRAME_TEMPLATE_VALUES.flatMap((t) => ["w", "u", "b", "r", "g", "c", "m"].map((k) => frameComboKey(t, k))),
 );
-const FRONTS = ["m15dfcfront", "m15dfclandfront"] as const;
-const BACKS = ["m15dfcback", "m15dfcbackleft", "m15dfclandback"] as const;
+// …and the borderless pair (TODO 5.7).
+const FRONTS = ["m15dfcfront", "m15dfclandfront", "m15borderlessdfcfront"] as const;
+const BACKS = ["m15dfcback", "m15dfcbackleft", "m15dfclandback", "m15borderlessdfcback"] as const;
 
 describe("the Transform kind (TODO 5.1a)", () => {
   it("is a layout kind over the two front bodies, needing a double-faced front, drawing the six transform card types", () => {
     expect(CARD_KIND_VALUES).toContain("transform");
-    expect(KIND_DEFS.transform).toMatchObject({ label: "Transform", cardType: "creature", layoutTemplates: ["m15dfcfront", "m15dfclandfront"], previewTemplate: "m15dfcfront", inlineSecondFace: false });
+    expect(KIND_DEFS.transform).toMatchObject({ label: "Transform", cardType: "creature", layoutTemplates: ["m15dfcfront", "m15dfclandfront", "m15borderlessdfcfront"], previewTemplate: "m15dfcfront", inlineSecondFace: false });
     expect(KIND_REQUIRES.transform).toEqual(["dfcFront"]);
     expect(LAYOUT_KIND_CARD_TYPES.transform).toEqual(["creature", "artifact", "enchantment", "land", "instant", "sorcery"]);
     for (const front of FRONTS) {
@@ -55,7 +56,7 @@ describe("the Transform kind (TODO 5.1a)", () => {
     // front bodies (5.1b), which draw the Modal kind and never this one.
     for (const t of FRAME_TEMPLATE_VALUES) {
       if ((FRONTS as readonly string[]).includes(t)) continue;
-      if (t === "m15mdfcfront" || t === "m15mdfclandfront") {
+      if (t === "m15mdfcfront" || t === "m15mdfclandfront" || t === "m15borderlessmdfcfront") {
         expect(capabilitiesOf(getFrameProfile(t)), t).toContain("dfcFront");
         expect(profileDrawsKind(getFrameProfile(t), "transform"), t).toBe(true);
         expect(templateSupportsKind(t, "transform"), t).toBe(false);
@@ -78,6 +79,7 @@ describe("the Transform kind (TODO 5.1a)", () => {
     expect(framesForKind("transform", EVERY_COMBO).map((f) => [f.template, f.group])).toEqual([
       ["m15dfcfront", "layout"],
       ["m15dfclandfront", "layout"],
+      ["m15borderlessdfcfront", "layout"],
     ]);
     for (const kind of CARD_KIND_VALUES) {
       if (kind === "transform") continue;

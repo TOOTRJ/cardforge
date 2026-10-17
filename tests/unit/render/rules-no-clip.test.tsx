@@ -306,6 +306,8 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       "m15nyx/main",
       // 4.25's Universes Beyond frames: their M15 twins' boxes.
       "m15ub/main", "m15ubartifact/main", "m15ubland/main",
+      // 5.7's borderless double-faced bodies: m15borderless's box.
+      "m15borderlessdfcfront/main", "m15borderlessdfcback/main", "m15borderlessmdfcfront/main", "m15borderlessmdfcback/main",
     ],
     ["1200 chars"],
   ],

@@ -101,7 +101,7 @@ const GLYPH: Record<DfcIconFamily, { front: string; back: string }> = {
 /** The bodies whose well the rider fills: the two left-well faces and the
  *  land front. The ▼-right back's ▼ is in its master and the land back has
  *  no well. */
-const RIDER_BODIES: readonly string[] = ["m15dfcfront", "m15dfcbackleft", "m15dfclandfront"];
+const RIDER_BODIES: readonly string[] = ["m15dfcfront", "m15dfcbackleft", "m15dfclandfront", "m15borderlessdfcfront"];
 
 /** The icon rider a face draws from the data a renderer is HANDED — the
  *  bake's own reading (lib/render/card-image.tsx anatomyFactsOf: the `dfc`

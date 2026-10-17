@@ -722,7 +722,23 @@ from (values
      E'Return target spell or nonland permanent to its owner''s hand.', 'The tide takes what the shore forgets.', null, null, 21,
      '{"template":"m15mdfcfront","finish":"regular","collector":"2023"}'::jsonb,
      '{"title":"Tidewater Shoals","card_type":"land","subtypes":[],"rules_text":"As Tidewater Shoals enters, you may pay 3 life. If you don''t, it enters tapped.\n{T}: Add {U}.","frame_style":{"template":"m15mdfclandback"},"color_identity":["blue"]}'::jsonb,
-     22, 'unlisted', array['modal','lands'], 1)
+     22, 'unlisted', array['modal','lands'], 1),
+  -- TODO 5.7: the dark borderless double-faced bodies. A legendary red
+  -- transform creature with the floating crown (ECL #290's shape) whose
+  -- blue back sits on the borderless ▼ back; and a white modal legend whose
+  -- white-blue back keeps its cost and wears the split pinline (MSH #346's
+  -- shape). Unlisted; on a preview branch the bodies are unverified, so
+  -- these two are how the look is seen there.
+  ('c0000000-0000-4000-a000-000000000150'::uuid, 'Cindermoor Ascendant', 'cindermoor-ascendant', '{1}{R}', array['red'], 'Legendary', 'creature', array['Elemental','Sorcerer'], 'rare',
+     E'Whenever this creature enters or transforms into Cindermoor Ascendant, you may discard a card. If you do, draw a card.\nAt the beginning of your first main phase, you may pay {U}. If you do, transform Cindermoor Ascendant.', null, '1', '3', 3,
+     '{"template":"m15borderlessdfcfront","finish":"regular","crown":true,"twoColor":true}'::jsonb,
+     '{"title":"Cindermoor Tidecaller","card_type":"creature","supertype":"Legendary","subtypes":["Elemental","Wizard"],"power":"1","toughness":"3","rules_text":"Whenever this creature transforms into Cindermoor Tidecaller, add two mana of any one color.\nAt the beginning of your first main phase, you may pay {R}. If you do, transform Cindermoor Tidecaller.","frame_style":{"template":"m15borderlessdfcback"},"color_identity":["blue"]}'::jsonb,
+     4, 'unlisted', array['transform','borderless'], 1),
+  ('c0000000-0000-4000-a000-000000000151'::uuid, 'Sovereign of Twin Courts', 'sovereign-of-twin-courts', '{1}{W}', array['white'], 'Legendary', 'creature', array['Human','Noble'], 'mythic',
+     E'Flash\nWhenever a player draws their second card each turn, you draw a card.', null, '3', '2', 6,
+     '{"template":"m15borderlessmdfcfront","finish":"regular","crown":true,"twoColor":true}'::jsonb,
+     '{"title":"Sovereign Unbowed","cost":"{4}{W}{U}","card_type":"creature","supertype":"Legendary","subtypes":["Human","Warrior"],"power":"3","toughness":"3","rules_text":"Flash\nDouble strike","frame_style":{"template":"m15borderlessmdfcback"},"color_identity":["white","blue"]}'::jsonb,
+     7, 'unlisted', array['modal','borderless'], 1)
 ) as c (id, title, slug, cost, colors, supertype, card_type, subtypes, rarity,
         rules_text, flavor_text, power, toughness, art, frame_style, back_face,
         back_art, visibility, tags, age_days)

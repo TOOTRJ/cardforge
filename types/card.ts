@@ -479,6 +479,19 @@ export const FRAME_TEMPLATE_VALUES = [
   "m15mdfcback",
   "m15mdfclandfront",
   "m15mdfclandback",
+  // The borderless double-faced bodies (TODO 5.7): the DARK (`inverted`)
+  // borderless look of 98 of the 134 plain borderless transform / modal
+  // printings — m15borderless's floating bars and dark box with the
+  // double-faced pieces (the icon well, the ▼ well, the reverse-P/T tab,
+  // the modal housing and strip) grafted from Card Conjurer's light packs
+  // (scripts/lib/dfc-borderless.mjs). The FRONT bodies are skins of the
+  // bordered fronts (Variations); the back follows the front's look
+  // (bodyFor's `look`). No land pair, no 2016–22 left-well back yet.
+  // Additions: no stored card changes.
+  "m15borderlessdfcfront",
+  "m15borderlessdfcback",
+  "m15borderlessmdfcfront",
+  "m15borderlessmdfcback",
   "agclassic",
   "alphaland",
   "battle",
@@ -618,6 +631,11 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m15mdfcback: "Modal back",
   m15mdfclandfront: "Modal land front",
   m15mdfclandback: "Modal land back",
+  // The borderless double-faced bodies (TODO 5.7).
+  m15borderlessdfcfront: "Borderless transform front",
+  m15borderlessdfcback: "Borderless transform back",
+  m15borderlessmdfcfront: "Borderless modal front",
+  m15borderlessmdfcback: "Borderless modal back",
   m15pw: "Planeswalker",
   agclassic: "Standard",
   alphaland: "Land",
@@ -747,6 +765,10 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   m15mdfcback: "m15",
   m15mdfclandfront: "m15",
   m15mdfclandback: "m15",
+  m15borderlessdfcfront: "m15",
+  m15borderlessdfcback: "m15",
+  m15borderlessmdfcfront: "m15",
+  m15borderlessmdfcback: "m15",
   battle: "m15",
   saga: "m15",
   adventure: "m15",

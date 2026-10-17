@@ -34,7 +34,7 @@
 import { crownsTokens, frameAnatomyOf, qualifiesForCrown } from "@/lib/cards/anatomy";
 import { supertypeHasWord, supertypeWords } from "@/lib/cards/card-display";
 import { crownKeyFor } from "@/lib/cards/crown";
-import { DEFAULT_DFC_ICON, bodyFor, dfcBodyOf, isDfcIconFamily } from "@/lib/cards/dfc";
+import { DEFAULT_DFC_ICON, bodyFor, dfcBodyOf, dfcLookOf, isDfcIconFamily } from "@/lib/cards/dfc";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import type { CardType, ColorIdentity, FrameTemplate } from "@/types/card";
 
@@ -134,6 +134,7 @@ export function legendaryVariationOf(input: LegendaryVariationInput): LegendaryV
           "back",
           input.backCardType || null,
           !front.battle && isDfcIconFamily(input.dfcIcon) ? input.dfcIcon : DEFAULT_DFC_ICON,
+          dfcLookOf(input.template ?? undefined),
         )
       : null;
   const backType = (input.backCardType || null) as CardType | null;

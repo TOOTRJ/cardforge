@@ -94,6 +94,9 @@ describe("the declared pair masters", () => {
       // …and the extended-art frame's thirty (TODO 4.7 follow-up, owner
       // Round 63): m15's two dresses, the land dress's split.
       extendedart: 20, extendedartland: 10,
+      // …and the borderless double-faced bodies' forty (TODO 5.7):
+      // m15borderless's pinline split, grafted.
+      m15borderlessdfcfront: 10, m15borderlessdfcback: 10, m15borderlessmdfcfront: 10, m15borderlessmdfcback: 10,
     });
     // Every pair key is a master key the bake's loader knows (never "c").
     for (const key of TWO_COLOR_MASTER_KEYS) expect(FRAME_MASTER_KEYS as readonly string[]).toContain(key);

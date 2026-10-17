@@ -88,6 +88,10 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   m15dfclandback: { front: DFC_WINDOW },
   m15mdfcfront: { front: DFC_WINDOW },
   m15mdfcback: { front: DFC_WINDOW },
+  m15borderlessdfcfront: { front: BORDERLESS },
+  m15borderlessdfcback: { front: BORDERLESS },
+  m15borderlessmdfcfront: { front: BORDERLESS },
+  m15borderlessmdfcback: { front: BORDERLESS },
   m15mdfclandfront: { front: DFC_WINDOW },
   m15mdfclandback: { front: DFC_WINDOW },
   agclassic: { front: [1154, 930] },
@@ -226,8 +230,9 @@ describe("what the fixed 5:4 surface got wrong (before 3b.13)", () => {
     // picture under the whole frame is far taller than 5:4; 27 before the
     // extended-art frame's see-through colourless master, layout v58; 28
     // before the older full-art basics, TODO 4.40 / 4.41: three tall windows more; 31 before the Spacecraft's
-    // extended-art and borderless dresses, 4.27a step 2.)
-    expect(off.filter((m) => m > 0.25)).toHaveLength(33);
+    // extended-art and borderless dresses, 4.27a step 2; 33 before the
+    // borderless double-faced bodies, TODO 5.7: four full-bleed windows.)
+    expect(off.filter((m) => m > 0.25)).toHaveLength(37);
   });
 });
 
