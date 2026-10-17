@@ -28,8 +28,10 @@ import {
 //                                     the code profiles — for this request
 //                                     only. A broken read must not take down
 //                                     card rendering.
-//   requireFrameProfileOverrides()    STORED BAKES (lib/cards/bake-render.ts,
-//                                     lib/cards/rebake-batch.ts): a failed
+//   requireFrameProfileOverrides()    STORED BAKES (lib/cards/bake-render.ts;
+//                                     lib/cards/rebake-batch.ts reads
+//                                     readFrameProfileOverrides() UNCACHED,
+//                                     beside its uncached stamps): a failed
 //                                     read throws. A bake without an override
 //                                     that exists would be stored — and
 //                                     stamped current — with the wrong layout

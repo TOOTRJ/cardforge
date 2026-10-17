@@ -42,7 +42,7 @@ vi.mock("@/lib/cards/bake-core", () => ({
 vi.mock("@/lib/pips/queries", () => ({ getPipOverrides: async () => null }));
 vi.mock("@/lib/cards/frame-profile-overrides", () => ({
   getFrameProfileOverrides: async () => ({}),
-  requireFrameProfileOverrides: () => mocks.overrides(),
+  readFrameProfileOverrides: () => mocks.overrides(),
 }));
 vi.mock("@/lib/cards/storage-paths", () => ({ cardRenderPath: (o: string, c: string) => `${o}/${c}.png` }));
 // Pinned at layout v30: v31 (the one corner radius) is an UNSCOPED sweep, so
@@ -479,6 +479,21 @@ describe("runRebakeBatch", () => {
     expect(mocks.render).not.toHaveBeenCalled();
     expect(mocks.upload).not.toHaveBeenCalled();
     expect(stub.forTable("cards").filter((e) => called(e.calls, "update"))).toHaveLength(0);
+  });
+
+  it("reads the override stamps BEFORE the overrides: a save between the two reads supersedes the render, never stamps an older layout current", async () => {
+    let stub: ReturnType<typeof db> | null = null;
+    let stampReadsBeforeOverrides = -1;
+    mocks.overrides.mockImplementation(async () => {
+      stampReadsBeforeOverrides = stub!
+        .forTable("frame_profile_overrides")
+        .filter((e) => !called(e.calls, "maybeSingle")).length;
+      return {};
+    });
+    stub = db([row("c1")], { markedCount: 1 });
+    const result = await run(stub);
+    if (!result.ok) throw new Error(result.error);
+    expect(stampReadsBeforeOverrides).toBe(1);
   });
 
   it("a dry run never reads the overrides (it renders nothing)", async () => {

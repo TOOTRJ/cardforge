@@ -14,7 +14,7 @@ import {
 import { selectBakeColumns } from "@/lib/cards/bake-select";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { getPipOverrides } from "@/lib/pips/queries";
-import { requireFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
+import { readFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { backBodyOf } from "@/lib/cards/faces";
 import {
   CARD_LAYOUT_VERSION,
@@ -223,16 +223,26 @@ export async function runRebakeBatch(
     return { ...base, dry: true, processed: [], failed: [], superseded: [], remaining: plan.rebake + plan.stamp };
   }
 
+  // The layout each render used, per template (uncached): a save during the
+  // batch changes it, and the render must not be stamped current. Read
+  // BEFORE the overrides themselves: a save landing between the two reads
+  // then shows as a moved stamp (the render is superseded), never as a
+  // fresh stamp beside the older layout (a stale bake stamped current).
+  const overrideStamps = await readOverrideStamps(supabase);
+
   // The frame layout overrides, read BEFORE any card is picked (admin audit
   // L2): when they can't be read the whole batch answers an error and
   // writes nothing — never a card baked on the code profile while an
   // override exists, stamped current. No card is struck for it (the
   // database is at fault, not the card); the cron's "batch query failing"
-  // breaker counts the run. A batch of stamps alone reads nothing.
-  let profileOverrides: Awaited<ReturnType<typeof requireFrameProfileOverrides>> | null = null;
+  // breaker counts the run. A batch of stamps alone reads nothing. UNCACHED
+  // (readFrameProfileOverrides, not the 5-minute cache), like the stamps: a
+  // save marks its cards before it busts the cache tag, so a cached map can
+  // be older than the stamps just read, and the guard would not see it.
+  let profileOverrides: Awaited<ReturnType<typeof readFrameProfileOverrides>> | null = null;
   if (batch.some(({ verdict }) => verdict === "rebake")) {
     try {
-      profileOverrides = await requireFrameProfileOverrides();
+      profileOverrides = await readFrameProfileOverrides();
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : "Frame layout overrides could not be read." };
     }
@@ -243,10 +253,6 @@ export async function runRebakeBatch(
   const processed: RebakeBatchResult["processed"] = [];
   const failed: RebakeBatchResult["failed"] = [];
   const superseded: string[] = [];
-  // The layout each render used, per template (uncached): a save during the
-  // batch changes it, and the render must not be stamped current.
-  const overrideStamps = await readOverrideStamps(supabase);
-
   for (const { row, verdict } of batch) {
     try {
       if (verdict === "stamp") {
