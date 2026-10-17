@@ -39,7 +39,9 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // unstable_cache entry tagged FRAME_PROFILE_OVERRIDES_TAG. A write must use
 // `updateTag` — `revalidateTag(tag, "max")` is stale-while-revalidate and
 // served the OLD map to the very next request (the editor's own
-// router.refresh), so the tool could not read its own save.
+// router.refresh), so the tool could not read its own save. The tag is
+// busted right after the row write and BEFORE the marking (a save bake
+// reads the cached map; see bustOverridesCache).
 //
 // Reset only touches renders when a row actually existed: a draft-only
 // "reset" used to null the layout_version of every baked card on the
@@ -180,8 +182,16 @@ async function deleteOverrideRow(
   return { ok: true, existed: (data?.length ?? 0) > 0 };
 }
 
-function publish(): void {
+/** Bust the overrides read cache — RIGHT AFTER the row write, BEFORE any
+ *  card is marked stale. A save bake reads the CACHED overrides
+ *  (requireFrameProfileOverrides) and has no stamp guard: with the bust
+ *  after the marking, a bake reading in between drew the OLD map and could
+ *  persist a current stamp over the mark. */
+function bustOverridesCache(): void {
   updateTag(FRAME_PROFILE_OVERRIDES_TAG);
+}
+
+function publish(): void {
   revalidatePath("/admin/frame-compare");
 }
 
@@ -221,6 +231,7 @@ export async function saveFrameProfileOverrideAction(
     if (error) return { ok: false, error: error.message };
   }
 
+  bustOverridesCache();
   const { marked: staleCount, keptForOwner } = await markTemplateRendersStale(admin, template);
   // Template-wide history row ("*"): every colour's verification now
   // measures against a different layout — the checklist flags them.
@@ -254,6 +265,7 @@ export async function resetFrameProfileOverrideAction(
     return { ok: true, staleCount: 0, keptForOwner: 0, changed: false };
   }
 
+  bustOverridesCache();
   const { marked: staleCount, keptForOwner } = await markTemplateRendersStale(admin, parsed.data.template);
   await recordFrameReviewEvent(admin, {
     template: parsed.data.template,

@@ -121,7 +121,7 @@ beforeEach(() => {
   state.configured = true;
   artGate.refusal = null;
   artGate.calls = [];
-  cache.updateTag.mockClear();
+  cache.updateTag.mockReset();
   cache.revalidatePath.mockClear();
   cache.revalidateTag.mockClear();
 });
@@ -206,6 +206,42 @@ describe("saveFrameProfileOverrideAction", () => {
     expect(result).toEqual({ ok: true, staleCount: 0, keptForOwner: 0, changed: false });
     expect(stub.forTable("cards")).toHaveLength(0);
     expect(cache.updateTag).not.toHaveBeenCalled();
+  });
+});
+
+describe("the read cache is busted BEFORE any card is marked stale", () => {
+  // A save bake reads the CACHED overrides and has no stamp guard: marking
+  // first left a window where it drew the OLD map and persisted a current
+  // stamp over the mark.
+  function orderOf(run: () => Promise<unknown>, opts: Parameters<typeof db>[0]) {
+    const order: string[] = [];
+    const stub = db(opts);
+    const from = (stub.client as { from: (t: string) => unknown }).from;
+    (stub.client as { from: (t: string) => unknown }).from = (table: string) => {
+      order.push(`from:${table}`);
+      return from(table);
+    };
+    cache.updateTag.mockImplementation(() => void order.push("updateTag"));
+    return run().then(() => order);
+  }
+
+  it("on a save: row written, tag busted, then the cards scanned and marked", async () => {
+    const order = await orderOf(
+      () => saveFrameProfileOverrideAction({ template: "saga", overrides: { title: { rect: { topPct: 5 } } } }),
+      { staleIds: ["a"] },
+    );
+    expect(order.slice(0, 3)).toEqual(["from:frame_profile_overrides", "updateTag", "from:cards"]);
+    expect(order.filter((o) => o === "updateTag")).toHaveLength(1);
+  });
+
+  it("on a reset (and an empty save): row deleted, tag busted, then the cards", async () => {
+    for (const run of [
+      () => resetFrameProfileOverrideAction({ template: "saga" }),
+      () => saveFrameProfileOverrideAction({ template: "saga", overrides: {} }),
+    ]) {
+      const order = await orderOf(run, { existingRow: true, staleIds: ["a"] });
+      expect(order.slice(0, 3)).toEqual(["from:frame_profile_overrides", "updateTag", "from:cards"]);
+    }
   });
 });
 
