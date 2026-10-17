@@ -41,14 +41,14 @@ minute). The first job of every run, **Classify the change**
 (`scripts/ci-classify-change.mjs`, rule in `scripts/lib/ci-docs-only.mjs`),
 puts the run in one tier and says which, and why, on the run summary:
 
-| Tier | When | Runs | Billed (measured 2026-10-13) |
+| Tier | When | Runs | Billed |
 | --- | --- | --- | --- |
-| **full** | a READY pull request; a merge to `main` that no green full PR run already tested; anything unclear | everything — the unit shards WITHOUT coverage on a PR, with coverage + the floors on `main` | ~55 min on a PR (estimate), ~72 on `main` |
-| **draft** | a DRAFT pull request that changes code | typecheck + lint + build, and the notes tests | ~7 min |
+| **full** | a READY pull request; a merge to `main` that no green full PR run already tested; anything unclear | everything — the unit shards WITHOUT coverage on a PR, with coverage + the floors on `main` | ~61 min on a PR (measured 2026-10-16), ~73–80 on `main` |
+| **draft** | a DRAFT pull request that changes code | typecheck + lint + build, and the notes tests | ~7 min (measured 2026-10-13) |
 | **notes** | every changed file is notes (PR or merge to `main`) | the notes tests (`npm run test:docs`) | ~3 min |
-| **verified** | a merge to `main` whose tree IS its PR head's tree (the branch held all of `main`) AND whose head has a GREEN FULL pull request run | the cache warm-up + Frames published | ~4 min |
-| **nightly** | the schedule (03:23 UTC), on `main` as it is | the six unit shards with coverage + the floors | ~33 min |
-| **idle** | the schedule, when a run on that commit already passed the floors | nothing | ~1 min |
+| **verified** | a merge to `main` whose tree IS its PR head's tree (the branch held all of `main`) AND whose head has a GREEN FULL pull request run | the cache warm-up + Frames published | ~5 min (estimate) |
+| **nightly** | the schedule (03:23 UTC), on `main` as it is | the six unit shards with coverage + the floors | ~35 min (estimate) |
+| **idle** | the schedule, when a run on that commit already passed the floors | nothing | ~2 min (estimate) |
 
 **Working with it: open the pull request as a draft while you iterate, mark
 it ready when you want the full checks.**
