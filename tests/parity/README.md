@@ -95,6 +95,13 @@ if it is ever needed.
 For a change of BOTH renderers that moved recorded numbers on purpose, or a
 new case (`tests/parity/cases.ts`). Two pushes, one red round:
 
+> **Cheaper, while the pull request is a DRAFT:** after step 1, run
+> `gh workflow run parity-record.yml --ref <branch>` (the same measurement
+> on CI's runner image, ~6 billed minutes; it judges nothing and ends
+> green), download its `parity-baseline` artifact as in step 3, commit the
+> linux files, and only then mark the pull request ready — its one full run
+> is green. The red round below costs a full run (~70 minutes).
+
 1. **Your platform.** `npm run test:parity -- --update`, read the diff
    (only the cases you meant), commit `tests/parity/baseline/<platform>/`.
 2. **Push.** *Preview parity* goes **red** — it has to: linux has no line
