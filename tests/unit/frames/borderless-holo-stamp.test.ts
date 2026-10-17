@@ -108,7 +108,7 @@ describe("the recipe is the profiles' slots", () => {
     for (const v of Object.values(box)) expect(v % 2).toBe(0);
   });
 
-  it("the four borderless entries draw it (the artifact's colourless key is the silver `a`) with M15's collector slot; the walkers wait for the owner", () => {
+  it("the four borderless entries draw it (the artifact's colourless key is the silver `a`) with M15's collector slot", () => {
     const facts = (colorKey: string, over: Record<string, unknown> = {}) =>
       ({ colorKey, colors: [colorKey === "c" ? "colorless" : "blue"], rarity: "rare", cost: "{2}{U}", cardType: "creature", supertype: null, ...over }) as Parameters<typeof resolveHoloStamp>[2];
     const pathOf = (template: string, colorKey: string, over: Record<string, unknown> = {}, style: Record<string, unknown> = {}) =>
@@ -126,10 +126,8 @@ describe("the recipe is the profiles' slots", () => {
     for (const t of ["m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlessstation"]) {
       expect(getFrameProfile(t).collector, t).toEqual(M15_COLLECTOR);
     }
-    for (const t of ["m15borderlesspw", "m15borderlesspwtall"]) {
-      expect(getFrameProfile(t).collector, t).toBeUndefined();
-      expect((getFrameProfile(t).overlays ?? []).some((o) => o.anatomy === "holoStamp"), t).toBe(false);
-    }
+    // (The borderless walkers draw their own since owner Round 70:
+    // tests/unit/frames/borderless-walker-holo-stamp.test.ts.)
   });
 });
 

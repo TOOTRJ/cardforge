@@ -64,12 +64,12 @@ export const ARCH_LIFT_PX = Object.freeze([
 export const ARCH_CENTER_X = 750;
 
 /** The lift at card column `x` (the pixel's centre, x + 0.5). */
-export function archLiftAt(x) {
+export function archLiftAt(x, table = ARCH_LIFT_PX) {
   const d = Math.abs(x + 0.5 - ARCH_CENTER_X) / ARCH_LIFT_STEP_PX;
   const i = Math.floor(d);
-  if (i >= ARCH_LIFT_PX.length - 1) return 0;
+  if (i >= table.length - 1) return 0;
   const t = d - i;
-  return ARCH_LIFT_PX[i] * (1 - t) + ARCH_LIFT_PX[i + 1] * t;
+  return table[i] * (1 - t) + table[i + 1] * t;
 }
 
 /** The first row of the masters' black bottom bar under the pinline (every
@@ -124,6 +124,70 @@ export const SHARED_TOLERANCE = 2;
  *  lift reaches down to (the black bar). */
 export const READ_ROWS = Object.freeze([BORDERLESS_NOTCH_BOX.y, BLACK_BAR_TOP]);
 
+/** The borderless spells', artifact's, land's and station's arch: the lift
+ *  table, the first black row under the pinline and the piece's box — what
+ *  every function below reads (their default). */
+/** @typedef {{ lift: readonly number[]; barTop: number; box: { x: number; y: number; width: number; height: number } }} ArchSpec */
+/** @type {ArchSpec} */
+export const BORDERLESS_ARCH = Object.freeze({ lift: ARCH_LIFT_PX, barTop: BLACK_BAR_TOP, box: BORDERLESS_NOTCH_BOX });
+
+// ---------------------------------------------------------------------------
+// The BORDERLESS PLANESWALKERS' arch (TODO 4.9d, owner Round 70: "Build them
+// next"). Measured 2026-10-16 on Scryfall PNGs (745 x 1040) resampled to
+// 1500 x 2100 with lanczos (measuring only; nothing committed): the dark
+// outline under the ability window — its UPPER edge, the light stripe's end,
+// read column by column — on thirteen stamped borderless walkers whose
+// straight outline reads the same row (BLB #341, BLC #75 / #97, DFT #376,
+// FDN #357 / #359, INR #322, LCI #307, OTJ #305 / #306, RVR #444, SLP #55,
+// M21 #281): straight at 1918.8 px (1918.7–1919.0; M21 #281 1921.2), lifted
+// 24.2–24.4 px at the centre, rising from x 666 to x 834 — the spells' span,
+// 8 px lower — symmetric about x 750 within 0–1.5 px. The outline and the
+// rim under it keep their thickness over the arch (the rim reads 12 px on the
+// straight bar and at the centre on BLC #75 / OTJ #306), so the arch is the
+// bar LIFTED, as on the spells. Seven more read the same lift where their art
+// or text let the edge be read (AFR #285, DMU #375, FDN #417 / #420 / #421,
+// M21 #280, UNF #276: 23.7–24.6 at the centre). The oval sits at M15's place
+// (M15_HOLO_STAMP_OVAL; the physical scans read ≈ 1931–1996, the 4.9d
+// measure) — the clean renders draw it higher.
+//
+// Our masters (m15borderlesspw, m15borderlesspwtall: Card Conjurer's) draw
+// the window's bottom as a 4-row black outline (1922–1925), an 11-row flat
+// rim in the colour (1926–1936) and the black bar from 1937, the window
+// above see-through — 3 px lower than the prints'; the lift moves all of it.
+// ---------------------------------------------------------------------------
+
+/** The walkers' printed arch: the per-column median lift over the thirteen
+ *  prints above (both sides averaged), smoothed over three samples (1-2-1),
+ *  at |x − 750| = 0, 2, 4, … (linear between; 0 from the last entry on). */
+export const WALKER_ARCH_LIFT_PX = Object.freeze([
+  24.3, 24.3, 24.2, 24.2, 24.2, 24.1, 24.1, 24.1, 23.9, 23.7, 23.5, 23.2, 22.8, 22.5, 22.2, 22.0, 21.7, 21.2, 20.7, 20.3,
+  19.9, 19.4, 18.8, 18.3, 17.7, 17.0, 16.3, 15.7, 14.9, 14.1, 13.3, 12.4, 11.5, 10.6, 9.6, 8.5, 7.4, 6.3, 5.1, 3.8,
+  2.4, 1.2, 0.3, 0,
+]);
+
+/** The walker masters' first black row under the rim. */
+export const WALKER_BLACK_BAR_TOP = 1937;
+
+/** The walker piece's box (whole, even px): every painted pixel is inside
+ *  it — the outline lifted to 1897.7 at the centre, down to the rim's last
+ *  row (1936). */
+export const WALKER_NOTCH_BOX = Object.freeze({ x: 660, y: 1896, width: 180, height: 42 });
+
+/** The walkers' arch spec (the functions' `arch` argument). */
+/** @type {ArchSpec} */
+export const WALKER_ARCH = Object.freeze({ lift: WALKER_ARCH_LIFT_PX, barTop: WALKER_BLACK_BAR_TOP, box: WALKER_NOTCH_BOX });
+
+/** The walker pieces: m15borderlesspwholostamp/<key> over
+ *  m15borderlesspw/<key>, the tall twin's master the same pixels where the
+ *  piece reads (checked by the build). */
+export const WALKER_STAMP_FOLDERS = {
+  m15borderlesspwholostamp: {
+    keys: Object.fromEntries(["w", "u", "b", "r", "g", "m", "c"].map((k) => [k, `m15borderlesspw/${k}`])),
+    sharedBy: Object.fromEntries(["w", "u", "b", "r", "g", "m", "c"].map((k) => [k, [`m15borderlesspwtall/${k}`]])),
+    arch: WALKER_ARCH,
+  },
+};
+
 /** How much more opaque than the box above it a row must be to count as the
  *  pinline (its bevel or rim). */
 const PINLINE_ALPHA_STEP = 10;
@@ -135,10 +199,10 @@ const PINLINE_ALPHA_STEP = 10;
  * it is the box — the piece never moves the box (a station box's paper keeps
  * its own texture), only the bevel and the rim.
  */
-export function pinlineTop(m, width, x) {
-  const boxAlpha = m[(BORDERLESS_NOTCH_BOX.y * width + x) * 4 + 3];
-  let y = BLACK_BAR_TOP - 1;
-  while (y > BORDERLESS_NOTCH_BOX.y && m[((y - 1) * width + x) * 4 + 3] > boxAlpha + PINLINE_ALPHA_STEP) y -= 1;
+export function pinlineTop(m, width, x, arch = BORDERLESS_ARCH) {
+  const boxAlpha = m[(arch.box.y * width + x) * 4 + 3];
+  let y = arch.barTop - 1;
+  while (y > arch.box.y && m[((y - 1) * width + x) * 4 + 3] > boxAlpha + PINLINE_ALPHA_STEP) y -= 1;
   return y;
 }
 
@@ -150,14 +214,14 @@ export function pinlineTop(m, width, x) {
  * box (the box above the arch is never moved). Rows from the black bar down
  * are the master's black.
  */
-export function liftedTarget(m, width, x, y, lift, top) {
+export function liftedTarget(m, width, x, y, lift, top, arch = BORDERLESS_ARCH) {
   const at = (yy) => {
     const o = (yy * width + x) * 4;
     const a = m[o + 3] / 255;
     return [(m[o] / 255) * a, (m[o + 1] / 255) * a, (m[o + 2] / 255) * a, a];
   };
   const own = at(y);
-  const row = (r) => (r >= top ? at(Math.min(r, BLACK_BAR_TOP)) : own);
+  const row = (r) => (r >= top ? at(Math.min(r, arch.barTop)) : own);
   const src = y + lift;
   const y0 = Math.floor(src);
   const t = src - y0;
@@ -172,8 +236,8 @@ export function liftedTarget(m, width, x, y, lift, top) {
  * lifted master (liftedTarget) over every art — exact wherever covering can
  * do it. Returns [r, g, b, a] in 8 bits.
  */
-export function liftedPixel(m, width, x, y, lift, top = pinlineTop(m, width, x)) {
-  const { under, want } = liftedTarget(m, width, x, y, lift, top);
+export function liftedPixel(m, width, x, y, lift, top = pinlineTop(m, width, x), arch = BORDERLESS_ARCH) {
+  const { under, want } = liftedTarget(m, width, x, y, lift, top, arch);
   if (under[3] >= 1 - 1e-9) {
     // An opaque pixel (the rim, the black): the lifted one is opaque too.
     const same = want.every((v, i) => Math.abs(v - under[i]) < 0.5 / 255);
@@ -218,16 +282,16 @@ export function bestCover(under, want) {
 /** The whole piece over a master: BORDERLESS_NOTCH_BOX-sized RGBA, and the
  *  count of painted pixels outside the box the recipe would want (always 0
  *  for the published table; the build refuses anything else). */
-export function buildBorderlessNotch(master, width) {
-  const box = BORDERLESS_NOTCH_BOX;
+export function buildBorderlessNotch(master, width, arch = BORDERLESS_ARCH) {
+  const box = arch.box;
   const out = Buffer.alloc(box.width * box.height * 4);
   let outside = 0;
   for (let x = box.x - 8; x < box.x + box.width + 8; x += 1) {
-    const lift = archLiftAt(x);
+    const lift = archLiftAt(x, arch.lift);
     if (lift === 0) continue;
-    const top = pinlineTop(master, width, x);
-    for (let y = box.y - 8; y < BLACK_BAR_TOP; y += 1) {
-      const px = liftedPixel(master, width, x, y, lift, top);
+    const top = pinlineTop(master, width, x, arch);
+    for (let y = box.y - 8; y < arch.barTop; y += 1) {
+      const px = liftedPixel(master, width, x, y, lift, top, arch);
       const inside = x >= box.x && x < box.x + box.width && y >= box.y && y < box.y + box.height;
       if (!inside) {
         if (px[3] > 0) outside += 1;
@@ -249,21 +313,21 @@ export function buildBorderlessNotch(master, width) {
  * own check (the bevel rows that cannot be made LESS opaque by covering are
  * its only loss).
  */
-export function liftError(master, width, piece, arts = [[0, 0, 0], [255, 255, 255], [128, 96, 64], [40, 120, 200]]) {
-  const box = BORDERLESS_NOTCH_BOX;
+export function liftError(master, width, piece, arts = [[0, 0, 0], [255, 255, 255], [128, 96, 64], [40, 120, 200]], arch = BORDERLESS_ARCH) {
+  const box = arch.box;
   let worst = 0;
   let at = null;
   const over = (px, art) => {
     const a = px[3] / 255;
     return [0, 1, 2].map((i) => px[i] * a + art[i] * (1 - a));
   };
-  const tops = Array.from({ length: box.width }, (_, i) => pinlineTop(master, width, box.x + i));
+  const tops = Array.from({ length: box.width }, (_, i) => pinlineTop(master, width, box.x + i, arch));
   for (let y = box.y; y < box.y + box.height; y += 1) {
     for (let x = box.x; x < box.x + box.width; x += 1) {
-      const lift = archLiftAt(x);
+      const lift = archLiftAt(x, arch.lift);
       const mo = (y * width + x) * 4;
       const po = ((y - box.y) * box.width + (x - box.x)) * 4;
-      const { want: w } = liftedTarget(master, width, x, y, lift, tops[x - box.x]);
+      const { want: w } = liftedTarget(master, width, x, y, lift, tops[x - box.x], arch);
       for (const art of arts) {
         const base = over([master[mo], master[mo + 1], master[mo + 2], master[mo + 3]], art);
         const p = [piece[po], piece[po + 1], piece[po + 2], piece[po + 3]];

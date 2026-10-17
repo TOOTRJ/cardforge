@@ -1,4 +1,4 @@
-import { BORDERLESS_STAMP_FOLDERS } from "@/scripts/lib/borderless-stamp.mjs";
+import { BORDERLESS_STAMP_FOLDERS, WALKER_STAMP_FOLDERS } from "@/scripts/lib/borderless-stamp.mjs";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -2064,7 +2064,8 @@ describe("provenance and hygiene", () => {
     // lift of the published borderless masters' pinline
     // (scripts/build-borderless-stamp.mjs; its own test:
     // tests/unit/frames/borderless-holo-stamp.test.ts).
-    for (const folder of Object.keys(BORDERLESS_STAMP_FOLDERS)) {
+    // (…and the borderless walkers', owner Round 70: the same script.)
+    for (const folder of [...Object.keys(BORDERLESS_STAMP_FOLDERS), ...Object.keys(WALKER_STAMP_FOLDERS)]) {
       expect(provenance[folder].source, folder).toBe("pipglyph");
       expect(provenance[folder].converter, folder).toBe("scripts/build-borderless-stamp.mjs");
       expect(provenance[folder].commit, folder).toBeUndefined();
@@ -2086,6 +2087,7 @@ describe("provenance and hygiene", () => {
         ...Object.keys(HOLO_STAMP_NOTCHES),
         ...Object.keys(DFC_BORDERLESS_TEMPLATES),
         ...Object.keys(BORDERLESS_STAMP_FOLDERS),
+        ...Object.keys(WALKER_STAMP_FOLDERS),
       ].sort(),
     );
     // …and the borderless double-faced bodies (TODO 5.7): PipGlyph's

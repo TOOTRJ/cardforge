@@ -780,6 +780,11 @@ export type ResolvedHoloStamp = {
   /** The keep-out as the arch's shape (the borderless frames, TODO 4.9d):
    *  the rules boxes read it in place of `keepOut` when set. */
   keepOutShape?: readonly Rect[];
+  /** Drawn ABOVE the ability rows (HoloStampArt.aboveRows: the borderless
+   *  walkers): the renderers leave `notch` out of the frame layer and the
+   *  finish masks (notInFrameLayer) and draw it, then the oval, after the
+   *  rules layer. */
+  aboveRows?: true;
 };
 
 /**
@@ -811,7 +816,19 @@ export function resolveHoloStamp(
     artRect: holoStampArtRect(art.oval),
     keepOut: art.keepOut,
     ...(art.keepOutShape ? { keepOutShape: art.keepOutShape } : {}),
+    ...(art.aboveRows ? { aboveRows: true as const } : {}),
   };
+}
+
+/**
+ * The overlays a face draws IN THE FRAME LAYER (and its finish masks): all
+ * of them but a stamp notch drawn above the ability rows
+ * (ResolvedHoloStamp.aboveRows — the borderless walkers, TODO 4.9d), which
+ * the renderers draw after the rules layer instead. Unchanged (the same
+ * array) on every other face.
+ */
+export function frameLayerOverlays<T extends ResolvedFrameOverlay>(overlays: readonly T[], stamp: ResolvedHoloStamp | null | undefined): readonly T[] {
+  return stamp?.aboveRows ? overlays.filter((o) => o.anatomy !== "holoStamp") : overlays;
 }
 
 /** The crown's switch is on and the card prints one (the ONE test the

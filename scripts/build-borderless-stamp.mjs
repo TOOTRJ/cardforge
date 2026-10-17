@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // ---------------------------------------------------------------------------
 // build-borderless-stamp.mjs — the holofoil stamp's notch on the borderless
-// frames (TODO 4.9d, owner Round 66): PipGlyph's OWN derivation from masters
+// frames (TODO 4.9d, owner Round 66; the borderless walkers' own arch since
+// owner Round 70, WALKER_ARCH): PipGlyph's OWN derivation from masters
 // already published in the frames bucket. No Card Conjurer piece and no scan
 // is read; the printed arch is DATA in scripts/lib/borderless-stamp.mjs.
 //
@@ -16,7 +17,7 @@
 //
 //   node scripts/build-borderless-stamp.mjs                 # → .frames-build
 //   node scripts/build-borderless-stamp.mjs --out <dir> [--masters <dir>] [--only <folder,…>] [--dry-run]
-//   npm run frames:publish -- --source .frames-build --only m15borderlessholostamp,m15borderlesslandholostamp,m15borderlessstationholostamp --write
+//   npm run frames:publish -- --source .frames-build --only m15borderlessholostamp,m15borderlesslandholostamp,m15borderlessstationholostamp,m15borderlesspwholostamp --write
 //
 // The sources are local copies of the PUBLISHED masters, each sha256-checked
 // against lib/frames/frame-manifest.json (--masters, FRAMES_BUILD_DIR,
@@ -32,13 +33,11 @@ import path from "node:path";
 import sharp from "sharp";
 import { WEBP } from "./lib/cc-frames.mjs";
 import {
-  ARCH_LIFT_PX,
   ARCH_LIFT_STEP_PX,
-  BLACK_BAR_TOP,
-  BORDERLESS_NOTCH_BOX,
+  BORDERLESS_ARCH,
   BORDERLESS_STAMP_FOLDERS,
-  READ_ROWS,
   SHARED_TOLERANCE,
+  WALKER_STAMP_FOLDERS,
   buildBorderlessNotch,
   liftError,
 } from "./lib/borderless-stamp.mjs";
@@ -59,10 +58,15 @@ const PIECE_WEBP = { ...WEBP, alphaQuality: 100 };
 /** The recipe's own loss (the bevel rows a cover can't make LESS opaque):
  *  refuse a piece that lands further than this from the lifted master. */
 const MAX_LIFT_ERROR = 5;
+/** Every folder this script builds: the spells', artifact's, land's and
+ *  station's (TODO 4.9d) and the borderless walkers' (their own arch, owner
+ *  Round 70). */
+const FOLDERS = { ...BORDERLESS_STAMP_FOLDERS, ...WALKER_STAMP_FOLDERS };
+const archOf = (def) => def.arch ?? BORDERLESS_ARCH;
 
 if (only) {
-  const unknown = only.filter((f) => !BORDERLESS_STAMP_FOLDERS[f]);
-  if (unknown.length) throw new Error(`unknown folder(s) ${unknown.join(", ")}: known ${Object.keys(BORDERLESS_STAMP_FOLDERS).join(", ")}`);
+  const unknown = only.filter((f) => !FOLDERS[f]);
+  if (unknown.length) throw new Error(`unknown folder(s) ${unknown.join(", ")}: known ${Object.keys(FOLDERS).join(", ")}`);
 }
 
 const sourceDirs = [
@@ -90,11 +94,11 @@ async function raw(file, width = W, height = H) {
 }
 
 /** The worst channel difference between two masters in the region a piece
- *  reads (its columns, READ_ROWS). */
-function regionDiff(a, b) {
+ *  reads (its columns, from its box's top to the black bar's first row). */
+function regionDiff(a, b, arch) {
   let worst = 0;
-  const box = BORDERLESS_NOTCH_BOX;
-  for (let y = READ_ROWS[0]; y <= READ_ROWS[1]; y += 1) {
+  const box = arch.box;
+  for (let y = box.y; y <= arch.barTop; y += 1) {
     for (let x = box.x; x < box.x + box.width; x += 1) {
       const o = (y * W + x) * 4;
       for (let i = 0; i < 4; i += 1) worst = Math.max(worst, Math.abs(a[o + i] - b[o + i]));
@@ -103,8 +107,8 @@ function regionDiff(a, b) {
   return worst;
 }
 
-async function write(folder, key, piece) {
-  const box = BORDERLESS_NOTCH_BOX;
+async function write(folder, key, piece, arch) {
+  const box = arch.box;
   const png = path.join(outDir, folder, `${key}.png`);
   fs.mkdirSync(path.dirname(png), { recursive: true });
   const image = sharp(piece, { raw: { width: box.width, height: box.height, channels: 4 } });
@@ -119,8 +123,10 @@ async function write(folder, key, piece) {
 }
 
 const provenance = fs.existsSync(PROVENANCE) ? JSON.parse(fs.readFileSync(PROVENANCE, "utf8")) : {};
-for (const [folder, def] of Object.entries(BORDERLESS_STAMP_FOLDERS)) {
+for (const [folder, def] of Object.entries(FOLDERS)) {
   if (only && !only.includes(folder)) continue;
+  const arch = archOf(def);
+  const walker = arch !== BORDERLESS_ARCH;
   const colors = {};
   const sourceFiles = new Set();
   for (const [key, rel] of Object.entries(def.keys)) {
@@ -131,19 +137,19 @@ for (const [folder, def] of Object.entries(BORDERLESS_STAMP_FOLDERS)) {
     for (const other of def.sharedBy[key] ?? []) {
       const o = published(other);
       sourceFiles.add(`${other}.png`);
-      const diff = regionDiff(master, await raw(o.file));
+      const diff = regionDiff(master, await raw(o.file), arch);
       if (diff > SHARED_TOLERANCE) throw new Error(`${folder}/${key}: ${other} differs from ${rel} by ${diff} levels where the piece reads — it needs its own key`);
       shared.push(`${other}.png (sha256 ${o.sha.slice(0, 12)}; within ${diff} level${diff === 1 ? "" : "s"})`);
     }
-    const { piece, outside } = buildBorderlessNotch(master, W);
-    if (outside > 0) throw new Error(`${folder}/${key}: ${outside} painted px fall outside the box ${JSON.stringify(BORDERLESS_NOTCH_BOX)}`);
-    const { worst, at } = liftError(master, W, piece);
+    const { piece, outside } = buildBorderlessNotch(master, W, arch);
+    if (outside > 0) throw new Error(`${folder}/${key}: ${outside} painted px fall outside the box ${JSON.stringify(arch.box)}`);
+    const { worst, at } = liftError(master, W, piece, undefined, arch);
     if (worst > MAX_LIFT_ERROR) throw new Error(`${folder}/${key}: the piece over ${rel} lands ${worst.toFixed(1)} levels from the lifted master at ${JSON.stringify(at)}`);
     // The feet: no painted pixel in the box's outermost columns (the arch
     // stands on the master's own bar there).
-    for (const x of [0, BORDERLESS_NOTCH_BOX.width - 1]) {
-      for (let y = 0; y < BORDERLESS_NOTCH_BOX.height; y += 1) {
-        if (piece[(y * BORDERLESS_NOTCH_BOX.width + x) * 4 + 3] !== 0) throw new Error(`${folder}/${key}: column ${x} of the piece is painted — the arch must stand on the bar`);
+    for (const x of [0, arch.box.width - 1]) {
+      for (let y = 0; y < arch.box.height; y += 1) {
+        if (piece[(y * arch.box.width + x) * 4 + 3] !== 0) throw new Error(`${folder}/${key}: column ${x} of the piece is painted — the arch must stand on the bar`);
       }
     }
     colors[key] = [
@@ -151,7 +157,7 @@ for (const [folder, def] of Object.entries(BORDERLESS_STAMP_FOLDERS)) {
       ...shared.map((s) => `drawn over ${s} too`),
     ];
     if (!dryRun) {
-      const png = await write(folder, key, piece);
+      const png = await write(folder, key, piece, arch);
       console.log(`wrote ${path.relative(process.cwd(), png)} (+ .webp, alpha equal) from ${rel}; worst ${worst.toFixed(2)}`);
     } else {
       console.log(`${folder}/${key} from ${rel}: worst ${worst.toFixed(2)} (dry run)`);
@@ -160,15 +166,21 @@ for (const [folder, def] of Object.entries(BORDERLESS_STAMP_FOLDERS)) {
   provenance[folder] = {
     source: "pipglyph",
     converter: "scripts/build-borderless-stamp.mjs",
-    derivedFrom: `the published borderless masters named per key below (Card Conjurer imports: see "m15borderless", "m15borderlessartifact", "m15borderlessland", and PipGlyph's "m15borderlessstation")`,
-    output: `${BORDERLESS_NOTCH_BOX.width}x${BORDERLESS_NOTCH_BOX.height} at ${BORDERLESS_NOTCH_BOX.x},${BORDERLESS_NOTCH_BOX.y} of the 1500x2100 card (1:1 at HD), webp q${WEBP.quality} with the PNG's alpha exactly`,
+    derivedFrom: walker
+      ? `the published borderless planeswalker masters named per key below (Card Conjurer imports: see "m15borderlesspw", "m15borderlesspwtall")`
+      : `the published borderless masters named per key below (Card Conjurer imports: see "m15borderless", "m15borderlessartifact", "m15borderlessland", and PipGlyph's "m15borderlessstation")`,
+    output: `${arch.box.width}x${arch.box.height} at ${arch.box.x},${arch.box.y} of the 1500x2100 card (1:1 at HD), webp q${WEBP.quality} with the PNG's alpha exactly`,
     recipe: {
-      lift: `the master's own column, read ${ARCH_LIFT_STEP_PX}-px samples of ARCH_LIFT_PX rows further down (|x - 750| = 0, 2, 4, …; linear between): ${ARCH_LIFT_PX.join(" ")}`,
-      layer: "per pixel, the layer that over the master gives the lifted master (premultiplied): alpha (want − under) / (1 − under), clear where the master already shows it; rows from the black bar (" + BLACK_BAR_TOP + ") down are the master's black",
+      lift: `the master's own column, read ${ARCH_LIFT_STEP_PX}-px samples of ${walker ? "WALKER_ARCH_LIFT_PX" : "ARCH_LIFT_PX"} rows further down (|x - 750| = 0, 2, 4, …; linear between): ${arch.lift.join(" ")}`,
+      layer: "per pixel, the layer that over the master gives the lifted master (premultiplied): alpha (want − under) / (1 − under), clear where the master already shows it; rows from the black bar (" + arch.barTop + ") down are the master's black",
     },
     colors,
     sourceFiles: [...sourceFiles].sort(),
-    notes: [
+    notes: walker ? [
+      "PipGlyph's own derivation (TODO 4.9d, owner Round 70, 2026-10-16: the borderless walkers' follow-up): the holofoil stamp's notch on the borderless planeswalker frames — the ability window's bottom outline and rim arched over the oval as every stamped borderless walker print draws it. Card Conjurer's borderless planeswalker pack has no stamp piece; no CC piece and no scan is read by the build — every painted pixel is the published master's own outline, rim and black bar, moved up.",
+      "The arch is scripts/lib/borderless-stamp.mjs WALKER_ARCH_LIFT_PX: thirteen stamped borderless walker printings measured 2026-10-16 (the outline's upper edge lifted 24.3 px at the centre against the straight 1918.8, rising from x 666 to x 834).",
+      "The piece is drawn ABOVE the ability rows (HoloStampArt.aboveRows): the rows' translucent stripes end where the print's window ends, at the arch. The oval is drawn by both renderers over it (our own art, lib/cards/holo-stamp-art.ts) at M15_HOLO_STAMP_OVAL. Nothing of a hologram is in a piece.",
+    ] : [
       "PipGlyph's own derivation (TODO 4.9d, owner Round 66, 2026-10-14): the holofoil stamp's notch on the borderless frames — the text box's bottom pinline arched over the oval as every stamped borderless print draws it. Card Conjurer's borderless pack has no stamp piece; no CC piece and no scan is read by the build — every painted pixel is the published master's own bar, moved up.",
       "The arch is scripts/lib/borderless-stamp.mjs ARCH_LIFT_PX: fourteen stamped borderless printings measured 2026-10-15 (the rim's lower edge 1916.0 px at the centre against the straight bar's 1948.6, rising from x 666 to x 834).",
       "The oval is drawn by both renderers over the black (our own art, lib/cards/holo-stamp-art.ts) at M15_HOLO_STAMP_OVAL: the physical prints put it where the bordered frame's sits. Nothing of a hologram is in a piece.",

@@ -138,6 +138,7 @@ import {
 } from "@/lib/render/card-frames";
 import {
   plateKeyFor,
+  frameLayerOverlays,
   resolveFrameOverlays,
   resolveHoloStamp,
   resolveTwoColor,
@@ -175,6 +176,7 @@ import {
 } from "@/lib/cards/foil-finish";
 import {
   layoutProfileLoyaltyRows,
+  rowsStampKeepOut,
   loyaltyRowsDrawing,
   type LoyaltyRowsLayout,
 } from "@/lib/cards/loyalty-rows";
@@ -485,7 +487,7 @@ function CardImage({
   // band) — the preview's twins (lib/cards/anatomy.ts). Nothing until a
   // profile declares pair masters / an overlay and the card's switch is on.
   const plateKey = plateKeyFor(colorKey, resolveTwoColor(layout, card.frameStyle, anatomyFactsOf(card)));
-  const overlays = resolveFrameOverlays(layout, card.frameStyle, { ...anatomyFactsOf(card), colorKey }).map(
+  const allOverlays = resolveFrameOverlays(layout, card.frameStyle, { ...anatomyFactsOf(card), colorKey }).map(
     (overlay) => ({ ...overlay, href: getFrameOverlayDataUrl(overlay.path) }),
   );
   // The white border (TODO 4.30): one inline SVG over the master's black
@@ -501,6 +503,11 @@ function CardImage({
   // mask) at the same rect the preview stretches it over, and its arch is a
   // keep-out for the rules box while it is drawn — the preview's twins.
   const holoStamp = resolveHoloStamp(layout, card.frameStyle, { ...anatomyFactsOf(card), colorKey });
+  // The frame layer's overlays: all of them but a notch drawn ABOVE the
+  // ability rows (the borderless walkers, TODO 4.9d), which is drawn after
+  // the rules layer instead (aboveRowsNotch) — the preview's twin.
+  const overlays = frameLayerOverlays(allOverlays, holoStamp);
+  const aboveRowsNotch = holoStamp?.aboveRows ? (allOverlays.find((o) => o.anatomy === "holoStamp") ?? null) : null;
   // A two-colour Dragon Wing card draws BOTH colours' frames split down the
   // seam (FrameProfile.twoColorSplit); the plates keep colorKey ("m").
   const frameSplit = frameSplitFor(
@@ -662,7 +669,9 @@ function CardImage({
   // Their text size and content-sized row heights, the last row's text short
   // of the loyalty shield when it would reach it — the preview's twin
   // (lib/cards/loyalty-rows.ts).
-  const loyaltyLayout = layoutProfileLoyaltyRows(layout, loyaltyAbilities, aspect);
+  // (The borderless walkers' stamp arch, TODO 4.9d: the last row's text
+  // keeps above it — rowsStampKeepOut.)
+  const loyaltyLayout = layoutProfileLoyaltyRows(layout, loyaltyAbilities, aspect, rowsStampKeepOut(holoStamp));
   // Saga chapter rail content — same structured-first resolution — and the
   // printed rail laid out for it (lib/cards/saga-rail.ts sagaRail: the
   // reminder block, the content-sized rows, the badge stacks), then its px
@@ -1060,7 +1069,7 @@ function CardImage({
           — a real stamp is foil of its own, never tinted by the card's —
           stretched over the art rect (the oval plus its black margin, which
           covers the notch piece's cut). The preview's HoloStampOval twin. */}
-      {holoStamp ? (
+      {holoStamp && !holoStamp.aboveRows ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={holoStampArtOf(holoStamp.shape, holoStamp.tone).dataUri}
@@ -1339,6 +1348,44 @@ function CardImage({
                 symbols,
               })
             : null}
+
+      {/* The borderless walkers' stamp (TODO 4.9d, HoloStampArt.aboveRows):
+          the notch ABOVE the ability rows and the rules backdrop — their
+          translucent stripes cover the see-through window, and print ends
+          the window at the arch — with its own foil sheen (as a plate's:
+          the full-card sheen is under it), then the oval over it. Never
+          wrapped in a Fragment. The preview's twin. */}
+      {aboveRowsNotch?.href ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={aboveRowsNotch.href}
+          alt=""
+          width={Math.round((aboveRowsNotch.rect.widthPct / 100) * width)}
+          height={Math.round((aboveRowsNotch.rect.heightPct / 100) * height)}
+          style={{ ...slotBox(aboveRowsNotch.rect), objectFit: "fill" }}
+        />
+      ) : null}
+      {aboveRowsNotch?.href && plateFoil ? (
+        <FoilSheen
+          id="foil-stamp-notch"
+          frameHref={aboveRowsNotch.href}
+          region={aboveRowsNotch.rect}
+          landscape={plateFoil.landscape}
+          width={Math.round((aboveRowsNotch.rect.widthPct / 100) * width)}
+          height={Math.round((aboveRowsNotch.rect.heightPct / 100) * height)}
+          style={slotBox(aboveRowsNotch.rect)}
+        />
+      ) : null}
+      {holoStamp?.aboveRows ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={holoStampArtOf(holoStamp.shape, holoStamp.tone).dataUri}
+          alt=""
+          width={Math.round((holoStamp.artRect.widthPct / 100) * width)}
+          height={Math.round((holoStamp.artRect.heightPct / 100) * height)}
+          style={{ ...slotBox(holoStamp.artRect), objectFit: "fill" }}
+        />
+      ) : null}
 
       {/* The station frame's text (TODO 4.27a): every band's lines, set by
           the ONE rules layout in its band — only drawn here. */}
@@ -2786,7 +2833,9 @@ function LoyaltyRowsBake({
             alignItems: "center",
             background: stripe(i),
             paddingTop: a.padY,
-            paddingBottom: a.padY,
+            // The last row's text held up over the stamp's arch (TODO 4.9d,
+            // lastRowLift; 0 on every other card).
+            paddingBottom: i === last ? a.padY + (draw.lastRowLift ?? 0) : a.padY,
             paddingLeft: a.padX,
           }}
         >

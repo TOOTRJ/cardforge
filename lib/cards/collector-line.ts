@@ -75,12 +75,15 @@ export const COLLECTOR_TEMPLATES = [
   "extendedartstation",
   // The borderless frames (TODO 4.9d, owner Round 66): the prints set both
   // lines in the black bottom bar exactly where the bordered frame does.
-  // (The borderless planeswalkers wait for the owner: walker follow-ups are
-  // asked first.)
   "m15borderless",
   "m15borderlessartifact",
   "m15borderlessland",
   "m15borderlessstation",
+  // …and the borderless planeswalkers (owner Round 70, 2026-10-16): the same
+  // two rows, the © line on line 2 beside the loyalty shield (IKO #277, AFR
+  // #285, FDN #417, UNF #276, SLP #55, MH3 #444).
+  "m15borderlesspw",
+  "m15borderlesspwtall",
   "m15ub",
   "m15ubartifact",
   "m15ubland",

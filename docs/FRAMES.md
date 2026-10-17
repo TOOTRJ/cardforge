@@ -5306,9 +5306,8 @@ TODO 4.9d, owner Round 66 (2026-10-14): every borderless print carries the
 holofoil stamp (a rare or mythic) and the collector line, and our borderless
 frames had neither — one follow-up for the family. `m15borderless`,
 `m15borderlessartifact`, `m15borderlessland` and `m15borderlessstation`
-declare both since; the borderless planeswalkers (`m15borderlesspw`,
-`m15borderlesspwtall`) do NOT yet — walker follow-ups are asked first (they
-were measured, below). An ADDITION, exactly as 4.9b / 4.9c: the same
+declare both since, and the borderless planeswalkers (`m15borderlesspw`,
+`m15borderlesspwtall`) since owner Round 70 (below). An ADDITION, exactly as 4.9b / 4.9c: the same
 switches (`frame_style.stamp` / `collector` / `star`), new cards on by
 default, a stored borderless card keeps its look (it was saved with neither
 key — `normalizeAnatomy` dropped them on a template without the slot — so
@@ -5400,20 +5399,65 @@ sweep, no badge, no verification tick.
   stamp rather than an oval it never printed. The borderless triangle's
   notch is a follow-up (TODO 4.9d). Visual case
   `m15borderless/u/creature-short@stamp-triangle` pins the plain look.
-- **The borderless walkers come NEXT** (owner Round 70: a separate PR after
-  this one), measured but not built here
-  (IKO #277, AFR #285, FDN #417, UNF #276, SLP #55, MH3 #444): the line at
-  the same two rows from x 99, the © line on line 2 beside the loyalty
-  shield; the ability window's bottom rim ends at ≈ 1917 px and arches
-  ≈ 24 px over the oval (to ≈ 1893 at the centre, SLP #55), and the oval
-  sits at ≈ 1931–1996 on the physical scans — M15's place, not the 7 px
-  higher one `M15PW_HOLO_STAMP_OVAL` takes from Card Conjurer's walker
-  piece. The alignment score keeps its arch exclusion (`HOLO_STAMP_ARCH`,
-  `lib/frames/align.ts`) on the walkers alone: the three borderless frames
-  that draw the arch now score it (the comparison card draws the stamp
-  wherever the reference printing carries one), as TODO 4.9d planned. No
-  stored tick changes; a re-score of a borderless combo reads the box's
-  bottom edge too.
+- **The borderless walkers** (`m15borderlesspw`, `m15borderlesspwtall`;
+  owner Round 70, 2026-10-16: "Build them next") — built in their own PR,
+  the same addition (opt-in per card, no bump, sweep or badge):
+  - *Measured on print* (2026-10-16, Scryfall PNGs at 1500 × 2100; numbers
+    in `scripts/lib/borderless-stamp.mjs` `WALKER_ARCH_LIFT_PX`): the dark
+    outline under the ability window — its upper edge, where the light
+    stripe ends — read column by column on thirteen stamped borderless
+    walkers whose straight outline reads the same row (BLB #341, BLC #75 /
+    #97, DFT #376, FDN #357 / #359, INR #322, LCI #307, OTJ #305 / #306, RVR
+    #444, SLP #55, M21 #281): straight at 1918.8 px, lifted 24.2–24.4 px at
+    the centre, rising from x 666 to x 834 (the spells' span, 8 px lower),
+    symmetric within 0–1.5 px; the outline and the rim keep their thickness
+    over the arch (BLC #75, OTJ #306: the rim 12 px on the bar and at the
+    centre). Seven more (AFR #285, DMU #375, FDN #417 / #420 / #421, M21
+    #280, UNF #276) read 23.7–24.6 at the centre where the edge could be
+    read. The collector line sits on the same two rows from x 99, the ©
+    line on line 2 beside the loyalty shield (IKO #277, AFR #285, FDN #417,
+    UNF #276, SLP #55, MH3 #444), so both frames take `M15PW_COLLECTOR`
+    (`markLine: 2`: the mark stays off the shield the master draws). The
+    oval is M15's (`M15_HOLO_STAMP_OVAL`): the physical scans put it at
+    ≈ 1931–1996, the bordered frame's place — not the 7 px higher one
+    `M15PW_HOLO_STAMP_OVAL` takes from Card Conjurer's walker piece.
+  - *The notch* (`m15borderlesspwholostamp/<w u b r g m c>`, 180 × 42 px at
+    660, 1896; `WALKER_ARCH`): the same lift recipe over the walker masters
+    — their 4-row black outline (1922–1925), the colour's flat 11-row rim
+    (1926–1936) and the black bar under them moved up, the see-through
+    window above left clear. One piece per key; the tall twin's master is
+    the same pixels there (the build checks it, `sharedBy`). 7 pieces, 14
+    objects with their WebPs (alpha equal), in the DEV bucket until the
+    owner's `frames:promote`. No Card Conjurer piece, no scan.
+  - *Drawn above the rows* (`HoloStampArt.aboveRows`): the walker's window
+    is see-through and the rows' translucent stripes (and the plain box's
+    backdrop) are drawn over it in the text layer, so a notch in the frame
+    layer would show through a stripe as a grey ghost — print ends the
+    window AT the arch. Both renderers leave the notch out of the frame
+    layer and the finish masks (`frameLayerOverlays`) and draw it after the
+    rules layer, with its own foil sheen as a plate gets one, then the
+    oval. (m15pw's stamp, 4.9c, is unchanged: its stripe still washes over
+    its arch — an owner question.) An etched walker's notch takes no
+    etched hatch, as the plates take none.
+  - *The keep-out follows the arch* (`borderlessWalkerArchKeepOut`, 4 px
+    columns from 2 px over the lifted outline, 1895.7 px at the centre,
+    past the box's bottom) and holds against BOTH the plain box (glyph by
+    glyph, `DrawnStats.stamp`) and the ability ROWS: `layoutLoyaltyRows`
+    takes the arch (`stamp`, from `rowsStampKeepOut`) and, where a layout
+    that holds its text and clears the shield fails only on the arch, holds
+    the LAST row's text up over it at the same size (its bottom padding
+    grows by `lastRowLiftHd`, 24 px — even, so the 750 px bake's half is
+    whole; the badge stays centred on its text) before any step down. A
+    walker whose text clears the arch lays out exactly as without the stamp
+    (`tests/unit/frames/borderless-walker-holo-stamp.test.ts`: a 1–70-word
+    sweep of the last ability holds 8 / 10 up and steps 10 / 9 down on the
+    regular / tall frame, never a glyph in the arch at either target, never
+    a new clip). No badge comes near it: the rail ends ≈ 400 px left of the
+    arch, the shield starts ≈ 350 px right of it. The creator's
+    badge-crowding note still reads the rows without the stamp.
+  - A triangle draws nothing here (`ownShapeOnly`), as on the other four.
+  - The alignment score keeps its arch exclusion (`HOLO_STAMP_ARCH`) on the
+    walkers: lifting it is a re-score question for the owner.
 
 ### The text alignment (4.21e)
 

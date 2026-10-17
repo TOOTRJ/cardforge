@@ -61,6 +61,7 @@ import {
   RULES_TARGET_SCALE,
   blockHeightPx,
   layoutRulesAt,
+  lineHitsKeepOut,
   linePositions,
   rectPx,
   rulesLadderPx,
@@ -164,6 +165,11 @@ export type LoyaltyRowsLayout = {
   /** Nothing fits even at the floor: the floor's rows, scaled into the box
    *  alike (a row may clip its text). */
   clipped: boolean;
+  /** How far the LAST row's text is held up, HD px (even), so its lines keep
+   *  out of the holofoil stamp's arch (the borderless walkers, TODO 4.9d):
+   *  the row's bottom padding grows by it. Absent (0) on every card whose
+   *  last ability already clears the arch, and on every frame without one. */
+  lastRowLiftHd?: number;
 };
 
 export type LoyaltyRowsInput = {
@@ -180,6 +186,11 @@ export type LoyaltyRowsInput = {
   /** The starting-loyalty shield's box (loyaltyShieldRect) — the last row's
    *  text wraps before it. */
   shield?: Rect | null;
+  /** The holofoil stamp's arch while it is drawn
+   *  (ResolvedHoloStamp.keepOutShape — the borderless walkers, TODO 4.9d):
+   *  no line's ink may enter it. Absent / null: the rows are exactly as
+   *  before. */
+  stamp?: readonly Rect[] | null;
   /** The frame's symbol style (the inline pip's shadow); "modern" unset. */
   symbolStyle?: SymbolStyle;
 };
@@ -256,6 +267,8 @@ export type ContentRowsAt = {
   sizePx: number;
   /** The last row's extra right padding (a walker's shield inset), HD px. */
   insetHd: number;
+  /** The last row's extra bottom padding (the stamp's arch), HD px. */
+  liftHd: number;
   text: RulesLayout[];
   /** Each row's natural height at each target, whole px. */
   needs: Record<RulesTarget, number[]>;
@@ -281,12 +294,13 @@ export type ContentRowsAt = {
 export function contentRowsAt(
   { texts, rect, baseSizePct, lineHeight = RULES_TEXT.lineHeight, aspect, anatomy, symbolStyle }: ContentRowsInput,
   sizePx: number,
-  opts: { lastRowInsetHd?: number; scaleIntoBox?: boolean; text?: readonly RulesLayout[] } = {},
+  opts: { lastRowInsetHd?: number; lastRowLiftHd?: number; scaleIntoBox?: boolean; text?: readonly RulesLayout[] } = {},
 ): ContentRowsAt {
   const orientation = orientationFromAspect(aspect);
   const count = texts.length;
   const last = count - 1;
   const lastInset = opts.lastRowInsetHd ?? 0;
+  const lastLift = opts.lastRowLiftHd ?? 0;
   const box = { hd: rectPx(rect, orientation, aspect, "hd"), default: rectPx(rect, orientation, aspect, "default") };
   const pad = anatomy.padPx;
   const text =
@@ -300,7 +314,12 @@ export function contentRowsAt(
           aspect,
           sizePct: baseSizePct,
           lineHeight,
-          padPx: { left: pad.left, right: pad.right + (i === last ? lastInset : 0), top: pad.top, bottom: pad.bottom },
+          padPx: {
+            left: pad.left,
+            right: pad.right + (i === last ? lastInset : 0),
+            top: pad.top,
+            bottom: pad.bottom + (i === last ? lastLift : 0),
+          },
           vAlign: "center",
           ...(symbolStyle ? { symbolStyle } : {}),
         },
@@ -313,7 +332,8 @@ export function contentRowsAt(
   for (const t of RULES_TARGETS) {
     const scale = RULES_TARGET_SCALE[t];
     const padV = Math.round(pad.top * scale) + Math.round(pad.bottom * scale);
-    needs[t] = text.map((l, i) => Math.max(blockHeightPx(l, t) + padV, anatomy.minHeightPx(i, t)));
+    const liftV = Math.round(lastLift * scale);
+    needs[t] = text.map((l, i) => Math.max(blockHeightPx(l, t) + padV + (i === last ? liftV : 0), anatomy.minHeightPx(i, t)));
   }
   // A row's share: the larger of its two targets' needs, then an equal
   // share of what is left. Past the floor, every row scales alike.
@@ -329,7 +349,7 @@ export function contentRowsAt(
       const edges = loyaltyRowEdgesPx(rowFractions, box[t].height);
       return needs[t].every((need, i) => edges[i + 1] - edges[i] >= need);
     });
-  return { sizePx, insetHd: lastInset, text, needs, rowFractions, fits: holds && !overwide };
+  return { sizePx, insetHd: lastInset, liftHd: lastLift, text, needs, rowFractions, fits: holds && !overwide };
 }
 
 /** The walker rows' anatomy (LOYALTY_ROW at LOYALTY_ROW_SIZE_PX): the badge
@@ -363,6 +383,7 @@ export function layoutLoyaltyRows({
   lineHeight = RULES_TEXT.lineHeight,
   aspect,
   shield = null,
+  stamp = null,
   symbolStyle,
 }: LoyaltyRowsInput): LoyaltyRowsLayout {
   const orientation = orientationFromAspect(aspect);
@@ -386,8 +407,34 @@ export function layoutLoyaltyRows({
     anatomy: loyaltyRowAnatomy(),
     ...(symbolStyle ? { symbolStyle } : {}),
   };
-  const rowsAt = (sizePx: number, lastInset: number, scaleIntoBox: boolean): RowsAt =>
-    contentRowsAt(rows, sizePx, { lastRowInsetHd: lastInset, scaleIntoBox });
+  const rowsAt = (sizePx: number, lastInset: number, scaleIntoBox: boolean, lastLift = 0): RowsAt =>
+    contentRowsAt(rows, sizePx, { lastRowInsetHd: lastInset, scaleIntoBox, ...(lastLift > 0 ? { lastRowLiftHd: lastLift } : {}) });
+  // The stamp's arch (TODO 4.9d): how far the last row's text is held up
+  // when its lines would enter it — the arch's height over the box's bottom
+  // (the HD px from its highest column's top down to the box's bottom),
+  // rounded UP to even px so the 750 bake's half is whole.
+  const archs = stamp && stamp.length > 0 ? stamp : null;
+  const liftHd = (() => {
+    if (!archs) return 0;
+    const box = rectPx(rect, orientation, aspect, "hd");
+    const top = Math.min(...archs.map((k) => rectPx(k, orientation, aspect, "hd").top));
+    const lift = Math.ceil(box.top + box.height - top);
+    return lift <= 0 ? 0 : lift + (lift % 2);
+  })();
+  /** Whether any line of any row, where its row puts it at either target,
+   *  puts ink in the stamp's arch — glyph by glyph, as every badge. */
+  const entersArch = (rows: RowsAt): boolean => {
+    if (!archs) return false;
+    return RULES_TARGETS.some((t) => {
+      const ks = archs.map((k) => rectPx(k, orientation, aspect, t));
+      return rows.text.some((layout, i) => {
+        const placed = loyaltyRowLines(rows, i, t);
+        return placed.lines.some((l) =>
+          ks.some((k) => lineHitsKeepOut(l, layout.blocks[l.block].lines[l.line], placed.metrics, k)),
+        );
+      });
+    });
+  };
 
   /** Whether any line of any row, where its row puts it at either target,
    *  has ink within the row's padding of the shield's box. */
@@ -411,21 +458,33 @@ export function layoutLoyaltyRows({
     lastRowInsetPct: rows.insetHd > 0 ? insetPct : 0,
     text: rows.text,
     clipped,
+    ...(rows.liftHd > 0 ? { lastRowLiftHd: rows.liftHd } : {}),
   });
 
+  // At each size: the rows as they are; and where a layout that holds its
+  // text and clears the shield fails ONLY on the stamp's arch (the
+  // borderless walkers), the same layout with the last row's text held up
+  // over it — never a smaller size while holding it up fits, and never a
+  // change to a walker whose text clears the arch.
   for (const sizePx of ladder) {
-    const full = rowsAt(sizePx, 0, false);
-    if (full.fits && !reachesShield(full)) return result(full, false);
-    if (insetHd > 0) {
-      const narrow = rowsAt(sizePx, insetHd, false);
-      if (narrow.fits && !reachesShield(narrow)) return result(narrow, false);
+    const candidates = insetHd > 0 ? [0, insetHd] : [0];
+    const archOnly: number[] = [];
+    for (const inset of candidates) {
+      const at = rowsAt(sizePx, inset, false);
+      if (!at.fits || reachesShield(at)) continue;
+      if (!entersArch(at)) return result(at, false);
+      archOnly.push(inset);
+    }
+    for (const inset of liftHd > 0 ? archOnly : []) {
+      const held = rowsAt(sizePx, inset, false, liftHd);
+      if (held.fits && !reachesShield(held) && !entersArch(held)) return result(held, false);
     }
   }
   // Nothing fits even at the floor: the floor's rows, scaled into the box.
   const floor = ladder[ladder.length - 1];
-  const full = rowsAt(floor, 0, true);
+  const full = rowsAt(floor, 0, true, liftHd);
   if (insetHd === 0 || !reachesShield(full)) return result(full, true);
-  return result(rowsAt(floor, insetHd, true), true);
+  return result(rowsAt(floor, insetHd, true, liftHd), true);
 }
 
 /**
@@ -438,6 +497,9 @@ export function layoutProfileLoyaltyRows(
   layout: Pick<FrameProfile, "rules" | "loyalty" | "loyaltyRows" | "symbolStyle">,
   abilities: readonly LoyaltyAbility[],
   aspect: number,
+  /** The holofoil stamp's arch while drawn, where the rows keep out of it
+   *  (rowsStampKeepOut: the borderless walkers, TODO 4.9d). */
+  stamp: readonly Rect[] | null = null,
 ): LoyaltyRowsLayout {
   return layoutLoyaltyRows({
     abilities,
@@ -446,8 +508,24 @@ export function layoutProfileLoyaltyRows(
     lineHeight: layout.rules.lineHeight ?? RULES_TEXT.lineHeight,
     aspect,
     shield: loyaltyShieldRect(layout),
+    ...(stamp ? { stamp } : {}),
     ...(layout.symbolStyle ? { symbolStyle: layout.symbolStyle } : {}),
   });
+}
+
+/**
+ * The stamp keep-out the ability ROWS read (TODO 4.9d): the arch's shape
+ * on a frame whose notch is drawn above the rows (ResolvedHoloStamp
+ * .aboveRows — the borderless walkers, whose window's own outline arches
+ * into the last row's stripe), else null — m15pw's rows keep their shield
+ * rule alone, as since 4.9c. The one answer both renderers, the creator's
+ * crowding note and the tests read.
+ */
+export function rowsStampKeepOut(
+  stamp: { aboveRows?: true; keepOut: Rect; keepOutShape?: readonly Rect[] } | null | undefined,
+): readonly Rect[] | null {
+  if (!stamp?.aboveRows) return null;
+  return stamp.keepOutShape ?? [stamp.keepOut];
 }
 
 /**
@@ -484,6 +562,10 @@ export type LoyaltyRowsDrawing = {
   row: LoyaltyRowPx;
   boxHeight: number;
   edges: number[];
+  /** The last row's extra bottom padding at this target (the stamp's arch,
+   *  LoyaltyRowsLayout.lastRowLiftHd), whole px; absent without one (the
+   *  drawing of every other walker is what it was). */
+  lastRowLift?: number;
   text: { column: number; insetTop: number; insetBottom: number; metrics: RulesMetrics }[];
 };
 
@@ -496,6 +578,7 @@ export function loyaltyRowsDrawing(rows: LoyaltyRowsLayout, target: RulesTarget)
     row: loyaltyRowPx(target),
     boxHeight: box.height,
     edges: loyaltyRowEdgesPx(rows.rowFractions, box.height),
+    ...(rows.lastRowLiftHd ? { lastRowLift: Math.round(rows.lastRowLiftHd * RULES_TARGET_SCALE[target]) } : {}),
     text: rows.text.map((layout) => {
       const placed = linePositions(layout, target);
       return {
