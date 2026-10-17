@@ -3,7 +3,12 @@
 import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { FRAME_PROFILE_OVERRIDES_TAG } from "@/lib/cards/frame-profile-overrides";
-import { staleTemplateFilter } from "@/lib/cards/frame-override-stale";
+import {
+  backFaceDrawsOn,
+  staleBackBodyFilter,
+  staleTemplateFilter,
+} from "@/lib/cards/frame-override-stale";
+import type { CardFaceColumns } from "@/lib/cards/faces";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { frameProfileOverrideSchema } from "@/lib/cards/profile-override";
@@ -20,7 +25,9 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // owner badge (hasNewerLook ignores null stamps, TODO 0.20): the editor
 // starts the "marked" re-bake right away (/api/admin/rebake-marked) and
 // the compare page shows what is left. The affected count is returned so
-// the admin sees the blast radius.
+// the admin sees the blast radius. A BACK body's save marks the cards whose
+// back face is drawn on it as well (lib/cards/frame-override-stale.ts): the
+// stamp is the card's, so the re-bake writes both faces again.
 //
 // A card whose owner has NOT accepted a pending opt-in look (hasNewerLook)
 // is left alone: re-baking it would force that look on them and silently
@@ -92,32 +99,60 @@ async function markTemplateRendersStale(
   template: string,
 ): Promise<{ marked: number; keptForOwner: number }> {
   const filter = staleTemplateFilter(template);
+  const backFilter = staleBackBodyFilter(template);
   const toMark: string[] = [];
+  // A card is counted once, whichever scan finds it (a template a card
+  // wore as a front AND a back would otherwise count it twice).
+  const seen = new Set<string>();
   let alreadyMarked = 0;
   let keptForOwner = 0;
-  for (let from = 0; from < 50 * MARK_PAGE; from += MARK_PAGE) {
-    // Only the columns the scope rules read; the collector fields (TODO
-    // 4.9a) join them only if a correction is ever scoped by set or
-    // language.
-    let query = admin
-      .from("cards")
-      .select(
-        "id, visibility, layout_version, rendered_image_url, frame_style, rarity, set_icon_url, set_icon_code, title, cost, supertype, card_type, subtypes, power, toughness, loyalty, defense, back_face, rules_text, flavor_text, face_content, color_identity, art_url, art_position",
-      )
-      .in("visibility", ["public", "unlisted"])
-      .not("rendered_image_url", "is", null);
-    query =
+  type ScanQuery = ReturnType<ReturnType<typeof admin.from>["select"]>;
+  const scan = async (
+    narrow: (query: ScanQuery) => ScanQuery,
+    keep: (card: CardFaceColumns) => boolean,
+  ): Promise<void> => {
+    for (let from = 0; from < 50 * MARK_PAGE; from += MARK_PAGE) {
+      // Only the columns the scope rules read; the collector fields (TODO
+      // 4.9a) join them only if a correction is ever scoped by set or
+      // language.
+      const query = narrow(
+        admin
+          .from("cards")
+          .select(
+            "id, visibility, layout_version, rendered_image_url, frame_style, rarity, set_icon_url, set_icon_code, title, cost, supertype, card_type, subtypes, power, toughness, loyalty, defense, back_face, rules_text, flavor_text, face_content, color_identity, art_url, art_position",
+          )
+          .in("visibility", ["public", "unlisted"])
+          .not("rendered_image_url", "is", null),
+      );
+      const { data, error } = await query.order("id", { ascending: true }).range(from, from + MARK_PAGE - 1);
+      if (error || !data) break;
+      for (const card of data) {
+        if (seen.has(card.id) || !keep(card)) continue;
+        seen.add(card.id);
+        if (card.layout_version == null) alreadyMarked += 1;
+        else if (hasNewerLook(card)) keptForOwner += 1;
+        else toMark.push(card.id);
+      }
+      if (data.length < MARK_PAGE) break;
+    }
+  };
+  // The cards whose FRONT draws on the template — unchanged since 0.20.
+  await scan(
+    (query) =>
       filter.kind === "or"
         ? query.or(filter.expression)
-        : query.filter("frame_style->>template", "eq", filter.template);
-    const { data, error } = await query.order("id", { ascending: true }).range(from, from + MARK_PAGE - 1);
-    if (error || !data) break;
-    for (const card of data) {
-      if (card.layout_version == null) alreadyMarked += 1;
-      else if (hasNewerLook(card)) keptForOwner += 1;
-      else toMark.push(card.id);
-    }
-    if (data.length < MARK_PAGE) break;
+        : query.filter("frame_style->>template", "eq", filter.template),
+    () => true,
+  );
+  // The cards whose BACK face is drawn on it (a DFC back body, TODO 5.3):
+  // their `.back.png` / `.back.thumb.webp` carry the layout too. ONE stamp
+  // per card, so nulling it re-bakes both faces in one write
+  // (runRebakeBatch, scope "marked").
+  if (backFilter) {
+    await scan(
+      (query) => query.filter(backFilter.column, "eq", backFilter.template),
+      (card) => backFaceDrawsOn(card, template),
+    );
   }
   let marked = alreadyMarked;
   for (let i = 0; i < toMark.length; i += MARK_CHUNK) {

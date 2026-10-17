@@ -23,7 +23,7 @@ import { selectBakeColumns } from "@/lib/cards/bake-select";
 import { bakedBackOf } from "@/lib/cards/faces";
 import { TRANSPARENT_PIXEL_DATA_URL, resolveRenderableImage } from "@/lib/render/art-source";
 import { getPipOverrides } from "@/lib/pips/queries";
-import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
+import { requireFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 
 // ---------------------------------------------------------------------------
@@ -213,7 +213,17 @@ async function bakeCardRender(
   }
 
   const pipOverrides = await getPipOverrides(card.owner_id);
-  const profileOverrides = await getFrameProfileOverrides();
+  // A bake REFUSES when the frame layout overrides can't be read (admin
+  // audit L2): a PNG drawn on the code profile while an override exists
+  // would be stored, and stamped current, with the wrong layout. Refused,
+  // the card falls back to its live preview with its pointers cleared, and
+  // the automatic re-bake (scope "sweep": never-baked cards) bakes it later.
+  let profileOverrides: Awaited<ReturnType<typeof requireFrameProfileOverrides>>;
+  try {
+    profileOverrides = await requireFrameProfileOverrides();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Frame layout overrides could not be read." };
+  }
   const previewData = rowToPreviewData(
     card as CardRowForBake,
     pipOverrides,

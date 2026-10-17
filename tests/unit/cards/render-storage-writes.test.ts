@@ -129,7 +129,10 @@ vi.mock("@/lib/render/card-image", () => ({
 }));
 vi.mock("@/lib/billing/flags", () => ({ isBillingEnabled: () => false }));
 vi.mock("@/lib/pips/queries", () => ({ getPipOverrides: async () => null }));
-vi.mock("@/lib/cards/frame-profile-overrides", () => ({ getFrameProfileOverrides: async () => ({}) }));
+vi.mock("@/lib/cards/frame-profile-overrides", () => ({
+  getFrameProfileOverrides: async () => ({}),
+  requireFrameProfileOverrides: async () => ({}),
+}));
 // lib/cards/actions.ts imports the whole card-save world; the delete paths
 // need none of it.
 vi.mock("@/lib/cards/frame-reviews", () => ({ getVerifiedFrameKeys: async () => [] }));

@@ -41,6 +41,7 @@ const state = vi.hoisted(() => ({
   failUpload: null as string | null,
   renderThrowsOn: null as "front" | "back" | null,
   artDown: new Set<string>(),
+  overridesDown: false,
 }));
 
 function recordWrite(via: RowWrite["via"], calls: { method: string; args: unknown[] }[]) {
@@ -118,7 +119,13 @@ vi.mock("@/lib/render/art-source", () => ({
 }));
 vi.mock("@/lib/billing/flags", () => ({ isBillingEnabled: () => true }));
 vi.mock("@/lib/pips/queries", () => ({ getPipOverrides: async () => null }));
-vi.mock("@/lib/cards/frame-profile-overrides", () => ({ getFrameProfileOverrides: async () => ({}) }));
+vi.mock("@/lib/cards/frame-profile-overrides", () => ({
+  getFrameProfileOverrides: async () => ({}),
+  requireFrameProfileOverrides: async () => {
+    if (state.overridesDown) throw new Error("Frame layout overrides could not be read: fetch failed");
+    return {};
+  },
+}));
 vi.mock("@/lib/media/storage-origin", () => ({ ensureStorageOriginRegistered: async () => undefined }));
 
 import { bakeAndPersistCardRender } from "@/lib/cards/bake-render";
@@ -209,6 +216,7 @@ beforeEach(async () => {
   state.failUpload = null;
   state.renderThrowsOn = null;
   state.artDown.clear();
+  state.overridesDown = false;
   state.card = dfcRow();
   state.png ??= await sharp({ create: { width: 30, height: 42, channels: 4, background: "#345" } }).png().toBuffer();
 });
@@ -291,6 +299,22 @@ describe("a card with a back body (TODO 5.3)", () => {
       expect(state.ops).toEqual([]);
       expect(state.writes).toEqual([expect.objectContaining({ via: "user", payload: CLEARED })]);
       expect(warn).toHaveBeenCalledWith(expect.stringMatching(/Back face: Art unavailable/));
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("REFUSES to bake when the frame layout overrides can't be read — no render on the code profile, nothing uploaded, every pointer cleared (admin audit L2)", async () => {
+    state.overridesDown = true;
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      expect(await bakeAndPersistCardRender(CARD, USER)).toBeNull();
+      expect(state.rendered).toEqual([]);
+      expect(state.ops).toEqual([]);
+      // The failure path: the card falls back to its live preview, and no
+      // stamp is written — the auto re-bake's sweep scope bakes it later.
+      expect(state.writes).toEqual([expect.objectContaining({ via: "user", payload: CLEARED })]);
+      expect(warn).toHaveBeenCalledWith(expect.stringMatching(/Frame layout overrides could not be read/));
     } finally {
       warn.mockRestore();
     }

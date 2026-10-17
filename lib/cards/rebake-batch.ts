@@ -14,7 +14,8 @@ import {
 import { selectBakeColumns } from "@/lib/cards/bake-select";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { getPipOverrides } from "@/lib/pips/queries";
-import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
+import { requireFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
+import { backBodyOf } from "@/lib/cards/faces";
 import {
   CARD_LAYOUT_VERSION,
   classifyForSweep,
@@ -222,12 +223,26 @@ export async function runRebakeBatch(
     return { ...base, dry: true, processed: [], failed: [], superseded: [], remaining: plan.rebake + plan.stamp };
   }
 
+  // The frame layout overrides, read BEFORE any card is picked (admin audit
+  // L2): when they can't be read the whole batch answers an error and
+  // writes nothing — never a card baked on the code profile while an
+  // override exists, stamped current. No card is struck for it (the
+  // database is at fault, not the card); the cron's "batch query failing"
+  // breaker counts the run. A batch of stamps alone reads nothing.
+  let profileOverrides: Awaited<ReturnType<typeof requireFrameProfileOverrides>> | null = null;
+  if (batch.some(({ verdict }) => verdict === "rebake")) {
+    try {
+      profileOverrides = await requireFrameProfileOverrides();
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : "Frame layout overrides could not be read." };
+    }
+  }
+
   if (batch.length > 0 && opts.onPicked) await opts.onPicked(batch.map(({ row }) => row.id));
 
   const processed: RebakeBatchResult["processed"] = [];
   const failed: RebakeBatchResult["failed"] = [];
   const superseded: string[] = [];
-  let profileOverrides: Awaited<ReturnType<typeof getFrameProfileOverrides>> | null = null;
   // The layout each render used, per template (uncached): a save during the
   // batch changes it, and the render must not be stamped current.
   const overrideStamps = await readOverrideStamps(supabase);
@@ -249,7 +264,7 @@ export async function runRebakeBatch(
       // Same render contract as the save-time bake: HD, always watermarked
       // (when billing is on), no custom footer text (layout v20), round
       // corners (layout v31).
-      profileOverrides ??= await getFrameProfileOverrides();
+      if (!profileOverrides) throw new Error("Frame layout overrides were not read.");
       const pipOverrides = await getPipOverrides(row.owner_id);
       const previewData = rowToPreviewData(row, pipOverrides, profileOverrides);
       // Same art guard as the save-time bake: never store an art-less PNG as
@@ -270,17 +285,21 @@ export async function runRebakeBatch(
 
       // Overlap guard, part 1: is the card (and its layout) still what we
       // rendered? A residual race remains until the write; part 2 catches it.
+      // Every template the bake drew: the front's, and the back body's when
+      // the card has one (TODO 5.3) — a save on either moves its layout.
       const template = normalizeFrameTemplate(templateOfFrameStyle(row.frame_style), row);
-      const [{ data: fresh }, layoutNow] = await Promise.all([
+      const backBody = backBodyOf(previewData)?.template;
+      const templates = backBody && backBody !== template ? [template, backBody] : [template];
+      const [{ data: fresh }, layoutMoved] = await Promise.all([
         supabase.from("cards").select("updated_at, visibility, layout_version").eq("id", row.id).maybeSingle(),
-        readOverrideStamp(supabase, template),
+        overridesMoved(supabase, templates, overrideStamps),
       ]);
       if (
         !fresh ||
         fresh.updated_at !== row.updated_at ||
         !["public", "unlisted"].includes(fresh.visibility as string) ||
         (scope.kind === "marked" && fresh.layout_version != null) ||
-        layoutNow !== (overrideStamps.get(template) ?? null)
+        layoutMoved
       ) {
         superseded.push(row.id);
         continue;
@@ -332,7 +351,7 @@ export async function runRebakeBatch(
       // Part 3: a layout save during the upload can't be seen by the write
       // (it doesn't move updated_at). If the override moved, re-mark the
       // card — only if the row still holds OUR render.
-      if ((await readOverrideStamp(supabase, template)) !== (overrideStamps.get(template) ?? null)) {
+      if (await overridesMoved(supabase, templates, overrideStamps)) {
         await supabase
           .from("cards")
           .update({ layout_version: null })
@@ -379,6 +398,17 @@ export async function runRebakeBatch(
 async function readOverrideStamps(supabase: Admin): Promise<Map<string, string>> {
   const { data } = await supabase.from("frame_profile_overrides").select("template, updated_at");
   return new Map((data ?? []).map((r) => [r.template as string, r.updated_at as string]));
+}
+
+/** True when any of `templates`' override rows moved since `stamps` was
+ *  read (uncached) — the front's and, on a two-faced card, the back body's. */
+async function overridesMoved(
+  supabase: Admin,
+  templates: readonly string[],
+  stamps: ReadonlyMap<string, string>,
+): Promise<boolean> {
+  const now = await Promise.all(templates.map((t) => readOverrideStamp(supabase, t)));
+  return templates.some((t, i) => now[i] !== (stamps.get(t) ?? null));
 }
 
 async function readOverrideStamp(supabase: Admin, template: string): Promise<string | null> {
