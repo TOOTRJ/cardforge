@@ -443,6 +443,26 @@ export function printedTypesOfPrinting(
   return resolvePrintedTypes({ cardType: face.cardType, supertype: face.supertype, printedTypes: printed }) ?? undefined;
 }
 
+/**
+ * A TOKEN's supertype with "Legendary" first where the printing makes it
+ * legendary without printing the word — Scryfall's `legendary` frame effect
+ * (the crown is printed) on a token whose type line has no Legendary (T2XM
+ * #28 Tuktuk the Returned, owner Round 69): the word drives the crown; the
+ * type line still prints as the card does through `printed_types`
+ * (printedTypesOfPrinting reads the printing's words against this
+ * supertype). Every other printing: the supertype as parsed.
+ */
+export function legendaryTokenSupertype(
+  card: Pick<ScryfallCard, "frame_effects">,
+  cardType: CardType | undefined,
+  supertype: string | undefined,
+): string | undefined {
+  if (cardType !== "token") return supertype;
+  if (!(card.frame_effects ?? []).some((e) => e.toLowerCase() === "legendary")) return supertype;
+  if (supertypeHasWord(supertype, "Legendary")) return supertype;
+  return supertype ? `Legendary ${supertype}` : "Legendary";
+}
+
 /** The patch key for a printing's own word order — absent, never
  *  `undefined`, when the printing reads as the built line. */
 function printedTypesKey(printed: string | undefined): { printed_types?: string } {
@@ -1839,6 +1859,14 @@ export function mapScryfallToFormPatch(
   // and a subtype only where the printing prints one.
   const emblem = kind === "emblem";
 
+  // A token the printing makes legendary without the word (owner Round 69:
+  // T2XM #28 Tuktuk the Returned — "Token Artifact Creature — Goblin Golem",
+  // the crown printed, its rules text "is legendary"): Legendary in the
+  // supertype, which is what draws the crown, and the printed words kept
+  // as the card prints them through printed_types (printedTypesOfPrinting →
+  // resolvePrintedTypes: "Artifact Creature").
+  const supertype = legendaryTokenSupertype(card, cardType, typeParts.supertype);
+
   // A transform / modal printing on the double-faced bodies (TODO 5.4): the
   // front's colour is its own — colourless on the TRANSFORM land front,
   // whose body has one master verified on `c`; a modal land front's is its
@@ -1861,11 +1889,11 @@ export function mapScryfallToFormPatch(
     printing_treatment: printingTreatmentFromScryfall(card),
     printing_detail: printingDetailFromScryfall(card),
     card_type: cardType,
-    supertype: emblem ? undefined : typeParts.supertype,
+    supertype: emblem ? undefined : supertype,
     ...printedTypesKey(
       emblem
         ? undefined
-        : printedTypesOfPrinting(pick(front?.type_line, card.type_line), { cardType, supertype: typeParts.supertype }),
+        : printedTypesOfPrinting(pick(front?.type_line, card.type_line), { cardType, supertype }),
     ),
     subtypes_text: emblem && !emblemPrintsSubtype(card) ? undefined : typeParts.subtypes_text,
     rarity: emblem ? "common" : rarityChecked,

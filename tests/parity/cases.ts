@@ -243,6 +243,11 @@ const PICKS: readonly Pick[] = [
     row: () => ({ title: "Æther Vampire Long-Winded" }),
   },
   { from: "m20tokentall/g/token-long", why: "M20 token, tall box (squeezed paragraph gaps)" },
+  // TODO 4.48's last pieces: the full-art token's floating crown band and
+  // its two-colour pair master with the grey colourless plate.
+  { from: "m20token/u/token-short@crown", why: "4.48: the full-art token's floating crown round the name pill (a Legendary token)" },
+  { from: "m20tokentext/wu/token-short@pair-crown", why: "4.48: a crowned two-colour token — the pair master, the pair's crown, the grey plate" },
+  { from: "m20tokenartifact/c/token-short@crown", why: "4.48: the artifact template's colourless crown, CC's silver A (keyMap c → a)" },
   { from: "emblem/g/emblem-long", why: "emblem: the toned master, the walker's name, no cost or stats" },
   // 3.24's cases, by name — the Zendikar split type line since 4.40, the
   // first profile to use `type.split`.

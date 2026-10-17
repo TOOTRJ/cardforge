@@ -78,8 +78,9 @@ describe("bake path = preview path", () => {
     // …and the Universes Beyond frames' 20 + 10 + 10 (4.25).
     // …and the extended-art frame's 20 and its land dress's 10 (4.7 follow-up).
     // …and the Spacecraft's borderless dress's 7 crowned twins (4.27a step 2).
-    // …and the borderless double-faced bodies' 10 each (TODO 5.7).
-    expect(pairKeys).toBe(330);
+    // …and the full-art tokens' 10 each (4.48's central split: 60), and the
+    // borderless double-faced bodies' 10 each (TODO 5.7: 40).
+    expect(pairKeys).toBe(390);
     // …and the borderless double-faced bodies' 18 crowned twins each (TODO
     // 5.7: the seven colour keys, the artifact stand-in's `a`, ten pairs).
     expect(crownedKeys).toBe(51 + 4 * 18);
@@ -158,7 +159,10 @@ describe("bake path = preview path", () => {
                   : template === "nyx"
                     ? // The Nyx Constellation frame's crown: that band, its arms faded.
                       "nyxcrown"
-                    : (dfcCrown ?? "m15crown");
+                    : template.startsWith("m20token")
+                      ? // The full-art token's floating crown band (4.48).
+                        "m20tokencrown"
+                      : (dfcCrown ?? "m15crown");
         for (const key of slot.keys) {
           expect(slot.assetPathTemplate.replace("{key}", key), `${template} ${slot.anatomy}`).toBe(`/frames/${folder}/${key}.png`);
           if (slot.anatomy === "holoStamp") notches += 1;

@@ -308,6 +308,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
       // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
+      // The full-art tokens (TODO 4.48's last pieces): their floating crown
+      // band (a Legendary TOKEN draws it there) and their split pairs.
+      "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
       // The battle (TODO 5.5): the switch is the card's and its ▼ back draws
       // it — the battle front itself draws none.
       "battle",
@@ -383,6 +386,14 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       m15borderlessdfcback: ["split"],
       m15borderlessmdfcfront: ["split"],
       m15borderlessmdfcback: ["split"],
+      // The full-art tokens (4.48): the central split; a token has no cost,
+      // so no hybrid dress.
+      m20token: ["split"],
+      m20tokentext: ["split"],
+      m20tokentall: ["split"],
+      m20tokenartifact: ["split"],
+      m20tokenartifacttext: ["split"],
+      m20tokenartifacttall: ["split"],
     });
     // The borderless frames draw their crown from the crowned twins, not a
     // band (4.6f): no crown slot, crownMasters set. (Their one overlay is

@@ -386,6 +386,28 @@ export const PAIR_CASES: readonly PairCase[] = [
       plate: null,
     }),
   ),
+  // The full-art tokens (TODO 4.48's central split): the pair master, the
+  // grey colourless plate (FrameProfile.twoColorPlate — the prints'
+  // 204/197/192), on every height, the artifact templates' silver set too;
+  // a token has no cost, so never the hybrid dress. A stored token (no key)
+  // and the switch off keep the gold master and plate.
+  ...(
+    [
+      ["a two-colour full-art token (TMKM #10 W|U style)", "m20token", colours("white", "blue"), "Creature", { twoColor: true }, "m20token/wu", "/frames/m15/pt/c.png"],
+      ["a crowned two-colour full-art token, regular box (TMKM #13 G|W style)", "m20tokentext", colours("green", "white"), "Legendary Creature", { twoColor: true, crown: true }, "m20tokentext/gw", "/frames/m15/pt/c.png"],
+      ["a two-colour tall full-art token (TLTC #14 B|R style)", "m20tokentall", colours("black", "red"), "Creature", { twoColor: true }, "m20tokentall/br", "/frames/m15/pt/c.png"],
+      ["a two-colour artifact token (TLCI #13 W|U style): the artifact set's plate", "m20tokenartifact", colours("white", "blue"), "Artifact Creature", { twoColor: true }, "m20tokenartifact/wu", "/frames/m15artifact/pt/c.png"],
+      ["a stored two-colour full-art token with no key: the gold master and plate", "m20tokentext", colours("red", "green"), "Creature", {}, "m20tokentext/m", "/frames/m15/pt/m.png"],
+      ["a two-colour full-art token switched off: gold", "m20token", colours("red", "green"), "Creature", { twoColor: false }, "m20token/m", "/frames/m15/pt/m.png"],
+    ] as const
+  ).map(
+    ([id, template, colorIdentity, supertype, extra, master, plate]): PairCase => ({
+      id,
+      card: { cardType: "token", supertype, subtypes: ["Wolf"], colorIdentity, cost: null, rulesText: template === "m20token" ? null : "Trample", frameStyle: { template, ...extra } as FrameStyle },
+      master,
+      plate,
+    }),
+  ),
 ];
 
 export const FINISHES = ["regular", "foil", "etched"] as const;

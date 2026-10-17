@@ -32,6 +32,8 @@ import {
   M20_ARTIFACT_SOLID_NAME_PILL,
   M20_ARTIFACT_TYPE_TINT,
   M20_COLOURLESS_TYPE_TINT,
+  M20_PAIR_TYPE_TINT,
+  M20_PAIR_WHITE_PILL_GAIN,
   M20_TOKEN_SOLID_TYPE_PILL,
   M20_TOKEN_TEXTLESS_RECUT,
   TINTED_BOX_STRUCTURE,
@@ -566,14 +568,44 @@ describe("Card Conjurer recipe", () => {
       // The plain template: the colourless (`c`) pill darkened (that colour
       // only), then the pill solid through the pack's own Type mask. The
       // tint goes FIRST: it weighs CC's alpha, which "opaque" sets to 255.
+      // TODO 4.48's pairs: CC's grey L pill tinted to the prints' neutral
+      // grey (the pairs only), then solid like every pill.
+      // …and (owner Round 69) the white half of a white pair's name pill
+      // toned to print's metal: one rampGain per white pair, its side.
+      const whiteTone = (pair: string, side: string) => ({
+        op: "rampGain",
+        gain: [...M20_PAIR_WHITE_PILL_GAIN],
+        side,
+        ramp: [40, 60],
+        alphaFull: 230,
+        alphaNone: 244,
+        colors: [pair],
+        mask: TITLE,
+      });
       expect(templates[plain].finish, plain).toEqual([
+        { ...M20_COLOURLESS_TYPE_TINT, mask: typeMask },
+        { ...M20_PAIR_TYPE_TINT, mask: typeMask },
+        { op: "opaque", mask: typeMask },
+        whiteTone("wu", "left"),
+        whiteTone("wb", "left"),
+        whiteTone("rw", "right"),
+        whiteTone("gw", "right"),
+      ]);
+      expect(finishFor(templates[plain] as never, "c"), plain).toEqual([
         { ...M20_COLOURLESS_TYPE_TINT, mask: typeMask },
         { op: "opaque", mask: typeMask },
       ]);
-      expect(finishFor(templates[plain] as never, "c"), plain).toEqual(templates[plain].finish);
       // The five coloured pills (and the gold one) keep CC's colour: solid only.
       for (const k of ["w", "u", "b", "r", "g", "m"]) {
         expect(finishFor(templates[plain] as never, k), `${plain} ${k}`).toEqual([{ op: "opaque", mask: typeMask }]);
+      }
+      const SIDE: Record<string, string> = { wu: "left", wb: "left", rw: "right", gw: "right" };
+      for (const k of TWO_COLOR_PAIRS) {
+        expect(finishFor(templates[plain] as never, k), `${plain} ${k}`).toEqual([
+          { ...M20_PAIR_TYPE_TINT, mask: typeMask },
+          { op: "opaque", mask: typeMask },
+          ...(SIDE[k] ? [whiteTone(k, SIDE[k])] : []),
+        ]);
       }
       // The artifact template: its silver type pill darkened in EVERY colour
       // (a coloured artifact token keeps the silver pill), then solid; the

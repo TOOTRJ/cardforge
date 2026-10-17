@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import tokenData from "./fixtures/token-printings.json";
+// T2XM #28 Tuktuk the Returned (owner Round 69), captured from Scryfall 2026-10-15
+// and trimmed as the others — a file of its own, so the frame picker's recorded
+// import cases (frame-picker-groups.test.ts) stay main's.
+import legendaryWordData from "./fixtures/token-legendary-word.json";
 import plstData from "./fixtures/plst-token-prefixes.json";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
 import {
@@ -18,6 +22,10 @@ import {
 } from "@/lib/scryfall/frame-signatures";
 import { onlyUndrawnDetailsMissing } from "@/lib/creator/import-frame-choice";
 import { finalizeImportMatch, withVerification } from "@/lib/creator/frame-resolve";
+import { importedAnatomy } from "@/lib/cards/anatomy";
+import { buildTypeLine } from "@/lib/cards/card-display";
+import { crownKeyFor } from "@/lib/cards/crown";
+import { getFrameProfile } from "@/lib/cards/template-layout";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { frameRequestFromImport } from "@/lib/frames/frame-requests";
 import type { FrameTemplate } from "@/types/card";
@@ -203,10 +211,6 @@ describe("the full-art templates once verified (TODO 4.48 / 1.23)", () => {
 
   it("keeps a gap the full-art template doesn't draw either: nearest, its own reason, item and gaps", () => {
     const cases: [Key, FrameTemplate, string, string, string[]][] = [
-      // The M20 token's crown and pair are 4.48's (its pill crown, the rims'
-      // central split), not 4.6's M15 pieces.
-      ["tmkm-13", "m20tokentext", "PipGlyph doesn't draw the legendary crown on this frame yet", "4.48", ["crown", "two-colour"]],
-      ["tmkm-10", "m20token", "two-colour cards print a split frame, and PipGlyph uses its gold one", "4.48", ["two-colour"]],
       ["tdsk-4", "m20token", "PipGlyph doesn't draw the Nyx dress on its token frames yet", "4.51", ["nyx-dress"]],
       ["teoc-13", "m20tokenartifact", "PipGlyph doesn't draw the Nyx dress on its token frames yet", "4.51", ["nyx-dress"]],
     ];
@@ -216,12 +220,82 @@ describe("the full-art templates once verified (TODO 4.48 / 1.23)", () => {
       // Before its tick: still the registry's own nearest (a gap is missing
       // whatever is verified), never "not yet verified".
       expect(withVerification(m, pickColour(key), new Set()).unverified, key).toBeUndefined();
-      // Two colours land on gold ("m") until 4.6's gradient.
       const colour = pickColour(key);
       const done = withVerification(m, colour, new Set([frameComboKey(template, colour)]));
       expect(done, key).toMatchObject({ status: "nearest", template, reason, blockedBy, gaps });
     }
-    expect(pickColour("tmkm-10")).toBe("m");
+  });
+
+  // TODO 4.48's last pieces: the full-art templates draw the token's own
+  // floating crown (M20_TOKEN_CROWN) and its central two-colour split (the
+  // `<pair>` masters), so a crowned or two-colour M20 token is EXACT on them
+  // once verified in its colour (a pair's colour key is "m") — and, before
+  // the tick, the arch stands in, "not yet verified" like any M20 token.
+  it("a crowned or two-colour M20 token: exact on the full-art template once verified — the crown and the pair are drawn there", () => {
+    const cases: [Key, FrameTemplate, string][] = [
+      ["tmkm-13", "m20tokentext", "m"],
+      ["tmkm-10", "m20token", "m"],
+    ];
+    for (const [key, template, colour] of cases) {
+      const m = match(key);
+      expect(m.onceVerified, key).toBe(template);
+      expect(m.onceVerifiedMatch, key).toEqual({ status: "exact", reason: null });
+      expect(pickColour(key)).toBe(colour);
+      const waiting = withVerification(m, colour, new Set());
+      expect(waiting, key).toMatchObject({ status: "nearest", unverified: true, reason: "not yet verified in multicolor" });
+      expect(waiting.template, key).toMatch(/^m15token/);
+      const done = withVerification(m, colour, new Set([frameComboKey(template, colour)]));
+      expect(done, key).toMatchObject({ status: "exact", template, reason: null });
+      expect(done.blockedBy, key).toBeUndefined();
+      expect(done.gaps, key).toBeUndefined();
+    }
+  });
+
+  // Owner Round 69: T2XM #28 Tuktuk the Returned prints the crown, but its
+  // type line has no "Legendary" (its rules text makes it legendary). The
+  // import makes it legendary — the word in `supertype`, which draws the
+  // crown — and keeps the printed line through `printed_types`.
+  it("a token the printing makes legendary without the word (T2XM #28): Legendary in supertype, the type line as printed, the crown drawn", () => {
+    const patch = finalizeImportMatch(mapScryfallToFormPatch(scryfallCardSchema.parse(legendaryWordData["t2xm-28"])), new Set([frameComboKey("m20tokenartifacttext", "c")]));
+    expect(patch).toMatchObject({ card_type: "token", supertype: "Legendary Artifact Creature", printed_types: "Artifact Creature", printed_crown: true, frame_template: "m20tokenartifacttext" });
+    expect(patch.frame_match).toMatchObject({ status: "exact", template: "m20tokenartifacttext" });
+    // The line prints exactly as the card: "Token Artifact Creature — Goblin Golem".
+    expect(
+      buildTypeLine({ cardType: "token", supertype: patch.supertype, printedTypes: patch.printed_types, subtypes: ["Goblin", "Golem"] }),
+    ).toBe("Token Artifact Creature — Goblin Golem");
+    // …and the crown draws: the silver A crown of the artifact template.
+    const anatomy = importedAnatomy(patch, patch.frame_template);
+    expect(
+      crownKeyFor(
+        { colorIdentity: anatomy.colorIdentity ?? [], cardType: "token", supertype: patch.supertype, frameStyle: anatomy.style },
+        getFrameProfile("m20tokenartifacttext"),
+      ),
+    ).toBe("a");
+    // A token that prints the word keeps its parse; a non-legendary one too.
+    expect(mapScryfallToFormPatch(printing("tmkm-13"))).toMatchObject({ supertype: "Legendary Creature" });
+    expect(mapScryfallToFormPatch(printing("tmkm-13")).printed_types).toBeUndefined();
+    expect(mapScryfallToFormPatch(printing("tfdn-6")).supertype).toBe("Creature");
+  });
+
+  it("the import names the crown and the pair where the print has them, and keeps the pair on the full-art template", () => {
+    const verified = new Set([frameComboKey("m20tokentext", "m"), frameComboKey("m20token", "m")]);
+    const crowned = finalizeImportMatch(mapScryfallToFormPatch(printing("tmkm-13")), verified);
+    expect(crowned.frame_template).toBe("m20tokentext");
+    expect(crowned.printed_crown).toBe(true);
+    expect(crowned.printed_two_color).toBe(true);
+    expect(importedAnatomy(crowned, crowned.frame_template)).toEqual({
+      style: expect.objectContaining({ crown: true, twoColor: true }),
+      colorIdentity: ["green", "white"],
+    });
+    const pair = finalizeImportMatch(mapScryfallToFormPatch(printing("tmkm-10")), verified);
+    expect(pair.frame_template).toBe("m20token");
+    expect(pair.printed_crown).toBeUndefined();
+    expect(importedAnatomy(pair, pair.frame_template).colorIdentity).toEqual(["white", "blue"]);
+    // Unverified, the arch stands in: it draws no pair, so the identity stays
+    // "multicolor" (gold), and the save drops the crown it can't draw.
+    const arch = finalizeImportMatch(mapScryfallToFormPatch(printing("tmkm-10")), new Set());
+    expect(arch.frame_template).toBe("m15token");
+    expect(importedAnatomy(arch, arch.frame_template).colorIdentity).toEqual(["multicolor"]);
   });
 
   it("finalizes an import patch onto the full-art template once verified (the form's frame follows)", () => {

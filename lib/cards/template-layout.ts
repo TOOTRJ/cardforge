@@ -516,6 +516,11 @@ export type TwoColorDress = "split" | "hybrid";
 export type FrameOverlaySlot =
   | (FrameOverlaySlotBase & {
       anatomy: "crown";
+      /** The crown is a TOKEN design's own (TODO 4.48: the M20 full-art
+       *  token's floating crown round its name pill, M20_TOKEN_CROWN): a
+       *  Legendary token qualifies for it (lib/cards/anatomy.ts
+       *  qualifiesForCrown). Every other crown is never a token's. */
+      tokens?: true;
       /** A two-colour card wears the PAIR's split crown although the
        *  template draws no pair masters (its frame stays the gold "m"):
        *  print's legendary textless promos split the crown over the gold
@@ -641,6 +646,13 @@ export type FrameProfile = {
    *  don't draw it (owner round 17, 2026-09-30; lib/cards/anatomy.ts
    *  twoColorFits). Code-owned; set only on PROFILES entries. */
   twoColorForLands?: boolean;
+  /** The stat plate a card drawn as its PAIR master paints (TODO 4.48:
+   *  the full-art token's two-colour prints set the P/T on the grey
+   *  colourless plate, `c` — 204/197/192 on 11 prints, `m15/pt/c` reads
+   *  203/196/191), in either dress (lib/cards/anatomy.ts plateKeyFor).
+   *  Absent: the split dress keeps the card's colour key (gold "m"), the
+   *  hybrid dress the grey "c". Code-owned; set only on PROFILES entries. */
+  twoColorPlate?: string;
   /** The legendary crown is baked INTO this template's masters (TODO 4.6f,
    *  wave 2a): beside each `<template>/<key>.png` a `<key>-legendary.png`
    *  draws the same frame with the crown — the borderless FLOATING crown,
@@ -5040,6 +5052,44 @@ export const UB_CROWN: FrameOverlaySlot = {
 };
 
 /**
+ * The M20 full-art token's legendary crown (TODO 4.48): Card Conjurer's
+ * FLOATING crown — the borderless frame's — round the name pill, an overlay
+ * band `m20tokencrown/<key>.png` (1500 × 260): the outline under the crown at
+ * CC's borderless bounds (2.8/1.72/94.4×10.62 % and 3.07/1.91/93.87×10.24 %),
+ * 1:1, nothing erased; its hole is the pill's interior, so it repaints only
+ * the pill's rims and ends, as every crowned M20+ print (51: TFDN #13, TTDC
+ * #18, TCMM #60, TMKM #13 …) carries them. Keys: the colours, gold, CC's grey
+ * C crown (the plain templates' charcoal colourless), CC's silver A crown
+ * (the artifact templates map c → a: TNEO #16) and the ten pairs (the two
+ * crowns across the token's own split, 40→60 %W: TDMU #21). `tokens`: a
+ * Legendary TOKEN draws it (qualifiesForCrown) — the only crown that does.
+ * Set on the six m20token* PROFILES entries only; opt-in per card like
+ * every crown (FrameStyle.crown) — declaring it changes no stored card.
+ */
+export const M20_TOKEN_CROWN: FrameOverlaySlot = {
+  anatomy: "crown",
+  tokens: true,
+  rect: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: (260 / 2100) * 100 },
+  assetPathTemplate: "/frames/m20tokencrown/{key}.png",
+  // M20_TOKEN_CROWN_BAND.keys in scripts/lib/cc-frames.mjs (a unit test
+  // holds them together).
+  keys: ["w", "u", "b", "r", "g", "m", "c", "a", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+};
+
+/** The full-art token templates' anatomy (TODO 4.48): the crown band and
+ *  the split pair masters, whose cards set the P/T on the colourless plate
+ *  (the plain templates' `m15/pt/c`, the artifact ones' `m15artifact/pt/c`). */
+const M20_TOKEN_ANATOMY = {
+  overlays: [M20_TOKEN_CROWN],
+  twoColorMasters: ["split"],
+  twoColorPlate: "c",
+} as const satisfies Partial<FrameProfile>;
+const M20_ARTIFACT_TOKEN_ANATOMY = {
+  ...M20_TOKEN_ANATOMY,
+  overlays: [{ ...M20_TOKEN_CROWN, keyMap: { c: "a" } }],
+} as const satisfies Partial<FrameProfile>;
+
+/**
  * The extended-art frame's legendary crown (TODO 4.6f, wave 2b): Card
  * Conjurer's FLOATING crown as an overlay band, `extendedcrown/<key>.png`
  * (1500 × 260): CC's black 'Crown Border Cover' strip (3.94/2.77/92.14×1.77 %,
@@ -5879,12 +5929,16 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // TODO 4.48 / 4.50: the full-art tokens, labelled plain "Token" now that
   // they are verified (4.48a). Their masters are clear almost everywhere,
   // so the creator's tile draws its sample art (4.45).
-  m20token: { ...M20TOKEN, pickerSampleArt: true },
-  m20tokentext: { ...M20TOKENTEXT, pickerSampleArt: true },
-  m20tokentall: { ...M20TOKENTALL, pickerSampleArt: true },
-  m20tokenartifact: { ...m20ArtifactToken(M20TOKEN, "Artifact Token"), pickerSampleArt: true },
-  m20tokenartifacttext: { ...m20ArtifactToken(M20TOKENTEXT, "Artifact Token, text box"), pickerSampleArt: true },
-  m20tokenartifacttall: { ...m20ArtifactToken(M20TOKENTALL, "Artifact Token, tall text box"), pickerSampleArt: true },
+  // TODO 4.48's last pieces, both ADDITIONS (opt-in per card, no bump): the
+  // floating crown round the name pill (M20_TOKEN_CROWN; the artifact
+  // templates' colourless wears CC's silver A crown) and the two-colour
+  // central split (`<pair>.png`, the P/T on the grey colourless plate).
+  m20token: { ...M20TOKEN, ...M20_TOKEN_ANATOMY, pickerSampleArt: true },
+  m20tokentext: { ...M20TOKENTEXT, ...M20_TOKEN_ANATOMY, pickerSampleArt: true },
+  m20tokentall: { ...M20TOKENTALL, ...M20_TOKEN_ANATOMY, pickerSampleArt: true },
+  m20tokenartifact: { ...m20ArtifactToken(M20TOKEN, "Artifact Token"), ...M20_ARTIFACT_TOKEN_ANATOMY, pickerSampleArt: true },
+  m20tokenartifacttext: { ...m20ArtifactToken(M20TOKENTEXT, "Artifact Token, text box"), ...M20_ARTIFACT_TOKEN_ANATOMY, pickerSampleArt: true },
+  m20tokenartifacttall: { ...m20ArtifactToken(M20TOKENTALL, "Artifact Token, tall text box"), ...M20_ARTIFACT_TOKEN_ANATOMY, pickerSampleArt: true },
   // A coloured artifact's crown is its colour (NEO #74, M20 #131); a
   // colourless artifact's the artifact silver "a" (FDN #677).
   m15artifact: {

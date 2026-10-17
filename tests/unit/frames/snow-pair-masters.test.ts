@@ -125,7 +125,10 @@ describe("declared and published", () => {
       "m15nyx",
       // …and the Universes Beyond frames since 4.25.
       "m15ub", "m15ubartifact", "m15ubland",
-      "m15snow", "m15snowland", "m15borderless", "m15borderlessartifact", "m15borderlessland",
+      "m15snow", "m15snowland",
+      // …and the full-art tokens since 4.48's central split.
+      "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
+      "m15borderless", "m15borderlessartifact", "m15borderlessland",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback",
       // …and the borderless double-faced bodies since 5.7 (m15borderless's split).
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",

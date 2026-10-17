@@ -544,7 +544,6 @@ describe("the frame picker's groups: a classification change only", () => {
     ["base", "the Frame-section base of every frame, per kind"],
     ["resolve", "the published-frame resolver, every kind × frame × colour × policy"],
     ["candidates", "the import's candidate frames"],
-    ["imports", "every captured printing's match, landing, chooser and remix landing"],
     ["walkthrough", "the kind a frame's walk-through opens as"],
     ["notice", "the 'bordered' word of an import's treatment notice"],
     ["ownRemix", "the frame a remix of an own card keeps"],
@@ -552,6 +551,20 @@ describe("the frame picker's groups: a classification change only", () => {
     ["basicFallback", "where a basic-only frame's card goes when it stops being a basic"],
   ])("%s — %s: identical to origin/main", (section) => {
     expect(changed(section)).toEqual([]);
+  });
+
+  // Every captured printing's import: identical but for TODO 4.48's last
+  // pieces — the M20 token's crown and its two-colour split are drawn by the
+  // full-art templates now, so TMKM #13 (a crowned G|W token) and TMKM #10
+  // (a W|U token) are EXACT on them wherever they are verified (production's
+  // ticks and every verified policy), where main left them nearest with the
+  // crown / two-colour gap. Their frame, kind and landing are main's.
+  it("imports — every captured printing's match, landing, chooser and remix landing: the same, but the crowned and two-colour M20 tokens exact (4.48)", () => {
+    expect(changed("imports")).toEqual(["all|tmkm-10", "all|tmkm-13", "prodPlusMoved|tmkm-10", "prodPlusMoved|tmkm-13", "prod|tmkm-10", "prod|tmkm-13"]);
+    for (const policy of ["all", "prodPlusMoved", "prod"]) {
+      expect(raw.imports[`${policy}|tmkm-10`], policy).toMatchObject({ kind: "token", frame_template: "m20token", match: ["exact", "m20token", null] });
+      expect(raw.imports[`${policy}|tmkm-13`], policy).toMatchObject({ kind: "token", frame_template: "m20tokentext", match: ["exact", "m20tokentext", null] });
+    }
   });
 
   // The AI's random pools: identical but for layout v58 (TODO 4.35 / 4.42),

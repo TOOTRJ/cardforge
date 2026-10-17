@@ -9,8 +9,10 @@
 //   • is the entry OFFERED — the frame the card is saved on declares a crown
 //     (its PROFILES entry: an overlay band or crowned masters), and a face of
 //     the card would draw it with the switch on and the word on its type
-//     line (the card type prints one — never a planeswalker, token, battle
-//     or emblem — and the crown is published in the colour it would paint);
+//     line (the card type prints one — never a planeswalker, battle or
+//     emblem, and a token only on a frame whose crown is a token design's
+//     own, the full-art token's, TODO 4.48 — and the crown is published in
+//     the colour it would paint);
 //   • is it SELECTED — the switch is exactly `true` AND a face draws the
 //     crown now (the word is there). So a card that is not legendary never
 //     reads as selected, whatever its switch holds (a new card starts with
@@ -29,7 +31,7 @@
 // Pure and client-safe.
 // ---------------------------------------------------------------------------
 
-import { frameAnatomyOf, qualifiesForCrown } from "@/lib/cards/anatomy";
+import { crownsTokens, frameAnatomyOf, qualifiesForCrown } from "@/lib/cards/anatomy";
 import { supertypeHasWord, supertypeWords } from "@/lib/cards/card-display";
 import { crownKeyFor } from "@/lib/cards/crown";
 import { DEFAULT_DFC_ICON, bodyFor, dfcBodyOf, dfcLookOf, isDfcIconFamily } from "@/lib/cards/dfc";
@@ -104,7 +106,7 @@ export function legendaryVariationOf(input: LegendaryVariationInput): LegendaryV
   // The front: would it draw a crown, legendary and switched on? The ONE
   // overlay rule both renderers draw with answers (crownKeyFor): the card
   // type prints one and the key it would paint is published.
-  const frontTypePrints = qualifiesForCrown({ cardType: frontType, supertype: "Legendary" });
+  const frontTypePrints = qualifiesForCrown({ cardType: frontType, supertype: "Legendary" }, crownsTokens(profile));
   const frontCanDraw =
     frontTypePrints &&
     crownKeyFor(

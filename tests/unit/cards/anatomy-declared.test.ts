@@ -59,8 +59,15 @@ describe("where the pieces are declared", () => {
       // The battle (TODO 5.5): the switch is the card's and its ▼ back draws
       // it — the battle front itself draws none.
       "battle",
+      // The full-art tokens (TODO 4.48's last pieces): their own floating
+      // crown band and their split pairs, on all six entries.
+      "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
     ];
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => DRAWN.includes(t)));
+    for (const t of ["m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall"] as const) {
+      expect(frameAnatomyOf(t), t).toMatchObject({ crown: true, twoColor: ["split"], collector: false, stamp: false, dfcIcon: false, border: false });
+      expect(anatomyDefaults(t), t).toEqual({ crown: true, twoColor: true });
+    }
     // (…and the holofoil stamp's notch, 4.9c, on the seven wave-1 entries —
     // the snow pair included; never extendedart or the borderless land. The
     // transform icon family, 5.0a, on no entry yet.)
