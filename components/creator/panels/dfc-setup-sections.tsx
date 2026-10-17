@@ -200,3 +200,54 @@ export function BattleBackSection({
     </SetupSection>
   );
 }
+
+/** Why the Saga kind's "Two faces" is off: the double-faced saga front or
+ *  its default back is not published in any colour yet. */
+export const SAGA_TWO_FACES_UNAVAILABLE = "Frames awaiting verification";
+
+/** A saga's faces (TODO 5.5 (b)): "One face" is the saga frame, "Two faces"
+ *  the double-faced saga front — Kamigawa: Neon Dynasty's transforming
+ *  Sagas, whose last chapter returns the card transformed — with a back
+ *  face of its own on the Back face tab. The pick IS the frame (both are
+ *  the Saga kind's templates; the Frame section lists them too). A NEW
+ *  saga's Card step only: an edit keeps the faces it was saved with. A
+ *  single-select chip row (one tab stop, arrows move, Space / Enter picks);
+ *  "Two faces" is off with its reason until the frames are published. */
+export function SagaFacesSection({
+  two,
+  twoAvailable,
+  onChange,
+  testId = "saga-faces",
+}: {
+  two: boolean;
+  twoAvailable: boolean;
+  onChange: (next: boolean) => void;
+  testId?: string;
+}) {
+  const options: ChipOption<"one" | "two">[] = [
+    { value: "one", label: "One face", description: "A saga on its own" },
+    {
+      value: "two",
+      label: "Two faces",
+      description: twoAvailable ? "A transforming saga with a back face" : SAGA_TWO_FACES_UNAVAILABLE,
+      ...(twoAvailable || two ? {} : { disabled: true, badge: <SoonBadge /> }),
+    },
+  ];
+  return (
+    <SetupSection title="Faces" value={two ? "Two faces" : "One face"} testId={testId}>
+      <ChipGroup
+        ariaLabel="Saga faces"
+        layout="grid-2"
+        size="md"
+        value={two ? "two" : "one"}
+        onChange={(next) => onChange(next === "two")}
+        options={options}
+      />
+      <p className="text-[11px] leading-4 text-subtle">
+        A transforming saga returns as its back face after its last chapter —
+        the icon in the corner and the back&apos;s power and toughness at the
+        foot of the chapters, as Kamigawa: Neon Dynasty printed them.
+      </p>
+    </SetupSection>
+  );
+}

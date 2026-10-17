@@ -185,11 +185,14 @@ export function frameAnatomyOfProfile(profile: AnatomyProfile): FrameAnatomy {
     // template's `-legendary` masters (4.6f, FrameProfile.crownMasters).
     // A battle front draws none itself, but the switch is the CARD's and its
     // back — the ▼ back, which draws the crown (TODO 5.5: the ten MOM /
-    // PMOM battles with a legendary back) — reads it through the front.
+    // PMOM battles with a legendary back) — reads it through the front; so
+    // does the double-faced saga front (TODO 5.5 (b): TLA #117 Fire Lord
+    // Sozin, the legendary back of a saga with no crown of its own).
     crown:
       (profile.overlays ?? []).some((slot) => slot.anatomy === "crown") ||
       profile.crownMasters === true ||
-      profile.dfc?.battle === true,
+      profile.dfc?.battle === true ||
+      profile.dfc?.saga === true,
     twoColor: profile.twoColorMasters ?? [],
     collector: profile.collector !== undefined,
     stamp: (profile.overlays ?? []).some((slot) => slot.anatomy === "holoStamp"),

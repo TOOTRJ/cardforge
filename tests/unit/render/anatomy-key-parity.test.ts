@@ -183,8 +183,9 @@ describe("bake path = preview path", () => {
       }
     }
     // The four rider slots × 12 glyphs (m15dfcfront, m15dfclandfront,
-    // m15dfcbackleft, and the borderless front's, TODO 5.7).
-    expect(riders).toBe(48);
+    // m15dfcbackleft, and the borderless front's, TODO 5.7) — and the double-
+    // faced saga front's (5.5 (b)): five.
+    expect(riders).toBe(60);
     // The four modal strip slots (5.1c): 8 keys on each spell body (w u b r
     // g m a + l), 7 on each land body (w u b r g m c).
     // …and the borderless modal pair's 7 each (TODO 5.7: no `l`).

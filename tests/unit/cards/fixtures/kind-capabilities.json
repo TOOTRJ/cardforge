@@ -82,7 +82,8 @@
   { "template":  "m15borderlessdfcfront", "change":  "new-template", "capabilities":  ["pt", "dfcFront"], "reason":  "TODO 5.7: a NEW template — the dark borderless transform FRONT body (PipGlyph's own masters: the published m15borderless masters with the double-faced pieces grafted from Card Conjurer's light borderless DFC packs): m15borderless's slots with the bordered transform front's double-faced slots — the capabilities of its bordered twin. An addition: no stored card sits on it." },
   { "template":  "m15borderlessdfcback", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 5.7: a NEW template — the dark borderless transform BACK body (PipGlyph's own masters: the published m15borderless masters with the double-faced pieces grafted from Card Conjurer's light borderless DFC packs): m15borderless's slots with the bordered transform back's double-faced slots — the capabilities of its bordered twin. Never a card's own template (templateRefusesKind refuses every kind on a back body). An addition: no stored card sits on it." },
   { "template":  "m15borderlessmdfcfront", "change":  "new-template", "capabilities":  ["pt", "dfcFront"], "reason":  "TODO 5.7: a NEW template — the dark borderless modal FRONT body (PipGlyph's own masters: the published m15borderless masters with the double-faced pieces grafted from Card Conjurer's light borderless DFC packs): m15borderless's slots with the bordered modal front's double-faced slots — the capabilities of its bordered twin. An addition: no stored card sits on it." },
-  { "template":  "m15borderlessmdfcback", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 5.7: a NEW template — the dark borderless modal BACK body (PipGlyph's own masters: the published m15borderless masters with the double-faced pieces grafted from Card Conjurer's light borderless DFC packs): m15borderless's slots with the bordered modal back's double-faced slots — the capabilities of its bordered twin. Never a card's own template (templateRefusesKind refuses every kind on a back body). An addition: no stored card sits on it." }
+  { "template":  "m15borderlessmdfcback", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 5.7: a NEW template — the dark borderless modal BACK body (PipGlyph's own masters: the published m15borderless masters with the double-faced pieces grafted from Card Conjurer's light borderless DFC packs): m15borderless's slots with the bordered modal back's double-faced slots — the capabilities of its bordered twin. Never a card's own template (templateRefusesKind refuses every kind on a back body). An addition: no stored card sits on it." },
+  { "template":  "sagadfcfront", "change":  "new-template", "capabilities":  ["chapters"], "reason":  "TODO 5.5 (b): a NEW template — the double-faced saga FRONT (Card Conjurer's 'Saga (Transform)' pack, frames bucket only): the saga's slots (its chapter rail, with a shorter rail foot) with the transform front's icon rider and a left-aligned reverse P/T — the saga's capabilities. Not a front of the Transform kind (DfcProfile.saga: no `dfcFront`): the Saga kind's frame for a saga with a back face. An addition: no stored card sits on it." }
  ],
  "capabilities": {
   "m15": ["pt"],
@@ -134,6 +135,7 @@
   "alphaland": ["pt"],
   "battle": ["defense", "landscape"],
   "saga": ["chapters"],
+  "sagadfcfront": ["chapters"],
   "adventure": ["pt", "adventure"],
   "flip": ["pt", "secondFace"],
   "split": ["landscape", "secondFace"],

@@ -218,6 +218,12 @@ export const END_ALIGNED_STAT_AIR_EM = 0.25;
 export function endAlignedStatKeepOut(slot: StatSlot, value: string, orientation: CardOrientation = "portrait"): Rect {
   const sizePct = fitStatSizePct(slot, value, orientation);
   const widthPct = (statWidthEm(value, slot.font) + END_ALIGNED_STAT_AIR_EM) * sizePct * 100;
+  // A START-aligned value (the double-faced saga front's reverse P/T, TODO
+  // 5.5 (b): left-aligned at the tab, as printed): its ink from the slot's
+  // left edge, the air on its right.
+  if (slot.align === "start") {
+    return { leftPct: slot.rect.leftPct, topPct: slot.rect.topPct, widthPct: Math.min(widthPct, slot.rect.widthPct), heightPct: slot.rect.heightPct };
+  }
   const rightPct = slot.rect.leftPct + slot.rect.widthPct;
   return {
     leftPct: Math.max(slot.rect.leftPct, rightPct - widthPct),

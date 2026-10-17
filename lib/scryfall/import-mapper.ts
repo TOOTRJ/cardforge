@@ -600,8 +600,10 @@ export type DfcImportFacts = {
   blocked: DfcImportBlock | null;
   /** The kind — set only when nothing blocks the landing: `battle` for a
    *  battle front with a back of its own (TODO 5.5 — the battle frame and
-   *  the ▼ back), else the Transform / Modal kind. */
-  kind: "transform" | "mdfc" | "battle" | null;
+   *  the ▼ back), `saga` for a transforming Saga (5.5 (b) — the
+   *  double-faced saga front and its transform back), else the Transform /
+   *  Modal kind. */
+  kind: "transform" | "mdfc" | "battle" | "saga" | null;
   /** The bodies each face WOULD wear (by type and family) — set whenever
    *  they exist, blocked or not: a blocked printing's frame is still the
    *  body (the registry names it; the import lands on the standard instead,
@@ -669,6 +671,24 @@ export function dfcImportOf(card: ScryfallCard): DfcImportFacts | null {
       return { ...blocked("colourless-face"), frontBody: "battle", backBody: battleBack };
     }
     return { ...facts, family: DEFAULT_DFC_ICON, kind: "battle", frontBody: "battle", backBody: battleBack };
+  }
+  // A transforming SAGA (TODO 5.5 (b); NEO's 23 and their promos, TLA's
+  // five): the double-faced saga front, its back the transform back the
+  // printing's family and the back's type derive (NEO's fans → the 2016–22
+  // back, TLA's arrows → the ▼ back). A Saga BACK (the MOM praetors, LCI
+  // Huatli, FIN's summons) has no body yet: today's landing, a legacy back.
+  if (layout === "transform" && front.saga && front.cardType === "enchantment") {
+    if (faces.length < 2 || !isDfcFaceType(back.cardType) || back.saga) return blocked("face-type");
+    const sagaBack = bodyFor(layout, "back", back.cardType, family);
+    if (!sagaBack) return blocked("no-body");
+    if (
+      backFaceColors(card).length === 0 &&
+      !colorlessFaceAllowed(sagaBack, { cardType: back.cardType, supertype: back.supertype })
+    ) {
+      // TLA's Avatars: a colourless back with no Artifact word (5.11).
+      return { ...blocked("colourless-face"), frontBody: "sagadfcfront", backBody: sagaBack };
+    }
+    return { ...facts, kind: "saga", frontBody: "sagadfcfront", backBody: sagaBack };
   }
   if (faces.length < 2 || !isDfcFaceType(front.cardType) || !isDfcFaceType(back.cardType) || front.saga || back.saga) {
     return blocked("face-type");
@@ -846,7 +866,8 @@ export function verifiedFrameMatchFromScryfall(
   match: FrameMatch = frameMatchFromScryfall(card),
 ): FrameMatch {
   const kind = kindFromScryfall(card);
-  if (kind && (dfcLayoutForKind(kind) || kind === "battle")) {
+  // (…and a transforming Saga on the double-faced saga front, TODO 5.5 (b).)
+  if (kind && (dfcLayoutForKind(kind) || kind === "battle" || (kind === "saga" && dfcImportOf(card)?.kind === "saga"))) {
     // A double-faced landing is verified on BOTH faces (TODO 5.4): the
     // front body in the front's colour and the back body in the back's —
     // the same finalization the import's patch gets (finalizeImportMatch),
@@ -877,7 +898,9 @@ export function frameTemplateFromScryfall(
 ): FrameTemplate | undefined {
   const kind = kindFromScryfall(card);
   if (!kind) return undefined;
-  if (KIND_DEFS[kind].layoutTemplates && !dfcLayoutForKind(kind)) return undefined;
+  // (A transforming Saga that lands on the double-faced saga front — TODO
+  // 5.5 (b) — names it, as a double-faced kind names its front body.)
+  if (KIND_DEFS[kind].layoutTemplates && !dfcLayoutForKind(kind) && dfcImportOf(card)?.kind !== "saga") return undefined;
   return match.landOn ?? match.template;
 }
 

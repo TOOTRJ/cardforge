@@ -137,6 +137,8 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
     // The textless promo pair (layout v58, TODO 4.35 / 4.42): no rules box.
     expect(without).toEqual([
       "m15station", "m15stationland", "m15pw", "m20token", "m20tokenartifact", "m15borderlessstation", "m15borderlesspw", "m15borderlesspwtall", "saga",
+      // The double-faced saga front (TODO 5.5 (b)): the saga's rail.
+      "sagadfcfront",
       "extendedartstation", "m15textless", "m15textlessland",
     ]);
     // (…and 4.40 / 4.41's three older full-art basics offer it: a basic

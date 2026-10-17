@@ -3659,6 +3659,90 @@
       ]
     }
   },
+  "sagadfcfront": {
+    "note": "The double-faced saga's FRONT (TODO 5.5 (b)): Kamigawa: Neon Dynasty's transforming Sagas — the saga body with the transform icon well (the closed fan: the card's family, `fandfc`) and the back's P/T left-aligned in the tab at the rail's foot. Every colour is a NEO plain front (the back an Enchantment Creature on the 2016–22 back). Gold is The Kami War (five colours on the gold frame) with Hidetsugu Consumes All (BR) as the alternate. TLA's five transforming Sagas (#27 / #61 / #117 / #145 / #186) print the same body under the Nyx starfield (the `nyx-saga-front` gap) and are not references. Colourless: no colourless transforming saga was printed (the land frame stands in, as on the saga).",
+    "colors": {
+      "w": [
+        {
+          "name": "The Restoration of Eiganjo",
+          "set": "neo",
+          "scryfallId": "a11a33ae-e7fa-4bd4-8cd8-3a3239a29bcc",
+          "curated": true
+        },
+        {
+          "name": "Era of Enlightenment",
+          "set": "neo",
+          "scryfallId": "74f43827-2b9b-4fc9-a6e2-c682dfbf14f7"
+        }
+      ],
+      "u": [
+        {
+          "name": "Inventive Iteration",
+          "set": "neo",
+          "scryfallId": "ea6d3242-8059-4203-aa06-58a6a3925eda",
+          "curated": true
+        },
+        {
+          "name": "The Modern Age",
+          "set": "neo",
+          "scryfallId": "ee60a8e9-3201-4a7e-8aa4-2c5e1042c8a5"
+        }
+      ],
+      "b": [
+        {
+          "name": "Tribute to Horobi",
+          "set": "neo",
+          "scryfallId": "54613f38-ca91-4764-b1fe-60cd83707fb4",
+          "curated": true
+        },
+        {
+          "name": "Life of Toshiro Umezawa",
+          "set": "neo",
+          "scryfallId": "f7f4adf7-b871-417b-8904-7f024ca21486"
+        }
+      ],
+      "r": [
+        {
+          "name": "Fable of the Mirror-Breaker",
+          "set": "neo",
+          "scryfallId": "24c0d87b-0049-4beb-b9cb-6f813b7aa7dc",
+          "curated": true
+        },
+        {
+          "name": "Kumano Faces Kakkazan",
+          "set": "neo",
+          "scryfallId": "28d92cad-45b0-479d-97fc-c175f3a3f259"
+        }
+      ],
+      "g": [
+        {
+          "name": "Teachings of the Kirin",
+          "set": "neo",
+          "scryfallId": "4c0c6c2a-4352-4c65-b41d-2a722bbef6c5",
+          "curated": true
+        },
+        {
+          "name": "Boseiju Reaches Skyward",
+          "set": "neo",
+          "scryfallId": "1144014b-f13b-4397-97ed-a8de46371a2c"
+        }
+      ],
+      "c": null,
+      "m": [
+        {
+          "name": "The Kami War",
+          "set": "neo",
+          "scryfallId": "36052532-5028-43a8-9fc4-56221ec867fd",
+          "curated": true
+        },
+        {
+          "name": "Hidetsugu Consumes All",
+          "set": "neo",
+          "scryfallId": "8e910464-329a-4de1-930a-be85b1956676"
+        }
+      ]
+    }
+  },
   "adventure": {
     "colors": {
       "w": [

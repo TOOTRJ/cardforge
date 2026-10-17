@@ -238,8 +238,11 @@ describe("type-line + layout precedence (TODO 1.3)", () => {
     // Artifact tokens: Treasure TMSH #27, Thopter TKLD #7.
     ["tmsh-27", "token", "token", "Artifact", "Treasure", "m15tokenartifact"],
     ["tkld-7", "token", "token", "Artifact Creature", "Thopter", "m15tokenartifact"],
-    // A transforming Saga (layout "transform") is a saga by its front face.
-    ["neo-141", "saga", "enchantment", undefined, "Saga", undefined],
+    // A transforming Saga (layout "transform") is a saga by its front face —
+    // on the double-faced saga front (TODO 5.5 (b)), which the static patch
+    // names; the import lands there once both faces are verified, else on
+    // the saga frame (finalizeImportMatch: `landing` below).
+    ["neo-141", "saga", "enchantment", undefined, "Saga", "sagadfcfront"],
     // A Room (layout "split") is not a split card: its first door is an
     // enchantment (m15), the second door rides as the back face.
     ["dsk-43", "enchantment", "enchantment", undefined, "Room", "m15"],

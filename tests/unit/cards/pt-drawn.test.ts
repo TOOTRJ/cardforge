@@ -32,6 +32,9 @@ const NO_PT_SLOT: FrameTemplate[] = [
   "m15mdfclandback",
   "battle",
   "saga",
+  // The double-faced saga front (TODO 5.5 (b)): the saga's body — the back's
+  // P/T is the tab's reverse P/T, not a slot of the front's.
+  "sagadfcfront",
   "split",
   "aftermath",
 ];

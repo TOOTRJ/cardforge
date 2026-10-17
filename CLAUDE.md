@@ -295,7 +295,11 @@ Rules and gotchas:
   tint per colour).
   In the creator a Transform / Modal card has ONE Front face | Back face
   switch above every step (Face tabs, 5.14 part 1: `face-switch.tsx`, words
-  from `SECOND_PART_WORDS`; a battle's Back tab is greyed out until 5.5) —
+  from `SECOND_PART_WORDS`; a battle's back is optional, 5.5 (a); a saga is
+  two-faced on the double-faced saga front `sagadfcfront`, 5.5 (b) — the
+  Saga kind's own frame, `DfcProfile.saga`, picked on the Card step's Faces
+  row, its back required; `dfcLayoutForCard` is the one "is this card
+  double-faced" for a kind with a two-faced frame) —
   the tab is the one source of "which face": each back field sits on the
   step of its front twin (`panels/back-face-panels.tsx`, `BACK_FIELD_STEP`
   in `lib/creator/face-tabs.ts`; the same `back_face.*` paths), the preview

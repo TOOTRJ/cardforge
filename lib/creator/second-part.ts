@@ -104,6 +104,14 @@ export const SECOND_PART_WORDS: Readonly<Partial<Record<CardKind, SecondPartWord
     rulesPlaceholder: "Flying, vigilance. (The back face's rules.)",
     blankCardType: "creature",
   }),
+  // A double-faced saga's back (TODO 5.5 (b)): a saga on its transform
+  // front (`sagadfcfront`) — Kamigawa: Neon Dynasty's enchantment creatures
+  // (NEO #141's Reflection of Kiki-Jiki). A one-faced saga has no switch.
+  saga: words("Saga", "Back face", {
+    namePlaceholder: "Reflection of Kiki-Jiki",
+    rulesPlaceholder: "Haste. (The back face's rules.)",
+    blankCardType: "creature",
+  }),
 };
 
 /** A double-faced back kept from before the real frames (an imported

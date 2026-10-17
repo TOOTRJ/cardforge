@@ -172,7 +172,8 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
     // + the Spacecraft's two dresses (TODO 4.27a step 2: sampled, above)
     // + 4.40 / 4.41's three older full-art basics.
     // + the borderless double-faced bodies (TODO 5.7: art to the edges, sampled).
-    expect(FRAME_TEMPLATE_VALUES).toHaveLength(77);
+    // + the double-faced saga front (TODO 5.5 (b): the saga's opaque master).
+    expect(FRAME_TEMPLATE_VALUES).toHaveLength(78);
     expect(FRAME_TEMPLATE_VALUES.filter((t) => drawn.has(t))).toEqual(SAMPLED);
   });
 
