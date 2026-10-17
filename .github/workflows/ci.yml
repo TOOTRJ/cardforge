@@ -12,9 +12,13 @@
 #                       on the bucket frame masters too, fetched from
 #                       production's PUBLIC frames bucket
 #                       (scripts/frames-fetch.mjs).
-#             coverage  the shards' reports merged: the coverage floors of
+#             coverage  OFF A PULL REQUEST only (main, the nightly run): the
+#                       shards' reports merged, the coverage floors of
 #                       vitest.config.ts held on the WHOLE suite, and the
-#                       `coverage` artifact.
+#                       `coverage` artifact. A pull request's shards run
+#                       plain vitest — no coverage, about twice as fast
+#                       (owner 2026-10-16). A red coverage run on main opens
+#                       (or comments on) ONE issue, `coverage-alert`.
 #   frames  every object in lib/frames/frame-manifest.json is readable from
 #           PRODUCTION's frames bucket (frames plan 4.2, docs/FRAMES.md) — a
 #           PR that adds frames stays red until the owner runs
@@ -51,17 +55,23 @@
 # private, and the full run is ~65 of them). `changes` picks one per run
 # (scripts/lib/ci-docs-only.mjs) and says which, and why, on the run summary:
 #
-#   full   everything above. A READY pull request; a merge to main that the
-#          pull request's own run did not already test; anything unclear.
-#   notes  every changed file is notes (the allow-list: root *.md,
-#          docs/**/*.md, .claude/**/*.md, the two tests READMEs): `docs` only.
-#   draft  a DRAFT pull request: `static` + `docs`. Marking it ready starts
-#          the full run on the same head. Its gate reports as "Draft checks"
-#          — never under the required name (see `checks`).
-#   light  a merge to main whose tree is the pull request head's own tree
-#          (the branch held all of main) and that leaves the frame manifest
-#          alone: `static` + `unit` + `coverage`. e2e, visual, parity and
-#          frames ran on these exact files in the pull request.
+#   full     everything above. A READY pull request (no `coverage`); a merge
+#            to main that no green full pull request run already tested
+#            (with `coverage`); anything unclear.
+#   notes    every changed file is notes (the allow-list: root *.md,
+#            docs/**/*.md, .claude/**/*.md, the two tests READMEs): `docs`.
+#   draft    a DRAFT pull request: `static` + `docs`. Marking it ready
+#            starts the full run on the same head. Its gate reports as
+#            "Draft checks" — never under the required name (see `checks`).
+#   verified a merge to main whose tree is the pull request head's own tree
+#            (the branch held all of main) AND whose head has a GREEN FULL
+#            pull request run (looked up through the API with this run's
+#            read-only token): `warm` + `frames` (~3 min). Everything else
+#            ran on these exact files in the pull request.
+#   nightly  the schedule: `unit` with `coverage` — the floors on main as it
+#            is, since a verified merge runs no unit test.
+#   idle     the schedule, when a run on this commit already passed the
+#            floors: nothing.
 #
 # Keep a new heavy job behind the `changes` condition, never behind a
 # workflow-level `paths-ignore`. No secrets are needed: the local stack's
@@ -86,6 +96,11 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
+  # The nightly coverage run on main (the `nightly` / `idle` tiers): 03:23
+  # UTC, off the hour GitHub's schedules crowd. A schedule runs on the
+  # default branch only.
+  schedule:
+    - cron: "23 3 * * *"
 
 # A pull request: one run per pull request, a newer push (or "ready for
 # review") cancels the one in flight. main: one group per COMMIT, so no merge
@@ -114,16 +129,26 @@ jobs:
   # this job FAILS its outputs are empty and they all run (without a status
   # function a failed need would skip them — and a skipped required check
   # passes).
+  #
+  # The token: read-only. `actions: read` is for the two lookups (a merge's
+  # green full pull request run; the schedule's earlier coverage run) and
+  # nothing else; an error there is the full tier (the nightly run).
   changes:
     name: Classify the change
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
     outputs:
       tier: ${{ steps.classify.outputs.tier }}
       static: ${{ steps.classify.outputs.static }}
       unit: ${{ steps.classify.outputs.unit }}
       heavy: ${{ steps.classify.outputs.heavy }}
+      frames: ${{ steps.classify.outputs.frames }}
+      warm: ${{ steps.classify.outputs.warm }}
       docs: ${{ steps.classify.outputs.docs }}
+      coverage: ${{ steps.classify.outputs.coverage }}
     steps:
       # Depth 2: HEAD is a merge commit (a pull request's test merge, or the
       # merge on main) and HEAD^1 what it was merged into — their diff is
@@ -137,6 +162,7 @@ jobs:
         id: classify
         env:
           PR_DRAFT: ${{ github.event.pull_request.draft }}
+          GH_TOKEN: ${{ github.token }}
         run: node scripts/ci-classify-change.mjs
 
   # The notes and draft tiers' tests: the unit tests that read a notes file
@@ -187,10 +213,14 @@ jobs:
   # The unit suite, split over runners by vitest's own `--shard` (a hash of
   # each test file's path — no file list to maintain). In one job the coverage
   # run took 12 to 21 minutes (2026-10-12) and was cancelled at the limit
-  # twice in a day with no test failing. A shard only RECORDS its coverage
+  # twice in a day with no test failing. On a PULL REQUEST a shard runs plain
+  # vitest (`coverage` output "false": no V8 counters, about twice as fast —
+  # owner 2026-10-16); a failing test fails its shard, and the gate. Off a
+  # pull request (main, the nightly run) a shard also RECORDS its coverage
   # (VITEST_COVERAGE_SHARD: no floors, no report — its share of the suite
   # could never meet them); the `coverage` job merges the shards' blobs and
-  # enforces the floors of vitest.config.ts on the whole suite.
+  # enforces the floors of vitest.config.ts on the whole suite. The times
+  # below were measured under coverage.
   # Six shards, measured (2026-10-12; the slowest shard's test step, across
   # runner types): three 7.4 min, four 6.2 to 9.5, six 5.6 to 7.7, eight 5.3.
   # The hash split is uneven — a handful of bake files are 40 % of the suite —
@@ -259,15 +289,24 @@ jobs:
         with:
           path: .frames-cache
           key: frames-${{ hashFiles('lib/frames/frame-manifest.json') }}
-      - run: npm run test:coverage:shard -- --shard=${{ matrix.shard }}/${{ matrix.total }}
+      # ONE of the two runs, by the classifier's `coverage` (an empty output
+      # — no verdict — covers).
+      - name: Unit tests, coverage recorded
+        if: ${{ needs.changes.outputs.coverage != 'false' }}
+        run: npm run test:coverage:shard -- --shard=${{ matrix.shard }}/${{ matrix.total }}
         env:
           FRAMES_BUILD_DIR: .frames-cache
           VITEST_COVERAGE_SHARD: "1"
+      - name: Unit tests
+        if: ${{ needs.changes.outputs.coverage == 'false' }}
+        run: npm run test:unit:shard -- --shard=${{ matrix.shard }}/${{ matrix.total }}
+        env:
+          FRAMES_BUILD_DIR: .frames-cache
       # The shard's results and coverage (.vitest-reports/blob-<i>-<n>.json),
       # uploaded from a red shard too: the merge then reports its failures
-      # beside the others'.
+      # beside the others'. None without coverage: nothing merges them.
       - name: Upload the shard's report
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.changes.outputs.coverage != 'false' }}
         uses: actions/upload-artifact@v4
         with:
           name: unit-blob-${{ matrix.shard }}
@@ -283,13 +322,15 @@ jobs:
   # in any of them fails this job too) and the merged coverage held to the
   # floors of vitest.config.ts — exactly what `npm run test:coverage` checks
   # on one machine.
+  # Off a pull request only (the `coverage` output, "false" on every pull
+  # request and wherever no shard runs).
   coverage:
     name: Unit coverage
     needs: [changes, unit]
     # Runs when a shard failed too, so the coverage report is still made —
-    # and not at all in the notes and draft tiers (no shard ran: the floors
-    # do not apply to a run of the two notes tests).
-    if: ${{ !cancelled() && needs.changes.outputs.unit != 'false' }}
+    # and not at all on a pull request, nor in a tier where no shard runs
+    # (the floors do not apply to a run of the two notes tests).
+    if: ${{ !cancelled() && needs.changes.outputs.coverage != 'false' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -320,6 +361,40 @@ jobs:
           path: coverage/
           retention-days: 3
 
+  # How the owner hears of a red coverage run on main (owner 2026-10-16): the
+  # run itself fails — `Unit coverage`, and the gate under "Typecheck, lint,
+  # unit", on main's commit — AND ONE open issue says so: opened on the first
+  # red run, commented on by the next ones, closed by the first green one.
+  # Red here means a floor dropped OR a unit test failed (the merge replays
+  # every shard's tests). The only job with a write permission, and only to
+  # issues; it judges nothing (the gate does not read it).
+  coverage-alert:
+    name: Coverage alert (main)
+    needs: [changes, coverage]
+    if: ${{ !cancelled() && github.event_name != 'pull_request' && (needs.coverage.result == 'failure' || needs.coverage.result == 'success') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: Open, update or close the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RESULT: ${{ needs.coverage.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SHA: ${{ github.sha }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          title="CI: unit coverage is red on main"
+          open=$(gh issue list --state open --search "\"$title\" in:title" --json number,title --jq "map(select(.title == \"$title\")) | .[0].number // empty")
+          if [ "$RESULT" = "failure" ]; then
+            body="Unit coverage failed on \`main\` at $SHA ($EVENT): a coverage floor of vitest.config.ts dropped, or a unit test failed. Run: $RUN_URL — its \`coverage\` artifact has the report. Pull requests no longer measure coverage, so the change that dropped a floor is one of the merges since the last green coverage run."
+            if [ -n "$open" ]; then gh issue comment "$open" --body "$body"; else gh issue create --title "$title" --body "$body"; fi
+          elif [ -n "$open" ]; then
+            gh issue close "$open" --comment "Unit coverage is green again on \`main\` at $SHA: $RUN_URL"
+          fi
+
   # The REQUIRED check (main's ruleset names "Typecheck, lint, unit"): green
   # only when the jobs its tier runs all are. `always()`, not `!cancelled()`:
   # the gate must RUN whatever became of the jobs it covers — failed, skipped,
@@ -332,11 +407,18 @@ jobs:
   # tier and fails on anything else (`changes` must have succeeded in all of
   # them):
   #
-  #            static   unit+coverage  docs     frames, e2e, visual
-  #   full     success  success        skipped  ran (not "skipped")
-  #   light    success  success        skipped  skipped
-  #   draft    success  skipped        success  skipped
-  #   notes    skipped  skipped        success  skipped
+  #            static   unit     docs     frames   e2e, visual  warm
+  #   full     success  success  skipped  ran      ran          skipped
+  #   verified skipped  skipped  skipped  ran      skipped      success
+  #   nightly  skipped  success  skipped  skipped  skipped      skipped
+  #   idle     skipped  skipped  skipped  skipped  skipped      skipped
+  #   draft    success  skipped  success  skipped  skipped      skipped
+  #   notes    skipped  skipped  success  skipped  skipped      skipped
+  #
+  # ("ran" = not "skipped": that job's own check carries its verdict.)
+  # `coverage` must be "success" where `unit` must succeed AND the
+  # classifier's `coverage` output is not "false" (every run but a pull
+  # request's), else "skipped".
   #
   # So "skipped" passes only where the classifier put it; a failed or
   # cancelled classifier, a skip nobody asked for, a failure, a cancel and a
@@ -374,7 +456,7 @@ jobs:
   # and the gate reads its result.
   checks:
     name: ${{ needs.changes.outputs.tier == 'draft' && 'Draft checks (typecheck, lint, build)' || 'Typecheck, lint, unit' }}
-    needs: [changes, static, unit, coverage, docs, frames, e2e, visual, superseded]
+    needs: [changes, static, unit, coverage, docs, frames, e2e, visual, warm, superseded]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -383,6 +465,7 @@ jobs:
         env:
           NEEDS: ${{ toJSON(needs) }}
           TIER: ${{ needs.changes.outputs.tier }}
+          COVERAGE: ${{ needs.changes.outputs.coverage }}
           SUPERSEDED: ${{ needs.superseded.result }}
         run: |
           echo "tier: ${TIER:-(none: judged as full)}" | tee -a "$GITHUB_STEP_SUMMARY"
@@ -391,17 +474,28 @@ jobs:
             echo "superseded: this draft run was cancelled (marked ready for review, or a newer push); the run that cancelled it judges the commit" | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          echo "$NEEDS" | jq 'del(.superseded)' | jq -e --arg tier "$TIER" '
-            ( if   $tier == "notes" then ["skipped", "skipped", "success", "skipped"]
-              elif $tier == "draft" then ["success", "skipped", "success", "skipped"]
-              elif $tier == "light" then ["success", "success", "skipped", "skipped"]
-              else                       ["success", "success", "skipped", "ran"] end ) as $want
-            | length == 8
+          echo "coverage: ${COVERAGE:-(none: covered)}" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "$NEEDS" | jq 'del(.superseded)' | jq -e --arg tier "$TIER" --arg coverage "$COVERAGE" '
+            def is($want): if $want == "ran" then .result != "skipped" else .result == $want end;
+            ( {
+                full:     ["success", "success", "skipped", "ran",     "ran",     "skipped"],
+                verified: ["skipped", "skipped", "skipped", "ran",     "skipped", "success"],
+                nightly:  ["skipped", "success", "skipped", "skipped", "skipped", "skipped"],
+                idle:     ["skipped", "skipped", "skipped", "skipped", "skipped", "skipped"],
+                draft:    ["success", "skipped", "success", "skipped", "skipped", "skipped"],
+                notes:    ["skipped", "skipped", "success", "skipped", "skipped", "skipped"]
+              } as $shapes
+              | $shapes[$tier] // $shapes.full ) as $want
+            | (if $want[1] == "success" and $coverage != "false" then "success" else "skipped" end) as $covered
+            | length == 9
             and .changes.result == "success"
-            and .static.result == $want[0]
-            and ([.unit, .coverage] | all(.result == $want[1]))
-            and .docs.result == $want[2]
-            and ([.frames, .e2e, .visual] | all(if $want[3] == "ran" then .result != "skipped" else .result == "skipped" end))
+            and (.static | is($want[0]))
+            and (.unit | is($want[1]))
+            and (.coverage | is($covered))
+            and (.docs | is($want[2]))
+            and (.frames | is($want[3]))
+            and ([.e2e, .visual] | all(is($want[4])))
+            and (.warm | is($want[5]))
           ' > /dev/null
 
   # A marker for the gate: did this RUN get cancelled? `cancelled()` is true
@@ -412,17 +506,98 @@ jobs:
   # gate uses it (see the gate).
   superseded:
     name: Cancelled-run marker
-    needs: [changes, static, unit, coverage, docs, frames, e2e, visual]
+    needs: [changes, static, unit, coverage, docs, frames, e2e, visual, warm]
     if: ${{ cancelled() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
       - run: echo "This run was cancelled (a newer push, or ready for review)." >> "$GITHUB_STEP_SUMMARY"
 
+  # The verified tier's work on main (owner 2026-10-16): save the caches a
+  # pull request restores from main — a pull request can read only its own
+  # and its base branch's caches, and in the full tier main's unit shard 1,
+  # visual bakes and parity job save them as a side effect. Each cache is
+  # LOOKED UP first (no download) and filled only when main has no entry
+  # under its key: the frame manifest moved, or the 10 GB limit evicted it.
+  # The same keys, paths and commands as the jobs that read them:
+  #   frames-<manifest>         .frames-cache      the unit shards
+  #   visual-frames-<manifest>  tmp/visual/frames  visual bakes, parity
+  #   setup-node's npm cache    ~/.npm             every `npm ci`
+  warm:
+    name: Warm the caches
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.warm != 'false' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - id: node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      # setup-node saves ~/.npm after the job only when its key missed.
+      - name: Fill npm's cache
+        if: steps.node.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Look up the unit shards' frames
+        id: unit-frames
+        uses: actions/cache/restore@v4
+        with:
+          path: .frames-cache
+          key: frames-${{ hashFiles('lib/frames/frame-manifest.json') }}
+          lookup-only: true
+      - name: Restore an older copy
+        if: steps.unit-frames.outputs.cache-hit != 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: .frames-cache
+          key: frames-${{ hashFiles('lib/frames/frame-manifest.json') }}
+          restore-keys: frames-
+      - name: Fetch the unit shards' frames
+        if: steps.unit-frames.outputs.cache-hit != 'true'
+        timeout-minutes: 10
+        run: >-
+          node scripts/frames-fetch.mjs --out .frames-cache
+          --fallback-origin https://znipzaxgpaiandwiqabn.supabase.co/storage/v1/object/public/frames
+      - name: Save the unit shards' frames
+        if: steps.unit-frames.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .frames-cache
+          key: frames-${{ hashFiles('lib/frames/frame-manifest.json') }}
+
+      - name: Look up the visual frames
+        id: visual-frames
+        uses: actions/cache/restore@v4
+        with:
+          path: tmp/visual/frames
+          key: visual-frames-${{ hashFiles('lib/frames/frame-manifest.json') }}
+          lookup-only: true
+      - name: Restore an older copy
+        if: steps.visual-frames.outputs.cache-hit != 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: tmp/visual/frames
+          key: visual-frames-${{ hashFiles('lib/frames/frame-manifest.json') }}
+          restore-keys: visual-frames-
+      - name: Fetch the visual frames
+        if: steps.visual-frames.outputs.cache-hit != 'true'
+        timeout-minutes: 10
+        run: node scripts/visual-regression.mjs --fetch-only
+      - name: Save the visual frames
+        if: steps.visual-frames.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: tmp/visual/frames
+          key: visual-frames-${{ hashFiles('lib/frames/frame-manifest.json') }}
+
   frames:
     name: Frames published
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.heavy != 'false' }}
+    # The full and verified tiers: main must see it once the manifest moved.
+    if: ${{ !cancelled() && needs.changes.outputs.frames != 'false' }}
     runs-on: ubuntu-24.04
     # frames-check re-checks apparent misses one at a time with backoff
     # (transient storage errors are common when several PRs run at once).

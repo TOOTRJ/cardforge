@@ -43,10 +43,12 @@ puts the run in one tier and says which, and why, on the run summary:
 
 | Tier | When | Runs | Billed (measured 2026-10-13) |
 | --- | --- | --- | --- |
-| **full** | a READY pull request; a merge to `main` that its PR did not already test; anything unclear | everything | ~67 min |
+| **full** | a READY pull request; a merge to `main` that no green full PR run already tested; anything unclear | everything — the unit shards WITHOUT coverage on a PR, with coverage + the floors on `main` | ~55 min on a PR (estimate), ~72 on `main` |
 | **draft** | a DRAFT pull request that changes code | typecheck + lint + build, and the notes tests | ~7 min |
 | **notes** | every changed file is notes (PR or merge to `main`) | the notes tests (`npm run test:docs`) | ~3 min |
-| **light** | a merge to `main` whose tree IS its PR head's tree (the branch held all of `main`) and that leaves `lib/frames/frame-manifest.json` alone | typecheck + lint + build, the six unit shards, coverage | ~37 min |
+| **verified** | a merge to `main` whose tree IS its PR head's tree (the branch held all of `main`) AND whose head has a GREEN FULL pull request run | the cache warm-up + Frames published | ~4 min |
+| **nightly** | the schedule (03:23 UTC), on `main` as it is | the six unit shards with coverage + the floors | ~33 min |
+| **idle** | the schedule, when a run on that commit already passed the floors | nothing | ~1 min |
 
 **Working with it: open the pull request as a draft while you iterate, mark
 it ready when you want the full checks.**
@@ -124,14 +126,48 @@ unit-test source for a string naming a `.md`, `docs/`, `.claude`, README or
 LICENSE), and fails too if app code starts to read a `.md`. The coverage
 floors do not apply where no shard runs (notes, draft).
 
-The **light** tier rests on one fact: when the branch already contained all
-of `main`, the merge commit's files are byte for byte the files the pull
-request's own run tested, and E2E, Frames published and Visual regression
-are required checks there. The script proves it from git alone (the merge's
-tree equals its second parent's, and its first parent is an ancestor of the
-second). `main` moved under the PR → full. The manifest changed → full,
-because `main`'s run is what SAVES the frame caches every pull request
-restores (a PR can read only its base branch's caches).
+The **verified** tier (owner 2026-10-16) rests on two facts, each proven or
+the run is full:
+
+1. **Same tree** — git alone: the merge's tree equals its second parent's
+   (the PR head), and its first parent is an ancestor of the second (the
+   branch held all of `main`). Since the ruleset refuses non-fast-forward
+   pushes, every earlier tip of `main` is an ancestor of the head too, so
+   every PR run of that head tested exactly the head's tree.
+2. **A green FULL run of it** — the GitHub API, with the run's own
+   read-only token (`actions: read`; `scripts/lib/ci-runs.mjs`): a
+   `pull_request` run of `ci.yml` on that head sha, in this repository,
+   completed and successful, whose latest attempt's "Typecheck, lint,
+   unit", "E2E (local Supabase)", "Visual regression", "Frames published"
+   and "Preview parity" all SUCCEEDED (a draft or notes run is green with
+   them skipped), and no job failed.
+
+Fail-safe: `main` moved under the PR, no such run, a missing token, an API
+error or timeout (one retry), an unexpected answer, a classifier crash — all
+run the **full** tier, with coverage. The verified tier still runs the
+**Warm the caches** job, because `main`'s run is what SAVES the caches every
+PR restores (a PR can read only its base branch's caches): `frames-<hash>`
+(the unit shards' `.frames-cache`), `visual-frames-<hash>` (visual bakes,
+parity, `parity-record.yml`) and setup-node's npm cache — each looked up
+first and filled only on a miss (a moved manifest, or the 10 GB limit's
+eviction) — and **Frames published**. The manifest no longer forces a full
+run on `main`.
+
+**Coverage runs off a pull request only.** A PR's six shards run plain
+`npm run test:unit:shard` (no V8 counters); a failing test still fails its
+shard and the gate. `main`'s full runs and the **nightly** schedule record
+coverage and `Unit coverage` holds the floors. A red `Unit coverage` on
+`main` (a floor dropped, or a unit test failed) fails `main`'s run AND opens
+one issue, "CI: unit coverage is red on main" (`coverage-alert`: commented
+on by the next red run, closed by the next green one). The floor that
+dropped came from a merge since the last green coverage run — at most a day
+of merges. `npm run test:coverage` locally checks the same floors before you
+push, if you touched an area with one (`lib/billing`, `lib/stripe`,
+`lib/auth`, `lib/seo`, `lib/ai`).
+
+**Rolling back** both is one revert of the pull request that brought them
+(`ci: skip main's re-test of a verified tree; coverage off pull requests`):
+the classifier, the gate's table and the tests move together.
 
 Rules for whoever edits the workflow:
 
@@ -140,8 +176,12 @@ Rules for whoever edits the workflow:
   and the PR cannot merge. A job skipped by its own `if` reports "skipped",
   which a required check accepts.
 - A new job takes its group's condition, `needs: changes` and
-  `if: ${{ !cancelled() && needs.changes.outputs.<static|unit|heavy> != 'false' }}`
-  — so a FAILED classifier runs it — and is added to the test's `GROUP_JOBS`.
+  `if: ${{ !cancelled() && needs.changes.outputs.<group> != 'false' }}`
+  (`static`, `unit`, `coverage`, `heavy`, `frames`, `warm`) — so a FAILED
+  classifier runs it — and is added to the test's `GROUP_JOBS`.
+- A renamed full-tier job (`FULL_RUN_JOBS` in `scripts/lib/ci-runs.mjs`)
+  is renamed there too, or every merge silently runs the full suite again
+  (`ci-docs-only.test.ts` holds the names to the workflow).
 - The gate accepts exactly one shape per tier (the table in the workflow);
   "skipped" passes only where the classifier put it, and a failed or
   cancelled classifier is red.
@@ -151,8 +191,8 @@ Rules for whoever edits the workflow:
   the shards' blobs (read by the same run only). Nothing reads an artifact
   of another run.
 
-`.github/workflows/ci.yml` runs on every PR and on `main`: typecheck, lint,
-unit tests with coverage floors, `next build`, and the **full** Playwright
+`.github/workflows/ci.yml` runs on every PR, on `main` and nightly: typecheck,
+lint, unit tests (coverage floors on `main`), `next build`, and the **full** Playwright
 suite against a Supabase stack booted inside the runner (its keys are
 generated per run; no secrets involved; the paid layer is switched on so the
 pricing specs run). A red e2e job is a real signal — in 2026-09 the suite had
@@ -161,15 +201,15 @@ job summary lists every skipped test and every test that only passed on a
 retry (`scripts/e2e-summary.mjs`) — a flake that keeps appearing there is a
 bug to fix, not noise.
 
-The required **Typecheck, lint, unit** check is a gate over three jobs that
-run side by side (in the full and light tiers; the other tiers above swap in
-**Notes checks**): `static` (typecheck, lint, `next build`), `unit` (the unit
-suite in six shards — vitest's `--shard`, a hash of each file's path, so
-there is no file list to keep) and `coverage`, which merges the shards'
-blob reports (`npm run test:coverage:merge`) and holds the coverage floors
-of `vitest.config.ts` to the WHOLE suite. A shard only records coverage
-(`VITEST_COVERAGE_SHARD=1`: its share of the tests could never meet a
-floor); nothing else may set that variable. One machine's
+The required **Typecheck, lint, unit** check is a gate over the jobs its
+tier runs (the table in the workflow): in the full tier `static`
+(typecheck, lint, `next build`) and `unit` (the unit suite in six shards —
+vitest's `--shard`, a hash of each file's path, so there is no file list to
+keep), plus, off a pull request, `coverage`, which merges the shards' blob
+reports (`npm run test:coverage:merge`) and holds the coverage floors of
+`vitest.config.ts` to the WHOLE suite. A covering shard only records
+coverage (`VITEST_COVERAGE_SHARD=1`: its share of the tests could never meet
+a floor); nothing else may set that variable. One machine's
 `npm run test:coverage` is unchanged and checks the same floors.
 `tests/unit/devops/ci-unit-shards.test.ts` pins the shape.
 

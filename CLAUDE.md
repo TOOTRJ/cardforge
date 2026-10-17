@@ -92,6 +92,15 @@ Rules and gotchas:
   (`tests/unit/devops/ci-docs-only.test.ts` fails until it does). A new job
   goes behind the `changes` condition, never behind a workflow-level
   `paths-ignore`; a draft's gate is named "Draft checks" on purpose.
+  PR unit shards run WITHOUT coverage (owner 2026-10-16): the floors are
+  held on `main`'s full runs and the nightly schedule, and a red
+  `Unit coverage` there fails `main`'s run and opens ONE issue ("CI: unit
+  coverage is red on main") — run `npm run test:coverage` yourself when a
+  change touches a floored area. A merge whose tree is its PR head's AND
+  whose head has a green FULL PR run (`scripts/lib/ci-runs.mjs`, read-only
+  token) is the `verified` tier on `main`: only the cache warm-up (the frame
+  and npm caches PRs restore from `main`) and Frames published; any doubt
+  is the full run. A renamed full-tier job is renamed in `FULL_RUN_JOBS` too.
 
 ## Conventions
 
