@@ -125,7 +125,7 @@ describe("getFrameRequestSummary", () => {
     mocks.rpc.mockResolvedValue({ data: null, error: { message: "function does not exist" } });
     const failed = await getFrameRequestSummary("30");
     expect(failed?.rows).toEqual([]);
-    expect(failed?.error).toMatch(/migration 0123/);
+    expect(failed?.error).toBe("Couldn't read the request log.");
 
     mocks.isAdminConfigured.mockReturnValue(false);
     const unconfigured = await getFrameRequestSummary("30");

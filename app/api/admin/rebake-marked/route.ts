@@ -58,8 +58,8 @@ export type RebakeMarkedResponse =
     }
   | { ok: false; error: string };
 
-function json(body: RebakeMarkedResponse, status = 200) {
-  return NextResponse.json(body, { status });
+function json(body: RebakeMarkedResponse, status = 200, headers?: HeadersInit) {
+  return NextResponse.json(body, { status, headers });
 }
 
 export async function POST(request: Request) {
@@ -92,9 +92,11 @@ export async function POST(request: Request) {
   try {
     lease = await acquireManualLease(admin, token);
   } catch (err) {
+    console.error("[rebake-marked] sweep lease failed:", err);
     return json({ ok: false, error: err instanceof Error ? err.message : "Sweep lease unavailable." }, 500);
   }
-  if (!lease.ok) return json({ ok: false, error: leaseBusyMessage(lease) }, 503);
+  // Busy → 503 + Retry-After, as /api/admin/rebake answers (never a 409).
+  if (!lease.ok) return json({ ok: false, error: leaseBusyMessage(lease) }, 503, { "Retry-After": "60" });
 
   let result: Awaited<ReturnType<typeof runRebakeBatch>> | null = null;
   try {
@@ -109,7 +111,10 @@ export async function POST(request: Request) {
     const finished = result?.ok === true && result.remaining === 0;
     await releaseSweepLease(admin, token, finished ? {} : { parkSeconds: MANUAL_PARK_SECONDS });
   }
-  if (!result.ok) return json({ ok: false, error: result.error }, 500);
+  if (!result.ok) {
+    console.error("[rebake-marked] batch failed:", result.error);
+    return json({ ok: false, error: result.error }, 500);
+  }
   // Gallery landings, hubs and card pages are ISR and point at the old
   // ?v= render URLs (cached immutably by /render-cdn). Refresh them once,
   // when the run finishes, not after every batch.

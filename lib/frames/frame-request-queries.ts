@@ -169,8 +169,7 @@ export async function getFrameRequestSummary(
     });
     if (error) {
       console.warn("getFrameRequestSummary: rpc error", error.message);
-      // The shared dev DB has no migration 0123 until it merges.
-      return empty("Couldn't read the request log (is migration 0123 applied here?).");
+      return empty("Couldn't read the request log.");
     }
     const rows = sortFrameRequestRows(mapFrameRequestRows((data ?? []) as RpcRow[]));
     return {
