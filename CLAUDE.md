@@ -1437,8 +1437,12 @@ Rules and gotchas:
   (Stripe renews it on confirm). Stripe's
   `trial_will_end` becomes ONE `trial_ending` notification + "account" email
   per subscription (migration 0109; honest about whether a card is on file).
-  `invoice.paid` writes ONE `billing_payments` row per invoice (0110; the
-  admin Revenue panel reads only that table), resyncs the subscription, and
+  `invoice.paid` writes ONE `billing_payments` row per invoice (0110) and a
+  PAID pack session ONE `billing_pack_payments` row (0138, keyed by the
+  session like its grant, `on conflict do nothing` — a pack has no invoice);
+  the admin Revenue panel reads both, counts only money taken (a $0 trial
+  invoice is listed as "Trial start", never totalled) and totals per
+  currency. It also resyncs the subscription, and
   notifies `payment_received` only when money was taken; a
   `checkout.session.expired` session becomes ONE `checkout_reminder`
   notification + email per user per 30 days, skipped once the plan/pack was

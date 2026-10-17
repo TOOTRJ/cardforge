@@ -72,6 +72,8 @@ function makeAdmin(
             },
           };
         },
+        // The pack revenue row (billing_pack_payments, 0138).
+        upsert: async () => ({ error: null }),
       };
     },
     rpc: async (fn: string, args: Record<string, unknown>) => {
@@ -1306,6 +1308,176 @@ describe("handleStripeEvent — funnel rows for subscription lifecycle", () => {
       ["pack_purchased", { pack: "mini", credits: 10, discount: "subscriber", amountCents: 320, sessionId: "cs_1" }],
       ["checkout_completed", { kind: "pack", pack: "mini", discount: "subscriber", sessionId: "cs_1" }],
     ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Pack sales in the revenue log (billing_pack_payments, migration 0138). A
+// stand-in table that behaves like Postgres' ON CONFLICT DO NOTHING on the
+// session id (what `ignoreDuplicates: true` asks PostgREST for), so repeated
+// and out-of-order deliveries are judged on the rows they leave.
+// ---------------------------------------------------------------------------
+describe("handleStripeEvent — pack sales in the revenue log", () => {
+  function makePackAdmin(opts: { upsertError?: string; grantError?: string } = {}) {
+    const table = new Map<string, Record<string, unknown>>();
+    const upsertCalls: Array<{ table: string; row: Record<string, unknown>; opts: unknown }> = [];
+    const grants = new Set<string>();
+    const rpcs: Array<{ fn: string; args: Record<string, unknown> }> = [];
+    const chain = () => {
+      const c: Record<string, unknown> = {};
+      for (const m of ["select", "eq", "limit", "single", "maybeSingle"]) c[m] = () => c;
+      c.then = (resolve: (v: unknown) => unknown) =>
+        Promise.resolve({ data: { id: "fe_1" }, error: null }).then(resolve);
+      return c;
+    };
+    const admin = {
+      from(name: string) {
+        return {
+          insert: () => chain(), // funnel_events
+          upsert: async (row: Record<string, unknown>, o: { onConflict?: string; ignoreDuplicates?: boolean }) => {
+            upsertCalls.push({ table: name, row, opts: o });
+            if (opts.upsertError) return { error: { message: opts.upsertError } };
+            const key = String(row[o.onConflict ?? ""]);
+            if (!(table.has(key) && o.ignoreDuplicates)) table.set(key, row);
+            return { error: null };
+          },
+        };
+      },
+      rpc: async (fn: string, args: Record<string, unknown>) => {
+        rpcs.push({ fn, args });
+        if (opts.grantError) return { data: null, error: { message: opts.grantError } };
+        grants.add(String(args.p_idempotency_key));
+        return { data: 0, error: null };
+      },
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return { admin: admin as any, table, upsertCalls, grants, rpcs };
+  }
+
+  const session = (extra: Record<string, unknown> = {}) => ({
+    id: "cs_live_pack_1",
+    mode: "payment",
+    payment_status: "paid",
+    customer: "cus_1",
+    payment_intent: "pi_1",
+    client_reference_id: "user-1",
+    amount_total: 640,
+    currency: "usd",
+    created: 1790130000,
+    metadata: {
+      purchase_kind: "pack",
+      supabase_user_id: "user-1",
+      pack: "small",
+      pack_credits: "30",
+      discount: "subscriber",
+    },
+    ...extra,
+  });
+  const ev = (id: string, type: string, object: unknown, created: number) => ({ id, type, created, data: { object } });
+
+  it("a paid `completed` writes ONE row from Stripe's amount_total, keyed by the session", async () => {
+    const { admin, table, upsertCalls } = makePackAdmin();
+    await run(ev("evt_c", "checkout.session.completed", session(), 1790130100), admin);
+    expect(upsertCalls).toHaveLength(1);
+    expect(upsertCalls[0]).toMatchObject({
+      table: "billing_pack_payments",
+      opts: { onConflict: "checkout_session_id", ignoreDuplicates: true },
+    });
+    expect([...table.values()]).toEqual([
+      {
+        checkout_session_id: "cs_live_pack_1",
+        user_id: "user-1",
+        stripe_customer_id: "cus_1",
+        payment_intent_id: "pi_1",
+        pack: "small",
+        credits: 30,
+        amount_cents: 640,
+        currency: "usd",
+        discount: "subscriber",
+        paid_at: new Date(1790130100 * 1000).toISOString(),
+      },
+    ]);
+  });
+
+  it("is idempotent under a repeated delivery: the same event twice leaves one row, one grant key", async () => {
+    const { admin, table, grants } = makePackAdmin();
+    const event = ev("evt_c", "checkout.session.completed", session(), 1790130100);
+    await run(event, admin);
+    const first = [...table.values()];
+    await run(event, admin);
+    expect([...table.values()]).toEqual(first);
+    expect(table.size).toBe(1);
+    expect([...grants]).toEqual(["pack:cs_live_pack_1"]);
+  });
+
+  it("is idempotent in ANY order: async_payment_succeeded before an unpaid `completed`, then a paid echo", async () => {
+    const { admin, table } = makePackAdmin();
+    await run(ev("evt_settled", "checkout.session.async_payment_succeeded", session(), 1790140000), admin);
+    // The unpaid `completed` (sent first, delivered last) writes nothing.
+    await run(
+      ev("evt_c", "checkout.session.completed", session({ payment_status: "unpaid" }), 1790130100),
+      admin,
+    );
+    // A paid echo of the same session never moves the row either.
+    await run(ev("evt_echo", "checkout.session.completed", session(), 1790150000), admin);
+    expect(table.size).toBe(1);
+    expect(table.get("cs_live_pack_1")).toMatchObject({
+      amount_cents: 640,
+      paid_at: new Date(1790140000 * 1000).toISOString(),
+    });
+  });
+
+  it("an unpaid `completed` alone writes no revenue row and grants nothing", async () => {
+    const { admin, table, rpcs } = makePackAdmin();
+    await run(
+      ev("evt_c", "checkout.session.completed", session({ payment_status: "unpaid" }), 1790130100),
+      admin,
+    );
+    expect(table.size).toBe(0);
+    expect(rpcs).toHaveLength(0);
+  });
+
+  it("a subscription checkout writes no pack row (its money arrives as invoice.paid)", async () => {
+    const { admin, upsertCalls } = makePackAdmin();
+    await run(
+      ev("evt_sub", "checkout.session.completed", session({ mode: "subscription", metadata: {} }), 1790130100),
+      admin,
+    );
+    expect(upsertCalls).toHaveLength(0);
+  });
+
+  it("throws when the row can't be written, so Stripe retries (the grant is deduped on the retry)", async () => {
+    const { admin } = makePackAdmin({ upsertError: "boom" });
+    await expect(run(ev("evt_c", "checkout.session.completed", session(), 1790130100), admin)).rejects.toThrow(
+      /billing_pack_payments write failed for cs_live_pack_1/,
+    );
+  });
+
+  it("writes no revenue row when the credit grant failed (no sale logged without its credits)", async () => {
+    const { admin, upsertCalls } = makePackAdmin({ grantError: "db down" });
+    await expect(run(ev("evt_c", "checkout.session.completed", session(), 1790130100), admin)).rejects.toThrow(
+      /Pack grant failed/,
+    );
+    expect(upsertCalls).toHaveLength(0);
+  });
+
+  it("stores an expanded customer / payment intent as ids and the currency in lower case", async () => {
+    const { admin, table } = makePackAdmin();
+    await run(
+      ev(
+        "evt_c",
+        "checkout.session.completed",
+        session({ customer: { id: "cus_x" }, payment_intent: { id: "pi_x" }, currency: "EUR", amount_total: 900 }),
+        1790130100,
+      ),
+      admin,
+    );
+    expect(table.get("cs_live_pack_1")).toMatchObject({
+      stripe_customer_id: "cus_x",
+      payment_intent_id: "pi_x",
+      currency: "eur",
+      amount_cents: 900,
+    });
   });
 });
 

@@ -13,7 +13,7 @@ how the integration compares with the standard Stripe SaaS pattern.
 | Billing page | `/dashboard/billing` | Plan, renewal/trial/cancel dates, plan changes (the same grid), credits + packs, card on file + invoices (`lib/billing/subscription-details.ts`), portal shortcuts. What the plan card says about the plan's future is ONE decision, `planStatusOf()` (`lib/billing/plan-status.ts`), drawn by `components/billing/plan-status.tsx` — see "A cancelled subscription" below. |
 | Checkout / portal | `lib/stripe/actions.ts` (server actions) | New subscription → Stripe Checkout (7-day trial for first-timers, **card required** since 2026-09-24, 25 trial credits, the full allotment on first payment; a lapsed trial gets 20% off its first month for 30 days). Live subscription: an **upgrade** goes through the Customer Portal **confirm-update** flow (in-place price switch, prorated, charged now); a **downgrade** (Pro → Plus, or annual → monthly) is **scheduled for the end of the paid period** with a subscription schedule (§6). Broken payment → portal. Packs → Checkout in `payment` mode. |
 | Webhook | `app/api/stripe/webhook/route.ts` → `lib/stripe/webhook-handlers.ts` → `lib/stripe/subscription-sync.ts` | Events: `checkout.session.{completed,async_payment_succeeded,expired}`, `customer.subscription.{created,updated,deleted,trial_will_end}`, `invoice.{paid,payment_failed}`. Idempotent (`stripe_events` claim table, migration 0099). Every endpoint (live + sandbox) must subscribe to all nine. |
-| Revenue log | `billing_payments` (migration 0110) ← `invoice.paid`; admin Revenue panel on `/admin/users` (`lib/admin/revenue-queries.ts`) | One row per paid invoice; admins read, the webhook writes. |
+| Revenue log | `billing_payments` (migration 0110) ← `invoice.paid`; `billing_pack_payments` (migration 0138) ← a paid pack `checkout.session.*`; admin Revenue panel on `/admin/users` (`lib/admin/revenue-queries.ts`) | One row per paid invoice and one per paid pack session; admins read, the webhook writes. |
 | Entitlements | `lib/billing/entitlements.ts` | The ONE server-side truth: subscription active/trialing + admin comp → effective tier → perks. Never trust a client tier. |
 | Credits | `lib/billing/credit-refill.ts` (monthly refill, cron + webhook), `lib/billing/credit-reconcile.ts` (refund orphaned spends), `settle_spend` (0106) | Refill is idempotent per user per month; upgrades top up the difference against everything the month already granted. |
 
@@ -195,8 +195,34 @@ arrived" signal — does three things:
    `subscription_update` / `manual`), tier + interval, the billed period,
    `paid_at`, invoice number and hosted URL. The admin **Revenue** panel on
    `/admin/users` shows last-30-days and all-time totals plus the newest
-   payments; it reads only this table, never Stripe. Seeds give `dev_pro`
-   three renewals so branches show rows.
+   payments; it reads this table and `billing_pack_payments` (below), never
+   Stripe. Seeds give `dev_pro` three renewals and `dev_artist` a $0 trial
+   start so branches show rows.
+
+   **Credit packs (2026-10-16, migration 0138).** A pack is a one-time
+   Checkout session with NO invoice, so `invoice.paid` never sees it and
+   the panel used to leave every pack sale out. `handleCheckoutPaid` — the
+   handler that grants the pack's credits, on `checkout.session.completed`
+   when it arrives paid or on `async_payment_succeeded` — now also writes
+   ONE `billing_pack_payments` row per session (keyed by the session id,
+   like the `pack:<session>` grant; Stripe's `amount_total` / `currency`,
+   after any subscriber coupon; `paid_at` = the paying event's time),
+   `on conflict do nothing`: a repeated delivery, or both events in any
+   order, leave the first paid write. An unpaid `completed` writes nothing;
+   a write error throws (Stripe retries; the grant is deduped). No backfill:
+   the ledger's pack grants carry credits, not the amount paid, and the
+   funnel's `pack_purchased` rows lost their `sessionId` (66 characters,
+   past the 48-character prop limit), so neither ties an amount to a sale.
+   The panel counts ledger pack grants with no row and says how many
+   earlier sales it can't price. Seeds give two packs.
+
+   **What the panel counts.** Only money taken: a $0 invoice is listed —
+   "Trial start" for a plan's first ($0 `subscription_create`, the
+   card-required trial), else "no charge" — and is in no total or count.
+   Totals are kept per currency (never added across currencies), before
+   Stripe fees and refunds (refunds are not logged). Each log is read up to
+   5,000 rows; when one reaches it, "All time" says it covers the newest
+   rows only.
 2. **Resync.** The subscription the invoice bills is re-read and run through
    `syncSubscriptionForUser` + the idempotent credit grant — a recovered
    past-due plan or a converted trial is current the moment it's paid, even
@@ -490,7 +516,8 @@ ends Nov 8, 2026").
 ENDS (the `deleted` event), so a subscriber who has cancelled but is active
 counts as a subscriber until then, and one who resumes never counts as a
 cancellation; `subscription_resumed` counts the resumes. Revenue reads only
-`billing_payments` (paid invoices) and is unaffected.
+`billing_payments` (paid invoices) and `billing_pack_payments` (paid packs,
+§7) and is unaffected.
 
 ### Follow-up 2 (2026-10-07): a late event cannot store a state the plan has left
 

@@ -344,6 +344,48 @@ export type Database = {
         };
         Relationships: [];
       };
+      billing_pack_payments: {
+        Row: {
+          checkout_session_id: string;
+          user_id: string | null;
+          stripe_customer_id: string | null;
+          payment_intent_id: string | null;
+          pack: string | null;
+          credits: number;
+          amount_cents: number;
+          currency: string;
+          discount: string | null;
+          paid_at: string;
+          created_at: string;
+        };
+        Insert: {
+          checkout_session_id: string;
+          user_id?: string | null;
+          stripe_customer_id?: string | null;
+          payment_intent_id?: string | null;
+          pack?: string | null;
+          credits: number;
+          amount_cents: number;
+          currency?: string;
+          discount?: string | null;
+          paid_at: string;
+          created_at?: string;
+        };
+        Update: {
+          checkout_session_id?: string;
+          user_id?: string | null;
+          stripe_customer_id?: string | null;
+          payment_intent_id?: string | null;
+          pack?: string | null;
+          credits?: number;
+          amount_cents?: number;
+          currency?: string;
+          discount?: string | null;
+          paid_at?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       comment_reports: {
         Row: {
           comment_id: string;

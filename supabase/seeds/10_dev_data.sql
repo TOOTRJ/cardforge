@@ -819,7 +819,8 @@ values
 on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------------
--- 7. Revenue log (0110). dev_pro's last three renewals, so the admin Revenue
+-- 7. Revenue log (0110 + 0138). dev_pro's last three renewals, dev_artist's
+--    $0 trial start and two credit packs, so the admin Revenue
 --    panel has rows on a fresh branch. No Stripe objects behind them.
 -- ---------------------------------------------------------------------------
 
@@ -833,8 +834,26 @@ values
   ('in_dev_pro_0002', 'd0000000-0000-4000-a000-000000000002', 'cus_dev_pro', 'sub_dev_pro', 1500, 'usd',
    'subscription_cycle', 'pro', 'month', now() - interval '60 days', now() - interval '30 days', now() - interval '60 days', 'DEV-0002', null),
   ('in_dev_pro_0003', 'd0000000-0000-4000-a000-000000000002', 'cus_dev_pro', 'sub_dev_pro', 1500, 'usd',
-   'subscription_cycle', 'pro', 'month', now() - interval '30 days', now(), now() - interval '30 days', 'DEV-0003', null)
+   'subscription_cycle', 'pro', 'month', now() - interval '30 days', now(), now() - interval '30 days', 'DEV-0003', null),
+  -- A card-required trial opens with a $0 invoice: listed as "Trial start",
+  -- counted in no total.
+  ('in_dev_artist_trial', 'd0000000-0000-4000-a000-000000000004', 'cus_dev_artist', 'sub_dev_artist', 0, 'usd',
+   'subscription_create', 'plus', 'month', now() - interval '5 days', now() + interval '2 days', now() - interval '5 days', 'DEV-0004', null)
 on conflict (invoice_id) do nothing;
+
+-- Credit-pack sales (0138): a pack is a one-time Checkout session with no
+-- invoice. dev_free's full-price mini pack and dev_pro's small pack at the
+-- subscriber price, both inside the last 30 days.
+insert into public.billing_pack_payments (
+  checkout_session_id, user_id, stripe_customer_id, payment_intent_id, pack, credits,
+  amount_cents, currency, discount, paid_at
+)
+values
+  ('cs_dev_free_pack_0001', 'd0000000-0000-4000-a000-000000000003', 'cus_dev_free', null, 'mini', 10,
+   400, 'usd', 'none', now() - interval '3 days'),
+  ('cs_dev_pro_pack_0001', 'd0000000-0000-4000-a000-000000000002', 'cus_dev_pro', null, 'small', 30,
+   640, 'usd', 'subscriber', now() - interval '12 days')
+on conflict (checkout_session_id) do nothing;
 
 -- ---------------------------------------------------------------------------
 -- 8. Funnel events (0112). A week of plausible steps so the admin Funnel
