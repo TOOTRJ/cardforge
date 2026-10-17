@@ -65,7 +65,7 @@ describe("every save (normalizeAnatomy / newCardFrameStyle)", () => {
     expect(normalizeAnatomy({ template: "m15", collector: "2015", star: true }, "m15", "creature")).toEqual({ template: "m15", collector: "2015", star: true });
     expect(normalizeAnatomy({ template: "m15pw", collector: "off" }, "m15pw", "planeswalker")).toEqual({ template: "m15pw", collector: "off" });
     expect(normalizeAnatomy({ template: "emblem", collector: "2023" }, "emblem", "emblem")).toEqual({ template: "emblem", collector: "2023" });
-    for (const template of ["m15borderless", "saga", "adventure", "extendedart", "lotr", "m20token", "fullartland"] as const) {
+    for (const template of ["m15borderlesspw", "saga", "adventure", "extendedart", "lotr", "m20token", "fullartland"] as const) {
       expect(normalizeAnatomy({ template, finish: "foil", collector: "2023", star: true }, template, "creature"), template).toEqual({ template, finish: "foil" });
     }
     // A stored key-less card: nothing to drop, the same object back.
@@ -82,9 +82,11 @@ describe("every save (normalizeAnatomy / newCardFrameStyle)", () => {
     expect(newCardFrameStyle({ template: "m15token", finish: "regular" }, "token")).toEqual({ template: "m15token", finish: "regular", collector: "2023" });
     expect(newCardFrameStyle({ template: "m15", collector: "2015", star: true }, "creature")).toMatchObject({ collector: "2015", star: true });
     expect(newCardFrameStyle({ template: "m15", collector: "off" }, "creature")).toMatchObject({ collector: "off" });
-    // No slot on m15borderless: no collector key (it starts with the crown
-    // and pair switches it draws, 4.6f wave 2a).
-    expect(newCardFrameStyle({ template: "m15borderless" }, "creature")).toEqual({ template: "m15borderless", crown: true, twoColor: true });
+    // No slot on extendedart: no collector key (it starts with the crown
+    // and pair switches it draws). The borderless frames have the line and
+    // the stamp since 4.9d.
+    expect(newCardFrameStyle({ template: "extendedart" }, "creature")).toEqual({ template: "extendedart", crown: true, twoColor: true });
+    expect(newCardFrameStyle({ template: "m15borderless" }, "creature")).toEqual({ template: "m15borderless", crown: true, twoColor: true, collector: "2023", stamp: "auto" });
     // The creator's all-on switches on a frame with the slot but no crown.
     expect(newCardFrameStyle({ template: "m15devoid", ...NEW_CARD_ANATOMY }, "creature")).toEqual({ template: "m15devoid", collector: "2023", stamp: "auto" });
   });
@@ -144,9 +146,9 @@ describe("an edit's switch flip (applyFrameAnatomyPatch — updateCardAction)", 
   });
 
   it("a frame without the slot drops the flip", () => {
-    expect(applyFrameAnatomyPatch(storedCard({ template: "m15borderless", finish: "etched" }), { collector: "2023", star: true })).toEqual({
+    expect(applyFrameAnatomyPatch(storedCard({ template: "extendedart", finish: "etched" }), { collector: "2023", star: true })).toEqual({
       ok: true,
-      frameStyle: { template: "m15borderless", finish: "etched" },
+      frameStyle: { template: "extendedart", finish: "etched" },
       colorIdentity: null,
     });
   });

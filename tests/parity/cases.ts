@@ -204,6 +204,8 @@ const PICKS: readonly Pick[] = [
   { from: "battle/g/battle-long", why: "battle: landscape, the painted defense shield, the turned credit" },
   { from: "m15dfcfront/g/transform-long", why: "transform front: icon rider, reverse P/T float" },
   { from: "m15dfcback/g/transform-long", why: "transform back: its own body, through the flip" },
+  { from: "battle/w/battle-short@back", why: "battle with a back of its own (5.5): the back's P/T in the master's tab, a rules float" },
+  { from: "m15dfcback/b/battle-long@crown-battle", why: "a battle's back (5.5): the portrait ▼ back behind a landscape front, its legendary crown" },
   { from: "m15mdfcfront/w/mdfc-long@strip-u", why: "modal front: the flipside strip in the other face's colour" },
   { from: "m15mdfcback/g/mdfc-long", why: "modal back: the strip on a back, through the flip" },
   // The borderless double-faced bodies (TODO 5.7): the grafted masters'
@@ -258,6 +260,11 @@ const PICKS: readonly Pick[] = [
   { from: "extendedart/wu/creature-long@pair-crown", why: "extended art: the gold-split pair master and the split floating crown (4.7 follow-up)" },
   { from: "m15textless/u/creature-long@crown", why: "textless promo: the standard crown band over the promo master (4.35 follow-up)" },
   { from: "m15borderless/b/creature-long", why: "borderless: art to the edge, white ink, the keylined set symbol" },
+  // --- the borderless stamp and collector line (TODO 4.9d) -----------------
+  { from: "m15borderless/r/creature-long@stamp-collector-hd", why: "borderless: the lifted-pinline arch, the oval over the black, the collector line with the mark on line 2 beside the plate" },
+  { from: "m15borderless/b/instant-short@stamp-collector-2015", why: "borderless: the 2015 style's letter column and, with no plate, the mark on line 1 beside the arch" },
+  { from: "m15borderlessland/wu/land-short@stamp-pair-split", why: "borderless land: the pair's own piece (the box and pinline split across the ramp) under the stamp" },
+  { from: "m15borderlessstation/u/artifact-short@stamp", why: "borderless station: the arch over the station box, the tier washes over it as on m15station" },
   // --- the old frames (era symbol styles, footers, © slots) ----------------
   { from: "agclassic/g/creature-long", why: "1993: image pips, the Illus. line, right-set P/T" },
   { from: "retro/r/creature-long", why: "1997: shadowed white ink, flat discs, centred © slot" },

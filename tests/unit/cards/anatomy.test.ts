@@ -308,6 +308,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
       // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
+      // The battle (TODO 5.5): the switch is the card's and its ▼ back draws
+      // it — the battle front itself draws none.
+      "battle",
     ].includes(t),
   );
   /** …and the pair masters (the textless promo pair draws none: a pair
@@ -323,8 +326,10 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       OLD_FRAME_PAIRED.includes(t) ||
       // (The station frame, TODO 4.27a, draws the crown and no pair masters:
       // its entries declare no `twoColorMasters` — and neither does the Nyx
-      // Constellation frame, whose two-colour card is the gold master.)
-      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx"),
+      // Constellation frame, whose two-colour card is the gold master — nor
+      // the battle, TODO 5.5: its back draws the crown through the card's
+      // switch, but its two-colour back wears the gold master for now.)
+      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "battle"),
   );
 
   it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless, extended-art and snow PROFILES entries — never a profile that spreads them", () => {
@@ -380,9 +385,10 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       m15borderlessmdfcback: ["split"],
     });
     // The borderless frames draw their crown from the crowned twins, not a
-    // band (4.6f): no overlay slot, crownMasters set.
+    // band (4.6f): no crown slot, crownMasters set. (Their one overlay is
+    // the stamp's notch since 4.9d: STAMP_TEMPLATES below.)
     for (const t of ["m15borderless", "m15borderlessartifact"]) {
-      expect(getFrameProfile(t).overlays, t).toBeUndefined();
+      expect((getFrameProfile(t).overlays ?? []).filter((slot) => slot.anatomy === "crown"), t).toEqual([]);
       expect(getFrameProfile(t).crownMasters, t).toBe(true);
     }
     // The snow pair (4.6f, wave 2c) draw the STANDARD band — the slot on
@@ -394,11 +400,12 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     expect(getFrameProfile("m15snowland").overlays?.filter((slot) => slot.anatomy === "crown")).toEqual([{ ...M15_CROWN, keyMap: { c: "l" } }]);
     // The borderless land spreads M15BORDERLESS and declares its OWN pairs
     // on its entry (4.56) — the land's, like m15land's — with no crown
-    // (no crowned twin), no collector slot and no stamp notch.
-    expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: ["split"], collector: false, stamp: false, dfcIcon: false, rulesAlign: true, border: false });
+    // (no crowned twin); the collector slot and the stamp's notch since
+    // 4.9d.
+    expect(frameAnatomyOf("m15borderlessland")).toEqual({ crown: false, twoColor: ["split"], collector: true, stamp: true, dfcIcon: false, rulesAlign: true, border: false });
     expect(getFrameProfile("m15borderlessland").twoColorForLands).toBe(true);
     expect(getFrameProfile("m15borderlessland").crownMasters).toBeUndefined();
-    expect(getFrameProfile("m15borderlessland").overlays).toBeUndefined();
+    expect(getFrameProfile("m15borderlessland").overlays?.map((slot) => slot.anatomy)).toEqual(["holoStamp"]);
     // Every other profile that spreads M15 / M15LAND / M15BORDERLESS draws
     // neither: m15devoid (no crown and no pairs by the owner's round-20
     // call: its two-colour printings ARE the gold frame) / the layouts /
@@ -422,11 +429,12 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
 
   /** The entries with the holofoil stamp's notch (4.9c, wave 1). */
   // …and the station frame's two entries (TODO 4.27a): the parents' notch; the Universes Beyond three (4.25): the triangle's.
-  const STAMP_TEMPLATES = ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15stationland", "extendedartstation", "m15ub", "m15ubartifact", "m15ubland", "m15snow", "m15devoid", "m15pw"];
+  // …and the borderless family (4.9d): its own lifted arch; not its walkers (asked first).
+  const STAMP_TEMPLATES = ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15stationland", "extendedartstation", "m15borderlessstation", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15snow", "m15devoid", "m15pw"];
 
   it("the stamp's notch on exactly the seven wave-1 entries (4.9c): the M15 family's bordered frames and the walker, never a token, an emblem or a profile that spreads them", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).stamp)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => STAMP_TEMPLATES.includes(t)));
-    for (const t of ["m15token", "m15tokenartifact", "m15tokentext", "m15tokenartifacttext", "emblem", "m15borderless", "extendedart", "adventure"]) {
+    for (const t of ["m15token", "m15tokenartifact", "m15tokentext", "m15tokenartifacttext", "emblem", "m15borderlesspw", "m15borderlesspwtall", "extendedart", "adventure"]) {
       expect(frameAnatomyOf(t).stamp, t).toBe(false);
     }
   });
@@ -498,7 +506,8 @@ describe("a crown baked into the masters (4.6f: FrameProfile.crownMasters)", () 
 
   it("counts as the crown the template draws — the switch, the hint, the default and the registry gap read it", () => {
     expect(frameAnatomyOf("m15borderless").crown).toBe(true);
-    expect(anatomyDefaults("m15borderless")).toEqual({ crown: true, twoColor: true });
+    // (…with the collector line and the stamp since 4.9d.)
+    expect(anatomyDefaults("m15borderless")).toEqual({ crown: true, twoColor: true, collector: "2023", stamp: "auto" });
     expect(normalizeAnatomy({ template: "m15borderless", crown: true, twoColor: true }, "m15borderless", "creature")).toEqual({
       template: "m15borderless",
       crown: true,

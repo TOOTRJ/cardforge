@@ -87,6 +87,27 @@ export function templateHasBackFace(template: FrameTemplate | string | null | un
   return dfcBodyOf(template)?.role === "front";
 }
 
+/** The template is the BATTLE front (TODO 5.5; DfcProfile.battle): a front
+ *  whose back is optional — a battle saved without one, or with a legacy
+ *  back, keeps it — and whose face is a battle. */
+export function isBattleFront(template: FrameTemplate | string | null | undefined): boolean {
+  return dfcBodyOf(template)?.battle === true;
+}
+
+/** The card on `frontTemplate` is TWO-FACED with this back: a DFC front
+ *  body with a back — on the battle front (TODO 5.5, whose back is
+ *  optional) only a back that names a BODY of its own; a legacy back there
+ *  is the battle's old one-picture flip, never a second picture. What the
+ *  remix prices and paints a second picture for. */
+export function hasBackOfItsOwn(
+  frontTemplate: FrameTemplate | string | null | undefined,
+  back: { frame_style?: { template?: string } | null } | null | undefined,
+): boolean {
+  if (!back || !templateHasBackFace(frontTemplate)) return false;
+  if (!isBattleFront(frontTemplate)) return true;
+  return isDfcBackBody(back.frame_style?.template);
+}
+
 /** The template is a BACK body — what `back_face.frame_style.template` may
  *  name, and never a card's own template. */
 export function isDfcBackBody(template: FrameTemplate | string | null | undefined): boolean {
@@ -130,7 +151,7 @@ export function frontBodyFor(
   const look = dfcLookOf(backTemplate);
   const fronts = FRAME_TEMPLATE_VALUES.filter((template) => {
     const candidate = dfcBodyOf(template);
-    return candidate?.layout === body.layout && candidate.role === "front" && dfcLookOf(template) === look;
+    return candidate?.layout === body.layout && candidate.role === "front" && !candidate.battle && dfcLookOf(template) === look;
   });
   const landFront = frontFaceType === "land";
   return (

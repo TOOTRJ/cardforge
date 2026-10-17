@@ -43,7 +43,9 @@ describe("the collector slot", () => {
     expect(source.match(/collector: M15(?:PW)?_COLLECTOR/g)).toHaveLength(COLLECTOR_TEMPLATES.length);
     expect(source.match(/collector: M15PW_COLLECTOR/g)).toHaveLength(1);
     // The profiles that spread those bases carry none.
-    for (const t of ["m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlesspw", "m15borderlesspwtall", "adventure", "extendedart", "expeditionland", "nyx", "fullart", "fullartland", "m15fullartland", "m15textless", "m15textlessland", "saga", "m20token", "m20tokentext", "m20tokenartifact"]) {
+    // (The borderless frames carry the slot on their entries since 4.9d —
+    // never on M15BORDERLESS, which the land and station dresses spread.)
+    for (const t of ["m15borderlesspw", "m15borderlesspwtall", "adventure", "extendedart", "expeditionland", "nyx", "fullart", "fullartland", "m15fullartland", "m15textless", "m15textlessland", "saga", "m20token", "m20tokentext", "m20tokenartifact"]) {
       expect(getFrameProfile(t).collector, t).toBeUndefined();
     }
   });
@@ -58,10 +60,10 @@ describe("the collector slot", () => {
     const overrides = {
       m15: { footer: { rect: { topPct: 90 }, sizePct: 0.03 }, pt: { rect: { leftPct: 70 } } },
       m15pw: { footer: { sizePct: 0.03 }, loyalty: { rect: { topPct: 80 } } },
-      m15borderless: { footer: { rect: { topPct: 90 } } },
+      extendedart: { footer: { rect: { topPct: 90 } } },
     };
     expect(resolveFrameProfile("m15", overrides).collector).toBe(M15_COLLECTOR);
     expect(resolveFrameProfile("m15pw", overrides).collector).toBe(M15PW_COLLECTOR);
-    expect(resolveFrameProfile("m15borderless", overrides).collector).toBeUndefined();
+    expect(resolveFrameProfile("extendedart", overrides).collector).toBeUndefined();
   });
 });

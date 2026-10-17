@@ -53,6 +53,10 @@ export type LegendaryVariationInput = {
   dfcIcon?: unknown;
   backCardType?: string | null;
   backSupertype?: string | null;
+  /** The form holds a back face (`has_back_face`). A BATTLE's back is
+   *  optional (TODO 5.5): without one there is no face to crown. Unset
+   *  reads as true — every other double-faced card always has its back. */
+  hasBackFace?: boolean;
   /** An EDIT or a REMIX: the card's type line is locked (owner decision
    *  2026-09-16, lib/creator/revise.ts — the supertype never leaves the
    *  client), so the entry can't add the word: on a card with no legendary
@@ -118,14 +122,16 @@ export function legendaryVariationOf(input: LegendaryVariationInput): LegendaryV
   // supertype, on the body its type and the family derive (bodyFor — the
   // form's live preview's derivation); a back body that draws none (the ▼
   // land back, the modal land pair) never counts.
+  // A battle (TODO 5.5) wears the crown on its back alone — once it has
+  // one — and no family (its back is the ▼ back).
   const front = dfcBodyOf(input.template ?? undefined);
   const backBody =
-    front?.role === "front"
+    front?.role === "front" && !(front.battle && input.hasBackFace === false)
       ? bodyFor(
           front.layout,
           "back",
           input.backCardType || null,
-          isDfcIconFamily(input.dfcIcon) ? input.dfcIcon : DEFAULT_DFC_ICON,
+          !front.battle && isDfcIconFamily(input.dfcIcon) ? input.dfcIcon : DEFAULT_DFC_ICON,
           dfcLookOf(input.template ?? undefined),
         )
       : null;

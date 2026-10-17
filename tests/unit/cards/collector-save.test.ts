@@ -127,7 +127,7 @@ function stored(over: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
-  state.verified = ["m15/r", "m15borderless/r", "saga/r", "m15snow/r", "m15pw/r", "m15token/r", "emblem/c", "modern/r"];
+  state.verified = ["m15/r", "extendedart/r", "saga/r", "m15snow/r", "m15pw/r", "m15token/r", "emblem/c", "modern/r"];
   state.existing = null;
 });
 
@@ -146,7 +146,7 @@ describe("createCardAction — the new-card default", () => {
       // walker too, never the token frame.
       expect(style.stamp, template).toBe(template === "m15token" ? undefined : "auto");
     }
-    for (const template of ["m15borderless", "saga", "modern"] as const) {
+    for (const template of ["extendedart", "saga", "modern"] as const) {
       const stub = db();
       const result = await createCardAction(payload({ card_type: template === "saga" ? "enchantment" : "creature", frame_style: { template } }));
       expect(result.ok, template).toBe(true);
@@ -158,10 +158,10 @@ describe("createCardAction — the new-card default", () => {
 
   it("a crafted payload can't switch the line on where the template has no slot", async () => {
     const stub = db();
-    const result = await createCardAction(payload({ frame_style: { template: "m15borderless", finish: "regular", collector: "2015", star: true } }));
+    const result = await createCardAction(payload({ frame_style: { template: "extendedart", finish: "regular", collector: "2015", star: true } }));
     expect(result.ok).toBe(true);
-    // (m15borderless keeps the crown and pair switches it draws, 4.6f.)
-    expect(written(stub, "insert")?.frame_style).toEqual({ template: "m15borderless", finish: "regular", crown: true, twoColor: true });
+    // (extendedart keeps the crown and pair switches it draws, 4.6f.)
+    expect(written(stub, "insert")?.frame_style).toEqual({ template: "extendedart", finish: "regular", crown: true, twoColor: true });
   });
 
   it("keeps an explicit style, the owner's off and an import's ★", async () => {
@@ -252,11 +252,11 @@ describe("updateCardAction — a stored card keeps its look", () => {
   });
 
   it("a flip on a template without the slot stores neither key", async () => {
-    state.existing = stored({ frame_style: { template: "m15borderless", finish: "etched" } });
+    state.existing = stored({ frame_style: { template: "extendedart", finish: "etched" } });
     const stub = db();
     const result = await updateCardAction(CARD, { frame_anatomy: { collector: "2023", star: true } });
     expect(result.ok).toBe(true);
-    expect(written(stub, "update")?.frame_style).toEqual({ template: "m15borderless", finish: "etched" });
+    expect(written(stub, "update")?.frame_style).toEqual({ template: "extendedart", finish: "etched" });
   });
 
   it.each([
@@ -264,7 +264,7 @@ describe("updateCardAction — a stored card keeps its look", () => {
     ["collector true", { collector: true }],
     ["collector null", { collector: null }],
     ["star 'yes'", { star: "yes" }],
-    ["a template beside the switch", { collector: "2023", template: "m15borderless" }],
+    ["a template beside the switch", { collector: "2023", template: "extendedart" }],
     ["a finish beside the switch", { collector: "2023", finish: "foil" }],
     ["footer text beside the switch", { collector: "2023", footer_text: "™ & © Wizards" }],
   ])("refuses a crafted frame_anatomy with %s and writes nothing", async (_name, bad) => {
@@ -278,11 +278,11 @@ describe("updateCardAction — a stored card keeps its look", () => {
   it("a whole frame_style (a non-revise update): slotted → slot-less drops both keys; slot-less → slotted never switches the card on", async () => {
     state.existing = stored({ frame_style: { template: "m15", collector: "2015", star: true } });
     const toBorderless = db();
-    const moved = await updateCardAction(CARD, { frame_style: { template: "m15borderless", collector: "2015", star: true } });
+    const moved = await updateCardAction(CARD, { frame_style: { template: "extendedart", collector: "2015", star: true } });
     expect(moved.ok).toBe(true);
-    expect(written(toBorderless, "update")?.frame_style).toEqual({ template: "m15borderless" });
+    expect(written(toBorderless, "update")?.frame_style).toEqual({ template: "extendedart" });
 
-    state.existing = stored({ frame_style: { template: "m15borderless", finish: "regular" } });
+    state.existing = stored({ frame_style: { template: "extendedart", finish: "regular" } });
     const toM15 = db();
     const back = await updateCardAction(CARD, { frame_style: { template: "m15", finish: "regular" } });
     expect(back.ok).toBe(true);

@@ -115,9 +115,11 @@ describe("the preview draws the bake's stamp", () => {
       card({ cardType: "token", frameStyle: { template: "m15token", stamp: "oval" } }),
       card({ cardType: "emblem", frameStyle: { template: "emblem", stamp: "oval" } }),
       card({ cardType: "token", frameStyle: { template: "m15", stamp: "oval" } }),
-      card({ frameStyle: { template: "m15borderless", stamp: "oval" } }),
-      // A pair on the borderless frame: its pair master has no notch (4.9d).
-      card({ colorIdentity: ["white", "blue"], cost: "{W}{U}", frameStyle: { template: "m15borderless", stamp: "oval", twoColor: true } }),
+      // A frame with no notch (the borderless frames have theirs since 4.9d;
+      // extended art and the borderless walker have none), a pair included.
+      card({ frameStyle: { template: "extendedart", stamp: "oval" } }),
+      card({ colorIdentity: ["white", "blue"], cost: "{W}{U}", frameStyle: { template: "extendedart", stamp: "oval", twoColor: true } }),
+      card({ cardType: "planeswalker", loyalty: "4", frameStyle: { template: "m15borderlesspw", stamp: "oval" } }),
     ]) {
       expect(bakeStamp(data), JSON.stringify(data.frameStyle)).toBeNull();
       const { container } = render(<CardPreview {...data} />);

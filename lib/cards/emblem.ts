@@ -1,4 +1,4 @@
-import { templateHasBackFace } from "@/lib/cards/dfc";
+import { hasBackOfItsOwn } from "@/lib/cards/dfc";
 import type { CardType, ColorIdentity } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -83,6 +83,10 @@ export function cardTypeHasRarity(cardType: string | null | undefined): boolean 
 export type CardPageFaces = {
   frameTemplate: string | null | undefined;
   backTitle: string | null | undefined;
+  /** The back's own body (`back_face.frame_style.template`): a battle's
+   *  back (TODO 5.5, optional) joins the name only with one — a legacy back
+   *  keeps the battle's name. */
+  backBody?: string | null;
 };
 
 /**
@@ -97,7 +101,7 @@ export type CardPageFaces = {
  *
  * A DOUBLE-FACED card (TODO 5.3, design 2026-10-02 §3.4) is "Front // Back",
  * Scryfall's spelling — ONLY when its front template is a DFC body
- * (templateHasBackFace) and the back has a name: the 8 legacy two-faced
+ * (hasBackOfItsOwn — a battle only with a back body, TODO 5.5) and the back has a name: the 8 legacy two-faced
  * pages keep their front's name until their owner moves them onto the
  * bodies. The slug stays the front's (createCardAction passes no faces).
  */
@@ -108,7 +112,7 @@ export function cardPageName(
 ): string {
   const front = emblemPageName(title, cardType);
   const back = (faces?.backTitle ?? "").trim().replace(/\s+/g, " ");
-  if (!faces || !back || !templateHasBackFace(faces.frameTemplate)) return front;
+  if (!faces || !back || !hasBackOfItsOwn(faces.frameTemplate, { frame_style: { template: faces.backBody ?? undefined } })) return front;
   return `${front} // ${back}`;
 }
 
@@ -123,9 +127,10 @@ function emblemPageName(title: string | null | undefined, cardType: string | nul
  *  back face's title (the jsonb columns as the queries return them). */
 export function cardPageFacesOf(row: { frame_style: unknown; back_face: unknown }): CardPageFaces {
   const frameStyle = row.frame_style as { template?: unknown } | null | undefined;
-  const back = row.back_face as { title?: unknown } | null | undefined;
+  const back = row.back_face as { title?: unknown; frame_style?: { template?: unknown } | null } | null | undefined;
   return {
     frameTemplate: typeof frameStyle?.template === "string" ? frameStyle.template : null,
     backTitle: typeof back?.title === "string" ? back.title : null,
+    backBody: typeof back?.frame_style?.template === "string" ? back.frame_style.template : null,
   };
 }

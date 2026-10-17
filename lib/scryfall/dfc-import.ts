@@ -2,7 +2,7 @@ import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 import { isArtifactFrameType } from "@/components/cards/frame-layer";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
-import { bodyFor, dfcBodyOf, dfcLookOf, templateHasBackFace } from "@/lib/cards/dfc";
+import { DEFAULT_DFC_ICON, bodyFor, dfcBodyOf, dfcLookOf, isBattleFront, isDfcBackBody, templateHasBackFace, type DfcLayout } from "@/lib/cards/dfc";
 import { dfcFamilyOf } from "@/lib/cards/dfc-gate";
 import { dfcLayoutForKind, kindFromCard, type CardKind } from "@/lib/creator/card-kinds";
 import { standardFrameFor } from "@/lib/creator/frame-picker";
@@ -35,7 +35,7 @@ export const DFC_REMIX_CREDITS = 2;
 export type DfcImportLanding =
   | {
       ok: true;
-      kind: "transform" | "mdfc";
+      kind: "transform" | "mdfc" | "battle";
       frontBody: FrameTemplate;
       backBody: FrameTemplate;
       /** The back's stored colour (its own; the front's when it names none). */
@@ -55,10 +55,24 @@ type DfcPatch = Pick<
   "kind" | "frame_template" | "card_type" | "supertype" | "back_face" | "printed_dfc_icon"
 > & { color_identity?: readonly ColorIdentity[] };
 
+/** The DFC layout a patch lands on, or null: a Transform / Modal kind on
+ *  its front body, or a BATTLE (TODO 5.5) on the battle frame with a back
+ *  that names its body — a battle with no back, or a legacy one, is not a
+ *  double-faced landing (its back is optional). */
+function landingLayoutOf(patch: Pick<ScryfallImportPatch, "kind" | "frame_template" | "back_face">): DfcLayout | null {
+  const front = patch.frame_template;
+  if (!patch.kind || !front || !templateHasBackFace(front)) return null;
+  if (patch.kind === "battle") {
+    const backBody = patch.back_face?.frame_style?.template;
+    return isBattleFront(front) && backBody && isDfcBackBody(backBody) ? (dfcBodyOf(front)?.layout ?? null) : null;
+  }
+  return dfcLayoutForKind(patch.kind);
+}
+
 /** True when the mapper put this patch on a double-faced body: a DFC kind
- *  with the front body named. */
-export function isDfcImportPatch(patch: Pick<ScryfallImportPatch, "kind" | "frame_template">): boolean {
-  return Boolean(patch.kind && dfcLayoutForKind(patch.kind) && patch.frame_template && templateHasBackFace(patch.frame_template));
+ *  with the front body named, or a battle with a back of its own. */
+export function isDfcImportPatch(patch: Pick<ScryfallImportPatch, "kind" | "frame_template"> & Partial<Pick<ScryfallImportPatch, "back_face">>): boolean {
+  return landingLayoutOf(patch) !== null;
 }
 
 /**
@@ -70,9 +84,9 @@ export function isDfcImportPatch(patch: Pick<ScryfallImportPatch, "kind" | "fram
  */
 export function dfcImportLanding(patch: DfcPatch, verifiedKeys: ReadonlySet<string>): DfcImportLanding {
   const kind = patch.kind;
-  const layout = kind ? dfcLayoutForKind(kind) : null;
+  const layout = landingLayoutOf(patch);
   const frontBody = patch.frame_template;
-  if (!kind || !layout || !frontBody || !templateHasBackFace(frontBody) || (kind !== "transform" && kind !== "mdfc")) {
+  if (!kind || !layout || !frontBody || (kind !== "transform" && kind !== "mdfc" && kind !== "battle")) {
     return { ok: false, reason: "not-dfc" };
   }
   const frontKey = pickFrameColorKey(patch.color_identity);
@@ -82,7 +96,7 @@ export function dfcImportLanding(patch: DfcPatch, verifiedKeys: ReadonlySet<stri
   const back = patch.back_face;
   const backBody =
     back?.frame_style?.template ??
-    bodyFor(layout, "back", back?.card_type ?? null, dfcFamilyOf(patch.printed_dfc_icon));
+    bodyFor(layout, "back", back?.card_type ?? null, kind === "battle" ? DEFAULT_DFC_ICON : dfcFamilyOf(patch.printed_dfc_icon));
   if (!backBody) return { ok: false, reason: "not-dfc" };
   const backColorIdentity: ColorIdentity[] =
     back?.color_identity && back.color_identity.length > 0
@@ -153,6 +167,17 @@ export function withoutDfcLanding<P extends DfcPatch>(patch: P): P {
     void _body;
     void _colour;
     legacyBack = content as P["back_face"];
+  }
+  // A battle keeps its kind and frame (TODO 5.5): only its back goes back
+  // to the legacy back every battle import stored before — its body off,
+  // its printed colour kept for the creator, which then knows the back's
+  // body isn't published in it (lib/creator/battle-back.ts: a legacy back,
+  // never the front's colour in its place). A legacy back's colour is never
+  // drawn (it draws on the front's frame) and the save sends none.
+  if (patch.kind === "battle" && back) {
+    const { frame_style: _battleBody, ...battleLegacy } = back;
+    void _battleBody;
+    return { ...patch, back_face: battleLegacy as P["back_face"] };
   }
   return {
     ...patch,

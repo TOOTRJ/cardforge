@@ -11,7 +11,9 @@ import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 // its own:
 //   * ONE Front face | Back face switch (a tab list from SECOND_PART_WORDS),
 //     each tab with the face's name and what it still needs; arrow keys;
-//     a battle's Back face tab greyed out with "Battle backs are coming";
+//     a battle's Back face tab greyed out with the reason where its back
+//     can't be a face of its own (TODO 5.5: the ▼ back unpublished), and a
+//     working Back face tab where it can;
 //   * every back field on the step of its front twin, writing the form path
 //     it always wrote;
 //   * the preview: the edited face large, the other small — a click on it
@@ -94,7 +96,7 @@ const VERIFIED = [
   "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
 ].flatMap((template) => EVERY_COLOUR.map((key) => frameComboKey(template, key)));
 
-function renderForm() {
+function renderForm(verified: string[] = VERIFIED) {
   return render(
     <CardCreatorForm
       mode="create"
@@ -102,7 +104,7 @@ function renderForm() {
       ownerUsername="tester"
       gameSystems={GAME_SYSTEMS}
       aiConfigured={false}
-      verifiedFrameKeys={VERIFIED}
+      verifiedFrameKeys={verified}
     />,
   );
 }
@@ -203,11 +205,12 @@ describe("the switch on its own (components/creator/face-switch.tsx)", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it("a battle: the Back face tab is greyed out, says “Battle backs are coming”, and cannot be selected", () => {
+  it("a battle whose back can't be a face of its own: the Back face tab is greyed out, says why, and cannot be selected", () => {
     const onChange = vi.fn();
+    const words = { ...SECOND_PART_WORDS.battle!, available: false, unavailableNote: "Battle backs are coming" };
     render(
       <>
-        <FaceSwitch words={SECOND_PART_WORDS.battle!} value="back" onChange={onChange} panelId="panel" noteId="note" front={{ name: "Siege", status: null }} back={{ name: "", status: null }} />
+        <FaceSwitch words={words} value="back" onChange={onChange} panelId="panel" noteId="note" front={{ name: "Siege", status: null }} back={{ name: "", status: null }} />
         <p id="note">Battle backs are coming.</p>
       </>,
     );
@@ -733,15 +736,15 @@ describe("cards without the switch, and the battle's greyed tab", () => {
   // Split, Aftermath, Adventure and Flip have the switch since part 2:
   // creator-part-tabs.test.tsx.
 
-  it("a battle: the switch with its Back face tab greyed out and one line; nothing else changes", async () => {
-    renderForm();
+  it("a battle while the ▼ back is published nowhere (TODO 5.5): the switch with its Back face tab greyed out and one line; nothing else changes", async () => {
+    renderForm(VERIFIED.filter((key) => !key.startsWith("m15dfcback/")));
     await pickKind(/^Battle/);
     for (const step of [/^card/i, /^identity/i, /^text/i, /^publish/i]) {
       await goTo(step);
       const back = tab(/^Back face/);
       expect(back.getAttribute("aria-disabled")).toBe("true");
       expect(tab(/^Battle/).getAttribute("aria-selected")).toBe("true");
-      expect(screen.getByTestId("face-switch-note").textContent).toBe("Battle backs are coming.");
+      expect(screen.getByTestId("face-switch-note").textContent).toBe("The back face's frame isn't published yet.");
       await click(back);
       expect(selected()).toBe("front");
     }
@@ -751,5 +754,108 @@ describe("cards without the switch, and the battle's greyed tab", () => {
     await goTo(/^identity/i);
     expect(named("title")!.closest("label")!.textContent).not.toMatch(/face —/);
     expect(named("back_face.title")).toBeNull();
+  });
+
+  it("a battle once the ▼ back is published (TODO 5.5): a Back face tab of its own — the back's type and colour on the Card step, its name on Identity, its stats on Text — and the two-face preview", async () => {
+    renderForm();
+    await pickKind(/^Battle/);
+    await goTo(/^card/i);
+    const back = tab(/^Back face/);
+    expect(back.getAttribute("aria-disabled")).toBeNull();
+    await click(back);
+    expect(selected()).toBe("back");
+    expect(screen.getByTestId("dfc-back-type")).toBeTruthy();
+    expect(screen.getByTestId("dfc-back-color")).toBeTruthy();
+    await goTo(/^identity/i);
+    expect(named("back_face.title")).toBeTruthy();
+    await goTo(/^text/i);
+    expect(named("back_face.power")).toBeTruthy();
+    expect(screen.queryAllByTestId("face-preview").length).toBeGreaterThan(0);
+    // The back is the ▼ back in the live preview (no family on a battle).
+    const props = screen.getAllByTestId("card-preview").map(propsOf);
+    expect(props.some((p) => (p.backFace as { frame_style?: { template?: string } } | null)?.frame_style?.template === "m15dfcback")).toBe(true);
+  });
+
+  // Owner Round 68: a battle's back is OPTIONAL — "One face" on the Card
+  // step, and the battle saves exactly as on main.
+  const faces = () => screen.getByRole("radiogroup", { name: "Battle faces" });
+  const facesChip = (label: RegExp) =>
+    Array.from(faces().querySelectorAll("[role='radio']")).find((el) => label.test(el.textContent ?? "")) as HTMLElement;
+
+  it("a new battle starts with its back (Two faces); the Faces switch is a single-select chip row — one tab stop, arrows move, Space picks", async () => {
+    renderForm();
+    await pickKind(/^Battle/);
+    await goTo(/^card/i);
+    expect(facesChip(/^Two faces/).getAttribute("aria-checked")).toBe("true");
+    expect(facesChip(/^One face/).getAttribute("aria-checked")).toBe("false");
+    // One tab stop: the picked chip.
+    expect([facesChip(/^Two faces/).tabIndex, facesChip(/^One face/).tabIndex]).toEqual([0, -1]);
+    // Arrow keys move the focus and never pick; Space picks.
+    facesChip(/^Two faces/).focus();
+    await act(async () => {
+      fireEvent.keyDown(facesChip(/^Two faces/), { key: "ArrowRight" });
+    });
+    expect(document.activeElement).toBe(facesChip(/^One face/));
+    expect(facesChip(/^Two faces/).getAttribute("aria-checked")).toBe("true");
+    await act(async () => {
+      fireEvent.keyDown(facesChip(/^One face/), { key: " " });
+      fireEvent.keyUp(facesChip(/^One face/), { key: " " });
+      fireEvent.click(facesChip(/^One face/));
+    });
+    expect(facesChip(/^One face/).getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("“One face”: the Back tab greys with the reason, nothing of the back is asked for, and the battle saves ONE-faced (no back_face)", async () => {
+    actions.createCardAction.mockResolvedValue({ ok: false, fieldErrors: { title: "stop here" } });
+    renderForm();
+    await pickKind(/^Battle/);
+    await goTo(/^card/i);
+    await click(tab(/^Back face/));
+    expect(selected()).toBe("back");
+    await click(tab(/^Battle/));
+    await click(facesChip(/^One face/));
+    const back = tab(/^Back face/);
+    expect(back.getAttribute("aria-disabled")).toBe("true");
+    expect(selected()).toBe("front");
+    expect(screen.getByTestId("face-switch-note").textContent).toBe("This battle has one face — choose Two faces on the Card step to give it a back.");
+    await goTo(/^identity/i);
+    await act(async () => {
+      fireEvent.change(named("title")!, { target: { value: "Invasion of Dominaria" } });
+    });
+    expect(named("back_face.title")).toBeNull();
+    // The Save line asks nothing of the back.
+    expect(screen.getByTestId("save-needs").hasAttribute("data-by-face")).toBe(false);
+    expect(screen.getAllByTestId("card-preview").every((el) => propsOf(el).backFace == null)).toBe(true);
+    await goTo(/^publish/i);
+    await click(screen.getByTestId("save-as-draft"));
+    await click(screen.getByRole("button", { name: /^Save$/ }));
+    await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
+    const payload = actions.createCardAction.mock.calls[0][0] as { back_face?: unknown; frame_style: { template: string } };
+    expect(payload.frame_style.template).toBe("battle");
+    expect(payload.back_face ?? null).toBeNull();
+  });
+
+  it("“Two faces” again: the back comes back as it was left, and saves on the ▼ back", async () => {
+    actions.createCardAction.mockResolvedValue({ ok: false, fieldErrors: { title: "stop here" } });
+    renderForm();
+    await pickKind(/^Battle/);
+    await goTo(/^identity/i);
+    await act(async () => {
+      fireEvent.change(named("title")!, { target: { value: "Invasion of Dominaria" } });
+    });
+    await click(tab(/^Back face/));
+    await act(async () => {
+      fireEvent.change(named("back_face.title")!, { target: { value: "Serra Faithkeeper" } });
+    });
+    await click(tab(/^Battle/));
+    await goTo(/^card/i);
+    await click(facesChip(/^One face/));
+    await click(facesChip(/^Two faces/));
+    await goTo(/^publish/i);
+    await click(screen.getByTestId("save-as-draft"));
+    await click(screen.getByRole("button", { name: /^Save$/ }));
+    await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
+    const payload = actions.createCardAction.mock.calls[0][0] as { back_face?: { title?: string; frame_style?: { template?: string } } };
+    expect(payload.back_face).toMatchObject({ title: "Serra Faithkeeper", frame_style: { template: "m15dfcback" } });
   });
 });

@@ -45,12 +45,13 @@ const TRANSFORM_BACKS = ["m15dfcback", "m15dfcbackleft", "m15dfclandback", "m15b
 // The modal bodies (TODO 5.1b).
 const MODAL_FRONTS = ["m15mdfcfront", "m15mdfclandfront", "m15borderlessmdfcfront"] as const;
 const MODAL_BACKS = ["m15mdfcback", "m15mdfclandback", "m15borderlessmdfcback"] as const;
-const DFC_FRONTS = [...TRANSFORM_FRONTS, ...MODAL_FRONTS] as const;
+// The battle front (TODO 5.5): a transform front whose back is optional.
+const DFC_FRONTS = [...TRANSFORM_FRONTS, ...MODAL_FRONTS, "battle"] as const;
 const DFC_BACKS = [...TRANSFORM_BACKS, ...MODAL_BACKS] as const;
 const DFC_BODIES = [...DFC_FRONTS, ...DFC_BACKS] as const;
 
 describe("the transform bodies (5.1a), the modal bodies (5.1b) and every other template", () => {
-  it("exactly the nine bodies declare `dfc`: four fronts (a back face of their own), five backs (never a card's own), each of its layout", () => {
+  it("exactly the ten bodies declare `dfc`: five fronts (a back face of their own — the battle's optional, 5.5), five backs (never a card's own), each of its layout", () => {
     expect(FRAME_TEMPLATE_VALUES.length).toBeGreaterThan(40);
     for (const template of FRAME_TEMPLATE_VALUES) {
       const body = getFrameProfile(template).dfc;

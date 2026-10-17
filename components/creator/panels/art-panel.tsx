@@ -34,6 +34,11 @@ type ArtPanelProps = {
    *  the legacy back's art strip below is not for it. Until part 2 its
    *  whole editor was folded into this panel's "More options". */
   secondPartOnTab?: boolean;
+  /** The card's back is edited on the Back face tab (a double-faced
+   *  front's — TODO 5.14). Unset: whenever the template is a DFC front
+   *  body. A BATTLE whose back is not a face of its own (TODO 5.5: saved
+   *  with a legacy back) passes false and keeps the legacy back's strip. */
+  backFaceOnTab?: boolean;
   /** The "Generate AI artwork and title" button, beside Choose file. */
   aiSlot?: React.ReactNode;
   /** Art a Scryfall import brought in (TODO 1.18): while it is still the
@@ -55,6 +60,7 @@ export function ArtPanel({
   userId,
   artWindow,
   secondPartOnTab = false,
+  backFaceOnTab,
   aiSlot,
   importedArtOrigin = null,
   onImportedArtOrigin,
@@ -80,7 +86,7 @@ export function ArtPanel({
   // on the Back face tab (Face tabs, TODO 5.14 — panels/back-face-panels.tsx).
   // "Front face" on a card with Face tabs (TODO 5.14); null elsewhere.
   const faceLabel = useFaceLabel();
-  const showBackFaceArt = Boolean(hasBackFace) && !secondPartOnTab && !templateHasBackFace(template);
+  const showBackFaceArt = Boolean(hasBackFace) && !secondPartOnTab && !(backFaceOnTab ?? templateHasBackFace(template));
 
   return (
     <>

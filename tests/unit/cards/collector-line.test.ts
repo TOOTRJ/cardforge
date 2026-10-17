@@ -60,6 +60,11 @@ describe("the switch values", () => {
       "m15stationland",
       // …and its extended-art dress (step 2): M15's bottom border.
       "extendedartstation",
+      // The borderless frames (TODO 4.9d): M15's two lines in the black bar.
+      "m15borderless",
+      "m15borderlessartifact",
+      "m15borderlessland",
+      "m15borderlessstation",
       "m15ub",
       "m15ubartifact",
       "m15ubland",

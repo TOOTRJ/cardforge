@@ -32,6 +32,7 @@ import {
   type CardKind,
 } from "@/lib/creator/card-kinds";
 import {
+  DEFAULT_DFC_ICON,
   bodyFor,
   colorlessFaceAllowed,
   dfcBodyOf,
@@ -577,8 +578,10 @@ export type DfcImportFacts = {
   backType: CardType | undefined;
   /** Null when the printing lands on the bodies. */
   blocked: DfcImportBlock | null;
-  /** The kind — set only when nothing blocks the landing. */
-  kind: "transform" | "mdfc" | null;
+  /** The kind — set only when nothing blocks the landing: `battle` for a
+   *  battle front with a back of its own (TODO 5.5 — the battle frame and
+   *  the ▼ back), else the Transform / Modal kind. */
+  kind: "transform" | "mdfc" | "battle" | null;
   /** The bodies each face WOULD wear (by type and family) — set whenever
    *  they exist, blocked or not: a blocked printing's frame is still the
    *  body (the registry names it; the import lands on the standard instead,
@@ -631,6 +634,22 @@ export function dfcImportOf(card: ScryfallCard): DfcImportFacts | null {
   };
   const blocked = (why: DfcImportBlock): DfcImportFacts => ({ ...facts, blocked: why });
   if (hasWalkerFace(card)) return blocked("walker-face");
+  // A battle (TODO 5.5; every MOM battle is a transform printing): the
+  // battle frame is its front body, its back the ▼ back its type derives —
+  // a battle wears no family (every one printed is the plain ▲ / ▼). A Saga
+  // back or a face of no wave-1 type keeps today's landing (a legacy back).
+  if (layout === "transform" && front.cardType === "battle") {
+    if (faces.length < 2 || !isDfcFaceType(back.cardType) || back.saga) return blocked("face-type");
+    const battleBack = bodyFor(layout, "back", back.cardType, DEFAULT_DFC_ICON);
+    if (!battleBack) return blocked("no-body");
+    if (
+      backFaceColors(card).length === 0 &&
+      !colorlessFaceAllowed(battleBack, { cardType: back.cardType, supertype: back.supertype })
+    ) {
+      return { ...blocked("colourless-face"), frontBody: "battle", backBody: battleBack };
+    }
+    return { ...facts, family: DEFAULT_DFC_ICON, kind: "battle", frontBody: "battle", backBody: battleBack };
+  }
   if (faces.length < 2 || !isDfcFaceType(front.cardType) || !isDfcFaceType(back.cardType) || front.saga || back.saga) {
     return blocked("face-type");
   }
@@ -807,7 +826,7 @@ export function verifiedFrameMatchFromScryfall(
   match: FrameMatch = frameMatchFromScryfall(card),
 ): FrameMatch {
   const kind = kindFromScryfall(card);
-  if (kind && dfcLayoutForKind(kind)) {
+  if (kind && (dfcLayoutForKind(kind) || kind === "battle")) {
     // A double-faced landing is verified on BOTH faces (TODO 5.4): the
     // front body in the front's colour and the back body in the back's —
     // the same finalization the import's patch gets (finalizeImportMatch),
@@ -1859,7 +1878,8 @@ export function mapScryfallToFormPatch(
     // The transform icon family the printing wears (TODO 5.4, owner Q5),
     // only where the printing lands on a TRANSFORM body (the modal housing
     // has no family).
-    ...(dfcLanding?.layout === "transform" ? { printed_dfc_icon: dfcLanding.family } : {}),
+    // (A battle wears none: TODO 5.5.)
+    ...(dfcLanding?.layout === "transform" && dfcLanding.kind !== "battle" ? { printed_dfc_icon: dfcLanding.family } : {}),
     // The printing's own anatomy (TODO 4.6.0): the import's values for the
     // card's crown and two-colour switches, named only where the printing
     // says something (owner round 17: printing-only). The save keeps only

@@ -1691,7 +1691,9 @@ export function dfcFrontDressesKind(template: FrameTemplate, kind: CardKind): bo
  *  walkthrough and the admin tools start a back body's card on this kind
  *  and flip to the back, TODO 5.0b). Null for every other template. */
 export function dfcKindFor(template: FrameTemplate): CardKind | null {
-  const layout = dfcBodyOf(template)?.layout;
+  const body = dfcBodyOf(template);
+  // (The battle front is the Battle kind's own frame — TODO 5.5.)
+  const layout = body && !body.battle ? body.layout : null;
   if (!layout) return null;
   return (Object.entries(DFC_KIND_LAYOUT) as [CardKind, DfcLayout][]).find(([, l]) => l === layout)?.[0] ?? null;
 }

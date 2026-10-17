@@ -848,9 +848,15 @@ exports[`buildFrameComparePayload(id, template) — the front path, as before 5.
     "back_face": {
       "artist_credit": undefined,
       "card_type": "enchantment",
+      "color_identity": [
+        "white",
+      ],
       "cost": "",
       "defense": undefined,
       "flavor_text": undefined,
+      "frame_style": {
+        "template": "m15dfcback",
+      },
       "imported_art_url": null,
       "loyalty": undefined,
       "power": undefined,
@@ -915,9 +921,15 @@ exports[`buildFrameComparePayload(id, template) — the front path, as before 5.
       "art_url": undefined,
       "artist_credit": undefined,
       "card_type": "enchantment",
+      "color_identity": [
+        "white",
+      ],
       "cost": "",
       "defense": undefined,
       "flavor_text": undefined,
+      "frame_style": {
+        "template": "m15dfcback",
+      },
       "loyalty": undefined,
       "power": undefined,
       "rules_text": "At the beginning of your end step, put a +1/+1 counter on each creature that attacked this turn.",
@@ -932,6 +944,19 @@ exports[`buildFrameComparePayload(id, template) — the front path, as before 5.
     ],
     "cost": "{1}{W}",
     "defense": "3",
+    "dfc": {
+      "icon": "arrows",
+      "layout": "transform",
+      "otherFace": {
+        "line": null,
+        "power": null,
+        "printsPt": false,
+        "stripKey": "w",
+        "toughness": null,
+        "typeWord": "Enchantment",
+      },
+      "role": "front",
+    },
     "flavorText": null,
     "frameStyle": {
       "template": "battle",

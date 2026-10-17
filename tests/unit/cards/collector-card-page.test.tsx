@@ -54,7 +54,7 @@ describe("collectorLineText", () => {
     expect(collectorLineText({ ...base, lang: "en", collector_number: "9", frame_style: { template: "m15pw", collector: "2023" } })).toBe("DMU · 0009 · English");
     expect(collectorLineText({ ...base, set_code: null, lang: "he", frame_style: { template: "m15", collector: "2015" } })).toBe("107/281");
     expect(collectorLineText({ ...base, set_code: null, collector_number: null, lang: "he", frame_style: { template: "m15", collector: "2015" } })).toBeNull();
-    for (const frame_style of [{ template: "m15" }, { template: "m15", collector: "off" }, { template: "m15borderless", collector: "2023" }, null, undefined]) {
+    for (const frame_style of [{ template: "m15" }, { template: "m15", collector: "off" }, { template: "extendedart", collector: "2023" }, null, undefined]) {
       expect(collectorLineText({ ...base, frame_style }), JSON.stringify(frame_style)).toBeNull();
     }
   });
@@ -101,7 +101,8 @@ describe("the glyph warnings on a collector card", () => {
   it("read the footer mark in the body face as typed, and the artist in the display face as capitals", () => {
     expect(drawsCollectorLine({ template: "m15", collector: "2023" })).toBe(true);
     expect(drawsCollectorLine({ template: "m15", collector: "off" })).toBe(false);
-    expect(drawsCollectorLine({ template: "m15borderless", collector: "2023" })).toBe(false);
+    expect(drawsCollectorLine({ template: "extendedart", collector: "2023" })).toBe(false);
+    expect(drawsCollectorLine({ template: "m15borderless", collector: "2023" })).toBe(true);
     expect(drawsCollectorLine({ template: "regular", collector: "2015" })).toBe(true); // a legacy template draws m15
     expect(drawsCollectorLine(null)).toBe(false);
     const on = cardGlyphFields({ ...values, frame_style: { template: "m15", collector: "2023" } });

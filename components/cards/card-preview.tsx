@@ -610,6 +610,13 @@ export function CardPreview(rawProps: CardPreviewProps) {
   // Whole-card click-to-flip (editor preview) vs the small corner button
   // (gallery / detail). Only meaningful when there's a flippable back face.
   const clickToFlip = showFlip && flipOnClick && !hideFlipControl;
+  // A battle's back of its own (TODO 5.5) is a PORTRAIT card behind a
+  // landscape front: the box takes the shape of the face shown and the
+  // turn is a plain swap of the two (a card can't turn over in place into
+  // another shape). Every other two-faced card keeps one shape and turns.
+  const backLandscape = backBodyFaceProps ? backBodyFaceProps.layout.orientation === "landscape" : false;
+  const swapsShape = Boolean(backBodyFaceProps) && !backCardFace && backLandscape !== (layout.orientation === "landscape");
+  const shownLandscape = swapsShape && currentFace === "back" ? backLandscape : layout.orientation === "landscape";
 
   const faceProps = {
     template,
@@ -634,8 +641,9 @@ export function CardPreview(rawProps: CardPreviewProps) {
         // Battle frames are landscape (7:5); every other frame is the 5:7 card.
         // card-corners* cut the ONE card corner (4.3% of the short side,
         // lib/cards/card-corner.ts) — the same radius the bake masks, so the
-        // preview and the stored image share an outline.
-        layout.orientation === "landscape"
+        // preview and the stored image share an outline. (A battle showing
+        // its portrait back takes the back's shape: swapsShape.)
+        shownLandscape
           ? "aspect-[7/5] card-corners-landscape"
           : "aspect-[5/7] card-corners",
         staticInEditor
@@ -675,7 +683,13 @@ export function CardPreview(rawProps: CardPreviewProps) {
           }
         : {})}
     >
-      {showFlip && flipBackFace ? (
+      {showFlip && flipBackFace && swapsShape ? (
+        currentFace === "back" ? (
+          <CardFace face={flipBackFace} {...(backBodyFaceProps ?? faceProps)} />
+        ) : (
+          <CardFace face={frontFace} {...faceProps} />
+        )
+      ) : showFlip && flipBackFace ? (
         <div
           className="relative h-full w-full"
           style={{ perspective: "1400px" }}
@@ -986,7 +1000,9 @@ function CardFace({
   // The stat badges this face draws — the rules boxes keep their lines out
   // of them (lib/cards/rules-box.ts), the bake's twin.
   const secondFacePtShown = Boolean(secondFace?.power || secondFace?.toughness);
-  const stampKeepOut = holoStamp?.keepOut ?? null;
+  // The arch's shape where the frame declares one (the borderless frames,
+  // TODO 4.9d), else its one rect — the bake's twin.
+  const stampKeepOut = holoStamp?.keepOutShape ?? holoStamp?.keepOut ?? null;
   // The modal strip (5.1b): the lines keep out of the painted tab.
   const stripKeepOut = layout.flipside?.keepOut ?? null;
   // The transform front's reverse P/T digits (5.1d): the lines wrap round

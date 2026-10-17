@@ -158,13 +158,15 @@ export function BakedCardThumbnail({
     : "bg-[#101015]";
   // The #101015 backdrop sits directly behind the image (see the header): it
   // only ever shows through a rounded bake's transparent corner sliver.
-  const image = backThumbUrl && thumbUrl && backFaceButton ? (
+  const flips = Boolean(backThumbUrl && thumbUrl && backFaceButton);
+  const image = flips && backThumbUrl && thumbUrl ? (
     <BakedCardFlip
       frontSrc={toRenderCdnUrl(thumbUrl) ?? thumbUrl}
       backSrc={toRenderCdnUrl(backThumbUrl) ?? backThumbUrl}
       label={label}
       title={title?.trim() || "this card"}
       priority={priority}
+      frontLandscape={isLandscape}
     />
   ) : thumbUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -191,15 +193,19 @@ export function BakedCardThumbnail({
   // the same hover effects and shadows the live preview gets. A portrait render
   // is 5:7 and fills the tile; a landscape render is letterboxed in it, inside
   // its own 7:5 card box.
+  // A two-faced battle (TODO 5.5) turns in the portrait tile itself — its
+  // portrait back fills it — so its landscape front is letterboxed by the
+  // flip (BakedCardFlip frontLandscape), not by the box below.
+  const flipsInTile = isLandscape && flips;
   return (
     <div
       className={cn(
         "relative aspect-[5/7] w-full overflow-hidden card-corners border border-border/40 bg-background shadow-[0_18px_60px_-30px_rgba(0,0,0,0.85)]",
-        isLandscape && "flex items-center",
+        isLandscape && !flipsInTile && "flex items-center",
         className,
       )}
     >
-      {isLandscape ? (
+      {isLandscape && !flipsInTile ? (
         <div className="relative aspect-[7/5] w-full overflow-hidden card-corners-landscape">
           {image}
         </div>

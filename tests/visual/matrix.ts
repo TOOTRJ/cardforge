@@ -1711,6 +1711,39 @@ export function visualCases(): VisualCase[] {
   add("m15ubartifact", "artifact", "c", "short", { suffix: "@stamp-auto-uncommon", row: stampRow("m15ubartifact", "auto", { rarity: "uncommon" }) });
   add("m15ub", "creature", "r", "long", { suffix: "@stamp-matte-hd", preset: "hd", row: stampRow("m15ub", "auto", { rarity: "common" }) });
   add("m15ub", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15ub"), cost: "{W/U}{W/U}" } });
+  // TODO 4.9d: the borderless frames (new keys on templates whose stored
+  // cards carry none: new cases, no bump) beyond the loops above — the
+  // see-through colourless frame and the artifact's silver, a crowned
+  // mythic (the crowned twin under the same piece), the hybrid dress under
+  // the pair's piece, a full box whose last line reaches the arch, the
+  // stored bake's size, a foil, the squared print, "Always" on a common,
+  // and the line and the stamp together, with and without a plate.
+  add("m15borderless", "creature", "c", "short", { suffix: "@stamp-c", row: stampRow("m15borderless", "auto", { rarity: "rare" }) });
+  add("m15borderlessartifact", "artifact", "c", "short", { suffix: "@stamp-c", row: stampRow("m15borderlessartifact", "auto", { rarity: "rare" }) });
+  add("m15borderless", "creature", "r", "long", { suffix: "@stamp-crown", row: stampRow("m15borderless", "auto", { rarity: "mythic", frame_style: { crown: true } as CardRowForBake["frame_style"] }) });
+  add("m15borderless", "creature", "wu", "short", { suffix: "@stamp-pair-hybrid", row: stampRow("m15borderless", "auto", { rarity: "rare", cost: "{W/U}{W/U}", frame_style: { twoColor: true } as CardRowForBake["frame_style"] }) });
+  add("m15borderless", "creature", "b", "long", { suffix: "@stamp-arch", row: stampRow("m15borderless", "auto", { rarity: "rare", rules_text: STAMP_ARCH_RULES, flavor_text: null }) });
+  add("m15borderless", "creature", "g", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("m15borderless", "auto", { rarity: "mythic" }) });
+  add("m15borderless", "creature", "r", "short", { suffix: "@stamp-foil", finish: "foil", row: stampRow("m15borderless", "auto", { rarity: "rare", frame_style: { finish: "foil" } as CardRowForBake["frame_style"] }) });
+  add("m15borderless", "creature", "u", "short", { suffix: "@stamp-square", corners: "square", row: stampRow("m15borderless", "auto", { rarity: "rare" }) });
+  add("m15borderless", "creature", "w", "short", { suffix: "@stamp-always", row: stampRow("m15borderless", "oval", { rarity: "common" }) });
+  // A Universes Beyond printing's triangle on the borderless frame draws
+  // NOTHING (owner Round 70: no triangle notch there yet) — the plain look,
+  // pinned.
+  add("m15borderless", "creature", "u", "short", { suffix: "@stamp-triangle", row: stampRow("m15borderless", "triangle", { rarity: "rare" }) });
+  add("m15borderlessland", "land", "g", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("m15borderlessland", "auto", { rarity: "rare" }) });
+  add("m15borderlessstation", "artifact", "c", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("m15borderlessstation", "auto", { rarity: "mythic" }) });
+  add("m15borderless", "instant", "u", "short", { suffix: "@collector-noplate", row: collectorRow("m15borderless", "2023") });
+  add("m15borderless", "creature", "g", "long", { suffix: "@collector-hd", preset: "hd", row: collectorRow("m15borderless", "2023") });
+  add("m15borderless", "creature", "r", "long", {
+    suffix: "@stamp-collector-hd",
+    preset: "hd",
+    row: collectorRow("m15borderless", "2023", { rarity: "rare", frame_style: { stamp: "auto" } as CardRowForBake["frame_style"] }),
+  });
+  add("m15borderless", "instant", "b", "short", {
+    suffix: "@stamp-collector-2015",
+    row: collectorRow("m15borderless", "2015", { rarity: "mythic", frame_style: { stamp: "auto" } as CardRowForBake["frame_style"] }),
+  });
   // A token with the key: the switch on, nothing drawn — the plain look,
   // pinned.
   add("m15token", "token", "g", "short", { suffix: "@stamp-token", row: stampRow("m15token", "oval", { rarity: "rare" }) });
@@ -1956,11 +1989,39 @@ export function visualCases(): VisualCase[] {
   ];
   for (const [template, colour] of CENTRED) {
     const primary = (hosted.get(template) ?? ["creature"])[0];
-    const dfcRow = getFrameProfile(template).dfc ? dfcBodyRow("m15dfcback", colour, "short") : {};
+    // (A battle's back is optional — TODO 5.5: its centred cases are the
+    // one-faced battle's, as before.)
+    const twoFaced = Boolean(getFrameProfile(template).dfc) && !getFrameProfile(template).dfc?.battle;
+    const dfcRow = twoFaced ? dfcBodyRow("m15dfcback", colour, "short") : {};
     add(template, primary, colour, "short", { suffix: "@centred", row: { ...dfcRow, ...centredStyle(template) } });
-    if (!getFrameProfile(template).dfc) add(template, primary, colour, "long", { suffix: "@centred", row: centredStyle(template) });
+    if (!twoFaced) add(template, primary, colour, "long", { suffix: "@centred", row: centredStyle(template) });
   }
   add("split", "split", "r", "short", { suffix: "@centred-hd", preset: "hd", row: centredStyle("split") });
+  // TODO 5.5 (a): the battle's back — NEW cases (an addition: no stored
+  // battle has a back with a body, and the plain battle cases above, one
+  // face, stay byte-identical). The front with a back of its own prints the
+  // back's P/T in the master's tab (BATTLE_REVERSE_PT), short and long, the
+  // stored bake's size, a back with no P/T (the tab empty), a colourless
+  // artifact creature back, the centred text beside the digits; the BACK on
+  // the ▼ back in each shape — a creature, a legendary one with the crown
+  // switched on (the ten MOM legendary backs), a gold back, an enchantment
+  // back (no plate), the HD size. And a LEGACY back (no body: every battle
+  // import before 5.5) whose front must bake as the plain battle does.
+  for (const colour of ["w", "r", "c"] as const) {
+    add("battle", "battle", colour, "short", { suffix: "@back", row: battleBackRow(colour, "short") });
+  }
+  add("battle", "battle", "u", "long", { suffix: "@back", row: battleBackRow("u", "long") });
+  add("battle", "battle", "g", "long", { suffix: "@back-hd", preset: "hd", row: battleBackRow("g", "long") });
+  add("battle", "battle", "w", "short", { suffix: "@back-nopt", row: battleBackRow("w", "short", BATTLE_ENCHANTMENT_BACK) });
+  add("battle", "battle", "r", "short", { suffix: "@centred-back", row: { ...battleBackRow("r", "short"), ...centredStyle("battle") } });
+  add("battle", "battle", "u", "short", { suffix: "@legacyback", row: { back_face: BATTLE_LEGACY_BACK } });
+  const battleFront = { frontTemplate: "battle" as FrameTemplate };
+  for (const colour of ["w", "r", "c", "wu"] as const) {
+    add("m15dfcback", "battle", colour, "short", { suffix: "@battle", back: battleFront, row: battleBackRow(colour, "short") });
+  }
+  add("m15dfcback", "battle", "b", "long", { suffix: "@crown-battle", back: battleFront, row: dfcSwitches(battleBackRow("b", "long"), { crown: true }) });
+  add("m15dfcback", "battle", "w", "short", { suffix: "@battle-nopt", back: battleFront, row: battleBackRow("w", "short", BATTLE_ENCHANTMENT_BACK) });
+  add("m15dfcback", "battle", "g", "long", { suffix: "@battle-hd", preset: "hd", back: battleFront, row: battleBackRow("g", "long") });
   add("m15", "creature", "w", "long", { suffix: "@centred-hd", preset: "hd", row: centredStyle("m15") });
   // TODO 4.30: the white border (frame_style.border — an ADDITION, opt-in
   // per card; no stored card has the key, so these are NEW cases and every
@@ -1997,6 +2058,8 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "extendedartstation",
   // TODO 4.25: the Universes Beyond frames' TRIANGLE stamp.
   "m15ub", "m15ubartifact", "m15ubland",
+  // TODO 4.9d: the borderless frames' arch (our own lifted pinline).
+  "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlessstation",
 ];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's
@@ -2005,6 +2068,8 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
 export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = [
   "m15", "m15artifact", "m15vehicle", "m15nyx", "m15land", "m15snow", "m15snowland",
   "m15ub", "m15ubartifact", "m15ubland",
+  // TODO 4.9d: the borderless pairs (the split pinline; the land's own).
+  "m15borderless", "m15borderlessartifact", "m15borderlessland",
 ];
 
 /** A rules text whose fitted last line enters the arch on m15 (found on the
@@ -2096,6 +2161,66 @@ const MDFC_TIBALT_BACK: Partial<CardRowForBake> = {
 /** The holofoil stamp's switch on a case (TODO 4.9c): `frame_style.stamp`
  *  and the rarity the auto rule reads, on top of a stored row — nothing
  *  else on the row changes. */
+/** A battle row's BACK of its own (TODO 5.5): the ▼ back the battle derives
+ *  (lib/cards/dfc.ts bodyFor — a battle wears no family) in `colour` (a
+ *  two-colour back on a mono front, as MOM #23 Invasion of Theros), its art
+ *  and artist. Short: MOM #21's Serra Faithkeeper (4/4, flying, vigilance);
+ *  long: a legendary back (MOM #114 Marchesa's shape, a long name and the
+ *  dense rules; 3/3 and a three-word subtype line — a short line beside the
+ *  set symbol, and a kerned value like 3/6 on the dark plate, draw a few px
+ *  apart in the two renderers on every ▼ back, transform's too: reported,
+ *  not this case's to hold); colourless: MOM #1's Guildpact Paragon, an
+ *  Artifact Creature. `over` replaces the back's content (an enchantment
+ *  back). */
+function battleBackRow(colour: VisualColour, shape: VisualShape, over: Partial<NonNullable<CardRowForBake["back_face"]>> = {}): Partial<CardRowForBake> {
+  const long = shape === "long";
+  const front = colour === "wu" ? "w" : colour;
+  return {
+    frame_style: { template: "battle", finish: "regular" } as CardRowForBake["frame_style"],
+    color_identity: IDENTITY[front],
+    back_face: {
+      title: long ? "Marchesa, Resolute Monarch of the Shattered Sky" : colour === "c" ? "Guildpact Paragon" : "Serra Faithkeeper",
+      cost: "",
+      card_type: "creature",
+      supertype: colour === "c" ? "Artifact" : long ? "Legendary" : null,
+      subtypes: colour === "c" ? ["Construct"] : long ? ["Human", "Noble", "Advisor"] : ["Angel"],
+      rules_text: long ? LONG_RULES : "Flying, vigilance",
+      flavor_text: long ? null : "“I was there when Phyrexia doomed Serra’s realm with a single touch.”",
+      power: long ? "3" : colour === "c" ? "5" : "4",
+      toughness: long ? "3" : colour === "c" ? "5" : "4",
+      frame_style: { template: "m15dfcback" as FrameTemplate },
+      color_identity: IDENTITY[colour],
+      art_url: "ART2",
+      artist_credit: "Visual Regression",
+      ...over,
+    } as CardRowForBake["back_face"],
+  };
+}
+
+/** An enchantment back (MOM #20 Belenon War Anthem): no P/T — the front's
+ *  tab prints empty, the back draws no plate. */
+const BATTLE_ENCHANTMENT_BACK: Partial<NonNullable<CardRowForBake["back_face"]>> = {
+  title: "Belenon War Anthem",
+  card_type: "enchantment",
+  supertype: null,
+  subtypes: [],
+  rules_text: "Creatures you control get +1/+1.",
+  flavor_text: null,
+  power: null,
+  toughness: null,
+};
+
+/** A battle's LEGACY back (no body, no colour — what every battle import
+ *  stored before TODO 5.5): drawn on the battle frame by the flip, never
+ *  baked; the front bakes as the one-faced battle. */
+const BATTLE_LEGACY_BACK = {
+  title: "Belenon War Anthem",
+  cost: "",
+  card_type: "enchantment",
+  subtypes: [],
+  rules_text: "Creatures you control get +1/+1.",
+} as unknown as CardRowForBake["back_face"];
+
 function stampRow(
   template: FrameTemplate,
   stamp: "auto" | "oval" | "triangle" | "none",
