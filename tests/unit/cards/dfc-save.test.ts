@@ -349,7 +349,8 @@ describe("every template today", () => {
     // through the save rule the actions call.
     const { normalizeAnatomy } = await import("@/lib/cards/anatomy");
     for (const template of FRAME_TEMPLATE_VALUES) {
-      const front = template === "m15dfcfront" || template === "m15dfclandfront" || template === "m15borderlessdfcfront";
+      // (…and the double-faced saga front, TODO 5.5 (b): NEO's fans.)
+      const front = template === "m15dfcfront" || template === "m15dfclandfront" || template === "m15borderlessdfcfront" || template === "sagadfcfront";
       expect(normalizeAnatomy({ template, dfcIcon: "arrows" }, template, "creature"), template).toEqual(front ? { template, dfcIcon: "arrows" } : { template });
     }
     // …and since 5.1d the crown and the two-colour switch survive where the

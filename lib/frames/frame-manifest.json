@@ -19714,6 +19714,104 @@
       "width": 1500,
       "height": 2100
     },
+    "sagadfcfront/b.png": {
+      "hash": "256ae57559e9",
+      "sha256": "256ae57559e91009bbe5619f8e3840e7ab5bfb6c495e097fd5d3f9ab08ef0732",
+      "bytes": 2047965,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcfront/b.webp": {
+      "hash": "dfab3d216987",
+      "sha256": "dfab3d2169874d1f4933bd2aa9a5d17c6e886d407c2823c2dd9e0e99285e0f8c",
+      "bytes": 89134,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcfront/c.png": {
+      "hash": "b8ff7314e1ec",
+      "sha256": "b8ff7314e1ec4cb9758412f14bbe66ccd2b3b1ca72d7acf2bcb2ef75b3bc3b24",
+      "bytes": 1508641,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcfront/c.webp": {
+      "hash": "16be93faf0db",
+      "sha256": "16be93faf0dba1d42b34d14926636b74c578f44cc3bf7579acfc4b06895932af",
+      "bytes": 68208,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcfront/g.png": {
+      "hash": "ff9202997323",
+      "sha256": "ff92029973239ab0e85c4f90253a1d7cb7628d1a393db92b03ac217806a617a8",
+      "bytes": 2000814,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcfront/g.webp": {
+      "hash": "0a486531bc4b",
+      "sha256": "0a486531bc4b9f84c7faf7ddd1c44b39a3616c71d6f90348b8accbd01ba9ee0c",
+      "bytes": 93736,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcfront/m.png": {
+      "hash": "97e2e6e2fb49",
+      "sha256": "97e2e6e2fb49099a6910ef1b00eb9448812846ce48de36bd8b6de5ce743a0d5a",
+      "bytes": 1827785,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcfront/m.webp": {
+      "hash": "ab101b29c2fb",
+      "sha256": "ab101b29c2fb429bbd7d7ebe4a2dac294835609e2e837d3cfe9a2d630b9e3907",
+      "bytes": 83800,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcfront/r.png": {
+      "hash": "ba30f6d36956",
+      "sha256": "ba30f6d3695601e3dae55790ec75954f9c9f327c98517db821798f5b0cf7218e",
+      "bytes": 2148387,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcfront/r.webp": {
+      "hash": "3c18f596c5b5",
+      "sha256": "3c18f596c5b54590c63f8ebd3bab80118822db3b70769f00624d31b9d49fb6d5",
+      "bytes": 130012,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcfront/u.png": {
+      "hash": "e627b2209cca",
+      "sha256": "e627b2209ccaca83be28cf50bfd4c1970bdafccfd5b17603081b6d2b65b0fd00",
+      "bytes": 1122854,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcfront/u.webp": {
+      "hash": "a058eab0cd6e",
+      "sha256": "a058eab0cd6e993b356ca2f60f2a69b119fca9f524e9bf66b1a9697d97ac64c6",
+      "bytes": 54608,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcfront/w.png": {
+      "hash": "6dcc88ea31bc",
+      "sha256": "6dcc88ea31bc4b2c8cdc76efde6b7692d3030f38fa143f396b40c09fc534c646",
+      "bytes": 1300686,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcfront/w.webp": {
+      "hash": "ee532bfba3ca",
+      "sha256": "ee532bfba3ca2651693417a813b91a78dd772c901c7fc339a3a10bb9017c4fe1",
+      "bytes": 55678,
+      "width": 1500,
+      "height": 2100
+    },
     "split/b.png": {
       "hash": "cf588c412c28",
       "sha256": "cf588c412c2800c2147d2432349006e224ae86ca2bc2d86709a36424bf43b77c",

@@ -206,6 +206,8 @@ const PICKS: readonly Pick[] = [
   { from: "m15dfcback/g/transform-long", why: "transform back: its own body, through the flip" },
   { from: "battle/w/battle-short@back", why: "battle with a back of its own (5.5): the back's P/T in the master's tab, a rules float" },
   { from: "m15dfcback/b/battle-long@crown-battle", why: "a battle's back (5.5): the portrait ▼ back behind a landscape front, its legendary crown" },
+  { from: "sagadfcfront/g/saga-long@fan", why: "double-faced saga front (5.5 (b)): the fan rider, the rail ending at the tab, the back's P/T left-aligned in it" },
+  { from: "sagadfcfront/r/saga-short@fan-wide-pt", why: "double-faced saga front (5.5 (b)): a two-digit reverse P/T left-aligned at the tab" },
   { from: "m15mdfcfront/w/mdfc-long@strip-u", why: "modal front: the flipside strip in the other face's colour" },
   { from: "m15mdfcback/g/mdfc-long", why: "modal back: the strip on a back, through the flip" },
   // The borderless double-faced bodies (TODO 5.7): the grafted masters'

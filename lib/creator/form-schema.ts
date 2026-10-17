@@ -34,8 +34,8 @@ import {
   cardTitleSchema,
   loyaltyCostSchema,
 } from "@/lib/validation/card";
-import { dfcFrontBodyFor, dfcLayoutForKind, kindFromCard } from "@/lib/creator/card-kinds";
-import { bodyFor, colorlessFaceAllowed, dfcLookOf, isDfcFaceType } from "@/lib/cards/dfc";
+import { dfcFrontBodyFor, dfcLayoutForCard, kindFromCard } from "@/lib/creator/card-kinds";
+import { bodyFor, colorlessFaceAllowed, dfcLookOf, isDfcFaceType, isSagaFront } from "@/lib/cards/dfc";
 import { dfcFamilyOf, dfcFrontColorError, dfcFrontTypeError, DFC_BACK_TYPE_REFUSED, DFC_COLORLESS_NEEDS_ARTIFACT } from "@/lib/cards/dfc-gate";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import {
@@ -262,9 +262,11 @@ export function cardFormSchemaFor(
       // stand-in (design D2). The body itself is derived at submit; its
       // verification is the server's gate (the chips hide what isn't).
       const dfcKind = kindFromCard(values.card_type, values.frame_style?.template);
-      const dfcLayout = dfcLayoutForKind(dfcKind);
+      // (A saga on the double-faced saga front — TODO 5.5 (b) — is a
+      // transform front: dfcLayoutForCard.)
+      const dfcLayout = dfcLayoutForCard(dfcKind, values.frame_style?.template);
       const dfcLook = dfcLookOf(values.frame_style?.template);
-      if (dfcLayout && dfcFrontBodyFor(dfcKind, values.card_type, dfcLook)) {
+      if (dfcLayout && (isSagaFront(values.frame_style?.template) || dfcFrontBodyFor(dfcKind, values.card_type, dfcLook))) {
         if (!isDfcFaceType(back.card_type)) {
           ctx.addIssue({ code: "custom", path: ["back_face", "card_type"], message: DFC_BACK_TYPE_REFUSED });
         } else {

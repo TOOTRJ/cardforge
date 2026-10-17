@@ -83,7 +83,8 @@ describe("one M15-era display size (layout v32)", () => {
     // 4.40 / 4.41's three older full-art basics, and the Spacecraft's
     // extended-art and borderless dresses (4.27a step 2).
     // …and TODO 5.7's four borderless double-faced bodies.
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(62);
+    // …and TODO 5.5 (b)'s double-faced saga front.
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(63);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -175,6 +176,8 @@ describe("one M15-era display size (layout v32)", () => {
       m15borderlesspw: SET_SYMBOL_BOX_PCT_THIN_BAR,
       m15borderlesspwtall: SET_SYMBOL_BOX_PCT_THIN_BAR,
       saga: SET_SYMBOL_BOX_PCT_THIN_BAR,
+      // The double-faced saga front (TODO 5.5 (b)): the saga's box.
+      sagadfcfront: SET_SYMBOL_BOX_PCT_THIN_BAR,
     };
     expect(SET_SYMBOL_BOX_PCT_THIN_BAR).toBe(0.0533);
     for (const t of M15_FAMILY_TEMPLATES) {
@@ -338,6 +341,8 @@ describe("baselines (TextSlot.dy)", () => {
     // the prints', 185 px); the type line moves onto the prints' — 9.3 px
     // down at HD (DOM #21 / #42 / #90 / #122 / #173: 1854–1857 px).
     ["saga", mse.title, (mse.type ?? 0) + 9.3 / 1500],
+    // The double-faced saga front (TODO 5.5 (b)): the saga's bars.
+    ["sagadfcfront", mse.title, (mse.type ?? 0) + 9.3 / 1500],
     // Flip (layout v38, TODO 4.21a): packFlip.js's bars, the name and type
     // line set onto C18 #134 / CM2 #71's baselines from CC's box centres
     // (−9.2 px and −4.9 px at HD).

@@ -223,6 +223,7 @@ describe("Card Conjurer recipe", () => {
       "retroland",
       // The saga (TODO 4.21c; its own describe below).
       "saga",
+      "sagadfcfront",
       "split",
     ]);
     for (const [template, def] of Object.entries(templates)) {

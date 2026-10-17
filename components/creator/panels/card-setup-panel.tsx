@@ -182,9 +182,10 @@ type CardSetupPanelProps = {
    *  its variations are the card's (shared) and stay. Absent on every card
    *  without the switch and on the Front face tab. */
   backFace?: { type: React.ReactNode; color: React.ReactNode } | null;
-  /** A NEW battle's faces switch (TODO 5.5 (a): its back is optional),
+  /** A NEW battle's or saga's faces switch (TODO 5.5: a battle's back is
+   *  optional, a saga picks its double-faced front — with its icon family),
    *  under the card type; null elsewhere. */
-  battleFaces?: React.ReactNode;
+  facesRow?: React.ReactNode;
 };
 
 /** One line under a chip that has no other hint (owner, Round 60): what the
@@ -214,7 +215,7 @@ export function CardSetupPanel({
   onLandModeChange,
   onDfcFaceTypePick,
   backFace = null,
-  battleFaces = null,
+  facesRow = null,
 }: CardSetupPanelProps) {
   const { control, setValue, getValues, clearErrors } =
     useFormContext<FormValues>();
@@ -385,7 +386,7 @@ export function CardSetupPanel({
         // — the battle itself has no face-type row (it is the Battle kind).
         backFace.type
       ) : (
-        battleFaces
+        facesRow
       )}
 
       {/* 1c · The token's types (TODO 3b.15) — the words its type line

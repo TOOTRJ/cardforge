@@ -12,7 +12,7 @@
 
 import type { CardBackFace, FrameTemplate } from "@/types/card";
 import { kindFromCard, templatePaintsSecondFace } from "@/lib/creator/card-kinds";
-import { isBattleFront, templateHasBackFace } from "@/lib/cards/dfc";
+import { isBattleFront, isSagaFront, templateHasBackFace } from "@/lib/cards/dfc";
 
 /** The layout kinds whose frame paints a second half the remix names — and
  *  the double-faced kinds (TODO 5.4), whose BACK FACE the remix names and
@@ -33,7 +33,8 @@ export function remixSecondHalfLayout(
   if (!template || !(templatePaintsSecondFace(template) || templateHasBackFace(template))) return null;
   // A battle's back of its own (TODO 5.5) is a TRANSFORM back: its own
   // picture, named and painted as a transform card's is.
-  if (isBattleFront(template)) return "transform";
+  // …and so is a double-faced saga's (TODO 5.5 (b)).
+  if (isBattleFront(template) || isSagaFront(template)) return "transform";
   const kind = kindFromCard(undefined, template);
   return (REMIX_SECOND_HALF_LAYOUTS as readonly string[]).includes(kind)
     ? (kind as RemixSecondHalfLayout)

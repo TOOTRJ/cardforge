@@ -178,7 +178,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 56 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 57 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the extended-art frame and the textless promo pair (4.7 / 4.35 / 4.42,
@@ -300,6 +300,10 @@ into `.frames-build/` — 56 templates today (`CC_TEMPLATES` in
   two-colour saga's pair masters, 4.6f): fetched into the cache, listed in
   provenance, never written to the build folder or the bucket — see
   [The saga (4.21c)](#the-saga-421c);
+- the double-faced saga front (5.5 (b)): `sagadfcfront` from the
+  'Saga (Transform)' pack (packSagaDFC.js) — w u b r g m its masters, `c`
+  its 'Land Frame', copied 1:1 at 1500×2100; the chapter pieces are the
+  saga's — see [The double-faced saga front](#the-double-faced-saga-front-55-b);
 - the transform bodies (5.1a) from the 'Transform' packs: m15dfcfront
   ('Transform (Front)'), m15dfcback ('Transform (Back) (New)', the ▼ at the
   right) and m15dfcbackleft ('Transform (Back)', the empty left well) in
@@ -6671,6 +6675,77 @@ bump, no sweep, no badge, no new master.
   beside the portrait back, centred on its height, the gutter the portrait
   card's (60 / 30 px); the PDF turns the landscape page as before.
 
+### The double-faced saga front (5.5 (b))
+
+TODO 5.5 (b), PR 1, 2026-10-16 (`feat/dfc-saga-front`). An ADDITION: a new
+template, `sagadfcfront`; no layout bump, no sweep, no badge; stored sagas
+keep their look (a saga imported before it keeps its one-faced frame and its
+legacy back).
+
+- **The master** is Card Conjurer's 'Saga (Transform)' pack
+  (packSagaDFC.js, seven masters: w u b r g m and the land frame as `c`, no
+  artifact one), frames bucket only. Measured on the masters, it is the
+  4.21c saga master pixel for pixel but in two places: the TITLE BAR is the
+  transform front's (its icon well at the left, rows 89–223) and the RIBBON
+  is cut 110 px short (its tip at 1635 px, the regular's at 1745) for the
+  grey reverse-P/T tab notched into the left border. The art window is the
+  saga's (752–1384 × 237–1758 px on all seven), so the art slot is.
+- **The profile** (`SAGADFCFRONT`) is the saga's — its rail, badges,
+  dividers, sizes, symbol — with: the name from the left-well inset
+  (`DFC_ICON_FACE_TITLE_LEFT_PCT`: the prints' ink at 250–251 px, as on
+  every left-well face); the icon rider (`DFC_ICON_RIDER`, the card's
+  family: NEO's closed fan, TLA's ▲); the back's P/T LEFT-aligned at the tab
+  (`SAGA_DFC_REVERSE_PT`, the transform tab's ink — 61 px, #777, no plate —
+  in CC's 'Reverse PT' box: the prints' digits start at 125–133 px, median
+  128, over 1679–1682 → 1724–1727 px; on a real HD bake "2/2" inks 128–213 ×
+  1679–1727), drawn only while the back prints a P/T; and the chapters'
+  rail ending at the tab's top (`SAGA_DFC_RAIL_FOOT_PX`, 1664 px: no print's
+  chapter ink passes ~1655 px — Fable of the Mirror-Breaker #141 1649,
+  Teachings of the Kirin #212 1653 — and the ribbon, the last badge on it,
+  stops at 1635). The digits sit LEFT of the chapters' column (from 203 px)
+  and under the rail's foot, so no chapter line ever shares a row with them:
+  the rail needs no float (`endAlignedStatKeepOut` reads a start-aligned slot
+  too, from its left edge, for any rules box that would).
+- **The body.** `DfcProfile.saga`: a transform FRONT that is the SAGA kind's
+  frame (the kind's second `layoutTemplates` entry; `kindFromCard` →
+  `saga`), never a front of the Transform kind (`dfcFront` capability,
+  `dfcKindFor`, `frontBodyFor` and `bodyFor` leave it out — `isOwnKindFront`
+  names it beside the battle). Unlike the battle's, its back is REQUIRED
+  (the master paints the well): `resolveDfcBackFace` gates it as every
+  double-faced back — the body the card's family derives (NEO's fans → the
+  2016–22 back with the open fan; the arrows → the ▼ back), verified in the
+  back's colour, the stored body and colour winning on an edit, no cost. The
+  front is a saga and nothing else (`dfcFrontTypeError`: an enchantment). The
+  crown is the card's switch, drawn by its back (TLA #117's legendary
+  back), as the battle's; the front declares no pair masters (a two-colour
+  saga wears the gold master: NEO #221 is nearest for it).
+- **The creator.** A NEW saga's Card step has a **Faces** row — "One face"
+  (the saga frame) | "Two faces" (this front), a single-select `ChipGroup`
+  (`SagaFacesSection`, `panels/dfc-setup-sections.tsx`), "Two faces" off
+  with "Frames awaiting verification" until the front AND the default back
+  are published in some colour (`sagaTwoFacesAvailable`). The pick IS the
+  frame (a Frame tile does the same); with two faces the card wears the icon
+  pairs' chips and the **Saga | Back face** switch (`SECOND_PART_WORDS.saga`,
+  the back a creature to start), and `dfcLayoutForCard` answers "transform"
+  for it everywhere the form asks the kind. Going back to one face puts the
+  back aside for the visit (Two faces brings it back) and the saga saves
+  one-faced — never as a legacy back. A colourless saga moving to two faces
+  takes the first colour both faces are published in (a colourless back
+  needs an Artifact word). An edit keeps the faces the card was saved with.
+- **The import** (`dfcImportOf`, kind `saga`): a transforming Saga whose
+  back has a body lands on this front with its back on the body its family
+  derives once BOTH combos are verified (`saga/dfc/2015`, exact; NEO's
+  showcase and extended-art dresses and the borderless printings nearest on
+  the same bodies; TLA's under the Nyx starfield nearest, the
+  `nyx-saga-front` gap), else exactly as on main: the one-faced saga frame
+  with a legacy back and no family (`withoutDfcLanding`;
+  `tests/unit/scryfall/saga-dfc-imports.test.ts` holds all 124 paper
+  printings to origin/main's landing). A Saga BACK (MOM's praetors, LCI
+  #189, FIN's summons) has no body yet (PR 2), and TLA's colourless Avatar
+  backs are 5.11's see-through faces (`dfc/colourless-face`). The AI deck
+  remix follows the import (`remixFrameFor`, `dfcImportLanding`), its second
+  picture a transform back's (`remixSecondHalfLayout`).
+
 ### The borderless double-faced bodies (5.7)
 
 TODO 5.7, 2026-10-15 (`feat/dfc-borderless`). Four templates for the DARK
@@ -7934,11 +8009,11 @@ at HD on all four.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 62 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 63 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens, the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics and 5.7's four borderless double-faced bodies, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card) prints its names,

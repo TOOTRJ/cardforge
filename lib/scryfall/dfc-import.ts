@@ -2,7 +2,7 @@ import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 import { isArtifactFrameType } from "@/components/cards/frame-layer";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
-import { DEFAULT_DFC_ICON, bodyFor, dfcBodyOf, dfcLookOf, isBattleFront, isDfcBackBody, templateHasBackFace, type DfcLayout } from "@/lib/cards/dfc";
+import { DEFAULT_DFC_ICON, bodyFor, dfcBodyOf, dfcLookOf, isBattleFront, isDfcBackBody, isSagaFront, templateHasBackFace, type DfcLayout } from "@/lib/cards/dfc";
 import { dfcFamilyOf } from "@/lib/cards/dfc-gate";
 import { dfcLayoutForKind, kindFromCard, type CardKind } from "@/lib/creator/card-kinds";
 import { standardFrameFor } from "@/lib/creator/frame-picker";
@@ -35,7 +35,7 @@ export const DFC_REMIX_CREDITS = 2;
 export type DfcImportLanding =
   | {
       ok: true;
-      kind: "transform" | "mdfc" | "battle";
+      kind: "transform" | "mdfc" | "battle" | "saga";
       frontBody: FrameTemplate;
       backBody: FrameTemplate;
       /** The back's stored colour (its own; the front's when it names none). */
@@ -66,6 +66,8 @@ function landingLayoutOf(patch: Pick<ScryfallImportPatch, "kind" | "frame_templa
     const backBody = patch.back_face?.frame_style?.template;
     return isBattleFront(front) && backBody && isDfcBackBody(backBody) ? (dfcBodyOf(front)?.layout ?? null) : null;
   }
+  // A transforming Saga (TODO 5.5 (b)) on the double-faced saga front.
+  if (patch.kind === "saga") return isSagaFront(front) ? (dfcBodyOf(front)?.layout ?? null) : null;
   return dfcLayoutForKind(patch.kind);
 }
 
@@ -86,7 +88,7 @@ export function dfcImportLanding(patch: DfcPatch, verifiedKeys: ReadonlySet<stri
   const kind = patch.kind;
   const layout = landingLayoutOf(patch);
   const frontBody = patch.frame_template;
-  if (!kind || !layout || !frontBody || (kind !== "transform" && kind !== "mdfc" && kind !== "battle")) {
+  if (!kind || !layout || !frontBody || (kind !== "transform" && kind !== "mdfc" && kind !== "battle" && kind !== "saga")) {
     return { ok: false, reason: "not-dfc" };
   }
   const frontKey = pickFrameColorKey(patch.color_identity);
@@ -178,6 +180,15 @@ export function withoutDfcLanding<P extends DfcPatch>(patch: P): P {
     const { frame_style: _battleBody, ...battleLegacy } = back;
     void _battleBody;
     return { ...patch, back_face: battleLegacy as P["back_face"] };
+  }
+  // A transforming Saga (TODO 5.5 (b)) keeps its kind and goes back to the
+  // one-faced saga frame with a LEGACY back — byte for byte what its import
+  // stored before (the Saga kind names no frame: its layout template).
+  if (patch.kind === "saga") {
+    // (…and no family: main's patch named none for a Saga.)
+    const { printed_dfc_icon: _family, ...rest } = patch;
+    void _family;
+    return { ...rest, frame_template: undefined, back_face: legacyBack } as P;
   }
   return {
     ...patch,
