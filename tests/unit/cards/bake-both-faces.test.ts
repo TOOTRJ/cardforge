@@ -42,6 +42,13 @@ const state = vi.hoisted(() => ({
   renderThrowsOn: null as "front" | "back" | null,
   artDown: new Set<string>(),
   overridesDown: false,
+  stamps: {
+    atStart: [] as Array<{ template: string; updated_at: string }>,
+    listFails: false,
+    reads: 0,
+    /** A template's stamp on the Nth single read (null = no row). */
+    now: (() => null) as (template: string, read: number) => string | null | "error",
+  },
 }));
 
 function recordWrite(via: RowWrite["via"], calls: { method: string; args: unknown[] }[]) {
@@ -75,10 +82,22 @@ vi.mock("@/lib/supabase/server", () => ({
 vi.mock("@/lib/supabase/admin", () => ({
   isAdminConfigured: () => true,
   createAdminClient: () => {
-    const db = chainClient((_table, calls): ChainAnswer => {
+    const db = chainClient((table, calls): ChainAnswer => {
       if (called(calls, "update")) {
         recordWrite("admin", calls);
         return { data: [{ id: CARD }], error: null };
+      }
+      if (table === "frame_profile_overrides") {
+        // The override-stamp guard (lib/cards/override-stamps.ts): the list
+        // read before the render, then one read per template per check.
+        if (!called(calls, "maybeSingle")) {
+          if (state.stamps.listFails) return { data: null, error: { message: "stamps down" } };
+          return { data: state.stamps.atStart };
+        }
+        const template = calls.find((c) => c.method === "eq" && c.args[0] === "template")?.args[1] as string;
+        const answer = state.stamps.now(template, state.stamps.reads++);
+        if (answer === "error") return { data: null, error: { message: "stamp read failed" } };
+        return { data: answer ? { updated_at: answer } : null };
       }
       return { data: null };
     });
@@ -121,7 +140,7 @@ vi.mock("@/lib/billing/flags", () => ({ isBillingEnabled: () => true }));
 vi.mock("@/lib/pips/queries", () => ({ getPipOverrides: async () => null }));
 vi.mock("@/lib/cards/frame-profile-overrides", () => ({
   getFrameProfileOverrides: async () => ({}),
-  requireFrameProfileOverrides: async () => {
+  readFrameProfileOverrides: async () => {
     if (state.overridesDown) throw new Error("Frame layout overrides could not be read: fetch failed");
     return {};
   },
@@ -217,6 +236,10 @@ beforeEach(async () => {
   state.renderThrowsOn = null;
   state.artDown.clear();
   state.overridesDown = false;
+  state.stamps.atStart = [];
+  state.stamps.listFails = false;
+  state.stamps.reads = 0;
+  state.stamps.now = () => null;
   state.card = dfcRow();
   state.png ??= await sharp({ create: { width: 30, height: 42, channels: 4, background: "#345" } }).png().toBuffer();
 });
@@ -411,5 +434,80 @@ describe("a legacy back (no body) and a card that lost its back", () => {
     expect(state.rendered).toHaveLength(1);
     expect(state.ops.filter((op) => op.op === "upload").map((op) => op.keys).flat()).toEqual([KEY(NAMES.png), KEY(NAMES.thumb)]);
     expect(state.writes[0].payload).toMatchObject({ rendered_back_image_url: null });
+  });
+});
+
+describe("the save bake's frame-layout guard (lib/cards/override-stamps.ts, the re-bake batch's own)", () => {
+  const AT_START = [
+    { template: "m15dfcfront", updated_at: "F1" },
+    { template: "m15dfcback", updated_at: "B1" },
+  ];
+  const unchanged = (t: string) => AT_START.find((s) => s.template === t)?.updated_at ?? null;
+
+  function quiet<T>(run: () => Promise<T>): Promise<T> {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    return run().finally(() => warn.mockRestore());
+  }
+
+  it("unchanged stamps: a normal bake — one write at the current stamp, both faces' templates checked twice", async () => {
+    state.stamps.atStart = AT_START;
+    const read: string[] = [];
+    state.stamps.now = (t) => (read.push(t), unchanged(t));
+    expect(await bakeAndPersistCardRender(CARD, USER)).not.toBeNull();
+    expect(state.writes).toHaveLength(1);
+    expect(state.writes[0].payload).toMatchObject({ layout_version: expect.any(Number) });
+    // Before the upload and after the write, front and back body each.
+    expect(read.sort()).toEqual(["m15dfcback", "m15dfcback", "m15dfcfront", "m15dfcfront"]);
+  });
+
+  it("a back-body save during the UPLOAD: the card is re-marked (null stamp, on this render only), never left current", async () => {
+    state.stamps.atStart = AT_START;
+    // The pre-upload check (reads 0–1) sees the start; the post-write check
+    // (reads 2–3) sees the back body saved.
+    state.stamps.now = (t, n) => (n >= 2 && t === "m15dfcback" ? "B2" : unchanged(t));
+    const url = await quiet(() => bakeAndPersistCardRender(CARD, USER));
+    expect(url).not.toBeNull();
+    expect(state.writes).toHaveLength(2);
+    const [bake, remark] = state.writes;
+    expect(bake.payload).toMatchObject({ layout_version: expect.any(Number), rendered_at: expect.any(String) });
+    expect(remark.via).toBe("admin");
+    expect(remark.payload).toEqual({ layout_version: null });
+    expect(remark.filters).toEqual([
+      ["id", CARD],
+      ["rendered_at", bake.payload.rendered_at],
+    ]);
+  });
+
+  it("a front save during the RENDER: superseded — nothing uploaded, the row untouched", async () => {
+    state.stamps.atStart = AT_START;
+    state.stamps.now = (t) => (t === "m15dfcfront" ? "F2" : unchanged(t));
+    expect(await quiet(() => bakeAndPersistCardRender(CARD, USER))).toBeNull();
+    expect(state.ops).toEqual([]);
+    // Not even the failure path's clear: the edit that asked for the bake
+    // already cleared the pointers (REBAKE_PENDING_RENDER), and a baked
+    // card keeps the mark the layout save gave it.
+    expect(state.writes).toEqual([]);
+  });
+
+  it("the stamps can't be read before the render: the bake refuses (the outage path) — nothing rendered, every pointer cleared", async () => {
+    state.stamps.listFails = true;
+    expect(await quiet(() => bakeAndPersistCardRender(CARD, USER))).toBeNull();
+    expect(state.rendered).toEqual([]);
+    expect(state.ops).toEqual([]);
+    expect(state.writes).toEqual([expect.objectContaining({ via: "user", payload: CLEARED })]);
+  });
+
+  it("a stamp read that fails before the upload is a move (superseded); after the write, a re-mark", async () => {
+    state.stamps.atStart = AT_START;
+    state.stamps.now = (t, n) => (n === 0 ? "error" : unchanged(t));
+    expect(await quiet(() => bakeAndPersistCardRender(CARD, USER))).toBeNull();
+    expect(state.ops).toEqual([]);
+    expect(state.writes).toEqual([]);
+
+    state.ops.length = 0;
+    state.stamps.reads = 0;
+    state.stamps.now = (t, n) => (n >= 2 ? "error" : unchanged(t));
+    expect(await quiet(() => bakeAndPersistCardRender(CARD, USER))).not.toBeNull();
+    expect(state.writes.map((w) => w.payload.layout_version)).toEqual([expect.any(Number), null]);
   });
 });

@@ -100,6 +100,8 @@ type DbOptions = {
   /** The conditional stamp write matches no row. */
   stampLost?: boolean;
   countError?: boolean;
+  /** The batch-start stamps read fails. */
+  stampsError?: boolean;
 };
 
 function db(rows: RebakeRow[], opts: DbOptions = {}) {
@@ -122,6 +124,7 @@ function db(rows: RebakeRow[], opts: DbOptions = {}) {
         overrideReads += 1;
         return { data: answer };
       }
+      if (opts.stampsError) return { error: { message: "stamps down" } };
       return { data: opts.overridesAtStart ?? [] };
     }
     if (table !== "cards") return {};
@@ -465,6 +468,16 @@ describe("runRebakeBatch", () => {
     expect(mocks.upload).toHaveBeenCalledTimes(1);
     expect((mocks.upload.mock.calls[0] as unknown[])[1]).toBe("good");
     expect(stub.forTable("cards").filter((e) => called(e.calls, "update"))).toHaveLength(1);
+  });
+
+  it("refuses the whole batch when the override STAMPS can't be read — never a guard on an empty map", async () => {
+    const onPicked = vi.fn();
+    const stub = db([row("c1")], { stampsError: true, markedCount: 1 });
+    const result = await run(stub, { onPicked });
+    expect(result).toEqual({ ok: false, error: "Frame layout override stamps could not be read: stamps down" });
+    expect(onPicked).not.toHaveBeenCalled();
+    expect(mocks.render).not.toHaveBeenCalled();
+    expect(stub.forTable("cards").filter((e) => called(e.calls, "update"))).toHaveLength(0);
   });
 
   it("refuses the whole batch when the frame layout overrides can't be read — nothing picked, rendered or written (admin audit L2)", async () => {

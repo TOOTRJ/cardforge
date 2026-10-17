@@ -183,10 +183,10 @@ async function deleteOverrideRow(
 }
 
 /** Bust the overrides read cache — RIGHT AFTER the row write, BEFORE any
- *  card is marked stale. A save bake reads the CACHED overrides
- *  (requireFrameProfileOverrides) and has no stamp guard: with the bust
- *  after the marking, a bake reading in between drew the OLD map and could
- *  persist a current stamp over the mark. */
+ *  card is marked stale, so nothing that reads the cached map after the
+ *  marking (the live previews, the editor's own refresh) draws the old one.
+ *  The stored bakes read the overrides uncached behind the override-stamp
+ *  guard (lib/cards/override-stamps.ts), which catches a save mid-bake. */
 function bustOverridesCache(): void {
   updateTag(FRAME_PROFILE_OVERRIDES_TAG);
 }

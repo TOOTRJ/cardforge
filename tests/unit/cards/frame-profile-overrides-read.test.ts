@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 //     RETURNS, so the next request reads the table again;
 //   * display (getFrameProfileOverrides) answers {} for that request and
 //     logs it — a live preview keeps working on the code profiles;
-//   * a stored bake (requireFrameProfileOverrides) gets the throw;
+//   * a stored bake reads uncached (readFrameProfileOverrides) and gets the throw;
 //   * a row whose jsonb does not parse is skipped, not a failed read.
 //
 // unstable_cache is stood in for by a store with Next's rule: a resolved
@@ -52,7 +52,7 @@ vi.mock("@/lib/supabase/public", () => ({
 
 import {
   getFrameProfileOverrides,
-  requireFrameProfileOverrides,
+  readFrameProfileOverrides,
 } from "@/lib/cards/frame-profile-overrides";
 
 const ROW = { template: "saga", overrides: { title: { rect: { topPct: 5 } } } };
@@ -68,13 +68,16 @@ describe("frame layout overrides read (L2)", () => {
   it("reads and caches the map", async () => {
     state.answers = [{ data: [ROW] }];
     expect(await getFrameProfileOverrides()).toEqual(MAP);
-    expect(await requireFrameProfileOverrides()).toEqual(MAP);
+    expect(await getFrameProfileOverrides()).toEqual(MAP);
     expect(state.reads).toBe(1);
+    // The bakes' read is UNCACHED: it reads the table every time.
+    expect(await readFrameProfileOverrides()).toEqual(MAP);
+    expect(state.reads).toBe(2);
   });
 
   it("retries once: a transient error then a good read is the map", async () => {
     state.answers = [{ error: { message: "upstream timeout" } }, { data: [ROW] }];
-    expect(await requireFrameProfileOverrides()).toEqual(MAP);
+    expect(await readFrameProfileOverrides()).toEqual(MAP);
     expect(state.reads).toBe(2);
   });
 
@@ -97,7 +100,7 @@ describe("frame layout overrides read (L2)", () => {
 
   it("a stored bake gets the failure, never a silent {}", async () => {
     state.answers = [{ error: { message: "connection refused" } }];
-    await expect(requireFrameProfileOverrides()).rejects.toThrow(
+    await expect(readFrameProfileOverrides()).rejects.toThrow(
       "Frame layout overrides could not be read: connection refused",
     );
     expect(state.store.size).toBe(0);
@@ -105,13 +108,14 @@ describe("frame layout overrides read (L2)", () => {
 
   it("a row that does not parse is skipped — a broken row, not a failed read", async () => {
     state.answers = [{ data: [ROW, { template: "m15", overrides: { title: { colorHex: "#fff" } } }] }];
-    expect(await requireFrameProfileOverrides()).toEqual(MAP);
+    expect(await readFrameProfileOverrides()).toEqual(MAP);
   });
 
   it("an empty table is no overrides (and is cached)", async () => {
     state.answers = [{ data: [] }];
-    expect(await requireFrameProfileOverrides()).toEqual({});
+    expect(await getFrameProfileOverrides()).toEqual({});
     expect(await getFrameProfileOverrides()).toEqual({});
     expect(state.reads).toBe(1);
+    expect(await readFrameProfileOverrides()).toEqual({});
   });
 });

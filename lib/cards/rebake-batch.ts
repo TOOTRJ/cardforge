@@ -12,15 +12,13 @@ import {
   uploadRenderObjects,
 } from "@/lib/cards/bake-core";
 import { selectBakeColumns } from "@/lib/cards/bake-select";
-import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { getPipOverrides } from "@/lib/pips/queries";
 import { readFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
-import { backBodyOf } from "@/lib/cards/faces";
+import { overridesMoved, readOverrideStamps, remarkIfLayoutMoved, templatesBakedFor } from "@/lib/cards/override-stamps";
 import {
   CARD_LAYOUT_VERSION,
   classifyForSweep,
   rolloutPolicy,
-  templateOfFrameStyle,
   type SweepVerdict,
 } from "@/lib/cards/layout-version";
 
@@ -228,7 +226,14 @@ export async function runRebakeBatch(
   // BEFORE the overrides themselves: a save landing between the two reads
   // then shows as a moved stamp (the render is superseded), never as a
   // fresh stamp beside the older layout (a stale bake stamped current).
-  const overrideStamps = await readOverrideStamps(supabase);
+  // (lib/cards/override-stamps.ts, the guard the save bake shares.) A
+  // failed read answers the whole batch with an error, like the overrides.
+  let overrideStamps: Map<string, string>;
+  try {
+    overrideStamps = await readOverrideStamps(supabase);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Frame layout override stamps could not be read." };
+  }
 
   // The frame layout overrides, read BEFORE any card is picked (admin audit
   // L2): when they can't be read the whole batch answers an error and
@@ -293,9 +298,7 @@ export async function runRebakeBatch(
       // rendered? A residual race remains until the write; part 2 catches it.
       // Every template the bake drew: the front's, and the back body's when
       // the card has one (TODO 5.3) — a save on either moves its layout.
-      const template = normalizeFrameTemplate(templateOfFrameStyle(row.frame_style), row);
-      const backBody = backBodyOf(previewData)?.template;
-      const templates = backBody && backBody !== template ? [template, backBody] : [template];
+      const templates = templatesBakedFor(row, previewData);
       const [{ data: fresh }, layoutMoved] = await Promise.all([
         supabase.from("cards").select("updated_at, visibility, layout_version").eq("id", row.id).maybeSingle(),
         overridesMoved(supabase, templates, overrideStamps),
@@ -357,12 +360,7 @@ export async function runRebakeBatch(
       // Part 3: a layout save during the upload can't be seen by the write
       // (it doesn't move updated_at). If the override moved, re-mark the
       // card — only if the row still holds OUR render.
-      if (await overridesMoved(supabase, templates, overrideStamps)) {
-        await supabase
-          .from("cards")
-          .update({ layout_version: null })
-          .eq("id", row.id)
-          .eq("rendered_at", renderedAt);
+      if (await remarkIfLayoutMoved(supabase, { cardId: row.id, renderedAt, templates, stamps: overrideStamps })) {
         superseded.push(row.id);
         continue;
       }
@@ -398,32 +396,6 @@ export async function runRebakeBatch(
     return { ok: false, error: err instanceof Error ? err.message : "Could not count the remaining cards." };
   }
   return { ...base, dry: false, processed, failed, superseded, remaining };
-}
-
-/** template → the override row's updated_at (uncached), for the overlap guard. */
-async function readOverrideStamps(supabase: Admin): Promise<Map<string, string>> {
-  const { data } = await supabase.from("frame_profile_overrides").select("template, updated_at");
-  return new Map((data ?? []).map((r) => [r.template as string, r.updated_at as string]));
-}
-
-/** True when any of `templates`' override rows moved since `stamps` was
- *  read (uncached) — the front's and, on a two-faced card, the back body's. */
-async function overridesMoved(
-  supabase: Admin,
-  templates: readonly string[],
-  stamps: ReadonlyMap<string, string>,
-): Promise<boolean> {
-  const now = await Promise.all(templates.map((t) => readOverrideStamp(supabase, t)));
-  return templates.some((t, i) => now[i] !== (stamps.get(t) ?? null));
-}
-
-async function readOverrideStamp(supabase: Admin, template: string): Promise<string | null> {
-  const { data } = await supabase
-    .from("frame_profile_overrides")
-    .select("updated_at")
-    .eq("template", template)
-    .maybeSingle();
-  return (data?.updated_at as string | undefined) ?? null;
 }
 
 /** Published, baked cards a platform re-bake is owed to (null stamp) — the

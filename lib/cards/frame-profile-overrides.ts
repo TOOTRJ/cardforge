@@ -28,11 +28,13 @@ import {
 //                                     the code profiles — for this request
 //                                     only. A broken read must not take down
 //                                     card rendering.
-//   requireFrameProfileOverrides()    STORED BAKES (lib/cards/bake-render.ts;
-//                                     lib/cards/rebake-batch.ts reads
-//                                     readFrameProfileOverrides() UNCACHED,
-//                                     beside its uncached stamps): a failed
-//                                     read throws. A bake without an override
+//   readFrameProfileOverrides()       STORED BAKES (lib/cards/bake-render.ts,
+//                                     lib/cards/rebake-batch.ts): UNCACHED,
+//                                     read right after the override stamps
+//                                     (lib/cards/override-stamps.ts), so a
+//                                     save between the two reads shows as a
+//                                     moved stamp; a failed read throws. A
+//                                     bake without an override
 //                                     that exists would be stored — and
 //                                     stamped current — with the wrong layout
 //                                     for good; a refused bake is retried
@@ -86,11 +88,6 @@ const loadFrameProfileOverrides = unstable_cache(
   readFrameProfileOverrides,
   [FRAME_PROFILE_OVERRIDES_TAG],
   { revalidate: 300, tags: [FRAME_PROFILE_OVERRIDES_TAG] },
-);
-
-/** For a STORED bake: the overrides, or a throw — never a silent {}. */
-export const requireFrameProfileOverrides = cache(
-  (): Promise<FrameProfileOverridesMap> => loadFrameProfileOverrides(),
 );
 
 /** For display: the overrides, or {} (logged, uncached) when they can't be
