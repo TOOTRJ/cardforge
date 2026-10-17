@@ -365,16 +365,20 @@ async function handleInvoicePaid(
   let tier: PlanTier | null = null;
   let interval: string | null = null;
   if (subscriptionId) {
+    let sub: Stripe.Subscription | null = null;
     try {
-      const sub = await stripe.subscriptions.retrieve(subscriptionId);
+      sub = await stripe.subscriptions.retrieve(subscriptionId);
       interval = sub.items?.data?.[0]?.price?.recurring?.interval ?? null;
       const result = await syncSubscriptionForUser(admin, stripe, userId, {
         // Just retrieved: current, not an event's snapshot.
         currentSub: sub,
         customerId,
       });
+      // The row's tier label is known once the sync is: set it BEFORE the
+      // grant, so a failed grant (a deleted account's ledger FK) doesn't
+      // log the payment without it.
+      if (result.tier !== "free") tier = result.tier;
       await grantCreditsForSync(result, admin, { isCreationEvent: false });
-      tier = result.tier === "free" ? await resolveSubscriptionTier(sub, stripe) : result.tier;
     } catch (error) {
       // The subscription events carry the sync; the row still gets written.
       console.warn(
@@ -382,6 +386,9 @@ async function handleInvoicePaid(
         error instanceof Error ? error.message : error,
       );
     }
+    // Synced to free (or the sync failed): the invoice's own price names
+    // the tier it billed, if the subscription could be read.
+    if (!tier && sub) tier = await resolveSubscriptionTier(sub, stripe);
   }
 
   const amountCents = Math.max(0, invoice.amount_paid ?? 0);

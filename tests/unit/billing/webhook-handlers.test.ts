@@ -920,7 +920,7 @@ describe("handleStripeEvent — trial_will_end", () => {
 type Rows = Record<string, Array<Record<string, unknown>>>;
 function makeChainAdmin(
   rows: Rows,
-  opts: { insertError?: string; upsertError?: string; missingUser?: string } = {},
+  opts: { insertError?: string; upsertError?: string; missingUser?: string; rpcError?: string; updateError?: string } = {},
 ) {
   const inserts: Array<{ table: string; row: Record<string, unknown> }> = [];
   const upserts: Array<{ table: string; row: Record<string, unknown>; opts: unknown }> = [];
@@ -962,13 +962,13 @@ function makeChainAdmin(
         },
         update: (values: Record<string, unknown>) => {
           updates.push({ table, values });
-          return chain(table, () => ({ data: null, error: null }));
+          return chain(table, () => ({ data: null, error: opts.updateError ? { message: opts.updateError } : null }));
         },
       };
     },
     rpc: async (fn: string, args: Record<string, unknown>) => {
       rpcs.push({ fn, args });
-      return { data: 0, error: null };
+      return { data: 0, error: opts.rpcError ? { message: opts.rpcError } : null };
     },
   };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1107,6 +1107,30 @@ describe("handleStripeEvent — invoice.paid", () => {
     expect(upserts[1].row).toMatchObject({ invoice_id: "in_1", amount_cents: 1500, stripe_customer_id: "cus_1" });
     expect(funnel(inserts)).toEqual([expect.objectContaining({ event: "payment_received", user_id: null })]);
     expect(notes(inserts)).toEqual([]); // nobody left to notify
+  });
+
+  it("keeps the tier label when the credit grant fails (a deleted buyer's ledger FK) — the grant's failure still never 500s", async () => {
+    const { admin, upserts, rpcs } = makeChainAdmin(
+      { profiles: [], notifications: [], credit_ledger: [] },
+      { missingUser: "user-1", rpcError: "violates foreign key constraint" },
+    );
+    await handleStripeEvent(event(invoice()), { admin, stripe: invoiceStripe });
+    expect(rpcs.filter((r) => r.fn === "grant_credits")).toHaveLength(1); // tried once, as before
+    const rows = upserts.filter((u) => u.table === "billing_payments").map((u) => u.row);
+    expect(rows.map((r) => [r.user_id, r.tier, r.billing_interval])).toEqual([
+      ["user-1", "pro", "month"],
+      [null, "pro", "month"],
+    ]);
+  });
+
+  it("a failed resync still labels the row with the tier the subscription's price names", async () => {
+    const { admin, upserts, rpcs } = makeChainAdmin(
+      { profiles: [profile], notifications: [], credit_ledger: [] },
+      { updateError: "deadlock" },
+    );
+    await handleStripeEvent(event(invoice()), { admin, stripe: invoiceStripe });
+    expect(rpcs.some((r) => r.fn === "grant_credits")).toBe(false); // no grant without a sync
+    expect(upserts[0].row).toMatchObject({ invoice_id: "in_1", tier: "pro", billing_interval: "month" });
   });
 
   it("a second failure on the unlinked write still throws so Stripe retries", async () => {
