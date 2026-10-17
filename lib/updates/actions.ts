@@ -6,7 +6,7 @@ import { z } from "zod";
 import { createClient, getCurrentProfile, getCurrentUser } from "@/lib/supabase/server";
 import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { SITE_UPDATES_TAG } from "@/lib/updates/queries";
-import { isReleased } from "@/lib/updates/shared";
+import { isAllowedUpdateLink, isReleased } from "@/lib/updates/shared";
 import { newsletterEmail } from "@/lib/email/messages";
 import { isEmailConfigured, sendEmailBatch } from "@/lib/email/send";
 
@@ -19,8 +19,6 @@ import { isEmailConfigured, sendEmailBatch } from "@/lib/email/send";
 
 export type UpdateActionResult = { ok: true; id?: string } | { ok: false; error: string };
 
-const HTTPS_OR_RELATIVE = /^(https:\/\/[^\s]+|\/[^\s]*)$/;
-
 const updateInputSchema = z.object({
   kind: z.enum(["update", "upcoming"]),
   title: z.string().trim().min(3).max(120),
@@ -30,7 +28,7 @@ const updateInputSchema = z.object({
     .string()
     .trim()
     .max(512)
-    .refine((v) => v === "" || HTTPS_OR_RELATIVE.test(v), "Link must be https:// or a site path.")
+    .refine((v) => v === "" || isAllowedUpdateLink(v), "Link must be https:// or a site path.")
     .optional()
     .or(z.literal("")),
   publishAt: z.string().trim().optional().or(z.literal("")),

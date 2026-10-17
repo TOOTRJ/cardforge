@@ -94,6 +94,7 @@ export async function POST(request: Request) {
   try {
     lease = await acquireManualLease(admin, token);
   } catch (err) {
+    console.error("[rebake] sweep lease failed:", err);
     return NextResponse.json(
       { ok: false, billingEnabled, error: err instanceof Error ? err.message : "Sweep lease unavailable." },
       { status: 500 },
@@ -115,13 +116,19 @@ export async function POST(request: Request) {
     const finished = result?.ok === true && result.remaining === 0;
     await releaseSweepLease(admin, token, finished ? {} : { parkSeconds: MANUAL_PARK_SECONDS });
   }
-  if (!result.ok) return NextResponse.json(result, { status: 500 });
+  if (!result.ok) {
+    console.error("[rebake] batch failed:", result.error);
+    return NextResponse.json(result, { status: 500 });
+  }
   return NextResponse.json(result);
 }
 
 /** The dry run's answer: the plan the driver prints (nothing processed). */
 function planResponse(result: Awaited<ReturnType<typeof runRebakeBatch>>) {
-  if (!result.ok) return NextResponse.json(result, { status: 500 });
+  if (!result.ok) {
+    console.error("[rebake] dry run failed:", result.error);
+    return NextResponse.json(result, { status: 500 });
+  }
   return NextResponse.json({
     ok: true,
     dry: true,

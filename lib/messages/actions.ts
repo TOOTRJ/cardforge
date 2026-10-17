@@ -12,6 +12,7 @@ import {
   type ThreadStatus,
 } from "@/lib/messages/schemas";
 import { emailUserAboutMessage } from "@/lib/messages/notify";
+import { isUuid } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
 // Writes for admin ↔ user messaging.
@@ -285,12 +286,16 @@ export async function adminSetThreadStatusAction(
 ): Promise<MessageActionResult> {
   const gate = await requireAdmin();
   if (!gate.ok) return gate;
+  if (!isUuid(threadId)) return { ok: false, error: "No such conversation." };
   if (!THREAD_STATUSES.includes(status)) return { ok: false, error: "Unknown status." };
   const { error } = await gate.admin
     .from("message_threads")
     .update({ status })
     .eq("id", threadId);
-  if (error) return { ok: false, error: "Couldn't update the conversation." };
+  if (error) {
+    console.error("[messages] thread status update failed:", error.message);
+    return { ok: false, error: "Couldn't update the conversation." };
+  }
   revalidateMessageSurfaces(threadId);
   return { ok: true };
 }
@@ -299,17 +304,20 @@ export async function adminSetThreadStatusAction(
 export async function adminMarkThreadReadAction(threadId: string): Promise<MessageActionResult> {
   const gate = await requireAdmin();
   if (!gate.ok) return gate;
+  if (!isUuid(threadId)) return { ok: false, error: "No such conversation." };
   const { admin, adminId } = gate;
-  await admin
+  const { error: threadError } = await admin
     .from("message_threads")
     .update({ admin_unread_count: 0, admin_last_read_at: new Date().toISOString() })
     .eq("id", threadId);
-  await admin
+  if (threadError) console.error("[messages] admin mark-read (thread) failed:", threadError.message);
+  const { error: notifError } = await admin
     .from("notifications")
     .update({ read_at: new Date().toISOString() })
     .eq("recipient_id", adminId)
     .eq("thread_id", threadId)
     .is("read_at", null);
+  if (notifError) console.error("[messages] admin mark-read (notifications) failed:", notifError.message);
   revalidatePath("/admin/messages");
   revalidatePath("/notifications");
   return { ok: true };
