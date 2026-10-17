@@ -28,6 +28,7 @@ import {
 } from "@/lib/creator/card-kinds";
 import { secondPartWordsFor, secondPartWordsOfCard } from "@/lib/creator/second-part";
 import { remixSecondHalfLayout } from "@/lib/ai/remix-names";
+import { SAGA_TWO_FACES_COLOURLESS, SAGA_TWO_FACES_NEEDS_COLOUR, sagaTwoFacesColourMove } from "@/lib/creator/saga-faces";
 import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -124,6 +125,17 @@ describe("the kinds", () => {
     expect(sagaTwoFacesAvailable(verified("sagadfcfront"))).toBe(false);
     expect(sagaTwoFacesAvailable(verified("m15dfcback"))).toBe(false);
     expect(sagaTwoFacesAvailable(new Set([frameComboKey("sagadfcfront", "r"), frameComboKey("m15dfcback", "u")]))).toBe(true);
+  });
+
+  it("a colourless saga going two-faced (owner Round 73): the first colour both faces are published in, said plainly — else it stays, and says it can't be saved with two faces", () => {
+    expect(sagaTwoFacesColourMove(EVERYTHING, "arrows")).toEqual({ key: "w", message: "A double-faced saga needs a colour — switched the colour to white." });
+    // Both faces in red only (the fans' back is the 2016–22 one).
+    const red = new Set([frameComboKey("sagadfcfront", "r"), frameComboKey("m15dfcbackleft", "r"), frameComboKey("m15dfcback", "u")]);
+    expect(sagaTwoFacesColourMove(red, "fan")).toEqual({ key: "r", message: "A double-faced saga needs a colour — switched the colour to red." });
+    expect(sagaTwoFacesColourMove(red, "arrows")).toEqual({ key: null, message: SAGA_TWO_FACES_NEEDS_COLOUR });
+    expect(sagaTwoFacesColourMove(new Set(), "arrows")).toEqual({ key: null, message: SAGA_TWO_FACES_NEEDS_COLOUR });
+    expect(SAGA_TWO_FACES_NEEDS_COLOUR).toMatch(/^A double-faced saga needs a colour/);
+    expect(SAGA_TWO_FACES_COLOURLESS).toMatch(/^A double-faced saga needs a colour/);
   });
 
   it("the words: the switch reads Saga | Back face; a one-faced saga has none", () => {

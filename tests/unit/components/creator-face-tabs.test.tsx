@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { GameSystem } from "@/types/card";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
+import { SAGA_TWO_FACES_COLOURLESS, SAGA_TWO_FACES_NEEDS_COLOUR } from "@/lib/creator/saga-faces";
 
 // ---------------------------------------------------------------------------
 // Face tabs, part 1 (TODO 5.14, owner round 46) — Transform and Modal
@@ -886,6 +887,9 @@ describe("the double-faced saga (TODO 5.5 (b))", () => {
     await goTo(/^card/i);
     await click(sagaChip(/^Two faces/));
     expect(sagaChip(/^Two faces/).getAttribute("aria-checked")).toBe("true");
+    // A new saga is colourless: two faces need a colour (owner Round 73) —
+    // the first one both faces are published in, said plainly.
+    expect(toast.info).toHaveBeenCalledWith("A double-faced saga needs a colour — switched the colour to white.");
     expect(screen.getByTestId("dfc-icon-family")).toBeTruthy();
     expect(tab(/^Saga/).getAttribute("aria-selected")).toBe("true");
     const back = tab(/^Back face/);
@@ -914,6 +918,39 @@ describe("the double-faced saga (TODO 5.5 (b))", () => {
     expect(payload.card_type).toBe("enchantment");
     expect(payload.frame_style).toMatchObject({ template: "sagadfcfront", dfcIcon: "arrows" });
     expect(payload.back_face).toMatchObject({ title: "Reflection of Kiki-Jiki", card_type: "creature", frame_style: { template: "m15dfcback" } });
+  });
+
+  it("no colour has both faces published: the saga stays colourless and says so — and the save is refused on its colour, in a saga's words", async () => {
+    // The front in white and colourless (the land frame), the default back
+    // only in blue: no colour has both.
+    const verified = [
+      ...VERIFIED.filter((key) => !key.startsWith("m15dfcback/")),
+      frameComboKey("m15dfcback", "u"),
+      frameComboKey("sagadfcfront", "w"),
+      frameComboKey("sagadfcfront", "c"),
+    ];
+    renderForm(verified);
+    await pickKind(/^Saga/);
+    await goTo(/^card/i);
+    await click(sagaChip(/^Two faces/));
+    expect(sagaChip(/^Two faces/).getAttribute("aria-checked")).toBe("true");
+    expect(toast.info).toHaveBeenCalledWith(SAGA_TWO_FACES_NEEDS_COLOUR);
+    // The colour stays colourless (the front is published there).
+    expect(screen.getAllByTestId("card-preview").some((el) => JSON.stringify(propsOf(el)).includes("\"template\":\"sagadfcfront\""))).toBe(true);
+    await goTo(/^identity/i);
+    await act(async () => {
+      fireEvent.change(named("title")!, { target: { value: "Fable of the Mirror-Breaker" } });
+    });
+    await click(tab(/^Back face/));
+    await act(async () => {
+      fireEvent.change(named("back_face.title")!, { target: { value: "Reflection of Kiki-Jiki" } });
+    });
+    await click(tab(/^Saga/));
+    await goTo(/^publish/i);
+    await click(screen.getByTestId("save-as-draft"));
+    await click(screen.getByRole("button", { name: /^Save$/ }));
+    await waitFor(() => expect(document.body.textContent).toContain(SAGA_TWO_FACES_COLOURLESS));
+    expect(actions.createCardAction).not.toHaveBeenCalled();
   });
 
   it("back to “One face”: the saga frame, no switch, and the saga saves ONE-faced (no back_face) — the back kept for the visit", async () => {

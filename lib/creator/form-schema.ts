@@ -36,6 +36,7 @@ import {
 } from "@/lib/validation/card";
 import { dfcFrontBodyFor, dfcLayoutForCard, kindFromCard } from "@/lib/creator/card-kinds";
 import { bodyFor, colorlessFaceAllowed, dfcLookOf, isDfcFaceType, isSagaFront } from "@/lib/cards/dfc";
+import { SAGA_TWO_FACES_COLOURLESS } from "@/lib/creator/saga-faces";
 import { dfcFamilyOf, dfcFrontColorError, dfcFrontTypeError, DFC_BACK_TYPE_REFUSED, DFC_COLORLESS_NEEDS_ARTIFACT } from "@/lib/cards/dfc-gate";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import {
@@ -277,7 +278,14 @@ export function cardFormSchemaFor(
             pickFrameColorKey(colour) === "c" &&
             !colorlessFaceAllowed(body, { cardType: back.card_type, supertype: back.supertype })
           ) {
-            ctx.addIssue({ code: "custom", path: ["back_face", "color_identity"], message: DFC_COLORLESS_NEEDS_ARTIFACT });
+            // (A colourless double-faced saga whose back takes the front's
+            // colour — TODO 5.5 (b), owner Round 73 — is told so where the
+            // back face's colour is refused, in a saga's words.)
+            if (isSagaFront(values.frame_style?.template) && back.color_identity.length === 0) {
+              ctx.addIssue({ code: "custom", path: ["back_face", "color_identity"], message: SAGA_TWO_FACES_COLOURLESS });
+            } else {
+              ctx.addIssue({ code: "custom", path: ["back_face", "color_identity"], message: DFC_COLORLESS_NEEDS_ARTIFACT });
+            }
           }
         }
       }

@@ -287,6 +287,7 @@ import {
 } from "@/lib/cards/dfc";
 import { dfcIconOf } from "@/lib/cards/faces";
 import { BATTLE_ONE_FACE_NOTE, battleBackBodyFor, battleBackUnavailableNote } from "@/lib/creator/battle-back";
+import { sagaTwoFacesColourMove } from "@/lib/creator/saga-faces";
 import { dfcAdoptionOffer } from "@/lib/cards/dfc-adopt";
 // The emblem kind (TODO 6.23): its entry values and the hidden rarity chips.
 import {
@@ -2116,46 +2117,47 @@ export function CardCreatorForm({
    *  effect beside the forced back face). */
   const handleSagaFaces = (two: boolean) => {
     if (two === sagaTwoFaced) return;
-    sagaFramePickRef.current = true;
     const target: FrameTemplate = two ? "sagadfcfront" : "saga";
+    const verifiedKeys = new Set(verifiedFrameKeys);
     const currentColorKey = pickFrameColorKey(getValues("color_identity")) as FrameColorKey;
+    // A double-faced saga needs a colour (lib/creator/saga-faces.ts; owner
+    // Round 73): a colourless saga moves to the first colour BOTH faces are
+    // published in, and says so. Where no colour has both, the front is
+    // taken where it is published (the frame is the pick, as a tile's) and
+    // the line says the saga can't be saved with two faces until one does —
+    // leaveColourlessDfcFront's rule, in a saga's words.
+    const move =
+      two && currentColorKey === "c"
+        ? sagaTwoFacesColourMove(verifiedKeys, dfcIconOf({ frameStyle: getValues("frame_style") }))
+        : null;
     const resolution = resolvePublishedFrame({
       kind: "saga",
       candidates: [target],
-      colorKey: currentColorKey,
-      verifiedKeys: new Set(verifiedFrameKeys),
-      prefer: "frame",
+      colorKey: move?.key ?? currentColorKey,
+      verifiedKeys,
+      // The frame is what the maker picked: never another frame in its place.
+      prefer: "colour",
     });
-    if (resolution.status === "unavailable") {
+    if (resolution.status === "unavailable" || resolution.template !== target) {
       toast.info(`${describeFrame(target)} isn't verified yet — keeping the current frame.`);
       return;
     }
+    sagaFramePickRef.current = true;
     setFrameSubstitution(null);
-    clearErrors(["frame_style", "back_face"]);
+    clearErrors(["frame_style", "back_face", "color_identity"]);
     if (two && !getValues("frame_style.dfcIcon")) {
       setValue("frame_style.dfcIcon", DEFAULT_DFC_ICON, { shouldDirty: true });
     }
     setValue("frame_style.template", resolution.template, { shouldDirty: true });
-    if (resolution.status === "colour-switched") {
+    if (resolution.colorKey !== currentColorKey) {
       setValue("color_identity", [colorIdentityForKey(resolution.colorKey)], { shouldDirty: true });
+    }
+    if (move) {
+      toast.info(move.message);
+    } else if (resolution.status === "colour-switched") {
       toast.info(
         `${describeFrame(target)} isn't verified in ${colorWord(resolution.fromColorKey)} yet — switched the colour to ${colorWord(resolution.colorKey)}.`,
       );
-    } else if (two && resolution.colorKey === "c") {
-      // The back takes the front's colour, and a colourless back needs an
-      // Artifact word (design D2: the back body's `c` is the artifact
-      // stand-in) — no colourless transforming saga was printed. A
-      // colourless saga moves to the first colour both faces are published
-      // in, and says so (leaveColourlessDfcFront's rule).
-      const published = new Set(verifiedFrameKeys);
-      const backBody = bodyFor("transform", "back", "creature", dfcIconOf({ frameStyle: getValues("frame_style") }));
-      const key = (["w", "u", "b", "r", "g", "m"] as const).find(
-        (k) => isFrameComboAvailable("sagadfcfront", k, published) && backBody !== null && isFrameComboAvailable(backBody, k, published),
-      );
-      if (key) {
-        setValue("color_identity", [colorIdentityForKey(key)], { shouldDirty: true });
-        toast.info(`A double-faced saga's back can't be colourless — switched the colour to ${colorWord(key)}.`);
-      }
     }
     if (!two) setPreviewFace("front");
   };

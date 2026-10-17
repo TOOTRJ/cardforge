@@ -6730,8 +6730,12 @@ legacy back).
   for it everywhere the form asks the kind. Going back to one face puts the
   back aside for the visit (Two faces brings it back) and the saga saves
   one-faced — never as a legacy back. A colourless saga moving to two faces
-  takes the first colour both faces are published in (a colourless back
-  needs an Artifact word). An edit keeps the faces the card was saved with.
+  takes the first colour both faces are published in and says so ("A
+  double-faced saga needs a colour — switched the colour to …"; a colourless
+  back needs an Artifact word); where no colour has both, it stays and the
+  line says it can't be saved with two faces until one does — the save is
+  then refused on the back's colour in the same words
+  (`lib/creator/saga-faces.ts`, owner Round 73). An edit keeps the faces the card was saved with.
 - **The import** (`dfcImportOf`, kind `saga`): a transforming Saga whose
   back has a body lands on this front with its back on the body its family
   derives once BOTH combos are verified (`saga/dfc/2015`, exact; NEO's
