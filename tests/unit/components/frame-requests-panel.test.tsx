@@ -252,12 +252,12 @@ describe("FrameRequestsPanel", () => {
   it("shows an empty state, and the reason when the log couldn't be read", () => {
     render(
       <FrameRequestsPanel
-        summary={summary({ rows: [], error: "Couldn't read the request log (is migration 0123 applied here?)." })}
+        summary={summary({ rows: [], error: "Couldn't read the request log." })}
         now={NOW}
       />,
     );
     expect(screen.getByText("No requests in this window")).toBeTruthy();
-    expect(screen.getByRole("status").textContent).toMatch(/migration 0123/);
+    expect(screen.getByRole("status").textContent).toMatch(/Couldn't read the request log/);
     expect(screen.queryByRole("table")).toBeNull();
     expect(screen.queryByRole("region")).toBeNull();
   });

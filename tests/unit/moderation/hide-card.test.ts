@@ -51,7 +51,7 @@ vi.mock("@/lib/supabase/server", () => ({
   getCurrentUser: async () => null,
   createClient: async () => ({}),
 }));
-vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => s.client }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => s.client, isAdminConfigured: () => true }));
 vi.mock("@/lib/moderation/notify", () => ({ notifyAdminsOfReport: vi.fn() }));
 
 import { hideCard } from "@/lib/moderation/hide-card";

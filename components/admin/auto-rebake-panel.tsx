@@ -79,7 +79,11 @@ export function AutoRebakePanel({ overview, nowMs }: { overview: AutoRebakeOverv
       ? { label: "Running now", variant: "primary" as const, Icon: Loader2 }
       : leaseLive
         ? { label: "Manual re-bake active", variant: "accent" as const, Icon: TimerReset }
-        : { label: "On — every 5 minutes", variant: "default" as const, Icon: CircleCheck };
+        : !billingEnabled
+          ? // The cron refuses to bake here (the banner below says why) — the
+            // badge must not say it is on.
+            { label: "Not running — billing flag off", variant: "gold" as const, Icon: CirclePause }
+          : { label: "On — every 5 minutes", variant: "default" as const, Icon: CircleCheck };
 
   return (
     <div className="flex flex-col gap-6" data-testid="auto-rebake-panel">

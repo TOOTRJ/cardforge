@@ -7,7 +7,7 @@ import {
   getCurrentProfile,
   getCurrentUser,
 } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, isAdminConfigured } from "@/lib/supabase/admin";
 import { revalidateCardPaths } from "@/lib/cards/revalidate";
 import { hideCard } from "@/lib/moderation/hide-card";
 import {
@@ -173,6 +173,10 @@ export async function resolveCommentReportsAction(input: {
   if (!profile?.is_admin) return { ok: false, error: "Not authorized." };
 
   if (!isUuid(input.commentId)) return { ok: false, error: "Invalid comment id." };
+  if (input.action !== "remove" && input.action !== "dismiss") {
+    return { ok: false, error: "Unknown action." };
+  }
+  if (!isAdminConfigured()) return { ok: false, error: "Admin key is not configured." };
 
   const admin = createAdminClient();
   if (input.action === "remove") {
@@ -183,7 +187,10 @@ export async function resolveCommentReportsAction(input: {
       .eq("id", input.commentId)
       .maybeSingle();
     const { error } = await admin.from("card_comments").delete().eq("id", input.commentId);
-    if (error) return { ok: false, error: `Couldn't remove the comment: ${error.message}` };
+    if (error) {
+      console.error("[moderation] remove comment failed:", error.message);
+      return { ok: false, error: `Couldn't remove the comment: ${error.message}` };
+    }
 
     const card = (comment as { cards?: { slug: string | null; owner_id: string } | null } | null)
       ?.cards;
@@ -200,7 +207,10 @@ export async function resolveCommentReportsAction(input: {
       })
       .eq("comment_id", input.commentId)
       .eq("status", "pending");
-    if (error) return { ok: false, error: `Couldn't dismiss the reports: ${error.message}` };
+    if (error) {
+      console.error("[moderation] dismiss reports failed:", error.message);
+      return { ok: false, error: `Couldn't dismiss the reports: ${error.message}` };
+    }
   }
 
   revalidatePath("/admin/moderation");
@@ -222,6 +232,10 @@ export async function resolveCardReportsAction(input: {
   if (!profile?.is_admin) return { ok: false, error: "Not authorized." };
 
   if (!isUuid(input.cardId)) return { ok: false, error: "Invalid card id." };
+  if (input.action !== "hide" && input.action !== "dismiss") {
+    return { ok: false, error: "Unknown action." };
+  }
+  if (!isAdminConfigured()) return { ok: false, error: "Admin key is not configured." };
 
   const admin = createAdminClient();
   const nowIso = new Date().toISOString();
@@ -239,7 +253,10 @@ export async function resolveCardReportsAction(input: {
       .update({ status: "dismissed", resolved_at: nowIso, resolved_by: profile.id })
       .eq("card_id", input.cardId)
       .eq("status", "pending");
-    if (error) return { ok: false, error: `Couldn't dismiss the reports: ${error.message}` };
+    if (error) {
+      console.error("[moderation] dismiss reports failed:", error.message);
+      return { ok: false, error: `Couldn't dismiss the reports: ${error.message}` };
+    }
   }
 
   revalidatePath("/admin/moderation");

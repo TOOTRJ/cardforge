@@ -34,6 +34,8 @@ const ACTION_LABELS: Record<string, string> = {
   search: "Search",
   named: "Named lookup",
   import_art: "Art import",
+  // Its cap counts import RUNS, not Scryfall calls (lib/scryfall/rate-limit.ts).
+  deck_import: "Deck import (runs)",
 };
 
 function StatTile({

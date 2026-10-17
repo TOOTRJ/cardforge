@@ -698,7 +698,7 @@ export default async function AdminFrameComparePage({
       <PageHeader
         eyebrow="Admin"
         title="Frame verification"
-        description="Every frame/color combination the site ships, with the real printing to verify against. Checking a box publishes that combination to the frame picker; special layouts stay hidden until verified."
+        description="Every frame/color combination the site ships, with the real printing to verify against. Checking a box publishes that combination to the frame picker; every combination stays out of the picker until it is verified."
         actions={
           <span className="flex flex-wrap items-center gap-2">
             <Badge variant="default">

@@ -99,6 +99,16 @@ describe("AutoRebakePanel", () => {
     expect(screen.getByTestId("auto-rebake-resume")).toBeTruthy();
   });
 
+  it("never says it is on where the billing flag is off (the cron refuses there)", () => {
+    const { unmount } = render(<AutoRebakePanel overview={overview()} nowMs={NOW} />);
+    expect(screen.getByTestId("auto-rebake-status").textContent).toMatch(/On — every 5 minutes/);
+    unmount();
+    render(<AutoRebakePanel overview={overview({}, { billingEnabled: false })} nowMs={NOW} />);
+    const status = screen.getByTestId("auto-rebake-status").textContent ?? "";
+    expect(status).toMatch(/Not running — billing flag off/);
+    expect(status).not.toMatch(/On — every 5 minutes/);
+  });
+
   it("lists poisoned cards with a link and a Retry button", () => {
     render(
       <AutoRebakePanel

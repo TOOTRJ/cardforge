@@ -29,7 +29,7 @@ const STEPS: Array<{ title: string; body: string }> = [
   },
   {
     title: "Publish the frame",
-    body: "When the frame renders near-perfectly, tick \"Frame renders near-perfectly — publish to all users\". For frames that aren't live yet (Saga, Adventure, Snow…), that checkbox is what releases them to the card creator for that color.",
+    body: "When the frame renders near-perfectly, tick \"Frame renders near-perfectly — publish to all users\". That checkbox is what releases any frame to the card creator for that color — an unticked combination is not offered.",
   },
 ];
 

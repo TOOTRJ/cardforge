@@ -17,6 +17,7 @@ import {
 import { FRAME_TEMPLATE_LABELS } from "@/types/card";
 import type { FrameTemplate } from "@/types/card";
 import { cn } from "@/lib/utils";
+import { formatUtcDateTime } from "@/lib/format/dates";
 
 export const metadata: Metadata = {
   title: "Feedback inbox",
@@ -108,7 +109,7 @@ export default async function AdminFeedbackPage({
                   {item.subject}
                 </span>
                 <span className="ml-auto text-xs text-subtle">
-                  {new Date(item.createdAt).toLocaleString()}
+                  {formatUtcDateTime(item.createdAt)}
                 </span>
               </div>
 
