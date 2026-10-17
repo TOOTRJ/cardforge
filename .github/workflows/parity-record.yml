@@ -1,0 +1,92 @@
+# Record the LINUX half of the parity baseline for a branch — by hand, while
+# its pull request is still a DRAFT (tests/parity/README.md "Re-recording").
+#
+# Why: a pull request that adds or moves a parity case used to need TWO full
+# runs (~70 billed minutes each) — the first one red only because
+# tests/parity/baseline/linux/ had no line for the new case (the Preview
+# parity job AND the unit test parity-matrix.test.ts), the second after the
+# linux files from that red run were committed. This job is the same
+# measurement as CI's "Preview parity" job (scripts/parity.mjs on the same
+# runner image, the same frame cache) for ~6 minutes, so the linux files go
+# in BEFORE "ready for review" and the one full run is green:
+#
+#   gh workflow run parity-record.yml -R TOOTRJ/cardforge --ref <branch>
+#   gh run list -R TOOTRJ/cardforge -w parity-record.yml -b <branch> -L 1   # its id
+#   gh run watch <run> -R TOOTRJ/cardforge
+#   rm -rf tmp/parity/ci && gh run download <run> -R TOOTRJ/cardforge -n parity-baseline -D tmp/parity/ci \
+#     && mkdir -p tests/parity/baseline/linux && cp -R tmp/parity/ci/linux/. tests/parity/baseline/linux/ \
+#     && git add tests/parity/baseline/linux
+#
+# It JUDGES nothing: no pull request event starts it, no required check has
+# its name, and the job ends green whatever the comparison found (a
+# difference is what it is run to record — the summary has the table). The
+# gate stays CI's "Preview parity" and parity-matrix.test.ts on the full run.
+# No artifact on a run where nothing is new or moved. No secrets: the
+# public frames buckets only.
+name: Record parity baseline (linux)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: parity-record-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  record:
+    name: Record parity baseline (linux)
+    # The image CI's parity job runs on (ci.yml: never `ubuntu-latest`).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      # CI's frame cache, read only (main's entry is readable from every
+      # branch; this job never saves one).
+      - name: Restore the frame cache
+        uses: actions/cache/restore@v4
+        with:
+          path: tmp/visual/frames
+          key: visual-frames-${{ hashFiles('lib/frames/frame-manifest.json') }}
+          restore-keys: visual-frames-
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      # Red when a case is new or moved — that is the point here, so the
+      # step's verdict is reported, not enforced.
+      - name: Measure the preview against the bake
+        id: parity
+        continue-on-error: true
+        run: node scripts/parity.mjs
+
+      - name: Say what to commit
+        if: ${{ !cancelled() }}
+        env:
+          OUTCOME: ${{ steps.parity.outcome }}
+        run: |
+          if [ -s tmp/parity/next/update.json ]; then
+            echo "Linux case files to commit: the parity-baseline artifact (commands at the top of .github/workflows/parity-record.yml)." >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$OUTCOME" = success ]; then
+            echo "Nothing to record: every case matches tests/parity/baseline/linux/." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::parity.mjs failed without writing case files — a harness error, not a baseline (see the log)"
+          fi
+
+      - name: Upload the measured baseline
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: parity-baseline
+          path: tmp/parity/next/
+          if-no-files-found: ignore
+          retention-days: 7
+          overwrite: true
