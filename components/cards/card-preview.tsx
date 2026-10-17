@@ -1752,7 +1752,11 @@ function CardFace({
 
       {/* The borderless walkers' stamp, above the rows (TODO 4.9d). */}
       {holoStamp?.aboveRows ? (
-        <AboveRowsStamp stamp={holoStamp} foil={plateFoil && { ...plateFoil, id: `${foilId}-stamp` }} />
+        <AboveRowsStamp
+          stamp={holoStamp}
+          foil={plateFoil && { ...plateFoil, id: `${foilId}-stamp` }}
+          etched={isEtched ? { id: `${etchedId}-stamp`, landscape: layout.orientation === "landscape" } : null}
+        />
       ) : null}
 
       {/* The station frame's text (TODO 4.27a): every band's lines. */}
@@ -1967,7 +1971,15 @@ function BandSlot({
  * ends the window at the arch — its own foil sheen (as a plate's), then the
  * oval. The bake's twin (card-image.tsx, after the rules layer).
  */
-function AboveRowsStamp({ stamp, foil }: { stamp: ResolvedHoloStamp; foil: { id: string; landscape: boolean } | null }) {
+function AboveRowsStamp({
+  stamp,
+  foil,
+  etched,
+}: {
+  stamp: ResolvedHoloStamp;
+  foil: { id: string; landscape: boolean } | null;
+  etched: { id: string; landscape: boolean } | null;
+}) {
   const notch = stamp.notch;
   return (
     <>
@@ -1981,6 +1993,19 @@ function AboveRowsStamp({ stamp, foil }: { stamp: ResolvedHoloStamp; foil: { id:
           width="100%"
           height="100%"
           style={{ ...rectStyle(notch.rect), zIndex: 20, pointerEvents: "none" }}
+        />
+      ) : null}
+      {etched ? (
+        // Etched (owner Round 72): the hatch on the notch too, masked by the
+        // notch alone — the bake's twin.
+        <EtchedSheen
+          id={etched.id}
+          frameHref={null}
+          overlays={[{ href: frameOverlayImageUrl(notch.path), rect: notch.rect }]}
+          landscape={etched.landscape}
+          width="100%"
+          height="100%"
+          style={{ zIndex: 20, pointerEvents: "none" }}
         />
       ) : null}
       <HoloStampOval stamp={stamp} />
@@ -3560,9 +3585,7 @@ function LoyaltyRows({
             alignItems: "center",
             background: stripe(i),
             paddingTop: hdCqw(a.padY),
-            // The last row's text held up over the stamp's arch (TODO 4.9d,
-            // lastRowLift; 0 on every other card) — the bake's twin.
-            paddingBottom: hdCqw(i === abilities.length - 1 ? a.padY + (draw.lastRowLift ?? 0) : a.padY),
+            paddingBottom: hdCqw(a.padY),
             paddingLeft: hdCqw(a.padX),
             ...onTop,
           }}
@@ -3647,7 +3670,10 @@ function LoyaltyRows({
               flexShrink: 0,
               width: hdCqw(draw.text[i].column),
               paddingTop: hdCqw(draw.text[i].insetTop),
-              paddingBottom: hdCqw(draw.text[i].insetBottom),
+              // The last row's text held up over the stamp's arch (TODO 4.9d,
+              // lastRowLift) on the TEXT column — the badge stays centred on
+              // its stripe; the bake's twin.
+              paddingBottom: hdCqw(draw.text[i].insetBottom + (i === abilities.length - 1 ? (draw.lastRowLift ?? 0) : 0)),
               ...onTop,
               ...(placeholder ? { opacity: 0.55 } : {}),
             }}

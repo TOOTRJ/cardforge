@@ -32,7 +32,9 @@ import {
   borderlessWalkerArchLiftAt,
 } from "@/lib/cards/holo-stamp";
 import {
+  contentRowsAt,
   layoutProfileLoyaltyRows,
+  loyaltyRowAnatomy,
   loyaltyRowLines,
   loyaltyRowPx,
   loyaltyRowsDrawing,
@@ -40,6 +42,7 @@ import {
   type LoyaltyRowsLayout,
 } from "@/lib/cards/loyalty-rows";
 import { lineHitsKeepOut, rectPx } from "@/lib/cards/rules-layout";
+import { walkerSizePct } from "@/lib/cards/rules-box";
 import { M15BORDERLESSPW_HOLO_STAMP, M15PW_COLLECTOR, getFrameProfile } from "@/lib/cards/template-layout";
 import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
 
@@ -230,7 +233,8 @@ describe("the ability rows hold against the arch", () => {
         }
         if (stamped.lastRowLiftHd) lifted.push(n);
         if (stamped.sizePx < plain.sizePx) stepped.push(n);
-        // The lift is even (the 750 bake's half is whole) and drawn as such.
+        // The lift is even (the 750 bake's half is whole) and drawn as such
+        // — on the TEXT column, so the badge stays centred on its stripe.
         if (stamped.lastRowLiftHd) {
           expect(stamped.lastRowLiftHd % 2).toBe(0);
           expect(loyaltyRowsDrawing(stamped, "default").lastRowLift).toBe(stamped.lastRowLiftHd / 2);
@@ -238,13 +242,58 @@ describe("the ability rows hold against the arch", () => {
       }
       summary[t] = { lifted, stepped };
     }
-    // Held up over the arch where the last ability reaches it at its size;
-    // a step down only where held up it no longer fits (the regular frame's
-    // last row is short: 10 of 70; the tall one's 9).
+    // Held up over the arch by the smallest even lift that clears it at its
+    // size (owner Round 72); a step down only where no lift does (6 of 70
+    // on the regular frame, 4 on the tall one — the all-or-nothing 24 px of
+    // the first cut stepped 10 and 9).
     expect(summary).toEqual({
-      m15borderlesspw: { lifted: [56, 57, 58, 66, 67, 68, 69, 70], stepped: [37, 38, 51, 52, 53, 54, 63, 64, 65, 66] },
-      m15borderlesspwtall: { lifted: [37, 38, 48, 49, 50, 60, 61, 62, 63, 64], stepped: [45, 46, 47, 48, 57, 58, 59, 60, 61] },
+      m15borderlesspw: { lifted: [51, 52, 53, 54, 56, 57, 58, 66, 67, 68, 69, 70], stepped: [37, 38, 63, 64, 65, 66] },
+      m15borderlesspwtall: { lifted: [37, 38, 45, 46, 47, 48, 49, 50, 58, 59, 60, 61, 62, 63, 64], stepped: [57, 58, 59, 60] },
     });
+  });
+
+  it("the lift is the SMALLEST even one that clears the arch at the layout's size (owner Round 72)", () => {
+    let held = 0;
+    for (const t of WALKERS) {
+      const profile = getFrameProfile(t);
+      for (let n = 1; n <= 70; n += 1) {
+        const abilities = abilitiesFor(t, n);
+        const stamped = layoutProfileLoyaltyRows(profile, abilities, ASPECT, arch);
+        const lift = stamped.lastRowLiftHd ?? 0;
+        if (!lift) continue;
+        held += 1;
+        expect(lift % 2, `${t} · ${n}`).toBe(0);
+        expect(lift, `${t} · ${n}`).toBeLessThanOrEqual(24);
+        // Every smaller even lift, at the same size and column, fails: its
+        // rows don't fit or its text enters the arch.
+        for (let smaller = 0; smaller < lift; smaller += 2) {
+          const at = contentRowsAt(
+            {
+              texts: abilities.map((a) => a.text),
+              rect: profile.rules.rect,
+              baseSizePct: walkerSizePct(profile),
+              aspect: ASPECT,
+              anatomy: loyaltyRowAnatomy(),
+            },
+            stamped.sizePx,
+            { lastRowInsetHd: stamped.lastRowInsetPct > 0 ? Math.round(stamped.lastRowInsetPct * 1500) : 0, ...(smaller > 0 ? { lastRowLiftHd: smaller } : {}) },
+          );
+          const rows = { text: at.text, rowFractions: at.rowFractions } as LoyaltyRowsLayout;
+          expect(!at.fits || entersArch(rows, "hd") || entersArch(rows, "default"), `${t} · ${n} · lift ${smaller}`).toBe(true);
+        }
+      }
+    }
+    expect(held).toBeGreaterThan(20);
+  });
+
+  it("the floor's fallback (nothing fits) takes no lift: exactly the unstamped rows", () => {
+    for (const t of WALKERS) {
+      const abilities: LoyaltyAbility[] = Array.from({ length: 6 }, (_, i) => ({ cost: `−${i + 1}`, text: lastAbility(60) }));
+      const plain = layoutProfileLoyaltyRows(getFrameProfile(t), abilities, ASPECT);
+      const stamped = layoutProfileLoyaltyRows(getFrameProfile(t), abilities, ASPECT, arch);
+      expect(plain.clipped, t).toBe(true);
+      expect(stamped, t).toEqual(plain);
+    }
   });
 
   it("no badge comes near the arch (the rail ends far left of it)", () => {

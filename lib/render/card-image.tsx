@@ -1376,6 +1376,19 @@ function CardImage({
           style={slotBox(aboveRowsNotch.rect)}
         />
       ) : null}
+      {aboveRowsNotch?.href && isEtched ? (
+        // Etched (owner Round 72): the hatch on the notch too, masked by the
+        // notch alone — the same card-space pattern as the frame's, so the
+        // straight rim and the arch etch as one.
+        <EtchedSheen
+          id="etched-stamp-notch"
+          frameHref={null}
+          overlays={[{ href: aboveRowsNotch.href, rect: aboveRowsNotch.rect }]}
+          landscape={layout.orientation === "landscape"}
+          width={width}
+          height={height}
+        />
+      ) : null}
       {holoStamp?.aboveRows ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -2833,9 +2846,7 @@ function LoyaltyRowsBake({
             alignItems: "center",
             background: stripe(i),
             paddingTop: a.padY,
-            // The last row's text held up over the stamp's arch (TODO 4.9d,
-            // lastRowLift; 0 on every other card).
-            paddingBottom: i === last ? a.padY + (draw.lastRowLift ?? 0) : a.padY,
+            paddingBottom: a.padY,
             paddingLeft: a.padX,
           }}
         >
@@ -2915,7 +2926,11 @@ function LoyaltyRowsBake({
               flexShrink: 0,
               width: draw.text[i].column,
               paddingTop: draw.text[i].insetTop,
-              paddingBottom: draw.text[i].insetBottom,
+              // The last row's text held up over the stamp's arch (TODO 4.9d,
+              // lastRowLift; 0 on every other card) — on the TEXT column, so
+              // the badge stays centred on its stripe; the text lands where
+              // the layout put it (the row's own bottom padding grown by it).
+              paddingBottom: draw.text[i].insetBottom + (i === last ? (draw.lastRowLift ?? 0) : 0),
             }}
           >
             <RulesLinesBake blocks={rowsLayout.text[i].blocks} metrics={draw.text[i].metrics} overrides={pipOverrides} symbols={symbols} />

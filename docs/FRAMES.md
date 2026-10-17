@@ -486,9 +486,9 @@ template stays out of the picker until the owner verifies each colour
 ([Verifying a frame](#verifying-a-frame)); an import never lands on one (the
 creator only offers it, once verified). The compare page's alignment score
 leaves out printed details a master doesn't draw (`scoreExclusionsFor` in
-`lib/frames/align.ts`: on the borderless walkers, the arch their ability
-window makes around a rare's holo stamp; the borderless spell, artifact and
-land frames draw theirs since 4.9d, so their score includes it).
+`lib/frames/align.ts`; none today: the borderless spell, artifact and land
+frames draw the stamp's arch since 4.9d and the borderless walkers since
+owner Round 72, so their score includes it).
 
 ## The card corner
 
@@ -5436,28 +5436,35 @@ sweep, no badge, no verification tick.
     window AT the arch. Both renderers leave the notch out of the frame
     layer and the finish masks (`frameLayerOverlays`) and draw it after the
     rules layer, with its own foil sheen as a plate gets one, then the
-    oval. (m15pw's stamp, 4.9c, is unchanged: its stripe still washes over
-    its arch — an owner question.) An etched walker's notch takes no
-    etched hatch, as the plates take none.
+    oval; on an etched card the frame's hatch is drawn over it too
+    (`EtchedSheen` masked by the notch alone, `frameHref: null`: the same
+    card-space pattern, so the straight rim and the arch etch as one —
+    owner Round 72). (m15pw's stamp, 4.9c, is unchanged: its stripe still
+    washes over its arch — a later, separate correction, TODO.md.)
   - *The keep-out follows the arch* (`borderlessWalkerArchKeepOut`, 4 px
     columns from 2 px over the lifted outline, 1895.7 px at the centre,
     past the box's bottom) and holds against BOTH the plain box (glyph by
     glyph, `DrawnStats.stamp`) and the ability ROWS: `layoutLoyaltyRows`
     takes the arch (`stamp`, from `rowsStampKeepOut`) and, where a layout
     that holds its text and clears the shield fails only on the arch, holds
-    the LAST row's text up over it at the same size (its bottom padding
-    grows by `lastRowLiftHd`, 24 px — even, so the 750 px bake's half is
-    whole; the badge stays centred on its text) before any step down. A
-    walker whose text clears the arch lays out exactly as without the stamp
-    (`tests/unit/frames/borderless-walker-holo-stamp.test.ts`: a 1–70-word
-    sweep of the last ability holds 8 / 10 up and steps 10 / 9 down on the
-    regular / tall frame, never a glyph in the arch at either target, never
-    a new clip). No badge comes near it: the rail ends ≈ 400 px left of the
+    the LAST row's text up over it at the same size by the SMALLEST even
+    lift (2 … 24 px, `lastRowLiftHd`; even, so the 750 px bake's half is
+    whole) that clears it, before any step down (owner Round 72). The lift
+    is the TEXT column's bottom padding in both renderers, never the row's,
+    so the badge stays centred on its stripe. The floor's fallback (nothing
+    fits) takes no lift — exactly the unstamped rows. A walker whose text
+    clears the arch lays out exactly as without the stamp. Audited
+    2026-10-17 on 501 inputs per frame (327 real walkers' oracle text, 174
+    synthetic): no new clip, no difference where the text clears, no glyph
+    in the arch; real walkers step down a size 20 / 16 times (regular /
+    tall; the first cut's all-or-nothing 24 px stepped 66 / 48 on the
+    checker's 329, and clipped Ugin, Eye of the Storms). The unit sweep of a
+    1–70-word last ability holds 12 / 15 up and steps 6 / 4. No badge comes near it: the rail ends ≈ 400 px left of the
     arch, the shield starts ≈ 350 px right of it. The creator's
     badge-crowding note still reads the rows without the stamp.
   - A triangle draws nothing here (`ownShapeOnly`), as on the other four.
-  - The alignment score keeps its arch exclusion (`HOLO_STAMP_ARCH`) on the
-    walkers: lifting it is a re-score question for the owner.
+  - The alignment score scores the arch on the walkers too (owner Round 72:
+    `HOLO_STAMP_ARCH` excludes no template now); no stored tick changes.
 
 ### The text alignment (4.21e)
 

@@ -1783,6 +1783,8 @@ export function visualCases(): VisualCase[] {
   add("m15borderlesspwtall", "planeswalker", "r", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("m15borderlesspwtall", "auto", { rarity: "mythic" }) });
   add("m15borderlesspw", "planeswalker", "c", "short", { suffix: "@stamp-c", row: stampRow("m15borderlesspw", "auto", { rarity: "rare" }) });
   add("m15borderlesspw", "planeswalker", "w", "short", { suffix: "@stamp-foil", finish: "foil", row: stampRow("m15borderlesspw", "auto", { rarity: "mythic", frame_style: { finish: "foil" } as CardRowForBake["frame_style"] }) });
+  // Etched (owner Round 72): the frame's hatch over the notch too.
+  add("m15borderlesspw", "planeswalker", "g", "short", { suffix: "@stamp-etched", finish: "etched", row: stampRow("m15borderlesspw", "auto", { rarity: "mythic", frame_style: { finish: "etched" } as CardRowForBake["frame_style"] }) });
   add("m15borderlesspw", "planeswalker", "b", "short", { suffix: "@stamp-always", row: stampRow("m15borderlesspw", "oval", { rarity: "uncommon" }) });
   add("m15borderlesspw", "planeswalker", "u", "long", { suffix: "@stamp-arch", row: stampRow("m15borderlesspw", "auto", { rarity: "mythic", rules_text: WALKER_STAMP_ARCH_ROWS, face_content: null }) });
   add("m15borderlesspwtall", "planeswalker", "g", "long", { suffix: "@stamp-arch", row: stampRow("m15borderlesspwtall", "auto", { rarity: "mythic", rules_text: WALKER_STAMP_ARCH_ROWS_TALL, face_content: null }) });

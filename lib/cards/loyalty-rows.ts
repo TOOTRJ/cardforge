@@ -409,10 +409,11 @@ export function layoutLoyaltyRows({
   };
   const rowsAt = (sizePx: number, lastInset: number, scaleIntoBox: boolean, lastLift = 0): RowsAt =>
     contentRowsAt(rows, sizePx, { lastRowInsetHd: lastInset, scaleIntoBox, ...(lastLift > 0 ? { lastRowLiftHd: lastLift } : {}) });
-  // The stamp's arch (TODO 4.9d): how far the last row's text is held up
-  // when its lines would enter it — the arch's height over the box's bottom
-  // (the HD px from its highest column's top down to the box's bottom),
-  // rounded UP to even px so the 750 bake's half is whole.
+  // The stamp's arch (TODO 4.9d): the most the last row's text is ever held
+  // up when its lines would enter it — the arch's height over the box's
+  // bottom (the HD px from its highest column's top down to the box's
+  // bottom), rounded UP to even px. The lift tried is the SMALLEST even one
+  // that clears the arch (owner Round 72), never more.
   const archs = stamp && stamp.length > 0 ? stamp : null;
   const liftHd = (() => {
     if (!archs) return 0;
@@ -464,8 +465,9 @@ export function layoutLoyaltyRows({
   // At each size: the rows as they are; and where a layout that holds its
   // text and clears the shield fails ONLY on the stamp's arch (the
   // borderless walkers), the same layout with the last row's text held up
-  // over it — never a smaller size while holding it up fits, and never a
-  // change to a walker whose text clears the arch.
+  // over it by the SMALLEST even lift (2, 4, … up to the arch's height)
+  // that clears it (owner Round 72) — never a smaller size while holding
+  // it up fits, and never a change to a walker whose text clears the arch.
   for (const sizePx of ladder) {
     const candidates = insetHd > 0 ? [0, insetHd] : [0];
     const archOnly: number[] = [];
@@ -475,16 +477,21 @@ export function layoutLoyaltyRows({
       if (!entersArch(at)) return result(at, false);
       archOnly.push(inset);
     }
-    for (const inset of liftHd > 0 ? archOnly : []) {
-      const held = rowsAt(sizePx, inset, false, liftHd);
-      if (held.fits && !reachesShield(held) && !entersArch(held)) return result(held, false);
+    if (archOnly.length === 0) continue;
+    for (let lift = 2; lift <= liftHd; lift += 2) {
+      for (const inset of archOnly) {
+        const held = rowsAt(sizePx, inset, false, lift);
+        if (held.fits && !reachesShield(held) && !entersArch(held)) return result(held, false);
+      }
     }
   }
-  // Nothing fits even at the floor: the floor's rows, scaled into the box.
+  // Nothing fits even at the floor: the floor's rows, scaled into the box —
+  // with NO lift (owner Round 72): a lift here only takes room from a text
+  // that already does not fit, so the fallback is exactly the unstamped one.
   const floor = ladder[ladder.length - 1];
-  const full = rowsAt(floor, 0, true, liftHd);
+  const full = rowsAt(floor, 0, true);
   if (insetHd === 0 || !reachesShield(full)) return result(full, true);
-  return result(rowsAt(floor, insetHd, true, liftHd), true);
+  return result(rowsAt(floor, insetHd, true), true);
 }
 
 /**
