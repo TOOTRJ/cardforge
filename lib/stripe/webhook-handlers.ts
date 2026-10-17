@@ -594,9 +594,17 @@ async function handleSupersededSubscription(
 // SESSION id (not the event id): the two event types carry different event
 // ids, so a session-scoped key is what guarantees one grant per purchase no
 // matter which (or how many) of them arrive.
+//
+// The same handler writes the sale's revenue row (billing_pack_payments,
+// migration 0138 — a pack session creates no invoice, so invoice.paid never
+// sees it). Keyed by the session id too and written ON CONFLICT DO NOTHING:
+// a repeated delivery or the second of the two events is a no-op, so the
+// first paid write is the row (its paid_at = that event's time). An unpaid
+// `completed` returns above and writes nothing, whatever the order.
 async function handleCheckoutPaid(
   session: Stripe.Checkout.Session,
   admin: AdminClient,
+  eventCreated?: number,
 ): Promise<void> {
   // Subscriptions are provisioned by customer.subscription.* events; here we
   // only grant credits for one-time pack purchases (mode = "payment").
@@ -621,6 +629,7 @@ async function handleCheckoutPaid(
   if (error) {
     throw new Error(`Pack grant failed for ${userId}: ${error.message}`);
   }
+  await recordPackPayment(session, { userId, credits, eventCreated }, admin);
   await recordFunnelEvent(admin, {
     event: "pack_purchased",
     userId,
@@ -634,6 +643,44 @@ async function handleCheckoutPaid(
   });
 }
 
+/** The revenue row for a PAID pack session (see handleCheckoutPaid). Throws
+ *  on a write error so the webhook 500s and Stripe retries — the credit
+ *  grant is deduped on retry, so nothing is granted twice. */
+async function recordPackPayment(
+  session: Stripe.Checkout.Session,
+  sale: { userId: string; credits: number; eventCreated?: number },
+  admin: AdminClient,
+): Promise<void> {
+  const meta = session.metadata ?? {};
+  const paidAtSeconds = sale.eventCreated ?? session.created ?? Math.floor(Date.now() / 1000);
+  const paymentIntent = session.payment_intent;
+  const write = (userId: string | null) =>
+    admin.from("billing_pack_payments").upsert(
+      {
+        checkout_session_id: session.id,
+        user_id: userId,
+        stripe_customer_id: customerIdOf(session.customer ?? undefined),
+        payment_intent_id:
+          typeof paymentIntent === "string" ? paymentIntent : (paymentIntent?.id ?? null),
+        pack: meta.pack ?? null,
+        credits: sale.credits,
+        amount_cents: Math.max(0, session.amount_total ?? 0),
+        currency: (session.currency ?? "usd").toLowerCase(),
+        discount: meta.discount ?? null,
+        paid_at: new Date(paidAtSeconds * 1000).toISOString(),
+      },
+      { onConflict: "checkout_session_id", ignoreDuplicates: true },
+    );
+  let { error } = await write(sale.userId);
+  // 23503 = the user is gone (account deleted between checkout and this
+  // event; user_id references auth.users). The sale still happened: log it
+  // unlinked, as `on delete set null` would have — never 500 on every retry.
+  if (error?.code === "23503") ({ error } = await write(null));
+  if (error) {
+    throw new Error(`billing_pack_payments write failed for ${session.id}: ${error.message}`);
+  }
+}
+
 export async function handleStripeEvent(
   event: Stripe.Event,
   deps: { admin: AdminClient; stripe: Stripe },
@@ -642,7 +689,7 @@ export async function handleStripeEvent(
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
-      await handleCheckoutPaid(session, admin);
+      await handleCheckoutPaid(session, admin, event.created);
       await handleSupersededSubscription(session, stripe);
       await recordFunnelEvent(admin, {
         event: "checkout_completed",
@@ -664,6 +711,7 @@ export async function handleStripeEvent(
       await handleCheckoutPaid(
         event.data.object as Stripe.Checkout.Session,
         admin,
+        event.created,
       );
       break;
     case "customer.subscription.created":
