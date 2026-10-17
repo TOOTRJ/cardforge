@@ -342,7 +342,8 @@ function priceLabelFor(tier: PlanTier | null, interval: string | null): string |
 //   3. ONE "Payment received" notification when money was actually taken —
 //      a $0 trial invoice or a 100%-off coupon says nothing. Stripe's own
 //      receipt email covers the inbox (Dashboard → Settings → Emails).
-// The row write throws (Stripe retries); the rest is best effort.
+// The row write throws (Stripe retries) — except for a deleted account,
+// whose row is logged unlinked; the rest is best effort.
 async function handleInvoicePaid(
   invoice: Stripe.Invoice,
   deps: { admin: AdminClient; stripe: Stripe },
@@ -388,10 +389,11 @@ async function handleInvoicePaid(
   const periodStart = line?.period?.start ?? invoice.period_start ?? null;
   const periodEnd = line?.period?.end ?? invoice.period_end ?? null;
   const paidAt = invoice.status_transitions?.paid_at ?? invoice.created;
-  const { error } = await admin.from("billing_payments").upsert(
+  const write = (rowUserId: string | null) =>
+    admin.from("billing_payments").upsert(
     {
       invoice_id: invoice.id,
-      user_id: userId,
+      user_id: rowUserId,
       stripe_customer_id: customerId,
       stripe_subscription_id: subscriptionId,
       amount_cents: amountCents,
@@ -407,6 +409,13 @@ async function handleInvoicePaid(
     },
     { onConflict: "invoice_id" },
   );
+  let { error } = await write(userId);
+  // 23503 = the user is gone (the account was deleted, and the id came from
+  // the subscription's metadata; user_id references auth.users). The money
+  // still arrived: log it unlinked, as `on delete set null` would have —
+  // never 500 on every Stripe retry. Nobody is left to notify.
+  const userGone = error?.code === "23503";
+  if (userGone) ({ error } = await write(null));
   if (error) {
     throw new Error(`billing_payments write failed for ${invoice.id}: ${error.message}`);
   }
@@ -414,7 +423,7 @@ async function handleInvoicePaid(
   if (amountCents <= 0) return;
   await recordFunnelEvent(admin, {
     event: "payment_received",
-    userId,
+    userId: userGone ? null : userId,
     props: {
       amountCents,
       tier: tier ?? undefined,
@@ -422,6 +431,7 @@ async function handleInvoicePaid(
       billingReason: invoice.billing_reason ?? undefined,
     },
   });
+  if (userGone) return;
   const { data: existing } = await admin
     .from("notifications")
     .select("id")
