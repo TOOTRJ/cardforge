@@ -4,20 +4,30 @@
 // them). Pure and dependency-free: the classifier job runs it on the
 // runner's own Node with no `npm ci`.
 //
-//   full   everything. A READY pull request, and every case nothing below
-//          claims — an unknown event, a diff that could not be read, no
-//          changed file, a classifier that threw. The default is the
-//          expensive one, on purpose.
-//   notes  a pull request (or a merge to main) whose EVERY changed file is
-//          on the allow-list below: only `npm run test:docs`.
-//   draft  a DRAFT pull request that changes code: typecheck + lint + build
-//          and `npm run test:docs`. The heavy jobs run when it is marked
-//          ready (`ready_for_review` starts a full run on the same head).
-//   light  a merge to main whose tree IS the pull request head's tree (the
-//          branch already held all of main, so the pull request's own run
-//          tested these exact files) and which leaves the frame manifest
-//          alone: typecheck + lint + build + the unit shards + coverage;
-//          not e2e, visual, parity or "Frames published" again.
+//   full     everything. A READY pull request, a merge to main that no
+//            green full pull request run tested, and every case nothing
+//            below claims — an unknown event, a diff that could not be read,
+//            no changed file, a classifier that threw. The default is the
+//            expensive one, on purpose. Off a pull request the unit shards
+//            also record COVERAGE and the floors are held (`coverageFor`;
+//            owner 2026-10-16: never on a pull request).
+//   notes    a pull request (or a merge to main) whose EVERY changed file
+//            is on the allow-list below: only `npm run test:docs`.
+//   draft    a DRAFT pull request that changes code: typecheck + lint +
+//            build and `npm run test:docs`. The heavy jobs run when it is
+//            marked ready (`ready_for_review` starts a full run on the same
+//            head).
+//   verified a merge to main whose tree IS the pull request head's tree (the
+//            branch already held all of main, so the pull request's run
+//            tested these exact files) AND whose head has a GREEN FULL pull
+//            request run of ci.yml (scripts/lib/ci-runs.mjs, read through
+//            the GitHub API): only the cache warm-up (the frame caches every
+//            pull request restores from main) and "Frames published"
+//            (owner 2026-10-16).
+//   nightly  the schedule: the unit shards with coverage and the floors, on
+//            main as it is (a verified merge runs no unit test on main).
+//   idle     the schedule, when a run of ci.yml on this very commit already
+//            passed the coverage floors: nothing runs.
 //
 // NOTES — the allow-list. Never turn it into a deny-list: a new kind of
 // file must land on the heavy side until someone says otherwise.
@@ -73,24 +83,47 @@ export const DOCS_READING_TESTS = [
 ];
 
 /**
- * A merge to main that changes this file always runs in full: main's run is
- * what SAVES the frame caches a pull request restores (a pull request can
- * read only its base branch's caches), and "Frames published" must be seen
- * on main once the manifest moved.
- */
-export const FRAME_MANIFEST = "lib/frames/frame-manifest.json";
-
-/**
  * What each tier runs. `static` = typecheck + lint + build; `unit` = the
- * shards and the coverage merge; `heavy` = e2e, the visual bakes and gate,
- * parity, "Frames published"; `docs` = `npm run test:docs`.
+ * shards (and, off a pull request, the coverage merge: `coverageFor`);
+ * `heavy` = e2e, the visual bakes and gate, parity; `frames` = "Frames
+ * published"; `warm` = the cache warm-up (the frame caches main saves for
+ * every pull request — a pull request can read only its base branch's
+ * caches); `docs` = `npm run test:docs`.
  */
 export const TIERS = {
-  full: { static: true, unit: true, heavy: true, docs: false },
-  light: { static: true, unit: true, heavy: false, docs: false },
-  draft: { static: true, unit: false, heavy: false, docs: true },
-  notes: { static: false, unit: false, heavy: false, docs: true },
+  full: { static: true, unit: true, heavy: true, frames: true, warm: false, docs: false },
+  verified: { static: false, unit: false, heavy: false, frames: true, warm: true, docs: false },
+  nightly: { static: false, unit: true, heavy: false, frames: false, warm: false, docs: false },
+  idle: { static: false, unit: false, heavy: false, frames: false, warm: false, docs: false },
+  draft: { static: true, unit: false, heavy: false, frames: false, warm: false, docs: true },
+  notes: { static: false, unit: false, heavy: false, frames: false, warm: false, docs: true },
 };
+
+/**
+ * Do this run's unit shards record coverage, and does the `coverage` job
+ * hold the floors? Wherever the shards run EXCEPT on a pull request (owner
+ * 2026-10-16: the floors are held on main and nightly; a pull request's
+ * shards run plain vitest, about twice as fast). Any other event — a push to
+ * main, the schedule, one nobody expected — covers.
+ * @param {string} tier
+ * @param {string | undefined} event
+ */
+export function coverageFor(tier, event) {
+  return Object.hasOwn(TIERS, tier) && TIERS[tier].unit === true && event !== "pull_request";
+}
+
+/**
+ * Every output the classifier writes: `tier`, each group of TIERS as
+ * "true" / "false", and `coverage`.
+ * @param {string} tier
+ * @param {string | undefined} event
+ * @returns {Record<string, string>}
+ */
+export function tierOutputs(tier, event) {
+  if (!Object.hasOwn(TIERS, tier)) throw new Error(`unknown tier "${tier}"`);
+  const groups = Object.entries(TIERS[tier]).map(([group, on]) => [group, on ? "true" : "false"]);
+  return { tier, ...Object.fromEntries(groups), coverage: coverageFor(tier, event) ? "true" : "false" };
+}
 
 /**
  * Is this repo-relative path (forward slashes) a notes file?
@@ -116,13 +149,23 @@ export function isNotesFile(file) {
  *                    tree equals its second parent's AND whose first parent
  *                    is an ancestor of the second — the merged files are
  *                    byte for byte what the pull request's run tested.
+ *   prRunGreen       push only: `true` when a pull request run of ci.yml on
+ *                    the second parent (the pull request's head) finished
+ *                    GREEN in the full tier (scripts/lib/ci-runs.mjs).
+ *   alreadyCovered   schedule only: `true` when a run of ci.yml on this
+ *                    commit already passed the coverage floors.
+ * The four flags count only as the boolean `true`; anything else is "no".
  *
- * @param {{ event?: string, files?: string[] | null, draft?: unknown, treeIsPrHead?: unknown }} input
- * @returns {{ tier: "full" | "notes" | "draft" | "light", reason: string, code?: string[] }}
+ * @param {{ event?: string, files?: string[] | null, draft?: unknown, treeIsPrHead?: unknown, prRunGreen?: unknown, alreadyCovered?: unknown }} input
+ * @returns {{ tier: "full" | "verified" | "nightly" | "idle" | "notes" | "draft", reason: string, code?: string[] }}
  */
-export function classifyChange({ event, files, draft, treeIsPrHead }) {
+export function classifyChange({ event, files, draft, treeIsPrHead, prRunGreen, alreadyCovered }) {
   /** @returns {{ tier: "full", reason: string, code?: string[] }} */
   const full = (/** @type {string} */ reason, extra = {}) => ({ tier: "full", reason: `${reason}: everything runs`, ...extra });
+  if (event === "schedule") {
+    if (alreadyCovered === true) return { tier: "idle", reason: "a run of ci.yml on this commit already passed the coverage floors: nothing runs" };
+    return { tier: "nightly", reason: "the nightly coverage run: the unit shards with coverage, and the floors, on main as it is" };
+  }
   if (event !== "pull_request" && event !== "push") return full(`event "${event ?? ""}" is neither a pull request nor a push`);
   if (!Array.isArray(files)) return full("the changed files could not be read");
   if (files.length === 0) return full("no changed file");
@@ -145,10 +188,12 @@ export function classifyChange({ event, files, draft, treeIsPrHead }) {
   }
 
   if (treeIsPrHead !== true) return full(`${notNotes} and main had moved under the pull request (or this is no merge commit) — this tree was never tested`, { code });
-  if (files.includes(FRAME_MANIFEST)) return full(`${notNotes} and the frame manifest changed (main saves the frame caches)`, { code });
+  if (prRunGreen !== true) {
+    return full(`${notNotes}; the merged tree is the pull request head's, but no GREEN FULL pull request run of that head was found (or the lookup failed)`, { code });
+  }
   return {
-    tier: "light",
-    reason: `${notNotes}, and the merged tree is the pull request head's own: typecheck, lint, build and the unit suite run; e2e, visual, parity and "Frames published" ran on these files in the pull request`,
+    tier: "verified",
+    reason: `${notNotes}; the merged tree is the pull request head's own and that head's full pull request run was green: only the cache warm-up and "Frames published" run`,
     code,
   };
 }
