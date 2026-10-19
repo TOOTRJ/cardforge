@@ -1202,6 +1202,22 @@ describe("handleStripeEvent — invoice.paid", () => {
     errorLog.mockRestore();
   });
 
+  it("a failed grant for a DELETED buyer (the row's FK 23503) alerts nobody — they are owed nothing", async () => {
+    // The same setup as the alerting case above, but the buyer is gone: the
+    // stub still answers the admin lookup with user-1, so only the
+    // `!userGone` gate keeps the alert out.
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { admin, inserts, upserts } = makeChainAdmin(
+      { profiles: [profile], notifications: [], credit_ledger: [] },
+      { missingUser: "user-1", rpcError: "violates foreign key constraint" },
+    );
+    await expect(handleStripeEvent(event(invoice()), { admin, stripe: invoiceStripe })).resolves.toBeUndefined();
+    expect(upserts.filter((u) => u.table === "billing_payments").map((u) => u.row.user_id)).toEqual(["user-1", null]);
+    expect(errorLog).toHaveBeenCalledWith(expect.stringContaining("[stripe] invoice.paid credit grant failed for in_1"));
+    expect(alerts(inserts)).toEqual([]);
+    errorLog.mockRestore();
+  });
+
   it("a successful grant alerts nobody", async () => {
     const { admin, inserts } = makeChainAdmin({ profiles: [profile], notifications: [], credit_ledger: [] });
     await handleStripeEvent(event(invoice()), { admin, stripe: invoiceStripe });
