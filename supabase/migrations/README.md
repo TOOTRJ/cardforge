@@ -288,3 +288,6 @@ instead. Each bullet: what the header says, and what is true now.
   the owner could write them too, like any column of their own card (0003's
   UPDATE policy); since 0126 only the service role can set them (see
   "Storage" above).
+- **0120 ("cron /api/cron/auto-rebake (vercel.json, every 10 minutes on
+  production)")** — `vercel.json` schedules it every 5 minutes
+  (`*/5 * * * *`), as `/admin/renders` and `docs/FRAMES.md` say.
