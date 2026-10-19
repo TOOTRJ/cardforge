@@ -81,7 +81,8 @@ describe("the creator's glyph check on a small-caps name", () => {
 describe("TextSlot.smallCaps", () => {
   it("is set on the four 2014–19 arch token names alone (every other name as typed)", () => {
     const withSmallCaps = (FRAME_TEMPLATE_VALUES as readonly string[]).filter((t) => getFrameProfile(t).title.smallCaps);
-    expect(withSmallCaps.sort()).toEqual(["m15token", "m15tokenartifact", "m15tokenartifacttext", "m15tokentext"]);
+    // (…and the arch's tall box, TODO 4.55: the same arch, the same name.)
+    expect(withSmallCaps.sort()).toEqual(["m15token", "m15tokenartifact", "m15tokenartifacttall", "m15tokenartifacttext", "m15tokentall", "m15tokentext"]);
     for (const t of FRAME_TEMPLATE_VALUES) {
       const p = getFrameProfile(t);
       expect(p.type.smallCaps, `${t} type line`).toBeUndefined();

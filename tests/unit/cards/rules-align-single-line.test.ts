@@ -32,8 +32,10 @@ describe("which profiles centre a single line", () => {
     // The 2014–19 text-box tokens (4.49 (b)), 4.52's emblem (TDSK #17 /
     // TFRA #16 centre their one line) and the full-art tokens (4.48, every
     // height: the textless one's slot is never drawn).
+    // …and the arch's tall box (TODO 4.55).
     expect(centring).toEqual([
       "m15tokentext", "m15tokenartifacttext",
+      "m15tokentall", "m15tokenartifacttall",
       "emblem",
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
     ]);

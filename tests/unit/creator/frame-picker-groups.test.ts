@@ -153,6 +153,10 @@ const STATION_DRESSES: readonly string[] = [
   // …and the double-faced saga front (TODO 5.5 (b)) — pinned in
   // tests/unit/creator/saga-dfc-front.test.ts and the dfc import tests.
   "sagadfcfront",
+  // …and the arch token's tall box (TODO 4.55) — pinned in
+  // tests/unit/creator/token-tall.test.ts and tests/unit/scryfall/token-imports.test.ts.
+  "m15tokentall",
+  "m15tokenartifacttall",
 ];
 function withoutStationDresses(dump: Dump): Dump {
   const named = (text: string) => STATION_DRESSES.some((t) => text === t || text.startsWith(`${t}|`));
@@ -562,12 +566,17 @@ describe("the frame picker's groups: a classification change only", () => {
   // (a W|U token) are EXACT on them wherever they are verified (production's
   // ticks and every verified policy), where main left them nearest with the
   // crown / two-colour gap. Their frame, kind and landing are main's.
-  it("imports — every captured printing's match, landing, chooser and remix landing: the same, but the crowned and two-colour M20 tokens exact (4.48)", () => {
-    expect(changed("imports")).toEqual(["all|tmkm-10", "all|tmkm-13", "prodPlusMoved|tmkm-10", "prodPlusMoved|tmkm-13", "prod|tmkm-10", "prod|tmkm-13"]);
+  // …and the arch's tall-box printings (TODO 4.55: TAKH #1, TSOI #11), exact
+  // on the tall box where it is verified — "all" alone: production has not
+  // ticked it; until then they land where main lands them.
+  it("imports — every captured printing's match, landing, chooser and remix landing: the same, but the crowned and two-colour M20 tokens exact (4.48) and the tall-box arch tokens exact once verified (4.55)", () => {
+    expect(changed("imports")).toEqual(["all|takh-1", "all|tmkm-10", "all|tmkm-13", "all|tsoi-11", "prodPlusMoved|tmkm-10", "prodPlusMoved|tmkm-13", "prod|tmkm-10", "prod|tmkm-13"]);
     for (const policy of ["all", "prodPlusMoved", "prod"]) {
       expect(raw.imports[`${policy}|tmkm-10`], policy).toMatchObject({ kind: "token", frame_template: "m20token", match: ["exact", "m20token", null] });
       expect(raw.imports[`${policy}|tmkm-13`], policy).toMatchObject({ kind: "token", frame_template: "m20tokentext", match: ["exact", "m20tokentext", null] });
     }
+    expect(raw.imports["all|takh-1"]).toMatchObject({ kind: "token", frame_template: "m15tokentall", match: ["exact", null] }); // (the dump drops the tall templates from its lists)
+    expect(raw.imports["all|tsoi-11"]).toMatchObject({ kind: "token", frame_template: "m15tokenartifacttall", match: ["exact", null] });
   });
 
   // The AI's random pools: identical but for layout v58 (TODO 4.35 / 4.42),

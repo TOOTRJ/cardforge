@@ -431,6 +431,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
   "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
   // TODO 5.5 (b)'s double-faced saga front.
   "sagadfcfront",
+  // TODO 4.55's tall-box arch tokens.
+  "m15tokentall", "m15tokenartifacttall",
 ];
 /** The modal bodies added after v53 (TODO 5.7's borderless pair): the v49
  *  and v53 frozen lists never name them. */
@@ -459,6 +461,8 @@ const POST_V36_TEMPLATES: readonly string[] = [
   "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
   // TODO 5.5 (b)'s double-faced saga front.
   "sagadfcfront",
+  // TODO 4.55's tall-box arch tokens.
+  "m15tokentall", "m15tokenartifacttall",
 ];
 
 describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
@@ -818,6 +822,8 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
       // …and TODO 5.5 (b)'s double-faced saga front.
       "sagadfcfront",
+      // …and TODO 4.55's tall-box arch tokens.
+      "m15tokentall", "m15tokenartifacttall",
     ];
     // An EXISTING template that joined brought its own bump: the battle
     // (TODO 4.21b), with layout v43 — its Card Conjurer master and the
@@ -1212,7 +1218,9 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
     // (m15ub/c — the see-through Universes Beyond colourless spell master,
     // TODO 4.25 follow-up — joined later as an addition on a frame no card
     // could be on: not v35's business either.)
-    const SEE_THROUGH_SINCE_V35 = ["flip", "m15ub"];
+    // (…nor the arch's tall box, TODO 4.55: the text box's see-through c
+    // cut shorter — a new template, no stored card.)
+    const SEE_THROUGH_SINCE_V35 = ["flip", "m15ub", "m15tokentall"];
     for (const t of ALL) {
       const u = getFrameProfile(t).underFrameArt;
       if (u && (sameRect(u.rect, UNDER) || (u.artSlot && sameRect(u.artSlot, UNDER)))) {
@@ -3013,7 +3021,14 @@ describe("v59 — the 2014–19 arch token on its prints (TODO 4.53)", () => {
       expect(px.left, t).toBeCloseTo(Math.round(px.left), 6);
       expect(px.top, t).toBeCloseTo(Math.round(px.top), 6);
     }
-    // No other frame sets its name in small caps.
-    for (const t of FRAME_TEMPLATE_VALUES) if (!ARCH.includes(t)) expect(getFrameProfile(t).title.smallCaps, t).toBeUndefined();
+    // No other frame sets its name in small caps — but the arch's tall box
+    // (TODO 4.55), added after v59 on the same slots: an addition, no card
+    // on it owes v59.
+    const TALL = ["m15tokentall", "m15tokenartifacttall"];
+    for (const t of TALL) {
+      expect(getFrameProfile(t).title, t).toEqual(getFrameProfile("m15tokentext").title);
+      expect(isRenderStale(V - 1, t, undefined, V), t).toBe(false);
+    }
+    for (const t of FRAME_TEMPLATE_VALUES) if (!ARCH.includes(t) && !TALL.includes(t)) expect(getFrameProfile(t).title.smallCaps, t).toBeUndefined();
   });
 });

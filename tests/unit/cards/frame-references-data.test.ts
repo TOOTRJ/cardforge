@@ -154,6 +154,11 @@ const DOCUMENTED_NULLS = new Set([
   // black modal front outside a poster (SPM #233), and every modal back in
   // the look is gold (MSH's pairs, SPM #200 / #202) or a land (SLD #2655).
   "m15borderlessdfcfront/c", "m15borderlessdfcback/c", "m15borderlessmdfcfront/b", "m15borderlessmdfcfront/c", "m15borderlessmdfcback/w", "m15borderlessmdfcback/u", "m15borderlessmdfcback/b", "m15borderlessmdfcback/r", "m15borderlessmdfcback/g", "m15borderlessmdfcback/c",
+  // The arch's tall box (TODO 4.55): the 21 tall-box printings are white,
+  // black and red creatures and an enchantment, and colourless Clues (the
+  // artifact dress) — no other colour printed it.
+  "m15tokentall/u", "m15tokentall/g", "m15tokentall/c", "m15tokentall/m",
+  "m15tokenartifacttall/w", "m15tokenartifacttall/u", "m15tokenartifacttall/b", "m15tokenartifacttall/r", "m15tokenartifacttall/g", "m15tokenartifacttall/m",
 ]);
 
 describe("frame-references.json", () => {

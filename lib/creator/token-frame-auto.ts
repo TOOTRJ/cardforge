@@ -39,15 +39,27 @@
 //     (4.50; the form's type-word effect owns that dress). The form never
 //     lands on an unverified combo: it keeps the frame it has and says so.
 //
+//   * The arch's heights (TODO 4.55): the 2014–19 arch has the same three
+//     heights — m15token, m15tokentext, m15tokentall — and its text picks
+//     them by the same rule against its own regular box. While the arch's
+//     tall box isn't verified in the card's colour its regular text box
+//     stands in, silently (archTallStandIn: the text shrinks to fit, as it
+//     did before 4.55) — never the textless arch's scrim. A text coming or
+//     going still moves the arch between its textless frame and a box (round
+//     11's followTokenTextBox) whatever height the old text asked for.
+//
 // Pure and client-safe.
 // ---------------------------------------------------------------------------
 
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
-import { printsPowerToughness, supertypeHasWord } from "@/lib/cards/card-display";
+import { hasRulesBoxText, printsPowerToughness, supertypeHasWord } from "@/lib/cards/card-display";
 import {
+  archTallStandIn,
   m20TokenHeightOf,
   m20TokenTemplate,
   tokenHeightForText,
+  tokenHeightOf,
+  tokenTemplate,
   type M20TokenHeight,
   type TokenHeightText,
 } from "@/lib/cards/token-height";
@@ -62,6 +74,9 @@ const ARCH_TOKEN_FRAMES: ReadonlySet<FrameTemplate> = new Set([
   "m15tokentext",
   "m15tokenartifact",
   "m15tokenartifacttext",
+  // …and its tall box (TODO 4.55).
+  "m15tokentall",
+  "m15tokenartifacttall",
 ]);
 
 /** True for the 2014–19 arch in any of its dresses — where a token lands
@@ -112,10 +127,27 @@ export function autoM20TokenFrame(text: TokenFrameText): FrameTemplate {
 }
 
 /**
+ * The arch its type words and text pick (tokenFrameFor: the textless arch,
+ * its text box or its tall box — TODO 4.55 — in the Artifact word's dress),
+ * with the regular text box standing in for a tall box that isn't verified
+ * in `colorKey` (archTallStandIn).
+ */
+export function archTokenFrameIn(
+  text: TokenFrameText,
+  colorKey: string,
+  verifiedKeys: ReadonlySet<string>,
+): FrameTemplate {
+  const arch = tokenFrameFor("token", "m15token", text);
+  const standIn = archTallStandIn(arch);
+  return standIn && !isFrameComboAvailable(arch, colorKey, verifiedKeys) ? standIn : arch;
+}
+
+/**
  * The frame a NEW token starts on (the default switch): the full-art
  * template its text asks for when that template is verified in the card's
- * colour, else the arch round 11 picks — its text box when it has text, its
- * artifact dress for an Artifact (tokenFrameFor).
+ * colour, else the arch round 11 picks — its text box when it has text (its
+ * tall box for long text where that is verified, 4.55), its artifact dress
+ * for an Artifact (archTokenFrameIn).
  */
 export function newTokenFrame(
   text: TokenFrameText,
@@ -124,7 +156,7 @@ export function newTokenFrame(
 ): FrameTemplate {
   const full = autoM20TokenFrame(text);
   if (isFrameComboAvailable(full, colorKey, verifiedKeys)) return full;
-  return tokenFrameFor("token", "m15token", text);
+  return archTokenFrameIn(text, colorKey, verifiedKeys);
 }
 
 /**
@@ -146,6 +178,8 @@ export function defaultTokenFrameIn(
 ): FrameTemplate | null {
   const pick = newTokenFrame(text, colorKey, verifiedKeys);
   if (m20TokenHeightOf(pick)) return pick;
+  // (the arch's pick already has its regular box standing in for an
+  // unverified tall one in this colour — archTokenFrameIn)
   if (m20TokenHeightOf(current) && isFrameComboAvailable(current, colorKey, verifiedKeys)) return current;
   if (isFrameComboAvailable(pick, colorKey, verifiedKeys)) return pick;
   const plain = typeWordFrameFor("token", "m15token", text.supertype);
@@ -153,17 +187,22 @@ export function defaultTokenFrameIn(
 }
 
 /**
- * The frame a full-art token follows to as its text or type words change:
- * the height the text now asks for — but only while the card wears the
- * height the text asked for before the edit (`previous`) and the user
- * hasn't picked one (`heightPinned`); otherwise the height it is on (round
- * 11's rule, followTokenTextBox: a frame that disagreed with the text is a
- * choice the user made, and it sticks) — dressed by the Artifact word
- * either way. Any other template is returned as it is (the arch, a
- * showcase). With `verifiedKeys`, a target that isn't verified in the
+ * The frame a full-art or arch token follows to as its text or type words
+ * change: the height the text now asks for on the design it wears — but only
+ * while the card wears the height the text asked for before the edit
+ * (`previous`) and the user hasn't picked one (`heightPinned`); otherwise
+ * the height it is on (round 11's rule, followTokenTextBox: a frame that
+ * disagreed with the text is a choice the user made, and it sticks) —
+ * dressed by the Artifact word either way. On the ARCH a text coming or
+ * going also moves it between its textless frame and a box while its
+ * box-or-none agreed with the old text (round 11's rule, whatever height
+ * the old text asked for: a stored m15tokentext card with long text still
+ * loses its box with its text). Any other template is returned as it is
+ * (a showcase). With `verifiedKeys`, a target that isn't verified in the
  * card's colour returns the template as it is (the form never moves a card
- * onto an unverified combo); without them, the target itself — the caller
- * checks it and says why it stays.
+ * onto an unverified combo) — on the arch, its regular box first where the
+ * tall one isn't (archTallStandIn); without them, the target itself — the
+ * caller checks it and says why it stays.
  */
 export function followTokenHeight(
   input: TokenFrameText & {
@@ -176,17 +215,23 @@ export function followTokenHeight(
     verifiedKeys?: ReadonlySet<string>;
   },
 ): FrameTemplate {
-  const current = m20TokenHeightOf(input.template);
-  if (!current) return input.template;
+  const of = tokenHeightOf(input.template);
+  if (!of) return input.template;
+  const { design, height: current } = of;
   const artifact = supertypeHasWord(input.supertype, "Artifact");
+  const hadText = hasRulesBoxText(input.previous);
   const followed =
     !input.heightPinned &&
-    current ===
-      tokenHeightForText({ ...input.previous, artifact: supertypeHasWord(input.previous.supertype, "Artifact") });
-  const height: M20TokenHeight = followed ? tokenHeightForText({ ...input, artifact }) : current;
-  const next = m20TokenTemplate(height, artifact);
+    (current ===
+      tokenHeightForText({ ...input.previous, artifact: supertypeHasWord(input.previous.supertype, "Artifact") }, design) ||
+      (design === "arch" && hadText !== hasRulesBoxText(input) && (current !== "textless") === hadText));
+  const height: M20TokenHeight = followed ? tokenHeightForText({ ...input, artifact }, design) : current;
+  const next = tokenTemplate(design, height, artifact);
   if (next === input.template || !input.verifiedKeys) return next;
-  return isFrameComboAvailable(next, input.colorKey ?? "", input.verifiedKeys) ? next : input.template;
+  const colorKey = input.colorKey ?? "";
+  if (isFrameComboAvailable(next, colorKey, input.verifiedKeys)) return next;
+  const standIn = archTallStandIn(next);
+  return standIn && isFrameComboAvailable(standIn, colorKey, input.verifiedKeys) ? standIn : input.template;
 }
 
 /**

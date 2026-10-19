@@ -94,6 +94,8 @@ export const COLLECTOR_TEMPLATES = [
   "m15tokenartifact",
   "m15tokentext",
   "m15tokenartifacttext",
+  "m15tokentall",
+  "m15tokenartifacttall",
   "emblem",
   // The transform bodies (TODO 5.1a): both faces print the card's ONE
   // collector line through M15's slot (design D8; the © slot follows each

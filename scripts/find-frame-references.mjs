@@ -86,14 +86,25 @@ const TEMPLATES = {
   },
   // 4.49 (b): the same arch with a text box — the prints with rules or
   // flavour text. Keep the REGULAR box by eye (type bar at ~67 %H): the tall
-  // box (type bar at ~56 %H: TSOI #11 Clue, TAKH #1, TDOM #7) has no Card
-  // Conjurer source (4.49's P3).
+  // box (type bar at ~56 %H: TSOI #11 Clue, TAKH #1, TDOM #7) is 4.55's
+  // m15tokentall / m15tokenartifacttall.
   m15tokentext: {
     note: "Text-box arch prints only (released before M20); drop the tall box (type bar ~56 %H) by eye.",
     q: (k) => `t:token -t:artifact -t:emblem frame:2015 date<2019-07-12 (o:/./ or ft:/./) -is:fullart -is:showcase -set:tunf -set:tund ${spellColor(k)}`,
   },
   m15tokenartifacttext: {
     note: "Text-box arch artifact prints only (released before M20); drop the tall box by eye.",
+    q: (k) => `t:token t:artifact frame:2015 date<2019-07-12 (o:/./ or ft:/./) -is:fullart -is:showcase ${spellColor(k)}`,
+  },
+  // TODO 4.55: the arch's TALL box — the pinned tall-box printings only
+  // (TALL_BOX_TOKEN_PINS in lib/scryfall/frame-signatures.ts: type bar at
+  // ~56 %H). The query is the text-box one; keep the pinned prints.
+  m15tokentall: {
+    note: "Tall-box arch prints only — the pinned TALL_BOX_TOKEN_PINS (type bar ~56 %H).",
+    q: (k) => `t:token -t:artifact -t:emblem frame:2015 date<2019-07-12 (o:/./ or ft:/./) -is:fullart -is:showcase -set:tunf -set:tund ${spellColor(k)}`,
+  },
+  m15tokenartifacttall: {
+    note: "Tall-box arch artifact prints only — the pinned Clues (TSOI #11–16, TC18 #19, TUST #18).",
     q: (k) => `t:token t:artifact frame:2015 date<2019-07-12 (o:/./ or ft:/./) -is:fullart -is:showcase ${spellColor(k)}`,
   },
   // TODO 4.48 / 4.50: the full-art token design (M20, 2019-07-12 → today).

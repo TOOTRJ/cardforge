@@ -24,7 +24,7 @@ import { describeFrame } from "@/lib/creator/frame-resolve";
 import { artReachesCardEdge, getFrameProfile } from "@/lib/cards/template-layout";
 import { frameAnatomyOf, twoColorDressOf } from "@/lib/cards/anatomy";
 import { templateHasBackFace } from "@/lib/cards/dfc";
-import { m20TokenTemplate, tokenHeightForText } from "@/lib/cards/token-height";
+import { isArchTallTokenTemplate, m20TokenTemplate, tokenHeightForText } from "@/lib/cards/token-height";
 
 // ---------------------------------------------------------------------------
 // The frame signature registry (TODO 1.4, with 1.17's borderless families and
@@ -585,7 +585,7 @@ type Match = {
 };
 
 /** A family of templates picked by kind (and dress). */
-type Family = "m15" | "ub" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "extended" | "m20" | "dfc" | "station";
+type Family = "m15" | "ub" | "borderless" | "modern" | "retro" | "alpha" | "textless" | "extended" | "m20" | "dfc" | "station" | "tokentall";
 
 type TemplateSpec = FrameTemplate | { family: Family };
 
@@ -835,6 +835,12 @@ const FAMILIES: Record<
   Family,
   { produces: readonly FrameTemplate[]; pick: (ctx: Ctx) => FrameTemplate }
 > = {
+  // The 2014–19 arch's tall text box (TODO 4.55): its artifact dress for an
+  // Artifact (a Clue), the plain one otherwise.
+  tokentall: {
+    produces: ["m15tokentall", "m15tokenartifacttall"],
+    pick: ({ facts }) => (facts.cardTypes.has("artifact") ? "m15tokenartifacttall" : "m15tokentall"),
+  },
   // The station frame (TODO 4.27a): a Planet's is the land master's, every
   // other station card's (a Spacecraft) the artifact master's.
   station: {
@@ -1347,8 +1353,10 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
     blockedBy: "4.51",
   },
   // The arch token's tall text box (TODO 4.55, P3 — split out of 4.49 (b),
-  // owner 2026-09-29): the import lands on the regular box, the text
-  // shrinking to fit (3.29), and the 1.6 log counts the demand.
+  // owner 2026-09-29): until 4.55 the import landed on the regular box, the
+  // text shrinking to fit (3.29), and the 1.6 log counted the demand. The
+  // tall box draws it now (gapDrawnBy) and the `token/tall-box` rule names
+  // it once verified; the gap stays for the rows the log holds.
   // Zendikar Rising's full-art basics (TODO 4.40, owner Round 64): the
   // stone-ring design, but every ZNR printing sets its subtype 22–28 px
   // further right than `m15fullartlandzen` (BFZ's) and its bars and name
@@ -2237,6 +2245,30 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     // in and the gap names 4.48; after, the gap is drawn there (gapDrawnBy:
     // onceVerifiedMatch is exact). No token prints the hybrid dress (no cost).
     { crown: "4.48", "two-colour": "4.48", "two-colour-hybrid": "4.48" },
+  ),
+  // The 2014–19 arch tokens that print the TALL text box (TODO 4.55: the 21
+  // pinned printings, TALL_BOX_TOKEN_PINS — Scryfall can't tell the height
+  // and the text length doesn't: the SOI Clue's 39 characters print tall).
+  // Until the arch's tall box is verified in the card's colour the regular
+  // box is the nearest — where the import always landed (the `tall-box`
+  // gap's answer before 4.55: the text shrinks to fit); once it is, this
+  // rule names the tall box instead (`onceVerified`) and is exact
+  // (`exactOnceVerified`), every other M15-era gap still naming its item.
+  ...withGaps(
+    {
+      key: "token/tall-box",
+      exactLabel: "2014–19 token, tall text box",
+      match: { frames: ["2015"], kinds: ["token"], collectorIds: TALL_BOX_TOKEN_PINS },
+      outcome: {
+        status: "nearest",
+        template: { family: "m15" },
+        onceVerified: { family: "tokentall" },
+        exactOnceVerified: true,
+        reason: "PipGlyph's tall text box token frame isn't verified yet",
+        blockedBy: "4.55",
+      },
+    },
+    M15_ERA_GAPS.filter((gap) => gap !== "tall-box"),
   ),
   {
     key: "fullart/basic/coloured-border",
@@ -3267,6 +3299,9 @@ function gapDrawnBy(gap: GapKey, template: FrameTemplate, border?: string): bool
     // The Universes Beyond dress (TODO 4.25): its three frames draw it.
     case "universes-beyond":
       return UB_TEMPLATES.has(template);
+    // The arch token's tall box (TODO 4.55): its two templates draw it.
+    case "tall-box":
+      return isArchTallTokenTemplate(template);
     // The station frame's tiers (TODO 4.27a): every frame that lays them
     // out (FrameProfile.tiers — the bordered pair and its dresses).
     case "station":

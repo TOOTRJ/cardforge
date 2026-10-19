@@ -69,6 +69,9 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   m15tokenartifact: { front: [1280, 1454] },
   m15tokentext: { front: [1272, 1146], masters: { c: [1280, 1154] } },
   m15tokenartifacttext: { front: [1280, 1154] },
+  // The tall box (TODO 4.55): the text box's window, 238 px shorter.
+  m15tokentall: { front: [1272, 908], masters: { c: [1280, 916] } },
+  m15tokenartifacttall: { front: [1280, 916] },
   emblem: { front: [1216, 1163] },
   m20token: { front: M20_TOKEN },
   m20tokentext: { front: M20_TOKEN },

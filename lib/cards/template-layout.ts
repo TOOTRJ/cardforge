@@ -2061,9 +2061,17 @@ const TOKEN_ART_WIDE_WINDOW_PX: TokenArtWindowPx = { left: 111, right: 1389, top
 /** How far the text-box arch's window ends above the textless one's (HD px):
  *  1405 / 1409 against 1705 / 1709. */
 const TOKEN_TEXT_WINDOW_UP_PX = 300;
-/** A token art slot: `window` + 1 px across and 2 px down, in card %. */
-function tokenArtSlot(window: TokenArtWindowPx, textBox = false): Rect {
-  const bottom = window.bottom - (textBox ? TOKEN_TEXT_WINDOW_UP_PX : 0);
+/** TODO 4.55: how far the TALL box's window, type pill and box top sit above
+ *  the regular text box's (HD px) — the prints' 238 (21 tall-box printings,
+ *  scripts/lib/token-tall.mjs), the distance the masters' cut moves them
+ *  (TOKEN_TALL_RECIPE.up; a unit test holds the two equal). */
+export const TOKEN_TALL_UP_PX = 238;
+/** A token art slot: `window` + 1 px across and 2 px down, in card %. The
+ *  text box shortens the window by TOKEN_TEXT_WINDOW_UP_PX, the tall box by
+ *  TOKEN_TALL_UP_PX more. */
+function tokenArtSlot(window: TokenArtWindowPx, box: "none" | "text" | "tall" = "none"): Rect {
+  const bottom =
+    window.bottom - (box === "none" ? 0 : TOKEN_TEXT_WINDOW_UP_PX) - (box === "tall" ? TOKEN_TALL_UP_PX : 0);
   return {
     topPct: ((window.top - 2) / 2100) * 100,
     leftPct: ((window.left - 1) / 1500) * 100,
@@ -2074,9 +2082,12 @@ function tokenArtSlot(window: TokenArtWindowPx, textBox = false): Rect {
 /** The arch token's slots (TODO 4.53 (e)): the opaque windows', and the
  *  wider see-through / artifact-dress windows'. */
 export const TOKEN_ART_SLOT: Rect = tokenArtSlot(TOKEN_ART_WINDOW_PX);
-export const TOKEN_TEXT_ART_SLOT: Rect = tokenArtSlot(TOKEN_ART_WINDOW_PX, true);
+export const TOKEN_TEXT_ART_SLOT: Rect = tokenArtSlot(TOKEN_ART_WINDOW_PX, "text");
 export const TOKEN_WIDE_ART_SLOT: Rect = tokenArtSlot(TOKEN_ART_WIDE_WINDOW_PX);
-export const TOKEN_TEXT_WIDE_ART_SLOT: Rect = tokenArtSlot(TOKEN_ART_WIDE_WINDOW_PX, true);
+export const TOKEN_TEXT_WIDE_ART_SLOT: Rect = tokenArtSlot(TOKEN_ART_WIDE_WINDOW_PX, "text");
+/** The tall box's slots (TODO 4.55): the text box's, 238 px shorter. */
+export const TOKEN_TALL_ART_SLOT: Rect = tokenArtSlot(TOKEN_ART_WINDOW_PX, "tall");
+export const TOKEN_TALL_WIDE_ART_SLOT: Rect = tokenArtSlot(TOKEN_ART_WIDE_WINDOW_PX, "tall");
 
 /** TODO 4.53 (c): the arch token's name is GOLD on its black bar, as all 49
  *  prints measured set it (the ink's median 254, 222, 102; the scans run
@@ -2257,6 +2268,49 @@ const M15TOKENTEXT: FrameProfile = {
   // prints put their plate where the textless ones do: on CC's 88.48 %H
   // box the plate sat 4.1 px above TDOM #2 / TM19 #1 / TC16 #9 (2.5 on
   // average over nine text-box prints), 1.4 px after the move.
+};
+
+// M15 Token with the TALL text box — TODO 4.55: PipGlyph's own cut of the
+// text-box masters (scripts/build-token-tall-frames.mjs, the recipe and its
+// measurements in scripts/lib/token-tall.mjs): the window's lower rows, the
+// type pill and the box's top edge 238 px higher (TOKEN_TALL_UP_PX), the box
+// 238 px taller; the title bar, the arch, the box's bottom, the plate and
+// the border exactly M15TOKENTEXT's. The 21 printings: TAKH #1/5/6/12/15,
+// THOU #2/3/4/6, TC18 #4/10/19, TSOI #11–16, TDOM #7, TRIX #1, TUST #18 —
+// their pills, box tops and window edges 233–241 px above the regular
+// box's (median 238), their type line's capitals and baseline 237 px above
+// it, their rules centred in the taller box (ink centres 1621–1635 px, the
+// drawn box's 1634).
+/** TOKEN_TALL_UP_PX in card %H. */
+const TOKEN_TALL_UP_PCT = (TOKEN_TALL_UP_PX / 2100) * 100;
+const M15TOKENTALL: FrameProfile = {
+  ...M15TOKENTEXT,
+  label: "M15 Token, tall text box",
+  // The window runs 115–1385 × 263–1167 px on the opaque masters (111–1389
+  // × 259–1171 on the see-through `c` and the coloured artifact dresses):
+  // the text box's slot rule, 238 px shorter (TOKEN_TALL_ART_SLOT).
+  artSlot: TOKEN_TALL_ART_SLOT,
+  // Everything on the pill rides it: the set symbol's box (centred 59.15
+  // %H) and the type band, their dy as on the regular box — the prints set
+  // the type line's baseline 237 px above the regular box's (1263 px,
+  // eleven prints 1262–1266), within 1 px of the pill's move.
+  symbolRect: { ...M15TOKENTEXT.symbolRect!, topPct: M15TOKENTEXT.symbolRect!.topPct - TOKEN_TALL_UP_PCT },
+  type: {
+    ...M15TOKENTEXT.type,
+    rect: { ...M15TOKENTEXT.type.rect, topPct: M15TOKENTEXT.type.rect.topPct - TOKEN_TALL_UP_PCT },
+  },
+  // The rules box from 5 px inside the drawn box's moved top (1326 px) to
+  // the regular box's end (1942 px, 5 px inside its bottom), centred
+  // vertically as the prints centre theirs; ONE line still centred on it,
+  // the plate still a keep-out (its ink, as on the regular box).
+  rules: {
+    ...M15TOKENTEXT.rules,
+    rect: {
+      ...M15TOKENTEXT.rules.rect,
+      topPct: M15TOKENTEXT.rules.rect.topPct - TOKEN_TALL_UP_PCT,
+      heightPct: M15TOKENTEXT.rules.rect.heightPct + TOKEN_TALL_UP_PCT,
+    },
+  },
 };
 
 // The emblem — TODO 4.52: Card Conjurer 'Planeswalker Emblems'
@@ -6029,6 +6083,20 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     artSlot: TOKEN_TEXT_WIDE_ART_SLOT,
     label: "M15 Artifact Token, text box",
     pt: { ...M15TOKENTEXT.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
+    collector: M15_COLLECTOR,
+  },
+  // TODO 4.55: the tall box, its see-through `c` and its artifact dress as
+  // the regular box's.
+  m15tokentall: {
+    ...M15TOKENTALL,
+    underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"], artSlot: TOKEN_TALL_WIDE_ART_SLOT },
+    collector: M15_COLLECTOR,
+  },
+  m15tokenartifacttall: {
+    ...M15TOKENTALL,
+    artSlot: TOKEN_TALL_WIDE_ART_SLOT,
+    label: "M15 Artifact Token, tall text box",
+    pt: { ...M15TOKENTALL.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
     collector: M15_COLLECTOR,
   },
   // TODO 4.52: the emblem (M20 design); its collector line (E, the © slot

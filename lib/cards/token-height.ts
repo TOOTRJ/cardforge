@@ -24,6 +24,13 @@
 // (lib/creator/token-frame-auto.ts). The artifact templates (TODO 4.50) are
 // the same heights, picked by the Artifact type word.
 //
+// The 2014–19 ARCH has the same three heights since TODO 4.55 (m15token,
+// m15tokentext, m15tokentall and their artifact dresses), and its text picks
+// them by the same rule against ITS regular box (tokenHeightForText(text,
+// "arch")). Its import is the one exception: the arch's printings are
+// PINNED (the 21 tall-box printings, TALL_BOX_TOKEN_PINS) — the SOI Clue's
+// 39 characters print tall, so the text can't tell.
+//
 // Pure and client-safe: it runs the same rules layout the renderers draw.
 // ---------------------------------------------------------------------------
 
@@ -37,6 +44,10 @@ export type { M20TokenHeight };
 /** The printed heights, smallest first. */
 export const M20_TOKEN_HEIGHTS: readonly M20TokenHeight[] = ["textless", "regular", "tall"];
 
+/** The two token designs that print heights: the full-art design (M20 →
+ *  today) and the 2014–19 arch (TODO 4.55). */
+export type TokenDesign = "m20" | "arch";
+
 /** The full-art token templates by height: the plain one and its artifact
  *  dress (4.50). */
 export const M20_TOKEN_TEMPLATES: Readonly<Record<M20TokenHeight, { plain: FrameTemplate; artifact: FrameTemplate }>> = {
@@ -45,10 +56,59 @@ export const M20_TOKEN_TEMPLATES: Readonly<Record<M20TokenHeight, { plain: Frame
   tall: { plain: "m20tokentall", artifact: "m20tokenartifacttall" },
 };
 
+/** The 2014–19 arch's templates by height (TODO 4.49 (b), 4.55): the
+ *  textless arch, its text box, its tall box — each with its artifact
+ *  dress. */
+export const ARCH_TOKEN_TEMPLATES: Readonly<Record<M20TokenHeight, { plain: FrameTemplate; artifact: FrameTemplate }>> = {
+  textless: { plain: "m15token", artifact: "m15tokenartifact" },
+  regular: { plain: "m15tokentext", artifact: "m15tokenartifacttext" },
+  tall: { plain: "m15tokentall", artifact: "m15tokenartifacttall" },
+};
+
+const DESIGN_TEMPLATES: Readonly<Record<TokenDesign, typeof M20_TOKEN_TEMPLATES>> = {
+  m20: M20_TOKEN_TEMPLATES,
+  arch: ARCH_TOKEN_TEMPLATES,
+};
+
 /** The template for a height, plain or artifact. */
 export function m20TokenTemplate(height: M20TokenHeight, artifact: boolean): FrameTemplate {
-  const pair = M20_TOKEN_TEMPLATES[height];
+  return tokenTemplate("m20", height, artifact);
+}
+
+/** A design's template for a height, plain or artifact. */
+export function tokenTemplate(design: TokenDesign, height: M20TokenHeight, artifact: boolean): FrameTemplate {
+  const pair = DESIGN_TEMPLATES[design][height];
   return artifact ? pair.artifact : pair.plain;
+}
+
+/** A height template's design, height and dress, or null for any other
+ *  template. */
+export function tokenHeightOf(
+  template: FrameTemplate | string | null | undefined,
+): { design: TokenDesign; height: M20TokenHeight; artifact: boolean } | null {
+  for (const design of ["m20", "arch"] as const) {
+    for (const height of M20_TOKEN_HEIGHTS) {
+      const pair = DESIGN_TEMPLATES[design][height];
+      if (template === pair.plain) return { design, height, artifact: false };
+      if (template === pair.artifact) return { design, height, artifact: true };
+    }
+  }
+  return null;
+}
+
+/** True for the arch's tall box, plain or artifact (TODO 4.55). */
+export function isArchTallTokenTemplate(template: FrameTemplate | string | null | undefined): boolean {
+  const of = tokenHeightOf(template);
+  return of?.design === "arch" && of.height === "tall";
+}
+
+/** The frame that stands in for the arch's tall box while it isn't verified
+ *  in the card's colour: the arch's regular text box in the same dress (the
+ *  text shrinks to fit it, as it did before 4.55). Null for any other
+ *  template. */
+export function archTallStandIn(template: FrameTemplate | string | null | undefined): FrameTemplate | null {
+  const of = tokenHeightOf(template);
+  return of?.design === "arch" && of.height === "tall" ? tokenTemplate("arch", "regular", of.artifact) : null;
 }
 
 /** A full-art token template's height, or null for any other template. */
@@ -88,9 +148,14 @@ export const M20_TOKEN_REGULAR_MIN_PX = 72;
 
 /** The size, HD px, the rules fit `height`'s box at — the largest ladder step
  *  at which they fit at both bake targets, clear of the plate — or null when
- *  they don't fit it even at the floor. */
-export function tokenTextFitPx(height: Exclude<M20TokenHeight, "textless">, text: TokenHeightText): number | null {
-  const profile = getFrameProfile(m20TokenTemplate(height, text.artifact === true));
+ *  they don't fit it even at the floor. On the full-art design unless
+ *  `design` says the arch. */
+export function tokenTextFitPx(
+  height: Exclude<M20TokenHeight, "textless">,
+  text: TokenHeightText,
+  design: TokenDesign = "m20",
+): number | null {
+  const profile = getFrameProfile(tokenTemplate(design, height, text.artifact === true));
   const layout = mainRulesLayout({
     layout: profile,
     rulesText: text.rulesText,
@@ -103,19 +168,25 @@ export function tokenTextFitPx(height: Exclude<M20TokenHeight, "textless">, text
 
 /** True when the text fits `height`'s box at the rules standard size — the
  *  first step of the ladder, at both bake targets, clear of the plate. */
-export function tokenTextFitsAtStandardSize(height: Exclude<M20TokenHeight, "textless">, text: TokenHeightText): boolean {
-  const profile = getFrameProfile(m20TokenTemplate(height, text.artifact === true));
-  return tokenTextFitPx(height, text) === rulesLadderPx(profile.rules.sizePct)[0];
+export function tokenTextFitsAtStandardSize(
+  height: Exclude<M20TokenHeight, "textless">,
+  text: TokenHeightText,
+  design: TokenDesign = "m20",
+): boolean {
+  const profile = getFrameProfile(tokenTemplate(design, height, text.artifact === true));
+  return tokenTextFitPx(height, text, design) === rulesLadderPx(profile.rules.sizePct)[0];
 }
 
 /** True when the regular box holds the text at M20_TOKEN_REGULAR_MIN_PX or
- *  more — the height rule's test (above). */
-export function tokenTextFitsRegularBox(text: TokenHeightText): boolean {
-  return (tokenTextFitPx("regular", text) ?? 0) >= M20_TOKEN_REGULAR_MIN_PX;
+ *  more — the height rule's test (above); the arch's regular box with
+ *  `design` "arch" (TODO 4.55: the same floor). */
+export function tokenTextFitsRegularBox(text: TokenHeightText, design: TokenDesign = "m20"): boolean {
+  return (tokenTextFitPx("regular", text, design) ?? 0) >= M20_TOKEN_REGULAR_MIN_PX;
 }
 
-/** The height the text asks for (TODO 4.48's rule, above). */
-export function tokenHeightForText(text: TokenHeightText): M20TokenHeight {
+/** The height the text asks for (TODO 4.48's rule, above), on the full-art
+ *  design unless `design` says the arch (TODO 4.55). */
+export function tokenHeightForText(text: TokenHeightText, design: TokenDesign = "m20"): M20TokenHeight {
   if (!text.rulesText?.trim() && !text.flavorText?.trim()) return "textless";
-  return tokenTextFitsRegularBox(text) ? "regular" : "tall";
+  return tokenTextFitsRegularBox(text, design) ? "regular" : "tall";
 }

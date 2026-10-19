@@ -145,7 +145,8 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
     // prints no rules, but the switch is harmless on a frame that draws none.)
     // (…and the borderless double-faced bodies, TODO 5.7, offer it as their
     // bordered twins do.)
-    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(65);
+    // (…and the arch's tall box, TODO 4.55, as the text box does.)
+    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(67);
   });
 
   it("rulesAlignOf is \"center\" only for the card's \"center\" on a frame that offers it", () => {
