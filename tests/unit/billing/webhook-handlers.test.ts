@@ -1150,6 +1150,79 @@ describe("handleStripeEvent — invoice.paid", () => {
     expect(updates.filter((u) => u.table === "profiles")).toEqual([]);
     expect(upserts[0].row).toMatchObject({ invoice_id: "in_1", tier: null });
   });
+
+  // Loud grant failures (2026-10-18). The chain stub ignores filters, so the
+  // admin lookup answers the `profiles` rows: here user-1 stands in as the
+  // one admin.
+  const alerts = (inserts: Array<{ table: string; row: unknown }>) =>
+    inserts
+      .filter((i) => i.table === "notifications" && Array.isArray(i.row))
+      .flatMap((i) => i.row as Array<Record<string, unknown>>)
+      .filter((row) => row.type === "credit_refill_failed");
+
+  it("a failed credit grant: an error log + ONE admin alert for the invoice, never a throw; the row and the receipt still land", async () => {
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { admin, inserts, upserts, rpcs } = makeChainAdmin(
+      { profiles: [profile], notifications: [], credit_ledger: [] },
+      { rpcError: "permission denied for function grant_credits" },
+    );
+    await expect(handleStripeEvent(event(invoice()), { admin, stripe: invoiceStripe })).resolves.toBeUndefined();
+    expect(rpcs.filter((r) => r.fn === "grant_credits")).toHaveLength(1); // tried once, as before
+    expect(upserts[0].row).toMatchObject({ invoice_id: "in_1", tier: "pro" });
+    expect(errorLog).toHaveBeenCalledWith(
+      "[stripe] invoice.paid credit grant failed for in_1 (user user-1): Credit grant failed for user-1: permission denied for function grant_credits",
+    );
+    expect(alerts(inserts)).toEqual([
+      {
+        recipient_id: "user-1",
+        actor_id: null,
+        type: "credit_refill_failed",
+        payload: {
+          source: "invoice",
+          dedupeKey: "invoice:in_1",
+          invoiceId: "in_1",
+          userId: "user-1",
+          error: "Credit grant failed for user-1: permission denied for function grant_credits",
+        },
+      },
+    ]);
+    // The subscriber's own receipt is unchanged.
+    expect(notes(inserts).filter((n) => !Array.isArray(n.row)).map((n) => n.row.type)).toEqual(["payment_received"]);
+    errorLog.mockRestore();
+  });
+
+  it("a redelivered invoice whose grant fails again alerts nobody twice", async () => {
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { admin, inserts } = makeChainAdmin(
+      { profiles: [profile], notifications: [{ id: "n_1", recipient_id: "user-1" }], credit_ledger: [] },
+      { rpcError: "permission denied for function grant_credits" },
+    );
+    await handleStripeEvent(event(invoice()), { admin, stripe: invoiceStripe });
+    expect(alerts(inserts)).toEqual([]);
+    errorLog.mockRestore();
+  });
+
+  it("a failed grant for a DELETED buyer (the row's FK 23503) alerts nobody — they are owed nothing", async () => {
+    // The same setup as the alerting case above, but the buyer is gone: the
+    // stub still answers the admin lookup with user-1, so only the
+    // `!userGone` gate keeps the alert out.
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { admin, inserts, upserts } = makeChainAdmin(
+      { profiles: [profile], notifications: [], credit_ledger: [] },
+      { missingUser: "user-1", rpcError: "violates foreign key constraint" },
+    );
+    await expect(handleStripeEvent(event(invoice()), { admin, stripe: invoiceStripe })).resolves.toBeUndefined();
+    expect(upserts.filter((u) => u.table === "billing_payments").map((u) => u.row.user_id)).toEqual(["user-1", null]);
+    expect(errorLog).toHaveBeenCalledWith(expect.stringContaining("[stripe] invoice.paid credit grant failed for in_1"));
+    expect(alerts(inserts)).toEqual([]);
+    errorLog.mockRestore();
+  });
+
+  it("a successful grant alerts nobody", async () => {
+    const { admin, inserts } = makeChainAdmin({ profiles: [profile], notifications: [], credit_ledger: [] });
+    await handleStripeEvent(event(invoice()), { admin, stripe: invoiceStripe });
+    expect(alerts(inserts)).toEqual([]);
+  });
 });
 
 describe("handleStripeEvent — checkout.session.expired", () => {

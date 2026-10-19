@@ -1,5 +1,6 @@
 import { formatShortDate } from "@/lib/format/dates";
 import { formatMoney } from "@/lib/format/money";
+import { isUuid } from "@/lib/ids";
 
 // ---------------------------------------------------------------------------
 // One source of copy + deep link for every notification kind. Shared by the
@@ -216,6 +217,33 @@ export function describeNotification(
         subject: "Automatic re-bake",
         body: `paused itself${reason ? ` — ${reason}` : ""}. Check the failures, then resume it.`,
         href: "/admin/renders",
+      };
+    }
+    case "credit_refill_failed": {
+      // Admin-only: a subscription credit grant failed
+      // (lib/billing/credit-alerts.ts — the refill cron or invoice.paid).
+      const error = str(payload.error);
+      if (str(payload.source) === "invoice") {
+        const userId = str(payload.userId);
+        const invoiceId = str(payload.invoiceId);
+        return {
+          subject: "Credit grant failed",
+          body: `on a paid invoice${invoiceId ? ` (${invoiceId})` : ""}${error ? ` — ${error}` : ""}. The daily refill retries it; check the account's credits.`,
+          href: isUuid(userId) ? `/admin/users?u=${userId}` : "/admin/users",
+        };
+      }
+      const failed = num(payload.failed) ?? 0;
+      const pageError = str(payload.pageError);
+      const what = [
+        failed > 0 ? `${failed.toLocaleString("en-US")} grant${failed === 1 ? "" : "s"} failed` : null,
+        pageError ? `a profiles read failed (${pageError})` : null,
+      ]
+        .filter(Boolean)
+        .join(" and ");
+      return {
+        subject: "Credit refill",
+        body: `${what || "failed"}${error ? ` — ${error}` : ""}. Tomorrow's run retries; check the function logs.`,
+        href: "/admin/users",
       };
     }
     case "card_limit": {
