@@ -228,5 +228,59 @@ describe("describeNotification — deck generated", () => {
       "paused itself. Check the failures, then resume it.",
     );
   });
+
+  it("credit refill failed (cron): the failure count and first error, linking admins to the users page", () => {
+    const base = { actor: null, card: null, threadId: null, type: "credit_refill_failed" };
+    const cron = {
+      source: "cron",
+      dedupeKey: "cron:2026-10-18",
+      period: "2026-10",
+      day: "2026-10-18",
+      processed: 40,
+      granted: 5,
+      failed: 2,
+      pageError: null,
+      userIds: ["u-1", "u-2"],
+      error: "permission denied for function grant_credits",
+    };
+    const d = describeNotification({ ...base, payload: cron }, { isAdmin: true });
+    expect(d).toEqual({
+      subject: "Credit refill",
+      body: "2 grants failed — permission denied for function grant_credits. Tomorrow's run retries; check the function logs.",
+      href: "/admin/users",
+    });
+    // The toast and the bell print the same sentence (realtime-alerts.tsx reads describeNotification).
+    expect(notificationSentence({ ...base, payload: cron }, { isAdmin: true })).toBe(`${d.subject} ${d.body}`);
+    expect(
+      describeNotification({ ...base, payload: { ...cron, failed: 1, error: null } }, { isAdmin: true }).body,
+    ).toBe("1 grant failed. Tomorrow's run retries; check the function logs.");
+    expect(
+      describeNotification(
+        { ...base, payload: { ...cron, failed: 0, error: null, pageError: "statement timeout" } },
+        { isAdmin: true },
+      ).body,
+    ).toBe("a profiles read failed (statement timeout). Tomorrow's run retries; check the function logs.");
+    expect(describeNotification({ ...base, payload: {} }, { isAdmin: true }).body).toBe(
+      "failed. Tomorrow's run retries; check the function logs.",
+    );
+  });
+
+  it("credit refill failed (invoice): names the invoice and opens the account", () => {
+    const base = { actor: null, card: null, threadId: null, type: "credit_refill_failed" };
+    const userId = "d0000000-0000-4000-a000-000000000002";
+    expect(
+      describeNotification(
+        { ...base, payload: { source: "invoice", dedupeKey: "invoice:in_1", invoiceId: "in_1", userId, error: "boom" } },
+        { isAdmin: true },
+      ),
+    ).toEqual({
+      subject: "Credit grant failed",
+      body: "on a paid invoice (in_1) — boom. The daily refill retries it; check the account's credits.",
+      href: `/admin/users?u=${userId}`,
+    });
+    expect(
+      describeNotification({ ...base, payload: { source: "invoice", userId: "not-a-uuid" } }, { isAdmin: true }).href,
+    ).toBe("/admin/users");
+  });
 });
 

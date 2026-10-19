@@ -19,6 +19,11 @@ import { formatMoney } from "@/lib/format/money";
 import { endsByPeriodEnd } from "@/lib/billing/subscription-ending";
 import { recordFunnelEvent } from "@/lib/analytics/funnel-server";
 import {
+  cutError,
+  invoiceAlertDedupeKey,
+  notifyAdminsCreditRefillFailed,
+} from "@/lib/billing/credit-alerts";
+import {
   CREDIT_PACKS,
   PLANS,
   TRIAL_WINBACK_DISCOUNT_PCT,
@@ -338,7 +343,9 @@ function priceLabelFor(tier: PlanTier | null, interval: string | null): string |
 //   2. a resync of the subscription the invoice bills (cheap insurance: a
 //      recovered past-due plan or a converted trial is current the moment
 //      it's paid, even if the matching subscription.updated is late), with
-//      the usual idempotent credit grant;
+//      the usual idempotent credit grant — a failed grant is an error log
+//      plus ONE credit_refill_failed alert per invoice to every admin
+//      (lib/billing/credit-alerts.ts), never a throw;
 //   3. ONE "Payment received" notification when money was actually taken —
 //      a $0 trial invoice or a 100%-off coupon says nothing. Stripe's own
 //      receipt email covers the inbox (Dashboard → Settings → Emails).
@@ -364,6 +371,7 @@ async function handleInvoicePaid(
 
   let tier: PlanTier | null = null;
   let interval: string | null = null;
+  let grantError: string | null = null;
   if (subscriptionId) {
     let sub: Stripe.Subscription | null = null;
     try {
@@ -378,7 +386,16 @@ async function handleInvoicePaid(
       // grant, so a failed grant (a deleted account's ledger FK) doesn't
       // log the payment without it.
       if (result.tier !== "free") tier = result.tier;
-      await grantCreditsForSync(result, admin, { isCreationEvent: false });
+      try {
+        await grantCreditsForSync(result, admin, { isCreationEvent: false });
+      } catch (error) {
+        // Loud, never thrown (Stripe's retries stay as they were; the
+        // subscription events and the daily cron grant the month too): an
+        // error log, and the admins alerted once per invoice after the
+        // revenue row below.
+        grantError = error instanceof Error ? error.message : String(error);
+        console.error(`[stripe] invoice.paid credit grant failed for ${invoice.id} (user ${userId}): ${grantError}`);
+      }
     } catch (error) {
       // The subscription events carry the sync; the row still gets written.
       console.warn(
@@ -425,6 +442,17 @@ async function handleInvoicePaid(
   if (userGone) ({ error } = await write(null));
   if (error) {
     throw new Error(`billing_payments write failed for ${invoice.id}: ${error.message}`);
+  }
+
+  // A deleted buyer is owed nothing (their ledger FK is what failed).
+  if (grantError && !userGone) {
+    await notifyAdminsCreditRefillFailed(admin, {
+      source: "invoice",
+      dedupeKey: invoiceAlertDedupeKey(invoice.id),
+      invoiceId: invoice.id,
+      userId,
+      error: cutError(grantError),
+    });
   }
 
   if (amountCents <= 0) return;

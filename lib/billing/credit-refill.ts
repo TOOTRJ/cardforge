@@ -116,10 +116,15 @@ export function refillTierFor(
  * owed. Offset pagination is stable because grants never change the read
  * columns. A page-read failure aborts with the stats so far — the grants are
  * idempotent, so the next daily run resumes harmlessly.
+ *
+ * Every failed grant is logged with its user id and error (no email, no
+ * secret) and handed to `onGrantFailed`, so the cron route can alert the
+ * admins (lib/billing/credit-alerts.ts). Neither changes what is granted.
  */
 export async function refillActiveSubscribers(
   admin: CreditGrantClient,
   period: string,
+  opts: { onGrantFailed?: (userId: string, error: string) => void } = {},
 ): Promise<RefillSweepResult> {
   let processed = 0;
   let granted = 0;
@@ -130,13 +135,19 @@ export async function refillActiveSubscribers(
       .select("id, subscription_tier, subscription_status, comp_tier, comp_expires_at, is_admin, created_at")
       .order("id", { ascending: true })
       .range(from, from + REFILL_PAGE_SIZE - 1);
-    if (error) return { ok: false, error: error.message };
+    if (error) {
+      console.error(`[refill-credits] profiles page read failed at row ${from}: ${error.message}`);
+      return { ok: false, error: error.message };
+    }
     for (const profile of (page ?? []) as RefillProfileRow[]) {
       const tier = refillTierFor(profile, period);
       if (!tier) continue;
       const result = await grantMonthlyCreditsForPeriod(admin, profile.id, tier, period);
-      if (!result.ok) failed += 1;
-      else granted += 1;
+      if (!result.ok) {
+        failed += 1;
+        console.error(`[refill-credits] grant failed for user ${profile.id} (${tier}, ${period}): ${result.error}`);
+        opts.onGrantFailed?.(profile.id, result.error);
+      } else granted += 1;
     }
     processed += page?.length ?? 0;
     if ((page?.length ?? 0) < REFILL_PAGE_SIZE) break;

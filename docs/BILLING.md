@@ -262,6 +262,19 @@ expiries produced none — the 30-day guard); a dev_pro Pro subscription
 produced the revenue row, the resync, one `payment_received` and exactly one
 refill ledger row across `subscription.created` + `invoice.paid`.
 
+**Failed subscription grants are loud (2026-10-18, migration 0140).** The
+daily refill cron logs every failed grant with its user id and error, answers
+**500** when any grant or a profiles page read failed (Vercel's cron log shows
+the run as failed; Vercel never retries a cron, and a rerun grants nothing
+twice — every grant is keyed), and sends every admin ONE `credit_refill_failed`
+notification per UTC run day while failures persist. `invoice.paid` logs a
+failed grant at error level and alerts every admin once per invoice; it still
+answers 200 (the grant's retries are the subscription events and the cron, as
+before). Copy: `lib/notifications/describe.ts`; dedupe: 0140's unique index on
+(`payload->>'dedupeKey'`, recipient), `lib/billing/credit-alerts.ts`. Nothing
+about how or when credits are granted changed. A real gap is remedied with an
+admin grant on `/admin/users` naming the month.
+
 ## 8. Free credits once, packs where the need is felt (2026-09-24)
 
 Owner decisions of 2026-09-24 (audit §6 recommendations 1 and 2):

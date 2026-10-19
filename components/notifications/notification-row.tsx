@@ -39,6 +39,7 @@ const NOTIFICATION_ICON: Record<string, typeof Bell> = {
   card_limit: Layers,
   render_update: Sparkles,
   render_sweep_paused: CirclePause,
+  credit_refill_failed: Coins,
 };
 
 export function NotificationRow({
