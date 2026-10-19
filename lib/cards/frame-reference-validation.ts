@@ -23,7 +23,7 @@ import {
   typeLineHasWord,
   type CardKind,
 } from "@/lib/creator/card-kinds";
-import { colorlessFaceAllowed, dfcBodyOf, dfcIconFamilyFromEffects, dfcLookOf, isDeclaredDfcBody, isDfcBackBody, templateHasBackFace, transformBackBodyFor } from "@/lib/cards/dfc";
+import { colorlessFaceAllowed, dfcBodyOf, dfcIconFamilyFromEffects, dfcLookOf, isDeclaredDfcBody, isDfcBackBody, sagaBackBodyFor, templateHasBackFace, transformBackBodyFor } from "@/lib/cards/dfc";
 import { eraForTemplate } from "@/lib/creator/frame-picker";
 import { eraGroupFrameLabel } from "@/lib/creator/frame-resolve";
 import { FRAME_TEMPLATE_LABELS, type FrameTemplate } from "@/types/card";
@@ -201,11 +201,22 @@ export function validateReferenceForCombo(
       // icon family (the ▼ at the right, or the 2016–22 left well) and the
       // back's type (a land back wears the land back) name the body.
       if (dfcBodyOf(template)?.layout === "transform" && isDeclaredDfcBody(template) && (card.layout ?? "") === "transform") {
-        const wears = transformBackBodyFor(
-          dfcIconFamilyFromEffects(card.frame_effects),
-          parseTypeLine(back?.type_line).card_type,
-          dfcLookOf(template),
-        );
+        // (A Saga back — TODO 5.5 (b), PR 2 — wears the double-faced saga
+        // back where one exists for its family and look.)
+        const backTypes = parseTypeLine(back?.type_line);
+        const wears =
+          sagaBackBodyFor(
+            "transform",
+            backTypes.card_type,
+            backTypes.subtypes_text,
+            dfcIconFamilyFromEffects(card.frame_effects),
+            dfcLookOf(template),
+          ) ??
+          transformBackBodyFor(
+            dfcIconFamilyFromEffects(card.frame_effects),
+            backTypes.card_type,
+            dfcLookOf(template),
+          );
         if (wears && wears !== template) {
           errors.push(
             `${card.name}'s back wears the ${FRAME_TEMPLATE_LABELS[wears] ?? wears} body (its icon family and the back's type), not ${label}.`,

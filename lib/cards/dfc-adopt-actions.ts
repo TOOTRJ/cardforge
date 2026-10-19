@@ -43,7 +43,7 @@ import { MEDIA_URL_NOT_ALLOWED_MESSAGE, mediaUrlViolationField } from "@/lib/med
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient, getCurrentUser, getCurrentUsername } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/ids";
-import type { CardUpdate } from "@/types/card";
+import type { CardUpdate, FrameTemplate } from "@/types/card";
 
 export type AdoptDfcBodiesResult =
   | { ok: true; cardId: string; slug: string; frontBody: string; backBody: string }
@@ -109,14 +109,22 @@ export async function adoptDfcBodiesAction(cardId: string, layoutName: string): 
     existing.color_identity,
   );
   if (frontColourGate) return { ok: false, formError: frontColourGate };
+  // The back's body is the gate's to derive (sent without one): a Saga back
+  // (TODO 5.5 (b), PR 2) moves onto the double-faced saga back where that
+  // is verified in its colour — the body its import lands on — and onto
+  // the plan's body otherwise. Sent WITH the plan's ▼ back it was refused
+  // (DFC_BACK_BODY_MISMATCH) as soon as the saga back was ticked.
+  const { frame_style: _planBody, ...planBack } = plan.back_face;
+  void _planBody;
   const backGate = resolveDfcBackFace({
     frontTemplate: plan.frontBody,
-    back: plan.back_face,
+    back: planBack,
     family: plan.frame_style.dfcIcon as string | undefined,
     frontColorIdentity: existing.color_identity,
     verifiedKeys,
   });
   if (!backGate.ok) return { ok: false, formError: backGate.message };
+  const backBody = (backGate.back?.frame_style?.template ?? plan.backBody) as FrameTemplate;
 
   const update: CardUpdate = {
     frame_style: plan.frame_style as CardUpdate["frame_style"],
@@ -151,5 +159,5 @@ export async function adoptDfcBodiesAction(cardId: string, layoutName: string): 
     }
   });
 
-  return { ok: true, cardId: row.id, slug: row.slug, frontBody: plan.frontBody, backBody: plan.backBody };
+  return { ok: true, cardId: row.id, slug: row.slug, frontBody: plan.frontBody, backBody };
 }

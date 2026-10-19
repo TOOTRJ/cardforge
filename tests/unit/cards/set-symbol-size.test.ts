@@ -94,7 +94,7 @@ describe("the family's set-symbol boxes", () => {
   it("are set on every M15-era family profile and on nothing else", () => {
     // …and 4.33's borderless planeswalkers, which keep m15pw's box.
     // (…and the double-faced saga front, TODO 5.5 (b): the saga's box.)
-    const thin = new Set(["m15pw", "m15borderlesspw", "m15borderlesspwtall", "saga", "sagadfcfront"]);
+    const thin = new Set(["m15pw", "m15borderlesspw", "m15borderlesspwtall", "saga", "sagadfcfront", "sagadfcback"]);
     for (const template of FRAME_TEMPLATE_VALUES) {
       const p = getFrameProfile(template);
       if (!M15_FAMILY_TEMPLATES.includes(template)) {

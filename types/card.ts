@@ -503,6 +503,11 @@ export const FRAME_TEMPLATE_VALUES = [
   // saga with a back face of its own (lib/cards/dfc.ts, DfcProfile.saga);
   // the back is a transform back body. An addition: no stored card changes.
   "sagadfcfront",
+  // …and the double-faced saga's BACK (TODO 5.5 (b), PR 2): the back of a
+  // card whose back face is a Saga (MOM's praetors, LCI #189) — PipGlyph's
+  // own composite of the saga body and the ▼ back's bars. A back body, never
+  // a card's own template. An addition: no stored card changes.
+  "sagadfcback",
   "adventure",
   "flip",
   "split",
@@ -649,6 +654,7 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   battle: "Battle (Siege)",
   saga: "Saga",
   sagadfcfront: "Saga (transform front)",
+  sagadfcback: "Saga (transform back)",
   adventure: "Adventure",
   flip: "Flip",
   split: "Split",
@@ -780,6 +786,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   battle: "m15",
   saga: "m15",
   sagadfcfront: "m15",
+  sagadfcback: "m15",
   adventure: "m15",
   flip: "m15",
   split: "m15",

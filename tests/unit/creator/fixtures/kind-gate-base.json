@@ -460,6 +460,25 @@
   "sagadfcfront": [
    "emblem"
   ],
+  "sagadfcback": [
+   "creature",
+   "instant",
+   "sorcery",
+   "artifact",
+   "enchantment",
+   "land",
+   "planeswalker",
+   "battle",
+   "token",
+   "emblem",
+   "saga",
+   "adventure",
+   "split",
+   "aftermath",
+   "flip",
+   "transform",
+   "mdfc"
+  ],
   "adventure": [
    "emblem"
   ],
@@ -955,6 +974,7 @@
   "sagadfcfront": [
    "saga"
   ],
+  "sagadfcback": [],
   "adventure": [
    "adventure"
   ],

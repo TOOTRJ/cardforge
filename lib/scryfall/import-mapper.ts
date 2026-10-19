@@ -34,6 +34,7 @@ import {
 import {
   DEFAULT_DFC_ICON,
   bodyFor,
+  sagaBackBodyFor,
   colorlessFaceAllowed,
   dfcBodyOf,
   dfcIconFamilyFromEffects,
@@ -564,8 +565,9 @@ export function undrawableSymbolsNotice(
  *   • "walker-face" — either face is a planeswalker (5.13; the back is
  *     dropped, droppedFaceOf);
  *   • "face-type" — a face is not one of wave 1's six face types, or is a
- *     Saga (the saga fronts and the MOM / LCI / FIN saga backs are their own
- *     bodies, 5.5; a battle front stays a battle, 4.21b / 5.5);
+ *     Saga with no body yet (the saga fronts land on theirs and MOM's / LCI's
+ *     Saga backs on the double-faced saga back, 5.5 (b); FIN's saga CREATURE
+ *     backs are 4.5d's; a battle front stays a battle, 4.21b / 5.5);
  *   • "no-body" — the layout has no body for a face (none since 5.1b's
  *     modal pair; a later layout's rows turn a printing onto them by
  *     themselves once `bodyFor` answers);
@@ -690,17 +692,24 @@ export function dfcImportOf(card: ScryfallCard): DfcImportFacts | null {
     }
     return { ...facts, kind: "saga", frontBody: "sagadfcfront", backBody: sagaBack };
   }
-  if (faces.length < 2 || !isDfcFaceType(front.cardType) || !isDfcFaceType(back.cardType) || front.saga || back.saga) {
+  // A Saga BACK (TODO 5.5 (b), PR 2: MOM's five praetors and their promos,
+  // LCI #189 / #296 — an enchantment back on today's ▼) wears the
+  // double-faced saga back; a saga CREATURE back (FIN's summons, 4.5d) or a
+  // Saga back of another family has no body: today's landing.
+  const sagaBack = back.saga ? sagaBackBodyFor(layout, back.cardType, ["Saga"], family, "bordered") : null;
+  if (faces.length < 2 || !isDfcFaceType(front.cardType) || !isDfcFaceType(back.cardType) || front.saga || (back.saga && !sagaBack)) {
     return blocked("face-type");
   }
   // The borderless bodies (TODO 5.7) where the printing wears that look and
-  // both faces have one; else the bordered bodies, as before.
-  const borderlessFront = printedLook === "borderless" ? bodyFor(layout, "front", front.cardType, family, "borderless") : null;
-  const borderlessBack = printedLook === "borderless" ? bodyFor(layout, "back", back.cardType, family, "borderless") : null;
+  // both faces have one; else the bordered bodies, as before. (The saga
+  // back has no borderless body: such a printing lands on the bordered
+  // ones, as a borderless land face does.)
+  const borderlessFront = printedLook === "borderless" && !sagaBack ? bodyFor(layout, "front", front.cardType, family, "borderless") : null;
+  const borderlessBack = printedLook === "borderless" && !sagaBack ? bodyFor(layout, "back", back.cardType, family, "borderless") : null;
   const look: DfcLook = borderlessFront && borderlessBack ? "borderless" : "bordered";
   facts.look = look;
   const frontBody = borderlessFront && borderlessBack ? borderlessFront : bodyFor(layout, "front", front.cardType, family);
-  const backBody = borderlessFront && borderlessBack ? borderlessBack : bodyFor(layout, "back", back.cardType, family);
+  const backBody = borderlessFront && borderlessBack ? borderlessBack : (sagaBack ?? bodyFor(layout, "back", back.cardType, family));
   if (!frontBody || !backBody) return blocked("no-body");
   // A colourless face wears the body's `c` only with an Artifact word (D2);
   // a land face's colour is its body's one master (always allowed). The
