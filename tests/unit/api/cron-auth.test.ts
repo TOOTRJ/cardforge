@@ -2,6 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const s = vi.hoisted(() => ({ adminConfigured: true }));
 vi.mock("@/lib/supabase/admin", () => ({ isAdminConfigured: () => s.adminConfigured }));
+vi.mock("node:crypto", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:crypto")>();
+  return { ...actual, timingSafeEqual: vi.fn(actual.timingSafeEqual) };
+});
+
+import { timingSafeEqual } from "node:crypto";
 
 import { cronRouteGuard, isCronAuthorized } from "@/lib/api/cron-auth";
 
@@ -25,6 +31,17 @@ describe("isCronAuthorized", () => {
     expect(isCronAuthorized(req("Bearer wrong"))).toBe(false);
     expect(isCronAuthorized(req("s3cret"))).toBe(false);
     expect(isCronAuthorized(req())).toBe(false);
+  });
+
+  it("compares in constant time, guarding the length first", () => {
+    const spy = vi.mocked(timingSafeEqual);
+    spy.mockClear();
+    expect(isCronAuthorized(req("Bearer s3creX"))).toBe(false);
+    expect(spy).toHaveBeenCalledTimes(1);
+    // A different length never reaches timingSafeEqual (it would throw).
+    expect(isCronAuthorized(req("Bearer s3cret-and-more"))).toBe(false);
+    expect(isCronAuthorized(req("Bearer é3cret"))).toBe(false);
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 
   it("fails closed when no secret is configured", () => {
