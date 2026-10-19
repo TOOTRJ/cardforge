@@ -104,8 +104,10 @@ describe("framesForKind", () => {
   });
 
   it("gives layout kinds exactly their template family, nothing else", () => {
+    // (…and the double-faced saga front, TODO 5.5 (b): a saga with a back.)
     expect(framesForKind("saga", NO_VERIFIED).map((f) => f.template)).toEqual([
       "saga",
+      "sagadfcfront",
     ]);
     expect(framesForKind("split", NO_VERIFIED).map((f) => f.template)).toEqual([
       "split",

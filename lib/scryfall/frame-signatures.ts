@@ -586,6 +586,10 @@ type Match = {
   /** The look of the bodies the printing lands on (PrintingFacts.dfc.look,
    *  TODO 5.7): `bordered` also for a printing that isn't double-faced. */
   dfcLook?: "bordered" | "borderless";
+  /** The kind the printing lands on as a double-faced card
+   *  (PrintingFacts.dfc.kind): `saga` for a transforming Saga on the
+   *  double-faced saga front (TODO 5.5 (b)). */
+  dfcKinds?: readonly NonNullable<DfcImportFacts["kind"]>[];
   anyOf?: readonly Match[];
   allOf?: readonly Match[];
 };
@@ -761,6 +765,7 @@ function matches(match: Match, ctx: Ctx): boolean {
   if (match.backSubtypesAny && !match.backSubtypesAny.some((s) => facts.backSubtypes.includes(s))) return false;
   if (match.dfcBlocked && (!facts.dfc?.blocked || !match.dfcBlocked.includes(facts.dfc.blocked))) return false;
   if (match.dfcLook && (facts.dfc?.look ?? "bordered") !== match.dfcLook) return false;
+  if (match.dfcKinds && (!facts.dfc?.kind || !match.dfcKinds.includes(facts.dfc.kind))) return false;
   if (match.colorCount) {
     const n = facts.colors.length;
     if (match.colorCount.min !== undefined && n < match.colorCount.min) return false;
@@ -980,7 +985,7 @@ const FAMILIES: Record<
   // through bodyFor). A printing that doesn't land on the bodies (a blocked
   // face) takes its kind's standard instead, as kindFallback does.
   dfc: {
-    produces: ["m15dfclandfront", "m15dfcfront", "m15mdfclandfront", "m15mdfcfront", "m15borderlessdfcfront", "m15borderlessmdfcfront"],
+    produces: ["m15dfclandfront", "m15dfcfront", "m15mdfclandfront", "m15mdfcfront", "m15borderlessdfcfront", "m15borderlessmdfcfront", "sagadfcfront"],
     pick: (ctx) => ctx.facts.dfc?.frontBody ?? kindFallback(ctx),
   },
 };
@@ -1092,7 +1097,8 @@ type GapKey =
   | "tall-box"
   | "znr-type-line"
   | "borderless-dfc-face"
-  | "marvel-variant-face";
+  | "marvel-variant-face"
+  | "nyx-saga-front";
 
 const BORDER_WORD: Record<string, string> = {
   white: "white",
@@ -1240,6 +1246,15 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
     match: { collectors: { msh: [[355, 363], [388, 399]] } },
     reason: "this Marvel printing's faces aren't the borderless title bar (a floating name, a comic-cover back)",
     blockedBy: "5.7d",
+  },
+  // Avatar: the Last Airbender's transforming Sagas (TLA #27 / #61 / #117 /
+  // #145 / #186 and their promos) print the double-faced saga front under
+  // the Nyx starfield (TODO 5.5 (b), measured 2026-10-16); Kamigawa: Neon
+  // Dynasty's — which Scryfall marks `enchantment` too — print it plain.
+  "nyx-saga-front": {
+    match: { sets: ["tla", "ptla"], effectsAny: ["enchantment"] },
+    reason: "this saga's front wears the Nyx starfield, which PipGlyph's double-faced saga front doesn't draw",
+    blockedBy: "5.5",
   },
   "borderless-dfc-face": {
     match: { dfcLook: "bordered" },
@@ -2725,6 +2740,25 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     // The Ixalan parchment land back (5.8) is the most visible miss after an
     // unmodelled layout; the rest are the M15 era's.
     ["layout", "parchment-land-back", ...DFC_BODY_GAPS.filter((gap) => gap !== "layout")],
+  ),
+
+  // --- 5.5 (b): the transforming Saga -----------------------------------------
+  // A transforming Saga the mapper puts on the double-faced saga front
+  // (dfcImportOf: kind `saga` — NEO's 23 and their promos, TLA #117) is
+  // EXACT on it (the `dfc` gap is drawn there), verified on both faces like
+  // every double-faced landing (finalizeImportMatch: short of either it
+  // lands on the one-faced saga frame with a legacy back, as before). A
+  // Saga BACK (MOM's praetors, LCI #189, FIN's summons) and a colourless
+  // Avatar back keep their rules (`layout/2015` + the `dfc` gap;
+  // `dfc/colourless-face`).
+  ...withGaps(
+    {
+      key: "saga/dfc/2015",
+      exactLabel: "Saga (transform front) frame",
+      match: { frames: ["2015"], kinds: ["saga"], dfcKinds: ["saga"] },
+      outcome: { status: "exact", template: { family: "dfc" } },
+    },
+    ["nyx-saga-front", "etched", "border", "universes-beyond", "crown", "two-colour", "two-colour-hybrid"],
   ),
 
   // --- 1.4: layout kinds ---------------------------------------------------

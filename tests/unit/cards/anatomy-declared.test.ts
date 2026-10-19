@@ -59,6 +59,9 @@ describe("where the pieces are declared", () => {
       // The battle (TODO 5.5): the switch is the card's and its ▼ back draws
       // it — the battle front itself draws none.
       "battle",
+      // The double-faced saga front (TODO 5.5 (b)): the same — its back
+      // draws the crown through the card's switch, the front none.
+      "sagadfcfront",
       // The full-art tokens (TODO 4.48's last pieces): their own floating
       // crown band and their split pairs, on all six entries.
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",

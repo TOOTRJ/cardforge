@@ -600,6 +600,12 @@ export type DfcProfile = {
    *  resolveDfcBackFace). The front prints no icon rider (the master paints
    *  its ▲) and no family; it is not a front of the Transform kind. */
   battle?: true;
+  /** The double-faced SAGA front (TODO 5.5 (b)): a transform front that is
+   *  the SAGA kind's frame (the chapter rail, the icon well, the reverse P/T
+   *  at the rail's foot), never a front of the Transform kind; its back is
+   *  required, as on every transform front (the master paints the well),
+   *  and it wears the card's icon family (NEO's fans, TLA's arrows). */
+  saga?: true;
 };
 
 /** The modal strip's two text slots (FrameProfile.flipside) and the painted
@@ -5622,6 +5628,68 @@ const M15DFCLANDBACK: FrameProfile = {
 };
 
 // ---------------------------------------------------------------------------
+// The double-faced saga's FRONT (TODO 5.5 (b); the 5.0 design 2026-10-02):
+// Kamigawa: Neon Dynasty's transforming Sagas (NEO #4 … #227 and their
+// promos, 32 plain printings, the `fandfc` family; TLA's five Avatar sagas
+// print the same body under the Nyx starfield). Card Conjurer's 'Saga
+// (Transform)' pack (packSagaDFC.js, 7 masters: w u b r g m and the land
+// frame, no artifact one) is the 4.21c saga master pixel for pixel but in
+// two places (measured on the masters, every colour): the TITLE BAR — the
+// transform front's, its icon well at the left (rows 89–223; the bar and
+// the well are the transform front pack's within a few px) — and the
+// RIBBON's foot, cut 110 px short (its tip at 1635 px, the regular's at
+// 1745) for the grey reverse-P/T tab notched into the left border. The art
+// window is the saga's (752–1384 × 237–1758 px on all seven).
+// Measured on 23 NEO fronts (Scryfall PNGs scaled to 1500 × 2100):
+//   • the name's ink starts at 250–251 px, as on every left-well face
+//     (DFC_ICON_FACE_TITLE_LEFT_PCT); the closed fan in the well is the
+//     icon rider's (DFC_ICON_RIDER: the well is the transform front's);
+//   • the back's P/T is LEFT-aligned at the tab, not end-aligned: the
+//     digits' ink starts at 125–133 px (median 128) and runs 1679–1682 →
+//     1724–1727 px down (a 46 px block, the transform tab's 61 px digits);
+//     CC's 'Reverse PT' box is 8 / 79.29 / 35 × 3.62 %, 61 px;
+//   • the CHAPTERS end above the tab: the last chapter's ink never passes
+//     ~1655 px (Fable of the Mirror-Breaker #141 1649, Kumano #152 1648,
+//     Teachings of the Kirin #212 1653), the ribbon (and the last badge on
+//     it) stops at 1635 — so the rail's FOOT is the tab's top
+//     (SAGA_DFC_RAIL_FOOT_PX), not the window's bottom: no chapter line
+//     shares a row with the digits, which sit left of the chapters' column
+//     (from 203 px) under the ribbon's cut.
+// An ADDITION (owner rule 2026-09-29): a new template, no stored card, no
+// bump. Set on the PROFILES entry only.
+// ---------------------------------------------------------------------------
+
+/** The double-faced saga front's rail foot, HD px: the reverse-P/T tab's
+ *  top (the rows end above it on every print measured; see above). */
+export const SAGA_DFC_RAIL_FOOT_PX = 1664;
+
+/** The double-faced saga front's reverse P/T: CC's 'Reverse PT' box at the
+ *  rail's foot (CC: 8 / 79.29 / 35 × 3.62 %), LEFT-aligned — the transform
+ *  tab's ink (61 px, #777, no plate). Its left edge and top row put the
+ *  digits where the prints' are (ink from 125–133 px, median 128; rows
+ *  1679–1682 → 1724–1727): on a real HD bake "2/2" inks 128–213 ×
+ *  1679–1727 (tests/unit/render/saga-dfc-front.test.tsx; CC's own 120 px
+ *  edge inked from 124). */
+export const SAGA_DFC_REVERSE_PT: StatSlot = {
+  ...DFC_REVERSE_PT,
+  rect: { topPct: 1665.5 / 21, leftPct: 127 / 15, widthPct: 35, heightPct: 3.62 },
+  align: "start",
+};
+
+const SAGADFCFRONT: FrameProfile = {
+  ...SAGA,
+  label: "Saga (transform front)",
+  dfc: { layout: "transform", role: "front", well: "left", saga: true },
+  title: { ...SAGA.title, rect: { ...SAGA.title.rect, leftPct: DFC_ICON_FACE_TITLE_LEFT_PCT, widthPct: 92.2 - DFC_ICON_FACE_TITLE_LEFT_PCT } },
+  overlays: [DFC_ICON_RIDER],
+  reversePt: SAGA_DFC_REVERSE_PT,
+  chapters: {
+    ...SAGA.chapters!,
+    rect: { ...SAGA.chapters!.rect, heightPct: SAGA_DFC_RAIL_FOOT_PX / 21 - SAGA.chapters!.rect.topPct },
+  },
+};
+
+// ---------------------------------------------------------------------------
 // The modal (MDFC) bodies (TODO 5.1b; design 2026-10-02 §2.2, frames.md
 // §1.5 / §3.5 / §4.3): Card Conjurer's 'Modal Regular' pack over the same
 // CC-framed M15 skeleton as the transform bodies — the drop housing with its
@@ -6348,6 +6416,8 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     reversePt: BATTLE_REVERSE_PT,
   },
   saga: SAGA,
+  // The double-faced saga's front (TODO 5.5 (b)): see SAGADFCFRONT.
+  sagadfcfront: SAGADFCFRONT,
   adventure: ADVENTURE,
   // CC's colourless flip frame is see-through (layout v38, TODO 4.21a; owner
   // decision 2026-09-29): bars at α 191–248, the body between the border and

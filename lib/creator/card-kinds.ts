@@ -31,7 +31,7 @@ import {
   type FrameTemplate,
 } from "@/types/card";
 import { resolveLoyaltyRows } from "@/lib/cards/face-content";
-import { DEFAULT_DFC_ICON, DEFAULT_DFC_LOOK, DFC_FACE_TYPES, bodyFor, dfcBodyOf, type DfcLayout, type DfcLook } from "@/lib/cards/dfc";
+import { DEFAULT_DFC_ICON, DEFAULT_DFC_LOOK, DFC_FACE_TYPES, bodyFor, dfcBodyOf, isSagaFront, type DfcLayout, type DfcLook } from "@/lib/cards/dfc";
 import {
   TOKEN_TYPE_WORDS,
   hasRulesBoxText,
@@ -191,7 +191,10 @@ const RAW_KIND_DEFS: Record<CardKind, Omit<KindDef, "inlineSecondFace">> = {
   saga: {
     label: "Saga",
     cardType: "enchantment",
-    layoutTemplates: ["saga"],
+    // …and the double-faced saga front (TODO 5.5 (b)): a saga with a back
+    // face of its own, picked on the Card step's Faces row (never the
+    // kind's default).
+    layoutTemplates: ["saga", "sagadfcfront"],
     previewTemplate: "saga",
   },
   adventure: {
@@ -1675,6 +1678,28 @@ export function dfcLayoutForKind(kind: CardKind): DfcLayout | null {
   return DFC_KIND_LAYOUT[kind] ?? null;
 }
 
+/** Whether a NEW saga may have two faces (TODO 5.5 (b), the Card step's
+ *  Faces row): the double-faced saga front is published in some colour AND
+ *  so is the default back body (bodyFor with DEFAULT_DFC_ICON — a front
+ *  with no verified back could not be saved with its back), as the
+ *  Transform kind's chip asks (kindHasAvailableFrame). */
+export function sagaTwoFacesAvailable(verifiedKeys: ReadonlySet<string>): boolean {
+  if (!templateHasAvailableColor("sagadfcfront", verifiedKeys)) return false;
+  const back = bodyFor("transform", "back", "creature", DEFAULT_DFC_ICON);
+  return back !== null && templateHasAvailableColor(back, verifiedKeys);
+}
+
+/** The double-faced layout of a CARD of `kind` on `template`: its kind's
+ *  (Transform, Modal) — or, on the Saga kind, the double-faced saga front's
+ *  (TODO 5.5 (b)): a saga on `sagadfcfront` is a transform front with a back
+ *  of its own, a saga on `saga` has none. (The battle's optional back is
+ *  lib/creator/battle-back.ts's.) */
+export function dfcLayoutForCard(kind: CardKind, template: FrameTemplate | string | null | undefined): DfcLayout | null {
+  const own = dfcLayoutForKind(kind);
+  if (own) return own;
+  return kind === "saga" && isSagaFront(template) ? "transform" : null;
+}
+
 /** The front BODY a double-faced kind's card wears for a face type (the
  *  land front for a land, the spell front otherwise), or null for a kind
  *  with no bodies (none since 5.1b's modal pair; a wave-2 kind until its
@@ -1717,8 +1742,9 @@ export function dfcFrontDressesKind(template: FrameTemplate, kind: CardKind): bo
  *  and flip to the back, TODO 5.0b). Null for every other template. */
 export function dfcKindFor(template: FrameTemplate): CardKind | null {
   const body = dfcBodyOf(template);
-  // (The battle front is the Battle kind's own frame — TODO 5.5.)
-  const layout = body && !body.battle ? body.layout : null;
+  // (The battle front is the Battle kind's own frame, the double-faced saga
+  // front the Saga kind's — TODO 5.5.)
+  const layout = body && !body.battle && !body.saga ? body.layout : null;
   if (!layout) return null;
   return (Object.entries(DFC_KIND_LAYOUT) as [CardKind, DfcLayout][]).find(([, l]) => l === layout)?.[0] ?? null;
 }

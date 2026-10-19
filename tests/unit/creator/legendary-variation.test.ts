@@ -52,9 +52,10 @@ function typeFor(template: FrameTemplate): string {
 }
 
 describe("offered where the frame declares a crown — from the PROFILES data", () => {
-  // (The battle — TODO 5.5 — wears the crown on its optional back alone:
-  // its own block below.)
-  const fronts = FRAME_TEMPLATE_VALUES.filter((t) => dfcBodyOf(t)?.role !== "back" && !dfcBodyOf(t)?.battle);
+  // (The battle — TODO 5.5 — wears the crown on its optional back alone,
+  // and so does the double-faced saga front — 5.5 (b): their own blocks
+  // below.)
+  const fronts = FRAME_TEMPLATE_VALUES.filter((t) => dfcBodyOf(t)?.role !== "back" && !dfcBodyOf(t)?.battle && !dfcBodyOf(t)?.saga);
   const crowned = fronts.filter((t) => frameAnatomyOf(t).crown);
   const crownless = fronts.filter((t) => !frameAnatomyOf(t).crown);
 
@@ -126,6 +127,30 @@ describe("the battle (TODO 5.5): the crown is its back's — the ten MOM legenda
   });
 });
 
+describe("the double-faced saga front (TODO 5.5 (b)): the crown is its back's — TLA #117's legendary back", () => {
+  const saga = (over: Partial<LegendaryVariationInput> = {}) =>
+    input({ template: "sagadfcfront", cardType: "enchantment", supertype: "", cost: "{2}{B}", backCardType: "creature", backSupertype: "", hasBackFace: true, ...over });
+
+  it("the saga front draws none, so the entry offers the BACK: it adds the word to the back", () => {
+    expect(legendaryVariationOf(saga())).toEqual({ available: true, reason: null, selected: false, switchShown: false, addsWordTo: "back" });
+    expect(legendaryVariationOf(saga({ backSupertype: "Legendary" }))).toEqual({ available: true, reason: null, selected: true, switchShown: true, addsWordTo: null });
+  });
+
+  it("the back follows the card's family: NEO's fans put it on the 2016–22 back, which draws the crown too", () => {
+    expect(legendaryVariationOf(saga({ dfcIcon: "fan", backSupertype: "Legendary" }))).toMatchObject({ available: true, selected: true });
+  });
+
+  it("the save keeps the switch (normalizeAnatomy); the saga front's renderer rule draws none", () => {
+    expect(normalizeAnatomy({ template: "sagadfcfront", crown: true }, "sagadfcfront", "enchantment")).toMatchObject({ crown: true });
+    expect(
+      crownKeyFor(
+        { colorIdentity: ["black"], cost: "{2}{B}", cardType: "enchantment", supertype: "Legendary", frameStyle: { crown: true } },
+        getFrameProfile("sagadfcfront"),
+      ),
+    ).toBeNull();
+  });
+});
+
 describe("the card type and the colour", () => {
   it.each(["planeswalker", "token", "battle", "emblem"])("a %s never prints the standard crown, even on a frame that draws one", (cardType) => {
     expect(legendaryVariationOf(input({ cardType, supertype: "Legendary" }))).toMatchObject({ available: false, reason: NO_CROWN_REASON });
@@ -133,7 +158,7 @@ describe("the card type and the colour", () => {
 
   it("every colour key of every crowned template is published — or the reason names the colour", () => {
     const colours: ColorIdentity[][] = [["white"], ["blue"], ["black"], ["red"], ["green"], ["multicolor"], ["colorless"], ["white", "blue"], ["white", "blue", "black"]];
-    for (const template of FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown && dfcBodyOf(t)?.role !== "back" && !dfcBodyOf(t)?.battle)) {
+    for (const template of FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown && dfcBodyOf(t)?.role !== "back" && !dfcBodyOf(t)?.battle && !dfcBodyOf(t)?.saga)) {
       for (const colorIdentity of colours) {
         const cardType = typeFor(template);
         const state = legendaryVariationOf(input({ template, cardType, colorIdentity, supertype: "Legendary" }));

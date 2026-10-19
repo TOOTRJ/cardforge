@@ -88,7 +88,8 @@
   { "template":  "m20tokennyxtall", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.51: a NEW template — the full-art token's Nyx dress, tall box: m20tokentall's slots — the capabilities of its plain twin. An addition: no stored card sits on it." },
   { "template":  "m20tokenartifactnyx", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.51: a NEW template — the artifact full-art token's Nyx dress, textless (TEOC #13): m20tokenartifact's slots — the capabilities of its plain twin. An addition: no stored card sits on it." },
   { "template":  "m20tokenartifactnyxtext", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.51: a NEW template — the artifact full-art token's Nyx dress, regular box: m20tokenartifacttext's slots — the capabilities of its plain twin. An addition: no stored card sits on it." },
-  { "template":  "m20tokenartifactnyxtall", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.51: a NEW template — the artifact full-art token's Nyx dress, tall box: m20tokenartifacttall's slots — the capabilities of its plain twin. An addition: no stored card sits on it." }
+  { "template":  "m20tokenartifactnyxtall", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.51: a NEW template — the artifact full-art token's Nyx dress, tall box: m20tokenartifacttall's slots — the capabilities of its plain twin. An addition: no stored card sits on it." },
+  { "template":  "sagadfcfront", "change":  "new-template", "capabilities":  ["chapters"], "reason":  "TODO 5.5 (b): a NEW template — the double-faced saga FRONT (Card Conjurer's 'Saga (Transform)' pack, frames bucket only): the saga's slots (its chapter rail, with a shorter rail foot) with the transform front's icon rider and a left-aligned reverse P/T — the saga's capabilities. Not a front of the Transform kind (DfcProfile.saga: no `dfcFront`): the Saga kind's frame for a saga with a back face. An addition: no stored card sits on it." }
  ],
  "capabilities": {
   "m15": ["pt"],
@@ -146,6 +147,7 @@
   "alphaland": ["pt"],
   "battle": ["defense", "landscape"],
   "saga": ["chapters"],
+  "sagadfcfront": ["chapters"],
   "adventure": ["pt", "adventure"],
   "flip": ["pt", "secondFace"],
   "split": ["landscape", "secondFace"],

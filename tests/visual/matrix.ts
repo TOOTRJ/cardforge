@@ -344,6 +344,10 @@ function contentFor(kind: CardKind, shape: VisualShape, colour: VisualColour, te
                 ],
           },
         },
+        // The double-faced saga front (TODO 5.5 (b)) has a back of its own:
+        // the ▼ back the default family derives (TLA #117's shape; NEO's
+        // fans are the "@fan" cases), so its tab prints the back's P/T.
+        ...(template === "sagadfcfront" ? { back_face: sagaBackFace(shape, colour, "m15dfcback") } : {}),
       };
     case "adventure":
     case "split":
@@ -2123,6 +2127,25 @@ export function visualCases(): VisualCase[] {
   add("m15dfcback", "battle", "b", "long", { suffix: "@crown-battle", back: battleFront, row: dfcSwitches(battleBackRow("b", "long"), { crown: true }) });
   add("m15dfcback", "battle", "w", "short", { suffix: "@battle-nopt", back: battleFront, row: battleBackRow("w", "short", BATTLE_ENCHANTMENT_BACK) });
   add("m15dfcback", "battle", "g", "long", { suffix: "@battle-hd", preset: "hd", back: battleFront, row: battleBackRow("g", "long") });
+  // TODO 5.5 (b): the double-faced saga front — NEW cases (an addition: a
+  // new template, no stored card; the loop above gives it its colour × shape
+  // cases with the ▼ back, TLA #117's shape). NEO's own shape: the fans
+  // (frame_style.dfcIcon "fan" — the closed fan in the well, the back on the
+  // 2016–22 back with the open fan), a full rail beside the tab, the tab
+  // empty under a back with no P/T, a wide P/T, the HD size; and the BACK
+  // of each (the 2016–22 and ▼ backs behind a saga front).
+  for (const colour of ["w", "r", "b"] as const) {
+    add("sagadfcfront", "saga", colour, "short", { suffix: "@fan", row: sagaFanRow(colour, "short") });
+  }
+  add("sagadfcfront", "saga", "g", "long", { suffix: "@fan", row: sagaFanRow("g", "long") });
+  add("sagadfcfront", "saga", "u", "long", { suffix: "@fan-hd", preset: "hd", row: sagaFanRow("u", "long") });
+  add("sagadfcfront", "saga", "w", "short", { suffix: "@fan-nopt", row: sagaFanRow("w", "short", SAGA_AURA_BACK) });
+  add("sagadfcfront", "saga", "r", "short", { suffix: "@fan-wide-pt", row: sagaFanRow("r", "short", { power: "10", toughness: "10" }) });
+  const sagaFront = { frontTemplate: "sagadfcfront" as FrameTemplate };
+  for (const colour of ["w", "r"] as const) {
+    add("m15dfcbackleft", "saga", colour, "short", { suffix: "@saga", back: sagaFront, row: sagaFanRow(colour, "short") });
+    add("m15dfcback", "saga", colour, "short", { suffix: "@saga", back: sagaFront });
+  }
   add("m15", "creature", "w", "long", { suffix: "@centred-hd", preset: "hd", row: centredStyle("m15") });
   // TODO 4.30: the white border (frame_style.border — an ADDITION, opt-in
   // per card; no stored card has the key, so these are NEW cases and every
@@ -2318,6 +2341,68 @@ const BATTLE_ENCHANTMENT_BACK: Partial<NonNullable<CardRowForBake["back_face"]>>
   subtypes: [],
   rules_text: "Creatures you control get +1/+1.",
   flavor_text: null,
+  power: null,
+  toughness: null,
+};
+
+/** A double-faced saga's back (TODO 5.5 (b)) on `body`: NEO #141's
+ *  Reflection of Kiki-Jiki (an Enchantment Creature 2/2) short, a long
+ *  legendary back (TLA #117's Fire Lord Sozin shape, 5/5) long. */
+function sagaBackFace(shape: VisualShape, colour: VisualColour, body: FrameTemplate): CardRowForBake["back_face"] {
+  const long = shape === "long";
+  return {
+    title: long ? "Fire Lord Sozin, Herald of the Comet's Long Shadow" : "Reflection of Kiki-Jiki",
+    cost: "",
+    card_type: "creature",
+    supertype: long ? "Legendary" : "Enchantment",
+    subtypes: long ? ["Human", "Noble"] : ["Goblin", "Shaman"],
+    rules_text: long ? LONG_RULES : "{1}, {T}: Create a token that's a copy of another target nonlegendary creature you control, except it has haste. Sacrifice it at the beginning of the next end step.",
+    flavor_text: null,
+    power: long ? "5" : "2",
+    toughness: long ? "5" : "2",
+    frame_style: { template: body },
+    color_identity: IDENTITY[colour],
+    art_url: "ART2",
+    artist_credit: "Visual Regression",
+  } as unknown as CardRowForBake["back_face"];
+}
+
+/** A saga row on the double-faced saga front with NEO's fans: the closed
+ *  fan in the well (frame_style.dfcIcon "fan"), the back on the 2016–22
+ *  back the family derives. Long: Fable of the Mirror-Breaker's full rail
+ *  (a reminder, three long chapters) beside the tab. `over` replaces the
+ *  back's content. */
+function sagaFanRow(colour: VisualColour, shape: VisualShape, over: Partial<NonNullable<CardRowForBake["back_face"]>> = {}): Partial<CardRowForBake> {
+  const long = shape === "long";
+  return {
+    frame_style: { template: "sagadfcfront", finish: "regular", dfcIcon: "fan" } as CardRowForBake["frame_style"],
+    ...(long
+      ? {
+          title: "Fable of the Mirror-Breaker",
+          face_content: {
+            v: 1,
+            saga: {
+              intro: "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)",
+              chapters: [
+                { numerals: [1], text: "Create a 2/2 red Goblin Shaman creature token with “Whenever this creature attacks, create a Treasure token.”" },
+                { numerals: [2], text: "You may discard up to two cards. If you do, draw that many cards." },
+                { numerals: [3], text: "Exile this Saga, then return it to the battlefield transformed under your control." },
+              ],
+            },
+          },
+        }
+      : {}),
+    back_face: { ...(sagaBackFace(shape, colour, "m15dfcbackleft") as object), ...over } as CardRowForBake["back_face"],
+  } as Partial<CardRowForBake>;
+}
+
+/** A saga's back with no P/T (an Aura): the front's tab prints empty. */
+const SAGA_AURA_BACK: Partial<NonNullable<CardRowForBake["back_face"]>> = {
+  title: "Imperial Oath",
+  card_type: "enchantment",
+  supertype: null,
+  subtypes: ["Aura"],
+  rules_text: "Enchant creature\nEnchanted creature gets +2/+2.",
   power: null,
   toughness: null,
 };

@@ -94,6 +94,23 @@ export function isBattleFront(template: FrameTemplate | string | null | undefine
   return dfcBodyOf(template)?.battle === true;
 }
 
+/** The template is the double-faced SAGA front (TODO 5.5 (b);
+ *  DfcProfile.saga): the Saga kind's frame for a saga with a back face of
+ *  its own — a transform front (the back on the body the card's family
+ *  derives), never a front of the Transform kind. */
+export function isSagaFront(template: FrameTemplate | string | null | undefined): boolean {
+  return dfcBodyOf(template)?.saga === true;
+}
+
+/** The template is a FRONT body that belongs to a kind of its own — the
+ *  battle (5.5 (a)) or the double-faced saga (5.5 (b)) — never a front of
+ *  the Transform kind: `frontBodyFor`, `dfcKindFor` and the kind anatomy's
+ *  `dfcFront` leave it out. */
+export function isOwnKindFront(template: FrameTemplate | string | null | undefined): boolean {
+  const body = dfcBodyOf(template);
+  return body?.role === "front" && (body.battle === true || body.saga === true);
+}
+
 /** The card on `frontTemplate` is TWO-FACED with this back: a DFC front
  *  body with a back — on the battle front (TODO 5.5, whose back is
  *  optional) only a back that names a BODY of its own; a legacy back there
@@ -151,7 +168,7 @@ export function frontBodyFor(
   const look = dfcLookOf(backTemplate);
   const fronts = FRAME_TEMPLATE_VALUES.filter((template) => {
     const candidate = dfcBodyOf(template);
-    return candidate?.layout === body.layout && candidate.role === "front" && !candidate.battle && dfcLookOf(template) === look;
+    return candidate?.layout === body.layout && candidate.role === "front" && !candidate.battle && !candidate.saga && dfcLookOf(template) === look;
   });
   const landFront = frontFaceType === "land";
   return (
@@ -225,6 +242,9 @@ export function dfcIconFamilyFromEffects(effects: readonly string[] | null | und
  *  in the table) is a body by role but has no row here. */
 export function isDeclaredDfcBody(template: FrameTemplate | string | null | undefined): boolean {
   if (!template) return false;
+  // The double-faced saga's front (TODO 5.5 (b)): declared, but no row of
+  // the table — the Saga kind picks it, never a face type.
+  if (template === "sagadfcfront") return true;
   for (const entry of [...Object.values(DFC_BODIES), ...Object.values(DFC_BORDERLESS_BODIES)]) {
     if (typeof entry === "string" ? entry === template : Object.values(entry).includes(template as FrameTemplate)) return true;
   }

@@ -192,6 +192,9 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   modern: ALL_BORDER,
   modernland: ALL_BORDER,
   saga: ALL_BORDER,
+  // The double-faced saga front (TODO 5.5 (b)): the saga master with the
+  // transform title bar and the tab — the same border.
+  sagadfcfront: ALL_BORDER,
   adventure: ALL_BORDER,
   flip: ALL_BORDER,
   aftermath: ALL_BORDER,

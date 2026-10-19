@@ -142,7 +142,7 @@ import {
   BackFaceStatsFields,
   BackFaceTypeSection,
 } from "@/components/creator/panels/back-face-panels";
-import { BattleBackSection, DfcIconFamilySection } from "@/components/creator/panels/dfc-setup-sections";
+import { BattleBackSection, DfcIconFamilySection, SagaFacesSection } from "@/components/creator/panels/dfc-setup-sections";
 import { FaceScope } from "@/components/creator/field-group";
 import { FaceSwitch, FaceSwitchNote, FaceThumb, faceTabId } from "@/components/creator/face-switch";
 import { FacePreview } from "@/components/creator/face-preview";
@@ -263,6 +263,8 @@ import {
   typeWordFrameFor,
   KIND_DEFS,
   dfcFrontBodyFor,
+  dfcLayoutForCard,
+  sagaTwoFacesAvailable,
   dfcLayoutForKind,
   framesForKind,
   type CardKind,
@@ -277,6 +279,7 @@ import {
   dfcIconFamilyForBackBody,
   dfcLookOf,
   isBattleFront,
+  isSagaFront,
   isDfcBackBody,
   templateHasBackFace,
   withTransformBackShape,
@@ -284,6 +287,7 @@ import {
 } from "@/lib/cards/dfc";
 import { dfcIconOf } from "@/lib/cards/faces";
 import { BATTLE_ONE_FACE_NOTE, battleBackBodyFor, battleBackUnavailableNote } from "@/lib/creator/battle-back";
+import { sagaTwoFacesColourMove } from "@/lib/creator/saga-faces";
 import { dfcAdoptionOffer } from "@/lib/cards/dfc-adopt";
 // The emblem kind (TODO 6.23): its entry values and the hidden rarity chips.
 import {
@@ -1045,12 +1049,19 @@ export function CardCreatorForm({
   const battleBackNote = battleCard
     ? (battleOfferNote ?? (watched.has_back_face ? null : BATTLE_ONE_FACE_NOTE))
     : null;
+  // A saga's faces (TODO 5.5 (b)): two on the double-faced saga front, which
+  // a NEW saga is offered once it and the default back body are published
+  // in some colour (the Card step's Faces row).
+  const sagaTwoFaced = isSagaFront(watched.frame_style?.template);
+  const sagaTwoFacesOffered = sagaTwoFacesAvailable(battleVerifiedKeys);
   const dfcLayout = templateHasBackFace(watched.frame_style?.template)
     ? battleCard
       ? battleBackNote === null
         ? "transform"
         : null
-      : dfcLayoutForKind(kind)
+      : // (A saga on the double-faced saga front — TODO 5.5 (b) — is a
+        // transform front: dfcLayoutForCard.)
+        dfcLayoutForCard(kind, watched.frame_style?.template)
     : null;
   const dfcFamily: DfcIconFamily = dfcIconOf({ frameStyle: watched.frame_style });
   const dfcBackBody = dfcLayout
@@ -1846,6 +1857,9 @@ export function CardCreatorForm({
   // promises "switch back to Transform … it comes back", and a half removed
   // from a Split card on the way must not cost the Transform back its slot.
   const stashedSecondPartRef = useRef<Partial<Record<CardKind, FormValues["back_face"]>>>({});
+  /** The next change of frame between a saga's one- and two-faced frames
+   *  (TODO 5.5 (b)) is the maker's pick — the Faces row or a Frame tile. */
+  const sagaFramePickRef = useRef(false);
 
   const applyKindPatch = (patch: KindChangePatch, options: { byUser?: boolean } = {}) => {
     const { currentColorKey, resolution } = resolveKindPatchFrame(patch);
@@ -2096,6 +2110,58 @@ export function CardCreatorForm({
       `A double-faced ${CARD_TYPE_LABEL[cardType || "creature"] ?? "card"} can't be colourless — switched the colour to ${colorWord(key)}.`,
     );
   };
+  /** A saga's faces (TODO 5.5 (b), the Card step's Faces row): "Two faces"
+   *  moves the card onto the double-faced saga front — in the current
+   *  colour where it is published, else in one it is (and says so), as a
+   *  frame tile does — and starts its icon family; "One face" goes back to
+   *  the saga frame. The back itself comes and goes with the frame (the
+   *  effect beside the forced back face). */
+  const handleSagaFaces = (two: boolean) => {
+    if (two === sagaTwoFaced) return;
+    const target: FrameTemplate = two ? "sagadfcfront" : "saga";
+    const verifiedKeys = new Set(verifiedFrameKeys);
+    const currentColorKey = pickFrameColorKey(getValues("color_identity")) as FrameColorKey;
+    // A double-faced saga needs a colour (lib/creator/saga-faces.ts; owner
+    // Round 73): a colourless saga moves to the first colour BOTH faces are
+    // published in, and says so. Where no colour has both, the front is
+    // taken where it is published (the frame is the pick, as a tile's) and
+    // the line says the saga can't be saved with two faces until one does —
+    // leaveColourlessDfcFront's rule, in a saga's words.
+    const move =
+      two && currentColorKey === "c"
+        ? sagaTwoFacesColourMove(verifiedKeys, dfcIconOf({ frameStyle: getValues("frame_style") }))
+        : null;
+    const resolution = resolvePublishedFrame({
+      kind: "saga",
+      candidates: [target],
+      colorKey: move?.key ?? currentColorKey,
+      verifiedKeys,
+      // The frame is what the maker picked: never another frame in its place.
+      prefer: "colour",
+    });
+    if (resolution.status === "unavailable" || resolution.template !== target) {
+      toast.info(`${describeFrame(target)} isn't verified yet — keeping the current frame.`);
+      return;
+    }
+    sagaFramePickRef.current = true;
+    setFrameSubstitution(null);
+    clearErrors(["frame_style", "back_face", "color_identity"]);
+    if (two && !getValues("frame_style.dfcIcon")) {
+      setValue("frame_style.dfcIcon", DEFAULT_DFC_ICON, { shouldDirty: true });
+    }
+    setValue("frame_style.template", resolution.template, { shouldDirty: true });
+    if (resolution.colorKey !== currentColorKey) {
+      setValue("color_identity", [colorIdentityForKey(resolution.colorKey)], { shouldDirty: true });
+    }
+    if (move) {
+      toast.info(move.message);
+    } else if (resolution.status === "colour-switched") {
+      toast.info(
+        `${describeFrame(target)} isn't verified in ${colorWord(resolution.fromColorKey)} yet — switched the colour to ${colorWord(resolution.colorKey)}.`,
+      );
+    }
+    if (!two) setPreviewFace("front");
+  };
   /** A double-faced card's FRONT face type (TODO 5.2, the Card step's
    *  face-type row): the type is written and the card moves onto the body
    *  for it — the land front for a land, the spell front for the rest — in
@@ -2212,6 +2278,42 @@ export function CardCreatorForm({
       setValue("has_back_face", true);
     }
   }, [currentTemplate, watched.has_back_face, setValue]);
+  // A saga's back comes and goes with the double-faced saga front (TODO
+  // 5.5 (b); the Faces row or a Frame tile): onto it, an untouched back
+  // starts as a creature (NEO's are) — or the one this visit put aside comes
+  // back; off it, the back is put aside for the visit and the saga saves
+  // one-faced, never as a legacy back. Only a frame the MAKER picked here
+  // (sagaFramePickRef): a stored card opens on its own frame and keeps its
+  // faces, and an import's or an AI fill's landing brings its own back.
+  const lastSagaFrontRef = useRef(isSagaFront(currentTemplate));
+  useEffect(() => {
+    const now = isSagaFront(currentTemplate);
+    if (lastSagaFrontRef.current === now) return;
+    lastSagaFrontRef.current = now;
+    const picked = sagaFramePickRef.current;
+    sagaFramePickRef.current = false;
+    if (!picked || isRevise || kindFromCard(getValues("card_type"), currentTemplate) !== "saga") return;
+    if (now) {
+      const stashed = stashedSecondPartRef.current.saga;
+      if (stashed && isBlankBackFace(getValues("back_face"))) {
+        setValue("back_face", stashed, { shouldDirty: true });
+        delete stashedSecondPartRef.current.saga;
+      } else if (isBlankBackFace(getValues("back_face"))) {
+        setValue("back_face", { ...EMPTY_BACK_FACE, card_type: "creature" }, { shouldDirty: true });
+      }
+      return;
+    }
+    const leaving = getValues("back_face");
+    if (!isBlankBackFace(leaving)) {
+      stashedSecondPartRef.current.saga = {
+        ...leaving,
+        art_position: { ...leaving.art_position },
+        color_identity: [...leaving.color_identity],
+      };
+    }
+    setValue("has_back_face", false, { shouldDirty: true });
+    setValue("back_face", EMPTY_BACK_FACE, { shouldDirty: true });
+  }, [currentTemplate, isRevise, getValues, setValue]);
 
   // Symbol insertion for the rules editors (front + back): the PipTextEditor
   // owns the caret and drops the pip in place, then reports the new
@@ -2229,6 +2331,7 @@ export function CardCreatorForm({
   // dirty. Strings are passed through as-is; the color_identity readonly
   // tuple from the schema is widened to a mutable array.
   const handleAIPatch = (rawPatch: CardFieldPatch) => {
+    sagaFramePickRef.current = false;
     // The idea's text as print sets it (TODO 6.11) — what the save stores.
     const patch = printTypographyPatch(rawPatch);
     const setIfPresent = (
@@ -2332,6 +2435,8 @@ export function CardCreatorForm({
     // Scryfall's Oracle text is typed with straight quotes; the card prints
     // curly ones (TODO 6.11). Converted as it lands, as the save would.
     const patch = printTypographyPatch(rawPatch);
+    // (An import brings its own faces: never a saga Faces pick — TODO 5.5 (b).)
+    sagaFramePickRef.current = false;
     const setIfPresent = (key: keyof FormValues, value: string | undefined) => {
       if (value === undefined) return;
       setValue(key, value as never, { shouldDirty: true });
@@ -2806,7 +2911,7 @@ export function CardCreatorForm({
         if (family) setValue("frame_style.dfcIcon", family, { shouldDirty: true });
         setValue("has_back_face", true, { shouldDirty: true });
         setValue("back_face.color_identity", [colorIdentityForKey(walkthrough.colorKey)], { shouldDirty: true });
-      } else if (dfcLayoutForKind(walkthrough.kind) === "transform" && !getValues("frame_style.dfcIcon")) {
+      } else if (dfcLayoutForCard(walkthrough.kind, walkthrough.cardTemplate) === "transform" && !getValues("frame_style.dfcIcon")) {
         setValue("frame_style.dfcIcon", DEFAULT_DFC_ICON, { shouldDirty: true });
       }
       // The combo under test is the frame: the text box never follows the
@@ -3218,7 +3323,7 @@ export function CardCreatorForm({
         ? battleBackOffered && values.has_back_face
           ? "transform"
           : null
-        : dfcLayoutForKind(kindFromCard(values.card_type, submitTemplate))
+        : dfcLayoutForCard(kindFromCard(values.card_type, submitTemplate), submitTemplate)
       : null;
     const submitBackBody = submitDfcLayout
       ? submitBattle
@@ -4084,6 +4189,9 @@ export function CardCreatorForm({
                 verifiedFrameKeys={verifiedFrameKeys}
                 frameSubstitution={frameSubstitution}
                 onFramePick={({ variation }) => {
+                  // (A saga's Frame tile between its one- and two-faced
+                  // frames moves its back with it — TODO 5.5 (b).)
+                  sagaFramePickRef.current = true;
                   setFrameSubstitution(null);
                   // A variation picked by hand sticks (owner decision 5); a
                   // frame picked in the Frame section follows the text again.
@@ -4116,8 +4224,10 @@ export function CardCreatorForm({
                 onLandModeChange={handleLandModeChange}
                 onDfcFaceTypePick={handleDfcFaceTypePick}
                 // A NEW battle's faces (TODO 5.5 (a), owner Round 68): its
-                // back is optional — "One face" saves it alone.
-                battleFaces={
+                // back is optional — "One face" saves it alone. A NEW
+                // saga's (5.5 (b)): "Two faces" is the double-faced saga
+                // front, with its icon family under it.
+                facesRow={
                   battleCard && battleBackOffered && !isRevise ? (
                     <BattleBackSection
                       on={Boolean(watched.has_back_face)}
@@ -4127,6 +4237,23 @@ export function CardCreatorForm({
                         if (!on) setPreviewFace("front");
                       }}
                     />
+                  ) : kind === "saga" && !isRevise ? (
+                    <>
+                      <SagaFacesSection
+                        two={sagaTwoFaced}
+                        twoAvailable={sagaTwoFacesOffered}
+                        onChange={handleSagaFaces}
+                      />
+                      {sagaTwoFaced ? (
+                        <DfcIconFamilySection
+                          family={watched.frame_style?.dfcIcon ?? null}
+                          onChange={(next) => {
+                            clearErrors("frame_style");
+                            setValue("frame_style.dfcIcon", next, { shouldDirty: true });
+                          }}
+                        />
+                      ) : null}
+                    </>
                   ) : null
                 }
                 // The Back face tab (TODO 5.14): the back's own type and

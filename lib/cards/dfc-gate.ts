@@ -38,7 +38,10 @@
 //     sent (its content drawn on the battle frame, as every battle import
 //     before 5.5 stored it); a back that names a body (or whose stored back
 //     has one) is a back of its own and meets every rule above, on the
-//     ▼ back (the battle wears no family: always the default).
+//     ▼ back (the battle wears no family: always the default);
+//   • the double-faced SAGA front (TODO 5.5 (b), DfcProfile.saga) is a
+//     transform front like any other — its back required, on the body the
+//     card's family derives — that dresses a saga (an enchantment) only.
 //
 // Pure: no I/O. The caller fetches the verified keys and decides whether an
 // admin's frame preview skips verification.
@@ -142,6 +145,7 @@ export const DFC_COLORLESS_FRONT_NEEDS_ARTIFACT =
 export const DFC_FRONT_TYPE_REFUSED =
   "A double-faced card's front can be a creature, artifact, enchantment, land, instant or sorcery.";
 export const DFC_BATTLE_FRONT_TYPE_REFUSED = "The battle frame dresses battles only.";
+export const DFC_SAGA_FRONT_TYPE_REFUSED = "The double-faced saga frame dresses sagas only.";
 export const DFC_FRONT_BODY_MISMATCH =
   "This double-faced frame doesn't dress that card type — the land frame is for lands, the other for everything else.";
 
@@ -168,6 +172,9 @@ export function dfcFrontTypeError(
   // the kind gate says of it already (KIND_REQUIRES: the defense shield on
   // the landscape card), said here too so the two never disagree.
   if (body.battle) return cardType === "battle" ? null : DFC_BATTLE_FRONT_TYPE_REFUSED;
+  // …and the double-faced saga front (TODO 5.5 (b)) a saga — the Saga
+  // kind's card type (LAYOUT_KIND_CARD_TYPES.saga: an enchantment).
+  if (body.saga) return cardType === "enchantment" ? null : DFC_SAGA_FRONT_TYPE_REFUSED;
   if (!isDfcFaceType(cardType)) return DFC_FRONT_TYPE_REFUSED;
   if (Boolean(body.land) !== (cardType === "land")) return DFC_FRONT_BODY_MISMATCH;
   return null;

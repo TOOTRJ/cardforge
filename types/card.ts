@@ -505,6 +505,13 @@ export const FRAME_TEMPLATE_VALUES = [
   "alphaland",
   "battle",
   "saga",
+  // The double-faced saga's FRONT (TODO 5.5 (b), Card Conjurer 'Saga
+  // (Transform)', packSagaDFC.js): Kamigawa: Neon Dynasty's transforming
+  // Sagas — the saga body with the transform icon well in its title bar and
+  // the back's P/T in the tab at the rail's foot. The Saga kind's frame for a
+  // saga with a back face of its own (lib/cards/dfc.ts, DfcProfile.saga);
+  // the back is a transform back body. An addition: no stored card changes.
+  "sagadfcfront",
   "adventure",
   "flip",
   "split",
@@ -656,6 +663,7 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   alphaland: "Land",
   battle: "Battle (Siege)",
   saga: "Saga",
+  sagadfcfront: "Saga (transform front)",
   adventure: "Adventure",
   flip: "Flip",
   split: "Split",
@@ -792,6 +800,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   m15borderlessmdfcback: "m15",
   battle: "m15",
   saga: "m15",
+  sagadfcfront: "m15",
   adventure: "m15",
   flip: "m15",
   split: "m15",

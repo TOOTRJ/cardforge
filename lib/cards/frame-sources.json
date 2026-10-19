@@ -15297,6 +15297,53 @@
       "the pack's masks (Pinline, Title, Type, Frame, Banner, Banner (Right), Text, Text (Right), Border) are importer inputs for the two-colour saga's pair masters (TODO 4.6f), recorded as maskInputs and never published; its 'Banner Pinstripe (Multicolored)' (sagaMidStripe.png) and 'Holo Stamp' addons are not drawn (4.6f / 4.9d)"
     ]
   },
+  "sagadfcfront": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packSagaDFC.js 'Saga (Transform)' (groupSaga-1.js; versionSaga.js draws the chapter badges and dividers)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, pixels copied 1:1 (no resample), corners rounded to the importer radius",
+    "colors": {
+      "w": [
+        "img/frames/saga/dfc/w.png"
+      ],
+      "u": [
+        "img/frames/saga/dfc/u.png"
+      ],
+      "b": [
+        "img/frames/saga/dfc/b.png"
+      ],
+      "r": [
+        "img/frames/saga/dfc/r.png"
+      ],
+      "g": [
+        "img/frames/saga/dfc/g.png"
+      ],
+      "c": [
+        "img/frames/saga/dfc/l.png"
+      ],
+      "m": [
+        "img/frames/saga/dfc/m.png"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/saga/dfc/b.png",
+      "img/frames/saga/dfc/g.png",
+      "img/frames/saga/dfc/l.png",
+      "img/frames/saga/dfc/m.png",
+      "img/frames/saga/dfc/r.png",
+      "img/frames/saga/dfc/u.png",
+      "img/frames/saga/dfc/w.png"
+    ],
+    "notes": [
+      "source: CC 'Saga (Transform)' pack (packSagaDFC.js, 7 masters): the 4.21c saga master pixel for pixel but in two places — the title bar is the transform front's (its icon well at the left, rows 89–223) and the ribbon is cut 110 px short (its tip at 1635 px) for the grey reverse-P/T tab notched into the left border; the art window is the saga's (752–1384 × 237–1758 px on all seven)",
+      "colourless = the pack's 'Land Frame' (saga/dfc/l.png), as the saga's (owner decision 2026-09-29); the pack has no artifact frame",
+      "the icon in the well is the profile's icon rider (DFC_ICON_RIDER, the card's family — NEO's closed fan, TLA's ▲): the well is painted empty, as on the transform front's masters; the back's P/T is text (SAGA_DFC_REVERSE_PT, left-aligned at the tab, as the prints and the pack's 'Reverse PT' set it)",
+      "the chapter badge and the row divider are the saga's published pieces (saga/chapter/badge.png, saga/chapter/divider.png); the pack's masks (Pinline, Title — the transform pack's maskTitle.png — Type, Frame, Banner, Banner (Right), Rules, Rules (Right), Border) and its 'Holo Stamp' are not used and not published"
+    ]
+  },
   "split": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",

@@ -159,6 +159,9 @@ const STATION_DRESSES: readonly string[] = [
   "m20tokenartifactnyx",
   "m20tokenartifactnyxtext",
   "m20tokenartifactnyxtall",
+  // …and the double-faced saga front (TODO 5.5 (b)) — pinned in
+  // tests/unit/creator/saga-dfc-front.test.ts and the dfc import tests.
+  "sagadfcfront",
 ];
 function withoutStationDresses(dump: Dump): Dump {
   const named = (text: string) => STATION_DRESSES.some((t) => text === t || text.startsWith(`${t}|`));

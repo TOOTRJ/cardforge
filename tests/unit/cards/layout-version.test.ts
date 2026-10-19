@@ -431,6 +431,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
   "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
   // TODO 4.51's Nyx dress of the full-art tokens.
   "m20tokennyx", "m20tokennyxtext", "m20tokennyxtall", "m20tokenartifactnyx", "m20tokenartifactnyxtext", "m20tokenartifactnyxtall",
+  // TODO 5.5 (b)'s double-faced saga front.
+  "sagadfcfront",
 ];
 /** The modal bodies added after v53 (TODO 5.7's borderless pair): the v49
  *  and v53 frozen lists never name them. */
@@ -459,6 +461,8 @@ const POST_V36_TEMPLATES: readonly string[] = [
   "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
   // TODO 4.51's Nyx dress of the full-art tokens.
   "m20tokennyx", "m20tokennyxtext", "m20tokennyxtall", "m20tokenartifactnyx", "m20tokenartifactnyxtext", "m20tokenartifactnyxtall",
+  // TODO 5.5 (b)'s double-faced saga front.
+  "sagadfcfront",
 ];
 
 describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
@@ -818,6 +822,8 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
       // …and TODO 4.51's Nyx dress of the full-art tokens.
       "m20tokennyx", "m20tokennyxtext", "m20tokennyxtall", "m20tokenartifactnyx", "m20tokenartifactnyxtext", "m20tokenartifactnyxtall",
+      // …and TODO 5.5 (b)'s double-faced saga front.
+      "sagadfcfront",
     ];
     // An EXISTING template that joined brought its own bump: the battle
     // (TODO 4.21b), with layout v43 — its Card Conjurer master and the
@@ -1023,7 +1029,11 @@ describe("v33 — rules text laid out by its real lines (TODO 3.29)", () => {
     const newTextless = ["m20token", "m20tokenartifact", "m20tokennyx", "m20tokenartifactnyx", "m15textless", "m15textlessland"];
     expect([...V33_SCOPE_TEMPLATES.textless, ...newTextless].sort()).toEqual(all.filter((t) => getFrameProfile(t).textless).sort());
     for (const t of newTextless) expect(V33_SCOPE_TEMPLATES.textless, t).not.toContain(t);
-    expect([...V33_SCOPE_TEMPLATES.chapters].sort()).toEqual(all.filter((t) => getFrameProfile(t).chapters).sort());
+    // A NEW chapter-rail template no card was ever baked on needs none
+    // either: TODO 5.5 (b)'s double-faced saga front.
+    const newChapters = ["sagadfcfront"];
+    expect([...V33_SCOPE_TEMPLATES.chapters, ...newChapters].sort()).toEqual(all.filter((t) => getFrameProfile(t).chapters).sort());
+    for (const t of newChapters) expect(V33_SCOPE_TEMPLATES.chapters, t).not.toContain(t);
   });
 
   it("is verification-neutral: a v32 / v31 / v30 frame_reviews tick stays fresh on every template", async () => {

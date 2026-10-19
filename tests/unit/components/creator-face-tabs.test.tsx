@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { GameSystem } from "@/types/card";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
+import { SAGA_TWO_FACES_COLOURLESS, SAGA_TWO_FACES_NEEDS_COLOUR } from "@/lib/creator/saga-faces";
 
 // ---------------------------------------------------------------------------
 // Face tabs, part 1 (TODO 5.14, owner round 46) — Transform and Modal
@@ -857,5 +858,134 @@ describe("cards without the switch, and the battle's greyed tab", () => {
     await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
     const payload = actions.createCardAction.mock.calls[0][0] as { back_face?: { title?: string; frame_style?: { template?: string } } };
     expect(payload.back_face).toMatchObject({ title: "Serra Faithkeeper", frame_style: { template: "m15dfcback" } });
+  });
+});
+
+// TODO 5.5 (b): a saga's faces — "Two faces" is the double-faced saga front
+// (the Saga kind's second frame), its back a face of its own on the Back
+// face tab; "One face" the saga as on main.
+describe("the double-faced saga (TODO 5.5 (b))", () => {
+  const SAGA_FRONT = EVERY_COLOUR.map((key) => frameComboKey("sagadfcfront", key));
+  const sagaFaces = () => screen.getByRole("radiogroup", { name: "Saga faces" });
+  const sagaChip = (label: RegExp) =>
+    Array.from(sagaFaces().querySelectorAll("[role='radio']")).find((el) => label.test(el.textContent ?? "")) as HTMLElement;
+
+  it("a new saga starts with ONE face — no switch; “Two faces” is off with its reason until the front is published", async () => {
+    renderForm();
+    await pickKind(/^Saga/);
+    await goTo(/^card/i);
+    expect(sagaChip(/^One face/).getAttribute("aria-checked")).toBe("true");
+    expect(sagaChip(/^Two faces/).getAttribute("aria-disabled")).toBe("true");
+    expect(sagaChip(/^Two faces/).textContent).toMatch(/Frames awaiting verification/);
+    expect(screen.queryByTestId("face-switch")).toBeNull();
+  });
+
+  it("“Two faces”: the double-faced saga front, the icon pairs, a Back face tab of its own — and the save sends the back on the body the family derives", async () => {
+    actions.createCardAction.mockResolvedValue({ ok: false, fieldErrors: { title: "stop here" } });
+    renderForm([...VERIFIED, ...SAGA_FRONT]);
+    await pickKind(/^Saga/);
+    await goTo(/^card/i);
+    await click(sagaChip(/^Two faces/));
+    expect(sagaChip(/^Two faces/).getAttribute("aria-checked")).toBe("true");
+    // A new saga is colourless: two faces need a colour (owner Round 73) —
+    // the first one both faces are published in, said plainly.
+    expect(toast.info).toHaveBeenCalledWith("A double-faced saga needs a colour — switched the colour to white.");
+    expect(screen.getByTestId("dfc-icon-family")).toBeTruthy();
+    expect(tab(/^Saga/).getAttribute("aria-selected")).toBe("true");
+    const back = tab(/^Back face/);
+    expect(back.getAttribute("aria-disabled")).toBeNull();
+    await click(back);
+    expect(screen.getByTestId("dfc-back-type")).toBeTruthy();
+    await goTo(/^identity/i);
+    await act(async () => {
+      fireEvent.change(named("back_face.title")!, { target: { value: "Reflection of Kiki-Jiki" } });
+    });
+    await click(tab(/^Saga/));
+    await act(async () => {
+      fireEvent.change(named("title")!, { target: { value: "Fable of the Mirror-Breaker" } });
+    });
+    const props = screen.getAllByTestId("card-preview").map(propsOf);
+    expect(props.some((p) => (p as { frameStyle?: { template?: string } }).frameStyle?.template === "sagadfcfront")).toBe(true);
+    await goTo(/^publish/i);
+    await click(screen.getByTestId("save-as-draft"));
+    await click(screen.getByRole("button", { name: /^Save$/ }));
+    await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
+    const payload = actions.createCardAction.mock.calls[0][0] as {
+      card_type: string;
+      frame_style: { template: string; dfcIcon?: string };
+      back_face?: { title?: string; card_type?: string; frame_style?: { template?: string } };
+    };
+    expect(payload.card_type).toBe("enchantment");
+    expect(payload.frame_style).toMatchObject({ template: "sagadfcfront", dfcIcon: "arrows" });
+    expect(payload.back_face).toMatchObject({ title: "Reflection of Kiki-Jiki", card_type: "creature", frame_style: { template: "m15dfcback" } });
+  });
+
+  it("no colour has both faces published: the saga stays colourless and says so — and the save is refused on its colour, in a saga's words", async () => {
+    // The front in white and colourless (the land frame), the default back
+    // only in blue: no colour has both.
+    const verified = [
+      ...VERIFIED.filter((key) => !key.startsWith("m15dfcback/")),
+      frameComboKey("m15dfcback", "u"),
+      frameComboKey("sagadfcfront", "w"),
+      frameComboKey("sagadfcfront", "c"),
+    ];
+    renderForm(verified);
+    await pickKind(/^Saga/);
+    await goTo(/^card/i);
+    await click(sagaChip(/^Two faces/));
+    expect(sagaChip(/^Two faces/).getAttribute("aria-checked")).toBe("true");
+    expect(toast.info).toHaveBeenCalledWith(SAGA_TWO_FACES_NEEDS_COLOUR);
+    // The colour stays colourless (the front is published there).
+    expect(screen.getAllByTestId("card-preview").some((el) => JSON.stringify(propsOf(el)).includes("\"template\":\"sagadfcfront\""))).toBe(true);
+    await goTo(/^identity/i);
+    await act(async () => {
+      fireEvent.change(named("title")!, { target: { value: "Fable of the Mirror-Breaker" } });
+    });
+    await click(tab(/^Back face/));
+    await act(async () => {
+      fireEvent.change(named("back_face.title")!, { target: { value: "Reflection of Kiki-Jiki" } });
+    });
+    await click(tab(/^Saga/));
+    await goTo(/^publish/i);
+    await click(screen.getByTestId("save-as-draft"));
+    await click(screen.getByRole("button", { name: /^Save$/ }));
+    await waitFor(() => expect(document.body.textContent).toContain(SAGA_TWO_FACES_COLOURLESS));
+    expect(actions.createCardAction).not.toHaveBeenCalled();
+  });
+
+  it("back to “One face”: the saga frame, no switch, and the saga saves ONE-faced (no back_face) — the back kept for the visit", async () => {
+    actions.createCardAction.mockResolvedValue({ ok: false, fieldErrors: { title: "stop here" } });
+    renderForm([...VERIFIED, ...SAGA_FRONT]);
+    await pickKind(/^Saga/);
+    await goTo(/^card/i);
+    await click(sagaChip(/^Two faces/));
+    await click(tab(/^Back face/));
+    await goTo(/^identity/i);
+    await act(async () => {
+      fireEvent.change(named("back_face.title")!, { target: { value: "Reflection of Kiki-Jiki" } });
+    });
+    await click(tab(/^Saga/));
+    await goTo(/^card/i);
+    await click(sagaChip(/^One face/));
+    expect(screen.queryByTestId("face-switch")).toBeNull();
+    // …and Two faces again brings the back back.
+    await click(sagaChip(/^Two faces/));
+    await click(tab(/^Back face/));
+    await goTo(/^identity/i);
+    expect((named("back_face.title") as HTMLInputElement).value).toBe("Reflection of Kiki-Jiki");
+    await click(tab(/^Saga/));
+    await goTo(/^card/i);
+    await click(sagaChip(/^One face/));
+    await goTo(/^identity/i);
+    await act(async () => {
+      fireEvent.change(named("title")!, { target: { value: "The Eldest Reborn" } });
+    });
+    await goTo(/^publish/i);
+    await click(screen.getByTestId("save-as-draft"));
+    await click(screen.getByRole("button", { name: /^Save$/ }));
+    await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
+    const payload = actions.createCardAction.mock.calls[0][0] as { back_face?: unknown; frame_style: { template: string } };
+    expect(payload.frame_style.template).toBe("saga");
+    expect(payload.back_face ?? null).toBeNull();
   });
 });

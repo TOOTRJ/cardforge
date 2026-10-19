@@ -3935,6 +3935,24 @@ export const CC_TEMPLATES = {
       "the pack's masks (Pinline, Title, Type, Frame, Banner, Banner (Right), Text, Text (Right), Border) are importer inputs for the two-colour saga's pair masters (TODO 4.6f), recorded as maskInputs and never published; its 'Banner Pinstripe (Multicolored)' (sagaMidStripe.png) and 'Holo Stamp' addons are not drawn (4.6f / 4.9d)",
     ],
   },
+  // 5.5 (b) — the double-faced saga's FRONT (NEO #141 Fable of the
+  // Mirror-Breaker and every transforming Saga): the saga master with the
+  // transform icon well in its title bar and the reverse-P/T tab at the
+  // ribbon's foot.
+  sagadfcfront: {
+    colors: {
+      ...perColor((k) => [layer(`${SAGA}/dfc/${k}.png`)], WUBRGM),
+      c: [layer(`${SAGA}/dfc/l.png`)],
+    },
+    pack: "packSagaDFC.js 'Saga (Transform)' (groupSaga-1.js; versionSaga.js draws the chapter badges and dividers)",
+    transforms: NATIVE_1500,
+    notes: [
+      "source: CC 'Saga (Transform)' pack (packSagaDFC.js, 7 masters): the 4.21c saga master pixel for pixel but in two places — the title bar is the transform front's (its icon well at the left, rows 89–223) and the ribbon is cut 110 px short (its tip at 1635 px) for the grey reverse-P/T tab notched into the left border; the art window is the saga's (752–1384 × 237–1758 px on all seven)",
+      "colourless = the pack's 'Land Frame' (saga/dfc/l.png), as the saga's (owner decision 2026-09-29); the pack has no artifact frame",
+      "the icon in the well is the profile's icon rider (DFC_ICON_RIDER, the card's family — NEO's closed fan, TLA's ▲): the well is painted empty, as on the transform front's masters; the back's P/T is text (SAGA_DFC_REVERSE_PT, left-aligned at the tab, as the prints and the pack's 'Reverse PT' set it)",
+      "the chapter badge and the row divider are the saga's published pieces (saga/chapter/badge.png, saga/chapter/divider.png); the pack's masks (Pinline, Title — the transform pack's maskTitle.png — Type, Frame, Banner, Banner (Right), Rules, Rules (Right), Border) and its 'Holo Stamp' are not used and not published",
+    ],
+  },
   // --- TODO 5.1a: the transform bodies (see the section above CC_TEMPLATES).
   m15dfcfront: {
     colors: { ...perColor((k) => [layer(transformFrame("front", k))]), a: [layer(transformFrame("front", "a"))], ...dfcPairMasters("m15dfcfront") },

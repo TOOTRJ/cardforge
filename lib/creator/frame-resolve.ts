@@ -638,7 +638,13 @@ export function finalizeImportMatch<
       const downgraded: FrameMatch = {
         ...match,
         status: "nearest",
-        ...(fallback.frame_template ? { landOn: fallback.frame_template } : {}),
+        // (A transforming Saga — TODO 5.5 (b) — lands on the one-faced saga
+        // frame, which its kind names: the patch names no frame.)
+        ...(fallback.frame_template
+          ? { landOn: fallback.frame_template }
+          : finalized.kind === "saga"
+            ? { landOn: "saga" as const }
+            : {}),
         ...(unverifiedBack
           ? {
               reason: `the back face's frame isn't verified in ${colorWord(landing.colorKey ?? "c")} yet`,
@@ -729,8 +735,10 @@ export function remixFrameFor(
   // A double-faced printing (TODO 5.4) lands on its front body when BOTH
   // bodies are verified (dfcImportLanding — the back's body in the back's
   // colour too, or the save's gate would refuse it after the art); else it
-  // lands as it did before 5.4: the front's standard kind, one-faced.
-  if (dfcLayoutForKind(kind)) {
+  // lands as it did before 5.4: the front's standard kind, one-faced. (A
+  // transforming Saga — TODO 5.5 (b) — the same on the double-faced saga
+  // front, else the one-faced saga frame: the Saga kind either way.)
+  if (dfcLayoutForKind(kind) || (kind === "saga" && isDfcImportPatch(patch))) {
     const landing = options.singleFace ? null : dfcImportLanding(patch, verifiedKeys);
     if (landing?.ok) {
       return { ok: true, template: landing.frontBody, card_type: importedCardTypeForKind(kind, patch.card_type) };
