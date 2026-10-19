@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { frameAnatomyOf } from "@/lib/cards/anatomy";
-import { DFC_BACK_BODY_SET, resolveDfcBackFace, type DfcBackFacePayload } from "@/lib/cards/dfc-gate";
+import { DFC_BACK_BODY_SET, DFC_COLORLESS_NEEDS_ARTIFACT, resolveDfcBackFace, type DfcBackFacePayload } from "@/lib/cards/dfc-gate";
 import {
   SAGA_BACK_BODY,
   backBodyFor,
@@ -23,6 +23,8 @@ import { colorIndicatorBox } from "@/lib/cards/color-indicator";
 import { SAGA_TYPE_ROW_DY_PX, getFrameProfile } from "@/lib/cards/template-layout";
 import { KIND_DEFS, templateRefusesKind, type CardKind } from "@/lib/creator/card-kinds";
 import { creatorBackBodyFor } from "@/lib/creator/saga-back";
+import { cardFormSchemaFor, type FormBackBodyContext } from "@/lib/creator/form-schema";
+import { EMPTY_BACK_FACE, EMPTY_WATERMARK, type FormValues } from "@/lib/creator/form-types";
 import { SAGA_TYPE_DY } from "@/scripts/lib/saga-back.mjs";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
@@ -315,5 +317,87 @@ describe("an edit that retypes a back as a Saga (skeptic #589)", () => {
       stored: { back: stored, familyChanged: false },
     });
     expect(result).toMatchObject({ ok: false, field: "back_face.card_type", message: DFC_BACK_BODY_SET });
+  });
+});
+
+describe("the form's colourless check asks the server's body (owner Round 75, fix 5)", () => {
+  // A colourless Saga back: on `sagadfcback` its `c` is the saga's own
+  // master (no artifact stand-in), so the server takes it where
+  // `sagadfcback/c` is verified; on the ▼ back it needs an Artifact word.
+  // The form asks the same body (creatorBackBodyFor → backBodyFor) and so
+  // agrees with the gate either way — `bodyFor` alone refused it.
+  function values(over: Partial<FormValues> = {}): FormValues {
+    return {
+      title: "Elesh Norn",
+      slug: "",
+      game_system_id: "g",
+      cost: "{2}{W}{W}",
+      color_identity: ["colorless"],
+      supertype: "Legendary",
+      printed_types: null,
+      card_type: "artifact",
+      subtypes_text: "Phyrexian Praetor",
+      tags_text: "",
+      rarity: "mythic",
+      rules_text: "Vigilance",
+      loyalty_abilities: [],
+      saga_intro: "",
+      saga_chapters: [],
+      flavor_text: "",
+      power: "",
+      toughness: "",
+      loyalty: "",
+      defense: "",
+      artist_credit: "",
+      art_url: "https://example.com/art.png",
+      art_position: { focalX: 0.5, focalY: 0.5, scale: 1 },
+      frame_style: { finish: "regular", template: "m15dfcfront", dfcIcon: "arrows" },
+      visibility: "public",
+      save_as_draft: false,
+      has_back_face: true,
+      back_face: {
+        ...EMPTY_BACK_FACE,
+        title: "The Argent Etchings",
+        card_type: "enchantment",
+        subtypes_text: "Saga",
+        rules_text: ETCHINGS.rules_text as string,
+        art_url: "https://example.com/back.png",
+        color_identity: ["colorless"],
+      },
+      source_scryfall_id: "",
+      set_icon_url: "",
+      set_icon_code: "",
+      set_code: "",
+      collector_number: "",
+      lang: "en",
+      deck_id: "",
+      watermark: EMPTY_WATERMARK,
+      footer_text: "",
+      ...over,
+    } as FormValues;
+  }
+  const formIssue = (v: FormValues, context?: FormBackBodyContext) =>
+    cardFormSchemaFor(null, context).safeParse(v).error?.issues.find((i) => i.path.join(".") === "back_face.color_identity")?.message ?? null;
+  const serverIssue = (keys: ReadonlySet<string>) => {
+    const r = resolveDfcBackFace({ frontTemplate: "m15dfcfront", back: { ...ETCHINGS, color_identity: ["colorless"] }, family: null, frontColorIdentity: ["colorless"], verifiedKeys: keys });
+    return r.ok ? null : r.field === "back_face.color_identity" ? r.message : `other: ${r.message}`;
+  };
+  const C_TICKED = new Set([...PLAIN, frameComboKey(SAGA_BACK_BODY, "c")]);
+
+  it("with `sagadfcback/c` verified: the form and the server both take a colourless Saga back", () => {
+    expect(serverIssue(C_TICKED)).toBeNull();
+    expect(formIssue(values(), { mode: "create", verifiedKeys: C_TICKED })).toBeNull();
+  });
+
+  it("with it unverified (today: `c` published but unticked): both refuse it as the ▼ back's colourless rule", () => {
+    expect(serverIssue(PLAIN)).toBe(DFC_COLORLESS_NEEDS_ARTIFACT);
+    expect(formIssue(values(), { mode: "create", verifiedKeys: PLAIN })).toBe(DFC_COLORLESS_NEEDS_ARTIFACT);
+    // No context (nothing verified): bodyFor's body, as before.
+    expect(formIssue(values())).toBe(DFC_COLORLESS_NEEDS_ARTIFACT);
+  });
+
+  it("an edit of a back stored on the saga back keeps asking that body, verified or not", () => {
+    expect(formIssue(values(), { mode: "edit", verifiedKeys: PLAIN, storedBackTemplate: SAGA_BACK_BODY, storedFamily: "arrows" })).toBeNull();
+    expect(formIssue(values(), { mode: "edit", verifiedKeys: C_TICKED, storedBackTemplate: "m15dfcback", storedFamily: "arrows" })).toBe(DFC_COLORLESS_NEEDS_ARTIFACT);
   });
 });

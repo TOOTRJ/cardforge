@@ -6880,6 +6880,25 @@ back).
   124 transforming-saga printings to origin/main's landing until then). A
   saga CREATURE back (FIN) keeps today's landing (`face-type`). The AI deck
   remix follows the import (`remixFrameFor`, `dfcImportLanding`).
+- **Owner Round 75 (2026-10-18)** — the look is signed off, and:
+  1. **Adopt** (`adoptDfcBodiesAction`): an imported legacy DFC whose back is
+     a Saga moves onto the saga back once it is verified in the back's
+     colour, the ▼ back before — the gate derives the body (sent without
+     one), where the import lands. Kept.
+  2. **The own-card AI remix** follows onto the saga back once ticked (through
+     the gate). Kept.
+  3. `m15dfcback`'s blue reading less saturated than print: left as it is (no
+     item); only the saga back's bars are toned.
+  4. An imported multicolour back (LCI #189, MOM #43) draws no colour dot —
+     its colour is stored as `["multicolor"]`: later, TODO 5.19, for every
+     double-faced import.
+  5. **One answer in the form too**: the creator form's colourless check
+     (`lib/creator/form-schema.ts`) asks the body the save stores —
+     `creatorBackBodyFor` → `backBodyFor`, with the verified keys and an
+     edit's stored back (`FormBackBodyContext`) — never `bodyFor` alone: on
+     `sagadfcback` the `c` key is the saga's own master, so a colourless Saga
+     back the server takes where `sagadfcback/c` is verified is no longer
+     refused by the form. `c` stays published but unticked.
 
 ### The borderless double-faced bodies (5.7)
 

@@ -916,9 +916,20 @@ export function CardCreatorForm({
   // An edit's schema knows the rows the form opened with: a walker / saga
   // whose rows the maker did not touch saves its stored text unchanged, so
   // nothing about them blocks the save (lib/creator/form-schema.ts).
+  // …and the back body the save will store (TODO 5.5 (b), PR 2): the
+  // verified keys and an edit's stored back, as the live preview derives it.
+  const formBackBody = useMemo(
+    () => ({
+      mode,
+      verifiedKeys: new Set(verifiedFrameKeys),
+      storedBackTemplate: (card?.back_face as { frame_style?: { template?: string } | null } | null | undefined)?.frame_style?.template ?? null,
+      storedFamily: card ? dfcIconOf({ frameStyle: (card.frame_style as FrameStyle | null) ?? undefined }) : null,
+    }),
+    [mode, verifiedFrameKeys, card],
+  );
   const formResolver = useMemo(
-    () => zodResolver(cardFormSchemaFor(mode === "edit" ? defaults : null)),
-    [mode, defaults],
+    () => zodResolver(cardFormSchemaFor(mode === "edit" ? defaults : null, formBackBody)),
+    [mode, defaults, formBackBody],
   );
   const methods = useForm<FormValues>({
     defaultValues: defaults,
