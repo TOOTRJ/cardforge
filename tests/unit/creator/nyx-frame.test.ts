@@ -212,8 +212,8 @@ describe("the enchantment dress", () => {
   const typedArtifact = { cardType: "artifact", supertype: "Enchantment" };
   const ring = { cardType: "artifact", supertype: "" };
 
-  it("names the Nyx frame alone", () => {
-    expect(FRAME_TEMPLATE_VALUES.filter(isEnchantmentDress)).toEqual(["m15nyx"]);
+  it("names the Nyx frame — and the full-art token's Nyx dress (TODO 4.51) — alone", () => {
+    expect(FRAME_TEMPLATE_VALUES.filter(isEnchantmentDress)).toEqual(["m15nyx", "m20tokennyx", "m20tokennyxtext", "m20tokennyxtall", "m20tokenartifactnyx", "m20tokenartifactnyxtext", "m20tokenartifactnyxtall"]);
     expect(enchantmentDressReason("m15nyx")).toBe("The Nyx frame is for enchantments");
     expect(enchantmentDressReason("m15")).toBeNull();
   });
@@ -225,7 +225,7 @@ describe("the enchantment dress", () => {
     for (const type of [plainCreature, ring, { cardType: "instant", supertype: "" }, { cardType: "creature", supertype: "Enchantmentish" }, { cardType: null, supertype: null }]) {
       expect(enchantmentFrameFits("m15nyx", type), JSON.stringify(type)).toBe(false);
     }
-    for (const t of FRAME_TEMPLATE_VALUES) if (t !== "m15nyx") expect(enchantmentFrameFits(t, plainCreature), t).toBe(true);
+    for (const t of FRAME_TEMPLATE_VALUES) if (!isEnchantmentDress(t)) expect(enchantmentFrameFits(t, plainCreature), t).toBe(true);
   });
 
   it("is followed by every card whose words say Enchantment — a plain enchantment and an Aura too (owner decision 1, Round 56) — but a Saga, Class, Case or Room", () => {
@@ -262,10 +262,12 @@ describe("the enchantment dress", () => {
     for (const own of ["Saga", "Class", "Case", "Room"]) {
       expect(enchantmentFrameFor("enchantment", "m15", { cardType: "enchantment", supertype: "", subtypes: [own] }), own).toBe("m15");
     }
-    // …never a kind with no base here, whatever its words: a land, a token,
-    // the saga kind, an instant, a double-faced face on its own body.
+    // …never a kind with no base here, whatever its words: a land, a token
+    // on the 2014–19 arch (its Nyx is not built: TC15 #23), the saga kind,
+    // an instant, a double-faced face on its own body. (A token on the
+    // full-art design has its own dress, TODO 4.51: token-nyx-dress.test.ts.)
     const enchantmentWords = { cardType: "enchantment", supertype: "Enchantment" };
-    for (const [kind, template] of [["land", "m15land"], ["token", "m15token"], ["token", "m20token"], ["saga", "saga"], ["instant", "m15"], ["sorcery", "m15"], ["transform", "m15dfcfront"], ["mdfc", "m15mdfcfront"], ["transform", "m15"], ["land", "m15"]] as const) {
+    for (const [kind, template] of [["land", "m15land"], ["token", "m15token"], ["saga", "saga"], ["instant", "m15"], ["sorcery", "m15"], ["transform", "m15dfcfront"], ["mdfc", "m15mdfcfront"], ["transform", "m15"], ["land", "m15"]] as const) {
       expect(enchantmentFrameFor(kind, template, enchantmentWords), `${kind} on ${template}`).toBe(template);
       expect(enchantmentFrameFor(kind, template, { cardType: "land", supertype: "Enchantment" }), `${kind} on ${template}`).toBe(template);
     }

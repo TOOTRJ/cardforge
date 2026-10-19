@@ -156,6 +156,11 @@ const DOCUMENTED_NULLS = new Set([
   // black modal front outside a poster (SPM #233), and every modal back in
   // the look is gold (MSH's pairs, SPM #200 / #202) or a land (SLD #2655).
   "m15borderlessdfcfront/c", "m15borderlessdfcback/c", "m15borderlessmdfcfront/b", "m15borderlessmdfcfront/c", "m15borderlessmdfcback/w", "m15borderlessmdfcback/u", "m15borderlessmdfcback/b", "m15borderlessmdfcback/r", "m15borderlessmdfcback/g", "m15borderlessmdfcback/c",
+  // The full-art token's Nyx dress (TODO 4.51): six M20+ Nyx token
+  // printings in all (Scryfall 2026-10-17) — W / B / C textless (TDSK #4,
+  // TDSK #10, SLD #1835), W / U regular (TSOC #3, TMDD #8), the artifact C
+  // textless (TEOC #13); no tall box, no red, green or gold.
+  "m20tokennyx/u", "m20tokennyx/r", "m20tokennyx/g", "m20tokennyx/m", "m20tokennyxtext/b", "m20tokennyxtext/r", "m20tokennyxtext/g", "m20tokennyxtext/c", "m20tokennyxtext/m", "m20tokennyxtall/w", "m20tokennyxtall/u", "m20tokennyxtall/b", "m20tokennyxtall/r", "m20tokennyxtall/g", "m20tokennyxtall/c", "m20tokennyxtall/m", "m20tokenartifactnyx/w", "m20tokenartifactnyx/u", "m20tokenartifactnyx/b", "m20tokenartifactnyx/r", "m20tokenartifactnyx/g", "m20tokenartifactnyx/m", "m20tokenartifactnyxtext/w", "m20tokenartifactnyxtext/u", "m20tokenartifactnyxtext/b", "m20tokenartifactnyxtext/r", "m20tokenartifactnyxtext/g", "m20tokenartifactnyxtext/c", "m20tokenartifactnyxtext/m", "m20tokenartifactnyxtall/w", "m20tokenartifactnyxtall/u", "m20tokenartifactnyxtall/b", "m20tokenartifactnyxtall/r", "m20tokenartifactnyxtall/g", "m20tokenartifactnyxtall/c", "m20tokenartifactnyxtall/m",
   // The arch's tall box (TODO 4.55): the 21 tall-box printings are white,
   // black and red creatures and an enchantment, and colourless Clues (the
   // artifact dress) — no other colour printed it.
@@ -286,13 +291,17 @@ describe("frame-references.json", () => {
   it("gives most combos an alternate printing", () => {
     let withAlternates = 0;
     let total = 0;
+    // The Nyx dress of the full-art tokens (TODO 4.51) lists every printing
+    // there is — one per combo — so it is left out of the share.
+    const ALL_PRINTINGS_LISTED = (t: string) => t.startsWith("m20token") && t.includes("nyx");
     for (const template of FRAME_TEMPLATE_VALUES) {
       for (const key of FRAME_COLOR_KEYS) {
         const options = frameReferenceOptions(template, key);
         if (options.length === 0) continue;
+        expect(FRAME_REFERENCES[template][key]).toEqual(options[0]);
+        if (ALL_PRINTINGS_LISTED(template)) continue;
         total += 1;
         if (options.length > 1) withAlternates += 1;
-        expect(FRAME_REFERENCES[template][key]).toEqual(options[0]);
       }
     }
     expect(total).toBeGreaterThan(200);

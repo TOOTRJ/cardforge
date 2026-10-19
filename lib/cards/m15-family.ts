@@ -89,6 +89,13 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   "m20tokenartifact",
   "m20tokenartifacttext",
   "m20tokenartifacttall",
+  // …and their Nyx dress (TODO 4.51): the same profiles, new templates.
+  "m20tokennyx",
+  "m20tokennyxtext",
+  "m20tokennyxtall",
+  "m20tokenartifactnyx",
+  "m20tokenartifactnyxtext",
+  "m20tokenartifactnyxtall",
   // The transform bodies (TODO 5.1a, CC's 'Transform' packs): new
   // templates, no stored card — CC's name and type sizes are the family's
   // — so they joined without a bump too.

@@ -39,14 +39,17 @@ const LONG =
 
 describe("the arch's heights (token-height)", () => {
   it("names the three heights and their artifact dresses, and reads them back", () => {
-    expect(ARCH_TOKEN_TEMPLATES.tall).toEqual({ plain: "m15tokentall", artifact: "m15tokenartifacttall" });
+    expect(ARCH_TOKEN_TEMPLATES.tall).toMatchObject({ plain: "m15tokentall", artifact: "m15tokenartifacttall" });
     for (const height of ["textless", "regular", "tall"] as const) {
       for (const artifact of [false, true]) {
         const t = tokenTemplate("arch", height, artifact);
-        expect(tokenHeightOf(t), t).toEqual({ design: "arch", height, artifact });
+        // (The arch has no Nyx dress, TODO 4.51: never read as one.)
+        expect(tokenHeightOf(t), t).toEqual({ design: "arch", height, artifact, nyx: false });
+        expect(tokenTemplate("arch", height, artifact, true), t).toBe(t);
       }
     }
-    expect(tokenHeightOf("m20tokentall")).toEqual({ design: "m20", height: "tall", artifact: false });
+    expect(tokenHeightOf("m20tokentall")).toEqual({ design: "m20", height: "tall", artifact: false, nyx: false });
+    expect(tokenHeightOf("m20tokennyxtall")).toEqual({ design: "m20", height: "tall", artifact: false, nyx: true });
     expect(tokenHeightOf("m15")).toBeNull();
     expect(TALL.every(isArchTallTokenTemplate)).toBe(true);
     expect(isArchTallTokenTemplate("m20tokentall")).toBe(false);

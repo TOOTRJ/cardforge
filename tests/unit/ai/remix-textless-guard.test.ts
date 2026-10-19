@@ -66,7 +66,7 @@ describe("which frames hide a card's text", () => {
   it("the profiles flagged `textless` are the full-art token's two textless heights and, since layout v58, the textless promo pair", () => {
     // A new `textless` profile is covered by the guard with no other change;
     // it belongs in docs/FRAMES.md's landings table (TODO 1.24) too.
-    expect(TEXTLESS).toEqual(["m20token", "m20tokenartifact", "m15textless", "m15textlessland"]);
+    expect(TEXTLESS).toEqual(["m20token", "m20tokenartifact", "m20tokennyx", "m20tokenartifactnyx", "m15textless", "m15textlessland"]);
   });
 
   it("the test is the renderers': the flag AND rules-box text (rules or flavour, not blank)", () => {

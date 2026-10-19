@@ -474,7 +474,25 @@ export function withVerification<
         "onceVerified" | "onceVerifiedMatch" | "unverified" | "blockedBy" | "gaps" | "landOn" | "landOnOnceVerified"
       >
     >,
->(match: T, colorKey: string, verifiedKeys: ReadonlySet<string>): T {
+>(input: T, colorKey: string, verifiedKeys: ReadonlySet<string>): T {
+  // The Nyx dress's stand-in (TODO 4.51): while the frame named once
+  // verified isn't, the one named in its place (the plain full-art token
+  // template) takes its part where IT is verified — nearest, its gap said.
+  let match = input;
+  const fallback = (input as Partial<FrameMatch>).onceVerifiedFallback;
+  if (fallback || "onceVerifiedFallback" in input) {
+    const rest: Partial<FrameMatch> = { ...input };
+    delete rest.onceVerifiedFallback;
+    match = rest as T;
+    if (
+      fallback &&
+      input.onceVerified &&
+      !verifiedKeys.has(frameComboKey(input.onceVerified, colorKey)) &&
+      verifiedKeys.has(frameComboKey(fallback.template, colorKey))
+    ) {
+      match = { ...match, onceVerified: fallback.template, onceVerifiedMatch: fallback.match } as T;
+    }
+  }
   const landing = match.landOnOnceVerified;
   // A match that names its OWN frame once verified (an extended-art
   // Spacecraft: the extended-art station frame, TODO 4.27a step 2) takes

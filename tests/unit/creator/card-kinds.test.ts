@@ -180,6 +180,8 @@ describe("framesForKind", () => {
       // …and the arch's tall box (TODO 4.55).
       "m15tokentall", "m15tokenartifacttall",
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
+      // …and their Nyx dress (TODO 4.51): an Enchantment token's.
+      "m20tokennyx", "m20tokennyxtext", "m20tokennyxtall", "m20tokenartifactnyx", "m20tokenartifactnyxtext", "m20tokenartifactnyxtall",
       "extendedart", "m15textless",
     ]);
     // 4.33's borderless planeswalkers; the tall one is a row dress (the

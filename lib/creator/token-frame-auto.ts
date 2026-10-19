@@ -63,7 +63,7 @@ import {
   type M20TokenHeight,
   type TokenHeightText,
 } from "@/lib/cards/token-height";
-import { tokenFrameFor, typeWordFrameFor } from "@/lib/creator/card-kinds";
+import { enchantmentFrameFor, tokenFrameFor, typeWordFrameFor } from "@/lib/creator/card-kinds";
 import type { CardType, FrameTemplate } from "@/types/card";
 
 /** The 2014–19 arch the M15 era's token standard (m15token) lands on, in
@@ -155,6 +155,13 @@ export function newTokenFrame(
   verifiedKeys: ReadonlySet<string>,
 ): FrameTemplate {
   const full = autoM20TokenFrame(text);
+  // An Enchantment token starts on the Nyx dress where it is verified in
+  // the colour (TODO 4.51: the 2024+ prints); else the plain design. Only a
+  // SINGLE-colour one (owner Round 74): a two-colour token keeps the plain
+  // design's split, so a colour change on the default switch's pick
+  // (defaultTokenFrameIn) moves it off the dress and back.
+  const nyx = enchantmentFrameFor("token", full, { supertype: text.supertype }, colorKey);
+  if (nyx !== full && isFrameComboAvailable(nyx, colorKey, verifiedKeys)) return nyx;
   if (isFrameComboAvailable(full, colorKey, verifiedKeys)) return full;
   return archTokenFrameIn(text, colorKey, verifiedKeys);
 }
@@ -226,7 +233,9 @@ export function followTokenHeight(
       tokenHeightForText({ ...input.previous, artifact: supertypeHasWord(input.previous.supertype, "Artifact") }, design) ||
       (design === "arch" && hadText !== hasRulesBoxText(input) && (current !== "textless") === hadText));
   const height: M20TokenHeight = followed ? tokenHeightForText({ ...input, artifact }, design) : current;
-  const next = tokenTemplate(design, height, artifact);
+  // The Nyx dress (TODO 4.51) is the type words' (the form's enchantment
+  // follow): the height keeps whichever dress the card wears.
+  const next = tokenTemplate(design, height, artifact, of.nyx);
   if (next === input.template || !input.verifiedKeys) return next;
   const colorKey = input.colorKey ?? "";
   if (isFrameComboAvailable(next, colorKey, input.verifiedKeys)) return next;

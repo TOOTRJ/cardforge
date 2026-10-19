@@ -73,6 +73,8 @@ describe("the main box on every template", () => {
       // TODO 4.48: the full-art tokens' box, CC's 8.6 / 82.8 %W with the same
       // 2 px (the textless height never draws it).
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
+      // …and their Nyx dress (TODO 4.51).
+      "m20tokennyx", "m20tokennyxtext", "m20tokennyxtall", "m20tokenartifactnyx", "m20tokenartifactnyxtext", "m20tokenartifactnyxtall",
     ];
     // The landscape pair (TODO 4.21b, layout v43): Card Conjurer's rules
     // rects lie INSIDE the paper, where the prints start their lines.

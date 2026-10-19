@@ -210,20 +210,40 @@ describe("the full-art templates once verified (TODO 4.48 / 1.23)", () => {
     expect(done.onceVerified).toBeUndefined();
   });
 
-  it("keeps a gap the full-art template doesn't draw either: nearest, its own reason, item and gaps", () => {
-    const cases: [Key, FrameTemplate, string, string, string[]][] = [
-      ["tdsk-4", "m20token", "PipGlyph doesn't draw the Nyx dress on its token frames yet", "4.51", ["nyx-dress"]],
-      ["teoc-13", "m20tokenartifact", "PipGlyph doesn't draw the Nyx dress on its token frames yet", "4.51", ["nyx-dress"]],
+  // TODO 4.51: a Nyx token names the Nyx dress of its full-art template.
+  // Verified there: exact. Before the dress's tick, the plain full-art
+  // template stands in where IT is verified (onceVerifiedFallback) — nearest,
+  // the starfield its gap, as before the dress existed; with neither, the
+  // arch stands in, "not yet verified" (the dress exists).
+  it("a Nyx token: exact on the Nyx dress once verified — until then the plain full-art template, nearest for the starfield", () => {
+    const cases: [Key, FrameTemplate, FrameTemplate, string, string, string[]][] = [
+      ["tdsk-4", "m20tokennyx", "m20token", "PipGlyph doesn't draw the Nyx dress on its token frames yet", "4.51", ["nyx-dress"]],
+      ["teoc-13", "m20tokenartifactnyx", "m20tokenartifact", "PipGlyph doesn't draw the Nyx dress on its token frames yet", "4.51", ["nyx-dress"]],
     ];
-    for (const [key, template, reason, blockedBy, gaps] of cases) {
+    for (const [key, dress, plain, reason, blockedBy, gaps] of cases) {
       const m = match(key);
-      expect(m.onceVerified, key).toBe(template);
-      // Before its tick: still the registry's own nearest (a gap is missing
-      // whatever is verified), never "not yet verified".
-      expect(withVerification(m, pickColour(key), new Set()).unverified, key).toBeUndefined();
+      expect(m.onceVerified, key).toBe(dress);
+      expect(m.onceVerifiedMatch, key).toEqual({ status: "exact", reason: null });
+      expect(m.onceVerifiedFallback, key).toEqual({ template: plain, match: { status: "nearest", reason, blockedBy, gaps } });
       const colour = pickColour(key);
-      const done = withVerification(m, colour, new Set([frameComboKey(template, colour)]));
-      expect(done, key).toMatchObject({ status: "nearest", template, reason, blockedBy, gaps });
+      // Nothing verified: the arch stands in and the answer is the dress's —
+      // it exists and would be exact, so "not yet verified".
+      const none = withVerification(m, colour, new Set());
+      expect(none, key).toMatchObject({ status: "nearest", unverified: true, reason: expect.stringMatching(/^not yet verified in /) });
+      expect(none.template, key).toMatch(/^m15token/);
+      expect(none, key).not.toHaveProperty("onceVerifiedFallback");
+      // The plain template verified, the dress not: main's landing.
+      const plainOnly = withVerification(m, colour, new Set([frameComboKey(plain, colour)]));
+      expect(plainOnly, key).toMatchObject({ status: "nearest", template: plain, reason, blockedBy, gaps });
+      expect(plainOnly, key).not.toHaveProperty("onceVerifiedFallback");
+      // The dress verified: exact on it, whatever else is.
+      for (const keys of [[dress], [dress, plain]]) {
+        const done = withVerification(m, colour, new Set(keys.map((t) => frameComboKey(t, colour))));
+        expect(done, key).toMatchObject({ status: "exact", template: dress, reason: null });
+        expect(done.gaps, key).toBeUndefined();
+        expect(done.blockedBy, key).toBeUndefined();
+        expect(done, key).not.toHaveProperty("onceVerifiedFallback");
+      }
     }
   });
 

@@ -8165,12 +8165,12 @@ at HD on all four.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 66 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 72 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card) prints its names,
@@ -8954,6 +8954,103 @@ dress 7, the arch's tall box 21).
 - **Creator**: the anatomy panel's crown and two-colour switches and the
   Variations "Legendary" entry read the profile like any frame's; a new
   token starts with both on (`anatomyDefaults`).
+
+### The full-art token's Nyx dress (TODO 4.51)
+
+An ADDITION ([Additions vs corrections](#additions-vs-corrections)): six
+NEW stored templates, no stored card on them — no layout bump, no sweep,
+no badge. Not `m15nyx` (4.7, the non-token frame) and not the `nyx`
+constellation showcase.
+
+**Which printings** (Scryfall `t:token t:enchantment`, 2026-10-17): seven
+wear the dress — on the full-art design TDSK #4 Glimmer (W, textless),
+TDSK #10 Horror (B, textless), SLD #1835 Shrine (C, textless), TEOC #13
+Golem (C Enchantment Artifact, textless), TSOC #3 Contract (W Aura,
+regular box, no P/T), TMDD #8 Spirit Sorcerer (U, regular box); on the
+2014–19 arch TC15 #23 Spirit (WB). Every one from September 2024 on but
+TC15 #23. The other enchantment tokens (TKHM #1 / TDSK #2 Shard, TNEC,
+TCMM #62, TWHO, TPIP #8) print the plain pill; Roles stay unsupported.
+
+**What the prints show** (Scryfall PNGs at 1500 × 2100, the pill's face
+rows 118–202, x 130–1370, the name's columns 420–1080 left out): the
+starfield is in the NAME PILL only — the type pill, box, rims and strip
+are the plain design's (TDSK #2, same set, 0 % specks). The pill keeps its
+colour — black 42/38/46, blue 20/85/127, colourless 124/125/124, the
+artifact slate 74/80/96 — but the white pill prints a mid SILVER
+(166/161/154 and 175/173/164; the plain white pill is near-white,
+236/237/238 on our master), dark ink on it. The stars sit where the
+starfield inside the title bar of Magic Set Editor's constellation master
+(`public/frames/nyx/b.png`) has them (the bright star at x ≈ 205 on every
+print).
+
+**Masters** (`scripts/build-token-nyx.mjs`, recipe in
+`scripts/lib/token-nyx.mjs`; frames bucket only): PipGlyph's composite
+over the PUBLISHED full-art masters — no Card Conjurer file is read:
+`m20tokennyx`, `m20tokennyxtext`, `m20tokennyxtall` from `m20token*`,
+`m20tokenartifactnyx…` from `m20tokenartifact…`, keys w u b r g c m. The
+region is the published crown band's α-0 hole (`m20tokencrown/w`, the
+pill's interior) connected to the pill's centre, weighted by the parent's
+alpha (full at α ≤ 230, none from 244 — the bevel, rims and outline keep
+the parent's pixels); in it `P + offset + 2.7 × (starfield luma − its
+median)`, the starfield the MSE bar's luminance at the same pixel (a
+neutral layer: the pill keeps its hue), the offset solved per key so the
+face's median, read over mid-grey art, is print's (keys with no print — r,
+g, m — take no offset). Alpha is never touched; every byte outside the
+face is the parent's (the build refuses otherwise); each WebP's alpha
+equals its PNG's. After: medians within 1 of print on every printed key.
+No pair masters: no two-colour Nyx token is printed, so a two-colour card
+on the dress wears gold (`m`).
+
+**Profiles**: the plain full-art profiles with these masters
+(`M20_NYX_TOKEN_ANATOMY`: the crown band — its hole shows the starry pill —
+and no `twoColorMasters` / `twoColorPlate`); every slot, plate and ink as
+the plain twin's (dark name ink on the white key, as TDSK #4 prints).
+
+**Who wears it** (the Nyx pattern, 4.7): an enchantment dress
+(`ENCHANTMENT_DRESSES`, `token` bases: each full-art template its dress),
+the token kind's alone (`TREATMENT_KINDS`) — the server's kind gate refuses
+it on a token whose words don't say Enchantment (`enchantmentFrameFits`).
+The height and the Artifact word move between the dresses as between the
+plain templates (`m20TokenTemplate(height, artifact, nyx)`,
+`tokenHeightFrameFor` / `followTokenHeight` keep the dress,
+`TYPE_WORD_DRESSES`: an Enchantment Artifact token wears the slate pill
+with the stars, TEOC #13). A NEW token whose words say Enchantment starts
+on (or follows onto) the dress where it is verified in the card's colour
+(`newTokenFrame`, the form's enchantment effect); "Token" under Variations
+is the way back (the plain 2021–23 look); a stored token keeps its frame.
+The random and requested AI picks read the same rules
+(`resolveGeneratedFrame`). The 2014–19 arch has no dress (TC15 #23, the one
+printing).
+
+**Owner Round 74 (2026-10-18)** — the look is approved, and:
+
+- **Only a SINGLE-colour token follows onto the dress** (one colour or
+  colourless: `followsTokenNyxDressIn`, the frame colour key w u b r g c).
+  Every printed Nyx token is one colour. A two-colour (or three-colour)
+  Enchantment token keeps its plain full-art frame with 4.48's split and
+  pair crown. That holds for the creator's start (`newTokenFrame`), its
+  words follow (`enchantmentFrameFor(…, colorKey)`), a colour picked after
+  (the form's colour follow: two colours take a followed token off the
+  dress, one colour back onto it — until a frame is picked by hand), and
+  the AI's random and requested picks. On a pick under Variations the
+  two-colour token wears the dress in GOLD (`m`, no pair masters). An AI
+  request that names the dress itself is the same kind of pick. Imports are
+  unaffected: the printings are single-colour.
+- r, g and m keep their masters (the starfield over the pill's own tone).
+- TC15 #23 stays nearest on the arch (`era/2015+nyx-dress`).
+
+**Imports**: `token/m20+nyx-dress` names the dress of the printing's height
+through `onceVerified` (the `m20` family's pick; `gapDrawnBy("nyx-dress")`
+on the six), exact once it is verified in the card's colour. Until then the
+plain full-art template stands in where IT is verified
+(`FrameMatch.onceVerifiedFallback`, applied by `withVerification`) —
+nearest, the starfield its gap, as before the dress. Run over all 3,037
+token and emblem printings, main vs branch, under no ticks, production's
+ticks, production's plus the dress and everything verified: 3,031
+identical in every policy; on production's ticks all 3,037 identical; the
+six M20+ Nyx printings move onto the dress, exact, once it is verified;
+with nothing verified they say "not yet verified" (the dress exists)
+instead of naming the starfield. TC15 #23 stays `era/2015+nyx-dress`.
 
 ## Art under and around the frame
 

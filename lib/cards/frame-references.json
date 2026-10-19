@@ -1980,6 +1980,114 @@
       "m": null
     }
   },
+  "m20tokennyx": {
+    "note": "The full-art token's Nyx dress, textless height (TODO 4.51: PipGlyph's composite — a starfield in the name pill over the published m20token masters). Every M20+ Nyx token printed (Scryfall 2026-10-17): W TDSK #4 Glimmer, B TDSK #10 Horror, C SLD #1835 Shrine; no blue, red, green or gold textless Nyx token.",
+    "colors": {
+      "w": [
+        {
+          "name": "Glimmer",
+          "set": "tdsk",
+          "scryfallId": "475c7449-2c95-4873-94de-68a5e06cdfb8"
+        }
+      ],
+      "u": null,
+      "b": [
+        {
+          "name": "Horror",
+          "set": "tdsk",
+          "scryfallId": "36bb6907-e7d7-4f99-966a-ab09ca130fb8"
+        }
+      ],
+      "r": null,
+      "g": null,
+      "c": [
+        {
+          "name": "Shrine",
+          "set": "sld",
+          "scryfallId": "41648b36-154c-4907-8571-9461e45a9e00"
+        }
+      ],
+      "m": null
+    }
+  },
+  "m20tokennyxtext": {
+    "note": "The full-art token's Nyx dress, regular box (TODO 4.51). Printed: W TSOC #3 Contract (an Aura, no P/T), U TMDD #8 Spirit Sorcerer; no other colour.",
+    "colors": {
+      "w": [
+        {
+          "name": "Contract",
+          "set": "tsoc",
+          "scryfallId": "4c5e0caa-a043-41de-acbf-cdf3a6b6ab18"
+        }
+      ],
+      "u": [
+        {
+          "name": "Spirit Sorcerer Token",
+          "set": "tmdd",
+          "scryfallId": "3b9c4950-9890-4977-87a0-6eba840e1f66"
+        }
+      ],
+      "b": null,
+      "r": null,
+      "g": null,
+      "c": null,
+      "m": null
+    }
+  },
+  "m20tokennyxtall": {
+    "note": "The full-art token's Nyx dress, tall box (TODO 4.51). No tall-box Nyx token is printed; the height follows the text as on m20tokentall.",
+    "colors": {
+      "w": null,
+      "u": null,
+      "b": null,
+      "r": null,
+      "g": null,
+      "c": null,
+      "m": null
+    }
+  },
+  "m20tokenartifactnyx": {
+    "note": "The artifact full-art token's Nyx dress, textless height (TODO 4.51): the slate name pill with the starfield. Printed: TEOC #13 Golem (colourless, Enchantment Artifact Creature) alone.",
+    "colors": {
+      "w": null,
+      "u": null,
+      "b": null,
+      "r": null,
+      "g": null,
+      "c": [
+        {
+          "name": "Golem",
+          "set": "teoc",
+          "scryfallId": "51cfd1dc-b7f8-418b-9a7a-76d887f83929"
+        }
+      ],
+      "m": null
+    }
+  },
+  "m20tokenartifactnyxtext": {
+    "note": "The artifact full-art token's Nyx dress, regular box (TODO 4.51). None printed.",
+    "colors": {
+      "w": null,
+      "u": null,
+      "b": null,
+      "r": null,
+      "g": null,
+      "c": null,
+      "m": null
+    }
+  },
+  "m20tokenartifactnyxtall": {
+    "note": "The artifact full-art token's Nyx dress, tall box (TODO 4.51). None printed.",
+    "colors": {
+      "w": null,
+      "u": null,
+      "b": null,
+      "r": null,
+      "g": null,
+      "c": null,
+      "m": null
+    }
+  },
   "m15snow": {
     "note": "Gold snow spells only exist as legendaries (crown) — the m reference is accepted with that caveat. The reference (KHM #224, a crowned U|B pair) prints the white-bar pair under the split crown, which the two-colour and crown switches draw since 4.6f wave 2c (V-A: the pairs ride this m tick).",
     "colors": {
