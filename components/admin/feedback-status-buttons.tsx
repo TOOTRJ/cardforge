@@ -6,7 +6,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { adminErrorToast } from "@/lib/admin/admin-toast";
 import { cn } from "@/lib/utils";
 import { setFeedbackStatusAction } from "@/lib/feedback/actions";
 import { FEEDBACK_STATUSES, type FeedbackStatus } from "@/lib/feedback/schemas";
@@ -40,7 +40,7 @@ export function FeedbackStatusButtons({
           onClick={() =>
             startTransition(async () => {
               const result = await setFeedbackStatusAction(feedbackId, s);
-              if (!result.ok) toast.error(result.error);
+              if (!result.ok) adminErrorToast("feedback status", result.error);
               else router.refresh();
             })
           }

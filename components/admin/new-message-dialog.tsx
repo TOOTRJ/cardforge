@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, MessageSquarePlus, Send } from "lucide-react";
 import { toast } from "sonner";
+import { adminErrorToast } from "@/lib/admin/admin-toast";
 import {
   Dialog,
   DialogContent,
@@ -56,7 +57,7 @@ export function NewMessageDialog({
       const result = await adminStartThreadAction(parsed.data);
       if (!result.ok) {
         setError(result.error);
-        toast.error(result.error);
+        adminErrorToast("new message", result.error);
         return;
       }
       toast.success(`Message sent to ${userLabel}.`);

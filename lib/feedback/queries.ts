@@ -68,12 +68,15 @@ const UNRESOLVED_FEEDBACK_STATUSES: readonly FeedbackStatus[] = ["new", "reviewe
  *  [] when the inbox is empty. Service-role read gated on is_admin. Newest
  *  first; the unresolved view additionally lifts untouched ("new") rows
  *  above reviewed ones so fresh reports are always at the top. */
+/** The inbox for an admin (null for anyone else). `loadError`: a read
+ *  failed (logged) — the items may be missing or nameless, and the page
+ *  says so rather than "Inbox zero". */
 export async function listAllFeedback(
   filter: FeedbackInboxFilter = "unresolved",
-): Promise<AdminFeedbackItem[] | null> {
+): Promise<{ items: AdminFeedbackItem[]; loadError: boolean } | null> {
   const profile = await getCurrentProfile();
   if (!profile?.is_admin) return null;
-  if (!isAdminConfigured()) return [];
+  if (!isAdminConfigured()) return { items: [], loadError: true };
 
   const admin = createAdminClient();
   let query = admin
@@ -84,7 +87,11 @@ export async function listAllFeedback(
   if (filter === "unresolved") query = query.in("status", [...UNRESOLVED_FEEDBACK_STATUSES]);
   else if (filter !== "all") query = query.eq("status", filter);
   const { data: fetched, error } = await query;
-  if (error || !fetched) return [];
+  if (error || !fetched) {
+    console.error("[admin/feedback] feedback read failed:", error?.message ?? "no data");
+    return { items: [], loadError: true };
+  }
+  let loadError = false;
   const data =
     filter === "unresolved"
       ? [...fetched].sort((a, b) => {
@@ -98,16 +105,21 @@ export async function listAllFeedback(
   const userIds = [...new Set(data.map((r) => r.user_id).filter(Boolean))] as string[];
   const names = new Map<string, { username: string | null; displayName: string | null }>();
   if (userIds.length > 0) {
-    const { data: profiles } = await admin
+    const { data: profiles, error: profilesError } = await admin
       .from("profiles")
       .select("id, username, display_name")
       .in("id", userIds);
+    if (profilesError) {
+      // Every sender would read "deleted account" below: say so instead.
+      console.error("[admin/feedback] sender read failed:", profilesError.message);
+      loadError = true;
+    }
     for (const p of profiles ?? []) {
       names.set(p.id, { username: p.username, displayName: p.display_name });
     }
   }
 
-  return data.map((r) => ({
+  const items = data.map((r) => ({
     id: r.id,
     category: r.category as FeedbackCategory,
     subject: r.subject,
@@ -118,4 +130,5 @@ export async function listAllFeedback(
     createdAt: r.created_at,
     user: r.user_id ? (names.get(r.user_id) ?? null) : null,
   }));
+  return { items, loadError };
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, MessageSquareReply, Send } from "lucide-react";
 import { toast } from "sonner";
+import { adminErrorToast } from "@/lib/admin/admin-toast";
 import {
   Dialog,
   DialogContent,
@@ -66,7 +67,7 @@ export function FeedbackReplyButton({
       const result = await adminReplyToFeedbackAction(parsed.data);
       if (!result.ok) {
         setError(result.error);
-        toast.error(result.error);
+        adminErrorToast("feedback reply", result.error);
         return;
       }
       toast.success("Reply sent — the user has been notified.");

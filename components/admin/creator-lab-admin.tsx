@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { FlaskConical, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { adminErrorToast } from "@/lib/admin/admin-toast";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { setCreatorLabModeAction } from "@/lib/creator/lab-actions";
@@ -26,7 +27,7 @@ export function CreatorLabAdmin({ mode: initial }: { mode: CreatorLabMode }) {
       const result = await setCreatorLabModeAction(next);
       if (!result.ok) {
         setMode(previous);
-        toast.error(result.error);
+        adminErrorToast("creator lab", result.error);
         return;
       }
       toast.success(`Creator lab: ${CREATOR_LAB_MODE_LABELS[next]}.`);

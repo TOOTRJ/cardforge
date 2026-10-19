@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Search, X } from "lucide-react";
 import { toast } from "sonner";
+import { adminErrorToast } from "@/lib/admin/admin-toast";
 import { setFrameReferenceAction } from "@/lib/cards/frame-review-actions";
 import { cn } from "@/lib/utils";
 
@@ -90,7 +91,7 @@ export function FrameReferencePicker({
         scryfallId,
       });
       if (!result.ok) {
-        toast.error(result.error);
+        adminErrorToast("frame reference", result.error);
         return;
       }
       if (result.warning) {

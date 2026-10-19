@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { adminErrorToast } from "@/lib/admin/admin-toast";
 import { Button } from "@/components/ui/button";
 import {
   resolveCardReportsAction,
@@ -21,7 +22,7 @@ export function ReportActions({ cardId }: { cardId: string }) {
         toast.success(action === "hide" ? "Card hidden." : "Reports dismissed.");
         router.refresh();
       } else {
-        toast.error(result.error);
+        adminErrorToast("card moderation", result.error);
       }
     });
   }
