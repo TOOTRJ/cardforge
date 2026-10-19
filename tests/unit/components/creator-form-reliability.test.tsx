@@ -1923,6 +1923,33 @@ describe("4.48 the full-art token: the default switch and the automatic height",
     expect(preview().template).toBe("m20tokentall");
   });
 
+  it("the height follows the text on the Nyx dress too — the starfield stays (TODO 4.51)", async () => {
+    const NYX = ["m20tokennyx", "m20tokennyxtext", "m20tokennyxtall"];
+    renderForm({
+      mode: "edit",
+      verifiedFrameKeys: [...ALL, ...combos(NYX)],
+      card: savedCard({
+        title: "Glimmer",
+        card_type: "token",
+        supertype: "Enchantment Creature",
+        subtypes: ["Glimmer"],
+        power: "1",
+        toughness: "1",
+        cost: null,
+        rules_text: null,
+        flavor_text: "It shines.",
+        color_identity: ["white"],
+        frame_style: { finish: "regular", template: "m20tokennyxtext" },
+      }),
+    });
+    expect(preview().template).toBe("m20tokennyxtext");
+    await goToText();
+    await typeFlavour(LONG);
+    expect(preview().template).toBe("m20tokennyxtall");
+    await typeFlavour("   ");
+    expect(preview().template).toBe("m20tokennyx");
+  });
+
   it("a stored arch token stays on the arch: the switch is for new tokens only", async () => {
     renderForm({
       mode: "edit",

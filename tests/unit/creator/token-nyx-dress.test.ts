@@ -99,6 +99,15 @@ describe("the Nyx dress of the full-art tokens", () => {
     const face = (supertype: string) => ({ cardType: "token", supertype, subtypes: ["Glimmer"], rulesText: "", flavorText: "", power: "1", toughness: "1", title: "Glimmer" });
     expect(resolveGeneratedFrame({ cardType: "token", requested: "m20token", colorIdentity: ["white"], verifiedKeys: keys, face: face("Enchantment Creature") as never })).toBe("m20tokennyx");
     expect(resolveGeneratedFrame({ cardType: "token", requested: "m20token", colorIdentity: ["white"], verifiedKeys: keys, face: face("Creature") as never })).toBe("m20token");
+    // A frame asked for by name keeps the height the TEXT asks for on the
+    // dress, as on the plain design: never the textless dress for a token
+    // with text (it fell to a random frame), nor the tall box for a line.
+    const withText = (supertype: string, rulesText: string) => ({ ...face(supertype), rulesText }) as never;
+    for (const requested of ["m20token", "m20tokentext", "m20tokentall", "m20tokennyx", "m20tokennyxtall"] as const) {
+      expect(resolveGeneratedFrame({ cardType: "token", requested, colorIdentity: ["white"], verifiedKeys: keys, face: withText("Enchantment Creature", "Flying"), fallback: "none" }), requested).toBe("m20tokennyxtext");
+      expect(resolveGeneratedFrame({ cardType: "token", requested, colorIdentity: ["white"], verifiedKeys: keys, face: withText("Enchantment Creature", ""), fallback: "none" }), requested).toBe("m20tokennyx");
+      expect(resolveGeneratedFrame({ cardType: "token", requested, colorIdentity: ["white"], verifiedKeys: keys, face: withText("Creature", "Flying"), fallback: "none" }), requested).toBe("m20tokentext");
+    }
     // Unpublished in black: the plain design, never a frame it can't wear.
     expect(resolveGeneratedFrame({ cardType: "token", requested: "m20token", colorIdentity: ["black"], verifiedKeys: keys, face: face("Enchantment Creature") as never })).toBe("m20token");
     // A random pick never draws the dress for a token without the word.

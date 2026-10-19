@@ -198,8 +198,13 @@ export function resolveGeneratedFrame(input: {
     const bySubtype = subtypeFrameFor(requested, face?.subtypes, has);
     // …the Nyx dress before the artifact frame an Artifact Creature borrows
     // (owner 2026-10-14): an Enchantment Artifact Creature prints on Nyx.
-    const byNyx = enchantmentFrameFor(kind, bySubtype, type);
-    const byWords = byNyx !== bySubtype && has(byNyx) ? byNyx : artifactCreatureFrameFor(kind, bySubtype, type);
+    // A token's dress is read on the frame its words and text pick first
+    // (tokenFrameFor: the Artifact word, the box, the full-art height), so
+    // the Nyx dress keeps the height the text asks for (TODO 4.51) — never
+    // the textless dress for a token with text, nor the tall box for a line.
+    const nyxBase = kind === "token" ? tokenFrameFor(kind, bySubtype, tokenFace) : bySubtype;
+    const byNyx = enchantmentFrameFor(kind, nyxBase, type);
+    const byWords = byNyx !== nyxBase && has(byNyx) ? byNyx : artifactCreatureFrameFor(kind, bySubtype, type);
     const vehicle = has(byWords) ? byWords : bySubtype;
     const wanted = has(vehicle) && vehicle !== requested
       ? vehicle

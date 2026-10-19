@@ -300,7 +300,7 @@ import {
   sameTokenFrameText,
   tokenFrameText,
 } from "@/lib/creator/token-frame-auto";
-import { isM20ArtifactTokenTemplate, m20TokenHeightOf, m20TokenTemplate } from "@/lib/cards/token-height";
+import { isM20ArtifactTokenTemplate, isM20NyxTokenTemplate, m20TokenHeightOf, m20TokenTemplate } from "@/lib/cards/token-height";
 import {
   blankSecondFaceFor,
   defaultValuesFor,
@@ -1482,11 +1482,12 @@ export function CardCreatorForm({
         previous: prev.text,
         heightPinned: manualTokenFrameRef.current,
       });
-      // Only the height moves here, in the dress the card wears: the
+      // Only the height moves here, in the dress the card wears (its Nyx
+      // starfield too, TODO 4.51): the
       // Artifact word's dress is the type-word effect's (it has already
       // run, and says so when it can't).
       const height = m20TokenHeightOf(target);
-      next = height && height !== m20TokenHeightOf(current) ? m20TokenTemplate(height, isM20ArtifactTokenTemplate(current)) : null;
+      next = height && height !== m20TokenHeightOf(current) ? m20TokenTemplate(height, isM20ArtifactTokenTemplate(current), isM20NyxTokenTemplate(current)) : null;
     } else if (hasRulesBoxText(prev.text) !== hasText) {
       next = followTokenTextBox({
         kind,
