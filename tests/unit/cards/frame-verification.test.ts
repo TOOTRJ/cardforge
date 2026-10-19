@@ -157,6 +157,8 @@ describe("frame reference registry", () => {
       // The double-faced saga front (TODO 5.5 (b)): no colourless
       // transforming saga was printed.
       "sagadfcfront/c",
+      // …and its back (5.5 (b) PR 2): no colourless Saga back was printed.
+      "sagadfcback/c",
       // The arch's tall box (TODO 4.55): white, black and red tokens and the
       // colourless Clues (the artifact dress) are all that printed it.
       ...["u", "g", "c", "m"].map((k) => `m15tokentall/${k}`),
@@ -178,9 +180,9 @@ describe("frame reference registry", () => {
     // + the Spacecraft's extended-art and borderless dresses (4.27a step 2).
     // + 4.40 / 4.41's three older full-art basics.
     // + 5.7's four borderless double-faced bodies.
-    // + 5.5 (b)'s double-faced saga front.
+    // + 5.5 (b)'s double-faced saga front and its back (PR 2).
     // + 4.55's two tall-box tokens.
-    expect(m15Templates.length).toBe(63);
+    expect(m15Templates.length).toBe(64);
     expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {

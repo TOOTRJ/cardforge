@@ -274,7 +274,6 @@ import {
 } from "@/lib/creator/card-kinds";
 import {
   DEFAULT_DFC_ICON,
-  bodyFor,
   colorlessFaceAllowed,
   dfcIconFamilyForBackBody,
   dfcLookOf,
@@ -288,6 +287,7 @@ import {
 import { dfcIconOf } from "@/lib/cards/faces";
 import { BATTLE_ONE_FACE_NOTE, battleBackBodyFor, battleBackUnavailableNote } from "@/lib/creator/battle-back";
 import { sagaTwoFacesColourMove } from "@/lib/creator/saga-faces";
+import { creatorBackBodyFor } from "@/lib/creator/saga-back";
 import { dfcAdoptionOffer } from "@/lib/cards/dfc-adopt";
 // The emblem kind (TODO 6.23): its entry values and the hidden rarity chips.
 import {
@@ -916,9 +916,20 @@ export function CardCreatorForm({
   // An edit's schema knows the rows the form opened with: a walker / saga
   // whose rows the maker did not touch saves its stored text unchanged, so
   // nothing about them blocks the save (lib/creator/form-schema.ts).
+  // …and the back body the save will store (TODO 5.5 (b), PR 2): the
+  // verified keys and an edit's stored back, as the live preview derives it.
+  const formBackBody = useMemo(
+    () => ({
+      mode,
+      verifiedKeys: new Set(verifiedFrameKeys),
+      storedBackTemplate: (card?.back_face as { frame_style?: { template?: string } | null } | null | undefined)?.frame_style?.template ?? null,
+      storedFamily: card ? dfcIconOf({ frameStyle: (card.frame_style as FrameStyle | null) ?? undefined }) : null,
+    }),
+    [mode, verifiedFrameKeys, card],
+  );
   const formResolver = useMemo(
-    () => zodResolver(cardFormSchemaFor(mode === "edit" ? defaults : null)),
-    [mode, defaults],
+    () => zodResolver(cardFormSchemaFor(mode === "edit" ? defaults : null, formBackBody)),
+    [mode, defaults, formBackBody],
   );
   const methods = useForm<FormValues>({
     defaultValues: defaults,
@@ -1041,6 +1052,10 @@ export function CardCreatorForm({
   // reason, and the card keeps what it was saved with.
   const battleVerifiedKeys = useMemo(() => new Set(verifiedFrameKeys), [verifiedFrameKeys]);
   const battleOfferNote = battleBackUnavailableNote({ mode, storedBack: card?.back_face as { frame_style?: { template?: string } | null } | null | undefined, verifiedKeys: battleVerifiedKeys });
+  // The edited card's back body and family as stored — an edit keeps a Saga
+  // back where it was saved (TODO 5.5 (b), PR 2: lib/creator/saga-back.ts).
+  const storedBackTemplate = (card?.back_face as { frame_style?: { template?: string } | null } | null | undefined)?.frame_style?.template ?? null;
+  const storedDfcFamily = card ? dfcIconOf({ frameStyle: (card.frame_style as FrameStyle | null) ?? undefined }) : null;
   /** Whether a battle on this form edits its back as a face of its own. */
   const battleBackOffered = battleOfferNote === null;
   const battleCard = isBattleFront(watched.frame_style?.template);
@@ -1073,7 +1088,21 @@ export function CardCreatorForm({
           frontColorIdentity: watched.color_identity,
           verifiedKeys: battleVerifiedKeys,
         })
-      : bodyFor(dfcLayout, "back", watched.back_face.card_type || null, dfcFamily, dfcLookOf(watched.frame_style?.template))
+      : // (A Saga back — TODO 5.5 (b), PR 2 — on the saga back where it is
+        // published in the back's colour: lib/creator/saga-back.ts.)
+        creatorBackBodyFor({
+          mode,
+          layout: dfcLayout,
+          backType: watched.back_face.card_type,
+          backSubtypes: watched.back_face.subtypes_text,
+          family: dfcFamily,
+          look: dfcLookOf(watched.frame_style?.template),
+          backColorIdentity: watched.back_face.color_identity,
+          frontColorIdentity: watched.color_identity,
+          verifiedKeys: battleVerifiedKeys,
+          storedBackTemplate: storedBackTemplate,
+          storedFamily: storedDfcFamily,
+        })
     : null;
   // The kind's own words for its second part — "back face", "right half",
   // "adventure spell" (lib/creator/second-part.ts, TODO 5.14).
@@ -3341,13 +3370,19 @@ export function CardCreatorForm({
             frontColorIdentity: values.color_identity,
             verifiedKeys: battleVerifiedKeys,
           })
-        : bodyFor(
-            submitDfcLayout,
-            "back",
-            values.back_face.card_type || null,
-            dfcIconOf({ frameStyle: values.frame_style }),
-            dfcLookOf(submitTemplate),
-          )
+        : creatorBackBodyFor({
+            mode,
+            layout: submitDfcLayout,
+            backType: values.back_face.card_type,
+            backSubtypes: values.back_face.subtypes_text,
+            family: dfcIconOf({ frameStyle: values.frame_style }),
+            look: dfcLookOf(submitTemplate),
+            backColorIdentity: values.back_face.color_identity,
+            frontColorIdentity: values.color_identity,
+            verifiedKeys: battleVerifiedKeys,
+            storedBackTemplate: storedBackTemplate,
+            storedFamily: storedDfcFamily,
+          })
       : null;
     const backFaceContent = values.has_back_face
       ? {

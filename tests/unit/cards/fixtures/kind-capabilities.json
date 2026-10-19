@@ -84,6 +84,7 @@
   { "template":  "m15borderlessmdfcfront", "change":  "new-template", "capabilities":  ["pt", "dfcFront"], "reason":  "TODO 5.7: a NEW template — the dark borderless modal FRONT body (PipGlyph's own masters: the published m15borderless masters with the double-faced pieces grafted from Card Conjurer's light borderless DFC packs): m15borderless's slots with the bordered modal front's double-faced slots — the capabilities of its bordered twin. An addition: no stored card sits on it." },
   { "template":  "m15borderlessmdfcback", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 5.7: a NEW template — the dark borderless modal BACK body (PipGlyph's own masters: the published m15borderless masters with the double-faced pieces grafted from Card Conjurer's light borderless DFC packs): m15borderless's slots with the bordered modal back's double-faced slots — the capabilities of its bordered twin. Never a card's own template (templateRefusesKind refuses every kind on a back body). An addition: no stored card sits on it." },
   { "template":  "sagadfcfront", "change":  "new-template", "capabilities":  ["chapters"], "reason":  "TODO 5.5 (b): a NEW template — the double-faced saga FRONT (Card Conjurer's 'Saga (Transform)' pack, frames bucket only): the saga's slots (its chapter rail, with a shorter rail foot) with the transform front's icon rider and a left-aligned reverse P/T — the saga's capabilities. Not a front of the Transform kind (DfcProfile.saga: no `dfcFront`): the Saga kind's frame for a saga with a back face. An addition: no stored card sits on it." },
+  { "template":  "sagadfcback", "change":  "new-template", "capabilities":  ["chapters"], "reason":  "TODO 5.5 (b), PR 2: a NEW template — the double-faced saga BACK (PipGlyph's own composite of the published saga and m15dfcback masters, frames bucket only): the saga's slots (its chapter rail) with the ▼ back's white ink, no cost and the colour dot on the saga's type row — the saga's capabilities (no P/T: a saga creature back is 4.5d's). Never a card's own template (templateRefusesKind refuses every kind on a back body). An addition: no stored card sits on it." },
   { "template":  "m15tokentall", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.55: a NEW template — the 2014–19 arch token's TALL text box (PipGlyph's own cut of the published m15tokentext masters: the window's lower rows, the type pill and the box's top 238 px higher, the box 238 px taller): m15tokentext's slots moved with them — its capabilities. An addition: no stored card sits on it." },
   { "template":  "m15tokenartifacttall", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.55: a NEW template — the tall box's artifact dress (PipGlyph's own cut of the published m15tokenartifacttext masters): m15tokenartifacttext's capabilities. An addition: no stored card sits on it." }
  ],
@@ -140,6 +141,7 @@
   "battle": ["defense", "landscape"],
   "saga": ["chapters"],
   "sagadfcfront": ["chapters"],
+  "sagadfcback": ["chapters"],
   "adventure": ["pt", "adventure"],
   "flip": ["pt", "secondFace"],
   "split": ["landscape", "secondFace"],

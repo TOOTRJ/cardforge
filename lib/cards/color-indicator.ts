@@ -75,15 +75,18 @@ export function drawsColorIndicator(
   return indicator === "coloured" && colorIndicatorFills(colors).length > 0;
 }
 
-/** The box the dot's SVG is drawn in (outline included), card percent. */
-export function colorIndicatorBox(): { topPct: number; leftPct: number; widthPct: number; heightPct: number } {
+/** The box the dot's SVG is drawn in (outline included), card percent —
+ *  moved down `dyPct` (% of the card's height) on a body whose type bar sits
+ *  lower than M15's (FrameProfile.indicatorDyPct: the double-faced saga
+ *  back, TODO 5.5 (b)); 0 everywhere else. */
+export function colorIndicatorBox(dyPct = 0): { topPct: number; leftPct: number; widthPct: number; heightPct: number } {
   // The box is square in card WIDTH units; its height in %H follows the
   // 5:7 card (× 5 / 7).
   const sidePct = COLOR_INDICATOR.diameterPct + COLOR_INDICATOR.outlinePct * 2;
   const heightPct = sidePct * (5 / 7);
   return {
     leftPct: COLOR_INDICATOR.centre.xPct - sidePct / 2,
-    topPct: COLOR_INDICATOR.centre.yPct - heightPct / 2,
+    topPct: COLOR_INDICATOR.centre.yPct + dyPct - heightPct / 2,
     widthPct: sidePct,
     heightPct,
   };

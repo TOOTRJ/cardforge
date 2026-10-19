@@ -35,7 +35,8 @@ import {
   loyaltyCostSchema,
 } from "@/lib/validation/card";
 import { dfcFrontBodyFor, dfcLayoutForCard, kindFromCard } from "@/lib/creator/card-kinds";
-import { bodyFor, colorlessFaceAllowed, dfcLookOf, isDfcFaceType, isSagaFront } from "@/lib/cards/dfc";
+import { colorlessFaceAllowed, dfcLookOf, isDfcFaceType, isSagaFront, type DfcIconFamily } from "@/lib/cards/dfc";
+import { creatorBackBodyFor } from "@/lib/creator/saga-back";
 import { SAGA_TWO_FACES_COLOURLESS } from "@/lib/creator/saga-faces";
 import { dfcFamilyOf, dfcFrontColorError, dfcFrontTypeError, DFC_BACK_TYPE_REFUSED, DFC_COLORLESS_NEEDS_ARTIFACT } from "@/lib/cards/dfc-gate";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
@@ -157,8 +158,24 @@ export function sagaRowLosesMarkerMessage(stored: string, lost: readonly string[
  * edits a row the checks are back for every row: the save then writes what
  * the editor shows.
  */
+/** What the form knows of a double-faced back's BODY beyond its values
+ *  (TODO 5.5 (b), PR 2): the verified keys and, on an edit, the stored back
+ *  body and family — so the colourless check below asks the body the save
+ *  will store (`creatorBackBodyFor` → `backBodyFor`, the server gate's ONE
+ *  answer), never a body of its own. Absent: nothing is verified, a create —
+ *  `bodyFor`'s body, as before. */
+export type FormBackBodyContext = {
+  mode: "create" | "edit" | "remix";
+  verifiedKeys: ReadonlySet<string>;
+  storedBackTemplate?: string | null;
+  storedFamily?: DfcIconFamily | null;
+};
+
+const NO_BACK_BODY_CONTEXT: FormBackBodyContext = { mode: "create", verifiedKeys: new Set() };
+
 export function cardFormSchemaFor(
   opened: StructuredRulesValues | null = null,
+  backBody: FormBackBodyContext = NO_BACK_BODY_CONTEXT,
 ): z.ZodType<FormValues, FormValues> {
   return z
   .custom<FormValues>()
@@ -271,7 +288,23 @@ export function cardFormSchemaFor(
         if (!isDfcFaceType(back.card_type)) {
           ctx.addIssue({ code: "custom", path: ["back_face", "card_type"], message: DFC_BACK_TYPE_REFUSED });
         } else {
-          const body = bodyFor(dfcLayout, "back", back.card_type, dfcFamilyOf(values.frame_style?.dfcIcon), dfcLook);
+          // The body the save stores — the server gate's answer
+          // (backBodyFor: a Saga back on `sagadfcback` where it is verified,
+          // whose `c` is no artifact stand-in), never `bodyFor` alone
+          // (TODO 5.5 (b), PR 2).
+          const body = creatorBackBodyFor({
+            mode: backBody.mode,
+            layout: dfcLayout,
+            backType: back.card_type,
+            backSubtypes: back.subtypes_text,
+            family: dfcFamilyOf(values.frame_style?.dfcIcon),
+            look: dfcLook,
+            backColorIdentity: back.color_identity,
+            frontColorIdentity: values.color_identity,
+            verifiedKeys: backBody.verifiedKeys,
+            storedBackTemplate: backBody.storedBackTemplate,
+            storedFamily: backBody.storedFamily,
+          });
           const colour = back.color_identity.length > 0 ? back.color_identity : values.color_identity;
           if (
             body &&

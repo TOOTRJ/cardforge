@@ -598,8 +598,9 @@ describe("rules consumers, centred (FrameStyle.rulesAlign) — no clip, no keep-
 });
 
 // …on the saga AND on the double-faced saga front (TODO 5.5 (b)), whose
-// rail ends at the reverse-P/T tab's top (SAGA_DFC_RAIL_FOOT_PX).
-for (const template of ["saga", "sagadfcfront"] as const)
+// rail ends at the reverse-P/T tab's top (SAGA_DFC_RAIL_FOOT_PX), and on its BACK
+// (5.5 (b) PR 2: the saga's rail, read from a back face's plain text).
+for (const template of ["saga", "sagadfcfront", "sagadfcback"] as const)
 describe(`the saga rail on ${template} — its reminder block and every chapter row (TODO 4.21c, 5.5 (b))`, () => {
   const SLOT = getFrameProfile(template).chapters!;
   const REMINDER = "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)";

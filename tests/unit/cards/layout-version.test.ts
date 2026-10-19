@@ -429,8 +429,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
   "m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb",
   // TODO 5.7's borderless double-faced bodies.
   "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
-  // TODO 5.5 (b)'s double-faced saga front.
-  "sagadfcfront",
+  // TODO 5.5 (b)'s double-faced saga front and back.
+  "sagadfcfront", "sagadfcback",
   // TODO 4.55's tall-box arch tokens.
   "m15tokentall", "m15tokenartifacttall",
 ];
@@ -459,8 +459,8 @@ const POST_V36_TEMPLATES: readonly string[] = [
   "m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb",
   // TODO 5.7's borderless double-faced bodies.
   "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
-  // TODO 5.5 (b)'s double-faced saga front.
-  "sagadfcfront",
+  // TODO 5.5 (b)'s double-faced saga front and back.
+  "sagadfcfront", "sagadfcback",
   // TODO 4.55's tall-box arch tokens.
   "m15tokentall", "m15tokenartifacttall",
 ];
@@ -820,8 +820,8 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb",
       // …and TODO 5.7's borderless double-faced bodies.
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
-      // …and TODO 5.5 (b)'s double-faced saga front.
-      "sagadfcfront",
+      // …and TODO 5.5 (b)'s double-faced saga front and back.
+      "sagadfcfront", "sagadfcback",
       // …and TODO 4.55's tall-box arch tokens.
       "m15tokentall", "m15tokenartifacttall",
     ];
@@ -1030,8 +1030,8 @@ describe("v33 — rules text laid out by its real lines (TODO 3.29)", () => {
     expect([...V33_SCOPE_TEMPLATES.textless, ...newTextless].sort()).toEqual(all.filter((t) => getFrameProfile(t).textless).sort());
     for (const t of newTextless) expect(V33_SCOPE_TEMPLATES.textless, t).not.toContain(t);
     // A NEW chapter-rail template no card was ever baked on needs none
-    // either: TODO 5.5 (b)'s double-faced saga front.
-    const newChapters = ["sagadfcfront"];
+    // either: TODO 5.5 (b)'s double-faced saga front and back.
+    const newChapters = ["sagadfcfront", "sagadfcback"];
     expect([...V33_SCOPE_TEMPLATES.chapters, ...newChapters].sort()).toEqual(all.filter((t) => getFrameProfile(t).chapters).sort());
     for (const t of newChapters) expect(V33_SCOPE_TEMPLATES.chapters, t).not.toContain(t);
   });

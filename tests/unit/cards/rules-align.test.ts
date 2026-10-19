@@ -139,6 +139,8 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
       "m15station", "m15stationland", "m15pw", "m20token", "m20tokenartifact", "m15borderlessstation", "m15borderlesspw", "m15borderlesspwtall", "saga",
       // The double-faced saga front (TODO 5.5 (b)): the saga's rail.
       "sagadfcfront",
+      // …and its back (5.5 (b) PR 2): the same rail.
+      "sagadfcback",
       "extendedartstation", "m15textless", "m15textlessland",
     ]);
     // (…and 4.40 / 4.41's three older full-art basics offer it: a basic

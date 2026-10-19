@@ -349,3 +349,57 @@ describe("adoptDfcBodiesAction", () => {
     expect(state.baked).toEqual([]);
   });
 });
+
+// A legacy SAGA back (TODO 5.5 (b), PR 2: MOM's praetors imported before the
+// bodies) is moved onto the body the gate derives — the ▼ back until the
+// double-faced saga back is verified in its colour, the saga back after —
+// and is never refused for the plan's ▼ back once the saga back is ticked.
+describe("adoptDfcBodiesAction — a Saga back", () => {
+  const sagaCard = () => ({
+    id: CARD,
+    owner_id: USER,
+    slug: "elesh-norn",
+    visibility: "public",
+    ...cardOf(rows[2]),
+    back_face: {
+      title: "The Argent Etchings",
+      card_type: "enchantment",
+      subtypes: ["Saga"],
+      rules_text:
+        "(As this Saga enters and after your draw step, add a lore counter.)\nI — Incubate 2 five times.\nII — Creatures you control get +1/+1.\nIII — Destroy all other permanents.",
+    },
+  });
+  function db() {
+    const stub = chainClient((table, calls): ChainAnswer => {
+      if (table === "cards" && called(calls, "update")) return { data: { id: CARD, slug: "elesh-norn" }, error: null };
+      return { data: null, error: null, count: 0 };
+    });
+    state.client = stub.client;
+    return stub;
+  }
+  const writtenBack = (stub: ReturnType<typeof db>) => {
+    const entry = stub.forTable("cards").find((e) => called(e.calls, "update"));
+    return (payloadOf(entry?.calls ?? [], "update") as { back_face?: Record<string, unknown> } | undefined)?.back_face;
+  };
+  beforeEach(() => {
+    state.existing = sagaCard();
+    state.user = { id: USER };
+    state.baked = [];
+  });
+
+  it("onto the ▼ back while the saga back isn't verified", async () => {
+    state.verified = [frameComboKey("m15dfcfront", "w"), frameComboKey("m15dfcback", "w")];
+    const stub = db();
+    const result = await adoptDfcBodiesAction(CARD, "transform");
+    expect(result).toMatchObject({ ok: true, frontBody: "m15dfcfront", backBody: "m15dfcback" });
+    expect(writtenBack(stub)).toMatchObject({ frame_style: { template: "m15dfcback" }, color_identity: ["white"] });
+  });
+
+  it("onto the saga back once it is verified in the back's colour (refused before the fix)", async () => {
+    state.verified = [frameComboKey("m15dfcfront", "w"), frameComboKey("m15dfcback", "w"), frameComboKey("sagadfcback", "w")];
+    const stub = db();
+    const result = await adoptDfcBodiesAction(CARD, "transform");
+    expect(result).toMatchObject({ ok: true, frontBody: "m15dfcfront", backBody: "sagadfcback" });
+    expect(writtenBack(stub)).toMatchObject({ frame_style: { template: "sagadfcback" }, color_identity: ["white"] });
+  });
+});

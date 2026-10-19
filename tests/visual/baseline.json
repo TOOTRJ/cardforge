@@ -20,7 +20,7 @@
       "public/fonts/mplantin-italic.ttf": "e81d83608cfa12d5",
       "public/fonts/Montserrat-Medium.ttf": "4a5a218d2b8efa4f"
     },
-    "manifest": "b57641b0c3abadff"
+    "manifest": "aad8dc32a0c7d864"
   },
   "cases": {
     "adventure/b/adventure-long": "62fb854bb9fd30f8:42614af9",
@@ -2032,6 +2032,24 @@
     "saga/wub/saga-long@dense": "d59b410f8b97e331:e27452c5",
     "saga/wub/saga-long@pastfloor": "1f462dcc3682f67b:dfc181aa",
     "saga/wub/saga-short": "f44d6e12861a3ad1:298202f5",
+    "sagadfcback/b/transform-long": "28672a3a7cfce55a:d94a8a65",
+    "sagadfcback/b/transform-short": "4c7e2d67cf31324e:1e2955e4",
+    "sagadfcback/c/transform-long": "f3aab7bdc168a6e0:318af024",
+    "sagadfcback/c/transform-short": "9fda42cd928ba137:549d4962",
+    "sagadfcback/g/transform-long": "9749fa2b8d1c42d9:1bb10639",
+    "sagadfcback/g/transform-long@hd": "01caee3592c2d0ff:98504fcd",
+    "sagadfcback/g/transform-short": "a101276188138273:8f07cf99",
+    "sagadfcback/r/transform-long": "06ab8bca9b39fb4a:12de2849",
+    "sagadfcback/r/transform-short": "af1e3a1665d767d3:4f2b8e9d",
+    "sagadfcback/r/transform-short@foil": "6a536deb784cb10a:dd54d43f",
+    "sagadfcback/u/transform-long": "8bf7a0dd2108c7da:5ab1ab3b",
+    "sagadfcback/u/transform-short": "0a8f6c16169dd17f:0bbadf69",
+    "sagadfcback/w/transform-long": "b56712649f586aed:4f4899a6",
+    "sagadfcback/w/transform-short": "b6029a574807e54d:29b1acaa",
+    "sagadfcback/wu/transform-long": "e3a2295175f2fd1d:11c8b354",
+    "sagadfcback/wu/transform-short": "7f4fe942ac770d90:40fd39e4",
+    "sagadfcback/wub/transform-long": "4a05f5a0812c677a:3fd17897",
+    "sagadfcback/wub/transform-short": "07bdd53c8fcb52ce:f533f48c",
     "sagadfcfront/b/saga-long": "44f0834eeffee896:c5df63fc",
     "sagadfcfront/b/saga-short": "1af6d761baf4e31b:e4b1b33b",
     "sagadfcfront/b/saga-short@fan": "1a4246ba2b2e5fbc:832bf45b",

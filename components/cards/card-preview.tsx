@@ -1337,7 +1337,7 @@ function CardFace({
       <StationPieces pieces={stationPieces} />
       {/* The colour-indicator dot (TODO 5.1a): over the master, under every
           text layer — the bake's twin (ColorIndicatorBake). */}
-      {indicatorFills.length ? <ColorIndicatorOverlay fills={indicatorFills} /> : null}
+      {indicatorFills.length ? <ColorIndicatorOverlay fills={indicatorFills} dyPct={layout.indicatorDyPct ?? 0} /> : null}
 
       {/* Premium finish: etched — fine cross-hatch + sheen on the FRAME only
           (masked by the frame's own luminance), just above the frame and
@@ -2407,8 +2407,8 @@ function FlipsideLineOverlay({ slot, line, orientation, overrides }: { slot: Tex
 // box. The bake draws the same geometry (ColorIndicatorBake).
 // ---------------------------------------------------------------------------
 
-function ColorIndicatorOverlay({ fills }: { fills: readonly string[] }) {
-  const box = colorIndicatorBox();
+function ColorIndicatorOverlay({ fills, dyPct = 0 }: { fills: readonly string[]; dyPct?: number }) {
+  const box = colorIndicatorBox(dyPct);
   const c = COLOR_INDICATOR_VIEW / 2;
   return (
     <svg

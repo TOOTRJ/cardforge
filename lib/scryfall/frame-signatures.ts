@@ -3071,8 +3071,10 @@ export function signatureDrawnOn(signature: string, template: string | null | un
  *  (TODO 4.27a step 2): its two printings (EOC #1 / #2) resolve to the
  *  borderless artifact frame and land on the bordered station frame — as
  *  every edge-to-edge frame, it is never an import's landing (Scryfall's art
- *  crop is the window, 1.18): a maker's pick only. */
-export const TEMPLATES_WITHOUT_PRINTED_SIGNATURE: readonly FrameTemplate[] = ["m15dfcback", "m15dfcbackleft", "m15dfclandback", "m15mdfcback", "m15mdfclandback", "m15borderlessstation", "m15borderlessdfcback", "m15borderlessmdfcback"];
+ *  crop is the window, 1.18): a maker's pick only. (The double-faced saga
+ *  BACK, TODO 5.5 (b) PR 2, is a back body like the others: a Saga back's
+ *  printing resolves to its front.) */
+export const TEMPLATES_WITHOUT_PRINTED_SIGNATURE: readonly FrameTemplate[] = ["m15dfcback", "m15dfcbackleft", "m15dfclandback", "m15mdfcback", "m15mdfclandback", "m15borderlessstation", "m15borderlessdfcback", "m15borderlessmdfcback", "sagadfcback"];
 
 const textOf = (text: Text | undefined, ctx: Ctx): string | null =>
   text === undefined ? null : typeof text === "string" ? text : text(ctx);

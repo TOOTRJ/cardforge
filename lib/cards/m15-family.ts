@@ -113,6 +113,9 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // The double-faced saga front (TODO 5.5 (b)): a new template, no stored
   // card — the saga's slots and the family's sizes — no bump.
   "sagadfcfront",
+  // …and its back (TODO 5.5 (b), PR 2): a new template, no stored card —
+  // the saga's slots and the family's sizes — no bump.
+  "sagadfcback",
   // The battle (TODO 4.21b, CC's 'Battle' pack; layout v43): the family's
   // sizes on a landscape card — it joined WITH its bump (0 stored public or
   // unlisted cards).
