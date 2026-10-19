@@ -63,6 +63,8 @@ describe("which card draws the crown", () => {
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
       // The full-art tokens' own floating crown (TODO 4.48).
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
+      // …and their Nyx dress (TODO 4.51).
+      "m20tokennyx", "m20tokennyxtext", "m20tokennyxtall", "m20tokenartifactnyx", "m20tokenartifactnyxtext", "m20tokenartifactnyxtall",
     ];
     expect(crowned).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => DRAWN.includes(t)));
     expect(showsCrown(legendary(["white"]), getFrameProfile("regular"))).toBe(true);
@@ -80,7 +82,7 @@ describe("which card draws the crown", () => {
       ...over,
     });
     const tokenCrowned = FRAME_TEMPLATE_VALUES.filter((t) => showsCrown(token(["white"], t), getFrameProfile(t)));
-    expect(tokenCrowned).toEqual(["m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall"]);
+    expect(tokenCrowned).toEqual(["m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall", "m20tokennyx", "m20tokennyxtext", "m20tokennyxtall", "m20tokenartifactnyx", "m20tokenartifactnyxtext", "m20tokenartifactnyxtall"]);
     expect(crownKeyFor(token(["blue"], "m20token"), getFrameProfile("m20token"))).toBe("u");
     expect(crownKeyFor(token(["colorless"], "m20tokentext"), getFrameProfile("m20tokentext"))).toBe("c");
     // The artifact templates' colourless wears the silver A crown (TNEO #16).

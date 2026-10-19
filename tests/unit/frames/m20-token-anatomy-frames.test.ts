@@ -120,8 +120,16 @@ describe("the slot the full-art token profiles draw (M20_TOKEN_CROWN)", () => {
       expect(getFrameProfile(t).twoColorMasters, t).toEqual(["split"]);
       expect(getFrameProfile(t).twoColorPlate, t).toBe("c");
     }
+    // …and the Nyx dress (TODO 4.51): the same band, no pairs, no plate rule.
+    const NYX = ["m20tokennyx", "m20tokennyxtext", "m20tokennyxtall", "m20tokenartifactnyx", "m20tokenartifactnyxtext", "m20tokenartifactnyxtall"];
+    for (const t of NYX.slice(0, 3)) expect(getFrameProfile(t).overlays, t).toEqual([M20_TOKEN_CROWN]);
+    for (const t of NYX.slice(3)) expect(getFrameProfile(t).overlays, t).toEqual([{ ...M20_TOKEN_CROWN, keyMap: { c: "a" } }]);
+    for (const t of NYX) {
+      expect(getFrameProfile(t).twoColorMasters, t).toBeUndefined();
+      expect(getFrameProfile(t).twoColorPlate, t).toBeUndefined();
+    }
     for (const t of FRAME_TEMPLATE_VALUES) {
-      if ((TEMPLATES as readonly string[]).includes(t)) continue;
+      if ((TEMPLATES as readonly string[]).includes(t) || NYX.includes(t)) continue;
       const profile = getFrameProfile(t);
       for (const slot of profile.overlays ?? []) {
         expect(slot.assetPathTemplate, t).not.toContain("m20tokencrown");

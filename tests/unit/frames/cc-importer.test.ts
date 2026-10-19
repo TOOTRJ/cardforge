@@ -69,6 +69,7 @@ import {
   RETRO_GOLD_MSE,
 } from "@/scripts/lib/cc-frames.mjs";
 import { DFC_BORDERLESS_TEMPLATES } from "@/scripts/lib/dfc-borderless.mjs";
+import { TOKEN_NYX_RECIPE } from "@/scripts/lib/token-nyx.mjs";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { TWO_COLOR_PAIRS } from "@/lib/cards/frame-reference-registry";
 import { getFrameProfile, M20_TOKEN_TEXTLESS_RECUT_PX } from "@/lib/cards/template-layout";
@@ -2088,6 +2089,9 @@ describe("provenance and hygiene", () => {
         ...Object.keys(HOLO_STAMP_NOTCHES),
         ...Object.keys(DFC_BORDERLESS_TEMPLATES),
         ...Object.keys(BORDERLESS_STAMP_FOLDERS),
+        // The full-art token's Nyx dress (TODO 4.51): PipGlyph's composite
+        // (scripts/build-token-nyx.mjs), its own test: token-nyx-masters.test.ts.
+        ...Object.keys(TOKEN_NYX_RECIPE.templates),
         ...Object.keys(WALKER_STAMP_FOLDERS),
         // …and the double-faced saga back (TODO 5.5 (b) PR 2): PipGlyph's
         // composite (scripts/build-saga-back-frames.mjs) of the published

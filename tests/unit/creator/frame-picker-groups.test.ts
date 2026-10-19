@@ -150,6 +150,15 @@ const STATION_DRESSES: readonly string[] = [
   "m15borderlessdfcback",
   "m15borderlessmdfcfront",
   "m15borderlessmdfcback",
+  // …and the full-art token's Nyx dress (TODO 4.51), pinned in
+  // tests/unit/creator/token-nyx-dress.test.ts and
+  // tests/unit/scryfall/token-imports.test.ts.
+  "m20tokennyx",
+  "m20tokennyxtext",
+  "m20tokennyxtall",
+  "m20tokenartifactnyx",
+  "m20tokenartifactnyxtext",
+  "m20tokenartifactnyxtall",
   // …and the double-faced saga front (TODO 5.5 (b)) — pinned in
   // tests/unit/creator/saga-dfc-front.test.ts and the dfc import tests.
   "sagadfcfront",
@@ -566,11 +575,20 @@ describe("the frame picker's groups: a classification change only", () => {
   // ticks and every verified policy), where main left them nearest with the
   // crown / two-colour gap. Their frame, kind and landing are main's.
   it("imports — every captured printing's match, landing, chooser and remix landing: the same, but the crowned and two-colour M20 tokens exact (4.48)", () => {
-    expect(changed("imports")).toEqual(["all|tmkm-10", "all|tmkm-13", "prodPlusMoved|tmkm-10", "prodPlusMoved|tmkm-13", "prod|tmkm-10", "prod|tmkm-13"]);
+    expect(changed("imports")).toEqual([
+      "all|tdsk-10", "all|tdsk-4", "all|teoc-13",
+      "all|tmkm-10", "all|tmkm-13", "prodPlusMoved|tmkm-10", "prodPlusMoved|tmkm-13", "prod|tmkm-10", "prod|tmkm-13",
+    ]);
     for (const policy of ["all", "prodPlusMoved", "prod"]) {
       expect(raw.imports[`${policy}|tmkm-10`], policy).toMatchObject({ kind: "token", frame_template: "m20token", match: ["exact", "m20token", null] });
       expect(raw.imports[`${policy}|tmkm-13`], policy).toMatchObject({ kind: "token", frame_template: "m20tokentext", match: ["exact", "m20tokentext", null] });
     }
+    // …and TODO 4.51: the Nyx tokens land EXACT on the Nyx dress once it is
+    // verified (only "all" verifies it); until then main's landing, the
+    // plain full-art template, nearest with the starfield gap.
+    expect(raw.imports["all|tdsk-4"]).toMatchObject({ kind: "token", frame_template: "m20tokennyx", match: ["exact", null] });
+    expect(raw.imports["all|tdsk-10"]).toMatchObject({ kind: "token", frame_template: "m20tokennyx", match: ["exact", null] });
+    expect(raw.imports["all|teoc-13"]).toMatchObject({ kind: "token", frame_template: "m20tokenartifactnyx", match: ["exact", null] });
   });
 
   // The AI's random pools: identical but for layout v58 (TODO 4.35 / 4.42),

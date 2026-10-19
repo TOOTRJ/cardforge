@@ -24,7 +24,7 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // ---------------------------------------------------------------------------
 
 const PORTRAIT = 7 / 5;
-const TALL = ["m20tokentall", "m20tokenartifacttall"];
+const TALL = ["m20tokentall", "m20tokenartifacttall", "m20tokennyxtall", "m20tokenartifactnyxtall"];
 const WARLEADER =
   "Whenever you attack, choose one —\n• Create a 1/1 white Rabbit creature token that's tapped and attacking.\n• Attacking creatures you control get +1/+1 until end of turn.\n(This token's mana cost is {2}{W}{W}.)";
 

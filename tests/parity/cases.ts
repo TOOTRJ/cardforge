@@ -252,6 +252,9 @@ const PICKS: readonly Pick[] = [
   { from: "m20token/u/token-short@crown", why: "4.48: the full-art token's floating crown round the name pill (a Legendary token)" },
   { from: "m20tokentext/wu/token-short@pair-crown", why: "4.48: a crowned two-colour token — the pair master, the pair's crown, the grey plate" },
   { from: "m20tokenartifact/c/token-short@crown", why: "4.48: the artifact template's colourless crown, CC's silver A (keyMap c → a)" },
+  { from: "m20tokennyx/w/token-short@token-nyx", why: "4.51: the Nyx dress — the starfield in a white name pill, dark name ink (TDSK #4 Glimmer)" },
+  { from: "m20tokennyxtext/w/token-short@token-nyx-aura", why: "4.51: the Nyx dress at the regular box, an Aura with no P/T (TSOC #3 Contract)" },
+  { from: "m20tokenartifactnyx/c/token-short@token-nyx-artifact", why: "4.51: the artifact Nyx dress — the starry slate pill (TEOC #13 Golem)" },
   { from: "emblem/g/emblem-long", why: "emblem: the toned master, the walker's name, no cost or stats" },
   // 3.24's cases, by name — the Zendikar split type line since 4.40, the
   // first profile to use `type.split`.

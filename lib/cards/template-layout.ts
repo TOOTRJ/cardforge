@@ -5103,6 +5103,18 @@ const M20_ARTIFACT_TOKEN_ANATOMY = {
   overlays: [{ ...M20_TOKEN_CROWN, keyMap: { c: "a" } }],
 } as const satisfies Partial<FrameProfile>;
 
+/** The Nyx dress's anatomy (TODO 4.51): the full-art token's crown band —
+ *  its hole is the pill's face, so the starfield shows through — and NO
+ *  pair masters: no two-colour Nyx token is printed, so a two-colour card
+ *  on the dress wears gold (`m`). The masters are
+ *  scripts/build-token-nyx.mjs's (keys w u b r g c m). */
+const M20_NYX_TOKEN_ANATOMY = {
+  overlays: [M20_TOKEN_CROWN],
+} as const satisfies Partial<FrameProfile>;
+const M20_ARTIFACT_NYX_TOKEN_ANATOMY = {
+  overlays: [{ ...M20_TOKEN_CROWN, keyMap: { c: "a" } }],
+} as const satisfies Partial<FrameProfile>;
+
 /**
  * The extended-art frame's legendary crown (TODO 4.6f, wave 2b): Card
  * Conjurer's FLOATING crown as an overlay band, `extendedcrown/<key>.png`
@@ -6096,6 +6108,17 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m20tokenartifact: { ...m20ArtifactToken(M20TOKEN, "Artifact Token"), ...M20_ARTIFACT_TOKEN_ANATOMY, pickerSampleArt: true },
   m20tokenartifacttext: { ...m20ArtifactToken(M20TOKENTEXT, "Artifact Token, text box"), ...M20_ARTIFACT_TOKEN_ANATOMY, pickerSampleArt: true },
   m20tokenartifacttall: { ...m20ArtifactToken(M20TOKENTALL, "Artifact Token, tall text box"), ...M20_ARTIFACT_TOKEN_ANATOMY, pickerSampleArt: true },
+  // TODO 4.51: the Nyx dress — the same templates with a starfield in the
+  // name pill (scripts/build-token-nyx.mjs: PipGlyph's composite over the
+  // published masters), for an Enchantment token. Every slot, plate and the
+  // crown are the full-art token's; no pair masters (M20_NYX_TOKEN_ANATOMY).
+  // An ADDITION: new templates, no stored card on them.
+  m20tokennyx: { ...M20TOKEN, label: "Nyx Token", ...M20_NYX_TOKEN_ANATOMY, pickerSampleArt: true },
+  m20tokennyxtext: { ...M20TOKENTEXT, label: "Nyx Token, text box", ...M20_NYX_TOKEN_ANATOMY, pickerSampleArt: true },
+  m20tokennyxtall: { ...M20TOKENTALL, label: "Nyx Token, tall text box", ...M20_NYX_TOKEN_ANATOMY, pickerSampleArt: true },
+  m20tokenartifactnyx: { ...m20ArtifactToken(M20TOKEN, "Nyx Artifact Token"), ...M20_ARTIFACT_NYX_TOKEN_ANATOMY, pickerSampleArt: true },
+  m20tokenartifactnyxtext: { ...m20ArtifactToken(M20TOKENTEXT, "Nyx Artifact Token, text box"), ...M20_ARTIFACT_NYX_TOKEN_ANATOMY, pickerSampleArt: true },
+  m20tokenartifactnyxtall: { ...m20ArtifactToken(M20TOKENTALL, "Nyx Artifact Token, tall text box"), ...M20_ARTIFACT_NYX_TOKEN_ANATOMY, pickerSampleArt: true },
   // A coloured artifact's crown is its colour (NEO #74, M20 #131); a
   // colourless artifact's the artifact silver "a" (FDN #677).
   m15artifact: {

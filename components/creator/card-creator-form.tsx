@@ -259,6 +259,7 @@ import {
   subtypesSay,
   enchantmentFrameFor,
   followsEnchantmentDress,
+  followsTokenNyxDressIn,
   typeLineHasWord,
   typeWordFrameFor,
   KIND_DEFS,
@@ -304,7 +305,7 @@ import {
   sameTokenFrameText,
   tokenFrameText,
 } from "@/lib/creator/token-frame-auto";
-import { isM20ArtifactTokenTemplate, m20TokenHeightOf, m20TokenTemplate } from "@/lib/cards/token-height";
+import { isM20ArtifactTokenTemplate, isM20NyxTokenTemplate, m20TokenHeightOf, m20TokenTemplate, m20TokenTwinWithoutNyx } from "@/lib/cards/token-height";
 import {
   blankSecondFaceFor,
   defaultValuesFor,
@@ -1422,18 +1423,28 @@ export function CardCreatorForm({
   };
   const nyxWords = `${kind}|${nyxWordsOf(watched.card_type, watched.supertype, watched.subtypes_text)}`;
   const lastNyxRef = useRef(nyxWords);
+  // A token the words moved onto its Nyx dress (TODO 4.51): a colour picked
+  // after that keeps the one-colour rule (handleColorIdentityChange) until a
+  // frame is picked by hand.
+  const tokenNyxFollowedRef = useRef(false);
   useEffect(() => {
     if (lastNyxRef.current === nyxWords) return;
     lastNyxRef.current = nyxWords;
     if (isRevise || !isDirty || vehicleFramePinned) return;
     const current = normalizeFrameTemplate(getValues("frame_style.template"));
-    const next = enchantmentFrameFor(kind, current, {
+    // A token follows onto its Nyx dress in ONE colour only (TODO 4.51,
+    // owner Round 74): a two-colour token keeps its split.
+    const colorKey = pickFrameColorKey(getValues("color_identity"));
+    const words = {
       cardType: getValues("card_type"),
       supertype: getValues("supertype"),
       subtypes: parseSubtypes(getValues("subtypes_text") ?? ""),
-    });
+    };
+    // While its words say Enchantment, a full-art token keeps following
+    // the one-colour rule as its colour changes (handleColorIdentityChange).
+    if (kind === "token") tokenNyxFollowedRef.current = m20TokenHeightOf(current) !== null && followsEnchantmentDress(words);
+    const next = enchantmentFrameFor(kind, current, words, colorKey);
     if (next === current) return;
-    const colorKey = pickFrameColorKey(getValues("color_identity"));
     if (!isFrameComboAvailable(next, colorKey, new Set(verifiedFrameKeys))) return;
     setValue("frame_style.template", next, { shouldDirty: true });
   }, [kind, nyxWords, isRevise, isDirty, vehicleFramePinned, getValues, setValue, verifiedFrameKeys]);
@@ -1522,11 +1533,12 @@ export function CardCreatorForm({
         previous: prev.text,
         heightPinned: manualTokenFrameRef.current,
       });
-      // Only the height moves here, in the dress the card wears: the
+      // Only the height moves here, in the dress the card wears (its Nyx
+      // starfield too, TODO 4.51): the
       // Artifact word's dress is the type-word effect's (it has already
       // run, and says so when it can't).
       const height = m20TokenHeightOf(target);
-      next = height && height !== m20TokenHeightOf(current) ? m20TokenTemplate(height, isM20ArtifactTokenTemplate(current)) : null;
+      next = height && height !== m20TokenHeightOf(current) ? m20TokenTemplate(height, isM20ArtifactTokenTemplate(current), isM20NyxTokenTemplate(current)) : null;
     } else if (hasRulesBoxText(prev.text) !== hasText) {
       next = followTokenTextBox({
         kind,
@@ -1610,6 +1622,10 @@ export function CardCreatorForm({
     manualTokenFrameRef.current = manual;
     lastVehicleRef.current = `${kindFromCard(getValues("card_type"), getValues("frame_style.template"))}|${subtypesSay(parseSubtypes(getValues("subtypes_text")), "Vehicle")}`;
     lastNyxRef.current = `${kindFromCard(getValues("card_type"), getValues("frame_style.template"))}|${nyxWordsOf(getValues("card_type"), getValues("supertype"), getValues("subtypes_text"))}`;
+    // …and a frame that came with the card is its own: no colour moves it
+    // on or off the token's Nyx dress (TODO 4.51).
+    tokenNyxFollowedRef.current = false;
+    lastTokenColorKeyRef.current = pickFrameColorKey(getValues("color_identity"));
     lastWalkerTallRef.current =
       walkerRowCount({ editorRows: getValues("loyalty_abilities"), rulesText: getValues("rules_text") }) >=
       TALL_WALKER_MIN_ROWS;
@@ -2232,6 +2248,28 @@ export function CardCreatorForm({
    *  color (Forest → Mountain when green flips to red; multicolor has no
    *  basic, so the seed clears for the user to name their dual). Inert the
    *  moment the user renames the card. */
+  // A full-art token whose words say Enchantment follows the Nyx dress's
+  // ONE-colour rule as its colour changes (TODO 4.51, owner Round 74): two
+  // colours — the Multicolor choice or a pair, however it was picked —
+  // take it to the plain full-art template (4.48's split), one colour (or
+  // colourless) onto the dress again, where verified. Until a frame is
+  // picked by hand (onFramePick): the dress a maker picks stays, in gold.
+  const tokenColorKey = pickFrameColorKey(watched.color_identity);
+  const lastTokenColorKeyRef = useRef(tokenColorKey);
+  useEffect(() => {
+    if (lastTokenColorKeyRef.current === tokenColorKey) return;
+    lastTokenColorKeyRef.current = tokenColorKey;
+    if (kind !== "token" || !tokenNyxFollowedRef.current || isRevise || !isDirty || tokenFramePinned) return;
+    const current = normalizeFrameTemplate(getValues("frame_style.template"));
+    if (m20TokenHeightOf(current) === null) return;
+    const plain = m20TokenTwinWithoutNyx(current);
+    const target = followsTokenNyxDressIn(tokenColorKey)
+      ? enchantmentFrameFor("token", plain, { cardType: "token", supertype: getValues("supertype") }, tokenColorKey)
+      : plain;
+    if (target === current || !isFrameComboAvailable(target, tokenColorKey, verifiedFrameSet)) return;
+    setValue("frame_style.template", target, { shouldDirty: true });
+  }, [tokenColorKey, kind, isRevise, isDirty, tokenFramePinned, getValues, setValue, verifiedFrameSet]);
+
   const handleColorIdentityChange = (next: ColorIdentity[]) => {
     // A new token still on the default switch's pick follows the colour
     // (owner decision 1): onto the full-art design where it is verified in
@@ -4233,6 +4271,9 @@ export function CardCreatorForm({
                   // Either is the user's frame, no longer the default
                   // switch's: a colour picked after it never moves it.
                   setTokenDefaultFrame(false);
+                  // …nor off the Nyx dress a two-colour maker picks (TODO
+                  // 4.51, owner Round 74: it wears gold there).
+                  tokenNyxFollowedRef.current = false;
                 }}
                 onKindSelect={handleKindSelect}
                 onColorIdentityChange={handleColorIdentityChange}

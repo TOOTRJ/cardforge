@@ -429,6 +429,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
   "m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb",
   // TODO 5.7's borderless double-faced bodies.
   "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
+  // TODO 4.51's Nyx dress of the full-art tokens.
+  "m20tokennyx", "m20tokennyxtext", "m20tokennyxtall", "m20tokenartifactnyx", "m20tokenartifactnyxtext", "m20tokenartifactnyxtall",
   // TODO 5.5 (b)'s double-faced saga front and back.
   "sagadfcfront", "sagadfcback",
 ];
@@ -457,6 +459,8 @@ const POST_V36_TEMPLATES: readonly string[] = [
   "m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb",
   // TODO 5.7's borderless double-faced bodies.
   "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
+  // TODO 4.51's Nyx dress of the full-art tokens.
+  "m20tokennyx", "m20tokennyxtext", "m20tokennyxtall", "m20tokenartifactnyx", "m20tokenartifactnyxtext", "m20tokenartifactnyxtall",
   // TODO 5.5 (b)'s double-faced saga front and back.
   "sagadfcfront", "sagadfcback",
 ];
@@ -816,6 +820,8 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "m15fullartlandzen", "m15fullartlandsnc", "m15fullartlandthb",
       // …and TODO 5.7's borderless double-faced bodies.
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
+      // …and TODO 4.51's Nyx dress of the full-art tokens.
+      "m20tokennyx", "m20tokennyxtext", "m20tokennyxtall", "m20tokenartifactnyx", "m20tokenartifactnyxtext", "m20tokenartifactnyxtall",
       // …and TODO 5.5 (b)'s double-faced saga front and back.
       "sagadfcfront", "sagadfcback",
     ];
@@ -1020,7 +1026,7 @@ describe("v33 — rules text laid out by its real lines (TODO 3.29)", () => {
     // textless template no card was ever baked on needs none: 4.48's
     // full-art token's textless height (and its artifact template). The
     // textless promo pair became textless at v58, with its own bump.
-    const newTextless = ["m20token", "m20tokenartifact", "m15textless", "m15textlessland"];
+    const newTextless = ["m20token", "m20tokenartifact", "m20tokennyx", "m20tokenartifactnyx", "m15textless", "m15textlessland"];
     expect([...V33_SCOPE_TEMPLATES.textless, ...newTextless].sort()).toEqual(all.filter((t) => getFrameProfile(t).textless).sort());
     for (const t of newTextless) expect(V33_SCOPE_TEMPLATES.textless, t).not.toContain(t);
     // A NEW chapter-rail template no card was ever baked on needs none
@@ -1361,7 +1367,7 @@ describe("v36 — the second correction round: inline pips, printed set symbols,
     expect(printedSetSymbolPx(keyruneCodepointFor("zzz9"))).toBeNull();
     expect(lv.v36PrintedSymbolCode("zzz9")).toBe(false);
     // (The textless promo pair joined the profiles' list at v58, its own bump.)
-    expect(lv.V36_TEXTLESS_TEMPLATES).toEqual(ALL.filter((t) => getFrameProfile(t).textless && !lv.CC_RESOURCE_TEMPLATES.includes(t)));
+    expect(lv.V36_TEXTLESS_TEMPLATES).toEqual(ALL.filter((t) => getFrameProfile(t).textless && !lv.CC_RESOURCE_TEMPLATES.includes(t) && !POST_V36_TEMPLATES.includes(t)));
     expect(lv.V36_BACK_FACE_TEXT_TEMPLATES).toEqual(
       ALL.filter((t) => getFrameProfile(t).adventure || getFrameProfile(t).secondFace),
     );

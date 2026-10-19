@@ -142,12 +142,15 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
       // …and its back (5.5 (b) PR 2): the same rail.
       "sagadfcback",
       "extendedartstation", "m15textless", "m15textlessland",
-    ]);
+      // The Nyx dress's textless heights (TODO 4.51), as their plain twins.
+      "m20tokennyx", "m20tokenartifactnyx",
+    ].sort((a, b) => FRAME_TEMPLATE_VALUES.indexOf(a as never) - FRAME_TEMPLATE_VALUES.indexOf(b as never)));
     // (…and 4.40 / 4.41's three older full-art basics offer it: a basic
     // prints no rules, but the switch is harmless on a frame that draws none.)
     // (…and the borderless double-faced bodies, TODO 5.7, offer it as their
     // bordered twins do.)
-    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(65);
+    // (…and the Nyx dress's regular and tall heights, TODO 4.51.)
+    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(69);
   });
 
   it("rulesAlignOf is \"center\" only for the card's \"center\" on a frame that offers it", () => {

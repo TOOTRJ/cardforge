@@ -428,6 +428,15 @@ export const FRAME_TEMPLATE_VALUES = [
   "m20tokenartifact",
   "m20tokenartifacttext",
   "m20tokenartifacttall",
+  // The full-art token's Nyx dress (TODO 4.51): the starfield in the name
+  // pill an Enchantment token prints (TDSK #4, TEOC #13), at each height,
+  // plain and artifact — the token kind's only.
+  "m20tokennyx",
+  "m20tokennyxtext",
+  "m20tokennyxtall",
+  "m20tokenartifactnyx",
+  "m20tokenartifactnyxtext",
+  "m20tokenartifactnyxtall",
   // The 2019+ borderless frame (frames plan 4.32, Card Conjurer 'Borderless
   // (Alt)'): art to the card edge, dark translucent bars and box, white ink.
   // Skins of the M15 standard and the M15 artifact frame, in the Borderless
@@ -626,6 +635,12 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m20tokenartifact: "Artifact Token",
   m20tokenartifacttext: "Artifact Token, text box",
   m20tokenartifacttall: "Artifact Token, tall text box",
+  m20tokennyx: "Nyx Token",
+  m20tokennyxtext: "Nyx Token, text box",
+  m20tokennyxtall: "Nyx Token, tall text box",
+  m20tokenartifactnyx: "Nyx Artifact Token",
+  m20tokenartifactnyxtext: "Nyx Artifact Token, text box",
+  m20tokenartifactnyxtall: "Nyx Artifact Token, tall text box",
   m15borderless: "Borderless",
   m15borderlessartifact: "Borderless Artifact",
   m15borderlessland: "Borderless Land",
@@ -765,6 +780,12 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   m20tokenartifact: "m15",
   m20tokenartifacttext: "m15",
   m20tokenartifacttall: "m15",
+  m20tokennyx: "m15",
+  m20tokennyxtext: "m15",
+  m20tokennyxtall: "m15",
+  m20tokenartifactnyx: "m15",
+  m20tokenartifactnyxtext: "m15",
+  m20tokenartifactnyxtall: "m15",
   m15borderless: "borderless",
   m15borderlessartifact: "borderless",
   m15borderlessland: "borderless",
@@ -997,6 +1018,15 @@ export const TEMPLATE_SKIN_VARIANTS: Partial<
     "m20tokenartifact",
     "m20tokenartifacttext",
     "m20tokenartifacttall",
+    // The Nyx dress (TODO 4.51): an Enchantment token's, followed by its
+    // type words (lib/creator/card-kinds.ts ENCHANTMENT_DRESSES); the
+    // heights and the artifact dress follow the text and the Artifact word.
+    "m20tokennyx",
+    "m20tokennyxtext",
+    "m20tokennyxtall",
+    "m20tokenartifactnyx",
+    "m20tokenartifactnyxtext",
+    "m20tokenartifactnyxtall",
   ],
 };
 

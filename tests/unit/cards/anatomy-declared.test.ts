@@ -65,6 +65,8 @@ describe("where the pieces are declared", () => {
       // The full-art tokens (TODO 4.48's last pieces): their own floating
       // crown band and their split pairs, on all six entries.
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
+      // …and their Nyx dress (TODO 4.51): the same band, no pairs.
+      "m20tokennyx", "m20tokennyxtext", "m20tokennyxtall", "m20tokenartifactnyx", "m20tokenartifactnyxtext", "m20tokenartifactnyxtall",
     ];
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => DRAWN.includes(t)));
     for (const t of ["m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall"] as const) {

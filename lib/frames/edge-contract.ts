@@ -143,6 +143,13 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   m20tokenartifact: ALL_BORDER,
   m20tokenartifacttext: ALL_BORDER,
   m20tokenartifacttall: ALL_BORDER,
+  // …and their Nyx dress (TODO 4.51): the same masters but the name pill.
+  m20tokennyx: ALL_BORDER,
+  m20tokennyxtext: ALL_BORDER,
+  m20tokennyxtall: ALL_BORDER,
+  m20tokenartifactnyx: ALL_BORDER,
+  m20tokenartifactnyxtext: ALL_BORDER,
+  m20tokenartifactnyxtall: ALL_BORDER,
   m15artifact: ALL_BORDER,
   // The Vehicle frame (TODO 4.5c, CC 'Vehicle Frame' through the M15 Border
   // and Frame masks): the M15 black border on every edge.

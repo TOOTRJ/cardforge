@@ -49,6 +49,8 @@ const ART_FIRST: FrameTemplate[] = [
 /** The full-art tokens (4.48 / 4.50), in FRAME_TEMPLATE_VALUES order. */
 const M20_TOKENS: FrameTemplate[] = [
   "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
+  // …and their Nyx dress (TODO 4.51): the same clear masters.
+  "m20tokennyx", "m20tokennyxtext", "m20tokennyxtall", "m20tokenartifactnyx", "m20tokenartifactnyxtext", "m20tokenartifactnyxtall",
 ];
 /** The owner's six (2026-09-27) and the full-art tokens, in
  *  FRAME_TEMPLATE_VALUES order. */
@@ -146,7 +148,7 @@ describe("pickerSampleArt — the owner's six near-black tiles (and the full-art
 });
 
 describe("FrameThumb — art-first and opted-in tiles draw a sample art under the master", () => {
-  it("draws the sample on exactly 28 of the 77 templates, on every colour and type dress", () => {
+  it("draws the sample on exactly 34 of the 83 templates, on every colour and type dress", () => {
     const drawn = new Set<FrameTemplate>();
     for (const template of FRAME_TEMPLATE_VALUES) {
       const counts = { with: 0, without: 0 };
@@ -174,7 +176,8 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
     // + the borderless double-faced bodies (TODO 5.7: art to the edges, sampled).
     // + the double-faced saga front (TODO 5.5 (b): the saga's opaque master)
     // + its back (5.5 (b) PR 2: the same opaque master).
-    expect(FRAME_TEMPLATE_VALUES).toHaveLength(79);
+    // + the full-art token's six Nyx dresses (TODO 4.51: sampled, above).
+    expect(FRAME_TEMPLATE_VALUES).toHaveLength(85);
     expect(FRAME_TEMPLATE_VALUES.filter((t) => drawn.has(t))).toEqual(SAMPLED);
   });
 

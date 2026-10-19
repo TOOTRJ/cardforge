@@ -329,8 +329,9 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // plate in its corner) holds what the arch's does; the tall box (62.8 %H
   // down) everything but 1,200 characters. The textless height draws no box
   // (no consumer: the renderers skip a textless frame's rules).
-  [["m20tokentext/main", "m20tokenartifacttext/main"], ["1200 chars", "EOE #30", "level up"]],
-  [["m20tokentall/main", "m20tokenartifacttall/main"], ["1200 chars"]],
+  // …and their Nyx dress (TODO 4.51): the same boxes.
+  [["m20tokentext/main", "m20tokenartifacttext/main", "m20tokennyxtext/main", "m20tokenartifactnyxtext/main"], ["1200 chars", "EOE #30", "level up"]],
+  [["m20tokentall/main", "m20tokenartifacttall/main", "m20tokennyxtall/main", "m20tokenartifactnyxtall/main"], ["1200 chars"]],
   // Adventure's pages are Card Conjurer's (layout v38, TODO 4.21a): the
   // creature's right page 65.0–88.58 %H (was 63.5–92.0) and the adventure's
   // 73.58–88.58 (was 71.6–91.9), the prints' boxes — a few more of the long
@@ -358,7 +359,7 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
     [
       "adventure/adventure", "adventure/main", "aftermath/main", "avatar/main", "battle/main", "bloomburrow/main", "emblem/main",
       "expeditionland/main", "flip/main", "flip/second face", "fullart/main", "lotrscroll/main", "m15token/main", "m15tokenartifact/main", "m15tokenartifacttext/main", "m15tokentext/main",
-      "m20tokenartifacttext/main", "m20tokentext/main", "split/main",
+      "m20tokenartifacttext/main", "m20tokentext/main", "m20tokenartifactnyxtext/main", "m20tokennyxtext/main", "split/main",
     ],
     ["typed, as printed"],
   ],

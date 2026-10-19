@@ -38,36 +38,56 @@ export type { M20TokenHeight };
 export const M20_TOKEN_HEIGHTS: readonly M20TokenHeight[] = ["textless", "regular", "tall"];
 
 /** The full-art token templates by height: the plain one and its artifact
- *  dress (4.50). */
-export const M20_TOKEN_TEMPLATES: Readonly<Record<M20TokenHeight, { plain: FrameTemplate; artifact: FrameTemplate }>> = {
-  textless: { plain: "m20token", artifact: "m20tokenartifact" },
-  regular: { plain: "m20tokentext", artifact: "m20tokenartifacttext" },
-  tall: { plain: "m20tokentall", artifact: "m20tokenartifacttall" },
+ *  dress (4.50), and the Nyx dress of each (4.51: the starfield in the name
+ *  pill, an Enchantment token's). */
+export const M20_TOKEN_TEMPLATES: Readonly<
+  Record<M20TokenHeight, { plain: FrameTemplate; artifact: FrameTemplate; nyx: FrameTemplate; artifactNyx: FrameTemplate }>
+> = {
+  textless: { plain: "m20token", artifact: "m20tokenartifact", nyx: "m20tokennyx", artifactNyx: "m20tokenartifactnyx" },
+  regular: { plain: "m20tokentext", artifact: "m20tokenartifacttext", nyx: "m20tokennyxtext", artifactNyx: "m20tokenartifactnyxtext" },
+  tall: { plain: "m20tokentall", artifact: "m20tokenartifacttall", nyx: "m20tokennyxtall", artifactNyx: "m20tokenartifactnyxtall" },
 };
 
-/** The template for a height, plain or artifact. */
-export function m20TokenTemplate(height: M20TokenHeight, artifact: boolean): FrameTemplate {
-  const pair = M20_TOKEN_TEMPLATES[height];
-  return artifact ? pair.artifact : pair.plain;
+/** The template for a height, plain or artifact, plain or Nyx. */
+export function m20TokenTemplate(height: M20TokenHeight, artifact: boolean, nyx = false): FrameTemplate {
+  const set = M20_TOKEN_TEMPLATES[height];
+  if (nyx) return artifact ? set.artifactNyx : set.nyx;
+  return artifact ? set.artifact : set.plain;
 }
 
 /** A full-art token template's height, or null for any other template. */
 export function m20TokenHeightOf(template: FrameTemplate | string | null | undefined): M20TokenHeight | null {
   for (const height of M20_TOKEN_HEIGHTS) {
-    const pair = M20_TOKEN_TEMPLATES[height];
-    if (template === pair.plain || template === pair.artifact) return height;
+    const set = M20_TOKEN_TEMPLATES[height];
+    if (template === set.plain || template === set.artifact || template === set.nyx || template === set.artifactNyx) return height;
   }
   return null;
 }
 
-/** True for the six full-art token templates. */
+/** True for the twelve full-art token templates (the Nyx dress's six too). */
 export function isM20TokenTemplate(template: FrameTemplate | string | null | undefined): boolean {
   return m20TokenHeightOf(template) !== null;
 }
 
-/** True for the three artifact templates. */
+/** True for the artifact templates, plain or Nyx. */
 export function isM20ArtifactTokenTemplate(template: FrameTemplate | string | null | undefined): boolean {
-  return M20_TOKEN_HEIGHTS.some((height) => M20_TOKEN_TEMPLATES[height].artifact === template);
+  return M20_TOKEN_HEIGHTS.some(
+    (height) => M20_TOKEN_TEMPLATES[height].artifact === template || M20_TOKEN_TEMPLATES[height].artifactNyx === template,
+  );
+}
+
+/** A full-art token template without the Nyx dress (its plain twin at the
+ *  same height, artifact or not); any other template as it is. */
+export function m20TokenTwinWithoutNyx(template: FrameTemplate): FrameTemplate {
+  const height = m20TokenHeightOf(template);
+  return height ? m20TokenTemplate(height, isM20ArtifactTokenTemplate(template), false) : template;
+}
+
+/** True for the Nyx dress's six templates (TODO 4.51). */
+export function isM20NyxTokenTemplate(template: FrameTemplate | string | null | undefined): boolean {
+  return M20_TOKEN_HEIGHTS.some(
+    (height) => M20_TOKEN_TEMPLATES[height].nyx === template || M20_TOKEN_TEMPLATES[height].artifactNyx === template,
+  );
 }
 
 export type TokenHeightText = {

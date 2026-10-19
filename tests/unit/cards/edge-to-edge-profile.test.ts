@@ -35,7 +35,7 @@ describe("opt-in profile fields", () => {
 
   // 3.24's `textless` has one user: the full-art token's textless height
   // (TODO 4.48), which keeps its type line (`textlessTypeLine`).
-  const TEXTLESS_TOKENS = ["m20token", "m20tokenartifact"];
+  const TEXTLESS_TOKENS = ["m20token", "m20tokenartifact", "m20tokennyx", "m20tokenartifactnyx"];
   // …and, since layout v58, the black-bordered textless promos (TODO 4.35 /
   // 4.42), which print no type line.
   const TEXTLESS_PROMOS = ["m15textless", "m15textlessland"];
