@@ -17,8 +17,11 @@ import { describe, expect, it } from "vitest";
 //     light, draft, notes) and what each may skip are pinned in
 //     tests/unit/devops/ci-docs-only.test.ts;
 //   - every shard runs, on the bucket masters, and none is the only one;
-//   - the coverage floors are checked once, on ALL shards' coverage — a shard
-//     alone never checks them, and nothing but a shard may switch them off.
+//   - on a pull request a shard runs plain vitest (owner 2026-10-16: no
+//     coverage on pull requests) and a failing test still fails it;
+//   - off a pull request the coverage floors are checked once, on ALL
+//     shards' coverage — a shard alone never checks them, and nothing but a
+//     shard may switch them off.
 // ---------------------------------------------------------------------------
 
 const ROOT = process.cwd();
@@ -51,7 +54,7 @@ describe("the required check", () => {
   });
 
   it("covers the classifier, typecheck + lint + build, every unit shard, the coverage floors and the notes job — and waits for the other required jobs", () => {
-    expect(gate).toMatch(/^ {4}needs: \[changes, static, unit, coverage, docs, frames, e2e, visual, superseded\]$/m);
+    expect(gate).toMatch(/^ {4}needs: \[changes, static, unit, coverage, docs, frames, e2e, visual, warm, superseded\]$/m);
   });
 
   it("runs when a job it covers failed (a skipped required check counts as passing) and passes only when all succeeded", () => {
@@ -66,14 +69,18 @@ describe("the required check", () => {
     expect(gate).toContain("NEEDS: ${{ toJSON(needs) }}");
     expect(gate).toContain("TIER: ${{ needs.changes.outputs.tier }}");
     // The full tier (and any tier nobody knows): the classifier succeeded
-    // and static, every shard and coverage succeeded. "skipped" passes ONLY
-    // in the shape of the tier the classifier named. The whole truth table
-    // is run through jq in ci-docs-only.test.ts.
-    expect(gate).toContain(`else                       ["success", "success", "skipped", "ran"] end ) as $want`);
-    expect(gate).toContain("| length == 8\n");
+    // and static and every shard succeeded — and coverage too, unless the
+    // classifier said "false" (a pull request). "skipped" passes ONLY in the
+    // shape of the tier the classifier named. The whole truth table is run
+    // through jq in ci-docs-only.test.ts.
+    expect(gate).toContain(`full:     ["success", "success", "skipped", "ran",     "ran",     "skipped"],`);
+    expect(gate).toContain("| $shapes[$tier] // $shapes.full ) as $want");
+    expect(gate).toContain(`| (if $want[1] == "success" and $coverage != "false" then "success" else "skipped" end) as $covered\n`);
+    expect(gate).toContain("| length == 9\n");
     expect(gate).toContain(`and .changes.result == "success"\n`);
-    expect(gate).toContain("and .static.result == $want[0]\n");
-    expect(gate).toContain("and ([.unit, .coverage] | all(.result == $want[1]))\n");
+    expect(gate).toContain("and (.static | is($want[0]))\n");
+    expect(gate).toContain("and (.unit | is($want[1]))\n");
+    expect(gate).toContain("and (.coverage | is($covered))\n");
     // Nothing in it may swallow the verdict.
     expect(gate).not.toMatch(/continue-on-error|\|\| true/);
   });
@@ -87,12 +94,12 @@ describe("the required check", () => {
 
 describe("the jobs behind the check", () => {
   it("each has its own time limit — a hung one ends in minutes, not in GitHub's six hours", () => {
-    for (const id of ["changes", "static", "unit", "coverage", "docs", "checks"]) {
+    for (const id of ["changes", "static", "unit", "coverage", "coverage-alert", "docs", "warm", "checks"]) {
       expect(jobOf(id), id).toMatch(/^ {4}timeout-minutes: \d+$/m);
     }
   });
 
-  it("the shards all run in the full and light tiers: one job condition, no matrix exclude or include", () => {
+  it("the shards all run in the full and nightly tiers: one job condition, no matrix exclude or include", () => {
     const unit = jobOf("unit");
     // The classifier's word (a notes-only change, a draft) is the ONLY thing
     // that skips them — and a failed classifier (empty output) runs them.
@@ -129,28 +136,48 @@ describe("the unit shards", () => {
     expect(job).toMatch(/^ {6}fail-fast: false$/m);
   });
 
-  it("each runs its own share of the suite with coverage recorded, through vitest's own --shard", () => {
-    expect(job).toContain("- run: npm run test:coverage:shard -- --shard=${{ matrix.shard }}/${{ matrix.total }}");
+  // The two runs a shard may make: exactly one of them, by the classifier's
+  // `coverage` — "false" on a pull request only; an empty output covers.
+  const COVERED_RUN =
+    "      - name: Unit tests, coverage recorded\n        if: ${{ needs.changes.outputs.coverage != 'false' }}\n        run: npm run test:coverage:shard -- --shard=${{ matrix.shard }}/${{ matrix.total }}\n        env:\n          FRAMES_BUILD_DIR: .frames-cache\n          VITEST_COVERAGE_SHARD: \"1\"\n";
+  const PLAIN_RUN =
+    "      - name: Unit tests\n        if: ${{ needs.changes.outputs.coverage == 'false' }}\n        run: npm run test:unit:shard -- --shard=${{ matrix.shard }}/${{ matrix.total }}\n        env:\n          FRAMES_BUILD_DIR: .frames-cache\n";
+
+  it("each runs its own share of the suite through vitest's own --shard: plain on a pull request, with coverage recorded elsewhere", () => {
+    expect(job).toContain(COVERED_RUN);
+    expect(job).toContain(PLAIN_RUN);
+    // No other run of the tests.
+    expect(job.match(/run: npm run test:/g)).toHaveLength(2);
     const pkg = JSON.parse(read("package.json")) as { scripts: Record<string, string> };
-    const script = pkg.scripts["test:coverage:shard"];
-    expect(script).toMatch(/^vitest run --coverage /);
-    expect(script).toContain("--reporter=blob");
-    // The whole suite: no path, no filter, no --shard of its own.
-    expect(script).not.toMatch(/tests\/|--shard|-t |--exclude|--changed|passWithNoTests/);
+    const covered = pkg.scripts["test:coverage:shard"];
+    const plain = pkg.scripts["test:unit:shard"];
+    expect(covered).toMatch(/^vitest run --coverage /);
+    expect(covered).toContain("--reporter=blob");
+    // Plain: `vitest run` (exit 1 on a failing test) with nothing but reporters.
+    expect(plain).toBe("vitest run --reporter=default --reporter=github-actions");
+    for (const script of [covered, plain]) {
+      // The whole suite: no path, no filter, no --shard of its own, nothing
+      // that passes on a failure.
+      expect(script).not.toMatch(/tests\/|--shard|-t |--exclude|--changed|passWithNoTests|--bail|\|\||;/);
+    }
     // No hand-kept file lists anywhere in the job.
     expect(job).not.toMatch(/tests\/unit/);
   });
 
   it("each has the bucket masters before the tests (a suite gated on them skips silently without)", () => {
     const fetch = job.indexOf("node scripts/frames-fetch.mjs --out .frames-cache");
-    const run = job.indexOf("- run: npm run test:coverage:shard");
     expect(fetch).toBeGreaterThan(0);
-    expect(run).toBeGreaterThan(fetch);
-    // No `if:` on the fetch, the tests or `npm ci`: only the cache SAVE is
-    // one shard's.
+    expect(job.indexOf(COVERED_RUN)).toBeGreaterThan(fetch);
+    expect(job.indexOf(PLAIN_RUN)).toBeGreaterThan(fetch);
+    // No `if:` on the fetch or `npm ci`: only the cache SAVE is one shard's,
+    // the two runs are the classifier's, and the upload goes with coverage.
     const conditions = [...job.matchAll(/^ {8}if: (.*)$/gm)].map((m) => m[1]);
-    expect(conditions).toEqual(["steps.frames-cache.outputs.cache-hit != 'true' && matrix.shard == 1", "${{ !cancelled() }}"]);
-    expect(job.slice(run, run + 250)).toMatch(/FRAMES_BUILD_DIR: \.frames-cache/);
+    expect(conditions).toEqual([
+      "steps.frames-cache.outputs.cache-hit != 'true' && matrix.shard == 1",
+      "${{ needs.changes.outputs.coverage != 'false' }}",
+      "${{ needs.changes.outputs.coverage == 'false' }}",
+      "${{ !cancelled() && needs.changes.outputs.coverage != 'false' }}",
+    ]);
   });
 
   it("each uploads its report — from a red shard too — under its own name", () => {
@@ -175,7 +202,7 @@ describe("the coverage floors", () => {
     expect(config).toMatch(/thresholds: COVERAGE_SHARD\n\s+\? undefined\n\s+: \{/);
     const yaml = ci.replace(/^\s*#.*$/gm, "");
     expect(yaml.match(/VITEST_COVERAGE_SHARD/g)).toHaveLength(1);
-    const run = unit.indexOf("- run: npm run test:coverage:shard");
+    const run = unit.indexOf("run: npm run test:coverage:shard");
     expect(unit.slice(run, run + 250)).toMatch(/VITEST_COVERAGE_SHARD: "1"/);
     expect(job).not.toMatch(/VITEST_COVERAGE_SHARD/);
     for (const file of ["package.json", ".env.example"]) {
@@ -191,9 +218,10 @@ describe("the coverage floors", () => {
 
   it("are checked on the merge of EVERY shard's coverage, shard failures or not", () => {
     expect(job).toMatch(/^ {4}needs: \[changes, unit\]$/m);
-    // …but never where no shard ran (a notes-only change, a draft): the
-    // floors are the whole suite's.
-    expect(job.match(/^ {4}if: .*$/gm)).toEqual(["    if: ${{ !cancelled() && needs.changes.outputs.unit != 'false' }}"]);
+    // …but never on a pull request (owner 2026-10-16), nor where no shard
+    // ran (the classifier's `coverage` is "false" there): the floors are the
+    // whole suite's.
+    expect(job.match(/^ {4}if: .*$/gm)).toEqual(["    if: ${{ !cancelled() && needs.changes.outputs.coverage != 'false' }}"]);
     expect(job).toMatch(/pattern: unit-blob-\*\n\s+merge-multiple: true\n\s+path: \.vitest-reports/);
     expect(job).toMatch(/^ {6}- run: npm run test:coverage:merge$/m);
     const pkg = JSON.parse(read("package.json")) as { scripts: Record<string, string> };

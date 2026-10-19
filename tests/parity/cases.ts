@@ -272,6 +272,12 @@ const PICKS: readonly Pick[] = [
   { from: "m15borderless/b/instant-short@stamp-collector-2015", why: "borderless: the 2015 style's letter column and, with no plate, the mark on line 1 beside the arch" },
   { from: "m15borderlessland/wu/land-short@stamp-pair-split", why: "borderless land: the pair's own piece (the box and pinline split across the ramp) under the stamp" },
   { from: "m15borderlessstation/u/artifact-short@stamp", why: "borderless station: the arch over the station box, the tier washes over it as on m15station" },
+  // --- the borderless walkers' stamp and collector line (TODO 4.9d, owner Round 70)
+  { from: "m15borderlesspw/u/planeswalker-long@stamp-arch", why: "borderless walker: the window's arch drawn ABOVE the rows, the last row's text held up over it (its bottom padding)" },
+  { from: "m15borderlesspw/r/planeswalker-long@stamp-collector-hd", why: "borderless walker: the arch, the oval and the collector line with the mark on line 2 beside the shield" },
+  { from: "m15borderlesspwtall/r/planeswalker-long@stamp-hd", why: "tall borderless walker: the same piece under the tall window's four rows" },
+  { from: "m15borderlesspw/w/planeswalker-short@stamp-foil", why: "borderless walker foil: the notch's own sheen over the stripes' (as a plate's)" },
+  { from: "m15borderlesspw/g/planeswalker-short@stamp-etched", why: "borderless walker etched: the frame's hatch over the notch drawn above the rows (owner Round 72)" },
   // --- the old frames (era symbol styles, footers, © slots) ----------------
   { from: "agclassic/g/creature-long", why: "1993: image pips, the Illus. line, right-set P/T" },
   { from: "retro/r/creature-long", why: "1997: shadowed white ink, flat discs, centred © slot" },

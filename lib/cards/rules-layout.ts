@@ -965,7 +965,7 @@ function lineInkBoxes(line: RulesLine, m: RulesMetrics): InkBox[] {
 
 /** Whether a placed line's ink enters keep-out `k` (target px): its band
  *  first, then glyph by glyph. */
-function lineHitsKeepOut(l: RulesLinePlacement, line: RulesLine, m: RulesMetrics, k: InkBox): boolean {
+export function lineHitsKeepOut(l: RulesLinePlacement, line: RulesLine, m: RulesMetrics, k: InkBox): boolean {
   if (!(l.inkRight > k.left && l.inkLeft < k.right && l.inkBottom > k.top && l.inkTop < k.bottom)) return false;
   return lineInkBoxes(line, m).some(
     (b) => l.left + b.right > k.left && l.left + b.left < k.right && l.top + b.bottom > k.top && l.top + b.top < k.bottom,

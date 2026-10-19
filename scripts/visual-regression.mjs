@@ -26,6 +26,8 @@
 //   --save             also write every bake to tmp/visual/renders/ (local
 //                      inspection; tmp/ is gitignored)
 //   --no-fetch         use the frame cache as it is
+//   --fetch-only       fill the frame cache and stop (CI's cache warm-up on
+//                      main: no bake, no gate, no node_modules needed)
 //
 // FRAMES: the bake reads the manifest's PNG objects from tmp/visual/frames/
 // (gitignored), downloaded here by manifest key + sha256 from the public
@@ -175,6 +177,12 @@ function resolveBase() {
 }
 
 // --- main -------------------------------------------------------------------
+
+// CI's cache warm-up on main (ci.yml `warm`): fill the frame cache, nothing else.
+if (flags.has("--fetch-only")) {
+  await fetchFrames();
+  process.exit(0);
+}
 
 const headVersion = parseLayoutVersion(fs.readFileSync(path.join(ROOT, LAYOUT_VERSION_PATH), "utf8"));
 const headBaseline = readJson(path.join(ROOT, BASELINE_PATH));

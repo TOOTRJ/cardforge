@@ -1776,6 +1776,28 @@ export function visualCases(): VisualCase[] {
     suffix: "@stamp-collector-2015",
     row: collectorRow("m15borderless", "2015", { rarity: "mythic", frame_style: { stamp: "auto" } as CardRowForBake["frame_style"] }),
   });
+  // The borderless walkers (owner Round 70; new keys on templates whose
+  // stored cards carry none: new cases, no bump) beyond the loops above —
+  // long abilities on both frames at the stored bake's size, the
+  // see-through colourless frame, a foil (the notch's own sheen over the
+  // rows), "Always" on an uncommon, a last ability that runs into the arch (held up over it)
+  // (WALKER_STAMP_ARCH_ROWS), the triangle (nothing drawn), and the line
+  // and the stamp together at HD.
+  add("m15borderlesspw", "planeswalker", "g", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("m15borderlesspw", "auto", { rarity: "mythic" }) });
+  add("m15borderlesspwtall", "planeswalker", "r", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("m15borderlesspwtall", "auto", { rarity: "mythic" }) });
+  add("m15borderlesspw", "planeswalker", "c", "short", { suffix: "@stamp-c", row: stampRow("m15borderlesspw", "auto", { rarity: "rare" }) });
+  add("m15borderlesspw", "planeswalker", "w", "short", { suffix: "@stamp-foil", finish: "foil", row: stampRow("m15borderlesspw", "auto", { rarity: "mythic", frame_style: { finish: "foil" } as CardRowForBake["frame_style"] }) });
+  // Etched (owner Round 72): the frame's hatch over the notch too.
+  add("m15borderlesspw", "planeswalker", "g", "short", { suffix: "@stamp-etched", finish: "etched", row: stampRow("m15borderlesspw", "auto", { rarity: "mythic", frame_style: { finish: "etched" } as CardRowForBake["frame_style"] }) });
+  add("m15borderlesspw", "planeswalker", "b", "short", { suffix: "@stamp-always", row: stampRow("m15borderlesspw", "oval", { rarity: "uncommon" }) });
+  add("m15borderlesspw", "planeswalker", "u", "long", { suffix: "@stamp-arch", row: stampRow("m15borderlesspw", "auto", { rarity: "mythic", rules_text: WALKER_STAMP_ARCH_ROWS, face_content: null }) });
+  add("m15borderlesspwtall", "planeswalker", "g", "long", { suffix: "@stamp-arch", row: stampRow("m15borderlesspwtall", "auto", { rarity: "mythic", rules_text: WALKER_STAMP_ARCH_ROWS_TALL, face_content: null }) });
+  add("m15borderlesspw", "planeswalker", "u", "short", { suffix: "@stamp-triangle", row: stampRow("m15borderlesspw", "triangle", { rarity: "mythic" }) });
+  add("m15borderlesspw", "planeswalker", "r", "long", {
+    suffix: "@stamp-collector-hd",
+    preset: "hd",
+    row: collectorRow("m15borderlesspw", "2023", { rarity: "mythic", frame_style: { stamp: "auto" } as CardRowForBake["frame_style"] }),
+  });
   // A token with the key: the switch on, nothing drawn — the plain look,
   // pinned.
   add("m15token", "token", "g", "short", { suffix: "@stamp-token", row: stampRow("m15token", "oval", { rarity: "rare" }) });
@@ -2111,6 +2133,9 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "m15ub", "m15ubartifact", "m15ubland",
   // TODO 4.9d: the borderless frames' arch (our own lifted pinline).
   "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlessstation",
+  // …and the borderless walkers' (owner Round 70: the window's arch, drawn
+  // above the ability rows).
+  "m15borderlesspw", "m15borderlesspwtall",
 ];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's
@@ -2127,6 +2152,14 @@ export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = [
  *  real layout, 2026-10-02: 50 px, the last line's ink 132–839 × …–1910 at
  *  HD, into the keep-out from 1905; with the arch the ladder steps to 48).
  *  tests/unit/render/holo-stamp-bake.test.tsx reads the same text. */
+/** A walker whose LAST ability is long enough to run into the borderless
+ *  walkers' arch at full size (TODO 4.9d): the last row is held up over it. */
+export const WALKER_STAMP_ARCH_ROWS =
+  "+1: Scry 2.\n−3: Return target creature card from your graveyard to your hand.\n−8: You get an emblem with \"Whenever you cast a spell, copy it. You may choose new targets for the copy, and creatures you control get +2/+2 and gain flying, vigilance and trample.\"";
+/** …and on the tall frame (four rows). */
+export const WALKER_STAMP_ARCH_ROWS_TALL =
+  "Creatures you control have ward 1.\n+1: Scry 2.\n−3: Return target creature card from your graveyard to your hand.\n−8: You get an emblem with \"Whenever you cast a spell, copy it. You may choose new targets for the copy, and creatures you control get +2/+2 and gain flying, vigilance and trample.\"";
+
 export const STAMP_ARCH_RULES =
   "Flying, vigilance, deathtouch, lifelink, haste\nWhenever Kesh attacks, each opponent loses 2 life and you gain 2 life. Then if an opponent has 10 or less life, exile the top card of their library and you may play it this turn.\nWhenever a creature you control dies, draw a card, then discard a card unless you control a Phyrexian.\n{2}{B}: Kesh gets +2/+2 until end of turn. Activate only once each turn. The ancient ward endures beyond the last ember of the forge and every";
 

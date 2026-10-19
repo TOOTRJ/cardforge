@@ -24,7 +24,9 @@ describe("the collector slot", () => {
     // M15's one slot everywhere — the planeswalker's is the same geometry
     // with the © slot pinned to line 2 (its master draws the loyalty
     // shield's outline: M15PW_COLLECTOR).
-    for (const t of slotted) expect(getFrameProfile(t).collector, t).toBe(t === "m15pw" ? M15PW_COLLECTOR : M15_COLLECTOR);
+    // (…and the borderless walkers', TODO 4.9d: their masters draw it too.)
+    const walkers = ["m15pw", "m15borderlesspw", "m15borderlesspwtall"];
+    for (const t of slotted) expect(getFrameProfile(t).collector, t).toBe(walkers.includes(t) ? M15PW_COLLECTOR : M15_COLLECTOR);
     expect(M15PW_COLLECTOR).toEqual({ ...M15_COLLECTOR, markLine: 2 });
     expect("markLine" in M15_COLLECTOR).toBe(false);
     for (const t of FRAME_TEMPLATE_VALUES) expect(frameAnatomyOf(t).collector, t).toBe((COLLECTOR_TEMPLATES as readonly string[]).includes(t));
@@ -41,11 +43,11 @@ describe("the collector slot", () => {
     expect(profiles).toBeGreaterThan(0);
     for (const m of source.matchAll(/collector: M15(?:PW)?_COLLECTOR/g)) expect(m.index, "a slot outside PROFILES").toBeGreaterThan(profiles);
     expect(source.match(/collector: M15(?:PW)?_COLLECTOR/g)).toHaveLength(COLLECTOR_TEMPLATES.length);
-    expect(source.match(/collector: M15PW_COLLECTOR/g)).toHaveLength(1);
+    expect(source.match(/collector: M15PW_COLLECTOR/g)).toHaveLength(3);
     // The profiles that spread those bases carry none.
     // (The borderless frames carry the slot on their entries since 4.9d —
     // never on M15BORDERLESS, which the land and station dresses spread.)
-    for (const t of ["m15borderlesspw", "m15borderlesspwtall", "adventure", "extendedart", "expeditionland", "nyx", "fullart", "fullartland", "m15fullartland", "m15textless", "m15textlessland", "saga", "m20token", "m20tokentext", "m20tokenartifact"]) {
+    for (const t of ["adventure", "extendedart", "expeditionland", "nyx", "fullart", "fullartland", "m15fullartland", "m15textless", "m15textlessland", "saga", "m20token", "m20tokentext", "m20tokenartifact"]) {
       expect(getFrameProfile(t).collector, t).toBeUndefined();
     }
   });

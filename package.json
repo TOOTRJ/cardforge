@@ -12,6 +12,7 @@
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
+    "test:unit:shard": "vitest run --reporter=default --reporter=github-actions",
     "test:coverage": "vitest run --coverage",
     "test:coverage:shard": "vitest run --coverage --reporter=default --reporter=github-actions --reporter=blob",
     "test:coverage:merge": "vitest run --merge-reports --coverage",

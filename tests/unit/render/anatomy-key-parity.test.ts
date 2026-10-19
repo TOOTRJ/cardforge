@@ -144,6 +144,8 @@ describe("bake path = preview path", () => {
                     // the land's and the station's over their own masters.
                     template === "m15borderless" || template === "m15borderlessartifact"
                     ? "m15borderlessholostamp"
+                    : template === "m15borderlesspw" || template === "m15borderlesspwtall"
+                      ? "m15borderlesspwholostamp"
                     : template === "m15borderlessland"
                       ? "m15borderlesslandholostamp"
                       : template === "m15borderlessstation"
@@ -201,8 +203,9 @@ describe("bake path = preview path", () => {
     // step 2: M15's bottom border) — eleven.
     // …and the borderless family's own pieces (4.9d): 8 bar keys + 10
     // pairs on m15borderless and its artifact dress, the land's 7 + 10, the
-    // station's 7.
-    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7);
+    // station's 7; and the borderless walkers' 7 on each of their two
+    // entries (owner Round 70).
+    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2);
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

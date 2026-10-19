@@ -65,7 +65,7 @@ describe("every save (normalizeAnatomy / newCardFrameStyle)", () => {
     expect(normalizeAnatomy({ template: "m15", collector: "2015", star: true }, "m15", "creature")).toEqual({ template: "m15", collector: "2015", star: true });
     expect(normalizeAnatomy({ template: "m15pw", collector: "off" }, "m15pw", "planeswalker")).toEqual({ template: "m15pw", collector: "off" });
     expect(normalizeAnatomy({ template: "emblem", collector: "2023" }, "emblem", "emblem")).toEqual({ template: "emblem", collector: "2023" });
-    for (const template of ["m15borderlesspw", "saga", "adventure", "extendedart", "lotr", "m20token", "fullartland"] as const) {
+    for (const template of ["saga", "adventure", "extendedart", "lotr", "m20token", "fullartland"] as const) {
       expect(normalizeAnatomy({ template, finish: "foil", collector: "2023", star: true }, template, "creature"), template).toEqual({ template, finish: "foil" });
     }
     // A stored key-less card: nothing to drop, the same object back.
