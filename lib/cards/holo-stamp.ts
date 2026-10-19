@@ -239,6 +239,76 @@ export const M15BORDERLESS_HOLO_STAMP_KEEP_OUT: Rect = (() => {
   return { leftPct: left, topPct: top, widthPct: right - left, heightPct: bottom - top };
 })();
 
+/**
+ * The BORDERLESS WALKERS' arch (TODO 4.9d, owner Round 70: "Build them
+ * next") — how far the ability window's bottom outline and rim are lifted
+ * (HD px) at |x − 750| = 0, 2, 4, … px (linear between; nothing from the
+ * last entry on): thirteen prints measured 2026-10-16, 24.3 px at the
+ * centre, from x 666 to x 834. The build's own copy is
+ * scripts/lib/borderless-stamp.mjs WALKER_ARCH_LIFT_PX; a unit test holds
+ * the two equal.
+ */
+export const BORDERLESS_WALKER_ARCH_LIFT_PX: readonly number[] = [
+  24.3, 24.3, 24.2, 24.2, 24.2, 24.1, 24.1, 24.1, 23.9, 23.7, 23.5, 23.2, 22.8, 22.5, 22.2, 22.0, 21.7, 21.2, 20.7, 20.3,
+  19.9, 19.4, 18.8, 18.3, 17.7, 17.0, 16.3, 15.7, 14.9, 14.1, 13.3, 12.4, 11.5, 10.6, 9.6, 8.5, 7.4, 6.3, 5.1, 3.8,
+  2.4, 1.2, 0.3, 0,
+];
+
+/** The walker arch's lift at card column `x` (HD px, the pixel's centre). */
+export function borderlessWalkerArchLiftAt(x: number): number {
+  const d = Math.abs(x + 0.5 - 750) / 2;
+  const i = Math.floor(d);
+  if (i >= BORDERLESS_WALKER_ARCH_LIFT_PX.length - 1) return 0;
+  const t = d - i;
+  return BORDERLESS_WALKER_ARCH_LIFT_PX[i]! * (1 - t) + BORDERLESS_WALKER_ARCH_LIFT_PX[i + 1]! * t;
+}
+
+/** The walker masters' window outline: its first row (HD px), the top of
+ *  the dark line the arch lifts. */
+const BORDERLESS_WALKER_OUTLINE_TOP_PX = 1922;
+/** Past the walker rules box's bottom (1919.4). */
+const BORDERLESS_WALKER_KEEP_OUT_BOTTOM_PX = 1921;
+
+/**
+ * The borderless walkers' keep-out as the ARCH'S SHAPE: 4 px columns over
+ * the arch, each from BORDERLESS_ARCH_AIR_PX above the lifted outline's top
+ * in that column down past the rules box — the same rule as the spells'
+ * (borderlessArchKeepOut), over the walker's own arch. Columns whose top
+ * falls below the box are left out. Read by the plain box (glyph by glyph,
+ * DrawnStats.stamp) AND by the ability rows (lib/cards/loyalty-rows.ts: the
+ * last row's text keeps above it).
+ */
+export function borderlessWalkerArchKeepOut(air = BORDERLESS_ARCH_AIR_PX): Rect[] {
+  const out: Rect[] = [];
+  for (let x0 = 660; x0 < 840; x0 += BORDERLESS_ARCH_STRIP_PX) {
+    let lift = 0;
+    for (let x = x0; x < x0 + BORDERLESS_ARCH_STRIP_PX; x += 1) lift = Math.max(lift, borderlessWalkerArchLiftAt(x));
+    const top = BORDERLESS_WALKER_OUTLINE_TOP_PX - lift - air;
+    if (top >= BORDERLESS_WALKER_KEEP_OUT_BOTTOM_PX) continue;
+    out.push({
+      leftPct: (x0 / 1500) * 100,
+      topPct: (top / 2100) * 100,
+      widthPct: (BORDERLESS_ARCH_STRIP_PX / 1500) * 100,
+      heightPct: ((BORDERLESS_WALKER_KEEP_OUT_BOTTOM_PX - top) / 2100) * 100,
+    });
+  }
+  return out;
+}
+
+/** The borderless walkers' keep-out columns (HoloStampArt.keepOutShape). */
+export const M15BORDERLESSPW_HOLO_STAMP_KEEP_OUT_SHAPE: readonly Rect[] = borderlessWalkerArchKeepOut();
+
+/** …and their bounds (HoloStampArt.keepOut): from 2 px over the lifted
+ *  outline's top at the centre (1897.7) past the rules box's bottom. */
+export const M15BORDERLESSPW_HOLO_STAMP_KEEP_OUT: Rect = (() => {
+  const shape = M15BORDERLESSPW_HOLO_STAMP_KEEP_OUT_SHAPE;
+  const left = Math.min(...shape.map((r) => r.leftPct));
+  const top = Math.min(...shape.map((r) => r.topPct));
+  const right = Math.max(...shape.map((r) => r.leftPct + r.widthPct));
+  const bottom = Math.max(...shape.map((r) => r.topPct + r.heightPct));
+  return { leftPct: left, topPct: top, widthPct: right - left, heightPct: bottom - top };
+})();
+
 /** The walker's: from its notch piece's top (1893 px: the piece draws a
  *  black line above the rim) past its rules rect's bottom (1919.4). Read by
  *  the plain box only (a non-walker card on the frame, a walker with no
@@ -351,6 +421,14 @@ export type HoloStampArt = {
    *  frame then draws nothing (the borderless frames, owner Round 70: no
    *  triangle notch yet). */
   ownShapeOnly?: true;
+  /** The notch is drawn ABOVE the ability rows and the rules backdrop, not
+   *  in the frame layer (the borderless walkers, TODO 4.9d): their window
+   *  is see-through and the rows' translucent stripes are drawn over it, so
+   *  in the frame layer the arch would show through a stripe — print ends
+   *  the window AT the arch. Both renderers then draw the notch, its foil
+   *  sheen (as a plate's) and the oval after the rules layer, and leave the
+   *  notch out of the frame layer and the finish masks. */
+  aboveRows?: true;
 };
 
 /**

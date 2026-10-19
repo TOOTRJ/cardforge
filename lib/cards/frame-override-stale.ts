@@ -1,4 +1,8 @@
 import { DEFAULT_FRAME_TEMPLATE, FRAME_TEMPLATE_VALUES, RETIRED_FRAME_TEMPLATES } from "@/types/card";
+import type { CardBackFace } from "@/types/card";
+import type { CardPreviewData } from "@/components/cards/card-preview";
+import { isDfcBackBody } from "@/lib/cards/dfc";
+import { backBodyOf, type CardFaceColumns } from "@/lib/cards/faces";
 
 // ---------------------------------------------------------------------------
 // Which baked cards render on a frame template — the filter the override
@@ -14,6 +18,17 @@ import { DEFAULT_FRAME_TEMPLATE, FRAME_TEMPLATE_VALUES, RETIRED_FRAME_TEMPLATES 
 // "current" with a stale PNG. A RETIRED template (types/card.ts
 // RETIRED_FRAME_TEMPLATES) draws on its replacement instead, so an override
 // of the replacement marks those rows too.
+//
+// BACK BODIES (TODO 5.3): a double-faced card's back face draws on the body
+// stored at `back_face.frame_style.template` (lib/cards/faces.ts
+// backBodyOf), and its `{id}.back.png` / `.back.thumb.webp` are baked from
+// it. A save on a back body therefore owes a re-bake to every card whose
+// back is DRAWN on it: `staleBackBodyFilter` is a second scan beside the
+// front one (null for a template no back is drawn on, so a front-only
+// template's scan is exactly what it was), narrowed in code by
+// `backFaceDrawsOn` — the renderer's own rule: a front that holds a back
+// AND a back-body template. A legacy back draws on the FRONT's frame and is
+// never baked, so the front scan already covers its card.
 // ---------------------------------------------------------------------------
 
 export type StaleTemplateFilter =
@@ -50,4 +65,22 @@ export function staleTemplateFilter(template: string): StaleTemplateFilter {
       ...retired.map((t) => `frame_style->>template.eq.${t}`),
     ].join(","),
   };
+}
+
+/** The back-face filter of a template a back face can be drawn on (a DFC
+ *  back body: `isDfcBackBody`), else null — the column path as PostgREST
+ *  reads it. */
+export function staleBackBodyFilter(template: string): { column: string; template: string } | null {
+  if (!isDfcBackBody(template)) return null;
+  return { column: "back_face->frame_style->>template", template };
+}
+
+/** True when a stored row's BACK face is drawn — and baked — on `template`
+ *  (backBodyOf: the rule both bake paths and the preview read). */
+export function backFaceDrawsOn(row: CardFaceColumns, template: string): boolean {
+  const body = backBodyOf({
+    frameStyle: (row.frame_style as CardPreviewData["frameStyle"]) ?? {},
+    backFace: (row.back_face as CardBackFace | null) ?? null,
+  });
+  return body?.template === template;
 }

@@ -23,7 +23,8 @@ import { selectBakeColumns } from "@/lib/cards/bake-select";
 import { bakedBackOf } from "@/lib/cards/faces";
 import { TRANSPARENT_PIXEL_DATA_URL, resolveRenderableImage } from "@/lib/render/art-source";
 import { getPipOverrides } from "@/lib/pips/queries";
-import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
+import { readFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
+import { overridesMoved, readOverrideStamps, remarkIfLayoutMoved, templatesBakedFor } from "@/lib/cards/override-stamps";
 import { CARD_LAYOUT_VERSION } from "@/lib/cards/layout-version";
 
 // ---------------------------------------------------------------------------
@@ -75,6 +76,9 @@ type BakeRenderResult =
       /** The row's updated_at the bake rendered from — the persist step's
        *  compare-and-set key (see bakeAndPersistCardRender). */
       bakedFrom?: string;
+      /** The templates this bake drew and their override stamps as read
+       *  before it — the persist step's part 3 (re-mark if one moved). */
+      layoutGuard?: { templates: string[]; stamps: Map<string, string> };
     }
   | { ok: false; error: string; superseded?: boolean };
 
@@ -213,12 +217,37 @@ async function bakeCardRender(
   }
 
   const pipOverrides = await getPipOverrides(card.owner_id);
-  const profileOverrides = await getFrameProfileOverrides();
+  // The frame-layout overlap guard (lib/cards/override-stamps.ts, the
+  // re-bake batch's own): the override STAMPS first, then the overrides,
+  // both UNCACHED — a layout save landing between the two reads shows as a
+  // moved stamp below, never as a current stamp on the older layout.
+  //
+  // A bake REFUSES when either can't be read (admin audit L2): a PNG drawn
+  // on the code profile while an override exists would be stored, and
+  // stamped current, with the wrong layout. Refused, the card falls back to
+  // its live preview with its pointers cleared, and the automatic re-bake
+  // (scope "sweep": never-baked cards) bakes it later. The user's SAVE is
+  // never failed by it — only this deferred bake.
+  const stampClient = createAdminClient();
+  let overrideStamps: Map<string, string>;
+  let profileOverrides: Awaited<ReturnType<typeof readFrameProfileOverrides>>;
+  try {
+    overrideStamps = await readOverrideStamps(stampClient);
+    profileOverrides = await readFrameProfileOverrides();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Frame layout overrides could not be read." };
+  }
   const previewData = rowToPreviewData(
     card as CardRowForBake,
     pipOverrides,
     profileOverrides,
   );
+  // Every template this bake draws: the front's and, on a two-faced card,
+  // the back body's (TODO 5.3) — a save on either moves its layout.
+  const layoutGuard = {
+    templates: templatesBakedFor(card as CardRowForBake, previewData),
+    stamps: overrideStamps,
+  };
 
   // The art has to actually load (resolveBakeArt) — the caller then clears
   // the stale render on refusal and tiles show the live preview.
@@ -263,6 +292,14 @@ async function bakeCardRender(
   if (!fresh || fresh.updated_at !== card.updated_at) {
     return { ok: false, error: "Superseded by a newer save.", superseded: true };
   }
+  // …and the LAYOUT it drew. An admin saved one of its templates meanwhile
+  // (or the stamps can't be read: a move, fail safe): nothing is uploaded or
+  // written. The row keeps what it had — the edit that asked for this bake
+  // cleared its pointers, so the sweep bakes it; a baked card was marked by
+  // that save, so the platform re-bakes it.
+  if (await overridesMoved(stampClient, layoutGuard.templates, layoutGuard.stamps)) {
+    return { ok: false, error: "Superseded by a frame layout save.", superseded: true };
+  }
 
   const uploaded = await uploadRenderObjects(
     ownerId,
@@ -276,7 +313,7 @@ async function bakeCardRender(
     { staleBack: true },
   );
   if (!uploaded.ok) return uploaded;
-  return { ...uploaded, bakedFrom: card.updated_at };
+  return { ...uploaded, bakedFrom: card.updated_at, layoutGuard };
 }
 
 /**
@@ -336,6 +373,7 @@ export async function bakeAndPersistCardRender(
   // A private card's result carries no URL; that clear goes through the
   // owner's client like the failure path above.
   const writer = result.renderedImageUrl ? createAdminClient() : supabase;
+  const renderedAt = result.renderedImageUrl ? new Date().toISOString() : null;
   let query = writer
     .from("cards")
     .update({
@@ -348,7 +386,7 @@ export async function bakeAndPersistCardRender(
       // four pointers always describe the one bake that just happened.
       rendered_back_image_url: result.renderedBackImageUrl,
       rendered_back_thumb_url: result.renderedBackThumbUrl,
-      rendered_at: result.renderedImageUrl ? new Date().toISOString() : null,
+      rendered_at: renderedAt,
       // Records WHICH renderer/profile generation baked this PNG, so
       // scripts/rebake-renders.mjs can find stale renders after template
       // changes (see lib/cards/layout-version.ts). ONE stamp per card: the
@@ -369,6 +407,25 @@ export async function bakeAndPersistCardRender(
       `[bake-render] Failed to persist render URL for card ${cardId}: ${updateErr.message}`,
     );
     return null;
+  }
+
+  // Overlap guard, part 3 (the re-bake batch's own, lib/cards/override-
+  // stamps.ts): a frame layout save during the upload can't be seen by the
+  // write (a layout save doesn't move updated_at). If one of the templates
+  // this bake drew moved — or its stamp can't be read — the card is
+  // RE-MARKED (null stamp, only while the row holds this render), never
+  // left current on the older layout; the platform re-bakes it. The render
+  // stays the card's picture meanwhile.
+  if (renderedAt && result.layoutGuard) {
+    const remarked = await remarkIfLayoutMoved(writer, {
+      cardId,
+      renderedAt,
+      templates: result.layoutGuard.templates,
+      stamps: result.layoutGuard.stamps,
+    });
+    if (remarked) {
+      console.warn(`[bake-render] A frame layout save overlapped the bake of card ${cardId}; re-marked for a platform re-bake.`);
+    }
   }
 
   return result.renderedImageUrl;

@@ -444,12 +444,12 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
 
   /** The entries with the holofoil stamp's notch (4.9c, wave 1). */
   // …and the station frame's two entries (TODO 4.27a): the parents' notch; the Universes Beyond three (4.25): the triangle's.
-  // …and the borderless family (4.9d): its own lifted arch; not its walkers (asked first).
-  const STAMP_TEMPLATES = ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15stationland", "extendedartstation", "m15borderlessstation", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15snow", "m15devoid", "m15pw"];
+  // …and the borderless family (4.9d): its own lifted arch, its walkers too (owner Round 70).
+  const STAMP_TEMPLATES = ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15stationland", "extendedartstation", "m15borderlessstation", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlesspw", "m15borderlesspwtall", "m15snow", "m15devoid", "m15pw"];
 
   it("the stamp's notch on exactly the seven wave-1 entries (4.9c): the M15 family's bordered frames and the walker, never a token, an emblem or a profile that spreads them", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).stamp)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => STAMP_TEMPLATES.includes(t)));
-    for (const t of ["m15token", "m15tokenartifact", "m15tokentext", "m15tokenartifacttext", "emblem", "m15borderlesspw", "m15borderlesspwtall", "extendedart", "adventure"]) {
+    for (const t of ["m15token", "m15tokenartifact", "m15tokentext", "m15tokenartifacttext", "emblem", "extendedart", "adventure"]) {
       expect(frameAnatomyOf(t).stamp, t).toBe(false);
     }
   });

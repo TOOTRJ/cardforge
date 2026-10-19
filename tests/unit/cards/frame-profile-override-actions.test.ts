@@ -63,7 +63,9 @@ import {
   saveFrameProfileOverrideAction,
 } from "@/lib/cards/frame-profile-override-actions";
 import { FRAME_PROFILE_OVERRIDES_TAG } from "@/lib/cards/frame-profile-overrides";
-import { staleTemplateFilter } from "@/lib/cards/frame-override-stale";
+import { staleBackBodyFilter, staleTemplateFilter } from "@/lib/cards/frame-override-stale";
+import { isDfcBackBody } from "@/lib/cards/dfc";
+import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { UNTOUCHED_SINCE_V22 } from "@/tests/stubs/layout-scope-cards";
 
 type Candidate = { id: string; layout_version: number | null } & Record<string, unknown>;
@@ -74,7 +76,15 @@ function candidatesFor(opts: { staleIds?: string[]; candidates?: Candidate[] }):
   return opts.candidates ?? (opts.staleIds ?? ["c1", "c2"]).map((id) => ({ id, layout_version: 23 }));
 }
 
-function db(opts: { existingRow?: boolean; staleIds?: string[]; candidates?: Candidate[] } = {}) {
+function db(
+  opts: {
+    existingRow?: boolean;
+    staleIds?: string[];
+    candidates?: Candidate[];
+    /** What the BACK-body scan (back_face->frame_style->>template) reads. */
+    backCandidates?: Candidate[];
+  } = {},
+) {
   const stub = chainClient((table, calls): ChainAnswer => {
     if (table === "frame_profile_overrides" && called(calls, "delete")) {
       return { data: opts.existingRow ? [{ template: "saga" }] : [] };
@@ -87,8 +97,9 @@ function db(opts: { existingRow?: boolean; staleIds?: string[]; candidates?: Can
       return { data: ids.map((id) => ({ id })) };
     }
     if (table === "cards" && called(calls, "select")) {
+      const backScan = called(calls, "filter", "back_face->frame_style->>template");
       return {
-        data: candidatesFor(opts).map((c) => ({
+        data: (backScan ? (opts.backCandidates ?? []) : candidatesFor(opts)).map((c) => ({
           visibility: "public",
           rendered_image_url: "https://cdn/r.png",
           frame_style: { template: "saga" },
@@ -110,7 +121,7 @@ beforeEach(() => {
   state.configured = true;
   artGate.refusal = null;
   artGate.calls = [];
-  cache.updateTag.mockClear();
+  cache.updateTag.mockReset();
   cache.revalidatePath.mockClear();
   cache.revalidateTag.mockClear();
 });
@@ -198,6 +209,42 @@ describe("saveFrameProfileOverrideAction", () => {
   });
 });
 
+describe("the read cache is busted BEFORE any card is marked stale", () => {
+  // A save bake reads the CACHED overrides and has no stamp guard: marking
+  // first left a window where it drew the OLD map and persisted a current
+  // stamp over the mark.
+  function orderOf(run: () => Promise<unknown>, opts: Parameters<typeof db>[0]) {
+    const order: string[] = [];
+    const stub = db(opts);
+    const from = (stub.client as { from: (t: string) => unknown }).from;
+    (stub.client as { from: (t: string) => unknown }).from = (table: string) => {
+      order.push(`from:${table}`);
+      return from(table);
+    };
+    cache.updateTag.mockImplementation(() => void order.push("updateTag"));
+    return run().then(() => order);
+  }
+
+  it("on a save: row written, tag busted, then the cards scanned and marked", async () => {
+    const order = await orderOf(
+      () => saveFrameProfileOverrideAction({ template: "saga", overrides: { title: { rect: { topPct: 5 } } } }),
+      { staleIds: ["a"] },
+    );
+    expect(order.slice(0, 3)).toEqual(["from:frame_profile_overrides", "updateTag", "from:cards"]);
+    expect(order.filter((o) => o === "updateTag")).toHaveLength(1);
+  });
+
+  it("on a reset (and an empty save): row deleted, tag busted, then the cards", async () => {
+    for (const run of [
+      () => resetFrameProfileOverrideAction({ template: "saga" }),
+      () => saveFrameProfileOverrideAction({ template: "saga", overrides: {} }),
+    ]) {
+      const order = await orderOf(run, { existingRow: true, staleIds: ["a"] });
+      expect(order.slice(0, 3)).toEqual(["from:frame_profile_overrides", "updateTag", "from:cards"]);
+    }
+  });
+});
+
 describe("resetFrameProfileOverrideAction", () => {
   it("deletes the row, marks renders stale and refreshes the cache when a row existed", async () => {
     const stub = db({ existingRow: true, staleIds: ["x"] });
@@ -274,5 +321,91 @@ describe("staleTemplateFilter", () => {
     // Every real template is in the exclusion list, so a saved saga card is
     // never mistaken for a legacy default-frame card.
     expect(filter.expression).toContain(",saga,");
+  });
+});
+
+describe("a BACK body's save marks the cards whose back face is drawn on it (admin audit M1)", () => {
+  const BACK_BODIES = FRAME_TEMPLATE_VALUES.filter((t) => isDfcBackBody(t));
+  const dfc = (id: string, back: string, patch: Partial<Candidate> = {}): Candidate => ({
+    id,
+    layout_version: 23,
+    frame_style: { template: "m15dfcfront" },
+    back_face: { title: "Back", frame_style: { template: back } },
+    ...patch,
+  });
+
+  it("knows the back bodies: every one has a back filter, no other template does", () => {
+    expect(BACK_BODIES).toEqual(expect.arrayContaining(["m15dfcback", "m15dfcbackleft", "m15mdfcback"]));
+    for (const t of FRAME_TEMPLATE_VALUES) {
+      const filter = staleBackBodyFilter(t);
+      if (isDfcBackBody(t)) expect(filter).toEqual({ column: "back_face->frame_style->>template", template: t });
+      else expect(filter).toBeNull();
+    }
+  });
+
+  it("marks exactly the cards whose back is drawn on the body, and counts them", async () => {
+    const stub = db({
+      existingRow: true,
+      // No card wears a back body as its own template.
+      candidates: [],
+      backCandidates: [
+        dfc("drawn", "m15dfcback"),
+        // Marked by an earlier save: counted, not updated again.
+        dfc("already", "m15dfcback", { layout_version: null }),
+        // The value is stored, but its front holds no back: the renderer
+        // draws it on the front's frame (a legacy flip) and bakes no back.
+        dfc("not-drawn", "m15dfcback", { frame_style: { template: "m15" } }),
+        // Another body (the SQL filter would not return it; the code
+        // narrowing must not mark it either).
+        dfc("other-body", "m15dfcbackleft"),
+      ],
+    });
+    const result = await saveFrameProfileOverrideAction({
+      template: "m15dfcback",
+      overrides: { title: { rect: { topPct: 5 } } },
+    });
+    expect(result).toEqual({ ok: true, staleCount: 2, keptForOwner: 0, changed: true });
+    const scans = stub.forTable("cards").filter((e) => !called(e.calls, "update"));
+    expect(scans).toHaveLength(2);
+    expect(called(scans[0].calls, "filter", "frame_style->>template")).toBe(true);
+    expect(scans[1].calls.find((c) => c.method === "filter")?.args).toEqual([
+      "back_face->frame_style->>template",
+      "eq",
+      "m15dfcback",
+    ]);
+    // Published, baked cards only — the same scope as the front scan.
+    expect(called(scans[1].calls, "in", "visibility")).toBe(true);
+    expect(called(scans[1].calls, "not", "rendered_image_url")).toBe(true);
+    const update = stub.forTable("cards").find((e) => called(e.calls, "update"))!;
+    expect(payloadOf(update.calls, "update")).toEqual({ layout_version: null });
+    expect(update.calls.find((c) => c.method === "in" && c.args[0] === "id")?.args[1]).toEqual(["drawn"]);
+  });
+
+  it("a reset of a back body marks them too", async () => {
+    const stub = db({ existingRow: true, candidates: [], backCandidates: [dfc("drawn", "m15mdfcback")] });
+    const result = await resetFrameProfileOverrideAction({ template: "m15mdfcback" });
+    expect(result).toEqual({ ok: true, staleCount: 1, keptForOwner: 0, changed: true });
+    const update = stub.forTable("cards").find((e) => called(e.calls, "update"))!;
+    expect(update.calls.find((c) => c.method === "in" && c.args[0] === "id")?.args[1]).toEqual(["drawn"]);
+  });
+
+  it("a card both scans find is marked and counted once", async () => {
+    const both = dfc("both", "m15dfcback", { frame_style: { template: "m15dfcback" } });
+    const stub = db({ existingRow: true, candidates: [both], backCandidates: [dfc("both", "m15dfcback")] });
+    const result = await resetFrameProfileOverrideAction({ template: "m15dfcback" });
+    expect(result).toEqual({ ok: true, staleCount: 1, keptForOwner: 0, changed: true });
+    const update = stub.forTable("cards").find((e) => called(e.calls, "update"))!;
+    expect(update.calls.find((c) => c.method === "in" && c.args[0] === "id")?.args[1]).toEqual(["both"]);
+  });
+
+  it("a front-only template runs the one front scan, as before — never a back scan", async () => {
+    for (const template of ["saga", "m15", "m15dfcfront", "m15mdfcfront"] as const) {
+      const stub = db({ existingRow: true, staleIds: ["x"], backCandidates: [dfc("back-only", "m15dfcback")] });
+      const result = await resetFrameProfileOverrideAction({ template });
+      expect(result).toEqual({ ok: true, staleCount: 1, keptForOwner: 0, changed: true });
+      const scans = stub.forTable("cards").filter((e) => !called(e.calls, "update"));
+      expect(scans).toHaveLength(1);
+      expect(called(scans[0].calls, "filter", "back_face->frame_style->>template")).toBe(false);
+    }
   });
 });

@@ -157,6 +157,7 @@ import {
 } from "@/lib/cards/color-indicator";
 import {
   plateKeyFor,
+  frameLayerOverlays,
   resolveFrameOverlays,
   resolveHoloStamp,
   type ResolvedHoloStamp,
@@ -892,7 +893,7 @@ function CardFace({
     rarity,
   };
   const plateKey = plateKeyFor(colorKey, resolveTwoColor(layout, anatomy, anatomyFacts));
-  const overlays = resolveFrameOverlays(layout, anatomy, { ...anatomyFacts, colorKey });
+  const allOverlays = resolveFrameOverlays(layout, anatomy, { ...anatomyFacts, colorKey });
   // The white border (TODO 4.30): one inline SVG over the master's black
   // border, the same bytes the bake draws (lib/cards/white-border.ts) —
   // null on every card whose switch is off or whose frame declares none.
@@ -903,6 +904,10 @@ function CardFace({
   // oval is our bitmap over the sheens (HoloStampOval), and its arch keeps
   // the rules lines out while drawn — the bake's twins.
   const holoStamp = resolveHoloStamp(layout, anatomy, { ...anatomyFacts, colorKey });
+  // The frame layer's overlays: all of them but a notch drawn ABOVE the
+  // ability rows (the borderless walkers, TODO 4.9d: AboveRowsStamp) — the
+  // bake's twin.
+  const overlays = frameLayerOverlays(allOverlays, holoStamp);
   // A two-colour Dragon Wing card draws BOTH colours' frames split down the
   // seam (FrameProfile.twoColorSplit); the plates keep colorKey ("m").
   const frameSplit = frameSplitFor(layout, colorIdentity);
@@ -1003,6 +1008,12 @@ function CardFace({
   // The arch's shape where the frame declares one (the borderless frames,
   // TODO 4.9d), else its one rect — the bake's twin.
   const stampKeepOut = holoStamp?.keepOutShape ?? holoStamp?.keepOut ?? null;
+  // The stamp arch the ability rows keep out of (the borderless walkers,
+  // TODO 4.9d: a constant per frame, or null) — rowsStampKeepOut, the
+  // bake's, inlined: the React compiler keeps the memo below only while
+  // holoStamp is never handed to a call (every aboveRows slot declares its
+  // shape; the unit test holds the two equal).
+  const rowsStamp = holoStamp?.aboveRows ? (holoStamp.keepOutShape ?? null) : null;
   // The modal strip (5.1b): the lines keep out of the painted tab.
   const stripKeepOut = layout.flipside?.keepOut ?? null;
   // The transform front's reverse P/T digits (5.1d): the lines wrap round
@@ -1042,13 +1053,15 @@ function CardFace({
   // hint rows the same way. (Memoised like the rules layouts below: a long
   // walker's rows take a few ms to fit.)
   const loyaltyRowsLayout = useMemo(
-    () => (loyaltyAbilities.length > 0 ? layoutProfileLoyaltyRows(layout, loyaltyAbilities, aspect) : null),
-    [layout, loyaltyAbilities, aspect],
+    // (The borderless walkers' stamp arch, TODO 4.9d: the last row's text
+    // keeps above it — the bake's twin.)
+    () => (loyaltyAbilities.length > 0 ? layoutProfileLoyaltyRows(layout, loyaltyAbilities, aspect, rowsStamp) : null),
+    [layout, loyaltyAbilities, aspect, rowsStamp],
   );
   const showsHintRows = usesLoyaltyRows && staticInEditor && loyaltyAbilities.length === 0;
   const hintRowsLayout = useMemo(
-    () => (showsHintRows ? layoutProfileLoyaltyRows(layout, EDITOR_LOYALTY_HINT, aspect) : null),
-    [showsHintRows, layout, aspect],
+    () => (showsHintRows ? layoutProfileLoyaltyRows(layout, EDITOR_LOYALTY_HINT, aspect, rowsStamp) : null),
+    [showsHintRows, layout, aspect, rowsStamp],
   );
   // Saga chapter rail content — same structured-first resolution — and the
   // printed rail laid out for it (lib/cards/saga-rail.ts sagaRail: the
@@ -1392,7 +1405,7 @@ function CardFace({
 
       {/* The holofoil stamp's oval (TODO 4.9c): our silver oval bitmap over
           the notch and above the sheens, at the bake's rect. */}
-      {holoStamp ? <HoloStampOval stamp={holoStamp} /> : null}
+      {holoStamp && !holoStamp.aboveRows ? <HoloStampOval stamp={holoStamp} /> : null}
 
       {/* The station frame's ink over its pieces (TODO 4.27a): each
           badge's "N+" and the plate's P/T — the bake's twin. */}
@@ -1737,6 +1750,15 @@ function CardFace({
         />
       ) : null}
 
+      {/* The borderless walkers' stamp, above the rows (TODO 4.9d). */}
+      {holoStamp?.aboveRows ? (
+        <AboveRowsStamp
+          stamp={holoStamp}
+          foil={plateFoil && { ...plateFoil, id: `${foilId}-stamp` }}
+          etched={isEtched ? { id: `${etchedId}-stamp`, landscape: layout.orientation === "landscape" } : null}
+        />
+      ) : null}
+
       {/* The station frame's text (TODO 4.27a): every band's lines. */}
       {station
         ? station.drawing.texts.map((text, i) => (
@@ -1942,12 +1964,62 @@ function BandSlot({
  *  (lib/cards/holo-stamp-art.ts) stretched over the stamp's art rect — the
  *  oval and its black margin — above the finish sheens (z 7), as the bake
  *  draws it. The notch under it is one of the FrameOverlayLayer's images. */
+/**
+ * The borderless walkers' stamp (TODO 4.9d, HoloStampArt.aboveRows): the
+ * notch ABOVE the ability rows and the rules backdrop (z 20, after the
+ * rows) — their translucent stripes cover the see-through window, and print
+ * ends the window at the arch — its own foil sheen (as a plate's), then the
+ * oval. The bake's twin (card-image.tsx, after the rules layer).
+ */
+function AboveRowsStamp({
+  stamp,
+  foil,
+  etched,
+}: {
+  stamp: ResolvedHoloStamp;
+  foil: { id: string; landscape: boolean } | null;
+  etched: { id: string; landscape: boolean } | null;
+}) {
+  const notch = stamp.notch;
+  return (
+    <>
+      <FrameOverlayLayer overlays={[notch]} zIndex={20} />
+      {foil ? (
+        <FoilSheen
+          id={foil.id}
+          frameHref={frameOverlayImageUrl(notch.path)}
+          region={notch.rect}
+          landscape={foil.landscape}
+          width="100%"
+          height="100%"
+          style={{ ...rectStyle(notch.rect), zIndex: 20, pointerEvents: "none" }}
+        />
+      ) : null}
+      {etched ? (
+        // Etched (owner Round 72): the hatch on the notch too, masked by the
+        // notch alone — the bake's twin.
+        <EtchedSheen
+          id={etched.id}
+          frameHref={null}
+          overlays={[{ href: frameOverlayImageUrl(notch.path), rect: notch.rect }]}
+          landscape={etched.landscape}
+          width="100%"
+          height="100%"
+          style={{ zIndex: 20, pointerEvents: "none" }}
+        />
+      ) : null}
+      <HoloStampOval stamp={stamp} />
+    </>
+  );
+}
+
 function HoloStampOval({ stamp }: { stamp: ResolvedHoloStamp }) {
   const r = stamp.artRect;
   return (
     <div
       aria-hidden
       data-holo-stamp={stamp.shape}
+      data-stamp-above-rows={stamp.aboveRows ? "" : undefined}
       data-stamp-tone={stamp.tone}
       data-stamp-key={stamp.notch.key}
       className="pointer-events-none absolute"
@@ -1956,7 +2028,9 @@ function HoloStampOval({ stamp }: { stamp: ResolvedHoloStamp }) {
         left: `${r.leftPct}%`,
         width: `${r.widthPct}%`,
         height: `${r.heightPct}%`,
-        zIndex: 7,
+        // Above the ability rows with its notch on the borderless walkers
+        // (AboveRowsStamp, z 20 after the rows), else over the sheens.
+        zIndex: stamp.aboveRows ? 20 : 7,
         backgroundImage: `url("${holoStampArtOf(stamp.shape, stamp.tone).dataUri}")`,
         backgroundSize: "100% 100%",
         backgroundRepeat: "no-repeat",
@@ -3596,7 +3670,10 @@ function LoyaltyRows({
               flexShrink: 0,
               width: hdCqw(draw.text[i].column),
               paddingTop: hdCqw(draw.text[i].insetTop),
-              paddingBottom: hdCqw(draw.text[i].insetBottom),
+              // The last row's text held up over the stamp's arch (TODO 4.9d,
+              // lastRowLift) on the TEXT column — the badge stays centred on
+              // its stripe; the bake's twin.
+              paddingBottom: hdCqw(draw.text[i].insetBottom + (i === abilities.length - 1 ? (draw.lastRowLift ?? 0) : 0)),
               ...onTop,
               ...(placeholder ? { opacity: 0.55 } : {}),
             }}

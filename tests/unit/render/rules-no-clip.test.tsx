@@ -466,6 +466,47 @@ describe("the holofoil stamp's arch on the borderless frames (TODO 4.9d) — a k
   }, 120_000);
 });
 
+describe("the borderless walkers' arch (TODO 4.9d, owner Round 70) — the plain box keeps out of it, never a new clip", () => {
+  // A walker with no ability rows (or another card forced onto the frame)
+  // draws its text in the plain box, which reads the arch's columns
+  // (DrawnStats.stamp) beside the loyalty shield. The rows themselves are
+  // held in tests/unit/frames/borderless-walker-holo-stamp.test.ts.
+  const TEMPLATES = ["m15borderlesspw", "m15borderlesspwtall"] as const;
+  const stamped = (template: FrameTemplate, text: RulesCase) => {
+    const layout = getFrameProfile(template);
+    const slot = (layout.overlays ?? []).find((o) => o.anatomy === "holoStamp");
+    if (!slot || slot.anatomy !== "holoStamp") throw new Error(`${template} has no notch`);
+    expect(slot.stamp.aboveRows, template).toBe(true);
+    const show: DrawnStats = { loyalty: true };
+    const plain = mainRulesLayout({ layout, rulesText: text.rules, flavorText: text.flavor, aspect: aspectOf(layout), show });
+    const arch = mainRulesLayout({ layout, rulesText: text.rules, flavorText: text.flavor, aspect: aspectOf(layout), show: { ...show, stamp: slot.stamp.keepOutShape ?? slot.stamp.keepOut } });
+    return { plain, arch };
+  };
+
+  it("clips exactly the texts the box clips without the stamp, never sets one larger", () => {
+    for (const template of TEMPLATES) {
+      for (const text of RULES_MATRIX) {
+        const { plain, arch } = stamped(template, text);
+        expect(arch.clipped, `${template} · ${text.name}`).toBe(plain.clipped);
+        expect(arch.sizePx, `${template} · ${text.name}`).toBeLessThanOrEqual(plain.sizePx);
+      }
+    }
+  });
+
+  it("draws every stamped layout inside its box, clear of the arch and the shield, line for line (750 px)", async () => {
+    let n = 0;
+    for (const template of TEMPLATES) {
+      for (const text of RULES_MATRIX) {
+        const { arch } = stamped(template, text);
+        if (arch.clipped) continue;
+        await checkDrawn(arch, "default", `${template} stamped · ${text.name}`);
+        n += 1;
+      }
+    }
+    expect(n).toBeGreaterThan(20);
+  }, 240_000);
+});
+
 describe("rules consumers — the HD bake (subset)", () => {
   const TEMPLATES: FrameTemplate[] = ["m15", "m15pw", "m15token", "adventure", "flip", "split", "aftermath", "battle", "retro", "m15borderless"];
   // "symbols as printed" (layout v49): the Phyrexian pip's larger disc is drawn

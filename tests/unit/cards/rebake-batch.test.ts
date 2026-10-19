@@ -25,18 +25,25 @@ const mocks = vi.hoisted(() => ({
   // The back face's render (TODO 5.3): none for an ordinary card.
   back: vi.fn(async () => ({ ok: true as const, png: null as ArrayBuffer | null })),
   purge: vi.fn(async (ids: readonly string[]) => void ids),
+  // What rowToPreviewData hands the bake (a back body is read from it).
+  preview: vi.fn((): Record<string, unknown> => ({ title: "x" })),
+  // The STRICT overrides read the bakes use (admin audit L2).
+  overrides: vi.fn(async (): Promise<Record<string, unknown>> => ({})),
 }));
 vi.mock("@/lib/cards/cache-purge", () => ({ purgeCardCdnCache: mocks.purge }));
 vi.mock("@/lib/render/card-image", () => ({ renderCardImage: mocks.render }));
 vi.mock("@/lib/cards/bake-render", () => ({ resolveBakeArt: mocks.art, renderBackFace: mocks.back }));
 vi.mock("@/lib/cards/bake-core", () => ({
   BAKE_SELECT_COLUMNS: "id, owner_id, visibility, updated_at, art_url, frame_style",
-  rowToPreviewData: () => ({ title: "x" }),
+  rowToPreviewData: () => mocks.preview(),
   uploadRenderObjects: mocks.upload,
   removeRenderObjects: mocks.remove,
 }));
 vi.mock("@/lib/pips/queries", () => ({ getPipOverrides: async () => null }));
-vi.mock("@/lib/cards/frame-profile-overrides", () => ({ getFrameProfileOverrides: async () => ({}) }));
+vi.mock("@/lib/cards/frame-profile-overrides", () => ({
+  getFrameProfileOverrides: async () => ({}),
+  readFrameProfileOverrides: () => mocks.overrides(),
+}));
 vi.mock("@/lib/cards/storage-paths", () => ({ cardRenderPath: (o: string, c: string) => `${o}/${c}.png` }));
 // Pinned at layout v30: v31 (the one corner radius) is an UNSCOPED sweep, so
 // at v31 no older bake is opt-in-only or stamp-only — cases below need both.
@@ -77,6 +84,8 @@ type DbOptions = {
   /** frame_profile_overrides at batch start / at the pre-upload re-read. */
   overridesAtStart?: Array<{ template: string; updated_at: string }>;
   overrideNow?: { updated_at: string } | null;
+  /** Per-template answer of the pre-/post-upload re-read (wins when set). */
+  overrideByTemplate?: Record<string, { updated_at: string } | null>;
   /** The compare-and-set write matches no row. */
   casLost?: boolean;
   /** visibility after a lost write. */
@@ -91,6 +100,8 @@ type DbOptions = {
   /** The conditional stamp write matches no row. */
   stampLost?: boolean;
   countError?: boolean;
+  /** The batch-start stamps read fails. */
+  stampsError?: boolean;
 };
 
 function db(rows: RebakeRow[], opts: DbOptions = {}) {
@@ -104,11 +115,16 @@ function db(rows: RebakeRow[], opts: DbOptions = {}) {
   return chainClient((table, calls: ChainCall[]): ChainAnswer => {
     if (table === "frame_profile_overrides") {
       if (called(calls, "maybeSingle")) {
+        if (opts.overrideByTemplate) {
+          const t = calls.find((c) => c.method === "eq" && c.args[0] === "template")?.args[1] as string;
+          return { data: opts.overrideByTemplate[t] ?? null };
+        }
         const seq = opts.overrideSequence;
         const answer = seq ? seq[Math.min(overrideReads, seq.length - 1)] : (opts.overrideNow ?? null);
         overrideReads += 1;
         return { data: answer };
       }
+      if (opts.stampsError) return { error: { message: "stamps down" } };
       return { data: opts.overridesAtStart ?? [] };
     }
     if (table !== "cards") return {};
@@ -159,6 +175,10 @@ beforeEach(() => {
   mocks.back.mockClear();
   mocks.back.mockResolvedValue({ ok: true, png: null });
   mocks.purge.mockClear();
+  mocks.preview.mockReset();
+  mocks.preview.mockImplementation(() => ({ title: "x" }));
+  mocks.overrides.mockReset();
+  mocks.overrides.mockImplementation(async () => ({}));
 });
 
 describe("parseRebakeScope", () => {
@@ -448,6 +468,105 @@ describe("runRebakeBatch", () => {
     expect(mocks.upload).toHaveBeenCalledTimes(1);
     expect((mocks.upload.mock.calls[0] as unknown[])[1]).toBe("good");
     expect(stub.forTable("cards").filter((e) => called(e.calls, "update"))).toHaveLength(1);
+  });
+
+  it("refuses the whole batch when the override STAMPS can't be read — never a guard on an empty map", async () => {
+    const onPicked = vi.fn();
+    const stub = db([row("c1")], { stampsError: true, markedCount: 1 });
+    const result = await run(stub, { onPicked });
+    expect(result).toEqual({ ok: false, error: "Frame layout override stamps could not be read: stamps down" });
+    expect(onPicked).not.toHaveBeenCalled();
+    expect(mocks.render).not.toHaveBeenCalled();
+    expect(stub.forTable("cards").filter((e) => called(e.calls, "update"))).toHaveLength(0);
+  });
+
+  it("refuses the whole batch when the frame layout overrides can't be read — nothing picked, rendered or written (admin audit L2)", async () => {
+    mocks.overrides.mockRejectedValue(new Error("Frame layout overrides could not be read: fetch failed"));
+    const onPicked = vi.fn();
+    const stub = db([row("c1"), row("c2")], { markedCount: 2 });
+    const result = await run(stub, { onPicked });
+    expect(result).toEqual({ ok: false, error: "Frame layout overrides could not be read: fetch failed" });
+    // Not a bake on the code profile stamped current; not a strike on the
+    // cards either (the database is at fault): they stay marked.
+    expect(onPicked).not.toHaveBeenCalled();
+    expect(mocks.render).not.toHaveBeenCalled();
+    expect(mocks.upload).not.toHaveBeenCalled();
+    expect(stub.forTable("cards").filter((e) => called(e.calls, "update"))).toHaveLength(0);
+  });
+
+  it("reads the override stamps BEFORE the overrides: a save between the two reads supersedes the render, never stamps an older layout current", async () => {
+    let stub: ReturnType<typeof db> | null = null;
+    let stampReadsBeforeOverrides = -1;
+    mocks.overrides.mockImplementation(async () => {
+      stampReadsBeforeOverrides = stub!
+        .forTable("frame_profile_overrides")
+        .filter((e) => !called(e.calls, "maybeSingle")).length;
+      return {};
+    });
+    stub = db([row("c1")], { markedCount: 1 });
+    const result = await run(stub);
+    if (!result.ok) throw new Error(result.error);
+    expect(stampReadsBeforeOverrides).toBe(1);
+  });
+
+  it("a dry run never reads the overrides (it renders nothing)", async () => {
+    mocks.overrides.mockRejectedValue(new Error("down"));
+    const result = await run(db([row("c1")]), { dry: true });
+    expect(result.ok).toBe(true);
+    expect(mocks.overrides).not.toHaveBeenCalled();
+  });
+
+  describe("a card with a back body: the overlap guard reads the BACK body's layout too (M1)", () => {
+    const dfcRow = () => row("dfc", { frame_style: { template: "m15dfcfront" } } as Partial<RebakeRow>);
+    const dfcPreview = () => ({
+      title: "x",
+      frameStyle: { template: "m15dfcfront" },
+      backFace: { title: "Back", frame_style: { template: "m15dfcback" } },
+    });
+    const atStart = [
+      { template: "m15dfcfront", updated_at: "F1" },
+      { template: "m15dfcback", updated_at: "B1" },
+    ];
+
+    it("a save on the back body during the render supersedes it (the card stays marked)", async () => {
+      mocks.preview.mockImplementation(dfcPreview);
+      const stub = db([dfcRow()], {
+        overridesAtStart: atStart,
+        overrideByTemplate: { m15dfcfront: { updated_at: "F1" }, m15dfcback: { updated_at: "B2" } },
+        markedCount: 1,
+      });
+      const result = await run(stub);
+      if (!result.ok) throw new Error(result.error);
+      expect(result.superseded).toEqual(["dfc"]);
+      expect(mocks.upload).not.toHaveBeenCalled();
+    });
+
+    it("unchanged layouts on both faces: written, both templates read", async () => {
+      mocks.preview.mockImplementation(dfcPreview);
+      const stub = db([dfcRow()], {
+        overridesAtStart: atStart,
+        overrideByTemplate: { m15dfcfront: { updated_at: "F1" }, m15dfcback: { updated_at: "B1" } },
+      });
+      const result = await run(stub);
+      if (!result.ok) throw new Error(result.error);
+      expect(result.processed.map((p) => p.id)).toEqual(["dfc"]);
+      const read = stub
+        .forTable("frame_profile_overrides")
+        .filter((e) => called(e.calls, "maybeSingle"))
+        .map((e) => e.calls.find((c) => c.method === "eq")?.args[1]);
+      // Pre-upload guard + post-write check, each on both templates.
+      expect(read.sort()).toEqual(["m15dfcback", "m15dfcback", "m15dfcfront", "m15dfcfront"]);
+    });
+
+    it("a one-faced card never reads a back body's layout", async () => {
+      const stub = db([row("c1")], {
+        overridesAtStart: [{ template: "saga", updated_at: "S1" }, { template: "m15dfcback", updated_at: "B1" }],
+        overrideByTemplate: { saga: { updated_at: "S1" }, m15dfcback: { updated_at: "B2" } },
+      });
+      const result = await run(stub);
+      if (!result.ok) throw new Error(result.error);
+      expect(result.processed.map((p) => p.id)).toEqual(["c1"]);
+    });
   });
 
   it("surfaces a scan error", async () => {
