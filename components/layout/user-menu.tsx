@@ -92,7 +92,9 @@ export function UserMenu({
       <PopoverContent
         align="end"
         sideOffset={8}
-        className="w-60 p-2"
+        // An admin's menu is wider: its admin grid's two columns fit their
+        // labels whole.
+        className={cn("p-2", isAdmin ? "w-72" : "w-60")}
       >
         <div className="flex items-center gap-3 rounded-md px-2 py-2">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-primary to-accent text-xs font-semibold text-primary-foreground">
