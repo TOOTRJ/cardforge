@@ -128,4 +128,26 @@ describe("AutoRebakePanel", () => {
     expect(screen.getByTestId("auto-rebake-retry").textContent).toMatch(/Retry this card/);
     expect(screen.getByTestId("auto-rebake-pause")).toBeTruthy();
   });
+
+  it("says a FAILED card lookup failed — never 'Card no longer exists' (L4)", () => {
+    render(
+      <AutoRebakePanel
+        overview={overview(
+          {},
+          {
+            poisonCards: [
+              { id: ID, error: "Art unavailable", failures: 3, at: "2026-09-28T11:00:00.000Z", title: null, href: null, visibility: null, lookupFailed: true },
+              { id: "55555555-5555-4555-8555-555555555555", error: "Art unavailable", failures: 3, at: "2026-09-28T11:00:00.000Z", title: null, href: null, visibility: null },
+            ],
+          },
+        )}
+        nowMs={NOW}
+      />,
+    );
+    const list = screen.getByTestId("auto-rebake-poison").textContent ?? "";
+    expect(list).toMatch(/Couldn’t look this card up/);
+    expect(list).toMatch(/The lookup failed — reload to try again/);
+    // The second card's row really is missing: that one still says so, once.
+    expect(list.match(/Card no longer exists/g)).toHaveLength(1);
+  });
 });

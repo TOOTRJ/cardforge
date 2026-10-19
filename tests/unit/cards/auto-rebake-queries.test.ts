@@ -16,6 +16,8 @@ type CacheOptions = { revalidate?: number | false; tags?: string[] };
 
 const mocks = vi.hoisted(() => ({
   tables: [] as string[],
+  /** Tables whose `.in()` read answers an error (L4). */
+  failing: new Set<string>(),
   readSweepState: vi.fn(),
   countSweepCandidates: vi.fn(),
   // What unstable_cache was configured with, and a stand-in Data Cache that
@@ -61,8 +63,10 @@ vi.mock("@/lib/supabase/admin", () => ({
       const query = {
         select: () => query,
         in: async () => ({
-          data:
-            table === "cards"
+          error: mocks.failing.has(table) ? { message: `${table} read failed` } : null,
+          data: mocks.failing.has(table)
+            ? null
+            : table === "cards"
               ? [{ id: "44444444-4444-4444-8444-444444444444", title: "Gravebloom Shade", slug: "gravebloom-shade", visibility: "public", owner_id: "owner" }]
               : [{ id: "owner", username: "maker" }],
         }),
@@ -89,6 +93,7 @@ const ID = "44444444-4444-4444-8444-444444444444";
 
 beforeEach(() => {
   mocks.tables.length = 0;
+  mocks.failing.clear();
   mocks.dataCache.clear();
   mocks.countSweepCandidates.mockReset();
   mocks.readSweepState.mockResolvedValue({
@@ -111,6 +116,35 @@ describe("getAutoRebakeOverview", () => {
     ]);
     expect(overview.pending).toBe(5);
     expect(mocks.countSweepCandidates).toHaveBeenCalledWith(expect.anything(), [ID]);
+  });
+
+  it("marks a failed card lookup as failed, not as a deleted card (L4)", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.failing.add("cards");
+    const overview = await getAutoRebakeOverview();
+    expect(overview.poisonCards).toEqual([
+      expect.objectContaining({ id: ID, title: null, href: null, lookupFailed: true }),
+    ]);
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("poison card lookup failed"), "cards read failed");
+
+    // The owners' read failing keeps the title, loses only the link.
+    mocks.failing.clear();
+    mocks.failing.add("profiles");
+    const owners = await getAutoRebakeOverview();
+    expect(owners.poisonCards).toEqual([
+      expect.objectContaining({ id: ID, title: "Gravebloom Shade", href: null, lookupFailed: true }),
+    ]);
+    log.mockRestore();
+  });
+
+  it("a card that is really gone carries no lookupFailed", async () => {
+    mocks.readSweepState.mockResolvedValue({
+      ...EMPTY_AUTO_REBAKE_STATE,
+      poison: [{ id: "55555555-5555-4555-8555-555555555555", error: "x", failures: 3, at: "2026-09-29T10:00:00.000Z" }],
+    });
+    const overview = await getAutoRebakeOverview();
+    expect(overview.poisonCards[0]).toEqual(expect.objectContaining({ title: null, href: null }));
+    expect(overview.poisonCards[0].lookupFailed).toBeUndefined();
   });
 
   it("skips the lookup with poisonDetails: false, keeping the poison list itself", async () => {
