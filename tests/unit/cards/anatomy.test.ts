@@ -311,6 +311,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // The full-art tokens (TODO 4.48's last pieces): their floating crown
       // band (a Legendary TOKEN draws it there) and their split pairs.
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
+      // …and their Nyx dress (TODO 4.51): the same band, no pairs.
+      "m20tokennyx", "m20tokennyxtext", "m20tokennyxtall", "m20tokenartifactnyx", "m20tokenartifactnyxtext", "m20tokenartifactnyxtall",
       // The battle (TODO 5.5): the switch is the card's and its ▼ back draws
       // it — the battle front itself draws none.
       "battle",
@@ -323,6 +325,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
    *  lands — pairs and no crown; `retro` none, its gold cards print one
    *  gold). */
   const OLD_FRAME_PAIRED = ["modern", "modernland", "retroland"];
+  /** The full-art token's Nyx dress (TODO 4.51): the crown, no pairs (no
+   *  two-colour Nyx token is printed). */
+  const NYX_TOKENS: readonly string[] = ["m20tokennyx", "m20tokennyxtext", "m20tokennyxtall", "m20tokenartifactnyx", "m20tokenartifactnyxtext", "m20tokenartifactnyxtall"];
   const PAIRED = FRAME_TEMPLATE_VALUES.filter(
     (t): boolean =>
       t === "m15borderlessland" ||
@@ -332,7 +337,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // Constellation frame, whose two-colour card is the gold master — nor
       // the battle, TODO 5.5: its back draws the crown through the card's
       // switch, but its two-colour back wears the gold master for now.)
-      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "battle"),
+      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "battle" && !NYX_TOKENS.includes(t)),
   );
 
   it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless, extended-art and snow PROFILES entries — never a profile that spreads them", () => {

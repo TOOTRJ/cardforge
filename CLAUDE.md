@@ -656,7 +656,18 @@ Rules and gotchas:
   ADDITIONS (4.48's last pieces): CC's floating crown band
   (`M20_TOKEN_CROWN`, `tokens: true` — the ONE crown a Legendary token
   qualifies for, `qualifiesForCrown(facts, tokens)`) and `<pair>` masters
-  whose P/T is the grey `c` plate (`FrameProfile.twoColorPlate`).
+  whose P/T is the grey `c` plate (`FrameProfile.twoColorPlate`). The Nyx
+  dress (4.51, an ADDITION): six more STORED templates `m20tokennyx…` /
+  `m20tokenartifactnyx…` — the starfield in the NAME PILL only, PipGlyph's
+  composite over the published masters (`scripts/build-token-nyx.mjs`;
+  never a CC file), keys w u b r g c m, no pairs — an enchantment dress
+  (`ENCHANTMENT_DRESSES` `token` bases; the token kind's alone): the height
+  and the Artifact word keep it (`m20TokenTemplate(height, artifact, nyx)`),
+  a NEW Enchantment token starts on it where verified, a stored one keeps
+  its frame; the import names it once verified and, until then, the plain
+  template where that is (`FrameMatch.onceVerifiedFallback`, applied by
+  `withVerification` only). `docs/FRAMES.md` "The full-art token's Nyx
+  dress".
 - The type line (layout v50, TODO 1.20): `supertype` holds every word left
   of the dash but the card type's own (the importer's rule, 1.3) and
   `typeLineWords` / `buildTypeLine` (`lib/cards/card-display.ts`) put the

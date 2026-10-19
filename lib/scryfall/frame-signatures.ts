@@ -24,7 +24,7 @@ import { describeFrame } from "@/lib/creator/frame-resolve";
 import { artReachesCardEdge, getFrameProfile } from "@/lib/cards/template-layout";
 import { frameAnatomyOf, twoColorDressOf } from "@/lib/cards/anatomy";
 import { templateHasBackFace } from "@/lib/cards/dfc";
-import { m20TokenTemplate, tokenHeightForText } from "@/lib/cards/token-height";
+import { isM20NyxTokenTemplate, m20TokenTemplate, m20TokenTwinWithoutNyx, tokenHeightForText } from "@/lib/cards/token-height";
 
 // ---------------------------------------------------------------------------
 // The frame signature registry (TODO 1.4, with 1.17's borderless families and
@@ -117,6 +117,16 @@ export type FrameMatch = {
    *  extended-art frame draws a Spacecraft's tiers as plain lines, so a
    *  verified `extendedart` is no landing for one. */
   landOnOnceVerified?: { template: FrameTemplate; reason: string | null; overOwnFrame?: true };
+  /** The frame named once verified when `onceVerified` itself isn't yet,
+   *  with what the match is there (TODO 4.51): an M20+ Nyx token names the
+   *  Nyx dress of its full-art template; until that dress is verified in
+   *  the card's colour the plain full-art template stands in where IT is —
+   *  nearest, the starfield its gap — as it did before the dress existed.
+   *  withVerification applies it only when `onceVerified` isn't verified. */
+  onceVerifiedFallback?: {
+    template: FrameTemplate;
+    match: NonNullable<FrameMatch["onceVerifiedMatch"]>;
+  };
   /** Set by withVerification only: the registry answered `exact`, but that
    *  frame isn't verified in the card's colour yet, so the match was
    *  downgraded to `nearest`. The frame request log files it under "Not yet
@@ -810,7 +820,10 @@ function m20TokenFrame(ctx: Ctx): FrameTemplate {
     printsPowerToughness: Boolean(power || toughness),
     artifact,
   });
-  return m20TokenTemplate(height, artifact);
+  // The Nyx dress (TODO 4.51): a printing the `nyx-dress` gap names — the
+  // `enchantment` frame effect, or one of NYX_TOKEN_PINS — wears the
+  // starfield pill of the same height.
+  return m20TokenTemplate(height, artifact, matches(GAPS["nyx-dress"].match, ctx));
 }
 
 /** The 2014–19 arch token a token printing wears: its artifact dress for an
@@ -953,6 +966,9 @@ const FAMILIES: Record<
     produces: [
       "m20token", "m20tokentext", "m20tokentall",
       "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
+      // …and their Nyx dress (TODO 4.51).
+      "m20tokennyx", "m20tokennyxtext", "m20tokennyxtall",
+      "m20tokenartifactnyx", "m20tokenartifactnyxtext", "m20tokenartifactnyxtall",
     ],
     pick: (ctx) => m20TokenFrame(ctx),
   },
@@ -3150,6 +3166,28 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
     }
   }
 
+  // The Nyx dress's stand-in (TODO 4.51): a Nyx token names the dress of its
+  // full-art template once verified; until the dress is, the plain template
+  // — nearest, with whatever of the rule's gaps it doesn't draw (the
+  // starfield first) — where that one is verified, as before the dress.
+  let onceVerifiedFallback: FrameMatch["onceVerifiedFallback"];
+  if (onceVerified && rule.outcome.exactOnceVerified && isM20NyxTokenTemplate(onceVerified)) {
+    const plain = m20TokenTwinWithoutNyx(onceVerified);
+    const plainGaps = holding(rule.gapsOnceVerified, plain);
+    if (plainGaps.length > 0) {
+      const first = GAPS[plainGaps[0]!];
+      onceVerifiedFallback = {
+        template: plain,
+        match: {
+          status: "nearest",
+          reason: textOf(first.reason, ctx),
+          blockedBy: blockedByOn(rule.gapBlockedBy?.[plainGaps[0]!] ?? first.blockedBy, plain),
+          gaps: plainGaps,
+        },
+      };
+    }
+  }
+
   return {
     status,
     template,
@@ -3162,6 +3200,7 @@ export function resolveFrameSignature(card: ScryfallCard, facts: PrintingFacts):
     ...(status !== "exact" && blockedBy ? { blockedBy } : {}),
     ...(onceVerified ? { onceVerified } : {}),
     ...(onceVerifiedMatch ? { onceVerifiedMatch } : {}),
+    ...(onceVerifiedFallback ? { onceVerifiedFallback } : {}),
     ...(landOnOnceVerified ? { landOnOnceVerified } : {}),
     ...(gaps.length > 0 ? { gaps } : {}),
   };
@@ -3229,7 +3268,10 @@ function gapDrawnBy(gap: GapKey, template: FrameTemplate, border?: string): bool
       return subtypeDressOf(template) === "Vehicle";
     // The Nyx starfield (TODO 4.7): the Nyx frame draws it.
     case "nyx":
-      return isEnchantmentDress(template);
+      return isEnchantmentDress(template) && !isM20NyxTokenTemplate(template);
+    // The token's Nyx dress (TODO 4.51): the starfield pill templates.
+    case "nyx-dress":
+      return isM20NyxTokenTemplate(template);
     // The Universes Beyond dress (TODO 4.25): its three frames draw it.
     case "universes-beyond":
       return UB_TEMPLATES.has(template);

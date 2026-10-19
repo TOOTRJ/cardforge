@@ -45,6 +45,7 @@ import { getFrameProfile } from "@/lib/cards/template-layout";
 import { profileDrawsKind } from "@/lib/cards/kind-anatomy";
 import {
   isM20ArtifactTokenTemplate,
+  isM20NyxTokenTemplate,
   m20TokenHeightOf,
   m20TokenTemplate,
   tokenHeightForText,
@@ -542,6 +543,14 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   // and an Enchantment Artifact (ENCHANTMENT_DRESSES, below, is the per-card
   // half: the type words must say Enchantment).
   m15nyx: ["creature", "enchantment", "artifact"],
+  // …and the full-art token's Nyx dress (TODO 4.51), new too: the token
+  // kind's alone (ENCHANTMENT_DRESSES: the words must say Enchantment).
+  m20tokennyx: ["token"],
+  m20tokennyxtext: ["token"],
+  m20tokennyxtall: ["token"],
+  m20tokenartifactnyx: ["token"],
+  m20tokenartifactnyxtext: ["token"],
+  m20tokenartifactnyxtall: ["token"],
   // The station frame (TODO 4.27a), new as well: an artifact whose subtype
   // says Spacecraft, a land whose subtype says Planet (SUBTYPE_DRESSES).
   m15station: ["artifact"],
@@ -815,6 +824,17 @@ export function isSubtypeDress(template: FrameTemplate): boolean {
 
 const ENCHANTMENT_DRESSES: Partial<Record<FrameTemplate, { bases: Partial<Record<CardKind, FrameTemplate>> }>> = {
   m15nyx: { bases: { creature: "m15", enchantment: "m15", artifact: "m15artifact" } },
+  // The full-art token's Nyx dress (TODO 4.51): an Enchantment TOKEN's — the
+  // starfield in the name pill (TDSK #4 Glimmer, TEOC #13 Golem, TSOC #3
+  // Contract), one dress per full-art template. The token kind's only; the
+  // height and the Artifact word move between them as they move the plain
+  // ones (tokenHeightFrameFor keeps the dress, TYPE_WORD_DRESSES).
+  m20tokennyx: { bases: { token: "m20token" } },
+  m20tokennyxtext: { bases: { token: "m20tokentext" } },
+  m20tokennyxtall: { bases: { token: "m20tokentall" } },
+  m20tokenartifactnyx: { bases: { token: "m20tokenartifact" } },
+  m20tokenartifactnyxtext: { bases: { token: "m20tokenartifacttext" } },
+  m20tokenartifactnyxtall: { bases: { token: "m20tokenartifacttall" } },
 };
 
 /** The enchantment subtypes that print on a BODY OF THEIR OWN, never on the
@@ -1164,6 +1184,11 @@ const TYPE_WORD_DRESSES: Partial<
     m20token: { word: "Artifact", template: "m20tokenartifact" },
     m20tokentext: { word: "Artifact", template: "m20tokenartifacttext" },
     m20tokentall: { word: "Artifact", template: "m20tokenartifacttall" },
+    // …and the Nyx dress's (TODO 4.51): an Enchantment Artifact token (TEOC
+    // #13 Golem) wears the artifact template's slate pill with the stars.
+    m20tokennyx: { word: "Artifact", template: "m20tokenartifactnyx" },
+    m20tokennyxtext: { word: "Artifact", template: "m20tokenartifactnyxtext" },
+    m20tokennyxtall: { word: "Artifact", template: "m20tokenartifactnyxtall" },
   },
 };
 
@@ -1294,7 +1319,7 @@ export function tokenHeightFrameFor(kind: CardKind, template: FrameTemplate, fac
     printsPowerToughness: face.printsPowerToughness ?? supertypeHasWord(face.supertype, "Creature"),
     artifact,
   });
-  return m20TokenTemplate(height, artifact);
+  return m20TokenTemplate(height, artifact, isM20NyxTokenTemplate(template));
 }
 
 /** Every one of the token's automatic frame rules at once: the type words'

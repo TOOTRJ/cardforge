@@ -11413,6 +11413,174 @@
       "the name pill SOLID (owner decision round 14, 2026-09-29): after the slate its interior was α ≈ 246; every pixel M15's Title mask covers made opaque in its own colour (the mask covers nothing CC draws below α 230) — PipGlyph composite of CC pixels"
     ]
   },
+  "m20tokenartifactnyx": {
+    "source": "pipglyph",
+    "converter": "scripts/build-token-nyx.mjs",
+    "derivedFrom": "the published m20tokenartifact/<key> masters of the frames bucket (themselves Card Conjurer imports: see \"m20tokenartifact\") and the starfield of the Magic Set Editor constellation master public/frames/nyx/b.png (git)",
+    "output": "1500x2100, the parent's every byte but the name pill's face; webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "region": "the α-0 hole of the published m20tokencrown/w.png (sha256 9f8ecd1267ef) connected to 750,160, weighted by m20token/w.png's alpha (sha256 b208ff257aa4): 1 at α ≤ 230, 0 from 244",
+      "starfield": "luma of public/frames/nyx/b.png (sha256 1a34b555290e) at the same pixel, minus its median over the region (19.3)",
+      "tone": "out = P + offset + 2.7 × starfield per channel, the offset solved so the region's median, read over mid-grey art, is print's (scripts/lib/token-nyx.mjs targets: w TDSK #4 Glimmer, TSOC #3 Contract (mean); u TMDD #8 Spirit Sorcerer; b TDSK #10 Horror; c SLD #1835 Shrine; artifact TEOC #13 Golem); alpha untouched"
+    },
+    "colors": {
+      "w": [
+        "m20tokenartifact/w.png (published, sha256 3f90fa8931fb)",
+        "the name pill's face (132129 px): P + (-17.9 / -18.9 / -7.7) + 2.7 × (starfield luma − 19.3), onto print's median 74/80/96; 132074 px changed"
+      ],
+      "u": [
+        "m20tokenartifact/u.png (published, sha256 1a1a25677982)",
+        "the name pill's face (132129 px): P + (-17.9 / -18.9 / -7.7) + 2.7 × (starfield luma − 19.3), onto print's median 74/80/96; 132074 px changed"
+      ],
+      "b": [
+        "m20tokenartifact/b.png (published, sha256 5775bfbe5582)",
+        "the name pill's face (132129 px): P + (-17.9 / -18.9 / -7.7) + 2.7 × (starfield luma − 19.3), onto print's median 74/80/96; 132074 px changed"
+      ],
+      "r": [
+        "m20tokenartifact/r.png (published, sha256 136994f742cf)",
+        "the name pill's face (132129 px): P + (-17.9 / -18.9 / -7.7) + 2.7 × (starfield luma − 19.3), onto print's median 74/80/96; 132074 px changed"
+      ],
+      "g": [
+        "m20tokenartifact/g.png (published, sha256 1b929f5d171d)",
+        "the name pill's face (132129 px): P + (-17.9 / -18.9 / -7.7) + 2.7 × (starfield luma − 19.3), onto print's median 74/80/96; 132074 px changed"
+      ],
+      "c": [
+        "m20tokenartifact/c.png (published, sha256 bfee88af08ab)",
+        "the name pill's face (132129 px): P + (-17.9 / -18.9 / -7.7) + 2.7 × (starfield luma − 19.3), onto print's median 74/80/96; 132074 px changed"
+      ],
+      "m": [
+        "m20tokenartifact/m.png (published, sha256 bb8c3e382e36)",
+        "the name pill's face (132129 px): P + (-17.9 / -18.9 / -7.7) + 2.7 × (starfield luma − 19.3), onto print's median 74/80/96; 132074 px changed"
+      ]
+    },
+    "sourceFiles": [
+      "m20token/w.png",
+      "m20tokenartifact/b.png",
+      "m20tokenartifact/c.png",
+      "m20tokenartifact/g.png",
+      "m20tokenartifact/m.png",
+      "m20tokenartifact/r.png",
+      "m20tokenartifact/u.png",
+      "m20tokenartifact/w.png",
+      "m20tokencrown/w.png"
+    ],
+    "notes": [
+      "PipGlyph's own composite (TODO 4.51): the M20+ Nyx tokens (TDSK #4 / #10, TEOC #13, TSOC #3, SLD #1835, TMDD #8) print a starfield in the NAME PILL only; the type pill, box, rims and strip are the plain design's. Neither Card Conjurer nor Magic Set Editor ships the piece.",
+      "No pairs: no two-colour Nyx token is printed; a two-colour card on the dress wears gold (m)."
+    ]
+  },
+  "m20tokenartifactnyxtall": {
+    "source": "pipglyph",
+    "converter": "scripts/build-token-nyx.mjs",
+    "derivedFrom": "the published m20tokenartifacttall/<key> masters of the frames bucket (themselves Card Conjurer imports: see \"m20tokenartifacttall\") and the starfield of the Magic Set Editor constellation master public/frames/nyx/b.png (git)",
+    "output": "1500x2100, the parent's every byte but the name pill's face; webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "region": "the α-0 hole of the published m20tokencrown/w.png (sha256 9f8ecd1267ef) connected to 750,160, weighted by m20token/w.png's alpha (sha256 b208ff257aa4): 1 at α ≤ 230, 0 from 244",
+      "starfield": "luma of public/frames/nyx/b.png (sha256 1a34b555290e) at the same pixel, minus its median over the region (19.3)",
+      "tone": "out = P + offset + 2.7 × starfield per channel, the offset solved so the region's median, read over mid-grey art, is print's (scripts/lib/token-nyx.mjs targets: w TDSK #4 Glimmer, TSOC #3 Contract (mean); u TMDD #8 Spirit Sorcerer; b TDSK #10 Horror; c SLD #1835 Shrine; artifact TEOC #13 Golem); alpha untouched"
+    },
+    "colors": {
+      "w": [
+        "m20tokenartifacttall/w.png (published, sha256 6ddc9cb17032)",
+        "the name pill's face (132129 px): P + (-17.9 / -18.9 / -7.7) + 2.7 × (starfield luma − 19.3), onto print's median 74/80/96; 132074 px changed"
+      ],
+      "u": [
+        "m20tokenartifacttall/u.png (published, sha256 1972f19bbae6)",
+        "the name pill's face (132129 px): P + (-17.9 / -18.9 / -7.7) + 2.7 × (starfield luma − 19.3), onto print's median 74/80/96; 132074 px changed"
+      ],
+      "b": [
+        "m20tokenartifacttall/b.png (published, sha256 c1b60425013c)",
+        "the name pill's face (132129 px): P + (-17.9 / -18.9 / -7.7) + 2.7 × (starfield luma − 19.3), onto print's median 74/80/96; 132074 px changed"
+      ],
+      "r": [
+        "m20tokenartifacttall/r.png (published, sha256 c7ab97d8548d)",
+        "the name pill's face (132129 px): P + (-17.9 / -18.9 / -7.7) + 2.7 × (starfield luma − 19.3), onto print's median 74/80/96; 132074 px changed"
+      ],
+      "g": [
+        "m20tokenartifacttall/g.png (published, sha256 5f3b8676d71b)",
+        "the name pill's face (132129 px): P + (-17.9 / -18.9 / -7.7) + 2.7 × (starfield luma − 19.3), onto print's median 74/80/96; 132074 px changed"
+      ],
+      "c": [
+        "m20tokenartifacttall/c.png (published, sha256 906c43847966)",
+        "the name pill's face (132129 px): P + (-17.9 / -18.9 / -7.7) + 2.7 × (starfield luma − 19.3), onto print's median 74/80/96; 132074 px changed"
+      ],
+      "m": [
+        "m20tokenartifacttall/m.png (published, sha256 8ad912f47ce2)",
+        "the name pill's face (132129 px): P + (-17.9 / -18.9 / -7.7) + 2.7 × (starfield luma − 19.3), onto print's median 74/80/96; 132074 px changed"
+      ]
+    },
+    "sourceFiles": [
+      "m20token/w.png",
+      "m20tokenartifacttall/b.png",
+      "m20tokenartifacttall/c.png",
+      "m20tokenartifacttall/g.png",
+      "m20tokenartifacttall/m.png",
+      "m20tokenartifacttall/r.png",
+      "m20tokenartifacttall/u.png",
+      "m20tokenartifacttall/w.png",
+      "m20tokencrown/w.png"
+    ],
+    "notes": [
+      "PipGlyph's own composite (TODO 4.51): the M20+ Nyx tokens (TDSK #4 / #10, TEOC #13, TSOC #3, SLD #1835, TMDD #8) print a starfield in the NAME PILL only; the type pill, box, rims and strip are the plain design's. Neither Card Conjurer nor Magic Set Editor ships the piece.",
+      "No pairs: no two-colour Nyx token is printed; a two-colour card on the dress wears gold (m)."
+    ]
+  },
+  "m20tokenartifactnyxtext": {
+    "source": "pipglyph",
+    "converter": "scripts/build-token-nyx.mjs",
+    "derivedFrom": "the published m20tokenartifacttext/<key> masters of the frames bucket (themselves Card Conjurer imports: see \"m20tokenartifacttext\") and the starfield of the Magic Set Editor constellation master public/frames/nyx/b.png (git)",
+    "output": "1500x2100, the parent's every byte but the name pill's face; webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "region": "the α-0 hole of the published m20tokencrown/w.png (sha256 9f8ecd1267ef) connected to 750,160, weighted by m20token/w.png's alpha (sha256 b208ff257aa4): 1 at α ≤ 230, 0 from 244",
+      "starfield": "luma of public/frames/nyx/b.png (sha256 1a34b555290e) at the same pixel, minus its median over the region (19.3)",
+      "tone": "out = P + offset + 2.7 × starfield per channel, the offset solved so the region's median, read over mid-grey art, is print's (scripts/lib/token-nyx.mjs targets: w TDSK #4 Glimmer, TSOC #3 Contract (mean); u TMDD #8 Spirit Sorcerer; b TDSK #10 Horror; c SLD #1835 Shrine; artifact TEOC #13 Golem); alpha untouched"
+    },
+    "colors": {
+      "w": [
+        "m20tokenartifacttext/w.png (published, sha256 835386253d2a)",
+        "the name pill's face (132129 px): P + (-17.9 / -18.9 / -7.7) + 2.7 × (starfield luma − 19.3), onto print's median 74/80/96; 132074 px changed"
+      ],
+      "u": [
+        "m20tokenartifacttext/u.png (published, sha256 232806dfe374)",
+        "the name pill's face (132129 px): P + (-17.9 / -18.9 / -7.7) + 2.7 × (starfield luma − 19.3), onto print's median 74/80/96; 132074 px changed"
+      ],
+      "b": [
+        "m20tokenartifacttext/b.png (published, sha256 bf9ff99435b2)",
+        "the name pill's face (132129 px): P + (-17.9 / -18.9 / -7.7) + 2.7 × (starfield luma − 19.3), onto print's median 74/80/96; 132074 px changed"
+      ],
+      "r": [
+        "m20tokenartifacttext/r.png (published, sha256 013e648bf4d8)",
+        "the name pill's face (132129 px): P + (-17.9 / -18.9 / -7.7) + 2.7 × (starfield luma − 19.3), onto print's median 74/80/96; 132074 px changed"
+      ],
+      "g": [
+        "m20tokenartifacttext/g.png (published, sha256 ffbf3b5302c2)",
+        "the name pill's face (132129 px): P + (-17.9 / -18.9 / -7.7) + 2.7 × (starfield luma − 19.3), onto print's median 74/80/96; 132074 px changed"
+      ],
+      "c": [
+        "m20tokenartifacttext/c.png (published, sha256 251ac135dc72)",
+        "the name pill's face (132129 px): P + (-17.9 / -18.9 / -7.7) + 2.7 × (starfield luma − 19.3), onto print's median 74/80/96; 132074 px changed"
+      ],
+      "m": [
+        "m20tokenartifacttext/m.png (published, sha256 b05e1fa575fc)",
+        "the name pill's face (132129 px): P + (-17.9 / -18.9 / -7.7) + 2.7 × (starfield luma − 19.3), onto print's median 74/80/96; 132074 px changed"
+      ]
+    },
+    "sourceFiles": [
+      "m20token/w.png",
+      "m20tokenartifacttext/b.png",
+      "m20tokenartifacttext/c.png",
+      "m20tokenartifacttext/g.png",
+      "m20tokenartifacttext/m.png",
+      "m20tokenartifacttext/r.png",
+      "m20tokenartifacttext/u.png",
+      "m20tokenartifacttext/w.png",
+      "m20tokencrown/w.png"
+    ],
+    "notes": [
+      "PipGlyph's own composite (TODO 4.51): the M20+ Nyx tokens (TDSK #4 / #10, TEOC #13, TSOC #3, SLD #1835, TMDD #8) print a starfield in the NAME PILL only; the type pill, box, rims and strip are the plain design's. Neither Card Conjurer nor Magic Set Editor ships the piece.",
+      "No pairs: no two-colour Nyx token is printed; a two-colour card on the dress wears gold (m)."
+    ]
+  },
   "m20tokenartifacttall": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
@@ -11722,6 +11890,174 @@
       "the full-art token's legendary crown (TODO 4.48): CC's floating crown with its outline UNDER it, at CC's borderless bounds (crown 3.07/1.91/93.87x10.24 %, outline 2.8/1.72/94.4x10.62 %), composited 1:1 at 1500x2100 (every piece 1500-native) over a clear canvas and cropped to rows 0–259 (the outline's extent); nothing erased or covered — an overlay band over the m20token* masters (frames bucket)",
       "measured 2026-10-15 on 11 crowned M20+ prints (Scryfall PNGs at 1500x2100; TFDN #13, TOTJ #6, TTDC #18 / #19, TMOM #6, TLCC #7, TLTR #20, TCMM #60, TAFR #8 / #13, TM3C #11): the crown's top edge into the black border +2.5 px from CC's on the 2023+ prints (median), its wings +4 / +1 px — used as drawn, as the name pill (+1.3 px, TODO 4.48); the crown's hole is the pill's interior (rows 104–217 between the ends: α 0 there, checked), so it repaints only the pill's rims and ends, as the prints' crown carries them",
       "keys = w u b r g, m (gold: three or more colours, or a pair drawn gold), c (CC's grey C crown, on the plain templates' charcoal colourless), a (CC's silver A crown, the artifact templates' colourless: keyMap c → a; TNEO #16, TONE #9) and the ten pairs — the first colour's crown on the left, the second's on the right, lerped (premultiplied) across PAIR_RAMPS.m20Token (40→60 %W, the token's own split: TDMU #21 R|G, TMKM #13 G|W)"
+    ]
+  },
+  "m20tokennyx": {
+    "source": "pipglyph",
+    "converter": "scripts/build-token-nyx.mjs",
+    "derivedFrom": "the published m20token/<key> masters of the frames bucket (themselves Card Conjurer imports: see \"m20token\") and the starfield of the Magic Set Editor constellation master public/frames/nyx/b.png (git)",
+    "output": "1500x2100, the parent's every byte but the name pill's face; webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "region": "the α-0 hole of the published m20tokencrown/w.png (sha256 9f8ecd1267ef) connected to 750,160, weighted by m20token/w.png's alpha (sha256 b208ff257aa4): 1 at α ≤ 230, 0 from 244",
+      "starfield": "luma of public/frames/nyx/b.png (sha256 1a34b555290e) at the same pixel, minus its median over the region (19.3)",
+      "tone": "out = P + offset + 2.7 × starfield per channel, the offset solved so the region's median, read over mid-grey art, is print's (scripts/lib/token-nyx.mjs targets: w TDSK #4 Glimmer, TSOC #3 Contract (mean); u TMDD #8 Spirit Sorcerer; b TDSK #10 Horror; c SLD #1835 Shrine; artifact TEOC #13 Golem); alpha untouched"
+    },
+    "colors": {
+      "w": [
+        "m20token/w.png (published, sha256 b208ff257aa4)",
+        "the name pill's face (132129 px): P + (-79.2 / -84.6 / -94.2) + 2.7 × (starfield luma − 19.3), onto print's median 170.5/167/159; 132117 px changed"
+      ],
+      "u": [
+        "m20token/u.png (published, sha256 7aa3d26e67d6)",
+        "the name pill's face (132129 px): P + (+1.3 / -18.9 / -31.3) + 2.7 × (starfield luma − 19.3), onto print's median 20/85/127; 132129 px changed"
+      ],
+      "b": [
+        "m20token/b.png (published, sha256 a8b4f371d036)",
+        "the name pill's face (132129 px): P + (-7.0 / -10.8 / -0.4) + 2.7 × (starfield luma − 19.3), onto print's median 42/38/46; 132071 px changed"
+      ],
+      "r": [
+        "m20token/r.png (published, sha256 97ef3615c362)",
+        "the name pill's face (132129 px): P + (+0.0 / +0.0 / +0.0) + 2.7 × (starfield luma − 19.3), its own median kept (no print); 130142 px changed"
+      ],
+      "g": [
+        "m20token/g.png (published, sha256 7d028882b251)",
+        "the name pill's face (132129 px): P + (+0.0 / +0.0 / +0.0) + 2.7 × (starfield luma − 19.3), its own median kept (no print); 130142 px changed"
+      ],
+      "c": [
+        "m20token/c.png (published, sha256 9748a2ce3608)",
+        "the name pill's face (132129 px): P + (-4.1 / +4.5 / +8.2) + 2.7 × (starfield luma − 19.3), onto print's median 124/125/124; 132101 px changed"
+      ],
+      "m": [
+        "m20token/m.png (published, sha256 28ea85722b86)",
+        "the name pill's face (132129 px): P + (+0.0 / +0.0 / +0.0) + 2.7 × (starfield luma − 19.3), its own median kept (no print); 130142 px changed"
+      ]
+    },
+    "sourceFiles": [
+      "m20token/b.png",
+      "m20token/c.png",
+      "m20token/g.png",
+      "m20token/m.png",
+      "m20token/r.png",
+      "m20token/u.png",
+      "m20token/w.png",
+      "m20token/w.png",
+      "m20tokencrown/w.png"
+    ],
+    "notes": [
+      "PipGlyph's own composite (TODO 4.51): the M20+ Nyx tokens (TDSK #4 / #10, TEOC #13, TSOC #3, SLD #1835, TMDD #8) print a starfield in the NAME PILL only; the type pill, box, rims and strip are the plain design's. Neither Card Conjurer nor Magic Set Editor ships the piece.",
+      "No pairs: no two-colour Nyx token is printed; a two-colour card on the dress wears gold (m)."
+    ]
+  },
+  "m20tokennyxtall": {
+    "source": "pipglyph",
+    "converter": "scripts/build-token-nyx.mjs",
+    "derivedFrom": "the published m20tokentall/<key> masters of the frames bucket (themselves Card Conjurer imports: see \"m20tokentall\") and the starfield of the Magic Set Editor constellation master public/frames/nyx/b.png (git)",
+    "output": "1500x2100, the parent's every byte but the name pill's face; webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "region": "the α-0 hole of the published m20tokencrown/w.png (sha256 9f8ecd1267ef) connected to 750,160, weighted by m20token/w.png's alpha (sha256 b208ff257aa4): 1 at α ≤ 230, 0 from 244",
+      "starfield": "luma of public/frames/nyx/b.png (sha256 1a34b555290e) at the same pixel, minus its median over the region (19.3)",
+      "tone": "out = P + offset + 2.7 × starfield per channel, the offset solved so the region's median, read over mid-grey art, is print's (scripts/lib/token-nyx.mjs targets: w TDSK #4 Glimmer, TSOC #3 Contract (mean); u TMDD #8 Spirit Sorcerer; b TDSK #10 Horror; c SLD #1835 Shrine; artifact TEOC #13 Golem); alpha untouched"
+    },
+    "colors": {
+      "w": [
+        "m20tokentall/w.png (published, sha256 142b25abf56f)",
+        "the name pill's face (132129 px): P + (-79.2 / -84.6 / -94.2) + 2.7 × (starfield luma − 19.3), onto print's median 170.5/167/159; 132117 px changed"
+      ],
+      "u": [
+        "m20tokentall/u.png (published, sha256 4a2d19e6c6fe)",
+        "the name pill's face (132129 px): P + (+1.3 / -18.4 / -30.7) + 2.7 × (starfield luma − 19.3), onto print's median 20/85/127; 132129 px changed"
+      ],
+      "b": [
+        "m20tokentall/b.png (published, sha256 cf424f3417fc)",
+        "the name pill's face (132129 px): P + (-7.0 / -10.8 / -0.4) + 2.7 × (starfield luma − 19.3), onto print's median 42/38/46; 132071 px changed"
+      ],
+      "r": [
+        "m20tokentall/r.png (published, sha256 790351c9c179)",
+        "the name pill's face (132129 px): P + (+0.0 / +0.0 / +0.0) + 2.7 × (starfield luma − 19.3), its own median kept (no print); 130142 px changed"
+      ],
+      "g": [
+        "m20tokentall/g.png (published, sha256 d0ea9afa0fcb)",
+        "the name pill's face (132129 px): P + (+0.0 / +0.0 / +0.0) + 2.7 × (starfield luma − 19.3), its own median kept (no print); 130142 px changed"
+      ],
+      "c": [
+        "m20tokentall/c.png (published, sha256 13cd98463580)",
+        "the name pill's face (132129 px): P + (-4.1 / +4.5 / +8.2) + 2.7 × (starfield luma − 19.3), onto print's median 124/125/124; 132101 px changed"
+      ],
+      "m": [
+        "m20tokentall/m.png (published, sha256 f018497093f7)",
+        "the name pill's face (132129 px): P + (+0.0 / +0.0 / +0.0) + 2.7 × (starfield luma − 19.3), its own median kept (no print); 130142 px changed"
+      ]
+    },
+    "sourceFiles": [
+      "m20token/w.png",
+      "m20tokencrown/w.png",
+      "m20tokentall/b.png",
+      "m20tokentall/c.png",
+      "m20tokentall/g.png",
+      "m20tokentall/m.png",
+      "m20tokentall/r.png",
+      "m20tokentall/u.png",
+      "m20tokentall/w.png"
+    ],
+    "notes": [
+      "PipGlyph's own composite (TODO 4.51): the M20+ Nyx tokens (TDSK #4 / #10, TEOC #13, TSOC #3, SLD #1835, TMDD #8) print a starfield in the NAME PILL only; the type pill, box, rims and strip are the plain design's. Neither Card Conjurer nor Magic Set Editor ships the piece.",
+      "No pairs: no two-colour Nyx token is printed; a two-colour card on the dress wears gold (m)."
+    ]
+  },
+  "m20tokennyxtext": {
+    "source": "pipglyph",
+    "converter": "scripts/build-token-nyx.mjs",
+    "derivedFrom": "the published m20tokentext/<key> masters of the frames bucket (themselves Card Conjurer imports: see \"m20tokentext\") and the starfield of the Magic Set Editor constellation master public/frames/nyx/b.png (git)",
+    "output": "1500x2100, the parent's every byte but the name pill's face; webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "region": "the α-0 hole of the published m20tokencrown/w.png (sha256 9f8ecd1267ef) connected to 750,160, weighted by m20token/w.png's alpha (sha256 b208ff257aa4): 1 at α ≤ 230, 0 from 244",
+      "starfield": "luma of public/frames/nyx/b.png (sha256 1a34b555290e) at the same pixel, minus its median over the region (19.3)",
+      "tone": "out = P + offset + 2.7 × starfield per channel, the offset solved so the region's median, read over mid-grey art, is print's (scripts/lib/token-nyx.mjs targets: w TDSK #4 Glimmer, TSOC #3 Contract (mean); u TMDD #8 Spirit Sorcerer; b TDSK #10 Horror; c SLD #1835 Shrine; artifact TEOC #13 Golem); alpha untouched"
+    },
+    "colors": {
+      "w": [
+        "m20tokentext/w.png (published, sha256 13709a4a108e)",
+        "the name pill's face (132129 px): P + (-79.2 / -84.6 / -94.2) + 2.7 × (starfield luma − 19.3), onto print's median 170.5/167/159; 132117 px changed"
+      ],
+      "u": [
+        "m20tokentext/u.png (published, sha256 ef380781f228)",
+        "the name pill's face (132129 px): P + (+1.3 / -18.4 / -30.7) + 2.7 × (starfield luma − 19.3), onto print's median 20/85/127; 132129 px changed"
+      ],
+      "b": [
+        "m20tokentext/b.png (published, sha256 3d8ab5b4617d)",
+        "the name pill's face (132129 px): P + (-7.0 / -10.8 / -0.4) + 2.7 × (starfield luma − 19.3), onto print's median 42/38/46; 132071 px changed"
+      ],
+      "r": [
+        "m20tokentext/r.png (published, sha256 bf41a562a13d)",
+        "the name pill's face (132129 px): P + (+0.0 / +0.0 / +0.0) + 2.7 × (starfield luma − 19.3), its own median kept (no print); 130142 px changed"
+      ],
+      "g": [
+        "m20tokentext/g.png (published, sha256 4ed073828c04)",
+        "the name pill's face (132129 px): P + (+0.0 / +0.0 / +0.0) + 2.7 × (starfield luma − 19.3), its own median kept (no print); 130142 px changed"
+      ],
+      "c": [
+        "m20tokentext/c.png (published, sha256 338bfa9d2436)",
+        "the name pill's face (132129 px): P + (-4.1 / +4.5 / +8.2) + 2.7 × (starfield luma − 19.3), onto print's median 124/125/124; 132101 px changed"
+      ],
+      "m": [
+        "m20tokentext/m.png (published, sha256 18b8f8a16069)",
+        "the name pill's face (132129 px): P + (+0.0 / +0.0 / +0.0) + 2.7 × (starfield luma − 19.3), its own median kept (no print); 130142 px changed"
+      ]
+    },
+    "sourceFiles": [
+      "m20token/w.png",
+      "m20tokencrown/w.png",
+      "m20tokentext/b.png",
+      "m20tokentext/c.png",
+      "m20tokentext/g.png",
+      "m20tokentext/m.png",
+      "m20tokentext/r.png",
+      "m20tokentext/u.png",
+      "m20tokentext/w.png"
+    ],
+    "notes": [
+      "PipGlyph's own composite (TODO 4.51): the M20+ Nyx tokens (TDSK #4 / #10, TEOC #13, TSOC #3, SLD #1835, TMDD #8) print a starfield in the NAME PILL only; the type pill, box, rims and strip are the plain design's. Neither Card Conjurer nor Magic Set Editor ships the piece.",
+      "No pairs: no two-colour Nyx token is printed; a two-colour card on the dress wears gold (m)."
     ]
   },
   "m20tokentall": {

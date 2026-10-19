@@ -1523,6 +1523,57 @@ export function visualCases(): VisualCase[] {
   add("m20tokenartifacttext", "token", "u", "short", { suffix: "@crown", row: legendaryToken("m20tokenartifacttext", {}, true) });
   add("m20tokentext", "token", "wu", "short", { suffix: "@pair-crown", row: legendaryToken("m20tokentext", { twoColor: true }, true) });
   add("m20tokentext", "token", "wu", "short", { suffix: "@pair-crown-hd", preset: "hd", row: legendaryToken("m20tokentext", { twoColor: true }, true) });
+  // TODO 4.51: the full-art token's Nyx dress — new templates, no stored
+  // card. A Legendary Enchantment token's crown over the starry pill on each
+  // of the six, at the stored bake's size and on foil (the generic cases
+  // above bake every key on each), and the printed Nyx tokens' looks: W
+  // textless (TDSK #4 Glimmer), W regular box with no P/T (TSOC #3
+  // Contract), C artifact textless (TEOC #13 Golem).
+  const nyxToken = (template: FrameTemplate, supertype: string, extra: Partial<CardRowForBake> = {}): Partial<CardRowForBake> => ({
+    title: "Glimmer",
+    supertype,
+    subtypes: ["Glimmer"],
+    power: "1",
+    toughness: "1",
+    rules_text: null,
+    flavor_text: null,
+    frame_style: { template, finish: "regular" },
+    ...extra,
+  });
+  for (const template of ["m20tokennyx", "m20tokennyxtext", "m20tokennyxtall", "m20tokenartifactnyx", "m20tokenartifactnyxtext", "m20tokenartifactnyxtall"] as const) {
+    const artifact = template.includes("artifact");
+    const row = legendaryToken(template, {}, !template.endsWith("nyx"));
+    add(template, "token", artifact ? "c" : "b", "short", {
+      suffix: "@crown",
+      row: { ...row, supertype: artifact ? "Legendary Enchantment Artifact Creature" : "Legendary Enchantment Creature" },
+    });
+  }
+  add("m20tokennyx", "token", "w", "short", {
+    suffix: "@crown-hd",
+    preset: "hd",
+    row: { ...legendaryToken("m20tokennyx"), supertype: "Legendary Enchantment Creature" },
+  });
+  add("m20tokennyx", "token", "u", "short", {
+    suffix: "@crown-foil",
+    finish: "foil",
+    row: { ...legendaryToken("m20tokennyx", { finish: "foil" }), supertype: "Legendary Enchantment Creature" },
+  });
+  add("m20tokennyx", "token", "w", "short", { suffix: "@token-nyx", row: nyxToken("m20tokennyx", "Enchantment Creature") });
+  add("m20tokennyx", "token", "w", "short", { suffix: "@token-nyx-hd", preset: "hd", row: nyxToken("m20tokennyx", "Enchantment Creature") });
+  add("m20tokennyxtext", "token", "w", "short", {
+    suffix: "@token-nyx-aura",
+    row: nyxToken("m20tokennyxtext", "Enchantment", {
+      title: "Contract",
+      subtypes: ["Aura"],
+      power: null,
+      toughness: null,
+      rules_text: "Enchant creature\nWhenever enchanted creature attacks, it gets +2/+0 until end of turn if it's attacking one of your opponents. Otherwise, its controller loses 2 life.",
+    }),
+  });
+  add("m20tokenartifactnyx", "token", "c", "short", {
+    suffix: "@token-nyx-artifact",
+    row: nyxToken("m20tokenartifactnyx", "Enchantment Artifact Creature", { title: "Golem", subtypes: ["Golem"], power: "3", toughness: "3" }),
+  });
   // TODO 4.6b: the two-colour frame, opt-in per card (frame_style.twoColor —
   // no stored card has the switch, so these are NEW cases, no bump): the
   // gold-split pair on every template that draws one, the hybrid dress on

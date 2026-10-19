@@ -76,6 +76,12 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   m20tokenartifact: { front: M20_TOKEN },
   m20tokenartifacttext: { front: M20_TOKEN },
   m20tokenartifacttall: { front: M20_TOKEN },
+  m20tokennyx: { front: M20_TOKEN },
+  m20tokennyxtext: { front: M20_TOKEN },
+  m20tokennyxtall: { front: M20_TOKEN },
+  m20tokenartifactnyx: { front: M20_TOKEN },
+  m20tokenartifactnyxtext: { front: M20_TOKEN },
+  m20tokenartifactnyxtall: { front: M20_TOKEN },
   m15borderless: { front: BORDERLESS },
   m15borderlessartifact: { front: BORDERLESS },
   m15borderlessland: { front: BORDERLESS },
@@ -231,8 +237,10 @@ describe("what the fixed 5:4 surface got wrong (before 3b.13)", () => {
     // extended-art frame's see-through colourless master, layout v58; 28
     // before the older full-art basics, TODO 4.40 / 4.41: three tall windows more; 31 before the Spacecraft's
     // extended-art and borderless dresses, 4.27a step 2; 33 before the
-    // borderless double-faced bodies, TODO 5.7: four full-bleed windows.)
-    expect(off.filter((m) => m > 0.25)).toHaveLength(37);
+    // borderless double-faced bodies, TODO 5.7: four full-bleed windows;
+    // 37 before the full-art token's Nyx dress, TODO 4.51: six more full-art
+    // token windows.)
+    expect(off.filter((m) => m > 0.25)).toHaveLength(43);
   });
 });
 

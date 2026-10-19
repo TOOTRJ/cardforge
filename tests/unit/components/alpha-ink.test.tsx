@@ -123,7 +123,8 @@ describe("slotInk / footerInk", () => {
     const keys = ["w", "u", "b", "r", "g", "c", "m"];
     // TODO 4.48: the full-art token prints its name white on every pill but
     // the white one (dark ink); its artifact templates' pills are silver.
-    const whitePill = ["m20token", "m20tokentext", "m20tokentall"];
+    // …and the Nyx dress's (TODO 4.51): a silver starry pill, dark ink (TDSK #4).
+    const whitePill = ["m20token", "m20tokentext", "m20tokentall", "m20tokennyx", "m20tokennyxtext", "m20tokennyxtall"];
     for (const t of FRAME_TEMPLATE_VALUES) {
       const p: FrameProfile = getFrameProfile(t);
       if (whitePill.includes(t)) {

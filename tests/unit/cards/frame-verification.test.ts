@@ -154,6 +154,44 @@ describe("frame reference registry", () => {
       "m15borderlessmdfcback/r",
       "m15borderlessmdfcback/g",
       "m15borderlessmdfcback/c",
+      // The full-art token's Nyx dress (TODO 4.51): only six printings —
+      // W/B/C textless, W/U regular, the artifact C textless.
+      "m20tokennyx/u",
+      "m20tokennyx/r",
+      "m20tokennyx/g",
+      "m20tokennyx/m",
+      "m20tokennyxtext/b",
+      "m20tokennyxtext/r",
+      "m20tokennyxtext/g",
+      "m20tokennyxtext/c",
+      "m20tokennyxtext/m",
+      "m20tokennyxtall/w",
+      "m20tokennyxtall/u",
+      "m20tokennyxtall/b",
+      "m20tokennyxtall/r",
+      "m20tokennyxtall/g",
+      "m20tokennyxtall/c",
+      "m20tokennyxtall/m",
+      "m20tokenartifactnyx/w",
+      "m20tokenartifactnyx/u",
+      "m20tokenartifactnyx/b",
+      "m20tokenartifactnyx/r",
+      "m20tokenartifactnyx/g",
+      "m20tokenartifactnyx/m",
+      "m20tokenartifactnyxtext/w",
+      "m20tokenartifactnyxtext/u",
+      "m20tokenartifactnyxtext/b",
+      "m20tokenartifactnyxtext/r",
+      "m20tokenartifactnyxtext/g",
+      "m20tokenartifactnyxtext/c",
+      "m20tokenartifactnyxtext/m",
+      "m20tokenartifactnyxtall/w",
+      "m20tokenartifactnyxtall/u",
+      "m20tokenartifactnyxtall/b",
+      "m20tokenartifactnyxtall/r",
+      "m20tokenartifactnyxtall/g",
+      "m20tokenartifactnyxtall/c",
+      "m20tokenartifactnyxtall/m",
     ]);
     const m15Templates = FRAME_TEMPLATE_VALUES.filter(
       (t) => eraForTemplate(t) === "m15",
@@ -171,7 +209,8 @@ describe("frame reference registry", () => {
     // + the Spacecraft's extended-art and borderless dresses (4.27a step 2).
     // + 4.40 / 4.41's three older full-art basics.
     // + 5.7's four borderless double-faced bodies.
-    expect(m15Templates.length).toBe(60);
+    // + 4.51's six Nyx dresses of the full-art tokens.
+    expect(m15Templates.length).toBe(66);
     expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {

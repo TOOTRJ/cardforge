@@ -83,7 +83,8 @@ describe("one M15-era display size (layout v32)", () => {
     // 4.40 / 4.41's three older full-art basics, and the Spacecraft's
     // extended-art and borderless dresses (4.27a step 2).
     // …and TODO 5.7's four borderless double-faced bodies.
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(62);
+    // …and TODO 4.51's six Nyx dresses of the full-art tokens.
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(68);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -299,6 +300,13 @@ describe("baselines (TextSlot.dy)", () => {
     ["m20tokenartifact", -4 / 1500, -6 / 1500],
     ["m20tokenartifacttext", -4 / 1500, -5 / 1500],
     ["m20tokenartifacttall", -4 / 1500, -6 / 1500],
+    // TODO 4.51: the Nyx dress — the same slots as its plain twin.
+    ["m20tokennyx", -4 / 1500, -6 / 1500],
+    ["m20tokennyxtext", -4 / 1500, -5 / 1500],
+    ["m20tokennyxtall", -4 / 1500, -6 / 1500],
+    ["m20tokenartifactnyx", -4 / 1500, -6 / 1500],
+    ["m20tokenartifactnyxtext", -4 / 1500, -5 / 1500],
+    ["m20tokenartifactnyxtall", -4 / 1500, -6 / 1500],
     // Adventure (layout v38, TODO 4.21a): a Card Conjurer master whose bars
     // are CC's M15 bars — the name kept, the type line on the prints' like
     // the other CC-framed M15 profiles.

@@ -36,6 +36,8 @@ describe("which profiles centre a single line", () => {
       "m15tokentext", "m15tokenartifacttext",
       "emblem",
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
+      // …and their Nyx dress (TODO 4.51).
+      "m20tokennyx", "m20tokennyxtext", "m20tokennyxtall", "m20tokenartifactnyx", "m20tokenartifactnyxtext", "m20tokenartifactnyxtall",
     ]);
     for (const t of centring) expect(getFrameProfile(t).rules.alignSingleLine).toBe("center");
     for (const t of FRAME_TEMPLATE_VALUES) {
