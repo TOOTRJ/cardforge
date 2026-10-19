@@ -162,6 +162,15 @@ async function postAsAdmin(
   return { ok: true };
 }
 
+/** A thread this action just opened, whose first message failed: remove it,
+ *  so the user's and the team's inboxes show no empty conversation (audit
+ *  L7). Only ever a thread created in the same call — never one that held
+ *  messages. A failed delete is logged; the send's error stands. */
+async function discardEmptyThread(admin: ReturnType<typeof createAdminClient>, threadId: string) {
+  const { error } = await admin.from("message_threads").delete().eq("id", threadId);
+  if (error) console.error("[messages] couldn't remove the empty thread", threadId, error.message);
+}
+
 /** Open an independent thread with a user and post the first message. */
 export async function adminStartThreadAction(input: unknown): Promise<StartThreadResult> {
   const gate = await requireAdmin();
@@ -190,7 +199,10 @@ export async function adminStartThreadAction(input: unknown): Promise<StartThrea
     return { ok: false, error: "Couldn't open the conversation." };
   }
   const posted = await postAsAdmin(admin, adminId, thread, body);
-  if (!posted.ok) return posted;
+  if (!posted.ok) {
+    await discardEmptyThread(admin, thread.id);
+    return posted;
+  }
   return { ok: true, threadId: thread.id };
 }
 
@@ -221,6 +233,7 @@ export async function adminReplyToFeedbackAction(input: unknown): Promise<StartT
   }
 
   let thread: { id: string; user_id: string; subject: string } | null = null;
+  let opened = false;
   const { data: existing } = await admin
     .from("message_threads")
     .select("id, user_id, subject")
@@ -246,10 +259,15 @@ export async function adminReplyToFeedbackAction(input: unknown): Promise<StartT
       return { ok: false, error: "Couldn't open the conversation." };
     }
     thread = created;
+    opened = true;
   }
 
   const posted = await postAsAdmin(admin, adminId, thread, body);
-  if (!posted.ok) return posted;
+  if (!posted.ok) {
+    // A thread opened for this reply goes again; an existing one stays.
+    if (opened) await discardEmptyThread(admin, thread.id);
+    return posted;
+  }
   if (feedback.status === "new") {
     await admin.from("feedback").update({ status: "reviewed" }).eq("id", feedbackId);
     revalidatePath("/admin/feedback");
