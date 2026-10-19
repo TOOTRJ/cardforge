@@ -2,17 +2,13 @@
 
 import Link from "next/link";
 import {
-  Activity,
   CreditCard,
-  Frame,
   GalleryVerticalEnd,
   LayoutDashboard,
-  ListOrdered,
   LogOut,
   MessageSquare,
   Settings,
   ShieldCheck,
-  Trophy,
   Sparkles,
   UserCircle,
 } from "lucide-react";
@@ -24,6 +20,8 @@ import {
 import { logoutAction } from "@/app/(auth)/actions";
 import { isBillingEnabled } from "@/lib/billing/flags";
 import { cn } from "@/lib/utils";
+import { siteConfig } from "@/lib/site-config";
+import { NAV_ICONS } from "@/components/layout/nav-icons";
 import { useLocalDateText } from "@/components/ui/local-date";
 import type { DateText } from "@/lib/format/dates";
 
@@ -153,38 +151,22 @@ export function UserMenu({
           </>
         ) : null}
         {isAdmin ? (
-          <>
-          <MenuItem
-            href="/admin/messages"
-            icon={MessageSquare}
-            label="Conversations"
-          />
-          <MenuItem
-            href="/admin/moderation"
-            icon={ShieldCheck}
-            label="Moderation"
-          />
-          <MenuItem
-            href="/admin/challenges"
-            icon={Trophy}
-            label="Challenges"
-          />
-          <MenuItem
-            href="/admin/scryfall"
-            icon={Activity}
-            label="Scryfall usage"
-          />
-          <MenuItem
-            href="/admin/frame-compare"
-            icon={Frame}
-            label="Frame compare"
-          />
-          <MenuItem
-            href="/admin/frame-requests"
-            icon={ListOrdered}
-            label="Frame requests"
-          />
-          </>
+          // Every admin page (audit I1), from the one list the dashboard
+          // rail reads too — two compact columns so the menu stays short.
+          <nav aria-label="Admin" className="mt-1 border-t border-border/60 pt-2">
+            <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-subtle">Admin</p>
+            <div className="grid grid-cols-2 gap-x-1">
+              {siteConfig.adminNav.map((item) => (
+                <MenuItem
+                  key={item.href}
+                  href={item.href}
+                  icon={NAV_ICONS[item.href] ?? ShieldCheck}
+                  label={item.label}
+                  compact
+                />
+              ))}
+            </div>
+          </nav>
         ) : null}
         <div className="my-1 h-px bg-border/60" />
         <form action={logoutAction}>
@@ -205,18 +187,24 @@ function MenuItem({
   href,
   icon: Icon,
   label,
+  compact = false,
 }: {
   href: string;
   icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
   label: string;
+  /** The admin grid's smaller row. */
+  compact?: boolean;
 }) {
   return (
     <Link
       href={href}
-      className="flex items-center gap-2.5 rounded-md px-2 py-2 text-sm text-muted transition-colors hover:bg-elevated hover:text-foreground focus-visible:outline-none focus-visible:bg-elevated"
+      className={cn(
+        "flex items-center rounded-md text-muted transition-colors hover:bg-elevated hover:text-foreground focus-visible:outline-none focus-visible:bg-elevated",
+        compact ? "min-w-0 gap-1.5 px-2 py-1.5 text-xs" : "gap-2.5 px-2 py-2 text-sm",
+      )}
     >
-      <Icon className="h-4 w-4" aria-hidden />
-      {label}
+      <Icon className={cn("shrink-0", compact ? "h-3.5 w-3.5" : "h-4 w-4")} aria-hidden />
+      <span className={compact ? "truncate" : undefined}>{label}</span>
     </Link>
   );
 }
