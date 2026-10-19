@@ -56,6 +56,7 @@ import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import {
   DEFAULT_DFC_ICON,
   backBodyFor,
+  bodyFor,
   colorlessFaceAllowed,
   dfcBodyOf,
   dfcLookOf,
@@ -302,8 +303,12 @@ export function resolveDfcBackFace(input: DfcBackGateInput): DfcBackGateResult {
   if (storedWins) {
     // The stored body is structure: a type that would derive another body
     // is refused; the same type keeps the body as stored.
+    // (A type its plain body would keep on the stored body — a creature
+    // back retyped as a Saga on the ▼ back — is not a move, whether or not
+    // the saga back is published: the stored body stays, as the creator
+    // draws it.)
     const typeChanged = (input.stored?.back?.card_type ?? null) !== backType;
-    if (typeChanged && derived !== storedBody) {
+    if (typeChanged && derived !== storedBody && bodyFor(layout, "back", backType, family, dfcLookOf(front)) !== storedBody) {
       return { ok: false, field: "back_face.card_type", message: DFC_BACK_BODY_SET };
     }
     template = storedBody as FrameTemplate;

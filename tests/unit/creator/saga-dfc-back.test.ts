@@ -272,3 +272,48 @@ describe("the faces", () => {
     expect(bakedBackOf(card)).not.toBeNull();
   });
 });
+
+describe("an edit that retypes a back as a Saga (skeptic #589)", () => {
+  it("keeps a creature back stored on the ▼ back there when it becomes an enchantment Saga — accepted as on main, whether or not the saga back is published", () => {
+    const stored = { ...ETCHINGS, card_type: "creature", subtypes: ["Human"], frame_style: { template: "m15dfcback" }, color_identity: ["white"] } as DfcBackFacePayload;
+    for (const keys of [PLAIN, WITH_SAGA]) {
+      const result = resolveDfcBackFace({
+        frontTemplate: "m15dfcfront",
+        family: undefined,
+        back: { ...ETCHINGS, color_identity: ["white"] } as DfcBackFacePayload,
+        frontColorIdentity: ["white"],
+        verifiedKeys: keys,
+        stored: { back: stored, familyChanged: false },
+      });
+      expect(result.ok && result.back?.frame_style?.template).toBe("m15dfcback");
+      expect(
+        creatorBackBodyFor({
+          mode: "edit",
+          layout: "transform",
+          backType: "enchantment",
+          backSubtypes: "Saga",
+          family: "arrows",
+          look: "bordered",
+          backColorIdentity: ["white"],
+          frontColorIdentity: ["white"],
+          verifiedKeys: keys,
+          storedBackTemplate: "m15dfcback",
+          storedFamily: "arrows",
+        }),
+      ).toBe("m15dfcback");
+    }
+  });
+
+  it("still refuses a saga back retyped off the Saga (its type's body is the ▼ back)", () => {
+    const stored = { ...ETCHINGS, frame_style: { template: SAGA_BACK_BODY }, color_identity: ["white"] } as DfcBackFacePayload;
+    const result = resolveDfcBackFace({
+      frontTemplate: "m15dfcfront",
+      family: undefined,
+      back: { ...ETCHINGS, card_type: "creature", subtypes: ["Human"], color_identity: ["white"] } as DfcBackFacePayload,
+      frontColorIdentity: ["white"],
+      verifiedKeys: WITH_SAGA,
+      stored: { back: stored, familyChanged: false },
+    });
+    expect(result).toMatchObject({ ok: false, field: "back_face.card_type", message: DFC_BACK_BODY_SET });
+  });
+});
