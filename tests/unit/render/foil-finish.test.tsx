@@ -293,8 +293,10 @@ describe("foil finish — one component, both renderers", () => {
     const preview = read("components/cards/card-preview.tsx");
     expect(preview).toContain('from "@/lib/cards/foil-finish"');
     // The full card, StatOverlay's plate, and a second face's plate (flip's
-    // bottom creature, layout v38 — SecondFaceBake's twin).
-    expect(preview.match(/<FoilSheen/g)?.length).toBe(3);
+    // bottom creature, layout v38 — SecondFaceBake's twin), and the
+    // borderless walkers' stamp notch drawn above the rows (TODO 4.9d,
+    // AboveRowsStamp — a plate's sheen on the notch).
+    expect(preview.match(/<FoilSheen/g)?.length).toBe(4);
     expect(preview).toContain("foilArtLayers({");
     expect(preview).not.toMatch(/mix-blend-overlay|card-shimmer/);
   });

@@ -53,8 +53,12 @@ export function EtchedSheen({
   id: string;
   /** The SAME frame image the face draws: the bake's PNG data URL, the
    *  preview's frame URL (WebP; the frames bucket sends ACAO *). For a
-   *  two-colour split frame, the LEFT colour's image. */
-  frameHref: string;
+   *  two-colour split frame, the LEFT colour's image. null = the mask is
+   *  the `overlays` alone (the borderless walkers' stamp notch drawn above
+   *  the ability rows, TODO 4.9d: the hatch on the notch only, at the same
+   *  card-space pattern as the frame's, so the straight rim and the arch
+   *  etch as one). */
+  frameHref: string | null;
   landscape?: boolean;
   width: number | string;
   height: number | string;
@@ -111,7 +115,7 @@ export function EtchedSheen({
           </clipPath>
         ) : null}
         <mask id={`${id}-frame`} maskUnits="userSpaceOnUse" x="0" y="0" width={vw} height={vh}>
-          {split ? (
+          {frameHref === null ? null : split ? (
             <image
               href={frameHref}
               x="0"

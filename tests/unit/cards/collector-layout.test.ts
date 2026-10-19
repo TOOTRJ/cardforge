@@ -94,7 +94,8 @@ describe("when the line is drawn", () => {
       if (!profile.collector) continue;
       const { markLine, ...geometry } = profile.collector;
       expect(geometry, template).toEqual(M15_COLLECTOR);
-      expect(markLine, template).toBe(template === "m15pw" ? 2 : undefined);
+      // (…and the borderless walkers, TODO 4.9d: the same shield in the master.)
+      expect(markLine, template).toBe(["m15pw", "m15borderlesspw", "m15borderlesspwtall"].includes(template) ? 2 : undefined);
       // The card draws a stat plate here, so every template agrees.
       expect(collectorLayout(profile, dmu(), display), template).toEqual(reference);
     }
