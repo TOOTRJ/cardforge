@@ -1087,7 +1087,7 @@ function CardImage({
           text layer — the preview's ColorIndicatorOverlay twin. Satori
           paints in document order, so it sits here, after the sheens. A
           plain sibling, never a Fragment. */}
-      {indicatorFills.length ? ColorIndicatorBake({ fills: indicatorFills }) : null}
+      {indicatorFills.length ? ColorIndicatorBake({ fills: indicatorFills, dyPct: layout.indicatorDyPct ?? 0 }) : null}
 
       {/* Rules-box backdrop — own layer under the watermark and the title /
           type bands (see the preview's twin comment: z9 under their z20).
@@ -3292,8 +3292,8 @@ function FlipsideLineBake({
 // color-indicator.ts), the preview's ColorIndicatorOverlay twin: the outline
 // disc, then the fills (one disc, two halves on the diagonal, else wedges)
 // in one inline SVG at the dot's box. Satori draws SVG paths and circles.
-function ColorIndicatorBake({ fills }: { fills: readonly string[] }) {
-  const box = colorIndicatorBox();
+function ColorIndicatorBake({ fills, dyPct = 0 }: { fills: readonly string[]; dyPct?: number }) {
+  const box = colorIndicatorBox(dyPct);
   const c = COLOR_INDICATOR_VIEW / 2;
   return (
     <svg

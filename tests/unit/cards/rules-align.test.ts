@@ -139,6 +139,8 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
       "m15station", "m15stationland", "m15pw", "m20token", "m20tokenartifact", "m15borderlessstation", "m15borderlesspw", "m15borderlesspwtall", "saga",
       // The double-faced saga front (TODO 5.5 (b)): the saga's rail.
       "sagadfcfront",
+      // …and its back (5.5 (b) PR 2): the same rail.
+      "sagadfcback",
       "extendedartstation", "m15textless", "m15textlessland",
       // The Nyx dress's textless heights (TODO 4.51), as their plain twins.
       "m20tokennyx", "m20tokenartifactnyx",

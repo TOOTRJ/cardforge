@@ -5,7 +5,7 @@ import { scryfallCardSchema } from "@/lib/scryfall/client";
 import { frameMatchFromScryfall, frontFacePairFromScryfall, printsTwoColorFrame } from "@/lib/scryfall/import-mapper";
 import { TWO_COLOR_PAIRS, framePairReferenceOptions } from "@/lib/cards/frame-reference-registry";
 import { validateReferenceForCombo } from "@/lib/cards/frame-reference-validation";
-import { bodyFor, dfcIconFamilyFromEffects, dfcLookOf, templateHasBackFace } from "@/lib/cards/dfc";
+import { backBodyFor, dfcIconFamilyFromEffects, dfcLookOf, templateHasBackFace } from "@/lib/cards/dfc";
 import { parseTypeLine } from "@/lib/scryfall/import-mapper";
 import type { FrameTemplate } from "@/types/card";
 
@@ -86,10 +86,11 @@ describe("frame registry references vs the signature registry (TODO 1.4 (c))", (
       const front = match.onceVerified ?? match.template;
       expect(templateHasBackFace(front), `${row.combo} ${match.signature}`).toBe(true);
       const back = card.card_faces?.[1];
-      const { card_type } = parseTypeLine(back?.type_line);
+      const { card_type, subtypes_text } = parseTypeLine(back?.type_line);
       const layout = card.layout === "modal_dfc" ? "modal" : "transform";
-      // (…in the body's look: a borderless front's back is borderless, 5.7.)
-      expect(bodyFor(layout, "back", card_type, dfcIconFamilyFromEffects(card.frame_effects), dfcLookOf(row.template)), row.combo).toBe(row.template);
+      // (…in the body's look: a borderless front's back is borderless, 5.7;
+      // a Saga back wears the double-faced saga back, 5.5 (b) PR 2.)
+      expect(backBodyFor(layout, { cardType: card_type, subtypes: subtypes_text }, dfcIconFamilyFromEffects(card.frame_effects), dfcLookOf(row.template)), row.combo).toBe(row.template);
       return;
     }
     if (row.combo in ALLOWLIST) {

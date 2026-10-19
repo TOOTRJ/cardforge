@@ -245,6 +245,9 @@ export function isDeclaredDfcBody(template: FrameTemplate | string | null | unde
   // The double-faced saga's front (TODO 5.5 (b)): declared, but no row of
   // the table — the Saga kind picks it, never a face type.
   if (template === "sagadfcfront") return true;
+  // …and its back (5.5 (b), PR 2): no row either — a Saga back face picks
+  // it (sagaBackBodyFor), never a face type alone.
+  if (template === SAGA_BACK_BODY) return true;
   for (const entry of [...Object.values(DFC_BODIES), ...Object.values(DFC_BORDERLESS_BODIES)]) {
     if (typeof entry === "string" ? entry === template : Object.values(entry).includes(template as FrameTemplate)) return true;
   }
@@ -309,6 +312,58 @@ export function bodyFor(
   if (!entry) return null;
   if (typeof entry === "string") return entry;
   return entry[family] ?? null;
+}
+
+/** The double-faced saga BACK (TODO 5.5 (b), PR 2): the body of a transform
+ *  BACK face that is a Saga — MOM's praetors, LCI #189 — the saga's rail
+ *  under the ▼ back's dark bars. */
+export const SAGA_BACK_BODY: FrameTemplate = "sagadfcback";
+
+/** True when a face's subtypes name a Saga — an array (a stored back) or
+ *  the form's comma- / space-separated text. */
+export function namesSagaSubtype(subtypes: readonly string[] | string | null | undefined): boolean {
+  const words = typeof subtypes === "string" ? subtypes.split(/[\s,]+/) : (subtypes ?? []);
+  return words.some((word) => word.trim().toLowerCase() === "saga");
+}
+
+/**
+ * The saga back a transform back face wears, or null: an ENCHANTMENT back
+ * whose subtypes say Saga, on today's ▼ (`arrows` — every printed Saga back
+ * is MOM's or LCI's plain ▲ / ▼) and the bordered look. A Saga back of
+ * another family or the borderless look has no saga body: it stays on the
+ * body `bodyFor` gives it (today's). A saga CREATURE back (FIN's summons,
+ * a P/T plate) is another body — TODO 4.5d.
+ */
+export function sagaBackBodyFor(
+  layout: DfcLayout,
+  faceType: string | null | undefined,
+  subtypes: readonly string[] | string | null | undefined,
+  family: DfcIconFamily = DEFAULT_DFC_ICON,
+  look: DfcLook = DEFAULT_DFC_LOOK,
+): FrameTemplate | null {
+  if (layout !== "transform" || family !== "arrows" || look !== "bordered") return null;
+  if (faceType !== "enchantment" || !namesSagaSubtype(subtypes)) return null;
+  return SAGA_BACK_BODY;
+}
+
+/**
+ * The BACK body a face derives, the saga back included — the ONE answer the
+ * server's gate, the creator, the import and the remix ask: the saga back
+ * (sagaBackBodyFor) where `offered` says it may be worn (the caller's
+ * verification: published in the back's colour), else `bodyFor`'s — exactly
+ * today's body for every back that is not a Saga, and for a Saga back while
+ * its body isn't published.
+ */
+export function backBodyFor(
+  layout: DfcLayout,
+  face: { cardType: string | null | undefined; subtypes?: readonly string[] | string | null },
+  family: DfcIconFamily = DEFAULT_DFC_ICON,
+  look: DfcLook = DEFAULT_DFC_LOOK,
+  offered: (template: FrameTemplate) => boolean = () => true,
+): FrameTemplate | null {
+  const saga = sagaBackBodyFor(layout, face.cardType, face.subtypes, family, look);
+  if (saga && offered(saga)) return saga;
+  return bodyFor(layout, "back", face.cardType, family, look);
 }
 
 /**

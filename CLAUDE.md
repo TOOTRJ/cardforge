@@ -299,7 +299,11 @@ Rules and gotchas:
   two-faced on the double-faced saga front `sagadfcfront`, 5.5 (b) — the
   Saga kind's own frame, `DfcProfile.saga`, picked on the Card step's Faces
   row, its back required; `dfcLayoutForCard` is the one "is this card
-  double-faced" for a kind with a two-faced frame) —
+  double-faced" for a kind with a two-faced frame; a transform BACK that is
+  an enchantment Saga — MOM's praetors, LCI #189 — wears `sagadfcback`, 5.5
+  (b) PR 2, where it is published in the back's colour, else the ▼ back:
+  `backBodyFor` in `lib/cards/dfc.ts` is the answer the gate, the creator
+  and the import share) —
   the tab is the one source of "which face": each back field sits on the
   step of its front twin (`panels/back-face-panels.tsx`, `BACK_FIELD_STEP`
   in `lib/creator/face-tabs.ts`; the same `back_face.*` paths), the preview

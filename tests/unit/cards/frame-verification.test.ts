@@ -195,6 +195,8 @@ describe("frame reference registry", () => {
       // The double-faced saga front (TODO 5.5 (b)): no colourless
       // transforming saga was printed.
       "sagadfcfront/c",
+      // …and its back (5.5 (b) PR 2): no colourless Saga back was printed.
+      "sagadfcback/c",
     ]);
     const m15Templates = FRAME_TEMPLATE_VALUES.filter(
       (t) => eraForTemplate(t) === "m15",
@@ -212,9 +214,9 @@ describe("frame reference registry", () => {
     // + the Spacecraft's extended-art and borderless dresses (4.27a step 2).
     // + 4.40 / 4.41's three older full-art basics.
     // + 5.7's four borderless double-faced bodies.
-    // + 5.5 (b)'s double-faced saga front.
+    // + 5.5 (b)'s double-faced saga front and its back (PR 2).
     // + 4.51's six Nyx dresses of the full-art tokens.
-    expect(m15Templates.length).toBe(67);
+    expect(m15Templates.length).toBe(68);
     expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {

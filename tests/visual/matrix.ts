@@ -2146,6 +2146,18 @@ export function visualCases(): VisualCase[] {
     add("m15dfcbackleft", "saga", colour, "short", { suffix: "@saga", back: sagaFront, row: sagaFanRow(colour, "short") });
     add("m15dfcback", "saga", colour, "short", { suffix: "@saga", back: sagaFront });
   }
+  // TODO 5.5 (b), PR 2: the double-faced saga BACK (a transform card whose
+  // back face is a Saga — MOM's praetors, LCI #189): baked as the back face
+  // of a creature front, every coloured key short and long (the gold pair
+  // and the three-colour wedges of LCI #189's dot), the HD size and a foil
+  // back. (The colourless key — the saga's land frame under the bronze bars
+  // — has no print; it is baked as every master is.)
+  for (const colour of VISUAL_COLOURS) {
+    add("sagadfcback", "transform", colour, "short", { back: { frontTemplate: "m15dfcfront" }, row: sagaBackRow(colour, "short") });
+    add("sagadfcback", "transform", colour, "long", { back: { frontTemplate: "m15dfcfront" }, row: sagaBackRow(colour, "long") });
+  }
+  add("sagadfcback", "transform", "g", "long", { preset: "hd", suffix: "@hd", back: { frontTemplate: "m15dfcfront" }, row: sagaBackRow("g", "long") });
+  add("sagadfcback", "transform", "r", "short", { finish: "foil", suffix: "@foil", back: { frontTemplate: "m15dfcfront" }, row: sagaBackRow("r", "short", "foil") });
   add("m15", "creature", "w", "long", { suffix: "@centred-hd", preset: "hd", row: centredStyle("m15") });
   // TODO 4.30: the white border (frame_style.border — an ADDITION, opt-in
   // per card; no stored card has the key, so these are NEW cases and every
@@ -2393,6 +2405,45 @@ function sagaFanRow(colour: VisualColour, shape: VisualShape, over: Partial<NonN
         }
       : {}),
     back_face: { ...(sagaBackFace(shape, colour, "m15dfcbackleft") as object), ...over } as CardRowForBake["back_face"],
+  } as Partial<CardRowForBake>;
+}
+
+/** A transform card whose BACK is a Saga (TODO 5.5 (b), PR 2: MOM #12 Elesh
+ *  Norn // The Argent Etchings's shape) — the front a creature on the
+ *  transform front, the back an enchantment Saga on the double-faced saga
+ *  back, its chapters as PLAIN text (a back face has no structured rows:
+ *  lib/cards/faces.ts backPreviewData). The long one: four chapters (LCI
+ *  #189's), a long name. */
+function sagaBackRow(colour: VisualColour, shape: VisualShape, finish: VisualCase["finish"] = "regular"): Partial<CardRowForBake> {
+  const long = shape === "long";
+  return {
+    title: "Elesh Norn",
+    cost: `{2}${pips(colour, 0, 2)}`,
+    card_type: "creature",
+    supertype: "Legendary",
+    subtypes: ["Phyrexian", "Praetor"],
+    rules_text: "Vigilance\nWhenever a source an opponent controls deals damage to you or a permanent you control, that source's controller loses 2 life unless they pay {1}.",
+    power: "4",
+    toughness: "7",
+    frame_style: { template: "m15dfcfront", finish } as CardRowForBake["frame_style"],
+    face_content: null,
+    back_face: {
+      title: long ? "The Argent Etchings of the Machine Unbound" : "The Argent Etchings",
+      cost: "",
+      card_type: "enchantment",
+      supertype: null,
+      subtypes: ["Saga"],
+      rules_text: long
+        ? "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI — Create two 3/3 green Dinosaur creature tokens.\nII — Roar of the Fifth People gains “Creatures you control have ‘{T}: Add {R}, {G}, or {W}.’”\nIII — Search your library for a Dinosaur card, reveal it, put it into your hand, then shuffle.\nIV — Dinosaurs you control gain double strike and trample until end of turn."
+        : "(As this Saga enters and after your draw step, add a lore counter.)\nI — Incubate 2 five times, then transform all Incubator tokens you control.\nII — Creatures you control get +1/+1 and gain double strike until end of turn.\nIII — Destroy all other permanents except for artifacts, lands, and Phyrexians. Exile The Argent Etchings, then return it to the battlefield (front face up).",
+      flavor_text: null,
+      power: null,
+      toughness: null,
+      art_url: "ART2",
+      artist_credit: "Visual Regression",
+      frame_style: { template: "sagadfcback" },
+      color_identity: IDENTITY[colour],
+    } as CardRowForBake["back_face"],
   } as Partial<CardRowForBake>;
 }
 

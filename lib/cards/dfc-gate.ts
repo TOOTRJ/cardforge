@@ -41,7 +41,12 @@
 //     ▼ back (the battle wears no family: always the default);
 //   • the double-faced SAGA front (TODO 5.5 (b), DfcProfile.saga) is a
 //     transform front like any other — its back required, on the body the
-//     card's family derives — that dresses a saga (an enchantment) only.
+//     card's family derives — that dresses a saga (an enchantment) only;
+//   • a Saga BACK (TODO 5.5 (b), PR 2: an enchantment back whose subtypes
+//     say Saga, on the ▼ family and the bordered look) derives the saga
+//     back (`backBodyFor` → `sagadfcback`) where it is published in the
+//     colour the back wears, else its type's body as before; on an update
+//     the stored body wins as for every back.
 //
 // Pure: no I/O. The caller fetches the verified keys and decides whether an
 // admin's frame preview skips verification.
@@ -50,6 +55,7 @@
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import {
   DEFAULT_DFC_ICON,
+  backBodyFor,
   bodyFor,
   colorlessFaceAllowed,
   dfcBodyOf,
@@ -61,7 +67,7 @@ import {
   type DfcIconFamily,
   type DfcLayout,
 } from "@/lib/cards/dfc";
-import { frameGateError } from "@/lib/cards/frame-availability";
+import { frameGateError, isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import type { ColorIdentity, FrameTemplate } from "@/types/card";
 
@@ -268,11 +274,24 @@ export function resolveDfcBackFace(input: DfcBackGateInput): DfcBackGateResult {
   const family = body?.battle ? DEFAULT_DFC_ICON : dfcFamilyOf(input.family);
   // The back follows the front's look (TODO 5.7): a borderless front's back
   // is borderless — none yet for a land back or a 2016–22 family.
-  const derived = bodyFor(layout, "back", backType, family, dfcLookOf(front));
-  if (!derived) return { ok: false, field: "back_face.frame_style", message: DFC_NO_BACK_BODY_YET };
-
   const storedBody = input.stored?.back?.frame_style?.template;
   const storedHasBody = Boolean(input.stored && storedBody && isDfcBackBody(storedBody));
+  // A Saga back (TODO 5.5 (b), PR 2) derives the saga back where it is
+  // published in the colour the back will wear (the stored one on an edit
+  // of a back with a body, else its own, else the front's) — or, under an
+  // admin's frame preview, wherever it exists; short of that, the body every
+  // other back of its type derives (today's), so nothing is refused that was
+  // saved before.
+  const wornColour = storedHasBody ? backColourOf(input.stored?.back, input.frontColorIdentity) : backColourOf(back, input.frontColorIdentity);
+  const derived = backBodyFor(
+    layout,
+    { cardType: backType, subtypes: back.subtypes as readonly string[] | string | null | undefined },
+    family,
+    dfcLookOf(front),
+    (template) => Boolean(input.skipVerification) || isFrameComboAvailable(template, pickFrameColorKey(wornColour), input.verifiedKeys),
+  );
+  if (!derived) return { ok: false, field: "back_face.frame_style", message: DFC_NO_BACK_BODY_YET };
+
   const storedWins = storedHasBody && !input.stored?.familyChanged;
   let template: FrameTemplate;
   if (storedWins && dfcLookOf(storedBody) !== dfcLookOf(front)) {
@@ -284,8 +303,12 @@ export function resolveDfcBackFace(input: DfcBackGateInput): DfcBackGateResult {
   if (storedWins) {
     // The stored body is structure: a type that would derive another body
     // is refused; the same type keeps the body as stored.
+    // (A type its plain body would keep on the stored body — a creature
+    // back retyped as a Saga on the ▼ back — is not a move, whether or not
+    // the saga back is published: the stored body stays, as the creator
+    // draws it.)
     const typeChanged = (input.stored?.back?.card_type ?? null) !== backType;
-    if (typeChanged && derived !== storedBody) {
+    if (typeChanged && derived !== storedBody && bodyFor(layout, "back", backType, family, dfcLookOf(front)) !== storedBody) {
       return { ok: false, field: "back_face.card_type", message: DFC_BACK_BODY_SET };
     }
     template = storedBody as FrameTemplate;

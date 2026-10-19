@@ -430,7 +430,7 @@ describe("visual-regression matrix", () => {
       const rowFinish = (c.row.frame_style as { finish?: string } | null)?.finish ?? "regular";
       expect(rowFinish, c.id).toBe(c.finish);
     }
-    expect(cases.filter((c) => c.finish === "foil" && c.face === "back").map((c) => c.id)).toEqual(["m15dfcback/r/transform-short@foil", "m15mdfcback/r/mdfc-short@foil"]);
+    expect(cases.filter((c) => c.finish === "foil" && c.face === "back").map((c) => c.id)).toEqual(["m15dfcback/r/transform-short@foil", "m15mdfcback/r/mdfc-short@foil", "sagadfcback/r/transform-short@foil"]);
   });
 
   it("bakes the long back-body cases with the LONG back (dense rules, the long name, 12/12 on the dark plate): never the short back under a long id (TODO 5.1a; the modal backs too, 5.1b)", () => {

@@ -804,6 +804,12 @@ export type FrameProfile = {
    *  colourless face. Intrinsic to the body, not a per-card switch (4.6c's
    *  switch for ordinary cards reuses the module). Code-owned. */
   indicator?: "coloured";
+  /** The colour-indicator dot's move DOWN from its M15 place, % of the
+   *  card's height (TODO 5.5 (b), PR 2): the double-faced saga back's type
+   *  bar is m15dfcback's moved onto the saga's type row, and the prints'
+   *  dot rides it (MOM #12 / #65 / #169: centred ≈ 1832 px against the ▼
+   *  back's 1239). Absent = 0, every other body. Code-owned. */
+  indicatorDyPct?: number;
   /** A modal double-faced body's flipside STRIP texts (TODO 5.1b; design
    *  2026-10-02 §2.2, D9): two text slots in the strip CC paints into the
    *  master (its housing-coloured tab at the text box's bottom left) — the
@@ -5690,6 +5696,49 @@ const SAGADFCFRONT: FrameProfile = {
 };
 
 // ---------------------------------------------------------------------------
+// The double-faced saga's BACK (TODO 5.5 (b), PR 2): the back of a card
+// whose BACK face is a Saga — March of the Machine's five praetors (MOM #12
+// The Argent Etchings, #65, #125, #169, #213 and their prerelease promos)
+// and LCI #189 Roar of the Fifth People (and #296) — every one on today's
+// ▼ (no family effect on any of them; no print wears a 2016–22 saga back).
+// No Card Conjurer pack draws it: the masters are PipGlyph's own composite
+// (scripts/build-saga-back-frames.mjs, scripts/lib/saga-back.mjs) — the
+// 4.21c saga master with m15dfcback's dark title bar and ▼ well over its
+// title row and m15dfcback's type bar moved down 593 px onto its type row,
+// the rail's paper toned to the printed backs' greyed box and both bars
+// toned per key onto the prints. So the profile is the SAGA's — its rail,
+// badges, dividers, sizes, symbol, art window — with the ▼ back's deltas
+// (M15DFCBACK): no cost; WHITE name and type ink (the prints' 247–254); the
+// name band ending before the well (DFC_RIGHT_WELL_TITLE_RIGHT_PCT); the
+// colour-indicator dot on every coloured back, moved down with its bar
+// (indicatorDyPct: the prints centre it ≈ 1832 px, 593 below the ▼ back's
+// 1239), the type line indented past it. No P/T: a saga CREATURE back (FIN's
+// summons, with the dark back's plate) is TODO 4.5d's body. No crown (no
+// legendary Saga back is printed outside FIN's creatures), no pairs, no
+// stamp (never on a DFC body). An ADDITION: no stored card sits on it, no
+// bump. Set on the PROFILES entry only.
+// ---------------------------------------------------------------------------
+
+/** The type bar's move from M15's row onto the saga's, HD px (the saga
+ *  pack's type mask IS M15's moved down this far: the builder checks it). */
+export const SAGA_TYPE_ROW_DY_PX = 593;
+
+const SAGADFCBACK: FrameProfile = {
+  ...SAGA,
+  label: "Saga (transform back)",
+  dfc: { layout: "transform", role: "back", well: "right" },
+  hideCost: true,
+  title: {
+    ...SAGA.title,
+    rect: { ...SAGA.title.rect, widthPct: DFC_RIGHT_WELL_TITLE_RIGHT_PCT - SAGA.title.rect.leftPct },
+    colorHex: DFC_BACK_INK,
+  },
+  type: { ...SAGA.type, colorHex: DFC_BACK_INK },
+  indicator: "coloured",
+  indicatorDyPct: SAGA_TYPE_ROW_DY_PX / 21,
+};
+
+// ---------------------------------------------------------------------------
 // The modal (MDFC) bodies (TODO 5.1b; design 2026-10-02 §2.2, frames.md
 // §1.5 / §3.5 / §4.3): Card Conjurer's 'Modal Regular' pack over the same
 // CC-framed M15 skeleton as the transform bodies — the drop housing with its
@@ -6418,6 +6467,8 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   saga: SAGA,
   // The double-faced saga's front (TODO 5.5 (b)): see SAGADFCFRONT.
   sagadfcfront: SAGADFCFRONT,
+  // …and its back (TODO 5.5 (b), PR 2): see SAGADFCBACK.
+  sagadfcback: SAGADFCBACK,
   adventure: ADVENTURE,
   // CC's colourless flip frame is see-through (layout v38, TODO 4.21a; owner
   // decision 2026-09-29): bars at α 191–248, the body between the border and

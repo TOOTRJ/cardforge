@@ -3851,6 +3851,66 @@
       ]
     }
   },
+  "sagadfcback": {
+    "note": "The double-faced saga's BACK (TODO 5.5 (b), PR 2): the back of a card whose BACK face is a Saga — March of the Machine's five praetors (the saga's chapter rail under the ▼ back's dark bars, the colour dot moved down with the type bar) and LCI #189 Roar of the Fifth People (G R W: the gold frame, the dot in three wedges). Every reference is the printing's BACK face (face 1). The date-stamped prerelease promos (PMOM #12s–#213s) print the same and are left out for their scans' cast; FIN's summons are saga CREATURE backs (a P/T plate: TODO 4.5d) and REX #7's back is a land. Colourless: no colourless Saga back was printed (the saga's land frame stands in, untoned).",
+    "colors": {
+      "w": [
+        {
+          "name": "The Argent Etchings",
+          "set": "mom",
+          "scryfallId": "d8999135-ddb1-4e4c-b885-e25f23dac3d3",
+          "face": 1,
+          "curated": true
+        }
+      ],
+      "u": [
+        {
+          "name": "The Great Synthesis",
+          "set": "mom",
+          "scryfallId": "41c83142-b948-4ee5-a486-41306d2bb411",
+          "face": 1,
+          "curated": true
+        }
+      ],
+      "b": [
+        {
+          "name": "The True Scriptures",
+          "set": "mom",
+          "scryfallId": "bf2249e6-af74-4b88-8eb7-144ce8fa7f6b",
+          "face": 1,
+          "curated": true
+        }
+      ],
+      "r": [
+        {
+          "name": "The Great Work",
+          "set": "mom",
+          "scryfallId": "712fb9e5-bd67-4173-a2d4-061aeb6253b5",
+          "face": 1,
+          "curated": true
+        }
+      ],
+      "g": [
+        {
+          "name": "The Grand Evolution",
+          "set": "mom",
+          "scryfallId": "e24b5289-d3b5-4b4d-bb37-69bf2c3b48bc",
+          "face": 1,
+          "curated": true
+        }
+      ],
+      "c": null,
+      "m": [
+        {
+          "name": "Roar of the Fifth People",
+          "set": "lci",
+          "scryfallId": "57df2563-18d4-4526-a8bc-0c114e6fd4d9",
+          "face": 1,
+          "curated": true
+        }
+      ]
+    }
+  },
   "adventure": {
     "colors": {
       "w": [
