@@ -19714,6 +19714,104 @@
       "width": 1500,
       "height": 2100
     },
+    "sagadfcback/b.png": {
+      "hash": "3e115ad0d49d",
+      "sha256": "3e115ad0d49db9ff9746981616178b8023e9953b7c31297e078d4b7be621e541",
+      "bytes": 1835339,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcback/b.webp": {
+      "hash": "5b5ade5d72ba",
+      "sha256": "5b5ade5d72ba358cd85ff7234b3629feffde1e5a8745e0029dedd3934f17b722",
+      "bytes": 76066,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcback/c.png": {
+      "hash": "db253f41c2b4",
+      "sha256": "db253f41c2b491a8ce5507ad7ec847781db830a63b73fd07afca18e4cc91f038",
+      "bytes": 1474634,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcback/c.webp": {
+      "hash": "f5e8ffccce2e",
+      "sha256": "f5e8ffccce2eb53d81f25a1dc21c2a88cac74ea32b7199ad8c8dff19ddf0185f",
+      "bytes": 68756,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcback/g.png": {
+      "hash": "dc9e3208ca72",
+      "sha256": "dc9e3208ca7248e2079e3f2c0fb44063699a9bab1c7aa8940ba8a5413f969a94",
+      "bytes": 2007651,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcback/g.webp": {
+      "hash": "2849c8f36178",
+      "sha256": "2849c8f36178f0a01f2352397c641525306c1715f5ccc67451d824d0de86db60",
+      "bytes": 87566,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcback/m.png": {
+      "hash": "477badb122d9",
+      "sha256": "477badb122d9e7f1e86eca0d954102938566bf8edf592a0c1d1ec9f1266f30c0",
+      "bytes": 1947684,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcback/m.webp": {
+      "hash": "a7675aee50eb",
+      "sha256": "a7675aee50ebab0d68906ba820254a838f1a956e941540d215e5c0046563bbee",
+      "bytes": 92940,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcback/r.png": {
+      "hash": "9757fc90560c",
+      "sha256": "9757fc90560c9fc81b3368b7dca9d33a5861ea78d6c5ac366cde760ce7d4b200",
+      "bytes": 2165941,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcback/r.webp": {
+      "hash": "1a9d5093abca",
+      "sha256": "1a9d5093abca4b32f17f14730952a16462d2c8a7d5f110dc8af3646bb18fbe78",
+      "bytes": 124332,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcback/u.png": {
+      "hash": "9c7e0d5a47f0",
+      "sha256": "9c7e0d5a47f0c36c7e2027b421923032864bdec82d4a2679a5a4b67a01be6820",
+      "bytes": 1290630,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcback/u.webp": {
+      "hash": "26a6bd7fff70",
+      "sha256": "26a6bd7fff702fa565a1dc268e34f1f0750650529734c6c79f4ecf7f4cc410bb",
+      "bytes": 56290,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcback/w.png": {
+      "hash": "7ff2a84a8443",
+      "sha256": "7ff2a84a84432c13a12825e7bad10c9a05387106c564dc48fdbb116e8c4bae91",
+      "bytes": 1325247,
+      "width": 1500,
+      "height": 2100
+    },
+    "sagadfcback/w.webp": {
+      "hash": "d5058fb47ec5",
+      "sha256": "d5058fb47ec52494a20b6de136d00bad684661952823da4a8c7179860db98e8f",
+      "bytes": 54058,
+      "width": 1500,
+      "height": 2100
+    },
     "sagadfcfront/b.png": {
       "hash": "256ae57559e9",
       "sha256": "256ae57559e91009bbe5619f8e3840e7ab5bfb6c495e097fd5d3f9ab08ef0732",

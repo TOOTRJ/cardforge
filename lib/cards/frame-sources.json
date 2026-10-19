@@ -14900,6 +14900,161 @@
       "the pack's masks (Pinline, Title, Type, Frame, Banner, Banner (Right), Text, Text (Right), Border) are importer inputs for the two-colour saga's pair masters (TODO 4.6f), recorded as maskInputs and never published; its 'Banner Pinstripe (Multicolored)' (sagaMidStripe.png) and 'Holo Stamp' addons are not drawn (4.6f / 4.9d)"
     ]
   },
+  "sagadfcback": {
+    "source": "pipglyph",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "converter": "scripts/build-saga-back-frames.mjs",
+    "derivedFrom": "the published saga/<k> masters (the 4.21c saga, Card Conjurer imports: see \"saga\") with the published m15dfcback/<k> masters' title bar + ▼ well and type bar (Card Conjurer imports: see \"m15dfcback\") laid over them through Card Conjurer's masks; the rail's paper and both bars toned onto the printed saga backs (scripts/lib/saga-back.mjs SAGA_BACK_TONES)",
+    "output": "1500x2100, the saga master's corners, webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "masks": {
+        "title": "cc:img/frames/m15/transform/regular/new/maskTitle.png@a2bebb355f9e",
+        "type": "cc:img/frames/m15/regular/m15MaskType.png@40600c4681c7",
+        "sagaType": "cc:img/frames/saga/sagaMaskType.png@3e55a05502c1",
+        "sagaText": "cc:img/frames/saga/sagaMaskText.png@2bf40fcbd802",
+        "sagaBanner": "cc:img/frames/saga/sagaMaskBanner.png@d120739e6f94"
+      },
+      "typeDy": "593 px (the moved M15 type mask's best fit to the saga pack's own: L1 175293, its anti-aliased edges)",
+      "titleToneFade": "x 1240 → 1262 px (the ▼ well untoned)",
+      "tones": {
+        "w": {
+          "title": "× 1.102 / 1.101 / 1.114 (167, 158, 149 → 184, 174, 166), fading to × 1.102 on every channel at white",
+          "type": "× 1.078 / 1.070 / 1.095 (166, 157, 148 → 179, 168, 162), fading to × 1.074 on every channel at white",
+          "paper": "× 0.857 / 0.837 / 0.819 (252, 252, 248 → 216, 211, 203), fading to × 0.840 on every channel at white"
+        },
+        "u": {
+          "title": "× 0.785 / 1.189 / 1.287 (65, 106, 143 → 51, 126, 184), fading to × 1.143 on every channel at white",
+          "type": "× 0.662 / 1.198 / 1.224 (65, 106, 143 → 43, 127, 175), fading to × 1.127 on every channel at white",
+          "paper": "× 0.774 / 0.814 / 0.873 (239, 247, 251 → 185, 201, 219), fading to × 0.810 on every channel at white"
+        },
+        "b": {
+          "title": "× 1.259 / 1.286 / 1.312 (81, 77, 77 → 102, 99, 101), fading to × 1.282 on every channel at white",
+          "type": "× 1.186 / 1.222 / 1.250 (86, 81, 80 → 102, 99, 100), fading to × 1.216 on every channel at white",
+          "paper": "× 0.754 / 0.747 / 0.742 (236, 237, 236 → 178, 177, 175), fading to × 0.748 on every channel at white"
+        },
+        "r": {
+          "title": "× 1.011 / 1.057 / 1.625 (178, 70, 32 → 180, 74, 52), fading to × 1.052 on every channel at white",
+          "type": "× 1.011 / 1.029 / 1.563 (178, 70, 32 → 180, 72, 50), fading to × 1.035 on every channel at white",
+          "paper": "× 0.833 / 0.772 / 0.736 (252, 241, 239 → 210, 186, 176), fading to × 0.783 on every channel at white"
+        },
+        "g": {
+          "title": "× 1.314 / 1.313 / 1.035 (51, 80, 57 → 67, 105, 59), fading to × 1.297 on every channel at white",
+          "type": "× 1.255 / 1.291 / 0.947 (51, 79, 57 → 64, 102, 54), fading to × 1.266 on every channel at white",
+          "paper": "× 0.756 / 0.785 / 0.765 (242, 246, 243 → 183, 193, 186), fading to × 0.777 on every channel at white"
+        },
+        "m": {
+          "title": "× 0.902 / 0.979 / 1.321 (184, 146, 56 → 166, 143, 74), fading to × 0.968 on every channel at white",
+          "type": "× 0.902 / 0.959 / 1.228 (184, 147, 57 → 166, 141, 70), fading to × 0.952 on every channel at white",
+          "paper": "× 0.896 / 0.875 / 0.795 (251, 248, 239 → 225, 217, 190), fading to × 0.874 on every channel at white"
+        }
+      }
+    },
+    "colors": {
+      "w": [
+        "saga/w.png@e9e5ce26dbd6",
+        "m15dfcback/w.png@fae725a6ad69 (title bar, ▼ well, type bar)"
+      ],
+      "u": [
+        "saga/u.png@5fe1a4716e08",
+        "m15dfcback/u.png@988e035dcf02 (title bar, ▼ well, type bar)"
+      ],
+      "b": [
+        "saga/b.png@10e954c2e22f",
+        "m15dfcback/b.png@cd529342ee3e (title bar, ▼ well, type bar)"
+      ],
+      "r": [
+        "saga/r.png@11daa4d6cbd9",
+        "m15dfcback/r.png@fe5a929fd235 (title bar, ▼ well, type bar)"
+      ],
+      "g": [
+        "saga/g.png@cc2c41df5bc5",
+        "m15dfcback/g.png@3cddb652b6e8 (title bar, ▼ well, type bar)"
+      ],
+      "m": [
+        "saga/m.png@03a9637c8f44",
+        "m15dfcback/m.png@6e2dbe62fe42 (title bar, ▼ well, type bar)"
+      ],
+      "c": [
+        "saga/c.png@9c33b7018ca6",
+        "m15dfcback/c.png@18945d44dd2e (title bar, ▼ well, type bar)"
+      ]
+    },
+    "changedPixels": {
+      "w": {
+        "title": 158986,
+        "type": 162634,
+        "title (toned)": "167,158,149 → 184,174,166 (print 184,174,166)",
+        "type (toned)": "166,157,148 → 179,168,162 (print 179,168,162)",
+        "paper (toned)": "252,252,248 → 216,211,203 (print 216,211,203)"
+      },
+      "u": {
+        "title": 158986,
+        "type": 162634,
+        "title (toned)": "65,106,143 → 51,126,184 (print 51,126,184)",
+        "type (toned)": "65,106,143 → 43,127,175 (print 43,127,175)",
+        "paper (toned)": "239,247,251 → 185,201,219 (print 185,201,219)"
+      },
+      "b": {
+        "title": 158986,
+        "type": 162634,
+        "title (toned)": "81,77,77 → 102,99,101 (print 102,99,101)",
+        "type (toned)": "86,81,80 → 102,99,100 (print 102,99,100)",
+        "paper (toned)": "236,237,236 → 178,177,175 (print 178,177,175)"
+      },
+      "r": {
+        "title": 158986,
+        "type": 162634,
+        "title (toned)": "178,70,32 → 180,74,52 (print 180,74,52)",
+        "type (toned)": "178,70,32 → 180,72,50 (print 180,72,50)",
+        "paper (toned)": "252,241,239 → 208,186,176 (print 210,186,176)"
+      },
+      "g": {
+        "title": 158986,
+        "type": 162634,
+        "title (toned)": "51,80,57 → 67,105,59 (print 67,105,59)",
+        "type (toned)": "51,79,57 → 64,102,54 (print 64,102,54)",
+        "paper (toned)": "242,246,243 → 183,193,186 (print 183,193,186)"
+      },
+      "m": {
+        "title": 158986,
+        "type": 162634,
+        "title (toned)": "184,146,56 → 166,143,74 (print 166,143,74)",
+        "type (toned)": "184,147,57 → 166,141,70 (print 166,141,70)",
+        "paper (toned)": "251,248,239 → 224,217,191 (print 225,217,190)"
+      },
+      "c": {
+        "title": 158986,
+        "type": 162634
+      }
+    },
+    "sourceFiles": [
+      "cc:img/frames/m15/regular/m15MaskType.png",
+      "cc:img/frames/m15/transform/regular/new/maskTitle.png",
+      "cc:img/frames/saga/sagaMaskBanner.png",
+      "cc:img/frames/saga/sagaMaskText.png",
+      "cc:img/frames/saga/sagaMaskType.png",
+      "m15dfcback/b.png",
+      "m15dfcback/c.png",
+      "m15dfcback/g.png",
+      "m15dfcback/m.png",
+      "m15dfcback/r.png",
+      "m15dfcback/u.png",
+      "m15dfcback/w.png",
+      "saga/b.png",
+      "saga/c.png",
+      "saga/g.png",
+      "saga/m.png",
+      "saga/r.png",
+      "saga/u.png",
+      "saga/w.png"
+    ],
+    "notes": [
+      "TODO 5.5 (b) PR 2: the back of a card whose back face is a Saga — MOM's five praetors (#12, #65, #125, #169, #213 and their prerelease promos), LCI #189 Roar of the Fifth People (and #296); no Card Conjurer pack draws it (owner-approved mock 2026-10-17, design-backup/dfc-sagas/back-proposal.jpg)",
+      "toned onto print before the first tick (owner 2026-10-17): the rail's paper to the printed backs' greyed box, the title and type bars per key; `from` is re-read on every run and must match the table within 2 levels a channel",
+      "c = the saga's land frame under m15dfcback/c's bronze bars, untoned (no print); FIN's saga CREATURE backs (a P/T plate) are TODO 4.5d, not this body"
+    ]
+  },
   "sagadfcfront": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",

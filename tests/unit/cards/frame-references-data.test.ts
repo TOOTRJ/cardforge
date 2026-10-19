@@ -146,6 +146,8 @@ const DOCUMENTED_NULLS = new Set([
   // The double-faced saga front (TODO 5.5 (b)): no colourless transforming
   // saga was printed (the land frame stands in, as on the saga).
   "sagadfcfront/c",
+  // …and its back (5.5 (b) PR 2): no colourless Saga back was printed.
+  "sagadfcback/c",
   // Its borderless Spacecraft dress (step 2): two printings, both
   // three-colour commanders (EOC #1 / #2) — gold only.
   "m15borderlessstation/w", "m15borderlessstation/u", "m15borderlessstation/b", "m15borderlessstation/r", "m15borderlessstation/g", "m15borderlessstation/c",

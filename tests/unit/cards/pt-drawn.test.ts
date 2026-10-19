@@ -35,6 +35,9 @@ const NO_PT_SLOT: FrameTemplate[] = [
   // The double-faced saga front (TODO 5.5 (b)): the saga's body — the back's
   // P/T is the tab's reverse P/T, not a slot of the front's.
   "sagadfcfront",
+  // …and its back (5.5 (b) PR 2): a Saga back prints no P/T (a saga
+  // creature back is 4.5d's body).
+  "sagadfcback",
   "split",
   "aftermath",
 ];
@@ -98,8 +101,10 @@ describe("the second / back face, every template", () => {
         expect(secondFaceDrawsPowerToughness(front, back), `${front} → ${back}`).toBe(Boolean(getFrameProfile(back).pt));
       }
     }
-    // The back bodies with no slot today: the two land backs.
-    expect(backs.filter((b) => !secondFaceDrawsPowerToughness(fronts[0], b))).toEqual(["m15dfclandback", "m15mdfclandback"]);
+    // The back bodies with no slot today: the two land backs — and the
+    // double-faced saga back (TODO 5.5 (b) PR 2: a Saga back prints none; a
+    // saga creature back is 4.5d's body).
+    expect(backs.filter((b) => !secondFaceDrawsPowerToughness(fronts[0], b))).toEqual(["m15dfclandback", "m15mdfclandback", "sagadfcback"]);
   });
 
   it("a body is honoured only as backBodyOf honours it (a back body under a front body)", () => {

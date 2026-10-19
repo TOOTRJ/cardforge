@@ -137,4 +137,56 @@ describe.skipIf(Boolean(capture))("transforming Saga imports (TODO 5.5 (b))", ()
     expect(changed).toEqual([]);
     expect(stay.length).toBe(124 - 55);
   });
+
+  // --- PR 2: the double-faced saga BACK (`sagadfcback`) --------------------
+  // Until it is ticked every Saga back lands exactly as on origin/main (the
+  // two tests above, which tick everything BUT it). Once it is ticked in the
+  // back's colour (and the transform front in the front's), exactly MOM's
+  // and LCI's non-creature Saga backs move — the front onto the transform
+  // front, the back onto the saga back, the remix with them; FIN's saga
+  // CREATURE backs (4.5d) and everything else land as before.
+  const WITH_BACK = new Set([...TICKED, ...KEYS.map((k) => frameComboKey("sagadfcback" as never, k))]);
+
+  it("PR 2, once the saga back is ticked: exactly MOM's and LCI's Saga backs move onto the transform front with their back on the saga back", () => {
+    const moved: Record<string, [unknown, unknown, unknown, unknown, unknown, unknown]> = {};
+    for (const [key, card] of Object.entries(printings)) {
+      const { patch, remix } = landingOf(card, WITH_BACK);
+      const back = patch.back_face as { frame_style?: { template?: string }; color_identity?: string[] } | undefined;
+      if (back?.frame_style?.template !== "sagadfcback") continue;
+      const status = (finalizeImportMatch(mapScryfallToFormPatch(card) as never, WITH_BACK) as { frame_match?: { status?: string } }).frame_match?.status;
+      moved[key] = [patch.kind, patch.frame_template, back.color_identity ?? null, patch.printed_dfc_icon ?? null, remix, status];
+    }
+    const plain = ["mom-12", "mom-65", "mom-125", "mom-169", "mom-213", "pmom-12s", "pmom-65s", "pmom-125s", "pmom-169s", "pmom-213s", "lci-189"];
+    // The showcase and borderless dresses: nearest, on the same bodies (the
+    // saga back has no borderless body).
+    const dressed = ["mom-292", "mom-294", "mom-297", "mom-299", "mom-301", "mom-338", "mom-339", "mom-340", "mom-341", "mom-342", "lci-296", "lci-339"];
+    expect(Object.keys(moved).sort()).toEqual([...plain, ...dressed].sort());
+    const colourOf: Record<string, string[]> = { "12": ["white"], "65": ["blue"], "125": ["black"], "169": ["red"], "213": ["green"], "292": ["white"], "294": ["blue"], "297": ["black"], "299": ["red"], "301": ["green"], "338": ["white"], "339": ["blue"], "340": ["black"], "341": ["red"], "342": ["green"] };
+    for (const key of [...plain, ...dressed]) {
+      const n = key.split("-")[1].replace(/s$/, "");
+      const colour = key.startsWith("lci") ? ["multicolor"] : colourOf[n];
+      expect(moved[key], key).toEqual(["transform", "m15dfcfront", colour, "arrows", "m15dfcfront", plain.includes(key) ? "exact" : "nearest"]);
+    }
+  });
+
+  it("PR 2: with only the transform bodies ticked (not the saga back) — and with the saga back ticked in another colour — every Saga back still lands as on origin/main", () => {
+    const otherColour = new Set([...TICKED, frameComboKey("sagadfcback" as never, "c")]);
+    for (const keys of [TICKED, otherColour]) {
+      const changed = ["mom-12", "mom-65", "mom-125", "mom-169", "mom-213", "lci-189", "mom-338", "lci-296"].filter(
+        (key) => JSON.stringify(landingOf(printings[key], keys).patch) !== JSON.stringify((main[key] as { patch: unknown }).patch),
+      );
+      expect(changed).toEqual([]);
+    }
+  });
+
+  it("PR 2: FIN's saga CREATURE backs (4.5d) and every printing that isn't a Saga back land as without the saga back", () => {
+    const changed = Object.entries(printings)
+      .filter(([key]) => !/^(p?mom|lci)-/.test(key))
+      .filter(([, card]) => JSON.stringify(landingOf(card, WITH_BACK)) !== JSON.stringify(landingOf(card, TICKED)))
+      .map(([key]) => key);
+    expect(changed).toEqual([]);
+    for (const key of Object.keys(printings).filter((k) => /^p?fin-/.test(k))) {
+      expect((landingOf(printings[key], WITH_BACK).patch.back_face as { frame_style?: unknown } | undefined)?.frame_style, key).toBeUndefined();
+    }
+  });
 });

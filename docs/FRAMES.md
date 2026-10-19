@@ -6750,6 +6750,86 @@ legacy back).
   remix follows the import (`remixFrameFor`, `dfcImportLanding`), its second
   picture a transform back's (`remixSecondHalfLayout`).
 
+### The double-faced saga back (5.5 (b), PR 2)
+
+TODO 5.5 (b), PR 2, 2026-10-18 (`feat/dfc-saga-back`). An ADDITION: a new
+back body, `sagadfcback`; no layout bump, no sweep, no badge; stored cards
+keep their look (a Saga back saved before it keeps the ▼ back, or its legacy
+back).
+
+- **What it dresses.** The back of a transform card whose BACK face is a
+  Saga: March of the Machine's five praetors (MOM #12 Elesh Norn // The
+  Argent Etchings, #65, #125, #169, #213 and their prerelease promos) and
+  LCI #189 Huatli, Poet of Unity // Roar of the Fifth People (and the #296
+  showcase). Every one wears today's ▼ (no family effect): no print wears a
+  2016–22 saga back, so the body is the ▼ one alone. FIN's summons are saga
+  CREATURE backs — a P/T on the dark back's plate — and are TODO 4.5d's
+  body, not this one; REX #7's back is a land.
+- **The masters** are PipGlyph's own composite of published masters
+  (`scripts/build-saga-back-frames.mjs`, every number in
+  `scripts/lib/saga-back.mjs`; frames bucket only, provenance in
+  `lib/cards/frame-sources.json`): the 4.21c `saga/<k>` master whole, with
+  `m15dfcback/<k>`'s dark title bar and ▼ well laid over it through Card
+  Conjurer's 'Transform (Back) (New)' title mask, and its type bar through
+  CC's M15 type mask moved down 593 px onto the saga's type row (the saga
+  pack's own type mask is M15's moved 593 px — the run refuses any other
+  fit within ±2 rows). Keys w u b r g m c (`c`: the saga's land frame
+  under the bronze bars, untoned — no print).
+- **Toned onto print before the first tick** (owner 2026-10-17), with the
+  importer's tone (`toneSourceRegions`: hue kept on the highlights, black
+  stays black; a pixel at `from` lands on `to`), read the UB way (the
+  per-channel median of the region, every 2 px, the brightest 5 % and the
+  darker 40 % left out) on MOM #12 / #65 / #125 / #169 / #213 and LCI #189
+  (the date-stamped PMOM scans set aside for their blue cast):
+  - the rail's PAPER (the reminder box and the chapter column, less the
+    ribbon) → the printed backs' greyed box: w 216,211,203 · u 185,201,219 ·
+    b 178,177,175 · r 210,186,176 · g 183,193,186 · m 225,217,190 (the
+    saga's near-white ≈ 250 before; the ▼ back's own box reads 5–15 levels
+    under the prints' saga paper);
+  - the TITLE and TYPE bars per key (m15dfcback's as CC drew them, off by
+    more than 8 levels a channel on every key): w 167,158,149 → 184,174,166
+    (MOM #12's neutral mid-grey: lighter than CC's warm one), u 65,106,143 →
+    51,126,184 (the prints' blue is far more saturated), b 81,77,77 →
+    102,99,101, r's blue channel 32 → 52, g 51,80,57 → 67,105,59, gold
+    184,146,56 → 166,143,74 — the ▼ well (from x 1240, faded out by 1262)
+    untoned.
+  The build re-reads `from` on the composite every run and refuses a drift
+  over 2 levels (a re-published master means a new look at the table). Once
+  a colour is ticked, a tone change is a correction (bump + sweep).
+- **The profile** (`SAGADFCBACK`) is the saga's — rail, badges, dividers,
+  sizes, set symbol, art window — with the ▼ back's deltas: no cost, WHITE
+  name and type ink, the name band ending before the well
+  (`DFC_RIGHT_WELL_TITLE_RIGHT_PCT`), and the colour-indicator dot on every
+  coloured back MOVED DOWN with its bar (`FrameProfile.indicatorDyPct` =
+  593 / 21 %H — the prints centre it ≈ 1832 px against the ▼ back's 1239;
+  `colorIndicatorBox(dyPct)`, both renderers; 0 on every other body), the
+  type line indented past it. No P/T slot, no crown (no legendary
+  non-creature Saga back is printed), no pairs (a two- or three-colour back
+  wears gold, as LCI #189 prints), no stamp. The chapters are the back's
+  PLAIN rules text (a back face carries no structured rows,
+  `backPreviewData`), parsed by the rail as a legacy saga's are.
+- **Which back wears it** — ONE answer, `backBodyFor` (`lib/cards/dfc.ts`):
+  a TRANSFORM back that is an ENCHANTMENT whose subtypes say Saga
+  (`sagaBackBodyFor`), on the ▼ family and the bordered look, wears
+  `sagadfcback` where it is published in the colour the back wears; short
+  of that — and for a Saga back of another family or the borderless look —
+  the body `bodyFor` gives its type (today's: the ▼ back). The server's gate
+  (`resolveDfcBackFace`), the creator (`lib/creator/saga-back.ts`
+  `creatorBackBodyFor`: the live preview and the save's payload agree with
+  the gate; an edit keeps the stored body), the reference validator and,
+  through the gate, the AI remix of an own card read it. A back body is
+  never a card's own template (`isDfcBackBody`, `templateRefusesKind`).
+- **The import** (`dfcImportOf`): MOM's and LCI's Saga backs (non-creature)
+  land on the transform bodies — the front on `m15dfcfront`, the back on
+  `sagadfcback` — once BOTH combos are verified (`finalizeImportMatch`:
+  `transform/2015`, exact on the plain printings; the borderless and
+  showcase dresses on the bordered bodies as every such printing), else
+  exactly as on main: the front's standard frame with a legacy back
+  (`tests/unit/scryfall/saga-dfc-imports.test.ts` holds every one of the
+  124 transforming-saga printings to origin/main's landing until then). A
+  saga CREATURE back (FIN) keeps today's landing (`face-type`). The AI deck
+  remix follows the import (`remixFrameFor`, `dfcImportLanding`).
+
 ### The borderless double-faced bodies (5.7)
 
 TODO 5.7, 2026-10-15 (`feat/dfc-borderless`). Four templates for the DARK
@@ -8013,11 +8093,11 @@ at HD on all four.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 63 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 64 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens, the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card) prints its names,

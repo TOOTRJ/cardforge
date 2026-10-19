@@ -2,7 +2,7 @@ import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 import { isArtifactFrameType } from "@/components/cards/frame-layer";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
-import { DEFAULT_DFC_ICON, bodyFor, dfcBodyOf, dfcLookOf, isBattleFront, isDfcBackBody, isSagaFront, templateHasBackFace, type DfcLayout } from "@/lib/cards/dfc";
+import { DEFAULT_DFC_ICON, SAGA_BACK_BODY, bodyFor, dfcBodyOf, dfcLookOf, isBattleFront, isDfcBackBody, isSagaFront, templateHasBackFace, type DfcLayout } from "@/lib/cards/dfc";
 import { dfcFamilyOf } from "@/lib/cards/dfc-gate";
 import { dfcLayoutForKind, kindFromCard, type CardKind } from "@/lib/creator/card-kinds";
 import { standardFrameFor } from "@/lib/creator/frame-picker";
@@ -189,6 +189,14 @@ export function withoutDfcLanding<P extends DfcPatch>(patch: P): P {
     const { printed_dfc_icon: _family, ...rest } = patch;
     void _family;
     return { ...rest, frame_template: undefined, back_face: legacyBack } as P;
+  }
+  // A Saga BACK (TODO 5.5 (b), PR 2: MOM's praetors, LCI #189) goes back to
+  // exactly what its import stored before its body existed — and that patch
+  // named no family (the printing never reached the bodies).
+  if (back?.frame_style?.template === SAGA_BACK_BODY) {
+    const { printed_dfc_icon: _family, ...rest } = patch;
+    void _family;
+    return { ...rest, kind: dfcFallbackKind(patch), frame_template: dfcFallbackTemplate(patch), back_face: legacyBack } as P;
   }
   return {
     ...patch,

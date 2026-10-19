@@ -2087,8 +2087,23 @@ describe("provenance and hygiene", () => {
         ...Object.keys(HOLO_STAMP_NOTCHES),
         ...Object.keys(DFC_BORDERLESS_TEMPLATES),
         ...Object.keys(BORDERLESS_STAMP_FOLDERS),
+        // …and the double-faced saga back (TODO 5.5 (b) PR 2): PipGlyph's
+        // composite (scripts/build-saga-back-frames.mjs) of the published
+        // saga and m15dfcback masters through Card Conjurer's masks at the
+        // pinned commit; its own test: tests/unit/frames/saga-back-recipe.test.ts.
+        "sagadfcback",
       ].sort(),
     );
+    expect(Object.keys(templates)).not.toContain("sagadfcback");
+    expect(provenance.sagadfcback.source).toBe("pipglyph");
+    expect(provenance.sagadfcback.converter).toBe("scripts/build-saga-back-frames.mjs");
+    expect(provenance.sagadfcback.commit).toBe(CC_COMMIT);
+    for (const key of COLORS) {
+      expect(provenance.sagadfcback.colors[key], `sagadfcback/${key}`).toEqual([
+        expect.stringMatching(new RegExp(`^saga/${key}\\.png@[0-9a-f]{12}$`)),
+        expect.stringMatching(new RegExp(`^m15dfcback/${key}\\.png@[0-9a-f]{12} \\(title bar, ▼ well, type bar\\)$`)),
+      ]);
+    }
     // …and the borderless double-faced bodies (TODO 5.7): PipGlyph's
     // derivation (scripts/build-dfc-borderless-frames.mjs) of the published
     // m15borderless masters with pieces of Card Conjurer's light packs at

@@ -153,6 +153,9 @@ const STATION_DRESSES: readonly string[] = [
   // …and the double-faced saga front (TODO 5.5 (b)) — pinned in
   // tests/unit/creator/saga-dfc-front.test.ts and the dfc import tests.
   "sagadfcfront",
+  // …and its back (5.5 (b), PR 2) — pinned in
+  // tests/unit/creator/saga-dfc-back.test.ts.
+  "sagadfcback",
 ];
 function withoutStationDresses(dump: Dump): Dump {
   const named = (text: string) => STATION_DRESSES.some((t) => text === t || text.startsWith(`${t}|`));
