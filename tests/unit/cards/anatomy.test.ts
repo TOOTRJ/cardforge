@@ -308,6 +308,10 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
       // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
+      // The double-faced saga front (TODO 5.5 (b)): it draws no crown of its
+      // own, but the switch is the CARD's — its back draws it (TLA #117
+      // Fire Lord Sozin's legendary back), as the battle's.
+      "sagadfcfront",
       // The full-art tokens (TODO 4.48's last pieces): their floating crown
       // band (a Legendary TOKEN draws it there) and their split pairs.
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
@@ -332,7 +336,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // Constellation frame, whose two-colour card is the gold master — nor
       // the battle, TODO 5.5: its back draws the crown through the card's
       // switch, but its two-colour back wears the gold master for now.)
-      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "battle"),
+      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "battle" && t !== "sagadfcfront"),
   );
 
   it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless, extended-art and snow PROFILES entries — never a profile that spreads them", () => {
@@ -460,7 +464,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       const stamp = STAMP_TEMPLATES.includes(template) ? { stamp: "auto" as const } : {};
       // …and the transform icon family's default (`arrows`, TODO 5.2) on the
       // two transform FRONT bodies, the templates that draw it.
-      const family = template === "m15dfcfront" || template === "m15dfclandfront" || template === "m15borderlessdfcfront" ? { dfcIcon: "arrows" as const } : {};
+      // (…and the double-faced saga front, TODO 5.5 (b).)
+      const family = template === "m15dfcfront" || template === "m15dfclandfront" || template === "m15borderlessdfcfront" || template === "sagadfcfront" ? { dfcIcon: "arrows" as const } : {};
       expect(anatomyDefaults(template), template).toEqual({ ...(crown ? { crown: true } : {}), ...(pair ? { twoColor: true } : {}), ...line, ...stamp, ...family });
       expect(normalizeAnatomy({ template, finish: "foil", crown: true, twoColor: false, stamp: "oval" }, template, "creature"), template).toEqual({
         template,

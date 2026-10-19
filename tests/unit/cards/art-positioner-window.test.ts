@@ -99,6 +99,8 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   // Landscape canvas (2100 × 1500).
   battle: { front: [1877, 1381] },
   saga: { front: [636, 1526] },
+  // The double-faced saga front (TODO 5.5 (b)): the saga's window.
+  sagadfcfront: { front: [636, 1526] },
   adventure: { front: [1273, 933] },
   flip: { front: [1273, 691] },
   // Landscape canvas; the right half has its own window.
@@ -231,8 +233,9 @@ describe("what the fixed 5:4 surface got wrong (before 3b.13)", () => {
     // extended-art frame's see-through colourless master, layout v58; 28
     // before the older full-art basics, TODO 4.40 / 4.41: three tall windows more; 31 before the Spacecraft's
     // extended-art and borderless dresses, 4.27a step 2; 33 before the
-    // borderless double-faced bodies, TODO 5.7: four full-bleed windows.)
-    expect(off.filter((m) => m > 0.25)).toHaveLength(37);
+    // borderless double-faced bodies, TODO 5.7: four full-bleed windows; 37
+    // before the double-faced saga front, 5.5 (b): the saga's tall column.)
+    expect(off.filter((m) => m > 0.25)).toHaveLength(38);
   });
 });
 

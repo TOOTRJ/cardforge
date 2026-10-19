@@ -288,8 +288,9 @@ describe("one state with the anatomy panel's switch", () => {
   });
 
   it("an edit, on every template: the switch shows exactly where the frame declares a crown, with the stored value — never a chip, never the reason on a legendary card", () => {
-    // (The battle's crown is its back's — TODO 5.5: the next test.)
-    for (const template of FRAME_TEMPLATE_VALUES.filter((t) => dfcBodyOf(t)?.role !== "back" && !dfcBodyOf(t)?.battle)) {
+    // (The battle's crown is its back's — TODO 5.5: the next test — and the
+    // double-faced saga front's, 5.5 (b).)
+    for (const template of FRAME_TEMPLATE_VALUES.filter((t) => dfcBodyOf(t)?.role !== "back" && !dfcBodyOf(t)?.battle && !dfcBodyOf(t)?.saga)) {
       for (const crown of [true, false]) {
         render(<Harness stored={{ template, crown } as FrameStyle} supertype="Legendary" />);
         expect(chipCount(), template).toBe(0);
@@ -312,6 +313,16 @@ describe("one state with the anatomy panel's switch", () => {
     render(<Harness stored={{ template: "battle", crown: true } as FrameStyle} cardType="battle" supertype="" />);
     expect(crownSwitch()).toBeNull();
     cleanup();
+  });
+
+  it("an edit of a double-faced saga (TODO 5.5 (b)): the switch shows for a legendary BACK with the stored value", () => {
+    const back = { title: "Fire Lord Sozin", card_type: "creature", supertype: "Legendary", frame_style: { template: "m15dfcback" } } as unknown as FormValues["back_face"];
+    for (const crown of [true, false]) {
+      render(<Harness stored={{ template: "sagadfcfront", crown } as FrameStyle} cardType="enchantment" supertype="" backFace={back} />);
+      expect(reason(), String(crown)).toBeNull();
+      expect(crownSwitch()?.getAttribute("aria-checked"), String(crown)).toBe(String(crown));
+      cleanup();
+    }
   });
 
   it("an edit of a battle whose back is a LEGACY back (legendary or not): no switch and no reason, as on main — the form says the back is no face of its own (owner Round 68)", () => {

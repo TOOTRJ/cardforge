@@ -153,6 +153,17 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
       "The emblem's long name (it has no cost: this region is the name band's right end) runs 4 px further RIGHT in the preview at 750 px — the line is that much wider there than in the 750 px bake; the two agree across at HD (0). Like the other 750-only entries it is a width difference of the 750 px bake, seen here on a line that fills its band; not traced to a constant.",
   },
   {
+    name: "750-left-well-title-width",
+    size: "750",
+    cases: /^sagadfcfront\/g\/saga-long@fan$/,
+    regions: ["title"],
+    metric: "dx",
+    min: 3,
+    max: 4,
+    why:
+      "On a left-well face (the name band from 16.45 %W) the name \"Fable of the Mirror-Breaker\" beside a three-pip cost is WIDER in the preview at 750 px, by about 5 px over the line (the offset grows letter by letter from its start), so the region reads +3; at HD the two agree (0). Not introduced by the double-faced saga front (TODO 5.5 (b)): the same name and cost on main's transform front (m15dfcfront/g/transform-long with that title and {2}{G}, tried on darwin 2026-10-16) measure the same 3,-1 — a measured-fit band whose 750 px bake sets the line a hair smaller than the preview's HD-derived px. Not traced further.",
+  },
+  {
     name: "750-retro-type-line-end",
     size: "750",
     cases: /^retro\//,

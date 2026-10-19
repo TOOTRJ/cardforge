@@ -65,7 +65,7 @@ describe("visual-regression matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
       expect(id).toMatch(
-        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|land|artifact|vehicle|wide|star|spacecraft|nopt|nodefense|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|legacyland|sunmoon|moon|compass|fan|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square|battle))?|back(-(hd|nopt))?|battle(-(nopt|hd))?|pair(-(hybrid|foil|etched|hd|square|br|gw|ub))?(-crown(-hd)?)?|centred(-(hd|back))?|white(-(hd|foil|etched|square|pair))?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|crown|triangle|collector-(hd|2015)|auto-common|auto-uncommon|matte-hd|pair-(split|hybrid|crown|hd|foil)))?|tiers-(one|three|none|wide|star)|large-pips-hd|phyrexian-cost-(3|5)(-hd)?|nyx-(wide|artifact|silver)))?$/,
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|land|artifact|vehicle|wide|star|spacecraft|nopt|nodefense|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|legacyland|sunmoon|moon|compass|fan(-(hd|nopt|wide-pt))?|saga|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square|battle))?|back(-(hd|nopt))?|battle(-(nopt|hd))?|pair(-(hybrid|foil|etched|hd|square|br|gw|ub))?(-crown(-hd)?)?|centred(-(hd|back))?|white(-(hd|foil|etched|square|pair))?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|crown|triangle|collector-(hd|2015)|auto-common|auto-uncommon|matte-hd|pair-(split|hybrid|crown|hd|foil)))?|tiers-(one|three|none|wide|star)|large-pips-hd|phyrexian-cost-(3|5)(-hd)?|nyx-(wide|artifact|silver)))?$/,
       );
     }
     expect(ids).toEqual([...ids].sort());
@@ -318,8 +318,9 @@ describe("visual-regression matrix", () => {
     expect(crowned.map((c) => c.id)).toEqual(cases.filter((c) => /@(stamp-)?(pair(-hybrid)?-)?crown/.test(c.id)).map((c) => c.id));
     expect([...new Set(crowned.map((c) => c.template))].sort()).toEqual(
       // (The battle's crown is drawn by its ▼ back — its own cases are the
-      // back body's, TODO 5.5.)
-      FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown && t !== "battle").sort(),
+      // back body's, TODO 5.5 — and so is the double-faced saga front's,
+      // 5.5 (b): the back bodies' crown cases draw it.)
+      FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).crown && t !== "battle" && t !== "sagadfcfront").sort(),
     );
     // Every one is Legendary (it draws the crown), in every finish and at HD;
     // every case with neither switch is a stored card, which names none.
@@ -341,7 +342,8 @@ describe("visual-regression matrix", () => {
       const keys = Object.keys(c.row.frame_style as object).sort();
       const family = (c.row.frame_style as { dfcIcon?: string }).dfcIcon;
       if (family) {
-        expect(c.kind, c.id).toBe("transform");
+        // (…or a double-faced saga, TODO 5.5 (b): NEO's fans.)
+        expect(["transform", "saga"], c.id).toContain(c.kind);
         expect(family, c.id).not.toBe("arrows");
         expect(keys, c.id).toEqual(["dfcIcon", "finish", "template"]);
         continue;

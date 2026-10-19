@@ -101,7 +101,8 @@ const GLYPH: Record<DfcIconFamily, { front: string; back: string }> = {
 /** The bodies whose well the rider fills: the two left-well faces and the
  *  land front. The ▼-right back's ▼ is in its master and the land back has
  *  no well. */
-const RIDER_BODIES: readonly string[] = ["m15dfcfront", "m15dfcbackleft", "m15dfclandfront", "m15borderlessdfcfront"];
+// (…and the double-faced saga front, TODO 5.5 (b): the transform front's well.)
+const RIDER_BODIES: readonly string[] = ["m15dfcfront", "m15dfcbackleft", "m15dfclandfront", "m15borderlessdfcfront", "sagadfcfront"];
 
 /** The icon rider a face draws from the data a renderer is HANDED — the
  *  bake's own reading (lib/render/card-image.tsx anatomyFactsOf: the `dfc`
@@ -339,11 +340,12 @@ describe("every family, as a pinned printing would bring it", () => {
     expect(validateReferenceForCombo(angler, "m15dfcfront", "u").errors).toEqual([]);
     expect(mapScryfallToFormPatch(angler, { artPreviewUrl: null })).not.toHaveProperty("printed_dfc_icon");
     expect(iconRiderOf((await payloadOf(angler.id, "m15dfcfront")).preview)).toBe("fullmoon");
-    // NEO #227's creature back on m15dfcbackleft/m, under its Saga front
-    // (5.5): the same, and the back draws the open fan.
+    // NEO #227's creature back on m15dfcbackleft/m, under its Saga front:
+    // the back draws the open fan — and since TODO 5.5 (b) the import LANDS
+    // (on the double-faced saga front), so its patch names the fan too.
     const war = scryfallCardSchema.parse(kamiWar);
     expect(validateReferenceForCombo(war, "m15dfcbackleft", "m").errors).toEqual([]);
-    expect(mapScryfallToFormPatch(war, { artPreviewUrl: null })).not.toHaveProperty("printed_dfc_icon");
+    expect(mapScryfallToFormPatch(war, { artPreviewUrl: null }).printed_dfc_icon).toBe("fan");
     expect(iconRiderOf((await payloadOf(war.id, "m15dfcbackleft", "back")).preview)).toBe("fanopen");
     // A printing that lands (MID #169) names the same family on both.
     const admirer = scryfallCardSchema.parse(imported("mid-169"));

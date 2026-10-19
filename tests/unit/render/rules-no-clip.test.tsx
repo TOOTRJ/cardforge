@@ -594,8 +594,11 @@ describe("rules consumers, centred (FrameStyle.rulesAlign) — no clip, no keep-
   }, 240_000);
 });
 
-describe("the saga rail — its reminder block and every chapter row (TODO 4.21c)", () => {
-  const SLOT = getFrameProfile("saga").chapters!;
+// …on the saga AND on the double-faced saga front (TODO 5.5 (b)), whose
+// rail ends at the reverse-P/T tab's top (SAGA_DFC_RAIL_FOOT_PX).
+for (const template of ["saga", "sagadfcfront"] as const)
+describe(`the saga rail on ${template} — its reminder block and every chapter row (TODO 4.21c, 5.5 (b))`, () => {
+  const SLOT = getFrameProfile(template).chapters!;
   const REMINDER = "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)";
   const NUMERALS = ["I", "II", "III", "IV", "V", "VI"];
   /** A matrix text as a saga: its paragraphs dealt over (at most six)
