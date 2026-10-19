@@ -164,11 +164,26 @@ async function postAsAdmin(
 
 /** A thread this action just opened, whose first message failed: remove it,
  *  so the user's and the team's inboxes show no empty conversation (audit
- *  L7). Only ever a thread created in the same call — never one that held
- *  messages. A failed delete is logged; the send's error stands. */
-async function discardEmptyThread(admin: ReturnType<typeof createAdminClient>, threadId: string) {
-  const { error } = await admin.from("message_threads").delete().eq("id", threadId);
-  if (error) console.error("[messages] couldn't remove the empty thread", threadId, error.message);
+ *  L7). Only ever a thread created in the same call (its id comes from that
+ *  call's insert), opened by this admin for this user — and never one that
+ *  holds a message: `messages` cascades on delete, so the ONE statement also
+ *  requires `last_sender_role` null, which `on_message_posted` sets in the
+ *  same transaction as any message insert (another admin's reply to the same
+ *  feedback, the user's own post, an insert that committed but reported an
+ *  error). A failed delete is logged; the send's error stands. */
+async function discardEmptyThread(
+  admin: ReturnType<typeof createAdminClient>,
+  thread: { id: string; user_id: string },
+  adminId: string,
+) {
+  const { error } = await admin
+    .from("message_threads")
+    .delete()
+    .eq("id", thread.id)
+    .eq("user_id", thread.user_id)
+    .eq("created_by", adminId)
+    .is("last_sender_role", null);
+  if (error) console.error("[messages] couldn't remove the empty thread", thread.id, error.message);
 }
 
 /** Open an independent thread with a user and post the first message. */
@@ -200,7 +215,7 @@ export async function adminStartThreadAction(input: unknown): Promise<StartThrea
   }
   const posted = await postAsAdmin(admin, adminId, thread, body);
   if (!posted.ok) {
-    await discardEmptyThread(admin, thread.id);
+    await discardEmptyThread(admin, thread, adminId);
     return posted;
   }
   return { ok: true, threadId: thread.id };
@@ -265,7 +280,7 @@ export async function adminReplyToFeedbackAction(input: unknown): Promise<StartT
   const posted = await postAsAdmin(admin, adminId, thread, body);
   if (!posted.ok) {
     // A thread opened for this reply goes again; an existing one stays.
-    if (opened) await discardEmptyThread(admin, thread.id);
+    if (opened) await discardEmptyThread(admin, thread, adminId);
     return posted;
   }
   if (feedback.status === "new") {

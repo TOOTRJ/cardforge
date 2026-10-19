@@ -71,7 +71,17 @@ describe("adminStartThreadAction", () => {
     expect(result).toEqual({ ok: false, error: "Couldn't send the message." });
     const deletes = threadDeletes();
     expect(deletes).toHaveLength(1);
-    expect(deletes[0].calls.find((c) => c.method === "eq")?.args).toEqual(["id", THREAD]);
+    // Scoped to the thread this call opened, by this admin, for this user —
+    // and only while no message was ever posted in it (messages cascade).
+    const filters = deletes[0].calls
+      .filter((c) => c.method === "eq" || c.method === "is")
+      .map((c) => [c.method, ...c.args]);
+    expect(filters).toEqual([
+      ["eq", "id", THREAD],
+      ["eq", "user_id", USER],
+      ["eq", "created_by", ADMIN],
+      ["is", "last_sender_role", null],
+    ]);
     expect(email).not.toHaveBeenCalled();
   });
 
