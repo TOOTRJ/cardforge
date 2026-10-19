@@ -174,8 +174,9 @@ describe("the notch and the resolved stamp", () => {
     expect(withNotch).toEqual(FRAME_TEMPLATE_VALUES.filter((t) =>
       // (…and the station frame's two entries, TODO 4.27a: the parents' notch; the
       // Universes Beyond three, 4.25: the triangle's.)
-      // …and the borderless family, 4.9d: its own lifted arch, the walkers aside.)
-      ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15stationland", "extendedartstation", "m15borderlessstation", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15snow", "m15devoid", "m15pw"].includes(t)));
+      // …and the borderless family, 4.9d: its own lifted arch, its walkers'
+      // own since owner Round 70.)
+      ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15stationland", "extendedartstation", "m15borderlessstation", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlesspw", "m15borderlesspwtall", "m15snow", "m15devoid", "m15pw"].includes(t)));
     const keyOf = (template: string, colorKey: string, over: Record<string, unknown> = {}) =>
       resolveHoloStamp(getFrameProfile(template), { stamp: "oval" }, facts({ colorKey, colors: [colorKey === "c" ? "colorless" : "blue"], ...over }))?.notch.path ?? null;
     expect(keyOf("m15", "w")).toBe("/frames/m15holostamp/w.png");
@@ -192,11 +193,13 @@ describe("the notch and the resolved stamp", () => {
     // No notch: nothing, never a stand-in.
     expect(keyOf("m15token", "g", { cardType: "creature" })).toBeNull();
     expect(keyOf("emblem", "c")).toBeNull();
-    expect(keyOf("m15borderlesspw", "w", { cardType: "planeswalker" })).toBeNull();
     expect(keyOf("extendedart", "w")).toBeNull();
     expect(keyOf("adventure", "w")).toBeNull();
     // The borderless family's own pieces (4.9d).
     expect(keyOf("m15borderless", "w")).toBe("/frames/m15borderlessholostamp/w.png");
+    // …and the borderless walkers' (owner Round 70), the tall frame's the same.
+    expect(keyOf("m15borderlesspw", "w", { cardType: "planeswalker" })).toBe("/frames/m15borderlesspwholostamp/w.png");
+    expect(keyOf("m15borderlesspwtall", "c", { cardType: "planeswalker" })).toBe("/frames/m15borderlesspwholostamp/c.png");
     expect(keyOf("m15borderlessartifact", "c", { cardType: "artifact" })).toBe("/frames/m15borderlessholostamp/a.png");
     expect(keyOf("m15borderlessland", "c", { cardType: "land" })).toBe("/frames/m15borderlesslandholostamp/c.png");
   });
@@ -272,7 +275,8 @@ describe("the owner rule through the plumbing", () => {
     expect(newCardFrameStyle({ template: "m15" } as FrameStyle, "creature").stamp).toBe("auto");
     expect(newCardFrameStyle({ template: "m15", stamp: "none" } as FrameStyle, "creature").stamp).toBe("none");
     expect(newCardFrameStyle({ template: "m15", stamp: "triangle" } as FrameStyle, "creature").stamp).toBe("triangle");
-    for (const template of ["m15token", "emblem", "extendedart", "m15borderlesspw", "saga", "lotr"] as const) {
+    expect(anatomyDefaults("m15borderlesspw").stamp).toBe("auto");
+    for (const template of ["m15token", "emblem", "extendedart", "saga", "lotr"] as const) {
       expect(normalizeAnatomy({ template, stamp: "oval" } as FrameStyle, template, "creature"), template).toEqual({ template });
       expect(newCardFrameStyle({ template, stamp: "auto" } as FrameStyle, "creature"), template).not.toHaveProperty("stamp");
     }

@@ -4476,6 +4476,67 @@
       "the loyalty shield is the master's own pixels cut out through CC's maskLoyalty.png (loyalty/<colour>.png), drawn above the ability stripes, as on m15pw"
     ]
   },
+  "m15borderlesspwholostamp": {
+    "source": "pipglyph",
+    "converter": "scripts/build-borderless-stamp.mjs",
+    "derivedFrom": "the published borderless planeswalker masters named per key below (Card Conjurer imports: see \"m15borderlesspw\", \"m15borderlesspwtall\")",
+    "output": "180x42 at 660,1896 of the 1500x2100 card (1:1 at HD), webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "lift": "the master's own column, read 2-px samples of WALKER_ARCH_LIFT_PX rows further down (|x - 750| = 0, 2, 4, …; linear between): 24.3 24.3 24.2 24.2 24.2 24.1 24.1 24.1 23.9 23.7 23.5 23.2 22.8 22.5 22.2 22 21.7 21.2 20.7 20.3 19.9 19.4 18.8 18.3 17.7 17 16.3 15.7 14.9 14.1 13.3 12.4 11.5 10.6 9.6 8.5 7.4 6.3 5.1 3.8 2.4 1.2 0.3 0",
+      "layer": "per pixel, the layer that over the master gives the lifted master (premultiplied): alpha (want − under) / (1 − under), clear where the master already shows it; rows from the black bar (1937) down are the master's black"
+    },
+    "colors": {
+      "w": [
+        "m15borderlesspw/w.png (published, sha256 63a67b6b68f4): its pinline lifted along the printed arch; worst 0.63 levels from the lifted master over four flat arts",
+        "drawn over m15borderlesspwtall/w.png (sha256 801f85276899; within 2 levels) too"
+      ],
+      "u": [
+        "m15borderlesspw/u.png (published, sha256 c19e3f1eef98): its pinline lifted along the printed arch; worst 0.63 levels from the lifted master over four flat arts",
+        "drawn over m15borderlesspwtall/u.png (sha256 58e16b767fc2; within 2 levels) too"
+      ],
+      "b": [
+        "m15borderlesspw/b.png (published, sha256 8e0fa36d6cf2): its pinline lifted along the printed arch; worst 0.63 levels from the lifted master over four flat arts",
+        "drawn over m15borderlesspwtall/b.png (sha256 e76d324fc45f; within 2 levels) too"
+      ],
+      "r": [
+        "m15borderlesspw/r.png (published, sha256 86ccdeabcc92): its pinline lifted along the printed arch; worst 0.63 levels from the lifted master over four flat arts",
+        "drawn over m15borderlesspwtall/r.png (sha256 b931592898ae; within 1 level) too"
+      ],
+      "g": [
+        "m15borderlesspw/g.png (published, sha256 55891d25eab7): its pinline lifted along the printed arch; worst 0.63 levels from the lifted master over four flat arts",
+        "drawn over m15borderlesspwtall/g.png (sha256 47cc427370fe; within 0 levels) too"
+      ],
+      "m": [
+        "m15borderlesspw/m.png (published, sha256 a0c7c2603867): its pinline lifted along the printed arch; worst 0.63 levels from the lifted master over four flat arts",
+        "drawn over m15borderlesspwtall/m.png (sha256 499ce9602feb; within 2 levels) too"
+      ],
+      "c": [
+        "m15borderlesspw/c.png (published, sha256 f23719bf9683): its pinline lifted along the printed arch; worst 0.63 levels from the lifted master over four flat arts",
+        "drawn over m15borderlesspwtall/c.png (sha256 89c2f2bceee9; within 2 levels) too"
+      ]
+    },
+    "sourceFiles": [
+      "m15borderlesspw/b.png",
+      "m15borderlesspw/c.png",
+      "m15borderlesspw/g.png",
+      "m15borderlesspw/m.png",
+      "m15borderlesspw/r.png",
+      "m15borderlesspw/u.png",
+      "m15borderlesspw/w.png",
+      "m15borderlesspwtall/b.png",
+      "m15borderlesspwtall/c.png",
+      "m15borderlesspwtall/g.png",
+      "m15borderlesspwtall/m.png",
+      "m15borderlesspwtall/r.png",
+      "m15borderlesspwtall/u.png",
+      "m15borderlesspwtall/w.png"
+    ],
+    "notes": [
+      "PipGlyph's own derivation (TODO 4.9d, owner Round 70, 2026-10-16: the borderless walkers' follow-up): the holofoil stamp's notch on the borderless planeswalker frames — the ability window's bottom outline and rim arched over the oval as every stamped borderless walker print draws it. Card Conjurer's borderless planeswalker pack has no stamp piece; no CC piece and no scan is read by the build — every painted pixel is the published master's own outline, rim and black bar, moved up.",
+      "The arch is scripts/lib/borderless-stamp.mjs WALKER_ARCH_LIFT_PX: thirteen stamped borderless walker printings measured 2026-10-16 (the outline's upper edge lifted 24.3 px at the centre against the straight 1918.8, rising from x 666 to x 834).",
+      "The piece is drawn ABOVE the ability rows (HoloStampArt.aboveRows): the rows' translucent stripes end where the print's window ends, at the arch. The oval is drawn by both renderers over it (our own art, lib/cards/holo-stamp-art.ts) at M15_HOLO_STAMP_OVAL. Nothing of a hologram is in a piece."
+    ]
+  },
   "m15borderlesspwtall": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",

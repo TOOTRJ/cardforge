@@ -258,9 +258,9 @@ describe("visual-regression matrix", () => {
     for (const c of stamped) {
       const style = c.row.frame_style as { stamp?: string; collector?: string; crown?: boolean; twoColor?: boolean };
       // "triangle" only on the Universes Beyond frame's "Always" case (4.25).
-      // …and on the borderless frame's pinned triangle (owner Round 70: it
-      // draws nothing there).
-      expect(c.id === "m15ub/r/creature-short@stamp-always" || c.id === "m15borderless/u/creature-short@stamp-triangle" ? ["triangle"] : ["auto", "oval"], c.id).toContain(style.stamp);
+      // …and on the borderless frame's and walker's pinned triangles (owner
+      // Round 70: it draws nothing there).
+      expect(c.id === "m15ub/r/creature-short@stamp-always" || c.id === "m15borderless/u/creature-short@stamp-triangle" || c.id === "m15borderlesspw/u/planeswalker-short@stamp-triangle" ? ["triangle"] : ["auto", "oval"], c.id).toContain(style.stamp);
       // The line rides only on the borderless frames' two combined cases
       // (TODO 4.9d).
       expect(style.collector, c.id).toBe(c.id.endsWith("@stamp-collector-hd") ? "2023" : c.id.endsWith("@stamp-collector-2015") ? "2015" : undefined);

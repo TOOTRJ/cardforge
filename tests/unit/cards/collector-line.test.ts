@@ -65,6 +65,9 @@ describe("the switch values", () => {
       "m15borderlessartifact",
       "m15borderlessland",
       "m15borderlessstation",
+      // …and the borderless walkers (owner Round 70): the © on line 2.
+      "m15borderlesspw",
+      "m15borderlesspwtall",
       "m15ub",
       "m15ubartifact",
       "m15ubland",

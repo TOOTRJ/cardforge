@@ -55,6 +55,8 @@ import type { FrameColorKey, FrameMasterKey } from "@/lib/cards/frame-reference-
 import {
   M15BORDERLESS_HOLO_STAMP_KEEP_OUT,
   M15BORDERLESS_HOLO_STAMP_KEEP_OUT_SHAPE,
+  M15BORDERLESSPW_HOLO_STAMP_KEEP_OUT,
+  M15BORDERLESSPW_HOLO_STAMP_KEEP_OUT_SHAPE,
   M15PW_HOLO_STAMP_KEEP_OUT,
   M15UB_HOLO_STAMP_BOX,
   M15UB_HOLO_STAMP_KEEP_OUT,
@@ -5354,6 +5356,44 @@ export const M15BORDERLESSSTATION_HOLO_STAMP: FrameOverlaySlot = {
   stamp: { shape: "oval", oval: M15_HOLO_STAMP_OVAL, keepOut: M15_HOLO_STAMP_KEEP_OUT, ownShapeOnly: true },
 };
 
+/**
+ * …and the BORDERLESS WALKERS' (TODO 4.9d, owner Round 70, 2026-10-16:
+ * "Build them next"): every stamped borderless walker print arches the
+ * ability window's bottom outline and rim over the oval — 24.3 px at the
+ * centre, from x 666 to x 834 (thirteen prints, 2026-10-16), the spells'
+ * span 8 px lower. Ours is the same lift recipe over the walker masters
+ * (scripts/build-borderless-stamp.mjs, WALKER_ARCH in
+ * scripts/lib/borderless-stamp.mjs): the 4-row outline, the colour's rim
+ * and the black under them moved up, the see-through window above left
+ * clear. 180 × 42 px at 660, 1896, 1:1 at HD; one piece per colour key,
+ * the tall twin's master the same pixels there (checked by the build). The
+ * oval is M15's — the physical prints put it at the bordered frame's place
+ * (≈ 1931–1996), not the 7 px higher one m15pw takes from Card Conjurer's
+ * walker piece. The keep-out follows the arch (borderlessWalkerArchKeepOut)
+ * for the plain box AND the ability rows (layoutLoyaltyRows `stamp`: the
+ * last row's text keeps above it). Drawn ABOVE the rows (`aboveRows`): the
+ * rows' translucent stripes cover the see-through window, and print ends
+ * the window at the arch. A triangle draws nothing here (no notch cut for
+ * it), as on the other borderless frames. Opt-in per card: declaring it
+ * changes no stored card.
+ */
+export const M15BORDERLESSPW_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  // WALKER_NOTCH_BOX in scripts/lib/borderless-stamp.mjs (a unit test holds
+  // them together).
+  rect: { leftPct: (660 / 1500) * 100, topPct: (1896 / 2100) * 100, widthPct: (180 / 1500) * 100, heightPct: (42 / 2100) * 100 },
+  assetPathTemplate: "/frames/m15borderlesspwholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c"],
+  stamp: {
+    shape: "oval",
+    oval: M15_HOLO_STAMP_OVAL,
+    keepOut: M15BORDERLESSPW_HOLO_STAMP_KEEP_OUT,
+    keepOutShape: M15BORDERLESSPW_HOLO_STAMP_KEEP_OUT_SHAPE,
+    ownShapeOnly: true,
+    aboveRows: true,
+  },
+};
+
 /** The planeswalker's notch (TODO 4.9c): CC's `planeswalker/holo` piece —
  *  a flat rim with a black line above it, no bevel, as the walker's box
  *  prints — 182 × 107 px at 43.94 / 90.15 / 12.14 × 5.1 % (659–841 ×
@@ -6192,8 +6232,15 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     overlays: [M15BORDERLESSLAND_HOLO_STAMP],
     collector: M15_COLLECTOR,
   },
-  m15borderlesspw: M15BORDERLESSPW,
-  m15borderlesspwtall: M15BORDERLESSPWTALL,
+  // The borderless walkers' stamp and collector line (TODO 4.9d, owner
+  // Round 70: "Build them next"): the window's arch over the oval
+  // (M15BORDERLESSPW_HOLO_STAMP, our own lift of each master's outline and
+  // rim — the tall twin's masters hold the same pixels there) and the two
+  // lines in the black bottom bar where the bordered walker prints them,
+  // the © slot always on line 2 beside the loyalty shield the master draws
+  // (M15PW_COLLECTOR). Additions, opt-in per card.
+  m15borderlesspw: { ...M15BORDERLESSPW, overlays: [M15BORDERLESSPW_HOLO_STAMP], collector: M15PW_COLLECTOR },
+  m15borderlesspwtall: { ...M15BORDERLESSPWTALL, overlays: [M15BORDERLESSPW_HOLO_STAMP], collector: M15PW_COLLECTOR },
   // The transform bodies (TODO 5.1a): each declares its `dfc` on its own
   // profile; the collector line (4.9b) on the entries here, like every
   // other — both faces print the card's one line (D8). The legendary crown
