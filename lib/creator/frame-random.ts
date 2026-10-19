@@ -15,6 +15,7 @@ import {
   enchantmentFrameFits,
   enchantmentFrameFor,
   followsEnchantmentDress,
+  followsTokenNyxDressIn,
   isEnchantmentDress,
   isPickOnlyDress,
   subtypeFrameFits,
@@ -173,9 +174,14 @@ export function resolveGeneratedFrame(input: {
     if (isPickOnlyDress(choice.template)) return false;
     const dress = subtypeFrameFor(choice.template, face?.subtypes);
     if (dress !== choice.template && has(dress)) return false;
-    const nyx = enchantmentFrameFor(kind, choice.template, type);
+    const nyx = enchantmentFrameFor(kind, choice.template, type, colorKey);
     if (nyx !== choice.template && has(nyx)) return false;
-    return !isEnchantmentDress(choice.template) || followsEnchantmentDress(type);
+    if (!isEnchantmentDress(choice.template)) return true;
+    // The full-art token's Nyx dress (TODO 4.51, owner Round 74): drawn for
+    // a single-colour token only — a two-colour one keeps the plain design
+    // with its split (the dress is its maker's pick there, never a random one).
+    if (kind === "token" && !followsTokenNyxDressIn(colorKey)) return false;
+    return followsEnchantmentDress(type);
   });
   // …and a card with text never draws a frame that prints none (TODO 1.24,
   // frameHidesRulesBoxText — the full-art token's textless height) while
@@ -203,7 +209,7 @@ export function resolveGeneratedFrame(input: {
     // the Nyx dress keeps the height the text asks for (TODO 4.51) — never
     // the textless dress for a token with text, nor the tall box for a line.
     const nyxBase = kind === "token" ? tokenFrameFor(kind, bySubtype, tokenFace) : bySubtype;
-    const byNyx = enchantmentFrameFor(kind, nyxBase, type);
+    const byNyx = enchantmentFrameFor(kind, nyxBase, type, colorKey);
     const byWords = byNyx !== nyxBase && has(byNyx) ? byNyx : artifactCreatureFrameFor(kind, bySubtype, type);
     const vehicle = has(byWords) ? byWords : bySubtype;
     const wanted = has(vehicle) && vehicle !== requested

@@ -6,6 +6,7 @@ import {
   CARD_KIND_VALUES,
   enchantmentFrameFits,
   enchantmentFrameFor,
+  followsTokenNyxDressIn,
   isEnchantmentDress,
   templateRefusesKind,
   tokenFrameFor,
@@ -13,7 +14,10 @@ import {
   typeWordFrameFor,
 } from "@/lib/creator/card-kinds";
 import { resolveGeneratedFrame } from "@/lib/creator/frame-random";
-import { followTokenHeight, newTokenFrame } from "@/lib/creator/token-frame-auto";
+import { defaultTokenFrameIn, followTokenHeight, newTokenFrame } from "@/lib/creator/token-frame-auto";
+import { normalizeAnatomy, plateKeyFor, resolveTwoColor } from "@/lib/cards/anatomy";
+import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
+import { getFrameProfile } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -56,14 +60,23 @@ describe("the Nyx dress of the full-art tokens", () => {
     for (const plain of ALL_M20) {
       const dress = `${plain.replace("artifact", "artifactnyx").replace(/^m20token(?!artifact)/, "m20tokennyx")}` as FrameTemplate;
       expect(NYX, plain).toContain(dress);
-      expect(enchantmentFrameFor("token", plain, glimmer), plain).toBe(dress);
-      expect(enchantmentFrameFor("token", dress, soldier), dress).toBe(plain);
-      expect(enchantmentFrameFor("token", plain, soldier), plain).toBe(plain);
-      expect(enchantmentFrameFor("token", dress, glimmer), dress).toBe(dress);
+      for (const key of ["w", "u", "b", "r", "g", "c"]) {
+        expect(enchantmentFrameFor("token", plain, glimmer, key), `${plain} ${key}`).toBe(dress);
+        expect(enchantmentFrameFor("token", dress, soldier, key), dress).toBe(plain);
+        expect(enchantmentFrameFor("token", plain, soldier, key), plain).toBe(plain);
+        expect(enchantmentFrameFor("token", dress, glimmer, key), dress).toBe(dress);
+      }
+      // Owner Round 74: a two-colour (gold-keyed) token never follows onto
+      // the dress — nor one whose colour the caller doesn't say — but leaves
+      // it when its words stop saying Enchantment, whatever its colour.
+      expect(enchantmentFrameFor("token", plain, glimmer, "m"), plain).toBe(plain);
+      expect(enchantmentFrameFor("token", plain, glimmer), plain).toBe(plain);
+      expect(enchantmentFrameFor("token", dress, soldier, "m"), dress).toBe(plain);
+      expect(enchantmentFrameFor("token", dress, glimmer, "m"), dress).toBe(dress);
     }
     // The 2014–19 arch has no Nyx dress (TC15 #23 alone prints one).
     for (const arch of ["m15token", "m15tokentext", "m15tokenartifact", "m15tokenartifacttext"] as FrameTemplate[]) {
-      expect(enchantmentFrameFor("token", arch, glimmer), arch).toBe(arch);
+      expect(enchantmentFrameFor("token", arch, glimmer, "w"), arch).toBe(arch);
     }
     // …and a creature on m15 is the m15nyx dress, as before.
     expect(enchantmentFrameFor("creature", "m15", { cardType: "creature", supertype: "Enchantment" })).toBe("m15nyx");
@@ -120,6 +133,60 @@ describe("the Nyx dress of the full-art tokens", () => {
       const picked = resolveGeneratedFrame({ cardType: "token", requested: "random", colorIdentity: ["white"], verifiedKeys: keys, face: face("Enchantment Creature") as never, random: () => i / 40 });
       expect(ALL_M20, String(picked)).not.toContain(picked);
     }
+  });
+
+  // Owner Round 74 (2026-10-18): only a SINGLE-colour Enchantment token
+  // follows onto the dress; a two-colour one keeps the plain full-art frame
+  // with 4.48's split and pair crown — unless its maker picks the dress,
+  // where it wears gold (`m`).
+  describe("one colour follows, two colours keep the split (owner Round 74)", () => {
+    const everything = new Set(
+      [...ALL_M20, ...NYX].flatMap((t) => ["w", "u", "b", "r", "g", "c", "m"].map((k) => frameComboKey(t, k))),
+    );
+    const text = { supertype: glimmer.supertype, rulesText: "", flavorText: "", printsPowerToughness: true };
+    const face = (supertype: string) => ({ cardType: "token", supertype, subtypes: ["Glimmer"], rulesText: "", flavorText: "", power: "1", toughness: "1", title: "Glimmer" });
+
+    it("a two-colour Enchantment token doesn't follow — the creator's start, the words, the AI's random and requested picks", () => {
+      expect(followsTokenNyxDressIn("m")).toBe(false);
+      expect(newTokenFrame(text, "m", everything)).toBe("m20token");
+      expect(newTokenFrame({ ...text, supertype: golem.supertype }, "m", everything)).toBe("m20tokenartifact");
+      // A colour change on the default switch's pick takes it off the dress.
+      expect(defaultTokenFrameIn(text, "m20tokennyx", "m", everything)).toBe("m20token");
+      expect(enchantmentFrameFor("token", "m20tokentext", glimmer, "m")).toBe("m20tokentext");
+      expect(resolveGeneratedFrame({ cardType: "token", requested: "m20token", colorIdentity: ["white", "blue"], verifiedKeys: everything, face: face("Enchantment Creature") as never })).toBe("m20token");
+      for (let i = 0; i < 40; i++) {
+        const picked = resolveGeneratedFrame({ cardType: "token", requested: "random", colorIdentity: ["white", "blue"], verifiedKeys: everything, face: face("Enchantment Creature") as never, random: () => i / 40 });
+        expect(isM20NyxTokenTemplate(picked), String(picked)).toBe(false);
+      }
+      // …and three colours are gold too.
+      expect(resolveGeneratedFrame({ cardType: "token", requested: "m20token", colorIdentity: ["white", "blue", "black"], verifiedKeys: everything, face: face("Enchantment Creature") as never })).toBe("m20token");
+    });
+
+    it("a single-colour one does — colourless too", () => {
+      for (const [key, identity] of [["w", ["white"]], ["g", ["green"]], ["c", []]] as const) {
+        expect(followsTokenNyxDressIn(key)).toBe(true);
+        expect(newTokenFrame(text, key, everything), key).toBe("m20tokennyx");
+        expect(defaultTokenFrameIn(text, "m20token", key, everything), key).toBe("m20tokennyx");
+        expect(resolveGeneratedFrame({ cardType: "token", requested: "m20token", colorIdentity: [...identity], verifiedKeys: everything, face: face("Enchantment Creature") as never }), key).toBe("m20tokennyx");
+      }
+      expect(newTokenFrame({ ...text, supertype: golem.supertype }, "c", everything)).toBe("m20tokenartifactnyx");
+    });
+
+    it("a two-colour one PICKED onto the dress wears gold: the kind gate takes it, no pair master, the gold master and plate", () => {
+      for (const t of NYX) {
+        expect(frameKindGateError(t, { cardType: "token", supertype: "Enchantment Creature", title: "Glimmer", subtypes: ["Glimmer"] } as never), t).toBeNull();
+        const profile = getFrameProfile(t);
+        // The two-colour switch on, a W|U card: no look — the gold frame.
+        const look = resolveTwoColor(profile, { twoColor: true }, { cardType: "token", supertype: "Enchantment Creature", colors: ["white", "blue"], cost: null } as never);
+        expect(look, t).toBeNull();
+        expect(pickFrameColorKey(["white", "blue"])).toBe("m");
+        expect(plateKeyFor("m", look), t).toBe("m");
+        // …and normalizeAnatomy drops the switch: the dress draws no pairs.
+        expect(normalizeAnatomy({ template: t, twoColor: true }, t, "token"), t).not.toHaveProperty("twoColor");
+      }
+      // An AI card asked for the dress BY NAME keeps it (a maker's pick).
+      expect(resolveGeneratedFrame({ cardType: "token", requested: "m20tokennyx", colorIdentity: ["white", "blue"], verifiedKeys: everything, face: face("Enchantment Creature") as never })).toBe("m20tokennyx");
+    });
   });
 
   it("m20TokenTemplate names the dress at each height", () => {

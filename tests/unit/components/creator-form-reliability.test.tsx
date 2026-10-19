@@ -2032,6 +2032,37 @@ describe("4.48 the full-art token: the default switch and the automatic height",
     await pickColour(/^colorless/i);
     expect(preview().template).toBe("m20tokentall");
   });
+
+  // TODO 4.51, owner Round 74: an Enchantment token follows onto the Nyx
+  // dress in ONE colour only; two colours keep the plain design's split
+  // (and take it off the dress again), and the dress picked by hand stays —
+  // in gold — whatever the colour.
+  it("the Nyx dress: a single-colour Enchantment token follows it, a two-colour one keeps the split, a hand pick stays", async () => {
+    const NYX = ["m20tokennyx", "m20tokennyxtext", "m20tokennyxtall", "m20tokenartifactnyx", "m20tokenartifactnyxtext", "m20tokenartifactnyxtall"];
+    renderForm({ mode: "create", verifiedFrameKeys: [...ALL, ...combos(NYX)] });
+    await pickKind(/^Token/);
+    await pickColour(/^white/i);
+    expect(preview().template).toBe("m20token");
+    await toggleToken(/^Enchantment/);
+    expect(preview().template).toBe("m20tokennyx");
+    // Another single colour: still the dress.
+    await pickColour(/^blue/i);
+    expect(preview().template).toBe("m20tokennyx");
+    // Two colours (Multicolor): off the dress, onto the plain design (its split).
+    await pickColour(/^multicolor/i);
+    expect(preview().template).toBe("m20token");
+    // Back to one colour: the dress again.
+    await pickColour(/^white/i);
+    expect(preview().template).toBe("m20tokennyx");
+    // Picked by hand in two colours: it stays, gold.
+    await pickColour(/^multicolor/i);
+    expect(preview().template).toBe("m20token");
+    await clickChip("Frame variations", /^Nyx Token/);
+    expect(preview().template).toBe("m20tokennyx");
+    await pickColour(/^white/i);
+    await pickColour(/^multicolor/i);
+    expect(preview().template).toBe("m20tokennyx");
+  });
 });
 
 // ---------------------------------------------------------------------------

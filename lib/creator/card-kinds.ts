@@ -882,6 +882,16 @@ export function followsEnchantmentDress(type: TypeWordsFace): boolean {
   );
 }
 
+/** The frame colour keys a token FOLLOWS onto the Nyx dress in (TODO 4.51,
+ *  owner Round 74): one colour, or colourless — never gold (`m`: two or
+ *  more colours, which keep 4.48's split). */
+const TOKEN_NYX_FOLLOW_KEYS: ReadonlySet<string> = new Set(["w", "u", "b", "r", "g", "c"]);
+
+/** True when a token in this frame colour key follows onto the Nyx dress. */
+export function followsTokenNyxDressIn(colorKey: string | null | undefined): boolean {
+  return colorKey != null && TOKEN_NYX_FOLLOW_KEYS.has(colorKey);
+}
+
 /**
  * The frame the type words pick for a card of `kind` on `template`: on an
  * enchantment dress's base for that kind (m15 for a creature or an
@@ -892,12 +902,21 @@ export function followsEnchantmentDress(type: TypeWordsFace): boolean {
  * on the 2003 frame or a showcase keeps that, and a kind with no base here
  * (a land, a token, a saga, a double-faced face) is never moved. What a NEW
  * card follows; a stored card is never moved by it.
+ *
+ * The full-art TOKEN's dress (TODO 4.51, owner Round 74) is followed by a
+ * SINGLE-colour token only (`colorKey`, the card's frame colour key: w u b
+ * r g or c — every Nyx token printed is one colour): a two-colour (or
+ * three-colour) Enchantment token keeps its plain full-art frame with
+ * 4.48's split and pair crown, and wears the dress — gold, `m` — only when
+ * its maker picks it under Variations. Without `colorKey` a token never
+ * follows onto it. Leaving the dress (the words stop saying Enchantment)
+ * reads no colour.
  */
-export function enchantmentFrameFor(kind: CardKind, template: FrameTemplate, type: TypeWordsFace): FrameTemplate {
+export function enchantmentFrameFor(kind: CardKind, template: FrameTemplate, type: TypeWordsFace, colorKey?: string): FrameTemplate {
   for (const [dress, { bases }] of Object.entries(ENCHANTMENT_DRESSES) as [FrameTemplate, { bases: Partial<Record<CardKind, FrameTemplate>> }][]) {
     const base = bases[kind];
     if (!base) continue;
-    if (template === base && followsEnchantmentDress(type)) return dress;
+    if (template === base && followsEnchantmentDress(type) && (kind !== "token" || followsTokenNyxDressIn(colorKey))) return dress;
     if (template === dress && !typeLineHasWord(type, "Enchantment")) return base;
   }
   return template;

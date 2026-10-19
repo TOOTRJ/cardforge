@@ -667,8 +667,10 @@ Rules and gotchas:
   never a CC file), keys w u b r g c m, no pairs — an enchantment dress
   (`ENCHANTMENT_DRESSES` `token` bases; the token kind's alone): the height
   and the Artifact word keep it (`m20TokenTemplate(height, artifact, nyx)`),
-  a NEW Enchantment token starts on it where verified, a stored one keeps
-  its frame; the import names it once verified and, until then, the plain
+  a NEW Enchantment token starts on (and follows onto) it where verified —
+  in ONE colour only (owner Round 74, `followsTokenNyxDressIn`: a
+  two-colour token keeps 4.48's split; picked by hand it wears gold `m`) —
+  a stored one keeps its frame; the import names it once verified and, until then, the plain
   template where that is (`FrameMatch.onceVerifiedFallback`, applied by
   `withVerification` only). `docs/FRAMES.md` "The full-art token's Nyx
   dress".

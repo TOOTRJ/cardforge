@@ -125,8 +125,11 @@ export function newTokenFrame(
 ): FrameTemplate {
   const full = autoM20TokenFrame(text);
   // An Enchantment token starts on the Nyx dress where it is verified in
-  // the colour (TODO 4.51: the 2024+ prints); else the plain design.
-  const nyx = enchantmentFrameFor("token", full, { supertype: text.supertype });
+  // the colour (TODO 4.51: the 2024+ prints); else the plain design. Only a
+  // SINGLE-colour one (owner Round 74): a two-colour token keeps the plain
+  // design's split, so a colour change on the default switch's pick
+  // (defaultTokenFrameIn) moves it off the dress and back.
+  const nyx = enchantmentFrameFor("token", full, { supertype: text.supertype }, colorKey);
   if (nyx !== full && isFrameComboAvailable(nyx, colorKey, verifiedKeys)) return nyx;
   if (isFrameComboAvailable(full, colorKey, verifiedKeys)) return full;
   return tokenFrameFor("token", "m15token", text);

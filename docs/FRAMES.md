@@ -8836,7 +8836,24 @@ on (or follows onto) the dress where it is verified in the card's colour
 is the way back (the plain 2021–23 look); a stored token keeps its frame.
 The random and requested AI picks read the same rules
 (`resolveGeneratedFrame`). The 2014–19 arch has no dress (TC15 #23, the one
-printing — an owner question).
+printing).
+
+**Owner Round 74 (2026-10-18)** — the look is approved, and:
+
+- **Only a SINGLE-colour token follows onto the dress** (one colour or
+  colourless: `followsTokenNyxDressIn`, the frame colour key w u b r g c).
+  Every printed Nyx token is one colour. A two-colour (or three-colour)
+  Enchantment token keeps its plain full-art frame with 4.48's split and
+  pair crown. That holds for the creator's start (`newTokenFrame`), its
+  words follow (`enchantmentFrameFor(…, colorKey)`), a colour picked after
+  (the form's colour follow: two colours take a followed token off the
+  dress, one colour back onto it — until a frame is picked by hand), and
+  the AI's random and requested picks. On a pick under Variations the
+  two-colour token wears the dress in GOLD (`m`, no pair masters). An AI
+  request that names the dress itself is the same kind of pick. Imports are
+  unaffected: the printings are single-colour.
+- r, g and m keep their masters (the starfield over the pill's own tone).
+- TC15 #23 stays nearest on the arch (`era/2015+nyx-dress`).
 
 **Imports**: `token/m20+nyx-dress` names the dress of the printing's height
 through `onceVerified` (the `m20` family's pick; `gapDrawnBy("nyx-dress")`
