@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { adminErrorToast } from "@/lib/admin/admin-toast";
 import { Button } from "@/components/ui/button";
 import {
   resolveCommentReportsAction,
@@ -23,7 +24,7 @@ export function CommentReportActions({ commentId }: { commentId: string }) {
         );
         router.refresh();
       } else {
-        toast.error(result.error);
+        adminErrorToast("comment moderation", result.error);
       }
     });
   }

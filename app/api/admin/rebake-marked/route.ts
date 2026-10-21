@@ -14,7 +14,7 @@ import {
 } from "@/lib/cards/sweep-lease";
 
 // ---------------------------------------------------------------------------
-// POST /api/admin/rebake-marked  { skipIds? }
+// POST /api/admin/rebake-marked  { skipIds?, rebakedSoFar? }
 //
 // The compare page's "Re-bake now" (TODO 0.20): one small batch of the
 // "marked" scope per call — baked cards a frame-layout save stamped with
@@ -46,6 +46,10 @@ const BATCH = 4;
 
 const bodySchema = z.object({
   skipIds: z.array(z.string().uuid()).max(2000).default([]),
+  /** Cards the loop's EARLIER calls re-baked — the route is stateless, and
+   *  the run's last call may re-bake nothing itself (all failed, all
+   *  superseded) after earlier ones did. */
+  rebakedSoFar: z.number().int().min(0).max(1_000_000).default(0),
 });
 
 export type RebakeMarkedResponse =
@@ -117,8 +121,14 @@ export async function POST(request: Request) {
   }
   // Gallery landings, hubs and card pages are ISR and point at the old
   // ?v= render URLs (cached immutably by /render-cdn). Refresh them once,
-  // when the run finishes, not after every batch.
-  if (result.remaining === 0 && result.processed.length > 0) revalidatePath("/", "layout");
+  // when the run finishes — the loop's last call, the one that reports
+  // nothing remaining or makes no progress — if ANY call of the run
+  // re-baked a card, not after every batch.
+  const runRebaked = parsed.data.rebakedSoFar + result.processed.length;
+  const runEnds =
+    result.remaining === 0 ||
+    (result.processed.length === 0 && result.failed.length === 0 && result.superseded.length === 0);
+  if (runEnds && runRebaked > 0) revalidatePath("/", "layout");
   return json({
     ok: true,
     rebaked: result.processed.length,

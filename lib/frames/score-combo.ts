@@ -7,7 +7,7 @@ import { FrameCompareFaceError, buildFrameComparePayload } from "@/lib/scryfall/
 import type { CardFace } from "@/lib/cards/card-face";
 import { faceUnderTest } from "@/lib/cards/dfc";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
-import { getFrameReviews } from "@/lib/cards/frame-reviews";
+import { readFrameReviews } from "@/lib/cards/frame-reviews";
 import {
   findFrameReference,
   type FrameColorKey,
@@ -94,8 +94,19 @@ export async function resolveReferenceId(
   // An explicit registry pick needs no review read.
   const picked = findFrameReference(template, color, ref);
   if (picked) return picked.scryfallId;
-  const reviews = await getFrameReviews();
+  const { reviews, error } = await readFrameReviews();
+  // A failed read must not fall back to the registry default: the admin's
+  // pinned printing lives in those rows.
+  if (error) throw new PinnedReferenceReadError();
   return pickFrameReferenceFrom(reviews, template, color)?.scryfallId ?? null;
+}
+
+/** The review read behind a combo's pinned reference failed. */
+export class PinnedReferenceReadError extends Error {
+  constructor() {
+    super("Couldn’t read the pinned reference printing — nothing was scored. Try again.");
+    this.name = "PinnedReferenceReadError";
+  }
 }
 
 export async function scoreFrameCombo(input: {
@@ -117,7 +128,13 @@ export async function scoreFrameCombo(input: {
 }): Promise<ScoreComboResult> {
   const { template, color } = input;
   const face = faceUnderTest(template, input.face);
-  const scryfallId = input.referenceId ?? (await resolveReferenceId(template, color, input.ref));
+  let scryfallId: string | null;
+  try {
+    scryfallId = input.referenceId ?? (await resolveReferenceId(template, color, input.ref));
+  } catch (error) {
+    if (error instanceof PinnedReferenceReadError) return { ok: false, error: error.message, status: 502 };
+    throw error;
+  }
   if (!scryfallId) {
     return { ok: false, error: "No reference printing for this combination.", status: 404 };
   }

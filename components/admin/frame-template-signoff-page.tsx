@@ -5,6 +5,7 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { MarkedRendersPanel } from "@/components/admin/marked-renders-panel";
+import { AdminLoadError } from "@/components/admin/admin-load-error";
 import {
   FrameTemplateSignOff,
   type SignOffColourView,
@@ -60,11 +61,14 @@ export async function FrameTemplateSignOffPage({
   reviews,
   markedCount,
   viewerId,
+  reviewsFailed = false,
 }: {
   template: FrameTemplate;
   reviews: Map<string, FrameReview>;
   markedCount: number;
   viewerId: string;
+  /** The frame_reviews read failed: every colour reads unverified below. */
+  reviewsFailed?: boolean;
 }) {
   const treatmentTemplates = templatesForTreatment(FRAME_TEMPLATE_SET[template]);
   const [overrides, scores, treatmentScores] = await Promise.all([
@@ -184,6 +188,7 @@ export async function FrameTemplateSignOffPage({
           </span>
         }
       />
+      {reviewsFailed ? <AdminLoadError what="the frame reviews" className="mt-4" /> : null}
       <MarkedRendersPanel initialCount={markedCount} />
       <section className="mt-6 flex flex-col gap-3" aria-labelledby="signoff-side-by-side-heading">
         <h2 id="signoff-side-by-side-heading" className="text-sm font-semibold text-foreground">

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { adminErrorToast } from "@/lib/admin/admin-toast";
 import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
 import { deleteFramePreviewCardAction } from "@/lib/cards/frame-signoff-actions";
 import { cn } from "@/lib/utils";
@@ -37,7 +38,7 @@ function DeleteButton({ id, title }: { id: string; title: string }) {
     startTransition(async () => {
       const result = await deleteFramePreviewCardAction({ cardId: id });
       if (!result.ok) {
-        toast.error(result.error);
+        adminErrorToast("frame previews", result.error);
         setArmed(false);
         return;
       }

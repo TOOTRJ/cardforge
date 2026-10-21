@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   applyRunOutcome,
   breakerAfterBatch,
@@ -8,6 +8,7 @@ import {
   EMPTY_AUTO_REBAKE_STATE,
   formatRunLog,
   leaseIsLive,
+  parseRunSummary,
   parseSweepState,
   POISON_AFTER_STRIKES,
   POISON_MAX,
@@ -25,6 +26,76 @@ import {
 // ---------------------------------------------------------------------------
 
 const AT = "2026-09-28T12:00:00.000Z";
+
+describe("parseRunSummary — a hand-edited last_run never crashes the panel (L4)", () => {
+  it("reads a full summary", () => {
+    const run: AutoRebakeRunSummary = {
+      startedAt: AT,
+      finishedAt: AT,
+      durationMs: 1200,
+      layoutVersion: 58,
+      batches: 2,
+      rebaked: 7,
+      stamped: 1,
+      failed: 1,
+      superseded: 0,
+      remaining: 0,
+      stop: "done",
+      error: null,
+      failures: [{ id: "a", error: "art" }],
+      poisoned: ["b"],
+      crashes: 1,
+      errorStreak: 2,
+      suspects: ["c"],
+    };
+    expect(parseRunSummary(run)).toEqual(run);
+  });
+
+  it("refuses what isn't a summary and coerces bad fields", () => {
+    expect(parseRunSummary("garbage")).toBeNull();
+    expect(parseRunSummary([])).toBeNull();
+    expect(parseRunSummary({ rebaked: 3 })).toBeNull(); // no stop
+    expect(parseRunSummary({ stop: "exploded" })).toBeNull(); // unknown stop
+    const run = parseRunSummary({
+      stop: "budget",
+      finishedAt: 42,
+      rebaked: "3",
+      durationMs: Number.NaN,
+      remaining: "lots",
+      failures: "nope",
+      suspects: ["x", 1, null, ""],
+      poisoned: { a: 1 },
+      crashes: "2",
+      error: 5,
+    });
+    expect(run).toEqual({
+      startedAt: "",
+      finishedAt: "",
+      durationMs: 0,
+      layoutVersion: 0,
+      batches: 0,
+      rebaked: 0,
+      stamped: 0,
+      failed: 0,
+      superseded: 0,
+      remaining: null,
+      stop: "budget",
+      error: null,
+      suspects: ["x"],
+    });
+    expect(parseRunSummary({ stop: "error", failures: [null, { error: "no id" }, { id: "a" }] })?.failures).toEqual([
+      { id: "a", error: "Unknown error" },
+    ]);
+  });
+
+  it("knows every stop the type names", () => {
+    const stops = [
+      "done", "budget", "yield", "paused", "lease-lost", "breaker", "hung", "overrun", "crashed", "error", "refused",
+    ] as const;
+    expectTypeOf<(typeof stops)[number]>().toEqualTypeOf<AutoRebakeRunSummary["stop"]>();
+    for (const stop of stops) expect(parseRunSummary({ stop })?.stop).toBe(stop);
+  });
+});
 
 describe("parseSweepState", () => {
   it("reads a full row", () => {

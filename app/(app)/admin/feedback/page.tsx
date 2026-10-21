@@ -7,6 +7,7 @@ import { SurfaceCard } from "@/components/ui/surface-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FeedbackStatusButtons } from "@/components/admin/feedback-status-buttons";
 import { FeedbackReplyButton } from "@/components/admin/feedback-reply-button";
+import { AdminLoadError } from "@/components/admin/admin-load-error";
 import { listAllFeedback, type FeedbackInboxFilter } from "@/lib/feedback/queries";
 import { threadIdsForFeedback } from "@/lib/messages/queries";
 import {
@@ -53,12 +54,15 @@ export default async function AdminFeedbackPage({
       : (FEEDBACK_STATUSES as readonly string[]).includes(status ?? "")
         ? (status as FeedbackStatus)
         : "unresolved";
-  const items = await listAllFeedback(filter);
+  const inbox = await listAllFeedback(filter);
   // Non-admins get a 404 (don't reveal the route exists).
-  if (items === null) notFound();
+  if (inbox === null) notFound();
+  const { items } = inbox;
   // Submissions that already have a conversation link to it instead of
   // opening a second one (one thread per feedback row, migration 0070).
-  const threadByFeedback = await threadIdsForFeedback(items.map((item) => item.id));
+  const links = await threadIdsForFeedback(items.map((item) => item.id));
+  const threadByFeedback = links.threads;
+  const loadError = inbox.loadError || links.loadError;
 
   return (
     <DashboardShell>
@@ -82,7 +86,8 @@ export default async function AdminFeedbackPage({
       </div>
 
       <div className="mt-6 flex flex-col gap-4">
-        {items.length === 0 ? (
+        {loadError ? <AdminLoadError what="the feedback inbox" /> : null}
+        {items.length === 0 && !loadError ? (
           <EmptyState
             title="Inbox zero"
             description={

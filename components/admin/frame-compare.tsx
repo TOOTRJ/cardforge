@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Gauge, Loader2, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import { adminErrorToast } from "@/lib/admin/admin-toast";
 import { CardPreview, type CardPreviewData } from "@/components/cards/card-preview";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { cn } from "@/lib/utils";
@@ -210,9 +211,9 @@ export function FrameCompare({
       if (body?.ok) {
         setScore({ overall: body.overall, global: body.global, slots: body.slots ?? {} });
         setScoreStale(false);
-      } else toast.error(body?.error ?? "Scoring failed.");
-    } catch {
-      toast.error("Scoring failed.");
+      } else adminErrorToast("frame compare", body?.error ?? "Scoring failed.");
+    } catch (err) {
+      adminErrorToast("frame compare", "Scoring failed.", err);
     } finally {
       setScoring(false);
     }
@@ -349,7 +350,7 @@ export function FrameCompare({
         overrides: draft,
       });
       if (!result.ok) {
-        toast.error(result.error);
+        adminErrorToast("frame compare", result.error);
         return;
       }
       setScoreStale(true);
@@ -369,7 +370,7 @@ export function FrameCompare({
       if (!template) return;
       const result = await resetFrameProfileOverrideAction({ template });
       if (!result.ok) {
-        toast.error(result.error);
+        adminErrorToast("frame compare", result.error);
         return;
       }
       setDraft({});

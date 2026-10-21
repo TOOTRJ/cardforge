@@ -57,6 +57,7 @@ describe("getScryfallAdminUsageSnapshot", () => {
     expect(snapshot?.todayTotal).toBe(0);
     expect(snapshot?.topUsers).toEqual([]);
     expect(snapshot?.limits.search.perDay).toBeGreaterThan(0);
+    expect(snapshot?.loadError).toBe(false);
   });
 
   it("maps RPC rows and head counts into the snapshot", async () => {
@@ -103,7 +104,8 @@ describe("getScryfallAdminUsageSnapshot", () => {
     ]);
   });
 
-  it("falls back to the empty snapshot when the admin client throws", async () => {
+  it("falls back to the empty snapshot when the admin client throws — flagged and logged (L5)", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
     mocks.getCurrentProfile.mockResolvedValue({ is_admin: true });
     mocks.isAdminConfigured.mockReturnValue(true);
     mocks.createAdminClient.mockImplementation(() => {
@@ -113,5 +115,27 @@ describe("getScryfallAdminUsageSnapshot", () => {
     const snapshot = await getScryfallAdminUsageSnapshot();
     expect(snapshot).not.toBeNull();
     expect(snapshot?.todayTotal).toBe(0);
+    expect(snapshot?.loadError).toBe(true);
+    expect(log).toHaveBeenCalled();
+    log.mockRestore();
+  });
+
+  it("flags a snapshot whose RPC answered an error, rather than printing zeros as the truth (L5)", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.getCurrentProfile.mockResolvedValue({ is_admin: true });
+    mocks.isAdminConfigured.mockReturnValue(true);
+    mocks.createAdminClient.mockReturnValue({
+      rpc: (name: string) =>
+        Promise.resolve(
+          name === "scryfall_usage_admin_daily"
+            ? { data: null, error: { message: "permission denied" } }
+            : { data: [], error: null },
+        ),
+      from: () => countQuery(0),
+    });
+    const snapshot = await getScryfallAdminUsageSnapshot();
+    expect(snapshot?.loadError).toBe(true);
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("usage read failed"), "permission denied");
+    log.mockRestore();
   });
 });

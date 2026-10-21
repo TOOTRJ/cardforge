@@ -72,15 +72,16 @@ describe("card-corner display surfaces", () => {
     const deckModal = read("components/decks/deck-card-modal.tsx");
     expect(deckModal).toContain("relative block aspect-[5/7] w-full overflow-hidden card-corners border");
     expect(deckModal).toContain('"aspect-[5/7] w-full card-corners bg-[#101015] object-cover"');
-    expect(read("app/(app)/admin/moderation/page.tsx")).toContain(
-      "aspect-[5/7] w-28 shrink-0 overflow-hidden card-corners",
+    // Moderation draws the card's own tile (audit L6): BakedCardThumbnail
+    // carries the corner, and a 7:5 render (Battle, Split) whole in its own
+    // landscape box — never cropped to its middle by the 5:7 slot.
+    const moderation = read("app/(app)/admin/moderation/page.tsx");
+    expect(moderation).toContain("<BakedCardThumbnail");
+    expect(moderation).toContain("renderedThumbUrl={item.card.rendered_thumb_url}");
+    expect(moderation).not.toContain("<img");
+    expect(read("components/cards/baked-card-thumbnail.tsx")).toContain(
+      '<div className="relative aspect-[7/5] w-full overflow-hidden card-corners-landscape">',
     );
-    // A 7:5 render (Battle, Split) is shown whole in its own landscape box,
-    // never cropped to its middle by the 5:7 slot.
-    expect(read("app/(app)/admin/moderation/page.tsx")).toContain(
-      '<div className="aspect-[7/5] w-full overflow-hidden card-corners-landscape">',
-    );
-    expect(read("lib/moderation/queries.ts")).toContain("landscape: isLandscapeFrame(card.frame_style),");
     expect(deckModal).toContain("isLandscapeFrame(card?.frame_style)");
     expect(deckModal).toContain('<span className="block aspect-[7/5] w-full overflow-hidden card-corners-landscape">');
     // An <img> whose box is the card itself, 5:7 or 7:5 by the render.

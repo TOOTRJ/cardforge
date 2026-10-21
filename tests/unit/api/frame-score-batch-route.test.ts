@@ -26,6 +26,7 @@ const state = vi.hoisted(() => ({
   overrides: {} as Record<string, unknown>,
   score: vi.fn(),
   reviewReads: 0,
+  reviewsError: null as string | null,
 }));
 
 vi.mock("server-only", () => ({}));
@@ -35,9 +36,9 @@ vi.mock("@/lib/supabase/admin", () => ({
   isAdminConfigured: () => state.configured,
 }));
 vi.mock("@/lib/cards/frame-reviews", () => ({
-  getFrameReviews: async () => {
+  readFrameReviews: async () => {
     state.reviewReads += 1;
-    return state.reviews;
+    return { reviews: state.reviewsError ? new Map() : state.reviews, error: state.reviewsError };
   },
 }));
 vi.mock("@/lib/cards/frame-profile-overrides", () => ({
@@ -75,6 +76,7 @@ beforeEach(() => {
   state.reviews = new Map();
   state.overrides = { saga: { title: { rect: { topPct: 5 } } } };
   state.reviewReads = 0;
+  state.reviewsError = null;
   state.score.mockReset();
   state.score.mockImplementation(async (input: { template: string; color: string; referenceId: string }) => ({
     ok: true,
@@ -112,6 +114,15 @@ describe("POST /api/admin/frame-score-batch", () => {
     state.configured = false;
     expect((await post({ combos: [{ template: "saga", colorKey: "w" }] })).status).toBe(503);
     expect(state.score).not.toHaveBeenCalled();
+  });
+
+  it("refuses (503) when the pinned references can't be read — never scores against the defaults (L5)", async () => {
+    state.reviewsError = "connection reset";
+    const res = await post({ combos: [{ template: "saga", colorKey: "w" }] });
+    expect(res.status).toBe(503);
+    expect((await res.json()).error).toMatch(/pinned reference/);
+    expect(state.score).not.toHaveBeenCalled();
+    expect(stub.log).toHaveLength(0);
   });
 
   it("rejects an unknown combo, an empty list and an oversized one", async () => {
