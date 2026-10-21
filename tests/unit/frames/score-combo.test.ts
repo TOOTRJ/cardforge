@@ -36,6 +36,7 @@ import type { FrameTemplate } from "@/types/card";
 const state = vi.hoisted(() => ({
   reviews: new Map<string, unknown>(),
   reviewReads: 0,
+  reviewsError: null as string | null,
   overrides: {} as Record<string, unknown>,
   overrideReads: 0,
   payload: vi.fn(),
@@ -47,9 +48,9 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/cards/frame-reviews", () => ({
-  getFrameReviews: async () => {
+  readFrameReviews: async () => {
     state.reviewReads += 1;
-    return state.reviews;
+    return { reviews: state.reviewsError ? new Map() : state.reviews, error: state.reviewsError };
   },
 }));
 vi.mock("@/lib/cards/frame-profile-overrides", () => ({
@@ -173,6 +174,7 @@ function payloadFor(scryfallId: string) {
 beforeEach(async () => {
   state.reviews = new Map();
   state.reviewReads = 0;
+  state.reviewsError = null;
   state.overrides = { lotr: { title: { rect: { topPct: 5 } } } };
   state.overrideReads = 0;
   state.payload.mockReset();
@@ -234,6 +236,17 @@ describe("scoreFrameCombo — refusals", () => {
     state.payload.mockResolvedValueOnce({ ...payloadFor("x"), scanUrl: null });
     expect(await scoreFrameCombo({ template: "lotr", color: "u" })).toMatchObject({ ok: false, status: 502 });
     expect(state.fetchScan).not.toHaveBeenCalled();
+  });
+
+  it("502s when the pinned references can't be read — never scores the registry default (L5)", async () => {
+    state.reviewsError = "connection reset";
+    expect(await scoreFrameCombo({ template: "lotr", color: "u" })).toEqual({
+      ok: false,
+      error: "Couldn’t read the pinned reference printing — nothing was scored. Try again.",
+      status: 502,
+    });
+    expect(state.payload).not.toHaveBeenCalled();
+    expect(state.render).not.toHaveBeenCalled();
   });
 
   it("502s when the scan download fails", async () => {

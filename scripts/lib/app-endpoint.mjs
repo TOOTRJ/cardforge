@@ -32,7 +32,9 @@ export const ENDPOINT_PATH = "/api/admin/storage-sweep";
 export const PURGE_CHUNK = 100;
 /** Row actions per flagged-file call (the route's own cap). */
 export const ACTION_CHUNK = 50;
-/** The route may re-bake and purge; its maxDuration is 300 s. */
+/** The route purges caches (purge-cards) and acts on the rows a flagged file
+ *  is drawn by (flagged-file: hide a card, swap a picture, clear a cover,
+ *  remove a pip) — it never re-bakes; its maxDuration is 300 s. */
 export const CALL_TIMEOUT_MS = 290_000;
 
 export class AppEndpointError extends Error {}

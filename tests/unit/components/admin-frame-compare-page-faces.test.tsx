@@ -44,7 +44,7 @@ vi.mock("@/lib/supabase/admin", () => ({
   },
 }));
 vi.mock("@/lib/cards/rebake-batch", () => ({ countMarkedRenders: async () => 0 }));
-vi.mock("@/lib/cards/frame-reviews", () => ({ getFrameReviews: async () => new Map() }));
+vi.mock("@/lib/cards/frame-reviews", () => ({ readFrameReviews: async () => ({ reviews: new Map(), error: null }) }));
 vi.mock("@/lib/cards/frame-review-events", () => ({ listFrameReviewEvents: async () => [] }));
 vi.mock("@/lib/cards/frame-profile-overrides", () => ({ getFrameProfileOverrides: async () => ({}) }));
 vi.mock("@/lib/cards/frame-preview-cards", () => ({ listFramePreviewCards: async () => [] }));

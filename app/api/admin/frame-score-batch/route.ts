@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getCurrentProfile } from "@/lib/supabase/server";
 import { isAdminConfigured } from "@/lib/supabase/admin";
 import { FRAME_COLOR_KEYS } from "@/lib/cards/frame-reference-registry";
-import { getFrameReviews } from "@/lib/cards/frame-reviews";
+import { readFrameReviews } from "@/lib/cards/frame-reviews";
 import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 import {
   SCORE_BATCH_BUDGET_MS,
@@ -82,7 +82,16 @@ export async function POST(request: Request) {
 
   // One review read plans every combo's reference; one override read is
   // what every render uses AND what every recorded hash describes.
-  const [reviews, overrides] = await Promise.all([getFrameReviews(), getFrameProfileOverrides()]);
+  const [{ reviews, error: reviewsError }, overrides] = await Promise.all([
+    readFrameReviews(),
+    getFrameProfileOverrides(),
+  ]);
+  // Refuse rather than score every combo against the registry default: the
+  // pinned references are IN those rows, and a score recorded against the
+  // wrong printing reads as a real one in the history.
+  if (reviewsError) {
+    return jsonError("Couldn’t read the pinned reference printings — nothing was scored. Try again.", 503);
+  }
   const plan = planScoreBatch(parsed.data.combos, reviews);
   const actorId = profile.id;
 

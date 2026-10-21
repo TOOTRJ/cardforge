@@ -47,8 +47,11 @@ vi.mock("@/lib/supabase/admin", () => ({
     throw new Error("not in this test");
   },
 }));
+const reviewsState = vi.hoisted(() => ({ error: null as string | null }));
 vi.mock("@/lib/cards/rebake-batch", () => ({ countMarkedRenders: async () => 0 }));
-vi.mock("@/lib/cards/frame-reviews", () => ({ getFrameReviews: async () => new Map() }));
+vi.mock("@/lib/cards/frame-reviews", () => ({
+  readFrameReviews: async () => ({ reviews: new Map(), error: reviewsState.error }),
+}));
 vi.mock("@/lib/cards/frame-review-events", () => ({ listFrameReviewEvents: async () => [] }));
 vi.mock("@/lib/cards/frame-profile-overrides", () => ({ getFrameProfileOverrides: async () => ({}) }));
 vi.mock("@/lib/cards/frame-preview-cards", () => ({ listFramePreviewCards: async () => [] }));
@@ -136,6 +139,7 @@ async function renderPage(params: { template?: string; color?: string; ref?: str
 let warn: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
   payloads.build.mockReset();
+  reviewsState.error = null;
   warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 });
 afterEach(() => {
@@ -210,6 +214,22 @@ describe("/admin/frame-compare — the reference lookup", () => {
     await renderPage({ template: "m15", color: "w" });
     expect(screen.getByText(/^Reference lookup failed/)).toBeTruthy();
     expect(warn).not.toHaveBeenCalled();
+  });
+});
+
+describe("/admin/frame-compare — a failed review read (L5)", () => {
+  it("says the frame reviews couldn't load on the checklist and on a combo — never a silent 'unverified'", async () => {
+    reviewsState.error = "connection reset";
+    payloads.build.mockResolvedValue({ preview: { title: "From Scryfall" }, scanUrl: SCAN });
+    await renderPage({ template: "m15", color: "w" });
+    expect(screen.getByTestId("admin-load-error").textContent).toMatch(/Couldn’t load the frame reviews/);
+    cleanup();
+    await renderPage({});
+    expect(screen.getByRole("alert").textContent).toMatch(/Couldn’t load the frame reviews/);
+    cleanup();
+    reviewsState.error = null;
+    await renderPage({});
+    expect(screen.queryByTestId("admin-load-error")).toBeNull();
   });
 });
 

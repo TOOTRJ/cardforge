@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Hash, Plus, Star, StarOff, TimerOff } from "lucide-react";
 import { toast } from "sonner";
+import { adminErrorToast } from "@/lib/admin/admin-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -59,7 +60,7 @@ export function ChallengeAdmin({ challenges }: { challenges: Challenge[] }) {
         );
         router.refresh();
       } else {
-        toast.error(result.error);
+        adminErrorToast("challenges", result.error);
       }
     });
   };
@@ -71,7 +72,7 @@ export function ChallengeAdmin({ challenges }: { challenges: Challenge[] }) {
         toast.success("Challenge closed.");
         router.refresh();
       } else {
-        toast.error(result.error);
+        adminErrorToast("challenges", result.error);
       }
     });
   };
