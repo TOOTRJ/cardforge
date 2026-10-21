@@ -73,7 +73,12 @@ const BACK_TYPE_OPTIONS: ChipOption<CardType>[] = CARD_TYPE_OPTIONS.filter((opti
   (DFC_FACE_TYPES as readonly string[]).includes(option.value),
 );
 
-const partWordsFor = (layout: DfcLayout) => SECOND_PART_WORDS[layout === "transform" ? "transform" : "mdfc"]!;
+/** The back's layout: a double-faced card's, or `token` for a double-sided
+ *  token's back (TODO 5.5 (c): another token, no cost of its own). */
+type BackLayout = DfcLayout | "token";
+
+const partWordsFor = (layout: BackLayout) =>
+  SECOND_PART_WORDS[layout === "token" ? "token" : layout === "transform" ? "transform" : "mdfc"]!;
 
 /** A server error on a key the form has no field for (back_face.frame_style)
  *  — RHF stores it under the path all the same. */
@@ -221,14 +226,21 @@ export function BackFaceColorSection({
 
 /** Edit / remix: the back's type and colour, locked — the type decides the
  *  body, the colour its master (structure, like the front's). */
-export function BackFaceLockedRows({ frontColorIdentity }: { frontColorIdentity: ColorIdentity[] }) {
+export function BackFaceLockedRows({
+  frontColorIdentity,
+  token = false,
+}: {
+  frontColorIdentity: ColorIdentity[];
+  /** A double-sided token's back (TODO 5.5 (c)): its type is "Token". */
+  token?: boolean;
+}) {
   const { control } = useFormContext<FormValues>();
   const [backType, backColour] = useWatch({
     control,
     name: ["back_face.card_type", "back_face.color_identity"],
   });
   const colour = (backColour ?? []).length > 0 ? (backColour as ColorIdentity[]) : frontColorIdentity;
-  const typeLabel = BACK_TYPE_OPTIONS.find((option) => option.value === backType)?.label ?? "Creature";
+  const typeLabel = token ? "Token" : (BACK_TYPE_OPTIONS.find((option) => option.value === backType)?.label ?? "Creature");
   return (
     <div className="flex flex-col gap-1.5 text-xs text-muted" data-testid="dfc-back-locked">
       <div className="flex items-center gap-2" data-testid="dfc-back-type-locked">
@@ -249,7 +261,7 @@ export function BackFaceLockedRows({ frontColorIdentity }: { frontColorIdentity:
 
 type BackFaceIdentityFieldsProps = {
   userId: string | null;
-  layout: DfcLayout;
+  layout: BackLayout;
   /** The back face's art window on its own body and colour (TODO 3b.13):
    *  the positioner's surface. */
   artWindow: ArtWindow;
@@ -441,7 +453,7 @@ export function BackFaceRulesField({
   backRulesTextRef,
   onInsertSymbol,
 }: {
-  layout: DfcLayout;
+  layout: BackLayout;
   /** Hoisted register("back_face.rules_text") — merged with the caret ref. */
   backRulesTextRef: React.MutableRefObject<PipTextEditorHandle | null>;
   /** Caret-preserving symbol insertion into back_face.rules_text. */

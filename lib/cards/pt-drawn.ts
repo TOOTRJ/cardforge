@@ -27,6 +27,7 @@
 
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { isDfcBackBody, templateHasBackFace } from "@/lib/cards/dfc";
+import { isTokenPairBack } from "@/lib/cards/token-faces";
 import { resolveStationTiers } from "@/lib/cards/station";
 import { getFrameProfile, type FrameProfile } from "@/lib/cards/template-layout";
 import type { FaceContent } from "@/types/card";
@@ -89,7 +90,8 @@ export function secondFaceDrawsPowerToughness(
   const front = normalizeFrameTemplate(template);
   const inline = profileSecondFaceDrawsPowerToughness(getFrameProfile(front));
   if (inline !== null) return inline;
-  if (backBody && templateHasBackFace(front) && isDfcBackBody(backBody)) {
+  // (…and a double-sided token's back — TODO 5.5 (c) — its own token.)
+  if (backBody && ((templateHasBackFace(front) && isDfcBackBody(backBody)) || isTokenPairBack(front, backBody))) {
     return profileDrawsPowerToughness(getFrameProfile(backBody));
   }
   return profileDrawsPowerToughness(getFrameProfile(front));

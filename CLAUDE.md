@@ -239,7 +239,11 @@ Rules and gotchas:
   that `dfc` block — never from the `dfcIcon` switch (off for an absent
   key, which reads as `arrows`); a BACK body is never a card's own template
   (`templateRefusesKind`), and nothing on them is offered until each colour
-  of the front AND the default back is ticked (after 5.3). The modal bodies
+  of the front AND the default back is ticked (after 5.3). A double-sided
+  TOKEN (5.5 (c), owner Round 76) is no DFC body: two tokens back to back,
+  its back another TOKEN template in the front's design (arch with arch,
+  full-art with full-art) derived from the back's own words and text
+  (`tokenBackBodyFor`, `lib/cards/token-faces.ts`) through the same gate. The modal bodies
   (5.1b: `m15mdfcfront`, `m15mdfcback` and the land pair) draw the flipside
   strip's two TEXTS from that same block (`FrameProfile.flipside`,
   `lib/cards/flipside-strip.ts`: the other face's LAST type word + its cost

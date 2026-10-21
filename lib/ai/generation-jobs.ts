@@ -84,7 +84,7 @@ import {
 import { cardFieldsFace, frameKindGateError } from "@/lib/cards/frame-kind-gate";
 import { applyRemixNames, remixSecondHalfLayout } from "@/lib/ai/remix-names";
 import { DFC_REMIX_CREDITS } from "@/lib/scryfall/dfc-import";
-import { templateHasBackFace } from "@/lib/cards/dfc";
+import { templateTakesBackBody } from "@/lib/cards/dfc";
 
 /** A remix step priced for both faces whose double-faced frames aren't
  *  available any more (a tick withdrawn since the plan): refused, refunded. */
@@ -1773,7 +1773,8 @@ async function executeDeckRemixStep(
   // both-arts rule), so a failed second picture fails the step — and the
   // wrapper refunds both credits.
   let backArtUrl: string | undefined;
-  if (named.back_face && mechanics.frame_template && templateHasBackFace(mechanics.frame_template)) {
+  // (…and a double-sided token's back — TODO 5.5 (c) — the same.)
+  if (named.back_face && mechanics.frame_template && templateTakesBackBody(mechanics.frame_template)) {
     const instruction = identity.second_art_instruction?.trim() || identity.art_instruction;
     const generated = await generatePlainImage(
       `${instruction} Style: ${plan.style}.`,

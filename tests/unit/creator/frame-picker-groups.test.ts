@@ -577,8 +577,16 @@ describe("the frame picker's groups: a classification change only", () => {
   it("imports — every captured printing's match, landing, chooser and remix landing: the same, but the crowned and two-colour M20 tokens exact (4.48)", () => {
     expect(changed("imports")).toEqual([
       "all|tdsk-10", "all|tdsk-4", "all|teoc-13",
-      "all|tmkm-10", "all|tmkm-13", "prodPlusMoved|tmkm-10", "prodPlusMoved|tmkm-13", "prod|tmkm-10", "prod|tmkm-13",
+      "all|tmkm-10", "all|tmkm-13", "all|tmom-16",
+      "prodPlusMoved|tmkm-10", "prodPlusMoved|tmkm-13", "prodPlusMoved|tmom-16",
+      "prod|tmkm-10", "prod|tmkm-13", "prod|tmom-16",
     ]);
+    // …and TODO 5.5 (c): MOM's transforming Incubator // Phyrexian lands on
+    // the same full-art frame, NEAREST (the `dfc-token-transform` gap: the
+    // plain pair has no transform icons) — the rest of it main's.
+    for (const policy of ["all", "prodPlusMoved", "prod"]) {
+      expect(raw.imports[`${policy}|tmom-16`], policy).toMatchObject({ kind: "token", frame_template: "m20tokenartifacttext", match: ["nearest", "m20tokenartifacttext", null] });
+    }
     for (const policy of ["all", "prodPlusMoved", "prod"]) {
       expect(raw.imports[`${policy}|tmkm-10`], policy).toMatchObject({ kind: "token", frame_template: "m20token", match: ["exact", "m20token", null] });
       expect(raw.imports[`${policy}|tmkm-13`], policy).toMatchObject({ kind: "token", frame_template: "m20tokentext", match: ["exact", "m20tokentext", null] });

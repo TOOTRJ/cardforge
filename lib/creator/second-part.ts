@@ -112,6 +112,14 @@ export const SECOND_PART_WORDS: Readonly<Partial<Record<CardKind, SecondPartWord
     rulesPlaceholder: "Haste. (The back face's rules.)",
     blankCardType: "creature",
   }),
+  // A double-sided token's back (TODO 5.5 (c), owner Round 76): another
+  // token (Guild Kit #4's Soldier behind its Goblin). A one-faced token has
+  // no switch: the form shows these words only while "Two faces" is on.
+  token: words("Front face", "Back face", {
+    namePlaceholder: "Soldier",
+    rulesPlaceholder: "Lifelink. (The back face's rules.)",
+    blankCardType: "token",
+  }),
 };
 
 /** A double-faced back kept from before the real frames (an imported

@@ -89,7 +89,9 @@ describe("token designs by printing (TODO 1.23, replaces 1.19 step 4)", () => {
     ["tmkm-13", "nearest", "m15tokentext", "token/m20+crown", "4.48"],
     ["tmkm-10", "nearest", "m15token", "token/m20+two-colour", "4.48"],
     // Double-faced token: its front face's frame.
-    ["tmom-16", "nearest", "m15tokenartifacttext", "token/m20", "4.48"],
+    // A transforming double-sided token (TODO 5.5 (c)): the plain full-art
+    // pair, nearest whatever is verified — its own body is 5.5 (d).
+    ["tmom-16", "nearest", "m15tokenartifacttext", "token/m20+dfc-token-transform", "5.5d"],
     // The List follows its collector prefix: TXLN is pre-M20, TKHM isn't.
     ["plst-txln-10", "exact", "m15tokenartifacttext", "era/2015", undefined],
     ["plst-tkhm-19", "nearest", "m15tokenartifacttext", "token/m20", "4.48"],
@@ -181,7 +183,6 @@ describe("the full-art templates once verified (TODO 4.48 / 1.23)", () => {
     ["tfdn-23", "m20tokenartifacttext"],
     ["tfra-15", "m20tokenartifacttext"],
     ["plst-tkhm-19", "m20tokenartifacttext"],
-    ["tmom-16", "m20tokenartifacttext"],
     // …the tall box (Warren Warleader's 207 characters, the Map's 287)…
     ["tblb-5", "m20tokentall"],
     ["tlci-17", "m20tokenartifacttall"],
@@ -481,7 +482,7 @@ describe("token import words and faces (TODO 1.23)", () => {
     ).toMatchObject({ signature: "token/other-type", status: "nearest" });
   });
 
-  it("a double-faced token imports its front face only, and says so (a single-faced one drops nothing)", () => {
+  it("a double-sided token brings its back — two tokens back to back (TODO 5.5 (c)); an art-only back is dropped and said so (a single-faced one drops nothing)", () => {
     const single = mapScryfallToFormPatch(printing("tdom-3"));
     expect(single.dropped_face).toBeUndefined();
     expect(droppedFaceNotice(single, "Soldier")).toBeNull();
@@ -493,11 +494,35 @@ describe("token import words and faces (TODO 1.23)", () => {
       card_type: "token",
       supertype: "Artifact",
       subtypes_text: "Incubator",
-      dropped_face: "double-faced-token",
     });
-    expect(patch.back_face).toBeUndefined();
-    expect(droppedFaceNotice(patch, card.name)).toBe(
-      "Incubator // Phyrexian is a double-faced token — PipGlyph imported its front face, Incubator. Two-sided tokens aren't supported yet.",
+    expect(patch.dropped_face).toBeUndefined();
+    // (The body is the arch's here — the mapper's static landing; the import
+    // derives it again for the front it lands on: tests/unit/scryfall/
+    // dft-imports.test.ts.)
+    expect(patch.back_face).toMatchObject({
+      title: "Phyrexian",
+      card_type: "token",
+      supertype: "Artifact Creature",
+      subtypes_text: "Phyrexian",
+      power: "0",
+      toughness: "0",
+      color_identity: ["colorless"],
+      frame_style: { template: "m15tokenartifact" },
+    });
+    // Unstable's art-only back (its type line a bare "Token"): the front alone.
+    const artBack = {
+      ...card,
+      name: "Zombie // Zombie",
+      card_faces: [
+        { ...card.card_faces![0], name: "Zombie", type_line: "Token Creature — Zombie", oracle_text: "" },
+        { ...card.card_faces![1], name: "Zombie", type_line: "Token", oracle_text: "", power: undefined, toughness: undefined },
+      ],
+    } as typeof card;
+    const dropped = mapScryfallToFormPatch(artBack);
+    expect(dropped.dropped_face).toBe("double-faced-token");
+    expect(dropped.back_face).toBeUndefined();
+    expect(droppedFaceNotice(dropped, artBack.name)).toBe(
+      "Zombie // Zombie is a double-faced token — PipGlyph imported its front face, Zombie. Two-sided tokens aren't supported yet.",
     );
   });
 

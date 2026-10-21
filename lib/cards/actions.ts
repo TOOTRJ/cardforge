@@ -55,7 +55,8 @@ import {
   type FrameAnatomyStyle,
 } from "@/lib/cards/anatomy";
 import { cardPageName, withEmblemShape, withEmblemUpdateShape } from "@/lib/cards/emblem";
-import { templateHasBackFace } from "@/lib/cards/dfc";
+import { templateTakesBackBody } from "@/lib/cards/dfc";
+
 import {
   dfcBackArtMissing,
   dfcFamilyOf,
@@ -361,7 +362,7 @@ export async function createCardAction(
       family: storedFrameStyle.dfcIcon,
       frontColorIdentity: data.color_identity,
       verifiedKeys:
-        !framePreview && templateHasBackFace(storedFrameStyle.template)
+        !framePreview && templateTakesBackBody(storedFrameStyle.template)
           ? await verifiedKeysOf()
           : new Set<string>(),
       skipVerification: framePreview,
@@ -842,7 +843,7 @@ export async function updateCardAction(
     data.back_face === undefined &&
     storedBackFace?.frame_style !== undefined &&
     storedBackFace?.frame_style !== null &&
-    !templateHasBackFace(nextFrontTemplate);
+    !templateTakesBackBody(nextFrontTemplate);
   const nextBackFace =
     data.back_face !== undefined
       ? (data.back_face as DfcBackFacePayload | null)
@@ -891,7 +892,7 @@ export async function updateCardAction(
       back: nextBackFace,
       family: nextFrameStyle.dfcIcon,
       frontColorIdentity: update.color_identity ?? existing.color_identity,
-      verifiedKeys: templateHasBackFace(nextFrontTemplate) ? await verifiedKeysOf() : new Set<string>(),
+      verifiedKeys: templateTakesBackBody(nextFrontTemplate) ? await verifiedKeysOf() : new Set<string>(),
       stored: { back: storedBackFace, familyChanged },
     };
     let gate = resolveDfcBackFace(gateInput);

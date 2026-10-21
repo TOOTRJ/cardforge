@@ -6900,6 +6900,94 @@ back).
      back the server takes where `sagadfcback/c` is verified is no longer
      refused by the form. `c` stays published but unticked.
 
+### Double-sided tokens (5.5 (c))
+
+TODO 5.5 (c), 2026-10-21 (`feat/dfc-tokens-pair`; owner Round 76). An
+ADDITION: no template, no master, no layout bump, no sweep, no badge; every
+stored token keeps its look and its data on every save path.
+
+- **What prints.** Scryfall lays 121 printings out as `double_faced_token`.
+  39 are two tokens back to back — Guild Kit 2018 (×10), the FNM / store
+  promos (F17, F18, L16), A25 #5★, PEMN #1Z, CC2 #9, Q07 #T12, MOM's
+  Incubator // Phyrexian (×5), GS1 #T1, the 2003-frame pairs F12 #1a and
+  PHEL #1★, and Unstable's ten art-only backs and UNF's folded
+  Contortionist. 2 pair a token with a reminder card (F18 #2 City's
+  Blessing // Elemental, L17 #1 Gremlin // Energy Reserve), 80 are helper
+  cards (Punchcards, the minigames, OTC's Bounties, Day // Night, the
+  Initiative, The Ring). Each face of a pair is an ordinary token of its
+  era: its own colour, its own height (the textless arch beside the
+  text-box arch: GK1 #4 Goblin // Soldier), the Artifact dress where its own
+  words say Artifact (F17 #11 Dinosaur // Treasure) — no transform icon.
+- **The model** (`lib/cards/token-faces.ts`): the back is NOT a double-faced
+  back body (those are never a card's own template): it is another TOKEN
+  template — the very ones a one-faced token wears — in the FRONT's design,
+  the 2014–19 arch (`m15token…`) with the arch, the full-art token
+  (`m20token…`, Nyx included) with the full-art token (`tokenDesignOf`,
+  `isTokenPairBack`). Which one is derived, never picked:
+  `tokenBackBodyFor` (`lib/creator/token-back.ts`) dresses the design's
+  plain textless template by the back's own words and text through
+  `tokenFrameFor` (the Artifact word, the arch's text box, the full-art
+  height) and, on the full-art design, onto the Nyx dress where its words
+  say Enchantment in one colour (`enchantmentFrameFor`, owner Round 74's
+  rule). The creator, the import and the server read this ONE function.
+- **The ONE gate** (`resolveDfcBackFace`, `lib/cards/dfc-gate.ts`): a token
+  front with no back, or a body-less back, is kept as it came (as on main);
+  a back that names a body (or whose stored back has one) is a token
+  (`TOKEN_BACK_TYPE_REFUSED` otherwise), stored on the body derived for the
+  front as it is stored — whatever body was sent, refusing only a template
+  that is no token at all (a remix's textless guard may move a full-art
+  front onto the arch) — in its own colour (else the front's), verified for
+  that template (`code: "unverified"`, an admin's preview skips it), with no
+  cost. On an edit the STORED body and colour win (`DFC_BACK_COLOR_SET`; the
+  front's template is locked on an edit too). A public save needs the back's
+  picture (`dfcBackArtMissing`). `templateTakesBackBody`
+  (`lib/cards/dfc.ts`) is what the actions read the verified keys for.
+- **The faces.** `backBodyOf` honours a token back in the front's design, so
+  `backPreviewData` draws it on its template and colour with no `dfc` block,
+  `bakedBackOf` bakes it (`{id}.back.png` + thumb), the tile turns,
+  `?face=back`, `?faces=both`, the downloads and the deck export offer it
+  and the page is "Goblin // Soldier" (`hasBackOfItsOwn`). The crown stays
+  each face's own (`qualifiesForCrown` reads the face's words): a
+  legendary front over a plain back crowns the front alone.
+- **The creator.** A NEW token on a token frame has a **Faces** row on the
+  Card step (`TokenFacesSection`, `panels/dfc-setup-sections.tsx`): "One
+  face" (the default — every token until now) | "Two faces". With two faces
+  the Front face | Back face switch appears (`SECOND_PART_WORDS.token`): the
+  back's token types (`TokenBackTypeSection`, no Emblem choice) and colour
+  on the Card step, its name, Types, subtypes, art and artist on Identity,
+  its rules, flavour and P/T on Text — no cost. Its frame follows the
+  front's design with no picker of its own; the live preview draws what the
+  save sends. "One face" saves the token alone (the back kept for the
+  visit); leaving the token kind asks first and takes the back along
+  (restored on the way back). An edit keeps the faces the card was saved
+  with; on a frame that is no token frame "Two faces" is off with its
+  reason.
+- **The import** (`doubleFacedTokenShapeOf`, `lib/scryfall/import-mapper.ts`):
+  a `pair` brings both faces — the back mapped as a token
+  (`mapTokenBackFacePatch`) — and `finalizeImportMatch` keeps it only once
+  BOTH faces' tokens are verified, each in its colour, the back derived again
+  for the front the import lands on (`tokenPairImportLanding`,
+  `lib/scryfall/dfc-import.ts`); short of either, exactly main's patch: the
+  front alone with the toast. A `helper-front` printing (F18 #2) imports its
+  TOKEN face by itself (`dropped_face: "helper-front"`, its own toast; the
+  art import asks for that face). Everything else — L17 #1's helper back,
+  Unstable's art-only backs (a back whose type line is a bare "Token"), the
+  folded Contortionist (`TOKEN_FOLD_BACK_PINS`), the helper cards — imports
+  as before. GS1 Mowu and the 2003-frame pairs bring both faces, nearest as
+  their fronts are. `tests/unit/scryfall/dft-imports.test.ts` holds all 121
+  printings to origin/main's landing (`fixtures/dft-main-landings.json`).
+- **The transforming token.** MOM's Incubator // Phyrexian prints the ▲ well
+  on its front, the ▼ on its back and the back's 0/0 at the front's text
+  box: it lands on the plain full-art pair, **nearest** — the registry's
+  `dfc-token-transform` gap on `token/m20` (blocked by TODO 5.5 (d), the
+  transform-token body).
+- **The AI remix** follows the import: a printing's pair is two pictures
+  (2 credits, `remixCreditsOf` → `hasBackOfItsOwn`; the back's body derived
+  for the front the remix lands on), one face on a one-credit plan or short
+  of the ticks; an own pair keeps both faces through the gate
+  (`ownCardRemixFrame`). The identity call names the back as a token of its
+  own (`SECOND_HALF_RELATIONSHIP.token`).
+
 ### The borderless double-faced bodies (5.7)
 
 TODO 5.7, 2026-10-15 (`feat/dfc-borderless`). Four templates for the DARK
@@ -8369,7 +8457,9 @@ What a frame gives it:
 
 ## Tokens
 
-TODO 4.49, 3b.15, layout v34: the 2014–19 frame and the type words.
+TODO 4.49, 3b.15, layout v34: the 2014–19 frame and the type words. A
+double-sided token (two tokens back to back) is
+[Double-sided tokens](#double-sided-tokens-55-c).
 
 ### The 2014–19 arch
 

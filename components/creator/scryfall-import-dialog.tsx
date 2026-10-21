@@ -482,7 +482,9 @@ function ScryfallImportContent({
         // artwork" checkbox covers the whole card, so a DFC gets art on both
         // faces (Delver, werewolves, MDFCs) rather than a blank back.
         [importedArtUrl, importedBackArtUrl] = await Promise.all([
-          importArtFace("art"),
+          // A reminder card backed by a token imports its TOKEN face (TODO
+          // 5.5 (c), F18 #2 City's Blessing // Elemental): that face's art.
+          importArtFace(patch.dropped_face === "helper-front" ? "art-back" : "art"),
           hasBackImage ? importArtFace("art-back") : Promise.resolve(null),
         ]);
 

@@ -6,6 +6,8 @@ import { DEFAULT_DFC_ICON, SAGA_BACK_BODY, bodyFor, dfcBodyOf, dfcLookOf, isBatt
 import { dfcFamilyOf } from "@/lib/cards/dfc-gate";
 import { dfcLayoutForKind, kindFromCard, type CardKind } from "@/lib/creator/card-kinds";
 import { standardFrameFor } from "@/lib/creator/frame-picker";
+import { tokenBackBodyFor } from "@/lib/creator/token-back";
+import { isTokenPairFront } from "@/lib/cards/token-faces";
 import type { CardType, ColorIdentity, FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -204,4 +206,59 @@ export function withoutDfcLanding<P extends DfcPatch>(patch: P): P {
     frame_template: dfcFallbackTemplate(patch),
     back_face: legacyBack,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Double-sided tokens (TODO 5.5 (c), owner Round 76): two tokens back to
+// back. The mapper names the back's token template (mapTokenBackFacePatch);
+// whether the card may SAVE with both faces is the same question as a DFC's
+// — the front's token in the front's colour AND the back's token (derived
+// again here for the front the import lands on: the registry may land a
+// full-art printing on the arch while the full-art token waits for a tick)
+// in the back's colour. Short of either, the import is exactly what it was
+// before: the front alone, the back dropped with today's toast.
+// ---------------------------------------------------------------------------
+
+type TokenPairPatch = Pick<ScryfallImportPatch, "kind" | "frame_template" | "back_face" | "dropped_face"> & {
+  color_identity?: readonly ColorIdentity[];
+};
+
+/** True when the mapper put this patch on a double-sided token's pair: the
+ *  token kind with a back that names its body. */
+export function isTokenPairImportPatch(patch: Pick<ScryfallImportPatch, "kind" | "back_face">): boolean {
+  return patch.kind === "token" && Boolean(patch.back_face?.frame_style?.template);
+}
+
+/** The pair as it lands on `verifiedKeys`: the patch with its back's body
+ *  derived for the patch's front, or the front alone (`dropped_face`
+ *  "double-faced-token", no back — byte for byte the import before 5.5 (c))
+ *  when either face's token isn't verified in its colour. */
+export function tokenPairImportLanding<P extends TokenPairPatch>(patch: P, verifiedKeys: ReadonlySet<string>): P {
+  const back = patch.back_face;
+  const front = patch.frame_template;
+  if (!back || !isTokenPairImportPatch(patch)) return patch;
+  const backColour: ColorIdentity[] =
+    back.color_identity && back.color_identity.length > 0 ? [...back.color_identity] : [...(patch.color_identity ?? [])];
+  const body = isTokenPairFront(front)
+    ? tokenBackBodyFor(front, {
+        supertype: back.supertype,
+        subtypes: back.subtypes_text,
+        rulesText: back.rules_text,
+        flavorText: back.flavor_text,
+        power: back.power,
+        toughness: back.toughness,
+        colorIdentity: backColour,
+      })
+    : null;
+  if (
+    front &&
+    body &&
+    isFrameComboAvailable(front, pickFrameColorKey(patch.color_identity), verifiedKeys) &&
+    isFrameComboAvailable(body, pickFrameColorKey(backColour), verifiedKeys)
+  ) {
+    return { ...patch, back_face: { ...back, color_identity: backColour, frame_style: { template: body } } };
+  }
+  const { back_face: _back, ...rest } = patch;
+  void _back;
+  return { ...rest, dropped_face: "double-faced-token" } as P;
 }
