@@ -27,15 +27,21 @@ describe("AdminLoadError", () => {
 });
 
 describe("adminErrorToast", () => {
-  it("toasts AND logs, with the cause when there is one", () => {
-    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+  it("toasts AND logs as a WARNING, with the cause when there is one", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
     adminErrorToast("card moderation", "Couldn't hide the card.");
     expect(toast.error).toHaveBeenCalledWith("Couldn't hide the card.");
-    expect(log).toHaveBeenCalledWith("[admin] card moderation:", "Couldn't hide the card.");
+    expect(warn).toHaveBeenCalledWith("[admin] card moderation:", "Couldn't hide the card.");
     const cause = new TypeError("fetch failed");
     adminErrorToast("frame compare", "Scoring failed.", cause);
-    expect(log).toHaveBeenLastCalledWith("[admin] frame compare:", "Scoring failed.", cause);
-    log.mockRestore();
+    expect(warn).toHaveBeenLastCalledWith("[admin] frame compare:", "Scoring failed.", cause);
+    // Never console.error: `next dev` copies a client console.error into its
+    // dev overlay, which renders the refusal a second time on the page (#591:
+    // the e2e pin spec found "… is a white card …" twice).
+    expect(error).not.toHaveBeenCalled();
+    warn.mockRestore();
+    error.mockRestore();
   });
 });
 
@@ -53,6 +59,22 @@ describe("every admin control's error toast goes through it", () => {
         if (/\btoast\.error\b/.test(source)) offenders.push(`${dir}/${name}`);
       }
     }
+    expect(offenders).toEqual([]);
+  });
+
+  it("no admin or moderation client component logs a refusal with console.error (the dev overlay would show it twice)", async () => {
+    const { readdirSync, readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const offenders: string[] = [];
+    for (const dir of ["components/admin", "components/moderation"]) {
+      for (const name of readdirSync(join(process.cwd(), dir))) {
+        if (!/\.tsx?$/.test(name)) continue;
+        const source = readFileSync(join(process.cwd(), dir, name), "utf8");
+        if (/^["']use client["']/.test(source) && /\bconsole\.error\(/.test(source)) offenders.push(`${dir}/${name}`);
+      }
+    }
+    const helper = readFileSync(join(process.cwd(), "lib/admin/admin-toast.ts"), "utf8");
+    if (/\bconsole\.error\(/.test(helper)) offenders.push("lib/admin/admin-toast.ts");
     expect(offenders).toEqual([]);
   });
 });
