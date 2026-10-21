@@ -15,7 +15,7 @@ import { dfcBodyOf } from "@/lib/cards/dfc";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { hasRulesBoxText, printsPowerToughness } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
-import { archTallStandIn } from "@/lib/cards/token-height";
+import { archTallStandIn, isArchTallTokenTemplate } from "@/lib/cards/token-height";
 import {
   colorWord,
   isArtifactFrameType,
@@ -364,9 +364,18 @@ export function withoutTextlessFrames(verifiedKeys: ReadonlySet<string>): Readon
  * rule), so the credits the plan priced never move. Pure.
  */
 export function remixSavedFrame(
-  input: Parameters<typeof autoTokenTextBoxFrame>[0] & { standIn?: FrameTemplate | null },
+  input: Parameters<typeof autoTokenTextBoxFrame>[0] & {
+    standIn?: FrameTemplate | null;
+    /** The printing landed on the arch's TALL box (a pinned tall-box
+     *  printing, TODO 4.55 — ScryfallRemixMechanics.printed_height): the
+     *  remix keeps it while it saves with text, as the import lands it —
+     *  the height follows the PRINTING, not the new text (owner Round 77:
+     *  an SOI Clue's 39 characters print tall). */
+    printedHeight?: boolean;
+  },
 ): FrameTemplate | undefined {
-  const { standIn, ...card } = input;
+  const { standIn, printedHeight, ...card } = input;
+  if (printedHeight && isArchTallTokenTemplate(card.template) && hasRulesBoxText(card)) return card.template;
   const landed = autoTokenTextBoxFrame(card);
   if (!frameHidesRulesBoxText(landed, card) || standIn === undefined) return landed;
   if (standIn === null) return undefined;

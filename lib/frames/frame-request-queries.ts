@@ -13,7 +13,8 @@ import {
   type FrameRequestCause,
   type FrameRequestStatus,
 } from "@/lib/frames/frame-requests";
-import { isKnownFrameSignature, signatureDrawnOn } from "@/lib/scryfall/frame-signatures";
+import { isKnownFrameSignature, legacyTallBoxAnswered, signatureDrawnOn } from "@/lib/scryfall/frame-signatures";
+import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 
 // ---------------------------------------------------------------------------
 // /admin/frame-requests reads (TODO 1.6, migration 0123): the requests per
@@ -101,10 +102,14 @@ type RpcRow = {
 const isTemplate = (value: string | null): value is FrameTemplate =>
   value != null && Object.prototype.hasOwnProperty.call(FRAME_TEMPLATE_SET, value);
 
-/** Pure: RPC rows → panel rows. */
-export function mapFrameRequestRows(rows: readonly RpcRow[]): FrameRequestRow[] {
+/** Pure: RPC rows → panel rows. `verifiedKeys` (the verified combos) answers
+ *  the rows whose printings land on a frame of their own once it is ticked:
+ *  the arch's tall box (TODO 4.55, legacyTallBoxAnswered) — the import of
+ *  such a printing landed on the regular box, which never draws it. */
+export function mapFrameRequestRows(rows: readonly RpcRow[], verifiedKeys: ReadonlySet<string> = new Set()): FrameRequestRow[] {
   return rows.map((row) => {
-    const drawnNow = signatureDrawnOn(row.signature, row.template);
+    const drawnNow =
+      signatureDrawnOn(row.signature, row.template) || legacyTallBoxAnswered(row.signature, row.set_code, verifiedKeys);
     return {
       signature: row.signature,
       label: row.label,
@@ -171,7 +176,9 @@ export async function getFrameRequestSummary(
       console.warn("getFrameRequestSummary: rpc error", error.message);
       return empty("Couldn't read the request log.");
     }
-    const rows = sortFrameRequestRows(mapFrameRequestRows((data ?? []) as RpcRow[]));
+    // (An unreadable list answers nothing more: getVerifiedFrameKeys is [] then.)
+    const verified = new Set(await getVerifiedFrameKeys());
+    const rows = sortFrameRequestRows(mapFrameRequestRows((data ?? []) as RpcRow[], verified));
     return {
       window: range,
       rows,

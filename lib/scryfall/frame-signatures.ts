@@ -286,6 +286,35 @@ export const TALL_BOX_TOKEN_PINS: Readonly<Record<string, readonly string[]>> = 
   tust: ["18"],
 };
 
+/** What each pinned tall-box printing wears on the tall box (TODO 4.55,
+ *  measured 2026-10-18): the template — the artifact dress for the Clues —
+ *  and the colour key. Read by the request log (legacyTallBoxAnswered): a
+ *  row logged as `era/2015+tall-box` before 4.55 is answered once the tall
+ *  box is verified in every colour its set's pins print. A unit test holds
+ *  it to TALL_BOX_TOKEN_PINS key for key. */
+export const TALL_BOX_TOKEN_PIN_COMBOS: Readonly<Record<string, Readonly<Record<string, readonly [FrameTemplate, string]>>>> = {
+  takh: { "1": ["m15tokentall", "w"], "5": ["m15tokentall", "w"], "6": ["m15tokentall", "w"], "12": ["m15tokentall", "w"], "15": ["m15tokentall", "w"] },
+  thou: { "2": ["m15tokentall", "b"], "3": ["m15tokentall", "b"], "4": ["m15tokentall", "b"], "6": ["m15tokentall", "b"] },
+  tc18: { "4": ["m15tokentall", "w"], "10": ["m15tokentall", "r"], "19": ["m15tokenartifacttall", "c"] },
+  tsoi: Object.fromEntries(["11", "12", "13", "14", "15", "16"].map((n) => [n, ["m15tokenartifacttall", "c"] as const])),
+  tdom: { "7": ["m15tokentall", "b"] },
+  trix: { "1": ["m15tokentall", "r"] },
+  tust: { "18": ["m15tokenartifacttall", "c"] },
+};
+
+/** Whether a request-log row logged as `era/2015+tall-box` (before TODO 4.55
+ *  drew the tall box) is answered today: its set's pinned printings import
+ *  EXACT on the tall box — the tall box is verified in every colour (and
+ *  dress) that set's pins print. Rows are per signature and set, so the
+ *  set's combos decide (TC18: white, red and the Clue's colourless artifact
+ *  dress). Any other signature, or a set with no pin: false. */
+export function legacyTallBoxAnswered(signature: string, setCode: string | null | undefined, verifiedKeys: ReadonlySet<string>): boolean {
+  if (signature !== "era/2015+tall-box" || !setCode) return false;
+  const pins = TALL_BOX_TOKEN_PIN_COMBOS[setCode.toLowerCase()];
+  if (!pins) return false;
+  return Object.values(pins).every(([template, colour]) => verifiedKeys.has(`${template}/${colour}`));
+}
+
 /** Borderless nonbasic lands that print the SPELLS' look — the colour's
  *  title bar over a DARK type bar and text box, m15borderless's master —
  *  not the tinted type bar and box of 4.34's m15borderlessland. Scryfall

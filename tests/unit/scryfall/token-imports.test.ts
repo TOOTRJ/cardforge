@@ -404,10 +404,12 @@ describe("the 2014–19 arch's tall text box (TODO 4.49 (b), 4.55)", () => {
   });
 
   // A row the request log holds from before 4.55 ("era/2015+tall-box") is not
-  // read as answered: the rule that logged it names the regular box's family,
-  // as the Vehicle's `era/2015+vehicle` rows (signatureDrawnOn). The same
-  // printing imported now logs `token/tall-box`.
-  it("leaves the logged `era/2015+tall-box` rows open (their rule's family is the regular box's)", () => {
+  // answered by the frame it LANDED on (the regular box draws no tall box —
+  // signatureDrawnOn); the request log answers it once the tall box is
+  // verified in its set's colours (legacyTallBoxAnswered, owner Round 77;
+  // tests/unit/frames/frame-request-queries.test.ts). The same printing
+  // imported now logs `token/tall-box`.
+  it("never reads the regular box as drawing a logged `era/2015+tall-box` row", () => {
     expect(signatureDrawnOn("era/2015+tall-box", "m15tokentall")).toBe(false);
   });
 });

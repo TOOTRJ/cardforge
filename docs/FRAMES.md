@@ -8669,8 +8669,21 @@ each WebP's alpha the PNG's; provenance `source: "pipglyph"`).
   verified in the card's colour, then `exact` on it (`onceVerified` +
   `exactOnceVerified`, family `tokentall`); every other M15-era gap still
   names its item. No other printing moves. A request row logged before
-  4.55 (`era/2015+tall-box`) stays open: its rule's family is the regular
-  box's.
+  4.55 (`era/2015+tall-box`, landed on the regular box) is ANSWERED on the
+  admin page once the tall box is verified in every colour its set's pins
+  print (`legacyTallBoxAnswered`, `TALL_BOX_TOKEN_PIN_COMBOS`; owner Round
+  77) — those printings import exact then.
+- **The deck remix** of a pinned printing follows the PRINTING (owner Round
+  77): once it lands on the tall box (verified in its colour), it SAVES
+  there whatever its new text — `ScryfallRemixMechanics.printed_height`,
+  honoured by `remixSavedFrame` — never re-deciding the height from the
+  text (the SOI Clue's text would ask for the regular box). Every other
+  token's remix is unchanged: it follows its saved text. Stored tokens with
+  long text stay on the regular box (owner Round 77).
+- **Tall prints that can't land on it today** (owner Round 77, in TODO
+  4.55): TFRF #4 and TC18 #1, the Manifest reminder cards — they import as
+  `m15` creatures, a mis-landing of their own — and F18 #2's Elemental back
+  (the front, City's Blessing, is another design).
 - **References** (`frame-references.json`): TAKH #1 / TC18 #4 (w), THOU #2
   / TDOM #7 (b), TC18 #10 / TRIX #1 (r), TSOI #11 / TC18 #19 (the artifact
   dress's `c`); no other colour printed the tall box (documented nulls).

@@ -15,6 +15,12 @@ import {
 import { getFrameProfile, TOKEN_TALL_UP_PX } from "@/lib/cards/template-layout";
 import { TOKEN_TALL_RECIPE } from "../../../scripts/lib/token-tall.mjs";
 import type { FrameTemplate } from "@/types/card";
+import { scryfallRemixMechanics } from "@/lib/ai/remix-mechanics";
+import { remixSavedFrame } from "@/lib/creator/frame-resolve";
+import { scryfallCardSchema } from "@/lib/scryfall/client";
+import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
+import { TALL_BOX_TOKEN_PINS, TALL_BOX_TOKEN_PIN_COMBOS } from "@/lib/scryfall/frame-signatures";
+import tokenData from "../scryfall/fixtures/token-printings.json";
 
 // ---------------------------------------------------------------------------
 // TODO 4.55: the 2014–19 arch token's TALL text box (m15tokentall /
@@ -240,5 +246,73 @@ describe("the profile rides the masters' cut", () => {
     expect(c.artSlot!.heightPct).toBeCloseTo(rc.artSlot!.heightPct - up, 10);
     // The rules box: 5 px inside the drawn box's moved top (1326 px).
     expect((getFrameProfile("m15tokentall").rules.rect.topPct / 100) * 2100).toBeCloseTo(1326, 0);
+  });
+});
+
+// Owner Round 77: an AI deck remix of a PINNED tall-box printing follows the
+// PRINTING onto the tall box once it is verified (as the import lands it) —
+// never re-deciding the height from its new text: the SOI Clue's 39
+// characters would ask for the regular box. Every other token's remix is
+// main's (tests/unit/ai/job-payloads-pinned.test.ts).
+describe("the deck remix of a pinned tall-box printing (owner Round 77)", () => {
+  const printing = (key: keyof typeof tokenData) => mapScryfallToFormPatch(scryfallCardSchema.parse(tokenData[key]));
+  const save = (m: { frame_template: FrameTemplate; printed_height?: true; card_type?: string; supertype?: string; power?: string; toughness?: string; color_identity?: string[] }, rulesText: string, verified: Set<string>) =>
+    remixSavedFrame({
+      template: m.frame_template,
+      printedHeight: m.printed_height === true,
+      cardType: m.card_type as never,
+      supertype: m.supertype,
+      rulesText,
+      flavorText: "A new flavour line.",
+      power: m.power,
+      toughness: m.toughness,
+      colorIdentity: (m.color_identity ?? ["colorless"]) as never,
+      verifiedKeys: verified,
+    });
+
+  it("lands on the tall box once it is verified, and SAVES there with its short text", () => {
+    const verified = allOf(...ARCH, ...TALL);
+    const clue = scryfallRemixMechanics(printing("tsoi-11"), "Clue", verified);
+    expect(clue.ok).toBe(true);
+    if (!clue.ok) return;
+    expect(clue.mechanics).toMatchObject({ frame_template: "m15tokenartifacttall", printed_height: true });
+    expect(save(clue.mechanics, "{2}, Sacrifice this artifact: Draw a card.", verified)).toBe("m15tokenartifacttall");
+    const angel = scryfallRemixMechanics(printing("takh-1"), "Angel", verified);
+    if (!angel.ok) throw new Error("no landing");
+    expect(angel.mechanics).toMatchObject({ frame_template: "m15tokentall", printed_height: true });
+    expect(save(angel.mechanics, "Flying", verified)).toBe("m15tokentall");
+  });
+
+  it("before the tall box is verified: main's landing and main's save — no flag", () => {
+    const verified = allOf(...ARCH);
+    const clue = scryfallRemixMechanics(printing("tsoi-11"), "Clue", verified);
+    if (!clue.ok) throw new Error("no landing");
+    expect(clue.mechanics.frame_template).toBe("m15tokenartifacttext");
+    expect("printed_height" in clue.mechanics).toBe(false);
+    expect(save(clue.mechanics, "{2}, Sacrifice this artifact: Draw a card.", verified)).toBe("m15tokenartifacttext");
+  });
+
+  it("never flags another token: a regular-box printing still follows its text", () => {
+    const verified = allOf(...ARCH, ...TALL);
+    const knight = scryfallRemixMechanics(printing("tdom-2"), "Knight", verified);
+    if (!knight.ok) throw new Error("no landing");
+    expect(knight.mechanics.frame_template).toBe("m15tokentext");
+    expect("printed_height" in knight.mechanics).toBe(false);
+    // …a long new text takes it to the tall box by the text rule, as before.
+    expect(save(knight.mechanics, AKH, verified)).toBe("m15tokentall");
+    // A tall landing WITHOUT the printing's flag (an own card's kept frame)
+    // re-decides by the text — main's rule.
+    expect(save({ ...knight.mechanics, frame_template: "m15tokentall" }, "Vigilance", verified)).toBe("m15tokentext");
+  });
+
+  it("the request log's pin table names exactly the pins, each on the tall box's template", () => {
+    expect(Object.keys(TALL_BOX_TOKEN_PIN_COMBOS).sort()).toEqual(Object.keys(TALL_BOX_TOKEN_PINS).sort());
+    for (const [set, numbers] of Object.entries(TALL_BOX_TOKEN_PINS)) {
+      expect(Object.keys(TALL_BOX_TOKEN_PIN_COMBOS[set]).sort(), set).toEqual([...numbers].sort());
+      for (const [template] of Object.values(TALL_BOX_TOKEN_PIN_COMBOS[set])) expect(TALL, set).toContain(template);
+    }
+    // The fixtures' two: TAKH #1 white, TSOI #11 the Clue's artifact c.
+    expect(TALL_BOX_TOKEN_PIN_COMBOS.takh["1"]).toEqual(["m15tokentall", "w"]);
+    expect(TALL_BOX_TOKEN_PIN_COMBOS.tsoi["11"]).toEqual(["m15tokenartifacttall", "c"]);
   });
 });
