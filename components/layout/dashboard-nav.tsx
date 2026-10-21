@@ -2,59 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Activity,
-  Bell,
-  BookOpen,
-  CreditCard,
-  Frame,
-  GalleryVerticalEnd,
-  Inbox,
-  LayoutDashboard,
-  ListOrdered,
-  MessageSquare,
-  MessageSquarePlus,
-  RefreshCw,
-  Rss,
-  Settings,
-  ShieldCheck,
-  Sparkles,
-  Megaphone,
-  Users,
-  Star,
-  Trophy,
-  type LucideIcon,
-  FlaskConical,
-} from "lucide-react";
 import { siteConfig } from "@/lib/site-config";
+import { NAV_ICONS } from "@/components/layout/nav-icons";
 import { cn } from "@/lib/utils";
-
-// Icon per dashboard-nav destination, keyed by href so the config stays a
-// plain data array (no JSX in site-config.ts).
-const NAV_ICONS: Record<string, LucideIcon> = {
-  "/dashboard": LayoutDashboard,
-  "/dashboard/cards": GalleryVerticalEnd,
-  "/dashboard/decks": BookOpen,
-  "/feed": Rss,
-  "/dashboard/usage": Sparkles,
-  "/dashboard/billing": CreditCard,
-  "/notifications": Bell,
-  "/messages": MessageSquare,
-  "/feedback": MessageSquarePlus,
-  "/admin/users": Users,
-  "/admin/messages": MessageSquare,
-  "/settings": Settings,
-  "/admin/moderation": ShieldCheck,
-  "/admin/feedback": Inbox,
-  "/admin/featured": Star,
-  "/admin/challenges": Trophy,
-  "/admin/updates": Megaphone,
-  "/admin/scryfall": Activity,
-  "/admin/frame-compare": Frame,
-  "/admin/frame-requests": ListOrdered,
-  "/admin/renders": RefreshCw,
-  "/admin/creator-lab": FlaskConical,
-};
 
 type DashboardNavProps = {
   /** Renders the Admin rail section. Set by DashboardShell from the

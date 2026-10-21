@@ -11,6 +11,7 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { BellRing, CalendarClock, Eye, EyeOff, Mail, Megaphone, Pencil, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
+import { adminErrorToast } from "@/lib/admin/admin-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
@@ -50,7 +51,7 @@ export function SiteUpdatesAdmin({
     startTransition(async () => {
       const result = await setBannerEnabledAction(!bannerEnabled);
       if (!result.ok) {
-        toast.error(result.error);
+        adminErrorToast("site updates", result.error);
         return;
       }
       toast.success(bannerEnabled ? "Ribbon hidden on every page." : "Ribbon is showing again.");
@@ -61,7 +62,7 @@ export function SiteUpdatesAdmin({
     startTransition(async () => {
       const result = await setSiteUpdateFlagAction(u.id, flag, !u[flag]);
       if (!result.ok) {
-        toast.error(result.error);
+        adminErrorToast("site updates", result.error);
         return;
       }
       router.refresh();
@@ -78,7 +79,7 @@ export function SiteUpdatesAdmin({
     startTransition(async () => {
       const result = await notifyAllUsersAction(u.id);
       if (!result.ok) {
-        toast.error(result.error);
+        adminErrorToast("site updates", result.error);
         return;
       }
       toast.success(
@@ -101,7 +102,7 @@ export function SiteUpdatesAdmin({
     startTransition(async () => {
       const result = await emailNewsletterAction(u.id);
       if (!result.ok) {
-        toast.error(result.error);
+        adminErrorToast("site updates", result.error);
         return;
       }
       toast.success(
@@ -120,7 +121,7 @@ export function SiteUpdatesAdmin({
     startTransition(async () => {
       const result = await deleteSiteUpdateAction(u.id);
       if (!result.ok) {
-        toast.error(result.error);
+        adminErrorToast("site updates", result.error);
         return;
       }
       toast.success("Update deleted.");

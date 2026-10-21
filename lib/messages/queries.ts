@@ -251,10 +251,12 @@ async function profilesById(
 ): Promise<Map<string, ProfileLite>> {
   const unique = [...new Set(ids.filter(Boolean))];
   if (unique.length === 0) return new Map();
-  const { data } = await admin
+  const { data, error } = await admin
     .from("profiles")
     .select("id, username, display_name, avatar_url")
     .in("id", unique);
+  // The threads still list, nameless: log it rather than fail them.
+  if (error) console.error("[messages] thread people read failed:", error.message);
   // Only a drawable avatar (migration 0127, lib/media/media-urls.ts).
   return new Map(
     ((data ?? []) as ProfileLite[]).map((p) => [
@@ -266,10 +268,12 @@ async function profilesById(
 
 export type AdminThreadFilter = "all" | "unread" | "open" | "closed";
 
-/** Every thread, newest activity first. Null for non-admins. */
+/** Every thread, newest activity first. Null for non-admins; `loadError`
+ *  when the read failed (logged) — the inbox says so, never "No
+ *  conversations yet". */
 export async function listAllThreads(
   filter: AdminThreadFilter = "all",
-): Promise<AdminThreadSummary[] | null> {
+): Promise<{ threads: AdminThreadSummary[]; loadError: boolean } | null> {
   const admin = await requireAdminClient();
   if (!admin) return null;
   let query = admin
@@ -279,10 +283,11 @@ export async function listAllThreads(
     .limit(200);
   if (filter === "unread") query = query.gt("admin_unread_count", 0);
   if (filter === "open" || filter === "closed") query = query.eq("status", filter);
-  const { data } = await query;
+  const { data, error } = await query;
+  if (error) console.error("[admin/messages] thread list read failed:", error.message);
   const rows = (data ?? []) as Array<ThreadRow & { user_id: string }>;
   const people = await profilesById(admin, rows.map((row) => row.user_id));
-  return rows.map((row) => {
+  const threads = rows.map((row) => {
     const p = people.get(row.user_id);
     return {
       ...toSummary(row, "admin"),
@@ -295,22 +300,27 @@ export async function listAllThreads(
       },
     };
   });
+  return { threads, loadError: Boolean(error) };
 }
 
-/** Threads for one user (the admin users page's detail view). */
-export async function listThreadsForUser(userId: string): Promise<AdminThreadSummary[] | null> {
+/** Threads for one user (the admin users page's detail view). Null for
+ *  non-admins; `loadError` when the read failed (logged). */
+export async function listThreadsForUser(
+  userId: string,
+): Promise<{ threads: AdminThreadSummary[]; loadError: boolean } | null> {
   const admin = await requireAdminClient();
   if (!admin) return null;
-  const { data } = await admin
+  const { data, error } = await admin
     .from("message_threads")
     .select(`${THREAD_COLUMNS}, user_id`)
     .eq("user_id", userId)
     .order("last_message_at", { ascending: false })
     .limit(50);
+  if (error) console.error("[admin/users] user threads read failed:", error.message);
   const rows = (data ?? []) as Array<ThreadRow & { user_id: string }>;
   const people = await profilesById(admin, [userId]);
   const p = people.get(userId);
-  return rows.map((row) => ({
+  const threads = rows.map((row) => ({
     ...toSummary(row, "admin"),
     ...adminReceipt(row),
     user: {
@@ -320,6 +330,7 @@ export async function listThreadsForUser(userId: string): Promise<AdminThreadSum
       avatarUrl: p?.avatar_url ?? null,
     },
   }));
+  return { threads, loadError: Boolean(error) };
 }
 
 export async function getThreadForAdmin(threadId: string): Promise<AdminThreadDetail | null> {
@@ -382,16 +393,20 @@ export const getAdminUnreadThreadCount = cache(async (): Promise<number> => {
 /** feedback id → thread id for the admin feedback inbox's Reply buttons. */
 export async function threadIdsForFeedback(
   feedbackIds: string[],
-): Promise<Map<string, string>> {
+): Promise<{ threads: Map<string, string>; loadError: boolean }> {
   const admin = await requireAdminClient();
-  if (!admin || feedbackIds.length === 0) return new Map();
-  const { data } = await admin
+  if (!admin || feedbackIds.length === 0) return { threads: new Map(), loadError: false };
+  const { data, error } = await admin
     .from("message_threads")
     .select("id, feedback_id")
     .in("feedback_id", feedbackIds);
-  return new Map(
-    (data ?? [])
-      .filter((row) => row.feedback_id)
-      .map((row) => [row.feedback_id as string, row.id]),
-  );
+  if (error) console.error("[admin/feedback] thread links read failed:", error.message);
+  return {
+    threads: new Map(
+      (data ?? [])
+        .filter((row) => row.feedback_id)
+        .map((row) => [row.feedback_id as string, row.id]),
+    ),
+    loadError: Boolean(error),
+  };
 }

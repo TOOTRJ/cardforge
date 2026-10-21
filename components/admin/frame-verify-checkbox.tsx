@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { adminErrorToast } from "@/lib/admin/admin-toast";
 import { setFrameReviewAction } from "@/lib/cards/frame-review-actions";
 import { cn } from "@/lib/utils";
 
@@ -53,7 +54,7 @@ export function FrameVerifyCheckbox({
       });
       if (!result.ok) {
         setVerified(!next);
-        toast.error(result.error);
+        adminErrorToast("frame verify", result.error);
         return;
       }
       toast.success(

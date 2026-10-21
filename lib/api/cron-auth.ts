@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { isAdminConfigured } from "@/lib/supabase/admin";
 
@@ -6,13 +7,20 @@ import { isAdminConfigured } from "@/lib/supabase/admin";
 // Vercel sends `Authorization: Bearer <CRON_SECRET>` on scheduled
 // invocations; scripts/rebake-renders.mjs and a manual curl pass the same
 // header. The check fails CLOSED — no secret configured means nobody is
-// authorized — and the routes need the service role to do their work.
+// authorized — and the routes need the service role to do their work. The
+// bearer is compared in constant time (a plain `===` returns at the first
+// differing byte); the length check before it only reveals the length.
 // ---------------------------------------------------------------------------
 
 export function isCronAuthorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
-  return request.headers.get("authorization") === `Bearer ${secret}`;
+  const header = request.headers.get("authorization");
+  if (header === null) return false;
+  const given = Buffer.from(header, "utf8");
+  const expected = Buffer.from(`Bearer ${secret}`, "utf8");
+  if (given.length !== expected.length) return false;
+  return timingSafeEqual(given, expected);
 }
 
 /**

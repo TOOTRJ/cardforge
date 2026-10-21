@@ -5,6 +5,7 @@ import { Inbox } from "lucide-react";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ThreadList } from "@/components/messages/thread-list";
+import { AdminLoadError } from "@/components/admin/admin-load-error";
 import { listAllThreads, type AdminThreadFilter } from "@/lib/messages/queries";
 import { cn } from "@/lib/utils";
 
@@ -31,8 +32,9 @@ export default async function AdminMessagesIndexPage({
   const active: AdminThreadFilter = (FILTERS.some((f) => f.key === filter)
     ? filter
     : "all") as AdminThreadFilter;
-  const threads = await listAllThreads(active);
-  if (threads === null) notFound();
+  const inbox = await listAllThreads(active);
+  if (inbox === null) notFound();
+  const { threads, loadError } = inbox;
 
   return (
     <div className="flex flex-col gap-4">
@@ -53,7 +55,8 @@ export default async function AdminMessagesIndexPage({
           </Link>
         ))}
       </div>
-      {threads.length === 0 ? (
+      {loadError ? <AdminLoadError what="the conversations" /> : null}
+      {threads.length === 0 && loadError ? null : threads.length === 0 ? (
         <EmptyState
           icon={Inbox}
           title={active === "unread" ? "Nothing awaiting a reply" : "No conversations yet"}

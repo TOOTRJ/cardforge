@@ -50,6 +50,21 @@ export type SweepStrike = { n: number; error: string; at: string };
 
 export type PoisonEntry = { id: string; error: string; failures: number; at: string };
 
+/** Every stop a summary may record — parseRunSummary refuses others. */
+const RUN_STOPS = [
+  "done",
+  "budget",
+  "yield",
+  "paused",
+  "lease-lost",
+  "breaker",
+  "hung",
+  "overrun",
+  "crashed",
+  "error",
+  "refused",
+] as const satisfies readonly AutoRebakeStop[];
+
 export type AutoRebakeStop =
   | "done" // a batch found nothing left to do
   | "budget" // the time budget ran out (the next invocation continues)
@@ -141,6 +156,51 @@ const str = (value: unknown): string | null => (typeof value === "string" && val
 const num = (value: unknown): number | null =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
 
+const idList = (value: unknown): string[] | undefined =>
+  Array.isArray(value) ? value.filter((v): v is string => typeof v === "string" && v.length > 0) : undefined;
+
+/** `last_run` jsonb → a summary, or null when it isn't one. Every field is
+ *  checked: the panel prints them and the cron reads `stop` / `finishedAt` /
+ *  the streaks, so a hand-edited value (a string where a number belongs, a
+ *  `failures` that isn't a list) must neither crash the page nor the cron.
+ *  A known `stop` is required; a missing date reads "" (the panel prints
+ *  it as-is, the cron as "no summary after the lease"), counts default 0. */
+export function parseRunSummary(value: unknown): AutoRebakeRunSummary | null {
+  if (!isRecord(value)) return null;
+  const stop = (RUN_STOPS as readonly unknown[]).includes(value.stop) ? (value.stop as AutoRebakeStop) : null;
+  if (!stop) return null;
+  const summary: AutoRebakeRunSummary = {
+    startedAt: str(value.startedAt) ?? "",
+    finishedAt: str(value.finishedAt) ?? "",
+    durationMs: num(value.durationMs) ?? 0,
+    layoutVersion: num(value.layoutVersion) ?? 0,
+    batches: num(value.batches) ?? 0,
+    rebaked: num(value.rebaked) ?? 0,
+    stamped: num(value.stamped) ?? 0,
+    failed: num(value.failed) ?? 0,
+    superseded: num(value.superseded) ?? 0,
+    remaining: num(value.remaining),
+    stop,
+  };
+  if ("error" in value) summary.error = str(value.error);
+  if (Array.isArray(value.failures)) {
+    summary.failures = value.failures.flatMap((f) => {
+      if (!isRecord(f)) return [];
+      const id = str(f.id);
+      return id ? [{ id, error: str(f.error) ?? "Unknown error" }] : [];
+    });
+  }
+  const poisoned = idList(value.poisoned);
+  if (poisoned) summary.poisoned = poisoned;
+  const suspects = idList(value.suspects);
+  if (suspects) summary.suspects = suspects;
+  const crashes = num(value.crashes);
+  if (crashes != null) summary.crashes = crashes;
+  const errorStreak = num(value.errorStreak);
+  if (errorStreak != null) summary.errorStreak = errorStreak;
+  return summary;
+}
+
 /** A render_sweep_state row (or null) → state. Tolerates any jsonb shape: a
  *  hand-edited or older row must never crash the cron or the admin page. */
 export function parseSweepState(row: Record<string, unknown> | null | undefined): AutoRebakeState {
@@ -198,7 +258,7 @@ export function parseSweepState(row: Record<string, unknown> | null | undefined)
     strikes,
     poison,
     inFlight,
-    lastRun: isRecord(row.last_run) ? (row.last_run as unknown as AutoRebakeRunSummary) : null,
+    lastRun: parseRunSummary(row.last_run),
     idle,
     lastCheckedAt: str(row.last_checked_at),
     revalidatePending: row.revalidate_pending === true,

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Footprints, Gauge, Loader2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
+import { adminErrorToast } from "@/lib/admin/admin-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -229,7 +230,7 @@ export function FrameTemplateSignOff({
     try {
       const result = await scoreFrameColorAction({ template, colorKey });
       if (!result.ok) {
-        toast.error(`${template}/${colorKey}: ${result.error}`);
+        adminErrorToast("frame sign-off", `${template}/${colorKey}: ${result.error}`);
         return false;
       }
       const match = frameMatchPct(result.overall);
@@ -241,8 +242,8 @@ export function FrameTemplateSignOff({
         }`,
       );
       return true;
-    } catch {
-      toast.error(`${template}/${colorKey}: the score request failed — try again.`);
+    } catch (err) {
+      adminErrorToast("frame sign-off", `${template}/${colorKey}: the score request failed — try again.`, err);
       return false;
     } finally {
       setScoring(null);
@@ -266,7 +267,7 @@ export function FrameTemplateSignOff({
       const result = await signOffFrameTemplateAction({ template, confirmed: true });
       setLowConfirmOpen(false);
       if (!result.ok) {
-        toast.error(result.error);
+        adminErrorToast("frame sign-off", result.error);
         return;
       }
       toast.success(

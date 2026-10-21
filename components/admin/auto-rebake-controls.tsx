@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Pause, Play, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
+import { adminErrorToast } from "@/lib/admin/admin-toast";
 import { Button } from "@/components/ui/button";
 import {
   pauseAutoRebakeAction,
@@ -24,7 +25,7 @@ function useAction() {
     startTransition(async () => {
       const result = await action();
       if (!result.ok) {
-        toast.error(result.error);
+        adminErrorToast("auto re-bake", result.error);
         return;
       }
       toast.success(success);

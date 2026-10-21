@@ -23,6 +23,9 @@ export type PoisonCard = PoisonEntry & {
   title: string | null;
   href: string | null;
   visibility: string | null;
+  /** The card lookup FAILED (a read error, not a missing row): title, href
+   *  and visibility are unknown — never "Card no longer exists". */
+  lookupFailed?: boolean;
 };
 
 export type AutoRebakeOverview = {
@@ -137,21 +140,46 @@ async function describePoison(
   poison: readonly PoisonEntry[],
 ): Promise<PoisonCard[]> {
   if (poison.length === 0) return [];
-  // `in (…)` lists travel in the URL: look them up 100 at a time.
+  // `in (…)` lists travel in the URL: look them up 100 at a time. A chunk
+  // whose read FAILS marks its ids lookupFailed (the panel says so) — an
+  // absent row is a deleted card, an error is not.
   const cards: Array<Record<string, unknown>> = [];
+  const failedIds = new Set<string>();
   for (const part of chunk(poison.map((p) => p.id).filter(isUuid), 100)) {
-    const { data } = await admin.from("cards").select("id, title, slug, visibility, owner_id").in("id", part);
+    const { data, error } = await admin.from("cards").select("id, title, slug, visibility, owner_id").in("id", part);
+    if (error) {
+      console.error("[auto-rebake] poison card lookup failed:", error.message);
+      for (const id of part) failedIds.add(id);
+      continue;
+    }
     cards.push(...((data ?? []) as Array<Record<string, unknown>>));
   }
   const usernameById = new Map<string, string | null>();
+  const failedOwners = new Set<string>();
   for (const part of chunk([...new Set(cards.map((c) => c.owner_id as string))], 100)) {
-    const { data: owners } = await admin.from("profiles").select("id, username").in("id", part);
+    const { data: owners, error } = await admin.from("profiles").select("id, username").in("id", part);
+    if (error) {
+      console.error("[auto-rebake] poison card owner lookup failed:", error.message);
+      for (const id of part) failedOwners.add(id);
+      continue;
+    }
     for (const o of owners ?? []) usernameById.set(o.id as string, (o.username as string | null) ?? null);
   }
   const cardById = new Map(cards.map((c) => [c.id as string, c]));
   return poison.map((entry) => {
+    if (failedIds.has(entry.id)) return { ...entry, title: null, href: null, visibility: null, lookupFailed: true };
     const card = cardById.get(entry.id);
     if (!card) return { ...entry, title: null, href: null, visibility: null };
+    if (failedOwners.has(card.owner_id as string)) {
+      // The card is there; only its link (which needs the handle) is unknown.
+      return {
+        ...entry,
+        title: (card.title as string | null) ?? null,
+        visibility: (card.visibility as string | null) ?? null,
+        href: null,
+        lookupFailed: true,
+      };
+    }
     const visibility = (card.visibility as string | null) ?? null;
     return {
       ...entry,

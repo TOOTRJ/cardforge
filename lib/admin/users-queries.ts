@@ -44,6 +44,12 @@ export type AdminUserPage = {
   total: number;
   page: number;
   pageSize: number;
+  /** The directory read failed (logged): `rows` / `total` are not the truth
+   *  and the page says so, never "No users match". */
+  loadError: boolean;
+  /** A page past the last one: no rows, but `total` is the real count (the
+   *  RPC's total rides on its rows, so an empty page reads 0 by itself). */
+  pastEnd: boolean;
 };
 
 export async function requireAdminClient(): Promise<ReturnType<typeof createAdminClient> | null> {
@@ -60,18 +66,44 @@ const n = (value: number | string | null | undefined): number =>
 export async function listAdminUsers(params: UserListParams): Promise<AdminUserPage | null> {
   const admin = await requireAdminClient();
   if (!admin) return null;
-  const { data, error } = await admin.rpc("admin_list_users", {
-    p_q: params.q || null,
-    p_tier: params.tier || null,
-    p_status: params.status || null,
-    p_flag: params.flag || null,
-    p_sort: params.sort,
-    p_limit: USER_LIST_PAGE_SIZE,
-    p_offset: (params.page - 1) * USER_LIST_PAGE_SIZE,
+  const read = (limit: number, offset: number) =>
+    admin.rpc("admin_list_users", {
+      p_q: params.q || null,
+      p_tier: params.tier || null,
+      p_status: params.status || null,
+      p_flag: params.flag || null,
+      p_sort: params.sort,
+      p_limit: limit,
+      p_offset: offset,
+    });
+  const failed = (): AdminUserPage => ({
+    rows: [],
+    total: 0,
+    page: params.page,
+    pageSize: USER_LIST_PAGE_SIZE,
+    loadError: true,
+    pastEnd: false,
   });
+  const { data, error } = await read(USER_LIST_PAGE_SIZE, (params.page - 1) * USER_LIST_PAGE_SIZE);
   if (error) {
-    console.warn("listAdminUsers: rpc error", error.message);
-    return { rows: [], total: 0, page: params.page, pageSize: USER_LIST_PAGE_SIZE };
+    console.error("[admin/users] admin_list_users failed:", error.message);
+    return failed();
+  }
+  if ((data ?? []).length === 0 && params.page > 1) {
+    // Past the last page: ask for the first row alone, for the real total.
+    const first = await read(1, 0);
+    if (first.error) {
+      console.error("[admin/users] admin_list_users (total) failed:", first.error.message);
+      return failed();
+    }
+    return {
+      rows: [],
+      total: n(first.data?.[0]?.total_count),
+      page: params.page,
+      pageSize: USER_LIST_PAGE_SIZE,
+      loadError: false,
+      pastEnd: true,
+    };
   }
   const rows = (data ?? []).map((row) => ({
     id: row.id,
@@ -101,6 +133,8 @@ export async function listAdminUsers(params: UserListParams): Promise<AdminUserP
     total: n(data?.[0]?.total_count),
     page: params.page,
     pageSize: USER_LIST_PAGE_SIZE,
+    loadError: false,
+    pastEnd: false,
   };
 }
 

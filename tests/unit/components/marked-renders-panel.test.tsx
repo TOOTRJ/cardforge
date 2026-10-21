@@ -45,8 +45,10 @@ describe("startMarkedRebake", () => {
       .mockResolvedValueOnce({ ok: true, rebaked: 3, failed: [{ id: A, error: "art" }], superseded: 0, remaining: 4 })
       .mockResolvedValueOnce({ ok: true, rebaked: 4, failed: [], superseded: 0, remaining: 0 });
     const final = await startMarkedRebake();
-    expect(action).toHaveBeenNthCalledWith(1, { skipIds: [] });
-    expect(action).toHaveBeenNthCalledWith(2, { skipIds: [A] });
+    expect(action).toHaveBeenNthCalledWith(1, { skipIds: [], rebakedSoFar: 0 });
+    // The run's count so far travels too: the route refreshes the tile pages
+    // at the end when ANY call re-baked.
+    expect(action).toHaveBeenNthCalledWith(2, { skipIds: [A], rebakedSoFar: 3 });
     expect(final).toMatchObject({ status: "done", rebaked: 7, remaining: 0 });
     expect(final.failed).toHaveLength(1);
   });

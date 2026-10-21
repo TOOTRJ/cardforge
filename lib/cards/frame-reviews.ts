@@ -29,14 +29,20 @@ export type FrameReview = {
 // adds a column, an explicit list would 400 and the picker would show NO
 // frames. Missing columns simply read as undefined → null.
 
-/** Every review row, keyed for the admin checklist. Empty map on any error —
- *  absent rows read as "not yet reviewed". */
-export async function getFrameReviews(): Promise<Map<string, FrameReview>> {
+/** Every review row, keyed for the admin checklist, AND whether the read
+ *  failed. An admin surface that acts on the rows (the checklist, the score
+ *  batch's pinned references) reads this and says so / refuses on an error,
+ *  rather than treating every combo as "not yet reviewed". */
+export async function readFrameReviews(): Promise<{ reviews: Map<string, FrameReview>; error: string | null }> {
   const reviews = new Map<string, FrameReview>();
-  if (!isSupabaseConfigured()) return reviews;
+  if (!isSupabaseConfigured()) return { reviews, error: null };
   try {
     const supabase = await createClient();
-    const { data } = await supabase.from("frame_reviews").select("*");
+    const { data, error } = await supabase.from("frame_reviews").select("*");
+    if (error) {
+      console.error("[frame-reviews] read failed:", error.message);
+      return { reviews, error: error.message };
+    }
     for (const row of data ?? []) {
       reviews.set(`${row.template}/${row.color_key}`, {
         template: row.template,
@@ -52,10 +58,19 @@ export async function getFrameReviews(): Promise<Map<string, FrameReview>> {
         scoreJson: row.score_json ?? null,
       });
     }
-  } catch {
-    // Fall through — empty map.
+  } catch (err) {
+    console.error("[frame-reviews] read failed:", err);
+    return { reviews: new Map(), error: err instanceof Error ? err.message : "The frame review read failed." };
   }
-  return reviews;
+  return { reviews, error: null };
+}
+
+/** Every review row, keyed for the admin checklist. Empty map on any error
+ *  (logged) — absent rows read as "not yet reviewed". For readers where
+ *  that is the safe answer (the creator's gate offers nothing unverified);
+ *  admin surfaces that act on the rows use readFrameReviews(). */
+export async function getFrameReviews(): Promise<Map<string, FrameReview>> {
+  return (await readFrameReviews()).reviews;
 }
 
 /** Just the verified combo keys ("template/color") — what the frame picker
