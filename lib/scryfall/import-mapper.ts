@@ -192,6 +192,11 @@ export type ScryfallImportPatch = {
    *  `supertype` + `card_type` (TODO 3b.16, printedTypesOfPrinting). The
    *  creator pours it into the Types field. */
   printed_types?: string;
+  /** The printing's nickname (Scryfall `flavor_name`, the front face's on a
+   *  multi-face card — TODO 6.3): what it prints in the title bar over the
+   *  card's own name. Named only where the printing has one; the creator
+   *  clears a nickname typed before an import that names none. */
+  nickname?: string;
   subtypes_text?: string;
   rarity?: Rarity;
   /** The card's COLOUR as the creator models it — the one frame dress the
@@ -468,6 +473,13 @@ export function legendaryTokenSupertype(
  *  `undefined`, when the printing reads as the built line. */
 function printedTypesKey(printed: string | undefined): { printed_types?: string } {
   return printed === undefined ? {} : { printed_types: printed };
+}
+
+/** The patch's nickname key (TODO 6.3): only a printing with one names it,
+ *  so every other import's patch is, key for key, what it was. */
+function nicknameKey(nickname: string | null | undefined): { nickname?: string } {
+  const text = nickname?.trim();
+  return text ? { nickname: text } : {};
 }
 
 /** The front face's type line: the first face of a multi-face card, else
@@ -1914,6 +1926,9 @@ export function mapScryfallToFormPatch(
     title: emblem
       ? emblemTitleFromName((isMultiFace && front?.name) || card.name)
       : (isMultiFace && front?.name) || card.name,
+    // The printing's nickname (TODO 6.3): the front face's own, else the
+    // card's (an emblem prints its walker's name, never one).
+    ...nicknameKey(emblem ? null : pick(front?.flavor_name, card.flavor_name)),
     cost: emblem ? undefined : pick(front?.mana_cost, card.mana_cost),
     kind,
     frame_template: frameTemplateFromScryfall(card, frameMatch),

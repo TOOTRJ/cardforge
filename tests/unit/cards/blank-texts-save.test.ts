@@ -118,7 +118,7 @@ beforeEach(() => {
 describe("withBlankTexts", () => {
   it("the list is the nullable texts whose empty value is NULL", () => {
     expect([...BLANK_IS_NULL_TEXTS].sort()).toEqual(
-      ["artist_credit", "defense", "flavor_text", "loyalty", "power", "rules_text", "supertype", "toughness"].sort(),
+      ["artist_credit", "defense", "flavor_text", "loyalty", "nickname", "power", "rules_text", "supertype", "toughness"].sort(),
     );
   });
 
@@ -142,13 +142,20 @@ describe("the schemas let a blank through — the actions are what normalise it"
   });
 });
 
+/** A column a new card names only when it holds a text (the nickname, TODO
+ *  6.3, migration 0141 — as printed_types: an insert across the migration's
+ *  deploy never names a column the database may not have yet). Blank, it is
+ *  left out of the insert: NULL by the column's default. */
+const LEFT_OUT_WHEN_BLANK: readonly string[] = ["nickname"];
+
 describe("createCardAction — a blank text is stored as NULL", () => {
   it.each(BLANK_IS_NULL_TEXTS)("%s", async (key) => {
     for (const blank of ["", "   ", "\n\t "]) {
       const stub = db();
       const result = await createCardAction({ ...NEW_CARD, [key]: blank });
       expect(result).toMatchObject({ ok: true });
-      expect(written(stub, "insert")).toMatchObject({ [key]: null });
+      if (LEFT_OUT_WHEN_BLANK.includes(key)) expect(written(stub, "insert")).not.toHaveProperty(key);
+      else expect(written(stub, "insert")).toMatchObject({ [key]: null });
     }
   });
 
@@ -161,7 +168,11 @@ describe("createCardAction — a blank text is stored as NULL", () => {
     });
     const row = written(stub, "insert")!;
     expect(row.rules_text).toBe("Haste");
-    for (const key of BLANK_IS_NULL_TEXTS) if (key !== "rules_text") expect(row[key]).toBeNull();
+    for (const key of BLANK_IS_NULL_TEXTS) {
+      if (key === "rules_text") continue;
+      if (LEFT_OUT_WHEN_BLANK.includes(key)) expect(row).not.toHaveProperty(key);
+      else expect(row[key]).toBeNull();
+    }
   });
 
   it("printed_types \"\" is NOT blank-is-NULL: an emptied Types field prints the subtypes alone", async () => {

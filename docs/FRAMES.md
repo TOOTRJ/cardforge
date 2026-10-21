@@ -5589,6 +5589,51 @@ and the one switch a NEW card starts OFF on.
   px), `rules-align-control.test.tsx`, the centred half of
   `rules-no-clip`, and the visual gate's `@centred` cases.
 
+### The nickname plate (6.3)
+
+TODO 6.3 (owner 2026-10-21). A card's NICKNAME (`cards.nickname`,
+migration 0141; Scryfall's `flavor_name`) prints in the title bar, and the
+card's own name in small italic type on a dark plate hanging from the top
+of the art window — the look of every black-bordered flavour-name printing
+(MSC #276–290, SDS #3 / #15 / #24 / #27, TMC #48–56, SLD #478–483 / #697 /
+#710 / #726 / #1186–1188). An addition: a card without a nickname draws
+byte for byte as before; no layout bump, no sweep, no badge.
+
+**Measured on 14 Scryfall PNGs (2026-10-21), HD px, symmetric about
+x = 750.** The plate's rim is the frame's own pinline colour, 10 px, with a
+black keyline either side; it leaves the window's top pinline (rows
+223–231) at x ≈ 148, curves down to y 297.5 — its centre line 167 @ 240,
+184.5 @ 250, 193.5 @ 260, 200 @ 270, 205 @ 280, 209.5 @ 290 — and runs
+straight to the mirror side. One cubic draws the curve within 0.5 px of
+every point; the bake's own rim reads within 1 px of MSC #282's on every
+row. Inside, a dark wash the art shows through (the art under the plate at
+0.43–0.65 of its level on eight prints): rgb(16,16,22) at α 0.6. A
+two-colour card's rim is its pinline's two colours (MSC #282: green |
+white) — the masters' 40 → 60 %W ramp. The name: MPlantin italic, white,
+centred, baseline 274, 54 px (ink-to-advance 50.4–53.6 on the prints, 52.6
+on the bake); a long name steps down in even px to 40, then ends in one
+"…".
+
+**What draws it.** `lib/cards/nickname.ts` alone: `resolveNickname`
+(declared frame + a non-blank nickname + the FRONT face), the plate an
+inline SVG `data:` URL (the station pieces' pattern: no bucket object, the
+same string in the preview, the bake and both finish masks), the name line
+a centred band. The rim colours are the masters' (rows 224–229 at x ≈ 300
+and 1200; one palette across every declared template, a land frame's
+colourless master the land grey) — `tests/unit/cards/nickname.test.ts`
+reads them back off the masters when the frame cache is present.
+
+**Where.** `FrameProfile.nickname` on the PROFILES entries whose art window
+opens at 238 px under the 223–231 px pinline: m15, m15artifact, m15land,
+m15snow, m15snowland, m15nyx, m15vehicle, m15ub, m15ubartifact, m15ubland.
+Not devoid (no pinline there), the station frames (one picture under the
+frame), the tokens (another title pill), the walkers, the two-part and
+double-faced bodies, the old frames (no print) or the borderless family —
+IKO #275's and the Secret Lair borderless nickname prints draw another
+plate (a box under a floating title bar): those imports keep their
+`nickname` gap. On any other frame the creator's field says the frame
+prints no nickname; the card shows its name.
+
 ### The white border (4.30)
 
 TODO 4.30, era step E8 (owner 2026-10-07: "the white border: YES, as the

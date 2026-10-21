@@ -242,6 +242,8 @@ export function typedForMatching(text: string): string {
  *  conversion never touches (costs, stats, the artist, tags, the footer
  *  mark, the collector fields). */
 export function typographyFieldOf(name: string): TypographyField | null {
+  // The nickname is a printed name too (TODO 6.3) — the front's only.
+  if (name === "nickname") return "name";
   const key = name.replace(/^back_face\./, "");
   if (key === "title") return "name";
   if (key === "supertype" || key === "subtypes_text" || key === "printed_types") return "type";
@@ -253,6 +255,7 @@ export function typographyFieldOf(name: string): TypographyField | null {
 
 type TextPatch = {
   title?: string;
+  nickname?: string;
   supertype?: string;
   printed_types?: string | null;
   subtypes_text?: string;
@@ -263,6 +266,7 @@ type TextPatch = {
 function textPatch<T extends TextPatch>(patch: T): T {
   const out = { ...patch };
   if (typeof out.title === "string") out.title = printTypography(out.title, "name");
+  if (typeof out.nickname === "string") out.nickname = printTypography(out.nickname, "name");
   if (typeof out.supertype === "string") out.supertype = printTypography(out.supertype, "type");
   if (typeof out.printed_types === "string") out.printed_types = printTypography(out.printed_types, "type");
   if (typeof out.subtypes_text === "string") out.subtypes_text = printTypography(out.subtypes_text, "type");
@@ -317,6 +321,8 @@ type FaceContentText = {
 
 type FaceText = {
   title?: string;
+  /** The front's nickname (TODO 6.3); null = an edit that emptied it. */
+  nickname?: string | null;
   supertype?: string;
   /** The Types field as typed (TODO 3b.16); null = the built line. */
   printed_types?: string | null;
@@ -337,6 +343,7 @@ export type TypographyPayload = FaceText & {
 /** The same text of a stored row. */
 export type StoredTypographyText = {
   title?: string | null;
+  nickname?: string | null;
   supertype?: string | null;
   printed_types?: string | null;
   card_type?: string | null;
@@ -381,6 +388,9 @@ function faceText<T extends FaceText>(face: T, stored: StoredTypographyText | nu
   const out = { ...face };
   if (typeof out.title === "string" && changed(out.title, stored?.title)) {
     out.title = printTypography(out.title, "name");
+  }
+  if (typeof out.nickname === "string" && changed(out.nickname, stored?.nickname)) {
+    out.nickname = printTypography(out.nickname, "name");
   }
   if (typeof out.supertype === "string" && changed(out.supertype, stored?.supertype)) {
     out.supertype = printTypography(out.supertype, "type");

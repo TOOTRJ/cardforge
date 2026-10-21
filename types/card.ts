@@ -128,6 +128,7 @@ export type Card = Omit<
   | "watermark"
   | "frame_preview"
   | "printed_types"
+  | "nickname"
 > & {
   visibility: Visibility;
   rarity: Rarity | null;
@@ -148,6 +149,11 @@ export type Card = Omit<
    *  (lib/cards/card-display.ts typeLineWords). Optional: a row read by a
    *  select that does not name the column has no such key. */
   printed_types?: string | null;
+  /** The card's nickname / flavour name (TODO 6.3, migration 0141): printed
+   *  in the title bar, `title` on a plate under it, on a frame that declares
+   *  the plate (lib/cards/nickname.ts). NULL / absent = none. Optional: a
+   *  row read by a select that does not name the column has no such key. */
+  nickname?: string | null;
 };
 
 export type CardInsert = Omit<

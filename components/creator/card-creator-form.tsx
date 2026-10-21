@@ -237,6 +237,7 @@ import { describeSecondPartLoss, type SecondPartLoss } from "@/lib/creator/secon
 import { useSecondPartFields } from "@/components/creator/use-second-part-fields";
 import { revealAndFocusField } from "@/lib/creator/focus-field";
 import { resolveFrameProfile, type FrameProfileOverridesMap } from "@/lib/cards/profile-override";
+import { frameDrawsNickname } from "@/lib/cards/nickname";
 import {
   basicLandSeedForColorKey,
   importedCardTypeForKind,
@@ -1006,6 +1007,17 @@ export function CardCreatorForm({
   const [savedUnderKey, setSavedUnderKey] = useState<string | null>(null);
   if (footerBaseline.key !== resetKey) {
     setFooterBaseline({ key: resetKey, text: defaults.footer_text.trim() });
+  }
+  // The nickname the ROW holds as far as this form knows (TODO 6.3) — the
+  // footer's rule: an edit sends the field only when it differs from it, so
+  // a card without one (every card before 0141) never carries the key, and
+  // it follows a save of this session, never prop churn.
+  const [nicknameBaseline, setNicknameBaseline] = useState(() => ({
+    key: resetKey,
+    text: (defaults.nickname ?? "").trim(),
+  }));
+  if (nicknameBaseline.key !== resetKey) {
+    setNicknameBaseline({ key: resetKey, text: (defaults.nickname ?? "").trim() });
   }
   useEffect(() => {
     if (lastReset.current.key === resetKey) return;
@@ -2684,6 +2696,9 @@ export function CardCreatorForm({
     // a Types text only where the printing reads differently from the line
     // the card builds; any other import clears a text typed before it.
     setValue("printed_types", patch.printed_types ?? null, { shouldDirty: true });
+    // …and its nickname (TODO 6.3): the printing's flavour name, or none —
+    // a nickname typed before an import of another card is cleared.
+    setValue("nickname", patch.nickname ?? "", { shouldDirty: true });
     if (importedKind) {
       setValue("supertype", patch.supertype ?? "", { shouldDirty: true });
       setValue("subtypes_text", patch.subtypes_text ?? "", {
@@ -3533,8 +3548,21 @@ export function CardCreatorForm({
     // No `slug`: a NEW card's slug is derived server-side from the title it
     // is saved with (so a remix lives at ITS name, not the original's), and
     // an edit never rewrites the slug (links stay stable).
+    // The nickname (TODO 6.3): a new card (a remix too) sends one only when
+    // it has one; an edit only when the field differs from what the row
+    // holds (nicknameBaseline) — null when emptied, which clears it. A card
+    // without one never carries the key.
+    const nicknameOut = (values.nickname ?? "").trim();
+    const nicknamePayload: { nickname?: string | null } = isEdit
+      ? nicknameOut === nicknameBaseline.text
+        ? {}
+        : { nickname: nicknameOut || null }
+      : nicknameOut
+        ? { nickname: nicknameOut }
+        : {};
     const payload = {
       title: values.title.trim(),
+      ...nicknamePayload,
       game_system_id: values.game_system_id,
       cost: values.cost.trim() || emptied,
       color_identity: values.color_identity,
@@ -3805,6 +3833,8 @@ export function CardCreatorForm({
       toast.success("Changes saved.");
       // The row's footer is now what this save sent (see the payload).
       if (typeof payload.footer_text === "string") setFooterBaseline({ key: resetKey, text: payload.footer_text });
+      // …and its nickname (TODO 6.3), when this save sent one.
+      if ("nickname" in payload) setNicknameBaseline({ key: resetKey, text: payload.nickname ?? "" });
       // …and its rows may no longer be the rows the card opened with (the
       // payload's face_content, above).
       setSavedUnderKey(resetKey);
@@ -3942,6 +3972,8 @@ export function CardCreatorForm({
     pipOverrides,
     profileOverrides,
     title: watched.title,
+    // The nickname (TODO 6.3) — the key only while the field holds one.
+    ...(watched.nickname?.trim() ? { nickname: watched.nickname } : {}),
     cost: watched.cost,
     cardType: cardTypeForPreview,
     supertype: watched.supertype || null,
@@ -4443,7 +4475,14 @@ export function CardCreatorForm({
                   </FaceScope>
                 ) : (
                   <FaceScope label={faceTabs ? (faceWords?.first ?? null) : null}>
-                <IdentityPanel revise={isRevise} token={kind === "token"} emblem={kind === "emblem"} />
+                <IdentityPanel
+                  revise={isRevise}
+                  token={kind === "token"}
+                  emblem={kind === "emblem"}
+                  nicknamePrinted={frameDrawsNickname(
+                    resolveFrameProfile(normalizeFrameTemplate(watched.frame_style?.template), profileOverrides),
+                  )}
+                />
                 {/* The printed-details switches (TODO 4.6.0): the crown
                     beside the Legendary supertype; on an edit or a remix —
                     whose Card step is locked — the two-colour frame too.

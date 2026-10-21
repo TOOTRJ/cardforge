@@ -464,6 +464,9 @@ export async function createCardAction(
     // Only a line the maker typed differently from the built one (TODO
     // 3b.16, migration 0137); the column is left out otherwise.
     ...(data.printed_types != null ? { printed_types: data.printed_types } : {}),
+    // The nickname (TODO 6.3, migration 0141): only a card that has one
+    // names the column.
+    ...(data.nickname ? { nickname: data.nickname } : {}),
     subtypes: data.subtypes,
     tags: data.tags ?? [],
     rarity: data.rarity ?? null,
@@ -745,6 +748,9 @@ export async function updateCardAction(
   if (data.printed_types !== undefined && (data.printed_types ?? null) !== (existing.printed_types ?? null)) {
     update.printed_types = data.printed_types ?? null;
   }
+  // The nickname (TODO 6.3): the editor sends it only when the field
+  // changed (an untouched card never names the column); null clears.
+  if (data.nickname !== undefined) update.nickname = data.nickname || null;
   if (data.card_type !== undefined) update.card_type = data.card_type ?? null;
   if (data.subtypes !== undefined) update.subtypes = data.subtypes;
   if (data.tags !== undefined) update.tags = data.tags;

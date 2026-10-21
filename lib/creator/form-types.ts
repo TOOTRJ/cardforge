@@ -66,6 +66,9 @@ export type BackFaceFormValues = {
 
 export type FormValues = {
   title: string;
+  /** The card's nickname (TODO 6.3; cards.nickname): "" = none. Optional
+   *  so a values object written before it reads as none. */
+  nickname?: string;
   slug: string;
   game_system_id: string;
   cost: string;
