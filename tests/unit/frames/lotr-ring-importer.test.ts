@@ -100,6 +100,7 @@ describe("the ring recipe", () => {
     expect(RING_NOTCH_BOX.x).toBeLessThan(x);
     expect(RING_NOTCH_BOX.y).toBeLessThan(y);
     expect(RING_NOTCH_BOX.x + RING_NOTCH_BOX.width).toBeGreaterThan(x + width);
+    expect(RING_NOTCH_BOX.y + RING_NOTCH_BOX.height).toBeGreaterThan(y + height);
     expect(RING_NOTCH_BOX.y + RING_NOTCH_BOX.height).toBeGreaterThanOrEqual(UB_STAMP_HOLE.points[2][1] + 2 + 2);
     expect(HOLO_STAMP_NOTCHES.lotrholostamp.triangle).toBe(UB_STAMP_HOLE);
     expect(LOTR_HOLO_STAMP.anatomy === "holoStamp" && LOTR_HOLO_STAMP.stamp.shape).toBe("triangle");
