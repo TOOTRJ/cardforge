@@ -15,6 +15,7 @@ import { dfcBodyOf } from "@/lib/cards/dfc";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { hasRulesBoxText, printsPowerToughness } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import { archTallStandIn, isArchTallTokenTemplate } from "@/lib/cards/token-height";
 import {
   colorWord,
   isArtifactFrameType,
@@ -22,7 +23,14 @@ import {
 } from "@/components/cards/frame-layer";
 import type { FrameMatch } from "@/lib/scryfall/frame-signatures";
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
-import { dfcImportLanding, isDfcImportPatch, withBorderedDfcBodies, withoutDfcLanding } from "@/lib/scryfall/dfc-import";
+import {
+  dfcImportLanding,
+  isDfcImportPatch,
+  isTokenPairImportPatch,
+  tokenPairImportLanding,
+  withBorderedDfcBodies,
+  withoutDfcLanding,
+} from "@/lib/scryfall/dfc-import";
 import { eraForTemplate, isM15Treatment, isTreatmentBody, standardFrameFor } from "@/lib/creator/frame-picker";
 import {
   KIND_DEFS,
@@ -188,6 +196,10 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
 const TEXT_BOX_TOKEN_FALLBACK: Partial<Record<FrameTemplate, FrameTemplate>> = {
   m15tokentext: "m15token",
   m15tokenartifacttext: "m15tokenartifact",
+  // The arch's tall box (TODO 4.55) falls back to its regular text box
+  // (archTallStandIn: the text shrinks to fit it, as before 4.55).
+  m15tokentall: "m15tokentext",
+  m15tokenartifacttall: "m15tokenartifacttext",
 };
 
 /** The frames a Scryfall import asks resolvePublishedFrame for, most wanted
@@ -274,6 +286,13 @@ export function autoTokenTextBoxFrame(input: {
   if (wanted === input.template) return wanted;
   const colorKey = pickFrameColorKey([...input.colorIdentity]);
   if (isFrameComboAvailable(wanted, colorKey, input.verifiedKeys)) return wanted;
+  // The arch's tall box (TODO 4.55) not published in the colour: its
+  // regular text box stands in (archTallStandIn) — never the textless arch's
+  // scrim, nor a text-box card left where it was.
+  const standIn = archTallStandIn(wanted);
+  if (standIn && (standIn === input.template || isFrameComboAvailable(standIn, colorKey, input.verifiedKeys))) {
+    return standIn;
+  }
   // The full-art design's textless height would hide the saved text (3.24's
   // `textless`): while the height the text asks for isn't published, the
   // arch's text box stands in when it is — the arch's textless frame keeps
@@ -352,9 +371,18 @@ export function withoutTextlessFrames(verifiedKeys: ReadonlySet<string>): Readon
  * rule), so the credits the plan priced never move. Pure.
  */
 export function remixSavedFrame(
-  input: Parameters<typeof autoTokenTextBoxFrame>[0] & { standIn?: FrameTemplate | null },
+  input: Parameters<typeof autoTokenTextBoxFrame>[0] & {
+    standIn?: FrameTemplate | null;
+    /** The printing landed on the arch's TALL box (a pinned tall-box
+     *  printing, TODO 4.55 — ScryfallRemixMechanics.printed_height): the
+     *  remix keeps it while it saves with text, as the import lands it —
+     *  the height follows the PRINTING, not the new text (owner Round 77:
+     *  an SOI Clue's 39 characters print tall). */
+    printedHeight?: boolean;
+  },
 ): FrameTemplate | undefined {
-  const { standIn, ...card } = input;
+  const { standIn, printedHeight, ...card } = input;
+  if (printedHeight && isArchTallTokenTemplate(card.template) && hasRulesBoxText(card)) return card.template;
   const landed = autoTokenTextBoxFrame(card);
   if (!frameHidesRulesBoxText(landed, card) || standIn === undefined) return landed;
   if (standIn === null) return undefined;
@@ -586,6 +614,10 @@ export function finalizeImportMatch<
   // exact answer becomes "not yet verified" on the body (the request log's
   // "Not yet verified" cause, D1), a nearest one keeps its own reason; both
   // land on the standard (`landOn`).
+  // A double-sided token (TODO 5.5 (c)): both faces only once both faces'
+  // tokens are verified, each in its colour — else the front alone, as the
+  // import was before (lib/scryfall/dfc-import.ts tokenPairImportLanding).
+  if (isTokenPairImportPatch(finalized)) return tokenPairImportLanding(finalized, verifiedKeys);
   if (isDfcImportPatch(finalized)) {
     let landing = dfcImportLanding(finalized, verifiedKeys);
     // A dark borderless printing (TODO 5.7) on the borderless bodies: short

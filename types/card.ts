@@ -418,6 +418,14 @@ export const FRAME_TEMPLATE_VALUES = [
   // m15tokenartifact.
   "m15tokentext",
   "m15tokenartifacttext",
+  // Its TALL text box (TODO 4.55): the same arch with the window shorter,
+  // the type pill 238 px higher and the box twice the regular one's — Amonkhet
+  // / Hour of Devastation's embalmed and eternalized cards, the SOI Clues,
+  // TDOM #7, TC18 #4 / #10 / #19, TRIX #1, TUST #18. PipGlyph's own cut of
+  // the text-box masters (Card Conjurer has none); the height follows the
+  // text, as the full-art token's does.
+  "m15tokentall",
+  "m15tokenartifacttall",
   // The emblem (TODO 4.52, Card Conjurer 'Planeswalker Emblems'): the M20
   // design — the source's name in the dark title bar, the art in a
   // planeswalker-spark cut-out on a silver frame, a type bar reading
@@ -629,6 +637,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m15tokenartifact: "Artifact Token (2014–2019)",
   m15tokentext: "Token (2014–2019), text box",
   m15tokenartifacttext: "Artifact Token (2014–2019), text box",
+  m15tokentall: "Token (2014–2019), tall text box",
+  m15tokenartifacttall: "Artifact Token (2014–2019), tall text box",
   emblem: "Emblem",
   // The full-art design (TODO 4.48) is what a token IS now that it is
   // verified (4.48a, owner round 14b; every colour verified 2026-09-30):
@@ -779,6 +789,8 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   m15tokenartifact: "m15",
   m15tokentext: "m15",
   m15tokenartifacttext: "m15",
+  m15tokentall: "m15",
+  m15tokenartifacttall: "m15",
   emblem: "m15",
   m20token: "m15",
   m20tokentext: "m15",
@@ -1018,6 +1030,10 @@ export const TEMPLATE_SKIN_VARIANTS: Partial<
     "m15tokenartifact",
     "m15tokentext",
     "m15tokenartifacttext",
+    // The arch's tall box (TODO 4.55): a height of the arch, as the
+    // full-art design's tall box is of its own.
+    "m15tokentall",
+    "m15tokenartifacttall",
     "m20token",
     "m20tokentext",
     "m20tokentall",

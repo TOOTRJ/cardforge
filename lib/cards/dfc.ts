@@ -26,6 +26,7 @@ import { isArtifactFrameType, type FrameTypeInfo } from "@/components/cards/fram
 import { DFC_ICON_GLYPHS, dfcIconGlyph } from "@/lib/cards/dfc-icons";
 import type { CardFace } from "@/lib/cards/card-face";
 import { getFrameProfile, type DfcProfile } from "@/lib/cards/template-layout";
+import { isTokenPairBack, isTokenPairFront } from "@/lib/cards/token-faces";
 import {
   DFC_ICON_FAMILY_VALUES,
   FRAME_TEMPLATE_VALUES,
@@ -87,6 +88,15 @@ export function templateHasBackFace(template: FrameTemplate | string | null | un
   return dfcBodyOf(template)?.role === "front";
 }
 
+/** A card on this template may carry a back BODY of its own: a double-faced
+ *  FRONT body (TODO 5.2), or a token template — a double-sided token's back,
+ *  another token in the front's design (TODO 5.5 (c),
+ *  lib/cards/token-faces.ts). What the save reads the verified keys for and
+ *  the remix paints a second picture on. */
+export function templateTakesBackBody(template: FrameTemplate | string | null | undefined): boolean {
+  return templateHasBackFace(template) || isTokenPairFront(template);
+}
+
 /** The template is the BATTLE front (TODO 5.5; DfcProfile.battle): a front
  *  whose back is optional — a battle saved without one, or with a legacy
  *  back, keeps it — and whose face is a battle. */
@@ -120,6 +130,9 @@ export function hasBackOfItsOwn(
   frontTemplate: FrameTemplate | string | null | undefined,
   back: { frame_style?: { template?: string } | null } | null | undefined,
 ): boolean {
+  // A double-sided token (TODO 5.5 (c)): a token back with a body of its
+  // own — a token template in the front's design (lib/cards/token-faces.ts).
+  if (back && isTokenPairFront(frontTemplate)) return isTokenPairBack(frontTemplate, back.frame_style?.template);
   if (!back || !templateHasBackFace(frontTemplate)) return false;
   if (!isBattleFront(frontTemplate)) return true;
   return isDfcBackBody(back.frame_style?.template);
@@ -402,6 +415,9 @@ export function backBodyError(
 ): string | null {
   const body = backFace?.frame_style?.template;
   if (!body) return null;
+  // A double-sided token's back (TODO 5.5 (c)) is a token template in the
+  // front's design — never a double-faced back body.
+  if (isTokenPairFront(frontTemplate)) return isTokenPairBack(frontTemplate, body) ? null : "Not a back-face frame.";
   if (!templateHasBackFace(frontTemplate)) return "This frame has no back face of its own.";
   if (!isDfcBackBody(body)) return "Not a back-face frame.";
   return null;

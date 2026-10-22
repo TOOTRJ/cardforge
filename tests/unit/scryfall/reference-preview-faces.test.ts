@@ -27,8 +27,8 @@ import {
 
 const lookup = vi.hoisted(() => ({ ids: [] as string[] }));
 
-/** Incubator // Phyrexian (TMOM #16): a double-faced TOKEN — two scans,
- *  but the import drops its back (TODO 1.23; two-sided tokens are 5.5). */
+/** Incubator // Phyrexian (TMOM #16): a double-sided TOKEN — two scans,
+ *  two tokens back to back: the import keeps both since TODO 5.5 (c). */
 const INCUBATOR_ID = "f9f9f9f9-0009-4009-8009-000000000009";
 const incubator = {
   id: INCUBATOR_ID,
@@ -62,6 +62,21 @@ const incubator = {
   ],
 } as unknown as ScryfallCard;
 
+/** Unstable's Zombie (TUST #9): a token whose back is its art alone (type
+ *  line "Token") — the import still drops it (TODO 5.5 (c), owner Round 76). */
+const ART_BACK_ID = "f9f9f9f9-0010-4010-8010-000000000010";
+const artBack = {
+  ...incubator,
+  id: ART_BACK_ID,
+  name: "Zombie // Zombie",
+  set: "tust",
+  collector_number: "9",
+  card_faces: [
+    { name: "Zombie", mana_cost: "", type_line: "Token Creature — Zombie", oracle_text: "", colors: ["B"], power: "2", toughness: "2", image_uris: { png: `https://cards.scryfall.io/png/front/f/9/${ART_BACK_ID}.png` } },
+    { name: "Zombie", mana_cost: "", type_line: "Token", oracle_text: "", colors: ["B"], image_uris: { png: `https://cards.scryfall.io/png/back/f/9/${ART_BACK_ID}.png` } },
+  ],
+} as unknown as ScryfallCard;
+
 vi.mock("@/lib/scryfall/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/scryfall/client")>();
   const { DFC_PRINTINGS } = await import("./fixtures/dfc-printings");
@@ -70,6 +85,7 @@ vi.mock("@/lib/scryfall/client", async (importOriginal) => {
     getCardById: async (id: string) => {
       lookup.ids.push(id);
       if (id === INCUBATOR_ID) return incubator;
+      if (id === ART_BACK_ID) return artBack;
       return (DFC_PRINTINGS as Record<string, ScryfallCard>)[id] ?? null;
     },
   };
@@ -193,14 +209,24 @@ describe("a face the printing can't show is a named refusal, never the front's s
     );
   });
 
-  it("a double-faced token's back is dropped by the import: no back offered, and the back view names why", async () => {
-    const front = await buildFrameComparePayload(INCUBATOR_ID, "m15token");
+  it("a double-sided token's back that the import drops (an art-only back): no back offered, and the back view names why", async () => {
+    const front = await buildFrameComparePayload(ART_BACK_ID, "m15token");
     expect(front).toMatchObject({ face: "front", faceName: null, hasBackScan: false });
     expect(front?.patch.back_face).toBeUndefined();
-    await expect(buildFrameComparePayload(INCUBATOR_ID, "m15token", "back")).rejects.toThrow(FrameCompareFaceError);
-    await expect(buildFrameComparePayload(INCUBATOR_ID, "m15token", "back")).rejects.toThrow(
-      /^Incubator \/\/ Phyrexian is a double-faced token — PipGlyph imported its front face, Incubator\./,
+    await expect(buildFrameComparePayload(ART_BACK_ID, "m15token", "back")).rejects.toThrow(FrameCompareFaceError);
+    await expect(buildFrameComparePayload(ART_BACK_ID, "m15token", "back")).rejects.toThrow(
+      /^Zombie \/\/ Zombie is a double-faced token — PipGlyph imported its front face, Zombie\./,
     );
+  });
+
+  it("two tokens back to back (TODO 5.5 (c)): the import keeps the back, so the view offers it — drawn on the template under test, as any back the tool compares", async () => {
+    const front = await buildFrameComparePayload(INCUBATOR_ID, "m20tokenartifacttext");
+    expect(front).toMatchObject({ face: "front", faceName: "Incubator", hasBackScan: true });
+    expect(front?.patch.back_face?.title).toBe("Phyrexian");
+    const back = await buildFrameComparePayload(INCUBATOR_ID, "m20tokenartifact", "back");
+    expect(back).toMatchObject({ face: "back", faceName: "Phyrexian", hasBackScan: true });
+    expect(back?.preview.frameStyle?.template).toBe("m20tokenartifact");
+    expect(back?.preview.title).toBe("Phyrexian");
   });
 
   it("an adventure's second face has no scan of its own (one picture)", async () => {

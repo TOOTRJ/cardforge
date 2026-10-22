@@ -56,20 +56,31 @@ describe("a back body's pin", () => {
     expect(adventure.errors[0]).toMatch(/has no second face with its own scan/);
   });
 
-  it("refuses a double-faced token or a Role card: the import drops their second face", () => {
-    const incubator = {
+  it("refuses a double-faced token whose second face the import drops (an art-only back) or a Role card", () => {
+    const artBack = {
       ...archangelAvacyn,
       id: "f9f9f9f9-0009-4009-8009-000000000009",
-      name: "Incubator // Phyrexian",
+      name: "Zombie // Zombie",
       layout: "double_faced_token",
+      card_faces: [
+        { ...archangelAvacyn.card_faces![0], name: "Zombie", type_line: "Token Creature — Zombie", colors: ["B"] },
+        { ...archangelAvacyn.card_faces![1], name: "Zombie", type_line: "Token", colors: ["B"], color_indicator: undefined },
+      ],
+    } as typeof archangelAvacyn;
+    const result = validateReferenceForCombo(artBack, "m15artifact", "b");
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toMatch(/^Zombie \/\/ Zombie is a double-faced token, whose second face PipGlyph doesn't import/);
+    // Two tokens back to back (TODO 5.5 (c)): the import keeps the back —
+    // no such refusal.
+    const incubator = {
+      ...artBack,
+      name: "Incubator // Phyrexian",
       card_faces: [
         { ...archangelAvacyn.card_faces![0], name: "Incubator", type_line: "Token Artifact — Incubator", colors: [] },
         { ...archangelAvacyn.card_faces![1], name: "Phyrexian", type_line: "Token Artifact Creature — Phyrexian", colors: [], color_indicator: undefined },
       ],
     } as typeof archangelAvacyn;
-    const result = validateReferenceForCombo(incubator, "m15artifact", "c");
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toMatch(/^Incubator \/\/ Phyrexian is a double-faced token, whose second face PipGlyph doesn't import/);
+    expect(validateReferenceForCombo(incubator, "m15artifact", "c").errors.join(" ")).not.toMatch(/doesn't import/);
   });
 
   it("an era mismatch stays a warning on a back body", () => {

@@ -78,6 +78,8 @@ describe("the switch values", () => {
       "m15tokenartifact",
       "m15tokentext",
       "m15tokenartifacttext",
+      "m15tokentall",
+      "m15tokenartifacttall",
       "emblem",
       // The transform bodies (TODO 5.1a): both faces print the line.
       "m15dfcfront",

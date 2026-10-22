@@ -60,7 +60,6 @@ import {
   resolveDeckCardFrame,
   resolveGeneratedFrame,
 } from "@/lib/creator/frame-random";
-import { remixSavedFrame } from "@/lib/creator/frame-resolve";
 import type {
   CardBackFace,
   CardType,
@@ -79,12 +78,13 @@ import {
   ownCardRulesText,
   remixableDeckItems,
   remixCreditsOf,
+  remixSavedFrames,
   scryfallRemixMechanics,
 } from "@/lib/ai/remix-mechanics";
 import { cardFieldsFace, frameKindGateError } from "@/lib/cards/frame-kind-gate";
 import { applyRemixNames, remixSecondHalfLayout } from "@/lib/ai/remix-names";
 import { DFC_REMIX_CREDITS } from "@/lib/scryfall/dfc-import";
-import { templateHasBackFace } from "@/lib/cards/dfc";
+import { templateTakesBackBody } from "@/lib/cards/dfc";
 
 /** A remix step priced for both faces whose double-faced frames aren't
  *  available any more (a tick withdrawn since the plan): refused, refunded. */
@@ -1540,6 +1540,9 @@ async function executeDeckRemixStep(
      *  = the default landing (no template), as it landed before its frame
      *  was kept (ownCardTextStandIn); absent = none, the landing stands. */
     text_stand_in?: FrameTemplate | null;
+    /** A pinned tall-box printing on the arch's tall box (TODO 4.55): the
+     *  remix keeps the printed height (remixSavedFrame). */
+    printed_height?: true;
     /** An own STATION card's "power / toughness on this tier" choice where
      *  its rows say more than its text (stationPtChoiceOf) — the remix
      *  keeps the plate where its maker put it (TODO 4.27a, PR 3). */
@@ -1708,6 +1711,40 @@ async function executeDeckRemixStep(
     return { ...step, status: "failed", error: REMIX_STATION_SHAPE_LOST };
   }
 
+  // ---- The frames the card SAVES on, decided BEFORE any art (owner Round
+  //      78): the front's (remixSavedFrame) and a double-sided token's back
+  //      under it — a back that can't follow a stand-in keeps the pair on
+  //      its landing; one that can't be saved at all fails the step here,
+  //      refunded, never after two pictures are paid for. ----
+  // The printing's frame followed its PRINTED text; the remix saves the AI's
+  // flavour, so a token's text box follows the text it saves with (TODO 4.49
+  // (b), owner decision 5) — the creator's and the other AI jobs' rule.
+  // And no remix saves a text on a frame that draws none (TODO 1.24): a
+  // `textless` landing gives way to its stand-in when the card saves with
+  // rules or flavour text, and stands when it saves with none
+  // (remixSavedFrame — one rule for a printing and an own card).
+  const savedFrames = mechanics.frame_template
+    ? remixSavedFrames({
+        standIn: mechanics.text_stand_in,
+        printedHeight: mechanics.printed_height === true,
+        template: mechanics.frame_template as FrameTemplate,
+        cardType: mechanics.card_type as CardType | undefined,
+        supertype: mechanics.supertype,
+        subtypes: mechanics.subtypes,
+        rulesText: named.rules_text,
+        flavorText: identity.flavor_text,
+        power: mechanics.power,
+        toughness: mechanics.toughness,
+        colorIdentity: (mechanics.color_identity ?? ["colorless"]) as ColorIdentity[],
+        verifiedKeys: new Set(await getVerifiedFrameKeys()),
+        back: named.back_face ?? null,
+      })
+    : ({ ok: true, template: undefined } as const);
+  if (!savedFrames.ok) {
+    return { ...step, status: "failed", error: REMIX_DFC_FRAMES_GONE };
+  }
+  const frameTemplate = savedFrames.template;
+
   // ---- Art (REQUIRED — a remix is the art; failures fail the step so the
   //      user can retry, rather than silently shipping the old artwork) ----
   await logAiCall(userId, "remix_art");
@@ -1773,7 +1810,8 @@ async function executeDeckRemixStep(
   // both-arts rule), so a failed second picture fails the step — and the
   // wrapper refunds both credits.
   let backArtUrl: string | undefined;
-  if (named.back_face && mechanics.frame_template && templateHasBackFace(mechanics.frame_template)) {
+  // (…and a double-sided token's back — TODO 5.5 (c) — the same.)
+  if (named.back_face && mechanics.frame_template && templateTakesBackBody(mechanics.frame_template)) {
     const instruction = identity.second_art_instruction?.trim() || identity.art_instruction;
     const generated = await generatePlainImage(
       `${instruction} Style: ${plan.style}.`,
@@ -1797,28 +1835,7 @@ async function executeDeckRemixStep(
   }
 
   // ---- Create the remixed custom card, linked into the new deck ----
-  // The printing's frame followed its PRINTED text; the remix saves the AI's
-  // flavour, so a token's text box follows the text it saves with (TODO 4.49
-  // (b), owner decision 5) — the creator's and the other AI jobs' rule.
-  // And no remix saves a text on a frame that draws none (TODO 1.24): a
-  // `textless` landing gives way to its stand-in when the card saves with
-  // rules or flavour text, and stands when it saves with none
-  // (remixSavedFrame — one rule for a printing and an own card).
-  const frameTemplate = mechanics.frame_template
-    ? remixSavedFrame({
-        standIn: mechanics.text_stand_in,
-        template: mechanics.frame_template as FrameTemplate,
-        cardType: mechanics.card_type as CardType | undefined,
-        supertype: mechanics.supertype,
-        subtypes: mechanics.subtypes,
-        rulesText: named.rules_text,
-        flavorText: identity.flavor_text,
-        power: mechanics.power,
-        toughness: mechanics.toughness,
-        colorIdentity: (mechanics.color_identity ?? ["colorless"]) as ColorIdentity[],
-        verifiedKeys: new Set(await getVerifiedFrameKeys()),
-      })
-    : undefined;
+  // (Its frames were decided before the art: remixSavedFrames above.)
   // A remix that lands on a STATION frame (TODO 4.27a, PR 3) keeps its
   // source's tiers — the rules are copied, only the card's names in them
   // change — and saves them as the creator saves a new card: the canonical

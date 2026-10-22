@@ -2202,6 +2202,25 @@ export function visualCases(): VisualCase[] {
     add(land, "land", "wu", "short", { suffix: "@white-pair", row: { ...whiteStyle(land, "regular", { twoColor: true }), color_identity: ["white", "blue"] } });
   }
   add("modern", "creature", "wu", "short", { suffix: "@white-pair", row: { ...whiteStyle("modern", "regular", { twoColor: true }), color_identity: ["white", "blue"], cost: "{1}{W}{U}" } });
+  // TODO 5.5 (c): double-sided tokens — two tokens back to back (owner
+  // Round 76). NEW cases (an addition: no stored token has a back with a
+  // body, so every token case above stays byte-identical): the FRONT of a
+  // pair, which draws exactly as the one-faced token (no icon, no cross-face
+  // anything), and the BACK on its own token template in the front's design
+  // and its own colour — GK1 #4's Soldier behind a red Goblin (the text-box
+  // arch), F17 #11's Treasure behind a green Dinosaur (the artifact text-box
+  // arch), Q07 #T12's Blood behind a red full-art Goblin, MOM #16's
+  // Phyrexian behind the Incubator (the full-art artifact token, the plain
+  // pair: the transform icons are 5.5 (d)), a gold back (GK1 #1's Horror),
+  // and the stored bake's size.
+  add("m15token", "token", "r", "short", { suffix: "@two-sided-front", row: tokenPairRow("m15token", "r", PAIR_SOLDIER) });
+  add("m20tokenartifacttext", "token", "c", "short", { suffix: "@two-sided-front", row: tokenPairRow("m20tokenartifacttext", "c", PAIR_PHYREXIAN, INCUBATOR) });
+  add("m15tokentext", "token", "w", "short", { suffix: "@two-sided", back: { frontTemplate: "m15token" }, row: tokenPairRow("m15token", "r", PAIR_SOLDIER) });
+  add("m15tokenartifacttext", "token", "c", "short", { suffix: "@two-sided", back: { frontTemplate: "m15tokentext" }, row: tokenPairRow("m15tokentext", "g", PAIR_TREASURE) });
+  add("m15tokentext", "token", "wu", "short", { suffix: "@two-sided", back: { frontTemplate: "m15token" }, row: tokenPairRow("m15token", "c", PAIR_HORROR) });
+  add("m20tokenartifacttext", "token", "c", "short", { suffix: "@two-sided", back: { frontTemplate: "m20token" }, row: tokenPairRow("m20token", "r", PAIR_BLOOD) });
+  add("m20tokenartifact", "token", "c", "short", { suffix: "@two-sided", back: { frontTemplate: "m20tokenartifacttext" }, row: tokenPairRow("m20tokenartifacttext", "c", PAIR_PHYREXIAN, INCUBATOR) });
+  add("m20tokenartifact", "token", "c", "short", { suffix: "@two-sided-hd", preset: "hd", back: { frontTemplate: "m20tokenartifacttext" }, row: tokenPairRow("m20tokenartifacttext", "c", PAIR_PHYREXIAN, INCUBATOR) });
   cases.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   return cases;
 }
@@ -2361,6 +2380,44 @@ function battleBackRow(colour: VisualColour, shape: VisualShape, over: Partial<N
       art_url: "ART2",
       artist_credit: "Visual Regression",
       ...over,
+    } as CardRowForBake["back_face"],
+  };
+}
+
+/** A double-sided token's back (TODO 5.5 (c)): the token's content, its
+ *  body — a token template in the front's design (lib/creator/token-back.ts
+ *  derives the same) — and its own colour. */
+type TokenPairBack = { body: FrameTemplate; colour: VisualColour; face: Partial<NonNullable<CardRowForBake["back_face"]>> };
+const PAIR_SOLDIER: TokenPairBack = { body: "m15tokentext", colour: "w", face: { title: "Soldier", supertype: "Creature", subtypes: ["Soldier"], rules_text: "Lifelink", power: "1", toughness: "1" } };
+const PAIR_TREASURE: TokenPairBack = { body: "m15tokenartifacttext", colour: "c", face: { title: "Treasure", supertype: "Artifact", subtypes: ["Treasure"], rules_text: "{T}, Sacrifice this artifact: Add one mana of any color." } };
+const PAIR_HORROR: TokenPairBack = { body: "m15tokentext", colour: "wu", face: { title: "Horror", supertype: "Creature", subtypes: ["Horror"], rules_text: "Flying", power: "1", toughness: "1" } };
+const PAIR_BLOOD: TokenPairBack = { body: "m20tokenartifacttext", colour: "c", face: { title: "Blood", supertype: "Artifact", subtypes: ["Blood"], rules_text: "{1}, {T}, Discard a card, Sacrifice this artifact: Draw a card." } };
+const PAIR_PHYREXIAN: TokenPairBack = { body: "m20tokenartifact", colour: "c", face: { title: "Phyrexian", supertype: "Artifact Creature", subtypes: ["Phyrexian"], rules_text: null, power: "0", toughness: "0" } };
+/** MOM #16's front: the Incubator (its 0/0 and ▲ are 5.5 (d)'s). */
+const INCUBATOR: Partial<CardRowForBake> = { title: "Incubator", supertype: "Artifact", subtypes: ["Incubator"], rules_text: "{2}: Transform this artifact.", flavor_text: null, power: null, toughness: null };
+
+/** A token front on `frontTemplate` in `frontColour` with a token back of its
+ *  own. The front is the case's own token content unless `front` says. */
+function tokenPairRow(frontTemplate: FrameTemplate, frontColour: VisualColour, back: TokenPairBack, front: Partial<CardRowForBake> = {}): Partial<CardRowForBake> {
+  return {
+    frame_style: { template: frontTemplate, finish: "regular" } as CardRowForBake["frame_style"],
+    color_identity: IDENTITY[frontColour],
+    ...front,
+    back_face: {
+      title: "",
+      cost: "",
+      card_type: "token",
+      supertype: null,
+      subtypes: [],
+      rules_text: null,
+      flavor_text: null,
+      power: null,
+      toughness: null,
+      ...back.face,
+      frame_style: { template: back.body },
+      color_identity: IDENTITY[back.colour],
+      art_url: "ART2",
+      artist_credit: "Visual Regression",
     } as CardRowForBake["back_face"],
   };
 }

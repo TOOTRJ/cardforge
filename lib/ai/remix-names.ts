@@ -13,23 +13,29 @@
 import type { CardBackFace, FrameTemplate } from "@/types/card";
 import { kindFromCard, templatePaintsSecondFace } from "@/lib/creator/card-kinds";
 import { isBattleFront, isSagaFront, templateHasBackFace } from "@/lib/cards/dfc";
+import { isTokenPairFront } from "@/lib/cards/token-faces";
 
 /** The layout kinds whose frame paints a second half the remix names — and
  *  the double-faced kinds (TODO 5.4), whose BACK FACE the remix names and
  *  paints as a second picture. */
-export const REMIX_SECOND_HALF_LAYOUTS = ["adventure", "split", "aftermath", "flip", "transform", "mdfc"] as const;
+export const REMIX_SECOND_HALF_LAYOUTS = ["adventure", "split", "aftermath", "flip", "transform", "mdfc", "token"] as const;
 export type RemixSecondHalfLayout = (typeof REMIX_SECOND_HALF_LAYOUTS)[number];
 
 /** The double-faced layouts: the second half is a back face with its own
  *  art, not a panel the front's master paints. */
-export const REMIX_DOUBLE_FACED_LAYOUTS: ReadonlySet<RemixSecondHalfLayout> = new Set(["transform", "mdfc"]);
+export const REMIX_DOUBLE_FACED_LAYOUTS: ReadonlySet<RemixSecondHalfLayout> = new Set(["transform", "mdfc", "token"]);
 
 /** The layout a landed template's second half belongs to, or null when the
  *  template paints no second half (a standard frame, the saga's rail): a
- *  two-part layout's kind, or the double-faced kind of a DFC front body. */
+ *  two-part layout's kind, the double-faced kind of a DFC front body, or
+ *  `token` for a token template (a double-sided token's back — the caller
+ *  asks only with a back face in hand). */
 export function remixSecondHalfLayout(
   template: FrameTemplate | string | undefined,
 ): RemixSecondHalfLayout | null {
+  // A double-sided token (TODO 5.5 (c)): its back is another token with a
+  // picture of its own.
+  if (isTokenPairFront(template)) return "token";
   if (!template || !(templatePaintsSecondFace(template) || templateHasBackFace(template))) return null;
   // A battle's back of its own (TODO 5.5) is a TRANSFORM back: its own
   // picture, named and painted as a transform card's is.

@@ -181,9 +181,11 @@ describe("dfcImportOf — the one landing rule", () => {
     expect(dfcImportOf(printing("neo-141"))).toMatchObject({ blocked: null, kind: "saga", frontBody: "sagadfcfront", backBody: "m15dfcbackleft", family: "fan" });
     expect(patchOf("neo-141")).toMatchObject({ kind: "saga", card_type: "enchantment", frame_template: "sagadfcfront", printed_dfc_icon: "fan" });
     expect(patchOf("neo-141").back_face).toMatchObject({ title: "Reflection of Kiki-Jiki", card_type: "creature", frame_style: { template: "m15dfcbackleft" }, color_identity: ["red"] });
-    // A double-faced token is not a transform / modal layout at all.
+    // A double-faced token is not a transform / modal layout at all: two
+    // tokens back to back (TODO 5.5 (c)), its back a token of its own.
     expect(dfcImportOf(printing("tmom-16"))).toBeNull();
-    expect(patchOf("tmom-16")).toMatchObject({ kind: "token", dropped_face: "double-faced-token" });
+    expect(patchOf("tmom-16")).toMatchObject({ kind: "token", back_face: { title: "Phyrexian", card_type: "token" } });
+    expect(patchOf("tmom-16").dropped_face).toBeUndefined();
   });
 
   it("a modal printing lands on the modal bodies (5.1b): the Modal kind, the front body by the front's type, the back body by the back's, no family", () => {

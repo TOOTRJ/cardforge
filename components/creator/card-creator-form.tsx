@@ -104,7 +104,7 @@ import { PipsPanel } from "@/components/creator/panels/pips-panel";
 import { RarityPanel } from "@/components/creator/panels/rarity-panel";
 import { LoyaltyAbilitiesEditor } from "@/components/creator/panels/loyalty-editor";
 import { SagaChaptersEditor } from "@/components/creator/panels/saga-editor";
-import { CardSetupPanel } from "@/components/creator/panels/card-setup-panel";
+import { CardSetupPanel, TokenBackTypeSection } from "@/components/creator/panels/card-setup-panel";
 import { LegendaryCrownReason } from "@/components/creator/panels/legendary-variation";
 import { previewFrameStyleOf } from "@/lib/creator/legendary-variation";
 import { CARD_TYPE_OPTIONS } from "@/components/creator/field-group";
@@ -142,7 +142,9 @@ import {
   BackFaceStatsFields,
   BackFaceTypeSection,
 } from "@/components/creator/panels/back-face-panels";
-import { BattleBackSection, DfcIconFamilySection, SagaFacesSection } from "@/components/creator/panels/dfc-setup-sections";
+import { BattleBackSection, DfcIconFamilySection, SagaFacesSection, TokenFacesSection } from "@/components/creator/panels/dfc-setup-sections";
+import { isTokenPairBack, isTokenPairFront } from "@/lib/cards/token-faces";
+import { tokenBackBodyFor } from "@/lib/creator/token-back";
 import { FaceScope } from "@/components/creator/field-group";
 import { FaceSwitch, FaceSwitchNote, FaceThumb, faceTabId } from "@/components/creator/face-switch";
 import { FacePreview } from "@/components/creator/face-preview";
@@ -306,7 +308,7 @@ import {
   sameTokenFrameText,
   tokenFrameText,
 } from "@/lib/creator/token-frame-auto";
-import { isM20ArtifactTokenTemplate, isM20NyxTokenTemplate, m20TokenHeightOf, m20TokenTemplate, m20TokenTwinWithoutNyx } from "@/lib/cards/token-height";
+import { archTallStandIn, m20TokenHeightOf, m20TokenTwinWithoutNyx, tokenHeightOf, tokenTemplate } from "@/lib/cards/token-height";
 import {
   blankSecondFaceFor,
   defaultValuesFor,
@@ -1117,6 +1119,37 @@ export function CardCreatorForm({
           storedFamily: storedDfcFamily,
         })
     : null;
+  // A double-sided TOKEN (TODO 5.5 (c), owner Round 76): two tokens back to
+  // back. A NEW token on a token frame turns its back on with the Card
+  // step's Faces row; an edit or remix keeps the faces the card was saved
+  // with (a back with a token body of its own). The back's body is never a
+  // pick: the token template its own words and text derive in the front's
+  // design (lib/creator/token-back.ts — what the server stores too); an
+  // edit draws the stored one, which the server keeps.
+  // (The verified combos the back's dress and height give way to — what the
+  // server's gate derives with; an admin's preview lists every frame here.)
+  const tokenBackVerifiedKeys = useMemo(() => new Set(verifiedFrameKeys), [verifiedFrameKeys]);
+  const storedTokenBack =
+    card != null && isTokenPairBack((card.frame_style as FrameStyle | null)?.template, storedBackTemplate);
+  const tokenTwoFacesAllowed = mode === "create" ? isTokenPairFront(watched.frame_style?.template) : storedTokenBack;
+  const tokenPairOn = kind === "token" && Boolean(watched.has_back_face) && tokenTwoFacesAllowed;
+  const tokenBackBody = tokenPairOn
+    ? mode === "edit" && storedTokenBack
+      ? (storedBackTemplate as FrameTemplate)
+      : tokenBackBodyFor(watched.frame_style?.template, {
+          supertype: watched.back_face.supertype,
+          subtypes: watched.back_face.subtypes_text,
+          rulesText: watched.back_face.rules_text,
+          flavorText: watched.back_face.flavor_text,
+          power: watched.back_face.power,
+          toughness: watched.back_face.toughness,
+          colorIdentity:
+            watched.back_face.color_identity.length > 0 ? watched.back_face.color_identity : watched.color_identity,
+        }, tokenBackVerifiedKeys)
+    : null;
+  /** Two pictures on this form: a double-faced card, or a double-sided
+   *  token with its back on. */
+  const twoFaces = dfcLayout !== null || tokenPairOn;
   // The kind's own words for its second part — "back face", "right half",
   // "adventure spell" (lib/creator/second-part.ts, TODO 5.14).
   const partWords = secondPartWordsOfCard(watched.card_type, watched.frame_style?.template);
@@ -1127,7 +1160,7 @@ export function CardCreatorForm({
   // "parts"). `editFace` is the part every step edits; a card without the
   // switch always edits its front.
   const partTabs = dfcLayout === null && hasInlineBackFace(watched.frame_style?.template);
-  const faceTabsMode: "faces" | "parts" | null = dfcLayout !== null ? "faces" : partTabs ? "parts" : null;
+  const faceTabsMode: "faces" | "parts" | null = twoFaces ? "faces" : partTabs ? "parts" : null;
   const faceTabs = faceTabsMode !== null;
   // The switch's words (lib/creator/second-part.ts): the kind's own — "Left
   // half | Right half" on a split card; a battle's too — its Back face tab
@@ -1138,7 +1171,7 @@ export function CardCreatorForm({
     ? partWords
     : battleCard && battleBackNote !== null && kindWords
       ? { ...kindWords, available: false, unavailableNote: battleBackNote }
-      : dfcLayout !== null || kind === "battle"
+      : dfcLayout !== null || kind === "battle" || tokenPairOn
         ? kindWords
         : null;
   const editFace: CardFaceId = faceTabs ? previewFace : "front";
@@ -1221,7 +1254,7 @@ export function CardCreatorForm({
     backFace: watched.back_face,
     savesAsDraft,
     visibility: watched.visibility,
-    doubleFaced: dfcLayout !== null,
+    doubleFaced: twoFaces,
     words: partWords,
   });
   // Edit / remix: at least one field must change (owner decision
@@ -1532,13 +1565,16 @@ export function CardCreatorForm({
     const colorKey = pickFrameColorKey(getValues("color_identity"));
     const verified = new Set(verifiedFrameKeys);
     const hasText = hasRulesBoxText(tokenText);
+    const onHeight = tokenHeightOf(current);
     let next: FrameTemplate | null;
     if (prev.kind !== "token") {
       manualTokenFrameRef.current = false;
       next = isArchTokenFrame(current)
         ? newTokenFrame(tokenText, colorKey, verified)
         : textBoxFrameFor(kind, current, hasText);
-    } else if (m20TokenHeightOf(current)) {
+    } else if (onHeight) {
+      // The full-art design's heights, and the arch's since TODO 4.55 (its
+      // textless frame, text box and tall box).
       const target = followTokenHeight({
         ...tokenText,
         template: current,
@@ -1549,8 +1585,13 @@ export function CardCreatorForm({
       // starfield too, TODO 4.51): the
       // Artifact word's dress is the type-word effect's (it has already
       // run, and says so when it can't).
-      const height = m20TokenHeightOf(target);
-      next = height && height !== m20TokenHeightOf(current) ? m20TokenTemplate(height, isM20ArtifactTokenTemplate(current), isM20NyxTokenTemplate(current)) : null;
+      const height = tokenHeightOf(target)?.height;
+      next = height && height !== onHeight.height ? tokenTemplate(onHeight.design, height, onHeight.artifact, onHeight.nyx) : null;
+      // The arch's tall box not verified in the colour: its regular box
+      // stands in, silently (archTallStandIn) — the text shrinks to fit, as
+      // before 4.55.
+      const standIn = archTallStandIn(next);
+      if (standIn && next && !isFrameComboAvailable(next, colorKey, verified)) next = standIn;
     } else if (hasRulesBoxText(prev.text) !== hasText) {
       next = followTokenTextBox({
         kind,
@@ -1972,12 +2013,18 @@ export function CardCreatorForm({
     // or a double-faced front body (TODO 5.2): that face was forced on for
     // the frame, so drop it with the frame — otherwise an invisible,
     // unfixable back_face.title error followed the card around.
-    const prevOwnsBack = frameOwnsSecondPart(prevTemplate);
+    // (A double-sided token's back — TODO 5.5 (c) — is the token kind's
+    // own: it leaves with the kind, kept for the visit like any second part.)
+    // It leaves even for a kind whose frame has a second part of its own
+    // (Transform, Adventure…): a TOKEN back is never that kind's back face
+    // or half — that kind starts its own, below.
+    const tokenBackLeaves = prevKind === "token" && nextKind !== "token" && Boolean(getValues("has_back_face"));
+    const prevOwnsBack = frameOwnsSecondPart(prevTemplate) || tokenBackLeaves;
     const nextOwnsBack = frameOwnsSecondPart(template);
     // A kind change the user did not make (an import, an AI card) starts
     // from its own data: nothing kept from before is offered back.
     if (!options.byUser) stashedSecondPartRef.current = {};
-    if (prevOwnsBack && !nextOwnsBack) {
+    if (prevOwnsBack && (!nextOwnsBack || tokenBackLeaves)) {
       // The user was asked first when the part holds anything
       // (SecondPartLossDialog); it is kept for the session all the same.
       const leaving = getValues("back_face");
@@ -1990,7 +2037,19 @@ export function CardCreatorForm({
       }
       setValue("has_back_face", false, { shouldDirty: true });
       setValue("back_face", EMPTY_BACK_FACE, { shouldDirty: true });
-    } else if (nextOwnsBack && isBlankBackFace(getValues("back_face"))) {
+    }
+    if (prevKind !== "token" && nextKind === "token" && options.byUser && stashedSecondPartRef.current.token) {
+      // Back on the token kind whose back a kind change removed (TODO 5.5
+      // (c)): it returns as it was, with its second face on — from a kind
+      // whose own second part just left above, too (Transform, Adventure).
+      setValue("back_face", stashedSecondPartRef.current.token, { shouldDirty: true });
+      delete stashedSecondPartRef.current.token;
+      setValue("has_back_face", true, { shouldDirty: true });
+      toast.info("Back face restored.");
+    }
+    // (Its own `if`: a token's back that just left, above, makes way for the
+    // second part of a kind that has one — never carried into it.)
+    if (nextOwnsBack && isBlankBackFace(getValues("back_face"))) {
       const stashed = options.byUser ? stashedSecondPartRef.current[nextKind] : undefined;
       if (stashed) {
         // Back on the kind whose second part was removed: it returns as it
@@ -2114,11 +2173,14 @@ export function CardCreatorForm({
    *  really lands on; null when the card keeps a second part, or the part
    *  holds nothing the maker wrote. */
   const secondPartLossFor = (next: CardKind, patch: KindChangePatch): SecondPartLoss | null => {
-    if (!frameOwnsSecondPart(getValues("frame_style.template"))) return null;
+    // (A double-sided token's back — TODO 5.5 (c) — is the token kind's.)
+    const tokenBackLeaves = tokenPairOn && next !== "token";
+    if (!frameOwnsSecondPart(getValues("frame_style.template")) && !tokenBackLeaves) return null;
     const { resolution } = resolveKindPatchFrame(patch);
     // An unpublished kind keeps the current frame, and the second part.
     if (resolution.status === "unavailable") return null;
-    if (frameOwnsSecondPart(resolution.template)) return null;
+    // (A token's back leaves even for a kind with a second part of its own.)
+    if (frameOwnsSecondPart(resolution.template) && !tokenBackLeaves) return null;
     return describeSecondPartLoss({
       face: getValues("back_face"),
       words: partWords,
@@ -2172,6 +2234,24 @@ export function CardCreatorForm({
    *  frame tile does — and starts its icon family; "One face" goes back to
    *  the saga frame. The back itself comes and goes with the frame (the
    *  effect beside the forced back face). */
+  /** A token's faces (TODO 5.5 (c), the Card step's Faces row): "Two faces"
+   *  turns the back on — a blank back is a Creature token to start, in the
+   *  front's colour until one is picked — and "One face" off; the back's
+   *  fields stay in the form for the visit. */
+  const handleTokenFaces = (two: boolean) => {
+    clearErrors("back_face");
+    if (two) {
+      const back = getValues("back_face");
+      if (isBlankBackFace(back)) {
+        setValue("back_face", { ...EMPTY_BACK_FACE, card_type: "token", supertype: "Creature" }, { shouldDirty: true });
+      } else if (back.card_type !== "token") {
+        setValue("back_face.card_type", "token", { shouldDirty: true });
+      }
+    } else {
+      setPreviewFace("front");
+    }
+    setValue("has_back_face", two, { shouldDirty: true });
+  };
   const handleSagaFaces = (two: boolean) => {
     if (two === sagaTwoFaced) return;
     const target: FrameTemplate = two ? "sagadfcfront" : "saga";
@@ -3452,8 +3532,41 @@ export function CardCreatorForm({
           art_position: values.back_face.art_position,
         }
       : null;
+    // A double-sided token (TODO 5.5 (c)): its back on the token template
+    // its words and text derive (the server derives the same and stores it),
+    // its own colour or the front's, no cost. A token with its back off —
+    // or on a frame that is no token frame — saves one-faced, as always.
+    const submitTokenKind = kindFromCard(values.card_type, submitTemplate) === "token";
+    const submitTokenBody =
+      submitTokenKind && values.has_back_face && tokenTwoFacesAllowed
+        ? mode === "edit" && storedTokenBack
+          ? (storedBackTemplate as FrameTemplate)
+          : tokenBackBodyFor(submitTemplate, {
+              supertype: values.back_face.supertype,
+              subtypes: values.back_face.subtypes_text,
+              rulesText: values.back_face.rules_text,
+              flavorText: values.back_face.flavor_text,
+              power: values.back_face.power,
+              toughness: values.back_face.toughness,
+              colorIdentity:
+                values.back_face.color_identity.length > 0 ? values.back_face.color_identity : values.color_identity,
+            }, tokenBackVerifiedKeys)
+        : null;
     const backFacePayload =
-      backFaceContent && submitDfcLayout && (!submitBattle || submitBackBody)
+      submitTokenKind && backFaceContent && submitTokenBody
+        ? {
+            ...backFaceContent,
+            cost: undefined,
+            card_type: "token" as const,
+            frame_style: { template: submitTokenBody },
+            color_identity:
+              values.back_face.color_identity.length > 0 ? values.back_face.color_identity : values.color_identity,
+          }
+        : submitTokenKind && mode === "create"
+          ? // (A new token's back off — or on a frame that is no token frame:
+            // one face, as every new token before 5.5 (c).)
+            null
+          : backFaceContent && submitDfcLayout && (!submitBattle || submitBackBody)
         ? withTransformBackShape(
             {
               ...backFaceContent,
@@ -4055,9 +4168,9 @@ export function CardCreatorForm({
           // (TODO 5.2; components/cards/card-preview.tsx → backPreviewData):
           // the body the back's type and the family derive, the colour its
           // own or the front's — exactly what the save stores.
-          ...(dfcBackBody
+          ...((dfcBackBody ?? tokenBackBody)
             ? {
-                frame_style: { template: dfcBackBody },
+                frame_style: { template: (dfcBackBody ?? tokenBackBody)! },
                 color_identity:
                   watched.back_face.color_identity.length > 0
                     ? watched.back_face.color_identity
@@ -4344,6 +4457,14 @@ export function CardCreatorForm({
                         if (!on) setPreviewFace("front");
                       }}
                     />
+                  ) : kind === "token" && !isRevise ? (
+                    // A NEW token's faces (TODO 5.5 (c), owner Round 76):
+                    // "Two faces" is a double-sided token.
+                    <TokenFacesSection
+                      two={tokenPairOn}
+                      twoAvailable={isTokenPairFront(watched.frame_style?.template)}
+                      onChange={handleTokenFaces}
+                    />
                   ) : kind === "saga" && !isRevise ? (
                     <>
                       <SagaFacesSection
@@ -4366,7 +4487,21 @@ export function CardCreatorForm({
                 // The Back face tab (TODO 5.14): the back's own type and
                 // colour stand where the front's are.
                 backFace={
-                  dfcLayout && editFace === "back"
+                  tokenPairOn && editFace === "back"
+                    ? {
+                        // A double-sided token's back (TODO 5.5 (c)): its
+                        // own token types and colour — its frame follows
+                        // them in the front's design, never a pick.
+                        type: <TokenBackTypeSection />,
+                        color: (
+                          <BackFaceColorSection
+                            backBody={tokenBackBody}
+                            frontColorIdentity={watched.color_identity}
+                            verifiedFrameKeys={verifiedFrameSet}
+                          />
+                        ),
+                      }
+                    : dfcLayout && editFace === "back"
                     ? {
                         type: <BackFaceTypeSection layout={dfcLayout} backBody={dfcBackBody} />,
                         color: (
@@ -4404,14 +4539,17 @@ export function CardCreatorForm({
                     testId="dfc-icon-family-revise"
                   />
                 ) : null}
-                {dfcLayout && editFace === "back" ? (
+                {(dfcLayout || tokenPairOn) && editFace === "back" ? (
                   // The Back face tab (TODO 5.14): the back's name, type
-                  // line, artwork and artist, in the front's order.
+                  // line, artwork and artist, in the front's order — a
+                  // double-sided token's too (TODO 5.5 (c)).
                   <FaceScope label={faceWords?.second ?? null}>
-                    {isRevise ? <BackFaceLockedRows frontColorIdentity={watched.color_identity} /> : null}
+                    {isRevise ? (
+                      <BackFaceLockedRows frontColorIdentity={watched.color_identity} token={tokenPairOn} />
+                    ) : null}
                     <BackFaceIdentityFields
                       userId={userId}
-                      layout={dfcLayout}
+                      layout={dfcLayout ?? "token"}
                       // A back with no body yet draws on the front's frame.
                       artWindow={artWindows.back ?? artWindows.front}
                       blankBackFace={blankSecondFaceFor(kind)}
@@ -4510,7 +4648,7 @@ export function CardCreatorForm({
                   // A half painted on this frame is edited on its own tab
                   // (Face tabs, part 2): never the legacy back's art strip.
                   secondPartOnTab={partTabs}
-                  backFaceOnTab={dfcLayout !== null}
+                  backFaceOnTab={twoFaces}
                   aiSlot={
                     <AiFillButton
                       label="Generate AI artwork and title"
@@ -4540,19 +4678,22 @@ export function CardCreatorForm({
             {/* ----- Text & stats panel (cost + rarity, rules/flavor, type-gated
                 stats). Cost and rarity moved here from Identity (owner
                 decision 2026-09-16). ----- */}
-            {stepKey === "text" && dfcLayout && editFace === "back" ? (
+            {stepKey === "text" && (dfcLayout || tokenPairOn) && editFace === "back" ? (
               // The Back face tab (TODO 5.14): the back's cost, rules,
               // flavour and stats where the front's are, in the same order.
               // Rarity and the text alignment are the card's — shared by
               // both faces — and stay in their places.
               <>
-                <FaceScope label={faceWords?.second ?? null}>
-                  <BackFaceCostField layout={dfcLayout} />
-                </FaceScope>
+                {/* (A token prints no cost — TODO 5.5 (c).) */}
+                {dfcLayout ? (
+                  <FaceScope label={faceWords?.second ?? null}>
+                    <BackFaceCostField layout={dfcLayout} />
+                  </FaceScope>
+                ) : null}
                 {!kindHidesRarity(kind) ? <RarityPanel /> : null}
                 <FaceScope label={faceWords?.second ?? null}>
                   <BackFaceRulesField
-                    layout={dfcLayout}
+                    layout={dfcLayout ?? "token"}
                     backRulesTextRef={backRulesTextRef}
                     onInsertSymbol={(token) => insertSymbol(backRulesTextRef, token)}
                   />
@@ -4560,7 +4701,7 @@ export function CardCreatorForm({
                 <RulesAlignChoice />
                 <FaceScope label={faceWords?.second ?? null}>
                   <BackFaceFlavorField />
-                  <BackFaceStatsFields backBody={dfcBackBody} />
+                  <BackFaceStatsFields backBody={dfcBackBody ?? tokenBackBody} />
                 </FaceScope>
               </>
             ) : stepKey === "text" && partTabs && editFace === "back" ? (
@@ -4890,7 +5031,7 @@ export function CardCreatorForm({
                   // real frames on the Identity step).
                   !field.startsWith("back_face.") ||
                   hasInlineBackFace(watched.frame_style?.template) ||
-                  dfcLayout !== null
+                  twoFaces
                 }
                 faceGroups={faceTabs && faceWords ? groupNeedsByFace(saveNeeds, faceWords) : null}
               />
@@ -5092,7 +5233,7 @@ export function CardCreatorForm({
             </p>
             {partEditingLabel}
             <div className="relative w-full max-w-md">
-              <CardPreview {...previewProps} flipOnClick={false} hideFlipControl={dfcLayout !== null} />
+              <CardPreview {...previewProps} flipOnClick={false} hideFlipControl={twoFaces} />
               {previewOverlays}
               {readOnly ? null : (
                 <CanvasHotspots
@@ -5190,7 +5331,7 @@ export function CardCreatorForm({
                   <span className="hidden group-open/preview:inline">Hide the preview</span>
                 </span>
               </summary>
-              {dfcLayout !== null && faceWords ? (
+              {twoFaces && faceWords ? (
                 // The face being edited large, the other one small beside
                 // it — tap it to switch (the same state as the tabs).
                 <div className="px-4 pb-4">
@@ -5231,7 +5372,7 @@ export function CardCreatorForm({
             <p className="text-xs font-semibold uppercase tracking-wider text-subtle">
               Live preview
             </p>
-            {dfcLayout !== null && faceWords ? (
+            {twoFaces && faceWords ? (
               <FacePreview
                 previewProps={previewProps}
                 face={editFace}
