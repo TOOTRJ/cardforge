@@ -292,6 +292,9 @@ const PICKS: readonly Pick[] = [
   // Its follow-ups (owner Round 63): the two-colour pair and the textless crown.
   { from: "extendedart/wu/creature-long@pair-crown", why: "extended art: the gold-split pair master and the split floating crown (4.7 follow-up)" },
   { from: "m15textless/u/creature-long@crown", why: "textless promo: the standard crown band over the promo master (4.35 follow-up)" },
+  // The Expeditions from Card Conjurer (TODO 4.11 wave 1, layout v61).
+  { from: "expeditionland/g/land-long@collector", why: "v61 Expedition (ZNE): the art under the light rules panel, dark ink, the type band on 1794, the set symbol's own box, the collector line on ZNE's rows" },
+  { from: "expeditionlandbfz/u/land-short@collector-2015", why: "2015 Expedition (EXP): the panel under the arched window, the 2015 collector line 6.5 px above M15's rows" },
   { from: "m15borderless/b/creature-long", why: "borderless: art to the edge, white ink, the keylined set symbol" },
   // --- the borderless stamp and collector line (TODO 4.9d) -----------------
   { from: "m15borderless/r/creature-long@stamp-collector-hd", why: "borderless: the lifted-pinline arch, the oval over the black, the collector line with the mark on line 2 beside the plate" },

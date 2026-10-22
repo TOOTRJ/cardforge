@@ -526,16 +526,15 @@ export const BORDER_PENDING_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<Fram
   "tarkirdraconic",
 ]);
 
-/** Single colour masters whose border isn't true yet (owner decision A8):
- *  expeditionland's black and green, where the black flood fill leaked
- *  through the dark stone (4.35 (3)). No printed Expedition is black or
- *  green today (ZNE and EXP checked 2026-09-29: the fetches and duals are
- *  multicolour, Ancient Tomb and Kor Haven colourless, Valakut red), so the
- *  cap guards the combos rather than a printing. */
+/** Single colour masters whose border isn't true yet (owner decision A8).
+ *  None today: expeditionland's black and green, where the black flood fill
+ *  leaked through the MSE master's dark stone (4.35 (3)), left with TODO
+ *  4.11 wave 1 — Card Conjurer's masters print the black border on every
+ *  colour. */
 export const BORDER_PENDING_COLOURS: ReadonlyMap<FrameTemplate, ReadonlySet<string>> = new Map<
   FrameTemplate,
   ReadonlySet<string>
->([["expeditionland", new Set(["b", "g"])]]);
+>([]);
 
 /** True when `template`'s border isn't true yet in this colour key. */
 export function isBorderPending(template: FrameTemplate, colorKey: string): boolean {
@@ -2595,12 +2594,32 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     match: { collectors: { znr: [[290, 313]] } },
     outcome: { status: "exact", template: "fullart" },
   },
-  {
-    key: "expedition",
-    exactLabel: "Zendikar Expedition",
-    match: { setTypes: ["masterpiece"], sets: ["zne", "exp"] },
-    outcome: { status: "exact", template: "expeditionland" },
-  },
+  // The Expeditions (TODO 4.11 wave 1): two looks, two frames — the 2020
+  // Zendikar Rising Expeditions (ZNE) on `expeditionland`, the 2015 Battle
+  // for Zendikar / Oath Expeditions (EXP) on `expeditionlandbfz`. Both are
+  // exact once verified (withVerification), but for a two-colour land
+  // (the duals and the fetch lands): its pinline prints its two colours,
+  // where the frames paint the gold master — 4.11's pair masters.
+  ...withGaps(
+    {
+      key: "expedition",
+      exactLabel: "Zendikar Rising Expedition",
+      match: { setTypes: ["masterpiece"], sets: ["zne"] },
+      outcome: { status: "exact", template: "expeditionland" },
+    },
+    ["two-colour"],
+    { "two-colour": "4.11" },
+  ),
+  ...withGaps(
+    {
+      key: "expedition/bfz",
+      exactLabel: "Battle for Zendikar Expedition",
+      match: { setTypes: ["masterpiece"], sets: ["exp"] },
+      outcome: { status: "exact", template: "expeditionlandbfz" },
+    },
+    ["two-colour"],
+    { "two-colour": "4.11" },
+  ),
 
   // --- 1.4: pinned showcase runs -------------------------------------------
   {

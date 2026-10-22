@@ -4801,32 +4801,101 @@ const EXTENDEDARTLAND: FrameProfile = {
   artifactMasterKeys: undefined,
 };
 
-// Zendikar Expedition land — dark stone frame, art fills the upper 2/3,
-// translucent dark text box over the art (MSE text 29,315 314×112).
+// The Zendikar Expeditions (TODO 4.11 wave 1, layout
+// EXPEDITION_CC_LAYOUT_VERSION) — Card Conjurer's two Expedition packs,
+// 1500 × 2100 native (frames bucket; the 375 px MSE masters left git). Both
+// print the same anatomy: a light title bar, the art down to the type bar
+// with a LIGHT translucent rules panel over its lower part and dark ink on
+// it, the type bar at the bottom, no cost and no P/T. Measured at 1500 ×
+// 2100 against Scryfall's scans (2026-10-21; HD px):
+//   • the name: Beleren at the family's 80 px, its baseline 186 px on our
+//     masters (ZNE prints 181–183 px on a title bar printed 4 px higher than
+//     CC's, EXP 187 on one 1 px lower), ink from ~127 px — M15's band with
+//     its text 2 px up (EXPEDITION_TITLE_DY);
+//   • the type line: the family's 68 px, "Land" from ~130 px;
+//   • the rules: the standard 76 px (ZNE #21 Ancient Tomb's two lines pitch
+//     75 px), text from 145 / 135 px, centred in the panel as printed;
+//   • the set symbol right-aligned in its own box (symbolRect) at the
+//     prints' right end and height;
+//   • the collector line (4.9b) in the black border under the stone.
+// Neither frame draws a crown (EXP #38 Eye of Ugin, #41 Kor Haven print
+// none), a stamp notch (the prints' oval sits on a cut the masters don't
+// draw: a follow-up) or two-colour pinlines (pair masters: a follow-up).
+/** The name's text 2 HD px above M15's (whole px at 750 and 1500). */
+const EXPEDITION_TITLE_DY = M15_TITLE_DY - 2 / 1500;
+/** A type band whose single 68 px line sits on `baselinePx` (HD): the band
+ *  is CC's height (0.0543 H) centred DISPLAY_BASELINE_BELOW_CENTRE_EM × the
+ *  size above the baseline, no dy. */
+function expeditionTypeSlot(baselinePx: number): TextSlot {
+  const heightPx = 114;
+  const centrePx = baselinePx - DISPLAY_BASELINE_BELOW_CENTRE_EM * TYPE_SIZE_PCT * 1500;
+  return {
+    ...M15.type,
+    rect: { topPct: ((centrePx - heightPx / 2) / 2100) * 100, leftPct: 8.5, widthPct: 83.7, heightPct: (heightPx / 2100) * 100 },
+    dy: 0,
+    colorHex: INK_DARK,
+  };
+}
+/** A rules box from its HD px edges: standard size, dark ink, centred, the
+ *  M15 print margins. */
+function expeditionRulesSlot(leftPx: number, topPx: number, rightPx: number, bottomPx: number): TextSlot {
+  return {
+    rect: { topPct: (topPx / 2100) * 100, leftPct: (leftPx / 1500) * 100, widthPct: ((rightPx - leftPx) / 1500) * 100, heightPct: ((bottomPx - topPx) / 2100) * 100 },
+    sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
+    colorHex: INK_DARK,
+    vAlign: "center",
+    font: "body",
+    padPx: { x: 4, y: 0 },
+  };
+}
+/** The set symbol's box from its right end and centre (HD px): M15's 12 %W
+ *  × 80 px box, the glyph right-aligned and centred in it. */
+function expeditionSymbolRect(rightPx: number, centrePx: number): Rect {
+  return { topPct: ((centrePx - 40) / 2100) * 100, leftPct: ((rightPx - 180) / 1500) * 100, widthPct: 12, heightPct: (80 / 2100) * 100 };
+}
+
+// ZNE 2020 — CC 'ZNR Expeditions (2020)': the hedron stone, the art window
+// 60–1440 × 230–1186 px and the panel (white, α 153) 124–1386 × 1186–1711
+// under the same picture, the type bar 1712–1860.
+//   • art: the window + the panel, with 7.6's overscan (59–1441 × 228–1713);
+//   • type: baseline 1794 — the ZNE prints set "Land" at 1803–1806 on a
+//     type bar printed ~10 px lower than CC's (the bar registers 9–12 px
+//     down on ZNE #1 / #11 / #21 / #28 / #30), the set symbol likewise
+//     (print centre 1781–1786 px; CC's own bounds centre it at 1772);
+//   • the set symbol: right end 1419 px (ZNE #1 … #30: 1417–1420), centre
+//     1772;
+//   • rules: 141–1365 × 1208–1702 px (Valakut ZNE #29: text 145–1360, caps
+//     from 1235, the last baseline 1685).
 const EXPEDITIONLAND: FrameProfile = {
   ...M15,
   label: "Expedition Land",
   hideCost: true,
-  artSlot: { topPct: 11.5, leftPct: 4, widthPct: 92, heightPct: 70 },
-  title: {
-    ...M15.title,
-    colorHex: INK_LIGHT,
-    shadowCss: SHOWCASE_SHADOW,
-  },
-  type: {
-    ...M15.type,
-    colorHex: INK_LIGHT,
-    shadowCss: SHOWCASE_SHADOW,
-  },
-  rules: {
-    rect: { topPct: 60.5, leftPct: 8, widthPct: 83.5, heightPct: 21 },
-    sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
-    colorHex: INK_LIGHT,
-    vAlign: "start",
-    font: "body",
-    backdropHex: "rgba(8,8,10,0.72)",
-  },
-  footer: { ...M15.footer!, colorHex: INK_LIGHT },
+  artSlot: { topPct: (228 / 2100) * 100, leftPct: (59 / 1500) * 100, widthPct: (1382 / 1500) * 100, heightPct: (1485 / 2100) * 100 },
+  title: { ...M15.title, dy: EXPEDITION_TITLE_DY },
+  type: expeditionTypeSlot(1794),
+  symbolRect: expeditionSymbolRect(1419, 1772),
+  rules: expeditionRulesSlot(141, 1208, 1365, 1702),
+};
+
+// EXP 2015 — CC 'BFZ Expeditions (2015)': the carved stone round an arched
+// window 113–1387 × 233–1238 px, an opaque rule under it (1239–1258), the
+// panel (white, α 128) 113–1386 × 1259–1700 over the same picture, the
+// type bar 1716–1830. CC's bars register within 1 px of the EXP prints.
+//   • art: the window + the panel, with 7.6's overscan (112–1388 ×
+//     231–1702);
+//   • type: baseline 1798 (EXP #1 / #16 / #38: 1797–1799);
+//   • the set symbol: right end 1371 px, centre 1776 (EXP #36: ink
+//     1331–1371 × 1746–1818 on a bar 7 px low; the rest centre 1777–1781);
+//   • rules: 131–1365 × 1262–1694 px (EXP #38 Eye of Ugin: text 135–1345,
+//     five lines centred in the panel);
+//   • the collector line 6.5 px above M15's (EXPEDITION_BFZ_COLLECTOR).
+const EXPEDITIONLANDBFZ: FrameProfile = {
+  ...EXPEDITIONLAND,
+  label: "Expedition Land (2015)",
+  artSlot: { topPct: (231 / 2100) * 100, leftPct: (112 / 1500) * 100, widthPct: (1276 / 1500) * 100, heightPct: (1471 / 2100) * 100 },
+  type: expeditionTypeSlot(1798),
+  symbolRect: expeditionSymbolRect(1371, 1776),
+  rules: expeditionRulesSlot(131, 1262, 1365, 1694),
 };
 
 // Nyx constellation — M15 layout at 750×1046 with a starfield border and a
@@ -5397,6 +5466,30 @@ export const M15_COLLECTOR: CollectorSlot = {
   sizePct: 36 / 1500,
   artistSizePct: 38 / 1500,
   markTextSizePct: 34 / 1500,
+};
+
+/**
+ * The collector line on the Expeditions (TODO 4.11 wave 1): M15's slot —
+ * the pen x, the brush column, the sizes, the © slot's right end (the
+ * prints end it at 1394–1399) — on each look's own rows, measured on every
+ * printing at 1500 × 2100 (the baseline of the flat-bottomed digits and
+ * capitals):
+ *   • ZNE 2020 (`expeditionland`, 30 prints): line 1 at 1993–2000 px, 21 of
+ *     30 on 1995–1996; line 2 at 2031–2038, 20 of 30 on 2033–2034 — 2 px
+ *     below M15's 1993.5 / 2032;
+ *   • EXP 2015 (`expeditionlandbfz`, 45 prints): line 1 at 1986–1995, 37 of
+ *     45 on 1986–1988; line 2 at 2024–2033, 35 of 45 on 2024–2026 (the
+ *     outliers are the 2016 run's cards printed ~5 px low) — 6.5 px above.
+ */
+export const EXPEDITION_ZNR_COLLECTOR: CollectorSlot = {
+  ...M15_COLLECTOR,
+  line1BaselinePct: (1995.5 / 2100) * 100,
+  line2BaselinePct: (2033.5 / 2100) * 100,
+};
+export const EXPEDITION_BFZ_COLLECTOR: CollectorSlot = {
+  ...M15_COLLECTOR,
+  line1BaselinePct: (1987 / 2100) * 100,
+  line2BaselinePct: (2025.5 / 2100) * 100,
 };
 
 /**
@@ -6738,7 +6831,11 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15fullartlandzen: M15FULLARTLANDZEN,
   m15fullartlandsnc: M15FULLARTLANDSNC,
   m15fullartlandthb: M15FULLARTLANDTHB,
-  expeditionland: EXPEDITIONLAND,
+  // The Expeditions (TODO 4.11 wave 1) print the collector line in the
+  // black border under the stone (4.9b): ZNE 2 px below M15's rows, EXP
+  // 6.5 px above. Opt-in per card like every collector line.
+  expeditionland: { ...EXPEDITIONLAND, collector: EXPEDITION_ZNR_COLLECTOR },
+  expeditionlandbfz: { ...EXPEDITIONLANDBFZ, collector: EXPEDITION_BFZ_COLLECTOR },
   // The constellation showcase prints its legendary crown (THB #258–268):
   // the Nyx crown band with its arms faded into this frame's own rim
   // (NYX_CONSTELLATION_CROWN). On this entry only — never on the NYX base.

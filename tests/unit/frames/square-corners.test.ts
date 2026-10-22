@@ -54,9 +54,11 @@ describe("the square-corner table", () => {
     for (const t of ["bloomburrow", "lotr", "tarkirdraconic"]) {
       expect(CORNER_NAMES.map((c) => squareCornerKind(t, "g", c))).toEqual(["frame", "frame", "root", "root"]);
     }
-    // expeditionland: only the see-through-band keys.
-    expect(squareCornerKind("expeditionland", "b", "tl")).toBe("root");
-    expect(squareCornerKind("expeditionland", "w", "tl")).toBe("border");
+    // expeditionland's b/g leaked MSE masters left the table with TODO 4.11
+    // wave 1: Card Conjurer's border runs black to every corner.
+    for (const t of ["expeditionland", "expeditionlandbfz"]) {
+      for (const k of ["w", "b", "g"]) expect(CORNER_NAMES.map((c) => squareCornerKind(t, k, c)), `${t}/${k}`).toEqual(["border", "border", "border", "border"]);
+    }
   });
 
   it("keeps the art in a corner the art slot covers, and paints the rest", () => {
@@ -76,11 +78,13 @@ describe("the square-corner table", () => {
       ROOT_BACKDROP_RGB,
       ROOT_BACKDROP_RGB,
     ]);
-    // A split's halves each answer for their own side.
+    // A split's halves each answer for their own side (no entry is keyed by
+    // colour since expeditionland's left with TODO 4.11 wave 1, so both
+    // halves of its card are border black).
     expect(squareCornerFills("expeditionland", null, { left: "b", right: "w" })).toEqual([
-      ROOT_BACKDROP_RGB,
       BORDER_BLACK_RGB,
-      ROOT_BACKDROP_RGB,
+      BORDER_BLACK_RGB,
+      BORDER_BLACK_RGB,
       BORDER_BLACK_RGB,
     ]);
   });

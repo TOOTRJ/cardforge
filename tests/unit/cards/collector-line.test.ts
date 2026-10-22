@@ -92,6 +92,9 @@ describe("the switch values", () => {
       "m15mdfcback",
       "m15mdfclandfront",
       "m15mdfclandback",
+      // …and the Expeditions (TODO 4.11 wave 1), on their own rows.
+      "expeditionland",
+      "expeditionlandbfz",
     ]);
   });
 });

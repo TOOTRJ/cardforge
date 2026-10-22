@@ -260,9 +260,11 @@ describe("artWindowVerdict: the known-failure table", () => {
     // 4.35's re-source, layout v58.)
     expect(artWindowVerdict("tarkirdraconic", "w", miss(80))).toEqual({ fails: [], fixed: false });
     expect(artWindowVerdict("tarkirdraconic", "w", miss(90)).fails).toEqual([expect.stringMatching(/^worse than its known failure \(4\.11\): misses by 90 px > 87\.5: /)]);
-    // Per-key bounds: expeditionland b/g's missing ring, u/r's 2.5 px apex.
-    expect(artWindowVerdict("expeditionland", "b", miss(300)).fails).toEqual([]);
-    expect(artWindowVerdict("expeditionland", "u", miss(300)).fails).toHaveLength(1);
+    // An entry limited to some keys (expeditionland's per-key b/g / u/r
+    // bounds, this test's third example, left the table with TODO 4.11 wave
+    // 1): the colourless arch token's c is listed, its w is not.
+    expect(artWindowVerdict("m15token", "c", miss(1000)).fails).toEqual([]);
+    expect(artWindowVerdict("m15token", "w", miss(0.2)).fails).toHaveLength(1);
   });
 
   it("marks a listed master with nothing left to find as fixed", () => {
@@ -606,9 +608,9 @@ describe("the art-window known failures", () => {
         "avatar",
         "bloomanime",
         "bloomburrow",
-        "expeditionland",
         // (extendedart, m15textless and m15textlessland left with their Card
-        // Conjurer masters, layout v58: TODO 4.7 / 4.35.)
+        // Conjurer masters, layout v58: TODO 4.7 / 4.35; expeditionland with
+        // its own, layout v61: TODO 4.11 wave 1.)
         "m15fullartland",
         // (m15tokenartifact's flush bottom — 4.53 (e) — struck by layout
         // v59's art slot on the window.)
@@ -647,8 +649,12 @@ describe("the art-window known failures", () => {
       expect(ART_WINDOW_KNOWN_FAILURES[template], template).toBeUndefined();
       for (const key of ["w", "u", "b", "r", "g", "c", "m"]) expect(isKnownArtWindowFailure(template, key), `${template}/${key}`).toBe(false);
     }
-    expect(isKnownArtWindowFailure("expeditionland", "w")).toBe(false);
-    expect(isKnownArtWindowFailure("expeditionland", "b")).toBe(true);
+    // The Expeditions (TODO 4.11 wave 1): Card Conjurer's masters, both
+    // looks, covered on every colour (CI fetches them by sha).
+    for (const template of ["expeditionland", "expeditionlandbfz"]) {
+      expect(ART_WINDOW_KNOWN_FAILURES[template], template).toBeUndefined();
+      for (const key of ["w", "u", "b", "r", "g", "c", "m"]) expect(isKnownArtWindowFailure(template, key), `${template}/${key}`).toBe(false);
+    }
   });
 });
 

@@ -519,9 +519,12 @@ describe("full-art and textless families (TODO 1.19)", () => {
     // showcase frame can't dress the Modal kind, so the import lands on the
     // modal front body (5.1b / 5.4).
     ["znr-305", "nearest", "fullart", "m15mdfcfront"],
-    // The Expeditions: exact, but for the black and green masters (A8) —
-    // Flooded Strand is multicolour (its two colours, landFrameColorRule).
-    ["zne-1", "exact", "expeditionland", undefined],
+    // The Expeditions (TODO 4.11 wave 1): exact on their frame (ZNE on the
+    // 2020 one, EXP on the 2015 one: tests/unit/scryfall/expedition-imports
+    // .test.ts) — but a two-colour land (Flooded Strand: its two colours,
+    // landFrameColorRule) prints a split pinline the frames don't draw yet:
+    // nearest through the two-colour gap.
+    ["zne-1", "nearest", "expeditionland", undefined],
   ];
 
   it.each(rows)("%s → %s %s (landOn %s)", (key, status, template, landOn) => {
@@ -1040,29 +1043,37 @@ describe("the rule table", () => {
     }
   });
 
-  it("caps the Expedition frame in black and green only (A8)", () => {
-    // No printed Expedition is black or green (ZNE/EXP checked 2026-09-29):
-    // the same printing, made to tap for one colour.
-    const expedition = (mana: string) =>
-      scryfallCardSchema.parse({
-        ...printingsData["zne-1"],
-        name: `Test Expedition ${mana}`,
-        oracle_text: `{T}: Add {${mana}}.`,
-        produced_mana: [mana],
-        color_identity: [mana],
-      });
-    for (const mana of ["B", "G"]) {
-      expect(frameMatchFromScryfall(expedition(mana)), mana).toMatchObject({
+  it("caps no Expedition colour any more: Card Conjurer's masters print the border (TODO 4.11 wave 1)", () => {
+    // The MSE master's black and green leaked their border (A8, 4.35 (3));
+    // the same printing, made to tap for one colour, is exact on both
+    // looks in every colour now, and a two-colour one waits on the pairs.
+    for (const [set, template] of [["zne", "expeditionland"], ["exp", "expeditionlandbfz"]] as const) {
+      const expedition = (mana: string[]) =>
+        scryfallCardSchema.parse({
+          ...printingsData["zne-1"],
+          set,
+          name: `Test Expedition ${mana.join("")}`,
+          type_line: "Land",
+          oracle_text: `{T}: Add ${mana.map((m) => `{${m}}`).join(" or ")}.`,
+          produced_mana: mana,
+          color_identity: mana,
+        });
+      for (const mana of ["W", "U", "B", "R", "G", "C"]) {
+        expect(frameMatchFromScryfall(expedition([mana])), `${set} ${mana}`).toMatchObject({ status: "exact", template });
+      }
+      expect(frameMatchFromScryfall(expedition(["W", "U", "B", "R", "G"])), `${set} any`).toMatchObject({ status: "exact", template });
+      expect(frameMatchFromScryfall(expedition(["B", "G"])), `${set} BG`).toMatchObject({
         status: "nearest",
-        template: "expeditionland",
-        blockedBy: "4.35",
+        template,
+        blockedBy: "4.11",
+        gaps: ["two-colour"],
       });
     }
-    for (const mana of ["W", "U", "R"]) {
-      expect(frameMatchFromScryfall(expedition(mana)).status, mana).toBe("exact");
+    for (const key of ["w", "u", "b", "r", "g", "c", "m"]) {
+      expect(isBorderPending("expeditionland", key), key).toBe(false);
+      expect(isBorderPending("expeditionlandbfz", key), key).toBe(false);
     }
-    expect(isBorderPending("expeditionland", "b")).toBe(true);
-    expect(isBorderPending("expeditionland", "m")).toBe(false);
+    expect(BORDER_PENDING_COLOURS.size).toBe(0);
     expect(isBorderPending("lotr", "w")).toBe(true);
     expect(isBorderPending("m15", "w")).toBe(false);
     // The battle left the list with TODO 4.21b: its Card Conjurer master

@@ -110,6 +110,11 @@ export const COLLECTOR_TEMPLATES = [
   "m15mdfcback",
   "m15mdfclandfront",
   "m15mdfclandback",
+  // The Expeditions (TODO 4.11 wave 1): both looks print the line in the
+  // black border under the stone — M15's slot on each look's printed rows
+  // (EXPEDITION_ZNR_COLLECTOR, EXPEDITION_BFZ_COLLECTOR).
+  "expeditionland",
+  "expeditionlandbfz",
 ] as const;
 
 export type CollectorLetter = "T" | "E" | "L" | "C" | "U" | "R" | "M";

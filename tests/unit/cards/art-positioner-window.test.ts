@@ -141,7 +141,10 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   m15fullartlandthb: { front: [1382, 1876] },
   m15textless: { front: [1314, 1816] },
   m15textlessland: { front: [1314, 1816] },
-  expeditionland: { front: [1380, 1470] },
+  // The Expeditions (TODO 4.11 wave 1, layout v61): CC's window + the
+  // translucent rules panel under the same picture, both looks.
+  expeditionland: { front: [1382, 1485] },
+  expeditionlandbfz: { front: [1276, 1471] },
   nyx: { front: [1320, 1718] },
   retro: { front: [1154, 931] },
   retroland: { front: [1154, 931] },
@@ -248,8 +251,10 @@ describe("what the fixed 5:4 surface got wrong (before 3b.13)", () => {
     // borderless double-faced bodies, TODO 5.7: four full-bleed windows; 37
     // before the double-faced saga front, 5.5 (b): the saga's tall column; 38
     // before its back, 5.5 (b) PR 2: the same column; 39 before the full-art
-    // token's Nyx dress, TODO 4.51: six more full-art token windows.)
-    expect(off.filter((m) => m > 0.25)).toHaveLength(45);
+    // token's Nyx dress, TODO 4.51: six more full-art token windows; 45
+    // before the Expeditions' window + panel, TODO 4.11 wave 1: the 2020
+    // look's 1382 × 1485 and the new 2015 look's 1276 × 1471.)
+    expect(off.filter((m) => m > 0.25)).toHaveLength(47);
   });
 });
 

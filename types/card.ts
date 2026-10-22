@@ -584,7 +584,11 @@ export const FRAME_TEMPLATE_VALUES = [
   "m15fullartlandthb",
   "m15textless",
   "m15textlessland",
+  // The Zendikar Expeditions (TODO 4.11 wave 1, Card Conjurer, frames
+  // bucket): the 2020 Zendikar Rising look (ZNE) and the 2015 Battle for
+  // Zendikar look (EXP), each its own template.
   "expeditionland",
+  "expeditionlandbfz",
   "nyx",
   // Border eras beyond Alpha/M15 (converted from the MSE old/new/future styles).
   "retro",
@@ -725,6 +729,7 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   m15textless: "Textless",
   m15textlessland: "Textless Land",
   expeditionland: "Land",
+  expeditionlandbfz: "2015 Land",
   nyx: "Constellation",
   retro: "Standard",
   retroland: "Land",
@@ -857,6 +862,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   m15textless: "fullartset",
   m15textlessland: "fullartset",
   expeditionland: "expeditions",
+  expeditionlandbfz: "expeditions",
   nyx: "nyxset",
   agclassic: "alpha",
   alphaland: "alpha",

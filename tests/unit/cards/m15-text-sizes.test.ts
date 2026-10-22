@@ -87,7 +87,8 @@ describe("one M15-era display size (layout v32)", () => {
     // …and TODO 4.51's six Nyx dresses of the full-art tokens.
     // …and TODO 4.55's two tall-box arch tokens.
     // …and TODO 4.27's Prepare frame.
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(73);
+    // …and TODO 4.11 wave 1's 2015 Expeditions.
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(74);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -360,8 +361,13 @@ describe("baselines (TextSlot.dy)", () => {
     ["extendedart", base.title, cc],
     // …and its land dress (owner Round 63): the same pack's land frames.
     ["extendedartland", base.title, cc],
+    // The Expeditions (TODO 4.11 wave 1, layout v61): Card Conjurer's two
+    // Expedition packs — the name 2 px above M15's (186 px, the prints'),
+    // the type line on its own band centred for its baseline (no dy: 1794
+    // on ZNE's bar, 1798 on EXP's).
+    ["expeditionland", base.title - 2 / 1500, 0],
+    ["expeditionlandbfz", base.title - 2 / 1500, 0],
     // MSE-framed: baselines kept (their print offsets are TODO 4.21's).
-    ["expeditionland", base.title, base.type],
     ["nyx", base.title, base.type],
     // Aftermath (v38): a CC master; its text slots stay as print-matched in
     // 0.22 / v32 (baselines kept).
@@ -465,7 +471,9 @@ describe("baselines (TextSlot.dy)", () => {
   });
 
   it("lands the Card Conjurer masters' type line 4.2 px higher than a kept baseline, on the prints' (1259.6 px at HD)", () => {
-    const kept15 = getFrameProfile("expeditionland").type.dy!;
+    // (The kept baseline's reference was expeditionland's until TODO 4.11
+    // wave 1 re-sourced it: nyx keeps M15's.)
+    const kept15 = getFrameProfile("nyx").type.dy!;
     for (const t of [
       "m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15ub", "m15ubartifact", "m15ubland", "m15snow", "m15devoid", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15pw",
       // The station frame (TODO 4.27a): cut from the published m15artifact /

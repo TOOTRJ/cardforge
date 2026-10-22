@@ -5704,7 +5704,52 @@
     }
   },
   "expeditionland": {
-    "note": "Expeditions are nonbasic lands: fetches are colourless identity (c), duals multicolour (m); no mono-colour printing exists.",
+    "note": "The 2020 Zendikar Rising Expeditions (ZNE) only (TODO 4.11 wave 1; EXP is expeditionlandbfz). The frame colour follows the mana the land makes: {C} → c, any colour → m (Prismatic Vista prints gold, LAND_FRAME_OVERRIDES). A two-colour land prints a split pinline (a pair master, not built), so it is never an m reference. Mono: ZNE #29 Valakut (r) only.",
+    "colors": {
+      "w": null,
+      "u": null,
+      "b": null,
+      "r": [
+        {
+          "name": "Valakut, the Molten Pinnacle",
+          "set": "zne",
+          "scryfallId": "c2d07eea-b165-4976-9088-d283ab7cfe72"
+        }
+      ],
+      "g": null,
+      "c": [
+        {
+          "name": "Ancient Tomb",
+          "set": "zne",
+          "scryfallId": "880ffa23-ed71-4f39-aa66-0953a1f20fe9"
+        },
+        {
+          "name": "Strip Mine",
+          "set": "zne",
+          "scryfallId": "e8f7a850-e049-48a0-95ac-afdac6e204e5"
+        },
+        {
+          "name": "Wasteland",
+          "set": "zne",
+          "scryfallId": "a81a49a0-995a-4311-894d-5cbfba59db14"
+        }
+      ],
+      "m": [
+        {
+          "name": "Cavern of Souls",
+          "set": "zne",
+          "scryfallId": "5261e0f6-55bf-4d45-92ea-7acbab41162c"
+        },
+        {
+          "name": "Prismatic Vista",
+          "set": "zne",
+          "scryfallId": "1ac01fff-4de6-4783-9489-4127e25bc641"
+        }
+      ]
+    }
+  },
+  "expeditionlandbfz": {
+    "note": "The 2015 Battle for Zendikar / Oath Expeditions (EXP; TODO 4.11 wave 1). The frame colour follows the mana the land makes: {C} → c (Kor Haven among them), any colour → m. No mono-colour printing exists, and a two-colour land prints a split pinline (a pair master, not built). EXP #37 Dust Bowl and #38 Eye of Ugin are a whiter print run: not references.",
     "colors": {
       "w": null,
       "u": null,
@@ -5714,25 +5759,30 @@
       "c": [
         {
           "name": "Ancient Tomb",
-          "set": "zne",
-          "scryfallId": "880ffa23-ed71-4f39-aa66-0953a1f20fe9"
+          "set": "exp",
+          "scryfallId": "f77d5b90-5ea1-403e-ab85-3040e1da933b"
+        },
+        {
+          "name": "Strip Mine",
+          "set": "exp",
+          "scryfallId": "1b8de79d-5efe-4e21-8614-786689fcad58"
+        },
+        {
+          "name": "Kor Haven",
+          "set": "exp",
+          "scryfallId": "2519b6a3-d074-4e9b-a57a-559fae5a8531"
         }
       ],
       "m": [
         {
-          "name": "Grove of the Burnwillows",
-          "set": "zne",
-          "scryfallId": "82fb5274-c11a-465b-b14f-8f35495482e4"
+          "name": "Forbidden Orchard",
+          "set": "exp",
+          "scryfallId": "c13bea32-5dac-4338-b570-bed58109273d"
         },
         {
-          "name": "Creeping Tar Pit",
-          "set": "zne",
-          "scryfallId": "3272a554-8509-40b2-ac39-c906b1366275"
-        },
-        {
-          "name": "Cavern of Souls",
-          "set": "zne",
-          "scryfallId": "5261e0f6-55bf-4d45-92ea-7acbab41162c"
+          "name": "Mana Confluence",
+          "set": "exp",
+          "scryfallId": "4eafa4f8-3b9b-4e20-97bf-8f547e970752"
         }
       ]
     }

@@ -3,7 +3,6 @@
 // Full-Magic-Pack MSE sources into app frames (public/frames/<name>/{7}.png,
 // 1500×2100):
 //
-//   expeditionland   magic-m15-expedition          *lcard.jpg, BLACK art window
 //   nyx          …showcase-theros-constellation card/*.png, already alpha-cut
 //   fullart      …showcase-zendikar            *card.png,  already alpha-cut
 //
@@ -29,6 +28,8 @@
 // `extendedart`, `m15textless` and `m15textlessland` went the same way (TODO
 // 4.7 / 4.35 / 4.42, layout v58): Card Conjurer's 'Extended Art Frames' and
 // 'Magic Fest Promos' through scripts/import-cc-frames.mjs, frames bucket.
+// `expeditionland` too (TODO 4.11 wave 1): Card Conjurer's 'ZNR Expeditions
+// (2020)', beside the new `expeditionlandbfz` from 'BFZ Expeditions (2015)'.
 // ---------------------------------------------------------------------------
 import sharp from "sharp";
 import path from "node:path";
@@ -48,49 +49,6 @@ const wanted = (outDir) => !ONLY || ONLY.has(path.basename(outDir));
 const DATA = "/Users/redjester/Projects/other/Full-Magic-Pack/data";
 const W = 1500;
 const H = 2100;
-const NEAR_BLACK = 60;
-const NEAR_WHITE = 235;
-
-/** Flood-fill the art window (seeded inside it) to alpha=0. Same approach as
- *  convert-mse-frame.mjs: BFS from the seed over near-fill pixels. maxYFrac
- *  clamps the fill vertically — extended-art's textbox is the same white as
- *  its art window and connected to it, so the flood must stop at the box. */
-async function cutWindow(buf, fill, seeds, maxYFrac = 1) {
-  const { data, info } = await sharp(buf)
-    .ensureAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  const { width, height } = info;
-  const matches = (i) =>
-    fill === "black"
-      ? data[i] + data[i + 1] + data[i + 2] <= NEAR_BLACK * 3
-      : data[i] >= NEAR_WHITE && data[i + 1] >= NEAR_WHITE && data[i + 2] >= NEAR_WHITE;
-  const queue = [];
-  for (const [fx, fy] of seeds) {
-    queue.push(Math.floor(height * fy) * width + Math.floor(width * fx));
-  }
-  const seen = new Uint8Array(width * height);
-  let cut = 0;
-  while (queue.length > 0) {
-    const p = queue.pop();
-    if (seen[p]) continue;
-    seen[p] = 1;
-    if (Math.floor(p / width) > height * maxYFrac) continue;
-    const i = p * 4;
-    if (data[i + 3] === 0 || !matches(i)) continue;
-    data[i + 3] = 0;
-    cut++;
-    const x = p % width;
-    if (x > 0) queue.push(p - 1);
-    if (x < width - 1) queue.push(p + 1);
-    if (p >= width) queue.push(p - width);
-    if (p < width * (height - 1)) queue.push(p + width);
-  }
-  return {
-    png: await sharp(data, { raw: { width, height, channels: 4 } }).png().toBuffer(),
-    cutPct: ((cut / (width * height)) * 100).toFixed(1),
-  };
-}
 
 async function writeOut(outDir, key, buf, transform) {
   fs.mkdirSync(outDir, { recursive: true });
@@ -105,33 +63,7 @@ async function writeOut(outDir, key, buf, transform) {
 
 const COLORS = ["w", "u", "b", "r", "g", "c", "m"];
 
-// 1+2. JPG families with a fill-colored art window ---------------------------
-const JPG_SETS = [
-  {
-    out: "public/frames/expeditionland", // the shipped template is expeditionland
-    pack: `${DATA}/magic-m15-expedition.mse-style`,
-    file: (k) => `${k}lcard.jpg`,
-    fill: "black",
-    seeds: [[0.5, 0.3]],
-  },
-];
-
-for (const set of JPG_SETS) {
-  if (!wanted(set.out)) continue;
-  for (const key of COLORS) {
-    const src = path.join(set.pack, set.file(key));
-    const { png, cutPct } = await cutWindow(
-      fs.readFileSync(src),
-      set.fill,
-      set.seeds,
-      set.maxYFrac ?? 1,
-    );
-    await writeOut(set.out, key, png);
-    console.log(`${path.basename(set.out)}/${key}.png  cut ${cutPct}% ← ${set.file(key)}`);
-  }
-}
-
-// 3+4. PNG families already alpha-cut ----------------------------------------
+// PNG families already alpha-cut ---------------------------------------------
 const PNG_SETS = [
   {
     out: "public/frames/nyx",

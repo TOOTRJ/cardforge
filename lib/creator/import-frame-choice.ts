@@ -120,8 +120,8 @@ export const UNDRAWN_DETAIL_GAPS: ReadonlySet<FrameGap> = new Set<FrameGap>([
  *  other gap and no border that isn't true yet. Such an import lands on the
  *  printing's own frame without the chooser (C1) and without a deck
  *  pre-fill toast (C3); the Card step's "Nearest frame" chip still names
- *  the reason. `colorKey` is the imported frame colour (the border check is
- *  per colour for expeditionland). */
+ *  the reason. `colorKey` is the imported frame colour (the border check
+ *  can be per colour: BORDER_PENDING_COLOURS). */
 export function onlyUndrawnDetailsMissing(
   match: Pick<FrameMatch, "status" | "template" | "landOn" | "gaps"> | null | undefined,
   colorKey: string,

@@ -13,10 +13,11 @@ import type { CardCornerFills, CornerFill } from "@/lib/cards/card-corner";
 //   "root"   — the card root's #101015: a master whose EDGE BAND is
 //              transparent at that corner, so the card's border there IS the
 //              root's backdrop — the rings (avatar, bloomanime,
-//              lotrscroll, tarkirdragon, tarkirghostfire), the bottom
-//              corners of bloomburrow, lotr and tarkirdraconic, and
-//              expeditionland b/g. A #000 cap in a #101015 band was a seam
-//              (3.26 review).
+//              lotrscroll, tarkirdragon, tarkirghostfire) and the bottom
+//              corners of bloomburrow, lotr and tarkirdraconic
+//              (expeditionland b/g's leaked MSE masters left with TODO 4.11
+//              wave 1). A #000 cap in a #101015 band was a seam (3.26
+//              review).
 //   "frame"  — what the render drew stays: design that runs into the corner
 //              (Bloomburrow's pale top corners, LOTR's tan, Tarkir draconic's
 //              ornament) and — from the profile's art slot, never listed —
@@ -24,7 +25,7 @@ import type { CardCornerFills, CornerFill } from "@/lib/cards/card-corner";
 //
 // At a border or root corner the fill REPLACES everything outside the arc
 // (lib/cards/card-corner.ts squareCardCorners), so a frame's own pixels
-// there — expeditionland b/g's paper, Alpha's 60 px cut — never print, and
+// there — Alpha's 60 px cut — never print, and
 // a free Square (the stored round bake squared with the same fills) is the
 // paid live Square's twin. A template with a "frame" corner renders its
 // free Square live instead (the round bake's downscale no longer carries
@@ -61,8 +62,6 @@ export const SQUARE_CORNERS: Readonly<Record<string, { kinds: Kinds; keys?: read
   bloomburrow: { kinds: DESIGN_TOP_ROOT_BOTTOM },
   lotr: { kinds: DESIGN_TOP_ROOT_BOTTOM },
   tarkirdraconic: { kinds: DESIGN_TOP_ROOT_BOTTOM },
-  // The 7.7 known failures: the black flood leaked, no ring.
-  expeditionland: { kinds: "root", keys: ["b", "g"] },
 };
 
 /** What `template`'s master `key` shows outside the arc at `corner` in a

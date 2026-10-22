@@ -115,6 +115,10 @@ describe("the main box on every template", () => {
         // The Prepare frame (TODO 4.27): the creature's half of M15's box,
         // the prints' margins (ink from x 127, M15's 4 px inside the rect).
         "prepare",
+        // The Expeditions (TODO 4.11 wave 1): M15's margins in their panel
+        // (ZNE #29 Valakut's lines from x 145 in the 141 px box, EXP #38
+        // Eye of Ugin's from 135 in 131).
+        "expeditionland", "expeditionlandbfz",
       ].sort(),
     );
     for (const t of withPrintMargins) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 4, y: 0 });

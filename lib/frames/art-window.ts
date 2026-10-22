@@ -610,12 +610,6 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
     why: "the see-through gaps between the dragon ornaments run to 67–1449 px, 68–84 px past the slot 135–1365 (4.11 re-measure)",
     maxMissPx: 87.5,
   },
-  expeditionland: {
-    keys: ["u", "b", "r", "g"],
-    todo: ["4.35", "4.11"],
-    why: "b/g: no ring, the window is the whole card (4.35 (3)); u/r: the arch's apex at 239 px vs slot top 241.5 (4.11 re-source)",
-    maxMissPx: { u: 4, r: 4, b: 389, g: 389 },
-  },
   // The emblem (found by v35's see-through slot rule when #421 merged main):
   // two owner decisions (2026-09-29) meet at the window's top — the slot is
   // Scryfall's art_crop box exactly (from 250.4 px, never grown) and the
