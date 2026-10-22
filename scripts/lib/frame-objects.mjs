@@ -161,13 +161,17 @@ export async function objectStatus(url, expectedBytes, { tries = 5, baseDelayMs 
  * objectStatus. `status` on a miss is the last HTTP status, "timeout",
  * "network" or "sha256 mismatch". scripts/frames-fetch.mjs uses it to give
  * CI the bucket masters (TODO 7.6); the sha is what makes a fallback origin
- * (the dev bucket) as trustworthy as production.
+ * (the dev bucket) as trustworthy as production. `fetchImpl` is for tests.
+ * @param {string} url
+ * @param {string} expectedSha256
+ * @param {{ tries?: number, baseDelayMs?: number, timeoutMs?: number,
+ *   fetchImpl?: (url: string, init?: { signal?: AbortSignal }) => Promise<Response> }} [options]
  */
-export async function fetchVerified(url, expectedSha256, { tries = 4, baseDelayMs = 500, timeoutMs = 60_000 } = {}) {
+export async function fetchVerified(url, expectedSha256, { tries = 4, baseDelayMs = 500, timeoutMs = 60_000, fetchImpl = fetch } = {}) {
   let status = "network";
   for (let attempt = 1; attempt <= tries; attempt += 1) {
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+      const res = await fetchImpl(url, { signal: AbortSignal.timeout(timeoutMs) });
       status = String(res.status);
       if (res.ok) {
         const bytes = Buffer.from(await res.arrayBuffer());

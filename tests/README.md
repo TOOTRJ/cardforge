@@ -246,7 +246,8 @@ Satori bake and compares each card's pixel hash with the committed
   (brand mark, no footer text, round corners). Hermetic: generated art, the
   committed/locked fonts, and the frames bucket objects read from a local
   cache (`tmp/visual/frames/`, gitignored) that the script fills by manifest
-  key and checks against the manifest's sha256. Card Conjurer-derived frames
+  key and checks against the manifest's sha256 — on a local run from the
+  machine's [shared frame cache](#the-shared-frame-cache). Card Conjurer-derived frames
   never enter git: the baseline holds 16-hex hashes of the decoded pixels,
   nothing else.
 - `scripts/visual-regression.mjs` + `scripts/lib/visual-gate.mjs` — fetch,
@@ -292,6 +293,49 @@ that moved. `tests/unit/render/visual-matrix.test.ts` also fails the fast
 unit run when the baseline no longer matches the matrix or the layout
 version. DB frame-profile overrides are outside the suite (their saves null
 the stamps and the platform re-bakes).
+
+### The shared frame cache
+
+The frame PNGs (1,629 objects, about 1.3 GB) are downloaded ONCE per machine,
+not once per checkout: every agent worktree fetching its own copy took the
+org past Supabase's cached-egress quota (2026-10-22). On a local run,
+`npm run test:visual`, `npm run test:parity` and `node scripts/frames-fetch.mjs`
+all go through one store (`scripts/lib/frame-cache.mjs`):
+
+- **Where:** `~/.cache/pipglyph/frames`, the bucket objects by their
+  content-addressed key (`m15/w.<hash>.png`). It is outside every checkout
+  and never committed.
+- **The checkout's folders stay:** `tmp/visual/frames/` (object keys) and
+  `.frames-cache/` (manifest keys, for `FRAMES_BUILD_DIR`) are still there
+  and still pruned to this checkout's manifest. They are filled from the
+  store by a hard link, so there is no second copy on disk (a plain copy
+  when the store is on another volume). A download lands in the store
+  first. Never edit a file in these folders in place: the scripts only ever
+  write a new file and rename it over the old name, which leaves the other
+  links alone.
+- **Safe to share:** a store file is used only when its bytes hash to the
+  manifest's sha256. A corrupt or half-written one is fetched again and
+  replaced. Every write, to the store or a checkout, is a temp file renamed
+  into place, so several agents can sync at once. One checkout never prunes
+  the store, because another worktree's manifest may still need an older
+  object.
+- **Which bucket:** locally the DEV bucket. `--origin <public bucket base>`
+  names another, production's included. CI reads production's first, then
+  dev's for a frame not promoted yet.
+- **CI is unchanged:** with `CI` set there is no store. The folders are
+  `actions/cache` entries keyed by the manifest's hash, as before.
+- **Env vars:** `PIPGLYPH_FRAMES_CACHE=<dir>` moves the store (`~/` works).
+  `PIPGLYPH_FRAMES_CACHE=off` skips it, so each checkout fetches on its own
+  as before.
+- **Clearing it:** `rm -rf ~/.cache/pipglyph/frames` (or your
+  `PIPGLYPH_FRAMES_CACHE`). It only grows, by the new objects each frame
+  change publishes. The next run fetches what a checkout needs. The disk
+  comes back once the worktrees' `tmp/visual/frames` and `.frames-cache`
+  links are gone too (removing a worktree removes them).
+- **Seeding it without a download:** copy an older worktree's
+  `tmp/visual/frames` into it, `cp -c -R <worktree>/tmp/visual/frames/ ~/.cache/pipglyph/frames/`
+  (`-c` clones on APFS, so it costs no disk). A worktree's own checked
+  copies also seed an empty store by themselves on its next sync.
 
 ## Preview parity (the browser preview ⇄ the bake, TODO 3.11)
 

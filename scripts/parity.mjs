@@ -27,8 +27,9 @@
 //
 // Three steps, no database, no account, no secret:
 //   1. frames — the visual suite's cache (tmp/visual/frames, gitignored; the
-//      manifest's PNG objects by key + sha256 from the PUBLIC bucket; CI
-//      shares the visual jobs' cache);
+//      manifest's PNG objects by key + sha256 from the PUBLIC bucket — on a
+//      local run through the machine's shared frame store,
+//      scripts/lib/frame-cache.mjs; CI shares the visual jobs' cache);
 //   2. bake   — tests/parity/bake.parity.ts (vitest): every case through the
 //      real Satori bake at 750 px and HD, into tmp/parity/;
 //   3. browser — tests/parity/preview.parity.spec.ts (Playwright, headless
@@ -48,23 +49,22 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseFlags, publicBaseFor, readManifest } from "./lib/frame-objects.mjs";
+import { frameBucketOrigins, sharedFrameCacheDir } from "./lib/frame-cache.mjs";
+import { parseFlags, readManifest } from "./lib/frame-objects.mjs";
 import { syncFrameCache } from "./lib/visual-frames.mjs";
-import { PRODUCTION_SUPABASE_REF } from "./lib/prod-guard.mjs";
 import { PASTE_LIMIT_BYTES, baselineArtifactCommand, baselinePasteScript, readNextBaseline } from "./lib/parity-next.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TMP = path.join(ROOT, "tmp", "parity");
 const FRAMES_DIR = path.join(ROOT, "tmp", "visual", "frames");
-const DEV_SUPABASE_REF = /\[remotes\.dev\][^[]*?project_id\s*=\s*"([a-z]{16,24})"/s.exec(
-  fs.readFileSync(path.join(ROOT, "supabase/config.toml"), "utf8"),
-)?.[1];
-if (!DEV_SUPABASE_REF || DEV_SUPABASE_REF === PRODUCTION_SUPABASE_REF) throw new Error("supabase/config.toml has no usable [remotes.dev] project_id.");
-const PRODUCTION_FRAMES = publicBaseFor(`https://${PRODUCTION_SUPABASE_REF}.supabase.co`);
-const DEV_FRAMES = publicBaseFor(`https://${DEV_SUPABASE_REF}.supabase.co`);
-// As scripts/visual-regression.mjs: CI reads production's public bucket (the
-// dev bucket covers a frame not promoted yet), a local run the dev bucket.
-const DEFAULT_ORIGINS = process.env.CI ? [PRODUCTION_FRAMES, DEV_FRAMES] : [DEV_FRAMES];
+// CI reads production's public bucket (what production bakes with; the dev
+// bucket covers a frame not promoted yet). A local run reads the dev bucket
+// only — the one every local tool uses; name production with --origin if
+// needed. Locally the frames come through the machine's shared store
+// (scripts/lib/frame-cache.mjs: one download per machine, not per worktree;
+// tmp/visual/frames stays this checkout's, hard-linked from it); CI has none.
+const { defaults: DEFAULT_ORIGINS } = frameBucketOrigins({ root: ROOT });
+const FRAMES_STORE = sharedFrameCacheDir();
 
 const flags = parseFlags(process.argv.slice(2), ["--only", "--origin", "--shards"]);
 const ONLY = flags.get("--only") ?? "";
@@ -103,9 +103,9 @@ if (!flags.has("--no-fetch")) {
   const manifest = readManifest(path.join(ROOT, "lib/frames/frame-manifest.json"));
   const entries = Object.entries(manifest.files).filter(([key]) => key.endsWith(".png"));
   const t0 = Date.now();
-  const { cached, fetched, bytes, failed } = await syncFrameCache({ entries, origins: ORIGINS, dir: FRAMES_DIR });
+  const { cached, shared, fetched, bytes, failed } = await syncFrameCache({ entries, origins: ORIGINS, dir: FRAMES_DIR, store: FRAMES_STORE });
   console.log(
-    `frames: ${entries.length} manifest PNGs — ${cached} cached, ${fetched} fetched (${(bytes / 1e6).toFixed(1)} MB) in ${Math.round((Date.now() - t0) / 1000)} s`,
+    `frames: ${entries.length} manifest PNGs — ${cached} cached${FRAMES_STORE ? ` (${shared} from the shared store ${FRAMES_STORE})` : ""}, ${fetched} fetched (${(bytes / 1e6).toFixed(1)} MB) in ${Math.round((Date.now() - t0) / 1000)} s`,
   );
   if (failed.length) {
     for (const f of failed) console.error(`  ✗ ${f.key}: ${f.error}`);
