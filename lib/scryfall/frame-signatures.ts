@@ -2622,10 +2622,13 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   ),
 
   // --- 1.4: pinned showcase runs -------------------------------------------
+  // The commander set's scroll printings, LTC #411–490 (80: Scryfall's
+  // `scroll` promo type on every one, and the scroll frame by eye on #411,
+  // #465, #485 and #490, 2026-10-21) print the same frame as LTR's run.
   {
     key: "showcase/ltr/scroll",
     exactLabel: "The Lord of the Rings scroll showcase",
-    match: { collectors: { ltr: [[452, 712], [723, 730]] } },
+    match: { collectors: { ltr: [[452, 712], [723, 730]], ltc: [[411, 490]] } },
     outcome: { status: "exact", template: "lotrscroll" },
   },
   {
@@ -2657,10 +2660,24 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     match: { collectors: { mul: [[1, 1], [60, 60], [131, 131], [190, 190]] } },
     outcome: { status: "exact", template: "tarkirdragon" },
   },
+  // Multiverse Legends' three Theros demigods print the same constellation
+  // frame, crown included (checked by eye against THB #259 / #262,
+  // 2026-10-21): Daxos #2, Tymaret #18, Renata #28 and their halo-foil
+  // twins #132, #148, #158 (the serialized "z" printings too). Not their
+  // etched twins (#67, #83, #93: the etched frame, other art), nor the
+  // plane's three two-colour legends (Arixmethes #32, Atris #34, Kroxa #49
+  // and twins), which print a starless frame with a split pinline — they
+  // stay `showcase/mul`.
   {
     key: "showcase/thb/constellation",
-    exactLabel: "Theros Beyond Death constellation showcase",
-    match: { collectors: { thb: [[258, 268]] } },
+    exactLabel: ({ set }) =>
+      set === "mul" ? "Multiverse Legends Theros showcase (constellation)" : "Theros Beyond Death constellation showcase",
+    match: {
+      collectors: {
+        thb: [[258, 268]],
+        mul: [[2, 2], [18, 18], [28, 28], [132, 132], [148, 148], [158, 158]],
+      },
+    },
     outcome: { status: "exact", template: "nyx" },
   },
   {
@@ -2671,6 +2688,45 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       status: "nearest",
       template: { family: "m15" },
       reason: "PipGlyph doesn't have this plane's Multiverse Legends frame yet",
+      blockedBy: "4.11",
+    },
+  },
+  // Two whole sets in a frame of their own that Scryfall flags as no more
+  // than `inverted` (no `showcase` effect), so `era/2015` called them exact
+  // on M15 and nothing reached the request log (the showcase survey,
+  // 2026-10-21). They land where they always did — the kind's M15 frame,
+  // a transform card on its double-faced front body, the one Vehicle on
+  // the Vehicle frame once that is verified — as its nearest, and each
+  // import logs the ask. Not `showcase/…` keys: both print the standard
+  // legendary crown in their own tones (DBL #1, #240, #512; SS2 #8), so a
+  // legendary one keeps importing with the crown on (crownSwitchFromPrinting
+  // turns it off on a showcase signature).
+  //   • Innistrad: Double Feature (DBL, 2022; 535 printings): every card in
+  //     the black-and-white "silver screen" frame.
+  //   • Signature Spellbook (SS1 2018, SS2 2019, SS3 2020; 24 printings):
+  //     the Spellbook frame — the art behind a translucent text box.
+  {
+    key: "double-feature",
+    exactLabel: "Innistrad: Double Feature black-and-white frame",
+    match: { sets: ["dbl"] },
+    outcome: {
+      status: "nearest",
+      template: { family: "m15" },
+      reason: "PipGlyph doesn't have Double Feature's black-and-white frame yet",
+      blockedBy: "4.11",
+      // The M15 frame here is a stand-in itself: a verified artifact frame
+      // is never kept over the Vehicle frame (Honeymoon Hearse DBL #427).
+      landOnOnceVerified: { ...vehicleStandIn("in Double Feature's black-and-white frame"), overOwnFrame: true },
+    },
+  },
+  {
+    key: "signature-spellbook",
+    exactLabel: "Signature Spellbook frame",
+    match: { sets: ["ss1", "ss2", "ss3"] },
+    outcome: {
+      status: "nearest",
+      template: { family: "m15" },
+      reason: "PipGlyph doesn't have the Signature Spellbook frame yet",
       blockedBy: "4.11",
     },
   },

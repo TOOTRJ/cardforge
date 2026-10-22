@@ -317,7 +317,7 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // …and the 2015 Expeditions' rules panel (TODO 4.11 wave 1: 432 px over
   // the art — a land's text is a line or four).
   [["avatar/main", "battle/main", "bloomburrow/main", "emblem/main", "expeditionlandbfz/main", "lotrscroll/main"], ["1200 chars", "level up"]],
-  // The 2020 Expeditions' panel (layout v61: 494 px, where the MSE box was
+  // The 2020 Expeditions' panel (layout v62: 494 px, where the MSE box was
   // 441) holds the level-up card and the typed text now; 1,200 characters
   // still don't fit.
   [["expeditionland/main"], ["1200 chars"]],

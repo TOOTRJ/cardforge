@@ -82,7 +82,7 @@ describe("m15pw mana cost — real bake", () => {
     vi.unstubAllGlobals();
   });
 
-  it("centres the pip two HD px (costDy) below its box's centre, right edge on the box's", async () => {
+  it("centres the pip two HD px (costDy) below its box's centre, right edge costDx past the box's", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: string) => {
@@ -129,7 +129,9 @@ describe("m15pw mana cost — real bake", () => {
     const centre = (top + bottom + 1) / 2;
     expect(p.costDy).toBe(2 / 1500);
     expect(Math.abs(centre - (boxCentre + p.costDy! * W))).toBeLessThanOrEqual(1);
-    // Right-aligned in the box as before — only the height moved.
-    expect(Math.abs(right + 1 - ((box.leftPct + box.widthPct) / 100) * W)).toBeLessThanOrEqual(1);
+    // Right-aligned in the box, then moved costDx right (layout v61: 4 HD px,
+    // where the walker prints end their row).
+    expect(p.costDx).toBe(4 / 1500);
+    expect(Math.abs(right + 1 - (((box.leftPct + box.widthPct) / 100) * W + p.costDx! * W))).toBeLessThanOrEqual(1);
   });
 });

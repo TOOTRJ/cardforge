@@ -147,6 +147,12 @@ const requestSchema = z.discriminatedUnion("kind", [
       .union([z.literal("random"), z.enum(FRAME_TEMPLATE_VALUES)])
       .optional(),
     deck_id: z.string().uuid().optional(),
+    /** The creator's current frame, for an art fill that keeps the card
+     *  type: the picture is painted in its window's shape (TODO 4.48b). A
+     *  KNOWN template name only — anything else (a retired name on an older
+     *  card, a made-up one) is dropped and the art is painted for the
+     *  default frame, never a refused fill. Read for the shape alone. */
+    art_frame: z.enum(FRAME_TEMPLATE_VALUES).optional().catch(undefined),
     /** Which creator this fill belongs to ("create", "card:<id>",
      *  "remix:<id>") so an unclaimed result is offered back on the right
      *  page (app/api/ai/card-fill). */
@@ -437,6 +443,7 @@ export async function POST(request: Request) {
       theme: parsed.data.theme,
       style: parsed.data.style,
       frame: parsed.data.frame,
+      artFrame: parsed.data.art_frame,
       deckId: parsed.data.deck_id,
       scope: parsed.data.scope,
     });

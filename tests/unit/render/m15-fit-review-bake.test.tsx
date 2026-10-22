@@ -24,11 +24,11 @@ import { displayRunPx } from "@/lib/render/satori-text";
 //     symbol's ink (both renderers draw that string);
 //   • the rules box never dims the set symbol: on Expedition, whose rules box
 //     overlapped the type bar on its MSE master (a dark backdrop until
-//     TODO 4.11 wave 1's Card Conjurer re-source, layout v61; the panel is
+//     TODO 4.11 wave 1's Card Conjurer re-source, layout v62; the panel is
 //     the master's now), the symbol's full height shows with rules text or
 //     without.
 // The Card Conjurer masters live in the frames bucket (Expedition's since
-// layout v61): the bake is served a flat light-grey stand-in (so the dark
+// layout v62): the bake is served a flat light-grey stand-in (so the dark
 // ink is the only dark mark in its band).
 // ---------------------------------------------------------------------------
 

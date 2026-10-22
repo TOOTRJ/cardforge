@@ -6,8 +6,10 @@ import opentype from "opentype.js";
 import { describe, expect, it } from "vitest";
 import manifest from "@/lib/frames/frame-manifest.json";
 import { M15_FAMILY_TEMPLATES } from "@/lib/cards/m15-family";
+import { COST_ROW_PRINT_TEMPLATES } from "@/lib/cards/layout-version";
 import { DISPLAY_BASELINE_BELOW_CENTRE_EM, getFrameProfile, type FrameProfile, type TextSlot } from "@/lib/cards/template-layout";
 import {
+  CC_M15_COST_DISC_PCT,
   ADVENTURE_PANEL_COST_PCT,
   ADVENTURE_PANEL_PCT,
   COST_DISC_PCT,
@@ -161,14 +163,18 @@ describe("one M15-era display size (layout v32)", () => {
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       if (p.hideCost) continue;
-      expect(p.costSizePct ?? p.title.sizePct, t).toBe(sized(t, COST_DISC_PCT));
+      // Layout v61 (TODO 3.34): the CC-framed M15 profiles and the walkers
+      // print the 70 px disc; flip, aftermath and the MSE-framed showcases
+      // keep v32's 72.75.
+      const disc = COST_ROW_PRINT_TEMPLATES.includes(t) ? CC_M15_COST_DISC_PCT : COST_DISC_PCT;
+      expect(p.costSizePct ?? p.title.sizePct, t).toBe(sized(t, disc));
       if (p.secondFace?.costSizePct) expect(p.secondFace.costSizePct, t).toBe(sized(t, COST_DISC_PCT));
     }
     // The battle's: the family's 72.75 px disc on its landscape card (4.20
     // had pinned 71 px on the MSE profile).
     expect(getFrameProfile("battle").costSizePct! * 2100).toBeCloseTo(72.75, 9);
     // The planeswalker's disc no longer follows its (grown) name.
-    expect(getFrameProfile("m15pw").costSizePct).toBe(COST_DISC_PCT);
+    expect(getFrameProfile("m15pw").costSizePct).toBe(CC_M15_COST_DISC_PCT);
   });
 
   it("sizes the set symbol from Card Conjurer's box: M15's 86 px, the planeswalker's and saga's 80 px", () => {
@@ -361,7 +367,7 @@ describe("baselines (TextSlot.dy)", () => {
     ["extendedart", base.title, cc],
     // …and its land dress (owner Round 63): the same pack's land frames.
     ["extendedartland", base.title, cc],
-    // The Expeditions (TODO 4.11 wave 1, layout v61): Card Conjurer's two
+    // The Expeditions (TODO 4.11 wave 1, layout v62): Card Conjurer's two
     // Expedition packs — the name 2 px above M15's (186 px, the prints'),
     // the type line on its own band centred for its baseline (no dy: 1794
     // on ZNE's bar, 1798 on EXP's).

@@ -6,7 +6,7 @@ import { CardPreview } from "@/components/cards/card-preview";
 import { displayLine } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { costRowHdPx, measuredLinePreviewPct, secondFaceLineSizes } from "@/lib/cards/render-tiers";
-import { RULES_SIZE_PX, rulesPxToPct } from "@/lib/cards/typography";
+import { CC_M15_COST_DISC_PCT, COST_DISC_PCT, RULES_SIZE_PX, rulesPxToPct } from "@/lib/cards/typography";
 
 // ---------------------------------------------------------------------------
 // The live-preview half of TODO 0.22: aftermath's bottom half turns 90°
@@ -67,7 +67,10 @@ describe("CardPreview — aftermath's second half", () => {
     expect(second.rules.sizePct).toBe(layout.rules.sizePct);
     expect(layout.title.sizePct).toBe(m15.title.sizePct);
     expect(layout.type.sizePct).toBe(m15.type.sizePct);
-    expect(layout.costSizePct).toBe(m15.costSizePct);
+    // M15's v32 disc (72.75 px): v61 moved the CC-framed M15 profiles to
+    // the printed 70 px (TODO 3.34), not the portrait layouts.
+    expect(layout.costSizePct).toBe(COST_DISC_PCT);
+    expect(m15.costSizePct).toBe(CC_M15_COST_DISC_PCT);
     expect(layout.rules.sizePct).toBe(rulesPxToPct(RULES_SIZE_PX.standard)); // 76 px, layout v33
   });
 

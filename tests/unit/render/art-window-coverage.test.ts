@@ -610,7 +610,7 @@ describe("the art-window known failures", () => {
         "bloomburrow",
         // (extendedart, m15textless and m15textlessland left with their Card
         // Conjurer masters, layout v58: TODO 4.7 / 4.35; expeditionland with
-        // its own, layout v61: TODO 4.11 wave 1.)
+        // its own, layout v62: TODO 4.11 wave 1.)
         "m15fullartland",
         // (m15tokenartifact's flush bottom — 4.53 (e) — struck by layout
         // v59's art slot on the window.)

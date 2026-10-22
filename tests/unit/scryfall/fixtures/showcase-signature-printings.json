@@ -1,0 +1,937 @@
+{
+  "dbl-1": {
+    "id": "9c5743e9-7fae-483a-b591-496afdd905f2",
+    "name": "Adeline, Resplendent Cathar",
+    "layout": "normal",
+    "set": "dbl",
+    "set_name": "Innistrad: Double Feature",
+    "set_type": "draft_innovation",
+    "collector_number": "1",
+    "released_at": "2022-01-28",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "security_stamp": "oval",
+    "keywords": [
+      "Vigilance"
+    ],
+    "type_line": "Legendary Creature — Human Knight",
+    "mana_cost": "{1}{W}{W}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "power": "*",
+    "toughness": "4",
+    "oracle_text": "Vigilance\nAdeline's power is equal to the number of creatures you control.\nWhenever you attack, for each opponent, create a 1/1 white Human creature token that's tapped and attacking that player or a planeswalker they control.",
+    "rarity": "rare",
+    "image_status": "highres_scan"
+  },
+  "dbl-300": {
+    "id": "7c9aeb6e-678e-44ed-8143-c44250cdb196",
+    "name": "Sanctify",
+    "layout": "normal",
+    "set": "dbl",
+    "set_name": "Innistrad: Double Feature",
+    "set_type": "draft_innovation",
+    "collector_number": "300",
+    "released_at": "2022-01-28",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "keywords": [],
+    "type_line": "Sorcery",
+    "mana_cost": "{1}{W}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "oracle_text": "Destroy target artifact or enchantment. You gain 3 life.",
+    "rarity": "common",
+    "image_status": "highres_scan"
+  },
+  "dbl-2": {
+    "id": "c778f191-0a9b-4d1c-97e5-b5fba9af174d",
+    "name": "Ambitious Farmhand // Seasoned Cathar",
+    "layout": "transform",
+    "set": "dbl",
+    "set_name": "Innistrad: Double Feature",
+    "set_type": "draft_innovation",
+    "collector_number": "2",
+    "released_at": "2022-01-28",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted",
+      "sunmoondfc"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "keywords": [
+      "Lifelink",
+      "Transform",
+      "Coven"
+    ],
+    "type_line": "Creature — Human Peasant // Creature — Human Knight",
+    "color_identity": [
+      "W"
+    ],
+    "rarity": "uncommon",
+    "image_status": "highres_scan",
+    "card_faces": [
+      {
+        "name": "Ambitious Farmhand",
+        "mana_cost": "{1}{W}",
+        "type_line": "Creature — Human Peasant",
+        "oracle_text": "When this creature enters, you may search your library for a basic Plains card, reveal it, put it into your hand, then shuffle.\nCoven — {1}{W}{W}: Transform this creature. Activate only if you control three or more creatures with different powers.",
+        "colors": [
+          "W"
+        ],
+        "power": "1",
+        "toughness": "1",
+        "image_uris": {
+          "normal": "https://cards.scryfall.io/normal/front/c/7/c778f191-0a9b-4d1c-97e5-b5fba9af174d.jpg?1783924485",
+          "art_crop": "https://cards.scryfall.io/art_crop/front/c/7/c778f191-0a9b-4d1c-97e5-b5fba9af174d.jpg?1783924485"
+        }
+      },
+      {
+        "name": "Seasoned Cathar",
+        "mana_cost": "",
+        "type_line": "Creature — Human Knight",
+        "oracle_text": "Lifelink",
+        "colors": [
+          "W"
+        ],
+        "power": "3",
+        "toughness": "3",
+        "color_indicator": [
+          "W"
+        ],
+        "image_uris": {
+          "normal": "https://cards.scryfall.io/normal/back/c/7/c778f191-0a9b-4d1c-97e5-b5fba9af174d.jpg?1783924485",
+          "art_crop": "https://cards.scryfall.io/art_crop/back/c/7/c778f191-0a9b-4d1c-97e5-b5fba9af174d.jpg?1783924485"
+        }
+      }
+    ]
+  },
+  "dbl-260": {
+    "id": "cd4ae6af-22c3-4fa3-a7c1-5174382cda2f",
+    "name": "Deserted Beach",
+    "layout": "normal",
+    "set": "dbl",
+    "set_name": "Innistrad: Double Feature",
+    "set_type": "draft_innovation",
+    "collector_number": "260",
+    "released_at": "2022-01-28",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "security_stamp": "oval",
+    "keywords": [],
+    "type_line": "Land",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "produced_mana": [
+      "U",
+      "W"
+    ],
+    "oracle_text": "This land enters tapped unless you control two or more other lands.\n{T}: Add {W} or {U}.",
+    "rarity": "rare",
+    "image_status": "highres_scan"
+  },
+  "dbl-427": {
+    "id": "a122f34e-181d-4c26-9cef-ff56baf4b993",
+    "name": "Honeymoon Hearse",
+    "layout": "normal",
+    "set": "dbl",
+    "set_name": "Innistrad: Double Feature",
+    "set_type": "draft_innovation",
+    "collector_number": "427",
+    "released_at": "2022-01-28",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "keywords": [
+      "Trample"
+    ],
+    "type_line": "Artifact — Vehicle",
+    "mana_cost": "{2}{R}",
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "power": "5",
+    "toughness": "5",
+    "oracle_text": "Trample\nTap two untapped creatures you control: This Vehicle becomes an artifact creature until end of turn.",
+    "rarity": "uncommon",
+    "image_status": "highres_scan"
+  },
+  "dbl-23": {
+    "id": "a4ff1482-a838-4955-b95e-7f06d8b738c5",
+    "name": "Hedgewitch's Mask",
+    "layout": "normal",
+    "set": "dbl",
+    "set_name": "Innistrad: Double Feature",
+    "set_type": "draft_innovation",
+    "collector_number": "23",
+    "released_at": "2022-01-28",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "keywords": [
+      "Equip"
+    ],
+    "type_line": "Artifact — Equipment",
+    "mana_cost": "{W}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "oracle_text": "Equipped creature gets +1/+1.\nEquipped creature can't be blocked by creatures with power 4 or greater.\nEquip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)",
+    "rarity": "common",
+    "image_status": "highres_scan"
+  },
+  "ss1-3": {
+    "id": "3cd19bdf-64f1-4c59-920b-1165f3551928",
+    "name": "Brainstorm",
+    "layout": "normal",
+    "set": "ss1",
+    "set_name": "Signature Spellbook: Jace",
+    "set_type": "spellbook",
+    "collector_number": "3",
+    "released_at": "2018-06-15",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "security_stamp": "circle",
+    "keywords": [],
+    "type_line": "Instant",
+    "mana_cost": "{U}",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "oracle_text": "Draw three cards, then put two cards from your hand on top of your library in any order.",
+    "rarity": "rare",
+    "image_status": "highres_scan"
+  },
+  "ss2-8": {
+    "id": "9dccac19-a915-4189-beb8-5d279a15a54e",
+    "name": "Blackblade Reforged",
+    "layout": "normal",
+    "set": "ss2",
+    "set_name": "Signature Spellbook: Gideon",
+    "set_type": "spellbook",
+    "collector_number": "8",
+    "released_at": "2019-06-28",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "security_stamp": "circle",
+    "keywords": [
+      "Equip"
+    ],
+    "type_line": "Legendary Artifact — Equipment",
+    "mana_cost": "{2}",
+    "colors": [],
+    "color_identity": [],
+    "oracle_text": "Equipped creature gets +1/+1 for each land you control.\nEquip legendary creature {3}\nEquip {7}",
+    "rarity": "rare",
+    "image_status": "highres_scan"
+  },
+  "ss2-1": {
+    "id": "8532d72a-b2d2-49e1-85ea-35f4c91c6c8d",
+    "name": "Gideon Jura",
+    "layout": "normal",
+    "set": "ss2",
+    "set_name": "Signature Spellbook: Gideon",
+    "set_type": "spellbook",
+    "collector_number": "1",
+    "released_at": "2019-06-28",
+    "frame": "2015",
+    "frame_effects": [
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "security_stamp": "circle",
+    "keywords": [],
+    "type_line": "Legendary Planeswalker — Gideon",
+    "mana_cost": "{3}{W}{W}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "loyalty": "6",
+    "oracle_text": "+2: During target opponent's next turn, creatures that player controls attack Gideon Jura if able.\n−2: Destroy target tapped creature.\n0: Until end of turn, Gideon Jura becomes a 6/6 Human Soldier creature that's still a planeswalker. Prevent all damage that would be dealt to him this turn.",
+    "rarity": "mythic",
+    "image_status": "highres_scan"
+  },
+  "ltc-411": {
+    "id": "2ed1e876-f68f-4134-bb63-f9d05d5e0cff",
+    "name": "Beregond of the Guard",
+    "layout": "normal",
+    "set": "ltc",
+    "set_name": "Tales of Middle-earth Commander",
+    "set_type": "commander",
+    "collector_number": "411",
+    "released_at": "2023-11-03",
+    "frame": "2015",
+    "frame_effects": [
+      "showcase",
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "silverfoil",
+      "scroll",
+      "universesbeyond",
+      "boosterfun"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "security_stamp": "triangle",
+    "keywords": [],
+    "type_line": "Legendary Creature — Human Soldier",
+    "mana_cost": "{3}{W}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "power": "3",
+    "toughness": "3",
+    "oracle_text": "Whenever Beregond or another Human you control enters, creatures you control get +1/+1 and gain vigilance until end of turn.",
+    "rarity": "rare",
+    "image_status": "lowres"
+  },
+  "ltc-465": {
+    "id": "46ffeca9-a934-4592-8dd7-18750fcac11d",
+    "name": "In the Darkness Bind Them",
+    "layout": "saga",
+    "set": "ltc",
+    "set_name": "Tales of Middle-earth Commander",
+    "set_type": "commander",
+    "collector_number": "465",
+    "released_at": "2023-11-03",
+    "frame": "2015",
+    "frame_effects": [
+      "showcase"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "silverfoil",
+      "scroll",
+      "universesbeyond",
+      "boosterfun"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "security_stamp": "triangle",
+    "keywords": [],
+    "type_line": "Enchantment — Saga",
+    "mana_cost": "{2}{U}{B}{R}",
+    "colors": [
+      "B",
+      "R",
+      "U"
+    ],
+    "color_identity": [
+      "B",
+      "R",
+      "U"
+    ],
+    "oracle_text": "(As this Saga enters and after your draw step, add a lore counter. Sacrifice after IV.)\nI, II, III — Create a 3/3 black Wraith creature token with menace. The Ring tempts you.\nIV — For each opponent, gain control of up to one target creature that player controls until end of turn. Untap those creatures. They gain haste until end of turn. The Ring tempts you.",
+    "rarity": "rare",
+    "image_status": "lowres"
+  },
+  "ltc-485": {
+    "id": "5ed34e69-aefe-440e-a0f4-495578a15904",
+    "name": "Crown of Gondor",
+    "layout": "normal",
+    "set": "ltc",
+    "set_name": "Tales of Middle-earth Commander",
+    "set_type": "commander",
+    "collector_number": "485",
+    "released_at": "2023-11-03",
+    "frame": "2015",
+    "frame_effects": [
+      "showcase",
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "silverfoil",
+      "scroll",
+      "universesbeyond",
+      "boosterfun"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "security_stamp": "triangle",
+    "keywords": [
+      "Equip"
+    ],
+    "type_line": "Legendary Artifact — Equipment",
+    "mana_cost": "{3}",
+    "colors": [],
+    "color_identity": [],
+    "oracle_text": "Equipped creature gets +1/+1 for each creature you control.\nWhen a legendary creature you control enters, if there is no monarch, you become the monarch.\nEquip {4}. This ability costs {3} less to activate if you're the monarch.",
+    "rarity": "rare",
+    "image_status": "lowres"
+  },
+  "ltc-490": {
+    "id": "e9c5dce8-b67f-41cd-b96c-67e49833a96f",
+    "name": "The Black Gate",
+    "layout": "normal",
+    "set": "ltc",
+    "set_name": "Tales of Middle-earth Commander",
+    "set_type": "commander",
+    "collector_number": "490",
+    "released_at": "2023-11-03",
+    "frame": "2015",
+    "frame_effects": [
+      "showcase",
+      "legendary"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "silverfoil",
+      "scroll",
+      "universesbeyond",
+      "boosterfun"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "security_stamp": "triangle",
+    "keywords": [],
+    "type_line": "Legendary Land — Gate",
+    "mana_cost": "",
+    "colors": [],
+    "color_identity": [
+      "B"
+    ],
+    "produced_mana": [
+      "B"
+    ],
+    "oracle_text": "As The Black Gate enters, you may pay 3 life. If you don't, it enters tapped.\n{T}: Add {B}.\n{1}{B}, {T}: Choose a player with the most life or tied for most life. Target creature can't be blocked by creatures that player controls this turn.",
+    "rarity": "rare",
+    "image_status": "lowres"
+  },
+  "ltc-410": {
+    "id": "13788423-db82-4e76-83ad-3f812a4d547a",
+    "name": "Sol Ring",
+    "layout": "normal",
+    "set": "ltc",
+    "set_name": "Tales of Middle-earth Commander",
+    "set_type": "commander",
+    "collector_number": "410",
+    "released_at": "2023-06-23",
+    "frame": "2015",
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "finishes": [
+      "nonfoil"
+    ],
+    "security_stamp": "triangle",
+    "keywords": [],
+    "type_line": "Artifact",
+    "mana_cost": "{1}",
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "C"
+    ],
+    "oracle_text": "{T}: Add {C}{C}.",
+    "rarity": "mythic",
+    "image_status": "lowres"
+  },
+  "ltc-491": {
+    "id": "b33c91d2-020e-45a1-aef6-187484a7cb51",
+    "name": "Andúril, Narsil Reforged",
+    "layout": "normal",
+    "set": "ltc",
+    "set_name": "Tales of Middle-earth Commander",
+    "set_type": "commander",
+    "collector_number": "491",
+    "released_at": "2023-11-03",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "inverted"
+    ],
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "universesbeyond",
+      "boosterfun"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "security_stamp": "triangle",
+    "keywords": [
+      "Ascend",
+      "Equip"
+    ],
+    "type_line": "Legendary Artifact — Equipment",
+    "mana_cost": "{2}",
+    "colors": [],
+    "color_identity": [],
+    "oracle_text": "Ascend (If you control ten or more permanents, you get the city's blessing for the rest of the game.)\nWhenever equipped creature attacks, put a +1/+1 counter on each creature you control. If you have the city's blessing, put two +1/+1 counters on each creature you control instead.\nEquip {3}",
+    "rarity": "rare",
+    "image_status": "highres_scan"
+  },
+  "mul-2": {
+    "id": "42496543-db8c-4053-aaf5-8e96948bafb9",
+    "name": "Daxos, Blessed by the Sun",
+    "layout": "normal",
+    "set": "mul",
+    "set_name": "Multiverse Legends",
+    "set_type": "masterpiece",
+    "collector_number": "2",
+    "released_at": "2023-04-21",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "showcase",
+      "inverted",
+      "enchantment"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Enchantment Creature — Demigod",
+    "mana_cost": "{W}{W}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "power": "2",
+    "toughness": "*",
+    "oracle_text": "Daxos's toughness is equal to your devotion to white. (Each {W} in the mana costs of permanents you control counts toward your devotion to white.)\nWhenever another creature you control enters or dies, you gain 1 life.",
+    "rarity": "uncommon",
+    "image_status": "highres_scan"
+  },
+  "mul-18": {
+    "id": "aff4fb74-8fb8-4d58-ac1b-be3de156411a",
+    "name": "Tymaret, Chosen from Death",
+    "layout": "normal",
+    "set": "mul",
+    "set_name": "Multiverse Legends",
+    "set_type": "masterpiece",
+    "collector_number": "18",
+    "released_at": "2023-04-21",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "showcase",
+      "inverted",
+      "enchantment"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Enchantment Creature — Demigod",
+    "mana_cost": "{B}{B}",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "power": "2",
+    "toughness": "*",
+    "oracle_text": "Tymaret's toughness is equal to your devotion to black. (Each {B} in the mana costs of permanents you control counts toward your devotion to black.)\n{1}{B}: Exile up to two target cards from graveyards. You gain 1 life for each creature card exiled this way.",
+    "rarity": "uncommon",
+    "image_status": "highres_scan"
+  },
+  "mul-28": {
+    "id": "1998356b-4eb3-43a7-8534-10eb212c7f2a",
+    "name": "Renata, Called to the Hunt",
+    "layout": "normal",
+    "set": "mul",
+    "set_name": "Multiverse Legends",
+    "set_type": "masterpiece",
+    "collector_number": "28",
+    "released_at": "2023-04-21",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "showcase",
+      "inverted",
+      "enchantment"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Enchantment Creature — Demigod",
+    "mana_cost": "{2}{G}{G}",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "power": "*",
+    "toughness": "3",
+    "oracle_text": "Renata's power is equal to your devotion to green. (Each {G} in the mana costs of permanents you control counts toward your devotion to green.)\nEach other creature you control enters with an additional +1/+1 counter on it.",
+    "rarity": "uncommon",
+    "image_status": "highres_scan"
+  },
+  "mul-158": {
+    "id": "ad021f67-bef5-4d21-886a-97516f23dc4c",
+    "name": "Renata, Called to the Hunt",
+    "layout": "normal",
+    "set": "mul",
+    "set_name": "Multiverse Legends",
+    "set_type": "masterpiece",
+    "collector_number": "158",
+    "released_at": "2023-04-21",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "showcase",
+      "inverted",
+      "enchantment"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "halofoil"
+    ],
+    "finishes": [
+      "foil"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Enchantment Creature — Demigod",
+    "mana_cost": "{2}{G}{G}",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "power": "*",
+    "toughness": "3",
+    "oracle_text": "Renata's power is equal to your devotion to green. (Each {G} in the mana costs of permanents you control counts toward your devotion to green.)\nEach other creature you control enters with an additional +1/+1 counter on it.",
+    "rarity": "uncommon",
+    "image_status": "highres_scan"
+  },
+  "mul-132z": {
+    "id": "353a4398-5b8e-48bd-985b-62c8f33110e0",
+    "name": "Daxos, Blessed by the Sun",
+    "layout": "normal",
+    "set": "mul",
+    "set_name": "Multiverse Legends",
+    "set_type": "masterpiece",
+    "collector_number": "132z",
+    "released_at": "2023-04-21",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "showcase",
+      "inverted",
+      "enchantment"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "promo_types": [
+      "serialized",
+      "doublerainbow"
+    ],
+    "finishes": [
+      "foil"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Enchantment Creature — Demigod",
+    "mana_cost": "{W}{W}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "power": "2",
+    "toughness": "*",
+    "oracle_text": "Daxos's toughness is equal to your devotion to white. (Each {W} in the mana costs of permanents you control counts toward your devotion to white.)\nWhenever another creature you control enters or dies, you gain 1 life.",
+    "rarity": "uncommon",
+    "image_status": "highres_scan"
+  },
+  "mul-67": {
+    "id": "71689446-2d30-4e0d-8e77-7aa7843fc039",
+    "name": "Daxos, Blessed by the Sun",
+    "layout": "normal",
+    "set": "mul",
+    "set_name": "Multiverse Legends",
+    "set_type": "masterpiece",
+    "collector_number": "67",
+    "released_at": "2023-04-21",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "inverted",
+      "enchantment",
+      "etched"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "finishes": [
+      "etched"
+    ],
+    "keywords": [],
+    "type_line": "Legendary Enchantment Creature — Demigod",
+    "mana_cost": "{W}{W}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "power": "2",
+    "toughness": "*",
+    "oracle_text": "Daxos's toughness is equal to your devotion to white. (Each {W} in the mana costs of permanents you control counts toward your devotion to white.)\nWhenever another creature you control enters or dies, you gain 1 life.",
+    "rarity": "uncommon",
+    "image_status": "highres_scan"
+  },
+  "mul-32": {
+    "id": "2fa20406-86ce-48a1-876d-c434cfca2237",
+    "name": "Arixmethes, Slumbering Isle",
+    "layout": "normal",
+    "set": "mul",
+    "set_name": "Multiverse Legends",
+    "set_type": "masterpiece",
+    "collector_number": "32",
+    "released_at": "2023-04-21",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "showcase",
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "security_stamp": "oval",
+    "keywords": [],
+    "type_line": "Legendary Creature — Kraken",
+    "mana_cost": "{2}{G}{U}",
+    "colors": [
+      "G",
+      "U"
+    ],
+    "color_identity": [
+      "G",
+      "U"
+    ],
+    "produced_mana": [
+      "G",
+      "U"
+    ],
+    "power": "12",
+    "toughness": "12",
+    "oracle_text": "Arixmethes enters tapped with five slumber counters on it.\nAs long as Arixmethes has a slumber counter on it, it's a land. (It's not a creature.)\nWhenever you cast a spell, you may remove a slumber counter from Arixmethes.\n{T}: Add {G}{U}.",
+    "rarity": "rare",
+    "image_status": "highres_scan"
+  },
+  "mul-1": {
+    "id": "278d7781-ddfe-4bcb-94bd-3c155030dfdc",
+    "name": "Anafenza, Kin-Tree Spirit",
+    "layout": "normal",
+    "set": "mul",
+    "set_name": "Multiverse Legends",
+    "set_type": "masterpiece",
+    "collector_number": "1",
+    "released_at": "2023-04-21",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary",
+      "showcase",
+      "inverted"
+    ],
+    "border_color": "black",
+    "full_art": false,
+    "textless": false,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "security_stamp": "oval",
+    "keywords": [
+      "Bolster"
+    ],
+    "type_line": "Legendary Creature — Spirit Soldier",
+    "mana_cost": "{W}{W}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "power": "2",
+    "toughness": "2",
+    "oracle_text": "Whenever another nontoken creature you control enters, bolster 1. (Choose a creature with the least toughness among creatures you control and put a +1/+1 counter on it.)",
+    "rarity": "rare",
+    "image_status": "highres_scan"
+  },
+  "mp2-1": {
+    "id": "dbbf55bc-6bb3-458a-8cf0-1f603bb2acb3",
+    "name": "Austere Command",
+    "layout": "normal",
+    "set": "mp2",
+    "set_name": "Amonkhet Invocations",
+    "set_type": "masterpiece",
+    "collector_number": "1",
+    "released_at": "2017-04-28",
+    "frame": "2015",
+    "border_color": "borderless",
+    "full_art": false,
+    "textless": false,
+    "finishes": [
+      "foil"
+    ],
+    "security_stamp": "oval",
+    "keywords": [],
+    "type_line": "Sorcery",
+    "mana_cost": "{4}{W}{W}",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "oracle_text": "Choose two —\n• Destroy all artifacts.\n• Destroy all enchantments.\n• Destroy all creatures with mana value 3 or less.\n• Destroy all creatures with mana value 4 or greater.",
+    "rarity": "special",
+    "image_status": "highres_scan"
+  }
+}

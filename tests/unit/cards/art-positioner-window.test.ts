@@ -141,7 +141,7 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   m15fullartlandthb: { front: [1382, 1876] },
   m15textless: { front: [1314, 1816] },
   m15textlessland: { front: [1314, 1816] },
-  // The Expeditions (TODO 4.11 wave 1, layout v61): CC's window + the
+  // The Expeditions (TODO 4.11 wave 1, layout v62): CC's window + the
   // translucent rules panel under the same picture, both looks.
   expeditionland: { front: [1382, 1485] },
   expeditionlandbfz: { front: [1276, 1471] },
