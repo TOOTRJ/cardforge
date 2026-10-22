@@ -26,10 +26,13 @@
 -- renderers substitute in. Flavour text is never substituted, so it is not
 -- read. CARDNAME is matched as a capitalised word, as the renderers do.
 --
--- Only `frame_style` changes on a flagged row. It is not a render column
+-- Only `frame_style` is written on a flagged row. It is not a render column
 -- (0126's guard) and no search column (0086's trigger does not fire); the
--- stored bake stays exact — it already shows the token as typed. A row
--- already carrying the key is left alone (idempotent).
+-- stored bake stays exact — it already shows the token as typed. 0134's
+-- updated_at guard DOES fire (frame_style is not one of the columns it
+-- ignores): a flagged row's updated_at moves to the migration's time — its
+-- share image's cache-buster and its sitemap lastmod with it; nothing
+-- re-bakes. A row already carrying the key is left alone (idempotent).
 --
 -- Grants: none — no new object; `cards` is granted at table level (0097).
 --

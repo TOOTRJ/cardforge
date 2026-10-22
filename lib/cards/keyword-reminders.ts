@@ -60,7 +60,7 @@ export const KEYWORD_REMINDERS: readonly KeywordReminder[] = [
   { name: "Flashback", rule: "702.34", text: "Flashback {2}", reminder: "You may cast this card from your graveyard for its flashback cost. Then exile it." },
   { name: "Convoke", rule: "702.51", text: "Convoke", reminder: "Your creatures can help cast this spell. Each creature you tap while casting this spell pays for {1} or one mana of that creature’s color." },
   { name: "Prowess", rule: "702.108", text: "Prowess", reminder: "Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn." },
-  { name: "Crew", rule: "702.122", text: "Crew 1", reminder: "Tap any number of untapped creatures you control with total power 1 or more: This Vehicle becomes an artifact creature until end of turn." },
+  { name: "Crew", rule: "702.122", text: "Crew 1", reminder: "Tap any number of creatures you control with total power 1 or more: This Vehicle becomes an artifact creature until end of turn." },
   { name: "Toxic", rule: "702.164", text: "Toxic 1", reminder: "Players dealt combat damage by this creature also get a poison counter." },
   { name: "Mill", rule: "701.17", text: "Mill two cards.", reminder: "Put the top two cards of your library into your graveyard." },
   { name: "Scry", rule: "701.22", text: "Scry 1.", reminder: "Look at the top card of your library. You may put that card on the bottom." },
