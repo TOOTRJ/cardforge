@@ -37,16 +37,18 @@ describe("the second-part words, per kind", () => {
       battle: ["Battle", "Back face", "the back face"],
       // A double-faced saga's back (TODO 5.5 (b)).
       saga: ["Saga", "Back face", "the back face"],
+      // A double-sided token's back (TODO 5.5 (c)).
+      token: ["Front face", "Back face", "the back face"],
     });
   });
 
-  it("covers exactly the kinds whose frame carries a second part — plus the battle, whose back is optional (TODO 5.5), and the saga, whose double-faced front has one (5.5 (b))", () => {
+  it("covers exactly the kinds whose frame carries a second part — plus the battle, whose back is optional (TODO 5.5), the saga, whose double-faced front has one (5.5 (b)), and the token, a double-sided token's (5.5 (c))", () => {
     const withPart = CARD_KIND_VALUES.filter(
       (kind) => KIND_DEFS[kind].inlineSecondFace || dfcLayoutForKind(kind) !== null,
     );
-    expect(Object.keys(SECOND_PART_WORDS).sort()).toEqual([...withPart, "battle", "saga"].sort());
+    expect(Object.keys(SECOND_PART_WORDS).sort()).toEqual([...withPart, "battle", "saga", "token"].sort());
     for (const kind of CARD_KIND_VALUES) {
-      expect(secondPartWordsFor(kind) !== null, kind).toBe(kind === "battle" || kind === "saga" || withPart.includes(kind));
+      expect(secondPartWordsFor(kind) !== null, kind).toBe(kind === "battle" || kind === "saga" || kind === "token" || withPart.includes(kind));
     }
     // Every kind's back is built since TODO 5.5: a battle whose back can't
     // be a face of its own is greyed by the form (lib/creator/battle-back.ts).

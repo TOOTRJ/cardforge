@@ -227,6 +227,10 @@ const PICKS: readonly Pick[] = [
   { from: "m15borderlessmdfcfront/wu/mdfc-long@pair-crown", why: "borderless modal front: the split pinline's crowned twin, the housing, the strip's white texts" },
   { from: "m15borderlessmdfcback/g/mdfc-long", why: "borderless modal back: its own cost, the light strip's dark texts, through the flip" },
   { from: "m15tokentext/g/token-long", why: "token with a text box" },
+  // Double-sided tokens (TODO 5.5 (c)): the back on its own token template
+  // and colour, in the front's design — through the flip.
+  { from: "m15tokentext/w/token-short@two-sided", why: "double-sided token (5.5 (c)): the back on its own arch token template and colour, through the flip" },
+  { from: "m20tokenartifacttext/c/token-short@two-sided", why: "double-sided token (5.5 (c)): a full-art artifact token's back behind a red full-art front, through the flip" },
   // The arch's tall box (TODO 4.55): the pill, the symbol and the type line
   // 238 px up, the taller box's rules centred clear of the plate — and its
   // artifact dress (a Clue's silver frame).

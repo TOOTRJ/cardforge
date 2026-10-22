@@ -23,7 +23,14 @@ import {
 } from "@/components/cards/frame-layer";
 import type { FrameMatch } from "@/lib/scryfall/frame-signatures";
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
-import { dfcImportLanding, isDfcImportPatch, withBorderedDfcBodies, withoutDfcLanding } from "@/lib/scryfall/dfc-import";
+import {
+  dfcImportLanding,
+  isDfcImportPatch,
+  isTokenPairImportPatch,
+  tokenPairImportLanding,
+  withBorderedDfcBodies,
+  withoutDfcLanding,
+} from "@/lib/scryfall/dfc-import";
 import { eraForTemplate, isM15Treatment, isTreatmentBody, standardFrameFor } from "@/lib/creator/frame-picker";
 import {
   KIND_DEFS,
@@ -625,6 +632,10 @@ export function finalizeImportMatch<
   // exact answer becomes "not yet verified" on the body (the request log's
   // "Not yet verified" cause, D1), a nearest one keeps its own reason; both
   // land on the standard (`landOn`).
+  // A double-sided token (TODO 5.5 (c)): both faces only once both faces'
+  // tokens are verified, each in its colour — else the front alone, as the
+  // import was before (lib/scryfall/dfc-import.ts tokenPairImportLanding).
+  if (isTokenPairImportPatch(finalized)) return tokenPairImportLanding(finalized, verifiedKeys);
   if (isDfcImportPatch(finalized)) {
     let landing = dfcImportLanding(finalized, verifiedKeys);
     // A dark borderless printing (TODO 5.7) on the borderless bodies: short

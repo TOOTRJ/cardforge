@@ -97,6 +97,9 @@ export const SECOND_HALF_RELATIONSHIP: Record<RemixSecondHalfLayout, string> = {
     "The second half is the card's BACK FACE: what the front becomes when it transforms — the same being or place changed, unleashed or revealed. Name it as the front's other form, so the two names read as before and after.",
   mdfc:
     "The second half is the card's BACK FACE, the other MODE of a modal double-faced card: a different spell, creature or land the player may choose instead of the front. Name it as a second, related choice from the same world, not the same being.",
+  // A double-sided token (TODO 5.5 (c)): two tokens back to back.
+  token:
+    "The second half is the card's BACK FACE: another TOKEN printed on the other side of the same token card — a different token, not the front transformed. Name it as a token is named (what it is, usually its creature type), a companion to the front's token from the same world.",
 };
 
 const GENERIC_RELATIONSHIP =

@@ -20,7 +20,7 @@
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 import { backFaceFromPatch, splitSubtypes } from "@/lib/scryfall/preview-from-patch";
 import { DFC_REMIX_CREDITS, dfcImportLanding } from "@/lib/scryfall/dfc-import";
-import { finalizeImportMatch, remixFrameFor, withoutTextlessFrames } from "@/lib/creator/frame-resolve";
+import { finalizeImportMatch, remixFrameFor, remixSavedFrame, withoutTextlessFrames } from "@/lib/creator/frame-resolve";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { extendedArtDressFor, kindFromCard, templatePaintsSecondFace, typeWordFrameFor } from "@/lib/creator/card-kinds";
 import { bodyFor, dfcBodyOf, hasBackOfItsOwn, isBattleFront, templateHasBackFace, withTransformBackShape } from "@/lib/cards/dfc";
@@ -34,7 +34,10 @@ import {
   type FrameTemplate,
 } from "@/types/card";
 import { importedAnatomy, storedAnatomyOf, type FrameAnatomyStyle } from "@/lib/cards/anatomy";
-import { frameGateError } from "@/lib/cards/frame-availability";
+import { frameGateError, isFrameComboAvailable } from "@/lib/cards/frame-availability";
+import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
+import { isTokenPairBack, isTokenPairFront } from "@/lib/cards/token-faces";
+import { tokenBackBodyFor } from "@/lib/creator/token-back";
 import { cardFieldsFace, frameKindGateError } from "@/lib/cards/frame-kind-gate";
 import { dfcFrontColorError, dfcFrontTypeError, resolveDfcBackFace } from "@/lib/cards/dfc-gate";
 import { serializeLoyalty, serializeSaga } from "@/lib/cards/face-content";
@@ -126,9 +129,15 @@ export function scryfallRemixMechanics(
   // whether the back landed: the import's own landing does — both bodies
   // verified, each in its colour — and a one-credit plan stays one-faced,
   // as a transform printing's does.)
+  // (A double-sided token — TODO 5.5 (c) — the same: two faces only where
+  // the import keeps its back — both faces' tokens verified, each in its
+  // colour — and its back's body is derived for the front it lands on.)
+  const tokenBack = isTokenPairFront(frame.template) && !options.singleFace ? tokenPairRemixBack(patch, frame.template, verifiedKeys) : null;
   const doubleFaced = isBattleFront(frame.template)
     ? !options.singleFace && dfcImportLanding(finalizeImportMatch(patch, verifiedKeys), verifiedKeys).ok
-    : hasBackOfItsOwn(frame.template, patch.back_face);
+    : isTokenPairFront(frame.template)
+      ? tokenBack !== null
+      : hasBackOfItsOwn(frame.template, patch.back_face);
   const back =
     doubleFaced || templatePaintsSecondFace(frame.template)
       ? backFaceFromPatch(patch.back_face)
@@ -144,7 +153,7 @@ export function scryfallRemixMechanics(
   // mapper's, which the save's gate derives again (lib/cards/dfc-gate.ts);
   // a transform back carries no cost (withTransformBackShape, the gate's
   // rule, applied here so the payload is what is stored).
-  const backBody = doubleFaced ? patch.back_face?.frame_style : undefined;
+  const backBody = doubleFaced ? (tokenBack ?? patch.back_face?.frame_style) : undefined;
   const backColour = doubleFaced ? patch.back_face?.color_identity : undefined;
   const layout = doubleFaced ? (dfcBodyOf(frame.template)?.layout ?? null) : null;
 
@@ -186,6 +195,31 @@ export function scryfallRemixMechanics(
       ...(isArchTallTokenTemplate(frame.template) ? { printed_height: true as const } : {}),
     },
   };
+}
+
+/** A double-sided token printing's back body for a remix landing on
+ *  `front` (TODO 5.5 (c)), or null when the import leaves it one-faced (the
+ *  pair's combos not verified: finalizeImportMatch drops the back) or the
+ *  back's token isn't published in its colour under this front's design. */
+function tokenPairRemixBack(
+  patch: ScryfallImportPatch,
+  front: FrameTemplate,
+  verifiedKeys: ReadonlySet<string>,
+): { template: FrameTemplate } | null {
+  const kept = finalizeImportMatch(patch, verifiedKeys).back_face;
+  if (!kept?.frame_style?.template) return null;
+  const colour = kept.color_identity && kept.color_identity.length > 0 ? kept.color_identity : (patch.color_identity ?? []);
+  const body = tokenBackBodyFor(front, {
+    supertype: kept.supertype,
+    subtypes: kept.subtypes_text,
+    rulesText: kept.rules_text,
+    flavorText: kept.flavor_text,
+    power: kept.power,
+    toughness: kept.toughness,
+    colorIdentity: colour,
+  }, verifiedKeys);
+  if (!body || !isFrameComboAvailable(body, pickFrameColorKey([...colour]), verifiedKeys)) return null;
+  return { template: body };
 }
 
 /** The credits a remix of these mechanics costs (owner decision Q4,
@@ -291,6 +325,22 @@ export function ownCardRemixFrame(
   // can't follow it (a single-face plan, an unverified back) the same.
   if (isBattleFront(template) && !hasBackOfItsOwn(template, back)) {
     return dfcFrontTypeError(template, source.card_type) === null ? { frame_template: template } : {};
+  }
+  // A double-sided token (TODO 5.5 (c)): its back of its own — a token
+  // template in the front's design — through the save's gate (derived again
+  // for the front, verified in its colour); short of it, or on a one-credit
+  // plan, the token alone on its frame.
+  if (isTokenPairFront(template) && back && isTokenPairBack(template, back.frame_style?.template)) {
+    if (options.singleFace) return { frame_template: template };
+    const gate = resolveDfcBackFace({
+      frontTemplate: template,
+      back: { ...carriedBackFace(back), frame_style: { template: back.frame_style!.template! } },
+      family: null,
+      frontColorIdentity: colours,
+      verifiedKeys,
+    });
+    if (!gate.ok || !gate.back || !gate.tokenPair) return { frame_template: template };
+    return { frame_template: template, back_face: gate.back as CardBackFace };
   }
   if (templateHasBackFace(template)) {
     // Both faces or neither (TODO 5.4's rule): the front body with the back
@@ -425,4 +475,45 @@ export function remixableDeckItems<
     else remixable.push(item);
   }
   return { remixable, ownEmblems };
+}
+
+/**
+ * The frames a remix SAVES on — the front's and, for a double-sided token
+ * (TODO 5.5 (c)), its back's — decided once the final text is known and
+ * BEFORE any picture is made (owner Round 78: never charge for, or paint, a
+ * back that can't be saved). The front is `remixSavedFrame`'s answer (the
+ * token's text height, a textless landing's stand-in); a token back must
+ * then pass the save's gate (resolveDfcBackFace) under that front. When it
+ * can't — the front moved to a stand-in its back can't follow — the pair
+ * stays on its LANDING, where the plan priced it; when the back can't be
+ * saved there either (a tick withdrawn since the plan), `ok: false`: the
+ * step fails before the art and its credits are refunded. Every other card
+ * is `remixSavedFrame`'s answer, unchanged.
+ */
+export function remixSavedFrames(
+  input: Parameters<typeof remixSavedFrame>[0] & {
+    /** The back as it will be sent (the remix's names applied), or none. */
+    back?: CardBackFace | null;
+  },
+): { ok: true; template: FrameTemplate | undefined } | { ok: false } {
+  const { back, ...front } = input;
+  const template = remixSavedFrame(front);
+  const landing = input.template;
+  if (!back || !isTokenPairFront(landing) || !isTokenPairBack(landing, back.frame_style?.template)) {
+    return { ok: true, template };
+  }
+  const saves = (candidate: FrameTemplate | undefined) => {
+    if (!candidate || !isTokenPairFront(candidate)) return false;
+    const gate = resolveDfcBackFace({
+      frontTemplate: candidate,
+      back: back as never,
+      family: null,
+      frontColorIdentity: input.colorIdentity,
+      verifiedKeys: input.verifiedKeys,
+    });
+    return gate.ok && gate.tokenPair === true;
+  };
+  if (saves(template)) return { ok: true, template };
+  if (template !== landing && saves(landing)) return { ok: true, template: landing };
+  return { ok: false };
 }
