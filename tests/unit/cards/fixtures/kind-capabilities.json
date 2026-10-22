@@ -92,7 +92,8 @@
   { "template":  "sagadfcfront", "change":  "new-template", "capabilities":  ["chapters"], "reason":  "TODO 5.5 (b): a NEW template — the double-faced saga FRONT (Card Conjurer's 'Saga (Transform)' pack, frames bucket only): the saga's slots (its chapter rail, with a shorter rail foot) with the transform front's icon rider and a left-aligned reverse P/T — the saga's capabilities. Not a front of the Transform kind (DfcProfile.saga: no `dfcFront`): the Saga kind's frame for a saga with a back face. An addition: no stored card sits on it." },
   { "template":  "sagadfcback", "change":  "new-template", "capabilities":  ["chapters"], "reason":  "TODO 5.5 (b), PR 2: a NEW template — the double-faced saga BACK (PipGlyph's own composite of the published saga and m15dfcback masters, frames bucket only): the saga's slots (its chapter rail) with the ▼ back's white ink, no cost and the colour dot on the saga's type row — the saga's capabilities (no P/T: a saga creature back is 4.5d's). Never a card's own template (templateRefusesKind refuses every kind on a back body). An addition: no stored card sits on it." },
   { "template":  "m15tokentall", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.55: a NEW template — the 2014–19 arch token's TALL text box (PipGlyph's own cut of the published m15tokentext masters: the window's lower rows, the type pill and the box's top 238 px higher, the box 238 px taller): m15tokentext's slots moved with them — its capabilities. An addition: no stored card sits on it." },
-  { "template":  "m15tokenartifacttall", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.55: a NEW template — the tall box's artifact dress (PipGlyph's own cut of the published m15tokenartifacttext masters): m15tokenartifacttext's capabilities. An addition: no stored card sits on it." }
+  { "template":  "m15tokenartifacttall", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.55: a NEW template — the tall box's artifact dress (PipGlyph's own cut of the published m15tokenartifacttext masters): m15tokenartifacttext's capabilities. An addition: no stored card sits on it." },
+  { "template":  "prepare", "change":  "new-template", "capabilities":  ["pt", "adventure"], "reason":  "TODO 4.27: a NEW template — the Prepare frame (Secrets of Strixhaven 2026; PipGlyph's own derivation of the published m15 masters with the adventure master's page bars, frames bucket only): M15's slots and P/T plate with the spell on a page on the RIGHT — the `adventure` anatomy with its own rects. The Prepare kind's alone (TREATMENT_KINDS + EXCLUSIVE_KINDS keep it and the adventure frame apart). An addition: no stored card sits on it." }
  ],
  "capabilities": {
   "m15": ["pt"],
@@ -155,6 +156,7 @@
   "sagadfcfront": ["chapters"],
   "sagadfcback": ["chapters"],
   "adventure": ["pt", "adventure"],
+  "prepare": ["pt", "adventure"],
   "flip": ["pt", "secondFace"],
   "split": ["landscape", "secondFace"],
   "aftermath": ["secondFace"],

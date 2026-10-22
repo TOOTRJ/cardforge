@@ -169,6 +169,11 @@ const STATION_DRESSES: readonly string[] = [
   // tests/unit/creator/token-tall.test.ts and tests/unit/scryfall/token-imports.test.ts.
   "m15tokentall",
   "m15tokenartifacttall",
+  // …and the Prepare frame AND kind (TODO 4.27): a new template and a new
+  // kind, each the other's alone — every row naming either dropped, as
+  // above; pinned in tests/unit/creator/prepare-kind.test.ts and
+  // tests/unit/scryfall/prepare-imports.test.ts.
+  "prepare",
 ];
 function withoutStationDresses(dump: Dump): Dump {
   const named = (text: string) => STATION_DRESSES.some((t) => text === t || text.startsWith(`${t}|`));

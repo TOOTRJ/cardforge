@@ -967,6 +967,12 @@ export type FrameProfile = {
     /** Adventure mana-cost size (fraction of card width). Defaults to the
      *  adventure title's sizePct. */
     costSizePct?: number;
+    /** The name drawn while the part has none (code-owned; "Adventure" when
+     *  absent — the Prepare page says "Spell"). */
+    placeholderName?: string;
+    /** The editor's hint on an empty page (never baked; the adventure's
+     *  when absent). */
+    rulesHint?: string;
   };
   /** A second face/half drawn from the card's BACK-FACE content, optionally
    *  ROTATED — the multi-panel frames where two cards share one piece of
@@ -3826,6 +3832,97 @@ const ADVENTURE: FrameProfile = {
   },
 };
 
+// Prepare — the M15 frame Secrets of Strixhaven (2026) prints its Prepare
+// creatures on (TODO 4.27). The adventure's two parts, mirrored: the
+// creature's rules stay in M15's box on the LEFT and the spell sits on a
+// PAGE on the RIGHT — a name bar (name + cost) and a type bar in the card's
+// colour, white ink, and a box of its own, darker paper (Abigale, Poet
+// Laureate SOS #170; Seething Song on SOS #109). The `adventure` capability
+// with its own rects: the renderers draw the page from them, the creator's
+// second part is the spell, and the spell has no picture of its own.
+//
+// Masters: PipGlyph's own derivation (scripts/build-prepare-frames.mjs, the
+// numbers in scripts/lib/prepare-2026.mjs) — the published m15/<key>
+// (m15artifact/c for c) with the adventure master's page bars. Everything
+// above the type bar is M15's, so M15's slots, art window, cost lift and
+// type-line baseline are the card's; the P/T is M15's plate, which print
+// draws on the frame field under the page.
+//
+// Measured on the 93 plain printings (2026-10-21, 1500 × 2100):
+//   • the creature's text: ink from x 127 to 733 (the box ends at 736),
+//     1333–1927 down like M15's, CENTRED in its box, at up to 76 px (most
+//     cards' lines pitch 66, but SOS #27 sets 74 px: the standard ceiling,
+//     the fit stepping a long text down — owner Round 79);
+//   • the page's name: baseline 1388 (the adventure's — band centre 1367.3),
+//     ink from x 783, the pips' right edge at 1392; its type line baseline
+//     1490 (cap 1447–1493, the adventure panel's 46 px capitals: the same
+//     62 px), band centre 1469.3; both white;
+//   • the page's text: ink x 775–1387, y 1545–1849, left-aligned, centred
+//     down its box (1536–1855), at 68 px on most cards (pitch 66–67).
+const PREPARE_PANEL_BAND_PCT = 4.0;
+// The page's pen: its ink lands on print's columns — on SOS #109, "Seething
+// Song" from x 783, "Instant" 785, "Add" 778, on the bake as on print (owner
+// Round 79: the first cut's rects sat 5 px left, at 775 / 769).
+const PREPARE_PAGE_LEFT_PX = 780;
+const PREPARE_PAGE_RIGHT_PX = 1397;
+const PREPARE_PANEL_RECT = (centerPx: number): Rect => ({
+  topPct: centerPx / 21 - PREPARE_PANEL_BAND_PCT / 2,
+  leftPct: PREPARE_PAGE_LEFT_PX / 15,
+  widthPct: (PREPARE_PAGE_RIGHT_PX - PREPARE_PAGE_LEFT_PX) / 15,
+  heightPct: PREPARE_PANEL_BAND_PCT,
+});
+const PREPARE: FrameProfile = {
+  ...M15,
+  label: "Prepare",
+  costDy: CC_M15_COST_DY,
+  type: { ...M15.type, dy: CC_M15_TYPE_DY },
+  artSlot: CC_M15_ART_SLOT,
+  // The creature's rules → the LEFT box (M15's box, up to the page), at
+  // the standard ceiling (owner Round 79: SOS #27 prints its text at 74 px;
+  // the fit still steps a long text down).
+  rules: {
+    rect: { topPct: 63.6, leftPct: 121 / 15, widthPct: (736 - 121) / 15, heightPct: 28.0 },
+    sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
+    colorHex: INK_DARK,
+    vAlign: "center",
+    font: "body",
+    padPx: { x: 4, y: 0 },
+  },
+  adventure: {
+    title: {
+      rect: PREPARE_PANEL_RECT(1367.3),
+      sizePct: ADVENTURE_PANEL_PCT,
+      fit: "measured",
+      colorHex: INK_LIGHT,
+      weight: 700,
+      font: "display",
+      shadowCss: ADV_SHADOW,
+    },
+    type: {
+      rect: PREPARE_PANEL_RECT(1469.3),
+      sizePct: ADVENTURE_PANEL_PCT,
+      fit: "measured",
+      colorHex: INK_LIGHT,
+      weight: 600,
+      font: "display",
+      shadowCss: ADV_SHADOW,
+    },
+    // The page's box: 1540–1852 down, from x 774 (ink at 778–780, print's)
+    // to its right edge at 1390.
+    rules: {
+      rect: { topPct: 1540 / 21, leftPct: 774 / 15, widthPct: (1390 - 774) / 15, heightPct: (1852 - 1540) / 21 },
+      sizePct: rulesPxToPct(RULES_SIZE_PX.reduced),
+      colorHex: INK_DARK,
+      vAlign: "center",
+      font: "body",
+      padPx: { x: 4, y: 0 },
+    },
+    costSizePct: ADVENTURE_PANEL_COST_PCT,
+    placeholderName: "Spell",
+    rulesHint: "The spell's rules (cast as a copy while prepared).",
+  },
+};
+
 // Flip — the M15 Kamigawa flip frame. ONE card, two creatures: the top reads
 // normally (name → small text box → type bar) and the bottom is printed
 // UPSIDE-DOWN — its name / type / rules / P-T come from the back-face content
@@ -6567,6 +6664,12 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // …and its back (TODO 5.5 (b), PR 2): see SAGADFCBACK.
   sagadfcback: SAGADFCBACK,
   adventure: ADVENTURE,
+  // The Prepare frame (TODO 4.27): M15's crown over its M15 title bar
+  // (SOS #170 Abigale, #198 Kirol … print it), opt-in per card like m15's;
+  // the colourless key is the artifact frame, so its crown is the
+  // artifact's. No stamp notch (the page's outline runs through M15's) and
+  // no collector line yet (TODO 4.27 follow-ups).
+  prepare: { ...PREPARE, overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }] },
   // CC's colourless flip frame is see-through (layout v38, TODO 4.21a; owner
   // decision 2026-09-29): bars at α 191–248, the body between the border and
   // the pinline clear, a 15 px opaque pinline round the window — the art

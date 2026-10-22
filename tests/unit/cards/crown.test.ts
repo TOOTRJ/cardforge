@@ -61,6 +61,8 @@ describe("which card draws the crown", () => {
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
       // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
+      // The Prepare frame (TODO 4.27): M15's band over its M15 title bar.
+      "prepare",
       // The full-art tokens' own floating crown (TODO 4.48).
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
       // …and their Nyx dress (TODO 4.51).

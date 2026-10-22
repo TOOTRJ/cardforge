@@ -204,6 +204,12 @@ const PICKS: readonly Pick[] = [
   { from: "split/r/split-long", why: "split: two turned halves (landscape master)" },
   { from: "aftermath/b/aftermath-long", why: "aftermath: the turned second half and its art" },
   { from: "adventure/g/adventure-long", why: "adventure: the inline page" },
+  // The Prepare frame (TODO 4.27): the adventure's page anatomy on its own
+  // rects — the spell's page on the RIGHT, white ink on its bars, the
+  // creature's rules in the left box.
+  { from: "prepare/r/prepare-short", why: "prepare: the spell's page on the right (name, cost and type on its bars, rules in its box), the creature's box on the left" },
+  { from: "prepare/b/prepare-long", why: "prepare: a long name before the page's pips, two full boxes" },
+  { from: "prepare/wub/prepare-long@crown", why: "prepare: M15's crown over the Prepare master, gold" },
   { from: "flip/u/flip-long", why: "flip: the upside-down second face" },
   { from: "battle/g/battle-long", why: "battle: landscape, the painted defense shield, the turned credit" },
   { from: "m15dfcfront/g/transform-long", why: "transform front: icon rider, reverse P/T float" },

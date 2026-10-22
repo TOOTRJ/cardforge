@@ -82,6 +82,15 @@ export const SECOND_PART_WORDS: Readonly<Partial<Record<CardKind, SecondPartWord
     both: "both parts",
     blankCardType: "instant",
   }),
+  // The Prepare card (TODO 4.27): the creature, and the spell on the page
+  // to its right (SOS #109 Blazing Firesinger's Seething Song) — most are
+  // sorceries.
+  prepare: words("Creature", "Prepare spell", {
+    namePlaceholder: "Seething Song",
+    rulesPlaceholder: "Add {R}{R}{R}{R}{R}. (The spell's rules.)",
+    both: "both parts",
+    blankCardType: "sorcery",
+  }),
   split: words("Left half", "Right half", {
     namePlaceholder: "Ice",
     rulesPlaceholder: "Tap target permanent. Draw a card. (The right half's rules.)",
