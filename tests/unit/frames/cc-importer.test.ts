@@ -166,6 +166,8 @@ describe("Card Conjurer recipe", () => {
       "extendedart",
       "extendedartland",
       "flip",
+      // The Zendikar Rising hedron showcase (TODO 4.11, layout v62; tests/unit/frames/zendikar-rising-frame.test.ts).
+      "fullart",
       "fullartland",
       "m15",
       "m15artifact",

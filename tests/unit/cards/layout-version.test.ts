@@ -1202,8 +1202,9 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
     for (const t of ["m15", "m15artifact", "m15land", "m15snow", "m15snowland", "m15devoid"]) expect(getFrameProfile(t).artSlot, t).toEqual(cc);
     // … nyx and fullart's slots, now to 93 % under the whole text box (4.17b) …
     expect(getFrameProfile("nyx").artSlot).toEqual({ topPct: 11.2, leftPct: 6, widthPct: 88, heightPct: 81.8 });
-    // (fullart's also out to whole pixels past its hedron ring's rim.)
-    expect(getFrameProfile("fullart").artSlot).toEqual({ topPct: 2.7, leftPct: 3.8, widthPct: 92.4, heightPct: 90.3 });
+    // (fullart's also out to whole pixels past its hedron ring's rim — until
+    // v62, TODO 4.11: Card Conjurer's art bounds since.)
+    if (CARD_LAYOUT_VERSION < 62) expect(getFrameProfile("fullart").artSlot).toEqual({ topPct: 2.7, leftPct: 3.8, widthPct: 92.4, heightPct: 90.3 });
     // … and the under-frame art, from the border's inner edge (4.17a), on every
     // see-through master — m15pw's colourless one new (4.17b).
     for (const t of ["m15", "m15token", "m15tokentext", "m15pw"]) {
@@ -3128,7 +3129,7 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
 
   it("the frozen list is every profile that draws the 70 px cost row (while v61 is the latest)", async () => {
     const lv = await import("@/lib/cards/layout-version");
-    if (lv.CARD_LAYOUT_VERSION !== V) return;
+    if ((lv.CARD_LAYOUT_VERSION as number) !== V) return;
     const drawn = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).costSizePct === 70 / 1500);
     expect([...drawn].sort()).toEqual([...lv.COST_ROW_PRINT_TEMPLATES].sort());
     for (const t of drawn) {
@@ -3167,5 +3168,27 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
     expect(isRenderStale(V - 1, "m15", undefined, V, noCost)).toBe(true);
     // Off the 39, a cost owes nothing.
     for (const t of ["m15land", "nyx", "flip", "m15token"]) expect(isRenderStale(V - 1, t, undefined, V, at(t)), t).toBe(false);
+  });
+});
+
+describe("v62 — the Zendikar Rising hedron showcase re-sourced from Card Conjurer (TODO 4.11, wave 1)", () => {
+  // Renumbered with ZNR_HEDRON_LAYOUT_VERSION if another bump merges first
+  // (the Expedition lands' #602 takes v62 too: whichever merges later
+  // renumbers).
+  const V = 62;
+  it("is a sweep, never a badge, scoped to `fullart`, and not verification-neutral", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.ZNR_HEDRON_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect([...lv.ZNR_HEDRON_TEMPLATES]).toEqual(["fullart"]);
+    // The masters a tick would judge change: a tick (none yet) re-opens.
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).not.toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual(["fullart"]);
+    // A bake one version older owes it on `fullart` alone, whatever the card.
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(t === "fullart");
   });
 });

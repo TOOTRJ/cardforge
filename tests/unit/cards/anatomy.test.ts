@@ -305,6 +305,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       "extendedartstation", "m15borderlessstation",
       // The Nyx Constellation frame (owner 2026-10-13): the Nyx crown band, its arms faded.
       "nyx",
+      // The Zendikar Rising hedron showcase (TODO 4.11): its own crown band, no pairs.
+      "fullart",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
       // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
@@ -346,7 +348,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // switch, but its two-colour back wears the gold master for now; nor
       // the Prepare frame, TODO 4.27: its two-colour card is the gold master
       // until its pairs, 4.6f.)
-      (CROWNED.includes(t) && t !== "prepare" && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "battle" && t !== "sagadfcfront" && !NYX_TOKENS.includes(t)),
+      (CROWNED.includes(t) && t !== "prepare" && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "fullart" && t !== "battle" && t !== "sagadfcfront" && !NYX_TOKENS.includes(t)),
   );
 
   it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless, extended-art and snow PROFILES entries — never a profile that spreads them", () => {
@@ -442,7 +444,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // (…and the holofoil stamp's notch, 4.9c, on the devoid entry too:
     // STAMP_TEMPLATES below.)
     expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true, stamp: true, dfcIcon: false, rulesAlign: true, border: false });
-    for (const t of ["adventure", "saga", "fullart", "expeditionland"]) {
+    for (const t of ["adventure", "saga", "expeditionland"]) {
       expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: profileOffersRulesAlign(getFrameProfile(t)), border: false });
     }
     for (const t of ["m15pw", "m15token"] as const) {
@@ -455,7 +457,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
   /** The entries with the holofoil stamp's notch (4.9c, wave 1). */
   // …and the station frame's two entries (TODO 4.27a): the parents' notch; the Universes Beyond three (4.25): the triangle's.
   // …and the borderless family (4.9d): its own lifted arch, its walkers too (owner Round 70).
-  const STAMP_TEMPLATES = ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15stationland", "extendedartstation", "m15borderlessstation", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlesspw", "m15borderlesspwtall", "m15snow", "m15devoid", "m15pw"];
+  const STAMP_TEMPLATES = ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15stationland", "extendedartstation", "m15borderlessstation", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlesspw", "m15borderlesspwtall", "m15snow", "m15devoid", "m15pw",
+    // …and the Zendikar Rising hedron showcase (TODO 4.11): the notch split off its own masters.
+    "fullart"];
 
   it("the stamp's notch on exactly the seven wave-1 entries (4.9c): the M15 family's bordered frames and the walker, never a token, an emblem or a profile that spreads them", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).stamp)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => STAMP_TEMPLATES.includes(t)));

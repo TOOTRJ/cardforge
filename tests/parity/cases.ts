@@ -292,6 +292,10 @@ const PICKS: readonly Pick[] = [
   // Its follow-ups (owner Round 63): the two-colour pair and the textless crown.
   { from: "extendedart/wu/creature-long@pair-crown", why: "extended art: the gold-split pair master and the split floating crown (4.7 follow-up)" },
   { from: "m15textless/u/creature-long@crown", why: "textless promo: the standard crown band over the promo master (4.35 follow-up)" },
+  // The Zendikar Rising hedron showcase from Card Conjurer (TODO 4.11, layout v62).
+  { from: "fullart/w/creature-short", why: "v62 ZNR hedron: black name and type ink on the white key's ivory bars, the art under the whole frame, the light plate's dark digits" },
+  { from: "fullart/wu/creature-long@crown", why: "v62 ZNR hedron: white ink with its shadow on the gold bars, the pair's split crown band over the gold master (pairCrownOnGold)" },
+  { from: "fullart/u/creature-short@stamp", why: "v62 ZNR hedron: the notch split off CC's master drawn back over the plain one, our oval in its cut, white digits on the blue plate" },
   { from: "m15borderless/b/creature-long", why: "borderless: art to the edge, white ink, the keylined set symbol" },
   // --- the borderless stamp and collector line (TODO 4.9d) -----------------
   { from: "m15borderless/r/creature-long@stamp-collector-hd", why: "borderless: the lifted-pinline arch, the oval over the black, the collector line with the mark on line 2 beside the plate" },

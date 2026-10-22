@@ -5,7 +5,6 @@
 //
 //   expeditionland   magic-m15-expedition          *lcard.jpg, BLACK art window
 //   nyx          …showcase-theros-constellation card/*.png, already alpha-cut
-//   fullart      …showcase-zendikar            *card.png,  already alpha-cut
 //
 //   node scripts/build-variation-frames.mjs
 //   node scripts/build-variation-frames.mjs --only nyx     # one family
@@ -29,13 +28,15 @@
 // `extendedart`, `m15textless` and `m15textlessland` went the same way (TODO
 // 4.7 / 4.35 / 4.42, layout v58): Card Conjurer's 'Extended Art Frames' and
 // 'Magic Fest Promos' through scripts/import-cc-frames.mjs, frames bucket.
+// So did `fullart`, the Zendikar Rising hedron showcase (TODO 4.11, layout
+// v62): MSE's 375 px `zendikar` masters (upscaled 4×, missing MSE's hedron
+// `back` layer) gave way to Card Conjurer's 'Zendikar Rising' pack.
 // ---------------------------------------------------------------------------
 import sharp from "sharp";
 import path from "node:path";
 import fs from "node:fs";
 // Phase B (TODO 3.26): normalise the card corners at the final size before
-// the write, so a rebuild can't bring the white paper back (fullart is
-// allow-listed).
+// the write, so a rebuild can't bring the white paper back.
 import { normaliseMasterCorners } from "./lib/frame-corners.mjs";
 import { toneNyxMaster } from "./lib/nyx-tone.mjs";
 import { NYX_RIM_TONES, toneNyxRim } from "./lib/nyx-frame.mjs";
@@ -141,11 +142,6 @@ const PNG_SETS = [
       toneNyxMaster(data, width, height);
       if (NYX_RIM_TONES[key]) toneNyxRim(data, width, height, NYX_RIM_TONES[key]);
     },
-  },
-  {
-    out: "public/frames/fullart",
-    pack: `${DATA}/magic-m15-showcase-zendikar.mse-style`,
-    file: (k) => `${k}card.png`,
   },
 ];
 

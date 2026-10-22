@@ -87,6 +87,9 @@ export const COLLECTOR_TEMPLATES = [
   "m15ub",
   "m15ubartifact",
   "m15ubland",
+  // The Zendikar Rising hedron showcase (TODO 4.11, wave 1): ZNR #290–313
+  // print the 2015 line where M15 does.
+  "fullart",
   "m15snow",
   "m15devoid",
   "m15pw",

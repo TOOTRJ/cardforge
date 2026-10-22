@@ -84,6 +84,7 @@ import {
   CC_OVERLAY_BANDS,
   DFC_CROWN_TWIN_SIZE,
   HOLO_STAMP_NOTCHES,
+  splitZnrNotch,
   cutCrownBand,
   cutCrownFindings,
   cutCrownRecipe,
@@ -591,6 +592,17 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
       }
     }
     const { W, H } = builtFrom;
+    // A stamp notch the pack paints on every key, split off into its own
+    // piece (TODO 4.11: the ZNR hedron frame — scripts/lib/cc-frames.mjs
+    // ZNR_NOTCH): the master is written plain, the arch beside it.
+    if (def.notch && !isBuiltRecipe(def.colors[key])) {
+      const { plain, piece, findings } = splitZnrNotch(master, outW, outH, def.notch);
+      for (const f of findings.failures) edgeFailures.push(`${template}/${key} notch: ${f}`);
+      master = plain;
+      const pieceFile = path.join(outDir, template, "holostamp", `${key}.png`);
+      await writeCutout(piece, def.notch.box, pieceFile);
+      console.log(`wrote ${path.relative(process.cwd(), pieceFile)} (+ .webp) ${def.notch.box.width}×${def.notch.box.height} at ${def.notch.box.x}, ${def.notch.box.y}: ${findings.kept} px kept`);
+    }
     // The one card corner: 4.3 % of the SHORT side, 64.5 px on either
     // orientation (CORNER_RADIUS).
     roundCornersRgba8(master, outW, outH, CORNER_RADIUS);
@@ -740,6 +752,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     ...(pieces ? { pieces: { ...pieces, output: "<name>.png, native size" } } : {}),
     ...(def.maskInputs ? { maskInputs: { ...def.maskInputs, output: "not published — importer inputs for a later recipe" } } : {}),
     ...(def.printRecipe ? { printRecipe: Object.fromEntries(builtColors(def).filter((key) => !isBuiltRecipe(def.colors[key])).map((key) => [key, describePrintRecipe(def.printRecipe(key))])) } : {}),
+    ...(def.notch ? { notch: { ...def.notch, output: "holostamp/<colour>.png: the notch the master paints, split off (the master written with the straight bar)" } } : {}),
     ...(def.recut ? { recut: def.recut } : {}),
     ...(def.barRecut ? { barRecut: { ...def.barRecut, effect: describeBarRecut(def.barRecut) } } : {}),
     ...(def.recutUp ? { recutUp: def.recutUp } : {}),

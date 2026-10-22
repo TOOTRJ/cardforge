@@ -6,7 +6,7 @@ import opentype from "opentype.js";
 import { describe, expect, it } from "vitest";
 import manifest from "@/lib/frames/frame-manifest.json";
 import { M15_FAMILY_TEMPLATES } from "@/lib/cards/m15-family";
-import { COST_ROW_PRINT_TEMPLATES } from "@/lib/cards/layout-version";
+import { COST_ROW_PRINT_TEMPLATES, ZNR_HEDRON_TEMPLATES } from "@/lib/cards/layout-version";
 import { DISPLAY_BASELINE_BELOW_CENTRE_EM, getFrameProfile, type FrameProfile, type TextSlot } from "@/lib/cards/template-layout";
 import {
   CC_M15_COST_DISC_PCT,
@@ -165,7 +165,9 @@ describe("one M15-era display size (layout v32)", () => {
       // Layout v61 (TODO 3.34): the CC-framed M15 profiles and the walkers
       // print the 70 px disc; flip, aftermath and the MSE-framed showcases
       // keep v32's 72.75.
-      const disc = COST_ROW_PRINT_TEMPLATES.includes(t) ? CC_M15_COST_DISC_PCT : COST_DISC_PCT;
+      // …and the Zendikar Rising hedron showcase since its Card Conjurer
+      // rebuild (TODO 4.11, layout v62): its prints' 70 px disc.
+      const disc = COST_ROW_PRINT_TEMPLATES.includes(t) || ZNR_HEDRON_TEMPLATES.includes(t) ? CC_M15_COST_DISC_PCT : COST_DISC_PCT;
       expect(p.costSizePct ?? p.title.sizePct, t).toBe(sized(t, disc));
       if (p.secondFace?.costSizePct) expect(p.secondFace.costSizePct, t).toBe(sized(t, COST_DISC_PCT));
     }
@@ -389,7 +391,9 @@ describe("baselines (TextSlot.dy)", () => {
     // px below the pill-centred line (158.4 px on the prints), "Battle —
     // Siege" 2 px below the bar-centred one. Fractions of ITS 2100 px width.
     ["battle", 2 / 2100, 2 / 2100],
-    ["fullart", base.title, mse.type],
+    // The Zendikar Rising hedron showcase (TODO 4.11, layout v62): the
+    // CC-framed slots, its type line 5.6 px lower on the 2014–22 prints'.
+    ["fullart", base.title, cc + 5.6 / 1500],
     // The textless promo pair (layout v58): CC 'Magic Fest Promos', the m15
     // entry's slots (its type line is never drawn: `textless`).
     ["m15textless", base.title, cc],
@@ -454,7 +458,8 @@ describe("baselines (TextSlot.dy)", () => {
     // its band does not ride the textless re-cut (its master has its own,
     // TOKEN_REGULAR_RECUT).
     expect(at("m15tokentext")).toEqual([-1, 0, 0, 0]);
-    expect(at("fullart")).toEqual([-2, -5, -1, -3]);
+    // The ZNR hedron (v62): the CC type slot 5.6 / 2.8 px lower.
+    expect(at("fullart")).toEqual([-2, 1, -1, 0]);
     expect(at("aftermath")).toEqual([-2, -1, -1, 0]);
     expect(at("m15fullartland")).toEqual([0, 0, 0, 0]);
     // The full-art tokens: whole px at both sizes, onto the prints'.

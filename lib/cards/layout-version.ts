@@ -1583,6 +1583,41 @@ export const COST_ROW_PRINT_TEMPLATES: readonly string[] = [
   "m15textless", "m15textlessland", "prepare",
   "m15pw", "m15borderlesspw", "m15borderlesspwtall",
 ];
+//   v62    — the Zendikar Rising hedron showcase re-sourced from Card
+//            Conjurer (TODO 4.11, wave 1; owner-approved 2026-10-22).
+//            `fullart`, every card on it: the masters (CC 'Zendikar Rising',
+//            1500 native, frames bucket; MSE's 375 px `zendikar` masters
+//            leave the repo) and the slots that ride them — the type line on
+//            the painted bar (56.4–62.7 %H; it printed at 73.6 %, inside the
+//            box) at the 2014–22 prints' baseline, the CC-framed M15 title,
+//            rules box, set symbol box (with the prints' white keyline) and
+//            plate bounds, the name and type line black on the white key's
+//            ivory bars and white with a shadow on the rest, white rules,
+//            the pack's P/T plates (black digits on the light w / m / c
+//            plates, white on u b r g), the art under the whole frame on
+//            CC's art bounds, and the cost row on the prints' (70 px discs,
+//            78 pitch, centred 153.6 px: it sat at 165.2 with 72.75 px
+//            discs). The crown band, the stamp notch and the collector line
+//            arrive with it as ADDITIONS (opt-in per card: a stored card
+//            names none of them, so its bake shows none).
+//            ZNR_HEDRON_LAYOUT_VERSION below — the ONE constant (taken as
+//            v62 in the PR, the next free on main; the Expedition lands'
+//            re-source, #602, takes v62 too — whichever merges later
+//            renumbers this constant, the test's `V` and the docs
+//            together; a number skipped would leave a version with no
+//            scope, which re-bakes every card). A CORRECTION ("sweep"), never a badge: the look was
+//            wrong against its own prints and no colour of the frame is
+//            ticked, so no tick goes stale (not verification-neutral: the
+//            masters a tick would judge change).
+// ---------------------------------------------------------------------------
+
+/** The Zendikar Rising hedron showcase re-sourced from Card Conjurer (TODO
+ *  4.11, wave 1): every card on `fullart`. ITS version lives here alone —
+ *  CARD_LAYOUT_VERSION, the scoped table and the rollout below read this
+ *  constant — so a bump that merges first moves it in one place. Frozen
+ *  once it ships. */
+export const ZNR_HEDRON_LAYOUT_VERSION = 62;
+export const ZNR_HEDRON_TEMPLATES: readonly string[] = ["fullart"];
 
 /** The station frame on print's band rule (TODO 4.27a, PR 2): every card
  *  on `m15station` and `m15stationland`. ITS version lives here alone —
@@ -1667,7 +1702,7 @@ export const LARGE_PIPS_LAYOUT_VERSION = 53;
  *  latest). */
 export const V53_LARGER_COST_TEMPLATES: readonly string[] = ["modern", "modernland"];
 
-export const CARD_LAYOUT_VERSION = COST_ROW_PRINT_LAYOUT_VERSION;
+export const CARD_LAYOUT_VERSION = ZNR_HEDRON_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -1872,6 +1907,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // 36 CC-framed M15 templates and the three walkers — and on them only a
   // card that draws a cost (v61Changed). Verification-neutral.
   [COST_ROW_PRINT_LAYOUT_VERSION]: COST_ROW_PRINT_TEMPLATES,
+  // The Zendikar Rising hedron showcase re-sourced from Card Conjurer
+  // (4.11, wave 1): the masters and the slots that ride them; every card on
+  // `fullart`. No narrower verification scope: no colour has a tick.
+  [ZNR_HEDRON_LAYOUT_VERSION]: ZNR_HEDRON_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -2958,6 +2997,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [TOKEN_ARCH_PRINT_LAYOUT_VERSION]: "sweep", // the 2014–19 arch token on its prints (4.53): the gold small-caps name and the art slot on the window — a correction of the four arch frames against their own prints, never a badge
   [WALKER_COST_ROW_LAYOUT_VERSION]: "sweep", // the planeswalker's cost row and name on its prints (pips 132 → 128 px, the name 4 px up) — a correction of the three walker frames against their own prints, never a badge
   [COST_ROW_PRINT_LAYOUT_VERSION]: "sweep", // the cost row as current print draws it (the 2023 pip move + 3.34): 70 px discs, 78 pitch, 5 px lower and 2 px right on the 36 CC-framed M15 templates; the walkers' 70 px discs, 4 px right — a correction against the frames' own current print after the owner's before / after sheet, never a badge
+  [ZNR_HEDRON_LAYOUT_VERSION]: "sweep", // the Zendikar Rising hedron showcase re-sourced from Card Conjurer (4.11, wave 1): masters, type line on the bar, inks, plates, cost row — a correction of the look against its own prints on a frame never ticked, never a badge
   [CC_RESOURCE_LAYOUT_VERSION]: "sweep", // extendedart and the textless pair re-sourced from Card Conjurer (4.7 / 4.35 / 4.42; owner Q6) — a correction of three looks against their own prints on frames never ticked, never a badge
   [LARGE_PIPS_LAYOUT_VERSION]: "sweep", // hybrid and twobrid discs large, the large pip's factor per frame and place (3.21) — a correction against the prints after the owner's round-49 sheets, never a badge
   [SYMBOLS_PRINT_LAYOUT_VERSION]: "sweep", // five symbols on the prints' drawings + flat rules-text pips (6.16b) — a correction against the prints after the owner's round-43 sheets, never a badge

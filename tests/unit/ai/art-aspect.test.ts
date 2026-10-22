@@ -114,7 +114,7 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   tarkirdraconic: ["1152x896", "4:3", 1.273],
   tarkirghostfire: ["864x1200", "3:4", 0.722],
   tarkirdragon: ["1168x880", "4:3", 1.329],
-  fullart: ["864x1184", "3:4", 0.731],
+  fullart: ["896x1168", "3:4", 0.7605],
   extendedart: ["1168x896", "4:3", 1.314],
   extendedartland: ["1168x896", "4:3", 1.314],
   extendedartstation: ["896x1168", "3:4", 0.766],

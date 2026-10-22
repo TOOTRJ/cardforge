@@ -192,7 +192,7 @@ describe("layout v35 — where the art is painted (real bakes, clear stand-in ma
     expect(blue(375, 536)).toBe("art2");
   });
 
-  it("paints fullart's art to 93 % and out past its ring's rim (4.17b)", async () => {
+  it("paints fullart's art on Card Conjurer's art bounds under the whole frame (4.17b; TODO 4.11, layout v62)", async () => {
     const { frameObjectKey } = await import("@/lib/frames/frame-url");
     const clear = await solid(1500, 2100, [0, 0, 0], 0);
     const sha256 = createHash("sha256").update(clear).digest("hex");
@@ -200,16 +200,17 @@ describe("layout v35 — where the art is painted (real bakes, clear stand-in ma
     manifest.files["fullart/g.png"] = { hash: sha256.slice(0, 12), sha256, bytes: clear.length, width: 1500, height: 2100 };
     bucket.byUrl.set(`${ORIGIN}/${frameObjectKey("fullart/g.png", sha256.slice(0, 12))}`, clear);
     const at = await bake(card("fullart", ["green"]));
-    // 3.8/2.7/92.4 × 90.3 → 28.5–721.5 × 28.35–976.5 at 750 px (the first
-    // v35 build: 30–720 × 30.45–976.5, the ring's rim half-dark).
-    expect(at(29, 500), "left").toBe("art");
-    expect(at(27, 500), "left").toBe("ground");
-    expect(at(721, 500), "right").toBe("art");
-    expect(at(723, 500), "right").toBe("ground");
-    expect(at(375, 29), "top").toBe("art");
-    expect(at(375, 27), "top").toBe("ground");
-    expect(at(375, 975), "bottom").toBe("art");
-    expect(at(375, 978), "bottom").toBe("ground");
+    // 3.9/2.8/92.2 × 86.6 → 29.25–720.75 × 29.4–938.7 at 750 px: CC's art
+    // bounds (4/2.86/92 × 86.48) with the art-window check's spare (v62; it
+    // was MSE's 3.8/2.7/92.4 × 90.3 from v35).
+    expect(at(30, 500), "left").toBe("art");
+    expect(at(28, 500), "left").toBe("ground");
+    expect(at(720, 500), "right").toBe("art");
+    expect(at(722, 500), "right").toBe("ground");
+    expect(at(375, 30), "top").toBe("art");
+    expect(at(375, 28), "top").toBe("ground");
+    expect(at(375, 937), "bottom").toBe("art");
+    expect(at(375, 940), "bottom").toBe("ground");
   });
 
   it("runs nyx's art on under its whole text box, to 93 % (4.17b)", async () => {

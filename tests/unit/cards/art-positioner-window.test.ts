@@ -127,7 +127,7 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   tarkirdraconic: { front: [1230, 966] },
   tarkirghostfire: { front: [1395, 1932] },
   tarkirdragon: { front: [1242, 935] },
-  fullart: { front: [1386, 1896] },
+  fullart: { front: [1383, 1819] },
   // The extended-art frame (layout v58): CC's window to the side edges;
   // its see-through colourless master is ONE picture under the frame.
   extendedart: { front: [1500, 1142], masters: { c: [1500, 1959] } },

@@ -71,10 +71,10 @@ import {
  * importer's too, the MSE gold among them; modern and modernland with 4.10b:
  * Card Conjurer's 8th, re-cut and toned by the importer; extendedart,
  * m15textless and m15textlessland with 4.7 / 4.35: Card Conjurer's 'Extended
- * Art Frames' and 'Magic Fest Promos', cut at the one corner by the importer.)
+ * Art Frames' and 'Magic Fest Promos', cut at the one corner by the importer;
+ * fullart with 4.11: Card Conjurer's 'Zendikar Rising', the same way.)
  */
 export const CORNER_NORMALISE_TEMPLATES = Object.freeze({
-  fullart: "all",
   expeditionland: Object.freeze(["w", "u", "r", "c", "m"]),
 });
 
