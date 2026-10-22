@@ -334,11 +334,13 @@ import {
   importedFormAnatomy,
   stampForTemplate,
 } from "@/lib/cards/anatomy";
+import { drawsPartColor } from "@/lib/cards/part-color";
 import { fitArtToWindow } from "@/lib/cards/art-fit";
 import { artPositionerWindows } from "@/lib/cards/art-positioner-window";
 import {
   AnatomyPanel,
   useTwoColorPairFollow,
+  useSecondPartColorFollow,
 } from "@/components/creator/panels/anatomy-panel";
 import { cardFormSchemaFor } from "@/lib/creator/form-schema";
 import { DEFAULT_CARD_LANG } from "@/lib/cards/collector-fields";
@@ -1062,6 +1064,8 @@ export function CardCreatorForm({
   // two-colour frame (TODO 4.6b; a no-op until one does) — until the user
   // picks the pair by hand. A stored card's edit never re-colours.
   const markPairTouched = useTwoColorPairFollow({ control, setValue }, mode !== "edit");
+  // A new card's second part takes its colour from its cost (TODO 4.26).
+  const markPartColorTouched = useSecondPartColorFollow({ control, setValue }, mode !== "edit");
 
   // The Adventure frame repurposes the back-face content as the adventure spell
   // (rendered inline on the card's left page, not as a flippable face), so the
@@ -3565,6 +3569,12 @@ export function CardCreatorForm({
           artist_credit: values.back_face.artist_credit.trim() || undefined,
           art_url: values.back_face.art_url.trim() || undefined,
           art_position: values.back_face.art_position,
+          // The second part's own colour (TODO 4.26) on a frame that draws
+          // it — the colour it holds (the cost's, a pick, the import's, the
+          // stored one), none = the card's.
+          ...(drawsPartColor(submitTemplate) && values.back_face.color_identity.length > 0
+            ? { color_identity: [...values.back_face.color_identity] }
+            : {}),
         }
       : null;
     // A double-sided token (TODO 5.5 (c)): its back on the token template
@@ -4199,6 +4209,11 @@ export function CardCreatorForm({
           artist_credit: watched.back_face.artist_credit || undefined,
           art_url: watched.back_face.art_url || undefined,
           art_position: watched.back_face.art_position,
+          // The second part's own colour (TODO 4.26) — what the save
+          // stores (a DFC back's colour is set below).
+          ...(drawsPartColor(watched.frame_style?.template) && watched.back_face.color_identity.length > 0
+            ? { color_identity: watched.back_face.color_identity }
+            : {}),
           // A double-faced card's back draws on its own BODY and colour
           // (TODO 5.2; components/cards/card-preview.tsx → backPreviewData):
           // the body the back's type and the family derive, the colour its
@@ -4629,14 +4644,18 @@ export function CardCreatorForm({
                         // shows on both tabs).
                         afterTypeLine={
                           <FaceScope label={null}>
+                            {/* …and the part's own colour (TODO 4.26):
+                                its switch and colour row, on the tab where
+                                the part is edited. */}
                             <AnatomyPanel
-                              which={isRevise ? ["crown", "twoColor"] : ["crown"]}
+                              which={isRevise ? ["crown", "twoColor", "partColor"] : ["crown", "partColor"]}
                               stored={
                                 isEdit && card
                                   ? { frameStyle: card.frame_style as FrameStyle | null, colorIdentity: card.color_identity }
                                   : null
                               }
                               onPairTouched={markPairTouched}
+                              onPartColorTouched={markPartColorTouched}
                             />
                             {isRevise ? <LegendaryCrownReason /> : null}
                           </FaceScope>

@@ -323,7 +323,7 @@ export function FoilSheen({
    *  of the seam and this one right of it — the frame the face painted, so
    *  each wing's sheen follows its own colour (as EtchedSheen does). Never
    *  with `region`: plates stay on the gold "m" key. */
-  split?: { href: string; atPct: number } | null;
+  split?: { href: string; atPct: number; axis?: "y" } | null;
   /** The face's anatomy overlays (the crown band, TODO 4.6.0): each image
    *  over its card-% rect, added to the mask after the frame — what the face
    *  shows there — so the crown sparkles like the frame it is drawn over.
@@ -332,6 +332,9 @@ export function FoilSheen({
 }) {
   const { vw, vh } = cardSpace(landscape);
   const seamX = split && !region ? (vw * split.atPct) / 100 : null;
+  // A horizontal seam (TODO 4.26: aftermath's lower part): the first image
+  // above it, the second below.
+  const seamY = split?.axis === "y" && !region ? (vh * split.atPct) / 100 : null;
   const pct = (rect: Rect) => rectBox(rect, vw, vh);
   const box = region ? pct(region) : null;
   const view = box
@@ -366,12 +369,20 @@ export function FoilSheen({
           </clipPath>
         ))}
         {sheenGradients(id, vw, vh)}
-        {seamX !== null ? (
+        {seamY !== null ? (
+          <clipPath id={`${id}-left`} clipPathUnits="userSpaceOnUse">
+            <rect x="0" y="0" width={vw} height={r2(seamY + SPLIT_OVERLAP)} />
+          </clipPath>
+        ) : seamX !== null ? (
           <clipPath id={`${id}-left`} clipPathUnits="userSpaceOnUse">
             <rect x="0" y="0" width={r2(seamX + SPLIT_OVERLAP)} height={vh} />
           </clipPath>
         ) : null}
-        {seamX !== null ? (
+        {seamY !== null ? (
+          <clipPath id={`${id}-right`} clipPathUnits="userSpaceOnUse">
+            <rect x="0" y={r2(seamY)} width={vw} height={r2(vh - seamY)} />
+          </clipPath>
+        ) : seamX !== null ? (
           <clipPath id={`${id}-right`} clipPathUnits="userSpaceOnUse">
             <rect x={r2(seamX)} y="0" width={r2(vw - seamX)} height={vh} />
           </clipPath>

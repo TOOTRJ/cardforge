@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Card, GameSystem } from "@/types/card";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
+import { partColorFromCost } from "@/lib/cards/part-color";
 
 // ---------------------------------------------------------------------------
 // Face tabs, part 1 (TODO 5.14): the back's fields MOVED — nothing about
@@ -591,7 +592,36 @@ describe("Face tabs moved the back's fields, not what a save sends", () => {
   });
   it.each(Object.keys(SCENARIOS))("%s: identical to origin/main", async (name) => {
     const got = await SCENARIOS[name]();
-    // Byte for byte, key order included.
-    expect(JSON.stringify(got, null, 2)).toBe(JSON.stringify(recorded[name], null, 2));
+    // Byte for byte, key order included — but for what TODO 4.26 adds to a
+    // NEW split or aftermath card, each part in its own colour: the switch
+    // ON (the new-card default on a frame that draws it) and the second
+    // part's colour from its cost. Checked here, then taken out: the rest
+    // of the payload is main's. (An edit sends neither: the stored cards'
+    // scenarios are main's as they are.)
+    expect(JSON.stringify(withoutPartColour(name, got), null, 2)).toBe(JSON.stringify(recorded[name], null, 2));
   }, 30_000);
+});
+
+/** A new split / aftermath card's 4.26 additions, asserted and removed. */
+function withoutPartColour(name: string, got: unknown): unknown {
+  const payload = got as { frame_style?: Record<string, unknown>; back_face?: Record<string, unknown> | null } | null;
+  const template = payload?.frame_style?.template;
+  if (!payload?.frame_style || (template !== "split" && template !== "aftermath") || !/^new /.test(name)) return got;
+  expect(payload.frame_style.partColor, name).toBe(true);
+  const frameStyle = { ...payload.frame_style };
+  delete frameStyle.partColor;
+  const out: Record<string, unknown> = { ...payload, frame_style: frameStyle };
+  if (payload.back_face) {
+    expect(payload.back_face.color_identity, name).toEqual(partColorFromCost(payload.back_face.cost as string));
+    const back = { ...payload.back_face };
+    delete back.color_identity;
+    out.back_face = back;
+  }
+  return out;
+}
+
+describe("4.26's additions to a new two-part card", () => {
+  it("are the only change the split and aftermath scenarios make", () => {
+    expect(Object.keys(SCENARIOS).filter((n) => /^new (split|aftermath) /.test(n)).length).toBeGreaterThan(0);
+  });
 });

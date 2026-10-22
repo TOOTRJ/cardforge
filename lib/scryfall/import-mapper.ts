@@ -1,4 +1,5 @@
 import type { ScryfallCard, ScryfallSet } from "@/lib/scryfall/client";
+import { partColorFromCost } from "@/lib/cards/part-color";
 import { resolvePrintedTypes } from "@/lib/cards/type-line-field";
 import { oracleSelfNamesAsTokens } from "@/lib/cards/self-name";
 import { getFrameProfile } from "@/lib/cards/template-layout";
@@ -860,6 +861,16 @@ function isRoomCard(card: ScryfallCard): boolean {
   return typeLineWords(frontTypeLine(card)).subtypes.includes("Room");
 }
 
+/** The layouts whose two parts each print their own colour, read from the
+ *  parts' own costs (TODO 4.26): split and aftermath — each half its own
+ *  colour's frame — and Prepare — the spell's page in the spell's colour
+ *  (its creature's colours are Scryfall's card `colors` already). A Room
+ *  (layout split) is read by isRoomCard first. */
+const PART_COLOUR_LAYOUTS: ReadonlySet<string> = new Set(["split", "aftermath", "prepare"]);
+function isPartColourLayout(card: ScryfallCard): boolean {
+  return PART_COLOUR_LAYOUTS.has((card.layout ?? "").toLowerCase());
+}
+
 /**
  * Derive the card KIND from a Scryfall card. Multi-signal by necessity —
  * `layout` alone can't do it (verified against the live API):
@@ -1576,6 +1587,11 @@ export function frontFaceColors(card: ScryfallCard): string[] {
     printed = [...front.colors, ...(front.color_indicator ?? [])];
   } else if (front && isRoomCard(card)) {
     printed = [...manaSymbolColors(front.mana_cost), ...(front.color_indicator ?? [])];
+  } else if (front && isPartColourLayout(card) && (card.layout ?? "").toLowerCase() !== "prepare") {
+    // A split or aftermath half prints its own colour (TODO 4.26): the
+    // first half is read from its own cost — Fire // Ice's Fire is red
+    // (DMR #215), Cut // Ribbons's Cut red (AKH #223).
+    printed = [...manaSymbolColors(front.mana_cost), ...(front.color_indicator ?? [])];
   } else if (card.colors) {
     printed = [...card.colors, ...(card.color_indicator ?? [])];
   }
@@ -2203,7 +2219,13 @@ export function mapScryfallBackFacePatch(
           color_identity: dfcFaceColorIdentity(body, dfc!.backType, backFrameColorsFromScryfall(card)),
           frame_style: { template: body },
         }
-      : {}),
+      : // The second part's own colour (TODO 4.26): a split or aftermath
+        // half, a Prepare spell — what its cost says (partColorFromCost: a
+        // colour, a pair, gold for three or more); none on a colourless
+        // part, which prints the card's.
+        isPartColourLayout(card) && partColorFromCost(back.mana_cost).length > 0
+        ? { color_identity: partColorFromCost(back.mana_cost) }
+        : {}),
     title: back.name ?? undefined,
     cost: back.mana_cost ?? undefined,
     card_type: cardType,

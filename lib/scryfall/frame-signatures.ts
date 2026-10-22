@@ -3409,7 +3409,18 @@ function gapDrawnBy(gap: GapKey, template: FrameTemplate, border?: string): bool
     case "crown":
       return frameAnatomyOf(template).crown;
     case "two-colour":
-      return frameAnatomyOf(template).twoColor.includes("split") || GOLD_PAIR_TEMPLATES.has(template);
+      // …and on split and aftermath (TODO 4.26), where a two-colour printing
+      // is two one-colour halves (HOU #157 Driven // Despair g|b), not the
+      // two-colour dress: drawn where each part draws its own colour.
+      return (
+        frameAnatomyOf(template).twoColor.includes("split") ||
+        GOLD_PAIR_TEMPLATES.has(template) ||
+        (PER_PART_COLOUR_TEMPLATES.has(template) && frameAnatomyOf(template).partColor === true)
+      );
+    // The Prepare page in its spell's own colour (TODO 4.26): the frames
+    // whose profile declares a part in its own colour.
+    case "part-colour":
+      return frameAnatomyOf(template).partColor === true;
     case "two-colour-hybrid":
       return frameAnatomyOf(template).twoColor.includes("hybrid");
     // The double-faced marks (TODO 5.1a): a transform FRONT body draws them

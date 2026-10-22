@@ -20,6 +20,14 @@
 // "New:" hint (its stored key is "white" or absent, so "never set" and
 // "switched off" are the same card).
 //
+// Each part in its own colour (TODO 4.26) is the fourth: on the two-part
+// frames that draw it (split, aftermath — a seam; Prepare — the spell's
+// page), shown on the SECOND part's tab with the part's colour row under it
+// (SecondPartColorRow), filled from the part's cost (useSecondPartColorFollow
+// for a new card; the switch itself for a stored card's owner). A new card
+// starts on; a stored card shows it off with a hint until its owner turns
+// it on.
+//
 // The two-colour frame needs the card's colour PAIR (color_identity): the
 // "Two colours" row (TwoColorPairRow) — under the Multicolor chip on the
 // Card step for a new card, and here, pre-filled from the cost, when the
@@ -41,6 +49,7 @@ import {
   type TwoColorPair,
 } from "@/lib/cards/anatomy";
 import { useLegendaryVariation } from "@/components/creator/panels/legendary-variation";
+import { drawsPartColor, partColorFromCost, samePartColor } from "@/lib/cards/part-color";
 import type { FormValues } from "@/lib/creator/form-types";
 import type { ColorIdentity, FrameStyle } from "@/types/card";
 
@@ -62,6 +71,7 @@ export const ANATOMY_HINTS: Partial<Record<SwitchKey, string>> = {
   // one (collector-panel.tsx picks COLLECTOR_ONLY_HINT otherwise).
   collector: "New: add a collector line and holofoil stamp",
   stamp: "New: the printed holofoil stamp. Switch it on to add it.",
+  partColor: "New: each part in its own colour. Switch it on to add it.",
 };
 
 /** The collector line's hint on a frame that draws no stamp (a token, an
@@ -93,7 +103,109 @@ const ANATOMY_COPY: Record<SwitchKey, { label: string; help: string }> = {
     label: "White border",
     help: "As core sets printed until 2007: a white border with a thin black line round the frame. Off is the black border.",
   },
+  partColor: {
+    label: "Each part in its own colour",
+    help: "As printed: the second part in its own colour — a split half, an aftermath half, a Prepare spell's page. Off draws the whole card in the card's colour.",
+  },
 };
+
+const PART_COLORS = ["white", "blue", "black", "red", "green"] as const;
+type PartColor = (typeof PART_COLORS)[number];
+
+/** The words picked in the second part's colour row, stored in printed
+ *  order: one colour, a pair (its printed order — the cost's dress picks
+ *  gold or hybrid), three or more as "multicolor" (gold); none = the card's
+ *  own colour. */
+function partColorOfPicks(picks: readonly PartColor[]): ColorIdentity[] {
+  if (picks.length === 0) return [];
+  if (picks.length === 1) return [picks[0]!];
+  if (picks.length === 2) {
+    const pair = twoColorPairOf([...picks]);
+    return pair ? pairColorIdentity(pair) : [...picks];
+  }
+  return ["multicolor"];
+}
+
+/**
+ * A NEW card's second-part colour follows the part's cost (TODO 4.26: "the
+ * second colour from the second part's cost, in the editor"): while the
+ * switch is on, on a frame that draws a part in its own colour, the part's
+ * colour is what its cost says (partColorFromCost) — until a pick in the
+ * row (the returned `markTouched`), or a colour something else set (an
+ * import's, a remix's stored one). The fill is not an edit of the user's
+ * (no dirty flag). Called by the form itself, so it follows the cost on
+ * every step; disabled for an edit, whose owner fills it by switching the
+ * look on (AnatomyPanel).
+ */
+export function useSecondPartColorFollow(
+  form: Pick<UseFormReturn<FormValues>, "control" | "setValue">,
+  enabled: boolean,
+): () => void {
+  const { control, setValue } = form;
+  const [template, partColor, backCost, backColors] = useWatch({
+    control,
+    name: ["frame_style.template", "frame_style.partColor", "back_face.cost", "back_face.color_identity"],
+  });
+  const touched = useRef(false);
+  const filled = useRef<ColorIdentity[] | null>(null);
+  // The switch itself: a new card (or a remix) starts ON where the frame
+  // draws a part in its own colour — the new-card default, set here and not
+  // in NEW_CARD_ANATOMY so a card on any other frame sends what it always
+  // did. Only while the switch names nothing (an import, a remix of a card
+  // stored before 4.26, a frame picked later): the owner's off stays off.
+  const draws = drawsPartColor(template);
+  useEffect(() => {
+    if (enabled && draws && partColor === undefined) setValue("frame_style.partColor", true);
+  }, [enabled, draws, partColor, setValue]);
+  useEffect(() => {
+    if (!enabled || touched.current) return;
+    if (!drawsPartColor(template) || partColor !== true) return;
+    const current = (backColors ?? []) as ColorIdentity[];
+    // A colour this hook did not fill (an import's, a stored one) stays.
+    if (current.length > 0 && !(filled.current && samePartColor(current, filled.current))) return;
+    const next = partColorFromCost(backCost);
+    filled.current = next;
+    if (!samePartColor(current, next)) setValue("back_face.color_identity", next);
+  }, [enabled, template, partColor, backCost, backColors, setValue]);
+  return useCallback(() => {
+    touched.current = true;
+  }, []);
+}
+
+/** The second part's colour row (TODO 4.26): pick its colour — one, two
+ *  (the pair) or more (gold); none = the card's own colour. */
+export function SecondPartColorRow({
+  colors,
+  onChange,
+}: {
+  colors: readonly ColorIdentity[];
+  onChange: (next: ColorIdentity[]) => void;
+}) {
+  const multicolor = colors.includes("multicolor");
+  const selected = PART_COLORS.filter((c) => colors.includes(c));
+  const options: ChipOption<PartColor>[] = PART_COLORS.map((color) => ({ value: color, label: color }));
+  return (
+    <div className="flex flex-col gap-2" data-testid="second-part-colour-row">
+      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Second part&rsquo;s colour</span>
+      <ChipGroup
+        multiSelect
+        ariaLabel="Second part's colour"
+        layout="wrap"
+        size="sm"
+        value={selected}
+        onChange={(next) => onChange(partColorOfPicks(next))}
+        options={options}
+      />
+      <p className="text-[11px] leading-4 text-subtle">
+        {multicolor && selected.length === 0
+          ? "Gold (three colours or more). Pick colours to change it."
+          : selected.length === 0
+            ? "None picked: the second part prints in the card's own colour."
+            : "Filled in from the second part's mana cost — change it if its colours differ."}
+      </p>
+    </div>
+  );
+}
 
 /** Shown under the two-colour switch when the card's cost asks for the
  *  hybrid dress on a frame that has none (m15artifact: no hybrid P/T plate
@@ -290,12 +402,16 @@ export function AnatomyPanel({
   which,
   stored = null,
   onPairTouched,
+  onPartColorTouched,
   pairRow = true,
 }: {
   which: readonly SwitchKey[];
   stored?: AnatomyStoredCard | null;
   /** A pick in the "Two colours" row (useTwoColorPairFollow's markTouched). */
   onPairTouched?: () => void;
+  /** A pick in the second part's colour row (useSecondPartColorFollow's
+   *  markTouched). */
+  onPartColorTouched?: () => void;
   /** Show the "Two colours" row under the two-colour switch — for an edit
    *  or a remix, whose Colour step is locked. A new card picks its pair in
    *  the Colour step's own row (card-setup-panel.tsx), so the Card step
@@ -303,7 +419,7 @@ export function AnatomyPanel({
   pairRow?: boolean;
 }) {
   const { control, setValue } = useFormContext<FormValues>();
-  const [template, crown, twoColor, cardType, cost, colorIdentity, border] = useWatch({
+  const [template, crown, twoColor, cardType, cost, colorIdentity, border, partColor, backCost, backColors] = useWatch({
     control,
     name: [
       "frame_style.template",
@@ -313,6 +429,9 @@ export function AnatomyPanel({
       "cost",
       "color_identity",
       "frame_style.border",
+      "frame_style.partColor",
+      "back_face.cost",
+      "back_face.color_identity",
     ],
   });
   const anatomy = frameAnatomyOf(template);
@@ -341,10 +460,13 @@ export function AnatomyPanel({
   // The white border (TODO 4.30): wherever the frame draws it, whatever the
   // card's type or colours.
   const showBorder = which.includes("border") && anatomy.border;
-  if (!showCrown && !showTwoColor && !showBorder) return null;
+  // Each part in its own colour (TODO 4.26): wherever the frame draws a
+  // seam or a page.
+  const showPartColor = which.includes("partColor") && anatomy.partColor;
+  if (!showCrown && !showTwoColor && !showBorder && !showPartColor) return null;
 
   const editing = stored !== null;
-  const hintFor = (key: "crown" | "twoColor", on: boolean) =>
+  const hintFor = (key: "crown" | "twoColor" | "partColor", on: boolean) =>
     editing && !on && typeof stored?.frameStyle?.[key] !== "boolean" ? (ANATOMY_HINTS[key] ?? null) : null;
   const setSwitch = (key: Exclude<SwitchKey, "border">, next: boolean) =>
     setValue(`frame_style.${key}`, next, { shouldDirty: true });
@@ -410,6 +532,33 @@ export function AnatomyPanel({
                     ? "Filled in from the mana cost — change it if the card's colours differ."
                     : "Pick the card's two colours to draw the two-colour frame."
                 }
+              />
+            ) : null}
+          </SwitchRow>
+        ) : null}
+        {showPartColor ? (
+          <SwitchRow
+            anatomy="partColor"
+            on={partColor === true}
+            hint={hintFor("partColor", partColor === true)}
+            onToggle={(next) => {
+              setSwitch("partColor", next);
+              // Switching it on fills a part with no colour of its own from
+              // its cost, for the owner to confirm below.
+              const current = (backColors ?? []) as ColorIdentity[];
+              if (next && current.length === 0) {
+                const fromCost = partColorFromCost(backCost);
+                if (fromCost.length > 0) setValue("back_face.color_identity", fromCost, { shouldDirty: true });
+              }
+            }}
+          >
+            {partColor === true ? (
+              <SecondPartColorRow
+                colors={(backColors ?? []) as ColorIdentity[]}
+                onChange={(next) => {
+                  onPartColorTouched?.();
+                  setValue("back_face.color_identity", next, { shouldDirty: true });
+                }}
               />
             ) : null}
           </SwitchRow>

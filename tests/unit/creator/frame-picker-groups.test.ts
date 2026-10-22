@@ -590,9 +590,19 @@ describe("the frame picker's groups: a classification change only", () => {
     expect(changed("imports")).toEqual([
       "all|takh-1", "all|tdsk-10", "all|tdsk-4", "all|teoc-13",
       "all|tmkm-10", "all|tmkm-13", "all|tmom-16", "all|tsoi-11",
+      // TODO 4.26: a split printing's colour is its FIRST half's (each half
+      // prints its own) — UNH #120 Who // What // When // Where // Why is
+      // Who's white where main read all five halves' gold.
+      "all|unh-120",
       "prodPlusMoved|tmkm-10", "prodPlusMoved|tmkm-13", "prodPlusMoved|tmom-16",
+      "prodPlusMoved|unh-120",
       "prod|tmkm-10", "prod|tmkm-13", "prod|tmom-16",
+      "prod|unh-120",
     ]);
+    for (const policy of ["all", "prodPlusMoved", "prod"]) {
+      const row = raw.imports[`${policy}|unh-120`] as { landing: string | null };
+      if (row.landing && row.landing !== "unavailable") expect(row.landing.split("|")[2], policy).toBe("w");
+    }
     // …and TODO 5.5 (c): MOM's transforming Incubator // Phyrexian lands on
     // the same full-art frame, NEAREST (the `dfc-token-transform` gap: the
     // plain pair has no transform icons) — the rest of it main's.

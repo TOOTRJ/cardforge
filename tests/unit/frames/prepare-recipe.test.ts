@@ -104,15 +104,35 @@ describe("the Prepare recipe", () => {
     const entry = PROVENANCE.prepare!;
     expect(entry.source).toBe("pipglyph");
     expect(entry.converter).toBe("scripts/build-prepare-frames.mjs");
-    expect(Object.keys(entry.colors).sort()).toEqual([...R.keys].sort());
-    expect(entry.sourceFiles).toEqual([...new Set(R.keys.flatMap((k) => [`${BASE[k]}.png`, `${BARS[k]}.png`]))].sort());
-    for (const key of R.keys) {
+    // TODO 4.26: the twenty pair masters (both dresses of the ten pairs)
+    // beside the seven keys, each read from its dress's M15 pair master,
+    // the two one-colour m15 masters and the dress's bar source.
+    const pairKeys = R.pairs.list.flatMap((pair) => [pair, `${pair}-h`]);
+    expect(Object.keys(entry.colors).sort()).toEqual([...R.keys, ...pairKeys].sort());
+    const pairSources = (["split", "hybrid"] as const).flatMap((dress) =>
+      R.pairs.list.flatMap((pair) => [
+        `${R.pairs.dresses[dress].base.replace("{pair}", pair)}.png`,
+        `${BASE[pair[0]!]}.png`,
+        `${BASE[pair[1]!]}.png`,
+        `${R.pairs.dresses[dress].barSource}.png`,
+      ]),
+    );
+    expect(entry.sourceFiles).toEqual([...new Set([...R.keys.flatMap((k) => [`${BASE[k]}.png`, `${BARS[k]}.png`]), ...pairSources])].sort());
+    for (const key of [...R.keys, ...pairKeys]) {
       for (const ext of ["png", "webp"]) {
         const file = MANIFEST[`prepare/${key}.${ext}`];
         expect(file, `prepare/${key}.${ext}`).toBeDefined();
         expect([file!.width, file!.height]).toEqual([W, H]);
+        // …and its page, the overlay a spell of that key draws (R.page).
+        const page = MANIFEST[`prepare/page/${key}.${ext}`];
+        expect(page, `prepare/page/${key}.${ext}`).toBeDefined();
+        expect([page!.width, page!.height]).toEqual([R.page.cols[1] - R.page.cols[0] + 1, R.page.rows[1] - R.page.rows[0] + 1]);
       }
     }
+    // The page overlay's rect is the profile's partPage slot, px for px.
+    const slot = (profile.overlays ?? []).find((s) => s.anatomy === "partPage")!;
+    const box = px(slot.rect);
+    expect([box.x0, box.x1, box.y0, box.y1].map((v) => Math.round(v * 1e6) / 1e6)).toEqual([R.page.cols[0], R.page.cols[1] + 1, R.page.rows[0], R.page.rows[1] + 1]);
   });
 });
 

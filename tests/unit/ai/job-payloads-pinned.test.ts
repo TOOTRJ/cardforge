@@ -147,6 +147,21 @@ const UPDATE = process.env.JOB_PAYLOADS_UPDATE === "1";
 const recorded: Record<string, unknown> = existsSync(FIXTURE) ? (JSON.parse(readFileSync(FIXTURE, "utf8")) as Record<string, unknown>) : {};
 const fresh: Record<string, unknown> = {};
 
+/** The records this branch changes on purpose, as main's record → the
+ *  new one. TODO 4.26: a split printing's halves each print their own
+ *  colour — Fire // Ice (DMR #215) saves Fire's red as the card's colour
+ *  (main: "multicolor", and the two-colour switch a split frame never
+ *  drew) and Ice's blue as its second half's. */
+const MEANT_CHANGES: Record<string, (record: unknown) => unknown> = {
+  "remix printing · dmr-215": (record) => {
+    const saved = (record as { saved: Record<string, unknown> }).saved;
+    saved.color_identity = ["red"];
+    delete (saved.frame_style as Record<string, unknown>).twoColor;
+    (saved.back_face as Record<string, unknown>).color_identity = ["blue"];
+    return record;
+  },
+};
+
 /** Compare with main's record (or record it). JSON round-trip: what a
  *  payload is on the wire — an `undefined` key is no key. */
 function pinned(name: string, value: unknown) {
@@ -154,6 +169,13 @@ function pinned(name: string, value: unknown) {
   fresh[name] = wire;
   if (UPDATE) return;
   expect(recorded, `no record for "${name}" — run with JOB_PAYLOADS_UPDATE=1 on main's lib/`).toHaveProperty([name]);
+  const changed = MEANT_CHANGES[name];
+  if (changed) {
+    // A change this branch MEANS, laid over main's record (equal, not
+    // byte for byte: the keys it adds land where the wire puts them).
+    expect(wire, name).toEqual(changed(structuredClone(recorded[name])));
+    return;
+  }
   expect(wire, name).toEqual(recorded[name]);
   // …and not merely equal: the same keys in the same order, the same bytes.
   expect(JSON.stringify(wire), name).toBe(JSON.stringify(recorded[name]));

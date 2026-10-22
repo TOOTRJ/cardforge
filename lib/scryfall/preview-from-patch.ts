@@ -1,6 +1,7 @@
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { CardBackFace, FrameTemplate } from "@/types/card";
+import { drawsPartColor } from "@/lib/cards/part-color";
 
 // ---------------------------------------------------------------------------
 // Reshape a Scryfall import patch (the mapper's output) into CardPreviewData
@@ -44,6 +45,9 @@ export function backFaceFromPatch(
     artist_credit: back.artist_credit,
     // Frame geometry is the comparison target; the scan supplies the art.
     art_url: undefined,
+    // A second part in its own colour (TODO 4.26: a split or aftermath
+    // half, a Prepare spell) — what the import stores.
+    ...(back.color_identity && !back.frame_style ? { color_identity: [...back.color_identity] } : {}),
   };
 }
 
@@ -82,6 +86,9 @@ export function previewFromImportPatch(
       // …and its border (TODO 4.30): a white-bordered reference is compared
       // with the white border drawn, where the frame draws one.
       ...(patch.printed_border === "white" ? { border: "white" as const } : {}),
+      // …and each part in its own colour (TODO 4.26), as every two-part
+      // printing prints it, where the frame draws it.
+      ...(drawsPartColor(template) ? { partColor: true } : {}),
     },
     backFace: backFaceFromPatch(patch.back_face),
   };

@@ -349,6 +349,9 @@ const frameStyleBaseSchema = z
     // CARDNAME / `~` (TODO 6.2): "literal" only on a card migration 0142
     // flagged (a remix of one keeps its parent's look); absent = the name.
     selfName: z.literal("literal").optional(),
+    // Each part in its own colour (TODO 4.26): the save keeps it only on a
+    // template that draws a seam or a page (normalizeAnatomy).
+    partColor: z.boolean().optional(),
   })
   .strict();
 
@@ -390,6 +393,8 @@ export const frameAnatomyPatchSchema = z
     // CARDNAME / `~` (TODO 6.2): "name" takes a stored "literal" off — the
     // card's `~` then draws as its name. Nothing switches it back on.
     selfName: z.literal("name").optional(),
+    // Each part in its own colour (TODO 4.26): on or off.
+    partColor: z.boolean().optional(),
     pair: z
       .tuple([pairColorSchema, pairColorSchema])
       .refine(([a, b]) => a !== b, "Pick two different colours.")

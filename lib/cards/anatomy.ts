@@ -114,7 +114,7 @@ export { TWO_COLOR_PAIRS, type TwoColorPair, type TwoColorDress };
  *  stored style ("left" only in the creator's form and an edit's patch) —
  *  and the border (4.30) — `border` is "white" or absent in a stored style
  *  ("black" only in the creator's form and an edit's patch). */
-export const FRAME_ANATOMY_KEYS = ["crown", "twoColor", "collector", "star", "stamp", "dfcIcon", "rulesAlign", "border"] as const;
+export const FRAME_ANATOMY_KEYS = ["crown", "twoColor", "collector", "star", "stamp", "dfcIcon", "rulesAlign", "border", "partColor"] as const;
 export type FrameAnatomyKey = (typeof FRAME_ANATOMY_KEYS)[number];
 export type FrameAnatomyStyle = Pick<FrameStyle, FrameAnatomyKey>;
 
@@ -133,6 +133,11 @@ export type FrameAnatomy = {
   dfcIcon: boolean;
   rulesAlign: boolean;
   border: boolean;
+  /** Each part in its own colour (TODO 4.26): a seam (split, aftermath —
+   *  FrameProfile.partColorSeam) or a page overlay (Prepare — a
+   *  `partPage` slot) — named only where drawn, so every other
+   *  template's anatomy reads as it did. */
+  partColor?: true;
 };
 
 type AnatomyProfile = Pick<
@@ -149,6 +154,7 @@ type AnatomyProfile = Pick<
   | "chapters"
   | "loyaltyRows"
   | "whiteBorder"
+  | "partColorSeam"
 >;
 
 /** The switches a NEW card starts with (the creator's create and remix
@@ -169,6 +175,12 @@ export const NEW_CARD_ANATOMY: Readonly<Required<Pick<FrameAnatomyStyle, "crown"
     collector: "2023",
     stamp: "auto",
   });
+// (Each part in its own colour, TODO 4.26, is on for a new card too — but
+// only on a frame that draws it: the creator switches it on when the card
+// is on such a frame (components/creator/panels/anatomy-panel.tsx
+// useSecondPartColorFollow), and the save stamps it there for a payload
+// that names none (anatomyDefaults) — so a new card on any other frame
+// sends exactly what it sent before.)
 
 /** A text alignment the creator's form or an edit's patch may hold. */
 export function isRulesAlign(value: unknown): value is RulesAlign {
@@ -207,6 +219,10 @@ export function frameAnatomyOfProfile(profile: AnatomyProfile): FrameAnatomy {
     rulesAlign: profileOffersRulesAlign(profile),
     // The white border (4.30): a profile that declares its box.
     border: profile.whiteBorder !== undefined,
+    // Each part in its own colour (4.26): a seam, or the page's overlay.
+    ...(profile.partColorSeam !== undefined || (profile.overlays ?? []).some((slot) => slot.anatomy === "partPage")
+      ? { partColor: true as const }
+      : {}),
   };
 }
 
@@ -234,6 +250,8 @@ export function anatomyDrawn(anatomy: FrameAnatomy, key: FrameAnatomyKey): boole
       return anatomy.rulesAlign;
     case "border":
       return anatomy.border;
+    case "partColor":
+      return anatomy.partColor === true;
     default:
       return anatomy.collector;
   }
@@ -308,6 +326,7 @@ export function anatomyDefaults(
   if (anatomyDrawn(anatomy, "collector")) out.collector = NEW_CARD_ANATOMY.collector;
   if (anatomyDrawn(anatomy, "stamp")) out.stamp = NEW_CARD_ANATOMY.stamp;
   if (anatomyDrawn(anatomy, "dfcIcon")) out.dfcIcon = DEFAULT_DFC_ICON;
+  if (anatomyDrawn(anatomy, "partColor")) out.partColor = true;
   return out;
 }
 
@@ -407,6 +426,7 @@ export function storedAnatomyOf(frameStyle: unknown): FrameAnatomyStyle {
   if (isDfcIconFamily(stored.dfcIcon)) out.dfcIcon = stored.dfcIcon;
   if (stored.rulesAlign === "center") out.rulesAlign = "center";
   if (stored.border === "white") out.border = "white";
+  if (typeof stored.partColor === "boolean") out.partColor = stored.partColor;
   return out;
 }
 
@@ -554,7 +574,38 @@ export type AnatomyFacts = {
      *  land or a hybrid-dressed front, `c` for a colourless face. */
     stripKey?: string | null;
   } | null;
+  /** The SECOND part of a two-part card (TODO 4.26: the Prepare spell, a
+   *  split or aftermath half) — its own colour (`back_face.color_identity`;
+   *  absent or empty = the card's) and its cost, which picks a pair page's
+   *  dress. */
+  part?: PartFacts | null;
 };
+
+/** The second part's colour facts (TODO 4.26). */
+export type PartFacts = {
+  colors: readonly ColorIdentity[] | null | undefined;
+  cost?: string | null;
+};
+
+/**
+ * The PAGE key a Prepare spell prints (TODO 4.26; print: SOS / SOC / FRA,
+ * docs/FRAMES.md "Each part in its own colour"), or null when the part
+ * names no colour of its own (it prints the card's): a mono spell its
+ * colour's letter; a two-colour spell the PAIR's page — gold bars (`wu`)
+ * for a gold cost, the hybrid's grey bars (`wu-h`) for an all-hybrid one
+ * (twoColorDressOf, the creature's rule); "multicolor" or three colours and
+ * more the gold `m`; colourless `c`.
+ */
+export function partPageKeyOf(part: PartFacts | null | undefined): string | null {
+  const colors = part?.colors ?? [];
+  if (colors.length === 0) return null;
+  const pair = twoColorPairOf(colors);
+  if (pair) return twoColorDressOf(part?.cost, "nonland") === "hybrid" ? `${pair}-h` : pair;
+  const letters = colors.map((c) => WORD_LETTER[c]).filter((l): l is string => Boolean(l));
+  if (letters.length === 1) return letters[0]!.toLowerCase();
+  if (letters.length > 1 || colors.includes("multicolor")) return "m";
+  return "c";
+}
 
 /** The two-colour look a card draws (TODO 4.6b). */
 export type TwoColorLook = {
@@ -706,6 +757,16 @@ export function resolveFrameOverlays(
       const role = profile.dfc?.role ?? facts.dfc?.role;
       if (!family || !role) continue;
       key = dfcIconGlyph(family, role);
+    } else if (slot.anatomy === "partPage") {
+      // The Prepare spell's page in its own colour (TODO 4.26): only with
+      // the switch on, and only where it is not the page the master
+      // already paints (the pair master's own page, or the colour's).
+      if (!anatomyOn(style, "partColor")) continue;
+      const pageKey = partPageKeyOf(facts.part);
+      if (!pageKey) continue;
+      const look = resolveTwoColor(profile, style, facts);
+      if (pageKey === (look ? look.masterKey : facts.colorKey)) continue;
+      key = pageKey;
     } else if (slot.anatomy === "mdfcStrip") {
       const other = facts.dfc?.stripKey;
       if (!other) continue;
@@ -748,7 +809,7 @@ export function mdfcStripOwnKey(look: TwoColorLook | null, colorKey: string): st
  *  all — each rider's own rule, keyed by the slot's discriminant (the
  *  master's key is the caller's). */
 function overlayWanted(
-  anatomy: Exclude<FrameOverlaySlot["anatomy"], "dfcIcon" | "mdfcStrip">,
+  anatomy: Exclude<FrameOverlaySlot["anatomy"], "dfcIcon" | "mdfcStrip" | "partPage">,
   style: FrameAnatomyStyle | null | undefined,
   facts: AnatomyFacts & HoloStampFacts,
   /** The crown slot is a token design's own (FrameOverlaySlot `tokens`). */
@@ -911,6 +972,10 @@ export type FrameAnatomyPatch = {
    *  "literal"` off (migration 0142's flag) — the card's `~` then draws as
    *  its name. */
   selfName?: "name";
+  /** Each part in its own colour (TODO 4.26): `true` switches it on,
+   *  `false` off; the save drops it on a template that draws neither a
+   *  seam nor a page. */
+  partColor?: boolean;
   /** The colour pair a stored multicolour card is given when its owner
    *  switches the two-colour frame on — pre-filled from the cost in the
    *  editor, confirmed by the owner. */
@@ -952,7 +1017,7 @@ export function applyFrameAnatomyPatch(
 ): AppliedFrameAnatomyPatch {
   const template = typeof stored.frameStyle.template === "string" ? stored.frameStyle.template : undefined;
   const merged: Record<string, unknown> = { ...stored.frameStyle };
-  for (const key of ["crown", "twoColor", "collector", "stamp", "dfcIcon"] as const) {
+  for (const key of ["crown", "twoColor", "collector", "stamp", "dfcIcon", "partColor"] as const) {
     if (patch[key] !== undefined) merged[key] = patch[key];
   }
   if (patch.star === true) merged.star = true;

@@ -1155,6 +1155,16 @@ export type FrameStyle = {
    *  them): it keeps printing what it printed until its owner switches the
    *  name on (an edit's `frame_anatomy.selfName: "name"` removes the key). */
   selfName?: "literal";
+  /** Each part in its own colour (TODO 4.26): an ADDITION, opt-in per card.
+   *  `true` draws the SECOND part in its own colour (`back_face.
+   *  color_identity`) — split's right half and aftermath's lower half as
+   *  that colour's master past a hard seam (FrameProfile.partColorSeam),
+   *  the Prepare spell's page as that colour's page (a `partPage` overlay
+   *  slot); absent and `false` are today's look, the card's one colour, so
+   *  no stored card changes. A NEW card starts on (NEW_CARD_ANATOMY), an
+   *  import follows its printing (on); every save drops it on a template
+   *  that declares neither (lib/cards/anatomy.ts normalizeAnatomy). */
+  partColor?: boolean;
 };
 
 // ---------------------------------------------------------------------------

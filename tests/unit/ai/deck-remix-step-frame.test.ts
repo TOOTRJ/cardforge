@@ -282,8 +282,10 @@ describe("executeDeckRemixStep — the frame reaches the save", () => {
 
   it("a one-faced landing renames the card's own mention too (Fire // Ice on M15, current oracle)", async () => {
     // Split is unverified here, so Fire // Ice lands one-faced on M15 with
-    // Fire's text — which names Fire (a spell still names itself).
-    s.verified = keys(["m15", "m"]);
+    // Fire's text — which names Fire (a spell still names itself). Fire is
+    // red since TODO 4.26 read a split half's colour from its own cost
+    // (main: the card's gold, both halves').
+    s.verified = keys(["m15", "r"]);
     const { step, card } = await remix("dmr-215", (raw) => {
       const faces = raw.card_faces as Record<string, unknown>[];
       faces[0].oracle_text = "Fire deals 2 damage divided as you choose among one or two targets.";

@@ -212,6 +212,15 @@ const PICKS: readonly Pick[] = [
   { from: "prepare/r/prepare-short", why: "prepare: the spell's page on the right (name, cost and type on its bars, rules in its box), the creature's box on the left" },
   { from: "prepare/b/prepare-long", why: "prepare: a long name before the page's pips, two full boxes" },
   { from: "prepare/wub/prepare-long@crown", why: "prepare: M15's crown over the Prepare master, gold" },
+  // Each part in its own colour (TODO 4.26): the page overlay in the
+  // spell's colour over the creature's master, the two-colour Prepare's pair
+  // master under a hybrid page, and the seam on split (vertical) and
+  // aftermath (horizontal).
+  { from: "prepare/r/prepare-short@part-u", why: "part colour: the spell's blue page over a red Prepare master (the page overlay)" },
+  { from: "prepare/w/prepare-short@part-gw-h", why: "part colour: a hybrid spell's grey page, its box ramped green → white" },
+  { from: "prepare/wu/prepare-long@pair-part-hybrid", why: "part colour: the two-colour Prepare (its pair master, the crown) under a hybrid page" },
+  { from: "split/r/split-long@part-u-hd", why: "part colour: split's right half in its own colour, a vertical seam (the long card: the short split's turned footer sits 3 px off at 750 on main already)" },
+  { from: "aftermath/r/aftermath-short@part-b", why: "part colour: aftermath's lower part in its own colour, a horizontal seam" },
   { from: "flip/u/flip-long", why: "flip: the upside-down second face" },
   { from: "battle/g/battle-long", why: "battle: landscape, the painted defense shield, the turned credit" },
   { from: "m15dfcfront/g/transform-long", why: "transform front: icon rider, reverse P/T float" },

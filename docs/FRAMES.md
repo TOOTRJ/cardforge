@@ -3849,9 +3849,128 @@ creature's own (`SECOND_HALF_RELATIONSHIP.prepare`); the AI does not design
 Prepare cards (its design types are one-faced).
 
 **Left for later** (TODO 4.27), in the owner's order (Round 79): the page's
-own colour and the two-colour pairs (4.26 / 4.6f) FIRST, then the stamp
-notch and the collector line; the extended-art and borderless dresses;
-Omen, then Room.
+own colour and the two-colour pairs — BUILT by 4.26 (next section, "Each
+part in its own colour") — then the stamp notch and the collector line; the
+extended-art and borderless dresses; Omen, then Room. (The import paragraph
+above is 4.27's: since 4.26 the two-colour and part-colour printings are
+exact on `prepare` once it is verified in the card's colour.)
+
+### Each part in its own colour (4.26)
+
+TODO 4.26 (owner 2026-10-21, Prepare first). Print colours each part of a
+two-part card by the part: Fire // Ice is a red half and a blue half (DMR
+#215), Cut // Ribbons a red top and a black lower part (AKH #223), and a
+Prepare card's spell page is the SPELL's colour. PipGlyph had one colour key
+per card. The second part's colour is card data — `back_face.color_identity`
+(absent or empty: the card's own) — and the look is an ADDITION, opt-in per
+card: `frame_style.partColor`, drawn only `=== true` (lib/cards/anatomy.ts,
+FRAME_ANATOMY_KEYS; lib/cards/part-color.ts).
+
+- **Rollout.** A NEW card on split, aftermath or prepare starts on (the
+  creator switches it on for a card on one of them —
+  `useSecondPartColorFollow`, never NEW_CARD_ANATOMY, so a card on any other
+  frame sends what it always did — and `anatomyDefaults` stamps it for a
+  payload that names none, the AI jobs); an import follows its printing
+  (on; each part's colour from its own cost, `partColorFromCost`); every
+  save drops the key on a template that draws neither a seam nor a page
+  (normalizeAnatomy). A card stored before it names no key and keeps its
+  look whatever its second colour says — the 108 two-part cards of the dev
+  database (2026-10-21) name no second colour at all, and
+  `tests/unit/render/part-colour-bake.test.tsx` holds a stored card with
+  one, switch absent or off, byte for byte to the card without. No layout
+  bump, no sweep, no badge. An edit switches it on (`frame_anatomy.
+  partColor`) and fills an empty second colour from the part's cost.
+- **The second part's colour.** From its cost (`partColorFromCost`): one
+  colour; two — the PAIR in printed order, its dress the cost's
+  (`twoColorDressOf`: an all-hybrid cost the hybrid's grey, else the
+  gold-split); three or more `["multicolor"]` (gold); none `[]` (the card's
+  own). The creator fills it from the part's cost on a new card and offers
+  the "Second part's colour" row under the switch on the second part's tab.
+  The server gates it like the front's colour (`partColorGateError`: the
+  part's colour key must be published on the frame — on a new card; on an
+  edit when the switch goes on or the colour changes).
+
+**Split and aftermath: a seam between two masters** (FrameProfile.
+`partColorSeam`, the twoColorSplit machinery on an axis): the first part
+paints the card's master, the second its own colour's master
+(`frameMasterKey` — gold `m` for a two-colour half) past a hard seam, in both
+renderers (`FrameLayer` clip-paths, the bake's `FrameSlice` boxes), both
+finish masks and the bake's preload (`cardFrameSplit` / `frameColorKeysFor`).
+No asset: never pre-flattened pairs.
+
+| frame | seam | where | why there |
+| --- | --- | --- | --- |
+| split | x 52 %W (1092 px) | the black gutter between the halves, black on every row from x 1071 to 1114 of all seven masters | the prints' gutter centre is 1092.5 (DMR #210 / #214 / #215: 989–1026 on the portrait scan, turned); 546 px at the 1050 bake |
+| aftermath | y 54.2857 %H (1140 px) | the black band between the parts, black on every column from row 1135 to 1143 of all seven masters | 570 px at the 750 bake; the prints' gap reads 1136–1137 dark across (AKH #215 / #220 / #223) |
+
+Import: a split or aftermath printing (Scryfall layout `split`, aftermath
+with the Aftermath keyword) is its FIRST half's colour, read from that half's
+cost (Scryfall gives a split card's faces no colours of their own — the
+card's are both halves'), and its second half's colour from its cost. A
+two-colour printing on these frames is exact now (the `two-colour` gap was
+4.26's here, `gapDrawnBy`); a HYBRID half (Incubation {G/U}, Depose
+{1}{W/U}) prints a hybrid half PipGlyph draws gold — still nearest, the
+`two-colour-hybrid` gap.
+
+**Prepare: the page overlay** (a `partPage` overlay slot, PREPARE_PAGE): the
+spell's page cut out of the Prepare master of its key —
+`prepare/page/<key>`, cols 746..1413 × rows 1314..1875 of the HD card (even
+px, whole px at the 750 bake) — drawn over the creature's master where the
+spell's PAGE key (`partPageKeyOf`) is not the page the master already
+paints. What the prints show (the 38 two-colour and part-colour plain
+printings of `layout:prepare`, 2026-10-21):
+
+| the spell | its page | prints |
+| --- | --- | --- |
+| one colour | that colour's page (bars, rim, box) | YFRA #27 (red on an R/G creature), YFRA #29 (blue on U/B) |
+| a gold two-colour cost | GOLD bars, the rim and the box ramped from its first colour (left) to its second about the PAGE's centre | SOC #45–50, SOS #198 / #223 / #237 |
+| an all-hybrid cost | GREY bars (light name bar, dark type bar), the same ramp | FRA #3 / #39 / #70 / #85 / #105 and the ten hybrid creatures, SOS #170 / #199 |
+| three colours or more | the gold page (`m`) | — (none printed) |
+
+The name ink stays WHITE on the grey bar, as on every print (SOS #170's
+"Heroic Stanza" included). The page's ramp: 10 / 50 / 90 % at 941 / 1061 /
+1205 px (median of the 25 two-colour pages, the rim between the bars the
+same) — linear 898 → 1228. Its paper at each end is that colour's own page
+paper (FRA #105's red end 212/180/167 = SOS #109's red page).
+
+**The two-colour Prepare creature** (`twoColorMasters: ["split",
+"hybrid"]`, `prepare/<pair>` and `prepare/<pair>-h`): M15's pair master of
+the dress — its field, bars and crown pinline (the hybrid's field split at
+the card's centre, FRA #130) — with the LEFT box ramped about its own centre
+(25 / 50 / 75 % at 408 / 420 / 432 on the 18 two-colour creatures: 396 →
+444) and the pinline under both boxes about x 688 (660 → 716, SOC #48 /
+#49, SOS #223), where M15's pair ramps both 600 → 900; the page is the pair
+page of the same dress, the strip under it the gold field's (185/156/83 on
+the 10 gold creatures) or, on the hybrid dress, its second colour's (FRA
+#130 / #133 / #139 read the mono prints' w / u / g strips). The crown is
+M15's pair band (`m15crown/<pair>`); the hybrid dress's plate the grey `c`.
+A two-colour creature with a mono spell (YFRA #27) draws that colour's page
+over its pair master; a gold creature with a hybrid spell (SOS #170) the
+grey page.
+
+**Masters** (`scripts/build-prepare-frames.mjs`, numbers `scripts/lib/
+prepare-2026.mjs` `pairs` / `page`): the twenty pair masters are PipGlyph's
+own derivation of the published `m15/<pair>`, `m15/<pair>-h` and one-colour
+m15 masters (the pair master's left box and bottom pinline re-lerped from
+the two one-colour masters onto print's columns; the page read from the two
+lerped about the page's centre, its box's gain the two keys' lerped the same
+way; the bars from `adventure/m` — gold — or `adventure/b` — the nearest to
+print's neutral grey — toned onto print and lit by print's bevel); the
+twenty-seven pages are every master's page cut out (col 746 and rows
+1872..1875 see-through — the outline's soft edge over the creature's own
+paper; right of the rim only the bars' rounded ends at their coverage,
+un-blended from the page under them). The seven one-colour masters are
+byte-identical to 4.27's. Dev bucket only until the owner promotes.
+
+**Verification.** A pair master and a page ride the gate of the card's
+colour key (a pair is `m`); the seam's second master is gated in its own
+colour (`partColorGateError`). For the owner's ticks: `split/w`, `split/b`,
+`split/g`, `split/m` and `aftermath/m` (built in 4.21, unticked "until 4.26")
+against their prints, and `prepare/m` now covers the two-colour Prepare's
+pair masters (its known close stand-in no longer).
+
+**Not built: adventure and flip** (an owner decision — the adventure's
+shaped book masks; TODO 4.26).
 
 ### The Universes Beyond frames (4.25)
 
