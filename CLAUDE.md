@@ -988,7 +988,9 @@ Rules and gotchas:
   Masters: PipGlyph's own derivation (`scripts/build-prepare-frames.mjs`,
   numbers `scripts/lib/prepare-2026.mjs`; the published m15 masters with the
   adventure master's page bars; bucket only). Imports: the Prepare kind
-  keeps the spell, exact once verified; a textless printing keeps the
+  keeps the spell, exact once verified — short of the frame in the card's
+  colour, main's import (the creature kind on M15 / extended art, a legacy
+  back: `finalizeImportMatch`); a textless printing keeps the
   creature kind; a spell page of another colour is the `part-colour` gap
   (4.26). An ADDITION: no bump, no sweep. `docs/FRAMES.md` "The Prepare
   frame (4.27)".

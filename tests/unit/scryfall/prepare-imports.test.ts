@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import fixture from "./fixtures/prepare-printings.json";
 import { frameMatchFromScryfall, kindFromScryfall, mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
 import { finalizeImportMatch, remixFrameFor } from "@/lib/creator/frame-resolve";
+import { importFramePlan } from "@/lib/creator/import-frame-choice";
 import type { ScryfallCard } from "@/lib/scryfall/client";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
@@ -99,5 +100,33 @@ describe("the Prepare printings, imported", () => {
     // The AI deck remix lands where the import does (remixFrameFor).
     expect(remixFrameFor(patch, ALL_VERIFIED)).toEqual({ ok: true, template: "prepare", card_type: "creature" });
     expect(remixFrameFor(patch, PREPARE_UNVERIFIED)).toMatchObject({ ok: true, template: "m15", card_type: "creature" });
+  });
+
+  it("short of the frame in the colour, imports as main did: the creature kind on the printing's own landing", () => {
+    // (The Prepare kind wears the Prepare frame alone: kept on an
+    // unpublished frame, the chooser had nothing to offer — "No frame for
+    // this card type is published" — and the creator a kind no published
+    // frame dresses. Gold stays unpublished: no plain gold page prints.)
+    for (const key of KEYS) {
+      const printing = card(key);
+      if (printing.textless === true) continue;
+      const patch = mapScryfallToFormPatch(printing);
+      const finalized = finalizeImportMatch(patch, PREPARE_UNVERIFIED);
+      const extended = (printing.frame_effects ?? []).includes("extendedart");
+      expect(finalized.kind, key).toBe("creature");
+      expect(finalized.frame_template, key).toBe(extended ? "extendedart" : "m15");
+      expect(finalized.frame_match, key).toMatchObject({ status: "nearest", template: extended ? "extendedart" : "prepare" });
+      expect(finalized.frame_match?.landOn, key).toBe(extended ? undefined : "m15");
+      // The spell stays, a legacy back as on main.
+      expect(finalized.back_face?.title, key).toBe(printing.card_faces![1]!.name);
+      const plan = importFramePlan(finalized, PREPARE_UNVERIFIED, "m15");
+      expect(plan.mode, key).toBe("choose");
+      if (plan.mode === "choose") expect(plan.preselected, key).toEqual({ template: extended ? "extendedart" : "m15" });
+      expect(remixFrameFor(patch, PREPARE_UNVERIFIED), key).toMatchObject({ ok: true, template: extended ? "extendedart" : "m15" });
+    }
+    // Published in red, not in gold: a red card is the Prepare kind, a gold one the creature.
+    const redOnly = new Set([...PREPARE_UNVERIFIED, "prepare/r"]);
+    expect(finalizeImportMatch(mapScryfallToFormPatch(card("sos-109")), redOnly).kind).toBe("prepare");
+    expect(finalizeImportMatch(mapScryfallToFormPatch(card("sos-198")), redOnly).kind).toBe("creature");
   });
 });

@@ -599,6 +599,24 @@ export function finalizeImportMatch<
     frame_match: match,
     ...(moved ? { frame_template: match.landOn ?? match.template } : {}),
   };
+  // A Prepare printing (TODO 4.27) is the Prepare kind only where the
+  // Prepare frame is published in its colour: the kind wears that frame
+  // alone (EXCLUSIVE_KINDS), so short of it the import chooser had nothing
+  // to offer and the creator kept a kind no published frame dresses. There
+  // the import is what it was before 4.27 — the creature kind on the
+  // printing's own landing (M15, or the extended-art frame), the spell a
+  // legacy back — and the match still names the Prepare frame, so the
+  // chooser and the request log say what is missing.
+  if (
+    finalized.kind === "prepare" &&
+    !isFrameComboAvailable("prepare", pickFrameColorKey(patch.color_identity), verifiedKeys)
+  ) {
+    const landing: FrameTemplate = match.template === "prepare" ? "m15" : match.template;
+    const fallbackMatch: FrameMatch = { ...match };
+    if (landing === match.template) delete fallbackMatch.landOn;
+    else fallbackMatch.landOn = landing;
+    return { ...finalized, kind: "creature", frame_template: landing, frame_match: fallbackMatch };
+  }
   // A double-faced landing (TODO 5.4) is verified on BOTH faces: the front
   // body in the front's colour (withVerification, above) and the back body
   // in the back's (dfcImportLanding). Short of either, the import lands as

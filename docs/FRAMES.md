@@ -3821,8 +3821,12 @@ its fields on the steps of its creature twin, the never-drawn fields hidden
 **Import.** A Prepare printing is the Prepare kind and keeps its spell as
 the back face, which the frame draws (main imported the creature on M15
 with the spell as a back face no frame drew). The bordered printings are
-EXACT on `prepare` once it is verified in the card's colour — `nearest`, the
-creature on M15 as before, until then; a two-colour card (the split frame,
+EXACT on `prepare` once it is verified in the card's colour. Short of the
+frame in the card's colour (before its tick; gold and colourless stay
+unticked) the import is main's — the CREATURE kind on the printing's own
+landing (M15, or the extended-art frame), the spell a legacy back
+(`finalizeImportMatch`): the Prepare kind wears its frame alone, so kept on
+an unpublished one the import chooser had nothing to offer. A two-colour card (the split frame,
 4.6f) and a spell page of another colour (`part-colour`, 4.26: SOS #170's
 {W/B} spell on a grey page, FRA #3's {G/W} on a white creature) are
 `nearest` on it; the extended-art printings land on it `nearest`; the two
