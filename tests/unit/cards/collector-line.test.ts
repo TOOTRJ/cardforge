@@ -94,6 +94,8 @@ describe("the switch values", () => {
       "m15mdfclandback",
       // The Lord of the Rings scroll (TODO 4.11): M15's slot on its border.
       "lotrscroll",
+      // …and the ring (TODO 4.11): M15's slot on its black bottom border.
+      "lotr",
     ]);
   });
 });

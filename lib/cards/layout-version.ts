@@ -1580,6 +1580,23 @@ export const WALKER_COST_ROW_TEMPLATES: readonly string[] = ["m15pw", "m15border
 //            no colour is ticked, so no tick goes stale. The crown band, the
 //            triangle stamp's notch and the collector line are ADDITIONS a
 //            card switches on (no stored card names them).
+//   v63    — the Lord of the Rings RING showcase re-sourced from Card
+//            Conjurer (TODO 4.11, showcase rebuild wave 1). `lotr`, every
+//            card on it: the masters (CC 'Ring', 1500 px native; the 646 px
+//            MSE drawing leaves git) with the frame field to the top and
+//            side edges and the black border's shoulders (7.7's `design`
+//            edges; 4.35's transparent band is gone), the round window on
+//            the pack's own art bounds; the colourless artifact's master
+//            `a`, `c` the brown land frame; the pack's P/T plates; and the
+//            slots that ride them — the M15 pack's text layout (the M15-era
+//            family's sizes, `fit: "measured"` names, the CC M15 cost row:
+//            70 px discs, 78 pitch) under the pack's lower title bar, white
+//            name and type line. LOTR_RING_LAYOUT_VERSION below — the ONE
+//            constant (taken as v63, the next free number on main at PR
+//            time; likely renumbered to v65 behind the Zendikar Rising and
+//            Expedition re-sources). A CORRECTION ("sweep"), never a badge:
+//            no colour is ticked. The crown band, the triangle stamp's notch
+//            and the collector line are ADDITIONS a card switches on.
 // ---------------------------------------------------------------------------
 
 /** The Lord of the Rings scroll showcase re-sourced from Card Conjurer
@@ -1589,6 +1606,18 @@ export const WALKER_COST_ROW_TEMPLATES: readonly string[] = ["m15pw", "m15border
  *  once it ships. */
 export const LOTR_SCROLL_LAYOUT_VERSION = 62;
 export const LOTR_SCROLL_TEMPLATES: readonly string[] = ["lotrscroll"];
+
+/** The Lord of the Rings RING showcase re-sourced from Card Conjurer
+ *  (TODO 4.11): every card on `lotr`. ITS version lives here alone —
+ *  CARD_LAYOUT_VERSION, the scoped table and the rollout below read this
+ *  constant — so a bump that merges first moves it in one place (taken as
+ *  v63, the next free number on main at PR time; the Zendikar Rising and
+ *  Expedition re-sources hold v63 / v64 on their branches, so this is
+ *  likely renumbered to v65: the constant, the test's `V` and the docs
+ *  together — never a gap, which would read as an unscoped sweep). Frozen
+ *  once it ships. */
+export const LOTR_RING_LAYOUT_VERSION = 63;
+export const LOTR_RING_TEMPLATES: readonly string[] = ["lotr"];
 
 /** The cost row as current print draws it (the 2023 pip move + TODO 3.34):
  *  the CC-framed M15 family's disc, centre and right end. ITS version lives
@@ -1694,7 +1723,7 @@ export const LARGE_PIPS_LAYOUT_VERSION = 53;
  *  latest). */
 export const V53_LARGER_COST_TEMPLATES: readonly string[] = ["modern", "modernland"];
 
-export const CARD_LAYOUT_VERSION = LOTR_SCROLL_LAYOUT_VERSION;
+export const CARD_LAYOUT_VERSION = LOTR_RING_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -1903,6 +1932,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // masters, plates and the slots that ride them; every card on it. No
   // narrower verification scope: no colour has a tick.
   [LOTR_SCROLL_LAYOUT_VERSION]: LOTR_SCROLL_TEMPLATES,
+  // The Lord of the Rings ring re-sourced from Card Conjurer (4.11): the
+  // masters, plates and the slots that ride them; every card on it. No
+  // narrower verification scope: no colour has a tick.
+  [LOTR_RING_LAYOUT_VERSION]: LOTR_RING_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -2988,6 +3021,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [UB_SEE_THROUGH_C_LAYOUT_VERSION]: "sweep", // the see-through colourless Universes Beyond spell frame (4.25 follow-up): an addition the visual gate records as a bump on a combo no card can be on (never ticked, offered nowhere) — never a badge
   [TOKEN_ARCH_PRINT_LAYOUT_VERSION]: "sweep", // the 2014–19 arch token on its prints (4.53): the gold small-caps name and the art slot on the window — a correction of the four arch frames against their own prints, never a badge
   [WALKER_COST_ROW_LAYOUT_VERSION]: "sweep", // the planeswalker's cost row and name on its prints (pips 132 → 128 px, the name 4 px up) — a correction of the three walker frames against their own prints, never a badge
+  [LOTR_RING_LAYOUT_VERSION]: "sweep", // the Lord of the Rings ring re-sourced from Card Conjurer (4.11): its masters with the frame field to the top and side edges and the black border's shoulders, the ring plates and the M15 pack's text layout under the lower title bar — a correction of the look against its own prints on a frame never ticked, never a badge
   [LOTR_SCROLL_LAYOUT_VERSION]: "sweep", // the Lord of the Rings scroll re-sourced from Card Conjurer (4.11): its masters with the printed black border, the scroll plates and the M15 pack's text layout — a correction of the look against its own prints on a frame never ticked, never a badge
   [COST_ROW_PRINT_LAYOUT_VERSION]: "sweep", // the cost row as current print draws it (the 2023 pip move + 3.34): 70 px discs, 78 pitch, 5 px lower and 2 px right on the 36 CC-framed M15 templates; the walkers' 70 px discs, 4 px right — a correction against the frames' own current print after the owner's before / after sheet, never a badge
   [CC_RESOURCE_LAYOUT_VERSION]: "sweep", // extendedart and the textless pair re-sourced from Card Conjurer (4.7 / 4.35 / 4.42; owner Q6) — a correction of three looks against their own prints on frames never ticked, never a badge

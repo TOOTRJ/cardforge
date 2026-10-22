@@ -167,6 +167,8 @@ describe("Card Conjurer recipe", () => {
       "extendedartland",
       "flip",
       "fullartland",
+      // The Lord of the Rings ring (TODO 4.11, layout v63; tests/unit/frames/lotr-ring-importer.test.ts).
+      "lotr",
       // The Lord of the Rings scroll (TODO 4.11, layout v62; tests/unit/frames/lotr-scroll-importer.test.ts).
       "lotrscroll",
       "m15",
@@ -2161,7 +2163,10 @@ describe("provenance and hygiene", () => {
       // landscape recipe's masters are 2100 × 1500.
       const { width: outW, height: outH } = outputSizeOf(templates[template] as never);
       expect([outW, outH], template).toEqual(templates[template].orientation === "landscape" ? [2100, 1500] : [1500, 2100]);
-      expect(provenance[template].output, template).toBe(`${outW}x${outH}, corners rounded to ${CORNER_RADIUS}px, webp q90`);
+      // (A recipe that keeps square corners — the LOTR ring's top two, TODO
+      // 4.11: the frame field runs into them — says which.)
+      const kept = (templates[template] as { keepCorners?: readonly string[] }).keepCorners;
+      expect(provenance[template].output, template).toBe(`${outW}x${outH}, corners rounded to ${CORNER_RADIUS}px${kept?.length ? ` (but ${kept.join(", ")}: kept square, design to the corner)` : ""}, webp q90`);
       expect(provenance[template].output, template).toContain("64.5px");
       const plainKeys = [...COLORS, ...pairKeysOf(template), ...(getFrameProfile(template).artifactMasterKeys?.c === "a" ? ["a"] : [])];
       // A template whose crown is baked into its masters (4.6f) records a

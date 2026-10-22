@@ -14,9 +14,10 @@ import signaturePrintings from "./fixtures/signature-printings.json";
 //   • printed_crown: ON for Scryfall's `legendary` frame effect (DOM 2018
 //     on); OFF for a Legendary card printed without it (the M15–RIX
 //     legendaries, owner 2026-09-29; kept as built, owner 2026-09-30 pick
-//     (a)) and for a Legendary SHOWCASE printing (the LTR ring and scroll,
-//     TDM draconic, BLB woodland, TLA avatar …), which prints no standard
-//     crown (owner's choice over the design's Q6 recommendation); ABSENT for
+//     (a)) and for a Legendary SHOWCASE printing (TDM draconic, BLB
+//     woodland, TLA avatar …), which prints no standard crown — but the
+//     showcases whose own crown the template draws (the THB constellation,
+//     the LTR scroll and, since TODO 4.11, the LTR ring: ON) (owner's choice over the design's Q6 recommendation); ABSENT for
 //     a nonlegendary printing — a nonlegendary SHOWCASE too (owner
 //     2026-09-30, pick (b)), so it gets the new-card default if it is made
 //     Legendary later.
@@ -56,9 +57,15 @@ describe("printed_crown", () => {
   });
 
   it("is off for a LEGENDARY showcase printing, which prints no standard crown (Q6 → b)", () => {
+    const S = signaturePrintings as unknown as Record<string, ScryfallCard>;
+    expect(S["tla-338"].frame_effects).toEqual(["showcase", "legendary"]);
+    expect(mapScryfallToFormPatch(S["tla-338"]).printed_crown).toBe(false); // Yue, TLA avatar
+    expect(mapScryfallToFormPatch(S["blb-343"]).printed_crown).toBe(false); // Lumra, BLB anime
+    // The LTR ring prints its OWN crown, which its template draws (TODO 4.11):
+    // every printing of the run is legendary under the scalloped bar.
     expect(P["ltr-302"].frame_effects).toEqual(["legendary", "showcase"]);
-    expect(patchOf("ltr-302").printed_crown).toBe(false); // Boromir, LTR ring
-    expect(patchOf("ltr-321").printed_crown).toBe(false); // Galadriel, LTR ring
+    expect(patchOf("ltr-302").printed_crown).toBe(true); // Boromir, LTR ring
+    expect(patchOf("ltr-321").printed_crown).toBe(true); // Galadriel, LTR ring (two-colour: nearest, crowned)
   });
 
   it("names NO crown for a nonlegendary showcase — like any nonlegendary printing (owner 2026-09-30, pick (b))", () => {
@@ -110,6 +117,13 @@ describe("printed_crown", () => {
       // …but the one showcase that prints the standard crown: the THB
       // constellation frame (#258–268, owner 2026-10-13), which follows its
       // printing like any 2015-frame legendary.
+      // …and the LTR ring (#302–331, TODO 4.11): its own scalloped crown.
+      if (/^ltr-3(0[2-9]|[12][0-9]|3[01])$/.test(key)) {
+        expect(mapScryfallToFormPatch(card).frame_match?.signature, key).toMatch(/^showcase\/ltr\/ring/);
+        expect(got, key).toBe(true);
+        crowned += 1;
+        continue;
+      }
       if (/^thb-2(5[89]|6[0-8])$/.test(key)) {
         expect(mapScryfallToFormPatch(card).frame_match?.signature, key).toBe("showcase/thb/constellation");
         expect(got, key).toBe(true);

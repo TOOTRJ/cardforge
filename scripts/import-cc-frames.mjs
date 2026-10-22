@@ -101,6 +101,8 @@ import {
   notchFindings,
   pieceNotchFindings,
   blackoutAndCut,
+  blackoutStampShape,
+  stampShapeBlackFindings,
   notchSourceFiles,
   sampleBar,
   sampleBarColumns,
@@ -595,7 +597,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     const { W, H } = builtFrom;
     // The one card corner: 4.3 % of the SHORT side, 64.5 px on either
     // orientation (CORNER_RADIUS).
-    roundCornersRgba8(master, outW, outH, CORNER_RADIUS);
+    roundCornersRgba8(master, outW, outH, CORNER_RADIUS, def.keepCorners ?? []);
     // A crowned twin (4.6f) is held to its own edges where they differ.
     const contract = edgeContractFor(template, key);
     if (!contract) {
@@ -722,7 +724,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     commit: CC_COMMIT,
     ...(def.pack ? { pack: def.pack } : {}),
     converter: "scripts/import-cc-frames.mjs",
-    output: `${outW}x${outH}, corners rounded to ${CORNER_RADIUS}px, webp q${WEBP.quality}`,
+    output: `${outW}x${outH}, corners rounded to ${CORNER_RADIUS}px${def.keepCorners?.length ? ` (but ${def.keepCorners.join(", ")}: kept square, design to the corner)` : ""}, webp q${WEBP.quality}`,
     ...(landscape ? { orientation: "landscape", transform: def.transform } : {}),
     ...(def.shift ? { shift: describeBlockShift(def.shift, outW, outH) } : {}),
     ...(def.printRecut ? { printRecut: describeBattleRecut({ shield: def.paintedShield, ...def.printRecut }) } : {}),
@@ -887,7 +889,7 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
         W === OUT_W && H === OUT_H
           ? composite
           : await sharp(composite, { raw: { width: W, height: H, channels: 4 } }).resize(OUT_W, OUT_H, { fit: "fill", kernel: "lanczos3" }).raw().toBuffer();
-      roundCornersRgba8(full, OUT_W, OUT_H, CORNER_RADIUS);
+      roundCornersRgba8(full, OUT_W, OUT_H, CORNER_RADIUS, def.keepCorners ?? []);
       const findings = def.findings(full, OUT_W, OUT_H, band.rows);
       for (const f of findings.failures) bandFailures.push(`${folder}/${key}: ${f}`);
       const cropped = cropRows(full, OUT_W, band.rows);
@@ -988,7 +990,7 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
     kind: "overlay",
     output: def.cut
       ? `${OUT_W}x${band.rows} cut band: the published m15crown band (rows 0–${band.rows - 1}) cut through the twin's alpha round the well, webp q${WEBP.quality}`
-      : `${OUT_W}x${band.rows} overlay band: rows 0–${band.rows - 1} of a ${OUT_W}x${OUT_H} card composited at ${W}x${H}, corners rounded to ${CORNER_RADIUS}px, webp q${WEBP.quality}`,
+      : `${OUT_W}x${band.rows} overlay band: rows 0–${band.rows - 1} of a ${OUT_W}x${OUT_H} card composited at ${W}x${H}, corners rounded to ${CORNER_RADIUS}px${def.keepCorners?.length ? ` (but ${def.keepCorners.join(", ")}: kept square, design to the corner)` : ""}, webp q${WEBP.quality}`,
     colors: recipe,
     sourceFiles: def.cut
       ? cutCrownSourceFiles(folder)
@@ -1072,6 +1074,8 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
       const meta = await sharp(file).metadata();
       if (meta.width !== def.placeAt.width || meta.height !== def.placeAt.height) throw new Error(`${src} is ${meta.width}×${meta.height}, the recipe says ${def.placeAt.width}×${def.placeAt.height} (the source moved?)`);
       const canvas = placeOnCanvas(await rgba(file, meta.width, meta.height), def.placeAt, CW, CH);
+      // (A pack drawn at HD — the ring, 4.11 — passes through unchanged: a
+      // same-size Lanczos resize is the identity.)
       const full = await sharp(canvas, { raw: { width: CW, height: CH, channels: 4 } }).resize(OUT_W, OUT_H, { fit: "fill", kernel: "lanczos3" }).raw().toBuffer();
       const piece = Buffer.alloc(box.width * box.height * 4);
       for (let y = 0; y < box.height; y += 1) full.copy(piece, y * box.width * 4, ((box.y + y) * OUT_W + box.x) * 4, ((box.y + y) * OUT_W + box.x + box.width) * 4);
@@ -1086,15 +1090,23 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
     for (const key of def.keys) {
       const out = path.join(outDir, folder, `${key}.png`);
       recipe[key] = [
-        `${def.pieces[key]} at ${def.placeAt.x},${def.placeAt.y} ${def.placeAt.width}×${def.placeAt.height} px of a clear ${CW}×${CH} card, downscaled once to ${OUT_W}×${OUT_H}, cut to ${box.width}×${box.height} at ${box.x},${box.y}`,
+        `${def.pieces[key]} at ${def.placeAt.x},${def.placeAt.y} ${def.placeAt.width}×${def.placeAt.height} px of a clear ${CW}×${CH} card, ${CW === OUT_W && CH === OUT_H ? "1:1 (no resample)" : `downscaled once to ${OUT_W}×${OUT_H}`}, cut to ${box.width}×${box.height} at ${box.x},${box.y}`,
         `the triangle ${def.triangle.points.map((p) => p.join(",")).join(" / ")} px, corner radius ${def.triangle.radius}, plus ${def.cutMarginPx} px cut to transparent, the ${def.blackoutPx} px round it painted opaque black`,
       ];
       if (dryRun) {
         console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}`);
         continue;
       }
-      const piece = blackoutAndCut(await placeAndCut(def.pieces[key]), def.shape, def.triangle, def.cutMarginPx, def.blackoutPx);
-      const findings = pieceNotchFindings(piece, def.shape, def.triangle, def.cutMarginPx, def.blackoutPx, stamp);
+      // The pack's own hologram shape blacked out first where it reaches past
+      // the hole's ring (TODO 4.11: the ring's triangle sits 8–10 px higher
+      // than the printed stamp) — then the hole cut and its ring blacked.
+      const placedPiece = await placeAndCut(def.pieces[key]);
+      if (def.blackoutStampGrowPx !== undefined) blackoutStampShape(placedPiece, stamp, box.width, box.height, def.blackoutStampGrowPx);
+      const piece = blackoutAndCut(placedPiece, def.shape, def.triangle, def.cutMarginPx, def.blackoutPx);
+      // With the shape blacked out, the hologram check is the shape's own
+      // (every pixel of it black or clear), not "nothing outside the ring".
+      const findings = pieceNotchFindings(piece, def.shape, def.triangle, def.cutMarginPx, def.blackoutPx, def.blackoutStampGrowPx !== undefined ? null : stamp);
+      if (def.blackoutStampGrowPx !== undefined) findings.failures.push(...stampShapeBlackFindings(piece, stamp, box.width, box.height).failures);
       for (const f of findings.failures) notchFailures.push(`${folder}/${key}: ${f}`);
       fs.mkdirSync(path.dirname(out), { recursive: true });
       const image = sharp(piece, { raw: { width: box.width, height: box.height, channels: 4 } });

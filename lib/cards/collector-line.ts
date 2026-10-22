@@ -114,6 +114,9 @@ export const COLLECTOR_TEMPLATES = [
   // black bottom border is the M15 pack's, and LTR / LTC set both lines
   // there within 1–2 px of M15's slot (LTR #470, #712, LTC #422).
   "lotrscroll",
+  // …and the ring (TODO 4.11, Card Conjurer's 'Ring'): its black bottom
+  // border sets both lines where M15's slot does on LTR #302–331.
+  "lotr",
 ] as const;
 
 export type CollectorLetter = "T" | "E" | "L" | "C" | "U" | "R" | "M";

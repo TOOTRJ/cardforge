@@ -78,7 +78,8 @@ describe("frameMasterKey — the one master rule", () => {
     // …and the borderless double-faced bodies (TODO 5.7), the same stand-in.
     // …and the Lord of the Rings scroll (TODO 4.11, layout v62): its `c` is
     // the pack's brown land frame, a colourless ARTIFACT paints its blue `a`.
-    const DRESSED = new Set(["agclassic", "extendedart", "lotrscroll", "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback", "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback"]);
+    // …and the ring (layout v63), the same split.
+    const DRESSED = new Set(["agclassic", "extendedart", "lotrscroll", "lotr", "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback", "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback"]);
     for (const t of FRAME_TEMPLATE_VALUES) {
       const profile = getFrameProfile(t);
       expect(Boolean(profile.artifactMasterKeys), t).toBe(DRESSED.has(t));
@@ -112,7 +113,7 @@ describe("frameMasterKey — the one master rule", () => {
           // The transform bodies' `a` is their `c`'s bytes; the extended-art
           // frame's and the Lord of the Rings scroll's are the packs' own
           // artifact frames.
-          if (t !== "extendedart" && t !== "lotrscroll") expect(manifest.files[`${t}/${master}.png`].sha256).toBe(manifest.files[`${t}/c.png`].sha256);
+          if (t !== "extendedart" && t !== "lotrscroll" && t !== "lotr") expect(manifest.files[`${t}/${master}.png`].sha256).toBe(manifest.files[`${t}/c.png`].sha256);
           continue;
         }
         expect(existsSync(`public/frames/${t}/${master}.png`), `${t}/${master}.png`).toBe(true);

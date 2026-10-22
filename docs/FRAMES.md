@@ -178,7 +178,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 58 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 59 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the extended-art frame and the textless promo pair (4.7 / 4.35 / 4.42,
@@ -212,6 +212,11 @@ into `.frames-build/` — 58 templates today (`CC_TEMPLATES` in
   artifact frame), its plates, its crown band (`lotrscrollcrown`) and its
   own triangle stamp notch per key (`lotrscrollholostamp`) ([The Lord of
   the Rings scroll](#the-lord-of-the-rings-scroll-411-layout-v62));
+- the Lord of the Rings ring showcase (4.11, layout v63): lotr — the 'Ring'
+  pack's eight frames whole at its native 1500 px (`c` its land frame, `a`
+  its artifact frame, the top corners kept square), its plates, its crown
+  band (`lotrcrown`) and its own triangle stamp notch per key
+  (`lotrholostamp`) ([The Lord of the Rings ring](#the-lord-of-the-rings-ring-411-layout-v63));
 - the borderless M15 frame from 'Borderless (Alt)' (4.32): m15borderless and
   its artifact dress m15borderlessartifact, each with the pack's own P/T
   plates — and, since 4.6f (wave 2a), their pinline-split pair masters and
@@ -518,7 +523,9 @@ bake's transparent corner mask and the frame masters all read it.
   runs beside the edge contract in the importer, in Phase B's gate and in
   CI: on a `border` or `bar` edge, every pixel the cut keeps whole within
   8 px of the arc (0.5 ≤ −d ≤ 8) must be opaque (α ≥ 0.99) and dark
-  (luma ≤ 48). It catches a paper crescent, a grey paper rim right at the
+  (luma ≤ 48); on a `design` edge (the frame's own design to the edge: the
+  LOTR ring's frame field, 4.11) opaque only — its corner is the design's
+  colour. It catches a paper crescent, a grey paper rim right at the
   arc (a light ring on a round bake) and a transparent ring, none of which
   the edge check (which skips each corner by `Math.ceil(radius) + 2` = 67 px
   on the short side) can see. An `art` edge's half of the arc is skipped.
@@ -587,9 +594,10 @@ bake's transparent corner mask and the frame masters all read it.
   ZIP) and the Square PNG are the round render squared again
   (`squareCardCorners`): outside the arc each corner is the card's border
   colour — the border black by default, the root's #101015 where a master's
-  edge band is see-through (the rings; bloomburrow / lotr / tarkirdraconic
+  edge band is see-through (the rings; bloomburrow / tarkirdraconic
   bottoms; expeditionland b/g) — or, where art or frame design runs into
-  the corner (an art-to-edge frame; the tops of bloomburrow, lotr and
+  the corner (an art-to-edge frame; the tops of bloomburrow, the LOTR ring
+  — its frame field, kept square by the importer since 4.11 — and
   tarkirdraconic), what was drawn. The table is `lib/frames/square-corners.ts`;
   `tests/unit/frames/square-corners.test.ts` holds it to every master, so a
   new or rebuilt frame whose corner changes turns CI red.
@@ -625,7 +633,7 @@ TODO item that fixes it: fixing a master means striking its row.
 | Visual regression (7.1) | `tests/visual/`, `scripts/lib/visual-gate.mjs` | no stored-image change without a layout bump ([Shipping a frame change](#shipping-a-frame-change)) |
 
 - **Edge contract (TODO 7.7).** Each template declares its four edges in
-  `lib/frames/edge-contract.ts` (`border`, `art` or `bar`). A violation, or
+  `lib/frames/edge-contract.ts` (`border`, `art`, `bar` or `design`). A violation, or
   a template with no declaration, makes the importer exit non-zero; CI runs
   the same check on every git master and on the bucket masters. A new
   template declares its edges there first; today's known failures are
@@ -4406,6 +4414,110 @@ block of `scripts/lib/cc-frames.mjs`). A CORRECTION (layout v62, a sweep,
 split by the pack's `maskRightHalf.png` under its 'Multicolored Bars'), and
 the scroll saga (CC's `SagaLTR`, 4.5d).
 
+### The Lord of the Rings ring (4.11, layout v63)
+
+`lotr` — the ring showcase of LTR #302–331 and their surge-foil twins
+#794–823 (sixty printings, every one a legendary creature: 14 mono, 12
+two-colour, 4 gold) — is Card Conjurer's 'Ring' pack (packRing.js,
+`img/frames/lotr/`, 1500 × 2100 NATIVE: nothing is resampled) since the
+showcase rebuild's first wave. The 646 px MSE drawing left git (its masters
+under public/frames and its rows in `build-showcase-frames.mjs` /
+`import-mse-profiles.mjs`); the pack goes to the frames bucket through
+`scripts/import-cc-frames.mjs` (`CC_TEMPLATES.lotr`, the `RING` block of
+`scripts/lib/cc-frames.mjs`). A CORRECTION (layout v63, a sweep,
+`LOTR_RING_LAYOUT_VERSION`): no colour was ticked.
+
+- **Masters.** The pack's eight frames whole: w u b r g m are the colour
+  frames; `a` the blue-grey 'Artifact Frame' a colourless ARTIFACT paints
+  (`artifactMasterKeys { c: "a" }`); `c` the brown 'Land Frame' — the
+  scroll's split (#604), applied unprinted: the ring run prints no
+  colourless card.
+- **The edges.** The frame field runs to the card's TOP and SIDE edges (no
+  border there, on every print) and the bottom is the black border's
+  shoulders. The edge contract declares that as it is printed: three
+  `design` edges (opaque like a border, but the corner is the design's
+  colour, never held dark — `lib/frames/edge-contract.ts`) and a `border`
+  bottom. The transparent band 7.7 found under the MSE drawing is gone:
+  `lotr` left `BORDER_PENDING_TEMPLATES`, the edge contract's and the art
+  window's known failures and `NEVER_NORMALISE`.
+- **The corners.** The importer cuts the ONE card corner (64.5 px) at the
+  two BOTTOM corners, as on every Card Conjurer master, and keeps the two
+  top corners square (the recipe's `keepCorners`, on the masters and the
+  crown band): the frame field runs into them, so a square output keeps it
+  there (`SQUARE_CORNERS.lotr`: top "frame", bottom the border black) — a
+  black or #101015 cap on the taupe field would be a seam. Every round
+  output (the stored bake, the thumb, the OG image, the preview) cuts the
+  standard corner at render, so the round card is the standard one.
+- **The round window.** The masters are opaque but for the window: see-
+  through (α < 16) on 150–1350 × 254–1160 px with a soft white foot (α 90)
+  down to row 1170, on every key. The pack's own artBounds (149 / 252 /
+  1202 × 918, `LOTR_ART_SLOT`) cover it as ONE plain slot with the art-
+  window check's 0.05 % to spare; the frame hides the rect's corners round
+  the circle. No `underFrameArt`: nothing else on the master lets the art
+  through.
+- **Plates.** The pack's plates (`lotr/pt/<k>.png`, 268 × 134) at its
+  ptBounds (`LOTR_PLATE_RECT`); the colourless card wears the artifact's
+  (the plate follows the colour key). Their ink box is in
+  `lib/cards/plate-ink.ts`.
+- **The pack against its prints.** Measured 2026-10-22 on 11 Scryfall PNGs
+  at 1500 × 2100 (LTR #302 / 305 / 307 / 310 / 312 / 313 / 316 / 317 / 318 /
+  328 / 331) by the shift that best registers our bake on the print, region
+  by region, and by ink profiles: the pack DRAWS its title bar 12 px lower
+  than the prints (outlines 113.5 / 231.5 px against 100.5 / 218.5), its
+  type bar where they do (1182.5 / 1299 on both), its box bottom and plate
+  6 px higher, and its sides 4 px in. The masters are taken as drawn (no
+  re-cut: the pack's geometry), and every slot is placed against ITS OWN
+  bar, as the print places it against the print's.
+- **Slots.** The pack's text layout is the accurate M15 pack's but for the
+  title bar, so the profile is M15's slots and the M15-era family's sizes
+  (`fit: "measured"` name and type line, joined WITH v63), white name and
+  type line, with:
+  - the name and the cost row 10.4 px lower (CC's title y 120 against
+    M15's 109.6 of 2100); the name's ink then sits within 1–2 px of the
+    print's against the bar (left edge 131–132 against 129–134);
+  - the CC M15 cost row (70 px discs, 78 pitch, its right end) CENTRED on
+    the bar, as the prints centre it (the disc's face 124.5–193.5 under
+    outlines 100.5 / 218.5 on #307 / #310 / #312: −0.3 px off the bar's
+    centre), where the v61 lift left ours 6 px above it: `costDy` −2 px.
+    The last disc ends 0.5 px from the print's against the bar's right end;
+  - the type line on the CC baseline + 2 px (the prints set it on 1261 px,
+    6 prints, under the same bar; CC M15's lift leaves 1259);
+  - the P/T digits centred on the plate's face (1185–1393 px) as printed
+    (1290.3 px, 5 prints): CC's box left them 8 px left and 1 px high;
+  - the set symbol where M15's sits: its ink centre within 1.5 / 2 px of
+    the print's.
+  The prints set the type line ~5 % larger than the family's constant and
+  the LTR symbol ~6 % smaller than the regular LTR print the per-set table
+  measured; both stay the family's (a per-frame size is its own item).
+- **Crown** (`LOTR_CROWN`, `lotrcrown/<key>.png`): the pack's 'Legendary
+  Crown' — the scalloped cream title bar every print carries — at its
+  bounds, a 1500 × 272 band (rows 0–271) that repaints the card's whole
+  top, its top corners kept square like the masters'. Keys w u b r g m, `a`
+  (a colourless artifact, `artifactKeyMap`) and `l` (any other colourless
+  card, `keyMap`). An ADDITION, opt-in per card; an import of a ring
+  printing names it (`CROWNED_SHOWCASE_SIGNATURES`: all sixty are
+  legendary).
+- **Stamp** (`LOTR_HOLO_STAMP`, `lotrholostamp/<key>.png`): every print
+  wears the Universes Beyond TRIANGLE (hole 687–812 × 1924.6–1992.5 px), so
+  "auto" stamps every rarity, matte below a rare. The notch is the pack's
+  OWN piece per key (212 × 95 at 644 / 1893, 1:1), cut to a 214 × 106 box
+  at 643, 1892 — 1 px round the piece and 10 px past its foot, so the hole
+  and its ring fit. The pack draws its hologram 8–10 px HIGHER than the
+  printed stamp (its `gray.png` shape from 1915 px against the hole's
+  1924.6), so the importer paints that shape black first
+  (`blackoutStampShape`, grown 1 px), then cuts the hole + 2 px clear and
+  paints the 2 px round it black (`blackoutAndCut`): no pixel of the
+  capture is published (`stampShapeBlackFindings`). An ADDITION.
+- **Collector line**: M15's slot (`COLLECTOR_TEMPLATES`) — the prints set
+  both lines there in the black bottom border. An ADDITION.
+- **Imports.** `showcase/ltr/ring` is exact on `lotr` once a colour is
+  verified (the cap is gone); a two-colour printing (LTR #316, #318–327,
+  #330 and their twins: 24) is `nearest` through the `two-colour` gap, item
+  4.11.
+
+**Not built** (follow-ups, in 4.11): the two-colour dress (the colour frames
+split by the pack's `lotr/maskRightHalf.png`).
+
 ### The older full-art basics (4.40 / 4.41)
 
 Three black-bordered full-art basic designs older than the 2022 one
@@ -5492,8 +5604,8 @@ absent, and the visual gate gained its `@stamp…` cases and changed none.
   ordinary tokens and emblems print none; their control is hidden). The
   SHAPE drawn is the frame's own (`FrameOverlaySlot.stamp.shape`): every
   wave-1 notch is cut for the oval, so an imported `"triangle"` draws the
-  oval here and keeps its key for a frame that prints the triangle (4.9d's
-  lotr; lotrscroll draws its own triangle since 4.11). `resolveHoloStamp` (lib/cards/anatomy.ts) answers
+  oval here and keeps its key for a frame that prints the triangle (lotr
+  and lotrscroll draw their own triangle since 4.11). `resolveHoloStamp` (lib/cards/anatomy.ts) answers
   both renderers, the rules layout and the creator (on a TRIANGLE frame
   "auto" is every rarity and the face has a tone — "The Universes Beyond
   frames", layout v55): the notch overlay
@@ -8719,8 +8831,9 @@ which the name's room is measured against (`titleBandRoomPct` →
 cost 3 px per pip and 1 per gap MORE room — a name never loses room. Inline
 rules pips are untouched (they follow the rules size, not the cost disc).
 NOT changed: flip and aftermath (their own prints' rows), the old frames,
-and the MSE-framed showcases (`nyx`, `fullart`, `expeditionland`, `lotr`,
-`tarkir…`) — `COST_DISC_PCT` keeps 72.75 px for them; the showcases wait for
+and the MSE-framed showcases (`nyx`, `fullart`, `expeditionland`,
+`tarkir…`; `lotr` and `lotrscroll` took the row with their Card Conjurer
+rebuilds, 4.11) — `COST_DISC_PCT` keeps 72.75 px for them; the showcases wait for
 their Card Conjurer rebuild (TODO 4.11).
 
 **Rollout.** A CORRECTION: `"sweep"`, no badge, after the owner's before /
@@ -8735,7 +8848,7 @@ signs the row off on the before / after sheet, so every tick stays fresh.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 74 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 75 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
@@ -8745,7 +8858,7 @@ joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card — and the Lord of
 the Rings scroll, WITH one too: layout v62, on Card Conjurer's 'Scroll'
-pack) prints its names,
+pack, and the ring, layout v63, on its 'Ring' pack) prints its names,
 type lines, pips and set symbol at ONE set of sizes, Card Conjurer's, which
 match the prints. Split is M15-era too and stays OUT: a split half prints
 every line smaller than a regular card (the `SPLIT_*` constants, [The

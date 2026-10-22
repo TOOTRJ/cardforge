@@ -88,7 +88,7 @@ describe("the Phase B allow-list", () => {
   });
 
   it("never normalises the showcase families, Alpha or the Card Conjurer masters", () => {
-    for (const t of ["bloomburrow", "bloomanime", "lotr", "tarkirdragon", "tarkirghostfire", "tarkirdraconic", "avatar"]) {
+    for (const t of ["bloomburrow", "bloomanime", "tarkirdragon", "tarkirghostfire", "tarkirdraconic", "avatar"]) {
       expect(NEVER_NORMALISE.test(t), t).toBe(true);
       expect(shouldNormalise(t, "w"), t).toBe(false);
     }
@@ -99,7 +99,9 @@ describe("the Phase B allow-list", () => {
     expect(NEVER_NORMALISE.test("battle")).toBe(false);
     // …and the Lord of the Rings scroll with TODO 4.11, the same way.
     expect(NEVER_NORMALISE.test("lotrscroll")).toBe(false);
-    for (const t of ["agclassic", "alphaland", "split", "battle", "lotrscroll", "nyx", "m15", "m15borderless", "fullartland", "adventure", "aftermath", "flip"]) {
+    // …and the ring with its own (layout v63).
+    expect(NEVER_NORMALISE.test("lotr")).toBe(false);
+    for (const t of ["agclassic", "alphaland", "split", "battle", "lotrscroll", "lotr", "nyx", "m15", "m15borderless", "fullartland", "adventure", "aftermath", "flip"]) {
       expect(shouldNormalise(t, "w"), t).toBe(false);
       expect(CORNER_NORMALISE_TEMPLATES, t).not.toHaveProperty(t);
     }

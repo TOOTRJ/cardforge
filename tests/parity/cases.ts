@@ -314,6 +314,8 @@ const PICKS: readonly Pick[] = [
   // The Lord of the Rings scroll from Card Conjurer (TODO 4.11, layout v62).
   { from: "lotrscroll/w/creature-long@crown", why: "v62 LOTR scroll: CC's 'Scroll' master, the M15 pack's slots on the scroll, its own crown band, the scroll plate" },
   { from: "lotrscroll/c/artifact-long@stamp-c", why: "v62 LOTR scroll: the pack's own triangle notch per key over the `a` master, the matte or silver triangle art in its cut" },
+  // The Lord of the Rings ring from Card Conjurer (TODO 4.11, layout v63).
+  { from: "lotr/w/creature-long@crown", why: "v63 LOTR ring: CC's 'Ring' master, the M15 pack's slots under its lower title bar (the cost row centred on it), its scalloped crown band, the ring plate with its digits on the face" },
   { from: "m15borderless/b/creature-long", why: "borderless: art to the edge, white ink, the keylined set symbol" },
   // --- the borderless stamp and collector line (TODO 4.9d) -----------------
   { from: "m15borderless/r/creature-long@stamp-collector-hd", why: "borderless: the lifted-pinline arch, the oval over the black, the collector line with the mark on line 2 beside the plate" },

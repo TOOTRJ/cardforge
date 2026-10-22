@@ -52,9 +52,13 @@ describe("the square-corner table", () => {
         for (const c of CORNER_NAMES) expect(squareCornerKind(template, key, c), `${template}/${key} ${c}`).toBe("border");
       }
     }
-    for (const t of ["bloomburrow", "lotr", "tarkirdraconic"]) {
+    for (const t of ["bloomburrow", "tarkirdraconic"]) {
       expect(CORNER_NAMES.map((c) => squareCornerKind(t, "g", c))).toEqual(["frame", "frame", "root", "root"]);
     }
+    // The LOTR ring since TODO 4.11: its Card Conjurer masters keep the frame
+    // field in the top corners (square) and run the border black into the
+    // bottom ones.
+    expect(CORNER_NAMES.map((c) => squareCornerKind("lotr", "g", c))).toEqual(["frame", "frame", "border", "border"]);
     // expeditionland: only the see-through-band keys.
     expect(squareCornerKind("expeditionland", "b", "tl")).toBe("root");
     expect(squareCornerKind("expeditionland", "w", "tl")).toBe("border");

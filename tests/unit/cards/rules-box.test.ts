@@ -118,6 +118,8 @@ describe("the main box on every template", () => {
         // The Lord of the Rings scroll (layout v62, TODO 4.11): the pack's
         // text layout is M15's, its box and margins.
         "lotrscroll",
+        // …and the ring (layout v63): M15's box and margins too.
+        "lotr",
       ].sort(),
     );
     for (const t of withPrintMargins) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 4, y: 0 });

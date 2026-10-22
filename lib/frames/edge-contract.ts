@@ -9,7 +9,12 @@
 //            see-through (α ≤ 0.05) in the band, outside any declared bar
 //            that crosses it (`except`, % along the edge);
 //   bar    — an opaque band at least `depthPct` deep (% of the card's
-//            height for top/bottom, of its width for left/right),
+//            height for top/bottom, of its width for left/right);
+//   design — the frame's own DESIGN runs to that edge with no border
+//            (the Lord of the Rings ring's frame field, TODO 4.11): opaque
+//            in the band like a border, but its corner is the design's
+//            colour, never held dark — a borderless treatment whose edge
+//            is frame, not art,
 //
 // the vocabulary of 6.1a's bleed recipe. It catches the flat #101015 "ring"
 // a master with a transparent outer band bakes (the card root's background,
@@ -37,7 +42,8 @@ export type EdgeName = "top" | "right" | "bottom" | "left";
 export type EdgeSpec =
   | { kind: "border" }
   | { kind: "art"; except?: readonly (readonly [number, number])[] }
-  | { kind: "bar"; depthPct: number };
+  | { kind: "bar"; depthPct: number }
+  | { kind: "design" };
 
 export type EdgeContract = Readonly<Record<EdgeName, EdgeSpec>>;
 
@@ -114,6 +120,18 @@ const EXTENDED_ART_EDGES: EdgeContract = {
   right: { kind: "art", except: [[0, 11.3], [59.2, 100]] },
   bottom: BORDER,
   left: { kind: "art", except: [[0, 11.3], [59.2, 100]] },
+};
+
+/** CC's 'Ring' pack (TODO 4.11; measured on all eight masters at 1500 ×
+ *  2100): the frame field α 1.00 to the top and side edges — design, no
+ *  border, its top corners the frame field's colour — and the black
+ *  border's shoulders along the bottom (black from row 1658 at the sides,
+ *  the whole bottom 2 % band). */
+const RING_EDGES: EdgeContract = {
+  top: { kind: "design" },
+  right: { kind: "design" },
+  bottom: BORDER,
+  left: { kind: "design" },
 };
 
 /**
@@ -248,7 +266,11 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   tarkirghostfire: ALL_BORDER, // the black run, TDM #399–408 (4.35)
   tarkirdragon: ALL_BORDER, // MUL references are black-bordered (4.35)
   tarkirdraconic: ALL_BORDER,
-  lotr: ALL_BORDER,
+  // Card Conjurer's 'Ring' pack since TODO 4.11 (frames bucket): the frame
+  // field runs to the top and side edges as every print has it (LTR #302–331,
+  // #794–823: no border there), the black border's shoulders along the bottom
+  // — the importer cuts the one card corner at the bottom only.
+  lotr: RING_EDGES,
   // Card Conjurer's 'Scroll' pack since TODO 4.11 (frames bucket): a real black
   // border all round, cut at the one card corner by the importer.
   lotrscroll: ALL_BORDER,
@@ -323,7 +345,9 @@ export function edgeContractFor(template: string, key: string): EdgeContract | u
  *  test red until it is struck from this list. Every entry's `why` carries
  *  a "corner" note (3.26): a ring is transparent at the arc, and the
  *  showcase families that paint their corner (Bloomburrow's pale corner,
- *  LOTR's tan, Tarkir's ornament) are design that Phase B never paints.
+ *  Tarkir's ornament) are design that Phase B never paints. (The Lord of
+ *  the Rings ring left with TODO 4.11: its Card Conjurer masters declare
+ *  their frame field as `design` edges, whose corner is never held dark.)
  *  The corner check adds one entry of its own — alphaland/b, whose edges
  *  pass. (It found adventure's grey paper rim too, luma ≤ 97: Phase B
  *  normalises it since the owner's 2026-09-28 call.) */
@@ -358,10 +382,6 @@ export const EDGE_CONTRACT_KNOWN_FAILURES: Readonly<Record<string, { keys: "all"
   bloomburrow: {
     keys: "all",
     why: "transparent outer band at the bottom and lower sides (found 2026-09-26); corner: the pale design corner (never normalised, 3.26)",
-  },
-  lotr: {
-    keys: "all",
-    why: "transparent outer band at the bottom and lower sides (found 2026-09-26); corner: the tan design corner on top (never normalised, 3.26)",
   },
   tarkirdraconic: {
     keys: "all",
@@ -451,7 +471,7 @@ export function edgeContractViolations(
       }
       if (artSlot && !rectTouchesEdge(artSlot, edge)) out.push(`${edge}: art edge, but the art window doesn't reach it`);
     } else if (worst < OPAQUE_MIN) {
-      const what = spec.kind === "bar" ? `bar (${spec.depthPct} %)` : "border";
+      const what = spec.kind === "bar" ? `bar (${spec.depthPct} %)` : spec.kind === "design" ? "design" : "border";
       out.push(`${edge}: ${what}, but the frame is α ${worst.toFixed(2)} at ${worstAt?.join(",")} (≥ ${OPAQUE_MIN})`);
     }
   }
@@ -518,13 +538,15 @@ export function cornerViolations(
           }
         }
       }
-      const what = spec.kind === "bar" ? "bar" : "border";
+      const what = spec.kind === "bar" ? "bar" : spec.kind === "design" ? "design" : "border";
       if (minAlpha < OPAQUE_MIN) {
         out.push(
           `${corner} corner (${edge} ${what}): the frame is α ${minAlpha.toFixed(2)} at ${minAt?.join(",")} just inside the arc (≥ ${OPAQUE_MIN})`,
         );
       }
-      if (maxLuma > CORNER_DARK_LUMA_MAX) {
+      // A design edge's corner is the design's colour (the ring's frame
+      // field): only its opacity is held.
+      if (spec.kind !== "design" && maxLuma > CORNER_DARK_LUMA_MAX) {
         out.push(
           `${corner} corner (${edge} ${what}): luma ${Math.round(maxLuma)} at ${lumaAt?.join(",")} just inside the arc (≤ ${CORNER_DARK_LUMA_MAX}, the border)`,
         );

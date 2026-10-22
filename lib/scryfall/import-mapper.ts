@@ -1792,14 +1792,19 @@ function isShowcaseSignature(signature: string): boolean {
  *  of the Rings scroll showcase (TODO 4.11: every legendary print of LTR
  *  #452–730 and LTC #411–490 wears the scroll's own crown, the rolled top
  *  edge of its title scroll — LOTRSCROLL_CROWN; its two-colour printings,
- *  nearest on the gold master until the pair dress, wear it too). A
- *  printing with one of these signatures imports as its scan with the crown
- *  ON. */
+ *  nearest on the gold master until the pair dress, wear it too) — and the
+ *  ring showcase (TODO 4.11: all sixty printings of LTR #302–331 and
+ *  #794–823 are legendary, each under the pack's scalloped title-bar crown —
+ *  LOTR_CROWN; checked on #302, #310 and #317). A printing with one of these
+ *  signatures imports as its scan with the crown ON. */
 const CROWNED_SHOWCASE_SIGNATURES: ReadonlySet<string> = new Set([
   "showcase/thb/constellation",
   "showcase/ltr/scroll",
   "showcase/ltr/scroll+two-colour",
   "showcase/ltr/scroll+two-colour-hybrid",
+  "showcase/ltr/ring",
+  "showcase/ltr/ring+two-colour",
+  "showcase/ltr/ring+two-colour-hybrid",
 ]);
 
 /** Whether a printing prints the STANDARD legendary crown (see

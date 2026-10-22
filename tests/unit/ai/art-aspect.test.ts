@@ -106,7 +106,8 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   flip: ["1392x752", "16:9", 1.842],
   split: ["1232x848", "3:2", 1.462],
   aftermath: ["1680x624", "21:9", 2.701],
-  lotr: ["1088x960", "1:1", 1.143],
+  // The Card Conjurer ring window (TODO 4.11, v63): the pack's artBounds, 1202 × 918.
+  lotr: ["1168x896", "4:3", 1.309],
   // The Card Conjurer scroll window (TODO 4.11, v62): 1280 × 941.
   lotrscroll: ["1184x864", "4:3", 1.359],
   avatar: ["1104x944", "4:3", 1.164],

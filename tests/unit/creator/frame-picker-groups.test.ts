@@ -591,7 +591,10 @@ describe("the frame picker's groups: a classification change only", () => {
     // Conjurer masters), so LTR #482 is EXACT on it once verified (only
     // "all" verifies it); production lands it where main does.
     expect(raw.imports["all|ltr-482"]).toMatchObject({ frame_template: "lotrscroll", match: ["exact", "lotrscroll", null] });
+    // …and the ring's (LTR #306, TODO 4.11 too), the same way.
+    expect(raw.imports["all|ltr-306"]).toMatchObject({ frame_template: "lotr", match: ["exact", "lotr", null] });
     expect(changed("imports")).toEqual([
+      "all|ltr-306",
       "all|ltr-482",
       "all|takh-1", "all|tdsk-10", "all|tdsk-4", "all|teoc-13",
       "all|tmkm-10", "all|tmkm-13", "all|tmom-16", "all|tsoi-11",

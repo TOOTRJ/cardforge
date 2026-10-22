@@ -38,14 +38,13 @@ const TEMPLATE_SOURCES = {
   // (adventure, flip and aftermath are Card Conjurer masters since TODO
   // 4.21a, split and battle since 4.21b, saga since 4.21c — their geometry is
   // the CC pack's, measured on the prints; scripts/lib/cc-frames.mjs — and
-  // lotrscroll since 4.11.)
+  // lotrscroll and lotr since 4.11.)
   agclassic: { dir: "magic-agclassic.mse-style" },
   alphaland: { dir: "magic-agclassic.mse-style", note: "land variant shares agclassic geometry" },
   retro: { dir: "magic-old.mse-style" },
   retroland: { dir: "magic-old.mse-style", note: "land variant shares magic-old geometry" },
   modern: { dir: "magic-new.mse-style" },
   modernland: { dir: "magic-new.mse-style", note: "land variant shares magic-new geometry" },
-  lotr: { dir: "magic-m15-showcase-lotr.mse-style" },
   avatar: { dir: "magic-m15-showcase-avatar-elemental.mse-style" },
   bloomburrow: { dir: "magic-m15-showcase-bloomburrow-woodland.mse-style" },
   bloomanime: { dir: "magic-m15-showcase-bloomburrow-borderless-anime.mse-style" },
