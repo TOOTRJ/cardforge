@@ -68,6 +68,8 @@ import {
   type DfcLayout,
 } from "@/lib/cards/dfc";
 import { frameGateError, isFrameComboAvailable } from "@/lib/cards/frame-availability";
+import { isTokenPairBack, isTokenPairFront, tokenDesignOf } from "@/lib/cards/token-faces";
+import { tokenBackBodyFor } from "@/lib/creator/token-back";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import type { ColorIdentity, FrameTemplate } from "@/types/card";
 
@@ -97,6 +99,8 @@ export type DfcBackGateResult =
       back: DfcBackFacePayload | null;
       /** The DFC layout the front is, or null for any other card. */
       layout: DfcLayout | null;
+      /** A double-sided token's back of its own (TODO 5.5 (c)). */
+      tokenPair?: true;
     }
   | {
       ok: false;
@@ -152,6 +156,8 @@ export const DFC_FRONT_TYPE_REFUSED =
   "A double-faced card's front can be a creature, artifact, enchantment, land, instant or sorcery.";
 export const DFC_BATTLE_FRONT_TYPE_REFUSED = "The battle frame dresses battles only.";
 export const DFC_SAGA_FRONT_TYPE_REFUSED = "The double-faced saga frame dresses sagas only.";
+/** A double-sided token's back face is a token too (TODO 5.5 (c)). */
+export const TOKEN_BACK_TYPE_REFUSED = "A token's back face is a token too.";
 export const DFC_FRONT_BODY_MISMATCH =
   "This double-faced frame doesn't dress that card type — the land frame is for lands, the other for everything else.";
 
@@ -237,6 +243,7 @@ export function stripBackBody<T extends DfcBackFacePayload>(back: T): Omit<T, "f
 
 export function resolveDfcBackFace(input: DfcBackGateInput): DfcBackGateResult {
   const front = normalizeFrameTemplate(input.frontTemplate);
+  if (isTokenPairFront(front)) return resolveTokenBackFace(input, front);
   const body = dfcBodyOf(front);
   const layout = body?.role === "front" ? body.layout : null;
   const back = input.back ?? null;
@@ -378,6 +385,77 @@ export function resolveDfcBackFace(input: DfcBackGateInput): DfcBackGateResult {
   };
 }
 
+/** A double-sided token's back (TODO 5.5 (c)): see the header. */
+function resolveTokenBackFace(input: DfcBackGateInput, front: FrameTemplate): DfcBackGateResult {
+  const back = input.back ?? null;
+  if (!back) return { ok: true, back: null, layout: null };
+  const storedBody = input.stored?.back?.frame_style?.template;
+  const storedHasBody = Boolean(input.stored && storedBody && isTokenPairBack(front, storedBody));
+  const sent = back.frame_style?.template;
+  // No body sent and none stored: a body-less back, kept as it came — what
+  // the `!layout` path keeps on any other front.
+  if (!sent && !storedHasBody) return { ok: true, back, layout: null };
+  // (A body sent for the OTHER design is no refusal: the front moved there
+  // — a remix's textless guard puts a full-art token onto the arch — and
+  // the body below is derived for the front as it is stored.)
+  if (sent && !storedHasBody && tokenDesignOf(sent) === null) {
+    return { ok: false, field: "back_face.frame_style", message: DFC_NOT_A_BACK_BODY };
+  }
+  if ((back.card_type ?? null) !== "token") {
+    return { ok: false, field: "back_face.card_type", message: TOKEN_BACK_TYPE_REFUSED };
+  }
+  // The colour: on an update of a back with a body the STORED one wins (the
+  // lock, as every back's); else its own, or the front's.
+  let colour: ColorIdentity[];
+  if (storedHasBody) {
+    const storedColour = backColourOf(input.stored?.back, input.frontColorIdentity);
+    const sentColour = back.color_identity;
+    if (sentColour && sentColour.length > 0 && !sameColorIdentity(sentColour, storedColour)) {
+      return { ok: false, field: "back_face.color_identity", message: DFC_BACK_COLOR_SET };
+    }
+    colour = storedColour;
+  } else {
+    colour = backColourOf(back, input.frontColorIdentity);
+  }
+  // The body: the stored one on an update (structure, like the front's
+  // template, which an edit never sends); else the one the back's words and
+  // text derive in the front's design — whatever was sent.
+  const template = storedHasBody
+    ? (storedBody as FrameTemplate)
+    : tokenBackBodyFor(front, {
+        supertype: back.supertype as string | null | undefined,
+        subtypes: back.subtypes as readonly string[] | string | null | undefined,
+        rulesText: back.rules_text as string | null | undefined,
+        flavorText: back.flavor_text as string | null | undefined,
+        power: back.power as string | null | undefined,
+        toughness: back.toughness as string | null | undefined,
+        colorIdentity: colour,
+      }, input.skipVerification ? null : input.verifiedKeys);
+  if (!template) return { ok: false, field: "back_face.frame_style", message: DFC_NO_BACK_BODY_YET };
+  if (!input.skipVerification) {
+    // An update re-checks only a changed body or colour (the legacy pin).
+    const unchanged =
+      storedHasBody &&
+      storedBody === template &&
+      pickFrameColorKey(backColourOf(input.stored?.back, input.frontColorIdentity)) === pickFrameColorKey(colour);
+    if (!unchanged) {
+      const gateError = frameGateError(template, colour, input.verifiedKeys);
+      if (gateError) {
+        return { ok: false, field: "back_face.color_identity", message: gateError, code: "unverified" };
+      }
+    }
+  }
+  // A token prints no mana cost: the back saves with none.
+  const { cost: _cost, ...content } = back;
+  void _cost;
+  return {
+    ok: true,
+    layout: null,
+    tokenPair: true,
+    back: { ...content, frame_style: { template }, color_identity: colour },
+  };
+}
+
 /** True when a public save of this card would have an empty back window —
  *  a DFC front whose back has no art (design D13: the front's "no artwork →
  *  no gallery" rule on both faces; a legacy back keeps today's rule). */
@@ -385,7 +463,10 @@ export function dfcBackArtMissing(
   frontTemplate: FrameTemplate | string | null | undefined,
   back: DfcBackFacePayload | null | undefined,
 ): boolean {
-  const body = dfcBodyOf(normalizeFrameTemplate(frontTemplate));
+  const front = normalizeFrameTemplate(frontTemplate);
+  // A double-sided token (TODO 5.5 (c)): a back of its own needs its picture.
+  if (isTokenPairFront(front)) return isTokenPairBack(front, back?.frame_style?.template) && !back?.art_url;
+  const body = dfcBodyOf(front);
   if (body?.role !== "front") return false;
   // A battle's back is optional (TODO 5.5): only a back of its own — one
   // with a body — must have its picture; none, or a legacy back, keeps

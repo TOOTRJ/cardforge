@@ -177,6 +177,8 @@ describe("framesForKind", () => {
     // hide them, isTypeWordDress).
     expect(skinsFor("token")).toEqual([
       "m15tokenartifact", "m15tokentext", "m15tokenartifacttext",
+      // …and the arch's tall box (TODO 4.55).
+      "m15tokentall", "m15tokenartifacttall",
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
       // …and their Nyx dress (TODO 4.51): an Enchantment token's.
       "m20tokennyx", "m20tokennyxtext", "m20tokennyxtall", "m20tokenartifactnyx", "m20tokenartifactnyxtext", "m20tokenartifactnyxtall",

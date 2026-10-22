@@ -47,7 +47,7 @@ from (values
      E'{3}{G}{W}: Monstrosity 1.\nAs long as Thornmane Lion is monstrous, it has hexproof and indestructible.', '3', '3', 4,
      '{"template":"m15","finish":"regular","twoColor":true}'::jsonb, 1),
   -- A colourless artifact: the plate's rim in the artifact frame's silver.
-  ('c0000000-0000-4000-a000-0000000006a2'::uuid, 'Spyglass Idol', 'The Watcher''s Eye', 'spyglass-idol', '{5}', array['colorless'], null, 'artifact', array[]::text[], 'uncommon',
+  ('c0000000-0000-4000-a000-0000000006a2'::uuid, 'Spyglass Idol', 'The Watcher’s Eye', 'spyglass-idol', '{5}', array['colorless'], null, 'artifact', array[]::text[], 'uncommon',
      E'{4}, {T}: Draw a card.', null, null, 11,
      '{"template":"m15artifact","finish":"regular"}'::jsonb, 1)
 ) as c (id, title, nickname, slug, cost, colors, supertype, card_type, subtypes, rarity,

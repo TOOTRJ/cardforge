@@ -1099,8 +1099,10 @@ badges to Exact the moment its `frame_reviews` row is ticked.
   earlier 2015-frame tokens ARE the arch (`era/2015`, exact). Either way the
   family pick is the text-box arch (`m15tokentext` / `m15tokenartifacttext`,
   4.49 (b)) for a printing with rules or flavour text — a box, not the
-  scrim — and the textless one otherwise; the arch's tall box is the
-  `tall-box` gap (pinned, `TALL_BOX_TOKEN_PINS`). A token's Nyx
+  scrim — and the textless one otherwise; the arch's tall box is its own
+  rule since 4.55 (`token/tall-box`, pinned `TALL_BOX_TOKEN_PINS`: `nearest`
+  the regular box until the tall box is verified, then `exact` on it —
+  "The arch token's tall text box" below). A token's Nyx
   is the `nyx-dress` gap (4.51), not `nyx` (4.7). Role cards (`token/role`,
   unsupported) and double-faced tokens import their front face only.
   Tokens and emblems are only found through the import dialog's "Tokens &
@@ -6945,6 +6947,99 @@ back).
      back the server takes where `sagadfcback/c` is verified is no longer
      refused by the form. `c` stays published but unticked.
 
+### Double-sided tokens (5.5 (c))
+
+TODO 5.5 (c), 2026-10-21 (`feat/dfc-tokens-pair`; owner Round 76). An
+ADDITION: no template, no master, no layout bump, no sweep, no badge; every
+stored token keeps its look and its data on every save path.
+
+- **What prints.** Scryfall lays 121 printings out as `double_faced_token`.
+  39 are two tokens back to back — Guild Kit 2018 (×10), the FNM / store
+  promos (F17, F18, L16), A25 #5★, PEMN #1Z, CC2 #9, Q07 #T12, MOM's
+  Incubator // Phyrexian (×5), GS1 #T1, the 2003-frame pairs F12 #1a and
+  PHEL #1★, and Unstable's ten art-only backs and UNF's folded
+  Contortionist. 2 pair a token with a reminder card (F18 #2 City's
+  Blessing // Elemental, L17 #1 Gremlin // Energy Reserve), 80 are helper
+  cards (Punchcards, the minigames, OTC's Bounties, Day // Night, the
+  Initiative, The Ring). Each face of a pair is an ordinary token of its
+  era: its own colour, its own height (the textless arch beside the
+  text-box arch: GK1 #4 Goblin // Soldier), the Artifact dress where its own
+  words say Artifact (F17 #11 Dinosaur // Treasure) — no transform icon.
+- **The model** (`lib/cards/token-faces.ts`): the back is NOT a double-faced
+  back body (those are never a card's own template): it is another TOKEN
+  template — the very ones a one-faced token wears — in the FRONT's design,
+  the 2014–19 arch (`m15token…`) with the arch, the full-art token
+  (`m20token…`, Nyx included) with the full-art token (`tokenDesignOf`,
+  `isTokenPairBack`). Which one is derived, never picked:
+  `tokenBackBodyFor` (`lib/creator/token-back.ts`) dresses the design's
+  plain textless template by the back's own words and text through
+  `tokenFrameFor` (the Artifact word, the arch's text box, the full-art
+  height) and, on the full-art design, onto the Nyx dress where its words
+  say Enchantment in one colour (`enchantmentFrameFor`, owner Round 74's
+  rule). The creator, the import and the server read this ONE function.
+- **The ONE gate** (`resolveDfcBackFace`, `lib/cards/dfc-gate.ts`): a token
+  front with no back, or a body-less back, is kept as it came (as on main);
+  a back that names a body (or whose stored back has one) is a token
+  (`TOKEN_BACK_TYPE_REFUSED` otherwise), stored on the body derived for the
+  front as it is stored — whatever body was sent, refusing only a template
+  that is no token at all (a remix's textless guard may move a full-art
+  front onto the arch) — in its own colour (else the front's), verified for
+  that template (`code: "unverified"`, an admin's preview skips it), with no
+  cost. On an edit the STORED body and colour win (`DFC_BACK_COLOR_SET`; the
+  front's template is locked on an edit too). A public save needs the back's
+  picture (`dfcBackArtMissing`). `templateTakesBackBody`
+  (`lib/cards/dfc.ts`) is what the actions read the verified keys for.
+- **The faces.** `backBodyOf` honours a token back in the front's design, so
+  `backPreviewData` draws it on its template and colour with no `dfc` block,
+  `bakedBackOf` bakes it (`{id}.back.png` + thumb), the tile turns,
+  `?face=back`, `?faces=both`, the downloads and the deck export offer it
+  and the page is "Goblin // Soldier" (`hasBackOfItsOwn`). The crown stays
+  each face's own (`qualifiesForCrown` reads the face's words): a
+  legendary front over a plain back crowns the front alone.
+- **The creator.** A NEW token on a token frame has a **Faces** row on the
+  Card step (`TokenFacesSection`, `panels/dfc-setup-sections.tsx`): "One
+  face" (the default — every token until now) | "Two faces". With two faces
+  the Front face | Back face switch appears (`SECOND_PART_WORDS.token`): the
+  back's token types (`TokenBackTypeSection`, no Emblem choice) and colour
+  on the Card step, its name, Types, subtypes, art and artist on Identity,
+  its rules, flavour and P/T on Text — no cost. Its frame follows the
+  front's design with no picker of its own; the live preview draws what the
+  save sends. "One face" saves the token alone (the back kept for the
+  visit); leaving the token kind asks first and takes the back along
+  (restored on the way back). An edit keeps the faces the card was saved
+  with; on a frame that is no token frame "Two faces" is off with its
+  reason.
+- **The import** (`doubleFacedTokenShapeOf`, `lib/scryfall/import-mapper.ts`):
+  a `pair` brings both faces — the back mapped as a token
+  (`mapTokenBackFacePatch`) — and `finalizeImportMatch` keeps it only once
+  BOTH faces' tokens are verified, each in its colour, the back derived again
+  for the front the import lands on (`tokenPairImportLanding`,
+  `lib/scryfall/dfc-import.ts`); short of either, exactly main's patch: the
+  front alone with the toast. A `helper-front` printing (F18 #2) imports its
+  TOKEN face by itself (`dropped_face: "helper-front"`, its own toast; the
+  art import asks for that face). Everything else — L17 #1's helper back,
+  Unstable's art-only backs (a back whose type line is a bare "Token"), the
+  folded Contortionist (`TOKEN_FOLD_BACK_PINS`), the helper cards — imports
+  as before. GS1 Mowu and the 2003-frame pairs bring both faces, nearest as
+  their fronts are. `tests/unit/scryfall/dft-imports.test.ts` holds all 121
+  printings to origin/main's landing (`fixtures/dft-main-landings.json`).
+- **The transforming token.** MOM's Incubator // Phyrexian prints the ▲ well
+  on its front, the ▼ on its back and the back's 0/0 at the front's text
+  box: it lands on the plain full-art pair, **nearest** — the registry's
+  `dfc-token-transform` gap on `token/m20` (blocked by TODO 5.5 (d), the
+  transform-token body).
+- **The AI remix** follows the import: a printing's pair is two pictures
+  (2 credits, `remixCreditsOf` → `hasBackOfItsOwn`; the back's body derived
+  for the front the remix lands on), one face on a one-credit plan or short
+  of the ticks; an own pair keeps both faces through the gate
+  (`ownCardRemixFrame`). The identity call names the back as a token of its
+  own (`SECOND_HALF_RELATIONSHIP.token`). The step decides the frames it
+  SAVES on — the front's and the back's — before any picture is made
+  (`remixSavedFrames`, owner Round 78): a back that can't follow the front's
+  text stand-in (a textless full-art pair whose text heights are unticked)
+  keeps the pair on its landing, and a back that can't be saved at all fails
+  the step before the art, refunded — never two pictures for one face.
+
 ### The borderless double-faced bodies (5.7)
 
 TODO 5.7, 2026-10-15 (`feat/dfc-borderless`). Four templates for the DARK
@@ -8208,8 +8303,9 @@ at HD on all four.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 70 templates — the 23 of v32's frozen scope in
-`lib/cards/layout-version.ts`, plus the two text-box tokens, the six
+`lib/cards/m15-family.ts`: 72 templates — the 23 of v32's frozen scope in
+`lib/cards/layout-version.ts`, plus the two text-box tokens and their two
+tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
 bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, new templates that joined without a bump, and the battle, which
@@ -8414,7 +8510,9 @@ What a frame gives it:
 
 ## Tokens
 
-TODO 4.49, 3b.15, layout v34: the 2014–19 frame and the type words.
+TODO 4.49, 3b.15, layout v34: the 2014–19 frame and the type words. A
+double-sided token (two tokens back to back) is
+[Double-sided tokens](#double-sided-tokens-55-c).
 
 ### The 2014–19 arch
 
@@ -8454,7 +8552,8 @@ TODO 4.49, 3b.15, layout v34: the 2014–19 frame and the type words.
   centre theirs on their pill the same way), M15's 86 px box with the ink
   fit, clear of the pill's bevels (`TOKEN_PILL_INTERIOR_PX`). Its colour
   stays the card's rarity (a new token and a token's remix save as common);
-- still to come: the TALL text box (4.55).
+- the TALL text box is its own pair of templates since 4.55 ("The arch
+  token's tall text box" below).
 
 ### The arch token's name and art slot (4.53, layout v59)
 
@@ -8628,15 +8727,109 @@ card whose owner picked the textless variation by hand over text, a frame
 preview, a land, or one an older client saved — its text stays readable
 instead of being lost or set straight on the art.
 
-TSOI #11 Clue prints the TALL box (type bar ~56 %H, no CC source: its own
-item, 4.55, P3) and is not a reference. The registry pins the 21 arch printings with
-the tall box (`TALL_BOX_TOKEN_PINS`: every black-bordered pre-M20 arch token
-with rules text measured against this master — Amonkhet / Hour of
-Devastation's embalmed and eternalized cards, the SOI Clues, TDOM #7, TC18
-#4 / #10 / #19, TRIX #1, TUST #18): the `tall-box` gap answers `nearest` the
-regular box with `blockedBy` 4.55, so the import lands there (the text
-shrinks to fit) and the 1.6 log counts the demand, instead of calling the
-regular box exact.
+TSOI #11 Clue prints the TALL box (type bar ~56 %H) and is not a reference:
+since 4.55 it is the tall box's ("The arch token's tall text box" below).
+The registry pins the 21 arch printings with the tall box
+(`TALL_BOX_TOKEN_PINS`: every black-bordered pre-M20 arch token with rules
+text measured against this master — Amonkhet / Hour of Devastation's
+embalmed and eternalized cards, the SOI Clues, TDOM #7, TC18 #4 / #10 / #19,
+TRIX #1, TUST #18). Until 4.55 the `tall-box` gap answered `nearest` the
+regular box (the text shrinks to fit) and the 1.6 log counted the demand;
+the `token/tall-box` rule now names the tall box once verified.
+
+### The arch token's tall text box (4.55)
+
+`m15tokentall` / `m15tokenartifacttall`: the 2014–19 arch with the TALL box
+the 21 pinned printings wear — a shorter window, the type pill high on the
+card (56–62 %H), a box twice the regular one. Card Conjurer has no source,
+so the masters are PipGlyph's OWN cut of the published `m15tokentext` /
+`m15tokenartifacttext` masters (`scripts/build-token-tall-frames.mjs`, the
+recipe and the measurements in `scripts/lib/token-tall.mjs`; bucket only,
+each WebP's alpha the PNG's; provenance `source: "pipglyph"`).
+
+- **Measured on print** (2026-10-18; Scryfall PNGs, measuring only — no
+  scan is read by the build): every one of the 21 against the text-box
+  master of its colour (w, b, r; the Clues on the artifact dress's `c`) by
+  the correlation of the rows' edges. The title bar, the arch and the
+  window's top sit where the master draws them (0 … +3 px, the scans' own
+  offset), and so do the box's bottom, the plate and the border. The type
+  pill, the box's top edge and the window's bottom edge sit 233–241 px
+  HIGHER (median 238; 235–241 against each print's own offset), as ONE
+  piece. The type line rides the pill (capitals 1211–1214 px against the
+  regular box's 1450, baseline 1262–1266 against 1500) and starts where the
+  regular one does (x 124–127). The rules are centred in the taller box
+  (ink centres 1621–1635 px; the drawn box's centre is 1634). The box's
+  tone is the regular box's within the prints' own spread (TC18 #4 reads
+  the regular prints' 1.00 / 0.99 / 0.98 of the master; Amonkhet's warmer
+  stock and its frame shift together): no re-tone.
+- **The cut** (`recutTokenTall`; nothing drawn, every pixel the parent's,
+  moved or cross-faded): rows 1300–1589 — the window's straight sides
+  through the box's top edge and first paper rows — move up 238 px as one
+  piece (`TOKEN_TALL_RECIPE.up`), faded in over 24 rows inside the window's
+  sides. The 238 rows the box gains (1352–1589) are filled column by column:
+  the box's paper (x 111–1388, between the pinlines; the window's keyline
+  above it) continues the moved band — rows 1590–1827 of the box's own
+  paper, so it reads as one taller box — and the side columns (border,
+  frame texture, shadow line, pinline: the same structure beside the
+  window and beside the box) take the rows 238 px above them, beside the
+  window's straight sides, so the frame's lower inner corner (from ~1770)
+  is never repeated. Each seam is cross-faded over 24 rows; every row above
+  1062 and from 1590 on is the parent's byte for byte
+  (`tests/unit/frames/token-tall-recut.test.ts` holds the cut on a coded
+  image and every published master against its parent).
+- **The profile** (`M15TOKENTALL`): `M15TOKENTEXT`'s, with what the cut
+  moves moved by `TOKEN_TALL_UP_PX` (a unit test holds it to the recipe):
+  the art slot 238 px shorter (115–1385 × 263–1167 on the opaque masters,
+  the see-through `c` and the coloured artifact dresses 4 px wider — 4.53
+  (e)'s rule), the type band and the set symbol's box on the moved pill
+  (the same dy: the prints' baseline 1 px under the band's), the rules box
+  from 1326 px (5 px inside the drawn box's moved top) to the regular box's
+  1942, centred, one line centred on it, the plate a keep-out. Everything
+  else — 4.53's gold small-caps name, the plate, the footer, the collector
+  line, the stamp-less arch — is the text box's. Its see-through `c` keeps
+  the arch's 4.17c seam (`ART_WINDOW_KNOWN_FAILURES`, 286 of 916 px down
+  each side).
+- **The height follows the text**, as on the full-art design: the arch has
+  three heights now (`ARCH_TOKEN_TEMPLATES`; `tokenHeightForText(text,
+  "arch")` against the arch's OWN regular box — the regular box while it
+  holds the text at 72 px or more, else the tall box), and every writer
+  reads it through `tokenFrameFor`: the creator (`followTokenHeight` — a
+  text going or coming still moves the box as round 11 did, a height that
+  disagreed with the old text stays, a Variations pick sticks), a new token
+  (`newTokenFrame` / `archTokenFrameIn`), the AI jobs
+  (`resolveGeneratedFrame`) and the remix (`autoTokenTextBoxFrame`).
+  Wherever the tall box isn't verified in the card's colour the regular
+  text box STANDS IN (`archTallStandIn`): the text shrinks to fit as it did
+  before 4.55 — never the textless arch's scrim. A stored card keeps its
+  frame (the follow moves only a card whose height agreed with its text).
+- **Imports**: Scryfall can't tell the height and the text length doesn't
+  (the SOI Clue's 39 characters print tall), so the 21 printings stay
+  PINNED: the `token/tall-box` rule (`TALL_BOX_TOKEN_PINS`) is `nearest`
+  the regular box — where the import always landed — until the tall box is
+  verified in the card's colour, then `exact` on it (`onceVerified` +
+  `exactOnceVerified`, family `tokentall`); every other M15-era gap still
+  names its item. No other printing moves. A request row logged before
+  4.55 (`era/2015+tall-box`, landed on the regular box) is ANSWERED on the
+  admin page once the tall box is verified in every colour its set's pins
+  print (`legacyTallBoxAnswered`, `TALL_BOX_TOKEN_PIN_COMBOS`; owner Round
+  77) — those printings import exact then.
+- **The deck remix** of a pinned printing follows the PRINTING (owner Round
+  77): once it lands on the tall box (verified in its colour), it SAVES
+  there whatever its new text — `ScryfallRemixMechanics.printed_height`,
+  honoured by `remixSavedFrame` — never re-deciding the height from the
+  text (the SOI Clue's text would ask for the regular box). Every other
+  token's remix is unchanged: it follows its saved text. Stored tokens with
+  long text stay on the regular box (owner Round 77).
+- **Tall prints that can't land on it today** (owner Round 77, in TODO
+  4.55): TFRF #4 and TC18 #1, the Manifest reminder cards — they import as
+  `m15` creatures, a mis-landing of their own — and F18 #2's Elemental back
+  (the front, City's Blessing, is another design).
+- **References** (`frame-references.json`): TAKH #1 / TC18 #4 (w), THOU #2
+  / TDOM #7 (b), TC18 #10 / TRIX #1 (r), TSOI #11 / TC18 #19 (the artifact
+  dress's `c`); no other colour printed the tall box (documented nulls).
+- **Rollout.** An ADDITION: two new templates, no stored card on them — no
+  layout bump, no sweep, no badge; every existing Visual case is
+  byte-identical, the new ones join the baseline.
 
 ### Type words
 

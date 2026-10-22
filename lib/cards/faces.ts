@@ -51,6 +51,7 @@ import {
   type DfcRole,
 } from "@/lib/cards/dfc";
 import type { CardFace } from "@/lib/cards/card-face";
+import { isTokenPairBack } from "@/lib/cards/token-faces";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import type { CardBackFace, CardType, ColorIdentity, FrameTemplate } from "@/types/card";
 
@@ -242,6 +243,12 @@ export function backBodyOf(card: Pick<CardPreviewData, "frameStyle" | "backFace"
 } | null {
   const body = card.backFace?.frame_style?.template;
   if (!body) return null;
+  // A double-sided token (TODO 5.5 (c)): a token back in the front's design
+  // — two tokens back to back, each its own template and colour; no `dfc`
+  // block (dfcBlock answers null: a token front is no DFC body).
+  if (isTokenPairBack(card.frameStyle?.template, body)) {
+    return { template: body as FrameTemplate, colorIdentity: card.backFace?.color_identity ?? null };
+  }
   if (!templateHasBackFace(card.frameStyle?.template) || !isDfcBackBody(body)) return null;
   return { template: body, colorIdentity: card.backFace?.color_identity ?? null };
 }

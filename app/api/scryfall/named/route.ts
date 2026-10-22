@@ -18,7 +18,7 @@ import {
   checkScryfallRateLimit,
   logScryfallCall,
 } from "@/lib/scryfall/rate-limit";
-import { mapScryfallToFormPatch, needsScryfallSet } from "@/lib/scryfall/import-mapper";
+import { doubleFacedTokenShapeOf, mapScryfallToFormPatch, needsScryfallSet } from "@/lib/scryfall/import-mapper";
 import { rateLimitedResponse } from "@/lib/api/responses";
 import { getVerifiedFrameKeys } from "@/lib/cards/frame-reviews";
 import { finalizeImportMatch } from "@/lib/creator/frame-resolve";
@@ -153,7 +153,12 @@ export async function GET(request: NextRequest) {
 
   await logScryfallCall(user.id, "named");
 
-  const artPreviewUrl = pickArtCropUrl(card);
+  // (A reminder card backed by a token imports its TOKEN face — TODO 5.5
+  // (c), F18 #2 — so the preview shows that face's art.)
+  const artPreviewUrl =
+    doubleFacedTokenShapeOf(card) === "helper-front"
+      ? (card.card_faces?.[1]?.image_uris?.art_crop ?? pickArtCropUrl(card))
+      : pickArtCropUrl(card);
   // The collector fields follow the printing (TODO 4.9a): a token set's
   // parent code and a 2015-era set size live on the SET object, fetched
   // only when the mapper needs it — cached for a day, so at most one extra

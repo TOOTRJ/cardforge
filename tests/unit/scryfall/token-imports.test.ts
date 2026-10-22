@@ -18,6 +18,7 @@ import {
   PLST_PRE_M20_PREFIX_SETS,
   TALL_BOX_TOKEN_PINS,
   isM20DesignPrinting,
+  signatureDrawnOn,
   type FrameMatchStatus,
 } from "@/lib/scryfall/frame-signatures";
 import { onlyUndrawnDetailsMissing } from "@/lib/creator/import-frame-choice";
@@ -55,11 +56,11 @@ describe("token designs by printing (TODO 1.23, replaces 1.19 step 4)", () => {
     ["tdom-2", "exact", "m15tokentext", "era/2015", undefined],
     ["tdom-11", "exact", "m15token", "era/2015", undefined],
     ["txln-7", "exact", "m15tokenartifacttext", "era/2015", undefined],
-    // …except the arch's TALL text box (4.55, P3 — split out of 4.49 (b),
-    // owner 2026-09-29; no CC source): pinned (TALL_BOX_TOKEN_PINS),
-    // nearest the regular box and logged, blocked by its own item.
-    ["takh-1", "nearest", "m15tokentext", "era/2015+tall-box", "4.55"],
-    ["tsoi-11", "nearest", "m15tokenartifacttext", "era/2015+tall-box", "4.55"],
+    // …except the arch's TALL text box (TODO 4.55): pinned (Scryfall can't
+    // tell the height), `token/tall-box` — nearest the regular box until the
+    // tall box is verified in the card's colour, exact on it after.
+    ["takh-1", "nearest", "m15tokentext", "token/tall-box", "4.55"],
+    ["tsoi-11", "nearest", "m15tokenartifacttext", "token/tall-box", "4.55"],
     // From M20 (2019-07-12) on: the full-art design PipGlyph doesn't draw
     // yet (4.48) — nearest the arch, the artifact arch for an Artifact, and
     // its text-box variant when the printing has text (4.49 (b): a box, not
@@ -89,7 +90,9 @@ describe("token designs by printing (TODO 1.23, replaces 1.19 step 4)", () => {
     ["tmkm-13", "nearest", "m15tokentext", "token/m20+crown", "4.48"],
     ["tmkm-10", "nearest", "m15token", "token/m20+two-colour", "4.48"],
     // Double-faced token: its front face's frame.
-    ["tmom-16", "nearest", "m15tokenartifacttext", "token/m20", "4.48"],
+    // A transforming double-sided token (TODO 5.5 (c)): the plain full-art
+    // pair, nearest whatever is verified — its own body is 5.5 (d).
+    ["tmom-16", "nearest", "m15tokenartifacttext", "token/m20+dfc-token-transform", "5.5d"],
     // The List follows its collector prefix: TXLN is pre-M20, TKHM isn't.
     ["plst-txln-10", "exact", "m15tokenartifacttext", "era/2015", undefined],
     ["plst-tkhm-19", "nearest", "m15tokenartifacttext", "token/m20", "4.48"],
@@ -181,7 +184,6 @@ describe("the full-art templates once verified (TODO 4.48 / 1.23)", () => {
     ["tfdn-23", "m20tokenartifacttext"],
     ["tfra-15", "m20tokenartifacttext"],
     ["plst-tkhm-19", "m20tokenartifacttext"],
-    ["tmom-16", "m20tokenartifacttext"],
     // …the tall box (Warren Warleader's 207 characters, the Map's 287)…
     ["tblb-5", "m20tokentall"],
     ["tlci-17", "m20tokenartifacttall"],
@@ -330,10 +332,13 @@ describe("the full-art templates once verified (TODO 4.48 / 1.23)", () => {
   });
 
   it("never names a full-art template for a 2014–19 token, an old-frame token, a Role or another token type", () => {
-    for (const key of ["tdom-3", "tdom-2", "txln-7", "takh-1", "tc15-23", "plst-txln-10", "tlrw-3", "twoe-15", "tfra-5", "tbro-3"] as Key[]) {
+    for (const key of ["tdom-3", "tdom-2", "txln-7", "tc15-23", "plst-txln-10", "tlrw-3", "twoe-15", "tfra-5", "tbro-3"] as Key[]) {
       expect(match(key).onceVerified, key).toBeUndefined();
       expect(match(key).onceVerifiedMatch, key).toBeUndefined();
     }
+    // A tall-box arch printing names the arch's OWN tall box once verified
+    // (TODO 4.55), never the full-art design.
+    expect(match("takh-1").onceVerified).toBe("m15tokentall");
   });
 });
 
@@ -345,7 +350,7 @@ function pickColour(key: Key): string {
   return colors[0]!.toLowerCase();
 }
 
-describe("the 2014–19 arch's tall text box (TODO 4.49 (b), P3)", () => {
+describe("the 2014–19 arch's tall text box (TODO 4.49 (b), 4.55)", () => {
   it("pins the 21 tall-box printings — never a regular-box one, never an M20 print", () => {
     const pins = Object.entries(TALL_BOX_TOKEN_PINS).flatMap(([set, numbers]) => numbers.map((n) => `${set} #${n}`));
     expect(pins).toHaveLength(21);
@@ -363,25 +368,50 @@ describe("the 2014–19 arch's tall text box (TODO 4.49 (b), P3)", () => {
     for (const set of Object.keys(TALL_BOX_TOKEN_PINS)) expect(set, set).toMatch(/^t[a-z0-9]+$/);
   });
 
-  it("says why, lists the gap, and logs the demand as a missing frame (1.6)", () => {
+  it("TODO 4.55: nearest the regular box until the tall box is verified — says why and logs the ask", () => {
     expect(match("tsoi-11")).toMatchObject({
       status: "nearest",
       template: "m15tokenartifacttext",
-      reason: "PipGlyph doesn't have the tall text box of this token frame yet",
-      gaps: ["tall-box"],
+      reason: "PipGlyph's tall text box token frame isn't verified yet",
+      onceVerified: "m15tokenartifacttall",
     });
-    // Nearest whatever is verified: never an exact match on the regular box.
-    expect(match("takh-1").status).toBe("nearest");
+    expect(match("takh-1")).toMatchObject({ status: "nearest", template: "m15tokentext", onceVerified: "m15tokentall" });
     const patch = mapScryfallToFormPatch(printing("tsoi-11"));
+    expect(patch.frame_template).toBe("m15tokenartifacttext");
     expect(frameRequestFromImport(patch, { artImported: false, source: "import" })).toMatchObject({
-      signature: "era/2015+tall-box",
+      signature: "token/tall-box",
       status: "nearest",
-      cause: "missing",
       setCode: "tsoi",
       collectorNumber: "11",
     });
     // A tall box is no detail the chooser may skip (C1).
     expect(onlyUndrawnDetailsMissing(match("takh-1"), "w")).toBe(false);
+  });
+
+  it("TODO 4.55: exact on the tall box once it is verified in the card's colour — in that colour only", () => {
+    const clue = finalizeImportMatch(mapScryfallToFormPatch(printing("tsoi-11")), new Set([frameComboKey("m15tokenartifacttall", "c")]));
+    expect(clue.frame_template).toBe("m15tokenartifacttall");
+    expect(clue.frame_match).toMatchObject({ status: "exact", template: "m15tokenartifacttall" });
+    const angel = finalizeImportMatch(mapScryfallToFormPatch(printing("takh-1")), new Set([frameComboKey("m15tokentall", "w")]));
+    expect(angel.frame_template).toBe("m15tokentall");
+    expect(angel.frame_match).toMatchObject({ status: "exact", template: "m15tokentall" });
+    // Verified in another colour only: the regular box stays.
+    const other = finalizeImportMatch(mapScryfallToFormPatch(printing("takh-1")), new Set([frameComboKey("m15tokentall", "b")]));
+    expect(other.frame_template).toBe("m15tokentext");
+    expect(other.frame_match).toMatchObject({ status: "nearest" });
+    // A regular-box printing never moves onto the tall box, verified or not.
+    const knight = finalizeImportMatch(mapScryfallToFormPatch(printing("tdom-2")), new Set([frameComboKey("m15tokentall", "w")]));
+    expect(knight.frame_template).toBe("m15tokentext");
+  });
+
+  // A row the request log holds from before 4.55 ("era/2015+tall-box") is not
+  // answered by the frame it LANDED on (the regular box draws no tall box —
+  // signatureDrawnOn); the request log answers it once the tall box is
+  // verified in its set's colours (legacyTallBoxAnswered, owner Round 77;
+  // tests/unit/frames/frame-request-queries.test.ts). The same printing
+  // imported now logs `token/tall-box`.
+  it("never reads the regular box as drawing a logged `era/2015+tall-box` row", () => {
+    expect(signatureDrawnOn("era/2015+tall-box", "m15tokentall")).toBe(false);
   });
 });
 
@@ -481,7 +511,7 @@ describe("token import words and faces (TODO 1.23)", () => {
     ).toMatchObject({ signature: "token/other-type", status: "nearest" });
   });
 
-  it("a double-faced token imports its front face only, and says so (a single-faced one drops nothing)", () => {
+  it("a double-sided token brings its back — two tokens back to back (TODO 5.5 (c)); an art-only back is dropped and said so (a single-faced one drops nothing)", () => {
     const single = mapScryfallToFormPatch(printing("tdom-3"));
     expect(single.dropped_face).toBeUndefined();
     expect(droppedFaceNotice(single, "Soldier")).toBeNull();
@@ -493,11 +523,35 @@ describe("token import words and faces (TODO 1.23)", () => {
       card_type: "token",
       supertype: "Artifact",
       subtypes_text: "Incubator",
-      dropped_face: "double-faced-token",
     });
-    expect(patch.back_face).toBeUndefined();
-    expect(droppedFaceNotice(patch, card.name)).toBe(
-      "Incubator // Phyrexian is a double-faced token — PipGlyph imported its front face, Incubator. Two-sided tokens aren't supported yet.",
+    expect(patch.dropped_face).toBeUndefined();
+    // (The body is the arch's here — the mapper's static landing; the import
+    // derives it again for the front it lands on: tests/unit/scryfall/
+    // dft-imports.test.ts.)
+    expect(patch.back_face).toMatchObject({
+      title: "Phyrexian",
+      card_type: "token",
+      supertype: "Artifact Creature",
+      subtypes_text: "Phyrexian",
+      power: "0",
+      toughness: "0",
+      color_identity: ["colorless"],
+      frame_style: { template: "m15tokenartifact" },
+    });
+    // Unstable's art-only back (its type line a bare "Token"): the front alone.
+    const artBack = {
+      ...card,
+      name: "Zombie // Zombie",
+      card_faces: [
+        { ...card.card_faces![0], name: "Zombie", type_line: "Token Creature — Zombie", oracle_text: "" },
+        { ...card.card_faces![1], name: "Zombie", type_line: "Token", oracle_text: "", power: undefined, toughness: undefined },
+      ],
+    } as typeof card;
+    const dropped = mapScryfallToFormPatch(artBack);
+    expect(dropped.dropped_face).toBe("double-faced-token");
+    expect(dropped.back_face).toBeUndefined();
+    expect(droppedFaceNotice(dropped, artBack.name)).toBe(
+      "Zombie // Zombie is a double-faced token — PipGlyph imported its front face, Zombie. Two-sided tokens aren't supported yet.",
     );
   });
 

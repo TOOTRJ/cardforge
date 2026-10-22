@@ -251,3 +251,54 @@ export function SagaFacesSection({
     </SetupSection>
   );
 }
+
+/** Why a token's "Two faces" is off: its frame is not a token frame (a token
+ *  on a showcase or another era's frame has no back). */
+export const TOKEN_TWO_FACES_UNAVAILABLE = "Pick a token frame to give it a back";
+
+/** A token's faces (TODO 5.5 (c), owner Round 76): "One face" — every token
+ *  until now, the default — or "Two faces": a double-sided token, two tokens
+ *  back to back (Guild Kit's Goblin // Soldier, Dinosaur // Treasure). The
+ *  back is a token of its own on the Back face tab, on the token frame its
+ *  words and text pick in the front's design — no pick of its own. A NEW
+ *  token's Card step only: an edit keeps the faces it was saved with. A
+ *  single-select chip row (one tab stop, arrows move, Space / Enter picks). */
+export function TokenFacesSection({
+  two,
+  twoAvailable,
+  onChange,
+  testId = "token-faces",
+}: {
+  two: boolean;
+  twoAvailable: boolean;
+  onChange: (next: boolean) => void;
+  testId?: string;
+}) {
+  const options: ChipOption<"one" | "two">[] = [
+    { value: "one", label: "One face", description: "A token on its own" },
+    {
+      value: "two",
+      label: "Two faces",
+      description: twoAvailable ? "A double-sided token: another token on its back" : TOKEN_TWO_FACES_UNAVAILABLE,
+      ...(twoAvailable || two ? {} : { disabled: true }),
+    },
+  ];
+  return (
+    <SetupSection title="Faces" value={two ? "Two faces" : "One face"} testId={testId}>
+      <ChipGroup
+        ariaLabel="Token faces"
+        layout="grid-2"
+        size="md"
+        value={two ? "two" : "one"}
+        onChange={(next) => onChange(next === "two")}
+        options={options}
+      />
+      <p className="text-[11px] leading-4 text-subtle">
+        A double-sided token prints a token on each side — each its own
+        name, type, colour and art, the back on the same token design as the
+        front. Switch the back off to save the token on its own; the
+        back&apos;s fields are kept while you stay on this card.
+      </p>
+    </SetupSection>
+  );
+}

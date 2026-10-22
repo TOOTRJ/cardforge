@@ -104,7 +104,7 @@ import { eraForTemplate, isM15Treatment } from "@/lib/creator/frame-picker";
 import { buildTypeLine, normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { parseSubtypes } from "@/lib/creator/card-fields";
 import { tokenFrameText } from "@/lib/creator/token-frame-auto";
-import { m20TokenHeightOf } from "@/lib/cards/token-height";
+import { archTallStandIn, isArchTallTokenTemplate, m20TokenHeightOf } from "@/lib/cards/token-height";
 import type { FormValues } from "@/lib/creator/form-types";
 import {
   frameAnatomyOf,
@@ -392,7 +392,9 @@ export function CardSetupPanel({
       {/* 1c · The token's types (TODO 3b.15) — the words its type line
           prints after "Token". The frame follows them (the orchestrator's
           effect): Artifact → the artifact token frame. */}
-      {kind === "token" || kind === "emblem" ? (
+      {/* (A double-sided token's Back face tab — TODO 5.5 (c) — shows the
+          back's own types in their place: `backFace.type`, above.) */}
+      {(kind === "token" || kind === "emblem") && !backFace ? (
         <TokenTypeSection
           emblem={{
             on: kind === "emblem",
@@ -537,9 +539,12 @@ export function CardSetupPanel({
               dressed,
               walkerRowCount({ editorRows: getValues("loyalty_abilities"), rulesText: getValues("rules_text") }),
             );
+            // The arch's tall box (TODO 4.55) not published in the colour:
+            // its regular text box stands in (archTallStandIn).
+            const standIn = archTallStandIn(dressed);
             const resolution = resolvePublishedFrame({
               kind,
-              candidates: next === dressed ? [next] : [next, dressed],
+              candidates: [...new Set([next, dressed, ...(standIn ? [standIn] : [])])],
               colorKey: colorKey as FrameColorKey,
               verifiedKeys,
               prefer: "colour",
@@ -627,6 +632,8 @@ export function CardSetupPanel({
                       ? "The printed enchantment frame: a starfield in the frame"
                       : isTextBoxDress(kind, choice.template)
                         ? "A text box for rules and flavour text"
+                        : kind === "token" && isArchTallTokenTemplate(choice.template)
+                          ? "A tall text box for long text"
                         : kind === "token" && m20TokenHeightOf(choice.template)
                           ? M20_TOKEN_HEIGHT_HINTS[m20TokenHeightOf(choice.template)!]
                           : subtypeDressOf(choice.template)
@@ -782,7 +789,7 @@ export function CardSetupPanel({
                         {textBoxFollows || heightFollows ? (
                           <p className="text-[11px] leading-4 text-subtle">
                             {heightFollows
-                              ? "The text box comes and goes with the card's rules and flavour text, and on the full-art token grows with it. Pick one here to keep it."
+                              ? "The text box comes and goes with the card's rules and flavour text, and grows with it for long text. Pick one here to keep it."
                               : "The text box comes and goes with the card's rules and flavour text. Pick one here to keep it."}
                           </p>
                         ) : null}
@@ -865,12 +872,19 @@ function TokenTypeSection({
   supertype,
   onToggle,
   emblem,
+  title = "Token type",
+  face = "",
 }: {
   supertype: string;
   onToggle: (word: TokenPickerWord, on: boolean) => void;
-  emblem: { on: boolean; available: boolean; onChange: (on: boolean) => void };
+  /** The Emblem choice (6.23): a card's, never a back face's. */
+  emblem?: { on: boolean; available: boolean; onChange: (on: boolean) => void };
+  title?: string;
+  /** "Back face " for a double-sided token's back (TODO 5.5 (c)): the
+   *  chip rows' names say whose types they are. */
+  face?: string;
 }) {
-  if (emblem.on) {
+  if (emblem?.on) {
     return (
       <SetupSection title="Token type" value="Emblem" autoClose={false}>
         <EmblemChoice {...emblem} />
@@ -896,13 +910,13 @@ function TokenTypeSection({
   };
   return (
     <SetupSection
-      title="Token type"
+      title={title}
       value={buildTypeLine({ supertype, cardType: "token" })}
       autoClose={false}
     >
       <ChipGroup
         multiSelect
-        ariaLabel="Token types"
+        ariaLabel={`${face}Token types`}
         layout="grid-3"
         size="md"
         value={active.filter((w) => w !== "Legendary")}
@@ -913,7 +927,7 @@ function TokenTypeSection({
       />
       <ChipGroup
         multiSelect
-        ariaLabel="Token supertypes"
+        ariaLabel={`${face}Token supertypes`}
         layout="grid-3"
         size="md"
         value={active.filter((w) => w === "Legendary")}
@@ -922,11 +936,33 @@ function TokenTypeSection({
         }
         options={[toOption("Legendary")]}
       />
-      <EmblemChoice {...emblem} />
+      {emblem ? <EmblemChoice {...emblem} /> : null}
       <p className="text-[11px] leading-4 text-subtle">
         None on prints a bare &ldquo;Token&rdquo;, like a Copy token. The
         power / toughness shows for a Creature token only.
       </p>
     </SetupSection>
+  );
+}
+
+/** A double-sided token's BACK face's types (TODO 5.5 (c), owner Round 76):
+ *  the token picker on `back_face.supertype` — the back's frame follows its
+ *  words as a token's does (the Artifact word → the artifact dress), in the
+ *  front's design. No Emblem choice: an emblem has one face. */
+export function TokenBackTypeSection() {
+  const { control, setValue, getValues, clearErrors } = useFormContext<FormValues>();
+  const supertype = useWatch({ control, name: "back_face.supertype" });
+  return (
+    <TokenTypeSection
+      title="Back face type"
+      face="Back face "
+      supertype={supertype ?? ""}
+      onToggle={(word, on) => {
+        clearErrors("back_face");
+        setValue("back_face.supertype", toggleTokenWord(getValues("back_face.supertype"), word, on), {
+          shouldDirty: true,
+        });
+      }}
+    />
   );
 }
