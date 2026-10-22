@@ -1893,6 +1893,24 @@ export function visualCases(): VisualCase[] {
   add("m15", "creature", "b", "short", { suffix: "@collector-lang", row: collectorRow("m15", "2015", { lang: "es" }) });
   // Empty fields: the bare letter and "EN" (new cards print what's filled).
   add("m15", "creature", "w", "short", { suffix: "@collector-empty", row: collectorRow("m15", "2023", { set_code: null, collector_number: null }) });
+  // TODO 4.11: a two-colour Expedition as the import stores it — gold in its
+  // colour, its frame the plain land master `c` (FrameStyle.plainLandMaster).
+  for (const template of ["expeditionland", "expeditionlandbfz"] as const) {
+    add(template, "land", "wu", "short", {
+      suffix: "@plain-land",
+      row: { frame_style: { template, finish: "regular", plainLandMaster: true } as CardRowForBake["frame_style"] },
+    });
+    // …with a mana watermark: tinted as the `c` master it paints, not the
+    // gold card's neutral ink (the preview's twin:
+    // tests/unit/components/expedition-watermark-tint.test.tsx).
+    add(template, "land", "wu", "long", {
+      suffix: "@plain-land-watermark",
+      row: {
+        frame_style: { template, finish: "regular", plainLandMaster: true } as CardRowForBake["frame_style"],
+        watermark: { kind: "mana", key: "u" },
+      },
+    });
+  }
   // A long artist: cut with one "…" before the © slot's mark.
   add("m15", "creature", "g", "long", {
     suffix: "@collector-artist",

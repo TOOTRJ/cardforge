@@ -437,6 +437,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
   "m15tokentall", "m15tokenartifacttall",
   // TODO 4.27's Prepare frame.
   "prepare",
+  // TODO 4.11 wave 1's 2015 Expeditions.
+  "expeditionlandbfz",
 ];
 /** The modal bodies added after v53 (TODO 5.7's borderless pair): the v49
  *  and v53 frozen lists never name them. */
@@ -471,6 +473,8 @@ const POST_V36_TEMPLATES: readonly string[] = [
   "m15tokentall", "m15tokenartifacttall",
   // TODO 4.27's Prepare frame.
   "prepare",
+  // TODO 4.11 wave 1's 2015 Expeditions.
+  "expeditionlandbfz",
 ];
 
 describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
@@ -838,6 +842,8 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "m15tokentall", "m15tokenartifacttall",
       // …and TODO 4.27's Prepare frame: a new template, no stored card — no bump.
       "prepare",
+      // …and TODO 4.11 wave 1's 2015 Expeditions: the same, no bump.
+      "expeditionlandbfz",
     ];
     // An EXISTING template that joined brought its own bump: the battle
     // (TODO 4.21b), with layout v43 — its Card Conjurer master and the
@@ -3245,6 +3251,40 @@ describe("v63 — the Zendikar Rising hedron showcase re-sourced from Card Conju
     expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual(["fullart"]);
     // A bake one version older owes it on `fullart` alone, whatever the card.
     for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(t === "fullart");
+  });
+});
+
+describe("v64 — the Zendikar Expeditions re-sourced from Card Conjurer (TODO 4.11 wave 1)", () => {
+  // Renumbered with EXPEDITION_CC_LAYOUT_VERSION if another bump merges
+  // first (taken as v61 in the PR; #598's cost row, #604's scroll (v62) and
+  // #603's Zendikar Rising (v63) were numbered first).
+  const V = 64;
+  const SCOPE = ["expeditionland"];
+  it("is a sweep, never a badge, scoped to expeditionland — never the new 2015 look — and not verification-neutral", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.EXPEDITION_CC_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect([...lv.EXPEDITION_CC_TEMPLATES]).toEqual(SCOPE);
+    // The masters a tick would judge change (none is ticked yet).
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).not.toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual(SCOPE);
+    // A bake one version older owes it on expeditionland alone; the new
+    // expeditionlandbfz (an addition: no card sits on it) owes nothing.
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(SCOPE.includes(t));
+  });
+
+  // v63 is #603's (Zendikar Rising, merged first). A version with no rollout
+  // and no scope reads as a SWEEP OF EVERY CARD (rolloutPolicy's default, an
+  // unscoped version), so v64 never ships over a gap.
+  it("ships only after v63 (#603): no gap below it", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.VERSION_ROLLOUT[V - 1], "v63 (#603) has no rollout yet: merge #603 first").toBeDefined();
+    // (#603 is scoped to its own frames: a plain m15 card owes v63 nothing.)
+    expect(isRenderStale(V - 2, "m15", undefined, V - 1), "v63 reads as a sweep of every card").toBe(false);
   });
 });
 

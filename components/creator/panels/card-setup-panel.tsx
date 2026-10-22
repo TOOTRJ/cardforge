@@ -14,6 +14,7 @@
 // framesForKind() simply doesn't include an era that can't frame the kind.
 
 import { useMemo } from "react";
+import { frameGateColors } from "@/lib/cards/part-color";
 import { Controller, useFormContext, useFormState, useWatch } from "react-hook-form";
 import { Replace } from "lucide-react";
 import { toast } from "sonner";
@@ -239,9 +240,9 @@ export function CardSetupPanel({
   // Basic-only frames (the full-art basic land) can't draw a nonbasic's
   // rules, so their chips are disabled unless the card IS one basic land —
   // the same rule the renderers and the server gate read.
-  const [cardType, title, supertype, subtypesText, rulesText, cost, twoColorOn, dfcIcon] = useWatch({
+  const [cardType, title, supertype, subtypesText, rulesText, cost, twoColorOn, dfcIcon, plainLandMaster] = useWatch({
     control,
-    name: ["card_type", "title", "supertype", "subtypes_text", "rules_text", "cost", "frame_style.twoColor", "frame_style.dfcIcon"],
+    name: ["card_type", "title", "supertype", "subtypes_text", "rules_text", "cost", "frame_style.twoColor", "frame_style.dfcIcon", "frame_style.plainLandMaster"],
   });
   const cardSubtypes = parseSubtypes(subtypesText ?? "");
   const isBasicLand = isSingleBasicLand({
@@ -256,7 +257,12 @@ export function CardSetupPanel({
   // cost + two-colour switch, so a frame tile in the card's own colours shows
   // the pair master the card paints there (TODO 4.6b: gold-split or hybrid).
   const frameType: FrameTypeInfo = { cardType, supertype, cost };
-  const frameAnatomy = { twoColor: twoColorOn };
+  const frameAnatomy = { twoColor: twoColorOn, ...(plainLandMaster === true ? { plainLandMaster: true as const } : {}) };
+  // The colour key a frame is gated in for this card: its own, but a
+  // two-colour Expedition's plain land master `c` (TODO 4.11,
+  // frameGateColors — the save's rule).
+  const gateKeyFor = (template: FrameTemplate) =>
+    pickFrameColorKey(frameGateColors(template, { plainLandMaster: plainLandMaster === true ? true : undefined }, colorIdentity));
   // The Variations section's Legendary entry (TODO 3b.17): the crown
   // switch's state, for the section's summary — the chip reads the same.
   const legendary = useLegendaryVariation();
@@ -546,7 +552,7 @@ export function CardSetupPanel({
             const resolution = resolvePublishedFrame({
               kind,
               candidates: [...new Set([next, dressed, ...(standIn ? [standIn] : [])])],
-              colorKey: colorKey as FrameColorKey,
+              colorKey: gateKeyFor(next) as FrameColorKey,
               verifiedKeys,
               prefer: "colour",
             });
@@ -594,7 +600,7 @@ export function CardSetupPanel({
               : FRAME_TEMPLATE_LABELS[choice.template];
             const colorAvailable = isFrameComboAvailable(
               choice.template,
-              colorKey,
+              gateKeyFor(choice.template),
               verifiedKeys,
             );
             const basicOnlyRefused =
@@ -841,6 +847,7 @@ export function CardSetupPanel({
             verifiedKeys={verifiedKeys}
             frameType={frameType}
             frameFor={colorFrameFor}
+            plainLandMaster={plainLandMaster === true ? true : undefined}
           />
         )}
       />

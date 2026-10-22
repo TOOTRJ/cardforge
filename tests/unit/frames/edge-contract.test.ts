@@ -95,14 +95,17 @@ describe("the edge-contract table", () => {
         "avatar",
         "bloomanime",
         "bloomburrow",
-        "expeditionland",
+        // (expeditionland b/g left with Card Conjurer's masters, TODO 4.11
+        // wave 1.)
         "tarkirdraconic",
         "tarkirdragon",
         "tarkirghostfire",
       ].sort(),
     );
-    expect(isKnownEdgeFailure("expeditionland", "b")).toBe(true);
-    expect(isKnownEdgeFailure("expeditionland", "w")).toBe(false);
+    for (const k of ["w", "u", "b", "r", "g", "c", "m"]) {
+      expect(isKnownEdgeFailure("expeditionland", k), k).toBe(false);
+      expect(isKnownEdgeFailure("expeditionlandbfz", k), k).toBe(false);
+    }
     expect(isKnownEdgeFailure("fullartland", "w")).toBe(false);
     expect(isKnownEdgeFailure("alphaland", "b")).toBe(true);
     expect(isKnownEdgeFailure("alphaland", "w")).toBe(false);

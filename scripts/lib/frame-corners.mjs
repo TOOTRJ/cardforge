@@ -61,9 +61,9 @@ import {
 
 /**
  * The masters Phase B normalises: "all" colour keys, or only the listed
- * ones. expeditionland: the keys the corner check flags (its grey paper
- * reaches 1–2 px inside the cut on w, u, r, c and m); b and g are 7.7 known
- * failures with a transparent edge band — no border to paint with.
+ * ones. (expeditionland, whose MSE grey paper reached 1–2 px inside the cut
+ * on w, u, r, c and m, left the list with TODO 4.11 wave 1: Card Conjurer's
+ * 'ZNR Expeditions (2020)', cut at the one corner by the importer.)
  * (adventure, with its 1–2 px grey paper rim, flip and aftermath left the
  * list with TODO 4.21a: their masters are Card Conjurer's in the frames
  * bucket, cut at the one corner by the importer. Saga left it with 4.21c, the
@@ -75,7 +75,6 @@ import {
  * fullart with 4.11: Card Conjurer's 'Zendikar Rising', the same way.)
  */
 export const CORNER_NORMALISE_TEMPLATES = Object.freeze({
-  expeditionland: Object.freeze(["w", "u", "r", "c", "m"]),
 });
 
 /** Never normalised: the showcase families' corners are real design.

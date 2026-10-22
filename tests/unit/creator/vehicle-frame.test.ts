@@ -254,8 +254,8 @@ describe("imports follow the printing (the registry's vehicle/2015 rule)", () =>
   });
 
   it("the import chooser offers the frame to a Vehicle only", () => {
-    const patch = { card_type: "artifact" as const, supertype: "", subtypes_text: "Vehicle", title: "x", rules_text: "" };
-    const input = { kind: "artifact" as const, colorKey: "c", verifiedKeys: EVERY };
+    const patch = { card_type: "artifact" as const, supertype: "", subtypes_text: "Vehicle", title: "x", rules_text: "", color_identity: ["colorless" as const] };
+    const input = { kind: "artifact" as const, verifiedKeys: EVERY };
     expect(frameFitsImport("m15vehicle", { ...input, patch })).toBe(true);
     expect(frameFitsImport("m15vehicle", { ...input, patch: { ...patch, subtypes_text: "Equipment" } })).toBe(false);
   });

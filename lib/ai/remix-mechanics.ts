@@ -34,7 +34,7 @@ import {
   type FrameTemplate,
 } from "@/types/card";
 import { importedAnatomy, storedAnatomyOf, type FrameAnatomyStyle } from "@/lib/cards/anatomy";
-import { partColourVerdict } from "@/lib/cards/part-color";
+import { frameGateColors, partColourVerdict } from "@/lib/cards/part-color";
 import { frameGateError, isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import { isTokenPairBack, isTokenPairFront } from "@/lib/cards/token-faces";
@@ -363,7 +363,9 @@ function keptOwnFrame(
   // A premium frame needs a plan the save checks (none exists yet): never a
   // refusal after the art.
   if (PREMIUM_FRAME_TEMPLATES.has(template)) return {};
-  if (frameGateError(template, partFrameColors ?? colours, verifiedKeys) !== null) return {};
+  // (A two-colour Expedition keeps its plain land master `c`, TODO 4.11:
+  // gated there, as the save gates it.)
+  if (frameGateError(template, partFrameColors ?? frameGateColors(template, { plainLandMaster: storedAnatomyOf(source.frame_style).plainLandMaster }, colours), verifiedKeys) !== null) return {};
   if (frameKindGateError(template, cardFieldsFace(source)) !== null) return {};
 
   const back = (source.back_face ?? null) as CardBackFace | null;

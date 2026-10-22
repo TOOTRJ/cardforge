@@ -11,7 +11,7 @@ import {
   type FrameTemplate,
 } from "@/types/card";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
-import { partColourVerdict } from "@/lib/cards/part-color";
+import { frameGateColors, partColourVerdict } from "@/lib/cards/part-color";
 import { dfcBodyOf } from "@/lib/cards/dfc";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { hasRulesBoxText, printsPowerToughness } from "@/lib/cards/card-display";
@@ -92,14 +92,21 @@ export type ResolveFrameInput = {
   /** Templates the caller would accept, most wanted first. */
   candidates: readonly FrameTemplate[];
   colorKey: FrameColorKey;
+  /** The key a candidate frame is gated in, where it isn't `colorKey` on
+   *  every frame: a two-colour Expedition's plain land master `c` on the
+   *  two Expedition frames, the card's gold everywhere else (TODO 4.11;
+   *  importFrameColorKey). Absent: `colorKey` on every frame. */
+  colorKeyFor?: (template: FrameTemplate) => FrameColorKey;
   verifiedKeys: ReadonlySet<string>;
   prefer: "frame" | "colour";
 };
 
 export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution {
-  const { kind, candidates, colorKey, verifiedKeys, prefer } = input;
+  const { kind, candidates, verifiedKeys, prefer } = input;
   const wanted = candidates[0];
   if (!wanted) return { status: "unavailable" };
+  const keyFor = input.colorKeyFor ?? (() => input.colorKey);
+  const colorKey = keyFor(wanted);
 
   const available = (template: FrameTemplate, key: FrameColorKey) =>
     isFrameComboAvailable(template, key, verifiedKeys);
@@ -116,11 +123,11 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
 
   const keepColour = (): FrameResolution | null => {
     for (const candidate of candidates.slice(1)) {
-      if (available(candidate, colorKey)) {
+      if (available(candidate, keyFor(candidate))) {
         return {
           status: "frame-switched",
           template: candidate,
-          colorKey,
+          colorKey: keyFor(candidate),
           fromTemplate: wanted,
         };
       }
@@ -148,13 +155,13 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
         // …nor an enchantment dress (the Nyx frame, TODO 4.7).
         !isEnchantmentDress(choice.template) &&
         Boolean(dfcBodyOf(choice.template)?.land) === Boolean(dfcBodyOf(wanted)?.land) &&
-        choice.availableColorKeys.includes(colorKey),
+        choice.availableColorKeys.includes(keyFor(choice.template)),
     );
     return any
       ? {
           status: "frame-switched",
           template: any.template,
-          colorKey,
+          colorKey: keyFor(any.template),
           fromTemplate: wanted,
         }
       : null;
@@ -420,6 +427,9 @@ export function resolveImportFrame(input: {
     rules_text?: string;
     flavor_text?: string;
     color_identity?: readonly ColorIdentity[];
+    /** A two-colour Expedition (TODO 4.11): resolved in its plain land
+     *  master `c` (frameGateColors), its colour untouched. */
+    printed_plain_land_master?: true;
   };
   /** The imported kind (patch.kind, else the card type's). */
   kind: CardKind | null;
@@ -431,9 +441,6 @@ export function resolveImportFrame(input: {
   verifiedKeys: ReadonlySet<string>;
 }): { wanted: FrameTemplate; colorKey: FrameColorKey; resolution: FrameResolution } {
   const { patch, current } = input;
-  const colorKey = pickFrameColorKey(
-    patch.color_identity ?? current.colors,
-  ) as FrameColorKey;
   const cardType = patch.card_type || current.cardType || "creature";
   const matched =
     patch.frame_match && !patch.frame_match.reject
@@ -441,6 +448,12 @@ export function resolveImportFrame(input: {
       : undefined;
   const wanted =
     matched ?? patch.frame_template ?? current.template ?? DEFAULT_FRAME_TEMPLATE;
+  // (A two-colour Expedition resolves in its plain land master `c` on the
+  // Expedition frames and in its gold anywhere else, TODO 4.11; its colour
+  // is never rewritten.)
+  const colors = { ...patch, color_identity: patch.color_identity ?? current.colors };
+  const colorKeyFor = (template: FrameTemplate) => importFrameColorKey(template, colors);
+  const colorKey = colorKeyFor(wanted);
   const resolution = resolvePublishedFrame({
     kind: input.kind ?? kindFromCard(cardType, undefined),
     candidates: importFrameCandidates({
@@ -451,10 +464,31 @@ export function resolveImportFrame(input: {
       flavorText: patch.flavor_text,
     }),
     colorKey,
+    colorKeyFor,
     verifiedKeys: input.verifiedKeys,
     prefer: "frame",
   });
   return { wanted, colorKey, resolution };
+}
+
+/**
+ * The key an imported card is gated, verified and painted in on `template`
+ * — its colour's, but a two-colour Expedition's plain land master `c` on a
+ * frame that stands it in (TODO 4.11, owner 2026-10-22: frameGateColors,
+ * plainLandMasterDrawn). The ONE answer for the import's chooser, its
+ * landing, its toast and its request row; the card's colour is never
+ * rewritten.
+ */
+export function importFrameColorKey(
+  template: FrameTemplate | string | null | undefined,
+  patch: {
+    color_identity?: readonly ColorIdentity[] | null;
+    printed_plain_land_master?: true;
+  },
+): FrameColorKey {
+  return pickFrameColorKey(
+    frameGateColors(template, { plainLandMaster: patch.printed_plain_land_master }, patch.color_identity ?? []),
+  ) as FrameColorKey;
 }
 
 /**
@@ -591,7 +625,7 @@ export function finalizeImportMatch<
     frame_template?: FrameTemplate;
     color_identity?: readonly ColorIdentity[];
   } & Partial<
-    Pick<ScryfallImportPatch, "kind" | "card_type" | "supertype" | "back_face" | "printed_dfc_icon" | "printed_first_part_color" | "printed_part_color">
+    Pick<ScryfallImportPatch, "kind" | "card_type" | "supertype" | "back_face" | "printed_dfc_icon" | "printed_first_part_color" | "printed_part_color" | "printed_plain_land_master">
   >,
 >(given: P, verifiedKeys: ReadonlySet<string>): P {
   if (!given.frame_match) return given;
@@ -614,7 +648,12 @@ export function finalizeImportMatch<
       : { ...given, frame_match: given.frame_match };
   const match = withVerification(
     patch.frame_match,
-    pickFrameColorKey(partVerdict.drawn ? [...partVerdict.frameColors] : patch.color_identity),
+    // (…and a two-colour Expedition in its plain land master `c`, TODO 4.11.)
+    pickFrameColorKey(
+      partVerdict.drawn
+        ? [...partVerdict.frameColors]
+        : frameGateColors(patch.frame_match.landOn ?? patch.frame_match.template, { plainLandMaster: patch.printed_plain_land_master }, patch.color_identity),
+    ),
     verifiedKeys,
   );
   // …or another landing (a borderless Vehicle onto the Vehicle frame).
@@ -779,6 +818,7 @@ export function remixFrameFor(
     | "printed_dfc_icon"
     | "printed_first_part_color"
     | "printed_part_color"
+    | "printed_plain_land_master"
   >,
   verifiedKeys: ReadonlySet<string>,
   options: {
@@ -838,12 +878,16 @@ export function remixFrameFor(
   // colour: the card type's frames, from the printing's own (a layout kind
   // has none) down to the M15 standard.
   const standardKind = layoutTemplate ? kindFromCard(cardType, undefined) : kind;
-  const { colorKey, resolution } = resolveImportFrame({
+  // (A two-colour Expedition is gated per frame, as the import is: its
+  // plain land master `c` on the Expedition frames, its gold anywhere else
+  // — importFrameColorKey, TODO 4.11.)
+  const { resolution } = resolveImportFrame({
     patch: {
       frame_template: layoutTemplate ? undefined : standardPatch.frame_template,
       card_type: cardType,
       supertype: patch.supertype,
       color_identity: colors,
+      printed_plain_land_master: patch.printed_plain_land_master,
     },
     kind: standardKind,
     current: {
@@ -858,9 +902,15 @@ export function remixFrameFor(
   // another colour — reported as "frame-switched" too, but with that other
   // colour's key — and the save's frame gate would refuse it after the art
   // was already paid for.
+  // (The card's own colour ON THAT FRAME: a two-colour Expedition's `c` on
+  // an Expedition frame, its gold on m15land.)
   if (
     (resolution.status === "exact" || resolution.status === "frame-switched") &&
-    resolution.colorKey === colorKey
+    resolution.colorKey ===
+      importFrameColorKey(resolution.template, {
+        color_identity: colors,
+        printed_plain_land_master: patch.printed_plain_land_master,
+      })
   ) {
     return { ok: true, template: resolution.template, card_type: savedType };
   }

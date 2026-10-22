@@ -17,6 +17,7 @@ import {
   slotPixelBox,
   slotSeams,
   translucentRegionsUnder,
+  type ArtWindowKnownFailures,
   type ArtWindowSlot,
 } from "@/lib/frames/art-window";
 import { applyCardCornerMask } from "@/lib/cards/card-corner";
@@ -260,9 +261,32 @@ describe("artWindowVerdict: the known-failure table", () => {
     // 4.35's re-source, layout v58.)
     expect(artWindowVerdict("tarkirdraconic", "w", miss(80))).toEqual({ fails: [], fixed: false });
     expect(artWindowVerdict("tarkirdraconic", "w", miss(90)).fails).toEqual([expect.stringMatching(/^worse than its known failure \(4\.11\): misses by 90 px > 87\.5: /)]);
-    // Per-key bounds: expeditionland b/g's missing ring, u/r's 2.5 px apex.
-    expect(artWindowVerdict("expeditionland", "b", miss(300)).fails).toEqual([]);
-    expect(artWindowVerdict("expeditionland", "u", miss(300)).fails).toHaveLength(1);
+    // An entry limited to some keys (expeditionland's per-key b/g / u/r
+    // bounds, this test's third example, left the table with TODO 4.11 wave
+    // 1): the colourless arch token's c is listed, its w is not.
+    expect(artWindowVerdict("m15token", "c", miss(1000)).fails).toEqual([]);
+    expect(artWindowVerdict("m15token", "w", miss(0.2)).fails).toHaveLength(1);
+  });
+
+  it("holds an entry's PER-KEY bounds (maxMissPx by key) — a synthetic table, since no live entry has one today", () => {
+    // (expeditionland's b/g 389 · u/r 4 was the live one until TODO 4.11
+    // wave 1 re-sourced it.) The table is the function's optional argument.
+    const table: ArtWindowKnownFailures = {
+      probe: { keys: ["u", "b"], todo: ["9.99"], why: "a synthetic per-key bound", maxMissPx: { u: 4, b: 389 } },
+    };
+    // Within each key's own bound.
+    expect(artWindowVerdict("probe", "b", miss(300), table)).toEqual({ fails: [], fixed: false });
+    expect(artWindowVerdict("probe", "u", miss(3.5), table)).toEqual({ fails: [], fixed: false });
+    // Past its own bound (b's would allow it): named with the entry's item.
+    expect(artWindowVerdict("probe", "u", miss(300), table).fails).toEqual([expect.stringMatching(/^worse than its known failure \(9\.99\): misses by 300 px > 4: /)]);
+    // A listed key with no bound of its own fails outright; an unlisted key
+    // is held to the plain rule; a listed master with no finding is fixed.
+    const unbounded: ArtWindowKnownFailures = { probe: { ...table.probe!, keys: ["u", "b", "g"] } };
+    expect(artWindowVerdict("probe", "g", miss(1), unbounded).fails).toEqual(["known failure without a maxMissPx for g"]);
+    expect(artWindowVerdict("probe", "w", miss(0.2), table)).toEqual({ fails: ["artSlot: …"], fixed: false });
+    expect(artWindowVerdict("probe", "b", [], table)).toEqual({ fails: [], fixed: true });
+    expect(isKnownArtWindowFailure("probe", "b", table)).toBe(true);
+    expect(isKnownArtWindowFailure("probe", "b")).toBe(false);
   });
 
   it("marks a listed master with nothing left to find as fixed", () => {
@@ -606,9 +630,9 @@ describe("the art-window known failures", () => {
         "avatar",
         "bloomanime",
         "bloomburrow",
-        "expeditionland",
         // (extendedart, m15textless and m15textlessland left with their Card
-        // Conjurer masters, layout v58: TODO 4.7 / 4.35.)
+        // Conjurer masters, layout v58: TODO 4.7 / 4.35; expeditionland with
+        // its own, layout v64: TODO 4.11 wave 1.)
         "m15fullartland",
         // (m15tokenartifact's flush bottom — 4.53 (e) — struck by layout
         // v59's art slot on the window.)
@@ -647,8 +671,12 @@ describe("the art-window known failures", () => {
       expect(ART_WINDOW_KNOWN_FAILURES[template], template).toBeUndefined();
       for (const key of ["w", "u", "b", "r", "g", "c", "m"]) expect(isKnownArtWindowFailure(template, key), `${template}/${key}`).toBe(false);
     }
-    expect(isKnownArtWindowFailure("expeditionland", "w")).toBe(false);
-    expect(isKnownArtWindowFailure("expeditionland", "b")).toBe(true);
+    // The Expeditions (TODO 4.11 wave 1): Card Conjurer's masters, both
+    // looks, covered on every colour (CI fetches them by sha).
+    for (const template of ["expeditionland", "expeditionlandbfz"]) {
+      expect(ART_WINDOW_KNOWN_FAILURES[template], template).toBeUndefined();
+      for (const key of ["w", "u", "b", "r", "g", "c", "m"]) expect(isKnownArtWindowFailure(template, key), `${template}/${key}`).toBe(false);
+    }
   });
 });
 

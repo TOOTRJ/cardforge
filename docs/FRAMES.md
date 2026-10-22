@@ -94,10 +94,11 @@ Where every frame came from, and the rules that follow from it:
   era — the 1997 frame left for Card Conjurer's drawing with TODO
   4.10a, its gold master cut from the MSE conversion kept as
   `scripts/frame-inputs/retro-m-mse.png`, and the 2003 frame with TODO
-  4.10b — the showcase families, the variation treatments, the
-  textless and expedition frames, and the planeswalker loyalty badges;
-  adventure, flip and aftermath left for Card Conjurer's masters with TODO
-  4.21a, split and battle with 4.21b, saga with 4.21c) are converted from
+  4.10b — the showcase families, the variation treatments and the
+  planeswalker loyalty badges; adventure, flip and aftermath left for Card
+  Conjurer's masters with TODO 4.21a, split and battle with 4.21b, saga
+  with 4.21c, the textless pair with 4.35 and the Expeditions with 4.11
+  wave 1) are converted from
   Magic Set
   Editor's Full-Magic-Pack styles by the builders under `scripts/`
   (`convert-mse-frame.mjs`, `build-era-frames.mjs`,
@@ -178,7 +179,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 60 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 62 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the Zendikar Rising hedron showcase (4.11, wave 1, layout v63): fullart —
@@ -194,6 +195,11 @@ into `.frames-build/` — 60 templates today (`CC_TEMPLATES` in
   `l` grey, `l<k>`, `lm` gold) — and m15textless and m15textlessland — 'Magic Fest Promos' whole
   ([The extended-art and textless frames from Card
   Conjurer](#the-extended-art-and-textless-frames-from-card-conjurer-47--435-v58));
+
+- the Zendikar Expeditions (4.11 wave 1, layout v64): expeditionland — the
+  'ZNR Expeditions (2020)' pack whole, the ZNE look — and expeditionlandbfz
+  — the 'BFZ Expeditions (2015)' land frame with a colour in its pinline,
+  the EXP look ([The Expeditions](#the-expeditions-411-wave-1-layout-v64));
 
 - the M15 family (4.4, shipped in #380, layout v24): m15, m15artifact,
   m15land, m15snow, m15snowland, m15devoid, m15pw, m15token and
@@ -547,9 +553,9 @@ bake's transparent corner mask and the frame masters all read it.
   only on the allow-list (`CORNER_NORMALISE_TEMPLATES` in
   `scripts/lib/frame-corners.mjs`: (retro and retroland left it with TODO
   4.10a, modern and modernland with 4.10b, extendedart, m15textless and
-  m15textlessland with 4.7 / 4.35: the importer cuts their corner)
-  fullart, and
-  expeditionland w/u/r/c/m, whose paper reached 1–2 px inside the cut;
+  m15textlessland with 4.7 / 4.35, expeditionland — whose w/u/r/c/m
+  paper reached 1–2 px inside the cut — with 4.11 wave 1: the importer
+  cuts their corner) fullart;
   adventure — its 1–2 px grey paper rim just inside the arc, added
   2026-09-28 — flip and aftermath left the list with 4.21a and saga with
   4.21c, their Card Conjurer masters cut by the importer), never on a
@@ -601,7 +607,7 @@ bake's transparent corner mask and the frame masters all read it.
   (`squareCardCorners`): outside the arc each corner is the card's border
   colour — the border black by default, the root's #101015 where a master's
   edge band is see-through (the rings; bloomburrow / tarkirdraconic
-  bottoms; expeditionland b/g) — or, where art or frame design runs into
+  bottoms) — or, where art or frame design runs into
   the corner (an art-to-edge frame; the tops of bloomburrow, the LOTR ring
   — its frame field, kept square by the importer since 4.11 — and
   tarkirdraconic), what was drawn. The table is `lib/frames/square-corners.ts`;
@@ -609,9 +615,9 @@ bake's transparent corner mask and the frame masters all read it.
   new or rebuilt frame whose corner changes turns CI red.
 - **Left alone.** The Alpha masters (agclassic, alphaland) keep their clean
   60 px cut, inside the 64.5 px one (square outputs paint the annulus
-  between the two cuts in the border black). expeditionland b/g keep their
-  paper: a see-through band leaves no border to paint with (7.7). The
-  showcase families keep their drawn corners (Bloomburrow's pale corner,
+  between the two cuts in the border black). (expeditionland b/g kept their
+  paper — a see-through band left no border to paint with, 7.7 — until
+  4.11 wave 1 re-sourced them from Card Conjurer.) The showcase families keep their drawn corners (Bloomburrow's pale corner,
   LOTR's tan, Tarkir draconic's ornament; owner, 2026-09-28). The small
   steps where a Phase B repaint meets the untouched border — visible only
   at 6× contrast — are accepted (owner, 2026-09-28).
@@ -4342,6 +4348,115 @@ all Universes Beyond, onto their own frame (2,001 spells, 614 artifacts,
 **Not built** (follow-ups, in 4.25): the Universes Beyond Vehicle frame
 (the pack's `v.png`), extended art, full
 art, the saga and spree dresses, the floating crowns, borderless.
+
+### The Expeditions (4.11 wave 1, layout v64)
+
+The Zendikar Expeditions printed two looks, and PipGlyph draws both from
+Card Conjurer's packs (frames bucket only, 1500 × 2100 native, copied 1:1):
+
+- **`expeditionland` — ZNE 2020** (Zendikar Rising Expeditions #1–30), from
+  'ZNR Expeditions (2020)' (`expedition/znr/expeditionNewFrame<K>.png`, w u
+  b r g m c). The hedron stone round a window that runs into a LIGHT
+  translucent rules panel (white, α 153) over the same picture, dark ink on
+  the title bar, the panel and the type bar. It replaced the 375 px MSE
+  masters (the 2015 BFZ look, an opaque black box and light ink, upscaled
+  4×; black and green leaked their border): a CORRECTION, layout v64
+  (`EXPEDITION_CC_LAYOUT_VERSION`), a sweep scoped to the template. Its
+  border, art window and corner checks pass on every colour, so its rows
+  left `BORDER_PENDING_COLOURS`, `EDGE_CONTRACT_KNOWN_FAILURES`,
+  `ART_WINDOW_KNOWN_FAILURES`, `SQUARE_CORNERS` and Phase B's allow-list.
+  The pack is RE-CUT onto the ZNE prints (owner 2026-10-22,
+  `EXPEDITION_ZNR_RECUT`, the recipe's `shift`): its title bar sits 4 px
+  below the prints' and its window foot, panel, type bar and bottom stone
+  11 px above them (each band registered on ZNE #21 / #22 / #27 / #28 /
+  #29 / #30), and only three runs of rows are flat on all seven masters —
+  the top border, the window's straight sides (730–776) and the bottom
+  border — so rows 60–729 move 4 px up and rows 777–1938 11 px down, whole
+  rows byte for byte, the flat runs giving and taking the rows. Left after
+  it: the prints' type bar is ~5 px thinner than the pack's (its top +2 …
+  +3 px, its foot −2 … −4 after the move), which no block move gives.
+- **`expeditionlandbfz` — EXP 2015** (Zendikar Expeditions #1–45, BFZ and
+  OGW), from 'BFZ Expeditions (2015)'. Every EXP print wears the pack's
+  'Land Frame' (the beige carved stone, light bars) with its colours in the
+  PINLINE only, but for the two any-colour lands (Forbidden Orchard, Mana
+  Confluence), which print the gold frame. So `c` is the land frame, `m`
+  the gold frame, and w u b r g the land frame with the colour frame's
+  pinline laid in through the pack's Pinline mask (no mono-colour EXP land
+  was printed; the pack's colour-stone frames are worn by no print). Its
+  rules panel is lifted onto print's opacity (owner 2026-10-22,
+  `EXPEDITION_BFZ_PANEL_GAIN`): the pack draws it at α 128 (0.50); measured
+  from the art's continuity across the window / panel divider on the twelve
+  EXP prints where the art crosses it clearly, print's is ~0.65 (0.62 by
+  the spread, 0.68 by the slope), so the land and gold layers' alpha is
+  multiplied by 166 / 128 — the panel α 166, its rim and the divider's dark
+  line opaque, every clear or opaque pixel unchanged. Its bars are NOT
+  re-cut: the title bar registers within 0–2 px of the prints, the type bar
+  with no one offset (+2 … +8 at its top, −1 … +7 at its foot over nine
+  prints). An ADDITION: no card sits on it, no bump.
+
+Measured at 1500 × 2100 against Scryfall's scans (2026-10-21; median
+|ΔRGB| over each candidate master's opaque pixels at the best offset):
+ZNE colourless 18.3–20.7 on C, Valakut 20.7 on R, Cavern / Prismatic Vista
+19.0–19.3 on M, the MSE masters 100–108 on all; EXP colourless 21.0–23.7 on
+L (A 26.0–30.3), gold 27.0–31.3 on M. EXP #37 Dust Bowl and #38 Eye of Ugin
+are a whiter run (closest to the pack's W, 20.3): not references.
+
+The profiles (`EXPEDITIONLAND`, `EXPEDITIONLANDBFZ` in
+`lib/cards/template-layout.ts`) share one anatomy: the art slot is the
+window plus the panel with 7.6's overscan (ZNE 224–1724 px down and
+59–1441 across on the re-cut master, EXP 112–1388 × 231–1702); the name at
+the family's 80 px with its text 2 px above M15's (`EXPEDITION_TITLE_DY`) —
+on ZNE in M15's band riding the title block 4 px up, baseline 182 (the
+prints' 181–183), on EXP 186 (prints 187); the type line at 68 px on its
+own band, baseline 1805 on ZNE's moved bar ("Land" bakes at 1804, the
+prints' 1802–1806) and 1798 on EXP; the set symbol in its own box
+(`symbolRect`) right-aligned at 1419 / 1371 px, centred on 1783 / 1776; the
+rules box on the panel, standard size, dark ink, centred, M15's print
+margins (ZNE 141–1365 × 1219–1713, EXP 131–1365 × 1262–1694). The ZNE
+slots ride `EXPEDITION_ZNR_TITLE_UP_PX` / `EXPEDITION_ZNR_LOWER_DOWN_PX`, a
+test holding them to the importer's blocks; no cost,
+no crown (EXP's legendary lands print none), no stamp notch. The collector
+line (4.9b, opt-in per card) is M15's slot on each look's rows:
+`EXPEDITION_ZNR_COLLECTOR` (1995.5 / 2033.5 px, 2 px below M15's) and
+`EXPEDITION_BFZ_COLLECTOR` (1987 / 2025.5, 6.5 px above).
+
+Import: ZNE → `expeditionland` (`expedition`), EXP → `expeditionlandbfz`
+(`expedition/bfz`), each exact once verified; a two-colour land — the duals
+and the fetch lands, whose pinline prints their two colours — is
+`nearest` through the `two-colour` gap (blocked by 4.11: the pair masters,
+not built; its request-log row is kept) and is dressed in the frame's PLAIN
+land master `c`, not the gold one (owner 2026-10-22,
+`twoColourLandOnPlainFrame` in `lib/scryfall/frame-signatures.ts`). The
+card's COLOUR is untouched — `color_identity` is what main imports (its
+"multicolor": the card page, the filters, the decks; owner 2026-10-22, as
+4.26's M2 for split cards) — and the frame data rides beside it:
+`printed_plain_land_master` on the import patch, stored as
+`frame_style.plainLandMaster` (kept by an edit and a remix, dropped at the
+save on any frame without `FrameProfile.plainLandStandIn` and on a card
+whose colour doesn't key gold). Both renderers (`frameMasterKey`, and the
+watermark's tint), the save's gate and the import's verification and
+landing (`frameGateColors`) read it through ONE test,
+`plainLandMasterDrawn` (`lib/cards/frame-color-key.ts`): the stand-in
+declared, the key set, the card gold-keyed — so the `c` tick is the gate, while the frame draws no two-colour pinline.
+Every import surface asks the key PER FRAME through
+`importFrameColorKey` (`lib/creator/frame-resolve.ts`): the chooser's
+options, its preselected nearest and the applied pick
+(`lib/creator/import-frame-choice.ts`), the landing's fallbacks
+(`resolvePublishedFrame`'s `colorKeyFor`: `c` on the Expedition frames, the
+card's gold on `m15land`), the AI deck remix's landing (`remixFrameFor`:
+it lands where the import lands, and its save passes the gate), the deck
+pre-fill's toast, the overwrite note and the request row — and the Card step's colour chips follow the master the
+card draws (`ColorSection`'s `plainLandMaster`: its own Multicolor chip is
+gated in, and its tile paints, `c`). Over all 75
+printings (`tests/unit/scryfall/expedition-imports.test.ts`): ZNE 6 exact,
+24 two-colour; EXP 9 exact, 36 two-colour.
+
+Not built (follow-ups): the two-colour pinline pair masters on both (the
+BFZ pack has its Pinline mask; the ZNR pack too) — they lift the gap and
+the plain-land landing; the holofoil stamp's notch (the prints' oval sits
+on a cut in the stone); the ZNE / EXP set symbols at their printed size
+(`lib/cards/set-symbol-prints.ts` — a card-scoped bump of its own, every
+frame a ZNE or EXP symbol sits on); the ZNE type bar's ~5 px thickness.
 
 ### The Lord of the Rings scroll (4.11, layout v62)
 
@@ -8364,7 +8479,9 @@ layout, and print decides which (audit of 2026-10-13, Scryfall the same day):
   block or one crossover printed: the Ring and Scroll (LTR), Avatar's
   elemental frame, Bloomburrow's woodland and anime, Tarkir: Dragonstorm's
   two, Multiverse Legends' Dragon Wing, Zendikar Rising's hedron, the
-  Zendikar Expeditions (EXP: 45 printings, 2015–16) and **the constellation
+  Zendikar Expeditions (ZNE: 30 printings, 2020, on `expeditionland`; EXP:
+  45, 2015–16, on `expeditionlandbfz` — two chips in the one Expeditions
+  set) and **the constellation
   frame** (`nyx`: THB #258–268 alone — Scryfall `showcase`, BLACK border;
   it is not a borderless Nyx frame, and the printed enchantment frame is
   `m15nyx`). Its chip names its set ("Zendikar Rising — Hedron").
@@ -8976,12 +9093,12 @@ signs the row off on the before / after sheet, so every tick stays fresh.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 75 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 76 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens and 4.27's Prepare frame, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame and 4.11's 2015 Expeditions, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card — and the Lord of

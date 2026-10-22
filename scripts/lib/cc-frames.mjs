@@ -256,6 +256,81 @@ const TEXTLESS_PROMO_NOTES = (colourless) => [
   "no type bar and no text box, as printed: the profile is `textless` (TODO 3.24)",
 ];
 
+// --- TODO 4.11 (wave 1, item 1): the Zendikar Expedition lands. Card
+// Conjurer's two Expedition packs (groupShowcase-5.js), 1500 × 2100 native:
+//   • 'ZNR Expeditions (2020)' (packExpeditionZNR-1.js,
+//     `expedition/znr/expeditionNewFrame<K>.png`, W U B R G M L C) — the
+//     Zendikar Rising Expeditions (ZNE #1–30): the hedron-stone frame with a
+//     LIGHT translucent rules panel and type bar printed in dark ink;
+//   • 'BFZ Expeditions (2015)' (packExpeditionBFZ-1.js,
+//     `expedition/bfz/expeditionFrame<K>.png`, W U B R G M L A) — the
+//     Battle for Zendikar / Oath Expeditions (EXP #1–45): the carved-stone
+//     frame round an arched window, its own light rules panel.
+// Each master is the pack's whole file, copied 1:1 (no resample).
+export const EXPEDITION_ZNR = "img/frames/expedition/znr";
+export const EXPEDITION_BFZ = "img/frames/expedition/bfz";
+/** The pack file of a recipe letter (the pack's capitals). */
+export const expeditionZnrFile = (letter) => `${EXPEDITION_ZNR}/expeditionNewFrame${letter.toUpperCase()}.png`;
+export const expeditionBfzFile = (letter) => `${EXPEDITION_BFZ}/expeditionFrame${letter.toUpperCase()}.png`;
+/** The BFZ pack's Pinline mask: where a coloured EXP land shows its colour
+ *  on the land frame (expeditionlandbfz w u b r g). */
+export const EXPEDITION_BFZ_PINLINE_MASK = `${EXPEDITION_BFZ}/expeditionMaskPinline.png`;
+const EXPEDITION_TRANSFORM = "native 1500x2100, the frame image copied 1:1 (no resample), corners cut at the importer radius";
+/**
+ * The ZNR pack's two blocks, onto the ZNE prints (owner 2026-10-22; measured
+ * 2026-10-22 on ZNE #21 / #22 / #27 / #28 / #29 / #30, each band registered
+ * on its own — the print's pixel = the pack's moved by dy):
+ *   • the title bar and its hedron stone (rows 150–235): −2 … −6, median −4
+ *     (the light bar's run: print 99–206, the pack 104–209 → −4 both edges);
+ *   • the lower block — the window's foot and the panel's top (1150–1230:
+ *     +9 … +14), the type bar (top 1690–1740: +13 / +14; its foot and the
+ *     stone 1790–1870: +8), the bottom stone's edge (1880–1950: +10 … +12):
+ *     +11 as one piece ("Land" then sets at 1804 px, the prints' 1802–1806).
+ * Only three runs of rows are flat on all seven masters — the top border
+ * (0–59), the window's straight sides (730–776) and the bottom border
+ * (1939–2099) — so the title block is rows 60–729 (−4: the top border
+ * gives 4 rows) and the lower block rows 777–1938 (+11: the bottom border
+ * gives 11), the window's straight sides taking the 15 rows between: whole
+ * rows, byte for byte (shiftBlocksRgba8 throws on a zone that isn't flat).
+ * The EXP pack's bars register within 0–2 px (title) and with no one offset
+ * (type bar top +2 … +8, foot −1 … +7, stone −5 … +4 over nine prints): not
+ * re-cut.
+ */
+export const EXPEDITION_ZNR_RECUT = Object.freeze({
+  axis: "y",
+  blocks: Object.freeze([Object.freeze({ from: 60, to: 730, by: -4 }), Object.freeze({ from: 777, to: 1939, by: 11 })]),
+  why: "the pack's title bar sits 4 px below the ZNE prints' and its window foot, panel, type bar and bottom stone 11 px above them: rows 60–729 move 4 px up and rows 777–1938 move 11 px down, through the flat top border, window sides and bottom border",
+});
+/**
+ * The EXP rules panel's opacity onto the prints (owner 2026-10-22): the
+ * pack draws the panel white at α 128 (0.50); the prints' is ~0.65 —
+ * measured from the art's continuity across the window / panel divider on
+ * every EXP print (the art's luma just above the divider against just
+ * below it, per 10-column bin: below = α·P + (1 − α)·above), on the twelve
+ * where the art crosses it clearly (r > 0.8): the slope's reading 0.676,
+ * the spread's 0.621 (the one biased high, the other low) — 0.65, α 166.
+ * The land and gold frames' alpha is LIFTED by 166 / 128 (lifted(): ×gain,
+ * clamped at 1), so the panel reads α 166, its anti-aliased rim and the
+ * divider's dark line become opaque and every opaque or clear pixel keeps
+ * its alpha.
+ */
+export const EXPEDITION_BFZ_PANEL_GAIN = 166 / 128;
+const EXPEDITION_ZNR_PACK = "packExpeditionZNR-1.js 'ZNR Expeditions (2020)' (groupShowcase-5.js)";
+const EXPEDITION_BFZ_PACK = "packExpeditionBFZ-1.js 'BFZ Expeditions (2015)' (groupShowcase-5.js)";
+const EXPEDITION_ZNR_NOTES = [
+  "re-sourced from Card Conjurer (TODO 4.11 wave 1, owner-approved 2026-10-21): replaces the 375 px MSE magic-m15-expedition masters that scripts/build-variation-frames.mjs upscaled 4x into git — the 2015 BFZ look (an opaque black box, light ink; b and g broken), where every reference printing (ZNE 2020) prints the light translucent panel with dark ink",
+  "w u b r g m c = the pack's colour frames whole (expedition/znr/expeditionNewFrame<K>.png), native 1500x2100; the pack's 'Land Frame' L is not imported. Measured 2026-10-21 (median |ΔRGB| over the master's opaque pixels, prints at 1500x2100, best offset within ±6 / ±10 px; the MSE masters 100–108 on every one): colourless #21 Ancient Tomb, #28 Strip Mine, #30 Wasteland 18.3–20.7 on C (L ties: the same stone, a brown pinline where the prints' is grey); red #29 Valakut 20.7 on R (C 29.0, M 40.7); gold #22 Cavern of Souls, #27 Prismatic Vista 19.0–19.3 on M (C 32.0–34.7)",
+  "two blocks moved onto the ZNE prints (EXPEDITION_ZNR_RECUT, owner 2026-10-22): rows 60–729 (the title bar and its stone) 4 px up and rows 777–1938 (the panel, the type bar and the bottom stone) 11 px down, through the flat top border, window sides and bottom border — whole rows, byte for byte",
+  "two-colour lands (ZNE #11–20, #23–26, and the fetch lands, whose pinline prints their two colours) are not built here: until the pair masters (over the pack's Pinline mask), their import lands on the plain colourless master `c` as nearest",
+];
+const EXPEDITION_BFZ_NOTES = [
+  "the 2015 BFZ / OGW Expeditions (EXP #1–45; TODO 4.11 wave 1): an ADDITION beside expeditionland, which keeps the 2020 ZNE look",
+  "every EXP printing wears the pack's 'Land Frame' (expeditionFrameL.png: the beige carved stone, light bars) with its colours only in the PINLINE, but for the two any-colour lands (#39 Forbidden Orchard, #42 Mana Confluence), which print the gold frame. Measured 2026-10-21 (median |ΔRGB| over the master's opaque pixels, prints at 1500x2100, best offset within ±6 / ±10 px): colourless #36 Ancient Tomb, #41 Kor Haven, #43 Strip Mine, #45 Wasteland 21.0–23.7 on L against 26.0–30.3 on the pack's 'Colorless Frame' A; gold #39 / #42 27.0–31.3 on M against 33.7–35.3 on L; the UW duals #1 / #16 24.7–25.3 on L (A 28.3–29.3, U 31.3–32.7). #37 Dust Bowl and #38 Eye of Ugin read closest to the white frame W (20.3; L 38.3–38.7): a whiter print run",
+  "c = the 'Land Frame' L whole; m = the 'Multicolored Frame' M whole; w u b r g = L with the colour frame's pinline laid in through the pack's Pinline mask (expeditionMaskPinline.png) — no mono-colour Expedition was printed in EXP, so a colour key follows the duals' rule (the colour in the pinline alone), never the pack's colour-stone frames, which no print wears",
+  "the rules panel's alpha lifted ×166/128 onto the prints' ~0.65 (EXPEDITION_BFZ_PANEL_GAIN, owner 2026-10-22: the pack's 0.50 against 0.62–0.68 measured over twelve EXP prints) on every key — the L and M layers lifted, the colour's pinline over them unchanged",
+  "two-colour lands (EXP #1–35, #40, whose pinline prints their two colours) are not built here: until the pair masters (over the pack's Pinline mask), their import lands on the land frame `c` as nearest",
+];
+
 // --- TODO 4.25: the Universes Beyond frames. Card Conjurer's accurate
 // 'Universes Beyond' pack (packUBNew.js, groupAccurate.js: `m15/new/ub/`,
 // 2010 × 2814) is the accurate M15 pack's geometry with the smooth,
@@ -4478,6 +4553,31 @@ export const CC_TEMPLATES = {
     pack: TEXTLESS_PROMO_PACK,
     transforms: "native 1500x2100, the frame image copied 1:1 (no resample), corners cut at the importer radius",
     notes: TEXTLESS_PROMO_NOTES("colourless = the pack's brown 'Colorless Frame' (l.png), the land rim (PF23 #3 Reliquary Tower, PW25 #17 Command Tower)"),
+  },
+  // TODO 4.11 (wave 1): the Expedition lands — the 2020 ZNE look on the
+  // existing template (a correction) and the 2015 EXP look as a template of
+  // its own (an addition). See EXPEDITION_ZNR above.
+  expeditionland: {
+    colors: perColor((k) => [layer(expeditionZnrFile(k))]),
+    // The title block 4 px up, the lower block 11 px down, onto the ZNE
+    // prints (EXPEDITION_ZNR_RECUT); the EXPEDITIONLAND profile rides it.
+    shift: EXPEDITION_ZNR_RECUT,
+    pack: EXPEDITION_ZNR_PACK,
+    transforms: `${EXPEDITION_TRANSFORM}; then two blocks moved onto the ZNE prints through the flat rows between them (shift: rows 60–729 4 px up, rows 777–1938 11 px down — whole rows, byte for byte)`,
+    notes: EXPEDITION_ZNR_NOTES,
+  },
+  expeditionlandbfz: {
+    colors: {
+      ...perColor(
+        (k) => [lifted(expeditionBfzFile("l"), EXPEDITION_BFZ_PANEL_GAIN), layer(expeditionBfzFile(k), EXPEDITION_BFZ_PINLINE_MASK)],
+        ["w", "u", "b", "r", "g"],
+      ),
+      c: [lifted(expeditionBfzFile("l"), EXPEDITION_BFZ_PANEL_GAIN)],
+      m: [lifted(expeditionBfzFile("m"), EXPEDITION_BFZ_PANEL_GAIN)],
+    },
+    pack: EXPEDITION_BFZ_PACK,
+    transforms: `${EXPEDITION_TRANSFORM}; the frame's alpha lifted ×166/128 (the rules panel α 128 → 166, onto the prints' ~0.65)`,
+    notes: EXPEDITION_BFZ_NOTES,
   },
   // 4.39 — the black-bordered full-art basic (P23+ left-medallion design).
   m15fullartland: {

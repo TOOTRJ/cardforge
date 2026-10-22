@@ -179,7 +179,8 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
     // + the full-art token's six Nyx dresses (TODO 4.51: sampled, above).
     // + the arch token's tall box (TODO 4.55: opaque masters, no sample).
     // + the Prepare frame (TODO 4.27: M15's opaque master, no sample).
-    expect(FRAME_TEMPLATE_VALUES).toHaveLength(88);
+    // + the 2015 Expeditions (TODO 4.11 wave 1: no sample, as the 2020 look).
+    expect(FRAME_TEMPLATE_VALUES).toHaveLength(89);
     expect(FRAME_TEMPLATE_VALUES.filter((t) => drawn.has(t))).toEqual(SAMPLED);
   });
 

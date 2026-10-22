@@ -59,15 +59,11 @@ const sum = (report: Report, field: "repainted" | "repaintedLight" | "flooded") 
 
 describe("the Phase B allow-list", () => {
   it("is the owner's list: the MSE masters with paper corners, never a showcase family", () => {
-    expect(Object.keys(CORNER_NORMALISE_TEMPLATES).sort()).toEqual(
-      [
-        "expeditionland",
-      ].sort(),
-    );
-    // expeditionland: only the keys the corner check flags — w u r c m, whose
-    // grey paper reaches 1–2 px inside the cut; b and g are 7.7 known
-    // failures (a transparent edge band: no border to paint with).
-    expect(CORNER_NORMALISE_TEMPLATES.expeditionland).toEqual(["w", "u", "r", "c", "m"]);
+    // Empty since TODO 4.11: no MSE master with paper corners is left in git.
+    expect(Object.keys(CORNER_NORMALISE_TEMPLATES)).toEqual([]);
+    // expeditionland left the list with TODO 4.11 wave 1 (its MSE w u r c m
+    // grey paper reached 1–2 px inside the cut): Card Conjurer's 'ZNR
+    // Expeditions (2020)', cut at the one corner by the importer.
     // adventure (its 1–2 px grey paper rim, owner 2026-09-28), flip and
     // aftermath left the list with TODO 4.21a, saga with 4.21c: Card
     // Conjurer masters in the frames bucket, cut at the one corner by the
@@ -80,7 +76,7 @@ describe("the Phase B allow-list", () => {
     // 4.35 (layout v58): Card Conjurer's packs, cut by the importer.
     // fullart left it with TODO 4.11 (layout v63): Card Conjurer's
     // 'Zendikar Rising', cut by the importer.
-    for (const t of ["adventure", "aftermath", "flip", "saga", "retro", "retroland", "modern", "modernland", "extendedart", "m15textless", "m15textlessland", "fullart"]) {
+    for (const t of ["adventure", "aftermath", "flip", "saga", "retro", "retroland", "modern", "modernland", "extendedart", "m15textless", "m15textlessland", "fullart", "expeditionland", "expeditionlandbfz"]) {
       expect(CORNER_NORMALISE_TEMPLATES, t).not.toHaveProperty(t);
     }
     for (const template of Object.keys(CORNER_NORMALISE_TEMPLATES)) {
@@ -111,9 +107,10 @@ describe("the Phase B allow-list", () => {
     expect(shouldNormalise("modern", "w")).toBe(false);
     expect(shouldNormalise("extendedart", "w")).toBe(false);
     expect(shouldNormalise("fullart", "w")).toBe(false);
-    expect(shouldNormalise("expeditionland", "w")).toBe(true);
-    expect(shouldNormalise("expeditionland", "b")).toBe(false);
-    expect(shouldNormalise("expeditionland", "g")).toBe(false);
+    for (const key of ["w", "b", "g"]) {
+      expect(shouldNormalise("expeditionland", key), key).toBe(false);
+      expect(shouldNormalise("expeditionlandbfz", key), key).toBe(false);
+    }
   });
 });
 
@@ -292,8 +289,8 @@ describe("the MSE builders run the pass", () => {
     // modernland with 4.10b: the importer's.)
     // (aftermath, flip and adventure left the list with TODO 4.21a, saga
     // with 4.21c: Card Conjurer masters in the frames bucket, cut by the
-    // importer; fullart with 4.11, the same.)
-    expeditionland: "build-variation-frames.mjs",
+    // importer; fullart with 4.11 and expeditionland with 4.11 wave 1, the
+    // same.)
   };
   it("names a builder for every allow-listed template, and that builder normalises before it writes", () => {
     expect(Object.keys(BUILDER_OF).sort()).toEqual(Object.keys(CORNER_NORMALISE_TEMPLATES).sort());
@@ -327,8 +324,8 @@ describe("the allow-listed git masters are already normalised", () => {
       .filter((key) => shouldNormalise(template, key))
       .map((key) => ({ template, key, file: path.join(process.cwd(), "public", "frames", template, `${key}.png`) })),
   );
-  it("covers all 5 (expeditionland's; fullart's 7 left with TODO 4.11)", () => {
-    expect(masters).toHaveLength(5);
+  it("covers none (fullart's 7 and expeditionland's 5 left git with TODO 4.11)", () => {
+    expect(masters).toHaveLength(0);
     for (const m of masters) expect(fs.existsSync(m.file), m.file).toBe(true);
   });
   for (const { template, key, file } of masters) {

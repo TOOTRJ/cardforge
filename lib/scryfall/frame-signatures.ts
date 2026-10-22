@@ -527,16 +527,15 @@ export const BORDER_PENDING_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<Fram
   "tarkirdraconic",
 ]);
 
-/** Single colour masters whose border isn't true yet (owner decision A8):
- *  expeditionland's black and green, where the black flood fill leaked
- *  through the dark stone (4.35 (3)). No printed Expedition is black or
- *  green today (ZNE and EXP checked 2026-09-29: the fetches and duals are
- *  multicolour, Ancient Tomb and Kor Haven colourless, Valakut red), so the
- *  cap guards the combos rather than a printing. */
+/** Single colour masters whose border isn't true yet (owner decision A8).
+ *  None today: expeditionland's black and green, where the black flood fill
+ *  leaked through the MSE master's dark stone (4.35 (3)), left with TODO
+ *  4.11 wave 1 — Card Conjurer's masters print the black border on every
+ *  colour. */
 export const BORDER_PENDING_COLOURS: ReadonlyMap<FrameTemplate, ReadonlySet<string>> = new Map<
   FrameTemplate,
   ReadonlySet<string>
->([["expeditionland", new Set(["b", "g"])]]);
+>([]);
 
 /** True when `template`'s border isn't true yet in this colour key. */
 export function isBorderPending(template: FrameTemplate, colorKey: string): boolean {
@@ -2605,12 +2604,34 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     match: { collectors: { znr: [[290, 313]] } },
     outcome: { status: "exact", template: "fullart" },
   },
-  {
-    key: "expedition",
-    exactLabel: "Zendikar Expedition",
-    match: { setTypes: ["masterpiece"], sets: ["zne", "exp"] },
-    outcome: { status: "exact", template: "expeditionland" },
-  },
+  // The Expeditions (TODO 4.11 wave 1): two looks, two frames — the 2020
+  // Zendikar Rising Expeditions (ZNE) on `expeditionland`, the 2015 Battle
+  // for Zendikar / Oath Expeditions (EXP) on `expeditionlandbfz`. Both are
+  // exact once verified (withVerification), but for a two-colour land
+  // (the duals and the fetch lands): its pinline prints its two colours,
+  // which neither frame draws yet — 4.11's pair masters. Until then it lands
+  // on the frame's plain land master `c` (twoColourLandOnPlainFrame, owner
+  // 2026-10-22), nearest through this gap.
+  ...withGaps(
+    {
+      key: "expedition",
+      exactLabel: "Zendikar Rising Expedition",
+      match: { setTypes: ["masterpiece"], sets: ["zne"] },
+      outcome: { status: "exact", template: "expeditionland" },
+    },
+    ["two-colour"],
+    { "two-colour": "4.11" },
+  ),
+  ...withGaps(
+    {
+      key: "expedition/bfz",
+      exactLabel: "Battle for Zendikar Expedition",
+      match: { setTypes: ["masterpiece"], sets: ["exp"] },
+      outcome: { status: "exact", template: "expeditionlandbfz" },
+    },
+    ["two-colour"],
+    { "two-colour": "4.11" },
+  ),
 
   // --- 1.4: pinned showcase runs -------------------------------------------
   // The commander set's scroll printings, LTC #411–490 (80: Scryfall's
@@ -3633,6 +3654,32 @@ const BASIC_TYPE_LETTER: Record<string, string> = {
 // Zendikar / Khans fetch lands and their reprints).
 const FETCH_TWO_TYPES =
   /search your library for an? (?:basic )?(Plains|Island|Swamp|Mountain|Forest) or (Plains|Island|Swamp|Mountain|Forest) card/i;
+
+/** The Zendikar Expeditions' sets (TODO 4.11 wave 1): ZNE 2020 on
+ *  `expeditionland`, EXP 2015 on `expeditionlandbfz` — Scryfall's
+ *  `masterpiece` set type in both (the registry's two `expedition` rules). */
+export const EXPEDITION_SETS: Readonly<Record<string, FrameTemplate>> = Object.freeze({ zne: "expeditionland", exp: "expeditionlandbfz" });
+
+/**
+ * True when a printing's TWO frame colours land on the plain land master
+ * (`c`) instead of the gold one (owner 2026-10-22, TODO 4.11): a two-colour
+ * Zendikar Expedition — the duals and the fetch lands, whose pinline prints
+ * their two colours — while its frame draws no two-colour pinline pair
+ * (`frameAnatomyOf(template).twoColor`). Both Expedition frames' plain land
+ * master is their nearest look (the gold frame is the any-colour lands');
+ * the `two-colour` gap still names it nearest and logs its request row.
+ * The import (lib/scryfall/import-mapper.ts) reads it as FRAME data —
+ * `printed_plain_land_master`, stored as FrameStyle.plainLandMaster — while
+ * the card's `color_identity` stays its own (owner 2026-10-22: a frame
+ * stand-in never rewrites a card's colour); the frame is drawn, gated and
+ * verified in `c` (lib/cards/part-color.ts frameGateColors).
+ */
+export function twoColourLandOnPlainFrame(card: ScryfallCard, colors: readonly string[]): boolean {
+  if (colors.length !== 2) return false;
+  if ((card.set_type ?? "").trim().toLowerCase() !== "masterpiece") return false;
+  const template = EXPEDITION_SETS[(card.set ?? "").trim().toLowerCase()];
+  return template !== undefined && !frameAnatomyOf(template).twoColor.includes("split");
+}
 
 /**
  * The land frame colours the produced-mana rule can't read, as WUBRG

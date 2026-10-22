@@ -144,6 +144,10 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   "extendedart",
   "extendedartland",
   "expeditionland",
+  // The 2015 Expeditions (TODO 4.11 wave 1, CC 'BFZ Expeditions (2015)'): a
+  // new template, no stored card — the family's sizes, as the 2020 look —
+  // so it joined without a bump.
+  "expeditionlandbfz",
   "nyx",
   "fullart",
   "m15textless",
