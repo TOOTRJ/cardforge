@@ -505,11 +505,13 @@ const cardSpaceBox = (r: { topPct: number; leftPct: number; widthPct: number; he
     .join(" ");
 
 describe("foil backdrops — which frames have one", () => {
-  it("is exactly the seven templates whose foil bakes FoilBackdropSheen changes", () => {
+  it("is exactly the six templates whose foil bakes FoilBackdropSheen changes", () => {
     // A frame that gains a rules backdrop changes its foil bakes, so it
     // needs a layout-version bump scoped to it — but for a NEW template no
     // card was ever baked on (4.33's borderless planeswalkers, which keep
-    // m15pw's box for a walker with no ability text).
+    // m15pw's box for a walker with no ability text). (expeditionland lost
+    // its dark backdrop with its layout v64 bump, TODO 4.11 wave 1: the
+    // Card Conjurer masters paint the light panel the prints wear.)
     const withBackdrop = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).rules.backdropHex);
     expect(withBackdrop).toEqual([
       "m15token",
@@ -518,7 +520,6 @@ describe("foil backdrops — which frames have one", () => {
       "m15borderlesspw",
       "m15borderlesspwtall",
       "bloomanime",
-      "expeditionland",
     ]);
     // The renderers read only the rules slot's.
     for (const t of FRAME_TEMPLATE_VALUES) {
@@ -558,7 +559,6 @@ describe("foil finish — rules backdrops in the preview", () => {
       ["m15token", "token"],
       ["m15tokenartifact", "token"],
       ["bloomanime", "creature"],
-      ["expeditionland", "land"],
     ] as const) {
       const p = getFrameProfile(template);
       const hex = p.rules.backdropHex!;

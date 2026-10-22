@@ -7,8 +7,7 @@ import {
   isKnownFrameSignature,
   type FrameMatch,
 } from "@/lib/scryfall/frame-signatures";
-import { withVerification } from "@/lib/creator/frame-resolve";
-import { pickFrameColorKey } from "@/components/cards/frame-layer";
+import { importFrameColorKey, withVerification } from "@/lib/creator/frame-resolve";
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 
 // ---------------------------------------------------------------------------
@@ -109,6 +108,7 @@ type PatchForRequest = Pick<
   | "frame_match"
   | "frame_template"
   | "color_identity"
+  | "printed_plain_land_master"
   | "printing"
   | "printing_treatment"
   | "printing_detail"
@@ -162,8 +162,10 @@ export function frameRequestFromImport(
 ): FrameRequestInput | null {
   const raw = patch.frame_match;
   if (!raw) return null;
+  // Verified in the key the card paints on its landing (a two-colour
+  // Expedition's plain land master `c`, TODO 4.11), as the import is.
   const match = options.verifiedKeys
-    ? withVerification(raw, pickFrameColorKey(patch.color_identity ?? []), options.verifiedKeys)
+    ? withVerification(raw, importFrameColorKey(raw.landOn ?? raw.template, patch), options.verifiedKeys)
     : raw;
   if (match.status === "exact") return null;
 

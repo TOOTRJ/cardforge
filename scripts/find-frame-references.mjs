@@ -315,13 +315,29 @@ const TEMPLATES = {
   m15textlessland: {
     q: (k) => (k === "m" ? null : `t:basic is:textless ${identityColor(k)}`),
   },
+  // The Expeditions (TODO 4.11 wave 1): ZNE on expeditionland, EXP on
+  // expeditionlandbfz. The frame colour follows the mana the land makes
+  // (import-mapper landFrameColors): {C} → c, any colour → m; a land of two
+  // colours prints a split pinline (a pair master, not built), so `m` asks
+  // for the any-colour lands alone. Mono: ZNE #29 Valakut (r) only.
   expeditionland: {
-    note: "Expeditions are nonbasic lands: fetches are colourless identity (c), duals multicolour (m); no mono-colour printing exists.",
+    note: "ZNE only. c = the lands that tap for {C}; m = the any-colour lands (Cavern of Souls, Prismatic Vista), never a two-colour land (its pinline prints both colours); r = Valakut.",
     q: (k) =>
       k === "c"
-        ? `(set:exp or set:zne) t:land id=c`
+        ? `set:zne t:land produces=c -produces=w -produces=u -produces=b -produces=r -produces=g`
         : k === "m"
-          ? `(set:exp or set:zne) t:land id>=2`
+          ? `set:zne t:land produces=wubrg`
+          : k === "r"
+            ? `set:zne t:land produces=r -produces=c -produces=w -produces=u -produces=b -produces=g`
+            : null,
+  },
+  expeditionlandbfz: {
+    note: "EXP only. c = the lands that tap for {C} alone (Kor Haven among them); m = the any-colour lands (Forbidden Orchard, Mana Confluence); no mono-colour printing exists.",
+    q: (k) =>
+      k === "c"
+        ? `set:exp t:land produces=c -produces=w -produces=u -produces=b -produces=r -produces=g`
+        : k === "m"
+          ? `set:exp t:land produces=wubrg`
           : null,
   },
   nyx: {

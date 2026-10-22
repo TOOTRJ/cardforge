@@ -629,11 +629,11 @@ describe("imports follow the printing (the registry's era/2015+nyx rule)", () =>
   });
 
   it("the import chooser offers the frame to an enchantment only, and still asks while the frame isn't verified", () => {
-    const patch = { card_type: "creature" as const, supertype: "Enchantment", subtypes_text: "Spirit", title: "x", rules_text: "" };
-    const input = { kind: "creature" as const, colorKey: "w", verifiedKeys: EVERY };
+    const patch = { card_type: "creature" as const, supertype: "Enchantment", subtypes_text: "Spirit", title: "x", rules_text: "", color_identity: ["white" as const] };
+    const input = { kind: "creature" as const, verifiedKeys: EVERY };
     expect(frameFitsImport("m15nyx", { ...input, patch })).toBe(true);
     expect(frameFitsImport("m15nyx", { ...input, patch: { ...patch, supertype: "" } })).toBe(false);
-    expect(frameFitsImport("m15nyx", { kind: "enchantment", colorKey: "w", verifiedKeys: EVERY, patch: { ...patch, card_type: "enchantment", supertype: "" } })).toBe(true);
+    expect(frameFitsImport("m15nyx", { kind: "enchantment", verifiedKeys: EVERY, patch: { ...patch, card_type: "enchantment", supertype: "" } })).toBe(true);
     // Unverified (production before 2026-10-14): the chooser, as before this frame.
     const today = importFramePlan(finalizeImportMatch(mapScryfallToFormPatch(ENVOY), PROD_BEFORE_NYX), PROD_BEFORE_NYX);
     expect(today.mode).toBe("choose");

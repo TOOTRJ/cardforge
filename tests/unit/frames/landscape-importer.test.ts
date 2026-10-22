@@ -728,11 +728,13 @@ describe("provenance (lib/cards/frame-sources.json)", () => {
     // Every substitution and move is written down.
     expect(provenance.split.notes).toEqual(split.notes);
     expect(provenance.battle.notes).toEqual(battle.notes);
-    // No portrait recipe records a landscape field.
+    // No portrait recipe records a landscape field — but a portrait block
+    // shift on a 1500 × 2100 pack (the ZNE Expeditions' re-cut, TODO 4.11
+    // wave 1; tests/unit/frames/expedition-importer.test.ts).
     for (const [template, entry] of Object.entries(provenance) as [string, Record<string, unknown>][]) {
       if (template === "split" || template === "battle") continue;
       expect(entry.orientation, template).toBeUndefined();
-      expect(entry.shift, template).toBeUndefined();
+      if (template !== "expeditionland") expect(entry.shift, template).toBeUndefined();
       expect(entry.printRecut, template).toBeUndefined();
     }
   });

@@ -199,7 +199,11 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
   {
     name: "750-collector-mark-line-1",
     size: "750",
-    cases: /^m15borderless\/b\/instant-short@stamp-collector-2015$/,
+    // (…and TODO 4.11 wave 1's 2015 Expedition: a land, no plate, the mark
+    // on line 1 of EXPEDITION_BFZ_COLLECTOR's rows — +3 / −1 at 750 and
+    // +2 / −1 at HD, darwin 2026-10-22; the 2020 Expedition's long case
+    // reads +2 at 750, within the limit.)
+    cases: /^(m15borderless\/b\/instant-short@stamp-collector-2015|expeditionlandbfz\/u\/land-short@collector-2015)$/,
     regions: ["stat"],
     metric: "dx",
     min: 3,

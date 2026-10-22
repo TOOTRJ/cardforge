@@ -612,12 +612,6 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
     why: "the see-through gaps between the dragon ornaments run to 67–1449 px, 68–84 px past the slot 135–1365 (4.11 re-measure)",
     maxMissPx: 87.5,
   },
-  expeditionland: {
-    keys: ["u", "b", "r", "g"],
-    todo: ["4.35", "4.11"],
-    why: "b/g: no ring, the window is the whole card (4.35 (3)); u/r: the arch's apex at 239 px vs slot top 241.5 (4.11 re-source)",
-    maxMissPx: { u: 4, r: 4, b: 389, g: 389 },
-  },
   // The emblem (found by v35's see-through slot rule when #421 merged main):
   // two owner decisions (2026-09-29) meet at the window's top — the slot is
   // Scryfall's art_crop box exactly (from 250.4 px, never grown) and the
@@ -633,8 +627,12 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
   },
 };
 
-export function isKnownArtWindowFailure(template: string, key: string): boolean {
-  const entry = ART_WINDOW_KNOWN_FAILURES[template];
+/** A known-failure table (ART_WINDOW_KNOWN_FAILURES; a test hands its own to
+ *  keep a shape the live table no longer has covered — a per-key bound). */
+export type ArtWindowKnownFailures = Readonly<Record<string, ArtWindowKnownFailure>>;
+
+export function isKnownArtWindowFailure(template: string, key: string, table: ArtWindowKnownFailures = ART_WINDOW_KNOWN_FAILURES): boolean {
+  const entry = table[template];
   return Boolean(entry && (entry.keys === "all" || entry.keys.includes(key)));
 }
 
@@ -649,16 +647,17 @@ export function artWindowVerdict(
   template: string,
   key: string,
   findings: readonly ArtWindowFinding[],
+  table: ArtWindowKnownFailures = ART_WINDOW_KNOWN_FAILURES,
 ): { fails: string[]; fixed: boolean } {
-  if (!isKnownArtWindowFailure(template, key)) return { fails: findings.map((f) => f.message), fixed: false };
+  if (!isKnownArtWindowFailure(template, key, table)) return { fails: findings.map((f) => f.message), fixed: false };
   if (!findings.length) return { fails: [], fixed: true };
-  const bound = ART_WINDOW_KNOWN_FAILURES[template].maxMissPx;
+  const bound = table[template].maxMissPx;
   const max = typeof bound === "number" ? bound : bound[key];
   if (max === undefined) return { fails: [`known failure without a maxMissPx for ${key}`], fixed: false };
   const worst = Math.max(...findings.map((f) => f.missPx));
   if (worst <= max) return { fails: [], fixed: false };
   return {
-    fails: [`worse than its known failure (${ART_WINDOW_KNOWN_FAILURES[template].todo.join(", ")}): misses by ${fmt(worst)} px > ${max}: ${findings.map((f) => f.message).join(" | ")}`],
+    fails: [`worse than its known failure (${table[template].todo.join(", ")}): misses by ${fmt(worst)} px > ${max}: ${findings.map((f) => f.message).join(" | ")}`],
     fixed: false,
   };
 }

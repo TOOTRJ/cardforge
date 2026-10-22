@@ -15,6 +15,7 @@ import { FrameThumb, SoonBadge } from "@/components/creator/frame-pickers";
 import { SetupSection } from "@/components/creator/panels/setup-section";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { frameAnatomyOf, pairColorIdentity, twoColorPairOf } from "@/lib/cards/anatomy";
+import { frameGateColors } from "@/lib/cards/part-color";
 import { TwoColorPairRow } from "@/components/creator/panels/anatomy-panel";
 import { COLOR_IDENTITY_VALUES, type ColorIdentity, type FrameTemplate } from "@/types/card";
 
@@ -47,6 +48,7 @@ export function ColorSection({
   frameType,
   frameFor,
   colorlessDisabledReason = null,
+  plainLandMaster,
   autoClose = true,
   testId,
 }: {
@@ -72,6 +74,11 @@ export function ColorSection({
   /** Why the Colorless chip is disabled on this face (a double-faced back
    *  whose `c` is the artifact stand-in — design D2), else null. */
   colorlessDisabledReason?: string | null;
+  /** The card's `frame_style.plainLandMaster` (a two-colour Expedition,
+   *  TODO 4.11): on a frame that stands its plain land master in, the
+   *  Multicolor chip is gated in — and its tile paints — that master `c`,
+   *  as the card does (frameGateColors). */
+  plainLandMaster?: true;
   autoClose?: boolean;
   testId?: string;
 }) {
@@ -82,9 +89,14 @@ export function ColorSection({
   const drawsPairs = frameAnatomyOf(template).twoColor.length > 0;
   const pair = twoColorPairOf(selection);
   const currentKey = pickFrameColorKey([...selection]);
+  // The master a colour paints on a frame — its own key, but a two-colour
+  // Expedition's plain land master `c` (TODO 4.11): the chip is gated in it
+  // and its tile shows it.
+  const drawnKeyOn = (there: FrameTemplate, colors: readonly ColorIdentity[]) =>
+    pickFrameColorKey(frameGateColors(there, { plainLandMaster }, colors));
   const currentAvailable = isFrameComboAvailable(
     template,
-    currentKey,
+    drawnKeyOn(template, selection),
     verifiedKeys,
   );
 
@@ -106,14 +118,15 @@ export function ColorSection({
       // changes nothing); another colour, the frame a pick lands on.
       const there = frameFor && key !== currentKey ? frameFor(key) : template;
       const refused = color === "colorless" && colorlessDisabledReason !== null;
+      const drawn = drawnKeyOn(there ?? template, [color]);
       const reachable =
-        !refused && there !== null && isFrameComboAvailable(there, key, verifiedKeys);
+        !refused && there !== null && isFrameComboAvailable(there, drawn, verifiedKeys);
       return {
         value: color,
         label: color,
         description: refused ? colorlessDisabledReason ?? undefined : undefined,
         leading: (
-          <FrameThumb template={there ?? template} colorKey={key} type={frameType} />
+          <FrameThumb template={there ?? template} colorKey={drawn} type={frameType} />
         ),
         disabled: !reachable,
         badge: reachable || refused ? undefined : <SoonBadge />,

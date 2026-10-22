@@ -19,7 +19,7 @@ import {
 import { COLLECTOR_FACES } from "@/lib/cards/collector-metrics";
 import { displayTextWidthEm } from "@/lib/cards/display-metrics";
 import { rulesTextWidthEm } from "@/lib/cards/rules-metrics";
-import { M15_COLLECTOR, getFrameProfile } from "@/lib/cards/template-layout";
+import { EXPEDITION_BFZ_COLLECTOR, EXPEDITION_ZNR_COLLECTOR, M15_COLLECTOR, getFrameProfile, type CollectorSlot } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -89,9 +89,19 @@ describe("when the line is drawn", () => {
 
   it("every slotted template lays the same line out — M15's slot (the walker's pins the © slot to line 2)", () => {
     const reference = collectorLayout(m15, dmu(), display)!;
+    // The Expeditions (TODO 4.11 wave 1): M15's slot on each look's printed
+    // rows — the same layout as M15's with those two baselines.
+    const ROWS: Partial<Record<string, CollectorSlot>> = { expeditionland: EXPEDITION_ZNR_COLLECTOR, expeditionlandbfz: EXPEDITION_BFZ_COLLECTOR };
     for (const template of FRAME_TEMPLATE_VALUES) {
       const profile = getFrameProfile(template);
       if (!profile.collector) continue;
+      const rows = ROWS[template];
+      if (rows) {
+        expect(profile.collector, template).toBe(rows);
+        expect({ ...rows, line1BaselinePct: M15_COLLECTOR.line1BaselinePct, line2BaselinePct: M15_COLLECTOR.line2BaselinePct }, template).toEqual(M15_COLLECTOR);
+        expect(collectorLayout(profile, dmu(), display), template).toEqual(collectorLayout({ ...m15, collector: rows }, dmu(), display));
+        continue;
+      }
       const { markLine, ...geometry } = profile.collector;
       expect(geometry, template).toEqual(M15_COLLECTOR);
       // (…and the borderless walkers, TODO 4.9d: the same shield in the master.)

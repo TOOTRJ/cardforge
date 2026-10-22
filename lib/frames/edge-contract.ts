@@ -208,7 +208,10 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   aftermath: ALL_BORDER,
   fullart: ALL_BORDER,
   nyx: ALL_BORDER,
+  // The Expeditions (TODO 4.11 wave 1, Card Conjurer's packs): the printed
+  // black border all round, on both looks.
   expeditionland: ALL_BORDER,
+  expeditionlandbfz: ALL_BORDER,
   // The extended-art frame (TODO 4.7, CC 'Extended Art Frames', frames
   // bucket): EXTENDED_ART_EDGES — the art runs to the side edges between the
   // title bar and the type bar, as every print runs it.
@@ -344,10 +347,6 @@ export const EDGE_CONTRACT_KNOWN_FAILURES: Readonly<Record<string, { keys: "all"
   tarkirdragon: {
     keys: "all",
     why: "the ring bakes #101015 (16,16,21), not the MUL print's black (4.35); corner: transparent at the arc",
-  },
-  expeditionland: {
-    keys: ["b", "g"],
-    why: "the black flood fill leaked through the dark stone: no ring, no text box (4.35 (3)); corner: transparent at the arc",
   },
   // Found by this check on 2026-09-26 (the borderless research sampled the
   // side band at 20–80 % H only): transparent bottom band and lower sides.

@@ -91,6 +91,9 @@ export function previewFromImportPatch(
       ...(drawsPartColor(template) ? { partColor: true } : {}),
       // …the first part's own colour where the card's is both halves' (M2).
       ...(drawsPartColor(template) && patch.printed_first_part_color ? { firstPartColor: [...patch.printed_first_part_color] } : {}),
+      // …and a two-colour Expedition's plain land master (TODO 4.11), as
+      // the import stores it.
+      ...(patch.printed_plain_land_master ? { plainLandMaster: true as const } : {}),
     },
     backFace: backFaceFromPatch(patch.back_face),
   };

@@ -450,8 +450,13 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // (…and the holofoil stamp's notch, 4.9c, on the devoid entry too:
     // STAMP_TEMPLATES below.)
     expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true, stamp: true, dfcIcon: false, rulesAlign: true, border: false });
-    for (const t of ["adventure", "saga", "expeditionland"]) {
+    for (const t of ["adventure", "saga"]) {
       expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: profileOffersRulesAlign(getFrameProfile(t)), border: false });
+    }
+    // The Expeditions (TODO 4.11 wave 1) print the collector line, nothing
+    // else a card switches on.
+    for (const t of ["expeditionland", "expeditionlandbfz"]) {
+      expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: true, stamp: false, dfcIcon: false, rulesAlign: true, border: false });
     }
     for (const t of ["m15pw", "m15token"] as const) {
       expect(frameAnatomyOf(t).crown, t).toBe(false);

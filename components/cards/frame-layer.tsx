@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { frameUrl } from "@/lib/frames/frame-url";
 import { canonicalColorSequence } from "@/lib/cards/mana-order";
-import { COLOR_KEY_LETTER, pickFrameColorKey } from "@/lib/cards/frame-color-key";
+import { COLOR_KEY_LETTER, pickFrameColorKey, plainLandMasterDrawn } from "@/lib/cards/frame-color-key";
 import type { FrameMasterKey, PartColorSeam, Rect, TwoColorDress, TwoColorSplit } from "@/lib/cards/template-layout";
 import { type FrameAnatomyStyle, type FrameTypeInfo, type PartFacts, type ResolvedFrameOverlay, anatomyOn, crownedMasterKey, isArtifactFrameType, isPartColorList, resolveTwoColor } from "@/lib/cards/anatomy";
 import { DEFAULT_FRAME_TEMPLATE } from "@/types/card";
@@ -204,6 +204,8 @@ type MasterDress = {
   twoColorForLands?: boolean;
   /** The crown baked into `-legendary` masters (TODO 4.6f; crownedMasterKey). */
   crownMasters?: true;
+  /** The plain-land stand-in (TODO 4.11; plainLandMasterDrawn). */
+  plainLandStandIn?: true;
 };
 
 /** The frame master (public/frames/{template}/{key}.png) a card of frame
@@ -233,7 +235,9 @@ export function frameMasterKeyForColor(
  *  twin (`w-legendary`, crownedMasterKey — TODO 4.6f). The colour key itself
  *  still decides everything that is about the card's COLOUR rather than the
  *  file painted: the frame_reviews gate, the watermark tint and the stat
- *  plates (plateKeyFor: the colour key, but a hybrid pair's grey "c"). */
+ *  plates (plateKeyFor: the colour key, but a hybrid pair's grey "c") —
+ *  but for a two-colour Expedition on its plain land master, whose gate
+ *  (frameGateColors) and watermark tint are that master's `c` (TODO 4.11). */
 export function frameMasterKey(
   profile: MasterDress,
   colors: readonly ColorIdentity[] | null | undefined,
@@ -245,7 +249,13 @@ export function frameMasterKey(
     cost: type?.cost,
     cardType: type?.cardType,
   });
-  const master = look ? look.masterKey : frameMasterKeyForColor(profile, pickFrameColorKey(colors), type);
+  // A two-colour Expedition (TODO 4.11, owner 2026-10-22): the plain land
+  // master `c` (FrameStyle.plainLandMaster), the card gold in its data.
+  const master = look
+    ? look.masterKey
+    : plainLandMasterDrawn(profile, style, colors)
+      ? "c"
+      : frameMasterKeyForColor(profile, pickFrameColorKey(colors), type);
   // A profile whose crown is baked into its masters (FrameProfile.
   // crownMasters, TODO 4.6f: the borderless floating crown) paints the
   // crowned twin for a Legendary card with the crown switched on.

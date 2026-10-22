@@ -334,9 +334,15 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // The shorter boxes: level-up's seven paragraphs too.
   // …and the emblem's box (TODO 4.52: 74.4–91.9 %H, no plate; an emblem's
   // text is a sentence or two).
+  // …and the 2015 Expeditions' rules panel (TODO 4.11 wave 1: 432 px over
+  // the art — a land's text is a line or four).
   // (The Lord of the Rings scroll took M15's box with its Card Conjurer
   // re-source, layout v62 / TODO 4.11: it holds the level-up card now.)
-  [["avatar/main", "battle/main", "bloomburrow/main", "emblem/main", "expeditionland/main"], ["1200 chars", "level up"]],
+  [["avatar/main", "battle/main", "bloomburrow/main", "emblem/main", "expeditionlandbfz/main"], ["1200 chars", "level up"]],
+  // The 2020 Expeditions' panel (layout v64: 494 px, where the MSE box was
+  // 441) holds the level-up card and the typed text now; 1,200 characters
+  // still don't fit.
+  [["expeditionland/main"], ["1200 chars"]],
   // Split's halves on Card Conjurer's boxes (layout v43, TODO 4.21b): each
   // 780 × 499 px text column holds 400 characters, TLA #112 and the level-up
   // card at the floor again (the MSE boxes, 57 / 54 px of padding inside a
@@ -388,7 +394,7 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   [
     [
       "adventure/adventure", "adventure/main", "aftermath/main", "avatar/main", "battle/main", "bloomburrow/main", "emblem/main",
-      "expeditionland/main", "flip/main", "flip/second face", "m15token/main", "m15tokenartifact/main", "m15tokenartifacttext/main", "m15tokentext/main",
+      "expeditionlandbfz/main", "flip/main", "flip/second face", "m15token/main", "m15tokenartifact/main", "m15tokenartifacttext/main", "m15tokentext/main",
       "m20tokenartifacttext/main", "m20tokentext/main", "m20tokenartifactnyxtext/main", "m20tokennyxtext/main", "split/main",
     ],
     ["typed, as printed"],

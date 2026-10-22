@@ -162,6 +162,9 @@ describe("Card Conjurer recipe", () => {
       // The landscape pair (TODO 4.21b; tests/unit/frames/landscape-importer.test.ts).
       "battle",
       "emblem",
+      // The Expeditions (TODO 4.11 wave 1; tests/unit/frames/expedition-importer.test.ts).
+      "expeditionland",
+      "expeditionlandbfz",
       // The extended-art frame (TODO 4.7, layout v58; tests/unit/frames/extended-art-importer.test.ts).
       "extendedart",
       "extendedartland",

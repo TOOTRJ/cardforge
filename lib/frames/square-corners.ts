@@ -25,7 +25,7 @@ import type { CardCornerFills, CornerFill } from "@/lib/cards/card-corner";
 //
 // At a border or root corner the fill REPLACES everything outside the arc
 // (lib/cards/card-corner.ts squareCardCorners), so a frame's own pixels
-// there — expeditionland b/g's paper, Alpha's 60 px cut — never print, and
+// there — Alpha's 60 px cut — never print, and
 // a free Square (the stored round bake squared with the same fills) is the
 // paid live Square's twin. A template with a "frame" corner renders its
 // free Square live instead (the round bake's downscale no longer carries
@@ -61,8 +61,6 @@ export const SQUARE_CORNERS: Readonly<Record<string, { kinds: Kinds; keys?: read
   bloomburrow: { kinds: DESIGN_TOP_ROOT_BOTTOM },
   lotr: { kinds: DESIGN_TOP_ROOT_BOTTOM },
   tarkirdraconic: { kinds: DESIGN_TOP_ROOT_BOTTOM },
-  // The 7.7 known failures: the black flood leaked, no ring.
-  expeditionland: { kinds: "root", keys: ["b", "g"] },
 };
 
 /** What `template`'s master `key` shows outside the arc at `corner` in a
