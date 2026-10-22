@@ -104,7 +104,7 @@ import { eraForTemplate, isM15Treatment } from "@/lib/creator/frame-picker";
 import { buildTypeLine, normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { parseSubtypes } from "@/lib/creator/card-fields";
 import { tokenFrameText } from "@/lib/creator/token-frame-auto";
-import { m20TokenHeightOf } from "@/lib/cards/token-height";
+import { archTallStandIn, isArchTallTokenTemplate, m20TokenHeightOf } from "@/lib/cards/token-height";
 import type { FormValues } from "@/lib/creator/form-types";
 import {
   frameAnatomyOf,
@@ -539,9 +539,12 @@ export function CardSetupPanel({
               dressed,
               walkerRowCount({ editorRows: getValues("loyalty_abilities"), rulesText: getValues("rules_text") }),
             );
+            // The arch's tall box (TODO 4.55) not published in the colour:
+            // its regular text box stands in (archTallStandIn).
+            const standIn = archTallStandIn(dressed);
             const resolution = resolvePublishedFrame({
               kind,
-              candidates: next === dressed ? [next] : [next, dressed],
+              candidates: [...new Set([next, dressed, ...(standIn ? [standIn] : [])])],
               colorKey: colorKey as FrameColorKey,
               verifiedKeys,
               prefer: "colour",
@@ -629,6 +632,8 @@ export function CardSetupPanel({
                       ? "The printed enchantment frame: a starfield in the frame"
                       : isTextBoxDress(kind, choice.template)
                         ? "A text box for rules and flavour text"
+                        : kind === "token" && isArchTallTokenTemplate(choice.template)
+                          ? "A tall text box for long text"
                         : kind === "token" && m20TokenHeightOf(choice.template)
                           ? M20_TOKEN_HEIGHT_HINTS[m20TokenHeightOf(choice.template)!]
                           : subtypeDressOf(choice.template)
@@ -784,7 +789,7 @@ export function CardSetupPanel({
                         {textBoxFollows || heightFollows ? (
                           <p className="text-[11px] leading-4 text-subtle">
                             {heightFollows
-                              ? "The text box comes and goes with the card's rules and flavour text, and on the full-art token grows with it. Pick one here to keep it."
+                              ? "The text box comes and goes with the card's rules and flavour text, and grows with it for long text. Pick one here to keep it."
                               : "The text box comes and goes with the card's rules and flavour text. Pick one here to keep it."}
                           </p>
                         ) : null}

@@ -69,6 +69,10 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // so they joined without a bump.
   "m15tokentext",
   "m15tokenartifacttext",
+  // The tall-box tokens (TODO 4.55): new templates with no stored card, so
+  // they joined without a bump.
+  "m15tokentall",
+  "m15tokenartifacttall",
   // The borderless land (TODO 4.34): a new template, no stored card — it
   // joined without a bump too.
   "m15borderlessland",

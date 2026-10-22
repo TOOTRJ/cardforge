@@ -225,6 +225,11 @@ const PICKS: readonly Pick[] = [
   // and colour, in the front's design — through the flip.
   { from: "m15tokentext/w/token-short@two-sided", why: "double-sided token (5.5 (c)): the back on its own arch token template and colour, through the flip" },
   { from: "m20tokenartifacttext/c/token-short@two-sided", why: "double-sided token (5.5 (c)): a full-art artifact token's back behind a red full-art front, through the flip" },
+  // The arch's tall box (TODO 4.55): the pill, the symbol and the type line
+  // 238 px up, the taller box's rules centred clear of the plate — and its
+  // artifact dress (a Clue's silver frame).
+  { from: "m15tokentall/w/token-long", why: "4.55: the arch token's tall text box — the moved pill, the taller box" },
+  { from: "m15tokenartifacttall/c/token-short", why: "4.55: the tall box's artifact dress (a Clue's silver frame)" },
   // The arch token's gold small-caps name (TODO 4.53, v59): the runs on one
   // baseline, a word gap, the see-through c's own art slot; and a name all
   // in lower case — every run small, each lifted onto the full-size baseline.

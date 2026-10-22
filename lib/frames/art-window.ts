@@ -572,6 +572,14 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
     why: "c: slot 110–1390 × 257–1411 in the translucent silver: along the arch (row 256, 1036 of 1280 px) and 286 of 1154 px down each side (columns 109 / 1390)",
     maxMissPx: 1036.5,
   },
+  // The tall box (TODO 4.55) is the text box's master cut 238 rows shorter:
+  // the same arch and the same silver sides above the cut.
+  m15tokentall: {
+    keys: ["c"],
+    todo: ["4.17c"],
+    why: "c: slot 110–1390 × 257–1173 in the translucent silver: along the arch (row 256, 1036 of 1280 px) and 286 of 916 px down each side (columns 109 / 1390)",
+    maxMissPx: 1036.5,
+  },
   m15fullartland: {
     keys: "all",
     todo: ["4.39"],

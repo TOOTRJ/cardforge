@@ -307,7 +307,7 @@ import {
   sameTokenFrameText,
   tokenFrameText,
 } from "@/lib/creator/token-frame-auto";
-import { isM20ArtifactTokenTemplate, isM20NyxTokenTemplate, m20TokenHeightOf, m20TokenTemplate, m20TokenTwinWithoutNyx } from "@/lib/cards/token-height";
+import { archTallStandIn, m20TokenHeightOf, m20TokenTwinWithoutNyx, tokenHeightOf, tokenTemplate } from "@/lib/cards/token-height";
 import {
   blankSecondFaceFor,
   defaultValuesFor,
@@ -1550,13 +1550,16 @@ export function CardCreatorForm({
     const colorKey = pickFrameColorKey(getValues("color_identity"));
     const verified = new Set(verifiedFrameKeys);
     const hasText = hasRulesBoxText(tokenText);
+    const onHeight = tokenHeightOf(current);
     let next: FrameTemplate | null;
     if (prev.kind !== "token") {
       manualTokenFrameRef.current = false;
       next = isArchTokenFrame(current)
         ? newTokenFrame(tokenText, colorKey, verified)
         : textBoxFrameFor(kind, current, hasText);
-    } else if (m20TokenHeightOf(current)) {
+    } else if (onHeight) {
+      // The full-art design's heights, and the arch's since TODO 4.55 (its
+      // textless frame, text box and tall box).
       const target = followTokenHeight({
         ...tokenText,
         template: current,
@@ -1567,8 +1570,13 @@ export function CardCreatorForm({
       // starfield too, TODO 4.51): the
       // Artifact word's dress is the type-word effect's (it has already
       // run, and says so when it can't).
-      const height = m20TokenHeightOf(target);
-      next = height && height !== m20TokenHeightOf(current) ? m20TokenTemplate(height, isM20ArtifactTokenTemplate(current), isM20NyxTokenTemplate(current)) : null;
+      const height = tokenHeightOf(target)?.height;
+      next = height && height !== onHeight.height ? tokenTemplate(onHeight.design, height, onHeight.artifact, onHeight.nyx) : null;
+      // The arch's tall box not verified in the colour: its regular box
+      // stands in, silently (archTallStandIn) — the text shrinks to fit, as
+      // before 4.55.
+      const standIn = archTallStandIn(next);
+      if (standIn && next && !isFrameComboAvailable(next, colorKey, verified)) next = standIn;
     } else if (hasRulesBoxText(prev.text) !== hasText) {
       next = followTokenTextBox({
         kind,

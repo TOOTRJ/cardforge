@@ -177,7 +177,8 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
     // + the double-faced saga front (TODO 5.5 (b): the saga's opaque master)
     // + its back (5.5 (b) PR 2: the same opaque master).
     // + the full-art token's six Nyx dresses (TODO 4.51: sampled, above).
-    expect(FRAME_TEMPLATE_VALUES).toHaveLength(85);
+    // + the arch token's tall box (TODO 4.55: opaque masters, no sample).
+    expect(FRAME_TEMPLATE_VALUES).toHaveLength(87);
     expect(FRAME_TEMPLATE_VALUES.filter((t) => drawn.has(t))).toEqual(SAMPLED);
   });
 

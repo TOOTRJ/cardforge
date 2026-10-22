@@ -55,11 +55,17 @@ describe("tokenFrameFor on the full-art design: the height the text asks for", (
     expect(tokenFrameFor("token", "m20token", { supertype: "Enchantment", rulesText: text })).toBe("m20tokentext");
   });
 
-  it("leaves every other frame and kind alone — the arch keeps round 11's box", () => {
-    expect(tokenHeightFrameFor("token", "m15tokentext", { rulesText: LONG })).toBe("m15tokentext");
+  it("leaves every other frame and kind alone — the arch takes its OWN heights (TODO 4.55)", () => {
+    // The arch's heights since 4.55: its text box while it holds the text at
+    // 72 px or more, its tall box beyond — never the full-art design.
+    expect(tokenHeightFrameFor("token", "m15tokentext", { rulesText: LONG })).toBe("m15tokentall");
+    expect(tokenHeightFrameFor("token", "m15tokentall", { rulesText: "Flying" })).toBe("m15tokentext");
+    expect(tokenHeightFrameFor("token", "m15tokentall", { rulesText: null })).toBe("m15token");
     expect(tokenHeightFrameFor("creature", "m20tokentall", { rulesText: null })).toBe("m20tokentall");
     expect(tokenFrameFor("token", "fullart", { rulesText: LONG })).toBe("fullart");
-    expect(tokenFrameFor("token", "m15token", { supertype: "Creature", rulesText: LONG })).toBe("m15tokentext");
+    expect(tokenFrameFor("token", "m15token", { supertype: "Creature", rulesText: LONG })).toBe("m15tokentall");
+    expect(tokenFrameFor("token", "m15token", { supertype: "Artifact", rulesText: LONG })).toBe("m15tokenartifacttall");
+    expect(tokenFrameFor("token", "m15token", { supertype: "Creature", rulesText: "Flying" })).toBe("m15tokentext");
   });
 
   it("fits only the frame its words and text pick; every other kind always fits", () => {
@@ -71,10 +77,15 @@ describe("tokenFrameFor on the full-art design: the height the text asks for", (
   });
 
   it("names the text's heights (the regular and the tall box) as dresses a frame list leaves to the text", () => {
-    for (const t of ["m20tokentext", "m20tokentall", "m20tokenartifacttext", "m20tokenartifacttall"] as FrameTemplate[]) {
+    // …and the arch's since TODO 4.55 (its text box is also round 11's
+    // text-box dress).
+    for (const t of [
+      "m20tokentext", "m20tokentall", "m20tokenartifacttext", "m20tokenartifacttall",
+      "m15tokentext", "m15tokentall", "m15tokenartifacttext", "m15tokenartifacttall",
+    ] as FrameTemplate[]) {
       expect(isTokenHeightDress("token", t), t).toBe(true);
     }
-    for (const t of ["m20token", "m20tokenartifact", "m15token", "m15tokentext", "fullart"] as FrameTemplate[]) {
+    for (const t of ["m20token", "m20tokenartifact", "m15token", "m15tokenartifact", "fullart"] as FrameTemplate[]) {
       expect(isTokenHeightDress("token", t), t).toBe(false);
     }
     expect(isTokenHeightDress("creature", "m20tokentext")).toBe(false);
