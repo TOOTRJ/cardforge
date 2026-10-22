@@ -6988,7 +6988,12 @@ stored token keeps its look and its data on every save path.
   for the front the remix lands on), one face on a one-credit plan or short
   of the ticks; an own pair keeps both faces through the gate
   (`ownCardRemixFrame`). The identity call names the back as a token of its
-  own (`SECOND_HALF_RELATIONSHIP.token`).
+  own (`SECOND_HALF_RELATIONSHIP.token`). The step decides the frames it
+  SAVES on — the front's and the back's — before any picture is made
+  (`remixSavedFrames`, owner Round 78): a back that can't follow the front's
+  text stand-in (a textless full-art pair whose text heights are unticked)
+  keeps the pair on its landing, and a back that can't be saved at all fails
+  the step before the art, refunded — never two pictures for one face.
 
 ### The borderless double-faced bodies (5.7)
 

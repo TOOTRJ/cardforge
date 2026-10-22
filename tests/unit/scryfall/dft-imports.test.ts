@@ -89,7 +89,7 @@ describe.skipIf(Boolean(capture))("double-faced token imports (TODO 5.5 (c))", (
     expect(Object.keys(printings)).toHaveLength(121);
   });
 
-  it("sorts the 121: 31 pairs, F18 #2's token face, the rest front-only", () => {
+  it("sorts the 121: 28 pairs, F18 #2's token face, the rest front-only", () => {
     const shapes = Object.fromEntries(Object.entries(printings).map(([key, card]) => [key, doubleFacedTokenShapeOf(card)]));
     expect(Object.keys(shapes).filter((key) => shapes[key] === "pair").sort()).toEqual([...PAIRS].sort());
     expect(Object.keys(shapes).filter((key) => shapes[key] === "helper-front")).toEqual(["f18-2"]);

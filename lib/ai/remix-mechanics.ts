@@ -20,7 +20,7 @@
 import type { ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 import { backFaceFromPatch, splitSubtypes } from "@/lib/scryfall/preview-from-patch";
 import { DFC_REMIX_CREDITS, dfcImportLanding } from "@/lib/scryfall/dfc-import";
-import { finalizeImportMatch, remixFrameFor, withoutTextlessFrames } from "@/lib/creator/frame-resolve";
+import { finalizeImportMatch, remixFrameFor, remixSavedFrame, withoutTextlessFrames } from "@/lib/creator/frame-resolve";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { extendedArtDressFor, kindFromCard, templatePaintsSecondFace, typeWordFrameFor } from "@/lib/creator/card-kinds";
 import { bodyFor, dfcBodyOf, hasBackOfItsOwn, isBattleFront, templateHasBackFace, withTransformBackShape } from "@/lib/cards/dfc";
@@ -475,4 +475,45 @@ export function remixableDeckItems<
     else remixable.push(item);
   }
   return { remixable, ownEmblems };
+}
+
+/**
+ * The frames a remix SAVES on — the front's and, for a double-sided token
+ * (TODO 5.5 (c)), its back's — decided once the final text is known and
+ * BEFORE any picture is made (owner Round 78: never charge for, or paint, a
+ * back that can't be saved). The front is `remixSavedFrame`'s answer (the
+ * token's text height, a textless landing's stand-in); a token back must
+ * then pass the save's gate (resolveDfcBackFace) under that front. When it
+ * can't — the front moved to a stand-in its back can't follow — the pair
+ * stays on its LANDING, where the plan priced it; when the back can't be
+ * saved there either (a tick withdrawn since the plan), `ok: false`: the
+ * step fails before the art and its credits are refunded. Every other card
+ * is `remixSavedFrame`'s answer, unchanged.
+ */
+export function remixSavedFrames(
+  input: Parameters<typeof remixSavedFrame>[0] & {
+    /** The back as it will be sent (the remix's names applied), or none. */
+    back?: CardBackFace | null;
+  },
+): { ok: true; template: FrameTemplate | undefined } | { ok: false } {
+  const { back, ...front } = input;
+  const template = remixSavedFrame(front);
+  const landing = input.template;
+  if (!back || !isTokenPairFront(landing) || !isTokenPairBack(landing, back.frame_style?.template)) {
+    return { ok: true, template };
+  }
+  const saves = (candidate: FrameTemplate | undefined) => {
+    if (!candidate || !isTokenPairFront(candidate)) return false;
+    const gate = resolveDfcBackFace({
+      frontTemplate: candidate,
+      back: back as never,
+      family: null,
+      frontColorIdentity: input.colorIdentity,
+      verifiedKeys: input.verifiedKeys,
+    });
+    return gate.ok && gate.tokenPair === true;
+  };
+  if (saves(template)) return { ok: true, template };
+  if (template !== landing && saves(landing)) return { ok: true, template: landing };
+  return { ok: false };
 }
