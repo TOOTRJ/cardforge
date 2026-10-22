@@ -135,6 +135,10 @@ describe("frame reference registry", () => {
       // colour — no gold or colourless one.
       "m15stationland/m",
       "m15stationland/c",
+      // The Prepare frame (TODO 4.27): no plain gold page (a two-colour
+      // Prepare prints the split frame) and no colourless Prepare card.
+      "prepare/m",
+      "prepare/c",
       // …and its borderless Spacecraft dress (step 2): gold only (EOC #1 / #2).
       "m15borderlessstation/w",
       "m15borderlessstation/u",
@@ -221,7 +225,8 @@ describe("frame reference registry", () => {
     // + 5.5 (b)'s double-faced saga front and its back (PR 2).
     // + 4.51's six Nyx dresses of the full-art tokens.
     // + 4.55's two tall-box tokens.
-    expect(m15Templates.length).toBe(70);
+    // + 4.27's Prepare frame.
+    expect(m15Templates.length).toBe(71);
     expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {

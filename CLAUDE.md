@@ -983,6 +983,23 @@ Rules and gotchas:
   edge-to-edge frame never being an import's landing. No dress for Planets
   (none printed); the viewport Planets / TRK #557 showcases stay 4.11's.
   `docs/FRAMES.md` "The Station frame".
+- The Prepare frame (`prepare`; TODO 4.27): Secrets of Strixhaven's Prepare
+  creatures — M15 with the SPELL on a page on the RIGHT, the creature's
+  rules in the left box. It is the `adventure` capability on its own rects
+  (both renderers draw the page from `profile.adventure`; `placeholderName`
+  / `rulesHint` are the page's code-owned words), and the Prepare KIND, a
+  creature: `TREATMENT_KINDS.prepare` + `EXCLUSIVE_KINDS` keep it and the
+  adventure frame apart (same anatomy, never each other's cards). The spell
+  is the second part ("Creature | Prepare spell", no picture of its own).
+  Masters: PipGlyph's own derivation (`scripts/build-prepare-frames.mjs`,
+  numbers `scripts/lib/prepare-2026.mjs`; the published m15 masters with the
+  adventure master's page bars; bucket only). Imports: the Prepare kind
+  keeps the spell, exact once verified — short of the frame in the card's
+  colour, main's import (the creature kind on M15 / extended art, a legacy
+  back: `finalizeImportMatch`); a textless printing keeps the
+  creature kind; a spell page of another colour is the `part-colour` gap
+  (4.26). An ADDITION: no bump, no sweep. `docs/FRAMES.md` "The Prepare
+  frame (4.27)".
 - The Universes Beyond frames (`m15ub`, `m15ubartifact`, `m15ubland`; TODO
   4.25): STORED templates of their own (owner 2026-10-13), skins of m15 /
   m15artifact / m15land under Variations — never a render-time pick, never

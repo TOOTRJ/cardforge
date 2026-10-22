@@ -1,0 +1,6497 @@
+{
+ "_note": "Every Prepare printing on Scryfall (layout:prepare, 124 printings), captured 2026-10-21 from GET /cards/search?q=layout:prepare&unique=prints (User-Agent PipGlyph) and trimmed to the fields the import mapper and the frame signature registry read. No image is kept.",
+ "printings": {
+  "fra-3": {
+   "id": "5e77fbf0-9d1f-4e7d-a02e-43065d11b0d9",
+   "name": "Blossom-Blessed Angel // Seed Suture",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "3",
+   "released_at": "2026-10-02",
+   "rarity": "common",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Flying",
+    "Vigilance",
+    "Prepared"
+   ],
+   "type_line": "Creature — Angel Cleric // Sorcery",
+   "mana_cost": "{3}{W} // {G/W}",
+   "colors": [
+    "W"
+   ],
+   "color_identity": [
+    "G",
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Blossom-Blessed Angel",
+     "mana_cost": "{3}{W}",
+     "type_line": "Creature — Angel Cleric",
+     "oracle_text": "Flying, vigilance\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "4",
+     "artist": "Joshua Raphael"
+    },
+    {
+     "name": "Seed Suture",
+     "mana_cost": "{G/W}",
+     "type_line": "Sorcery",
+     "oracle_text": "Put a +1/+1 counter on target creature. You gain 1 life.",
+     "artist": "Joshua Raphael"
+    }
+   ]
+  },
+  "fra-28": {
+   "id": "0853bb80-8664-432a-8457-600139fd96d5",
+   "name": "Diviner of Victory // Unwind History",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "28",
+   "released_at": "2026-10-02",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Surveil",
+    "Prepared"
+   ],
+   "type_line": "Creature — Dwarf Wizard // Sorcery",
+   "mana_cost": "{U} // {1}{U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Diviner of Victory",
+     "mana_cost": "{U}",
+     "type_line": "Creature — Dwarf Wizard",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\nWhenever you scry or surveil, this creature gets +1/+1 until end of turn.",
+     "power": "1",
+     "toughness": "1",
+     "artist": "Justyna Dura"
+    },
+    {
+     "name": "Unwind History",
+     "mana_cost": "{1}{U}",
+     "type_line": "Sorcery",
+     "oracle_text": "Return target creature an opponent controls with mana value 3 or less to its owner's hand. Surveil 1.",
+     "artist": "Justyna Dura"
+    }
+   ]
+  },
+  "fra-39": {
+   "id": "7e5a640b-fd88-4b5a-9dfc-1d8f5a5cef41",
+   "name": "Semester Foreseer // Peer Review",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "39",
+   "released_at": "2026-10-02",
+   "rarity": "common",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Surveil",
+    "Prepared"
+   ],
+   "type_line": "Creature — Human Wizard // Sorcery",
+   "mana_cost": "{3}{U} // {2}{W/U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U",
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Semester Foreseer",
+     "mana_cost": "{3}{U}",
+     "type_line": "Creature — Human Wizard",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\nWhen this creature enters, surveil 1.",
+     "power": "3",
+     "toughness": "4",
+     "artist": "Alix Branwyn"
+    },
+    {
+     "name": "Peer Review",
+     "mana_cost": "{2}{W/U}",
+     "type_line": "Sorcery",
+     "oracle_text": "Create a 2/2 colorless Wizard Soldier creature token named Cadet. Surveil 1.",
+     "artist": "Alix Branwyn"
+    }
+   ]
+  },
+  "fra-47": {
+   "id": "e3afedb1-bf9d-4e31-9700-433514cc29b1",
+   "name": "Variable Chaser // Arc of Fortune",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "47",
+   "released_at": "2026-10-02",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Flying",
+    "Prowess",
+    "Prepared"
+   ],
+   "type_line": "Creature — Human Wizard // Sorcery",
+   "mana_cost": "{2}{U} // {2}{U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Variable Chaser",
+     "mana_cost": "{2}{U}",
+     "type_line": "Creature — Human Wizard",
+     "oracle_text": "Flying, prowess\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "3",
+     "artist": "Kai Carpenter"
+    },
+    {
+     "name": "Arc of Fortune",
+     "mana_cost": "{2}{U}",
+     "type_line": "Sorcery",
+     "oracle_text": "Each player may discard their hand and draw seven cards.",
+     "artist": "Kai Carpenter"
+    }
+   ]
+  },
+  "fra-49": {
+   "id": "4fcc913e-f736-460a-b24b-022fa2e861b9",
+   "name": "Bloodline Recollector // Ancestral Craving",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "49",
+   "released_at": "2026-10-02",
+   "rarity": "mythic",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Vampire Warlock // Instant",
+   "mana_cost": "{1}{B} // {B}",
+   "colors": [
+    "B"
+   ],
+   "color_identity": [
+    "B"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Bloodline Recollector",
+     "mana_cost": "{1}{B}",
+     "type_line": "Creature — Vampire Warlock",
+     "oracle_text": "At the beginning of each end step, if three or more creatures died this turn, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "2",
+     "artist": "Cynthia Sheppard"
+    },
+    {
+     "name": "Ancestral Craving",
+     "mana_cost": "{B}",
+     "type_line": "Instant",
+     "oracle_text": "Target player draws three cards and loses 3 life.",
+     "artist": "Cynthia Sheppard"
+    }
+   ]
+  },
+  "fra-70": {
+   "id": "0eae2efb-bf25-48ee-9c07-9098008110ad",
+   "name": "Void Extrapolator // Omit Variables",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "70",
+   "released_at": "2026-10-02",
+   "rarity": "common",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Threshold",
+    "Prepared",
+    "Mill"
+   ],
+   "type_line": "Creature — Aetherborn Warlock // Sorcery",
+   "mana_cost": "{1}{B} // {U/B}",
+   "colors": [
+    "B"
+   ],
+   "color_identity": [
+    "B",
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Void Extrapolator",
+     "mana_cost": "{1}{B}",
+     "type_line": "Creature — Aetherborn Warlock",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\nThreshold — This creature gets +1/+1 as long as there are seven or more cards in your graveyard.",
+     "power": "2",
+     "toughness": "2",
+     "artist": "Valera Lutfullina"
+    },
+    {
+     "name": "Omit Variables",
+     "mana_cost": "{U/B}",
+     "type_line": "Sorcery",
+     "oracle_text": "Mill three cards. (Put the top three cards of your library into your graveyard.)",
+     "artist": "Valera Lutfullina"
+    }
+   ]
+  },
+  "fra-85": {
+   "id": "7e324816-552f-455d-97c4-5ea6b26d2e6e",
+   "name": "Hallway Heckler // Vicious Verse",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "85",
+   "released_at": "2026-10-02",
+   "rarity": "common",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Elemental Sorcerer // Sorcery",
+   "mana_cost": "{2}{R} // {B/R}",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "B",
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Hallway Heckler",
+     "mana_cost": "{2}{R}",
+     "type_line": "Creature — Elemental Sorcerer",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\n{T}, Discard a card: Draw a card.",
+     "power": "2",
+     "toughness": "3",
+     "artist": "Gustavo Pelissari"
+    },
+    {
+     "name": "Vicious Verse",
+     "mana_cost": "{B/R}",
+     "type_line": "Sorcery",
+     "oracle_text": "Vicious Verse deals 1 damage to target opponent.",
+     "artist": "Gustavo Pelissari"
+    }
+   ]
+  },
+  "fra-90": {
+   "id": "aa0f77ac-741a-444a-8bf0-a42c644726bf",
+   "name": "Pompous Battlemage // Improvised Act",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "90",
+   "released_at": "2026-10-02",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prowess",
+    "Prepared"
+   ],
+   "type_line": "Creature — Goblin Sorcerer // Sorcery",
+   "mana_cost": "{R} // {R}",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Pompous Battlemage",
+     "mana_cost": "{R}",
+     "type_line": "Creature — Goblin Sorcerer",
+     "oracle_text": "Prowess\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "1",
+     "toughness": "1",
+     "artist": "Justin Gerard"
+    },
+    {
+     "name": "Improvised Act",
+     "mana_cost": "{R}",
+     "type_line": "Sorcery",
+     "oracle_text": "You may discard a card. If you do, draw a card.",
+     "artist": "Justin Gerard"
+    }
+   ]
+  },
+  "fra-91": {
+   "id": "2b0ebea0-86de-4da4-9fe8-dacc1e75c161",
+   "name": "Pyre Rhymer // Molten Tide",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "91",
+   "released_at": "2026-10-02",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prowess",
+    "Prepared"
+   ],
+   "type_line": "Creature — Elemental Sorcerer // Instant",
+   "mana_cost": "{1}{R}{R} // {R}",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Pyre Rhymer",
+     "mana_cost": "{1}{R}{R}",
+     "type_line": "Creature — Elemental Sorcerer",
+     "oracle_text": "Prowess\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "3",
+     "artist": "Andrea Piparo"
+    },
+    {
+     "name": "Molten Tide",
+     "mana_cost": "{R}",
+     "type_line": "Instant",
+     "oracle_text": "Until end of turn, whenever you tap a Mountain for mana, add an additional {R}.",
+     "artist": "Andrea Piparo"
+    }
+   ]
+  },
+  "fra-100": {
+   "id": "79dd5c54-5ea5-47b5-8f9b-50ed57a5ea45",
+   "name": "Carnivorous Cultivator // Enroot",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "100",
+   "released_at": "2026-10-02",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared",
+    "Deathtouch"
+   ],
+   "type_line": "Creature — Elf Warlock // Sorcery",
+   "mana_cost": "{1}{G} // {G}",
+   "colors": [
+    "G"
+   ],
+   "color_identity": [
+    "G"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Carnivorous Cultivator",
+     "mana_cost": "{1}{G}",
+     "type_line": "Creature — Elf Warlock",
+     "oracle_text": "Deathtouch\nThis creature enters prepared.\nWhenever this creature deals combat damage to a player, return target land card from your graveyard to your hand.",
+     "power": "2",
+     "toughness": "3",
+     "artist": "Martina Fačková"
+    },
+    {
+     "name": "Enroot",
+     "mana_cost": "{G}",
+     "type_line": "Sorcery",
+     "oracle_text": "Search your library for a land card, put it into your graveyard, then shuffle.",
+     "artist": "Martina Fačková"
+    }
+   ]
+  },
+  "fra-105": {
+   "id": "910a1f41-17fd-4ab0-9597-7151e79dc760",
+   "name": "Heartwood Crafter // Soul Tether",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "105",
+   "released_at": "2026-10-02",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Elf Artificer // Sorcery",
+   "mana_cost": "{G} // {2}{R/G}",
+   "colors": [
+    "G"
+   ],
+   "color_identity": [
+    "G",
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Heartwood Crafter",
+     "mana_cost": "{G}",
+     "type_line": "Creature — Elf Artificer",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\n{T}: Add {C}. This mana can't be spent to cast spells from your hand.",
+     "power": "1",
+     "toughness": "1",
+     "artist": "Anastasia Ovchinnikova"
+    },
+    {
+     "name": "Soul Tether",
+     "mana_cost": "{2}{R/G}",
+     "type_line": "Sorcery",
+     "oracle_text": "Create a Heartwood token. (It's a red and green artifact with \"{T}: Add {R} or {G}.\")",
+     "artist": "Anastasia Ovchinnikova"
+    }
+   ]
+  },
+  "fra-130": {
+   "id": "de94d388-919d-44ff-baef-8c90a417ac6d",
+   "name": "Emergency Phytomedic // Seed Suture",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "130",
+   "released_at": "2026-10-02",
+   "rarity": "common",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Dryad Cleric // Sorcery",
+   "mana_cost": "{G/W} // {G/W}",
+   "colors": [
+    "G",
+    "W"
+   ],
+   "color_identity": [
+    "G",
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Emergency Phytomedic",
+     "mana_cost": "{G/W}",
+     "type_line": "Creature — Dryad Cleric",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "1",
+     "toughness": "1",
+     "artist": "Dmitry Burmak"
+    },
+    {
+     "name": "Seed Suture",
+     "mana_cost": "{G/W}",
+     "type_line": "Sorcery",
+     "oracle_text": "Put a +1/+1 counter on target creature. You gain 1 life.",
+     "artist": "Dmitry Burmak"
+    }
+   ]
+  },
+  "fra-133": {
+   "id": "29e7ec16-0c16-48aa-8e09-ce6e0d5bd40b",
+   "name": "Fatehold Chronologist // Peer Review",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "133",
+   "released_at": "2026-10-02",
+   "rarity": "common",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Flying",
+    "Surveil",
+    "Prepared"
+   ],
+   "type_line": "Creature — Bird Wizard // Sorcery",
+   "mana_cost": "{1}{W/U} // {2}{W/U}",
+   "colors": [
+    "U",
+    "W"
+   ],
+   "color_identity": [
+    "U",
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Fatehold Chronologist",
+     "mana_cost": "{1}{W/U}",
+     "type_line": "Creature — Bird Wizard",
+     "oracle_text": "Flying\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "1",
+     "toughness": "2",
+     "artist": "Alexander Mokhov"
+    },
+    {
+     "name": "Peer Review",
+     "mana_cost": "{2}{W/U}",
+     "type_line": "Sorcery",
+     "oracle_text": "Create a 2/2 colorless Wizard Soldier creature token named Cadet. Surveil 1.",
+     "artist": "Alexander Mokhov"
+    }
+   ]
+  },
+  "fra-139": {
+   "id": "42e28bd2-486b-45d4-8840-6e33c19c2d57",
+   "name": "Konstrari Improviser // Soul Tether",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "139",
+   "released_at": "2026-10-02",
+   "rarity": "common",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Human Artificer // Sorcery",
+   "mana_cost": "{1}{R/G} // {2}{R/G}",
+   "colors": [
+    "G",
+    "R"
+   ],
+   "color_identity": [
+    "G",
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Konstrari Improviser",
+     "mana_cost": "{1}{R/G}",
+     "type_line": "Creature — Human Artificer",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "2",
+     "artist": "Matheus Graef"
+    },
+    {
+     "name": "Soul Tether",
+     "mana_cost": "{2}{R/G}",
+     "type_line": "Sorcery",
+     "oracle_text": "Create a Heartwood token. (It's a red and green artifact with \"{T}: Add {R} or {G}.\")",
+     "artist": "Matheus Graef"
+    }
+   ]
+  },
+  "fra-143": {
+   "id": "e61b9d48-0ace-4453-afe0-a1024444bac0",
+   "name": "Paradox Shaper // Omit Variables",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "143",
+   "released_at": "2026-10-02",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared",
+    "Mill"
+   ],
+   "type_line": "Creature — Octopus Wizard // Sorcery",
+   "mana_cost": "{1}{U/B} // {U/B}",
+   "colors": [
+    "B",
+    "U"
+   ],
+   "color_identity": [
+    "B",
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Paradox Shaper",
+     "mana_cost": "{1}{U/B}",
+     "type_line": "Creature — Octopus Wizard",
+     "oracle_text": "At the beginning of your upkeep, if this creature isn't prepared, it becomes prepared.\n{2}: Put target card from your graveyard on the bottom of your library.",
+     "power": "1",
+     "toughness": "3",
+     "artist": "Mark Zug"
+    },
+    {
+     "name": "Omit Variables",
+     "mana_cost": "{U/B}",
+     "type_line": "Sorcery",
+     "oracle_text": "Mill three cards. (Put the top three cards of your library into your graveyard.)",
+     "artist": "Mark Zug"
+    }
+   ]
+  },
+  "fra-146": {
+   "id": "6c1c790b-9e0e-4964-9ea3-554843907f06",
+   "name": "Prudent Fateseer // Peer Review",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "146",
+   "released_at": "2026-10-02",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Surveil",
+    "Prepared"
+   ],
+   "type_line": "Creature — Dwarf Wizard // Sorcery",
+   "mana_cost": "{1}{W/U}{W/U} // {2}{W/U}",
+   "colors": [
+    "U",
+    "W"
+   ],
+   "color_identity": [
+    "U",
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Prudent Fateseer",
+     "mana_cost": "{1}{W/U}{W/U}",
+     "type_line": "Creature — Dwarf Wizard",
+     "oracle_text": "This creature enters prepared.\nWhenever you scry or surveil, creatures you control get +1/+0 until end of turn. This ability triggers only once each turn.",
+     "power": "1",
+     "toughness": "4",
+     "artist": "Gustavo Pelissari"
+    },
+    {
+     "name": "Peer Review",
+     "mana_cost": "{2}{W/U}",
+     "type_line": "Sorcery",
+     "oracle_text": "Create a 2/2 colorless Wizard Soldier creature token named Cadet. Surveil 1.",
+     "artist": "Gustavo Pelissari"
+    }
+   ]
+  },
+  "fra-151": {
+   "id": "84b1c268-3b8a-41b6-92e3-a2ce0cc3d738",
+   "name": "Stingerquill Voxmancer // Vicious Verse",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "151",
+   "released_at": "2026-10-02",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Goblin Sorcerer // Sorcery",
+   "mana_cost": "{B/R} // {B/R}",
+   "colors": [
+    "B",
+    "R"
+   ],
+   "color_identity": [
+    "B",
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Stingerquill Voxmancer",
+     "mana_cost": "{B/R}",
+     "type_line": "Creature — Goblin Sorcerer",
+     "oracle_text": "At the beginning of your upkeep, if this creature isn't prepared, it becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "1",
+     "toughness": "2",
+     "artist": "Igor Grechanyi"
+    },
+    {
+     "name": "Vicious Verse",
+     "mana_cost": "{B/R}",
+     "type_line": "Sorcery",
+     "oracle_text": "Vicious Verse deals 1 damage to target opponent.",
+     "artist": "Igor Grechanyi"
+    }
+   ]
+  },
+  "fra-156": {
+   "id": "fb6bad96-841d-4738-8e62-92f346f914fd",
+   "name": "Theorix Metamage // Omit Variables",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "156",
+   "released_at": "2026-10-02",
+   "rarity": "common",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Threshold",
+    "Prepared",
+    "Mill"
+   ],
+   "type_line": "Creature — Shade Wizard // Sorcery",
+   "mana_cost": "{2}{U/B} // {U/B}",
+   "colors": [
+    "B",
+    "U"
+   ],
+   "color_identity": [
+    "B",
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Theorix Metamage",
+     "mana_cost": "{2}{U/B}",
+     "type_line": "Creature — Shade Wizard",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\nThreshold — This creature gets +1/+0 and has flying as long as there are seven or more cards in your graveyard.",
+     "power": "2",
+     "toughness": "3",
+     "artist": "Slawomir Maniak"
+    },
+    {
+     "name": "Omit Variables",
+     "mana_cost": "{U/B}",
+     "type_line": "Sorcery",
+     "oracle_text": "Mill three cards. (Put the top three cards of your library into your graveyard.)",
+     "artist": "Slawomir Maniak"
+    }
+   ]
+  },
+  "fra-161": {
+   "id": "acefc515-bf97-4dc0-b0f7-ae8ae5a61671",
+   "name": "Vigorbloom Vanguard // Seed Suture",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "161",
+   "released_at": "2026-10-02",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Troll Druid // Sorcery",
+   "mana_cost": "{1}{G/W} // {G/W}",
+   "colors": [
+    "G",
+    "W"
+   ],
+   "color_identity": [
+    "G",
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Vigorbloom Vanguard",
+     "mana_cost": "{1}{G/W}",
+     "type_line": "Creature — Troll Druid",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\nEach creature you control with a +1/+1 counter on it has vigilance.",
+     "power": "2",
+     "toughness": "2",
+     "artist": "Denman Rooke"
+    },
+    {
+     "name": "Seed Suture",
+     "mana_cost": "{G/W}",
+     "type_line": "Sorcery",
+     "oracle_text": "Put a +1/+1 counter on target creature. You gain 1 life.",
+     "artist": "Denman Rooke"
+    }
+   ]
+  },
+  "fra-164": {
+   "id": "8096bc9a-a610-448f-bef2-7230e17e9777",
+   "name": "Whiplash Wordsmith // Vicious Verse",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "164",
+   "released_at": "2026-10-02",
+   "rarity": "common",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Vampire Sorcerer // Sorcery",
+   "mana_cost": "{3}{B/R} // {B/R}",
+   "colors": [
+    "B",
+    "R"
+   ],
+   "color_identity": [
+    "B",
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Whiplash Wordsmith",
+     "mana_cost": "{3}{B/R}",
+     "type_line": "Creature — Vampire Sorcerer",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\nAs long as an opponent was dealt noncombat damage this turn, this creature has flying and haste.",
+     "power": "3",
+     "toughness": "3",
+     "artist": "Anastasia Ovchinnikova"
+    },
+    {
+     "name": "Vicious Verse",
+     "mana_cost": "{B/R}",
+     "type_line": "Sorcery",
+     "oracle_text": "Vicious Verse deals 1 damage to target opponent.",
+     "artist": "Anastasia Ovchinnikova"
+    }
+   ]
+  },
+  "fra-165": {
+   "id": "7d17f7e3-7b63-4674-9024-4fd1827f40ec",
+   "name": "Woodwork Prodigy // Soul Tether",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "165",
+   "released_at": "2026-10-02",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Cat Druid // Sorcery",
+   "mana_cost": "{2}{R/G} // {2}{R/G}",
+   "colors": [
+    "G",
+    "R"
+   ],
+   "color_identity": [
+    "G",
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Woodwork Prodigy",
+     "mana_cost": "{2}{R/G}",
+     "type_line": "Creature — Cat Druid",
+     "oracle_text": "At the beginning of your upkeep, if this creature isn't prepared, it becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "3",
+     "artist": "Lius Lasahido"
+    },
+    {
+     "name": "Soul Tether",
+     "mana_cost": "{2}{R/G}",
+     "type_line": "Sorcery",
+     "oracle_text": "Create a Heartwood token. (It's a red and green artifact with \"{T}: Add {R} or {G}.\")",
+     "artist": "Lius Lasahido"
+    }
+   ]
+  },
+  "fra-402": {
+   "id": "9a5db4d2-035f-4f48-8752-75487267c222",
+   "name": "Bloodline Recollector // Ancestral Craving",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "402",
+   "released_at": "2026-10-02",
+   "rarity": "mythic",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": true,
+   "textless": true,
+   "promo_types": [
+    "serialized",
+    "headliner",
+    "doublerainbow",
+    "boosterfun"
+   ],
+   "security_stamp": "oval",
+   "finishes": [
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Vampire Warlock // Instant",
+   "mana_cost": "{1}{B} // {B}",
+   "colors": [
+    "B"
+   ],
+   "color_identity": [
+    "B"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Bloodline Recollector",
+     "mana_cost": "{1}{B}",
+     "type_line": "Creature — Vampire Warlock",
+     "oracle_text": "At the beginning of each end step, if three or more creatures died this turn, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "2",
+     "artist": "Mark Poole"
+    },
+    {
+     "name": "Ancestral Craving",
+     "mana_cost": "{B}",
+     "type_line": "Instant",
+     "oracle_text": "Target player draws three cards and loses 3 life.",
+     "artist": "Mark Poole"
+    }
+   ]
+  },
+  "fra-425": {
+   "id": "83582080-bbd8-421e-80d3-66a7144f03fd",
+   "name": "Diviner of Victory // Unwind History",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "425",
+   "released_at": "2026-10-02",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Surveil",
+    "Prepared"
+   ],
+   "type_line": "Creature — Dwarf Wizard // Sorcery",
+   "mana_cost": "{U} // {1}{U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Diviner of Victory",
+     "mana_cost": "{U}",
+     "type_line": "Creature — Dwarf Wizard",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\nWhenever you scry or surveil, this creature gets +1/+1 until end of turn.",
+     "power": "1",
+     "toughness": "1",
+     "artist": "Justyna Dura"
+    },
+    {
+     "name": "Unwind History",
+     "mana_cost": "{1}{U}",
+     "type_line": "Sorcery",
+     "oracle_text": "Return target creature an opponent controls with mana value 3 or less to its owner's hand. Surveil 1.",
+     "artist": "Justyna Dura"
+    }
+   ]
+  },
+  "fra-426": {
+   "id": "6330415d-324c-4170-9269-eb024dc9e5a3",
+   "name": "Variable Chaser // Arc of Fortune",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "426",
+   "released_at": "2026-10-02",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Flying",
+    "Prowess",
+    "Prepared"
+   ],
+   "type_line": "Creature — Human Wizard // Sorcery",
+   "mana_cost": "{2}{U} // {2}{U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Variable Chaser",
+     "mana_cost": "{2}{U}",
+     "type_line": "Creature — Human Wizard",
+     "oracle_text": "Flying, prowess\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "3",
+     "artist": "Kai Carpenter"
+    },
+    {
+     "name": "Arc of Fortune",
+     "mana_cost": "{2}{U}",
+     "type_line": "Sorcery",
+     "oracle_text": "Each player may discard their hand and draw seven cards.",
+     "artist": "Kai Carpenter"
+    }
+   ]
+  },
+  "fra-427": {
+   "id": "9fb84b18-0775-44eb-83af-5dcb69518360",
+   "name": "Bloodline Recollector // Ancestral Craving",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "427",
+   "released_at": "2026-10-02",
+   "rarity": "mythic",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Vampire Warlock // Instant",
+   "mana_cost": "{1}{B} // {B}",
+   "colors": [
+    "B"
+   ],
+   "color_identity": [
+    "B"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Bloodline Recollector",
+     "mana_cost": "{1}{B}",
+     "type_line": "Creature — Vampire Warlock",
+     "oracle_text": "At the beginning of each end step, if three or more creatures died this turn, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "2",
+     "artist": "Cynthia Sheppard"
+    },
+    {
+     "name": "Ancestral Craving",
+     "mana_cost": "{B}",
+     "type_line": "Instant",
+     "oracle_text": "Target player draws three cards and loses 3 life.",
+     "artist": "Cynthia Sheppard"
+    }
+   ]
+  },
+  "fra-428": {
+   "id": "dd78dea9-901c-4ff0-a155-06e2fa75b5d6",
+   "name": "Pompous Battlemage // Improvised Act",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "428",
+   "released_at": "2026-10-02",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prowess",
+    "Prepared"
+   ],
+   "type_line": "Creature — Goblin Sorcerer // Sorcery",
+   "mana_cost": "{R} // {R}",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Pompous Battlemage",
+     "mana_cost": "{R}",
+     "type_line": "Creature — Goblin Sorcerer",
+     "oracle_text": "Prowess\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "1",
+     "toughness": "1",
+     "artist": "Justin Gerard"
+    },
+    {
+     "name": "Improvised Act",
+     "mana_cost": "{R}",
+     "type_line": "Sorcery",
+     "oracle_text": "You may discard a card. If you do, draw a card.",
+     "artist": "Justin Gerard"
+    }
+   ]
+  },
+  "fra-429": {
+   "id": "5111c3cd-ccfb-4ed6-9311-741f9d1dc524",
+   "name": "Pyre Rhymer // Molten Tide",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "429",
+   "released_at": "2026-10-02",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prowess",
+    "Prepared"
+   ],
+   "type_line": "Creature — Elemental Sorcerer // Instant",
+   "mana_cost": "{1}{R}{R} // {R}",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Pyre Rhymer",
+     "mana_cost": "{1}{R}{R}",
+     "type_line": "Creature — Elemental Sorcerer",
+     "oracle_text": "Prowess\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "3",
+     "artist": "Andrea Piparo"
+    },
+    {
+     "name": "Molten Tide",
+     "mana_cost": "{R}",
+     "type_line": "Instant",
+     "oracle_text": "Until end of turn, whenever you tap a Mountain for mana, add an additional {R}.",
+     "artist": "Andrea Piparo"
+    }
+   ]
+  },
+  "fra-430": {
+   "id": "b06313ea-bf64-407b-878a-a2764055c851",
+   "name": "Carnivorous Cultivator // Enroot",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "430",
+   "released_at": "2026-10-02",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared",
+    "Deathtouch"
+   ],
+   "type_line": "Creature — Elf Warlock // Sorcery",
+   "mana_cost": "{1}{G} // {G}",
+   "colors": [
+    "G"
+   ],
+   "color_identity": [
+    "G"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Carnivorous Cultivator",
+     "mana_cost": "{1}{G}",
+     "type_line": "Creature — Elf Warlock",
+     "oracle_text": "Deathtouch\nThis creature enters prepared.\nWhenever this creature deals combat damage to a player, return target land card from your graveyard to your hand.",
+     "power": "2",
+     "toughness": "3",
+     "artist": "Martina Fačková"
+    },
+    {
+     "name": "Enroot",
+     "mana_cost": "{G}",
+     "type_line": "Sorcery",
+     "oracle_text": "Search your library for a land card, put it into your graveyard, then shuffle.",
+     "artist": "Martina Fačková"
+    }
+   ]
+  },
+  "fra-437": {
+   "id": "e9e31f13-8a2c-4ae2-854e-27d6c62936f2",
+   "name": "Carnivorous Cultivator // Enroot",
+   "layout": "prepare",
+   "set": "fra",
+   "set_type": "expansion",
+   "set_name": "Reality Fracture",
+   "collector_number": "437",
+   "released_at": "2026-10-02",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "promo_types": [
+    "bundle"
+   ],
+   "security_stamp": "oval",
+   "finishes": [
+    "foil"
+   ],
+   "keywords": [
+    "Prepared",
+    "Deathtouch"
+   ],
+   "type_line": "Creature — Elf Warlock // Sorcery",
+   "mana_cost": "{1}{G} // {G}",
+   "colors": [
+    "G"
+   ],
+   "color_identity": [
+    "G"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Carnivorous Cultivator",
+     "mana_cost": "{1}{G}",
+     "type_line": "Creature — Elf Warlock",
+     "oracle_text": "Deathtouch\nThis creature enters prepared.\nWhenever this creature deals combat damage to a player, return target land card from your graveyard to your hand.",
+     "power": "2",
+     "toughness": "3",
+     "artist": "Filip Burburan"
+    },
+    {
+     "name": "Enroot",
+     "mana_cost": "{G}",
+     "type_line": "Sorcery",
+     "oracle_text": "Search your library for a land card, put it into your graveyard, then shuffle.",
+     "artist": "Filip Burburan"
+    }
+   ]
+  },
+  "pfra-28p": {
+   "id": "fb4b2fbe-77af-49ec-825e-dd2203b4b302",
+   "name": "Diviner of Victory // Unwind History",
+   "layout": "prepare",
+   "set": "pfra",
+   "set_type": "promo",
+   "set_name": "Reality Fracture Promos",
+   "collector_number": "28p",
+   "released_at": "2026-10-02",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "promo_types": [
+    "promopack",
+    "stamped"
+   ],
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Surveil",
+    "Prepared"
+   ],
+   "type_line": "Creature — Dwarf Wizard // Sorcery",
+   "mana_cost": "{U} // {1}{U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Diviner of Victory",
+     "mana_cost": "{U}",
+     "type_line": "Creature — Dwarf Wizard",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\nWhenever you scry or surveil, this creature gets +1/+1 until end of turn.",
+     "power": "1",
+     "toughness": "1",
+     "artist": "Justyna Dura"
+    },
+    {
+     "name": "Unwind History",
+     "mana_cost": "{1}{U}",
+     "type_line": "Sorcery",
+     "oracle_text": "Return target creature an opponent controls with mana value 3 or less to its owner's hand. Surveil 1.",
+     "artist": "Justyna Dura"
+    }
+   ]
+  },
+  "pfra-47p": {
+   "id": "605c9415-b723-4483-be51-e51c1ffc0d5a",
+   "name": "Variable Chaser // Arc of Fortune",
+   "layout": "prepare",
+   "set": "pfra",
+   "set_type": "promo",
+   "set_name": "Reality Fracture Promos",
+   "collector_number": "47p",
+   "released_at": "2026-10-02",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "promo_types": [
+    "promopack",
+    "stamped"
+   ],
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Flying",
+    "Prowess",
+    "Prepared"
+   ],
+   "type_line": "Creature — Human Wizard // Sorcery",
+   "mana_cost": "{2}{U} // {2}{U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Variable Chaser",
+     "mana_cost": "{2}{U}",
+     "type_line": "Creature — Human Wizard",
+     "oracle_text": "Flying, prowess\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "3",
+     "artist": "Kai Carpenter"
+    },
+    {
+     "name": "Arc of Fortune",
+     "mana_cost": "{2}{U}",
+     "type_line": "Sorcery",
+     "oracle_text": "Each player may discard their hand and draw seven cards.",
+     "artist": "Kai Carpenter"
+    }
+   ]
+  },
+  "pfra-49p": {
+   "id": "545db49d-ee24-496b-8c00-443af20b1066",
+   "name": "Bloodline Recollector // Ancestral Craving",
+   "layout": "prepare",
+   "set": "pfra",
+   "set_type": "promo",
+   "set_name": "Reality Fracture Promos",
+   "collector_number": "49p",
+   "released_at": "2026-10-02",
+   "rarity": "mythic",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "promo_types": [
+    "promopack",
+    "stamped"
+   ],
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Vampire Warlock // Instant",
+   "mana_cost": "{1}{B} // {B}",
+   "colors": [
+    "B"
+   ],
+   "color_identity": [
+    "B"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Bloodline Recollector",
+     "mana_cost": "{1}{B}",
+     "type_line": "Creature — Vampire Warlock",
+     "oracle_text": "At the beginning of each end step, if three or more creatures died this turn, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "2",
+     "artist": "Cynthia Sheppard"
+    },
+    {
+     "name": "Ancestral Craving",
+     "mana_cost": "{B}",
+     "type_line": "Instant",
+     "oracle_text": "Target player draws three cards and loses 3 life.",
+     "artist": "Cynthia Sheppard"
+    }
+   ]
+  },
+  "pfra-90p": {
+   "id": "d6eee9e7-8767-4091-9e1c-9b0bd5c9e0d7",
+   "name": "Pompous Battlemage // Improvised Act",
+   "layout": "prepare",
+   "set": "pfra",
+   "set_type": "promo",
+   "set_name": "Reality Fracture Promos",
+   "collector_number": "90p",
+   "released_at": "2026-10-02",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "promo_types": [
+    "promopack",
+    "stamped"
+   ],
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prowess",
+    "Prepared"
+   ],
+   "type_line": "Creature — Goblin Sorcerer // Sorcery",
+   "mana_cost": "{R} // {R}",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Pompous Battlemage",
+     "mana_cost": "{R}",
+     "type_line": "Creature — Goblin Sorcerer",
+     "oracle_text": "Prowess\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "1",
+     "toughness": "1",
+     "artist": "Justin Gerard"
+    },
+    {
+     "name": "Improvised Act",
+     "mana_cost": "{R}",
+     "type_line": "Sorcery",
+     "oracle_text": "You may discard a card. If you do, draw a card.",
+     "artist": "Justin Gerard"
+    }
+   ]
+  },
+  "pfra-91p": {
+   "id": "80154fd8-3faf-44df-9684-ddc66ddba2a2",
+   "name": "Pyre Rhymer // Molten Tide",
+   "layout": "prepare",
+   "set": "pfra",
+   "set_type": "promo",
+   "set_name": "Reality Fracture Promos",
+   "collector_number": "91p",
+   "released_at": "2026-10-02",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "promo_types": [
+    "promopack",
+    "stamped"
+   ],
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prowess",
+    "Prepared"
+   ],
+   "type_line": "Creature — Elemental Sorcerer // Instant",
+   "mana_cost": "{1}{R}{R} // {R}",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Pyre Rhymer",
+     "mana_cost": "{1}{R}{R}",
+     "type_line": "Creature — Elemental Sorcerer",
+     "oracle_text": "Prowess\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "3",
+     "artist": "Andrea Piparo"
+    },
+    {
+     "name": "Molten Tide",
+     "mana_cost": "{R}",
+     "type_line": "Instant",
+     "oracle_text": "Until end of turn, whenever you tap a Mountain for mana, add an additional {R}.",
+     "artist": "Andrea Piparo"
+    }
+   ]
+  },
+  "pfra-100p": {
+   "id": "c914af64-4d68-4286-9c7d-d3083da4cb17",
+   "name": "Carnivorous Cultivator // Enroot",
+   "layout": "prepare",
+   "set": "pfra",
+   "set_type": "promo",
+   "set_name": "Reality Fracture Promos",
+   "collector_number": "100p",
+   "released_at": "2026-10-02",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "promo_types": [
+    "promopack",
+    "stamped"
+   ],
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared",
+    "Deathtouch"
+   ],
+   "type_line": "Creature — Elf Warlock // Sorcery",
+   "mana_cost": "{1}{G} // {G}",
+   "colors": [
+    "G"
+   ],
+   "color_identity": [
+    "G"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Carnivorous Cultivator",
+     "mana_cost": "{1}{G}",
+     "type_line": "Creature — Elf Warlock",
+     "oracle_text": "Deathtouch\nThis creature enters prepared.\nWhenever this creature deals combat damage to a player, return target land card from your graveyard to your hand.",
+     "power": "2",
+     "toughness": "3",
+     "artist": "Martina Fačková"
+    },
+    {
+     "name": "Enroot",
+     "mana_cost": "{G}",
+     "type_line": "Sorcery",
+     "oracle_text": "Search your library for a land card, put it into your graveyard, then shuffle.",
+     "artist": "Martina Fačková"
+    }
+   ]
+  },
+  "plst-SOS-88": {
+   "id": "d14edee1-cc44-4200-996a-1213430da897",
+   "name": "Leech Collector // Bloodletting",
+   "layout": "prepare",
+   "set": "plst",
+   "set_type": "masters",
+   "set_name": "The List",
+   "collector_number": "SOS-88",
+   "released_at": "2026-10-19",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Human Warlock // Sorcery",
+   "mana_cost": "{1}{B} // {B}",
+   "colors": [
+    "B"
+   ],
+   "color_identity": [
+    "B"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Leech Collector",
+     "mana_cost": "{1}{B}",
+     "type_line": "Creature — Human Warlock",
+     "oracle_text": "Whenever you gain life for the first time each turn, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "2",
+     "artist": "Chris Rallis"
+    },
+    {
+     "name": "Bloodletting",
+     "mana_cost": "{B}",
+     "type_line": "Sorcery",
+     "oracle_text": "Each opponent loses 2 life.",
+     "artist": "Chris Rallis"
+    }
+   ]
+  },
+  "psos-13p": {
+   "id": "589a4f39-fdd7-43f1-9521-608ec27bd926",
+   "name": "Emeritus of Truce // Swords to Plowshares",
+   "layout": "prepare",
+   "set": "psos",
+   "set_type": "promo",
+   "set_name": "Secrets of Strixhaven Promos",
+   "collector_number": "13p",
+   "released_at": "2026-04-24",
+   "rarity": "mythic",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "promo_types": [
+    "promopack",
+    "stamped"
+   ],
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Cat Cleric // Instant",
+   "mana_cost": "{1}{W}{W} // {W}",
+   "colors": [
+    "W"
+   ],
+   "color_identity": [
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Emeritus of Truce",
+     "mana_cost": "{1}{W}{W}",
+     "type_line": "Creature — Cat Cleric",
+     "oracle_text": "When this creature enters, target player creates a 1/1 white and black Inkling creature token with flying. Then if an opponent controls more creatures than you, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "3",
+     "artist": "Aleksi Briclot"
+    },
+    {
+     "name": "Swords to Plowshares",
+     "mana_cost": "{W}",
+     "type_line": "Instant",
+     "oracle_text": "Exile target creature. Its controller gains life equal to its power.",
+     "artist": "Aleksi Briclot"
+    }
+   ]
+  },
+  "psos-23p": {
+   "id": "24d7bf56-d547-4ca3-a1e1-900252a9fef9",
+   "name": "Joined Researchers // Secret Rendezvous",
+   "layout": "prepare",
+   "set": "psos",
+   "set_type": "promo",
+   "set_name": "Secrets of Strixhaven Promos",
+   "collector_number": "23p",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "promo_types": [
+    "promopack",
+    "stamped"
+   ],
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "First strike",
+    "Prepared"
+   ],
+   "type_line": "Creature — Human Cleric Wizard // Sorcery",
+   "mana_cost": "{1}{W} // {1}{W}{W}",
+   "colors": [
+    "W"
+   ],
+   "color_identity": [
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Joined Researchers",
+     "mana_cost": "{1}{W}",
+     "type_line": "Creature — Human Cleric Wizard",
+     "oracle_text": "First strike\nAt the beginning of each end step, if an opponent has more cards in hand than you, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "2",
+     "artist": "Ryan Pancoast"
+    },
+    {
+     "name": "Secret Rendezvous",
+     "mana_cost": "{1}{W}{W}",
+     "type_line": "Sorcery",
+     "oracle_text": "You and target opponent each draw three cards.",
+     "artist": "Ryan Pancoast"
+    }
+   ]
+  },
+  "psos-45p": {
+   "id": "84a8965c-0217-426b-8795-48c67eab4ab1",
+   "name": "Emeritus of Ideation // Ancestral Recall",
+   "layout": "prepare",
+   "set": "psos",
+   "set_type": "promo",
+   "set_name": "Secrets of Strixhaven Promos",
+   "collector_number": "45p",
+   "released_at": "2026-04-24",
+   "rarity": "mythic",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "promo_types": [
+    "promopack",
+    "stamped"
+   ],
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Flying",
+    "Prepared",
+    "Ward"
+   ],
+   "type_line": "Creature — Human Wizard // Instant",
+   "mana_cost": "{3}{U}{U} // {U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Emeritus of Ideation",
+     "mana_cost": "{3}{U}{U}",
+     "type_line": "Creature — Human Wizard",
+     "oracle_text": "Flying, ward {2}\nThis creature enters prepared.\nWhenever this creature attacks, you may exile eight cards from your graveyard. If you do, this creature becomes prepared.",
+     "power": "5",
+     "toughness": "5",
+     "artist": "Evyn Fong"
+    },
+    {
+     "name": "Ancestral Recall",
+     "mana_cost": "{U}",
+     "type_line": "Instant",
+     "oracle_text": "Target player draws three cards.",
+     "artist": "Evyn Fong"
+    }
+   ]
+  },
+  "psos-52p": {
+   "id": "7bf58206-b7b6-45e7-b99a-9de1c58c5c96",
+   "name": "Harmonized Trio // Brainstorm",
+   "layout": "prepare",
+   "set": "psos",
+   "set_type": "promo",
+   "set_name": "Secrets of Strixhaven Promos",
+   "collector_number": "52p",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "promo_types": [
+    "promopack",
+    "stamped"
+   ],
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Merfolk Bard Wizard // Instant",
+   "mana_cost": "{U} // {U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Harmonized Trio",
+     "mana_cost": "{U}",
+     "type_line": "Creature — Merfolk Bard Wizard",
+     "oracle_text": "{T}, Tap two untapped creatures you control: This creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "1",
+     "toughness": "1",
+     "artist": "Marie Magny"
+    },
+    {
+     "name": "Brainstorm",
+     "mana_cost": "{U}",
+     "type_line": "Instant",
+     "oracle_text": "Draw three cards, then put two cards from your hand on top of your library in any order.",
+     "artist": "Marie Magny"
+    }
+   ]
+  },
+  "psos-55p": {
+   "id": "63008d1f-aaa6-4183-9952-5e86f5246408",
+   "name": "Jadzi, Steward of Fate // Oracle's Gift",
+   "layout": "prepare",
+   "set": "psos",
+   "set_type": "promo",
+   "set_name": "Secrets of Strixhaven Promos",
+   "collector_number": "55p",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "legendary"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "promo_types": [
+    "promopack",
+    "stamped"
+   ],
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Legendary Creature — Human Wizard // Sorcery",
+   "mana_cost": "{2}{U} // {X}{X}{U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Jadzi, Steward of Fate",
+     "mana_cost": "{2}{U}",
+     "type_line": "Legendary Creature — Human Wizard",
+     "oracle_text": "Jadzi enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\nWhen Jadzi enters, draw two cards, then discard two cards.",
+     "power": "2",
+     "toughness": "4",
+     "artist": "Martina Fačková"
+    },
+    {
+     "name": "Oracle's Gift",
+     "mana_cost": "{X}{X}{U}",
+     "type_line": "Sorcery",
+     "oracle_text": "Create X 0/0 green and blue Fractal creature tokens, then put X +1/+1 counters on each Fractal you control.",
+     "artist": "Martina Fačková"
+    }
+   ]
+  },
+  "psos-67p": {
+   "id": "0788c44e-82c7-44e6-8964-6b5008c5c357",
+   "name": "Skycoach Conductor // All Aboard",
+   "layout": "prepare",
+   "set": "psos",
+   "set_type": "promo",
+   "set_name": "Secrets of Strixhaven Promos",
+   "collector_number": "67p",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "promo_types": [
+    "promopack",
+    "stamped"
+   ],
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Flying",
+    "Vigilance",
+    "Prepared",
+    "Flash"
+   ],
+   "type_line": "Creature — Bird Pilot // Instant",
+   "mana_cost": "{2}{U} // {U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Skycoach Conductor",
+     "mana_cost": "{2}{U}",
+     "type_line": "Creature — Bird Pilot",
+     "oracle_text": "Flash\nFlying, vigilance\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "3",
+     "artist": "Christina Kraus"
+    },
+    {
+     "name": "All Aboard",
+     "mana_cost": "{U}",
+     "type_line": "Instant",
+     "oracle_text": "Exile target non-Pilot creature you control, then return that card to the battlefield under its owner's control.",
+     "artist": "Christina Kraus"
+    }
+   ]
+  },
+  "psos-80p": {
+   "id": "bc27b7a7-e9ad-4305-a6e1-863f028030eb",
+   "name": "Emeritus of Woe // Demonic Tutor",
+   "layout": "prepare",
+   "set": "psos",
+   "set_type": "promo",
+   "set_name": "Secrets of Strixhaven Promos",
+   "collector_number": "80p",
+   "released_at": "2026-04-24",
+   "rarity": "mythic",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "promo_types": [
+    "promopack",
+    "stamped"
+   ],
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Vampire Warlock // Sorcery",
+   "mana_cost": "{3}{B} // {1}{B}",
+   "colors": [
+    "B"
+   ],
+   "color_identity": [
+    "B"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Emeritus of Woe",
+     "mana_cost": "{3}{B}",
+     "type_line": "Creature — Vampire Warlock",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\nAt the beginning of your end step, if two or more creatures died this turn, this creature becomes prepared.",
+     "power": "5",
+     "toughness": "4",
+     "artist": "Jodie Muir"
+    },
+    {
+     "name": "Demonic Tutor",
+     "mana_cost": "{1}{B}",
+     "type_line": "Sorcery",
+     "oracle_text": "Search your library for a card, put that card into your hand, then shuffle.",
+     "artist": "Jodie Muir"
+    }
+   ]
+  },
+  "psos-85p": {
+   "id": "f423c4ef-a8b5-4bec-9f8d-e54d5bb72c2e",
+   "name": "Grave Researcher // Reanimate",
+   "layout": "prepare",
+   "set": "psos",
+   "set_type": "promo",
+   "set_name": "Secrets of Strixhaven Promos",
+   "collector_number": "85p",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "promo_types": [
+    "promopack",
+    "stamped"
+   ],
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Surveil",
+    "Prepared"
+   ],
+   "type_line": "Creature — Troll Warlock // Sorcery",
+   "mana_cost": "{2}{B} // {B}",
+   "colors": [
+    "B"
+   ],
+   "color_identity": [
+    "B"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Grave Researcher",
+     "mana_cost": "{2}{B}",
+     "type_line": "Creature — Troll Warlock",
+     "oracle_text": "At the beginning of your upkeep, surveil 1. Then if there are three or more creature cards in your graveyard, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "3",
+     "artist": "Izzy"
+    },
+    {
+     "name": "Reanimate",
+     "mana_cost": "{B}",
+     "type_line": "Sorcery",
+     "oracle_text": "Put target creature card from a graveyard onto the battlefield under your control. You lose life equal to that card's mana value.",
+     "artist": "Izzy"
+    }
+   ]
+  },
+  "psos-99p": {
+   "id": "b7056690-d83c-4bee-bd36-d2c6649259da",
+   "name": "Scheming Silvertongue // Sign in Blood",
+   "layout": "prepare",
+   "set": "psos",
+   "set_type": "promo",
+   "set_name": "Secrets of Strixhaven Promos",
+   "collector_number": "99p",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "promo_types": [
+    "promopack",
+    "stamped"
+   ],
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Flying",
+    "Lifelink",
+    "Prepared"
+   ],
+   "type_line": "Creature — Vampire Warlock // Sorcery",
+   "mana_cost": "{1}{B} // {B}{B}",
+   "colors": [
+    "B"
+   ],
+   "color_identity": [
+    "B"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Scheming Silvertongue",
+     "mana_cost": "{1}{B}",
+     "type_line": "Creature — Vampire Warlock",
+     "oracle_text": "Flying, lifelink\nAt the beginning of your second main phase, if you gained 2 or more life this turn, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "1",
+     "toughness": "3",
+     "artist": "Anna Steinbauer"
+    },
+    {
+     "name": "Sign in Blood",
+     "mana_cost": "{B}{B}",
+     "type_line": "Sorcery",
+     "oracle_text": "Target player draws two cards and loses 2 life.",
+     "artist": "Anna Steinbauer"
+    }
+   ]
+  },
+  "psos-113p": {
+   "id": "699c0207-901e-4fe9-b22d-1f6cb994a1f2",
+   "name": "Emeritus of Conflict // Lightning Bolt",
+   "layout": "prepare",
+   "set": "psos",
+   "set_type": "promo",
+   "set_name": "Secrets of Strixhaven Promos",
+   "collector_number": "113p",
+   "released_at": "2026-04-24",
+   "rarity": "mythic",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "promo_types": [
+    "promopack",
+    "stamped"
+   ],
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "First strike",
+    "Prepared"
+   ],
+   "type_line": "Creature — Human Wizard // Instant",
+   "mana_cost": "{1}{R} // {R}",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Emeritus of Conflict",
+     "mana_cost": "{1}{R}",
+     "type_line": "Creature — Human Wizard",
+     "oracle_text": "First strike\nWhenever you cast your third spell each turn, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "2",
+     "artist": "Alix Branwyn"
+    },
+    {
+     "name": "Lightning Bolt",
+     "mana_cost": "{R}",
+     "type_line": "Instant",
+     "oracle_text": "Lightning Bolt deals 3 damage to any target.",
+     "artist": "Alix Branwyn"
+    }
+   ]
+  },
+  "psos-122p": {
+   "id": "04f58460-79bd-4632-b921-9c8927976aca",
+   "name": "Maelstrom Artisan // Rocket Volley",
+   "layout": "prepare",
+   "set": "psos",
+   "set_type": "promo",
+   "set_name": "Secrets of Strixhaven Promos",
+   "collector_number": "122p",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "promo_types": [
+    "promopack",
+    "stamped"
+   ],
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Haste",
+    "Prepared"
+   ],
+   "type_line": "Creature — Minotaur Sorcerer // Sorcery",
+   "mana_cost": "{1}{R}{R} // {1}{R}",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Maelstrom Artisan",
+     "mana_cost": "{1}{R}{R}",
+     "type_line": "Creature — Minotaur Sorcerer",
+     "oracle_text": "Haste\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "2",
+     "artist": "Eelis Kyttanen"
+    },
+    {
+     "name": "Rocket Volley",
+     "mana_cost": "{1}{R}",
+     "type_line": "Sorcery",
+     "oracle_text": "Destroy target nonbasic land.",
+     "artist": "Eelis Kyttanen"
+    }
+   ]
+  },
+  "psos-145p": {
+   "id": "7bd4e61f-07d5-4123-b485-1caf7dae4643",
+   "name": "Emeritus of Abundance // Regrowth",
+   "layout": "prepare",
+   "set": "psos",
+   "set_type": "promo",
+   "set_name": "Secrets of Strixhaven Promos",
+   "collector_number": "145p",
+   "released_at": "2026-04-24",
+   "rarity": "mythic",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "promo_types": [
+    "promopack",
+    "stamped"
+   ],
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Vigilance",
+    "Prepared"
+   ],
+   "type_line": "Creature — Elf Druid // Sorcery",
+   "mana_cost": "{2}{G} // {1}{G}",
+   "colors": [
+    "G"
+   ],
+   "color_identity": [
+    "G"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Emeritus of Abundance",
+     "mana_cost": "{2}{G}",
+     "type_line": "Creature — Elf Druid",
+     "oracle_text": "Vigilance\nThis creature enters prepared.\nWhenever this creature attacks, if you control eight or more lands, this creature becomes prepared.",
+     "power": "3",
+     "toughness": "4",
+     "artist": "Justyna Dura"
+    },
+    {
+     "name": "Regrowth",
+     "mana_cost": "{1}{G}",
+     "type_line": "Sorcery",
+     "oracle_text": "Return target card from your graveyard to your hand.",
+     "artist": "Justyna Dura"
+    }
+   ]
+  },
+  "psos-166p": {
+   "id": "a96e337e-a914-4a86-89e4-a231b2868571",
+   "name": "Vastlands Scavenger // Bind to Life",
+   "layout": "prepare",
+   "set": "psos",
+   "set_type": "promo",
+   "set_name": "Secrets of Strixhaven Promos",
+   "collector_number": "166p",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "promo_types": [
+    "promopack",
+    "stamped"
+   ],
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared",
+    "Mill",
+    "Deathtouch"
+   ],
+   "type_line": "Creature — Bear Druid // Instant",
+   "mana_cost": "{1}{G}{G} // {4}{G}",
+   "colors": [
+    "G"
+   ],
+   "color_identity": [
+    "G"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Vastlands Scavenger",
+     "mana_cost": "{1}{G}{G}",
+     "type_line": "Creature — Bear Druid",
+     "oracle_text": "Deathtouch\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "4",
+     "toughness": "4",
+     "artist": "Bryan Sola"
+    },
+    {
+     "name": "Bind to Life",
+     "mana_cost": "{4}{G}",
+     "type_line": "Instant",
+     "oracle_text": "Mill seven cards. Then put a creature card from among them onto the battlefield.",
+     "artist": "Bryan Sola"
+    }
+   ]
+  },
+  "soc-13": {
+   "id": "09d1f048-f411-4677-a0dc-dbddd06fe694",
+   "name": "Eiganjo Dynastorian // Replenish",
+   "layout": "prepare",
+   "set": "soc",
+   "set_type": "commander",
+   "set_name": "Secrets of Strixhaven Commander",
+   "collector_number": "13",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Vigilance",
+    "Prepared"
+   ],
+   "type_line": "Creature — Fox Advisor // Sorcery",
+   "mana_cost": "{2}{W} // {3}{W}",
+   "colors": [
+    "W"
+   ],
+   "color_identity": [
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Eiganjo Dynastorian",
+     "mana_cost": "{2}{W}",
+     "type_line": "Creature — Fox Advisor",
+     "oracle_text": "Vigilance\nWhenever you attack with two or more creatures, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "3",
+     "artist": "Aldo Domínguez"
+    },
+    {
+     "name": "Replenish",
+     "mana_cost": "{3}{W}",
+     "type_line": "Sorcery",
+     "oracle_text": "Return all enchantment cards from your graveyard to the battlefield.",
+     "artist": "Aldo Domínguez"
+    }
+   ]
+  },
+  "soc-18": {
+   "id": "7bdabeba-0cfb-4953-b725-50a48164a044",
+   "name": "Dirgur Focusmage // Braingeyser",
+   "layout": "prepare",
+   "set": "soc",
+   "set_type": "commander",
+   "set_name": "Secrets of Strixhaven Commander",
+   "collector_number": "18",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Djinn Monk // Sorcery",
+   "mana_cost": "{2}{U} // {X}{U}{U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Dirgur Focusmage",
+     "mana_cost": "{2}{U}",
+     "type_line": "Creature — Djinn Monk",
+     "oracle_text": "Instant and sorcery spells you cast cost {1} less to cast.\nWhenever you cast an instant or sorcery spell with mana value 5 or greater from your hand, this creature becomes prepared.",
+     "power": "1",
+     "toughness": "4",
+     "artist": "Andrew Mar"
+    },
+    {
+     "name": "Braingeyser",
+     "mana_cost": "{X}{U}{U}",
+     "type_line": "Sorcery",
+     "oracle_text": "Target player draws X cards.",
+     "artist": "Andrew Mar"
+    }
+   ]
+  },
+  "soc-29": {
+   "id": "909a52bc-53f6-4654-9db7-e8f48333d765",
+   "name": "Stensian Sanguinist // Exsanguinate",
+   "layout": "prepare",
+   "set": "soc",
+   "set_type": "commander",
+   "set_name": "Secrets of Strixhaven Commander",
+   "collector_number": "29",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Vampire Cleric // Sorcery",
+   "mana_cost": "{1}{B} // {X}{B}{B}",
+   "colors": [
+    "B"
+   ],
+   "color_identity": [
+    "B"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Stensian Sanguinist",
+     "mana_cost": "{1}{B}",
+     "type_line": "Creature — Vampire Cleric",
+     "oracle_text": "Whenever you attack, target creature gains deathtouch until end of turn. Whenever that creature deals combat damage to a player this combat, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "2",
+     "artist": "Cristi Balanescu"
+    },
+    {
+     "name": "Exsanguinate",
+     "mana_cost": "{X}{B}{B}",
+     "type_line": "Sorcery",
+     "oracle_text": "Each opponent loses X life. You gain life equal to the life lost this way.",
+     "artist": "Cristi Balanescu"
+    }
+   ]
+  },
+  "soc-33": {
+   "id": "acca1fd4-6384-460e-905f-118f01aa76ed",
+   "name": "Naktamun Lorespinner // Wheel of Fortune",
+   "layout": "prepare",
+   "set": "soc",
+   "set_type": "commander",
+   "set_name": "Secrets of Strixhaven Commander",
+   "collector_number": "33",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Jackal Wizard // Sorcery",
+   "mana_cost": "{2}{R} // {2}{R}",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Naktamun Lorespinner",
+     "mana_cost": "{2}{R}",
+     "type_line": "Creature — Jackal Wizard",
+     "oracle_text": "At the beginning of your upkeep, if a player has one or fewer cards in hand, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "3",
+     "artist": "Ekaterina Burmak"
+    },
+    {
+     "name": "Wheel of Fortune",
+     "mana_cost": "{2}{R}",
+     "type_line": "Sorcery",
+     "oracle_text": "Each player discards their hand, then draws seven cards.",
+     "artist": "Ekaterina Burmak"
+    }
+   ]
+  },
+  "soc-44": {
+   "id": "fc962e45-ab71-47e2-b736-644901ffe7d6",
+   "name": "Yavimaya Bloomsage // Channel",
+   "layout": "prepare",
+   "set": "soc",
+   "set_type": "commander",
+   "set_name": "Secrets of Strixhaven Commander",
+   "collector_number": "44",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Dryad Druid // Sorcery",
+   "mana_cost": "{2}{G} // {G}{G}",
+   "colors": [
+    "G"
+   ],
+   "color_identity": [
+    "G"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Yavimaya Bloomsage",
+     "mana_cost": "{2}{G}",
+     "type_line": "Creature — Dryad Druid",
+     "oracle_text": "At the beginning of your end step, put a +1/+1 counter on target creature you control. Then if that creature has power 7 or greater, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "2",
+     "artist": "Justyna Dura"
+    },
+    {
+     "name": "Channel",
+     "mana_cost": "{G}{G}",
+     "type_line": "Sorcery",
+     "oracle_text": "Until end of turn, any time you could activate a mana ability, you may pay 1 life. If you do, add {C}.",
+     "artist": "Justyna Dura"
+    }
+   ]
+  },
+  "soc-45": {
+   "id": "c35a1c6f-1656-4619-9ab8-40044c857a7f",
+   "name": "Defacing Duskmage // Vandal's Edit",
+   "layout": "prepare",
+   "set": "soc",
+   "set_type": "commander",
+   "set_name": "Secrets of Strixhaven Commander",
+   "collector_number": "45",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Prepared",
+    "Deathtouch"
+   ],
+   "type_line": "Creature — Dog Warlock // Instant",
+   "mana_cost": "{W}{B} // {1}{W}{B}",
+   "colors": [
+    "B",
+    "W"
+   ],
+   "color_identity": [
+    "B",
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Defacing Duskmage",
+     "mana_cost": "{W}{B}",
+     "type_line": "Creature — Dog Warlock",
+     "oracle_text": "Deathtouch\nWhenever an opponent draws their second card each turn, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "2",
+     "artist": "Daneen Wilkerson"
+    },
+    {
+     "name": "Vandal's Edit",
+     "mana_cost": "{1}{W}{B}",
+     "type_line": "Instant",
+     "oracle_text": "Draw two cards. Each player loses 2 life.",
+     "artist": "Daneen Wilkerson"
+    }
+   ]
+  },
+  "soc-46": {
+   "id": "508e1dd7-edbd-4b76-90bc-ff58c55b58a3",
+   "name": "Eccentric Pestfinder // Turn Stones",
+   "layout": "prepare",
+   "set": "soc",
+   "set_type": "commander",
+   "set_name": "Secrets of Strixhaven Commander",
+   "collector_number": "46",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Trample",
+    "Prepared"
+   ],
+   "type_line": "Creature — Troll Druid // Sorcery",
+   "mana_cost": "{2}{B}{G} // {B}{G}",
+   "colors": [
+    "B",
+    "G"
+   ],
+   "color_identity": [
+    "B",
+    "G"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Eccentric Pestfinder",
+     "mana_cost": "{2}{B}{G}",
+     "type_line": "Creature — Troll Druid",
+     "oracle_text": "Trample\nAt the beginning of each end step, if you gained life this turn, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "5",
+     "toughness": "5",
+     "artist": "Nereida"
+    },
+    {
+     "name": "Turn Stones",
+     "mana_cost": "{B}{G}",
+     "type_line": "Sorcery",
+     "oracle_text": "For each opponent, you create a 1/1 black and green Pest creature token with \"When this token dies, you gain 1 life.\"",
+     "artist": "Nereida"
+    }
+   ]
+  },
+  "soc-48": {
+   "id": "7fddd17b-8282-408e-a319-7f0bb437c52e",
+   "name": "Inspired Skypainter // Maestro's Gift",
+   "layout": "prepare",
+   "set": "soc",
+   "set_type": "commander",
+   "set_name": "Secrets of Strixhaven Commander",
+   "collector_number": "48",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Flying",
+    "Prepared"
+   ],
+   "type_line": "Creature — Lizard Wizard // Sorcery",
+   "mana_cost": "{U}{R} // {3}{U}{R}",
+   "colors": [
+    "R",
+    "U"
+   ],
+   "color_identity": [
+    "R",
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Inspired Skypainter",
+     "mana_cost": "{U}{R}",
+     "type_line": "Creature — Lizard Wizard",
+     "oracle_text": "Flying\nWhen this creature enters and whenever one or more creature tokens you control deal combat damage to a player, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "2",
+     "artist": "April Prime"
+    },
+    {
+     "name": "Maestro's Gift",
+     "mana_cost": "{3}{U}{R}",
+     "type_line": "Sorcery",
+     "oracle_text": "Create a token that's a copy of target creature you control. That token gains haste until end of turn.",
+     "artist": "April Prime"
+    }
+   ]
+  },
+  "soc-49": {
+   "id": "cb535433-f062-4c35-977e-2f896251b1d8",
+   "name": "Lorehold Archivist // Restore Relic",
+   "layout": "prepare",
+   "set": "soc",
+   "set_type": "commander",
+   "set_name": "Secrets of Strixhaven Commander",
+   "collector_number": "49",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "First strike",
+    "Prepared"
+   ],
+   "type_line": "Creature — Dwarf Artificer // Sorcery",
+   "mana_cost": "{1}{R}{W} // {2}{R}{W}",
+   "colors": [
+    "R",
+    "W"
+   ],
+   "color_identity": [
+    "R",
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Lorehold Archivist",
+     "mana_cost": "{1}{R}{W}",
+     "type_line": "Creature — Dwarf Artificer",
+     "oracle_text": "First strike\nAt the beginning of your upkeep, if there are three or more artifact and/or creature cards in your graveyard, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "2",
+     "artist": "Matheus Graef"
+    },
+    {
+     "name": "Restore Relic",
+     "mana_cost": "{2}{R}{W}",
+     "type_line": "Sorcery",
+     "oracle_text": "Exile target artifact or creature card from your graveyard. Create a token that's a copy of it.",
+     "artist": "Matheus Graef"
+    }
+   ]
+  },
+  "soc-50": {
+   "id": "159c2891-c1e2-4ec3-8c20-d6b97315dd1c",
+   "name": "Striding Shotcaller // Run the Play",
+   "layout": "prepare",
+   "set": "soc",
+   "set_type": "commander",
+   "set_name": "Secrets of Strixhaven Commander",
+   "collector_number": "50",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Reach",
+    "Prepared"
+   ],
+   "type_line": "Creature — Troll Druid // Sorcery",
+   "mana_cost": "{G}{U} // {X}{G}{U}",
+   "colors": [
+    "G",
+    "U"
+   ],
+   "color_identity": [
+    "G",
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Striding Shotcaller",
+     "mana_cost": "{G}{U}",
+     "type_line": "Creature — Troll Druid",
+     "oracle_text": "Reach\nWhenever one or more creatures you control deal combat damage to a player, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "0",
+     "toughness": "4",
+     "artist": "Brian Valeza"
+    },
+    {
+     "name": "Run the Play",
+     "mana_cost": "{X}{G}{U}",
+     "type_line": "Sorcery",
+     "oracle_text": "Put a +1/+1 counter on each of up to X target creatures. Those creatures gain flying until end of turn. Draw a card.",
+     "artist": "Brian Valeza"
+    }
+   ]
+  },
+  "soc-63": {
+   "id": "f6a504a6-2501-4384-9db9-da6abe1cf81d",
+   "name": "Eiganjo Dynastorian // Replenish",
+   "layout": "prepare",
+   "set": "soc",
+   "set_type": "commander",
+   "set_name": "Secrets of Strixhaven Commander",
+   "collector_number": "63",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Vigilance",
+    "Prepared"
+   ],
+   "type_line": "Creature — Fox Advisor // Sorcery",
+   "mana_cost": "{2}{W} // {3}{W}",
+   "colors": [
+    "W"
+   ],
+   "color_identity": [
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Eiganjo Dynastorian",
+     "mana_cost": "{2}{W}",
+     "type_line": "Creature — Fox Advisor",
+     "oracle_text": "Vigilance\nWhenever you attack with two or more creatures, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "3",
+     "artist": "Aldo Domínguez"
+    },
+    {
+     "name": "Replenish",
+     "mana_cost": "{3}{W}",
+     "type_line": "Sorcery",
+     "oracle_text": "Return all enchantment cards from your graveyard to the battlefield.",
+     "artist": "Aldo Domínguez"
+    }
+   ]
+  },
+  "soc-68": {
+   "id": "baae3f8f-f282-40db-a1e0-cf6efc70bff0",
+   "name": "Dirgur Focusmage // Braingeyser",
+   "layout": "prepare",
+   "set": "soc",
+   "set_type": "commander",
+   "set_name": "Secrets of Strixhaven Commander",
+   "collector_number": "68",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Djinn Monk // Sorcery",
+   "mana_cost": "{2}{U} // {X}{U}{U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Dirgur Focusmage",
+     "mana_cost": "{2}{U}",
+     "type_line": "Creature — Djinn Monk",
+     "oracle_text": "Instant and sorcery spells you cast cost {1} less to cast.\nWhenever you cast an instant or sorcery spell with mana value 5 or greater from your hand, this creature becomes prepared.",
+     "power": "1",
+     "toughness": "4",
+     "artist": "Andrew Mar"
+    },
+    {
+     "name": "Braingeyser",
+     "mana_cost": "{X}{U}{U}",
+     "type_line": "Sorcery",
+     "oracle_text": "Target player draws X cards.",
+     "artist": "Andrew Mar"
+    }
+   ]
+  },
+  "soc-78": {
+   "id": "66d88104-c69d-4349-a4ae-4a3d855a3536",
+   "name": "Stensian Sanguinist // Exsanguinate",
+   "layout": "prepare",
+   "set": "soc",
+   "set_type": "commander",
+   "set_name": "Secrets of Strixhaven Commander",
+   "collector_number": "78",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Vampire Cleric // Sorcery",
+   "mana_cost": "{1}{B} // {X}{B}{B}",
+   "colors": [
+    "B"
+   ],
+   "color_identity": [
+    "B"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Stensian Sanguinist",
+     "mana_cost": "{1}{B}",
+     "type_line": "Creature — Vampire Cleric",
+     "oracle_text": "Whenever you attack, target creature gains deathtouch until end of turn. Whenever that creature deals combat damage to a player this combat, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "2",
+     "artist": "Cristi Balanescu"
+    },
+    {
+     "name": "Exsanguinate",
+     "mana_cost": "{X}{B}{B}",
+     "type_line": "Sorcery",
+     "oracle_text": "Each opponent loses X life. You gain life equal to the life lost this way.",
+     "artist": "Cristi Balanescu"
+    }
+   ]
+  },
+  "soc-81": {
+   "id": "f562fbca-9446-4074-bf00-faf581a18c72",
+   "name": "Naktamun Lorespinner // Wheel of Fortune",
+   "layout": "prepare",
+   "set": "soc",
+   "set_type": "commander",
+   "set_name": "Secrets of Strixhaven Commander",
+   "collector_number": "81",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Jackal Wizard // Sorcery",
+   "mana_cost": "{2}{R} // {2}{R}",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Naktamun Lorespinner",
+     "mana_cost": "{2}{R}",
+     "type_line": "Creature — Jackal Wizard",
+     "oracle_text": "At the beginning of your upkeep, if a player has one or fewer cards in hand, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "3",
+     "artist": "Ekaterina Burmak"
+    },
+    {
+     "name": "Wheel of Fortune",
+     "mana_cost": "{2}{R}",
+     "type_line": "Sorcery",
+     "oracle_text": "Each player discards their hand, then draws seven cards.",
+     "artist": "Ekaterina Burmak"
+    }
+   ]
+  },
+  "soc-92": {
+   "id": "c243c2c4-f227-42a8-8b78-5f4b761106c2",
+   "name": "Yavimaya Bloomsage // Channel",
+   "layout": "prepare",
+   "set": "soc",
+   "set_type": "commander",
+   "set_name": "Secrets of Strixhaven Commander",
+   "collector_number": "92",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Dryad Druid // Sorcery",
+   "mana_cost": "{2}{G} // {G}{G}",
+   "colors": [
+    "G"
+   ],
+   "color_identity": [
+    "G"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Yavimaya Bloomsage",
+     "mana_cost": "{2}{G}",
+     "type_line": "Creature — Dryad Druid",
+     "oracle_text": "At the beginning of your end step, put a +1/+1 counter on target creature you control. Then if that creature has power 7 or greater, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "2",
+     "artist": "Justyna Dura"
+    },
+    {
+     "name": "Channel",
+     "mana_cost": "{G}{G}",
+     "type_line": "Sorcery",
+     "oracle_text": "Until end of turn, any time you could activate a mana ability, you may pay 1 life. If you do, add {C}.",
+     "artist": "Justyna Dura"
+    }
+   ]
+  },
+  "soc-93": {
+   "id": "91493530-bc0a-4ed1-8a4a-9a732fcb3752",
+   "name": "Defacing Duskmage // Vandal's Edit",
+   "layout": "prepare",
+   "set": "soc",
+   "set_type": "commander",
+   "set_name": "Secrets of Strixhaven Commander",
+   "collector_number": "93",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Prepared",
+    "Deathtouch"
+   ],
+   "type_line": "Creature — Dog Warlock // Instant",
+   "mana_cost": "{W}{B} // {1}{W}{B}",
+   "colors": [
+    "B",
+    "W"
+   ],
+   "color_identity": [
+    "B",
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Defacing Duskmage",
+     "mana_cost": "{W}{B}",
+     "type_line": "Creature — Dog Warlock",
+     "oracle_text": "Deathtouch\nWhenever an opponent draws their second card each turn, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "2",
+     "artist": "Daneen Wilkerson"
+    },
+    {
+     "name": "Vandal's Edit",
+     "mana_cost": "{1}{W}{B}",
+     "type_line": "Instant",
+     "oracle_text": "Draw two cards. Each player loses 2 life.",
+     "artist": "Daneen Wilkerson"
+    }
+   ]
+  },
+  "soc-94": {
+   "id": "d9e6b777-e0f6-47e1-808e-81850039d891",
+   "name": "Eccentric Pestfinder // Turn Stones",
+   "layout": "prepare",
+   "set": "soc",
+   "set_type": "commander",
+   "set_name": "Secrets of Strixhaven Commander",
+   "collector_number": "94",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Trample",
+    "Prepared"
+   ],
+   "type_line": "Creature — Troll Druid // Sorcery",
+   "mana_cost": "{2}{B}{G} // {B}{G}",
+   "colors": [
+    "B",
+    "G"
+   ],
+   "color_identity": [
+    "B",
+    "G"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Eccentric Pestfinder",
+     "mana_cost": "{2}{B}{G}",
+     "type_line": "Creature — Troll Druid",
+     "oracle_text": "Trample\nAt the beginning of each end step, if you gained life this turn, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "5",
+     "toughness": "5",
+     "artist": "Nereida"
+    },
+    {
+     "name": "Turn Stones",
+     "mana_cost": "{B}{G}",
+     "type_line": "Sorcery",
+     "oracle_text": "For each opponent, you create a 1/1 black and green Pest creature token with \"When this token dies, you gain 1 life.\"",
+     "artist": "Nereida"
+    }
+   ]
+  },
+  "soc-96": {
+   "id": "29d2186c-c5fb-4439-95c6-ffe46b6dded9",
+   "name": "Inspired Skypainter // Maestro's Gift",
+   "layout": "prepare",
+   "set": "soc",
+   "set_type": "commander",
+   "set_name": "Secrets of Strixhaven Commander",
+   "collector_number": "96",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Flying",
+    "Prepared"
+   ],
+   "type_line": "Creature — Lizard Wizard // Sorcery",
+   "mana_cost": "{U}{R} // {3}{U}{R}",
+   "colors": [
+    "R",
+    "U"
+   ],
+   "color_identity": [
+    "R",
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Inspired Skypainter",
+     "mana_cost": "{U}{R}",
+     "type_line": "Creature — Lizard Wizard",
+     "oracle_text": "Flying\nWhen this creature enters and whenever one or more creature tokens you control deal combat damage to a player, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "2",
+     "artist": "April Prime"
+    },
+    {
+     "name": "Maestro's Gift",
+     "mana_cost": "{3}{U}{R}",
+     "type_line": "Sorcery",
+     "oracle_text": "Create a token that's a copy of target creature you control. That token gains haste until end of turn.",
+     "artist": "April Prime"
+    }
+   ]
+  },
+  "soc-97": {
+   "id": "e6498b64-7178-43e1-b317-0ad03f894db3",
+   "name": "Lorehold Archivist // Restore Relic",
+   "layout": "prepare",
+   "set": "soc",
+   "set_type": "commander",
+   "set_name": "Secrets of Strixhaven Commander",
+   "collector_number": "97",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "First strike",
+    "Prepared"
+   ],
+   "type_line": "Creature — Dwarf Artificer // Sorcery",
+   "mana_cost": "{1}{R}{W} // {2}{R}{W}",
+   "colors": [
+    "R",
+    "W"
+   ],
+   "color_identity": [
+    "R",
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Lorehold Archivist",
+     "mana_cost": "{1}{R}{W}",
+     "type_line": "Creature — Dwarf Artificer",
+     "oracle_text": "First strike\nAt the beginning of your upkeep, if there are three or more artifact and/or creature cards in your graveyard, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "2",
+     "artist": "Matheus Graef"
+    },
+    {
+     "name": "Restore Relic",
+     "mana_cost": "{2}{R}{W}",
+     "type_line": "Sorcery",
+     "oracle_text": "Exile target artifact or creature card from your graveyard. Create a token that's a copy of it.",
+     "artist": "Matheus Graef"
+    }
+   ]
+  },
+  "soc-98": {
+   "id": "34303632-6062-4f6e-aeb4-bea74b7da0d7",
+   "name": "Striding Shotcaller // Run the Play",
+   "layout": "prepare",
+   "set": "soc",
+   "set_type": "commander",
+   "set_name": "Secrets of Strixhaven Commander",
+   "collector_number": "98",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Reach",
+    "Prepared"
+   ],
+   "type_line": "Creature — Troll Druid // Sorcery",
+   "mana_cost": "{G}{U} // {X}{G}{U}",
+   "colors": [
+    "G",
+    "U"
+   ],
+   "color_identity": [
+    "G",
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Striding Shotcaller",
+     "mana_cost": "{G}{U}",
+     "type_line": "Creature — Troll Druid",
+     "oracle_text": "Reach\nWhenever one or more creatures you control deal combat damage to a player, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "0",
+     "toughness": "4",
+     "artist": "Brian Valeza"
+    },
+    {
+     "name": "Run the Play",
+     "mana_cost": "{X}{G}{U}",
+     "type_line": "Sorcery",
+     "oracle_text": "Put a +1/+1 counter on each of up to X target creatures. Those creatures gain flying until end of turn. Draw a card.",
+     "artist": "Brian Valeza"
+    }
+   ]
+  },
+  "sos-12": {
+   "id": "2970683e-e69c-42cb-a067-34abd56fb42b",
+   "name": "Elite Interceptor // Rejoinder",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "12",
+   "released_at": "2026-04-24",
+   "rarity": "common",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Human Wizard // Sorcery",
+   "mana_cost": "{W} // {1}{W}",
+   "colors": [
+    "W"
+   ],
+   "color_identity": [
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Elite Interceptor",
+     "mana_cost": "{W}",
+     "type_line": "Creature — Human Wizard",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "1",
+     "toughness": "2",
+     "artist": "Lindsey Look"
+    },
+    {
+     "name": "Rejoinder",
+     "mana_cost": "{1}{W}",
+     "type_line": "Sorcery",
+     "oracle_text": "You may tap or untap target creature.\nDraw a card.",
+     "artist": "Lindsey Look"
+    }
+   ]
+  },
+  "sos-13": {
+   "id": "9869a753-5e41-4098-ab41-e75b4396ec50",
+   "name": "Emeritus of Truce // Swords to Plowshares",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "13",
+   "released_at": "2026-04-24",
+   "rarity": "mythic",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Cat Cleric // Instant",
+   "mana_cost": "{1}{W}{W} // {W}",
+   "colors": [
+    "W"
+   ],
+   "color_identity": [
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Emeritus of Truce",
+     "mana_cost": "{1}{W}{W}",
+     "type_line": "Creature — Cat Cleric",
+     "oracle_text": "When this creature enters, target player creates a 1/1 white and black Inkling creature token with flying. Then if an opponent controls more creatures than you, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "3",
+     "artist": "Aleksi Briclot"
+    },
+    {
+     "name": "Swords to Plowshares",
+     "mana_cost": "{W}",
+     "type_line": "Instant",
+     "oracle_text": "Exile target creature. Its controller gains life equal to its power.",
+     "artist": "Aleksi Briclot"
+    }
+   ]
+  },
+  "sos-19": {
+   "id": "79a70863-860f-4a7b-9cb2-d3546b689d44",
+   "name": "Honorbound Page // Forum's Favor",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "19",
+   "released_at": "2026-04-24",
+   "rarity": "common",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "First strike",
+    "Prepared"
+   ],
+   "type_line": "Creature — Cat Cleric // Sorcery",
+   "mana_cost": "{3}{W} // {W}",
+   "colors": [
+    "W"
+   ],
+   "color_identity": [
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Honorbound Page",
+     "mana_cost": "{3}{W}",
+     "type_line": "Creature — Cat Cleric",
+     "oracle_text": "First strike\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "3",
+     "artist": "Paolo Parente"
+    },
+    {
+     "name": "Forum's Favor",
+     "mana_cost": "{W}",
+     "type_line": "Sorcery",
+     "oracle_text": "Target creature gets +1/+0 and gains flying until end of turn.",
+     "artist": "Paolo Parente"
+    }
+   ]
+  },
+  "sos-23": {
+   "id": "1ebaafe0-3a9a-424c-8698-d26e7be45343",
+   "name": "Joined Researchers // Secret Rendezvous",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "23",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "First strike",
+    "Prepared"
+   ],
+   "type_line": "Creature — Human Cleric Wizard // Sorcery",
+   "mana_cost": "{1}{W} // {1}{W}{W}",
+   "colors": [
+    "W"
+   ],
+   "color_identity": [
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Joined Researchers",
+     "mana_cost": "{1}{W}",
+     "type_line": "Creature — Human Cleric Wizard",
+     "oracle_text": "First strike\nAt the beginning of each end step, if an opponent has more cards in hand than you, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "2",
+     "artist": "Ryan Pancoast"
+    },
+    {
+     "name": "Secret Rendezvous",
+     "mana_cost": "{1}{W}{W}",
+     "type_line": "Sorcery",
+     "oracle_text": "You and target opponent each draw three cards.",
+     "artist": "Ryan Pancoast"
+    }
+   ]
+  },
+  "sos-27": {
+   "id": "62a47835-5719-48c4-a740-a0c5f00dce11",
+   "name": "Quill-Blade Laureate // Twofold Intent",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "27",
+   "released_at": "2026-04-24",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared",
+    "Double strike"
+   ],
+   "type_line": "Creature — Human Cleric // Sorcery",
+   "mana_cost": "{1}{W} // {1}{W}",
+   "colors": [
+    "W"
+   ],
+   "color_identity": [
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Quill-Blade Laureate",
+     "mana_cost": "{1}{W}",
+     "type_line": "Creature — Human Cleric",
+     "oracle_text": "Double strike\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "1",
+     "toughness": "1",
+     "artist": "Elizabeth Peiró"
+    },
+    {
+     "name": "Twofold Intent",
+     "mana_cost": "{1}{W}",
+     "type_line": "Sorcery",
+     "oracle_text": "Target creature gets +1/+0 and gains double strike until end of turn.",
+     "artist": "Elizabeth Peiró"
+    }
+   ]
+  },
+  "sos-33": {
+   "id": "c0b85569-2cb3-4b64-b0fe-418195c4dab0",
+   "name": "Spiritcall Enthusiast // Scrollboost",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "33",
+   "released_at": "2026-04-24",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Cat Cleric // Sorcery",
+   "mana_cost": "{2}{W} // {1}{W}",
+   "colors": [
+    "W"
+   ],
+   "color_identity": [
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Spiritcall Enthusiast",
+     "mana_cost": "{2}{W}",
+     "type_line": "Creature — Cat Cleric",
+     "oracle_text": "Whenever one or more tokens you control enter, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "3",
+     "artist": "Oriana Menendez"
+    },
+    {
+     "name": "Scrollboost",
+     "mana_cost": "{1}{W}",
+     "type_line": "Sorcery",
+     "oracle_text": "One or two target creatures each get +2/+2 until end of turn.",
+     "artist": "Oriana Menendez"
+    }
+   ]
+  },
+  "sos-40": {
+   "id": "fac8ac39-ecb4-4142-bf37-131c65660a9b",
+   "name": "Campus Composer // Aqueous Aria",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "40",
+   "released_at": "2026-04-24",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared",
+    "Ward"
+   ],
+   "type_line": "Creature — Merfolk Bard // Sorcery",
+   "mana_cost": "{3}{U} // {4}{U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Campus Composer",
+     "mana_cost": "{3}{U}",
+     "type_line": "Creature — Merfolk Bard",
+     "oracle_text": "Ward {2}\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "4",
+     "artist": "Madeline Boni"
+    },
+    {
+     "name": "Aqueous Aria",
+     "mana_cost": "{4}{U}",
+     "type_line": "Sorcery",
+     "oracle_text": "Create a 3/3 blue and red Elemental creature token with flying.",
+     "artist": "Madeline Boni"
+    }
+   ]
+  },
+  "sos-45": {
+   "id": "75961d36-acf6-425f-9698-0bf52af74f31",
+   "name": "Emeritus of Ideation // Ancestral Recall",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "45",
+   "released_at": "2026-04-24",
+   "rarity": "mythic",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Flying",
+    "Prepared",
+    "Ward"
+   ],
+   "type_line": "Creature — Human Wizard // Instant",
+   "mana_cost": "{3}{U}{U} // {U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Emeritus of Ideation",
+     "mana_cost": "{3}{U}{U}",
+     "type_line": "Creature — Human Wizard",
+     "oracle_text": "Flying, ward {2}\nThis creature enters prepared.\nWhenever this creature attacks, you may exile eight cards from your graveyard. If you do, this creature becomes prepared.",
+     "power": "5",
+     "toughness": "5",
+     "artist": "Evyn Fong"
+    },
+    {
+     "name": "Ancestral Recall",
+     "mana_cost": "{U}",
+     "type_line": "Instant",
+     "oracle_text": "Target player draws three cards.",
+     "artist": "Evyn Fong"
+    }
+   ]
+  },
+  "sos-46": {
+   "id": "72654b84-9902-41db-92ab-a3499c31221c",
+   "name": "Encouraging Aviator // Jump",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "46",
+   "released_at": "2026-04-24",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Flying",
+    "Prepared"
+   ],
+   "type_line": "Creature — Bird Wizard // Instant",
+   "mana_cost": "{2}{U} // {U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Encouraging Aviator",
+     "mana_cost": "{2}{U}",
+     "type_line": "Creature — Bird Wizard",
+     "oracle_text": "Flying\nWhenever this creature attacks, it becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "3",
+     "artist": "Oriana Menendez"
+    },
+    {
+     "name": "Jump",
+     "mana_cost": "{U}",
+     "type_line": "Instant",
+     "oracle_text": "Target creature gains flying until end of turn.",
+     "artist": "Oriana Menendez"
+    }
+   ]
+  },
+  "sos-52": {
+   "id": "617208ff-dd9b-44fd-a740-d3188081e5cc",
+   "name": "Harmonized Trio // Brainstorm",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "52",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Merfolk Bard Wizard // Instant",
+   "mana_cost": "{U} // {U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Harmonized Trio",
+     "mana_cost": "{U}",
+     "type_line": "Creature — Merfolk Bard Wizard",
+     "oracle_text": "{T}, Tap two untapped creatures you control: This creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "1",
+     "toughness": "1",
+     "artist": "Marie Magny"
+    },
+    {
+     "name": "Brainstorm",
+     "mana_cost": "{U}",
+     "type_line": "Instant",
+     "oracle_text": "Draw three cards, then put two cards from your hand on top of your library in any order.",
+     "artist": "Marie Magny"
+    }
+   ]
+  },
+  "sos-55": {
+   "id": "a95b6baf-01e6-49c3-9a26-394b127d53c3",
+   "name": "Jadzi, Steward of Fate // Oracle's Gift",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "55",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "legendary"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Legendary Creature — Human Wizard // Sorcery",
+   "mana_cost": "{2}{U} // {X}{X}{U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Jadzi, Steward of Fate",
+     "mana_cost": "{2}{U}",
+     "type_line": "Legendary Creature — Human Wizard",
+     "oracle_text": "Jadzi enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\nWhen Jadzi enters, draw two cards, then discard two cards.",
+     "power": "2",
+     "toughness": "4",
+     "artist": "Martina Fačková"
+    },
+    {
+     "name": "Oracle's Gift",
+     "mana_cost": "{X}{X}{U}",
+     "type_line": "Sorcery",
+     "oracle_text": "Create X 0/0 green and blue Fractal creature tokens, then put X +1/+1 counters on each Fractal you control.",
+     "artist": "Martina Fačková"
+    }
+   ]
+  },
+  "sos-56": {
+   "id": "c0bd30c4-3cdf-4eda-8be5-0fb5e5ddddbf",
+   "name": "Landscape Painter // Vibrant Idea",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "56",
+   "released_at": "2026-04-24",
+   "rarity": "common",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Merfolk Wizard // Sorcery",
+   "mana_cost": "{1}{U} // {4}{U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Landscape Painter",
+     "mana_cost": "{1}{U}",
+     "type_line": "Creature — Merfolk Wizard",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "1",
+     "artist": "Vincent Christiaens"
+    },
+    {
+     "name": "Vibrant Idea",
+     "mana_cost": "{4}{U}",
+     "type_line": "Sorcery",
+     "oracle_text": "Draw two cards.",
+     "artist": "Vincent Christiaens"
+    }
+   ]
+  },
+  "sos-67": {
+   "id": "4ecbca71-9a1d-44c5-b709-d6f565941d5e",
+   "name": "Skycoach Conductor // All Aboard",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "67",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Flying",
+    "Vigilance",
+    "Prepared",
+    "Flash"
+   ],
+   "type_line": "Creature — Bird Pilot // Instant",
+   "mana_cost": "{2}{U} // {U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Skycoach Conductor",
+     "mana_cost": "{2}{U}",
+     "type_line": "Creature — Bird Pilot",
+     "oracle_text": "Flash\nFlying, vigilance\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "3",
+     "artist": "Christina Kraus"
+    },
+    {
+     "name": "All Aboard",
+     "mana_cost": "{U}",
+     "type_line": "Instant",
+     "oracle_text": "Exile target non-Pilot creature you control, then return that card to the battlefield under its owner's control.",
+     "artist": "Christina Kraus"
+    }
+   ]
+  },
+  "sos-68": {
+   "id": "cc44eaa4-59a4-419e-b1d1-d92f354ff588",
+   "name": "Spellbook Seeker // Careful Study",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "68",
+   "released_at": "2026-04-24",
+   "rarity": "common",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Flying",
+    "Prepared"
+   ],
+   "type_line": "Creature — Bird Wizard // Sorcery",
+   "mana_cost": "{3}{U} // {U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Spellbook Seeker",
+     "mana_cost": "{3}{U}",
+     "type_line": "Creature — Bird Wizard",
+     "oracle_text": "Flying\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "3",
+     "artist": "Scott Murphy"
+    },
+    {
+     "name": "Careful Study",
+     "mana_cost": "{U}",
+     "type_line": "Sorcery",
+     "oracle_text": "Draw two cards, then discard two cards.",
+     "artist": "Scott Murphy"
+    }
+   ]
+  },
+  "sos-72": {
+   "id": "d40cc7da-c731-418e-8547-7033d1939450",
+   "name": "Adventurous Eater // Have a Bite",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "72",
+   "released_at": "2026-04-24",
+   "rarity": "common",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Human Warlock // Sorcery",
+   "mana_cost": "{2}{B} // {B}",
+   "colors": [
+    "B"
+   ],
+   "color_identity": [
+    "B"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Adventurous Eater",
+     "mana_cost": "{2}{B}",
+     "type_line": "Creature — Human Warlock",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "2",
+     "artist": "Josu Hernaiz"
+    },
+    {
+     "name": "Have a Bite",
+     "mana_cost": "{B}",
+     "type_line": "Sorcery",
+     "oracle_text": "Put a +1/+1 counter on target creature. You gain 1 life.",
+     "artist": "Josu Hernaiz"
+    }
+   ]
+  },
+  "sos-76": {
+   "id": "3c34660c-25e3-4ff5-9b2b-5554ded2bcc3",
+   "name": "Cheerful Osteomancer // Raise Dead",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "76",
+   "released_at": "2026-04-24",
+   "rarity": "common",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Orc Warlock // Sorcery",
+   "mana_cost": "{3}{B} // {B}",
+   "colors": [
+    "B"
+   ],
+   "color_identity": [
+    "B"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Cheerful Osteomancer",
+     "mana_cost": "{3}{B}",
+     "type_line": "Creature — Orc Warlock",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "4",
+     "toughness": "2",
+     "artist": "Diego Gisbert"
+    },
+    {
+     "name": "Raise Dead",
+     "mana_cost": "{B}",
+     "type_line": "Sorcery",
+     "oracle_text": "Return target creature card from your graveyard to your hand.",
+     "artist": "Diego Gisbert"
+    }
+   ]
+  },
+  "sos-80": {
+   "id": "7eb9e83d-515d-4911-a06b-9982200277b2",
+   "name": "Emeritus of Woe // Demonic Tutor",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "80",
+   "released_at": "2026-04-24",
+   "rarity": "mythic",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Vampire Warlock // Sorcery",
+   "mana_cost": "{3}{B} // {1}{B}",
+   "colors": [
+    "B"
+   ],
+   "color_identity": [
+    "B"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Emeritus of Woe",
+     "mana_cost": "{3}{B}",
+     "type_line": "Creature — Vampire Warlock",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\nAt the beginning of your end step, if two or more creatures died this turn, this creature becomes prepared.",
+     "power": "5",
+     "toughness": "4",
+     "artist": "Jodie Muir"
+    },
+    {
+     "name": "Demonic Tutor",
+     "mana_cost": "{1}{B}",
+     "type_line": "Sorcery",
+     "oracle_text": "Search your library for a card, put that card into your hand, then shuffle.",
+     "artist": "Jodie Muir"
+    }
+   ]
+  },
+  "sos-85": {
+   "id": "8b1e10e8-ea14-4761-910b-4072e2a18456",
+   "name": "Grave Researcher // Reanimate",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "85",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Surveil",
+    "Prepared"
+   ],
+   "type_line": "Creature — Troll Warlock // Sorcery",
+   "mana_cost": "{2}{B} // {B}",
+   "colors": [
+    "B"
+   ],
+   "color_identity": [
+    "B"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Grave Researcher",
+     "mana_cost": "{2}{B}",
+     "type_line": "Creature — Troll Warlock",
+     "oracle_text": "At the beginning of your upkeep, surveil 1. Then if there are three or more creature cards in your graveyard, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "3",
+     "artist": "Izzy"
+    },
+    {
+     "name": "Reanimate",
+     "mana_cost": "{B}",
+     "type_line": "Sorcery",
+     "oracle_text": "Put target creature card from a graveyard onto the battlefield under your control. You lose life equal to that card's mana value.",
+     "artist": "Izzy"
+    }
+   ]
+  },
+  "sos-88": {
+   "id": "c715fe4c-c0e7-4342-811f-b74687851097",
+   "name": "Leech Collector // Bloodletting",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "88",
+   "released_at": "2026-04-24",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Human Warlock // Sorcery",
+   "mana_cost": "{1}{B} // {B}",
+   "colors": [
+    "B"
+   ],
+   "color_identity": [
+    "B"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Leech Collector",
+     "mana_cost": "{1}{B}",
+     "type_line": "Creature — Human Warlock",
+     "oracle_text": "Whenever you gain life for the first time each turn, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "2",
+     "artist": "Chris Rallis"
+    },
+    {
+     "name": "Bloodletting",
+     "mana_cost": "{B}",
+     "type_line": "Sorcery",
+     "oracle_text": "Each opponent loses 2 life.",
+     "artist": "Chris Rallis"
+    }
+   ]
+  },
+  "sos-98": {
+   "id": "03e664cd-c3a6-4263-b2d8-dd99058fb8ec",
+   "name": "Scathing Shadelock // Venomous Words",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "98",
+   "released_at": "2026-04-24",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Snake Warlock // Sorcery",
+   "mana_cost": "{4}{B} // {B}",
+   "colors": [
+    "B"
+   ],
+   "color_identity": [
+    "B"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Scathing Shadelock",
+     "mana_cost": "{4}{B}",
+     "type_line": "Creature — Snake Warlock",
+     "oracle_text": "At the beginning of your first main phase, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "4",
+     "toughness": "6",
+     "artist": "Loïc Canavaggia"
+    },
+    {
+     "name": "Venomous Words",
+     "mana_cost": "{B}",
+     "type_line": "Sorcery",
+     "oracle_text": "Target creature you control gets +2/+0 and gains deathtouch until end of turn.",
+     "artist": "Loïc Canavaggia"
+    }
+   ]
+  },
+  "sos-99": {
+   "id": "fe85a124-0d8b-4a29-8df1-65888a39147f",
+   "name": "Scheming Silvertongue // Sign in Blood",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "99",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Flying",
+    "Lifelink",
+    "Prepared"
+   ],
+   "type_line": "Creature — Vampire Warlock // Sorcery",
+   "mana_cost": "{1}{B} // {B}{B}",
+   "colors": [
+    "B"
+   ],
+   "color_identity": [
+    "B"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Scheming Silvertongue",
+     "mana_cost": "{1}{B}",
+     "type_line": "Creature — Vampire Warlock",
+     "oracle_text": "Flying, lifelink\nAt the beginning of your second main phase, if you gained 2 or more life this turn, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "1",
+     "toughness": "3",
+     "artist": "Anna Steinbauer"
+    },
+    {
+     "name": "Sign in Blood",
+     "mana_cost": "{B}{B}",
+     "type_line": "Sorcery",
+     "oracle_text": "Target player draws two cards and loses 2 life.",
+     "artist": "Anna Steinbauer"
+    }
+   ]
+  },
+  "sos-109": {
+   "id": "3ba971e7-0b7a-4750-896f-7cf063e66b2a",
+   "name": "Blazing Firesinger // Seething Song",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "109",
+   "released_at": "2026-04-24",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Dwarf Bard // Instant",
+   "mana_cost": "{2}{R} // {2}{R}",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Blazing Firesinger",
+     "mana_cost": "{2}{R}",
+     "type_line": "Creature — Dwarf Bard",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "3",
+     "artist": "Ashly Lovett"
+    },
+    {
+     "name": "Seething Song",
+     "mana_cost": "{2}{R}",
+     "type_line": "Instant",
+     "oracle_text": "Add {R}{R}{R}{R}{R}.",
+     "artist": "Ashly Lovett"
+    }
+   ]
+  },
+  "sos-113": {
+   "id": "f58dba4f-1abb-47a3-a684-29c32bab95c0",
+   "name": "Emeritus of Conflict // Lightning Bolt",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "113",
+   "released_at": "2026-04-24",
+   "rarity": "mythic",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "First strike",
+    "Prepared"
+   ],
+   "type_line": "Creature — Human Wizard // Instant",
+   "mana_cost": "{1}{R} // {R}",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Emeritus of Conflict",
+     "mana_cost": "{1}{R}",
+     "type_line": "Creature — Human Wizard",
+     "oracle_text": "First strike\nWhenever you cast your third spell each turn, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "2",
+     "artist": "Alix Branwyn"
+    },
+    {
+     "name": "Lightning Bolt",
+     "mana_cost": "{R}",
+     "type_line": "Instant",
+     "oracle_text": "Lightning Bolt deals 3 damage to any target.",
+     "artist": "Alix Branwyn"
+    }
+   ]
+  },
+  "sos-117": {
+   "id": "c85c5f06-dd31-4e2c-97be-2f64d65069ea",
+   "name": "Goblin Glasswright // Craft with Pride",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "117",
+   "released_at": "2026-04-24",
+   "rarity": "common",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Treasure",
+    "Prepared"
+   ],
+   "type_line": "Creature — Goblin Sorcerer // Sorcery",
+   "mana_cost": "{1}{R} // {R}",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Goblin Glasswright",
+     "mana_cost": "{1}{R}",
+     "type_line": "Creature — Goblin Sorcerer",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "2",
+     "artist": "David Auden Nash"
+    },
+    {
+     "name": "Craft with Pride",
+     "mana_cost": "{R}",
+     "type_line": "Sorcery",
+     "oracle_text": "Create a Treasure token. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")",
+     "artist": "David Auden Nash"
+    }
+   ]
+  },
+  "sos-122": {
+   "id": "5c88391d-271f-4021-a5d9-158ebc1e6357",
+   "name": "Maelstrom Artisan // Rocket Volley",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "122",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Haste",
+    "Prepared"
+   ],
+   "type_line": "Creature — Minotaur Sorcerer // Sorcery",
+   "mana_cost": "{1}{R}{R} // {1}{R}",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Maelstrom Artisan",
+     "mana_cost": "{1}{R}{R}",
+     "type_line": "Creature — Minotaur Sorcerer",
+     "oracle_text": "Haste\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "2",
+     "artist": "Eelis Kyttanen"
+    },
+    {
+     "name": "Rocket Volley",
+     "mana_cost": "{1}{R}",
+     "type_line": "Sorcery",
+     "oracle_text": "Destroy target nonbasic land.",
+     "artist": "Eelis Kyttanen"
+    }
+   ]
+  },
+  "sos-126": {
+   "id": "c2faf4cf-c4b6-4721-ac06-0e045dd9704a",
+   "name": "Pigment Wrangler // Striking Palette",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "126",
+   "released_at": "2026-04-24",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Flying",
+    "Prepared"
+   ],
+   "type_line": "Creature — Orc Sorcerer // Sorcery",
+   "mana_cost": "{4}{R} // {R}",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Pigment Wrangler",
+     "mana_cost": "{4}{R}",
+     "type_line": "Creature — Orc Sorcerer",
+     "oracle_text": "Flying\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "4",
+     "toughness": "4",
+     "artist": "Gonzalo Kenny"
+    },
+    {
+     "name": "Striking Palette",
+     "mana_cost": "{R}",
+     "type_line": "Sorcery",
+     "oracle_text": "When you next cast an instant or sorcery spell this turn, copy that spell. You may choose new targets for the copy.",
+     "artist": "Gonzalo Kenny"
+    }
+   ]
+  },
+  "sos-131": {
+   "id": "8de79312-2046-425e-9919-49afe19be81b",
+   "name": "Strife Scholar // Awaken the Ages",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "131",
+   "released_at": "2026-04-24",
+   "rarity": "common",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared",
+    "Ward"
+   ],
+   "type_line": "Creature — Orc Sorcerer // Sorcery",
+   "mana_cost": "{2}{R} // {5}{R}",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Strife Scholar",
+     "mana_cost": "{2}{R}",
+     "type_line": "Creature — Orc Sorcerer",
+     "oracle_text": "Ward—Pay 2 life.\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "2",
+     "artist": "Craig J Spearing"
+    },
+    {
+     "name": "Awaken the Ages",
+     "mana_cost": "{5}{R}",
+     "type_line": "Sorcery",
+     "oracle_text": "Create two 2/2 red and white Spirit creature tokens.",
+     "artist": "Craig J Spearing"
+    }
+   ]
+  },
+  "sos-145": {
+   "id": "ac095763-6f4e-4d4e-9c99-414646368f8d",
+   "name": "Emeritus of Abundance // Regrowth",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "145",
+   "released_at": "2026-04-24",
+   "rarity": "mythic",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Vigilance",
+    "Prepared"
+   ],
+   "type_line": "Creature — Elf Druid // Sorcery",
+   "mana_cost": "{2}{G} // {1}{G}",
+   "colors": [
+    "G"
+   ],
+   "color_identity": [
+    "G"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Emeritus of Abundance",
+     "mana_cost": "{2}{G}",
+     "type_line": "Creature — Elf Druid",
+     "oracle_text": "Vigilance\nThis creature enters prepared.\nWhenever this creature attacks, if you control eight or more lands, this creature becomes prepared.",
+     "power": "3",
+     "toughness": "4",
+     "artist": "Justyna Dura"
+    },
+    {
+     "name": "Regrowth",
+     "mana_cost": "{1}{G}",
+     "type_line": "Sorcery",
+     "oracle_text": "Return target card from your graveyard to your hand.",
+     "artist": "Justyna Dura"
+    }
+   ]
+  },
+  "sos-152": {
+   "id": "911442e3-3003-4683-a766-e791e9553667",
+   "name": "Infirmary Healer // Stream of Life",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "152",
+   "released_at": "2026-04-24",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Cat Cleric // Sorcery",
+   "mana_cost": "{1}{G} // {X}{G}",
+   "colors": [
+    "G"
+   ],
+   "color_identity": [
+    "G"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Infirmary Healer",
+     "mana_cost": "{1}{G}",
+     "type_line": "Creature — Cat Cleric",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "3",
+     "artist": "Nereida"
+    },
+    {
+     "name": "Stream of Life",
+     "mana_cost": "{X}{G}",
+     "type_line": "Sorcery",
+     "oracle_text": "Target player gains X life.",
+     "artist": "Nereida"
+    }
+   ]
+  },
+  "sos-162": {
+   "id": "24f888dd-785c-4089-a89c-03f9080130ed",
+   "name": "Studious First-Year // Rampant Growth",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "162",
+   "released_at": "2026-04-24",
+   "rarity": "common",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Bear Wizard // Sorcery",
+   "mana_cost": "{G} // {1}{G}",
+   "colors": [
+    "G"
+   ],
+   "color_identity": [
+    "G"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Studious First-Year",
+     "mana_cost": "{G}",
+     "type_line": "Creature — Bear Wizard",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "1",
+     "toughness": "1",
+     "artist": "Mariah Tekulve"
+    },
+    {
+     "name": "Rampant Growth",
+     "mana_cost": "{1}{G}",
+     "type_line": "Sorcery",
+     "oracle_text": "Search your library for a basic land card, put that card onto the battlefield tapped, then shuffle.",
+     "artist": "Mariah Tekulve"
+    }
+   ]
+  },
+  "sos-166": {
+   "id": "476b6a4d-cc05-4e98-8a45-a5c6582ec514",
+   "name": "Vastlands Scavenger // Bind to Life",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "166",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared",
+    "Mill",
+    "Deathtouch"
+   ],
+   "type_line": "Creature — Bear Druid // Instant",
+   "mana_cost": "{1}{G}{G} // {4}{G}",
+   "colors": [
+    "G"
+   ],
+   "color_identity": [
+    "G"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Vastlands Scavenger",
+     "mana_cost": "{1}{G}{G}",
+     "type_line": "Creature — Bear Druid",
+     "oracle_text": "Deathtouch\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "4",
+     "toughness": "4",
+     "artist": "Bryan Sola"
+    },
+    {
+     "name": "Bind to Life",
+     "mana_cost": "{4}{G}",
+     "type_line": "Instant",
+     "oracle_text": "Mill seven cards. Then put a creature card from among them onto the battlefield.",
+     "artist": "Bryan Sola"
+    }
+   ]
+  },
+  "sos-170": {
+   "id": "77285d12-e658-4eb3-ba13-ff202afab9c8",
+   "name": "Abigale, Poet Laureate // Heroic Stanza",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "170",
+   "released_at": "2026-04-24",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "frame_effects": [
+    "legendary"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Flying",
+    "Prepared"
+   ],
+   "type_line": "Legendary Creature — Bird Bard // Sorcery",
+   "mana_cost": "{1}{W}{B} // {1}{W/B}",
+   "colors": [
+    "B",
+    "W"
+   ],
+   "color_identity": [
+    "B",
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Abigale, Poet Laureate",
+     "mana_cost": "{1}{W}{B}",
+     "type_line": "Legendary Creature — Bird Bard",
+     "oracle_text": "Flying\nWhenever you cast a creature spell, Abigale becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "3",
+     "artist": "Olivier Bernard"
+    },
+    {
+     "name": "Heroic Stanza",
+     "mana_cost": "{1}{W/B}",
+     "type_line": "Sorcery",
+     "oracle_text": "Put a +1/+1 counter on target creature.",
+     "artist": "Olivier Bernard"
+    }
+   ]
+  },
+  "sos-198": {
+   "id": "676ba521-66e4-42cf-a315-70d03cb7334e",
+   "name": "Kirol, History Buff // Pack a Punch",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "198",
+   "released_at": "2026-04-24",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "frame_effects": [
+    "legendary"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared",
+    "Mill"
+   ],
+   "type_line": "Legendary Creature — Vampire Cleric // Sorcery",
+   "mana_cost": "{R}{W} // {1}{R}{W}",
+   "colors": [
+    "R",
+    "W"
+   ],
+   "color_identity": [
+    "R",
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Kirol, History Buff",
+     "mana_cost": "{R}{W}",
+     "type_line": "Legendary Creature — Vampire Cleric",
+     "oracle_text": "Whenever one or more cards leave your graveyard, Kirol becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "3",
+     "artist": "Bryan Sola"
+    },
+    {
+     "name": "Pack a Punch",
+     "mana_cost": "{1}{R}{W}",
+     "type_line": "Sorcery",
+     "oracle_text": "Mill a card. Put two +1/+1 counters on target creature. It gains trample until end of turn.",
+     "artist": "Bryan Sola"
+    }
+   ]
+  },
+  "sos-199": {
+   "id": "a0bcb638-c3c8-4973-9537-5c471f43f34f",
+   "name": "Lluwen, Exchange Student // Pest Friend",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "199",
+   "released_at": "2026-04-24",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "frame_effects": [
+    "legendary"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Legendary Creature — Elf Druid // Sorcery",
+   "mana_cost": "{2}{B}{G} // {B/G}",
+   "colors": [
+    "B",
+    "G"
+   ],
+   "color_identity": [
+    "B",
+    "G"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Lluwen, Exchange Student",
+     "mana_cost": "{2}{B}{G}",
+     "type_line": "Legendary Creature — Elf Druid",
+     "oracle_text": "Lluwen enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\nExile a creature card from your graveyard: Lluwen becomes prepared. Activate only as a sorcery.",
+     "power": "3",
+     "toughness": "4",
+     "artist": "Alix Branwyn"
+    },
+    {
+     "name": "Pest Friend",
+     "mana_cost": "{B/G}",
+     "type_line": "Sorcery",
+     "oracle_text": "Create a 1/1 black and green Pest creature token with \"Whenever this token attacks, you gain 1 life.\"",
+     "artist": "Alix Branwyn"
+    }
+   ]
+  },
+  "sos-223": {
+   "id": "173157aa-712d-44f2-89ba-dd2511a07f26",
+   "name": "Sanar, Unfinished Genius // Wild Idea",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "223",
+   "released_at": "2026-04-24",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "frame_effects": [
+    "legendary"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Treasure",
+    "Prepared"
+   ],
+   "type_line": "Legendary Creature — Goblin Sorcerer // Sorcery",
+   "mana_cost": "{U}{R} // {3}{U}{R}",
+   "colors": [
+    "R",
+    "U"
+   ],
+   "color_identity": [
+    "R",
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Sanar, Unfinished Genius",
+     "mana_cost": "{U}{R}",
+     "type_line": "Legendary Creature — Goblin Sorcerer",
+     "oracle_text": "Sanar enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\n{T}: Create a Treasure token. Activate only if you've cast an instant or sorcery spell this turn.",
+     "power": "0",
+     "toughness": "4",
+     "artist": "Justin Gerard"
+    },
+    {
+     "name": "Wild Idea",
+     "mana_cost": "{3}{U}{R}",
+     "type_line": "Sorcery",
+     "oracle_text": "Search your library for an instant or sorcery card, reveal it, put it into your hand, then shuffle.",
+     "artist": "Justin Gerard"
+    }
+   ]
+  },
+  "sos-237": {
+   "id": "7120e71b-2976-451b-89a7-a1665dc6fb6b",
+   "name": "Tam, Observant Sequencer // Deep Sight",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "237",
+   "released_at": "2026-04-24",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "frame_effects": [
+    "legendary"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared",
+    "Landfall"
+   ],
+   "type_line": "Legendary Creature — Gorgon Wizard // Sorcery",
+   "mana_cost": "{2}{G}{U} // {G}{U}",
+   "colors": [
+    "G",
+    "U"
+   ],
+   "color_identity": [
+    "G",
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Tam, Observant Sequencer",
+     "mana_cost": "{2}{G}{U}",
+     "type_line": "Legendary Creature — Gorgon Wizard",
+     "oracle_text": "Landfall — Whenever a land you control enters, Tam becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "4",
+     "toughness": "3",
+     "artist": "Jodie Muir"
+    },
+    {
+     "name": "Deep Sight",
+     "mana_cost": "{G}{U}",
+     "type_line": "Sorcery",
+     "oracle_text": "You draw a card and gain 1 life.",
+     "artist": "Jodie Muir"
+    }
+   ]
+  },
+  "sos-306": {
+   "id": "ef371352-ec8f-4da4-9085-67195068fb79",
+   "name": "Emeritus of Ideation // Ancestral Recall",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "306",
+   "released_at": "2026-04-24",
+   "rarity": "mythic",
+   "frame": "2003",
+   "border_color": "black",
+   "full_art": true,
+   "textless": true,
+   "promo_types": [
+    "rainbowfoil",
+    "serialized",
+    "headliner"
+   ],
+   "finishes": [
+    "foil"
+   ],
+   "keywords": [
+    "Flying",
+    "Prepared",
+    "Ward"
+   ],
+   "type_line": "Creature — Human Wizard // Instant",
+   "mana_cost": "{3}{U}{U} // {U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Emeritus of Ideation",
+     "mana_cost": "{3}{U}{U}",
+     "type_line": "Creature — Human Wizard",
+     "oracle_text": "Flying, ward {2}\nThis creature enters prepared.\nWhenever this creature attacks, you may exile eight cards from your graveyard. If you do, this creature becomes prepared.",
+     "power": "5",
+     "toughness": "5",
+     "artist": "Mark Poole"
+    },
+    {
+     "name": "Ancestral Recall",
+     "mana_cost": "{U}",
+     "type_line": "Instant",
+     "oracle_text": "Target player draws three cards.",
+     "artist": "Mark Poole"
+    }
+   ]
+  },
+  "sos-309": {
+   "id": "bfd607c0-7ed7-4a4e-abdd-508080f40ef2",
+   "name": "Emeritus of Truce // Swords to Plowshares",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "309",
+   "released_at": "2026-04-24",
+   "rarity": "mythic",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Cat Cleric // Instant",
+   "mana_cost": "{1}{W}{W} // {W}",
+   "colors": [
+    "W"
+   ],
+   "color_identity": [
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Emeritus of Truce",
+     "mana_cost": "{1}{W}{W}",
+     "type_line": "Creature — Cat Cleric",
+     "oracle_text": "When this creature enters, target player creates a 1/1 white and black Inkling creature token with flying. Then if an opponent controls more creatures than you, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "3",
+     "artist": "Aleksi Briclot"
+    },
+    {
+     "name": "Swords to Plowshares",
+     "mana_cost": "{W}",
+     "type_line": "Instant",
+     "oracle_text": "Exile target creature. Its controller gains life equal to its power.",
+     "artist": "Aleksi Briclot"
+    }
+   ]
+  },
+  "sos-312": {
+   "id": "15d99a75-939e-4584-9b4a-8afd115bab2c",
+   "name": "Joined Researchers // Secret Rendezvous",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "312",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "First strike",
+    "Prepared"
+   ],
+   "type_line": "Creature — Human Cleric Wizard // Sorcery",
+   "mana_cost": "{1}{W} // {1}{W}{W}",
+   "colors": [
+    "W"
+   ],
+   "color_identity": [
+    "W"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Joined Researchers",
+     "mana_cost": "{1}{W}",
+     "type_line": "Creature — Human Cleric Wizard",
+     "oracle_text": "First strike\nAt the beginning of each end step, if an opponent has more cards in hand than you, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "2",
+     "artist": "Ryan Pancoast"
+    },
+    {
+     "name": "Secret Rendezvous",
+     "mana_cost": "{1}{W}{W}",
+     "type_line": "Sorcery",
+     "oracle_text": "You and target opponent each draw three cards.",
+     "artist": "Ryan Pancoast"
+    }
+   ]
+  },
+  "sos-315": {
+   "id": "d8e1e20c-03b9-446b-84d4-466377e50310",
+   "name": "Emeritus of Ideation // Ancestral Recall",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "315",
+   "released_at": "2026-04-24",
+   "rarity": "mythic",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Flying",
+    "Prepared",
+    "Ward"
+   ],
+   "type_line": "Creature — Human Wizard // Instant",
+   "mana_cost": "{3}{U}{U} // {U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Emeritus of Ideation",
+     "mana_cost": "{3}{U}{U}",
+     "type_line": "Creature — Human Wizard",
+     "oracle_text": "Flying, ward {2}\nThis creature enters prepared.\nWhenever this creature attacks, you may exile eight cards from your graveyard. If you do, this creature becomes prepared.",
+     "power": "5",
+     "toughness": "5",
+     "artist": "Evyn Fong"
+    },
+    {
+     "name": "Ancestral Recall",
+     "mana_cost": "{U}",
+     "type_line": "Instant",
+     "oracle_text": "Target player draws three cards.",
+     "artist": "Evyn Fong"
+    }
+   ]
+  },
+  "sos-317": {
+   "id": "c8f1baae-dd81-4e10-841e-15531ea1ffaa",
+   "name": "Harmonized Trio // Brainstorm",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "317",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Merfolk Bard Wizard // Instant",
+   "mana_cost": "{U} // {U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Harmonized Trio",
+     "mana_cost": "{U}",
+     "type_line": "Creature — Merfolk Bard Wizard",
+     "oracle_text": "{T}, Tap two untapped creatures you control: This creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "1",
+     "toughness": "1",
+     "artist": "Marie Magny"
+    },
+    {
+     "name": "Brainstorm",
+     "mana_cost": "{U}",
+     "type_line": "Instant",
+     "oracle_text": "Draw three cards, then put two cards from your hand on top of your library in any order.",
+     "artist": "Marie Magny"
+    }
+   ]
+  },
+  "sos-318": {
+   "id": "92fcf155-41ae-4275-8791-27ee95a2f7c0",
+   "name": "Jadzi, Steward of Fate // Oracle's Gift",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "318",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "legendary",
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Legendary Creature — Human Wizard // Sorcery",
+   "mana_cost": "{2}{U} // {X}{X}{U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Jadzi, Steward of Fate",
+     "mana_cost": "{2}{U}",
+     "type_line": "Legendary Creature — Human Wizard",
+     "oracle_text": "Jadzi enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\nWhen Jadzi enters, draw two cards, then discard two cards.",
+     "power": "2",
+     "toughness": "4",
+     "artist": "Martina Fačková"
+    },
+    {
+     "name": "Oracle's Gift",
+     "mana_cost": "{X}{X}{U}",
+     "type_line": "Sorcery",
+     "oracle_text": "Create X 0/0 green and blue Fractal creature tokens, then put X +1/+1 counters on each Fractal you control.",
+     "artist": "Martina Fačková"
+    }
+   ]
+  },
+  "sos-322": {
+   "id": "f9092a09-78a8-421c-868b-115175f4c252",
+   "name": "Skycoach Conductor // All Aboard",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "322",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Flying",
+    "Vigilance",
+    "Prepared",
+    "Flash"
+   ],
+   "type_line": "Creature — Bird Pilot // Instant",
+   "mana_cost": "{2}{U} // {U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Skycoach Conductor",
+     "mana_cost": "{2}{U}",
+     "type_line": "Creature — Bird Pilot",
+     "oracle_text": "Flash\nFlying, vigilance\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "3",
+     "artist": "Christina Kraus"
+    },
+    {
+     "name": "All Aboard",
+     "mana_cost": "{U}",
+     "type_line": "Instant",
+     "oracle_text": "Exile target non-Pilot creature you control, then return that card to the battlefield under its owner's control.",
+     "artist": "Christina Kraus"
+    }
+   ]
+  },
+  "sos-324": {
+   "id": "26156da4-1ec3-4702-bded-9868af3026b5",
+   "name": "Emeritus of Woe // Demonic Tutor",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "324",
+   "released_at": "2026-04-24",
+   "rarity": "mythic",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Creature — Vampire Warlock // Sorcery",
+   "mana_cost": "{3}{B} // {1}{B}",
+   "colors": [
+    "B"
+   ],
+   "color_identity": [
+    "B"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Emeritus of Woe",
+     "mana_cost": "{3}{B}",
+     "type_line": "Creature — Vampire Warlock",
+     "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\nAt the beginning of your end step, if two or more creatures died this turn, this creature becomes prepared.",
+     "power": "5",
+     "toughness": "4",
+     "artist": "Jodie Muir"
+    },
+    {
+     "name": "Demonic Tutor",
+     "mana_cost": "{1}{B}",
+     "type_line": "Sorcery",
+     "oracle_text": "Search your library for a card, put that card into your hand, then shuffle.",
+     "artist": "Jodie Muir"
+    }
+   ]
+  },
+  "sos-325": {
+   "id": "1d12804c-dda0-4dae-9eb8-f670e72c17e7",
+   "name": "Grave Researcher // Reanimate",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "325",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Surveil",
+    "Prepared"
+   ],
+   "type_line": "Creature — Troll Warlock // Sorcery",
+   "mana_cost": "{2}{B} // {B}",
+   "colors": [
+    "B"
+   ],
+   "color_identity": [
+    "B"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Grave Researcher",
+     "mana_cost": "{2}{B}",
+     "type_line": "Creature — Troll Warlock",
+     "oracle_text": "At the beginning of your upkeep, surveil 1. Then if there are three or more creature cards in your graveyard, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "3",
+     "artist": "Izzy"
+    },
+    {
+     "name": "Reanimate",
+     "mana_cost": "{B}",
+     "type_line": "Sorcery",
+     "oracle_text": "Put target creature card from a graveyard onto the battlefield under your control. You lose life equal to that card's mana value.",
+     "artist": "Izzy"
+    }
+   ]
+  },
+  "sos-329": {
+   "id": "1c4c2765-2fb0-43f2-9e50-934405d108d2",
+   "name": "Scheming Silvertongue // Sign in Blood",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "329",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Flying",
+    "Lifelink",
+    "Prepared"
+   ],
+   "type_line": "Creature — Vampire Warlock // Sorcery",
+   "mana_cost": "{1}{B} // {B}{B}",
+   "colors": [
+    "B"
+   ],
+   "color_identity": [
+    "B"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Scheming Silvertongue",
+     "mana_cost": "{1}{B}",
+     "type_line": "Creature — Vampire Warlock",
+     "oracle_text": "Flying, lifelink\nAt the beginning of your second main phase, if you gained 2 or more life this turn, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "1",
+     "toughness": "3",
+     "artist": "Anna Steinbauer"
+    },
+    {
+     "name": "Sign in Blood",
+     "mana_cost": "{B}{B}",
+     "type_line": "Sorcery",
+     "oracle_text": "Target player draws two cards and loses 2 life.",
+     "artist": "Anna Steinbauer"
+    }
+   ]
+  },
+  "sos-332": {
+   "id": "f11b8d24-375d-40dc-8497-c1ee779e156a",
+   "name": "Emeritus of Conflict // Lightning Bolt",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "332",
+   "released_at": "2026-04-24",
+   "rarity": "mythic",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "First strike",
+    "Prepared"
+   ],
+   "type_line": "Creature — Human Wizard // Instant",
+   "mana_cost": "{1}{R} // {R}",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Emeritus of Conflict",
+     "mana_cost": "{1}{R}",
+     "type_line": "Creature — Human Wizard",
+     "oracle_text": "First strike\nWhenever you cast your third spell each turn, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "2",
+     "toughness": "2",
+     "artist": "Alix Branwyn"
+    },
+    {
+     "name": "Lightning Bolt",
+     "mana_cost": "{R}",
+     "type_line": "Instant",
+     "oracle_text": "Lightning Bolt deals 3 damage to any target.",
+     "artist": "Alix Branwyn"
+    }
+   ]
+  },
+  "sos-334": {
+   "id": "8463c38a-0441-404e-b183-1f871f61f250",
+   "name": "Maelstrom Artisan // Rocket Volley",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "334",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Haste",
+    "Prepared"
+   ],
+   "type_line": "Creature — Minotaur Sorcerer // Sorcery",
+   "mana_cost": "{1}{R}{R} // {1}{R}",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Maelstrom Artisan",
+     "mana_cost": "{1}{R}{R}",
+     "type_line": "Creature — Minotaur Sorcerer",
+     "oracle_text": "Haste\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "3",
+     "toughness": "2",
+     "artist": "Eelis Kyttanen"
+    },
+    {
+     "name": "Rocket Volley",
+     "mana_cost": "{1}{R}",
+     "type_line": "Sorcery",
+     "oracle_text": "Destroy target nonbasic land.",
+     "artist": "Eelis Kyttanen"
+    }
+   ]
+  },
+  "sos-339": {
+   "id": "2b7e8e07-b3ff-496e-923f-42d703f20a1e",
+   "name": "Emeritus of Abundance // Regrowth",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "339",
+   "released_at": "2026-04-24",
+   "rarity": "mythic",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Vigilance",
+    "Prepared"
+   ],
+   "type_line": "Creature — Elf Druid // Sorcery",
+   "mana_cost": "{2}{G} // {1}{G}",
+   "colors": [
+    "G"
+   ],
+   "color_identity": [
+    "G"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Emeritus of Abundance",
+     "mana_cost": "{2}{G}",
+     "type_line": "Creature — Elf Druid",
+     "oracle_text": "Vigilance\nThis creature enters prepared.\nWhenever this creature attacks, if you control eight or more lands, this creature becomes prepared.",
+     "power": "3",
+     "toughness": "4",
+     "artist": "Justyna Dura"
+    },
+    {
+     "name": "Regrowth",
+     "mana_cost": "{1}{G}",
+     "type_line": "Sorcery",
+     "oracle_text": "Return target card from your graveyard to your hand.",
+     "artist": "Justyna Dura"
+    }
+   ]
+  },
+  "sos-342": {
+   "id": "91db5c3d-45ab-440f-8568-a2837aee1fca",
+   "name": "Vastlands Scavenger // Bind to Life",
+   "layout": "prepare",
+   "set": "sos",
+   "set_type": "expansion",
+   "set_name": "Secrets of Strixhaven",
+   "collector_number": "342",
+   "released_at": "2026-04-24",
+   "rarity": "rare",
+   "frame": "2015",
+   "frame_effects": [
+    "extendedart"
+   ],
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "oval",
+   "finishes": [
+    "nonfoil",
+    "foil"
+   ],
+   "keywords": [
+    "Prepared",
+    "Mill",
+    "Deathtouch"
+   ],
+   "type_line": "Creature — Bear Druid // Instant",
+   "mana_cost": "{1}{G}{G} // {4}{G}",
+   "colors": [
+    "G"
+   ],
+   "color_identity": [
+    "G"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Vastlands Scavenger",
+     "mana_cost": "{1}{G}{G}",
+     "type_line": "Creature — Bear Druid",
+     "oracle_text": "Deathtouch\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+     "power": "4",
+     "toughness": "4",
+     "artist": "Bryan Sola"
+    },
+    {
+     "name": "Bind to Life",
+     "mana_cost": "{4}{G}",
+     "type_line": "Instant",
+     "oracle_text": "Mill seven cards. Then put a creature card from among them onto the battlefield.",
+     "artist": "Bryan Sola"
+    }
+   ]
+  },
+  "yfra-27": {
+   "id": "e6715141-7e4e-4bf4-bd13-0e496d1c2e28",
+   "name": "Rootha, Ardent Artisan // Next Iteration",
+   "layout": "prepare",
+   "set": "yfra",
+   "set_type": "alchemy",
+   "set_name": "Alchemy: Reality Fracture",
+   "collector_number": "27",
+   "released_at": "2026-10-13",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "arena",
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Prepared",
+    "Conjure"
+   ],
+   "type_line": "Legendary Creature — Orc Artificer // Sorcery",
+   "mana_cost": "{R}{G} // {X}{R}",
+   "colors": [
+    "G",
+    "R"
+   ],
+   "color_identity": [
+    "G",
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Rootha, Ardent Artisan",
+     "mana_cost": "{R}{G}",
+     "type_line": "Legendary Creature — Orc Artificer",
+     "oracle_text": "Sacrifice an artifact: Rootha becomes prepared. Activate only as a sorcery and only once each turn.",
+     "power": "2",
+     "toughness": "3",
+     "artist": "Dmitry Burmak"
+    },
+    {
+     "name": "Next Iteration",
+     "mana_cost": "{X}{R}",
+     "type_line": "Sorcery",
+     "oracle_text": "Conjure a random artifact card with mana value X plus 1 onto the battlefield.",
+     "artist": "Dmitry Burmak"
+    }
+   ]
+  },
+  "yfra-29": {
+   "id": "45695988-6b78-468a-b12b-bcb92c405761",
+   "name": "Zimone the Calculating // Simple Subtraction",
+   "layout": "prepare",
+   "set": "yfra",
+   "set_type": "alchemy",
+   "set_name": "Alchemy: Reality Fracture",
+   "collector_number": "29",
+   "released_at": "2026-10-13",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "security_stamp": "arena",
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Prepared"
+   ],
+   "type_line": "Legendary Creature — Human Warlock // Instant",
+   "mana_cost": "{U}{B} // {1}{U}",
+   "colors": [
+    "B",
+    "U"
+   ],
+   "color_identity": [
+    "B",
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Zimone the Calculating",
+     "mana_cost": "{U}{B}",
+     "type_line": "Legendary Creature — Human Warlock",
+     "oracle_text": "Zimone assigns combat damage as though her power were positive.\nWhenever one or more cards are put into your graveyard from your library, Zimone becomes prepared.",
+     "power": "-1",
+     "toughness": "4",
+     "artist": "Jodie Muir"
+    },
+    {
+     "name": "Simple Subtraction",
+     "mana_cost": "{1}{U}",
+     "type_line": "Instant",
+     "oracle_text": "Target creature perpetually gets -3/-0.",
+     "artist": "Jodie Muir"
+    }
+   ]
+  },
+  "ysos-3": {
+   "id": "03e88790-ac95-44a2-9886-153a7576c5ba",
+   "name": "Galathul Galecaller // Corvid Squall",
+   "layout": "prepare",
+   "set": "ysos",
+   "set_type": "alchemy",
+   "set_name": "Alchemy: Secrets of Strixhaven",
+   "collector_number": "3",
+   "released_at": "2026-05-19",
+   "rarity": "rare",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Flying",
+    "Storm",
+    "Prepared",
+    "Flash",
+    "Conjure"
+   ],
+   "type_line": "Creature — Bird Wizard // Sorcery",
+   "mana_cost": "{1}{U} // {1}{U}",
+   "colors": [
+    "U"
+   ],
+   "color_identity": [
+    "U"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Galathul Galecaller",
+     "mana_cost": "{1}{U}",
+     "type_line": "Creature — Bird Wizard",
+     "oracle_text": "Flash\nFlying\nWhenever this creature attacks, it becomes prepared.",
+     "power": "2",
+     "toughness": "1",
+     "artist": "Justine Cruz"
+    },
+    {
+     "name": "Corvid Squall",
+     "mana_cost": "{1}{U}",
+     "type_line": "Sorcery",
+     "oracle_text": "Conjure a card named Storm Crow onto the battlefield.\nStorm",
+     "artist": "Justine Cruz"
+    }
+   ]
+  },
+  "ysos-9": {
+   "id": "3dd09bb0-91b5-450b-9150-fab424c605e1",
+   "name": "Crescendo Conductor // Boltwave",
+   "layout": "prepare",
+   "set": "ysos",
+   "set_type": "alchemy",
+   "set_name": "Alchemy: Secrets of Strixhaven",
+   "collector_number": "9",
+   "released_at": "2026-05-19",
+   "rarity": "uncommon",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Reach",
+    "Prepared",
+    "Conjure"
+   ],
+   "type_line": "Creature — Orc Sorcerer // Sorcery",
+   "mana_cost": "{1}{R} // {R}",
+   "colors": [
+    "R"
+   ],
+   "color_identity": [
+    "R"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Crescendo Conductor",
+     "mana_cost": "{1}{R}",
+     "type_line": "Creature — Orc Sorcerer",
+     "oracle_text": "Reach\nWhenever you conjure one or more cards, this creature becomes prepared.",
+     "power": "2",
+     "toughness": "2",
+     "artist": "Pascal Quidault"
+    },
+    {
+     "name": "Boltwave",
+     "mana_cost": "{R}",
+     "type_line": "Sorcery",
+     "oracle_text": "Boltwave deals 3 damage to each opponent.",
+     "artist": "Pascal Quidault"
+    }
+   ]
+  },
+  "ysos-11": {
+   "id": "e6a0da1e-7af8-4fdf-ad0d-ebfc9c4a13cb",
+   "name": "Ursine Guide // Ranger's Merit",
+   "layout": "prepare",
+   "set": "ysos",
+   "set_type": "alchemy",
+   "set_name": "Alchemy: Secrets of Strixhaven",
+   "collector_number": "11",
+   "released_at": "2026-05-19",
+   "rarity": "mythic",
+   "frame": "2015",
+   "border_color": "black",
+   "full_art": false,
+   "textless": false,
+   "finishes": [
+    "nonfoil"
+   ],
+   "keywords": [
+    "Prepared",
+    "Conjure"
+   ],
+   "type_line": "Creature — Bear Druid // Sorcery",
+   "mana_cost": "{2}{G} // {3}{G}{G}",
+   "colors": [
+    "G"
+   ],
+   "color_identity": [
+    "G"
+   ],
+   "lang": "en",
+   "card_faces": [
+    {
+     "name": "Ursine Guide",
+     "mana_cost": "{2}{G}",
+     "type_line": "Creature — Bear Druid",
+     "oracle_text": "This creature enters prepared.\nWhenever you cast a spell that isn't from your starting deck, conjure a card named Bear Cub onto the battlefield. This creature becomes prepared.",
+     "power": "3",
+     "toughness": "3",
+     "artist": "Tomas Duchek"
+    },
+    {
+     "name": "Ranger's Merit",
+     "mana_cost": "{3}{G}{G}",
+     "type_line": "Sorcery",
+     "oracle_text": "Put a +1/+1 counter on each Bear you control. They gain trample until end of turn.",
+     "artist": "Tomas Duchek"
+    }
+   ]
+  }
+ }
+}

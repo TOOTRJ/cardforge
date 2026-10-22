@@ -496,8 +496,11 @@ const DFC_EFFECTS = [
 /** Frame marks PipGlyph doesn't draw (4.7's marks). */
 const MARK_EFFECTS = ["miracle", "companion", "lesson", "spree", "tombstone", "draft"] as const;
 
-/** Layouts PipGlyph has no layout for yet; they import as a standard kind. */
-const UNMODELLED_LAYOUTS = ["class", "case", "leveler", "prototype", "mutate", "meld", "prepare", "host", "augment"] as const;
+/** Layouts PipGlyph has no layout for yet; they import as a standard kind.
+ *  (`prepare` left with TODO 4.27: its printings are the Prepare kind — but
+ *  a TEXTLESS one, FRA #402 / SOS #306, keeps the creature kind on the
+ *  textless frames, whose own gap names it, as on main.) */
+const UNMODELLED_LAYOUTS = ["class", "case", "leveler", "prototype", "mutate", "meld", "host", "augment"] as const;
 const UNMODELLED_SUBTYPES = ["Room", "Class", "Case"] as const;
 
 /** The templates whose border isn't true yet, capped at `nearest` so
@@ -552,6 +555,10 @@ type Range = readonly [number, number];
 type Match = {
   /** `frame` in the list ("1993" | "1997" | "2003" | "2015" | "future"). */
   frames?: readonly string[];
+  /** The SECOND face's page prints another colour than the card (TODO
+   *  4.26's per-part colour; partColourDiffers): a hybrid spell's grey page,
+   *  or a spell of other colours. */
+  partColourDiffers?: boolean;
   /** `border_color` in the list. */
   borders?: readonly string[];
   effectsAll?: readonly string[];
@@ -737,9 +744,36 @@ function isHybridCost({ card, facts }: Ctx): boolean {
   return twoColorDressOf(cost, cardType) === "hybrid";
 }
 
+/** The coloured letters of a cost, and whether any symbol is a two-colour
+ *  hybrid ({W/B}; {2/W} and Phyrexian {W/P} are one colour). */
+function costColours(cost: string | null | undefined): { letters: Set<string>; hybrid: boolean } {
+  const letters = new Set<string>();
+  let hybrid = false;
+  for (const [, sym] of (cost ?? "").matchAll(/\{([^}]*)\}/g)) {
+    const coloured = sym.toUpperCase().split("/").filter((part) => "WUBRG".includes(part) && part.length === 1);
+    if (coloured.length >= 2) hybrid = true;
+    for (const c of coloured) letters.add(c);
+  }
+  return { letters, hybrid };
+}
+
+/** A two-part printing whose second face's page prints another colour than
+ *  the card's frame (TODO 4.26's per-part colour). Print colours the Prepare
+ *  page by its SPELL (SOS #170 Abigale: a W/B creature, a {W/B} hybrid spell
+ *  on a grey page; FRA #3: a white creature, a {G/W} spell on a grey page);
+ *  PipGlyph paints it in the card's one colour. */
+function partColourDiffers({ card }: Ctx): boolean {
+  const front = costColours(card.card_faces?.[0]?.mana_cost);
+  const back = costColours(card.card_faces?.[1]?.mana_cost);
+  if (back.hybrid && !front.hybrid) return true;
+  if (back.letters.size === 0) return false;
+  return back.letters.size !== front.letters.size || [...back.letters].some((c) => !front.letters.has(c));
+}
+
 function matches(match: Match, ctx: Ctx): boolean {
   const { card, facts } = ctx;
   if (match.frames && !match.frames.includes(ctx.frame)) return false;
+  if (match.partColourDiffers !== undefined && partColourDiffers(ctx) !== match.partColourDiffers) return false;
   if (match.borders && !match.borders.includes(ctx.border)) return false;
   if (match.effectsAll && !match.effectsAll.every((e) => ctx.effects.has(e))) return false;
   if (match.effectsAny && !hasAny(ctx.effects, match.effectsAny)) return false;
@@ -898,7 +932,7 @@ const FAMILIES: Record<
   // token that prints text the text-box token frame (4.49 (b)).
   m15: {
     produces: [
-      "saga", "adventure", "split", "aftermath", "flip", "m15token",
+      "saga", "adventure", "prepare", "split", "aftermath", "flip", "m15token",
       "m15tokenartifact", "m15tokentext", "m15tokenartifacttext", "m15land",
       "m15snowland", "m15pw", "battle", "m15snow", "m15devoid", "m15artifact",
       "m15",
@@ -946,7 +980,7 @@ const FAMILIES: Record<
   // ability rows or more (walkerRowsFrameFor), as the prints do.
   borderless: {
     produces: [
-      "saga", "adventure", "split", "aftermath", "flip", "m15token",
+      "saga", "adventure", "prepare", "split", "aftermath", "flip", "m15token",
       "m15borderlessland", "m15borderlesspwtall", "m15borderlesspw", "battle",
       "m15borderlessartifact", "m15borderless",
     ],
@@ -975,11 +1009,11 @@ const FAMILIES: Record<
     },
   },
   modern: {
-    produces: ["saga", "adventure", "split", "aftermath", "flip", "modernland", "m15token", "m15pw", "battle", "modern"],
+    produces: ["saga", "adventure", "prepare", "split", "aftermath", "flip", "modernland", "m15token", "m15pw", "battle", "modern"],
     pick: ({ facts }) => eraPick(facts, "modern", "modernland"),
   },
   retro: {
-    produces: ["saga", "adventure", "split", "aftermath", "flip", "retroland", "m15token", "m15pw", "battle", "retro"],
+    produces: ["saga", "adventure", "prepare", "split", "aftermath", "flip", "retroland", "m15token", "m15pw", "battle", "retro"],
     pick: ({ facts }) => eraPick(facts, "retro", "retroland"),
   },
   alpha: {
@@ -987,7 +1021,7 @@ const FAMILIES: Record<
     // was retired (TODO 4.54): a token is `token/old-frame`'s, on the M15
     // family, before this family is asked — eraPick's token answer is the
     // same frame.
-    produces: ["saga", "adventure", "split", "aftermath", "flip", "alphaland", "m15token", "m15pw", "battle", "agclassic"],
+    produces: ["saga", "adventure", "prepare", "split", "aftermath", "flip", "alphaland", "m15token", "m15pw", "battle", "agclassic"],
     pick: ({ facts }) => eraPick(facts, "agclassic", "alphaland"),
   },
   textless: {
@@ -1134,7 +1168,8 @@ type GapKey =
   | "borderless-dfc-face"
   | "marvel-variant-face"
   | "nyx-saga-front"
-  | "dfc-token-transform";
+  | "dfc-token-transform"
+  | "part-colour";
 
 const BORDER_WORD: Record<string, string> = {
   white: "white",
@@ -1209,6 +1244,14 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
     // hybrid plate yet): "uses its gold one" was wrong there (4.6 review).
     reason: "two-colour hybrid cards print a split hybrid frame, which PipGlyph doesn't draw on this frame yet",
     blockedBy: "4.6f",
+  },
+  // The Prepare page's own colour (TODO 4.27 → 4.26): print colours the
+  // spell's page by the SPELL — a hybrid spell's grey page, another
+  // colour's page — and PipGlyph paints it in the card's one colour.
+  "part-colour": {
+    match: { layouts: ["prepare"], partColourDiffers: true },
+    reason: "its spell's page prints the spell's own colour, and PipGlyph paints it in the card's",
+    blockedBy: "4.26",
   },
   "colour-indicator": {
     match: { colorIndicator: true },
@@ -1710,7 +1753,7 @@ const STATION_SHOWCASE: Partial<Record<GapKey, BlockedBy>> = { station: "4.11" }
 const showcaseLabel = ({ card, set }: Ctx) =>
   `${card.set_name ?? set.toUpperCase()} showcase`;
 
-const LAYOUT_KINDS: readonly CardKind[] = ["saga", "adventure", "split", "aftermath", "flip"];
+const LAYOUT_KINDS: readonly CardKind[] = ["saga", "adventure", "prepare", "split", "aftermath", "flip"];
 
 /** The M15-era gaps on a double-faced BODY (TODO 5.4): every M15-era gap but
  *  the double-faced marks, which the body draws (gapDrawnBy). */
@@ -2850,7 +2893,9 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     // aftermath/m note says).
     // A Universes Beyond saga (254 printings), adventure or split wears
     // the streaked dress the layout frames have no twin for (TODO 4.25).
-    ["omen", "dfc", "etched", "border", "universes-beyond", "crown", "two-colour", "two-colour-hybrid"],
+    // A Prepare printing whose spell's page is another colour (TODO 4.27):
+    // the per-part colour, 4.26.
+    ["omen", "dfc", "etched", "border", "universes-beyond", "crown", "two-colour", "two-colour-hybrid", "part-colour"],
     { "two-colour": LAYOUT_TWO_COLOUR_ITEM, "two-colour-hybrid": LAYOUT_TWO_COLOUR_ITEM },
   ),
   {

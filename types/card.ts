@@ -532,6 +532,12 @@ export const FRAME_TEMPLATE_VALUES = [
   // a card's own template. An addition: no stored card changes.
   "sagadfcback",
   "adventure",
+  // The Prepare frame (TODO 4.27, Secrets of Strixhaven 2026): the M15
+  // frame with the spell on a PAGE on the right — its own name, cost and
+  // type bars and box — and the creature's rules in the box on the left.
+  // PipGlyph's own derivation (scripts/build-prepare-frames.mjs): no Card
+  // Conjurer or MSE source. An addition: no stored card changes.
+  "prepare",
   "flip",
   "split",
   "aftermath",
@@ -687,6 +693,7 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   sagadfcfront: "Saga (transform front)",
   sagadfcback: "Saga (transform back)",
   adventure: "Adventure",
+  prepare: "Prepare",
   flip: "Flip",
   split: "Split",
   aftermath: "Aftermath",
@@ -827,6 +834,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   sagadfcfront: "m15",
   sagadfcback: "m15",
   adventure: "m15",
+  prepare: "m15",
   flip: "m15",
   split: "m15",
   aftermath: "m15",

@@ -844,9 +844,14 @@ function isRoomCard(card: ScryfallCard): boolean {
  *   • Omens (Tarkir: Dragonstorm) are layout "adventure" on Scryfall: the
  *     omen spell is the storybook page, the nearest frame until 4.27's Omen
  *     template. A future "omen" layout value lands there too.
- * Class, Case and the other unmodeled layouts (leveler, prototype, prepare,
- * meld, …) take the standard kind of the front face's type line, so an
- * exotic import degrades to a standard kind instead of failing.
+ *   • a Prepare card (Secrets of Strixhaven, layout "prepare") is the
+ *     Prepare kind (TODO 4.27): the creature front, its spell the page —
+ *     the second face rides along as the back face, which the frame draws.
+ *     A TEXTLESS printing (FRA #402, SOS #306: art over the whole card)
+ *     keeps the creature kind, on the textless frame its look is.
+ * Class, Case and the other unmodeled layouts (leveler, prototype, meld, …)
+ * take the standard kind of the front face's type line, so an exotic import
+ * degrades to a standard kind instead of failing.
  */
 export function kindFromScryfall(card: ScryfallCard): CardKind | undefined {
   const layout = (card.layout ?? "").toLowerCase();
@@ -862,6 +867,7 @@ export function kindFromScryfall(card: ScryfallCard): CardKind | undefined {
   // for Roles only; Kamigawa's flip cards keep the flip kind).
   if (layout === "flip") return isTokenTypeLine(frontTypeLine(card)) ? "token" : "flip";
   if (layout === "adventure" || layout === "omen") return "adventure";
+  if (layout === "prepare" && card.textless !== true) return "prepare";
   // A transform or modal printing lands on the double-faced bodies (TODO
   // 5.4) when both faces can wear one: the Transform / Modal kind. A
   // planeswalker face, a battle or token front (their own kinds), a Saga

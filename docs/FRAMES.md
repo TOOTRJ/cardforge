@@ -3742,6 +3742,117 @@ look are layout **v54**, scoped to the two templates
 either, the dev database's seeds re-bake. A stored Spacecraft on the
 artifact frame keeps it.
 
+### The Prepare frame (4.27)
+
+TODO 4.27 (owner 2026-10-21: Prepare first; Room and Omen planned, not
+built). Secrets of Strixhaven (2026) prints its **Prepare** creatures — a
+creature and the spell it can cast a copy of while it is prepared — on the
+M15 frame with the lower text area split in two: the creature's rules in
+M15's box on the LEFT, and the spell on a **page** on the RIGHT, a name bar
+(name and cost) and a type bar in the colour, white ink, and a box of its
+own, darker paper. It is the adventure's two parts, mirrored, and it is
+drawn with the same anatomy: `prepare` is a profile with the `adventure`
+capability on its own rects (`PREPARE`, `lib/cards/template-layout.ts`).
+Reference: SOS #109 Blazing Firesinger // Seething Song; SOS #170 Abigale,
+Poet Laureate. Until the owner verifies a colour nobody is offered the frame
+(an admin: `?previewFrames=prepare`).
+
+**What the prints show** (the 93 plain 2015-frame printings of Scryfall's
+`layout:prepare` — 124 printings in all, 2026-10-21 — each Scryfall PNG at
+1500 × 2100; geometry the median over all 93, tones the median image of the
+printings whose spell is the card's one colour; the numbers are
+`scripts/lib/prepare-2026.mjs`): everything above the type bar is M15's;
+the page runs from a black outline at x 746–749 (which also closes the
+left box) and 1313–1315 down to 1872–1875, open to M15's pinline on the
+right; its bars are 1325–1416 and 1426–1517 from x 758, a square left end
+and a half-ellipse right end reaching x 1410 over the pinline (centre 1390,
+20 px across), a 3 px black outline; its box is M15's paper at about 0.8 of
+the left box's (1532–1862); under the page the frame field shows, lighter
+than the frame's own field, down to M15's box bottom, and M15's P/T plate
+sits on it. Text: the creature's rules centred in the left box (ink x
+127–733) at up to 76 px (most cards pitch 66, SOS #27 sets 74; owner
+Round 79 raised the first cut's 68 to the standard ceiling, the fit
+stepping a long text down), the page's name on the adventure panel's
+baseline (1388) and size (62 px, pips 60 px, right edge 1392), its type line
+baseline 1490, its rules left-aligned and centred down the page's box at
+68 px. The page's ink lands on print's columns — SOS #109's "Seething Song"
+from x 783, "Instant" 785, "Add" 778 on print; 783 / 786 / 778 on the bake
+(the first cut's rects sat 5 px left: owner Round 79).
+
+| key | name bar (print → master) | type bar | page box |
+| --- | --- | --- | --- |
+| w | 170 161 147 → 172 168 154 | 121 111 94 → 121 112 94 | 213 208 197 → 215 209 197 |
+| u | 1 124 159 → 14 130 173 | 0 75 103 → 0 75 103 | 171 196 212 → 179 201 219 |
+| b | 92 87 86 → 87 86 84 | 56 49 49 → 56 49 50 | 167 165 161 → 170 168 164 |
+| r | 181 82 61 → 181 82 65 | 134 42 30 → 135 42 30 | 208 175 162 → 215 180 166 |
+| g | 47 93 56 → 48 93 56 | 2 55 22 → 2 56 22 | 167 183 172 → 173 187 175 |
+
+**Masters are PipGlyph's own derivation** (`scripts/build-prepare-frames.mjs`;
+neither Card Conjurer, whose fork ends June 2024, nor MSE has the frame):
+`prepare/<w u b r g m>` from the published `m15/<key>`, `prepare/c` from
+`m15artifact/c` (m15/c is see-through), each page's bars from the published
+`adventure/<key>` (Card Conjurer's adventure page bars are the prints' two
+tones). The run moves the base box's right edge onto the left box, fills
+the page's rim with the base's pinline, lays the base's frame field (a
+quarter turn — two runs of its inside, cross-faded over 6 rows, never its
+bright outer rim, which the first cut ran across the strip on blue and
+black — toned onto print's strip) under the page, re-dresses the
+page's box as the base's paper under a per-key gain with the base box's own
+edges, cuts the adventure bars to the prints' shape — toned onto print and
+lit by the prints' bevel — and darkens the page's outline. The only drawn
+geometry is the two outlines, flat black at the prints' coverage (said so
+in provenance, `frame-sources.json`, `source: "pipglyph"`). Every WebP's
+alpha is checked equal to its PNG's; the bucket is the only home. `m` and
+`c` exist so that no colour resolves to a missing master (no plain gold
+page or colourless Prepare is printed). The owner ticks GOLD as a known
+close stand-in (Round 79): the 22 bordered two-colour printings then land
+on `prepare/m` — the Prepare kind, `nearest` with the two-colour gap (print
+draws the split frame, its page in the spell's colour) — and the 5
+two-colour extended-art ones move onto it from the extended-art frame; `c`
+stays unticked.
+
+**Profile.** M15's slots, cost lift, type baseline, art window
+(`CC_M15_ART_SLOT`), P/T plate and crown (`M15_CROWN`, `c` → the artifact's
+`a`: SOS #170 and the five other legendary prints wear it; opt-in per card).
+No stamp notch (the page's outline runs through M15's notch), no collector
+line, no pairs yet. The page's slots carry `placeholderName: "Spell"` and
+their own editor hint — the adventure's stay as they were.
+
+**Kind.** `prepare` is a layout kind (`KIND_DEFS.prepare`: a creature, the
+one card type every print has) whose template is `prepare`. Both renderers'
+page anatomy is the adventure's, so the kind gate keeps the two apart by
+trade dress: `TREATMENT_KINDS.prepare = ["prepare"]` and `prepare` is an
+EXCLUSIVE kind, as the emblem — the Prepare frame dresses nothing else and
+the Prepare card wears nothing else (`templateRefusesKind`, the server's
+gate). The spell is the card's second part: the creator's "Creature |
+Prepare spell" switch (`SECOND_PART_WORDS.prepare`, a sorcery to start),
+its fields on the steps of its creature twin, the never-drawn fields hidden
+(no picture of its own), the outline on the page.
+
+**Import.** A Prepare printing is the Prepare kind and keeps its spell as
+the back face, which the frame draws (main imported the creature on M15
+with the spell as a back face no frame drew). The bordered printings are
+EXACT on `prepare` once it is verified in the card's colour. Short of the
+frame in the card's colour (before its tick; colourless stays unticked)
+the import is main's — the CREATURE kind on the printing's own
+landing (M15, or the extended-art frame), the spell a legacy back
+(`finalizeImportMatch`): the Prepare kind wears its frame alone, so kept on
+an unpublished one the import chooser had nothing to offer. A two-colour card (the split frame,
+4.6f) and a spell page of another colour (`part-colour`, 4.26: SOS #170's
+{W/B} spell on a grey page, FRA #3's {G/W} on a white creature) are
+`nearest` on it; the extended-art printings land on it `nearest`; the two
+TEXTLESS printings (FRA #402, SOS #306) keep main's landing, the creature
+on the textless frames. Over all 124: 66 exact, 22 two-colour, 5 part
+colour, 29 extended art, 2 textless (`tests/unit/scryfall/prepare-imports.test.ts`).
+The AI deck remix lands where the import does and names the spell as the
+creature's own (`SECOND_HALF_RELATIONSHIP.prepare`); the AI does not design
+Prepare cards (its design types are one-faced).
+
+**Left for later** (TODO 4.27), in the owner's order (Round 79): the page's
+own colour and the two-colour pairs (4.26 / 4.6f) FIRST, then the stamp
+notch and the collector line; the extended-art and borderless dresses;
+Omen, then Room.
+
 ### The Universes Beyond frames (4.25)
 
 TODO 4.25 (owner 2026-10-13, roadmap Q5: three frames of their own — spell,
@@ -8303,12 +8414,12 @@ at HD on all four.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 72 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 73 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
 land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
-bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, new templates that joined without a bump, and the battle, which
+bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens and 4.27's Prepare frame, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card) prints its names,

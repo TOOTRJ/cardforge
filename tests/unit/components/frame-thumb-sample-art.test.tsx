@@ -178,7 +178,8 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
     // + its back (5.5 (b) PR 2: the same opaque master).
     // + the full-art token's six Nyx dresses (TODO 4.51: sampled, above).
     // + the arch token's tall box (TODO 4.55: opaque masters, no sample).
-    expect(FRAME_TEMPLATE_VALUES).toHaveLength(87);
+    // + the Prepare frame (TODO 4.27: M15's opaque master, no sample).
+    expect(FRAME_TEMPLATE_VALUES).toHaveLength(88);
     expect(FRAME_TEMPLATE_VALUES.filter((t) => drawn.has(t))).toEqual(SAMPLED);
   });
 

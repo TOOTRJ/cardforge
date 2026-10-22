@@ -201,6 +201,9 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // …and its back (TODO 5.5 (b), PR 2): the saga master's border, whole.
   sagadfcback: ALL_BORDER,
   adventure: ALL_BORDER,
+  // The Prepare frame (TODO 4.27): M15's own border, whole (its masters are
+  // m15/<key> and m15artifact/c with the text area re-dressed).
+  prepare: ALL_BORDER,
   flip: ALL_BORDER,
   aftermath: ALL_BORDER,
   fullart: ALL_BORDER,
