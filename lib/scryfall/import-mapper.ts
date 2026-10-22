@@ -1,4 +1,5 @@
 import type { ScryfallCard, ScryfallSet } from "@/lib/scryfall/client";
+import { frameGateColors, partColorFromCost } from "@/lib/cards/part-color";
 import { resolvePrintedTypes } from "@/lib/cards/type-line-field";
 import { oracleSelfNamesAsTokens } from "@/lib/cards/self-name";
 import { getFrameProfile } from "@/lib/cards/template-layout";
@@ -262,6 +263,19 @@ export type ScryfallImportPatch = {
    *  keeps it only where the landed frame draws the white border (the 1997
    *  and 2003 frames). */
   printed_border?: "white";
+  /** The FIRST part's own frame colour (TODO 4.26, M2;
+   *  ImportedAnatomyFacts): a split or aftermath half's, from its cost,
+   *  where it is not the card's whole colour. */
+  printed_first_part_color?: ColorIdentity[];
+  /** `false`: the parts can't be drawn in their own colours where the
+   *  card lands (finalizeImportMatch — a part's colour not verified there);
+   *  the card saves with the look off. */
+  printed_part_color?: false;
+  /** `true` for a two-colour Zendikar Expedition (TODO 4.11, owner
+   *  2026-10-22; twoColourLandOnPlainFrame): its frame draws the plain land
+   *  master `c` (FrameStyle.plainLandMaster) while `color_identity` stays
+   *  the card's colour. Absent otherwise. */
+  printed_plain_land_master?: true;
   /** The transform icon FAMILY this printing wears (TODO 5.4, owner Q5:
    *  imports follow the printing's family) — `frame_style.dfcIcon`, from
    *  the printing's `frame_effects` (dfcIconFamilyFromEffects): sun / moon,
@@ -861,6 +875,38 @@ function isRoomCard(card: ScryfallCard): boolean {
   return typeLineWords(frontTypeLine(card)).subtypes.includes("Room");
 }
 
+/** The layouts whose two parts each print their own colour, read from the
+ *  parts' own costs (TODO 4.26): split and aftermath — each half its own
+ *  colour's frame — and Prepare — the spell's page in the spell's colour
+ *  (its creature's colours are Scryfall's card `colors` already). A Room
+ *  (layout split) is read by isRoomCard first. */
+const PART_COLOUR_LAYOUTS: ReadonlySet<string> = new Set(["split", "aftermath", "prepare"]);
+function isPartColourLayout(card: ScryfallCard): boolean {
+  // (A Room — layout split, TODO 4.27 — is no split card: its doors are
+  // its own frame's, never a part colour; L1.)
+  return PART_COLOUR_LAYOUTS.has((card.layout ?? "").toLowerCase()) && !isRoomCard(card);
+}
+
+/**
+ * The FIRST part's own frame colour of a split or aftermath printing (TODO
+ * 4.26, owner decision M2), from its own cost (partColorFromCost — Fire //
+ * Ice's Fire is red, DMR #215), where it is not what the card's whole
+ * colour paints: the card's `color_identity` stays both halves' (Fire //
+ * Ice is red and blue — the gold "multicolor" of the single-select model),
+ * so the card page, the filters and the deck stats are unchanged, and this
+ * names the master its first half paints with each part in its own colour.
+ * Undefined for any other printing (a Prepare card's creature IS the
+ * card's colour; a Room is no split card).
+ */
+function firstPartColorOf(card: ScryfallCard, wholeColors: readonly ColorIdentity[]): ColorIdentity[] | undefined {
+  const layout = (card.layout ?? "").toLowerCase();
+  if (layout === "prepare" || !isPartColourLayout(card)) return undefined;
+  const first = partColorFromCost(card.card_faces?.[0]?.mana_cost);
+  if (first.length === 0) return undefined;
+  // The same master either way: no key to store.
+  return pickFrameColorKey(first) === pickFrameColorKey([...wholeColors]) ? undefined : first;
+}
+
 /**
  * Derive the card KIND from a Scryfall card. Multi-signal by necessity —
  * `layout` alone can't do it (verified against the live API):
@@ -978,7 +1024,15 @@ export function verifiedFrameMatchFromScryfall(
     // so the printings grid and the import agree.
     return finalizeImportMatch({ ...mapScryfallToFormPatch(card), frame_match: match }, verifiedKeys).frame_match ?? match;
   }
-  return withVerification(match, pickFrameColorKey(frameColorsFromScryfall(card)), verifiedKeys);
+  // (A two-colour Expedition is verified in its plain land master `c`,
+  // TODO 4.11 — frameGateColors, the save's rule.)
+  return withVerification(
+    match,
+    pickFrameColorKey(
+      frameGateColors(match.landOn ?? match.template, { plainLandMaster: twoColourLandOnPlainFrame(card, frontFaceColors(card)) || undefined }, frameColorsFromScryfall(card)),
+    ),
+    verifiedKeys,
+  );
 }
 
 /**
@@ -1720,12 +1774,7 @@ const IDENTITY_DRESSED_LAND_ERAS: ReadonlySet<string> = new Set(["1993", "1997"]
  * not Commander identity (see ScryfallImportPatch.color_identity).
  */
 export function frameColorsFromScryfall(card: ScryfallCard): ColorIdentity[] {
-  const letters = frontFaceColors(card);
-  // A two-colour Zendikar Expedition prints its colours in a split pinline
-  // its frame doesn't draw yet: the plain land master, not gold (TODO 4.11,
-  // owner 2026-10-22; the registry's `two-colour` gap keeps it nearest).
-  if (twoColourLandOnPlainFrame(card, letters)) return ["colorless"];
-  const colors = letters.map((code) => SCRYFALL_COLOR_TO_IDENTITY[code]);
+  const colors = frontFaceColors(card).map((code) => SCRYFALL_COLOR_TO_IDENTITY[code]);
   if (colors.length > 1) return ["multicolor"];
   if (colors.length === 0) return ["colorless"];
   return colors.filter((v) =>
@@ -2077,6 +2126,15 @@ export function mapScryfallToFormPatch(
     printed_stamp: stampOfPrinting(card),
     // …and its border (TODO 4.30): white, or no key at all.
     ...((card.border_color ?? "").trim().toLowerCase() === "white" ? { printed_border: "white" as const } : {}),
+    // …and its first part's own colour (TODO 4.26, M2): a split or
+    // aftermath half's, where it is not the card's whole colour.
+    ...(() => {
+      const first = firstPartColorOf(card, frontColorIdentity);
+      return first ? { printed_first_part_color: first } : {};
+    })(),
+    // …and a two-colour Expedition's plain-land frame (TODO 4.11): frame
+    // data beside its unchanged colour.
+    ...(twoColourLandOnPlainFrame(card, frontFaceColors(card)) ? { printed_plain_land_master: true as const } : {}),
     // A flavour-name printing (TODO 6.2, owner Round 80) writes its own
     // name as `~`, which draws the nickname its title bar prints — as the
     // printing sets its rules. Every other import keeps Oracle's name.
@@ -2209,7 +2267,13 @@ export function mapScryfallBackFacePatch(
           color_identity: dfcFaceColorIdentity(body, dfc!.backType, backFrameColorsFromScryfall(card)),
           frame_style: { template: body },
         }
-      : {}),
+      : // The second part's own colour (TODO 4.26): a split or aftermath
+        // half, a Prepare spell — what its cost says (partColorFromCost: a
+        // colour, a pair, gold for three or more); none on a colourless
+        // part, which prints the card's.
+        isPartColourLayout(card) && partColorFromCost(back.mana_cost).length > 0
+        ? { color_identity: partColorFromCost(back.mana_cost) }
+        : {}),
     title: back.name ?? undefined,
     cost: back.mana_cost ?? undefined,
     card_type: cardType,

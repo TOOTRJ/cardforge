@@ -65,7 +65,7 @@ describe("visual-regression matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
       expect(id).toMatch(
-        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|land|artifact|vehicle|wide|star|spacecraft|nopt|nodefense|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|legacyland|sunmoon|moon|compass|fan(-(hd|nopt|wide-pt))?|saga|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square|battle))?|back(-(hd|nopt))?|battle(-(nopt|hd))?|pair(-(hybrid|foil|etched|hd|square|br|gw|ub))?(-crown(-hd)?)?|centred(-(hd|back))?|white(-(hd|foil|etched|square|pair))?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|crown|triangle|collector-(hd|2015)|auto-common|auto-uncommon|matte-hd|pair-(split|hybrid|crown|hd|foil)))?|tiers-(one|three|none|wide|star)|large-pips-hd|phyrexian-cost-(3|5)(-hd)?|nyx-(wide|artifact|silver)|token-nyx(-(hd|aura|artifact))?|two-sided(-(front|hd))?|nickname(-(pair|long|hd|foil|etched))?|selfname(-(nickname|literal))?))?$/,
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|land|artifact|vehicle|wide|star|spacecraft|nopt|nodefense|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|legacyland|sunmoon|moon|compass|fan(-(hd|nopt|wide-pt))?|saga|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square|battle))?|back(-(hd|nopt))?|battle(-(nopt|hd))?|pair(-(hybrid|foil|etched|hd|square|br|gw|ub))?(-crown(-hd)?)?|centred(-(hd|back))?|white(-(hd|foil|etched|square|pair))?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|crown|triangle|collector-(hd|2015)|auto-common|auto-uncommon|matte-hd|pair-(split|hybrid|crown|hd|foil)))?|tiers-(one|three|none|wide|star)|large-pips-hd|phyrexian-cost-(3|5)(-hd)?|nyx-(wide|artifact|silver)|token-nyx(-(hd|aura|artifact))?|two-sided(-(front|hd))?|nickname(-(pair|long|hd|foil|etched))?|selfname(-(nickname|literal))?|part-(u|b|m|r|wb|gw-h)(-(foil|etched|hd))?|pair-part-(hybrid|r)|pair-hybrid-part|plain-land))?$/,
       );
     }
     expect(ids).toEqual([...ids].sort());
@@ -369,8 +369,30 @@ describe("visual-regression matrix", () => {
         expect(keys, c.id).toEqual(["finish", "selfName", "template"]);
         continue;
       }
+      // Each part in its own colour (TODO 4.26) — the ONLY cases that name
+      // it, each with a second part's colour of its own.
+      if (/@part-/.test(c.id)) {
+        expect((c.row.frame_style as { partColor?: boolean }).partColor, c.id).toBe(true);
+        // (…and the first half's own colour where the card's is the whole
+        // card's — M2.)
+        expect(keys.filter((k) => k !== "firstPartColor"), c.id).toEqual(["finish", "partColor", "template"]);
+        expect((c.row.back_face as { color_identity?: string[] } | null)?.color_identity?.length, c.id).toBeGreaterThan(0);
+        continue;
+      }
+      // A two-colour Expedition's plain land master (TODO 4.11) — the ONLY
+      // cases that name it.
+      if (/@plain-land$/.test(c.id)) {
+        expect(keys, c.id).toEqual(["finish", "plainLandMaster", "template"]);
+        continue;
+      }
       expect(keys, c.id).toEqual(["finish", "template"]);
     }
+    expect(
+      cases.filter((c) => "partColor" in (c.row.frame_style as object)).every((c) => /@(pair-)?(hybrid-)?part/.test(c.id)),
+    ).toBe(true);
+    expect(
+      [...new Set(cases.filter((c) => "partColor" in (c.row.frame_style as object)).map((c) => c.template))].sort(),
+    ).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).partColor).sort());
     expect(cases.filter((c) => "rulesAlign" in (c.row.frame_style as object)).every((c) => c.id.includes("@centred"))).toBe(true);
     // The white border (TODO 4.30): on each of the four frames that draw it,
     // in both finishes, at the stored bake's size and squared; never on a

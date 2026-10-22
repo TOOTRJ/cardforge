@@ -492,6 +492,13 @@ export type TwoColorSplit = {
   atPct: number;
 };
 
+/** A per-part colour seam (TODO 4.26) — see FrameProfile.partColorSeam.
+ *  `x`: the first part's master left of `atPct` (% of the card's width),
+ *  the second part's right of it; `y`: above / below `atPct` (% of the
+ *  card's height). The seam runs through flat black on every master, so a
+ *  whole-pixel cut at any bake size shows no line. */
+export type PartColorSeam = { axis: "x" | "y"; atPct: number };
+
 /** How a two-colour card's frame prints (TODO 4.6b; lib/cards/anatomy.ts
  *  twoColorDressOf): "split" — the gold frame with a split pinline and text
  *  box, the printed look of any two-colour cost; "hybrid" — the split outer
@@ -538,6 +545,13 @@ export type FrameOverlaySlot =
    *  (lib/cards/faces.ts) and drawn only when that key is not the master's
    *  own (lib/cards/anatomy.ts resolveFrameOverlays). */
   | (FrameOverlaySlotBase & { anatomy: "mdfcStrip" })
+  /** The Prepare spell's PAGE in the spell's own colour (TODO 4.26): the
+   *  page cut out of each master (`prepare/page/<key>`), keyed by the
+   *  second part's page key (lib/cards/part-color.ts partPageKeyOf: a
+   *  colour, `m`, `c`, a pair or a pair's hybrid `-h`) and drawn only with
+   *  `frame_style.partColor === true` where that key is not the page the
+   *  card's master already paints. */
+  | (FrameOverlaySlotBase & { anatomy: "partPage" })
   | (FrameOverlaySlotBase & {
       anatomy: "holoStamp";
       /** The stamp this notch is cut for: its shape, the oval the art
@@ -688,6 +702,25 @@ export type FrameProfile = {
    *  FrameSlice boxes), and the etched sheen
    *  masks with both halves. */
   twoColorSplit?: TwoColorSplit;
+  /** Each part in its own colour (TODO 4.26): a two-part frame whose halves
+   *  are each a whole master — split (a vertical seam through the black
+   *  gutter between the halves) and aftermath (a horizontal seam through
+   *  the black band between the two parts). With the card's
+   *  `frame_style.partColor === true` and a second-part colour
+   *  (`back_face.color_identity`) whose master differs from the card's, the
+   *  second part's master is drawn past the seam — the twoColorSplit
+   *  machinery on an axis of its own (lib/cards/part-color.ts). The Prepare
+   *  page is a `partPage` overlay slot instead. Code-owned; set only on
+   *  PROFILES entries. */
+  partColorSeam?: PartColorSeam;
+  /** The frame paints its plain land master `c` for a gold-keyed card whose
+   *  frame_style says `plainLandMaster` (TODO 4.11, owner 2026-10-22): a
+   *  two-colour Zendikar Expedition, whose pinline prints its two colours,
+   *  while the frame draws no two-colour pinline. The card stays gold in its
+   *  data; the frame is drawn, gated and verified in `c`
+   *  (lib/cards/part-color.ts frameGateColors). Set on the two Expedition
+   *  PROFILES entries only. */
+  plainLandStandIn?: true;
   /** Masters dressed by the card's TYPE as well as its colour: colour key →
    *  the master an ARTIFACT of that colour paints instead (isArtifactFrameType:
    *  the Artifact card type, or "Artifact" in the supertype). Alpha:
@@ -3984,6 +4017,24 @@ const PREPARE: FrameProfile = {
   },
 };
 
+// The spell's PAGE in its own colour (TODO 4.26; docs/FRAMES.md "Each part
+// in its own colour"): `prepare/page/<key>` — the page of every Prepare
+// master (scripts/build-prepare-frames.mjs, R.page), cols 746..1413 × rows
+// 1314..1875 of the HD card (even px: whole px at the 750 bake). Keys: the
+// seven colours and the twenty pair keys (the gold-split `wu` and the
+// hybrid `wu-h`; lib/cards/part-color.ts partPageKeyOf).
+export const PREPARE_PAGE_KEYS = [
+  "w", "u", "b", "r", "g", "m", "c",
+  "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu",
+  "wu-h", "wb-h", "ub-h", "ur-h", "br-h", "bg-h", "rg-h", "rw-h", "gw-h", "gu-h",
+] as const;
+export const PREPARE_PAGE: FrameOverlaySlot = {
+  anatomy: "partPage",
+  rect: { topPct: (1314 / 2100) * 100, leftPct: (746 / 1500) * 100, widthPct: (668 / 1500) * 100, heightPct: (562 / 2100) * 100 },
+  assetPathTemplate: "/frames/prepare/page/{key}.png",
+  keys: PREPARE_PAGE_KEYS,
+};
+
 // Flip — the M15 Kamigawa flip frame. ONE card, two creatures: the top reads
 // normally (name → small text box → type bar) and the bottom is printed
 // UPSIDE-DOWN — its name / type / rules / P-T come from the back-face content
@@ -4416,6 +4467,17 @@ const AFTERMATH: FrameProfile = {
     },
   },
 };
+
+// Each half in its own colour (TODO 4.26): split's second half (the right,
+// after the clockwise turn) and aftermath's lower part are their own
+// colour's master past a hard seam. Both seams run through flat black on
+// all seven masters: split's gutter is black on every row from x 1071 to
+// 1114 (the seam at its centre, 1092 px = 52 %W — 546 px at the 750 bake;
+// the prints' gutter centre, DMR #210 / #214 / #215, is 1092.5), and
+// aftermath's band between the parts is black on every column from row
+// 1135 to 1143 (the seam at 1140 = 54.2857 %H, 570 px at the 750 bake).
+export const SPLIT_PART_SEAM: PartColorSeam = { axis: "x", atPct: 52 };
+export const AFTERMATH_PART_SEAM: PartColorSeam = { axis: "y", atPct: (1140 / 2100) * 100 };
 
 // ---------------------------------------------------------------------------
 // Showcase set families — per-set "showcase" frame treatments from popular
@@ -6839,15 +6901,23 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // the colourless key is the artifact frame, so its crown is the
   // artifact's. No stamp notch (the page's outline runs through M15's) and
   // no collector line yet (TODO 4.27 follow-ups).
-  prepare: { ...PREPARE, overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }] },
+  // TODO 4.26: the two-colour Prepare (M15's pair masters with the page,
+  // both dresses) and the spell's page in its own colour (PREPARE_PAGE).
+  prepare: {
+    ...PREPARE,
+    twoColorMasters: ["split", "hybrid"],
+    overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }, PREPARE_PAGE],
+  },
   // CC's colourless flip frame is see-through (layout v38, TODO 4.21a; owner
   // decision 2026-09-29): bars at α 191–248, the body between the border and
   // the pinline clear, a 15 px opaque pinline round the window — the art
   // runs under the frame for "c" from the border's inner edge (4.17a's
   // rect), the window's own crop meeting it on that pinline.
   flip: { ...FLIP, underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] } },
-  split: SPLIT,
-  aftermath: AFTERMATH,
+  // TODO 4.26: each half in its own colour (SPLIT_PART_SEAM,
+  // AFTERMATH_PART_SEAM).
+  split: { ...SPLIT, partColorSeam: SPLIT_PART_SEAM },
+  aftermath: { ...AFTERMATH, partColorSeam: AFTERMATH_PART_SEAM },
   avatar: AVATAR,
   bloomburrow: BLOOMBURROW,
   // The six near-black picker tiles that are not art-first get the tile's
@@ -6897,8 +6967,8 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // The Expeditions (TODO 4.11 wave 1) print the collector line in the
   // black border under the stone (4.9b): ZNE 2 px below M15's rows, EXP
   // 6.5 px above. Opt-in per card like every collector line.
-  expeditionland: { ...EXPEDITIONLAND, collector: EXPEDITION_ZNR_COLLECTOR },
-  expeditionlandbfz: { ...EXPEDITIONLANDBFZ, collector: EXPEDITION_BFZ_COLLECTOR },
+  expeditionland: { ...EXPEDITIONLAND, collector: EXPEDITION_ZNR_COLLECTOR, plainLandStandIn: true },
+  expeditionlandbfz: { ...EXPEDITIONLANDBFZ, collector: EXPEDITION_BFZ_COLLECTOR, plainLandStandIn: true },
   // The constellation showcase prints its legendary crown (THB #258–268):
   // the Nyx crown band with its arms faded into this frame's own rim
   // (NYX_CONSTELLATION_CROWN). On this entry only — never on the NYX base.

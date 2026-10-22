@@ -14031,15 +14031,17 @@
   "prepare": {
     "source": "pipglyph",
     "converter": "scripts/build-prepare-frames.mjs",
-    "derivedFrom": "the published m15/<key> masters (m15artifact/c for c) and the published adventure/<key> masters' page bars (Card Conjurer imports: see \"m15\", \"m15artifact\" and \"adventure\")",
-    "output": "1500x2100, the base's corners, webp q90 with the PNG's alpha exactly",
+    "derivedFrom": "the published m15/<key> masters (m15artifact/c for c), the published m15/<pair> and m15/<pair>-h pair masters, and the published adventure/<key> masters' page bars (Card Conjurer imports: see \"m15\", \"m15artifact\" and \"adventure\")",
+    "output": "1500x2100, the base's corners, webp q90 with the PNG's alpha exactly; page/<key> 668x562 at x 746, y 1314",
     "recipe": {
       "leftBoxEdge": "the base box's right edge (cols 1374..1389) moved to 729..",
       "rim": "cols 750..1390 x rows 1316..1871: the base's pinline (row 1308) per column",
       "strip": "rows 1876..1926: the base's frame field (cols 1404..1437 from row 250, then 1415..1437 from row 510, cross-faded over 6 rows) turned a quarter, each channel moved onto print's strip median, the page's shadow on it",
       "pageBox": "cols 758..1390 x rows 1532..1862: the base box's paper x a per-key gain, its top / left / bottom edges the base box's own, moved",
       "bars": "name rows 1325..1416, type 1426..1517, from x 758: the adventure master's page bars (rows 1323..1412 / 1424..1493) toned onto print and lit by the prints' bevel; the shape (square left end, half-ellipse right end centred x 1390, 20 px across) and its 3 px outline DRAWN, flat black",
-      "outline": "the page's left, top and bottom outline DRAWN, flat black at the prints' coverage"
+      "outline": "the page's left, top and bottom outline DRAWN, flat black at the prints' coverage",
+      "pairs": "TODO 4.26: the M15 pair master of the dress, its left box (rows 1314..1937, cols 98..745) and the pinline under the boxes (rows 1938..1949) re-lerped from the two one-colour m15 masters (shares 396→444 / 660→716); the page read from the two one-colour masters lerped 898→1228, its box's gain the two keys' lerped the same way; the bars from adventure/m (gold) or adventure/b (the hybrid's grey) toned onto print",
+      "page": "page/<key>: the master's page, cols 746..1413 x rows 1314..1875 (col 746 and rows 1872..1875 see-through; right of x 1390 only the bars' ends at their coverage, un-blended from the page under them)"
     },
     "colors": {
       "w": [
@@ -14076,6 +14078,146 @@
         "m15artifact/c.png (published, sha256 bc6654e4964d)",
         "its page bars from adventure/c.png (published, sha256 8a92af9381eb)",
         "page box gain 0.810 / 0.807 / 0.799; strip shift 0 / 0 / 0; name bar 150/160/164 → 150/160/164, type bar 116/135/141 → 116/135/141 (no plain printing: the bars untoned, the gain the five keys' mean)"
+      ],
+      "wu": [
+        "m15/wu.png (published, sha256 5febe66b93c7)",
+        "m15/w.png (published, sha256 3818b6c0d274)",
+        "m15/u.png (published, sha256 80cb122e0539)",
+        "adventure/m.png (published, sha256 fca06e0cbbfb)",
+        "the gold-split dress: the left box ramped 396→444, the bottom pinline 660→716, the page's rim and box 898→1228; strip shift -34/-38/-19; name bar 113/96/44 → 165/140/66, type bar 68/56/15 → 123/85/25"
+      ],
+      "wb": [
+        "m15/wb.png (published, sha256 1f026723e2d0)",
+        "m15/w.png (published, sha256 3818b6c0d274)",
+        "m15/b.png (published, sha256 d5578ecb1927)",
+        "adventure/m.png (published, sha256 fca06e0cbbfb)",
+        "the gold-split dress: the left box ramped 396→444, the bottom pinline 660→716, the page's rim and box 898→1228; strip shift -34/-38/-19; name bar 113/96/44 → 165/140/66, type bar 68/56/15 → 123/85/25"
+      ],
+      "ub": [
+        "m15/ub.png (published, sha256 8702e335d81e)",
+        "m15/u.png (published, sha256 80cb122e0539)",
+        "m15/b.png (published, sha256 d5578ecb1927)",
+        "adventure/m.png (published, sha256 fca06e0cbbfb)",
+        "the gold-split dress: the left box ramped 396→444, the bottom pinline 660→716, the page's rim and box 898→1228; strip shift -34/-38/-19; name bar 113/96/44 → 165/140/66, type bar 68/56/15 → 123/85/25"
+      ],
+      "ur": [
+        "m15/ur.png (published, sha256 850db175460c)",
+        "m15/u.png (published, sha256 80cb122e0539)",
+        "m15/r.png (published, sha256 e6cbb495cf62)",
+        "adventure/m.png (published, sha256 fca06e0cbbfb)",
+        "the gold-split dress: the left box ramped 396→444, the bottom pinline 660→716, the page's rim and box 898→1228; strip shift -34/-38/-19; name bar 113/96/44 → 165/140/66, type bar 68/56/15 → 123/85/25"
+      ],
+      "br": [
+        "m15/br.png (published, sha256 2814f12b0205)",
+        "m15/b.png (published, sha256 d5578ecb1927)",
+        "m15/r.png (published, sha256 e6cbb495cf62)",
+        "adventure/m.png (published, sha256 fca06e0cbbfb)",
+        "the gold-split dress: the left box ramped 396→444, the bottom pinline 660→716, the page's rim and box 898→1228; strip shift -34/-38/-19; name bar 113/96/44 → 165/140/66, type bar 68/56/15 → 123/85/25"
+      ],
+      "bg": [
+        "m15/bg.png (published, sha256 3494bdf81c45)",
+        "m15/b.png (published, sha256 d5578ecb1927)",
+        "m15/g.png (published, sha256 f6d980508b95)",
+        "adventure/m.png (published, sha256 fca06e0cbbfb)",
+        "the gold-split dress: the left box ramped 396→444, the bottom pinline 660→716, the page's rim and box 898→1228; strip shift -34/-38/-19; name bar 113/96/44 → 165/140/66, type bar 68/56/15 → 123/85/25"
+      ],
+      "rg": [
+        "m15/rg.png (published, sha256 cf8a9d5ed096)",
+        "m15/r.png (published, sha256 e6cbb495cf62)",
+        "m15/g.png (published, sha256 f6d980508b95)",
+        "adventure/m.png (published, sha256 fca06e0cbbfb)",
+        "the gold-split dress: the left box ramped 396→444, the bottom pinline 660→716, the page's rim and box 898→1228; strip shift -34/-38/-19; name bar 113/96/44 → 165/140/66, type bar 68/56/15 → 123/85/25"
+      ],
+      "rw": [
+        "m15/rw.png (published, sha256 080d6586a5c9)",
+        "m15/r.png (published, sha256 e6cbb495cf62)",
+        "m15/w.png (published, sha256 3818b6c0d274)",
+        "adventure/m.png (published, sha256 fca06e0cbbfb)",
+        "the gold-split dress: the left box ramped 396→444, the bottom pinline 660→716, the page's rim and box 898→1228; strip shift -34/-38/-19; name bar 113/96/44 → 165/140/66, type bar 68/56/15 → 123/85/25"
+      ],
+      "gw": [
+        "m15/gw.png (published, sha256 7cd729e529cc)",
+        "m15/g.png (published, sha256 f6d980508b95)",
+        "m15/w.png (published, sha256 3818b6c0d274)",
+        "adventure/m.png (published, sha256 fca06e0cbbfb)",
+        "the gold-split dress: the left box ramped 396→444, the bottom pinline 660→716, the page's rim and box 898→1228; strip shift -34/-38/-19; name bar 113/96/44 → 165/140/66, type bar 68/56/15 → 123/85/25"
+      ],
+      "gu": [
+        "m15/gu.png (published, sha256 d74392176cf2)",
+        "m15/g.png (published, sha256 f6d980508b95)",
+        "m15/u.png (published, sha256 80cb122e0539)",
+        "adventure/m.png (published, sha256 fca06e0cbbfb)",
+        "the gold-split dress: the left box ramped 396→444, the bottom pinline 660→716, the page's rim and box 898→1228; strip shift -34/-38/-19; name bar 113/96/44 → 165/140/66, type bar 68/56/15 → 123/85/25"
+      ],
+      "wu-h": [
+        "m15/wu-h.png (published, sha256 72d2cf801df4)",
+        "m15/w.png (published, sha256 3818b6c0d274)",
+        "m15/u.png (published, sha256 80cb122e0539)",
+        "adventure/b.png (published, sha256 316327a82421)",
+        "the hybrid (grey bars) dress: the left box ramped 396→444, the bottom pinline 660→716, the page's rim and box 898→1228; strip shift 4/11/10; name bar 97/91/94 → 141/137/136, type bar 45/38/40 → 87/84/85"
+      ],
+      "wb-h": [
+        "m15/wb-h.png (published, sha256 f187c6549ef6)",
+        "m15/w.png (published, sha256 3818b6c0d274)",
+        "m15/b.png (published, sha256 d5578ecb1927)",
+        "adventure/b.png (published, sha256 316327a82421)",
+        "the hybrid (grey bars) dress: the left box ramped 396→444, the bottom pinline 660→716, the page's rim and box 898→1228; strip shift -3/2/9; name bar 97/91/94 → 141/137/136, type bar 45/38/40 → 87/84/85"
+      ],
+      "ub-h": [
+        "m15/ub-h.png (published, sha256 10a101967899)",
+        "m15/u.png (published, sha256 80cb122e0539)",
+        "m15/b.png (published, sha256 d5578ecb1927)",
+        "adventure/b.png (published, sha256 316327a82421)",
+        "the hybrid (grey bars) dress: the left box ramped 396→444, the bottom pinline 660→716, the page's rim and box 898→1228; strip shift -3/2/9; name bar 97/91/94 → 141/137/136, type bar 45/38/40 → 87/84/85"
+      ],
+      "ur-h": [
+        "m15/ur-h.png (published, sha256 de679e84113d)",
+        "m15/u.png (published, sha256 80cb122e0539)",
+        "m15/r.png (published, sha256 e6cbb495cf62)",
+        "adventure/b.png (published, sha256 316327a82421)",
+        "the hybrid (grey bars) dress: the left box ramped 396→444, the bottom pinline 660→716, the page's rim and box 898→1228; strip shift 22/50/52; name bar 97/91/94 → 141/137/136, type bar 45/38/40 → 87/84/85"
+      ],
+      "br-h": [
+        "m15/br-h.png (published, sha256 2e4ea478b629)",
+        "m15/b.png (published, sha256 d5578ecb1927)",
+        "m15/r.png (published, sha256 e6cbb495cf62)",
+        "adventure/b.png (published, sha256 316327a82421)",
+        "the hybrid (grey bars) dress: the left box ramped 396→444, the bottom pinline 660→716, the page's rim and box 898→1228; strip shift 22/50/52; name bar 97/91/94 → 141/137/136, type bar 45/38/40 → 87/84/85"
+      ],
+      "bg-h": [
+        "m15/bg-h.png (published, sha256 e742d40e9de5)",
+        "m15/b.png (published, sha256 d5578ecb1927)",
+        "m15/g.png (published, sha256 f6d980508b95)",
+        "adventure/b.png (published, sha256 316327a82421)",
+        "the hybrid (grey bars) dress: the left box ramped 396→444, the bottom pinline 660→716, the page's rim and box 898→1228; strip shift -1/5/8; name bar 97/91/94 → 141/137/136, type bar 45/38/40 → 87/84/85"
+      ],
+      "rg-h": [
+        "m15/rg-h.png (published, sha256 1f0ae479f981)",
+        "m15/r.png (published, sha256 e6cbb495cf62)",
+        "m15/g.png (published, sha256 f6d980508b95)",
+        "adventure/b.png (published, sha256 316327a82421)",
+        "the hybrid (grey bars) dress: the left box ramped 396→444, the bottom pinline 660→716, the page's rim and box 898→1228; strip shift -1/5/8; name bar 97/91/94 → 141/137/136, type bar 45/38/40 → 87/84/85"
+      ],
+      "rw-h": [
+        "m15/rw-h.png (published, sha256 1b607c532758)",
+        "m15/r.png (published, sha256 e6cbb495cf62)",
+        "m15/w.png (published, sha256 3818b6c0d274)",
+        "adventure/b.png (published, sha256 316327a82421)",
+        "the hybrid (grey bars) dress: the left box ramped 396→444, the bottom pinline 660→716, the page's rim and box 898→1228; strip shift 6/9/11; name bar 97/91/94 → 141/137/136, type bar 45/38/40 → 87/84/85"
+      ],
+      "gw-h": [
+        "m15/gw-h.png (published, sha256 9f5138bcbe1c)",
+        "m15/g.png (published, sha256 f6d980508b95)",
+        "m15/w.png (published, sha256 3818b6c0d274)",
+        "adventure/b.png (published, sha256 316327a82421)",
+        "the hybrid (grey bars) dress: the left box ramped 396→444, the bottom pinline 660→716, the page's rim and box 898→1228; strip shift 6/9/11; name bar 97/91/94 → 141/137/136, type bar 45/38/40 → 87/84/85"
+      ],
+      "gu-h": [
+        "m15/gu-h.png (published, sha256 50e8a9f07450)",
+        "m15/g.png (published, sha256 f6d980508b95)",
+        "m15/u.png (published, sha256 80cb122e0539)",
+        "adventure/b.png (published, sha256 316327a82421)",
+        "the hybrid (grey bars) dress: the left box ramped 396→444, the bottom pinline 660→716, the page's rim and box 898→1228; strip shift 4/11/10; name bar 97/91/94 → 141/137/136, type bar 45/38/40 → 87/84/85"
       ]
     },
     "sourceFiles": [
@@ -14087,18 +14229,38 @@
       "adventure/u.png",
       "adventure/w.png",
       "m15/b.png",
+      "m15/bg-h.png",
+      "m15/bg.png",
+      "m15/br-h.png",
+      "m15/br.png",
       "m15/g.png",
+      "m15/gu-h.png",
+      "m15/gu.png",
+      "m15/gw-h.png",
+      "m15/gw.png",
       "m15/m.png",
       "m15/r.png",
+      "m15/rg-h.png",
+      "m15/rg.png",
+      "m15/rw-h.png",
+      "m15/rw.png",
       "m15/u.png",
+      "m15/ub-h.png",
+      "m15/ub.png",
+      "m15/ur-h.png",
+      "m15/ur.png",
       "m15/w.png",
+      "m15/wb-h.png",
+      "m15/wb.png",
+      "m15/wu-h.png",
+      "m15/wu.png",
       "m15artifact/c.png"
     ],
     "notes": [
-      "PipGlyph's own derivation (TODO 4.27): neither Card Conjurer (its fork ends June 2024) nor MSE has the Prepare frame (Secrets of Strixhaven, 2026). Every painted pixel is a published master's — moved, toned or darkened — except the bars' outline and the page's outline, which are flat black geometry at the prints' coverage.",
-      "The numbers are scripts/lib/prepare-2026.mjs (93 plain 2015-frame printings of layout:prepare (SOS, SOC, PSOS, FRA, PFRA, PLST, YSOS, YFRA), measured 2026-10-21); no scan is read by the build.",
-      "m and c have no plain printing (a two-colour Prepare prints the split frame, 4.6f; none is colourless): they exist so that no colour resolves to a missing master and stay unticked until a print shows them.",
-      "The spell page's colour is the CARD's (one colour key per card); print colours the page by the spell (a hybrid spell's page is grey, Abigale SOS #170): 4.26's per-part colour."
+      "PipGlyph's own derivation (TODO 4.27): neither Card Conjurer (its fork ends June 2024) nor MSE has the Prepare frame (Secrets of Strixhaven, 2026). Every painted pixel is a published master's — moved, toned, lerped or darkened — except the bars' outline and the page's outline, which are flat black geometry at the prints' coverage.",
+      "The numbers are scripts/lib/prepare-2026.mjs (93 plain 2015-frame printings of layout:prepare (SOS, SOC, PSOS, FRA, PFRA, PLST, YSOS, YFRA), measured 2026-10-21; the pairs and pages 2026-10-21 on the two-colour and part-colour printings named there); no scan is read by the build.",
+      "m and c have no plain printing as a creature's frame: they exist so that no colour resolves to a missing master and stay unticked until a print shows them; `page/m` is a gold spell of three colours or more.",
+      "TODO 4.26: the page is the SPELL's (print colours it by the spell — a hybrid spell's grey page, Abigale SOS #170): `page/<key>` is drawn over the creature's master where the spell's page key differs (lib/cards/part-color.ts), opt-in per card (frame_style.partColor)."
     ]
   },
   "retro": {

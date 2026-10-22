@@ -60,31 +60,41 @@ describe("the Prepare printings, imported", () => {
       const row = `${m.status} ${m.template}${m.landOn ? `→${m.landOn}` : ""} ${m.signature} ${m.blockedBy ?? "-"}`;
       table[row] = (table[row] ?? 0) + 1;
     }
+    // TODO 4.26: the 22 two-colour printings (the pair masters, both
+    // dresses) and the 5 whose spell's page is another colour (the page
+    // overlay) are EXACT now — they were nearest with the two-colour (4.6f)
+    // and part-colour (4.26) gaps: 66 + 12 + 10 + 5 = 93.
     expect(table).toEqual({
-      "exact prepare layout/2015 -": 66,
+      "exact prepare layout/2015 -": 93,
       "nearest extendedart→prepare extendedart -": 29,
-      "nearest prepare layout/2015+two-colour 4.6f": 12,
-      "nearest prepare layout/2015+two-colour-hybrid 4.6f": 10,
-      "nearest prepare layout/2015+part-colour 4.26": 5,
       "nearest m15textless textless/2015 4.42": 1,
       "nearest modern textless/old-frame 4.43": 1,
     });
     // SOS #109 Blazing Firesinger // Seething Song: the reference.
     expect(frameMatchFromScryfall(card("sos-109"))).toMatchObject({ status: "exact", template: "prepare" });
-    // SOS #170 Abigale: a W/B creature — the split frame (4.6f) before its
-    // hybrid spell's grey page.
-    expect(frameMatchFromScryfall(card("sos-170"))).toMatchObject({ status: "nearest", template: "prepare", blockedBy: "4.6f" });
+    // SOS #170 Abigale: a W/B creature (the gold-split pair master) with
+    // its hybrid spell's grey page (TODO 4.26) — exact.
+    expect(frameMatchFromScryfall(card("sos-170"))).toMatchObject({ status: "exact", template: "prepare" });
     // FRA #3 Blossom-Blessed Angel: a white creature, a {G/W} spell on a
-    // grey page.
-    expect(frameMatchFromScryfall(card("fra-3"))).toMatchObject({
-      status: "nearest",
-      template: "prepare",
-      blockedBy: "4.26",
-      reason: expect.stringMatching(/spell's page/),
-    });
+    // grey page — exact.
+    expect(frameMatchFromScryfall(card("fra-3"))).toMatchObject({ status: "exact", template: "prepare" });
     // The textless printings keep main's landing and reason: the textless
     // frames' own gap (the creature kind, the spell a legacy back).
     expect(frameMatchFromScryfall(card("fra-402"))).toMatchObject({ status: "nearest", template: "m15textless", blockedBy: "4.42" });
+  });
+
+  it("keeps the spell's own colour, from its cost (TODO 4.26)", () => {
+    const backColour = (key: string) => mapScryfallToFormPatch(card(key)).back_face?.color_identity;
+    expect(backColour("sos-109")).toEqual(["red"]);
+    // A hybrid spell: the pair (its grey page — the dress is the cost's).
+    expect(backColour("sos-170")).toEqual(["white", "black"]);
+    expect(backColour("fra-3")).toEqual(["green", "white"]);
+    // A gold spell: the pair (the gold page).
+    expect(backColour("soc-45")).toEqual(["white", "black"]);
+    // A mono spell on a two-colour creature (YFRA #27: a red page).
+    expect(backColour("yfra-27")).toEqual(["red"]);
+    // The creature's colours stay Scryfall's card colours.
+    expect(mapScryfallToFormPatch(card("fra-3")).color_identity).toEqual(["white"]);
   });
 
   it("a legendary printing wears the crown (SOS #55 Jadzi, exact)", () => {
@@ -130,10 +140,12 @@ describe("the Prepare printings, imported", () => {
     expect(finalizeImportMatch(mapScryfallToFormPatch(card("sos-198")), redOnly).kind).toBe("creature");
   });
 
-  it("with GOLD ticked (owner Round 79: a known close stand-in), every two-colour printing is the Prepare kind on the gold master, nearest", () => {
-    // Print draws a two-colour Prepare card on the split frame (4.6f) with
-    // its page in the SPELL's colour (4.26); the gold master is the stand-in.
-    // The 22 bordered ones land on `prepare` with the two-colour gap, the 5
+  it("with GOLD ticked, every two-colour printing is the Prepare kind on its pair master — exact since 4.26", () => {
+    // Print draws a two-colour Prepare card on the split frame with its page
+    // in the SPELL's colour — the pair masters and the page overlays since
+    // TODO 4.26 (they were the gold master, nearest with the two-colour gap:
+    // owner Round 79's known close stand-in). A pair is verified with its
+    // gold key. The 22 bordered ones land EXACT on `prepare`, the 5
     // extended-art ones move onto it from the extended-art frame; every
     // one-colour printing still imports as main did until its own tick.
     const goldOnly = new Set([...PREPARE_UNVERIFIED, "prepare/m"]);
@@ -148,7 +160,7 @@ describe("the Prepare printings, imported", () => {
       const row = `${m.status} ${m.template}${m.landOn ? `→${m.landOn}` : ""} ${m.blockedBy ?? "-"}`;
       rows[row] = (rows[row] ?? 0) + 1;
     }
-    expect(rows).toEqual({ "nearest prepare 4.6f": 22, "nearest extendedart→prepare -": 5 });
+    expect(rows).toEqual({ "exact prepare -": 22, "nearest extendedart→prepare -": 5 });
     expect(remixFrameFor(mapScryfallToFormPatch(card("sos-170")), goldOnly)).toEqual({ ok: true, template: "prepare", card_type: "creature" });
     expect(finalizeImportMatch(mapScryfallToFormPatch(card("sos-109")), goldOnly).kind).toBe("creature");
   });

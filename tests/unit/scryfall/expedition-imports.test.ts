@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import printingsData from "./fixtures/expedition-printings.json";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
-import { frameColorsFromScryfall, frameMatchFromScryfall, frontFaceColors } from "@/lib/scryfall/import-mapper";
+import { frameColorsFromScryfall, frameMatchFromScryfall, frontFaceColors, mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
+import { importedAnatomy, normalizeAnatomy, storedAnatomyOf } from "@/lib/cards/anatomy";
+import { frameGateColors } from "@/lib/cards/part-color";
+import { frameGateError } from "@/lib/cards/frame-availability";
+import { getFrameProfile } from "@/lib/cards/template-layout";
+import { frameMasterKey } from "@/components/cards/frame-layer";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 
 // ---------------------------------------------------------------------------
@@ -45,9 +50,9 @@ describe("the Expedition imports", () => {
       if (twoColour) {
         expect(r.match.blockedBy, r.key).toBe("4.11");
         expect(r.match.gaps, r.key).toEqual(["two-colour"]);
-        // …on the plain land master, not gold (owner 2026-10-22), until the
-        // pinline pair masters exist.
-        expect(r.colour, r.key).toBe("c");
+        // Its colour stays gold (main's); the FRAME draws the plain land
+        // master (below).
+        expect(r.colour, r.key).toBe("m");
         expect(frontFaceColors(card(r.key)), r.key).toHaveLength(2);
       } else {
         expect(r.match.status, r.key).toBe("exact");
@@ -59,17 +64,42 @@ describe("the Expedition imports", () => {
     expect(tally).toEqual({ "zne exact": 6, "zne nearest": 24, "exp exact": 9, "exp nearest": 36 });
   });
 
-  it("dresses a two-colour land in the plain land master only on an Expedition frame (twoColourLandOnPlainFrame)", () => {
-    const strand = printings["zne-1"] as Record<string, unknown>;
-    expect(frameColorsFromScryfall(card("zne-1"))).toEqual(["colorless"]);
-    expect(frameColorsFromScryfall(card("exp-1"))).toEqual(["colorless"]);
-    // The same land in a regular set (KTK's) or another masterpiece set keeps gold.
-    for (const over of [{ set: "ktk", set_type: "expansion" }, { set: "mps", set_type: "masterpiece" }]) {
-      expect(frameColorsFromScryfall(scryfallCardSchema.parse({ ...strand, ...over })), over.set).toEqual(["multicolor"]);
+  it("keeps a two-colour Expedition's colour exactly as main stores it and draws, gates and verifies its FRAME in the plain land master `c`", () => {
+    for (const [key, template] of [["zne-1", "expeditionland"], ["exp-1", "expeditionlandbfz"]] as const) {
+      const patch = mapScryfallToFormPatch(card(key));
+      // The card's colour: main's, gold ("multicolor"; the page, the
+      // filters, the decks) — never the frame's stand-in.
+      expect(patch.color_identity, key).toEqual(["multicolor"]);
+      expect(patch.color_identity, key).toEqual(frameColorsFromScryfall(card(key)));
+      expect(patch.printed_plain_land_master, key).toBe(true);
+      // The import's anatomy carries the frame data; the save keeps it on
+      // the Expedition frames and drops it on any other.
+      const { style, colorIdentity } = importedAnatomy(patch, template);
+      expect(colorIdentity, key).toEqual(["multicolor"]);
+      expect(style.plainLandMaster, key).toBe(true);
+      expect(normalizeAnatomy({ ...style, template }, template, "land").plainLandMaster, key).toBe(true);
+      expect("plainLandMaster" in normalizeAnatomy({ ...style, template: "m15land" }, "m15land", "land"), key).toBe(false);
+      // Both renderers' master (frameMasterKey): the plain land `c`.
+      const profile = getFrameProfile(template);
+      expect(frameMasterKey(profile, colorIdentity, { cardType: "land" }, style), key).toBe("c");
+      expect(frameMasterKey(profile, colorIdentity, { cardType: "land" }, {}), key).toBe("m");
+      // The gate and the verification combo: `c` (frameGateColors).
+      expect(frameGateColors(template, style, colorIdentity), key).toEqual(["colorless"]);
+      const onlyC = new Set([`${template}/c`]);
+      expect(frameGateError(template, frameGateColors(template, style, colorIdentity), onlyC), key).toBeNull();
+      expect(frameGateError(template, colorIdentity, onlyC), key).not.toBeNull();
+      // A remix keeps it (storedAnatomyOf).
+      expect(storedAnatomyOf({ template, ...style }).plainLandMaster, key).toBe(true);
     }
-    // One colour and any colour are untouched on the Expedition frames.
-    expect(frameColorsFromScryfall(card("zne-29"))).toEqual(["red"]);
-    expect(frameColorsFromScryfall(card("zne-22"))).toEqual(["multicolor"]);
+    // Not on an any-colour land (gold, as printed), nor on the same land
+    // printed in a regular set, nor once the card is recoloured.
+    expect(mapScryfallToFormPatch(card("zne-22")).printed_plain_land_master).toBeUndefined();
+    const strand = printings["zne-1"] as Record<string, unknown>;
+    for (const over of [{ set: "ktk", set_type: "expansion" }, { set: "mps", set_type: "masterpiece" }]) {
+      expect(mapScryfallToFormPatch(scryfallCardSchema.parse({ ...strand, ...over })).printed_plain_land_master, over.set).toBeUndefined();
+    }
+    expect(frameMasterKey(getFrameProfile("expeditionland"), ["red"], { cardType: "land" }, { plainLandMaster: true })).toBe("r");
+    expect(frameMasterKey(getFrameProfile("m15land"), ["multicolor"], { cardType: "land" }, { plainLandMaster: true })).toBe("m");
   });
 
   it("reads each reference's colour as the registry lists it", () => {

@@ -3,7 +3,8 @@
 import { withPrintedTypes, withPrintedTypesUpdate } from "@/lib/cards/type-line-field";
 import { withPrintTypography, withPrintTypographyUpdate } from "@/lib/validation/print-typography";
 import { revalidatePath } from "next/cache";
-import { frameGateError } from "@/lib/cards/frame-availability";
+import { frameGateError, partColorGateError } from "@/lib/cards/frame-availability";
+import { drawsPartColor, frameGateColors } from "@/lib/cards/part-color";
 import {
   cardFieldsFace,
   frameKindGateError,
@@ -72,6 +73,7 @@ import {
   frameStyleRequiresPremium,
   type CardInsert,
   type CardUpdate,
+  type ColorIdentity,
   type Visibility,
 } from "@/types/card";
 import { getEntitlements } from "@/lib/billing/entitlements";
@@ -281,13 +283,34 @@ export async function createCardAction(
   const verifiedKeysOf = async () =>
     (verifiedKeysCache ??= new Set(await getVerifiedFrameKeys()));
   if (!framePreview) {
+    // (A split / aftermath half in its own colour, TODO 4.26 M2: gated in
+    // the first part's own colour where the card names one — the master it
+    // draws; the card's colour stays the whole card's. The look is the
+    // new-card default where the payload names no switch.)
     const gateError = frameGateError(
       data.frame_style?.template,
-      data.color_identity,
+      frameGateColors(
+        data.frame_style?.template,
+        { partColor: data.frame_style?.partColor ?? true, firstPartColor: data.frame_style?.firstPartColor, plainLandMaster: data.frame_style?.plainLandMaster },
+        data.color_identity,
+      ),
       await verifiedKeysOf(),
     );
     if (gateError) {
       return { ok: false, fieldErrors: { frame_style: gateError } };
+    }
+    // A second part in its own colour (TODO 4.26) paints that colour's
+    // master or page: it must be published on the frame too — unless the
+    // card switches the look off.
+    if (drawsPartColor(data.frame_style?.template) && data.frame_style?.partColor !== false) {
+      const partError = partColorGateError(
+        data.frame_style?.template,
+        (data.back_face as { color_identity?: ColorIdentity[] } | null | undefined)?.color_identity,
+        await verifiedKeysOf(),
+      );
+      if (partError) {
+        return { ok: false, fieldErrors: { "back_face.color_identity": partError } };
+      }
     }
   }
 
@@ -681,17 +704,51 @@ export async function updateCardAction(
       data.color_identity !== undefined &&
       JSON.stringify([...data.color_identity].sort()) !==
         JSON.stringify([...(existing.color_identity ?? [])].sort());
-    if (templateChanged || colorChanged) {
-      const gateError = frameGateError(
-        nextTemplate ?? existingTemplate,
-        data.color_identity ?? existing.color_identity,
-        await verifiedKeysOf(),
-      );
+    // …and an edit that flips each part in its own colour (TODO 4.26, N2)
+    // where the flip changes the colour the frame draws in (the first
+    // part's own, or the card's): gated in the colour it will draw, as a
+    // frame change is — a flip that draws the same masters stays editable.
+    const storedStyle = (existing.frame_style ?? {}) as { partColor?: boolean; firstPartColor?: ColorIdentity[]; plainLandMaster?: true };
+    const nextPartColor = data.frame_anatomy?.partColor ?? storedStyle.partColor;
+    const gateColorsAfter = frameGateColors(
+      nextTemplate ?? existingTemplate,
+      { partColor: nextPartColor, firstPartColor: storedStyle.firstPartColor, plainLandMaster: storedStyle.plainLandMaster },
+      data.color_identity ?? existing.color_identity,
+    );
+    const gateColorsBefore = frameGateColors(existingTemplate, storedStyle, existing.color_identity);
+    const partSwitchMovesFrame =
+      data.frame_anatomy?.partColor !== undefined &&
+      data.frame_anatomy.partColor !== (storedStyle.partColor === true) &&
+      JSON.stringify([...(gateColorsAfter ?? [])].sort()) !== JSON.stringify([...(gateColorsBefore ?? [])].sort());
+    if (templateChanged || colorChanged || partSwitchMovesFrame) {
+      const gateError = frameGateError(nextTemplate ?? existingTemplate, gateColorsAfter, await verifiedKeysOf());
       if (gateError) {
         if (!(await previewAllowed())) {
           return { ok: false, fieldErrors: { frame_style: gateError } };
         }
         becomesPreview = !previewCard;
+      }
+    }
+
+    // A second part in its own colour (TODO 4.26): when the edit switches
+    // the look on, changes the part's colour or moves the card onto another
+    // frame with the look on (L2), that colour must be published on the
+    // frame — a stored card that leaves all three alone stays editable.
+    {
+      const template = nextTemplate ?? existingTemplate;
+      const storedBack = (existing.back_face ?? null) as { color_identity?: ColorIdentity[] } | null;
+      const nextBack = data.back_face !== undefined ? (data.back_face as { color_identity?: ColorIdentity[] } | null) : storedBack;
+      const partColors = nextBack?.color_identity ?? [];
+      const storedOn = (existing.frame_style as { partColor?: unknown } | null)?.partColor === true;
+      const nextOn = data.frame_anatomy?.partColor ?? storedOn;
+      const switchedOn = nextOn && !storedOn;
+      const partChanged =
+        JSON.stringify([...partColors].sort()) !== JSON.stringify([...(storedBack?.color_identity ?? [])].sort());
+      if (drawsPartColor(template) && nextOn && (switchedOn || partChanged || templateChanged)) {
+        const partError = partColorGateError(template, partColors, await verifiedKeysOf());
+        if (partError && !(await previewAllowed())) {
+          return { ok: false, fieldErrors: { "back_face.color_identity": partError } };
+        }
       }
     }
 

@@ -22,7 +22,9 @@ import {
   FrameLayer,
   frameImageUrl,
   frameMasterKey,
-  frameSplitFor,
+  cardFrameSplit,
+  partFactsOfBackFace,
+  type PartFrameFacts,
   FrameOverlayLayer,
   frameOverlayImageUrl,
   pickFrameColorKey,
@@ -752,6 +754,9 @@ export function CardPreview(rawProps: CardPreviewProps) {
           face={frontFace}
           adventure={adventureData}
           secondFace={secondFaceData}
+          // The second part's own colour (TODO 4.26): split's and
+          // aftermath's seam, the Prepare page — the bake's twin.
+          part={adventureData || secondFaceData ? partFactsOfBackFace(backFace) : null}
           {...faceProps}
         />
       )}
@@ -852,6 +857,7 @@ function CardFace({
   brandMark = false,
   anatomy = null,
   dfc = null,
+  part = null,
 }: {
   face: FaceData;
   template: FrameTemplate;
@@ -878,6 +884,9 @@ function CardFace({
    *  icon family the rider draws, and what the OTHER face puts on this one
    *  (the back's P/T in the front's grey tab). Null on every other card. */
   dfc?: DfcFace | null;
+  /** The second part's colour facts on a two-part frame (TODO 4.26) — its
+   *  seam or its page in its own colour. Null on every other face. */
+  part?: PartFrameFacts | null;
 }) {
   // The colour-indicator dot (TODO 5.1a, lib/cards/color-indicator.ts): a
   // body that declares it draws it for a coloured identity, and the type
@@ -912,6 +921,8 @@ function CardFace({
     dfc: dfc ? { role: dfc.role, icon: dfc.icon, stripKey: dfc.otherFace.stripKey } : null,
     // The holofoil stamp's "auto" reads the rarity (TODO 4.9c).
     rarity,
+    // The second part's own colour (TODO 4.26): the Prepare page overlay.
+    part: part ?? null,
   };
   const plateKey = plateKeyFor(colorKey, resolveTwoColor(layout, anatomy, anatomyFacts));
   const allOverlays = resolveFrameOverlays(layout, anatomy, { ...anatomyFacts, colorKey });
@@ -930,8 +941,11 @@ function CardFace({
   // bake's twin.
   const overlays = frameLayerOverlays(allOverlays, holoStamp);
   // A two-colour Dragon Wing card draws BOTH colours' frames split down the
-  // seam (FrameProfile.twoColorSplit); the plates keep colorKey ("m").
-  const frameSplit = frameSplitFor(layout, colorIdentity);
+  // seam (FrameProfile.twoColorSplit); the plates keep colorKey ("m"). A
+  // split / aftermath card with its parts in their own colours (TODO 4.26,
+  // FrameProfile.partColorSeam) draws its second part's master past its
+  // seam the same way.
+  const frameSplit = cardFrameSplit(layout, colorIdentity, face, anatomy, part ?? null);
   const cardName = face.title?.trim() || "Untitled Card";
   // The nickname (TODO 6.3, lib/cards/nickname.ts): on a frame that
   // declares the plate it takes the title bar, and the card's own name goes
@@ -1386,6 +1400,7 @@ function CardFace({
               ? {
                   href: frameImageUrl(template, frameSplit.rightKey),
                   atPct: frameSplit.atPct,
+                  ...(frameSplit.axis ? { axis: frameSplit.axis } : {}),
                 }
               : null
           }
@@ -1415,7 +1430,7 @@ function CardFace({
           frameHref={frameImageUrl(template, frameSplit?.leftKey ?? masterKey)}
           split={
             frameSplit
-              ? { href: frameImageUrl(template, frameSplit.rightKey), atPct: frameSplit.atPct }
+              ? { href: frameImageUrl(template, frameSplit.rightKey), atPct: frameSplit.atPct, ...(frameSplit.axis ? { axis: frameSplit.axis } : {}) }
               : null
           }
           art={foilArtLayers({

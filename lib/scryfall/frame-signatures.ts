@@ -3486,7 +3486,18 @@ function gapDrawnBy(gap: GapKey, template: FrameTemplate, border?: string): bool
     case "crown":
       return frameAnatomyOf(template).crown;
     case "two-colour":
-      return frameAnatomyOf(template).twoColor.includes("split") || GOLD_PAIR_TEMPLATES.has(template);
+      // …and on split and aftermath (TODO 4.26), where a two-colour printing
+      // is two one-colour halves (HOU #157 Driven // Despair g|b), not the
+      // two-colour dress: drawn where each part draws its own colour.
+      return (
+        frameAnatomyOf(template).twoColor.includes("split") ||
+        GOLD_PAIR_TEMPLATES.has(template) ||
+        (PER_PART_COLOUR_TEMPLATES.has(template) && frameAnatomyOf(template).partColor === true)
+      );
+    // The Prepare page in its spell's own colour (TODO 4.26): the frames
+    // whose profile declares a part in its own colour.
+    case "part-colour":
+      return frameAnatomyOf(template).partColor === true;
     case "two-colour-hybrid":
       return frameAnatomyOf(template).twoColor.includes("hybrid");
     // The double-faced marks (TODO 5.1a): a transform FRONT body draws them
@@ -3638,8 +3649,11 @@ export const EXPEDITION_SETS: Readonly<Record<string, FrameTemplate>> = Object.f
  * (`frameAnatomyOf(template).twoColor`). Both Expedition frames' plain land
  * master is their nearest look (the gold frame is the any-colour lands');
  * the `two-colour` gap still names it nearest and logs its request row.
- * frameColorsFromScryfall (lib/scryfall/import-mapper.ts) reads it: the
- * import's frame colour, the verification combo and the landing.
+ * The import (lib/scryfall/import-mapper.ts) reads it as FRAME data —
+ * `printed_plain_land_master`, stored as FrameStyle.plainLandMaster — while
+ * the card's `color_identity` stays its own (owner 2026-10-22: a frame
+ * stand-in never rewrites a card's colour); the frame is drawn, gated and
+ * verified in `c` (lib/cards/part-color.ts frameGateColors).
  */
 export function twoColourLandOnPlainFrame(card: ScryfallCard, colors: readonly string[]): boolean {
   if (colors.length !== 2) return false;
