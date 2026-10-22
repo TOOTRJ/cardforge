@@ -221,6 +221,10 @@ const PICKS: readonly Pick[] = [
   { from: "prepare/wu/prepare-long@pair-part-hybrid", why: "part colour: the two-colour Prepare (its pair master, the crown) under a hybrid page" },
   { from: "split/r/split-long@part-u-hd", why: "part colour: split's right half in its own colour, a vertical seam (the long card: the short split's turned footer sits 3 px off at 750 on main already)" },
   { from: "aftermath/r/aftermath-short@part-b", why: "part colour: aftermath's lower part in its own colour, a horizontal seam" },
+  // …and the adventure's storybook page in its spell's colour (owner
+  // decision 2026-10-22: the pre-cut `adventure/page/<key>` through the
+  // same partPage slot — WOE #221's red page beside a black frame).
+  { from: "adventure/b/adventure-short@part-r", why: "part colour: the adventure spell's red page over a black master (the page overlay, bookLeft's soft edge)" },
   // …and owner decision M2 (N3): the card's colour the WHOLE card's (gold),
   // its first half's on frame_style.firstPartColor — the left half red from
   // it, the right blue (the long split: the short one's turned footer is

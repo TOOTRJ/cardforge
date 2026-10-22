@@ -58,6 +58,90 @@
       "width": 1500,
       "height": 2100
     },
+    "adventure/page/b.png": {
+      "hash": "e6b798744f8c",
+      "sha256": "e6b798744f8c96f2ff51973603086f4791a246114b1dc3df5b985c85a8e4edcd",
+      "bytes": 325309,
+      "width": 682,
+      "height": 626
+    },
+    "adventure/page/b.webp": {
+      "hash": "ec3b4a33212c",
+      "sha256": "ec3b4a33212cb872b03241245a196f1d5a46b0d319158d951f25960e63d20b16",
+      "bytes": 9954,
+      "width": 682,
+      "height": 626
+    },
+    "adventure/page/g.png": {
+      "hash": "bccca06de4d0",
+      "sha256": "bccca06de4d0b904a3a298e3ca7b2c725a8a5aee246fa2c3eb51fb9531eb27dd",
+      "bytes": 351238,
+      "width": 682,
+      "height": 626
+    },
+    "adventure/page/g.webp": {
+      "hash": "b23ba21ecfc5",
+      "sha256": "b23ba21ecfc5835db63eab53ef4c098d90f66d36d7a5024989819495824cdc21",
+      "bytes": 10074,
+      "width": 682,
+      "height": 626
+    },
+    "adventure/page/m.png": {
+      "hash": "3db9dce38a9e",
+      "sha256": "3db9dce38a9edb5c1d530251e6fc91f3b0d1930544f958cd4864ef233e8a84cc",
+      "bytes": 349257,
+      "width": 682,
+      "height": 626
+    },
+    "adventure/page/m.webp": {
+      "hash": "105ef5e58049",
+      "sha256": "105ef5e58049d8070ae4bad0502b722f46cdea2ad7197352cc3a17220caa281a",
+      "bytes": 10836,
+      "width": 682,
+      "height": 626
+    },
+    "adventure/page/r.png": {
+      "hash": "0aacc703497e",
+      "sha256": "0aacc703497e736bf728c984803d7961ccc02fc7961e5b66a880d5df3ff03b62",
+      "bytes": 332795,
+      "width": 682,
+      "height": 626
+    },
+    "adventure/page/r.webp": {
+      "hash": "ebfde03f8823",
+      "sha256": "ebfde03f88230cd66bf074b65d5e4cd8a63ee370ff17fdbcc3a210a37b6f9773",
+      "bytes": 10676,
+      "width": 682,
+      "height": 626
+    },
+    "adventure/page/u.png": {
+      "hash": "b8af356461ff",
+      "sha256": "b8af356461fff96aff6f3704fbbeffeff59f7e538aeaa9824678a52303d8a62b",
+      "bytes": 408508,
+      "width": 682,
+      "height": 626
+    },
+    "adventure/page/u.webp": {
+      "hash": "0161a003ea24",
+      "sha256": "0161a003ea247357a4c2b5e50a8ebca2c464b8c98aa58b5c7742bfc5ff0f8555",
+      "bytes": 11528,
+      "width": 682,
+      "height": 626
+    },
+    "adventure/page/w.png": {
+      "hash": "043010b01d34",
+      "sha256": "043010b01d34a4212c2b1c74960173352e8a651c61e98ceaabd52b683add0772",
+      "bytes": 381153,
+      "width": 682,
+      "height": 626
+    },
+    "adventure/page/w.webp": {
+      "hash": "e9c7b363ab89",
+      "sha256": "e9c7b363ab89cc3aa83921bbfc98e021fbe68fcab40842bfe885b55ebb89a584",
+      "bytes": 10138,
+      "width": 682,
+      "height": 626
+    },
     "adventure/r.png": {
       "hash": "928b2581eb2e",
       "sha256": "928b2581eb2e3a82788c83aa665a69aa4a0c722d21c895ac62272452e6a3bdea",

@@ -3034,6 +3034,98 @@ export function describeStripRider(template, key, spec, sha) {
   ];
 }
 
+// ---------------------------------------------------------------------------
+// The adventure's spell PAGE in the spell's own colour (TODO 4.26, owner
+// decision 2026-10-22: pre-cut pieces). The storybook's LEFT page — its name
+// bar, type bar, paper, curled edge and the left half of the spine — prints
+// in the SPELL's colour and the right page in the creature's: WOE #221
+// Callous Sell-Sword // Burn Together is a red page beside a black frame; of
+// the plain 2015-frame adventure printings, every one whose spell is another
+// colour is a mono spell beside a mono (or colourless) creature (WOE #221–241,
+// LCI #231, HOB #170 / #174 / #176, the WOE / LCI promos; TDM's Omens wear
+// their own page). Card Conjurer paints it by drawing the spell's frame
+// through the pack's `bookLeft` mask over the creature's; we publish that
+// cut as PIECES, `adventure/page/<key>.png`: each key's PUBLISHED master
+// (the bytes the bucket serves) cropped to the mask's box, its alpha the
+// mask's (bookLeft is native 1500 × 2100: no resample) — the colour the
+// master's everywhere, so a piece over its own master is that master. The
+// renderers draw it through the `partPage` overlay slot Prepare's page uses
+// (lib/cards/template-layout.ts ADVENTURE_PAGE), keyed by the spell's
+// colour, only where it differs from the creature's: no new renderer code,
+// no mask published, nothing composited at render.
+//   • Keys: the five colours and gold `m` (a gold spell's page: WOE #220
+//     Beluna prints the gold master's own page). The two-colour PAIR pages
+//     CC builds with `bookLeftMulticolor` (the first colour's page ramped
+//     into the second's, x ≈ 360 → 560) are NOT built: no adventure prints
+//     a two-colour spell page beside a creature of other colours — the
+//     two-colour spells (MKM #212, MH3 #196, ELD #212's hybrid, HOB #166)
+//     sit on creatures of the same pair, whose master already paints the
+//     page — so the slot maps a pair to the gold page (keyMap). No
+//     colourless page: no adventure spell is colourless.
+//   • The box: the mask's alpha reaches x 73–752 × y 1313–1937; the piece is
+//     x 72–753 × y 1312–1937 (an even origin and size: whole px at the 750
+//     bake), every px of the mask inside it.
+// ---------------------------------------------------------------------------
+
+/** The page piece's box at HD (even origin and size; the mask's bbox grown). */
+export const ADVENTURE_PAGE_BOX = Object.freeze({ x: 72, y: 1312, width: 682, height: 626 });
+/** The keys the page publishes. */
+export const ADVENTURE_PAGE_KEYS = Object.freeze(["w", "u", "b", "r", "g", "m"]);
+/** The adventure template's page spec (CC_TEMPLATES.adventure.page). */
+export const ADVENTURE_PAGE_CUT = Object.freeze({
+  mask: `${ADVENTURE}/bookLeft.png`,
+  box: ADVENTURE_PAGE_BOX,
+  keys: ADVENTURE_PAGE_KEYS,
+  /** CC's two-colour page mask — read by no recipe (no print shows a pair
+   *  page beside a creature of other colours); kept as provenance. */
+  unused: Object.freeze({ bookLeftMulticolor: `${ADVENTURE}/bookLeftMulticolor.png` }),
+});
+
+/** How provenance prints one page piece's recipe. */
+export function describeAdventurePage(template, key, spec, sha) {
+  const { box } = spec;
+  return [
+    `${template}/${key}.png (the published master, sha256 ${sha.slice(0, 12)}) cut at x ${box.x}–${box.x + box.width - 1} × y ${box.y}–${box.y + box.height - 1} through the alpha of ${spec.mask} (native 1500 × 2100; the master's colour on every px, alpha × the mask's)`,
+  ];
+}
+
+/**
+ * What a cut page piece must be (TODO 4.26): every px of the mask's alpha
+ * inside the box (none of the page cut off), the piece's alpha the mask's
+ * times the master's, and its colour the master's wherever it shows.
+ * `master` and `mask` are raw 8-bit RGBA at width × height; returns the
+ * counts and the failures.
+ */
+export function adventurePageFindings(piece, master, mask, width, height, box) {
+  let opaque = 0;
+  let partial = 0;
+  let alphaOff = 0;
+  let colourOff = 0;
+  let maskOutsideBox = 0;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const p = (y * width + x) * 4;
+      const inBox = x >= box.x && x < box.x + box.width && y >= box.y && y < box.y + box.height;
+      if (!inBox) {
+        if (mask[p + 3] > 0) maskOutsideBox += 1;
+        continue;
+      }
+      const o = ((y - box.y) * box.width + (x - box.x)) * 4;
+      const want = Math.round((master[p + 3] * mask[p + 3]) / 255);
+      if (piece[o + 3] !== want) alphaOff += 1;
+      if (piece[o + 3] === 255) opaque += 1;
+      else if (piece[o + 3] > 0) partial += 1;
+      if (piece[o + 3] > 0 && (piece[o] !== master[p] || piece[o + 1] !== master[p + 1] || piece[o + 2] !== master[p + 2])) colourOff += 1;
+    }
+  }
+  const failures = [];
+  if (maskOutsideBox > 0) failures.push(`${maskOutsideBox} px of the mask fall outside the box`);
+  if (alphaOff > 0) failures.push(`${alphaOff} px whose alpha is not the mask's × the master's`);
+  if (colourOff > 0) failures.push(`${colourOff} px whose colour is not the master's`);
+  if (opaque === 0) failures.push("the piece is empty");
+  return { opaque, partial, alphaOff, colourOff, maskOutsideBox, failures };
+}
+
 const MDFC_STRIP_NOTE =
   "the flipside strip RIDERS (TODO 5.1c, strip/<key>.png): this template's masters' tabs cut through CC's Flipside mask (reminder.svg, the whole tab — the ◀ and the outline stay dark), eroded 1 px so the cut runs inside the tab's dark outline and snapped to the HD grid's 2 × 2 px blocks so the 750 bake's 2:1 resample reads whole blocks (a piece over its own master is byte-identical at HD and at 750); drawn by both renderers over the strip the master paints, keyed by the OTHER face's colour (the prints paint the strip in the colour of the face it describes: STX #147, the pathways, KHM #114), only when that key differs from the master's own; `l` = the grey land modal's tab (the land pair's c master) for a two-colour land other face (MH3 #252–261's hybrid fronts) and, on a back, a front in the hybrid dress";
 
@@ -3840,11 +3932,14 @@ export const CC_TEMPLATES = {
     },
     pack: "packAdventure.js 'Adventure'",
     transforms: NATIVE_1500,
+    // TODO 4.26: the spell's page in its own colour — pieces cut from the
+    // published masters through CC's bookLeft mask (ADVENTURE_PAGE_CUT).
+    page: ADVENTURE_PAGE_CUT,
     notes: [
       "source: CC 'Adventure' (packAdventure.js): the M15 frame with the storybook's two pages — replaces the MSE composite (build-adventure-frame.mjs: the MSE m15 master + double_page + null_page), whose window ran 10 / 6 px narrow and whose paper was re-drawn",
       "colourless = CC's 'Artifact Frame' (adventure/a.png) as a RENDER STAND-IN only (owner decision 2026-09-29): no colourless adventure was ever printed and the pack has no colourless frame, so the key keeps a master for a stray colourless card and is never offered (no reference, never ticked)",
       "P/T plate = M15's (m15/pt/<k>.png): the pack draws CC's m15PT<K>.png at M15's bounds, so the ADVENTURE profile keeps M15's plate and box",
-      "the book masks (bookLeft, bookLeftMulticolor, bookRight) are 4.26's per-page colour inputs, not published",
+      "the book masks are not published: bookLeft cuts the spell's PAGE pieces (TODO 4.26, page/<key>.png — the published masters' left page through its alpha, drawn by the partPage overlay slot where the spell's colour differs from the creature's: WOE #221 a red page beside a black frame); bookLeftMulticolor (a two-colour page) is read by nothing, as no print shows a pair page beside a creature of other colours; bookRight is the creature's own page, which the master paints",
     ],
   },
   // 4.21a — the Amonkhet aftermath frame (AKH Insult // Injury and the 27
@@ -5260,6 +5355,9 @@ export function sourceFilesFor(def) {
   // (battle): importer inputs, checked and recorded.
   if (def.halfMasks) for (const src of [def.halfMasks.left, def.halfMasks.right]) files.add(src);
   if (def.paintedShield) files.add(def.paintedShield.mask);
+  // The mask a template's page pieces are cut through (TODO 4.26: the
+  // adventure's bookLeft).
+  if (def.page) files.add(def.page.mask);
   // A pack's own bitmaps published beside the masters, and the masks kept
   // for a later recipe (4.21c's saga).
   for (const src of Object.values(def.pieces ?? {})) files.add(src);

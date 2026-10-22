@@ -781,12 +781,15 @@ export function resolveFrameOverlays(
       // The Prepare spell's page in its own colour (TODO 4.26): only with
       // the switch on, and only where it is not the page the master
       // already paints (the pair master's own page, or the colour's).
+      // (The adventure's page maps a two-colour spell to its gold page —
+      // the slot's keyMap; Prepare's slot has none.)
       if (!anatomyOn(style, "partColor")) continue;
       const pageKey = partPageKeyOf(facts.part);
       if (!pageKey) continue;
+      const mapped = slot.keyMap?.[pageKey] ?? pageKey;
       const look = resolveTwoColor(profile, style, facts);
-      if (pageKey === (look ? look.masterKey : facts.colorKey)) continue;
-      key = pageKey;
+      if (mapped === (look ? look.masterKey : facts.colorKey)) continue;
+      key = mapped;
     } else if (slot.anatomy === "mdfcStrip") {
       const other = facts.dfc?.stripKey;
       if (!other) continue;

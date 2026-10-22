@@ -161,6 +161,16 @@ const MEANT_CHANGES: Record<string, (record: unknown) => unknown> = {
     (saved.back_face as Record<string, unknown>).color_identity = ["blue"];
     return record;
   },
+  // TODO 4.26, the adventure's page (feat/adventure-part-colours): an
+  // adventure printing names its spell's colour from the spell's cost, as a
+  // Prepare / split printing does — Bonecrusher Giant's Stomp {1}{R} red.
+  // The page draws only where it differs from the creature's (here it
+  // doesn't: the bake is unchanged).
+  "remix printing · eld-115": (record) => {
+    const saved = (record as { saved: Record<string, unknown> }).saved;
+    (saved.back_face as Record<string, unknown>).color_identity = ["red"];
+    return record;
+  },
 };
 
 /** Compare with main's record (or record it). JSON round-trip: what a

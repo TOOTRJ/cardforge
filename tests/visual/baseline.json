@@ -20,11 +20,13 @@
       "public/fonts/mplantin-italic.ttf": "e81d83608cfa12d5",
       "public/fonts/Montserrat-Medium.ttf": "4a5a218d2b8efa4f"
     },
-    "manifest": "467442970aacb044"
+    "manifest": "948ac3013ff37426"
   },
   "cases": {
     "adventure/b/adventure-long": "33f0376c03fd9950:42614af9",
     "adventure/b/adventure-short": "668f7e872f0a7e15:4e4c69e5",
+    "adventure/b/adventure-short@part-r": "43b5a8a0bc1d0f1e:8da71d58",
+    "adventure/b/adventure-short@part-r-foil": "892c250d0b2d19a5:0ee91668",
     "adventure/c/adventure-long": "f8d5394adfc1236e:cb709a66",
     "adventure/c/adventure-short": "674c5c722a832577:b24af08d",
     "adventure/g/adventure-long": "7fd519eaafc34660:39bb56a4",
@@ -33,11 +35,16 @@
     "adventure/g/adventure-long@longpage": "40c7e6b21df88297:ce6968af",
     "adventure/g/adventure-short": "7f820921056e4fcd:b61598f0",
     "adventure/g/adventure-short@centred": "18e1a6036ec42eef:866021ac",
+    "adventure/g/adventure-short@part-ub": "8ad5af2108205bc5:59516bb2",
     "adventure/r/adventure-long": "9200f481322b1d54:8ad4172f",
+    "adventure/r/adventure-long@part-w": "38fe3d480a54f960:939568d6",
     "adventure/r/adventure-short": "14b20642293a777a:d204b056",
     "adventure/u/adventure-long": "558d6566f3942397:3129bf6f",
     "adventure/u/adventure-short": "2aac3a317e3706fc:60bd83ed",
+    "adventure/u/adventure-short@part-m": "464e8c0cb8d99dcd:8b6228b7",
     "adventure/w/adventure-long": "7d7f320efaa155a8:260c0875",
+    "adventure/w/adventure-long@part-g-hd": "232e3aee7785a3cf:c32b2feb",
+    "adventure/w/adventure-long@part-u-etched": "4f95ee9ff36cfca9:d77818a0",
     "adventure/w/adventure-short": "80b35a5200d90d9b:9ae67c27",
     "adventure/wu/adventure-long": "4e3210648d821552:47527500",
     "adventure/wu/adventure-short": "6ddf40d1cccedf28:39304b52",

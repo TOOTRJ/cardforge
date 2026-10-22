@@ -57,7 +57,9 @@ describe("previewFromImportPatch", () => {
     const patch = mapScryfallToFormPatch(bonecrusher, { artPreviewUrl: null });
     const preview = previewFromImportPatch(patch, bonecrusher.name, "adventure");
 
-    expect(preview.frameStyle).toEqual({ template: "adventure" });
+    // (The adventure draws its spell's page in the spell's own colour, TODO
+    // 4.26: the import's preview names the look on, as a split's does.)
+    expect(preview.frameStyle).toEqual({ template: "adventure", partColor: true });
     expect(preview.title).toBe("Bonecrusher Giant");
     expect(preview.cost).toBe("{2}{R}");
     expect(preview.subtypes).toEqual(["Giant"]);

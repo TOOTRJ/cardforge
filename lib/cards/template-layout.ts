@@ -4027,6 +4027,33 @@ export const PREPARE_PAGE: FrameOverlaySlot = {
   keys: PREPARE_PAGE_KEYS,
 };
 
+// The ADVENTURE spell's page in its own colour (TODO 4.26, owner decision
+// 2026-10-22: pre-cut pieces; docs/FRAMES.md "Each part in its own
+// colour"): `adventure/page/<key>` — the storybook's LEFT page (its name and
+// type bars, paper, curled edge and the left half of the spine) of each
+// published adventure master, cut through Card Conjurer's bookLeft mask
+// (scripts/lib/cc-frames.mjs ADVENTURE_PAGE_CUT), x 72..753 × y 1312..1937
+// of the HD card (even px: whole px at the 750 bake). Print paints it in
+// the SPELL's colour beside the creature's (WOE #221 Callous Sell-Sword //
+// Burn Together: a red page beside a black frame). Keys: the five colours
+// and gold `m`; a two-colour spell's page (no print beside a creature of
+// other colours) is the gold one — the gold-split pair and its hybrid dress
+// both map to `m`, which a gold creature's master already paints.
+export const ADVENTURE_PAGE_KEYS = ["w", "u", "b", "r", "g", "m"] as const;
+const ADVENTURE_PAGE_PAIRS_TO_GOLD: Record<string, string> = Object.fromEntries(
+  ["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"].flatMap((pair) => [
+    [pair, "m"],
+    [`${pair}-h`, "m"],
+  ]),
+);
+export const ADVENTURE_PAGE: FrameOverlaySlot = {
+  anatomy: "partPage",
+  rect: { topPct: (1312 / 2100) * 100, leftPct: (72 / 1500) * 100, widthPct: (682 / 1500) * 100, heightPct: (626 / 2100) * 100 },
+  assetPathTemplate: "/frames/adventure/page/{key}.png",
+  keys: ADVENTURE_PAGE_KEYS,
+  keyMap: ADVENTURE_PAGE_PAIRS_TO_GOLD,
+};
+
 // Flip — the M15 Kamigawa flip frame. ONE card, two creatures: the top reads
 // normally (name → small text box → type bar) and the bottom is printed
 // UPSIDE-DOWN — its name / type / rules / P-T come from the back-face content
@@ -6778,7 +6805,9 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   sagadfcfront: SAGADFCFRONT,
   // …and its back (TODO 5.5 (b), PR 2): see SAGADFCBACK.
   sagadfcback: SAGADFCBACK,
-  adventure: ADVENTURE,
+  // TODO 4.26: the spell's page in its own colour (ADVENTURE_PAGE), opt-in
+  // per card (frame_style.partColor).
+  adventure: { ...ADVENTURE, overlays: [ADVENTURE_PAGE] },
   // The Prepare frame (TODO 4.27): M15's crown over its M15 title bar
   // (SOS #170 Abigale, #198 Kirol … print it), opt-in per card like m15's;
   // the colourless key is the artifact frame, so its crown is the
