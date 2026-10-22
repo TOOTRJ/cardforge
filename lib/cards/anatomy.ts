@@ -721,7 +721,10 @@ export function resolveFrameOverlays(
       const look = resolveTwoColor(profile, style, facts);
       const goldPair = slot.anatomy === "crown" && slot.pairCrownOnGold ? twoColorPairOf(facts.colors) : null;
       const base = look ? look.pair : goldPair ?? facts.colorKey;
-      key = slot.keyMap?.[base] ?? base;
+      // A template that dresses a colour key in two masters by type
+      // (artifactMasterKeys) keys an artifact's overlay by its own master.
+      const artifact = slot.artifactKeyMap?.[base] !== undefined && (facts.cardType === "artifact" || supertypeHasWord(facts.supertype, "Artifact"));
+      key = (artifact ? slot.artifactKeyMap?.[base] : undefined) ?? slot.keyMap?.[base] ?? base;
     }
     if (!slot.keys.includes(key)) continue;
     out.push({ anatomy: slot.anatomy, rect: slot.rect, key, path: slot.assetPathTemplate.replace("{key}", key) });

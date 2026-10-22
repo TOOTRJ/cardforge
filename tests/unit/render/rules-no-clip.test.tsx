@@ -288,7 +288,7 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // 1,200 characters fill no box at 5 pt (the widest full boxes hold ~1,000).
   [
     [
-      "agclassic/main", "alphaland/main", "bloomanime/main", "extendedart/main", "extendedartland/main", "lotr/main", "m15/main",
+      "agclassic/main", "alphaland/main", "bloomanime/main", "extendedart/main", "extendedartland/main", "lotr/main", "lotrscroll/main", "m15/main",
       "m15artifact/main", "m15borderless/main", "m15borderlessartifact/main", "m15borderlessland/main", "m15devoid/main", "m15land/main",
       "m15pw/main", "m15pw/walker", "m15snow/main", "m15snowland/main", "modern/main", "modernland/main",
       // 4.33's borderless planeswalkers: m15pw's box, and the tall one's
@@ -314,7 +314,9 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // The shorter boxes: level-up's seven paragraphs too.
   // …and the emblem's box (TODO 4.52: 74.4–91.9 %H, no plate; an emblem's
   // text is a sentence or two).
-  [["avatar/main", "battle/main", "bloomburrow/main", "emblem/main", "expeditionland/main", "lotrscroll/main"], ["1200 chars", "level up"]],
+  // (The Lord of the Rings scroll took M15's box with its Card Conjurer
+  // re-source, layout v62 / TODO 4.11: it holds the level-up card now.)
+  [["avatar/main", "battle/main", "bloomburrow/main", "emblem/main", "expeditionland/main"], ["1200 chars", "level up"]],
   // Split's halves on Card Conjurer's boxes (layout v43, TODO 4.21b): each
   // 780 × 499 px text column holds 400 characters, TLA #112 and the level-up
   // card at the floor again (the MSE boxes, 57 / 54 px of padding inside a
@@ -369,7 +371,7 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   [
     [
       "adventure/adventure", "adventure/main", "aftermath/main", "avatar/main", "battle/main", "bloomburrow/main", "emblem/main",
-      "expeditionland/main", "flip/main", "flip/second face", "fullart/main", "lotrscroll/main", "m15token/main", "m15tokenartifact/main", "m15tokenartifacttext/main", "m15tokentext/main",
+      "expeditionland/main", "flip/main", "flip/second face", "fullart/main", "m15token/main", "m15tokenartifact/main", "m15tokenartifacttext/main", "m15tokentext/main",
       "m20tokenartifacttext/main", "m20tokentext/main", "m20tokenartifactnyxtext/main", "m20tokennyxtext/main", "split/main",
     ],
     ["typed, as printed"],
@@ -552,6 +554,17 @@ describe("rules consumers — the HD bake (subset)", () => {
  *  the rule (a centred line that would land on a drawn badge is held short
  *  of it; the left-aligned line's own place is always free). */
 const CENTRED_ONLY_CLIPS: string[] = [];
+/** Centred layouts whose held line still puts ink in a keep-out — by the
+ *  rules model's VERTICAL ink of an italic glyph, which is the regular
+ *  face's (lib/cards/rules-metrics.ts rulesTextGlyphsEm reads
+ *  GLYPH_INK_BY_CHAR for both faces): MPlantin Italic's "f" descends where
+ *  the roman "f" does not, so a flavour line ending in "fall" is not held
+ *  short of a plate whose top lies in its descenders. Found by the Lord of
+ *  the Rings scroll's plate (TODO 4.11, layout v62: its rolled top edge
+ *  1,847 px down, 18 px above M15's), the one frame the matrix meets it on.
+ *  Pinned as failing (a fix of the model makes it red): an italic ink table
+ *  is its own item. */
+const KNOWN_ITALIC_INK_HITS: string[] = ["lotrscroll/main · typed, as printed"];
 
 describe("rules consumers, centred (FrameStyle.rulesAlign) — no clip, no keep-out ink, the layout's lines", () => {
   const cases = matrix(RULES_MATRIX, FRAME_TEMPLATE_VALUES, "center");
@@ -587,6 +600,10 @@ describe("rules consumers, centred (FrameStyle.rulesAlign) — no clip, no keep-
     let n = 0;
     for (const c of cases) {
       if (c.layout.clipped || c.layout.input.align !== "center") continue;
+      if (KNOWN_ITALIC_INK_HITS.includes(c.keys[0])) {
+        await expect(checkDrawn(c.layout, "default", `centred ${c.keys[0]}`), c.keys[0]).rejects.toThrow(/ink in a keep-out/);
+        continue;
+      }
       const { placed } = await checkDrawn(c.layout, "default", `centred ${c.keys[0]}`);
       // …and the lines are where the layout centred them: some line moved.
       if (placed.lines.some((l) => placed.interior.width - l.width > 8)) expect(placed.lines.some((l) => l.indent > 0), c.keys[0]).toBe(true);

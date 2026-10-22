@@ -175,8 +175,9 @@ describe("the notch and the resolved stamp", () => {
       // (…and the station frame's two entries, TODO 4.27a: the parents' notch; the
       // Universes Beyond three, 4.25: the triangle's.)
       // …and the borderless family, 4.9d: its own lifted arch, its walkers'
-      // own since owner Round 70.)
-      ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15stationland", "extendedartstation", "m15borderlessstation", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlesspw", "m15borderlesspwtall", "m15snow", "m15devoid", "m15pw"].includes(t)));
+      // own since owner Round 70; the Lord of the Rings scroll, 4.11: the
+      // pack's own triangle piece.)
+      ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15stationland", "extendedartstation", "m15borderlessstation", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlesspw", "m15borderlesspwtall", "m15snow", "m15devoid", "m15pw", "lotrscroll"].includes(t)));
     const keyOf = (template: string, colorKey: string, over: Record<string, unknown> = {}) =>
       resolveHoloStamp(getFrameProfile(template), { stamp: "oval" }, facts({ colorKey, colors: [colorKey === "c" ? "colorless" : "blue"], ...over }))?.notch.path ?? null;
     expect(keyOf("m15", "w")).toBe("/frames/m15holostamp/w.png");

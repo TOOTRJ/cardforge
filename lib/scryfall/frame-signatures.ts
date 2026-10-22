@@ -507,8 +507,9 @@ const UNMODELLED_SUBTYPES = ["Room", "Class", "Case"] as const;
  *  verifying one can never make it exact:
  *   • a transparent outer ring plus an inset art slot that bakes a flat
  *     #101015 "border" (TODO 4.35): bloomanime, tarkirghostfire,
- *     tarkirdragon, lotrscroll (battle left the list with TODO 4.21b: its
- *     Card Conjurer master has the printed black border);
+ *     tarkirdragon (battle left the list with TODO 4.21b and lotrscroll
+ *     with TODO 4.11: their Card Conjurer masters have the printed black
+ *     border);
  *   • a transparent outer band at the bottom and lower sides, found by 7.7's
  *     edge contract (owner decision A8, 2026-09-29): avatar, bloomburrow,
  *     lotr, tarkirdraconic.
@@ -519,7 +520,6 @@ export const BORDER_PENDING_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<Fram
   "bloomanime",
   "tarkirghostfire",
   "tarkirdragon",
-  "lotrscroll",
   "avatar",
   "bloomburrow",
   "lotr",
@@ -2606,12 +2606,21 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // The commander set's scroll printings, LTC #411–490 (80: Scryfall's
   // `scroll` promo type on every one, and the scroll frame by eye on #411,
   // #465, #485 and #490, 2026-10-21) print the same frame as LTR's run.
-  {
-    key: "showcase/ltr/scroll",
-    exactLabel: "The Lord of the Rings scroll showcase",
-    match: { collectors: { ltr: [[452, 712], [723, 730]], ltc: [[411, 490]] } },
-    outcome: { status: "exact", template: "lotrscroll" },
-  },
+  // Exact once verified since TODO 4.11 (Card Conjurer's 'Scroll' masters
+  // have the printed black border: off BORDER_PENDING_TEMPLATES). A
+  // two-colour printing (80 of the 359: LTR #642–686, LTC #449–484) prints
+  // the colour halves under gold bars, which the template doesn't draw yet
+  // (the pack's 'Multicolored Bars' dress, a 4.11 follow-up): nearest.
+  ...withGaps(
+    {
+      key: "showcase/ltr/scroll",
+      exactLabel: "The Lord of the Rings scroll showcase",
+      match: { collectors: { ltr: [[452, 712], [723, 730]], ltc: [[411, 490]] } },
+      outcome: { status: "exact", template: "lotrscroll" },
+    },
+    ["two-colour", "two-colour-hybrid"],
+    { "two-colour": "4.11", "two-colour-hybrid": "4.11" },
+  ),
   {
     key: "showcase/tdm/draconic",
     exactLabel: "Tarkir: Dragonstorm draconic showcase",

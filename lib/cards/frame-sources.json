@@ -1281,6 +1281,203 @@
       "m = the pack's 'Multicolored Frame' m.png, built so the key keeps a master (the MSE build dressed m as colourless); no multicolour basic exists, so no symbol disc and never offered"
     ]
   },
+  "lotrscroll": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packScroll.js 'Scroll' (the Lord of the Rings scroll showcase; groupShowcase-5.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "a": [
+        "img/frames/scroll/a.png"
+      ],
+      "w": [
+        "img/frames/scroll/w.png"
+      ],
+      "u": [
+        "img/frames/scroll/u.png"
+      ],
+      "b": [
+        "img/frames/scroll/b.png"
+      ],
+      "r": [
+        "img/frames/scroll/r.png"
+      ],
+      "g": [
+        "img/frames/scroll/g.png"
+      ],
+      "c": [
+        "img/frames/scroll/l.png"
+      ],
+      "m": [
+        "img/frames/scroll/m.png"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/scroll/pt/w.png",
+      "u": "img/frames/scroll/pt/u.png",
+      "b": "img/frames/scroll/pt/b.png",
+      "r": "img/frames/scroll/pt/r.png",
+      "g": "img/frames/scroll/pt/g.png",
+      "c": "img/frames/scroll/pt/a.png",
+      "m": "img/frames/scroll/pt/m.png"
+    },
+    "sourceFiles": [
+      "img/frames/scroll/a.png",
+      "img/frames/scroll/b.png",
+      "img/frames/scroll/g.png",
+      "img/frames/scroll/l.png",
+      "img/frames/scroll/m.png",
+      "img/frames/scroll/pt/a.png",
+      "img/frames/scroll/pt/b.png",
+      "img/frames/scroll/pt/g.png",
+      "img/frames/scroll/pt/m.png",
+      "img/frames/scroll/pt/r.png",
+      "img/frames/scroll/pt/u.png",
+      "img/frames/scroll/pt/w.png",
+      "img/frames/scroll/r.png",
+      "img/frames/scroll/u.png",
+      "img/frames/scroll/w.png"
+    ],
+    "notes": [
+      "w u b r g m = the pack's colour frames whole (scroll/<k>.png, 2010x2814), downscaled once to 1500x2100 (Lanczos) — as the LTR scroll showcase prints them (LTR #452–730, LTC #411–490), the parchment wash over the art window included (the pack's 'No Art Overlay' mask, which drops it, is not used)",
+      "a = the pack's light-blue 'Artifact Frame' (scroll/a.png): the master a colourless ARTIFACT paints (FrameProfile.artifactMasterKeys { c: 'a' }; LTR #687–703, LTC #485–489)",
+      "c = the pack's brown 'Land Frame' (scroll/l.png): the pack draws no colourless frame, and a colourless printing that is not an artifact is a land (LTR #711 The Shire, #712 Shire Terrace); a coloured land wears its colour's frame (LTC #490 The Black Gate, LTR #704 Barad-dûr)",
+      "plates = the pack's seven scroll plates (scroll/pt/<k>.png, 435x266 at the pack's ptBounds 1492/2422 px of 2010x2814); c = the artifact's light-blue plate (the pack has no land plate; LTR #700 Shire Scarecrow prints it)",
+      "not built: the 'Multicolored Bars' overlay and maskRightHalf.png (the two-colour dress: the colour frames split down the card under gold bars — a follow-up; a two-colour card draws the gold master today) and the pack's scroll sagas (SagaLTR, TODO 4.5d)"
+    ]
+  },
+  "lotrscrollcrown": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packScroll.js 'Scroll' (the Lord of the Rings scroll showcase; groupShowcase-5.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "1500x100 overlay band: rows 0–99 of a 1500x2100 card composited at 2010x2814, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/scroll/crowns/w.png at 2.437810945273632/1.5280739161336176/94.97512437810946×2.4875621890547266 %"
+      ],
+      "u": [
+        "img/frames/scroll/crowns/u.png at 2.437810945273632/1.5280739161336176/94.97512437810946×2.4875621890547266 %"
+      ],
+      "b": [
+        "img/frames/scroll/crowns/b.png at 2.437810945273632/1.5280739161336176/94.97512437810946×2.4875621890547266 %"
+      ],
+      "r": [
+        "img/frames/scroll/crowns/r.png at 2.437810945273632/1.5280739161336176/94.97512437810946×2.4875621890547266 %"
+      ],
+      "g": [
+        "img/frames/scroll/crowns/g.png at 2.437810945273632/1.5280739161336176/94.97512437810946×2.4875621890547266 %"
+      ],
+      "m": [
+        "img/frames/scroll/crowns/m.png at 2.437810945273632/1.5280739161336176/94.97512437810946×2.4875621890547266 %"
+      ],
+      "a": [
+        "img/frames/scroll/crowns/a.png at 2.437810945273632/1.5280739161336176/94.97512437810946×2.4875621890547266 %"
+      ],
+      "l": [
+        "img/frames/scroll/crowns/l.png at 2.437810945273632/1.5280739161336176/94.97512437810946×2.4875621890547266 %"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/scroll/crowns/a.png",
+      "img/frames/scroll/crowns/b.png",
+      "img/frames/scroll/crowns/g.png",
+      "img/frames/scroll/crowns/l.png",
+      "img/frames/scroll/crowns/m.png",
+      "img/frames/scroll/crowns/r.png",
+      "img/frames/scroll/crowns/u.png",
+      "img/frames/scroll/crowns/w.png"
+    ],
+    "notes": [
+      "the scroll showcase's legendary crown (TODO 4.11): the pack's 'Legendary Crown' (scroll/crowns/<k>.png, 1909x70) at its crownBounds (49/2010, 43/2814) on a clear 2010x2814 canvas, downscaled once to 1500x2100 (Lanczos) and cropped to rows 0–99 — the rolled top edge of the title scroll every legendary scroll print carries (LTR #470, #526, LTC #422; plain: #457, #700, LTC #412). No cover strip: the crown is drawn over the master's own title scroll",
+      "keys = the pack's eight crowns: w u b r g, m (gold), a (the artifact's light blue — a colourless artifact draws master a) and l (the land's brown — the template's keyMap c → l); no pairs (no pair masters)"
+    ]
+  },
+  "lotrscrollholostamp": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packScroll.js 'Scroll' (the Lord of the Rings scroll showcase; groupShowcase-5.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "266x140 notch piece (1:1 at 1500x2100, at 620,1877), the triangle region cut to transparent, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/scroll/stamps/w.png at 834,2518 349×181 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 266×140 at 620,1877",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "u": [
+        "img/frames/scroll/stamps/u.png at 834,2518 349×181 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 266×140 at 620,1877",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "b": [
+        "img/frames/scroll/stamps/b.png at 834,2518 349×181 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 266×140 at 620,1877",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "r": [
+        "img/frames/scroll/stamps/r.png at 834,2518 349×181 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 266×140 at 620,1877",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "g": [
+        "img/frames/scroll/stamps/g.png at 834,2518 349×181 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 266×140 at 620,1877",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "m": [
+        "img/frames/scroll/stamps/m.png at 834,2518 349×181 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 266×140 at 620,1877",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "a": [
+        "img/frames/scroll/stamps/a.png at 834,2518 349×181 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 266×140 at 620,1877",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "l": [
+        "img/frames/scroll/stamps/l.png at 834,2518 349×181 px of a clear 2010×2814 card, downscaled once to 1500×2100, cut to 266×140 at 620,1877",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ]
+    },
+    "cut": {
+      "triangle": {
+        "points": [
+          [
+            687.1,
+            1924.6
+          ],
+          [
+            812.1,
+            1924.6
+          ],
+          [
+            749.6,
+            1992.5
+          ]
+        ],
+        "radius": 6.7
+      },
+      "marginPx": 2,
+      "blackoutPx": 2,
+      "what": "the hologram capture inside the pack's triangle — never published; the ring round the cut painted black"
+    },
+    "sourceFiles": [
+      "img/frames/scroll/stamps/a.png",
+      "img/frames/scroll/stamps/b.png",
+      "img/frames/scroll/stamps/g.png",
+      "img/frames/scroll/stamps/gray.png",
+      "img/frames/scroll/stamps/l.png",
+      "img/frames/scroll/stamps/m.png",
+      "img/frames/scroll/stamps/r.png",
+      "img/frames/scroll/stamps/u.png",
+      "img/frames/scroll/stamps/w.png"
+    ],
+    "notes": [
+      "the scroll showcase's triangle stamp notch (TODO 4.11): the pack's per-colour 'Holo Stamp' (scroll/stamps/<k>.png, 349x181) — the text box's parchment edge stepped up and round a black trapezoid over the stamp — placed at its stampBounds (834/2010, 2518/2814) on a clear 2010x2814 canvas, downscaled ONCE with the canvas (Lanczos, as the masters are) and cut to its box 266x140 at 620,1877 px of the 1500x2100 card, drawn 1:1 from there",
+      "the pack's OWN piece per key (w u b r g, m gold, a the artifact's light blue, l the land's brown — the template maps a colourless land's c → l and a colourless artifact's c → a): the scroll's rim is textured parchment in the frame's colour, not one flat bar, so m15holostamp's one-geometry tint does not apply; no pairs (no pair masters)",
+      "the triangle — the Universes Beyond stamp's (lib/cards/holo-stamp.ts UB_STAMP_HOLE: the scroll prints wear the same physical stamp, LTR #457 / #470 / #700, LTC #412: 705–797 px wide at row 1950, apex 1992–1993, against the hole's 708–793 / 1992.5) plus 2 px — is cut to transparent, and the 2 px round the cut painted the trapezoid's opaque black: every colour piece holds a capture of the hologram there, drawn ~2 px larger and higher than the stamp (the pack's 'Gray Stamp' gray.png, 680–822 × 1914–1997 px once placed and downscaled, against the hole's 680.4–818.8 × 1917.9–1999.2), which is never published; our own triangle bitmap (lib/cards/holo-stamp-art.ts) covers the cut with its 3 px black margin. gray.png is read only by the check: placed and downscaled like a piece, it reaches α ≤ 8 outside the cut and its ring"
+    ]
+  },
   "m15": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
