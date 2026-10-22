@@ -14,9 +14,15 @@
 // copy when the store is on another volume). Downloads land in the store
 // first. A linked file is never written in place — every write here is a
 // new file renamed over the old name, which leaves the other link alone —
-// and both sides are sha-checked on every use, so a file changed by hand is
-// caught, not spread. (Node's COPYFILE_FICLONE does not clone on macOS: it
-// measured as a full copy, 2026-10-22.)
+// and every store file is READ-ONLY (0444; its links share the mode), so an
+// in-place write anywhere (`sharp().toFile`, `writeFileSync`) fails with
+// EACCES instead of changing every worktree's copy; a rename over it and an
+// unlink still work (they need the FOLDER writable). Both sides are
+// sha-checked on every use as well. (Node's COPYFILE_FICLONE does not clone
+// on macOS: it measured as a full copy, 2026-10-22.)
+//
+// A temp file a sync died with (`*.part`) is swept at the next sync once it
+// is an hour old — never a fresh one, which another process is writing.
 //
 // Safe to share because nothing is trusted by its name: a store file is
 // used only when its bytes hash to the manifest's sha256 (else it is fetched
@@ -35,6 +41,10 @@ import { PRODUCTION_SUPABASE_REF } from "./prod-guard.mjs";
 import { fetchVerified, frameObjectKey, publicBaseFor } from "./frame-objects.mjs";
 
 export const FRAMES_CACHE_ENV = "PIPGLYPH_FRAMES_CACHE";
+/** A store file's mode: read-only for everyone (its hard links share it). */
+export const STORE_FILE_MODE = 0o444;
+/** A `*.part` temp file this old is a dead sync's, not a live one's. */
+export const STALE_PART_MS = 60 * 60 * 1000;
 /** Written into the store so a person who finds it knows what it is. */
 export const STORE_MARKER = ".pipglyph-frames-cache";
 
@@ -82,6 +92,89 @@ export function prepareStore(store) {
   }
 }
 
+/**
+ * `p` with every symlink resolved, also when its last segments don't exist
+ * yet (the nearest existing folder is resolved, the rest appended).
+ * @param {string} p
+ */
+export function realPathOf(p) {
+  const abs = path.resolve(p);
+  const rest = [];
+  let head = abs;
+  for (;;) {
+    try {
+      return path.join(fs.realpathSync(head), ...rest);
+    } catch {
+      const parent = path.dirname(head);
+      if (parent === head) return abs;
+      rest.unshift(path.basename(head));
+      head = parent;
+    }
+  }
+}
+
+/**
+ * Throws unless the store and a checkout's `dir` are apart: not the same
+ * folder, the store not inside `dir` and `dir` not inside the store (after
+ * symlinks) — a checkout's folder is pruned to its manifest, and the prune
+ * must never reach a store object.
+ * @param {string} store
+ * @param {string} dir
+ */
+export function assertStoreApart(store, dir) {
+  const a = realPathOf(store);
+  const b = realPathOf(dir);
+  const inside = (child, parent) => child === parent || child.startsWith(parent.endsWith(path.sep) ? parent : parent + path.sep);
+  if (inside(a, b) || inside(b, a)) {
+    throw new Error(
+      `The shared frame store (${a}) and the checkout folder ${b} overlap — a checkout's folder is pruned to its manifest, so neither may hold the other (move PIPGLYPH_FRAMES_CACHE or pick another folder).`,
+    );
+  }
+}
+
+/**
+ * True for a `*.part` file last written more than `maxAgeMs` ago (or gone).
+ * @param {string} file
+ * @param {{ maxAgeMs?: number, now?: number }} [opts]
+ */
+export function isStalePart(file, { maxAgeMs = STALE_PART_MS, now = Date.now() } = {}) {
+  try {
+    return now - fs.statSync(file).mtimeMs > maxAgeMs;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Remove every `*.part` file under `dir` older than `maxAgeMs` (a sync that
+ * died mid-write); a younger one is another process's write in progress
+ * and is left alone. Returns how many went.
+ * @param {string} dir
+ * @param {{ maxAgeMs?: number, now?: number }} [opts]
+ */
+export function sweepStaleParts(dir, { maxAgeMs = STALE_PART_MS, now = Date.now() } = {}) {
+  let removed = 0;
+  /** @param {string} d */
+  const walk = (d) => {
+    let entries;
+    try {
+      entries = fs.readdirSync(d, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      const file = path.join(d, e.name);
+      if (e.isDirectory()) walk(file);
+      else if (e.name.endsWith(".part") && isStalePart(file, { maxAgeMs, now })) {
+        fs.rmSync(file, { force: true });
+        removed += 1;
+      }
+    }
+  };
+  walk(dir);
+  return removed;
+}
+
 /** The dev branch's project ref, from supabase/config.toml [remotes.dev]. */
 export function devSupabaseRef(root) {
   const ref = /\[remotes\.dev\][^[]*?project_id\s*=\s*"([a-z]{16,24})"/s.exec(fs.readFileSync(path.join(root, "supabase/config.toml"), "utf8"))?.[1];
@@ -111,16 +204,31 @@ export function hasVerifiedFile(file, expectedSha256) {
   }
 }
 
+/** Make `file` 0444 when it is still writable (a store seeded by hand).
+ * @param {string} file */
+export function ensureReadOnly(file) {
+  try {
+    if (fs.statSync(file).mode & 0o222) fs.chmodSync(file, STORE_FILE_MODE);
+  } catch {
+    /* gone or not ours: the next use checks it anyway */
+  }
+}
+
 /** A temp name beside `file` no other process or call can pick. */
 const tempBeside = (file) => `${file}.${process.pid}.${randomBytes(4).toString("hex")}.part`;
 
 /** Write `bytes` to `file` atomically: a temp file in the same folder,
- *  renamed into place (a reader sees the old file or the new one). */
-export function writeFileAtomic(file, bytes) {
+ *  renamed into place (a reader sees the old file or the new one); with
+ *  `readOnly` the file is made 0444 BEFORE it appears under its name.
+ * @param {string} file
+ * @param {string | Uint8Array} bytes
+ * @param {{ readOnly?: boolean }} [opts] */
+export function writeFileAtomic(file, bytes, { readOnly = false } = {}) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const tmp = tempBeside(file);
   try {
     fs.writeFileSync(tmp, bytes);
+    if (readOnly) fs.chmodSync(tmp, STORE_FILE_MODE);
     fs.renameSync(tmp, file);
   } catch (err) {
     fs.rmSync(tmp, { force: true });
@@ -133,12 +241,14 @@ export function writeFileAtomic(file, bytes) {
  * (no second copy on disk), else — another volume, a file system without
  * links — a copy (a reflink where Linux has them), renamed into place. With
  * `expectedSha256` the new file is checked BEFORE the rename; returns false
- * (and leaves `dest` alone) when its bytes differ or `src` is gone.
+ * (and leaves `dest` alone) when its bytes differ or `src` is gone. With
+ * `readOnly` it is made 0444 before the rename — on a link, `src` with it.
  * @param {string} src
  * @param {string} dest
  * @param {string | null} [expectedSha256]
+ * @param {{ readOnly?: boolean }} [opts]
  */
-export function linkFileAtomic(src, dest, expectedSha256 = null) {
+export function linkFileAtomic(src, dest, expectedSha256 = null, { readOnly = false } = {}) {
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   const tmp = tempBeside(dest);
   try {
@@ -152,6 +262,7 @@ export function linkFileAtomic(src, dest, expectedSha256 = null) {
       fs.rmSync(tmp, { force: true });
       return false;
     }
+    if (readOnly) fs.chmodSync(tmp, STORE_FILE_MODE);
     fs.renameSync(tmp, dest);
     return true;
   } catch (err) {
@@ -174,14 +285,17 @@ export function fromCheckoutOrStore({ file, storeFile, sha256: expected }) {
   if (hasVerifiedFile(file, expected)) {
     if (storeFile && !fs.existsSync(storeFile)) {
       try {
-        linkFileAtomic(file, storeFile);
+        linkFileAtomic(file, storeFile, null, { readOnly: true });
       } catch {
         /* a store we can't write to only costs a later download */
       }
+    } else if (storeFile) {
+      ensureReadOnly(storeFile);
     }
     return "kept";
   }
-  if (storeFile && fs.existsSync(storeFile) && linkFileAtomic(storeFile, file, expected)) return "shared";
+  // readOnly: a store file seeded by hand (cp -c -R) is made 0444 on first use.
+  if (storeFile && fs.existsSync(storeFile) && linkFileAtomic(storeFile, file, expected, { readOnly: true })) return "shared";
   return null;
 }
 
@@ -194,7 +308,7 @@ export function fromCheckoutOrStore({ file, storeFile, sha256: expected }) {
 export function keepFetched({ file, storeFile, bytes }) {
   if (storeFile) {
     try {
-      writeFileAtomic(storeFile, bytes);
+      writeFileAtomic(storeFile, bytes, { readOnly: true });
       // false: the store file went away in between (the store was cleared).
       if (linkFileAtomic(storeFile, file)) return;
     } catch {
@@ -234,4 +348,18 @@ export async function fetchManifestFile({ key, entry, out, store, origin, fallba
   if (!result.ok) return { from: null, status: result.status };
   keepFetched({ file, storeFile, bytes: result.bytes });
   return { from };
+}
+
+/**
+ * What to say when a LOCAL run's fetch from the dev bucket missed objects:
+ * the dev bucket lost some (restore it) or they are on production only.
+ * Null on CI or for any other origin.
+ * @param {{ origin: string, buckets: { production: string, dev: string }, env?: Env }} args
+ */
+export function devMissHint({ origin, buckets, env = process.env }) {
+  if (isCi(env) || origin.replace(/\/+$/, "") !== buckets.dev) return null;
+  return (
+    "The dev bucket is missing these objects. Put them back with `npm run frames:restore-dev`, " +
+    `or read production's public bucket for this run: --origin ${buckets.production}`
+  );
 }

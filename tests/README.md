@@ -310,9 +310,15 @@ all go through one store (`scripts/lib/frame-cache.mjs`):
   and still pruned to this checkout's manifest. They are filled from the
   store by a hard link, so there is no second copy on disk (a plain copy
   when the store is on another volume). A download lands in the store
-  first. Never edit a file in these folders in place: the scripts only ever
-  write a new file and rename it over the old name, which leaves the other
-  links alone.
+  first. Every store file is read-only (0444), and its links share the mode,
+  so an in-place write to any of them (`sharp().toFile`, `writeFileSync`)
+  fails with EACCES instead of changing every worktree's copy. The scripts
+  only ever write a new file and rename it over the old name (or unlink
+  one), which needs the folder writable, not the file. The store may not
+  sit inside a checkout's folder, nor a folder inside the store: a sync
+  refuses that, so a prune can never reach a store object. A `*.part` temp
+  file left by a sync that died is swept by the next sync once it is an
+  hour old; a fresh one is another process's write and is left alone.
 - **Safe to share:** a store file is used only when its bytes hash to the
   manifest's sha256. A corrupt or half-written one is fetched again and
   replaced. Every write, to the store or a checkout, is a temp file renamed
@@ -321,7 +327,10 @@ all go through one store (`scripts/lib/frame-cache.mjs`):
   object.
 - **Which bucket:** locally the DEV bucket. `--origin <public bucket base>`
   names another, production's included. CI reads production's first, then
-  dev's for a frame not promoted yet.
+  dev's for a frame not promoted yet. When a local `frames-fetch` finds
+  objects missing from the dev bucket, it says how to fix that:
+  `npm run frames:restore-dev`, or `--origin` with production's public
+  bucket for that run.
 - **CI is unchanged:** with `CI` set there is no store. The folders are
   `actions/cache` entries keyed by the manifest's hash, as before.
 - **Env vars:** `PIPGLYPH_FRAMES_CACHE=<dir>` moves the store (`~/` works).

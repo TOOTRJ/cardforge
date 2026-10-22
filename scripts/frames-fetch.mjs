@@ -43,7 +43,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { fetchManifestFile, frameBucketOrigins, prepareStore, sharedFrameCacheDir } from "./lib/frame-cache.mjs";
+import {
+  assertStoreApart,
+  devMissHint,
+  fetchManifestFile,
+  frameBucketOrigins,
+  prepareStore,
+  sharedFrameCacheDir,
+  sweepStaleParts,
+} from "./lib/frame-cache.mjs";
 import { MANIFEST_KEY, frameObjectKey, listFrameFiles, mapLimit, parseFlags, readManifest } from "./lib/frame-objects.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -79,9 +87,13 @@ const listed = new Set(entries.map(([key]) => key));
 
 // The machine's shared store (none on CI, or with PIPGLYPH_FRAMES_CACHE=off).
 let store = sharedFrameCacheDir();
-if (store && path.resolve(store) === out) {
-  console.error(`✗ --out ${out} is the shared frame store — pick a checkout folder (the store holds objects by content-addressed key).`);
-  process.exit(1);
+if (store) {
+  try {
+    assertStoreApart(store, out);
+  } catch (err) {
+    console.error(`✗ ${err instanceof Error ? err.message : err}`);
+    process.exit(1);
+  }
 }
 
 // The output is this script's own: a directory it marked, or a new/empty
@@ -98,11 +110,15 @@ fs.writeFileSync(path.join(out, MARKER), "Frame PNGs fetched by scripts/frames-f
 if (store) {
   try {
     prepareStore(store);
+    sweepStaleParts(store);
   } catch (err) {
     console.warn(`frames-fetch: the shared store ${store} is not writable (${err instanceof Error ? err.message : err}) — fetching into ${out} alone.`);
     store = null;
   }
 }
+
+// A sync that died left its temp files: sweep the hour-old ones.
+sweepStaleParts(out);
 
 // A cache restored from an older manifest: drop the PNGs it no longer lists.
 let removed = 0;
@@ -137,6 +153,8 @@ if (missing.length) {
   console.error(`✗ ${missing.length}/${entries.length} manifest PNGs could not be fetched with the manifest's sha256:`);
   for (const row of missing.sort()) console.error(row);
   console.error(summary);
+  const hint = devMissHint({ origin, buckets });
+  if (hint) console.error(hint);
   process.exit(1);
 }
 console.log(`✓ ${summary}`);

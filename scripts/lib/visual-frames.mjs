@@ -24,7 +24,7 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { fromCheckoutOrStore, keepFetched, prepareStore } from "./frame-cache.mjs";
+import { assertStoreApart, fromCheckoutOrStore, isStalePart, keepFetched, prepareStore, sweepStaleParts } from "./frame-cache.mjs";
 import { frameObjectKey, mapLimit } from "./frame-objects.mjs";
 
 /** @typedef {(url: string, init?: { signal?: AbortSignal }) => Promise<Response>} FetchLike */
@@ -96,17 +96,11 @@ function walk(dir) {
  *   fetchImpl?: FetchLike, sleep?: (ms: number) => Promise<unknown>, limit?: number, confirmDelayMs?: number }} args
  */
 export async function syncFrameCache({ entries, origins, dir, store = null, fetchImpl = fetch, sleep = defaultSleep, limit = 4, confirmDelayMs = 3000 }) {
-  const real = (p) => {
-    try {
-      return fs.realpathSync(p);
-    } catch {
-      return path.resolve(p);
-    }
-  };
-  if (store && real(store) === real(dir)) throw new Error("The shared frame store is not a checkout's folder (a checkout's folder is pruned to its manifest).");
+  if (store) assertStoreApart(store, dir);
   if (store) {
     try {
       prepareStore(store);
+      sweepStaleParts(store);
     } catch (err) {
       console.warn(`frames: the shared store ${store} is not writable (${err instanceof Error ? err.message : err}) — fetching into ${dir} alone.`);
       store = null;
@@ -120,7 +114,8 @@ export async function syncFrameCache({ entries, origins, dir, store = null, fetc
     for (const i of retry) results[i] = await get(entries[i], true);
   }
   const wanted = new Set(entries.map(([key, entry]) => path.join(dir, frameObjectKey(key, entry.hash))));
-  for (const file of walk(dir)) if (!wanted.has(file)) fs.rmSync(file);
+  // Never a fresh *.part: another sync of this checkout is writing it.
+  for (const file of walk(dir)) if (!wanted.has(file) && (!file.endsWith(".part") || isStalePart(file))) fs.rmSync(file);
   const fetched = results.filter((r) => r.cached === false);
   return {
     cached: results.filter((r) => r.cached === true).length,

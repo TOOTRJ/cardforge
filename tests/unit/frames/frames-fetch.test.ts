@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import os from "node:os";
@@ -193,6 +193,9 @@ describe("scripts/frames-fetch.mjs", () => {
     });
 
     it("re-fetches a store copy that is corrupt instead of trusting its name", async () => {
+      // Store files are read-only (0444): rot it the way a disk would, past the mode.
+      expect(statSync(storeKey("m15/w.png")).mode & 0o777).toBe(0o444);
+      chmodSync(storeKey("m15/w.png"), 0o644);
       writeFileSync(storeKey("m15/w.png"), "bit rot");
       hits.length = 0;
       const r = await run(["--out", path.join(tmp, "wt-3"), "--origin", originUrl, "--fallback-origin", fallbackUrl], local());
@@ -207,6 +210,22 @@ describe("scripts/frames-fetch.mjs", () => {
       expect(r.code, r.out).toBe(0);
       expect(r.out).toContain("0 fetched from https://znipzaxgpaiandwiqabn.supabase.co/storage/v1/object/public/frames");
       expect(r.out).not.toContain("zkwkisxoqdhdchqyjwdc");
+    });
+
+    it("prints no dev-bucket hint when another origin missed an object", async () => {
+      // The hint names the dev bucket only (devMissHint is unit-tested in
+      // tests/unit/devops/frame-cache.test.ts); a test can't make the real
+      // dev bucket miss without the network.
+      const r = await run(["--out", path.join(tmp, "wt-hint"), "--origin", originUrl], { ...local(), PIPGLYPH_FRAMES_CACHE: path.join(tmp, "empty-store") });
+      expect(r.code).toBe(1);
+      expect(r.out).not.toContain("frames:restore-dev");
+    });
+
+    it("refuses a store inside the --out folder (the prune would reach it)", async () => {
+      const out = path.join(tmp, "nest");
+      const r = await run(["--out", out, "--origin", originUrl], { CI: "", PIPGLYPH_FRAMES_CACHE: path.join(out, "store") });
+      expect(r.code).toBe(1);
+      expect(r.out).toMatch(/overlap/);
     });
 
     it("uses no store on CI", async () => {

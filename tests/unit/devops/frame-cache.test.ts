@@ -4,7 +4,11 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  assertStoreApart,
+  devMissHint,
   linkFileAtomic,
+  STALE_PART_MS,
+  sweepStaleParts,
   fetchManifestFile,
   frameBucketOrigins,
   fromCheckoutOrStore,
@@ -203,6 +207,130 @@ describe("atomic writes", () => {
   });
 });
 
+describe("read-only store files", () => {
+  const isRoot = typeof process.getuid === "function" && process.getuid() === 0;
+
+  it.skipIf(isRoot)("an in-place write to a worktree's linked file fails (EACCES) instead of changing every copy", async () => {
+    const { fetchImpl } = scripted({ [`${ORIGIN}/${OBJECT}`]: [200] });
+    const dir = path.join(tmp, "wt");
+    await syncInto(dir, fetchImpl);
+    const view = path.join(dir, OBJECT);
+    expect(fs.statSync(path.join(store, OBJECT)).mode & 0o777).toBe(0o444);
+    expect(fs.statSync(view).mode & 0o777).toBe(0o444);
+    expect(() => fs.writeFileSync(view, "an in-place write")).toThrow(expect.objectContaining({ code: "EACCES" }));
+    expect(() => fs.appendFileSync(path.join(store, OBJECT), "!")).toThrow(expect.objectContaining({ code: "EACCES" }));
+    expect(fs.readFileSync(path.join(store, OBJECT))).toEqual(BYTES);
+  });
+
+  it("still lets the scripts replace (rename over) and remove (unlink) them", async () => {
+    const { fetchImpl } = scripted({ [`${ORIGIN}/${OBJECT}`]: [200] });
+    const dir = path.join(tmp, "wt");
+    await syncInto(dir, fetchImpl);
+    writeFileAtomic(path.join(store, OBJECT), BYTES, { readOnly: true });
+    expect(fs.readFileSync(path.join(store, OBJECT))).toEqual(BYTES);
+    // The visual prune unlinks a read-only file another manifest no longer names.
+    const res = await syncFrameCache({ entries: [], origins: [ORIGIN], dir, store, fetchImpl: scripted().fetchImpl, sleep: noSleep });
+    expect(res.failed).toEqual([]);
+    expect(fs.existsSync(path.join(dir, OBJECT))).toBe(false);
+    expect(fs.existsSync(path.join(store, OBJECT))).toBe(true);
+  });
+
+  it("makes a hand-seeded (writable) store file read-only on first use", async () => {
+    fs.mkdirSync(path.join(store, "m15"), { recursive: true });
+    fs.writeFileSync(path.join(store, OBJECT), BYTES, { mode: 0o644 });
+    await syncInto(path.join(tmp, "wt"), scripted().fetchImpl);
+    expect(fs.statSync(path.join(store, OBJECT)).mode & 0o777).toBe(0o444);
+  });
+});
+
+describe("the store and a checkout folder never overlap", () => {
+  it("refuses the same folder, a store inside the folder and the folder inside the store", () => {
+    const dir = path.join(tmp, "wt");
+    expect(() => assertStoreApart(dir, dir)).toThrow(/overlap/);
+    expect(() => assertStoreApart(path.join(dir, "store"), dir)).toThrow(/overlap/);
+    expect(() => assertStoreApart(store, path.join(store, "m15"))).toThrow(/overlap/);
+    expect(() => assertStoreApart(store, dir)).not.toThrow();
+    // A sibling whose name only STARTS like the store's is apart.
+    expect(() => assertStoreApart(store, `${store}-other`)).not.toThrow();
+  });
+
+  it("sees through a symlink (realpath)", () => {
+    fs.mkdirSync(store, { recursive: true });
+    const alias = path.join(tmp, "alias");
+    fs.symlinkSync(store, alias);
+    expect(() => assertStoreApart(store, alias)).toThrow(/overlap/);
+    expect(() => assertStoreApart(store, path.join(alias, "not-yet", "made"))).toThrow(/overlap/);
+  });
+
+  it("syncFrameCache refuses a store nested inside the checkout folder before touching anything", async () => {
+    const dir = path.join(tmp, "wt");
+    const nested = path.join(dir, "store");
+    await expect(
+      syncFrameCache({ entries: [[KEY, ENTRY]], origins: [ORIGIN], dir, store: nested, fetchImpl: scripted().fetchImpl, sleep: noSleep }),
+    ).rejects.toThrow(/overlap/);
+    expect(fs.existsSync(nested)).toBe(false);
+  });
+});
+
+describe("stale temp files", () => {
+  const age = (file: string, ms: number) => {
+    const t = new Date(Date.now() - ms);
+    fs.utimesSync(file, t, t);
+  };
+
+  it("sweeps an hour-old *.part and never a fresh one (another process's write)", () => {
+    const dir = path.join(tmp, "d", "m15");
+    fs.mkdirSync(dir, { recursive: true });
+    const old = path.join(dir, "r.abc.png.111.deadbeef.part");
+    const fresh = path.join(dir, "r.abc.png.222.cafebabe.part");
+    const png = path.join(dir, "r.abc.png");
+    for (const f of [old, fresh, png]) fs.writeFileSync(f, "x");
+    age(old, STALE_PART_MS + 60_000);
+    age(png, STALE_PART_MS + 60_000);
+    expect(sweepStaleParts(path.join(tmp, "d"))).toBe(1);
+    expect(fs.existsSync(old)).toBe(false);
+    expect(fs.existsSync(fresh)).toBe(true);
+    expect(fs.existsSync(png)).toBe(true);
+  });
+
+  it("a sync sweeps the store's stale temps and its prune leaves a fresh one in the folder", async () => {
+    const dir = path.join(tmp, "wt");
+    fs.mkdirSync(path.join(store, "m15"), { recursive: true });
+    fs.mkdirSync(path.join(dir, "m15"), { recursive: true });
+    const storeOld = path.join(store, "m15", "x.png.1.aaaa.part");
+    const viewFresh = path.join(dir, "m15", "x.png.2.bbbb.part");
+    const viewOld = path.join(dir, "m15", "x.png.3.cccc.part");
+    for (const f of [storeOld, viewFresh, viewOld]) fs.writeFileSync(f, "half");
+    age(storeOld, STALE_PART_MS + 1);
+    age(viewOld, STALE_PART_MS + 1);
+    await syncInto(dir, scripted({ [`${ORIGIN}/${OBJECT}`]: [200] }).fetchImpl);
+    expect(fs.existsSync(storeOld)).toBe(false);
+    expect(fs.existsSync(viewOld)).toBe(false);
+    expect(fs.existsSync(viewFresh)).toBe(true);
+  });
+});
+
+describe("devMissHint (frames-fetch's message when the dev bucket misses objects)", () => {
+  const buckets = { production: "https://prod.example/frames", dev: "https://dev.example/frames" };
+
+  it("names frames:restore-dev and the production --origin on a local run from dev", () => {
+    const hint = devMissHint({ origin: buckets.dev, buckets, env: {} });
+    expect(hint).toContain("npm run frames:restore-dev");
+    expect(hint).toContain(`--origin ${buckets.production}`);
+    expect(devMissHint({ origin: `${buckets.dev}/`, buckets, env: {} })).toBe(hint);
+  });
+
+  it("says nothing on CI or for another origin", () => {
+    expect(devMissHint({ origin: buckets.dev, buckets, env: { CI: "true" } })).toBeNull();
+    expect(devMissHint({ origin: buckets.production, buckets, env: {} })).toBeNull();
+  });
+
+  it("frames-fetch prints it after the summary", () => {
+    const src = fs.readFileSync(path.join(ROOT, "scripts/frames-fetch.mjs"), "utf8");
+    expect(src).toMatch(/console\.error\(summary\);\n {2}const hint = devMissHint\(\{ origin, buckets \}\);\n {2}if \(hint\) console\.error\(hint\);/);
+  });
+});
+
 describe("syncFrameCache with the shared store (test:visual / test:parity)", () => {
   it("downloads once per machine: a second worktree is filled from the store with 0 fetches", async () => {
     const first = scripted({ [`${ORIGIN}/${OBJECT}`]: [200] });
@@ -327,6 +455,9 @@ describe("fetchManifestFile (frames-fetch → .frames-cache, the importer-build 
     fs.writeFileSync(path.join(out(), KEY), BYTES);
     expect(await get(scripted().fetchImpl)).toEqual({ from: "kept" });
 
+    // Both names are one read-only inode now: rot it past the mode.
+    expect(fs.statSync(path.join(store, OBJECT)).mode & 0o777).toBe(0o444);
+    fs.chmodSync(path.join(out(), KEY), 0o644);
     fs.writeFileSync(path.join(out(), KEY), "corrupt");
     fs.writeFileSync(path.join(store, OBJECT), "corrupt too");
     const { fetchImpl, calls } = scripted({ [`${ORIGIN}/${OBJECT}`]: [200] });
