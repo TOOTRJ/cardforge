@@ -71,6 +71,7 @@ import {
 import {
   EMBLEM_UNFILLED_FIELDS,
   FILL_PRESETS,
+  fillArtFrameOf,
   type CardFillField,
   type CardFillLocked,
   type CardFillResult,
@@ -3329,6 +3330,9 @@ export function CardCreatorForm({
           theme: options.theme,
           style: options.style,
           frame: options.frame,
+          // The art is painted in the shape of the frame the card is on
+          // (TODO 4.48b) — the frame itself is never changed by it.
+          art_frame: fillArtFrameOf(options.want, getValues("frame_style.template")),
           deck_id: options.deck_id,
           scope: fillScope,
         }),

@@ -6,6 +6,7 @@ import { isGatewayConfigured } from "@/lib/ai/provider";
 import { autoOrientBytes } from "@/lib/media/orientation";
 import { imageWithoutMetadata } from "@/lib/media/upload-bytes";
 import { modelInputImage } from "@/lib/media/model-input";
+import type { ArtShape } from "@/lib/ai/art-aspect";
 
 // ---------------------------------------------------------------------------
 // Image generation + image-to-image restyle. ALL image generation goes through
@@ -149,11 +150,45 @@ export async function restyleImage(input: {
 
 const GATEWAY_IMAGE_DEFAULT = "bfl/flux-2-flex";
 
-/** "card" matches the frame's art window (~4:3 — m15 slot is 84.4%×44% of a
- *  63×88 card ≈ 1.37:1), so generated art fits with no manual repositioning.
- *  "square" suits icons; "wide" (16:9) suits set cover tiles; "banner"
- *  (21:9) suits the deck hero, which crops covers to aspect-[5/2]. */
-export type ImageAspect = "square" | "wide" | "card" | "banner";
+/** A CARD picture is asked for in its frame's shape — an ArtShape
+ *  (lib/ai/art-aspect.ts, TODO 4.48b: the art window of the frame the card
+ *  lands on, at today's pixel budget). "square" suits icons; "wide" (16:9)
+ *  suits deck cover tiles (normalised to 16:9 before upload, lib/decks/
+ *  cover.ts); "banner" (21:9) suits the deck hero. There is no "card"
+ *  aspect any more: it asked every frame for 4:3, which FLUX.2 dropped. */
+export type ImageAspect = "square" | "wide" | "banner" | ArtShape;
+
+/** FLUX.2 models take an output SIZE, not a ratio: an aspectRatio alone is
+ *  dropped and the picture comes back at the 1024 × 1024 default
+ *  (help.bfl.ai: default 1024 × 1024, width / height in multiples of 16,
+ *  any aspect ratio). Every production picture before TODO 4.48b was square
+ *  for that reason (measured 2026-10-21). */
+export function isSizedFluxModel(model: string): boolean {
+  return /^bfl\/flux-2-/.test(model);
+}
+
+/** What the gateway is asked for one picture's shape: a FLUX.2 model gets
+ *  the ArtShape's width × height — `size`, and the Black Forest Labs
+ *  provider's own `width` / `height` options (which win over `size` there)
+ *  — never an aspectRatio it would drop; any other model the nearest ratio.
+ *  "square" / "wide" / "banner" are asked as they always were. */
+export function imageShapeArgs(
+  model: string,
+  aspect: ImageAspect,
+): {
+  aspectRatio?: `${number}:${number}`;
+  size?: `${number}x${number}`;
+  providerOptions?: { blackForestLabs: { width: number; height: number } };
+} {
+  if (typeof aspect === "string") {
+    return { aspectRatio: aspect === "banner" ? "21:9" : aspect === "wide" ? "16:9" : "1:1" };
+  }
+  if (!isSizedFluxModel(model)) return { aspectRatio: aspect.aspectRatio };
+  return {
+    size: `${aspect.width}x${aspect.height}`,
+    providerOptions: { blackForestLabs: { width: aspect.width, height: aspect.height } },
+  };
+}
 
 async function generateStyledImage(
   prompt: string,
@@ -165,7 +200,7 @@ async function generateStyledImage(
   }
   try {
     const model = process.env.AI_IMAGE_MODEL?.trim() || GATEWAY_IMAGE_DEFAULT;
-    const { image } = await generateImage({
+    const { image, warnings } = await generateImage({
       model,
       abortSignal: AbortSignal.timeout(
         options.timeoutMs ?? IMAGE_CALL_TIMEOUT_MS,
@@ -174,15 +209,13 @@ async function generateStyledImage(
       // slow-failing call past the timeout for no user-visible benefit.
       maxRetries: 1,
       prompt: prompt.trim().slice(0, 4000),
-      aspectRatio:
-        aspect === "banner"
-          ? "21:9"
-          : aspect === "wide"
-            ? "16:9"
-            : aspect === "card"
-              ? "4:3"
-              : "1:1",
+      ...imageShapeArgs(model, aspect),
     });
+    // A shape the model didn't take is a warning, not an error: logged so a
+    // run shows it (the picture still lands fitted to its window).
+    if (warnings?.length) {
+      console.warn("[image-gen] model warnings", model, JSON.stringify(warnings).slice(0, 500));
+    }
     return {
       ok: true,
       bytes: image.uint8Array,

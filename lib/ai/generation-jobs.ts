@@ -34,6 +34,12 @@ import {
   type ImageAspect,
 } from "@/lib/ai/image-gen";
 import {
+  artShapeForBackFace,
+  artShapeForFace,
+  type ArtFace,
+  type ArtShape,
+} from "@/lib/ai/art-aspect";
+import {
   artPromptLadder,
   softenArtPrompt,
   type FallbackArtInputs,
@@ -223,6 +229,18 @@ type CardFillJobPlan = {
   style: string | null;
   /** Resolved when the card type was generated (create only). */
   frame_template: string | null;
+  /** The face the art is painted for (TODO 4.48b), set only on a fill that
+   *  wants the art: the frame — the one this plan resolved when the TYPE is
+   *  generated, else the creator's current frame (`artFrame`) — with the
+   *  card's colours and type words as the fill leaves them. Only the
+   *  picture's shape reads it; absent on every plan made before it. */
+  art_face?: {
+    template: string | null;
+    color_identity: string[];
+    card_type: string | null;
+    supertype: string | null;
+    cost: string | null;
+  };
   /** Deck-aware design (Pro): the client links the card to this deck. */
   deck_id: string | null;
 };
@@ -562,6 +580,13 @@ async function runGeneratedCardStep(
       await config.afterCreate?.(cardId);
     }
 
+    // The picture's shape: the window of the frame the card is ON (TODO
+    // 4.48b) — the one it was just created with, or, on a retry of a step
+    // whose card exists, the one it was saved with.
+    const shape = await generatedCardArtShape(
+      step.card_id ? cardId : null,
+      generatedCardArtFace(card, config.createExtras),
+    );
     await logAiCall(userId, config.artLogAction);
     // Every run rewords the art prompt (moderation refuses identical text),
     // and a refusal walks straight to the next rung inside this step.
@@ -569,11 +594,58 @@ async function runGeneratedCardStep(
     const published = await paintAndPublishCard(
       cardId,
       artPromptLadder(attempt, config.artPrompt, fallbackInputsFor(card, config.style)),
+      shape,
     );
     if (!published.ok) {
       return { ...step, status: "failed", card_id: cardId, attempts: attempt, error: published.error };
     }
     return { ...step, status: "done", card_id: cardId, attempts: attempt, error: undefined };
+  });
+}
+
+/** The face a generated card is CREATED as, for its picture's shape: the
+ *  designed card with the flow's create-time frame and supertype (no
+ *  template = the default frame, as the card then draws). */
+function generatedCardArtFace(card: DesignedCard, extras?: Record<string, unknown>): ArtFace {
+  const frameStyle = extras?.frame_style as { template?: unknown } | undefined;
+  const supertype = extras?.supertype;
+  return {
+    template: typeof frameStyle?.template === "string" ? frameStyle.template : null,
+    colorIdentity: card.color_identity,
+    cardType: card.card_type,
+    supertype: typeof supertype === "string" ? supertype : card.supertype,
+    cost: card.cost,
+  };
+}
+
+/** The shape a generated card's picture is painted in (TODO 4.48b). A
+ *  retried step whose card already exists reads the card back: the frame it
+ *  was SAVED on is the window (a deck card's frame is resolved only by the
+ *  attempt that created it). A row that can't be read paints for `created`. */
+async function generatedCardArtShape(existingCardId: string | null, created: ArtFace): Promise<ArtShape> {
+  if (!existingCardId) return artShapeForFace(created);
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("cards")
+    .select("frame_style, color_identity, card_type, supertype, cost")
+    .eq("id", existingCardId)
+    .maybeSingle();
+  const row = data as
+    | {
+        frame_style?: { template?: unknown } | null;
+        color_identity?: string[] | null;
+        card_type?: string | null;
+        supertype?: string | null;
+        cost?: string | null;
+      }
+    | null;
+  if (!row || typeof row.card_type !== "string") return artShapeForFace(created);
+  return artShapeForFace({
+    template: typeof row.frame_style?.template === "string" ? row.frame_style.template : null,
+    colorIdentity: row.color_identity ?? null,
+    cardType: row.card_type,
+    supertype: row.supertype ?? null,
+    cost: row.cost ?? null,
   });
 }
 
@@ -795,6 +867,11 @@ export type CreateCardFillJobInput = {
   style?: string;
   /** Create only, with card_type wanted: "random" or a specific frame. */
   frame?: "random" | FrameTemplate;
+  /** The creator's CURRENT frame (a known template, validated by the
+   *  route), for a fill that keeps the card type: the art is painted in its
+   *  window's shape (TODO 4.48b). Read for nothing else — the fill never
+   *  sets a frame from it. */
+  artFrame?: FrameTemplate;
   /** Pro: brief the designer with this deck. */
   deckId?: string;
   /** The creator this fill belongs to — see app/api/ai/card-fill. */
@@ -896,6 +973,20 @@ export async function createCardFillJob(
     art_prompt: designed.art_prompt,
     style: input.style?.trim() || null,
     frame_template: frameTemplate ?? null,
+    // The art's window (TODO 4.48b): the frame this fill picked with the
+    // type, else the creator's own — the card as it stands once filled.
+    ...(input.want.includes("art")
+      ? {
+          art_face: {
+            template: wantsType ? (frameTemplate ?? null) : (input.artFrame ?? null),
+            color_identity: designed.fields.color_identity ?? input.locked.color_identity ?? [],
+            card_type: designed.fields.card_type ?? input.locked.card_type ?? null,
+            supertype:
+              (designed.fields.supertype !== undefined ? designed.fields.supertype : input.locked.supertype) ?? null,
+            cost: (designed.fields.cost !== undefined ? designed.fields.cost : input.locked.cost) ?? null,
+          },
+        }
+      : {}),
     deck_id: deckContext?.deck.id ?? null,
   };
   const steps: JobStep[] = [
@@ -967,7 +1058,7 @@ async function runCardFillStep(
             style: plan.style,
           },
         ),
-        "card",
+        cardFillArtShape(plan),
       );
       if (!image.ok) return { ...step, status: "failed", attempts: attempt, error: image.error };
       const persisted = await persistGeneratedArt(image.bytes, image.contentType);
@@ -978,6 +1069,29 @@ async function runCardFillStep(
       fill.artist_credit = await aiArtistCredit();
     }
     return { ...step, status: "done", fill, attempts: attempt, error: undefined };
+  });
+}
+
+/** The shape a fill's picture is painted in (TODO 4.48b): the plan's
+ *  `art_face` — a plan made before it paints for the frame it resolved and
+ *  the fields it wrote (the default frame when it resolved none). */
+function cardFillArtShape(plan: CardFillJobPlan): ArtShape {
+  const face = plan.art_face;
+  if (face) {
+    return artShapeForFace({
+      template: face.template,
+      colorIdentity: face.color_identity,
+      cardType: face.card_type,
+      supertype: face.supertype,
+      cost: face.cost,
+    });
+  }
+  return artShapeForFace({
+    template: plan.frame_template,
+    colorIdentity: plan.fields.color_identity ?? null,
+    cardType: plan.fields.card_type ?? null,
+    supertype: plan.fields.supertype ?? null,
+    cost: plan.fields.cost ?? null,
   });
 }
 
@@ -1329,9 +1443,10 @@ export async function createDeckRemixJob(
 async function paintAndPublishCard(
   cardId: string,
   prompts: readonly string[],
+  shape: ArtShape,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  // "card" aspect matches the frame's art window — no manual repositioning.
-  const image = await generateImageWithFallbacks(prompts, "card");
+  // Painted in the shape of the card's own art window (TODO 4.48b).
+  const image = await generateImageWithFallbacks(prompts, shape);
   if (!image.ok) return { ok: false, error: image.error };
 
   const persisted = await persistGeneratedArt(image.bytes, image.contentType);
@@ -1745,6 +1860,17 @@ async function executeDeckRemixStep(
     return { ...step, status: "failed", error: REMIX_DFC_FRAMES_GONE };
   }
   const frameTemplate = savedFrames.template;
+  // The fresh pictures' shapes (TODO 4.48b): the windows of the frames the
+  // card SAVES on, decided just above — the front's, and a double-faced
+  // back's own body (else the front's). The restyle keeps its source's.
+  const frontArtFace: ArtFace = {
+    template: frameTemplate ?? null,
+    colorIdentity: mechanics.color_identity ?? ["colorless"],
+    cardType: mechanics.card_type ?? null,
+    supertype: mechanics.supertype ?? null,
+    cost: mechanics.cost ?? null,
+    style: mechanics.anatomy ?? null,
+  };
 
   // ---- Art (REQUIRED — a remix is the art; failures fail the step so the
   //      user can retry, rather than silently shipping the old artwork) ----
@@ -1783,7 +1909,7 @@ async function executeDeckRemixStep(
   if (!artUrl) {
     const generated = await generatePlainImage(
       `${identity.art_instruction} Style: ${plan.style}.`,
-      "card",
+      artShapeForFace(frontArtFace),
       { timeoutMs: REMIX_IMAGE_TIMEOUT_MS },
     );
     if (generated.ok) {
@@ -1816,7 +1942,7 @@ async function executeDeckRemixStep(
     const instruction = identity.second_art_instruction?.trim() || identity.art_instruction;
     const generated = await generatePlainImage(
       `${instruction} Style: ${plan.style}.`,
-      "card",
+      artShapeForBackFace(frontArtFace, named.back_face),
       { timeoutMs: REMIX_IMAGE_TIMEOUT_MS },
     );
     if (generated.ok) {
