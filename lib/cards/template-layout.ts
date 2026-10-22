@@ -5063,45 +5063,133 @@ const NYX: FrameProfile = {
   footer: { ...M15.footer!, colorHex: INK_LIGHT },
 };
 
-// Zendikar Rising showcase (the hedron frame; key `fullart` for history, not
-// full art) — a tall art window inside the border, floating title bar, and a
-// baked-in translucent text box in the bottom quarter.
-// The art fills the whole translucent text box (α ≈ 179, 59–1442 ×
-// 1239–1946 px): the slot used to end at 91.2 % (1915 px), leaving a 31 px
-// #101015 strip along the box's bottom (TODO 4.17b, layout v35); it ends at
-// 93 % (1953 px) now, under the opaque bottom border. (The ZNR prints paint
-// that box as an opaque hedron panel — a re-source question, not this fix.)
-// Its left, top and right edges moved out to whole pixels past the hedron
-// ring's anti-aliased rim too (v35): 57–1443 × 56.7 px (was 60–1440 × 60.9),
-// where the ring (α 128–249 on rows 59–60 and columns 59 / 1440–1441) left
-// 7,956 px half-dark over #101015 — a thin line along the art's top.
+// Zendikar Rising showcase — the hedron frame (ZNR #290–313; template key
+// `fullart` for history: it is not full art). Since layout v63 (TODO 4.11,
+// wave 1) the masters are Card Conjurer's 'Zendikar Rising' pack
+// (packZendikarRising.js, frames bucket only; scripts/lib/cc-frames.mjs
+// ZNR_* block): each colour's frame whole with its title pill's ends, 1500
+// native — they replaced MSE's 375 px `zendikar` masters, upscaled 4× and
+// missing MSE's hedron `back` layer, whose type line printed at 73.6 %H
+// inside the box (the painted bar is 56.4–62.7 %).
+//
+// GEOMETRY. CC's bars sit on the M15 pack's rows: the title bar's outline
+// 101.5 / 219.5 px (m15/r 101.2 / 220.7), the type bar's 1182.5 / 1300.5
+// (m15/r 1182.6 / 1302.1); measured on ZNR #290–313 (Scryfall PNGs at
+// 1500 × 2100, the outlines' darkness centroid, median over 60 columns) the
+// prints' title bar sits 4.3 px higher (median mid 155.9 against 160.3) and
+// their type bar 1.8 px higher — under the 2–3 px a Scryfall PNG wanders,
+// and the masters are CC's as drawn (no re-cut). So the text slots are the
+// CC-framed M15 profile's own (title, type, the set symbol's box, the rules
+// box, the plate bounds — CC's text options for this pack are M15's numbers
+// but the title's y), every text registered on its own bar; the type line
+// takes the 2014–22 prints' baseline (ZNR_TYPE_DY). Checked on our bakes of
+// #290–313 against the prints, each registered on its own bar: name within
+// 1.1 px, type line within 1 px (after ZNR_TYPE_DY), cost discs within
+// 0.5 px, the P/T digits within 2 px.
+//
+// ART. One picture under the whole frame (CC's artBounds 4/2.86/92 ×
+// 86.48 %): the window (60–1439 × 60–1169 px, α < 16; the strip above the
+// title bar is window too) and the V in the text box (α < 250 down to 1874)
+// are see-through on every key, the hedron panels beside the V opaque. The
+// slot covers the window and the V with the art-window check's 0.05 % to
+// spare: 58.5–1441.5 × 58.8–1877.4 (the rest is under the opaque border).
+//
+// INK (ZNR #290–313): the name and the type line are BLACK on the white
+// key's ivory bars (#290 / #291 / #292 / #293 / #294, no shadow) and WHITE
+// with a soft dark shadow on every other key (blue, black, red, green, the
+// gold bars of #311 / #312 / #313, and the colourless key's see-through
+// grey); the rules white on every key (the box is dark under its V); the P/T
+// black on the light plates (w, m — #311 / #312 / #313's cream gold plate —
+// and c) and white on the coloured ones (u b r g).
+//
+// COST ROW (the 4.11 cost-row read; ZNR_COST): 70 px discs at the M15 pitch,
+// on the 2014–23 row the prints set: their disc centres sit 6.7 px above
+// their own title bar's middle (median of 11 prints: #295 – #313), the last
+// disc's centre 56.3 px left of the pill's right outline — 153.6 px down
+// and 1351.2 px across on our bar, 3 px above and 1.7 px right of the
+// CC-framed M15 row (157 / 1349.5, layout v61's current-print row). Before
+// v63 the MSE masters' row sat at 165.2 px with 72.75 px discs.
+const ZNR_COST = {
+  costSizePct: CC_M15_COST_DISC_PCT,
+  costDy: CC_M15_COST_DY - 3 / 1500,
+  costDx: 4 / 1500,
+} as const satisfies Pick<FrameProfile, "costSizePct" | "costDy" | "costDx">;
+/** The type line on the ZNR prints' baseline: registered on its own type
+ *  bar, the prints' line sits 5.6 px lower than the CC-framed M15 slot's
+ *  (CC_M15_TYPE_DY, current print's 1259.6 px): median of #290 / #293 /
+ *  #294 / #299 / #301 (4.5–6.2) — the 2014–22 baseline (pre-2023 M15 prints
+ *  sit at 1262.2, 2.6 px under the 2023+ ones). The name needs nothing: it
+ *  sits within 1.1 px of the prints on its bar (#295 / #296 / #297 / #299 /
+ *  #307). */
+const ZNR_TYPE_DY = CC_M15_TYPE_DY + 5.6 / 1500;
+const ZNR_INK_LIGHT: SlotInk = { colorHex: "#ffffff", shadowCss: SHOWCASE_SHADOW };
+/** The bars' ink by master key: white with a shadow on every key but the
+ *  white one's ivory bars (the band's own dark ink). */
+const ZNR_BAND_INK: InkByColorKey = { u: ZNR_INK_LIGHT, b: ZNR_INK_LIGHT, r: ZNR_INK_LIGHT, g: ZNR_INK_LIGHT, m: ZNR_INK_LIGHT, c: ZNR_INK_LIGHT };
+/** The P/T's ink: white on the coloured plates, the plate's dark default on
+ *  the light ones (w, m, c). */
+const ZNR_PT_INK: InkByColorKey = { u: { colorHex: "#ffffff" }, b: { colorHex: "#ffffff" }, r: { colorHex: "#ffffff" }, g: { colorHex: "#ffffff" } };
 const FULLART: FrameProfile = {
   ...M15,
   label: "Zendikar Rising Hedron",
-  artSlot: { topPct: 2.7, leftPct: 3.8, widthPct: 92.4, heightPct: 90.3 },
-  title: {
-    ...M15.title,
-    rect: { topPct: 5.4, leftPct: 8.5, widthPct: 83, heightPct: 5 },
-  },
-  // Layout v32: M15's type size (was 0.0347, 52 px), on its old baseline.
-  type: {
-    rect: { topPct: 73.6, leftPct: 8.5, widthPct: 83, heightPct: 4.2 },
-    sizePct: TYPE_SIZE_PCT,
-    dy: keepBaseline(0.0347, TYPE_SIZE_PCT),
-    fit: "measured",
-    colorHex: INK_LIGHT,
-    weight: 600,
-    font: "display",
-    shadowCss: SHOWCASE_SHADOW,
-  },
-  rules: {
-    rect: { topPct: 78.6, leftPct: 8, widthPct: 84, heightPct: 13.5 },
-    sizePct: rulesPxToPct(RULES_SIZE_PX.reduced),
-    colorHex: INK_LIGHT,
-    vAlign: "start",
-    font: "body",
-  },
+  ...ZNR_COST,
+  // The prints ring the set symbol in white on every bar (#293, #299 …),
+  // as the borderless bars do — a common's ink is lost on the black key's.
+  setSymbolKeyline: SET_SYMBOL_KEYLINE,
+  artSlot: { topPct: 2.8, leftPct: 3.9, widthPct: 92.2, heightPct: 86.6 },
+  title: { ...M15.title, inkByColorKey: ZNR_BAND_INK },
+  type: { ...M15.type, dy: ZNR_TYPE_DY, inkByColorKey: ZNR_BAND_INK },
+  rules: { ...M15.rules, colorHex: "#ffffff" },
   footer: { ...M15.footer!, colorHex: INK_LIGHT },
+  pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/fullart/pt/{color}.png", inkByColorKey: ZNR_PT_INK },
+};
+
+/** The ZNR showcase's oval: the one CC paints in its notch (685–814 ×
+ *  1927–1990 px on every key, scripts/lib/cc-frames.mjs ZNR_NOTCH.oval) —
+ *  4 px narrower and 3 px shorter than M15's, on the same centre within
+ *  half a pixel. */
+export const ZNR_HOLO_STAMP_OVAL: Rect = { leftPct: (685 / 1500) * 100, topPct: (1927 / 2100) * 100, widthPct: (130 / 1500) * 100, heightPct: (64 / 2100) * 100 };
+/** The rules box keeps out of the arch: its bevel's top (1895 px at the
+ *  centre, the rim 1905) down past the box's bottom, over the arch's span
+ *  656–844 px. */
+export const ZNR_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (656 / 1500) * 100, topPct: (1895 / 2100) * 100, widthPct: (188 / 1500) * 100, heightPct: (30 / 2100) * 100 };
+/**
+ * The ZNR showcase's holofoil stamp notch (TODO 4.11): CC's frames paint
+ * the box's bottom rim arched over a hologram oval on every key, the prints
+ * only on a rare or mythic, so the importer writes each master with the
+ * straight bar and splits the arch off as this piece (`fullart/holostamp/
+ * <key>`, 220 × 125 px at 640, 1880, 1:1 at HD; ZNR_NOTCH in
+ * scripts/lib/cc-frames.mjs), its oval cut clear for our oval art. Keys:
+ * the masters' (the template draws no pair masters: a two-colour card's
+ * gold `m`). Opt-in per card like every stamp (FrameStyle.stamp: "auto" =
+ * a rare or mythic, as ZNR prints it). Set only on the `fullart` PROFILES
+ * entry.
+ */
+export const ZNR_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: { leftPct: (640 / 1500) * 100, topPct: (1880 / 2100) * 100, widthPct: (220 / 1500) * 100, heightPct: (125 / 2100) * 100 },
+  assetPathTemplate: "/frames/fullart/holostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c"],
+  stamp: { shape: "oval", oval: ZNR_HOLO_STAMP_OVAL, keepOut: ZNR_HOLO_STAMP_KEEP_OUT, ownShapeOnly: true },
+};
+/**
+ * The ZNR showcase's legendary crown (TODO 4.11): `fullartcrown/<key>.png`,
+ * the pack's crown — the title pill's two ends drawn bigger, with their
+ * hedron points — at CC's bounds 2.94 / 2.34 / 94.14 × 11.67 %, rows 0–299
+ * of the card (scripts/lib/cc-frames.mjs ZNR_CROWN_BAND). #300 Moraug, #312
+ * Omnath, #313 Phylath. Keys: the masters' w u b r g m c and the ten pairs
+ * (the first colour's end left, the second's right — #313 prints R|G over
+ * its gold bars; `pairCrownOnGold`: the template draws no pair masters).
+ * An ADDITION on this frame: opt-in per card (FrameStyle.crown === true —
+ * new cards on, stored cards keep their look, imports follow the printing).
+ * Set only on the `fullart` PROFILES entry.
+ */
+export const ZNR_CROWN: FrameOverlaySlot = {
+  anatomy: "crown",
+  rect: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: (300 / 2100) * 100 },
+  assetPathTemplate: "/frames/fullartcrown/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+  pairCrownOnGold: true,
 };
 
 // Full-art basic lands — Card Conjurer 'Fullart Basics (2022)' (frames plan
@@ -7012,7 +7100,11 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // #101–108, FRC #102, STX #360 / #365, EOC #43 — twoColorForLands, like
   // m15land), opt-in per card.
   extendedartland: { ...EXTENDEDARTLAND, overlays: [EXTENDED_CROWN], twoColorMasters: ["split"], twoColorForLands: true },
-  fullart: { ...FULLART, pickerSampleArt: true },
+  // The Zendikar Rising hedron showcase (TODO 4.11, layout v63): its own
+  // crown band and stamp notch (both split off Card Conjurer's pack), and
+  // the 2015-style collector line where M15 prints it (ZNR #293 / #313: the
+  // two lines at 1994 / 2033 px from x 95). Additions, opt-in per card.
+  fullart: { ...FULLART, pickerSampleArt: true, overlays: [ZNR_CROWN, ZNR_HOLO_STAMP], collector: M15_COLLECTOR },
   m15fullartland: M15FULLARTLAND,
   fullartland: FULLARTLAND,
   // The legendary textless promos print the STANDARD crown (TODO 4.35

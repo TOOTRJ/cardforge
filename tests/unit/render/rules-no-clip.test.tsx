@@ -324,6 +324,8 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       "m15nyx/main",
       // 4.25's Universes Beyond frames: their M15 twins' boxes.
       "m15ub/main", "m15ubartifact/main", "m15ubland/main",
+      // 4.11's Zendikar Rising hedron showcase: the CC-framed M15 box (layout v63).
+      "fullart/main",
       // 5.7's borderless double-faced bodies: m15borderless's box.
       "m15borderlessdfcfront/main", "m15borderlessdfcback/main", "m15borderlessmdfcfront/main", "m15borderlessmdfcback/main",
     ],
@@ -384,10 +386,7 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
     ["1200 chars", "400 chars", "EOE #30", "TLA #112", "accented first line", "blank lines", "level up", "modal bullets"],
   ],
   [["flip/second face"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "blank lines", "level up", "modal bullets"]],
-  [
-    ["fullart/main"],
-    ["1200 chars", "400 chars", "EOE #30", "TLA #112", "accented first line", "blank lines", "level up"],
-  ],
+  // (fullart's box is the CC-framed M15 box since layout v63, TODO 4.11.)
   // "typed, as printed" (TODO 6.11): five paragraphs — an ability word, a
   // modal list with its bullets, quoted abilities — over a quoted flavor
   // line and its attribution. The short boxes that can't hold the level-up
@@ -395,7 +394,7 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   [
     [
       "adventure/adventure", "adventure/main", "aftermath/main", "avatar/main", "battle/main", "bloomburrow/main", "emblem/main",
-      "expeditionlandbfz/main", "flip/main", "flip/second face", "fullart/main", "m15token/main", "m15tokenartifact/main", "m15tokenartifacttext/main", "m15tokentext/main",
+      "expeditionlandbfz/main", "flip/main", "flip/second face", "m15token/main", "m15tokenartifact/main", "m15tokenartifacttext/main", "m15tokentext/main",
       "m20tokenartifacttext/main", "m20tokentext/main", "m20tokenartifactnyxtext/main", "m20tokennyxtext/main", "split/main",
     ],
     ["typed, as printed"],

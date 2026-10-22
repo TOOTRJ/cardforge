@@ -2018,6 +2018,538 @@
       "width": 1500,
       "height": 2100
     },
+    "fullart/b.png": {
+      "hash": "142dab4acdb3",
+      "sha256": "142dab4acdb35469896bf6b51297511b4a4aa1e22f6661102d6a8156e5f29d0c",
+      "bytes": 1408507,
+      "width": 1500,
+      "height": 2100
+    },
+    "fullart/b.webp": {
+      "hash": "6d462fc062eb",
+      "sha256": "6d462fc062ebbbb9136cfdc12d48cf00cc7c1be30ea0552316867479698c1968",
+      "bytes": 63494,
+      "width": 1500,
+      "height": 2100
+    },
+    "fullart/c.png": {
+      "hash": "2e3fadfa9678",
+      "sha256": "2e3fadfa9678e1894e0210024fd29fcda22ff46121ef70211b1e227a263c739b",
+      "bytes": 1349086,
+      "width": 1500,
+      "height": 2100
+    },
+    "fullart/c.webp": {
+      "hash": "98ad3193fe8b",
+      "sha256": "98ad3193fe8b258e423ff781b8a8f22cbcf6d0322ceff28ef18ff19701bf311a",
+      "bytes": 62896,
+      "width": 1500,
+      "height": 2100
+    },
+    "fullart/g.png": {
+      "hash": "a74ebd965ae3",
+      "sha256": "a74ebd965ae340369a5885c9e9eea3549fe599ef5d57bba5a157f48ce5f07872",
+      "bytes": 1855827,
+      "width": 1500,
+      "height": 2100
+    },
+    "fullart/g.webp": {
+      "hash": "64f526cf7d12",
+      "sha256": "64f526cf7d129f361dfa50fbb166d78e507ca9bf4fbb35c446571339ffc8fd96",
+      "bytes": 113354,
+      "width": 1500,
+      "height": 2100
+    },
+    "fullart/holostamp/b.png": {
+      "hash": "072d8487eb61",
+      "sha256": "072d8487eb61bc292f3ef562472fe021a849c3fcde56ae20b62fd6ee2cc2b6aa",
+      "bytes": 8881,
+      "width": 220,
+      "height": 125
+    },
+    "fullart/holostamp/b.webp": {
+      "hash": "0074914825b6",
+      "sha256": "0074914825b631922387c55350942a7d30d55e97b51ca85e7629f6a9706dc4ba",
+      "bytes": 1494,
+      "width": 220,
+      "height": 125
+    },
+    "fullart/holostamp/c.png": {
+      "hash": "e67c09105b2f",
+      "sha256": "e67c09105b2f262023b2d87201920b70d3b2a06ef1a8f4d7c6b73df9c5d367c9",
+      "bytes": 7987,
+      "width": 220,
+      "height": 125
+    },
+    "fullart/holostamp/c.webp": {
+      "hash": "c882c2bcf3ce",
+      "sha256": "c882c2bcf3ce6c624f311842ea6edf2dda0e365d4ebf24f672d8df7ca0537df5",
+      "bytes": 1578,
+      "width": 220,
+      "height": 125
+    },
+    "fullart/holostamp/g.png": {
+      "hash": "b4bfe3857005",
+      "sha256": "b4bfe385700505b5672ac3def46e2d595e8a38155ced0507450e1005f798cd39",
+      "bytes": 9021,
+      "width": 220,
+      "height": 125
+    },
+    "fullart/holostamp/g.webp": {
+      "hash": "5b0c56aacb02",
+      "sha256": "5b0c56aacb0213b574b34742a2d782a5f6d82da414ca5d539cee024bbca48e21",
+      "bytes": 2178,
+      "width": 220,
+      "height": 125
+    },
+    "fullart/holostamp/m.png": {
+      "hash": "d3bd3c59e78c",
+      "sha256": "d3bd3c59e78c7aaedf6bfa9936b5850a935b408c23930d945535fd555b654416",
+      "bytes": 8910,
+      "width": 220,
+      "height": 125
+    },
+    "fullart/holostamp/m.webp": {
+      "hash": "2d9247e52d62",
+      "sha256": "2d9247e52d625267a5bd2a87b6b6908e242d425667d7e8cc0d2e58c1850c167a",
+      "bytes": 2540,
+      "width": 220,
+      "height": 125
+    },
+    "fullart/holostamp/r.png": {
+      "hash": "e57808c24fec",
+      "sha256": "e57808c24fec85147c799af8eb8c46a875856aa5ac7f3493070ed1b141483f7b",
+      "bytes": 9045,
+      "width": 220,
+      "height": 125
+    },
+    "fullart/holostamp/r.webp": {
+      "hash": "2488c6475a20",
+      "sha256": "2488c6475a2078ade563f1f50cc7e08f6c27fb6480b5c7ab4c8bff467e0fd64d",
+      "bytes": 2546,
+      "width": 220,
+      "height": 125
+    },
+    "fullart/holostamp/u.png": {
+      "hash": "a8fb479c43c8",
+      "sha256": "a8fb479c43c8e0e0f4497fbf2c27dd4f26c45e6c1b6af2d57b8e34489a81ca46",
+      "bytes": 9073,
+      "width": 220,
+      "height": 125
+    },
+    "fullart/holostamp/u.webp": {
+      "hash": "8ad1f96d1627",
+      "sha256": "8ad1f96d1627cf9c3b8678cd8eaba83591e253f0eb4465ded182fcc113915619",
+      "bytes": 2428,
+      "width": 220,
+      "height": 125
+    },
+    "fullart/holostamp/w.png": {
+      "hash": "ac580b696ff5",
+      "sha256": "ac580b696ff526fe85d135dec1da681c41eda97ec2a5b176fb1a455292f915f4",
+      "bytes": 8874,
+      "width": 220,
+      "height": 125
+    },
+    "fullart/holostamp/w.webp": {
+      "hash": "96314a632f06",
+      "sha256": "96314a632f0698695a07ed94113d5069138f14e6ec5ea9235696d7fb265afa87",
+      "bytes": 2210,
+      "width": 220,
+      "height": 125
+    },
+    "fullart/m.png": {
+      "hash": "7a154f11cf5d",
+      "sha256": "7a154f11cf5d00c6817a0264c9808f8c08cc7ff01014c15eb8cd850270f39d77",
+      "bytes": 1611319,
+      "width": 1500,
+      "height": 2100
+    },
+    "fullart/m.webp": {
+      "hash": "8bc2ec4fac7b",
+      "sha256": "8bc2ec4fac7bb2f31ab3a7daa7e31aecf009fd0958292b0fe7d00e95d9a07888",
+      "bytes": 86634,
+      "width": 1500,
+      "height": 2100
+    },
+    "fullart/pt/b.png": {
+      "hash": "8c3a6c92fcd4",
+      "sha256": "8c3a6c92fcd42dabbcc76b35dd862b1a4f33f12c97bc5cc46bced294c8746750",
+      "bytes": 50251,
+      "width": 282,
+      "height": 154
+    },
+    "fullart/pt/b.webp": {
+      "hash": "44a6be8f81f7",
+      "sha256": "44a6be8f81f7a13ae738041fc9e52744582063fb3dd2bae842d1228575145bff",
+      "bytes": 4438,
+      "width": 282,
+      "height": 154
+    },
+    "fullart/pt/c.png": {
+      "hash": "09c7003b1068",
+      "sha256": "09c7003b1068025c2b9f384c225e301ae54b112148bd3f7efb8bf9f30b15f187",
+      "bytes": 60771,
+      "width": 282,
+      "height": 154
+    },
+    "fullart/pt/c.webp": {
+      "hash": "cfba4f066c7b",
+      "sha256": "cfba4f066c7b5395b3dd47b11383fcc93cc9b367c81805eeecf3ace16cc14460",
+      "bytes": 5044,
+      "width": 282,
+      "height": 154
+    },
+    "fullart/pt/g.png": {
+      "hash": "9030aca20c2a",
+      "sha256": "9030aca20c2afd2e79ead0dd9a516d5643975abeb23cbc93200404d29de5f728",
+      "bytes": 59724,
+      "width": 282,
+      "height": 154
+    },
+    "fullart/pt/g.webp": {
+      "hash": "0743936335e6",
+      "sha256": "0743936335e606eab670a2e262ca3b89a614cd7cefa6eb5584c894622c78d900",
+      "bytes": 6934,
+      "width": 282,
+      "height": 154
+    },
+    "fullart/pt/m.png": {
+      "hash": "63f463781d3b",
+      "sha256": "63f463781d3b39b16b367be53a2fa89dd97197e177bb0193fcce18447e7fcd04",
+      "bytes": 48924,
+      "width": 282,
+      "height": 154
+    },
+    "fullart/pt/m.webp": {
+      "hash": "83cdc008411c",
+      "sha256": "83cdc008411c7b2357064ac4b02af353f678a074d0b6e84947b6e4c3824ca5d9",
+      "bytes": 5154,
+      "width": 282,
+      "height": 154
+    },
+    "fullart/pt/r.png": {
+      "hash": "5580e064c8c0",
+      "sha256": "5580e064c8c07d7cff2df73e27bda8a09ae9a574b6ed3ae29a1650d4326f8cf4",
+      "bytes": 71812,
+      "width": 282,
+      "height": 154
+    },
+    "fullart/pt/r.webp": {
+      "hash": "6785d5d1a2d2",
+      "sha256": "6785d5d1a2d24d22c437cddf1218719d4ce4dc13ffb7b265738180d960bf19c3",
+      "bytes": 6440,
+      "width": 282,
+      "height": 154
+    },
+    "fullart/pt/u.png": {
+      "hash": "8433f74c69c0",
+      "sha256": "8433f74c69c02a8a51355577deff2a5ed46cd8b18f7c38d119eed6775c6da652",
+      "bytes": 69290,
+      "width": 282,
+      "height": 154
+    },
+    "fullart/pt/u.webp": {
+      "hash": "80cdebdf640a",
+      "sha256": "80cdebdf640a9956801ae9f22af1e716e74811a957dafdde05828de3ab0eace3",
+      "bytes": 5882,
+      "width": 282,
+      "height": 154
+    },
+    "fullart/pt/w.png": {
+      "hash": "4ae40cef9ffc",
+      "sha256": "4ae40cef9ffc0dd75ac85046cbed56034b343f25231c2e21c2bc5c72db3b2e8e",
+      "bytes": 62148,
+      "width": 282,
+      "height": 154
+    },
+    "fullart/pt/w.webp": {
+      "hash": "7fc5eefeb0c8",
+      "sha256": "7fc5eefeb0c8f0378827a1efa8dc4de57585edc7d275b4f03d2158ce9f280d35",
+      "bytes": 5660,
+      "width": 282,
+      "height": 154
+    },
+    "fullart/r.png": {
+      "hash": "dcef245c25e2",
+      "sha256": "dcef245c25e2443977b6bd124e26197a5ef13b69b90648f8a28d553c9e20b0b4",
+      "bytes": 1569999,
+      "width": 1500,
+      "height": 2100
+    },
+    "fullart/r.webp": {
+      "hash": "cea0d66efe57",
+      "sha256": "cea0d66efe577a85a087d02498c13f5403b3cc5693b1e3c56e8febb2bf81f162",
+      "bytes": 86142,
+      "width": 1500,
+      "height": 2100
+    },
+    "fullart/u.png": {
+      "hash": "091728392104",
+      "sha256": "091728392104d93afa59bbed4fe648bcb2069e3b44639afaba463ff70974c50d",
+      "bytes": 1666558,
+      "width": 1500,
+      "height": 2100
+    },
+    "fullart/u.webp": {
+      "hash": "85cbdeed9bc5",
+      "sha256": "85cbdeed9bc58e381469aba8176bde2288c62e9f520284479150a9a3c39fb80f",
+      "bytes": 93088,
+      "width": 1500,
+      "height": 2100
+    },
+    "fullart/w.png": {
+      "hash": "80541bbcbba8",
+      "sha256": "80541bbcbba823f93a22fb7f74d321c8609e872d87302fb8017d6bea59f9c34e",
+      "bytes": 1597739,
+      "width": 1500,
+      "height": 2100
+    },
+    "fullart/w.webp": {
+      "hash": "c988e2a60a50",
+      "sha256": "c988e2a60a50223c4823730cb27e2b052a69ad6518e6eea407e5fc418102b684",
+      "bytes": 79560,
+      "width": 1500,
+      "height": 2100
+    },
+    "fullartcrown/b.png": {
+      "hash": "727751291dde",
+      "sha256": "727751291ddebac415317792a5ae3caeddb4200419d7d9469e9cdfca9b38296e",
+      "bytes": 20082,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/b.webp": {
+      "hash": "5b7360d62e01",
+      "sha256": "5b7360d62e011d15717dee4d1ed874f9ab4ef53ca62232801d1f9bfac61fb010",
+      "bytes": 8784,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/bg.png": {
+      "hash": "1c73e58e3490",
+      "sha256": "1c73e58e34903c8854d0a403fac00e616ab364433222e1a39a49b9b45a849290",
+      "bytes": 19519,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/bg.webp": {
+      "hash": "7d4bea37659b",
+      "sha256": "7d4bea37659b8da6775501c62695f10e908fc9ac1357600fd5c48045fb4f79e9",
+      "bytes": 11430,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/br.png": {
+      "hash": "ab3afa7870a2",
+      "sha256": "ab3afa7870a2267858fb77def4c566a5b8732522dcf2e2f41a9da2af176e0b54",
+      "bytes": 20264,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/br.webp": {
+      "hash": "86d1e1df4ef2",
+      "sha256": "86d1e1df4ef28a20dbf167f9b379692f96c1a9b3ecb640e95283cc853a32238d",
+      "bytes": 13040,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/c.png": {
+      "hash": "cce9dca55b17",
+      "sha256": "cce9dca55b175d8ef2884f31dcd2731023cc9c6fb03b54e798f0e44efcc1888c",
+      "bytes": 19735,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/c.webp": {
+      "hash": "5d1057570e4a",
+      "sha256": "5d1057570e4afe7e22c36e9ee65040d2837ce3aef7cf9a4836f61db52753d308",
+      "bytes": 12476,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/g.png": {
+      "hash": "4eefd9215c0a",
+      "sha256": "4eefd9215c0ab1edf94348ac6beeff99d14625cbf310dc8d9cc6079b3409a86c",
+      "bytes": 17100,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/g.webp": {
+      "hash": "87116ab89543",
+      "sha256": "87116ab8954309a539c8561441c33771d3f8d6e73c79585d0db7c7b24f83dafd",
+      "bytes": 13642,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/gu.png": {
+      "hash": "3a73dbff5c93",
+      "sha256": "3a73dbff5c93306b8f969d755371acc7714b8019a6507685f30747019c487925",
+      "bytes": 19262,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/gu.webp": {
+      "hash": "734145594ec8",
+      "sha256": "734145594ec8010eaa6fa454b393290142b115fc451be569e42a2b5936b533d4",
+      "bytes": 15274,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/gw.png": {
+      "hash": "7bf968838609",
+      "sha256": "7bf9688386095e4bd5fd7ffe09471acf34185b817e1b5e0f005361ba36e25693",
+      "bytes": 19145,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/gw.webp": {
+      "hash": "bee78210f180",
+      "sha256": "bee78210f180921789231fcb995e457b5843a22e6c214ef8d322a8a82e41abf0",
+      "bytes": 14276,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/m.png": {
+      "hash": "a5b5173395e5",
+      "sha256": "a5b5173395e509b630a31c796265012e0846a4806e145b5c482c50894edc4500",
+      "bytes": 19295,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/m.webp": {
+      "hash": "c3feb98a6c0c",
+      "sha256": "c3feb98a6c0c0a69be9005413cbcbbac394c10b633866a0e856575235ff4cb6c",
+      "bytes": 17988,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/r.png": {
+      "hash": "f61fa44bd12f",
+      "sha256": "f61fa44bd12fb85970a4db9323da36f8b8f08f469e51ec836f164e4fbccd28e0",
+      "bytes": 18706,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/r.webp": {
+      "hash": "513d44e97e98",
+      "sha256": "513d44e97e98badd19c58b8882f0dd3ac2742735356c65eb7851fac6d75b64c3",
+      "bytes": 16614,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/rg.png": {
+      "hash": "4561f49b7a19",
+      "sha256": "4561f49b7a197c8f69f55dc7fee99c606daad26c6c9b3ed9c2c7b9f092478def",
+      "bytes": 18783,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/rg.webp": {
+      "hash": "8355cf4ad331",
+      "sha256": "8355cf4ad3315796650fd5554149a3c3bc78b39ddca2d6e1ce5f116da02c6bdf",
+      "bytes": 15424,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/rw.png": {
+      "hash": "56f8c9475860",
+      "sha256": "56f8c94758605558e36b829bc5cb90d266f8f2c8a3f569ae57518dc6b9663e8f",
+      "bytes": 20008,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/rw.webp": {
+      "hash": "3893855eec81",
+      "sha256": "3893855eec81a5b9be20550236f96d33e7b164034261e32e4ccecfa9de72e8af",
+      "bytes": 15836,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/u.png": {
+      "hash": "a7bfd93b3f4c",
+      "sha256": "a7bfd93b3f4cbf48b7fa41c5c8ade574ab34c387176f697a0449f9e87f7fa7d2",
+      "bytes": 20169,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/u.webp": {
+      "hash": "94f827c3a8de",
+      "sha256": "94f827c3a8de534dec369e4edb537bf1dba5cdfb7a657254c84ec14ce3f8a992",
+      "bytes": 16260,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/ub.png": {
+      "hash": "f54e8ec7721f",
+      "sha256": "f54e8ec7721fe01e3bc880001e2b430705eb9566bceb8aadfea549078f0e8969",
+      "bytes": 20822,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/ub.webp": {
+      "hash": "97accd73cc33",
+      "sha256": "97accd73cc33354eb0591244a2dd7460e5c582b5f20ae441b6b02d939d94154e",
+      "bytes": 12832,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/ur.png": {
+      "hash": "2a49e0ac70d3",
+      "sha256": "2a49e0ac70d3930c8a2dc5acfbc32f96c458c20e8467b163eac45d3a738adb3a",
+      "bytes": 20291,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/ur.webp": {
+      "hash": "2f03be8f3371",
+      "sha256": "2f03be8f33716de74c38ef451f95801e160eaf071820ddee2140dcbca2fcf9af",
+      "bytes": 16402,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/w.png": {
+      "hash": "754f82072940",
+      "sha256": "754f820729405a36825542dfef5f404fdbbd1ccfc7c47d9564a53a2501bfb3e1",
+      "bytes": 19410,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/w.webp": {
+      "hash": "4d2f879baeef",
+      "sha256": "4d2f879baeefd295768356447b99458fa501918b1954baf0c65b429f9c3cc4dd",
+      "bytes": 14224,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/wb.png": {
+      "hash": "0ee7a72222c5",
+      "sha256": "0ee7a72222c543f8e088397707f5bd69799e796c42ca0cd29367a080a9c5e186",
+      "bytes": 20641,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/wb.webp": {
+      "hash": "e0875eaed63f",
+      "sha256": "e0875eaed63ff3390407b466dc849669c358890bae000b73635f2d9678623f49",
+      "bytes": 11872,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/wu.png": {
+      "hash": "0493bbe4e872",
+      "sha256": "0493bbe4e872f5e38a42b9d121ef8dc86985b78b85239d362e64b8643583a677",
+      "bytes": 20591,
+      "width": 1500,
+      "height": 300
+    },
+    "fullartcrown/wu.webp": {
+      "hash": "748b32a5c22b",
+      "sha256": "748b32a5c22ba3bf3d286864baf66c019575bd0c25c482cfab264ccb477a51ca",
+      "bytes": 15668,
+      "width": 1500,
+      "height": 300
+    },
     "fullartland/b.png": {
       "hash": "d8d32fa8ce52",
       "sha256": "d8d32fa8ce52743898b38d7c95348f6b04e79f4694f87af0274491f450bb4496",

@@ -158,7 +158,10 @@ describe("slotInk / footerInk", () => {
       // The 1997 pair (TODO 4.10a): white ink with the prints' hard shadow on
       // every key, as per-key entries — tests/unit/cards/retro-1997-profile
       // .test.ts holds them.
-      expect(inked, t).toBe(t === "agclassic" || t === "alphaland" || t === "retro" || t === "retroland");
+      // The Zendikar Rising hedron showcase (TODO 4.11): black on the white
+      // key's ivory bars, white elsewhere, the P/T per plate —
+      // tests/unit/frames/zendikar-rising-frame.test.ts holds them.
+      expect(inked, t).toBe(t === "agclassic" || t === "alphaland" || t === "retro" || t === "retroland" || t === "fullart");
       if (!inked) {
         for (const k of keys) {
           if (p.pt) expect(slotInk(p.pt, k)).toEqual({ colorHex: p.pt.colorHex, shadowCss: p.pt.shadowCss });

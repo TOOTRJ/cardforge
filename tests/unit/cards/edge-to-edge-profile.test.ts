@@ -220,7 +220,9 @@ describe("the set symbol's keyline on a dark type bar (4.32, owner evidence 2026
   // …and on the extended-art frame's black type bar (layout v58, TODO 4.7).
   // …and the Spacecraft's two dresses (TODO 4.27a step 2), on those bars.
   // …and the borderless double-faced bodies (TODO 5.7), on m15borderless's bars.
-  const BORDERLESS = ["m15borderless", "m15borderlessartifact", "m15borderlessland", "extendedart", "extendedartland", "extendedartstation", "m15borderlessstation", "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback"];
+  // …and the Zendikar Rising hedron showcase (TODO 4.11): ZNR rings the
+  // symbol in white on every bar, the black key's too.
+  const BORDERLESS = ["fullart", "m15borderless", "m15borderlessartifact", "m15borderlessland", "extendedart", "extendedartland", "extendedartstation", "m15borderlessstation", "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback"];
 
   it("is set by the borderless M15 frames and extended art only — every other profile draws the glyph as before", () => {
     for (const template of FRAME_TEMPLATE_VALUES) {

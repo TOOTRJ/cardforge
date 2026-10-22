@@ -179,8 +179,14 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 60 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 61 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
+
+- the Zendikar Rising hedron showcase (4.11, wave 1, layout v63): fullart —
+  the 'Zendikar Rising' pack's frames whole with their title ends, each
+  master written with the straight bar and the stamp notch split off as its
+  own piece, the pack's plates and its crown band (`fullartcrown`)
+  ([The Zendikar Rising hedron showcase](#the-zendikar-rising-hedron-showcase-411-layout-v63));
 
 - the extended-art frame and the textless promo pair (4.7 / 4.35 / 4.42,
   layout v58): extendedart — the accurate 'Extended Art Frames' pack whole,
@@ -4520,6 +4526,101 @@ block of `scripts/lib/cc-frames.mjs`). A CORRECTION (layout v62, a sweep,
 **Not built** (follow-ups, in 4.11): the two-colour dress (the colour frames
 split by the pack's `maskRightHalf.png` under its 'Multicolored Bars'), and
 the scroll saga (CC's `SagaLTR`, 4.5d).
+
+### The Zendikar Rising hedron showcase (4.11, layout v63)
+
+TODO 4.11, wave 1 (owner-approved 2026-10-22). `fullart` is the Zendikar
+Rising showcase (ZNR #290–313) — the key is history; the frame is not full
+art. Until v63 its masters were MSE's `zendikar` drawing at 375 px, upscaled
+4× into git and missing MSE's hedron `back` layer, and its type line printed
+at 73.6 %H, inside the box, under an empty painted bar. A CORRECTION: one
+template-scoped bump (`ZNR_HEDRON_LAYOUT_VERSION`, `"sweep"`), no badge; no
+colour of the frame is ticked, so no tick goes stale. The owner counts the
+stored cards on it before the sweep (production can't be read from here).
+
+- **Masters** — Card Conjurer's 'Zendikar Rising' pack
+  (packZendikarRising, 1500 native, no resample; the frames bucket
+  only; `scripts/lib/cc-frames.mjs` ZNR_* block): each colour's frame whole
+  with its title pill's ends at CC's bounds on top, w u b r g m and the
+  see-through 'Colorless Frame' as `c` (not 'Colorless Frame (2)', whose one
+  difference is a see-through notch). The pack's artifact and land frames
+  are not imported: no ZNR showcase printing is colourless, and the
+  template keeps the MSE masters' seven keys (a colourless artifact draws
+  `c`). The art runs under the whole frame on every key — the window, the
+  strip above the title bar and the box's V are see-through — so the art
+  slot is CC's art bounds with the art-window check's spare (58.5–1441.5 ×
+  58.8–1877.4 px), no `underFrameArt`.
+- **The stamp notch, split off.** CC paints the box's bottom rim arched over
+  a hologram oval on EVERY key; the prints arch it only on a rare or mythic
+  and run it straight on a common or uncommon. So the importer writes each
+  master PLAIN (`ZNR_NOTCH`, `splitZnrNotch`): under the arch every column
+  is the straight bar's beside it, and the hedron texture the arch hid is
+  filled ALONG ITS OWN RIDGES — the box's lines run parallel to the V's
+  edges, so a pixel left of the centre takes the one 64 px up and to the
+  left, one right of it the one up and to the right (`srcDiag`) —
+  cross-faded over 6 rows above and the centre's 16 columns (owner
+  2026-10-22: the first cut, a horizontal copy 192 px out, left a soft
+  rounded mound under the V's tip). The pixels that differ are the notch
+  piece, `fullart/holostamp/<key>.png` (220 × 125 at 640, 1880, 1:1), its
+  oval (685–814 × 1927–1990, every key) cut clear with 2 px; drawn over the
+  plain master it gives CC's pixels back exactly outside the cut — the
+  importer records the sha256 of CC's master so drawn (corners cut, the oval
+  cleared) per key in `lib/cards/frame-sources.json`, and a unit test holds
+  the PUBLISHED pair to it (`restoredZnrMaster`). The
+  profile declares it as the `holoStamp` overlay (`ZNR_HOLO_STAMP`, oval
+  `ZNR_HOLO_STAMP_OVAL`, keep-out from the bevel's top at 1895 px), so
+  `"auto"` stamps a rare or mythic as ZNR does, with our oval art.
+- **The crown** — the pack's crown (the title pill's two ends drawn bigger,
+  with their hedron points) at CC's bounds over a clear canvas, 1:1, rows
+  0–299: the band `fullartcrown/<key>` (`ZNR_CROWN_BAND`, the overlay
+  `ZNR_CROWN`). It covers the title piece's ends whole, as CC draws it.
+  Keys: w u b r g m c and the ten pairs — the first colour's end left, the
+  second's right, over the gold master (`pairCrownOnGold`), as #313
+  Phylath prints R|G. An ADDITION on this frame: opt-in per card, like
+  every crown — and an import follows the print (owner 2026-10-22): the
+  legendary printings (#300, #312, #313: Scryfall's `legendary` effect)
+  import with the crown ON, `showcase/znr/hedron` being one of
+  `CROWNED_SHOWCASE_SIGNATURES` (`lib/scryfall/import-mapper.ts`) beside
+  the THB constellation and the LOTR scroll.
+- **Geometry, measured on ZNR #290–313** (Scryfall PNGs at 1500 × 2100,
+  ≥ 250 ms apart; every text registered on its own bar's outline, as the
+  cost-row read does). CC's bars sit on the M15 pack's rows (title outline
+  101.5 / 219.5 px, type 1182.5 / 1300.5); the prints' title bar sits
+  4.3 px higher and their type bar 1.8 px higher in their PNGs — inside the
+  wander of a Scryfall scan — so the masters are CC's as drawn, and the
+  slots are the CC-framed M15 profile's: name (within 1.1 px of the prints
+  on its bar), rules box, set symbol box, plate bounds. Three differ: the
+  type line takes the 2014–22 prints' baseline (`ZNR_TYPE_DY`: 5.6 px below
+  the current-print M15 slot; median of five prints); the cost row is
+  ZNR's (`ZNR_COST`: 70 px discs, 78 pitch, centres 6.7 px above the
+  bar's middle — 153.6 px — and the last disc's centre 56.3 px left of the
+  pill's outline, 1351.2 px: 3 px above and 1.7 px right of the v61 row;
+  the MSE master drew 72.75 px discs at 165.2); and the set symbol wears the
+  prints' white keyline (`setSymbolKeyline`). Checked on our bakes of the
+  24 against the prints: name 1.1 px, type line 1 px, discs 0.5 px, P/T
+  digits 2 px.
+- **Ink.** The name and the type line BLACK on the white key's ivory bars
+  (#290–294, no shadow) and white with `SHOWCASE_SHADOW` on every other
+  key (the gold bars of #311–313 too); the rules white on every key; the
+  P/T black on the light plates (w, m — #311–313's cream gold plate — and
+  c) and white on u b r g.
+- **Plates** — the pack's own for w, b, m and c and the 'Nickname' pack's
+  for u, r and g, as the pack lists them (282 × 154, at M15's plate
+  bounds); their ink row in `lib/cards/plate-ink.ts`.
+- **Collector line** — the 2015 style where M15 prints it (#293, #313: the
+  lines at 1994 / 2033 px from x 95): `M15_COLLECTOR`, opt-in per card.
+- **Import.** `showcase/znr/hedron` already names `fullart` exact: it is
+  `nearest`, "not yet verified", until the owner ticks a colour, then exact
+  (`withVerification`). #305 Kazandu Mammoth, the one modal printing, keeps
+  its landing on the modal front body (the showcase frame dresses no modal
+  kind).
+- **Gone from the repo:** the git masters under public/frames and their recipe in
+  `scripts/build-variation-frames.mjs`, and its row on Phase B's
+  allow-list (`CORNER_NORMALISE_TEMPLATES`).
+- **Not built:** the pair masters (a two-colour card draws the gold master,
+  as before; #313 Phylath's corner pieces print its two colours), the
+  modal front's flipside strip and ◀ (#305 lands on the modal body), the
+  artifact and land dresses.
 
 ### The older full-art basics (4.40 / 4.41)
 

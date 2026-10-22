@@ -64,7 +64,7 @@ describe("the collector slot", () => {
     // The profiles that spread those bases carry none.
     // (The borderless frames carry the slot on their entries since 4.9d —
     // never on M15BORDERLESS, which the land and station dresses spread.)
-    for (const t of ["adventure", "extendedart", "nyx", "fullart", "fullartland", "m15fullartland", "m15textless", "m15textlessland", "saga", "m20token", "m20tokentext", "m20tokenartifact"]) {
+    for (const t of ["adventure", "extendedart", "nyx", "fullartland", "m15fullartland", "m15textless", "m15textlessland", "saga", "m20token", "m20tokentext", "m20tokenartifact"]) {
       expect(getFrameProfile(t).collector, t).toBeUndefined();
     }
   });

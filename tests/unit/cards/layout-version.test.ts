@@ -1217,8 +1217,9 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
     for (const t of ["m15", "m15artifact", "m15land", "m15snow", "m15snowland", "m15devoid"]) expect(getFrameProfile(t).artSlot, t).toEqual(cc);
     // … nyx and fullart's slots, now to 93 % under the whole text box (4.17b) …
     expect(getFrameProfile("nyx").artSlot).toEqual({ topPct: 11.2, leftPct: 6, widthPct: 88, heightPct: 81.8 });
-    // (fullart's also out to whole pixels past its hedron ring's rim.)
-    expect(getFrameProfile("fullart").artSlot).toEqual({ topPct: 2.7, leftPct: 3.8, widthPct: 92.4, heightPct: 90.3 });
+    // (fullart's also out to whole pixels past its hedron ring's rim — until
+    // v63, TODO 4.11: Card Conjurer's art bounds since.)
+    if (CARD_LAYOUT_VERSION < 63) expect(getFrameProfile("fullart").artSlot).toEqual({ topPct: 2.7, leftPct: 3.8, widthPct: 92.4, heightPct: 90.3 });
     // … and the under-frame art, from the border's inner edge (4.17a), on every
     // see-through master — m15pw's colourless one new (4.17b).
     for (const t of ["m15", "m15token", "m15tokentext", "m15pw"]) {
@@ -3150,12 +3151,14 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
   it("the frozen list is every profile that draws the 70 px cost row but those that took it with a bump of their own", async () => {
     const lv = await import("@/lib/cards/layout-version");
     // The Lord of the Rings scroll took the CC M15 row with its Card
-    // Conjurer re-source (TODO 4.11, v62), its own bump.
-    const later = ["lotrscroll"];
+    // Conjurer re-source (TODO 4.11, v62), its own bump. The Zendikar Rising
+    // hedron took a 70 px disc on its own prints' row with its rebuild
+    // (TODO 4.11, v63): 3 px higher, 2 px further right.
+    const later = ["lotrscroll", "fullart"];
     const drawn = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).costSizePct === 70 / 1500);
     expect([...drawn].filter((t) => !later.includes(t)).sort()).toEqual([...lv.COST_ROW_PRINT_TEMPLATES].sort());
     for (const t of later) expect(drawn, t).toContain(t);
-    for (const t of drawn) {
+    for (const t of drawn.filter((d) => d !== "fullart")) {
       const p = getFrameProfile(t);
       // The family: 5 px down and 2 px right; the walkers: #597's place, 4 px right.
       expect([p.costSizePct, p.costDy, p.costDx], t).toEqual(
@@ -3164,7 +3167,7 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
     }
     // The portrait layouts and the MSE-framed showcases keep their rows
     // (their own items; the showcases wait for TODO 4.11).
-    for (const t of ["flip", "aftermath", "nyx", "fullart", "expeditionland", "lotr", "tarkirdraconic"]) {
+    for (const t of ["flip", "aftermath", "nyx", "expeditionland", "lotr", "tarkirdraconic"]) {
       expect(lv.COST_ROW_PRINT_TEMPLATES, t).not.toContain(t);
       expect(getFrameProfile(t).costDx, t).toBeUndefined();
     }
@@ -3215,6 +3218,28 @@ describe("v62 — the Lord of the Rings scroll re-sourced from Card Conjurer (TO
   });
 });
 
+describe("v63 — the Zendikar Rising hedron showcase re-sourced from Card Conjurer (TODO 4.11, wave 1)", () => {
+  // Renumbered with ZNR_HEDRON_LAYOUT_VERSION if another bump merges first
+  // (v62 went to the Lord of the Rings scroll, #604; the Expedition lands'
+  // #602 takes v64 after this one).
+  const V = 63;
+  it("is a sweep, never a badge, scoped to `fullart`, and not verification-neutral", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.ZNR_HEDRON_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect([...lv.ZNR_HEDRON_TEMPLATES]).toEqual(["fullart"]);
+    // The masters a tick would judge change: a tick (none yet) re-opens.
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).not.toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual(["fullart"]);
+    // A bake one version older owes it on `fullart` alone, whatever the card.
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(t === "fullart");
+  });
+});
+
 describe("v64 — the Zendikar Expeditions re-sourced from Card Conjurer (TODO 4.11 wave 1)", () => {
   // Renumbered with EXPEDITION_CC_LAYOUT_VERSION if another bump merges
   // first (taken as v61 in the PR; #598's cost row, #604's scroll (v62) and
@@ -3238,10 +3263,9 @@ describe("v64 — the Zendikar Expeditions re-sourced from Card Conjurer (TODO 4
     for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(SCOPE.includes(t));
   });
 
-  // v63 is #603's (Zendikar Rising). Until it merges, v63 has no rollout and
-  // no scope, and a version with neither reads as a SWEEP OF EVERY CARD
-  // (rolloutPolicy's default, an unscoped version): this PR must not merge
-  // before #603 does — or it is renumbered to v63 if #603 is renumbered.
+  // v63 is #603's (Zendikar Rising, merged first). A version with no rollout
+  // and no scope reads as a SWEEP OF EVERY CARD (rolloutPolicy's default, an
+  // unscoped version), so v64 never ships over a gap.
   it("ships only after v63 (#603): no gap below it", async () => {
     const lv = await import("@/lib/cards/layout-version");
     expect(lv.VERSION_ROLLOUT[V - 1], "v63 (#603) has no rollout yet: merge #603 first").toBeDefined();
