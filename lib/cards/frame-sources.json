@@ -1288,42 +1288,6 @@
     "pack": "packRing.js 'Ring' (the Lord of the Rings ring showcase; groupShowcase-5.js)",
     "converter": "scripts/import-cc-frames.mjs",
     "output": "1500x2100, corners rounded to 64.5px (but tl, tr: kept square, design to the corner), webp q90",
-    "shift": {
-      "axis": "y",
-      "blocks": [
-        {
-          "from": 12,
-          "to": 238,
-          "by": -12
-        },
-        {
-          "from": 243,
-          "to": 2100,
-          "by": 0
-        }
-      ],
-      "zones": [
-        "rows 0–11 dropped (they leave the image)",
-        "rows 238–242 (flat but the masked lines across) → 17 px, line 240 repeated"
-      ],
-      "zoneMask": {
-        "at": 238,
-        "lines": [
-          [
-            88,
-            108
-          ],
-          [
-            1390,
-            1413
-          ]
-        ],
-        "repeat": 240,
-        "what": "lines across left out of the zone's flatness check: on them the repeated line is a streak (TODO 4.11)"
-      },
-      "why": "the pack's top block (edge inscription, title bar and its rim) 12 px lower than LTR #302–331 print it (TODO 4.11, owner 2026-10-22)",
-      "lossless": "each block is copied byte for byte; each zone between them is one flat line repeated (checked: every line of a zone is identical) — no resample, no blend"
-    },
     "colors": {
       "a": [
         "img/frames/lotr/a.png"
@@ -1419,7 +1383,7 @@
       "corners: the one card corner cut at the two BOTTOM corners (the black border's shoulders, as on every Card Conjurer master); the TOP corners kept square — the frame field runs to the card's top and side edges on every print, so a square output keeps it there (lib/frames/square-corners.ts 'frame'); a round output cuts it at render",
       "plates = the pack's eight plates (lotr/pt/<k>.png, 268x134 at ptBounds 1148/1857 px); c = the artifact's plate (the plate follows the colour key); the land plate is not published (no land creature prints on the frame)",
       "toned onto the prints (owner 2026-10-22; RING_PRINT_TONES through RING_SOURCE_TONES, recorded under sourceTones): the text-box paper of w u b r g and gold through the pack's Rules mask, and the frame field of r and g (the field, the bars' faces and the plate's face — one flat colour in the pack — by their own colour), as each FILE loads, so the masters, crowns, plates and stamp pieces drawn from it agree",
-      "the top block raised 12 px onto the prints (RING_TOP_RECUT, shiftBlocksRgba8): rows 0–11 dropped, rows 12–237 up 12 px, the title bar's flat lower rim (rows 238–242, line 240) repeated in the 12 rows that opens — but at the bar's slanted end caps (x 88–108, 1390–1413, the zone mask): a streak of line 240 there; the type bar, the box (6 px higher than print: TODO 4.11) and the plate unmoved",
+      "geometry as drawn (owner 2026-10-22): the pack draws its top block (edge inscription, title bar and rim) 12 px lower than the prints and its box bottom and plate 6 px higher — known and accepted; no flat zone allows a lossless re-cut of the top (the rim would thicken), so the slots ride the pack's own bars",
       "not built: the two-colour dress (replacementMasks 'Right Half' = lotr/maskRightHalf.png: the colour frames split down the card under the pack's bars — LTR #316, #318–327, #330 and their twins; a follow-up — a two-colour card draws the gold master today)"
     ]
   },
@@ -1457,42 +1421,6 @@
         "img/frames/lotr/crown/l.png at 0/0/100×12.95238095238095 %"
       ]
     },
-    "shift": {
-      "axis": "y",
-      "blocks": [
-        {
-          "from": 12,
-          "to": 238,
-          "by": -12
-        },
-        {
-          "from": 243,
-          "to": 2100,
-          "by": 0
-        }
-      ],
-      "zones": [
-        "rows 0–11 dropped (they leave the image)",
-        "rows 238–242 (flat but the masked lines across) → 17 px, line 240 repeated"
-      ],
-      "zoneMask": {
-        "at": 238,
-        "lines": [
-          [
-            47,
-            55
-          ],
-          [
-            1441,
-            1449
-          ]
-        ],
-        "repeat": 240,
-        "what": "lines across left out of the zone's flatness check: on them the repeated line is a streak (TODO 4.11)"
-      },
-      "why": "the pack's top block (edge inscription, title bar and its rim) 12 px lower than LTR #302–331 print it (TODO 4.11, owner 2026-10-22)",
-      "lossless": "each block is copied byte for byte; each zone between them is one flat line repeated (checked: every line of a zone is identical) — no resample, no blend"
-    },
     "sourceTones": {
       "img/frames/lotr/crown/r.png": {
         "table": "RING_PRINT_TONES (r)",
@@ -1516,7 +1444,7 @@
     "notes": [
       "the ring showcase's legendary crown (TODO 4.11): the pack's 'Legendary Crown' (lotr/crown/<k>.png, 1500x272 at crownBounds 0/0) at 1:1 — the scalloped cream title bar with the frame field round it, which every print of the run carries (all sixty are legendary: LTR #302–331, #794–823); it repaints the card's whole top, its two top corners kept square like the masters'",
       "keys = the pack's eight crowns: w u b r g, m (gold), a (the artifact's blue-grey — a colourless artifact draws master a) and l (the land's brown — the template's keyMap c → l); no pairs (no pair masters)",
-      "raised 12 px with the masters (RING_CROWN_TOP_RECUT: the masters' rows, the zone mask on the crown's own legs, x 47–55 and 1441–1449) and its field toned with theirs (RING_SOURCE_TONES)"
+      "its field toned with the masters' (RING_SOURCE_TONES)"
     ]
   },
   "lotrholostamp": {

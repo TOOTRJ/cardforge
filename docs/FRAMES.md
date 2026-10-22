@@ -4467,20 +4467,15 @@ under public/frames and its rows in `build-showcase-frames.mjs` /
   type bar where they do (1182.5 / 1299 on both), its box bottom and plate
   6 px higher, and its sides 4 px in. Every slot is placed against ITS OWN
   bar, as the print places it against the print's.
-- **The top raised onto print** (owner 2026-10-22, `RING_TOP_RECUT`): the
-  importer drops rows 0–11 and moves rows 12–237 — the edge inscription,
-  the title bar and the top of its cream lower rim — 12 px up
-  (`shiftBlocksRgba8`), on the masters and the crown band alike; the 12 rows
-  that opens are the rim's flat rows 238–242 repeated (line 240). The rim is
-  flat across the card but at the bar's two slanted end caps (x 88–108 and
-  1390–1413 on the masters, the crown's legs x 47–55 and 1441–1449), which
-  the zone's explicit mask leaves out of the flatness check
-  (`zoneMask`, at most `ZONE_MASK_MAX_LINES` lines across; every other
-  zone keeps the strict check): a streak of line 240 there. **Known
-  trade-off:** the rim below the bar is ~21 rows thick where print's is 8,
-  and on the plain (uncrowned) bar its end caps become a square step — the
-  review sheet's 2× zoom row shows both. The type bar, the box (still 6 px
-  higher than print: TODO 4.11) and the plate are not moved.
+- **The geometry, as drawn — accepted** (owner 2026-10-22): the top
+  block (edge inscription, title bar, its rim) stays 12 px below print and
+  the box bottom and plate 6 px above it. A lossless re-cut of the top was
+  built and reviewed (rows 12–237 up 12 px through a flat zone): the only
+  flat zone under the moved block is the title bar's cream rim, so the rim
+  came out ~21 rows thick where print's is 8 and the plain bar's end caps
+  turned into a square step — below the rim the inscription, the ring and
+  the window's top differ row to row, and no other seam exists. The owner
+  dropped it: the slots ride the pack's own bars instead.
 - **Tones onto print** (owner 2026-10-22, `RING_PRINT_TONES` through
   `RING_SOURCE_TONES`, the Universes Beyond frames' mechanism): Card
   Conjurer's text-box paper was 40–60 levels off print on u / b / r / g
@@ -4502,15 +4497,15 @@ under public/frames and its rows in `build-showcase-frames.mjs` /
   title bar, so the profile is M15's slots and the M15-era family's sizes
   (`fit: "measured"` name and type line, joined WITH v63), white name and
   type line, with:
-  - the name and the cost row on the raised bar: 10.4 px lower than M15's
-    (CC's title y 120 against M15's 109.6 of 2100) less the 12 px raise
-    (`LOTR_TOP_RECUT_PX`); the name's ink sits within 1–2 px of the
-    print's (left edge 131–132 against 129–134);
+  - the name and the cost row 10.4 px lower (CC's title y 120 against
+    M15's 109.6 of 2100), on the pack's own bar; the name's ink then sits
+    within 1–2 px of the print's against the bar (left edge 131–132 against
+    129–134);
   - the CC M15 cost row (70 px discs, 78 pitch, its right end) CENTRED on
     the bar, as the prints centre it (the disc's face 124.5–193.5 under
     outlines 100.5 / 218.5 on #307 / #310 / #312: −0.3 px off the bar's
     centre), where the v61 lift left ours 6 px above it: `costDy` −2 px —
-    ours 125.5–193.5 on the raised bar (101.5 / 219.5).
+    ours 138–206 under the pack's bar (113.5 / 231.5).
     The last disc ends 0.5 px from the print's against the bar's right end;
   - the type line on the CC baseline + 2 px (the prints set it on 1261 px,
     6 prints, under the same bar; CC M15's lift leaves 1259);

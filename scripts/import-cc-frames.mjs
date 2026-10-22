@@ -472,9 +472,7 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
   if (landscape !== Boolean(def.transform)) {
     throw new Error(`${template}: a landscape recipe names its transform ("rotate-cw" or "downscale"), and only a landscape one does`);
   }
-  // A portrait recipe moves rows only (TODO 4.11: the LOTR ring's top block
-  // raised onto its prints); a landscape one either axis, in its 2100×1500 px.
-  if (def.shift && !landscape && def.shift.axis !== "y") throw new Error(`${template}: a portrait recipe's block shift moves rows (axis "y") only`);
+  if (def.shift && !landscape) throw new Error(`${template}: a block shift is in the 2100×1500 master's px — a landscape recipe's only`);
   for (const key of builtColors(def)) {
     recipe[key] = def.colors[key].map(describeLayer);
     const out = path.join(outDir, template, `${key}.png`);
@@ -922,13 +920,10 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
         W === OUT_W && H === OUT_H
           ? composite
           : await sharp(composite, { raw: { width: W, height: H, channels: 4 } }).resize(OUT_W, OUT_H, { fit: "fill", kernel: "lanczos3" }).raw().toBuffer();
-      // A band raised with its masters (TODO 4.11: the LOTR ring's crown), by
-      // the same rule: whole rows through a flat zone (shiftBlocksRgba8).
-      const shifted = def.shift ? shiftBlocksRgba8(full, OUT_W, OUT_H, def.shift) : full;
-      roundCornersRgba8(shifted, OUT_W, OUT_H, CORNER_RADIUS, def.keepCorners ?? []);
-      const findings = def.findings(shifted, OUT_W, OUT_H, band.rows);
+      roundCornersRgba8(full, OUT_W, OUT_H, CORNER_RADIUS, def.keepCorners ?? []);
+      const findings = def.findings(full, OUT_W, OUT_H, band.rows);
       for (const f of findings.failures) bandFailures.push(`${folder}/${key}: ${f}`);
-      const cropped = cropRows(shifted, OUT_W, band.rows);
+      const cropped = cropRows(full, OUT_W, band.rows);
       fs.mkdirSync(path.dirname(out), { recursive: true });
       const image = sharp(cropped, { raw: { width: OUT_W, height: band.rows, channels: 4 } });
       await image.clone().png({ compressionLevel: 9 }).toFile(out);
@@ -1028,7 +1023,6 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
       ? `${OUT_W}x${band.rows} cut band: the published m15crown band (rows 0–${band.rows - 1}) cut through the twin's alpha round the well, webp q${WEBP.quality}`
       : `${OUT_W}x${band.rows} overlay band: rows 0–${band.rows - 1} of a ${OUT_W}x${OUT_H} card composited at ${W}x${H}, corners rounded to ${CORNER_RADIUS}px${def.keepCorners?.length ? ` (but ${def.keepCorners.join(", ")}: kept square, design to the corner)` : ""}, webp q${WEBP.quality}`,
     colors: recipe,
-    ...(def.shift ? { shift: describeBlockShift(def.shift, OUT_W, OUT_H) } : {}),
     ...(def.layers && describeFileTones(def.keys.flatMap((key) => def.layers(key).map((l) => l.src))) ? { sourceTones: describeFileTones(def.keys.flatMap((key) => def.layers(key).map((l) => l.src))) } : {}),
     sourceFiles: def.cut
       ? cutCrownSourceFiles(folder)
