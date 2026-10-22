@@ -1,0 +1,199 @@
+{
+ "znr-293": {
+  "id": "be97b691-f9f5-4fb4-8e44-8ffe32d13d03",
+  "oracle_id": "e4f0fa12-542b-485f-a792-3a8aba933522",
+  "name": "Makindi Ox",
+  "released_at": "2020-09-25",
+  "layout": "normal",
+  "set": "znr",
+  "set_name": "Zendikar Rising",
+  "set_type": "expansion",
+  "collector_number": "293",
+  "frame": "2015",
+  "frame_effects": [
+   "showcase",
+   "inverted"
+  ],
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo_types": [
+   "boosterfun"
+  ],
+  "keywords": [
+   "Landfall"
+  ],
+  "type_line": "Creature — Ox",
+  "mana_cost": "{4}{W}",
+  "power": "4",
+  "toughness": "4",
+  "colors": [
+   "W"
+  ],
+  "color_identity": [
+   "W"
+  ],
+  "rarity": "common"
+ },
+ "znr-300": {
+  "id": "aecfbd48-7da0-4b44-b9a2-d31412f65eb1",
+  "oracle_id": "6288c0cb-cf32-4ae9-abf0-104ec71654fa",
+  "name": "Moraug, Fury of Akoum",
+  "released_at": "2020-09-25",
+  "layout": "normal",
+  "set": "znr",
+  "set_name": "Zendikar Rising",
+  "set_type": "expansion",
+  "collector_number": "300",
+  "frame": "2015",
+  "frame_effects": [
+   "showcase",
+   "legendary",
+   "inverted"
+  ],
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo_types": [
+   "boosterfun"
+  ],
+  "security_stamp": "oval",
+  "keywords": [
+   "Landfall"
+  ],
+  "type_line": "Legendary Creature — Minotaur Warrior",
+  "mana_cost": "{4}{R}{R}",
+  "power": "6",
+  "toughness": "6",
+  "colors": [
+   "R"
+  ],
+  "color_identity": [
+   "R"
+  ],
+  "rarity": "mythic"
+ },
+ "znr-311": {
+  "id": "0d0954df-07f0-430d-90ee-d1fe40af546f",
+  "oracle_id": "b33a7ec6-b22b-41cf-9312-65add1529b51",
+  "name": "Brushfire Elemental",
+  "released_at": "2020-09-25",
+  "layout": "normal",
+  "set": "znr",
+  "set_name": "Zendikar Rising",
+  "set_type": "expansion",
+  "collector_number": "311",
+  "frame": "2015",
+  "frame_effects": [
+   "showcase",
+   "inverted"
+  ],
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo_types": [
+   "boosterfun"
+  ],
+  "keywords": [
+   "Haste",
+   "Landfall"
+  ],
+  "type_line": "Creature — Elemental",
+  "mana_cost": "{R}{G}",
+  "power": "1",
+  "toughness": "1",
+  "colors": [
+   "G",
+   "R"
+  ],
+  "color_identity": [
+   "G",
+   "R"
+  ],
+  "rarity": "uncommon"
+ },
+ "znr-312": {
+  "id": "9b5bc5d7-c0f8-4632-adb7-dd3b75a3d87d",
+  "oracle_id": "cd133d30-51ff-4114-a7d7-029345f0f0d7",
+  "name": "Omnath, Locus of Creation",
+  "released_at": "2020-09-25",
+  "layout": "normal",
+  "set": "znr",
+  "set_name": "Zendikar Rising",
+  "set_type": "expansion",
+  "collector_number": "312",
+  "frame": "2015",
+  "frame_effects": [
+   "showcase",
+   "legendary",
+   "inverted"
+  ],
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo_types": [
+   "boosterfun"
+  ],
+  "security_stamp": "oval",
+  "keywords": [
+   "Landfall"
+  ],
+  "type_line": "Legendary Creature — Elemental",
+  "mana_cost": "{R}{G}{W}{U}",
+  "power": "4",
+  "toughness": "4",
+  "colors": [
+   "G",
+   "R",
+   "U",
+   "W"
+  ],
+  "color_identity": [
+   "G",
+   "R",
+   "U",
+   "W"
+  ],
+  "rarity": "mythic"
+ },
+ "znr-313": {
+  "id": "c344a3cd-43e0-4333-83ec-081f0e39530a",
+  "oracle_id": "3d79cbe2-cf1b-4313-ab47-0118fcdbfc6c",
+  "name": "Phylath, World Sculptor",
+  "released_at": "2020-09-25",
+  "layout": "normal",
+  "set": "znr",
+  "set_name": "Zendikar Rising",
+  "set_type": "expansion",
+  "collector_number": "313",
+  "frame": "2015",
+  "frame_effects": [
+   "showcase",
+   "legendary",
+   "inverted"
+  ],
+  "border_color": "black",
+  "full_art": false,
+  "textless": false,
+  "promo_types": [
+   "boosterfun"
+  ],
+  "security_stamp": "oval",
+  "keywords": [
+   "Landfall"
+  ],
+  "type_line": "Legendary Creature — Elemental",
+  "mana_cost": "{4}{R}{G}",
+  "power": "5",
+  "toughness": "5",
+  "colors": [
+   "G",
+   "R"
+  ],
+  "color_identity": [
+   "G",
+   "R"
+  ],
+  "rarity": "rare"
+ }
+}

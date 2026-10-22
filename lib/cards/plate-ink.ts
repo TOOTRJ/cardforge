@@ -37,6 +37,9 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   // within a pixel of M15's at HD.
   "/frames/m15ub/pt/{color}.png": { left: 0.0744, top: 0.0454, right: 0.9965, bottom: 0.8637 },
   "/frames/m15ubartifact/pt/{color}.png": { left: 0.0744, top: 0.0454, right: 0.9965, bottom: 0.8637 },
+  // The Zendikar Rising hedron showcase (TODO 4.11): its pack's plates and
+  // the 'Nickname' pack's (282 × 154), drawn at M15's plate box.
+  "/frames/fullart/pt/{color}.png": { left: 0.0744, top: 0.0454, right: 0.9965, bottom: 0.8637 },
   "/frames/m15snow/pt/{color}.png": { left: 0.0742, top: 0.0436, right: 0.9974, bottom: 0.8641 },
   "/frames/m15devoid/pt/{color}.png": { left: 0.0742, top: 0.0436, right: 0.9974, bottom: 0.8641 },
   // The transform backs' dark plates (TODO 5.1a; CC's transform pt<K>.png,

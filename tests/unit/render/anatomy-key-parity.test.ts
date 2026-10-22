@@ -140,7 +140,11 @@ describe("bake path = preview path", () => {
             : slot.anatomy === "mdfcStrip"
               ? `${template}/strip`
             : slot.anatomy === "holoStamp"
-              ? template === "m15pw"
+              ? // The Zendikar Rising hedron showcase (4.11): the notch split
+                // off its own masters, beside them.
+                template === "fullart"
+                ? "fullart/holostamp"
+                : template === "m15pw"
                 ? "m15pwholostamp"
                 : ub
                   ? "m15ubholostamp"
@@ -158,7 +162,10 @@ describe("bake path = preview path", () => {
                           ? // The Lord of the Rings scroll's own piece per key (4.11).
                             "lotrscrollholostamp"
                           : "m15holostamp"
-              : template === "extendedart" || template === "extendedartland" || template === "extendedartstation"
+              : template === "fullart"
+                ? // The Zendikar Rising hedron showcase's crown band (4.11).
+                  "fullartcrown"
+                : template === "extendedart" || template === "extendedartland" || template === "extendedartstation"
                 ? "extendedcrown"
                 : ub
                   ? "m15ubcrown"
@@ -215,8 +222,9 @@ describe("bake path = preview path", () => {
     // pairs on m15borderless and its artifact dress, the land's 7 + 10, the
     // station's 7; and the borderless walkers' 7 on each of their two
     // entries (owner Round 70).
-    // …and the Lord of the Rings scroll's 8 keys (4.11, the pack's own pieces).
-    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8);
+    // …and the Lord of the Rings scroll's 8 keys (4.11, the pack's own pieces),
+    // and the Zendikar Rising hedron showcase's 7 (4.11).
+    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7);
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

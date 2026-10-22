@@ -1217,6 +1217,275 @@
       "no crown: the legendary bottom halves of C18 #134 and CM2 #71 print none"
     ]
   },
+  "fullart": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packZendikarRising.js 'Zendikar Rising' (groupShowcase-5.js:42)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, no resample: the colour's frame whole and its title pill's ends at CC's bounds (1:1); then the stamp notch split off (ZNR_NOTCH: the master written with the straight bar under the box, the arch, its bevel and the oval as the piece holostamp/<key>.png, 220x125 at 640, 1880, the oval cut clear); corners rounded to the importer radius",
+    "colors": {
+      "w": [
+        "img/frames/m15/zendikarRising/m15ZendikarRisingFrameW.png",
+        "img/frames/m15/zendikarRising/m15ZendikarRisingTitleW.png at 3.74/2.62/92.54×10.91 %"
+      ],
+      "u": [
+        "img/frames/m15/zendikarRising/m15ZendikarRisingFrameU.png",
+        "img/frames/m15/zendikarRising/m15ZendikarRisingTitleU.png at 3.74/2.62/92.54×10.91 %"
+      ],
+      "b": [
+        "img/frames/m15/zendikarRising/m15ZendikarRisingFrameB.png",
+        "img/frames/m15/zendikarRising/m15ZendikarRisingTitleB.png at 3.74/2.62/92.54×10.91 %"
+      ],
+      "r": [
+        "img/frames/m15/zendikarRising/m15ZendikarRisingFrameR.png",
+        "img/frames/m15/zendikarRising/m15ZendikarRisingTitleR.png at 3.74/2.62/92.54×10.91 %"
+      ],
+      "g": [
+        "img/frames/m15/zendikarRising/m15ZendikarRisingFrameG.png",
+        "img/frames/m15/zendikarRising/m15ZendikarRisingTitleG.png at 3.74/2.62/92.54×10.91 %"
+      ],
+      "c": [
+        "img/frames/m15/zendikarRising/m15ZendikarRisingFrameC.png",
+        "img/frames/m15/zendikarRising/m15ZendikarRisingTitleC.png at 3.74/2.62/92.54×10.91 %"
+      ],
+      "m": [
+        "img/frames/m15/zendikarRising/m15ZendikarRisingFrameM.png",
+        "img/frames/m15/zendikarRising/m15ZendikarRisingTitleM.png at 3.74/2.62/92.54×10.91 %"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/m15/zendikarRising/m15ZendikarRisingPTW.png",
+      "u": "img/frames/m15/nickname/m15NicknamePTU.png",
+      "b": "img/frames/m15/zendikarRising/m15ZendikarRisingPTB.png",
+      "r": "img/frames/m15/nickname/m15NicknamePTR.png",
+      "g": "img/frames/m15/nickname/m15NicknamePTG.png",
+      "m": "img/frames/m15/zendikarRising/m15ZendikarRisingPTM.png",
+      "c": "img/frames/m15/zendikarRising/m15ZendikarRisingPTC.png"
+    },
+    "notch": {
+      "centerX": 750,
+      "archTop": [
+        [
+          0,
+          1905
+        ],
+        [
+          18,
+          1905
+        ],
+        [
+          22,
+          1906
+        ],
+        [
+          30,
+          1907
+        ],
+        [
+          38,
+          1909
+        ],
+        [
+          46,
+          1910
+        ],
+        [
+          50,
+          1911.5
+        ],
+        [
+          54,
+          1913
+        ],
+        [
+          58,
+          1914
+        ],
+        [
+          62,
+          1916
+        ],
+        [
+          66,
+          1917.5
+        ],
+        [
+          70,
+          1919.5
+        ],
+        [
+          74,
+          1921.5
+        ],
+        [
+          78,
+          1924.5
+        ],
+        [
+          82,
+          1927.5
+        ],
+        [
+          86,
+          1930.5
+        ],
+        [
+          90,
+          1934.5
+        ],
+        [
+          94,
+          1937
+        ]
+      ],
+      "bevelRows": 10,
+      "feather": 6,
+      "barTop": 1930,
+      "rimRows": [
+        1937,
+        1947
+      ],
+      "bottom": 2004,
+      "halfWidth": 96,
+      "refX": {
+        "left": 600,
+        "right": 900
+      },
+      "srcDiag": 64,
+      "box": {
+        "x": 640,
+        "y": 1880,
+        "width": 220,
+        "height": 125
+      },
+      "oval": {
+        "x": 685,
+        "y": 1927,
+        "width": 130,
+        "height": 64
+      },
+      "cutMarginPx": 2,
+      "output": "holostamp/<colour>.png: the notch the master paints, split off (the master written with the straight bar)",
+      "restored": {
+        "w": "64515cac4f8ab18943c8cd76cf67dc25f82120299ac82137ced6dfde45adfc20",
+        "u": "81290903457b37a745ce84d8862dc418e9f04b182dd0e46799280c929a322473",
+        "b": "25211d927248872caaef635efb50f255037da5a36661bcf410ab4700f10b7ae8",
+        "r": "a6c9766878b1e4855d8fe88f7cc4587d79ea5f950007ca3914a25ce172ace9df",
+        "g": "e533db3e0e627e3666c2c8e92504e977fac862475c07dfc18e3de990533f4b8f",
+        "c": "669f57398f47380f2331dd4e72371e84264300bf1084a7508921e001f6f285a6",
+        "m": "ff6befdda7778e4bc61bbcc9ca815e6bd34df450232b212b0f0de2a55642c278",
+        "what": "sha256 of CC's master (corners cut, the oval cut cleared to 0,0,0,0) — what the published master with its piece laid over must draw (restoredZnrMaster)"
+      }
+    },
+    "sourceFiles": [
+      "img/frames/m15/nickname/m15NicknamePTG.png",
+      "img/frames/m15/nickname/m15NicknamePTR.png",
+      "img/frames/m15/nickname/m15NicknamePTU.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingFrameB.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingFrameC.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingFrameG.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingFrameM.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingFrameR.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingFrameU.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingFrameW.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingPTB.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingPTC.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingPTM.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingPTW.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingTitleB.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingTitleC.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingTitleG.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingTitleM.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingTitleR.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingTitleU.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingTitleW.png"
+    ],
+    "notes": [
+      "w u b r g m = the pack's colour frames whole (m15ZendikarRisingFrame<K>.png) with the colour's 'Title' pill ends on top; c = its see-through 'Colorless Frame' (FrameC; not 'Colorless Frame (2)', CAlt, whose only difference is a see-through notch) with the colourless title ends — the art runs under the whole frame on every key (the profile's art slot is CC's art bounds 4/2.86/92x86.48 %, the box and the V translucent)",
+      "the pack's 'Artifact Frame' and 'Land Frame' (and their title, crown and plate) are not imported: no ZNR showcase printing is colourless, and the template has no artifact or land master (a colourless artifact draws c, as the MSE masters did)",
+      "plates (pt/<k>.png, native 282x154 at M15's plate bounds) = the pack's own for w, b, m and c (m15ZendikarRisingPT<K>.png) and the 'Nickname' pack's for u, r and g (m15NicknamePT<K>.png), as the pack lists them; the profile prints dark digits on the light w / m / c plates and white ones on the rest, as ZNR #290–313 print them",
+      "the holofoil stamp: CC paints the arched rim and a hologram oval on every key; the prints arch only a rare's or mythic's box (commons and uncommons run the rim straight). So each master is written plain and the arch is its own piece — see ZNR_NOTCH; the piece's oval is cut clear and our oval art drawn over it",
+      "the source has never been in git: the MSE zendikar masters it replaces (public/frames/fullart, built by scripts/build-variation-frames.mjs) were deleted with this recipe"
+    ]
+  },
+  "fullartcrown": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packZendikarRising.js 'Zendikar Rising' (groupShowcase-5.js:42): its '… Crown' pieces",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "1500x300 overlay band: rows 0–299 of a 1500x2100 card composited at 1500x2100, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/m15/zendikarRising/m15ZendikarRisingCrownW.png at 2.94/2.34/94.14×11.67 %"
+      ],
+      "u": [
+        "img/frames/m15/zendikarRising/m15ZendikarRisingCrownU.png at 2.94/2.34/94.14×11.67 %"
+      ],
+      "b": [
+        "img/frames/m15/zendikarRising/m15ZendikarRisingCrownB.png at 2.94/2.34/94.14×11.67 %"
+      ],
+      "r": [
+        "img/frames/m15/zendikarRising/m15ZendikarRisingCrownR.png at 2.94/2.34/94.14×11.67 %"
+      ],
+      "g": [
+        "img/frames/m15/zendikarRising/m15ZendikarRisingCrownG.png at 2.94/2.34/94.14×11.67 %"
+      ],
+      "m": [
+        "img/frames/m15/zendikarRising/m15ZendikarRisingCrownM.png at 2.94/2.34/94.14×11.67 %"
+      ],
+      "c": [
+        "img/frames/m15/zendikarRising/m15ZendikarRisingCrownC.png at 2.94/2.34/94.14×11.67 %"
+      ],
+      "wu": [
+        "(img/frames/m15/zendikarRising/m15ZendikarRisingCrownW.png | img/frames/m15/zendikarRising/m15ZendikarRisingCrownU.png across procedural:ramp(45→55 %W)) at 2.94/2.34/94.14×11.67 %"
+      ],
+      "wb": [
+        "(img/frames/m15/zendikarRising/m15ZendikarRisingCrownW.png | img/frames/m15/zendikarRising/m15ZendikarRisingCrownB.png across procedural:ramp(45→55 %W)) at 2.94/2.34/94.14×11.67 %"
+      ],
+      "ub": [
+        "(img/frames/m15/zendikarRising/m15ZendikarRisingCrownU.png | img/frames/m15/zendikarRising/m15ZendikarRisingCrownB.png across procedural:ramp(45→55 %W)) at 2.94/2.34/94.14×11.67 %"
+      ],
+      "ur": [
+        "(img/frames/m15/zendikarRising/m15ZendikarRisingCrownU.png | img/frames/m15/zendikarRising/m15ZendikarRisingCrownR.png across procedural:ramp(45→55 %W)) at 2.94/2.34/94.14×11.67 %"
+      ],
+      "br": [
+        "(img/frames/m15/zendikarRising/m15ZendikarRisingCrownB.png | img/frames/m15/zendikarRising/m15ZendikarRisingCrownR.png across procedural:ramp(45→55 %W)) at 2.94/2.34/94.14×11.67 %"
+      ],
+      "bg": [
+        "(img/frames/m15/zendikarRising/m15ZendikarRisingCrownB.png | img/frames/m15/zendikarRising/m15ZendikarRisingCrownG.png across procedural:ramp(45→55 %W)) at 2.94/2.34/94.14×11.67 %"
+      ],
+      "rg": [
+        "(img/frames/m15/zendikarRising/m15ZendikarRisingCrownR.png | img/frames/m15/zendikarRising/m15ZendikarRisingCrownG.png across procedural:ramp(45→55 %W)) at 2.94/2.34/94.14×11.67 %"
+      ],
+      "rw": [
+        "(img/frames/m15/zendikarRising/m15ZendikarRisingCrownR.png | img/frames/m15/zendikarRising/m15ZendikarRisingCrownW.png across procedural:ramp(45→55 %W)) at 2.94/2.34/94.14×11.67 %"
+      ],
+      "gw": [
+        "(img/frames/m15/zendikarRising/m15ZendikarRisingCrownG.png | img/frames/m15/zendikarRising/m15ZendikarRisingCrownW.png across procedural:ramp(45→55 %W)) at 2.94/2.34/94.14×11.67 %"
+      ],
+      "gu": [
+        "(img/frames/m15/zendikarRising/m15ZendikarRisingCrownG.png | img/frames/m15/zendikarRising/m15ZendikarRisingCrownU.png across procedural:ramp(45→55 %W)) at 2.94/2.34/94.14×11.67 %"
+      ]
+    },
+    "sourceFiles": [
+      "img/frames/m15/zendikarRising/m15ZendikarRisingCrownB.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingCrownC.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingCrownG.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingCrownM.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingCrownR.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingCrownU.png",
+      "img/frames/m15/zendikarRising/m15ZendikarRisingCrownW.png"
+    ],
+    "notes": [
+      "the ZNR showcase's legendary crown (TODO 4.11): the pack's crown (m15ZendikarRisingCrown<K>.png, 1412x245 — the title pill's two ends drawn bigger, with their hedron points) at CC's bounds 2.94/2.34/94.14x11.67 % over a clear canvas, 1:1 at 1500x2100, rows 0–299 kept; nothing erased — it covers the title piece's ends whole, as CC draws it over them; an overlay band over the fullart masters (frames bucket)",
+      "keys = w u b r g, m (gold: three or more colours, or a pair — the template draws no pair masters), c (the colourless crown over the see-through frame) and the ten pairs: the first colour's crown on the left, the second's on the right, lerped across PAIR_RAMPS.crown (45→55 %W, where neither end draws anything) — #313 Phylath, World Sculptor prints the red end left and the green right over its gold bars; the pack's A and L crowns are not imported (no artifact or land master)",
+      "the prints: #300 Moraug (R), #312 Omnath (4 colours: gold), #313 Phylath (R|G) — the ends' outline and points land on CC's within 2 px once the title bar is registered"
+    ]
+  },
   "fullartland": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",

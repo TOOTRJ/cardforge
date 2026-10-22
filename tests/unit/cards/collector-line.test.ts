@@ -71,6 +71,8 @@ describe("the switch values", () => {
       "m15ub",
       "m15ubartifact",
       "m15ubland",
+      // The Zendikar Rising hedron showcase (TODO 4.11).
+      "fullart",
       "m15snow",
       "m15devoid",
       "m15pw",
