@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { Card, GameSystem } from "@/types/card";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 
@@ -184,9 +184,10 @@ describe("what a save sends for the nickname", () => {
   });
 
   it("a remix keeps its parent's nickname; a remix of a card without one names no key", async () => {
-    // (A remix saves once something is changed: its name, here.)
+    // (A remix saves once something is changed: its artist, here — a
+    // rename would clear the nickname, owner N3.)
     renderForm("remix", savedCard({ nickname: "The Ember Warden" }));
-    await type("title", "Kesh, Remixed");
+    await type("artist_credit", "Bo Reed");
     await save();
     await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
     expect((actions.createCardAction.mock.calls[0][0] as Record<string, unknown>).nickname).toBe("The Ember Warden");
@@ -360,6 +361,67 @@ describe("another card forgets the nickname", () => {
     await type("title", opened);
     await blur("title");
     expect(field("nickname").value).toBe("The Ember Warden");
+  });
+
+  it("a remix renamed and saved with Enter (no blur) saves no nickname", async () => {
+    renderForm("remix", savedCard({ nickname: "The Ember Warden" }));
+    await type("title", "Gloomwood Stalker");
+    await act(async () => {
+      fireEvent.submit(field("title").closest("form")!);
+    });
+    await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
+    expect(actions.createCardAction.mock.calls[0][0] as Record<string, unknown>).not.toHaveProperty("nickname");
+    expect(field("nickname").value).toBe("");
+  });
+
+  it("Start over (a remix's Reset) re-arms the one clear (the parent's nickname is back, and a rename clears it again)", async () => {
+    renderForm("remix", savedCard({ nickname: "The Ember Warden" }));
+    await type("title", "Gloomwood Stalker");
+    await blur("title");
+    expect(field("nickname").value).toBe("");
+    // A remix's "Start over" is its Reset (StartOverDialog's revert).
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Reset$/ }));
+    });
+    await act(async () => {
+      fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: /^Reset$/ }));
+    });
+    expect(field("nickname").value).toBe("The Ember Warden");
+    await type("title", "Gloomwood Prowler");
+    await blur("title");
+    expect(field("nickname").value).toBe("");
+  });
+
+  it("an idea that renames the remix spends the clear: a nickname typed after it survives a hand rename", async () => {
+    renderForm("remix", savedCard({ nickname: "The Ember Warden" }));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("idea-apply"));
+    });
+    expect(field("nickname").value).toBe("");
+    await type("nickname", "The Night Hunter");
+    await type("title", "Gloomwood Prowler");
+    await blur("title");
+    expect(field("nickname").value).toBe("The Night Hunter");
+  });
+
+  it("…and so does a fill that renames it", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) =>
+        String(input).startsWith("/api/ai/card-fill?")
+          ? new Response(JSON.stringify({ ok: true, fill: { jobId: "j3", result: { title: "Gloomwood Stalker" }, createdAt: "2026-10-21T00:00:00Z" } }), { status: 200 })
+          : new Response(JSON.stringify({ ok: false }), { status: 200 }),
+      ),
+    );
+    renderForm("remix", savedCard({ nickname: "The Ember Warden" }));
+    await waitFor(() => expect(toast.info).toHaveBeenCalled());
+    await act(async () => {
+      (toast.info.mock.calls.at(-1)![1] as { action: { onClick: () => void } }).action.onClick();
+    });
+    await type("nickname", "The Night Hunter");
+    await type("title", "Gloomwood Prowler");
+    await blur("title");
+    expect(field("nickname").value).toBe("The Night Hunter");
   });
 
   it("a plain edit's rename keeps the card's nickname", async () => {

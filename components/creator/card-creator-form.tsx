@@ -1024,6 +1024,19 @@ export function CardCreatorForm({
   // A remix's one nickname clear (owner N3, "Clear once"): spent by the
   // first rename — by hand (clearRemixNicknameOnRename), an idea or a fill.
   const remixNicknameClearedRef = useRef(false);
+  // The hand rename's clear, ONE rule for the two moments it is read: the
+  // maker leaving the title field, and a save that never left it (Enter in
+  // the title submits with no blur — independent re-check). A REMIX whose
+  // title differs from the one it opened with, its clear not yet spent:
+  // spend it, and clear a nickname it still holds. True when it cleared.
+  const spendRemixRenameClear = (title: string): boolean => {
+    if (!isRemix || readOnly || remixNicknameClearedRef.current) return false;
+    if (title.trim() === (defaults.title ?? "").trim()) return false;
+    remixNicknameClearedRef.current = true;
+    if (!(getValues("nickname") ?? "").trim()) return false;
+    setValue("nickname", "", { shouldDirty: true });
+    return true;
+  };
   useEffect(() => {
     if (lastReset.current.key === resetKey) return;
     const sameCard = lastReset.current.cardId === resetCardId;
@@ -1037,6 +1050,8 @@ export function CardCreatorForm({
       return;
     }
     reset(defaults);
+    // The parent's nickname is back in the field: the one clear with it.
+    remixNicknameClearedRef.current = false;
   }, [resetKey, resetCardId, defaults, reset, isDirty]);
 
   // useWatch is the React Compiler-friendly subscription variant of watch().
@@ -5205,11 +5220,8 @@ export function CardCreatorForm({
   // its own) nor a new card (no nickname came with it). The clear is the
   // maker's own touch: the remix then saves without one.
   const clearRemixNicknameOnRename = (event: React.FocusEvent<HTMLFormElement>) => {
-    if (!isRemix || readOnly || remixNicknameClearedRef.current) return;
     if ((event.target as HTMLElement).getAttribute("name") !== "title") return;
-    if ((getValues("title") ?? "").trim() === (defaults.title ?? "").trim()) return;
-    remixNicknameClearedRef.current = true;
-    if ((getValues("nickname") ?? "").trim()) setValue("nickname", "", { shouldDirty: true });
+    spendRemixRenameClear(getValues("title") ?? "");
   };
   const onFormBlur = (event: React.FocusEvent<HTMLFormElement>) => {
     tidyTypographyOnBlur(event);
@@ -5233,6 +5245,15 @@ export function CardCreatorForm({
     }
     const next = printTypography(value, field);
     if (next !== value) setValue(path, next as never, { shouldDirty: true });
+  };
+
+  // A remix renamed and saved without leaving the title field (Enter in
+  // the title submits with no blur — independent re-check): its one
+  // nickname clear runs as the form submits, BEFORE handleSubmit reads the
+  // values the payload is built from (setValue is synchronous on the store).
+  const onFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    spendRemixRenameClear(getValues("title") ?? "");
+    return formSubmit(event);
   };
 
   const formSubmit = handleSubmit(
@@ -5261,7 +5282,7 @@ export function CardCreatorForm({
         <BackIsOwnFaceContext.Provider value={battleCard ? dfcLayout !== null : null}>
         <form
           noValidate
-          onSubmit={formSubmit}
+          onSubmit={onFormSubmit}
           onBlur={onFormBlur}
           className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:items-start"
           data-testid="creator-canvas"
@@ -5317,7 +5338,7 @@ export function CardCreatorForm({
       <BackIsOwnFaceContext.Provider value={battleCard ? dfcLayout !== null : null}>
       <form
         noValidate
-        onSubmit={formSubmit}
+        onSubmit={onFormSubmit}
         onBlur={onFormBlur}
         className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:grid-cols-[10.5rem_minmax(0,1.05fr)_minmax(0,0.95fr)] xl:gap-6"
       >
