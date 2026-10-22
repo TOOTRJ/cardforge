@@ -877,10 +877,14 @@ function isRoomCard(card: ScryfallCard): boolean {
 
 /** The layouts whose two parts each print their own colour, read from the
  *  parts' own costs (TODO 4.26): split and aftermath — each half its own
- *  colour's frame — and Prepare — the spell's page in the spell's colour
- *  (its creature's colours are Scryfall's card `colors` already). A Room
- *  (layout split) is read by isRoomCard first. */
-const PART_COLOUR_LAYOUTS: ReadonlySet<string> = new Set(["split", "aftermath", "prepare"]);
+ *  colour's frame — and Prepare and adventure — the spell's page in the
+ *  spell's colour (WOE #221 Callous Sell-Sword: a red page beside a black
+ *  frame; the creature's colours are Scryfall's card `colors` already). A
+ *  Room (layout split) is read by isRoomCard first. */
+const PART_COLOUR_LAYOUTS: ReadonlySet<string> = new Set(["split", "aftermath", "prepare", "adventure"]);
+/** Of those, the layouts whose FIRST part is the card's own colour (the
+ *  creature, its frame the card's master): no first part's colour. */
+const PAGE_PART_LAYOUTS: ReadonlySet<string> = new Set(["prepare", "adventure"]);
 function isPartColourLayout(card: ScryfallCard): boolean {
   // (A Room — layout split, TODO 4.27 — is no split card: its doors are
   // its own frame's, never a part colour; L1.)
@@ -895,12 +899,12 @@ function isPartColourLayout(card: ScryfallCard): boolean {
  * Ice is red and blue — the gold "multicolor" of the single-select model),
  * so the card page, the filters and the deck stats are unchanged, and this
  * names the master its first half paints with each part in its own colour.
- * Undefined for any other printing (a Prepare card's creature IS the
- * card's colour; a Room is no split card).
+ * Undefined for any other printing (a Prepare or adventure card's creature
+ * IS the card's colour; a Room is no split card).
  */
 function firstPartColorOf(card: ScryfallCard, wholeColors: readonly ColorIdentity[]): ColorIdentity[] | undefined {
   const layout = (card.layout ?? "").toLowerCase();
-  if (layout === "prepare" || !isPartColourLayout(card)) return undefined;
+  if (PAGE_PART_LAYOUTS.has(layout) || !isPartColourLayout(card)) return undefined;
   const first = partColorFromCost(card.card_faces?.[0]?.mana_cost);
   if (first.length === 0) return undefined;
   // The same master either way: no key to store.

@@ -1725,6 +1725,18 @@ export function visualCases(): VisualCase[] {
   partCase("aftermath", "aftermath", "r", "long", "@part-b-hd", { colors: ["black"], cost: "{X}{B}{B}" }, { preset: "hd" });
   partCase("aftermath", "aftermath", "g", "short", "@part-u-foil", { colors: ["blue"], cost: "{4}{U}{U}" }, { finish: "foil" });
   partCase("aftermath", "aftermath", "w", "long", "@part-b-etched", { colors: ["black"], cost: "{2}{B}" }, { finish: "etched" });
+  // The adventure's storybook page in its spell's colour (owner decision
+  // 2026-10-22: pre-cut pieces, `adventure/page/<key>`): WOE #221's red page
+  // beside a black frame, WOE #229's white page beside red, a green page at
+  // HD, a gold three-colour spell, a two-colour spell's gold page, and both
+  // finishes over a page.
+  partCase("adventure", "adventure", "b", "short", "@part-r", { colors: ["red"], cost: "{R}" });
+  partCase("adventure", "adventure", "r", "long", "@part-w", { colors: ["white"], cost: "{4}{W}" });
+  partCase("adventure", "adventure", "w", "long", "@part-g-hd", { colors: ["green"], cost: "{1}{G}" }, { preset: "hd" });
+  partCase("adventure", "adventure", "u", "short", "@part-m", { colors: ["multicolor"], cost: "{W}{U}{B}" });
+  partCase("adventure", "adventure", "g", "short", "@part-ub", { colors: ["blue", "black"], cost: "{U}{B}" });
+  partCase("adventure", "adventure", "b", "short", "@part-r-foil", { colors: ["red"], cost: "{R}" }, { finish: "foil" });
+  partCase("adventure", "adventure", "w", "long", "@part-u-etched", { colors: ["blue"], cost: "{2}{U}" }, { finish: "etched" });
   // The borderless hybrid dress (grey bars, the split pinline) and its
   // crowned twin (4.6f).
   add("m15borderless", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15borderless"), cost: "{W/U}{W/U}" } });

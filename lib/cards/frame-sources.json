@@ -33,6 +33,7 @@
     "sourceFiles": [
       "img/frames/adventure/regular/a.png",
       "img/frames/adventure/regular/b.png",
+      "img/frames/adventure/regular/bookLeft.png",
       "img/frames/adventure/regular/g.png",
       "img/frames/adventure/regular/m.png",
       "img/frames/adventure/regular/r.png",
@@ -41,10 +42,59 @@
     ],
     "notes": [
       "source: CC 'Adventure' (packAdventure.js): the M15 frame with the storybook's two pages — replaces the MSE composite (build-adventure-frame.mjs: the MSE m15 master + double_page + null_page), whose window ran 10 / 6 px narrow and whose paper was re-drawn",
-      "colourless = CC's 'Artifact Frame' (adventure/a.png) as a RENDER STAND-IN only (owner decision 2026-09-29): no colourless adventure was ever printed and the pack has no colourless frame, so the key keeps a master for a stray colourless card and is never offered (no reference, never ticked)",
+      "colourless = CC's 'Artifact Frame' (adventure/a.png; the pack has no other colourless frame): colourless adventures ARE printed — the artifacts HOB #170 / #174 / #176 and FIN's Towns #283–293 — and `adventure/c` is verified on production (supabase/seed.sql lists adventure in all seven keys; corrected 2026-10-22, 4.26 — the 4.21a note said no colourless adventure was printed and the key would never be ticked); a colourless creature with a coloured spell draws the spell's page over it (HOB #170: `page/w` over `adventure/c`, TODO 4.26)",
       "P/T plate = M15's (m15/pt/<k>.png): the pack draws CC's m15PT<K>.png at M15's bounds, so the ADVENTURE profile keeps M15's plate and box",
-      "the book masks (bookLeft, bookLeftMulticolor, bookRight) are 4.26's per-page colour inputs, not published"
-    ]
+      "the book masks are not published: bookLeft cuts the spell's PAGE pieces (TODO 4.26, page/<key>.png — the published masters' left page through its alpha, drawn by the partPage overlay slot where the spell's colour differs from the creature's: WOE #221 a red page beside a black frame); bookLeftMulticolor (a two-colour page) is read by nothing, as no print shows a pair page beside a creature of other colours; bookRight is the creature's own page, which the master paints"
+    ],
+    "page": {
+      "mask": "img/frames/adventure/regular/bookLeft.png",
+      "box": {
+        "x": 72,
+        "y": 1312,
+        "width": 682,
+        "height": 626
+      },
+      "keys": [
+        "w",
+        "u",
+        "b",
+        "r",
+        "g",
+        "m"
+      ],
+      "sources": {
+        "w": "adventure/w.png",
+        "u": "adventure/u.png",
+        "b": "adventure/b.png",
+        "r": "adventure/r.png",
+        "g": "adventure/g.png",
+        "m": "adventure/m.png"
+      },
+      "unusedMasks": {
+        "bookLeftMulticolor": "img/frames/adventure/regular/bookLeftMulticolor.png"
+      },
+      "output": "page/<key>.png (+ .webp), the piece's box at 1:1 — drawn by the partPage overlay slot (lib/cards/template-layout.ts ADVENTURE_PAGE) where the spell's colour differs from the creature's",
+      "colors": {
+        "w": [
+          "adventure/w.png (the published master, sha256 ac04d30174d9) cut at x 72–753 × y 1312–1937 through the alpha of img/frames/adventure/regular/bookLeft.png (native 1500 × 2100; the master's colour on every px, alpha × the mask's)"
+        ],
+        "u": [
+          "adventure/u.png (the published master, sha256 be5edb0537d4) cut at x 72–753 × y 1312–1937 through the alpha of img/frames/adventure/regular/bookLeft.png (native 1500 × 2100; the master's colour on every px, alpha × the mask's)"
+        ],
+        "b": [
+          "adventure/b.png (the published master, sha256 316327a82421) cut at x 72–753 × y 1312–1937 through the alpha of img/frames/adventure/regular/bookLeft.png (native 1500 × 2100; the master's colour on every px, alpha × the mask's)"
+        ],
+        "r": [
+          "adventure/r.png (the published master, sha256 928b2581eb2e) cut at x 72–753 × y 1312–1937 through the alpha of img/frames/adventure/regular/bookLeft.png (native 1500 × 2100; the master's colour on every px, alpha × the mask's)"
+        ],
+        "g": [
+          "adventure/g.png (the published master, sha256 57ddcb2bf82f) cut at x 72–753 × y 1312–1937 through the alpha of img/frames/adventure/regular/bookLeft.png (native 1500 × 2100; the master's colour on every px, alpha × the mask's)"
+        ],
+        "m": [
+          "adventure/m.png (the published master, sha256 fca06e0cbbfb) cut at x 72–753 × y 1312–1937 through the alpha of img/frames/adventure/regular/bookLeft.png (native 1500 × 2100; the master's colour on every px, alpha × the mask's)"
+        ]
+      }
+    }
   },
   "aftermath": {
     "source": "cardconjurer",
