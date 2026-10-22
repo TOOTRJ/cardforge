@@ -248,7 +248,7 @@ export function tokenPairImportLanding<P extends TokenPairPatch>(patch: P, verif
         power: back.power,
         toughness: back.toughness,
         colorIdentity: backColour,
-      })
+      }, verifiedKeys)
     : null;
   if (
     front &&

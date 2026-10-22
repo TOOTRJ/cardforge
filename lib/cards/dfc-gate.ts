@@ -430,7 +430,7 @@ function resolveTokenBackFace(input: DfcBackGateInput, front: FrameTemplate): Df
         power: back.power as string | null | undefined,
         toughness: back.toughness as string | null | undefined,
         colorIdentity: colour,
-      });
+      }, input.skipVerification ? null : input.verifiedKeys);
   if (!template) return { ok: false, field: "back_face.frame_style", message: DFC_NO_BACK_BODY_YET };
   if (!input.skipVerification) {
     // An update re-checks only a changed body or colour (the legacy pin).

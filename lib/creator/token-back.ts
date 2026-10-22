@@ -6,14 +6,19 @@
 // exactly as a token's frame is (tokenFrameFor — the Artifact word's dress,
 // the arch's text box, the full-art token's height) and, on the full-art
 // design, the Nyx dress where its words say Enchantment in ONE colour (the
-// rule a new token follows onto it, owner Round 74). There is no pick: the
-// creator draws it, the import lands it and the server's gate stores it
-// through this ONE function, so the three never disagree.
+// rule a new token follows onto it, owner Round 74) — each only where it is
+// verified in the back's colour, as a new token's front follows them: the
+// Nyx dress gives way to the plain design, the arch's tall box (TODO 4.55)
+// to its regular text box. There is no pick: the creator draws it, the
+// import lands it and the server's gate stores it through this ONE function
+// (with the same verified combos), so the three never disagree.
 //
 // Pure: no React, no form state, no I/O.
 // ---------------------------------------------------------------------------
 
 import { printsPowerToughness } from "@/lib/cards/card-display";
+import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
+import { archTallStandIn } from "@/lib/cards/token-height";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import { TOKEN_DESIGN_BASE, tokenDesignOf } from "@/lib/cards/token-faces";
 import { enchantmentFrameFor, tokenFrameFor } from "@/lib/creator/card-kinds";
@@ -51,6 +56,12 @@ function subtypeList(value: TokenBackFace["subtypes"]): string[] {
 export function tokenBackBodyFor(
   frontTemplate: FrameTemplate | string | null | undefined,
   back: TokenBackFace,
+  /** The verified combos: a dress or height the words ask for that isn't
+   *  verified in the back's colour gives way as a token's front does — the
+   *  Nyx dress to the plain design (newTokenFrame), the arch's tall box to
+   *  its regular text box (archTallStandIn). Absent (an admin's frame
+   *  preview, the mapper before the import is finalized): the words alone. */
+  verifiedKeys?: ReadonlySet<string> | null,
 ): FrameTemplate | null {
   const design = tokenDesignOf(frontTemplate);
   if (!design) return null;
@@ -67,11 +78,12 @@ export function tokenBackBodyFor(
       toughness: back.toughness ?? null,
     }),
   };
-  const dressed = tokenFrameFor("token", TOKEN_DESIGN_BASE[design], face);
-  return enchantmentFrameFor(
-    "token",
-    dressed,
-    { cardType: "token", supertype: back.supertype ?? null, subtypes },
-    pickFrameColorKey([...(back.colorIdentity ?? [])]),
-  );
+  const colorKey = pickFrameColorKey([...(back.colorIdentity ?? [])]);
+  const verified = (template: FrameTemplate) =>
+    !verifiedKeys || isFrameComboAvailable(template, colorKey, verifiedKeys);
+  let dressed = tokenFrameFor("token", TOKEN_DESIGN_BASE[design], face);
+  const standIn = archTallStandIn(dressed);
+  if (standIn && !verified(dressed)) dressed = standIn;
+  const nyx = enchantmentFrameFor("token", dressed, { cardType: "token", supertype: back.supertype ?? null, subtypes }, colorKey);
+  return nyx !== dressed && !verified(nyx) ? dressed : nyx;
 }

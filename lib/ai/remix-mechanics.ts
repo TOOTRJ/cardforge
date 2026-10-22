@@ -217,7 +217,7 @@ function tokenPairRemixBack(
     power: kept.power,
     toughness: kept.toughness,
     colorIdentity: colour,
-  });
+  }, verifiedKeys);
   if (!body || !isFrameComboAvailable(body, pickFrameColorKey([...colour]), verifiedKeys)) return null;
   return { template: body };
 }

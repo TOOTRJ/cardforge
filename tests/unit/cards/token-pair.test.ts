@@ -74,6 +74,30 @@ describe("the vocabulary", () => {
     // No token front, no token back.
     expect(tokenBackBodyFor("m15", { supertype: "Creature" })).toBeNull();
   });
+
+  it("a dress or height its words ask for that isn't verified in the back's colour gives way, as a token's front does", () => {
+    const ENCHANTED = { supertype: "Enchantment Creature", power: "2", toughness: "2", colorIdentity: ["green"] as ColorIdentity[] };
+    // The Nyx dress unverified (production today): the plain full-art design.
+    const noNyx = new Set([...EVERY_TOKEN].filter((key) => !key.startsWith("m20tokennyx") && !key.startsWith("m20tokenartifactnyx")));
+    expect(tokenBackBodyFor("m20token", ENCHANTED, noNyx)).toBe("m20token");
+    expect(tokenBackBodyFor("m20token", ENCHANTED, EVERY_TOKEN)).toBe("m20tokennyx");
+    // …and the gate stores what the creator draws: a save, not a refusal.
+    const gate = resolveDfcBackFace({
+      frontTemplate: "m20token",
+      back: { title: "Spirit", card_type: "token", supertype: "Enchantment Creature", power: "2", toughness: "2", color_identity: ["green"], frame_style: { template: "m20token" } },
+      family: null,
+      frontColorIdentity: ["red"],
+      verifiedKeys: noNyx,
+    });
+    expect(gate.ok && gate.back?.frame_style).toEqual({ template: "m20token" });
+    // The arch's tall box (TODO 4.55) unverified: its regular text box.
+    const long = "When this creature dies, create a 6/6 blue Whale creature token with \u201cWhen this creature dies, create a 9/9 blue Kraken creature token.\u201d Flying, vigilance, deathtouch, lifelink, haste, trample, menace, reach.";
+    const KRAKEN = { supertype: "Creature", rulesText: long, power: "1", toughness: "1", colorIdentity: ["blue"] as ColorIdentity[] };
+    const noTall = new Set([...EVERY_TOKEN].filter((key) => !/^m15token(artifact)?tall/.test(key)));
+    expect(tokenBackBodyFor("m15token", KRAKEN)).toBe("m15tokentall");
+    expect(tokenBackBodyFor("m15token", KRAKEN, noTall)).toBe("m15tokentext");
+    expect(tokenBackBodyFor("m15token", KRAKEN, EVERY_TOKEN)).toBe("m15tokentall");
+  });
 });
 
 describe("the ONE gate (resolveDfcBackFace)", () => {

@@ -249,6 +249,24 @@ describe("a token's faces (TODO 5.5 (c))", () => {
     expect(payload.back_face ?? null).toBeNull();
   });
 
+  it("an Enchantment back where the Nyx dress isn't verified stays on the plain design — every colour open, the save goes out on it", async () => {
+    actions.createCardAction.mockResolvedValue({ ok: false, fieldErrors: { title: "stop here" } });
+    renderForm(); // (no m20tokennyx tick here — as on production today)
+    await click(chipIn("Card type", /^Token/));
+    await goTo(/^card/i);
+    await click(chipIn("Token faces", /^Two faces/));
+    await click(tab(/^Back face/));
+    await click(toggleIn("Back face Token types", /^Enchantment/));
+    expect(backTemplates()).toContain("m20token");
+    expect(screen.getByTestId("dfc-back-color").textContent).not.toMatch(/Soon/);
+    await goTo(/^identity/i);
+    await change("back_face.title", "Spirit");
+    await click(tab(/^Front face/));
+    await change("title", "Goblin");
+    const payload = await saveDraft();
+    expect(payload.back_face).toMatchObject({ supertype: "Enchantment Creature", frame_style: { template: "m20token" } });
+  });
+
   // A kind whose frame has a second part of its own (Transform, Modal,
   // Adventure) never takes the token's back as its back face or half: asked
   // first, it starts its own — and the token's comes back with the kind.

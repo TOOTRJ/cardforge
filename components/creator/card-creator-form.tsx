@@ -1114,6 +1114,9 @@ export function CardCreatorForm({
   // pick: the token template its own words and text derive in the front's
   // design (lib/creator/token-back.ts — what the server stores too); an
   // edit draws the stored one, which the server keeps.
+  // (The verified combos the back's dress and height give way to — what the
+  // server's gate derives with; an admin's preview lists every frame here.)
+  const tokenBackVerifiedKeys = useMemo(() => new Set(verifiedFrameKeys), [verifiedFrameKeys]);
   const storedTokenBack =
     card != null && isTokenPairBack((card.frame_style as FrameStyle | null)?.template, storedBackTemplate);
   const tokenTwoFacesAllowed = mode === "create" ? isTokenPairFront(watched.frame_style?.template) : storedTokenBack;
@@ -1130,7 +1133,7 @@ export function CardCreatorForm({
           toughness: watched.back_face.toughness,
           colorIdentity:
             watched.back_face.color_identity.length > 0 ? watched.back_face.color_identity : watched.color_identity,
-        })
+        }, tokenBackVerifiedKeys)
     : null;
   /** Two pictures on this form: a double-faced card, or a double-sided
    *  token with its back on. */
@@ -3532,7 +3535,7 @@ export function CardCreatorForm({
               toughness: values.back_face.toughness,
               colorIdentity:
                 values.back_face.color_identity.length > 0 ? values.back_face.color_identity : values.color_identity,
-            })
+            }, tokenBackVerifiedKeys)
         : null;
     const backFacePayload =
       submitTokenKind && backFaceContent && submitTokenBody
