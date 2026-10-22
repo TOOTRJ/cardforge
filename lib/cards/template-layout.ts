@@ -1913,7 +1913,16 @@ const M15PW: FrameProfile = {
   // centred at 126 px — sat high in it (owner review, round 3). Printed pips
   // centre 48.0 % of the way down the plate (47.3–48.8 %); 6 px down puts
   // ours there (132 px).
-  costDy: 0.004,
+  // Layout v60 (WALKER_COST_ROW_LAYOUT_VERSION): that read the plate, not
+  // the print. Measured on the prints themselves (1500 × 2100, a circle fit
+  // on the white, blue and generic discs), every walker since 2023 centres
+  // its pips at 127.3–127.7 px — regular (WOE #78, LCI #238, MKM #211, OTJ
+  // #271, BLB #230, DSK #220, EOE #2) and borderless (LCI #307, OTJ #305,
+  // BLB #341, FDN #357 / #359, INR #322) alike — and the earlier ones at
+  // 124.7–127.3 (ELD #197, KHM #225, NEO #238), so 132.2 sat ~5 px low. Two
+  // whole HD px (one at 750) under the box's centre puts the pips at 128.2:
+  // the same px in both bakes and the preview.
+  costDy: 2 / 1500,
   // Layout v32: the M15 disc (the prints' pips are ~70 px on a planeswalker
   // as on M15; the old default, the 64 px name size, left them small under
   // an 80 px name — owner decision 2026-09-28). The row stays centred in
@@ -1940,7 +1949,12 @@ const M15PW: FrameProfile = {
     // absolute baseline (156 px) would lift the caps ~6 px above the pips.
     // Centred, the caps stay level with the pips, as the owner placed them
     // in round 3 (plate-relative, owner decision 2026-09-28).
+    // Layout v60 puts the name on the prints' own rows as the pips move up
+    // to theirs: 4 HD px up (2 at 750), baseline ~157 and capitals ~97 px
+    // where print sets them at ~156 / ~98 — the text only (`dy`); the rect,
+    // and with it what shares the band, stays put.
     rect: { topPct: 4.18, leftPct: 8.5, widthPct: 80, heightPct: 4.4 },
+    dy: -4 / 1500,
     sizePct: TITLE_SIZE_PCT,
     fit: "measured",
     colorHex: INK_DARK,

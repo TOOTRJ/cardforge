@@ -2464,6 +2464,10 @@ that count.
       - m15textless: type on the 81.96 row;
       - lotr: art ≥9.8/11.2/80.8×44.5;
       - lotrscroll: full-bleed.
+      **Cost-row read 2026-10-21 (the walker showcase sheet; numbers only, nothing built — check all of these when the frames are rebuilt, at HD 1500 × 2100 against Scryfall prints, pips by a circle fit on the white, blue and generic discs):**
+      - nyx (THB #258–268): our pips sit ~18 px low (centre 164.2 px; print ~146–153), and our title bar sits ~8 px below print's.
+      - fullart (ZNR #290–313): our pips sit ~13–18 px low (centre 165.2 px; print ~149–152), and our title bar sits ~3.5 px lower than print's.
+      - tarkirdraconic (TDM #292–321), lotr (LTR #302–329) and lotrscroll (LTR #457 / 493 / 505 / 535 / 571): the pip height is right, but the discs are 57 px (`costSizePct` 0.038) against print's ~69–70, and the row ends at 1335 / 1365 px — ~20–50 px short of print's 1384–1386.
 
       Per-set full-art basics: CC for ZEN/THB/SNC/NEO/UB/2022/snow/UST/UNH, MSE for DFT/AFR/LCI/ONE/UNF, with one shared full-art land profile per layout family. Borderless basics (89: SLD 39, UNF 15, FRA 15, EOE 10, UST 5, ONE 5) join this line; they are one-off designs, not a new frame (borderless research 2026-09-25).
 

@@ -33,9 +33,33 @@ import { RENDER_PRESETS } from "@/lib/render/card-image";
 // change is proven to be the shadow alone where no redrawn symbol is
 // involved: "past the floor" ({2}{B}) baked with the inline shadow switched
 // back on is v41's hash again.
+//
+// Layout v60 (the walker cost-row correction) moved the pips 4 HD px up
+// (M15PW.costDy 0.004 → 2/1500) and the name's text with them (title.dy
+// −4/1500) — every walker's title bar, nothing else. So the pins are judged
+// with v59's title bar put back on the profile (`withV59TitleBar`): every
+// bake is then its pinned hash, byte for byte, and as v60 bakes it the same
+// walker DIFFERS from it (the title bar moved). The fixture is not rewritten.
 // ---------------------------------------------------------------------------
 
 const FIXTURE = join(process.cwd(), "tests/unit/render/fixtures/pw-rows-v41-bakes.json");
+
+/** v59's walker title bar — the pips at 0.004 W under the box's centre, the
+ *  name centred in its rect — put back on the live profile for `fn`. The
+ *  bake reads the profile through getFrameProfile, which hands back this
+ *  very object. */
+async function withV59TitleBar<T>(fn: () => Promise<T>): Promise<T> {
+  const profile = getFrameProfile("m15pw") as { costDy?: number; title: { dy?: number } };
+  const [costDy, title] = [profile.costDy, profile.title];
+  profile.costDy = 0.004;
+  profile.title = { ...title, dy: undefined };
+  try {
+    return await fn();
+  } finally {
+    profile.costDy = costDy;
+    profile.title = title;
+  }
+}
 const ORIGIN = "https://frames.test";
 const P = getFrameProfile("m15pw");
 const PRESETS = ["default", "hd"] as const;
@@ -172,7 +196,7 @@ describe("m15pw walker bakes are what layout v41 baked (pinned before the saga's
       for (const finish of FINISHES) {
         const id = `${name} | ${preset} | ${finish}`;
         it(`${id}: the same pixels`, async () => {
-          const hash = await bakeHash(rules, preset, finish);
+          const hash = await withV59TitleBar(() => bakeHash(rules, preset, finish));
           baked[id] = hash;
           if (WRITE || WRITE_V49) return;
           expect(fixture, "tests/unit/render/fixtures/pw-rows-v41-bakes.json is missing").not.toBeNull();
@@ -198,11 +222,21 @@ describe("m15pw walker bakes are what layout v41 baked (pinned before the saga's
       for (const preset of PRESETS) {
         for (const finish of FINISHES) {
           const id = `past the floor | ${preset} | ${finish}`;
-          expect(await bakeHash(WALKERS["past the floor"], preset, finish), id).toBe(fixture!.bakes[id]);
+          expect(await withV59TitleBar(() => bakeHash(WALKERS["past the floor"], preset, finish)), id).toBe(fixture!.bakes[id]);
         }
       }
     } finally {
       modern.inlineShadow = false;
+    }
+  }, 120_000);
+
+  it("v60 moved the title bar: as v60 bakes it, a pinned walker is NOT its pinned pixels", async () => {
+    if (WRITE || WRITE_V49) return;
+    expect(getFrameProfile("m15pw").costDy).toBe(2 / 1500);
+    expect(getFrameProfile("m15pw").title.dy).toBe(-4 / 1500);
+    for (const preset of PRESETS) {
+      const id = `three short | ${preset} | regular`;
+      expect(await bakeHash(WALKERS["three short"], preset, "regular"), id).not.toBe(fixture!.bakes[id]);
     }
   }, 120_000);
 

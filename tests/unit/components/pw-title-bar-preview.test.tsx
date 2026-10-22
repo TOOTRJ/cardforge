@@ -40,7 +40,7 @@ describe("CardPreview — m15pw title bar", () => {
     const box = cost.parentElement as HTMLElement;
     expect(box.style.top).toBe(`${p.costRect!.topPct}%`);
     expect(box.style.justifyContent).toBe("flex-end");
-    expect(p.costDy).toBe(0.004);
+    expect(p.costDy).toBe(2 / 1500);
     expect(cost.style.transform).toBe(`translateY(${(p.costDy! * 100).toFixed(3)}cqw)`);
   });
 });

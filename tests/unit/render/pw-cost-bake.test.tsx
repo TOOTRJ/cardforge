@@ -82,7 +82,7 @@ describe("m15pw mana cost — real bake", () => {
     vi.unstubAllGlobals();
   });
 
-  it("centres the pip 0.4 % of the width below its box's centre, right edge on the box's", async () => {
+  it("centres the pip two HD px (costDy) below its box's centre, right edge on the box's", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: string) => {
@@ -127,7 +127,7 @@ describe("m15pw mana cost — real bake", () => {
 
     const boxCentre = ((box.topPct + box.heightPct / 2) / 100) * H;
     const centre = (top + bottom + 1) / 2;
-    expect(p.costDy).toBe(0.004);
+    expect(p.costDy).toBe(2 / 1500);
     expect(Math.abs(centre - (boxCentre + p.costDy! * W))).toBeLessThanOrEqual(1);
     // Right-aligned in the box as before — only the height moved.
     expect(Math.abs(right + 1 - ((box.leftPct + box.widthPct) / 100) * W)).toBeLessThanOrEqual(1);

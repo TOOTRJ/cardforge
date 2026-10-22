@@ -223,11 +223,11 @@ describe("M15-era display sizes on real bakes (layout v32)", () => {
     }
   });
 
-  it("keeps the planeswalker's grown name centred where its v31 name was (133.6 px, level with the pips) and its type line on M15's", async () => {
+  it("keeps the planeswalker's grown name where its v31 name was, 4 px up with the pips onto the prints' rows (v60: 133.6 → 129.6 px), and its type line on M15's", async () => {
     const p = getFrameProfile("m15pw");
     const b = await bake("m15pw", "hd");
     const name = measure(b, p.title);
-    expect(Math.abs((name.capTop + name.baseline) / 2 - 133.6), `caps centre ${(name.capTop + name.baseline) / 2}`).toBeLessThanOrEqual(1);
+    expect(Math.abs((name.capTop + name.baseline) / 2 - 129.6), `caps centre ${(name.capTop + name.baseline) / 2}`).toBeLessThanOrEqual(1);
     expect(name.baseline - name.capTop).toBeGreaterThan(54); // 80 px caps (v31: 64 px, 45)
     const type = measure(b, p.type);
     expect(Math.abs(type.baseline - PRINT_TYPE_BASELINE_HD)).toBeLessThanOrEqual(1); // v31: 1250
