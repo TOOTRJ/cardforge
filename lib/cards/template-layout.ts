@@ -4855,10 +4855,9 @@ const EXTENDEDARTLAND: FrameProfile = {
 // with a LIGHT translucent rules panel over its lower part and dark ink on
 // it, the type bar at the bottom, no cost and no P/T. Measured at 1500 ×
 // 2100 against Scryfall's scans (2026-10-21; HD px):
-//   • the name: Beleren at the family's 80 px, its baseline 186 px on our
-//     masters (ZNE prints 181–183 px on a title bar printed 4 px higher than
-//     CC's, EXP 187 on one 1 px lower), ink from ~127 px — M15's band with
-//     its text 2 px up (EXPEDITION_TITLE_DY);
+//   • the name: Beleren at the family's 80 px, ink from ~127 px — M15's band
+//     with its text 2 px up (EXPEDITION_TITLE_DY), baseline 186; on ZNE the
+//     band rides the title block's 4 px re-cut (182, the prints' 181–183);
 //   • the type line: the family's 68 px, "Land" from ~130 px;
 //   • the rules: the standard 76 px (ZNE #21 Ancient Tomb's two lines pitch
 //     75 px), text from 145 / 135 px, centred in the panel as printed;
@@ -4901,33 +4900,49 @@ function expeditionSymbolRect(rightPx: number, centrePx: number): Rect {
   return { topPct: ((centrePx - 40) / 2100) * 100, leftPct: ((rightPx - 180) / 1500) * 100, widthPct: 12, heightPct: (80 / 2100) * 100 };
 }
 
-// ZNE 2020 — CC 'ZNR Expeditions (2020)': the hedron stone, the art window
-// 60–1440 × 230–1186 px and the panel (white, α 153) 124–1386 × 1186–1711
-// under the same picture, the type bar 1712–1860.
-//   • art: the window + the panel, with 7.6's overscan (59–1441 × 228–1713);
-//   • type: baseline 1794 — the ZNE prints set "Land" at 1803–1806 on a
-//     type bar printed ~10 px lower than CC's (the bar registers 9–12 px
-//     down on ZNE #1 / #11 / #21 / #28 / #30), the set symbol likewise
-//     (print centre 1781–1786 px; CC's own bounds centre it at 1772);
+/** The ZNE masters' re-cut onto the prints (owner 2026-10-22; the importer's
+ *  EXPEDITION_ZNR_RECUT in scripts/lib/cc-frames.mjs — a unit test holds the
+ *  two together): the title block (pack rows 60–729) 4 px UP, the lower
+ *  block (rows 777–1938: the window's foot, the panel, the type bar, the
+ *  bottom stone) 11 px DOWN. Every slot below rides its block. */
+export const EXPEDITION_ZNR_TITLE_UP_PX = 4;
+export const EXPEDITION_ZNR_LOWER_DOWN_PX = 11;
+
+// ZNE 2020 — CC 'ZNR Expeditions (2020)', re-cut onto the ZNE prints: the
+// hedron stone, the art window 60–1440 × 226–1197 px and the panel (white,
+// α 153) 124–1386 × 1197–1722 under the same picture, the type bar
+// 1723–1871 (the pack's 230 / 1186 / 1711 / 1712–1860, its blocks moved).
+//   • art: the window + the panel, with 7.6's overscan (59–1441 × 224–1724);
+//   • the name rides the title block: M15's band 4 px up with its text 2 px
+//     up (EXPEDITION_TITLE_DY) — baseline 182, the ZNE prints' 181–183;
+//   • type: baseline 1805 on the moved bar — "Land" bakes at 1804, the ZNE
+//     prints' 1802–1806 (#1 … #30);
 //   • the set symbol: right end 1419 px (ZNE #1 … #30: 1417–1420), centre
-//     1772;
-//   • rules: 141–1365 × 1208–1702 px (Valakut ZNE #29: text 145–1360, caps
-//     from 1235, the last baseline 1685).
+//     1783 (the prints' 1781–1786);
+//   • rules: 141–1365 × 1219–1713 px on the moved panel (Valakut ZNE #29:
+//     text 145–1360).
 const EXPEDITIONLAND: FrameProfile = {
   ...M15,
   label: "Expedition Land",
   hideCost: true,
-  artSlot: { topPct: (228 / 2100) * 100, leftPct: (59 / 1500) * 100, widthPct: (1382 / 1500) * 100, heightPct: (1485 / 2100) * 100 },
-  title: { ...M15.title, dy: EXPEDITION_TITLE_DY },
-  type: expeditionTypeSlot(1794),
-  symbolRect: expeditionSymbolRect(1419, 1772),
-  rules: expeditionRulesSlot(141, 1208, 1365, 1702),
+  artSlot: { topPct: (224 / 2100) * 100, leftPct: (59 / 1500) * 100, widthPct: (1382 / 1500) * 100, heightPct: (1500 / 2100) * 100 },
+  title: {
+    ...M15.title,
+    rect: { ...M15.title.rect, topPct: M15.title.rect.topPct - (EXPEDITION_ZNR_TITLE_UP_PX / 2100) * 100 },
+    dy: EXPEDITION_TITLE_DY,
+  },
+  type: expeditionTypeSlot(1794 + EXPEDITION_ZNR_LOWER_DOWN_PX),
+  symbolRect: expeditionSymbolRect(1419, 1772 + EXPEDITION_ZNR_LOWER_DOWN_PX),
+  rules: expeditionRulesSlot(141, 1208 + EXPEDITION_ZNR_LOWER_DOWN_PX, 1365, 1702 + EXPEDITION_ZNR_LOWER_DOWN_PX),
 };
 
 // EXP 2015 — CC 'BFZ Expeditions (2015)': the carved stone round an arched
 // window 113–1387 × 233–1238 px, an opaque rule under it (1239–1258), the
-// panel (white, α 128) 113–1386 × 1259–1700 over the same picture, the
-// type bar 1716–1830. CC's bars register within 1 px of the EXP prints.
+// panel (white, α 166 — lifted from the pack's 128 onto the prints' ~0.65)
+// 113–1386 × 1259–1700 over the same picture, the type bar 1716–1830. CC's
+// title bar registers within 0–2 px of the EXP prints and its type bar with
+// no one offset (+2 … +8 at its top, −1 … +7 at its foot): not re-cut.
+//   • the name: M15's band, its text 2 px up — baseline 186 (prints 187);
 //   • art: the window + the panel, with 7.6's overscan (112–1388 ×
 //     231–1702);
 //   • type: baseline 1798 (EXP #1 / #16 / #38: 1797–1799);
@@ -4939,6 +4954,7 @@ const EXPEDITIONLAND: FrameProfile = {
 const EXPEDITIONLANDBFZ: FrameProfile = {
   ...EXPEDITIONLAND,
   label: "Expedition Land (2015)",
+  title: { ...M15.title, dy: EXPEDITION_TITLE_DY },
   artSlot: { topPct: (231 / 2100) * 100, leftPct: (112 / 1500) * 100, widthPct: (1276 / 1500) * 100, heightPct: (1471 / 2100) * 100 },
   type: expeditionTypeSlot(1798),
   symbolRect: expeditionSymbolRect(1371, 1776),

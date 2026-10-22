@@ -4197,6 +4197,16 @@ Card Conjurer's packs (frames bucket only, 1500 × 2100 native, copied 1:1):
   border, art window and corner checks pass on every colour, so its rows
   left `BORDER_PENDING_COLOURS`, `EDGE_CONTRACT_KNOWN_FAILURES`,
   `ART_WINDOW_KNOWN_FAILURES`, `SQUARE_CORNERS` and Phase B's allow-list.
+  The pack is RE-CUT onto the ZNE prints (owner 2026-10-22,
+  `EXPEDITION_ZNR_RECUT`, the recipe's `shift`): its title bar sits 4 px
+  below the prints' and its window foot, panel, type bar and bottom stone
+  11 px above them (each band registered on ZNE #21 / #22 / #27 / #28 /
+  #29 / #30), and only three runs of rows are flat on all seven masters —
+  the top border, the window's straight sides (730–776) and the bottom
+  border — so rows 60–729 move 4 px up and rows 777–1938 11 px down, whole
+  rows byte for byte, the flat runs giving and taking the rows. Left after
+  it: the prints' type bar is ~5 px thinner than the pack's (its top +2 …
+  +3 px, its foot −2 … −4 after the move), which no block move gives.
 - **`expeditionlandbfz` — EXP 2015** (Zendikar Expeditions #1–45, BFZ and
   OGW), from 'BFZ Expeditions (2015)'. Every EXP print wears the pack's
   'Land Frame' (the beige carved stone, light bars) with its colours in the
@@ -4204,8 +4214,17 @@ Card Conjurer's packs (frames bucket only, 1500 × 2100 native, copied 1:1):
   Confluence), which print the gold frame. So `c` is the land frame, `m`
   the gold frame, and w u b r g the land frame with the colour frame's
   pinline laid in through the pack's Pinline mask (no mono-colour EXP land
-  was printed; the pack's colour-stone frames are worn by no print). An
-  ADDITION: no card sits on it, no bump.
+  was printed; the pack's colour-stone frames are worn by no print). Its
+  rules panel is lifted onto print's opacity (owner 2026-10-22,
+  `EXPEDITION_BFZ_PANEL_GAIN`): the pack draws it at α 128 (0.50); measured
+  from the art's continuity across the window / panel divider on the twelve
+  EXP prints where the art crosses it clearly, print's is ~0.65 (0.62 by
+  the spread, 0.68 by the slope), so the land and gold layers' alpha is
+  multiplied by 166 / 128 — the panel α 166, its rim and the divider's dark
+  line opaque, every clear or opaque pixel unchanged. Its bars are NOT
+  re-cut: the title bar registers within 0–2 px of the prints, the type bar
+  with no one offset (+2 … +8 at its top, −1 … +7 at its foot over nine
+  prints). An ADDITION: no card sits on it, no bump.
 
 Measured at 1500 × 2100 against Scryfall's scans (2026-10-21; median
 |ΔRGB| over each candidate master's opaque pixels at the best offset):
@@ -4216,15 +4235,18 @@ are a whiter run (closest to the pack's W, 20.3): not references.
 
 The profiles (`EXPEDITIONLAND`, `EXPEDITIONLANDBFZ` in
 `lib/cards/template-layout.ts`) share one anatomy: the art slot is the
-window plus the panel with 7.6's overscan (ZNE 59–1441 × 228–1713 px, EXP
-112–1388 × 231–1702); the name at the family's 80 px on 186 px
-(`EXPEDITION_TITLE_DY`, 2 px above M15's: ZNE prints 181–183 on a title bar
-printed 4 px above CC's, EXP 187 on one 1 px below); the type line at 68 px
-on its own band, baseline 1794 / 1798 (ZNE prints "Land" at 1803–1806 on a
-type bar ~10 px below CC's, the set symbol likewise); the set symbol in its
-own box (`symbolRect`) right-aligned at 1419 / 1371 px, centred on 1772 /
-1776; the rules box on the panel, standard size, dark ink, centred, M15's
-print margins (ZNE 141–1365 × 1208–1702, EXP 131–1365 × 1262–1694); no cost,
+window plus the panel with 7.6's overscan (ZNE 224–1724 px down and
+59–1441 across on the re-cut master, EXP 112–1388 × 231–1702); the name at
+the family's 80 px with its text 2 px above M15's (`EXPEDITION_TITLE_DY`) —
+on ZNE in M15's band riding the title block 4 px up, baseline 182 (the
+prints' 181–183), on EXP 186 (prints 187); the type line at 68 px on its
+own band, baseline 1805 on ZNE's moved bar ("Land" bakes at 1804, the
+prints' 1802–1806) and 1798 on EXP; the set symbol in its own box
+(`symbolRect`) right-aligned at 1419 / 1371 px, centred on 1783 / 1776; the
+rules box on the panel, standard size, dark ink, centred, M15's print
+margins (ZNE 141–1365 × 1219–1713, EXP 131–1365 × 1262–1694). The ZNE
+slots ride `EXPEDITION_ZNR_TITLE_UP_PX` / `EXPEDITION_ZNR_LOWER_DOWN_PX`, a
+test holding them to the importer's blocks; no cost,
 no crown (EXP's legendary lands print none), no stamp notch. The collector
 line (4.9b, opt-in per card) is M15's slot on each look's rows:
 `EXPEDITION_ZNR_COLLECTOR` (1995.5 / 2033.5 px, 2 px below M15's) and
@@ -4234,15 +4256,20 @@ Import: ZNE → `expeditionland` (`expedition`), EXP → `expeditionlandbfz`
 (`expedition/bfz`), each exact once verified; a two-colour land — the duals
 and the fetch lands, whose pinline prints their two colours — is
 `nearest` through the `two-colour` gap (blocked by 4.11: the pair masters,
-not built). Over all 75 printings (`tests/unit/scryfall/expedition-imports
-.test.ts`): ZNE 6 exact, 24 two-colour; EXP 9 exact, 36 two-colour.
+not built; its request-log row is kept) and is dressed in the frame's PLAIN
+land master `c`, not the gold one (owner 2026-10-22,
+`twoColourLandOnPlainFrame` in `lib/scryfall/frame-signatures.ts`, read by
+`frameColorsFromScryfall`: the import's frame colour, its verification combo
+and its landing) — while the frame draws no two-colour pinline. Over all 75
+printings (`tests/unit/scryfall/expedition-imports.test.ts`): ZNE 6 exact,
+24 two-colour; EXP 9 exact, 36 two-colour.
 
-Not built (follow-ups): the two-colour pinline pair masters on both; the
-holofoil stamp's notch (the prints' oval sits on a cut in the stone); the
-ZNE / EXP set symbols at their printed size (`lib/cards/set-symbol-prints.ts`
-— a card-scoped bump of its own, every frame a ZNE or EXP symbol sits on);
-CC's ZNR type bar sits ~10 px above the prints' (not re-cut: the text
-follows CC's bar).
+Not built (follow-ups): the two-colour pinline pair masters on both (the
+BFZ pack has its Pinline mask; the ZNR pack too) — they lift the gap and
+the plain-land landing; the holofoil stamp's notch (the prints' oval sits
+on a cut in the stone); the ZNE / EXP set symbols at their printed size
+(`lib/cards/set-symbol-prints.ts` — a card-scoped bump of its own, every
+frame a ZNE or EXP symbol sits on); the ZNE type bar's ~5 px thickness.
 
 ### The older full-art basics (4.40 / 4.41)
 

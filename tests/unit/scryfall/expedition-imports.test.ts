@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import printingsData from "./fixtures/expedition-printings.json";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
-import { frameColorsFromScryfall, frameMatchFromScryfall } from "@/lib/scryfall/import-mapper";
+import { frameColorsFromScryfall, frameMatchFromScryfall, frontFaceColors } from "@/lib/scryfall/import-mapper";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 
 // ---------------------------------------------------------------------------
@@ -45,7 +45,10 @@ describe("the Expedition imports", () => {
       if (twoColour) {
         expect(r.match.blockedBy, r.key).toBe("4.11");
         expect(r.match.gaps, r.key).toEqual(["two-colour"]);
-        expect(r.colour, r.key).toBe("m");
+        // …on the plain land master, not gold (owner 2026-10-22), until the
+        // pinline pair masters exist.
+        expect(r.colour, r.key).toBe("c");
+        expect(frontFaceColors(card(r.key)), r.key).toHaveLength(2);
       } else {
         expect(r.match.status, r.key).toBe("exact");
       }
@@ -54,6 +57,19 @@ describe("the Expedition imports", () => {
     // Pit, Grove of the Burnwillows and Horizon Canopy two-colour; EXP: the
     // fifteen duals, the ten fetches, the ten filter lands, Horizon Canopy.
     expect(tally).toEqual({ "zne exact": 6, "zne nearest": 24, "exp exact": 9, "exp nearest": 36 });
+  });
+
+  it("dresses a two-colour land in the plain land master only on an Expedition frame (twoColourLandOnPlainFrame)", () => {
+    const strand = printings["zne-1"] as Record<string, unknown>;
+    expect(frameColorsFromScryfall(card("zne-1"))).toEqual(["colorless"]);
+    expect(frameColorsFromScryfall(card("exp-1"))).toEqual(["colorless"]);
+    // The same land in a regular set (KTK's) or another masterpiece set keeps gold.
+    for (const over of [{ set: "ktk", set_type: "expansion" }, { set: "mps", set_type: "masterpiece" }]) {
+      expect(frameColorsFromScryfall(scryfallCardSchema.parse({ ...strand, ...over })), over.set).toEqual(["multicolor"]);
+    }
+    // One colour and any colour are untouched on the Expedition frames.
+    expect(frameColorsFromScryfall(card("zne-29"))).toEqual(["red"]);
+    expect(frameColorsFromScryfall(card("zne-22"))).toEqual(["multicolor"]);
   });
 
   it("reads each reference's colour as the registry lists it", () => {

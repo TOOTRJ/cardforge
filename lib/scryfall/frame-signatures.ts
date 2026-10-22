@@ -2599,7 +2599,9 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // for Zendikar / Oath Expeditions (EXP) on `expeditionlandbfz`. Both are
   // exact once verified (withVerification), but for a two-colour land
   // (the duals and the fetch lands): its pinline prints its two colours,
-  // where the frames paint the gold master — 4.11's pair masters.
+  // which neither frame draws yet — 4.11's pair masters. Until then it lands
+  // on the frame's plain land master `c` (twoColourLandOnPlainFrame, owner
+  // 2026-10-22), nearest through this gap.
   ...withGaps(
     {
       key: "expedition",
@@ -3622,6 +3624,29 @@ const BASIC_TYPE_LETTER: Record<string, string> = {
 // Zendikar / Khans fetch lands and their reprints).
 const FETCH_TWO_TYPES =
   /search your library for an? (?:basic )?(Plains|Island|Swamp|Mountain|Forest) or (Plains|Island|Swamp|Mountain|Forest) card/i;
+
+/** The Zendikar Expeditions' sets (TODO 4.11 wave 1): ZNE 2020 on
+ *  `expeditionland`, EXP 2015 on `expeditionlandbfz` — Scryfall's
+ *  `masterpiece` set type in both (the registry's two `expedition` rules). */
+export const EXPEDITION_SETS: Readonly<Record<string, FrameTemplate>> = Object.freeze({ zne: "expeditionland", exp: "expeditionlandbfz" });
+
+/**
+ * True when a printing's TWO frame colours land on the plain land master
+ * (`c`) instead of the gold one (owner 2026-10-22, TODO 4.11): a two-colour
+ * Zendikar Expedition — the duals and the fetch lands, whose pinline prints
+ * their two colours — while its frame draws no two-colour pinline pair
+ * (`frameAnatomyOf(template).twoColor`). Both Expedition frames' plain land
+ * master is their nearest look (the gold frame is the any-colour lands');
+ * the `two-colour` gap still names it nearest and logs its request row.
+ * frameColorsFromScryfall (lib/scryfall/import-mapper.ts) reads it: the
+ * import's frame colour, the verification combo and the landing.
+ */
+export function twoColourLandOnPlainFrame(card: ScryfallCard, colors: readonly string[]): boolean {
+  if (colors.length !== 2) return false;
+  if ((card.set_type ?? "").trim().toLowerCase() !== "masterpiece") return false;
+  const template = EXPEDITION_SETS[(card.set ?? "").trim().toLowerCase()];
+  return template !== undefined && !frameAnatomyOf(template).twoColor.includes("split");
+}
 
 /**
  * The land frame colours the produced-mana rule can't read, as WUBRG

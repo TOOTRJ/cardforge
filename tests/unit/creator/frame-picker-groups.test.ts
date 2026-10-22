@@ -595,15 +595,19 @@ describe("the frame picker's groups: a classification change only", () => {
       "all|takh-1", "all|tdsk-10", "all|tdsk-4", "all|teoc-13",
       "all|tmkm-10", "all|tmkm-13", "all|tmom-16", "all|tsoi-11",
       "all|zne-1",
-      "prodPlusMoved|tmkm-10", "prodPlusMoved|tmkm-13", "prodPlusMoved|tmom-16",
-      "prod|tmkm-10", "prod|tmkm-13", "prod|tmom-16",
+      "prodPlusMoved|tmkm-10", "prodPlusMoved|tmkm-13", "prodPlusMoved|tmom-16", "prodPlusMoved|zne-1",
+      "prod|tmkm-10", "prod|tmkm-13", "prod|tmom-16", "prod|zne-1",
     ]);
     // …and TODO 4.11 wave 1: a two-colour Expedition (ZNE #1 Flooded
     // Strand, white and blue) prints a split pinline the frame doesn't draw
     // yet — on its own frame still, NEAREST through the two-colour gap even
-    // with every combo verified ("all"); production verifies none, so its
-    // landing there is main's.
-    expect(raw.imports["all|zne-1"]).toMatchObject({ frame_template: "expeditionland", match: ["nearest", "expeditionland", null] });
+    // with every combo verified ("all"), and dressed in the frame's PLAIN
+    // land master `c`, not the gold one (owner 2026-10-22: the import's
+    // frame colour is colourless under every policy).
+    for (const policy of ["all", "prodPlusMoved", "prod"]) {
+      expect(raw.imports[`${policy}|zne-1`], policy).toMatchObject({ frame_template: "expeditionland", match: ["nearest", "expeditionland", null] });
+      expect(String((raw.imports[`${policy}|zne-1`] as { landing: string | null }).landing), policy).toMatch(/\|c$|^unavailable$/);
+    }
     // …and TODO 5.5 (c): MOM's transforming Incubator // Phyrexian lands on
     // the same full-art frame, NEAREST (the `dfc-token-transform` gap: the
     // plain pair has no transform icons) — the rest of it main's.

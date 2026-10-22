@@ -6,12 +6,15 @@ import { describe, expect, it } from "vitest";
 import {
   CC_TEMPLATES,
   EXPEDITION_BFZ,
+  EXPEDITION_BFZ_PANEL_GAIN,
   EXPEDITION_BFZ_PINLINE_MASK,
   EXPEDITION_ZNR,
+  EXPEDITION_ZNR_RECUT,
   expeditionBfzFile,
   expeditionZnrFile,
+  shiftBlocksRgba8,
 } from "../../../scripts/lib/cc-frames.mjs";
-import { getFrameProfile } from "@/lib/cards/template-layout";
+import { EXPEDITION_ZNR_LOWER_DOWN_PX, EXPEDITION_ZNR_TITLE_UP_PX, getFrameProfile } from "@/lib/cards/template-layout";
 import { EDGE_CONTRACTS } from "@/lib/frames/edge-contract";
 import { ART_WINDOW_KNOWN_FAILURES } from "@/lib/frames/art-window";
 import manifestJson from "@/lib/frames/frame-manifest.json";
@@ -50,14 +53,44 @@ describe("the Expedition recipes", () => {
     expect(def.transforms).toMatch(/no resample/);
   });
 
-  it("expeditionlandbfz: the land frame for c, gold for m, a colour in the land frame's PINLINE alone (as EXP's duals print it)", () => {
-    const def = templates.expeditionlandbfz;
+  it("expeditionland: two whole blocks onto the ZNE prints through the pack's flat rows — the title block 4 px up, the lower block 11 px down", () => {
+    const def = templates.expeditionland as unknown as { shift: unknown };
+    expect(def.shift).toBe(EXPEDITION_ZNR_RECUT);
+    expect(EXPEDITION_ZNR_RECUT.axis).toBe("y");
+    expect(EXPEDITION_ZNR_RECUT.blocks).toEqual([
+      { from: 60, to: 730, by: -4 },
+      { from: 777, to: 1939, by: 11 },
+    ]);
+    // The profile rides the same numbers.
+    expect(EXPEDITION_ZNR_RECUT.blocks[0]!.by).toBe(-EXPEDITION_ZNR_TITLE_UP_PX);
+    expect(EXPEDITION_ZNR_RECUT.blocks[1]!.by).toBe(EXPEDITION_ZNR_LOWER_DOWN_PX);
+    // Whole rows, byte for byte: a block lands where it says; the flat
+    // zones between stretch or shrink (a zone that isn't flat throws).
+    const W = 4, H = 2100;
+    const img = Buffer.alloc(W * H * 4);
+    for (let y = 0; y < H; y++) {
+      const flat = y < 60 || (y >= 730 && y < 777) || y >= 1939;
+      for (let x = 0; x < W; x++) img.writeUInt32LE(flat ? (y < 60 ? 1 : y < 777 ? 2 : 3) : y * 16 + x, (y * W + x) * 4);
+    }
+    const out = shiftBlocksRgba8(img, W, H, EXPEDITION_ZNR_RECUT);
+    expect(out.readUInt32LE((200 - 4) * W * 4)).toBe(200 * 16);
+    expect(out.readUInt32LE((1800 + 11) * W * 4)).toBe(1800 * 16);
+    const bumpy = Buffer.from(img);
+    bumpy.writeUInt32LE(99, 750 * W * 4);
+    expect(() => shiftBlocksRgba8(bumpy, W, H, EXPEDITION_ZNR_RECUT)).toThrow(/not flat/);
+  });
+
+  it("expeditionlandbfz: the land frame for c, gold for m, a colour in the land frame's PINLINE alone (as EXP's duals print it), the panel lifted onto print's opacity", () => {
+    const def = templates.expeditionlandbfz as unknown as { colors: Record<string, (Layer & { gain?: number })[]>; plates?: unknown };
     expect(Object.keys(def.colors).sort()).toEqual([...KEYS].sort());
-    expect(def.colors.c).toEqual([{ src: `${EXPEDITION_BFZ}/expeditionFrameL.png` }]);
-    expect(def.colors.m).toEqual([{ src: `${EXPEDITION_BFZ}/expeditionFrameM.png` }]);
+    // α 128 → 166 (≈ 0.65, the twelve EXP prints' median).
+    expect(EXPEDITION_BFZ_PANEL_GAIN).toBe(166 / 128);
+    expect(Math.round(128 * EXPEDITION_BFZ_PANEL_GAIN)).toBe(166);
+    expect(def.colors.c).toEqual([{ src: `${EXPEDITION_BFZ}/expeditionFrameL.png`, gain: EXPEDITION_BFZ_PANEL_GAIN }]);
+    expect(def.colors.m).toEqual([{ src: `${EXPEDITION_BFZ}/expeditionFrameM.png`, gain: EXPEDITION_BFZ_PANEL_GAIN }]);
     for (const key of ["w", "u", "b", "r", "g"]) {
       expect(def.colors[key], key).toEqual([
-        { src: expeditionBfzFile("l") },
+        { src: expeditionBfzFile("l"), gain: EXPEDITION_BFZ_PANEL_GAIN },
         { src: expeditionBfzFile(key), mask: EXPEDITION_BFZ_PINLINE_MASK },
       ]);
     }
@@ -74,11 +107,13 @@ describe("the profiles on the new masters", () => {
     bottom: ((r.topPct + r.heightPct) / 100) * 2100,
   });
 
-  it("expeditionland: the art on the window + panel, dark ink, the type line on 1794, the symbol at the prints' right end", () => {
+  it("expeditionland: every slot rides the re-cut — the art on the window + panel, the name band 4 px up, the type line on 1805, the symbol at the prints' right end and height", () => {
     const p = getFrameProfile("expeditionland");
     expect(p.hideCost).toBe(true);
     const art = px(p.artSlot);
-    expect([art.left, art.top, art.right, art.bottom].map((v) => Math.round(v * 1000) / 1000)).toEqual([59, 228, 1441, 1713]);
+    expect([art.left, art.top, art.right, art.bottom].map((v) => Math.round(v * 1000) / 1000)).toEqual([59, 224, 1441, 1724]);
+    expect(px(p.title.rect).top).toBeCloseTo(px(getFrameProfile("m15").title.rect).top - 4, 6);
+    expect(px(p.type.rect).top - px(getFrameProfile("expeditionlandbfz").type.rect).top).toBeCloseTo(7, 6);
     for (const slot of [p.title, p.type, p.rules]) expect(slot.colorHex).toBe("#17120c");
     expect(p.rules.backdropHex).toBeUndefined();
     expect(p.rules.vAlign).toBe("center");
@@ -86,9 +121,9 @@ describe("the profiles on the new masters", () => {
     expect(p.type.fit).toBe("measured");
     const sym = px(p.symbolRect!);
     expect(Math.round(sym.right)).toBe(1419);
-    expect(Math.round((sym.top + sym.bottom) / 2)).toBe(1772);
+    expect(Math.round((sym.top + sym.bottom) / 2)).toBe(1783);
     const rules = px(p.rules.rect);
-    expect([rules.left, rules.top, rules.right, rules.bottom].map((v) => Math.round(v))).toEqual([141, 1208, 1365, 1702]);
+    expect([rules.left, rules.top, rules.right, rules.bottom].map((v) => Math.round(v))).toEqual([141, 1219, 1365, 1713]);
   });
 
   it("expeditionlandbfz: the same anatomy on the EXP masters' rows", () => {
@@ -96,14 +131,14 @@ describe("the profiles on the new masters", () => {
     expect(p.hideCost).toBe(true);
     const art = px(p.artSlot);
     expect([art.left, art.top, art.right, art.bottom].map((v) => Math.round(v * 1000) / 1000)).toEqual([112, 231, 1388, 1702]);
-    expect(p.title).toEqual(getFrameProfile("expeditionland").title);
+    // M15's name band (EXP's bars are not re-cut), the text 2 px up.
+    expect(p.title.rect).toEqual(getFrameProfile("m15").title.rect);
+    expect(p.title.dy).toBe(getFrameProfile("expeditionland").title.dy);
     const sym = px(p.symbolRect!);
     expect(Math.round(sym.right)).toBe(1371);
     expect(Math.round((sym.top + sym.bottom) / 2)).toBe(1776);
     const rules = px(p.rules.rect);
     expect([rules.left, rules.top, rules.right, rules.bottom].map((v) => Math.round(v))).toEqual([131, 1262, 1365, 1694]);
-    // The type band sits 4 px lower than the ZNE one (1798 against 1794).
-    expect(px(p.type.rect).top - px(getFrameProfile("expeditionland").type.rect).top).toBeCloseTo(4, 6);
   });
 
   it("both are black-bordered all round, with no known edge or art-window failure", () => {
@@ -142,6 +177,16 @@ describe.skipIf(masters.some(([, buf]) => buf === null))("the published Expediti
     expect(panel[3], `${key} panel α`).toBeGreaterThanOrEqual(100);
     expect(panel[3], `${key} panel α`).toBeLessThanOrEqual(200);
     expect(Math.min(panel[0], panel[1], panel[2]), `${key} panel colour`).toBeGreaterThanOrEqual(200);
+    // EXP's panel lifted onto print (α 166 ≈ 0.65); ZNE's as the pack draws it.
+    expect(panel[3], `${key} panel α`).toBe(key.startsWith("expeditionlandbfz/") ? 166 : 153);
+    // The ZNE re-cut (column 750): the window opens at 236 (the pack's 240)
+    // and the panel ends at 1722 (the pack's 1711), the bar opaque below it.
+    if (!key.startsWith("expeditionlandbfz/")) {
+      expect(at(750, 236)[3], `${key} window top`).toBe(0);
+      expect(at(750, 234)[3], `${key} above the window`).toBe(255);
+      expect(at(750, 1720)[3], `${key} panel foot`).toBeLessThan(250);
+      expect(at(750, 1730)[3], `${key} type bar`).toBe(255);
+    }
     const webp = published(`${key}.webp`);
     if (!webp) return;
     const w = await sharp(webp).ensureAlpha().raw().toBuffer();

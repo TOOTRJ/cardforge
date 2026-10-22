@@ -625,8 +625,12 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
   },
 };
 
-export function isKnownArtWindowFailure(template: string, key: string): boolean {
-  const entry = ART_WINDOW_KNOWN_FAILURES[template];
+/** A known-failure table (ART_WINDOW_KNOWN_FAILURES; a test hands its own to
+ *  keep a shape the live table no longer has covered — a per-key bound). */
+export type ArtWindowKnownFailures = Readonly<Record<string, ArtWindowKnownFailure>>;
+
+export function isKnownArtWindowFailure(template: string, key: string, table: ArtWindowKnownFailures = ART_WINDOW_KNOWN_FAILURES): boolean {
+  const entry = table[template];
   return Boolean(entry && (entry.keys === "all" || entry.keys.includes(key)));
 }
 
@@ -641,16 +645,17 @@ export function artWindowVerdict(
   template: string,
   key: string,
   findings: readonly ArtWindowFinding[],
+  table: ArtWindowKnownFailures = ART_WINDOW_KNOWN_FAILURES,
 ): { fails: string[]; fixed: boolean } {
-  if (!isKnownArtWindowFailure(template, key)) return { fails: findings.map((f) => f.message), fixed: false };
+  if (!isKnownArtWindowFailure(template, key, table)) return { fails: findings.map((f) => f.message), fixed: false };
   if (!findings.length) return { fails: [], fixed: true };
-  const bound = ART_WINDOW_KNOWN_FAILURES[template].maxMissPx;
+  const bound = table[template].maxMissPx;
   const max = typeof bound === "number" ? bound : bound[key];
   if (max === undefined) return { fails: [`known failure without a maxMissPx for ${key}`], fixed: false };
   const worst = Math.max(...findings.map((f) => f.missPx));
   if (worst <= max) return { fails: [], fixed: false };
   return {
-    fails: [`worse than its known failure (${ART_WINDOW_KNOWN_FAILURES[template].todo.join(", ")}): misses by ${fmt(worst)} px > ${max}: ${findings.map((f) => f.message).join(" | ")}`],
+    fails: [`worse than its known failure (${table[template].todo.join(", ")}): misses by ${fmt(worst)} px > ${max}: ${findings.map((f) => f.message).join(" | ")}`],
     fixed: false,
   };
 }

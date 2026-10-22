@@ -57,6 +57,7 @@ import {
   FULL_ART_BASIC_2022_SETS,
   isM20DesignPrinting,
   landFrameColorRule,
+  twoColourLandOnPlainFrame,
   resolveFrameSignature,
   type FrameMatch,
   type PrintingFacts,
@@ -1719,7 +1720,12 @@ const IDENTITY_DRESSED_LAND_ERAS: ReadonlySet<string> = new Set(["1993", "1997"]
  * not Commander identity (see ScryfallImportPatch.color_identity).
  */
 export function frameColorsFromScryfall(card: ScryfallCard): ColorIdentity[] {
-  const colors = frontFaceColors(card).map((code) => SCRYFALL_COLOR_TO_IDENTITY[code]);
+  const letters = frontFaceColors(card);
+  // A two-colour Zendikar Expedition prints its colours in a split pinline
+  // its frame doesn't draw yet: the plain land master, not gold (TODO 4.11,
+  // owner 2026-10-22; the registry's `two-colour` gap keeps it nearest).
+  if (twoColourLandOnPlainFrame(card, letters)) return ["colorless"];
+  const colors = letters.map((code) => SCRYFALL_COLOR_TO_IDENTITY[code]);
   if (colors.length > 1) return ["multicolor"];
   if (colors.length === 0) return ["colorless"];
   return colors.filter((v) =>
