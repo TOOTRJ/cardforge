@@ -1,6 +1,7 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useId, useState } from "react";
+import { KEYWORD_REMINDERS, keywordInsert } from "@/lib/cards/keyword-reminders";
 import { offCardSuffix, tokenize } from "@/components/cards/mana-cost-glyphs";
 import { MORE_SYMBOLS_LABEL, MORE_SYMBOL_GROUPS, capitalized } from "@/lib/cards/more-symbols";
 import { cn } from "@/lib/utils";
@@ -99,19 +100,99 @@ function CharacterButton({
 
 /** The toolbar's accessible name. */
 export const RULES_SYMBOL_TOOLBAR_NAME = "Insert a symbol";
+/** The words row's accessible name (TODO 6.2). */
+export const RULES_WORDS_TOOLBAR_NAME = "Insert words";
+
+const WORD_BUTTON =
+  "flex h-7 items-center rounded-md border border-border/60 bg-elevated/40 px-2 text-xs font-medium text-foreground transition-colors hover:border-border-strong hover:bg-elevated";
+
+/**
+ * The words row (TODO 6.2): the card's own name as `~` — drawn as the name
+ * its title bar prints (lib/cards/self-name.ts: the nickname where it shows,
+ * a rename follows) — the "this creature" self-reference print uses since
+ * 2024, and the keywords (lib/cards/keyword-reminders.ts), each with its
+ * reminder text only when the maker ticks "with reminder text" (off by
+ * default, remembered while the editor is open).
+ */
+function WordsRow({ selfReference, onInsert }: { selfReference: string; onInsert: (text: string) => void }) {
+  const [withReminder, setWithReminder] = useState(false);
+  const reminderId = useId();
+  return (
+    <div role="group" aria-label={RULES_WORDS_TOOLBAR_NAME} className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap items-center gap-1">
+        <button
+          type="button"
+          title="The card's name — inserts ~, which prints as the name in the title bar (its nickname when it shows one)"
+          aria-label="Insert the card's name (~)"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => onInsert("~")}
+          className={WORD_BUTTON}
+        >
+          <span aria-hidden className="mr-1 font-mono">~</span>
+          Card name
+        </button>
+        <button
+          type="button"
+          title={`How print refers to the card itself since 2024 — inserts “${selfReference}”`}
+          aria-label={`Insert “${selfReference}”`}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => onInsert(selfReference)}
+          className={WORD_BUTTON}
+        >
+          {selfReference}
+        </button>
+      </div>
+      <details>
+        <summary className="cursor-pointer list-none text-xs text-subtle transition-colors hover:text-muted [&::-webkit-details-marker]:hidden">
+          Keywords
+        </summary>
+        <div className="mt-1.5 flex flex-col gap-1.5">
+          <label htmlFor={reminderId} className="inline-flex w-fit items-center gap-2 text-xs text-muted">
+            <input
+              id={reminderId}
+              type="checkbox"
+              checked={withReminder}
+              onChange={(event) => setWithReminder(event.target.checked)}
+            />
+            With reminder text
+          </label>
+          <div className="flex flex-wrap items-center gap-1">
+            {KEYWORD_REMINDERS.map((keyword) => (
+              <button
+                key={keyword.name}
+                type="button"
+                title={`${keyword.name} (Comprehensive Rules ${keyword.rule}) — ${keyword.reminder}`}
+                aria-label={`Insert ${keyword.name}${withReminder ? " with its reminder text" : ""}`}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => onInsert(keywordInsert(keyword, withReminder))}
+                className={WORD_BUTTON}
+              >
+                {keyword.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      </details>
+    </div>
+  );
+}
 
 export function RulesSymbolToolbar({
   onInsert,
   className,
+  selfReference,
 }: {
   onInsert: (token: string) => void;
   className?: string;
+  /** The card's "this …" words (lib/cards/self-name.ts selfReferenceFor):
+   *  given, the toolbar offers the words row (TODO 6.2). */
+  selfReference?: string;
 }) {
-  return (
+  const symbols = (
     // A group with its own name: the editor under it is named for the field
     // ("Rules text"), the buttons for what they do — never both under one
     // "Rules text" group that says the field twice (TODO 3b.24).
-    <div role="group" aria-label={RULES_SYMBOL_TOOLBAR_NAME} className={cn("flex flex-col gap-1.5", className)}>
+    <div role="group" aria-label={RULES_SYMBOL_TOOLBAR_NAME} className={cn("flex flex-col gap-1.5", selfReference ? undefined : className)}>
       <div className="flex flex-wrap items-center gap-1">
         {CORE.map((t) => (
           <SymbolButton key={t} token={t} onInsert={onInsert} />
@@ -144,6 +225,14 @@ export function RulesSymbolToolbar({
           ))}
         </div>
       </details>
+    </div>
+  );
+  if (!selfReference) return symbols;
+  // The words row is a group of its own beside the symbols (TODO 6.2).
+  return (
+    <div className={cn("flex flex-col gap-2", className)}>
+      {symbols}
+      <WordsRow selfReference={selfReference} onInsert={onInsert} />
     </div>
   );
 }

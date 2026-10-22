@@ -75,6 +75,7 @@ import { PRINTED_LANGS } from "@/lib/cards/collector-fields";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { cardPageFacesOf, cardPageName, cardTypeHasRarity } from "@/lib/cards/emblem";
 import { cardNickname } from "@/lib/cards/nickname";
+import { storedRulesTextWithSelfName } from "@/lib/cards/self-name";
 import { rowHasBakedBack } from "@/lib/cards/faces";
 import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
 import { renderVersionOf } from "@/lib/cards/render-version";
@@ -936,7 +937,8 @@ export function buildCardJsonLd({
 }): Record<string, unknown> {
   const description =
     card.flavor_text?.trim() ||
-    card.rules_text?.trim() ||
+    // CARDNAME / ~ as the name the card prints (TODO 6.2).
+    storedRulesTextWithSelfName(card)?.trim() ||
     "A custom Magic: The Gathering card forged on PipGlyph.";
   const truncatedDescription =
     description.length > 280 ? `${description.slice(0, 277)}…` : description;

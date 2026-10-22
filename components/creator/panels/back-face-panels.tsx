@@ -47,6 +47,7 @@ import {
 import { ColorSection, colorSummaryOf } from "@/components/creator/panels/color-section";
 import { SetupSection } from "@/components/creator/panels/setup-section";
 import { parseSubtypes } from "@/lib/creator/card-fields";
+import { selfReferenceFor } from "@/lib/cards/self-name";
 import { statVisibility } from "@/lib/creator/steps";
 import { PtNotDrawnNote, usePtNotDrawnNoteId } from "@/components/creator/pt-not-drawn-note";
 import { SECOND_FACE_NAME_HINT } from "@/lib/cards/second-face-name";
@@ -452,12 +453,15 @@ export function BackFaceRulesField({
     formState: { errors },
   } = useFormContext<FormValues>();
   const { field: backRulesField } = useController({ control, name: "back_face.rules_text" });
+  // The words row (TODO 6.2): this face's own "this …".
+  const backType = useWatch({ control, name: "back_face.card_type" });
+  const backSubtypes = useWatch({ control, name: "back_face.subtypes_text" });
   const partWords = partWordsFor(layout);
   return (
     <FieldGroup kind="control" label="Rules text" error={errors.back_face?.rules_text?.message}>
       {(aria) => (
         <div className="flex flex-col gap-2">
-          <RulesSymbolToolbar onInsert={onInsertSymbol} />
+          <RulesSymbolToolbar onInsert={onInsertSymbol} selfReference={selfReferenceFor(backType, parseSubtypes(backSubtypes ?? ""))} />
           <PipTextEditor
             ref={(handle) => {
               backRulesTextRef.current = handle;

@@ -1125,6 +1125,12 @@ export type FrameStyle = {
    *  `whiteBorder` (the 1997 and 2003 frames); the save drops it anywhere
    *  else (lib/cards/anatomy.ts normalizeAnatomy). */
   border?: CardBorder;
+  /** CARDNAME / `~` (TODO 6.2, lib/cards/self-name.ts): absent = they draw
+   *  as the card's name (every new card). "literal" = a card stored before
+   *  it with a literal `~` / CARDNAME in its text (migration 0142 flags
+   *  them): it keeps printing what it printed until its owner switches the
+   *  name on (an edit's `frame_anatomy.selfName: "name"` removes the key). */
+  selfName?: "literal";
 };
 
 // ---------------------------------------------------------------------------

@@ -907,6 +907,10 @@ export type FrameAnatomyPatch = {
    *  "white" off (the stored key is "white" or absent); the save drops it
    *  on a template without the white border. */
   border?: CardBorder;
+  /** CARDNAME / `~` (TODO 6.2): "name" takes a stored `selfName:
+   *  "literal"` off (migration 0142's flag) — the card's `~` then draws as
+   *  its name. */
+  selfName?: "name";
   /** The colour pair a stored multicolour card is given when its owner
    *  switches the two-colour frame on — pre-filled from the cost in the
    *  editor, confirmed by the owner. */
@@ -957,6 +961,8 @@ export function applyFrameAnatomyPatch(
   else if (patch.rulesAlign === "left") delete merged.rulesAlign;
   if (patch.border === "white") merged.border = "white";
   else if (patch.border === "black") delete merged.border;
+  // CARDNAME / `~` (TODO 6.2): "name" takes migration 0142's flag off.
+  if (patch.selfName === "name") delete merged.selfName;
   const frameStyle = normalizeAnatomy(merged as FrameAnatomyStyle, template, stored.cardType) as Record<
     string,
     unknown

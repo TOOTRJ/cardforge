@@ -1149,6 +1149,22 @@ Rules and gotchas:
   (`cardTitleWithNickname`), the JSON-LD `alternateName`; gallery search
   (search_vector weight A + the ILIKE half) and My Cards' search read it. A
   print-typography "name" field (front only).
+- CARDNAME / `~` (TODO 6.2): `~` and the capitalised word CARDNAME in rules
+  text draw as the name the title bar PRINTS (the nickname where its frame
+  draws it, else `title`; a second face / back its own name) — at RENDER
+  time, never at save (the stored text keeps the token, so a rename
+  follows): ONE function, `withSelfNames` (`lib/cards/self-name.ts`), called
+  on the card each renderer is handed before any layout reads the text
+  (rules, walker / saga / station rows, the back's rules; never flavour);
+  the card page's description reads `storedRulesTextWithSelfName`. A card
+  stored before it with a literal token is flagged by migration 0142
+  (`frame_style.selfName: "literal"`, drawn as typed); its editor offers
+  "Print ~ as the card's name" (one way: an edit's
+  `frame_anatomy.selfName: "name"`). Every new card has no key. The rules
+  toolbar's words row (`RulesSymbolToolbar selfReference`): `~`, the
+  card's "this …" (`selfReferenceFor`) and the keywords with their reminder
+  text only when ticked — `lib/cards/keyword-reminders.ts` is DATA, the CR
+  rule numbers sourced and dated (`CR_SOURCE`).
 - The art's automatic fit (TODO 3b.18): a picture that lands on a card
   (upload, a real card's art, an import, an AI picture) takes
   `fitArtToWindow()` (`lib/cards/art-fit.ts`: fill the window, show the

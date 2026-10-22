@@ -89,7 +89,7 @@ export function SagaChaptersEditor() {
       >
         {(aria) => (
           <div className="flex flex-col gap-2">
-            <RulesSymbolToolbar onInsert={insertSymbol} />
+            <RulesSymbolToolbar onInsert={insertSymbol} selfReference="this Saga" />
             <PipTextEditor
               ref={(handle) => {
                 introBox.current = handle;

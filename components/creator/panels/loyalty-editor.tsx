@@ -75,7 +75,7 @@ export function LoyaltyAbilitiesEditor({
       helper="One row per ability. Real walkers run 1–4 rows (plus/minus/ultimate); leave the cost blank for a static ability line. Symbols go into the row you last clicked."
     >
       <div ref={rowsRef} className="flex flex-col gap-3">
-        <RulesSymbolToolbar onInsert={insertSymbol} />
+        <RulesSymbolToolbar onInsert={insertSymbol} selfReference="this planeswalker" />
         {fields.map((row, i) => {
           const rowErrors = errors.loyalty_abilities?.[i];
           return (

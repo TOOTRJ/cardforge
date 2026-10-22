@@ -64,6 +64,7 @@ import {
 import { endAlignedStatKeepOut, fitStatSizePct, ptValue } from "@/lib/cards/stat-fit";
 import { fitTitleBand } from "@/lib/cards/title-band";
 import { nicknameLineSlot, resolveNickname } from "@/lib/cards/nickname";
+import { withSelfNames } from "@/lib/cards/self-name";
 import { setSymbolSize, setSymbolSource } from "@/lib/cards/set-symbol-size";
 import { collectorLayout, type CollectorLayout, type CollectorMarkAnchor } from "@/lib/cards/collector-layout";
 import {
@@ -392,7 +393,16 @@ export function CardPreview(rawProps: CardPreviewProps) {
   // Only pictures lib/media/media-urls.ts accepts (migration 0127): a row
   // written before it could point its art, icon, watermark or pips at any
   // host. The bake drops the same ones (lib/cards/drawable-media.ts).
-  const drawable = drawableCardMedia(rawProps);
+  // CARDNAME / `~` (TODO 6.2, lib/cards/self-name.ts): the tokens drawn as
+  // the name the title bar prints, before anything reads the text — the
+  // bake's twin (CardImage). The very same props for a card without one.
+  const drawable = withSelfNames(
+    drawableCardMedia(rawProps),
+    resolveFrameProfile(
+      normalizeFrameTemplate(rawProps.frameStyle?.template, { rulesText: rawProps.rulesText, flavorText: rawProps.flavorText }),
+      rawProps.profileOverrides,
+    ),
+  );
   const {
     title,
     nickname,
