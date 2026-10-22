@@ -200,7 +200,7 @@ async function generateStyledImage(
   }
   try {
     const model = process.env.AI_IMAGE_MODEL?.trim() || GATEWAY_IMAGE_DEFAULT;
-    const { image, warnings } = await generateImage({
+    const { image } = await generateImage({
       model,
       abortSignal: AbortSignal.timeout(
         options.timeoutMs ?? IMAGE_CALL_TIMEOUT_MS,
@@ -211,11 +211,10 @@ async function generateStyledImage(
       prompt: prompt.trim().slice(0, 4000),
       ...imageShapeArgs(model, aspect),
     });
-    // A shape the model didn't take is a warning, not an error: logged so a
-    // run shows it (the picture still lands fitted to its window).
-    if (warnings?.length) {
-      console.warn("[image-gen] model warnings", model, JSON.stringify(warnings).slice(0, 500));
-    }
+    // A shape the model didn't take comes back as a warning, not an error —
+    // the AI SDK already logs every one ("AI SDK Warning (…)", logWarnings),
+    // so a run shows it without a second line of ours. The picture still
+    // lands fitted to its window.
     return {
       ok: true,
       bytes: image.uint8Array,
