@@ -119,6 +119,21 @@ export function cardTitleWithNickname(name: string, nickname: string | null | un
   return shown && shown !== name ? `${name} (${shown})` : name;
 }
 
+/**
+ * The card page's line under its H1 (TODO 6.3, owner Round 80): "Printed
+ * as" only where the card's frame PRINTS the nickname in its title bar —
+ * on any other frame (the 2003 frame, a borderless one) the card shows its
+ * name, so the nickname is "Also known as". Null without a nickname.
+ */
+export function nicknamePageLine(
+  nickname: string | null | undefined,
+  layout: { nickname?: NicknameSlot },
+): { label: "Printed as" | "Also known as"; nickname: string } | null {
+  const shown = cardNickname(nickname);
+  if (!shown) return null;
+  return { label: frameDrawsNickname(layout) ? "Printed as" : "Also known as", nickname: shown };
+}
+
 /** Whether a frame prints a nickname plate at all (the creator's note under
  *  the field reads it). */
 export function frameDrawsNickname(layout: { nickname?: NicknameSlot }): boolean {

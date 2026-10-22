@@ -356,7 +356,7 @@ describe("borderless and extended-art Vehicles land on the Vehicle frame, neares
       status: "nearest",
       template: "m15borderlessartifact",
       landOn: "m15vehicle",
-      reason: "PipGlyph doesn't print the nickname line yet",
+      reason: "PipGlyph doesn't print the borderless nickname plate yet",
     });
   });
 

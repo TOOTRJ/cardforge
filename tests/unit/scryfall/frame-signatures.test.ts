@@ -271,7 +271,7 @@ describe("borderless families (TODO 1.17)", () => {
     });
     expect(frameMatchFromScryfall(printing("ltc-361"))).toMatchObject({
       signature: "borderless/land+nickname",
-      blockedBy: "6.3",
+      blockedBy: "6.3a",
     });
     for (const key of ["mh3-351", "mid-281", "znr-284", "eos-1"] as const) {
       expect(frameMatchFromScryfall(printing(key)).blockedBy, key).not.toBe("4.34");
@@ -333,7 +333,7 @@ describe("borderless families (TODO 1.17)", () => {
     // A crowned or nicknamed two-colour land keeps that gap alone (the land
     // masters have no crowned twin, the nickname line is 6.3's).
     expect(frameMatchFromScryfall(printing("ltr-343"))).toMatchObject({ signature: "borderless/land+crown", blockedBy: "4.6f", gaps: ["crown"] });
-    expect(frameMatchFromScryfall(printing("ltc-366"))).toMatchObject({ signature: "borderless/land+nickname", blockedBy: "6.3", gaps: ["nickname"] });
+    expect(frameMatchFromScryfall(printing("ltc-366"))).toMatchObject({ signature: "borderless/land+nickname", blockedBy: "6.3a", gaps: ["nickname"] });
     for (const key of ["fra-381", "sld-2143"] as const) {
       expect(frameMatchFromScryfall(printing(key)), key).toMatchObject({
         signature: "borderless/land+dark-type-bar",

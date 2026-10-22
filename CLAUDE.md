@@ -1162,7 +1162,10 @@ Rules and gotchas:
   edit sends it only when the field changed (`nicknameBaseline`, the
   footer's rule). `title` stays the card's name everywhere else (slug, H1,
   canonical, decks, hubs, AI); the page `<title>` is "Name (Nickname)"
-  (`cardTitleWithNickname`), the JSON-LD `alternateName`; gallery search
+  (`cardTitleWithNickname`), the JSON-LD `alternateName`, the line under
+  the H1 "Printed as" only where the frame prints it, else "Also known as"
+  (`nicknamePageLine`); an idea or an AI fill that names a NEW card forgets
+  the nickname of the card before it; gallery search
   (search_vector weight A + the ILIKE half) and My Cards' search read it. A
   print-typography "name" field (front only).
 - The art's automatic fit (TODO 3b.18): a picture that lands on a card

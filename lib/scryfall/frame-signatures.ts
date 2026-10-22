@@ -1394,8 +1394,8 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   },
   nickname: {
     match: { flavorName: true },
-    reason: "PipGlyph doesn't print the nickname line yet",
-    blockedBy: "6.3",
+    reason: "PipGlyph doesn't print the borderless nickname plate yet",
+    blockedBy: "6.3a",
   },
   // A token's Nyx is a dress of the token frames (4.51: the starfield in the
   // name pill on the M20 design, a textured frame on the 2014–19 one), not

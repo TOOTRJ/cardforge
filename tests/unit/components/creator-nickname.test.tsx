@@ -47,7 +47,15 @@ vi.mock("@/lib/decks/card-actions", () => ({ linkDeckCardAction: actions.linkDec
 vi.mock("@/lib/frames/frame-request-actions", () => ({ recordFrameRequestAction: actions.recordFrameRequestAction }));
 vi.mock("@/components/creator/scryfall-import-dialog", () => ({ ScryfallImportDialog: () => null, toastImportNotice: () => {} }));
 vi.mock("@/components/creator/ai-fill-dialog", () => ({ AiFillDialog: () => null }));
-vi.mock("@/components/creator/card-ideas-dialog", () => ({ CardIdeasDialog: () => null }));
+// The ideas dialog needs the AI: a stand-in with ONE button that hands the
+// form an idea through the same `onApply` the real one calls.
+vi.mock("@/components/creator/card-ideas-dialog", () => ({
+  CardIdeasDialog: (props: { onApply: (patch: { title: string }) => void }) => (
+    <button type="button" data-testid="idea-apply" onClick={() => props.onApply({ title: "Gloomwood Stalker" })}>
+      apply idea
+    </button>
+  ),
+}));
 vi.mock("@/components/cards/card-preview", () => ({
   CardPreview: () => <div data-testid="card-preview" />,
 }));
@@ -227,5 +235,60 @@ describe("the Nickname field", () => {
     cleanup();
     renderForm("edit", savedCard({ nickname: "The Ember Warden" }));
     expect((field("nickname").closest("details") as HTMLDetailsElement).open).toBe(true);
+  });
+});
+
+// Owner Round 80: another card forgets the nickname of the card before it,
+// as its borrowed words are — an idea, an AI fill that names the card.
+const goTo = async (step: string) => {
+  await act(async () => {
+    fireEvent.click(screen.getAllByTitle(`Go to ${step}`)[0]);
+  });
+};
+
+describe("another card forgets the nickname", () => {
+  it("an idea", async () => {
+    renderForm("create");
+    await goTo("Identity");
+    await type("nickname", "The Ember Warden");
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("idea-apply"));
+    });
+    expect(field("title").value).toBe("Gloomwood Stalker");
+    expect(field("nickname").value).toBe("");
+  });
+
+  it("an AI fill that names the card (the one offered back after a reload)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.startsWith("/api/ai/card-fill?")) {
+          return new Response(
+            JSON.stringify({ ok: true, fill: { jobId: "j1", result: { title: "Gloomwood Stalker", card_type: "creature" }, createdAt: "2026-10-21T00:00:00Z" } }),
+            { status: 200 },
+          );
+        }
+        return new Response(JSON.stringify({ ok: false }), { status: 200 });
+      }),
+    );
+    renderForm("create");
+    await goTo("Identity");
+    await type("nickname", "The Ember Warden");
+    await waitFor(() => expect(toast.info).toHaveBeenCalled());
+    const options = toast.info.mock.calls.at(-1)![1] as { action: { onClick: () => void } };
+    await act(async () => {
+      options.action.onClick();
+    });
+    expect(field("title").value).toBe("Gloomwood Stalker");
+    expect(field("nickname").value).toBe("");
+  });
+
+  it("…but an edit keeps the card's own", async () => {
+    renderForm("edit", savedCard({ nickname: "The Ember Warden" }));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("idea-apply"));
+    });
+    expect(field("nickname").value).toBe("The Ember Warden");
   });
 });

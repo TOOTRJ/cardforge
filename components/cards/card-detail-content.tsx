@@ -74,7 +74,7 @@ import { collectorNumberRuns } from "@/lib/cards/collector-line";
 import { PRINTED_LANGS } from "@/lib/cards/collector-fields";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { cardPageFacesOf, cardPageName, cardTypeHasRarity } from "@/lib/cards/emblem";
-import { cardNickname } from "@/lib/cards/nickname";
+import { cardNickname, nicknamePageLine } from "@/lib/cards/nickname";
 import { rowHasBakedBack } from "@/lib/cards/faces";
 import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
 import { renderVersionOf } from "@/lib/cards/render-version";
@@ -337,12 +337,9 @@ export async function CardDetailContent({
               {pageName}
             </h1>
             {/* The nickname (TODO 6.3): the name the card prints in its
-                title bar — the H1 stays the card's name. */}
-            {cardNickname(card.nickname) ? (
-              <p className="text-sm text-muted" data-testid="card-nickname">
-                Printed as <span className="font-medium text-foreground">“{cardNickname(card.nickname)}”</span>
-              </p>
-            ) : null}
+                title bar — the H1 stays the card's name; "Also known as"
+                on a frame that prints no nickname. */}
+            <NicknameLine nickname={card.nickname} frameStyle={card.frame_style} />
             {/* Chunk 13: "Also remixed by N others" chip. Only renders
                 when this card was imported from Scryfall AND at least
                 one other public/unlisted remix exists. Click-through
@@ -891,6 +888,20 @@ function CreatorFeature({
 // fabricated authors or licenses. The image URL points at the public OG
 // renderer so social unfurls and search-result thumbnails match.
 // ---------------------------------------------------------------------------
+
+/** The nickname's line under the H1 (TODO 6.3): "Printed as" where the
+ *  card's frame prints it, "Also known as" where it doesn't
+ *  (lib/cards/nickname.ts nicknamePageLine). Exported for tests. */
+export function NicknameLine({ nickname, frameStyle }: { nickname?: string | null; frameStyle: unknown }) {
+  const template = (frameStyle as { template?: string } | null | undefined)?.template;
+  const line = nicknamePageLine(nickname, getFrameProfile(normalizeFrameTemplate(template)));
+  if (!line) return null;
+  return (
+    <p className="text-sm text-muted" data-testid="card-nickname">
+      {line.label} <span className="font-medium text-foreground">“{line.nickname}”</span>
+    </p>
+  );
+}
 
 /** Exported for tests (tests/unit/cards/emblem-card-page.test.tsx). */
 export function buildCardJsonLd({
