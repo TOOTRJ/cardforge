@@ -2393,7 +2393,7 @@ function CostGlyphs({
   symbols: SymbolStyleSpec;
   /** Vertical nudge in px (profile.costDy) — the preview's translate. */
   dy?: number;
-  /** Horizontal nudge in px (profile.costDx, layout v60) — the same
+  /** Horizontal nudge in px (profile.costDx, layout v61) — the same
    *  translate; the row's layout box, which the name's room is measured
    *  against, stays where the band put it. */
   dx?: number;

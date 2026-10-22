@@ -956,10 +956,10 @@ before 5.0d was made beside the ▼: look at its seven colours again.
 the template's override (migration 0115). It goes stale when a later bump
 touches the template (`VERIFICATION_TEMPLATE_SCOPES` when a bump's slots
 move on fewer templates than its bakes change on) or the override changes;
-`VERIFICATION_NEUTRAL_VERSIONS` (31, 32, 33, 35, 36, 37) never stale one (v36's
+`VERIFICATION_NEUTRAL_VERSIONS` (31, 32, 33, 35, 36, 37, … 60) never stale one (v36's
 4.47 moved the planeswalkers' `symbolRect`, a box the alignment score reads,
 but the owner kept it neutral as v32's 15 px m15pw cost-box move was — owner
-round 18, 2026-09-30), and a
+round 18, 2026-09-30; v60's 4 px walker pip and name move likewise), and a
 pre-0115 tick is judged as made at `LEGACY_TICK_LAYOUT_VERSION` (33)
 (`lib/cards/frame-verification-state.ts`). A stale tick stays verified —
 the creator keeps offering the combo — and the admin pages show "needs
@@ -2005,7 +2005,7 @@ of them, DOM → MH3):
   re-cut of the taper is the owner's call).
 - **The bars.** The cost discs at the CC-framed M15 height
   (`CC_M15_COST_DY`: the prints centre them on 151.5–153 px; since layout
-  v60 the 2023+ prints' 157 — "The cost row as printed since 2023") in a title
+  v61 the 2023+ prints' 157 — "The cost row as printed since 2023") in a title
   band that ends at 92.2 %W (the last disc ends at 1383–1386 px on the
   prints; ours ended at 1365 and sat 12 px lower). The type line on the
   prints' baseline, 1855.3 px (1854–1857 on the five DOM references; ours
@@ -8412,12 +8412,12 @@ Chromium against the bake (`tests/parity`): the three new cases and the
 `@symbols` card within the limits at 750 px and HD — the cost row 0 px off
 at HD on all four.
 
-### The cost row as printed since 2023 (layout v60, TODO 3.34; owner 2026-10-22)
+### The cost row as printed since 2023 (layout v61, TODO 3.34; owner 2026-10-22)
 
 Wizards moved the cost row in mid-2023: from The Lord of the Rings (LTR, June
 2023) on, every M15-frame card sets its pips lower in the title bar than the
 2014 – April 2023 cards did. The CC-framed M15 profiles' row
-(`CC_M15_COST_DY`, v24 – v59) sat on the older cards. The owner chose "match
+(`CC_M15_COST_DY`, v24 – v60) sat on the older cards. The owner chose "match
 current cards" (2026-10-22), with TODO 3.34 (the disc's size) folded in.
 
 **How it was measured (2026-10-21).** 308 Scryfall PNGs (two passes,
@@ -8437,7 +8437,7 @@ and a June-2023+ image sits 1.1 ± 0.15 px lower in its PNG than ours, the
 bar with it — hence the registration (raw, the 2023+ rows read 5.7 px low,
 the investigation's +5.2).
 
-| HD px | 2014 – April 2023 prints | June 2023 + prints | v24 – v59 | v60 |
+| HD px | 2014 – April 2023 prints | June 2023 + prints | v24 – v61 | v61 |
 |---|---|---|---|---|
 | disc centre, below our old row (registered) | +1.1 (med; mean +1.8 ± 3.3, n = 11 — scans) | **+4.6** (+4.58 ± 0.05 on every 4- and 5-pip cost, n = 16; median of all, n = 32: +4.76) | 0 (152.0) | +5.0 (157.0: the disc on 122–192) |
 | plain disc | 70.2 ± 2.0 | 70.1 ± 0.2 (4–5 pips) / 69.8 ± 1.3 (all) | 73 | **70** |
@@ -8483,7 +8483,7 @@ their Card Conjurer rebuild (TODO 4.11).
 
 **Rollout.** A CORRECTION: `"sweep"`, no badge, after the owner's before /
 after sheet. Template-scoped to the 36 (`COST_ROW_PRINT_TEMPLATES`) and
-card-scoped (`v60Changed`): a card that draws a cost — its front's, or on a
+card-scoped (`v61Changed`): a card that draws a cost — its front's, or on a
 double-faced body its back's. A card with no cost bakes byte-identical and
 is stamped. NOT verification-neutral, but narrower than the bake scope
 (`COST_ROW_PRINT_VERIFICATION_TEMPLATES`, 25): the land bodies and the
@@ -8592,6 +8592,27 @@ A family profile:
   symbol wider than a 12 %W `symbolRect` (the core-set pills) is never
   shrunk to it: it ends at the rect's right edge and reaches out on the
   left, in both renderers (`flexShrink: 0`).
+
+**The planeswalker's cost row and name (layout v60).** Round 3 (layout
+v27) put the walker's pips 48 % of the way down Card Conjurer's taller
+title plate (132 px at HD) — a read of the plate, not of the print. Read on
+the prints themselves (1500 × 2100 Scryfall PNGs, for measuring only; a
+fixed-radius circle fit on the white, blue and generic discs — black, red
+and green pull a fit into the drop shadow), every walker since 2023 centres
+its pips at 127.3–127.7 px, regular (WOE #78, LCI #238, MKM #211, OTJ #271,
+BLB #230, DSK #220, EOE #2) and borderless (LCI #307, OTJ #305, BLB #341,
+FDN #357 / #359, INR #322) alike, and the earlier ones at 124.7–127.3 (ELD
+#197, KHM #225, NEO #238). `M15PW.costDy` 0.004 → 2 / 1500 (two whole px
+under the box's 126 px centre at HD, one at 750: 128 px in both bakes and
+the preview) and the name's text 4 px up with them (`title.dy` −4 / 1500:
+capitals 101 → 97 px, baseline ~161 → ~157; the prints set them at
+~97–100 / ~156–158). The cost box, the title rect, the disc and every
+master stay; `m15borderlesspw` and `m15borderlesspwtall` spread both. A
+CORRECTION: layout v60 (`WALKER_COST_ROW_LAYOUT_VERSION`), "sweep", scoped
+to the three templates (every card on them re-bakes), never a badge, and
+verification-neutral as v32 and v36 were on the same frame. The disc is the
+family's `COST_DISC_PCT`: a change of that constant reaches the walkers
+too, centred on the same row.
 
 Every frame outside the family keeps the old code paths byte-for-byte: no
 `fit` flag (the character estimate and the CSS ellipsis) and no box or ink

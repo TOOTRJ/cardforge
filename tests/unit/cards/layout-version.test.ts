@@ -3046,12 +3046,52 @@ describe("v59 — the 2014–19 arch token on its prints (TODO 4.53)", () => {
   });
 });
 
-describe("v60 — the cost row as current print draws it (the 2023 pip move + TODO 3.34)", () => {
-  // Renumbered with COST_ROW_PRINT_LAYOUT_VERSION if another bump merges
+describe("v60 — the planeswalker's cost row and name on its prints", () => {
+  // Renumbered with WALKER_COST_ROW_LAYOUT_VERSION if another bump merges
   // first.
   const V = 60;
+  const WALKERS = ["m15pw", "m15borderlesspw", "m15borderlesspwtall"];
+  it("is a sweep, never a badge, scoped to the three walker frames, and verification-neutral", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.WALKER_COST_ROW_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect([...lv.WALKER_COST_ROW_TEMPLATES]).toEqual(WALKERS);
+    // The owner's m15pw ticks stay fresh (as v32 / v36 on the same frame).
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual([]);
+    // A bake from before it on a walker frame owes it; on every other
+    // template nothing is owed.
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(WALKERS.includes(t));
+  });
+
+  it("the frozen list is the profiles': every template with the walker's cost lift and name nudge", () => {
+    const pw = getFrameProfile("m15pw");
+    expect(pw.costDy).toBe(2 / 1500);
+    expect(pw.title.dy).toBe(-4 / 1500);
+    // Whole px in both bakes (1500 and 750 wide): the preview draws the same.
+    for (const w of [1500, 750]) {
+      expect(pw.costDy! * w).toBeCloseTo(Math.round(pw.costDy! * w), 9);
+      expect(pw.title.dy! * w).toBeCloseTo(Math.round(pw.title.dy! * w), 9);
+    }
+    expect(
+      FRAME_TEMPLATE_VALUES.filter((t) => {
+        const p = getFrameProfile(t);
+        return p.costDy === pw.costDy && p.title.dy === pw.title.dy;
+      }),
+    ).toEqual(WALKERS);
+  });
+});
+
+describe("v61 — the cost row as current print draws it (the 2023 pip move + TODO 3.34)", () => {
+  // Renumbered with COST_ROW_PRINT_LAYOUT_VERSION if another bump merges
+  // first.
+  const V = 61;
   const png = "https://x/y.png";
-  /** A v59 bake: only v60 can be pending. */
+  /** A v60 bake: only v61 can be pending. */
   const at = (template: string, over: Record<string, unknown> = {}) => ({
     ...UNTOUCHED_SINCE_V22,
     visibility: "public",
@@ -3091,7 +3131,7 @@ describe("v60 — the cost row as current print draws it (the 2023 pip move + TO
     for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(lv.COST_ROW_PRINT_TEMPLATES.includes(t));
   });
 
-  it("the frozen list is every profile that draws the CC M15 cost row (while v60 is the latest)", async () => {
+  it("the frozen list is every profile that draws the CC M15 cost row (while v61 is the latest)", async () => {
     const lv = await import("@/lib/cards/layout-version");
     if (lv.CARD_LAYOUT_VERSION !== V) return;
     const drawn = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).costDx === 2 / 1500);

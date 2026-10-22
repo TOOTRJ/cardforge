@@ -106,7 +106,7 @@ export const MDFC_STRIP_LINE_PX = 54;
  *  Planeswalker, saga and flip use it too (owner decision 2026-09-28). */
 export const COST_DISC_PCT = 0.0485;
 
-/** The Card Conjurer-framed M15 family's cost disc (layout v60, TODO 3.34):
+/** The Card Conjurer-framed M15 family's cost disc (layout v61, TODO 3.34):
  *  70 px at HD — what the prints draw, 2014 → 2026 alike (a circle fitted
  *  to the rim of every disc whose symbol leaves its rim clear — {U}, the
  *  numerals, {X}, {C} — on 308 Scryfall PNGs, 2026-10-21: 70.1 ± 0.2 on

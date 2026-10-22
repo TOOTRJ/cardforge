@@ -49,7 +49,7 @@ type ManaCostGlyphsProps = {
    *  negative = up) — a frame profile's `costDy` (CardPreview only). */
   offsetY?: string;
   /** Horizontal nudge of the whole cost (a CSS length; positive = right) —
-   *  a frame profile's `costDx` (CardPreview only, layout v60). */
+   *  a frame profile's `costDx` (CardPreview only, layout v61). */
   offsetX?: string;
   /** The frame's symbol style (lib/cards/symbol-style.ts, TODO 4.8.0) — a
    *  prop of the CARD's uses only (CardPreview hands it its profile's): the

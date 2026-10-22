@@ -77,7 +77,7 @@ describe("CardPreview — TextSlot.dy", () => {
     expect(titleBand.style.top).toBe(`${p.title.rect.topPct}%`);
     expect(titleBand.style.transform).toBe("");
     expect(typeBand.style.transform).toBe("");
-    // The pips keep costDy's nudge (and costDx's, layout v60), the set
+    // The pips keep costDy's nudge (and costDx's, layout v61), the set
     // symbol none of its own.
     expect(cost.style.transform).toBe(`translate(${(p.costDx! * 100).toFixed(3)}cqw, ${(p.costDy! * 100).toFixed(3)}cqw)`);
     const symbol = typeLine.nextElementSibling as HTMLElement;

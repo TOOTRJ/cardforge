@@ -156,7 +156,7 @@ describe("the preview's disc shadow is the bake's", () => {
     expect(previewDiscShadowCss(FLAT, 73, 53)).toBeUndefined();
   });
 
-  it("a cost row's discs: one layer, 4 px left and 5 down of m15's 70 px disc (layout v60)", () => {
+  it("a cost row's discs: one layer, 4 px left and 5 down of m15's 70 px disc (layout v61)", () => {
     const { discPx } = costRowHdPx(getFrameProfile("m15").costSizePct!);
     expect(discPx).toBe(70);
     expect(discShadowPx(symbolStyle("modern"), discPx)).toEqual({ left: 4, down: 5 });

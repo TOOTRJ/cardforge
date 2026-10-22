@@ -162,7 +162,7 @@ describe("one M15-era display size (layout v32)", () => {
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       if (p.hideCost) continue;
-      // Layout v60 (TODO 3.34): the CC-framed M15 profiles print the 70 px
+      // Layout v61 (TODO 3.34): the CC-framed M15 profiles print the 70 px
       // disc; the planeswalkers, flip, aftermath and the MSE-framed
       // showcases keep v32's 72.75.
       const disc = COST_ROW_PRINT_TEMPLATES.includes(t) ? CC_M15_COST_DISC_PCT : COST_DISC_PCT;
@@ -272,12 +272,13 @@ describe("baselines (TextSlot.dy)", () => {
     // baseline (its bars sit where the spells' do, ±1 px, on 14 prints).
     ["m15borderlessland", base.title, cc],
     // The planeswalker: its name centred on CC's plate (v27's relation to
-    // the pips); its type line in M15's slot, on the prints' baseline.
-    ["m15pw", undefined, cc],
+    // the pips), then 4 HD px up onto the prints' rows with the pips (layout
+    // v60); its type line in M15's slot, on the prints' baseline.
+    ["m15pw", -4 / 1500, cc],
     // 4.33's borderless planeswalkers: m15pw's slots (the tall one's type
     // band 138 px higher, its text on the same baseline in the band).
-    ["m15borderlesspw", undefined, cc],
-    ["m15borderlesspwtall", undefined, cc],
+    ["m15borderlesspw", -4 / 1500, cc],
+    ["m15borderlesspwtall", -4 / 1500, cc],
     // The tokens: the name on the prints' baseline in its own size (TODO
     // 4.53, layout v59: 1 px up from the band-centred 90 px line); the type
     // line's kept through its band's move up onto CC's pill (82.6 → 82.14
@@ -431,7 +432,8 @@ describe("baselines (TextSlot.dy)", () => {
     // baseline lands within 1 px of v31's at both sizes (the preview, which
     // translates by the exact dy, lands on it).
     expect(at("m15")).toEqual([-2, -5, -1, -3]);
-    expect(at("m15pw")).toEqual([0, -5, 0, -3]);
+    // The walker's name: 4 / 2 px up onto the prints' rows (layout v60).
+    expect(at("m15pw")).toEqual([-4, -5, -2, -3]);
     expect(at("extendedart")).toEqual([-2, -5, -1, -3]);
     // Saga (4.21c): the name kept, the type line 9.3 px lower onto the
     // prints (−5.3 + 9.3 = +4 at HD, +2 at 750).
@@ -494,10 +496,10 @@ describe("baselines (TextSlot.dy)", () => {
     }
   });
 
-  it("keeps the planeswalker's name centred on its plate, level with its pips (v27), and its type line in M15's slot", () => {
+  it("keeps the planeswalker's name rect centred on its plate (v27), its text 4 px up with the pips (v60), and its type line in M15's slot", () => {
     const pw = getFrameProfile("m15pw");
     const m15 = getFrameProfile("m15");
-    expect(pw.title.dy).toBeUndefined();
+    expect(pw.title.dy).toBe(-4 / 1500);
     expect(pw.title.rect).toEqual({ topPct: 4.18, leftPct: 8.5, widthPct: 80, heightPct: 4.4 });
     // Name caps centre ≈ line-box centre + (baseline offset − cap height / 2):
     // Beleren's caps are 1434 / 2048 em. At 80 px (was 64) it moves < 1 px.

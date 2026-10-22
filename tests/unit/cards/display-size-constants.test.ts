@@ -36,12 +36,12 @@ describe("M15-era display sizes", () => {
     expect(Math.round(ADVENTURE_PANEL_PCT * HD)).toBe(62);
     expect(Math.round(ADVENTURE_PANEL_COST_PCT * HD)).toBe(60);
     expect(COST_DISC_PCT * HD).toBeCloseTo(72.75, 6);
-    // The CC-framed M15 family's printed disc since layout v60 (TODO 3.34).
+    // The CC-framed M15 family's printed disc since layout v61 (TODO 3.34).
     expect(CC_M15_COST_DISC_PCT * HD).toBe(70);
   });
 
   it("name the values the verified profiles already print", () => {
-    // M15's printed pip disc (layout v60: 70 px — TODO 3.34)…
+    // M15's printed pip disc (layout v61: 70 px — TODO 3.34)…
     expect(getFrameProfile("m15").costSizePct).toBe(CC_M15_COST_DISC_PCT);
     // …and the full-art basics' print-checked name and type line (4.39).
     for (const t of ["m15fullartland", "fullartland"]) {

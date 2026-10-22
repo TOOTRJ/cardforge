@@ -77,7 +77,7 @@ function baked(template: FrameTemplate) {
 describe("the preview's cost row is the stored bake's", () => {
   it("costRowHdPx is CostGlyphs' disc and gap at the stored width", () => {
     expect(costRowHdPx(COST_DISC_PCT)).toEqual({ discPx: 73, gapPx: 9, cardWidthPx: 1500 });
-    // The CC-framed M15 family's printed row (layout v60): 70 px discs, 78 apart.
+    // The CC-framed M15 family's printed row (layout v61): 70 px discs, 78 apart.
     expect(costRowHdPx(CC_M15_COST_DISC_PCT)).toEqual({ discPx: 70, gapPx: 8, cardWidthPx: 1500 });
     expect(costRowHdPx(0.04)).toEqual({ discPx: 60, gapPx: 7, cardWidthPx: 1500 });
     expect(costRowHdPx(0.04, "landscape")).toEqual({ discPx: 84, gapPx: 10, cardWidthPx: 2100 });
@@ -123,7 +123,7 @@ describe("the preview's cost row is the stored bake's", () => {
     });
   }
 
-  it("a split disc is a LARGE pip's — 84 px where a plain disc is 70 (layout v53, m15 since v60; its halves: tests/unit/render/mana-gem-parity.test.tsx)", () => {
+  it("a split disc is a LARGE pip's — 84 px where a plain disc is 70 (layout v53, m15 since v61; its halves: tests/unit/render/mana-gem-parity.test.tsx)", () => {
     const row = costRow(render(<CardPreview {...card("m15", "{W/U}{2/G}{G}")} />));
     const [hybrid, twobrid, mono] = Array.from(row.children);
     for (const pip of [hybrid, twobrid]) {
@@ -134,7 +134,7 @@ describe("the preview's cost row is the stored bake's", () => {
       expect(css(pip, "flex-shrink")).toBe("0");
     }
     // A two-colour Phyrexian disc is the split disc on the larger size
-    // (layout v49): 84 px where a plain disc is 70 (v60), centred in the row.
+    // (layout v49): 84 px where a plain disc is 70 (v61), centred in the row.
     const phy = costRow(render(<CardPreview {...card("m15", "{2}{G/U/P}{G/P}")} />));
     const [, split, solid] = Array.from(phy.children);
     expect(css(split, "font-size")).toBe("");

@@ -218,7 +218,7 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
     min: -5,
     max: -3,
     why:
-      "The walker's detached cost of five Phyrexian symbols (×1.2 discs) starts 4 px further LEFT in the preview at 750 px than in the 750 px bake (the name is cut at the same word in both, #514). It is the old 750-cost-row-width (struck at layout v60, when the M15 family's disc became a whole 35 px at 750; the walker keeps 72.75 px discs) on the widest row the matrix has — five discs of about 44 px where a plain pip is 36 — and like it gone at HD (0 across, 1 down). The 2003 frame's twin (modern/w/…@phyrexian-cost-5) measures +1. Not traced past that entry's guess: the 750 px bake draws whole-pixel discs and gaps, the preview keeps the fractions.",
+      "The walker's detached cost of five Phyrexian symbols (×1.2 discs) starts 4 px further LEFT in the preview at 750 px than in the 750 px bake (the name is cut at the same word in both, #514). It is the old 750-cost-row-width (struck at layout v61, when the M15 family's disc became a whole 35 px at 750; the walker keeps 72.75 px discs) on the widest row the matrix has — five discs of about 44 px where a plain pip is 36 — and like it gone at HD (0 across, 1 down). The 2003 frame's twin (modern/w/…@phyrexian-cost-5) measures +1. Not traced past that entry's guess: the 750 px bake draws whole-pixel discs and gaps, the preview keeps the fractions.",
   },
   {
     name: "750-walker-phyrexian-cost-mad",
@@ -229,7 +229,18 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
     min: 31,
     max: 35,
     why:
-      "The same row as 750-walker-phyrexian-cost-start, seen as a difference: with the row 4 px out of register the cost region's mean absolute difference is 32.9 against a limit of 31 (a quarter of the region reads as another picture: hot 24.8 %, a hair inside its limit of 25 %). At HD the region measures 5.2. It goes when the row's start does.",
+      "The same row as 750-walker-phyrexian-cost-start, seen as a difference: with the row 4 px out of register the cost region's mean absolute difference is 32.9 against a limit of 31 (34.2 since layout v60 put the walker's pips 2 px higher at 750; a quarter of the region reads as another picture — 750-walker-phyrexian-cost-hot). At HD the region measures 5.2. It goes when the row's start does.",
+  },
+  {
+    name: "750-walker-phyrexian-cost-hot",
+    size: "750",
+    cases: /^m15pw\/w\/planeswalker-long@phyrexian-cost-5$/,
+    regions: ["cost"],
+    metric: "hot",
+    min: 0.25,
+    max: 0.28,
+    why:
+      "The same row again, as the share of the cost region that reads as another picture: 24.8 % through layout v59, a hair inside the limit of 25 %, and 25.8 % since v60 moved the walker's pips 2 px up at 750 in BOTH renderers (the row's 4 px horizontal misregister, 750-walker-phyrexian-cost-start, lands on other rows of the discs' rims; measured on darwin 2026-10-21). Nothing new differs: it goes when the row's start does.",
   },
 ];
 

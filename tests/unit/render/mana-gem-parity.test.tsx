@@ -612,7 +612,7 @@ describe("the symbols as printed (v49): the numbers, in both renderers and in th
     expect(manaGemSpec("gp", 73, SYMBOL_STYLES.modern)).toEqual({ kind: "solid", suffix: "gp", discPx: 88, bg: "#93b483", ink: INK, glyphPx: 80 });
 
     const { bake, cells: [, , plain, phy] } = await cells(rules("{2}{G/P}: Draw a card.", "{2}{G/P}"));
-    // Cost (m15's 70 px disc since layout v60): 70 beside 84; the larger
+    // Cost (m15's 70 px disc since layout v61): 70 beside 84; the larger
     // disc's shadow is its own size's.
     expect(bake.slice(0, 2).map((d) => [d.size, d.shadow])).toEqual([[70, [-4, 5, "#111"]], [84, [-5, 6, "#111"]]]);
     // Rules text: 60 beside 77 (v53: ×1.28), the larger disc 8 px higher

@@ -67,7 +67,7 @@ describe("CardPreview — aftermath's second half", () => {
     expect(second.rules.sizePct).toBe(layout.rules.sizePct);
     expect(layout.title.sizePct).toBe(m15.title.sizePct);
     expect(layout.type.sizePct).toBe(m15.type.sizePct);
-    // M15's v32 disc (72.75 px): v60 moved the CC-framed M15 profiles to
+    // M15's v32 disc (72.75 px): v61 moved the CC-framed M15 profiles to
     // the printed 70 px (TODO 3.34), not the portrait layouts.
     expect(layout.costSizePct).toBe(COST_DISC_PCT);
     expect(m15.costSizePct).toBe(CC_M15_COST_DISC_PCT);
