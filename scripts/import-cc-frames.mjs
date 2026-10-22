@@ -85,6 +85,7 @@ import {
   DFC_CROWN_TWIN_SIZE,
   HOLO_STAMP_NOTCHES,
   splitZnrNotch,
+  clearZnrOvalCut,
   cutCrownBand,
   cutCrownFindings,
   cutCrownRecipe,
@@ -430,6 +431,9 @@ for (const template of Object.keys(provenance)) {
 for (const [template, def] of Object.entries(CC_TEMPLATES)) {
   if (only && !only.includes(template)) continue;
   const recipe = {};
+  // The sha256 of CC's own master as the notch pair must draw it back, per
+  // key (TODO 4.11, ZNR_NOTCH).
+  const notchRestored = {};
   // The size this recipe's masters are written at: 1500×2100, or 2100×1500
   // for a landscape one (TODO 4.21b: split, battle).
   const { width: outW, height: outH } = outputSizeOf(def);
@@ -598,6 +602,11 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     if (def.notch && !isBuiltRecipe(def.colors[key])) {
       const { plain, piece, findings } = splitZnrNotch(master, outW, outH, def.notch);
       for (const f of findings.failures) edgeFailures.push(`${template}/${key} notch: ${f}`);
+      // What the published pair must draw back: CC's master, its corners
+      // cut as the plain one's are, the oval cut cleared (restoredZnrMaster).
+      const restored = Buffer.from(master);
+      roundCornersRgba8(restored, outW, outH, CORNER_RADIUS);
+      notchRestored[key] = createHash("sha256").update(clearZnrOvalCut(restored, outW, def.notch)).digest("hex");
       master = plain;
       const pieceFile = path.join(outDir, template, "holostamp", `${key}.png`);
       await writeCutout(piece, def.notch.box, pieceFile);
@@ -752,7 +761,15 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
     ...(pieces ? { pieces: { ...pieces, output: "<name>.png, native size" } } : {}),
     ...(def.maskInputs ? { maskInputs: { ...def.maskInputs, output: "not published — importer inputs for a later recipe" } } : {}),
     ...(def.printRecipe ? { printRecipe: Object.fromEntries(builtColors(def).filter((key) => !isBuiltRecipe(def.colors[key])).map((key) => [key, describePrintRecipe(def.printRecipe(key))])) } : {}),
-    ...(def.notch ? { notch: { ...def.notch, output: "holostamp/<colour>.png: the notch the master paints, split off (the master written with the straight bar)" } } : {}),
+    ...(def.notch
+      ? {
+          notch: {
+            ...def.notch,
+            output: "holostamp/<colour>.png: the notch the master paints, split off (the master written with the straight bar)",
+            restored: { ...notchRestored, what: "sha256 of CC's master (corners cut, the oval cut cleared to 0,0,0,0) — what the published master with its piece laid over must draw (restoredZnrMaster)" },
+          },
+        }
+      : {}),
     ...(def.recut ? { recut: def.recut } : {}),
     ...(def.barRecut ? { barRecut: { ...def.barRecut, effect: describeBarRecut(def.barRecut) } } : {}),
     ...(def.recutUp ? { recutUp: def.recutUp } : {}),

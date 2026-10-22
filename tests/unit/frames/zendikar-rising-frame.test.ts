@@ -5,6 +5,7 @@ import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import manifestJson from "@/lib/frames/frame-manifest.json";
 import printingsData from "../scryfall/fixtures/signature-printings.json";
+import hedronData from "./fixtures/znr-hedron-printings.json";
 import { resolveFrameOverlays, resolveHoloStamp } from "@/lib/cards/anatomy";
 import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
 import { frameComboKey, TWO_COLOR_PAIRS } from "@/lib/cards/frame-reference-registry";
@@ -21,8 +22,9 @@ import {
 } from "@/lib/cards/template-layout";
 import { withVerification } from "@/lib/creator/frame-resolve";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
-import { frameMatchFromScryfall } from "@/lib/scryfall/import-mapper";
-import { CC_OVERLAY_BANDS, CC_TEMPLATES, ZNR_CROWN_BAND, ZNR_NOTCH, splitZnrNotch, znrCrownLayers } from "@/scripts/lib/cc-frames.mjs";
+import { frameMatchFromScryfall, mapScryfallToFormPatch, printsStandardCrown } from "@/lib/scryfall/import-mapper";
+import provenance from "@/lib/cards/frame-sources.json";
+import { CC_OVERLAY_BANDS, CC_TEMPLATES, ZNR_CROWN_BAND, ZNR_NOTCH, clearZnrOvalCut, restoredZnrMaster, splitZnrNotch, znrCrownLayers } from "@/scripts/lib/cc-frames.mjs";
 
 // ---------------------------------------------------------------------------
 // TODO 4.11 (wave 1) — the Zendikar Rising hedron showcase (`fullart`, ZNR
@@ -182,6 +184,27 @@ describe("the stamp notch, split off every master", () => {
       expect(at(750, 1959), k).toBe(0);
     }
   });
+
+  // The importer records, per key, the sha256 of Card Conjurer's own master
+  // (corners cut, the oval cut cleared) — CI has no Card Conjurer source to
+  // composite again. The PUBLISHED plain master with its PUBLISHED piece
+  // laid over must be that image, byte for byte: the split loses nothing
+  // outside the oval.
+  it.runIf(published)("every published master and its piece draw Card Conjurer's master back exactly, outside the oval", async () => {
+    const restored = (provenance as unknown as { fullart: { notch: { restored: Record<string, string> } } }).fullart.notch.restored;
+    for (const k of KEYS) {
+      const master = await sharp(onDisk(`fullart/${k}.png`)!).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      const piece = await sharp(onDisk(`fullart/holostamp/${k}.png`)!).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      expect([piece.info.width, piece.info.height], k).toEqual([ZNR_NOTCH.box.width, ZNR_NOTCH.box.height]);
+      // The piece holds no translucent pixel (so drawn "over" is a replace).
+      for (let p = 3; p < piece.data.length; p += 4) expect(piece.data[p] === 0 || piece.data[p] === 255, k).toBe(true);
+      const drawn = restoredZnrMaster(master.data, piece.data, 1500, 2100);
+      expect(createHash("sha256").update(drawn).digest("hex"), k).toBe(restored[k]);
+      // …and the plain master alone is NOT it (the piece carries the arch).
+      const plain = clearZnrOvalCut(Buffer.from(master.data), 1500);
+      expect(createHash("sha256").update(plain).digest("hex"), k).not.toBe(restored[k]);
+    }
+  });
 });
 
 describe("the crown band", () => {
@@ -253,5 +276,32 @@ describe("the import", () => {
 
   it("lands the one modal printing (#305 Kazandu Mammoth) on the modal front body, as before", () => {
     expect(frameMatchFromScryfall(printing("znr-305"))).toMatchObject({ status: "nearest", template: "fullart", landOn: "m15mdfcfront" });
+  });
+
+  // Owner 2026-10-22 ("follow the print"): the legendary hedron printings
+  // print the pack's crown, so they import with it ON, as the THB
+  // constellation showcase does — every other legendary showcase imports
+  // with it off. Real printings (Scryfall, trimmed): #293 / #311 not
+  // legendary, #300 / #312 / #313 legendary.
+  const hedron = (key: keyof typeof hedronData) => scryfallCardSchema.parse(hedronData[key]);
+  it("imports a legendary hedron printing with the crown ON and a non-legendary one with no crown", () => {
+    for (const key of ["znr-300", "znr-312", "znr-313"] as const) {
+      const card = hedron(key);
+      expect(card.frame_effects, key).toContain("legendary");
+      const patch = mapScryfallToFormPatch(card);
+      expect(patch.frame_match?.signature, key).toBe("showcase/znr/hedron");
+      expect(printsStandardCrown(card), key).toBe(true);
+      expect(patch.printed_crown, key).toBe(true);
+    }
+    for (const key of ["znr-293", "znr-311"] as const) {
+      const card = hedron(key);
+      const patch = mapScryfallToFormPatch(card);
+      expect(patch.frame_match?.signature, key).toBe("showcase/znr/hedron");
+      expect(printsStandardCrown(card), key).toBe(false);
+      // Not legendary: no crown printed, and no key stored (the new-card
+      // default applies if it is made Legendary later), as on every frame.
+      expect(patch.printed_crown, key).not.toBe(true);
+      expect(patch.printed_crown, key).toBeUndefined();
+    }
   });
 });

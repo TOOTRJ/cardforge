@@ -4209,11 +4209,18 @@ stored cards on it before the sweep (production can't be read from here).
   and run it straight on a common or uncommon. So the importer writes each
   master PLAIN (`ZNR_NOTCH`, `splitZnrNotch`): under the arch every column
   is the straight bar's beside it, and the hedron texture the arch hid is
-  filled from the same rows 192 px further out, cross-faded over 6 rows
-  above and the centre's 16 columns. The pixels that differ are the notch
+  filled ALONG ITS OWN RIDGES — the box's lines run parallel to the V's
+  edges, so a pixel left of the centre takes the one 64 px up and to the
+  left, one right of it the one up and to the right (`srcDiag`) —
+  cross-faded over 6 rows above and the centre's 16 columns (owner
+  2026-10-22: the first cut, a horizontal copy 192 px out, left a soft
+  rounded mound under the V's tip). The pixels that differ are the notch
   piece, `fullart/holostamp/<key>.png` (220 × 125 at 640, 1880, 1:1), its
   oval (685–814 × 1927–1990, every key) cut clear with 2 px; drawn over the
-  plain master it gives CC's pixels back exactly outside the cut. The
+  plain master it gives CC's pixels back exactly outside the cut — the
+  importer records the sha256 of CC's master so drawn (corners cut, the oval
+  cleared) per key in `lib/cards/frame-sources.json`, and a unit test holds
+  the PUBLISHED pair to it (`restoredZnrMaster`). The
   profile declares it as the `holoStamp` overlay (`ZNR_HOLO_STAMP`, oval
   `ZNR_HOLO_STAMP_OVAL`, keep-out from the bevel's top at 1895 px), so
   `"auto"` stamps a rare or mythic as ZNR does, with our oval art.
@@ -4224,7 +4231,11 @@ stored cards on it before the sweep (production can't be read from here).
   Keys: w u b r g m c and the ten pairs — the first colour's end left, the
   second's right, over the gold master (`pairCrownOnGold`), as #313
   Phylath prints R|G. An ADDITION on this frame: opt-in per card, like
-  every crown.
+  every crown — and an import follows the print (owner 2026-10-22): the
+  legendary printings (#300, #312, #313: Scryfall's `legendary` effect)
+  import with the crown ON, `showcase/znr/hedron` being one of
+  `CROWNED_SHOWCASE_SIGNATURES` (`lib/scryfall/import-mapper.ts`) beside
+  the THB constellation.
 - **Geometry, measured on ZNR #290–313** (Scryfall PNGs at 1500 × 2100,
   ≥ 250 ms apart; every text registered on its own bar's outline, as the
   cost-row read does). CC's bars sit on the M15 pack's rows (title outline

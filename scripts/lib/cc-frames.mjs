@@ -3335,8 +3335,14 @@ const znrMasterLayers = (k) => [layer(znrFile("Frame", k)), placed(znrFile("Titl
  * #301 …). So each master is written PLAIN — the arch, its bevel and the
  * oval replaced by the straight bar (each column under the arch copied from
  * the straight bar beside it, `refX`) and the hedron texture the arch hid
- * filled from the same rows `srcDx` px further out, cross-faded over
- * `feather` rows above and across the centre — and the pixels that differ
+ * filled ALONG ITS OWN RIDGES: the box's hedron lines run parallel to the
+ * V's two edges (45°), so a pixel left of the centre takes the one `srcDiag`
+ * px up and to the left, a pixel right of it the one up and to the right —
+ * the same ridge, the same distance from the V's edge — cross-faded over
+ * `feather` rows above and across the centre's 16 columns (owner
+ * 2026-10-22: a horizontal copy, 192 px out, left a soft rounded mound
+ * under the V's tip; the ridges now run on through the patch) — and the
+ * pixels that differ
  * are written beside it as the notch piece (`<template>/holostamp/<key>`,
  * the `box`), the oval cut clear (our oval art is drawn over it,
  * lib/cards/holo-stamp-art.ts). Drawn over the plain master the piece gives
@@ -3361,13 +3367,55 @@ export const ZNR_NOTCH = Object.freeze({
   bottom: 2004,
   halfWidth: 96,
   refX: Object.freeze({ left: 600, right: 900 }),
-  srcDx: 192,
+  srcDiag: 64,
   /** The piece's box (1:1 at HD) and the oval CC paints in the notch
    *  (685–814 × 1927–1990 on every key), cut clear with `cutMarginPx`. */
   box: Object.freeze({ x: 640, y: 1880, width: 220, height: 125 }),
   oval: Object.freeze({ x: 685, y: 1927, width: 130, height: 64 }),
   cutMarginPx: 2,
 });
+
+/** Whether HD pixel (x, y) is inside the notch's oval cut (ZNR_NOTCH.oval
+ *  grown by `cutMarginPx`): the pixels the piece leaves clear for our oval
+ *  art. */
+export function inZnrOvalCut(x, y, spec = ZNR_NOTCH) {
+  const { oval, cutMarginPx } = spec;
+  const rx = oval.width / 2 + cutMarginPx;
+  const ry = oval.height / 2 + cutMarginPx;
+  return ((x + 0.5 - (oval.x + oval.width / 2)) / rx) ** 2 + ((y + 0.5 - (oval.y + oval.height / 2)) / ry) ** 2 <= 1;
+}
+
+/** The pixels a published plain master and its notch piece draw together:
+ *  the piece laid over the master's box (its opaque pixels replace, a clear
+ *  one shows the master — the piece holds no translucent pixel), and the
+ *  oval cut cleared to 0,0,0,0 whatever drew it. Pure; RGBA8 in, a new
+ *  buffer out. The importer records the sha256 of this over CC's own master
+ *  (ZNR_NOTCH restoration, frame-sources.json), and a test holds the
+ *  published pair to it. */
+export function restoredZnrMaster(plain, piece, width, height, spec = ZNR_NOTCH) {
+  const out = Buffer.from(plain);
+  const { box } = spec;
+  for (let y = 0; y < box.height; y += 1) {
+    for (let x = 0; x < box.width; x += 1) {
+      const p = (y * box.width + x) * 4;
+      if (piece[p + 3] === 0) continue;
+      if (piece[p + 3] !== 255) throw new Error(`restoredZnrMaster: a translucent piece pixel at (${box.x + x}, ${box.y + y})`);
+      piece.copy(out, ((box.y + y) * width + box.x + x) * 4, p, p + 4);
+    }
+  }
+  return clearZnrOvalCut(out, width, spec);
+}
+
+/** The oval cut cleared to 0,0,0,0 in a full master (in place; returned). */
+export function clearZnrOvalCut(buf, width, spec = ZNR_NOTCH) {
+  const { oval, cutMarginPx } = spec;
+  for (let y = oval.y - cutMarginPx - 1; y <= oval.y + oval.height + cutMarginPx; y += 1) {
+    for (let x = oval.x - cutMarginPx - 1; x <= oval.x + oval.width + cutMarginPx; x += 1) {
+      if (inZnrOvalCut(x, y, spec)) buf.fill(0, (y * width + x) * 4, (y * width + x) * 4 + 4);
+    }
+  }
+  return buf;
+}
 
 function znrArchTop(dx, table = ZNR_NOTCH.archTop) {
   const a = Math.abs(dx);
@@ -3394,22 +3442,22 @@ export function splitZnrNotch(buf, width, height, spec = ZNR_NOTCH) {
   if (width !== OUT_W || height !== OUT_H) throw new Error(`splitZnrNotch: a ${OUT_W}×${OUT_H} master, not ${width}×${height}`);
   const plain = Buffer.from(buf);
   const at = (x, y) => (y * width + x) * 4;
-  const { centerX, halfWidth, bevelRows, feather, barTop, bottom, srcDx, refX } = spec;
+  const { centerX, halfWidth, bevelRows, feather, barTop, bottom, srcDiag, refX } = spec;
   for (let x = centerX - halfWidth; x <= centerX + halfWidth; x += 1) {
     const dx = x - centerX;
     // Under the bar's bevel: the straight bar's own column beside the arch.
     const ref = dx < 0 ? refX.left : refX.right;
     for (let y = barTop; y <= bottom; y += 1) buf.copy(plain, at(x, y), at(ref, y), at(ref, y) + 4);
-    // Above it: the hedron texture the arch hid, from the same rows further
-    // out (the two halves cross-faded over the centre's 16 columns).
+    // Above it: the hedron texture the arch hid, from further along its own
+    // ridges (the two halves cross-faded over the centre's 16 columns).
     const top = znrArchTop(dx, spec.archTop) - bevelRows;
     if (top >= barTop) continue;
     const share = Math.min(1, Math.max(0, (dx + 8) / 16));
     for (let y = Math.max(0, Math.floor(top - feather)); y < barTop; y += 1) {
       const w = Math.min(1, Math.max(0, (y - (top - feather)) / feather));
       if (w === 0) continue;
-      const l = at(x - srcDx, y);
-      const r = at(x + srcDx, y);
+      const l = at(x - srcDiag, y - srcDiag);
+      const r = at(x + srcDiag, y - srcDiag);
       const o = at(x, y);
       for (let c = 0; c < 4; c += 1) {
         const src = buf[l + c] * (1 - share) + buf[r + c] * share;
@@ -3417,12 +3465,8 @@ export function splitZnrNotch(buf, width, height, spec = ZNR_NOTCH) {
       }
     }
   }
-  const { box, oval, cutMarginPx } = spec;
+  const { box } = spec;
   const piece = Buffer.alloc(box.width * box.height * 4);
-  const ocx = oval.x + oval.width / 2;
-  const ocy = oval.y + oval.height / 2;
-  const orx = oval.width / 2 + cutMarginPx;
-  const ory = oval.height / 2 + cutMarginPx;
   let kept = 0;
   for (let y = 0; y < box.height; y += 1) {
     for (let x = 0; x < box.width; x += 1) {
@@ -3430,7 +3474,7 @@ export function splitZnrNotch(buf, width, height, spec = ZNR_NOTCH) {
       const cy = box.y + y;
       const o = at(cx, cy);
       const p = (y * box.width + x) * 4;
-      if (((cx + 0.5 - ocx) / orx) ** 2 + ((cy + 0.5 - ocy) / ory) ** 2 <= 1) continue;
+      if (inZnrOvalCut(cx, cy, spec)) continue;
       let same = true;
       for (let c = 0; c < 4; c += 1) if (buf[o + c] !== plain[o + c]) same = false;
       if (same) continue;

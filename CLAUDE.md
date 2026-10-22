@@ -893,9 +893,10 @@ Rules and gotchas:
   plain `m15crown/a` — left alone, alpha never). No pairs (a
   two-colour card wears gold on the gold master), no stamp, no collector
   line. An ADDITION: opt-in per card, no bump, no sweep; a stored card on
-  the frame keeps its look. The one showcase whose import names the crown
-  ON (`CROWNED_SHOWCASE_SIGNATURES`, `lib/scryfall/import-mapper.ts`) —
-  every other legendary showcase still imports with it off. Since v55 the
+  the frame keeps its look. One of the showcases whose import names the
+  crown ON (`CROWNED_SHOWCASE_SIGNATURES`, `lib/scryfall/import-mapper.ts`;
+  the ZNR hedron, `showcase/znr/hedron`, is the other, TODO 4.11) — every
+  other legendary showcase still imports with it off. Since v55 the
   masters' RIM wears the M15 FAMILY's tones (owner Rounds 59 / 61: print
   read per card against the same card's regular printing — never a raw
   scan colour; `scripts/lib/nyx-frame.mjs`, `toneNyxRim` in

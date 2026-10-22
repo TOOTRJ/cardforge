@@ -9,6 +9,7 @@ import {
   cornerDiff,
   lightInsideCorners,
   normaliseCardCorners,
+  normaliseCornersGated,
   normaliseMasterCorners,
   normalisedMasterFailures,
   phaseBGateFailures,
@@ -186,9 +187,9 @@ describe("normaliseCardCorners", () => {
     for (let i = 0; i < 120; i += 1) for (let d = -2; d <= 2; d += 1) leak.set([255, 255, 255], at(i, Math.max(0, i + d)));
     const report = normaliseCardCorners(Uint8Array.from(leak), W, H);
     expect(report[0].skipped).toMatch(/leak/);
-    expect(() => normaliseMasterCorners("expeditionland", "w", leak, W, H)).toThrow(/^expeditionland\/w: corner normalise refused — tl: exterior reaches the guard arc \(leak\)/);
+    expect(() => normaliseCornersGated("m15", "w", leak, W, H)).toThrow(/^m15\/w: corner normalise refused — tl: exterior reaches the guard arc \(leak\)/);
     const white = new Uint8Array(W * H * 4).fill(255);
-    expect(() => normaliseMasterCorners("expeditionland", "w", white, W, H)).toThrow(/border band is not opaque and dark/);
+    expect(() => normaliseCornersGated("m15", "w", white, W, H)).toThrow(/border band is not opaque and dark/);
     // Off the allow-list the hook does nothing.
     const bloom = mseMaster();
     const copy = Uint8Array.from(bloom);
@@ -261,6 +262,8 @@ describe("normaliseCardCorners", () => {
     }
   });
 
+  // (On m15, a template that stays: the allow-list empties as the MSE
+  // masters leave git, TODO 4.11; the hook is the same gate behind it.)
   it("the builders' hook runs the runner's whole gate and restores the master when it refuses", () => {
     const m = mseMaster();
     const copy = Uint8Array.from(m);
@@ -268,11 +271,11 @@ describe("normaliseCardCorners", () => {
     // contract (a border is opaque) refuses the normalised master.
     for (let y = 0; y < 8; y += 1) for (let x = 400; x < 420; x += 1) m[at(x, y) + 3] = 0;
     const withSpot = Uint8Array.from(m);
-    expect(() => normaliseMasterCorners("expeditionland", "w", m, W, H)).toThrow(/^expeditionland\/w: corner normalise refused — .*top/);
+    expect(() => normaliseCornersGated("m15", "w", m, W, H)).toThrow(/^m15\/w: corner normalise refused — .*top/);
     expect(Buffer.from(m).equals(Buffer.from(withSpot))).toBe(true);
     // A clean one passes, and the report comes back.
-    expect(normaliseMasterCorners("expeditionland", "w", copy, W, H)).toHaveLength(4);
-    expect(normalisedMasterFailures("expeditionland", "w", mseMaster(), copy, W, H, normaliseCardCorners(Uint8Array.from(copy), W, H))).toEqual([]);
+    expect(normaliseCornersGated("m15", "w", copy, W, H)).toHaveLength(4);
+    expect(normalisedMasterFailures("m15", "w", mseMaster(), copy, W, H, normaliseCardCorners(Uint8Array.from(copy), W, H))).toEqual([]);
   });
 });
 

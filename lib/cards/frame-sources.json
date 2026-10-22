@@ -1353,7 +1353,7 @@
         "left": 600,
         "right": 900
       },
-      "srcDx": 192,
+      "srcDiag": 64,
       "box": {
         "x": 640,
         "y": 1880,
@@ -1367,7 +1367,17 @@
         "height": 64
       },
       "cutMarginPx": 2,
-      "output": "holostamp/<colour>.png: the notch the master paints, split off (the master written with the straight bar)"
+      "output": "holostamp/<colour>.png: the notch the master paints, split off (the master written with the straight bar)",
+      "restored": {
+        "w": "64515cac4f8ab18943c8cd76cf67dc25f82120299ac82137ced6dfde45adfc20",
+        "u": "81290903457b37a745ce84d8862dc418e9f04b182dd0e46799280c929a322473",
+        "b": "25211d927248872caaef635efb50f255037da5a36661bcf410ab4700f10b7ae8",
+        "r": "a6c9766878b1e4855d8fe88f7cc4587d79ea5f950007ca3914a25ce172ace9df",
+        "g": "e533db3e0e627e3666c2c8e92504e977fac862475c07dfc18e3de990533f4b8f",
+        "c": "669f57398f47380f2331dd4e72371e84264300bf1084a7508921e001f6f285a6",
+        "m": "ff6befdda7778e4bc61bbcc9ca815e6bd34df450232b212b0f0de2a55642c278",
+        "what": "sha256 of CC's master (corners cut, the oval cut cleared to 0,0,0,0) — what the published master with its piece laid over must draw (restoredZnrMaster)"
+      }
     },
     "sourceFiles": [
       "img/frames/m15/nickname/m15NicknamePTG.png",
