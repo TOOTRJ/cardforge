@@ -47,13 +47,15 @@ describe("Card Conjurer frame profiles", () => {
       // v24–v59 lifted the discs 11.55 px (−0.0077 W) onto the 2014–2023
       // prints; June-2023+ prints set them 4.6 px lower (the 2023 pip move,
       // docs/FRAMES.md "The cost row as printed since 2023"): 7 px above the
-      // band's centre, on 156.8 px at HD — a whole px, so preview and bake
-      // agree — 70 px discs (TODO 3.34) and the row's end 2 px right.
-      expect(profile.costDy, template).toBe(-7 / 1500);
+      // band's centre in the bake (−6.6 px rounds to −7 there: the disc on
+      // 122–192, centred on 157.0; the preview's exact −6.6 stays within
+      // 0.4 px of it) — 70 px discs (TODO 3.34) and the row's end 2 px right.
+      expect(profile.costDy, template).toBe(-6.6 / 1500);
+      expect(Math.round((profile.costDy ?? 0) * 1500), template).toBe(-7);
       expect(profile.costDx, template).toBe(2 / 1500);
       expect(Math.round((profile.costSizePct ?? 0) * 1500), template).toBe(70);
       const band = profile.title.rect;
-      expect(((band.topPct + band.heightPct / 2) / 100) * 2100 + (profile.costDy ?? 0) * 1500, template).toBeCloseTo(156.8, 6);
+      expect(((band.topPct + band.heightPct / 2) / 100) * 2100 + (profile.costDy ?? 0) * 1500, template).toBeCloseTo(157.2, 6);
     }
     expect([...ccTemplates].filter((t) => getFrameProfile(t).costDy)).toEqual(
       expect.arrayContaining(["m15", "m15artifact", "m15snow", "m15devoid"]),

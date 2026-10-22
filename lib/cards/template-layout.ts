@@ -2720,17 +2720,21 @@ function m20ArtifactToken(profile: FrameProfile, label: string): FrameProfile {
 // bar's outline (docs/FRAMES.md "The cost row as printed since 2023"):
 //   - the centre: 4.6 px lower than v24–v59's on June-2023+ prints (+4.58 ±
 //     0.05 on every 4- and 5-pip cost; the median of 77 cards), ~1 px lower
-//     on 2014–April 2023 prints (scans, ± 2) — so the row moves down 4.75 px,
-//     to 156.8 px at HD (the band's centre 163.8 − 7), and an older card now
-//     sits ≈ 4 px below its own print;
+//     on 2014–April 2023 prints (scans, ± 2) — so the stored bake's discs
+//     move down 5 px, onto 157.0 px at HD, and an older card now sits ≈ 4 px
+//     below its own print;
 //   - the disc 70 px, the pitch 78, the large pip 84 (CC_M15_COST_DISC_PCT:
 //     the same on both eras — only the place moved in 2023);
 //   - the row's right end 2 px further right (the last disc ends at 1385;
 //     1384.4–1385.4 on 2023+ prints, 1383 drawn) — CC_M15_COST_DX moves the
 //     discs only, never the name's room.
-// Every value is a whole HD px, so the preview's cqw and the bake's rounded
-// px agree at the stored size.
-const CC_M15_COST_DY = -7 / 1500;
+// The disc and the nudge right are whole HD px. The lift is not, on
+// purpose: the bake lays the 70 px disc out on Satori's whole px (the band's
+// centre 163.8 − 35 = 128.8 → 129) and moves it by the whole px nearest the
+// lift (−7: discs on 122–192, centred on 157.0), while the preview places it
+// at the exact fraction; −6.6 puts the preview's disc within 0.4 px of the
+// bake's (the parity check, tests/parity), where −7 left it 0.8 px high.
+const CC_M15_COST_DY = -6.6 / 1500;
 const CC_M15_COST_DX = 2 / 1500;
 /** The cost row of every Card Conjurer-framed M15 profile (36 templates):
  *  disc, lift and right-end nudge — one spread, so no profile takes one
@@ -3648,7 +3652,7 @@ const SAGA: FrameProfile = {
   // set the pips where M15's are: the generic disc centres on 151.5 px on DOM
   // #122 and 153 px on 40K #126 (segmented by its colour) — v24–v59 put ours
   // on 152.25; since layout v60 the saga takes the family's current-print row
-  // (CC_M15_COST: 70 px discs centred on 156.8 px; LTR / PIP / MH3 sagas sit
+  // (CC_M15_COST: 70 px discs centred on 157 px; LTR / PIP / MH3 sagas sit
   // 4.6 px below the old row, as every 2023+ M15 print does).
   ...CC_M15_COST,
   // The masters' window + 0.1 % (752–1384 × 237–1758 px on every colour,

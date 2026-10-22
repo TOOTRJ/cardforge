@@ -3098,7 +3098,7 @@ describe("v60 — the cost row as current print draws it (the 2023 pip move + TO
     expect([...drawn].sort()).toEqual([...lv.COST_ROW_PRINT_TEMPLATES].sort());
     for (const t of drawn) {
       const p = getFrameProfile(t);
-      expect([p.costSizePct, p.costDy, p.costDx], t).toEqual([70 / 1500, -7 / 1500, 2 / 1500]);
+      expect([p.costSizePct, p.costDy, p.costDx], t).toEqual([70 / 1500, -6.6 / 1500, 2 / 1500]);
     }
     // The planeswalkers, the portrait layouts and the MSE-framed showcases
     // keep their rows (their own items).

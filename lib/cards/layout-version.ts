@@ -1495,8 +1495,8 @@ export const UB_SEE_THROUGH_C_TEMPLATES: readonly string[] = ["m15ub"];
 //            templates that drew the Card Conjurer M15 lift
 //            (COST_ROW_PRINT_TEMPLATES — every profile spreading
 //            template-layout's CC_M15_COST): the discs 70 px (73), so the
-//            pitch 78 (82) and a large pip 84 (88); their centre 4.75 px
-//            LOWER, on 156.8 px at HD (152.05 measured; June-2023+ prints
+//            pitch 78 (82) and a large pip 84 (88); their centre 5 px
+//            LOWER, on 157.0 px at HD (152.0 before; June-2023+ prints
 //            sit 4.6 below the old row, 2014–April 2023 prints ~1 below),
 //            and the row's right end 2 px further right (costDx). Measured
 //            on 308 Scryfall PNGs against our own bakes of the same names

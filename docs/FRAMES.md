@@ -2005,7 +2005,7 @@ of them, DOM → MH3):
   re-cut of the taper is the owner's call).
 - **The bars.** The cost discs at the CC-framed M15 height
   (`CC_M15_COST_DY`: the prints centre them on 151.5–153 px; since layout
-  v60 the 2023+ prints' 156.8 — "The cost row as printed since 2023") in a title
+  v60 the 2023+ prints' 157 — "The cost row as printed since 2023") in a title
   band that ends at 92.2 %W (the last disc ends at 1383–1386 px on the
   prints; ours ended at 1365 and sat 12 px lower). The type line on the
   prints' baseline, 1855.3 px (1854–1857 on the five DOM references; ours
@@ -8439,7 +8439,7 @@ the investigation's +5.2).
 
 | HD px | 2014 – April 2023 prints | June 2023 + prints | v24 – v59 | v60 |
 |---|---|---|---|---|
-| disc centre, below our old row (registered) | +1.1 (med; mean +1.8 ± 3.3, n = 11 — scans) | **+4.6** (+4.58 ± 0.05 on every 4- and 5-pip cost, n = 16; median of all, n = 32: +4.76) | 0 (152.0) | +4.75 (156.8: the band's centre 163.8 − 7) |
+| disc centre, below our old row (registered) | +1.1 (med; mean +1.8 ± 3.3, n = 11 — scans) | **+4.6** (+4.58 ± 0.05 on every 4- and 5-pip cost, n = 16; median of all, n = 32: +4.76) | 0 (152.0) | +5.0 (157.0: the disc on 122–192) |
 | plain disc | 70.2 ± 2.0 | 70.1 ± 0.2 (4–5 pips) / 69.8 ± 1.3 (all) | 73 | **70** |
 | pitch, plain to plain | 77.1 – 78.0 | 77.7 – 78.4 (77.8 ± 0.9) | 82 (73 + 9) | **78** (70 + 8) |
 | large pip (hybrid, Phyrexian) | 84.6 – 86.6 | 84.4 ± 0.9 | 88 | **84** (× 1.2) |
@@ -8458,14 +8458,19 @@ raw reading, ≈ 6 px). The owner chose current print; no per-era switch.
 
 **Where.** `CC_M15_COST` in `lib/cards/template-layout.ts` — one spread of
 `costSizePct: CC_M15_COST_DISC_PCT` (`lib/cards/typography.ts`, 70 / 1500),
-`costDy: CC_M15_COST_DY` (−7 / 1500) and `costDx: CC_M15_COST_DX` (2 / 1500)
+`costDy: CC_M15_COST_DY` (−6.6 / 1500) and `costDx: CC_M15_COST_DX` (2 / 1500)
 — on the 36 profiles that drew the Card Conjurer lift (m15 and its
 artifact, Vehicle, Nyx, station, Universes Beyond, snow, devoid and
 borderless dresses; the transform and modal bodies, front and back; saga and
 its double-faced pair; adventure's and Prepare's fronts; extended art; the
 textless pair).
-Every value is a whole HD px, so the preview (`cqw`) and the bake (rounded
-px) agree at the stored size. `costDx` is a translate: the row's layout box,
+The disc and the nudge are whole HD px; the lift is −6.6 px on purpose:
+the bake lays the disc out on Satori's whole px (128.8 → 129) and moves it
+by the whole px nearest the lift (−7), the preview by the exact fraction, so
+−6.6 keeps the two within 0.4 px (−7 left the preview 0.8 px high).
+At 750 px the 70 px disc is exactly 35 px, which retires the parity check's
+known difference `750-cost-row-width` (the preview's row was wider by half a
+pixel a pip against the bake's whole-px 36 px discs). `costDx` is a translate: the row's layout box,
 which the name's room is measured against (`titleBandRoomPct` →
 `costRowWidthPct`), stays put, and the narrower row gives a name beside a
 cost 3 px per pip and 1 per gap MORE room — a name never loses room. Inline

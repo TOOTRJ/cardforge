@@ -94,7 +94,7 @@ const PICKS: readonly Pick[] = [
     from: "nyx/g/creature-long@crown",
     as: "@three-pips",
     // A three-pip cost: the long card's five-pip row is the M15 cost row's
-    // own 750 px difference ("750-cost-row-width"), not this frame's.
+    // own 750 px difference ("750-cost-row-width", struck at layout v60), not this frame's.
     why: "Nyx Constellation: the crown band over the MSE starfield master, its arms faded into the master's rim, light ink on the translucent bars",
     row: () => ({ cost: "{2}{G}" }),
   },
@@ -138,7 +138,7 @@ const PICKS: readonly Pick[] = [
     from: "m15station/g/artifact-long@crown",
     as: "@full-box",
     // A three-pip cost: the long card's five-pip row is the M15 cost row's
-    // own 750 px difference ("750-cost-row-width"), not this frame's.
+    // own 750 px difference ("750-cost-row-width", struck at layout v60), not this frame's.
     why: "station: the crown over the cut master, a fuller box (a two-paragraph plated tier, 10/10 on the plate)",
     row: () => ({ cost: "{2}{G}" }),
   },

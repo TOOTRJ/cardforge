@@ -131,17 +131,6 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
       "At HD the preview's text sits ABOVE the bake's: by 1 px on 57 regions, 2 px on 58 and 3 px (1.5 CSS px) on 33 of 276 — names, type lines, rules and set symbols on most templates (the short M15 creature: name, type line and rules all −3). The 750 px comparison shows the same rise as −1 / −2. Seen on every text face; not traced further (the two engines place a line's baseline from the font's metrics independently). The frame, the art and the plates do not move with it.",
   },
   {
-    name: "750-cost-row-width",
-    size: "750",
-    cases: /^m15(borderless|textless|ub)?\//,
-    regions: ["cost"],
-    metric: "dx",
-    min: -4,
-    max: -3,
-    why:
-      "At 750 px a cost row of five or more pips starts 2–3 px further LEFT in the preview than in the bake (its right end agrees): the preview's row is wider by about half a pixel a pip. The HD comparison of the same cards measures 0, which points at the 750 px bake's whole-pixel disc and gap sizes (the preview keeps fractions); not traced to the line. Measured −3 on the M15 long card (collector, symbols, etched), m15borderless and m15textless, and on the Universes Beyond long pair card (TODO 4.25: m15's cost row on the m15ub frame — its M15 twin, m15/wu/creature-long@stamp-pair-crown, measures −2); −2 on four more.",
-  },
-  {
     name: "750-emblem-title-end",
     size: "750",
     cases: /^emblem\//,
@@ -229,7 +218,7 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
     min: -5,
     max: -3,
     why:
-      "The walker's detached cost of five Phyrexian symbols (×1.2 discs) starts 4 px further LEFT in the preview at 750 px than in the 750 px bake (the name is cut at the same word in both, #514). It is 750-cost-row-width on the widest row the matrix has — five discs of about 44 px where a plain pip is 36 — and like it gone at HD (0 across, 1 down). The 2003 frame's twin (modern/w/…@phyrexian-cost-5) measures +1. Not traced past that entry's guess: the 750 px bake draws whole-pixel discs and gaps, the preview keeps the fractions.",
+      "The walker's detached cost of five Phyrexian symbols (×1.2 discs) starts 4 px further LEFT in the preview at 750 px than in the 750 px bake (the name is cut at the same word in both, #514). It is the old 750-cost-row-width (struck at layout v60, when the M15 family's disc became a whole 35 px at 750; the walker keeps 72.75 px discs) on the widest row the matrix has — five discs of about 44 px where a plain pip is 36 — and like it gone at HD (0 across, 1 down). The 2003 frame's twin (modern/w/…@phyrexian-cost-5) measures +1. Not traced past that entry's guess: the 750 px bake draws whole-pixel discs and gaps, the preview keeps the fractions.",
   },
   {
     name: "750-walker-phyrexian-cost-mad",
