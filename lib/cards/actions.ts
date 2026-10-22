@@ -704,17 +704,24 @@ export async function updateCardAction(
       data.color_identity !== undefined &&
       JSON.stringify([...data.color_identity].sort()) !==
         JSON.stringify([...(existing.color_identity ?? [])].sort());
-    if (templateChanged || colorChanged) {
-      const storedStyle = (existing.frame_style ?? {}) as { partColor?: boolean; firstPartColor?: ColorIdentity[] };
-      const gateError = frameGateError(
-        nextTemplate ?? existingTemplate,
-        frameGateColors(
-          nextTemplate ?? existingTemplate,
-          { partColor: data.frame_anatomy?.partColor ?? storedStyle.partColor, firstPartColor: storedStyle.firstPartColor },
-          data.color_identity ?? existing.color_identity,
-        ),
-        await verifiedKeysOf(),
-      );
+    // …and an edit that flips each part in its own colour (TODO 4.26, N2)
+    // where the flip changes the colour the frame draws in (the first
+    // part's own, or the card's): gated in the colour it will draw, as a
+    // frame change is — a flip that draws the same masters stays editable.
+    const storedStyle = (existing.frame_style ?? {}) as { partColor?: boolean; firstPartColor?: ColorIdentity[] };
+    const nextPartColor = data.frame_anatomy?.partColor ?? storedStyle.partColor;
+    const gateColorsAfter = frameGateColors(
+      nextTemplate ?? existingTemplate,
+      { partColor: nextPartColor, firstPartColor: storedStyle.firstPartColor },
+      data.color_identity ?? existing.color_identity,
+    );
+    const gateColorsBefore = frameGateColors(existingTemplate, storedStyle, existing.color_identity);
+    const partSwitchMovesFrame =
+      data.frame_anatomy?.partColor !== undefined &&
+      data.frame_anatomy.partColor !== (storedStyle.partColor === true) &&
+      JSON.stringify([...(gateColorsAfter ?? [])].sort()) !== JSON.stringify([...(gateColorsBefore ?? [])].sort());
+    if (templateChanged || colorChanged || partSwitchMovesFrame) {
+      const gateError = frameGateError(nextTemplate ?? existingTemplate, gateColorsAfter, await verifiedKeysOf());
       if (gateError) {
         if (!(await previewAllowed())) {
           return { ok: false, fieldErrors: { frame_style: gateError } };

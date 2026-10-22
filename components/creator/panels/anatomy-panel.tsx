@@ -34,7 +34,7 @@
 // owner of a stored multicolour card switches the frame on (owner decision
 // 2026-09-29: never derived at render, never a silent re-colour).
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useFormContext, useWatch, type UseFormReturn } from "react-hook-form";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import { cn } from "@/lib/utils";
@@ -149,7 +149,7 @@ export function useSecondPartColorFollow(
   /** The verified (template, colour) combos: a colour the frame is not
    *  verified in is never filled (TODO 4.26, M1). */
   verifiedKeys: ReadonlySet<string>,
-): () => void {
+): SecondPartColorFollow {
   const { control, setValue } = form;
   const [template, partColor, backCost, backColors, colorIdentity, firstPartColor] = useWatch({
     control,
@@ -193,17 +193,33 @@ export function useSecondPartColorFollow(
   }, [draws]);
   // M2: the first part's own colour (an import's, Fire's red where the card
   // is red AND blue) belongs to the card colour it came with: a colour
-  // picked by hand afterwards IS the first part's, so it goes.
+  // picked by hand afterwards IS the first part's, so it goes. An import
+  // sets both at once (noteImport, N1): its colour change is the new pair's
+  // baseline, never a pick — a second split import kept losing its own
+  // first half to the colour it set itself.
   const firstFor = useRef<string | null>(null);
+  const firstKeyFor = useRef<string | null>(null);
+  const importing = useRef(false);
   useEffect(() => {
     const identity = [...((colorIdentity ?? []) as string[])].sort().join(",");
+    const firstKey = [...((firstPartColor ?? []) as string[])].join(",");
     if (!firstPartColor || firstPartColor.length === 0) {
       firstFor.current = null;
+      firstKeyFor.current = null;
+      importing.current = false;
       return;
     }
-    if (firstFor.current === null) firstFor.current = identity;
-    else if (firstFor.current !== identity) {
+    // A new first half (an import's) or an import in progress: the colour
+    // it came with is the baseline.
+    if (importing.current || firstFor.current === null || firstKeyFor.current !== firstKey) {
+      firstFor.current = identity;
+      firstKeyFor.current = firstKey;
+      importing.current = false;
+      return;
+    }
+    if (firstFor.current !== identity) {
       firstFor.current = null;
+      firstKeyFor.current = null;
       setValue("frame_style.firstPartColor", undefined);
     }
   }, [colorIdentity, firstPartColor, setValue]);
@@ -220,10 +236,20 @@ export function useSecondPartColorFollow(
     filled.current = next;
     if (!samePartColor(current, next)) setValue("back_face.color_identity", next);
   }, [enabled, template, partColor, backCost, backColors, verifiedKeys, setValue]);
-  return useCallback(() => {
+  const markTouched = useCallback(() => {
     touched.current = true;
   }, []);
+  const noteImport = useCallback(() => {
+    importing.current = true;
+  }, []);
+  return useMemo(() => ({ markTouched, noteImport }), [markTouched, noteImport]);
 }
+
+/** What useSecondPartColorFollow hands the form: `markTouched` — a pick in
+ *  the second part's colour row ends the cost's fill; `noteImport` — the
+ *  colour an import is about to set is the baseline of the first half's own
+ *  colour it sets with it (TODO 4.26, N1), never a hand pick. */
+export type SecondPartColorFollow = { markTouched: () => void; noteImport: () => void };
 
 /** A second part's colour is verified on the frame (the master or page it
  *  paints — its colour key, a pair's gold `m`). */
@@ -265,7 +291,8 @@ export function SecondPartColorRow({
       ...(reachable ? {} : { disabled: true, description: "Not available on this frame in this colour yet" }),
     };
   });
-  const helpId = "second-part-colour-help";
+  // (Unique per row: the tab may mount the panel more than once — N3.)
+  const helpId = useId();
   return (
     <div
       className="flex flex-col gap-2"

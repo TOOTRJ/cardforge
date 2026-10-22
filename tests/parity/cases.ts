@@ -221,6 +221,16 @@ const PICKS: readonly Pick[] = [
   { from: "prepare/wu/prepare-long@pair-part-hybrid", why: "part colour: the two-colour Prepare (its pair master, the crown) under a hybrid page" },
   { from: "split/r/split-long@part-u-hd", why: "part colour: split's right half in its own colour, a vertical seam (the long card: the short split's turned footer sits 3 px off at 750 on main already)" },
   { from: "aftermath/r/aftermath-short@part-b", why: "part colour: aftermath's lower part in its own colour, a horizontal seam" },
+  // …and owner decision M2 (N3): the card's colour the WHOLE card's (gold),
+  // its first half's on frame_style.firstPartColor — the left half red from
+  // it, the right blue (the long split: the short one's turned footer is
+  // 3 px off at 750 on main already, TODO 3.37 (c)).
+  {
+    from: "split/r/split-long@part-u-hd",
+    as: "@first-part",
+    why: "part colour (M2): a gold card's first half from firstPartColor, red | blue",
+    row: (row) => ({ color_identity: ["multicolor"], frame_style: { ...(row.frame_style as Record<string, unknown>), firstPartColor: ["red"] } as never }),
+  },
   { from: "flip/u/flip-long", why: "flip: the upside-down second face" },
   { from: "battle/g/battle-long", why: "battle: landscape, the painted defense shield, the turned credit" },
   { from: "m15dfcfront/g/transform-long", why: "transform front: icon rider, reverse P/T float" },

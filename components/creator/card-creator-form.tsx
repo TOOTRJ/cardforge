@@ -1068,7 +1068,8 @@ export function CardCreatorForm({
   // A new card's second part takes its colour from its cost (TODO 4.26).
   // (Never a colour the frame isn't verified in: TODO 4.26, M1.)
   const partColorVerifiedKeys = useMemo(() => new Set(verifiedFrameKeys), [verifiedFrameKeys]);
-  const markPartColorTouched = useSecondPartColorFollow({ control, setValue }, mode !== "edit", partColorVerifiedKeys);
+  const partColorFollow = useSecondPartColorFollow({ control, setValue }, mode !== "edit", partColorVerifiedKeys);
+  const markPartColorTouched = partColorFollow.markTouched;
 
   // The Adventure frame repurposes the back-face content as the adventure spell
   // (rendered inline on the card's left page, not as a flippable face), so the
@@ -2842,6 +2843,9 @@ export function CardCreatorForm({
     // frame draws.
     const imported = importedAnatomy(patch, landedTemplate);
     const importedColors = isRevise ? patch.color_identity : imported.colorIdentity;
+    // (The colour this import sets is the baseline of the first half's own
+    // colour it sets with it — TODO 4.26, N1 — never a hand pick.)
+    partColorFollow.noteImport();
     if (importedColors) {
       setValue(
         "color_identity",
