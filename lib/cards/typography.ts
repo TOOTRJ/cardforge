@@ -113,9 +113,9 @@ export const COST_DISC_PCT = 0.0485;
  *  June-2023+ prints, 69.6–70.5 before; COST_DISC_PCT drew 73), and with the
  *  style's 0.12 gap (8 px) the prints' 78 px pitch (77.7–78.4 measured; 82
  *  before) and, × 1.2, their 84–85 px large pip (84 drawn; 88 before).
- *  Read only by the CC_M15_COST profiles (lib/cards/template-layout.ts):
- *  the planeswalker, flip, aftermath and the MSE-framed showcases keep
- *  COST_DISC_PCT. 35 px exactly at 750. */
+ *  Read by the CC_M15_COST profiles (lib/cards/template-layout.ts) and the
+ *  three walkers (M15PW, owner 2026-10-22); flip, aftermath and the
+ *  MSE-framed showcases keep COST_DISC_PCT. 35 px exactly at 750. */
 export const CC_M15_COST_DISC_PCT = 70 / 1500;
 
 /** Set-symbol BOX height (FrameProfile.symbolSizePct on the family) — CC's

@@ -162,9 +162,9 @@ describe("one M15-era display size (layout v32)", () => {
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       if (p.hideCost) continue;
-      // Layout v61 (TODO 3.34): the CC-framed M15 profiles print the 70 px
-      // disc; the planeswalkers, flip, aftermath and the MSE-framed
-      // showcases keep v32's 72.75.
+      // Layout v61 (TODO 3.34): the CC-framed M15 profiles and the walkers
+      // print the 70 px disc; flip, aftermath and the MSE-framed showcases
+      // keep v32's 72.75.
       const disc = COST_ROW_PRINT_TEMPLATES.includes(t) ? CC_M15_COST_DISC_PCT : COST_DISC_PCT;
       expect(p.costSizePct ?? p.title.sizePct, t).toBe(sized(t, disc));
       if (p.secondFace?.costSizePct) expect(p.secondFace.costSizePct, t).toBe(sized(t, COST_DISC_PCT));
@@ -173,7 +173,7 @@ describe("one M15-era display size (layout v32)", () => {
     // had pinned 71 px on the MSE profile).
     expect(getFrameProfile("battle").costSizePct! * 2100).toBeCloseTo(72.75, 9);
     // The planeswalker's disc no longer follows its (grown) name.
-    expect(getFrameProfile("m15pw").costSizePct).toBe(COST_DISC_PCT);
+    expect(getFrameProfile("m15pw").costSizePct).toBe(CC_M15_COST_DISC_PCT);
   });
 
   it("sizes the set symbol from Card Conjurer's box: M15's 86 px, the planeswalker's and saga's 80 px", () => {

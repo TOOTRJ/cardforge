@@ -3105,7 +3105,9 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
     ...over,
   });
 
-  it("is a sweep, never a badge, scoped to the 36 CC-framed M15 templates, and re-opens only the ticks of the ones that draw a cost", async () => {
+  const WALKERS = ["m15pw", "m15borderlesspw", "m15borderlesspwtall"];
+
+  it("is a sweep, never a badge, scoped to the 36 CC-framed M15 templates and the three walkers, and verification-neutral", async () => {
     const lv = await import("@/lib/cards/layout-version");
     expect(lv.COST_ROW_PRINT_LAYOUT_VERSION).toBe(V);
     expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
@@ -3113,43 +3115,39 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
     expect(lv.rolloutPolicy(V)).toBe("sweep");
     expect(lv.latestSweepVersion(undefined, V)).toBe(V);
     expect(lv.latestOptInVersion()).toBe(22);
-    expect(lv.COST_ROW_PRINT_TEMPLATES).toHaveLength(36);
+    expect(lv.COST_ROW_PRINT_TEMPLATES).toHaveLength(39);
+    for (const t of WALKERS) expect(lv.COST_ROW_PRINT_TEMPLATES, t).toContain(t);
     expect(lv.VERSION_SCOPES[V]).toBeTypeOf("function");
-    // Not verification-neutral, but narrower than the bake scope: a land
-    // body and a transform back never draw a cost, so their ticks stay.
-    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).not.toContain(V);
-    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual(lv.COST_ROW_PRINT_VERIFICATION_TEMPLATES);
-    const kept = lv.COST_ROW_PRINT_TEMPLATES.filter((t) => !lv.COST_ROW_PRINT_VERIFICATION_TEMPLATES.includes(t));
-    expect([...kept].sort()).toEqual(
-      [
-        "extendedartland", "m15borderlessdfcback", "m15borderlessland", "m15dfcback", "m15dfcbackleft", "m15dfclandback",
-        "m15dfclandfront", "m15mdfclandback", "m15mdfclandfront", "m15textlessland", "sagadfcback",
-      ].sort(),
-    );
-    for (const t of lv.COST_ROW_PRINT_VERIFICATION_TEMPLATES) expect(lv.COST_ROW_PRINT_TEMPLATES, t).toContain(t);
-    // Without a card to judge by, the 36 owe it; nothing else does.
+    // Verification-neutral (owner 2026-10-22): the discs move inside the
+    // band / box a tick verified; the before / after sheet is the sign-off.
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual([]);
+    // Without a card to judge by, the 39 owe it; nothing else does.
     for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(lv.COST_ROW_PRINT_TEMPLATES.includes(t));
   });
 
-  it("the frozen list is every profile that draws the CC M15 cost row (while v61 is the latest)", async () => {
+  it("the frozen list is every profile that draws the 70 px cost row (while v61 is the latest)", async () => {
     const lv = await import("@/lib/cards/layout-version");
     if (lv.CARD_LAYOUT_VERSION !== V) return;
-    const drawn = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).costDx === 2 / 1500);
+    const drawn = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).costSizePct === 70 / 1500);
     expect([...drawn].sort()).toEqual([...lv.COST_ROW_PRINT_TEMPLATES].sort());
     for (const t of drawn) {
       const p = getFrameProfile(t);
-      expect([p.costSizePct, p.costDy, p.costDx], t).toEqual([70 / 1500, -6.6 / 1500, 2 / 1500]);
+      // The family: 5 px down and 2 px right; the walkers: #597's place, 4 px right.
+      expect([p.costSizePct, p.costDy, p.costDx], t).toEqual(
+        WALKERS.includes(t) ? [70 / 1500, 2 / 1500, 4 / 1500] : [70 / 1500, -6.6 / 1500, 2 / 1500],
+      );
     }
-    // The planeswalkers, the portrait layouts and the MSE-framed showcases
-    // keep their rows (their own items).
-    for (const t of ["m15pw", "m15borderlesspw", "m15borderlesspwtall", "flip", "aftermath", "nyx", "fullart", "expeditionland", "lotr", "lotrscroll", "tarkirdraconic"]) {
+    // The portrait layouts and the MSE-framed showcases keep their rows
+    // (their own items; the showcases wait for TODO 4.11).
+    for (const t of ["flip", "aftermath", "nyx", "fullart", "expeditionland", "lotr", "lotrscroll", "tarkirdraconic"]) {
       expect(lv.COST_ROW_PRINT_TEMPLATES, t).not.toContain(t);
       expect(getFrameProfile(t).costDx, t).toBeUndefined();
     }
   });
 
-  it("re-bakes a card that draws a cost on the 36 — its own, or a double-faced back's — and stamps one with none", () => {
-    for (const t of ["m15", "m15artifact", "saga", "m15borderless", "m15mdfcfront", "adventure"]) {
+  it("re-bakes a card that draws a cost on the 39 — its own, or a double-faced back's — and stamps one with none", () => {
+    for (const t of ["m15", "m15artifact", "saga", "m15borderless", "m15mdfcfront", "adventure", "m15pw", "m15borderlesspwtall"]) {
       expect(isRenderStale(V - 1, t, undefined, V, at(t)), t).toBe(true);
       expect(isRenderStale(V - 1, t, undefined, V, at(t, { cost: "" })), t).toBe(false);
       expect(isRenderStale(V - 1, t, undefined, V, at(t, { cost: null })), t).toBe(false);
@@ -3167,7 +3165,7 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
     const noCost: Record<string, unknown> = at("m15");
     delete noCost.cost;
     expect(isRenderStale(V - 1, "m15", undefined, V, noCost)).toBe(true);
-    // Off the 36, a cost owes nothing.
-    for (const t of ["m15pw", "m15land", "nyx", "flip", "m15token"]) expect(isRenderStale(V - 1, t, undefined, V, at(t)), t).toBe(false);
+    // Off the 39, a cost owes nothing.
+    for (const t of ["m15land", "nyx", "flip", "m15token"]) expect(isRenderStale(V - 1, t, undefined, V, at(t)), t).toBe(false);
   });
 });

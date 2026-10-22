@@ -207,41 +207,9 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
     why:
       "The © slot's pipglyph.com mark on line 1 (a card that draws no plate: its right end at 93.54 %W, inside the P/T slot's region) is NARROWER in the preview at 750 px: the right end agrees, the star starts 3 px further right. At HD the region measures +2 across, within the limit. It is the mark as 4.9b draws it on every collector card without a plate — m15's no-plate instant measures the same +3 — seen here because this is the first parity case whose line-1 mark falls inside a scored region. A width difference of the 750 px bake's mark text, like the other 750-only entries; not traced to a constant.",
   },
-  // --- TODO 3.37: seen by #514, measured again 2026-10-13 (after #523's
-  // large pips; the numbers did not move) and listed with their case. -------
-  {
-    name: "750-walker-phyrexian-cost-start",
-    size: "750",
-    cases: /^m15pw\/w\/planeswalker-long@phyrexian-cost-5$/,
-    regions: ["cost"],
-    metric: "dx",
-    min: -5,
-    max: -3,
-    why:
-      "The walker's detached cost of five Phyrexian symbols (×1.2 discs) starts 4 px further LEFT in the preview at 750 px than in the 750 px bake (the name is cut at the same word in both, #514). It is the old 750-cost-row-width (struck at layout v61, when the M15 family's disc became a whole 35 px at 750; the walker keeps 72.75 px discs) on the widest row the matrix has — five discs of about 44 px where a plain pip is 36 — and like it gone at HD (0 across, 1 down). The 2003 frame's twin (modern/w/…@phyrexian-cost-5) measures +1. Not traced past that entry's guess: the 750 px bake draws whole-pixel discs and gaps, the preview keeps the fractions.",
-  },
-  {
-    name: "750-walker-phyrexian-cost-mad",
-    size: "750",
-    cases: /^m15pw\/w\/planeswalker-long@phyrexian-cost-5$/,
-    regions: ["cost"],
-    metric: "mad",
-    min: 31,
-    max: 35,
-    why:
-      "The same row as 750-walker-phyrexian-cost-start, seen as a difference: with the row 4 px out of register the cost region's mean absolute difference is 32.9 against a limit of 31 (34.2 since layout v60 put the walker's pips 2 px higher at 750; a quarter of the region reads as another picture — 750-walker-phyrexian-cost-hot). At HD the region measures 5.2. It goes when the row's start does.",
-  },
-  {
-    name: "750-walker-phyrexian-cost-hot",
-    size: "750",
-    cases: /^m15pw\/w\/planeswalker-long@phyrexian-cost-5$/,
-    regions: ["cost"],
-    metric: "hot",
-    min: 0.25,
-    max: 0.28,
-    why:
-      "The same row again, as the share of the cost region that reads as another picture: 24.8 % through layout v59, a hair inside the limit of 25 %, and 25.8 % since v60 moved the walker's pips 2 px up at 750 in BOTH renderers (the row's 4 px horizontal misregister, 750-walker-phyrexian-cost-start, lands on other rows of the discs' rims; measured on darwin 2026-10-21). Nothing new differs: it goes when the row's start does.",
-  },
+  // (TODO 3.37's three 750-walker-phyrexian-cost entries struck at layout
+  // v61: the walkers' 70 px disc is a whole 35 px at 750, and the preview's
+  // row and the bake's now agree there, as 750-cost-row-width's did.)
 ];
 
 /**

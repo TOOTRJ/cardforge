@@ -528,7 +528,8 @@ Rules and gotchas:
   — never a profile literal. The 36 CC-framed M15 profiles' cost row is ONE
   spread, `CC_M15_COST` (layout v61: `CC_M15_COST_DISC_PCT` 70 px, the
   2023+ prints' place, `costDx` a translate that never moves the name's
-  room); the walkers, flip, aftermath and the MSE showcases keep theirs. A slot with `fit: "measured"` takes its size,
+  room); the walkers take the 70 px disc and their own `costDx` (place
+  kept); flip, aftermath and the MSE showcases keep 72.75. A slot with `fit: "measured"` takes its size,
   text (ONE "…" past the 5 pt floor) and width from `fitTitleBand` /
   `fitTypeLineBand` in BOTH renderers (bake: `measuredLinePx`; preview: the
   HD bake's px); `TextSlot.dy` moves the text only; the set symbol's size and

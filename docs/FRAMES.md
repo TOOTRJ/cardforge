@@ -8437,7 +8437,7 @@ and a June-2023+ image sits 1.1 ± 0.15 px lower in its PNG than ours, the
 bar with it — hence the registration (raw, the 2023+ rows read 5.7 px low,
 the investigation's +5.2).
 
-| HD px | 2014 – April 2023 prints | June 2023 + prints | v24 – v61 | v61 |
+| HD px | 2014 – April 2023 prints | June 2023 + prints | v24 – v60 | v61 |
 |---|---|---|---|---|
 | disc centre, below our old row (registered) | +1.1 (med; mean +1.8 ± 3.3, n = 11 — scans) | **+4.6** (+4.58 ± 0.05 on every 4- and 5-pip cost, n = 16; median of all, n = 32: +4.76) | 0 (152.0) | +5.0 (157.0: the disc on 122–192) |
 | plain disc | 70.2 ± 2.0 | 70.1 ± 0.2 (4–5 pips) / 69.8 ± 1.3 (all) | 73 | **70** |
@@ -8450,6 +8450,18 @@ pitch (78) are the same on both eras, and both were 3 – 4 px smaller than
 ours (TODO 3.34's 70 against 73 holds on a sample chosen for it). After the
 change the same pipeline reads print − ours on the 2023+ cards as centre
 +0.1 (median, n = 67), disc +0.1, pitch −0.3, large pip +0.5.
+
+**The walkers (owner 2026-10-22).** `m15pw`, `m15borderlesspw` and
+`m15borderlesspwtall` take the same 70 px disc, 78 pitch and 84 large pip
+(`M15PW.costSizePct`, which the borderless pair spread). Their PLACE is
+#597's (layout v60: `costDy` 2 / 1500, the discs centred on 128 px) and is
+not touched. Their row's end was read the same way, on 30 more walker PNGs
+(regular and borderless, 20 of them June 2023 +, each paired with our bake of
+the same name and cost): the prints' discs 70.0 – 70.2 px, pitch 78.2 – 78.7,
+the last disc centred on 1350.4 – 1351.2 px — 4.2 – 4.6 px right of ours
+once ours were 70 px (1346.5 – 1347). `costDx` 4 / 1500 puts it there
+(print − ours after: +0.3 / −0.5 px, regular / borderless). The 2014 – 2022
+walkers end their row 3 – 6 px further right still (scans, ± 5).
 
 **The trade-off.** An older card — an import of a 2014 – April 2023 printing,
 and every card made in the creator on these frames — now sits about 4 px
@@ -8475,20 +8487,19 @@ which the name's room is measured against (`titleBandRoomPct` →
 `costRowWidthPct`), stays put, and the narrower row gives a name beside a
 cost 3 px per pip and 1 per gap MORE room — a name never loses room. Inline
 rules pips are untouched (they follow the rules size, not the cost disc).
-NOT changed: the planeswalkers (`m15pw` and the borderless pair, their own
-`costRect` row), flip and aftermath (their own prints' rows), the old frames,
+NOT changed: flip and aftermath (their own prints' rows), the old frames,
 and the MSE-framed showcases (`nyx`, `fullart`, `expeditionland`, `lotr`,
 `tarkir…`) — `COST_DISC_PCT` keeps 72.75 px for them; the showcases wait for
 their Card Conjurer rebuild (TODO 4.11).
 
 **Rollout.** A CORRECTION: `"sweep"`, no badge, after the owner's before /
-after sheet. Template-scoped to the 36 (`COST_ROW_PRINT_TEMPLATES`) and
-card-scoped (`v61Changed`): a card that draws a cost — its front's, or on a
-double-faced body its back's. A card with no cost bakes byte-identical and
-is stamped. NOT verification-neutral, but narrower than the bake scope
-(`COST_ROW_PRINT_VERIFICATION_TEMPLATES`, 25): the land bodies and the
-transform backs never draw a cost, so their ticks stay fresh; every other
-tick on the 36 re-opens once.
+after sheet. Template-scoped to the 39 (`COST_ROW_PRINT_TEMPLATES`: the 36
+and the three walkers) and card-scoped (`v61Changed`): a card that draws a
+cost — its front's, or on a double-faced body its back's. A card with no
+cost bakes byte-identical and is stamped. Verification-neutral (owner
+2026-10-22, as v32, v36 and v60): the discs move inside the title band or
+cost box a tick verified — no slot, master or plate moves — and the owner
+signs the row off on the before / after sheet, so every tick stays fresh.
 
 ## Text sizes on the M15-era family
 

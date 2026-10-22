@@ -1943,7 +1943,15 @@ const M15PW: FrameProfile = {
   // as on M15; the old default, the 64 px name size, left them small under
   // an 80 px name — owner decision 2026-09-28). The row stays centred in
   // costRect, so the pips' centre does not move.
-  costSizePct: COST_DISC_PCT,
+  // Layout v61 (TODO 3.34, owner 2026-10-22): the walkers take the family's
+  // printed disc too — 70 px, the 78 pitch, the 84 large pip — and their
+  // row ends 4 px further right (costDx, a translate: the name's room is
+  // measured against the box): on 17 walkers since 2023, regular and
+  // borderless, the last disc centres 4.2–4.6 px right of ours read the same
+  // way (print 1350.4–1351.2 px; docs/FRAMES.md "The cost row as printed
+  // since 2023"). The place #597 set (costDy, centre 128) is untouched.
+  costSizePct: CC_M15_COST_DISC_PCT,
+  costDx: 4 / 1500,
   // Layout v36 (TODO 4.47): the symbol ends where M15's does (92.2 %W, 1383
   // px at HD) — the walker prints put it where their set's regular cards do
   // (BFZ #29, DOM #1, WAR #1, DMU #1, M19 #3, M20 #2, M21 #1: +0.1 px from
