@@ -47,6 +47,7 @@ const MEASURED_ON: Readonly<Record<string, Readonly<Record<string, string>>>> = 
   "/frames/flip/pt/{color}-top.png": { w: "76ac787ef466", u: "4f99d8cbb7a2", b: "b5e9f2081d99", r: "eb90c5a3bb5f", g: "fd89b29e7229", c: "74c0d4223b14", m: "9ecd8cae94aa" },
   "/frames/m15pw/loyalty/{color}.png": { w: "d69d28d0134d", u: "60a78b2232c6", b: "ca6ad18941f8", r: "ba92609978fb", g: "20f3cac491c6", c: "117ad7df3f73", m: "3437adf23b51" },
   "/frames/m15snow/pt/{color}.png": { w: "f6527bf8c103", u: "c4d44c844b2c", b: "910d573e16d2", r: "a96b70906276", g: "9baafb7090e6", c: "82954026d022", m: "21f2e51b2eac" },
+  "/frames/lotrscroll/pt/{color}.png": { w: "4d2d3edcab52", u: "236d2520a799", b: "54a0df4bc069", r: "91ba752c750a", g: "c23988767a3f", c: "80697d8f4c64", m: "b3d74100eb8a" },
 };
 
 /** A plate template's bucket colours: colour key → manifest hash. */

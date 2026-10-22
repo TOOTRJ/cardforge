@@ -108,6 +108,18 @@ describe("the page the slot draws", () => {
     expect(page(["black"], { template: "adventure", partColor: true }, { colors: ["multicolor"], cost: "{W}{U}{B}" }).map((o) => o.key)).toEqual(["m"]);
   });
 
+  it("draws a coloured spell's page over a COLOURLESS creature (HOB #170: white over adventure/c)", () => {
+    // The Arkenstone // Seek the Heart: a colourless artifact creature on
+    // the `c` master (CC's artifact frame, verified), a {2}{W} spell.
+    expect(page(["colorless"], { template: "adventure", partColor: true }, { colors: ["white"], cost: "{2}{W}" }, "{5}")).toEqual([
+      { anatomy: "partPage", rect: ADVENTURE_PAGE.rect, key: "w", path: "/frames/adventure/page/w.png" },
+    ]);
+    // …gated in both keys: the creature's `c` and the spell's `w`.
+    const keys = (...k: string[]) => new Set(k);
+    expect(partColourVerdict("adventure", ["colorless"], null, ["white"], keys("adventure/c", "adventure/w"))).toEqual({ drawn: true, ok: true, frameColors: ["colorless"] });
+    expect(partColourVerdict("adventure", ["colorless"], null, ["white"], keys("adventure/c"))).toMatchObject({ drawn: true, ok: false });
+  });
+
   it("paints a two-colour spell's page gold — both dresses — and none over a gold creature", () => {
     expect(page(["black"], { template: "adventure", partColor: true }, { colors: ["green", "blue"], cost: "{G}{U}" }).map((o) => o.key)).toEqual(["m"]);
     expect(page(["black"], { template: "adventure", partColor: true }, { colors: ["green", "white"], cost: "{G/W}{G/W}" }).map((o) => o.key)).toEqual(["m"]);

@@ -101,6 +101,16 @@ describe("adventure printings, the spell's page in its own colour", () => {
     expect(finalizeImportMatch(mapScryfallToFormPatch(card("eld-115")), without("adventure/b")).printed_part_color).toBeUndefined();
   });
 
+  it("a colourless creature with a coloured spell (HOB #170): the look ON, the white page over adventure/c", () => {
+    const patch = finalizeImportMatch(mapScryfallToFormPatch(card("hob-170")), ALL_VERIFIED);
+    expect(patch.color_identity).toEqual(["colorless"]);
+    expect(patch.back_face?.color_identity).toEqual(["white"]);
+    expect(patch.printed_part_color).toBeUndefined();
+    expect(patch.frame_match).toMatchObject({ template: "adventure" });
+    // The spell's white not verified: the look OFF.
+    expect(finalizeImportMatch(mapScryfallToFormPatch(card("hob-170")), without("adventure/w")).printed_part_color).toBe(false);
+  });
+
   it("M1: the AI deck remix of the printing — the same rule", () => {
     const on = scryfallRemixMechanics(mapScryfallToFormPatch(card("woe-221")), "Callous Sell-Sword // Burn Together", ALL_VERIFIED);
     expect(on.ok && on.mechanics).toMatchObject({ frame_template: "adventure", color_identity: ["black"] });

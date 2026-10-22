@@ -18,7 +18,7 @@ import { serveStandInFrames, type StandInFrames, type StandInSpec } from "@/test
 //     the gold page.
 // ---------------------------------------------------------------------------
 
-const TONES: Record<string, number> = { r: 70, u: 190, b: 40, w: 230, g: 120, m: 160 };
+const TONES: Record<string, number> = { r: 70, u: 190, b: 40, w: 230, g: 120, m: 160, c: 100 };
 const PAGE_RGB = [10, 200, 30];
 type Raw = { data: Buffer; w: number; h: number; png: Buffer };
 
@@ -69,9 +69,10 @@ let frames: StandInFrames;
 beforeAll(async () => {
   const specs: StandInSpec[] = [];
   const pieces: Record<string, { rgb: number[]; width: number; height: number }> = {};
-  for (const key of ["r", "m"]) pieces[ADVENTURE_PAGE.assetPathTemplate.replace("{key}", key)] = { rgb: PAGE_RGB, width: 682, height: 626 };
+  for (const key of ["r", "m", "w"]) pieces[ADVENTURE_PAGE.assetPathTemplate.replace("{key}", key)] = { rgb: PAGE_RGB, width: 682, height: 626 };
   specs.push({ template: "adventure", keys: ["b"], tone: TONES.b!, pieces });
   specs.push({ template: "adventure", keys: ["r"], tone: TONES.r! });
+  specs.push({ template: "adventure", keys: ["c"], tone: TONES.c! });
   frames = await serveStandInFrames(specs);
 }, 60_000);
 afterAll(() => frames?.restore());
@@ -115,6 +116,14 @@ describe("the spell's page in its own colour", () => {
     expect(grey(r, 35, 800)).toBe(TONES.b);
     expect(grey(r, 377, 950)).toBe(TONES.b);
     expect(grey(r, 200, 969)).toBe(TONES.b);
+  }, 60_000);
+
+  it("a colourless creature with a white spell (HOB #170): the white page over adventure/c", async () => {
+    const before = frames.fetched.length;
+    const r = await bake(card({ colors: ["colorless"], backColors: ["white"], backCost: "{2}{W}", frameStyle: { partColor: true } }));
+    expect(frames.fetched.slice(before)).toContain("adventure/page/w.png");
+    expect(rgb(r, 700, 1900)).toEqual(PAGE_RGB);
+    expect(grey(r, 70, 1600)).toBe(TONES.c);
   }, 60_000);
 
   it("a two-colour spell draws the gold page", async () => {

@@ -3,7 +3,7 @@ import { frameUrl } from "@/lib/frames/frame-url";
 import { canonicalColorSequence } from "@/lib/cards/mana-order";
 import { COLOR_KEY_LETTER, pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import type { FrameMasterKey, PartColorSeam, Rect, TwoColorDress, TwoColorSplit } from "@/lib/cards/template-layout";
-import { type FrameAnatomyStyle, type PartFacts, type ResolvedFrameOverlay, anatomyOn, crownedMasterKey, isPartColorList, resolveTwoColor } from "@/lib/cards/anatomy";
+import { type FrameAnatomyStyle, type FrameTypeInfo, type PartFacts, type ResolvedFrameOverlay, anatomyOn, crownedMasterKey, isArtifactFrameType, isPartColorList, resolveTwoColor } from "@/lib/cards/anatomy";
 import { DEFAULT_FRAME_TEMPLATE } from "@/types/card";
 import type { ColorIdentity, FrameTemplate } from "@/types/card";
 
@@ -126,6 +126,11 @@ export function frameSplitFor(
     : null;
 }
 
+// What a card's type line tells its frame, and whether it is an artifact as
+// far as the frame goes: one rule in lib/cards/anatomy.ts (its overlay keys
+// read it too), re-exported for the callers that import it from here.
+export { isArtifactFrameType, type FrameTypeInfo } from "@/lib/cards/anatomy";
+
 /** The facts a second part's own frame is drawn from (TODO 4.26): its
  *  colour (`back_face.color_identity`), cost and type. */
 export type PartFrameFacts = PartFacts & { cardType?: string | null; supertype?: string | null };
@@ -188,27 +193,6 @@ export function cardFrameSplit(
   part: PartFrameFacts | null | undefined,
 ): FrameSplit | null {
   return frameSplitFor(profile, colors) ?? partColorSplitFor(profile, colors, type, style, part);
-}
-
-/** What a card's type line tells its frame: the card type and the
- *  supertype words (CardPreviewData, a preview face and the creator form all
- *  carry both) — and its mana cost, which picks a two-colour card's dress
- *  (twoColorDressOf: hybrid only when every coloured pip is hybrid). */
-export type FrameTypeInfo = {
-  cardType?: string | null;
-  supertype?: string | null;
-  cost?: string | null;
-};
-
-/** An artifact, as far as the frame goes: the Artifact card type, or
- *  "Artifact" among the supertype words (an "Artifact Creature — Juggernaut"
- *  is the creature type with the Artifact supertype). */
-export function isArtifactFrameType(type: FrameTypeInfo | null | undefined): boolean {
-  if (!type) return false;
-  if (type.cardType === "artifact") return true;
-  return (type.supertype ?? "")
-    .split(/\s+/)
-    .some((word) => word.toLowerCase() === "artifact");
 }
 
 /** A profile's type-dressed masters (FrameProfile.artifactMasterKeys) and

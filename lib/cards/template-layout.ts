@@ -576,6 +576,13 @@ type FrameOverlaySlotBase = {
    *  m15artifact), a colourless land's the land grey ("c" → "l" on
    *  m15land). */
   keyMap?: Readonly<Record<string, string>>;
+  /** The frame colour key → the slot's key for an ARTIFACT (the Artifact
+   *  card type or supertype word), read before `keyMap` — for a template
+   *  that dresses one colour key in two masters by type
+   *  (FrameProfile.artifactMasterKeys): the Lord of the Rings scroll's
+   *  colourless artifact wears the light-blue `a` crown and notch over its
+   *  `a` master, a colourless land the brown `l` ones over `c` (TODO 4.11). */
+  artifactKeyMap?: Readonly<Record<string, string>>;
 };
 
 /** A double-faced BODY (TODO 5.0a, design 2026-10-02 §2.2): the profile
@@ -4730,30 +4737,40 @@ const LOTR: FrameProfile = {
   },
 };
 
-// LOTR Scroll — m15-ish (title top, rectangular art, type, textbox) on a scroll.
-// The scroll's ribbon + type band are light parchment in every color variant,
-// so both take dark ink (the official LTC scrolls print dark).
+// LOTR Scroll (TODO 4.11, layout v62) — Card Conjurer's 'Scroll' pack
+// (packScroll.js; scripts/lib/cc-frames.mjs SCROLL), whose text layout is
+// the accurate M15 pack's number for number (title 8.54/5.22, type
+// 8.54/56.64, rules 8.6/63.03/82.8 × 28.75, the P/T box, the set symbol's
+// 0.9213 / 0.591): so M15's slots and the M15-era family's sizes, measured
+// against the LTR / LTC prints below.
+/** The scroll's art window (LOTRSCROLL_ART_SLOT): the masters' see-through
+ *  region — the window and the parchment wash over its edges — is 111–1388
+ *  × 230–1168 px on every key (CC's artBounds 150/311/1711 × 1252 of 2010 ×
+ *  2814 = 111.9–1388.5 × 232.1–1166.4), covered with the art-window check's
+ *  0.05 % to spare. */
+const LOTRSCROLL_ART_SLOT: Rect = { topPct: 10.9, leftPct: 7.35, widthPct: 85.3, heightPct: 44.82 };
+/** The scroll pack's plate at its ptBounds (1492 / 2422, 435 × 266 of the
+ *  2010 × 2814 card: 1113.4–1438.1 × 1806.4–2004.9 px at HD). */
+const LOTRSCROLL_TITLE_LEFT_PCT = (4 / 1500) * 100;
+const LOTRSCROLL_PLATE_RECT: Rect ={ topPct: (2422 / 2814) * 100, leftPct: (1492 / 2010) * 100, widthPct: (435 / 2010) * 100, heightPct: (266 / 2814) * 100 };
 const LOTRSCROLL: FrameProfile = {
-  ...LOTR,
+  ...M15,
   label: "Scroll",
-  artSlot: { topPct: 11.5, leftPct: 8, widthPct: 84, heightPct: 45 },
-  rules: {
-    ...LOTR.rules,
-    rect: { topPct: 65.5, leftPct: 8.5, widthPct: 83, heightPct: 21 },
-  },
-  title: {
-    rect: { topPct: 4.5, leftPct: 9, widthPct: 82, heightPct: 6 },
-    sizePct: 0.044,
-    colorHex: INK_DARK,
-    weight: 600,
-    font: "display",
-  },
-  type: {
-    rect: { topPct: 59, leftPct: 9, widthPct: 82, heightPct: 5 },
-    sizePct: 0.028,
-    colorHex: INK_DARK,
-    weight: 600,
-    font: "display",
+  ...CC_M15_COST,
+  artSlot: LOTRSCROLL_ART_SLOT,
+  // A colourless ARTIFACT paints the pack's light-blue artifact frame; any
+  // other colourless card the brown land frame `c` — a land on print (LTR
+  // #712 Shire Terrace; #711 The Shire is green). A colourless creature that
+  // is neither draws `c` with the artifact's plate: no print has that shape.
+  artifactMasterKeys: { c: "a" },
+  // The name starts 4 HD px left of M15's (127.5 → 123.5 px: the median of
+  // 12 prints, −1…−7), its band's right end — the cost row's — unchanged.
+  title: { ...M15.title, rect: { ...M15.title.rect, leftPct: M15.title.rect.leftPct - LOTRSCROLL_TITLE_LEFT_PCT, widthPct: M15.title.rect.widthPct + LOTRSCROLL_TITLE_LEFT_PCT } },
+  type: { ...M15.type, dy: CC_M15_TYPE_DY },
+  pt: {
+    ...M15.pt!,
+    plateRect: LOTRSCROLL_PLATE_RECT,
+    plateAssetPathTemplate: "/frames/lotrscroll/pt/{color}.png",
   },
 };
 
@@ -5603,6 +5620,50 @@ export const M15UB_HOLO_STAMP: FrameOverlaySlot = {
   assetPathTemplate: "/frames/m15ubholostamp/{key}.png",
   keys: ["w", "u", "b", "r", "g", "m", "a", "l", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
   stamp: { shape: "triangle", oval: M15UB_HOLO_STAMP_BOX, keepOut: M15UB_HOLO_STAMP_KEEP_OUT },
+};
+
+/**
+ * The Lord of the Rings scroll's legendary crown (TODO 4.11):
+ * `lotrscrollcrown/<key>.png`, Card Conjurer's scroll 'Legendary Crown' —
+ * the rolled top edge of the title scroll a legendary scroll print carries
+ * (LTR #470, #526, LTC #422) — at the pack's bounds, 1500 × 100 (rows 0–99;
+ * the crown is rows 30–86). Keys: w u b r g, m, a (the artifact's light
+ * blue: a colourless ARTIFACT, `artifactKeyMap`) and l (the land's brown: a
+ * colourless land, `keyMap`). No pairs. Set on the lotrscroll entry only;
+ * opt-in per card like every crown (FrameStyle.crown).
+ */
+export const LOTRSCROLL_CROWN: FrameOverlaySlot = {
+  anatomy: "crown",
+  rect: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: (100 / 2100) * 100 },
+  assetPathTemplate: "/frames/lotrscrollcrown/{key}.png",
+  // SCROLL_CROWN_BAND.keys in scripts/lib/cc-frames.mjs (a unit test holds
+  // them together).
+  keys: ["w", "u", "b", "r", "g", "m", "a", "l"],
+  keyMap: { c: "l" },
+  artifactKeyMap: { c: "a" },
+};
+
+/**
+ * The Lord of the Rings scroll's TRIANGLE stamp notch (TODO 4.11): the
+ * pack's own per-colour piece — the text box's parchment edge stepped up
+ * round a black trapezoid — at its bounds, 266 × 140 at 620, 1877 px
+ * (SCROLL_NOTCH_BOX in scripts/lib/cc-frames.mjs), the Universes Beyond
+ * stamp's hole cut clear (every LTR / LTC print wears that physical
+ * stamp: 705–797 px wide at row 1950, apex 1992–1993) and our triangle art
+ * over it, as on the Universes Beyond frames: "auto" stamps every rarity
+ * (a triangle frame — the matte face below a rare). The rules keep-out is
+ * the raised rim, 644–852 px from its top (1897) down past the box. Keys
+ * as the crown's. Set on the lotrscroll entry only.
+ */
+export const LOTRSCROLL_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (644 / 1500) * 100, topPct: (1897 / 2100) * 100, widthPct: (208 / 1500) * 100, heightPct: (27 / 2100) * 100 };
+export const LOTRSCROLL_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: { leftPct: (620 / 1500) * 100, topPct: (1877 / 2100) * 100, widthPct: (266 / 1500) * 100, heightPct: (140 / 2100) * 100 },
+  assetPathTemplate: "/frames/lotrscrollholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "a", "l"],
+  keyMap: { c: "l" },
+  artifactKeyMap: { c: "a" },
+  stamp: { shape: "triangle", oval: M15UB_HOLO_STAMP_BOX, keepOut: LOTRSCROLL_HOLO_STAMP_KEEP_OUT },
 };
 
 /**
@@ -6838,7 +6899,10 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // M15TEXTLESS, so a flag on a base would reach whatever spreads it next.
   bloomanime: { ...BLOOMANIME, pickerSampleArt: true },
   lotr: LOTR,
-  lotrscroll: LOTRSCROLL,
+  // The scroll's crown, its triangle stamp notch (TODO 4.11) and the
+  // collector line as the prints set it (M15's two lines) — each opt-in per
+  // card, so no stored card changes by them.
+  lotrscroll: { ...LOTRSCROLL, overlays: [LOTRSCROLL_CROWN, LOTRSCROLL_HOLO_STAMP], collector: M15_COLLECTOR },
   tarkirdragon: TARKIRDRAGON,
   tarkirdraconic: TARKIRDRACONIC,
   tarkirghostfire: { ...TARKIRGHOSTFIRE, pickerSampleArt: true },

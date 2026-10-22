@@ -107,7 +107,8 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   split: ["1232x848", "3:2", 1.462],
   aftermath: ["1680x624", "21:9", 2.701],
   lotr: ["1088x960", "1:1", 1.143],
-  lotrscroll: ["1184x880", "4:3", 1.333],
+  // The Card Conjurer scroll window (TODO 4.11, v62): 1280 × 941.
+  lotrscroll: ["1184x864", "4:3", 1.359],
   avatar: ["1104x944", "4:3", 1.164],
   bloomburrow: ["1104x944", "4:3", 1.164],
   bloomanime: ["864x1200", "3:4", 0.722],
