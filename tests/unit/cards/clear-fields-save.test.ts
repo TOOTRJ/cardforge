@@ -179,6 +179,8 @@ describe("updateCardSchema — what null can NOT clear", () => {
         "face_content",
         "watermark",
         "footer_text",
+        // The nickname (TODO 6.3, migration 0141): null clears it.
+        "nickname",
       ].sort(),
     );
   });

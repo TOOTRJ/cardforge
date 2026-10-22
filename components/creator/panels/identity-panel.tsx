@@ -5,7 +5,7 @@
 // Scryfall / AI quick-starts live in the hero cards above the stepper
 // (start-with-hero.tsx); card type lives on the Card step.
 
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import {
   FieldGroup,
   MoreOptions,
@@ -27,13 +27,19 @@ type IdentityPanelProps = {
    *  an emblem has no supertype — only the optional subtype ("Emblem —
    *  Kaito", the 2014–19 and AFR style) is offered. */
   emblem?: boolean;
+  /** Whether the card's frame prints the nickname plate (TODO 6.3,
+   *  lib/cards/nickname.ts frameDrawsNickname): the field's helper says
+   *  where the nickname goes, or that this frame prints none. */
+  nicknamePrinted?: boolean;
 };
 
-export function IdentityPanel({ revise = false, token = false, emblem = false }: IdentityPanelProps) {
+export function IdentityPanel({ revise = false, token = false, emblem = false, nicknamePrinted = false }: IdentityPanelProps) {
   const {
     register,
+    control,
     formState: { errors },
   } = useFormContext<FormValues>();
+  const nickname = useWatch({ control, name: "nickname" });
 
   return (
     <>
@@ -58,6 +64,35 @@ export function IdentityPanel({ revise = false, token = false, emblem = false }:
           autoComplete="off"
         />
       </FieldGroup>
+
+      {/* The nickname (TODO 6.3): a flavour name printed in the title bar
+          with the card's own name in small type under it, as Universes
+          Beyond printings do. Folded away until it holds a value — never on
+          an emblem, which prints its walker's name. */}
+      {emblem ? null : (
+        <MoreOptions
+          summary="More options — nickname"
+          openWhen={Boolean(errors.nickname)}
+          expandWhen={Boolean(nickname?.trim())}
+        >
+          <FieldGroup
+            label="Nickname"
+            helper={
+              nicknamePrinted
+                ? "Optional — prints in the title bar, with the card's name in small type under it (Universes Beyond style). The name stays the card's name everywhere else."
+                : "Optional — this frame doesn't print a nickname, so the card shows its name. The nickname is kept, searchable and shown on the card's page."
+            }
+            error={errors.nickname?.message}
+          >
+            <input
+              {...register("nickname")}
+              placeholder="Wakandan War Panther"
+              className={inputClass(Boolean(errors.nickname))}
+              autoComplete="off"
+            />
+          </FieldGroup>
+        </MoreOptions>
+      )}
 
       {/* Card type now lives on the Kind step (step 1) — the kind IS the
           type choice, and routing every type change through planKindChange

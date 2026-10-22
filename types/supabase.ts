@@ -827,6 +827,7 @@ export type Database = {
           subtypes: string[];
           tags: string[];
           supertype: string | null;
+          nickname: string | null;
           printed_types: string | null;
           template_id: string | null;
           title: string;
@@ -885,6 +886,7 @@ export type Database = {
           subtypes?: string[];
           tags?: string[];
           supertype?: string | null;
+          nickname?: string | null;
           printed_types?: string | null;
           template_id?: string | null;
           title: string;
@@ -941,6 +943,7 @@ export type Database = {
           subtypes?: string[];
           tags?: string[];
           supertype?: string | null;
+          nickname?: string | null;
           printed_types?: string | null;
           template_id?: string | null;
           title?: string;

@@ -14,6 +14,11 @@ import type { CardBackFace, FrameTemplate } from "@/types/card";
 import { kindFromCard, templatePaintsSecondFace } from "@/lib/creator/card-kinds";
 import { isBattleFront, isSagaFront, templateHasBackFace } from "@/lib/cards/dfc";
 import { isTokenPairFront } from "@/lib/cards/token-faces";
+import { escapeRegExp, isRulesWord, shortNameOf } from "@/lib/cards/card-names";
+
+// The naming helpers moved to lib/cards/card-names.ts (TODO 6.2: the import
+// reads them too); re-exported for the remix's own callers.
+export { shortNameOf };
 
 /** The layout kinds whose frame paints a second half the remix names — and
  *  the double-faced kinds (TODO 5.4), whose BACK FACE the remix names and
@@ -61,30 +66,6 @@ export const REMIX_SECOND_NAME_REUSED =
 export const REMIX_NAME_REUSED =
   "The AI kept one of the card's original names — retry this card.";
 
-/**
- * The short name rules text calls a card by, or null: the part before the
- * comma ("Dokai, Weaver of Life" → "Dokai"), or — for a LEGENDARY face
- * without one — the ONE word before " the " ("Goka the Unjust" → "Goka":
- * Scryfall's oracle for the CHK flip reads "Goka deals 4 damage"). Never
- * shorter than 3 characters. A non-legendary "Curse of the Fire Penguin"
- * has no short name, nor does the legendary "Kodama of the North Tree"
- * (its rules text uses the full name).
- */
-export function shortNameOf(
-  name: string,
-  supertype?: string | null,
-): string | null {
-  const title = name.trim();
-  const comma = title.indexOf(",");
-  let short = comma > 0 ? title.slice(0, comma).trim() : "";
-  if (!short && /\blegendary\b/i.test(supertype ?? "")) {
-    const the = title.indexOf(" the ");
-    const head = the > 0 ? title.slice(0, the).trim() : "";
-    if (head && !/\s/.test(head)) short = head;
-  }
-  return short.length >= 3 ? short : null;
-}
-
 /** True when a new name is the old one again, or keeps a legendary's own
  *  name ("Dokai, Weaver of Life" → "Dokai, Lifebringer", seen in a live
  *  run 2026-09-28; "Goka the Unjust" → "Goka the Merciful"): the half
@@ -103,25 +84,6 @@ export function reusesSourceName(
   return new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegExp(short)}(?![\\p{L}\\p{N}])`, "u").test(next);
 }
 
-// A one-word name that is also a word rules text starts sentences with
-// ("Exile" is a real card; "Exile target creature." is not about it) can't
-// be told apart from the instruction, so its self-references are left as
-// they are. Compared case-insensitively.
-const RULES_WORDS: ReadonlySet<string> = new Set([
-  "activate", "add", "all", "another", "any", "as", "at", "attach", "attack",
-  "block", "cast", "choose", "copy", "counter", "create", "destroy", "discard",
-  "double", "draw", "each", "exchange", "exile", "explore", "fight", "flip",
-  "gain", "if", "investigate", "it", "look", "lose", "mill", "play", "prevent",
-  "proliferate", "put", "regenerate", "remove", "return", "reveal",
-  "sacrifice", "scry", "search", "shuffle", "surveil", "take", "tap", "target",
-  "that", "then", "this", "transform", "turn", "until", "untap", "up", "vote",
-  "when", "whenever", "you",
-]);
-
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 /** old → new name pairs for one face, plus a legendary's short name
  *  ("Dokai, Weaver of Life" is "Dokai" and "Goka the Unjust" is "Goka" in
  *  modern rules text; shortNameOf). */
@@ -136,9 +98,7 @@ function renamePairs(
   const pairs: [string, string][] = [[from, to]];
   const short = shortNameOf(from, supertype);
   if (short) pairs.push([short, shortNameOf(to, supertype) ?? to]);
-  return pairs.filter(
-    ([name]) => /\s/.test(name) || !RULES_WORDS.has(name.toLowerCase()),
-  );
+  return pairs.filter(([name]) => !isRulesWord(name));
 }
 
 /**

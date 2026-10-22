@@ -66,6 +66,7 @@ import {
   type HoloStampArt,
 } from "@/lib/cards/holo-stamp";
 import { baseMasterKey } from "@/lib/cards/master-key";
+import type { NicknameSlot } from "@/lib/cards/nickname";
 import { RETIRED_FRAME_TEMPLATES, type FrameTemplate } from "@/types/card";
 import {
   ADVENTURE_PANEL_COST_PCT,
@@ -753,6 +754,14 @@ export type FrameProfile = {
    *  text alignment. The geometry is STATION's (measured on the prints);
    *  the profile holds only the inks. Code-owned: not in the override schema. */
   tiers?: { textColorHex: string; digitColorHex: string };
+  /** The nickname plate (TODO 6.3; lib/cards/nickname.ts): a card with a
+   *  nickname prints it in the title bar and its own name on a plate
+   *  hanging from the art window's top, as every black-bordered
+   *  flavour-name printing does. Declared on the M15-skeleton PROFILES
+   *  entries whose window and pinline the plate was measured on (never on
+   *  a base another profile spreads); a card without a nickname draws
+   *  nothing of it. Code-owned: not in the override schema. */
+  nickname?: NicknameSlot;
   /** The printed collector line's slot (TODO 4.9b) — the two lines in the
    *  bottom border a card switches on (FrameStyle.collector, opt-in per
    *  card: declaring it changes no stored card). When the line is drawn it
@@ -6164,6 +6173,16 @@ const M15BORDERLESSMDFCBACK: FrameProfile = {
   flipside: MDFC_FLIPSIDE_BACK,
 };
 
+/** The nickname plate (TODO 6.3, lib/cards/nickname.ts) on the M15-skeleton
+ *  entries below — every one whose art window opens at 238 px under the
+ *  same 223–231 px pinline (the plate was measured there); a land frame's
+ *  colourless master is the land grey. Not on devoid (its patterned bars
+ *  carry no pinline there), the station frames (one picture under the
+ *  whole frame), the tokens (another title pill) or the borderless family
+ *  (another plate on print: IKO #275 — a follow-up). */
+const NICKNAME_SLOT: NicknameSlot = {};
+const NICKNAME_LAND_SLOT: NicknameSlot = { keyMap: { c: "l" } };
+
 const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // Colourless M15 is CC's see-through "Eldrazi" frame: art under the frame
   // for "c" only (4.17). Set here, not on M15, so the many profiles that
@@ -6192,6 +6211,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     overlays: [M15_CROWN, M15_HOLO_STAMP],
     twoColorMasters: ["split", "hybrid"],
     collector: M15_COLLECTOR,
+    nickname: NICKNAME_SLOT,
   },
   // A land's crown is its colour (NEO #266–278); a colourless land's the
   // land grey "l" (UMA #241 Dark Depths).
@@ -6203,6 +6223,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     // on — owner round 17, 2026-09-30).
     twoColorForLands: true,
     collector: M15_COLLECTOR,
+    nickname: NICKNAME_LAND_SLOT,
   },
   // The collector line (TODO 4.9b, M15_COLLECTOR) is set on each wave-1
   // entry here, like the crown — never on the M15 / M15LAND / M15TOKEN /
@@ -6221,6 +6242,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     twoColorMasters: ["split"],
     twoColorForLands: true,
     collector: M15_COLLECTOR,
+    nickname: NICKNAME_LAND_SLOT,
   },
   // Colourless creature tokens print a see-through frame (BFZ, MH1, WAR).
   // Its window is 4 px wider each side than the opaque masters' (TODO 4.53
@@ -6305,6 +6327,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }, { ...M15_HOLO_STAMP, keyMap: { c: "a" } }],
     twoColorMasters: ["split"],
     collector: M15_COLLECTOR,
+    nickname: NICKNAME_SLOT,
   },
   // The station frame (TODO 4.27a; owner rounds 2026-10-13 and 54): Edge of
   // Eternities' Spacecraft and Planets. PipGlyph's own masters — the
@@ -6403,6 +6426,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     pt: { ...M15ARTIFACT.pt!, plateAssetPathTemplate: "/frames/m15vehicle/pt/{color}.png", colorHex: VEHICLE_PT_INK },
     overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }, { ...M15_HOLO_STAMP, keyMap: { c: "a" } }],
     collector: M15_COLLECTOR,
+    nickname: NICKNAME_SLOT,
   },
   // The Nyx dress (TODO 4.7; owner decisions A3 / A4, 2026-09-29): the
   // printed ENCHANTMENT frame — Card Conjurer's 'Nyx (Theros)' masters,
@@ -6426,6 +6450,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     overlays: [{ ...M15_NYX_CROWN, keyMap: { c: "a" } }, { ...M15_HOLO_STAMP, keyMap: { c: "a" } }],
     twoColorMasters: ["split", "hybrid"],
     collector: M15_COLLECTOR,
+    nickname: NICKNAME_SLOT,
   },
   // The Universes Beyond frames (TODO 4.25; owner 2026-10-13, roadmap Q5:
   // three frames of their own, reached by a pick or an import only): Card
@@ -6454,6 +6479,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     overlays: [UB_CROWN, M15UB_HOLO_STAMP],
     twoColorMasters: ["split", "hybrid"],
     collector: M15_COLLECTOR,
+    nickname: NICKNAME_SLOT,
   },
   m15ubartifact: {
     ...M15ARTIFACT,
@@ -6462,6 +6488,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     overlays: [{ ...UB_CROWN, keyMap: { c: "a" } }, { ...M15UB_HOLO_STAMP, keyMap: { c: "a" } }],
     twoColorMasters: ["split"],
     collector: M15_COLLECTOR,
+    nickname: NICKNAME_SLOT,
   },
   // A land creature (Dryad Arbor's kind) draws the spell frame's plates.
   m15ubland: {
@@ -6472,6 +6499,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     twoColorMasters: ["split"],
     twoColorForLands: true,
     collector: M15_COLLECTOR,
+    nickname: NICKNAME_LAND_SLOT,
   },
   // The borderless frame's crown (TODO 4.6f, wave 2a) is CC's FLOATING crown
   // baked into `<key>-legendary` masters (crownMasters — an overlay can't
@@ -6586,6 +6614,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
     overlays: [{ ...M15_CROWN, keyMap: { c: "a" } }, M15_HOLO_STAMP],
     twoColorMasters: ["split"],
     collector: M15_COLLECTOR,
+    nickname: NICKNAME_SLOT,
   },
   // Devoid draws neither (owner round 20, 2026-10-01, option (i): no crown —
   // the one crowned devoid printing, M3C #4, is the see-through Eldrazi

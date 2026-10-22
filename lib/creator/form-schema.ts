@@ -31,6 +31,7 @@ import {
   cardStatStringSchema,
   cardSupertypeSchema,
   cardPrintedTypesSchema,
+  cardNicknameSchema,
   cardTitleSchema,
   loyaltyCostSchema,
 } from "@/lib/validation/card";
@@ -202,6 +203,10 @@ export function cardFormSchemaFor(
 
     // ----- Identity step -----
     check(ctx, ["title"], cardTitleSchema, values.title);
+    // The nickname (TODO 6.3); "" = none.
+    if (typeof values.nickname === "string" && values.nickname.trim()) {
+      check(ctx, ["nickname"], cardNicknameSchema, values.nickname);
+    }
     check(ctx, ["supertype"], cardSupertypeSchema, values.supertype.trim());
     // The Types field as typed (TODO 3b.16); null = never edited.
     if (typeof values.printed_types === "string") {

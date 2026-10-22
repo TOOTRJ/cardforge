@@ -210,6 +210,8 @@ export function MyCardsBrowser({
     (card: DashboardCard | CardWithStats) =>
       !needle ||
       typedForMatching(card.title.toLowerCase()).includes(needle) ||
+      // …and the nickname it prints (TODO 6.3).
+      typedForMatching((card.nickname ?? "").toLowerCase()).includes(needle) ||
       typedForMatching(
         buildTypeLine({
           supertype: card.supertype,

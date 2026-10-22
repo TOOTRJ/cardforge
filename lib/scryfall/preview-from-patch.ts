@@ -54,6 +54,7 @@ export function previewFromImportPatch(
 ): CardPreviewData {
   return {
     title: patch.title ?? fallbackTitle,
+    ...(patch.nickname !== undefined ? { nickname: patch.nickname } : {}),
     cost: patch.cost ?? null,
     cardType: patch.card_type ?? null,
     supertype: patch.supertype ?? null,

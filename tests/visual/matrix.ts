@@ -1748,6 +1748,46 @@ export function visualCases(): VisualCase[] {
     add(template, primary, "g", "long", { suffix: "@collector", row: collectorRow(template, "2023") });
     add(template, primary, "u", "short", { suffix: "@collector-2015", row: collectorRow(template, "2015") });
   }
+  // TODO 6.3: the nickname — no stored card has one (migration 0141), so
+  // these are NEW cases, no bump: on every template that declares the plate
+  // (the primary kind), and on m15 a colourless see-through card, the
+  // two-colour pair's two-coloured rim, a long name that steps down and a
+  // nickname too long for the bar, the HD bake and both finishes.
+  for (const template of FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).nickname)) {
+    const primary = (hosted.get(template) ?? ["creature"])[0];
+    add(template, primary, "g", "long", { suffix: "@nickname", row: { nickname: "Wakandan War Panther" } });
+    add(template, primary, "c", "short", { suffix: "@nickname", row: { nickname: "Panther Idol" } });
+  }
+  add("m15", "creature", "wu", "short", { suffix: "@nickname-pair", row: { nickname: "Wakandan War Panther", frame_style: { template: "m15", finish: "regular", twoColor: true } } });
+  add("m15", "creature", "r", "long", {
+    suffix: "@nickname-long",
+    row: {
+      title: "Kenrith, the Returned King of the Seven Realms Beyond the Glittering Silver Sea",
+      nickname: "General Picard, Earth Warlord of the United Federation of Planets",
+    },
+  });
+  add("m15", "creature", "b", "long", { suffix: "@nickname-hd", preset: "hd", row: { nickname: "Post, Son of Rich" } });
+  add("m15", "creature", "u", "short", { suffix: "@nickname-foil", finish: "foil", row: { nickname: "Unstable Harmonics", frame_style: { template: "m15", finish: "foil" } } });
+  add("m15", "creature", "w", "short", { suffix: "@nickname-etched", finish: "etched", row: { nickname: "Unstable Harmonics", frame_style: { template: "m15", finish: "etched" } } });
+  // TODO 6.2: CARDNAME / `~` — no stored card's text holds one unflagged
+  // (migration 0142), so NEW cases: the tokens drawn as the name, as the
+  // nickname where the title bar prints it, as typed on a flagged card, and
+  // in a walker's structured rows.
+  const SELF_RULES = "~ deals 3 damage to any target.\nWhen CARDNAME dies, draw a card.";
+  add("m15", "creature", "r", "short", { suffix: "@selfname", row: { rules_text: SELF_RULES, flavor_text: null } });
+  add("m15", "creature", "g", "short", { suffix: "@selfname-nickname", row: { rules_text: SELF_RULES, flavor_text: null, nickname: "The Verdant Sovereign" } });
+  add("m15", "creature", "b", "short", {
+    suffix: "@selfname-literal",
+    row: { rules_text: SELF_RULES, flavor_text: null, frame_style: { template: "m15", finish: "regular", selfName: "literal" } },
+  });
+  add("m15pw", "planeswalker", "w", "short", {
+    suffix: "@selfname",
+    row: {
+      rules_text: "+1: ~ deals 1 damage to any target.\n-3: Untap CARDNAME.",
+      face_content: { v: 1, loyalty: { abilities: [{ cost: "+1", text: "~ deals 1 damage to any target." }, { cost: "-3", text: "Untap CARDNAME." }] } },
+      flavor_text: null,
+    },
+  });
   // No stat plate (an instant): the mark on line 1.
   add("m15", "instant", "u", "short", { suffix: "@collector-noplate", row: collectorRow("m15", "2023") });
   // The ★: by the flag, and by a foil or etched finish (owner 2026-10-02).

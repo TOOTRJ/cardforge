@@ -150,6 +150,7 @@ const STEP_DEFS: StepDef[] = [
     description: "Name & art",
     fields: [
       "title",
+      "nickname",
       "supertype",
       "subtypes_text",
       "game_system_id",

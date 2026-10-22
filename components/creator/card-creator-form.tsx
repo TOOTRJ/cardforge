@@ -239,6 +239,7 @@ import { describeSecondPartLoss, type SecondPartLoss } from "@/lib/creator/secon
 import { useSecondPartFields } from "@/components/creator/use-second-part-fields";
 import { revealAndFocusField } from "@/lib/creator/focus-field";
 import { resolveFrameProfile, type FrameProfileOverridesMap } from "@/lib/cards/profile-override";
+import { frameDrawsNickname } from "@/lib/cards/nickname";
 import {
   basicLandSeedForColorKey,
   importedCardTypeForKind,
@@ -1009,6 +1010,33 @@ export function CardCreatorForm({
   if (footerBaseline.key !== resetKey) {
     setFooterBaseline({ key: resetKey, text: defaults.footer_text.trim() });
   }
+  // The nickname the ROW holds as far as this form knows (TODO 6.3) — the
+  // footer's rule: an edit sends the field only when it differs from it, so
+  // a card without one (every card before 0141) never carries the key, and
+  // it follows a save of this session, never prop churn.
+  const [nicknameBaseline, setNicknameBaseline] = useState(() => ({
+    key: resetKey,
+    text: (defaults.nickname ?? "").trim(),
+  }));
+  if (nicknameBaseline.key !== resetKey) {
+    setNicknameBaseline({ key: resetKey, text: (defaults.nickname ?? "").trim() });
+  }
+  // A remix's one nickname clear (owner N3, "Clear once"): spent by the
+  // first rename — by hand (clearRemixNicknameOnRename), an idea or a fill.
+  const remixNicknameClearedRef = useRef(false);
+  // The hand rename's clear, ONE rule for the two moments it is read: the
+  // maker leaving the title field, and a save that never left it (Enter in
+  // the title submits with no blur — independent re-check). A REMIX whose
+  // title differs from the one it opened with, its clear not yet spent:
+  // spend it, and clear a nickname it still holds. True when it cleared.
+  const spendRemixRenameClear = (title: string): boolean => {
+    if (!isRemix || readOnly || remixNicknameClearedRef.current) return false;
+    if (title.trim() === (defaults.title ?? "").trim()) return false;
+    remixNicknameClearedRef.current = true;
+    if (!(getValues("nickname") ?? "").trim()) return false;
+    setValue("nickname", "", { shouldDirty: true });
+    return true;
+  };
   useEffect(() => {
     if (lastReset.current.key === resetKey) return;
     const sameCard = lastReset.current.cardId === resetCardId;
@@ -1022,6 +1050,8 @@ export function CardCreatorForm({
       return;
     }
     reset(defaults);
+    // The parent's nickname is back in the field: the one clear with it.
+    remixNicknameClearedRef.current = false;
   }, [resetKey, resetCardId, defaults, reset, isDirty]);
 
   // useWatch is the React Compiler-friendly subscription variant of watch().
@@ -2525,6 +2555,14 @@ export function CardCreatorForm({
     }
 
     setIfPresent("title", patch.title);
+    // An idea that names the card renames it (TODO 6.3, owner Round 80 and
+    // N3): the nickname of the card before it is forgotten, as its borrowed
+    // words are — on a new card AND a remix (a rename clears it). An edit
+    // keeps the card's own.
+    if (patch.title !== undefined && !isEdit) {
+      setValue("nickname", "", { shouldDirty: true });
+      remixNicknameClearedRef.current = true;
+    }
     setIfPresent("cost", patch.cost);
     // An idea's type words print in the built order (TODO 1.20); a typed
     // Types text gives way to them (TODO 3b.16). Locked while revising.
@@ -2764,6 +2802,9 @@ export function CardCreatorForm({
     // a Types text only where the printing reads differently from the line
     // the card builds; any other import clears a text typed before it.
     setValue("printed_types", patch.printed_types ?? null, { shouldDirty: true });
+    // …and its nickname (TODO 6.3): the printing's flavour name, or none —
+    // a nickname typed before an import of another card is cleared.
+    setValue("nickname", patch.nickname ?? "", { shouldDirty: true });
     if (importedKind) {
       setValue("supertype", patch.supertype ?? "", { shouldDirty: true });
       setValue("subtypes_text", patch.subtypes_text ?? "", {
@@ -3152,6 +3193,14 @@ export function CardCreatorForm({
 
   /** Pour a fill result into the form — only the keys present are touched. */
   const applyFill = (fill: CardFillResult) => {
+    // A fill that names the card renames it (TODO 6.3, owner Round 80 and
+    // N3): the nickname typed or imported for the card before it is
+    // forgotten, as its borrowed words are — on a new card AND a remix (a
+    // rename clears it). An edit keeps the card's own.
+    if (fill.title !== undefined && !isEdit) {
+      setValue("nickname", "", { shouldDirty: true });
+      remixNicknameClearedRef.current = true;
+    }
     // The job picked the frame for the text it wrote (resolveGeneratedFrame:
     // a token's text box included) — that frame stands, below.
     let filledFrame = false;
@@ -3388,6 +3437,7 @@ export function CardCreatorForm({
   // and return to step 1.
   const handleStartOver = () => {
     reset(defaults);
+    remixNicknameClearedRef.current = false;
     stashedSecondPartRef.current = {};
     secondPartFields.forget();
     forgetBorrowedWords();
@@ -3646,8 +3696,21 @@ export function CardCreatorForm({
     // No `slug`: a NEW card's slug is derived server-side from the title it
     // is saved with (so a remix lives at ITS name, not the original's), and
     // an edit never rewrites the slug (links stay stable).
+    // The nickname (TODO 6.3): a new card (a remix too) sends one only when
+    // it has one; an edit only when the field differs from what the row
+    // holds (nicknameBaseline) — null when emptied, which clears it. A card
+    // without one never carries the key.
+    const nicknameOut = (values.nickname ?? "").trim();
+    const nicknamePayload: { nickname?: string | null } = isEdit
+      ? nicknameOut === nicknameBaseline.text
+        ? {}
+        : { nickname: nicknameOut || null }
+      : nicknameOut
+        ? { nickname: nicknameOut }
+        : {};
     const payload = {
       title: values.title.trim(),
+      ...nicknamePayload,
       game_system_id: values.game_system_id,
       cost: values.cost.trim() || emptied,
       color_identity: values.color_identity,
@@ -3918,6 +3981,8 @@ export function CardCreatorForm({
       toast.success("Changes saved.");
       // The row's footer is now what this save sent (see the payload).
       if (typeof payload.footer_text === "string") setFooterBaseline({ key: resetKey, text: payload.footer_text });
+      // …and its nickname (TODO 6.3), when this save sent one.
+      if ("nickname" in payload) setNicknameBaseline({ key: resetKey, text: payload.nickname ?? "" });
       // …and its rows may no longer be the rows the card opened with (the
       // payload's face_content, above).
       setSavedUnderKey(resetKey);
@@ -4055,6 +4120,8 @@ export function CardCreatorForm({
     pipOverrides,
     profileOverrides,
     title: watched.title,
+    // The nickname (TODO 6.3) — the key only while the field holds one.
+    ...(watched.nickname?.trim() ? { nickname: watched.nickname } : {}),
     cost: watched.cost,
     cardType: cardTypeForPreview,
     supertype: watched.supertype || null,
@@ -4581,7 +4648,14 @@ export function CardCreatorForm({
                   </FaceScope>
                 ) : (
                   <FaceScope label={faceTabs ? (faceWords?.first ?? null) : null}>
-                <IdentityPanel revise={isRevise} token={kind === "token"} emblem={kind === "emblem"} />
+                <IdentityPanel
+                  revise={isRevise}
+                  token={kind === "token"}
+                  emblem={kind === "emblem"}
+                  nicknamePrinted={frameDrawsNickname(
+                    resolveFrameProfile(normalizeFrameTemplate(watched.frame_style?.template), profileOverrides),
+                  )}
+                />
                 {/* The printed-details switches (TODO 4.6.0): the crown
                     beside the Legendary supertype; on an edit or a remix —
                     whose Card step is locked — the two-colour frame too.
@@ -5138,6 +5212,22 @@ export function CardCreatorForm({
   // PipTextEditors (`data-field`) included. EDITING a stored card, only a
   // field whose text differs from the stored one is touched — the server
   // keeps the same rule, so a card never changes where it wasn't edited.
+  // A REMIX renamed by hand (owner N3, "Clear once"): when the maker leaves
+  // the title field with a name other than the one the remix opened with,
+  // the nickname the remix came with is cleared — ONCE: a nickname typed
+  // after that stays through any later rename, and a title put back before
+  // leaving the field clears nothing. Never on a plain edit (the card keeps
+  // its own) nor a new card (no nickname came with it). The clear is the
+  // maker's own touch: the remix then saves without one.
+  const clearRemixNicknameOnRename = (event: React.FocusEvent<HTMLFormElement>) => {
+    if ((event.target as HTMLElement).getAttribute("name") !== "title") return;
+    spendRemixRenameClear(getValues("title") ?? "");
+  };
+  const onFormBlur = (event: React.FocusEvent<HTMLFormElement>) => {
+    tidyTypographyOnBlur(event);
+    clearRemixNicknameOnRename(event);
+  };
+
   const tidyTypographyOnBlur = (event: React.FocusEvent<HTMLFormElement>) => {
     const target = event.target as HTMLElement;
     const name = target.getAttribute("name") ?? target.getAttribute("data-field") ?? "";
@@ -5155,6 +5245,15 @@ export function CardCreatorForm({
     }
     const next = printTypography(value, field);
     if (next !== value) setValue(path, next as never, { shouldDirty: true });
+  };
+
+  // A remix renamed and saved without leaving the title field (Enter in
+  // the title submits with no blur — independent re-check): its one
+  // nickname clear runs as the form submits, BEFORE handleSubmit reads the
+  // values the payload is built from (setValue is synchronous on the store).
+  const onFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    spendRemixRenameClear(getValues("title") ?? "");
+    return formSubmit(event);
   };
 
   const formSubmit = handleSubmit(
@@ -5183,8 +5282,8 @@ export function CardCreatorForm({
         <BackIsOwnFaceContext.Provider value={battleCard ? dfcLayout !== null : null}>
         <form
           noValidate
-          onSubmit={formSubmit}
-          onBlur={tidyTypographyOnBlur}
+          onSubmit={onFormSubmit}
+          onBlur={onFormBlur}
           className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:items-start"
           data-testid="creator-canvas"
         >
@@ -5239,8 +5338,8 @@ export function CardCreatorForm({
       <BackIsOwnFaceContext.Provider value={battleCard ? dfcLayout !== null : null}>
       <form
         noValidate
-        onSubmit={formSubmit}
-        onBlur={tidyTypographyOnBlur}
+        onSubmit={onFormSubmit}
+        onBlur={onFormBlur}
         className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:grid-cols-[10.5rem_minmax(0,1.05fr)_minmax(0,0.95fr)] xl:gap-6"
       >
         {/* ----- Far left (xl+): vertical icon step rail ----- */}

@@ -101,6 +101,16 @@ export const cardTitleSchema = z
   .min(1, "Title is required.")
   .max(CARD_TITLE_MAX, CARD_TITLE_MAX_MESSAGE);
 
+/** A card's nickname (cards.nickname, migration 0141; TODO 6.3): the name
+ *  printed in the title bar over the card's own. Optional; the DB CHECK
+ *  (cards_nickname_length) says 1–150 and never blank — an empty field is
+ *  NULL (BLANK_IS_NULL_TEXTS). */
+export const CARD_NICKNAME_MAX = CARD_TITLE_MAX;
+export const cardNicknameSchema = z
+  .string()
+  .trim()
+  .max(CARD_NICKNAME_MAX, `Nickname must be ${CARD_NICKNAME_MAX} characters or fewer.`);
+
 export const cardSlugSchema = z
   .string()
   .trim()
@@ -336,6 +346,9 @@ const frameStyleBaseSchema = z
     // or "white". The save stores "white" only, and only on a template that
     // draws the white border (normalizeAnatomy).
     border: z.enum(CARD_BORDER_VALUES).optional(),
+    // CARDNAME / `~` (TODO 6.2): "literal" only on a card migration 0142
+    // flagged (a remix of one keeps its parent's look); absent = the name.
+    selfName: z.literal("literal").optional(),
   })
   .strict();
 
@@ -374,6 +387,9 @@ export const frameAnatomyPatchSchema = z
     // The border (TODO 4.30): "white", or "black" to take a stored "white"
     // off.
     border: z.enum(CARD_BORDER_VALUES).optional(),
+    // CARDNAME / `~` (TODO 6.2): "name" takes a stored "literal" off — the
+    // card's `~` then draws as its name. Nothing switches it back on.
+    selfName: z.literal("name").optional(),
     pair: z
       .tuple([pairColorSchema, pairColorSchema])
       .refine(([a, b]) => a !== b, "Pick two different colours.")
@@ -574,6 +590,9 @@ const watermarkSchema = z.discriminatedUnion("kind", [
 
 const baseCardSchema = z.object({
   title: cardTitleSchema,
+  // The nickname (TODO 6.3). A new card stores none unless one is sent; on
+  // an update `null` clears it and omitted leaves it alone.
+  nickname: cardNicknameSchema.optional(),
   slug: cardSlugSchema.optional(),
   game_system_id: uuidSchema,
   cost: cardCostSchema,
@@ -682,6 +701,7 @@ export const createCardSchema = baseCardSchema;
 // creator sent nothing for an empty field, so it could never clear a flavor
 // text, a cost, a stat… on a stored card.) Create never takes null.
 export const updateCardSchema = baseCardSchema.partial().extend({
+  nickname: cardNicknameSchema.nullable().optional(),
   cost: cardCostSchema.nullable(),
   rules_text: cardRulesTextSchema.nullable(),
   flavor_text: cardFlavorTextSchema.nullable(),
@@ -711,6 +731,7 @@ export const updateCardSchema = baseCardSchema.partial().extend({
  *  there the two values mean two things. (`cost` is already normalised by
  *  the actions; an empty `art_url` never parses as "".) */
 export const BLANK_IS_NULL_TEXTS = [
+  "nickname",
   "supertype",
   "rules_text",
   "flavor_text",

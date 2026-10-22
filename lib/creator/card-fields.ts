@@ -195,6 +195,7 @@ export function defaultValuesFor(
   if (!card) {
     return {
       title: "",
+      nickname: "",
       slug: "",
       game_system_id: fallbackGameSystem,
       cost: "",
@@ -266,10 +267,15 @@ export function defaultValuesFor(
     // The anatomy switches exactly as stored: absent stays absent — a
     // stored card keeps its look until its owner switches a piece on.
     ...storedAnatomyOf(persistedFrame),
+    // CARDNAME / `~` (TODO 6.2): a card migration 0142 flagged keeps its
+    // literal `~` in the editor's preview until its owner switches the name
+    // on (the Text step's note); every other card has no key.
+    ...(persistedFrame.selfName === "literal" ? { selfName: "literal" as const } : {}),
   };
 
   return {
     title: card.title,
+    nickname: card.nickname ?? "",
     slug: card.slug,
     game_system_id: card.game_system_id,
     cost: card.cost ?? "",

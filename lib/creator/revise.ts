@@ -23,6 +23,8 @@ import type { ColorIdentity } from "@/types/card";
  *  is displayed read-only (LockedSummary) and never leaves the client. */
 export const REVISABLE_FIELDS = [
   "title",
+  // The nickname (TODO 6.3): a printed name like the title.
+  "nickname",
   // The PRINTED words of the type line (TODO 3b.16, owner 2026-10-09: "an
   // existing card's field starts as the line it prints today, so nothing
   // changes until its owner edits it"). What the card IS stays locked — its
@@ -83,6 +85,7 @@ export function isRevisableField(name: string): name is RevisableField {
  *  REVISABLE_FIELDS. */
 export const REVISABLE_PAYLOAD_KEYS = [
   "title",
+  "nickname",
   "printed_types",
   "rarity",
   "cost",
@@ -191,6 +194,9 @@ export function frameAnatomyPatchFor(
   // is sent only to take a stored "white" off.
   const white = values.frame_style.border === "white";
   if (white !== (storedStyle.border === "white")) patch.border = white ? "white" : "black";
+  // CARDNAME / `~` (TODO 6.2): a flagged card (migration 0142) whose owner
+  // switched the name on — the form dropped the key; one way only.
+  if (storedStyle.selfName === "literal" && values.frame_style.selfName !== "literal") patch.selfName = "name";
   const pair = twoColorPairOf(values.color_identity);
   if (pair && values.frame_style.twoColor === true && !twoColorPairOf(stored.color_identity)) {
     patch.twoColor = true;

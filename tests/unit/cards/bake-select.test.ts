@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { BAKE_SELECT_COLUMNS } from "@/lib/cards/bake-core";
-import { bakeSelectColumnsWithout0137, isMissing0137Column, selectBakeColumns } from "@/lib/cards/bake-select";
+import { bakeSelectColumnsWithout0137, isMissing0137Column, missingLateColumn, selectBakeColumns } from "@/lib/cards/bake-select";
 
 // The deploy window of migration 0137 (TODO 3b.16): the new code live on a
 // database that has no `printed_types` column yet. PostgREST's answers below
@@ -32,6 +32,28 @@ describe("the bake's read on a database from before migration 0137", () => {
     expect(run).toHaveBeenCalledTimes(2);
     expect(run).toHaveBeenLastCalledWith(bakeSelectColumnsWithout0137());
     expect(result).toEqual({ data: [{ id: "a" }], error: null });
+  });
+
+  it("…and the same for the nickname (migration 0141, TODO 6.3), one column at a time", async () => {
+    expect(BAKE_SELECT_COLUMNS.split(/,\s*/)).toContain("nickname");
+    const NICK = { code: "42703", message: "column cards.nickname does not exist" };
+    expect(missingLateColumn(NICK)).toBe("nickname");
+    // A database from before 0141: read once more without the nickname.
+    const before0141 = vi.fn(async (columns: string) =>
+      columns.split(", ").includes("nickname") ? { data: null, error: NICK } : { data: [{ id: "a" }], error: null },
+    );
+    expect(await selectBakeColumns(before0141)).toEqual({ data: [{ id: "a" }], error: null });
+    expect(before0141).toHaveBeenCalledTimes(2);
+    expect(before0141.mock.calls[1]![0].split(", ")).toEqual(BAKE_SELECT_COLUMNS.split(/,\s*/).filter((c) => c !== "nickname"));
+    // …and from before 0137 too: both dropped, each once.
+    const before0137 = vi.fn(async (columns: string) => {
+      const list = columns.split(", ");
+      if (list.includes("nickname")) return { data: null, error: NICK };
+      if (list.includes("printed_types")) return { data: null, error: MISSING };
+      return { data: [{ id: "b" }], error: null };
+    });
+    expect(await selectBakeColumns(before0137)).toEqual({ data: [{ id: "b" }], error: null });
+    expect(before0137).toHaveBeenCalledTimes(3);
   });
 
   it("tolerates nothing else: another missing column, another error, a second failure", async () => {

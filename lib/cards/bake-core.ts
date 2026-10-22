@@ -39,6 +39,10 @@ export type CardRowForBake = {
   /** The Types field as typed (migration 0137, TODO 3b.16). OPTIONAL like
    *  the collector fields below: the visual matrix's rows have none. */
   printed_types?: string | null;
+  /** The nickname (migration 0141, TODO 6.3). OPTIONAL like printed_types:
+   *  the visual matrix's rows have none, and an explicit key would redefine
+   *  every case. */
+  nickname?: string | null;
   subtypes: string[];
   rarity: string | null;
   color_identity: string[];
@@ -76,7 +80,7 @@ export type CardRowForBake = {
 
 /** Every column the renderer needs (plus owner/visibility for gating). */
 export const BAKE_SELECT_COLUMNS =
-  "id, owner_id, visibility, updated_at, title, cost, card_type, supertype, printed_types, subtypes, rarity, color_identity, rules_text, flavor_text, power, toughness, loyalty, defense, artist_credit, art_url, art_position, frame_style, set_icon_url, set_icon_code, back_face, face_content, watermark, set_code, collector_number, lang, rendered_back_image_url";
+  "id, owner_id, visibility, updated_at, title, nickname, cost, card_type, supertype, printed_types, subtypes, rarity, color_identity, rules_text, flavor_text, power, toughness, loyalty, defense, artist_credit, art_url, art_position, frame_style, set_icon_url, set_icon_code, back_face, face_content, watermark, set_code, collector_number, lang, rendered_back_image_url";
 
 export function rowToPreviewData(
   card: CardRowForBake,
@@ -94,6 +98,9 @@ export function rowToPreviewData(
     pipOverrides,
     profileOverrides,
     title: card.title,
+    // Only a card with a nickname carries the key (TODO 6.3): every other
+    // card's preview data is, key for key, what it was.
+    ...(typeof card.nickname === "string" ? { nickname: card.nickname } : {}),
     cost: card.cost,
     cardType: isCardType(card.card_type) ? (card.card_type as CardType) : null,
     supertype: card.supertype,
