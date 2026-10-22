@@ -96,6 +96,9 @@ describe("the switch values", () => {
       "m15mdfclandback",
       // The Lord of the Rings scroll (TODO 4.11): M15's slot on its border.
       "lotrscroll",
+      // …and the Expeditions (TODO 4.11 wave 1), on their own rows.
+      "expeditionland",
+      "expeditionlandbfz",
     ]);
   });
 });

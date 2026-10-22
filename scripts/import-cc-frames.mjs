@@ -448,7 +448,10 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
   if (landscape !== Boolean(def.transform)) {
     throw new Error(`${template}: a landscape recipe names its transform ("rotate-cw" or "downscale"), and only a landscape one does`);
   }
-  if (def.shift && !landscape) throw new Error(`${template}: a block shift is in the 2100×1500 master's px — a landscape recipe's only`);
+  // A block shift is in the WRITTEN master's px (outW × outH): the landscape
+  // pair's 2100×1500, and a portrait pack drawn at 1500×2100 (the
+  // Expeditions, TODO 4.11 wave 1) — a portrait pack of another size is
+  // refused where the shift runs (its rows would be the pack's, not ours).
   for (const key of builtColors(def)) {
     recipe[key] = def.colors[key].map(describeLayer);
     const out = path.join(outDir, template, `${key}.png`);
@@ -589,6 +592,9 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
       // Whole blocks moved onto the prints through the flat zones between
       // them (TODO 4.21b: split's halves, battle's lower block) — it throws
       // when a zone isn't flat, so every moved pixel is the pack's.
+      if (def.shift && !landscape && (W !== outW || H !== outH)) {
+        throw new Error(`${template}/${key}: a portrait block shift names the ${outW}×${outH} master's rows; the pack is ${W}×${H}`);
+      }
       if (def.shift) master = shiftBlocksRgba8(master, outW, outH, def.shift);
       // What no block move reaches, re-cut onto the prints (TODO 4.21d: the
       // battle's right side and icon) — the bars' paper stretched, the shield

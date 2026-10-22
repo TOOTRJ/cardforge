@@ -527,6 +527,8 @@ export function frameColorKeyForKind(kind: CardKind, colorKey: FrameColorKey): F
  *  still applies on top on a showcase, M15-treatment or Borderless body). */
 const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   expeditionland: ["land"],
+  // The 2015 Expeditions (TODO 4.11 wave 1): lands only, as the 2020 look.
+  expeditionlandbfz: ["land"],
   m15fullartland: ["land"],
   fullartland: ["land"],
   // The older full-art basic designs (TODO 4.40 / 4.41): basics only too.

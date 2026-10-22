@@ -83,6 +83,7 @@ import {
   watermarkInk,
   watermarkOpacity,
 } from "@/lib/cards/watermark";
+import { plainLandMasterDrawn } from "@/lib/cards/frame-color-key";
 import { getWatermarkDataUrl } from "@/lib/render/card-frames";
 import {
   BASIC_SYMBOL_DISC_FILL,
@@ -495,6 +496,11 @@ function CardImage({
     card,
     card.frameStyle,
   );
+  // The watermark's tint follows the master a two-colour Expedition paints
+  // (its plain land `c`, TODO 4.11); the card's colour key everywhere else.
+  const watermarkKey = plainLandMasterDrawn(layout, card.frameStyle, card.colorIdentity as ColorIdentity[] | undefined)
+    ? "c"
+    : colorKey;
   // The two-colour look's stat plate and the anatomy overlays (the crown
   // band) — the preview's twins (lib/cards/anatomy.ts). Nothing until a
   // profile declares pair masters / an overlay and the card's switch is on.
@@ -1325,7 +1331,7 @@ function CardImage({
                     height *
                     watermarkHeightFraction(effectiveWatermark),
                 ),
-                color: watermarkInk(colorKey),
+                color: watermarkInk(watermarkKey),
                 lineHeight: 1,
               }}
             >

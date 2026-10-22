@@ -126,7 +126,9 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   m15fullartlandthb: ["880x1184", "3:4", 0.737],
   m15textless: ["864x1200", "3:4", 0.724],
   m15textlessland: ["864x1200", "3:4", 0.724],
-  expeditionland: ["992x1056", "1:1", 0.939],
+  // The Expeditions (TODO 4.11 wave 1, layout v64): CC's window + panel.
+  expeditionland: ["976x1056", "1:1", 0.921],
+  expeditionlandbfz: ["944x1088", "1:1", 0.867],
   nyx: ["896x1168", "3:4", 0.768],
   retro: ["1136x912", "4:3", 1.239],
   retroland: ["1136x912", "4:3", 1.239],

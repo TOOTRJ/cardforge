@@ -1,5 +1,5 @@
 import type { ScryfallCard, ScryfallSet } from "@/lib/scryfall/client";
-import { partColorFromCost } from "@/lib/cards/part-color";
+import { frameGateColors, partColorFromCost } from "@/lib/cards/part-color";
 import { resolvePrintedTypes } from "@/lib/cards/type-line-field";
 import { oracleSelfNamesAsTokens } from "@/lib/cards/self-name";
 import { getFrameProfile } from "@/lib/cards/template-layout";
@@ -58,6 +58,7 @@ import {
   FULL_ART_BASIC_2022_SETS,
   isM20DesignPrinting,
   landFrameColorRule,
+  twoColourLandOnPlainFrame,
   resolveFrameSignature,
   type FrameMatch,
   type PrintingFacts,
@@ -270,6 +271,11 @@ export type ScryfallImportPatch = {
    *  card lands (finalizeImportMatch — a part's colour not verified there);
    *  the card saves with the look off. */
   printed_part_color?: false;
+  /** `true` for a two-colour Zendikar Expedition (TODO 4.11, owner
+   *  2026-10-22; twoColourLandOnPlainFrame): its frame draws the plain land
+   *  master `c` (FrameStyle.plainLandMaster) while `color_identity` stays
+   *  the card's colour. Absent otherwise. */
+  printed_plain_land_master?: true;
   /** The transform icon FAMILY this printing wears (TODO 5.4, owner Q5:
    *  imports follow the printing's family) — `frame_style.dfcIcon`, from
    *  the printing's `frame_effects` (dfcIconFamilyFromEffects): sun / moon,
@@ -1022,7 +1028,15 @@ export function verifiedFrameMatchFromScryfall(
     // so the printings grid and the import agree.
     return finalizeImportMatch({ ...mapScryfallToFormPatch(card), frame_match: match }, verifiedKeys).frame_match ?? match;
   }
-  return withVerification(match, pickFrameColorKey(frameColorsFromScryfall(card)), verifiedKeys);
+  // (A two-colour Expedition is verified in its plain land master `c`,
+  // TODO 4.11 — frameGateColors, the save's rule.)
+  return withVerification(
+    match,
+    pickFrameColorKey(
+      frameGateColors(match.landOn ?? match.template, { plainLandMaster: twoColourLandOnPlainFrame(card, frontFaceColors(card)) || undefined }, frameColorsFromScryfall(card)),
+    ),
+    verifiedKeys,
+  );
 }
 
 /**
@@ -2138,6 +2152,9 @@ export function mapScryfallToFormPatch(
       const first = firstPartColorOf(card, frontColorIdentity);
       return first ? { printed_first_part_color: first } : {};
     })(),
+    // …and a two-colour Expedition's plain-land frame (TODO 4.11): frame
+    // data beside its unchanged colour.
+    ...(twoColourLandOnPlainFrame(card, frontFaceColors(card)) ? { printed_plain_land_master: true as const } : {}),
     // A flavour-name printing (TODO 6.2, owner Round 80) writes its own
     // name as `~`, which draws the nickname its title bar prints — as the
     // printing sets its rules. Every other import keeps Oracle's name.

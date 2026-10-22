@@ -355,6 +355,9 @@ const frameStyleBaseSchema = z
     // …and the first part's own frame colour (M2: the card's colour stays
     // the whole card's), colour words; kept only on a seam frame.
     firstPartColor: z.array(z.enum(COLOR_IDENTITY_VALUES)).min(1).max(5).optional(),
+    // A two-colour Expedition's plain-land frame (TODO 4.11): frame data,
+    // kept only on a frame that declares the stand-in (normalizeAnatomy).
+    plainLandMaster: z.literal(true).optional(),
   })
   .strict();
 

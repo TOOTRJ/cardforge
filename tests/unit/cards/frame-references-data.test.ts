@@ -121,7 +121,10 @@ const DOCUMENTED_NULLS = new Set([
   // The anime frame is the raised-foil legends BLB #343–355: one mono-green
   // card and multicolour legends (TODO 1.4, checked by eye 2026-09-28).
   "bloomanime/w", "bloomanime/u", "bloomanime/b", "bloomanime/r", "bloomanime/c",
-  "expeditionland/w", "expeditionland/u", "expeditionland/b", "expeditionland/r", "expeditionland/g",
+  // The Expeditions (TODO 4.11 wave 1): ZNE prints one mono-colour land
+  // (#29 Valakut, red), EXP none.
+  "expeditionland/w", "expeditionland/u", "expeditionland/b", "expeditionland/g",
+  "expeditionlandbfz/w", "expeditionlandbfz/u", "expeditionlandbfz/b", "expeditionlandbfz/r", "expeditionlandbfz/g",
   "nyx/c",
   "lotr/c",
   "bloomburrow/c",

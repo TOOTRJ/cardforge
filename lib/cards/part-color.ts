@@ -21,7 +21,7 @@
 import { canonicalColorSequence } from "@/lib/cards/mana-order";
 import { anatomyOn, frameAnatomyOf, isPartColorList, pairColorIdentity, twoColorFromCost, type FrameAnatomyStyle, type TwoColorPair } from "@/lib/cards/anatomy";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
-import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
+import { pickFrameColorKey, plainLandMasterDrawn } from "@/lib/cards/frame-color-key";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import type { ColorIdentity, FrameTemplate } from "@/types/card";
@@ -95,7 +95,12 @@ export function frameGateColors(
   frameStyle: FrameAnatomyStyle | null | undefined,
   colors: readonly ColorIdentity[] | null | undefined,
 ): readonly ColorIdentity[] | null | undefined {
-  if (getFrameProfile(template ?? undefined).partColorSeam === undefined || !anatomyOn(frameStyle, "partColor")) return colors;
+  const profile = getFrameProfile(template ?? undefined);
+  // A two-colour Expedition's plain-land frame (TODO 4.11, owner
+  // 2026-10-22): the frame paints — and is gated and verified in — its
+  // plain land master `c`; the card stays gold in its data.
+  if (plainLandMasterDrawn(profile, frameStyle, colors)) return ["colorless"];
+  if (profile.partColorSeam === undefined || !anatomyOn(frameStyle, "partColor")) return colors;
   return isPartColorList(frameStyle?.firstPartColor) ? frameStyle.firstPartColor : colors;
 }
 

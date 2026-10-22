@@ -22,12 +22,14 @@ import { displayRunPx } from "@/lib/render/satori-text";
 //   • a type line too long even at the 5 pt floor is drawn as the fit's ONE
 //     "…"-cut string, at the floor's whole px, a print's gap before the set
 //     symbol's ink (both renderers draw that string);
-//   • the rules backdrop is painted UNDER the type band: on Expedition, whose
-//     rules box overlaps the type bar, it no longer dims the bake's set
-//     symbol.
-// The Card Conjurer masters live in the frames bucket: the bake is served a
-// flat light-grey stand-in (so the dark ink is the only dark mark in its
-// band); Expedition's MSE master is read from public/frames as always.
+//   • the rules box never dims the set symbol: on Expedition, whose rules box
+//     overlapped the type bar on its MSE master (a dark backdrop until
+//     TODO 4.11 wave 1's Card Conjurer re-source, layout v64; the panel is
+//     the master's now), the symbol's full height shows with rules text or
+//     without.
+// The Card Conjurer masters live in the frames bucket (Expedition's since
+// layout v64): the bake is served a flat light-grey stand-in (so the dark
+// ink is the only dark mark in its band).
 // ---------------------------------------------------------------------------
 
 const ORIGIN = "https://frames.test";
@@ -39,7 +41,7 @@ async function standInBucket() {
   })
     .png()
     .toBuffer();
-  const files: Record<string, Buffer> = { "m15/b.png": frame, "m15pw/b.png": frame };
+  const files: Record<string, Buffer> = { "m15/b.png": frame, "m15pw/b.png": frame, "expeditionland/b.png": frame };
   const manifest = {
     version: 1 as const,
     bucket: "frames",
@@ -258,11 +260,12 @@ describe("layout v32 review fixes — real bakes", () => {
     }
   });
 
-  it("paints Expedition's rules backdrop under its set symbol, as the preview layers it", async () => {
+  it("never dims Expedition's set symbol with its rules box, as the preview layers it", async () => {
     const icon = await iconDataUrl();
     const exp = getFrameProfile("expeditionland");
     const { width: W, height: H } = RENDER_PRESETS.hd;
-    // The rules box overlaps the type bar: the backdrop reaches the symbol.
+    // The rules box ends above the symbol now (the panel is the master's);
+    // the symbol draws in its own box (symbolRect), whole either way.
     const sym = setSymbolSize(exp, setSymbolSource(icon, null));
     const bandCentre = ((exp.type.rect.topPct + exp.type.rect.heightPct / 2) / 100) * H;
     const symbolBottom = bandCentre + (sym.sizePct * W) / 2;
@@ -271,15 +274,18 @@ describe("layout v32 review fixes — real bakes", () => {
     const bare = await bake(card({ ...base, rulesText: null }), "hd");
     const boxed = await bake(card({ ...base, rulesText: "{T}: Add {C}." }), "hd");
     const blue = (r: number, g: number, b: number) => Math.abs(r - 30) < 12 && Math.abs(g - 90) < 12 && Math.abs(b - 160) < 12;
-    const right = Math.round(((exp.type.rect.leftPct + exp.type.rect.widthPct) / 100) * W);
+    // The symbol's own box (symbolRect, right-aligned, centred).
+    const box = exp.symbolRect!;
+    const right = Math.round(((box.leftPct + box.widthPct) / 100) * W);
     const x0 = right - Math.round(sym.drawnWidthPct * W) - 4;
-    const y0 = Math.floor((exp.type.rect.topPct / 100) * H) - 10;
-    const y1 = Math.ceil(symbolBottom) + 10;
+    const y0 = Math.floor((box.topPct / 100) * H) - 20;
+    const y1 = Math.ceil(((box.topPct + box.heightPct) / 100) * H) + 20;
     const a = inkBox(bare, blue, x0, right + 4, y0, y1)!;
     const b = inkBox(boxed, blue, x0, right + 4, y0, y1)!;
     // The icon's full height shows through in both — no dimmed lower part.
+    expect(a).toBeTruthy();
     expect(b.bottom).toBe(a.bottom);
     expect(b.top).toBe(a.top);
-    expect(a.bottom).toBeGreaterThan((exp.rules.rect.topPct / 100) * H + 5);
+    expect(a.bottom - a.top).toBeGreaterThan(40);
   });
 });

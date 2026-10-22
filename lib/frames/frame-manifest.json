@@ -646,6 +646,202 @@
       "width": 1500,
       "height": 2100
     },
+    "expeditionland/b.png": {
+      "hash": "ad617dd9791a",
+      "sha256": "ad617dd9791a227b9ac795f4c8e4681af9ec891f1268ab0702b1397b104969fb",
+      "bytes": 1096144,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionland/b.webp": {
+      "hash": "68cff17130b1",
+      "sha256": "68cff17130b18542ef9187d864f66a278cb78c609b9030ff9c9a48b8a8490263",
+      "bytes": 71332,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionland/c.png": {
+      "hash": "e91306b20516",
+      "sha256": "e91306b205161b1de683499f62b7290e6e6f5a3c8ac48de444ffe4f285b378e8",
+      "bytes": 966022,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionland/c.webp": {
+      "hash": "489ad3ec527c",
+      "sha256": "489ad3ec527c2fac2de36b2657840b537dee4e57156c96dd2a0b14ac0f575fba",
+      "bytes": 71374,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionland/g.png": {
+      "hash": "1d3278971be8",
+      "sha256": "1d3278971be862af6c0203b6869332e61e097a464336646b823115b4c775c0c6",
+      "bytes": 1148158,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionland/g.webp": {
+      "hash": "bbb98c59be67",
+      "sha256": "bbb98c59be675128a53aa44a060c61714716607dc1f0269c74342c2ed57b2fdc",
+      "bytes": 79246,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionland/m.png": {
+      "hash": "c53962f94f45",
+      "sha256": "c53962f94f45f54ae42b953ae91c6bc8dbab47506fac90be4e2637b4876a28d7",
+      "bytes": 1106932,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionland/m.webp": {
+      "hash": "785a0677f45f",
+      "sha256": "785a0677f45ffee91140acf9fad6f5b3783067123e769091919b095839df3e5d",
+      "bytes": 84534,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionland/r.png": {
+      "hash": "c0380e390892",
+      "sha256": "c0380e3908928c47788ca95bc10905db19a1c7d5a342c65f8a94d1cac473da74",
+      "bytes": 1112465,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionland/r.webp": {
+      "hash": "c22ab4125f88",
+      "sha256": "c22ab4125f88ab0fcbce0448105b98f34eb8e0acfd0a26dd455049eface17469",
+      "bytes": 90710,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionland/u.png": {
+      "hash": "58f09ae6c8e5",
+      "sha256": "58f09ae6c8e5737b8ba6e38aceb1ccecba0b0c9bff1c056000a523fdda8df7e4",
+      "bytes": 1047351,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionland/u.webp": {
+      "hash": "1ef7b58a91da",
+      "sha256": "1ef7b58a91dad398f9d71e6994909ddb814ecadf0059cfe915332f14c76e59fc",
+      "bytes": 80366,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionland/w.png": {
+      "hash": "f70ed9f72f3f",
+      "sha256": "f70ed9f72f3f1730e946b0150a40a3e4f380658db979238541bfb396e7288305",
+      "bytes": 1030167,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionland/w.webp": {
+      "hash": "972e587478ac",
+      "sha256": "972e587478ac8d2a2c61d466d45d4add0391e2655425ff368d59939e12a7d9e6",
+      "bytes": 72862,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionlandbfz/b.png": {
+      "hash": "a7e7291b4d18",
+      "sha256": "a7e7291b4d18c871ca6c859f3de2f73f694baeec343da9b1bc23902a83ba1513",
+      "bytes": 1048420,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionlandbfz/b.webp": {
+      "hash": "54b14cf44619",
+      "sha256": "54b14cf44619f03f80b1d527251dd4db8b37055dcc74b0e5a874fed42323fd2b",
+      "bytes": 92460,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionlandbfz/c.png": {
+      "hash": "898c0e624adb",
+      "sha256": "898c0e624adbbc3cad3e7f314d7c9ff6591d394e1ebdd3022bd3a74a9683af42",
+      "bytes": 1047368,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionlandbfz/c.webp": {
+      "hash": "f5b332bffec1",
+      "sha256": "f5b332bffec1db7f2db60734c972ffa3c8e2a9e4b3d1c7571ba7adc28a5ce3b0",
+      "bytes": 94556,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionlandbfz/g.png": {
+      "hash": "2a8674566092",
+      "sha256": "2a86745660920cd0f611f6643d22fa6908947ba22c3dc0277aec2db50c9ec6f1",
+      "bytes": 1045849,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionlandbfz/g.webp": {
+      "hash": "e2c530d4c963",
+      "sha256": "e2c530d4c963cae313ddb7c13117095d358d4d209b9f18fd8656cd5679b3058c",
+      "bytes": 95210,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionlandbfz/m.png": {
+      "hash": "95358a122646",
+      "sha256": "95358a1226468fb2a8cd2829e939a4806a795db44fe7b827e33be104f01caeed",
+      "bytes": 1260967,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionlandbfz/m.webp": {
+      "hash": "ad6c8aa7520b",
+      "sha256": "ad6c8aa7520b08fac1a680928165144e7e77a49a39affec4de198baabf6b714d",
+      "bytes": 89062,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionlandbfz/r.png": {
+      "hash": "a5b0443df32c",
+      "sha256": "a5b0443df32c4a6fa5483b71bb361bc76ca49623e459adcfcd5b1efd41ca5048",
+      "bytes": 1048399,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionlandbfz/r.webp": {
+      "hash": "4f017e210d8b",
+      "sha256": "4f017e210d8bd883aed36f3da497f373e01a04cf3ecf1b58f8c8e71e20ee5b69",
+      "bytes": 97746,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionlandbfz/u.png": {
+      "hash": "6be5621e40cd",
+      "sha256": "6be5621e40cd49f242113e4a58fd1aa0fce16a630c3e375f9d52f9c0d50abdeb",
+      "bytes": 1045690,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionlandbfz/u.webp": {
+      "hash": "43f176179a69",
+      "sha256": "43f176179a69252d8310bdf048b7347cc50ca0f92cbe2a076dd500f04951a6bd",
+      "bytes": 97130,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionlandbfz/w.png": {
+      "hash": "9e8bfc9e4145",
+      "sha256": "9e8bfc9e4145d89de47b5bee76ebb74b6c51f2c29d2327c34c872fdfde4f06cd",
+      "bytes": 1045438,
+      "width": 1500,
+      "height": 2100
+    },
+    "expeditionlandbfz/w.webp": {
+      "hash": "3252e9d9444f",
+      "sha256": "3252e9d9444f1672e6182fb76d1d0b0fbdf8e04d41f801771aff395b215a6c03",
+      "bytes": 95130,
+      "width": 1500,
+      "height": 2100
+    },
     "extendedart/a.png": {
       "hash": "44a87b85d75e",
       "sha256": "44a87b85d75e380ca53078a54a0f457e2c52222604e902f984321bf11a0e846e",

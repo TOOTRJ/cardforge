@@ -322,6 +322,9 @@ const PICKS: readonly Pick[] = [
   { from: "fullart/w/creature-short", why: "v63 ZNR hedron: black name and type ink on the white key's ivory bars, the art under the whole frame, the light plate's dark digits" },
   { from: "fullart/wu/creature-long@crown", why: "v63 ZNR hedron: white ink with its shadow on the gold bars, the pair's split crown band over the gold master (pairCrownOnGold)" },
   { from: "fullart/u/creature-short@stamp", why: "v63 ZNR hedron: the notch split off CC's master drawn back over the plain one, our oval in its cut, white digits on the blue plate" },
+  // The Expeditions from Card Conjurer (TODO 4.11 wave 1, layout v64).
+  { from: "expeditionland/g/land-long@collector", why: "v64 Expedition (ZNE): the art under the light rules panel, dark ink, the re-cut bars (the type band on 1805), the set symbol's own box, the collector line on ZNE's rows" },
+  { from: "expeditionlandbfz/u/land-short@collector-2015", why: "2015 Expedition (EXP): the panel under the arched window, the 2015 collector line 6.5 px above M15's rows" },
   { from: "m15borderless/b/creature-long", why: "borderless: art to the edge, white ink, the keylined set symbol" },
   // --- the borderless stamp and collector line (TODO 4.9d) -----------------
   { from: "m15borderless/r/creature-long@stamp-collector-hd", why: "borderless: the lifted-pinline arch, the oval over the black, the collector line with the mark on line 2 beside the plate" },
