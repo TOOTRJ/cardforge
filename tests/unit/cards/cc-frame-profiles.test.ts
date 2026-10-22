@@ -35,17 +35,27 @@ describe("Card Conjurer frame profiles", () => {
     retro: undefined,
   };
 
-  it("lifts the inline mana cost ~0.55 % of the card height on every CC frame that shows one", () => {
+  it("sets the inline mana cost where CURRENT print does on every CC frame that shows one (layout v61)", () => {
     for (const template of ccTemplates) {
       const profile = getFrameProfile(template);
       if (profile.hideCost || profile.costRect) continue;
       if (template in OWN_PRINT_COST_DY) {
         expect(profile.costDy, template).toBe(OWN_PRINT_COST_DY[template]);
+        expect(profile.costDx, template).toBeUndefined();
         continue;
       }
-      expect(profile.costDy, template).toBeCloseTo(-0.0077, 6);
-      // costDy is a fraction of the WIDTH; the card is 5:7.
-      expect((-(profile.costDy ?? 0) / 1.4) * 100, template).toBeCloseTo(0.55, 2);
+      // v24–v60 lifted the discs 11.55 px (−0.0077 W) onto the 2014–2023
+      // prints; June-2023+ prints set them 4.6 px lower (the 2023 pip move,
+      // docs/FRAMES.md "The cost row as printed since 2023"): 7 px above the
+      // band's centre in the bake (−6.6 px rounds to −7 there: the disc on
+      // 122–192, centred on 157.0; the preview's exact −6.6 stays within
+      // 0.4 px of it) — 70 px discs (TODO 3.34) and the row's end 2 px right.
+      expect(profile.costDy, template).toBe(-6.6 / 1500);
+      expect(Math.round((profile.costDy ?? 0) * 1500), template).toBe(-7);
+      expect(profile.costDx, template).toBe(2 / 1500);
+      expect(Math.round((profile.costSizePct ?? 0) * 1500), template).toBe(70);
+      const band = profile.title.rect;
+      expect(((band.topPct + band.heightPct / 2) / 100) * 2100 + (profile.costDy ?? 0) * 1500, template).toBeCloseTo(157.2, 6);
     }
     expect([...ccTemplates].filter((t) => getFrameProfile(t).costDy)).toEqual(
       expect.arrayContaining(["m15", "m15artifact", "m15snow", "m15devoid"]),

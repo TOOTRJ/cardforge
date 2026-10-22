@@ -41,6 +41,8 @@ describe("CardPreview — m15pw title bar", () => {
     expect(box.style.top).toBe(`${p.costRect!.topPct}%`);
     expect(box.style.justifyContent).toBe("flex-end");
     expect(p.costDy).toBe(2 / 1500);
-    expect(cost.style.transform).toBe(`translateY(${(p.costDy! * 100).toFixed(3)}cqw)`);
+    // …and 4 HD px right of the box's end (costDx, layout v61).
+    expect(p.costDx).toBe(4 / 1500);
+    expect(cost.style.transform).toBe(`translate(${(p.costDx! * 100).toFixed(3)}cqw, ${(p.costDy! * 100).toFixed(3)}cqw)`);
   });
 });

@@ -1185,6 +1185,7 @@ function CardImage({
             overrides={card.pipOverrides}
             symbols={symbols}
             dy={layout.costDy ? fpx(layout.costDy, width) : 0}
+            dx={layout.costDx ? fpx(layout.costDx, width) : 0}
           />
         ) : isAligned(layout.title) || layout.title.fit === "measured" ? null : (
           <span style={{ display: "flex" }} />
@@ -1207,6 +1208,7 @@ function CardImage({
             overrides={card.pipOverrides}
             symbols={symbols}
             dy={layout.costDy ? fpx(layout.costDy, width) : 0}
+            dx={layout.costDx ? fpx(layout.costDx, width) : 0}
           />
         </div>
       ) : null}
@@ -2381,6 +2383,7 @@ function CostGlyphs({
   overrides,
   symbols,
   dy = 0,
+  dx = 0,
 }: {
   cost: string;
   fontSize: number;
@@ -2388,8 +2391,12 @@ function CostGlyphs({
   overrides?: PipOverrides | null;
   /** The frame's symbol style (lib/cards/symbol-style.ts). */
   symbols: SymbolStyleSpec;
-  /** Vertical nudge in px (profile.costDy) — the preview's translateY. */
+  /** Vertical nudge in px (profile.costDy) — the preview's translate. */
   dy?: number;
+  /** Horizontal nudge in px (profile.costDx, layout v61) — the same
+   *  translate; the row's layout box, which the name's room is measured
+   *  against, stays where the band put it. */
+  dx?: number;
 }) {
   const tokens = tokenize(cost);
   if (tokens.length === 0) return <span style={{ display: "flex" }} />;
@@ -2399,7 +2406,7 @@ function CostGlyphs({
       style={{
         display: "flex",
         alignItems: "center",
-        ...(dy ? { transform: `translate(0px, ${dy}px)` } : {}),
+        ...(dy || dx ? { transform: `translate(${dx}px, ${dy}px)` } : {}),
         // The style's pip gap (COST_PIP_GAP of the disc on every style but
         // "original", whose prints set the discs further apart); a fitted
         // bar measures a cost with the same gap (costRowWidthPct).
