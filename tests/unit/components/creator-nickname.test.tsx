@@ -324,6 +324,52 @@ describe("another card forgets the nickname", () => {
     expect((actions.createCardAction.mock.calls[0][0] as Record<string, unknown>).nickname).toBe("The Ember Warden");
   });
 
+  // Owner N3, "Clear once": a REMIX renamed BY HAND loses the nickname it
+  // came with when the maker leaves the title field — once.
+  const blur = async (name: string) => {
+    await act(async () => {
+      fireEvent.blur(field(name));
+    });
+  };
+
+  it("a hand rename in a remix clears the nickname it came with (on leaving the field), and the save sends none", async () => {
+    renderForm("remix", savedCard({ nickname: "The Ember Warden" }));
+    await type("title", "Gloomwood Stalker");
+    expect(field("nickname").value).toBe("The Ember Warden");
+    await blur("title");
+    expect(field("nickname").value).toBe("");
+    await save();
+    await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
+    expect(actions.createCardAction.mock.calls[0][0] as Record<string, unknown>).not.toHaveProperty("nickname");
+  });
+
+  it("…once: a nickname typed after the rename survives a second rename", async () => {
+    renderForm("remix", savedCard({ nickname: "The Ember Warden" }));
+    await type("title", "Gloomwood Stalker");
+    await blur("title");
+    await type("nickname", "The Night Hunter");
+    await type("title", "Gloomwood Prowler");
+    await blur("title");
+    expect(field("nickname").value).toBe("The Night Hunter");
+  });
+
+  it("a title put back to the remix's own before leaving the field clears nothing", async () => {
+    renderForm("remix", savedCard({ nickname: "The Ember Warden" }));
+    const opened = field("title").value;
+    await type("title", "Gloomwood Stalker");
+    await type("title", opened);
+    await blur("title");
+    expect(field("nickname").value).toBe("The Ember Warden");
+  });
+
+  it("a plain edit's rename keeps the card's nickname", async () => {
+    renderForm("edit", savedCard({ nickname: "The Ember Warden" }));
+    await type("title", "Kesh, Emberforge Keeper");
+    await blur("title");
+    expect(field("nickname").value).toBe("The Ember Warden");
+    expect(await sentUpdate()).not.toHaveProperty("nickname");
+  });
+
   it("…but an edit keeps the card's own", async () => {
     renderForm("edit", savedCard({ nickname: "The Ember Warden" }));
     await act(async () => {

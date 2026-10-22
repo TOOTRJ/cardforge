@@ -1182,7 +1182,9 @@ Rules and gotchas:
   (`cardTitleWithNickname`), the JSON-LD `alternateName`, the line under
   the H1 "Printed as" only where the frame prints it, else "Also known as"
   (`nicknamePageLine`); an idea or an AI fill that names a new card or a
-  REMIX forgets the nickname of the card before it (an edit keeps it); gallery search
+  REMIX forgets the nickname of the card before it, and a remix renamed by
+  hand clears it ONCE on leaving the title (`clearRemixNicknameOnRename`;
+  an edit keeps it); gallery search
   (search_vector weight A + the ILIKE half) and My Cards' search read it. A
   print-typography "name" field (front only).
 - CARDNAME / `~` (TODO 6.2): `~` and the capitalised word CARDNAME in rules

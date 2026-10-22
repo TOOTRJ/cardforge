@@ -1021,6 +1021,9 @@ export function CardCreatorForm({
   if (nicknameBaseline.key !== resetKey) {
     setNicknameBaseline({ key: resetKey, text: (defaults.nickname ?? "").trim() });
   }
+  // A remix's one nickname clear (owner N3, "Clear once"): spent by the
+  // first rename — by hand (clearRemixNicknameOnRename), an idea or a fill.
+  const remixNicknameClearedRef = useRef(false);
   useEffect(() => {
     if (lastReset.current.key === resetKey) return;
     const sameCard = lastReset.current.cardId === resetCardId;
@@ -2541,7 +2544,10 @@ export function CardCreatorForm({
     // N3): the nickname of the card before it is forgotten, as its borrowed
     // words are — on a new card AND a remix (a rename clears it). An edit
     // keeps the card's own.
-    if (patch.title !== undefined && !isEdit) setValue("nickname", "", { shouldDirty: true });
+    if (patch.title !== undefined && !isEdit) {
+      setValue("nickname", "", { shouldDirty: true });
+      remixNicknameClearedRef.current = true;
+    }
     setIfPresent("cost", patch.cost);
     // An idea's type words print in the built order (TODO 1.20); a typed
     // Types text gives way to them (TODO 3b.16). Locked while revising.
@@ -3176,7 +3182,10 @@ export function CardCreatorForm({
     // N3): the nickname typed or imported for the card before it is
     // forgotten, as its borrowed words are — on a new card AND a remix (a
     // rename clears it). An edit keeps the card's own.
-    if (fill.title !== undefined && !isEdit) setValue("nickname", "", { shouldDirty: true });
+    if (fill.title !== undefined && !isEdit) {
+      setValue("nickname", "", { shouldDirty: true });
+      remixNicknameClearedRef.current = true;
+    }
     // The job picked the frame for the text it wrote (resolveGeneratedFrame:
     // a token's text box included) — that frame stands, below.
     let filledFrame = false;
@@ -3413,6 +3422,7 @@ export function CardCreatorForm({
   // and return to step 1.
   const handleStartOver = () => {
     reset(defaults);
+    remixNicknameClearedRef.current = false;
     stashedSecondPartRef.current = {};
     secondPartFields.forget();
     forgetBorrowedWords();
@@ -5187,6 +5197,25 @@ export function CardCreatorForm({
   // PipTextEditors (`data-field`) included. EDITING a stored card, only a
   // field whose text differs from the stored one is touched — the server
   // keeps the same rule, so a card never changes where it wasn't edited.
+  // A REMIX renamed by hand (owner N3, "Clear once"): when the maker leaves
+  // the title field with a name other than the one the remix opened with,
+  // the nickname the remix came with is cleared — ONCE: a nickname typed
+  // after that stays through any later rename, and a title put back before
+  // leaving the field clears nothing. Never on a plain edit (the card keeps
+  // its own) nor a new card (no nickname came with it). The clear is the
+  // maker's own touch: the remix then saves without one.
+  const clearRemixNicknameOnRename = (event: React.FocusEvent<HTMLFormElement>) => {
+    if (!isRemix || readOnly || remixNicknameClearedRef.current) return;
+    if ((event.target as HTMLElement).getAttribute("name") !== "title") return;
+    if ((getValues("title") ?? "").trim() === (defaults.title ?? "").trim()) return;
+    remixNicknameClearedRef.current = true;
+    if ((getValues("nickname") ?? "").trim()) setValue("nickname", "", { shouldDirty: true });
+  };
+  const onFormBlur = (event: React.FocusEvent<HTMLFormElement>) => {
+    tidyTypographyOnBlur(event);
+    clearRemixNicknameOnRename(event);
+  };
+
   const tidyTypographyOnBlur = (event: React.FocusEvent<HTMLFormElement>) => {
     const target = event.target as HTMLElement;
     const name = target.getAttribute("name") ?? target.getAttribute("data-field") ?? "";
@@ -5233,7 +5262,7 @@ export function CardCreatorForm({
         <form
           noValidate
           onSubmit={formSubmit}
-          onBlur={tidyTypographyOnBlur}
+          onBlur={onFormBlur}
           className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:items-start"
           data-testid="creator-canvas"
         >
@@ -5289,7 +5318,7 @@ export function CardCreatorForm({
       <form
         noValidate
         onSubmit={formSubmit}
-        onBlur={tidyTypographyOnBlur}
+        onBlur={onFormBlur}
         className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:grid-cols-[10.5rem_minmax(0,1.05fr)_minmax(0,0.95fr)] xl:gap-6"
       >
         {/* ----- Far left (xl+): vertical icon step rail ----- */}
