@@ -311,8 +311,11 @@ const PICKS: readonly Pick[] = [
   // Its follow-ups (owner Round 63): the two-colour pair and the textless crown.
   { from: "extendedart/wu/creature-long@pair-crown", why: "extended art: the gold-split pair master and the split floating crown (4.7 follow-up)" },
   { from: "m15textless/u/creature-long@crown", why: "textless promo: the standard crown band over the promo master (4.35 follow-up)" },
-  // The Expeditions from Card Conjurer (TODO 4.11 wave 1, layout v62).
-  { from: "expeditionland/g/land-long@collector", why: "v62 Expedition (ZNE): the art under the light rules panel, dark ink, the type band on 1794, the set symbol's own box, the collector line on ZNE's rows" },
+  // The Lord of the Rings scroll from Card Conjurer (TODO 4.11, layout v62).
+  { from: "lotrscroll/w/creature-long@crown", why: "v62 LOTR scroll: CC's 'Scroll' master, the M15 pack's slots on the scroll, its own crown band, the scroll plate" },
+  { from: "lotrscroll/c/artifact-long@stamp-c", why: "v62 LOTR scroll: the pack's own triangle notch per key over the `a` master, the matte or silver triangle art in its cut" },
+  // The Expeditions from Card Conjurer (TODO 4.11 wave 1, layout v64).
+  { from: "expeditionland/g/land-long@collector", why: "v64 Expedition (ZNE): the art under the light rules panel, dark ink, the re-cut bars (the type band on 1805), the set symbol's own box, the collector line on ZNE's rows" },
   { from: "expeditionlandbfz/u/land-short@collector-2015", why: "2015 Expedition (EXP): the panel under the arched window, the 2015 collector line 6.5 px above M15's rows" },
   { from: "m15borderless/b/creature-long", why: "borderless: art to the edge, white ink, the keylined set symbol" },
   // --- the borderless stamp and collector line (TODO 4.9d) -----------------

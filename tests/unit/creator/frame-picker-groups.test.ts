@@ -591,7 +591,12 @@ describe("the frame picker's groups: a classification change only", () => {
   // on the tall box where it is verified — "all" alone: production has not
   // ticked it; until then they land where main lands them.
   it("imports — every captured printing's match, landing, chooser and remix landing: the same, but the crowned and two-colour M20 tokens exact (4.48), the Nyx tokens (4.51) and the tall-box arch tokens (4.55) exact once verified", () => {
+    // …and TODO 4.11: the Lord of the Rings scroll's border is true (its Card
+    // Conjurer masters), so LTR #482 is EXACT on it once verified (only
+    // "all" verifies it); production lands it where main does.
+    expect(raw.imports["all|ltr-482"]).toMatchObject({ frame_template: "lotrscroll", match: ["exact", "lotrscroll", null] });
     expect(changed("imports")).toEqual([
+      "all|ltr-482",
       "all|takh-1", "all|tdsk-10", "all|tdsk-4", "all|teoc-13",
       "all|tmkm-10", "all|tmkm-13", "all|tmom-16", "all|tsoi-11",
       "all|zne-1",

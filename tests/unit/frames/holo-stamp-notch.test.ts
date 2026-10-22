@@ -75,7 +75,12 @@ function onDisk(rel: string): Buffer | null {
 
 /** A folder's recipe as the importer reads it (the pair fields are the
  *  M15 folder's alone). */
-type NotchDef = (typeof HOLO_STAMP_NOTCHES)[keyof typeof HOLO_STAMP_NOTCHES] & {
+/** The folders built from ONE tinted piece (the Lord of the Rings scroll's
+ *  notch is the pack's own piece per key, TODO 4.11: its own test,
+ *  tests/unit/frames/lotr-scroll-importer.test.ts). */
+const { lotrscrollholostamp: _scrollNotch, ...TINTED_NOTCHES } = HOLO_STAMP_NOTCHES;
+void _scrollNotch;
+type NotchDef = (typeof TINTED_NOTCHES)[keyof typeof TINTED_NOTCHES] & {
   rampKeys?: readonly string[];
   barSharedBy?: Record<string, string[]>;
   // The cut: an oval (the M15 and walker folders) or a round triangle (the
@@ -330,7 +335,7 @@ describe("published to the frames bucket", () => {
   });
 
   it("provenance records the pinned commit, the one source piece per pack, the tint per key and the cut — never the per-key CC pieces", () => {
-    for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES) as [string, NotchDef][]) {
+    for (const [folder, def] of Object.entries(TINTED_NOTCHES) as [string, NotchDef][]) {
       const p = provenance[folder];
       expect(p, folder).toBeDefined();
       expect(p.commit).toBe(CC_COMMIT);
@@ -365,8 +370,8 @@ describe("published to the frames bucket", () => {
     expect(all.filter((f) => /holo/i.test(f)).sort()).toEqual([M15.shape.src, PW.shape.src]);
   });
 
-  const published = Object.entries(HOLO_STAMP_NOTCHES).flatMap(([folder, def]) => def.keys.map((key) => [folder, key, onDisk(`${folder}/${key}.png`)] as const));
-  const masters = (Object.values(HOLO_STAMP_NOTCHES) as NotchDef[]).flatMap((def) =>
+  const published = Object.entries(TINTED_NOTCHES).flatMap(([folder, def]) => def.keys.map((key) => [folder, key, onDisk(`${folder}/${key}.png`)] as const));
+  const masters = (Object.values(TINTED_NOTCHES) as NotchDef[]).flatMap((def) =>
     [...Object.values(def.barOf as Record<string, string>), ...Object.values(def.barSharedBy ?? {}).flat()].map(
       (rel) => [rel, onDisk(`${rel}.png`)] as const,
     ),
@@ -375,7 +380,7 @@ describe("published to the frames bucket", () => {
 
   describe.skipIf(!available)("the published pieces (set FRAMES_BUILD_DIR if skipped)", () => {
     it.each(published.map(([folder, key]) => [folder, key] as const))("%s/%s: clear inside the cut, black around it, its foot the master's bar", async (folder, key) => {
-      const def: NotchDef = HOLO_STAMP_NOTCHES[folder as keyof typeof HOLO_STAMP_NOTCHES];
+      const def: NotchDef = TINTED_NOTCHES[folder as keyof typeof TINTED_NOTCHES];
       const bytes = onDisk(`${folder}/${key}.png`)!;
       const { data, info } = await sharp(bytes).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
       expect([info.width, info.height]).toEqual([def.shape.size.width, def.shape.size.height]);

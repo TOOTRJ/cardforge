@@ -110,6 +110,10 @@ export const COLLECTOR_TEMPLATES = [
   "m15mdfcback",
   "m15mdfclandfront",
   "m15mdfclandback",
+  // The Lord of the Rings scroll (TODO 4.11, Card Conjurer's 'Scroll'): its
+  // black bottom border is the M15 pack's, and LTR / LTC set both lines
+  // there within 1–2 px of M15's slot (LTR #470, #712, LTC #422).
+  "lotrscroll",
   // The Expeditions (TODO 4.11 wave 1): both looks print the line in the
   // black border under the stone — M15's slot on each look's printed rows
   // (EXPEDITION_ZNR_COLLECTOR, EXPEDITION_BFZ_COLLECTOR).

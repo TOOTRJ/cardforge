@@ -179,7 +179,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 59 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 60 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the extended-art frame and the textless promo pair (4.7 / 4.35 / 4.42,
@@ -190,10 +190,10 @@ into `.frames-build/` — 59 templates today (`CC_TEMPLATES` in
   ([The extended-art and textless frames from Card
   Conjurer](#the-extended-art-and-textless-frames-from-card-conjurer-47--435-v58));
 
-- the Zendikar Expeditions (4.11 wave 1, layout v62): expeditionland — the
+- the Zendikar Expeditions (4.11 wave 1, layout v64): expeditionland — the
   'ZNR Expeditions (2020)' pack whole, the ZNE look — and expeditionlandbfz
   — the 'BFZ Expeditions (2015)' land frame with a colour in its pinline,
-  the EXP look ([The Expeditions](#the-expeditions-411-wave-1-layout-v62));
+  the EXP look ([The Expeditions](#the-expeditions-411-wave-1-layout-v64));
 
 - the M15 family (4.4, shipped in #380, layout v24): m15, m15artifact,
   m15land, m15snow, m15snowland, m15devoid, m15pw, m15token and
@@ -213,6 +213,11 @@ into `.frames-build/` — 59 templates today (`CC_TEMPLATES` in
   recipes over its files with the pair masters, its own plates, its crown
   band (`m15ubcrown`) and the triangle stamp's notch (`m15ubholostamp`)
   ([The Universes Beyond frames](#the-universes-beyond-frames-425));
+- the Lord of the Rings scroll showcase (4.11, layout v62): lotrscroll —
+  the 'Scroll' pack's eight frames whole (`c` its land frame, `a` its
+  artifact frame), its plates, its crown band (`lotrscrollcrown`) and its
+  own triangle stamp notch per key (`lotrscrollholostamp`) ([The Lord of
+  the Rings scroll](#the-lord-of-the-rings-scroll-411-layout-v62));
 - the borderless M15 frame from 'Borderless (Alt)' (4.32): m15borderless and
   its artifact dress m15borderlessartifact, each with the pack's own P/T
   plates — and, since 4.6f (wave 2a), their pinline-split pair masters and
@@ -4330,7 +4335,7 @@ all Universes Beyond, onto their own frame (2,001 spells, 614 artifacts,
 (the pack's `v.png`), extended art, full
 art, the saga and spree dresses, the floating crowns, borderless.
 
-### The Expeditions (4.11 wave 1, layout v62)
+### The Expeditions (4.11 wave 1, layout v64)
 
 The Zendikar Expeditions printed two looks, and PipGlyph draws both from
 Card Conjurer's packs (frames bucket only, 1500 × 2100 native, copied 1:1):
@@ -4341,7 +4346,7 @@ Card Conjurer's packs (frames bucket only, 1500 × 2100 native, copied 1:1):
   translucent rules panel (white, α 153) over the same picture, dark ink on
   the title bar, the panel and the type bar. It replaced the 375 px MSE
   masters (the 2015 BFZ look, an opaque black box and light ink, upscaled
-  4×; black and green leaked their border): a CORRECTION, layout v62
+  4×; black and green leaked their border): a CORRECTION, layout v64
   (`EXPEDITION_CC_LAYOUT_VERSION`), a sweep scoped to the template. Its
   border, art window and corner checks pass on every colour, so its rows
   left `BORDER_PENDING_COLOURS`, `EDGE_CONTRACT_KNOWN_FAILURES`,
@@ -4427,6 +4432,83 @@ the plain-land landing; the holofoil stamp's notch (the prints' oval sits
 on a cut in the stone); the ZNE / EXP set symbols at their printed size
 (`lib/cards/set-symbol-prints.ts` — a card-scoped bump of its own, every
 frame a ZNE or EXP symbol sits on); the ZNE type bar's ~5 px thickness.
+
+### The Lord of the Rings scroll (4.11, layout v62)
+
+`lotrscroll` — the scroll showcase of LTR #452–730 and LTC #411–490, our
+most-printed showcase — is Card Conjurer's 'Scroll' pack (packScroll.js,
+`img/frames/scroll/`, 2010 × 2814) since the showcase rebuild's first wave.
+The 646 px MSE drawing left git (its masters under public/frames and
+its row in `build-showcase-frames.mjs`); the pack goes to the frames bucket through
+`scripts/import-cc-frames.mjs` (`CC_TEMPLATES.lotrscroll`, the `SCROLL`
+block of `scripts/lib/cc-frames.mjs`). A CORRECTION (layout v62, a sweep,
+`LOTR_SCROLL_LAYOUT_VERSION`): no colour was ticked.
+
+- **Masters.** The pack's eight frames whole, downscaled once to
+  1500 × 2100 (Lanczos, as `m15ub`'s), with the parchment wash over the
+  art window that every print shows (the pack's 'No Art Overlay' mask, which
+  drops it, is not used). w u b r g m are the colour frames; `a` is the
+  light-blue 'Artifact Frame' a colourless ARTIFACT paints
+  (`artifactMasterKeys { c: "a" }`: LTR #687–703, LTC #485–489); `c` is the
+  brown 'Land Frame' — the pack has no colourless frame, and a colourless
+  printing that is not an artifact is a land (#712 Shire Terrace). A
+  coloured land wears its colour's frame (#711 The Shire is green; LTC #490,
+  LTR #704). A colourless creature that is neither an artifact nor a land
+  draws the brown land master with the artifact's plate: no print has that
+  shape.
+  The masters carry the printed black border, so the transparent ring of
+  4.35 is gone: `lotrscroll` left `BORDER_PENDING_TEMPLATES`, the edge
+  contract's and the art window's known failures, `SQUARE_CORNERS` (its
+  square corner is the border black now) and `NEVER_NORMALISE`.
+- **The corner.** The pack's corners are square black, so the importer cuts
+  the ONE card corner (64.5 px) as on every Card Conjurer master. The MSE
+  drawing's corner was its transparent ring (a #101015 arc on the bake):
+  the showcase families keep their drawn corners (owner, 2026-09-28), but
+  the scroll's drawn corner is now the border's, so there is nothing of a
+  design to keep — flagged for the owner on the review sheet.
+- **Plates.** The pack's seven scroll plates (`scroll/pt/<k>.png`,
+  435 × 266) at its ptBounds (`LOTRSCROLL_PLATE_RECT`); the colourless card
+  wears the artifact's light-blue plate (#700 Shire Scarecrow). Their ink box
+  is in `lib/cards/plate-ink.ts`.
+- **Slots.** The pack's text layout is the accurate M15 pack's number for
+  number, so the profile is M15's slots and the M15-era family's sizes
+  (`fit: "measured"` name and type line, joined WITH v62), the CC M15 cost
+  row (`CC_M15_COST`: 70 px discs, 78 pitch, the row ending at 1385, centred
+  on 157) and type baseline, the art slot over the masters' window
+  (111–1388 × 230–1168 px on every key: `LOTRSCROLL_ART_SLOT`), and the
+  name 4 px left of M15's. Measured 2026-10-22 on 14 Scryfall PNGs at
+  1500 × 2100 (LTR #457 / 470 / 526 / 546 / 595 / 619 / 643 / 687 / 697 /
+  700 / 704 / 712, LTC #412 / 422) by the shift that best registers our
+  bake of the same card on the print, region by region: the frame ±2 px
+  (the scans' own scale), the cost row 0 / +1, the name −4 → 0 after the
+  move, the type line +1 / +2, the set symbol −2 / 0, the P/T −1 / +1; a
+  generic disc's face 69 px tall on print and ours, centred 156.0 on both,
+  its right edge 1387 on print (3 prints) against our 1385.
+- **Crown** (`LOTRSCROLL_CROWN`, `lotrscrollcrown/<key>.png`): the pack's
+  'Legendary Crown' — the rolled top edge of the title scroll (LTR #470,
+  #526, LTC #422) — at its bounds, a 1500 × 100 band. Keys w u b r g m, `a`
+  (a colourless artifact, through the slot's `artifactKeyMap`) and `l` (any
+  other colourless card, `keyMap`). An ADDITION, opt-in per card; an import
+  of a legendary scroll printing names it (`CROWNED_SHOWCASE_SIGNATURES`).
+- **Stamp** (`LOTRSCROLL_HOLO_STAMP`, `lotrscrollholostamp/<key>.png`): every
+  print wears the Universes Beyond TRIANGLE (705–797 px wide at row 1950,
+  apex 1992–1993), so the slot is the triangle's — "auto" stamps every
+  rarity, matte below a rare. The notch is the pack's OWN piece per key (its
+  rim is textured parchment in the frame's colour — no flat bar for
+  `m15holostamp`'s tint), placed at its bounds, downscaled with the card,
+  cut to 266 × 140 at 620, 1877; the triangle's hole + 2 px cut clear and
+  the 2 px round it painted black, because the pack draws its hologram ~2 px
+  larger and higher than the stamp (`blackoutAndCut`; the check places the
+  pack's `gray.png` the same way and finds α ≤ 1 outside). An ADDITION.
+- **Collector line**: M15's slot (`COLLECTOR_TEMPLATES`) — LTR / LTC set
+  both lines within 1–2 px of it. An ADDITION.
+- **Imports.** `showcase/ltr/scroll` is exact on `lotrscroll` once a colour
+  is verified (the cap is gone); a two-colour printing (LTR #642–686, LTC
+  #449–484) is `nearest` through the `two-colour` gap, item 4.11.
+
+**Not built** (follow-ups, in 4.11): the two-colour dress (the colour frames
+split by the pack's `maskRightHalf.png` under its 'Multicolored Bars'), and
+the scroll saga (CC's `SagaLTR`, 4.5d).
 
 ### The older full-art basics (4.40 / 4.41)
 
@@ -5515,7 +5597,7 @@ absent, and the visual gate gained its `@stamp…` cases and changed none.
   SHAPE drawn is the frame's own (`FrameOverlaySlot.stamp.shape`): every
   wave-1 notch is cut for the oval, so an imported `"triangle"` draws the
   oval here and keeps its key for a frame that prints the triangle (4.9d's
-  lotr / lotrscroll). `resolveHoloStamp` (lib/cards/anatomy.ts) answers
+  lotr; lotrscroll draws its own triangle since 4.11). `resolveHoloStamp` (lib/cards/anatomy.ts) answers
   both renderers, the rules layout and the creator (on a TRIANGLE frame
   "auto" is every rarity and the face has a tone — "The Universes Beyond
   frames", layout v55): the notch overlay
@@ -8767,7 +8849,9 @@ land, the emblem, 5.1a's five transform bodies, 5.1b's four modal
 bodies, 4.5c's Vehicle frame, 4.7's Nyx dress, 4.27a's two station frames and its two Spacecraft dresses (step 2), 4.25's three Universes Beyond frames, extended art's land dress (4.7, owner Round 63), 4.40 / 4.41's three older full-art basics, 5.7's four borderless double-faced bodies and 5.5 (b)'s double-faced saga front and back, and 4.51's six Nyx dresses of the full-art tokens, 4.27's Prepare frame and 4.11's 2015 Expeditions, new templates that joined without a bump, and the battle, which
 joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
-`displayPct(…, "landscape")`, the same px on the card) prints its names,
+`displayPct(…, "landscape")`, the same px on the card — and the Lord of
+the Rings scroll, WITH one too: layout v62, on Card Conjurer's 'Scroll'
+pack) prints its names,
 type lines, pips and set symbol at ONE set of sizes, Card Conjurer's, which
 match the prints. Split is M15-era too and stays OUT: a split half prints
 every line smaller than a regular card (the `SPLIT_*` constants, [The

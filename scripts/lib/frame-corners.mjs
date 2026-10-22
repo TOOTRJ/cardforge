@@ -80,8 +80,10 @@ export const CORNER_NORMALISE_TEMPLATES = Object.freeze({
 /** Never normalised: the showcase families' corners are real design.
  *  (battle left the list with TODO 4.21b: its master is Card Conjurer's in
  *  the frames bucket, cut at the one corner by the importer — Phase B never
- *  sees it, as it never sees the split's.) */
-export const NEVER_NORMALISE = /^(bloomburrow|bloomanime|lotr|lotrscroll|tarkir[a-z]*|avatar)$/;
+ *  sees it, as it never sees the split's — and lotrscroll with TODO 4.11, the
+ *  same way: Card Conjurer's 'Scroll' masters, whose black border runs to
+ *  the corner, cut at the one card corner by the importer.) */
+export const NEVER_NORMALISE = /^(bloomburrow|bloomanime|lotr|tarkir[a-z]*|avatar)$/;
 
 /** The corner box the pass works in (and the gate confines the diff to). */
 export const NORMALISE_BOX = 96;

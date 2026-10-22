@@ -510,7 +510,7 @@ describe("foil backdrops — which frames have one", () => {
     // needs a layout-version bump scoped to it — but for a NEW template no
     // card was ever baked on (4.33's borderless planeswalkers, which keep
     // m15pw's box for a walker with no ability text). (expeditionland lost
-    // its dark backdrop with its layout v62 bump, TODO 4.11 wave 1: the
+    // its dark backdrop with its layout v64 bump, TODO 4.11 wave 1: the
     // Card Conjurer masters paint the light panel the prints wear.)
     const withBackdrop = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).rules.backdropHex);
     expect(withBackdrop).toEqual([

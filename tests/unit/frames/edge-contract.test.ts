@@ -85,7 +85,8 @@ describe("the edge-contract table", () => {
     // adventure's grey paper rim (a corner-check find) left the list when
     // Phase B took it on (owner, 2026-09-28); the battle when its borderless
     // MSE ring gave way to Card Conjurer's black-bordered master (TODO
-    // 4.21b, layout v43).
+    // 4.21b, layout v43); the Lord of the Rings scroll the same way (TODO
+    // 4.11, layout v62).
     expect(Object.keys(EDGE_CONTRACT_KNOWN_FAILURES).sort()).toEqual(
       [
         "alphaland",
@@ -95,7 +96,6 @@ describe("the edge-contract table", () => {
         // (expeditionland b/g left with Card Conjurer's masters, TODO 4.11
         // wave 1.)
         "lotr",
-        "lotrscroll",
         "tarkirdraconic",
         "tarkirdragon",
         "tarkirghostfire",

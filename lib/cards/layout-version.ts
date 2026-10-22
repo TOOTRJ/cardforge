@@ -1561,7 +1561,34 @@ export const WALKER_COST_ROW_TEMPLATES: readonly string[] = ["m15pw", "m15border
 //            — the discs inside the title band and cost box a tick verified;
 //            the owner signs the row off on the before / after sheet, and
 //            every tick stays fresh.
+//   v62    — the Lord of the Rings scroll showcase re-sourced from Card
+//            Conjurer (TODO 4.11, showcase rebuild wave 1). `lotrscroll`,
+//            every card on it: the masters (CC 'Scroll', 2010 px, downscaled
+//            once; the 646 px MSE drawing leaves git) with the printed black
+//            border (4.35: it baked a #101015 ring) and the round card
+//            corner the importer cuts; the colourless artifact's light-blue
+//            master `a`, `c` the brown land frame; the pack's scroll P/T
+//            plates; and the slots that ride them — the M15 pack's text
+//            layout (the M15-era family's sizes, `fit: "measured"` names,
+//            the CC M15 cost row: 70 px discs, 78 pitch, the row ending at
+//            1385), the name 4 px left of M15's, the masters' art window.
+//            LOTR_SCROLL_LAYOUT_VERSION below — the ONE constant (taken as
+//            v62 at PR time; the Expedition and Zendikar Rising re-sources
+//            take one each, and whichever merges first moves this constant,
+//            the test's `V` and the docs together). A CORRECTION ("sweep"),
+//            never a badge: the look was wrong against its own prints and
+//            no colour is ticked, so no tick goes stale. The crown band, the
+//            triangle stamp's notch and the collector line are ADDITIONS a
+//            card switches on (no stored card names them).
 // ---------------------------------------------------------------------------
+
+/** The Lord of the Rings scroll showcase re-sourced from Card Conjurer
+ *  (TODO 4.11): every card on `lotrscroll`. ITS version lives here alone —
+ *  CARD_LAYOUT_VERSION, the scoped table and the rollout below read this
+ *  constant — so a bump that merges first moves it in one place. Frozen
+ *  once it ships. */
+export const LOTR_SCROLL_LAYOUT_VERSION = 62;
+export const LOTR_SCROLL_TEMPLATES: readonly string[] = ["lotrscroll"];
 
 /** The cost row as current print draws it (the 2023 pip move + TODO 3.34):
  *  the CC-framed M15 family's disc, centre and right end. ITS version lives
@@ -1583,24 +1610,29 @@ export const COST_ROW_PRINT_TEMPLATES: readonly string[] = [
   "m15textless", "m15textlessland", "prepare",
   "m15pw", "m15borderlesspw", "m15borderlesspwtall",
 ];
-//   v62    — the Zendikar Expeditions re-sourced from Card Conjurer (TODO
+//   v64    — the Zendikar Expeditions re-sourced from Card Conjurer (TODO
 //            4.11 wave 1, owner-approved 2026-10-21). On `expeditionland`
 //            alone, every card on it: the masters (CC 'ZNR Expeditions
 //            (2020)', the ZNE look every reference printing wears — the
 //            light translucent rules panel and dark ink — where the 375 px
 //            MSE masters drew the 2015 BFZ look 4× upscaled, b and g broken;
-//            they leave git) and the slots that ride them — the art slot on
-//            CC's window + panel (59–1441 × 228–1713 px), the name and the
-//            type line in dark ink (the name 2 px up, the type line on its
-//            own band at 1794 px), the set symbol in its own box at the
-//            prints' right end, the rules box on the panel in dark ink with
-//            no backdrop. The collector line (4.9b) is declared too: opt-in
-//            per card, no stored card draws it. The new 2015 look,
-//            `expeditionlandbfz`, is an ADDITION (no card sits on it): not in
-//            the scope. EXPEDITION_CC_LAYOUT_VERSION below — the ONE
-//            constant (taken as v61 in the PR; v61 went to the M15 family's
-//            cost row, #598, first in — another bump merging first renumbers
-//            this constant, the test's `V` and the docs together). The cost
+//            they leave git), the bars RE-CUT onto the prints through flat
+//            zones (the name 4 px up, the type bar and everything under it
+//            11 px down), and the slots that ride them — the art slot on
+//            CC's window + panel (59–1441 × 224–1724 px), the name and the
+//            type line in dark ink (the type line on its own band at
+//            1805 px), the set symbol in its own box at the prints' right
+//            end, the rules box on the panel in dark ink with no backdrop.
+//            A two-colour Expedition draws the plain land master `c` (the
+//            pinline pairs are TODO 4.11); its colour stays its own. The
+//            collector line (4.9b) is declared too: opt-in per card, no
+//            stored card draws it. The new 2015 look, `expeditionlandbfz`,
+//            is an ADDITION (no card sits on it): not in the scope.
+//            EXPEDITION_CC_LAYOUT_VERSION below — the ONE constant (taken as
+//            v61 in the PR; v61 went to the M15 family's cost row, #598, v62
+//            to the scroll, #604, v63 to Zendikar Rising, #603 — another
+//            bump merging first renumbers this constant, the test's `V` and
+//            the docs together). The cost
 //            row's v61 never touched `expeditionland` (it draws no cost). A
 //            CORRECTION ("sweep"), never a badge: the look was
 //            wrong against the frame's own prints. Not verification-neutral
@@ -1613,7 +1645,7 @@ export const COST_ROW_PRINT_TEMPLATES: readonly string[] = [
  *  CARD_LAYOUT_VERSION, the scoped table and the rollout below read this
  *  constant — so a bump that merges first moves it in one place. Frozen
  *  once it ships. */
-export const EXPEDITION_CC_LAYOUT_VERSION = 62;
+export const EXPEDITION_CC_LAYOUT_VERSION = 64;
 export const EXPEDITION_CC_TEMPLATES: readonly string[] = ["expeditionland"];
 
 /** The station frame on print's band rule (TODO 4.27a, PR 2): every card
@@ -1904,6 +1936,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // 36 CC-framed M15 templates and the three walkers — and on them only a
   // card that draws a cost (v61Changed). Verification-neutral.
   [COST_ROW_PRINT_LAYOUT_VERSION]: COST_ROW_PRINT_TEMPLATES,
+  // The Lord of the Rings scroll re-sourced from Card Conjurer (4.11): the
+  // masters, plates and the slots that ride them; every card on it. No
+  // narrower verification scope: no colour has a tick.
+  [LOTR_SCROLL_LAYOUT_VERSION]: LOTR_SCROLL_TEMPLATES,
   // The Zendikar Expeditions re-sourced from Card Conjurer (4.11 wave 1):
   // the masters and the slots that ride them; every card on
   // `expeditionland`. No narrower verification scope: none has a tick.
@@ -2993,6 +3029,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [UB_SEE_THROUGH_C_LAYOUT_VERSION]: "sweep", // the see-through colourless Universes Beyond spell frame (4.25 follow-up): an addition the visual gate records as a bump on a combo no card can be on (never ticked, offered nowhere) — never a badge
   [TOKEN_ARCH_PRINT_LAYOUT_VERSION]: "sweep", // the 2014–19 arch token on its prints (4.53): the gold small-caps name and the art slot on the window — a correction of the four arch frames against their own prints, never a badge
   [WALKER_COST_ROW_LAYOUT_VERSION]: "sweep", // the planeswalker's cost row and name on its prints (pips 132 → 128 px, the name 4 px up) — a correction of the three walker frames against their own prints, never a badge
+  [LOTR_SCROLL_LAYOUT_VERSION]: "sweep", // the Lord of the Rings scroll re-sourced from Card Conjurer (4.11): its masters with the printed black border, the scroll plates and the M15 pack's text layout — a correction of the look against its own prints on a frame never ticked, never a badge
   [COST_ROW_PRINT_LAYOUT_VERSION]: "sweep", // the cost row as current print draws it (the 2023 pip move + 3.34): 70 px discs, 78 pitch, 5 px lower and 2 px right on the 36 CC-framed M15 templates; the walkers' 70 px discs, 4 px right — a correction against the frames' own current print after the owner's before / after sheet, never a badge
   [EXPEDITION_CC_LAYOUT_VERSION]: "sweep", // expeditionland re-sourced from Card Conjurer (4.11 wave 1): the ZNE look its prints wear — a correction of the frame against its own prints on a frame never ticked, never a badge
   [CC_RESOURCE_LAYOUT_VERSION]: "sweep", // extendedart and the textless pair re-sourced from Card Conjurer (4.7 / 4.35 / 4.42; owner Q6) — a correction of three looks against their own prints on frames never ticked, never a badge

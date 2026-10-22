@@ -555,13 +555,15 @@ describe("C1 — no chooser when the only gap is a detail no frame draws (owner 
     expect(onlyUndrawnDetailsMissing({ ...base, gaps: ["crown", "vehicle"] }, "b")).toBe(false);
     expect(onlyUndrawnDetailsMissing({ ...base, gaps: ["nyx", "crown"] }, "b")).toBe(false);
     // A frame whose border isn't true yet is a second gap (4.35 / A8).
-    expect(onlyUndrawnDetailsMissing({ ...base, template: "lotrscroll" }, "w")).toBe(false);
+    expect(onlyUndrawnDetailsMissing({ ...base, template: "tarkirdragon" }, "w")).toBe(false);
     // The battle's border is true since TODO 4.21b (its Card Conjurer
     // master has the printed black border): no second gap any more.
     expect(onlyUndrawnDetailsMissing({ ...base, template: "battle" }, "w")).toBe(true);
     // …and the Expeditions' since TODO 4.11 wave 1 (Card Conjurer's masters
     // print the border in every colour: the green cap is gone).
     expect(onlyUndrawnDetailsMissing({ ...base, template: "expeditionland" }, "g")).toBe(true);
+    // …and the Lord of the Rings scroll's since TODO 4.11, the same way.
+    expect(onlyUndrawnDetailsMissing({ ...base, template: "lotrscroll" }, "w")).toBe(true);
     expect(onlyUndrawnDetailsMissing({ ...base, template: "expeditionland" }, "r")).toBe(true);
     expect(onlyUndrawnDetailsMissing(undefined, "b")).toBe(false);
   });

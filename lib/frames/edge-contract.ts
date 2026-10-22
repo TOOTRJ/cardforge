@@ -252,6 +252,8 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   tarkirdragon: ALL_BORDER, // MUL references are black-bordered (4.35)
   tarkirdraconic: ALL_BORDER,
   lotr: ALL_BORDER,
+  // Card Conjurer's 'Scroll' pack since TODO 4.11 (frames bucket): a real black
+  // border all round, cut at the one card corner by the importer.
   lotrscroll: ALL_BORDER,
   avatar: ALL_BORDER,
   bloomburrow: ALL_BORDER,
@@ -346,7 +348,6 @@ export const EDGE_CONTRACT_KNOWN_FAILURES: Readonly<Record<string, { keys: "all"
     keys: "all",
     why: "the ring bakes #101015 (16,16,21), not the MUL print's black (4.35); corner: transparent at the arc",
   },
-  lotrscroll: { keys: "all", why: "borderless scroll PNG, transparent ring (7.6 / 4.21); corner: transparent at the arc" },
   // Found by this check on 2026-09-26 (the borderless research sampled the
   // side band at 20–80 % H only): transparent bottom band and lower sides.
   avatar: {

@@ -20,7 +20,7 @@ import { ART_WINDOW_KNOWN_FAILURES } from "@/lib/frames/art-window";
 import manifestJson from "@/lib/frames/frame-manifest.json";
 
 // ---------------------------------------------------------------------------
-// TODO 4.11 wave 1 (owner-approved 2026-10-21; layout v62): the Zendikar
+// TODO 4.11 wave 1 (owner-approved 2026-10-21; layout v64): the Zendikar
 // Expeditions from Card Conjurer — `expeditionland` re-sourced from 'ZNR
 // Expeditions (2020)' (the ZNE look its prints wear) and the new
 // `expeditionlandbfz` from 'BFZ Expeditions (2015)' (the EXP look) — the

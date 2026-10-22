@@ -596,10 +596,12 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
   // one picture under the frame — with 0.8–1.25 px).
   // (4.21c struck saga: its CC masters' window, 752–1384 × 237–1758 px on
   // every colour, is covered with 1.45–2.27 px to spare.)
+  // (4.11 struck lotrscroll: Card Conjurer's 'Scroll' masters have a real
+  // black border, and their window with its parchment wash, 111–1388 ×
+  // 230–1168 px on every key, is covered by LOTRSCROLL_ART_SLOT.)
   // Transparent rings and bands (7.7's known failures) the window leaks into,
   // and the showcase windows cut wider than their slots.
   lotr: { keys: "all", todo: ["4.35", "4.11"], why: "the ring 9.8–90.5 × 11.24–55.62 % vs slot 14–86 × 13–58 % (4.35 A8 / 4.11 re-measure)", maxMissPx: 69 },
-  lotrscroll: { keys: "all", todo: ["4.35"], why: "borderless scroll PNG: the window runs into the transparent ring, the whole card (4.35)", maxMissPx: 914 },
   avatar: { keys: "all", todo: ["4.35"], why: "the window runs into the transparent outer band: 0–1500 × 0–1160 (4.35 A8)", maxMissPx: 90.5 },
   bloomburrow: { keys: "all", todo: ["4.35"], why: "the window runs into the transparent sides: 0–1500 × 236–1182 (4.35 A8)", maxMissPx: 90.5 },
   bloomanime: { keys: "all", todo: ["4.35"], why: "transparent outer ring: the window is the whole card, the slot inset 2.5/3.5/93×92 (4.35)", maxMissPx: 116 },

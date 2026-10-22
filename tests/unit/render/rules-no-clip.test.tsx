@@ -77,7 +77,12 @@ beforeAll(() => {
 });
 
 type Box = { x0: number; y0: number; x1: number; y1: number };
-type Svg = { words: (Box | null)[]; ink: Box[]; bars: number[] };
+/** `contours`: the ink as each glyph's own contours — a word is ONE path,
+ *  so its box spans every glyph in it (a descender at its left, a raised
+ *  quote at its right); the keep-out check reads each subpath's box (the
+ *  hull of its points, control points included: an upper bound of its
+ *  ink). A drawn box (a pip) is its own contour. */
+type Svg = { words: (Box | null)[]; ink: Box[]; contours: Box[]; bars: number[] };
 
 /** Satori's SVG, read: its glyph paths (absolute M/L/Q/C/Z — opentype's path
  *  data) in document order, every drawn box (a pip's disc and shadow carry
@@ -88,7 +93,7 @@ function readSvg(svg: string): Svg {
     .replace(/<defs>[\s\S]*?<\/defs>/g, "")
     .replace(/<mask[\s\S]*?<\/mask>/g, "")
     .replace(/<clipPath[\s\S]*?<\/clipPath>/g, "");
-  const out: Svg = { words: [], ink: [], bars: [] };
+  const out: Svg = { words: [], ink: [], contours: [], bars: [] };
   for (const m of drawn.matchAll(/<rect ([^>]*?)\/?>/g)) {
     const attrs = Object.fromEntries([...m[1].matchAll(/([a-z-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]]));
     if (attrs.fill === `${SENTINEL}44`) out.bars.push(Number(attrs.y));
@@ -102,17 +107,27 @@ function readSvg(svg: string): Svg {
     if (attrs.x !== undefined && attrs.width !== undefined) {
       const [x, y, w, h] = [attrs.x, attrs.y, attrs.width, attrs.height].map(Number);
       out.ink.push({ x0: x, y0: y, x1: x + w, y1: y + h });
+      out.contours.push({ x0: x, y0: y, x1: x + w, y1: y + h });
       continue;
     }
-    const nums = (attrs.d ?? "").match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
-    let box: Box | null = null;
-    for (let i = 0; i + 1 < nums.length; i += 2) {
-      const [x, y] = [nums[i], nums[i + 1]];
-      box = box
-        ? { x0: Math.min(box.x0, x), y0: Math.min(box.y0, y), x1: Math.max(box.x1, x), y1: Math.max(box.y1, y) }
-        : { x0: x, y0: y, x1: x, y1: y };
-    }
+    const boxOf = (d: string): Box | null => {
+      const nums = d.match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+      let box: Box | null = null;
+      for (let i = 0; i + 1 < nums.length; i += 2) {
+        const [x, y] = [nums[i], nums[i + 1]];
+        box = box
+          ? { x0: Math.min(box.x0, x), y0: Math.min(box.y0, y), x1: Math.max(box.x1, x), y1: Math.max(box.y1, y) }
+          : { x0: x, y0: y, x1: x, y1: y };
+      }
+      return box;
+    };
+    const box = boxOf(attrs.d ?? "");
     if (box) out.ink.push(box);
+    // Each subpath (absolute M/L/Q/C/Z: an M opens one) on its own.
+    for (const sub of (attrs.d ?? "").split(/(?=M)/)) {
+      const c = boxOf(sub);
+      if (c) out.contours.push(c);
+    }
     if (attrs.fill === SENTINEL) out.words.push(box);
   }
   return out;
@@ -164,9 +179,12 @@ async function checkDrawn(layout: RulesLayout, target: RulesTarget, label: strin
     expect(b.y0, `${label}: ink above the box`).toBeGreaterThanOrEqual(box.top - EPS);
     expect(b.y1, `${label}: ink below the box`).toBeLessThanOrEqual(box.top + box.height + EPS);
   }
-  // 2. Nothing in a keep-out.
+  // 2. Nothing in a keep-out — judged glyph contour by glyph contour (a
+  // word's whole box would put a descender at its left and a raised quote
+  // at its right into one rectangle that ink never fills: "fall.”" beside
+  // the scroll plate's rolled top, TODO 4.11).
   for (const k of keepOuts) {
-    for (const b of svg.ink) {
+    for (const b of svg.contours) {
       const hit = b.x1 > k.left + EPS && b.x0 < k.right - EPS && b.y1 > k.top + EPS && b.y0 < k.bottom - EPS;
       expect(hit, `${label}: ink in a keep-out`).toBe(false);
     }
@@ -288,7 +306,7 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // 1,200 characters fill no box at 5 pt (the widest full boxes hold ~1,000).
   [
     [
-      "agclassic/main", "alphaland/main", "bloomanime/main", "extendedart/main", "extendedartland/main", "lotr/main", "m15/main",
+      "agclassic/main", "alphaland/main", "bloomanime/main", "extendedart/main", "extendedartland/main", "lotr/main", "lotrscroll/main", "m15/main",
       "m15artifact/main", "m15borderless/main", "m15borderlessartifact/main", "m15borderlessland/main", "m15devoid/main", "m15land/main",
       "m15pw/main", "m15pw/walker", "m15snow/main", "m15snowland/main", "modern/main", "modernland/main",
       // 4.33's borderless planeswalkers: m15pw's box, and the tall one's
@@ -316,8 +334,10 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // text is a sentence or two).
   // …and the 2015 Expeditions' rules panel (TODO 4.11 wave 1: 432 px over
   // the art — a land's text is a line or four).
-  [["avatar/main", "battle/main", "bloomburrow/main", "emblem/main", "expeditionlandbfz/main", "lotrscroll/main"], ["1200 chars", "level up"]],
-  // The 2020 Expeditions' panel (layout v62: 494 px, where the MSE box was
+  // (The Lord of the Rings scroll took M15's box with its Card Conjurer
+  // re-source, layout v62 / TODO 4.11: it holds the level-up card now.)
+  [["avatar/main", "battle/main", "bloomburrow/main", "emblem/main", "expeditionlandbfz/main"], ["1200 chars", "level up"]],
+  // The 2020 Expeditions' panel (layout v64: 494 px, where the MSE box was
   // 441) holds the level-up card and the typed text now; 1,200 characters
   // still don't fit.
   [["expeditionland/main"], ["1200 chars"]],
@@ -375,7 +395,7 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   [
     [
       "adventure/adventure", "adventure/main", "aftermath/main", "avatar/main", "battle/main", "bloomburrow/main", "emblem/main",
-      "expeditionlandbfz/main", "flip/main", "flip/second face", "fullart/main", "lotrscroll/main", "m15token/main", "m15tokenartifact/main", "m15tokenartifacttext/main", "m15tokentext/main",
+      "expeditionlandbfz/main", "flip/main", "flip/second face", "fullart/main", "m15token/main", "m15tokenartifact/main", "m15tokenartifacttext/main", "m15tokentext/main",
       "m20tokenartifacttext/main", "m20tokentext/main", "m20tokenartifactnyxtext/main", "m20tokennyxtext/main", "split/main",
     ],
     ["typed, as printed"],

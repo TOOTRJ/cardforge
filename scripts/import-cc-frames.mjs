@@ -99,6 +99,8 @@ import {
   describeNotch,
   footRunsSolid,
   notchFindings,
+  pieceNotchFindings,
+  blackoutAndCut,
   notchSourceFiles,
   sampleBar,
   sampleBarColumns,
@@ -1061,6 +1063,67 @@ async function notchMasterPixels(rel, what) {
 }
 for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
   if (only && !only.includes(folder)) continue;
+  if (def.pieces) {
+    // A notch made of the pack's OWN piece per key (TODO 4.11: the Lord of
+    // the Rings scroll — its rim is textured parchment, no flat bar to
+    // tint): placed at its bounds on a clear card at the pack's size,
+    // downscaled once with the card, cut to its box, the triangle cleared.
+    const recipe = {};
+    const notchFailures = [];
+    const { width: CW, height: CH } = def.compositeSize;
+    const box = { x: Math.round((def.shape.bounds.leftPct / 100) * OUT_W), y: Math.round((def.shape.bounds.topPct / 100) * OUT_H), ...def.shape.size };
+    // Placed at the bounds on the pack's card, downscaled with it, cut to the box.
+    const placeAndCut = async (src) => {
+      const file = await fetchCached(src);
+      const meta = await sharp(file).metadata();
+      if (meta.width !== def.placeAt.width || meta.height !== def.placeAt.height) throw new Error(`${src} is ${meta.width}×${meta.height}, the recipe says ${def.placeAt.width}×${def.placeAt.height} (the source moved?)`);
+      const canvas = placeOnCanvas(await rgba(file, meta.width, meta.height), def.placeAt, CW, CH);
+      const full = await sharp(canvas, { raw: { width: CW, height: CH, channels: 4 } }).resize(OUT_W, OUT_H, { fit: "fill", kernel: "lanczos3" }).raw().toBuffer();
+      const piece = Buffer.alloc(box.width * box.height * 4);
+      for (let y = 0; y < box.height; y += 1) full.copy(piece, y * box.width * 4, ((box.y + y) * OUT_W + box.x) * 4, ((box.y + y) * OUT_W + box.x + box.width) * 4);
+      return piece;
+    };
+    let stamp = null;
+    if (def.stampShape && !dryRun) {
+      const shapePiece = await placeAndCut(def.stampShape);
+      stamp = new Uint8Array(box.width * box.height);
+      for (let p = 0; p < stamp.length; p += 1) stamp[p] = shapePiece[p * 4 + 3];
+    }
+    for (const key of def.keys) {
+      const out = path.join(outDir, folder, `${key}.png`);
+      recipe[key] = [
+        `${def.pieces[key]} at ${def.placeAt.x},${def.placeAt.y} ${def.placeAt.width}×${def.placeAt.height} px of a clear ${CW}×${CH} card, downscaled once to ${OUT_W}×${OUT_H}, cut to ${box.width}×${box.height} at ${box.x},${box.y}`,
+        `the triangle ${def.triangle.points.map((p) => p.join(",")).join(" / ")} px, corner radius ${def.triangle.radius}, plus ${def.cutMarginPx} px cut to transparent, the ${def.blackoutPx} px round it painted opaque black`,
+      ];
+      if (dryRun) {
+        console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}`);
+        continue;
+      }
+      const piece = blackoutAndCut(await placeAndCut(def.pieces[key]), def.shape, def.triangle, def.cutMarginPx, def.blackoutPx);
+      const findings = pieceNotchFindings(piece, def.shape, def.triangle, def.cutMarginPx, def.blackoutPx, stamp);
+      for (const f of findings.failures) notchFailures.push(`${folder}/${key}: ${f}`);
+      fs.mkdirSync(path.dirname(out), { recursive: true });
+      const image = sharp(piece, { raw: { width: box.width, height: box.height, channels: 4 } });
+      await image.clone().png({ compressionLevel: 9 }).toFile(out);
+      await image.clone().webp(WEBP).toFile(out.replace(/\.png$/, ".webp"));
+      console.log(`wrote ${path.relative(process.cwd(), out)} (+ .webp) ${box.width}×${box.height}: ${findings.opaque} opaque px, cut clear ${findings.cutClear}, ring black ${findings.ringBlack}, stamp shape outside α ≤ ${findings.stampOutside}`);
+    }
+    for (const f of notchFailures) edgeFailures.push(f);
+    provenance[folder] = {
+      source: "cardconjurer",
+      repo: CC_REPO,
+      commit: CC_COMMIT,
+      pack: def.pack,
+      converter: "scripts/import-cc-frames.mjs",
+      kind: "overlay",
+      output: `${box.width}x${box.height} notch piece (1:1 at ${OUT_W}x${OUT_H}, at ${box.x},${box.y}), the triangle region cut to transparent, webp q${WEBP.quality}`,
+      colors: recipe,
+      cut: { triangle: def.triangle, marginPx: def.cutMarginPx, blackoutPx: def.blackoutPx, what: "the hologram capture inside the pack's triangle — never published; the ring round the cut painted black" },
+      sourceFiles: notchSourceFiles(def),
+      notes: def.notes,
+    };
+    continue;
+  }
   const recipe = {};
   const { width: PW, height: PH } = def.shape.size;
   let piece = null;

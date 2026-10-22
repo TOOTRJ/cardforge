@@ -120,7 +120,8 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   // The bottom half is drawn in this box and turned a quarter turn.
   aftermath: { front: [1273, 471], second: { size: [741, 427], rotation: 90 } },
   lotr: { front: [1080, 945] },
-  lotrscroll: { front: [1260, 945] },
+  // Card Conjurer's scroll window (TODO 4.11, layout v62).
+  lotrscroll: { front: [1280, 941] },
   avatar: { front: [1320, 1134] },
   bloomburrow: { front: [1320, 1134] },
   bloomanime: { front: [1395, 1932] },
@@ -141,7 +142,7 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   m15fullartlandthb: { front: [1382, 1876] },
   m15textless: { front: [1314, 1816] },
   m15textlessland: { front: [1314, 1816] },
-  // The Expeditions (TODO 4.11 wave 1, layout v62): CC's window + the
+  // The Expeditions (TODO 4.11 wave 1, layout v64): CC's window + the
   // translucent rules panel under the same picture, both looks.
   expeditionland: { front: [1382, 1500] },
   expeditionlandbfz: { front: [1276, 1471] },

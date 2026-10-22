@@ -169,11 +169,13 @@ describe("LTC #411–490 are LTR's scroll showcase", () => {
     for (const key of ["ltc-411", "ltc-465", "ltc-485", "ltc-490"] as const) expect(P[key].promo_types, key).toContain("scroll");
   });
 
-  it("resolves `showcase/ltr/scroll` on lotrscroll, nearest (its border is 4.35's), as LTR's run does", () => {
+  it("resolves `showcase/ltr/scroll` on lotrscroll, exact once verified (its border is true since TODO 4.11), as LTR's run does", () => {
     for (const key of ["ltc-411", "ltc-485", "ltc-490"] as const) {
-      expect(frameMatchFromScryfall(P[key]), key).toMatchObject({ signature: "showcase/ltr/scroll", status: "nearest", template: "lotrscroll", blockedBy: "4.35" });
+      expect(frameMatchFromScryfall(P[key]), key).toMatchObject({ signature: "showcase/ltr/scroll", status: "exact", template: "lotrscroll" });
+      expect(frameMatchFromScryfall(P[key]).blockedBy, key).toBeUndefined();
       expect(imported(key).frame_template, key).toBe("lotrscroll");
-      expect(requestRow(key), key).toMatchObject({ signature: "showcase/ltr/scroll", cause: "missing", template: "lotrscroll" });
+      // Exact on a frame no colour of which is ticked yet: the row says so.
+      expect(requestRow(key), key).toMatchObject({ signature: "showcase/ltr/scroll", cause: "unverified", template: "lotrscroll" });
     }
     // The saga lands on the saga frame (ltr-602's landing).
     expect(frameMatchFromScryfall(P["ltc-465"])).toMatchObject({ signature: "showcase/ltr/scroll", template: "lotrscroll", landOn: "saga" });

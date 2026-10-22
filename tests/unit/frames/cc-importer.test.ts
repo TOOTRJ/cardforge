@@ -170,6 +170,8 @@ describe("Card Conjurer recipe", () => {
       "extendedartland",
       "flip",
       "fullartland",
+      // The Lord of the Rings scroll (TODO 4.11, layout v62; tests/unit/frames/lotr-scroll-importer.test.ts).
+      "lotrscroll",
       "m15",
       "m15artifact",
       "m15borderless",

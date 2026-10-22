@@ -671,7 +671,8 @@ describe("the general signatures (TODO 1.4)", () => {
     // Extended art.
     ["woe-328", "exact", "extendedart", undefined],
     // Pinned showcase runs.
-    ["ltr-482", "nearest", "lotrscroll", undefined],
+    // Exact once verified since TODO 4.11 (its border is true now).
+    ["ltr-482", "exact", "lotrscroll", undefined],
     ["ltr-602", "nearest", "lotrscroll", "saga"],
     ["tdm-303", "nearest", "tarkirdraconic", undefined],
     ["tdm-320", "nearest", "tarkirdraconic", "adventure"],
