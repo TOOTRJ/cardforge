@@ -16,8 +16,7 @@ import {
   type ImportFrameChoice,
   type ImportFramePlan,
 } from "@/lib/creator/import-frame-choice";
-import { describeFrame } from "@/lib/creator/frame-resolve";
-import { pickFrameColorKey } from "@/components/cards/frame-layer";
+import { describeFrame, importFrameColorKey } from "@/lib/creator/frame-resolve";
 import {
   droppedFaceNotice,
   undrawableSymbolsNotice,
@@ -64,7 +63,7 @@ export type NamedResponse = {
  *  without the chooser (owner decision C1): the note names the frame and
  *  the reason. */
 export function frameOverwriteCopy(
-  patch: Pick<ScryfallImportPatch, "frame_match" | "color_identity">,
+  patch: Pick<ScryfallImportPatch, "frame_match" | "color_identity" | "printed_plain_land_master">,
   choice: ImportFrameChoice | null = null,
   planMode: ImportFramePlan["mode"] = "none",
 ): string | null {
@@ -80,7 +79,7 @@ export function frameOverwriteCopy(
   if (
     planMode === "none" &&
     match.reason &&
-    onlyUndrawnDetailsMissing(match, pickFrameColorKey(patch.color_identity))
+    onlyUndrawnDetailsMissing(match, importFrameColorKey(match.template, patch))
   ) {
     return `the frame (${describeFrame(match.template)} — ${match.reason})`;
   }

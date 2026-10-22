@@ -600,18 +600,27 @@ describe("the frame picker's groups: a classification change only", () => {
       "all|takh-1", "all|tdsk-10", "all|tdsk-4", "all|teoc-13",
       "all|tmkm-10", "all|tmkm-13", "all|tmom-16", "all|tsoi-11",
       "all|zne-1",
-      "prodPlusMoved|tmkm-10", "prodPlusMoved|tmkm-13", "prodPlusMoved|tmom-16", "prodPlusMoved|zne-1",
-      "prod|tmkm-10", "prod|tmkm-13", "prod|tmom-16", "prod|zne-1",
+      "prodPlusMoved|tmkm-10", "prodPlusMoved|tmkm-13", "prodPlusMoved|tmom-16",
+      "prod|tmkm-10", "prod|tmkm-13", "prod|tmom-16",
     ]);
     // …and TODO 4.11 wave 1: a two-colour Expedition (ZNE #1 Flooded
     // Strand, white and blue) prints a split pinline the frame doesn't draw
     // yet — on its own frame still, NEAREST through the two-colour gap even
-    // with every combo verified ("all"), and dressed in the frame's PLAIN
-    // land master `c`, not the gold one (owner 2026-10-22: the import's
-    // frame colour is colourless under every policy).
+    // with every combo verified ("all"), and there dressed in, gated in and
+    // offered in the frame's PLAIN land master `c`, not the gold one (owner
+    // 2026-10-22; importFrameColorKey). Where the Expedition frame isn't
+    // ticked (production) it lands where main lands it — m15land in its
+    // gold, the chooser offering the same frames — so only "all" differs.
     for (const policy of ["all", "prodPlusMoved", "prod"]) {
       expect(raw.imports[`${policy}|zne-1`], policy).toMatchObject({ frame_template: "expeditionland", match: ["nearest", "expeditionland", null] });
-      expect(String((raw.imports[`${policy}|zne-1`] as { landing: string | null }).landing), policy).toMatch(/\|c$|^unavailable$/);
+    }
+    expect(raw.imports["all|zne-1"]).toMatchObject({
+      landing: "exact|expeditionland|c",
+      plan: { preselected: { template: "expeditionland" } },
+      remix: "expeditionland|land",
+    });
+    for (const policy of ["prodPlusMoved", "prod"]) {
+      expect(raw.imports[`${policy}|zne-1`], policy).toMatchObject({ landing: "frame-switched|m15land|m", remix: "m15land|land" });
     }
     // …and TODO 5.5 (c): MOM's transforming Incubator // Phyrexian lands on
     // the same full-art frame, NEAREST (the `dfc-token-transform` gap: the

@@ -218,6 +218,7 @@ import {
 import {
   basicOnlyFrameFallback,
   describeFrame,
+  importFrameColorKey,
   resolveImportFrame,
   resolvePublishedFrame,
 } from "@/lib/creator/frame-resolve";
@@ -2761,7 +2762,8 @@ export function CardCreatorForm({
       // treatment (the borderless M15 frame, the full-art basic — frames plan
       // 4.32 / 4.39) is OFFERED once it is verified in this colour, never
       // picked for the user.
-      const importedColorKey = pickFrameColorKey(patch.color_identity);
+      // Each frame in the key the card paints on it (importFrameColorKey: a
+      // two-colour Expedition's plain land master `c`, TODO 4.11).
       // Only a real substitution toasts: a card on the printing's own frame
       // short of only the crown or a colour indicator gets just the Card
       // step's "Nearest frame" chip (owner decision C3).
@@ -2769,8 +2771,8 @@ export function CardCreatorForm({
         importSubstitutionMessage(
           patch.frame_match,
           landedTemplate,
-          (template) => isFrameComboAvailable(template, importedColorKey, verifiedKeys),
-          importedColorKey,
+          (template) => isFrameComboAvailable(template, importFrameColorKey(template, patch), verifiedKeys),
+          importFrameColorKey(patch.frame_match?.template, patch),
         ) ??
         resolutionMessage ??
         (patch.printing_treatment && !patch.frame_match

@@ -235,7 +235,9 @@ export function frameMasterKeyForColor(
  *  twin (`w-legendary`, crownedMasterKey — TODO 4.6f). The colour key itself
  *  still decides everything that is about the card's COLOUR rather than the
  *  file painted: the frame_reviews gate, the watermark tint and the stat
- *  plates (plateKeyFor: the colour key, but a hybrid pair's grey "c"). */
+ *  plates (plateKeyFor: the colour key, but a hybrid pair's grey "c") —
+ *  but for a two-colour Expedition on its plain land master, whose gate
+ *  (frameGateColors) and watermark tint are that master's `c` (TODO 4.11). */
 export function frameMasterKey(
   profile: MasterDress,
   colors: readonly ColorIdentity[] | null | undefined,

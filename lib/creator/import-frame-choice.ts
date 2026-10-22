@@ -24,7 +24,7 @@ import {
   type FrameChoice,
   type FrameColorKey,
 } from "@/lib/creator/card-kinds";
-import { describeFrame, resolveImportFrame } from "@/lib/creator/frame-resolve";
+import { describeFrame, importFrameColorKey, resolveImportFrame } from "@/lib/creator/frame-resolve";
 import { isM15Treatment, standardFrameFor } from "@/lib/creator/frame-picker";
 import { colorWord, pickFrameColorKey } from "@/components/cards/frame-layer";
 
@@ -62,6 +62,7 @@ export type ImportChooserPatch = Pick<
   | "color_identity"
   | "frame_template"
   | "frame_match"
+  | "printed_plain_land_master"
 >;
 
 export type ImportFrameOption = {
@@ -151,13 +152,16 @@ export function importedKindOf(patch: Pick<ScryfallImportPatch, "kind" | "card_t
  *  a card that isn't one basic land, never a frame the kind borrows from
  *  another type (the artifact dress, Nyx — owner decision A3) for a card
  *  whose type line doesn't say that type. The chooser's filter and the
- *  creator's re-check when it applies a choice. */
+ *  creator's re-check when it applies a choice. The colour is the key the
+ *  card paints on THAT frame (importFrameColorKey): a two-colour
+ *  Expedition's plain land master `c` on the Expedition frames, its gold on
+ *  any other (TODO 4.11). */
 export function frameFitsImport(
   template: FrameTemplate,
-  input: { kind: CardKind; colorKey: string; verifiedKeys: ReadonlySet<string>; patch: ImportChooserPatch },
+  input: { kind: CardKind; verifiedKeys: ReadonlySet<string>; patch: ImportChooserPatch },
 ): boolean {
-  const { kind, colorKey, verifiedKeys, patch } = input;
-  if (!isFrameComboAvailable(template, colorKey, verifiedKeys)) return false;
+  const { kind, verifiedKeys, patch } = input;
+  if (!isFrameComboAvailable(template, importFrameColorKey(template, patch), verifiedKeys)) return false;
   if (!framesForKind(kind, verifiedKeys).some((choice) => choice.template === template)) {
     return false;
   }
@@ -245,9 +249,13 @@ export function importFramePlan(
 
   const kind = importedKindOf(patch);
   if (!kind) return { mode: "none" };
+  // The card's own key (the tiles paint each frame's master from it and
+  // the printing's anatomy); each frame is gated in the key it paints
+  // there (importFrameColorKey: a two-colour Expedition's `c`, TODO 4.11).
   const colorKey = pickFrameColorKey(patch.color_identity) as FrameColorKey;
+  const keyOn = (template: FrameTemplate) => importFrameColorKey(template, patch);
   const fits = (template: FrameTemplate) =>
-    frameFitsImport(template, { kind, colorKey, verifiedKeys, patch });
+    frameFitsImport(template, { kind, verifiedKeys, patch });
 
   const { resolution } = resolveImportFrame({
     patch,
@@ -261,7 +269,7 @@ export function importFramePlan(
   });
   const nearest =
     (resolution.status === "exact" || resolution.status === "frame-switched") &&
-    resolution.colorKey === colorKey &&
+    resolution.colorKey === keyOn(resolution.template) &&
     fits(resolution.template)
       ? resolution.template
       : null;
@@ -270,7 +278,7 @@ export function importFramePlan(
   // indicator), on its own frame, published in the colour: no choice to
   // make — the import lands there and the Card step says "Nearest frame"
   // (owner decision C1).
-  if (nearest === match.template && onlyUndrawnDetailsMissing(match, colorKey)) {
+  if (nearest === match.template && onlyUndrawnDetailsMissing(match, keyOn(match.template))) {
     return { mode: "none" };
   }
 
@@ -320,7 +328,7 @@ export function importFramePlan(
   const heading =
     match.status === "exact"
       ? `PipGlyph has ${theFrame(match.exactLabel)}, but Scryfall's art won't fill it — pick one of these`
-      : isFrameComboAvailable(match.template, colorKey, verifiedKeys)
+      : isFrameComboAvailable(match.template, keyOn(match.template), verifiedKeys)
         ? `PipGlyph can't match this printing's ${match.exactLabel} exactly yet — pick one of these`
         : `PipGlyph doesn't have ${theFrame(match.exactLabel)} yet — pick one of these`;
 
@@ -374,8 +382,7 @@ export function appliedImportFrameChoice(input: {
         : null
       : choice.template;
   if (!template) return null;
-  const colorKey = pickFrameColorKey(patch.color_identity);
-  return frameFitsImport(template, { kind, colorKey, verifiedKeys, patch }) ? template : null;
+  return frameFitsImport(template, { kind, verifiedKeys, patch }) ? template : null;
 }
 
 /** The Card step's "Frame substituted (imported …)" chip: set when the

@@ -4418,11 +4418,21 @@ card's COLOUR is untouched — `color_identity` is what main imports (its
 4.26's M2 for split cards) — and the frame data rides beside it:
 `printed_plain_land_master` on the import patch, stored as
 `frame_style.plainLandMaster` (kept by an edit and a remix, dropped at the
-save on any frame without `FrameProfile.plainLandStandIn`). Both renderers
-(`frameMasterKey`), the save's gate and the import's verification and
+save on any frame without `FrameProfile.plainLandStandIn` and on a card
+whose colour doesn't key gold). Both renderers (`frameMasterKey`, and the
+watermark's tint), the save's gate and the import's verification and
 landing (`frameGateColors`) read it through ONE test,
 `plainLandMasterDrawn` (`lib/cards/frame-color-key.ts`): the stand-in
-declared, the key set, the card gold-keyed — so the `c` tick is the gate, while the frame draws no two-colour pinline. Over all 75
+declared, the key set, the card gold-keyed — so the `c` tick is the gate, while the frame draws no two-colour pinline.
+Every import surface asks the key PER FRAME through
+`importFrameColorKey` (`lib/creator/frame-resolve.ts`): the chooser's
+options, its preselected nearest and the applied pick
+(`lib/creator/import-frame-choice.ts`), the landing's fallbacks
+(`resolvePublishedFrame`'s `colorKeyFor`: `c` on the Expedition frames, the
+card's gold on `m15land`), the deck pre-fill's toast, the overwrite note and
+the request row — and the Card step's colour chips follow the master the
+card draws (`ColorSection`'s `plainLandMaster`: its own Multicolor chip is
+gated in, and its tile paints, `c`). Over all 75
 printings (`tests/unit/scryfall/expedition-imports.test.ts`): ZNE 6 exact,
 24 two-colour; EXP 9 exact, 36 two-colour.
 
@@ -8841,7 +8851,7 @@ signs the row off on the before / after sheet, so every tick stays fresh.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 74 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 75 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless

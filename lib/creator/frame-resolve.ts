@@ -92,14 +92,21 @@ export type ResolveFrameInput = {
   /** Templates the caller would accept, most wanted first. */
   candidates: readonly FrameTemplate[];
   colorKey: FrameColorKey;
+  /** The key a candidate frame is gated in, where it isn't `colorKey` on
+   *  every frame: a two-colour Expedition's plain land master `c` on the
+   *  two Expedition frames, the card's gold everywhere else (TODO 4.11;
+   *  importFrameColorKey). Absent: `colorKey` on every frame. */
+  colorKeyFor?: (template: FrameTemplate) => FrameColorKey;
   verifiedKeys: ReadonlySet<string>;
   prefer: "frame" | "colour";
 };
 
 export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution {
-  const { kind, candidates, colorKey, verifiedKeys, prefer } = input;
+  const { kind, candidates, verifiedKeys, prefer } = input;
   const wanted = candidates[0];
   if (!wanted) return { status: "unavailable" };
+  const keyFor = input.colorKeyFor ?? (() => input.colorKey);
+  const colorKey = keyFor(wanted);
 
   const available = (template: FrameTemplate, key: FrameColorKey) =>
     isFrameComboAvailable(template, key, verifiedKeys);
@@ -116,11 +123,11 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
 
   const keepColour = (): FrameResolution | null => {
     for (const candidate of candidates.slice(1)) {
-      if (available(candidate, colorKey)) {
+      if (available(candidate, keyFor(candidate))) {
         return {
           status: "frame-switched",
           template: candidate,
-          colorKey,
+          colorKey: keyFor(candidate),
           fromTemplate: wanted,
         };
       }
@@ -148,13 +155,13 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
         // …nor an enchantment dress (the Nyx frame, TODO 4.7).
         !isEnchantmentDress(choice.template) &&
         Boolean(dfcBodyOf(choice.template)?.land) === Boolean(dfcBodyOf(wanted)?.land) &&
-        choice.availableColorKeys.includes(colorKey),
+        choice.availableColorKeys.includes(keyFor(choice.template)),
     );
     return any
       ? {
           status: "frame-switched",
           template: any.template,
-          colorKey,
+          colorKey: keyFor(any.template),
           fromTemplate: wanted,
         }
       : null;
@@ -441,11 +448,12 @@ export function resolveImportFrame(input: {
       : undefined;
   const wanted =
     matched ?? patch.frame_template ?? current.template ?? DEFAULT_FRAME_TEMPLATE;
-  // (A two-colour Expedition resolves in its plain land master `c`, TODO
-  // 4.11; its colour is never rewritten.)
-  const colorKey = pickFrameColorKey(
-    frameGateColors(wanted, { plainLandMaster: patch.printed_plain_land_master }, patch.color_identity ?? current.colors),
-  ) as FrameColorKey;
+  // (A two-colour Expedition resolves in its plain land master `c` on the
+  // Expedition frames and in its gold anywhere else, TODO 4.11; its colour
+  // is never rewritten.)
+  const colors = { ...patch, color_identity: patch.color_identity ?? current.colors };
+  const colorKeyFor = (template: FrameTemplate) => importFrameColorKey(template, colors);
+  const colorKey = colorKeyFor(wanted);
   const resolution = resolvePublishedFrame({
     kind: input.kind ?? kindFromCard(cardType, undefined),
     candidates: importFrameCandidates({
@@ -456,10 +464,31 @@ export function resolveImportFrame(input: {
       flavorText: patch.flavor_text,
     }),
     colorKey,
+    colorKeyFor,
     verifiedKeys: input.verifiedKeys,
     prefer: "frame",
   });
   return { wanted, colorKey, resolution };
+}
+
+/**
+ * The key an imported card is gated, verified and painted in on `template`
+ * — its colour's, but a two-colour Expedition's plain land master `c` on a
+ * frame that stands it in (TODO 4.11, owner 2026-10-22: frameGateColors,
+ * plainLandMasterDrawn). The ONE answer for the import's chooser, its
+ * landing, its toast and its request row; the card's colour is never
+ * rewritten.
+ */
+export function importFrameColorKey(
+  template: FrameTemplate | string | null | undefined,
+  patch: {
+    color_identity?: readonly ColorIdentity[] | null;
+    printed_plain_land_master?: true;
+  },
+): FrameColorKey {
+  return pickFrameColorKey(
+    frameGateColors(template, { plainLandMaster: patch.printed_plain_land_master }, patch.color_identity ?? []),
+  ) as FrameColorKey;
 }
 
 /**

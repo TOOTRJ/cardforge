@@ -360,7 +360,7 @@ export async function createCardAction(
   // front is refused, and a body-less back face (the imported DFCs, every
   // inline layout) is untouched. The family is stamped like every other
   // switch (newCardFrameStyle, below), so it is read the same way here.
-  const storedFrameStyle = newCardFrameStyle(data.frame_style ?? {}, data.card_type);
+  const storedFrameStyle = newCardFrameStyle(data.frame_style ?? {}, data.card_type, data.color_identity ?? []);
   {
     // The FRONT face's type rule (owner Q2: a wave-1 face type, on the body
     // its type derives) — the kind gate above can't see it: a card on a
@@ -834,6 +834,7 @@ export async function updateCardAction(
       data.frame_style.template ??
         (existing.frame_style as { template?: string } | null)?.template,
       savedCardType,
+      data.color_identity ?? existing.color_identity ?? [],
     );
   }
   // An edit's switch flip (frame_anatomy — edits never send frame_style):
@@ -861,7 +862,7 @@ export async function updateCardAction(
   // it had as a creature (twoColorFits). Untouched when nothing is dropped.
   if (data.card_type !== undefined && update.frame_style === undefined && existing.frame_style) {
     const storedStyle = existing.frame_style as FrameAnatomyStyle & { template?: string };
-    const normalized = normalizeAnatomy(storedStyle, storedStyle.template, savedCardType);
+    const normalized = normalizeAnatomy(storedStyle, storedStyle.template, savedCardType, data.color_identity ?? existing.color_identity ?? []);
     if (normalized !== storedStyle) update.frame_style = normalized as CardUpdate["frame_style"];
   }
   // A stored RETIRED template (TODO 4.54) is stored as the frame the row

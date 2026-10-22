@@ -3237,4 +3237,15 @@ describe("v64 — the Zendikar Expeditions re-sourced from Card Conjurer (TODO 4
     // expeditionlandbfz (an addition: no card sits on it) owes nothing.
     for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(SCOPE.includes(t));
   });
+
+  // v63 is #603's (Zendikar Rising). Until it merges, v63 has no rollout and
+  // no scope, and a version with neither reads as a SWEEP OF EVERY CARD
+  // (rolloutPolicy's default, an unscoped version): this PR must not merge
+  // before #603 does — or it is renumbered to v63 if #603 is renumbered.
+  it("ships only after v63 (#603): no gap below it", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.VERSION_ROLLOUT[V - 1], "v63 (#603) has no rollout yet: merge #603 first").toBeDefined();
+    // (#603 is scoped to its own frames: a plain m15 card owes v63 nothing.)
+    expect(isRenderStale(V - 2, "m15", undefined, V - 1), "v63 reads as a sweep of every card").toBe(false);
+  });
 });

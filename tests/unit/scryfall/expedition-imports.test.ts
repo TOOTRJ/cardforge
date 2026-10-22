@@ -8,6 +8,10 @@ import { frameGateError } from "@/lib/cards/frame-availability";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { frameMasterKey } from "@/components/cards/frame-layer";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
+import { frameComboKey } from "@/lib/cards/frame-reference-registry";
+import { finalizeImportMatch, importFrameColorKey, resolveImportFrame } from "@/lib/creator/frame-resolve";
+import { appliedImportFrameChoice, frameFitsImport, importFramePlan } from "@/lib/creator/import-frame-choice";
+import { frameRequestFromImport } from "@/lib/frames/frame-requests";
 
 // ---------------------------------------------------------------------------
 // TODO 4.11 wave 1: every Zendikar Expedition printing on Scryfall (ZNE #1–30,
@@ -100,6 +104,72 @@ describe("the Expedition imports", () => {
     }
     expect(frameMasterKey(getFrameProfile("expeditionland"), ["red"], { cardType: "land" }, { plainLandMaster: true })).toBe("r");
     expect(frameMasterKey(getFrameProfile("m15land"), ["multicolor"], { cardType: "land" }, { plainLandMaster: true })).toBe("m");
+  });
+
+  // The import's chooser, its applied pick, its overwrite note and its
+  // request row read the key the card PAINTS on each frame
+  // (importFrameColorKey): `c` on the Expedition frames, gold anywhere else.
+  // Before (#602's skeptic check): the chooser checked gold while the card
+  // drew, saved and landed in `c`.
+  it("offers and applies a two-colour Expedition's frame where its plain land `c` is ticked — never where only gold is", () => {
+    for (const [key, template] of [["zne-1", "expeditionland"], ["exp-1", "expeditionlandbfz"]] as const) {
+      const onlyC = new Set([frameComboKey(template, "c"), frameComboKey("m15land", "m")]);
+      const onlyM = new Set([frameComboKey(template, "m"), frameComboKey("m15land", "m")]);
+      const raw = mapScryfallToFormPatch(card(key));
+      expect(importFrameColorKey(template, raw), key).toBe("c");
+      expect(importFrameColorKey("m15land", raw), key).toBe("m");
+
+      // Only `c` ticked: offered, preselected as the nearest, and applied.
+      const patchC = finalizeImportMatch(raw, onlyC);
+      expect(patchC.color_identity, key).toEqual(["multicolor"]);
+      const planC = importFramePlan(patchC, onlyC, "m15");
+      expect(planC.mode, key).toBe("choose");
+      if (planC.mode !== "choose") continue;
+      expect(planC.options.map((o) => o.template), key).toContain(template);
+      expect(planC.options.find((o) => o.template === template)?.nearest, key).toBe(true);
+      expect(planC.preselected, key).toEqual({ template });
+      // (the "PipGlyph can't match … exactly yet" heading: the frame IS there)
+      expect(planC.heading, key).toMatch(/can't match/);
+      expect(frameFitsImport(template, { kind: "land", verifiedKeys: onlyC, patch: patchC }), key).toBe(true);
+      expect(
+        appliedImportFrameChoice({ choice: { template }, patch: patchC, kind: "land", templateBefore: "m15", verifiedKeys: onlyC }),
+        key,
+      ).toBe(template);
+      // The landing without a pick, and the request row: verified in `c`,
+      // still nearest through the two-colour gap (the registry's own cause).
+      const landed = resolveImportFrame({ patch: patchC, kind: "land", current: { colors: [] }, verifiedKeys: onlyC });
+      expect(landed.resolution, key).toEqual({ status: "exact", template, colorKey: "c" });
+      const row = frameRequestFromImport(patchC, { artImported: true, source: "import", verifiedKeys: onlyC });
+      expect(row?.status, key).toBe("nearest");
+      expect(row?.cause, key).toBe("missing");
+
+      // Only gold ticked: the Expedition frame is neither offered nor
+      // applied; the land lands on m15land in its gold.
+      const patchM = finalizeImportMatch(raw, onlyM);
+      const planM = importFramePlan(patchM, onlyM, "m15");
+      expect(planM.mode, key).toBe("choose");
+      if (planM.mode !== "choose") continue;
+      expect([...planM.options, ...planM.moreOptions].map((o) => o.template), key).not.toContain(template);
+      expect(planM.preselected, key).toEqual({ template: "m15land" });
+      expect(frameFitsImport(template, { kind: "land", verifiedKeys: onlyM, patch: patchM }), key).toBe(false);
+      expect(
+        appliedImportFrameChoice({ choice: { template }, patch: patchM, kind: "land", templateBefore: "m15", verifiedKeys: onlyM }),
+        key,
+      ).toBeNull();
+      const fallback = resolveImportFrame({ patch: patchM, kind: "land", current: { colors: [] }, verifiedKeys: onlyM });
+      expect(fallback.resolution, key).toMatchObject({ status: "frame-switched", template: "m15land", colorKey: "m" });
+    }
+  });
+
+  it("the save keeps the plain-land key only on a gold-keyed card", () => {
+    const style = { template: "expeditionland", plainLandMaster: true as const };
+    expect(normalizeAnatomy(style, "expeditionland", "land", ["multicolor"]).plainLandMaster).toBe(true);
+    expect(normalizeAnatomy(style, "expeditionland", "land", ["green", "white"]).plainLandMaster).toBe(true);
+    for (const colors of [["green"], ["colorless"], []] as const) {
+      expect("plainLandMaster" in normalizeAnatomy(style, "expeditionland", "land", colors), colors.join()).toBe(false);
+    }
+    // Not judged by colour where the caller doesn't know it.
+    expect(normalizeAnatomy(style, "expeditionland", "land").plainLandMaster).toBe(true);
   });
 
   it("reads each reference's colour as the registry lists it", () => {

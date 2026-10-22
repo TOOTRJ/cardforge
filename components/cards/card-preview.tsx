@@ -31,6 +31,7 @@ import {
   webpVariant,
 } from "@/components/cards/frame-layer";
 import { EtchedSheen } from "@/lib/cards/etched-finish";
+import { plainLandMasterDrawn } from "@/lib/cards/frame-color-key";
 import { holoStampArtOf } from "@/lib/cards/holo-stamp-art";
 import {
   FoilBackdropSheen,
@@ -907,6 +908,9 @@ function CardFace({
   const symbols = symbolStyleOf(layout);
   const colorKey = pickFrameColorKey(colorIdentity);
   const masterKey = frameMasterKey(layout, colorIdentity, face, anatomy);
+  // The watermark's tint follows the master a two-colour Expedition paints
+  // (its plain land `c`, TODO 4.11); the card's colour key everywhere else.
+  const watermarkKey = plainLandMasterDrawn(layout, anatomy, colorIdentity) ? "c" : colorKey;
   // The two-colour look (TODO 4.6b) picks the stat plate (plateKeyFor: a
   // hybrid's grey "c"), and the anatomy overlays (the crown, 4.6a) are drawn
   // over the master — the bake's twins. Both are nothing until a profile
@@ -1748,7 +1752,7 @@ function CardFace({
                     watermarkHeightFraction(effectiveWatermark) *
                     (layout.orientation === "landscape" ? 5 / 7 : 7 / 5),
                 ),
-                color: watermarkInk(colorKey),
+                color: watermarkInk(watermarkKey),
                 lineHeight: 1,
               }}
             />

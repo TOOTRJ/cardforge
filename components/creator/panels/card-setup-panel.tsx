@@ -847,6 +847,7 @@ export function CardSetupPanel({
             verifiedKeys={verifiedKeys}
             frameType={frameType}
             frameFor={colorFrameFor}
+            plainLandMaster={plainLandMaster === true ? true : undefined}
           />
         )}
       />

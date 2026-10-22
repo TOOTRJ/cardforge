@@ -60,6 +60,7 @@
 // ---------------------------------------------------------------------------
 
 import { supertypeHasWord } from "@/lib/cards/card-display";
+import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import { isCollectorStyle, isCollectorSwitch, type CollectorSwitch } from "@/lib/cards/collector-line";
 import {
   holoStampArtRect,
@@ -364,6 +365,10 @@ export function normalizeAnatomy<T extends FrameAnatomyStyle>(
   frameStyle: T,
   template: FrameTemplate | string | null | undefined,
   cardType: string | null | undefined,
+  /** The card's colour as it will be saved, where the caller knows it: the
+   *  plain-land stand-in is kept only for a gold-keyed card (TODO 4.11).
+   *  Absent: not judged by colour. */
+  colors?: readonly ColorIdentity[] | null,
 ): T {
   const profile = getFrameProfile(template ?? undefined);
   const anatomy = frameAnatomyOfProfile(profile);
@@ -390,8 +395,14 @@ export function normalizeAnatomy<T extends FrameAnatomyStyle>(
     delete out.firstPartColor;
   }
   // The plain-land stand-in (TODO 4.11) only where the frame declares one
-  // (the Expeditions), and only as `true`.
-  if ("plainLandMaster" in out && (!profile.plainLandStandIn || out.plainLandMaster !== true)) {
+  // (the Expeditions), only as `true`, and only on a card whose colour
+  // keys gold (a mono-colour or colourless card never draws it).
+  if (
+    "plainLandMaster" in out &&
+    (!profile.plainLandStandIn ||
+      out.plainLandMaster !== true ||
+      (colors !== undefined && pickFrameColorKey(colors) !== "m"))
+  ) {
     out = { ...out };
     delete out.plainLandMaster;
   }
@@ -424,7 +435,11 @@ export function stampForTemplate<T>(stamp: T, template: FrameTemplate | string |
  * An explicit `false` (a crownless Legendary printing, a Legendary
  * showcase, the creator's off switch) stays. The input itself when nothing changes.
  */
-export function newCardFrameStyle<T extends FrameStyle>(frameStyle: T, cardType: string | null | undefined): T {
+export function newCardFrameStyle<T extends FrameStyle>(
+  frameStyle: T,
+  cardType: string | null | undefined,
+  colors?: readonly ColorIdentity[] | null,
+): T {
   const defaults = anatomyDefaults(frameStyle.template);
   let stamped = frameStyle;
   for (const key of FRAME_ANATOMY_KEYS) {
@@ -433,7 +448,7 @@ export function newCardFrameStyle<T extends FrameStyle>(frameStyle: T, cardType:
       Object.assign(stamped, { [key]: defaults[key] });
     }
   }
-  return normalizeAnatomy(stamped, frameStyle.template, cardType);
+  return normalizeAnatomy(stamped, frameStyle.template, cardType, colors);
 }
 
 /** The anatomy switches a stored frame_style names (the booleans, a
