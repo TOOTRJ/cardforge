@@ -3841,8 +3841,9 @@ const ADVENTURE: FrameProfile = {
 //
 // Measured on the 93 plain printings (2026-10-21, 1500 × 2100):
 //   • the creature's text: ink from x 127 to 733 (the box ends at 736),
-//     1333–1927 down like M15's, CENTRED in its box, at 68 px (line pitch 66
-//     on most cards: RULES_SIZE_PX.reduced, as the adventure's creature page);
+//     1333–1927 down like M15's, CENTRED in its box, at up to 76 px (most
+//     cards' lines pitch 66, but SOS #27 sets 74 px: the standard ceiling,
+//     the fit stepping a long text down — owner Round 79);
 //   • the page's name: baseline 1388 (the adventure's — band centre 1367.3),
 //     ink from x 783, the pips' right edge at 1392; its type line baseline
 //     1490 (cap 1447–1493, the adventure panel's 46 px capitals: the same
@@ -3850,7 +3851,10 @@ const ADVENTURE: FrameProfile = {
 //   • the page's text: ink x 775–1387, y 1545–1849, left-aligned, centred
 //     down its box (1536–1855), at 68 px on most cards (pitch 66–67).
 const PREPARE_PANEL_BAND_PCT = 4.0;
-const PREPARE_PAGE_LEFT_PX = 775;
+// The page's pen: its ink lands on print's columns — on SOS #109, "Seething
+// Song" from x 783, "Instant" 785, "Add" 778, on the bake as on print (owner
+// Round 79: the first cut's rects sat 5 px left, at 775 / 769).
+const PREPARE_PAGE_LEFT_PX = 780;
 const PREPARE_PAGE_RIGHT_PX = 1397;
 const PREPARE_PANEL_RECT = (centerPx: number): Rect => ({
   topPct: centerPx / 21 - PREPARE_PANEL_BAND_PCT / 2,
@@ -3864,10 +3868,12 @@ const PREPARE: FrameProfile = {
   costDy: CC_M15_COST_DY,
   type: { ...M15.type, dy: CC_M15_TYPE_DY },
   artSlot: CC_M15_ART_SLOT,
-  // The creature's rules → the LEFT box (M15's box, up to the page).
+  // The creature's rules → the LEFT box (M15's box, up to the page), at
+  // the standard ceiling (owner Round 79: SOS #27 prints its text at 74 px;
+  // the fit still steps a long text down).
   rules: {
     rect: { topPct: 63.6, leftPct: 121 / 15, widthPct: (736 - 121) / 15, heightPct: 28.0 },
-    sizePct: rulesPxToPct(RULES_SIZE_PX.reduced),
+    sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
     colorHex: INK_DARK,
     vAlign: "center",
     font: "body",
@@ -3892,10 +3898,10 @@ const PREPARE: FrameProfile = {
       font: "display",
       shadowCss: ADV_SHADOW,
     },
-    // The page's box: 1540–1852 down, from x 769 (ink at 775) to its right
-    // edge at 1390.
+    // The page's box: 1540–1852 down, from x 774 (ink at 778–780, print's)
+    // to its right edge at 1390.
     rules: {
-      rect: { topPct: 1540 / 21, leftPct: 769 / 15, widthPct: (1390 - 769) / 15, heightPct: (1852 - 1540) / 21 },
+      rect: { topPct: 1540 / 21, leftPct: 774 / 15, widthPct: (1390 - 774) / 15, heightPct: (1852 - 1540) / 21 },
       sizePct: rulesPxToPct(RULES_SIZE_PX.reduced),
       colorHex: INK_DARK,
       vAlign: "center",

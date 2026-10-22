@@ -86,10 +86,11 @@ describe("the Prepare recipe", () => {
     // The strip reads the field beside the art window (it ends at 1166 px,
     // where the type bar's end begins), inside the frame's right side.
     const blockRows = R.strip.blocks.reduce((n, b) => n + Math.abs(b.fieldCols[1] - b.fieldCols[0]) + 1, 0);
-    expect(blockRows).toBeGreaterThanOrEqual(R.strip.rows[1] - R.strip.rows[0] + 1);
+    expect(blockRows - R.strip.crossFade * (R.strip.blocks.length - 1)).toBeGreaterThanOrEqual(R.strip.rows[1] - R.strip.rows[0] + 1);
     for (const b of R.strip.blocks) {
       expect(b.sourceRow0 + (R.strip.cols[1] - R.strip.cols[0])).toBeLessThan(1166);
-      for (const c of b.fieldCols) expect(c > 1402 && c < 1442, b.fieldCols.join("..")).toBe(true);
+      // Inside the field, never its outer rim (1438..1441, owner Round 79).
+      for (const c of b.fieldCols) expect(c > 1402 && c < 1438, b.fieldCols.join("..")).toBe(true);
     }
     const outlineCols = Object.keys(R.outline.left.cols).map(Number);
     expect(Math.min(...outlineCols)).toBeGreaterThanOrEqual(R.leftBoxEdge.toCol + R.leftBoxEdge.width);

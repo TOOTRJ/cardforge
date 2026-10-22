@@ -206,15 +206,30 @@ async function buildKey(key) {
   //    window, a quarter turn, toned onto print's strip
   {
     const S = R.strip;
-    const rows = [];
-    for (const block of S.blocks) {
+    // Each block's rows, then the blocks joined, the last `crossFade` rows of
+    // one blended into the first of the next (weights 1/7 … 6/7).
+    const want = S.rows[1] - S.rows[0] + 1;
+    const blockRows = S.blocks.map((block) => {
       const [from, to] = block.fieldCols;
       const step = to >= from ? 1 : -1;
-      for (let col = from; col !== to + step && rows.length < S.rows[1] - S.rows[0] + 1; col += step) {
-        rows.push(Array.from({ length: S.cols[1] - S.cols[0] + 1 }, (_, j) => get(base, col, block.sourceRow0 + j)));
+      const out = [];
+      for (let col = from; col !== to + step; col += step) {
+        out.push(Array.from({ length: S.cols[1] - S.cols[0] + 1 }, (_, j) => get(base, col, block.sourceRow0 + j)));
       }
+      return out;
+    });
+    const fade = S.crossFade ?? 0;
+    let rows = blockRows[0];
+    for (const next of blockRows.slice(1)) {
+      const head = rows.slice(0, rows.length - fade);
+      const blended = Array.from({ length: fade }, (_, t) => {
+        const w = (t + 1) / (fade + 1);
+        return rows[rows.length - fade + t].map((p, j) => p.map((v, c) => v * (1 - w) + next[t][j][c] * w));
+      });
+      rows = [...head, ...blended, ...next.slice(fade)];
     }
-    if (rows.length < S.rows[1] - S.rows[0] + 1) throw new Error(`the strip's blocks fill ${rows.length} of ${S.rows[1] - S.rows[0] + 1} rows`);
+    if (rows.length < want) throw new Error(`the strip's blocks fill ${rows.length} of ${want} rows`);
+    rows = rows.slice(0, want);
     const own = [0, 1, 2].map((c) => median(rows.flatMap((r) => r.map((p) => p[c]))));
     const shift = R.print[key]?.strip ? R.print[key].strip.map((v, c) => v - own[c]) : [0, 0, 0];
     rows.forEach((pixels, i) => {
@@ -352,7 +367,7 @@ if (!dryRun) {
     recipe: {
       leftBoxEdge: `the base box's right edge (cols ${R.leftBoxEdge.fromCol}..${R.leftBoxEdge.fromCol + R.leftBoxEdge.width - 1}) moved to ${R.leftBoxEdge.toCol}..`,
       rim: `cols ${R.rim.cols.join("..")} x rows ${R.rim.rows.join("..")}: the base's pinline (row ${R.rim.sourceRow}) per column`,
-      strip: `rows ${R.strip.rows.join("..")}: the base's frame field (cols ${R.strip.blocks.map((b) => `${b.fieldCols.join("..")} from row ${b.sourceRow0}`).join(", then ")}) turned a quarter, each channel moved onto print's strip median, the page's shadow on it`,
+      strip: `rows ${R.strip.rows.join("..")}: the base's frame field (cols ${R.strip.blocks.map((b) => `${b.fieldCols.join("..")} from row ${b.sourceRow0}`).join(", then ")}, cross-faded over ${R.strip.crossFade} rows) turned a quarter, each channel moved onto print's strip median, the page's shadow on it`,
       pageBox: `cols ${R.pageBox.cols.join("..")} x rows ${R.pageBox.rows.join("..")}: the base box's paper x a per-key gain, its top / left / bottom edges the base box's own, moved`,
       bars: `name rows ${R.bars.name.rows.join("..")}, type ${R.bars.type.rows.join("..")}, from x ${R.bars.x0}: the adventure master's page bars (rows ${R.bars.name.sourceRows.join("..")} / ${R.bars.type.sourceRows.join("..")}) toned onto print and lit by the prints' bevel; the shape (square left end, half-ellipse right end centred x ${R.bars.end.cx}, ${R.bars.end.a} px across) and its ${R.bars.outline} px outline DRAWN, flat black`,
       outline: "the page's left, top and bottom outline DRAWN, flat black at the prints' coverage",

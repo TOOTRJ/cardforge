@@ -13913,7 +13913,7 @@
     "recipe": {
       "leftBoxEdge": "the base box's right edge (cols 1374..1389) moved to 729..",
       "rim": "cols 750..1390 x rows 1316..1871: the base's pinline (row 1308) per column",
-      "strip": "rows 1876..1926: the base's frame field (cols 1404..1440 from row 250, then 1440..1427 from row 500) turned a quarter, each channel moved onto print's strip median, the page's shadow on it",
+      "strip": "rows 1876..1926: the base's frame field (cols 1404..1437 from row 250, then 1415..1437 from row 510, cross-faded over 6 rows) turned a quarter, each channel moved onto print's strip median, the page's shadow on it",
       "pageBox": "cols 758..1390 x rows 1532..1862: the base box's paper x a per-key gain, its top / left / bottom edges the base box's own, moved",
       "bars": "name rows 1325..1416, type 1426..1517, from x 758: the adventure master's page bars (rows 1323..1412 / 1424..1493) toned onto print and lit by the prints' bevel; the shape (square left end, half-ellipse right end centred x 1390, 20 px across) and its 3 px outline DRAWN, flat black",
       "outline": "the page's left, top and bottom outline DRAWN, flat black at the prints' coverage"
@@ -13922,27 +13922,27 @@
       "w": [
         "m15/w.png (published, sha256 3818b6c0d274)",
         "its page bars from adventure/w.png (published, sha256 ac04d30174d9)",
-        "page box gain 0.872 / 0.852 / 0.830; strip shift 6 / 8 / 9; name bar 151/141/126 → 172/167/154, type bar 124/111/94 → 121/111/94"
+        "page box gain 0.872 / 0.852 / 0.830; strip shift 6 / 9 / 11; name bar 151/141/126 → 172/167/154, type bar 124/111/94 → 121/111/94"
       ],
       "u": [
         "m15/u.png (published, sha256 80cb122e0539)",
         "its page bars from adventure/u.png (published, sha256 be5edb0537d4)",
-        "page box gain 0.780 / 0.848 / 0.887; strip shift 6 / 10 / 9; name bar 14/118/153 → 13/130/169, type bar 12/80/109 → 0/75/103"
+        "page box gain 0.780 / 0.848 / 0.887; strip shift 4 / 11 / 10; name bar 14/118/153 → 13/130/169, type bar 12/80/109 → 0/75/103"
       ],
       "b": [
         "m15/b.png (published, sha256 d5578ecb1927)",
         "its page bars from adventure/b.png (published, sha256 316327a82421)",
-        "page box gain 0.726 / 0.721 / 0.709; strip shift -1 / 3 / 9; name bar 97/91/94 → 89/87/85, type bar 45/38/40 → 56/49/49"
+        "page box gain 0.726 / 0.721 / 0.709; strip shift -3 / 2 / 9; name bar 97/91/94 → 89/87/85, type bar 45/38/40 → 56/49/49"
       ],
       "r": [
         "m15/r.png (published, sha256 e6cbb495cf62)",
         "its page bars from adventure/r.png (published, sha256 928b2581eb2e)",
-        "page box gain 0.882 / 0.805 / 0.776; strip shift 19 / 46 / 48; name bar 151/74/51 → 180/83/65, type bar 121/37/22 → 134/42/30"
+        "page box gain 0.882 / 0.805 / 0.776; strip shift 22 / 50 / 52; name bar 151/74/51 → 180/83/65, type bar 121/37/22 → 134/42/30"
       ],
       "g": [
         "m15/g.png (published, sha256 f6d980508b95)",
         "its page bars from adventure/g.png (published, sha256 57ddcb2bf82f)",
-        "page box gain 0.791 / 0.810 / 0.793; strip shift 0 / 5 / 8; name bar 67/92/54 → 49/94/56, type bar 4/56/28 → 2/55/22"
+        "page box gain 0.791 / 0.810 / 0.793; strip shift -1 / 5 / 8; name bar 67/92/54 → 49/94/56, type bar 4/56/28 → 2/55/22"
       ],
       "m": [
         "m15/m.png (published, sha256 0b21a694ab48)",

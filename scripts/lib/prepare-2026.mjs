@@ -52,9 +52,13 @@ export const PREPARE_RECIPE = {
   //    below from 1927). Filled with the base's own frame field beside the
   //    art window turned a quarter — strip row r, column j ← the field
   //    pixel at (column r of the block, row sourceRow0 + j): the right
-  //    field's 37 columns, then its outer 14 again, outside in, from rows
-  //    250 px lower — the seam meets like columns (a mirror of one block
-  //    drew kaleidoscope diamonds; the left field's, a hue step).
+  //    field from its inner edge (1404, whose bright bevel falls under the
+  //    page's shadow) to 1437, then its inside again (1415..1437) from rows
+  //    260 px lower, the two CROSS-FADED over `crossFade` rows. Never the
+  //    field's outer rim (1438..1441: a bright line, owner Round 79 — the
+  //    first cut ran it across the strip two-thirds down on blue and
+  //    black); a mirror of one block drew kaleidoscope diamonds, the left
+  //    field a hue step.
   //    Print's strip is LIGHTER than the frame's own field (the same cards'
   //    side field reads as the master's): each channel moves by print's
   //    strip median − the strip's own (`print.<key>.strip`; m and c: none).
@@ -62,9 +66,10 @@ export const PREPARE_RECIPE = {
     cols: [745, 1390],
     rows: [1876, 1926],
     blocks: [
-      { fieldCols: [1404, 1440], sourceRow0: 250 },
-      { fieldCols: [1440, 1427], sourceRow0: 500 },
+      { fieldCols: [1404, 1437], sourceRow0: 250 },
+      { fieldCols: [1415, 1437], sourceRow0: 510 },
     ],
+    crossFade: 6,
     // The page's drop shadow on the strip, rows 1876.. (print ÷ the strip's
     // own level, 160).
     shadow: [0.1, 0.19, 0.25, 0.24, 0.21, 0.21, 0.28, 0.43, 0.47, 0.55, 0.76, 0.88, 0.91],

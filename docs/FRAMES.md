@@ -3770,10 +3770,14 @@ and a half-ellipse right end reaching x 1410 over the pinline (centre 1390,
 the left box's (1532–1862); under the page the frame field shows, lighter
 than the frame's own field, down to M15's box bottom, and M15's P/T plate
 sits on it. Text: the creature's rules centred in the left box (ink x
-127–733) at 68 px, the page's name on the adventure panel's baseline (1388)
-and size (62 px, pips 60 px, right edge 1392), its type line baseline 1490,
-its rules left-aligned and centred down the page's box (ink 775–1387) at
-68 px.
+127–733) at up to 76 px (most cards pitch 66, SOS #27 sets 74; owner
+Round 79 raised the first cut's 68 to the standard ceiling, the fit
+stepping a long text down), the page's name on the adventure panel's
+baseline (1388) and size (62 px, pips 60 px, right edge 1392), its type line
+baseline 1490, its rules left-aligned and centred down the page's box at
+68 px. The page's ink lands on print's columns — SOS #109's "Seething Song"
+from x 783, "Instant" 785, "Add" 778 on print; 783 / 786 / 778 on the bake
+(the first cut's rects sat 5 px left: owner Round 79).
 
 | key | name bar (print → master) | type bar | page box |
 | --- | --- | --- | --- |
@@ -3790,7 +3794,9 @@ neither Card Conjurer, whose fork ends June 2024, nor MSE has the frame):
 `adventure/<key>` (Card Conjurer's adventure page bars are the prints' two
 tones). The run moves the base box's right edge onto the left box, fills
 the page's rim with the base's pinline, lays the base's frame field (a
-quarter turn, toned onto print's strip) under the page, re-dresses the
+quarter turn — two runs of its inside, cross-faded over 6 rows, never its
+bright outer rim, which the first cut ran across the strip on blue and
+black — toned onto print's strip) under the page, re-dresses the
 page's box as the base's paper under a per-key gain with the base box's own
 edges, cuts the adventure bars to the prints' shape — toned onto print and
 lit by the prints' bevel — and darkens the page's outline. The only drawn
@@ -3798,7 +3804,12 @@ geometry is the two outlines, flat black at the prints' coverage (said so
 in provenance, `frame-sources.json`, `source: "pipglyph"`). Every WebP's
 alpha is checked equal to its PNG's; the bucket is the only home. `m` and
 `c` exist so that no colour resolves to a missing master (no plain gold
-page or colourless Prepare is printed) and stay unticked.
+page or colourless Prepare is printed). The owner ticks GOLD as a known
+close stand-in (Round 79): the 22 bordered two-colour printings then land
+on `prepare/m` — the Prepare kind, `nearest` with the two-colour gap (print
+draws the split frame, its page in the spell's colour) — and the 5
+two-colour extended-art ones move onto it from the extended-art frame; `c`
+stays unticked.
 
 **Profile.** M15's slots, cost lift, type baseline, art window
 (`CC_M15_ART_SLOT`), P/T plate and crown (`M15_CROWN`, `c` → the artifact's
@@ -3822,8 +3833,8 @@ its fields on the steps of its creature twin, the never-drawn fields hidden
 the back face, which the frame draws (main imported the creature on M15
 with the spell as a back face no frame drew). The bordered printings are
 EXACT on `prepare` once it is verified in the card's colour. Short of the
-frame in the card's colour (before its tick; gold and colourless stay
-unticked) the import is main's — the CREATURE kind on the printing's own
+frame in the card's colour (before its tick; colourless stays unticked)
+the import is main's — the CREATURE kind on the printing's own
 landing (M15, or the extended-art frame), the spell a legacy back
 (`finalizeImportMatch`): the Prepare kind wears its frame alone, so kept on
 an unpublished one the import chooser had nothing to offer. A two-colour card (the split frame,
@@ -3837,9 +3848,10 @@ The AI deck remix lands where the import does and names the spell as the
 creature's own (`SECOND_HALF_RELATIONSHIP.prepare`); the AI does not design
 Prepare cards (its design types are one-faced).
 
-**Left for later** (TODO 4.27): the stamp notch and the collector line; the
-page's own colour (4.26) and the two-colour pairs (4.6f); the extended-art
-and borderless dresses; Room and Omen.
+**Left for later** (TODO 4.27), in the owner's order (Round 79): the page's
+own colour and the two-colour pairs (4.26 / 4.6f) FIRST, then the stamp
+notch and the collector line; the extended-art and borderless dresses;
+Omen, then Room.
 
 ### The Universes Beyond frames (4.25)
 

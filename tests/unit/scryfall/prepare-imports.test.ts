@@ -129,4 +129,27 @@ describe("the Prepare printings, imported", () => {
     expect(finalizeImportMatch(mapScryfallToFormPatch(card("sos-109")), redOnly).kind).toBe("prepare");
     expect(finalizeImportMatch(mapScryfallToFormPatch(card("sos-198")), redOnly).kind).toBe("creature");
   });
+
+  it("with GOLD ticked (owner Round 79: a known close stand-in), every two-colour printing is the Prepare kind on the gold master, nearest", () => {
+    // Print draws a two-colour Prepare card on the split frame (4.6f) with
+    // its page in the SPELL's colour (4.26); the gold master is the stand-in.
+    // The 22 bordered ones land on `prepare` with the two-colour gap, the 5
+    // extended-art ones move onto it from the extended-art frame; every
+    // one-colour printing still imports as main did until its own tick.
+    const goldOnly = new Set([...PREPARE_UNVERIFIED, "prepare/m"]);
+    const rows: Record<string, number> = {};
+    for (const key of KEYS) {
+      const printing = card(key);
+      if (printing.textless === true || (printing.colors ?? []).length < 2) continue;
+      const finalized = finalizeImportMatch(mapScryfallToFormPatch(printing), goldOnly);
+      expect(finalized.kind, key).toBe("prepare");
+      expect(finalized.color_identity, key).toEqual(["multicolor"]);
+      const m = finalized.frame_match!;
+      const row = `${m.status} ${m.template}${m.landOn ? `→${m.landOn}` : ""} ${m.blockedBy ?? "-"}`;
+      rows[row] = (rows[row] ?? 0) + 1;
+    }
+    expect(rows).toEqual({ "nearest prepare 4.6f": 22, "nearest extendedart→prepare -": 5 });
+    expect(remixFrameFor(mapScryfallToFormPatch(card("sos-170")), goldOnly)).toEqual({ ok: true, template: "prepare", card_type: "creature" });
+    expect(finalizeImportMatch(mapScryfallToFormPatch(card("sos-109")), goldOnly).kind).toBe("creature");
+  });
 });
