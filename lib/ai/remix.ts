@@ -82,6 +82,9 @@ RULES:
 export const SECOND_HALF_RELATIONSHIP: Record<RemixSecondHalfLayout, string> = {
   adventure:
     "The second half is an Adventure: a spell the first half's subject casts before it arrives, printed on the same card. Name it as that subject's deed, errand or tale, never a second character.",
+  // The Prepare card (TODO 4.27): the spell on the page beside the creature.
+  prepare:
+    "The second half is the creature's Prepare spell: a spell printed beside it on the same card, which the creature lets its controller cast a copy of while it is prepared. Name it as that subject's technique, lesson or song, never a second character.",
   split:
     "The halves are two spells printed side by side on one card. Name them as a matched pair (opposites, or two beats of one idea), similar in shape and length.",
   aftermath:

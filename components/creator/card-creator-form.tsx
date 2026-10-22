@@ -4101,7 +4101,7 @@ export function CardCreatorForm({
         thumb: !faceTabs ? undefined : partTabs && !partOwnArt ? (
           <FaceThumb
             glyph={
-              isAdventureFrame ? (
+              isAdventureFrame || kind === "prepare" ? (
                 <BookOpen className="h-3.5 w-3.5" aria-hidden />
               ) : (
                 <RotateCw className="h-3.5 w-3.5" aria-hidden />

@@ -159,8 +159,9 @@ describe("the crown slot the profiles draw (M15_CROWN)", () => {
     // draw the floating crown; devoid draws none).
     expect(FRAME_TEMPLATE_VALUES.filter((t) => (getFrameProfile(t).overlays ?? []).some((o) => o.assetPathTemplate === M15_CROWN.assetPathTemplate))).toEqual(
       // (…and the station frame's two entries, TODO 4.27a: m15artifact's and
-      // m15land's band, keyed as theirs.)
-      ["m15", "m15land", "m15artifact", "m15vehicle", "m15station", "m15stationland", "m15snow", "m15snowland", "m15textless", "m15textlessland"],
+      // m15land's band, keyed as theirs; the Prepare frame's, TODO 4.27:
+      // m15's, its colourless key the artifact's.)
+      ["m15", "m15land", "m15artifact", "m15vehicle", "m15station", "m15stationland", "m15snow", "m15snowland", "prepare", "m15textless", "m15textlessland"],
     );
   });
 });

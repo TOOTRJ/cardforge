@@ -143,6 +143,11 @@ const DOCUMENTED_NULLS = new Set([
   // one per colour — no gold or colourless one. The two masters exist so no
   // colour of a land resolves to a missing master.
   "m15stationland/m", "m15stationland/c",
+  // The Prepare frame (TODO 4.27): Secrets of Strixhaven prints no gold
+  // page on the plain frame (a two-colour Prepare prints the split frame,
+  // 4.6f) and no colourless Prepare card. The two masters exist so no
+  // colour resolves to a missing master.
+  "prepare/m", "prepare/c",
   // The double-faced saga front (TODO 5.5 (b)): no colourless transforming
   // saga was printed (the land frame stands in, as on the saga).
   "sagadfcfront/c",

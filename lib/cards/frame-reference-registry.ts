@@ -244,6 +244,13 @@ function sampleBackFace(template: FrameTemplate, colorKey: FrameColorKey) {
         subtypes: ["Adventure"],
         rules_text: "Sample adventure text on the storybook page.",
       };
+    case "prepare":
+      return {
+        title: "Sample Spell",
+        cost: SAMPLE_COST[colorKey],
+        card_type: "sorcery",
+        rules_text: "Sample spell text on the page.",
+      };
     case "flip":
       return {
         title: "Sample, Flipped",

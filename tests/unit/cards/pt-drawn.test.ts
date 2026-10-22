@@ -46,6 +46,8 @@ const NO_PT_SLOT: FrameTemplate[] = [
  *  half draws a P/T. */
 const INLINE_SECOND_FACE: Partial<Record<FrameTemplate, boolean>> = {
   adventure: false,
+  // The Prepare page (TODO 4.27): a spell, the adventure's anatomy — no slot.
+  prepare: false,
   flip: true,
   split: false,
   aftermath: false,

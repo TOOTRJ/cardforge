@@ -85,6 +85,10 @@ export const CARD_KIND_VALUES = [
   // Layout kinds — structural M15 layouts promoted to first-class picks.
   "saga",
   "adventure",
+  // The Prepare card (TODO 4.27, Secrets of Strixhaven 2026): a creature
+  // and the spell it can cast a copy of while prepared, on ONE frame — the
+  // adventure's two parts with the spell's page on the right.
+  "prepare",
   "split",
   "aftermath",
   "flip",
@@ -203,6 +207,12 @@ const RAW_KIND_DEFS: Record<CardKind, Omit<KindDef, "inlineSecondFace">> = {
     layoutTemplates: ["adventure"],
     previewTemplate: "adventure",
   },
+  prepare: {
+    label: "Prepare",
+    cardType: "creature",
+    layoutTemplates: ["prepare"],
+    previewTemplate: "prepare",
+  },
   split: {
     label: "Split",
     cardType: "instant",
@@ -293,13 +303,17 @@ export const KIND_DEFS: Record<CardKind, KindDef> = Object.fromEntries(
 //     enchantments, not this kind).
 // ---------------------------------------------------------------------------
 
-type LayoutKind = "saga" | "adventure" | "split" | "aftermath" | "flip" | "transform" | "mdfc";
+type LayoutKind = "saga" | "adventure" | "prepare" | "split" | "aftermath" | "flip" | "transform" | "mdfc";
 
 export { DFC_FACE_TYPES };
 
 export const LAYOUT_KIND_CARD_TYPES: Readonly<Record<LayoutKind, readonly CardType[]>> = {
   saga: ["enchantment"],
   adventure: ["creature", "enchantment", "artifact", "land", "instant", "sorcery"],
+  // Every printed Prepare card is a creature (124 printings, Scryfall
+  // 2026-10-21) — and its reminder says "this creature": the creature alone
+  // (3b.14 may open more).
+  prepare: ["creature"],
   split: ["instant", "sorcery"],
   aftermath: ["instant", "sorcery"],
   flip: ["creature", "enchantment", "token"],
@@ -571,6 +585,12 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   m15ub: ["creature", "instant", "sorcery", "enchantment"],
   m15ubartifact: ["artifact", "creature"],
   m15ubland: ["land"],
+  // The Prepare frame (TODO 4.27) is new — no stored card sits on it — and
+  // is the Prepare kind's alone, as the Prepare kind wears it alone
+  // (EXCLUSIVE_KINDS): the adventure frame never dresses a Prepare card and
+  // the Prepare frame never an adventure, though both draw the same
+  // `adventure` page anatomy.
+  prepare: ["prepare"],
 };
 
 /** The extended-art frame's land dress (TODO 4.7, owner Round 63): the one
@@ -585,7 +605,7 @@ export function extendedArtDressFor(kind: CardKind, template: FrameTemplate): Fr
 }
 
 /** Kinds that wear ONLY a template whose trade dress names them. */
-const EXCLUSIVE_KINDS: ReadonlySet<CardKind> = new Set<CardKind>(["emblem"]);
+const EXCLUSIVE_KINDS: ReadonlySet<CardKind> = new Set<CardKind>(["emblem", "prepare"]);
 
 /** True when the capability rule judges the template: a showcase, an M15
  *  treatment or a Borderless skin — the bodies whose anatomy decides their

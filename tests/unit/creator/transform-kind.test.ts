@@ -89,7 +89,7 @@ describe("the Transform kind (TODO 5.1a)", () => {
     for (const t of BACKS) expect(templateSupportsKind(t, "transform"), t).toBe(false);
   });
 
-  it("a BACK body refuses every kind — the server's gate too; a front body refuses the exclusive emblem only, as every layout frame", () => {
+  it("a BACK body refuses every kind — the server's gate too; a front body refuses the exclusive kinds only (the emblem, the Prepare card — 4.27), as every layout frame", () => {
     for (const back of BACKS) {
       for (const kind of CARD_KIND_VALUES) expect(templateRefusesKind(back, kind), `${back}/${kind}`).toBe(true);
       // (A back body is in no kind's TEMPLATE_KIND, so the gate names the
@@ -98,7 +98,7 @@ describe("the Transform kind (TODO 5.1a)", () => {
       expect(frameKindGateError(back, cardFieldsFace({ card_type: "land", title: "Cooking Campsite" })), back).not.toBeNull();
     }
     for (const front of FRONTS) {
-      for (const kind of CARD_KIND_VALUES) expect(templateRefusesKind(front, kind), `${front}/${kind}`).toBe(kind === "emblem");
+      for (const kind of CARD_KIND_VALUES) expect(templateRefusesKind(front, kind), `${front}/${kind}`).toBe(kind === "emblem" || kind === "prepare");
       expect(frameKindGateError(front, cardFieldsFace({ card_type: "creature", title: "Delver of Secrets" })), front).toBeNull();
     }
     // A patch that moves a stored card onto a back body is refused; one

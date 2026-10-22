@@ -338,6 +338,12 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // texts clip at the floor there, as they would on a printed page.
   [["adventure/main"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "level up"]],
   [["adventure/adventure"], ["1200 chars", "400 chars", "200 chars", "EOE #30", "TLA #112", "level up", "blank lines", "flavor only", "pips + reminder"]],
+  // The Prepare frame (TODO 4.27): the creature's half of M15's box
+  // (63.6–91.6 %H, 615 px wide) and the spell's page (73.3–88.2 %H, 621 px)
+  // — the prints' boxes; each holds more than the adventure's pages, and a
+  // full card's text still clips at the floor, as it would on print.
+  [["prepare/main"], ["1200 chars", "EOE #30", "typed, as printed"]],
+  [["prepare/adventure"], ["1200 chars", "400 chars", "EOE #30", "TLA #112", "level up", "blank lines", "flavor only", "typed, as printed"]],
   // The ~12 %-high boxes (tokens, flip, aftermath's top half, the ZNR
   // hedron panel): a full card's text never fits them. (The textless promo
   // pair draws no box since layout v58 — no consumer, as the full-art

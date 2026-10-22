@@ -4014,6 +4014,98 @@
       ]
     }
   },
+  "prepare": {
+    "note": "The Prepare frame (TODO 4.27): Secrets of Strixhaven's (2026) black-bordered Prepare creatures — M15's frame with the spell on a page on the right. Each reference is a mono-coloured creature whose spell is its own colour (a hybrid or gold spell prints its own page colour, 4.26) and carries no holofoil stamp (no notch is drawn yet). m and c: no plain printing (a two-colour Prepare prints the split frame; none is colourless).",
+    "colors": {
+      "w": [
+        {
+          "name": "Elite Interceptor // Rejoinder",
+          "set": "sos",
+          "scryfallId": "2970683e-e69c-42cb-a067-34abd56fb42b",
+          "curated": true
+        },
+        {
+          "name": "Honorbound Page // Forum's Favor",
+          "set": "sos",
+          "scryfallId": "79a70863-860f-4a7b-9cb2-d3546b689d44"
+        },
+        {
+          "name": "Quill-Blade Laureate // Twofold Intent",
+          "set": "sos",
+          "scryfallId": "62a47835-5719-48c4-a740-a0c5f00dce11"
+        }
+      ],
+      "u": [
+        {
+          "name": "Encouraging Aviator // Jump",
+          "set": "sos",
+          "scryfallId": "72654b84-9902-41db-92ab-a3499c31221c",
+          "curated": true
+        },
+        {
+          "name": "Spellbook Seeker // Careful Study",
+          "set": "sos",
+          "scryfallId": "cc44eaa4-59a4-419e-b1d1-d92f354ff588"
+        },
+        {
+          "name": "Landscape Painter // Vibrant Idea",
+          "set": "sos",
+          "scryfallId": "c0bd30c4-3cdf-4eda-8be5-0fb5e5ddddbf"
+        }
+      ],
+      "b": [
+        {
+          "name": "Adventurous Eater // Have a Bite",
+          "set": "sos",
+          "scryfallId": "d40cc7da-c731-418e-8547-7033d1939450",
+          "curated": true
+        },
+        {
+          "name": "Cheerful Osteomancer // Raise Dead",
+          "set": "sos",
+          "scryfallId": "3c34660c-25e3-4ff5-9b2b-5554ded2bcc3"
+        },
+        {
+          "name": "Leech Collector // Bloodletting",
+          "set": "sos",
+          "scryfallId": "c715fe4c-c0e7-4342-811f-b74687851097"
+        }
+      ],
+      "r": [
+        {
+          "name": "Blazing Firesinger // Seething Song",
+          "set": "sos",
+          "scryfallId": "3ba971e7-0b7a-4750-896f-7cf063e66b2a",
+          "curated": true
+        },
+        {
+          "name": "Goblin Glasswright // Craft with Pride",
+          "set": "sos",
+          "scryfallId": "c85c5f06-dd31-4e2c-97be-2f64d65069ea"
+        },
+        {
+          "name": "Pigment Wrangler // Striking Palette",
+          "set": "sos",
+          "scryfallId": "c2faf4cf-c4b6-4721-ac06-0e045dd9704a"
+        }
+      ],
+      "g": [
+        {
+          "name": "Infirmary Healer // Stream of Life",
+          "set": "sos",
+          "scryfallId": "911442e3-3003-4683-a766-e791e9553667",
+          "curated": true
+        },
+        {
+          "name": "Studious First-Year // Rampant Growth",
+          "set": "sos",
+          "scryfallId": "24f888dd-785c-4089-a89c-03f9080130ed"
+        }
+      ],
+      "c": null,
+      "m": null
+    }
+  },
   "split": {
     "note": "The M15 split frame as printed since 2018, its collector line down the card’s left border: mono-red MH2 #123 Fast // Furious (alternates WHO #77 Coward // Killer, TSR #156 Boom // Bust, #161 Dead // Gone, #186 Rough // Tumble) and mono-blue MH2 #60 Said // Done (TODO 4.21b). split/m’s reference is C16 #239 Trial // Error, the only gold // gold M15 split outside a showcase — printed in the frame’s 2016 arrangement (the collector line along the bottom border: both halves end about 100 px higher and the left one starts about 90 px further left at HD), so it shows the gold dress, not where the halves sit. No white, black or green split was printed in the M15 frame (black only as the UNK playtest card Fear // Loathing) and no colourless one: those four are built and never offered — split/c is Card Conjurer’s artifact frame, a render stand-in — and stay unverified until a print appears (owner decision 2026-09-29). A split whose halves differ in colour (GRN #224 Expansion // Explosion, hybrid // gold; DMR #209 Pain // Suffering, mono // mono) needs TODO 4.26 (per-part colour): it imports as the nearest frame, blocked by 4.26, and is never a reference here. J21 #730 Fast // Furious is an Arena render in Arena’s own layout, not a print.",
     "colors": {

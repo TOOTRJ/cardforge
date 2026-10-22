@@ -312,6 +312,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // own, but the switch is the CARD's — its back draws it (TLA #117
       // Fire Lord Sozin's legendary back), as the battle's.
       "sagadfcfront",
+      // The Prepare frame (TODO 4.27): M15's crown band over its M15 title
+      // bar (SOS #170 Abigale), no pairs.
+      "prepare",
       // The full-art tokens (TODO 4.48's last pieces): their floating crown
       // band (a Legendary TOKEN draws it there) and their split pairs.
       "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
@@ -340,8 +343,10 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // its entries declare no `twoColorMasters` — and neither does the Nyx
       // Constellation frame, whose two-colour card is the gold master — nor
       // the battle, TODO 5.5: its back draws the crown through the card's
-      // switch, but its two-colour back wears the gold master for now.)
-      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "battle" && t !== "sagadfcfront" && !NYX_TOKENS.includes(t)),
+      // switch, but its two-colour back wears the gold master for now; nor
+      // the Prepare frame, TODO 4.27: its two-colour card is the gold master
+      // until its pairs, 4.6f.)
+      (CROWNED.includes(t) && t !== "prepare" && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "battle" && t !== "sagadfcfront" && !NYX_TOKENS.includes(t)),
   );
 
   it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless, extended-art and snow PROFILES entries — never a profile that spreads them", () => {

@@ -110,6 +110,9 @@ describe("the main box on every template", () => {
         // The extended-art frame (layout v58, TODO 4.7): the pack's box is
         // M15's; the textless promo pair spreads M15 and draws no box.
         "extendedart", "extendedartland", "m15textless", "m15textlessland",
+        // The Prepare frame (TODO 4.27): the creature's half of M15's box,
+        // the prints' margins (ink from x 127, M15's 4 px inside the rect).
+        "prepare",
       ].sort(),
     );
     for (const t of withPrintMargins) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 4, y: 0 });

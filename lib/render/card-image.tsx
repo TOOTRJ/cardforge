@@ -3398,7 +3398,7 @@ function AdventureBake({
   rules: RulesLayout | null;
   target: RulesTarget;
 }) {
-  const name = back.title?.trim() || "Adventure";
+  const name = back.title?.trim() || slot.placeholderName || "Adventure";
   const typeLine = buildTypeLine({
     supertype: back.supertype,
     cardType: back.card_type ?? null,

@@ -77,6 +77,9 @@ export const KIND_REQUIRES: Readonly<Record<CardKind, readonly AnatomyCapability
   emblem: [],
   saga: ["chapters"],
   adventure: ["adventure"],
+  // The Prepare card's spell is a page of the same anatomy (TODO 4.27); the
+  // trade dress (card-kinds.ts TREATMENT_KINDS) keeps the two kinds apart.
+  prepare: ["adventure"],
   split: ["secondFace"],
   aftermath: ["secondFace"],
   flip: ["secondFace"],

@@ -29,6 +29,8 @@ describe("the second-part words, per kind", () => {
       transform: ["Front face", "Back face", "the back face"],
       mdfc: ["Front face", "Back face", "the back face"],
       adventure: ["Creature", "Adventure spell", "the adventure spell"],
+      // The Prepare card (TODO 4.27).
+      prepare: ["Creature", "Prepare spell", "the prepare spell"],
       split: ["Left half", "Right half", "the right half"],
       aftermath: ["Top half", "Aftermath half", "the aftermath half"],
       flip: ["Top side", "Flipped side", "the flipped side"],

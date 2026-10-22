@@ -166,6 +166,8 @@ const KIND_COLOUR: Record<CardKind, VisualColour> = {
   emblem: "c",
   saga: "r",
   adventure: "g",
+  // A Prepare card (TODO 4.27): SOS #109's red.
+  prepare: "r",
   split: "wu",
   aftermath: "b",
   flip: "r",
@@ -348,6 +350,31 @@ function contentFor(kind: CardKind, shape: VisualShape, colour: VisualColour, te
         // the ▼ back the default family derives (TLA #117's shape; NEO's
         // fans are the "@fan" cases), so its tab prints the back's P/T.
         ...(template === "sagadfcfront" ? { back_face: sagaBackFace(shape, colour, "m15dfcback") } : {}),
+      };
+    case "prepare":
+      // The Prepare card (TODO 4.27): SOS #109 Blazing Firesinger // Seething
+      // Song short; long, a Legendary creature (the crown cases draw its
+      // crown) with a full left box and a three-line spell.
+      return {
+        title: long ? "Abigale, Poet Laureate of the Silverquill Halls" : "Blazing Firesinger",
+        card_type: "creature",
+        supertype: long ? "Legendary" : null,
+        subtypes: long ? ["Bird", "Bard"] : ["Dwarf", "Bard"],
+        cost: pips(colour, 2, 1),
+        rules_text: long
+          ? "Flying\nWhenever you cast a creature spell, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)"
+          : "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+        power: "2",
+        toughness: "3",
+        back_face: {
+          title: long ? "Heroic Stanza of the Seven Libraries" : "Seething Song",
+          cost: pips(colour, 1, 1),
+          card_type: long ? "sorcery" : "instant",
+          subtypes: [],
+          rules_text: long
+            ? "Put a +1/+1 counter on target creature. It gains flying until end of turn. Draw a card."
+            : "Add {R}{R}{R}{R}{R}.",
+        },
       };
     case "adventure":
     case "split":
@@ -705,6 +732,10 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // pairCrownOnGold) and gold; the land's colour and its land grey (c → l).
   ["m15textless", ["u", "c", "wu", "wub"]],
   ["m15textlessland", ["g", "c"]],
+  // TODO 4.27: the Prepare frame's crown — M15's band over its M15 title
+  // bar: a colour (SOS #170's gold is a pair, 4.6f), the artifact silver on
+  // a colourless card (c → a), gold.
+  ["prepare", ["r", "c", "wub"]],
 ];
 /** Square corners (print): a black border, a ring, art to the edge, landscape. */
 /** No art (`art_url` null): the empty-art box, and no under-frame layer on a

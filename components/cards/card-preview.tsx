@@ -1168,7 +1168,7 @@ function CardFace({
         ? adventureRulesLayout({
             layout,
             rulesText: adventurePlaceholder ? null : adventureText,
-            flavorText: adventurePlaceholder ? ADVENTURE_RULES_HINT : null,
+            flavorText: adventurePlaceholder ? (layout.adventure.rulesHint ?? ADVENTURE_RULES_HINT) : null,
             aspect,
             show: drawnStats,
             rulesAlign,
@@ -2718,7 +2718,7 @@ function AdventurePanel({
   rulesPlaceholder: boolean;
   pipOverrides?: PipOverrides | null;
 }) {
-  const name = data.title?.trim() || "Adventure";
+  const name = data.title?.trim() || slot.placeholderName || "Adventure";
   const typeLine = buildTypeLine({
     supertype: data.supertype,
     cardType: data.cardType,

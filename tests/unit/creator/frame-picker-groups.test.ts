@@ -165,6 +165,11 @@ const STATION_DRESSES: readonly string[] = [
   // …and its back (5.5 (b), PR 2) — pinned in
   // tests/unit/creator/saga-dfc-back.test.ts.
   "sagadfcback",
+  // …and the Prepare frame AND kind (TODO 4.27): a new template and a new
+  // kind, each the other's alone — every row naming either dropped, as
+  // above; pinned in tests/unit/creator/prepare-kind.test.ts and
+  // tests/unit/scryfall/prepare-imports.test.ts.
+  "prepare",
 ];
 function withoutStationDresses(dump: Dump): Dump {
   const named = (text: string) => STATION_DRESSES.some((t) => text === t || text.startsWith(`${t}|`));

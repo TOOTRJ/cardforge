@@ -17,7 +17,7 @@ import { isBattleFront, isSagaFront, templateHasBackFace } from "@/lib/cards/dfc
 /** The layout kinds whose frame paints a second half the remix names — and
  *  the double-faced kinds (TODO 5.4), whose BACK FACE the remix names and
  *  paints as a second picture. */
-export const REMIX_SECOND_HALF_LAYOUTS = ["adventure", "split", "aftermath", "flip", "transform", "mdfc"] as const;
+export const REMIX_SECOND_HALF_LAYOUTS = ["adventure", "prepare", "split", "aftermath", "flip", "transform", "mdfc"] as const;
 export type RemixSecondHalfLayout = (typeof REMIX_SECOND_HALF_LAYOUTS)[number];
 
 /** The double-faced layouts: the second half is a back face with its own

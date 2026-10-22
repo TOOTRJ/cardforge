@@ -134,8 +134,9 @@ async function bake(face: CardPreviewData): Promise<Buffer> {
 const previewMarkup = (face: CardPreviewData) => renderToStaticMarkup(<CardPreview {...face} />);
 
 describe("what a second part's frame never draws — both renderers, every frame", () => {
-  it("the frames that paint a second part on their own picture are the four kinds' own", () => {
-    expect([...SECOND_PART_TEMPLATES].sort()).toEqual(["adventure", "aftermath", "flip", "split"]);
+  it("the frames that paint a second part on their own picture are the five kinds' own", () => {
+    // (…the Prepare card's since TODO 4.27: the adventure's page anatomy.)
+    expect([...SECOND_PART_TEMPLATES].sort()).toEqual(["adventure", "aftermath", "flip", "prepare", "split"]);
   });
 
   it("the table, per frame", () => {
@@ -147,6 +148,7 @@ describe("what a second part's frame never draws — both renderers, every frame
     );
     expect(table).toEqual({
       adventure: ["pt", "loyalty", "defense", "flavor", "artist", "art"],
+      prepare: ["pt", "loyalty", "defense", "flavor", "artist", "art"],
       aftermath: ["pt", "loyalty", "defense", "flavor", "artist"],
       flip: ["loyalty", "defense", "flavor", "artist", "art"],
       split: ["pt", "loyalty", "defense", "flavor", "artist"],

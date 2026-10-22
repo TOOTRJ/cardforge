@@ -109,6 +109,8 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   sagadfcfront: { front: [636, 1526] },
   sagadfcback: { front: [636, 1526] },
   adventure: { front: [1273, 933] },
+  // The Prepare frame (TODO 4.27): M15's window (its masters are M15's above the type bar).
+  prepare: { front: M15_WINDOW },
   flip: { front: [1273, 691] },
   // Landscape canvas; the right half has its own window.
   split: { front: [817, 559], second: { size: [816, 559], rotation: 0 } },

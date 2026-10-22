@@ -126,6 +126,9 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // M15-era frames on MSE masters.
   "saga",
   "adventure",
+  // The Prepare frame (TODO 4.27): a new template, no stored card — M15's
+  // bars and the adventure panel's sizes — no bump.
+  "prepare",
   "flip",
   "aftermath",
   "extendedart",

@@ -2098,6 +2098,10 @@ describe("provenance and hygiene", () => {
         // saga and m15dfcback masters through Card Conjurer's masks at the
         // pinned commit; its own test: tests/unit/frames/saga-back-recipe.test.ts.
         "sagadfcback",
+        // …and the Prepare frame (TODO 4.27): PipGlyph's own derivation
+        // (scripts/build-prepare-frames.mjs) of the published m15 and
+        // adventure masters; its own test: tests/unit/frames/prepare-recipe.test.ts.
+        "prepare",
       ].sort(),
     );
     expect(Object.keys(templates)).not.toContain("sagadfcback");

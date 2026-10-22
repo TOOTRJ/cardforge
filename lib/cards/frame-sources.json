@@ -13811,6 +13811,79 @@
       "Owner Round 59 (2026-10-14): the `a` band's silver read as a second metal over the colourless master's bronze, so its metal is toned onto the master's rim (223,225,225 → 172,148,132; toneSourceRegions, the colour part of the gain fading out toward white so the bevel keeps its hue). The starfield strip — every pixel where the band differs from the plain m15crown/a — is the parent's byte for byte but for its soft edge against the metal (within 2 px of it: the share of the tone the crown shows through), and every alpha is the parent's. No other band is tinted."
     ]
   },
+  "prepare": {
+    "source": "pipglyph",
+    "converter": "scripts/build-prepare-frames.mjs",
+    "derivedFrom": "the published m15/<key> masters (m15artifact/c for c) and the published adventure/<key> masters' page bars (Card Conjurer imports: see \"m15\", \"m15artifact\" and \"adventure\")",
+    "output": "1500x2100, the base's corners, webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "leftBoxEdge": "the base box's right edge (cols 1374..1389) moved to 729..",
+      "rim": "cols 750..1390 x rows 1316..1871: the base's pinline (row 1308) per column",
+      "strip": "rows 1876..1926: the base's frame field (cols 1404..1440 from row 250, then 1440..1427 from row 500) turned a quarter, each channel moved onto print's strip median, the page's shadow on it",
+      "pageBox": "cols 758..1390 x rows 1532..1862: the base box's paper x a per-key gain, its top / left / bottom edges the base box's own, moved",
+      "bars": "name rows 1325..1416, type 1426..1517, from x 758: the adventure master's page bars (rows 1323..1412 / 1424..1493) toned onto print and lit by the prints' bevel; the shape (square left end, half-ellipse right end centred x 1390, 20 px across) and its 3 px outline DRAWN, flat black",
+      "outline": "the page's left, top and bottom outline DRAWN, flat black at the prints' coverage"
+    },
+    "colors": {
+      "w": [
+        "m15/w.png (published, sha256 3818b6c0d274)",
+        "its page bars from adventure/w.png (published, sha256 ac04d30174d9)",
+        "page box gain 0.872 / 0.852 / 0.830; strip shift 6 / 8 / 9; name bar 151/141/126 → 172/167/154, type bar 124/111/94 → 121/111/94"
+      ],
+      "u": [
+        "m15/u.png (published, sha256 80cb122e0539)",
+        "its page bars from adventure/u.png (published, sha256 be5edb0537d4)",
+        "page box gain 0.780 / 0.848 / 0.887; strip shift 6 / 10 / 9; name bar 14/118/153 → 13/130/169, type bar 12/80/109 → 0/75/103"
+      ],
+      "b": [
+        "m15/b.png (published, sha256 d5578ecb1927)",
+        "its page bars from adventure/b.png (published, sha256 316327a82421)",
+        "page box gain 0.726 / 0.721 / 0.709; strip shift -1 / 3 / 9; name bar 97/91/94 → 89/87/85, type bar 45/38/40 → 56/49/49"
+      ],
+      "r": [
+        "m15/r.png (published, sha256 e6cbb495cf62)",
+        "its page bars from adventure/r.png (published, sha256 928b2581eb2e)",
+        "page box gain 0.882 / 0.805 / 0.776; strip shift 19 / 46 / 48; name bar 151/74/51 → 180/83/65, type bar 121/37/22 → 134/42/30"
+      ],
+      "g": [
+        "m15/g.png (published, sha256 f6d980508b95)",
+        "its page bars from adventure/g.png (published, sha256 57ddcb2bf82f)",
+        "page box gain 0.791 / 0.810 / 0.793; strip shift 0 / 5 / 8; name bar 67/92/54 → 49/94/56, type bar 4/56/28 → 2/55/22"
+      ],
+      "m": [
+        "m15/m.png (published, sha256 0b21a694ab48)",
+        "its page bars from adventure/m.png (published, sha256 fca06e0cbbfb)",
+        "page box gain 0.810 / 0.807 / 0.799; strip shift 0 / 0 / 0; name bar 113/96/44 → 113/96/44, type bar 68/56/15 → 68/56/15 (no plain printing: the bars untoned, the gain the five keys' mean)"
+      ],
+      "c": [
+        "m15artifact/c.png (published, sha256 bc6654e4964d)",
+        "its page bars from adventure/c.png (published, sha256 8a92af9381eb)",
+        "page box gain 0.810 / 0.807 / 0.799; strip shift 0 / 0 / 0; name bar 150/160/164 → 150/160/164, type bar 116/135/141 → 116/135/141 (no plain printing: the bars untoned, the gain the five keys' mean)"
+      ]
+    },
+    "sourceFiles": [
+      "adventure/b.png",
+      "adventure/c.png",
+      "adventure/g.png",
+      "adventure/m.png",
+      "adventure/r.png",
+      "adventure/u.png",
+      "adventure/w.png",
+      "m15/b.png",
+      "m15/g.png",
+      "m15/m.png",
+      "m15/r.png",
+      "m15/u.png",
+      "m15/w.png",
+      "m15artifact/c.png"
+    ],
+    "notes": [
+      "PipGlyph's own derivation (TODO 4.27): neither Card Conjurer (its fork ends June 2024) nor MSE has the Prepare frame (Secrets of Strixhaven, 2026). Every painted pixel is a published master's — moved, toned or darkened — except the bars' outline and the page's outline, which are flat black geometry at the prints' coverage.",
+      "The numbers are scripts/lib/prepare-2026.mjs (93 plain 2015-frame printings of layout:prepare (SOS, SOC, PSOS, FRA, PFRA, PLST, YSOS, YFRA), measured 2026-10-21); no scan is read by the build.",
+      "m and c have no plain printing (a two-colour Prepare prints the split frame, 4.6f; none is colourless): they exist so that no colour resolves to a missing master and stay unticked until a print shows them.",
+      "The spell page's colour is the CARD's (one colour key per card); print colours the page by the spell (a hybrid spell's page is grey, Abigale SOS #170): 4.26's per-part colour."
+    ]
+  },
   "retro": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
