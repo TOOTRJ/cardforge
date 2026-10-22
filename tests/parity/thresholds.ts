@@ -131,17 +131,6 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
       "At HD the preview's text sits ABOVE the bake's: by 1 px on 57 regions, 2 px on 58 and 3 px (1.5 CSS px) on 33 of 276 — names, type lines, rules and set symbols on most templates (the short M15 creature: name, type line and rules all −3). The 750 px comparison shows the same rise as −1 / −2. Seen on every text face; not traced further (the two engines place a line's baseline from the font's metrics independently). The frame, the art and the plates do not move with it.",
   },
   {
-    name: "750-cost-row-width",
-    size: "750",
-    cases: /^m15(borderless|textless|ub)?\//,
-    regions: ["cost"],
-    metric: "dx",
-    min: -4,
-    max: -3,
-    why:
-      "At 750 px a cost row of five or more pips starts 2–3 px further LEFT in the preview than in the bake (its right end agrees): the preview's row is wider by about half a pixel a pip. The HD comparison of the same cards measures 0, which points at the 750 px bake's whole-pixel disc and gap sizes (the preview keeps fractions); not traced to the line. Measured −3 on the M15 long card (collector, symbols, etched), m15borderless and m15textless, and on the Universes Beyond long pair card (TODO 4.25: m15's cost row on the m15ub frame — its M15 twin, m15/wu/creature-long@stamp-pair-crown, measures −2); −2 on four more.",
-  },
-  {
     name: "750-emblem-title-end",
     size: "750",
     cases: /^emblem\//,
@@ -218,41 +207,9 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
     why:
       "The © slot's pipglyph.com mark on line 1 (a card that draws no plate: its right end at 93.54 %W, inside the P/T slot's region) is NARROWER in the preview at 750 px: the right end agrees, the star starts 3 px further right. At HD the region measures +2 across, within the limit. It is the mark as 4.9b draws it on every collector card without a plate — m15's no-plate instant measures the same +3 — seen here because this is the first parity case whose line-1 mark falls inside a scored region. A width difference of the 750 px bake's mark text, like the other 750-only entries; not traced to a constant.",
   },
-  // --- TODO 3.37: seen by #514, measured again 2026-10-13 (after #523's
-  // large pips; the numbers did not move) and listed with their case. -------
-  {
-    name: "750-walker-phyrexian-cost-start",
-    size: "750",
-    cases: /^m15pw\/w\/planeswalker-long@phyrexian-cost-5$/,
-    regions: ["cost"],
-    metric: "dx",
-    min: -5,
-    max: -3,
-    why:
-      "The walker's detached cost of five Phyrexian symbols (×1.2 discs) starts 4 px further LEFT in the preview at 750 px than in the 750 px bake (the name is cut at the same word in both, #514). It is 750-cost-row-width on the widest row the matrix has — five discs of about 44 px where a plain pip is 36 — and like it gone at HD (0 across, 1 down). The 2003 frame's twin (modern/w/…@phyrexian-cost-5) measures +1. Not traced past that entry's guess: the 750 px bake draws whole-pixel discs and gaps, the preview keeps the fractions.",
-  },
-  {
-    name: "750-walker-phyrexian-cost-mad",
-    size: "750",
-    cases: /^m15pw\/w\/planeswalker-long@phyrexian-cost-5$/,
-    regions: ["cost"],
-    metric: "mad",
-    min: 31,
-    max: 35,
-    why:
-      "The same row as 750-walker-phyrexian-cost-start, seen as a difference: with the row 4 px out of register the cost region's mean absolute difference is 32.9 against a limit of 31 (34.2 since layout v60 put the walker's pips 2 px higher at 750; a quarter of the region reads as another picture — 750-walker-phyrexian-cost-hot). At HD the region measures 5.2. It goes when the row's start does.",
-  },
-  {
-    name: "750-walker-phyrexian-cost-hot",
-    size: "750",
-    cases: /^m15pw\/w\/planeswalker-long@phyrexian-cost-5$/,
-    regions: ["cost"],
-    metric: "hot",
-    min: 0.25,
-    max: 0.28,
-    why:
-      "The same row again, as the share of the cost region that reads as another picture: 24.8 % through layout v59, a hair inside the limit of 25 %, and 25.8 % since v60 moved the walker's pips 2 px up at 750 in BOTH renderers (the row's 4 px horizontal misregister, 750-walker-phyrexian-cost-start, lands on other rows of the discs' rims; measured on darwin 2026-10-21). Nothing new differs: it goes when the row's start does.",
-  },
+  // (TODO 3.37's three 750-walker-phyrexian-cost entries struck at layout
+  // v61: the walkers' 70 px disc is a whole 35 px at 750, and the preview's
+  // row and the bake's now agree there, as 750-cost-row-width's did.)
 ];
 
 /**

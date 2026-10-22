@@ -612,8 +612,9 @@ describe("the symbols as printed (v49): the numbers, in both renderers and in th
     expect(manaGemSpec("gp", 73, SYMBOL_STYLES.modern)).toEqual({ kind: "solid", suffix: "gp", discPx: 88, bg: "#93b483", ink: INK, glyphPx: 80 });
 
     const { bake, cells: [, , plain, phy] } = await cells(rules("{2}{G/P}: Draw a card.", "{2}{G/P}"));
-    // Cost: 73 beside 88; the larger disc's shadow is its own size's.
-    expect(bake.slice(0, 2).map((d) => [d.size, d.shadow])).toEqual([[73, [-4, 5, "#111"]], [88, [-5, 6, "#111"]]]);
+    // Cost (m15's 70 px disc since layout v61): 70 beside 84; the larger
+    // disc's shadow is its own size's.
+    expect(bake.slice(0, 2).map((d) => [d.size, d.shadow])).toEqual([[70, [-4, 5, "#111"]], [84, [-5, 6, "#111"]]]);
     // Rules text: 60 beside 77 (v53: ×1.28), the larger disc 8 px higher
     // (same centre, the odd px below).
     expect([plain.size, phy.size]).toEqual([60, 77]);
@@ -758,8 +759,8 @@ describe("the symbols as printed (v49): the numbers, in both renderers and in th
     // In the cost row too: no disc, and no shadow though the row has one.
     const { bake, preview, cells: [, , energy, generic] } = await cells(rules("{E}{2}: Draw a card.", "{E}{2}"), 2);
     expect(bake.map((d) => [d.size, d.background, d.shadow])).toEqual([
-      [73, null, null],
-      [73, "#beb9b2", [-4, 5, "#111"]],
+      [70, null, null],
+      [70, "#beb9b2", [-4, 5, "#111"]],
       [60, null, null],
       [60, "#beb9b2", null],
     ]);

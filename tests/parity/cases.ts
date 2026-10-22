@@ -94,7 +94,7 @@ const PICKS: readonly Pick[] = [
     from: "nyx/g/creature-long@crown",
     as: "@three-pips",
     // A three-pip cost: the long card's five-pip row is the M15 cost row's
-    // own 750 px difference ("750-cost-row-width"), not this frame's.
+    // own 750 px difference ("750-cost-row-width", struck at layout v61), not this frame's.
     why: "Nyx Constellation: the crown band over the MSE starfield master, its arms faded into the master's rim, light ink on the translucent bars",
     row: () => ({ cost: "{2}{G}" }),
   },
@@ -138,7 +138,7 @@ const PICKS: readonly Pick[] = [
     from: "m15station/g/artifact-long@crown",
     as: "@full-box",
     // A three-pip cost: the long card's five-pip row is the M15 cost row's
-    // own 750 px difference ("750-cost-row-width"), not this frame's.
+    // own 750 px difference ("750-cost-row-width", struck at layout v61), not this frame's.
     why: "station: the crown over the cut master, a fuller box (a two-paragraph plated tier, 10/10 on the plate)",
     row: () => ({ cost: "{2}{G}" }),
   },
@@ -320,9 +320,9 @@ const PICKS: readonly Pick[] = [
   { from: "modern/wu/creature-short@pair", why: "the synthesised old-frame pair master" },
   // --- a name fitted against a DETACHED cost of ×1.2 discs (TODO 6.16d, v52) -
   // The walker's twin (TODO 3.37): at 750 px its row of five ×1.2 discs is
-  // the widest cost row of the matrix and the two renderers disagree about
-  // it by more than a limit — the two "750-walker-phyrexian-cost" known
-  // differences (tests/parity/thresholds.ts) describe and bound it.
+  // the widest cost row of the matrix; the two renderers disagreed about it
+  // by more than a limit (the "750-walker-phyrexian-cost" known differences,
+  // struck at layout v61, whose 70 px disc is a whole 35 px at 750).
   { from: "m15pw/w/planeswalker-long@phyrexian-cost-5", why: "v52: a long name's room before five Phyrexian discs in the walker's detached cost (and 3.37's cost-row difference at its largest)" },
   { from: "m15/u/creature-short@large-pips-hd", why: "v53: the large pips on the M15 frame — a hybrid, a twobrid and a Phyrexian disc at 88 px in the cost, 77 px in rules text" },
   { from: "modern/u/creature-short@large-pips-hd", why: "v53: the large pips on the 2003 frame — 85 px discs in a detached cost, ×1.28 in rules text" },

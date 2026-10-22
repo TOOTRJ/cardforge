@@ -1554,6 +1554,7 @@ function CardFace({
             overrides={pipOverrides}
             symbols={symbols}
             offsetY={layout.costDy ? cqw(layout.costDy) : undefined}
+            offsetX={layout.costDx ? cqw(layout.costDx) : undefined}
           />
         ) : null}
       </BandSlot>
@@ -1573,6 +1574,7 @@ function CardFace({
             overrides={pipOverrides}
             symbols={symbols}
             offsetY={layout.costDy ? cqw(layout.costDy) : undefined}
+            offsetX={layout.costDx ? cqw(layout.costDx) : undefined}
           />
         </div>
       ) : null}

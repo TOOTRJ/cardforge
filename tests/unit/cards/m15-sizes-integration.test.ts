@@ -11,7 +11,7 @@ import {
 import { setSymbolSize, setSymbolSource } from "@/lib/cards/set-symbol-size";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { fitTitleBand } from "@/lib/cards/title-band";
-import { COST_DISC_PCT, RULES_TEXT, TITLE_SIZE_PCT, TYPE_SIZE_PCT, ptToPct } from "@/lib/cards/typography";
+import { CC_M15_COST_DISC_PCT, RULES_TEXT, TITLE_SIZE_PCT, TYPE_SIZE_PCT, ptToPct } from "@/lib/cards/typography";
 
 // ---------------------------------------------------------------------------
 // TODO 4.20 (layout v32) as SHIPPED: the family's profiles, the set-symbol
@@ -24,11 +24,13 @@ describe("layout v32 — the live family profiles with the measured fits and the
     const pw = getFrameProfile("m15pw");
     expect(pw.title.fit).toBe("measured");
     expect(pw.title.sizePct).toBe(TITLE_SIZE_PCT);
-    expect(pw.costSizePct).toBe(COST_DISC_PCT);
+    // The family's printed 70 px disc since layout v61 (TODO 3.34).
+    expect(pw.costSizePct).toBe(CC_M15_COST_DISC_PCT);
     // [name, cost, HD px, the print's] — tests/unit/cards/title-band.test.ts
     // holds the band-gap rule behind these.
     for (const [name, cost, px] of [
-      ["Chandra, Torch of Defiance", "{2}{R}{R}", 78], // KLD #110 prints ≈ 78
+      // KLD #110 prints ≈ 78; 79 since v61 (the 70 px discs leave the name 9 px more room)
+      ["Chandra, Torch of Defiance", "{2}{R}{R}", 79],
       ["Gideon, Ally of Zendikar", "{2}{W}{W}", 80],
       ["Karn, Scion of Urza", "{4}", 80],
       ["Liliana, Death's Majesty", "{3}{B}{B}", 80],

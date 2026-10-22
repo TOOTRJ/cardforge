@@ -71,6 +71,7 @@ import { RETIRED_FRAME_TEMPLATES, type FrameTemplate } from "@/types/card";
 import {
   ADVENTURE_PANEL_COST_PCT,
   ADVENTURE_PANEL_PCT,
+  CC_M15_COST_DISC_PCT,
   COST_DISC_PCT,
   MDFC_STRIP_LINE_PX,
   MDFC_STRIP_WORD_PX,
@@ -871,6 +872,12 @@ export type FrameProfile = {
    *  (inline or in costRect) and keeps the name's ellipsis against the pips.
    *  Front face only. */
   costDy?: number;
+  /** Horizontal nudge of the mana cost, as a fraction of card WIDTH
+   *  (positive = right; layout v61, the CC-framed M15 family's 2 px). Moves
+   *  the discs only: the name's room is measured against the row where the
+   *  band lays it out, so a name never gains or loses room by it. Both
+   *  renderers translate the row by it as by costDy. */
+  costDx?: number;
   /** When set, the rarity set-symbol renders absolutely inside THIS rect
    *  (right-aligned, vertically centered) instead of inline at the type
    *  band's right edge — lets the symbol move independently of the type
@@ -1961,7 +1968,15 @@ const M15PW: FrameProfile = {
   // as on M15; the old default, the 64 px name size, left them small under
   // an 80 px name — owner decision 2026-09-28). The row stays centred in
   // costRect, so the pips' centre does not move.
-  costSizePct: COST_DISC_PCT,
+  // Layout v61 (TODO 3.34, owner 2026-10-22): the walkers take the family's
+  // printed disc too — 70 px, the 78 pitch, the 84 large pip — and their
+  // row ends 4 px further right (costDx, a translate: the name's room is
+  // measured against the box): on 17 walkers since 2023, regular and
+  // borderless, the last disc centres 4.2–4.6 px right of ours read the same
+  // way (print 1350.4–1351.2 px; docs/FRAMES.md "The cost row as printed
+  // since 2023"). The place #597 set (costDy, centre 128) is untouched.
+  costSizePct: CC_M15_COST_DISC_PCT,
+  costDx: 4 / 1500,
   // Layout v36 (TODO 4.47): the symbol ends where M15's does (92.2 %W, 1383
   // px at HD) — the walker prints put it where their set's regular cards do
   // (BFZ #29, DOM #1, WAR #1, DMU #1, M19 #3, M20 #2, M21 #1: +0.1 px from
@@ -2744,11 +2759,42 @@ function m20ArtifactToken(profile: FrameProfile, label: string): FrameProfile {
 // The same profiles put the type line on the prints' baseline
 // (CC_M15_TYPE_DY, layout v32) and the art on CC's window (CC_M15_ART_SLOT,
 // layout v35).
-const CC_M15_COST_DY = -0.0077;
+//
+// Layout v61 (TODO 3.34 + the 2023 pip move, owner 2026-10-22: "match
+// current cards") puts the cost row where CURRENT print draws it. Measured
+// 2026-10-21 on 308 Scryfall PNGs against our own bakes of the same names and
+// costs, both read by one circle fit, each print registered on its own title
+// bar's outline (docs/FRAMES.md "The cost row as printed since 2023"):
+//   - the centre: 4.6 px lower than v24–v60's on June-2023+ prints (+4.58 ±
+//     0.05 on every 4- and 5-pip cost; the median of 77 cards), ~1 px lower
+//     on 2014–April 2023 prints (scans, ± 2) — so the stored bake's discs
+//     move down 5 px, onto 157.0 px at HD, and an older card now sits ≈ 4 px
+//     below its own print;
+//   - the disc 70 px, the pitch 78, the large pip 84 (CC_M15_COST_DISC_PCT:
+//     the same on both eras — only the place moved in 2023);
+//   - the row's right end 2 px further right (the last disc ends at 1385;
+//     1384.4–1385.4 on 2023+ prints, 1383 drawn) — CC_M15_COST_DX moves the
+//     discs only, never the name's room.
+// The disc and the nudge right are whole HD px. The lift is not, on
+// purpose: the bake lays the 70 px disc out on Satori's whole px (the band's
+// centre 163.8 − 35 = 128.8 → 129) and moves it by the whole px nearest the
+// lift (−7: discs on 122–192, centred on 157.0), while the preview places it
+// at the exact fraction; −6.6 puts the preview's disc within 0.4 px of the
+// bake's (the parity check, tests/parity), where −7 left it 0.8 px high.
+const CC_M15_COST_DY = -6.6 / 1500;
+const CC_M15_COST_DX = 2 / 1500;
+/** The cost row of every Card Conjurer-framed M15 profile (36 templates):
+ *  disc, lift and right-end nudge — one spread, so no profile takes one
+ *  without the others. */
+const CC_M15_COST = {
+  costSizePct: CC_M15_COST_DISC_PCT,
+  costDy: CC_M15_COST_DY,
+  costDx: CC_M15_COST_DX,
+} as const satisfies Pick<FrameProfile, "costSizePct" | "costDy" | "costDx">;
 const M15ARTIFACT: FrameProfile = {
   ...M15,
   label: "M15 Artifact",
-  costDy: CC_M15_COST_DY,
+  ...CC_M15_COST,
   artSlot: CC_M15_ART_SLOT,
   type: { ...M15.type, dy: CC_M15_TYPE_DY },
   pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15artifact/pt/{color}.png" },
@@ -2759,7 +2805,7 @@ const VEHICLE_PT_INK = "#ffffff";
 const M15SNOW: FrameProfile = {
   ...M15,
   label: "M15 Snow",
-  costDy: CC_M15_COST_DY,
+  ...CC_M15_COST,
   artSlot: CC_M15_ART_SLOT,
   type: { ...M15.type, dy: CC_M15_TYPE_DY },
   pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15snow/pt/{color}.png" },
@@ -2799,7 +2845,7 @@ function withoutPt(profile: FrameProfile): FrameProfile {
 const M15DEVOID: FrameProfile = {
   ...M15,
   label: "M15 Devoid (Eldrazi)",
-  costDy: CC_M15_COST_DY,
+  ...CC_M15_COST,
   artSlot: CC_M15_ART_SLOT,
   // Every devoid frame is see-through (CC text box alpha ~179): the art
   // runs under the whole frame like printed devoid cards (4.17).
@@ -2833,7 +2879,7 @@ const BORDERLESS_INK = "#ffffff";
 const M15BORDERLESS: FrameProfile = {
   ...M15,
   label: "M15 Borderless",
-  costDy: CC_M15_COST_DY,
+  ...CC_M15_COST,
   setSymbolKeyline: SET_SYMBOL_KEYLINE,
   artSlot: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 92.24 },
   title: { ...M15.title, colorHex: BORDERLESS_INK },
@@ -3648,13 +3694,14 @@ const SAGA_TYPE_PRINT_DY = 9.3 / 1500;
 // (184.7 px); the type line took its print offset with the CC masters.
 const SAGA: FrameProfile = {
   label: "Saga",
-  costSizePct: COST_DISC_PCT,
   // The saga's title bar is M15's (the pack's Title mask is m15MaskTitle; the
   // masters' bar faces span 104–210 px against M15's 104–208), and the prints
   // set the pips where M15's are: the generic disc centres on 151.5 px on DOM
-  // #122 and 153 px on 40K #126 (segmented by its colour), the band's centre
-  // lifted by CC_M15_COST_DY puts ours on 152.25.
-  costDy: CC_M15_COST_DY,
+  // #122 and 153 px on 40K #126 (segmented by its colour) — v24–v60 put ours
+  // on 152.25; since layout v61 the saga takes the family's current-print row
+  // (CC_M15_COST: 70 px discs centred on 157 px; LTR / PIP / MH3 sagas sit
+  // 4.6 px below the old row, as every 2023+ M15 print does).
+  ...CC_M15_COST,
   // The masters' window + 0.1 % (752–1384 × 237–1758 px on every colour,
   // the land saga included; packSagaRegular.js artBounds 0.5 / 0.1124 /
   // 0.4247 × 0.7253 sit flush with it).
@@ -3819,7 +3866,7 @@ const ADVENTURE_PANEL_BAND_PCT = 4.0;
 const ADVENTURE: FrameProfile = {
   ...M15,
   label: "Adventure",
-  costDy: CC_M15_COST_DY,
+  ...CC_M15_COST,
   type: { ...M15.type, dy: CC_M15_TYPE_DY },
   artSlot: { topPct: 11.19, leftPct: 7.57, widthPct: 84.87, heightPct: 44.44 },
   // Creature rules → the RIGHT page (CC rules2). Both pages centre their
@@ -3913,7 +3960,7 @@ const PREPARE_PANEL_RECT = (centerPx: number): Rect => ({
 const PREPARE: FrameProfile = {
   ...M15,
   label: "Prepare",
-  costDy: CC_M15_COST_DY,
+  ...CC_M15_COST,
   type: { ...M15.type, dy: CC_M15_TYPE_DY },
   artSlot: CC_M15_ART_SLOT,
   // The creature's rules → the LEFT box (M15's box, up to the page), at
@@ -4831,7 +4878,7 @@ const EXTENDED_UNDER_FRAME_RECT: Rect = { topPct: UNDER_FRAME_RECT.topPct, leftP
 const EXTENDEDART: FrameProfile = {
   ...M15,
   label: "Extended Art",
-  costDy: CC_M15_COST_DY,
+  ...CC_M15_COST,
   setSymbolKeyline: SET_SYMBOL_KEYLINE,
   artSlot: EXTENDED_ART_SLOT,
   underFrameArt: { rect: EXTENDED_UNDER_FRAME_RECT, colors: ["c"], artSlot: EXTENDED_UNDER_FRAME_RECT },
@@ -5170,7 +5217,7 @@ const M15FULLARTLANDTHB: FrameProfile = {
 const M15TEXTLESS: FrameProfile = {
   ...M15,
   label: "M15 Textless",
-  costDy: CC_M15_COST_DY,
+  ...CC_M15_COST,
   artSlot: { topPct: 4.96, leftPct: 6.2, widthPct: 87.6, heightPct: 86.47 },
   title: { ...M15.title, colorHex: "#ffffff" },
   type: { ...M15.type, dy: CC_M15_TYPE_DY },
@@ -5801,7 +5848,7 @@ const DFC_ART_SLOT: Rect = { topPct: 11.2, leftPct: 7.6, widthPct: 84.83, height
  *  opaque artifact master). */
 const DFC_SKELETON: FrameProfile = {
   ...M15,
-  costDy: CC_M15_COST_DY,
+  ...CC_M15_COST,
   artSlot: DFC_ART_SLOT,
   type: { ...M15.type, dy: CC_M15_TYPE_DY },
   artifactMasterKeys: { c: "a" },
@@ -6258,7 +6305,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // pair master wears the matching split crown band (m15crown/<pair>).
   m15: {
     ...M15,
-    costDy: CC_M15_COST_DY,
+    ...CC_M15_COST,
     artSlot: CC_M15_ART_SLOT,
     type: { ...M15.type, dy: CC_M15_TYPE_DY },
     underFrameArt: { rect: UNDER_FRAME_RECT, colors: ["c"] },
@@ -6497,7 +6544,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15nyx: {
     ...M15,
     label: "M15 Nyx",
-    costDy: CC_M15_COST_DY,
+    ...CC_M15_COST,
     artSlot: CC_M15_ART_SLOT,
     type: { ...M15.type, dy: CC_M15_TYPE_DY },
     pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15nyx/pt/{color}.png" },
@@ -6525,7 +6572,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   m15ub: {
     ...M15,
     label: "M15 Universes Beyond",
-    costDy: CC_M15_COST_DY,
+    ...CC_M15_COST,
     artSlot: CC_M15_ART_SLOT,
     type: { ...M15.type, dy: CC_M15_TYPE_DY },
     pt: { ...M15.pt!, plateAssetPathTemplate: "/frames/m15ub/pt/{color}.png" },

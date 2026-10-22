@@ -5,6 +5,7 @@ import sharp from "sharp";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import { COST_DISC_PCT } from "@/lib/cards/typography";
 import { RENDER_PRESETS } from "@/lib/render/card-image";
 
 // ---------------------------------------------------------------------------
@@ -40,6 +41,9 @@ import { RENDER_PRESETS } from "@/lib/render/card-image";
 // with v59's title bar put back on the profile (`withV59TitleBar`): every
 // bake is then its pinned hash, byte for byte, and as v60 bakes it the same
 // walker DIFFERS from it (the title bar moved). The fixture is not rewritten.
+// Layout v61 (the cost row as current print draws it, TODO 3.34) gave the
+// walkers the family's 70 px disc and moved their row 4 px right (costSizePct
+// 72.75 → 70 / 1500, costDx 4 / 1500): `withV59TitleBar` puts those back too.
 // ---------------------------------------------------------------------------
 
 const FIXTURE = join(process.cwd(), "tests/unit/render/fixtures/pw-rows-v41-bakes.json");
@@ -49,14 +53,18 @@ const FIXTURE = join(process.cwd(), "tests/unit/render/fixtures/pw-rows-v41-bake
  *  bake reads the profile through getFrameProfile, which hands back this
  *  very object. */
 async function withV59TitleBar<T>(fn: () => Promise<T>): Promise<T> {
-  const profile = getFrameProfile("m15pw") as { costDy?: number; title: { dy?: number } };
-  const [costDy, title] = [profile.costDy, profile.title];
+  const profile = getFrameProfile("m15pw") as { costDy?: number; costDx?: number; costSizePct?: number; title: { dy?: number } };
+  const [costDy, costDx, costSizePct, title] = [profile.costDy, profile.costDx, profile.costSizePct, profile.title];
   profile.costDy = 0.004;
+  profile.costDx = undefined;
+  profile.costSizePct = COST_DISC_PCT;
   profile.title = { ...title, dy: undefined };
   try {
     return await fn();
   } finally {
     profile.costDy = costDy;
+    profile.costDx = costDx;
+    profile.costSizePct = costSizePct;
     profile.title = title;
   }
 }

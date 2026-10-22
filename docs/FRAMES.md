@@ -2004,7 +2004,8 @@ of them, DOM → MH3):
   scans, ± 4 px) — left as the pack draws it (skeptic pass 2026-10-06: a
   re-cut of the taper is the owner's call).
 - **The bars.** The cost discs at the CC-framed M15 height
-  (`CC_M15_COST_DY`: the prints centre them on 151.5–153 px) in a title
+  (`CC_M15_COST_DY`: the prints centre them on 151.5–153 px; since layout
+  v61 the 2023+ prints' 157 — "The cost row as printed since 2023") in a title
   band that ends at 92.2 %W (the last disc ends at 1383–1386 px on the
   prints; ours ended at 1365 and sat 12 px lower). The type line on the
   prints' baseline, 1855.3 px (1854–1857 on the five DOM references; ours
@@ -8559,6 +8560,95 @@ bake to the same pixels (a symbol in a text the frame does not print).
 Chromium against the bake (`tests/parity`): the three new cases and the
 `@symbols` card within the limits at 750 px and HD — the cost row 0 px off
 at HD on all four.
+
+### The cost row as printed since 2023 (layout v61, TODO 3.34; owner 2026-10-22)
+
+Wizards moved the cost row in mid-2023: from The Lord of the Rings (LTR, June
+2023) on, every M15-frame card sets its pips lower in the title bar than the
+2014 – April 2023 cards did. The CC-framed M15 profiles' row
+(`CC_M15_COST_DY`, v24 – v60) sat on the older cards. The owner chose "match
+current cards" (2026-10-22), with TODO 3.34 (the disc's size) folded in.
+
+**How it was measured (2026-10-21).** 308 Scryfall PNGs (two passes,
+≥ 250 ms apart: 217 across 16 cells — mono, gold, 5–7-pip, hybrid,
+Phyrexian, artifact, crowned, Nyx, saga, borderless, Universes Beyond,
+snow, devoid, Vehicle, transform, modal — and 91 chosen by pip count with
+only `{W}` / `{U}` / generic symbols), each era sampled apart (before
+2023-06-01 / after). Our own HD bake of every card (same name, cost and
+colour on the frame an import picks) went through the SAME pipeline:
+downscaled to 745 px, a circle fitted to each disc's rim (the large-pips
+fit above), and each image registered on its own title bar's dark outline
+(top and bottom, median over 95 columns), so a print scanned or cropped a
+pixel off still compares. Two traps, both checked by eye: the `{W}`, `{B}`,
+`{R}` and `{G}` symbols run into the disc's rim and pull the fit 6 px down,
+so position and size are read on `{U}`, numeral, `{X}` and `{C}` discs only;
+and a June-2023+ image sits 1.1 ± 0.15 px lower in its PNG than ours, the
+bar with it — hence the registration (raw, the 2023+ rows read 5.7 px low,
+the investigation's +5.2).
+
+| HD px | 2014 – April 2023 prints | June 2023 + prints | v24 – v60 | v61 |
+|---|---|---|---|---|
+| disc centre, below our old row (registered) | +1.1 (med; mean +1.8 ± 3.3, n = 11 — scans) | **+4.6** (+4.58 ± 0.05 on every 4- and 5-pip cost, n = 16; median of all, n = 32: +4.76) | 0 (152.0) | +5.0 (157.0: the disc on 122–192) |
+| plain disc | 70.2 ± 2.0 | 70.1 ± 0.2 (4–5 pips) / 69.8 ± 1.3 (all) | 73 | **70** |
+| pitch, plain to plain | 77.1 – 78.0 | 77.7 – 78.4 (77.8 ± 0.9) | 82 (73 + 9) | **78** (70 + 8) |
+| large pip (hybrid, Phyrexian) | 84.6 – 86.6 | 84.4 ± 0.9 | 88 | **84** (× 1.2) |
+| last disc's centre x | 1351.5 – 1354 (scans, ± 3) | 1349.2 – 1350.4 | 1346 | **1349.5** (the row's end 2 px right, `costDx`) |
+
+So only the PLACE moved in 2023 — down about 4 px; the size (70 px) and the
+pitch (78) are the same on both eras, and both were 3 – 4 px smaller than
+ours (TODO 3.34's 70 against 73 holds on a sample chosen for it). After the
+change the same pipeline reads print − ours on the 2023+ cards as centre
++0.1 (median, n = 67), disc +0.1, pitch −0.3, large pip +0.5.
+
+**The walkers (owner 2026-10-22).** `m15pw`, `m15borderlesspw` and
+`m15borderlesspwtall` take the same 70 px disc, 78 pitch and 84 large pip
+(`M15PW.costSizePct`, which the borderless pair spread). Their PLACE is
+#597's (layout v60: `costDy` 2 / 1500, the discs centred on 128 px) and is
+not touched. Their row's end was read the same way, on 30 more walker PNGs
+(regular and borderless, 20 of them June 2023 +, each paired with our bake of
+the same name and cost): the prints' discs 70.0 – 70.2 px, pitch 78.2 – 78.7,
+the last disc centred on 1350.4 – 1351.2 px — 4.2 – 4.6 px right of ours
+once ours were 70 px (1346.5 – 1347). `costDx` 4 / 1500 puts it there
+(print − ours after: +0.3 / −0.5 px, regular / borderless). The 2014 – 2022
+walkers end their row 3 – 6 px further right still (scans, ± 5).
+
+**The trade-off.** An older card — an import of a 2014 – April 2023 printing,
+and every card made in the creator on these frames — now sits about 4 px
+BELOW its own print (−3.5 median, −3.9 mean, n = 20; the investigation's
+raw reading, ≈ 6 px). The owner chose current print; no per-era switch.
+
+**Where.** `CC_M15_COST` in `lib/cards/template-layout.ts` — one spread of
+`costSizePct: CC_M15_COST_DISC_PCT` (`lib/cards/typography.ts`, 70 / 1500),
+`costDy: CC_M15_COST_DY` (−6.6 / 1500) and `costDx: CC_M15_COST_DX` (2 / 1500)
+— on the 36 profiles that drew the Card Conjurer lift (m15 and its
+artifact, Vehicle, Nyx, station, Universes Beyond, snow, devoid and
+borderless dresses; the transform and modal bodies, front and back; saga and
+its double-faced pair; adventure's and Prepare's fronts; extended art; the
+textless pair).
+The disc and the nudge are whole HD px; the lift is −6.6 px on purpose:
+the bake lays the disc out on Satori's whole px (128.8 → 129) and moves it
+by the whole px nearest the lift (−7), the preview by the exact fraction, so
+−6.6 keeps the two within 0.4 px (−7 left the preview 0.8 px high).
+At 750 px the 70 px disc is exactly 35 px, which retires the parity check's
+known difference `750-cost-row-width` (the preview's row was wider by half a
+pixel a pip against the bake's whole-px 36 px discs). `costDx` is a translate: the row's layout box,
+which the name's room is measured against (`titleBandRoomPct` →
+`costRowWidthPct`), stays put, and the narrower row gives a name beside a
+cost 3 px per pip and 1 per gap MORE room — a name never loses room. Inline
+rules pips are untouched (they follow the rules size, not the cost disc).
+NOT changed: flip and aftermath (their own prints' rows), the old frames,
+and the MSE-framed showcases (`nyx`, `fullart`, `expeditionland`, `lotr`,
+`tarkir…`) — `COST_DISC_PCT` keeps 72.75 px for them; the showcases wait for
+their Card Conjurer rebuild (TODO 4.11).
+
+**Rollout.** A CORRECTION: `"sweep"`, no badge, after the owner's before /
+after sheet. Template-scoped to the 39 (`COST_ROW_PRINT_TEMPLATES`: the 36
+and the three walkers) and card-scoped (`v61Changed`): a card that draws a
+cost — its front's, or on a double-faced body its back's. A card with no
+cost bakes byte-identical and is stamped. Verification-neutral (owner
+2026-10-22, as v32, v36 and v60): the discs move inside the title band or
+cost box a tick verified — no slot, master or plate moves — and the owner
+signs the row off on the before / after sheet, so every tick stays fresh.
 
 ## Text sizes on the M15-era family
 
