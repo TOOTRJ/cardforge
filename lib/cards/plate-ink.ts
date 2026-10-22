@@ -61,6 +61,10 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   // (322 × 176), drawn at MODERN.pt.plateRect — the body with its outline,
   // none of the soft shadow under and beside it.
   "/frames/modern/pt/{color}.png": { left: 0.0621, top: 0.0681, right: 0.9535, bottom: 0.9035 },
+  // The Lord of the Rings scroll's plates (TODO 4.11): Card Conjurer's
+  // scroll P/T (435 × 266), drawn at the pack's ptBounds — the rolled
+  // parchment with its curls, none of the soft shadow round it.
+  "/frames/lotrscroll/pt/{color}.png": { left: 0.1425, top: 0.1992, right: 0.9472, bottom: 0.9286 },
   // Git plates: the Tarkir showcases' plates / ribbon.
   "/frames/tarkirdragon/pt/{color}.png": { left: 0.0036, top: 0.0067, right: 0.9964, bottom: 0.9933 },
   "/frames/tarkirdraconic/pt/{color}.png": { left: 0.0054, top: 0.0106, right: 0.9973, bottom: 0.9841 },

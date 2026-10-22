@@ -701,6 +701,10 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // silver (a colourless card on the spell frame too), a pair, gold and
   // the land grey.
   ["m15ub", ["w", "c", "wu", "wub"]],
+  // TODO 4.11: the Lord of the Rings scroll's crown — colours, gold and the
+  // land's brown (a colourless creature keys `l`; the artifact's light blue
+  // is "@crown-artifact" below).
+  ["lotrscroll", ["w", "u", "b", "r", "g", "c", "wub"]],
   ["m15ubartifact", ["c", "u"]],
   ["m15ubland", ["g", "c"]],
   ["m15land", ["g", "c", "wub"]],
@@ -1322,6 +1326,11 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   ["m15nyx", "artifact", "c", "@nyx-silver", { supertype: "Enchantment", subtypes: ["Equipment"] }],
   // TODO 4.25: the Universes Beyond plate at its widest.
   ["m15ub", "creature", "g", "@wide", { power: "12", toughness: "12" }],
+  // TODO 4.11: the Lord of the Rings scroll's plate at its widest, and the
+  // colourless artifact creature on the light-blue artifact master and plate
+  // (LTR #700 Shire Scarecrow).
+  ["lotrscroll", "creature", "r", "@wide", { power: "12", toughness: "12" }],
+  ["lotrscroll", "creature", "c", "@artifact", { supertype: "Artifact", subtypes: ["Scarecrow"], power: "0", toughness: "3" }],
   [
     "m15artifact",
     "artifact",
@@ -1929,6 +1938,16 @@ export function visualCases(): VisualCase[] {
   add("m15ub", "creature", "u", "short", { suffix: "@stamp-auto-common", row: stampRow("m15ub", "auto", { rarity: "common" }) });
   add("m15ubartifact", "artifact", "c", "short", { suffix: "@stamp-auto-uncommon", row: stampRow("m15ubartifact", "auto", { rarity: "uncommon" }) });
   add("m15ub", "creature", "r", "long", { suffix: "@stamp-matte-hd", preset: "hd", row: stampRow("m15ub", "auto", { rarity: "common" }) });
+  // TODO 4.11: the Lord of the Rings scroll's notch — the matte face on a
+  // common, the colourless artifact's light-blue piece over its `a` master
+  // (LTR #697 The One Ring) and the colourless land's brown one (#712 Shire
+  // Terrace), the HD bake — and its crown on the two colourless dresses.
+  add("lotrscroll", "creature", "g", "short", { suffix: "@stamp-auto-common", row: stampRow("lotrscroll", "auto", { rarity: "common" }) });
+  add("lotrscroll", "artifact", "c", "long", { suffix: "@stamp-c", row: stampRow("lotrscroll", "auto", { rarity: "mythic" }) });
+  add("lotrscroll", "land", "c", "long", { suffix: "@stamp-c", row: stampRow("lotrscroll", "auto", { rarity: "rare" }) });
+  add("lotrscroll", "creature", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("lotrscroll", "auto", { rarity: "mythic" }) });
+  add("lotrscroll", "artifact", "c", "long", { suffix: "@crown", row: { supertype: "Legendary", frame_style: { template: "lotrscroll", finish: "regular", crown: true } } });
+  add("lotrscroll", "land", "c", "long", { suffix: "@crown", row: { supertype: "Legendary", frame_style: { template: "lotrscroll", finish: "regular", crown: true } } });
   add("m15ub", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15ub"), cost: "{W/U}{W/U}" } });
   // TODO 4.9d: the borderless frames (new keys on templates whose stored
   // cards carry none: new cases, no bump) beyond the loops above — the
@@ -2354,6 +2373,9 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   // …and the borderless walkers' (owner Round 70: the window's arch, drawn
   // above the ability rows).
   "m15borderlesspw", "m15borderlesspwtall",
+  // TODO 4.11: the Lord of the Rings scroll's triangle notch (the pack's own
+  // piece per key).
+  "lotrscroll",
 ];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's

@@ -3290,7 +3290,210 @@ const OLD_PAIR_NOTE = {
     "two-colour pair masters <pair>.png (TODO 4.6h): SYNTHESISED — the pack's 'Dual Land' mask (nested rectangles) is not what the prints do. The finished plain land whole (its gold outer and art rings: the dual prints' rings read 174/131/56 against the plain land's 185/142/53 and a basic's 55/90/107), with the pair's two coloured lands — each the pack's drawing with its own tones, on the PLAIN land's cut — blended left to right across one straight ramp 40→60 %W inside the text box and its ring. Measured on 36 two-colour lands, Sixth Edition 1999 → Onslaught 2002: box 40.0→59.9, ring 39.9→59.5; the lands of 1997 and 1998 (Fifth Edition, Tempest, Anthologies: 11 of 11) print the plain land's orange box and are not this look",
 };
 
+// ---------------------------------------------------------------------------
+// TODO 4.11 (showcase rebuild, wave 1): the Lord of the Rings SCROLL
+// showcase (`lotrscroll`; LTR #452–730 and LTC #411–490) from Card
+// Conjurer's 'Scroll' pack (packScroll.js, `img/frames/scroll/`, 2010 ×
+// 2814). Its masters replace the 646 px MSE drawing (layout v62's
+// correction). Self-contained: the template, its crown band and its stamp
+// notch read only the constants below.
+//   • masters: the pack's eight frames whole, each downscaled ONCE to
+//     1500 × 2100 (Lanczos, as m15ub's) — w u b r g, m (gold: three
+//     colours or more, and today a pair), `a` the pack's light-blue
+//     'Artifact Frame' (FrameProfile.artifactMasterKeys { c: "a" }: every
+//     colourless nonland printing of the run is an artifact — Shire
+//     Scarecrow #700, The One Ring #697, LTC #485–489) and `c` the pack's
+//     brown 'Land Frame' (the pack has no colourless frame: a colourless
+//     card that is no artifact is a LAND on print — Shire Terrace #712; a
+//     coloured land wears its colour's frame, as The Shire #711 (green),
+//     The Black Gate LTC #490 and Barad-dûr #704 do. A colourless creature
+//     that is neither an artifact nor a land draws the brown land master
+//     with the artifact's plate: no print has that shape). Each frame keeps the
+//     pack's translucent parchment wash over the art window (the 'No Art
+//     Overlay' mask, which drops it, is not used: every print shows the
+//     wash at the window's edges).
+//   • plates: the pack's seven scroll P/T plates (435 × 266 at the pack's
+//     ptBounds) — the colourless key the artifact's light-blue plate.
+//   • not built: the pack's 'Multicolored Bars' (the gold bars of a
+//     two-colour card over the colour halves through maskRightHalf.png) —
+//     the two-colour dress is a follow-up; the pack's sagas (SagaLTR, 4.5d).
+// ---------------------------------------------------------------------------
+export const SCROLL = "img/frames/scroll";
+/** The scroll pack's plates, by colour key (the colourless card's is the
+ *  artifact's light-blue plate: the pack draws no land plate). */
+const SCROLL_PT = Object.freeze(perColor((k) => `${SCROLL}/pt/${k === "c" ? "a" : k}.png`));
+const SCROLL_PACK = "packScroll.js 'Scroll' (the Lord of the Rings scroll showcase; groupShowcase-5.js)";
+const SCROLL_NOTES = [
+  "w u b r g m = the pack's colour frames whole (scroll/<k>.png, 2010x2814), downscaled once to 1500x2100 (Lanczos) — as the LTR scroll showcase prints them (LTR #452–730, LTC #411–490), the parchment wash over the art window included (the pack's 'No Art Overlay' mask, which drops it, is not used)",
+  "a = the pack's light-blue 'Artifact Frame' (scroll/a.png): the master a colourless ARTIFACT paints (FrameProfile.artifactMasterKeys { c: 'a' }; LTR #687–703, LTC #485–489)",
+  "c = the pack's brown 'Land Frame' (scroll/l.png): the pack draws no colourless frame, and a colourless printing that is not an artifact is a land (LTR #712 Shire Terrace); a coloured land wears its colour's frame (LTR #711 The Shire green, LTC #490 The Black Gate, LTR #704 Barad-dûr)",
+  "a colourless creature that is neither an artifact nor a land draws c (the brown land master) with the artifact's light-blue plate — no print has that shape (every colourless creature of the run is an artifact creature)",
+  "plates = the pack's seven scroll plates (scroll/pt/<k>.png, 435x266 at the pack's ptBounds 1492/2422 px of 2010x2814); c = the artifact's light-blue plate (the pack has no land plate; LTR #700 Shire Scarecrow prints it)",
+  "not built: the 'Multicolored Bars' overlay and maskRightHalf.png (the two-colour dress: the colour frames split down the card under gold bars — a follow-up; a two-colour card draws the gold master today) and the pack's scroll sagas (SagaLTR, TODO 4.5d)",
+];
+/**
+ * The scroll's legendary crown (TODO 4.11): the pack's 'Legendary Crown'
+ * (`scroll/crowns/<k>.png`, 1909 × 70 at crownBounds 49 / 43 px of the
+ * 2010 × 2814 card) — the rolled top edge of the title scroll a legendary
+ * print carries (LTR #470 Gandalf the White, #526 The Watcher in the Water,
+ * LTC #422 Denethor against #457 / #700 / LTC #412). A generic band: the
+ * crown placed at its bounds on a clear 2010 × 2814 canvas, downscaled once,
+ * cropped to rows 0–99 of the HD card (the crown ends at row 86). No cover
+ * strip, no pairs (the template draws no pair masters).
+ */
+export const SCROLL_CROWN_BAND = Object.freeze({
+  source: `${SCROLL}/crowns`,
+  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "a", "l"]),
+  crown: Object.freeze({ leftPct: (49 / 2010) * 100, topPct: (43 / 2814) * 100, widthPct: (1909 / 2010) * 100, heightPct: (70 / 2814) * 100 }),
+  compositeSize: Object.freeze({ width: 2010, height: 2814 }),
+  rows: 100,
+});
+/** The scroll crown band's one layer for a key. */
+export function scrollCrownLayers(key) {
+  if (!SCROLL_CROWN_BAND.keys.includes(key)) throw new Error(`scrollCrownLayers: no crown for key ${key}`);
+  return [placed(`${SCROLL_CROWN_BAND.source}/${key}.png`, SCROLL_CROWN_BAND.crown)];
+}
+/**
+ * What the importer checks on the full 1500 × 2100 scroll-crown composite
+ * (pure): nothing below the band's rows; the crown's top edge (the first
+ * row with any alpha) where the pack draws it (row 32: 43 / 2814 × 2100,
+ * the Lanczos ringing up to 3 px above it); and
+ * the band clear outside x 34–1465 (the crown's bounds, 36.6–1461.2, and
+ * that ringing), so it never repaints the black border.
+ */
+export function scrollCrownFindings(buf, width, height, rows) {
+  let lastAlphaRow = -1;
+  for (let y = height - 1; y >= 0 && lastAlphaRow < 0; y -= 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (buf[(y * width + x) * 4 + 3] > 0) {
+        lastAlphaRow = y;
+        break;
+      }
+    }
+  }
+  let firstAlphaRow = -1;
+  for (let y = 0; y < rows && firstAlphaRow < 0; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (buf[(y * width + x) * 4 + 3] > 0) {
+        firstAlphaRow = y;
+        break;
+      }
+    }
+  }
+  let outside = 0;
+  for (let y = 0; y < rows; y += 1) {
+    for (const x of [0, 33, 1466, width - 1]) outside = Math.max(outside, buf[(y * width + x) * 4 + 3]);
+  }
+  const failures = [];
+  if (lastAlphaRow >= rows) failures.push(`alpha down to row ${lastAlphaRow}, past the band's ${rows} rows`);
+  if (firstAlphaRow < 29 || firstAlphaRow > 34) failures.push(`the crown's first row is ${firstAlphaRow}, the pack's bounds put it at 32 (the resample's ringing 2 px above)`);
+  if (outside > 0) failures.push(`α ${outside} outside the crown's bounds and the resample's ringing (x 34–1465)`);
+  return { lastAlphaRow, peakRow: firstAlphaRow, failures, summary: `first alpha row ${firstAlphaRow}, α outside the bounds ${outside}` };
+}
+
+/**
+ * The scroll's triangle stamp notch (TODO 4.11): the pack's per-colour
+ * piece (`scroll/stamps/<k>.png`, 349 × 181) at its stampBounds (834 / 2518
+ * of 2010 × 2814 → 622.4 / 1879.1 + 260.4 × 135.1 px at HD), composited on
+ * the whole card and downscaled with it, then cut to SCROLL_NOTCH_BOX — the
+ * whole px round it — and drawn 1:1 there (lib/cards/template-layout.ts
+ * LOTRSCROLL_HOLO_STAMP's rect).
+ */
+export const SCROLL_NOTCH_BOX = Object.freeze({ x: 620, y: 1877, width: 266, height: 140 });
+export const SCROLL_NOTCH = Object.freeze({
+  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "a", "l"]),
+  pieces: Object.freeze(Object.fromEntries(["w", "u", "b", "r", "g", "m", "a", "l"].map((k) => [k, `${SCROLL}/stamps/${k}.png`]))),
+  placeAt: Object.freeze({ x: 834, y: 2518, width: 349, height: 181 }),
+  compositeSize: Object.freeze({ width: 2010, height: 2814 }),
+  shape: Object.freeze({
+    size: Object.freeze({ width: SCROLL_NOTCH_BOX.width, height: SCROLL_NOTCH_BOX.height }),
+    bounds: Object.freeze({
+      leftPct: (SCROLL_NOTCH_BOX.x / 1500) * 100,
+      topPct: (SCROLL_NOTCH_BOX.y / 2100) * 100,
+      widthPct: (SCROLL_NOTCH_BOX.width / 1500) * 100,
+      heightPct: (SCROLL_NOTCH_BOX.height / 2100) * 100,
+    }),
+  }),
+});
+
+/**
+ * A scroll notch piece's hologram, blacked out and cut (in place): every
+ * pixel inside the cut grown by `blackoutPx` becomes the trapezoid's opaque
+ * black — the pack's triangle is drawn ~2 px larger and higher than the
+ * stamp's hole, so its edge would otherwise survive round our cut — then
+ * every pixel inside the cut itself transparent (cutOval).
+ */
+export function blackoutAndCut(buf, shape, cut, marginPx, blackoutPx) {
+  const { width, height } = shape.size;
+  const inside = cutInside(shape, cut, marginPx);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (!inside(x, y, blackoutPx)) continue;
+      const o = (y * width + x) * 4;
+      buf[o] = 0;
+      buf[o + 1] = 0;
+      buf[o + 2] = 0;
+      buf[o + 3] = 255;
+    }
+  }
+  cutOval(buf, shape, cut, marginPx);
+  return buf;
+}
+
+/**
+ * What the importer (and the unit test, on the published objects) checks
+ * on a scroll notch piece (8-bit RGBA at the box's size, pure): every
+ * pixel inside the cut is transparent; the blacked-out ring round it is
+ * opaque black; the piece's corners are clear (the pack's piece stops
+ * inside its box) — and, given the pack's stamp shape (`stamp`: gray.png's
+ * alpha at the same bounds, downscaled with the card and cut to the box),
+ * nothing of it lies outside the cut and its ring above α 8 (the resample's
+ * ringing): no pixel of the hologram capture is published.
+ * @param {Uint8Array | null} [stamp]
+ */
+export function pieceNotchFindings(buf, shape, cut, marginPx, blackoutPx, stamp = null) {
+  const { width, height } = shape.size;
+  const inside = cutInside(shape, cut, marginPx);
+  let cutClear = true;
+  let ringBlack = true;
+  let stampOutside = 0;
+  let opaque = 0;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const p = y * width + x;
+      const o = p * 4;
+      if (buf[o + 3] === 255) opaque += 1;
+      if (inside(x, y, 0)) {
+        if (buf[o + 3] !== 0 || buf[o] || buf[o + 1] || buf[o + 2]) cutClear = false;
+        continue;
+      }
+      if (inside(x, y, blackoutPx)) {
+        if (buf[o + 3] !== 255 || buf[o] || buf[o + 1] || buf[o + 2]) ringBlack = false;
+        continue;
+      }
+      if (stamp) stampOutside = Math.max(stampOutside, stamp[p]);
+    }
+  }
+  const corners = [0, width - 1, (height - 1) * width, height * width - 1].map((p) => buf[p * 4 + 3]);
+  const failures = [];
+  if (!cutClear) failures.push("a pixel inside the cut is not transparent");
+  if (!ringBlack) failures.push(`a pixel in the ${blackoutPx} px ring round the cut is not opaque black`);
+  if (stampOutside > 8) failures.push(`the pack's stamp shape reaches α ${stampOutside} outside the cut and its ring`);
+  if (corners.some((a) => a !== 0)) failures.push(`the box's corners are not clear (α ${corners.join(", ")})`);
+  return { cutClear, ringBlack, stampOutside, opaque, failures };
+}
+
 export const CC_TEMPLATES = {
+  // TODO 4.11: the Lord of the Rings scroll showcase (see SCROLL above).
+  lotrscroll: {
+    colors: {
+      ...perColor((k) => [layer(`${SCROLL}/${k === "c" ? "l" : k}.png`)]),
+      a: [layer(`${SCROLL}/a.png`)],
+    },
+    plates: SCROLL_PT,
+    pack: SCROLL_PACK,
+    notes: SCROLL_NOTES,
+  },
   m15: {
     colors: {
       ...perColor((k) => [layer(`${NEW}/${k}.png`)]),
@@ -5957,6 +6160,19 @@ export function m20TokenCrownFindings(buf, width, height, rows) {
 
 /** The overlay bands the importer builds, by bucket folder. */
 export const CC_OVERLAY_BANDS = {
+  // TODO 4.11: the Lord of the Rings scroll's crown — a generic band, the
+  // pack's crown at its own bounds (SCROLL_CROWN_BAND).
+  lotrscrollcrown: {
+    pack: SCROLL_PACK,
+    band: SCROLL_CROWN_BAND,
+    keys: SCROLL_CROWN_BAND.keys,
+    layers: scrollCrownLayers,
+    findings: scrollCrownFindings,
+    notes: [
+      "the scroll showcase's legendary crown (TODO 4.11): the pack's 'Legendary Crown' (scroll/crowns/<k>.png, 1909x70) at its crownBounds (49/2010, 43/2814) on a clear 2010x2814 canvas, downscaled once to 1500x2100 (Lanczos) and cropped to rows 0–99 — the rolled top edge of the title scroll every legendary scroll print carries (LTR #470, #526, LTC #422; plain: #457, #700, LTC #412). No cover strip: the crown is drawn over the master's own title scroll",
+      "keys = the pack's eight crowns: w u b r g, m (gold), a (the artifact's light blue — a colourless artifact draws master a) and l (the land's brown — the template's keyMap c → l); no pairs (no pair masters)",
+    ],
+  },
   // TODO 4.48: the M20 full-art token's crown — a generic band, the
   // borderless frame's floating crown at its own bounds.
   m20tokencrown: {
@@ -6367,6 +6583,25 @@ export const HOLO_STAMP_NOTCHES = {
       "the triangle — CC's 'Gray Holo Stamp' shape fitted (lib/cards/holo-stamp.ts UB_STAMP_HOLE) plus 2 px — is cut to transparent: every colour piece holds a capture of WotC's hologram there, which is never published; our own triangle bitmap (lib/cards/holo-stamp-art.ts) covers the cut. The pack's gray.png is the fit's reference only and is not read by the build",
     ],
   },
+  // TODO 4.11: the Lord of the Rings scroll's triangle notch — the pack's
+  // own piece per key, composited like the masters (SCROLL_NOTCH).
+  lotrscrollholostamp: {
+    pack: SCROLL_PACK,
+    pieces: SCROLL_NOTCH.pieces,
+    keys: SCROLL_NOTCH.keys,
+    shape: SCROLL_NOTCH.shape,
+    placeAt: SCROLL_NOTCH.placeAt,
+    compositeSize: SCROLL_NOTCH.compositeSize,
+    triangle: UB_STAMP_HOLE,
+    cutMarginPx: 2,
+    blackoutPx: 2,
+    stampShape: `${SCROLL}/stamps/gray.png`,
+    notes: [
+      `the scroll showcase's triangle stamp notch (TODO 4.11): the pack's per-colour 'Holo Stamp' (scroll/stamps/<k>.png, 349x181) — the text box's parchment edge stepped up and round a black trapezoid over the stamp — placed at its stampBounds (834/2010, 2518/2814) on a clear 2010x2814 canvas, downscaled ONCE with the canvas (Lanczos, as the masters are) and cut to its box ${SCROLL_NOTCH_BOX.width}x${SCROLL_NOTCH_BOX.height} at ${SCROLL_NOTCH_BOX.x},${SCROLL_NOTCH_BOX.y} px of the 1500x2100 card, drawn 1:1 from there`,
+      "the pack's OWN piece per key (w u b r g, m gold, a the artifact's light blue, l the land's brown — the template maps a colourless land's c → l and a colourless artifact's c → a): the scroll's rim is textured parchment in the frame's colour, not one flat bar, so m15holostamp's one-geometry tint does not apply; no pairs (no pair masters)",
+      "the triangle — the Universes Beyond stamp's (lib/cards/holo-stamp.ts UB_STAMP_HOLE: the scroll prints wear the same physical stamp, LTR #457 / #470 / #700, LTC #412: 705–797 px wide at row 1950, apex 1992–1993, against the hole's 708–793 / 1992.5) plus 2 px — is cut to transparent, and the 2 px round the cut painted the trapezoid's opaque black: every colour piece holds a capture of the hologram there, drawn ~2 px larger and higher than the stamp (the pack's 'Gray Stamp' gray.png, 680–822 × 1914–1997 px once placed and downscaled, against the hole's 680.4–818.8 × 1917.9–1999.2), which is never published; our own triangle bitmap (lib/cards/holo-stamp-art.ts) covers the cut with its 3 px black margin. gray.png is read only by the check: placed and downscaled like a piece, it reaches α ≤ 8 outside the cut and its ring",
+    ],
+  },
   m15pwholostamp: {
     pack: "Planeswalker 'Holo Stamps' (packPlaneswalkerHoloStamps.js)",
     shape: {
@@ -6644,6 +6879,8 @@ export const NOTCH_FOOT = Object.freeze({
 
 /** Every Card Conjurer file a notch folder reads. */
 export function notchSourceFiles(def) {
+  // A notch made of the pack's own piece per key (TODO 4.11: the scroll).
+  if (def.pieces) return [...new Set([...Object.values(def.pieces), ...(def.stampShape ? [def.stampShape] : [])])].sort();
   return [def.shape.src];
 }
 

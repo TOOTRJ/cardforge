@@ -115,6 +115,9 @@ describe("the main box on every template", () => {
         // The Prepare frame (TODO 4.27): the creature's half of M15's box,
         // the prints' margins (ink from x 127, M15's 4 px inside the rect).
         "prepare",
+        // The Lord of the Rings scroll (layout v62, TODO 4.11): the pack's
+        // text layout is M15's, its box and margins.
+        "lotrscroll",
       ].sort(),
     );
     for (const t of withPrintMargins) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 4, y: 0 });

@@ -127,6 +127,9 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // sizes on a landscape card — it joined WITH its bump (0 stored public or
   // unlisted cards).
   "battle",
+  // The Lord of the Rings scroll (TODO 4.11, CC's 'Scroll' pack, whose text
+  // layout is the M15 pack's; layout v62): it joined WITH its bump.
+  "lotrscroll",
   // M15-era frames on MSE masters.
   "saga",
   "adventure",
