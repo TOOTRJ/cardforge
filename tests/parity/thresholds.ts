@@ -240,7 +240,18 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
     min: 31,
     max: 35,
     why:
-      "The same row as 750-walker-phyrexian-cost-start, seen as a difference: with the row 4 px out of register the cost region's mean absolute difference is 32.9 against a limit of 31 (a quarter of the region reads as another picture: hot 24.8 %, a hair inside its limit of 25 %). At HD the region measures 5.2. It goes when the row's start does.",
+      "The same row as 750-walker-phyrexian-cost-start, seen as a difference: with the row 4 px out of register the cost region's mean absolute difference is 32.9 against a limit of 31 (34.2 since layout v60 put the walker's pips 2 px higher at 750; a quarter of the region reads as another picture — 750-walker-phyrexian-cost-hot). At HD the region measures 5.2. It goes when the row's start does.",
+  },
+  {
+    name: "750-walker-phyrexian-cost-hot",
+    size: "750",
+    cases: /^m15pw\/w\/planeswalker-long@phyrexian-cost-5$/,
+    regions: ["cost"],
+    metric: "hot",
+    min: 0.25,
+    max: 0.28,
+    why:
+      "The same row again, as the share of the cost region that reads as another picture: 24.8 % through layout v59, a hair inside the limit of 25 %, and 25.8 % since v60 moved the walker's pips 2 px up at 750 in BOTH renderers (the row's 4 px horizontal misregister, 750-walker-phyrexian-cost-start, lands on other rows of the discs' rims; measured on darwin 2026-10-21). Nothing new differs: it goes when the row's start does.",
   },
 ];
 
