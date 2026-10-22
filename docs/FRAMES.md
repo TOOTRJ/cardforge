@@ -8459,10 +8459,11 @@ raw reading, ≈ 6 px). The owner chose current print; no per-era switch.
 **Where.** `CC_M15_COST` in `lib/cards/template-layout.ts` — one spread of
 `costSizePct: CC_M15_COST_DISC_PCT` (`lib/cards/typography.ts`, 70 / 1500),
 `costDy: CC_M15_COST_DY` (−7 / 1500) and `costDx: CC_M15_COST_DX` (2 / 1500)
-— on the 35 profiles that drew the Card Conjurer lift (m15 and its
+— on the 36 profiles that drew the Card Conjurer lift (m15 and its
 artifact, Vehicle, Nyx, station, Universes Beyond, snow, devoid and
 borderless dresses; the transform and modal bodies, front and back; saga and
-its double-faced pair; adventure's front; extended art; the textless pair).
+its double-faced pair; adventure's and Prepare's fronts; extended art; the
+textless pair).
 Every value is a whole HD px, so the preview (`cqw`) and the bake (rounded
 px) agree at the stored size. `costDx` is a translate: the row's layout box,
 which the name's room is measured against (`titleBandRoomPct` →
@@ -8476,13 +8477,13 @@ and the MSE-framed showcases (`nyx`, `fullart`, `expeditionland`, `lotr`,
 their Card Conjurer rebuild (TODO 4.11).
 
 **Rollout.** A CORRECTION: `"sweep"`, no badge, after the owner's before /
-after sheet. Template-scoped to the 35 (`COST_ROW_PRINT_TEMPLATES`) and
+after sheet. Template-scoped to the 36 (`COST_ROW_PRINT_TEMPLATES`) and
 card-scoped (`v60Changed`): a card that draws a cost — its front's, or on a
 double-faced body its back's. A card with no cost bakes byte-identical and
 is stamped. NOT verification-neutral, but narrower than the bake scope
-(`COST_ROW_PRINT_VERIFICATION_TEMPLATES`, 24): the land bodies and the
+(`COST_ROW_PRINT_VERIFICATION_TEMPLATES`, 25): the land bodies and the
 transform backs never draw a cost, so their ticks stay fresh; every other
-tick on the 35 re-opens once.
+tick on the 36 re-opens once.
 
 ## Text sizes on the M15-era family
 

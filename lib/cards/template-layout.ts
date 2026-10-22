@@ -2715,7 +2715,7 @@ function m20ArtifactToken(profile: FrameProfile, label: string): FrameProfile {
 //
 // Layout v60 (TODO 3.34 + the 2023 pip move, owner 2026-10-22: "match
 // current cards") puts the cost row where CURRENT print draws it. Measured
-// 2026-10-21 on 228 Scryfall PNGs against our own bakes of the same names and
+// 2026-10-21 on 308 Scryfall PNGs against our own bakes of the same names and
 // costs, both read by one circle fit, each print registered on its own title
 // bar's outline (docs/FRAMES.md "The cost row as printed since 2023"):
 //   - the centre: 4.6 px lower than v24–v59's on June-2023+ prints (+4.58 ±
@@ -2732,7 +2732,7 @@ function m20ArtifactToken(profile: FrameProfile, label: string): FrameProfile {
 // px agree at the stored size.
 const CC_M15_COST_DY = -7 / 1500;
 const CC_M15_COST_DX = 2 / 1500;
-/** The cost row of every Card Conjurer-framed M15 profile (35 templates):
+/** The cost row of every Card Conjurer-framed M15 profile (36 templates):
  *  disc, lift and right-end nudge — one spread, so no profile takes one
  *  without the others. */
 const CC_M15_COST = {
@@ -3909,7 +3909,7 @@ const PREPARE_PANEL_RECT = (centerPx: number): Rect => ({
 const PREPARE: FrameProfile = {
   ...M15,
   label: "Prepare",
-  costDy: CC_M15_COST_DY,
+  ...CC_M15_COST,
   type: { ...M15.type, dy: CC_M15_TYPE_DY },
   artSlot: CC_M15_ART_SLOT,
   // The creature's rules → the LEFT box (M15's box, up to the page), at
