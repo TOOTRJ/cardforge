@@ -98,6 +98,9 @@ describe("which frames hide a card's text", () => {
       "borderless/basic/textless",
       "borderless/textless",
       "borderless/token",
+      // TODO 5.5 (c): the transforming Incubator // Phyrexian, nearest on the
+      // plain full-art pair until 5.5 (d) — the same `onceVerified` swap.
+      "token/m20+dfc-token-transform",
       "token/m20+nyx-dress",
       "token/m20+border",
       "token/m20+crown",

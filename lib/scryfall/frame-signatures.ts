@@ -1133,7 +1133,8 @@ type GapKey =
   | "znr-type-line"
   | "borderless-dfc-face"
   | "marvel-variant-face"
-  | "nyx-saga-front";
+  | "nyx-saga-front"
+  | "dfc-token-transform";
 
 const BORDER_WORD: Record<string, string> = {
   white: "white",
@@ -1290,6 +1291,16 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
     match: { sets: ["tla", "ptla"], effectsAny: ["enchantment"] },
     reason: "this saga's front wears the Nyx starfield, which PipGlyph's double-faced saga front doesn't draw",
     blockedBy: "5.5",
+  },
+  // The transforming double-sided token (TODO 5.5 (c), owner Round 76):
+  // MOM's Incubator // Phyrexian (TMOM #16–18, TEOC #15, TFRC #13) prints
+  // the ▲ well on its front, the ▼ on its back and the back's 0/0 on the
+  // front's text box — PipGlyph draws the plain full-art pair (two tokens
+  // back to back) meanwhile; the transform-token body is TODO 5.5 (d).
+  "dfc-token-transform": {
+    match: { layouts: ["double_faced_token"], subtypesAny: ["Incubator"] },
+    reason: "this token transforms: its faces print the transform icons and the back's power and toughness on the front, which PipGlyph's token frames don't draw",
+    blockedBy: "5.5d",
   },
   "borderless-dfc-face": {
     match: { dfcLook: "bordered" },
@@ -2281,7 +2292,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
         blockedBy: "4.48",
       },
     },
-    ["nyx-dress", "border", "crown", "two-colour", "two-colour-hybrid"],
+    ["dfc-token-transform", "nyx-dress", "border", "crown", "two-colour", "two-colour-hybrid"],
     // The M20 token's crown is its own floating crown round the name pill
     // (TFDN #13) and its two-colour look a central split (TMKM #10) —
     // never the arch's (4.6f): 4.48's, drawn by the m20token* templates

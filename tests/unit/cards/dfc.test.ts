@@ -191,6 +191,13 @@ describe("the transform bodies (5.1a), the modal bodies (5.1b) and every other t
         expect(backBodyError(front, { frame_style: { template: "m15mdfcfront" } }), front).toBe("Not a back-face frame.");
         continue;
       }
+      // A token template (TODO 5.5 (c)): its back is another token of its
+      // design (tests/unit/cards/token-pair.test.ts) — never a DFC body.
+      if (/^m(15|20)token/.test(front)) {
+        expect(backBodyError(front, { frame_style: { template: "m15" } }), front).toBe("Not a back-face frame.");
+        expect(backBodyError(front, { frame_style: { template: "m15dfcback" } }), front).toBe("Not a back-face frame.");
+        continue;
+      }
       expect(backBodyError(front, { frame_style: { template: "m15" } }), front).toBe("This frame has no back face of its own.");
       expect(backBodyError(front, { frame_style: { template: "m15dfcback" } }), front).toBe("This frame has no back face of its own.");
     }

@@ -44,6 +44,7 @@ import {
   type DfcLook,
 } from "@/lib/cards/dfc";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
+import { tokenBackBodyFor } from "@/lib/creator/token-back";
 import { isArtifactFrameType, pickFrameColorKey } from "@/components/cards/frame-layer";
 import { describeFrame, finalizeImportMatch, withVerification } from "@/lib/creator/frame-resolve";
 import { isTreatmentBody } from "@/lib/creator/frame-picker";
@@ -490,7 +491,42 @@ function isTokenTypeLine(typeLine: string | null | undefined): boolean {
  *  until the walker bodies exist (owner 2026-10-02, Q2: they wait — 5.13,
  *  ask first), and the request log counts the ask (the registry's
  *  `dfc/walker` signature). */
-export type DroppedFace = "double-faced-token" | "role" | "walker-face";
+export type DroppedFace = "double-faced-token" | "role" | "walker-face" | "helper-front";
+
+/** What a `double_faced_token` printing is (TODO 5.5 (c), owner Round 76):
+ *  • `pair` — two tokens back to back (GK1 #4 Goblin // Soldier, F17 #11
+ *    Dinosaur // Treasure, MOM #16 Incubator // Phyrexian): both faces
+ *    import, the back on the token template its words and text derive in the
+ *    front's design (lib/creator/token-back.ts) — once both faces' combos are
+ *    verified, else the front alone as before (finalizeImportMatch);
+ *  • `helper-front` — a reminder card backed by a token (F18 #2 City's
+ *    Blessing // Elemental): the TOKEN face imports by itself;
+ *  • `front-only` — everything else, imported as before 5.5 (c) with the
+ *    toast: a token backed by a helper card (L17 #1 Gremlin // Energy
+ *    Reserve), Unstable's art-only backs (the back's type line is a bare
+ *    "Token": the art with no frame), the folded Contortionist
+ *    (TOKEN_FOLD_BACK_PINS), and every helper card (Punchcards, Day // Night,
+ *    the minigames, The Ring…).
+ *  Null for any other layout. */
+export type DoubleFacedTokenShape = "pair" | "helper-front" | "front-only";
+
+/** The double-sided tokens whose back is the FRONT folded (UNF #4
+ *  Contortionist): front-only (owner Round 76). */
+const TOKEN_FOLD_BACK_PINS: Readonly<Record<string, readonly string[]>> = { tunf: ["4"] };
+
+export function doubleFacedTokenShapeOf(card: ScryfallCard): DoubleFacedTokenShape | null {
+  if ((card.layout ?? "").toLowerCase() !== "double_faced_token") return null;
+  const [front, back] = card.card_faces ?? [];
+  if (!front || !back) return "front-only";
+  const frontToken = isTokenTypeLine(front.type_line);
+  // A back that says "Token" and nothing else is Unstable's art-only back.
+  const backToken = isTokenTypeLine(back.type_line) && (back.type_line ?? "").trim().toLowerCase() !== "token";
+  if (!frontToken) return backToken ? "helper-front" : "front-only";
+  if (!backToken) return "front-only";
+  const set = (card.set ?? "").trim().toLowerCase();
+  if (TOKEN_FOLD_BACK_PINS[set]?.includes((card.collector_number ?? "").trim())) return "front-only";
+  return "pair";
+}
 
 /** True when either face of a transform / modal printing is a planeswalker. */
 function hasWalkerFace(card: ScryfallCard): boolean {
@@ -503,7 +539,12 @@ function hasWalkerFace(card: ScryfallCard): boolean {
 
 export function droppedFaceOf(card: ScryfallCard): DroppedFace | undefined {
   const layout = (card.layout ?? "").toLowerCase();
-  if (layout === "double_faced_token") return "double-faced-token";
+  if (layout === "double_faced_token") {
+    // Two tokens back to back bring both faces (TODO 5.5 (c)); a helper
+    // front gives way to its token face (the patch is that face's).
+    const shape = doubleFacedTokenShapeOf(card);
+    return shape === "pair" ? undefined : shape === "helper-front" ? "helper-front" : "double-faced-token";
+  }
   if (layout === "flip" && isTokenTypeLine(frontTypeLine(card))) return "role";
   if (hasWalkerFace(card)) return "walker-face";
   return undefined;
@@ -521,6 +562,8 @@ export function droppedFaceNotice(
       return `${cardName} is a double-faced token — PipGlyph imported its front face, ${patch.title ?? "the front"}. Two-sided tokens aren't supported yet.`;
     case "role":
       return `${cardName} holds two Roles — PipGlyph imported the front one, ${patch.title ?? "the front Role"}.`;
+    case "helper-front":
+      return `${cardName} pairs a reminder card with a token — PipGlyph imported its token face, ${patch.title ?? "the token"}.`;
     case "walker-face":
       return `${cardName} has a planeswalker face — PipGlyph imported the front face, ${patch.title ?? "the front"}, on its own. Double-faced planeswalkers aren't supported yet.`;
     default:
@@ -1845,6 +1888,12 @@ export function mapScryfallToFormPatch(
     set?: ScryfallSet | null;
   } = {},
 ): ScryfallImportPatch {
+  // A reminder card backed by a token (TODO 5.5 (c): F18 #2 City's Blessing
+  // // Elemental): the TOKEN face imports by itself, as the one-faced token
+  // it is — the printing's own fields, that face's content.
+  if (doubleFacedTokenShapeOf(card) === "helper-front") {
+    return { ...mapScryfallToFormPatch(tokenFaceAlone(card, 1), options), dropped_face: "helper-front" };
+  }
   const front = card.card_faces?.[0];
   // Split / adventure / room / transform cards carry combined-or-absent data at
   // the top level (name is "Foo // Bar", oracle/cost/PT live on the faces). For
@@ -1977,11 +2026,68 @@ export function mapScryfallToFormPatch(
     // emits a back_face patch the form will seed when the user imports —
     // except a double-faced token or a Role card, which import their front
     // face only (TODO 1.23) and say so.
+    // A double-sided token's back (TODO 5.5 (c)) is a token of its own,
+    // on the token template its words and text derive in the front's
+    // design — finalizeImportMatch derives it again for the front it lands
+    // on and keeps it only once both faces are verified.
     back_face:
       !droppedFace && card.card_faces && card.card_faces.length >= 2
-        ? mapScryfallBackFacePatch(card, dfcLanding)
+        ? doubleFacedTokenShapeOf(card) === "pair"
+          ? mapTokenBackFacePatch(card, frameTemplateFromScryfall(card, frameMatch))
+          : mapScryfallBackFacePatch(card, dfcLanding)
         : undefined,
     dropped_face: droppedFace,
+  };
+}
+
+/** One face of a multi-face printing as a single-faced TOKEN printing: the
+ *  printing's own fields (set, number, frame, release, promos…) with that
+ *  face's name, type line, text, colours, stats, artist and images. */
+function tokenFaceAlone(card: ScryfallCard, index: number): ScryfallCard {
+  const face = card.card_faces?.[index];
+  const { card_faces: _faces, ...rest } = card;
+  void _faces;
+  return { ...rest, ...face, layout: "token" } as ScryfallCard;
+}
+
+/**
+ * A double-sided token's BACK (TODO 5.5 (c)): `card_faces[1]` read as a token
+ * (its "Token" word is the card type, the rest its type words), in its own
+ * colour, on the token template `tokenBackBodyFor` derives under the
+ * front's `frontTemplate`. finalizeImportMatch derives the body again for
+ * the front the import lands on.
+ */
+function mapTokenBackFacePatch(
+  card: ScryfallCard,
+  frontTemplate: FrameTemplate | undefined,
+): ScryfallImportBackFacePatch | undefined {
+  const back = card.card_faces?.[1];
+  if (!back) return undefined;
+  const typeParts = parseTypeLine(back.type_line, { cardType: "token" });
+  const supertype = typeParts.supertype;
+  const colour = backFrameColorsFromScryfall(card);
+  const body = tokenBackBodyFor(frontTemplate, {
+    supertype,
+    subtypes: typeParts.subtypes_text,
+    rulesText: back.oracle_text,
+    flavorText: back.flavor_text,
+    power: back.power,
+    toughness: back.toughness,
+    colorIdentity: colour,
+  });
+  return {
+    ...(body ? { color_identity: colour, frame_style: { template: body } } : {}),
+    title: back.name ?? undefined,
+    card_type: "token",
+    supertype,
+    ...printedTypesKey(printedTypesOfPrinting(back.type_line, { cardType: "token", supertype })),
+    subtypes_text: typeParts.subtypes_text,
+    rules_text: back.oracle_text ?? undefined,
+    flavor_text: back.flavor_text ?? undefined,
+    power: back.power ?? undefined,
+    toughness: back.toughness ?? undefined,
+    artist_credit: scryfallFaceArtist(card, 1),
+    imported_art_url: null,
   };
 }
 
