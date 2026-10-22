@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Loader2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
+import { adminErrorToast } from "@/lib/admin/admin-toast";
 import { Button } from "@/components/ui/button";
 import { adminSetThreadStatusAction } from "@/lib/messages/actions";
 import type { ThreadStatus } from "@/lib/messages/schemas";
@@ -29,7 +30,7 @@ export function ThreadStatusButtons({
       onClick={() =>
         startTransition(async () => {
           const result = await adminSetThreadStatusAction(threadId, next);
-          if (!result.ok) toast.error(result.error);
+          if (!result.ok) adminErrorToast("thread status", result.error);
           else {
             toast.success(next === "closed" ? "Conversation closed." : "Conversation reopened.");
             router.refresh();

@@ -325,6 +325,9 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // The text-box tokens' box (TODO 4.49 (b): 74.5–92.5 %H, the P/T plate in
   // its corner) holds 400 characters but not a planeswalker's worth.
   [["m15tokentext/main", "m15tokenartifacttext/main"], ["1200 chars", "EOE #30", "level up"]],
+  // …and the arch's TALL box (TODO 4.55: 63.1–92.5 %H, the plate in its
+  // corner) holds everything but 1,200 characters, as the full-art tall box.
+  [["m15tokentall/main", "m15tokenartifacttall/main"], ["1200 chars"]],
   // The full-art tokens (TODO 4.48): the regular box (73.9–92.1 %H, the
   // plate in its corner) holds what the arch's does; the tall box (62.8 %H
   // down) everything but 1,200 characters. The textless height draws no box

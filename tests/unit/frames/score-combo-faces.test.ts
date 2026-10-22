@@ -28,7 +28,7 @@ const state = vi.hoisted(() => ({
   fetchScan: vi.fn(),
 }));
 
-vi.mock("@/lib/cards/frame-reviews", () => ({ getFrameReviews: async () => new Map() }));
+vi.mock("@/lib/cards/frame-reviews", () => ({ readFrameReviews: async () => ({ reviews: new Map(), error: null }) }));
 vi.mock("@/lib/cards/frame-profile-overrides", () => ({ getFrameProfileOverrides: async () => ({}) }));
 vi.mock("@/lib/scryfall/reference-preview", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/scryfall/reference-preview")>();

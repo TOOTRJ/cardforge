@@ -150,8 +150,9 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
     // (…and the borderless double-faced bodies, TODO 5.7, offer it as their
     // bordered twins do.)
     // (…and the Nyx dress's regular and tall heights, TODO 4.51.)
+    // (…and the arch's tall box, TODO 4.55, as the text box does.)
     // (…and the Prepare frame, TODO 4.27: both boxes, as the adventure's.)
-    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(70);
+    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(72);
   });
 
   it("rulesAlignOf is \"center\" only for the card's \"center\" on a frame that offers it", () => {

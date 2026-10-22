@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, CircleSlash, Loader2, X, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import { adminErrorToast } from "@/lib/admin/admin-toast";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import {
@@ -42,11 +43,13 @@ export function useStartScoreJob() {
         counts.skipped > 0 ? `, ${counts.skipped} skipped (no printing)` : ""
       }`;
       if (final.status === "done") {
-        (counts.failed > 0 ? toast.error : toast.success)(`${input.label}: ${counts.done} scored${tail}.`);
+        const message = `${input.label}: ${counts.done} scored${tail}.`;
+        if (counts.failed > 0) adminErrorToast("score batch", message);
+        else toast.success(message);
       } else if (final.status === "cancelled") {
         toast.info(`${input.label}: cancelled after ${counts.done} scored${tail}.`);
       } else if (final.status === "error") {
-        toast.error(`${input.label}: ${final.error ?? "the scoring job failed."}`);
+        adminErrorToast("score batch", `${input.label}: ${final.error ?? "the scoring job failed."}`);
       }
       router.refresh();
       return final;

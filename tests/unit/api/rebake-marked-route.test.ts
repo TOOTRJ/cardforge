@@ -116,6 +116,29 @@ describe("POST /api/admin/rebake-marked", () => {
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 
+  it("refreshes at the run's end when an EARLIER call re-baked, though the last re-baked nothing", async () => {
+    revalidatePath.mockClear();
+    // Last call: everything left failed, nothing remains.
+    state.batch.mockResolvedValue({ ok: true, processed: [], failed: [{ id: ID, error: "art" }], superseded: [], remaining: 0 });
+    await post({ rebakedSoFar: 8 });
+    expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
+    // A call that makes no progress also ends the loop (rebake-marked-store).
+    revalidatePath.mockClear();
+    state.batch.mockResolvedValue({ ok: true, processed: [], failed: [], superseded: [], remaining: 3 });
+    await post({ rebakedSoFar: 2 });
+    expect(revalidatePath).toHaveBeenCalledTimes(1);
+    // Mid-run (cards remain, progress made) never refreshes.
+    revalidatePath.mockClear();
+    state.batch.mockResolvedValue({ ok: true, processed: [], failed: [{ id: ID, error: "art" }], superseded: [], remaining: 3 });
+    await post({ rebakedSoFar: 2 });
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("rejects a malformed rebakedSoFar", async () => {
+    expect((await post({ rebakedSoFar: -1 })).status).toBe(400);
+    expect((await post({ rebakedSoFar: 1.5 })).status).toBe(400);
+  });
+
   it("runs each batch under the sweep lease: parked while cards are left, released when done", async () => {
     await post({});
     expect(state.acquire).toHaveBeenCalledTimes(1);

@@ -167,7 +167,9 @@ describe("the surfaces that draw a picture column", () => {
     ["lib/cards/preview-data.ts", /return drawableCardMedia\(\{/],
     ["lib/cards/bake-render.ts", /if \(!isAllowedMediaUrl\("card-art", artUrl\)\)/],
     ["lib/pips/queries.ts", /isAllowedMediaUrl\("pip", row\.image_url, ownerId\)/],
-    ["lib/moderation/queries.ts", /artUrl: drawableMediaUrl\("card-art", card\.art_url\)/],
+    // The queue's tile is the card's own (audit L6): the row through
+    // cardToPreviewData's guard, the bake through BakedCardThumbnail's.
+    ["app/(app)/admin/moderation/page.tsx", /previewData=\{cardToPreviewData\(item\.card, profileOverrides\)\}/],
     ["lib/cards/queries.ts", /avatar_url: profileMediaSrc\("avatar", row\.avatar_url, row\.id\)/],
     ["lib/cards/comments-queries.ts", /avatar_url: profileMediaSrc\("avatar", p\.avatar_url, p\.id\)/],
     ["components/cards/card-detail-content.tsx", /profileMediaSrc\("avatar", profile\.avatar_url, profile\.id\)/],

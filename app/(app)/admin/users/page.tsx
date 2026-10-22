@@ -23,6 +23,7 @@ import {
   ResyncSubscriptionButton,
 } from "@/components/admin/user-billing-controls";
 import { RevenuePanel } from "@/components/admin/revenue-panel";
+import { AdminLoadError } from "@/components/admin/admin-load-error";
 import { getRevenueSummary } from "@/lib/admin/revenue-queries";
 import { FunnelPanel } from "@/components/admin/funnel-panel";
 import { getFunnelSummary } from "@/lib/admin/funnel-queries";
@@ -104,7 +105,9 @@ export default async function AdminUsersPage({
         eyebrow="Admin · Users"
         title="Users"
         description="Every account, with plan, credits, activity and support context. Open a user to grant credits, comp a plan, resync billing, or message them."
-        actions={<Badge variant="primary">{page.total.toLocaleString()} total</Badge>}
+        actions={
+          page.loadError ? null : <Badge variant="primary">{page.total.toLocaleString()} total</Badge>
+        }
       />
 
       {funnel ? (
@@ -125,7 +128,22 @@ export default async function AdminUsersPage({
 
       <UserFilters params={params} />
 
-      {page.rows.length === 0 ? (
+      {page.loadError ? (
+        <AdminLoadError what="the user directory" className="mt-6" />
+      ) : page.pastEnd ? (
+        <div className="mt-6">
+          <EmptyState
+            icon={Users}
+            title={`No more users — back to page ${pages}`}
+            description={`These filters match ${page.total.toLocaleString()} ${page.total === 1 ? "account" : "accounts"}, on ${pages} ${pages === 1 ? "page" : "pages"}.`}
+            action={
+              <Button asChild variant="outline" size="sm">
+                <Link href={userListHref(params, { page: pages })}>Back to page {pages}</Link>
+              </Button>
+            }
+          />
+        </div>
+      ) : page.rows.length === 0 ? (
         <div className="mt-6">
           <EmptyState
             icon={Users}
@@ -377,7 +395,7 @@ function PlanBadges({ user }: { user: AdminUserRow }) {
 
 async function UserDetail({ userId, backHref }: { userId: string; backHref: string }) {
   const admin = createAdminClient();
-  const [{ data: user }, { data: authUser }, stats, { data: ledger }, threads] =
+  const [{ data: user }, { data: authUser }, stats, { data: ledger, error: ledgerError }, threadList] =
     await Promise.all([
       admin
         .from("profiles")
@@ -397,6 +415,9 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
         .limit(12),
       listThreadsForUser(userId),
     ]);
+
+  if (ledgerError) console.error("[admin/users] credit ledger read failed:", ledgerError.message);
+  const threads = threadList?.threads ?? null;
 
   if (!user) {
     return (
@@ -555,7 +576,9 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
 
           <SurfaceCard className="p-5">
             <SectionTitle title="Credit ledger" hint="Last 12 entries, newest first." />
-            {!ledger || ledger.length === 0 ? (
+            {ledgerError ? (
+              <AdminLoadError what="the credit ledger" className="mt-3" />
+            ) : !ledger || ledger.length === 0 ? (
               <p className="mt-3 text-sm text-muted">No ledger entries yet.</p>
             ) : (
               <div className="mt-3 overflow-x-auto">
@@ -594,7 +617,11 @@ async function UserDetail({ userId, backHref }: { userId: string; backHref: stri
             <h3 className="text-sm font-semibold text-foreground">Conversations</h3>
             <span className="ml-auto text-xs text-subtle">{threads?.length ?? 0}</span>
           </div>
-          {!threads || threads.length === 0 ? (
+          {threadList?.loadError ? (
+            <div className="px-4 py-4">
+              <AdminLoadError what="the conversations" />
+            </div>
+          ) : !threads || threads.length === 0 ? (
             <div className="flex flex-col items-start gap-3 px-4 py-5">
               <p className="text-sm text-muted">No conversations with {label} yet.</p>
               <NewMessageDialog userId={user.id} userLabel={label} />

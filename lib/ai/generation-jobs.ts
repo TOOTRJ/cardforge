@@ -1540,6 +1540,9 @@ async function executeDeckRemixStep(
      *  = the default landing (no template), as it landed before its frame
      *  was kept (ownCardTextStandIn); absent = none, the landing stands. */
     text_stand_in?: FrameTemplate | null;
+    /** A pinned tall-box printing on the arch's tall box (TODO 4.55): the
+     *  remix keeps the printed height (remixSavedFrame). */
+    printed_height?: true;
     /** An own STATION card's "power / toughness on this tier" choice where
      *  its rows say more than its text (stationPtChoiceOf) — the remix
      *  keeps the plate where its maker put it (TODO 4.27a, PR 3). */
@@ -1807,6 +1810,7 @@ async function executeDeckRemixStep(
   const frameTemplate = mechanics.frame_template
     ? remixSavedFrame({
         standIn: mechanics.text_stand_in,
+        printedHeight: mechanics.printed_height === true,
         template: mechanics.frame_template as FrameTemplate,
         cardType: mechanics.card_type as CardType | undefined,
         supertype: mechanics.supertype,

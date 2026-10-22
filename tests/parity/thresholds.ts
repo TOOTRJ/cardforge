@@ -191,8 +191,10 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
     // (The two arch-token cases of TODO 4.53 draw the same artist line as
     // m15tokentext's: the footer is M15TOKEN's on all four arch frames. The
     // short battle — TODO 5.5 (a)'s case, the one short battle the matrix
-    // has — draws it TURNED down the left border.)
-    cases: /^(agclassic|m15tokentext)\/|^m15token\/c\/token-long@small-caps$|^m15tokenartifact\/u\/token-long@small-caps-lower$|^battle\/w\/battle-short@back$/,
+    // has — draws it TURNED down the left border. The arch's tall box, TODO
+    // 4.55, draws m15tokentext's footer too: +3 / 0 at 750 on both its cases,
+    // darwin 2026-10-18.)
+    cases: /^(agclassic|m15tokentext|m15tokentall|m15tokenartifacttall)\/|^m15token\/c\/token-long@small-caps$|^m15tokenartifact\/u\/token-long@small-caps-lower$|^battle\/w\/battle-short@back$/,
     regions: ["footer"],
     metric: "dx",
     min: 3,

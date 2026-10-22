@@ -166,6 +166,11 @@ const DOCUMENTED_NULLS = new Set([
   // TDSK #10, SLD #1835), W / U regular (TSOC #3, TMDD #8), the artifact C
   // textless (TEOC #13); no tall box, no red, green or gold.
   "m20tokennyx/u", "m20tokennyx/r", "m20tokennyx/g", "m20tokennyx/m", "m20tokennyxtext/b", "m20tokennyxtext/r", "m20tokennyxtext/g", "m20tokennyxtext/c", "m20tokennyxtext/m", "m20tokennyxtall/w", "m20tokennyxtall/u", "m20tokennyxtall/b", "m20tokennyxtall/r", "m20tokennyxtall/g", "m20tokennyxtall/c", "m20tokennyxtall/m", "m20tokenartifactnyx/w", "m20tokenartifactnyx/u", "m20tokenartifactnyx/b", "m20tokenartifactnyx/r", "m20tokenartifactnyx/g", "m20tokenartifactnyx/m", "m20tokenartifactnyxtext/w", "m20tokenartifactnyxtext/u", "m20tokenartifactnyxtext/b", "m20tokenartifactnyxtext/r", "m20tokenartifactnyxtext/g", "m20tokenartifactnyxtext/c", "m20tokenartifactnyxtext/m", "m20tokenartifactnyxtall/w", "m20tokenartifactnyxtall/u", "m20tokenartifactnyxtall/b", "m20tokenartifactnyxtall/r", "m20tokenartifactnyxtall/g", "m20tokenartifactnyxtall/c", "m20tokenartifactnyxtall/m",
+  // The arch's tall box (TODO 4.55): the 21 tall-box printings are white,
+  // black and red creatures and an enchantment, and colourless Clues (the
+  // artifact dress) — no other colour printed it.
+  "m15tokentall/u", "m15tokentall/g", "m15tokentall/c", "m15tokentall/m",
+  "m15tokenartifacttall/w", "m15tokenartifacttall/u", "m15tokenartifacttall/b", "m15tokenartifacttall/r", "m15tokenartifacttall/g", "m15tokenartifacttall/m",
 ]);
 
 describe("frame-references.json", () => {

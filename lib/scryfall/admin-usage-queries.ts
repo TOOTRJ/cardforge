@@ -48,6 +48,9 @@ export type ScryfallAdminUsageSnapshot = {
   topUsers: ScryfallAdminTopUser[];
   /** Per-user quotas, for context next to app-wide counts. */
   limits: typeof SCRYFALL_USAGE_LIMITS;
+  /** A read failed (logged): the counts below are not the truth, and the
+   *  page says so rather than printing zeros. */
+  loadError: boolean;
 };
 
 // deck_import (0056) was missing here, so the today / per-minute / per-action
@@ -70,7 +73,10 @@ export async function getScryfallAdminUsageSnapshot(): Promise<ScryfallAdminUsag
     daily: [],
     topUsers: [],
     limits: SCRYFALL_USAGE_LIMITS,
+    loadError: false,
   };
+  // No key: the static limits panel alone (a deployment without the service
+  // role has no usage to read — not a failed read).
   if (!isAdminConfigured()) return empty;
 
   try {
@@ -101,6 +107,11 @@ export async function getScryfallAdminUsageSnapshot(): Promise<ScryfallAdminUsag
         ]),
       ]);
 
+    const failures = [dailyResult, topUsersResult, ...perActionResults].filter((r) => r.error);
+    for (const failure of failures) {
+      console.error("[admin/scryfall] usage read failed:", failure.error?.message);
+    }
+
     const perAction: ScryfallAdminActionUsage[] = ACTIONS.map((action, i) => ({
       action,
       minute: perActionResults[i * 2]?.count ?? 0,
@@ -122,8 +133,10 @@ export async function getScryfallAdminUsageSnapshot(): Promise<ScryfallAdminUsag
         calls: typeof row.calls === "string" ? Number(row.calls) : row.calls,
       })),
       limits: SCRYFALL_USAGE_LIMITS,
+      loadError: failures.length > 0,
     };
-  } catch {
-    return empty;
+  } catch (err) {
+    console.error("[admin/scryfall] usage read failed:", err);
+    return { ...empty, loadError: true };
   }
 }

@@ -1533,6 +1533,74 @@
       "m": null
     }
   },
+  "m15tokentall": {
+    "note": "The 2014–19 arch token with the TALL text box (TODO 4.55: PipGlyph's own cut of the text-box masters — the window shorter, the type pill 238 px higher, type bar ~56–62 %H), the pinned tall-box printings only (TALL_BOX_TOKEN_PINS: Amonkhet / Hour of Devastation's embalmed and eternalized cards, TC18, TDOM #7, TRIX #1). No tall-box print exists in blue, green, gold or colourless.",
+    "colors": {
+      "w": [
+        {
+          "name": "Angel of Sanctions",
+          "set": "takh",
+          "scryfallId": "a1786cb3-6f38-4f10-b5f1-8feb20e3baaf"
+        },
+        {
+          "name": "Mask",
+          "set": "tc18",
+          "scryfallId": "b21b5504-c5ef-4dfc-8219-8db90aca7694"
+        }
+      ],
+      "u": null,
+      "b": [
+        {
+          "name": "Champion of Wits",
+          "set": "thou",
+          "scryfallId": "65eebe6c-5bc9-463c-b74c-eae79fc3c1b6"
+        },
+        {
+          "name": "Demon",
+          "set": "tdom",
+          "scryfallId": "73b858b5-803b-4bcf-99d6-8c20c8b37f07"
+        }
+      ],
+      "r": [
+        {
+          "name": "Dragon Egg",
+          "set": "tc18",
+          "scryfallId": "0e80f154-9409-40fa-a564-6fc296498d80"
+        },
+        {
+          "name": "Elemental",
+          "set": "trix",
+          "scryfallId": "bd0bf1d7-2e66-41fd-ae9a-ea86b939e7c9"
+        }
+      ],
+      "g": null,
+      "c": null,
+      "m": null
+    }
+  },
+  "m15tokenartifacttall": {
+    "note": "The tall-box arch's artifact dress (TODO 4.55): the silver Clues (TSOI #11–16, TC18 #19, TUST #18) — the only artifact tokens that print the tall box, all colourless.",
+    "colors": {
+      "w": null,
+      "u": null,
+      "b": null,
+      "r": null,
+      "g": null,
+      "c": [
+        {
+          "name": "Clue",
+          "set": "tsoi",
+          "scryfallId": "f2c859e1-181e-44d1-afbd-bbd6e52cf42a"
+        },
+        {
+          "name": "Clue",
+          "set": "tc18",
+          "scryfallId": "93acc8a5-c694-4ad8-b4c0-2e156424319d"
+        }
+      ],
+      "m": null
+    }
+  },
   "emblem": {
     "note": "The emblem (TODO 4.52, CC 'Planeswalker Emblems'): the M20 design every emblem since 2019-07-12 prints (the source's name in the dark bar, the art in the planeswalker spark, \"Emblem\" on the type bar). One colour key, c: an emblem is colourless (CR 114) and every one is on this silver frame. The 2014–19 EMBLEM-bar prints and the 2003 plaque resolve nearest (4.52 later / 4.43). Checked by eye too: TM20 #11 (the first M20 emblem), TBLB #30 (two lines, left), TFRA #16.",
     "colors": {

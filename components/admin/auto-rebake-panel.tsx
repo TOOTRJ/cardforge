@@ -229,8 +229,15 @@ export function AutoRebakePanel({ overview, nowMs }: { overview: AutoRebakeOverv
                       {card.title ?? "Untitled card"}
                     </Link>
                   ) : (
-                    <span className="font-medium text-foreground">{card.title ?? "Card no longer exists"}</span>
+                    <span className="font-medium text-foreground">
+                      {card.title ?? (card.lookupFailed ? "Couldn’t look this card up" : "Card no longer exists")}
+                    </span>
                   )}
+                  {card.lookupFailed ? (
+                    <span className="text-xs text-danger" role="status">
+                      {card.title ? "Couldn’t load its link — reload to try again." : "The lookup failed — reload to try again."}
+                    </span>
+                  ) : null}
                   {card.visibility ? <Badge variant="outline">{card.visibility}</Badge> : null}
                   <span className="text-xs text-subtle">
                     {card.failures} failed runs · last {formatRelativeTime(card.at, nowMs)}

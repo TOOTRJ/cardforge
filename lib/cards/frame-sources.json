@@ -10162,6 +10162,53 @@
       "re-cut onto the prints like m15token (TODO 4.49, owner decision 2026-09-29)"
     ]
   },
+  "m15tokenartifacttall": {
+    "source": "pipglyph",
+    "converter": "scripts/build-token-tall-frames.mjs",
+    "derivedFrom": "the published m15tokenartifacttext/<key> masters of the frames bucket (themselves Card Conjurer imports, re-cut onto the prints: see \"m15tokenartifacttext\")",
+    "output": "1500x2100, the parent's corners, webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "move": "rows 1300–1589 (the window's straight sides through the box's top edge and first paper rows) 238 px UP as one piece, faded in from the original rows over 24 rows",
+      "box": "the 238 rows gained (1352–1589): the box's paper columns x 111–1388 continue the moved band (rows 1590–1827); the side columns take the rows 238 px above them (beside the window's straight sides), faded from the moved band over 24 rows; every column into the original rows over 24 rows at 1590",
+      "untouched": "every row above 1062 and from 1590 on is the parent's, byte for byte"
+    },
+    "colors": {
+      "w": [
+        "m15tokenartifacttext/w.png (published, sha256 92bb36ea63b4)"
+      ],
+      "u": [
+        "m15tokenartifacttext/u.png (published, sha256 81dcff2fe5d2)"
+      ],
+      "b": [
+        "m15tokenartifacttext/b.png (published, sha256 67d42b11e289)"
+      ],
+      "r": [
+        "m15tokenartifacttext/r.png (published, sha256 982632fa9348)"
+      ],
+      "g": [
+        "m15tokenartifacttext/g.png (published, sha256 a021a78f5867)"
+      ],
+      "m": [
+        "m15tokenartifacttext/m.png (published, sha256 eb202430abe4)"
+      ],
+      "c": [
+        "m15tokenartifacttext/c.png (published, sha256 73bd7217e775)"
+      ]
+    },
+    "sourceFiles": [
+      "m15tokenartifacttext/b.png",
+      "m15tokenartifacttext/c.png",
+      "m15tokenartifacttext/g.png",
+      "m15tokenartifacttext/m.png",
+      "m15tokenartifacttext/r.png",
+      "m15tokenartifacttext/u.png",
+      "m15tokenartifacttext/w.png"
+    ],
+    "notes": [
+      "PipGlyph's own derivation (TODO 4.55; owner 2026-09-29, round 10): Card Conjurer has no source for the arch token's tall box. Nothing is drawn or synthesised: every pixel is the parent master's, moved or cross-faded.",
+      "The numbers are scripts/lib/token-tall.mjs (the 21 tall-box printings measured 2026-10-18: the pill, the window's bottom edge and the box's top 238 px above the regular box's; the title, arch, box bottom, plate and border where the master draws them; the box's tone the regular box's); no scan is read by the build."
+    ]
+  },
   "m15tokenartifacttext": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
@@ -10247,6 +10294,53 @@
     "notes": [
       "source: CC 'Regular (Bordered M15)' Artifact Frame (a.png), re-cut onto the prints like m15tokentext (TODO 4.49 (b))",
       "coloured artifact tokens = the silver token frame + border and box, the colour through CC's Title, Type and Pinline masks (TC16 #9, TC18 #8 Thopter print a blue pinline and pill on the silver frame and box)"
+    ]
+  },
+  "m15tokentall": {
+    "source": "pipglyph",
+    "converter": "scripts/build-token-tall-frames.mjs",
+    "derivedFrom": "the published m15tokentext/<key> masters of the frames bucket (themselves Card Conjurer imports, re-cut onto the prints: see \"m15tokentext\")",
+    "output": "1500x2100, the parent's corners, webp q90 with the PNG's alpha exactly",
+    "recipe": {
+      "move": "rows 1300–1589 (the window's straight sides through the box's top edge and first paper rows) 238 px UP as one piece, faded in from the original rows over 24 rows",
+      "box": "the 238 rows gained (1352–1589): the box's paper columns x 111–1388 continue the moved band (rows 1590–1827); the side columns take the rows 238 px above them (beside the window's straight sides), faded from the moved band over 24 rows; every column into the original rows over 24 rows at 1590",
+      "untouched": "every row above 1062 and from 1590 on is the parent's, byte for byte"
+    },
+    "colors": {
+      "w": [
+        "m15tokentext/w.png (published, sha256 7cc136fc1c43)"
+      ],
+      "u": [
+        "m15tokentext/u.png (published, sha256 0e4175fb5b4c)"
+      ],
+      "b": [
+        "m15tokentext/b.png (published, sha256 b9ac901d549b)"
+      ],
+      "r": [
+        "m15tokentext/r.png (published, sha256 fda10fbee01c)"
+      ],
+      "g": [
+        "m15tokentext/g.png (published, sha256 138ee1faa4db)"
+      ],
+      "m": [
+        "m15tokentext/m.png (published, sha256 6999328595f3)"
+      ],
+      "c": [
+        "m15tokentext/c.png (published, sha256 5d29162a72fd)"
+      ]
+    },
+    "sourceFiles": [
+      "m15tokentext/b.png",
+      "m15tokentext/c.png",
+      "m15tokentext/g.png",
+      "m15tokentext/m.png",
+      "m15tokentext/r.png",
+      "m15tokentext/u.png",
+      "m15tokentext/w.png"
+    ],
+    "notes": [
+      "PipGlyph's own derivation (TODO 4.55; owner 2026-09-29, round 10): Card Conjurer has no source for the arch token's tall box. Nothing is drawn or synthesised: every pixel is the parent master's, moved or cross-faded.",
+      "The numbers are scripts/lib/token-tall.mjs (the 21 tall-box printings measured 2026-10-18: the pill, the window's bottom edge and the box's top 238 px above the regular box's; the title, arch, box bottom, plate and border where the master draws them; the box's tone the regular box's); no scan is read by the build."
     ]
   },
   "m15tokentext": {

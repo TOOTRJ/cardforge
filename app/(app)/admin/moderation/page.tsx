@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MessageCircle, ShieldCheck } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
@@ -16,6 +17,10 @@ import {
 } from "@/lib/moderation/reasons";
 import { ReportActions } from "@/components/moderation/report-actions";
 import { CommentReportActions } from "@/components/moderation/comment-report-actions";
+import { AdminLoadError } from "@/components/admin/admin-load-error";
+import { BakedCardThumbnail } from "@/components/cards/baked-card-thumbnail";
+import { cardToPreviewData } from "@/lib/cards/preview-data";
+import { getFrameProfileOverrides } from "@/lib/cards/frame-profile-overrides";
 
 export const metadata: Metadata = {
   title: "Moderation",
@@ -36,14 +41,20 @@ function reasonLine(reason: string, details: string | null, key: string) {
 }
 
 export default async function ModerationPage() {
-  const [cardQueue, commentQueue] = await Promise.all([
+  const [cardResult, commentResult] = await Promise.all([
     getModerationQueue(),
     getCommentModerationQueue(),
   ]);
   // Non-admins get a 404 (don't reveal the route exists).
-  if (cardQueue === null) notFound();
-  const comments = commentQueue ?? [];
+  if (cardResult === null) notFound();
+  const cardQueue = cardResult.items;
+  const comments = commentResult?.items ?? [];
+  const commentsFailed = commentResult?.loadError ?? false;
   const totalFlagged = cardQueue.length + comments.length;
+  // Only the live-preview fallback (a card with no bake) reads these.
+  const profileOverrides = cardQueue.some((item) => !item.card.rendered_image_url)
+    ? await getFrameProfileOverrides()
+    : null;
 
   return (
     <DashboardShell>
@@ -51,7 +62,9 @@ export default async function ModerationPage() {
         eyebrow="Admin"
         title="Moderation queue"
         description="Reported content awaiting review. Hiding a card un-publishes it; removing a comment deletes it."
-        actions={<Badge variant="primary">{totalFlagged} flagged</Badge>}
+        actions={
+          cardResult.loadError || commentsFailed ? null : <Badge variant="primary">{totalFlagged} flagged</Badge>
+        }
       />
 
       <div className="mt-10 flex flex-col gap-10">
@@ -59,7 +72,8 @@ export default async function ModerationPage() {
           <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-subtle">
             Reported cards
           </h2>
-          {cardQueue.length === 0 ? (
+          {cardResult.loadError ? <AdminLoadError what="the reported cards" /> : null}
+          {cardQueue.length === 0 && cardResult.loadError ? null : cardQueue.length === 0 ? (
             <EmptyState
               icon={ShieldCheck}
               title="No flagged cards"
@@ -71,32 +85,46 @@ export default async function ModerationPage() {
                 key={item.cardId}
                 className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start"
               >
-                {item.renderedImageUrl && item.landscape ? (
-                  // A 7:5 render (Battle, Split) whole, letterboxed in the
-                  // 5:7 slot with its own corner — never cropped to its
-                  // middle (TODO 3.26 review).
-                  <div className="flex aspect-[5/7] w-28 shrink-0 items-center overflow-hidden card-corners bg-elevated">
-                    <div className="aspect-[7/5] w-full overflow-hidden card-corners-landscape">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={item.renderedImageUrl} alt="" className="h-full w-full bg-[#101015] object-cover" />
-                    </div>
-                  </div>
+                {/* The card's own tile: the 600 px thumb (a 7:5 render
+                    letterboxed whole), the live preview when nothing is
+                    baked — never the 3 MB PNG. A link to the card. */}
+                {item.href ? (
+                  <Link
+                    href={item.href}
+                    className="block w-28 shrink-0 card-corners focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-bright/60"
+                    aria-label={`Open ${item.title}`}
+                  >
+                    <BakedCardThumbnail
+                      renderedImageUrl={item.card.rendered_image_url}
+                      renderedThumbUrl={item.card.rendered_thumb_url}
+                      title={item.title}
+                      alt=""
+                      sizes="112px"
+                      previewData={cardToPreviewData(item.card, profileOverrides)}
+                    />
+                  </Link>
                 ) : (
-                  <div className="aspect-[5/7] w-28 shrink-0 overflow-hidden card-corners bg-elevated">
-                    {item.renderedImageUrl || item.artUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={item.renderedImageUrl ?? item.artUrl ?? ""}
-                        alt=""
-                        className="h-full w-full bg-[#101015] object-cover"
-                      />
-                    ) : null}
+                  <div className="w-28 shrink-0">
+                    <BakedCardThumbnail
+                      renderedImageUrl={item.card.rendered_image_url}
+                      renderedThumbUrl={item.card.rendered_thumb_url}
+                      title={item.title}
+                      alt=""
+                      sizes="112px"
+                      previewData={cardToPreviewData(item.card, profileOverrides)}
+                    />
                   </div>
                 )}
                 <div className="flex min-w-0 flex-1 flex-col gap-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="font-display text-base font-semibold text-foreground">
-                      {item.title}
+                      {item.href ? (
+                        <Link href={item.href} className="underline-offset-4 hover:underline">
+                          {item.title}
+                        </Link>
+                      ) : (
+                        item.title
+                      )}
                     </h3>
                     <Badge variant="default">
                       {item.reports.length} report
@@ -119,7 +147,8 @@ export default async function ModerationPage() {
           <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-subtle">
             Reported comments
           </h2>
-          {comments.length === 0 ? (
+          {commentsFailed ? <AdminLoadError what="the reported comments" /> : null}
+          {comments.length === 0 && commentsFailed ? null : comments.length === 0 ? (
             <EmptyState
               icon={MessageCircle}
               title="No flagged comments"

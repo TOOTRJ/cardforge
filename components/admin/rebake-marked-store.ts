@@ -37,11 +37,13 @@ const MAX_ROUNDS = 400;
  *  art host down) shouldn't grind through every marked card. */
 const MAX_FAILED_ROUNDS = 2;
 
-async function requestBatch(skipIds: string[]): Promise<RebakeMarkedResponse> {
+async function requestBatch(skipIds: string[], rebakedSoFar: number): Promise<RebakeMarkedResponse> {
   const response = await fetch("/api/admin/rebake-marked", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ skipIds }),
+    // rebakedSoFar: the route refreshes the ISR tile pages at the run's end
+    // when any call of it re-baked, not only the last.
+    body: JSON.stringify({ skipIds, rebakedSoFar }),
   });
   const body = (await response.json().catch(() => null)) as RebakeMarkedResponse | null;
   if (!body) return { ok: false, error: `The re-bake request failed (HTTP ${response.status}).` };
@@ -75,7 +77,7 @@ export async function startMarkedRebake(): Promise<MarkedRebakeState> {
   for (let round = 0; round < MAX_ROUNDS; round += 1) {
     let result: RebakeMarkedResponse;
     try {
-      result = await requestBatch([...skipIds]);
+      result = await requestBatch([...skipIds], state.rebaked);
     } catch (err) {
       set({ status: "error", error: err instanceof Error ? err.message : "The re-bake request failed." });
       return state;

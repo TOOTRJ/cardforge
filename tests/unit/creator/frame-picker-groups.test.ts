@@ -165,6 +165,10 @@ const STATION_DRESSES: readonly string[] = [
   // …and its back (5.5 (b), PR 2) — pinned in
   // tests/unit/creator/saga-dfc-back.test.ts.
   "sagadfcback",
+  // …and the arch token's tall box (TODO 4.55) — pinned in
+  // tests/unit/creator/token-tall.test.ts and tests/unit/scryfall/token-imports.test.ts.
+  "m15tokentall",
+  "m15tokenartifacttall",
   // …and the Prepare frame AND kind (TODO 4.27): a new template and a new
   // kind, each the other's alone — every row naming either dropped, as
   // above; pinned in tests/unit/creator/prepare-kind.test.ts and
@@ -579,10 +583,13 @@ describe("the frame picker's groups: a classification change only", () => {
   // (a W|U token) are EXACT on them wherever they are verified (production's
   // ticks and every verified policy), where main left them nearest with the
   // crown / two-colour gap. Their frame, kind and landing are main's.
-  it("imports — every captured printing's match, landing, chooser and remix landing: the same, but the crowned and two-colour M20 tokens exact (4.48)", () => {
+  // …and the arch's tall-box printings (TODO 4.55: TAKH #1, TSOI #11), exact
+  // on the tall box where it is verified — "all" alone: production has not
+  // ticked it; until then they land where main lands them.
+  it("imports — every captured printing's match, landing, chooser and remix landing: the same, but the crowned and two-colour M20 tokens exact (4.48), the Nyx tokens (4.51) and the tall-box arch tokens (4.55) exact once verified", () => {
     expect(changed("imports")).toEqual([
-      "all|tdsk-10", "all|tdsk-4", "all|teoc-13",
-      "all|tmkm-10", "all|tmkm-13", "prodPlusMoved|tmkm-10", "prodPlusMoved|tmkm-13", "prod|tmkm-10", "prod|tmkm-13",
+      "all|takh-1", "all|tdsk-10", "all|tdsk-4", "all|teoc-13",
+      "all|tmkm-10", "all|tmkm-13", "all|tsoi-11", "prodPlusMoved|tmkm-10", "prodPlusMoved|tmkm-13", "prod|tmkm-10", "prod|tmkm-13",
     ]);
     for (const policy of ["all", "prodPlusMoved", "prod"]) {
       expect(raw.imports[`${policy}|tmkm-10`], policy).toMatchObject({ kind: "token", frame_template: "m20token", match: ["exact", "m20token", null] });
@@ -594,6 +601,8 @@ describe("the frame picker's groups: a classification change only", () => {
     expect(raw.imports["all|tdsk-4"]).toMatchObject({ kind: "token", frame_template: "m20tokennyx", match: ["exact", null] });
     expect(raw.imports["all|tdsk-10"]).toMatchObject({ kind: "token", frame_template: "m20tokennyx", match: ["exact", null] });
     expect(raw.imports["all|teoc-13"]).toMatchObject({ kind: "token", frame_template: "m20tokenartifactnyx", match: ["exact", null] });
+    expect(raw.imports["all|takh-1"]).toMatchObject({ kind: "token", frame_template: "m15tokentall", match: ["exact", null] }); // (the dump drops the tall templates from its lists)
+    expect(raw.imports["all|tsoi-11"]).toMatchObject({ kind: "token", frame_template: "m15tokenartifacttall", match: ["exact", null] });
   });
 
   // The AI's random pools: identical but for layout v58 (TODO 4.35 / 4.42),

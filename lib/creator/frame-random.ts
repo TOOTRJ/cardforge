@@ -40,7 +40,7 @@ import { pickFrameColorKey } from "@/components/cards/frame-layer";
 import { printsPowerToughness, supertypeHasWord } from "@/lib/cards/card-display";
 import { resolveSagaChapters } from "@/lib/cards/face-content";
 import { defaultTokenFrameIn, tokenFrameText } from "@/lib/creator/token-frame-auto";
-import { isM20TokenTemplate } from "@/lib/cards/token-height";
+import { archTallStandIn, isM20TokenTemplate } from "@/lib/cards/token-height";
 import { frameHidesRulesBoxText } from "@/lib/creator/frame-resolve";
 import { isStationFrame } from "@/lib/cards/station-frame";
 import { parseStationText } from "@/lib/cards/station";
@@ -160,8 +160,15 @@ export function resolveGeneratedFrame(input: {
       // the regular one for fewer (4.33): a gate, like the type words.
       walkerRowsFrameFits(kind, choice.template, rows),
   );
-  const boxed = typed.filter((choice) => tokenFrameFits(kind, choice.template, tokenFace));
   const has = (template: FrameTemplate) => typed.some((choice) => choice.template === template);
+  // …the frame the token's rules pick, or — for the arch's tall box (TODO
+  // 4.55) while it isn't published — its regular text box standing in
+  // (archTallStandIn), never the textless arch's scrim.
+  const boxed = typed.filter((choice) => {
+    if (tokenFrameFits(kind, choice.template, tokenFace)) return true;
+    const picked = tokenFrameFor(kind, choice.template, tokenFace);
+    return !has(picked) && archTallStandIn(picked) === choice.template;
+  });
   // The base of a subtype dress the card wears (m15artifact for a Vehicle)
   // gives way to the dress where both are published.
   // …and so does the base of an enchantment dress (m15 for an enchantment,
@@ -220,8 +227,10 @@ export function resolveGeneratedFrame(input: {
     // keeps the text on its scrim: a full-art height the text doesn't fit
     // would hide it (the textless height) or leave an empty box — the pool
     // below picks a published frame the text fits.
+    const standIn = archTallStandIn(wanted);
     const match =
       typed.find((choice) => choice.template === wanted) ??
+      (standIn ? typed.find((choice) => choice.template === standIn) : undefined) ??
       (isM20TokenTemplate(asked) ? undefined : typed.find((choice) => choice.template === asked));
     // A frame that prints no text (a `textless` profile — the textless promo
     // pair since layout v58) is asked for by name only while the designed

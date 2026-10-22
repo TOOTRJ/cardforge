@@ -37,7 +37,8 @@ import {
   type FrameColorKey,
   type FrameReference,
 } from "@/lib/cards/frame-reference-registry";
-import { getFrameReviews, type FrameReview } from "@/lib/cards/frame-reviews";
+import { readFrameReviews, type FrameReview } from "@/lib/cards/frame-reviews";
+import { AdminLoadError } from "@/components/admin/admin-load-error";
 import { listFrameReviewEvents } from "@/lib/cards/frame-review-events";
 import { FACE_PARAM, parseCardFace, type CardFace } from "@/lib/cards/card-face";
 import { faceUnderTest, isDfcBackBody } from "@/lib/cards/dfc";
@@ -319,7 +320,9 @@ export default async function AdminFrameComparePage({
   if (!profile?.is_admin) notFound();
 
   const { template, color, ref, legendary, face: faceParam } = await searchParams;
-  const [reviews, markedCount] = await Promise.all([getFrameReviews(), markedRenderCount()]);
+  const [{ reviews, error: reviewsError }, markedCount] = await Promise.all([readFrameReviews(), markedRenderCount()]);
+  // A failed read reads every combo as unverified and unpinned: say so.
+  const reviewsFailed = reviewsError != null;
 
   // ----- Sign-off mode (TODO 2.4): a template, no colour -----
   if (isTemplate(template) && color === undefined) {
@@ -329,6 +332,7 @@ export default async function AdminFrameComparePage({
         reviews={reviews}
         markedCount={markedCount}
         viewerId={profile.id}
+        reviewsFailed={reviewsFailed}
       />
     );
   }
@@ -466,6 +470,7 @@ export default async function AdminFrameComparePage({
             </span>
           }
         />
+        {reviewsFailed ? <AdminLoadError what="the frame reviews" className="mt-4" /> : null}
         <MarkedRendersPanel initialCount={markedCount} />
         {verified ? (
           <div
@@ -713,6 +718,7 @@ export default async function AdminFrameComparePage({
           </span>
         }
       />
+      {reviewsFailed ? <AdminLoadError what="the frame reviews" className="mt-4" /> : null}
       <MarkedRendersPanel initialCount={markedCount} />
       <div className="mt-6 flex flex-col gap-4">
         <FrameGuide defaultOpen />

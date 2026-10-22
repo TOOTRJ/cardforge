@@ -201,6 +201,10 @@ describe("frame reference registry", () => {
       "sagadfcfront/c",
       // …and its back (5.5 (b) PR 2): no colourless Saga back was printed.
       "sagadfcback/c",
+      // The arch's tall box (TODO 4.55): white, black and red tokens and the
+      // colourless Clues (the artifact dress) are all that printed it.
+      ...["u", "g", "c", "m"].map((k) => `m15tokentall/${k}`),
+      ...["w", "u", "b", "r", "g", "m"].map((k) => `m15tokenartifacttall/${k}`),
     ]);
     const m15Templates = FRAME_TEMPLATE_VALUES.filter(
       (t) => eraForTemplate(t) === "m15",
@@ -220,8 +224,9 @@ describe("frame reference registry", () => {
     // + 5.7's four borderless double-faced bodies.
     // + 5.5 (b)'s double-faced saga front and its back (PR 2).
     // + 4.51's six Nyx dresses of the full-art tokens.
+    // + 4.55's two tall-box tokens.
     // + 4.27's Prepare frame.
-    expect(m15Templates.length).toBe(69);
+    expect(m15Templates.length).toBe(71);
     expect(m15Templates).toContain("m15borderlessland");
     for (const template of m15Templates) {
       for (const colorKey of FRAME_COLOR_KEYS) {

@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
+import { AdminLoadError } from "@/components/admin/admin-load-error";
 import { UsageBarChart } from "@/components/settings/usage-bar-chart";
 import {
   getScryfallAdminUsageSnapshot,
@@ -126,9 +127,10 @@ export default async function AdminScryfallPage() {
         title="Scryfall usage"
         description="App-wide calls to the Scryfall proxy across every account, next to Scryfall's hard limits."
         actions={
-          <Badge variant="primary">{snapshot.todayTotal} calls today</Badge>
+          snapshot.loadError ? null : <Badge variant="primary">{snapshot.todayTotal} calls today</Badge>
         }
       />
+      {snapshot.loadError ? <AdminLoadError what="the Scryfall usage" className="mt-6" /> : null}
 
       <div className="mt-10 flex flex-col gap-10">
         {/* Today at a glance */}

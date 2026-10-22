@@ -11,6 +11,11 @@ const mocks = vi.hoisted(() => ({
   isAdminConfigured: vi.fn(),
   createAdminClient: vi.fn(),
   rpc: vi.fn(),
+  getVerifiedFrameKeys: vi.fn(async (): Promise<string[]> => []),
+}));
+
+vi.mock("@/lib/cards/frame-reviews", () => ({
+  getVerifiedFrameKeys: mocks.getVerifiedFrameKeys,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -260,5 +265,48 @@ describe("window helpers", () => {
   it("keeps an unknown template's raw key as its label", () => {
     const [row] = mapFrameRequestRows([{ ...RPC_ROWS[0], template: "retired-frame" }]);
     expect(row.templateLabel).toBe("retired-frame");
+  });
+});
+
+// TODO 4.55 (owner Round 77): a row logged as `era/2015+tall-box` before the
+// arch's tall box existed landed on the regular box, which never draws it —
+// it is ANSWERED once the tall box is verified in every colour its set's
+// pinned printings print (the same printings import exact then).
+describe("the arch's tall box: logged `era/2015+tall-box` rows (TODO 4.55)", () => {
+  const row = (set_code: string, template = "m15tokentext") => ({
+    ...RPC_ROWS[0],
+    signature: "era/2015+tall-box",
+    set_code,
+    template,
+  });
+  const keys = (...combos: string[]) => new Set(combos);
+
+  it("stays open until the tall box is verified in the set's colours, then is answered with no blocking item", () => {
+    expect(mapFrameRequestRows([row("takh")])[0]).toMatchObject({ drawnNow: false, blockedBy: "4.55" });
+    expect(mapFrameRequestRows([row("takh")], keys("m15tokentall/b"))[0].drawnNow).toBe(false);
+    expect(mapFrameRequestRows([row("takh")], keys("m15tokentall/w"))[0]).toMatchObject({ drawnNow: true, blockedBy: null });
+    // The Clues: the artifact dress's colourless key.
+    expect(mapFrameRequestRows([row("tsoi", "m15tokenartifacttext")], keys("m15tokentall/c"))[0].drawnNow).toBe(false);
+    expect(mapFrameRequestRows([row("tsoi", "m15tokenartifacttext")], keys("m15tokenartifacttall/c"))[0].drawnNow).toBe(true);
+    // TC18 prints three: white, red and a Clue — every one must be ticked.
+    expect(mapFrameRequestRows([row("tc18")], keys("m15tokentall/w", "m15tokentall/r"))[0].drawnNow).toBe(false);
+    expect(mapFrameRequestRows([row("tc18")], keys("m15tokentall/w", "m15tokentall/r", "m15tokenartifacttall/c"))[0].drawnNow).toBe(true);
+  });
+
+  it("answers nothing else: another signature, a set with no pin", () => {
+    const all = keys("m15tokentall/w", "m15tokentall/b", "m15tokentall/r", "m15tokenartifacttall/c");
+    expect(mapFrameRequestRows([{ ...row("tdom"), signature: "era/2015+crown" }], all)[0].drawnNow).toBe(false);
+    expect(mapFrameRequestRows([row("tgrn")], all)[0].drawnNow).toBe(false);
+    expect(mapFrameRequestRows([row("tdom")], all)[0].drawnNow).toBe(true);
+  });
+
+  it("is what the summary hands the admin page, read against the verified combos", async () => {
+    mocks.getCurrentProfile.mockResolvedValue({ is_admin: true });
+    mocks.isAdminConfigured.mockReturnValue(true);
+    mocks.rpc.mockResolvedValue({ data: [row("trix")], error: null });
+    mocks.getVerifiedFrameKeys.mockResolvedValueOnce(["m15tokentall/r"]);
+    expect((await getFrameRequestSummary("30"))?.rows[0]).toMatchObject({ signature: "era/2015+tall-box", drawnNow: true });
+    mocks.getVerifiedFrameKeys.mockResolvedValueOnce([]);
+    expect((await getFrameRequestSummary("30"))?.rows[0]).toMatchObject({ drawnNow: false, blockedBy: "4.55" });
   });
 });
