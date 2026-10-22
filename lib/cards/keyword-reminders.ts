@@ -67,6 +67,53 @@ export const KEYWORD_REMINDERS: readonly KeywordReminder[] = [
   { name: "Surveil", rule: "701.25", text: "Surveil 1.", reminder: "Look at the top card of your library. You may put that card into your graveyard." },
 ];
 
+/**
+ * Every keyword ability of the Comprehensive Rules (section 702, 702.2 →
+ * 702.195, CR_SOURCE's release) and the keyword actions of section 701 — by
+ * name, for the import's self-name guard (lib/cards/self-name.ts
+ * oracleSelfNamesAsTokens): a card named after a keyword ("Storm", "Split
+ * Second", "Flash") never has its keyword turned into `~`.
+ */
+export const CR_KEYWORD_NAMES: readonly string[] = [
+  // 702 — keyword abilities.
+  "Deathtouch", "Defender", "Double Strike", "Enchant", "Equip", "First Strike", "Flash", "Flying", "Haste",
+  "Hexproof", "Indestructible", "Intimidate", "Landwalk", "Lifelink", "Protection", "Reach", "Shroud", "Trample",
+  "Vigilance", "Ward", "Banding", "Rampage", "Cumulative Upkeep", "Flanking", "Phasing", "Buyback", "Shadow",
+  "Cycling", "Echo", "Horsemanship", "Fading", "Kicker", "Flashback", "Madness", "Fear", "Morph", "Amplify",
+  "Provoke", "Storm", "Affinity", "Entwine", "Modular", "Sunburst", "Bushido", "Soulshift", "Splice", "Offering",
+  "Ninjutsu", "Epic", "Convoke", "Dredge", "Transmute", "Bloodthirst", "Haunt", "Replicate", "Forecast", "Graft",
+  "Recover", "Ripple", "Split Second", "Suspend", "Vanishing", "Absorb", "Aura Swap", "Delve", "Fortify", "Frenzy",
+  "Gravestorm", "Poisonous", "Transfigure", "Champion", "Changeling", "Evoke", "Hideaway", "Prowl", "Reinforce",
+  "Conspire", "Persist", "Wither", "Retrace", "Devour", "Exalted", "Unearth", "Cascade", "Annihilator", "Level Up",
+  "Rebound", "Umbra Armor", "Infect", "Battle Cry", "Living Weapon", "Undying", "Miracle", "Soulbond", "Overload",
+  "Scavenge", "Unleash", "Cipher", "Evolve", "Extort", "Fuse", "Bestow", "Tribute", "Dethrone", "Hidden Agenda",
+  "Outlast", "Prowess", "Dash", "Exploit", "Menace", "Renown", "Awaken", "Devoid", "Ingest", "Myriad", "Surge",
+  "Skulk", "Emerge", "Escalate", "Melee", "Crew", "Fabricate", "Partner", "Undaunted", "Improvise", "Aftermath",
+  "Embalm", "Eternalize", "Afflict", "Ascend", "Assist", "Jump-Start", "Mentor", "Afterlife", "Riot", "Spectacle",
+  "Escape", "Companion", "Mutate", "Encore", "Boast", "Foretell", "Demonstrate", "Daybound", "Nightbound",
+  "Disturb", "Decayed", "Cleave", "Training", "Compleated", "Reconfigure", "Blitz", "Casualty", "Enlist",
+  "Read Ahead", "Ravenous", "Squad", "Space Sculptor", "Visit", "Prototype", "Living Metal",
+  "More Than Meets the Eye", "For Mirrodin!", "Toxic", "Backup", "Bargain", "Craft", "Disguise", "Solved", "Plot",
+  "Saddle", "Spree", "Freerunning", "Gift", "Offspring", "Impending", "Exhaust", "Max Speed", "Start Your Engines!",
+  "Harmonize", "Mobilize", "Job Select", "Tiered", "Station", "Warp", "Mayhem", "Web-slinging", "Firebending",
+  "Sneak", "Increment", "Paradigm", "Power-up", "Teamwork", "Storied",
+  // 701 — keyword actions.
+  "Activate", "Attach", "Behold", "Cast", "Counter", "Create", "Destroy", "Discard", "Double", "Triple", "Exchange",
+  "Exile", "Fight", "Goad", "Investigate", "Mill", "Play", "Regenerate", "Reveal", "Sacrifice", "Scry", "Search",
+  "Shuffle", "Surveil", "Tap", "Untap", "Transform", "Convert", "Fateseal", "Clash", "Planeswalk", "Abandon",
+  "Proliferate", "Detain", "Populate", "Monstrosity", "Vote", "Bolster", "Manifest", "Support", "Meld", "Exert",
+  "Explore", "Assemble", "Adapt", "Amass", "Learn", "Connive", "Incubate", "Discover", "Cloak", "Suspect", "Forage",
+  "Manifest Dread", "Endure", "Harness", "Airbend", "Earthbend", "Waterbend", "Blight", "Heal", "Recruit",
+];
+
+const KEYWORD_NAME_SET: ReadonlySet<string> = new Set(CR_KEYWORD_NAMES.map((name) => name.toLowerCase()));
+
+/** Whether a name IS a Comprehensive Rules keyword ability or action
+ *  (case-insensitive: "Storm", "split second"). */
+export function isKeywordName(name: string): boolean {
+  return KEYWORD_NAME_SET.has(name.trim().toLowerCase());
+}
+
 /** What the insert writes: the keyword, and its reminder in brackets when
  *  the maker asked for it (off by default — print leaves the evergreen
  *  ones' out on most cards). */

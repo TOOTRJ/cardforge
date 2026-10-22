@@ -284,6 +284,46 @@ describe("another card forgets the nickname", () => {
     expect(field("nickname").value).toBe("");
   });
 
+  // Owner N3: a REMIX renamed by an idea or a fill is renamed — the
+  // nickname clears; a remix nobody renamed keeps its parent's.
+  it("a remix renamed by an idea", async () => {
+    renderForm("remix", savedCard({ nickname: "The Ember Warden" }));
+    expect(field("nickname").value).toBe("The Ember Warden");
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("idea-apply"));
+    });
+    expect(field("title").value).toBe("Gloomwood Stalker");
+    expect(field("nickname").value).toBe("");
+  });
+
+  it("a remix renamed by an AI fill", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) =>
+        String(input).startsWith("/api/ai/card-fill?")
+          ? new Response(JSON.stringify({ ok: true, fill: { jobId: "j2", result: { title: "Gloomwood Stalker" }, createdAt: "2026-10-21T00:00:00Z" } }), { status: 200 })
+          : new Response(JSON.stringify({ ok: false }), { status: 200 }),
+      ),
+    );
+    renderForm("remix", savedCard({ nickname: "The Ember Warden" }));
+    await waitFor(() => expect(toast.info).toHaveBeenCalled());
+    const options = toast.info.mock.calls.at(-1)![1] as { action: { onClick: () => void } };
+    await act(async () => {
+      options.action.onClick();
+    });
+    expect(field("title").value).toBe("Gloomwood Stalker");
+    expect(field("nickname").value).toBe("");
+  });
+
+  it("a remix nobody renamed keeps its parent's nickname (and saves it)", async () => {
+    renderForm("remix", savedCard({ nickname: "The Ember Warden" }));
+    await type("artist_credit", "Bo Reed");
+    expect(field("nickname").value).toBe("The Ember Warden");
+    await save();
+    await waitFor(() => expect(actions.createCardAction).toHaveBeenCalledTimes(1));
+    expect((actions.createCardAction.mock.calls[0][0] as Record<string, unknown>).nickname).toBe("The Ember Warden");
+  });
+
   it("…but an edit keeps the card's own", async () => {
     renderForm("edit", savedCard({ nickname: "The Ember Warden" }));
     await act(async () => {

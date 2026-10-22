@@ -1,6 +1,7 @@
 import type { ScryfallCard, ScryfallSet } from "@/lib/scryfall/client";
 import { resolvePrintedTypes } from "@/lib/cards/type-line-field";
 import { oracleSelfNamesAsTokens } from "@/lib/cards/self-name";
+import { getFrameProfile } from "@/lib/cards/template-layout";
 import { listSymbols, undrawableSymbols } from "@/lib/validation/card-glyphs";
 import {
   DEFAULT_CARD_LANG,
@@ -1971,6 +1972,9 @@ export function mapScryfallToFormPatch(
     dfcLanding && dfcLanding.frontBody ? dfcFaceColorIdentity(dfcLanding.frontBody, dfcLanding.frontType, colorIdentity) : colorIdentity;
   // The printing's nickname (TODO 6.3) — its rules then write `~` (6.2).
   const frontNickname = emblem ? null : (pick(front?.flavor_name, card.flavor_name)?.trim() || null);
+  // The frame the import lands on (static: the creator / the named route
+  // finalize it against the verified combos).
+  const landingTemplate = frameTemplateFromScryfall(card, frameMatch);
 
   return {
     // For a multi-face card, the front face's own name ("Fire", not "Fire //
@@ -1983,7 +1987,7 @@ export function mapScryfallToFormPatch(
     ...nicknameKey(frontNickname),
     cost: emblem ? undefined : pick(front?.mana_cost, card.mana_cost),
     kind,
-    frame_template: frameTemplateFromScryfall(card, frameMatch),
+    frame_template: landingTemplate,
     frame_match: frameMatch,
     printing_treatment: printingTreatmentFromScryfall(card),
     printing_detail: printingDetailFromScryfall(card),
@@ -2027,8 +2031,16 @@ export function mapScryfallToFormPatch(
     // A flavour-name printing (TODO 6.2, owner Round 80) writes its own
     // name as `~`, which draws the nickname its title bar prints — as the
     // printing sets its rules. Every other import keeps Oracle's name.
+    // The short form only where the frame prints the nickname (independent
+    // check S1) — BOTH the frame the import lands on and the one that
+    // reproduces the printing (a borderless printing lands on a bordered
+    // frame until its own is verified, then moves): elsewhere `~` draws the
+    // full name where Oracle reads the short one.
     rules_text: frontNickname
-      ? oracleSelfNamesAsTokens(pick(front?.oracle_text, card.oracle_text), (isMultiFace && front?.name) || card.name)
+      ? oracleSelfNamesAsTokens(pick(front?.oracle_text, card.oracle_text), (isMultiFace && front?.name) || card.name, {
+          supertype,
+          shortForm: Boolean(getFrameProfile(landingTemplate).nickname && (!frameMatch || getFrameProfile(frameMatch.template).nickname)),
+        })
       : pick(front?.oracle_text, card.oracle_text),
     flavor_text: pick(front?.flavor_text, card.flavor_text),
     power: emblem ? undefined : pick(front?.power, card.power),

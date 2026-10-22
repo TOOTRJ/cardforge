@@ -1164,8 +1164,8 @@ Rules and gotchas:
   canonical, decks, hubs, AI); the page `<title>` is "Name (Nickname)"
   (`cardTitleWithNickname`), the JSON-LD `alternateName`, the line under
   the H1 "Printed as" only where the frame prints it, else "Also known as"
-  (`nicknamePageLine`); an idea or an AI fill that names a NEW card forgets
-  the nickname of the card before it; gallery search
+  (`nicknamePageLine`); an idea or an AI fill that names a new card or a
+  REMIX forgets the nickname of the card before it (an edit keeps it); gallery search
   (search_vector weight A + the ILIKE half) and My Cards' search read it. A
   print-typography "name" field (front only).
 - CARDNAME / `~` (TODO 6.2): `~` and the capitalised word CARDNAME in rules
@@ -1183,8 +1183,10 @@ Rules and gotchas:
   (`SelfNameLiteralNote`: one way — an edit's `frame_anatomy.selfName:
   "name"` — and it hands the focus on as it goes). Every new card has no
   key. A face with no name keeps its `~`. An imported FLAVOUR-NAME
-  printing writes its own name as `~` (`oracleSelfNamesAsTokens`; a plain
-  import keeps Oracle's name). CARDNAME is a word by Unicode letters (as
+  printing writes its own name as `~` (`oracleSelfNamesAsTokens`: the whole name; a legendary's short form only
+  where the printing's AND the landing frame print the plate; never a rules
+  word or keyword — `lib/cards/card-names.ts`, shared with the AI remix;
+  a plain import keeps Oracle's name). CARDNAME is a word by Unicode letters (as
   0142's `\m…\M`). The rules
   toolbar's words row (`RulesSymbolToolbar selfReference`): `~`, the
   card's "this …" (`selfReferenceFor`) and the keywords with their reminder

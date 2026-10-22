@@ -24,7 +24,15 @@
 -- (back_face->>'rules_text') and the structured rows (face_content: walker
 -- abilities, saga chapters and intro, station tiers) — the texts the
 -- renderers substitute in. Flavour text is never substituted, so it is not
--- read. CARDNAME is matched as a capitalised word, as the renderers do.
+-- read. CARDNAME is matched as a capitalised word, as the renderers do: no
+-- letter, digit or underscore on either side ([[:alnum:]_], the UTF-8
+-- locale's letters — lib/cards/self-name.ts SELF_NAME_TOKEN reads Unicode's).
+--
+-- The structured rows are read DECODED (independent check N1): every string
+-- VALUE of face_content (jsonb_path_query '$.**' of type string — the row
+-- texts, the intro), never face_content::text, whose JSON escapes put a
+-- `\n` / `\t` in front of a word ("\nCARDNAME" read as "nCARDNAME" was no
+-- token there, while the renderers substitute it).
 --
 -- Only `frame_style` is written on a flagged row. It is not a render column
 -- (0126's guard) and no search column (0086's trigger does not fire); the
@@ -42,7 +50,11 @@ update public.cards
 set frame_style = coalesce(frame_style, '{}'::jsonb) || '{"selfName": "literal"}'::jsonb
 where not (coalesce(frame_style, '{}'::jsonb) ? 'selfName')
   and (
-    rules_text ~ '~|\mCARDNAME\M'
-    or coalesce(back_face->>'rules_text', '') ~ '~|\mCARDNAME\M'
-    or coalesce(face_content::text, '') ~ '~|\mCARDNAME\M'
+    rules_text ~ '~|(?<![[:alnum:]_])CARDNAME(?![[:alnum:]_])'
+    or coalesce(back_face->>'rules_text', '') ~ '~|(?<![[:alnum:]_])CARDNAME(?![[:alnum:]_])'
+    or exists (
+      select 1
+      from jsonb_path_query(coalesce(face_content, 'null'::jsonb), 'strict $.** ? (@.type() == "string")') as row_text(value)
+      where row_text.value #>> '{}' ~ '~|(?<![[:alnum:]_])CARDNAME(?![[:alnum:]_])'
+    )
   );

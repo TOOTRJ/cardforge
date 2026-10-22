@@ -174,13 +174,18 @@ describe("migration 0142 — the cards stored with a literal token", () => {
     expect(body.match(/^\s*update public\.cards\b/gim)).toHaveLength(1);
     expect(body).toMatch(/set frame_style = coalesce\(frame_style, '\{\}'::jsonb\) \|\| '\{"selfName": "literal"\}'::jsonb/);
     expect(body).toMatch(/not \(coalesce\(frame_style, '\{\}'::jsonb\) \? 'selfName'\)/);
-    for (const column of ["rules_text", "back_face->>'rules_text'", "face_content::text"]) expect(body).toContain(column);
+    for (const column of ["rules_text", "back_face->>'rules_text'", "jsonb_path_query(coalesce(face_content, 'null'::jsonb)"]) expect(body).toContain(column);
+    // The rows DECODED (N1): never face_content::text, whose escapes put a
+    // "\\n" in front of a word.
+    expect(body).not.toContain("face_content::text");
+    expect(body).toContain("'strict $.** ? (@.type() == \"string\")'");
     expect(body).not.toMatch(/flavor_text/);
     expect(body.match(/^\s*(create|grant|revoke|alter|insert|delete)\b/gim)).toBeNull();
   });
 
   it("reads the same tokens the renderers substitute", () => {
-    expect(body).toContain("'~|\\mCARDNAME\\M'");
+    const token = "'~|(?<![[:alnum:]_])CARDNAME(?![[:alnum:]_])'";
+    expect(body.split(token)).toHaveLength(4);
   });
 });
 

@@ -2537,9 +2537,11 @@ export function CardCreatorForm({
     }
 
     setIfPresent("title", patch.title);
-    // An idea is another card (TODO 6.3, owner Round 80): the nickname of
-    // the card before it is forgotten, as its borrowed words are.
-    if (patch.title !== undefined && !isRevise) setValue("nickname", "", { shouldDirty: true });
+    // An idea that names the card renames it (TODO 6.3, owner Round 80 and
+    // N3): the nickname of the card before it is forgotten, as its borrowed
+    // words are — on a new card AND a remix (a rename clears it). An edit
+    // keeps the card's own.
+    if (patch.title !== undefined && !isEdit) setValue("nickname", "", { shouldDirty: true });
     setIfPresent("cost", patch.cost);
     // An idea's type words print in the built order (TODO 1.20); a typed
     // Types text gives way to them (TODO 3b.16). Locked while revising.
@@ -3170,10 +3172,11 @@ export function CardCreatorForm({
 
   /** Pour a fill result into the form — only the keys present are touched. */
   const applyFill = (fill: CardFillResult) => {
-    // A fill that names the card names ANOTHER card (TODO 6.3, owner Round
-    // 80): the nickname typed or imported for the card before it is
-    // forgotten, as its borrowed words are. Never on an edit / remix.
-    if (fill.title !== undefined && !isRevise) setValue("nickname", "", { shouldDirty: true });
+    // A fill that names the card renames it (TODO 6.3, owner Round 80 and
+    // N3): the nickname typed or imported for the card before it is
+    // forgotten, as its borrowed words are — on a new card AND a remix (a
+    // rename clears it). An edit keeps the card's own.
+    if (fill.title !== undefined && !isEdit) setValue("nickname", "", { shouldDirty: true });
     // The job picked the frame for the text it wrote (resolveGeneratedFrame:
     // a token's text box included) — that frame stands, below.
     let filledFrame = false;

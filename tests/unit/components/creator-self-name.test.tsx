@@ -273,6 +273,61 @@ describe("a card stored with a literal ~ (migration 0142's flag)", () => {
     expect((await sentUpdate()).frame_anatomy).toEqual({ selfName: "name" });
   });
 
+  it("hands the focus on beside a walker's rows (to the first row, never <body>)", async () => {
+    renderForm(
+      "edit",
+      savedCard({
+        card_type: "planeswalker",
+        subtypes: ["Kesh"],
+        power: null,
+        toughness: null,
+        loyalty: "4",
+        rules_text: "+1: ~ deals 1 damage to any target.",
+        face_content: { v: 1, loyalty: { abilities: [{ cost: "+1", text: "~ deals 1 damage to any target." }] } },
+        frame_style: { finish: "regular", template: "m15pw", selfName: "literal" },
+      }),
+    );
+    await goTo("Text & stats");
+    const note = screen.getByTestId("self-name-literal-note");
+    const editor = note.parentElement as HTMLElement;
+    const button = screen.getByRole("button", { name: "Print ~ as the card’s name" });
+    button.focus();
+    await act(async () => {
+      fireEvent.click(button);
+    });
+    await waitFor(() => {
+      const active = document.activeElement as HTMLElement | null;
+      expect(active && active !== document.body).toBe(true);
+      expect(editor.contains(active)).toBe(true);
+    });
+  });
+
+  it("hands the focus on beside a second part's rules (to its editor)", async () => {
+    renderForm(
+      "edit",
+      savedCard({
+        card_type: "instant",
+        supertype: null,
+        subtypes: [],
+        power: null,
+        toughness: null,
+        rules_text: "Fire deals 2 damage.",
+        back_face: { title: "Ice", cost: "{1}{U}", card_type: "instant", rules_text: "Tap target permanent. ~ draws a card." },
+        frame_style: { finish: "regular", template: "split", selfName: "literal" },
+      }),
+    );
+    await goTo("Text & stats");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("tab", { name: /right half/i }));
+    });
+    const button = screen.getByRole("button", { name: "Print ~ as the card’s name" });
+    button.focus();
+    await act(async () => {
+      fireEvent.click(button);
+    });
+    await waitFor(() => expect(document.activeElement?.getAttribute("data-field")).toBe("back_face.rules_text"));
+  });
+
   it("is offered beside a second part's rules too", async () => {
     renderForm(
       "edit",

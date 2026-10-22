@@ -57,12 +57,73 @@ describe("a flavour-name printing's rules on import", () => {
   });
 });
 
+describe("the short form only where the landing frame prints the nickname (independent check S1)", () => {
+  /** SLD #1186 as another printing would have it. */
+  const krrik = (over: Record<string, unknown>) => mapScryfallToFormPatch(scryfallCardSchema.parse({ ...printings["sld-1186"], ...over }));
+
+  it("on m15 (the plate): K'rrik's short form is ~, drawn as the nickname", () => {
+    const patch = patchOf("sld-1186");
+    expect(patch.frame_template).toBe("m15");
+    expect(patch.rules_text).toContain("counter on ~.");
+  });
+
+  it("on the 2003 frame (no plate): the short form stays as Oracle writes it", () => {
+    const patch = krrik({ frame: "2003" });
+    expect(patch.frame_template).toBe("modern");
+    expect(patch.rules_text).toContain("counter on K'rrik.");
+    const drawn = withSelfNames(previewFromImportPatch(patch, patch.title!, "modern"), getFrameProfile("modern"));
+    expect(drawn.rulesText).toContain("counter on K'rrik.");
+    expect(drawn.rulesText).not.toContain("Son of Yawgmoth.");
+  });
+
+  it("a borderless flavour-name legendary: the short form stays as Oracle writes it", () => {
+    const patch = krrik({ border_color: "borderless", frame_effects: ["legendary", "inverted"] });
+    // Its own frame prints no plate (it may land on a bordered one until
+    // that is verified, then move).
+    expect(getFrameProfile(patch.frame_match!.template).nickname).toBeUndefined();
+    expect(patch.nickname).toBe("Post, Son of Rich");
+    expect(patch.rules_text).toContain("counter on K'rrik.");
+  });
+});
+
 describe("oracleSelfNamesAsTokens", () => {
-  it("replaces the name as a whole word only", () => {
-    expect(oracleSelfNamesAsTokens("Exile Genesis Ultimatum.", "Genesis Ultimatum")).toBe("Exile ~.");
-    expect(oracleSelfNamesAsTokens("Genesis Ultimatums are rare.", "Genesis Ultimatum")).toBe("Genesis Ultimatums are rare.");
-    expect(oracleSelfNamesAsTokens("When K'rrik, Son of Yawgmoth enters, K'rrik deals 1.", "K'rrik, Son of Yawgmoth")).toBe("When ~ enters, ~ deals 1.");
-    expect(oracleSelfNamesAsTokens(undefined, "X")).toBeUndefined();
-    expect(oracleSelfNamesAsTokens("Fly.", "")).toBe("Fly.");
+  const SHORT = { shortForm: true } as const;
+  const LEGENDARY = { shortForm: true, supertype: "Legendary" } as const;
+
+  it("replaces the whole name as a whole word only", () => {
+    expect(oracleSelfNamesAsTokens("Exile Genesis Ultimatum.", "Genesis Ultimatum", SHORT)).toBe("Exile ~.");
+    expect(oracleSelfNamesAsTokens("Genesis Ultimatums are rare.", "Genesis Ultimatum", SHORT)).toBe("Genesis Ultimatums are rare.");
+    expect(oracleSelfNamesAsTokens(undefined, "X", SHORT)).toBeUndefined();
+    expect(oracleSelfNamesAsTokens("Fly.", "", SHORT)).toBe("Fly.");
+  });
+
+  it("the short form (shortNameOf): the comma's and a legendary \"X the Y\" alike, only with shortForm", () => {
+    expect(oracleSelfNamesAsTokens("When K'rrik, Son of Yawgmoth enters, K'rrik deals 1.", "K'rrik, Son of Yawgmoth", LEGENDARY)).toBe("When ~ enters, ~ deals 1.");
+    expect(oracleSelfNamesAsTokens("Goka deals 4 damage.", "Goka the Unjust", LEGENDARY)).toBe("~ deals 4 damage.");
+    // A non-legendary "X the Y" has no short form (shortNameOf).
+    expect(oracleSelfNamesAsTokens("Curse deals 1.", "Curse the Fire", SHORT)).toBe("Curse deals 1.");
+    // Without shortForm only the whole name.
+    expect(oracleSelfNamesAsTokens("When K'rrik, Son of Yawgmoth enters, K'rrik deals 1.", "K'rrik, Son of Yawgmoth", { shortForm: false })).toBe("When ~ enters, K'rrik deals 1.");
+    expect(oracleSelfNamesAsTokens("Goka deals 4 damage.", "Goka the Unjust", { shortForm: false, supertype: "Legendary" })).toBe("Goka deals 4 damage.");
+  });
+
+  it("never where the short form starts another name: \", <Capital>\" or \"'s <Capital>\"", () => {
+    // A meld pair: "Urza, Lord Protector" melds into "Urza, Planeswalker".
+    expect(oracleSelfNamesAsTokens("Melds into Urza, Planeswalker. Urza gets +1/+1.", "Urza, Lord Protector", LEGENDARY)).toBe(
+      "Melds into Urza, Planeswalker. ~ gets +1/+1.",
+    );
+    expect(oracleSelfNamesAsTokens("Search for Urza's Tower. Urza's power is 1.", "Urza, Lord Protector", LEGENDARY)).toBe(
+      "Search for Urza's Tower. ~'s power is 1.",
+    );
+    expect(oracleSelfNamesAsTokens("Fetch Urza’s Mine.", "Urza, Lord Protector", LEGENDARY)).toBe("Fetch Urza’s Mine.");
+  });
+
+  it("never a rules word or a keyword (the word in the text is the instruction)", () => {
+    expect(oracleSelfNamesAsTokens("Exile target attacking creature.", "Exile", SHORT)).toBe("Exile target attacking creature.");
+    expect(oracleSelfNamesAsTokens("Proliferate. Proliferate.", "Proliferate", SHORT)).toBe("Proliferate. Proliferate.");
+    expect(oracleSelfNamesAsTokens("Storm (copy it for each spell cast before it.)", "Storm", SHORT)).toBe("Storm (copy it for each spell cast before it.)");
+    expect(oracleSelfNamesAsTokens("Split second. Counter target spell.", "Split Second", SHORT)).toBe("Split second. Counter target spell.");
+    // …nor a short form that is one ("Exile, the Unbound" never turns Exile).
+    expect(oracleSelfNamesAsTokens("Exile target card.", "Exile, the Unbound", LEGENDARY)).toBe("Exile target card.");
   });
 });

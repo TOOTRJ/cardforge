@@ -2,6 +2,8 @@ import type { CardPreviewData } from "@/components/cards/card-preview";
 import { cardNickname, type NicknameSlot } from "@/lib/cards/nickname";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import { escapeRegExp, isRulesWord, shortNameOf } from "@/lib/cards/card-names";
+import { isKeywordName } from "@/lib/cards/keyword-reminders";
 import type { FaceContent } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -114,23 +116,44 @@ export function withSelfNames<T extends CardPreviewData>(card: T, layout: { nick
   };
 }
 
-const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
 /**
  * An imported FLAVOUR-NAME printing's Oracle text with the card's own name
  * written as `~` (TODO 6.2, owner Round 80): print sets such a card's rules
  * with its flavour name (MSC #283 "Exile The Five Arrive"), and `~` draws
  * the nickname the title bar prints — so the import reads as the printing.
- * The whole name as a word, and a legendary name's short form before its
- * comma ("K'rrik" of "K'rrik, Son of Yawgmoth"). Only for a printing with a
- * nickname: a plain import keeps Oracle's name, as today.
+ * Only for a printing with a nickname: a plain import keeps Oracle's name.
+ *
+ *   * The WHOLE name, as a word, always — where no plate prints the
+ *     nickname `~` draws that same name back.
+ *   * The SHORT form rules text calls a legendary by (lib/cards/card-names.ts
+ *     shortNameOf: "K'rrik" of "K'rrik, Son of Yawgmoth", "Goka" of the
+ *     legendary "Goka the Unjust") ONLY with `shortForm` — the frame the
+ *     import lands on prints the nickname. Elsewhere `~` would draw the FULL
+ *     name where Oracle reads the short one (independent check S1), so the
+ *     short form stays as typed. Never where it starts another name ("Urza,
+ *     Lord Protector", "Urza's Tower": followed by ", <Capital>" or
+ *     "'s <Capital>").
+ *   * Never a name that is a rules word or a keyword ("Exile", "Proliferate",
+ *     "Storm" — card-names.ts isRulesWord, keyword-reminders.ts
+ *     isKeywordName): the word in the text is the instruction.
  */
-export function oracleSelfNamesAsTokens(text: string | undefined, name: string | undefined): string | undefined {
-  if (!text || !name?.trim()) return text;
-  const word = (part: string) => new RegExp(`(?<![\\p{L}\\p{N}_])${escapeRegExp(part)}(?![\\p{L}\\p{N}_])`, "gu");
-  let out = text.replace(word(name.trim()), "~");
-  const comma = name.indexOf(", ");
-  if (comma > 0) out = out.replace(word(name.slice(0, comma).trim()), "~");
+export function oracleSelfNamesAsTokens(
+  text: string | undefined,
+  name: string | undefined,
+  options: { supertype?: string | null; shortForm: boolean },
+): string | undefined {
+  const full = name?.trim();
+  if (!text || !full) return text;
+  const guarded = (part: string) => isRulesWord(part) || isKeywordName(part);
+  const word = (part: string, tail = "") =>
+    new RegExp(`(?<![\\p{L}\\p{N}_])${escapeRegExp(part)}(?![\\p{L}\\p{N}_])${tail}`, "gu");
+  let out = guarded(full) ? text : text.replace(word(full), "~");
+  if (options.shortForm) {
+    const short = shortNameOf(full, options.supertype);
+    if (short && short !== full && !guarded(short)) {
+      out = out.replace(word(short, "(?!, \\p{Lu})(?!['’]s \\p{Lu})"), "~");
+    }
+  }
   return out;
 }
 
