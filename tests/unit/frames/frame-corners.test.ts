@@ -9,6 +9,7 @@ import {
   cornerDiff,
   lightInsideCorners,
   normaliseCardCorners,
+  normaliseCornersGated,
   normaliseMasterCorners,
   normalisedMasterFailures,
   phaseBGateFailures,
@@ -61,7 +62,6 @@ describe("the Phase B allow-list", () => {
     expect(Object.keys(CORNER_NORMALISE_TEMPLATES).sort()).toEqual(
       [
         "expeditionland",
-        "fullart",
       ].sort(),
     );
     // expeditionland: only the keys the corner check flags — w u r c m, whose
@@ -78,7 +78,9 @@ describe("the Phase B allow-list", () => {
     // re-cut and toned by the importer (the frames bucket).
     // extendedart, m15textless and m15textlessland left it with TODO 4.7 /
     // 4.35 (layout v58): Card Conjurer's packs, cut by the importer.
-    for (const t of ["adventure", "aftermath", "flip", "saga", "retro", "retroland", "modern", "modernland", "extendedart", "m15textless", "m15textlessland"]) {
+    // fullart left it with TODO 4.11 (layout v63): Card Conjurer's
+    // 'Zendikar Rising', cut by the importer.
+    for (const t of ["adventure", "aftermath", "flip", "saga", "retro", "retroland", "modern", "modernland", "extendedart", "m15textless", "m15textlessland", "fullart"]) {
       expect(CORNER_NORMALISE_TEMPLATES, t).not.toHaveProperty(t);
     }
     for (const template of Object.keys(CORNER_NORMALISE_TEMPLATES)) {
@@ -106,7 +108,7 @@ describe("the Phase B allow-list", () => {
     expect(shouldNormalise("retro", "w")).toBe(false);
     expect(shouldNormalise("modern", "w")).toBe(false);
     expect(shouldNormalise("extendedart", "w")).toBe(false);
-    expect(shouldNormalise("fullart", "w")).toBe(true);
+    expect(shouldNormalise("fullart", "w")).toBe(false);
     expect(shouldNormalise("expeditionland", "w")).toBe(true);
     expect(shouldNormalise("expeditionland", "b")).toBe(false);
     expect(shouldNormalise("expeditionland", "g")).toBe(false);
@@ -187,9 +189,9 @@ describe("normaliseCardCorners", () => {
     for (let i = 0; i < 120; i += 1) for (let d = -2; d <= 2; d += 1) leak.set([255, 255, 255], at(i, Math.max(0, i + d)));
     const report = normaliseCardCorners(Uint8Array.from(leak), W, H);
     expect(report[0].skipped).toMatch(/leak/);
-    expect(() => normaliseMasterCorners("fullart", "w", leak, W, H)).toThrow(/^fullart\/w: corner normalise refused — tl: exterior reaches the guard arc \(leak\)/);
+    expect(() => normaliseCornersGated("m15", "w", leak, W, H)).toThrow(/^m15\/w: corner normalise refused — tl: exterior reaches the guard arc \(leak\)/);
     const white = new Uint8Array(W * H * 4).fill(255);
-    expect(() => normaliseMasterCorners("fullart", "w", white, W, H)).toThrow(/border band is not opaque and dark/);
+    expect(() => normaliseCornersGated("m15", "w", white, W, H)).toThrow(/border band is not opaque and dark/);
     // Off the allow-list the hook does nothing.
     const bloom = mseMaster();
     const copy = Uint8Array.from(bloom);
@@ -262,6 +264,8 @@ describe("normaliseCardCorners", () => {
     }
   });
 
+  // (On m15, a template that stays: the allow-list empties as the MSE
+  // masters leave git, TODO 4.11; the hook is the same gate behind it.)
   it("the builders' hook runs the runner's whole gate and restores the master when it refuses", () => {
     const m = mseMaster();
     const copy = Uint8Array.from(m);
@@ -269,11 +273,11 @@ describe("normaliseCardCorners", () => {
     // contract (a border is opaque) refuses the normalised master.
     for (let y = 0; y < 8; y += 1) for (let x = 400; x < 420; x += 1) m[at(x, y) + 3] = 0;
     const withSpot = Uint8Array.from(m);
-    expect(() => normaliseMasterCorners("fullart", "w", m, W, H)).toThrow(/^fullart\/w: corner normalise refused — .*top/);
+    expect(() => normaliseCornersGated("m15", "w", m, W, H)).toThrow(/^m15\/w: corner normalise refused — .*top/);
     expect(Buffer.from(m).equals(Buffer.from(withSpot))).toBe(true);
     // A clean one passes, and the report comes back.
-    expect(normaliseMasterCorners("fullart", "w", copy, W, H)).toHaveLength(4);
-    expect(normalisedMasterFailures("fullart", "w", mseMaster(), copy, W, H, normaliseCardCorners(Uint8Array.from(copy), W, H))).toEqual([]);
+    expect(normaliseCornersGated("m15", "w", copy, W, H)).toHaveLength(4);
+    expect(normalisedMasterFailures("m15", "w", mseMaster(), copy, W, H, normaliseCardCorners(Uint8Array.from(copy), W, H))).toEqual([]);
   });
 });
 
@@ -286,8 +290,7 @@ describe("the MSE builders run the pass", () => {
     // modernland with 4.10b: the importer's.)
     // (aftermath, flip and adventure left the list with TODO 4.21a, saga
     // with 4.21c: Card Conjurer masters in the frames bucket, cut by the
-    // importer.)
-    fullart: "build-variation-frames.mjs",
+    // importer; fullart with 4.11, the same.)
     expeditionland: "build-variation-frames.mjs",
   };
   it("names a builder for every allow-listed template, and that builder normalises before it writes", () => {
@@ -322,8 +325,8 @@ describe("the allow-listed git masters are already normalised", () => {
       .filter((key) => shouldNormalise(template, key))
       .map((key) => ({ template, key, file: path.join(process.cwd(), "public", "frames", template, `${key}.png`) })),
   );
-  it("covers all 12 (fullart's 7 colours, and expeditionland's 5)", () => {
-    expect(masters).toHaveLength(12);
+  it("covers all 5 (expeditionland's; fullart's 7 left with TODO 4.11)", () => {
+    expect(masters).toHaveLength(5);
     for (const m of masters) expect(fs.existsSync(m.file), m.file).toBe(true);
   });
   for (const { template, key, file } of masters) {

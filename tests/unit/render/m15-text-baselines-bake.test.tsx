@@ -137,7 +137,9 @@ describe("M15-era display sizes on real bakes (layout v32)", () => {
     // TODO 4.21a — below.)
     // (m15token: its type line moved onto the prints' in TODO 4.49 (d), its
     // name in TODO 4.53 (layout v59) — below.)
-    ["fullart", null, 1608],
+    // (fullart: its type line moved onto the painted bar with Card
+    // Conjurer's masters — layout v63, TODO 4.11; tests/unit/frames/
+    // zendikar-rising-frame.test.ts.)
     ["aftermath", 191, 805],
   ];
 

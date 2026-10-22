@@ -60,6 +60,8 @@ describe("which card draws the crown", () => {
       "nyx",
       // The Lord of the Rings scroll (TODO 4.11): the pack's own crown band.
       "lotrscroll",
+      // The Zendikar Rising hedron showcase (TODO 4.11): its own crown band.
+      "fullart",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
       // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
