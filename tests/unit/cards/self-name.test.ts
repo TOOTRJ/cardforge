@@ -5,6 +5,7 @@ import type { CardPreviewData } from "@/components/cards/card-preview";
 import { applyFrameAnatomyPatch } from "@/lib/cards/anatomy";
 import { CR_SOURCE, KEYWORD_REMINDERS, keywordInsert } from "@/lib/cards/keyword-reminders";
 import {
+  backRulesTextWithSelfName,
   hasSelfNameToken,
   rulesTextWithSelfName,
   selfNameOf,
@@ -42,6 +43,30 @@ describe("the tokens", () => {
     expect(withSelfName(null, "Kesh")).toBeNull();
   });
 
+  it("CARDNAME is a word by Unicode letters (as Postgres's \\m…\\M in 0142 reads it)", () => {
+    expect(hasSelfNameToken("éCARDNAME")).toBe(false);
+    expect(hasSelfNameToken("CARDNAMEé")).toBe(false);
+    expect(hasSelfNameToken("CARDNAME_2")).toBe(false);
+    expect(withSelfName("CARDNAME’s power", "Kesh")).toBe("Kesh’s power");
+    expect(withSelfName("—CARDNAME—", "Kesh")).toBe("—Kesh—");
+  });
+
+  it("a face with no name keeps its ~ as typed (never “Untitled”)", () => {
+    const out = withSelfNames(
+      card({ rulesText: "Flying", backFace: { title: "  ", rules_text: "~ attacks." } as CardPreviewData["backFace"] }),
+      M15,
+    );
+    expect(out.backFace?.rules_text).toBe("~ attacks.");
+    expect(withSelfNames(card({ title: "" }), M15).rulesText).toBe("~ deals 3 damage to any target.");
+  });
+
+  it("a back's rules as its page describes it: its own name, as typed when flagged or unnamed", () => {
+    const back = { title: "Bloodbat Summoner", rules_text: "~ attacks." };
+    expect(backRulesTextWithSelfName(back, { template: "m15dfcfront" } as { selfName?: string })).toBe("Bloodbat Summoner attacks.");
+    expect(backRulesTextWithSelfName(back, { selfName: "literal" })).toBe("~ attacks.");
+    expect(backRulesTextWithSelfName({ ...back, title: "" }, null)).toBe("~ attacks.");
+  });
+
   it("a name with a $ pattern in it is inserted as written", () => {
     expect(withSelfName("~ attacks.", "Mr. $& $1")).toBe("Mr. $& $1 attacks.");
   });
@@ -52,7 +77,7 @@ describe("the name ~ stands for", () => {
     expect(selfNameOf({ title: "Fleecemane Lion", nickname: "Wakandan War Panther" }, M15)).toBe("Wakandan War Panther");
     expect(selfNameOf({ title: "Fleecemane Lion", nickname: "Wakandan War Panther" }, RETRO)).toBe("Fleecemane Lion");
     expect(selfNameOf({ title: "Fleecemane Lion", nickname: "  " }, M15)).toBe("Fleecemane Lion");
-    expect(selfNameOf({ title: "  " }, M15)).toBe("Untitled Card");
+    expect(selfNameOf({ title: "  " }, M15)).toBeNull();
   });
 });
 

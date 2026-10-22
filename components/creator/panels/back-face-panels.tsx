@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { ChipGroup, type ChipOption } from "@/components/ui/chip-group";
 import { ManaCostPicker } from "@/components/cards/mana-cost-picker";
 import { RulesSymbolToolbar } from "@/components/creator/rules-symbol-toolbar";
+import { SelfNameLiteralNote } from "@/components/creator/self-name-literal-note";
 import {
   PipTextEditor,
   type PipTextEditorHandle,
@@ -474,6 +475,8 @@ export function BackFaceRulesField({
       {(aria) => (
         <div className="flex flex-col gap-2">
           <RulesSymbolToolbar onInsert={onInsertSymbol} selfReference={selfReferenceFor(backType, parseSubtypes(backSubtypes ?? ""))} />
+          {/* A card stored with a literal ~ (TODO 6.2): the switch here too. */}
+          <SelfNameLiteralNote texts={[backRulesField.value]} />
           <PipTextEditor
             ref={(handle) => {
               backRulesTextRef.current = handle;

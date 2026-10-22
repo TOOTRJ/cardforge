@@ -74,7 +74,7 @@ import { collectorNumberRuns } from "@/lib/cards/collector-line";
 import { PRINTED_LANGS } from "@/lib/cards/collector-fields";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { cardPageFacesOf, cardPageName, cardTypeHasRarity } from "@/lib/cards/emblem";
-import { storedRulesTextWithSelfName } from "@/lib/cards/self-name";
+import { backRulesTextWithSelfName, storedRulesTextWithSelfName } from "@/lib/cards/self-name";
 import { cardNickname, nicknamePageLine } from "@/lib/cards/nickname";
 import { rowHasBakedBack } from "@/lib/cards/faces";
 import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
@@ -1063,7 +1063,9 @@ export function buildCardJsonLd({
   // purged with the card), only when the row carries THIS card's own
   // `.back.png`. The OG image stays the front.
   if (back) {
-    const backDescription = back.flavor_text?.trim() || back.rules_text?.trim() || "";
+    // Its rules with CARDNAME / ~ as ITS name (TODO 6.2), as the back draws.
+    const backDescription =
+      back.flavor_text?.trim() || backRulesTextWithSelfName(back, card.frame_style as { selfName?: string } | null)?.trim() || "";
     const backName = back.title?.trim() || "Back face";
     const part: Record<string, unknown> = {
       "@type": "CreativeWork",

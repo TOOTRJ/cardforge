@@ -1177,9 +1177,15 @@ Rules and gotchas:
   (rules, walker / saga / station rows, the back's rules; never flavour);
   the card page's description reads `storedRulesTextWithSelfName`. A card
   stored before it with a literal token is flagged by migration 0142
-  (`frame_style.selfName: "literal"`, drawn as typed); its editor offers
-  "Print ~ as the card's name" (one way: an edit's
-  `frame_anatomy.selfName: "name"`). Every new card has no key. The rules
+  (`frame_style.selfName: "literal"`, drawn as typed); EVERY rules area
+  holding a token (rules, walker / saga rows, station tiers, a back's /
+  second part's rules) offers "Print ~ as the card's name"
+  (`SelfNameLiteralNote`: one way — an edit's `frame_anatomy.selfName:
+  "name"` — and it hands the focus on as it goes). Every new card has no
+  key. A face with no name keeps its `~`. An imported FLAVOUR-NAME
+  printing writes its own name as `~` (`oracleSelfNamesAsTokens`; a plain
+  import keeps Oracle's name). CARDNAME is a word by Unicode letters (as
+  0142's `\m…\M`). The rules
   toolbar's words row (`RulesSymbolToolbar selfReference`): `~`, the
   card's "this …" (`selfReferenceFor`) and the keywords with their reminder
   text only when ticked — `lib/cards/keyword-reminders.ts` is DATA, the CR

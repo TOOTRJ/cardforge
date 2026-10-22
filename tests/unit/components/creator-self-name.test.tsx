@@ -213,6 +213,88 @@ describe("a card stored with a literal ~ (migration 0142's flag)", () => {
     expect(payload.frame_anatomy).toEqual({ selfName: "name" });
   });
 
+  it("the switch hands the focus on to the rules editor when it goes (never <body>)", async () => {
+    renderForm("edit", savedCard(FLAGGED));
+    await goTo("Text & stats");
+    const button = screen.getByRole("button", { name: "Print ~ as the card’s name" });
+    button.focus();
+    await act(async () => {
+      fireEvent.click(button);
+    });
+    await waitFor(() => expect(document.activeElement?.getAttribute("data-field")).toBe("rules_text"));
+  });
+
+  it.each([
+    [
+      "a walker's rows",
+      {
+        card_type: "planeswalker",
+        subtypes: ["Kesh"],
+        power: null,
+        toughness: null,
+        loyalty: "4",
+        rules_text: "+1: ~ deals 1 damage to any target.",
+        face_content: { v: 1, loyalty: { abilities: [{ cost: "+1", text: "~ deals 1 damage to any target." }] } },
+        frame_style: { finish: "regular", template: "m15pw", selfName: "literal" },
+      },
+    ],
+    [
+      "a saga's rows",
+      {
+        card_type: "enchantment",
+        supertype: null,
+        subtypes: ["Saga"],
+        power: null,
+        toughness: null,
+        rules_text: "I — Exile ~.",
+        face_content: { v: 1, saga: { intro: null, chapters: [{ numerals: [1], text: "Exile ~." }] } },
+        frame_style: { finish: "regular", template: "saga", selfName: "literal" },
+      },
+    ],
+    [
+      "a station's tiers",
+      {
+        card_type: "artifact",
+        supertype: null,
+        subtypes: ["Spacecraft"],
+        power: "3",
+        toughness: "3",
+        rules_text: "Station\n6+ | ~ has flying.",
+        face_content: null,
+        frame_style: { finish: "regular", template: "m15station", selfName: "literal" },
+      },
+    ],
+  ])("is offered beside %s too", async (_label, over) => {
+    renderForm("edit", savedCard(over));
+    await goTo("Text & stats");
+    expect(screen.getByTestId("self-name-literal-note")).toBeTruthy();
+    await click("Print ~ as the card’s name");
+    expect(screen.queryByTestId("self-name-literal-note")).toBeNull();
+    expect((await sentUpdate()).frame_anatomy).toEqual({ selfName: "name" });
+  });
+
+  it("is offered beside a second part's rules too", async () => {
+    renderForm(
+      "edit",
+      savedCard({
+        card_type: "instant",
+        supertype: null,
+        subtypes: [],
+        power: null,
+        toughness: null,
+        rules_text: "Fire deals 2 damage.",
+        back_face: { title: "Ice", cost: "{1}{U}", card_type: "instant", rules_text: "Tap target permanent. ~ draws a card." },
+        frame_style: { finish: "regular", template: "split", selfName: "literal" },
+      }),
+    );
+    await goTo("Text & stats");
+    expect(screen.queryByTestId("self-name-literal-note")).toBeNull();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("tab", { name: /right half/i }));
+    });
+    expect(screen.getByTestId("self-name-literal-note")).toBeTruthy();
+  });
+
   it("no note on a card without the flag, or with no token in its text", async () => {
     renderForm("edit", savedCard({ rules_text: "~ attacks." }));
     await goTo("Text & stats");

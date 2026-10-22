@@ -25,7 +25,8 @@ import { frameAnatomyOf } from "@/lib/cards/anatomy";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { StationEditor } from "@/components/creator/panels/station-editor";
-import { hasSelfNameToken, selfReferenceFor } from "@/lib/cards/self-name";
+import { selfReferenceFor } from "@/lib/cards/self-name";
+import { SelfNameLiteralNote } from "@/components/creator/self-name-literal-note";
 import { parseSubtypes } from "@/lib/creator/card-fields";
 import type { RulesAlign } from "@/types/card";
 
@@ -104,7 +105,7 @@ export function TextPanel({ rulesTextRef, onInsertSymbol }: TextPanelProps) {
         {(aria) => (
           <div className="flex flex-col gap-2">
             <RulesSymbolToolbar onInsert={onInsertSymbol} selfReference={selfReference} />
-            <SelfNameLiteralNote text={field.value ?? ""} />
+            <SelfNameLiteralNote texts={[field.value]} />
             <PipTextEditor
               ref={(handle) => {
                 rulesTextRef.current = handle;
@@ -148,30 +149,6 @@ export function TextPanel({ rulesTextRef, onInsertSymbol }: TextPanelProps) {
  *  both faces of a double-faced one): the Text step shows them between the
  *  rules and the flavour text of whichever face is being edited. Nothing
  *  where the frame does not offer the choice. */
-/**
- * A card stored before CARDNAME / `~` drew as its name (migration 0142 flags
- * it `frame_style.selfName: "literal"`) prints its `~` as typed. While its
- * text holds one, the editor says so and offers the switch — one way only:
- * the edit sends `frame_anatomy.selfName: "name"` (lib/creator/revise.ts).
- */
-export function SelfNameLiteralNote({ text }: { text: string }) {
-  const { control, setValue } = useFormContext<FormValues>();
-  const selfName = useWatch({ control, name: "frame_style.selfName" });
-  if (selfName !== "literal" || !hasSelfNameToken(text)) return null;
-  return (
-    <p data-testid="self-name-literal-note" className="flex flex-wrap items-center gap-2 text-xs text-muted">
-      This card was saved before ~ printed as the card’s name, so its ~ prints as typed.
-      <button
-        type="button"
-        onClick={() => setValue("frame_style.selfName", undefined, { shouldDirty: true })}
-        className="rounded-md border border-border/60 px-2 py-0.5 font-medium text-foreground transition-colors hover:border-border-strong"
-      >
-        Print ~ as the card’s name
-      </button>
-    </p>
-  );
-}
-
 export function RulesAlignChoice() {
   const { control, setValue } = useFormContext<FormValues>();
   const template = useWatch({ control, name: "frame_style.template" });

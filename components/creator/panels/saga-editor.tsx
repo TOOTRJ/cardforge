@@ -23,6 +23,7 @@ import {
   type PipTextEditorHandle,
 } from "@/components/creator/pip-text-editor";
 import { RulesSymbolToolbar } from "@/components/creator/rules-symbol-toolbar";
+import { SelfNameLiteralNote } from "@/components/creator/self-name-literal-note";
 import { useRowFocus } from "@/components/creator/use-row-focus";
 import { cn } from "@/lib/utils";
 import type { FormValues } from "@/lib/creator/form-types";
@@ -90,6 +91,8 @@ export function SagaChaptersEditor() {
         {(aria) => (
           <div className="flex flex-col gap-2">
             <RulesSymbolToolbar onInsert={insertSymbol} selfReference="this Saga" />
+            {/* A card stored with a literal ~ (TODO 6.2): the switch here too. */}
+            <SelfNameLiteralNote texts={[intro.field.value, ...rows.map((r) => r?.text)]} />
             <PipTextEditor
               ref={(handle) => {
                 introBox.current = handle;

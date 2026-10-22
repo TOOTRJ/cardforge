@@ -16,6 +16,7 @@ import {
   type PipTextEditorHandle,
 } from "@/components/creator/pip-text-editor";
 import { RulesSymbolToolbar } from "@/components/creator/rules-symbol-toolbar";
+import { SelfNameLiteralNote } from "@/components/creator/self-name-literal-note";
 import { useRowFocus } from "@/components/creator/use-row-focus";
 import type { FormValues } from "@/lib/creator/form-types";
 import { structuredRowsSaveAsText } from "@/lib/creator/structured-rules";
@@ -76,6 +77,8 @@ export function LoyaltyAbilitiesEditor({
     >
       <div ref={rowsRef} className="flex flex-col gap-3">
         <RulesSymbolToolbar onInsert={insertSymbol} selfReference="this planeswalker" />
+        {/* A card stored with a literal ~ (TODO 6.2): the switch here too. */}
+        <SelfNameLiteralNote texts={watchedRows.map((r) => r?.text)} />
         {fields.map((row, i) => {
           const rowErrors = errors.loyalty_abilities?.[i];
           return (

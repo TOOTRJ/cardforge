@@ -26,8 +26,11 @@ import type { FaceContent } from "@/types/card";
 // one — has no key: the substitution is on.
 // ---------------------------------------------------------------------------
 
-/** `~`, or CARDNAME as a word (capitals only: "cardname" in prose is left). */
-export const SELF_NAME_TOKEN = /~|\bCARDNAME\b/g;
+/** `~`, or CARDNAME as a word — capitals only ("cardname" in prose is
+ *  left), and a WORD by Unicode letters, digits and the underscore on both
+ *  sides (not JS's ASCII `\b`: "éCARDNAME" is no token here, as Postgres's
+ *  `\m…\M` in migration 0142 reads it). */
+export const SELF_NAME_TOKEN = /~|(?<![\p{L}\p{N}_])CARDNAME(?![\p{L}\p{N}_])/gu;
 
 /** Whether a text holds a self-name token. */
 export function hasSelfNameToken(text: string | null | undefined): boolean {
@@ -39,9 +42,10 @@ export function hasSelfNameToken(text: string | null | undefined): boolean {
 }
 
 /** `text` with every token as `name`; the very same string when it has
- *  none (null / undefined as they are). */
-export function withSelfName<T extends string | null | undefined>(text: T, name: string): T {
-  if (!text || !hasSelfNameToken(text)) return text;
+ *  none — or when there is no name to draw (`null`: a face with no name
+ *  keeps its `~` as typed). null / undefined texts as they are. */
+export function withSelfName<T extends string | null | undefined>(text: T, name: string | null): T {
+  if (!text || name === null || !hasSelfNameToken(text)) return text;
   return text.replace(SELF_NAME_TOKEN, () => name) as T;
 }
 
@@ -52,17 +56,18 @@ export function selfNameOn(frameStyle: { selfName?: string } | null | undefined)
 }
 
 /** The name `~` stands for on a face: the nickname where its frame prints
- *  it, else the face's own name (the renderers' "Untitled Card" for none). */
+ *  it, else the face's own name — null for a face with no name (a draft,
+ *  a back face left unnamed): its `~` stays as typed, never "Untitled". */
 export function selfNameOf(
   face: { title?: string | null; nickname?: string | null },
   layout: { nickname?: NicknameSlot } | null,
-): string {
+): string | null {
   const nickname = layout?.nickname ? cardNickname(face.nickname) : null;
-  return nickname ?? (face.title?.trim() || "Untitled Card");
+  return nickname ?? (face.title?.trim() || null);
 }
 
-function faceContentWith(content: FaceContent | null | undefined, name: string): FaceContent | null | undefined {
-  if (!content) return content;
+function faceContentWith(content: FaceContent | null | undefined, name: string | null): FaceContent | null | undefined {
+  if (!content || name === null) return content;
   let changed = false;
   const sub = <T extends string | null | undefined>(text: T): T => {
     const out = withSelfName(text, name);
@@ -74,6 +79,16 @@ function faceContentWith(content: FaceContent | null | undefined, name: string):
   if (content.saga) next.saga = { ...content.saga, intro: sub(content.saga.intro), chapters: content.saga.chapters.map((row) => ({ ...row, text: sub(row.text) })) };
   if (content.station) next.station = { ...content.station, intro: sub(content.station.intro), tiers: content.station.tiers.map((row) => ({ ...row, text: sub(row.text) })) };
   return changed ? next : content;
+}
+
+/** A second face's / back's rules text as drawn: its OWN name (never the
+ *  front's nickname), as typed when it has none or the card is flagged. */
+export function backRulesTextWithSelfName(
+  back: { title?: string | null; rules_text?: string | null },
+  frameStyle: { selfName?: string } | null | undefined,
+): string | null | undefined {
+  if (!selfNameOn(frameStyle)) return back.rules_text;
+  return withSelfName(back.rules_text, back.title?.trim() || null);
 }
 
 /**
@@ -89,7 +104,7 @@ export function withSelfNames<T extends CardPreviewData>(card: T, layout: { nick
   const rulesText = withSelfName(card.rulesText, name);
   const faceContent = faceContentWith(card.faceContent, name);
   const back = card.backFace;
-  const backRules = back ? withSelfName(back.rules_text, back.title?.trim() || name) : undefined;
+  const backRules = back ? backRulesTextWithSelfName(back, card.frameStyle) : undefined;
   if (rulesText === card.rulesText && faceContent === card.faceContent && (!back || backRules === back.rules_text)) return card;
   return {
     ...card,
@@ -97,6 +112,26 @@ export function withSelfNames<T extends CardPreviewData>(card: T, layout: { nick
     faceContent,
     ...(back && backRules !== back.rules_text ? { backFace: { ...back, rules_text: backRules } } : {}),
   };
+}
+
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * An imported FLAVOUR-NAME printing's Oracle text with the card's own name
+ * written as `~` (TODO 6.2, owner Round 80): print sets such a card's rules
+ * with its flavour name (MSC #283 "Exile The Five Arrive"), and `~` draws
+ * the nickname the title bar prints — so the import reads as the printing.
+ * The whole name as a word, and a legendary name's short form before its
+ * comma ("K'rrik" of "K'rrik, Son of Yawgmoth"). Only for a printing with a
+ * nickname: a plain import keeps Oracle's name, as today.
+ */
+export function oracleSelfNamesAsTokens(text: string | undefined, name: string | undefined): string | undefined {
+  if (!text || !name?.trim()) return text;
+  const word = (part: string) => new RegExp(`(?<![\\p{L}\\p{N}_])${escapeRegExp(part)}(?![\\p{L}\\p{N}_])`, "gu");
+  let out = text.replace(word(name.trim()), "~");
+  const comma = name.indexOf(", ");
+  if (comma > 0) out = out.replace(word(name.slice(0, comma).trim()), "~");
+  return out;
 }
 
 /** The subtypes print names in "this …" (Bloomburrow-era Oracle wording,

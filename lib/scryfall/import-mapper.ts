@@ -1,5 +1,6 @@
 import type { ScryfallCard, ScryfallSet } from "@/lib/scryfall/client";
 import { resolvePrintedTypes } from "@/lib/cards/type-line-field";
+import { oracleSelfNamesAsTokens } from "@/lib/cards/self-name";
 import { listSymbols, undrawableSymbols } from "@/lib/validation/card-glyphs";
 import {
   DEFAULT_CARD_LANG,
@@ -1968,6 +1969,8 @@ export function mapScryfallToFormPatch(
   const dfcLanding = dfc?.kind ? dfc : null;
   const frontColorIdentity =
     dfcLanding && dfcLanding.frontBody ? dfcFaceColorIdentity(dfcLanding.frontBody, dfcLanding.frontType, colorIdentity) : colorIdentity;
+  // The printing's nickname (TODO 6.3) — its rules then write `~` (6.2).
+  const frontNickname = emblem ? null : (pick(front?.flavor_name, card.flavor_name)?.trim() || null);
 
   return {
     // For a multi-face card, the front face's own name ("Fire", not "Fire //
@@ -1977,7 +1980,7 @@ export function mapScryfallToFormPatch(
       : (isMultiFace && front?.name) || card.name,
     // The printing's nickname (TODO 6.3): the front face's own, else the
     // card's (an emblem prints its walker's name, never one).
-    ...nicknameKey(emblem ? null : pick(front?.flavor_name, card.flavor_name)),
+    ...nicknameKey(frontNickname),
     cost: emblem ? undefined : pick(front?.mana_cost, card.mana_cost),
     kind,
     frame_template: frameTemplateFromScryfall(card, frameMatch),
@@ -2021,7 +2024,12 @@ export function mapScryfallToFormPatch(
     printed_stamp: stampOfPrinting(card),
     // …and its border (TODO 4.30): white, or no key at all.
     ...((card.border_color ?? "").trim().toLowerCase() === "white" ? { printed_border: "white" as const } : {}),
-    rules_text: pick(front?.oracle_text, card.oracle_text),
+    // A flavour-name printing (TODO 6.2, owner Round 80) writes its own
+    // name as `~`, which draws the nickname its title bar prints — as the
+    // printing sets its rules. Every other import keeps Oracle's name.
+    rules_text: frontNickname
+      ? oracleSelfNamesAsTokens(pick(front?.oracle_text, card.oracle_text), (isMultiFace && front?.name) || card.name)
+      : pick(front?.oracle_text, card.oracle_text),
     flavor_text: pick(front?.flavor_text, card.flavor_text),
     power: emblem ? undefined : pick(front?.power, card.power),
     toughness: emblem ? undefined : pick(front?.toughness, card.toughness),
