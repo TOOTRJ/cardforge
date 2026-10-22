@@ -296,6 +296,8 @@ export function backPreviewData(card: CardPreviewData): CardPreviewData | null {
   if (!back) return null;
   const content = {
     title: back.title ?? null,
+    // The nickname is the FRONT's (TODO 6.3): a back face never prints it.
+    ...(card.nickname != null ? { nickname: null } : {}),
     cost: back.cost ?? null,
     cardType: back.card_type ?? null,
     supertype: back.supertype ?? null,

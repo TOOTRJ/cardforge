@@ -196,6 +196,7 @@ import {
   type SagaRailDrawing,
 } from "@/lib/cards/saga-rail";
 import { fitTitleBand } from "@/lib/cards/title-band";
+import { nicknameLineSlot, resolveNickname } from "@/lib/cards/nickname";
 import {
   BRAND_MARK_LIGHT_INK,
   BRAND_MARK_LIGHT_SHADOW,
@@ -531,7 +532,13 @@ function CardImage({
 
   // No bake-only truncation: titles up to the validated 120 chars ellipsize
   // in the band exactly as the preview does.
-  const title = card.title?.trim() || "Untitled Card";
+  const cardName = card.title?.trim() || "Untitled Card";
+  // The nickname (TODO 6.3, lib/cards/nickname.ts): on a frame that
+  // declares the plate it takes the title bar, and the card's own name goes
+  // on the plate — the preview's twin. Null for every card without one.
+  const nicknameDrawn = resolveNickname(layout, card.nickname, cardName, masterKey);
+  const title = nicknameDrawn ? nicknameDrawn.titleText : cardName;
+  const nicknamePieces = nicknameDrawn ? [nicknameDrawn.plate] : [];
   const showCost =
     !layout.hideCost && card.cardType !== "land" && Boolean(card.cost?.trim());
   const typeLine = buildTypeLine(card);
@@ -1010,6 +1017,22 @@ function CardImage({
         />
       ))}
 
+      {/* The nickname plate (TODO 6.3, lib/cards/nickname.ts): our own
+          inline SVG at its even HD box — printed frame, so right after the
+          frame and under both finishes; the name on it is ink (below). The
+          preview's NicknamePlate twin. Nothing on a card without one. */}
+      {nicknamePieces.map((piece, i) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={`nickname-${i}`}
+          src={piece.href}
+          alt=""
+          width={Math.round((piece.rect.widthPct / 100) * width)}
+          height={Math.round((piece.rect.heightPct / 100) * height)}
+          style={{ ...slotBox(piece.rect), objectFit: "fill", zIndex: 5 }}
+        />
+      ))}
+
       {/* Premium finish: etched — a fine cross-hatch + sheen on the FRAME
           only (masked by the frame's own luminance), directly above the
           frame so every text/stat layer stays crisp on top of it. The SAME
@@ -1027,7 +1050,7 @@ function CardImage({
               ? { href: splitDataUrl, atPct: frameSplit.atPct }
               : null
           }
-          overlays={[...drawnOverlays([...overlays, ...railPieces, ...stationPieces]), ...borderMaskOverlays]}
+          overlays={[...drawnOverlays([...overlays, ...railPieces, ...stationPieces, ...nicknamePieces]), ...borderMaskOverlays]}
           landscape={layout.orientation === "landscape"}
           width={width}
           height={height}
@@ -1057,7 +1080,7 @@ function CardImage({
             secondArt: secondArtSlot && secondArtUrl ? (foilArt?.secondArt ?? null) : null,
             secondArtPosition: secondArtPos,
           })}
-          overlays={[...drawnOverlays([...overlays, ...railPieces, ...stationPieces]), ...borderMaskOverlays]}
+          overlays={[...drawnOverlays([...overlays, ...railPieces, ...stationPieces, ...nicknamePieces]), ...borderMaskOverlays]}
           landscape={layout.orientation === "landscape"}
           width={width}
           height={height}
@@ -1181,6 +1204,14 @@ function CardImage({
             dy={layout.costDy ? fpx(layout.costDy, width) : 0}
           />
         </div>
+      ) : null}
+
+      {/* The card's own name on the nickname plate (TODO 6.3): MPlantin
+          italic, white, centred — the preview's twin. */}
+      {nicknameDrawn ? (
+        <Band slot={nicknameLineSlot(nicknameDrawn)} cardWidth={width}>
+          <span style={ELLIPSIS}>{displayLine(nicknameDrawn.line.text)}</span>
+        </Band>
       ) : null}
 
       {/* Type band — type line + rarity set-symbol. Long type lines shrink

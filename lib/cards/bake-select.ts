@@ -1,47 +1,71 @@
 // ---------------------------------------------------------------------------
-// The bake's column list across the deploy of migration 0137 (TODO 3b.16).
+// The bake's column list across the deploys of migrations 0137 and 0141
+// (TODO 3b.16 `printed_types`, TODO 6.3 `nickname`).
 //
-// BAKE_SELECT_COLUMNS names `printed_types`. On a merge Vercel builds while
-// Supabase applies the migration, and Supabase's runner sometimes fails
-// silently (docs/ENVIRONMENTS.md §4): with the new code live on a database
-// that has no such column yet, PostgREST answers every one of these reads
-// with 42703 — no save bake, no automatic re-bake (three failed runs pause
-// the sweep), no admin frame previews — for as long as the column is
-// missing. A row from before the column prints the BUILT line, which is
-// exactly what a read without the column gives, so that one error is
-// answered by reading the same rows without it.
+// BAKE_SELECT_COLUMNS names both. On a merge Vercel builds while Supabase
+// applies the migration, and Supabase's runner sometimes fails silently
+// (docs/ENVIRONMENTS.md §4): with the new code live on a database that has
+// no such column yet, PostgREST answers every one of these reads with 42703
+// — no save bake, no automatic re-bake (three failed runs pause the sweep),
+// no admin frame previews — for as long as the column is missing. A row
+// from before the column prints exactly what a read without the column
+// gives (the BUILT type line; no nickname), so that one error is answered
+// by reading the same rows without it.
 //
 // Nothing else is tolerated: any other error comes back as it is, and a save
-// that STORES a typed line still fails loudly until the column exists (it is
-// never dropped silently).
+// that STORES a typed line or a nickname still fails loudly until the column
+// exists (it is never dropped silently).
 //
-// Remove once 0137 is on production and on the dev database.
+// Remove each column from LATE_COLUMNS once its migration is on production
+// and on the dev database.
 // ---------------------------------------------------------------------------
 
 import { BAKE_SELECT_COLUMNS } from "@/lib/cards/bake-core";
 
-const COLUMN = "printed_types";
+/** The bake's columns a database may not have yet, newest last. */
+const LATE_COLUMNS = ["printed_types", "nickname"] as const;
+type LateColumn = (typeof LATE_COLUMNS)[number];
+
+const COLUMN_0137: LateColumn = "printed_types";
+
+function columnsWithout(dropped: readonly string[]): string {
+  return BAKE_SELECT_COLUMNS.split(/,\s*/)
+    .filter((column) => !dropped.includes(column))
+    .join(", ");
+}
 
 /** BAKE_SELECT_COLUMNS for a database from before migration 0137. */
 export function bakeSelectColumnsWithout0137(): string {
-  return BAKE_SELECT_COLUMNS.split(/,\s*/)
-    .filter((column) => column !== COLUMN)
-    .join(", ");
+  return columnsWithout([COLUMN_0137]);
+}
+
+/** The late column PostgREST says does not exist ("column
+ *  cards.<name> does not exist", 42703), or null for any other answer. */
+export function missingLateColumn(error: { code?: string | null; message?: string | null } | null | undefined): LateColumn | null {
+  if (error?.code !== "42703") return null;
+  const message = error.message ?? "";
+  return LATE_COLUMNS.find((column) => message.includes(column)) ?? null;
 }
 
 /** True for PostgREST's "column cards.printed_types does not exist". */
 export function isMissing0137Column(error: { code?: string | null; message?: string | null } | null | undefined): boolean {
-  return error?.code === "42703" && (error.message ?? "").includes(COLUMN);
+  return missingLateColumn(error) === COLUMN_0137;
 }
 
 /**
  * Runs a read of the bake's columns: `run` is given BAKE_SELECT_COLUMNS and,
- * only when the database answers that `printed_types` does not exist, is run
- * once more with the list from before 0137.
+ * only while the database answers that one of the late columns does not
+ * exist, is run again without it (each late column dropped at most once).
  */
 export async function selectBakeColumns<R extends { error: { code?: string | null; message?: string | null } | null }>(
   run: (columns: string) => PromiseLike<R>,
 ): Promise<R> {
-  const first = await run(BAKE_SELECT_COLUMNS);
-  return isMissing0137Column(first.error) ? run(bakeSelectColumnsWithout0137()) : first;
+  const dropped: LateColumn[] = [];
+  let result = await run(BAKE_SELECT_COLUMNS);
+  for (;;) {
+    const missing = missingLateColumn(result.error);
+    if (!missing || dropped.includes(missing)) return result;
+    dropped.push(missing);
+    result = await run(columnsWithout(dropped));
+  }
 }

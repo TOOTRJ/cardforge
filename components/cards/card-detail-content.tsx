@@ -74,6 +74,7 @@ import { collectorNumberRuns } from "@/lib/cards/collector-line";
 import { PRINTED_LANGS } from "@/lib/cards/collector-fields";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { cardPageFacesOf, cardPageName, cardTypeHasRarity } from "@/lib/cards/emblem";
+import { cardNickname, nicknamePageLine } from "@/lib/cards/nickname";
 import { rowHasBakedBack } from "@/lib/cards/faces";
 import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
 import { renderVersionOf } from "@/lib/cards/render-version";
@@ -335,6 +336,10 @@ export async function CardDetailContent({
             <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
               {pageName}
             </h1>
+            {/* The nickname (TODO 6.3): the name the card prints in its
+                title bar — the H1 stays the card's name; "Also known as"
+                on a frame that prints no nickname. */}
+            <NicknameLine nickname={card.nickname} frameStyle={card.frame_style} />
             {/* Chunk 13: "Also remixed by N others" chip. Only renders
                 when this card was imported from Scryfall AND at least
                 one other public/unlisted remix exists. Click-through
@@ -884,6 +889,20 @@ function CreatorFeature({
 // renderer so social unfurls and search-result thumbnails match.
 // ---------------------------------------------------------------------------
 
+/** The nickname's line under the H1 (TODO 6.3): "Printed as" where the
+ *  card's frame prints it, "Also known as" where it doesn't
+ *  (lib/cards/nickname.ts nicknamePageLine). Exported for tests. */
+export function NicknameLine({ nickname, frameStyle }: { nickname?: string | null; frameStyle: unknown }) {
+  const template = (frameStyle as { template?: string } | null | undefined)?.template;
+  const line = nicknamePageLine(nickname, getFrameProfile(normalizeFrameTemplate(template)));
+  if (!line) return null;
+  return (
+    <p className="text-sm text-muted" data-testid="card-nickname">
+      {line.label} <span className="font-medium text-foreground">“{line.nickname}”</span>
+    </p>
+  );
+}
+
 /** Exported for tests (tests/unit/cards/emblem-card-page.test.tsx). */
 export function buildCardJsonLd({
   inDecks,
@@ -906,6 +925,7 @@ export function buildCardJsonLd({
     card_type: string | null;
     supertype: string | null;
     printed_types?: string | null;
+    nickname?: string | null;
     subtypes: string[] | null;
     rarity: string | null;
     color_identity: string[] | null;
@@ -981,6 +1001,8 @@ export function buildCardJsonLd({
     "@context": "https://schema.org",
     "@type": "CreativeWork",
     name,
+    // The nickname it prints in its title bar (TODO 6.3).
+    ...(cardNickname(card.nickname) ? { alternateName: cardNickname(card.nickname) } : {}),
     headline: name,
     description: truncatedDescription,
     url: canonical,
@@ -1114,6 +1136,8 @@ export function CardDetails({
     card_type: string | null;
     supertype: string | null;
     printed_types?: string | null;
+    /** The nickname (TODO 6.3): a row when the card has one. */
+    nickname?: string | null;
     subtypes: string[] | null;
     rarity: string | null;
     color_identity: string[] | null;
@@ -1173,6 +1197,8 @@ export function CardDetails({
           ? `Defense ${card.defense}`
           : null;
   const rows: Array<[string, React.ReactNode]> = [
+    // The nickname it prints in its title bar (TODO 6.3).
+    ...(cardNickname(card.nickname) ? [["Nickname", cardNickname(card.nickname)] as [string, React.ReactNode]] : []),
     ["Type", typeLine],
     ["Mana cost", card.cost ? `${card.cost} (${costWords})` : "None"],
     // An emblem has no rarity (CR 114): no row for its stored "common".

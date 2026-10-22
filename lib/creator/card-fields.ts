@@ -195,6 +195,7 @@ export function defaultValuesFor(
   if (!card) {
     return {
       title: "",
+      nickname: "",
       slug: "",
       game_system_id: fallbackGameSystem,
       cost: "",
@@ -270,6 +271,7 @@ export function defaultValuesFor(
 
   return {
     title: card.title,
+    nickname: card.nickname ?? "",
     slug: card.slug,
     game_system_id: card.game_system_id,
     cost: card.cost ?? "",

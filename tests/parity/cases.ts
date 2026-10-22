@@ -75,6 +75,10 @@ const PICKS: readonly Pick[] = [
   { from: "m15/w/creature-long@centred", why: "centred rules (held lines, per-line indents)" },
   { from: "m15/g/creature-long@collector", why: "the collector line and the © slot's mark" },
   { from: "m15/wu/creature-long@stamp-pair-crown", why: "crown + holofoil stamp + the two-colour pair, one card" },
+  // --- the nickname (TODO 6.3): the plate, its rim and the name on it -------
+  { from: "m15/g/creature-long@nickname", why: "the nickname in the title bar, the name on its plate (a long name)" },
+  { from: "m15/wu/creature-short@nickname-pair", why: "the nickname plate's rim in the pair's two colours" },
+  { from: "m15land/c/land-short@nickname", why: "the nickname plate on the land frame (the land grey)" },
   { from: "m15/r/creature-short@foil", why: "foil: the sheen and its art mask" },
   { from: "m15/u/creature-long@etched", why: "etched: the frame-only sheen" },
   // --- the Vehicle frame (TODO 4.5c): its own plate, white digits -----------

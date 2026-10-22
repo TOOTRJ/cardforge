@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { CardDetailContent } from "@/components/cards/card-detail-content";
 import { getCardByOwnerAndSlug } from "@/lib/cards/queries";
 import { cardPageFacesOf, cardPageName } from "@/lib/cards/emblem";
+import { cardTitleWithNickname } from "@/lib/cards/nickname";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cardAccentColor } from "@/lib/og/card-accent";
 import { CARD_SOCIAL_SIZE } from "@/lib/og/card-social";
@@ -54,7 +55,9 @@ export async function generateMetadata({
     card.visibility === "public" || card.visibility === "unlisted";
   // An emblem's page is "<walker> Emblem", like Scryfall's (cardPageName); a
   // double-faced card on the DFC bodies is "Front // Back" (TODO 5.3).
-  const name = cardPageName(card.title, card.card_type, cardPageFacesOf(card));
+  // A card with a nickname (TODO 6.3) is titled "Name (Nickname)"
+  // (cardTitleWithNickname: the name first, as the H1 and the canonical).
+  const name = cardTitleWithNickname(cardPageName(card.title, card.card_type, cardPageFacesOf(card)), card.nickname);
   const description =
     card.flavor_text?.trim() ||
     card.rules_text?.trim() ||

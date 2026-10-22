@@ -1,0 +1,341 @@
+{
+ "msc-282": {
+  "id": "13a8b618-6e8f-46cf-b456-dffa35831a67",
+  "resource_id": "687A606ACABCE34DD26F84DDF8F693E69948FBF97636036CFA91A804EB01D2F3",
+  "name": "Fleecemane Lion",
+  "flavor_name": "Wakandan War Panther",
+  "released_at": "2026-06-26",
+  "layout": "normal",
+  "image_updated_at": "2026-07-13T00:39:48Z",
+  "image_uris": {
+   "png": "https://cards.scryfall.io/png/front/1/3/13a8b618-6e8f-46cf-b456-dffa35831a67.png?1783903188"
+  },
+  "mana_cost": "{G}{W}",
+  "cmc": 2.0,
+  "type_line": "Creature — Cat",
+  "oracle_text": "{3}{G}{W}: Monstrosity 1. (If this creature isn't monstrous, put a +1/+1 counter on it and it becomes monstrous.)\nAs long as this creature is monstrous, it has hexproof and indestructible.",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "G",
+   "W"
+  ],
+  "color_identity": [
+   "G",
+   "W"
+  ],
+  "keywords": [
+   "Monstrosity"
+  ],
+  "game_changer": false,
+  "promo": false,
+  "set": "msc",
+  "set_name": "Marvel Super Heroes Commander",
+  "set_type": "commander",
+  "collector_number": "282",
+  "rarity": "rare",
+  "artist": "Thomas Chamberlain-Keen",
+  "border_color": "black",
+  "frame": "2015",
+  "security_stamp": "oval",
+  "full_art": false,
+  "textless": false,
+  "promo_types": [
+   "surgefoil",
+   "universesbeyond"
+  ]
+ },
+ "msc-288": {
+  "id": "708ad400-fa01-4473-aa9e-ba3db965b521",
+  "resource_id": "28CE8236BEBFD7B1D678C4F29374B66096001E5C6AC2632FA599873FDD379C5A",
+  "name": "Mind's Eye",
+  "flavor_name": "Panther Idol",
+  "released_at": "2026-06-26",
+  "layout": "normal",
+  "image_updated_at": "2026-07-13T00:39:46Z",
+  "image_uris": {
+   "png": "https://cards.scryfall.io/png/front/7/0/708ad400-fa01-4473-aa9e-ba3db965b521.png?1783903186"
+  },
+  "mana_cost": "{5}",
+  "cmc": 5.0,
+  "type_line": "Artifact",
+  "oracle_text": "Whenever an opponent draws a card, you may pay {1}. If you do, draw a card.",
+  "colors": [],
+  "color_identity": [],
+  "keywords": [],
+  "game_changer": false,
+  "promo": false,
+  "set": "msc",
+  "set_name": "Marvel Super Heroes Commander",
+  "set_type": "commander",
+  "collector_number": "288",
+  "rarity": "rare",
+  "flavor_text": "\"Nobody remembers who built it. She has watched over these lands for as long as we can remember. As eternal as Bast herself.\"\n—Shuri",
+  "artist": "Michele Giorgi",
+  "border_color": "black",
+  "frame": "2015",
+  "security_stamp": "oval",
+  "full_art": false,
+  "textless": false,
+  "promo_types": [
+   "surgefoil",
+   "universesbeyond"
+  ]
+ },
+ "sld-1186": {
+  "id": "a995fd27-b4c9-4620-b759-4755101e1534",
+  "name": "K'rrik, Son of Yawgmoth",
+  "flavor_name": "Post, Son of Rich",
+  "released_at": "2022-11-28",
+  "layout": "normal",
+  "image_updated_at": "2026-07-13T05:06:50Z",
+  "image_uris": {
+   "png": "https://cards.scryfall.io/png/front/a/9/a995fd27-b4c9-4620-b759-4755101e1534.png?1783919210"
+  },
+  "mana_cost": "{4}{B/P}{B/P}{B/P}",
+  "cmc": 7.0,
+  "type_line": "Legendary Creature — Phyrexian Horror Minion",
+  "oracle_text": "({B/P} can be paid with either {B} or 2 life.)\nLifelink\nFor each {B} in a cost, you may pay 2 life rather than pay that mana.\nWhenever you cast a black spell, put a +1/+1 counter on K'rrik.",
+  "printed_text": "Lifelink\nFor each {B} in a cost, you may pay 2 life rather than pay that mana.\nWhenever you cast a black spell, put a +1/+1 counter on Post, Son of Rich.",
+  "power": "2",
+  "toughness": "2",
+  "colors": [
+   "B"
+  ],
+  "color_identity": [
+   "B"
+  ],
+  "keywords": [
+   "Lifelink"
+  ],
+  "game_changer": false,
+  "promo": false,
+  "set": "sld",
+  "set_name": "Secret Lair Drop",
+  "set_type": "box",
+  "collector_number": "1186",
+  "rarity": "rare",
+  "artist": "Darren Tan",
+  "border_color": "black",
+  "frame": "2015",
+  "frame_effects": [
+   "legendary"
+  ],
+  "security_stamp": "oval",
+  "full_art": false,
+  "textless": false
+ },
+ "sld-697": {
+  "id": "0e863861-eb0d-4f86-9770-bd32b8227d07",
+  "name": "Command Tower",
+  "flavor_name": "Summoner's Rift",
+  "released_at": "2021-11-29",
+  "layout": "normal",
+  "image_updated_at": "2026-07-13T06:36:12Z",
+  "image_uris": {
+   "png": "https://cards.scryfall.io/png/front/0/e/0e863861-eb0d-4f86-9770-bd32b8227d07.png?1783924572"
+  },
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Land",
+  "oracle_text": "{T}: Add one mana of any color in your commander's color identity.",
+  "colors": [],
+  "color_identity": [],
+  "keywords": [],
+  "produced_mana": [
+   "B",
+   "G",
+   "R",
+   "U",
+   "W"
+  ],
+  "game_changer": false,
+  "promo": false,
+  "set": "sld",
+  "set_name": "Secret Lair Drop",
+  "set_type": "box",
+  "collector_number": "697",
+  "rarity": "rare",
+  "flavor_text": "There is a place apart from this world, a rift where pretense falls away and champions find their glory.",
+  "artist": "Riot Games",
+  "border_color": "black",
+  "frame": "2015",
+  "security_stamp": "triangle",
+  "full_art": false,
+  "textless": false,
+  "promo_types": [
+   "sldbonus",
+   "universesbeyond"
+  ]
+ },
+ "tmc-54": {
+  "id": "f415b285-4771-43ba-9534-244e446f8f72",
+  "resource_id": "34488D5437A1DCA28D00ACC711DAB835D40AC5A6C5EE8D7806D634785E96FFD7",
+  "name": "Voracious Hydra",
+  "flavor_name": "Aggro Amalgam",
+  "released_at": "2026-03-06",
+  "layout": "normal",
+  "image_updated_at": "2026-07-13T00:55:56Z",
+  "image_uris": {
+   "png": "https://cards.scryfall.io/png/front/f/4/f415b285-4771-43ba-9534-244e446f8f72.png?1783904156"
+  },
+  "mana_cost": "{X}{G}{G}",
+  "cmc": 2.0,
+  "type_line": "Creature — Hydra",
+  "oracle_text": "Trample\nThis creature enters with X +1/+1 counters on it.\nWhen this creature enters, choose one —\n• Double the number of +1/+1 counters on this creature.\n• This creature fights target creature you don't control.",
+  "power": "0",
+  "toughness": "1",
+  "colors": [
+   "G"
+  ],
+  "color_identity": [
+   "G"
+  ],
+  "keywords": [
+   "Trample",
+   "Fight",
+   "Double"
+  ],
+  "game_changer": false,
+  "promo": false,
+  "set": "tmc",
+  "set_name": "Teenage Mutant Ninja Turtles Eternal",
+  "set_type": "eternal",
+  "collector_number": "54",
+  "rarity": "rare",
+  "artist": "Aaron J. Riley",
+  "border_color": "black",
+  "frame": "2015",
+  "security_stamp": "oval",
+  "full_art": false,
+  "textless": false,
+  "promo_types": [
+   "surgefoil",
+   "universesbeyond"
+  ]
+ },
+ "iko-275": {
+  "id": "9a0639a0-c898-4a07-975c-a02bdd53175b",
+  "name": "Zilortha, Strength Incarnate",
+  "flavor_name": "Godzilla, King of the Monsters",
+  "released_at": "2020-04-24",
+  "layout": "normal",
+  "image_updated_at": "2026-07-13T08:23:12Z",
+  "image_uris": {
+   "png": "https://cards.scryfall.io/png/front/9/a/9a0639a0-c898-4a07-975c-a02bdd53175b.png?1783930992"
+  },
+  "mana_cost": "{3}{R}{G}",
+  "cmc": 5.0,
+  "type_line": "Legendary Creature — Dinosaur",
+  "oracle_text": "Trample\nLethal damage dealt to creatures you control is determined by their power rather than their toughness.",
+  "power": "7",
+  "toughness": "3",
+  "colors": [
+   "G",
+   "R"
+  ],
+  "color_identity": [
+   "G",
+   "R"
+  ],
+  "keywords": [
+   "Trample"
+  ],
+  "game_changer": false,
+  "promo": true,
+  "set": "iko",
+  "set_name": "Ikoria: Lair of Behemoths",
+  "set_type": "expansion",
+  "collector_number": "275",
+  "rarity": "mythic",
+  "artist": "Antonio José Manzanedo",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "legendary",
+   "inverted"
+  ],
+  "security_stamp": "oval",
+  "full_art": false,
+  "textless": false,
+  "promo_types": [
+   "godzillaseries",
+   "buyabox"
+  ]
+ },
+ "vow-338": {
+  "id": "0954ed3d-a5d8-4330-b07c-bf3e51192e4b",
+  "name": "Voldaren Bloodcaster // Bloodbat Summoner",
+  "released_at": "2021-11-19",
+  "layout": "transform",
+  "image_updated_at": "2026-07-13T06:39:09Z",
+  "cmc": 2.0,
+  "type_line": "Creature — Vampire Wizard // Creature — Vampire Wizard",
+  "color_identity": [
+   "B"
+  ],
+  "keywords": [
+   "Flying",
+   "Transform"
+  ],
+  "card_faces": [
+   {
+    "name": "Voldaren Bloodcaster",
+    "flavor_name": "Dracula, Lord of Blood",
+    "mana_cost": "{1}{B}",
+    "type_line": "Creature — Vampire Wizard",
+    "oracle_text": "Flying\nWhenever this creature or another nontoken creature you control dies, create a Blood token. (It's an artifact with \"{1}, {T}, Discard a card, Sacrifice this token: Draw a card.\")\nWhenever you create a Blood token, if you control five or more Blood tokens, transform this creature.",
+    "colors": [
+     "B"
+    ],
+    "power": "2",
+    "toughness": "1",
+    "artist": "Johann Bodin",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/front/0/9/0954ed3d-a5d8-4330-b07c-bf3e51192e4b.png?1783924749"
+    }
+   },
+   {
+    "name": "Bloodbat Summoner",
+    "flavor_name": "Dracula, Lord of Bats",
+    "mana_cost": "",
+    "type_line": "Creature — Vampire Wizard",
+    "oracle_text": "Flying\nAt the beginning of combat on your turn, up to one target Blood token you control becomes a 2/2 black Bat creature with flying and haste in addition to its other types.",
+    "colors": [
+     "B"
+    ],
+    "color_indicator": [
+     "B"
+    ],
+    "power": "3",
+    "toughness": "3",
+    "flavor_text": "\"Do you mean to tell me that Lucy was bitten by such a bat . . . ?\"",
+    "artist": "Johann Bodin",
+    "image_uris": {
+     "png": "https://cards.scryfall.io/png/back/0/9/0954ed3d-a5d8-4330-b07c-bf3e51192e4b.png?1783924749"
+    }
+   }
+  ],
+  "game_changer": false,
+  "promo": false,
+  "set": "vow",
+  "set_name": "Innistrad: Crimson Vow",
+  "set_type": "expansion",
+  "collector_number": "338",
+  "rarity": "rare",
+  "artist": "Johann Bodin",
+  "border_color": "borderless",
+  "frame": "2015",
+  "frame_effects": [
+   "sunmoondfc",
+   "inverted"
+  ],
+  "security_stamp": "oval",
+  "full_art": false,
+  "textless": false,
+  "promo_types": [
+   "draculaseries",
+   "boosterfun"
+  ]
+ }
+}

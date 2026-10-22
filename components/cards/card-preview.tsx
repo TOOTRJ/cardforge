@@ -63,6 +63,7 @@ import {
 } from "@/lib/cards/render-tiers";
 import { endAlignedStatKeepOut, fitStatSizePct, ptValue } from "@/lib/cards/stat-fit";
 import { fitTitleBand } from "@/lib/cards/title-band";
+import { nicknameLineSlot, resolveNickname } from "@/lib/cards/nickname";
 import { setSymbolSize, setSymbolSource } from "@/lib/cards/set-symbol-size";
 import { collectorLayout, type CollectorLayout, type CollectorMarkAnchor } from "@/lib/cards/collector-layout";
 import {
@@ -209,6 +210,11 @@ import {
 
 export type CardPreviewData = {
   title?: string | null;
+  /** The card's nickname (cards.nickname, TODO 6.3): printed in the title
+   *  bar with `title` on a plate under it, on a frame that declares the
+   *  plate (lib/cards/nickname.ts). Absent / null on every card without
+   *  one. The FRONT face's only. */
+  nickname?: string | null;
   cost?: string | null;
   cardType?: CardType | null;
   supertype?: string | null;
@@ -337,6 +343,8 @@ function collectorFaceStyle(face: "collector" | "display" | "body"): { fontFamil
 
 type FaceData = {
   title: string | null;
+  /** The front face's nickname (TODO 6.3); no other face carries one. */
+  nickname?: string | null;
   cost: string | null;
   cardType: CardType | null;
   supertype: string | null;
@@ -387,6 +395,7 @@ export function CardPreview(rawProps: CardPreviewProps) {
   const drawable = drawableCardMedia(rawProps);
   const {
     title,
+    nickname,
     cost,
     cardType,
     supertype,
@@ -438,6 +447,8 @@ export function CardPreview(rawProps: CardPreviewProps) {
 
   const frontFace: FaceData = {
     title: title ?? null,
+    // Only a card with a nickname carries the key (TODO 6.3).
+    ...(nickname != null ? { nickname } : {}),
     cost: cost ?? null,
     cardType: cardType ?? null,
     supertype: supertype ?? null,
@@ -911,7 +922,13 @@ function CardFace({
   // A two-colour Dragon Wing card draws BOTH colours' frames split down the
   // seam (FrameProfile.twoColorSplit); the plates keep colorKey ("m").
   const frameSplit = frameSplitFor(layout, colorIdentity);
-  const safeTitle = face.title?.trim() || "Untitled Card";
+  const cardName = face.title?.trim() || "Untitled Card";
+  // The nickname (TODO 6.3, lib/cards/nickname.ts): on a frame that
+  // declares the plate it takes the title bar, and the card's own name goes
+  // on the plate — the bake's twin. Null for every card without one.
+  const nicknameDrawn = resolveNickname(layout, face.nickname, cardName, masterKey);
+  // The name the title bar prints: the nickname where it is drawn.
+  const safeTitle = nicknameDrawn ? nicknameDrawn.titleText : cardName;
   const markLayout = brandMarkLayout(layout);
   // A textless frame (TODO 3.24) prints no type line and no text box — but
   // the full-art token's textless height keeps its type line (4.48,
@@ -1131,6 +1148,9 @@ function CardFace({
   );
   const station = stationLaid ? { layout: stationLaid, drawing: stationDrawing(stationLaid, layout, masterKey) } : null;
   const stationPieces = station?.drawing.pieces ?? NO_STATION_PIECES;
+  // The nickname plate (TODO 6.3): a frame piece under both finishes, as
+  // the station's — the bake's twin.
+  const nicknamePieces = nicknameDrawn ? [nicknameDrawn.plate] : NO_NICKNAME_PIECES;
   const drawsRulesBox =
     !textless &&
     !isBasicLand &&
@@ -1250,7 +1270,7 @@ function CardFace({
             focalX={focalX}
             focalY={focalY}
             scale={scale}
-            alt={`Artwork for ${safeTitle}`}
+            alt={`Artwork for ${cardName}`}
           />
         ) : (
           <div
@@ -1335,6 +1355,10 @@ function CardFace({
           discs and the P/T plate — printed frame, under both finishes; the
           bake's stationPieces twin. Nothing off a station frame. */}
       <StationPieces pieces={stationPieces} />
+      {/* The nickname plate (TODO 6.3, lib/cards/nickname.ts): printed
+          frame, under both finishes — the bake's twin. Nothing on a card
+          without a nickname. */}
+      <NicknamePlate pieces={nicknamePieces} />
       {/* The colour-indicator dot (TODO 5.1a): over the master, under every
           text layer — the bake's twin (ColorIndicatorBake). */}
       {indicatorFills.length ? <ColorIndicatorOverlay fills={indicatorFills} dyPct={layout.indicatorDyPct ?? 0} /> : null}
@@ -1358,6 +1382,7 @@ function CardFace({
           overlays={[
             ...[...overlays, ...railPieces].map((overlay) => ({ href: frameOverlayImageUrl(overlay.path), rect: overlay.rect })),
             ...stationPieces.map((piece) => ({ href: piece.href, rect: piece.rect })),
+            ...nicknamePieces.map((piece) => ({ href: piece.href, rect: piece.rect })),
             ...borderMaskOverlays,
           ]}
           landscape={layout.orientation === "landscape"}
@@ -1394,6 +1419,7 @@ function CardFace({
           overlays={[
             ...[...overlays, ...railPieces].map((overlay) => ({ href: frameOverlayImageUrl(overlay.path), rect: overlay.rect })),
             ...stationPieces.map((piece) => ({ href: piece.href, rect: piece.rect })),
+            ...nicknamePieces.map((piece) => ({ href: piece.href, rect: piece.rect })),
             ...borderMaskOverlays,
           ]}
           landscape={layout.orientation === "landscape"}
@@ -1524,6 +1550,16 @@ function CardFace({
             offsetY={layout.costDy ? cqw(layout.costDy) : undefined}
           />
         </div>
+      ) : null}
+
+      {/* The card's own name on the nickname plate (TODO 6.3): MPlantin
+          italic, white, centred — the bake's NicknameLineBake twin. */}
+      {nicknameDrawn ? (
+        <BandSlot slot={nicknameLineSlot(nicknameDrawn)}>
+          <span style={ELLIPSIS} data-nickname-line="">
+            {displayLine(nicknameDrawn.line.text)}
+          </span>
+        </BandSlot>
       ) : null}
 
       {/* Type band — type line (left) + rarity set-symbol (right). Long type
@@ -2576,6 +2612,22 @@ const NO_STATION_PIECES: readonly StationPiece[] = [];
 /** The station frame's drawn pieces (TODO 4.27a): each an inline SVG of
  *  lib/cards/station-art.ts stretched over its even HD box — the bake's
  *  <img>s. Under both finishes, like the saga rail's bitmaps. */
+const NO_NICKNAME_PIECES: readonly { href: string; rect: Rect }[] = [];
+
+/** The nickname plate (TODO 6.3): lib/cards/nickname.ts's inline SVG over
+ *  its box — the bake's <img>. Under both finishes, as the station's. */
+function NicknamePlate({ pieces }: { pieces: readonly { href: string; rect: Rect }[] }) {
+  if (pieces.length === 0) return null;
+  return (
+    <div aria-hidden data-nickname-plate="" className="pointer-events-none absolute inset-0" style={{ zIndex: 5 }}>
+      {pieces.map((piece, i) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img key={i} alt="" src={piece.href} className="absolute" style={{ ...rectStyle(piece.rect), position: "absolute" }} />
+      ))}
+    </div>
+  );
+}
+
 function StationPieces({ pieces }: { pieces: readonly StationPiece[] }) {
   if (pieces.length === 0) return null;
   return (

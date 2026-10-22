@@ -14,6 +14,7 @@ export function cardToPreviewData(
   return drawableCardMedia({
     profileOverrides,
     title: card.title,
+    ...(typeof card.nickname === "string" ? { nickname: card.nickname } : {}),
     cost: card.cost,
     cardType: card.card_type,
     supertype: card.supertype,

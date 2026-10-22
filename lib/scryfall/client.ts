@@ -245,6 +245,9 @@ export const scryfallCardSchema = z
           loyalty: z.string().optional().nullable(),
           defense: z.string().optional().nullable(),
           flavor_text: z.string().optional().nullable(),
+          // A face's own printed nickname (VOW #332–341's Dracula faces) —
+          // the import's nickname (TODO 6.3).
+          flavor_name: z.string().optional().nullable(),
           // Per-face colours (TODO 1.1/1.2). Transform, modal DFC, battle
           // and reversible faces carry their own `colors`, and Scryfall
           // leaves the card-level `colors` off; split, flip, adventure and
