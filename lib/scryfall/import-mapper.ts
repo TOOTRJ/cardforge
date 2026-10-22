@@ -1,5 +1,8 @@
 import type { ScryfallCard, ScryfallSet } from "@/lib/scryfall/client";
 import { resolvePrintedTypes } from "@/lib/cards/type-line-field";
+import { oracleSelfNamesAsTokens } from "@/lib/cards/self-name";
+import { getFrameProfile } from "@/lib/cards/template-layout";
+import { subtypeFrameFor } from "@/lib/creator/card-kinds";
 import { listSymbols, undrawableSymbols } from "@/lib/validation/card-glyphs";
 import {
   DEFAULT_CARD_LANG,
@@ -474,6 +477,36 @@ export function legendaryTokenSupertype(
  *  `undefined`, when the printing reads as the built line. */
 function printedTypesKey(printed: string | undefined): { printed_types?: string } {
   return printed === undefined ? {} : { printed_types: printed };
+}
+
+/**
+ * Whether EVERY frame a flavour-name import may end up on prints the
+ * nickname plate (TODO 6.2, independent checks S1 and the re-check): the
+ * landing, the printing's own frame, each frame the match names once it is
+ * verified (`onceVerified`, its fallback, `landOnOnceVerified`, `landOn`)
+ * and the subtype dress a new card follows onto (a Spacecraft onto the
+ * station frame, which prints none). Only then may a legendary's short form
+ * be written as `~`: anywhere else `~` would draw the full name.
+ */
+function everyLandingPrintsNickname(
+  landing: FrameTemplate | undefined,
+  match: FrameMatch | null | undefined,
+  subtypesText: string | undefined,
+): boolean {
+  // No static landing (the creator picks one later): unknown — keep the
+  // short form as typed.
+  if (!landing) return false;
+  const subtypes = (subtypesText ?? "").split(",").map((part) => part.trim()).filter(Boolean);
+  const candidates = [
+    landing,
+    match?.template,
+    match?.landOn,
+    match?.onceVerified,
+    match?.onceVerifiedFallback?.template,
+    match?.landOnOnceVerified?.template,
+    subtypeFrameFor(landing, subtypes, () => true),
+  ].filter((template): template is FrameTemplate => Boolean(template));
+  return candidates.every((template) => Boolean(getFrameProfile(template).nickname));
 }
 
 /** The patch's nickname key (TODO 6.3): only a printing with one names it,
@@ -1904,6 +1937,12 @@ export function mapScryfallToFormPatch(
     /** The printing's set object (getScryfallSet), when the caller fetched
      *  one for the collector fields (needsScryfallSet). */
     set?: ScryfallSet | null;
+    /** Oracle's rules text as written — never the flavour-name printing's
+     *  `~` (TODO 6.2): the AI deck remix drops the nickname and renames the
+     *  card's self-references itself (applyRemixNames, the short name
+     *  included), so a `~` there would draw the new FULL title where the
+     *  short one belongs (independent re-check, SLD #1186). */
+    oracleRules?: boolean;
   } = {},
 ): ScryfallImportPatch {
   // A reminder card backed by a token (TODO 5.5 (c): F18 #2 City's Blessing
@@ -1974,6 +2013,11 @@ export function mapScryfallToFormPatch(
   const dfcLanding = dfc?.kind ? dfc : null;
   const frontColorIdentity =
     dfcLanding && dfcLanding.frontBody ? dfcFaceColorIdentity(dfcLanding.frontBody, dfcLanding.frontType, colorIdentity) : colorIdentity;
+  // The printing's nickname (TODO 6.3) — its rules then write `~` (6.2).
+  const frontNickname = emblem ? null : (pick(front?.flavor_name, card.flavor_name)?.trim() || null);
+  // The frame the import lands on (static: the creator / the named route
+  // finalize it against the verified combos).
+  const landingTemplate = frameTemplateFromScryfall(card, frameMatch);
 
   return {
     // For a multi-face card, the front face's own name ("Fire", not "Fire //
@@ -1983,10 +2027,10 @@ export function mapScryfallToFormPatch(
       : (isMultiFace && front?.name) || card.name,
     // The printing's nickname (TODO 6.3): the front face's own, else the
     // card's (an emblem prints its walker's name, never one).
-    ...nicknameKey(emblem ? null : pick(front?.flavor_name, card.flavor_name)),
+    ...nicknameKey(frontNickname),
     cost: emblem ? undefined : pick(front?.mana_cost, card.mana_cost),
     kind,
-    frame_template: frameTemplateFromScryfall(card, frameMatch),
+    frame_template: landingTemplate,
     frame_match: frameMatch,
     printing_treatment: printingTreatmentFromScryfall(card),
     printing_detail: printingDetailFromScryfall(card),
@@ -2027,7 +2071,21 @@ export function mapScryfallToFormPatch(
     printed_stamp: stampOfPrinting(card),
     // …and its border (TODO 4.30): white, or no key at all.
     ...((card.border_color ?? "").trim().toLowerCase() === "white" ? { printed_border: "white" as const } : {}),
-    rules_text: pick(front?.oracle_text, card.oracle_text),
+    // A flavour-name printing (TODO 6.2, owner Round 80) writes its own
+    // name as `~`, which draws the nickname its title bar prints — as the
+    // printing sets its rules. Every other import keeps Oracle's name.
+    // The short form only where the frame prints the nickname (independent
+    // check S1) — BOTH the frame the import lands on and the one that
+    // reproduces the printing (a borderless printing lands on a bordered
+    // frame until its own is verified, then moves): elsewhere `~` draws the
+    // full name where Oracle reads the short one.
+    rules_text:
+      frontNickname && !options.oracleRules
+        ? oracleSelfNamesAsTokens(pick(front?.oracle_text, card.oracle_text), (isMultiFace && front?.name) || card.name, {
+            supertype,
+            shortForm: everyLandingPrintsNickname(landingTemplate, frameMatch, typeParts.subtypes_text),
+          })
+        : pick(front?.oracle_text, card.oracle_text),
     flavor_text: pick(front?.flavor_text, card.flavor_text),
     power: emblem ? undefined : pick(front?.power, card.power),
     toughness: emblem ? undefined : pick(front?.toughness, card.toughness),

@@ -74,6 +74,7 @@ import { collectorNumberRuns } from "@/lib/cards/collector-line";
 import { PRINTED_LANGS } from "@/lib/cards/collector-fields";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { cardPageFacesOf, cardPageName, cardTypeHasRarity } from "@/lib/cards/emblem";
+import { backRulesTextWithSelfName, storedRulesTextWithSelfName } from "@/lib/cards/self-name";
 import { cardNickname, nicknamePageLine } from "@/lib/cards/nickname";
 import { rowHasBakedBack } from "@/lib/cards/faces";
 import { isStoredRenderUrl, toRenderCdnUrl } from "@/lib/cards/render-cdn";
@@ -947,7 +948,8 @@ export function buildCardJsonLd({
 }): Record<string, unknown> {
   const description =
     card.flavor_text?.trim() ||
-    card.rules_text?.trim() ||
+    // CARDNAME / ~ as the name the card prints (TODO 6.2).
+    storedRulesTextWithSelfName(card)?.trim() ||
     "A custom Magic: The Gathering card forged on PipGlyph.";
   const truncatedDescription =
     description.length > 280 ? `${description.slice(0, 277)}…` : description;
@@ -1061,7 +1063,9 @@ export function buildCardJsonLd({
   // purged with the card), only when the row carries THIS card's own
   // `.back.png`. The OG image stays the front.
   if (back) {
-    const backDescription = back.flavor_text?.trim() || back.rules_text?.trim() || "";
+    // Its rules with CARDNAME / ~ as ITS name (TODO 6.2), as the back draws.
+    const backDescription =
+      back.flavor_text?.trim() || backRulesTextWithSelfName(back, card.frame_style as { selfName?: string } | null)?.trim() || "";
     const backName = back.title?.trim() || "Back face";
     const part: Record<string, unknown> = {
       "@type": "CreativeWork",

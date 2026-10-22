@@ -38,13 +38,16 @@
 // Identity step above the type line they feed.
 
 import { TypesField } from "@/components/creator/types-field";
-import { Controller, useController, useFormContext } from "react-hook-form";
+import { Controller, useController, useFormContext, useWatch } from "react-hook-form";
+import { selfReferenceFor } from "@/lib/cards/self-name";
+import { parseSubtypes } from "@/lib/creator/card-fields";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SurfaceCard } from "@/components/ui/surface-card";
 import { ChipGroup } from "@/components/ui/chip-group";
 import { ManaCostPicker } from "@/components/cards/mana-cost-picker";
 import { RulesSymbolToolbar } from "@/components/creator/rules-symbol-toolbar";
+import { SelfNameLiteralNote } from "@/components/creator/self-name-literal-note";
 import {
   PipTextEditor,
   type PipTextEditorHandle,
@@ -365,11 +368,16 @@ export function SecondPartRulesField({
     formState: { errors },
   } = useFormContext<FormValues>();
   const { field: backRulesField } = useController({ control, name: "back_face.rules_text" });
+  // The words row (TODO 6.2): this face's own "this …".
+  const backType = useWatch({ control, name: "back_face.card_type" });
+  const backSubtypes = useWatch({ control, name: "back_face.subtypes_text" });
   return (
     <FieldGroup kind="control" label="Rules text" error={errors.back_face?.rules_text?.message}>
       {(aria) => (
         <div className="flex flex-col gap-2">
-          <RulesSymbolToolbar onInsert={onInsertSymbol} />
+          <RulesSymbolToolbar onInsert={onInsertSymbol} selfReference={selfReferenceFor(backType, parseSubtypes(backSubtypes ?? ""))} />
+          {/* A card stored with a literal ~ (TODO 6.2): the switch here too. */}
+          <SelfNameLiteralNote texts={[backRulesField.value]} />
           <PipTextEditor
             ref={(handle) => {
               backRulesTextRef.current = handle;

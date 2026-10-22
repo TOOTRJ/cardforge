@@ -194,6 +194,9 @@ export function frameAnatomyPatchFor(
   // is sent only to take a stored "white" off.
   const white = values.frame_style.border === "white";
   if (white !== (storedStyle.border === "white")) patch.border = white ? "white" : "black";
+  // CARDNAME / `~` (TODO 6.2): a flagged card (migration 0142) whose owner
+  // switched the name on — the form dropped the key; one way only.
+  if (storedStyle.selfName === "literal" && values.frame_style.selfName !== "literal") patch.selfName = "name";
   const pair = twoColorPairOf(values.color_identity);
   if (pair && values.frame_style.twoColor === true && !twoColorPairOf(stored.color_identity)) {
     patch.twoColor = true;

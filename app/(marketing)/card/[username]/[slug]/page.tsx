@@ -5,6 +5,7 @@ import { CardDetailContent } from "@/components/cards/card-detail-content";
 import { getCardByOwnerAndSlug } from "@/lib/cards/queries";
 import { cardPageFacesOf, cardPageName } from "@/lib/cards/emblem";
 import { cardTitleWithNickname } from "@/lib/cards/nickname";
+import { storedRulesTextWithSelfName } from "@/lib/cards/self-name";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cardAccentColor } from "@/lib/og/card-accent";
 import { CARD_SOCIAL_SIZE } from "@/lib/og/card-social";
@@ -60,7 +61,8 @@ export async function generateMetadata({
   const name = cardTitleWithNickname(cardPageName(card.title, card.card_type, cardPageFacesOf(card)), card.nickname);
   const description =
     card.flavor_text?.trim() ||
-    card.rules_text?.trim() ||
+    // CARDNAME / ~ as the name the card prints (TODO 6.2).
+    storedRulesTextWithSelfName(card)?.trim() ||
     "A custom trading card on PipGlyph.";
 
   // The 1200×630 landscape composite (whole card + name + creator on a

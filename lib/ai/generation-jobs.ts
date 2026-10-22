@@ -1609,7 +1609,8 @@ async function executeDeckRemixStep(
     // credits, TODO 5.4); a one-credit entry is remixed one-faced.
     const doubleFacedPlan = remixEntryCredits(entry) >= DFC_REMIX_CREDITS;
     const resolved = scryfallRemixMechanics(
-      mapScryfallToFormPatch(scry),
+      // Oracle's own rules (TODO 6.2): the remix renames them itself.
+      mapScryfallToFormPatch(scry, { oracleRules: true }),
       entry.name,
       new Set(await getVerifiedFrameKeys()),
       { singleFace: !doubleFacedPlan },

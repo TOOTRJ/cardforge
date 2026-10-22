@@ -65,7 +65,7 @@ describe("visual-regression matrix", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) {
       expect(id).toMatch(
-        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|land|artifact|vehicle|wide|star|spacecraft|nopt|nodefense|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|legacyland|sunmoon|moon|compass|fan(-(hd|nopt|wide-pt))?|saga|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square|battle))?|back(-(hd|nopt))?|battle(-(nopt|hd))?|pair(-(hybrid|foil|etched|hd|square|br|gw|ub))?(-crown(-hd)?)?|centred(-(hd|back))?|white(-(hd|foil|etched|square|pair))?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|crown|triangle|collector-(hd|2015)|auto-common|auto-uncommon|matte-hd|pair-(split|hybrid|crown|hd|foil)))?|tiers-(one|three|none|wide|star)|large-pips-hd|phyrexian-cost-(3|5)(-hd)?|nyx-(wide|artifact|silver)|token-nyx(-(hd|aura|artifact))?|two-sided(-(front|hd))?|nickname(-(pair|long|hd|foil|etched))?))?$/,
+        /^[a-z0-9]+\/(w|u|b|r|g|c|wu|wub)\/[a-z]+-(short|long|edge)(@(hd|foil|etched|square|noart|notext|creature|land|artifact|vehicle|wide|star|spacecraft|nopt|nodefense|dense|longpage|stack3(-hd)?|prodshape|six(-hd)?|stack5(-tight)?|stack6|combined|longintro|grownintro|pastfloor|introonly|legacy8|emptytab|legacyback|legacyland|sunmoon|moon|compass|fan(-(hd|nopt|wide-pt))?|saga|stripequipment|stripgod|stripenchantment|striptibalt|strip-(u|w|a|m|l|g|c)(-hd)?|crown(-(hd|foil|etched|square|battle))?|back(-(hd|nopt))?|battle(-(nopt|hd))?|pair(-(hybrid|foil|etched|hd|square|br|gw|ub))?(-crown(-hd)?)?|centred(-(hd|back))?|white(-(hd|foil|etched|square|pair))?|collector(-2015)?(-(noplate|star|foil|etched|lang|empty|artist|hd|square))?|stamp(-(c|m|always|arch|hd|foil|etched|square|token|crown|triangle|collector-(hd|2015)|auto-common|auto-uncommon|matte-hd|pair-(split|hybrid|crown|hd|foil)))?|tiers-(one|three|none|wide|star)|large-pips-hd|phyrexian-cost-(3|5)(-hd)?|nyx-(wide|artifact|silver)|token-nyx(-(hd|aura|artifact))?|two-sided(-(front|hd))?|nickname(-(pair|long|hd|foil|etched))?|selfname(-(nickname|literal))?))?$/,
       );
     }
     expect(ids).toEqual([...ids].sort());
@@ -360,6 +360,13 @@ describe("visual-regression matrix", () => {
       if (c.id.includes("@white")) {
         expect((c.row.frame_style as { border?: string }).border, c.id).toBe("white");
         expect(keys, c.id).toEqual(["border", "finish", "template"]);
+        continue;
+      }
+      // A card migration 0142 flagged (TODO 6.2: its `~` drawn as typed) —
+      // the ONE case that names it.
+      if (c.id.includes("@selfname-literal")) {
+        expect((c.row.frame_style as { selfName?: string }).selfName, c.id).toBe("literal");
+        expect(keys, c.id).toEqual(["finish", "selfName", "template"]);
         continue;
       }
       expect(keys, c.id).toEqual(["finish", "template"]);

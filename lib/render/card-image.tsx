@@ -197,6 +197,7 @@ import {
 } from "@/lib/cards/saga-rail";
 import { fitTitleBand } from "@/lib/cards/title-band";
 import { nicknameLineSlot, resolveNickname } from "@/lib/cards/nickname";
+import { withSelfNames } from "@/lib/cards/self-name";
 import {
   BRAND_MARK_LIGHT_INK,
   BRAND_MARK_LIGHT_SHADOW,
@@ -416,7 +417,7 @@ function FrameSlice({
 // ---------------------------------------------------------------------------
 
 function CardImage({
-  card,
+  card: cardAsHanded,
   width,
   height,
   brandMark,
@@ -453,8 +454,12 @@ function CardImage({
   /** NEVER rendered — Satori's image preload list (see renderCardImage). */
   children?: React.ReactNode;
 }) {
-  const template = normalizeFrameTemplate(card.frameStyle?.template, card);
-  const layout = layoutForFace(resolveFrameProfile(template, card.profileOverrides), card);
+  const template = normalizeFrameTemplate(cardAsHanded.frameStyle?.template, cardAsHanded);
+  const layout = layoutForFace(resolveFrameProfile(template, cardAsHanded.profileOverrides), cardAsHanded);
+  // CARDNAME / `~` (TODO 6.2, lib/cards/self-name.ts): the tokens drawn as
+  // the name the title bar prints, before anything reads the text — the
+  // preview's twin. The very same object for a card without one.
+  const card = withSelfNames(cardAsHanded, layout);
   // The frame's symbol style — one resolution per render, handed to every
   // pip this card draws (TODO 4.8.0).
   const symbols = symbolStyleOf(layout);

@@ -1769,6 +1769,25 @@ export function visualCases(): VisualCase[] {
   add("m15", "creature", "b", "long", { suffix: "@nickname-hd", preset: "hd", row: { nickname: "Post, Son of Rich" } });
   add("m15", "creature", "u", "short", { suffix: "@nickname-foil", finish: "foil", row: { nickname: "Unstable Harmonics", frame_style: { template: "m15", finish: "foil" } } });
   add("m15", "creature", "w", "short", { suffix: "@nickname-etched", finish: "etched", row: { nickname: "Unstable Harmonics", frame_style: { template: "m15", finish: "etched" } } });
+  // TODO 6.2: CARDNAME / `~` — no stored card's text holds one unflagged
+  // (migration 0142), so NEW cases: the tokens drawn as the name, as the
+  // nickname where the title bar prints it, as typed on a flagged card, and
+  // in a walker's structured rows.
+  const SELF_RULES = "~ deals 3 damage to any target.\nWhen CARDNAME dies, draw a card.";
+  add("m15", "creature", "r", "short", { suffix: "@selfname", row: { rules_text: SELF_RULES, flavor_text: null } });
+  add("m15", "creature", "g", "short", { suffix: "@selfname-nickname", row: { rules_text: SELF_RULES, flavor_text: null, nickname: "The Verdant Sovereign" } });
+  add("m15", "creature", "b", "short", {
+    suffix: "@selfname-literal",
+    row: { rules_text: SELF_RULES, flavor_text: null, frame_style: { template: "m15", finish: "regular", selfName: "literal" } },
+  });
+  add("m15pw", "planeswalker", "w", "short", {
+    suffix: "@selfname",
+    row: {
+      rules_text: "+1: ~ deals 1 damage to any target.\n-3: Untap CARDNAME.",
+      face_content: { v: 1, loyalty: { abilities: [{ cost: "+1", text: "~ deals 1 damage to any target." }, { cost: "-3", text: "Untap CARDNAME." }] } },
+      flavor_text: null,
+    },
+  });
   // No stat plate (an instant): the mark on line 1.
   add("m15", "instant", "u", "short", { suffix: "@collector-noplate", row: collectorRow("m15", "2023") });
   // The ★: by the flag, and by a foil or etched finish (owner 2026-10-02).

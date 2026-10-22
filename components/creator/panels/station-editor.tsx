@@ -19,6 +19,8 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RulesSymbolToolbar } from "@/components/creator/rules-symbol-toolbar";
+import { SelfNameLiteralNote } from "@/components/creator/self-name-literal-note";
+import { selfReferenceFor } from "@/lib/cards/self-name";
 import { PipTextEditor, type PipTextEditorHandle } from "@/components/creator/pip-text-editor";
 import { FieldGroup, inputClass, textareaClass, useFaceLabel } from "@/components/creator/field-group";
 import { showsPowerToughness } from "@/lib/cards/card-display";
@@ -143,7 +145,9 @@ export function StationEditor({ rulesTextRef, onInsertSymbol }: StationEditorPro
       <FieldGroup kind="control" label="Rules text — top band" error={error} helper={STATION_TOP_BAND_HELP}>
         {(aria) => (
           <div className="flex flex-col gap-2">
-            <RulesSymbolToolbar onInsert={onInsertSymbol} />
+            <RulesSymbolToolbar onInsert={onInsertSymbol} selfReference={selfReferenceFor(cardType, parseSubtypes(subtypesText ?? ""))} />
+            {/* A card stored with a literal ~ (TODO 6.2): the switch here too. */}
+            <SelfNameLiteralNote texts={[rulesText]} />
             <PipTextEditor
               ref={(handle) => {
                 rulesTextRef.current = handle;

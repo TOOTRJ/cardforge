@@ -25,6 +25,9 @@ import { frameAnatomyOf } from "@/lib/cards/anatomy";
 import { normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { StationEditor } from "@/components/creator/panels/station-editor";
+import { selfReferenceFor } from "@/lib/cards/self-name";
+import { SelfNameLiteralNote } from "@/components/creator/self-name-literal-note";
+import { parseSubtypes } from "@/lib/creator/card-fields";
 import type { RulesAlign } from "@/types/card";
 
 /** Said on the Text step when the frame is textless (FrameProfile.textless,
@@ -72,6 +75,10 @@ export function TextPanel({ rulesTextRef, onInsertSymbol }: TextPanelProps) {
   // The station frame (TODO 4.27a): its text box is a top band over tiers,
   // and the tier editor is the rules field (a view of the same `rules_text`).
   const station = Boolean(profile.tiers) && !textless;
+  // The words row (TODO 6.2): the card's "this …" from its type and subtypes.
+  const cardType = useWatch({ control, name: "card_type" });
+  const subtypesText = useWatch({ control, name: "subtypes_text" });
+  const selfReference = selfReferenceFor(cardType, parseSubtypes(subtypesText ?? ""));
 
   return (
     <>
@@ -97,7 +104,8 @@ export function TextPanel({ rulesTextRef, onInsertSymbol }: TextPanelProps) {
       >
         {(aria) => (
           <div className="flex flex-col gap-2">
-            <RulesSymbolToolbar onInsert={onInsertSymbol} />
+            <RulesSymbolToolbar onInsert={onInsertSymbol} selfReference={selfReference} />
+            <SelfNameLiteralNote texts={[field.value]} />
             <PipTextEditor
               ref={(handle) => {
                 rulesTextRef.current = handle;

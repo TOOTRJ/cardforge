@@ -346,6 +346,9 @@ const frameStyleBaseSchema = z
     // or "white". The save stores "white" only, and only on a template that
     // draws the white border (normalizeAnatomy).
     border: z.enum(CARD_BORDER_VALUES).optional(),
+    // CARDNAME / `~` (TODO 6.2): "literal" only on a card migration 0142
+    // flagged (a remix of one keeps its parent's look); absent = the name.
+    selfName: z.literal("literal").optional(),
   })
   .strict();
 
@@ -384,6 +387,9 @@ export const frameAnatomyPatchSchema = z
     // The border (TODO 4.30): "white", or "black" to take a stored "white"
     // off.
     border: z.enum(CARD_BORDER_VALUES).optional(),
+    // CARDNAME / `~` (TODO 6.2): "name" takes a stored "literal" off — the
+    // card's `~` then draws as its name. Nothing switches it back on.
+    selfName: z.literal("name").optional(),
     pair: z
       .tuple([pairColorSchema, pairColorSchema])
       .refine(([a, b]) => a !== b, "Pick two different colours.")
