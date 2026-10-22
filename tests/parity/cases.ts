@@ -221,6 +221,11 @@ const PICKS: readonly Pick[] = [
   { from: "m15borderlessmdfcfront/wu/mdfc-long@pair-crown", why: "borderless modal front: the split pinline's crowned twin, the housing, the strip's white texts" },
   { from: "m15borderlessmdfcback/g/mdfc-long", why: "borderless modal back: its own cost, the light strip's dark texts, through the flip" },
   { from: "m15tokentext/g/token-long", why: "token with a text box" },
+  // The arch's tall box (TODO 4.55): the pill, the symbol and the type line
+  // 238 px up, the taller box's rules centred clear of the plate — and its
+  // artifact dress (a Clue's silver frame).
+  { from: "m15tokentall/w/token-long", why: "4.55: the arch token's tall text box — the moved pill, the taller box" },
+  { from: "m15tokenartifacttall/c/token-short", why: "4.55: the tall box's artifact dress (a Clue's silver frame)" },
   // The arch token's gold small-caps name (TODO 4.53, v59): the runs on one
   // baseline, a word gap, the see-through c's own art slot; and a name all
   // in lower case — every run small, each lifted onto the full-size baseline.

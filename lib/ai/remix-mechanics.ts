@@ -39,6 +39,7 @@ import { cardFieldsFace, frameKindGateError } from "@/lib/cards/frame-kind-gate"
 import { dfcFrontColorError, dfcFrontTypeError, resolveDfcBackFace } from "@/lib/cards/dfc-gate";
 import { serializeLoyalty, serializeSaga } from "@/lib/cards/face-content";
 import { isStationFrame } from "@/lib/cards/station-frame";
+import { isArchTallTokenTemplate } from "@/lib/cards/token-height";
 import { stationOpenText } from "@/lib/creator/station-rows";
 
 export type ScryfallRemixMechanics = {
@@ -72,6 +73,13 @@ export type ScryfallRemixMechanics = {
    *  picture. A card that fell back to a standard frame never becomes a
    *  double-faced card. */
   back_face?: CardBackFace;
+  /** Set only when the printing landed on the arch's TALL box (TODO 4.55,
+   *  owner Round 77): a PINNED tall-box printing (TALL_BOX_TOKEN_PINS) once
+   *  the tall box is verified in its colour. The remix saves on it as the
+   *  import lands it — it follows the printing, never re-deciding the height
+   *  from its new text (remixSavedFrame). Absent on every other landing, so
+   *  every other remix payload is unchanged. */
+  printed_height?: true;
   /** Set only when `frame_template` draws no rules box (a `textless`
    *  profile, TODO 1.24): the frame the card saves on INSTEAD when it saves
    *  with rules or flavour text — this printing's landing with the textless
@@ -175,6 +183,7 @@ export function scryfallRemixMechanics(
           )
         : undefined,
       ...(textStandIn ? { text_stand_in: textStandIn } : {}),
+      ...(isArchTallTokenTemplate(frame.template) ? { printed_height: true as const } : {}),
     },
   };
 }

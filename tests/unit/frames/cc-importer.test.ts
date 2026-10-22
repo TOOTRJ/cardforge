@@ -2041,6 +2041,19 @@ describe("provenance and hygiene", () => {
     // (scripts/build-nyx-crown.mjs; its own test:
     // tests/unit/frames/nyx-constellation-crown.test.ts).
     const PIPGLYPH_DERIVED_BANDS: Record<string, string> = { nyxcrown: "m15nyxcrown" };
+    // …and the arch token's tall box (TODO 4.55): PipGlyph's own cut of the
+    // published text-box masters (scripts/build-token-tall-frames.mjs; the
+    // cut's own test: tests/unit/frames/token-tall-recut.test.ts).
+    const TOKEN_TALL: Record<string, string> = { m15tokentall: "m15tokentext", m15tokenartifacttall: "m15tokenartifacttext" };
+    for (const [template, parent] of Object.entries(TOKEN_TALL)) {
+      expect(provenance[template].source, template).toBe("pipglyph");
+      expect(provenance[template].converter, template).toBe("scripts/build-token-tall-frames.mjs");
+      expect(provenance[template].commit, template).toBeUndefined();
+      expect(Object.keys(provenance[template].colors).sort(), template).toEqual([...COLORS].sort());
+      for (const key of COLORS) {
+        expect(provenance[template].colors[key][0], `${template}/${key}`).toMatch(new RegExp(`^${parent}/${key}\\.png \\(published, sha256 [0-9a-f]{12}\\)$`));
+      }
+    }
     // …and the Spacecraft's two dresses (TODO 4.27a step 2), the same
     // builder's: extended art cut from the published extendedart masters (a
     // colourless one from the silver artifact `a`), borderless the published
@@ -2082,6 +2095,7 @@ describe("provenance and hygiene", () => {
       [
         ...Object.keys(templates),
         ...Object.keys(PIPGLYPH_DERIVED),
+        ...Object.keys(TOKEN_TALL),
         ...Object.keys(STATION_DRESSES),
         ...Object.keys(PIPGLYPH_DERIVED_BANDS),
         ...Object.keys(CC_OVERLAY_BANDS),

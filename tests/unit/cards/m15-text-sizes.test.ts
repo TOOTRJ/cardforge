@@ -44,7 +44,7 @@ import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 
 const FAMILY = new Set<string>(M15_FAMILY_TEMPLATES);
 /** The 2014–19 arch tokens: their name is its prints' (TODO 4.53, v59). */
-const ARCH_TOKENS = new Set<string>(["m15token", "m15tokentext", "m15tokenartifact", "m15tokenartifacttext"]);
+const ARCH_TOKENS = new Set<string>(["m15token", "m15tokentext", "m15tokenartifact", "m15tokenartifacttext", "m15tokentall", "m15tokenartifacttall"]);
 /** Their name's dy: 1 px up at HD from the band-centred 90 px line onto the
  *  prints' baseline (TOKEN_ARCH_TITLE_PRINT_DY). */
 const ARCH_TITLE_DY = -1 / 1500;
@@ -85,7 +85,8 @@ describe("one M15-era display size (layout v32)", () => {
     // …and TODO 5.7's four borderless double-faced bodies.
     // …and TODO 5.5 (b)'s double-faced saga front and back.
     // …and TODO 4.51's six Nyx dresses of the full-art tokens.
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(70);
+    // …and TODO 4.55's two tall-box arch tokens.
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(72);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -287,6 +288,19 @@ describe("baselines (TextSlot.dy)", () => {
     ],
     [
       "m15tokenartifacttext",
+      ARCH_TITLE_DY,
+      kept(V31.tokenType, TYPE_SIZE_PCT) + TOKEN_PILL_LIFT + TOKEN_CC_TYPE_PRINT_DY + TOKEN_TEXT_TYPE_PRINT_DY,
+    ],
+    // The tall-box tokens (TODO 4.55): the text box's band and text, 238 px
+    // up with the pill — the same dy (the prints' baseline 1263, 1 px under
+    // the band's 1262).
+    [
+      "m15tokentall",
+      ARCH_TITLE_DY,
+      kept(V31.tokenType, TYPE_SIZE_PCT) + TOKEN_PILL_LIFT + TOKEN_CC_TYPE_PRINT_DY + TOKEN_TEXT_TYPE_PRINT_DY,
+    ],
+    [
+      "m15tokenartifacttall",
       ARCH_TITLE_DY,
       kept(V31.tokenType, TYPE_SIZE_PCT) + TOKEN_PILL_LIFT + TOKEN_CC_TYPE_PRINT_DY + TOKEN_TEXT_TYPE_PRINT_DY,
     ],

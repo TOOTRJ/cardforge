@@ -15,6 +15,7 @@ import { dfcBodyOf } from "@/lib/cards/dfc";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { hasRulesBoxText, printsPowerToughness } from "@/lib/cards/card-display";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import { archTallStandIn, isArchTallTokenTemplate } from "@/lib/cards/token-height";
 import {
   colorWord,
   isArtifactFrameType,
@@ -188,6 +189,10 @@ export function resolvePublishedFrame(input: ResolveFrameInput): FrameResolution
 const TEXT_BOX_TOKEN_FALLBACK: Partial<Record<FrameTemplate, FrameTemplate>> = {
   m15tokentext: "m15token",
   m15tokenartifacttext: "m15tokenartifact",
+  // The arch's tall box (TODO 4.55) falls back to its regular text box
+  // (archTallStandIn: the text shrinks to fit it, as before 4.55).
+  m15tokentall: "m15tokentext",
+  m15tokenartifacttall: "m15tokenartifacttext",
 };
 
 /** The frames a Scryfall import asks resolvePublishedFrame for, most wanted
@@ -274,6 +279,13 @@ export function autoTokenTextBoxFrame(input: {
   if (wanted === input.template) return wanted;
   const colorKey = pickFrameColorKey([...input.colorIdentity]);
   if (isFrameComboAvailable(wanted, colorKey, input.verifiedKeys)) return wanted;
+  // The arch's tall box (TODO 4.55) not published in the colour: its
+  // regular text box stands in (archTallStandIn) — never the textless arch's
+  // scrim, nor a text-box card left where it was.
+  const standIn = archTallStandIn(wanted);
+  if (standIn && (standIn === input.template || isFrameComboAvailable(standIn, colorKey, input.verifiedKeys))) {
+    return standIn;
+  }
   // The full-art design's textless height would hide the saved text (3.24's
   // `textless`): while the height the text asks for isn't published, the
   // arch's text box stands in when it is — the arch's textless frame keeps
@@ -352,9 +364,18 @@ export function withoutTextlessFrames(verifiedKeys: ReadonlySet<string>): Readon
  * rule), so the credits the plan priced never move. Pure.
  */
 export function remixSavedFrame(
-  input: Parameters<typeof autoTokenTextBoxFrame>[0] & { standIn?: FrameTemplate | null },
+  input: Parameters<typeof autoTokenTextBoxFrame>[0] & {
+    standIn?: FrameTemplate | null;
+    /** The printing landed on the arch's TALL box (a pinned tall-box
+     *  printing, TODO 4.55 — ScryfallRemixMechanics.printed_height): the
+     *  remix keeps it while it saves with text, as the import lands it —
+     *  the height follows the PRINTING, not the new text (owner Round 77:
+     *  an SOI Clue's 39 characters print tall). */
+    printedHeight?: boolean;
+  },
 ): FrameTemplate | undefined {
-  const { standIn, ...card } = input;
+  const { standIn, printedHeight, ...card } = input;
+  if (printedHeight && isArchTallTokenTemplate(card.template) && hasRulesBoxText(card)) return card.template;
   const landed = autoTokenTextBoxFrame(card);
   if (!frameHidesRulesBoxText(landed, card) || standIn === undefined) return landed;
   if (standIn === null) return undefined;
