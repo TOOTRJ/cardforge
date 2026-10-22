@@ -29,9 +29,11 @@ import type { FaceContent } from "@/types/card";
 // ---------------------------------------------------------------------------
 
 /** `~`, or CARDNAME as a word — capitals only ("cardname" in prose is
- *  left), and a WORD by Unicode letters, digits and the underscore on both
- *  sides (not JS's ASCII `\b`: "éCARDNAME" is no token here, as Postgres's
- *  `\m…\M` in migration 0142 reads it). */
+ *  left), with no letter, digit or underscore on either side (Unicode
+ *  letters and digits — not JS's ASCII `\b`: "éCARDNAME" and "CARDNAME_2"
+ *  are no token). Migration 0142 reads the same boundary in SQL:
+ *  `(?<![[:alnum:]_])CARDNAME(?![[:alnum:]_])` (the UTF-8 locale's letters
+ *  and digits, plus the underscore). */
 export const SELF_NAME_TOKEN = /~|(?<![\p{L}\p{N}_])CARDNAME(?![\p{L}\p{N}_])/gu;
 
 /** Whether a text holds a self-name token. */

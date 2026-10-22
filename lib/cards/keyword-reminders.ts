@@ -97,6 +97,13 @@ export const CR_KEYWORD_NAMES: readonly string[] = [
   "Saddle", "Spree", "Freerunning", "Gift", "Offspring", "Impending", "Exhaust", "Max Speed", "Start Your Engines!",
   "Harmonize", "Mobilize", "Job Select", "Tiered", "Station", "Warp", "Mayhem", "Web-slinging", "Firebending",
   "Sneak", "Increment", "Paradigm", "Power-up", "Teamwork", "Storied",
+  // …and the variants the 702 rules themselves name (read 2026-10-21):
+  // 702.37 "Megamorph is a variant of the morph ability"; 702.89 "Some older
+  // cards were printed with the ability “totem armor”"; 702.14c–d's landwalk
+  // examples (the CR lists no other — "plainswalk", "mountainwalk" and the
+  // rest are not in its text); 702.29e–f's cycling examples and "typecycling".
+  "Megamorph", "Totem Armor", "Islandwalk", "Artifact Landwalk", "Nonbasic Landwalk", "Snow Swampwalk",
+  "Snow Forestwalk", "Mountaincycling", "Basic Landcycling", "Typecycling",
   // 701 — keyword actions.
   "Activate", "Attach", "Behold", "Cast", "Counter", "Create", "Destroy", "Discard", "Double", "Triple", "Exchange",
   "Exile", "Fight", "Goad", "Investigate", "Mill", "Play", "Regenerate", "Reveal", "Sacrifice", "Scry", "Search",
@@ -104,6 +111,11 @@ export const CR_KEYWORD_NAMES: readonly string[] = [
   "Proliferate", "Detain", "Populate", "Monstrosity", "Vote", "Bolster", "Manifest", "Support", "Meld", "Exert",
   "Explore", "Assemble", "Adapt", "Amass", "Learn", "Connive", "Incubate", "Discover", "Cloak", "Suspect", "Forage",
   "Manifest Dread", "Endure", "Harness", "Airbend", "Earthbend", "Waterbend", "Blight", "Heal", "Recruit",
+  // 701's multi-word actions (701.26 is "Tap and Untap": both words above).
+  "Tap and Untap", "Set in Motion", "Venture into the Dungeon", "Open an Attraction", "Roll to Visit Your Attractions",
+  "The Ring Tempts You", "Face a Villainous Choice", "Time Travel", "Collect Evidence", "Empower Jace",
+  // Not here: "Prepare" — in this release a card layout and a designation
+  // (rule 722, "Preparation cards"; "prepared"), no 701 / 702 keyword.
 ];
 
 const KEYWORD_NAME_SET: ReadonlySet<string> = new Set(CR_KEYWORD_NAMES.map((name) => name.toLowerCase()));

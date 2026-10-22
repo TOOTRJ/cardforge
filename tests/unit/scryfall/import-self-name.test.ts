@@ -6,6 +6,9 @@ import { mapScryfallToFormPatch } from "@/lib/scryfall/import-mapper";
 import { previewFromImportPatch } from "@/lib/scryfall/preview-from-patch";
 import { oracleSelfNamesAsTokens, withSelfNames } from "@/lib/cards/self-name";
 import { getFrameProfile } from "@/lib/cards/template-layout";
+import { applyRemixNames } from "@/lib/ai/remix-names";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 // ---------------------------------------------------------------------------
 // TODO 6.2 (owner Round 80): an imported FLAVOUR-NAME printing writes the
@@ -86,6 +89,47 @@ describe("the short form only where the landing frame prints the nickname (indep
   });
 });
 
+describe("the AI deck remix maps Oracle's own rules (independent re-check 1)", () => {
+  it("SLD #1186 remixed as \"Vorath, Tide of Ruin\": the short name follows as Vorath, never the full title", () => {
+    const patch = mapScryfallToFormPatch(scryfallCardSchema.parse(printings["sld-1186"]), { oracleRules: true });
+    expect(patch.rules_text).toContain("counter on K'rrik.");
+    const named = applyRemixNames(
+      { title: patch.title!, supertype: patch.supertype, rules_text: patch.rules_text },
+      { title: "Vorath, Tide of Ruin" },
+    );
+    expect(named.ok && named.rules_text).toContain("counter on Vorath.");
+    expect(named.ok && named.rules_text).not.toContain("~");
+  });
+
+  it("the remix step asks for it", () => {
+    const source = readFileSync(join(process.cwd(), "lib/ai/generation-jobs.ts"), "utf8");
+    expect(source).toContain("mapScryfallToFormPatch(scry, { oracleRules: true })");
+  });
+});
+
+describe("a later landing without the plate keeps the short form (independent re-check 2)", () => {
+  it("a legendary flavour-name Spacecraft: its station frame prints no plate", () => {
+    const raw = {
+      ...printings["sld-1186"],
+      name: "Kessa, Star Voyager",
+      type_line: "Legendary Artifact — Spacecraft",
+      mana_cost: "{4}",
+      colors: [],
+      color_identity: [],
+      oracle_text: "When Kessa, Star Voyager enters, scry 1.\nWhenever Kessa attacks, draw a card.",
+      power: "4",
+      toughness: "4",
+      flavor_name: "The Long Dark",
+    };
+    const patch = mapScryfallToFormPatch(scryfallCardSchema.parse(raw));
+    expect(patch.frame_template).toBe("m15artifact");
+    expect(getFrameProfile("m15station").nickname).toBeUndefined();
+    // The whole name is ~ (it draws the same name back anywhere); the short
+    // form stays, as a station landing would print it.
+    expect(patch.rules_text).toBe("When ~ enters, scry 1.\nWhenever Kessa attacks, draw a card.");
+  });
+});
+
 describe("oracleSelfNamesAsTokens", () => {
   const SHORT = { shortForm: true } as const;
   const LEGENDARY = { shortForm: true, supertype: "Legendary" } as const;
@@ -123,6 +167,10 @@ describe("oracleSelfNamesAsTokens", () => {
     expect(oracleSelfNamesAsTokens("Proliferate. Proliferate.", "Proliferate", SHORT)).toBe("Proliferate. Proliferate.");
     expect(oracleSelfNamesAsTokens("Storm (copy it for each spell cast before it.)", "Storm", SHORT)).toBe("Storm (copy it for each spell cast before it.)");
     expect(oracleSelfNamesAsTokens("Split second. Counter target spell.", "Split Second", SHORT)).toBe("Split second. Counter target spell.");
+    // The CR's multi-word actions and its named variants (re-check 3).
+    for (const name of ["Time Travel", "Collect Evidence", "Venture into the Dungeon", "The Ring Tempts You", "Megamorph", "Totem Armor", "Islandwalk", "Basic Landcycling", "Typecycling"]) {
+      expect(oracleSelfNamesAsTokens(`${name} — then ${name}.`, name, SHORT), name).toBe(`${name} — then ${name}.`);
+    }
     // …nor a short form that is one ("Exile, the Unbound" never turns Exile).
     expect(oracleSelfNamesAsTokens("Exile target card.", "Exile, the Unbound", LEGENDARY)).toBe("Exile target card.");
   });

@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import { applyFrameAnatomyPatch } from "@/lib/cards/anatomy";
-import { CR_SOURCE, KEYWORD_REMINDERS, keywordInsert } from "@/lib/cards/keyword-reminders";
+import { CR_KEYWORD_NAMES, CR_SOURCE, KEYWORD_REMINDERS, isKeywordName, keywordInsert } from "@/lib/cards/keyword-reminders";
 import {
   backRulesTextWithSelfName,
   hasSelfNameToken,
@@ -43,7 +43,7 @@ describe("the tokens", () => {
     expect(withSelfName(null, "Kesh")).toBeNull();
   });
 
-  it("CARDNAME is a word by Unicode letters (as Postgres's \\m…\\M in 0142 reads it)", () => {
+  it("CARDNAME is a word: no letter, digit or underscore on either side (0142's [[:alnum:]_] boundary)", () => {
     expect(hasSelfNameToken("éCARDNAME")).toBe(false);
     expect(hasSelfNameToken("CARDNAMEé")).toBe(false);
     expect(hasSelfNameToken("CARDNAME_2")).toBe(false);
@@ -217,6 +217,15 @@ describe("the editor's words", () => {
     for (const evergreen of ["Deathtouch", "Defender", "Double strike", "First strike", "Flash", "Flying", "Haste", "Hexproof", "Indestructible", "Lifelink", "Menace", "Reach", "Trample", "Vigilance", "Ward"]) {
       expect(names).toContain(evergreen);
     }
+  });
+
+  it("the keyword NAMES are the CR's: 701's multi-word actions and 702's named variants, never \"Prepare\" (rule 722, a designation)", () => {
+    for (const name of ["Set in Motion", "Venture into the Dungeon", "Open an Attraction", "Roll to Visit Your Attractions", "The Ring Tempts You", "Face a Villainous Choice", "Time Travel", "Collect Evidence", "Megamorph", "Totem Armor", "Islandwalk", "Typecycling", "Basic Landcycling", "storm", "SPLIT SECOND"]) {
+      expect(isKeywordName(name), name).toBe(true);
+    }
+    expect(isKeywordName("Prepare")).toBe(false);
+    expect(isKeywordName("Plainswalk")).toBe(false);
+    expect(new Set(CR_KEYWORD_NAMES.map((n) => n.toLowerCase())).size).toBe(CR_KEYWORD_NAMES.length);
   });
 
   it("inserts the keyword, its reminder text only when asked for", () => {

@@ -1205,8 +1205,9 @@ Rules and gotchas:
   printing writes its own name as `~` (`oracleSelfNamesAsTokens`: the whole name; a legendary's short form only
   where the printing's AND the landing frame print the plate; never a rules
   word or keyword — `lib/cards/card-names.ts`, shared with the AI remix;
-  a plain import keeps Oracle's name). CARDNAME is a word by Unicode letters (as
-  0142's `\m…\M`). The rules
+  a plain import keeps Oracle's name). CARDNAME is a word: no letter, digit or
+  underscore on either side (Unicode's in TS; 0142 the same as
+  `(?<![[:alnum:]_])CARDNAME(?![[:alnum:]_])`). The rules
   toolbar's words row (`RulesSymbolToolbar selfReference`): `~`, the
   card's "this …" (`selfReferenceFor`) and the keywords with their reminder
   text only when ticked — `lib/cards/keyword-reminders.ts` is DATA, the CR

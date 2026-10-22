@@ -299,6 +299,8 @@ describe("a card stored with a literal ~ (migration 0142's flag)", () => {
       const active = document.activeElement as HTMLElement | null;
       expect(active && active !== document.body).toBe(true);
       expect(editor.contains(active)).toBe(true);
+      // The first row's cost — the first control after the note.
+      expect(active?.getAttribute("name")).toBe("loyalty_abilities.0.cost");
     });
   });
 
