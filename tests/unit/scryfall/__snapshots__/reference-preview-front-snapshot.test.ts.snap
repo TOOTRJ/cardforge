@@ -505,6 +505,9 @@ exports[`buildFrameComparePayload(id, template) — the front path, as before 5.
     "back_face": {
       "artist_credit": "Jason A. Engle",
       "card_type": "sorcery",
+      "color_identity": [
+        "green",
+      ],
       "cost": "{2}{G}",
       "defense": undefined,
       "flavor_text": undefined,
@@ -572,6 +575,9 @@ exports[`buildFrameComparePayload(id, template) — the front path, as before 5.
       "art_url": undefined,
       "artist_credit": "Jason A. Engle",
       "card_type": "sorcery",
+      "color_identity": [
+        "green",
+      ],
       "cost": "{2}{G}",
       "defense": undefined,
       "flavor_text": undefined,
@@ -619,6 +625,9 @@ exports[`buildFrameComparePayload(id, template) — the front path, as before 5.
     "back_face": {
       "artist_credit": "Victor Adame Minguez",
       "card_type": "instant",
+      "color_identity": [
+        "red",
+      ],
       "cost": "{1}{R}",
       "defense": undefined,
       "flavor_text": undefined,
@@ -687,6 +696,9 @@ exports[`buildFrameComparePayload(id, template) — the front path, as before 5.
       "art_url": undefined,
       "artist_credit": "Victor Adame Minguez",
       "card_type": "instant",
+      "color_identity": [
+        "red",
+      ],
       "cost": "{1}{R}",
       "defense": undefined,
       "flavor_text": undefined,
@@ -708,6 +720,7 @@ exports[`buildFrameComparePayload(id, template) — the front path, as before 5.
     "defense": null,
     "flavorText": null,
     "frameStyle": {
+      "partColor": true,
       "template": "adventure",
     },
     "loyalty": null,

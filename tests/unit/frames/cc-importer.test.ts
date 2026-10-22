@@ -888,10 +888,13 @@ describe("the portrait layouts (4.21a)", () => {
     expect(templates.flip.colors.c[0].src).toBe("img/frames/m15/flip/c.png");
     expect(templates.adventure.colors.c[0].src).toBe("img/frames/adventure/regular/a.png");
     expect(templates.aftermath.colors.c[0].src).toBe("img/frames/m15/aftermath/a.png");
-    for (const template of ["adventure", "aftermath"]) {
-      expect(templates[template].notes.join(" "), template).toMatch(/RENDER STAND-IN only/);
-      expect(templates[template].notes.join(" "), template).toMatch(/never offered/);
-    }
+    expect(templates.aftermath.notes.join(" ")).toMatch(/RENDER STAND-IN only/);
+    expect(templates.aftermath.notes.join(" ")).toMatch(/never offered/);
+    // The adventure's colourless key is PRINTED (HOB #170 / #174 / #176, FIN
+    // #283–293) and verified (supabase/seed.sql, all seven keys): the note
+    // says so since 4.26's adventure pages (corrected 2026-10-22).
+    expect(templates.adventure.notes.join(" ")).toMatch(/colourless adventures ARE printed/);
+    expect(templates.adventure.notes.join(" ")).not.toMatch(/never ticked/);
     expect(templates.aftermath.notes.join(" ")).toMatch(/needs TODO 4\.26/);
   });
 

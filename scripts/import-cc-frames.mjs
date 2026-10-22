@@ -124,6 +124,8 @@ import {
   crownBandRecipe,
   crownBandSourceFiles,
   cutStripRider,
+  adventurePageFindings,
+  describeAdventurePage,
   cutThroughMask,
   describeCrownBand,
   describeInnerCrown,
@@ -880,6 +882,51 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
       keys: stripRiderKeys(spec),
       sources,
       output: "strip/<key>.png (+ .webp), the piece's box at 1:1",
+      colors: recipe,
+    };
+  }
+}
+// The adventure's spell PAGE pieces (TODO 4.26): each key's PUBLISHED master
+// (localMaster — this run's own output first, else a local copy at the
+// manifest's sha256) cropped to the page's box through the alpha of CC's
+// bookLeft mask (native 1500 × 2100) into <out>/<template>/page/<key>.png +
+// .webp — after the template loop, like the strip riders.
+for (const [template, def] of Object.entries(CC_TEMPLATES)) {
+  if (!def.page || (only && !only.includes(template))) continue;
+  const spec = def.page;
+  const recipe = {};
+  const sources = {};
+  const pageFailures = [];
+  let mask = null;
+  for (const key of spec.keys) {
+    const out = path.join(outDir, template, "page", `${key}.png`);
+    const src = `${template}/${key}`;
+    sources[key] = `${src}.png`;
+    if (dryRun) {
+      recipe[key] = describeAdventurePage(template, key, spec, manifestShaOf(`${src}.png`) ?? "(unpublished)");
+      console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}`);
+      continue;
+    }
+    const { file, sha, fresh } = localMaster(src);
+    recipe[key] = describeAdventurePage(template, key, spec, sha);
+    const { data: master, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    if (info.width !== OUT_W || info.height !== OUT_H) throw new Error(`${file} is ${info.width}×${info.height}, not ${OUT_W}×${OUT_H}`);
+    mask ??= await rgba(await fetchCached(spec.mask), OUT_W, OUT_H);
+    const piece = cutThroughMask(master, mask, OUT_W, spec.box);
+    const findings = adventurePageFindings(piece, master, mask, OUT_W, OUT_H, spec.box);
+    for (const f of findings.failures) pageFailures.push(`${template}/page/${key}: ${f}`);
+    await writeCutout(piece, spec.box, out);
+    console.log(`wrote ${path.relative(process.cwd(), out)} (+ .webp) ${spec.box.width}×${spec.box.height} from ${path.relative(process.cwd(), file)}${fresh ? " (this run)" : ` (published ${sha.slice(0, 12)})`}: ${findings.opaque} opaque px, ${findings.partial} partial (the mask's soft edge)`);
+  }
+  for (const f of pageFailures) edgeFailures.push(f);
+  if (!dryRun && provenance[template]) {
+    provenance[template].page = {
+      mask: spec.mask,
+      box: spec.box,
+      keys: [...spec.keys],
+      sources,
+      unusedMasks: spec.unused,
+      output: "page/<key>.png (+ .webp), the piece's box at 1:1 — drawn by the partPage overlay slot (lib/cards/template-layout.ts ADVENTURE_PAGE) where the spell's colour differs from the creature's",
       colors: recipe,
     };
   }

@@ -1246,9 +1246,11 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   },
   // The Prepare page's own colour (TODO 4.27 → 4.26): print colours the
   // spell's page by the SPELL — a hybrid spell's grey page, another
-  // colour's page — and PipGlyph paints it in the card's one colour.
+  // colour's page — and PipGlyph paints it in the card's one colour. The
+  // adventure's storybook page too (WOE #221: a red page beside a black
+  // frame) — drawn since 4.26's adventure pages, so no gap on the frame.
   "part-colour": {
-    match: { layouts: ["prepare"], partColourDiffers: true },
+    match: { layouts: ["prepare", "adventure"], partColourDiffers: true },
     reason: "its spell's page prints the spell's own colour, and PipGlyph paints it in the card's",
     blockedBy: "4.26",
   },

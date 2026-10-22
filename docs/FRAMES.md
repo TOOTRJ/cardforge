@@ -3884,7 +3884,7 @@ per card. The second part's colour is card data — `back_face.color_identity`
 card: `frame_style.partColor`, drawn only `=== true` (lib/cards/anatomy.ts,
 FRAME_ANATOMY_KEYS; lib/cards/part-color.ts).
 
-- **Rollout.** A NEW card on split, aftermath or prepare starts on (the
+- **Rollout.** A NEW card on split, aftermath, prepare or adventure starts on (the
   creator switches it on for a card on one of them —
   `useSecondPartColorFollow`, never NEW_CARD_ANATOMY, so a card on any other
   frame sends what it always did — and `anatomyDefaults` stamps it for a
@@ -4017,8 +4017,91 @@ colour (`partColorGateError`). For the owner's ticks: `split/w`, `split/b`,
 against their prints, and `prepare/m` now covers the two-colour Prepare's
 pair masters (its known close stand-in no longer).
 
-**Not built: adventure and flip** (an owner decision — the adventure's
-shaped book masks; TODO 4.26).
+**Adventure: the storybook page** (owner decision 2026-10-22: pre-cut
+pieces; a `partPage` overlay slot, ADVENTURE_PAGE — the slot Prepare's page
+uses, so no renderer code of its own). Print paints the storybook's LEFT
+page — its name and type bars, its paper, its curled edge and the left half
+of the spine — in the SPELL's colour and the right page in the creature's:
+WOE #221 Callous Sell-Sword // Burn Together is a red page beside a black
+frame. Of the 347 plain 2015-frame adventure printings (Scryfall
+2026-10-22: `layout:adventure frame:2015`, no extended art, borderless,
+showcase, full art or etched), 78 print a spell of other colours than the
+creature: 62 a mono spell beside a mono creature (WOE #221–241, LCI #231,
+their promos and List reprints, the Alchemy `ywoe` / `ytdm` cards — and
+TDM's Stormbroods, Omens that print a page of their own: still nearest, the
+`omen` gap), 14 a mono spell beside a colourless creature (HOB #170 / #174 /
+#176, FIN's Towns, MB2 #577), one a two-colour spell beside a colourless
+land (MB2 #621, a playtest card) and one a mono spell beside a three-colour
+creature (YTDM #26, Alchemy). No print shows a TWO-COLOUR spell's page beside a creature of other
+colours: the two-colour spells (MKM #212, MH3 #196, ELD #212's hybrid, HOB
+#166) sit on a creature of the same pair, whose master already paints the
+page.
+
+- **The pieces** (`adventure/page/<key>`, `scripts/lib/cc-frames.mjs`
+  ADVENTURE_PAGE_CUT, built by `import-cc-frames.mjs --only adventure`
+  after the masters): each key's PUBLISHED master cropped to x 72..753 ×
+  y 1312..1937 (the mask's bbox, 73..752 × 1313..1937, grown to an even
+  origin and size — whole px at the 750 bake), its alpha Card Conjurer's
+  `bookLeft` mask (native 1500 × 2100, no resample: 415 121 opaque px and
+  3 147 on its soft edge), its colour the master's on every px — a piece
+  over its own master is that master. Keys `w u b r g m`; a two-colour
+  spell (either dress) maps to the gold page (the slot's `keyMap`), which a
+  gold creature's master already paints. CC's `bookLeftMulticolor` (a page
+  ramped between two colours, x ≈ 360 → 560) is read by nothing; no
+  colourless page (no adventure SPELL is colourless; a colourless CREATURE
+  — HOB #170 / #174 / #176, FIN #283–293, on `adventure/c`, CC's artifact
+  frame, verified like the other six keys — with a coloured spell draws
+  that colour's page: HOB #170's white page over `adventure/c` matches
+  print). Twelve objects (PNG +
+  WebP), dev bucket only until the owner promotes; provenance in
+  `frame-sources.json` (`adventure.page`). The seven masters rebuild byte
+  for byte.
+- **Drawn** only with the switch on and where the spell's page key (after
+  the keyMap) differs from the creature's colour key — a mono adventure
+  (ELD #115 Bonecrusher Giant) draws nothing new.
+- **Import**: an adventure printing (Scryfall layout `adventure`) names its
+  spell's colour from the spell's cost (`back_face.color_identity`); the
+  card's colour is the creature's (Scryfall's card `colors`), never a first
+  part's. The `part-colour` gap now matches adventure printings too, and the
+  adventure frame draws it: WOE #221–241 stay exact, as on main. The
+  crowned (WOE #220, LCI #231, HOB), two-colour (MKM #212, MH3 #196, ELD
+  #212) and Omen (TDM) printings keep their gaps. A colourless creature
+  with a coloured spell (HOB #170 The Arkenstone // Seek the Heart: a white
+  page over the artifact frame) draws that colour's page over
+  `adventure/c` where the look is on. TDM's Omens (layout `adventure`, the
+  `omen` gap) now draw their spell's colour page too — not measured
+  against TDM's print yet (TODO 4.26).
+- **Measured on print** (WOE #221–241 and LCI #231 at 1500 × 2100; the
+  page's bars right of the name, the type bar right of its text, the left
+  page's paper, the right page's paper — median colour; 17 printings whose
+  spell is another colour): the name bar is Δ 28 (RGB distance, mean; max
+  70) from print with the page on against Δ 107 with it off, the type bar
+  Δ 15 against 118, the right page Δ 7 either way (the creature's). The
+  left page's PAPER is about 28–35 levels per channel darker than print's
+  on every colour (Δ 54 on, 59 off; the independent check: Δ 51–56 on WOE
+  #221 / #223 / #233 / #239) — the Card Conjurer masters' own paper, the
+  same on a one-colour adventure (ELD #115 Δ 72–76 for red on red): a tone
+  of the masters, not of the page, and out of this change (a correction:
+  TODO 4.26a). Where the creature's own paper sat closer to print's than the
+  spell colour's does, the look ON reads further from print there (WOE #233:
+  a white creature, a green spell — the green master's darker paper). The edges are the
+  masters': the page's left edge at x 60 (print 61), its bottom at 1937
+  (print 1937), the spine's dark fold at x 751 (print 749 — the masters'
+  own, unchanged); the name and type ink is WHITE on every colour's bars,
+  the white page's taupe bars included (print's brightest 0.5 % reads 255
+  on all 17), as the profile draws it — no ink changes with the colour.
+
+**Verification.** The page rides the adventure tick of the spell's colour
+key (`partColourVerdict`, `partColorGateError`; a two-colour spell the gold
+`m`): `adventure` is verified in all seven keys — `c` included, CC's
+artifact frame for the colourless creatures (`supabase/seed.sql`, which
+mirrors production) — so the look lands on in every colour once the pieces
+are promoted. A tick
+was given against the creature's master; the owner signs the pages off on
+the review sheet (or re-ticks against WOE #221–241).
+
+**Not built: flip** (no flip printing on the 2015 frame is two-coloured:
+the 8 print both halves in the card's colour).
 
 ### The Universes Beyond frames (4.25)
 

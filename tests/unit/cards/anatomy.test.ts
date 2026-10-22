@@ -451,7 +451,10 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // STAMP_TEMPLATES below.)
     expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true, stamp: true, dfcIcon: false, rulesAlign: true, border: false });
     for (const t of ["adventure", "saga"]) {
-      expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: profileOffersRulesAlign(getFrameProfile(t)), border: false });
+      // (The adventure's one piece is the spell's page in its own colour,
+      // TODO 4.26: the `partPage` slot.)
+      const part = t === "adventure" ? { partColor: true } : {};
+      expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: profileOffersRulesAlign(getFrameProfile(t)), border: false, ...part });
     }
     // The Expeditions (TODO 4.11 wave 1) print the collector line, nothing
     // else a card switches on.
@@ -494,7 +497,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       const family = template === "m15dfcfront" || template === "m15dfclandfront" || template === "m15borderlessdfcfront" || template === "sagadfcfront" ? { dfcIcon: "arrows" as const } : {};
       // …and each part in its own colour (TODO 4.26) on split, aftermath
       // and the Prepare frame.
-      const part = template === "split" || template === "aftermath" || template === "prepare" ? { partColor: true as const } : {};
+      const part = template === "split" || template === "aftermath" || template === "prepare" || template === "adventure" ? { partColor: true as const } : {};
       expect(anatomyDefaults(template), template).toEqual({ ...(crown ? { crown: true } : {}), ...(pair ? { twoColor: true } : {}), ...line, ...stamp, ...family, ...part });
       expect(normalizeAnatomy({ template, finish: "foil", crown: true, twoColor: false, stamp: "oval" }, template, "creature"), template).toEqual({
         template,
