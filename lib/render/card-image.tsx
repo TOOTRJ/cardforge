@@ -55,7 +55,8 @@ import {
   FRAME_SPLIT_OVERLAP_PX,
   frameColorKeysFor,
   frameMasterKey,
-  frameSplitFor,
+  cardFrameSplit,
+  partFactsOfBackFace,
   pickFrameColorKey,
 } from "@/components/cards/frame-layer";
 import {
@@ -291,6 +292,8 @@ function anatomyFactsOf(card: CardPreviewData) {
     dfc: card.dfc ? { role: card.dfc.role, icon: card.dfc.icon, stripKey: card.dfc.otherFace.stripKey } : null,
     // The holofoil stamp's "auto" reads the rarity (TODO 4.9c).
     rarity: card.rarity,
+    // The second part's own colour (TODO 4.26): the Prepare page overlay.
+    part: partFactsOfBackFace(card.backFace),
   };
 }
 
@@ -375,21 +378,24 @@ function FrameSlice({
   x1,
   width,
   height,
+  axisY = false,
 }: {
   src: string;
   x0: number;
   x1: number;
   width: number;
   height: number;
+  /** [x0, x1) are ROWS (a horizontal seam, TODO 4.26: aftermath). */
+  axisY?: boolean;
 }) {
   return (
     <div
       style={{
         position: "absolute",
-        top: 0,
-        left: x0,
-        width: x1 - x0,
-        height,
+        top: axisY ? x0 : 0,
+        left: axisY ? 0 : x0,
+        width: axisY ? width : x1 - x0,
+        height: axisY ? x1 - x0 : height,
         overflow: "hidden",
         display: "flex",
         zIndex: 5,
@@ -401,8 +407,8 @@ function FrameSlice({
         alt=""
         style={{
           position: "absolute",
-          top: 0,
-          left: -x0,
+          top: axisY ? -x0 : 0,
+          left: axisY ? 0 : -x0,
           width,
           height,
           objectFit: "fill",
@@ -516,14 +522,26 @@ function CardImage({
   const aboveRowsNotch = holoStamp?.aboveRows ? (allOverlays.find((o) => o.anatomy === "holoStamp") ?? null) : null;
   // A two-colour Dragon Wing card draws BOTH colours' frames split down the
   // seam (FrameProfile.twoColorSplit); the plates keep colorKey ("m").
-  const frameSplit = frameSplitFor(
+  // A split / aftermath card with its parts in their own colours (TODO
+  // 4.26, FrameProfile.partColorSeam) draws its second part's master past
+  // its seam the same way — aftermath's on a horizontal seam.
+  const frameSplit = cardFrameSplit(
     layout,
     card.colorIdentity as ColorIdentity[] | undefined,
+    card,
+    card.frameStyle,
+    partFactsOfBackFace(card.backFace),
   );
   const frameDataUrl = getFrameDataUrl(template, frameSplit?.leftKey ?? masterKey);
   const splitDataUrl = frameSplit ? getFrameDataUrl(template, frameSplit.rightKey) : null;
   // Whole pixels: the seam is a hard edge in both renderers.
-  const splitX = frameSplit ? Math.round((width * frameSplit.atPct) / 100) : 0;
+  const splitAxisY = frameSplit?.axis === "y";
+  const splitX = frameSplit ? Math.round(((splitAxisY ? height : width) * frameSplit.atPct) / 100) : 0;
+  // The mask's split, on the seam's axis.
+  const maskSplit =
+    frameSplit && splitDataUrl
+      ? { href: splitDataUrl, atPct: frameSplit.atPct, ...(splitAxisY ? { axis: "y" as const } : {}) }
+      : null;
   // Per-frame-master footer ink — the same footerInk() the preview resolves
   // (outlined when the profile prints it on the art, footerOnArt).
   const footerInkResolved = layout.footer ? footerInk(layout.footer, masterKey, layout) : null;
@@ -934,6 +952,7 @@ function CardImage({
           x1={splitX + FRAME_SPLIT_OVERLAP_PX}
           width={width}
           height={height}
+          axisY={splitAxisY}
         />
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
@@ -952,7 +971,7 @@ function CardImage({
         />
       )}
       {splitDataUrl ? (
-        <FrameSlice src={splitDataUrl} x0={splitX} x1={width} width={width} height={height} />
+        <FrameSlice src={splitDataUrl} x0={splitX} x1={splitAxisY ? height : width} width={width} height={height} axisY={splitAxisY} />
       ) : null}
 
       {/* Anatomy overlays (the legendary crown band, TODO 4.6.0) — right
@@ -1050,11 +1069,7 @@ function CardImage({
         <EtchedSheen
           id="etched"
           frameHref={frameDataUrl}
-          split={
-            frameSplit && splitDataUrl
-              ? { href: splitDataUrl, atPct: frameSplit.atPct }
-              : null
-          }
+          split={maskSplit}
           overlays={[...drawnOverlays([...overlays, ...railPieces, ...stationPieces, ...nicknamePieces]), ...borderMaskOverlays]}
           landscape={layout.orientation === "landscape"}
           width={width}
@@ -1076,7 +1091,7 @@ function CardImage({
           frameHref={frameDataUrl}
           // Split frames: the right half masks with the right colour's master
           // (already drawn by its FrameSlice), like the etched sheen.
-          split={frameSplit && splitDataUrl ? { href: splitDataUrl, atPct: frameSplit.atPct } : null}
+          split={maskSplit}
           art={foilArtLayers({
             layout,
             colorKey: masterKey,
@@ -4006,7 +4021,7 @@ export function squareCornerFillsOf(card: CardPreviewData, medium: WhiteBorderMe
   const template = normalizeFrameTemplate(card.frameStyle?.template, card);
   const layout = resolveFrameProfile(template, card.profileOverrides);
   const colors = card.colorIdentity as ColorIdentity[] | undefined;
-  const split = frameSplitFor(layout, colors);
+  const split = cardFrameSplit(layout, colors, card, card.frameStyle, partFactsOfBackFace(card.backFace));
   const key = frameMasterKey(layout, colors, card, card.frameStyle);
   const fills = squareCornerFills(template, layout.artSlot, {
     left: split?.leftKey ?? key,
@@ -4188,7 +4203,13 @@ export async function renderCardImage(
   // also needs its art's mask copies (foilMaskSource, sharp).
   const frameTemplate = normalizeFrameTemplate(card.frameStyle?.template, card);
   const frameLayout = resolveFrameProfile(frameTemplate, card.profileOverrides);
-  const frameKeys = frameColorKeysFor(frameLayout, card.colorIdentity as ColorIdentity[] | undefined, card, card.frameStyle);
+  const frameKeys = frameColorKeysFor(
+    frameLayout,
+    card.colorIdentity as ColorIdentity[] | undefined,
+    card,
+    card.frameStyle,
+    partFactsOfBackFace(card.backFace),
+  );
   const [, , foilArt, foilSecondArt, secondArtSize] = await Promise.all([
     Promise.all(frameKeys.map((key) => preloadFrame(frameTemplate, key))),
     preloadFrameAssets(frameAssetPathsFor(card)),

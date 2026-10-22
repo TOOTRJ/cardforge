@@ -151,7 +151,8 @@ describe("buildFrameComparePayload", () => {
     const payload = await buildFrameComparePayload(FIRE_ICE_ID, "split");
     if (!payload) throw new Error("no payload");
 
-    expect(payload.preview.frameStyle).toEqual({ template: "split" });
+    // (…with each half in its own colour, TODO 4.26.)
+    expect(payload.preview.frameStyle).toEqual({ template: "split", partColor: true, firstPartColor: ["red"] });
     expect(payload.preview.title).toBe("Fire");
     expect(payload.preview.cost).toBe("{1}{R}");
     expect(payload.preview.rulesText).toContain("divided as you choose");
@@ -168,11 +169,14 @@ describe("buildFrameComparePayload", () => {
     expect(back?.art_url).toBeUndefined();
   });
 
-  it("keeps a two-colour printing two colours, where the creator's patch says multicolor", async () => {
+  it("draws each half of a split printing in its own colour (TODO 4.26: Fire red, Ice blue) — the card's colour still both halves' (M2)", async () => {
     lookup.card = fireIce;
     const payload = await buildFrameComparePayload(FIRE_ICE_ID, "split");
     expect(payload?.patch.color_identity).toEqual(["multicolor"]);
     expect([...(payload?.preview.colorIdentity ?? [])].sort()).toEqual(["blue", "red"]);
+    expect(payload?.preview.frameStyle?.firstPartColor).toEqual(["red"]);
+    expect(payload?.preview.backFace?.color_identity).toEqual(["blue"]);
+    expect(payload?.preview.frameStyle).toMatchObject({ template: "split", partColor: true });
   });
 
   it("carries an adventure's Stomp half and keeps one colour one colour", async () => {

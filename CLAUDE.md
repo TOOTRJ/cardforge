@@ -1216,6 +1216,25 @@ Rules and gotchas:
   card's "this …" (`selfReferenceFor`) and the keywords with their reminder
   text only when ticked — `lib/cards/keyword-reminders.ts` is DATA, the CR
   rule numbers sourced and dated (`CR_SOURCE`).
+- Each part in its own colour (TODO 4.26): `frame_style.partColor` (an
+  addition, drawn only `=== true`; a new card on split / aftermath /
+  prepare starts on through `useSecondPartColorFollow` — never
+  NEW_CARD_ANATOMY — an import follows the printing, a stored card keeps
+  its look) with the second part's colour on `back_face.color_identity`
+  (`partColorFromCost`, `lib/cards/part-color.ts`; empty = the card's).
+  A split / aftermath card's `color_identity` stays the WHOLE card's (M2:
+  Fire // Ice is red + blue); its first half's frame colour is
+  `frame_style.firstPartColor` (frame data, never read for behaviour; the
+  gate reads `frameGateColors`). Imports and AI remixes take the look on
+  only where both parts are verified (`partColourVerdict`, M1) — else off,
+  never a refused save after the art.
+  Split / aftermath draw the second part's master past a hard seam in the
+  masters' black gutter (`partColorSeam`, `cardFrameSplit` — the
+  twoColorSplit machinery on an axis, both renderers, both finish masks,
+  the preload); the Prepare spell's page is a `partPage` overlay
+  (`prepare/page/<key>`, `partPageKeyOf`) over the creature's master or its
+  pair master. The second colour is gated in its own colour
+  (`partColorGateError`). Adventure and flip: not built (owner decision).
 - The art's automatic fit (TODO 3b.18): a picture that lands on a card
   (upload, a real card's art, an import, an AI picture) takes
   `fitArtToWindow()` (`lib/cards/art-fit.ts`: fill the window, show the

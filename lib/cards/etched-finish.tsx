@@ -67,7 +67,7 @@ export function EtchedSheen({
    *  the seam (% of the card's width). The mask then holds `frameHref` left
    *  of the seam and this image right of it — exactly the frame the face
    *  painted, so the sheen follows each half's own wings. */
-  split?: { href: string; atPct: number } | null;
+  split?: { href: string; atPct: number; axis?: "y" } | null;
   /** The face's anatomy overlays (the crown band, TODO 4.6.0) — each image
    *  stretched over its card-% rect, added to the mask after the frame, so
    *  the crown etches with the frame it is drawn over. Empty = the mask is
@@ -77,6 +77,9 @@ export function EtchedSheen({
   const vw = landscape ? 2100 : 1500;
   const vh = landscape ? 1500 : 2100;
   const seamX = split ? (vw * split.atPct) / 100 : 0;
+  // A horizontal seam (TODO 4.26: aftermath's lower part): the first image
+  // above it, the second below.
+  const seamY = split?.axis === "y" ? (vh * split.atPct) / 100 : null;
   const p = ETCH_PERIOD;
   const h = p / 2;
   // Two diagonals per tile, each continued across the tile edges so the
@@ -104,12 +107,20 @@ export function EtchedSheen({
           <stop offset="0.62" stopColor="#ffffff" stopOpacity={0.06} />
           <stop offset="1" stopColor="#ffffff" stopOpacity={0} />
         </linearGradient>
-        {split ? (
+        {split && seamY !== null ? (
+          <clipPath id={`${id}-left`}>
+            <rect x="0" y="0" width={vw} height={seamY + SPLIT_OVERLAP} />
+          </clipPath>
+        ) : split ? (
           <clipPath id={`${id}-left`}>
             <rect x="0" y="0" width={seamX + SPLIT_OVERLAP} height={vh} />
           </clipPath>
         ) : null}
-        {split ? (
+        {split && seamY !== null ? (
+          <clipPath id={`${id}-right`}>
+            <rect x="0" y={seamY} width={vw} height={vh - seamY} />
+          </clipPath>
+        ) : split ? (
           <clipPath id={`${id}-right`}>
             <rect x={seamX} y="0" width={vw - seamX} height={vh} />
           </clipPath>

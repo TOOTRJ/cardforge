@@ -57,18 +57,16 @@ describe("the layout frames' new gaps", () => {
     });
   });
 
-  it("a two-colour aftermath is nearest too — blocked by 4.26's per-part colour, as the registry's aftermath/m note says (4.21a follow-up)", () => {
-    // HOU #157 Driven // Despair (g // b): each half prints its own colour,
-    // which no two-colour dress draws; the gap's item follows the frame.
+  it("a two-colour aftermath is EXACT since 4.26 drew each part in its own colour (it was nearest, blocked by 4.26 — the registry's aftermath/m note, 4.21a follow-up)", () => {
+    // HOU #157 Driven // Despair (g // b): each half prints its own colour —
+    // the green top and the black lower part past the seam (TODO 4.26).
     const card = scryfallCardSchema.parse((referencePrintings as Record<string, unknown>)["7713ba59-dd4c-4b49-93a7-292728df86b8"]);
     expect(card.set).toBe("hou");
     expect(card.collector_number).toBe("157");
     expect(frameMatchFromScryfall(card)).toMatchObject({
-      status: "nearest",
+      status: "exact",
       template: "aftermath",
-      signature: "layout/2015+two-colour",
-      blockedBy: "4.26",
-      reason: "two-colour cards print a split frame, and PipGlyph uses its gold one",
+      signature: "layout/2015",
     });
     // The gap stays 4.6f's on the layout frames whose dress IS the pair.
     expect(match("khm-201").blockedBy).toBe("4.6f");

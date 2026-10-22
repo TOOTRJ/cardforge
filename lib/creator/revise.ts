@@ -166,7 +166,7 @@ export function frameAnatomyPatchFor(
 ): FrameAnatomyPatch | undefined {
   const storedStyle = (stored.frame_style ?? {}) as Record<string, unknown>;
   const patch: FrameAnatomyPatch = {};
-  for (const key of ["crown", "twoColor"] as const) {
+  for (const key of ["crown", "twoColor", "partColor"] as const) {
     const next = values.frame_style[key];
     if (typeof next === "boolean" && next !== storedStyle[key]) patch[key] = next;
   }
