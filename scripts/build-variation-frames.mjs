@@ -29,7 +29,7 @@
 // 4.7 / 4.35 / 4.42, layout v58): Card Conjurer's 'Extended Art Frames' and
 // 'Magic Fest Promos' through scripts/import-cc-frames.mjs, frames bucket.
 // So did `fullart`, the Zendikar Rising hedron showcase (TODO 4.11, layout
-// v62): MSE's 375 px `zendikar` masters (upscaled 4×, missing MSE's hedron
+// v63): MSE's 375 px `zendikar` masters (upscaled 4×, missing MSE's hedron
 // `back` layer) gave way to Card Conjurer's 'Zendikar Rising' pack.
 // ---------------------------------------------------------------------------
 import sharp from "sharp";

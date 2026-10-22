@@ -39,7 +39,7 @@ describe("Card Conjurer frame profiles", () => {
     for (const template of ccTemplates) {
       const profile = getFrameProfile(template);
       if (profile.hideCost || profile.costRect) continue;
-      // The Zendikar Rising hedron showcase (TODO 4.11, layout v62): its own
+      // The Zendikar Rising hedron showcase (TODO 4.11, layout v63): its own
       // 2020 prints' row — 3 px above and 2 px further right than current
       // print's (centred 153.6 px, the last disc 1351.2 across), 70 px discs.
       if (template === "fullart") {

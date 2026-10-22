@@ -1788,14 +1788,24 @@ function isShowcaseSignature(signature: string): boolean {
  *  and whose template draws it: the Theros Beyond Death constellation
  *  showcase (THB #258–268 — all eleven legendary, each under the 2015 crown
  *  in its colour with the Nyx starfield strip inside; owner 2026-10-13,
- *  NYX_CONSTELLATION_CROWN in lib/cards/template-layout.ts) and the Zendikar
- *  Rising hedron showcase (ZNR #290–313: its legendary printings — #300
- *  Moraug, #312 Omnath, #313 Phylath, Scryfall's `legendary` frame effect —
- *  print the pack's crown, its pill ends drawn bigger; owner 2026-10-22,
- *  TODO 4.11: "follow the print", ZNR_CROWN in lib/cards/template-layout.ts).
- *  A printing with one of these signatures imports as its scan: the crown
- *  ON where it prints one. */
-const CROWNED_SHOWCASE_SIGNATURES: ReadonlySet<string> = new Set(["showcase/thb/constellation", "showcase/znr/hedron"]);
+ *  NYX_CONSTELLATION_CROWN in lib/cards/template-layout.ts) — the Lord
+ *  of the Rings scroll showcase (TODO 4.11: every legendary print of LTR
+ *  #452–730 and LTC #411–490 wears the scroll's own crown, the rolled top
+ *  edge of its title scroll — LOTRSCROLL_CROWN; its two-colour printings,
+ *  nearest on the gold master until the pair dress, wear it too) — and the
+ *  Zendikar Rising hedron showcase (ZNR #290–313: its legendary printings —
+ *  #300 Moraug, #312 Omnath, #313 Phylath, Scryfall's `legendary` frame
+ *  effect — print the pack's crown, its pill ends drawn bigger; owner
+ *  2026-10-22, TODO 4.11: "follow the print", ZNR_CROWN in
+ *  lib/cards/template-layout.ts). A printing with one of these signatures
+ *  imports as its scan with the crown ON where it prints one. */
+const CROWNED_SHOWCASE_SIGNATURES: ReadonlySet<string> = new Set([
+  "showcase/thb/constellation",
+  "showcase/ltr/scroll",
+  "showcase/ltr/scroll+two-colour",
+  "showcase/ltr/scroll+two-colour-hybrid",
+  "showcase/znr/hedron",
+]);
 
 /** Whether a printing prints the STANDARD legendary crown (see
  *  ScryfallImportPatch.printed_crown): the `legendary` frame effect, on a

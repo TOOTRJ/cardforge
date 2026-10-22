@@ -76,7 +76,7 @@ describe("layout v35 — the preview paints the art where the bake does", () => 
     expect(slot(preview("nyx", ["white"], "creature"))).toEqual(["6%", "11.2%", "88%", "81.8%"]);
     cleanup();
     // fullart: Card Conjurer's art bounds under the whole frame (TODO 4.11,
-    // layout v62), the art-window check's spare round the window.
+    // layout v63), the art-window check's spare round the window.
     expect(slot(preview("fullart", ["white"], "creature"))).toEqual(["3.9%", "2.8%", "92.2%", "86.6%"]);
   });
 });

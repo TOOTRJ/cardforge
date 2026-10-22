@@ -120,7 +120,8 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   // The bottom half is drawn in this box and turned a quarter turn.
   aftermath: { front: [1273, 471], second: { size: [741, 427], rotation: 90 } },
   lotr: { front: [1080, 945] },
-  lotrscroll: { front: [1260, 945] },
+  // Card Conjurer's scroll window (TODO 4.11, layout v62).
+  lotrscroll: { front: [1280, 941] },
   avatar: { front: [1320, 1134] },
   bloomburrow: { front: [1320, 1134] },
   bloomanime: { front: [1395, 1932] },

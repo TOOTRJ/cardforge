@@ -895,7 +895,7 @@ Rules and gotchas:
   line. An ADDITION: opt-in per card, no bump, no sweep; a stored card on
   the frame keeps its look. One of the showcases whose import names the
   crown ON (`CROWNED_SHOWCASE_SIGNATURES`, `lib/scryfall/import-mapper.ts`;
-  the ZNR hedron, `showcase/znr/hedron`, is the other, TODO 4.11) — every
+  with the LOTR scroll and the ZNR hedron, TODO 4.11) — every
   other legendary showcase still imports with it off. Since v55 the
   masters' RIM wears the M15 FAMILY's tones (owner Rounds 59 / 61: print
   read per card against the same card's regular printing — never a raw

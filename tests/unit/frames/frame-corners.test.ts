@@ -78,7 +78,7 @@ describe("the Phase B allow-list", () => {
     // re-cut and toned by the importer (the frames bucket).
     // extendedart, m15textless and m15textlessland left it with TODO 4.7 /
     // 4.35 (layout v58): Card Conjurer's packs, cut by the importer.
-    // fullart left it with TODO 4.11 (layout v62): Card Conjurer's
+    // fullart left it with TODO 4.11 (layout v63): Card Conjurer's
     // 'Zendikar Rising', cut by the importer.
     for (const t of ["adventure", "aftermath", "flip", "saga", "retro", "retroland", "modern", "modernland", "extendedart", "m15textless", "m15textlessland", "fullart"]) {
       expect(CORNER_NORMALISE_TEMPLATES, t).not.toHaveProperty(t);
@@ -90,7 +90,7 @@ describe("the Phase B allow-list", () => {
   });
 
   it("never normalises the showcase families, Alpha or the Card Conjurer masters", () => {
-    for (const t of ["bloomburrow", "bloomanime", "lotr", "lotrscroll", "tarkirdragon", "tarkirghostfire", "tarkirdraconic", "avatar"]) {
+    for (const t of ["bloomburrow", "bloomanime", "lotr", "tarkirdragon", "tarkirghostfire", "tarkirdraconic", "avatar"]) {
       expect(NEVER_NORMALISE.test(t), t).toBe(true);
       expect(shouldNormalise(t, "w"), t).toBe(false);
     }
@@ -99,7 +99,9 @@ describe("the Phase B allow-list", () => {
     // in the frames bucket now, cut at the one corner by the importer — the
     // pass has no git file of either to touch.
     expect(NEVER_NORMALISE.test("battle")).toBe(false);
-    for (const t of ["agclassic", "alphaland", "split", "battle", "nyx", "m15", "m15borderless", "fullartland", "adventure", "aftermath", "flip"]) {
+    // …and the Lord of the Rings scroll with TODO 4.11, the same way.
+    expect(NEVER_NORMALISE.test("lotrscroll")).toBe(false);
+    for (const t of ["agclassic", "alphaland", "split", "battle", "lotrscroll", "nyx", "m15", "m15borderless", "fullartland", "adventure", "aftermath", "flip"]) {
       expect(shouldNormalise(t, "w"), t).toBe(false);
       expect(CORNER_NORMALISE_TEMPLATES, t).not.toHaveProperty(t);
     }

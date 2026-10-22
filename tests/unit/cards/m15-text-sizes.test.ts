@@ -89,7 +89,8 @@ describe("one M15-era display size (layout v32)", () => {
     // …and TODO 4.51's six Nyx dresses of the full-art tokens.
     // …and TODO 4.55's two tall-box arch tokens.
     // …and TODO 4.27's Prepare frame.
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(73);
+    // …and TODO 4.11's Lord of the Rings scroll (with its own bump, v62).
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(74);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -165,9 +166,10 @@ describe("one M15-era display size (layout v32)", () => {
       // Layout v61 (TODO 3.34): the CC-framed M15 profiles and the walkers
       // print the 70 px disc; flip, aftermath and the MSE-framed showcases
       // keep v32's 72.75.
-      // …and the Zendikar Rising hedron showcase since its Card Conjurer
-      // rebuild (TODO 4.11, layout v62): its prints' 70 px disc.
-      const disc = COST_ROW_PRINT_TEMPLATES.includes(t) || ZNR_HEDRON_TEMPLATES.includes(t) ? CC_M15_COST_DISC_PCT : COST_DISC_PCT;
+      // (The Lord of the Rings scroll took the CC M15 row with its own bump,
+      // v63 / TODO 4.11; the Zendikar Rising hedron its prints' 70 px disc
+      // with its Card Conjurer rebuild, v63.)
+      const disc = COST_ROW_PRINT_TEMPLATES.includes(t) || t === "lotrscroll" || ZNR_HEDRON_TEMPLATES.includes(t) ? CC_M15_COST_DISC_PCT : COST_DISC_PCT;
       expect(p.costSizePct ?? p.title.sizePct, t).toBe(sized(t, disc));
       if (p.secondFace?.costSizePct) expect(p.secondFace.costSizePct, t).toBe(sized(t, COST_DISC_PCT));
     }
@@ -368,6 +370,9 @@ describe("baselines (TextSlot.dy)", () => {
     ["extendedart", base.title, cc],
     // …and its land dress (owner Round 63): the same pack's land frames.
     ["extendedartland", base.title, cc],
+    // The Lord of the Rings scroll (layout v62, TODO 4.11): Card Conjurer's
+    // 'Scroll' pack, the M15 pack's text layout — the CC type line.
+    ["lotrscroll", base.title, cc],
     // MSE-framed: baselines kept (their print offsets are TODO 4.21's).
     ["expeditionland", base.title, base.type],
     ["nyx", base.title, base.type],
@@ -391,7 +396,7 @@ describe("baselines (TextSlot.dy)", () => {
     // px below the pill-centred line (158.4 px on the prints), "Battle —
     // Siege" 2 px below the bar-centred one. Fractions of ITS 2100 px width.
     ["battle", 2 / 2100, 2 / 2100],
-    // The Zendikar Rising hedron showcase (TODO 4.11, layout v62): the
+    // The Zendikar Rising hedron showcase (TODO 4.11, layout v63): the
     // CC-framed slots, its type line 5.6 px lower on the 2014–22 prints'.
     ["fullart", base.title, cc + 5.6 / 1500],
     // The textless promo pair (layout v58): CC 'Magic Fest Promos', the m15
@@ -458,7 +463,7 @@ describe("baselines (TextSlot.dy)", () => {
     // its band does not ride the textless re-cut (its master has its own,
     // TOKEN_REGULAR_RECUT).
     expect(at("m15tokentext")).toEqual([-1, 0, 0, 0]);
-    // The ZNR hedron (v62): the CC type slot 5.6 / 2.8 px lower.
+    // The ZNR hedron (v63): the CC type slot 5.6 / 2.8 px lower.
     expect(at("fullart")).toEqual([-2, 1, -1, 0]);
     expect(at("aftermath")).toEqual([-2, -1, -1, 0]);
     expect(at("m15fullartland")).toEqual([0, 0, 0, 0]);
@@ -592,7 +597,6 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
   const V31_SPLIT_DIGEST = "43801d93b7c4e70505e4562174231f8f887fa2ba0acf0f66534410b2d7667c0d";
   const V31_DIGESTS: Record<string, string> = {
     lotr: "2541c98b09237643cc6ef8d761fdff42f85ffc8d8dc842322e45915e8f62771b",
-    lotrscroll: "45a76201319b406e6e6e3612ec875beeadf94315ee6f127af60b2cc0648e1882",
     avatar: "18b37fde1037dfccc0041e515a4f80246a9cbe0ed3e3277ca9a88014394a703a",
     bloomburrow: "736ecedbf0f59adbf31506777ef976bf18ce0b5ff549696201cefb1aa1250bfd",
     bloomanime: "86e5e9d3da194ee1ccfbe5e0654e1401024f303c54a0a912dee5e792d206705f",
@@ -651,6 +655,8 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
     // …and the 2003 pair with TODO 4.10b.
     // …and the 1993 pair with TODO 4.10c (layout v48 —
     // tests/unit/cards/alpha-1993-profile.test.ts).
+    // (The Lord of the Rings scroll joined the family with its Card Conjurer
+    // re-source, layout v62 / TODO 4.11: off this list.)
     const REBUILT = new Set<string>(["split", "retro", "retroland", "modern", "modernland", "agclassic", "alphaland"]);
     const outside = FRAME_TEMPLATE_VALUES.filter((t) => !FAMILY.has(t) && !REBUILT.has(t));
     expect([...outside].sort()).toEqual(Object.keys(V31_DIGESTS).sort());

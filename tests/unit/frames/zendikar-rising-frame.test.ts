@@ -29,7 +29,7 @@ import { CC_OVERLAY_BANDS, CC_TEMPLATES, ZNR_CROWN_BAND, ZNR_NOTCH, clearZnrOval
 // ---------------------------------------------------------------------------
 // TODO 4.11 (wave 1) — the Zendikar Rising hedron showcase (`fullart`, ZNR
 // #290–313) re-sourced from Card Conjurer's 'Zendikar Rising' pack (layout
-// v62): the recipe, the notch it splits off, the crown band, the profile's
+// v63): the recipe, the notch it splits off, the crown band, the profile's
 // slots and inks, and the import's landing.
 // ---------------------------------------------------------------------------
 

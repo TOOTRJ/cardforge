@@ -192,7 +192,7 @@ describe("layout v35 — where the art is painted (real bakes, clear stand-in ma
     expect(blue(375, 536)).toBe("art2");
   });
 
-  it("paints fullart's art on Card Conjurer's art bounds under the whole frame (4.17b; TODO 4.11, layout v62)", async () => {
+  it("paints fullart's art on Card Conjurer's art bounds under the whole frame (4.17b; TODO 4.11, layout v63)", async () => {
     const { frameObjectKey } = await import("@/lib/frames/frame-url");
     const clear = await solid(1500, 2100, [0, 0, 0], 0);
     const sha256 = createHash("sha256").update(clear).digest("hex");
@@ -201,7 +201,7 @@ describe("layout v35 — where the art is painted (real bakes, clear stand-in ma
     bucket.byUrl.set(`${ORIGIN}/${frameObjectKey("fullart/g.png", sha256.slice(0, 12))}`, clear);
     const at = await bake(card("fullart", ["green"]));
     // 3.9/2.8/92.2 × 86.6 → 29.25–720.75 × 29.4–938.7 at 750 px: CC's art
-    // bounds (4/2.86/92 × 86.48) with the art-window check's spare (v62; it
+    // bounds (4/2.86/92 × 86.48) with the art-window check's spare (v63; it
     // was MSE's 3.8/2.7/92.4 × 90.3 from v35).
     expect(at(30, 500), "left").toBe("art");
     expect(at(28, 500), "left").toBe("ground");

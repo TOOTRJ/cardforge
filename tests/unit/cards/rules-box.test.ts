@@ -105,7 +105,7 @@ describe("the main box on every template", () => {
         "m15station", "m15stationland", "extendedartstation", "m15borderlessstation",
         // The Universes Beyond frames (TODO 4.25): their M15 twins' boxes.
         "m15ub", "m15ubartifact", "m15ubland",
-        // The Zendikar Rising hedron showcase (TODO 4.11, layout v62): the
+        // The Zendikar Rising hedron showcase (TODO 4.11, layout v63): the
         // CC-framed M15 box.
         "fullart",
         // The transform bodies (TODO 5.1a): M15's box and margins on both faces.
@@ -118,6 +118,9 @@ describe("the main box on every template", () => {
         // The Prepare frame (TODO 4.27): the creature's half of M15's box,
         // the prints' margins (ink from x 127, M15's 4 px inside the rect).
         "prepare",
+        // The Lord of the Rings scroll (layout v62, TODO 4.11): the pack's
+        // text layout is M15's, its box and margins.
+        "lotrscroll",
       ].sort(),
     );
     for (const t of withPrintMargins) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 4, y: 0 });

@@ -576,6 +576,27 @@ export function twoColorDressOf(
 }
 
 /** The facts the anatomy of one card face depends on. */
+/** What a card's type line tells its frame: the card type and the
+ *  supertype words (CardPreviewData, a preview face and the creator form all
+ *  carry both) — and its mana cost, which picks a two-colour card's dress
+ *  (twoColorDressOf: hybrid only when every coloured pip is hybrid). */
+export type FrameTypeInfo = {
+  cardType?: string | null;
+  supertype?: string | null;
+  cost?: string | null;
+};
+
+/** An artifact, as far as the frame goes: the Artifact card type, or
+ *  "Artifact" among the supertype words (an "Artifact Creature — Juggernaut"
+ *  is the creature type with the Artifact supertype). */
+export function isArtifactFrameType(type: FrameTypeInfo | null | undefined): boolean {
+  if (!type) return false;
+  if (type.cardType === "artifact") return true;
+  return (type.supertype ?? "")
+    .split(/\s+/)
+    .some((word) => word.toLowerCase() === "artifact");
+}
+
 export type AnatomyFacts = {
   colors: readonly ColorIdentity[] | null | undefined;
   cost?: string | null;
@@ -802,7 +823,10 @@ export function resolveFrameOverlays(
       const look = resolveTwoColor(profile, style, facts);
       const goldPair = slot.anatomy === "crown" && slot.pairCrownOnGold ? twoColorPairOf(facts.colors) : null;
       const base = look ? look.pair : goldPair ?? facts.colorKey;
-      key = slot.keyMap?.[base] ?? base;
+      // A template that dresses a colour key in two masters by type
+      // (artifactMasterKeys) keys an artifact's overlay by its own master.
+      const artifact = slot.artifactKeyMap?.[base] !== undefined && isArtifactFrameType(facts);
+      key = (artifact ? slot.artifactKeyMap?.[base] : undefined) ?? slot.keyMap?.[base] ?? base;
     }
     if (!slot.keys.includes(key)) continue;
     out.push({ anatomy: slot.anatomy, rect: slot.rect, key, path: slot.assetPathTemplate.replace("{key}", key) });

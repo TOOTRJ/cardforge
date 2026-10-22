@@ -53,6 +53,8 @@ describe("where the pieces are declared", () => {
       "extendedartstation", "m15borderlessstation",
       // The Nyx Constellation frame (owner 2026-10-13): the Nyx crown band, its arms faded.
       "nyx",
+      // The Lord of the Rings scroll (TODO 4.11): the pack's own crown band.
+      "lotrscroll",
       // The Zendikar Rising hedron showcase (TODO 4.11): its own crown band.
       "fullart",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",

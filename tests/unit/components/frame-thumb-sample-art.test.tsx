@@ -222,7 +222,7 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
       tarkirghostfire: [93, 92],
       // Layout v35 (4.17b): nyx's and fullart's art run under the whole text
       // box (fullart's out past its ring's rim too).
-      // …and since TODO 4.11 (layout v62) fullart's is Card Conjurer's art
+      // …and since TODO 4.11 (layout v63) fullart's is Card Conjurer's art
       // bounds under the whole frame.
       fullart: [92.2, 86.6],
       // The textless promo pair (layout v58): CC's art bounds.
