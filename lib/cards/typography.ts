@@ -106,6 +106,18 @@ export const MDFC_STRIP_LINE_PX = 54;
  *  Planeswalker, saga and flip use it too (owner decision 2026-09-28). */
 export const COST_DISC_PCT = 0.0485;
 
+/** The Card Conjurer-framed M15 family's cost disc (layout v60, TODO 3.34):
+ *  70 px at HD — what the prints draw, 2014 → 2026 alike (a circle fitted
+ *  to the rim of every disc whose symbol leaves its rim clear — {U}, the
+ *  numerals, {X}, {C} — on 228 Scryfall PNGs, 2026-10-21: 70.1 ± 0.2 on
+ *  June-2023+ prints, 69.6–70.5 before; COST_DISC_PCT drew 73), and with the
+ *  style's 0.12 gap (8 px) the prints' 78 px pitch (77.7–78.4 measured; 82
+ *  before) and, × 1.2, their 84–85 px large pip (84 drawn; 88 before).
+ *  Read only by the CC_M15_COST profiles (lib/cards/template-layout.ts):
+ *  the planeswalker, flip, aftermath and the MSE-framed showcases keep
+ *  COST_DISC_PCT. 35 px exactly at 750. */
+export const CC_M15_COST_DISC_PCT = 70 / 1500;
+
 /** Set-symbol BOX height (FrameProfile.symbolSizePct on the family) — CC's
  *  symbol box, 0.041 H = 86 px at HD. An uploaded icon or the default mark
  *  is drawn contained in a square of this size; a Keyrune glyph's font size

@@ -3045,3 +3045,89 @@ describe("v59 — the 2014–19 arch token on its prints (TODO 4.53)", () => {
     for (const t of FRAME_TEMPLATE_VALUES) if (!ARCH.includes(t) && !TALL.includes(t)) expect(getFrameProfile(t).title.smallCaps, t).toBeUndefined();
   });
 });
+
+describe("v60 — the cost row as current print draws it (the 2023 pip move + TODO 3.34)", () => {
+  // Renumbered with COST_ROW_PRINT_LAYOUT_VERSION if another bump merges
+  // first.
+  const V = 60;
+  const png = "https://x/y.png";
+  /** A v59 bake: only v60 can be pending. */
+  const at = (template: string, over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    visibility: "public",
+    layout_version: V - 1,
+    rendered_image_url: png,
+    frame_style: { template, finish: "regular" },
+    card_type: "creature",
+    title: "Worm",
+    cost: "{2}{R}",
+    back_face: null,
+    ...over,
+  });
+
+  it("is a sweep, never a badge, scoped to the 35 CC-framed M15 templates, and re-opens only the ticks of the ones that draw a cost", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.COST_ROW_PRINT_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect(lv.COST_ROW_PRINT_TEMPLATES).toHaveLength(35);
+    expect(lv.VERSION_SCOPES[V]).toBeTypeOf("function");
+    // Not verification-neutral, but narrower than the bake scope: a land
+    // body and a transform back never draw a cost, so their ticks stay.
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).not.toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual(lv.COST_ROW_PRINT_VERIFICATION_TEMPLATES);
+    const kept = lv.COST_ROW_PRINT_TEMPLATES.filter((t) => !lv.COST_ROW_PRINT_VERIFICATION_TEMPLATES.includes(t));
+    expect([...kept].sort()).toEqual(
+      [
+        "extendedartland", "m15borderlessdfcback", "m15borderlessland", "m15dfcback", "m15dfcbackleft", "m15dfclandback",
+        "m15dfclandfront", "m15mdfclandback", "m15mdfclandfront", "m15textlessland", "sagadfcback",
+      ].sort(),
+    );
+    for (const t of lv.COST_ROW_PRINT_VERIFICATION_TEMPLATES) expect(lv.COST_ROW_PRINT_TEMPLATES, t).toContain(t);
+    // Without a card to judge by, the 35 owe it; nothing else does.
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(lv.COST_ROW_PRINT_TEMPLATES.includes(t));
+  });
+
+  it("the frozen list is every profile that draws the CC M15 cost row (while v60 is the latest)", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    if (lv.CARD_LAYOUT_VERSION !== V) return;
+    const drawn = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).costDx === 2 / 1500);
+    expect([...drawn].sort()).toEqual([...lv.COST_ROW_PRINT_TEMPLATES].sort());
+    for (const t of drawn) {
+      const p = getFrameProfile(t);
+      expect([p.costSizePct, p.costDy, p.costDx], t).toEqual([70 / 1500, -7 / 1500, 2 / 1500]);
+    }
+    // The planeswalkers, the portrait layouts and the MSE-framed showcases
+    // keep their rows (their own items).
+    for (const t of ["m15pw", "m15borderlesspw", "m15borderlesspwtall", "flip", "aftermath", "nyx", "fullart", "expeditionland", "lotr", "lotrscroll", "tarkirdraconic"]) {
+      expect(lv.COST_ROW_PRINT_TEMPLATES, t).not.toContain(t);
+      expect(getFrameProfile(t).costDx, t).toBeUndefined();
+    }
+  });
+
+  it("re-bakes a card that draws a cost on the 35 — its own, or a double-faced back's — and stamps one with none", () => {
+    for (const t of ["m15", "m15artifact", "saga", "m15borderless", "m15mdfcfront", "adventure"]) {
+      expect(isRenderStale(V - 1, t, undefined, V, at(t)), t).toBe(true);
+      expect(isRenderStale(V - 1, t, undefined, V, at(t, { cost: "" })), t).toBe(false);
+      expect(isRenderStale(V - 1, t, undefined, V, at(t, { cost: null })), t).toBe(false);
+      expect(isRenderStale(V - 1, t, undefined, V, at(t, { cost: "  " })), t).toBe(false);
+    }
+    // A {} frame_style draws m15.
+    expect(isRenderStale(V - 1, null, undefined, V, at("m15", { frame_style: {} }))).toBe(true);
+    // A modal land front with no cost whose back prints one: its back bake moves.
+    const back = { cost: "{1}{G}", title: "Back" };
+    expect(isRenderStale(V - 1, "m15mdfclandfront", undefined, V, at("m15mdfclandfront", { cost: null, back_face: back }))).toBe(true);
+    expect(isRenderStale(V - 1, "m15mdfclandfront", undefined, V, at("m15mdfclandfront", { cost: null, back_face: { title: "Back" } }))).toBe(false);
+    // An adventure's panel cost is not this row: no front cost, no re-bake.
+    expect(isRenderStale(V - 1, "adventure", undefined, V, at("adventure", { cost: null, back_face: back }))).toBe(false);
+    // A row that doesn't carry the cost can't be judged → affected.
+    const noCost: Record<string, unknown> = at("m15");
+    delete noCost.cost;
+    expect(isRenderStale(V - 1, "m15", undefined, V, noCost)).toBe(true);
+    // Off the 35, a cost owes nothing.
+    for (const t of ["m15pw", "m15land", "nyx", "flip", "m15token"]) expect(isRenderStale(V - 1, t, undefined, V, at(t)), t).toBe(false);
+  });
+});

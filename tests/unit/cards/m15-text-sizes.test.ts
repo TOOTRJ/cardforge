@@ -6,8 +6,10 @@ import opentype from "opentype.js";
 import { describe, expect, it } from "vitest";
 import manifest from "@/lib/frames/frame-manifest.json";
 import { M15_FAMILY_TEMPLATES } from "@/lib/cards/m15-family";
+import { COST_ROW_PRINT_TEMPLATES } from "@/lib/cards/layout-version";
 import { DISPLAY_BASELINE_BELOW_CENTRE_EM, getFrameProfile, type FrameProfile, type TextSlot } from "@/lib/cards/template-layout";
 import {
+  CC_M15_COST_DISC_PCT,
   ADVENTURE_PANEL_COST_PCT,
   ADVENTURE_PANEL_PCT,
   COST_DISC_PCT,
@@ -160,7 +162,11 @@ describe("one M15-era display size (layout v32)", () => {
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       if (p.hideCost) continue;
-      expect(p.costSizePct ?? p.title.sizePct, t).toBe(sized(t, COST_DISC_PCT));
+      // Layout v60 (TODO 3.34): the CC-framed M15 profiles print the 70 px
+      // disc; the planeswalkers, flip, aftermath and the MSE-framed
+      // showcases keep v32's 72.75.
+      const disc = COST_ROW_PRINT_TEMPLATES.includes(t) ? CC_M15_COST_DISC_PCT : COST_DISC_PCT;
+      expect(p.costSizePct ?? p.title.sizePct, t).toBe(sized(t, disc));
       if (p.secondFace?.costSizePct) expect(p.secondFace.costSizePct, t).toBe(sized(t, COST_DISC_PCT));
     }
     // The battle's: the family's 72.75 px disc on its landscape card (4.20

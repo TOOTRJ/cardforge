@@ -20,7 +20,7 @@ import {
   type SymbolStyleSpec,
 } from "@/lib/cards/symbol-style";
 import { getFrameProfile } from "@/lib/cards/template-layout";
-import { COST_DISC_PCT, RULES_HD_WIDTH } from "@/lib/cards/typography";
+import { RULES_HD_WIDTH } from "@/lib/cards/typography";
 import type { FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -156,8 +156,9 @@ describe("the preview's disc shadow is the bake's", () => {
     expect(previewDiscShadowCss(FLAT, 73, 53)).toBeUndefined();
   });
 
-  it("a cost row's discs: one layer, 4 px left and 5 down of a 73 px disc", () => {
-    const { discPx } = costRowHdPx(COST_DISC_PCT);
+  it("a cost row's discs: one layer, 4 px left and 5 down of m15's 70 px disc (layout v60)", () => {
+    const { discPx } = costRowHdPx(getFrameProfile("m15").costSizePct!);
+    expect(discPx).toBe(70);
     expect(discShadowPx(symbolStyle("modern"), discPx)).toEqual({ left: 4, down: 5 });
     const pips = costPips(render(<CardPreview {...card("m15")} />));
     expect(pips).toHaveLength(3);
@@ -173,7 +174,7 @@ describe("the preview's disc shadow is the bake's", () => {
       expect(pip.className).not.toContain("ms-shadow");
     }
     // …while the same card's cost row keeps its one layer.
-    const { discPx } = costRowHdPx(COST_DISC_PCT);
+    const { discPx } = costRowHdPx(getFrameProfile("m15").costSizePct!);
     for (const pip of costPips(body)) expectBakeShadow(pip, discPx);
     // The untap symbol is the prints': a white arrow on a near-black disc.
     const untap = pips[4];

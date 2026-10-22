@@ -1490,7 +1490,59 @@ export const UB_SEE_THROUGH_C_TEMPLATES: readonly string[] = ["m15ub"];
 //            byte-identical. NOT verification-neutral: the name and the
 //            art slot are what a tick judges, so the arch tokens' ticks go
 //            stale and are re-made once (4.53 "Rollout": as 4.49's did).
+//   v60    — the cost row as CURRENT print draws it (the 2023 pip move +
+//            TODO 3.34, owner 2026-10-22: "match current cards"). On the 35
+//            templates that drew the Card Conjurer M15 lift
+//            (COST_ROW_PRINT_TEMPLATES — every profile spreading
+//            template-layout's CC_M15_COST): the discs 70 px (73), so the
+//            pitch 78 (82) and a large pip 84 (88); their centre 4.75 px
+//            LOWER, on 156.8 px at HD (152.05 measured; June-2023+ prints
+//            sit 4.6 below the old row, 2014–April 2023 prints ~1 below),
+//            and the row's right end 2 px further right (costDx). Measured
+//            on 228 Scryfall PNGs against our own bakes of the same names
+//            and costs (docs/FRAMES.md "The cost row as printed since
+//            2023"). The planeswalkers, flip, aftermath, the old frames and
+//            the MSE-framed showcases (nyx, fullart, expeditionland) keep
+//            theirs. COST_ROW_PRINT_LAYOUT_VERSION below — the ONE
+//            constant. A CORRECTION ("sweep"), never a badge, after the
+//            owner's before / after sheet. Card-scoped (v60Changed): a card
+//            on the 35 that DRAWS a cost — its front's, or the back's of a
+//            double-faced body (a modal back prints one) — and with it every
+//            name beside a cost, whose room the narrower row widens; a card
+//            with no cost bakes byte-identical. NOT verification-neutral:
+//            the pips are what a tick's title band judges — but only on the
+//            templates that ever draw a cost (COST_ROW_PRINT_VERIFICATION_
+//            TEMPLATES): the land bodies and the transform backs, which
+//            print none, keep their ticks.
 // ---------------------------------------------------------------------------
+
+/** The cost row as current print draws it (the 2023 pip move + TODO 3.34):
+ *  the CC-framed M15 family's disc, centre and right end. ITS version lives
+ *  here alone — CARD_LAYOUT_VERSION, the scoped tables, the card scope and
+ *  the rollout below read this constant — so a bump that merges first moves
+ *  it in one place (this constant, the test's `V` and the docs move
+ *  together). Frozen once it ships. */
+export const COST_ROW_PRINT_LAYOUT_VERSION = 60;
+/** v60 — every template whose profile drew CC_M15_COST_DY at v59 (a test
+ *  holds it to the profiles while v60 is the latest). Frozen. */
+export const COST_ROW_PRINT_TEMPLATES: readonly string[] = [
+  "m15", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15ub", "m15ubartifact", "m15snow", "m15devoid",
+  "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlessstation",
+  "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
+  "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
+  "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
+  "saga", "sagadfcfront", "sagadfcback", "adventure", "extendedart", "extendedartland", "extendedartstation",
+  "m15textless", "m15textlessland",
+];
+/** v60 — the ones that ever DRAW a cost, whose ticks it re-opens: the list
+ *  above less the land bodies (a land prints no cost) and the transform
+ *  backs (a transform back has none, lib/cards/dfc-gate.ts). Frozen. */
+export const COST_ROW_PRINT_VERIFICATION_TEMPLATES: readonly string[] = [
+  "m15", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15ub", "m15ubartifact", "m15snow", "m15devoid",
+  "m15borderless", "m15borderlessartifact", "m15borderlessstation",
+  "m15dfcfront", "m15mdfcfront", "m15mdfcback", "m15borderlessdfcfront", "m15borderlessmdfcfront", "m15borderlessmdfcback",
+  "saga", "sagadfcfront", "adventure", "extendedart", "extendedartstation", "m15textless",
+];
 
 /** The 2014–19 arch token on its prints (TODO 4.53): the gold small-caps
  *  name and the art slot on the window. ITS version lives here alone —
@@ -1588,7 +1640,7 @@ export const LARGE_PIPS_LAYOUT_VERSION = 53;
  *  latest). */
 export const V53_LARGER_COST_TEMPLATES: readonly string[] = ["modern", "modernland"];
 
-export const CARD_LAYOUT_VERSION = TOKEN_ARCH_PRINT_LAYOUT_VERSION;
+export const CARD_LAYOUT_VERSION = COST_ROW_PRINT_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -1786,6 +1838,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // name and art slot; every card on them. Not verification-neutral: the
   // arch tokens' ticks are judged by this scope and re-made once.
   [TOKEN_ARCH_PRINT_LAYOUT_VERSION]: TOKEN_ARCH_PRINT_TEMPLATES,
+  // The cost row as current print draws it (the 2023 pip move + 3.34): the
+  // 35 CC-framed M15 templates — and on them only a card that draws a cost
+  // (v60Changed). Its ticks: COST_ROW_PRINT_VERIFICATION_TEMPLATES.
+  [COST_ROW_PRINT_LAYOUT_VERSION]: COST_ROW_PRINT_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -1890,6 +1946,9 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
   // two transform FRONT bodies' rules layout (the reverse-P/T float); the
   // modal fronts' ticks — none yet — would stay fresh.
   40: V40_VERIFICATION_TEMPLATES,
+  // v60: the cost row moves on 35 templates, but a land body or a transform
+  // back never draws a cost — their ticks stay fresh.
+  [COST_ROW_PRINT_LAYOUT_VERSION]: COST_ROW_PRINT_VERIFICATION_TEMPLATES,
 };
 
 /**
@@ -2227,6 +2286,29 @@ function v35Changed(card: ScopeCard): boolean {
  * other colour bakes byte-identical. A row without its identities can't be
  * judged → conservative.
  */
+/**
+ * Whether layout v60 (the cost row as current print draws it) changed a
+ * card's bake, on a template the template scope lets through
+ * (COST_ROW_PRINT_TEMPLATES): the card DRAWS a cost — its own, or, on a
+ * double-faced body, its back's (a modal back prints its cost on its own
+ * bake; a transform back has none, so a back cost there re-bakes to the
+ * same pixels — read wider than drawn). A name beside a cost gains room
+ * with the narrower row, so it is in scope with its cost. A card with no
+ * cost on either face bakes byte-identical. A row that doesn't carry the
+ * cost (or, on a double-faced body, the back) → affected.
+ */
+function v60Changed(card: ScopeCard): boolean {
+  if (card.cost === undefined) return true;
+  const drawn = (v: unknown) => typeof v === "string" && v.trim() !== "";
+  if (drawn(card.cost)) return true;
+  if (card.frame_style === undefined) return true;
+  const template = normalizeFrameTemplate(templateOfFrameStyle(card.frame_style), card);
+  if (!template.includes("dfc")) return false;
+  if (card.back_face === undefined) return true;
+  const back = card.back_face && typeof card.back_face === "object" ? (card.back_face as Record<string, unknown>) : null;
+  return drawn(back?.cost);
+}
+
 function v57Changed(card: ScopeCard): boolean {
   if (card.color_identity === undefined) return true;
   return pickFrameColorKey((card.color_identity ?? []).filter(isColorIdentity)) === "c";
@@ -2695,6 +2777,9 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // `m15ub` (the template scope), a card that paints the colourless master
   // — v57Changed.
   [UB_SEE_THROUGH_C_LAYOUT_VERSION]: v57Changed,
+  // v60 — the cost row as current print draws it: on the 35 templates (the
+  // template scope), a card that draws a cost — v60Changed.
+  [COST_ROW_PRINT_LAYOUT_VERSION]: v60Changed,
 };
 
 /** `frame_style.finish` from the jsonb column, or null when absent (= regular). */
@@ -2829,6 +2914,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [NYX_PRINT_TONES_LAYOUT_VERSION]: "sweep", // the Nyx Constellation frame's rim on the family's tones THB #258–268 wear (owner Rounds 59 / 61) — a correction of a look against its own print on a frame never ticked, never a badge
   [UB_STAMP_TONES_LAYOUT_VERSION]: "sweep", // the Universes Beyond triangle as printed (4.25 follow-up): "auto" on every rarity, the matte triangle of a common / uncommon, the hologram's tone — a correction of the stamp against the frame's own print on three frames a day old, never a badge
   [UB_SEE_THROUGH_C_LAYOUT_VERSION]: "sweep", // the see-through colourless Universes Beyond spell frame (4.25 follow-up): an addition the visual gate records as a bump on a combo no card can be on (never ticked, offered nowhere) — never a badge
+  [COST_ROW_PRINT_LAYOUT_VERSION]: "sweep", // the cost row as current print draws it (the 2023 pip move + 3.34): 70 px discs, 78 pitch, 4.75 px lower, 2 px right on the 35 CC-framed M15 templates — a correction against the frame's own current print after the owner's before / after sheet, never a badge
   [TOKEN_ARCH_PRINT_LAYOUT_VERSION]: "sweep", // the 2014–19 arch token on its prints (4.53): the gold small-caps name and the art slot on the window — a correction of the four arch frames against their own prints, never a badge
   [CC_RESOURCE_LAYOUT_VERSION]: "sweep", // extendedart and the textless pair re-sourced from Card Conjurer (4.7 / 4.35 / 4.42; owner Q6) — a correction of three looks against their own prints on frames never ticked, never a badge
   [LARGE_PIPS_LAYOUT_VERSION]: "sweep", // hybrid and twobrid discs large, the large pip's factor per frame and place (3.21) — a correction against the prints after the owner's round-49 sheets, never a badge

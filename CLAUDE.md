@@ -525,7 +525,10 @@ Rules and gotchas:
   frozen literal in `layout-version.ts`) prints names, type lines, pips and
   the set symbol at the constants in `lib/cards/typography.ts`
   (`TITLE_SIZE_PCT`, `TYPE_SIZE_PCT`, `COST_DISC_PCT`, `SET_SYMBOL_BOX_PCT`…)
-  — never a profile literal. A slot with `fit: "measured"` takes its size,
+  — never a profile literal. The 35 CC-framed M15 profiles' cost row is ONE
+  spread, `CC_M15_COST` (layout v60: `CC_M15_COST_DISC_PCT` 70 px, the
+  2023+ prints' place, `costDx` a translate that never moves the name's
+  room); the walkers, flip, aftermath and the MSE showcases keep theirs. A slot with `fit: "measured"` takes its size,
   text (ONE "…" past the 5 pt floor) and width from `fitTitleBand` /
   `fitTypeLineBand` in BOTH renderers (bake: `measuredLinePx`; preview: the
   HD bake's px); `TextSlot.dy` moves the text only; the set symbol's size and

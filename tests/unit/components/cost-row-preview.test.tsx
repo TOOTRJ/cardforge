@@ -9,7 +9,7 @@ import { ManaCostGlyphs } from "@/components/cards/mana-cost-glyphs";
 import { costRowHdPx } from "@/lib/cards/render-tiers";
 import { costPipGapPx, MANA_GLYPH_OF_DISC, manaGlyphPx, symbolStyleOf } from "@/lib/cards/symbol-style";
 import { getFrameProfile } from "@/lib/cards/template-layout";
-import { COST_DISC_PCT, RULES_HD_WIDTH } from "@/lib/cards/typography";
+import { CC_M15_COST_DISC_PCT, COST_DISC_PCT, RULES_HD_WIDTH } from "@/lib/cards/typography";
 import type { FrameTemplate } from "@/types/card";
 
 // ---------------------------------------------------------------------------
@@ -77,6 +77,8 @@ function baked(template: FrameTemplate) {
 describe("the preview's cost row is the stored bake's", () => {
   it("costRowHdPx is CostGlyphs' disc and gap at the stored width", () => {
     expect(costRowHdPx(COST_DISC_PCT)).toEqual({ discPx: 73, gapPx: 9, cardWidthPx: 1500 });
+    // The CC-framed M15 family's printed row (layout v60): 70 px discs, 78 apart.
+    expect(costRowHdPx(CC_M15_COST_DISC_PCT)).toEqual({ discPx: 70, gapPx: 8, cardWidthPx: 1500 });
     expect(costRowHdPx(0.04)).toEqual({ discPx: 60, gapPx: 7, cardWidthPx: 1500 });
     expect(costRowHdPx(0.04, "landscape")).toEqual({ discPx: 84, gapPx: 10, cardWidthPx: 2100 });
     // Never a gap that rounds away.
@@ -121,26 +123,26 @@ describe("the preview's cost row is the stored bake's", () => {
     });
   }
 
-  it("a split disc is a LARGE pip's — 88 px where a plain disc is 73 (layout v53; its halves: tests/unit/render/mana-gem-parity.test.tsx)", () => {
+  it("a split disc is a LARGE pip's — 84 px where a plain disc is 70 (layout v53, m15 since v60; its halves: tests/unit/render/mana-gem-parity.test.tsx)", () => {
     const row = costRow(render(<CardPreview {...card("m15", "{W/U}{2/G}{G}")} />));
     const [hybrid, twobrid, mono] = Array.from(row.children);
     for (const pip of [hybrid, twobrid]) {
       // In the row's own em (1 em = a plain disc): no font size of its own.
       expect(css(pip, "font-size")).toBe("");
-      expect(num(css(pip, "width"), "em") * 73).toBeCloseTo(88, 1);
-      expect(num(css(pip, "height"), "em") * 73).toBeCloseTo(88, 1);
+      expect(num(css(pip, "width"), "em") * 70).toBeCloseTo(84, 1);
+      expect(num(css(pip, "height"), "em") * 70).toBeCloseTo(84, 1);
       expect(css(pip, "flex-shrink")).toBe("0");
     }
     // A two-colour Phyrexian disc is the split disc on the larger size
-    // (layout v49): 88 px where a plain disc is 73, centred in the row.
+    // (layout v49): 84 px where a plain disc is 70 (v60), centred in the row.
     const phy = costRow(render(<CardPreview {...card("m15", "{2}{G/U/P}{G/P}")} />));
     const [, split, solid] = Array.from(phy.children);
     expect(css(split, "font-size")).toBe("");
-    expect(num(css(split, "width"), "em") * 73).toBeCloseTo(88, 1);
-    expect(num(css(split, "height"), "em") * 73).toBeCloseTo(88, 1);
-    expect(num(css(solid, "width"), "em") * num(css(solid, "font-size"), "em") * 73).toBeCloseTo(88, 1);
+    expect(num(css(split, "width"), "em") * 70).toBeCloseTo(84, 1);
+    expect(num(css(split, "height"), "em") * 70).toBeCloseTo(84, 1);
+    expect(num(css(solid, "width"), "em") * num(css(solid, "font-size"), "em") * 70).toBeCloseTo(84, 1);
     expect(phy.className).toContain("items-center");
-    expect(num(css(mono, "font-size"), "em") * 73).toBeCloseTo(manaGlyphPx(73), 2);
+    expect(num(css(mono, "font-size"), "em") * 70).toBeCloseTo(manaGlyphPx(70), 2);
   });
 
   it("an owner's pip image is one disc wide too, and the pickers' rows are as they were", () => {

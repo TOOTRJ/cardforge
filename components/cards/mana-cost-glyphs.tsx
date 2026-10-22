@@ -48,6 +48,9 @@ type ManaCostGlyphsProps = {
   /** Vertical nudge of the whole cost (a CSS length, e.g. a `cqw` string;
    *  negative = up) — a frame profile's `costDy` (CardPreview only). */
   offsetY?: string;
+  /** Horizontal nudge of the whole cost (a CSS length; positive = right) —
+   *  a frame profile's `costDx` (CardPreview only, layout v60). */
+  offsetX?: string;
   /** The frame's symbol style (lib/cards/symbol-style.ts, TODO 4.8.0) — a
    *  prop of the CARD's uses only (CardPreview hands it its profile's): the
    *  pickers, dialogs, deck lists and articles omit it and keep the
@@ -446,6 +449,7 @@ export function ManaCostGlyphs({
   disc,
   overrides,
   offsetY,
+  offsetX,
   symbols = symbolStyle(undefined),
   className,
 }: ManaCostGlyphsProps) {
@@ -470,7 +474,11 @@ export function ManaCostGlyphs({
       aria-label={`Cost ${cost}`}
       style={{
         ...(disc ? { fontSize: disc.size, columnGap: disc.gap } : { fontSize: SIZE_PX[size] }),
-        ...(offsetY ? { transform: `translateY(${offsetY})` } : {}),
+        ...(offsetX
+          ? { transform: `translate(${offsetX}, ${offsetY ?? "0px"})` }
+          : offsetY
+            ? { transform: `translateY(${offsetY})` }
+            : {}),
       }}
     >
       {tokens.map((token, i) => {
