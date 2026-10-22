@@ -3304,9 +3304,11 @@ const OLD_PAIR_NOTE = {
 //     colourless nonland printing of the run is an artifact — Shire
 //     Scarecrow #700, The One Ring #697, LTC #485–489) and `c` the pack's
 //     brown 'Land Frame' (the pack has no colourless frame: a colourless
-//     card that is no artifact is a LAND on print — Shire Terrace #712,
-//     The Shire #711; a coloured land wears its colour's frame, as The
-//     Black Gate LTC #490 and Barad-dûr #704 do). Each frame keeps the
+//     card that is no artifact is a LAND on print — Shire Terrace #712; a
+//     coloured land wears its colour's frame, as The Shire #711 (green),
+//     The Black Gate LTC #490 and Barad-dûr #704 do. A colourless creature
+//     that is neither an artifact nor a land draws the brown land master
+//     with the artifact's plate: no print has that shape). Each frame keeps the
 //     pack's translucent parchment wash over the art window (the 'No Art
 //     Overlay' mask, which drops it, is not used: every print shows the
 //     wash at the window's edges).
@@ -3324,7 +3326,8 @@ const SCROLL_PACK = "packScroll.js 'Scroll' (the Lord of the Rings scroll showca
 const SCROLL_NOTES = [
   "w u b r g m = the pack's colour frames whole (scroll/<k>.png, 2010x2814), downscaled once to 1500x2100 (Lanczos) — as the LTR scroll showcase prints them (LTR #452–730, LTC #411–490), the parchment wash over the art window included (the pack's 'No Art Overlay' mask, which drops it, is not used)",
   "a = the pack's light-blue 'Artifact Frame' (scroll/a.png): the master a colourless ARTIFACT paints (FrameProfile.artifactMasterKeys { c: 'a' }; LTR #687–703, LTC #485–489)",
-  "c = the pack's brown 'Land Frame' (scroll/l.png): the pack draws no colourless frame, and a colourless printing that is not an artifact is a land (LTR #711 The Shire, #712 Shire Terrace); a coloured land wears its colour's frame (LTC #490 The Black Gate, LTR #704 Barad-dûr)",
+  "c = the pack's brown 'Land Frame' (scroll/l.png): the pack draws no colourless frame, and a colourless printing that is not an artifact is a land (LTR #712 Shire Terrace); a coloured land wears its colour's frame (LTR #711 The Shire green, LTC #490 The Black Gate, LTR #704 Barad-dûr)",
+  "a colourless creature that is neither an artifact nor a land draws c (the brown land master) with the artifact's light-blue plate — no print has that shape (every colourless creature of the run is an artifact creature)",
   "plates = the pack's seven scroll plates (scroll/pt/<k>.png, 435x266 at the pack's ptBounds 1492/2422 px of 2010x2814); c = the artifact's light-blue plate (the pack has no land plate; LTR #700 Shire Scarecrow prints it)",
   "not built: the 'Multicolored Bars' overlay and maskRightHalf.png (the two-colour dress: the colour frames split down the card under gold bars — a follow-up; a two-colour card draws the gold master today) and the pack's scroll sagas (SagaLTR, TODO 4.5d)",
 ];

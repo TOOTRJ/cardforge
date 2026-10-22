@@ -77,7 +77,12 @@ beforeAll(() => {
 });
 
 type Box = { x0: number; y0: number; x1: number; y1: number };
-type Svg = { words: (Box | null)[]; ink: Box[]; bars: number[] };
+/** `contours`: the ink as each glyph's own contours — a word is ONE path,
+ *  so its box spans every glyph in it (a descender at its left, a raised
+ *  quote at its right); the keep-out check reads each subpath's box (the
+ *  hull of its points, control points included: an upper bound of its
+ *  ink). A drawn box (a pip) is its own contour. */
+type Svg = { words: (Box | null)[]; ink: Box[]; contours: Box[]; bars: number[] };
 
 /** Satori's SVG, read: its glyph paths (absolute M/L/Q/C/Z — opentype's path
  *  data) in document order, every drawn box (a pip's disc and shadow carry
@@ -88,7 +93,7 @@ function readSvg(svg: string): Svg {
     .replace(/<defs>[\s\S]*?<\/defs>/g, "")
     .replace(/<mask[\s\S]*?<\/mask>/g, "")
     .replace(/<clipPath[\s\S]*?<\/clipPath>/g, "");
-  const out: Svg = { words: [], ink: [], bars: [] };
+  const out: Svg = { words: [], ink: [], contours: [], bars: [] };
   for (const m of drawn.matchAll(/<rect ([^>]*?)\/?>/g)) {
     const attrs = Object.fromEntries([...m[1].matchAll(/([a-z-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]]));
     if (attrs.fill === `${SENTINEL}44`) out.bars.push(Number(attrs.y));
@@ -102,17 +107,27 @@ function readSvg(svg: string): Svg {
     if (attrs.x !== undefined && attrs.width !== undefined) {
       const [x, y, w, h] = [attrs.x, attrs.y, attrs.width, attrs.height].map(Number);
       out.ink.push({ x0: x, y0: y, x1: x + w, y1: y + h });
+      out.contours.push({ x0: x, y0: y, x1: x + w, y1: y + h });
       continue;
     }
-    const nums = (attrs.d ?? "").match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
-    let box: Box | null = null;
-    for (let i = 0; i + 1 < nums.length; i += 2) {
-      const [x, y] = [nums[i], nums[i + 1]];
-      box = box
-        ? { x0: Math.min(box.x0, x), y0: Math.min(box.y0, y), x1: Math.max(box.x1, x), y1: Math.max(box.y1, y) }
-        : { x0: x, y0: y, x1: x, y1: y };
-    }
+    const boxOf = (d: string): Box | null => {
+      const nums = d.match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+      let box: Box | null = null;
+      for (let i = 0; i + 1 < nums.length; i += 2) {
+        const [x, y] = [nums[i], nums[i + 1]];
+        box = box
+          ? { x0: Math.min(box.x0, x), y0: Math.min(box.y0, y), x1: Math.max(box.x1, x), y1: Math.max(box.y1, y) }
+          : { x0: x, y0: y, x1: x, y1: y };
+      }
+      return box;
+    };
+    const box = boxOf(attrs.d ?? "");
     if (box) out.ink.push(box);
+    // Each subpath (absolute M/L/Q/C/Z: an M opens one) on its own.
+    for (const sub of (attrs.d ?? "").split(/(?=M)/)) {
+      const c = boxOf(sub);
+      if (c) out.contours.push(c);
+    }
     if (attrs.fill === SENTINEL) out.words.push(box);
   }
   return out;
@@ -164,9 +179,12 @@ async function checkDrawn(layout: RulesLayout, target: RulesTarget, label: strin
     expect(b.y0, `${label}: ink above the box`).toBeGreaterThanOrEqual(box.top - EPS);
     expect(b.y1, `${label}: ink below the box`).toBeLessThanOrEqual(box.top + box.height + EPS);
   }
-  // 2. Nothing in a keep-out.
+  // 2. Nothing in a keep-out — judged glyph contour by glyph contour (a
+  // word's whole box would put a descender at its left and a raised quote
+  // at its right into one rectangle that ink never fills: "fall.”" beside
+  // the scroll plate's rolled top, TODO 4.11).
   for (const k of keepOuts) {
-    for (const b of svg.ink) {
+    for (const b of svg.contours) {
       const hit = b.x1 > k.left + EPS && b.x0 < k.right - EPS && b.y1 > k.top + EPS && b.y0 < k.bottom - EPS;
       expect(hit, `${label}: ink in a keep-out`).toBe(false);
     }
@@ -554,17 +572,6 @@ describe("rules consumers — the HD bake (subset)", () => {
  *  the rule (a centred line that would land on a drawn badge is held short
  *  of it; the left-aligned line's own place is always free). */
 const CENTRED_ONLY_CLIPS: string[] = [];
-/** Centred layouts whose held line still puts ink in a keep-out — by the
- *  rules model's VERTICAL ink of an italic glyph, which is the regular
- *  face's (lib/cards/rules-metrics.ts rulesTextGlyphsEm reads
- *  GLYPH_INK_BY_CHAR for both faces): MPlantin Italic's "f" descends where
- *  the roman "f" does not, so a flavour line ending in "fall" is not held
- *  short of a plate whose top lies in its descenders. Found by the Lord of
- *  the Rings scroll's plate (TODO 4.11, layout v62: its rolled top edge
- *  1,847 px down, 18 px above M15's), the one frame the matrix meets it on.
- *  Pinned as failing (a fix of the model makes it red): an italic ink table
- *  is its own item. */
-const KNOWN_ITALIC_INK_HITS: string[] = ["lotrscroll/main · typed, as printed"];
 
 describe("rules consumers, centred (FrameStyle.rulesAlign) — no clip, no keep-out ink, the layout's lines", () => {
   const cases = matrix(RULES_MATRIX, FRAME_TEMPLATE_VALUES, "center");
@@ -600,10 +607,6 @@ describe("rules consumers, centred (FrameStyle.rulesAlign) — no clip, no keep-
     let n = 0;
     for (const c of cases) {
       if (c.layout.clipped || c.layout.input.align !== "center") continue;
-      if (KNOWN_ITALIC_INK_HITS.includes(c.keys[0])) {
-        await expect(checkDrawn(c.layout, "default", `centred ${c.keys[0]}`), c.keys[0]).rejects.toThrow(/ink in a keep-out/);
-        continue;
-      }
       const { placed } = await checkDrawn(c.layout, "default", `centred ${c.keys[0]}`);
       // …and the lines are where the layout centred them: some line moved.
       if (placed.lines.some((l) => placed.interior.width - l.width > 8)) expect(placed.lines.some((l) => l.indent > 0), c.keys[0]).toBe(true);

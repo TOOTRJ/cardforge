@@ -4198,8 +4198,11 @@ block of `scripts/lib/cc-frames.mjs`). A CORRECTION (layout v62, a sweep,
   light-blue 'Artifact Frame' a colourless ARTIFACT paints
   (`artifactMasterKeys { c: "a" }`: LTR #687–703, LTC #485–489); `c` is the
   brown 'Land Frame' — the pack has no colourless frame, and a colourless
-  printing that is not an artifact is a land (#711 The Shire, #712 Shire
-  Terrace). A coloured land wears its colour's frame (LTC #490, LTR #704).
+  printing that is not an artifact is a land (#712 Shire Terrace). A
+  coloured land wears its colour's frame (#711 The Shire is green; LTC #490,
+  LTR #704). A colourless creature that is neither an artifact nor a land
+  draws the brown land master with the artifact's plate: no print has that
+  shape.
   The masters carry the printed black border, so the transparent ring of
   4.35 is gone: `lotrscroll` left `BORDER_PENDING_TEMPLATES`, the edge
   contract's and the art window's known failures, `SQUARE_CORNERS` (its

@@ -4678,7 +4678,9 @@ const LOTRSCROLL: FrameProfile = {
   ...CC_M15_COST,
   artSlot: LOTRSCROLL_ART_SLOT,
   // A colourless ARTIFACT paints the pack's light-blue artifact frame; any
-  // other colourless card (a land, on print) the brown land frame `c`.
+  // other colourless card the brown land frame `c` — a land on print (LTR
+  // #712 Shire Terrace; #711 The Shire is green). A colourless creature that
+  // is neither draws `c` with the artifact's plate: no print has that shape.
   artifactMasterKeys: { c: "a" },
   // The name starts 4 HD px left of M15's (127.5 → 123.5 px: the median of
   // 12 prints, −1…−7), its band's right end — the cost row's — unchanged.
