@@ -248,4 +248,47 @@ describe("a token's faces (TODO 5.5 (c))", () => {
     expect(payload.card_type).toBe("creature");
     expect(payload.back_face ?? null).toBeNull();
   });
+
+  // A kind whose frame has a second part of its own (Transform, Modal,
+  // Adventure) never takes the token's back as its back face or half: asked
+  // first, it starts its own — and the token's comes back with the kind.
+  const WITH_LAYOUTS = [
+    ...VERIFIED,
+    ...["m15dfcfront", "m15dfcback", "m15mdfcfront", "m15mdfcback", "adventure"].flatMap((template) =>
+      EVERY_COLOUR.map((key) => frameComboKey(template, key)),
+    ),
+  ];
+  for (const [kindLabel, template, backType] of [
+    ["Transform", "m15dfcfront", "creature"],
+    ["Modal double-faced", "m15mdfcfront", "creature"],
+    ["Adventure", "adventure", "instant"],
+  ] as const) {
+    it(`a token's back never becomes the ${kindLabel} card's second part — and returns with the token kind`, async () => {
+      actions.createCardAction.mockResolvedValue({ ok: false, fieldErrors: { title: "stop here" } });
+      renderForm(WITH_LAYOUTS);
+      await click(chipIn("Card type", /^Token/));
+      await goTo(/^card/i);
+      await click(chipIn("Token faces", /^Two faces/));
+      await goTo(/^identity/i);
+      await click(tab(/^Back face/));
+      await change("back_face.title", "Soldier");
+      await click(tab(/^Front face/));
+      await change("title", "Goblin");
+      await goTo(/^card/i);
+      await click(chipIn("Card type", new RegExp(`^${kindLabel}`)));
+      await click(screen.getByRole("button", { name: /^Remove the back face/ }));
+      await click(chipIn("Card type", /^Token/));
+      expect(toast.info).toHaveBeenCalledWith("Back face restored.");
+      await goTo(/^identity/i);
+      await click(tab(/^Back face/));
+      expect((named("back_face.title") as HTMLInputElement).value).toBe("Soldier");
+      await click(tab(/^Front face/));
+      await goTo(/^card/i);
+      await click(chipIn("Card type", new RegExp(`^${kindLabel}`)));
+      await click(screen.getByRole("button", { name: /^Remove the back face/ }));
+      const payload = await saveDraft();
+      expect(payload.frame_style.template).toBe(template);
+      expect(payload.back_face).toMatchObject({ title: "", card_type: backType });
+    });
+  }
 });

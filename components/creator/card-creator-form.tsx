@@ -1992,13 +1992,16 @@ export function CardCreatorForm({
     // unfixable back_face.title error followed the card around.
     // (A double-sided token's back — TODO 5.5 (c) — is the token kind's
     // own: it leaves with the kind, kept for the visit like any second part.)
-    const prevOwnsBack =
-      frameOwnsSecondPart(prevTemplate) || (prevKind === "token" && nextKind !== "token" && getValues("has_back_face"));
+    // It leaves even for a kind whose frame has a second part of its own
+    // (Transform, Adventure…): a TOKEN back is never that kind's back face
+    // or half — that kind starts its own, below.
+    const tokenBackLeaves = prevKind === "token" && nextKind !== "token" && Boolean(getValues("has_back_face"));
+    const prevOwnsBack = frameOwnsSecondPart(prevTemplate) || tokenBackLeaves;
     const nextOwnsBack = frameOwnsSecondPart(template);
     // A kind change the user did not make (an import, an AI card) starts
     // from its own data: nothing kept from before is offered back.
     if (!options.byUser) stashedSecondPartRef.current = {};
-    if (prevOwnsBack && !nextOwnsBack) {
+    if (prevOwnsBack && (!nextOwnsBack || tokenBackLeaves)) {
       // The user was asked first when the part holds anything
       // (SecondPartLossDialog); it is kept for the session all the same.
       const leaving = getValues("back_face");
@@ -2011,14 +2014,19 @@ export function CardCreatorForm({
       }
       setValue("has_back_face", false, { shouldDirty: true });
       setValue("back_face", EMPTY_BACK_FACE, { shouldDirty: true });
-    } else if (prevKind !== "token" && nextKind === "token" && options.byUser && stashedSecondPartRef.current.token) {
+    }
+    if (prevKind !== "token" && nextKind === "token" && options.byUser && stashedSecondPartRef.current.token) {
       // Back on the token kind whose back a kind change removed (TODO 5.5
-      // (c)): it returns as it was, with its second face on.
+      // (c)): it returns as it was, with its second face on — from a kind
+      // whose own second part just left above, too (Transform, Adventure).
       setValue("back_face", stashedSecondPartRef.current.token, { shouldDirty: true });
       delete stashedSecondPartRef.current.token;
       setValue("has_back_face", true, { shouldDirty: true });
       toast.info("Back face restored.");
-    } else if (nextOwnsBack && isBlankBackFace(getValues("back_face"))) {
+    }
+    // (Its own `if`: a token's back that just left, above, makes way for the
+    // second part of a kind that has one — never carried into it.)
+    if (nextOwnsBack && isBlankBackFace(getValues("back_face"))) {
       const stashed = options.byUser ? stashedSecondPartRef.current[nextKind] : undefined;
       if (stashed) {
         // Back on the kind whose second part was removed: it returns as it
@@ -2148,7 +2156,8 @@ export function CardCreatorForm({
     const { resolution } = resolveKindPatchFrame(patch);
     // An unpublished kind keeps the current frame, and the second part.
     if (resolution.status === "unavailable") return null;
-    if (frameOwnsSecondPart(resolution.template)) return null;
+    // (A token's back leaves even for a kind with a second part of its own.)
+    if (frameOwnsSecondPart(resolution.template) && !tokenBackLeaves) return null;
     return describeSecondPartLoss({
       face: getValues("back_face"),
       words: partWords,
