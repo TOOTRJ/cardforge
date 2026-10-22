@@ -125,6 +125,7 @@ import { DFC_COLORLESS_FRONT_NEEDS_ARTIFACT } from "@/lib/cards/dfc-gate";
 const KIND_HINTS: Partial<Record<CardKind, string>> = {
   saga: "Chapter rail (I–IV)",
   adventure: "Creature + inline adventure spell",
+  prepare: "Creature + the spell it prepares",
   split: "Two side-by-side spells",
   aftermath: "Top half now, sideways half later",
   flip: "Top and upside-down halves",

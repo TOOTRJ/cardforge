@@ -86,7 +86,8 @@ describe("one M15-era display size (layout v32)", () => {
     // …and TODO 5.5 (b)'s double-faced saga front and back.
     // …and TODO 4.51's six Nyx dresses of the full-art tokens.
     // …and TODO 4.55's two tall-box arch tokens.
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(72);
+    // …and TODO 4.27's Prepare frame.
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(73);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -330,6 +331,9 @@ describe("baselines (TextSlot.dy)", () => {
     // are CC's M15 bars — the name kept, the type line on the prints' like
     // the other CC-framed M15 profiles.
     ["adventure", base.title, cc],
+    // The Prepare frame (TODO 4.27): its masters are M15's above the type
+    // bar, so the CC-framed M15 profile's lines.
+    ["prepare", base.title, cc],
     // The transform bodies (TODO 5.1a): CC's 'Transform' packs are the M15
     // skeleton (the bands within 1–4 px of the prints), so each face is the
     // registry's m15 entry's baselines — the name kept, the type line on
