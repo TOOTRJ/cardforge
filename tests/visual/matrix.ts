@@ -5,7 +5,7 @@ import { frameAnatomyOf } from "@/lib/cards/anatomy";
 import { FRAME_COLOR_KEYS, frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { BASIC_LAND_NAME_BY_KEY } from "@/lib/cards/watermark";
 import { CARD_KIND_VALUES, KIND_DEFS, framesForKind, subtypeDressOf, type CardKind } from "@/lib/creator/card-kinds";
-import { FRAME_TEMPLATE_VALUES, type DfcIconFamily, type FrameTemplate } from "@/types/card";
+import { FRAME_TEMPLATE_VALUES, type ColorIdentity, type DfcIconFamily, type FrameTemplate } from "@/types/card";
 import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
 import { isDfcBackBody } from "@/lib/cards/dfc";
 
@@ -1638,6 +1638,71 @@ export function visualCases(): VisualCase[] {
     if (frameAnatomyOf(template).crown) add(template, primary, "wu", "long", { suffix: "@pair-crown", row: { ...pairStyle(template, "regular", true), ...legend } });
   }
   add("m15", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15"), cost: "{W/U}{W/U}" } });
+  // TODO 4.26: each part in its own colour (frame_style.partColor, opt-in
+  // per card — no stored card has the switch, so these are NEW cases, no
+  // bump): the second part's colour on back_face.color_identity, its cost
+  // where the dress needs one. A stored card with a second colour and no
+  // switch draws today's look (tests/unit/render/part-colour-bake.test.tsx).
+  const partCase = (
+    template: FrameTemplate,
+    kind: CardKind,
+    colour: VisualColour,
+    shape: VisualShape,
+    suffix: string,
+    back: { colors: ColorIdentity[]; cost?: string },
+    opts: { finish?: VisualCase["finish"]; preset?: VisualPreset; style?: Record<string, unknown>; row?: Partial<CardRowForBake> } = {},
+  ) => {
+    const finish = opts.finish ?? "regular";
+    const base = rowFor(template, kind, colour, shape, finish, caseId(template, colour, kind, shape, suffix));
+    add(template, kind, colour, shape, {
+      suffix,
+      finish,
+      ...(opts.preset ? { preset: opts.preset } : {}),
+      row: {
+        frame_style: { ...(base.frame_style as Record<string, unknown>), partColor: true, ...(opts.style ?? {}) } as CardRowForBake["frame_style"],
+        back_face: {
+          ...(base.back_face as Record<string, unknown>),
+          color_identity: back.colors,
+          ...(back.cost ? { cost: back.cost } : {}),
+        } as CardRowForBake["back_face"],
+        ...(opts.row ?? {}),
+      },
+    });
+  };
+  // The Prepare page in its spell's colour: a mono page of another colour
+  // (YFRA #29's blue page), a hybrid spell's grey page (FRA #3: a G/W spell
+  // on a white creature), a gold spell's gold page on a mono creature, a
+  // three-colour spell's plain gold page, and both finishes.
+  partCase("prepare", "prepare", "r", "short", "@part-u", { colors: ["blue"], cost: "{1}{U}" });
+  partCase("prepare", "prepare", "w", "short", "@part-gw-h", { colors: ["green", "white"], cost: "{G/W}" });
+  partCase("prepare", "prepare", "g", "long", "@part-wb", { colors: ["white", "black"], cost: "{1}{W}{B}" });
+  partCase("prepare", "prepare", "u", "short", "@part-m", { colors: ["multicolor"], cost: "{W}{U}{B}" });
+  partCase("prepare", "prepare", "r", "short", "@part-u-foil", { colors: ["blue"], cost: "{1}{U}" }, { finish: "foil" });
+  partCase("prepare", "prepare", "r", "long", "@part-u-etched", { colors: ["blue"], cost: "{1}{U}" }, { finish: "etched" });
+  partCase("prepare", "prepare", "b", "long", "@part-gw-h-hd", { colors: ["green", "white"], cost: "{G/W}" }, { preset: "hd" });
+  // The two-colour Prepare creature (its pair masters) with its spell's own
+  // page: Abigale's grey hybrid page on the gold W/B creature (SOS #170 —
+  // here W/U), a red page on a gold creature (YFRA #27); the pair crown is
+  // "@pair-crown" (PAIR_TEMPLATES).
+  partCase("prepare", "prepare", "wu", "long", "@pair-part-hybrid", { colors: ["white", "blue"], cost: "{1}{W/U}" }, { style: { twoColor: true } });
+  partCase("prepare", "prepare", "wu", "short", "@pair-part-r", { colors: ["red"], cost: "{X}{R}" }, { style: { twoColor: true } });
+  partCase("prepare", "prepare", "wu", "short", "@pair-hybrid-part", { colors: ["white", "blue"], cost: "{W/U}" }, { style: { twoColor: true }, row: { cost: "{1}{W/U}{W/U}" } });
+  // Split's right half and aftermath's lower part in their own colour (Fire
+  // // Ice; Cut // Ribbons): the seam, at the default bake and HD, and both
+  // finishes' masks on it; a gold second half.
+  partCase("split", "split", "r", "short", "@part-u", { colors: ["blue"], cost: "{1}{U}" });
+  partCase("split", "split", "r", "long", "@part-u-hd", { colors: ["blue"], cost: "{1}{U}" }, { preset: "hd" });
+  partCase("split", "split", "w", "short", "@part-m", { colors: ["blue", "black"], cost: "{2}{U}{B}" });
+  // Owner decision M2: the card's colour stays the WHOLE card's (Stand //
+  // Deliver, DMR #207: white and blue), its first half's on
+  // frame_style.firstPartColor.
+  partCase("split", "split", "wu", "short", "@part-u", { colors: ["blue"], cost: "{2}{U}" }, { style: { firstPartColor: ["white"] } });
+  partCase("split", "split", "r", "short", "@part-u-foil", { colors: ["blue"], cost: "{1}{U}" }, { finish: "foil" });
+  partCase("split", "split", "r", "long", "@part-u-etched", { colors: ["blue"], cost: "{1}{U}" }, { finish: "etched" });
+  partCase("aftermath", "aftermath", "r", "short", "@part-b", { colors: ["black"], cost: "{X}{B}{B}" });
+  partCase("aftermath", "aftermath", "r", "long", "@part-b-hd", { colors: ["black"], cost: "{X}{B}{B}" }, { preset: "hd" });
+  partCase("aftermath", "aftermath", "g", "short", "@part-u-foil", { colors: ["blue"], cost: "{4}{U}{U}" }, { finish: "foil" });
+  partCase("aftermath", "aftermath", "w", "long", "@part-b-etched", { colors: ["black"], cost: "{2}{B}" }, { finish: "etched" });
   // The borderless hybrid dress (grey bars, the split pinline) and its
   // crowned twin (4.6f).
   add("m15borderless", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15borderless"), cost: "{W/U}{W/U}" } });
@@ -2758,6 +2823,8 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   "modern", "modernland", "retroland",
   // The full-art tokens (TODO 4.48's central split): the six templates.
   "m20token", "m20tokentext", "m20tokentall", "m20tokenartifact", "m20tokenartifacttext", "m20tokenartifacttall",
+  // The Prepare frame (TODO 4.26): m15's pairs with the page, both dresses.
+  "prepare",
 ];
 
 /** The collector line's fields on its cases (TODO 4.9b): a real printing's

@@ -34,6 +34,7 @@ import {
   type FrameTemplate,
 } from "@/types/card";
 import { importedAnatomy, storedAnatomyOf, type FrameAnatomyStyle } from "@/lib/cards/anatomy";
+import { partColourVerdict } from "@/lib/cards/part-color";
 import { frameGateError, isFrameComboAvailable } from "@/lib/cards/frame-availability";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import { isTokenPairBack, isTokenPairFront } from "@/lib/cards/token-faces";
@@ -145,7 +146,21 @@ export function scryfallRemixMechanics(
   // The printing's pair where the landed frame draws the two-colour frame —
   // and its icon family only on a transform front body (the save would drop
   // the key anywhere else; the payload says only what the frame draws).
-  const anatomy = importedAnatomy(patch, frame.template);
+  // Each part in its own colour (TODO 4.26, M1): ON only where both
+  // parts' colours are verified on the landed frame (partColourVerdict, the
+  // import's rule) — else OFF, the card's whole colour: never a save the
+  // gate refuses after the art.
+  const partVerdict = partColourVerdict(
+    frame.template,
+    patch.color_identity,
+    patch.printed_first_part_color,
+    patch.back_face?.color_identity,
+    verifiedKeys,
+  );
+  const anatomy = importedAnatomy(
+    partVerdict.drawn && !partVerdict.ok ? { ...patch, printed_part_color: false } : patch,
+    frame.template,
+  );
   const { dfcIcon: _family, ...anatomyWithoutFamily } = anatomy.style;
   void _family;
   const style = doubleFaced ? anatomy.style : anatomyWithoutFamily;
@@ -265,6 +280,10 @@ export type OwnCardRemixFrame = {
    *  is new). Never set without `frame_template`: a body-less legacy back
    *  and a fallen-back card stay one-faced, as before. */
   back_face?: CardBackFace;
+  /** The kept frame draws each part in its own colour but a part's colour
+   *  is not verified there (TODO 4.26, M1): the remix saves with the look
+   *  OFF — the card's whole colour — never a save refused after the art. */
+  part_color_off?: true;
 };
 
 /** A stored back face as the remix carries it: its content, never its
@@ -297,6 +316,34 @@ export function ownCardRemixFrame(
   verifiedKeys: ReadonlySet<string>,
   options: { singleFace?: boolean } = {},
 ): OwnCardRemixFrame {
+  // Each part in its own colour (TODO 4.26, M1): a kept split / aftermath /
+  // Prepare frame with the look on (the source's switch, else the new-card
+  // default) is kept in its first part's own colour where BOTH parts'
+  // colours are verified on it; else the look goes OFF and the frame is
+  // judged in the card's whole colour, as before 4.26.
+  const style = storedAnatomyOf(source.frame_style);
+  const storedTemplate = (source.frame_style as { template?: unknown } | null)?.template;
+  const part =
+    typeof storedTemplate === "string" && style.partColor !== false
+      ? partColourVerdict(
+          storedTemplate,
+          source.color_identity ?? [],
+          style.firstPartColor,
+          ((source.back_face ?? null) as CardBackFace | null)?.color_identity,
+          verifiedKeys,
+        )
+      : null;
+  const kept = keptOwnFrame(source, verifiedKeys, options, part?.drawn && part.ok ? part.frameColors : null);
+  return part?.drawn && !part.ok && kept.frame_template ? { ...kept, part_color_off: true } : kept;
+}
+
+function keptOwnFrame(
+  source: OwnCardRemixSource,
+  verifiedKeys: ReadonlySet<string>,
+  options: { singleFace?: boolean },
+  /** The colours the frame is gated in where the parts keep their own. */
+  partFrameColors: readonly ColorIdentity[] | null,
+): OwnCardRemixFrame {
   const stored = (source.frame_style ?? {}) as { template?: unknown };
   // A current template only: a row that names none, or a retired one
   // (TODO 4.54), lands as before.
@@ -316,7 +363,7 @@ export function ownCardRemixFrame(
   // A premium frame needs a plan the save checks (none exists yet): never a
   // refusal after the art.
   if (PREMIUM_FRAME_TEMPLATES.has(template)) return {};
-  if (frameGateError(template, colours, verifiedKeys) !== null) return {};
+  if (frameGateError(template, partFrameColors ?? colours, verifiedKeys) !== null) return {};
   if (frameKindGateError(template, cardFieldsFace(source)) !== null) return {};
 
   const back = (source.back_face ?? null) as CardBackFace | null;

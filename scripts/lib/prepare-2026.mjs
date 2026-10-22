@@ -123,6 +123,85 @@ export const PREPARE_RECIPE = {
     bottom: { rows: { 1871: 0.3, 1872: 0.74, 1873: 0.98, 1874: 0.95, 1875: 0.85 }, cols: [745, 1390] },
   },
 
+  // ---- TODO 4.26: the page in the SPELL's colour, and the two-colour
+  // ---- Prepare (the pair masters and the page overlays)
+  //
+  // Print colours the PAGE by the spell (Scryfall 2026-10-21, the 38
+  // part-colour and two-colour plain printings): a mono spell's page is
+  // that colour's (YFRA #27 / #29: a red and a blue page on a two-colour
+  // creature); a two-colour spell's page is a PAIR page — gold bars for a
+  // gold cost (SOC #45–50, SOS #198 / #223 / #237), grey bars for an
+  // all-hybrid cost (FRA #3 / #39 / #70 / #85 / #105 and the ten hybrid
+  // creatures, SOS #170 / #199), the rim and the page's box ramped from
+  // the first colour (left) to the second (right) about the PAGE's own
+  // centre — and the name ink stays white on the grey bar (every print).
+  // A two-colour CREATURE prints M15's pair frame (the gold-split or the
+  // hybrid dress, 4.6b) with its LEFT box ramped about the box's own
+  // centre and the bottom pinline about x 688.
+  pairs: {
+    // The ten pairs in printed order, the first colour on the left
+    // (scripts/lib/pair-ramp.mjs TWO_COLOR_PAIRS).
+    list: ["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+    // Each dress: the published M15 pair master the creature's frame is
+    // (its bars, frame field, crown pinline), the adventure master whose
+    // page bars are toned onto print, and print's medians (the gold bars on
+    // the 8 gold-spell printings, the grey on the 17 hybrid-spell ones;
+    // fills and bevels read as `print` below). `strip`: the gold creature's
+    // strip (10 printings); a hybrid dress's strip is its SECOND colour's
+    // field (FRA #130 / #133 / #139 read 221/214/178, 78/175/223,
+    // 95/138/108 against the mono prints' w / u / g) — `print.<k2>.strip`.
+    dresses: {
+      split: {
+        base: "m15/{pair}",
+        barSource: "adventure/m",
+        printings: ["soc-45", "soc-46", "soc-48", "soc-49", "soc-50", "sos-198", "sos-223", "sos-237"],
+        nameFill: [165, 140, 66], typeFill: [123, 85, 25], strip: [185, 156, 83],
+        nameTop: [1.038, 1.642, 1.86, 1.933, 1.871, 1.782, 1.674, 1.504, 1.218, 1.027],
+        nameBottom: [1.027, 1.049, 1.073, 0.933, 0.674, 0.474, 0.31, 0.256, 0.302, 0.305, 0.275],
+        typeTop: [1.506, 2.155, 2.064, 1.996, 2.073, 2.03, 1.85, 1.584, 1.215, 0.987],
+        typeBottom: [1, 1, 0.987, 0.957, 0.876, 0.764, 0.67, 0.579, 0.528, 0.511, 0.524, 0.541],
+      },
+      hybrid: {
+        base: "m15/{pair}-h",
+        // The black adventure bars: the nearest to print's neutral grey
+        // (99/94/97 → 141/137/136).
+        barSource: "adventure/b",
+        printings: ["fra-3", "fra-39", "fra-70", "fra-85", "fra-105", "fra-130", "fra-133", "fra-139", "fra-143", "fra-146", "fra-151", "fra-156", "fra-161", "fra-164", "fra-165", "sos-170", "sos-199"],
+        nameFill: [141, 137, 136], typeFill: [87, 84, 85], strip: null,
+        nameTop: [0.763, 1.143, 1.147, 1.126, 1.111, 1.094, 1.075, 1.053, 1.034, 1.014],
+        nameBottom: [1.022, 1.024, 1.029, 1.014, 0.986, 0.882, 0.715, 0.604, 0.539, 0.529, 0.565],
+        typeTop: [0.797, 1.156, 1.121, 1.086, 1.078, 1.07, 1.059, 1.051, 1.035, 1.027],
+        typeBottom: [0.992, 1, 1.023, 1.055, 1.031, 0.953, 0.859, 0.723, 0.641, 0.602, 0.586, 0.59],
+      },
+    },
+    // The ramps: the second colour's share 0 → 1 linearly between two
+    // columns. The creature's LEFT box: 25 / 50 / 75 % at 408 / 420 / 432
+    // on the 18 two-colour creatures (median; the box spans 98..744). The
+    // bottom pinline under both boxes: 50 % at 688, 10 → 90 % over 45 px
+    // (SOC #48 / #49, SOS #223). The page's rim and box: 10 / 50 / 90 % at
+    // 941 / 1061 / 1205 on the 25 two-colour pages (median) — the page's
+    // centre is 1074.
+    creatureRamp: [396, 444],
+    pinlineRamp: [660, 716],
+    pageRamp: [898, 1228],
+    // Where the creature's ramps replace the M15 pair master's own
+    // (600..900, the card's centre): the left box with its left pinline
+    // (rows 1314..1937, cols 98..745) and the pinline under the boxes (rows
+    // 1938..1949, cols 98..1404) — never the frame field or the bars, which
+    // stay the pair master's.
+    creatureZone: { rows: [1314, 1937], cols: [98, 745] },
+    pinlineZone: { rows: [1938, 1949], cols: [98, 1404] },
+  },
+
+  // The PAGE OVERLAY (TODO 4.26): `prepare/page/<key>` — the page of each
+  // master (the seven keys and the twenty pair keys) cut out, drawn over the
+  // creature's master where the spell's page key differs. Even HD columns
+  // and rows (whole px at the 750 bake): cols 746..1413, rows 1314..1875.
+  // Column 746 and rows 1872..1875 are see-through (the outline's soft edge
+  // over the creature's own paper); right of the rim (1391..1413) only the
+  // bars' rounded ends, at their own coverage, over the creature's pinline.
+  page: { cols: [746, 1413], rows: [1314, 1875], clearCols: [746, 746], clearRows: [1872, 1875], rimRight: 1390 },
+
   // Per key, the printings measured and their medians (RGB: the name bar
   // 1338..1344 × 800..1240, the type bar 1450..1496 × 1100..1385, the page
   // box 1560..1840 × 800..1370, the left box 1340..1900 × 100..700, the

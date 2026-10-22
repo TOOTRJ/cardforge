@@ -94,6 +94,9 @@ describe("the declared pair masters", () => {
       // …and the extended-art frame's thirty (TODO 4.7 follow-up, owner
       // Round 63): m15's two dresses, the land dress's split.
       extendedart: 20, extendedartland: 10,
+      // …and the Prepare frame's twenty (TODO 4.26): m15's two dresses with
+      // the page (scripts/build-prepare-frames.mjs).
+      prepare: 20,
       // …and the borderless double-faced bodies' forty (TODO 5.7):
       // m15borderless's pinline split, grafted.
       m15borderlessdfcfront: 10, m15borderlessdfcback: 10, m15borderlessmdfcfront: 10, m15borderlessmdfcback: 10,

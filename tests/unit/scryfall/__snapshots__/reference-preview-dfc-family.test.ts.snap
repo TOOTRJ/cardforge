@@ -493,6 +493,10 @@ exports[`as it was — generated on the base (d9e877e6), only read since > a non
     "back_face": {
       "artist_credit": undefined,
       "card_type": "instant",
+      "color_identity": [
+        "blue",
+        "red",
+      ],
       "cost": "{X}{U}{U}{R}{R}",
       "defense": undefined,
       "flavor_text": undefined,
@@ -564,6 +568,10 @@ exports[`as it was — generated on the base (d9e877e6), only read since > a non
       "art_url": undefined,
       "artist_credit": undefined,
       "card_type": "instant",
+      "color_identity": [
+        "blue",
+        "red",
+      ],
       "cost": "{X}{U}{U}{R}{R}",
       "defense": undefined,
       "flavor_text": undefined,
@@ -584,6 +592,7 @@ exports[`as it was — generated on the base (d9e877e6), only read since > a non
     "defense": null,
     "flavorText": null,
     "frameStyle": {
+      "partColor": true,
       "template": "split",
     },
     "loyalty": null,
