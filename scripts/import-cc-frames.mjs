@@ -172,8 +172,10 @@ import {
   shiftRows,
   sourceFilesFor,
   sourceTonesOf,
+  nearRegionPlane,
   toneSourceRegions,
   describeSourceTones,
+  describeFileTones,
   toRgba8,
   tonesFor,
   stripRiderInterior,
@@ -258,17 +260,38 @@ async function rgba(file, width, height) {
  * every master drawn from the file carries the same pixels.
  */
 async function loadSource(src, W, H) {
-  const data = await rgba(await fetchCached(src), W, H);
+  return toneLoaded(src, await rgba(await fetchCached(src), W, H), W, H);
+}
+
+/**
+ * A pack file's pixels (8-bit RGBA, `w × h`) toned as CC_SOURCE_TONES says,
+ * or as they are. A mask region is the pack's whole-card mask at the file's
+ * size — or, for a piece drawn at `maskAt` (the LOTR ring's stamp, TODO
+ * 4.11), the mask's box at that place on the 1500 × 2100 card; a `near`
+ * region the file's own pixels near the tone's colour (nearRegionPlane).
+ * Every path that loads a toned file goes through here (the masters, a
+ * band's layers, the plates, a notch's pieces), so a file is toned the same
+ * wherever it is drawn.
+ */
+async function toneLoaded(src, data, w, h) {
   const tone = sourceTonesOf(src);
   if (!tone) return data;
   const regions = {};
-  for (const [name, maskFile] of Object.entries(tone.masks)) {
-    const mask = await rgba(await fetchCached(maskFile), W, H);
-    const plane = new Uint8Array(W * H);
-    for (let p = 0; p < W * H; p += 1) plane[p] = mask[p * 4 + 3];
+  for (const [name, maskFile] of Object.entries(tone.masks ?? {})) {
+    const plane = new Uint8Array(w * h);
+    if (tone.maskAt) {
+      const mask = await rgba(await fetchCached(maskFile), OUT_W, OUT_H);
+      const { x, y } = tone.maskAt;
+      if (x + w > OUT_W || y + h > OUT_H) throw new Error(`${src}: a ${w}×${h} piece at ${x},${y} leaves the card`);
+      for (let yy = 0; yy < h; yy += 1) for (let xx = 0; xx < w; xx += 1) plane[yy * w + xx] = mask[((y + yy) * OUT_W + x + xx) * 4 + 3];
+    } else {
+      const mask = await rgba(await fetchCached(maskFile), w, h);
+      for (let p = 0; p < w * h; p += 1) plane[p] = mask[p * 4 + 3];
+    }
     regions[name] = plane;
   }
-  return toneSourceRegions(data, W, H, regions, tone.tones);
+  for (const [name, near] of Object.entries(tone.near ?? {})) regions[name] = nearRegionPlane(data, w, h, tone.tones[name].from, near);
+  return toneSourceRegions(data, w, h, regions, tone.tones);
 }
 
 async function writeMaster(bytes, pngFile, width = OUT_W, height = OUT_H) {
@@ -289,6 +312,12 @@ async function writePlate(src, pngFile, gain = null, tone = null) {
   fs.mkdirSync(path.dirname(pngFile), { recursive: true });
   // Plates keep their native size; the renderer scales them into the slot.
   let image = sharp(await fetchCached(src));
+  // A plate whose FILE is toned (CC_SOURCE_TONES; TODO 4.11: the LOTR ring's
+  // field colour on its plate face), as every drawing of the file is.
+  if (sourceTonesOf(src)) {
+    const { data, info } = await image.ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    image = sharp(await toneLoaded(src, data, info.width, info.height), { raw: { width: info.width, height: info.height, channels: 4 } });
+  }
   // A plate toned onto its prints' (TODO 4.10b: the 2003 plates): a
   // per-channel gain on the raw pixels, alpha untouched.
   if (gain) {
@@ -443,7 +472,9 @@ for (const [template, def] of Object.entries(CC_TEMPLATES)) {
   if (landscape !== Boolean(def.transform)) {
     throw new Error(`${template}: a landscape recipe names its transform ("rotate-cw" or "downscale"), and only a landscape one does`);
   }
-  if (def.shift && !landscape) throw new Error(`${template}: a block shift is in the 2100×1500 master's px — a landscape recipe's only`);
+  // A portrait recipe moves rows only (TODO 4.11: the LOTR ring's top block
+  // raised onto its prints); a landscape one either axis, in its 2100×1500 px.
+  if (def.shift && !landscape && def.shift.axis !== "y") throw new Error(`${template}: a portrait recipe's block shift moves rows (axis "y") only`);
   for (const key of builtColors(def)) {
     recipe[key] = def.colors[key].map(describeLayer);
     const out = path.join(outDir, template, `${key}.png`);
@@ -880,7 +911,9 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
       const images = [{ data: Buffer.alloc(W * H * 4) }];
       for (const l of layers) {
         const box = rectPx(l.at, W, H);
-        const load = async (src) => placeOnCanvas(await rgba(await fetchCached(src), box.width, box.height), box, W, H);
+        // A toned file (the LOTR ring's crowns, TODO 4.11) is toned at its
+        // own size, as it loads, before it is placed.
+        const load = async (src) => placeOnCanvas(await toneLoaded(src, await rgba(await fetchCached(src), box.width, box.height), box.width, box.height), box, W, H);
         const data = l.right ? blendPair(await load(l.src), await load(l.right), W, H, l.ramp) : await load(l.src);
         images.push({ data, erase: l.erase });
       }
@@ -889,10 +922,13 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
         W === OUT_W && H === OUT_H
           ? composite
           : await sharp(composite, { raw: { width: W, height: H, channels: 4 } }).resize(OUT_W, OUT_H, { fit: "fill", kernel: "lanczos3" }).raw().toBuffer();
-      roundCornersRgba8(full, OUT_W, OUT_H, CORNER_RADIUS, def.keepCorners ?? []);
-      const findings = def.findings(full, OUT_W, OUT_H, band.rows);
+      // A band raised with its masters (TODO 4.11: the LOTR ring's crown), by
+      // the same rule: whole rows through a flat zone (shiftBlocksRgba8).
+      const shifted = def.shift ? shiftBlocksRgba8(full, OUT_W, OUT_H, def.shift) : full;
+      roundCornersRgba8(shifted, OUT_W, OUT_H, CORNER_RADIUS, def.keepCorners ?? []);
+      const findings = def.findings(shifted, OUT_W, OUT_H, band.rows);
       for (const f of findings.failures) bandFailures.push(`${folder}/${key}: ${f}`);
-      const cropped = cropRows(full, OUT_W, band.rows);
+      const cropped = cropRows(shifted, OUT_W, band.rows);
       fs.mkdirSync(path.dirname(out), { recursive: true });
       const image = sharp(cropped, { raw: { width: OUT_W, height: band.rows, channels: 4 } });
       await image.clone().png({ compressionLevel: 9 }).toFile(out);
@@ -992,6 +1028,8 @@ for (const [folder, def] of Object.entries(CC_OVERLAY_BANDS)) {
       ? `${OUT_W}x${band.rows} cut band: the published m15crown band (rows 0–${band.rows - 1}) cut through the twin's alpha round the well, webp q${WEBP.quality}`
       : `${OUT_W}x${band.rows} overlay band: rows 0–${band.rows - 1} of a ${OUT_W}x${OUT_H} card composited at ${W}x${H}, corners rounded to ${CORNER_RADIUS}px${def.keepCorners?.length ? ` (but ${def.keepCorners.join(", ")}: kept square, design to the corner)` : ""}, webp q${WEBP.quality}`,
     colors: recipe,
+    ...(def.shift ? { shift: describeBlockShift(def.shift, OUT_W, OUT_H) } : {}),
+    ...(def.layers && describeFileTones(def.keys.flatMap((key) => def.layers(key).map((l) => l.src))) ? { sourceTones: describeFileTones(def.keys.flatMap((key) => def.layers(key).map((l) => l.src))) } : {}),
     sourceFiles: def.cut
       ? cutCrownSourceFiles(folder)
       : def.layers
@@ -1073,7 +1111,8 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
       const file = await fetchCached(src);
       const meta = await sharp(file).metadata();
       if (meta.width !== def.placeAt.width || meta.height !== def.placeAt.height) throw new Error(`${src} is ${meta.width}×${meta.height}, the recipe says ${def.placeAt.width}×${def.placeAt.height} (the source moved?)`);
-      const canvas = placeOnCanvas(await rgba(file, meta.width, meta.height), def.placeAt, CW, CH);
+      // A toned piece (the LOTR ring's stamps, TODO 4.11), toned as it loads.
+      const canvas = placeOnCanvas(await toneLoaded(src, await rgba(file, meta.width, meta.height), meta.width, meta.height), def.placeAt, CW, CH);
       // (A pack drawn at HD — the ring, 4.11 — passes through unchanged: a
       // same-size Lanczos resize is the identity.)
       const full = await sharp(canvas, { raw: { width: CW, height: CH, channels: 4 } }).resize(OUT_W, OUT_H, { fit: "fill", kernel: "lanczos3" }).raw().toBuffer();
@@ -1125,6 +1164,7 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
       output: `${box.width}x${box.height} notch piece (1:1 at ${OUT_W}x${OUT_H}, at ${box.x},${box.y}), the triangle region cut to transparent, webp q${WEBP.quality}`,
       colors: recipe,
       cut: { triangle: def.triangle, marginPx: def.cutMarginPx, blackoutPx: def.blackoutPx, what: "the hologram capture inside the pack's triangle — never published; the ring round the cut painted black" },
+      ...(describeFileTones(notchSourceFiles(def)) ? { sourceTones: describeFileTones(notchSourceFiles(def)) } : {}),
       sourceFiles: notchSourceFiles(def),
       notes: def.notes,
     };

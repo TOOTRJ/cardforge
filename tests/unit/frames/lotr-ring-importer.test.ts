@@ -12,7 +12,18 @@ import {
   RING_KEEP_CORNERS,
   RING_NOTCH,
   RING_NOTCH_BOX,
+  RING_PRINT_TONES,
+  RING_SOURCE_TONES,
+  RING_TOP_RECUT,
+  RING_CROWN_TOP_RECUT,
+  RING_TOP_RECUT_PX,
+  ZONE_MASK_MAX_LINES,
   blackoutAndCut,
+  nearRegionPlane,
+  shiftBlocksRgba8,
+  sourceFilesFor,
+  sourceTonesOf,
+  toneSourceRegions,
   blackoutStampShape,
   cutInside,
   notchSourceFiles,
@@ -27,7 +38,7 @@ import { COLLECTOR_TEMPLATES } from "@/lib/cards/collector-line";
 import { M15_FAMILY_TEMPLATES } from "@/lib/cards/m15-family";
 import { PLATE_INK } from "@/lib/cards/plate-ink";
 import { UB_STAMP_HOLE } from "@/lib/cards/holo-stamp";
-import { LOTR_CROWN, LOTR_HOLO_STAMP, getFrameProfile } from "@/lib/cards/template-layout";
+import { LOTR_CROWN, LOTR_HOLO_STAMP, LOTR_TOP_RECUT_PX, getFrameProfile } from "@/lib/cards/template-layout";
 import { EDGE_CONTRACTS, EDGE_CONTRACT_KNOWN_FAILURES, cornerViolations, edgeContractViolations } from "@/lib/frames/edge-contract";
 import { ART_WINDOW_KNOWN_FAILURES } from "@/lib/frames/art-window";
 import { SQUARE_CORNERS, squareCornerKind } from "@/lib/frames/square-corners";
@@ -104,7 +115,96 @@ describe("the ring recipe", () => {
     expect(RING_NOTCH_BOX.y + RING_NOTCH_BOX.height).toBeGreaterThanOrEqual(UB_STAMP_HOLE.points[2][1] + 2 + 2);
     expect(HOLO_STAMP_NOTCHES.lotrholostamp.triangle).toBe(UB_STAMP_HOLE);
     expect(LOTR_HOLO_STAMP.anatomy === "holoStamp" && LOTR_HOLO_STAMP.stamp.shape).toBe("triangle");
-    expect(notchSourceFiles(HOLO_STAMP_NOTCHES.lotrholostamp)).toEqual([...OVERLAY_KEYS.map((k) => `${RING}/stamp/${k}.png`), `${RING}/stamp/gray.png`].sort());
+    // (…and the Rules mask its toned pieces' paper is toned through.)
+    expect(notchSourceFiles(HOLO_STAMP_NOTCHES.lotrholostamp)).toEqual([...OVERLAY_KEYS.map((k) => `${RING}/stamp/${k}.png`), `${RING}/stamp/gray.png`, `${RING}/rules.png`].sort());
+  });
+});
+
+describe("the tones onto print (owner 2026-10-22)", () => {
+  it("tones the paper of every colour key and the field of r and g, on every file that draws them", () => {
+    expect(Object.keys(RING_PRINT_TONES.paper).sort()).toEqual(["b", "g", "m", "r", "u", "w"]);
+    expect(Object.keys(RING_PRINT_TONES.field).sort()).toEqual(["g", "r"]);
+    for (const k of ["w", "u", "b", "r", "g", "m"]) {
+      // The master: the paper through the pack's Rules mask (+ the field on r / g).
+      const master = sourceTonesOf(`${RING}/${k}.png`)!;
+      expect(master.masks).toEqual({ paper: `${RING}/rules.png` });
+      expect(Object.keys(master.tones).sort()).toEqual(["field", "paper"].filter((r) => r === "paper" || k === "r" || k === "g"));
+      // The stamp piece: the paper too, its mask cut at the piece's place.
+      expect(sourceTonesOf(`${RING}/stamp/${k}.png`)).toMatchObject({ masks: { paper: `${RING}/rules.png` }, maskAt: { x: 644, y: 1893 } });
+      // Crowns and plates: the field only, where it is toned.
+      for (const f of [`${RING}/crown/${k}.png`, `${RING}/pt/${k}.png`]) {
+        if (k === "r" || k === "g") expect(Object.keys(sourceTonesOf(f)!.tones), f).toEqual(["field"]);
+        else expect(sourceTonesOf(f), f).toBeNull();
+      }
+    }
+    // The pack's artifact and land frames have no print: as drawn.
+    for (const f of [`${RING}/a.png`, `${RING}/l.png`, `${RING}/crown/a.png`, `${RING}/pt/a.png`]) expect(sourceTonesOf(f), f).toBeNull();
+    expect(Object.keys(RING_SOURCE_TONES)).toHaveLength(6 * 2 + 2 * 2);
+    // The Rules mask is an importer input of the recipe.
+    expect(sourceFilesFor(def as never)).toContain(`${RING}/rules.png`);
+  });
+
+  it("the field region is the file's own flat colour, its cream inscription left alone", () => {
+    const px = (r: number, g: number, b: number) => [r, g, b, 255];
+    const buf = Buffer.from([...px(118, 34, 34), ...px(119, 35, 33), ...px(230, 220, 185), ...px(118, 34, 34).slice(0, 3), 0]);
+    expect([...nearRegionPlane(buf, 4, 1, [118, 34, 34], { full: 2, none: 24 })]).toEqual([255, 255, 0, 0]);
+    const toned = toneSourceRegions(buf, 4, 1, { field: nearRegionPlane(buf, 4, 1, [118, 34, 34], { full: 2, none: 24 }) }, { field: RING_PRINT_TONES.field.r });
+    expect([...toned.subarray(0, 3)]).toEqual([108, 46, 41]);
+    expect([...toned.subarray(8, 12)]).toEqual([230, 220, 185, 255]);
+  });
+});
+
+describe("the top block raised onto print", () => {
+  it("drops rows 0–11, raises 12–237 by 12 and repeats the rim's line 240 in the gap; the profile follows", () => {
+    expect(def as unknown as { shift: unknown }).toMatchObject({ shift: RING_TOP_RECUT });
+    expect((CC_OVERLAY_BANDS.lotrcrown as { shift?: unknown }).shift).toBe(RING_CROWN_TOP_RECUT);
+    expect(RING_TOP_RECUT.blocks).toEqual([{ from: 12, to: 238, by: -12 }, { from: 243, to: 2100, by: 0 }]);
+    expect(RING_TOP_RECUT_PX).toBe(12);
+    expect(LOTR_TOP_RECUT_PX).toBe(RING_TOP_RECUT_PX);
+    // A synthetic 1500 × 2100 card: each row its own value, but the rim
+    // rows 238–242 one colour except the masked end-cap columns.
+    const W = 1500;
+    const H = 2100;
+    const buf = Buffer.alloc(W * H * 4);
+    for (let y = 0; y < H; y += 1) {
+      for (let x = 0; x < W; x += 1) {
+        const o = (y * W + x) * 4;
+        const rim = y >= 238 && y < 243;
+        buf[o] = rim ? 200 : y & 255;
+        buf[o + 1] = rim && (x === 100 || x === 1400) ? y : rim ? 190 : y >> 8;
+        buf[o + 3] = 255;
+      }
+    }
+    const out = shiftBlocksRgba8(buf, W, H, RING_TOP_RECUT);
+    const at = (y: number, x = 750) => [out[(y * W + x) * 4], out[(y * W + x) * 4 + 1]];
+    expect(at(0)).toEqual([12, 0]); // row 12 is the card's top now
+    expect(at(225)).toEqual([237, 0]);
+    for (let y = 226; y < 243; y += 1) {
+      expect(at(y), `row ${y}`).toEqual([200, 190]);
+      expect(at(y, 100), `row ${y} masked`).toEqual([200, 240]); // line 240's pixel, a streak
+    }
+    expect(at(243)).toEqual([243, 0]);
+    expect(at(2099)).toEqual([2099 & 255, 2099 >> 8]);
+  });
+
+  it("a zone mask is explicit and narrow: an unmasked difference, a mask too wide or a mask on no zone throws", () => {
+    const w = 10;
+    const h = 8;
+    const img = Buffer.alloc(w * h * 4);
+    for (let y = 0; y < h; y += 1) for (let x = 0; x < w; x += 1) img[(y * w + x) * 4] = y < 3 || y > 5 ? y * 10 : 99;
+    img[(4 * w + 2) * 4 + 1] = 7; // column 2 differs inside the zone 3–5
+    const spec = { axis: "y" as const, dropLeading: true, blocks: [{ from: 1, to: 3, by: -1 }, { from: 6, to: 8, by: 0 }] };
+    expect(() => shiftBlocksRgba8(img, w, h, spec)).toThrow(/the zone 3–6 is not flat: line 4 differs from line 3/);
+    expect(() => shiftBlocksRgba8(img, w, h, { ...spec, zoneMask: { at: 3, lines: [[5, 6]] } })).toThrow(/not flat/);
+    const out = shiftBlocksRgba8(img, w, h, { ...spec, zoneMask: { at: 3, lines: [[2, 2]], repeat: 4 } });
+    expect(out[(0 * w + 0) * 4]).toBe(10); // row 0 dropped, row 1 on top
+    expect([...Array.from({ length: 4 }, (_, i) => out[((2 + i) * w + 2) * 4 + 1])]).toEqual([7, 7, 7, 7]); // line 4 repeated
+    const clean = Buffer.from(img);
+    clean[(4 * w + 2) * 4 + 1] = 0;
+    expect(() => shiftBlocksRgba8(clean, w, h, { ...spec, zoneMask: { at: 0, lines: [[2, 2]] } })).toThrow(/names no zone/);
+    expect(() => shiftBlocksRgba8(Buffer.alloc(60 * 4), 60, 1, { axis: "y", blocks: [{ from: 0, to: 1, by: 0 }], zoneMask: { at: 0, lines: [[0, ZONE_MASK_MAX_LINES]] } })).toThrow(/leaves out 49 lines/);
+    // Without dropLeading the top zone may not vanish, as before.
+    expect(() => shiftBlocksRgba8(img, w, h, { ...spec, dropLeading: false, zoneMask: { at: 3, lines: [[2, 2]] } })).toThrow(/can't become 0 lines/);
   });
 });
 
@@ -270,6 +370,18 @@ describe.skipIf(!available)("the published objects (set FRAMES_BUILD_DIR if skip
     expect([px(0, 0)[3], px(1499, 0)[3], px(0, 2099)[3], px(1499, 2099)[3]]).toEqual([255, 255, 0, 0]);
     expect(px(750, 700)[3]).toBe(0);
     expect(px(170, 270)[3]).toBe(255); // the frame round the circle
+    // The top raised 12 px: the rim's repeated line fills rows 226–242.
+    for (let y = 226; y <= 242; y += 1) expect(px(750, y), `${key} row ${y}`).toEqual(px(750, 240));
+    // The paper toned onto print (the pack's Rules mask): its light ground.
+    const want = (RING_PRINT_TONES.paper as Record<string, { to: number[] }>)[key]?.to;
+    if (want) {
+      const L = (p: number[]) => 0.2126 * p[0] + 0.7152 * p[1] + 0.0722 * p[2];
+      const box: number[][] = [];
+      for (let y = 1700; y < 1820; y += 2) for (let x = 200; x < 1100; x += 2) box.push(px(x, y).slice(0, 3));
+      box.sort((a, b) => L(a) - L(b));
+      const ground = box[Math.floor(box.length * 0.85)];
+      for (let c = 0; c < 3; c += 1) expect(Math.abs(ground[c] - want[c]), `${key} paper`).toBeLessThanOrEqual(4);
+    }
   });
 
   it.each(OVERLAY_KEYS)("lotrcrown/%s and lotrholostamp/%s pass the importer's checks", async (key) => {

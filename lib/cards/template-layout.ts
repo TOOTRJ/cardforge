@@ -4671,11 +4671,13 @@ const TARKIRDRACONIC: FrameProfile = {
   },
 };
 
-// LOTR Ring (TODO 4.11, layout v65) — Card Conjurer's 'Ring' pack
+// LOTR Ring (TODO 4.11, layout v63) — Card Conjurer's 'Ring' pack
 // (packRing.js, 1500 × 2100 native; scripts/lib/cc-frames.mjs RING), whose
 // text layout is the accurate M15 pack's but for the title bar, which sits
 // lower under the scalloped crown every print carries: so M15's slots and
-// the M15-era family's sizes, measured against the LTR prints below.
+// the M15-era family's sizes, measured against the LTR prints below. The
+// importer raises the pack's top block 12 px onto the prints
+// (RING_TOP_RECUT); the name and the cost row ride it.
 /** The ring's art slot: the pack's own artBounds (149 / 252 / 1202 × 918
  *  px). The masters are opaque but for the round window — see-through on
  *  150–1350 × 254–1160 px with its soft white foot (α 90) down to row 1170,
@@ -4684,9 +4686,13 @@ const TARKIRDRACONIC: FrameProfile = {
 const LOTR_ART_SLOT: Rect = { topPct: (252 / 2100) * 100, leftPct: (149 / 1500) * 100, widthPct: (1202 / 1500) * 100, heightPct: (918 / 2100) * 100 };
 /** The ring pack's plate at its ptBounds (1148 / 1857, 268 × 134 px). */
 const LOTR_PLATE_RECT: Rect = { topPct: (1857 / 2100) * 100, leftPct: (1148 / 1500) * 100, widthPct: (268 / 1500) * 100, heightPct: (134 / 2100) * 100 };
-/** The name and the cost row ride the pack's title bar, LOTR_TITLE_DY_PX
- *  lower than M15's (CC: title y 120 against M15's 109.6 of 2100). */
+/** The name and the cost row ride the pack's title bar: CC draws it
+ *  LOTR_TITLE_DY_PX lower than M15's (title y 120 against M15's 109.6 of
+ *  2100), and the importer raises it LOTR_TOP_RECUT_PX onto the prints
+ *  (scripts/lib/cc-frames.mjs RING_TOP_RECUT_PX: the bar's outlines at
+ *  101.5 / 219.5 px, the prints' 100.5 / 218.5). */
 const LOTR_TITLE_DY_PX = 10.4;
+export const LOTR_TOP_RECUT_PX = 12;
 const LOTR: FrameProfile = {
   ...M15,
   label: "Ring",
@@ -4694,8 +4700,8 @@ const LOTR: FrameProfile = {
   // title bar as the prints centre it: the disc's face 124.5–193.5 px under a
   // bar whose outlines are 100.5 / 218.5 on LTR #307 / #310 / #312 (centre
   // −0.3 px off the bar's), where the v61 lift left ours 6 px above it. The
-  // bar here is the pack's (113.5 / 231.5): the band's centre 174.2, lifted
-  // 2 px — 172.2 in the preview, 172 in the bake's whole px.
+  // bar here is the pack's, raised (101.5 / 219.5): the band's centre 162.2,
+  // lifted 2 px — 160.2 in the preview, 160 in the bake's whole px.
   ...CC_M15_COST,
   costDy: -2 / 1500,
   artSlot: LOTR_ART_SLOT,
@@ -4705,7 +4711,7 @@ const LOTR: FrameProfile = {
   artifactMasterKeys: { c: "a" },
   title: {
     ...M15.title,
-    rect: { ...M15.title.rect, topPct: M15.title.rect.topPct + (LOTR_TITLE_DY_PX / 2100) * 100 },
+    rect: { ...M15.title.rect, topPct: M15.title.rect.topPct + ((LOTR_TITLE_DY_PX - LOTR_TOP_RECUT_PX) / 2100) * 100 },
     colorHex: INK_LIGHT,
   },
   // The type line on the CC baseline 2 px lower: the ring prints set it on

@@ -4465,20 +4465,52 @@ under public/frames and its rows in `build-showcase-frames.mjs` /
   by region, and by ink profiles: the pack DRAWS its title bar 12 px lower
   than the prints (outlines 113.5 / 231.5 px against 100.5 / 218.5), its
   type bar where they do (1182.5 / 1299 on both), its box bottom and plate
-  6 px higher, and its sides 4 px in. The masters are taken as drawn (no
-  re-cut: the pack's geometry), and every slot is placed against ITS OWN
+  6 px higher, and its sides 4 px in. Every slot is placed against ITS OWN
   bar, as the print places it against the print's.
+- **The top raised onto print** (owner 2026-10-22, `RING_TOP_RECUT`): the
+  importer drops rows 0–11 and moves rows 12–237 — the edge inscription,
+  the title bar and the top of its cream lower rim — 12 px up
+  (`shiftBlocksRgba8`), on the masters and the crown band alike; the 12 rows
+  that opens are the rim's flat rows 238–242 repeated (line 240). The rim is
+  flat across the card but at the bar's two slanted end caps (x 88–108 and
+  1390–1413 on the masters, the crown's legs x 47–55 and 1441–1449), which
+  the zone's explicit mask leaves out of the flatness check
+  (`zoneMask`, at most `ZONE_MASK_MAX_LINES` lines across; every other
+  zone keeps the strict check): a streak of line 240 there. **Known
+  trade-off:** the rim below the bar is ~21 rows thick where print's is 8,
+  and on the plain (uncrowned) bar its end caps become a square step — the
+  review sheet's 2× zoom row shows both. The type bar, the box (still 6 px
+  higher than print: TODO 4.11) and the plate are not moved.
+- **Tones onto print** (owner 2026-10-22, `RING_PRINT_TONES` through
+  `RING_SOURCE_TONES`, the Universes Beyond frames' mechanism): Card
+  Conjurer's text-box paper was 40–60 levels off print on u / b / r / g
+  (the MSE masters were within ~3), the frame field 10–23 off on r and g.
+  The paper of w u b r g and gold is toned through the pack's Rules mask
+  (85th luma percentile of the box 200–1100 × 1700–1820, print vs pack:
+  w 218,212,191 → 213,206,179; u 123,165,195 → 163,188,216; b 156,157,156 →
+  204,202,202; r 210,136,126 → 216,177,146; g 123,170,141 → 184,202,188;
+  gold 228,208,155 → 212,187,133), the field of r (118,34,34 → 108,46,41)
+  and g (13,68,45 → 36,65,48) by its own flat colour (`nearRegionPlane`: CC
+  paints the field, the bars' faces and the plate's face one colour), as
+  each FILE loads — masters, crowns, plates and stamp pieces alike. The
+  scans of one colour agree to 1 level (LTR #302–306, #307–308, #309–311,
+  #312, #313–315, gold #317 / #328 / #329 / #331). Left as drawn: the w, b
+  and gold fields (≤ 5 levels) and the blue field, whose prints set the bars
+  LIGHTER than the field (one tone of CC's single colour would move the bars
+  12 off to fix the field by 9); `a` and `l` (no print).
 - **Slots.** The pack's text layout is the accurate M15 pack's but for the
   title bar, so the profile is M15's slots and the M15-era family's sizes
   (`fit: "measured"` name and type line, joined WITH v63), white name and
   type line, with:
-  - the name and the cost row 10.4 px lower (CC's title y 120 against
-    M15's 109.6 of 2100); the name's ink then sits within 1–2 px of the
-    print's against the bar (left edge 131–132 against 129–134);
+  - the name and the cost row on the raised bar: 10.4 px lower than M15's
+    (CC's title y 120 against M15's 109.6 of 2100) less the 12 px raise
+    (`LOTR_TOP_RECUT_PX`); the name's ink sits within 1–2 px of the
+    print's (left edge 131–132 against 129–134);
   - the CC M15 cost row (70 px discs, 78 pitch, its right end) CENTRED on
     the bar, as the prints centre it (the disc's face 124.5–193.5 under
     outlines 100.5 / 218.5 on #307 / #310 / #312: −0.3 px off the bar's
-    centre), where the v61 lift left ours 6 px above it: `costDy` −2 px.
+    centre), where the v61 lift left ours 6 px above it: `costDy` −2 px —
+    ours 125.5–193.5 on the raised bar (101.5 / 219.5).
     The last disc ends 0.5 px from the print's against the bar's right end;
   - the type line on the CC baseline + 2 px (the prints set it on 1261 px,
     6 prints, under the same bar; CC M15's lift leaves 1259);

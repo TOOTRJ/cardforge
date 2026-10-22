@@ -11,7 +11,7 @@
 //
 // (`lotrscroll` left this builder with TODO 4.11, layout v62: Card Conjurer's
 // 'Scroll' pack through scripts/import-cc-frames.mjs, frames bucket — it must
-// never come back to public/frames. `lotr` left with it too, layout v65:
+// never come back to public/frames. `lotr` left with it too, layout v63:
 // Card Conjurer's 'Ring' pack, the same way.)
 //
 //   node scripts/build-showcase-frames.mjs               # every family

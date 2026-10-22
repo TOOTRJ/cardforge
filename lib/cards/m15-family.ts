@@ -131,7 +131,7 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // layout is the M15 pack's; layout v62): it joined WITH its bump.
   "lotrscroll",
   // …and the ring (TODO 4.11, CC's 'Ring' pack, the M15 pack's text layout
-  // under a lower title bar; layout v65): it joined WITH its bump.
+  // under a lower title bar; layout v63): it joined WITH its bump.
   "lotr",
   // M15-era frames on MSE masters.
   "saga",

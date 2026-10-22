@@ -728,11 +728,14 @@ describe("provenance (lib/cards/frame-sources.json)", () => {
     // Every substitution and move is written down.
     expect(provenance.split.notes).toEqual(split.notes);
     expect(provenance.battle.notes).toEqual(battle.notes);
-    // No portrait recipe records a landscape field.
+    // No portrait recipe records a landscape field. (A portrait one may move
+    // ROWS: the LOTR ring's top block and its crown band, TODO 4.11 —
+    // tests/unit/frames/lotr-ring-importer.test.ts.)
     for (const [template, entry] of Object.entries(provenance) as [string, Record<string, unknown>][]) {
       if (template === "split" || template === "battle") continue;
       expect(entry.orientation, template).toBeUndefined();
-      expect(entry.shift, template).toBeUndefined();
+      if (template === "lotr" || template === "lotrcrown") expect((entry.shift as { axis: string }).axis, template).toBe("y");
+      else expect(entry.shift, template).toBeUndefined();
       expect(entry.printRecut, template).toBeUndefined();
     }
   });

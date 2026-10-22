@@ -1590,8 +1590,10 @@ export const WALKER_COST_ROW_TEMPLATES: readonly string[] = ["m15pw", "m15border
 //            `a`, `c` the brown land frame; the pack's P/T plates; and the
 //            slots that ride them — the M15 pack's text layout (the M15-era
 //            family's sizes, `fit: "measured"` names, the CC M15 cost row:
-//            70 px discs, 78 pitch) under the pack's lower title bar, white
-//            name and type line. LOTR_RING_LAYOUT_VERSION below — the ONE
+//            70 px discs, 78 pitch) on the pack's title bar, white name and
+//            type line; the pack's top block raised 12 px onto the prints
+//            and its text-box paper (and the r / g field) toned onto them
+//            (owner 2026-10-22). LOTR_RING_LAYOUT_VERSION below — the ONE
 //            constant (taken as v63, the next free number on main at PR
 //            time; likely renumbered to v65 behind the Zendikar Rising and
 //            Expedition re-sources). A CORRECTION ("sweep"), never a badge:

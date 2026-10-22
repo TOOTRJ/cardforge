@@ -489,17 +489,29 @@ export function describeSourceToneTable(tones) {
 }
 /** A pack file's tones (CC_SOURCE_TONES), or null. */
 export function sourceTonesOf(src) {
-  return Object.hasOwn(CC_SOURCE_TONES, src) ? CC_SOURCE_TONES[src] : null;
+  if (Object.hasOwn(CC_SOURCE_TONES, src)) return CC_SOURCE_TONES[src];
+  // The LOTR ring's files (TODO 4.11, RING_SOURCE_TONES — defined with its
+  // recipe below; read at call time).
+  return Object.hasOwn(RING_SOURCE_TONES, src) ? RING_SOURCE_TONES[src] : null;
 }
 /** The toned files a recipe draws, as provenance prints them: file → the
  *  table's name, each region's mask and its gain (describeSourceToneTable). */
 export function describeSourceTones(def) {
+  return describeFileTones(sourceFilesFor(def));
+}
+/** describeSourceTones for a list of pack files (a band's layers, a notch's
+ *  pieces). */
+export function describeFileTones(files) {
   const out = {};
-  for (const file of sourceFilesFor(def)) {
+  for (const file of files) {
     const tone = sourceTonesOf(file);
     if (!tone) continue;
     const gains = describeSourceToneTable(tone.tones);
-    out[file] = { table: tone.table, ...Object.fromEntries(Object.keys(tone.tones).map((region) => [region, `through ${tone.masks[region]}: ${gains[region]}`])) };
+    // A region is a pack mask, or (the LOTR ring, TODO 4.11) the pixels near
+    // one flat colour of the file itself (nearRegionPlane).
+    const where = (region) =>
+      tone.masks?.[region] ? `through ${tone.masks[region]}` : `on the pixels within ${tone.near[region].full}–${tone.near[region].none} levels (max channel) of ${tone.tones[region].from.join(", ")}`;
+    out[file] = { table: tone.table, ...Object.fromEntries(Object.keys(tone.tones).map((region) => [region, `${where(region)}: ${gains[region]}`])) };
   }
   return Object.keys(out).length ? out : null;
 }
@@ -1776,18 +1788,49 @@ export function rotateCwRgba8(buf, width, height) {
  * block leaves the image, when two blocks would meet (a zone keeps ≥ 1
  * line; an empty one stays empty) or when the blocks are out of order.
  * Returns a new buffer.
+ *
+ * Two explicit, narrow exceptions, each named in the spec (TODO 4.11: the
+ * LOTR ring's top block, raised onto its prints), never implied:
+ *   • `dropLeading: true` — the zone BEFORE the first block may shrink to
+ *     nothing: its lines leave the image at the edge (the first block then
+ *     starts the image). Every other zone still keeps ≥ 1 line.
+ *   • `zoneMask: { at, lines, repeat? }` — the zone that starts at source
+ *     line `at` is judged flat with the listed `lines` across (column
+ *     ranges [from, to] inclusive on axis "y") left out: those may differ
+ *     from line to line, and the zone repeats line `repeat` (inside the
+ *     zone; default its first) — on the masked lines a streak of that one
+ *     line. At most ZONE_MASK_MAX_LINES lines across may be masked, so a
+ *     mask can never stand in for a zone that isn't flat. Every other zone,
+ *     and every unmasked line across this one, is held to the strict check.
  */
+export const ZONE_MASK_MAX_LINES = 48;
 export function shiftBlocksRgba8(buf, width, height, spec) {
   if (buf.length !== width * height * 4) throw new Error(`shiftBlocksRgba8: ${buf.length} bytes is not ${width}×${height} RGBA`);
-  const { axis, blocks } = spec;
+  const { axis, blocks, dropLeading = false, zoneMask = null } = spec;
   if (axis !== "x" && axis !== "y") throw new Error(`shiftBlocksRgba8: axis ${JSON.stringify(axis)}`);
   const lines = axis === "x" ? width : height;
   const across = axis === "x" ? height : width;
   const bad = (why) => new Error(`shiftBlocksRgba8: ${why} ${JSON.stringify({ axis, blocks, lines })}`);
   if (!Array.isArray(blocks) || blocks.length === 0) throw bad("no blocks");
-  // Line `line` of the source equals line `other`, over the whole other side.
-  const sameLine = (line, other) => {
+  // The masked lines across, if the spec names a zone mask.
+  const masked = new Uint8Array(across);
+  if (zoneMask) {
+    let count = 0;
+    for (const [from, to] of zoneMask.lines ?? []) {
+      if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to >= across || to < from) throw bad(`bad zone mask range ${from}–${to}`);
+      for (let i = from; i <= to; i += 1) {
+        if (masked[i]) continue;
+        masked[i] = 1;
+        count += 1;
+      }
+    }
+    if (count === 0 || count > ZONE_MASK_MAX_LINES) throw bad(`a zone mask leaves out ${count} lines across (1–${ZONE_MASK_MAX_LINES})`);
+  }
+  // Line `line` of the source equals line `other`, over the whole other side
+  // (but the masked lines across, when `skip` is given).
+  const sameLine = (line, other, skip = null) => {
     for (let i = 0; i < across; i += 1) {
+      if (skip && skip[i]) continue;
       const a = (axis === "x" ? i * width + line : line * width + i) * 4;
       const b = (axis === "x" ? i * width + other : other * width + i) * 4;
       if (buf[a] !== buf[b] || buf[a + 1] !== buf[b + 1] || buf[a + 2] !== buf[b + 2] || buf[a + 3] !== buf[b + 3]) return false;
@@ -1798,15 +1841,23 @@ export function shiftBlocksRgba8(buf, width, height, spec) {
   const src = new Int32Array(lines).fill(-1);
   let sourceAt = 0;
   let targetAt = 0;
+  let maskUsed = false;
   const zone = (sourceEnd, targetEnd) => {
     const had = sourceEnd - sourceAt;
     const has = targetEnd - targetAt;
     if (had < 0 || has < 0) throw bad("blocks out of order or overlapping");
+    // The leading zone, named droppable: its lines leave the image.
+    if (dropLeading && sourceAt === 0 && targetAt === 0 && has === 0) return;
     if (had === 0 ? has !== 0 : has < 1) throw bad(`the zone at source ${sourceAt}–${sourceEnd} can't become ${has} lines`);
-    for (let line = sourceAt + 1; line < sourceEnd; line += 1) {
-      if (!sameLine(sourceAt, line)) throw bad(`the zone ${sourceAt}–${sourceEnd} is not flat: line ${line} differs from line ${sourceAt}`);
+    const isMasked = zoneMask && zoneMask.at === sourceAt;
+    if (isMasked) maskUsed = true;
+    const repeat = isMasked && zoneMask.repeat !== undefined ? zoneMask.repeat : sourceAt;
+    if (!Number.isInteger(repeat) || repeat < sourceAt || repeat >= Math.max(sourceEnd, sourceAt + 1)) throw bad(`the zone mask's repeat line ${repeat} is not in the zone ${sourceAt}–${sourceEnd}`);
+    for (let line = sourceAt; line < sourceEnd; line += 1) {
+      if (line === repeat) continue;
+      if (!sameLine(repeat, line, isMasked ? masked : null)) throw bad(`the zone ${sourceAt}–${sourceEnd} is not flat: line ${line} differs from line ${repeat}`);
     }
-    for (let t = targetAt; t < targetEnd; t += 1) src[t] = sourceAt;
+    for (let t = targetAt; t < targetEnd; t += 1) src[t] = repeat;
   };
   for (const block of blocks) {
     const { from, to, by } = block;
@@ -1817,6 +1868,7 @@ export function shiftBlocksRgba8(buf, width, height, spec) {
     targetAt = to + by;
   }
   zone(lines, lines);
+  if (zoneMask && !maskUsed) throw bad(`the zone mask names no zone (no zone starts at ${zoneMask.at})`);
   const out = Buffer.alloc(buf.length);
   if (axis === "y") {
     for (let t = 0; t < lines; t += 1) buf.copy(out, t * width * 4, src[t] * width * 4, (src[t] + 1) * width * 4);
@@ -1845,8 +1897,14 @@ export function describeBlockShift(spec, width, height) {
   const zones = [];
   let at = 0;
   let landed = 0;
+  const mask = spec.zoneMask ?? null;
   for (const b of spec.blocks) {
-    if (b.from > at) zones.push(`${unit} ${at}–${b.from - 1} (flat) → ${b.from + b.by - landed} px`);
+    if (b.from > at) {
+      const size = b.from + b.by - landed;
+      if (spec.dropLeading && at === 0 && size === 0) zones.push(`${unit} 0–${b.from - 1} dropped (they leave the image)`);
+      else if (mask && mask.at === at) zones.push(`${unit} ${at}–${b.from - 1} (flat but the masked lines across) → ${size} px, line ${mask.repeat ?? at} repeated`);
+      else zones.push(`${unit} ${at}–${b.from - 1} (flat) → ${size} px`);
+    }
     at = b.to;
     landed = b.to + b.by;
   }
@@ -1855,6 +1913,7 @@ export function describeBlockShift(spec, width, height) {
     axis: spec.axis,
     blocks: spec.blocks.map((b) => ({ ...b })),
     zones,
+    ...(mask ? { zoneMask: { at: mask.at, lines: mask.lines.map((r) => [...r]), repeat: mask.repeat ?? mask.at, what: "lines across left out of the zone's flatness check: on them the repeated line is a streak (TODO 4.11)" } } : {}),
     why: spec.why,
     lossless: "each block is copied byte for byte; each zone between them is one flat line repeated (checked: every line of a zone is identical) — no resample, no blend",
   };
@@ -3488,7 +3547,7 @@ export function pieceNotchFindings(buf, shape, cut, marginPx, blackoutPx, stamp 
 // (`lotr`; LTR #302–331 and their surge-foil twins #794–823 — sixty
 // printings, every one a legendary creature) from Card Conjurer's 'Ring'
 // pack (packRing.js, `img/frames/lotr/`, 1500 × 2100 NATIVE: nothing is
-// resampled). Its masters replace the 646 px MSE drawing (layout v65's
+// resampled). Its masters replace the 646 px MSE drawing (layout v63's
 // correction). Self-contained: the template, its crown band and its stamp
 // notch read only the constants below.
 //   • masters: the pack's eight frames whole — w u b r g, m (gold: three
@@ -3528,11 +3587,143 @@ const RING_PACK = "packRing.js 'Ring' (the Lord of the Rings ring showcase; grou
 /** The ring's master corners the importer leaves SQUARE: the frame field
  *  runs into them on print (lib/frames/square-corners.ts "frame"). */
 export const RING_KEEP_CORNERS = Object.freeze(["tl", "tr"]);
+
+/**
+ * The ring pack's colours toned onto its prints (owner 2026-10-22, the #607
+ * review: Card Conjurer's text-box paper is 40–60 levels off print on u / b
+ * / r / g, where the MSE masters were within ~3). Measured on the Scryfall
+ * PNGs at 1500 × 2100 (LTR #302–306 w, #307–308 u, #309–311 b, #312 r,
+ * #313–315 g, #317 / #328 / #329 / #331 gold; the scans of one colour agree
+ * to 1 level, so the medians are these):
+ *   • paper — the 85th luma percentile of the box 200–1100 × 1700–1820 px
+ *     (the colour of the paper's light ground, its texture under it):
+ *       w 218,212,191 → 213,206,179;  u 123,165,195 → 163,188,216;
+ *       b 156,157,156 → 204,202,202;  r 210,136,126 → 216,177,146;
+ *       g 123,170,141 → 184,202,188;  gold 228,208,155 → 212,187,133.
+ *     Every key is ≥ 9 levels off on a channel (w 12 in blue, gold 16–22),
+ *     so every colour key is toned; the pack's `a` and `l` frames have no
+ *     print and stay as drawn.
+ *   • frame field — CC paints the field, the bars' faces and the plate's
+ *     face one flat colour; on print the field, the plate's face and (but
+ *     on blue) the bars agree within 3 levels (median of the three): r
+ *     118,34,34 → 108,46,41; g 13,68,45 → 36,65,48. Left as drawn: w
+ *     (134,123,105 vs 134,127,108), b (44,43,39 vs 47,46,42), gold
+ *     (158,124,78 vs 159,126,73) — ≤ 5 levels — and blue (44,51,103 vs
+ *     46,52,94): its prints set the bars LIGHTER (60,69,106) than the field,
+ *     so one tone of CC's single colour would move the bars 12 off to fix
+ *     the field by 9.
+ * Through toneSourceRegions (UB_PRINT_TONES' function): per-channel gain at
+ * the region's tone, fading to the neutral gain toward white, so a
+ * highlight keeps its hue. The paper region is the pack's own Rules mask
+ * (lotr/rules.png); the field region the pixels of the FILE near its flat
+ * colour (nearRegionPlane: full within 2 levels, none past 24 — the cream
+ * inscription and rims are far from it), so the crowns and plates, which
+ * repaint the field, take the same tone as the masters.
+ */
+export const RING_PRINT_TONES = Object.freeze({
+  paper: Object.freeze({
+    w: Object.freeze({ from: [218, 212, 191], to: [213, 206, 179] }),
+    u: Object.freeze({ from: [123, 165, 195], to: [163, 188, 216] }),
+    b: Object.freeze({ from: [156, 157, 156], to: [204, 202, 202] }),
+    r: Object.freeze({ from: [210, 136, 126], to: [216, 177, 146] }),
+    g: Object.freeze({ from: [123, 170, 141], to: [184, 202, 188] }),
+    m: Object.freeze({ from: [228, 208, 155], to: [212, 187, 133] }),
+  }),
+  field: Object.freeze({
+    r: Object.freeze({ from: [118, 34, 34], to: [108, 46, 41] }),
+    g: Object.freeze({ from: [13, 68, 45], to: [36, 65, 48] }),
+  }),
+});
+/** The field region: full coverage within `full` levels (max channel) of
+ *  the tone's `from`, none past `none`, linear between. */
+export const RING_FIELD_NEAR = Object.freeze({ full: 2, none: 24 });
+/**
+ * A region of an image's OWN pixels: the coverage plane (0–255) of the
+ * pixels near `rgb` — 255 within `full` levels on every channel, 0 past
+ * `none` on any, linear between; a transparent pixel 0. Pure.
+ */
+export function nearRegionPlane(buf, width, height, rgb, { full, none }) {
+  const n = width * height;
+  if (buf.length !== n * 4) throw new Error(`nearRegionPlane: the image is not ${width}x${height} RGBA`);
+  if (!(none > full && full >= 0)) throw new Error(`nearRegionPlane: bad range ${full}–${none}`);
+  const plane = new Uint8Array(n);
+  for (let p = 0; p < n; p += 1) {
+    const o = p * 4;
+    if (buf[o + 3] === 0) continue;
+    const d = Math.max(Math.abs(buf[o] - rgb[0]), Math.abs(buf[o + 1] - rgb[1]), Math.abs(buf[o + 2] - rgb[2]));
+    plane[p] = d <= full ? 255 : d >= none ? 0 : Math.round((255 * (none - d)) / (none - full));
+  }
+  return plane;
+}
+/** One ring file's tone entry: the paper through the Rules mask (a file
+ *  drawn on the whole card, or at `at` — the stamp piece, its box cut from
+ *  the mask), the field by its own colour. */
+function ringSourceTone(key, { paper, at = null }) {
+  const tones = {};
+  const masks = {};
+  const near = {};
+  if (paper && RING_PRINT_TONES.paper[key]) {
+    tones.paper = RING_PRINT_TONES.paper[key];
+    masks.paper = `${RING}/rules.png`;
+  }
+  if (RING_PRINT_TONES.field[key]) {
+    tones.field = RING_PRINT_TONES.field[key];
+    near.field = RING_FIELD_NEAR;
+  }
+  if (!Object.keys(tones).length) return null;
+  return Object.freeze({ masks: Object.freeze(masks), near: Object.freeze(near), ...(at ? { maskAt: at } : {}), tones: Object.freeze(tones), table: `RING_PRINT_TONES (${key})` });
+}
+/** The ring's toned files: masters (paper + field), crowns and plates
+ *  (field), stamp pieces (paper, the mask cut at the piece's place). */
+export const RING_SOURCE_TONES = Object.freeze(
+  Object.fromEntries(
+    ["w", "u", "b", "r", "g", "m"].flatMap((k) =>
+      [
+        [`${RING}/${k}.png`, ringSourceTone(k, { paper: true })],
+        [`${RING}/crown/${k}.png`, ringSourceTone(k, { paper: false })],
+        [`${RING}/pt/${k}.png`, ringSourceTone(k, { paper: false })],
+        [`${RING}/stamp/${k}.png`, ringSourceTone(k, { paper: true, at: { x: 644, y: 1893 } })],
+      ].filter(([, t]) => t !== null),
+    ),
+  ),
+);
+
+/**
+ * The ring's top block raised onto its prints (owner 2026-10-22, the #607
+ * review). The pack draws the whole top — the edge inscription, the title
+ * bar, its cream lower rim — 12–13 px lower than every print (the bar's
+ * outlines 113.5 / 231.5 px against 100.5 / 218.5 on LTR #302–331, its rim
+ * 234–242 against 222–229); the type bar, the box and the plate are not
+ * moved (the box's −6 px is noted on TODO 4.11). Rows 0–11 leave the image,
+ * rows 12–237 move up 12 px, and the 12 rows that opens are the rim's flat
+ * rows 238–242 repeated (line 240): the rim is flat across the card but at
+ * the bar's two slanted end caps, x 88–108 and 1390–1413 on every key (the
+ * zone mask — a streak of line 240 there; the review sheet's 2× zoom shows
+ * it). Below row 243 nothing moves. Masters and crown band alike.
+ */
+export const RING_TOP_RECUT = Object.freeze({
+  axis: "y",
+  dropLeading: true,
+  blocks: Object.freeze([Object.freeze({ from: 12, to: 238, by: -12 }), Object.freeze({ from: 243, to: 2100, by: 0 })]),
+  zoneMask: Object.freeze({ at: 238, lines: Object.freeze([Object.freeze([88, 108]), Object.freeze([1390, 1413])]), repeat: 240 }),
+  why: "the pack's top block (edge inscription, title bar and its rim) 12 px lower than LTR #302–331 print it (TODO 4.11, owner 2026-10-22)",
+});
+/** …the crown band's: the same rows; its rim's non-flat lines are the
+ *  crown's own legs, x 47–55 and 1441–1449. */
+export const RING_CROWN_TOP_RECUT = Object.freeze({
+  ...RING_TOP_RECUT,
+  zoneMask: Object.freeze({ at: 238, lines: Object.freeze([Object.freeze([47, 55]), Object.freeze([1441, 1449])]), repeat: 240 }),
+});
+/** The px the ring's top block was raised (the profile's name and cost row
+ *  follow it: lib/cards/template-layout.ts LOTR_TOP_RECUT_PX). */
+export const RING_TOP_RECUT_PX = 12;
 const RING_NOTES = [
   "w u b r g m = the pack's colour frames whole (lotr/<k>.png, 1500x2100 NATIVE — no resample), as the LTR ring showcase prints them (LTR #302–331, #794–823)",
   "a = the pack's blue-grey 'Artifact Frame' (lotr/a.png): the master a colourless ARTIFACT paints (FrameProfile.artifactMasterKeys { c: 'a' }); c = the pack's brown 'Land Frame' (lotr/l.png) — the pack draws no colourless frame. The ring run prints neither (sixty legendary creatures, every one coloured): the scroll's split (#604) applied unprinted",
   "corners: the one card corner cut at the two BOTTOM corners (the black border's shoulders, as on every Card Conjurer master); the TOP corners kept square — the frame field runs to the card's top and side edges on every print, so a square output keeps it there (lib/frames/square-corners.ts 'frame'); a round output cuts it at render",
   "plates = the pack's eight plates (lotr/pt/<k>.png, 268x134 at ptBounds 1148/1857 px); c = the artifact's plate (the plate follows the colour key); the land plate is not published (no land creature prints on the frame)",
+  "toned onto the prints (owner 2026-10-22; RING_PRINT_TONES through RING_SOURCE_TONES, recorded under sourceTones): the text-box paper of w u b r g and gold through the pack's Rules mask, and the frame field of r and g (the field, the bars' faces and the plate's face — one flat colour in the pack — by their own colour), as each FILE loads, so the masters, crowns, plates and stamp pieces drawn from it agree",
+  "the top block raised 12 px onto the prints (RING_TOP_RECUT, shiftBlocksRgba8): rows 0–11 dropped, rows 12–237 up 12 px, the title bar's flat lower rim (rows 238–242, line 240) repeated in the 12 rows that opens — but at the bar's slanted end caps (x 88–108, 1390–1413, the zone mask): a streak of line 240 there; the type bar, the box (6 px higher than print: TODO 4.11) and the plate unmoved",
   "not built: the two-colour dress (replacementMasks 'Right Half' = lotr/maskRightHalf.png: the colour frames split down the card under the pack's bars — LTR #316, #318–327, #330 and their twins; a follow-up — a two-colour card draws the gold master today)",
 ];
 /**
@@ -3673,6 +3864,7 @@ export const CC_TEMPLATES = {
     },
     plates: RING_PT,
     keepCorners: RING_KEEP_CORNERS,
+    shift: RING_TOP_RECUT,
     pack: RING_PACK,
     notes: RING_NOTES,
   },
@@ -5683,6 +5875,9 @@ export function sourceFilesFor(def) {
     // …and its region masks (TODO 4.10b, the 2003 frame).
     for (const mask of Object.values(printRecipe?.regionMasks ?? {})) files.add(mask);
   }
+  // A toned file's masks (CC_SOURCE_TONES; the LOTR ring's Rules mask, TODO
+  // 4.11): importer inputs too.
+  for (const file of [...files]) for (const mask of Object.values(sourceTonesOf(file)?.masks ?? {})) files.add(mask);
   return [...files].sort();
 }
 
@@ -6378,9 +6573,11 @@ export const CC_OVERLAY_BANDS = {
     layers: ringCrownLayers,
     findings: ringCrownFindings,
     keepCorners: RING_KEEP_CORNERS,
+    shift: RING_CROWN_TOP_RECUT,
     notes: [
       "the ring showcase's legendary crown (TODO 4.11): the pack's 'Legendary Crown' (lotr/crown/<k>.png, 1500x272 at crownBounds 0/0) at 1:1 — the scalloped cream title bar with the frame field round it, which every print of the run carries (all sixty are legendary: LTR #302–331, #794–823); it repaints the card's whole top, its two top corners kept square like the masters'",
       "keys = the pack's eight crowns: w u b r g, m (gold), a (the artifact's blue-grey — a colourless artifact draws master a) and l (the land's brown — the template's keyMap c → l); no pairs (no pair masters)",
+      "raised 12 px with the masters (RING_CROWN_TOP_RECUT: the masters' rows, the zone mask on the crown's own legs, x 47–55 and 1441–1449) and its field toned with theirs (RING_SOURCE_TONES)",
     ],
   },
   lotrscrollcrown: {
@@ -7121,7 +7318,12 @@ export const NOTCH_FOOT = Object.freeze({
 /** Every Card Conjurer file a notch folder reads. */
 export function notchSourceFiles(def) {
   // A notch made of the pack's own piece per key (TODO 4.11: the scroll).
-  if (def.pieces) return [...new Set([...Object.values(def.pieces), ...(def.stampShape ? [def.stampShape] : [])])].sort();
+  if (def.pieces) {
+    const pieces = Object.values(def.pieces);
+    // …and a toned piece's mask (the LOTR ring's Rules mask, TODO 4.11).
+    const masks = pieces.flatMap((src) => Object.values(sourceTonesOf(src)?.masks ?? {}));
+    return [...new Set([...pieces, ...masks, ...(def.stampShape ? [def.stampShape] : [])])].sort();
+  }
   return [def.shape.src];
 }
 
