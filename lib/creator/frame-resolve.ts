@@ -11,6 +11,7 @@ import {
   type FrameTemplate,
 } from "@/types/card";
 import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
+import { partColourVerdict } from "@/lib/cards/part-color";
 import { dfcBodyOf } from "@/lib/cards/dfc";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { hasRulesBoxText, printsPowerToughness } from "@/lib/cards/card-display";
@@ -589,12 +590,31 @@ export function finalizeImportMatch<
     frame_match?: FrameMatch;
     frame_template?: FrameTemplate;
     color_identity?: readonly ColorIdentity[];
-  } & Partial<Pick<ScryfallImportPatch, "kind" | "card_type" | "supertype" | "back_face" | "printed_dfc_icon">>,
->(patch: P, verifiedKeys: ReadonlySet<string>): P {
-  if (!patch.frame_match) return patch;
+  } & Partial<
+    Pick<ScryfallImportPatch, "kind" | "card_type" | "supertype" | "back_face" | "printed_dfc_icon" | "printed_first_part_color" | "printed_part_color">
+  >,
+>(given: P, verifiedKeys: ReadonlySet<string>): P {
+  if (!given.frame_match) return given;
+  // Each part in its own colour (TODO 4.26, M1): where the frame draws it,
+  // both parts' colours must be verified there — a split half's master, a
+  // Prepare page's colour — or the card lands with the look OFF (its whole
+  // colour, as before 4.26), never a save refused after the art. With the
+  // look on, the landing is verified in the first part's own colour (M2:
+  // the master it paints; the card's colour stays the whole card's).
+  const partVerdict = partColourVerdict(
+    given.frame_match.landOn ?? given.frame_match.template,
+    given.color_identity,
+    given.printed_first_part_color,
+    given.back_face?.color_identity,
+    verifiedKeys,
+  );
+  const patch: P & { frame_match: FrameMatch } =
+    partVerdict.drawn && !partVerdict.ok
+      ? { ...given, frame_match: given.frame_match, printed_part_color: false as const }
+      : { ...given, frame_match: given.frame_match };
   const match = withVerification(
     patch.frame_match,
-    pickFrameColorKey(patch.color_identity),
+    pickFrameColorKey(partVerdict.drawn ? [...partVerdict.frameColors] : patch.color_identity),
     verifiedKeys,
   );
   // …or another landing (a borderless Vehicle onto the Vehicle frame).
@@ -757,6 +777,8 @@ export function remixFrameFor(
     | "color_identity"
     | "back_face"
     | "printed_dfc_icon"
+    | "printed_first_part_color"
+    | "printed_part_color"
   >,
   verifiedKeys: ReadonlySet<string>,
   options: {
@@ -802,7 +824,11 @@ export function remixFrameFor(
   const layoutTemplate = KIND_DEFS[kind].layoutTemplates?.[0];
 
   if (layoutTemplate) {
-    const colorKey = pickFrameColorKey([...colors]);
+    // (A split / aftermath card with each part in its own colour, TODO
+    // 4.26: verified in its first part's — partColourVerdict, as the
+    // import; else its whole colour, the look off.)
+    const part = partColourVerdict(layoutTemplate, colors, patch.printed_first_part_color, patch.back_face?.color_identity, verifiedKeys);
+    const colorKey = pickFrameColorKey([...(part.drawn ? part.frameColors : colors)]);
     if (isFrameComboAvailable(layoutTemplate, colorKey, verifiedKeys)) {
       return { ok: true, template: layoutTemplate, card_type: savedType };
     }

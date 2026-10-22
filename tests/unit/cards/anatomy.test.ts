@@ -346,10 +346,10 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // Constellation frame, whose two-colour card is the gold master — nor
       // the battle, TODO 5.5: its back draws the crown through the card's
       // switch, but its two-colour back wears the gold master for now; nor
-      // the Prepare frame, TODO 4.27: its two-colour card is the gold master
-      // until its pairs, 4.6f; nor the Lord of the Rings scroll, TODO 4.11:
-      // its two-colour dress is a follow-up.)
-      (CROWNED.includes(t) && t !== "prepare" && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "lotrscroll" && t !== "battle" && t !== "sagadfcfront" && !NYX_TOKENS.includes(t)),
+      // the Prepare frame until TODO 4.26 drew its pairs, which it now has;
+      // nor the Lord of the Rings scroll, TODO 4.11: its two-colour dress is
+      // a follow-up.)
+      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "lotrscroll" && t !== "battle" && t !== "sagadfcfront" && !NYX_TOKENS.includes(t)),
   );
 
   it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless, extended-art and snow PROFILES entries — never a profile that spreads them", () => {
@@ -389,6 +389,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // dresses over the extended masters; its land dress the land's split.
       extendedart: ["split", "hybrid"],
       extendedartland: ["split"],
+      // The Prepare frame (4.26): m15's two dresses with the page.
+      prepare: ["split", "hybrid"],
       // The double-faced spell faces (5.1d): the split on every one — the
       // prints split a back's rings and box over its gold bars too — and the
       // hybrid dress on the modal front alone (MH3 #252–261); never the land
@@ -480,7 +482,10 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // two transform FRONT bodies, the templates that draw it.
       // (…and the double-faced saga front, TODO 5.5 (b).)
       const family = template === "m15dfcfront" || template === "m15dfclandfront" || template === "m15borderlessdfcfront" || template === "sagadfcfront" ? { dfcIcon: "arrows" as const } : {};
-      expect(anatomyDefaults(template), template).toEqual({ ...(crown ? { crown: true } : {}), ...(pair ? { twoColor: true } : {}), ...line, ...stamp, ...family });
+      // …and each part in its own colour (TODO 4.26) on split, aftermath
+      // and the Prepare frame.
+      const part = template === "split" || template === "aftermath" || template === "prepare" ? { partColor: true as const } : {};
+      expect(anatomyDefaults(template), template).toEqual({ ...(crown ? { crown: true } : {}), ...(pair ? { twoColor: true } : {}), ...line, ...stamp, ...family, ...part });
       expect(normalizeAnatomy({ template, finish: "foil", crown: true, twoColor: false, stamp: "oval" }, template, "creature"), template).toEqual({
         template,
         finish: "foil",
@@ -496,6 +501,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
         ...line,
         ...stamp,
         ...family,
+        ...part,
       });
     }
     // The AI jobs send no frame_style: the default template (m15) draws both.

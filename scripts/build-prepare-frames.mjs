@@ -10,6 +10,16 @@
 //                           the published adventure/<key>
 //   prepare/c               from the published m15artifact/c, its bars from
 //                           adventure/c (Card Conjurer's artifact `a`)
+//   prepare/<pair>, <pair>-h  (TODO 4.26) the two-colour Prepare: the
+//                           published m15/<pair> (gold-split) or
+//                           m15/<pair>-h (hybrid) master, its left box and
+//                           bottom pinline re-lerped from the two one-colour
+//                           m15 masters onto print's columns, the page's rim
+//                           and box lerped about the page's centre, gold or
+//                           grey bars (adventure/m, adventure/b toned)
+//   prepare/page/<key>      (TODO 4.26) every master's page cut out — the
+//                           overlay a card draws when its SPELL's page key
+//                           is not the creature's (lib/cards/part-color.ts)
 //
 // What the run does to the base master (in this order; every painted pixel
 // is a published master's, moved, toned or darkened — the only geometry it
@@ -173,12 +183,21 @@ function barCoverage(x, y, bar) {
 }
 
 // ---- the build ----------------------------------------------------------------
-async function buildKey(key) {
+/**
+ * One master: `spec.base` is the frame the card's creature wears (its
+ * field, bars and left box), `spec.pageBase` the frame its page's rim and
+ * box are read from (the same buffer for a one-colour key; for a pair, the
+ * two colours ramped about the page), `spec.bars` the adventure master
+ * whose page bars are toned onto print (`spec.tones`: print's fills, or
+ * null — untoned), `spec.bevel` print's bevel ratios, `spec.gainAt(x)` the
+ * page box's gain at column x, `spec.strip` print's strip median (or null
+ * — the strip keeps its own level).
+ */
+async function buildMaster(spec) {
   let stripShift = [0, 0, 0];
-  const baseSrc = published(R.base[key]);
-  const barSrc = published(R.barSources[key]);
-  const base = await raw(baseSrc.file);
-  const adv = await raw(barSrc.file);
+  const base = spec.base;
+  const pageBase = spec.pageBase;
+  const adv = spec.bars;
   const out = Buffer.from(base);
   const set = (x, y, rgb) => {
     const o = at(x, y);
@@ -198,7 +217,7 @@ async function buildKey(key) {
 
   // 2. the rim
   for (let x = R.rim.cols[0]; x <= R.rim.cols[1]; x++) {
-    const pin = get(base, x, R.rim.sourceRow);
+    const pin = get(pageBase, x, R.rim.sourceRow);
     for (let y = R.rim.rows[0]; y <= R.rim.rows[1]; y++) set(x, y, pin);
   }
 
@@ -231,7 +250,7 @@ async function buildKey(key) {
     if (rows.length < want) throw new Error(`the strip's blocks fill ${rows.length} of ${want} rows`);
     rows = rows.slice(0, want);
     const own = [0, 1, 2].map((c) => median(rows.flatMap((r) => r.map((p) => p[c]))));
-    const shift = R.print[key]?.strip ? R.print[key].strip.map((v, c) => v - own[c]) : [0, 0, 0];
+    const shift = spec.strip ? spec.strip.map((v, c) => v - own[c]) : [0, 0, 0];
     rows.forEach((pixels, i) => {
       const shade = S.shadow[i] ?? 1;
       pixels.forEach((p, j) => set(S.cols[0] + j, S.rows[0] + i, p.map((v, c) => (v + shift[c]) * shade)));
@@ -241,28 +260,32 @@ async function buildKey(key) {
 
   // 4. the page's box
   const P = R.pageBox;
-  const gain = pageGainOf(key);
   const ungained = (x, y) =>
     (y >= P.ungained.rows[0] && y <= P.ungained.rows[1]) || (x >= P.ungained.cols[0] && x <= P.ungained.cols[1]);
   const page = new Map();
-  for (let y = P.rows[0]; y <= P.rows[1]; y++) for (let x = P.cols[0]; x <= P.cols[1]; x++) page.set(y * W + x, get(base, x, y));
-  for (let i = 0; i < P.left.cols; i++) for (let y = P.rows[0]; y <= P.rows[1]; y++) page.set(y * W + P.left.toCol + i, get(base, P.left.fromCol + i, y + P.left.rowOffset));
+  for (let y = P.rows[0]; y <= P.rows[1]; y++) for (let x = P.cols[0]; x <= P.cols[1]; x++) page.set(y * W + x, get(pageBase, x, y));
+  for (let i = 0; i < P.left.cols; i++) for (let y = P.rows[0]; y <= P.rows[1]; y++) page.set(y * W + P.left.toCol + i, get(pageBase, P.left.fromCol + i, y + P.left.rowOffset));
   for (let i = 0; i < P.top.rows; i++) for (let x = P.cols[0]; x <= P.cols[1]; x++) {
     // The top edge's own left end: the base box's corner, moved with it.
     const from = x < P.left.toCol + P.left.cols ? P.left.fromCol + (x - P.left.toCol) : x;
-    page.set((P.top.toRow + i) * W + x, get(base, from, P.top.fromRow + i));
+    page.set((P.top.toRow + i) * W + x, get(pageBase, from, P.top.fromRow + i));
   }
   for (let i = 0; i < P.bottom.rows; i++) for (let x = P.cols[0]; x <= P.cols[1]; x++) {
-    page.set((P.bottom.toRow + i) * W + x, get(base, x, P.bottom.fromRow + i));
+    page.set((P.bottom.toRow + i) * W + x, get(pageBase, x, P.bottom.fromRow + i));
   }
   for (const [i, rgb] of page) {
     const x = i % W;
     const y = Math.floor(i / W);
+    const gain = spec.gainAt(x);
     set(x, y, ungained(x, y) ? rgb : rgb.map((v, c) => v * gain[c]));
   }
 
+  // The page as it stands under the bars: the overlay's rounded bar ends
+  // are cut against it (pageOverlay).
+  const underBars = Buffer.from(out);
+
   // 5. the bars
-  const bevel = bevelOf(key);
+  const bevel = spec.bevel;
   const bars = {};
   for (const name of ["name", "type"]) {
     const bar = R.bars[name];
@@ -278,7 +301,7 @@ async function buildKey(key) {
       name === "name"
         ? regionMedian(adv, srcCol(800), srcCol(1240), sourceRowOf(1338), sourceRowOf(1344))
         : regionMedian(adv, srcCol(1100), srcCol(1385), sourceRowOf(1450), sourceRowOf(1496));
-    const tone = toneOf(R.print[key]?.[`${name}Fill`], sourceFill);
+    const tone = toneOf(spec.tones?.[`${name}Fill`], sourceFill);
     const toned = sourceFill.map((v, c) => tone[c](v));
     const level = (toned[0] + toned[1] + toned[2]) / 3;
     const top = bevel[`${name}Top`];
@@ -321,38 +344,176 @@ async function buildKey(key) {
       }
     }
   }
-  return { out, baseSha: baseSrc.sha, barSha: barSrc.sha, gain, bars, stripShift };
+  return { out, underBars, bars, stripShift };
 }
 
-async function write(key, out) {
-  const png = path.join(outDir, TEMPLATE, `${key}.png`);
+/** A one-colour key's master (TODO 4.27's seven keys; 4.26 changes none of
+ *  their bytes). */
+async function buildKey(key) {
+  const baseSrc = published(R.base[key]);
+  const barSrc = published(R.barSources[key]);
+  const base = await raw(baseSrc.file);
+  const gain = pageGainOf(key);
+  const built = await buildMaster({
+    base,
+    pageBase: base,
+    bars: await raw(barSrc.file),
+    tones: R.print[key] ?? null,
+    bevel: bevelOf(key),
+    gainAt: () => gain,
+    strip: R.print[key]?.strip ?? null,
+  });
+  return { ...built, key, gain, baseSha: baseSrc.sha, barSha: barSrc.sha };
+}
+
+// ---- the pairs (TODO 4.26) ------------------------------------------------------
+const PR = R.pairs;
+/** The second colour's share at column x of a ramp [from, to]. */
+const share = ([from, to], x) => (x <= from ? 0 : x >= to ? 1 : (x - from) / (to - from));
+
+/** Two masters lerped per column by `shareAt` into `out` over `rows` ×
+ *  `cols` — premultiplied, as scripts/lib/pair-ramp.mjs lerps. */
+function lerpInto(out, left, right, shareAt, rows, cols) {
+  for (let y = rows[0]; y <= rows[1]; y++) {
+    for (let x = cols[0]; x <= cols[1]; x++) {
+      const t = shareAt(x);
+      const o = at(x, y);
+      const la = left[o + 3] / 255;
+      const ra = right[o + 3] / 255;
+      const a = la * (1 - t) + ra * t;
+      for (let c = 0; c < 3; c++) out[o + c] = a === 0 ? 0 : clamp8((left[o + c] * la * (1 - t) + right[o + c] * ra * t) / a);
+      out[o + 3] = clamp8(a * 255);
+    }
+  }
+}
+
+/** A pair key's master (`wu`, `wu-h`): the M15 pair master of its dress,
+ *  the creature's left box and the pinline under the boxes ramped onto
+ *  print's columns, the page's rim and box ramped about the page's centre,
+ *  the bars in the dress's tone (gold, or the hybrid's grey). */
+async function buildPair(pair, dressName) {
+  const dress = PR.dresses[dressName];
+  const [k1, k2] = [pair[0], pair[1]];
+  const pairRel = dress.base.replace("{pair}", pair);
+  const pairSrc = published(pairRel);
+  const leftSrc = published(R.base[k1]);
+  const rightSrc = published(R.base[k2]);
+  const barSrc = published(dress.barSource);
+  const left = await raw(leftSrc.file);
+  const right = await raw(rightSrc.file);
+  // The creature's frame: the pair master, its left box and bottom pinline
+  // re-ramped onto print's columns (the field and bars stay the master's).
+  const base = await raw(pairSrc.file);
+  lerpInto(base, left, right, (x) => share(PR.creatureRamp, x), PR.creatureZone.rows, PR.creatureZone.cols);
+  lerpInto(base, left, right, (x) => share(PR.pinlineRamp, x), PR.pinlineZone.rows, PR.pinlineZone.cols);
+  // The page's rim and box: the two colours about the page's centre.
+  const pageBase = Buffer.alloc(W * H * 4);
+  lerpInto(pageBase, left, right, (x) => share(PR.pageRamp, x), [0, H - 1], [0, W - 1]);
+  const g1 = pageGainOf(k1);
+  const g2 = pageGainOf(k2);
+  const built = await buildMaster({
+    base,
+    pageBase,
+    bars: await raw(barSrc.file),
+    tones: dress,
+    bevel: dress,
+    gainAt: (x) => {
+      const t = share(PR.pageRamp, x);
+      return [0, 1, 2].map((c) => g1[c] * (1 - t) + g2[c] * t);
+    },
+    strip: dress.strip ?? R.print[k2]?.strip ?? null,
+  });
+  return {
+    ...built,
+    key: dressName === "hybrid" ? `${pair}-h` : pair,
+    sources: [pairRel, R.base[k1], R.base[k2], dress.barSource],
+    shas: [pairSrc.sha, leftSrc.sha, rightSrc.sha, barSrc.sha],
+  };
+}
+
+/** The page overlay of a built master (R.page): the page cut out at even
+ *  HD px, see-through where the creature's own pixels belong (the
+ *  outline's soft left column and bottom rows), and right of the rim only
+ *  the bars' rounded ends — their colour un-blended from the page under
+ *  them, their alpha the bar's coverage — so over another master they
+ *  composite as the bars were drawn over this one. */
+function pageOverlay(built) {
+  const G = R.page;
+  const w = G.cols[1] - G.cols[0] + 1;
+  const h = G.rows[1] - G.rows[0] + 1;
+  const buf = Buffer.alloc(w * h * 4);
+  for (let y = G.rows[0]; y <= G.rows[1]; y++) {
+    for (let x = G.cols[0]; x <= G.cols[1]; x++) {
+      const o = at(x, y);
+      const d = ((y - G.rows[0]) * w + (x - G.cols[0])) * 4;
+      const clear = (x >= G.clearCols[0] && x <= G.clearCols[1]) || (y >= G.clearRows[0] && y <= G.clearRows[1]);
+      if (clear) continue;
+      if (x <= G.rimRight) {
+        for (let c = 0; c < 3; c++) buf[d + c] = built.out[o + c];
+        buf[d + 3] = 255;
+        continue;
+      }
+      let cov = 0;
+      for (const bar of [R.bars.name, R.bars.type]) if (y >= bar.rows[0] && y <= bar.rows[1]) cov = barCoverage(x, y, bar).outer;
+      if (cov === 0) continue;
+      for (let c = 0; c < 3; c++) buf[d + c] = clamp8((built.out[o + c] - built.underBars[o + c] * (1 - cov)) / cov);
+      buf[d + 3] = clamp8(cov * 255);
+    }
+  }
+  return { buf, w, h };
+}
+
+async function write(rel, out, w = W, h = H) {
+  const png = path.join(outDir, TEMPLATE, `${rel}.png`);
   fs.mkdirSync(path.dirname(png), { recursive: true });
-  const image = sharp(out, { raw: { width: W, height: H, channels: 4 } });
+  const image = sharp(out, { raw: { width: w, height: h, channels: 4 } });
   await image.clone().png({ compressionLevel: 9 }).toFile(png);
   const webp = png.replace(/\.png$/, ".webp");
   await image.clone().webp(PREPARE_WEBP).toFile(webp);
-  const back = await raw(webp);
-  for (let i = 0; i < W * H; i++) {
-    if (back[i * 4 + 3] !== out[i * 4 + 3]) throw new Error(`${webp}: alpha differs from the PNG's at ${i % W},${Math.floor(i / W)} (${back[i * 4 + 3]} ≠ ${out[i * 4 + 3]})`);
+  const { data: back, info } = await sharp(webp).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  if (info.width !== w || info.height !== h) throw new Error(`${webp}: ${info.width}×${info.height}, expected ${w}×${h}`);
+  for (let i = 0; i < w * h; i++) {
+    if (back[i * 4 + 3] !== out[i * 4 + 3]) throw new Error(`${webp}: alpha differs from the PNG's at ${i % w},${Math.floor(i / w)} (${back[i * 4 + 3]} ≠ ${out[i * 4 + 3]})`);
   }
   return png;
 }
 
+/** Write a master and its page overlay (`page/<key>`). */
+async function emit(key, built) {
+  if (dryRun) {
+    console.log(`${key}: built (dry run)`);
+    return;
+  }
+  const png = await write(key, built.out);
+  const overlay = pageOverlay(built);
+  const pagePng = await write(`page/${key}`, overlay.buf, overlay.w, overlay.h);
+  console.log(`wrote ${path.relative(process.cwd(), png)} + ${path.relative(process.cwd(), pagePng)} (+ .webp, alpha equal)`);
+}
+
 const colors = {};
 const sourceFiles = new Set();
+const fmt = (rgb) => rgb.map((v) => Math.round(v)).join("/");
 for (const key of R.keys) {
-  const { out, baseSha, barSha, gain, bars, stripShift } = await buildKey(key);
+  const built = await buildKey(key);
+  const { baseSha, barSha, gain, bars, stripShift } = built;
   sourceFiles.add(`${R.base[key]}.png`).add(`${R.barSources[key]}.png`);
   colors[key] = [
     `${R.base[key]}.png (published, sha256 ${baseSha.slice(0, 12)})`,
     `its page bars from ${R.barSources[key]}.png (published, sha256 ${barSha.slice(0, 12)})`,
     `page box gain ${gain.map((g) => g.toFixed(3)).join(" / ")}; strip shift ${stripShift.map((v) => Math.round(v)).join(" / ")}; name bar ${bars.name.sourceFill.join("/")} → ${bars.name.toned.map((v) => Math.round(v)).join("/")}, type bar ${bars.type.sourceFill.join("/")} → ${bars.type.toned.map((v) => Math.round(v)).join("/")}${R.print[key] ? "" : " (no plain printing: the bars untoned, the gain the five keys' mean)"}`,
   ];
-  if (!dryRun) {
-    const png = await write(key, out);
-    console.log(`wrote ${path.relative(process.cwd(), png)} (+ .webp, alpha equal)`);
-  } else {
-    console.log(`${key}: built (dry run)`);
+  await emit(key, built);
+}
+// TODO 4.26: the twenty pair masters (both dresses of the ten pairs).
+for (const dressName of ["split", "hybrid"]) {
+  for (const pair of PR.list) {
+    const built = await buildPair(pair, dressName);
+    for (const rel of built.sources) sourceFiles.add(`${rel}.png`);
+    colors[built.key] = [
+      ...built.sources.map((rel, i) => `${rel}.png (published, sha256 ${built.shas[i].slice(0, 12)})`),
+      `the ${dressName === "hybrid" ? "hybrid (grey bars)" : "gold-split"} dress: the left box ramped ${PR.creatureRamp.join("→")}, the bottom pinline ${PR.pinlineRamp.join("→")}, the page's rim and box ${PR.pageRamp.join("→")}; strip shift ${fmt(built.stripShift)}; name bar ${built.bars.name.sourceFill.join("/")} → ${fmt(built.bars.name.toned)}, type bar ${built.bars.type.sourceFill.join("/")} → ${fmt(built.bars.type.toned)}`,
+    ];
+    await emit(built.key, built);
   }
 }
 
@@ -362,8 +523,8 @@ if (!dryRun) {
     source: "pipglyph",
     converter: "scripts/build-prepare-frames.mjs",
     derivedFrom:
-      'the published m15/<key> masters (m15artifact/c for c) and the published adventure/<key> masters\' page bars (Card Conjurer imports: see "m15", "m15artifact" and "adventure")',
-    output: `${W}x${H}, the base's corners, webp q${WEBP.quality} with the PNG's alpha exactly`,
+      'the published m15/<key> masters (m15artifact/c for c), the published m15/<pair> and m15/<pair>-h pair masters, and the published adventure/<key> masters\' page bars (Card Conjurer imports: see "m15", "m15artifact" and "adventure")',
+    output: `${W}x${H}, the base's corners, webp q${WEBP.quality} with the PNG's alpha exactly; page/<key> ${R.page.cols[1] - R.page.cols[0] + 1}x${R.page.rows[1] - R.page.rows[0] + 1} at x ${R.page.cols[0]}, y ${R.page.rows[0]}`,
     recipe: {
       leftBoxEdge: `the base box's right edge (cols ${R.leftBoxEdge.fromCol}..${R.leftBoxEdge.fromCol + R.leftBoxEdge.width - 1}) moved to ${R.leftBoxEdge.toCol}..`,
       rim: `cols ${R.rim.cols.join("..")} x rows ${R.rim.rows.join("..")}: the base's pinline (row ${R.rim.sourceRow}) per column`,
@@ -371,14 +532,16 @@ if (!dryRun) {
       pageBox: `cols ${R.pageBox.cols.join("..")} x rows ${R.pageBox.rows.join("..")}: the base box's paper x a per-key gain, its top / left / bottom edges the base box's own, moved`,
       bars: `name rows ${R.bars.name.rows.join("..")}, type ${R.bars.type.rows.join("..")}, from x ${R.bars.x0}: the adventure master's page bars (rows ${R.bars.name.sourceRows.join("..")} / ${R.bars.type.sourceRows.join("..")}) toned onto print and lit by the prints' bevel; the shape (square left end, half-ellipse right end centred x ${R.bars.end.cx}, ${R.bars.end.a} px across) and its ${R.bars.outline} px outline DRAWN, flat black`,
       outline: "the page's left, top and bottom outline DRAWN, flat black at the prints' coverage",
+      pairs: `TODO 4.26: the M15 pair master of the dress, its left box (rows ${PR.creatureZone.rows.join("..")}, cols ${PR.creatureZone.cols.join("..")}) and the pinline under the boxes (rows ${PR.pinlineZone.rows.join("..")}) re-lerped from the two one-colour m15 masters (shares ${PR.creatureRamp.join("→")} / ${PR.pinlineRamp.join("→")}); the page read from the two one-colour masters lerped ${PR.pageRamp.join("→")}, its box's gain the two keys' lerped the same way; the bars from ${PR.dresses.split.barSource} (gold) or ${PR.dresses.hybrid.barSource} (the hybrid's grey) toned onto print`,
+      page: `page/<key>: the master's page, cols ${R.page.cols.join("..")} x rows ${R.page.rows.join("..")} (col ${R.page.clearCols[0]} and rows ${R.page.clearRows.join("..")} see-through; right of x ${R.page.rimRight} only the bars' ends at their coverage, un-blended from the page under them)`,
     },
     colors,
     sourceFiles: [...sourceFiles].sort(),
     notes: [
-      "PipGlyph's own derivation (TODO 4.27): neither Card Conjurer (its fork ends June 2024) nor MSE has the Prepare frame (Secrets of Strixhaven, 2026). Every painted pixel is a published master's — moved, toned or darkened — except the bars' outline and the page's outline, which are flat black geometry at the prints' coverage.",
-      `The numbers are scripts/lib/prepare-2026.mjs (${R.scope}, measured ${R.measuredOn}); no scan is read by the build.`,
-      "m and c have no plain printing (a two-colour Prepare prints the split frame, 4.6f; none is colourless): they exist so that no colour resolves to a missing master and stay unticked until a print shows them.",
-      "The spell page's colour is the CARD's (one colour key per card); print colours the page by the spell (a hybrid spell's page is grey, Abigale SOS #170): 4.26's per-part colour.",
+      "PipGlyph's own derivation (TODO 4.27): neither Card Conjurer (its fork ends June 2024) nor MSE has the Prepare frame (Secrets of Strixhaven, 2026). Every painted pixel is a published master's — moved, toned, lerped or darkened — except the bars' outline and the page's outline, which are flat black geometry at the prints' coverage.",
+      `The numbers are scripts/lib/prepare-2026.mjs (${R.scope}, measured ${R.measuredOn}; the pairs and pages 2026-10-21 on the two-colour and part-colour printings named there); no scan is read by the build.`,
+      "m and c have no plain printing as a creature's frame: they exist so that no colour resolves to a missing master and stay unticked until a print shows them; `page/m` is a gold spell of three colours or more.",
+      "TODO 4.26: the page is the SPELL's (print colours it by the spell — a hybrid spell's grey page, Abigale SOS #170): `page/<key>` is drawn over the creature's master where the spell's page key differs (lib/cards/part-color.ts), opt-in per card (frame_style.partColor).",
     ],
   };
   const sorted = Object.fromEntries(Object.keys(provenance).sort().map((k) => [k, provenance[k]]));

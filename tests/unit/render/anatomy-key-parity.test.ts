@@ -80,7 +80,8 @@ describe("bake path = preview path", () => {
     // …and the Spacecraft's borderless dress's 7 crowned twins (4.27a step 2).
     // …and the full-art tokens' 10 each (4.48's central split: 60), and the
     // borderless double-faced bodies' 10 each (TODO 5.7: 40).
-    expect(pairKeys).toBe(390);
+    // …and the Prepare frame's 20 (4.26: both dresses with the page).
+    expect(pairKeys).toBe(410);
     // …and the borderless double-faced bodies' 18 crowned twins each (TODO
     // 5.7: the seven colour keys, the artifact stand-in's `a`, ten pairs).
     expect(crownedKeys).toBe(51 + 4 * 18);
@@ -133,6 +134,9 @@ describe("bake path = preview path", () => {
         const folder =
           slot.anatomy === "dfcIcon"
             ? "dfcicon"
+            : slot.anatomy === "partPage"
+              ? // The Prepare spell's page in its own colour (4.26).
+                `${template}/page`
             : slot.anatomy === "mdfcStrip"
               ? `${template}/strip`
             : slot.anatomy === "holoStamp"
