@@ -818,6 +818,7 @@ export function remixFrameFor(
     | "printed_dfc_icon"
     | "printed_first_part_color"
     | "printed_part_color"
+    | "printed_plain_land_master"
   >,
   verifiedKeys: ReadonlySet<string>,
   options: {
@@ -877,12 +878,16 @@ export function remixFrameFor(
   // colour: the card type's frames, from the printing's own (a layout kind
   // has none) down to the M15 standard.
   const standardKind = layoutTemplate ? kindFromCard(cardType, undefined) : kind;
-  const { colorKey, resolution } = resolveImportFrame({
+  // (A two-colour Expedition is gated per frame, as the import is: its
+  // plain land master `c` on the Expedition frames, its gold anywhere else
+  // — importFrameColorKey, TODO 4.11.)
+  const { resolution } = resolveImportFrame({
     patch: {
       frame_template: layoutTemplate ? undefined : standardPatch.frame_template,
       card_type: cardType,
       supertype: patch.supertype,
       color_identity: colors,
+      printed_plain_land_master: patch.printed_plain_land_master,
     },
     kind: standardKind,
     current: {
@@ -897,9 +902,15 @@ export function remixFrameFor(
   // another colour — reported as "frame-switched" too, but with that other
   // colour's key — and the save's frame gate would refuse it after the art
   // was already paid for.
+  // (The card's own colour ON THAT FRAME: a two-colour Expedition's `c` on
+  // an Expedition frame, its gold on m15land.)
   if (
     (resolution.status === "exact" || resolution.status === "frame-switched") &&
-    resolution.colorKey === colorKey
+    resolution.colorKey ===
+      importFrameColorKey(resolution.template, {
+        color_identity: colors,
+        printed_plain_land_master: patch.printed_plain_land_master,
+      })
   ) {
     return { ok: true, template: resolution.template, card_type: savedType };
   }

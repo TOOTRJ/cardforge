@@ -12,6 +12,7 @@ import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { finalizeImportMatch, importFrameColorKey, resolveImportFrame } from "@/lib/creator/frame-resolve";
 import { appliedImportFrameChoice, frameFitsImport, importFramePlan } from "@/lib/creator/import-frame-choice";
 import { frameRequestFromImport } from "@/lib/frames/frame-requests";
+import { ownCardRemixFrame, scryfallRemixMechanics } from "@/lib/ai/remix-mechanics";
 
 // ---------------------------------------------------------------------------
 // TODO 4.11 wave 1: every Zendikar Expedition printing on Scryfall (ZNE #1–30,
@@ -158,6 +159,79 @@ describe("the Expedition imports", () => {
       ).toBeNull();
       const fallback = resolveImportFrame({ patch: patchM, kind: "land", current: { colors: [] }, verifiedKeys: onlyM });
       expect(fallback.resolution, key).toMatchObject({ status: "frame-switched", template: "m15land", colorKey: "m" });
+    }
+  });
+
+  // The AI deck remix lands where the import lands (remixFrameFor →
+  // resolveImportFrame with the patch's plain-land key) and saves only what
+  // the save's gate passes: never a refusal after the art. #602's fourth
+  // check: the remix gated in `m` and saved in `c` (only `m` ticked → the
+  // Expedition frame, refused at the save; only `c` → m15land, where the
+  // import took the Expedition frame).
+  it("the AI deck remix of a two-colour Expedition lands where the import lands and passes the save's gate, in every tick state", () => {
+    for (const [key, template] of [["zne-1", "expeditionland"], ["exp-1", "expeditionlandbfz"]] as const) {
+      const raw = mapScryfallToFormPatch(card(key));
+      const states: Record<string, string[]> = {
+        "only m": [frameComboKey(template, "m")],
+        "only c": [frameComboKey(template, "c")],
+        both: [frameComboKey(template, "c"), frameComboKey(template, "m")],
+        neither: [],
+      };
+      const landings: Record<string, string> = {};
+      for (const [state, ticks] of Object.entries(states)) {
+        const keys = new Set([...ticks, frameComboKey("m15land", "m")]);
+        const label = `${key} ${state}`;
+        const remix = scryfallRemixMechanics(raw, "x", keys);
+        expect(remix.ok, label).toBe(true);
+        if (!remix.ok) continue;
+        const m = remix.mechanics;
+        // The import's landing of the same printing (the deck pre-fill's
+        // path, and the chooser's preselected nearest).
+        const finalized = finalizeImportMatch(raw, keys);
+        const imported = resolveImportFrame({ patch: finalized, kind: "land", current: { colors: [] }, verifiedKeys: keys });
+        expect(imported.resolution.status === "exact" || imported.resolution.status === "frame-switched", label).toBe(true);
+        if (imported.resolution.status !== "exact" && imported.resolution.status !== "frame-switched") continue;
+        expect(m.frame_template, label).toBe(imported.resolution.template);
+        const plan = importFramePlan(finalized, keys, "m15");
+        if (plan.mode === "choose") expect(plan.preselected, label).toEqual({ template: m.frame_template });
+        landings[state] = m.frame_template;
+        // The card's colour is the import's on that frame (gold on the
+        // Expedition frames; m15land, which draws pairs, takes the
+        // printing's pair as main does — still gold-keyed); the save's gate
+        // (create: frameGateColors over the payload's frame_style) passes.
+        expect(m.color_identity, label).toEqual(importedAnatomy(raw, m.frame_template).colorIdentity ?? raw.color_identity);
+        expect(pickFrameColorKey(m.color_identity), label).toBe("m");
+        const frameStyle = { template: m.frame_template, ...m.anatomy };
+        expect(frameGateError(m.frame_template, frameGateColors(m.frame_template, frameStyle, m.color_identity), keys), label).toBeNull();
+        const saved = normalizeAnatomy(frameStyle, m.frame_template, "land", m.color_identity);
+        expect(frameGateError(m.frame_template, frameGateColors(m.frame_template, saved, m.color_identity), keys), label).toBeNull();
+        // …and on the Expedition frame it draws the `c` it was gated in;
+        // the key never reaches another frame.
+        expect(frameMasterKey(getFrameProfile(m.frame_template), m.color_identity, { cardType: "land" }, saved) === "c", label).toBe(
+          m.frame_template === template,
+        );
+      }
+      expect(landings, key).toEqual({ "only m": "m15land", "only c": template, both: template, neither: "m15land" });
+
+      // A remix of the user's OWN stored card agrees: kept on the
+      // Expedition frame where `c` is ticked, else the default landing.
+      const own = (ticks: string[]) =>
+        ownCardRemixFrame(
+          {
+            frame_style: { template, plainLandMaster: true },
+            color_identity: ["multicolor"],
+            card_type: "land",
+            supertype: null,
+            subtypes: [],
+            title: "x",
+            rules_text: "",
+          },
+          new Set([...ticks, frameComboKey("m15land", "m")]),
+        ).frame_template;
+      expect(own(states["only c"]), key).toBe(template);
+      expect(own(states.both), key).toBe(template);
+      expect(own(states["only m"]), key).toBeUndefined();
+      expect(own(states.neither), key).toBeUndefined();
     }
   });
 

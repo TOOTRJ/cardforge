@@ -1879,6 +1879,16 @@ export function visualCases(): VisualCase[] {
       suffix: "@plain-land",
       row: { frame_style: { template, finish: "regular", plainLandMaster: true } as CardRowForBake["frame_style"] },
     });
+    // …with a mana watermark: tinted as the `c` master it paints, not the
+    // gold card's neutral ink (the preview's twin:
+    // tests/unit/components/expedition-watermark-tint.test.tsx).
+    add(template, "land", "wu", "long", {
+      suffix: "@plain-land-watermark",
+      row: {
+        frame_style: { template, finish: "regular", plainLandMaster: true } as CardRowForBake["frame_style"],
+        watermark: { kind: "mana", key: "u" },
+      },
+    });
   }
   // A long artist: cut with one "…" before the © slot's mark.
   add("m15", "creature", "g", "long", {

@@ -4429,8 +4429,9 @@ Every import surface asks the key PER FRAME through
 options, its preselected nearest and the applied pick
 (`lib/creator/import-frame-choice.ts`), the landing's fallbacks
 (`resolvePublishedFrame`'s `colorKeyFor`: `c` on the Expedition frames, the
-card's gold on `m15land`), the deck pre-fill's toast, the overwrite note and
-the request row — and the Card step's colour chips follow the master the
+card's gold on `m15land`), the AI deck remix's landing (`remixFrameFor`:
+it lands where the import lands, and its save passes the gate), the deck
+pre-fill's toast, the overwrite note and the request row — and the Card step's colour chips follow the master the
 card draws (`ColorSection`'s `plainLandMaster`: its own Multicolor chip is
 gated in, and its tile paints, `c`). Over all 75
 printings (`tests/unit/scryfall/expedition-imports.test.ts`): ZNE 6 exact,
