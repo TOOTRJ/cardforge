@@ -532,9 +532,7 @@ describe("colour from the front face (TODO 1.2)", () => {
     ["eld-115", ["R"], "r", ["R"]],
     ["tdm-40", ["U"], "u", ["U"]],
     // A split card is both halves' (one frame paints both until 4.26).
-    // A split half prints its own colour (TODO 4.26): Fire is red — the
-    // card's colour is its FIRST half's, Ice's blue is its back face's.
-    ["dmr-215", ["R"], "r", ["R", "U"]],
+    ["dmr-215", ["R", "U"], "m", ["R", "U"]],
     ["chk-202", ["G"], "g", ["G"]],
     // A Room imports its first door: Restricted Office is white.
     ["dsk-227", ["W"], "w", ["U", "W"]],
@@ -547,9 +545,7 @@ describe("colour from the front face (TODO 1.2)", () => {
     // TODO 1.21's layout cards: the adventurer's colour, both halves'.
     ["woe-38", ["W"], "w", ["W"]],
     ["akh-211", ["U"], "u", ["U"]],
-    // (TODO 4.26: Beck // Call's Beck, {G}{U}, is its own two colours —
-    // gold; Call's W/U is its back face's.)
-    ["dgm-123", ["G", "U"], "m", ["G", "U", "W"]],
+    ["dgm-123", ["G", "U", "W"], "m", ["G", "U", "W"]],
     // TODO 1.12's longest name.
     ["unh-107", ["G"], "g", ["G"]],
   ];

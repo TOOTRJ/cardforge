@@ -585,8 +585,8 @@ exports[`as it was — generated on the base (d9e877e6), only read since > a non
     },
     "cardType": "instant",
     "colorIdentity": [
-      "blue",
       "red",
+      "blue",
     ],
     "cost": "{U/R}{U/R}",
     "defense": null,

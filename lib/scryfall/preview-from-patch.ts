@@ -89,6 +89,8 @@ export function previewFromImportPatch(
       // …and each part in its own colour (TODO 4.26), as every two-part
       // printing prints it, where the frame draws it.
       ...(drawsPartColor(template) ? { partColor: true } : {}),
+      // …the first part's own colour where the card's is both halves' (M2).
+      ...(drawsPartColor(template) && patch.printed_first_part_color ? { firstPartColor: [...patch.printed_first_part_color] } : {}),
     },
     backFace: backFaceFromPatch(patch.back_face),
   };

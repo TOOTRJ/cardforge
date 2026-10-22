@@ -19,7 +19,11 @@
 // ---------------------------------------------------------------------------
 
 import { canonicalColorSequence } from "@/lib/cards/mana-order";
-import { frameAnatomyOf, pairColorIdentity, twoColorFromCost, type TwoColorPair } from "@/lib/cards/anatomy";
+import { anatomyOn, frameAnatomyOf, isPartColorList, pairColorIdentity, twoColorFromCost, type FrameAnatomyStyle, type TwoColorPair } from "@/lib/cards/anatomy";
+import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
+import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
+import { getFrameProfile } from "@/lib/cards/template-layout";
 import type { ColorIdentity, FrameTemplate } from "@/types/card";
 
 const LETTER_WORD: Record<string, ColorIdentity> = {
@@ -77,4 +81,59 @@ export function samePartColor(a: readonly ColorIdentity[] | null | undefined, b:
   const x = [...(a ?? [])].sort().join(",");
   const y = [...(b ?? [])].sort().join(",");
   return x === y;
+}
+
+/**
+ * The colour a card's FRAME is verified in (TODO 4.26, M2): on a seam
+ * frame with the look on, its first part's own colour where it names one
+ * (`frame_style.firstPartColor` — the master the first half paints); else
+ * the card's colour. The ONE answer the save's frame gate and the landings
+ * read, so a card is gated on the masters it draws.
+ */
+export function frameGateColors(
+  template: FrameTemplate | string | null | undefined,
+  frameStyle: FrameAnatomyStyle | null | undefined,
+  colors: readonly ColorIdentity[] | null | undefined,
+): readonly ColorIdentity[] | null | undefined {
+  if (getFrameProfile(template ?? undefined).partColorSeam === undefined || !anatomyOn(frameStyle, "partColor")) return colors;
+  return isPartColorList(frameStyle?.firstPartColor) ? frameStyle.firstPartColor : colors;
+}
+
+/** What a landing on `template` can draw of a card's parts in their own
+ *  colours (partColourVerdict). */
+export type PartColourVerdict = {
+  /** The frame draws a part in its own colour at all (split, aftermath,
+   *  prepare). */
+  drawn: boolean;
+  /** Every part's colour is verified on the frame — the look may be on. */
+  ok: boolean;
+  /** The colours the landing is verified in: the first part's where the
+   *  look is on and it names one of its own, else the card's. */
+  frameColors: readonly ColorIdentity[];
+};
+
+/**
+ * Whether a card (an import patch, a remix, an own card) may land on
+ * `template` with each part in its own colour (TODO 4.26, M1): the first
+ * part's colour (`firstPartColor`, else the card's) and the second part's
+ * (`backColors`; none = the first's) both verified on the frame — a split
+ * half's master, a Prepare page's colour. Short of it the card lands with
+ * the look OFF — its whole colour, as before 4.26 — never a save the gate
+ * refuses after the art.
+ */
+export function partColourVerdict(
+  template: FrameTemplate | string | null | undefined,
+  colors: readonly ColorIdentity[] | null | undefined,
+  firstPartColor: readonly ColorIdentity[] | null | undefined,
+  backColors: readonly ColorIdentity[] | null | undefined,
+  verifiedKeys: ReadonlySet<string>,
+): PartColourVerdict {
+  const whole = colors ?? [];
+  if (!drawsPartColor(template)) return { drawn: false, ok: false, frameColors: whole };
+  const resolved = normalizeFrameTemplate(template ?? undefined);
+  const seam = getFrameProfile(resolved).partColorSeam !== undefined;
+  const first = seam && firstPartColor && firstPartColor.length > 0 ? firstPartColor : whole;
+  const verified = (c: readonly ColorIdentity[]) => isFrameComboAvailable(resolved, pickFrameColorKey([...c]), verifiedKeys);
+  const ok = verified(first) && (!backColors || backColors.length === 0 || verified(backColors));
+  return { drawn: true, ok, frameColors: ok ? first : whole };
 }

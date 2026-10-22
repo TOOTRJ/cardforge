@@ -373,7 +373,9 @@ describe("visual-regression matrix", () => {
       // it, each with a second part's colour of its own.
       if (/@part-/.test(c.id)) {
         expect((c.row.frame_style as { partColor?: boolean }).partColor, c.id).toBe(true);
-        expect(keys, c.id).toEqual(["finish", "partColor", "template"]);
+        // (…and the first half's own colour where the card's is the whole
+        // card's — M2.)
+        expect(keys.filter((k) => k !== "firstPartColor"), c.id).toEqual(["finish", "partColor", "template"]);
         expect((c.row.back_face as { color_identity?: string[] } | null)?.color_identity?.length, c.id).toBeGreaterThan(0);
         continue;
       }

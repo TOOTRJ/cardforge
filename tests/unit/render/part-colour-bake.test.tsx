@@ -19,7 +19,7 @@ import { serveStandInFrames, type StandInFrames, type StandInSpec } from "@/test
 //     master, at its rect — and none where the spell is the creature's own.
 // ---------------------------------------------------------------------------
 
-const TONES: Record<string, number> = { r: 70, u: 190, b: 40, w: 230, g: 120 };
+const TONES: Record<string, number> = { r: 70, u: 190, b: 40, w: 230, g: 120, m: 160 };
 const PAGE_RGB = [10, 200, 30];
 type Raw = { data: Buffer; w: number; h: number; png: Buffer };
 
@@ -76,7 +76,7 @@ afterAll(() => frames?.restore());
 async function serveStandInFramesByKey(): Promise<StandInFrames> {
   const specs: StandInSpec[] = [];
   for (const template of ["split", "aftermath", "prepare"]) {
-    for (const key of ["r", "u", "b"]) specs.push({ template, keys: [key], tone: TONES[key]! });
+    for (const key of ["r", "u", "b", "m"]) specs.push({ template, keys: [key], tone: TONES[key]! });
   }
   const pieces: Record<string, { rgb: number[]; width: number; height: number }> = {};
   for (const key of ["u", "b", "wb-h"]) pieces[PREPARE_PAGE.assetPathTemplate.replace("{key}", key)] = { rgb: PAGE_RGB, width: 668, height: 562 };
@@ -94,6 +94,25 @@ describe("a card stored before 4.26 keeps its bake", () => {
     // …and on, with no colour of its own (every stored back today): the same.
     const onNoColour = await bake(card(template, { frameStyle: { partColor: true } }));
     expect(onNoColour.png.equals(plain.png)).toBe(true);
+  }, 60_000);
+});
+
+describe("M2: a card whose colour is the WHOLE card's (Fire // Ice: gold), its first half's on frame_style", () => {
+  it("draws Fire red and Ice blue with the look on — and main's gold with it off", async () => {
+    const on = await bake(card("split", { colors: ["multicolor"], backColors: ["blue"], frameStyle: { partColor: true, firstPartColor: ["red"] } }));
+    expect(grey(on, 600, 12)).toBe(TONES.r);
+    expect(grey(on, 1700, 12)).toBe(TONES.u);
+    const off = await bake(card("split", { colors: ["multicolor"], backColors: ["blue"], frameStyle: { partColor: false, firstPartColor: ["red"] } }));
+    const main = await bake(card("split", { colors: ["multicolor"] }));
+    expect(grey(off, 600, 12)).toBe(TONES.m);
+    expect(grey(off, 1700, 12)).toBe(TONES.m);
+    expect(off.png.equals(main.png)).toBe(true);
+  }, 60_000);
+
+  it("a first half of its own colour with no second colour: the whole card in that colour", async () => {
+    const r = await bake(card("split", { colors: ["multicolor"], frameStyle: { partColor: true, firstPartColor: ["red"] } }));
+    expect(grey(r, 600, 12)).toBe(TONES.r);
+    expect(grey(r, 1700, 12)).toBe(TONES.r);
   }, 60_000);
 });
 

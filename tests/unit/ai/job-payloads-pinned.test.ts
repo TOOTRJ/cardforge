@@ -149,14 +149,15 @@ const fresh: Record<string, unknown> = {};
 
 /** The records this branch changes on purpose, as main's record → the
  *  new one. TODO 4.26: a split printing's halves each print their own
- *  colour — Fire // Ice (DMR #215) saves Fire's red as the card's colour
- *  (main: "multicolor", and the two-colour switch a split frame never
- *  drew) and Ice's blue as its second half's. */
+ *  colour — Fire // Ice (DMR #215) saves Ice's blue as its second half's
+ *  colour and Fire's red as its FIRST half's frame colour
+ *  (frame_style.firstPartColor). Its `color_identity` is main's — the
+ *  whole card's, "multicolor" — since owner decision M2 (2026-10-22: the
+ *  first cut saved Fire's red there, which reverted). */
 const MEANT_CHANGES: Record<string, (record: unknown) => unknown> = {
   "remix printing · dmr-215": (record) => {
     const saved = (record as { saved: Record<string, unknown> }).saved;
-    saved.color_identity = ["red"];
-    delete (saved.frame_style as Record<string, unknown>).twoColor;
+    (saved.frame_style as Record<string, unknown>).firstPartColor = ["red"];
     (saved.back_face as Record<string, unknown>).color_identity = ["blue"];
     return record;
   },

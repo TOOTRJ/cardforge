@@ -1065,7 +1065,9 @@ export function CardCreatorForm({
   // picks the pair by hand. A stored card's edit never re-colours.
   const markPairTouched = useTwoColorPairFollow({ control, setValue }, mode !== "edit");
   // A new card's second part takes its colour from its cost (TODO 4.26).
-  const markPartColorTouched = useSecondPartColorFollow({ control, setValue }, mode !== "edit");
+  // (Never a colour the frame isn't verified in: TODO 4.26, M1.)
+  const partColorVerifiedKeys = useMemo(() => new Set(verifiedFrameKeys), [verifiedFrameKeys]);
+  const markPartColorTouched = useSecondPartColorFollow({ control, setValue }, mode !== "edit", partColorVerifiedKeys);
 
   // The Adventure frame repurposes the back-face content as the adventure spell
   // (rendered inline on the card's left page, not as a flippable face), so the
@@ -2855,6 +2857,10 @@ export function CardCreatorForm({
           setValue(`frame_style.${key}`, switches[key], { shouldDirty: true });
         }
       }
+      // …and the first part's own colour (TODO 4.26, M2): a split or
+      // aftermath printing's first half, where the card's colour is both
+      // halves'; cleared by any other import.
+      setValue("frame_style.firstPartColor", switches.firstPartColor ? [...switches.firstPartColor] : undefined, { shouldDirty: true });
       // The import's colour is the printing's: the cost no longer re-fills it.
       markPairTouched();
     }
@@ -4656,6 +4662,7 @@ export function CardCreatorForm({
                               }
                               onPairTouched={markPairTouched}
                               onPartColorTouched={markPartColorTouched}
+                              verifiedKeys={verifiedFrameSet}
                             />
                             {isRevise ? <LegendaryCrownReason /> : null}
                           </FaceScope>

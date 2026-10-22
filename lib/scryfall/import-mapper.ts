@@ -262,6 +262,14 @@ export type ScryfallImportPatch = {
    *  keeps it only where the landed frame draws the white border (the 1997
    *  and 2003 frames). */
   printed_border?: "white";
+  /** The FIRST part's own frame colour (TODO 4.26, M2;
+   *  ImportedAnatomyFacts): a split or aftermath half's, from its cost,
+   *  where it is not the card's whole colour. */
+  printed_first_part_color?: ColorIdentity[];
+  /** `false`: the parts can't be drawn in their own colours where the
+   *  card lands (finalizeImportMatch — a part's colour not verified there);
+   *  the card saves with the look off. */
+  printed_part_color?: false;
   /** The transform icon FAMILY this printing wears (TODO 5.4, owner Q5:
    *  imports follow the printing's family) — `frame_style.dfcIcon`, from
    *  the printing's `frame_effects` (dfcIconFamilyFromEffects): sun / moon,
@@ -868,7 +876,29 @@ function isRoomCard(card: ScryfallCard): boolean {
  *  (layout split) is read by isRoomCard first. */
 const PART_COLOUR_LAYOUTS: ReadonlySet<string> = new Set(["split", "aftermath", "prepare"]);
 function isPartColourLayout(card: ScryfallCard): boolean {
-  return PART_COLOUR_LAYOUTS.has((card.layout ?? "").toLowerCase());
+  // (A Room — layout split, TODO 4.27 — is no split card: its doors are
+  // its own frame's, never a part colour; L1.)
+  return PART_COLOUR_LAYOUTS.has((card.layout ?? "").toLowerCase()) && !isRoomCard(card);
+}
+
+/**
+ * The FIRST part's own frame colour of a split or aftermath printing (TODO
+ * 4.26, owner decision M2), from its own cost (partColorFromCost — Fire //
+ * Ice's Fire is red, DMR #215), where it is not what the card's whole
+ * colour paints: the card's `color_identity` stays both halves' (Fire //
+ * Ice is red and blue — the gold "multicolor" of the single-select model),
+ * so the card page, the filters and the deck stats are unchanged, and this
+ * names the master its first half paints with each part in its own colour.
+ * Undefined for any other printing (a Prepare card's creature IS the
+ * card's colour; a Room is no split card).
+ */
+function firstPartColorOf(card: ScryfallCard, wholeColors: readonly ColorIdentity[]): ColorIdentity[] | undefined {
+  const layout = (card.layout ?? "").toLowerCase();
+  if (layout === "prepare" || !isPartColourLayout(card)) return undefined;
+  const first = partColorFromCost(card.card_faces?.[0]?.mana_cost);
+  if (first.length === 0) return undefined;
+  // The same master either way: no key to store.
+  return pickFrameColorKey(first) === pickFrameColorKey([...wholeColors]) ? undefined : first;
 }
 
 /**
@@ -1587,11 +1617,6 @@ export function frontFaceColors(card: ScryfallCard): string[] {
     printed = [...front.colors, ...(front.color_indicator ?? [])];
   } else if (front && isRoomCard(card)) {
     printed = [...manaSymbolColors(front.mana_cost), ...(front.color_indicator ?? [])];
-  } else if (front && isPartColourLayout(card) && (card.layout ?? "").toLowerCase() !== "prepare") {
-    // A split or aftermath half prints its own colour (TODO 4.26): the
-    // first half is read from its own cost — Fire // Ice's Fire is red
-    // (DMR #215), Cut // Ribbons's Cut red (AKH #223).
-    printed = [...manaSymbolColors(front.mana_cost), ...(front.color_indicator ?? [])];
   } else if (card.colors) {
     printed = [...card.colors, ...(card.color_indicator ?? [])];
   }
@@ -2087,6 +2112,12 @@ export function mapScryfallToFormPatch(
     printed_stamp: stampOfPrinting(card),
     // …and its border (TODO 4.30): white, or no key at all.
     ...((card.border_color ?? "").trim().toLowerCase() === "white" ? { printed_border: "white" as const } : {}),
+    // …and its first part's own colour (TODO 4.26, M2): a split or
+    // aftermath half's, where it is not the card's whole colour.
+    ...(() => {
+      const first = firstPartColorOf(card, frontColorIdentity);
+      return first ? { printed_first_part_color: first } : {};
+    })(),
     // A flavour-name printing (TODO 6.2, owner Round 80) writes its own
     // name as `~`, which draws the nickname its title bar prints — as the
     // printing sets its rules. Every other import keeps Oracle's name.

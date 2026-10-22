@@ -1685,6 +1685,10 @@ export function visualCases(): VisualCase[] {
   partCase("split", "split", "r", "short", "@part-u", { colors: ["blue"], cost: "{1}{U}" });
   partCase("split", "split", "r", "long", "@part-u-hd", { colors: ["blue"], cost: "{1}{U}" }, { preset: "hd" });
   partCase("split", "split", "w", "short", "@part-m", { colors: ["blue", "black"], cost: "{2}{U}{B}" });
+  // Owner decision M2: the card's colour stays the WHOLE card's (Stand //
+  // Deliver, DMR #207: white and blue), its first half's on
+  // frame_style.firstPartColor.
+  partCase("split", "split", "wu", "short", "@part-u", { colors: ["blue"], cost: "{2}{U}" }, { style: { firstPartColor: ["white"] } });
   partCase("split", "split", "r", "short", "@part-u-foil", { colors: ["blue"], cost: "{1}{U}" }, { finish: "foil" });
   partCase("split", "split", "r", "long", "@part-u-etched", { colors: ["blue"], cost: "{1}{U}" }, { finish: "etched" });
   partCase("aftermath", "aftermath", "r", "short", "@part-b", { colors: ["black"], cost: "{X}{B}{B}" });

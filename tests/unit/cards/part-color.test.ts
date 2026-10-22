@@ -10,7 +10,7 @@ import {
   resolveFrameOverlays,
   storedAnatomyOf,
 } from "@/lib/cards/anatomy";
-import { partColorFromCost } from "@/lib/cards/part-color";
+import { frameGateColors, partColorFromCost, partColourVerdict } from "@/lib/cards/part-color";
 import { cardFrameSplit, frameColorKeysFor, frameSplitClipPaths, partColorSplitFor } from "@/components/cards/frame-layer";
 import { AFTERMATH_PART_SEAM, PREPARE_PAGE, PREPARE_PAGE_KEYS, SPLIT_PART_SEAM, getFrameProfile } from "@/lib/cards/template-layout";
 import manifestJson from "@/lib/frames/frame-manifest.json";
@@ -223,5 +223,43 @@ describe("an edit's switch flip (frameAnatomyPatchFor)", () => {
     expect(frameAnatomyPatchFor(stored, values())).toBeUndefined();
     expect(frameAnatomyPatchFor(stored, values(true))).toEqual({ partColor: true });
     expect(frameAnatomyPatchFor({ ...stored, frame_style: { ...stored.frame_style, partColor: true } }, values(false))).toEqual({ partColor: false });
+  });
+});
+
+describe("M2: the first part's own frame colour (frame_style.firstPartColor)", () => {
+  const split = getFrameProfile("split");
+  const type = { cardType: "instant", supertype: null, cost: "{1}{R}" };
+
+  it("paints the first half where the card's colour is the whole card's", () => {
+    // Fire // Ice: the card gold ("multicolor"), Fire red, Ice blue.
+    expect(partColorSplitFor(split, ["multicolor"], type, { partColor: true, firstPartColor: ["red"] }, { colors: ["blue"] })).toEqual({ leftKey: "r", rightKey: "u", atPct: 52 });
+    // No second colour of its own: the whole card in the first's.
+    expect(partColorSplitFor(split, ["multicolor"], type, { partColor: true, firstPartColor: ["red"] }, null)).toEqual({ leftKey: "r", rightKey: "r", atPct: 52 });
+    // Off: main's gold, whatever the parts say.
+    expect(partColorSplitFor(split, ["multicolor"], type, { partColor: false, firstPartColor: ["red"] }, { colors: ["blue"] })).toBeNull();
+  });
+
+  it("is kept on a seam frame only, and only as colour words", () => {
+    expect(normalizeAnatomy({ partColor: true, firstPartColor: ["red"] }, "split", "instant")).toEqual({ partColor: true, firstPartColor: ["red"] });
+    expect(normalizeAnatomy({ partColor: true, firstPartColor: ["red"] }, "prepare", "creature")).toEqual({ partColor: true });
+    expect(normalizeAnatomy({ firstPartColor: ["red"] }, "m15", "instant")).toEqual({});
+    expect(normalizeAnatomy({ firstPartColor: [] }, "split", "instant")).toEqual({});
+    expect(storedAnatomyOf({ firstPartColor: ["red"] })).toEqual({ firstPartColor: ["red"] });
+    expect(storedAnatomyOf({ firstPartColor: ["crimson"] })).toEqual({});
+  });
+
+  it("is what the frame is gated in with the look on", () => {
+    expect(frameGateColors("split", { partColor: true, firstPartColor: ["red"] }, ["multicolor"])).toEqual(["red"]);
+    expect(frameGateColors("split", { partColor: false, firstPartColor: ["red"] }, ["multicolor"])).toEqual(["multicolor"]);
+    expect(frameGateColors("prepare", { partColor: true, firstPartColor: ["red"] }, ["white"])).toEqual(["white"]);
+    expect(frameGateColors("m15", { partColor: true, firstPartColor: ["red"] }, ["white"])).toEqual(["white"]);
+  });
+
+  it("partColourVerdict: both parts verified, else off and the whole colour", () => {
+    const keys = (...k: string[]) => new Set(k);
+    expect(partColourVerdict("split", ["multicolor"], ["red"], ["blue"], keys("split/r", "split/u"))).toEqual({ drawn: true, ok: true, frameColors: ["red"] });
+    expect(partColourVerdict("split", ["multicolor"], ["red"], ["blue"], keys("split/r", "split/m"))).toEqual({ drawn: true, ok: false, frameColors: ["multicolor"] });
+    expect(partColourVerdict("prepare", ["white"], null, ["green", "white"], keys("prepare/w"))).toMatchObject({ drawn: true, ok: false });
+    expect(partColourVerdict("m15", ["white"], null, ["blue"], keys())).toEqual({ drawn: false, ok: false, frameColors: ["white"] });
   });
 });

@@ -4,7 +4,7 @@ import { withPrintedTypes, withPrintedTypesUpdate } from "@/lib/cards/type-line-
 import { withPrintTypography, withPrintTypographyUpdate } from "@/lib/validation/print-typography";
 import { revalidatePath } from "next/cache";
 import { frameGateError, partColorGateError } from "@/lib/cards/frame-availability";
-import { drawsPartColor } from "@/lib/cards/part-color";
+import { drawsPartColor, frameGateColors } from "@/lib/cards/part-color";
 import {
   cardFieldsFace,
   frameKindGateError,
@@ -283,9 +283,17 @@ export async function createCardAction(
   const verifiedKeysOf = async () =>
     (verifiedKeysCache ??= new Set(await getVerifiedFrameKeys()));
   if (!framePreview) {
+    // (A split / aftermath half in its own colour, TODO 4.26 M2: gated in
+    // the first part's own colour where the card names one — the master it
+    // draws; the card's colour stays the whole card's. The look is the
+    // new-card default where the payload names no switch.)
     const gateError = frameGateError(
       data.frame_style?.template,
-      data.color_identity,
+      frameGateColors(
+        data.frame_style?.template,
+        { partColor: data.frame_style?.partColor ?? true, firstPartColor: data.frame_style?.firstPartColor },
+        data.color_identity,
+      ),
       await verifiedKeysOf(),
     );
     if (gateError) {
@@ -697,9 +705,14 @@ export async function updateCardAction(
       JSON.stringify([...data.color_identity].sort()) !==
         JSON.stringify([...(existing.color_identity ?? [])].sort());
     if (templateChanged || colorChanged) {
+      const storedStyle = (existing.frame_style ?? {}) as { partColor?: boolean; firstPartColor?: ColorIdentity[] };
       const gateError = frameGateError(
         nextTemplate ?? existingTemplate,
-        data.color_identity ?? existing.color_identity,
+        frameGateColors(
+          nextTemplate ?? existingTemplate,
+          { partColor: data.frame_anatomy?.partColor ?? storedStyle.partColor, firstPartColor: storedStyle.firstPartColor },
+          data.color_identity ?? existing.color_identity,
+        ),
         await verifiedKeysOf(),
       );
       if (gateError) {
@@ -711,9 +724,9 @@ export async function updateCardAction(
     }
 
     // A second part in its own colour (TODO 4.26): when the edit switches
-    // the look on or changes the part's colour, that colour must be
-    // published on the frame — a stored card that leaves both alone stays
-    // editable.
+    // the look on, changes the part's colour or moves the card onto another
+    // frame with the look on (L2), that colour must be published on the
+    // frame — a stored card that leaves all three alone stays editable.
     {
       const template = nextTemplate ?? existingTemplate;
       const storedBack = (existing.back_face ?? null) as { color_identity?: ColorIdentity[] } | null;
@@ -724,7 +737,7 @@ export async function updateCardAction(
       const switchedOn = nextOn && !storedOn;
       const partChanged =
         JSON.stringify([...partColors].sort()) !== JSON.stringify([...(storedBack?.color_identity ?? [])].sort());
-      if (drawsPartColor(template) && nextOn && (switchedOn || partChanged)) {
+      if (drawsPartColor(template) && nextOn && (switchedOn || partChanged || templateChanged)) {
         const partError = partColorGateError(template, partColors, await verifiedKeysOf());
         if (partError && !(await previewAllowed())) {
           return { ok: false, fieldErrors: { "back_face.color_identity": partError } };

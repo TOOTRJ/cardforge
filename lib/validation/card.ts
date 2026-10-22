@@ -352,6 +352,9 @@ const frameStyleBaseSchema = z
     // Each part in its own colour (TODO 4.26): the save keeps it only on a
     // template that draws a seam or a page (normalizeAnatomy).
     partColor: z.boolean().optional(),
+    // …and the first part's own frame colour (M2: the card's colour stays
+    // the whole card's), colour words; kept only on a seam frame.
+    firstPartColor: z.array(z.enum(COLOR_IDENTITY_VALUES)).min(1).max(5).optional(),
   })
   .strict();
 

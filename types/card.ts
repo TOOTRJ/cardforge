@@ -1165,6 +1165,17 @@ export type FrameStyle = {
    *  import follows its printing (on); every save drops it on a template
    *  that declares neither (lib/cards/anatomy.ts normalizeAnatomy). */
   partColor?: boolean;
+  /** The FIRST part's own frame colour where it is not the card's (TODO
+   *  4.26, owner decision M2): a split or aftermath card's `color_identity`
+   *  stays the WHOLE card's colours (Fire // Ice is red and blue, gold on
+   *  the card page, the filters and the deck stats), and this names the
+   *  colour its first half's master paints with `partColor` on (Fire's
+   *  red). FrameStyle colour words, as `color_identity`. Absent = the
+   *  card's colour paints the first part (every creator card: its picked
+   *  colour IS the first part's). Written by an import and the AI paths;
+   *  dropped at the save on a frame without a seam (normalizeAnatomy).
+   *  Frame data only — never read for behaviour. */
+  firstPartColor?: ColorIdentity[];
 };
 
 // ---------------------------------------------------------------------------

@@ -116,7 +116,19 @@ export { TWO_COLOR_PAIRS, type TwoColorPair, type TwoColorDress };
  *  ("black" only in the creator's form and an edit's patch). */
 export const FRAME_ANATOMY_KEYS = ["crown", "twoColor", "collector", "star", "stamp", "dfcIcon", "rulesAlign", "border", "partColor"] as const;
 export type FrameAnatomyKey = (typeof FRAME_ANATOMY_KEYS)[number];
-export type FrameAnatomyStyle = Pick<FrameStyle, FrameAnatomyKey>;
+/** …and the first part's own frame colour (TODO 4.26, M2: FrameStyle.
+ *  firstPartColor — colour DATA beside the `partColor` switch, not a switch
+ *  of its own, so not in FRAME_ANATOMY_KEYS; it rides wherever the switches
+ *  do: the save's normalisation, a remix, an import). */
+export type FrameAnatomyStyle = Pick<FrameStyle, FrameAnatomyKey | "firstPartColor">;
+
+const COLOR_WORDS: ReadonlySet<string> = new Set(["white", "blue", "black", "red", "green", "colorless", "multicolor"]);
+
+/** A first-part colour a stored frame_style or a payload may name: a
+ *  non-empty list of FrameStyle colour words. */
+export function isPartColorList(value: unknown): value is ColorIdentity[] {
+  return Array.isArray(value) && value.length > 0 && value.every((c) => typeof c === "string" && COLOR_WORDS.has(c));
+}
 
 /** What a template can draw: the crown, the two-colour dresses it has
  *  pair masters for, the collector line (FrameProfile.collector — the ★
@@ -368,6 +380,13 @@ export function normalizeAnatomy<T extends FrameAnatomyStyle>(
       delete out[key];
     }
   }
+  // The first part's own colour (TODO 4.26, M2) only where a seam draws
+  // it (split, aftermath): the Prepare page's first part is the card's own
+  // colour, and every other frame has one part.
+  if ("firstPartColor" in out && (profile.partColorSeam === undefined || !isPartColorList(out.firstPartColor))) {
+    out = { ...out };
+    delete out.firstPartColor;
+  }
   // A stamp naming the other shape on a frame that draws only its own (a
   // triangle printing on a borderless frame, owner Round 70): "none".
   if ("stamp" in out) {
@@ -427,6 +446,7 @@ export function storedAnatomyOf(frameStyle: unknown): FrameAnatomyStyle {
   if (stored.rulesAlign === "center") out.rulesAlign = "center";
   if (stored.border === "white") out.border = "white";
   if (typeof stored.partColor === "boolean") out.partColor = stored.partColor;
+  if (isPartColorList(stored.firstPartColor)) out.firstPartColor = [...stored.firstPartColor];
   return out;
 }
 
@@ -1087,6 +1107,17 @@ export type ImportedAnatomyFacts = {
    *  `border_color`), else absent — never "black". The save drops it on a
    *  frame that draws no white border. */
   printed_border?: "white";
+  /** The FIRST part's own frame colour (TODO 4.26, M2): a split or
+   *  aftermath printing's first half, from its own cost — where it is not
+   *  the card's whole colour (`color_identity`, which stays both halves').
+   *  Absent elsewhere. */
+  printed_first_part_color?: ColorIdentity[];
+  /** `false` where the printing's parts can't be drawn in their own
+   *  colours on the frame it lands on — a part's colour not verified there
+   *  (lib/creator/frame-resolve.ts partColourVerdict): the card saves with
+   *  the look OFF, never a refused save after the art. Absent = the
+   *  new-card default (on, where the frame draws it). */
+  printed_part_color?: false;
 };
 
 /**
@@ -1130,6 +1161,11 @@ export function importedAnatomy(
   // …and the border (4.30): white for a white-bordered printing; dropped at
   // the save on a frame that draws none.
   if (patch.printed_border === "white") style.border = "white";
+  // …and each part in its own colour (4.26): the first part's own colour
+  // where it is not the card's, and the look OFF where a part's colour is
+  // not verified on the frame (the default — on — otherwise).
+  if (patch.printed_first_part_color && patch.printed_first_part_color.length > 0) style.firstPartColor = [...patch.printed_first_part_color];
+  if (patch.printed_part_color === false) style.partColor = false;
   const drawsPairs = frameAnatomyOf(landedTemplate).twoColor.length > 0;
   const colorIdentity =
     drawsPairs && twoColourPrinting && patch.color_pair
@@ -1154,7 +1190,7 @@ export function importedAnatomy(
  */
 export function importedFormAnatomy(
   style: FrameAnatomyStyle,
-): Required<Pick<FrameAnatomyStyle, "crown" | "twoColor" | "collector" | "stamp">> & Pick<FrameAnatomyStyle, "star" | "dfcIcon" | "border"> {
+): Required<Pick<FrameAnatomyStyle, "crown" | "twoColor" | "collector" | "stamp">> & Pick<FrameAnatomyStyle, "star" | "dfcIcon" | "border" | "partColor" | "firstPartColor"> {
   return {
     crown: style.crown ?? NEW_CARD_ANATOMY.crown,
     twoColor: style.twoColor ?? NEW_CARD_ANATOMY.twoColor,
@@ -1165,5 +1201,10 @@ export function importedFormAnatomy(
     // form's own default (the kind change's `arrows`) stands otherwise.
     ...(style.dfcIcon !== undefined ? { dfcIcon: style.dfcIcon } : {}),
     ...(style.border === "white" ? { border: "white" as const } : {}),
+    // Each part in its own colour (4.26): OFF where the printing's parts
+    // can't be drawn in their colours (absent: the creator's default), and
+    // the first part's own colour.
+    ...(style.partColor === false ? { partColor: false } : {}),
+    ...(style.firstPartColor ? { firstPartColor: [...style.firstPartColor] } : {}),
   };
 }

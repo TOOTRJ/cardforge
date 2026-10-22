@@ -1218,6 +1218,12 @@ Rules and gotchas:
   NEW_CARD_ANATOMY — an import follows the printing, a stored card keeps
   its look) with the second part's colour on `back_face.color_identity`
   (`partColorFromCost`, `lib/cards/part-color.ts`; empty = the card's).
+  A split / aftermath card's `color_identity` stays the WHOLE card's (M2:
+  Fire // Ice is red + blue); its first half's frame colour is
+  `frame_style.firstPartColor` (frame data, never read for behaviour; the
+  gate reads `frameGateColors`). Imports and AI remixes take the look on
+  only where both parts are verified (`partColourVerdict`, M1) — else off,
+  never a refused save after the art.
   Split / aftermath draw the second part's master past a hard seam in the
   masters' black gutter (`partColorSeam`, `cardFrameSplit` — the
   twoColorSplit machinery on an axis, both renderers, both finish masks,

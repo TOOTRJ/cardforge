@@ -956,7 +956,7 @@ before 5.0d was made beside the ▼: look at its seven colours again.
 the template's override (migration 0115). It goes stale when a later bump
 touches the template (`VERIFICATION_TEMPLATE_SCOPES` when a bump's slots
 move on fewer templates than its bakes change on) or the override changes;
-`VERIFICATION_NEUTRAL_VERSIONS` (31, 32, 33, 35, 36, 37, … 60) never stale one (v36's
+`VERIFICATION_NEUTRAL_VERSIONS` (31, 32, 33, 35, 36, 37, … 61) never stale one (v36's
 4.47 moved the planeswalkers' `symbolRect`, a box the alignment score reads,
 but the owner kept it neutral as v32's 15 px m15pw cost-box move was — owner
 round 18, 2026-09-30; v60's 4 px walker pip and name move likewise), and a
@@ -3879,7 +3879,8 @@ FRAME_ANATOMY_KEYS; lib/cards/part-color.ts).
   `tests/unit/render/part-colour-bake.test.tsx` holds a stored card with
   one, switch absent or off, byte for byte to the card without. No layout
   bump, no sweep, no badge. An edit switches it on (`frame_anatomy.
-  partColor`) and fills an empty second colour from the part's cost.
+  partColor`) and fills an empty second colour from the part's cost (a
+  colour verified on the frame only).
 - **The second part's colour.** From its cost (`partColorFromCost`): one
   colour; two — the PAIR in printed order, its dress the cost's
   (`twoColorDressOf`: an all-hybrid cost the hybrid's grey, else the
@@ -3888,7 +3889,8 @@ FRAME_ANATOMY_KEYS; lib/cards/part-color.ts).
   the "Second part's colour" row under the switch on the second part's tab.
   The server gates it like the front's colour (`partColorGateError`: the
   part's colour key must be published on the frame — on a new card; on an
-  edit when the switch goes on or the colour changes).
+  edit when the switch goes on, the colour changes or the frame changes
+  with the look on, L2).
 
 **Split and aftermath: a seam between two masters** (FrameProfile.
 `partColorSeam`, the twoColorSplit machinery on an axis): the first part
@@ -3903,14 +3905,42 @@ No asset: never pre-flattened pairs.
 | split | x 52 %W (1092 px) | the black gutter between the halves, black on every row from x 1071 to 1114 of all seven masters | the prints' gutter centre is 1092.5 (DMR #210 / #214 / #215: 989–1026 on the portrait scan, turned); 546 px at the 1050 bake |
 | aftermath | y 54.2857 %H (1140 px) | the black band between the parts, black on every column from row 1135 to 1143 of all seven masters | 570 px at the 750 bake; the prints' gap reads 1136–1137 dark across (AKH #215 / #220 / #223) |
 
+**The card's colour stays the whole card's** (owner decision M2): a split
+or aftermath card's `color_identity` is both halves' colours, as before 4.26
+(Fire // Ice is red and blue — the single-select model's gold "multicolor"),
+so the card page, the OG image, the filters and the deck stats don't move.
+Its FIRST half's frame colour is `frame_style.firstPartColor` (colour words,
+kept on a seam frame only — normalizeAnatomy; never read for behaviour),
+named where it is not what the whole colour paints (Fire's red); absent, the
+card's own colour paints the first half (every creator card: its picked
+colour IS the first half's — a colour picked by hand after an import drops
+the import's). The frame is gated in the colour it draws
+(`frameGateColors`: the first half's with the look on, else the card's).
+With the look OFF a card draws main's look exactly (Fire // Ice gold).
+
 Import: a split or aftermath printing (Scryfall layout `split`, aftermath
-with the Aftermath keyword) is its FIRST half's colour, read from that half's
-cost (Scryfall gives a split card's faces no colours of their own — the
-card's are both halves'), and its second half's colour from its cost. A
-two-colour printing on these frames is exact now (the `two-colour` gap was
-4.26's here, `gapDrawnBy`); a HYBRID half (Incubation {G/U}, Depose
-{1}{W/U}) prints a hybrid half PipGlyph draws gold — still nearest, the
-`two-colour-hybrid` gap.
+with the Aftermath keyword; never a Room, L1) keeps its whole colour and
+names its first half's (`printed_first_part_color`, from that half's cost —
+Scryfall gives a split card's faces no colours of their own) and its second
+half's (`back_face.color_identity`, from its cost). A two-colour printing on
+these frames is exact now (the `two-colour` gap was 4.26's here,
+`gapDrawnBy`); a HYBRID half (Incubation {G/U}, Depose {1}{W/U}) prints a
+hybrid half PipGlyph draws gold — still nearest, the `two-colour-hybrid`
+gap.
+
+**Never a refused save after the art** (M1): an import
+(`finalizeImportMatch`), the AI deck remix of a printing (`remixFrameFor`,
+`scryfallRemixMechanics`) and of an own card (`ownCardRemixFrame`) judge a
+landing with `partColourVerdict`: the look stays on only where BOTH parts'
+colours are verified on the frame (the first half's master, the second's —
+a Prepare page's colour, a pair's gold key) and the landing is then verified
+in the first part's colour; short of it the card lands with the look OFF
+(`printed_part_color: false`, an own remix's `part_color_off`) in its whole
+colour — main's landing. The creator's "Second part's colour" row offers a
+colour only where the frame is verified in it (aria-disabled with its
+reason), the cost never fills an unverified one, a colour the cost filled
+never crosses onto a double-faced body (nor a back's onto the part tab, L3),
+and a refused save's message shows at the row.
 
 **Prepare: the page overlay** (a `partPage` overlay slot, PREPARE_PAGE): the
 spell's page cut out of the Prepare master of its key —

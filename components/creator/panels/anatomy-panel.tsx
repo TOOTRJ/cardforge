@@ -50,6 +50,9 @@ import {
 } from "@/lib/cards/anatomy";
 import { useLegendaryVariation } from "@/components/creator/panels/legendary-variation";
 import { drawsPartColor, partColorFromCost, samePartColor } from "@/lib/cards/part-color";
+import { isFrameComboAvailable } from "@/lib/cards/frame-availability";
+import { normalizeFrameTemplate } from "@/lib/cards/card-display";
+import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import type { FormValues } from "@/lib/creator/form-types";
 import type { ColorIdentity, FrameStyle } from "@/types/card";
 
@@ -110,6 +113,9 @@ const ANATOMY_COPY: Record<SwitchKey, { label: string; help: string }> = {
 };
 
 const PART_COLORS = ["white", "blue", "black", "red", "green"] as const;
+
+/** Every combo — a panel handed no verified set (a test) offers every colour. */
+const EVERY_COMBO: ReadonlySet<string> = { has: () => true } as unknown as ReadonlySet<string>;
 type PartColor = (typeof PART_COLORS)[number];
 
 /** The words picked in the second part's colour row, stored in printed
@@ -140,11 +146,21 @@ function partColorOfPicks(picks: readonly PartColor[]): ColorIdentity[] {
 export function useSecondPartColorFollow(
   form: Pick<UseFormReturn<FormValues>, "control" | "setValue">,
   enabled: boolean,
+  /** The verified (template, colour) combos: a colour the frame is not
+   *  verified in is never filled (TODO 4.26, M1). */
+  verifiedKeys: ReadonlySet<string>,
 ): () => void {
   const { control, setValue } = form;
-  const [template, partColor, backCost, backColors] = useWatch({
+  const [template, partColor, backCost, backColors, colorIdentity, firstPartColor] = useWatch({
     control,
-    name: ["frame_style.template", "frame_style.partColor", "back_face.cost", "back_face.color_identity"],
+    name: [
+      "frame_style.template",
+      "frame_style.partColor",
+      "back_face.cost",
+      "back_face.color_identity",
+      "color_identity",
+      "frame_style.firstPartColor",
+    ],
   });
   const touched = useRef(false);
   const filled = useRef<ColorIdentity[] | null>(null);
@@ -157,51 +173,125 @@ export function useSecondPartColorFollow(
   useEffect(() => {
     if (enabled && draws && partColor === undefined) setValue("frame_style.partColor", true);
   }, [enabled, draws, partColor, setValue]);
+  // L3: a colour this hook filled never crosses onto a frame that is not a
+  // part-colour frame (a double-faced body reads back_face.color_identity
+  // as its back's colour), and a back's colour picked on a double-faced
+  // body is not carried onto one — the cost fills it again there.
+  const drewBefore = useRef(draws);
+  useEffect(() => {
+    if (drewBefore.current === draws) return;
+    const was = drewBefore.current;
+    drewBefore.current = draws;
+    if (!enabled) return;
+    const current = (backColors ?? []) as ColorIdentity[];
+    if (was && filled.current && samePartColor(current, filled.current)) setValue("back_face.color_identity", []);
+    if (!was && current.length > 0) setValue("back_face.color_identity", []);
+    filled.current = null;
+    touched.current = false;
+    // (Only the frame's move is this effect's business.)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draws]);
+  // M2: the first part's own colour (an import's, Fire's red where the card
+  // is red AND blue) belongs to the card colour it came with: a colour
+  // picked by hand afterwards IS the first part's, so it goes.
+  const firstFor = useRef<string | null>(null);
+  useEffect(() => {
+    const identity = [...((colorIdentity ?? []) as string[])].sort().join(",");
+    if (!firstPartColor || firstPartColor.length === 0) {
+      firstFor.current = null;
+      return;
+    }
+    if (firstFor.current === null) firstFor.current = identity;
+    else if (firstFor.current !== identity) {
+      firstFor.current = null;
+      setValue("frame_style.firstPartColor", undefined);
+    }
+  }, [colorIdentity, firstPartColor, setValue]);
   useEffect(() => {
     if (!enabled || touched.current) return;
     if (!drawsPartColor(template) || partColor !== true) return;
     const current = (backColors ?? []) as ColorIdentity[];
     // A colour this hook did not fill (an import's, a stored one) stays.
     if (current.length > 0 && !(filled.current && samePartColor(current, filled.current))) return;
-    const next = partColorFromCost(backCost);
+    // Never a colour the frame isn't verified in (M1): the part keeps the
+    // card's own colour instead.
+    const fromCost = partColorFromCost(backCost);
+    const next = fromCost.length > 0 && partColorVerified(template, fromCost, verifiedKeys) ? fromCost : [];
     filled.current = next;
     if (!samePartColor(current, next)) setValue("back_face.color_identity", next);
-  }, [enabled, template, partColor, backCost, backColors, setValue]);
+  }, [enabled, template, partColor, backCost, backColors, verifiedKeys, setValue]);
   return useCallback(() => {
     touched.current = true;
   }, []);
 }
 
+/** A second part's colour is verified on the frame (the master or page it
+ *  paints — its colour key, a pair's gold `m`). */
+function partColorVerified(
+  template: string | null | undefined,
+  colors: readonly ColorIdentity[],
+  verifiedKeys: ReadonlySet<string>,
+): boolean {
+  return isFrameComboAvailable(normalizeFrameTemplate(template ?? undefined), pickFrameColorKey([...colors]), verifiedKeys);
+}
+
 /** The second part's colour row (TODO 4.26): pick its colour — one, two
- *  (the pair) or more (gold); none = the card's own colour. */
+ *  (the pair) or more (gold); none = the card's own colour. A colour that
+ *  would land on one the frame isn't verified in is offered off, with its
+ *  reason (M1; the chip rules: aria-disabled, never disabled). */
 export function SecondPartColorRow({
   colors,
   onChange,
+  template,
+  verifiedKeys,
+  error,
 }: {
   colors: readonly ColorIdentity[];
   onChange: (next: ColorIdentity[]) => void;
+  template: string | null | undefined;
+  verifiedKeys: ReadonlySet<string>;
+  /** A refused save's message for the part's colour (the server's gate). */
+  error?: string | null;
 }) {
   const multicolor = colors.includes("multicolor");
   const selected = PART_COLORS.filter((c) => colors.includes(c));
-  const options: ChipOption<PartColor>[] = PART_COLORS.map((color) => ({ value: color, label: color }));
+  const options: ChipOption<PartColor>[] = PART_COLORS.map((color) => {
+    // Picking a colour off is always allowed; picking one on, only where
+    // the colour the pick makes is verified on the frame.
+    const reachable = selected.includes(color) || partColorVerified(template, partColorOfPicks([...selected, color]), verifiedKeys);
+    return {
+      value: color,
+      label: color,
+      ...(reachable ? {} : { disabled: true, description: "Not available on this frame in this colour yet" }),
+    };
+  });
+  const helpId = "second-part-colour-help";
   return (
-    <div className="flex flex-col gap-2" data-testid="second-part-colour-row">
+    <div
+      className="flex flex-col gap-2"
+      data-testid="second-part-colour-row"
+      data-field-anchor="back_face.color_identity"
+      tabIndex={-1}
+    >
       <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Second part&rsquo;s colour</span>
       <ChipGroup
         multiSelect
         ariaLabel="Second part's colour"
+        ariaDescribedBy={helpId}
         layout="wrap"
-        size="sm"
+        size="md"
         value={selected}
         onChange={(next) => onChange(partColorOfPicks(next))}
         options={options}
       />
-      <p className="text-[11px] leading-4 text-subtle">
-        {multicolor && selected.length === 0
-          ? "Gold (three colours or more). Pick colours to change it."
-          : selected.length === 0
-            ? "None picked: the second part prints in the card's own colour."
-            : "Filled in from the second part's mana cost — change it if its colours differ."}
+      <p id={helpId} className={cn("text-[11px] leading-4", error ? "text-danger" : "text-subtle")} data-testid="second-part-colour-help">
+        {error
+          ? error
+          : multicolor && selected.length === 0
+            ? "Gold (three colours or more). Pick colours to change it."
+            : selected.length === 0
+              ? "None picked: the second part prints in the card's own colour."
+              : "Filled in from the second part's mana cost — change it if its colours differ."}
       </p>
     </div>
   );
@@ -403,6 +493,7 @@ export function AnatomyPanel({
   stored = null,
   onPairTouched,
   onPartColorTouched,
+  verifiedKeys,
   pairRow = true,
 }: {
   which: readonly SwitchKey[];
@@ -412,13 +503,16 @@ export function AnatomyPanel({
   /** A pick in the second part's colour row (useSecondPartColorFollow's
    *  markTouched). */
   onPartColorTouched?: () => void;
+  /** The verified combos — the second part's colour row offers only
+   *  colours verified on the frame (TODO 4.26, M1). */
+  verifiedKeys?: ReadonlySet<string>;
   /** Show the "Two colours" row under the two-colour switch — for an edit
    *  or a remix, whose Colour step is locked. A new card picks its pair in
    *  the Colour step's own row (card-setup-panel.tsx), so the Card step
    *  passes false. */
   pairRow?: boolean;
 }) {
-  const { control, setValue } = useFormContext<FormValues>();
+  const { control, setValue, formState, clearErrors } = useFormContext<FormValues>();
   const [template, crown, twoColor, cardType, cost, colorIdentity, border, partColor, backCost, backColors] = useWatch({
     control,
     name: [
@@ -548,15 +642,21 @@ export function AnatomyPanel({
               const current = (backColors ?? []) as ColorIdentity[];
               if (next && current.length === 0) {
                 const fromCost = partColorFromCost(backCost);
-                if (fromCost.length > 0) setValue("back_face.color_identity", fromCost, { shouldDirty: true });
+                if (fromCost.length > 0 && partColorVerified(template, fromCost, verifiedKeys ?? EVERY_COMBO)) {
+                  setValue("back_face.color_identity", fromCost, { shouldDirty: true });
+                }
               }
             }}
           >
             {partColor === true ? (
               <SecondPartColorRow
                 colors={(backColors ?? []) as ColorIdentity[]}
+                template={template}
+                verifiedKeys={verifiedKeys ?? EVERY_COMBO}
+                error={(formState.errors.back_face as { color_identity?: { message?: string } } | undefined)?.color_identity?.message ?? null}
                 onChange={(next) => {
                   onPartColorTouched?.();
+                  clearErrors("back_face.color_identity");
                   setValue("back_face.color_identity", next, { shouldDirty: true });
                 }}
               />

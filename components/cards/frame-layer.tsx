@@ -3,7 +3,7 @@ import { frameUrl } from "@/lib/frames/frame-url";
 import { canonicalColorSequence } from "@/lib/cards/mana-order";
 import { COLOR_KEY_LETTER, pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import type { FrameMasterKey, PartColorSeam, Rect, TwoColorDress, TwoColorSplit } from "@/lib/cards/template-layout";
-import { type FrameAnatomyStyle, type PartFacts, type ResolvedFrameOverlay, anatomyOn, crownedMasterKey, resolveTwoColor } from "@/lib/cards/anatomy";
+import { type FrameAnatomyStyle, type PartFacts, type ResolvedFrameOverlay, anatomyOn, crownedMasterKey, isPartColorList, resolveTwoColor } from "@/lib/cards/anatomy";
 import { DEFAULT_FRAME_TEMPLATE } from "@/types/card";
 import type { ColorIdentity, FrameTemplate } from "@/types/card";
 
@@ -142,12 +142,15 @@ export function partFactsOfBackFace(
 /**
  * The per-part colour seam a card draws (TODO 4.26), or null: the profile
  * declares a seam (FrameProfile.partColorSeam — split, aftermath), the
- * card's switch is on (`frame_style.partColor === true`), the second part
- * names a colour of its own, and its master is not the first part's. The
- * first part paints the card's master (frameMasterKey), the second its own
- * colour's, dressed the same way. Returns the split both renderers, both
- * finish masks and the bake's preload draw — the twoColorSplit machinery,
- * on the seam's axis.
+ * card's switch is on (`frame_style.partColor === true`), and a part names
+ * a colour of its own. The first part paints its own colour's master —
+ * `frame_style.firstPartColor` where the card's colour is the whole card's
+ * (M2: Fire // Ice stores red AND blue, Fire is red), else the card's —
+ * and the second its own colour's (`back_face.color_identity`, else the
+ * first part's), each dressed by frameMasterKey. Null when both are the
+ * card's own master — the card draws as it always did. Returns the split
+ * both renderers, both finish masks and the bake's preload draw — the
+ * twoColorSplit machinery, on the seam's axis.
  */
 export function partColorSplitFor(
   profile: { partColorSeam?: PartColorSeam } & MasterDress,
@@ -158,16 +161,20 @@ export function partColorSplitFor(
 ): FrameSplit | null {
   const seam = profile.partColorSeam;
   if (!seam || !anatomyOn(style, "partColor")) return null;
-  const partColors = part?.colors ?? [];
-  if (partColors.length === 0) return null;
-  const leftKey = frameMasterKey(profile, colors, type, style);
-  const rightKey = frameMasterKey(
-    profile,
-    partColors,
-    { cardType: part?.cardType ?? null, supertype: part?.supertype ?? null, cost: part?.cost ?? null },
-    style,
-  );
-  if (leftKey === rightKey) return null;
+  const firstColors = isPartColorList(style?.firstPartColor) ? style.firstPartColor : null;
+  const partColors = part?.colors && part.colors.length > 0 ? part.colors : null;
+  if (!firstColors && !partColors) return null;
+  const own = frameMasterKey(profile, colors, type, style);
+  const leftKey = firstColors ? frameMasterKey(profile, firstColors, type, style) : own;
+  const rightKey = partColors
+    ? frameMasterKey(
+        profile,
+        partColors,
+        { cardType: part?.cardType ?? null, supertype: part?.supertype ?? null, cost: part?.cost ?? null },
+        style,
+      )
+    : leftKey;
+  if (leftKey === own && rightKey === own) return null;
   return { leftKey, rightKey, atPct: seam.atPct, ...(seam.axis === "y" ? { axis: "y" as const } : {}) };
 }
 

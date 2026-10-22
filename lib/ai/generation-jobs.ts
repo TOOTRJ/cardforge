@@ -1587,7 +1587,9 @@ async function executeDeckRemixStep(
       defense: source.defense ?? undefined,
       parent_card_id: source.id,
       art_url: source.art_url,
-      anatomy: storedAnatomyOf(source.frame_style),
+      // (Each part in its own colour OFF where a part's colour isn't
+      // verified on the kept frame — TODO 4.26, M1.)
+      anatomy: kept.part_color_off ? { ...storedAnatomyOf(source.frame_style), partColor: false } : storedAnatomyOf(source.frame_style),
       frame_template: kept.frame_template,
       back_face: kept.back_face,
       text_stand_in: ownCardTextStandIn(source, ownVerifiedKeys),
