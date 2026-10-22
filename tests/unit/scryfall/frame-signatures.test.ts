@@ -142,11 +142,13 @@ describe("borderless families (TODO 1.17)", () => {
     // (#315 and #316 print the same frame, checked by eye); the anime frame
     // is the raised-foil #343–355. Every one is capped at nearest until its
     // border is true: 4.35's five, and the four 7.7's edge contract found
-    // (bloomburrow, lotr, avatar, tarkirdraconic — owner decision A8).
+    // (bloomburrow, lotr, avatar, tarkirdraconic — owner decision A8). The
+    // LOTR ring left the cap with its Card Conjurer re-source (TODO 4.11):
+    // exact once verified.
     ["blb-295", "nearest", "bloomburrow", undefined],
     ["blb-316", "nearest", "bloomburrow", undefined],
     ["blb-343", "nearest", "bloomanime", undefined],
-    ["ltr-306", "nearest", "lotr", undefined],
+    ["ltr-306", "exact", "lotr", undefined],
     ["tla-338", "nearest", "avatar", undefined],
     ["tle-315", "nearest", "avatar", undefined],
     // Text on the art (4.36): TDM clan, source material. `full_art` doesn't
@@ -1033,8 +1035,8 @@ describe("the rule table", () => {
   });
 
   it("names the border as the reason a capped showcase isn't exact (A8)", () => {
+    // (The LOTR ring, ltr-306, left the cap with TODO 4.11.)
     for (const [key, frame] of [
-      ["ltr-306", "The Lord of the Rings Ring"],
       ["tla-338", "Avatar: The Last Airbender"],
     ] as const) {
       const match = frameMatchFromScryfall(printing(key));
@@ -1075,7 +1077,10 @@ describe("the rule table", () => {
       expect(isBorderPending("expeditionlandbfz", key), key).toBe(false);
     }
     expect(BORDER_PENDING_COLOURS.size).toBe(0);
-    expect(isBorderPending("lotr", "w")).toBe(true);
+    expect(isBorderPending("avatar", "w")).toBe(true);
+    // The LOTR ring left the list with TODO 4.11 (Card Conjurer's masters,
+    // opaque to every edge).
+    expect(isBorderPending("lotr", "w")).toBe(false);
     expect(isBorderPending("m15", "w")).toBe(false);
     // The battle left the list with TODO 4.21b: its Card Conjurer master
     // has the printed black border on every colour (the MSE one was a

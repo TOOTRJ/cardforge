@@ -119,7 +119,8 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   split: { front: [817, 559], second: { size: [816, 559], rotation: 0 } },
   // The bottom half is drawn in this box and turned a quarter turn.
   aftermath: { front: [1273, 471], second: { size: [741, 427], rotation: 90 } },
-  lotr: { front: [1080, 945] },
+  // Card Conjurer's ring window (TODO 4.11, layout v65): the pack's artBounds.
+  lotr: { front: [1202, 918] },
   // Card Conjurer's scroll window (TODO 4.11, layout v62).
   lotrscroll: { front: [1280, 941] },
   avatar: { front: [1320, 1134] },

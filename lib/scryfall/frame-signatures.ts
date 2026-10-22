@@ -512,7 +512,9 @@ const UNMODELLED_SUBTYPES = ["Room", "Class", "Case"] as const;
  *     border);
  *   • a transparent outer band at the bottom and lower sides, found by 7.7's
  *     edge contract (owner decision A8, 2026-09-29): avatar, bloomburrow,
- *     lotr, tarkirdraconic.
+ *     tarkirdraconic (lotr left with TODO 4.11: Card Conjurer's 'Ring'
+ *     masters are opaque to every edge — the frame field's design edges and
+ *     the black border's shoulders).
  *  Each is a known failure in lib/frames/edge-contract.ts; a test holds the
  *  two lists together, so fixing a master (and striking it from the known
  *  failures) lifts its cap here too. */
@@ -522,7 +524,6 @@ export const BORDER_PENDING_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<Fram
   "tarkirdragon",
   "avatar",
   "bloomburrow",
-  "lotr",
   "tarkirdraconic",
 ]);
 
@@ -1976,12 +1977,21 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     match: { borders: ["borderless"], collectors: { blb: [[343, 355]] } },
     outcome: { status: "exact", template: "bloomanime" },
   },
-  {
-    key: "showcase/ltr/ring",
-    exactLabel: "The Lord of the Rings ring showcase",
-    match: { borders: ["borderless"], collectors: { ltr: [[302, 331], [794, 823]] } },
-    outcome: { status: "exact", template: "lotr" },
-  },
+  // Exact once verified since TODO 4.11 (Card Conjurer's 'Ring' masters are
+  // opaque to every edge: off BORDER_PENDING_TEMPLATES). A two-colour
+  // printing (24 of the 60: LTR #316, #318–327, #330 and their twins)
+  // prints the colour frames split down the card (the pack's
+  // maskRightHalf.png), which the template doesn't draw yet: nearest.
+  ...withGaps(
+    {
+      key: "showcase/ltr/ring",
+      exactLabel: "The Lord of the Rings ring showcase",
+      match: { borders: ["borderless"], collectors: { ltr: [[302, 331], [794, 823]] } },
+      outcome: { status: "exact", template: "lotr" },
+    },
+    ["two-colour", "two-colour-hybrid"],
+    { "two-colour": "4.11", "two-colour-hybrid": "4.11" },
+  ),
   {
     key: "showcase/tdm/clan",
     exactLabel: "Tarkir: Dragonstorm clan showcase (text on the art)",

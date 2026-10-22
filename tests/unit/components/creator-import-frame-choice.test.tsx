@@ -424,9 +424,12 @@ describe("imports = printing-only (owner round 17, 2026-09-30)", () => {
     await importPayload(printing("stx-175"));
     expect(preview().crown).toBe("true");
     expect(preview().twoColor).toBe("true");
-    // LTR #302 Boromir, a showcase: OFF again, explicitly.
-    await importPayload(printing("ltr-302"));
+    // MUL #66 Anafenza, a showcase: OFF again, explicitly.
+    await importPayload(printing("mul-66"));
     expect(preview().crown).toBe("false");
+    // LTR #302 Boromir, the ring showcase, prints its OWN crown (TODO 4.11): ON.
+    await importPayload(printing("ltr-302"));
+    expect(preview().crown).toBe("true");
   });
 });
 

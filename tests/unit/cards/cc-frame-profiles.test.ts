@@ -51,6 +51,15 @@ describe("Card Conjurer frame profiles", () => {
         expect(profile.costDx, template).toBeUndefined();
         continue;
       }
+      if (template === "lotr") {
+        // The LOTR ring (TODO 4.11): the CC M15 row centred on its pack's
+        // title bar (outlines 113.5 / 231.5 px, as drawn), as its prints
+        // centre theirs — 2 px above the band's centre, 172.2 px.
+        expect([profile.costDy, profile.costDx, Math.round((profile.costSizePct ?? 0) * 1500)]).toEqual([-2 / 1500, 2 / 1500, 70]);
+        const band = profile.title.rect;
+        expect(((band.topPct + band.heightPct / 2) / 100) * 2100 + (profile.costDy ?? 0) * 1500).toBeCloseTo(172.2, 6);
+        continue;
+      }
       // v24–v60 lifted the discs 11.55 px (−0.0077 W) onto the 2014–2023
       // prints; June-2023+ prints set them 4.6 px lower (the 2023 pip move,
       // docs/FRAMES.md "The cost row as printed since 2023"): 7 px above the

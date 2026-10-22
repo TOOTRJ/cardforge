@@ -99,6 +99,8 @@ describe("the switch values", () => {
       // …and the Expeditions (TODO 4.11 wave 1), on their own rows.
       "expeditionland",
       "expeditionlandbfz",
+      // …and the ring (TODO 4.11): M15's slot on its black bottom border.
+      "lotr",
     ]);
   });
 });

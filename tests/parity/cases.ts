@@ -318,6 +318,8 @@ const PICKS: readonly Pick[] = [
   // The Lord of the Rings scroll from Card Conjurer (TODO 4.11, layout v62).
   { from: "lotrscroll/w/creature-long@crown", why: "v62 LOTR scroll: CC's 'Scroll' master, the M15 pack's slots on the scroll, its own crown band, the scroll plate" },
   { from: "lotrscroll/c/artifact-long@stamp-c", why: "v62 LOTR scroll: the pack's own triangle notch per key over the `a` master, the matte or silver triangle art in its cut" },
+  // The Lord of the Rings ring from Card Conjurer (TODO 4.11, layout v65).
+  { from: "lotr/w/creature-long@crown", why: "v65 LOTR ring: CC's 'Ring' master, the M15 pack's slots under its lower title bar (the cost row centred on it), its scalloped crown band, the ring plate with its digits on the face" },
   // The Zendikar Rising hedron showcase from Card Conjurer (TODO 4.11, layout v63).
   { from: "fullart/w/creature-short", why: "v63 ZNR hedron: black name and type ink on the white key's ivory bars, the art under the whole frame, the light plate's dark digits" },
   { from: "fullart/wu/creature-long@crown", why: "v63 ZNR hedron: white ink with its shadow on the gold bars, the pair's split crown band over the gold master (pairCrownOnGold)" },

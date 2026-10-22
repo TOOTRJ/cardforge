@@ -711,6 +711,9 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // land's brown (a colourless creature keys `l`; the artifact's light blue
   // is "@crown-artifact" below).
   ["lotrscroll", ["w", "u", "b", "r", "g", "c", "wub"]],
+  // …and the ring's (TODO 4.11, layout v65): the scalloped title bar over
+  // the pack's frame field, colours, gold and the land's brown.
+  ["lotr", ["w", "u", "b", "r", "g", "c", "wub"]],
   ["m15ubartifact", ["c", "u"]],
   ["m15ubland", ["g", "c"]],
   ["m15land", ["g", "c", "wub"]],
@@ -1337,6 +1340,10 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   // (LTR #700 Shire Scarecrow).
   ["lotrscroll", "creature", "r", "@wide", { power: "12", toughness: "12" }],
   ["lotrscroll", "creature", "c", "@artifact", { supertype: "Artifact", subtypes: ["Scarecrow"], power: "0", toughness: "3" }],
+  // TODO 4.11: the ring's plate at its widest, and a colourless artifact
+  // creature on the artifact master and plate (no print has one).
+  ["lotr", "creature", "r", "@wide", { power: "12", toughness: "12" }],
+  ["lotr", "creature", "c", "@artifact", { supertype: "Artifact", subtypes: ["Golem"], power: "4", toughness: "4" }],
   [
     "m15artifact",
     "artifact",
@@ -1401,6 +1408,9 @@ const SQUARE_CASES: readonly [FrameTemplate, VisualColour][] = [
   // The other landscape frame (TODO 4.21b): its Card Conjurer master's
   // black border runs to the corner too.
   ["split", "r"],
+  // The Lord of the Rings ring (TODO 4.11): the frame field kept in the
+  // top corners, the border black in the bottom ones.
+  ["lotr", "g"],
 ];
 
 function caseId(template: string, colour: string, kind: string, shape: string, suffix = ""): string {
@@ -1538,6 +1548,9 @@ export function visualCases(): VisualCase[] {
   add("m15borderless", "creature", "b", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
   add("m15borderless", "creature", "b", "long", { crown: true, finish: "foil", suffix: "@crown-foil" });
   add("m15borderless", "creature", "b", "long", { crown: true, corners: "square", suffix: "@crown-square" });
+  // The ring's band repaints the card's top, its corners kept square like
+  // the masters' (TODO 4.11): squared, it keeps the frame field there.
+  add("lotr", "creature", "w", "long", { crown: true, corners: "square", suffix: "@crown-square" });
   // The extended-art band at the stored bake's size (4.6f, wave 2b).
   add("extendedart", "creature", "u", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
   // The textless promo's band at the stored bake's size.
@@ -1986,6 +1999,16 @@ export function visualCases(): VisualCase[] {
   add("lotrscroll", "creature", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("lotrscroll", "auto", { rarity: "mythic" }) });
   add("lotrscroll", "artifact", "c", "long", { suffix: "@crown", row: { supertype: "Legendary", frame_style: { template: "lotrscroll", finish: "regular", crown: true } } });
   add("lotrscroll", "land", "c", "long", { suffix: "@crown", row: { supertype: "Legendary", frame_style: { template: "lotrscroll", finish: "regular", crown: true } } });
+  // TODO 4.11: the Lord of the Rings ring's notch — the matte face on a
+  // common, the colourless artifact's piece over its `a` master and the
+  // colourless land's brown one, the HD bake — its crown on the two
+  // colourless dresses, and a square corner (the frame field kept there).
+  add("lotr", "creature", "g", "short", { suffix: "@stamp-auto-common", row: stampRow("lotr", "auto", { rarity: "common" }) });
+  add("lotr", "artifact", "c", "long", { suffix: "@stamp-c", row: stampRow("lotr", "auto", { rarity: "mythic" }) });
+  add("lotr", "land", "c", "long", { suffix: "@stamp-c", row: stampRow("lotr", "auto", { rarity: "rare" }) });
+  add("lotr", "creature", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("lotr", "auto", { rarity: "mythic" }) });
+  add("lotr", "artifact", "c", "long", { suffix: "@crown", row: { supertype: "Legendary", frame_style: { template: "lotr", finish: "regular", crown: true } } });
+  add("lotr", "land", "c", "long", { suffix: "@crown", row: { supertype: "Legendary", frame_style: { template: "lotr", finish: "regular", crown: true } } });
   add("m15ub", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15ub"), cost: "{W/U}{W/U}" } });
   // TODO 4.9d: the borderless frames (new keys on templates whose stored
   // cards carry none: new cases, no bump) beyond the loops above — the
@@ -2417,6 +2440,8 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   // TODO 4.11: the Zendikar Rising hedron showcase — the notch split off its
   // own masters.
   "fullart",
+  // …and the ring's.
+  "lotr",
 ];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's

@@ -1723,6 +1723,282 @@
       "m = the pack's 'Multicolored Frame' m.png, built so the key keeps a master (the MSE build dressed m as colourless); no multicolour basic exists, so no symbol disc and never offered"
     ]
   },
+  "lotr": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packRing.js 'Ring' (the Lord of the Rings ring showcase; groupShowcase-5.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px (but tl, tr: kept square, design to the corner), webp q90",
+    "colors": {
+      "a": [
+        "img/frames/lotr/a.png"
+      ],
+      "w": [
+        "img/frames/lotr/w.png"
+      ],
+      "u": [
+        "img/frames/lotr/u.png"
+      ],
+      "b": [
+        "img/frames/lotr/b.png"
+      ],
+      "r": [
+        "img/frames/lotr/r.png"
+      ],
+      "g": [
+        "img/frames/lotr/g.png"
+      ],
+      "c": [
+        "img/frames/lotr/l.png"
+      ],
+      "m": [
+        "img/frames/lotr/m.png"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/lotr/pt/w.png",
+      "u": "img/frames/lotr/pt/u.png",
+      "b": "img/frames/lotr/pt/b.png",
+      "r": "img/frames/lotr/pt/r.png",
+      "g": "img/frames/lotr/pt/g.png",
+      "c": "img/frames/lotr/pt/a.png",
+      "m": "img/frames/lotr/pt/m.png"
+    },
+    "sourceTones": {
+      "img/frames/lotr/b.png": {
+        "table": "RING_PRINT_TONES (b)",
+        "paper": "through img/frames/lotr/rules.png: × 1.308 / 1.287 / 1.295 (156, 157, 156 → 204, 202, 202), fading to × 1.292 on every channel at white"
+      },
+      "img/frames/lotr/g.png": {
+        "table": "RING_PRINT_TONES (g)",
+        "paper": "through img/frames/lotr/rules.png: × 1.496 / 1.188 / 1.333 (123, 170, 141 → 184, 202, 188), fading to × 1.249 on every channel at white",
+        "field": "on the pixels within 2–24 levels (max channel) of 13, 68, 45: × 2.769 / 0.956 / 1.067 (13, 68, 45 → 36, 65, 48), fading to × 1.054 on every channel at white"
+      },
+      "img/frames/lotr/m.png": {
+        "table": "RING_PRINT_TONES (m)",
+        "paper": "through img/frames/lotr/rules.png: × 0.930 / 0.899 / 0.858 (228, 208, 155 → 212, 187, 133), fading to × 0.904 on every channel at white"
+      },
+      "img/frames/lotr/pt/g.png": {
+        "table": "RING_PRINT_TONES (g)",
+        "field": "on the pixels within 2–24 levels (max channel) of 13, 68, 45: × 2.769 / 0.956 / 1.067 (13, 68, 45 → 36, 65, 48), fading to × 1.054 on every channel at white"
+      },
+      "img/frames/lotr/pt/r.png": {
+        "table": "RING_PRINT_TONES (r)",
+        "field": "on the pixels within 2–24 levels (max channel) of 118, 34, 34: × 0.915 / 1.353 / 1.206 (118, 34, 34 → 108, 46, 41), fading to × 1.134 on every channel at white"
+      },
+      "img/frames/lotr/r.png": {
+        "table": "RING_PRINT_TONES (r)",
+        "paper": "through img/frames/lotr/rules.png: × 1.029 / 1.301 / 1.159 (210, 136, 126 → 216, 177, 146), fading to × 1.212 on every channel at white",
+        "field": "on the pixels within 2–24 levels (max channel) of 118, 34, 34: × 0.915 / 1.353 / 1.206 (118, 34, 34 → 108, 46, 41), fading to × 1.134 on every channel at white"
+      },
+      "img/frames/lotr/u.png": {
+        "table": "RING_PRINT_TONES (u)",
+        "paper": "through img/frames/lotr/rules.png: × 1.325 / 1.139 / 1.108 (123, 165, 195 → 163, 188, 216), fading to × 1.167 on every channel at white"
+      },
+      "img/frames/lotr/w.png": {
+        "table": "RING_PRINT_TONES (w)",
+        "paper": "through img/frames/lotr/rules.png: × 0.977 / 0.972 / 0.937 (218, 212, 191 → 213, 206, 179), fading to × 0.971 on every channel at white"
+      }
+    },
+    "sourceFiles": [
+      "img/frames/lotr/a.png",
+      "img/frames/lotr/b.png",
+      "img/frames/lotr/g.png",
+      "img/frames/lotr/l.png",
+      "img/frames/lotr/m.png",
+      "img/frames/lotr/pt/a.png",
+      "img/frames/lotr/pt/b.png",
+      "img/frames/lotr/pt/g.png",
+      "img/frames/lotr/pt/m.png",
+      "img/frames/lotr/pt/r.png",
+      "img/frames/lotr/pt/u.png",
+      "img/frames/lotr/pt/w.png",
+      "img/frames/lotr/r.png",
+      "img/frames/lotr/rules.png",
+      "img/frames/lotr/u.png",
+      "img/frames/lotr/w.png"
+    ],
+    "notes": [
+      "w u b r g m = the pack's colour frames whole (lotr/<k>.png, 1500x2100 NATIVE — no resample), as the LTR ring showcase prints them (LTR #302–331, #794–823)",
+      "a = the pack's blue-grey 'Artifact Frame' (lotr/a.png): the master a colourless ARTIFACT paints (FrameProfile.artifactMasterKeys { c: 'a' }); c = the pack's brown 'Land Frame' (lotr/l.png) — the pack draws no colourless frame. The ring run prints neither (sixty legendary creatures, every one coloured): the scroll's split (#604) applied unprinted",
+      "corners: the one card corner cut at the two BOTTOM corners (the black border's shoulders, as on every Card Conjurer master); the TOP corners kept square — the frame field runs to the card's top and side edges on every print, so a square output keeps it there (lib/frames/square-corners.ts 'frame'); a round output cuts it at render",
+      "plates = the pack's eight plates (lotr/pt/<k>.png, 268x134 at ptBounds 1148/1857 px); c = the artifact's plate (the plate follows the colour key); the land plate is not published (no land creature prints on the frame)",
+      "toned onto the prints (owner 2026-10-22; RING_PRINT_TONES through RING_SOURCE_TONES, recorded under sourceTones): the text-box paper of w u b r g and gold through the pack's Rules mask, and the frame field of r and g (the field, the bars' faces and the plate's face — one flat colour in the pack — by their own colour), as each FILE loads, so the masters, crowns, plates and stamp pieces drawn from it agree",
+      "geometry as drawn (owner 2026-10-22): the pack draws its top block (edge inscription, title bar and rim) 12 px lower than the prints and its box bottom and plate 6 px higher — known and accepted; no flat zone allows a lossless re-cut of the top (the rim would thicken), so the slots ride the pack's own bars",
+      "not built: the two-colour dress (replacementMasks 'Right Half' = lotr/maskRightHalf.png: the colour frames split down the card under the pack's bars — LTR #316, #318–327, #330 and their twins; a follow-up — a two-colour card draws the gold master today)"
+    ]
+  },
+  "lotrcrown": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packRing.js 'Ring' (the Lord of the Rings ring showcase; groupShowcase-5.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "1500x272 overlay band: rows 0–271 of a 1500x2100 card composited at 1500x2100, corners rounded to 64.5px (but tl, tr: kept square, design to the corner), webp q90",
+    "colors": {
+      "w": [
+        "img/frames/lotr/crown/w.png at 0/0/100×12.95238095238095 %"
+      ],
+      "u": [
+        "img/frames/lotr/crown/u.png at 0/0/100×12.95238095238095 %"
+      ],
+      "b": [
+        "img/frames/lotr/crown/b.png at 0/0/100×12.95238095238095 %"
+      ],
+      "r": [
+        "img/frames/lotr/crown/r.png at 0/0/100×12.95238095238095 %"
+      ],
+      "g": [
+        "img/frames/lotr/crown/g.png at 0/0/100×12.95238095238095 %"
+      ],
+      "m": [
+        "img/frames/lotr/crown/m.png at 0/0/100×12.95238095238095 %"
+      ],
+      "a": [
+        "img/frames/lotr/crown/a.png at 0/0/100×12.95238095238095 %"
+      ],
+      "l": [
+        "img/frames/lotr/crown/l.png at 0/0/100×12.95238095238095 %"
+      ]
+    },
+    "sourceTones": {
+      "img/frames/lotr/crown/r.png": {
+        "table": "RING_PRINT_TONES (r)",
+        "field": "on the pixels within 2–24 levels (max channel) of 118, 34, 34: × 0.915 / 1.353 / 1.206 (118, 34, 34 → 108, 46, 41), fading to × 1.134 on every channel at white"
+      },
+      "img/frames/lotr/crown/g.png": {
+        "table": "RING_PRINT_TONES (g)",
+        "field": "on the pixels within 2–24 levels (max channel) of 13, 68, 45: × 2.769 / 0.956 / 1.067 (13, 68, 45 → 36, 65, 48), fading to × 1.054 on every channel at white"
+      }
+    },
+    "sourceFiles": [
+      "img/frames/lotr/crown/a.png",
+      "img/frames/lotr/crown/b.png",
+      "img/frames/lotr/crown/g.png",
+      "img/frames/lotr/crown/l.png",
+      "img/frames/lotr/crown/m.png",
+      "img/frames/lotr/crown/r.png",
+      "img/frames/lotr/crown/u.png",
+      "img/frames/lotr/crown/w.png"
+    ],
+    "notes": [
+      "the ring showcase's legendary crown (TODO 4.11): the pack's 'Legendary Crown' (lotr/crown/<k>.png, 1500x272 at crownBounds 0/0) at 1:1 — the scalloped cream title bar with the frame field round it, which every print of the run carries (all sixty are legendary: LTR #302–331, #794–823); it repaints the card's whole top, its two top corners kept square like the masters'",
+      "keys = the pack's eight crowns: w u b r g, m (gold), a (the artifact's blue-grey — a colourless artifact draws master a) and l (the land's brown — the template's keyMap c → l); no pairs (no pair masters)",
+      "its field toned with the masters' (RING_SOURCE_TONES)"
+    ]
+  },
+  "lotrholostamp": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packRing.js 'Ring' (the Lord of the Rings ring showcase; groupShowcase-5.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "214x106 notch piece (1:1 at 1500x2100, at 643,1892), the triangle region cut to transparent, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/lotr/stamp/w.png at 644,1893 212×95 px of a clear 1500×2100 card, 1:1 (no resample), cut to 214×106 at 643,1892",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "u": [
+        "img/frames/lotr/stamp/u.png at 644,1893 212×95 px of a clear 1500×2100 card, 1:1 (no resample), cut to 214×106 at 643,1892",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "b": [
+        "img/frames/lotr/stamp/b.png at 644,1893 212×95 px of a clear 1500×2100 card, 1:1 (no resample), cut to 214×106 at 643,1892",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "r": [
+        "img/frames/lotr/stamp/r.png at 644,1893 212×95 px of a clear 1500×2100 card, 1:1 (no resample), cut to 214×106 at 643,1892",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "g": [
+        "img/frames/lotr/stamp/g.png at 644,1893 212×95 px of a clear 1500×2100 card, 1:1 (no resample), cut to 214×106 at 643,1892",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "m": [
+        "img/frames/lotr/stamp/m.png at 644,1893 212×95 px of a clear 1500×2100 card, 1:1 (no resample), cut to 214×106 at 643,1892",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "a": [
+        "img/frames/lotr/stamp/a.png at 644,1893 212×95 px of a clear 1500×2100 card, 1:1 (no resample), cut to 214×106 at 643,1892",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "l": [
+        "img/frames/lotr/stamp/l.png at 644,1893 212×95 px of a clear 1500×2100 card, 1:1 (no resample), cut to 214×106 at 643,1892",
+        "the triangle 687.1,1924.6 / 812.1,1924.6 / 749.6,1992.5 px, corner radius 6.7, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ]
+    },
+    "cut": {
+      "triangle": {
+        "points": [
+          [
+            687.1,
+            1924.6
+          ],
+          [
+            812.1,
+            1924.6
+          ],
+          [
+            749.6,
+            1992.5
+          ]
+        ],
+        "radius": 6.7
+      },
+      "marginPx": 2,
+      "blackoutPx": 2,
+      "what": "the hologram capture inside the pack's triangle — never published; the ring round the cut painted black"
+    },
+    "sourceTones": {
+      "img/frames/lotr/stamp/b.png": {
+        "table": "RING_PRINT_TONES (b)",
+        "paper": "through img/frames/lotr/rules.png: × 1.308 / 1.287 / 1.295 (156, 157, 156 → 204, 202, 202), fading to × 1.292 on every channel at white"
+      },
+      "img/frames/lotr/stamp/g.png": {
+        "table": "RING_PRINT_TONES (g)",
+        "paper": "through img/frames/lotr/rules.png: × 1.496 / 1.188 / 1.333 (123, 170, 141 → 184, 202, 188), fading to × 1.249 on every channel at white",
+        "field": "on the pixels within 2–24 levels (max channel) of 13, 68, 45: × 2.769 / 0.956 / 1.067 (13, 68, 45 → 36, 65, 48), fading to × 1.054 on every channel at white"
+      },
+      "img/frames/lotr/stamp/m.png": {
+        "table": "RING_PRINT_TONES (m)",
+        "paper": "through img/frames/lotr/rules.png: × 0.930 / 0.899 / 0.858 (228, 208, 155 → 212, 187, 133), fading to × 0.904 on every channel at white"
+      },
+      "img/frames/lotr/stamp/r.png": {
+        "table": "RING_PRINT_TONES (r)",
+        "paper": "through img/frames/lotr/rules.png: × 1.029 / 1.301 / 1.159 (210, 136, 126 → 216, 177, 146), fading to × 1.212 on every channel at white",
+        "field": "on the pixels within 2–24 levels (max channel) of 118, 34, 34: × 0.915 / 1.353 / 1.206 (118, 34, 34 → 108, 46, 41), fading to × 1.134 on every channel at white"
+      },
+      "img/frames/lotr/stamp/u.png": {
+        "table": "RING_PRINT_TONES (u)",
+        "paper": "through img/frames/lotr/rules.png: × 1.325 / 1.139 / 1.108 (123, 165, 195 → 163, 188, 216), fading to × 1.167 on every channel at white"
+      },
+      "img/frames/lotr/stamp/w.png": {
+        "table": "RING_PRINT_TONES (w)",
+        "paper": "through img/frames/lotr/rules.png: × 0.977 / 0.972 / 0.937 (218, 212, 191 → 213, 206, 179), fading to × 0.971 on every channel at white"
+      }
+    },
+    "sourceFiles": [
+      "img/frames/lotr/rules.png",
+      "img/frames/lotr/stamp/a.png",
+      "img/frames/lotr/stamp/b.png",
+      "img/frames/lotr/stamp/g.png",
+      "img/frames/lotr/stamp/gray.png",
+      "img/frames/lotr/stamp/l.png",
+      "img/frames/lotr/stamp/m.png",
+      "img/frames/lotr/stamp/r.png",
+      "img/frames/lotr/stamp/u.png",
+      "img/frames/lotr/stamp/w.png"
+    ],
+    "notes": [
+      "the ring showcase's triangle stamp notch (TODO 4.11): the pack's per-colour 'Holo Stamp' (lotr/stamp/<k>.png, 212x95) — the text box's rim stepped up round a black trapezoid over the stamp — at its stampBounds (644/1893 px), 1:1 (the pack is 1500 px native), cut to its box 214x106 at 643,1892 px — 1 px round the piece and 10 px past its foot, so the stamp hole's apex (1992.5) and its ring fit; below the piece the box is clear but for that ring, over the master's black border",
+      "the pack's OWN piece per key (w u b r g, m gold, a the artifact's blue-grey, l the land's brown — the template maps a colourless land's c → l and a colourless artifact's c → a): the rim is the text box's own edge in the frame's colour, so m15holostamp's one-geometry tint does not apply; no pairs (no pair masters)",
+      "the hologram: the pack's 'Gray Holo Stamp' shape (lotr/stamp/gray.png) placed the same way, grown 1 px, painted opaque black — the pack draws its triangle 8–10 px HIGHER than the printed stamp (its top edge at 1915 px against the hole's 1924.6; LTR #302 / #313 print the Universes Beyond stamp, the hole 687–812 × 1924.6–1992.5) — then the Universes Beyond hole (lib/cards/holo-stamp.ts UB_STAMP_HOLE) plus 2 px cut to transparent and the 2 px round it painted black: no pixel of the capture is published; our own triangle bitmap (lib/cards/holo-stamp-art.ts) covers the cut"
+    ]
+  },
   "lotrscroll": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",
@@ -11789,6 +12065,8 @@
     "sourceFiles": [
       "img/frames/m15/new/pinline.png",
       "img/frames/m15/new/rules.png",
+      "img/frames/m15/new/title.png",
+      "img/frames/m15/new/type.png",
       "img/frames/m15/new/ub/l.png",
       "img/frames/m15/new/ub/lb.png",
       "img/frames/m15/new/ub/lg.png",

@@ -127,11 +127,12 @@ describe("imports = printing-only (owner round 17, 2026-09-30)", () => {
     expect(stored("m15-3").ai).toMatchObject({ template: "m15", crown: false });
     // MUL #66 Anafenza (a showcase signature, landing on m15) — Q6 → b.
     expect(stored("mul-66").ai).toMatchObject({ template: "m15", crown: false });
-    // LTR #302 Boromir (Scryfall's `showcase` effect) where it lands on m15.
-    const ltr = mapScryfallToFormPatch(P["ltr-302"]);
-    expect(ltr.printed_crown).toBe(false);
-    const onM15: FrameStyle = { template: "m15", ...importedFormAnatomy(importedAnatomy(ltr, "m15").style) };
-    expect(newCardFrameStyle(onM15, ltr.card_type)).toMatchObject({ crown: false });
+    // TLA #338 Yue (Scryfall's `showcase` effect) where it lands on m15.
+    // (The LTR ring prints its own crown since TODO 4.11: ON, below.)
+    const tla = mapScryfallToFormPatch(S["tla-338"]);
+    expect(tla.printed_crown).toBe(false);
+    const onM15: FrameStyle = { template: "m15", ...importedFormAnatomy(importedAnatomy(tla, "m15").style) };
+    expect(newCardFrameStyle(onM15, tla.card_type)).toMatchObject({ crown: false });
   });
 
   it("a NONlegendary showcase names no crown: the new-card default, the same through the creator and the AI deck remix (owner pick (b), 2026-09-30)", () => {
@@ -151,6 +152,15 @@ describe("imports = printing-only (owner round 17, 2026-09-30)", () => {
       // The one showcase that PRINTS the standard crown (owner 2026-10-13):
       // the THB constellation frame, #258–268 — its import follows the
       // printing onto `nyx`, crown on.
+      // …and the LTR ring (#302–331, TODO 4.11): its own scalloped crown,
+      // which its frame draws — on wherever it lands with one.
+      if (/^ltr-3(0[2-9]|[12][0-9]|3[01])$/.test(key)) {
+        expect(legendary, key).toBe(true);
+        expect(patch.printed_crown, key).toBe(true);
+        if (frameAnatomyOf(template).crown) expect(ai.crown, key).toBe(true);
+        crownedShowcases += 1;
+        continue;
+      }
       if (/^thb-2(5[89]|6[0-8])$/.test(key)) {
         expect(legendary, key).toBe(true);
         expect(template, key).toBe("nyx");

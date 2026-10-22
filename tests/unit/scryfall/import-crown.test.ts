@@ -77,10 +77,17 @@ describe("a crownless printing imports without the crown", () => {
     expect(got.crown).toBeNull();
   });
 
-  it("a showcase printing (LTR #302 ring) stores the switch off where it lands on a crowned frame", () => {
-    const patch = mapScryfallToFormPatch(P["ltr-302"]);
+  it("a showcase printing (MUL #66) stores the switch off where it lands on a crowned frame", () => {
+    const patch = mapScryfallToFormPatch(P["mul-66"]);
     expect(patch.printed_crown).toBe(false);
     expect(newCardFrameStyle({ template: "m15", ...importedAnatomy(patch, "m15").style }, "creature")).toMatchObject({ crown: false });
+  });
+
+  it("the LTR ring (#302) prints its OWN crown, which its frame draws: the switch ON (TODO 4.11)", () => {
+    const patch = mapScryfallToFormPatch(P["ltr-302"]);
+    expect(patch.frame_match?.signature).toBe("showcase/ltr/ring");
+    expect(patch.printed_crown).toBe(true);
+    expect(newCardFrameStyle({ template: "lotr", ...importedAnatomy(patch, "lotr").style }, "creature")).toMatchObject({ crown: true });
   });
 
   it("a Multiverse Legends etched printing (MUL #66) lands on m15 without the crown its frame never printed", () => {
