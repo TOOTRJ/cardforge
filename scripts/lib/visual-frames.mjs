@@ -13,10 +13,18 @@
 // next origin; other failures retried a few times), then every object that
 // pass could not get is tried again THOROUGHLY, one at a time after a pause,
 // with a 404/400 retried too. Only what fails both passes fails the run.
+//
+// With a `store` (a local run: the machine's shared frame store,
+// scripts/lib/frame-cache.mjs) an object the folder lacks is hard-linked from
+// the store when the store's copy matches the sha256, and a download lands
+// in the store first — one download per machine, not per worktree. The
+// folder itself is still this checkout's, pruned to its manifest; the store
+// is never pruned. CI passes no store (its folder is an actions/cache).
 // ---------------------------------------------------------------------------
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { assertStoreApart, fromCheckoutOrStore, isStalePart, keepFetched, prepareStore, sweepStaleParts } from "./frame-cache.mjs";
 import { frameObjectKey, mapLimit } from "./frame-objects.mjs";
 
 /** @typedef {(url: string, init?: { signal?: AbortSignal }) => Promise<Response>} FetchLike */
@@ -27,16 +35,19 @@ const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const defaultSleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * One manifest object into `dir`, from the first origin that serves it with
- * the manifest's sha256. Returns { key, cached } / { key, cached: false,
- * bytes } / { key, error }.
- * @param {{ key: string, entry: ManifestEntry, origins: string[], dir: string, thorough?: boolean,
- *   fetchImpl?: FetchLike, sleep?: (ms: number) => Promise<unknown>, timeoutMs?: number }} args
+ * One manifest object into `dir`, from the folder itself, else the `store`
+ * (when given), else the first origin that serves it with the manifest's
+ * sha256. Returns { key, cached: true, shared } (shared = linked from the
+ * store) / { key, cached: false, bytes } / { key, error }.
+ * @param {{ key: string, entry: ManifestEntry, origins: string[], dir: string, store?: string | null,
+ *   thorough?: boolean, fetchImpl?: FetchLike, sleep?: (ms: number) => Promise<unknown>, timeoutMs?: number }} args
  */
-export async function fetchFrameObject({ key, entry, origins, dir, thorough = false, fetchImpl = fetch, sleep = defaultSleep, timeoutMs = 60_000 }) {
+export async function fetchFrameObject({ key, entry, origins, dir, store = null, thorough = false, fetchImpl = fetch, sleep = defaultSleep, timeoutMs = 60_000 }) {
   const objectKey = frameObjectKey(key, entry.hash);
   const file = path.join(dir, objectKey);
-  if (fs.existsSync(file) && sha256(fs.readFileSync(file)) === entry.sha256) return { key, cached: true };
+  const storeFile = store ? path.join(store, objectKey) : null;
+  const local = fromCheckoutOrStore({ file, storeFile, sha256: entry.sha256 });
+  if (local) return { key, cached: true, shared: local === "shared" };
   const tries = thorough ? 4 : 3;
   const baseDelayMs = thorough ? 1000 : 500;
   const tried = [];
@@ -55,10 +66,7 @@ export async function fetchFrameObject({ key, entry, origins, dir, thorough = fa
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const bytes = Buffer.from(await res.arrayBuffer());
           if (sha256(bytes) !== entry.sha256) throw new Error("sha256 differs from the manifest");
-          fs.mkdirSync(path.dirname(file), { recursive: true });
-          const partial = `${file}.${process.pid}.part`;
-          fs.writeFileSync(partial, bytes);
-          fs.renameSync(partial, file);
+          keepFetched({ file, storeFile, bytes });
           return { key, cached: false, bytes: bytes.byteLength };
         }
       } catch (err) {
@@ -79,14 +87,26 @@ function walk(dir) {
 /**
  * Fill `dir` with `entries` ([key, manifest entry] pairs): the quick pass
  * `limit` at a time, then a confirm pass over its failures, one at a time
- * after `confirmDelayMs`. Drops cached files no entry names (CI restores an
- * older manifest's cache as a starting point). Returns { cached, fetched,
- * bytes, failed: [{ key, error }] }.
- * @param {{ entries: [string, ManifestEntry][], origins: string[], dir: string, fetchImpl?: FetchLike,
- *   sleep?: (ms: number) => Promise<unknown>, limit?: number, confirmDelayMs?: number }} args
+ * after `confirmDelayMs`. Drops files in `dir` no entry names (CI restores
+ * an older manifest's cache as a starting point) — never in the `store`.
+ * Returns { cached, shared, fetched, bytes, failed: [{ key, error }] }
+ * (`cached` counts every object that needed no download, `shared` the ones
+ * of those linked from the store).
+ * @param {{ entries: [string, ManifestEntry][], origins: string[], dir: string, store?: string | null,
+ *   fetchImpl?: FetchLike, sleep?: (ms: number) => Promise<unknown>, limit?: number, confirmDelayMs?: number }} args
  */
-export async function syncFrameCache({ entries, origins, dir, fetchImpl = fetch, sleep = defaultSleep, limit = 4, confirmDelayMs = 3000 }) {
-  const get = (entry, thorough) => fetchFrameObject({ key: entry[0], entry: entry[1], origins, dir, thorough, fetchImpl, sleep });
+export async function syncFrameCache({ entries, origins, dir, store = null, fetchImpl = fetch, sleep = defaultSleep, limit = 4, confirmDelayMs = 3000 }) {
+  if (store) assertStoreApart(store, dir);
+  if (store) {
+    try {
+      prepareStore(store);
+      sweepStaleParts(store);
+    } catch (err) {
+      console.warn(`frames: the shared store ${store} is not writable (${err instanceof Error ? err.message : err}) — fetching into ${dir} alone.`);
+      store = null;
+    }
+  }
+  const get = (entry, thorough) => fetchFrameObject({ key: entry[0], entry: entry[1], origins, dir, store, thorough, fetchImpl, sleep });
   const results = await mapLimit(entries, limit, (entry) => get(entry, false));
   const retry = results.map((r, i) => (r.error ? i : -1)).filter((i) => i >= 0);
   if (retry.length) {
@@ -94,10 +114,12 @@ export async function syncFrameCache({ entries, origins, dir, fetchImpl = fetch,
     for (const i of retry) results[i] = await get(entries[i], true);
   }
   const wanted = new Set(entries.map(([key, entry]) => path.join(dir, frameObjectKey(key, entry.hash))));
-  for (const file of walk(dir)) if (!wanted.has(file)) fs.rmSync(file);
+  // Never a fresh *.part: another sync of this checkout is writing it.
+  for (const file of walk(dir)) if (!wanted.has(file) && (!file.endsWith(".part") || isStalePart(file))) fs.rmSync(file);
   const fetched = results.filter((r) => r.cached === false);
   return {
     cached: results.filter((r) => r.cached === true).length,
+    shared: results.filter((r) => r.shared === true).length,
     fetched: fetched.length,
     bytes: fetched.reduce((n, r) => n + r.bytes, 0),
     failed: results.filter((r) => r.error).map(({ key, error }) => ({ key, error })),

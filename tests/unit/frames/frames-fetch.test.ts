@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import os from "node:os";
@@ -11,9 +11,12 @@ import { fetchVerified } from "@/scripts/lib/frame-objects.mjs";
 // ---------------------------------------------------------------------------
 // scripts/frames-fetch.mjs — CI's copy of the bucket masters (TODO 7.6): every
 // PNG in the frame manifest, fetched from a public frames bucket (production's
-// by default) into <out>/<template>/<key>.png and kept only at the manifest's
-// sha256, so the art-window, edge-contract, square-corner and plate-ink tests
-// run on them instead of skipping.
+// on CI, the dev bucket locally) into <out>/<template>/<key>.png and kept only
+// at the manifest's sha256, so the art-window, edge-contract, square-corner
+// and plate-ink tests run on them instead of skipping. A local run goes
+// through the machine's shared frame store (scripts/lib/frame-cache.mjs);
+// every run here names its own store, or none — never the real
+// ~/.cache/pipglyph/frames.
 // ---------------------------------------------------------------------------
 
 const ROOT = process.cwd();
@@ -86,9 +89,10 @@ describe("scripts/frames-fetch.mjs", () => {
     return key.replace(/\.png$/, `.${hash}.png`);
   };
 
-  function run(args: string[]): Promise<{ code: number | null; out: string }> {
+  /** The script as CI runs it (no shared store), unless `env` says otherwise. */
+  function run(args: string[], env: Record<string, string> = { PIPGLYPH_FRAMES_CACHE: "off" }): Promise<{ code: number | null; out: string }> {
     return new Promise((resolve) => {
-      const child = spawn(process.execPath, ["--no-warnings", SCRIPT, ...args], { cwd: tmp });
+      const child = spawn(process.execPath, ["--no-warnings", SCRIPT, ...args], { cwd: tmp, env: { ...process.env, ...env } });
       let out = "";
       child.stdout.on("data", (d) => (out += d));
       child.stderr.on("data", (d) => (out += d));
@@ -165,6 +169,72 @@ describe("scripts/frames-fetch.mjs", () => {
     expect(r.code).toBe(1);
     expect(r.out).toMatch(/is not empty and was not made by frames-fetch/);
     expect(readFileSync(path.join(build, "m15", "b.png"), "utf8")).toBe("the owner's own build");
+  });
+
+  describe("a local run, through the shared store", () => {
+    // CI="" — a local machine even on a CI runner.
+    const local = () => ({ CI: "", PIPGLYPH_FRAMES_CACHE: path.join(tmp, "store") });
+    const storeKey = (key: string) => path.join(tmp, "store", objectKey(key));
+
+    it("downloads into the store once; a second checkout's folder costs no download", async () => {
+      hits.length = 0;
+      const first = await run(["--out", path.join(tmp, "wt-1"), "--origin", originUrl, "--fallback-origin", fallbackUrl], local());
+      expect(first.code, first.out).toBe(0);
+      expect(first.out).toMatch(/0 kept, 0 from the shared store .*, 2 fetched from .*, 1 from the fallback/);
+      for (const [key, bytes] of Object.entries(files)) expect(readFileSync(storeKey(key)).equals(bytes), key).toBe(true);
+      expect(hits).toHaveLength(4);
+
+      hits.length = 0;
+      const second = await run(["--out", path.join(tmp, "wt-2"), "--origin", originUrl, "--fallback-origin", fallbackUrl], local());
+      expect(second.code, second.out).toBe(0);
+      expect(second.out).toMatch(/0 kept, 3 from the shared store .*, 0 fetched from .*, 0 from the fallback/);
+      expect(hits).toEqual([]);
+      for (const [key, bytes] of Object.entries(files)) expect(readFileSync(path.join(tmp, "wt-2", key)).equals(bytes), key).toBe(true);
+    });
+
+    it("re-fetches a store copy that is corrupt instead of trusting its name", async () => {
+      // Store files are read-only (0444): rot it the way a disk would, past the mode.
+      expect(statSync(storeKey("m15/w.png")).mode & 0o777).toBe(0o444);
+      chmodSync(storeKey("m15/w.png"), 0o644);
+      writeFileSync(storeKey("m15/w.png"), "bit rot");
+      hits.length = 0;
+      const r = await run(["--out", path.join(tmp, "wt-3"), "--origin", originUrl, "--fallback-origin", fallbackUrl], local());
+      expect(r.code, r.out).toBe(0);
+      expect(hits).toEqual([`origin /${objectKey("m15/w.png")}`]);
+      expect(readFileSync(storeKey("m15/w.png")).equals(files["m15/w.png"])).toBe(true);
+    });
+
+    it("defaults to the DEV bucket (never production) when no --origin is named", async () => {
+      // Every object is in the store: nothing is fetched, the summary names the origin.
+      const r = await run(["--out", path.join(tmp, "wt-4")], local());
+      expect(r.code, r.out).toBe(0);
+      expect(r.out).toContain("0 fetched from https://znipzaxgpaiandwiqabn.supabase.co/storage/v1/object/public/frames");
+      expect(r.out).not.toContain("zkwkisxoqdhdchqyjwdc");
+    });
+
+    it("prints no dev-bucket hint when another origin missed an object", async () => {
+      // The hint names the dev bucket only (devMissHint is unit-tested in
+      // tests/unit/devops/frame-cache.test.ts); a test can't make the real
+      // dev bucket miss without the network.
+      const r = await run(["--out", path.join(tmp, "wt-hint"), "--origin", originUrl], { ...local(), PIPGLYPH_FRAMES_CACHE: path.join(tmp, "empty-store") });
+      expect(r.code).toBe(1);
+      expect(r.out).not.toContain("frames:restore-dev");
+    });
+
+    it("refuses a store inside the --out folder (the prune would reach it)", async () => {
+      const out = path.join(tmp, "nest");
+      const r = await run(["--out", out, "--origin", originUrl], { CI: "", PIPGLYPH_FRAMES_CACHE: path.join(out, "store") });
+      expect(r.code).toBe(1);
+      expect(r.out).toMatch(/overlap/);
+    });
+
+    it("uses no store on CI", async () => {
+      const store = path.join(tmp, "ci-store");
+      const r = await run(["--out", path.join(tmp, "ci"), "--origin", originUrl, "--fallback-origin", fallbackUrl], { CI: "true", PIPGLYPH_FRAMES_CACHE: store });
+      expect(r.code, r.out).toBe(0);
+      expect(r.out).not.toContain("shared store");
+      expect(existsSync(store)).toBe(false);
+    });
   });
 
   it("refuses a plain-http origin that isn't this machine", async () => {

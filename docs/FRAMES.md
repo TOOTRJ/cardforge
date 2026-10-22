@@ -85,6 +85,7 @@ environment's own Supabase project, taken from `NEXT_PUBLIC_SUPABASE_URL`.
 | CI e2e (local Docker stack) | the dev bucket | `.env.e2e` in `.github/workflows/ci.yml` |
 | Local e2e / local Docker stack | the dev bucket | `NEXT_PUBLIC_FRAME_ORIGIN` in `.env.e2e` (see `.env.e2e.example`); the local bucket is empty |
 | CI unit tests, visual regression | production's PUBLIC bucket, then dev for frames not promoted yet | `scripts/frames-fetch.mjs` / `scripts/visual-regression.mjs`, sha256-checked against the manifest |
+| Local `frames-fetch`, `test:visual`, `test:parity` | the dev bucket (`--origin` names another), through ONE shared store per machine | `scripts/lib/frame-cache.mjs`: `~/.cache/pipglyph/frames` (`PIPGLYPH_FRAMES_CACHE`), sha256-checked; [tests/README.md](../tests/README.md#the-shared-frame-cache) |
 
 ## Provenance and legal
 
@@ -685,8 +686,10 @@ TODO item that fixes it: fixing a master means striking its row.
   `FRAMES_BUILD_DIR`, else `.frames-build` when it exists (each file
   checked against the manifest's sha256), and skip the bucket masters when
   neither is there: `node scripts/frames-fetch.mjs` (into the gitignored
-  `.frames-cache`), then `FRAMES_BUILD_DIR=.frames-cache npm run
-  test:unit`.
+  `.frames-cache`, from the DEV bucket on a local run, hard-linked from the
+  machine's shared frame store when it has the objects — see
+  [tests/README.md](../tests/README.md#the-shared-frame-cache)), then
+  `FRAMES_BUILD_DIR=.frames-cache npm run test:unit`.
 
 ## Adding a frame
 
