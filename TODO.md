@@ -2467,6 +2467,7 @@ that count.
       - lotrscroll: full-bleed.
       **Cost-row read 2026-10-21 (the walker showcase sheet; numbers only, nothing built — check all of these when the frames are rebuilt, at HD 1500 × 2100 against Scryfall prints, pips by a circle fit on the white, blue and generic discs):**
       - nyx (THB #258–268): our pips sit ~18 px low (centre 164.2 px; print ~146–153), and our title bar sits ~8 px below print's.
+        - **Fixed 2026-10-22 (fix/nyx-geometry, layout v66 — renumbered if #607's v65 does not land first):** registered on each text's own bar the cost row moves onto print's (70 px discs, 78 pitch, centred 152.5 px — 8.8 above the bar's middle — ending 1388), the name 2 px up, the type line and set symbol 10 px down (print sets the constellation's type row low in its bar). The title bar is NOT re-cut: the same cards' regular printings sit 5.6 px high against the print-verified M15 master in the same scans, so the "8 px" is the scans' crop (registered ~1.3 px, Round 59's −0.9). `docs/FRAMES.md` "The constellation frame's text on its prints".
       - fullart (ZNR #290–313): our pips sit ~13–18 px low (centre 165.2 px; print ~149–152), and our title bar sits ~3.5 px lower than print's.
       - tarkirdraconic (TDM #292–321), lotr (LTR #302–329) and lotrscroll (LTR #457 / 493 / 505 / 535 / 571): the pip height is right, but the discs are 57 px (`costSizePct` 0.038) against print's ~69–70, and the row ends at 1335 / 1365 px — ~20–50 px short of print's 1384–1386.
 

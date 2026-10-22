@@ -1683,6 +1683,34 @@ export const ZNR_HEDRON_TEMPLATES: readonly string[] = ["fullart"];
  *  once it ships. */
 export const EXPEDITION_CC_LAYOUT_VERSION = 64;
 export const EXPEDITION_CC_TEMPLATES: readonly string[] = ["expeditionland"];
+//   v66    — the Theros constellation showcase's text on its prints (TODO
+//            4.11, owner-approved 2026-10-22). `nyx`, every card on it: the
+//            cost row on the prints' (70 px discs at the 78 px pitch,
+//            centred 8.8 px above the title bar's middle — 152.5 px, it sat
+//            at 164.1 with 72.75 px discs — and ending 1388 px), the name
+//            2 px up, the type band (its line and the inline set symbol) 10
+//            px down and ending 6 px further left, where THB #258–268 set
+//            them on their own bars. No master moves: registered on the same
+//            cards' regular printings the title bar is within 1.3 px of
+//            print, the "8 px" being the scans' crop (docs/FRAMES.md "The
+//            constellation frame's text on its prints").
+//            NYX_GEOMETRY_LAYOUT_VERSION below — the ONE constant (taken as
+//            v66 at PR time: v65 is the Lord of the Rings ring's, #607 —
+//            whichever merges later renumbers its constant, its test's `V`
+//            and its docs together; a number skipped would leave a version
+//            with no scope, which re-bakes every card). A CORRECTION
+//            ("sweep"), never a badge: the text was wrong against the
+//            frame's own prints and no colour of the frame is ticked, so no
+//            tick goes stale (not verification-neutral: the type slot a tick
+//            would judge moves).
+// ---------------------------------------------------------------------------
+
+/** The Theros constellation showcase's text on its prints (TODO 4.11):
+ *  every card on `nyx`. ITS version lives here alone — CARD_LAYOUT_VERSION,
+ *  the scoped table and the rollout below read this constant — so a bump
+ *  that merges first moves it in one place. Frozen once it ships. */
+export const NYX_GEOMETRY_LAYOUT_VERSION = 66;
+export const NYX_GEOMETRY_TEMPLATES: readonly string[] = ["nyx"];
 
 /** The station frame on print's band rule (TODO 4.27a, PR 2): every card
  *  on `m15station` and `m15stationland`. ITS version lives here alone —
@@ -1767,7 +1795,7 @@ export const LARGE_PIPS_LAYOUT_VERSION = 53;
  *  latest). */
 export const V53_LARGER_COST_TEMPLATES: readonly string[] = ["modern", "modernland"];
 
-export const CARD_LAYOUT_VERSION = EXPEDITION_CC_LAYOUT_VERSION;
+export const CARD_LAYOUT_VERSION = NYX_GEOMETRY_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -1984,6 +2012,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // the masters and the slots that ride them; every card on
   // `expeditionland`. No narrower verification scope: none has a tick.
   [EXPEDITION_CC_LAYOUT_VERSION]: EXPEDITION_CC_TEMPLATES,
+  // The Theros constellation showcase's text on its prints (4.11): the cost
+  // row, the name and the type band; every card on `nyx`. No narrower
+  // verification scope: no colour has a tick.
+  [NYX_GEOMETRY_LAYOUT_VERSION]: NYX_GEOMETRY_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -3073,6 +3105,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [COST_ROW_PRINT_LAYOUT_VERSION]: "sweep", // the cost row as current print draws it (the 2023 pip move + 3.34): 70 px discs, 78 pitch, 5 px lower and 2 px right on the 36 CC-framed M15 templates; the walkers' 70 px discs, 4 px right — a correction against the frames' own current print after the owner's before / after sheet, never a badge
   [ZNR_HEDRON_LAYOUT_VERSION]: "sweep", // the Zendikar Rising hedron showcase re-sourced from Card Conjurer (4.11, wave 1): masters, type line on the bar, inks, plates, cost row — a correction of the look against its own prints on a frame never ticked, never a badge
   [EXPEDITION_CC_LAYOUT_VERSION]: "sweep", // expeditionland re-sourced from Card Conjurer (4.11 wave 1): the ZNE look its prints wear — a correction of the frame against its own prints on a frame never ticked, never a badge
+  [NYX_GEOMETRY_LAYOUT_VERSION]: "sweep", // the Theros constellation showcase's text on its prints (4.11): the 70 px cost row 11.6 px up, the name 2 px up, the type line and set symbol 10 px down — a correction against the frame's own prints on a frame never ticked, never a badge
   [CC_RESOURCE_LAYOUT_VERSION]: "sweep", // extendedart and the textless pair re-sourced from Card Conjurer (4.7 / 4.35 / 4.42; owner Q6) — a correction of three looks against their own prints on frames never ticked, never a badge
   [LARGE_PIPS_LAYOUT_VERSION]: "sweep", // hybrid and twobrid discs large, the large pip's factor per frame and place (3.21) — a correction against the prints after the owner's round-49 sheets, never a badge
   [SYMBOLS_PRINT_LAYOUT_VERSION]: "sweep", // five symbols on the prints' drawings + flat rules-text pips (6.16b) — a correction against the prints after the owner's round-43 sheets, never a badge

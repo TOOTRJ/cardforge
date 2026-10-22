@@ -3323,6 +3323,68 @@ card is only STAMPED to v55 (no render). `/admin/renders` therefore shows
 stamp-only batches, not "idle", until every card is stamped. The visual
 matrix: the `nyx` cases of w b r g and gold change, nothing else.
 
+### The constellation frame's text on its prints (4.11, layout v66)
+
+Owner-approved 2026-10-22 (the showcase survey: keep the masters, fix the
+geometry). Layout **v66** (`NYX_GEOMETRY_LAYOUT_VERSION`, `nyx` only,
+"sweep"; a correction of the text against the frame's own prints). The
+masters are not touched — v55's tones and the `nyxcrown` cut stay byte for
+byte.
+
+**How print was read** (2026-10-22). Scryfall's PNGs of THB #258–268 at
+1500 × 2100 against our bakes of the same names, costs, type lines and
+rules texts (the crown on, a flat grey picture), measured by the same code
+on both: a bar's outline is the centroid of its darkness, median over the
+text-free columns; a disc is a circle fitted to the edge of its top arc and
+sides (the drop shadow is below-left); a line's baseline is its last row
+with ≥ 30 % of its peak ink. Every text is registered on ITS OWN BAR —
+never on the card's edge — because a scan's crop wanders: these scans sit
+~6 px high against the frame.
+
+**The title bar is not re-cut.** Raw, print's title bar sits 6–8 px above
+ours (mid 154.9 against 161.3). But the same cards' REGULAR printings
+(THB #9 … #220) sit 5.6 px above the print-verified M15 master's bar in the
+same scans (mid 155.0 against 160.6), and showcase − regular, per card, is
+−0.6 px (median of 11): registered, the constellation bar is ~1.3 px above
+ours, as Round 59 read it (−0.9). That is the scans' crop, not the frame's —
+no flat-zone re-cut is warranted (and none would be clean: the bar's
+outline, bevel and starfield run the bar's whole height).
+
+| Text (median of the prints, each on its own bar) | Print | Ours before | After |
+|---|---|---|---|
+| Disc diameter / pitch | 69.9 / 78.0 | 72.75 / 82 | 70 / 78 |
+| Disc centre − title bar middle | −8.8 (−7.0 … −10.1, 10 cards) | +2.8 (164.1 px) | −8.7 (152.6 px) |
+| Last disc's right edge − bar's right outline | −22.6 | −28.2 (1382.5) | −23.2 (1387.5) |
+| Name baseline − title bar middle | 26.1 | 28.1 | 26.1 |
+| Name x-height | 40 | 40 | 40 |
+| Type baseline − type bar's bottom outline | −31.7 | −42.4 | −32.4 |
+| Set symbol centre − type bar middle | +6.0 (4 cards) | −4.0 | +6.0 |
+| Set symbol right edge | 1376–1378 (raw) | 1382 | 1377 |
+
+- **The cost row** (`NYX_COST`): the CC-framed M15 family's disc and pitch
+  (`CC_M15_COST_DISC_PCT`), 4.5 px above and 3 px right of that family's
+  row on the same band — 152.5 px at HD (the bake lays the disc on whole px:
+  153.0; the preview 152.7).
+- **The name** (`NYX_TITLE_DY`): 2 px up; its size was print's.
+- **The type band**: print sets the constellation's type row LOW in its bar
+  (the regular THB printings' baseline sits ~37 px above the bar's bottom,
+  the symbol on the bar's middle). The band's rect moves 10 px down — its
+  line and the inline set symbol together — and ends 6 px further left,
+  where the prints end the symbol. The symbol's size is the set's
+  (`set-symbol-prints.ts`), not the frame's.
+- **Unchanged, inside the scans' wander:** the rules (size, breaks, line
+  pitch 62 / 86 px against our 63 / 87, the first baseline 0–6 px), the P/T
+  plate and its digits (≤ 3 px), every text's left edge (2–3 px). The type
+  bar and the box under it are TODO 4.17f's (registered on the title bar
+  they sit within 1–3 px here); the plate's printed look — white digits on
+  a plate in the card's colour — is 4.17g's, not geometry.
+
+**Rollout**: a sweep scoped to `nyx`. Production has no card on the frame
+unless the owner's count says otherwise (`select count(*) from
+public.cards where frame_style->>'template' = 'nyx'`); the cron re-bakes
+whatever it finds and stamps every other card. The visual matrix: the `nyx`
+cases change, nothing else.
+
 ### The Station frame (4.27a)
 
 TODO 4.27a (owner 2026-10-13, rounds 53–54). `m15station` and

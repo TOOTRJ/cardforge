@@ -116,7 +116,9 @@ describe("Card Conjurer frame profiles", () => {
     // The Alpha pair carries its own nudge — the pip discs on the prints'
     // row (142.5 px, TODO 4.10c: a pixel under the band's middle), not the
     // CC title bar's lift.
-    const OWN_LIFT: Record<string, number> = { agclassic: 1 / 1500, alphaland: 1 / 1500 };
+    // The Theros constellation sets its own on its prints' row (TODO 4.11,
+    // layout v66): the CC-framed row's lift and 4.5 px more.
+    const OWN_LIFT: Record<string, number> = { agclassic: 1 / 1500, alphaland: 1 / 1500, nyx: -6.6 / 1500 - 4.5 / 1500 };
     for (const template of FRAME_TEMPLATE_VALUES) {
       if (ccTemplates.has(template)) continue;
       expect(getFrameProfile(template).costDy, template).toBe(OWN_LIFT[template]);
