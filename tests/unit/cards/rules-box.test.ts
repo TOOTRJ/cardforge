@@ -105,6 +105,9 @@ describe("the main box on every template", () => {
         "m15station", "m15stationland", "extendedartstation", "m15borderlessstation",
         // The Universes Beyond frames (TODO 4.25): their M15 twins' boxes.
         "m15ub", "m15ubartifact", "m15ubland",
+        // The Zendikar Rising hedron showcase (TODO 4.11, layout v63): the
+        // CC-framed M15 box.
+        "fullart",
         // The transform bodies (TODO 5.1a): M15's box and margins on both faces.
         "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
         // …and the modal bodies (5.1b), the same skeleton.
@@ -118,7 +121,7 @@ describe("the main box on every template", () => {
         // The Lord of the Rings scroll (layout v62, TODO 4.11): the pack's
         // text layout is M15's, its box and margins.
         "lotrscroll",
-        // …and the ring (layout v63): M15's box and margins too.
+        // …and the ring (layout v65): M15's box and margins too.
         "lotr",
       ].sort(),
     );

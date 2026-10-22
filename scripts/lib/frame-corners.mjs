@@ -71,10 +71,10 @@ import {
  * importer's too, the MSE gold among them; modern and modernland with 4.10b:
  * Card Conjurer's 8th, re-cut and toned by the importer; extendedart,
  * m15textless and m15textlessland with 4.7 / 4.35: Card Conjurer's 'Extended
- * Art Frames' and 'Magic Fest Promos', cut at the one corner by the importer.)
+ * Art Frames' and 'Magic Fest Promos', cut at the one corner by the importer;
+ * fullart with 4.11: Card Conjurer's 'Zendikar Rising', the same way.)
  */
 export const CORNER_NORMALISE_TEMPLATES = Object.freeze({
-  fullart: "all",
   expeditionland: Object.freeze(["w", "u", "r", "c", "m"]),
 });
 
@@ -609,6 +609,17 @@ export function normalisedMasterFailures(template, key, before, after, width, he
  */
 export function normaliseMasterCorners(template, key, rgba, width, height) {
   if (!shouldNormalise(template, key)) return null;
+  return normaliseCornersGated(template, key, rgba, width, height);
+}
+
+/**
+ * The hook's pass and gate on ANY template, whatever the allow-list says
+ * (normaliseMasterCorners asks the list first): normalise in place, run the
+ * runner's whole gate, restore the master and throw on a failure. The
+ * allow-list empties as the MSE masters leave git (TODO 4.11), so the gate
+ * is held to its rules on a template that stays.
+ */
+export function normaliseCornersGated(template, key, rgba, width, height) {
   const before = Uint8Array.from(rgba);
   const report = normaliseCardCorners(rgba, width, height);
   const failures = normalisedMasterFailures(template, key, before, rgba, width, height, report);

@@ -119,7 +119,7 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   split: { front: [817, 559], second: { size: [816, 559], rotation: 0 } },
   // The bottom half is drawn in this box and turned a quarter turn.
   aftermath: { front: [1273, 471], second: { size: [741, 427], rotation: 90 } },
-  // Card Conjurer's ring window (TODO 4.11, layout v63): the pack's artBounds.
+  // Card Conjurer's ring window (TODO 4.11, layout v65): the pack's artBounds.
   lotr: { front: [1202, 918] },
   // Card Conjurer's scroll window (TODO 4.11, layout v62).
   lotrscroll: { front: [1280, 941] },
@@ -129,7 +129,7 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   tarkirdraconic: { front: [1230, 966] },
   tarkirghostfire: { front: [1395, 1932] },
   tarkirdragon: { front: [1242, 935] },
-  fullart: { front: [1386, 1896] },
+  fullart: { front: [1383, 1819] },
   // The extended-art frame (layout v58): CC's window to the side edges;
   // its see-through colourless master is ONE picture under the frame.
   extendedart: { front: [1500, 1142], masters: { c: [1500, 1959] } },

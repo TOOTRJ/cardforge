@@ -106,7 +106,7 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   flip: ["1392x752", "16:9", 1.842],
   split: ["1232x848", "3:2", 1.462],
   aftermath: ["1680x624", "21:9", 2.701],
-  // The Card Conjurer ring window (TODO 4.11, v63): the pack's artBounds, 1202 × 918.
+  // The Card Conjurer ring window (TODO 4.11, v65): the pack's artBounds, 1202 × 918.
   lotr: ["1168x896", "4:3", 1.309],
   // The Card Conjurer scroll window (TODO 4.11, v62): 1280 × 941.
   lotrscroll: ["1184x864", "4:3", 1.359],
@@ -116,7 +116,7 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   tarkirdraconic: ["1152x896", "4:3", 1.273],
   tarkirghostfire: ["864x1200", "3:4", 0.722],
   tarkirdragon: ["1168x880", "4:3", 1.329],
-  fullart: ["864x1184", "3:4", 0.731],
+  fullart: ["896x1168", "3:4", 0.7605],
   extendedart: ["1168x896", "4:3", 1.314],
   extendedartland: ["1168x896", "4:3", 1.314],
   extendedartstation: ["896x1168", "3:4", 0.766],

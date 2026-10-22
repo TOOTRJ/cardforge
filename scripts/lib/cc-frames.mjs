@@ -3303,6 +3303,257 @@ const OLD_PAIR_NOTE = {
 };
 
 // ---------------------------------------------------------------------------
+// TODO 4.11 (wave 1, owner-approved 2026-10-22): the Zendikar Rising hedron
+// showcase — template `fullart` (the key is history: the frame is not full
+// art; ZNR #290–313) — re-sourced from Card Conjurer's 'Zendikar Rising'
+// pack (packZendikarRising.js, groupShowcase-5.js:42), 1500 × 2100 native.
+// It replaces the 375 px MSE `zendikar` masters that
+// scripts/build-variation-frames.mjs upscaled 4× into git (they lacked MSE's
+// hedron `back` layer). Self-contained: the recipe (CC_TEMPLATES.fullart),
+// its crown band (CC_OVERLAY_BANDS.fullartcrown) and the stamp notch it
+// splits off each master (`notch`) read only the constants below.
+// ---------------------------------------------------------------------------
+const ZNR = "img/frames/m15/zendikarRising";
+const ZNR_NICKNAME = "img/frames/m15/nickname";
+const znrFile = (part, letter) => `${ZNR}/m15ZendikarRising${part}${letter.toUpperCase()}.png`;
+/** CC's bounds for the pack's title pill ends ('… Title', bounds3) and its
+ *  crown ('… Crown', bounds2), card %. Both images are their box's size,
+ *  so they are placed 1:1 (rectPx: 56, 55, 1388 × 229 and 44, 49, 1412 ×
+ *  245). */
+export const ZNR_TITLE_BOUNDS = Object.freeze({ leftPct: 3.74, topPct: 2.62, widthPct: 92.54, heightPct: 10.91 });
+export const ZNR_CROWN_BOUNDS = Object.freeze({ leftPct: 2.94, topPct: 2.34, widthPct: 94.14, heightPct: 11.67 });
+/** The pack's P/T plates, by colour key (CC lists the 'Nickname' pack's
+ *  plates for blue, red, green, artifact and land; its own for white, black,
+ *  gold and colourless). 282 × 154 each, at M15's plate bounds. */
+const ZNR_PT = Object.freeze({
+  w: znrFile("PT", "w"),
+  u: `${ZNR_NICKNAME}/m15NicknamePTU.png`,
+  b: znrFile("PT", "b"),
+  r: `${ZNR_NICKNAME}/m15NicknamePTR.png`,
+  g: `${ZNR_NICKNAME}/m15NicknamePTG.png`,
+  m: znrFile("PT", "m"),
+  c: znrFile("PT", "c"),
+});
+/** One master: the colour's frame whole, then its title pill's ends at CC's
+ *  bounds (CC draws the title piece over the frame). */
+const znrMasterLayers = (k) => [layer(znrFile("Frame", k)), placed(znrFile("Title", k), ZNR_TITLE_BOUNDS)];
+
+/**
+ * The holofoil stamp's notch, split OFF every master (TODO 4.11): CC's
+ * frames paint the text box's bottom rim arched over a hologram oval on
+ * every key, where the ZNR prints arch it only on a rare or mythic (#292
+ * Felidar Retreat, #298, #300, #303, #305, #307, #308, #312, #313) and run
+ * the rim straight under the box on a common or uncommon (#290, #293, #296,
+ * #301 …). So each master is written PLAIN — the arch, its bevel and the
+ * oval replaced by the straight bar (each column under the arch copied from
+ * the straight bar beside it, `refX`) and the hedron texture the arch hid
+ * filled ALONG ITS OWN RIDGES: the box's hedron lines run parallel to the
+ * V's two edges (45°), so a pixel left of the centre takes the one `srcDiag`
+ * px up and to the left, a pixel right of it the one up and to the right —
+ * the same ridge, the same distance from the V's edge — cross-faded over
+ * `feather` rows above and across the centre's 16 columns (owner
+ * 2026-10-22: a horizontal copy, 192 px out, left a soft rounded mound
+ * under the V's tip; the ridges now run on through the patch) — and the
+ * pixels that differ
+ * are written beside it as the notch piece (`<template>/holostamp/<key>`,
+ * the `box`), the oval cut clear (our oval art is drawn over it,
+ * lib/cards/holo-stamp-art.ts). Drawn over the plain master the piece gives
+ * back CC's pixels exactly, outside the cut.
+ * `archTop`: the arch rim's first row (luma > 240 on the white master) by
+ * |x − 750|, read off CC's W frame (symmetric within 1 px; every key's
+ * geometry is the same file's).
+ */
+export const ZNR_NOTCH = Object.freeze({
+  centerX: 750,
+  archTop: Object.freeze([
+    [0, 1905], [18, 1905], [22, 1906], [30, 1907], [38, 1909], [46, 1910], [50, 1911.5], [54, 1913], [58, 1914],
+    [62, 1916], [66, 1917.5], [70, 1919.5], [74, 1921.5], [78, 1924.5], [82, 1927.5], [86, 1930.5], [90, 1934.5], [94, 1937],
+  ].map((p) => Object.freeze(p))),
+  /** The arch's bevel and shadow above its rim (the straight bar's bevel
+   *  runs 1930–1936 above its rim at 1937–1947). */
+  bevelRows: 10,
+  feather: 6,
+  /** The straight bar's first bevel row, its rim and the black below. */
+  barTop: 1930,
+  rimRows: Object.freeze([1937, 1947]),
+  bottom: 2004,
+  halfWidth: 96,
+  refX: Object.freeze({ left: 600, right: 900 }),
+  srcDiag: 64,
+  /** The piece's box (1:1 at HD) and the oval CC paints in the notch
+   *  (685–814 × 1927–1990 on every key), cut clear with `cutMarginPx`. */
+  box: Object.freeze({ x: 640, y: 1880, width: 220, height: 125 }),
+  oval: Object.freeze({ x: 685, y: 1927, width: 130, height: 64 }),
+  cutMarginPx: 2,
+});
+
+/** Whether HD pixel (x, y) is inside the notch's oval cut (ZNR_NOTCH.oval
+ *  grown by `cutMarginPx`): the pixels the piece leaves clear for our oval
+ *  art. */
+export function inZnrOvalCut(x, y, spec = ZNR_NOTCH) {
+  const { oval, cutMarginPx } = spec;
+  const rx = oval.width / 2 + cutMarginPx;
+  const ry = oval.height / 2 + cutMarginPx;
+  return ((x + 0.5 - (oval.x + oval.width / 2)) / rx) ** 2 + ((y + 0.5 - (oval.y + oval.height / 2)) / ry) ** 2 <= 1;
+}
+
+/** The pixels a published plain master and its notch piece draw together:
+ *  the piece laid over the master's box (its opaque pixels replace, a clear
+ *  one shows the master — the piece holds no translucent pixel), and the
+ *  oval cut cleared to 0,0,0,0 whatever drew it. Pure; RGBA8 in, a new
+ *  buffer out. The importer records the sha256 of this over CC's own master
+ *  (ZNR_NOTCH restoration, frame-sources.json), and a test holds the
+ *  published pair to it. */
+export function restoredZnrMaster(plain, piece, width, height, spec = ZNR_NOTCH) {
+  const out = Buffer.from(plain);
+  const { box } = spec;
+  for (let y = 0; y < box.height; y += 1) {
+    for (let x = 0; x < box.width; x += 1) {
+      const p = (y * box.width + x) * 4;
+      if (piece[p + 3] === 0) continue;
+      if (piece[p + 3] !== 255) throw new Error(`restoredZnrMaster: a translucent piece pixel at (${box.x + x}, ${box.y + y})`);
+      piece.copy(out, ((box.y + y) * width + box.x + x) * 4, p, p + 4);
+    }
+  }
+  return clearZnrOvalCut(out, width, spec);
+}
+
+/** The oval cut cleared to 0,0,0,0 in a full master (in place; returned). */
+export function clearZnrOvalCut(buf, width, spec = ZNR_NOTCH) {
+  const { oval, cutMarginPx } = spec;
+  for (let y = oval.y - cutMarginPx - 1; y <= oval.y + oval.height + cutMarginPx; y += 1) {
+    for (let x = oval.x - cutMarginPx - 1; x <= oval.x + oval.width + cutMarginPx; x += 1) {
+      if (inZnrOvalCut(x, y, spec)) buf.fill(0, (y * width + x) * 4, (y * width + x) * 4 + 4);
+    }
+  }
+  return buf;
+}
+
+function znrArchTop(dx, table = ZNR_NOTCH.archTop) {
+  const a = Math.abs(dx);
+  if (a >= table[table.length - 1][0]) return table[table.length - 1][1];
+  for (let i = 1; i < table.length; i += 1) {
+    const [x1, y1] = table[i];
+    if (a <= x1) {
+      const [x0, y0] = table[i - 1];
+      return y0 + ((y1 - y0) * (a - x0)) / (x1 - x0);
+    }
+  }
+  return table[table.length - 1][1];
+}
+
+/**
+ * Split one finished 1500 × 2100 master (RGBA8) into the PLAIN master and
+ * the notch piece (ZNR_NOTCH). Pure. Returns `{ plain, piece, findings }`:
+ * `piece` is the box's RGBA8 — CC's pixels where the plain master differs,
+ * clear elsewhere and inside the oval cut — and `findings.failures` lists
+ * what the importer refuses (the plain bar not straight under the arch, an
+ * empty piece).
+ */
+export function splitZnrNotch(buf, width, height, spec = ZNR_NOTCH) {
+  if (width !== OUT_W || height !== OUT_H) throw new Error(`splitZnrNotch: a ${OUT_W}×${OUT_H} master, not ${width}×${height}`);
+  const plain = Buffer.from(buf);
+  const at = (x, y) => (y * width + x) * 4;
+  const { centerX, halfWidth, bevelRows, feather, barTop, bottom, srcDiag, refX } = spec;
+  for (let x = centerX - halfWidth; x <= centerX + halfWidth; x += 1) {
+    const dx = x - centerX;
+    // Under the bar's bevel: the straight bar's own column beside the arch.
+    const ref = dx < 0 ? refX.left : refX.right;
+    for (let y = barTop; y <= bottom; y += 1) buf.copy(plain, at(x, y), at(ref, y), at(ref, y) + 4);
+    // Above it: the hedron texture the arch hid, from further along its own
+    // ridges (the two halves cross-faded over the centre's 16 columns).
+    const top = znrArchTop(dx, spec.archTop) - bevelRows;
+    if (top >= barTop) continue;
+    const share = Math.min(1, Math.max(0, (dx + 8) / 16));
+    for (let y = Math.max(0, Math.floor(top - feather)); y < barTop; y += 1) {
+      const w = Math.min(1, Math.max(0, (y - (top - feather)) / feather));
+      if (w === 0) continue;
+      const l = at(x - srcDiag, y - srcDiag);
+      const r = at(x + srcDiag, y - srcDiag);
+      const o = at(x, y);
+      for (let c = 0; c < 4; c += 1) {
+        const src = buf[l + c] * (1 - share) + buf[r + c] * share;
+        plain[o + c] = Math.round(buf[o + c] * (1 - w) + src * w);
+      }
+    }
+  }
+  const { box } = spec;
+  const piece = Buffer.alloc(box.width * box.height * 4);
+  let kept = 0;
+  for (let y = 0; y < box.height; y += 1) {
+    for (let x = 0; x < box.width; x += 1) {
+      const cx = box.x + x;
+      const cy = box.y + y;
+      const o = at(cx, cy);
+      const p = (y * box.width + x) * 4;
+      if (inZnrOvalCut(cx, cy, spec)) continue;
+      let same = true;
+      for (let c = 0; c < 4; c += 1) if (buf[o + c] !== plain[o + c]) same = false;
+      if (same) continue;
+      buf.copy(piece, p, o, o + 4);
+      kept += 1;
+    }
+  }
+  const failures = [];
+  // The plain bar runs straight under the arch: every rim row equals the
+  // reference column's, column by column.
+  for (let x = centerX - halfWidth; x <= centerX + halfWidth; x += 1) {
+    const ref = x < centerX ? refX.left : refX.right;
+    for (let y = spec.rimRows[0]; y <= spec.rimRows[1]; y += 1) {
+      for (let c = 0; c < 4; c += 1) if (plain[at(x, y) + c] !== buf[at(ref, y) + c]) failures.push(`the plain rim at (${x}, ${y}) is not the straight bar's`);
+    }
+    if (failures.length) break;
+  }
+  if (kept === 0) failures.push("the notch piece is empty (the master has no arch?)");
+  return { plain, piece, findings: { failures, kept } };
+}
+
+/** The ZNR crown band (TODO 4.11): the pack's crown (its two pill ends, the
+ *  frame's own corner pieces untouched) at CC's bounds over a clear canvas,
+ *  1:1, rows 0–299 kept. It covers the title pill's ends whole (checked by
+ *  eye on all nine keys against #300 Moraug, #312 Omnath, #313 Phylath:
+ *  CC draws it over the title piece). Keys: the masters' w u b r g m c and
+ *  the ten pairs — the first colour's crown left, the second's right,
+ *  lerped across PAIR_RAMPS.crown (the crown is two ends: the ramp crosses
+ *  nothing drawn), as #313 Phylath (R|G over the gold frame) prints it. */
+export const ZNR_CROWN_BAND = Object.freeze({
+  crown: ZNR_CROWN_BOUNDS,
+  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "c", ...TWO_COLOR_PAIRS]),
+  compositeSize: Object.freeze({ width: OUT_W, height: OUT_H }),
+  rows: 300,
+});
+
+export function znrCrownLayers(key) {
+  if (!ZNR_CROWN_BAND.keys.includes(key)) throw new Error(`znrCrownLayers: no crown for key ${key}`);
+  if (TWO_COLOR_PAIRS.includes(key)) {
+    const [a, b] = pairSides(key);
+    return [placed(znrFile("Crown", a), ZNR_CROWN_BOUNDS, { right: znrFile("Crown", b), ramp: [...PAIR_RAMPS.crown] })];
+  }
+  return [placed(znrFile("Crown", key), ZNR_CROWN_BOUNDS)];
+}
+
+/** What the importer checks on the full ZNR crown composite: nothing drawn
+ *  at or below the band's last row, nothing drawn over the middle of the
+ *  title pill (the crown is its two ends only: x 330–1170 clear). */
+export function znrCrownFindings(buf, width, height, rows) {
+  let lastAlphaRow = -1;
+  let peakRow = -1;
+  const failures = [];
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const a = buf[(y * width + x) * 4 + 3];
+      if (a === 0) continue;
+      lastAlphaRow = y;
+      if (peakRow < 0) peakRow = y;
+      if (x >= 330 && x <= 1170) failures.push(`α ${a} at (${x}, ${y}): the crown draws only the pill's ends`);
+      if (failures.length > 3) break;
+    }
+  }
+  if (lastAlphaRow >= rows) failures.push(`alpha down to row ${lastAlphaRow}, past the band's ${rows} rows`);
+  return { failures, lastAlphaRow, peakRow, summary: `first drawn row ${peakRow}` };
+}
+
+const ZNR_PACK = "packZendikarRising.js 'Zendikar Rising' (groupShowcase-5.js:42)";
 // TODO 4.11 (showcase rebuild, wave 1): the Lord of the Rings SCROLL
 // showcase (`lotrscroll`; LTR #452–730 and LTC #411–490) from Card
 // Conjurer's 'Scroll' pack (packScroll.js, `img/frames/scroll/`, 2010 ×
@@ -3500,7 +3751,7 @@ export function pieceNotchFindings(buf, shape, cut, marginPx, blackoutPx, stamp 
 // (`lotr`; LTR #302–331 and their surge-foil twins #794–823 — sixty
 // printings, every one a legendary creature) from Card Conjurer's 'Ring'
 // pack (packRing.js, `img/frames/lotr/`, 1500 × 2100 NATIVE: nothing is
-// resampled). Its masters replace the 646 px MSE drawing (layout v63's
+// resampled). Its masters replace the 646 px MSE drawing (layout v65's
 // correction). Self-contained: the template, its crown band and its stamp
 // notch read only the constants below.
 //   • masters: the pack's eight frames whole — w u b r g, m (gold: three
@@ -4299,6 +4550,23 @@ export const CC_TEMPLATES = {
     notes: [
       "the pack's geometry is the prints' (31 printings, 2026-10-14): type bar inner top 1778 / 1779 (range 1776–1782), bottom 1906 / 1906, title bar 104 / 104 and 232 / 235 — no re-cut",
       "colourless = the pack's 'Colorless Frame' l.png (no plain-bar Wastes was printed; PLG25 #2's 'Basic Land' prints the white frame); the pack's 'Artifact Frame' a.png is not imported; m = the 'Multicolored Frame', never offered",
+    ],
+  },
+  // TODO 4.11 (wave 1): the Zendikar Rising hedron showcase — see the
+  // ZNR_* block above.
+  fullart: {
+    colors: perColor((k) => znrMasterLayers(k)),
+    plates: ZNR_PT,
+    notch: ZNR_NOTCH,
+    pack: ZNR_PACK,
+    transforms:
+      "native 1500x2100, no resample: the colour's frame whole and its title pill's ends at CC's bounds (1:1); then the stamp notch split off (ZNR_NOTCH: the master written with the straight bar under the box, the arch, its bevel and the oval as the piece holostamp/<key>.png, 220x125 at 640, 1880, the oval cut clear); corners rounded to the importer radius",
+    notes: [
+      "w u b r g m = the pack's colour frames whole (m15ZendikarRisingFrame<K>.png) with the colour's 'Title' pill ends on top; c = its see-through 'Colorless Frame' (FrameC; not 'Colorless Frame (2)', CAlt, whose only difference is a see-through notch) with the colourless title ends — the art runs under the whole frame on every key (the profile's art slot is CC's art bounds 4/2.86/92x86.48 %, the box and the V translucent)",
+      "the pack's 'Artifact Frame' and 'Land Frame' (and their title, crown and plate) are not imported: no ZNR showcase printing is colourless, and the template has no artifact or land master (a colourless artifact draws c, as the MSE masters did)",
+      "plates (pt/<k>.png, native 282x154 at M15's plate bounds) = the pack's own for w, b, m and c (m15ZendikarRisingPT<K>.png) and the 'Nickname' pack's for u, r and g (m15NicknamePT<K>.png), as the pack lists them; the profile prints dark digits on the light w / m / c plates and white ones on the rest, as ZNR #290–313 print them",
+      "the holofoil stamp: CC paints the arched rim and a hologram oval on every key; the prints arch only a rare's or mythic's box (commons and uncommons run the rim straight). So each master is written plain and the arch is its own piece — see ZNR_NOTCH; the piece's oval is cut clear and our oval art drawn over it",
+      "the source has never been in git: the MSE zendikar masters it replaces (public/frames/fullart, built by scripts/build-variation-frames.mjs) were deleted with this recipe",
     ],
   },
   // 4.52 — the emblem (M20 design, today's look). CR 114: an emblem has no
@@ -6594,6 +6862,20 @@ export const CC_OVERLAY_BANDS = {
     keys: DFC_CROWN_KEYS,
     cut: DFC_CROWN_CUTS.m15mdfccrown,
     notes: DFC_CROWN_NOTES("modal 'Regular Legend Crown' twin (modal/crowns/regular/<k>.png, cut round the housing — its tip reaches into the crown's leg, which keeps its own pixels under the twin's alpha)", "the modal front and the modal back"),
+  },
+  // TODO 4.11 (wave 1): the Zendikar Rising hedron showcase's crown — a
+  // generic band (ZNR_CROWN_BAND), the pack's crown at CC's bounds, 1:1.
+  fullartcrown: {
+    pack: `${ZNR_PACK}: its '… Crown' pieces`,
+    band: ZNR_CROWN_BAND,
+    keys: ZNR_CROWN_BAND.keys,
+    layers: znrCrownLayers,
+    findings: znrCrownFindings,
+    notes: [
+      "the ZNR showcase's legendary crown (TODO 4.11): the pack's crown (m15ZendikarRisingCrown<K>.png, 1412x245 — the title pill's two ends drawn bigger, with their hedron points) at CC's bounds 2.94/2.34/94.14x11.67 % over a clear canvas, 1:1 at 1500x2100, rows 0–299 kept; nothing erased — it covers the title piece's ends whole, as CC draws it over them; an overlay band over the fullart masters (frames bucket)",
+      "keys = w u b r g, m (gold: three or more colours, or a pair — the template draws no pair masters), c (the colourless crown over the see-through frame) and the ten pairs: the first colour's crown on the left, the second's on the right, lerped across PAIR_RAMPS.crown (45→55 %W, where neither end draws anything) — #313 Phylath, World Sculptor prints the red end left and the green right over its gold bars; the pack's A and L crowns are not imported (no artifact or land master)",
+      "the prints: #300 Moraug (R), #312 Omnath (4 colours: gold), #313 Phylath (R|G) — the ends' outline and points land on CC's within 2 px once the title bar is registered",
+    ],
   },
 };
 

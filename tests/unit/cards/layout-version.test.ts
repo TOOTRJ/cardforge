@@ -506,7 +506,7 @@ describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
   // frozen list never held them, so its word-spacing track judges them as
   // "other" templates. (The Lord of the Rings scroll took M15's footer with
   // its Card Conjurer re-source, layout v62 / TODO 4.11, and the ring with
-  // its own, layout v63.)
+  // its own, layout v65.)
   const FOOTER_SINCE_V29 = ["flip", "aftermath", "battle", "split", "lotrscroll", "lotr"];
   // The 1997 pair's footer was a display-face "ART: …" line at v29 and is in
   // v29's frozen list; since TODO 4.10a (layout v46) it is the prints'
@@ -844,8 +844,8 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
     // family's sizes; a v31 battle bake never owed v32.
     // …and the Lord of the Rings scroll (TODO 4.11), with layout v62 — its
     // Card Conjurer masters and the family's sizes.
-    // …and the ring (TODO 4.11), with layout v63, the same way.
-    const joinedWithBump: Record<string, number> = { battle: 43, lotrscroll: 62, lotr: 63 };
+    // …and the ring (TODO 4.11), with layout v65, the same way.
+    const joinedWithBump: Record<string, number> = { battle: 43, lotrscroll: 62, lotr: 65 };
     expect([...V32_M15_FAMILY_TEMPLATES, ...joinedLater, ...Object.keys(joinedWithBump)].sort()).toEqual(
       [...M15_FAMILY_TEMPLATES].sort(),
     );
@@ -1218,8 +1218,9 @@ describe("v35 — the art-area corrections: CC M15 art slot, under-frame art, ny
     for (const t of ["m15", "m15artifact", "m15land", "m15snow", "m15snowland", "m15devoid"]) expect(getFrameProfile(t).artSlot, t).toEqual(cc);
     // … nyx and fullart's slots, now to 93 % under the whole text box (4.17b) …
     expect(getFrameProfile("nyx").artSlot).toEqual({ topPct: 11.2, leftPct: 6, widthPct: 88, heightPct: 81.8 });
-    // (fullart's also out to whole pixels past its hedron ring's rim.)
-    expect(getFrameProfile("fullart").artSlot).toEqual({ topPct: 2.7, leftPct: 3.8, widthPct: 92.4, heightPct: 90.3 });
+    // (fullart's also out to whole pixels past its hedron ring's rim — until
+    // v63, TODO 4.11: Card Conjurer's art bounds since.)
+    if (CARD_LAYOUT_VERSION < 63) expect(getFrameProfile("fullart").artSlot).toEqual({ topPct: 2.7, leftPct: 3.8, widthPct: 92.4, heightPct: 90.3 });
     // … and the under-frame art, from the border's inner edge (4.17a), on every
     // see-through master — m15pw's colourless one new (4.17b).
     for (const t of ["m15", "m15token", "m15tokentext", "m15pw"]) {
@@ -1373,7 +1374,7 @@ describe("v36 — the second correction round: inline pips, printed set symbols,
     // frozen list never names it.
     // (…and the Lord of the Rings scroll with its Card Conjurer re-source,
     // layout v62 / TODO 4.11.)
-    // (…and the ring with its own, layout v63.)
+    // (…and the ring with its own, layout v65.)
     const INK_FIT_SINCE_V36 = ["battle", "lotrscroll", "lotr"];
     expect(getFrameProfile("battle").setSymbolFit).toBe("ink");
     expect(lv.V36_PRINTED_SYMBOL_TEMPLATES).not.toContain("battle");
@@ -2939,7 +2940,7 @@ describe("v56 — the Universes Beyond triangle as printed (TODO 4.25 follow-up,
     const lv = await import("@/lib/cards/layout-version");
     // The Lord of the Rings scroll's triangle notch came with its own bump
     // (layout v62, TODO 4.11): no stored card names a stamp on it.
-    // …and the ring's with its own (layout v63).
+    // …and the ring's with its own (layout v65).
     const later = ["lotrscroll", "lotr"];
     expect(
       FRAME_TEMPLATE_VALUES.filter((t) => !later.includes(t) && (getFrameProfile(t).overlays ?? []).some((o) => o.anatomy === "holoStamp" && o.stamp.shape === "triangle")).sort(),
@@ -3153,13 +3154,15 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
   it("the frozen list is every profile that draws the 70 px cost row but those that took it with a bump of their own", async () => {
     const lv = await import("@/lib/cards/layout-version");
     // The Lord of the Rings scroll took the CC M15 row with its Card
-    // Conjurer re-source (TODO 4.11, v62), its own bump.
-    // …and the ring with its own (v63), centred on its pack's lower bar.
-    const later = ["lotrscroll", "lotr"];
+    // Conjurer re-source (TODO 4.11, v62), its own bump. The Zendikar Rising
+    // hedron took a 70 px disc on its own prints' row with its rebuild
+    // (TODO 4.11, v63): 3 px higher, 2 px further right.
+    // …and the LOTR ring with its own (v65), centred on its pack's bar.
+    const later = ["lotrscroll", "fullart", "lotr"];
     const drawn = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).costSizePct === 70 / 1500);
     expect([...drawn].filter((t) => !later.includes(t)).sort()).toEqual([...lv.COST_ROW_PRINT_TEMPLATES].sort());
     for (const t of later) expect(drawn, t).toContain(t);
-    for (const t of drawn) {
+    for (const t of drawn.filter((d) => d !== "fullart")) {
       const p = getFrameProfile(t);
       if (t === "lotr") {
         expect([p.costSizePct, p.costDy, p.costDx], t).toEqual([70 / 1500, -2 / 1500, 2 / 1500]);
@@ -3172,7 +3175,7 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
     }
     // The portrait layouts and the MSE-framed showcases keep their rows
     // (their own items; the showcases wait for TODO 4.11).
-    for (const t of ["flip", "aftermath", "nyx", "fullart", "expeditionland", "tarkirdraconic"]) {
+    for (const t of ["flip", "aftermath", "nyx", "expeditionland", "tarkirdraconic"]) {
       expect(lv.COST_ROW_PRINT_TEMPLATES, t).not.toContain(t);
       expect(getFrameProfile(t).costDx, t).toBeUndefined();
     }
@@ -3223,13 +3226,36 @@ describe("v62 — the Lord of the Rings scroll re-sourced from Card Conjurer (TO
   });
 });
 
-describe("v63 — the Lord of the Rings ring re-sourced from Card Conjurer (TODO 4.11)", () => {
+describe("v63 — the Zendikar Rising hedron showcase re-sourced from Card Conjurer (TODO 4.11, wave 1)", () => {
+  // Renumbered with ZNR_HEDRON_LAYOUT_VERSION if another bump merges first
+  // (v62 went to the Lord of the Rings scroll, #604; the Expedition lands'
+  // #602 takes v64 after this one).
+  const V = 63;
+  it("is a sweep, never a badge, scoped to `fullart`, and not verification-neutral", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.ZNR_HEDRON_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect([...lv.ZNR_HEDRON_TEMPLATES]).toEqual(["fullart"]);
+    // The masters a tick would judge change: a tick (none yet) re-opens.
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).not.toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual(["fullart"]);
+    // A bake one version older owes it on `fullart` alone, whatever the card.
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(t === "fullart");
+  });
+});
+
+describe("v65 — the Lord of the Rings ring re-sourced from Card Conjurer (TODO 4.11)", () => {
   it("is a sweep, never a badge, scoped to lotr, and not verification-neutral", async () => {
     const lv = await import("@/lib/cards/layout-version");
-    // Renumbered with the constant if another bump merges first (likely
-    // v65, behind the Zendikar Rising and Expedition re-sources).
+    // v63 is the Zendikar Rising hedron (#603), v64 the Expedition lands
+    // (#602, merged before this one); renumbered with the constant if
+    // another bump merges first.
     const V = lv.LOTR_RING_LAYOUT_VERSION;
-    expect(V).toBe(63);
+    expect(V).toBe(65);
     const SCOPE = ["lotr"];
     expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
     expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
@@ -3241,8 +3267,8 @@ describe("v63 — the Lord of the Rings ring re-sourced from Card Conjurer (TODO
     expect(lv.VERIFICATION_NEUTRAL_VERSIONS).not.toContain(V);
     expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual(SCOPE);
     // A bake one version older owes it on the ring; nothing else is owed —
-    // and the scroll's bake (v62) is not re-owed by it.
+    // and the scroll's bake (v62) and the hedron's (v63) owe it nothing.
     for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(SCOPE.includes(t));
-    expect(isRenderStale(lv.LOTR_SCROLL_LAYOUT_VERSION, "lotrscroll", undefined, V)).toBe(false);
+    expect(lv.VERSION_ROLLOUT[lv.ZNR_HEDRON_LAYOUT_VERSION]).toBe("sweep");
   });
 });

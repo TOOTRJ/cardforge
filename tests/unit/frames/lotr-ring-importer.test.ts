@@ -42,7 +42,7 @@ import { NEVER_NORMALISE } from "../../../scripts/lib/frame-corners.mjs";
 import manifestJson from "@/lib/frames/frame-manifest.json";
 
 // ---------------------------------------------------------------------------
-// TODO 4.11 (showcase rebuild, wave 1; layout v63): the Lord of the Rings
+// TODO 4.11 (showcase rebuild, wave 1; layout v65): the Lord of the Rings
 // RING showcase re-sourced from Card Conjurer's 'Ring' pack (1500 × 2100
 // native) — the recipe (whole files, `c` the land frame, `a` the artifact
 // frame, the ring plates, the top corners kept square), its crown band and

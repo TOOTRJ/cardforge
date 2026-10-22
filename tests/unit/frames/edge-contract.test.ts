@@ -86,7 +86,7 @@ describe("the edge-contract table", () => {
     // Phase B took it on (owner, 2026-09-28); the battle when its borderless
     // MSE ring gave way to Card Conjurer's black-bordered master (TODO
     // 4.21b, layout v43); the Lord of the Rings scroll the same way (TODO
-    // 4.11, layout v62), and the ring (4.11, layout v63: Card Conjurer's
+    // 4.11, layout v62), and the ring (4.11, layout v65: Card Conjurer's
     // 'Ring' masters, opaque to every edge — its frame field's `design`
     // edges, the black border's bottom).
     expect(Object.keys(EDGE_CONTRACT_KNOWN_FAILURES).sort()).toEqual(

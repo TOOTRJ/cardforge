@@ -688,6 +688,12 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // (nyxcrown), in every colour that picks a different band — w u b r g, c
   // (the silver: the frame maps c → a) and wu (gold: no pair masters here).
   ["nyx", ["w", "u", "b", "r", "g", "c", "wu"]],
+  // TODO 4.11 (wave 1): the Zendikar Rising hedron showcase's crown — Card
+  // Conjurer's ZNR crown band (fullartcrown), in every colour that picks a
+  // different band: w u b r g, c (the see-through frame's grey), wu (the
+  // pair's split crown over the gold master: no pair masters here, #313
+  // Phylath) and wub (gold, #312 Omnath).
+  ["fullart", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
   // TODO 4.27a: the station frame's crown — the parents' (artifact silver /
   // land grey on a colourless card, the colour's, gold).
   ["m15station", ["c", "g", "wub"]],
@@ -705,7 +711,7 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // land's brown (a colourless creature keys `l`; the artifact's light blue
   // is "@crown-artifact" below).
   ["lotrscroll", ["w", "u", "b", "r", "g", "c", "wub"]],
-  // …and the ring's (TODO 4.11, layout v63): the scalloped title bar over
+  // …and the ring's (TODO 4.11, layout v65): the scalloped title bar over
   // the pack's frame field, colours, gold and the land's brown.
   ["lotr", ["w", "u", "b", "r", "g", "c", "wub"]],
   ["m15ubartifact", ["c", "u"]],
@@ -1555,6 +1561,8 @@ export function visualCases(): VisualCase[] {
   // faded arms inside the finish mask).
   add("nyx", "creature", "g", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
   add("nyx", "creature", "u", "long", { crown: true, finish: "foil", suffix: "@crown-foil" });
+  // The ZNR hedron crown at the stored bake's size (TODO 4.11).
+  add("fullart", "creature", "r", "long", { crown: true, preset: "hd", suffix: "@crown-hd" });
   // TODO 4.48's last pieces: the full-art token's floating crown round its
   // name pill (m20tokencrown/<key>), opt-in per card — NEW cases, no stored
   // token names the switch. A Legendary token on each height, the artifact
@@ -2399,6 +2407,9 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   // TODO 4.11: the Lord of the Rings scroll's triangle notch (the pack's own
   // piece per key).
   "lotrscroll",
+  // TODO 4.11: the Zendikar Rising hedron showcase — the notch split off its
+  // own masters.
+  "fullart",
   // …and the ring's.
   "lotr",
 ];

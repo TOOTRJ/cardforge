@@ -601,7 +601,7 @@ describe("the art-window known failures", () => {
         // layout v38, 4.21a; split and battle by theirs, layout v43, 4.21b;
         // the saga's hairline by its own, 4.21c; lotrscroll by Card
         // Conjurer's 'Scroll' masters, layout v62, 4.11, and lotr by its
-        // 'Ring' masters, layout v63.)
+        // 'Ring' masters, layout v65.)
         // Found on 2026-09-29.
         "avatar",
         "bloomanime",

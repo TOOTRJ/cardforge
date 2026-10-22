@@ -166,8 +166,10 @@ describe("Card Conjurer recipe", () => {
       "extendedart",
       "extendedartland",
       "flip",
+      // The Zendikar Rising hedron showcase (TODO 4.11, layout v63; tests/unit/frames/zendikar-rising-frame.test.ts).
+      "fullart",
       "fullartland",
-      // The Lord of the Rings ring (TODO 4.11, layout v63; tests/unit/frames/lotr-ring-importer.test.ts).
+      // The Lord of the Rings ring (TODO 4.11, layout v65; tests/unit/frames/lotr-ring-importer.test.ts).
       "lotr",
       // The Lord of the Rings scroll (TODO 4.11, layout v62; tests/unit/frames/lotr-scroll-importer.test.ts).
       "lotrscroll",
