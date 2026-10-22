@@ -257,3 +257,19 @@ describe("POST /api/ai/jobs — a station fill refused at plan time", () => {
     expect(json).toEqual({ ok: false, error: "AI card design failed: boom" });
   });
 });
+
+// TODO 4.48b: an art fill names the creator's frame so the picture is
+// painted in its window's shape — a KNOWN template only, never a refused
+// fill: anything else is dropped (the art is then painted for the default).
+describe("POST /api/ai/jobs — the art fill's frame", () => {
+  it("passes a known template on as artFrame; drops an unknown one without refusing the fill", async () => {
+    const known = await post({ kind: "card_fill", want: ["art"], locked: { card_type: "token" }, art_frame: "m20token" });
+    expect(known.status).toBe(200);
+    expect(s.created.at(-1)?.input).toMatchObject({ artFrame: "m20token" });
+    for (const art_frame of ["regular", "../../etc", 42, { template: "m15" }]) {
+      const dropped = await post({ kind: "card_fill", want: ["art"], locked: {}, art_frame });
+      expect(dropped.status, String(art_frame)).toBe(200);
+      expect((s.created.at(-1)?.input as Record<string, unknown>).artFrame).toBeUndefined();
+    }
+  });
+});

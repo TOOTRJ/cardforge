@@ -5,7 +5,13 @@
 // Pure and React-free: shared by the dialog, the form, the job planner and
 // the unit tests.
 
-import type { CardType, ColorIdentity, Rarity } from "@/types/card";
+import {
+  FRAME_TEMPLATE_VALUES,
+  type CardType,
+  type ColorIdentity,
+  type FrameTemplate,
+  type Rarity,
+} from "@/types/card";
 import { buildTypeLine } from "@/lib/cards/card-display";
 import { stationFillNote } from "@/lib/ai/station-design";
 
@@ -53,6 +59,24 @@ export const FILL_FIELD_LABELS: Record<CardFillField, string> = {
   stats: "Power / toughness",
   tags: "Tags",
 };
+
+/**
+ * The frame a fill's request names for its ART (TODO 4.48b, the route's
+ * `art_frame`): the creator's current template when the art is wanted and
+ * the card type is kept — a fill that writes the type picks its own frame
+ * with it. Only a known template is sent (a retired name on an older card
+ * is left out; the route drops anything else too), and the job reads it for
+ * the picture's shape alone.
+ */
+export function fillArtFrameOf(
+  want: readonly CardFillField[],
+  template: string | null | undefined,
+): FrameTemplate | undefined {
+  if (!want.includes("art") || want.includes("card_type")) return undefined;
+  return template && (FRAME_TEMPLATE_VALUES as readonly string[]).includes(template)
+    ? (template as FrameTemplate)
+    : undefined;
+}
 
 /** Default tick-sets for each entry point. */
 export const FILL_PRESETS = {
