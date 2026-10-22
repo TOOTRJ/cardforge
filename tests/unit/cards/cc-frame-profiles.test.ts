@@ -69,18 +69,30 @@ describe("Card Conjurer frame profiles", () => {
     expect(pw.costRect!.leftPct + pw.costRect!.widthPct).toBeCloseTo(m15Band.leftPct + m15Band.widthPct, 9);
     expect(((pw.costRect!.leftPct + pw.costRect!.widthPct) / 100) * 1500).toBeGreaterThanOrEqual(1380);
     expect(((pw.costRect!.leftPct + pw.costRect!.widthPct) / 100) * 1500).toBeLessThanOrEqual(1384);
-    expect(pw.costDy).toBe(0.004);
+    // Layout v60 (the walker cost-row correction): the prints themselves
+    // centre their pips at 127.3–127.7 px since 2023 — two whole px under
+    // the box's centre (one at 750), 128 px.
+    expect(pw.costDy).toBe(2 / 1500);
     const pipPx = ((pw.costRect!.topPct + pw.costRect!.heightPct / 2) / 100) * 2100 + pw.costDy! * 1500;
-    expect(pipPx).toBeCloseTo(132, 6);
-    expect((pipPx - 77) / (192 - 77)).toBeCloseTo(0.48, 2);
+    expect(pipPx).toBeCloseTo(128, 6);
+    expect(pw.costDy! * 1500).toBe(Math.round(pw.costDy! * 1500));
+    expect(pw.costDy! * 750).toBe(Math.round(pw.costDy! * 750));
 
-    // The name is centred in its rect in both renderers (flex centre).
+    // The name is centred in its rect in both renderers (flex centre); v60
+    // moves its TEXT up 4 HD px (2 at 750) with the pips, the rect stays.
     expect(pw.title.rect).toEqual({ topPct: 4.18, leftPct: 8.5, widthPct: 80, heightPct: 4.4 });
     const nameShiftPx = ((pw.title.rect.topPct - 3.8) / 100) * 2100;
     expect(nameShiftPx).toBeCloseTo(8, 1);
-    const titleCentrePx = ((pw.title.rect.topPct + pw.title.rect.heightPct / 2) / 100) * 2100;
-    // Name ~2 px below the pips, as printed (was level with them).
+    expect(pw.title.dy).toBe(-4 / 1500);
+    const titleCentrePx = ((pw.title.rect.topPct + pw.title.rect.heightPct / 2) / 100) * 2100 + pw.title.dy! * 1500;
+    // Name ~2 px below the pips, as printed.
     expect(titleCentrePx - pipPx).toBeCloseTo(2, 0);
+    // The borderless pair spreads both.
+    for (const t of ["m15borderlesspw", "m15borderlesspwtall"] as const) {
+      expect(getFrameProfile(t).costDy, t).toBe(pw.costDy);
+      expect(getFrameProfile(t).title, t).toEqual(pw.title);
+      expect(getFrameProfile(t).costRect, t).toEqual(pw.costRect);
+    }
   });
 
   it("leaves the MSE-framed templates' cost where it was", () => {

@@ -1504,6 +1504,35 @@ export const TOKEN_ARCH_PRINT_TEMPLATES: readonly string[] = [
   "m15tokenartifact",
   "m15tokenartifacttext",
 ];
+//   v60    — the planeswalker's cost row and name on its prints (the walker
+//            showcase read, owner-approved 2026-10-21). On `m15pw`,
+//            `m15borderlesspw` and `m15borderlesspwtall` alone (the two
+//            borderless profiles spread M15PW's title and costDy): the pips
+//            4 HD px up (costDy 0.004 → 2/1500: centre 132.0 → 128.0 px;
+//            every walker print since 2023 centres them at 127.3–127.7, the
+//            earlier ones mostly 124.7–127.6) and the name's text 4 HD px up
+//            with them (title dy −4/1500: baseline ~161 → ~157, capitals
+//            101 → 97; print ~156–158 / ~97–100). No rect, size, disc,
+//            master or plate moves. WALKER_COST_ROW_LAYOUT_VERSION below —
+//            the ONE constant (another open PR, the M15 family's cost row
+//            (3.34), takes a number too: whichever merges second renumbers,
+//            this constant, the test's `V` and the docs together). A
+//            CORRECTION ("sweep"), never a badge: the look was wrong against
+//            the frame's own prints. Template-scoped: every card on the three
+//            re-bakes (every card draws a name), every other template bakes
+//            byte-identical. Verification-neutral (as v32 moved m15pw's cost
+//            box and v36 its symbol box and stayed neutral): the owner signs
+//            the move off on the before / after sheet, and production's
+//            m15pw ticks stay fresh.
+// ---------------------------------------------------------------------------
+
+/** The planeswalker's cost row and name on its prints: every card on the
+ *  three walker templates. ITS version lives here alone —
+ *  CARD_LAYOUT_VERSION, the scoped table, the rollout and the verification
+ *  list read this constant — so a bump that merges first moves it in one
+ *  place. Frozen once it ships. */
+export const WALKER_COST_ROW_LAYOUT_VERSION = 60;
+export const WALKER_COST_ROW_TEMPLATES: readonly string[] = ["m15pw", "m15borderlesspw", "m15borderlesspwtall"];
 
 /** The station frame on print's band rule (TODO 4.27a, PR 2): every card
  *  on `m15station` and `m15stationland`. ITS version lives here alone —
@@ -1588,7 +1617,7 @@ export const LARGE_PIPS_LAYOUT_VERSION = 53;
  *  latest). */
 export const V53_LARGER_COST_TEMPLATES: readonly string[] = ["modern", "modernland"];
 
-export const CARD_LAYOUT_VERSION = TOKEN_ARCH_PRINT_LAYOUT_VERSION;
+export const CARD_LAYOUT_VERSION = WALKER_COST_ROW_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -1786,6 +1815,9 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // name and art slot; every card on them. Not verification-neutral: the
   // arch tokens' ticks are judged by this scope and re-made once.
   [TOKEN_ARCH_PRINT_LAYOUT_VERSION]: TOKEN_ARCH_PRINT_TEMPLATES,
+  // The planeswalker's cost row and name on its prints: the three walker
+  // templates' pips and name text; every card on them. Verification-neutral.
+  [WALKER_COST_ROW_LAYOUT_VERSION]: WALKER_COST_ROW_TEMPLATES,
 };
 
 // v34 — the token frames 4.49 re-measured: EVERY card on them re-bakes (the
@@ -1954,6 +1986,12 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
  * v57 is (TODO 4.25 follow-up): only `m15ub/c` changes — a combo no tick
  * holds and that could not be ticked before (its master was the borrowed
  * artifact frame) — so every tick on the frame's other colours stays fresh.
+ * v60 is (the walker cost-row correction, owner 2026-10-21): the pips and
+ * the name's text move 4 HD px up on the three walker templates — inside
+ * the cost box and the title rect a tick verified, which stay put, as v32
+ * moved m15pw's cost box and v36 its symbol box and stayed neutral. The
+ * owner signs it off on the before / after sheet; the m15pw ticks stay
+ * fresh.
  * Stored bakes still owe these bumps: this list is read by frame
  * verification only, never by the stale / sweep / download rules.
  */
@@ -1963,6 +2001,7 @@ export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [
   LARGE_PIPS_LAYOUT_VERSION,
   UB_STAMP_TONES_LAYOUT_VERSION,
   UB_SEE_THROUGH_C_LAYOUT_VERSION,
+  WALKER_COST_ROW_LAYOUT_VERSION,
 ];
 
 /** TEMPLATE_SCOPED_VERSIONS with VERIFICATION_TEMPLATE_SCOPES laid over it
@@ -2830,6 +2869,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [UB_STAMP_TONES_LAYOUT_VERSION]: "sweep", // the Universes Beyond triangle as printed (4.25 follow-up): "auto" on every rarity, the matte triangle of a common / uncommon, the hologram's tone — a correction of the stamp against the frame's own print on three frames a day old, never a badge
   [UB_SEE_THROUGH_C_LAYOUT_VERSION]: "sweep", // the see-through colourless Universes Beyond spell frame (4.25 follow-up): an addition the visual gate records as a bump on a combo no card can be on (never ticked, offered nowhere) — never a badge
   [TOKEN_ARCH_PRINT_LAYOUT_VERSION]: "sweep", // the 2014–19 arch token on its prints (4.53): the gold small-caps name and the art slot on the window — a correction of the four arch frames against their own prints, never a badge
+  [WALKER_COST_ROW_LAYOUT_VERSION]: "sweep", // the planeswalker's cost row and name on its prints (pips 132 → 128 px, the name 4 px up) — a correction of the three walker frames against their own prints, never a badge
   [CC_RESOURCE_LAYOUT_VERSION]: "sweep", // extendedart and the textless pair re-sourced from Card Conjurer (4.7 / 4.35 / 4.42; owner Q6) — a correction of three looks against their own prints on frames never ticked, never a badge
   [LARGE_PIPS_LAYOUT_VERSION]: "sweep", // hybrid and twobrid discs large, the large pip's factor per frame and place (3.21) — a correction against the prints after the owner's round-49 sheets, never a badge
   [SYMBOLS_PRINT_LAYOUT_VERSION]: "sweep", // five symbols on the prints' drawings + flat rules-text pips (6.16b) — a correction against the prints after the owner's round-43 sheets, never a badge

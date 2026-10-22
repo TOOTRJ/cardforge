@@ -956,10 +956,10 @@ before 5.0d was made beside the ▼: look at its seven colours again.
 the template's override (migration 0115). It goes stale when a later bump
 touches the template (`VERIFICATION_TEMPLATE_SCOPES` when a bump's slots
 move on fewer templates than its bakes change on) or the override changes;
-`VERIFICATION_NEUTRAL_VERSIONS` (31, 32, 33, 35, 36, 37) never stale one (v36's
+`VERIFICATION_NEUTRAL_VERSIONS` (31, 32, 33, 35, 36, 37, … 60) never stale one (v36's
 4.47 moved the planeswalkers' `symbolRect`, a box the alignment score reads,
 but the owner kept it neutral as v32's 15 px m15pw cost-box move was — owner
-round 18, 2026-09-30), and a
+round 18, 2026-09-30; v60's 4 px walker pip and name move likewise), and a
 pre-0115 tick is judged as made at `LEGACY_TICK_LAYOUT_VERSION` (33)
 (`lib/cards/frame-verification-state.ts`). A stale tick stays verified —
 the creator keeps offering the combo — and the admin pages show "needs
@@ -8513,6 +8513,27 @@ A family profile:
   symbol wider than a 12 %W `symbolRect` (the core-set pills) is never
   shrunk to it: it ends at the rect's right edge and reaches out on the
   left, in both renderers (`flexShrink: 0`).
+
+**The planeswalker's cost row and name (layout v60).** Round 3 (layout
+v27) put the walker's pips 48 % of the way down Card Conjurer's taller
+title plate (132 px at HD) — a read of the plate, not of the print. Read on
+the prints themselves (1500 × 2100 Scryfall PNGs, for measuring only; a
+fixed-radius circle fit on the white, blue and generic discs — black, red
+and green pull a fit into the drop shadow), every walker since 2023 centres
+its pips at 127.3–127.7 px, regular (WOE #78, LCI #238, MKM #211, OTJ #271,
+BLB #230, DSK #220, EOE #2) and borderless (LCI #307, OTJ #305, BLB #341,
+FDN #357 / #359, INR #322) alike, and the earlier ones at 124.7–127.3 (ELD
+#197, KHM #225, NEO #238). `M15PW.costDy` 0.004 → 2 / 1500 (two whole px
+under the box's 126 px centre at HD, one at 750: 128 px in both bakes and
+the preview) and the name's text 4 px up with them (`title.dy` −4 / 1500:
+capitals 101 → 97 px, baseline ~161 → ~157; the prints set them at
+~97–100 / ~156–158). The cost box, the title rect, the disc and every
+master stay; `m15borderlesspw` and `m15borderlesspwtall` spread both. A
+CORRECTION: layout v60 (`WALKER_COST_ROW_LAYOUT_VERSION`), "sweep", scoped
+to the three templates (every card on them re-bakes), never a badge, and
+verification-neutral as v32 and v36 were on the same frame. The disc is the
+family's `COST_DISC_PCT`: a change of that constant reaches the walkers
+too, centred on the same row.
 
 Every frame outside the family keeps the old code paths byte-for-byte: no
 `fit` flag (the character estimate and the CSS ellipsis) and no box or ink
