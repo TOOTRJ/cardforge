@@ -100,7 +100,8 @@ describe("0119 — the borderless finish becomes regular", () => {
 // ---------------------------------------------------------------------------
 // No pixel moves: the renderers branch only on foil / etched / showcase, so a
 // "borderless" card draws exactly like a "regular" one. Git frames (read from
-// disk, deterministic): tarkirdragon carries one of production's 12 rows;
+// disk, deterministic): tarkirdragon carried one of production's 12 rows
+// (tarkirdraconic stands in since TODO 4.11 moved its masters to the bucket);
 // agclassic (modern, until TODO 4.10b moved it to the bucket too) stands in
 // for m15, whose masters live in the frames bucket (the
 // m15 bake comparison is in the PR evidence). Foil is the control that the
@@ -144,7 +145,7 @@ async function bakeHash(data: CardPreviewData): Promise<string> {
 describe("0119 changes no pixels", () => {
   // (lotr since TODO 4.10c: Alpha's colour pips are frames-bucket images;
   // avatar since 4.11: lotr's masters are Card Conjurer's, in the bucket.)
-  for (const template of ["tarkirdragon", "avatar"] as const) {
+  for (const template of ["tarkirdraconic", "avatar"] as const) {
     it(`${template}: a borderless-finish bake is byte-identical to a regular one`, async () => {
       const [borderless, regular, foil] = [
         await bakeHash(card(template, "borderless")),

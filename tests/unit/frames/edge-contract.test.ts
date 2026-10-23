@@ -98,7 +98,8 @@ describe("the edge-contract table", () => {
         // (expeditionland b/g left with Card Conjurer's masters, TODO 4.11
         // wave 1.)
         "tarkirdraconic",
-        "tarkirdragon",
+        // (tarkirdragon left with Card Conjurer's 'Tarkir' masters, TODO
+        // 4.11, layout v67: the printed black border all round.)
         "tarkirghostfire",
       ].sort(),
     );

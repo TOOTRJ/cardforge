@@ -597,9 +597,14 @@ describe("the frame picker's groups: a classification change only", () => {
     expect(raw.imports["all|ltr-482"]).toMatchObject({ frame_template: "lotrscroll", match: ["exact", "lotrscroll", null] });
     // …and the ring's (LTR #306, TODO 4.11 too), the same way.
     expect(raw.imports["all|ltr-306"]).toMatchObject({ frame_template: "lotr", match: ["exact", "lotr", null] });
+    // …and the MUL Tarkir dragon wings' (MUL #1 / #60, TODO 4.11 too).
+    expect(raw.imports["all|mul-1"]).toMatchObject({ frame_template: "tarkirdragon", match: ["exact", "tarkirdragon", null] });
+    expect(raw.imports["all|mul-60"]).toMatchObject({ frame_template: "tarkirdragon", match: ["exact", "tarkirdragon", null] });
     expect(changed("imports")).toEqual([
       "all|ltr-306",
       "all|ltr-482",
+      "all|mul-1",
+      "all|mul-60",
       "all|takh-1", "all|tdsk-10", "all|tdsk-4", "all|teoc-13",
       "all|tmkm-10", "all|tmkm-13", "all|tmom-16", "all|tsoi-11",
       "all|zne-1",

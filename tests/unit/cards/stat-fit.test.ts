@@ -309,7 +309,9 @@ describe("measured ink spans (HD px, on the digits' rows)", () => {
     // the digits' rows, measured on every colour's cut plate.
     ["flip", "pt", 1215, 1395],
     ["flip", "secondFace", 93, 272],
-    ["tarkirdragon", "pt", 1193, 1388],
+    // The MUL Tarkir dragon wings (TODO 4.11, layout v67): Card Conjurer's
+    // plate's light face on the digits' rows.
+    ["tarkirdragon", "pt", 1193, 1391],
     ["tarkirdraconic", "pt", 1187, 1398],
     ["tarkirghostfire", "pt", 1153, 1404],
   ])("%s %s: %d–%d px", (template, which, left, right) => {

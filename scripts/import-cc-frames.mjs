@@ -177,6 +177,8 @@ import {
   sourceFilesFor,
   sourceTonesOf,
   nearRegionPlane,
+  diffRegionPlane,
+  capturePlane,
   toneSourceRegions,
   describeSourceTones,
   describeFileTones,
@@ -295,6 +297,9 @@ async function toneLoaded(src, data, w, h) {
     regions[name] = plane;
   }
   for (const [name, near] of Object.entries(tone.near ?? {})) regions[name] = nearRegionPlane(data, w, h, tone.tones[name].from, near);
+  // A region where the file differs from another pack file of its kind
+  // (the MUL Tarkir dragon wings, TODO 4.11), read at the same size.
+  for (const [name, d] of Object.entries(tone.diff ?? {})) regions[name] = diffRegionPlane(data, await rgba(await fetchCached(d.file), w, h), w, h, d);
   return toneSourceRegions(data, w, h, regions, tone.tones);
 }
 
@@ -1203,11 +1208,17 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
       stamp = new Uint8Array(box.width * box.height);
       for (let p = 0; p < stamp.length; p += 1) stamp[p] = shapePiece[p * 4 + 3];
     }
+    // The cut: the pack's triangle (the Universes Beyond hole) or its oval
+    // (TODO 4.11: the MUL Tarkir notch).
+    const cut = notchCutOf(def);
+    const cutWords = def.triangle
+      ? `the triangle ${def.triangle.points.map((p) => p.join(",")).join(" / ")} px, corner radius ${def.triangle.radius}`
+      : `the oval ${def.oval.leftPct.toFixed(4)}/${def.oval.topPct.toFixed(4)}/${def.oval.widthPct.toFixed(4)}×${def.oval.heightPct.toFixed(4)} %`;
     for (const key of def.keys) {
       const out = path.join(outDir, folder, `${key}.png`);
       recipe[key] = [
         `${def.pieces[key]} at ${def.placeAt.x},${def.placeAt.y} ${def.placeAt.width}×${def.placeAt.height} px of a clear ${CW}×${CH} card, ${CW === OUT_W && CH === OUT_H ? "1:1 (no resample)" : `downscaled once to ${OUT_W}×${OUT_H}`}, cut to ${box.width}×${box.height} at ${box.x},${box.y}`,
-        `the triangle ${def.triangle.points.map((p) => p.join(",")).join(" / ")} px, corner radius ${def.triangle.radius}, plus ${def.cutMarginPx} px cut to transparent, the ${def.blackoutPx} px round it painted opaque black`,
+        `${cutWords}, plus ${def.cutMarginPx} px cut to transparent, the ${def.blackoutPx} px round it painted opaque black`,
       ];
       if (dryRun) {
         console.log(`${path.relative(process.cwd(), out)} ← ${recipe[key].join(" + ")}`);
@@ -1218,10 +1229,13 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
       // than the printed stamp) — then the hole cut and its ring blacked.
       const placedPiece = await placeAndCut(def.pieces[key]);
       if (def.blackoutStampGrowPx !== undefined) blackoutStampShape(placedPiece, stamp, box.width, box.height, def.blackoutStampGrowPx);
-      const piece = blackoutAndCut(placedPiece, def.shape, def.triangle, def.cutMarginPx, def.blackoutPx);
+      // A capture painted in the piece itself (TODO 4.11: the MUL Tarkir
+      // well) is read off the placed piece before the cut: held inside it.
+      const captured = def.capture ? capturePlane(placedPiece, box.width, box.height, def.capture) : null;
+      const piece = blackoutAndCut(placedPiece, def.shape, cut, def.cutMarginPx, def.blackoutPx);
       // With the shape blacked out, the hologram check is the shape's own
       // (every pixel of it black or clear), not "nothing outside the ring".
-      const findings = pieceNotchFindings(piece, def.shape, def.triangle, def.cutMarginPx, def.blackoutPx, def.blackoutStampGrowPx !== undefined ? null : stamp);
+      const findings = pieceNotchFindings(piece, def.shape, cut, def.cutMarginPx, def.blackoutPx, def.blackoutStampGrowPx !== undefined ? null : (captured ?? stamp));
       if (def.blackoutStampGrowPx !== undefined) findings.failures.push(...stampShapeBlackFindings(piece, stamp, box.width, box.height).failures);
       for (const f of findings.failures) notchFailures.push(`${folder}/${key}: ${f}`);
       fs.mkdirSync(path.dirname(out), { recursive: true });
@@ -1238,9 +1252,9 @@ for (const [folder, def] of Object.entries(HOLO_STAMP_NOTCHES)) {
       pack: def.pack,
       converter: "scripts/import-cc-frames.mjs",
       kind: "overlay",
-      output: `${box.width}x${box.height} notch piece (1:1 at ${OUT_W}x${OUT_H}, at ${box.x},${box.y}), the triangle region cut to transparent, webp q${WEBP.quality}`,
+      output: `${box.width}x${box.height} notch piece (1:1 at ${OUT_W}x${OUT_H}, at ${box.x},${box.y}), the ${def.triangle ? "triangle" : "oval"} region cut to transparent, webp q${WEBP.quality}`,
       colors: recipe,
-      cut: { triangle: def.triangle, marginPx: def.cutMarginPx, blackoutPx: def.blackoutPx, what: "the hologram capture inside the pack's triangle — never published; the ring round the cut painted black" },
+      cut: { ...(def.triangle ? { triangle: def.triangle } : { oval: def.oval }), marginPx: def.cutMarginPx, blackoutPx: def.blackoutPx, what: `the hologram capture inside the pack's ${def.triangle ? "triangle" : "oval"} — never published; the ring round the cut painted black` },
       ...(describeFileTones(notchSourceFiles(def)) ? { sourceTones: describeFileTones(notchSourceFiles(def)) } : {}),
       sourceFiles: notchSourceFiles(def),
       notes: def.notes,

@@ -16835,5 +16835,223 @@
       "gold (m) is the pack's 'Multicolored Frame' on BOTH halves (C16 #239 Trial // Error, the only gold // gold M15 split outside a showcase — printed in the frame's 2016 arrangement, its collector line along the bottom border); a mixed split (GRN's hybrid // gold, a mono // mono of two colours) needs TODO 4.26",
       "the pack hides the set symbol (setSymbolBounds off the card) and has no fuse dress here (split/fuse/ is its own pack): neither is built"
     ]
+  },
+  "tarkirdragon": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packTarkir.js 'Tarkir' (\"Tarkir Sketch (MOM)\" — the Multiverse Legends Tarkir dragon-wing showcase; groupShowcase-5.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/tarkir/w.png"
+      ],
+      "u": [
+        "img/frames/tarkir/u.png"
+      ],
+      "b": [
+        "img/frames/tarkir/b.png"
+      ],
+      "r": [
+        "img/frames/tarkir/r.png"
+      ],
+      "g": [
+        "img/frames/tarkir/g.png"
+      ],
+      "c": [
+        "img/frames/tarkir/a.png"
+      ],
+      "m": [
+        "img/frames/tarkir/m.png"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/tarkir/pt/w.png",
+      "u": "img/frames/tarkir/pt/u.png",
+      "b": "img/frames/tarkir/pt/b.png",
+      "r": "img/frames/tarkir/pt/r.png",
+      "g": "img/frames/tarkir/pt/g.png",
+      "c": "img/frames/tarkir/pt/a.png",
+      "m": "img/frames/tarkir/pt/m.png"
+    },
+    "sourceTones": {
+      "img/frames/tarkir/u.png": {
+        "table": "TARKIR_PRINT_TONES (u)",
+        "wing": "on the pixels that differ from img/frames/tarkir/a.png by 16–40 levels (max channel; full from 40): × 1.339 / 0.955 / 0.839 (56, 110, 211 → 75, 105, 177), fading to × 0.981 on every channel at white"
+      },
+      "img/frames/tarkir/w.png": {
+        "table": "TARKIR_PRINT_TONES (w)",
+        "wing": "on the pixels that differ from img/frames/tarkir/a.png by 16–40 levels (max channel; full from 40): × 0.976 / 1.011 / 1.101 (207, 178, 138 → 202, 180, 152), fading to × 1.008 on every channel at white"
+      }
+    },
+    "sourceFiles": [
+      "img/frames/tarkir/a.png",
+      "img/frames/tarkir/b.png",
+      "img/frames/tarkir/g.png",
+      "img/frames/tarkir/m.png",
+      "img/frames/tarkir/pt/a.png",
+      "img/frames/tarkir/pt/b.png",
+      "img/frames/tarkir/pt/g.png",
+      "img/frames/tarkir/pt/m.png",
+      "img/frames/tarkir/pt/r.png",
+      "img/frames/tarkir/pt/u.png",
+      "img/frames/tarkir/pt/w.png",
+      "img/frames/tarkir/r.png",
+      "img/frames/tarkir/u.png",
+      "img/frames/tarkir/w.png"
+    ],
+    "notes": [
+      "w u b r g m = the pack's colour frames whole (tarkir/<k>.png, 1500x2100 NATIVE — no resample), as the MUL Tarkir showcase prints them (MUL #1 / #131 / #131z white, #60 / #190 / #190z white-blue); one drawing whose dragon wings alone take the colour (any two masters differ only on x 48–422 and 1073–1454), so a two-colour card's hard seam at 50 %W (FrameProfile.twoColorSplit) crosses identical pixels, as the pack's own 'Right Half' ramp (tarkir/maskFrame.png, 41.7–61.3 %W) does",
+      "c = the pack's 'Artifact Frame' (tarkir/a.png, the silver-blue wings): the pack's Colorless frame is commented out of packTarkir.js and is not in the tree, so a colourless card wears the frame Card Conjurer offers it; no colourless card prints on the frame",
+      "a real black border all round, cut at the one card corner",
+      "plates = the pack's P/T plates (tarkir/pt/<k>.png, 273x150 at ptBounds 1155/1850 px); c = the artifact's plate",
+      "toned onto the prints (TARKIR_PRINT_TONES through TARKIR_SOURCE_TONES, recorded under sourceTones): the w and u dragon wings — the pixels where the colour's file differs from the artifact file — as each FILE loads, so the masters and the crowns drawn from it agree; b r g m and c have no print and stay as drawn",
+      "geometry as drawn: the pack's top block (crown, title bar) sits 6 px lower than the prints and its box bottom, plate and stamp 6 px higher, the type bar within 1 px — print is the same drawing 0.66 % taller and 0.4 % wider, which no flat zone can re-cut (the wings run unbroken from the title bar to the box); the slots ride the pack's own bars"
+    ]
+  },
+  "tarkirdragoncrown": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packTarkir.js 'Tarkir' (\"Tarkir Sketch (MOM)\" — the Multiverse Legends Tarkir dragon-wing showcase; groupShowcase-5.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "1500x120 overlay band: rows 0–119 of a 1500x2100 card composited at 1500x2100, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/tarkir/crowns/w.png at 12/2.4285714285714284/76.33333333333333×3.0952380952380953 %"
+      ],
+      "u": [
+        "img/frames/tarkir/crowns/u.png at 12/2.4285714285714284/76.33333333333333×3.0952380952380953 %"
+      ],
+      "b": [
+        "img/frames/tarkir/crowns/b.png at 12/2.4285714285714284/76.33333333333333×3.0952380952380953 %"
+      ],
+      "r": [
+        "img/frames/tarkir/crowns/r.png at 12/2.4285714285714284/76.33333333333333×3.0952380952380953 %"
+      ],
+      "g": [
+        "img/frames/tarkir/crowns/g.png at 12/2.4285714285714284/76.33333333333333×3.0952380952380953 %"
+      ],
+      "m": [
+        "img/frames/tarkir/crowns/m.png at 12/2.4285714285714284/76.33333333333333×3.0952380952380953 %"
+      ],
+      "c": [
+        "img/frames/tarkir/crowns/a.png at 12/2.4285714285714284/76.33333333333333×3.0952380952380953 %"
+      ],
+      "wu": [
+        "(img/frames/tarkir/crowns/w.png | img/frames/tarkir/crowns/u.png across procedural:ramp(41.7→61.3 %W)) at 12/2.4285714285714284/76.33333333333333×3.0952380952380953 %"
+      ],
+      "wb": [
+        "(img/frames/tarkir/crowns/w.png | img/frames/tarkir/crowns/b.png across procedural:ramp(41.7→61.3 %W)) at 12/2.4285714285714284/76.33333333333333×3.0952380952380953 %"
+      ],
+      "ub": [
+        "(img/frames/tarkir/crowns/u.png | img/frames/tarkir/crowns/b.png across procedural:ramp(41.7→61.3 %W)) at 12/2.4285714285714284/76.33333333333333×3.0952380952380953 %"
+      ],
+      "ur": [
+        "(img/frames/tarkir/crowns/u.png | img/frames/tarkir/crowns/r.png across procedural:ramp(41.7→61.3 %W)) at 12/2.4285714285714284/76.33333333333333×3.0952380952380953 %"
+      ],
+      "br": [
+        "(img/frames/tarkir/crowns/b.png | img/frames/tarkir/crowns/r.png across procedural:ramp(41.7→61.3 %W)) at 12/2.4285714285714284/76.33333333333333×3.0952380952380953 %"
+      ],
+      "bg": [
+        "(img/frames/tarkir/crowns/b.png | img/frames/tarkir/crowns/g.png across procedural:ramp(41.7→61.3 %W)) at 12/2.4285714285714284/76.33333333333333×3.0952380952380953 %"
+      ],
+      "rg": [
+        "(img/frames/tarkir/crowns/r.png | img/frames/tarkir/crowns/g.png across procedural:ramp(41.7→61.3 %W)) at 12/2.4285714285714284/76.33333333333333×3.0952380952380953 %"
+      ],
+      "rw": [
+        "(img/frames/tarkir/crowns/r.png | img/frames/tarkir/crowns/w.png across procedural:ramp(41.7→61.3 %W)) at 12/2.4285714285714284/76.33333333333333×3.0952380952380953 %"
+      ],
+      "gw": [
+        "(img/frames/tarkir/crowns/g.png | img/frames/tarkir/crowns/w.png across procedural:ramp(41.7→61.3 %W)) at 12/2.4285714285714284/76.33333333333333×3.0952380952380953 %"
+      ],
+      "gu": [
+        "(img/frames/tarkir/crowns/g.png | img/frames/tarkir/crowns/u.png across procedural:ramp(41.7→61.3 %W)) at 12/2.4285714285714284/76.33333333333333×3.0952380952380953 %"
+      ]
+    },
+    "sourceTones": {
+      "img/frames/tarkir/crowns/w.png": {
+        "table": "TARKIR_PRINT_TONES (w)",
+        "wing": "on the pixels that differ from img/frames/tarkir/crowns/a.png by 16–40 levels (max channel; full from 40): × 0.976 / 1.011 / 1.101 (207, 178, 138 → 202, 180, 152), fading to × 1.008 on every channel at white"
+      },
+      "img/frames/tarkir/crowns/u.png": {
+        "table": "TARKIR_PRINT_TONES (u)",
+        "wing": "on the pixels that differ from img/frames/tarkir/crowns/a.png by 16–40 levels (max channel; full from 40): × 1.339 / 0.955 / 0.839 (56, 110, 211 → 75, 105, 177), fading to × 0.981 on every channel at white"
+      }
+    },
+    "sourceFiles": [
+      "img/frames/tarkir/crowns/a.png",
+      "img/frames/tarkir/crowns/b.png",
+      "img/frames/tarkir/crowns/g.png",
+      "img/frames/tarkir/crowns/m.png",
+      "img/frames/tarkir/crowns/r.png",
+      "img/frames/tarkir/crowns/u.png",
+      "img/frames/tarkir/crowns/w.png"
+    ],
+    "notes": [
+      "the Tarkir showcase's legendary crown (TODO 4.11): the pack's 'Legend Crown' (tarkir/crowns/<k>.png, 1145x65 at crownBounds 180/51 px) at 1:1 over a clear card, rows 0–119 kept — the row of dragon-wing spikes along the title bar's top that every printing of the run carries (MUL #1, #60 and their twins are all legendary); drawn over the master's own bar",
+      "keys = w u b r g, m (gold), c (the artifact crown, tarkir/crowns/a.png — the master c is the artifact frame) and the ten pairs: the first colour's crown left, the second's right, lerped across procedural:ramp(41.7→61.3 %W) — the pack's own 'Right Half' mask (tarkir/maskFrame.png) — as MUL #60 Taigam (white-blue) prints it, its centre bulb the two blended",
+      "the w and u crowns toned with the masters (TARKIR_SOURCE_TONES)"
+    ]
+  },
+  "tarkirdragonholostamp": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packTarkir.js 'Tarkir' (\"Tarkir Sketch (MOM)\" — the Multiverse Legends Tarkir dragon-wing showcase; groupShowcase-5.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "227x110 notch piece (1:1 at 1500x2100, at 637,1887), the oval region cut to transparent, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/tarkir/stamp.png at 638,1888 225×101 px of a clear 1500×2100 card, 1:1 (no resample), cut to 227×110 at 637,1887",
+        "the oval 45.6667/91.6429/8.6667×3.0000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "u": [
+        "img/frames/tarkir/stamp.png at 638,1888 225×101 px of a clear 1500×2100 card, 1:1 (no resample), cut to 227×110 at 637,1887",
+        "the oval 45.6667/91.6429/8.6667×3.0000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "b": [
+        "img/frames/tarkir/stamp.png at 638,1888 225×101 px of a clear 1500×2100 card, 1:1 (no resample), cut to 227×110 at 637,1887",
+        "the oval 45.6667/91.6429/8.6667×3.0000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "r": [
+        "img/frames/tarkir/stamp.png at 638,1888 225×101 px of a clear 1500×2100 card, 1:1 (no resample), cut to 227×110 at 637,1887",
+        "the oval 45.6667/91.6429/8.6667×3.0000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "g": [
+        "img/frames/tarkir/stamp.png at 638,1888 225×101 px of a clear 1500×2100 card, 1:1 (no resample), cut to 227×110 at 637,1887",
+        "the oval 45.6667/91.6429/8.6667×3.0000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "m": [
+        "img/frames/tarkir/stamp.png at 638,1888 225×101 px of a clear 1500×2100 card, 1:1 (no resample), cut to 227×110 at 637,1887",
+        "the oval 45.6667/91.6429/8.6667×3.0000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "c": [
+        "img/frames/tarkir/stamp.png at 638,1888 225×101 px of a clear 1500×2100 card, 1:1 (no resample), cut to 227×110 at 637,1887",
+        "the oval 45.6667/91.6429/8.6667×3.0000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ]
+    },
+    "cut": {
+      "oval": {
+        "leftPct": 45.666666666666664,
+        "topPct": 91.64285714285715,
+        "widthPct": 8.666666666666668,
+        "heightPct": 3
+      },
+      "marginPx": 2,
+      "blackoutPx": 2,
+      "what": "the hologram capture inside the pack's oval — never published; the ring round the cut painted black"
+    },
+    "sourceFiles": [
+      "img/frames/tarkir/stamp.png"
+    ],
+    "notes": [
+      "the Tarkir showcase's oval stamp notch (TODO 4.11): the pack's one 'Holo Stamp' (tarkir/stamp.png, 225x101) — the text box's bottom rim arched over a black well round the hologram oval — at its stampBounds (638/1888 px), 1:1 (the pack is 1500 px native), cut to its box 227x110 at 637,1887 px — 1 px round the piece and 8 px past its foot, so the cut's black ring fits; below the piece the box is clear but for that ring, over the master's black border",
+      "keys = the masters' w u b r g m c, every one the same piece: the pack draws one stamp for every colour, and the masters' rim under it is the same pixels on every key (they differ only on the wings)",
+      "the hologram: the pack paints a capture of WotC's oval in the well (685–815 × 1924.5–1987.5 px, measured on the piece); that oval plus 2 px is cut to transparent and the 2 px round it painted opaque black, and the importer holds every lit pixel of the well inside the cut and its ring: no pixel of the capture is published; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut"
+    ]
   }
 }
