@@ -5140,12 +5140,75 @@ const EXPEDITIONLANDBFZ: FrameProfile = {
 // box (a third of the art shows through; the prints 0.28–0.39) and α 150 on
 // the type bar (0.41; the prints 0.36–0.46), where MSE painted both at α ≈
 // 128 (scripts/lib/nyx-tone.mjs).
+//
+// GEOMETRY ON PRINT (TODO 4.11, layout v66 — NYX_GEOMETRY_LAYOUT_VERSION).
+// Measured 2026-10-22 on THB #258–268 (Scryfall's 745 × 1040 PNGs at
+// 1500 × 2100) against our bakes of the same names, costs, type lines and
+// texts, EACH TEXT REGISTERED ON ITS OWN BAR (the outlines' darkness
+// centroid, median over the text-free columns): a scan's crop wanders, and
+// these scans sit ~6 px high against the cards' frame — the same cards'
+// regular printings (THB #9 … #220) sit 5.6 px above the print-verified
+// M15 master's bar too, so the "8 px" the 4.11 read saw at the title bar
+// is the scans'; registered on the regular printings the masters' bar is
+// within 1.3 px of print (Round 59: −0.9), and no master is re-cut.
+//   • cost row (NYX_COST): 70 px discs at the 78 px pitch (the prints:
+//     69.9 / 78.0, the CC-framed M15 family's — the MSE row was 72.75 /
+//     82), the centres 8.8 px above the bar's middle (median of 10 cards,
+//     −7.0 … −10.1; ours sat 2.8 BELOW it, 164.1 px) → 152.5 on our bar
+//     (161.3), and the last disc's right edge 22.6 px inside the bar's right
+//     outline (median of 10; ours 28.2) → 1388 — set on whole px at 750
+//     AND HD (NYX_COST): 152.0 / 1388.5;
+//   • the name (NYX_TITLE_DY): baseline 26.1 px below the bar's middle on
+//     print (median of 11, 23.7 … 26.7), ours 28.1 → 2 px up; same size
+//     (x-height 40 px on both);
+//   • the type line and the set symbol (NYX_TYPE_DOWN_PX): print sets the
+//     constellation's type row LOW in its bar — the baseline 31.6 px above
+//     the bar's bottom outline (median of 11; the regular printings ~37) and
+//     the symbol's centre 6 px below the bar's middle (the regular ones on
+//     it) — where ours sat 10.7 / 10 px higher: the band moves 10 px down,
+//     and ends 6 px further left (the symbol's right end 33 px inside the
+//     bar's right outline on print, ours 26);
+//   • unchanged, within the scans' wander: the rules (size, breaks, pitch
+//     62/86 px against our 63/87, first baseline 0–6 px), the P/T plate
+//     and digits (≤ 3 px), and every text's left edge (2–3 px). The type
+//     bar itself sits LOW on print — TODO 4.17f's 5.2 / 3.7 px (top /
+//     bottom; the independent check read 3.0 / 3.3 / 7.4) — so this line is
+//     on print against its own bar, and 4.17f's re-source moves it again
+//     with the bar. The plate's printed colour (white digits on the card's
+//     colour) is 4.17g's look, not geometry.
+/** The cost row on the constellation prints (see above): the CC-framed M15
+ *  family's disc and pitch, lifted 12 px and moved 6 px right on M15's
+ *  title band — both WHOLE px at 750 and at HD (6 / 3 at 750), so neither
+ *  bake rounds a half px away from the preview. On the HD bake the band
+ *  lays the disc out from 128.8 → 129 px: centre 152.0 (print 152.5;
+ *  preview 151.8), the last disc ending 1388.5 (print 1388). */
+const NYX_COST = {
+  costSizePct: CC_M15_COST_DISC_PCT,
+  costDy: -12 / 1500,
+  costDx: 6 / 1500,
+} as const satisfies Pick<FrameProfile, "costSizePct" | "costDy" | "costDx">;
+/** The name 2 px up onto the prints' baseline (see above). */
+const NYX_TITLE_DY = M15_TITLE_DY - 2 / 1500;
+/** The type band 10 px down — its text and the inline set symbol with it —
+ *  and 6 px shorter on the right, where the prints end the symbol. */
+const NYX_TYPE_DOWN_PX = 10;
+const NYX_TYPE_SHORTER_PX = 6;
 const NYX: FrameProfile = {
   ...M15,
   label: "Nyx Constellation",
+  ...NYX_COST,
   artSlot: { topPct: 11.2, leftPct: 6, widthPct: 88, heightPct: 81.8 },
-  title: { ...M15.title, colorHex: INK_LIGHT, shadowCss: SHOWCASE_SHADOW },
-  type: { ...M15.type, colorHex: INK_LIGHT, shadowCss: SHOWCASE_SHADOW },
+  title: { ...M15.title, dy: NYX_TITLE_DY, colorHex: INK_LIGHT, shadowCss: SHOWCASE_SHADOW },
+  type: {
+    ...M15.type,
+    rect: {
+      ...M15.type.rect,
+      topPct: M15.type.rect.topPct + (NYX_TYPE_DOWN_PX / 2100) * 100,
+      widthPct: M15.type.rect.widthPct - (NYX_TYPE_SHORTER_PX / 1500) * 100,
+    },
+    colorHex: INK_LIGHT,
+    shadowCss: SHOWCASE_SHADOW,
+  },
   rules: { ...M15.rules, colorHex: INK_LIGHT },
   footer: { ...M15.footer!, colorHex: INK_LIGHT },
 };
