@@ -133,6 +133,9 @@ export const M15_FAMILY_TEMPLATES: readonly FrameTemplate[] = [
   // …and the ring (TODO 4.11, CC's 'Ring' pack, the M15 pack's text layout
   // under a lower title bar; layout v65): it joined WITH its bump.
   "lotr",
+  // …and the MUL Tarkir dragon wings (TODO 4.11, CC's 'Tarkir' pack, the M15
+  // pack's text layout on its own bars; layout v67): it joined WITH its bump.
+  "tarkirdragon",
   // M15-era frames on MSE masters.
   "saga",
   "adventure",

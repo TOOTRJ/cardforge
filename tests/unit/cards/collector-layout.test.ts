@@ -91,7 +91,8 @@ describe("when the line is drawn", () => {
     const reference = collectorLayout(m15, dmu(), display)!;
     // The Expeditions (TODO 4.11 wave 1): M15's slot on each look's printed
     // rows — the same layout as M15's with those two baselines.
-    const ROWS: Partial<Record<string, CollectorSlot>> = { expeditionland: EXPEDITION_ZNR_COLLECTOR, expeditionlandbfz: EXPEDITION_BFZ_COLLECTOR };
+    // (…and the MUL Tarkir dragon wings, TODO 4.11: the ZNE rows.)
+    const ROWS: Partial<Record<string, CollectorSlot>> = { expeditionland: EXPEDITION_ZNR_COLLECTOR, expeditionlandbfz: EXPEDITION_BFZ_COLLECTOR, tarkirdragon: EXPEDITION_ZNR_COLLECTOR };
     for (const template of FRAME_TEMPLATE_VALUES) {
       const profile = getFrameProfile(template);
       if (!profile.collector) continue;

@@ -1598,6 +1598,31 @@ export const WALKER_COST_ROW_TEMPLATES: readonly string[] = ["m15pw", "m15border
 //            lands take v64, #602, merged first). A CORRECTION ("sweep"), never a badge:
 //            no colour is ticked. The crown band, the triangle stamp's notch
 //            and the collector line are ADDITIONS a card switches on.
+//   v67    — the Multiverse Legends TARKIR "Dragon Wing" showcase re-sourced
+//            from Card Conjurer (TODO 4.11). `tarkirdragon`, every card on
+//            it: the masters (CC 'Tarkir', "Tarkir Sketch (MOM)", 1500 px
+//            native; the 646 px MSE drawing leaves git) with the printed
+//            black border all round (4.35's #101015 ring is gone), the
+//            colourless card on the pack's artifact frame, the w and u wings,
+//            the text box and the w plate's ends toned onto MUL #1 / #60 (the
+//            ring's rule: ≥ 9 levels off), the art slot on the pack's window, the
+//            pack's P/T plates; and the slots that ride them — the M15
+//            pack's text layout (the M15-era family's sizes, `fit:
+//            "measured"` names, the CC M15 cost row) laid on the pack's own
+//            bars as the prints lay it on theirs: the name and cost row 7 px
+//            up, the name 2 px and the type band 5 px left, the type band
+//            (its line and set symbol) 4.5 px up, white rules on a box that
+//            ends at 1911 px, the P/T where print sets it on the plate (1.2
+//            px above M15's box); M15's footer, which the MSE profile lacked. The
+//            two-colour split wings stay. TARKIR_DRAGON_LAYOUT_VERSION below
+//            — the ONE constant (taken as v67 at PR time: v65 is the Lord of
+//            the Rings ring's, #607, and v66 the Theros constellation's
+//            text, #609 — whichever merges later renumbers its constant, its
+//            test's `V` and its docs together; a number skipped would leave a
+//            version with no scope, which re-bakes every card). A CORRECTION
+//            ("sweep"), never a badge: no colour is ticked. The crown band,
+//            the oval stamp's notch and the collector line are ADDITIONS a
+//            card switches on.
 // ---------------------------------------------------------------------------
 
 /** The Lord of the Rings scroll showcase re-sourced from Card Conjurer
@@ -1618,6 +1643,15 @@ export const LOTR_SCROLL_TEMPLATES: readonly string[] = ["lotrscroll"];
  *  Frozen once it ships. */
 export const LOTR_RING_LAYOUT_VERSION = 65;
 export const LOTR_RING_TEMPLATES: readonly string[] = ["lotr"];
+
+/** The Multiverse Legends Tarkir "Dragon Wing" showcase re-sourced from Card
+ *  Conjurer (TODO 4.11): every card on `tarkirdragon`. ITS version lives
+ *  here alone — CARD_LAYOUT_VERSION, the scoped table and the rollout below
+ *  read this constant — so a bump that merges first moves it in one place.
+ *  v67: v66 is the Theros constellation's text (#609, merged before this).
+ *  Frozen once it ships. */
+export const TARKIR_DRAGON_LAYOUT_VERSION = 67;
+export const TARKIR_DRAGON_TEMPLATES: readonly string[] = ["tarkirdragon"];
 
 /** The cost row as current print draws it (the 2023 pip move + TODO 3.34):
  *  the CC-framed M15 family's disc, centre and right end. ITS version lives
@@ -1825,7 +1859,7 @@ export const LARGE_PIPS_LAYOUT_VERSION = 53;
  *  latest). */
 export const V53_LARGER_COST_TEMPLATES: readonly string[] = ["modern", "modernland"];
 
-export const CARD_LAYOUT_VERSION = NYX_GEOMETRY_LAYOUT_VERSION;
+export const CARD_LAYOUT_VERSION = TARKIR_DRAGON_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -2038,6 +2072,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // masters, plates and the slots that ride them; every card on it. No
   // narrower verification scope: no colour has a tick.
   [LOTR_RING_LAYOUT_VERSION]: LOTR_RING_TEMPLATES,
+  // The MUL Tarkir dragon-wing showcase re-sourced from Card Conjurer (4.11):
+  // the masters, plates and the slots that ride them; every card on
+  // `tarkirdragon`. No narrower verification scope: no colour has a tick.
+  [TARKIR_DRAGON_LAYOUT_VERSION]: TARKIR_DRAGON_TEMPLATES,
   // The Zendikar Rising hedron showcase re-sourced from Card Conjurer
   // (4.11, wave 1): the masters and the slots that ride them; every card on
   // `fullart`. No narrower verification scope: no colour has a tick.
@@ -3135,6 +3173,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [UB_SEE_THROUGH_C_LAYOUT_VERSION]: "sweep", // the see-through colourless Universes Beyond spell frame (4.25 follow-up): an addition the visual gate records as a bump on a combo no card can be on (never ticked, offered nowhere) — never a badge
   [TOKEN_ARCH_PRINT_LAYOUT_VERSION]: "sweep", // the 2014–19 arch token on its prints (4.53): the gold small-caps name and the art slot on the window — a correction of the four arch frames against their own prints, never a badge
   [WALKER_COST_ROW_LAYOUT_VERSION]: "sweep", // the planeswalker's cost row and name on its prints (pips 132 → 128 px, the name 4 px up) — a correction of the three walker frames against their own prints, never a badge
+  [TARKIR_DRAGON_LAYOUT_VERSION]: "sweep", // the MUL Tarkir dragon-wing showcase re-sourced from Card Conjurer (4.11): its masters with the printed black border, the pack's plates and the M15 pack's text layout on the pack's own bars — a correction of the look against its own prints on a frame never ticked, never a badge
   [LOTR_RING_LAYOUT_VERSION]: "sweep", // the Lord of the Rings ring re-sourced from Card Conjurer (4.11): its masters with the frame field to the top and side edges and the black border's shoulders, the ring plates and the M15 pack's text layout under the lower title bar — a correction of the look against its own prints on a frame never ticked, never a badge
   [LOTR_SCROLL_LAYOUT_VERSION]: "sweep", // the Lord of the Rings scroll re-sourced from Card Conjurer (4.11): its masters with the printed black border, the scroll plates and the M15 pack's text layout — a correction of the look against its own prints on a frame never ticked, never a badge
   [COST_ROW_PRINT_LAYOUT_VERSION]: "sweep", // the cost row as current print draws it (the 2023 pip move + 3.34): 70 px discs, 78 pitch, 5 px lower and 2 px right on the 36 CC-framed M15 templates; the walkers' 70 px discs, 4 px right — a correction against the frames' own current print after the owner's before / after sheet, never a badge

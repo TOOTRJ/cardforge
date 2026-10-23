@@ -509,9 +509,9 @@ describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
   // credit turned down their left border, layout v43 / TODO 4.21b): v29's
   // frozen list never held them, so its word-spacing track judges them as
   // "other" templates. (The Lord of the Rings scroll took M15's footer with
-  // its Card Conjurer re-source, layout v62 / TODO 4.11, and the ring with
-  // its own, layout v65.)
-  const FOOTER_SINCE_V29 = ["flip", "aftermath", "battle", "split", "lotrscroll", "lotr"];
+  // its Card Conjurer re-source, layout v62 / TODO 4.11, the ring with
+  // its own, layout v65, and the MUL Tarkir dragon wings with theirs, v67.)
+  const FOOTER_SINCE_V29 = ["flip", "aftermath", "battle", "split", "lotrscroll", "lotr", "tarkirdragon"];
   // The 1997 pair's footer was a display-face "ART: …" line at v29 and is in
   // v29's frozen list; since TODO 4.10a (layout v46) it is the prints'
   // `Illus.` line in MPlantin.
@@ -851,13 +851,14 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
     // …and the Lord of the Rings scroll (TODO 4.11), with layout v62 — its
     // Card Conjurer masters and the family's sizes.
     // …and the ring (TODO 4.11), with layout v65, the same way.
-    const joinedWithBump: Record<string, number> = { battle: 43, lotrscroll: 62, lotr: 65 };
+    // …and the MUL Tarkir dragon wings (TODO 4.11), with layout v67.
+    const joinedWithBump: Record<string, number> = { battle: 43, lotrscroll: 62, lotr: 65, tarkirdragon: 67 };
     expect([...V32_M15_FAMILY_TEMPLATES, ...joinedLater, ...Object.keys(joinedWithBump)].sort()).toEqual(
       [...M15_FAMILY_TEMPLATES].sort(),
     );
     for (const t of [...joinedLater, ...Object.keys(joinedWithBump)]) expect(V32_M15_FAMILY_TEMPLATES, t).not.toContain(t);
     const { V43_LANDSCAPE_LAYOUT_TEMPLATES } = await import("@/lib/cards/layout-version");
-    const { LOTR_SCROLL_LAYOUT_VERSION, LOTR_SCROLL_TEMPLATES, LOTR_RING_LAYOUT_VERSION, LOTR_RING_TEMPLATES } = await import("@/lib/cards/layout-version");
+    const { LOTR_SCROLL_LAYOUT_VERSION, LOTR_SCROLL_TEMPLATES, LOTR_RING_LAYOUT_VERSION, LOTR_RING_TEMPLATES, TARKIR_DRAGON_LAYOUT_VERSION, TARKIR_DRAGON_TEMPLATES } = await import("@/lib/cards/layout-version");
     for (const [t, version] of Object.entries(joinedWithBump)) {
       if (t === "lotrscroll") {
         expect(version).toBe(LOTR_SCROLL_LAYOUT_VERSION);
@@ -867,6 +868,11 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       if (t === "lotr") {
         expect(version).toBe(LOTR_RING_LAYOUT_VERSION);
         expect(LOTR_RING_TEMPLATES, t).toContain(t);
+        continue;
+      }
+      if (t === "tarkirdragon") {
+        expect(version).toBe(TARKIR_DRAGON_LAYOUT_VERSION);
+        expect(TARKIR_DRAGON_TEMPLATES, t).toContain(t);
         continue;
       }
       expect(version).toBe(43);
@@ -1380,8 +1386,9 @@ describe("v36 — the second correction round: inline pips, printed set symbols,
     // frozen list never names it.
     // (…and the Lord of the Rings scroll with its Card Conjurer re-source,
     // layout v62 / TODO 4.11.)
-    // (…and the ring with its own, layout v65.)
-    const INK_FIT_SINCE_V36 = ["battle", "lotrscroll", "lotr"];
+    // (…and the ring with its own, layout v65, and the MUL Tarkir dragon
+    // wings with theirs, v67.)
+    const INK_FIT_SINCE_V36 = ["battle", "lotrscroll", "lotr", "tarkirdragon"];
     expect(getFrameProfile("battle").setSymbolFit).toBe("ink");
     expect(lv.V36_PRINTED_SYMBOL_TEMPLATES).not.toContain("battle");
     expect([...lv.V36_PRINTED_SYMBOL_TEMPLATES].sort()).toEqual(
@@ -3165,8 +3172,9 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
     // (TODO 4.11, v63): 3 px higher, 2 px further right.
     // …and the LOTR ring with its own (v65), centred on its pack's bar.
     // The Theros constellation took one on its prints' row with its text
-    // correction (TODO 4.11, v66): 12 px up, 6 px right.
-    const later = ["lotrscroll", "fullart", "lotr", "nyx"];
+    // correction (TODO 4.11, v66): 12 px up, 6 px right. The MUL Tarkir
+    // dragon wings took the CC M15 row with theirs (v67), on their pack's bar.
+    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon"];
     const ownRow = ["fullart", "nyx"];
     const drawn = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).costSizePct === 70 / 1500);
     expect([...drawn].filter((t) => !later.includes(t)).sort()).toEqual([...lv.COST_ROW_PRINT_TEMPLATES].sort());
@@ -3175,6 +3183,10 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
       const p = getFrameProfile(t);
       if (t === "lotr") {
         expect([p.costSizePct, p.costDy, p.costDx], t).toEqual([70 / 1500, -2 / 1500, 2 / 1500]);
+        continue;
+      }
+      if (t === "tarkirdragon") {
+        expect([p.costSizePct, p.costDy, p.costDx], t).toEqual([70 / 1500, -1.7 / 1500, 2 / 1500]);
         continue;
       }
       // The family: 5 px down and 2 px right; the walkers: #597's place, 4 px right.
@@ -3346,5 +3358,38 @@ describe("v66 — the Theros constellation showcase's text on its prints (TODO 4
     const lv = await import("@/lib/cards/layout-version");
     expect(lv.VERSION_ROLLOUT[V - 1], "v65 (#607) has no rollout yet: merge #607 first, or renumber this bump").toBeDefined();
     expect(isRenderStale(V - 2, "m15", undefined, V - 1), "v65 reads as a sweep of every card").toBe(false);
+  });
+});
+
+describe("v67 — the MUL Tarkir dragon-wing showcase re-sourced from Card Conjurer (TODO 4.11)", () => {
+  // Renumbered with TARKIR_DRAGON_LAYOUT_VERSION if another bump merges
+  // first (taken as v67 at PR time: v65 is the Lord of the Rings ring's,
+  // #607, and v66 the Theros constellation's text, #609).
+  const V = 67;
+  const SCOPE = ["tarkirdragon"];
+  it("is a sweep, never a badge, scoped to tarkirdragon, and not verification-neutral", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.TARKIR_DRAGON_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect([...lv.TARKIR_DRAGON_TEMPLATES]).toEqual(SCOPE);
+    // The masters a tick would judge change: a tick (none yet) re-opens.
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).not.toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual(SCOPE);
+    // A bake one version older owes it on the dragon wings alone.
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(SCOPE.includes(t));
+  });
+
+  // v66 is #609's (the Theros constellation's text). A version with no
+  // rollout and no scope reads as a SWEEP OF EVERY CARD (rolloutPolicy's
+  // default, an unscoped version), so v67 never ships over a gap: merge #609
+  // first, or renumber this bump v66 if #609 does not land.
+  it("ships only after v66 (#609): no gap below it", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.VERSION_ROLLOUT[V - 1], "v66 (#609) has no rollout yet: merge #609 first, or renumber this bump").toBeDefined();
+    expect(isRenderStale(V - 2, "m15", undefined, V - 1), "v66 reads as a sweep of every card").toBe(false);
   });
 });

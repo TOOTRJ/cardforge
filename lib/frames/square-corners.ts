@@ -13,8 +13,8 @@ import type { CardCornerFills, CornerFill } from "@/lib/cards/card-corner";
 //   "root"   — the card root's #101015: a master whose EDGE BAND is
 //              transparent at that corner, so the card's border there IS the
 //              root's backdrop — the rings (avatar, bloomanime,
-//              tarkirdragon, tarkirghostfire; lotrscroll left with TODO
-//              4.11, its Card Conjurer border black), the bottom
+//              tarkirghostfire; lotrscroll and tarkirdragon left with TODO
+//              4.11, their Card Conjurer border black), the bottom
 //              corners of bloomburrow and tarkirdraconic (lotr's left with
 //              TODO 4.11: its Card Conjurer bottom is border black), and
 //              expeditionland b/g. A #000 cap in a #101015 band was a seam
@@ -57,7 +57,6 @@ const DESIGN_TOP_ROOT_BOTTOM = { tl: "frame", tr: "frame", bl: "root", br: "root
 export const SQUARE_CORNERS: Readonly<Record<string, { kinds: Kinds; keys?: readonly string[] }>> = {
   avatar: { kinds: "root" },
   bloomanime: { kinds: "root" },
-  tarkirdragon: { kinds: "root" },
   tarkirghostfire: { kinds: "root" },
   bloomburrow: { kinds: DESIGN_TOP_ROOT_BOTTOM },
   // Card Conjurer's 'Ring' pack since TODO 4.11: the frame field runs into

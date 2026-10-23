@@ -38,10 +38,10 @@ describe("card-frames — frame assets resolve from disk or the deployment CDN",
     vi.stubGlobal("fetch", fetchSpy);
     // (The M15 family left git for the frames bucket in v24 — these are
     // masters that are still committed.)
-    await preloadFrame("tarkirdragon", "w");
-    await preloadFrameAssets(["/frames/tarkirdragon/pt/w.png"]);
-    expect(getFrameDataUrl("tarkirdragon", "w").startsWith("data:image/png;base64,")).toBe(true);
-    expect(getPlateDataUrlForPath("/frames/tarkirdragon/pt/{color}.png", "w")).toMatch(/^data:image\/png;base64,/);
+    await preloadFrame("tarkirdraconic", "w"); // a git master (tarkirdragon left git with TODO 4.11)
+    await preloadFrameAssets(["/frames/tarkirdraconic/pt/w.png"]);
+    expect(getFrameDataUrl("tarkirdraconic", "w").startsWith("data:image/png;base64,")).toBe(true);
+    expect(getPlateDataUrlForPath("/frames/tarkirdraconic/pt/{color}.png", "w")).toMatch(/^data:image\/png;base64,/);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 

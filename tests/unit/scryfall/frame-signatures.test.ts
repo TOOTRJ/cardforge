@@ -686,8 +686,11 @@ describe("the general signatures (TODO 1.4)", () => {
     ["tdm-401", "nearest", "tarkirghostfire", "m15pw"],
     ["tdm-409", "nearest", "tarkirghostfire", "m15pw"],
     ["tdm-411", "nearest", "tarkirghostfire", "m15pw"],
-    ["mul-1", "nearest", "tarkirdragon", undefined],
-    ["mul-60", "nearest", "tarkirdragon", undefined],
+    // The MUL Tarkir dragon wings left the border cap with their Card
+    // Conjurer re-source (TODO 4.11): exact once verified — #60 Taigam (W/U)
+    // too, the frame's own split wings.
+    ["mul-1", "exact", "tarkirdragon", undefined],
+    ["mul-60", "exact", "tarkirdragon", undefined],
     ["mul-5", "nearest", "m15", undefined],
     // A snow ARTIFACT prints the snow frame, which the Artifact kind can't
     // take yet: it lands on the artifact frame.
@@ -1081,6 +1084,9 @@ describe("the rule table", () => {
     // The LOTR ring left the list with TODO 4.11 (Card Conjurer's masters,
     // opaque to every edge).
     expect(isBorderPending("lotr", "w")).toBe(false);
+    // …and the MUL Tarkir dragon wings with TODO 4.11 (Card Conjurer's
+    // masters, the printed black border).
+    expect(isBorderPending("tarkirdragon", "u")).toBe(false);
     expect(isBorderPending("m15", "w")).toBe(false);
     // The battle left the list with TODO 4.21b: its Card Conjurer master
     // has the printed black border on every colour (the MSE one was a
