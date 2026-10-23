@@ -6,7 +6,7 @@ import opentype from "opentype.js";
 import { describe, expect, it } from "vitest";
 import manifest from "@/lib/frames/frame-manifest.json";
 import { M15_FAMILY_TEMPLATES } from "@/lib/cards/m15-family";
-import { COST_ROW_PRINT_TEMPLATES, ZNR_HEDRON_TEMPLATES } from "@/lib/cards/layout-version";
+import { COST_ROW_PRINT_TEMPLATES, NYX_GEOMETRY_TEMPLATES, ZNR_HEDRON_TEMPLATES } from "@/lib/cards/layout-version";
 import { DISPLAY_BASELINE_BELOW_CENTRE_EM, getFrameProfile, type FrameProfile, type TextSlot } from "@/lib/cards/template-layout";
 import {
   CC_M15_COST_DISC_PCT,
@@ -171,8 +171,12 @@ describe("one M15-era display size (layout v32)", () => {
       // (The Lord of the Rings scroll took the CC M15 row with its own bump,
       // v63 / TODO 4.11; the Zendikar Rising hedron its prints' 70 px disc
       // with its Card Conjurer rebuild, v63; the LOTR ring the CC M15 row
-      // with its own, v65.)
-      const disc = COST_ROW_PRINT_TEMPLATES.includes(t) || t === "lotrscroll" || t === "lotr" || ZNR_HEDRON_TEMPLATES.includes(t) ? CC_M15_COST_DISC_PCT : COST_DISC_PCT;
+      // with its own, v65; the Theros constellation its prints' 70 px disc
+      // with its text correction, v66.)
+      const disc =
+        COST_ROW_PRINT_TEMPLATES.includes(t) || t === "lotrscroll" || t === "lotr" || ZNR_HEDRON_TEMPLATES.includes(t) || NYX_GEOMETRY_TEMPLATES.includes(t)
+          ? CC_M15_COST_DISC_PCT
+          : COST_DISC_PCT;
       expect(p.costSizePct ?? p.title.sizePct, t).toBe(sized(t, disc));
       if (p.secondFace?.costSizePct) expect(p.secondFace.costSizePct, t).toBe(sized(t, COST_DISC_PCT));
     }
@@ -386,8 +390,10 @@ describe("baselines (TextSlot.dy)", () => {
     // lower bar — the name moves with its RECT (10.4 px), its dy is M15's;
     // the type line on the CC baseline + 2 px (the prints' 1261).
     ["lotr", base.title, cc + 2 / 1500],
-    // MSE-framed: baselines kept (their print offsets are TODO 4.21's).
-    ["nyx", base.title, base.type],
+    // The Theros constellation (TODO 4.11, layout v66): MSE-framed, its name
+    // 2 px up onto THB #258–268's baseline; its type line rides the band,
+    // whose RECT moves 10 px down (the text's dy is M15's).
+    ["nyx", base.title - 2 / 1500, base.type],
     // Aftermath (v38): a CC master; its text slots stay as print-matched in
     // 0.22 / v32 (baselines kept).
     ["aftermath", base.title, base.type],

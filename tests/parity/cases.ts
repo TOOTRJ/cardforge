@@ -98,6 +98,10 @@ const PICKS: readonly Pick[] = [
     why: "Nyx Constellation: the crown band over the MSE starfield master, its arms faded into the master's rim, light ink on the translucent bars",
     row: () => ({ cost: "{2}{G}" }),
   },
+  // The constellation's text on its prints (TODO 4.11, layout v66): the
+  // five-pip row at the CC-framed family's 70 px disc and 78 px pitch, the
+  // name 2 px up, the type band (line + inline set symbol) 10 px down.
+  { from: "nyx/u/creature-long", why: "v66 Nyx Constellation: the 70 px cost row on print's, the name on its baseline, the type line and set symbol low in their bar" },
   // --- Beleren's ligatures: ffi and ffl, all its GSUB 'liga' holds ----------
   // A browser sets them by default on a line with no letter-spacing (M15's
   // type line; its name is tracked 0.01 em, which switches them off by

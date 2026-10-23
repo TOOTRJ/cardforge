@@ -3164,11 +3164,14 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
     // hedron took a 70 px disc on its own prints' row with its rebuild
     // (TODO 4.11, v63): 3 px higher, 2 px further right.
     // …and the LOTR ring with its own (v65), centred on its pack's bar.
-    const later = ["lotrscroll", "fullart", "lotr"];
+    // The Theros constellation took one on its prints' row with its text
+    // correction (TODO 4.11, v66): 12 px up, 6 px right.
+    const later = ["lotrscroll", "fullart", "lotr", "nyx"];
+    const ownRow = ["fullart", "nyx"];
     const drawn = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).costSizePct === 70 / 1500);
     expect([...drawn].filter((t) => !later.includes(t)).sort()).toEqual([...lv.COST_ROW_PRINT_TEMPLATES].sort());
     for (const t of later) expect(drawn, t).toContain(t);
-    for (const t of drawn.filter((d) => d !== "fullart")) {
+    for (const t of drawn.filter((d) => !ownRow.includes(d))) {
       const p = getFrameProfile(t);
       if (t === "lotr") {
         expect([p.costSizePct, p.costDy, p.costDx], t).toEqual([70 / 1500, -2 / 1500, 2 / 1500]);
@@ -3181,7 +3184,7 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
     }
     // The portrait layouts and the MSE-framed showcases keep their rows
     // (their own items; the showcases wait for TODO 4.11).
-    for (const t of ["flip", "aftermath", "nyx", "expeditionland", "tarkirdraconic"]) {
+    for (const t of ["flip", "aftermath", "expeditionland", "tarkirdraconic"]) {
       expect(lv.COST_ROW_PRINT_TEMPLATES, t).not.toContain(t);
       expect(getFrameProfile(t).costDx, t).toBeUndefined();
     }
@@ -3310,5 +3313,38 @@ describe("v65 — the Lord of the Rings ring re-sourced from Card Conjurer (TODO
     // and the scroll's bake (v62) and the hedron's (v63) owe it nothing.
     for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(SCOPE.includes(t));
     expect(lv.VERSION_ROLLOUT[lv.ZNR_HEDRON_LAYOUT_VERSION]).toBe("sweep");
+  });
+});
+
+describe("v66 — the Theros constellation showcase's text on its prints (TODO 4.11)", () => {
+  // Renumbered with NYX_GEOMETRY_LAYOUT_VERSION if another bump merges
+  // first (taken as v66 at PR time: v65 is the Lord of the Rings ring's,
+  // #607).
+  const V = 66;
+  const SCOPE = ["nyx"];
+  it("is a sweep, never a badge, scoped to `nyx`, and not verification-neutral", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.NYX_GEOMETRY_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect([...lv.NYX_GEOMETRY_TEMPLATES]).toEqual(SCOPE);
+    // The type slot a tick would judge moves (no colour is ticked yet).
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).not.toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual(SCOPE);
+    // A bake one version older owes it on `nyx` alone, whatever the card.
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(SCOPE.includes(t));
+  });
+
+  // v65 is #607's (the Lord of the Rings ring). A version with no rollout
+  // and no scope reads as a SWEEP OF EVERY CARD (rolloutPolicy's default, an
+  // unscoped version), so v66 never ships over a gap: merge #607 first, or
+  // renumber this bump v65 if #607 does not land.
+  it("ships only after v65 (#607): no gap below it", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.VERSION_ROLLOUT[V - 1], "v65 (#607) has no rollout yet: merge #607 first, or renumber this bump").toBeDefined();
+    expect(isRenderStale(V - 2, "m15", undefined, V - 1), "v65 reads as a sweep of every card").toBe(false);
   });
 });
