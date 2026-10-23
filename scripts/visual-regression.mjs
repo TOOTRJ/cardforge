@@ -34,7 +34,11 @@
 // bucket — never committed (Card Conjurer-derived frames never enter git).
 // CI caches the folder by the manifest's hash, so production storage is read
 // only when the manifest changes; a frame not yet promoted to production
-// comes from the dev bucket (same bytes: the sha is checked).
+// comes from the dev bucket (same bytes: the sha is checked). A LOCAL run
+// fills tmp/visual/frames from the machine's shared frame store
+// (~/.cache/pipglyph/frames, PIPGLYPH_FRAMES_CACHE; scripts/lib/frame-cache.mjs)
+// and downloads only what the store lacks — tests/README.md "The shared
+// frame cache".
 //
 // Output: tmp/visual/report.md + report.json, tmp/visual/next/baseline.json
 // (what --update would write — CI uploads it as the `visual-baseline`
@@ -45,9 +49,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseFlags, publicBaseFor, readManifest } from "./lib/frame-objects.mjs";
+import { frameBucketOrigins, sharedFrameCacheDir } from "./lib/frame-cache.mjs";
+import { parseFlags, readManifest } from "./lib/frame-objects.mjs";
 import { syncFrameCache } from "./lib/visual-frames.mjs";
-import { PRODUCTION_SUPABASE_REF } from "./lib/prod-guard.mjs";
 import {
   BASELINE_PATH,
   LAYOUT_VERSION_PATH,
@@ -64,17 +68,14 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TMP = path.join(ROOT, "tmp", "visual");
 const FRAMES_DIR = path.join(TMP, "frames");
 const RESULTS_DIR = path.join(TMP, "results");
-// The shared dev branch's ref, from supabase/config.toml (as db-dev.mjs reads it).
-const DEV_SUPABASE_REF = /\[remotes\.dev\][^[]*?project_id\s*=\s*"([a-z]{16,24})"/s.exec(
-  fs.readFileSync(path.join(ROOT, "supabase/config.toml"), "utf8"),
-)?.[1];
-if (!DEV_SUPABASE_REF || DEV_SUPABASE_REF === PRODUCTION_SUPABASE_REF) throw new Error("supabase/config.toml has no usable [remotes.dev] project_id.");
-const PRODUCTION_FRAMES = publicBaseFor(`https://${PRODUCTION_SUPABASE_REF}.supabase.co`);
-const DEV_FRAMES = publicBaseFor(`https://${DEV_SUPABASE_REF}.supabase.co`);
-// CI reads production's bucket (what production bakes with; the dev bucket
-// covers a frame not promoted yet). A local run reads the dev bucket only —
-// the one every local tool uses; name production with --origin if needed.
-const DEFAULT_ORIGINS = process.env.CI ? [PRODUCTION_FRAMES, DEV_FRAMES] : [DEV_FRAMES];
+// CI reads production's public bucket (what production bakes with; the dev
+// bucket covers a frame not promoted yet). A local run reads the dev bucket
+// only — the one every local tool uses; name production with --origin if
+// needed. Locally the frames come through the machine's shared store
+// (scripts/lib/frame-cache.mjs: one download per machine, not per worktree;
+// tmp/visual/frames stays this checkout's, hard-linked from it); CI has none.
+const { defaults: DEFAULT_ORIGINS } = frameBucketOrigins({ root: ROOT });
+const FRAMES_STORE = sharedFrameCacheDir();
 
 const flags = parseFlags(process.argv.slice(2), ["--shards", "--group", "--base", "--origin", "--only"]);
 const UPDATE = flags.has("--update");
@@ -99,9 +100,9 @@ async function fetchFrames() {
   const t0 = Date.now();
   // A quick pass, then a confirm pass over its failures (transient storage
   // errors — scripts/lib/visual-frames.mjs).
-  const { cached, fetched, bytes, failed } = await syncFrameCache({ entries, origins: ORIGINS, dir: FRAMES_DIR });
+  const { cached, shared, fetched, bytes, failed } = await syncFrameCache({ entries, origins: ORIGINS, dir: FRAMES_DIR, store: FRAMES_STORE });
   console.log(
-    `frames: ${entries.length} manifest PNGs — ${cached} cached, ${fetched} fetched (${(bytes / 1e6).toFixed(1)} MB) in ${Math.round((Date.now() - t0) / 1000)} s`,
+    `frames: ${entries.length} manifest PNGs — ${cached} cached${FRAMES_STORE ? ` (${shared} from the shared store ${FRAMES_STORE})` : ""}, ${fetched} fetched (${(bytes / 1e6).toFixed(1)} MB) in ${Math.round((Date.now() - t0) / 1000)} s`,
   );
   if (failed.length) {
     for (const f of failed) console.error(`  ✗ ${f.key}: ${f.error}`);
