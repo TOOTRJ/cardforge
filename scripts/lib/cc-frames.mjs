@@ -598,7 +598,7 @@ export function describeFileTones(files) {
       if (c) return `on the pixels of chroma (max − min channel) ${c.none}–${c.full} (full from ${c.full})`;
       const b = tone.box?.[region];
       if (b)
-        return `inside ${b.rect.x},${b.rect.y} ${b.rect.width}×${b.rect.height} px on the dark ground (luma ≤ ${b.luma[0]}, none from ${b.luma[1]}) where the file is the same as ${b.file} (max channel ≤ ${b.same.full}, none from ${b.same.none})`;
+        return `inside ${b.rect.x},${b.rect.y} ${b.rect.width}×${b.rect.height} px${b.at ? ` (the piece drawn at ${b.at.x},${b.at.y})` : ""} on the dark ground (luma ≤ ${b.luma[0]}, none from ${b.luma[1]})${b.file ? ` where the file is the same as ${b.file} (max channel ≤ ${b.same.full}, none from ${b.same.none})` : ""}`;
       return `on the pixels within ${tone.near[region].full}–${tone.near[region].none} levels (max channel) of ${tone.tones[region].from.join(", ")}`;
     };
     out[file] = { table: tone.table, ...Object.fromEntries(Object.keys(tone.tones).map((region) => [region, `${where(region)}: ${gains[region]}`])) };
@@ -4352,20 +4352,23 @@ export function chromaRegionPlane(buf, width, height, { full, none }) {
 }
 /** The text box region of a whole-card master (TARKIR_BOX_REGION): the
  *  product of the box rect, the dark-ground ramp and the same-as-`ref`
- *  ramp. Pure; both images 8-bit RGBA at `width × height`. */
-export function boxRegionPlane(buf, ref, width, height, { rect, luma, same }) {
+ *  ramp. A PIECE drawn at `at` (card px — the stamp notch, whose arch
+ *  carries the box's ground round it) reads the rect at that place and has
+ *  no `ref` (null): no wing reaches it. Pure; the images 8-bit RGBA at
+ *  `width × height`. */
+export function boxRegionPlane(buf, ref, width, height, { rect, luma, same, at = { x: 0, y: 0 } }) {
   const n = width * height;
-  if (buf.length !== n * 4 || ref.length !== n * 4) throw new Error(`boxRegionPlane: the images are not ${width}x${height} RGBA`);
+  if (buf.length !== n * 4 || (ref && ref.length !== n * 4)) throw new Error(`boxRegionPlane: the images are not ${width}x${height} RGBA`);
   const ramp = (v, full, none) => (full < none ? (v <= full ? 1 : v >= none ? 0 : (none - v) / (none - full)) : 0);
   const plane = new Uint8Array(n);
-  for (let y = Math.max(0, rect.y); y < Math.min(height, rect.y + rect.height); y += 1) {
-    for (let x = Math.max(0, rect.x); x < Math.min(width, rect.x + rect.width); x += 1) {
+  for (let y = Math.max(0, rect.y - at.y); y < Math.min(height, rect.y + rect.height - at.y); y += 1) {
+    for (let x = Math.max(0, rect.x - at.x); x < Math.min(width, rect.x + rect.width - at.x); x += 1) {
       const p = y * width + x;
       const o = p * 4;
       if (buf[o + 3] === 0) continue;
       const l = 0.299 * buf[o] + 0.587 * buf[o + 1] + 0.114 * buf[o + 2];
-      const d = Math.max(Math.abs(buf[o] - ref[o]), Math.abs(buf[o + 1] - ref[o + 1]), Math.abs(buf[o + 2] - ref[o + 2]));
-      plane[p] = Math.round(255 * ramp(l, luma[0], luma[1]) * ramp(d, same.full, same.none));
+      const d = ref ? Math.max(Math.abs(buf[o] - ref[o]), Math.abs(buf[o + 1] - ref[o + 1]), Math.abs(buf[o + 2] - ref[o + 2])) : 0;
+      plane[p] = Math.round(255 * ramp(l, luma[0], luma[1]) * (ref ? ramp(d, same.full, same.none) : 1));
     }
   }
   return plane;
@@ -4388,7 +4391,10 @@ function tarkirMasterTone(key) {
   });
 }
 /** The Tarkir pack's toned files: every master (the box; w and u their
- *  wings too), the w and u crowns (their wings) and the w plate (its ends). */
+ *  wings too), the w and u crowns (their wings), the w plate (its ends) and
+ *  the stamp notch piece (the box's ground its arch carries round it, at its
+ *  place on the card — else it composites darker than the toned box, a
+ *  faint halo round the arch). */
 export const TARKIR_SOURCE_TONES = Object.freeze(
   Object.fromEntries([
     ...["w", "u", "b", "r", "g", "m", "a"].map((k) => [`${TARKIR}/${k}.png`, tarkirMasterTone(k)]),
@@ -4400,6 +4406,14 @@ export const TARKIR_SOURCE_TONES = Object.freeze(
         table: `TARKIR_PRINT_TONES (${k})`,
       }),
     ]),
+    [
+      `${TARKIR}/stamp.png`,
+      Object.freeze({
+        box: Object.freeze({ box: Object.freeze({ rect: TARKIR_BOX_REGION.rect, luma: TARKIR_BOX_REGION.luma, at: Object.freeze({ x: 638, y: 1888 }) }) }),
+        tones: Object.freeze({ box: TARKIR_PRINT_TONES.box }),
+        table: "TARKIR_PRINT_TONES (box: the stamp piece)",
+      }),
+    ],
     ...Object.keys(TARKIR_PRINT_TONES.plateEnds).map((k) => [
       `${TARKIR}/pt/${k}.png`,
       Object.freeze({
@@ -6621,7 +6635,7 @@ export function sourceFilesFor(def) {
   // 4.11): importer inputs too.
   for (const file of [...files]) for (const mask of Object.values(sourceTonesOf(file)?.masks ?? {})) files.add(mask);
   // …and a diff region's reference file (the MUL Tarkir wings, TODO 4.11).
-  for (const file of [...files]) for (const d of [...Object.values(sourceTonesOf(file)?.diff ?? {}), ...Object.values(sourceTonesOf(file)?.box ?? {})]) files.add(d.file);
+  for (const file of [...files]) for (const d of [...Object.values(sourceTonesOf(file)?.diff ?? {}), ...Object.values(sourceTonesOf(file)?.box ?? {})]) if (d.file) files.add(d.file);
   return [...files].sort();
 }
 
@@ -8111,7 +8125,7 @@ export function notchSourceFiles(def) {
   if (def.pieces) {
     const pieces = Object.values(def.pieces);
     // …and a toned piece's mask (the LOTR ring's Rules mask, TODO 4.11).
-    const masks = pieces.flatMap((src) => [...Object.values(sourceTonesOf(src)?.masks ?? {}), ...Object.values(sourceTonesOf(src)?.diff ?? {}).map((d) => d.file)]);
+    const masks = pieces.flatMap((src) => [...Object.values(sourceTonesOf(src)?.masks ?? {}), ...[...Object.values(sourceTonesOf(src)?.diff ?? {}), ...Object.values(sourceTonesOf(src)?.box ?? {})].map((d) => d.file).filter(Boolean)]);
     return [...new Set([...pieces, ...masks, ...(def.stampShape ? [def.stampShape] : [])])].sort();
   }
   return [def.shape.src];

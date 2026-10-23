@@ -17071,6 +17071,12 @@
       "blackoutPx": 2,
       "what": "the hologram capture inside the pack's oval — never published; the ring round the cut painted black"
     },
+    "sourceTones": {
+      "img/frames/tarkir/stamp.png": {
+        "table": "TARKIR_PRINT_TONES (box: the stamp piece)",
+        "box": "inside 110,1311 1280×614 px (the piece drawn at 638,1888) on the dark ground (luma ≤ 110, none from 150): × 1.208 / 1.189 / 1.231 (53, 53, 52 → 64, 63, 64), fading to × 1.196 on every channel at white"
+      }
+    },
     "sourceFiles": [
       "img/frames/tarkir/stamp.png"
     ],

@@ -4833,7 +4833,10 @@ ticked.
   the reading); the box its dark ground inside the box where the master is
   the same as another (`box`, `boxRegionPlane`: the dragon wings that run
   down its sides are not the box), on every master; the plate's ends its
-  coloured pixels (`chroma`, `chromaRegionPlane`). Toned as each FILE
+  coloured pixels (`chroma`, `chromaRegionPlane`); the stamp notch piece the
+  box's ground its arch carries round it, read at its place on the card
+  (else it composites ~8 levels darker than the toned box: a faint halo).
+  Toned as each FILE
   loads, so the masters, crowns and plates drawn from it agree. b r g, the
   gold wings and the artifact silver have no print: as drawn.
 - **Slots.** The pack's text layout is the accurate M15 pack's but for its
@@ -4864,8 +4867,10 @@ ticked.
     "2/2" and "3/4" at 1928.4 / 1928.0 px on the pack's plate (each print
     registered on the plate's ends and top rim, +5.8 px; a first 4.4 px
     lift left ours 2.5 px high) — the box 1.2 px above M15's, its top on a
-    whole px: the bake's centre 1928.5 / 1928.2, within 0.3 px; across
-    within 1 px.
+    whole px: the bake's centre 1928.5 / 1928.2, within 0.3 px. Across,
+    "2/2" sits within 1 px of print; "3/4"'s ink ~4 px left of print's,
+    most likely the digits' own ink asymmetry (the box is centred) — not
+    moved (TODO 4.11).
   Flagged, not changed: MUL is not in the per-set symbol table, so its
   glyph prints at the family's ink fit, ~0.73 of print's (a per-set row is
   its own bump, and every MUL card on any frame would move); print's P/T

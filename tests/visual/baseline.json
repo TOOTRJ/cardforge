@@ -20,7 +20,7 @@
       "public/fonts/mplantin-italic.ttf": "e81d83608cfa12d5",
       "public/fonts/Montserrat-Medium.ttf": "4a5a218d2b8efa4f"
     },
-    "manifest": "47bc347127d5cc6f"
+    "manifest": "990d4fccc6e5b2e2"
   },
   "cases": {
     "adventure/b/adventure-long": "33f0376c03fd9950:42614af9",
@@ -2397,7 +2397,7 @@
     "tarkirdragon/b/creature-edge": "c34cb7eb0fd2377b:88d05698",
     "tarkirdragon/b/creature-long": "0900e966cdd8635a:48efefd7",
     "tarkirdragon/b/creature-long@crown": "da7ebadf01d48b80:7fd610b1",
-    "tarkirdragon/b/creature-long@stamp-hd": "a09ad0bca62f19fa:59c7895a",
+    "tarkirdragon/b/creature-long@stamp-hd": "ce90aad5b2e58536:59c7895a",
     "tarkirdragon/b/creature-short": "b0c1a6198e68fd43:82fde0c0",
     "tarkirdragon/b/sorcery-short": "f3eb2b23e855d32f:b46711e4",
     "tarkirdragon/c/artifact-short": "8ee35913ea8b3818:21eb110d",
@@ -2420,17 +2420,17 @@
     "tarkirdragon/u/creature-short": "863ce0aec3fe7bfc:7faf50e3",
     "tarkirdragon/u/creature-short@collector-2015": "add7a1241eafb226:af6c5b6f",
     "tarkirdragon/u/creature-short@square": "bfdc19b60ad71abe:6a0b49a6",
-    "tarkirdragon/u/creature-short@stamp": "046d384e69bf8a65:3c3ebd64",
+    "tarkirdragon/u/creature-short@stamp": "cfe466ddddb6c2d0:3c3ebd64",
     "tarkirdragon/u/instant-short": "00e65086faecfce7:598b1ba0",
     "tarkirdragon/w/creature-long": "8df8c9ae0b02897e:88ef44b5",
     "tarkirdragon/w/creature-long@crown": "3d39a659e0ff25b2:4d32d694",
-    "tarkirdragon/w/creature-long@stamp": "efbd490418be3157:7691917c",
+    "tarkirdragon/w/creature-long@stamp": "995e5e6353915fd0:7691917c",
     "tarkirdragon/w/creature-short": "763eded88557c476:7819081a",
     "tarkirdragon/w/enchantment-short": "36582d0303eaed84:eb40eaf7",
     "tarkirdragon/w/token-short": "440576f1c9ccda04:00c34bd8",
     "tarkirdragon/wu/creature-long": "be41f73dd577f522:3aa66eb9",
     "tarkirdragon/wu/creature-long@crown": "d6729146b53da932:728f7b03",
-    "tarkirdragon/wu/creature-long@stamp-m": "4688674f14292eb8:49ec84ee",
+    "tarkirdragon/wu/creature-long@stamp-m": "55c2d9c501bd5c72:49ec84ee",
     "tarkirdragon/wu/creature-short": "024b3bef71c9cb7f:4c7f4f55",
     "tarkirdragon/wub/creature-long": "3c2187c9210b3ef9:28b87a7a",
     "tarkirdragon/wub/creature-long@crown": "f8213c471824dda4:cc65c742",

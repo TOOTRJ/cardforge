@@ -4712,7 +4712,10 @@ const TARKIRDRAGON: FrameProfile = {
   // rim: +5.8 px), where a 4.4 px lift left it on 1925.8 / 1925.6 and a
   // 1.9 px one on 1927.6 / 1927.4 (the bake lays the box on whole px) — so
   // the box 1.2 px above M15's, its top on a whole px (1893.0): the bake's
-  // centre 1928.5. Across, within 1 px.
+  // centre 1928.5. Across, "2/2" (MUL #1) sits within 1 px of print; MUL
+  // #60's "3/4" ink ~4 px left of print's — most likely the digits' own
+  // ink asymmetry (the box is centred; a 4 and a 3 are not): left as it is,
+  // TODO 4.11.
   pt: {
     ...M15.pt!,
     rect: { ...M15.pt!.rect, topPct: M15.pt!.rect.topPct - (1.2 / 2100) * 100 },

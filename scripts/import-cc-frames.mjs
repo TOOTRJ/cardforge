@@ -306,7 +306,7 @@ async function toneLoaded(src, data, w, h) {
   // inside a box where the file is the same as another master (the Tarkir
   // text box, its wings left out).
   for (const [name, c] of Object.entries(tone.chroma ?? {})) regions[name] = chromaRegionPlane(data, w, h, c);
-  for (const [name, b] of Object.entries(tone.box ?? {})) regions[name] = boxRegionPlane(data, await rgba(await fetchCached(b.file), w, h), w, h, b);
+  for (const [name, b] of Object.entries(tone.box ?? {})) regions[name] = boxRegionPlane(data, b.file ? await rgba(await fetchCached(b.file), w, h) : null, w, h, b);
   return toneSourceRegions(data, w, h, regions, tone.tones);
 }
 

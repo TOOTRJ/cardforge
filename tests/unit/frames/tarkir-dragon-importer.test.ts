@@ -139,7 +139,7 @@ describe("the tones onto print: one rule (raw scan medians, ≥ 9 levels off)", 
     expect(Object.keys(TARKIR_PRINT_TONES.plateEnds)).toEqual(["w"]);
     expect(TARKIR_PRINT_TONES.box).toEqual({ from: [53, 53, 52], to: [64, 63, 64] });
     expect(Object.keys(TARKIR_SOURCE_TONES).sort()).toEqual(
-      [...MASTERS.map((k) => `${TARKIR}/${k}.png`), `${TARKIR}/crowns/u.png`, `${TARKIR}/crowns/w.png`, `${TARKIR}/pt/w.png`].sort(),
+      [...MASTERS.map((k) => `${TARKIR}/${k}.png`), `${TARKIR}/crowns/u.png`, `${TARKIR}/crowns/w.png`, `${TARKIR}/pt/w.png`, `${TARKIR}/stamp.png`].sort(),
     );
     for (const k of MASTERS) {
       const t = sourceTonesOf(`${TARKIR}/${k}.png`)!;
@@ -151,7 +151,14 @@ describe("the tones onto print: one rule (raw scan medians, ≥ 9 levels off)", 
     expect(sourceTonesOf(`${TARKIR}/crowns/u.png`)!.diff).toEqual({ wing: { file: `${TARKIR}/crowns/a.png`, ...TARKIR_WING_DIFF } });
     expect(sourceTonesOf(`${TARKIR}/pt/w.png`)!.chroma).toEqual({ plateEnds: TARKIR_PLATE_CHROMA });
     // Within 5 levels of print: the bars, the plate's face, the gold plate's ends.
-    for (const f of ["crowns/b", "crowns/m", "crowns/a", "pt/m", "pt/u", "pt/a", "stamp"].map((k) => `${TARKIR}/${k}.png`)) expect(sourceTonesOf(f), f).toBeNull();
+    for (const f of ["crowns/b", "crowns/m", "crowns/a", "pt/m", "pt/u", "pt/a"].map((k) => `${TARKIR}/${k}.png`)) expect(sourceTonesOf(f), f).toBeNull();
+    // The stamp notch piece: the box's ground its arch carries, at its place
+    // on the card, with no reference (no wing reaches it) — else a halo.
+    expect(sourceTonesOf(`${TARKIR}/stamp.png`)).toMatchObject({
+      box: { box: { rect: TARKIR_BOX_REGION.rect, luma: TARKIR_BOX_REGION.luma, at: { x: TARKIR_NOTCH.placeAt.x, y: TARKIR_NOTCH.placeAt.y } } },
+      tones: { box: TARKIR_PRINT_TONES.box },
+    });
+    expect(sourceTonesOf(`${TARKIR}/stamp.png`)!.box!.box).not.toHaveProperty("file");
     // The reference files are importer inputs of the recipe.
     expect(sourceFilesFor(def as never)).toEqual(expect.arrayContaining([`${TARKIR}/a.png`, `${TARKIR}/w.png`]));
   });
@@ -182,6 +189,12 @@ describe("the tones onto print: one rule (raw scan medians, ≥ 9 levels off)", 
     expect([plane[700 + 1600 * W], plane[120 + 1600 * W], plane[700 + 1700 * W], plane[700 + 1200 * W]]).toEqual([255, 0, 0, 0]);
     const toned = toneSourceRegions(buf, W, H, { box: plane }, { box: TARKIR_PRINT_TONES.box });
     expect([...toned.subarray(at(700, 1600), at(700, 1600) + 3)]).toEqual([64, 63, 64]);
+    // A piece drawn at `at` reads the rect at its place, with no reference.
+    const piece = Buffer.alloc(4 * 2 * 4);
+    piece.set([53, 53, 52, 255], 0); // (0, 0) → card (700, 1924): the box's last row
+    piece.set([53, 53, 52, 255], (1 * 4 + 0) * 4); // (0, 1) → card (700, 1925): below the box
+    const piecePlane = boxRegionPlane(piece, null, 4, 2, { ...TARKIR_BOX_REGION, at: { x: 700, y: 1924 } });
+    expect([piecePlane[0], piecePlane[4]]).toEqual([255, 0]);
   });
 
   it("the plate's ends are its coloured pixels; the grey face is left alone", () => {
