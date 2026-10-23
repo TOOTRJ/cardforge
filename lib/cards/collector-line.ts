@@ -122,6 +122,9 @@ export const COLLECTOR_TEMPLATES = [
   // (EXPEDITION_ZNR_COLLECTOR, EXPEDITION_BFZ_COLLECTOR).
   "expeditionland",
   "expeditionlandbfz",
+  // …and the ring (TODO 4.11, Card Conjurer's 'Ring'): its black bottom
+  // border sets both lines where M15's slot does on LTR #302–331.
+  "lotr",
 ] as const;
 
 export type CollectorLetter = "T" | "E" | "L" | "C" | "U" | "R" | "M";

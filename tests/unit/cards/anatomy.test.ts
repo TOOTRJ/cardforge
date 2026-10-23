@@ -309,6 +309,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       "lotrscroll",
       // The Zendikar Rising hedron showcase (TODO 4.11): its own crown band, no pairs.
       "fullart",
+      // …and the ring (TODO 4.11): the pack's scalloped crown band, no pairs.
+      "lotr",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
       // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
@@ -351,8 +353,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // the Prepare frame until TODO 4.26 drew its pairs, which it now has;
       // nor the Lord of the Rings scroll, TODO 4.11: its two-colour dress is
       // a follow-up; nor the Zendikar Rising hedron, TODO 4.11: its
-      // two-colour card is the gold master.)
-      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "lotrscroll" && t !== "fullart" && t !== "battle" && t !== "sagadfcfront" && !NYX_TOKENS.includes(t)),
+      // two-colour card is the gold master; nor the LOTR ring, the scroll's
+      // way.)
+      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "lotrscroll" && t !== "fullart" && t !== "lotr" && t !== "battle" && t !== "sagadfcfront" && !NYX_TOKENS.includes(t)),
   );
 
   it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless, extended-art and snow PROFILES entries — never a profile that spreads them", () => {
@@ -451,7 +454,10 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // STAMP_TEMPLATES below.)
     expect(frameAnatomyOf("m15devoid")).toEqual({ crown: false, twoColor: [], collector: true, stamp: true, dfcIcon: false, rulesAlign: true, border: false });
     for (const t of ["adventure", "saga"]) {
-      expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: profileOffersRulesAlign(getFrameProfile(t)), border: false });
+      // (The adventure's one piece is the spell's page in its own colour,
+      // TODO 4.26: the `partPage` slot.)
+      const part = t === "adventure" ? { partColor: true } : {};
+      expect(frameAnatomyOf(t), t).toEqual({ crown: false, twoColor: [], collector: false, stamp: false, dfcIcon: false, rulesAlign: profileOffersRulesAlign(getFrameProfile(t)), border: false, ...part });
     }
     // The Expeditions (TODO 4.11 wave 1) print the collector line, nothing
     // else a card switches on.
@@ -471,7 +477,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
   // …and the Lord of the Rings scroll (4.11): the pack's own triangle piece.
   const STAMP_TEMPLATES = ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15stationland", "extendedartstation", "m15borderlessstation", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlesspw", "m15borderlesspwtall", "m15snow", "m15devoid", "m15pw", "lotrscroll",
     // …and the Zendikar Rising hedron showcase (TODO 4.11): the notch split off its own masters.
-    "fullart"];
+    "fullart",
+    // …and the Lord of the Rings ring (4.11): the pack's own triangle piece.
+    "lotr"];
 
   it("the stamp's notch on exactly the seven wave-1 entries (4.9c): the M15 family's bordered frames and the walker, never a token, an emblem or a profile that spreads them", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).stamp)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => STAMP_TEMPLATES.includes(t)));
@@ -494,7 +502,7 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       const family = template === "m15dfcfront" || template === "m15dfclandfront" || template === "m15borderlessdfcfront" || template === "sagadfcfront" ? { dfcIcon: "arrows" as const } : {};
       // …and each part in its own colour (TODO 4.26) on split, aftermath
       // and the Prepare frame.
-      const part = template === "split" || template === "aftermath" || template === "prepare" ? { partColor: true as const } : {};
+      const part = template === "split" || template === "aftermath" || template === "prepare" || template === "adventure" ? { partColor: true as const } : {};
       expect(anatomyDefaults(template), template).toEqual({ ...(crown ? { crown: true } : {}), ...(pair ? { twoColor: true } : {}), ...line, ...stamp, ...family, ...part });
       expect(normalizeAnatomy({ template, finish: "foil", crown: true, twoColor: false, stamp: "oval" }, template, "creature"), template).toEqual({
         template,

@@ -512,7 +512,9 @@ const UNMODELLED_SUBTYPES = ["Room", "Class", "Case"] as const;
  *     border);
  *   • a transparent outer band at the bottom and lower sides, found by 7.7's
  *     edge contract (owner decision A8, 2026-09-29): avatar, bloomburrow,
- *     lotr, tarkirdraconic.
+ *     tarkirdraconic (lotr left with TODO 4.11: Card Conjurer's 'Ring'
+ *     masters are opaque to every edge — the frame field's design edges and
+ *     the black border's shoulders).
  *  Each is a known failure in lib/frames/edge-contract.ts; a test holds the
  *  two lists together, so fixing a master (and striking it from the known
  *  failures) lifts its cap here too. */
@@ -522,7 +524,6 @@ export const BORDER_PENDING_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<Fram
   "tarkirdragon",
   "avatar",
   "bloomburrow",
-  "lotr",
   "tarkirdraconic",
 ]);
 
@@ -1246,9 +1247,11 @@ const GAPS: Record<GapKey, { match: Match; reason: Text; blockedBy: string }> = 
   },
   // The Prepare page's own colour (TODO 4.27 → 4.26): print colours the
   // spell's page by the SPELL — a hybrid spell's grey page, another
-  // colour's page — and PipGlyph paints it in the card's one colour.
+  // colour's page — and PipGlyph paints it in the card's one colour. The
+  // adventure's storybook page too (WOE #221: a red page beside a black
+  // frame) — drawn since 4.26's adventure pages, so no gap on the frame.
   "part-colour": {
-    match: { layouts: ["prepare"], partColourDiffers: true },
+    match: { layouts: ["prepare", "adventure"], partColourDiffers: true },
     reason: "its spell's page prints the spell's own colour, and PipGlyph paints it in the card's",
     blockedBy: "4.26",
   },
@@ -1974,12 +1977,21 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     match: { borders: ["borderless"], collectors: { blb: [[343, 355]] } },
     outcome: { status: "exact", template: "bloomanime" },
   },
-  {
-    key: "showcase/ltr/ring",
-    exactLabel: "The Lord of the Rings ring showcase",
-    match: { borders: ["borderless"], collectors: { ltr: [[302, 331], [794, 823]] } },
-    outcome: { status: "exact", template: "lotr" },
-  },
+  // Exact once verified since TODO 4.11 (Card Conjurer's 'Ring' masters are
+  // opaque to every edge: off BORDER_PENDING_TEMPLATES). A two-colour
+  // printing (24 of the 60: LTR #316, #318–327, #330 and their twins)
+  // prints the colour frames split down the card (the pack's
+  // maskRightHalf.png), which the template doesn't draw yet: nearest.
+  ...withGaps(
+    {
+      key: "showcase/ltr/ring",
+      exactLabel: "The Lord of the Rings ring showcase",
+      match: { borders: ["borderless"], collectors: { ltr: [[302, 331], [794, 823]] } },
+      outcome: { status: "exact", template: "lotr" },
+    },
+    ["two-colour", "two-colour-hybrid"],
+    { "two-colour": "4.11", "two-colour-hybrid": "4.11" },
+  ),
   {
     key: "showcase/tdm/clan",
     exactLabel: "Tarkir: Dragonstorm clan showcase (text on the art)",

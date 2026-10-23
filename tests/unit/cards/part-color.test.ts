@@ -12,7 +12,7 @@ import {
 } from "@/lib/cards/anatomy";
 import { frameGateColors, partColorFromCost, partColourVerdict } from "@/lib/cards/part-color";
 import { cardFrameSplit, frameColorKeysFor, frameSplitClipPaths, partColorSplitFor } from "@/components/cards/frame-layer";
-import { AFTERMATH_PART_SEAM, PREPARE_PAGE, PREPARE_PAGE_KEYS, SPLIT_PART_SEAM, getFrameProfile } from "@/lib/cards/template-layout";
+import { ADVENTURE_PAGE, AFTERMATH_PART_SEAM, PREPARE_PAGE, PREPARE_PAGE_KEYS, SPLIT_PART_SEAM, getFrameProfile } from "@/lib/cards/template-layout";
 import manifestJson from "@/lib/frames/frame-manifest.json";
 import { frameAnatomyPatchFor } from "@/lib/creator/revise";
 import { FRAME_TEMPLATE_VALUES, type ColorIdentity, type FrameStyle } from "@/types/card";
@@ -28,9 +28,10 @@ import { FRAME_TEMPLATE_VALUES, type ColorIdentity, type FrameStyle } from "@/ty
 const MANIFEST = (manifestJson as { files: Record<string, { width: number; height: number }> }).files;
 
 describe("the declaration", () => {
-  it("is on split, aftermath and prepare alone", () => {
+  it("is on split, aftermath, prepare and adventure alone", () => {
     const drawing = FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).partColor);
-    expect(drawing.sort()).toEqual(["aftermath", "prepare", "split"]);
+    expect(drawing.sort()).toEqual(["adventure", "aftermath", "prepare", "split"]);
+    expect((getFrameProfile("adventure").overlays ?? []).filter((s) => s.anatomy === "partPage")).toEqual([ADVENTURE_PAGE]);
     expect(getFrameProfile("split").partColorSeam).toEqual(SPLIT_PART_SEAM);
     expect(getFrameProfile("aftermath").partColorSeam).toEqual(AFTERMATH_PART_SEAM);
     expect((getFrameProfile("prepare").overlays ?? []).filter((s) => s.anatomy === "partPage")).toEqual([PREPARE_PAGE]);
@@ -77,13 +78,14 @@ describe("the switch (opt-in per card)", () => {
     expect(anatomyDefaults("aftermath").partColor).toBe(true);
     expect(anatomyDefaults("prepare").partColor).toBe(true);
     expect(anatomyDefaults("m15").partColor).toBeUndefined();
-    expect(anatomyDefaults("adventure").partColor).toBeUndefined();
+    expect(anatomyDefaults("adventure").partColor).toBe(true);
     expect(anatomyDefaults("flip").partColor).toBeUndefined();
     expect(normalizeAnatomy({ partColor: true }, "m15", "creature")).toEqual({});
     expect(normalizeAnatomy({ partColor: false }, "split", "instant")).toEqual({ partColor: false });
     expect(newCardFrameStyle<FrameStyle>({ template: "split" }, "instant").partColor).toBe(true);
     expect(newCardFrameStyle<FrameStyle>({ template: "split", partColor: false }, "instant").partColor).toBe(false);
-    expect(newCardFrameStyle<FrameStyle>({ template: "adventure" }, "creature").partColor).toBeUndefined();
+    expect(newCardFrameStyle<FrameStyle>({ template: "adventure" }, "creature").partColor).toBe(true);
+    expect(newCardFrameStyle<FrameStyle>({ template: "m15" }, "creature").partColor).toBeUndefined();
   });
 
   it("is kept by a remix and an import, and flipped by an edit", () => {

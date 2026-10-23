@@ -376,6 +376,9 @@ exports[`as it was — generated on the base (d9e877e6), only read since > a non
     "back_face": {
       "artist_credit": undefined,
       "card_type": "sorcery",
+      "color_identity": [
+        "white",
+      ],
       "cost": "{1}{W}",
       "defense": undefined,
       "flavor_text": undefined,
@@ -443,6 +446,9 @@ exports[`as it was — generated on the base (d9e877e6), only read since > a non
       "art_url": undefined,
       "artist_credit": undefined,
       "card_type": "sorcery",
+      "color_identity": [
+        "white",
+      ],
       "cost": "{1}{W}",
       "defense": undefined,
       "flavor_text": undefined,
@@ -464,6 +470,7 @@ exports[`as it was — generated on the base (d9e877e6), only read since > a non
     "defense": null,
     "flavorText": null,
     "frameStyle": {
+      "partColor": true,
       "template": "adventure",
     },
     "loyalty": null,

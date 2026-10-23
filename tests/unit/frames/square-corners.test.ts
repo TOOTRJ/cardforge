@@ -52,9 +52,13 @@ describe("the square-corner table", () => {
         for (const c of CORNER_NAMES) expect(squareCornerKind(template, key, c), `${template}/${key} ${c}`).toBe("border");
       }
     }
-    for (const t of ["bloomburrow", "lotr", "tarkirdraconic"]) {
+    for (const t of ["bloomburrow", "tarkirdraconic"]) {
       expect(CORNER_NAMES.map((c) => squareCornerKind(t, "g", c))).toEqual(["frame", "frame", "root", "root"]);
     }
+    // The LOTR ring since TODO 4.11: its Card Conjurer masters keep the frame
+    // field in the top corners (square) and run the border black into the
+    // bottom ones.
+    expect(CORNER_NAMES.map((c) => squareCornerKind("lotr", "g", c))).toEqual(["frame", "frame", "border", "border"]);
     // expeditionland's b/g leaked MSE masters left the table with TODO 4.11
     // wave 1: Card Conjurer's border runs black to every corner.
     for (const t of ["expeditionland", "expeditionlandbfz"]) {

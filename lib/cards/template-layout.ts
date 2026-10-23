@@ -4042,6 +4042,33 @@ export const PREPARE_PAGE: FrameOverlaySlot = {
   keys: PREPARE_PAGE_KEYS,
 };
 
+// The ADVENTURE spell's page in its own colour (TODO 4.26, owner decision
+// 2026-10-22: pre-cut pieces; docs/FRAMES.md "Each part in its own
+// colour"): `adventure/page/<key>` — the storybook's LEFT page (its name and
+// type bars, paper, curled edge and the left half of the spine) of each
+// published adventure master, cut through Card Conjurer's bookLeft mask
+// (scripts/lib/cc-frames.mjs ADVENTURE_PAGE_CUT), x 72..753 × y 1312..1937
+// of the HD card (even px: whole px at the 750 bake). Print paints it in
+// the SPELL's colour beside the creature's (WOE #221 Callous Sell-Sword //
+// Burn Together: a red page beside a black frame). Keys: the five colours
+// and gold `m`; a two-colour spell's page (no print beside a creature of
+// other colours) is the gold one — the gold-split pair and its hybrid dress
+// both map to `m`, which a gold creature's master already paints.
+export const ADVENTURE_PAGE_KEYS = ["w", "u", "b", "r", "g", "m"] as const;
+const ADVENTURE_PAGE_PAIRS_TO_GOLD: Record<string, string> = Object.fromEntries(
+  ["wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"].flatMap((pair) => [
+    [pair, "m"],
+    [`${pair}-h`, "m"],
+  ]),
+);
+export const ADVENTURE_PAGE: FrameOverlaySlot = {
+  anatomy: "partPage",
+  rect: { topPct: (1312 / 2100) * 100, leftPct: (72 / 1500) * 100, widthPct: (682 / 1500) * 100, heightPct: (626 / 2100) * 100 },
+  assetPathTemplate: "/frames/adventure/page/{key}.png",
+  keys: ADVENTURE_PAGE_KEYS,
+  keyMap: ADVENTURE_PAGE_PAIRS_TO_GOLD,
+};
+
 // Flip — the M15 Kamigawa flip frame. ONE card, two creatures: the top reads
 // normally (name → small text box → type bar) and the bottom is printed
 // UPSIDE-DOWN — its name / type / rules / P-T come from the back-face content
@@ -4679,42 +4706,61 @@ const TARKIRDRACONIC: FrameProfile = {
   },
 };
 
-// LOTR — title bar (top), CIRCULAR art window (the One Ring), type bar, textbox.
-// The artSlot is the circle's bounding box; the frame's opaque corners hide the
-// rectangular art outside the circle.
+// LOTR Ring (TODO 4.11, layout v65) — Card Conjurer's 'Ring' pack
+// (packRing.js, 1500 × 2100 native; scripts/lib/cc-frames.mjs RING), whose
+// text layout is the accurate M15 pack's but for the title bar, which sits
+// lower under the scalloped crown every print carries: so M15's slots and
+// the M15-era family's sizes, measured against the LTR prints below. The
+// pack's drawing is kept as drawn — its top block 12 px below print, its box
+// 6 px above (owner 2026-10-22: no lossless re-cut exists) — and every slot
+// rides the pack's own bars.
+/** The ring's art slot: the pack's own artBounds (149 / 252 / 1202 × 918
+ *  px). The masters are opaque but for the round window — see-through on
+ *  150–1350 × 254–1160 px with its soft white foot (α 90) down to row 1170,
+ *  on every key — so the slot covers it as ONE plain rect and the frame
+ *  hides the rect's corners round the circle. */
+const LOTR_ART_SLOT: Rect = { topPct: (252 / 2100) * 100, leftPct: (149 / 1500) * 100, widthPct: (1202 / 1500) * 100, heightPct: (918 / 2100) * 100 };
+/** The ring pack's plate at its ptBounds (1148 / 1857, 268 × 134 px). */
+const LOTR_PLATE_RECT: Rect = { topPct: (1857 / 2100) * 100, leftPct: (1148 / 1500) * 100, widthPct: (268 / 1500) * 100, heightPct: (134 / 2100) * 100 };
+/** The name and the cost row ride the pack's title bar, LOTR_TITLE_DY_PX
+ *  lower than M15's (CC: title y 120 against M15's 109.6 of 2100). */
+const LOTR_TITLE_DY_PX = 10.4;
 const LOTR: FrameProfile = {
+  ...M15,
   label: "Ring",
-  costSizePct: 0.038,
-  artSlot: { topPct: 13, leftPct: 14, widthPct: 72, heightPct: 45 },
+  // The CC M15 row (70 px discs, 78 pitch, its right end), CENTRED on the
+  // title bar as the prints centre it: the disc's face 124.5–193.5 px under a
+  // bar whose outlines are 100.5 / 218.5 on LTR #307 / #310 / #312 (centre
+  // −0.3 px off the bar's), where the v61 lift left ours 6 px above it. The
+  // bar here is the pack's (113.5 / 231.5): the band's centre 174.2, lifted
+  // 2 px — 172.2 in the preview, 172 in the bake's whole px.
+  ...CC_M15_COST,
+  costDy: -2 / 1500,
+  artSlot: LOTR_ART_SLOT,
+  // A colourless ARTIFACT paints the pack's blue-grey artifact frame; any
+  // other colourless card the brown land frame `c` (the scroll's split,
+  // #604 — the ring run prints no colourless card).
+  artifactMasterKeys: { c: "a" },
   title: {
-    rect: { topPct: 4.5, leftPct: 9, widthPct: 82, heightPct: 6 },
-    sizePct: 0.044,
+    ...M15.title,
+    rect: { ...M15.title.rect, topPct: M15.title.rect.topPct + (LOTR_TITLE_DY_PX / 2100) * 100 },
     colorHex: INK_LIGHT,
-    weight: 600,
-    font: "display",
-    shadowCss: SHOWCASE_SHADOW,
   },
-  type: {
-    rect: { topPct: 59, leftPct: 9, widthPct: 82, heightPct: 5 },
-    sizePct: 0.028,
-    colorHex: INK_LIGHT,
-    weight: 600,
-    font: "display",
-    shadowCss: SHOWCASE_SHADOW,
-  },
-  rules: {
-    rect: { topPct: 66, leftPct: 8.5, widthPct: 83, heightPct: 26 },
-    sizePct: rulesPxToPct(RULES_SIZE_PX.reduced),
-    colorHex: INK_DARK,
-    vAlign: "start",
-    font: "body",
-  },
+  // The type line on the CC baseline 2 px lower: the ring prints set it on
+  // 1261 px (6 prints) under the same bar as ours, where the CC M15 lift
+  // left it on 1259.
+  type: { ...M15.type, dy: CC_M15_TYPE_DY + 2 / 1500, colorHex: INK_LIGHT },
   pt: {
-    rect: { topPct: 86.5, leftPct: 71, widthPct: 23, heightPct: 7.5 },
-    sizePct: 0.043,
-    colorHex: "#ffffff",
-    weight: 700,
-    shadowCss: OUTLINE_SHADOW,
+    ...M15.pt!,
+    // The digits centred on the plate's face (1185–1393 px, its centre
+    // 1289): the prints centre them there (1290.3 px on LTR #302 / #310 /
+    // #312 / #313 / #328, 4 px below its middle) — CC's box (1184 / 1887)
+    // set them 8 px left and 1 px high.
+    rect: { topPct: (1888 / 2100) * 100, leftPct: (1191 / 1500) * 100, widthPct: 13.67, heightPct: 3.72 },
+    inkSpanPct: { leftPct: (1185 / 1500) * 100, rightPct: (1393 / 1500) * 100 },
+    plateRect: LOTR_PLATE_RECT,
+    plateAssetPathTemplate: "/frames/lotr/pt/{color}.png",
+    colorHex: INK_LIGHT,
   },
 };
 
@@ -5069,7 +5115,8 @@ const EXPEDITIONLANDBFZ: FrameProfile = {
 //     82), the centres 8.8 px above the bar's middle (median of 10 cards,
 //     −7.0 … −10.1; ours sat 2.8 BELOW it, 164.1 px) → 152.5 on our bar
 //     (161.3), and the last disc's right edge 22.6 px inside the bar's right
-//     outline (median of 10; ours 28.2) → 1388;
+//     outline (median of 10; ours 28.2) → 1388 — set on whole px at 750
+//     AND HD (NYX_COST): 152.0 / 1388.5;
 //   • the name (NYX_TITLE_DY): baseline 26.1 px below the bar's middle on
 //     print (median of 11, 23.7 … 26.7), ours 28.1 → 2 px up; same size
 //     (x-height 40 px on both);
@@ -5083,17 +5130,21 @@ const EXPEDITIONLANDBFZ: FrameProfile = {
 //   • unchanged, within the scans' wander: the rules (size, breaks, pitch
 //     62/86 px against our 63/87, first baseline 0–6 px), the P/T plate
 //     and digits (≤ 3 px), and every text's left edge (2–3 px). The type
-//     bar and the box under it are TODO 4.17f's; the plate's printed colour
-//     (white digits on the card's colour) is 4.17g's look, not geometry.
+//     bar itself sits LOW on print — TODO 4.17f's 5.2 / 3.7 px (top /
+//     bottom; the independent check read 3.0 / 3.3 / 7.4) — so this line is
+//     on print against its own bar, and 4.17f's re-source moves it again
+//     with the bar. The plate's printed colour (white digits on the card's
+//     colour) is 4.17g's look, not geometry.
 /** The cost row on the constellation prints (see above): the CC-framed M15
- *  family's disc and pitch, 4.5 px above and 3 px right of that family's
- *  row on the same title band (157.0 / 1385 at HD). The bake lays the disc
- *  out on whole px (centre 153.0), the preview at the exact fraction
- *  (152.7). */
+ *  family's disc and pitch, lifted 12 px and moved 6 px right on M15's
+ *  title band — both WHOLE px at 750 and at HD (6 / 3 at 750), so neither
+ *  bake rounds a half px away from the preview. On the HD bake the band
+ *  lays the disc out from 128.8 → 129 px: centre 152.0 (print 152.5;
+ *  preview 151.8), the last disc ending 1388.5 (print 1388). */
 const NYX_COST = {
   costSizePct: CC_M15_COST_DISC_PCT,
-  costDy: CC_M15_COST_DY - 4.5 / 1500,
-  costDx: CC_M15_COST_DX + 3 / 1500,
+  costDy: -12 / 1500,
+  costDx: 6 / 1500,
 } as const satisfies Pick<FrameProfile, "costSizePct" | "costDy" | "costDx">;
 /** The name 2 px up onto the prints' baseline (see above). */
 const NYX_TITLE_DY = M15_TITLE_DY - 2 / 1500;
@@ -5892,6 +5943,51 @@ export const LOTRSCROLL_CROWN: FrameOverlaySlot = {
  * as the crown's. Set on the lotrscroll entry only.
  */
 export const LOTRSCROLL_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (644 / 1500) * 100, topPct: (1897 / 2100) * 100, widthPct: (208 / 1500) * 100, heightPct: (27 / 2100) * 100 };
+/**
+ * The Lord of the Rings ring's legendary crown (TODO 4.11):
+ * `lotrcrown/<key>.png`, Card Conjurer's ring 'Legendary Crown' — the
+ * scalloped cream title bar every print of the run carries (all sixty are
+ * legendary: LTR #302–331, #794–823), with the frame field round it — at
+ * its bounds, a 1500 × 272 band (rows 0–271), its top corners square like
+ * the masters'. Keys: w u b r g, m, a (the artifact's blue-grey: a
+ * colourless ARTIFACT, `artifactKeyMap`) and l (the land's brown: any
+ * other colourless card, `keyMap`). No pairs. Set on the lotr entry only;
+ * opt-in per card like every crown (FrameStyle.crown).
+ */
+export const LOTR_CROWN: FrameOverlaySlot = {
+  anatomy: "crown",
+  rect: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: (272 / 2100) * 100 },
+  assetPathTemplate: "/frames/lotrcrown/{key}.png",
+  // RING_CROWN_BAND.keys in scripts/lib/cc-frames.mjs (a unit test holds
+  // them together).
+  keys: ["w", "u", "b", "r", "g", "m", "a", "l"],
+  keyMap: { c: "l" },
+  artifactKeyMap: { c: "a" },
+};
+
+/**
+ * The Lord of the Rings ring's TRIANGLE stamp notch (TODO 4.11): the pack's
+ * own per-colour piece — the text box's rim stepped up round a black
+ * trapezoid — 1:1 at its bounds, a 214 × 106 box at 643, 1892 px
+ * (RING_NOTCH_BOX in scripts/lib/cc-frames.mjs: 1 px round the piece and
+ * 10 px past its foot, so the hole fits), the Universes Beyond stamp's hole cut clear (every
+ * ring print wears that physical stamp) and our triangle art over it, as
+ * on the Universes Beyond frames: "auto" stamps every rarity (the matte
+ * face below a rare). The rules keep-out is the raised rim, 644–856 px from
+ * its top (1893) down past the rules box (1927). Keys as the crown's. Set
+ * on the lotr entry only.
+ */
+export const LOTR_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (644 / 1500) * 100, topPct: (1893 / 2100) * 100, widthPct: (212 / 1500) * 100, heightPct: (35 / 2100) * 100 };
+export const LOTR_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: { leftPct: (643 / 1500) * 100, topPct: (1892 / 2100) * 100, widthPct: (214 / 1500) * 100, heightPct: (106 / 2100) * 100 },
+  assetPathTemplate: "/frames/lotrholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "a", "l"],
+  keyMap: { c: "l" },
+  artifactKeyMap: { c: "a" },
+  stamp: { shape: "triangle", oval: M15UB_HOLO_STAMP_BOX, keepOut: LOTR_HOLO_STAMP_KEEP_OUT },
+};
+
 export const LOTRSCROLL_HOLO_STAMP: FrameOverlaySlot = {
   anatomy: "holoStamp",
   rect: { leftPct: (620 / 1500) * 100, topPct: (1877 / 2100) * 100, widthPct: (266 / 1500) * 100, heightPct: (140 / 2100) * 100 },
@@ -7102,7 +7198,9 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   sagadfcfront: SAGADFCFRONT,
   // …and its back (TODO 5.5 (b), PR 2): see SAGADFCBACK.
   sagadfcback: SAGADFCBACK,
-  adventure: ADVENTURE,
+  // TODO 4.26: the spell's page in its own colour (ADVENTURE_PAGE), opt-in
+  // per card (frame_style.partColor).
+  adventure: { ...ADVENTURE, overlays: [ADVENTURE_PAGE] },
   // The Prepare frame (TODO 4.27): M15's crown over its M15 title bar
   // (SOS #170 Abigale, #198 Kirol … print it), opt-in per card like m15's;
   // the colourless key is the artifact frame, so its crown is the
@@ -7132,7 +7230,10 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // bases: M15TEXTLESS spreads FULLART and M15TEXTLESSLAND spreads
   // M15TEXTLESS, so a flag on a base would reach whatever spreads it next.
   bloomanime: { ...BLOOMANIME, pickerSampleArt: true },
-  lotr: LOTR,
+  // The ring's crown, its triangle stamp notch (TODO 4.11) and the
+  // collector line as the prints set it (M15's two lines) — each opt-in per
+  // card, so no stored card changes by them.
+  lotr: { ...LOTR, overlays: [LOTR_CROWN, LOTR_HOLO_STAMP], collector: M15_COLLECTOR },
   // The scroll's crown, its triangle stamp notch (TODO 4.11) and the
   // collector line as the prints set it (M15's two lines) — each opt-in per
   // card, so no stored card changes by them.

@@ -125,6 +125,8 @@ describe("the main box on every template", () => {
         // (ZNE #29 Valakut's lines from x 145 in the 141 px box, EXP #38
         // Eye of Ugin's from 135 in 131).
         "expeditionland", "expeditionlandbfz",
+        // …and the ring (layout v65): M15's box and margins too.
+        "lotr",
       ].sort(),
     );
     for (const t of withPrintMargins) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 4, y: 0 });

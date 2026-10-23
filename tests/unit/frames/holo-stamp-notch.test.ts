@@ -76,10 +76,12 @@ function onDisk(rel: string): Buffer | null {
 /** A folder's recipe as the importer reads it (the pair fields are the
  *  M15 folder's alone). */
 /** The folders built from ONE tinted piece (the Lord of the Rings scroll's
- *  notch is the pack's own piece per key, TODO 4.11: its own test,
- *  tests/unit/frames/lotr-scroll-importer.test.ts). */
-const { lotrscrollholostamp: _scrollNotch, ...TINTED_NOTCHES } = HOLO_STAMP_NOTCHES;
+ *  and ring's notches are each pack's own piece per key, TODO 4.11: their
+ *  own tests, tests/unit/frames/lotr-scroll-importer.test.ts and
+ *  lotr-ring-importer.test.ts). */
+const { lotrscrollholostamp: _scrollNotch, lotrholostamp: _ringNotch, ...TINTED_NOTCHES } = HOLO_STAMP_NOTCHES;
 void _scrollNotch;
+void _ringNotch;
 type NotchDef = (typeof TINTED_NOTCHES)[keyof typeof TINTED_NOTCHES] & {
   rampKeys?: readonly string[];
   barSharedBy?: Record<string, string[]>;

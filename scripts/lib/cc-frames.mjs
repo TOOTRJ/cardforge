@@ -564,17 +564,29 @@ export function describeSourceToneTable(tones) {
 }
 /** A pack file's tones (CC_SOURCE_TONES), or null. */
 export function sourceTonesOf(src) {
-  return Object.hasOwn(CC_SOURCE_TONES, src) ? CC_SOURCE_TONES[src] : null;
+  if (Object.hasOwn(CC_SOURCE_TONES, src)) return CC_SOURCE_TONES[src];
+  // The LOTR ring's files (TODO 4.11, RING_SOURCE_TONES — defined with its
+  // recipe below; read at call time).
+  return Object.hasOwn(RING_SOURCE_TONES, src) ? RING_SOURCE_TONES[src] : null;
 }
 /** The toned files a recipe draws, as provenance prints them: file → the
  *  table's name, each region's mask and its gain (describeSourceToneTable). */
 export function describeSourceTones(def) {
+  return describeFileTones(sourceFilesFor(def));
+}
+/** describeSourceTones for a list of pack files (a band's layers, a notch's
+ *  pieces). */
+export function describeFileTones(files) {
   const out = {};
-  for (const file of sourceFilesFor(def)) {
+  for (const file of files) {
     const tone = sourceTonesOf(file);
     if (!tone) continue;
     const gains = describeSourceToneTable(tone.tones);
-    out[file] = { table: tone.table, ...Object.fromEntries(Object.keys(tone.tones).map((region) => [region, `through ${tone.masks[region]}: ${gains[region]}`])) };
+    // A region is a pack mask, or (the LOTR ring, TODO 4.11) the pixels near
+    // one flat colour of the file itself (nearRegionPlane).
+    const where = (region) =>
+      tone.masks?.[region] ? `through ${tone.masks[region]}` : `on the pixels within ${tone.near[region].full}–${tone.near[region].none} levels (max channel) of ${tone.tones[region].from.join(", ")}`;
+    out[file] = { table: tone.table, ...Object.fromEntries(Object.keys(tone.tones).map((region) => [region, `${where(region)}: ${gains[region]}`])) };
   }
   return Object.keys(out).length ? out : null;
 }
@@ -3109,6 +3121,100 @@ export function describeStripRider(template, key, spec, sha) {
   ];
 }
 
+// ---------------------------------------------------------------------------
+// The adventure's spell PAGE in the spell's own colour (TODO 4.26, owner
+// decision 2026-10-22: pre-cut pieces). The storybook's LEFT page — its name
+// bar, type bar, paper, curled edge and the left half of the spine — prints
+// in the SPELL's colour and the right page in the creature's: WOE #221
+// Callous Sell-Sword // Burn Together is a red page beside a black frame; of
+// the plain 2015-frame adventure printings, every one whose spell is another
+// colour is a mono spell beside a mono (or colourless) creature (WOE #221–241,
+// LCI #231, the WOE / LCI promos; the colourless artifacts HOB #170 / #174 /
+// #176 and FIN's Towns #283–293, on the `c` master — CC's artifact frame,
+// verified; TDM's Omens, whose page is their own, draw it too, unmeasured). Card Conjurer paints it by drawing the spell's frame
+// through the pack's `bookLeft` mask over the creature's; we publish that
+// cut as PIECES, `adventure/page/<key>.png`: each key's PUBLISHED master
+// (the bytes the bucket serves) cropped to the mask's box, its alpha the
+// mask's (bookLeft is native 1500 × 2100: no resample) — the colour the
+// master's everywhere, so a piece over its own master is that master. The
+// renderers draw it through the `partPage` overlay slot Prepare's page uses
+// (lib/cards/template-layout.ts ADVENTURE_PAGE), keyed by the spell's
+// colour, only where it differs from the creature's: no new renderer code,
+// no mask published, nothing composited at render.
+//   • Keys: the five colours and gold `m` (a gold spell's page: WOE #220
+//     Beluna prints the gold master's own page). The two-colour PAIR pages
+//     CC builds with `bookLeftMulticolor` (the first colour's page ramped
+//     into the second's, x ≈ 360 → 560) are NOT built: no adventure prints
+//     a two-colour spell page beside a creature of other colours — the
+//     two-colour spells (MKM #212, MH3 #196, ELD #212's hybrid, HOB #166)
+//     sit on creatures of the same pair, whose master already paints the
+//     page — so the slot maps a pair to the gold page (keyMap). No
+//     colourless PAGE: no adventure SPELL is colourless (a colourless
+//     creature with a coloured spell takes that colour's page).
+//   • The box: the mask's alpha reaches x 73–752 × y 1313–1937; the piece is
+//     x 72–753 × y 1312–1937 (an even origin and size: whole px at the 750
+//     bake), every px of the mask inside it.
+// ---------------------------------------------------------------------------
+
+/** The page piece's box at HD (even origin and size; the mask's bbox grown). */
+export const ADVENTURE_PAGE_BOX = Object.freeze({ x: 72, y: 1312, width: 682, height: 626 });
+/** The keys the page publishes. */
+export const ADVENTURE_PAGE_KEYS = Object.freeze(["w", "u", "b", "r", "g", "m"]);
+/** The adventure template's page spec (CC_TEMPLATES.adventure.page). */
+export const ADVENTURE_PAGE_CUT = Object.freeze({
+  mask: `${ADVENTURE}/bookLeft.png`,
+  box: ADVENTURE_PAGE_BOX,
+  keys: ADVENTURE_PAGE_KEYS,
+  /** CC's two-colour page mask — read by no recipe (no print shows a pair
+   *  page beside a creature of other colours); kept as provenance. */
+  unused: Object.freeze({ bookLeftMulticolor: `${ADVENTURE}/bookLeftMulticolor.png` }),
+});
+
+/** How provenance prints one page piece's recipe. */
+export function describeAdventurePage(template, key, spec, sha) {
+  const { box } = spec;
+  return [
+    `${template}/${key}.png (the published master, sha256 ${sha.slice(0, 12)}) cut at x ${box.x}–${box.x + box.width - 1} × y ${box.y}–${box.y + box.height - 1} through the alpha of ${spec.mask} (native 1500 × 2100; the master's colour on every px, alpha × the mask's)`,
+  ];
+}
+
+/**
+ * What a cut page piece must be (TODO 4.26): every px of the mask's alpha
+ * inside the box (none of the page cut off), the piece's alpha the mask's
+ * times the master's, and its colour the master's wherever it shows.
+ * `master` and `mask` are raw 8-bit RGBA at width × height; returns the
+ * counts and the failures.
+ */
+export function adventurePageFindings(piece, master, mask, width, height, box) {
+  let opaque = 0;
+  let partial = 0;
+  let alphaOff = 0;
+  let colourOff = 0;
+  let maskOutsideBox = 0;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const p = (y * width + x) * 4;
+      const inBox = x >= box.x && x < box.x + box.width && y >= box.y && y < box.y + box.height;
+      if (!inBox) {
+        if (mask[p + 3] > 0) maskOutsideBox += 1;
+        continue;
+      }
+      const o = ((y - box.y) * box.width + (x - box.x)) * 4;
+      const want = Math.round((master[p + 3] * mask[p + 3]) / 255);
+      if (piece[o + 3] !== want) alphaOff += 1;
+      if (piece[o + 3] === 255) opaque += 1;
+      else if (piece[o + 3] > 0) partial += 1;
+      if (piece[o + 3] > 0 && (piece[o] !== master[p] || piece[o + 1] !== master[p + 1] || piece[o + 2] !== master[p + 2])) colourOff += 1;
+    }
+  }
+  const failures = [];
+  if (maskOutsideBox > 0) failures.push(`${maskOutsideBox} px of the mask fall outside the box`);
+  if (alphaOff > 0) failures.push(`${alphaOff} px whose alpha is not the mask's × the master's`);
+  if (colourOff > 0) failures.push(`${colourOff} px whose colour is not the master's`);
+  if (opaque === 0) failures.push("the piece is empty");
+  return { opaque, partial, alphaOff, colourOff, maskOutsideBox, failures };
+}
+
 const MDFC_STRIP_NOTE =
   "the flipside strip RIDERS (TODO 5.1c, strip/<key>.png): this template's masters' tabs cut through CC's Flipside mask (reminder.svg, the whole tab — the ◀ and the outline stay dark), eroded 1 px so the cut runs inside the tab's dark outline and snapped to the HD grid's 2 × 2 px blocks so the 750 bake's 2:1 resample reads whole blocks (a piece over its own master is byte-identical at HD and at 750); drawn by both renderers over the strip the master paints, keyed by the OTHER face's colour (the prints paint the strip in the colour of the face it describes: STX #147, the pathways, KHM #114), only when that key differs from the master's own; `l` = the grey land modal's tab (the land pair's c master) for a two-colour land other face (MH3 #252–261's hybrid fronts) and, on a back, a front in the hybrid dress";
 
@@ -3809,7 +3915,301 @@ export function pieceNotchFindings(buf, shape, cut, marginPx, blackoutPx, stamp 
   return { cutClear, ringBlack, stampOutside, opaque, failures };
 }
 
+// ---------------------------------------------------------------------------
+// TODO 4.11 (showcase rebuild, wave 1): the Lord of the Rings RING showcase
+// (`lotr`; LTR #302–331 and their surge-foil twins #794–823 — sixty
+// printings, every one a legendary creature) from Card Conjurer's 'Ring'
+// pack (packRing.js, `img/frames/lotr/`, 1500 × 2100 NATIVE: nothing is
+// resampled). Its masters replace the 646 px MSE drawing (layout v65's
+// correction). Self-contained: the template, its crown band and its stamp
+// notch read only the constants below.
+//   • masters: the pack's eight frames whole — w u b r g, m (gold: three
+//     colours or more, and today a pair), `a` the pack's blue-grey
+//     'Artifact Frame' (FrameProfile.artifactMasterKeys { c: "a" }) and `c`
+//     the pack's brown 'Land Frame' (the pack has no colourless frame; the
+//     scroll's split, #604: a colourless card that is no artifact is a land
+//     on that run's prints). The ring run prints NONE of the three
+//     (sixty legendary creatures: 14 mono, 12 two-colour, 4 gold) — `a` and
+//     `c` follow the scroll's rule unprinted.
+//   • the frame field runs to the card's TOP and SIDE edges (as every print
+//     has it: no border there) and the bottom is the black border's
+//     shoulders: the edge contract's `design` edges (lib/frames/
+//     edge-contract.ts). The importer cuts the one card corner at the two
+//     BOTTOM corners only (`keepCorners`); the top corners are design — a
+//     square output keeps the frame field there (lib/frames/square-corners.ts
+//     "frame"), and every round output cuts it anyway (the renderer's card
+//     corner).
+//   • the art window is the pack's round one, cut off by the title and type
+//     bars: see-through (α < 16) on 150–1350 × 254–1160 px, its soft white
+//     foot (α 90) down to row 1170, everything else opaque — so the pack's
+//     own artBounds (149 / 252 / 1202 × 918) cover it as a plain slot, and
+//     the frame hides the slot's corners round the circle.
+//   • plates: the pack's eight P/T plates (268 × 134 at ptBounds 1148 /
+//     1857) — the colourless key the artifact's plate (the plate follows the
+//     colour key; the scroll's rule).
+//   • not built: the pack's two-colour dress (replacementMasks 'Right Half'
+//     = `lotr/maskRightHalf.png`: the colour frames split down the card —
+//     LTR #316 / #318–327 / #330, 24 of the 60 printings: a follow-up, a
+//     two-colour card draws the gold master today).
+// ---------------------------------------------------------------------------
+export const RING = "img/frames/lotr";
+/** The ring pack's plates, by colour key (the colourless card's is the
+ *  artifact's: the plate follows the colour key, as on the scroll). */
+const RING_PT = Object.freeze(perColor((k) => `${RING}/pt/${k === "c" ? "a" : k}.png`));
+const RING_PACK = "packRing.js 'Ring' (the Lord of the Rings ring showcase; groupShowcase-5.js)";
+/** The ring's master corners the importer leaves SQUARE: the frame field
+ *  runs into them on print (lib/frames/square-corners.ts "frame"). */
+export const RING_KEEP_CORNERS = Object.freeze(["tl", "tr"]);
+
+/**
+ * The ring pack's colours toned onto its prints (owner 2026-10-22, the #607
+ * review: Card Conjurer's text-box paper is 40–60 levels off print on u / b
+ * / r / g, where the MSE masters were within ~3). Measured on the Scryfall
+ * PNGs at 1500 × 2100 (LTR #302–306 w, #307–308 u, #309–311 b, #312 r,
+ * #313–315 g, #317 / #328 / #329 / #331 gold; the scans of one colour agree
+ * to 1 level, so the medians are these):
+ *   • paper — the 85th luma percentile of the box 200–1100 × 1700–1820 px
+ *     (the colour of the paper's light ground, its texture under it):
+ *       w 218,212,191 → 213,206,179;  u 123,165,195 → 163,188,216;
+ *       b 156,157,156 → 204,202,202;  r 210,136,126 → 216,177,146;
+ *       g 123,170,141 → 184,202,188;  gold 228,208,155 → 212,187,133.
+ *     Every key is ≥ 9 levels off on a channel (w 12 in blue, gold 16–22),
+ *     so every colour key is toned; the pack's `a` and `l` frames have no
+ *     print and stay as drawn.
+ *   • frame field — CC paints the field, the bars' faces and the plate's
+ *     face one flat colour; on print the field, the plate's face and (but
+ *     on blue) the bars agree within 3 levels (median of the three): r
+ *     118,34,34 → 108,46,41; g 13,68,45 → 36,65,48. Left as drawn: w
+ *     (134,123,105 vs 134,127,108), b (44,43,39 vs 47,46,42), gold
+ *     (158,124,78 vs 159,126,73) — ≤ 5 levels — and blue (44,51,103 vs
+ *     46,52,94): its prints set the bars LIGHTER (60,69,106) than the field,
+ *     so one tone of CC's single colour would move the bars 12 off to fix
+ *     the field by 9.
+ * Through toneSourceRegions (UB_PRINT_TONES' function): per-channel gain at
+ * the region's tone, fading to the neutral gain toward white, so a
+ * highlight keeps its hue. The paper region is the pack's own Rules mask
+ * (lotr/rules.png); the field region the pixels of the FILE near its flat
+ * colour (nearRegionPlane: full within 2 levels, none past 24 — the cream
+ * inscription and rims are far from it), so the crowns and plates, which
+ * repaint the field, take the same tone as the masters.
+ */
+export const RING_PRINT_TONES = Object.freeze({
+  paper: Object.freeze({
+    w: Object.freeze({ from: [218, 212, 191], to: [213, 206, 179] }),
+    u: Object.freeze({ from: [123, 165, 195], to: [163, 188, 216] }),
+    b: Object.freeze({ from: [156, 157, 156], to: [204, 202, 202] }),
+    r: Object.freeze({ from: [210, 136, 126], to: [216, 177, 146] }),
+    g: Object.freeze({ from: [123, 170, 141], to: [184, 202, 188] }),
+    m: Object.freeze({ from: [228, 208, 155], to: [212, 187, 133] }),
+  }),
+  field: Object.freeze({
+    r: Object.freeze({ from: [118, 34, 34], to: [108, 46, 41] }),
+    g: Object.freeze({ from: [13, 68, 45], to: [36, 65, 48] }),
+  }),
+});
+/** The field region: full coverage within `full` levels (max channel) of
+ *  the tone's `from`, none past `none`, linear between. */
+export const RING_FIELD_NEAR = Object.freeze({ full: 2, none: 24 });
+/**
+ * A region of an image's OWN pixels: the coverage plane (0–255) of the
+ * pixels near `rgb` — 255 within `full` levels on every channel, 0 past
+ * `none` on any, linear between; a transparent pixel 0. Pure.
+ */
+export function nearRegionPlane(buf, width, height, rgb, { full, none }) {
+  const n = width * height;
+  if (buf.length !== n * 4) throw new Error(`nearRegionPlane: the image is not ${width}x${height} RGBA`);
+  if (!(none > full && full >= 0)) throw new Error(`nearRegionPlane: bad range ${full}–${none}`);
+  const plane = new Uint8Array(n);
+  for (let p = 0; p < n; p += 1) {
+    const o = p * 4;
+    if (buf[o + 3] === 0) continue;
+    const d = Math.max(Math.abs(buf[o] - rgb[0]), Math.abs(buf[o + 1] - rgb[1]), Math.abs(buf[o + 2] - rgb[2]));
+    plane[p] = d <= full ? 255 : d >= none ? 0 : Math.round((255 * (none - d)) / (none - full));
+  }
+  return plane;
+}
+/** One ring file's tone entry: the paper through the Rules mask (a file
+ *  drawn on the whole card, or at `at` — the stamp piece, its box cut from
+ *  the mask), the field by its own colour. */
+function ringSourceTone(key, { paper, at = null }) {
+  const tones = {};
+  const masks = {};
+  const near = {};
+  if (paper && RING_PRINT_TONES.paper[key]) {
+    tones.paper = RING_PRINT_TONES.paper[key];
+    masks.paper = `${RING}/rules.png`;
+  }
+  if (RING_PRINT_TONES.field[key]) {
+    tones.field = RING_PRINT_TONES.field[key];
+    near.field = RING_FIELD_NEAR;
+  }
+  if (!Object.keys(tones).length) return null;
+  return Object.freeze({ masks: Object.freeze(masks), near: Object.freeze(near), ...(at ? { maskAt: at } : {}), tones: Object.freeze(tones), table: `RING_PRINT_TONES (${key})` });
+}
+/** The ring's toned files: masters (paper + field), crowns and plates
+ *  (field), stamp pieces (paper, the mask cut at the piece's place). */
+export const RING_SOURCE_TONES = Object.freeze(
+  Object.fromEntries(
+    ["w", "u", "b", "r", "g", "m"].flatMap((k) =>
+      [
+        [`${RING}/${k}.png`, ringSourceTone(k, { paper: true })],
+        [`${RING}/crown/${k}.png`, ringSourceTone(k, { paper: false })],
+        [`${RING}/pt/${k}.png`, ringSourceTone(k, { paper: false })],
+        [`${RING}/stamp/${k}.png`, ringSourceTone(k, { paper: true, at: { x: 644, y: 1893 } })],
+      ].filter(([, t]) => t !== null),
+    ),
+  ),
+);
+const RING_NOTES = [
+  "w u b r g m = the pack's colour frames whole (lotr/<k>.png, 1500x2100 NATIVE — no resample), as the LTR ring showcase prints them (LTR #302–331, #794–823)",
+  "a = the pack's blue-grey 'Artifact Frame' (lotr/a.png): the master a colourless ARTIFACT paints (FrameProfile.artifactMasterKeys { c: 'a' }); c = the pack's brown 'Land Frame' (lotr/l.png) — the pack draws no colourless frame. The ring run prints neither (sixty legendary creatures, every one coloured): the scroll's split (#604) applied unprinted",
+  "corners: the one card corner cut at the two BOTTOM corners (the black border's shoulders, as on every Card Conjurer master); the TOP corners kept square — the frame field runs to the card's top and side edges on every print, so a square output keeps it there (lib/frames/square-corners.ts 'frame'); a round output cuts it at render",
+  "plates = the pack's eight plates (lotr/pt/<k>.png, 268x134 at ptBounds 1148/1857 px); c = the artifact's plate (the plate follows the colour key); the land plate is not published (no land creature prints on the frame)",
+  "toned onto the prints (owner 2026-10-22; RING_PRINT_TONES through RING_SOURCE_TONES, recorded under sourceTones): the text-box paper of w u b r g and gold through the pack's Rules mask, and the frame field of r and g (the field, the bars' faces and the plate's face — one flat colour in the pack — by their own colour), as each FILE loads, so the masters, crowns, plates and stamp pieces drawn from it agree",
+  "geometry as drawn (owner 2026-10-22): the pack draws its top block (edge inscription, title bar and rim) 12 px lower than the prints and its box bottom and plate 6 px higher — known and accepted; no flat zone allows a lossless re-cut of the top (the rim would thicken), so the slots ride the pack's own bars",
+  "not built: the two-colour dress (replacementMasks 'Right Half' = lotr/maskRightHalf.png: the colour frames split down the card under the pack's bars — LTR #316, #318–327, #330 and their twins; a follow-up — a two-colour card draws the gold master today)",
+];
+/**
+ * The ring's legendary crown (TODO 4.11): the pack's 'Legendary Crown'
+ * (`lotr/crown/<k>.png`, 1500 × 272 at crownBounds 0 / 0) — the scalloped
+ * cream title bar every print of the run carries (all sixty are
+ * legendary), with the frame field round it: it repaints the whole top of
+ * the card, so the band is rows 0–271 at 1:1, its two top corners kept
+ * square as the masters' are.
+ */
+export const RING_CROWN_BAND = Object.freeze({
+  source: `${RING}/crown`,
+  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "a", "l"]),
+  crown: Object.freeze({ leftPct: 0, topPct: 0, widthPct: 100, heightPct: (272 / 2100) * 100 }),
+  compositeSize: Object.freeze({ width: 1500, height: 2100 }),
+  rows: 272,
+});
+/** The ring crown band's one layer for a key. */
+export function ringCrownLayers(key) {
+  if (!RING_CROWN_BAND.keys.includes(key)) throw new Error(`ringCrownLayers: no crown for key ${key}`);
+  return [placed(`${RING_CROWN_BAND.source}/${key}.png`, RING_CROWN_BAND.crown)];
+}
+/**
+ * What the importer checks on the full 1500 × 2100 ring-crown composite
+ * (pure): nothing below the band's rows; the frame field opaque across the
+ * band's top row and down both side edges (the crown repaints the card's
+ * top edge to edge — its corners kept square, `keepCorners`); and the
+ * title bar's interior see-through (the master's own bar shows there:
+ * x 200–1300 on row 170).
+ */
+export function ringCrownFindings(buf, width, height, rows) {
+  let lastAlphaRow = -1;
+  for (let y = height - 1; y >= 0 && lastAlphaRow < 0; y -= 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (buf[(y * width + x) * 4 + 3] > 0) {
+        lastAlphaRow = y;
+        break;
+      }
+    }
+  }
+  let edgeMin = 255;
+  for (let x = 0; x < width; x += 1) edgeMin = Math.min(edgeMin, buf[x * 4 + 3]);
+  for (let y = 0; y < rows; y += 1) edgeMin = Math.min(edgeMin, buf[(y * width) * 4 + 3], buf[(y * width + width - 1) * 4 + 3]);
+  let interior = 0;
+  for (let x = 200; x <= 1300; x += 1) interior = Math.max(interior, buf[(170 * width + x) * 4 + 3]);
+  const failures = [];
+  if (lastAlphaRow >= rows) failures.push(`alpha down to row ${lastAlphaRow}, past the band's ${rows} rows`);
+  if (edgeMin < 255) failures.push(`the frame field is α ${edgeMin} on the card's top or side edge (the crown repaints it edge to edge)`);
+  if (interior > 0) failures.push(`the title bar's interior is α ${interior} on row 170 (the master's own bar shows there)`);
+  return { lastAlphaRow, peakRow: 0, failures, summary: `edge α ≥ ${edgeMin}, title interior α ≤ ${interior}` };
+}
+
+/**
+ * The ring's triangle stamp notch (TODO 4.11): the pack's per-colour
+ * 'Holo Stamp' (`lotr/stamp/<k>.png`, 212 × 95 at stampBounds 644 / 1893:
+ * the text box's rim stepped up round a black trapezoid) — 1:1 at HD, no
+ * resample — cut to RING_NOTCH_BOX: 1 px round the piece (its soft edge
+ * stops inside the box) and 10 px past its foot, so the Universes Beyond
+ * hole (apex 1992.5) and its ring fit inside: below
+ * the piece the box is clear but for that black ring, over the master's own
+ * black border (lib/cards/template-layout.ts LOTR_HOLO_STAMP's rect).
+ */
+export const RING_NOTCH_BOX = Object.freeze({ x: 643, y: 1892, width: 214, height: 106 });
+export const RING_NOTCH = Object.freeze({
+  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "a", "l"]),
+  pieces: Object.freeze(Object.fromEntries(["w", "u", "b", "r", "g", "m", "a", "l"].map((k) => [k, `${RING}/stamp/${k}.png`]))),
+  placeAt: Object.freeze({ x: 644, y: 1893, width: 212, height: 95 }),
+  compositeSize: Object.freeze({ width: 1500, height: 2100 }),
+  shape: Object.freeze({
+    size: Object.freeze({ width: RING_NOTCH_BOX.width, height: RING_NOTCH_BOX.height }),
+    bounds: Object.freeze({
+      leftPct: (RING_NOTCH_BOX.x / 1500) * 100,
+      topPct: (RING_NOTCH_BOX.y / 2100) * 100,
+      widthPct: (RING_NOTCH_BOX.width / 1500) * 100,
+      heightPct: (RING_NOTCH_BOX.height / 2100) * 100,
+    }),
+  }),
+});
+
+/**
+ * The pack's hologram capture blacked out of a ring notch piece (in place,
+ * before blackoutAndCut): every pixel where the pack's stamp shape
+ * (`stamp`: gray.png's alpha at the piece's place, cut to the box) is
+ * non-zero, grown by `growPx` (Chebyshev), becomes opaque black. The pack
+ * draws its triangle 8–10 px HIGHER than the printed stamp (gray.png's top
+ * edge at 1915 px, the stamp hole's at 1924.6), so the hole's own ring
+ * leaves a strip of it above the cut: the shape itself goes, then the hole.
+ */
+export function blackoutStampShape(buf, stamp, width, height, growPx) {
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      let hit = false;
+      for (let dy = -growPx; dy <= growPx && !hit; dy += 1) {
+        const yy = y + dy;
+        if (yy < 0 || yy >= height) continue;
+        for (let dx = -growPx; dx <= growPx; dx += 1) {
+          const xx = x + dx;
+          if (xx >= 0 && xx < width && stamp[yy * width + xx] > 0) {
+            hit = true;
+            break;
+          }
+        }
+      }
+      if (!hit) continue;
+      const o = (y * width + x) * 4;
+      buf[o] = 0;
+      buf[o + 1] = 0;
+      buf[o + 2] = 0;
+      buf[o + 3] = 255;
+    }
+  }
+  return buf;
+}
+
+/**
+ * What the importer (and the unit test, on the published objects) checks
+ * on a ring notch piece beside pieceNotchFindings (pure): every pixel where
+ * the pack's stamp shape is non-zero is opaque black or transparent — no
+ * pixel of the hologram capture is published.
+ */
+export function stampShapeBlackFindings(buf, stamp, width, height) {
+  let leaks = 0;
+  for (let p = 0; p < width * height; p += 1) {
+    if (!stamp[p]) continue;
+    const o = p * 4;
+    if (buf[o + 3] === 0) continue;
+    if (buf[o + 3] !== 255 || buf[o] || buf[o + 1] || buf[o + 2]) leaks += 1;
+  }
+  return { leaks, failures: leaks ? [`${leaks} px of the pack's stamp shape are neither opaque black nor clear`] : [] };
+}
+
 export const CC_TEMPLATES = {
+  // TODO 4.11: the Lord of the Rings ring showcase (see RING above).
+  lotr: {
+    colors: {
+      ...perColor((k) => [layer(`${RING}/${k === "c" ? "l" : k}.png`)]),
+      a: [layer(`${RING}/a.png`)],
+    },
+    plates: RING_PT,
+    keepCorners: RING_KEEP_CORNERS,
+    pack: RING_PACK,
+    notes: RING_NOTES,
+  },
   // TODO 4.11: the Lord of the Rings scroll showcase (see SCROLL above).
   lotrscroll: {
     colors: {
@@ -4411,11 +4811,14 @@ export const CC_TEMPLATES = {
     },
     pack: "packAdventure.js 'Adventure'",
     transforms: NATIVE_1500,
+    // TODO 4.26: the spell's page in its own colour — pieces cut from the
+    // published masters through CC's bookLeft mask (ADVENTURE_PAGE_CUT).
+    page: ADVENTURE_PAGE_CUT,
     notes: [
       "source: CC 'Adventure' (packAdventure.js): the M15 frame with the storybook's two pages — replaces the MSE composite (build-adventure-frame.mjs: the MSE m15 master + double_page + null_page), whose window ran 10 / 6 px narrow and whose paper was re-drawn",
-      "colourless = CC's 'Artifact Frame' (adventure/a.png) as a RENDER STAND-IN only (owner decision 2026-09-29): no colourless adventure was ever printed and the pack has no colourless frame, so the key keeps a master for a stray colourless card and is never offered (no reference, never ticked)",
+      "colourless = CC's 'Artifact Frame' (adventure/a.png; the pack has no other colourless frame): colourless adventures ARE printed — the artifacts HOB #170 / #174 / #176 and FIN's Towns #283–293 — and `adventure/c` is verified on production (supabase/seed.sql lists adventure in all seven keys; corrected 2026-10-22, 4.26 — the 4.21a note said no colourless adventure was printed and the key would never be ticked); a colourless creature with a coloured spell draws the spell's page over it (HOB #170: `page/w` over `adventure/c`, TODO 4.26)",
       "P/T plate = M15's (m15/pt/<k>.png): the pack draws CC's m15PT<K>.png at M15's bounds, so the ADVENTURE profile keeps M15's plate and box",
-      "the book masks (bookLeft, bookLeftMulticolor, bookRight) are 4.26's per-page colour inputs, not published",
+      "the book masks are not published: bookLeft cuts the spell's PAGE pieces (TODO 4.26, page/<key>.png — the published masters' left page through its alpha, drawn by the partPage overlay slot where the spell's colour differs from the creature's: WOE #221 a red page beside a black frame); bookLeftMulticolor (a two-colour page) is read by nothing, as no print shows a pair page beside a creature of other colours; bookRight is the creature's own page, which the master paints",
     ],
   },
   // 4.21a — the Amonkhet aftermath frame (AKH Insult // Injury and the 27
@@ -5508,8 +5911,23 @@ export function roundCorners(acc, width, height, radius) {
 /** Same as roundCorners, on 8-bit RGBA (after the final downscale): the
  *  card corner mask the bake applies too (lib/cards/card-corner.ts, TODO
  *  3.26), so a master and a bake cut at one radius agree pixel for pixel. */
-export function roundCornersRgba8(buf, width, height, radius) {
+export function roundCornersRgba8(buf, width, height, radius, keep = []) {
+  // A recipe's `keepCorners` (TODO 4.11: the ring's top corners, design that
+  // runs into the corner on print): those corner boxes are put back after
+  // the cut, so a square output keeps them (lib/frames/square-corners.ts
+  // "frame"); every round output cuts them at render.
+  const n = Math.ceil(radius);
+  const boxes = keep.map((corner) => {
+    const x0 = corner === "tr" || corner === "br" ? width - n : 0;
+    const y0 = corner === "bl" || corner === "br" ? height - n : 0;
+    const saved = Buffer.alloc(n * n * 4);
+    for (let y = 0; y < n; y += 1) Buffer.from(buf.buffer, buf.byteOffset, buf.length).copy(saved, y * n * 4, ((y0 + y) * width + x0) * 4, ((y0 + y) * width + x0 + n) * 4);
+    return { x0, y0, saved };
+  });
   applyCardCornerMask(buf, width, height, radius);
+  for (const { x0, y0, saved } of boxes) {
+    for (let y = 0; y < n; y += 1) buf.set(saved.subarray(y * n * 4, (y + 1) * n * 4), ((y0 + y) * width + x0) * 4);
+  }
 }
 
 /** Crop `box` out of an 8-bit RGBA image, keeping only what the mask's
@@ -5831,6 +6249,9 @@ export function sourceFilesFor(def) {
   // (battle): importer inputs, checked and recorded.
   if (def.halfMasks) for (const src of [def.halfMasks.left, def.halfMasks.right]) files.add(src);
   if (def.paintedShield) files.add(def.paintedShield.mask);
+  // The mask a template's page pieces are cut through (TODO 4.26: the
+  // adventure's bookLeft).
+  if (def.page) files.add(def.page.mask);
   // A pack's own bitmaps published beside the masters, and the masks kept
   // for a later recipe (4.21c's saga).
   for (const src of Object.values(def.pieces ?? {})) files.add(src);
@@ -5844,6 +6265,9 @@ export function sourceFilesFor(def) {
     // …and its region masks (TODO 4.10b, the 2003 frame).
     for (const mask of Object.values(printRecipe?.regionMasks ?? {})) files.add(mask);
   }
+  // A toned file's masks (CC_SOURCE_TONES; the LOTR ring's Rules mask, TODO
+  // 4.11): importer inputs too.
+  for (const file of [...files]) for (const mask of Object.values(sourceTonesOf(file)?.masks ?? {})) files.add(mask);
   return [...files].sort();
 }
 
@@ -6530,6 +6954,21 @@ export function m20TokenCrownFindings(buf, width, height, rows) {
 export const CC_OVERLAY_BANDS = {
   // TODO 4.11: the Lord of the Rings scroll's crown — a generic band, the
   // pack's crown at its own bounds (SCROLL_CROWN_BAND).
+  // TODO 4.11: the Lord of the Rings ring's crown — a generic band, the
+  // pack's crown at its own bounds, 1:1 (RING_CROWN_BAND).
+  lotrcrown: {
+    pack: RING_PACK,
+    band: RING_CROWN_BAND,
+    keys: RING_CROWN_BAND.keys,
+    layers: ringCrownLayers,
+    findings: ringCrownFindings,
+    keepCorners: RING_KEEP_CORNERS,
+    notes: [
+      "the ring showcase's legendary crown (TODO 4.11): the pack's 'Legendary Crown' (lotr/crown/<k>.png, 1500x272 at crownBounds 0/0) at 1:1 — the scalloped cream title bar with the frame field round it, which every print of the run carries (all sixty are legendary: LTR #302–331, #794–823); it repaints the card's whole top, its two top corners kept square like the masters'",
+      "keys = the pack's eight crowns: w u b r g, m (gold), a (the artifact's blue-grey — a colourless artifact draws master a) and l (the land's brown — the template's keyMap c → l); no pairs (no pair masters)",
+      "its field toned with the masters' (RING_SOURCE_TONES)",
+    ],
+  },
   lotrscrollcrown: {
     pack: SCROLL_PACK,
     band: SCROLL_CROWN_BAND,
@@ -6967,6 +7406,26 @@ export const HOLO_STAMP_NOTCHES = {
   },
   // TODO 4.11: the Lord of the Rings scroll's triangle notch — the pack's
   // own piece per key, composited like the masters (SCROLL_NOTCH).
+  // TODO 4.11: the Lord of the Rings ring's triangle notch — the pack's own
+  // piece per key, 1:1 (RING_NOTCH).
+  lotrholostamp: {
+    pack: RING_PACK,
+    pieces: RING_NOTCH.pieces,
+    keys: RING_NOTCH.keys,
+    shape: RING_NOTCH.shape,
+    placeAt: RING_NOTCH.placeAt,
+    compositeSize: RING_NOTCH.compositeSize,
+    triangle: UB_STAMP_HOLE,
+    cutMarginPx: 2,
+    blackoutPx: 2,
+    stampShape: `${RING}/stamp/gray.png`,
+    blackoutStampGrowPx: 1,
+    notes: [
+      `the ring showcase's triangle stamp notch (TODO 4.11): the pack's per-colour 'Holo Stamp' (lotr/stamp/<k>.png, 212x95) — the text box's rim stepped up round a black trapezoid over the stamp — at its stampBounds (644/1893 px), 1:1 (the pack is 1500 px native), cut to its box ${RING_NOTCH_BOX.width}x${RING_NOTCH_BOX.height} at ${RING_NOTCH_BOX.x},${RING_NOTCH_BOX.y} px — 1 px round the piece and 10 px past its foot, so the stamp hole's apex (1992.5) and its ring fit; below the piece the box is clear but for that ring, over the master's black border`,
+      "the pack's OWN piece per key (w u b r g, m gold, a the artifact's blue-grey, l the land's brown — the template maps a colourless land's c → l and a colourless artifact's c → a): the rim is the text box's own edge in the frame's colour, so m15holostamp's one-geometry tint does not apply; no pairs (no pair masters)",
+      "the hologram: the pack's 'Gray Holo Stamp' shape (lotr/stamp/gray.png) placed the same way, grown 1 px, painted opaque black — the pack draws its triangle 8–10 px HIGHER than the printed stamp (its top edge at 1915 px against the hole's 1924.6; LTR #302 / #313 print the Universes Beyond stamp, the hole 687–812 × 1924.6–1992.5) — then the Universes Beyond hole (lib/cards/holo-stamp.ts UB_STAMP_HOLE) plus 2 px cut to transparent and the 2 px round it painted black: no pixel of the capture is published; our own triangle bitmap (lib/cards/holo-stamp-art.ts) covers the cut",
+    ],
+  },
   lotrscrollholostamp: {
     pack: SCROLL_PACK,
     pieces: SCROLL_NOTCH.pieces,
@@ -7262,7 +7721,12 @@ export const NOTCH_FOOT = Object.freeze({
 /** Every Card Conjurer file a notch folder reads. */
 export function notchSourceFiles(def) {
   // A notch made of the pack's own piece per key (TODO 4.11: the scroll).
-  if (def.pieces) return [...new Set([...Object.values(def.pieces), ...(def.stampShape ? [def.stampShape] : [])])].sort();
+  if (def.pieces) {
+    const pieces = Object.values(def.pieces);
+    // …and a toned piece's mask (the LOTR ring's Rules mask, TODO 4.11).
+    const masks = pieces.flatMap((src) => Object.values(sourceTonesOf(src)?.masks ?? {}));
+    return [...new Set([...pieces, ...masks, ...(def.stampShape ? [def.stampShape] : [])])].sort();
+  }
   return [def.shape.src];
 }
 

@@ -602,11 +602,12 @@ describe("Face tabs moved the back's fields, not what a save sends", () => {
   }, 30_000);
 });
 
-/** A new split / aftermath card's 4.26 additions, asserted and removed. */
+/** A new split / aftermath / adventure card's 4.26 additions, asserted and
+ *  removed (the adventure's: the spell's page in its own colour). */
 function withoutPartColour(name: string, got: unknown): unknown {
   const payload = got as { frame_style?: Record<string, unknown>; back_face?: Record<string, unknown> | null } | null;
   const template = payload?.frame_style?.template;
-  if (!payload?.frame_style || (template !== "split" && template !== "aftermath") || !/^new /.test(name)) return got;
+  if (!payload?.frame_style || (template !== "split" && template !== "aftermath" && template !== "adventure") || !/^new /.test(name)) return got;
   expect(payload.frame_style.partColor, name).toBe(true);
   const frameStyle = { ...payload.frame_style };
   delete frameStyle.partColor;
@@ -621,7 +622,8 @@ function withoutPartColour(name: string, got: unknown): unknown {
 }
 
 describe("4.26's additions to a new two-part card", () => {
-  it("are the only change the split and aftermath scenarios make", () => {
+  it("are the only change the split, aftermath and adventure scenarios make", () => {
     expect(Object.keys(SCENARIOS).filter((n) => /^new (split|aftermath) /.test(n)).length).toBeGreaterThan(0);
+    expect(Object.keys(SCENARIOS).filter((n) => /^new adventure /.test(n)).length).toBeGreaterThan(0);
   });
 });

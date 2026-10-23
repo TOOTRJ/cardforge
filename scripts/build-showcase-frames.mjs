@@ -11,7 +11,8 @@
 //
 // (`lotrscroll` left this builder with TODO 4.11, layout v62: Card Conjurer's
 // 'Scroll' pack through scripts/import-cc-frames.mjs, frames bucket — it must
-// never come back to public/frames.)
+// never come back to public/frames. `lotr` left with it too, layout v65:
+// Card Conjurer's 'Ring' pack, the same way.)
 //
 //   node scripts/build-showcase-frames.mjs               # every family
 //   node scripts/build-showcase-frames.mjs tarkirdragon  # one family
@@ -42,7 +43,6 @@ const FRAMES = [
   { name: "avatar", style: "avatar-elemental", pat: "card/{c}.png", seeds: [[0.5, 0.24]] },
   { name: "bloomburrow", style: "bloomburrow-woodland", pat: "card/{c}card.png", seeds: [[0.5, 0.24]] },
   { name: "bloomanime", style: "bloomburrow-borderless-anime", pat: "card.png", seeds: [[0.5, 0.3]] },
-  { name: "lotr", style: "lotr", pat: "card/{c}card.png", seeds: [[0.5, 0.36]] },
   { name: "tarkirdragon", style: "tarkir-dragon-wing", pat: "card/{c}card.png", seeds: [[0.5, 0.28]], plate: "pt/{c}pt.png" },
   { name: "tarkirdraconic", style: "tarkir-draconic", pat: "card/{c}card.png", seeds: [[0.5, 0.28]], plate: "pt/{c}pt.png" },
   {

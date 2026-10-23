@@ -597,25 +597,6 @@ Generated 2026-07-02 by scripts/import-mse-profiles.mjs from /Users/redjester/Pr
 | footer.heightPct | 2.6 | 3.06 | 0.46 |  |
 | footer.sizePct | 0.015 | 0.0267 | 0.0117 |  |
 
-## lotr  `magic-m15-showcase-lotr.mse-style` (646×902)
-
-| field | current | MSE | Δ (MSE−cur) | notes |
-|---|---|---|---|---|
-| artSlot.topPct | 13 | 11.09 | -1.91 |  |
-| artSlot.leftPct | 14 | 9.6 | -4.40 |  |
-| artSlot.widthPct | 72 | 81.11 | 9.11 |  |
-| artSlot.heightPct | 45 | 44.68 | -0.32 |  |
-| rules.topPct | 66 | — | — | { 570 + chop_top() + body_font_vertical() } |
-| rules.leftPct | 8.5 | 7.74 | -0.76 |  |
-| rules.widthPct | 83 | 84.21 | 1.21 |  |
-| rules.heightPct | 26 | — | — |  |
-| rules.sizePct | 0.033 | — | — |  |
-| pt.topPct | 86.5 | — | — | { 809 + pt_font_vertical() } |
-| pt.leftPct | 71 | 80.03 | 9.03 |  |
-| pt.widthPct | 23 | 12.38 | -10.62 |  |
-| pt.heightPct | 7.5 | 4.21 | -3.29 |  |
-| pt.sizePct | 0.043 | — | — |  |
-
 ## avatar  `magic-m15-showcase-avatar-elemental.mse-style` (744×1039)
 
 | field | current | MSE | Δ (MSE−cur) | notes |

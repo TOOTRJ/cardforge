@@ -58,6 +58,90 @@
       "width": 1500,
       "height": 2100
     },
+    "adventure/page/b.png": {
+      "hash": "e6b798744f8c",
+      "sha256": "e6b798744f8c96f2ff51973603086f4791a246114b1dc3df5b985c85a8e4edcd",
+      "bytes": 325309,
+      "width": 682,
+      "height": 626
+    },
+    "adventure/page/b.webp": {
+      "hash": "ec3b4a33212c",
+      "sha256": "ec3b4a33212cb872b03241245a196f1d5a46b0d319158d951f25960e63d20b16",
+      "bytes": 9954,
+      "width": 682,
+      "height": 626
+    },
+    "adventure/page/g.png": {
+      "hash": "bccca06de4d0",
+      "sha256": "bccca06de4d0b904a3a298e3ca7b2c725a8a5aee246fa2c3eb51fb9531eb27dd",
+      "bytes": 351238,
+      "width": 682,
+      "height": 626
+    },
+    "adventure/page/g.webp": {
+      "hash": "b23ba21ecfc5",
+      "sha256": "b23ba21ecfc5835db63eab53ef4c098d90f66d36d7a5024989819495824cdc21",
+      "bytes": 10074,
+      "width": 682,
+      "height": 626
+    },
+    "adventure/page/m.png": {
+      "hash": "3db9dce38a9e",
+      "sha256": "3db9dce38a9edb5c1d530251e6fc91f3b0d1930544f958cd4864ef233e8a84cc",
+      "bytes": 349257,
+      "width": 682,
+      "height": 626
+    },
+    "adventure/page/m.webp": {
+      "hash": "105ef5e58049",
+      "sha256": "105ef5e58049d8070ae4bad0502b722f46cdea2ad7197352cc3a17220caa281a",
+      "bytes": 10836,
+      "width": 682,
+      "height": 626
+    },
+    "adventure/page/r.png": {
+      "hash": "0aacc703497e",
+      "sha256": "0aacc703497e736bf728c984803d7961ccc02fc7961e5b66a880d5df3ff03b62",
+      "bytes": 332795,
+      "width": 682,
+      "height": 626
+    },
+    "adventure/page/r.webp": {
+      "hash": "ebfde03f8823",
+      "sha256": "ebfde03f88230cd66bf074b65d5e4cd8a63ee370ff17fdbcc3a210a37b6f9773",
+      "bytes": 10676,
+      "width": 682,
+      "height": 626
+    },
+    "adventure/page/u.png": {
+      "hash": "b8af356461ff",
+      "sha256": "b8af356461fff96aff6f3704fbbeffeff59f7e538aeaa9824678a52303d8a62b",
+      "bytes": 408508,
+      "width": 682,
+      "height": 626
+    },
+    "adventure/page/u.webp": {
+      "hash": "0161a003ea24",
+      "sha256": "0161a003ea247357a4c2b5e50a8ebca2c464b8c98aa58b5c7742bfc5ff0f8555",
+      "bytes": 11528,
+      "width": 682,
+      "height": 626
+    },
+    "adventure/page/w.png": {
+      "hash": "043010b01d34",
+      "sha256": "043010b01d34a4212c2b1c74960173352e8a651c61e98ceaabd52b683add0772",
+      "bytes": 381153,
+      "width": 682,
+      "height": 626
+    },
+    "adventure/page/w.webp": {
+      "hash": "e9c7b363ab89",
+      "sha256": "e9c7b363ab89cc3aa83921bbfc98e021fbe68fcab40842bfe885b55ebb89a584",
+      "bytes": 10138,
+      "width": 682,
+      "height": 626
+    },
     "adventure/r.png": {
       "hash": "928b2581eb2e",
       "sha256": "928b2581eb2e3a82788c83aa665a69aa4a0c722d21c895ac62272452e6a3bdea",
@@ -2731,6 +2815,440 @@
       "bytes": 29868,
       "width": 1500,
       "height": 2100
+    },
+    "lotr/a.png": {
+      "hash": "a732e5fd1b57",
+      "sha256": "a732e5fd1b577c60541657e5d3a061414be6447209d6fc567ecdfb0909f89d99",
+      "bytes": 1015296,
+      "width": 1500,
+      "height": 2100
+    },
+    "lotr/a.webp": {
+      "hash": "7853be530bfb",
+      "sha256": "7853be530bfb6ae1361118820336d6eb3168d0edc787b77a2c4ee876f2199c23",
+      "bytes": 155404,
+      "width": 1500,
+      "height": 2100
+    },
+    "lotr/b.png": {
+      "hash": "e94834721480",
+      "sha256": "e9483472148060041a0cbacfaacbd1e5ead567133097556277face06a41d0b6d",
+      "bytes": 998960,
+      "width": 1500,
+      "height": 2100
+    },
+    "lotr/b.webp": {
+      "hash": "f6066a77daaf",
+      "sha256": "f6066a77daaf3dc4d7f2a4dc2e447506a3342dfc63c2fb2dba6fa56735f5e074",
+      "bytes": 156918,
+      "width": 1500,
+      "height": 2100
+    },
+    "lotr/c.png": {
+      "hash": "560aeaf9a0d8",
+      "sha256": "560aeaf9a0d8b687273c839a3d4f2e3eafefba7ffabbaede38c8ec090f1c3e78",
+      "bytes": 929879,
+      "width": 1500,
+      "height": 2100
+    },
+    "lotr/c.webp": {
+      "hash": "27e4b3786f21",
+      "sha256": "27e4b3786f2130d89204ec53773b7c13b8529a65d46494bf204f38583a21b398",
+      "bytes": 134446,
+      "width": 1500,
+      "height": 2100
+    },
+    "lotr/g.png": {
+      "hash": "a4fcc5f51aec",
+      "sha256": "a4fcc5f51aec8537b995995734ed5d58a788ae53eecc3b8fa9f70a54342c1b8d",
+      "bytes": 997410,
+      "width": 1500,
+      "height": 2100
+    },
+    "lotr/g.webp": {
+      "hash": "525bd0e7c226",
+      "sha256": "525bd0e7c2260535c0b6b6e34170b16acb66541c3501e248f945df04dc9963e1",
+      "bytes": 170566,
+      "width": 1500,
+      "height": 2100
+    },
+    "lotr/m.png": {
+      "hash": "25ffa5bbaa75",
+      "sha256": "25ffa5bbaa75d52e0a512c68be5ecdf4d175fcc652f89bf416778b555cb7761c",
+      "bytes": 929023,
+      "width": 1500,
+      "height": 2100
+    },
+    "lotr/m.webp": {
+      "hash": "dc01b33f5813",
+      "sha256": "dc01b33f5813c5072b1e2ff69c543c47f87f42860c9365e200f5640ee69108c1",
+      "bytes": 137904,
+      "width": 1500,
+      "height": 2100
+    },
+    "lotr/pt/b.png": {
+      "hash": "ae34f219042a",
+      "sha256": "ae34f219042a76beb8f92f6563610f651bd50aadd30074572f3d6252c7ad6bcc",
+      "bytes": 11450,
+      "width": 268,
+      "height": 134
+    },
+    "lotr/pt/b.webp": {
+      "hash": "11d4f54e6c40",
+      "sha256": "11d4f54e6c406db67aa95fe5aee7751fc2c507a1e774abf65e3b3e466b9b6ebb",
+      "bytes": 2208,
+      "width": 268,
+      "height": 134
+    },
+    "lotr/pt/c.png": {
+      "hash": "e577c1bacc6e",
+      "sha256": "e577c1bacc6e901e4e130ed75a950d3322dd919a532259a3710675ace8863e62",
+      "bytes": 12644,
+      "width": 268,
+      "height": 134
+    },
+    "lotr/pt/c.webp": {
+      "hash": "f6af9bb8628d",
+      "sha256": "f6af9bb8628deff554fc0718397d3d9a32f10d46f75a1a9b7467d9d26ca5b90b",
+      "bytes": 2470,
+      "width": 268,
+      "height": 134
+    },
+    "lotr/pt/g.png": {
+      "hash": "25fa07910ca3",
+      "sha256": "25fa07910ca3e06e96c4e9bdc35753a2c4e662804950f9b066ddcf6a35b62d67",
+      "bytes": 11610,
+      "width": 268,
+      "height": 134
+    },
+    "lotr/pt/g.webp": {
+      "hash": "712780ed52dd",
+      "sha256": "712780ed52ddd39930d3ef86a57d2b8b4afe2ccabd2217477b647cc42efdea6c",
+      "bytes": 2430,
+      "width": 268,
+      "height": 134
+    },
+    "lotr/pt/m.png": {
+      "hash": "3be4849e81cb",
+      "sha256": "3be4849e81cb1d42a89422e727e0c06f1a3cc9de645350470f352408d918ada0",
+      "bytes": 12976,
+      "width": 268,
+      "height": 134
+    },
+    "lotr/pt/m.webp": {
+      "hash": "1b668129925d",
+      "sha256": "1b668129925d3f4bd33526add9636eb4ea671af7c8e58e7d56bea481bb687286",
+      "bytes": 2722,
+      "width": 268,
+      "height": 134
+    },
+    "lotr/pt/r.png": {
+      "hash": "3e5c61ae9f6a",
+      "sha256": "3e5c61ae9f6a0c1ff1d68bf06e179cc4aeeb490ff672e154e2d6a0fab683133a",
+      "bytes": 11801,
+      "width": 268,
+      "height": 134
+    },
+    "lotr/pt/r.webp": {
+      "hash": "fe8befed0da8",
+      "sha256": "fe8befed0da819309849ce655497653407dfb3b64b0d0b6cde07409db7b8b911",
+      "bytes": 2618,
+      "width": 268,
+      "height": 134
+    },
+    "lotr/pt/u.png": {
+      "hash": "50e582ea8089",
+      "sha256": "50e582ea808929f5beb6524c08fdef5359447231cfa17892f9b37a016fc822b6",
+      "bytes": 12391,
+      "width": 268,
+      "height": 134
+    },
+    "lotr/pt/u.webp": {
+      "hash": "41922567627d",
+      "sha256": "41922567627de1ceb571f14e84de4c18c90762ecc557df07a4135bc7b8e6f23c",
+      "bytes": 2464,
+      "width": 268,
+      "height": 134
+    },
+    "lotr/pt/w.png": {
+      "hash": "caa4db7dc77d",
+      "sha256": "caa4db7dc77d973f59c0c4044312cc1262f0fdf999315c3b12296d7cc018cca4",
+      "bytes": 12818,
+      "width": 268,
+      "height": 134
+    },
+    "lotr/pt/w.webp": {
+      "hash": "8bfef96273a7",
+      "sha256": "8bfef96273a7870a94a3f472f092ce375e1d116ee19c6bed9a7718a2061f2e82",
+      "bytes": 2444,
+      "width": 268,
+      "height": 134
+    },
+    "lotr/r.png": {
+      "hash": "a9fc1b17baac",
+      "sha256": "a9fc1b17baac463026c2ca85eb59938e5ca094eb19d294232c19959fc2e0e265",
+      "bytes": 930014,
+      "width": 1500,
+      "height": 2100
+    },
+    "lotr/r.webp": {
+      "hash": "af5844f1e2bf",
+      "sha256": "af5844f1e2bfa77bf373b33d6509fb9e94c313b59770e56409324d3f66e23696",
+      "bytes": 175342,
+      "width": 1500,
+      "height": 2100
+    },
+    "lotr/u.png": {
+      "hash": "832ffe3d7816",
+      "sha256": "832ffe3d7816ea6c2cba5e045b7c81e9c8e5ae77db79d65b4183521278194084",
+      "bytes": 922256,
+      "width": 1500,
+      "height": 2100
+    },
+    "lotr/u.webp": {
+      "hash": "24d70bd5d594",
+      "sha256": "24d70bd5d594c0189f1e64bfec7f32e935841594bddbb09c5ee8d1264b985232",
+      "bytes": 168894,
+      "width": 1500,
+      "height": 2100
+    },
+    "lotr/w.png": {
+      "hash": "05cab7149146",
+      "sha256": "05cab714914633412726c9e0940038b3e8e9745ff693d204b976d8e234d24b76",
+      "bytes": 737706,
+      "width": 1500,
+      "height": 2100
+    },
+    "lotr/w.webp": {
+      "hash": "6598f1266a9d",
+      "sha256": "6598f1266a9d7983025b346c9c0241be07226fc8736b491d455e4790a98281d7",
+      "bytes": 140428,
+      "width": 1500,
+      "height": 2100
+    },
+    "lotrcrown/a.png": {
+      "hash": "6af68e684c78",
+      "sha256": "6af68e684c7882fd897a84dea6ba0a47e94b94ddca57bb12b855c4f003f1bfa2",
+      "bytes": 38851,
+      "width": 1500,
+      "height": 272
+    },
+    "lotrcrown/a.webp": {
+      "hash": "4661d57ad027",
+      "sha256": "4661d57ad027b78e52fa69eec20bf8b1b507d47a35f370b9f91792c208ed19c3",
+      "bytes": 21934,
+      "width": 1500,
+      "height": 272
+    },
+    "lotrcrown/b.png": {
+      "hash": "f85828265a73",
+      "sha256": "f85828265a73211f4e7b7c839709182212471869dc17722f59eb1de1ebfc45bc",
+      "bytes": 36534,
+      "width": 1500,
+      "height": 272
+    },
+    "lotrcrown/b.webp": {
+      "hash": "73083942fd13",
+      "sha256": "73083942fd13ab5a3eecfdb9e5edc969443b551fd089c593436a5b3ead15950c",
+      "bytes": 14866,
+      "width": 1500,
+      "height": 272
+    },
+    "lotrcrown/g.png": {
+      "hash": "2ce78637c91c",
+      "sha256": "2ce78637c91c06ef78a2be4932c613e09c01a2ded7902056b4f4c427b10cd49b",
+      "bytes": 36150,
+      "width": 1500,
+      "height": 272
+    },
+    "lotrcrown/g.webp": {
+      "hash": "ed09e78b1fe5",
+      "sha256": "ed09e78b1fe5f0e71d86b46e720799a950c34f042bd67f7d54d5a3c390b0de37",
+      "bytes": 18784,
+      "width": 1500,
+      "height": 272
+    },
+    "lotrcrown/l.png": {
+      "hash": "1d0230eb97b7",
+      "sha256": "1d0230eb97b7876fa7d4375ead2893a8538ecb48783b94b59a208927f6ca1913",
+      "bytes": 37130,
+      "width": 1500,
+      "height": 272
+    },
+    "lotrcrown/l.webp": {
+      "hash": "1ca542e2b9d6",
+      "sha256": "1ca542e2b9d680335465c73858269476f82419299ad56bb5d6e9aa5502011b02",
+      "bytes": 17508,
+      "width": 1500,
+      "height": 272
+    },
+    "lotrcrown/m.png": {
+      "hash": "c26e3df92e6a",
+      "sha256": "c26e3df92e6a85dadf24d9979e9d199064419c17b5286854a5f2d57e8143d62b",
+      "bytes": 38210,
+      "width": 1500,
+      "height": 272
+    },
+    "lotrcrown/m.webp": {
+      "hash": "069db2ea3d8e",
+      "sha256": "069db2ea3d8e5ed42e1c74ebe86cbdecd7d98d45f3cacdf77837dfdddd06470b",
+      "bytes": 22624,
+      "width": 1500,
+      "height": 272
+    },
+    "lotrcrown/r.png": {
+      "hash": "fcfdd5c55544",
+      "sha256": "fcfdd5c555448618a0c99fad1d8c750ea95877cbbcde6263c455444494bd6471",
+      "bytes": 36486,
+      "width": 1500,
+      "height": 272
+    },
+    "lotrcrown/r.webp": {
+      "hash": "5b5e88fe6dc6",
+      "sha256": "5b5e88fe6dc63cdfe3c7c4c93280666bb608a2c21f17df54fda0a5b94706d7d6",
+      "bytes": 21378,
+      "width": 1500,
+      "height": 272
+    },
+    "lotrcrown/u.png": {
+      "hash": "cebfcd671e8c",
+      "sha256": "cebfcd671e8c46db051b72c27167504e8eab914843dced4b004cbdbfbbf91247",
+      "bytes": 37053,
+      "width": 1500,
+      "height": 272
+    },
+    "lotrcrown/u.webp": {
+      "hash": "7cda7c3084b5",
+      "sha256": "7cda7c3084b52ec197b80f6fa03eaeed96fd22dd65e5097db7a5465bda035f8d",
+      "bytes": 20722,
+      "width": 1500,
+      "height": 272
+    },
+    "lotrcrown/w.png": {
+      "hash": "6c5974816e0c",
+      "sha256": "6c5974816e0c5f722576d4b33ffd5934f59a1704002144f08b8e65d9651583a5",
+      "bytes": 37938,
+      "width": 1500,
+      "height": 272
+    },
+    "lotrcrown/w.webp": {
+      "hash": "e2d8669c0407",
+      "sha256": "e2d8669c0407e84b949a521e3ff71a878f23b8ad6f67416788bc4e2b69ed4703",
+      "bytes": 20320,
+      "width": 1500,
+      "height": 272
+    },
+    "lotrholostamp/a.png": {
+      "hash": "115c402f10cb",
+      "sha256": "115c402f10cb4ecedf06f12676f81e63db0e0b6717cf34ba01a2968e958b7656",
+      "bytes": 1961,
+      "width": 214,
+      "height": 106
+    },
+    "lotrholostamp/a.webp": {
+      "hash": "34b3b2a5f720",
+      "sha256": "34b3b2a5f72072cefa2505ab886859327a3ed433cd87253833104de16da5d3eb",
+      "bytes": 1474,
+      "width": 214,
+      "height": 106
+    },
+    "lotrholostamp/b.png": {
+      "hash": "df2ea2c23b99",
+      "sha256": "df2ea2c23b995828ead5c905c30c56f9c23af10bbb5ee41a37cf9bfdc89da3b2",
+      "bytes": 1910,
+      "width": 214,
+      "height": 106
+    },
+    "lotrholostamp/b.webp": {
+      "hash": "a8bff9c30f7f",
+      "sha256": "a8bff9c30f7fc4897cb716adef72eaf01bfdc1578674ef2428f41b2b5e7c3a1e",
+      "bytes": 1240,
+      "width": 214,
+      "height": 106
+    },
+    "lotrholostamp/g.png": {
+      "hash": "31b6e42d8e7c",
+      "sha256": "31b6e42d8e7c3f000ea1192522dd252d994ec1217009037daed79a129a18f824",
+      "bytes": 1906,
+      "width": 214,
+      "height": 106
+    },
+    "lotrholostamp/g.webp": {
+      "hash": "d2bb13be45f6",
+      "sha256": "d2bb13be45f6714bf2db8163e8016555842d0ab52bff9af4ef76c8a245ee10d5",
+      "bytes": 1564,
+      "width": 214,
+      "height": 106
+    },
+    "lotrholostamp/l.png": {
+      "hash": "4739870823b8",
+      "sha256": "4739870823b8e97df03edb986f78e9a7f04da297000197f46dc4770a8a217f22",
+      "bytes": 1973,
+      "width": 214,
+      "height": 106
+    },
+    "lotrholostamp/l.webp": {
+      "hash": "92f22505df1f",
+      "sha256": "92f22505df1f1e251e2c86231a356a6a184c583547b60ea85499c56532436278",
+      "bytes": 1508,
+      "width": 214,
+      "height": 106
+    },
+    "lotrholostamp/m.png": {
+      "hash": "79b504659095",
+      "sha256": "79b5046590956de3eaf83ea0d08754fff891377a9bbee2b70d7d6e10f7706564",
+      "bytes": 2005,
+      "width": 214,
+      "height": 106
+    },
+    "lotrholostamp/m.webp": {
+      "hash": "e84dfde65ff7",
+      "sha256": "e84dfde65ff7678eba41d9a5a630ee6dad5c28c4c3d4e357583918dcd6f8de24",
+      "bytes": 1770,
+      "width": 214,
+      "height": 106
+    },
+    "lotrholostamp/r.png": {
+      "hash": "958761908516",
+      "sha256": "958761908516306006f6377117c3b85086c9a82675456b0c06eee8faff5bc894",
+      "bytes": 1910,
+      "width": 214,
+      "height": 106
+    },
+    "lotrholostamp/r.webp": {
+      "hash": "626b245aa0d1",
+      "sha256": "626b245aa0d17826f5c43b06826aaff902516b0ee8302f2765a2042bf7ea6c7a",
+      "bytes": 1718,
+      "width": 214,
+      "height": 106
+    },
+    "lotrholostamp/u.png": {
+      "hash": "4edb7b4d134a",
+      "sha256": "4edb7b4d134ac8b077003bbaed587926b15a166df45d6fa840898e5214d8ea2a",
+      "bytes": 1923,
+      "width": 214,
+      "height": 106
+    },
+    "lotrholostamp/u.webp": {
+      "hash": "45a3b4491a4d",
+      "sha256": "45a3b4491a4d94a6ea445fa13aeff7452b62896ace3e07b747055fcc60d0c02b",
+      "bytes": 1714,
+      "width": 214,
+      "height": 106
+    },
+    "lotrholostamp/w.png": {
+      "hash": "356f0944f961",
+      "sha256": "356f0944f961efb2899d97dc4d595ef620baf513d38880ba5460b5c793da1881",
+      "bytes": 2017,
+      "width": 214,
+      "height": 106
+    },
+    "lotrholostamp/w.webp": {
+      "hash": "ac5f32a58380",
+      "sha256": "ac5f32a58380460a00d663a6d43738a07159645597907dac96b82abe8badecd8",
+      "bytes": 1600,
+      "width": 214,
+      "height": 106
     },
     "lotrscroll/a.png": {
       "hash": "b1d1a38d4d20",

@@ -1580,6 +1580,24 @@ export const WALKER_COST_ROW_TEMPLATES: readonly string[] = ["m15pw", "m15border
 //            no colour is ticked, so no tick goes stale. The crown band, the
 //            triangle stamp's notch and the collector line are ADDITIONS a
 //            card switches on (no stored card names them).
+//   v65    — the Lord of the Rings RING showcase re-sourced from Card
+//            Conjurer (TODO 4.11, showcase rebuild wave 1). `lotr`, every
+//            card on it: the masters (CC 'Ring', 1500 px native; the 646 px
+//            MSE drawing leaves git) with the frame field to the top and
+//            side edges and the black border's shoulders (7.7's `design`
+//            edges; 4.35's transparent band is gone), the round window on
+//            the pack's own art bounds; the colourless artifact's master
+//            `a`, `c` the brown land frame; the pack's P/T plates; and the
+//            slots that ride them — the M15 pack's text layout (the M15-era
+//            family's sizes, `fit: "measured"` names, the CC M15 cost row:
+//            70 px discs, 78 pitch) on the pack's title bar, white name and
+//            type line; its text-box paper (and the r / g field) toned
+//            onto the prints (owner 2026-10-22; its geometry kept as drawn).
+//            LOTR_RING_LAYOUT_VERSION below — the ONE constant (v65: the
+//            Zendikar Rising hedron took v63, #603, and the Expedition
+//            lands take v64, #602, merged first). A CORRECTION ("sweep"), never a badge:
+//            no colour is ticked. The crown band, the triangle stamp's notch
+//            and the collector line are ADDITIONS a card switches on.
 // ---------------------------------------------------------------------------
 
 /** The Lord of the Rings scroll showcase re-sourced from Card Conjurer
@@ -1589,6 +1607,17 @@ export const WALKER_COST_ROW_TEMPLATES: readonly string[] = ["m15pw", "m15border
  *  once it ships. */
 export const LOTR_SCROLL_LAYOUT_VERSION = 62;
 export const LOTR_SCROLL_TEMPLATES: readonly string[] = ["lotrscroll"];
+
+/** The Lord of the Rings RING showcase re-sourced from Card Conjurer
+ *  (TODO 4.11): every card on `lotr`. ITS version lives here alone —
+ *  CARD_LAYOUT_VERSION, the scoped table and the rollout below read this
+ *  constant — so a bump that merges first moves it in one place. v65: the
+ *  Zendikar Rising hedron is v63 (#603) and the Expedition lands v64 (#602,
+ *  which merges before this; until it does, v64 is the gap it fills — a
+ *  version with no scope re-bakes every card, so this never merges first).
+ *  Frozen once it ships. */
+export const LOTR_RING_LAYOUT_VERSION = 65;
+export const LOTR_RING_TEMPLATES: readonly string[] = ["lotr"];
 
 /** The cost row as current print draws it (the 2023 pip move + TODO 3.34):
  *  the CC-framed M15 family's disc, centre and right end. ITS version lives
@@ -1686,8 +1715,9 @@ export const EXPEDITION_CC_TEMPLATES: readonly string[] = ["expeditionland"];
 //   v66    — the Theros constellation showcase's text on its prints (TODO
 //            4.11, owner-approved 2026-10-22). `nyx`, every card on it: the
 //            cost row on the prints' (70 px discs at the 78 px pitch,
-//            centred 8.8 px above the title bar's middle — 152.5 px, it sat
-//            at 164.1 with 72.75 px discs — and ending 1388 px), the name
+//            centred 8.8 px above the title bar's middle — 152.5 px, drawn
+//            on whole px at 750 and HD at 152.0; it sat at 164.1 with
+//            72.75 px discs — and ending 1388 px, drawn 1388.5), the name
 //            2 px up, the type band (its line and the inline set symbol) 10
 //            px down and ending 6 px further left, where THB #258–268 set
 //            them on their own bars. No master moves: registered on the same
@@ -2004,6 +2034,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // masters, plates and the slots that ride them; every card on it. No
   // narrower verification scope: no colour has a tick.
   [LOTR_SCROLL_LAYOUT_VERSION]: LOTR_SCROLL_TEMPLATES,
+  // The Lord of the Rings ring re-sourced from Card Conjurer (4.11): the
+  // masters, plates and the slots that ride them; every card on it. No
+  // narrower verification scope: no colour has a tick.
+  [LOTR_RING_LAYOUT_VERSION]: LOTR_RING_TEMPLATES,
   // The Zendikar Rising hedron showcase re-sourced from Card Conjurer
   // (4.11, wave 1): the masters and the slots that ride them; every card on
   // `fullart`. No narrower verification scope: no colour has a tick.
@@ -3101,11 +3135,12 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [UB_SEE_THROUGH_C_LAYOUT_VERSION]: "sweep", // the see-through colourless Universes Beyond spell frame (4.25 follow-up): an addition the visual gate records as a bump on a combo no card can be on (never ticked, offered nowhere) — never a badge
   [TOKEN_ARCH_PRINT_LAYOUT_VERSION]: "sweep", // the 2014–19 arch token on its prints (4.53): the gold small-caps name and the art slot on the window — a correction of the four arch frames against their own prints, never a badge
   [WALKER_COST_ROW_LAYOUT_VERSION]: "sweep", // the planeswalker's cost row and name on its prints (pips 132 → 128 px, the name 4 px up) — a correction of the three walker frames against their own prints, never a badge
+  [LOTR_RING_LAYOUT_VERSION]: "sweep", // the Lord of the Rings ring re-sourced from Card Conjurer (4.11): its masters with the frame field to the top and side edges and the black border's shoulders, the ring plates and the M15 pack's text layout under the lower title bar — a correction of the look against its own prints on a frame never ticked, never a badge
   [LOTR_SCROLL_LAYOUT_VERSION]: "sweep", // the Lord of the Rings scroll re-sourced from Card Conjurer (4.11): its masters with the printed black border, the scroll plates and the M15 pack's text layout — a correction of the look against its own prints on a frame never ticked, never a badge
   [COST_ROW_PRINT_LAYOUT_VERSION]: "sweep", // the cost row as current print draws it (the 2023 pip move + 3.34): 70 px discs, 78 pitch, 5 px lower and 2 px right on the 36 CC-framed M15 templates; the walkers' 70 px discs, 4 px right — a correction against the frames' own current print after the owner's before / after sheet, never a badge
   [ZNR_HEDRON_LAYOUT_VERSION]: "sweep", // the Zendikar Rising hedron showcase re-sourced from Card Conjurer (4.11, wave 1): masters, type line on the bar, inks, plates, cost row — a correction of the look against its own prints on a frame never ticked, never a badge
   [EXPEDITION_CC_LAYOUT_VERSION]: "sweep", // expeditionland re-sourced from Card Conjurer (4.11 wave 1): the ZNE look its prints wear — a correction of the frame against its own prints on a frame never ticked, never a badge
-  [NYX_GEOMETRY_LAYOUT_VERSION]: "sweep", // the Theros constellation showcase's text on its prints (4.11): the 70 px cost row 11.6 px up, the name 2 px up, the type line and set symbol 10 px down — a correction against the frame's own prints on a frame never ticked, never a badge
+  [NYX_GEOMETRY_LAYOUT_VERSION]: "sweep", // the Theros constellation showcase's text on its prints (4.11): the 70 px cost row 12 px up and 6 px right, the name 2 px up, the type line and set symbol 10 px down — a correction against the frame's own prints on a frame never ticked, never a badge
   [CC_RESOURCE_LAYOUT_VERSION]: "sweep", // extendedart and the textless pair re-sourced from Card Conjurer (4.7 / 4.35 / 4.42; owner Q6) — a correction of three looks against their own prints on frames never ticked, never a badge
   [LARGE_PIPS_LAYOUT_VERSION]: "sweep", // hybrid and twobrid discs large, the large pip's factor per frame and place (3.21) — a correction against the prints after the owner's round-49 sheets, never a badge
   [SYMBOLS_PRINT_LAYOUT_VERSION]: "sweep", // five symbols on the prints' drawings + flat rules-text pips (6.16b) — a correction against the prints after the owner's round-43 sheets, never a badge

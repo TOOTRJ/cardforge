@@ -182,8 +182,11 @@ describe("buildFrameComparePayload", () => {
   it("carries an adventure's Stomp half and keeps one colour one colour", async () => {
     lookup.card = bonecrusher;
     const payload = await buildFrameComparePayload(BONECRUSHER_ID, "adventure");
-    expect(payload?.preview.frameStyle).toEqual({ template: "adventure" });
+    // (The compare view draws the spell's page in its own colour, TODO
+    // 4.26 — Stomp is red, the creature's own: no page drawn.)
+    expect(payload?.preview.frameStyle).toEqual({ template: "adventure", partColor: true });
     expect(payload?.preview.colorIdentity).toEqual(["red"]);
+    expect(payload?.preview.backFace?.color_identity).toEqual(["red"]);
     expect(payload?.preview.power).toBe("4");
     expect(payload?.preview.backFace?.title).toBe("Stomp");
     expect(payload?.preview.backFace?.subtypes).toEqual(["Adventure"]);
