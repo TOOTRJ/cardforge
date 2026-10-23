@@ -1603,15 +1603,17 @@ export const WALKER_COST_ROW_TEMPLATES: readonly string[] = ["m15pw", "m15border
 //            it: the masters (CC 'Tarkir', "Tarkir Sketch (MOM)", 1500 px
 //            native; the 646 px MSE drawing leaves git) with the printed
 //            black border all round (4.35's #101015 ring is gone), the
-//            colourless card on the pack's artifact frame, the w and u wings
-//            toned onto MUL #1 / #60, the art slot on the pack's window, the
+//            colourless card on the pack's artifact frame, the w and u wings,
+//            the text box and the w plate's ends toned onto MUL #1 / #60 (the
+//            ring's rule: ≥ 9 levels off), the art slot on the pack's window, the
 //            pack's P/T plates; and the slots that ride them — the M15
 //            pack's text layout (the M15-era family's sizes, `fit:
 //            "measured"` names, the CC M15 cost row) laid on the pack's own
 //            bars as the prints lay it on theirs: the name and cost row 7 px
 //            up, the name 2 px and the type band 5 px left, the type band
 //            (its line and set symbol) 4.5 px up, white rules on a box that
-//            ends at 1911 px, the P/T centred on the plate's face. The
+//            ends at 1911 px, the P/T where print sets it on the plate (1.2
+//            px above M15's box); M15's footer, which the MSE profile lacked. The
 //            two-colour split wings stay. TARKIR_DRAGON_LAYOUT_VERSION below
 //            — the ONE constant (taken as v67 at PR time: v65 is the Lord of
 //            the Rings ring's, #607, and v66 the Theros constellation's

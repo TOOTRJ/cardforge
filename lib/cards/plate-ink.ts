@@ -73,7 +73,8 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   // its rim, none of the soft shadow left of and under it.
   "/frames/lotr/pt/{color}.png": { left: 0.0522, top: 0.0074, right: 1, bottom: 0.9254 },
   // The MUL Tarkir showcase's plates (TODO 4.11): Card Conjurer's Tarkir P/T
-  // (273 × 150), drawn at the pack's ptBounds — the bevelled plate and its
+  // (274 × 150; the white one 273 × 150, stretched to them), drawn at the
+  // pack's ptBounds (274 × 150) — the bevelled plate and its
   // coloured ends fill the image to every edge.
   "/frames/tarkirdragon/pt/{color}.png": { left: 0, top: 0, right: 1, bottom: 1 },
   // Git plates: the Tarkir showcases' plates / ribbon.

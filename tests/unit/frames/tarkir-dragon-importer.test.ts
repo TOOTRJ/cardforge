@@ -16,7 +16,12 @@ import {
   TARKIR_SOURCE_TONES,
   TARKIR_STAMP_OVAL_PX,
   TARKIR_WING_DIFF,
+  TARKIR_BOX_REGION,
+  TARKIR_PLATE_CHROMA,
+  TARKIR_CAPTURE_PX,
   blackoutAndCut,
+  boxRegionPlane,
+  chromaRegionPlane,
   capturePlane,
   cutInside,
   diffRegionPlane,
@@ -112,6 +117,13 @@ describe("the Tarkir recipe", () => {
     // The oval's cut and its black ring fit inside the box.
     expect(TARKIR_NOTCH_BOX.y + TARKIR_NOTCH_BOX.height).toBeGreaterThanOrEqual(TARKIR_STAMP_OVAL_PX.y + TARKIR_STAMP_OVAL_PX.height + 2 + 2);
     expect(notchCutOf(HOLO_STAMP_NOTCHES.tarkirdragonholostamp)).toBe(TARKIR_NOTCH.oval);
+    // The prints' oval (134 × 64), on the pack's well's centre, covers the
+    // pack's capture.
+    expect(TARKIR_STAMP_OVAL_PX).toEqual({ x: 683, y: 1924, width: 134, height: 64 });
+    expect(TARKIR_STAMP_OVAL_PX.x + TARKIR_STAMP_OVAL_PX.width / 2).toBe(TARKIR_CAPTURE_PX.x + TARKIR_CAPTURE_PX.width / 2);
+    expect(TARKIR_STAMP_OVAL_PX.x).toBeLessThanOrEqual(TARKIR_CAPTURE_PX.x);
+    expect(TARKIR_STAMP_OVAL_PX.y).toBeLessThanOrEqual(TARKIR_CAPTURE_PX.y);
+    expect(TARKIR_STAMP_OVAL_PX.y + TARKIR_STAMP_OVAL_PX.height).toBeGreaterThanOrEqual(TARKIR_CAPTURE_PX.y + TARKIR_CAPTURE_PX.height);
     expect(TARKIRDRAGON_HOLO_STAMP.anatomy === "holoStamp" && TARKIRDRAGON_HOLO_STAMP.stamp.shape).toBe("oval");
     // The slot's oval is the cut's.
     for (const k of ["leftPct", "topPct", "widthPct", "heightPct"] as const) expect(TARKIRDRAGON_HOLO_STAMP_OVAL[k]).toBeCloseTo(TARKIR_NOTCH.oval[k], 9);
@@ -119,15 +131,29 @@ describe("the Tarkir recipe", () => {
   });
 });
 
-describe("the wing tones onto print", () => {
-  it("tones the w and u wings — the masters and crowns — against the artifact file of their kind, nothing else", () => {
-    expect(Object.keys(TARKIR_PRINT_TONES).sort()).toEqual(["u", "w"]);
-    expect(Object.keys(TARKIR_SOURCE_TONES).sort()).toEqual([`${TARKIR}/crowns/u.png`, `${TARKIR}/crowns/w.png`, `${TARKIR}/u.png`, `${TARKIR}/w.png`]);
-    expect(sourceTonesOf(`${TARKIR}/w.png`)!.diff).toEqual({ wing: { file: `${TARKIR}/a.png`, ...TARKIR_WING_DIFF } });
+describe("the tones onto print: one rule (raw scan medians, ≥ 9 levels off)", () => {
+  const MASTERS = ["w", "u", "b", "r", "g", "m", "a"];
+  it("tones every master's box, the w and u wings (masters and crowns) and the w plate's ends — nothing else", () => {
+    expect(Object.keys(TARKIR_PRINT_TONES).sort()).toEqual(["box", "plateEnds", "wing"]);
+    expect(Object.keys(TARKIR_PRINT_TONES.wing).sort()).toEqual(["u", "w"]);
+    expect(Object.keys(TARKIR_PRINT_TONES.plateEnds)).toEqual(["w"]);
+    expect(TARKIR_PRINT_TONES.box).toEqual({ from: [53, 53, 52], to: [64, 63, 64] });
+    expect(Object.keys(TARKIR_SOURCE_TONES).sort()).toEqual(
+      [...MASTERS.map((k) => `${TARKIR}/${k}.png`), `${TARKIR}/crowns/u.png`, `${TARKIR}/crowns/w.png`, `${TARKIR}/pt/w.png`].sort(),
+    );
+    for (const k of MASTERS) {
+      const t = sourceTonesOf(`${TARKIR}/${k}.png`)!;
+      // The box against another master: the artifact file, or the white one for the artifact file itself.
+      expect(t.box, k).toEqual({ box: { file: `${TARKIR}/${k === "a" ? "w" : "a"}.png`, ...TARKIR_BOX_REGION } });
+      expect(Object.keys(t.tones).sort(), k).toEqual(k === "w" || k === "u" ? ["box", "wing"] : ["box"]);
+      if (k === "w" || k === "u") expect(t.diff, k).toEqual({ wing: { file: `${TARKIR}/a.png`, ...TARKIR_WING_DIFF } });
+    }
     expect(sourceTonesOf(`${TARKIR}/crowns/u.png`)!.diff).toEqual({ wing: { file: `${TARKIR}/crowns/a.png`, ...TARKIR_WING_DIFF } });
-    for (const f of ["b", "r", "g", "m", "a"].map((k) => `${TARKIR}/${k}.png`).concat([`${TARKIR}/pt/w.png`, `${TARKIR}/stamp.png`])) expect(sourceTonesOf(f), f).toBeNull();
-    // The reference file is an importer input of the recipe.
-    expect(sourceFilesFor(def as never)).toContain(`${TARKIR}/a.png`);
+    expect(sourceTonesOf(`${TARKIR}/pt/w.png`)!.chroma).toEqual({ plateEnds: TARKIR_PLATE_CHROMA });
+    // Within 5 levels of print: the bars, the plate's face, the gold plate's ends.
+    for (const f of ["crowns/b", "crowns/m", "crowns/a", "pt/m", "pt/u", "pt/a", "stamp"].map((k) => `${TARKIR}/${k}.png`)) expect(sourceTonesOf(f), f).toBeNull();
+    // The reference files are importer inputs of the recipe.
+    expect(sourceFilesFor(def as never)).toEqual(expect.arrayContaining([`${TARKIR}/a.png`, `${TARKIR}/w.png`]));
   });
 
   it("the wing region is where the file differs from the reference; the tone lands the wing's colour on print's", () => {
@@ -136,9 +162,32 @@ describe("the wing tones onto print", () => {
     const buf = Buffer.from([...px(56, 110, 211), ...px(150, 160, 170), ...px(150 + 28, 160, 170), ...px(56, 110, 211, 0)]);
     const plane = diffRegionPlane(buf, ref, 4, 1, TARKIR_WING_DIFF);
     expect([...plane]).toEqual([255, 0, Math.round((255 * 12) / 24), 0]);
-    const toned = toneSourceRegions(buf, 4, 1, { wing: plane }, TARKIR_PRINT_TONES.u);
+    const toned = toneSourceRegions(buf, 4, 1, { wing: plane }, { wing: TARKIR_PRINT_TONES.wing.u });
     expect([...toned.subarray(0, 3)]).toEqual([75, 105, 177]);
     expect([...toned.subarray(4, 8)]).toEqual([150, 160, 170, 255]);
+  });
+
+  it("the box region is the box's dark ground where the master is the same as another — never a wing, never outside the box", () => {
+    const W = 1500;
+    const H = 2100;
+    const at = (x: number, y: number) => (y * W + x) * 4;
+    const buf = Buffer.alloc(W * H * 4);
+    const ref = Buffer.alloc(W * H * 4);
+    const put = (b: Buffer, x: number, y: number, rgb: number[]) => b.set([...rgb, 255], at(x, y));
+    put(buf, 700, 1600, [53, 53, 52]); put(ref, 700, 1600, [53, 53, 52]); // the box's ground
+    put(buf, 120, 1600, [207, 178, 138]); put(ref, 120, 1600, [190, 195, 205]); // a wing down its side
+    put(buf, 700, 1700, [190, 190, 190]); put(ref, 700, 1700, [190, 190, 190]); // a silver ornament
+    put(buf, 700, 1200, [53, 53, 52]); put(ref, 700, 1200, [53, 53, 52]); // above the box
+    const plane = boxRegionPlane(buf, ref, W, H, TARKIR_BOX_REGION);
+    expect([plane[700 + 1600 * W], plane[120 + 1600 * W], plane[700 + 1700 * W], plane[700 + 1200 * W]]).toEqual([255, 0, 0, 0]);
+    const toned = toneSourceRegions(buf, W, H, { box: plane }, { box: TARKIR_PRINT_TONES.box });
+    expect([...toned.subarray(at(700, 1600), at(700, 1600) + 3)]).toEqual([64, 63, 64]);
+  });
+
+  it("the plate's ends are its coloured pixels; the grey face is left alone", () => {
+    const px = (r: number, g: number, b: number) => [r, g, b, 255];
+    const buf = Buffer.from([...px(214, 190, 154), ...px(202, 202, 203), ...px(200, 190, 180)]);
+    expect([...chromaRegionPlane(buf, 3, 1, TARKIR_PLATE_CHROMA)]).toEqual([255, 0, Math.round((255 * 8) / 18)]);
   });
 });
 
@@ -258,12 +307,21 @@ describe.skipIf(!available)("the published objects (set FRAMES_BUILD_DIR if skip
     }
     expect([px(0, 0)[3], px(1499, 0)[3], px(0, 2099)[3], px(1499, 2099)[3]]).toEqual([0, 0, 0, 0]);
     expect(px(750, 700)[3]).toBe(0);
+    // The box's dark ground toned onto print (53 → 64,63,64 at its tone).
+    const ground: number[] = [];
+    for (let y = 1340; y < 1890; y += 3) for (let x = 200; x < 1300; x += 3) {
+      const [r, g, b] = px(x, y);
+      const l = 0.299 * r + 0.587 * g + 0.114 * b;
+      if (l < 110) ground.push(l);
+    }
+    ground.sort((p, q) => p - q);
+    expect(Math.abs(ground[ground.length >> 1] - 63), `${key} box`).toBeLessThanOrEqual(3);
     // The two masters of a pair differ only on the wings: the seam at 50 %W
     // crosses identical pixels (checked against w).
     if (key !== "w") {
       const w = await sharp(published("tarkirdragon/w.png")!).ensureAlpha().raw().toBuffer();
       let differ = 0;
-      for (let y = 0; y < 2100; y += 3) for (let x = 430; x < 1070; x += 3) if (Math.abs(w[(y * 1500 + x) * 4] - data[(y * 1500 + x) * 4]) > 2) differ += 1;
+      for (let y = 0; y < 2100; y += 3) for (let x = 443; x < 1069; x += 3) if (Math.abs(w[(y * 1500 + x) * 4] - data[(y * 1500 + x) * 4]) > 2) differ += 1;
       expect(differ, key).toBe(0);
     }
   });

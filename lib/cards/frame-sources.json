@@ -16876,12 +16876,38 @@
       "m": "img/frames/tarkir/pt/m.png"
     },
     "sourceTones": {
+      "img/frames/tarkir/a.png": {
+        "table": "TARKIR_PRINT_TONES (a)",
+        "box": "inside 110,1311 1280×614 px on the dark ground (luma ≤ 110, none from 150) where the file is the same as img/frames/tarkir/w.png (max channel ≤ 8, none from 24): × 1.208 / 1.189 / 1.231 (53, 53, 52 → 64, 63, 64), fading to × 1.196 on every channel at white"
+      },
+      "img/frames/tarkir/b.png": {
+        "table": "TARKIR_PRINT_TONES (b)",
+        "box": "inside 110,1311 1280×614 px on the dark ground (luma ≤ 110, none from 150) where the file is the same as img/frames/tarkir/a.png (max channel ≤ 8, none from 24): × 1.208 / 1.189 / 1.231 (53, 53, 52 → 64, 63, 64), fading to × 1.196 on every channel at white"
+      },
+      "img/frames/tarkir/g.png": {
+        "table": "TARKIR_PRINT_TONES (g)",
+        "box": "inside 110,1311 1280×614 px on the dark ground (luma ≤ 110, none from 150) where the file is the same as img/frames/tarkir/a.png (max channel ≤ 8, none from 24): × 1.208 / 1.189 / 1.231 (53, 53, 52 → 64, 63, 64), fading to × 1.196 on every channel at white"
+      },
+      "img/frames/tarkir/m.png": {
+        "table": "TARKIR_PRINT_TONES (m)",
+        "box": "inside 110,1311 1280×614 px on the dark ground (luma ≤ 110, none from 150) where the file is the same as img/frames/tarkir/a.png (max channel ≤ 8, none from 24): × 1.208 / 1.189 / 1.231 (53, 53, 52 → 64, 63, 64), fading to × 1.196 on every channel at white"
+      },
+      "img/frames/tarkir/pt/w.png": {
+        "table": "TARKIR_PRINT_TONES (w)",
+        "plateEnds": "on the pixels of chroma (max − min channel) 12–30 (full from 30): × 0.939 / 0.963 / 1.065 (214, 190, 154 → 201, 183, 164), fading to × 0.963 on every channel at white"
+      },
+      "img/frames/tarkir/r.png": {
+        "table": "TARKIR_PRINT_TONES (r)",
+        "box": "inside 110,1311 1280×614 px on the dark ground (luma ≤ 110, none from 150) where the file is the same as img/frames/tarkir/a.png (max channel ≤ 8, none from 24): × 1.208 / 1.189 / 1.231 (53, 53, 52 → 64, 63, 64), fading to × 1.196 on every channel at white"
+      },
       "img/frames/tarkir/u.png": {
         "table": "TARKIR_PRINT_TONES (u)",
+        "box": "inside 110,1311 1280×614 px on the dark ground (luma ≤ 110, none from 150) where the file is the same as img/frames/tarkir/a.png (max channel ≤ 8, none from 24): × 1.208 / 1.189 / 1.231 (53, 53, 52 → 64, 63, 64), fading to × 1.196 on every channel at white",
         "wing": "on the pixels that differ from img/frames/tarkir/a.png by 16–40 levels (max channel; full from 40): × 1.339 / 0.955 / 0.839 (56, 110, 211 → 75, 105, 177), fading to × 0.981 on every channel at white"
       },
       "img/frames/tarkir/w.png": {
         "table": "TARKIR_PRINT_TONES (w)",
+        "box": "inside 110,1311 1280×614 px on the dark ground (luma ≤ 110, none from 150) where the file is the same as img/frames/tarkir/a.png (max channel ≤ 8, none from 24): × 1.208 / 1.189 / 1.231 (53, 53, 52 → 64, 63, 64), fading to × 1.196 on every channel at white",
         "wing": "on the pixels that differ from img/frames/tarkir/a.png by 16–40 levels (max channel; full from 40): × 0.976 / 1.011 / 1.101 (207, 178, 138 → 202, 180, 152), fading to × 1.008 on every channel at white"
       }
     },
@@ -16902,11 +16928,11 @@
       "img/frames/tarkir/w.png"
     ],
     "notes": [
-      "w u b r g m = the pack's colour frames whole (tarkir/<k>.png, 1500x2100 NATIVE — no resample), as the MUL Tarkir showcase prints them (MUL #1 / #131 / #131z white, #60 / #190 / #190z white-blue); one drawing whose dragon wings alone take the colour (any two masters differ only on x 48–422 and 1073–1454), so a two-colour card's hard seam at 50 %W (FrameProfile.twoColorSplit) crosses identical pixels, as the pack's own 'Right Half' ramp (tarkir/maskFrame.png, 41.7–61.3 %W) does",
+      "w u b r g m = the pack's colour frames whole (tarkir/<k>.png, 1500x2100 NATIVE — no resample), as the MUL Tarkir showcase prints them (MUL #1 / #131 / #131z white, #60 / #190 / #190z white-blue); one drawing whose dragon wings alone take the colour (any two masters differ only on x 47–442 and 1069–1457), so a two-colour card's hard seam at 50 %W (FrameProfile.twoColorSplit) crosses identical pixels, as the pack's own 'Right Half' ramp (tarkir/maskFrame.png, 41.7–61.3 %W) does",
       "c = the pack's 'Artifact Frame' (tarkir/a.png, the silver-blue wings): the pack's Colorless frame is commented out of packTarkir.js and is not in the tree, so a colourless card wears the frame Card Conjurer offers it; no colourless card prints on the frame",
       "a real black border all round, cut at the one card corner",
-      "plates = the pack's P/T plates (tarkir/pt/<k>.png, 273x150 at ptBounds 1155/1850 px); c = the artifact's plate",
-      "toned onto the prints (TARKIR_PRINT_TONES through TARKIR_SOURCE_TONES, recorded under sourceTones): the w and u dragon wings — the pixels where the colour's file differs from the artifact file — as each FILE loads, so the masters and the crowns drawn from it agree; b r g m and c have no print and stay as drawn",
+      "plates = the pack's P/T plates (tarkir/pt/<k>.png, 274x150 — the white one 273x150, stretched to ptBounds — drawn at ptBounds 1155/1850 px, 274x150); c = the artifact's plate",
+      "toned onto the prints by one rule, the ring's (raw scan medians; a region ≥ 9 levels off is toned — TARKIR_PRINT_TONES through TARKIR_SOURCE_TONES, recorded under sourceTones), as each FILE loads, so the masters, crowns and plates drawn from it agree: the w and u dragon wings (the pixels where the colour's file differs from the artifact file), every master's text box (its dark ground inside the box, where the master is the same as another) and the w plate's tan ends (its coloured pixels); the bars, the plate's face and the gold plate's ends are within 5 levels and stay as drawn, as do b r g, gold and the artifact silver (no print)",
       "geometry as drawn: the pack's top block (crown, title bar) sits 6 px lower than the prints and its box bottom, plate and stamp 6 px higher, the type bar within 1 px — print is the same drawing 0.66 % taller and 0.4 % wider, which no flat zone can re-cut (the wings run unbroken from the title bar to the box); the slots ride the pack's own bars"
     ]
   },
@@ -17007,39 +17033,39 @@
     "colors": {
       "w": [
         "img/frames/tarkir/stamp.png at 638,1888 225×101 px of a clear 1500×2100 card, 1:1 (no resample), cut to 227×110 at 637,1887",
-        "the oval 45.6667/91.6429/8.6667×3.0000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+        "the oval 45.5333/91.6190/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
       ],
       "u": [
         "img/frames/tarkir/stamp.png at 638,1888 225×101 px of a clear 1500×2100 card, 1:1 (no resample), cut to 227×110 at 637,1887",
-        "the oval 45.6667/91.6429/8.6667×3.0000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+        "the oval 45.5333/91.6190/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
       ],
       "b": [
         "img/frames/tarkir/stamp.png at 638,1888 225×101 px of a clear 1500×2100 card, 1:1 (no resample), cut to 227×110 at 637,1887",
-        "the oval 45.6667/91.6429/8.6667×3.0000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+        "the oval 45.5333/91.6190/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
       ],
       "r": [
         "img/frames/tarkir/stamp.png at 638,1888 225×101 px of a clear 1500×2100 card, 1:1 (no resample), cut to 227×110 at 637,1887",
-        "the oval 45.6667/91.6429/8.6667×3.0000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+        "the oval 45.5333/91.6190/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
       ],
       "g": [
         "img/frames/tarkir/stamp.png at 638,1888 225×101 px of a clear 1500×2100 card, 1:1 (no resample), cut to 227×110 at 637,1887",
-        "the oval 45.6667/91.6429/8.6667×3.0000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+        "the oval 45.5333/91.6190/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
       ],
       "m": [
         "img/frames/tarkir/stamp.png at 638,1888 225×101 px of a clear 1500×2100 card, 1:1 (no resample), cut to 227×110 at 637,1887",
-        "the oval 45.6667/91.6429/8.6667×3.0000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+        "the oval 45.5333/91.6190/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
       ],
       "c": [
         "img/frames/tarkir/stamp.png at 638,1888 225×101 px of a clear 1500×2100 card, 1:1 (no resample), cut to 227×110 at 637,1887",
-        "the oval 45.6667/91.6429/8.6667×3.0000 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+        "the oval 45.5333/91.6190/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
       ]
     },
     "cut": {
       "oval": {
-        "leftPct": 45.666666666666664,
-        "topPct": 91.64285714285715,
-        "widthPct": 8.666666666666668,
-        "heightPct": 3
+        "leftPct": 45.53333333333333,
+        "topPct": 91.61904761904762,
+        "widthPct": 8.933333333333334,
+        "heightPct": 3.0476190476190474
       },
       "marginPx": 2,
       "blackoutPx": 2,
@@ -17051,7 +17077,7 @@
     "notes": [
       "the Tarkir showcase's oval stamp notch (TODO 4.11): the pack's one 'Holo Stamp' (tarkir/stamp.png, 225x101) — the text box's bottom rim arched over a black well round the hologram oval — at its stampBounds (638/1888 px), 1:1 (the pack is 1500 px native), cut to its box 227x110 at 637,1887 px — 1 px round the piece and 8 px past its foot, so the cut's black ring fits; below the piece the box is clear but for that ring, over the master's black border",
       "keys = the masters' w u b r g m c, every one the same piece: the pack draws one stamp for every colour, and the masters' rim under it is the same pixels on every key (they differ only on the wings)",
-      "the hologram: the pack paints a capture of WotC's oval in the well (685–815 × 1924.5–1987.5 px, measured on the piece); that oval plus 2 px is cut to transparent and the 2 px round it painted opaque black, and the importer holds every lit pixel of the well inside the cut and its ring: no pixel of the capture is published; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut"
+      "the hologram: the pack paints a capture of WotC's oval in the well (685–815 × 1924.5–1987.5 px, measured on the piece); the prints' oval (134 × 64 at 683, 1924 — MUL #1 / #60 / #131 / #190, on the well's centre) plus 2 px is cut to transparent and the 2 px round it painted opaque black, and the importer holds every lit pixel of the well inside the cut and its ring: no pixel of the capture is published; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut"
     ]
   }
 }

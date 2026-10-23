@@ -178,6 +178,8 @@ import {
   sourceTonesOf,
   nearRegionPlane,
   diffRegionPlane,
+  chromaRegionPlane,
+  boxRegionPlane,
   capturePlane,
   toneSourceRegions,
   describeSourceTones,
@@ -300,6 +302,11 @@ async function toneLoaded(src, data, w, h) {
   // A region where the file differs from another pack file of its kind
   // (the MUL Tarkir dragon wings, TODO 4.11), read at the same size.
   for (const [name, d] of Object.entries(tone.diff ?? {})) regions[name] = diffRegionPlane(data, await rgba(await fetchCached(d.file), w, h), w, h, d);
+  // …a file's coloured pixels (the Tarkir plate's ends) and the dark ground
+  // inside a box where the file is the same as another master (the Tarkir
+  // text box, its wings left out).
+  for (const [name, c] of Object.entries(tone.chroma ?? {})) regions[name] = chromaRegionPlane(data, w, h, c);
+  for (const [name, b] of Object.entries(tone.box ?? {})) regions[name] = boxRegionPlane(data, await rgba(await fetchCached(b.file), w, h), w, h, b);
   return toneSourceRegions(data, w, h, regions, tone.tones);
 }
 

@@ -588,12 +588,19 @@ export function describeFileTones(files) {
     // one flat colour of the file itself (nearRegionPlane).
     // …or (the MUL Tarkir wings, TODO 4.11) the pixels where the file
     // differs from another file (diffRegionPlane).
-    const where = (region) =>
-      tone.masks?.[region]
-        ? `through ${tone.masks[region]}`
-        : tone.diff?.[region]
-          ? `on the pixels that differ from ${tone.diff[region].file} by ${tone.diff[region].none}–${tone.diff[region].full} levels (max channel; full from ${tone.diff[region].full})`
-          : `on the pixels within ${tone.near[region].full}–${tone.near[region].none} levels (max channel) of ${tone.tones[region].from.join(", ")}`;
+    // …or the file's coloured pixels (chromaRegionPlane), or the dark ground
+    // inside a box where the file is the same as another (boxRegionPlane).
+    const where = (region) => {
+      if (tone.masks?.[region]) return `through ${tone.masks[region]}`;
+      const d = tone.diff?.[region];
+      if (d) return `on the pixels that differ from ${d.file} by ${d.none}–${d.full} levels (max channel; full from ${d.full})`;
+      const c = tone.chroma?.[region];
+      if (c) return `on the pixels of chroma (max − min channel) ${c.none}–${c.full} (full from ${c.full})`;
+      const b = tone.box?.[region];
+      if (b)
+        return `inside ${b.rect.x},${b.rect.y} ${b.rect.width}×${b.rect.height} px on the dark ground (luma ≤ ${b.luma[0]}, none from ${b.luma[1]}) where the file is the same as ${b.file} (max channel ≤ ${b.same.full}, none from ${b.same.none})`;
+      return `on the pixels within ${tone.near[region].full}–${tone.near[region].none} levels (max channel) of ${tone.tones[region].from.join(", ")}`;
+    };
     out[file] = { table: tone.table, ...Object.fromEntries(Object.keys(tone.tones).map((region) => [region, `${where(region)}: ${gains[region]}`])) };
   }
   return Object.keys(out).length ? out : null;
@@ -4224,7 +4231,8 @@ export function stampShapeBlackFindings(buf, stamp, width, height) {
 //     colourless card takes the frame Card Conjurer itself offers it. No
 //     print exists (the run is a white and a white-blue legend).
 //   • every master is the SAME drawing but for its dragon wings: two masters
-//     differ only on x 48–422 and 1073–1454 (measured on all seven), so the
+//     differ only on x 47–442 and 1069–1457 (any difference, measured on all
+//     seven; the wings run down the box's sides, x 58–182 and 1329–1440), so the
 //     profile's hard two-colour seam at 50 %W crosses identical pixels — as
 //     the pack's own 'Right Half' mask (tarkir/maskFrame.png, a ramp across
 //     41.7–61.3 %W) does.
@@ -4233,8 +4241,9 @@ export function stampShapeBlackFindings(buf, stamp, width, height) {
 //   • the art window is see-through (α < 16) on 144–1349 × 244–1157 px with
 //     a soft shadow round it (α < 250 on 131–1365 × 232–1158) on every key:
 //     the profile's slot covers it with the art-window check's spare.
-//   • plates: the pack's P/T plates (273 × 150 at ptBounds 1155 / 1850) —
-//     the colourless key the artifact's.
+//   • plates: the pack's P/T plates (274 × 150 — the white one 273 × 150,
+//     stretched to ptBounds — at ptBounds 1155 / 1850, 274 × 150) — the
+//     colourless key the artifact's.
 //   • geometry kept as drawn: registered region by region on the prints, the
 //     pack's top block (crown, title bar) sits 6 px lower than print and its
 //     box bottom, plate and stamp 6 px higher (the type bar within 1 px) —
@@ -4250,32 +4259,61 @@ const TARKIR_PT = Object.freeze(perColor((k) => tarkirFile("pt/", k)));
 const TARKIR_PACK = "packTarkir.js 'Tarkir' (\"Tarkir Sketch (MOM)\" — the Multiverse Legends Tarkir dragon-wing showcase; groupShowcase-5.js)";
 
 /**
- * The pack's dragon-wing colours toned onto the prints (TODO 4.11, the
- * owner's rule of the ring, #607: a pack colour ≥ 9 levels off print is
- * toned at load). Measured on the Scryfall PNGs at 1500 × 2100, each print
- * registered on the pack's drawing side by side (the left wing +2 / −3 px,
- * the right +7 / −3), the median over the pack's OWN wing pixels — where
- * the colour's file differs from the artifact file by ≥ 40 levels, eroded
- * 3 px:
- *   • w (tan): 207,178,138 → 202,180,152 — MUL #1's left and right wings
- *     and #60's left (207,183,159; 195,174,152; 202,180,149): the pack's
- *     tan 14 levels too saturated in blue;
- *   • u (blue): 56,110,211 → 75,105,177 — MUL #60's right wing: the pack's
- *     blue 19 short in red and 34 over in blue.
- * The halo-foil twins (#131, #190 and their serialized z) print another ink
- * and are not read. b r g, m and the artifact silver have no print: as
- * drawn. The paper of the text box and the silver bars agree with print
- * once the scans' black (12–20, not 0) is allowed for — box 53 vs 61–65,
- * bars 189–192 vs 194–198 — so they are not toned; nor is the plate's face
- * (202 vs 202).
+ * The pack's colours toned onto the prints (TODO 4.11) by ONE rule — the
+ * ring's (#607): the raw median of the Scryfall PNGs at 1500 × 2100 against
+ * the pack's, over the same pixels (each print registered on the pack's
+ * drawing; text and misregistered outlines, |Δluma| > 45, left out of both),
+ * and any region off by ≥ 9 levels on a channel is toned. Per region (pack →
+ * print, MUL #1 / #60; the halo-foil twins #131 / #190 print another ink
+ * and are not read):
+ *   • the w wings (the pixels where the colour's file differs from the
+ *     artifact file by ≥ 40 levels, eroded 3 px): 207,178,138 →
+ *     202,180,152 (#1's two wings and #60's left: 207,183,159 / 195,174,152 /
+ *     202,180,149) — 14 off in blue: TONED;
+ *   • the u wings: 56,110,211 → 75,105,177 (#60's right) — 19 / 34 off: TONED;
+ *   • the text box (its dark ground, 130–1370 × 1330–1900): 53,53,52 →
+ *     61,61,61 (#1) and 66,65,67 (#60), their mean 64,63,64 — 11 off: TONED;
+ *   • the w plate's tan ends (the plate's coloured pixels, chroma ≥ 30):
+ *     214,190,154 → 201,183,164 (#1) — 13 off: TONED;
+ *   • the title bar's face: 197,197,197 → 198,198,201 (both) — 4: as drawn;
+ *   • the type bar's face: 191,190,190 → 193,192,194 / 192,191,193 — 4: as
+ *     drawn;
+ *   • the plate's face: 201,202,203 → 196,199,201 / 196,198,198 — 5: as drawn;
+ *   • the gold plate's ends (chroma ≥ 30): 188,146,56 → 187,151,51 (#60) —
+ *     5: as drawn.
+ * b r g, the gold wings and the artifact silver have no print: as drawn.
+ * Through toneSourceRegions: a per-channel gain at the region's tone, fading
+ * to the neutral (luma) gain toward white.
  */
 export const TARKIR_PRINT_TONES = Object.freeze({
-  w: Object.freeze({ wing: Object.freeze({ from: [207, 178, 138], to: [202, 180, 152] }) }),
-  u: Object.freeze({ wing: Object.freeze({ from: [56, 110, 211], to: [75, 105, 177] }) }),
+  wing: Object.freeze({
+    w: Object.freeze({ from: [207, 178, 138], to: [202, 180, 152] }),
+    u: Object.freeze({ from: [56, 110, 211], to: [75, 105, 177] }),
+  }),
+  box: Object.freeze({ from: [53, 53, 52], to: [64, 63, 64] }),
+  plateEnds: Object.freeze({
+    w: Object.freeze({ from: [214, 190, 154], to: [201, 183, 164] }),
+  }),
 });
 /** The wing region: full coverage where the file differs from the pack's
  *  artifact file by ≥ `full` levels (max channel), none at ≤ `none`. */
 export const TARKIR_WING_DIFF = Object.freeze({ full: 40, none: 16 });
+/**
+ * The text box region: inside the box (`rect`, card px — the masters' box
+ * interior, 110–1390 × 1311–1925), on its dark ground (luma ≤ `luma[0]`
+ * full, ≥ `luma[1]` none: the silver ornaments are lighter) and where the
+ * file is the SAME as another master (max channel diff ≤ `same.full` full,
+ * ≥ `same.none` none: the dragon wings that run down the box's sides,
+ * x 58–182 and 1329–1440, are not the box). Every master draws the same box.
+ */
+export const TARKIR_BOX_REGION = Object.freeze({
+  rect: Object.freeze({ x: 110, y: 1311, width: 1280, height: 614 }),
+  luma: Object.freeze([110, 150]),
+  same: Object.freeze({ full: 8, none: 24 }),
+});
+/** The plate ends' region: the plate's coloured pixels — chroma (max −
+ *  min channel) ≥ `full` full, ≤ `none` none; the face is grey. */
+export const TARKIR_PLATE_CHROMA = Object.freeze({ full: 30, none: 12 });
 /**
  * A region of an image where it DIFFERS from a reference image of the same
  * size (both 8-bit RGBA): the coverage plane (0–255) — 255 where the max
@@ -4297,32 +4335,87 @@ export function diffRegionPlane(buf, ref, width, height, { full, none }) {
   }
   return plane;
 }
-/** One Tarkir file's tone entry: the wing region against the artifact file
- *  of the same kind (frame, crown). */
-function tarkirSourceTone(key, dir) {
-  const tone = TARKIR_PRINT_TONES[key];
+/** A region of an image's coloured pixels: chroma (max − min channel) ≥
+ *  `full` → 255, ≤ `none` → 0, linear between; a transparent pixel 0. Pure. */
+export function chromaRegionPlane(buf, width, height, { full, none }) {
+  const n = width * height;
+  if (buf.length !== n * 4) throw new Error(`chromaRegionPlane: the image is not ${width}x${height} RGBA`);
+  if (!(full > none && none >= 0)) throw new Error(`chromaRegionPlane: bad range ${none}–${full}`);
+  const plane = new Uint8Array(n);
+  for (let p = 0; p < n; p += 1) {
+    const o = p * 4;
+    if (buf[o + 3] === 0) continue;
+    const c = Math.max(buf[o], buf[o + 1], buf[o + 2]) - Math.min(buf[o], buf[o + 1], buf[o + 2]);
+    plane[p] = c >= full ? 255 : c <= none ? 0 : Math.round((255 * (c - none)) / (full - none));
+  }
+  return plane;
+}
+/** The text box region of a whole-card master (TARKIR_BOX_REGION): the
+ *  product of the box rect, the dark-ground ramp and the same-as-`ref`
+ *  ramp. Pure; both images 8-bit RGBA at `width × height`. */
+export function boxRegionPlane(buf, ref, width, height, { rect, luma, same }) {
+  const n = width * height;
+  if (buf.length !== n * 4 || ref.length !== n * 4) throw new Error(`boxRegionPlane: the images are not ${width}x${height} RGBA`);
+  const ramp = (v, full, none) => (full < none ? (v <= full ? 1 : v >= none ? 0 : (none - v) / (none - full)) : 0);
+  const plane = new Uint8Array(n);
+  for (let y = Math.max(0, rect.y); y < Math.min(height, rect.y + rect.height); y += 1) {
+    for (let x = Math.max(0, rect.x); x < Math.min(width, rect.x + rect.width); x += 1) {
+      const p = y * width + x;
+      const o = p * 4;
+      if (buf[o + 3] === 0) continue;
+      const l = 0.299 * buf[o] + 0.587 * buf[o + 1] + 0.114 * buf[o + 2];
+      const d = Math.max(Math.abs(buf[o] - ref[o]), Math.abs(buf[o + 1] - ref[o + 1]), Math.abs(buf[o + 2] - ref[o + 2]));
+      plane[p] = Math.round(255 * ramp(l, luma[0], luma[1]) * ramp(d, same.full, same.none));
+    }
+  }
+  return plane;
+}
+/** A master's tone entry: its box (against another master: the artifact
+ *  file, or the white one for the artifact file itself) and, for w / u, its
+ *  wings (against the artifact file). */
+function tarkirMasterTone(key) {
+  const tones = { box: TARKIR_PRINT_TONES.box };
+  const diff = {};
+  if (TARKIR_PRINT_TONES.wing[key]) {
+    tones.wing = TARKIR_PRINT_TONES.wing[key];
+    diff.wing = Object.freeze({ file: `${TARKIR}/a.png`, ...TARKIR_WING_DIFF });
+  }
   return Object.freeze({
-    diff: Object.freeze({ wing: Object.freeze({ file: `${TARKIR}/${dir}a.png`, ...TARKIR_WING_DIFF }) }),
-    tones: tone,
+    ...(Object.keys(diff).length ? { diff: Object.freeze(diff) } : {}),
+    box: Object.freeze({ box: Object.freeze({ file: `${TARKIR}/${key === "a" ? "w" : "a"}.png`, ...TARKIR_BOX_REGION }) }),
+    tones: Object.freeze(tones),
     table: `TARKIR_PRINT_TONES (${key})`,
   });
 }
-/** The Tarkir pack's toned files: the w and u masters and their crowns
- *  (the plates' wing-less faces carry no wing). */
+/** The Tarkir pack's toned files: every master (the box; w and u their
+ *  wings too), the w and u crowns (their wings) and the w plate (its ends). */
 export const TARKIR_SOURCE_TONES = Object.freeze(
-  Object.fromEntries(
-    Object.keys(TARKIR_PRINT_TONES).flatMap((k) => [
-      [`${TARKIR}/${k}.png`, tarkirSourceTone(k, "")],
-      [`${TARKIR}/crowns/${k}.png`, tarkirSourceTone(k, "crowns/")],
+  Object.fromEntries([
+    ...["w", "u", "b", "r", "g", "m", "a"].map((k) => [`${TARKIR}/${k}.png`, tarkirMasterTone(k)]),
+    ...Object.keys(TARKIR_PRINT_TONES.wing).map((k) => [
+      `${TARKIR}/crowns/${k}.png`,
+      Object.freeze({
+        diff: Object.freeze({ wing: Object.freeze({ file: `${TARKIR}/crowns/a.png`, ...TARKIR_WING_DIFF }) }),
+        tones: Object.freeze({ wing: TARKIR_PRINT_TONES.wing[k] }),
+        table: `TARKIR_PRINT_TONES (${k})`,
+      }),
     ]),
-  ),
+    ...Object.keys(TARKIR_PRINT_TONES.plateEnds).map((k) => [
+      `${TARKIR}/pt/${k}.png`,
+      Object.freeze({
+        chroma: Object.freeze({ plateEnds: TARKIR_PLATE_CHROMA }),
+        tones: Object.freeze({ plateEnds: TARKIR_PRINT_TONES.plateEnds[k] }),
+        table: `TARKIR_PRINT_TONES (${k})`,
+      }),
+    ]),
+  ]),
 );
 const TARKIR_NOTES = [
-  "w u b r g m = the pack's colour frames whole (tarkir/<k>.png, 1500x2100 NATIVE — no resample), as the MUL Tarkir showcase prints them (MUL #1 / #131 / #131z white, #60 / #190 / #190z white-blue); one drawing whose dragon wings alone take the colour (any two masters differ only on x 48–422 and 1073–1454), so a two-colour card's hard seam at 50 %W (FrameProfile.twoColorSplit) crosses identical pixels, as the pack's own 'Right Half' ramp (tarkir/maskFrame.png, 41.7–61.3 %W) does",
+  "w u b r g m = the pack's colour frames whole (tarkir/<k>.png, 1500x2100 NATIVE — no resample), as the MUL Tarkir showcase prints them (MUL #1 / #131 / #131z white, #60 / #190 / #190z white-blue); one drawing whose dragon wings alone take the colour (any two masters differ only on x 47–442 and 1069–1457), so a two-colour card's hard seam at 50 %W (FrameProfile.twoColorSplit) crosses identical pixels, as the pack's own 'Right Half' ramp (tarkir/maskFrame.png, 41.7–61.3 %W) does",
   "c = the pack's 'Artifact Frame' (tarkir/a.png, the silver-blue wings): the pack's Colorless frame is commented out of packTarkir.js and is not in the tree, so a colourless card wears the frame Card Conjurer offers it; no colourless card prints on the frame",
   "a real black border all round, cut at the one card corner",
-  "plates = the pack's P/T plates (tarkir/pt/<k>.png, 273x150 at ptBounds 1155/1850 px); c = the artifact's plate",
-  "toned onto the prints (TARKIR_PRINT_TONES through TARKIR_SOURCE_TONES, recorded under sourceTones): the w and u dragon wings — the pixels where the colour's file differs from the artifact file — as each FILE loads, so the masters and the crowns drawn from it agree; b r g m and c have no print and stay as drawn",
+  "plates = the pack's P/T plates (tarkir/pt/<k>.png, 274x150 — the white one 273x150, stretched to ptBounds — drawn at ptBounds 1155/1850 px, 274x150); c = the artifact's plate",
+  "toned onto the prints by one rule, the ring's (raw scan medians; a region ≥ 9 levels off is toned — TARKIR_PRINT_TONES through TARKIR_SOURCE_TONES, recorded under sourceTones), as each FILE loads, so the masters, crowns and plates drawn from it agree: the w and u dragon wings (the pixels where the colour's file differs from the artifact file), every master's text box (its dark ground inside the box, where the master is the same as another) and the w plate's tan ends (its coloured pixels); the bars, the plate's face and the gold plate's ends are within 5 levels and stay as drawn, as do b r g, gold and the artifact silver (no print)",
   "geometry as drawn: the pack's top block (crown, title bar) sits 6 px lower than the prints and its box bottom, plate and stamp 6 px higher, the type bar within 1 px — print is the same drawing 0.66 % taller and 0.4 % wider, which no flat zone can re-cut (the wings run unbroken from the title bar to the box); the slots ride the pack's own bars",
 ];
 
@@ -4389,16 +4482,23 @@ export function tarkirCrownFindings(buf, width, height, rows) {
  * every colour's master has the same rim there) — 1:1 at HD, no resample —
  * cut to TARKIR_NOTCH_BOX: 1 px round the piece and 8 px past its foot, so
  * the oval cut and its black ring fit (below the piece the box is clear but
- * for that ring, over the master's own black border). The hologram capture
- * the pack paints in the well (685–815 × 1924.5–1987.5 px, measured on the
- * piece: TARKIR_STAMP_OVAL) is cut clear with 2 px, the 2 px round it
- * painted black, and our own oval art covers it (lib/cards/holo-stamp-art.ts).
+ * for that ring, over the master's own black border). The prints' oval (134
+ * × 64 on the well's centre, TARKIR_STAMP_OVAL_PX — it covers the capture
+ * the pack paints in the well, 685–815 × 1924.5–1987.5 px) is cut clear with
+ * 2 px, the 2 px round it painted black, and our own oval art covers it
+ * (lib/cards/holo-stamp-art.ts).
  * Its own piece per key (all seven the same pixels), as the masters'.
  */
 export const TARKIR_NOTCH_BOX = Object.freeze({ x: 637, y: 1887, width: 227, height: 110 });
-/** The pack's hologram oval, card px (the capture's ink, luma > 70: x
- *  685–814 on its widest rows, 1924.5–1987.5 down the centre). */
-export const TARKIR_STAMP_OVAL_PX = Object.freeze({ x: 685, y: 1924.5, width: 130, height: 63 });
+/** The stamp's oval, card px: the PRINTS' hologram — 134 × 64 (MUL #1 /
+ *  #60 / #131 / #190: its ink 132–133 px across the widest row, 62–65 rows
+ *  down the centre, inside a thin dark edge; M15's oval is 134 × 67, so the
+ *  print agrees with it in width only) — on the centre of the pack's own
+ *  well (750, 1956), whose capture (685–815 × 1924.5–1987.5, the ink at
+ *  luma > 70) it covers. */
+export const TARKIR_STAMP_OVAL_PX = Object.freeze({ x: 683, y: 1924, width: 134, height: 64 });
+/** The pack's capture in the well, card px — what the cut must cover. */
+export const TARKIR_CAPTURE_PX = Object.freeze({ x: 685, y: 1924.5, width: 130, height: 63 });
 export const TARKIR_NOTCH = Object.freeze({
   keys: Object.freeze(["w", "u", "b", "r", "g", "m", "c"]),
   pieces: Object.freeze(Object.fromEntries(["w", "u", "b", "r", "g", "m", "c"].map((k) => [k, `${TARKIR}/stamp.png`]))),
@@ -6521,7 +6621,7 @@ export function sourceFilesFor(def) {
   // 4.11): importer inputs too.
   for (const file of [...files]) for (const mask of Object.values(sourceTonesOf(file)?.masks ?? {})) files.add(mask);
   // …and a diff region's reference file (the MUL Tarkir wings, TODO 4.11).
-  for (const file of [...files]) for (const d of Object.values(sourceTonesOf(file)?.diff ?? {})) files.add(d.file);
+  for (const file of [...files]) for (const d of [...Object.values(sourceTonesOf(file)?.diff ?? {}), ...Object.values(sourceTonesOf(file)?.box ?? {})]) files.add(d.file);
   return [...files].sort();
 }
 
@@ -7710,7 +7810,7 @@ export const HOLO_STAMP_NOTCHES = {
     notes: [
       `the Tarkir showcase's oval stamp notch (TODO 4.11): the pack's one 'Holo Stamp' (tarkir/stamp.png, 225x101) — the text box's bottom rim arched over a black well round the hologram oval — at its stampBounds (638/1888 px), 1:1 (the pack is 1500 px native), cut to its box ${TARKIR_NOTCH_BOX.width}x${TARKIR_NOTCH_BOX.height} at ${TARKIR_NOTCH_BOX.x},${TARKIR_NOTCH_BOX.y} px — 1 px round the piece and 8 px past its foot, so the cut's black ring fits; below the piece the box is clear but for that ring, over the master's black border`,
       "keys = the masters' w u b r g m c, every one the same piece: the pack draws one stamp for every colour, and the masters' rim under it is the same pixels on every key (they differ only on the wings)",
-      `the hologram: the pack paints a capture of WotC's oval in the well (${TARKIR_STAMP_OVAL_PX.x}–${TARKIR_STAMP_OVAL_PX.x + TARKIR_STAMP_OVAL_PX.width} × ${TARKIR_STAMP_OVAL_PX.y}–${TARKIR_STAMP_OVAL_PX.y + TARKIR_STAMP_OVAL_PX.height} px, measured on the piece); that oval plus 2 px is cut to transparent and the 2 px round it painted opaque black, and the importer holds every lit pixel of the well inside the cut and its ring: no pixel of the capture is published; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut`,
+      `the hologram: the pack paints a capture of WotC's oval in the well (${TARKIR_CAPTURE_PX.x}–${TARKIR_CAPTURE_PX.x + TARKIR_CAPTURE_PX.width} × ${TARKIR_CAPTURE_PX.y}–${TARKIR_CAPTURE_PX.y + TARKIR_CAPTURE_PX.height} px, measured on the piece); the prints' oval (${TARKIR_STAMP_OVAL_PX.width} × ${TARKIR_STAMP_OVAL_PX.height} at ${TARKIR_STAMP_OVAL_PX.x}, ${TARKIR_STAMP_OVAL_PX.y} — MUL #1 / #60 / #131 / #190, on the well's centre) plus 2 px is cut to transparent and the 2 px round it painted opaque black, and the importer holds every lit pixel of the well inside the cut and its ring: no pixel of the capture is published; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut`,
     ],
   },
   lotrscrollholostamp: {

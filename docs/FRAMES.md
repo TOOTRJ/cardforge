@@ -4779,7 +4779,8 @@ ticked.
   and absent from the tree, so a colourless card wears the frame Card
   Conjurer itself offers it (no colourless card prints on the frame). The
   pack draws ONE drawing whose dragon wings alone carry the colour — any
-  two masters differ only on x 48–422 and 1073–1454 px — with a real black
+  two masters differ only on x 47–442 and 1069–1457 px (the wings run down
+  the box's sides too, x 58–182 and 1329–1440) — with a real black
   border all round, cut at the one card corner by the importer. 4.35's
   #101015 ring is gone: `tarkirdragon` left `BORDER_PENDING_TEMPLATES`, the
   edge contract's known failures, `SQUARE_CORNERS` (its corners are the
@@ -4795,8 +4796,9 @@ ticked.
   crosses identical pixels on every pair, so the hard seam reads the same.
   The plate stays gold, as Taigam's.
 - **Plates.** The pack's plates (`tarkir/pt/<k>.png`, 274 × 150; the white
-  one 273) at its ptBounds (1155 / 1850); `c` the artifact's. They fill
-  their image to every edge (`lib/cards/plate-ink.ts`).
+  one 273 × 150, stretched to them) at its ptBounds (1155 / 1850, 274 ×
+  150); `c` the artifact's. They fill their image to every edge
+  (`lib/cards/plate-ink.ts`).
 - **The pack against its prints.** Measured 2026-10-22 on the six Scryfall
   PNGs at 1500 × 2100 (≥ 250 ms apart; the halo-foil twins print another
   ink and are read for geometry only) by the shift that best registers the
@@ -4808,20 +4810,32 @@ ticked.
   run unbroken from the title bar to the box), so the masters stay as
   drawn and every slot is placed against ITS OWN bar, as the print places
   it against the print's.
-- **Tones onto print** (`TARKIR_PRINT_TONES` through `TARKIR_SOURCE_TONES`,
-  the ring's rule, #607): the wings' colour, read over the pack's OWN wing
-  pixels (where the colour's file differs from the artifact file by ≥ 40
-  levels, eroded 3 px) with each print registered side by side — w tan
-  207,178,138 → 202,180,152 (MUL #1's two wings and #60's left: 14 levels
-  too saturated in blue), u blue 56,110,211 → 75,105,177 (#60's right wing:
-  19 short in red, 34 over in blue). Toned as each FILE loads, through a
-  new region kind, `diff` (`diffRegionPlane`: the pixels where the file
-  differs from another pack file — the masters' wings against `a.png`, the
-  crowns' against `crowns/a.png`), so the masters and the crowns agree.
-  Left as drawn: b r g, gold and the artifact silver (no print); the text
-  box's paper and the silver bars, which agree with print once the scans'
-  black (12–20, not 0) is allowed for (box 53 vs 61–65, bars 189–192 vs
-  194–198); the plate's face (202 vs 202).
+- **Tones onto print** (`TARKIR_PRINT_TONES` through `TARKIR_SOURCE_TONES`):
+  ONE rule, the ring's (#607) — the raw median of the scans against the
+  pack's, over the same pixels (each print registered on the pack's
+  drawing; text and misregistered outlines, |Δluma| > 45, left out of
+  both), and a region off by ≥ 9 levels on a channel is toned. Per region
+  (pack → MUL #1 / #60):
+
+  | Region | Pack | Print | Off | |
+  |---|---|---|---|---|
+  | w wings | 207,178,138 | 202,180,152 | 14 | toned |
+  | u wings | 56,110,211 | 75,105,177 | 34 | toned |
+  | text box (dark ground) | 53,53,52 | 61,61,61 / 66,65,67 → 64,63,64 | 11 | toned |
+  | w plate's tan ends | 214,190,154 | 201,183,164 | 13 | toned |
+  | title bar's face | 197,197,197 | 198,198,201 | 4 | as drawn |
+  | type bar's face | 191,190,190 | 193,192,194 / 192,191,193 | 4 | as drawn |
+  | plate's face | 201,202,203 | 196,199,201 / 196,198,198 | 5 | as drawn |
+  | gold plate's ends | 188,146,56 | 187,151,51 | 5 | as drawn |
+
+  The wings are the pixels where the colour's file differs from the
+  artifact file (`diff`, `diffRegionPlane`: ≥ 40 levels, eroded 3 px for
+  the reading); the box its dark ground inside the box where the master is
+  the same as another (`box`, `boxRegionPlane`: the dragon wings that run
+  down its sides are not the box), on every master; the plate's ends its
+  coloured pixels (`chroma`, `chromaRegionPlane`). Toned as each FILE
+  loads, so the masters, crowns and plates drawn from it agree. b r g, the
+  gold wings and the artifact silver have no print: as drawn.
 - **Slots.** The pack's text layout is the accurate M15 pack's but for its
   title and type bands, so the profile is M15's slots and the M15-era
   family's sizes (`fit: "measured"` name and type line, joined WITH v67),
@@ -4846,9 +4860,12 @@ ticked.
     pack's box ends at 1926 px (M15's at 1949), and print's full box (MUL
     #60, nine lines at the 64 px step) sets its last descender on 1912 px —
     1906.5 on the pack's — so the box ends at 1911;
-  - the P/T centred on the plate's face (1193–1391 × 1892–1962 px): print
-    centres "2/2" and "3/4" there (1291 × 1926.3 on the pack's plate),
-    where M15's box set them 4.4 px low.
+  - the P/T where print sets it on the plate: the ink-weighted centre of
+    "2/2" and "3/4" at 1928.4 / 1928.0 px on the pack's plate (each print
+    registered on the plate's ends and top rim, +5.8 px; a first 4.4 px
+    lift left ours 2.5 px high) — the box 1.2 px above M15's, its top on a
+    whole px: the bake's centre 1928.5 / 1928.2, within 0.3 px; across
+    within 1 px.
   Flagged, not changed: MUL is not in the per-set symbol table, so its
   glyph prints at the family's ink fit, ~0.73 of print's (a per-set row is
   its own bump, and every MUL card on any frame would move); print's P/T
@@ -4861,7 +4878,9 @@ ticked.
   colour's crown left and the second's right across the pack's own ramp
   (`TARKIR_PAIR_RAMP`, 41.7 → 61.3 %W), as MUL #60 prints its white-blue
   crown — its centre bulb the two blended (159,144,152 on print);
-  `pairCrownOnGold`, the template drawing its two colours as halves. An
+  `pairCrownOnGold`, the template drawing its two colours as halves. The
+  blend of tan and blue is near-neutral, so the bulb cannot reach print's
+  faint purple: accepted for now (TODO 4.11). An
   ADDITION, opt-in per card; an import of the run names it
   (`CROWNED_SHOWCASE_SIGNATURES`: both legends print it).
 - **Stamp** (`TARKIRDRAGON_HOLO_STAMP`, `tarkirdragonholostamp/<key>.png`):
@@ -4871,8 +4890,12 @@ ticked.
   well — cut to a 227 × 110 box at 637, 1887 (1 px round the piece, 8 px
   past its foot), the same piece for every key (the masters' rim under it
   is the same pixels). The pack paints a capture of the hologram in the
-  well (685–815 × 1924.5–1987.5 px, measured on the piece): that oval + 2 px
-  is cut clear and the 2 px round it painted black (`blackoutAndCut`, now
+  well (685–815 × 1924.5–1987.5 px, measured on the piece); the cut is the
+  PRINTS' oval, 134 × 64 on the well's centre (683–817 × 1924–1988 px —
+  MUL #1 / #60 / #131 / #190: ink 132–133 px across the widest row, 62–65
+  rows down the centre; M15's 134 × 67 agrees in width only), covering the
+  capture: that oval + 2 px is cut clear and the 2 px round it painted
+  black (`blackoutAndCut`, now
   for an oval too — `notchCutOf`), and the importer holds every lit pixel
   of the well inside the cut and its ring (`capturePlane`) — no pixel of
   the capture is published; our oval art covers the cut. The arch's rim is

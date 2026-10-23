@@ -4669,7 +4669,7 @@ const TARKIRDRAGON: FrameProfile = {
   // left, blue right, the gold P/T plate (owner decision 2026-09-25) — the
   // pack's own two-colour dress (packTarkir.js 'Right Half' =
   // tarkir/maskFrame.png, a ramp across 41.7–61.3 %W). Any two of the
-  // pack's masters differ only on the wings (x 48–422 and 1073–1454), so
+  // pack's masters differ only on the wings (x 47–442 and 1069–1457), so
   // the hard seam at 50 %W crosses identical pixels and reads as the ramp.
   // 3+ colours wear the gold "m" wings.
   twoColorSplit: { atPct: 50 },
@@ -4706,12 +4706,16 @@ const TARKIRDRAGON: FrameProfile = {
     rect: { ...M15.rules.rect, heightPct: ((1911 - 1335.6) / 2100) * 100 },
     colorHex: "#ffffff",
   },
-  // The pack's plate; the digits centred on its face (1193–1391 px, rows
-  // 1892–1962): print centres them on it (MUL #1 "2/2", #60 "3/4": 1291 ×
-  // 1926.3 on the pack's plate), where M15's box set them 4.4 px low.
+  // The pack's plate; the digits where print sets them on it: the ink-
+  // weighted centre of MUL #1 "2/2" and #60 "3/4" at 1928.4 / 1928.0 px on
+  // the pack's plate (each print registered on the plate's ends and top
+  // rim: +5.8 px), where a 4.4 px lift left it on 1925.8 / 1925.6 and a
+  // 1.9 px one on 1927.6 / 1927.4 (the bake lays the box on whole px) — so
+  // the box 1.2 px above M15's, its top on a whole px (1893.0): the bake's
+  // centre 1928.5. Across, within 1 px.
   pt: {
     ...M15.pt!,
-    rect: { ...M15.pt!.rect, topPct: M15.pt!.rect.topPct - (4.4 / 2100) * 100 },
+    rect: { ...M15.pt!.rect, topPct: M15.pt!.rect.topPct - (1.2 / 2100) * 100 },
     inkSpanPct: { leftPct: (1193 / 1500) * 100, rightPct: (1391 / 1500) * 100 },
     plateRect: TARKIRDRAGON_PLATE_RECT,
     plateAssetPathTemplate: "/frames/tarkirdragon/pt/{color}.png",
@@ -5991,10 +5995,12 @@ export const TARKIRDRAGON_CROWN: FrameOverlaySlot = {
   keys: ["w", "u", "b", "r", "g", "m", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
   pairCrownOnGold: true,
 };
-/** The pack's hologram oval (scripts/lib/cc-frames.mjs TARKIR_STAMP_OVAL_PX:
- *  685–815 × 1924.5–1987.5 px) — the size of M15's on its own well, 6 px
- *  higher than the prints set it, as the whole box bottom is. */
-export const TARKIRDRAGON_HOLO_STAMP_OVAL: Rect = { leftPct: (685 / 1500) * 100, topPct: (1924.5 / 2100) * 100, widthPct: (130 / 1500) * 100, heightPct: (63 / 2100) * 100 };
+/** The stamp's oval (scripts/lib/cc-frames.mjs TARKIR_STAMP_OVAL_PX: 683–817
+ *  × 1924–1988 px) — the PRINTS' hologram, 134 × 64 (MUL #1 / #60 / #131 /
+ *  #190; M15's is 134 × 67: the print agrees in width, not height), on the
+ *  centre of the pack's own well — 6 px higher than the prints set it, as
+ *  the whole box bottom is. */
+export const TARKIRDRAGON_HOLO_STAMP_OVAL: Rect = { leftPct: (683 / 1500) * 100, topPct: (1924 / 2100) * 100, widthPct: (134 / 1500) * 100, heightPct: (64 / 2100) * 100 };
 /** The rules box keeps out of the arch: its rim's top (1888 px at the
  *  centre) down past the box's bottom outline (1926), over the piece's
  *  638–863 px. */
