@@ -147,10 +147,13 @@ describe("borderless families (TODO 1.17)", () => {
     // exact once verified — and the Bloomburrow woodland and the Avatar
     // elemental with their footers and title bar built into their masters
     // (TODO 4.11, layout v69; the colourless Arcane Signet, TLE #315, on the
-    // silver master).
+    // silver master), and the Bloomburrow anime with its one master in
+    // print's look (TODO 4.11 / 4.35, layout v70) — full bleed, so it lands
+    // on the standard frame (1.18: Scryfall's art_crop is the classic
+    // window), the anime frame offered.
     ["blb-295", "exact", "bloomburrow", undefined],
     ["blb-316", "exact", "bloomburrow", undefined],
-    ["blb-343", "nearest", "bloomanime", undefined],
+    ["blb-343", "exact", "bloomanime", "m15"],
     ["ltr-306", "exact", "lotr", undefined],
     ["tla-338", "exact", "avatar", undefined],
     ["tle-315", "exact", "avatar", undefined],
@@ -356,8 +359,10 @@ describe("borderless families (TODO 1.17)", () => {
       forGood: true,
     });
     expect(frameMatchFromScryfall(printing("spg-119"))).toMatchObject({ forGood: true });
+    // (blb-343, the anime, was capped by its border, 4.35, until TODO 4.11 /
+    // 4.35's layout v70: exact now.)
     expect(frameMatchFromScryfall(printing("blb-343"))).toMatchObject({
-      blockedBy: "4.35",
+      status: "exact",
       exactLabel: "Bloomburrow anime showcase",
     });
   });
@@ -854,8 +859,9 @@ describe("the general signatures (TODO 1.4)", () => {
       blockedBy: "4.30",
       reason: "PipGlyph doesn't print a white border yet; PipGlyph's Tarkir: Dragonstorm Ghostfire frame doesn't dress planeswalkers yet",
     });
-    // The anime run's creatures still land on the anime frame.
-    expect(frameMatchFromScryfall(printing("blb-343")).landOn).toBeUndefined();
+    // The anime run's creatures land on the standard frame since the
+    // anime's full bleed (layout v70, 1.18's rule), the frame offered.
+    expect(frameMatchFromScryfall(printing("blb-343")).landOn).toBe("m15");
   });
 
   it("dresses a Theros god on Nyx because its type line says Enchantment (A3)", () => {
@@ -1043,16 +1049,15 @@ describe("the rule table", () => {
     expect(EDGE_CONTRACT_KNOWN_FAILURES.alphaland?.why).toMatch(/^edges pass; corner:/);
   });
 
-  it("names the border as the reason a capped showcase isn't exact (A8)", () => {
+  it("caps no showcase on its border any more (A8)", () => {
     // (The LOTR ring, ltr-306, left the cap with TODO 4.11, the Avatar
-    // elemental, tla-338, with layout v69.)
-    for (const [key, frame] of [
-      ["blb-343", "Bloomburrow Anime"],
-    ] as const) {
+    // elemental, tla-338, with layout v69, and the Bloomburrow anime,
+    // blb-343, the last, with layout v70.)
+    expect(BORDER_PENDING_TEMPLATES.size).toBe(0);
+    for (const key of ["ltr-306", "tla-338", "blb-343"] as const) {
       const match = frameMatchFromScryfall(printing(key));
-      expect(match.blockedBy, key).toBe("4.35");
-      expect(match.reason, key).toMatch(/frame doesn't have the printed border yet$/);
-      expect(match.reason, key).toContain(frame);
+      expect(match.blockedBy, key).not.toBe("4.35");
+      expect(match.reason ?? "", key).not.toMatch(/printed border yet/);
     }
   });
 
@@ -1087,7 +1092,9 @@ describe("the rule table", () => {
       expect(isBorderPending("expeditionlandbfz", key), key).toBe(false);
     }
     expect(BORDER_PENDING_COLOURS.size).toBe(0);
-    expect(isBorderPending("bloomanime", "w")).toBe(true);
+    // The Bloomburrow anime left it with TODO 4.11 / 4.35 (layout v70), the
+    // last.
+    expect(isBorderPending("bloomanime", "w")).toBe(false);
     // The Avatar elemental and Bloomburrow woodland left it with TODO 4.11
     // (layout v69: MSE's render-time title bar and footers built in).
     expect(isBorderPending("avatar", "w")).toBe(false);

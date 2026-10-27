@@ -1664,6 +1664,23 @@ export const WALKER_COST_ROW_TEMPLATES: readonly string[] = ["m15pw", "m15border
 //            badge: no colour of either frame is ticked. The woodland's crown
 //            band and oval stamp notch and both frames' collector line are
 //            ADDITIONS a card switches on.
+//   v70 — the Bloomburrow anime showcase (BLB #343–355) on ONE MSE master
+//            in print's look (TODO 4.11 / 4.35; scripts/build-showcase-
+//            frames.mjs `layered`, the numbers in scripts/lib/mse-showcase-
+//            borders.mjs ANIME_*): MSE's recolour template's flat red
+//            strokes in print's flat tone (35,31,12, the raw median of the
+//            registered scans), the dark slate name and text boxes MSE draws
+//            at render (the masters had none) at print's opacity (0.78 /
+//            0.80), the footer through MSE's border mask in print's own tone
+//            (15,20,16) and the P/T box's outline as a plate; its own layout
+//            measured per scan on M15's slots at the family's sizes (the
+//            name 25 px up, the CC M15 disc on print's row, the rules in
+//            print's rect, white ink) and full-bleed art (the slot was inset
+//            2.5 / 3.5 / 93 × 92 with a #101015 ring). ANIME_LAYOUT_VERSION
+//            below — the ONE constant (taken as v70 at PR time: v69 is the
+//            Avatar / woodland pair's, #615). A CORRECTION ("sweep"), never
+//            a badge: no colour is ticked. The crown, the oval stamp notch
+//            and the collector line are ADDITIONS a card switches on.
 // ---------------------------------------------------------------------------
 
 /** The Lord of the Rings scroll showcase re-sourced from Card Conjurer
@@ -1715,6 +1732,16 @@ export const TARKIR_MSE_TEMPLATES: readonly string[] = ["tarkirdraconic", "tarki
  *  card, so this never merges first). Frozen once it ships. */
 export const AVATAR_BLOOMBURROW_LAYOUT_VERSION = 69;
 export const AVATAR_BLOOMBURROW_TEMPLATES: readonly string[] = ["avatar", "bloomburrow"];
+
+/** The Bloomburrow anime showcase on ONE MSE master in print's look (TODO
+ *  4.11 / 4.35): every card on `bloomanime`. ITS version lives here alone —
+ *  CARD_LAYOUT_VERSION, the scoped table and the rollout below read this
+ *  constant — so a bump that merges first moves it in one place. v70: v69 is
+ *  the Avatar / woodland pair's (#615, which merges before this; until it
+ *  does, v69 is the gap it fills — a version with no scope re-bakes every
+ *  card, so this never merges first). Frozen once it ships. */
+export const ANIME_LAYOUT_VERSION = 70;
+export const ANIME_TEMPLATES: readonly string[] = ["bloomanime"];
 
 /** The cost row as current print draws it (the 2023 pip move + TODO 3.34):
  *  the CC-framed M15 family's disc, centre and right end. ITS version lives
@@ -1922,7 +1949,7 @@ export const LARGE_PIPS_LAYOUT_VERSION = 53;
  *  latest). */
 export const V53_LARGER_COST_TEMPLATES: readonly string[] = ["modern", "modernland"];
 
-export const CARD_LAYOUT_VERSION = AVATAR_BLOOMBURROW_LAYOUT_VERSION;
+export const CARD_LAYOUT_VERSION = ANIME_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -2148,6 +2175,10 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // 4.35): the masters, plates, slots and art slots; every card on `avatar`
   // and `bloomburrow`. No narrower verification scope: no colour has a tick.
   [AVATAR_BLOOMBURROW_LAYOUT_VERSION]: AVATAR_BLOOMBURROW_TEMPLATES,
+  // The Bloomburrow anime on one MSE master in print's look (4.11 / 4.35):
+  // the master, its plate, slots and art slot; every card on `bloomanime`.
+  // No narrower verification scope: no colour has a tick.
+  [ANIME_LAYOUT_VERSION]: ANIME_TEMPLATES,
   // The Zendikar Rising hedron showcase re-sourced from Card Conjurer
   // (4.11, wave 1): the masters and the slots that ride them; every card on
   // `fullart`. No narrower verification scope: no colour has a tick.
@@ -3248,6 +3279,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [TARKIR_DRAGON_LAYOUT_VERSION]: "sweep", // the MUL Tarkir dragon-wing showcase re-sourced from Card Conjurer (4.11): its masters with the printed black border, the pack's plates and the M15 pack's text layout on the pack's own bars — a correction of the look against its own prints on a frame never ticked, never a badge
   [TARKIR_MSE_LAYOUT_VERSION]: "sweep", // the Tarkir: Dragonstorm draconic and ghostfire showcases (4.11 / 4.35): the printed black border painted under their MSE masters, the draconic on M15's slots, both at the M15-era family's sizes with their art slots on the window — a correction of two looks against their own prints on frames never ticked, never a badge
   [AVATAR_BLOOMBURROW_LAYOUT_VERSION]: "sweep", // the Avatar elemental and Bloomburrow woodland showcases (4.11 / 4.35): the title bar and footers MSE paints at render time built into their masters, the M15 text layout both print (the name off the type bar), MSE's P/T boxes, art slots to the edges — a correction of two looks against their own prints on frames never ticked, never a badge
+  [ANIME_LAYOUT_VERSION]: "sweep", // the Bloomburrow anime showcase (4.11 / 4.35): one MSE master in print's look — the strokes in print's flat tone, the slate name and text boxes, the footer and the P/T outline MSE paints at render time — its own measured layout at the M15-era family's sizes and full-bleed art — a correction of the look against its own prints on a frame never ticked, never a badge
   [LOTR_RING_LAYOUT_VERSION]: "sweep", // the Lord of the Rings ring re-sourced from Card Conjurer (4.11): its masters with the frame field to the top and side edges and the black border's shoulders, the ring plates and the M15 pack's text layout under the lower title bar — a correction of the look against its own prints on a frame never ticked, never a badge
   [LOTR_SCROLL_LAYOUT_VERSION]: "sweep", // the Lord of the Rings scroll re-sourced from Card Conjurer (4.11): its masters with the printed black border, the scroll plates and the M15 pack's text layout — a correction of the look against its own prints on a frame never ticked, never a badge
   [COST_ROW_PRINT_LAYOUT_VERSION]: "sweep", // the cost row as current print draws it (the 2023 pip move + 3.34): 70 px discs, 78 pitch, 5 px lower and 2 px right on the 36 CC-framed M15 templates; the walkers' 70 px discs, 4 px right — a correction against the frames' own current print after the owner's before / after sheet, never a badge

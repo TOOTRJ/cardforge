@@ -12,7 +12,9 @@ import type { CardCornerFills, CornerFill } from "@/lib/cards/card-corner";
 //              normalised, Alpha, nyx, adventure …). The default.
 //   "root"   — the card root's #101015: a master whose EDGE BAND is
 //              transparent at that corner, so the card's border there IS the
-//              root's backdrop — the rings (bloomanime; avatar left with
+//              root's backdrop — the rings (none today: bloomanime left
+//              with TODO 4.11 / 4.35's layout v70, its art to every corner
+//              and its footer drawn into the bottom ones; avatar with
 //              its footer painted, TODO 4.11 layout v69;
 //              lotrscroll and tarkirdragon left with TODO 4.11, their Card
 //              Conjurer border black, and tarkirghostfire with its painted
@@ -55,7 +57,6 @@ type Kinds = SquareCornerKind | Readonly<Partial<Record<CornerName, SquareCorner
 /** Every template × corner that is not "border"; `keys` limits an entry to
  *  some colour masters. */
 export const SQUARE_CORNERS: Readonly<Record<string, { kinds: Kinds; keys?: readonly string[] }>> = {
-  bloomanime: { kinds: "root" },
   // The Bloomburrow woodland since TODO 4.11 (layout v69): its leafy top
   // band in the top corners, its footer in the colour's own tone in the
   // bottom ones — design all round, what the render drew.

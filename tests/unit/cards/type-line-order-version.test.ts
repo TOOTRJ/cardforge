@@ -123,10 +123,11 @@ describe(`v${V} — the type line in its printed order + a land creature's P/T (
             const label = JSON.stringify(row);
             expect(v50FaceChanged(row), label).toBe(lineChanged || ptChanged);
             // The front face, and the same face as a back_face.
-            // (bloomanime: a template no later bump touches yet — lotr was,
-            // until its Card Conjurer re-source, v65, and avatar until v69.)
-            const front = at("bloomanime", row);
-            const back = at("bloomanime", { back_face: { ...row, title: "Back" } });
+            // (agclassic: a template no later bump touches as a whole — lotr
+            // was, until its Card Conjurer re-source, v65, avatar until v69,
+            // bloomanime until v70.)
+            const front = at("agclassic", row);
+            const back = at("agclassic", { back_face: { ...row, title: "Back" } });
             expect(VERSION_SCOPES[V]!(front), label).toBe(lineChanged || ptChanged);
             expect(VERSION_SCOPES[V]!(back), `back ${label}`).toBe(lineChanged || ptChanged);
             expect(classifyForSweep(front), label).toBe(lineChanged || ptChanged ? "rebake" : "stamp");

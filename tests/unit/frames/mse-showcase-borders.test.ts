@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  ANIME_FOOTER_RGB,
+  ANIME_NAMEBOX,
+  ANIME_STROKE_RGB,
+  ANIME_TEXTBOX,
   BORDER_BLACK,
   BORDERED_PNG_ATTEMPTS,
   GHOSTFIRE_WINDOW,
@@ -8,7 +12,9 @@ import {
   borderLost,
   cutAtCardCorner,
   edgeCoverage,
+  maskCoverage,
   outsideCoverage,
+  paintOver,
   paintUnder,
   ringCoverage,
   showcaseBorderRgb,
@@ -32,7 +38,7 @@ const at = (cov: Float32Array, x: number, y: number) => cov[y * W + x];
 describe("the MSE showcase borders as data", () => {
   it("paints the Tarkir: Dragonstorm frames in the border black, the draconic's band from its edges, the ghostfire's ring round MSE's window", () => {
     expect([...BORDER_BLACK]).toEqual([0, 0, 0]);
-    expect(Object.keys(MSE_SHOWCASE_BORDERS).sort()).toEqual(["avatar", "bloomburrow", "tarkirdraconic", "tarkirghostfire"]);
+    expect(Object.keys(MSE_SHOWCASE_BORDERS).sort()).toEqual(["avatar", "bloomanime", "bloomburrow", "tarkirdraconic", "tarkirghostfire"]);
     expect(MSE_SHOWCASE_BORDERS.tarkirdraconic.kind).toBe("edge");
     expect(MSE_SHOWCASE_BORDERS.tarkirghostfire).toMatchObject({ kind: "ring", window: GHOSTFIRE_WINDOW });
     // Print's ring on whole px (TDM #399–408, the inner edge's median: 78.3
@@ -64,6 +70,28 @@ describe("the MSE showcase borders as data", () => {
     expect([...showcaseBorderRgb("bloomburrow", "g")!]).toEqual([18, 66, 7]);
     expect(() => showcaseBorderRgb("bloomburrow", "x")).toThrow(/no border colour/);
     expect(showcaseBorderRgb("m15", "w")).toBeNull();
+  });
+
+  it("draws the Bloomburrow anime with print's numbers: one flat stroke tone, the slate boxes at their opacity, the footer's own tone", () => {
+    // Raw medians of the 13 registered scans (TODO 4.11 / 4.35, layout v70).
+    expect([...ANIME_STROKE_RGB]).toEqual([35, 31, 12]);
+    expect(ANIME_NAMEBOX).toMatchObject({ alpha: 0.78, rgb: [45, 50, 52] });
+    expect(ANIME_TEXTBOX).toMatchObject({ alpha: 0.8, rgb: [39, 40, 35] });
+    expect([...ANIME_FOOTER_RGB]).toEqual([15, 20, 16]);
+    expect(MSE_SHOWCASE_BORDERS.bloomanime).toMatchObject({ kind: "mask", keepCorners: true });
+    for (const k of ["w", "u", "b", "r", "g", "c", "m"]) expect(showcaseBorderRgb("bloomanime", k), k).toBe(ANIME_FOOTER_RGB);
+  });
+
+  it("paints OVER (the anime's footer above its boxes) and reads a mask as coverage, cut at the corner unless kept", () => {
+    const rgba = new Uint8Array([39, 40, 35, 204, 0, 0, 0, 0, 200, 0, 0, 255]);
+    paintOver(rgba, new Float32Array([1, 0.5, 0]), [15, 20, 16]);
+    expect([...rgba.subarray(0, 4)]).toEqual([15, 20, 16, 255]);
+    expect([...rgba.subarray(4, 8)]).toEqual([15, 20, 16, 128]);
+    expect([...rgba.subarray(8, 12)]).toEqual([200, 0, 0, 255]);
+    const grey = new Uint8Array(W * H).fill(255);
+    expect(at(maskCoverage(grey, W, H, true), 0, 0)).toBe(1);
+    expect(at(maskCoverage(grey, W, H), 0, 0)).toBe(0);
+    expect(at(maskCoverage(grey, W, H), 750, 1000)).toBe(1);
   });
 
   it("the outside band is every see-through pixel not in the art's window — the window flooded from the art seeds", () => {

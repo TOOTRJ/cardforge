@@ -143,7 +143,9 @@ describe("Card Conjurer frame profiles", () => {
     // showcases (TODO 4.11, layout v69: print's rows sit within the CC M15
     // row's known offsets).
     const CC_ROW = getFrameProfile("m15").costDy!;
-    const OWN_LIFT: Record<string, number> = { agclassic: 1 / 1500, alphaland: 1 / 1500, nyx: -12 / 1500, tarkirdraconic: CC_ROW, avatar: CC_ROW, bloomburrow: CC_ROW };
+    // The Bloomburrow anime (layout v70) sets the 70 px disc on its prints'
+    // row: 8 px under the CC M15 lift, its name band 25 px higher.
+    const OWN_LIFT: Record<string, number> = { agclassic: 1 / 1500, alphaland: 1 / 1500, nyx: -12 / 1500, tarkirdraconic: CC_ROW, avatar: CC_ROW, bloomburrow: CC_ROW, bloomanime: CC_ROW + 8 / 1500 };
     for (const template of FRAME_TEMPLATE_VALUES) {
       if (ccTemplates.has(template)) continue;
       expect(getFrameProfile(template).costDy, template).toBe(OWN_LIFT[template]);

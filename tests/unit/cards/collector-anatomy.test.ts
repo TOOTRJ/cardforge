@@ -66,9 +66,9 @@ describe("every save (normalizeAnatomy / newCardFrameStyle)", () => {
     expect(normalizeAnatomy({ template: "m15", collector: "2015", star: true }, "m15", "creature")).toEqual({ template: "m15", collector: "2015", star: true });
     expect(normalizeAnatomy({ template: "m15pw", collector: "off" }, "m15pw", "planeswalker")).toEqual({ template: "m15pw", collector: "off" });
     expect(normalizeAnatomy({ template: "emblem", collector: "2023" }, "emblem", "emblem")).toEqual({ template: "emblem", collector: "2023" });
-    // (bloomanime stands in for an MSE showcase: the LOTR ring has the slot
-    // since TODO 4.11, and the Avatar since its v69.)
-    for (const template of ["saga", "adventure", "extendedart", "bloomanime", "m20token", "fullartland"] as const) {
+    // (No MSE showcase stands in any more: the LOTR ring has the slot since
+    // TODO 4.11, the Avatar since its v69, the Bloomburrow anime since v70.)
+    for (const template of ["saga", "adventure", "extendedart", "m20token", "fullartland"] as const) {
       expect(normalizeAnatomy({ template, finish: "foil", collector: "2023", star: true }, template, "creature"), template).toEqual({ template, finish: "foil" });
     }
     // A stored key-less card: nothing to drop, the same object back.
@@ -251,6 +251,6 @@ describe("imports follow the printing (importedAnatomy / importedFormAnatomy)", 
     expect(importedFormAnatomy({ collector: "off" })).toEqual({ crown: true, twoColor: true, collector: "off", stamp: "auto" });
     expect(importedFormAnatomy({})).toEqual({ crown: true, twoColor: true, collector: "2023", stamp: "auto" });
     // Saved on a frame without the slot, the printing's switches are dropped.
-    expect(newCardFrameStyle({ template: "bloomanime", collector: "2023", star: true }, "creature")).toEqual({ template: "bloomanime" });
+    expect(newCardFrameStyle({ template: "fullartland", collector: "2023", star: true }, "creature")).toEqual({ template: "fullartland" });
   });
 });

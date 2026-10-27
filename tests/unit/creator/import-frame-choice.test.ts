@@ -554,8 +554,9 @@ describe("C1 — no chooser when the only gap is a detail no frame draws (owner 
     expect(onlyUndrawnDetailsMissing({ ...base, gaps: undefined }, "b")).toBe(false);
     expect(onlyUndrawnDetailsMissing({ ...base, gaps: ["crown", "vehicle"] }, "b")).toBe(false);
     expect(onlyUndrawnDetailsMissing({ ...base, gaps: ["nyx", "crown"] }, "b")).toBe(false);
-    // A frame whose border isn't true yet is a second gap (4.35 / A8).
-    expect(onlyUndrawnDetailsMissing({ ...base, template: "bloomanime" }, "g")).toBe(false);
+    // A frame whose border isn't true yet was a second gap (4.35 / A8): the
+    // Bloomburrow anime, the last, left with TODO 4.11 / 4.35's layout v70.
+    expect(onlyUndrawnDetailsMissing({ ...base, template: "bloomanime" }, "g")).toBe(true);
     // (The MUL Tarkir dragon wings' border is true since TODO 4.11: their
     // Card Conjurer masters.)
     expect(onlyUndrawnDetailsMissing({ ...base, template: "tarkirdragon" }, "w")).toBe(true);
@@ -594,9 +595,12 @@ describe("C2 — the standard frame and the printing's family first, the rest be
   });
 
   it("a showcase printing lists its own set's frames (Bloomburrow anime BLB #343: woodland beside it)", () => {
+    // Since TODO 4.11 / 4.35's layout v70 the anime is full bleed, so the
+    // import lands on the standard frame (1.18) with the anime offered
+    // first among the frames it can wear.
     const plan = importFramePlan(namedPatch("blb-343", EVERYTHING), EVERYTHING, "m15");
     if (plan.mode !== "choose") throw new Error(plan.mode);
-    expect(templates(plan.options)).toEqual(["bloomanime", "m15", "bloomburrow"]);
+    expect(templates(plan.options)).toEqual(["m15", "bloomanime", "bloomburrow"]);
     expect(templates(plan.moreOptions)).not.toContain("bloomanime");
   });
 

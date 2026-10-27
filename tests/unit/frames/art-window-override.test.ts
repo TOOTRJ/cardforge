@@ -158,18 +158,25 @@ describe("artSlotOverrideRefusal", { timeout: 30_000 }, () => {
   });
 
   it("holds a known failure to its bound, as CI does: no worse is saved, worse is refused", async () => {
-    // bloomanime (TODO 4.35): the window is the whole card, the slot inset
-    // 2.5 / 3.5 / 93 × 92 % — known, bound 116 px (the bottom's 115.5).
-    // (The 2003 pair, this test's first example, left the table with TODO
-    // 4.10b; m15textless, its second, with 4.35's re-source, layout v58;
-    // tarkirdraconic, its third, with 4.11's layout v68; bloomburrow, its
-    // fourth, with 4.11's layout v69.)
-    const slot = getFrameProfile("bloomanime").artSlot;
-    const wholeCard: Box = [0, 1499, 0, 2099];
-    const load: MasterLoader = async () => master(wholeCard);
-    expect(await artSlotOverrideRefusal("bloomanime", { artSlot: { topPct: slot.topPct } }, load)).toBeNull();
-    expect(await artSlotOverrideRefusal("bloomanime", { artSlot: { heightPct: slot.heightPct - 2 } }, load)).toMatch(
-      /bloomanime\/w frame's art window uncovered .*worse than its known failure \(4\.35\): misses by [\d.]+ px > 116/,
+    // m15fullartland (TODO 4.39): the slot's top at 59.01 px against the
+    // window from 60 — 0.99 px of overscan where 1.05 is asked; known, bound
+    // 0.5 px. (The 2003 pair, this test's first example, left the table with
+    // TODO 4.10b; m15textless, its second, with 4.35's re-source, layout
+    // v58; tarkirdraconic, its third, with 4.11's layout v68; bloomburrow,
+    // its fourth, with 4.11's layout v69; bloomanime, its fifth, with 4.11 /
+    // 4.35's layout v70.)
+    const slot = getFrameProfile("m15fullartland").artSlot;
+    const px = (pct: number, of: number) => (pct / 100) * of;
+    const window: Box = [
+      Math.ceil(px(slot.leftPct, 1500)) + 3,
+      Math.floor(px(slot.leftPct + slot.widthPct, 1500)) - 3,
+      60,
+      Math.floor(px(slot.topPct + slot.heightPct, 2100)) - 3,
+    ];
+    const load: MasterLoader = async () => master(window);
+    expect(await artSlotOverrideRefusal("m15fullartland", { artSlot: { topPct: slot.topPct } }, load)).toBeNull();
+    expect(await artSlotOverrideRefusal("m15fullartland", { artSlot: { topPct: slot.topPct + 1 } }, load)).toMatch(
+      /m15fullartland\/w frame's art window uncovered .*worse than its known failure \(4\.39\): misses by [\d.]+ px > 0\.5/,
     );
   });
 

@@ -517,6 +517,8 @@ describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
   const FOOTER_SINCE_V29 = [
     "flip", "aftermath", "battle", "split", "lotrscroll", "lotr", "tarkirdragon", "tarkirdraconic", "tarkirghostfire",
     "avatar", "bloomburrow",
+    // …and the Bloomburrow anime with its own, v70.
+    "bloomanime",
   ];
   // The 1997 pair's footer was a display-face "ART: …" line at v29 and is in
   // v29's frozen list; since TODO 4.10a (layout v46) it is the prints'
@@ -864,13 +866,15 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
     // layout v69.
     const joinedWithBump: Record<string, number> = {
       battle: 43, lotrscroll: 62, lotr: 65, tarkirdragon: 67, tarkirdraconic: 68, tarkirghostfire: 68, avatar: 69, bloomburrow: 69,
+      // …and the Bloomburrow anime (TODO 4.11 / 4.35), with layout v70.
+      bloomanime: 70,
     };
     expect([...V32_M15_FAMILY_TEMPLATES, ...joinedLater, ...Object.keys(joinedWithBump)].sort()).toEqual(
       [...M15_FAMILY_TEMPLATES].sort(),
     );
     for (const t of [...joinedLater, ...Object.keys(joinedWithBump)]) expect(V32_M15_FAMILY_TEMPLATES, t).not.toContain(t);
     const { V43_LANDSCAPE_LAYOUT_TEMPLATES } = await import("@/lib/cards/layout-version");
-    const { LOTR_SCROLL_LAYOUT_VERSION, LOTR_SCROLL_TEMPLATES, LOTR_RING_LAYOUT_VERSION, LOTR_RING_TEMPLATES, TARKIR_DRAGON_LAYOUT_VERSION, TARKIR_DRAGON_TEMPLATES, TARKIR_MSE_LAYOUT_VERSION, TARKIR_MSE_TEMPLATES, AVATAR_BLOOMBURROW_LAYOUT_VERSION, AVATAR_BLOOMBURROW_TEMPLATES } = await import("@/lib/cards/layout-version");
+    const { LOTR_SCROLL_LAYOUT_VERSION, LOTR_SCROLL_TEMPLATES, LOTR_RING_LAYOUT_VERSION, LOTR_RING_TEMPLATES, TARKIR_DRAGON_LAYOUT_VERSION, TARKIR_DRAGON_TEMPLATES, TARKIR_MSE_LAYOUT_VERSION, TARKIR_MSE_TEMPLATES, AVATAR_BLOOMBURROW_LAYOUT_VERSION, AVATAR_BLOOMBURROW_TEMPLATES, ANIME_LAYOUT_VERSION, ANIME_TEMPLATES } = await import("@/lib/cards/layout-version");
     for (const [t, version] of Object.entries(joinedWithBump)) {
       if (t === "lotrscroll") {
         expect(version).toBe(LOTR_SCROLL_LAYOUT_VERSION);
@@ -895,6 +899,11 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       if (t === "avatar" || t === "bloomburrow") {
         expect(version).toBe(AVATAR_BLOOMBURROW_LAYOUT_VERSION);
         expect(AVATAR_BLOOMBURROW_TEMPLATES, t).toContain(t);
+        continue;
+      }
+      if (t === "bloomanime") {
+        expect(version).toBe(ANIME_LAYOUT_VERSION);
+        expect(ANIME_TEMPLATES, t).toContain(t);
         continue;
       }
       expect(version).toBe(43);
@@ -1412,7 +1421,8 @@ describe("v36 — the second correction round: inline pips, printed set symbols,
     // wings with theirs, v67, and the Tarkir: Dragonstorm pair with
     // theirs, v68, and the Avatar elemental and Bloomburrow woodland with
     // theirs, v69.)
-    const INK_FIT_SINCE_V36 = ["battle", "lotrscroll", "lotr", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow"];
+    // (…and the Bloomburrow anime with its own, v70.)
+    const INK_FIT_SINCE_V36 = ["battle", "lotrscroll", "lotr", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime"];
     expect(getFrameProfile("battle").setSymbolFit).toBe("ink");
     expect(lv.V36_PRINTED_SYMBOL_TEMPLATES).not.toContain("battle");
     expect([...lv.V36_PRINTED_SYMBOL_TEMPLATES].sort()).toEqual(
@@ -3202,8 +3212,10 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
     // draconic the CC M15 row whole, the ghostfire centred in its own band.
     // The Avatar elemental and Bloomburrow woodland took the CC M15 row whole
     // with theirs (v69): print's rows lie within its known offsets.
-    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow"];
-    const ownRow = ["fullart", "nyx", "tarkirghostfire"];
+    // The Bloomburrow anime took the 70 px disc on its own prints' row
+    // (v70): 8 px under the CC M15 lift, its name band 25 px up.
+    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime"];
+    const ownRow = ["fullart", "nyx", "tarkirghostfire", "bloomanime"];
     const drawn = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).costSizePct === 70 / 1500);
     expect([...drawn].filter((t) => !later.includes(t)).sort()).toEqual([...lv.COST_ROW_PRINT_TEMPLATES].sort());
     for (const t of later) expect(drawn, t).toContain(t);
@@ -3485,5 +3497,36 @@ describe("v69 — the Avatar elemental and Bloomburrow woodland showcases on the
     const lv = await import("@/lib/cards/layout-version");
     expect(lv.VERSION_ROLLOUT[V - 1], "v68 (#613) has no rollout yet: merge #613 first, or renumber this bump").toBeDefined();
     expect(isRenderStale(V - 2, "m15", undefined, V - 1), "v68 reads as a sweep of every card").toBe(false);
+  });
+});
+describe("v70 — the Bloomburrow anime showcase on one MSE master in print's look (TODO 4.11 / 4.35)", () => {
+  // Renumbered with ANIME_LAYOUT_VERSION if another bump merges first (taken
+  // as v70 at PR time: v69 is the Avatar / woodland pair's, #615).
+  const V = 70;
+  const SCOPE = ["bloomanime"];
+  it("is a sweep, never a badge, scoped to the one frame, and not verification-neutral", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.ANIME_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect([...lv.ANIME_TEMPLATES]).toEqual(SCOPE);
+    // The master a tick would judge changes: a tick (none yet) re-opens.
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).not.toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual(SCOPE);
+    // A bake one version older owes it on the one frame alone.
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(SCOPE.includes(t));
+  });
+
+  // v69 is #615's (the Avatar / woodland pair). A version with no rollout and
+  // no scope reads as a SWEEP OF EVERY CARD (rolloutPolicy's default, an
+  // unscoped version), so v70 never ships over a gap: merge #615 first, or
+  // renumber this bump v69 if #615 does not land.
+  it("ships only after v69 (#615): no gap below it", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.VERSION_ROLLOUT[V - 1], "v69 (#615) has no rollout yet: merge #615 first, or renumber this bump").toBeDefined();
+    expect(isRenderStale(V - 2, "m15", undefined, V - 1), "v69 reads as a sweep of every card").toBe(false);
   });
 });

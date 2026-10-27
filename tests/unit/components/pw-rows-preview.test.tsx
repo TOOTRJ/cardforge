@@ -12,7 +12,7 @@ import {
   loyaltyRowsDrawing,
 } from "@/lib/cards/loyalty-rows";
 import { getFrameProfile } from "@/lib/cards/template-layout";
-import type { FrameTemplate } from "@/types/card";
+import { FRAME_TEMPLATE_VALUES, type FrameTemplate } from "@/types/card";
 import { fitTitleBand } from "@/lib/cards/title-band";
 import { measuredLinePreviewPct } from "@/lib/cards/render-tiers";
 
@@ -239,18 +239,18 @@ describe("CardPreview — the name before a detached cost", () => {
     expect(span.endsWith(`>${displayLine("Kikyo Zoldyck")}`)).toBe(true);
   });
 
-  it("leaves an inline cost's name uncapped outside the family; a measured band caps it at its room", () => {
+  it("a measured band caps a name before an inline cost at its room — every frame that draws a cost measures its band", () => {
     const serra = (template: FrameTemplate) =>
       (
         render(
           <CardPreview title="Serra Angel" cost="{3}{W}{W}" cardType="creature" colorIdentity={["white"]} frameStyle={{ template }} />,
         ).container.querySelector('span[title="Serra Angel"]') as HTMLElement
       ).style.maxWidth;
-    // (modern's detached cost fits its name; the Avatar frame's inline one
-    // is the old path. The 1997 frame is measured since TODO 4.10a, the
-    // 1993 frame since TODO 4.10c, the LOTR ring since TODO 4.11.)
-    expect(serra("bloomanime")).toBe("");
-    cleanup();
+    // (The uncapped old path has no frame left: the 1997 frame is measured
+    // since TODO 4.10a, the 1993 frame since TODO 4.10c, the LOTR ring since
+    // TODO 4.11 and the Bloomburrow anime, the last, since its layout v70.)
+    // (The full-art basics' bands aren't, but they draw no cost.)
+    for (const t of FRAME_TEMPLATE_VALUES) if (!getFrameProfile(t).hideCost) expect(getFrameProfile(t).title.fit, t).toBe("measured");
     expect(serra("m15")).toBe(cqw(fitTitleBand(getFrameProfile("m15"), "Serra Angel", "{3}{W}{W}")!.widthPct));
     cleanup();
     const { container: noCost } = render(

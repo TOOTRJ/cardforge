@@ -170,6 +170,21 @@ describe("imports = printing-only (owner round 17, 2026-09-30)", () => {
         crownedShowcases += 1;
         continue;
       }
+      // …and the Bloomburrow anime (BLB #343–355, TODO 4.11 layout v70): all
+      // 13 legendary, the flourish above the name box — on wherever it
+      // lands with one, the ring's way. #353 Ral, a walker, names none: the
+      // crown doesn't print on a planeswalker (qualifiesForCrown).
+      if (key === "blb-353") {
+        expect(patch.printed_crown, key).toBeUndefined();
+        continue;
+      }
+      if (/^blb-3(4[3-9]|5[0-2]|5[45])$/.test(key)) {
+        expect(legendary, key).toBe(true);
+        expect(patch.printed_crown, key).toBe(true);
+        if (frameAnatomyOf(template).crown) expect(ai.crown, key).toBe(true);
+        crownedShowcases += 1;
+        continue;
+      }
       if (/^thb-2(5[89]|6[0-8])$/.test(key)) {
         expect(legendary, key).toBe(true);
         expect(template, key).toBe("nyx");

@@ -369,10 +369,13 @@ describe("fitTypeLine (TODO 4.20, layout v32)", () => {
     }
     // A line that fits is never cut; the old path never is either.
     expect(fitTypeLineBand({ layout: M15, text: LINES[3], symbolWidthPct: symbol }).text).toBe(LINES[3]);
-    // (An unmeasured frame: the Avatar showcase's — the 2003 pair, this
-    // test's first example, is measured since TODO 4.10b, Alpha, its
-    // second, since TODO 4.10c, and the LOTR ring, its third, since 4.11.)
-    const old = getFrameProfile("bloomanime");
+    // (An unmeasured band: no frame has one since the Bloomburrow anime's
+    // layout v70 — the 2003 pair, this test's first example, is measured
+    // since TODO 4.10b, Alpha, its second, since TODO 4.10c, the LOTR ring,
+    // its third, since 4.11, the anime, its fourth, since v70 — so M15's
+    // type band without its `fit` stands in for the old path.)
+    const m15Type = getFrameProfile("m15");
+    const old = { ...m15Type, type: { ...m15Type.type, fit: undefined } };
     expect(fitTypeLineBand({ layout: old, text: line, symbolWidthPct: symbol })).toEqual({
       sizePct: fitTypeLine({ layout: old, text: line, symbolWidthPct: symbol }),
       text: line,

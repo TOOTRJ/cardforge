@@ -40,6 +40,9 @@ const ART_FIRST: FrameTemplate[] = [
   "m15borderlessdfcback",
   "m15borderlessmdfcfront",
   "m15borderlessmdfcback",
+  // The Bloomburrow anime (TODO 4.11 / 4.35, layout v70): full bleed as
+  // printed, so art-first by rule (it opted in by name before).
+  "bloomanime",
   "m15fullartland",
   "fullartland",
   // 4.40's New Capenna ring and 4.41's plain bar: the art to the black ring.
@@ -59,7 +62,7 @@ const M20_TOKENS: FrameTemplate[] = [
 // …and its extended-art dress (step 2), whose picture runs under it too.
 const STATION: FrameTemplate[] = ["m15station", "m15stationland", "extendedartstation"];
 // …and 4.40's stone ring, whose window is 72 % of the card's height.
-const OPT_IN: FrameTemplate[] = ["m15station", "m15stationland", ...M20_TOKENS, "bloomanime", "tarkirghostfire", "fullart", "extendedartstation", "m15fullartlandzen", "m15textless", "m15textlessland", "nyx"];
+const OPT_IN: FrameTemplate[] = ["m15station", "m15stationland", ...M20_TOKENS, "tarkirghostfire", "fullart", "extendedartstation", "m15fullartlandzen", "m15textless", "m15textlessland", "nyx"];
 /** Every tile that draws the sample — exactly these 19 of the 52 templates,
  *  in FRAME_TEMPLATE_VALUES order. Spelled out, not derived, so a flag that
  *  leaks through a profile spread (or a widened rule) fails here. */
@@ -219,7 +222,6 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
 
   it("the six's windows are their own profiles' (not a full-card rect)", () => {
     const expected: Record<string, [number, number]> = {
-      bloomanime: [93, 92],
       // Inside its painted ring since TODO 4.11 (layout v68).
       tarkirghostfire: [(1344 / 1500) * 100, (1806 / 2100) * 100],
       // Layout v35 (4.17b): nyx's and fullart's art run under the whole text

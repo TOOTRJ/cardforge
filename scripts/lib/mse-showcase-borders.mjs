@@ -129,8 +129,34 @@ export const WOODLAND_FOOTER_RGB = Object.freeze({
   c: Object.freeze([51, 31, 21]),
 });
 
+/** The Bloomburrow anime showcase (BLB #343–355; TODO 4.11 / 4.35, layout
+ *  v70): MSE's style is a RECOLOUR template — its strokes are flat red
+ *  (255,0,0) that MSE recolours per card colour at render — and its name and
+ *  text boxes are `set_alpha(recolor_image(…, namebox / textbox colour),
+ *  70 %)`. Print wears ONE look on every colour (two-colour legends, all of
+ *  them, on the same frame), so the builder bakes ONE master, with these
+ *  numbers measured on the 13 raised-foil scans (Scryfall PNGs at 1500 ×
+ *  2100, each registered on MSE's stroke shapes per region — the crops
+ *  wander 0–12 px):
+ *   - the strokes: the raw median over every stroke's core (2 px eroded),
+ *     531,750 px over 75 registered regions — 35,31,12 (one flat tone,
+ *     owner 2026-10-27; print's raised foil runs 15–98 per region);
+ *   - the boxes: the pairs of pixels 7 px inside / outside every box edge
+ *     (strokes masked off), fitted inside = (1 − α)·outside + α·C per
+ *     channel — the name box α 0.78 over 45,50,52 (slate; MSE's default is
+ *     70 % black), the type / text box α 0.80 over 39,40,35;
+ *   - the footer: 15,20,16 (the median of the 12 creature prints' footers;
+ *     20 levels off black on green, where the same BLB scans read 0,0,0 on
+ *     the regular black borders — print's own tone, as the woodland's). */
+export const ANIME_STROKE_RGB = Object.freeze([35, 31, 12]);
+export const ANIME_NAMEBOX = Object.freeze({ alpha: 0.78, rgb: Object.freeze([45, 50, 52]) });
+export const ANIME_TEXTBOX = Object.freeze({ alpha: 0.8, rgb: Object.freeze([39, 40, 35]) });
+export const ANIME_FOOTER_RGB = Object.freeze([15, 20, 16]);
+
 /** Per template: the border's shape and colour (`rgb`, or `rgbByKey` per
- *  colour key). */
+ *  colour key). Kind "mask" is a style's own border mask (the anime's
+ *  border_pt_mask.png), painted by the builder's layered path OVER the
+ *  boxes and under the strokes, as MSE's z order draws it. */
 export const MSE_SHOWCASE_BORDERS = Object.freeze({
   tarkirdraconic: Object.freeze({ kind: "edge", rgb: BORDER_BLACK }),
   tarkirghostfire: Object.freeze({ kind: "ring", rgb: BORDER_BLACK, window: GHOSTFIRE_WINDOW }),
@@ -139,6 +165,10 @@ export const MSE_SHOWCASE_BORDERS = Object.freeze({
   // running into the bottom corners (a square output keeps it there,
   // lib/frames/square-corners.ts "frame"; a round render cuts it).
   bloomburrow: Object.freeze({ kind: "outside", rgbByKey: WOODLAND_FOOTER_RGB, keepCorners: true }),
+  // Not cut at the card corner: the footer is the frame's own dark tone
+  // running into the bottom corners (a square output keeps it; a round
+  // render cuts it).
+  bloomanime: Object.freeze({ kind: "mask", rgb: ANIME_FOOTER_RGB, keepCorners: true }),
 });
 
 /** The colour `template`'s border paints for colour key `key` (null: no
@@ -280,11 +310,34 @@ export function paintUnder(rgba, cov, rgb) {
   return painted;
 }
 
+/** Paint `rgb` at `cov` OVER the image (in place, straight RGBA): a layer
+ *  above what is there (the anime footer over its translucent boxes). */
+export function paintOver(rgba, cov, rgb) {
+  for (let p = 0; p < cov.length; p += 1) {
+    const c = cov[p];
+    if (c <= 0) continue;
+    const o = p * 4;
+    const b = rgba[o + 3] / 255;
+    const outA = c + b * (1 - c);
+    for (let k = 0; k < 3; k += 1) rgba[o + k] = Math.round((rgb[k] * c + rgba[o + k] * b * (1 - c)) / outA);
+    rgba[o + 3] = Math.round(outA * 255);
+  }
+}
+
+/** A greyscale mask (0–255) as coverage — cut at the one card corner
+ *  unless `keepCorners`. */
+export function maskCoverage(grey, width, height, keepCorners = false) {
+  const cov = new Float32Array(width * height);
+  for (let p = 0; p < cov.length; p += 1) cov[p] = grey[p] / 255;
+  return keepCorners ? cov : cutAtCardCorner(cov, width, height);
+}
+
 /** The border of `template` painted under its master (in place); its
  *  coverage back (null: the template has none). */
 export function paintShowcaseBorder(template, rgba, width, height, seeds, key) {
   const spec = MSE_SHOWCASE_BORDERS[template];
   if (!spec) return null;
+  if (spec.kind === "mask") throw new Error(`${template}: a "mask" border is painted by the builder's layered path`);
   const raw =
     spec.kind === "ring"
       ? ringCoverage(spec.window, width, height)

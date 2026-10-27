@@ -1838,6 +1838,9 @@ const CROWNED_SHOWCASE_SIGNATURES: ReadonlySet<string> = new Set([
   "showcase/blb/woodland",
   "showcase/blb/woodland+two-colour",
   "showcase/blb/woodland+two-colour-hybrid",
+  // The Bloomburrow anime (TODO 4.11, layout v70): all 13 are legendary and
+  // print the flourish above the name box.
+  "showcase/blb/anime",
 ]);
 
 /** Whether a printing prints the STANDARD legendary crown (see

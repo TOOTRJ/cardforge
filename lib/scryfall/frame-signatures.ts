@@ -521,7 +521,8 @@ const UNMODELLED_SUBTYPES = ["Room", "Class", "Case"] as const;
  *  two lists together, so fixing a master (and striking it from the known
  *  failures) lifts its cap here too. */
 export const BORDER_PENDING_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<FrameTemplate>([
-  "bloomanime",
+  // (bloomanime left with TODO 4.11 / 4.35's layout v70: one master in
+  // print's look, its footer drawn, full-bleed art. None today.)
 ]);
 
 /** Single colour masters whose border isn't true yet (owner decision A8).

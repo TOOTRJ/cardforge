@@ -60,7 +60,9 @@ describe("printed_crown", () => {
     const S = signaturePrintings as unknown as Record<string, ScryfallCard>;
     expect(S["tla-338"].frame_effects).toEqual(["showcase", "legendary"]);
     expect(mapScryfallToFormPatch(S["tla-338"]).printed_crown).toBe(false); // Yue, TLA avatar
-    expect(mapScryfallToFormPatch(S["blb-343"]).printed_crown).toBe(false); // Lumra, BLB anime
+    // The Bloomburrow anime prints its own flourish above the name box on all
+    // 13 (TODO 4.11 / 4.35, layout v70), which its template draws.
+    expect(mapScryfallToFormPatch(S["blb-343"]).printed_crown).toBe(true); // Lumra, BLB anime
     // The LTR ring prints its OWN crown, which its template draws (TODO 4.11):
     // every printing of the run is legendary under the scalloped bar.
     expect(P["ltr-302"].frame_effects).toEqual(["legendary", "showcase"]);
@@ -132,6 +134,19 @@ describe("printed_crown", () => {
         crowned += 1;
         continue;
       }
+      // …and the Bloomburrow anime (TODO 4.11 / 4.35, layout v70): its
+      // flourish above the name box, on every creature of the run; #353 Ral,
+      // a walker, names none (the crown never prints on a planeswalker).
+      if (key === "blb-353") {
+        expect(got, key).toBeUndefined();
+        continue;
+      }
+      if (/^blb-3(4[3-9]|5[0-2]|5[45])$/.test(key)) {
+        expect(mapScryfallToFormPatch(card).frame_match?.signature, key).toBe("showcase/blb/anime");
+        expect(got, key).toBe(true);
+        crowned += 1;
+        continue;
+      }
       if (/^thb-2(5[89]|6[0-8])$/.test(key)) {
         expect(mapScryfallToFormPatch(card).frame_match?.signature, key).toBe("showcase/thb/constellation");
         expect(got, key).toBe(true);
@@ -147,8 +162,10 @@ describe("printed_crown", () => {
       }
     }
     // Both kinds are in the fixtures (not a vacuous pass).
-    // (9 since TODO 4.11: MUL #1 / #60 print the Tarkir pack's own crown.)
-    expect(legendary).toBeGreaterThanOrEqual(9);
+    // (9 since TODO 4.11: MUL #1 / #60 print the Tarkir pack's own crown;
+    // 7 since the Bloomburrow anime's layout v70: BLB #343 / #344 print its
+    // flourish.)
+    expect(legendary).toBeGreaterThanOrEqual(7);
     expect(nonlegendary).toBeGreaterThanOrEqual(10);
     expect(crowned).toBeGreaterThanOrEqual(1);
     // The rule itself: the constellation signature follows the printing —

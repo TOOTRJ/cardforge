@@ -333,6 +333,9 @@ const PICKS: readonly Pick[] = [
   { from: "avatar/g/creature-long@collector", why: "v69 Avatar elemental: MSE's title bar and the black footer built into the master, M15's slots at the family's sizes in white, the CC M15 cost row, art from the top edge, MSE's plate, the collector line on the footer" },
   { from: "bloomburrow/g/creature-long@crown", why: "v69 Bloomburrow woodland: the footer in the colour's own tone, M15's slots in white, the art across the card, MSE's crown band (opt-in)" },
   { from: "bloomburrow/u/creature-short@stamp", why: "v69 Bloomburrow woodland: MSE's own stamp notch with its rim per colour and our oval in its well, MSE's plate" },
+  // The Bloomburrow anime on one MSE master in print's look (TODO 4.11 / 4.35, layout v70).
+  { from: "bloomanime/g/creature-long@crown", why: "v70 Bloomburrow anime: the strokes in print's flat tone, the slate name and text boxes at print's opacity over full-bleed art, its own layout on M15's slots in white, the CC M15 disc on print's row, MSE's flourish (opt-in)" },
+  { from: "bloomanime/u/creature-short@stamp", why: "v70 Bloomburrow anime: the footer in print's tone, MSE's P/T outline as the plate, MSE's stamp notch on the footer's well with our oval" },
   // The Zendikar Rising hedron showcase from Card Conjurer (TODO 4.11, layout v63).
   { from: "fullart/w/creature-short", why: "v63 ZNR hedron: black name and type ink on the white key's ivory bars, the art under the whole frame, the light plate's dark digits" },
   { from: "fullart/wu/creature-long@crown", why: "v63 ZNR hedron: white ink with its shadow on the gold bars, the pair's split crown band over the gold master (pairCrownOnGold)" },

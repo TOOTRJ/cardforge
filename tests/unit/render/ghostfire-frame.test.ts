@@ -62,12 +62,24 @@ describe("Ghostfire frame masters", () => {
     expect((r.heightPct / 100) * 2100).toBeCloseTo(208, 0);
   });
 
-  it("leaves Bloomburrow Anime (the other borderlessShowcase) as it was", () => {
+  it("the Bloomburrow anime (layout v70): ONE master for every key, its boxes and footer at print's numbers, the art clear between them", async () => {
+    // (It was the other borderlessShowcase, inset art with a 0.55 scrim on
+    // its rules box, until TODO 4.11 / 4.35.)
+    const w = await rgba("public/frames/bloomanime/w.png");
+    for (const c of COLORS) {
+      const m = await rgba(`public/frames/bloomanime/${c}.png`);
+      for (const [x, y] of [[50, 7.7], [50, 70], [50, 98], [5, 50]]) expect(m.at(x, y), `${c} @ ${x},${y}`).toEqual(w.at(x, y));
+    }
+    // The name box (slate, α 0.78), the text box (α 0.80), the footer
+    // (15,20,16, opaque) and the art between them (clear).
+    expect(w.at(50, 6.7)).toEqual([45, 50, 52, 199]);
+    expect(w.at(50, 75)).toEqual([39, 40, 35, 204]);
+    expect(w.at(50, 99)).toEqual([15, 20, 16, 255]);
+    expect(w.at(50, 30)[3]).toBe(0);
     const anime = getFrameProfile("bloomanime");
-    expect(anime.rules.backdropHex).toBe("rgba(8,8,12,0.55)");
-    expect(anime.title.sizePct).toBe(0.044);
-    expect(anime.type.rect).toEqual({ topPct: 56, leftPct: 8, widthPct: 84, heightPct: 4.5 });
-    expect(anime.pt?.plateAssetPathTemplate).toBeUndefined();
+    expect(anime.rules.backdropHex).toBeUndefined();
+    expect(anime.artSlot).toEqual({ topPct: 0, leftPct: 0, widthPct: 100, heightPct: 100 });
+    expect(anime.pt?.plateAssetPathTemplate).toBe("/frames/bloomanime/pt/{color}.png");
   });
 });
 

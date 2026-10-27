@@ -46,7 +46,18 @@
 import sharp from "sharp";
 import path from "node:path";
 import fs from "node:fs";
-import { BORDERED_PNG_ATTEMPTS, MSE_SHOWCASE_BORDERS, borderLost, paintShowcaseBorder, showcaseBorderRgb } from "./lib/mse-showcase-borders.mjs";
+import {
+  ANIME_NAMEBOX,
+  ANIME_STROKE_RGB,
+  ANIME_TEXTBOX,
+  BORDERED_PNG_ATTEMPTS,
+  MSE_SHOWCASE_BORDERS,
+  borderLost,
+  maskCoverage,
+  paintOver,
+  paintShowcaseBorder,
+  showcaseBorderRgb,
+} from "./lib/mse-showcase-borders.mjs";
 
 const PACK = "/Users/redjester/Projects/other/Full-Magic-Pack/data";
 const W = 1500;
@@ -92,7 +103,34 @@ const FRAMES = [
     crown: "crown/{c}crown.png",
     stampNotch: { well: "border_stamp_mask.png", rim: "stamp/{c}stamp.png" },
   },
-  { name: "bloomanime", style: "bloomburrow-borderless-anime", pat: "card.png", seeds: [[0.5, 0.3]] },
+  {
+    name: "bloomanime",
+    style: "bloomburrow-borderless-anime",
+    pat: "card.png",
+    seeds: [[0.5, 0.3]],
+    // magic-m15-showcase-bloomburrow-borderless-anime `style` (TODO 4.11 /
+    // 4.35, layout v70): a RECOLOUR template (flat red strokes MSE recolours
+    // at render), drawn as ONE master for every key in MSE's z order — the
+    // name and text boxes (z 150, set_alpha(recolor_image(…), 70 %)), the
+    // border colour through border_pt_mask.png (z 200: the footer), the
+    // strokes (card.png z 210, the P/T dress's nonptpt.png z 840) — with
+    // print's numbers (scripts/lib/mse-showcase-borders.mjs ANIME_*). Every
+    // print has a P/T, so the master is the P/T dress (textbox_pt.png's tab,
+    // nonptpt.png's shorter stroke); the P/T box's outline (pt.png) is the
+    // plate.
+    layered: {
+      boxes: [
+        { file: "namebox.png", ...ANIME_NAMEBOX },
+        { file: "textbox_pt.png", ...ANIME_TEXTBOX },
+      ],
+      footer: "border_pt_mask.png",
+      strokes: ["card.png", "nonptpt.png"],
+    },
+    tone: ANIME_STROKE_RGB,
+    plate: "pt.png",
+    crown: "crown.png",
+    stampNotch: { well: "border_stamp_mask.png", rim: "stamp.png" },
+  },
   {
     name: "tarkirdraconic",
     style: "tarkir-draconic",
@@ -144,15 +182,47 @@ function srcFile(frame, color) {
   return path.join(base, frame.pat.replace("{c}", sourceKey(frame, "card", color)));
 }
 
-/** A full-card MSE layer upscaled to W×H as raw RGBA, alpha scaled by `alpha`. */
-async function layer(file, alpha = 1) {
+/** A full-card MSE layer upscaled to W×H as raw RGBA, alpha scaled by
+ *  `alpha`; `rgb` recolours it flat (a recolour template's red). */
+async function layer(file, alpha = 1, rgb = null) {
   const { data } = await sharp(file)
     .resize(W, H, { fit: "fill" })
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
   if (alpha !== 1) for (let i = 3; i < data.length; i += 4) data[i] = Math.round(data[i] * alpha);
+  if (rgb) for (let i = 0; i < data.length; i += 4) [data[i], data[i + 1], data[i + 2]] = rgb;
   return data;
+}
+
+/** Straight-alpha source-over of `top` onto `base` (in place). */
+function over(base, top) {
+  for (let o = 0; o < base.length; o += 4) {
+    const a = top[o + 3] / 255;
+    if (a <= 0) continue;
+    const b = base[o + 3] / 255;
+    const outA = a + b * (1 - a);
+    for (let k = 0; k < 3; k += 1) base[o + k] = Math.round((top[o + k] * a + base[o + k] * b * (1 - a)) / outA);
+    base[o + 3] = Math.round(outA * 255);
+  }
+}
+
+/** A `layered` family's ONE master (every key the same bytes), in MSE's z
+ *  order: the recoloured boxes, the footer over them through the style's
+ *  border mask (cut at the card corner), the strokes in the flat tone. */
+const layeredCache = new Map();
+async function layeredMaster(frame) {
+  if (layeredCache.has(frame.name)) return layeredCache.get(frame.name);
+  const base = path.join(PACK, `magic-m15-showcase-${frame.style}.mse-style`);
+  const data = Buffer.alloc(W * H * 4);
+  for (const box of frame.layered.boxes) over(data, await layer(path.join(base, box.file), box.alpha, box.rgb));
+  const { data: grey } = await sharp(path.join(base, frame.layered.footer)).resize(W, H, { fit: "fill" }).greyscale().raw().toBuffer({ resolveWithObject: true });
+  const cov = maskCoverage(grey, W, H, Boolean(MSE_SHOWCASE_BORDERS[frame.name]?.keepCorners));
+  paintOver(data, cov, showcaseBorderRgb(frame.name, "w"));
+  for (const f of frame.layered.strokes) over(data, await layer(path.join(base, f), 1, frame.tone));
+  const out = { data, cov };
+  layeredCache.set(frame.name, out);
+  return out;
 }
 
 /** The frame as raw RGBA: card art alone, or card art OVER its underlays. */
@@ -170,6 +240,25 @@ async function frameLayers(frame, color) {
 }
 
 async function convert(frame, color) {
+  if (frame.layered) {
+    const { data, cov } = await layeredMaster(frame);
+    const out = path.join("public/frames", frame.name);
+    fs.mkdirSync(out, { recursive: true });
+    const file = path.join(out, `${color}.png`);
+    for (const [i, opts] of BORDERED_PNG_ATTEMPTS.entries()) {
+      const buf = await sharp(data, { raw: { width: W, height: H, channels: 4 } }).png(opts).toBuffer();
+      const { data: written } = await sharp(buf).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      const lost = borderLost(cov, written);
+      if (lost) {
+        console.log(`${file}: encoding ${i} left ${lost} border pixels see-through — next`);
+        continue;
+      }
+      fs.writeFileSync(file, buf);
+      if (i > 0) console.log(`${file}: written with encoding ${i}`);
+      return 0;
+    }
+    throw new Error(`${file}: no encoding kept the border whole`);
+  }
   const { data, info } = await frameLayers(frame, color);
   const ch = info.channels;
   const idx = (x, y) => (y * W + x) * ch;
@@ -255,7 +344,7 @@ async function convertStampNotch(frame, color) {
     .greyscale()
     .raw()
     .toBuffer({ resolveWithObject: true });
-  const rim = await layer(path.join(base, frame.stampNotch.rim.replace("{c}", sourceKey(frame, "stamp", color))));
+  const rim = await layer(path.join(base, frame.stampNotch.rim.replace("{c}", sourceKey(frame, "stamp", color))), 1, frame.tone ?? null);
   // The well in the border's own colour (black, or the woodland's coloured
   // footer: MSE's `colored border` under the rim).
   const rgb = showcaseBorderRgb(frame.name, color) ?? [0, 0, 0];
@@ -304,7 +393,7 @@ async function convertStampNotch(frame, color) {
  *  <name>crown/<c>.png — the profile's crown overlay rect is that box. */
 async function convertCrown(frame, color) {
   const base = path.join(PACK, `magic-m15-showcase-${frame.style}.mse-style`);
-  const data = await layer(path.join(base, frame.crown.replace("{c}", sourceKey(frame, "crown", color))));
+  const data = await layer(path.join(base, frame.crown.replace("{c}", sourceKey(frame, "crown", color))), 1, frame.tone ?? null);
   let x0 = W;
   let y0 = H;
   let x1 = -1;
@@ -336,6 +425,7 @@ async function convertPlate(frame, color) {
     .raw()
     .toBuffer({ resolveWithObject: true });
   const ch = info.channels;
+  if (frame.tone) for (let i = 0; i < data.length; i += ch) [data[i], data[i + 1], data[i + 2]] = frame.tone;
   let x0 = W;
   let y0 = H;
   let x1 = -1;

@@ -110,6 +110,8 @@ describe("the switch values", () => {
       // …and the Avatar and the Bloomburrow woodland (TODO 4.11, layout v69).
       "avatar",
       "bloomburrow",
+      // …and the Bloomburrow anime (TODO 4.11, layout v70).
+      "bloomanime",
     ]);
   });
 });

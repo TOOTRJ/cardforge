@@ -605,8 +605,10 @@ describe("keep-outs", () => {
     expect(value.topPct).toBeGreaterThan(painted.topPct);
     expect(value.topPct + value.heightPct).toBeLessThan(painted.topPct + painted.heightPct);
     // A value printed straight on the art (no plate, no badge): its rect.
-    const anime = getFrameProfile("bloomanime");
-    expect(statKeepOuts(anime, { pt: true })).toEqual([anime.pt!.rect]);
+    // (retro: the 1997 frame prints its P/T on the frame; the Bloomburrow
+    // anime, this test's first example, draws MSE's outline since v70.)
+    const retro = getFrameProfile("retro");
+    expect(statKeepOuts(retro, { pt: true })).toEqual([retro.pt!.rect]);
     // The battle frame has neither a P/T nor a loyalty: only its shield.
     expect(statKeepOuts(battle, { pt: true, loyalty: true })).toEqual([painted]);
   });
