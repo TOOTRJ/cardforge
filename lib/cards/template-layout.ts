@@ -4567,53 +4567,6 @@ function artForwardShowcase(
 const AVATAR = artForwardShowcase("Avatar", INK_LIGHT);
 const BLOOMBURROW = artForwardShowcase("Bloomburrow", INK_LIGHT);
 
-// Tarkir card showcases — m15-style (name top, art, type, textbox). Each slot
-// gets its own ink because the frames invert per band: Draconic's title sits
-// over dark art (light ink + shadow) while its type + parchment textbox take
-// dark ink. Dragon Wing overrides the geometry below.
-function tarkirCard(
-  label: string,
-  inks: { title: string; type: string; rules: string },
-): FrameProfile {
-  const slotInk = (hex: string) => ({
-    colorHex: hex,
-    ...(hex === INK_LIGHT ? { shadowCss: SHOWCASE_SHADOW } : {}),
-  });
-  return {
-    label,
-    costSizePct: 0.038,
-    artSlot: { topPct: 12, leftPct: 9, widthPct: 82, heightPct: 46 },
-    title: {
-      rect: { topPct: 4.6, leftPct: 11, widthPct: 78, heightPct: 6 },
-      sizePct: 0.044,
-      weight: 600,
-      font: "display",
-      ...slotInk(inks.title),
-    },
-    // Measured: the painted type band spans ~56.3–61.5% on both frames.
-    type: {
-      rect: { topPct: 56.6, leftPct: 11, widthPct: 78, heightPct: 4.8 },
-      sizePct: 0.03,
-      weight: 600,
-      font: "display",
-      ...slotInk(inks.type),
-    },
-    rules: {
-      rect: { topPct: 66, leftPct: 9, widthPct: 82, heightPct: 26 },
-      sizePct: rulesPxToPct(RULES_SIZE_PX.reduced),
-      colorHex: inks.rules,
-      vAlign: "start",
-      font: "body",
-    },
-    pt: {
-      rect: { topPct: 87, leftPct: 71, widthPct: 23, heightPct: 7.5 },
-      sizePct: 0.043,
-      colorHex: "#ffffff",
-      weight: 700,
-      shadowCss: OUTLINE_SHADOW,
-    },
-  };
-}
 // MUL Tarkir "Dragon Wing" (TODO 4.11, layout v67) — Card Conjurer's
 // 'Tarkir' pack (packTarkir.js, "Tarkir Sketch (MOM)", 1500 × 2100 native;
 // scripts/lib/cc-frames.mjs TARKIR), the Multiverse Legends showcase of MUL
@@ -4724,18 +4677,38 @@ const TARKIRDRAGON: FrameProfile = {
     plateAssetPathTemplate: "/frames/tarkirdragon/pt/{color}.png",
   },
 };
-// Draconic is the gold Tarkir: Dragonstorm dragon frame (TDM #292–323). Its
-// P/T prints in black on a light box ringed by serpents (TDM #321 Ureni
-// "10/10", #301 Magmatic Hellkite): MSE's pt/<c>pt.png, cropped by
-// scripts/build-showcase-frames.mjs to 1132,1813 368×188 on the 1500×2100
-// card (it runs to the card's right edge). Without it the P/T was white on
-// the light parchment and could not be read (owner review 2026-09-25).
+// Tarkir draconic (TODO 4.11, layout v68): the gold Tarkir: Dragonstorm
+// dragon showcase, TDM #292–326 — MSE's drawing (magic-m15-showcase-tarkir-
+// draconic, 646 px, upscaled by scripts/build-showcase-frames.mjs), with the
+// black border MSE paints at render time painted under it (the band below
+// and beside the dragons; scripts/lib/mse-showcase-borders.mjs). Its text
+// layout is the M15 frame's: on the 35 prints the name, type line, rules box
+// and collector line sit where the set's regular printings set them (TDM #1–
+// 12, same scans) — so M15's slots and the M15-era family's sizes, `fit:
+// "measured"`, and the CC M15 cost row (print: 70.4 px discs at a 77 px
+// pitch, the row ending at 1385.4 px). Black ink on the parchment bars.
+/** The art slot: the master's window (α < 250 on 64–1451 × 242–1179 px on
+ *  every key) and the six see-through holes between the dragons' claws at
+ *  its edges (from row 240), with the art-window check's 0.05 % to spare. */
+export const TARKIRDRACONIC_ART_SLOT: Rect = { topPct: (239 / 2100) * 100, leftPct: (63 / 1500) * 100, widthPct: (1390 / 1500) * 100, heightPct: (944 / 2100) * 100 };
 const TARKIRDRACONIC: FrameProfile = {
-  ...tarkirCard("Draconic", { title: INK_DARK, type: INK_DARK, rules: INK_DARK }),
-  // MSE's pt field (516,811 82×34 on 646×902) centres the value at
-  // 1293 × 1928 px, where both scans print it (86.0 %W, 91.7 %H); the ink
-  // may use the box's light face inside the serpents, 1187–1398 px, so
-  // `10/10` and `20/20` print at full size like Ureni's.
+  ...M15,
+  label: "Draconic",
+  ...CC_M15_COST,
+  artSlot: TARKIRDRACONIC_ART_SLOT,
+  // The type line 2 px below the CC M15 baseline: MSE's type bar sits 2 px
+  // lower than the Card Conjurer M15 master's (its outlines at 1185 / 1303
+  // px — print's own, TDM #292–326 — against 1184 / 1301), and print sets
+  // the line on it as M15 sets it on its own (1263 px; the regular TDM
+  // printings 1261 under theirs).
+  type: { ...M15.type, dy: CC_M15_TYPE_DY + 2 / 1500 },
+  // The P/T in black on MSE's light box ringed by serpents (TDM #321 Ureni
+  // "10/10", #301 Magmatic Hellkite): MSE's pt/<c>pt.png, cropped by the
+  // builder to 1132,1813 368×188 (it runs to the card's right edge). MSE's
+  // pt field (516,811 82×34 on 646×902) centres the value at 1293 × 1928
+  // px, where the scans print it; the ink may use the box's light face
+  // inside the serpents, 1187–1398 px, so `10/10` and `20/20` print at full
+  // size like Ureni's (owner review 2026-09-25, #386).
   pt: {
     rect: { topPct: 89.911, leftPct: 79.876, widthPct: 12.693, heightPct: 3.769 },
     inkSpanPct: { leftPct: 79.1333, rightPct: 93.2 },
@@ -4889,32 +4862,44 @@ function borderlessShowcase(
 }
 const BLOOMANIME = borderlessShowcase("Anime");
 
-// Ghostfire — the Tarkir: Dragonstorm borderless ghostfire showcase (TDM
-// #399–418). MSE's style (magic-m15-showcase-tarkir-ghostfire) draws its
-// namebox / typebox / textbox in teal (#03586b) at 60 % opacity UNDER the
-// pale-cyan outline, puts a teal ribbon under the P/T, and sets every font
-// white. scripts/build-showcase-frames.mjs bakes the three boxes into the
-// PNGs and crops the ribbon to pt/<c>.png, so the bars are dark translucent
-// teal and take white ink (owner review 2026-09-25: the old outline-only
-// PNG left "Enchantment" in dark ink on the type band's lower rim, over the
-// art). Geometry measured on the new c.png's bands (name 5.05–10.43 %H,
-// type 51.38–56.86, text box 57.3–87.4) and on the real TDM #400 scan.
-// MSE's swap_fonts are all "white" and the scan's ink is (255,255,255) —
-// pure white, not the house cream (INK_LIGHT).
+// Ghostfire — the Tarkir: Dragonstorm ghostfire showcase (TDM #399–418;
+// #399–408 black-bordered, #409–418 the white halo-foil run, 4.30). MSE's
+// style (magic-m15-showcase-tarkir-ghostfire) draws its namebox / typebox /
+// textbox in teal (#03586b) at 60 % opacity UNDER the pale-cyan outline,
+// puts a teal ribbon under the P/T, and sets every font white.
+// scripts/build-showcase-frames.mjs bakes the three boxes into the PNGs and
+// crops the ribbon to pt/<c>.png, so the bars are dark translucent teal and
+// take white ink (owner review 2026-09-25). Since TODO 4.11 (layout v68) it
+// also paints the black ring and footer MSE draws at render time (the
+// window 77–1423 × 79–1884 px, scripts/lib/mse-showcase-borders.mjs: the
+// ring 78–80 px on the bright-art prints) — the frame's own geometry, so
+// the slots stay this profile's, at the M15-era family's sizes with `fit:
+// "measured"` (print's name, type line and cost discs are the family's: 70.2
+// px discs at a 78 px pitch, the row ending at 1386 px, its centre 157.7 —
+// where this title band centres them). Geometry measured on the new c.png's
+// bands (name 5.05–10.43 %H, type 51.38–56.86, text box 57.3–87.4) and on
+// the real TDM #400 scan. MSE's swap_fonts are all "white" and the scan's
+// ink is (255,255,255) — pure white, not the house cream (INK_LIGHT).
 const GHOSTFIRE_INK = "#ffffff";
+/** The art slot: the ring's window (77–1423 × 79–1884 px; the translucent
+ *  boxes inside it) with the art-window check's 0.05 % to spare. */
+export const TARKIRGHOSTFIRE_ART_SLOT: Rect = { topPct: (78 / 2100) * 100, leftPct: (76 / 1500) * 100, widthPct: (1348 / 1500) * 100, heightPct: (1808 / 2100) * 100 };
 const TARKIRGHOSTFIRE: FrameProfile = {
   label: "Ghostfire",
-  artSlot: { topPct: 2.5, leftPct: 3.5, widthPct: 93, heightPct: 92 },
-  // Pips: Ø 70 px, 82.5–92.4 %W, centred at 7.52 %H on the scan. The pips
-  // centre in the title rect, which sits 0.09 %H above the name band's
-  // centre so name and pips each land within 2 px of the scan (no costDy:
-  // that nudge is kept for the Card Conjurer frames).
-  costSizePct: 0.0465,
-  // Title and type sizes land the scan's ink widths ("Clarion Conqueror"
-  // 659 px, "Creature — Dragon" 561 px at 1500 wide).
+  artSlot: TARKIRGHOSTFIRE_ART_SLOT,
+  // The family's 70 px disc (CC M15's), centred in the title rect as print
+  // centres it (157.7 px; the rect sits 0.09 %H above the name band's
+  // centre so name and pips each land within 2 px of the scans).
+  costSizePct: CC_M15_COST_DISC_PCT,
+  // The family's set symbol: Card Conjurer's 86 px box, the glyph fitted by
+  // its ink (M15's rule).
+  symbolSizePct: SET_SYMBOL_BOX_PCT,
+  setSymbolFit: "ink",
   title: {
     rect: { topPct: 4.96, leftPct: 8.55, widthPct: 83.85, heightPct: 5.38 },
-    sizePct: 0.0535,
+    sizePct: TITLE_SIZE_PCT,
+    dy: keepBaseline(0.0535, TITLE_SIZE_PCT),
+    fit: "measured",
     colorHex: GHOSTFIRE_INK,
     weight: 600,
     font: "display",
@@ -4922,7 +4907,11 @@ const TARKIRGHOSTFIRE: FrameProfile = {
   },
   type: {
     rect: { topPct: 51.38, leftPct: 8.5, widthPct: 83.5, heightPct: 5.48 },
-    sizePct: 0.0445,
+    sizePct: TYPE_SIZE_PCT,
+    // 2 px above the old baseline: print sets the line on 1158 px (TDM
+    // #399–408, the title bar within 1 px of ours on every scan).
+    dy: keepBaseline(0.0445, TYPE_SIZE_PCT) - 2 / 1500,
+    fit: "measured",
     colorHex: GHOSTFIRE_INK,
     weight: 600,
     font: "display",
@@ -6087,6 +6076,32 @@ export const TARKIRDRAGON_HOLO_STAMP: FrameOverlaySlot = {
   assetPathTemplate: "/frames/tarkirdragonholostamp/{key}.png",
   keys: ["w", "u", "b", "r", "g", "m", "c"],
   stamp: { shape: "oval", oval: TARKIRDRAGON_HOLO_STAMP_OVAL, keepOut: TARKIRDRAGON_HOLO_STAMP_KEEP_OUT },
+};
+
+/** The Tarkir draconic showcase's oval (TODO 4.11): the prints' hologram
+ *  centred on 750.8 × 1955 px (TDM #292–326, every stamped printing within
+ *  1 px), at M15's 134 × 67 size. */
+export const TARKIRDRACONIC_HOLO_STAMP_OVAL: Rect = { leftPct: (684 / 1500) * 100, topPct: (1922 / 2100) * 100, widthPct: (134 / 1500) * 100, heightPct: (67 / 2100) * 100 };
+/** The rules box keeps out of the arch: its rim's top (1895 px at the
+ *  centre) down to the box's bottom (1950), over the piece's 631–870 px. */
+export const TARKIRDRACONIC_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (631 / 1500) * 100, topPct: (1895 / 2100) * 100, widthPct: (239 / 1500) * 100, heightPct: (55 / 2100) * 100 };
+/**
+ * The Tarkir draconic showcase's OVAL stamp notch (TODO 4.11): MSE's own
+ * stamp as a stamped card draws it — the `card stamp border` (the border
+ * black through stamp_border_mask.png: the well) under the `card stamp rim`
+ * (stamp/<c>stamp.png: the serpent rim arched over the well) — upscaled
+ * like the masters and cropped to its box, 239 × 65 px at 631, 1895
+ * (scripts/build-showcase-frames.mjs `stampNotch`; git, beside the masters).
+ * The prints arch it on every rare and mythic (`security_stamp: oval`) and
+ * on nothing else: "auto" = a rare or mythic, as on M15. Keys: the masters'
+ * (each colour's own rim). Set on the tarkirdraconic entry only.
+ */
+export const TARKIRDRACONIC_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: { leftPct: (631 / 1500) * 100, topPct: (1895 / 2100) * 100, widthPct: (239 / 1500) * 100, heightPct: (65 / 2100) * 100 },
+  assetPathTemplate: "/frames/tarkirdraconicholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c"],
+  stamp: { shape: "oval", oval: TARKIRDRACONIC_HOLO_STAMP_OVAL, keepOut: TARKIRDRACONIC_HOLO_STAMP_KEEP_OUT },
 };
 
 /**
@@ -7330,8 +7345,15 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // card, so no stored card changes by them.
   lotrscroll: { ...LOTRSCROLL, overlays: [LOTRSCROLL_CROWN, LOTRSCROLL_HOLO_STAMP], collector: M15_COLLECTOR },
   tarkirdragon: { ...TARKIRDRAGON, overlays: [TARKIRDRAGON_CROWN, TARKIRDRAGON_HOLO_STAMP], collector: EXPEDITION_ZNR_COLLECTOR },
-  tarkirdraconic: TARKIRDRACONIC,
-  tarkirghostfire: { ...TARKIRGHOSTFIRE, pickerSampleArt: true },
+  // The Tarkir: Dragonstorm showcases (TODO 4.11, layout v68): the
+  // draconic's oval stamp notch and both frames' collector line on the black
+  // footer the masters now paint (the prints set it on M15's rows: line 1 at
+  // 1990–1991 px, line 2 at 2029, the © line ending at 1395 — TDM #1–12, the
+  // regular printings, the same) — each opt-in per card, so no stored card
+  // changes by them. The ghostfire's stamp sits in its ribbon's own dip
+  // (no notch piece yet: TODO 4.11).
+  tarkirdraconic: { ...TARKIRDRACONIC, overlays: [TARKIRDRACONIC_HOLO_STAMP], collector: M15_COLLECTOR },
+  tarkirghostfire: { ...TARKIRGHOSTFIRE, pickerSampleArt: true, collector: M15_COLLECTOR },
   // The extended-art frame draws the floating crown as an overlay band
   // (TODO 4.6f, wave 2b; EXTENDED_CROWN) — opt-in per card, so no stored
   // card changes (and production holds none on this frame). The two-colour

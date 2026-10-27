@@ -600,12 +600,20 @@ describe("the frame picker's groups: a classification change only", () => {
     // …and the MUL Tarkir dragon wings' (MUL #1 / #60, TODO 4.11 too).
     expect(raw.imports["all|mul-1"]).toMatchObject({ frame_template: "tarkirdragon", match: ["exact", "tarkirdragon", null] });
     expect(raw.imports["all|mul-60"]).toMatchObject({ frame_template: "tarkirdragon", match: ["exact", "tarkirdragon", null] });
+    // …and the Tarkir: Dragonstorm draconic and ghostfire (TDM #303 / #400,
+    // TODO 4.11 layout v68: the border MSE paints at render time painted
+    // under their masters).
+    expect(raw.imports["all|tdm-303"]).toMatchObject({ frame_template: "tarkirdraconic", match: ["exact", "tarkirdraconic", null] });
+    expect(raw.imports["all|tdm-400"]).toMatchObject({ frame_template: "tarkirghostfire", match: ["exact", "tarkirghostfire", null] });
     expect(changed("imports")).toEqual([
       "all|ltr-306",
       "all|ltr-482",
       "all|mul-1",
       "all|mul-60",
-      "all|takh-1", "all|tdsk-10", "all|tdsk-4", "all|teoc-13",
+      "all|takh-1",
+      "all|tdm-303",
+      "all|tdm-400",
+      "all|tdsk-10", "all|tdsk-4", "all|teoc-13",
       "all|tmkm-10", "all|tmkm-13", "all|tmom-16", "all|tsoi-11",
       "all|zne-1",
       "prodPlusMoved|tmkm-10", "prodPlusMoved|tmkm-13", "prodPlusMoved|tmom-16",

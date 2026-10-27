@@ -2457,6 +2457,8 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "lotr",
   // …and the MUL Tarkir dragon wings' oval.
   "tarkirdragon",
+  // …and the Tarkir draconic's MSE oval (TODO 4.11, layout v68).
+  "tarkirdraconic",
 ];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's

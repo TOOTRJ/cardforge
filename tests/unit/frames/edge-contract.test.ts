@@ -97,12 +97,21 @@ describe("the edge-contract table", () => {
         "bloomburrow",
         // (expeditionland b/g left with Card Conjurer's masters, TODO 4.11
         // wave 1.)
-        "tarkirdraconic",
         // (tarkirdragon left with Card Conjurer's 'Tarkir' masters, TODO
-        // 4.11, layout v67: the printed black border all round.)
-        "tarkirghostfire",
+        // 4.11, layout v67: the printed black border all round — and
+        // tarkirdraconic and tarkirghostfire with 4.11's layout v68: the
+        // border MSE paints at render time painted under their masters.)
       ].sort(),
     );
+    for (const k of ["w", "u", "b", "r", "g", "c", "m"]) {
+      expect(isKnownEdgeFailure("tarkirdraconic", k), k).toBe(false);
+      expect(isKnownEdgeFailure("tarkirghostfire", k), k).toBe(false);
+    }
+    // The draconic's dragons run to the side edges above its painted
+    // border, their heads into the top corners: design sides, a border top
+    // and bottom; the ghostfire's ring is a border all round.
+    expect(EDGE_CONTRACTS.tarkirdraconic).toEqual({ top: { kind: "border" }, right: { kind: "design" }, bottom: { kind: "border" }, left: { kind: "design" } });
+    expect(Object.values(EDGE_CONTRACTS.tarkirghostfire).every((e) => e.kind === "border")).toBe(true);
     for (const k of ["w", "u", "b", "r", "g", "c", "m"]) {
       expect(isKnownEdgeFailure("expeditionland", k), k).toBe(false);
       expect(isKnownEdgeFailure("expeditionlandbfz", k), k).toBe(false);

@@ -612,8 +612,9 @@ bake's transparent corner mask and the frame masters all read it.
   ZIP) and the Square PNG are the round render squared again
   (`squareCardCorners`): outside the arc each corner is the card's border
   colour — the border black by default, the root's #101015 where a master's
-  edge band is see-through (the rings; bloomburrow / tarkirdraconic
-  bottoms) — or, where art or frame design runs into
+  edge band is see-through (the rings; bloomburrow's bottom — the Tarkir
+  draconic's left it with its painted border, 4.11 layout v68, and the
+  ghostfire's ring with its own) — or, where art or frame design runs into
   the corner (an art-to-edge frame; the tops of bloomburrow, the LOTR ring
   — its frame field, kept square by the importer since 4.11 — and
   tarkirdraconic), what was drawn. The table is `lib/frames/square-corners.ts`;
@@ -4979,6 +4980,127 @@ ticked.
 - **Imports.** `showcase/mul/tarkir` is exact on `tarkirdragon` once a
   colour is verified (the border cap is gone); #60 / #190 Taigam is the
   frame's own split wings, so no two-colour gap.
+
+### The Tarkir: Dragonstorm showcases (4.11 / 4.35, layout v68)
+
+`tarkirdraconic` (TDM #292–326, the gold-railed dragon frame) and
+`tarkirghostfire` (TDM #399–408, the black run; #409–418 are the white
+halo-foil run, 4.30's) came out after Card Conjurer's last pack, so they
+stay on their Magic Set Editor masters
+(`magic-m15-showcase-tarkir-draconic` / `-ghostfire`, upscaled in git by
+`scripts/build-showcase-frames.mjs`). A CORRECTION (layout v68, a sweep
+scoped to the two templates, `TARKIR_MSE_LAYOUT_VERSION`; taken after
+#610's v67): no colour of either frame is ticked. Measured 2026-10-27 on
+every printing of both runs (Scryfall PNGs at 1500 × 2100, ≥ 300 ms apart)
+against the set's regular printings (TDM #1–12, the same scans) and our
+bakes of the same cards; sheet: the owner's design-backup
+`mse-showcase/tarkir-sheet.jpg`.
+
+- **The border MSE paints at render time** (4.35). An MSE style draws its
+  border colour in a `border color` layer, through a mask, when it renders
+  a card — so the card PNGs it ships are see-through where print has its
+  black border, and our bake showed the card root's #101015 there. The
+  builder now paints it UNDER each master
+  (`scripts/lib/mse-showcase-borders.mjs`, the numbers as data; never over
+  a pixel the drawing paints), in the border black of the print-verified
+  Card Conjurer M15 masters (0,0,0: Scryfall's PNGs read 19,12,12 on every
+  black border, the regular M15 printings' included — their scanning, not
+  the frame; owner 2026-10-22), cut at the one card corner:
+  - **draconic** — every see-through pixel joined to the card's outline
+    (MSE's own `border_mask.png` marks the text box, not a border): the
+    band below and beside the dragons, which print fills black to the
+    bottom edge and up the lower sides; the dragons themselves run to the
+    side edges above it and their heads into the TOP corners (left as
+    drawn). The art window is never joined to it (the builder throws if
+    the flood reaches an art seed). Edge contract: top and bottom `border`,
+    the sides `design`; square corners: the top pair `frame`, the bottom
+    pair the border black.
+  - **ghostfire** — a black ring round MSE's window (`border_mask.png`,
+    744 × 1039: x 38–705, y 39–931, top corners r ≈ 11, the bottom ones
+    chamfered 45° under the ribbon) at 1500 × 2100: 77–1423 × 79–1884 px,
+    drawn as geometry (4 × 4 supersampled), not as the 2× upscale of a
+    744 px mask, so its edge is clean at 2×. Print agrees: the ring is
+    78–80 px wide on the top and both sides of every bright-art print
+    (#402–#405, #407, #408), black under the ribbon to the bottom edge
+    (#402 / #404 / #405 let their art break over the ring: popouts, not
+    drawn). Edge contract `ALL_BORDER`, every corner the border black.
+  - The masters stay a palette PNG, but WITHOUT dithering
+    (`PALETTE_PNG_OPTIONS`): a dithered palette mapped a few opaque
+    near-black border pixels onto a dark translucent entry (α 231–240 on
+    the draconic's sides), and the builder now decodes what it wrote and
+    refuses a border pixel left short of opaque (`borderLost`). Side by
+    side at 2× the drawing is the same.
+  Both templates left `BORDER_PENDING_TEMPLATES`, the edge contract's and
+  the art-window check's known failures, and the ring corners of
+  `SQUARE_CORNERS`.
+- **Draconic slots: M15's.** On the prints the name, type line, rules box,
+  set symbol and collector line sit where the set's regular printings set
+  them (name baseline 188 / 189 px, rules ink from x 133 on both, the
+  title bar's outlines within 1 px of our master's), so the profile is
+  M15's slots at the M15-era family's sizes (`fit: "measured"`, joined WITH
+  v68) and the CC M15 cost row (print: 70.4 px discs at a 77–78 px pitch,
+  the row ending at 1385.4; it drew 57 px discs ending ~1306–1353) — the
+  same row the regular TDM printings carry, measured the same way (the
+  circle fit reads print ~4 px lower than our bakes of the same cards on
+  M15 and on this frame alike, so the frame takes M15's row whole). One
+  nudge: the type line 2 px below the CC M15 baseline, because MSE's type
+  bar is 2 px lower than the Card Conjurer M15 master's (its outlines at
+  1185 / 1303 px, print's own, against 1184 / 1301) and print sets the line
+  on it as M15 does on its own (1263 px; the regular printings 1261). The
+  serpent-ringed P/T plate and its digits stay as #386 set them.
+- **Draconic art slot** on the master's window: α < 250 on 64–1451 ×
+  242–1179 px on every key, plus six see-through holes between the
+  dragons' claws at its edges (from row 240), with the art-window check's
+  0.05 % to spare: 63–1453 × 239–1183 (`TARKIRDRACONIC_ART_SLOT`). The old
+  slot (135–1365 × 252–1218) left the gaps between the dragons showing the
+  root's #101015 68–84 px past it (7.6).
+- **Ghostfire slots: its own, at the family's sizes.** Its bars are not
+  M15's (the type bar at 51–57 %H), so the profile keeps its print-measured
+  rects, with the family's name and type sizes (`fit: "measured"`, each
+  band's baseline kept from its old print-matched size), the family's
+  86 px set symbol box with the ink fit, the 70 px disc centred in its
+  title band as before (print: 70.2 px, the row ending at 1386; ours 1385)
+  and the type line 2 px up onto print's 1158 px. Its art slot is the
+  ring's window (76–1424 × 78–1886, `TARKIRGHOSTFIRE_ART_SLOT`; it ran
+  from 52.5 px, under the ring).
+- **References.** The ghostfire's eight pointed at the white halo-foil run
+  (#409–418); they are the black run's now — w #400 / #401, r #402 / #403,
+  g #404, c #399, m #408 / #405 (u and b have no printing). The white run
+  stays `nearest` on its border (`showcase/tdm/ghostfire/white`, 4.30:
+  Scryfall says white, the scans show its halo foil there; its footer is
+  black). Imports: `showcase/tdm/draconic` and `showcase/tdm/ghostfire` are
+  exact once a colour is verified.
+- **Stamp** (draconic, `TARKIRDRACONIC_HOLO_STAMP`,
+  `tarkirdraconicholostamp/<key>.png`, git): MSE's own stamp as a stamped
+  card draws it — the `card stamp border` (the border black through
+  `stamp_border_mask.png`: the well) under the `card stamp rim`
+  (`stamp/<c>stamp.png`: the serpent rim arched over the well) — upscaled
+  like the masters and cut to its box, 239 × 65 px at 631, 1895 (each
+  colour its own rim). The oval is the prints' hologram, centred on 750.8 ×
+  1955 px on every stamped printing (#295, #300–303, #308, #309, #314,
+  #317, #319, #321, #324–326), at M15's 134 × 67. Print stamps every rare
+  and mythic and nothing else, so "auto" is M15's rule. The arch is a rules
+  keep-out (631–870 × 1895–1950). An ADDITION, opt-in per card. The
+  ghostfire's stamp sits in its ribbon's own dip — no notch piece, no
+  stamp yet (TODO 4.11).
+- **Collector line** (both, `M15_COLLECTOR`): the prints set both lines on
+  M15's rows (line 1 at 1990–1991 px, line 2 at 2029, the © line ending at
+  1395 — the regular TDM printings the same, by the same reading), on the
+  black footer the masters now paint. An ADDITION.
+- **No crown**: the legendary printings (draconic #302, #308, #314, #317,
+  #319, #321, #325; ghostfire #403, #407) print the same top as the rest.
+- **Flagged, not changed** (TODO 4.11):
+  - the draconic's TOP: print runs a scaled serpent across the whole top
+    edge, its heads at a third and two thirds; MSE draws black there with
+    a head in each corner (no source has the print's drawing);
+  - the ghostfire's translucent boxes print darker, a nearly opaque deep
+    teal, where MSE's 60 % teal over the art reads lighter; a translucent
+    box over art has no raw median to tone by, so it waits for a measure
+    of its own;
+  - TDM's set symbol: Keyrune's drawing is not print's (rotated, no black
+    keyline);
+  - on the densest rules texts the M15 rules layout sets one ladder step
+    smaller than these prints do — M15's own behaviour, not this frame's.
 
 ### The Zendikar Rising hedron showcase (4.11, layout v63)
 
@@ -9407,7 +9529,7 @@ signs the row off on the before / after sheet, so every tick stays fresh.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 77 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 79 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
@@ -9417,8 +9539,10 @@ joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card — and the Lord of
 the Rings scroll, WITH one too: layout v62, on Card Conjurer's 'Scroll'
-pack, the ring, layout v65, on its 'Ring' pack, and the MUL Tarkir
-dragon wings, layout v67, on its 'Tarkir' pack) prints its names,
+pack, the ring, layout v65, on its 'Ring' pack, the MUL Tarkir
+dragon wings, layout v67, on its 'Tarkir' pack, and the Tarkir:
+Dragonstorm draconic and ghostfire showcases, layout v68, on their MSE
+masters with the printed border painted) prints its names,
 type lines, pips and set symbol at ONE set of sizes, Card Conjurer's, which
 match the prints. Split is M15-era too and stays OUT: a split half prints
 every line smaller than a regular card (the `SPLIT_*` constants, [The

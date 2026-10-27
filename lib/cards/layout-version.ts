@@ -1623,6 +1623,26 @@ export const WALKER_COST_ROW_TEMPLATES: readonly string[] = ["m15pw", "m15border
 //            ("sweep"), never a badge: no colour is ticked. The crown band,
 //            the oval stamp's notch and the collector line are ADDITIONS a
 //            card switches on.
+//   v68    — the Tarkir: Dragonstorm showcases on their MSE masters (TODO
+//            4.11 / 4.35, the MSE-only showcase step). `tarkirdraconic` and
+//            `tarkirghostfire`, every card on them: the black border MSE
+//            paints at render time painted UNDER each master
+//            (scripts/lib/mse-showcase-borders.mjs: the draconic's band below
+//            and beside its dragons, the ghostfire's 77–79 px ring and footer
+//            — 4.35's #101015 band and ring are gone); the draconic on M15's
+//            slots at the M15-era family's sizes (`fit: "measured"`, the CC
+//            M15 cost row: 70 px discs where it drew 57 — print 70.4 —, the
+//            type line 2 px under the CC M15 baseline on MSE's lower type
+//            bar) and its art slot on the master's window (the dragons'
+//            gaps showed the root's #101015 68–84 px past the old slot); the
+//            ghostfire's own slots at the family's sizes (its name and type
+//            line `fit: "measured"`, the 70 px disc, the type line 2 px up)
+//            and its art slot inside the ring. TARKIR_MSE_LAYOUT_VERSION
+//            below — the ONE constant (taken as v68 at PR time: v67 is the
+//            MUL Tarkir dragon wings', #610). A CORRECTION ("sweep"), never a
+//            badge: no colour of either frame is ticked. The draconic's oval
+//            stamp notch and both frames' collector line are ADDITIONS a card
+//            switches on.
 // ---------------------------------------------------------------------------
 
 /** The Lord of the Rings scroll showcase re-sourced from Card Conjurer
@@ -1652,6 +1672,17 @@ export const LOTR_RING_TEMPLATES: readonly string[] = ["lotr"];
  *  Frozen once it ships. */
 export const TARKIR_DRAGON_LAYOUT_VERSION = 67;
 export const TARKIR_DRAGON_TEMPLATES: readonly string[] = ["tarkirdragon"];
+
+/** The Tarkir: Dragonstorm showcases on their MSE masters with the printed
+ *  border painted (TODO 4.11 / 4.35): every card on `tarkirdraconic` and
+ *  `tarkirghostfire`. ITS version lives here alone — CARD_LAYOUT_VERSION,
+ *  the scoped table and the rollout below read this constant — so a bump
+ *  that merges first moves it in one place. v68: v67 is the MUL Tarkir
+ *  dragon wings' (#610, which merges before this; until it does, v67 is the
+ *  gap it fills — a version with no scope re-bakes every card, so this
+ *  never merges first). Frozen once it ships. */
+export const TARKIR_MSE_LAYOUT_VERSION = 68;
+export const TARKIR_MSE_TEMPLATES: readonly string[] = ["tarkirdraconic", "tarkirghostfire"];
 
 /** The cost row as current print draws it (the 2023 pip move + TODO 3.34):
  *  the CC-framed M15 family's disc, centre and right end. ITS version lives
@@ -1859,7 +1890,7 @@ export const LARGE_PIPS_LAYOUT_VERSION = 53;
  *  latest). */
 export const V53_LARGER_COST_TEMPLATES: readonly string[] = ["modern", "modernland"];
 
-export const CARD_LAYOUT_VERSION = TARKIR_DRAGON_LAYOUT_VERSION;
+export const CARD_LAYOUT_VERSION = TARKIR_MSE_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -2076,6 +2107,11 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // the masters, plates and the slots that ride them; every card on
   // `tarkirdragon`. No narrower verification scope: no colour has a tick.
   [TARKIR_DRAGON_LAYOUT_VERSION]: TARKIR_DRAGON_TEMPLATES,
+  // The Tarkir: Dragonstorm showcases on their MSE masters (4.11 / 4.35):
+  // the painted border, the slots and art slots; every card on
+  // `tarkirdraconic` and `tarkirghostfire`. No narrower verification scope:
+  // no colour has a tick.
+  [TARKIR_MSE_LAYOUT_VERSION]: TARKIR_MSE_TEMPLATES,
   // The Zendikar Rising hedron showcase re-sourced from Card Conjurer
   // (4.11, wave 1): the masters and the slots that ride them; every card on
   // `fullart`. No narrower verification scope: no colour has a tick.
@@ -3174,6 +3210,7 @@ export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
   [TOKEN_ARCH_PRINT_LAYOUT_VERSION]: "sweep", // the 2014–19 arch token on its prints (4.53): the gold small-caps name and the art slot on the window — a correction of the four arch frames against their own prints, never a badge
   [WALKER_COST_ROW_LAYOUT_VERSION]: "sweep", // the planeswalker's cost row and name on its prints (pips 132 → 128 px, the name 4 px up) — a correction of the three walker frames against their own prints, never a badge
   [TARKIR_DRAGON_LAYOUT_VERSION]: "sweep", // the MUL Tarkir dragon-wing showcase re-sourced from Card Conjurer (4.11): its masters with the printed black border, the pack's plates and the M15 pack's text layout on the pack's own bars — a correction of the look against its own prints on a frame never ticked, never a badge
+  [TARKIR_MSE_LAYOUT_VERSION]: "sweep", // the Tarkir: Dragonstorm draconic and ghostfire showcases (4.11 / 4.35): the printed black border painted under their MSE masters, the draconic on M15's slots, both at the M15-era family's sizes with their art slots on the window — a correction of two looks against their own prints on frames never ticked, never a badge
   [LOTR_RING_LAYOUT_VERSION]: "sweep", // the Lord of the Rings ring re-sourced from Card Conjurer (4.11): its masters with the frame field to the top and side edges and the black border's shoulders, the ring plates and the M15 pack's text layout under the lower title bar — a correction of the look against its own prints on a frame never ticked, never a badge
   [LOTR_SCROLL_LAYOUT_VERSION]: "sweep", // the Lord of the Rings scroll re-sourced from Card Conjurer (4.11): its masters with the printed black border, the scroll plates and the M15 pack's text layout — a correction of the look against its own prints on a frame never ticked, never a badge
   [COST_ROW_PRINT_LAYOUT_VERSION]: "sweep", // the cost row as current print draws it (the 2023 pip move + 3.34): 70 px discs, 78 pitch, 5 px lower and 2 px right on the 36 CC-framed M15 templates; the walkers' 70 px discs, 4 px right — a correction against the frames' own current print after the owner's before / after sheet, never a badge

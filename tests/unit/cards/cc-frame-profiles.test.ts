@@ -136,8 +136,11 @@ describe("Card Conjurer frame profiles", () => {
     // row (142.5 px, TODO 4.10c: a pixel under the band's middle), not the
     // CC title bar's lift.
     // The Theros constellation sets its own on its prints' row (TODO 4.11,
-    // layout v66): 12 px up, whole at 750 and HD.
-    const OWN_LIFT: Record<string, number> = { agclassic: 1 / 1500, alphaland: 1 / 1500, nyx: -12 / 1500 };
+    // layout v66): 12 px up, whole at 750 and HD. The Tarkir draconic takes
+    // the CC M15 row whole (TODO 4.11, layout v68: its MSE title bar is
+    // print's, which sets the row where the regular TDM printings set
+    // theirs).
+    const OWN_LIFT: Record<string, number> = { agclassic: 1 / 1500, alphaland: 1 / 1500, nyx: -12 / 1500, tarkirdraconic: getFrameProfile("m15").costDy! };
     for (const template of FRAME_TEMPLATE_VALUES) {
       if (ccTemplates.has(template)) continue;
       expect(getFrameProfile(template).costDy, template).toBe(OWN_LIFT[template]);

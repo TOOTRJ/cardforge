@@ -608,13 +608,10 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
   avatar: { keys: "all", todo: ["4.35"], why: "the window runs into the transparent outer band: 0–1500 × 0–1160 (4.35 A8)", maxMissPx: 90.5 },
   bloomburrow: { keys: "all", todo: ["4.35"], why: "the window runs into the transparent sides: 0–1500 × 236–1182 (4.35 A8)", maxMissPx: 90.5 },
   bloomanime: { keys: "all", todo: ["4.35"], why: "transparent outer ring: the window is the whole card, the slot inset 2.5/3.5/93×92 (4.35)", maxMissPx: 116 },
-  tarkirghostfire: { keys: "all", todo: ["4.35"], why: "transparent outer ring: the window is the whole card (4.35)", maxMissPx: 116 },
-  tarkirdraconic: {
-    keys: "all",
-    todo: ["4.11"],
-    why: "the see-through gaps between the dragon ornaments run to 67–1449 px, 68–84 px past the slot 135–1365 (4.11 re-measure)",
-    maxMissPx: 87.5,
-  },
+  // (4.11 struck tarkirghostfire and tarkirdraconic, layout v68: the
+  // ghostfire's painted ring closes its window to 77–1423 × 79–1884 px and
+  // the draconic's slot covers its window and the dragons' gaps,
+  // TARKIRGHOSTFIRE_ART_SLOT / TARKIRDRACONIC_ART_SLOT.)
   // The emblem (found by v35's see-through slot rule when #421 merged main):
   // two owner decisions (2026-09-29) meet at the window's top — the slot is
   // Scryfall's art_crop box exactly (from 250.4 px, never grown) and the

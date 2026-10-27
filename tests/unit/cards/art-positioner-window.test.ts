@@ -126,8 +126,11 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   avatar: { front: [1320, 1134] },
   bloomburrow: { front: [1320, 1134] },
   bloomanime: { front: [1395, 1932] },
-  tarkirdraconic: { front: [1230, 966] },
-  tarkirghostfire: { front: [1395, 1932] },
+  // The Tarkir: Dragonstorm showcases (TODO 4.11, layout v68): the
+  // draconic's window and the dragons' gaps; the ghostfire's inside its
+  // painted ring.
+  tarkirdraconic: { front: [1390, 944] },
+  tarkirghostfire: { front: [1348, 1808] },
   // Card Conjurer's Tarkir window (TODO 4.11, layout v67): its shadow + 0.05 %.
   tarkirdragon: { front: [1237, 929] },
   fullart: { front: [1383, 1819] },

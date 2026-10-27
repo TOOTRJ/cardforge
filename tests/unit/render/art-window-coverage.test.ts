@@ -256,11 +256,12 @@ describe("artWindowVerdict: the known-failure table", () => {
   });
 
   it("passes a listed master within its maxMissPx, and fails one that got worse", () => {
-    // (tarkirdraconic, bound 87.5 px — the 2003 pair, this test's first
+    // (bloomburrow, bound 90.5 px — the 2003 pair, this test's first
     // example, left the table with TODO 4.10b; m15textless, its second, with
-    // 4.35's re-source, layout v58.)
-    expect(artWindowVerdict("tarkirdraconic", "w", miss(80))).toEqual({ fails: [], fixed: false });
-    expect(artWindowVerdict("tarkirdraconic", "w", miss(90)).fails).toEqual([expect.stringMatching(/^worse than its known failure \(4\.11\): misses by 90 px > 87\.5: /)]);
+    // 4.35's re-source, layout v58; tarkirdraconic, its third, with 4.11's
+    // layout v68.)
+    expect(artWindowVerdict("bloomburrow", "w", miss(80))).toEqual({ fails: [], fixed: false });
+    expect(artWindowVerdict("bloomburrow", "w", miss(95)).fails).toEqual([expect.stringMatching(/^worse than its known failure \(4\.35\): misses by 95 px > 90\.5: /)]);
     // An entry limited to some keys (expeditionland's per-key b/g / u/r
     // bounds, this test's third example, left the table with TODO 4.11 wave
     // 1): the colourless arch token's c is listed, its w is not.
@@ -290,7 +291,7 @@ describe("artWindowVerdict: the known-failure table", () => {
   });
 
   it("marks a listed master with nothing left to find as fixed", () => {
-    expect(artWindowVerdict("tarkirdraconic", "w", [])).toEqual({ fails: [], fixed: true });
+    expect(artWindowVerdict("bloomburrow", "w", [])).toEqual({ fails: [], fixed: true });
   });
 });
 
@@ -645,8 +646,9 @@ describe("the art-window known failures", () => {
         // The emblem's slot (Scryfall's art_crop box) against its bridged
         // ray's tip: 0.6 px of overscan (4.52; merged with v35's rule).
         "emblem",
-        "tarkirdraconic",
-        "tarkirghostfire",
+        // (tarkirdraconic and tarkirghostfire left with TODO 4.11, layout
+        // v68: the draconic's slot on its window and the dragons' gaps, the
+        // ghostfire's painted ring closing its window.)
       ].sort(),
     );
     // Two of the TODO's list pass today: alphaland (its window was re-cut

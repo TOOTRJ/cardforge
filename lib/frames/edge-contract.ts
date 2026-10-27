@@ -266,11 +266,21 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
     bottom: { kind: "bar", depthPct: 8.4 },
     left: { kind: "art", except: [[80, 100]] },
   },
-  tarkirghostfire: ALL_BORDER, // the black run, TDM #399–408 (4.35)
+  // The ghostfire's black run, TDM #399–408: since TODO 4.11 (layout v68)
+  // its MSE masters carry the black ring and footer MSE paints at render
+  // time (scripts/lib/mse-showcase-borders.mjs), cut at the one card
+  // corner. (The white halo-foil run, #409–418, is 4.30's.)
+  tarkirghostfire: ALL_BORDER,
   // Card Conjurer's 'Tarkir' pack since TODO 4.11 (frames bucket): the printed
   // black border all round, cut at the one card corner by the importer.
   tarkirdragon: ALL_BORDER,
-  tarkirdraconic: ALL_BORDER,
+  // The Tarkir draconic (TDM #292–326), since TODO 4.11 (layout v68): the
+  // black border all round on print — painted under the MSE masters below
+  // and beside the dragons, cut at the one card corner at the bottom — and
+  // the dragons' own drawing to the side edges above it, their heads into
+  // the TOP corners: the sides are `design` (opaque; their corner half the
+  // drawing's colour), the top and bottom the border.
+  tarkirdraconic: { top: BORDER, right: { kind: "design" }, bottom: BORDER, left: { kind: "design" } },
   // Card Conjurer's 'Ring' pack since TODO 4.11 (frames bucket): the frame
   // field runs to the top and side edges as every print has it (LTR #302–331,
   // #794–823: no border there), the black border's shoulders along the bottom
@@ -366,10 +376,6 @@ export const EDGE_CONTRACT_KNOWN_FAILURES: Readonly<Record<string, { keys: "all"
     keys: "all",
     why: "transparent outer ring + inset art slot 2.5/3.5/93×92 (4.35); corner: the bottom bar is transparent at the arc",
   },
-  tarkirghostfire: {
-    keys: "all",
-    why: "transparent outer ring bakes #101015; the black run needs a real ring (4.35); corner: transparent at the arc",
-  },
   // Found by this check on 2026-09-26 (the borderless research sampled the
   // side band at 20–80 % H only): transparent bottom band and lower sides.
   avatar: {
@@ -379,10 +385,6 @@ export const EDGE_CONTRACT_KNOWN_FAILURES: Readonly<Record<string, { keys: "all"
   bloomburrow: {
     keys: "all",
     why: "transparent outer band at the bottom and lower sides (found 2026-09-26); corner: the pale design corner (never normalised, 3.26)",
-  },
-  tarkirdraconic: {
-    keys: "all",
-    why: "transparent outer band at the bottom and lower sides (found 2026-09-26); corner: the dragon ornament on top (never normalised, 3.26)",
   },
 };
 
