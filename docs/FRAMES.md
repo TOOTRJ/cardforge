@@ -5015,15 +5015,17 @@ bakes of the same cards; sheet: the owner's design-backup
     the flood reaches an art seed). Edge contract: top and bottom `border`,
     the sides `design`; square corners: the top pair `frame`, the bottom
     pair the border black.
-  - **ghostfire** — a black ring round MSE's window (`border_mask.png`,
-    744 × 1039: x 38–705, y 39–931, top corners r ≈ 11, the bottom ones
-    chamfered 45° under the ribbon) at 1500 × 2100: 77–1423 × 79–1884 px,
-    drawn as geometry (4 × 4 supersampled), not as the 2× upscale of a
-    744 px mask, so its edge is clean at 2×. Print agrees: the ring is
-    78–80 px wide on the top and both sides of every bright-art print
-    (#402–#405, #407, #408), black under the ribbon to the bottom edge
-    (#402 / #404 / #405 let their art break over the ring: popouts, not
-    drawn). Edge contract `ALL_BORDER`, every corner the border black.
+  - **ghostfire** — a black ring round an art window of MSE's shape
+    (`border_mask.png`, 744 × 1039: top corners r ≈ 11, the bottom ones
+    chamfered 45° under the ribbon, the footer from y 932 — 1884 px) whose
+    straight edges are PRINT'S: the ring's inner edge by its half-level
+    crossing on every bright-art row and column of #399–408, median 78.3 /
+    80.2 / 80.0 px from the left, right and top edges (MSE's scaled mask,
+    76.6 / 76.6 / 78.8, drew it 1–3 px narrow) — 78–1420 × 80–1884 px on
+    whole px, drawn as geometry (4 × 4 supersampled), not as the 2×
+    upscale of a 744 px mask, so its edge is clean at 2×. (#402 / #404 /
+    #405 let their art break over the ring: popouts, not drawn.) Edge
+    contract `ALL_BORDER`, every corner the border black.
   - The masters stay a palette PNG, but WITHOUT dithering
     (`PALETTE_PNG_OPTIONS`): a dithered palette mapped a few opaque
     near-black border pixels onto a dark translucent entry (α 231–240 on
@@ -5040,10 +5042,13 @@ bakes of the same cards; sheet: the owner's design-backup
   M15's slots at the M15-era family's sizes (`fit: "measured"`, joined WITH
   v68) and the CC M15 cost row (print: 70.4 px discs at a 77–78 px pitch,
   the row ending at 1385.4; it drew 57 px discs ending ~1306–1353) — the
-  same row the regular TDM printings carry, measured the same way (the
-  circle fit reads print ~4 px lower than our bakes of the same cards on
-  M15 and on this frame alike, so the frame takes M15's row whole). One
-  nudge: the type line 2 px below the CC M15 baseline, because MSE's type
+  same row the regular TDM printings carry, and it is ON print: registered
+  as #598 registers it, the {U} disc's centre is 157.0 px against TDM
+  #295's 156.5–157.5 (the independent check, 2026-10-27). A raw circle fit
+  of the scans reads print ~4 px lower than our bakes — that is #598's two
+  known traps (the scans' 1.1 px image offset, and the W / B / R / G
+  symbols pulling the fit down), not a misplaced row: never move M15's row
+  for it. One nudge: the type line 2 px below the CC M15 baseline, because MSE's type
   bar is 2 px lower than the Card Conjurer M15 master's (its outlines at
   1185 / 1303 px, print's own, against 1184 / 1301) and print sets the line
   on it as M15 does on its own (1263 px; the regular printings 1261). The
@@ -5054,6 +5059,26 @@ bakes of the same cards; sheet: the owner's design-backup
   0.05 % to spare: 63–1453 × 239–1183 (`TARKIRDRACONIC_ART_SLOT`). The old
   slot (135–1365 × 252–1218) left the gaps between the dragons showing the
   root's #101015 68–84 px past it (7.6).
+- **Draconic colourless.** MSE's own `c` is a BROWN drawing no print
+  wears (its dragons 116,71,47 against the colourless prints' steel
+  78,94,100 — 53 levels off; no tone carries a hue change across a
+  textured frame). The run prints two colourless dresses and MSE draws
+  both, so each is built from its own MSE file (`sourceKeys` in the
+  builder; raw scan medians against the file over the same pixels):
+  - a colourless ARTIFACT (#323 Boulderborn Dragon, #324 Dragonfire Blade,
+    #325 Mox Jasper — the `c` reference) paints MSE's steel `acard.png` as
+    the master `a` (`artifactMasterKeys` { c: "a" }): dragons 78,94,99
+    against print's 75,91,97, text box 248,238,230 on both, title bar 3
+    levels off;
+  - any other colourless card paints `c` = MSE's GOLD `mcard.png`: the
+    run's one colourless non-artifact, #326 Maelstrom of the Spirit Dragon
+    (a land), prints the gold frame — dragons 140,104,51 against 139,101,46,
+    paper and bars within 5.
+  Every region is within 9 levels, so nothing is toned and `c` needs no
+  cap. The plate follows the colour key and the only colourless card with
+  a P/T is an artifact (#323): `c`'s plate is the steel `a`'s. The stamp
+  notch follows the master drawn: `a` the steel rim, `c` the gold (#326 is
+  a stamped rare).
 - **Ghostfire slots: its own, at the family's sizes.** Its bars are not
   M15's (the type bar at 51–57 %H), so the profile keeps its print-measured
   rects, with the family's name and type sizes (`fit: "measured"`, each
@@ -5061,8 +5086,10 @@ bakes of the same cards; sheet: the owner's design-backup
   86 px set symbol box with the ink fit, the 70 px disc centred in its
   title band as before (print: 70.2 px, the row ending at 1386; ours 1385)
   and the type line 2 px up onto print's 1158 px. Its art slot is the
-  ring's window (76–1424 × 78–1886, `TARKIRGHOSTFIRE_ART_SLOT`; it ran
-  from 52.5 px, under the ring).
+  ring's window (77–1421 × 79–1885, `TARKIRGHOSTFIRE_ART_SLOT`; it ran
+  from 52.5 px, under the ring). It had no footer slot — no artist credit
+  at all; it takes M15's on the black footer the master now paints (every
+  print sets the credit there, in the collector line's second row).
 - **References.** The ghostfire's eight pointed at the white halo-foil run
   (#409–418); they are the black run's now — w #400 / #401, r #402 / #403,
   g #404, c #399, m #408 / #405 (u and b have no printing). The white run

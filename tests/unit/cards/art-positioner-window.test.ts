@@ -130,7 +130,7 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   // draconic's window and the dragons' gaps; the ghostfire's inside its
   // painted ring.
   tarkirdraconic: { front: [1390, 944] },
-  tarkirghostfire: { front: [1348, 1808] },
+  tarkirghostfire: { front: [1344, 1806] },
   // Card Conjurer's Tarkir window (TODO 4.11, layout v67): its shadow + 0.05 %.
   tarkirdragon: { front: [1237, 929] },
   fullart: { front: [1383, 1819] },

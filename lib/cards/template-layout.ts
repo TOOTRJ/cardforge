@@ -4685,8 +4685,12 @@ const TARKIRDRAGON: FrameProfile = {
 // layout is the M15 frame's: on the 35 prints the name, type line, rules box
 // and collector line sit where the set's regular printings set them (TDM #1–
 // 12, same scans) — so M15's slots and the M15-era family's sizes, `fit:
-// "measured"`, and the CC M15 cost row (print: 70.4 px discs at a 77 px
-// pitch, the row ending at 1385.4 px). Black ink on the parchment bars.
+// "measured"`, and the CC M15 cost row as it is (print: 70.4 px discs at a
+// 77 px pitch, the row ending at 1385.4 px; registered as #598 registers
+// it, the {U} disc's centre 157.0 px against TDM #295's 156.5–157.5 — the
+// row is on print; a raw circle fit of the scans reads ~4 px lower, #598's
+// image offset and W / B / R / G traps, never a reason to move it). Black
+// ink on the parchment bars.
 /** The art slot: the master's window (α < 250 on 64–1451 × 242–1179 px on
  *  every key) and the six see-through holes between the dragons' claws at
  *  its edges (from row 240), with the art-window check's 0.05 % to spare. */
@@ -4696,6 +4700,12 @@ const TARKIRDRACONIC: FrameProfile = {
   label: "Draconic",
   ...CC_M15_COST,
   artSlot: TARKIRDRACONIC_ART_SLOT,
+  // A colourless ARTIFACT paints MSE's steel artifact drawing (`a`: TDM
+  // #323–325, within 3 levels of print); any other colourless card the gold
+  // one (`c`, built from MSE's `m`: the run's one colourless land, #326,
+  // prints gold) — scripts/build-showcase-frames.mjs `sourceKeys`. MSE's own
+  // brown `c` is no print's (53 levels off the steel).
+  artifactMasterKeys: { c: "a" },
   // The type line 2 px below the CC M15 baseline: MSE's type bar sits 2 px
   // lower than the Card Conjurer M15 master's (its outlines at 1185 / 1303
   // px — print's own, TDM #292–326 — against 1184 / 1301), and print sets
@@ -4871,8 +4881,8 @@ const BLOOMANIME = borderlessShowcase("Anime");
 // crops the ribbon to pt/<c>.png, so the bars are dark translucent teal and
 // take white ink (owner review 2026-09-25). Since TODO 4.11 (layout v68) it
 // also paints the black ring and footer MSE draws at render time (the
-// window 77–1423 × 79–1884 px, scripts/lib/mse-showcase-borders.mjs: the
-// ring 78–80 px on the bright-art prints) — the frame's own geometry, so
+// window 78–1420 × 80–1884 px, scripts/lib/mse-showcase-borders.mjs: print's
+// ring, 78 / 80 / 80 px on the bright-art prints) — the frame's own geometry, so
 // the slots stay this profile's, at the M15-era family's sizes with `fit:
 // "measured"` (print's name, type line and cost discs are the family's: 70.2
 // px discs at a 78 px pitch, the row ending at 1386 px, its centre 157.7 —
@@ -4881,9 +4891,9 @@ const BLOOMANIME = borderlessShowcase("Anime");
 // the real TDM #400 scan. MSE's swap_fonts are all "white" and the scan's
 // ink is (255,255,255) — pure white, not the house cream (INK_LIGHT).
 const GHOSTFIRE_INK = "#ffffff";
-/** The art slot: the ring's window (77–1423 × 79–1884 px; the translucent
+/** The art slot: the ring's window (78–1420 × 80–1884 px; the translucent
  *  boxes inside it) with the art-window check's 0.05 % to spare. */
-export const TARKIRGHOSTFIRE_ART_SLOT: Rect = { topPct: (78 / 2100) * 100, leftPct: (76 / 1500) * 100, widthPct: (1348 / 1500) * 100, heightPct: (1808 / 2100) * 100 };
+export const TARKIRGHOSTFIRE_ART_SLOT: Rect = { topPct: (79 / 2100) * 100, leftPct: (77 / 1500) * 100, widthPct: (1344 / 1500) * 100, heightPct: (1806 / 2100) * 100 };
 const TARKIRGHOSTFIRE: FrameProfile = {
   label: "Ghostfire",
   artSlot: TARKIRGHOSTFIRE_ART_SLOT,
@@ -4928,6 +4938,11 @@ const TARKIRGHOSTFIRE: FrameProfile = {
     vAlign: "center",
     font: "body",
   },
+  // The artist credit on the black footer the master now paints (layout
+  // v68): every print sets it there (TDM #399–408, in the collector line's
+  // second row); with the collector line off, M15's footer slot draws it as
+  // on every M15 card (it had none: no credit at all).
+  footer: M15.footer,
   // MSE's pt field (590,917 99 × 46 on 744 × 1039) on the ribbon, which the
   // build crops at 1093,1768 385 × 208 on the 1500 × 2100 card. The white
   // ink may use the ribbon from its pale left flare (1153 px) to its cyan rim
@@ -6100,7 +6115,9 @@ export const TARKIRDRACONIC_HOLO_STAMP: FrameOverlaySlot = {
   anatomy: "holoStamp",
   rect: { leftPct: (631 / 1500) * 100, topPct: (1895 / 2100) * 100, widthPct: (239 / 1500) * 100, heightPct: (65 / 2100) * 100 },
   assetPathTemplate: "/frames/tarkirdraconicholostamp/{key}.png",
-  keys: ["w", "u", "b", "r", "g", "m", "c"],
+  // …and `a`, the steel artifact master's rim (a colourless artifact's
+  // overlay is keyed by its master); `c` is the gold rim (#326).
+  keys: ["w", "u", "b", "r", "g", "m", "c", "a"],
   stamp: { shape: "oval", oval: TARKIRDRACONIC_HOLO_STAMP_OVAL, keepOut: TARKIRDRACONIC_HOLO_STAMP_KEEP_OUT },
 };
 

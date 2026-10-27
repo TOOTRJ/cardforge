@@ -511,8 +511,9 @@ describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
   // "other" templates. (The Lord of the Rings scroll took M15's footer with
   // its Card Conjurer re-source, layout v62 / TODO 4.11, the ring with
   // its own, layout v65, and the MUL Tarkir dragon wings with theirs, v67,
-  // and the Tarkir draconic with its own, v68 / TODO 4.11.)
-  const FOOTER_SINCE_V29 = ["flip", "aftermath", "battle", "split", "lotrscroll", "lotr", "tarkirdragon", "tarkirdraconic"];
+  // and the Tarkir draconic with its own, v68 / TODO 4.11 — and the
+  // ghostfire, which had no footer at all, with the same bump.)
+  const FOOTER_SINCE_V29 = ["flip", "aftermath", "battle", "split", "lotrscroll", "lotr", "tarkirdragon", "tarkirdraconic", "tarkirghostfire"];
   // The 1997 pair's footer was a display-face "ART: …" line at v29 and is in
   // v29's frozen list; since TODO 4.10a (layout v46) it is the prints'
   // `Illus.` line in MPlantin.

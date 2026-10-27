@@ -30,11 +30,11 @@ describe("the Tarkir: Dragonstorm borders as data", () => {
     expect(Object.keys(MSE_SHOWCASE_BORDERS).sort()).toEqual(["tarkirdraconic", "tarkirghostfire"]);
     expect(MSE_SHOWCASE_BORDERS.tarkirdraconic.kind).toBe("edge");
     expect(MSE_SHOWCASE_BORDERS.tarkirghostfire).toMatchObject({ kind: "ring", window: GHOSTFIRE_WINDOW });
-    // MSE's border_mask.png window (x 38–705.99 of 744, y 39–931.99 of
-    // 1039) at 1500 × 2100; print's ring is 78–80 px (TDM #399–408).
-    expect(Math.round((38 / 744) * 1500)).toBe(GHOSTFIRE_WINDOW.left);
-    expect(Math.round((39 / 1039) * 2100)).toBe(GHOSTFIRE_WINDOW.top);
-    expect(Math.round((706 / 744) * 1500)).toBe(GHOSTFIRE_WINDOW.right);
+    // Print's ring on whole px (TDM #399–408, the inner edge's median: 78.3
+    // / 80.2 / 80.0 from the left, right and top edges) — MSE's scaled mask
+    // (76.6 / 76.6 / 78.8) drew it 1–3 px narrow — and MSE's footer (its
+    // border_mask.png's y 931.99 of 1039, under the ribbon).
+    expect([GHOSTFIRE_WINDOW.left, W - GHOSTFIRE_WINDOW.right, GHOSTFIRE_WINDOW.top]).toEqual([78, 80, 80]);
     expect(Math.round((932 / 1039) * 2100)).toBe(GHOSTFIRE_WINDOW.bottom);
     // No dithering in the palette encode (a dithered palette turned a few
     // opaque near-black border pixels into α 231–240).
@@ -48,19 +48,19 @@ describe("the Tarkir: Dragonstorm borders as data", () => {
     expect(at(cov, 750, 2000)).toBe(1); // the footer
     expect(at(cov, 750, 1000)).toBe(0);
     expect(at(cov, 100, 1000)).toBe(0);
-    // The straight edges sit on whole px: x 77–1423, y 79–1884.
-    expect(at(cov, 76, 1000)).toBe(1);
-    expect(at(cov, 77, 1000)).toBe(0);
-    expect(at(cov, 1422, 1000)).toBe(0);
-    expect(at(cov, 1423, 1000)).toBe(1);
-    expect(at(cov, 750, 78)).toBe(1);
-    expect(at(cov, 750, 79)).toBe(0);
+    // The straight edges sit on whole px: x 78–1420, y 80–1884.
+    expect(at(cov, 77, 1000)).toBe(1);
+    expect(at(cov, 78, 1000)).toBe(0);
+    expect(at(cov, 1419, 1000)).toBe(0);
+    expect(at(cov, 1420, 1000)).toBe(1);
+    expect(at(cov, 750, 79)).toBe(1);
+    expect(at(cov, 750, 80)).toBe(0);
     // The round top corner IS anti-aliased: some pixel on its arc is part-covered.
-    const arc = [...Array(22).keys()].map((i) => at(cov, 77 + i, 79 + 22 - Math.round(Math.sqrt(22 * 22 - (22 - i) ** 2))));
+    const arc = [...Array(22).keys()].map((i) => at(cov, 78 + i, 80 + 22 - Math.round(Math.sqrt(22 * 22 - (22 - i) ** 2))));
     expect(arc.some((v) => v > 0 && v < 1)).toBe(true);
     // The top corner's round: the window's own corner pixel is ring.
-    expect(at(cov, 78, 80)).toBe(1);
-    expect(at(cov, 77 + 22, 80)).toBe(0);
+    expect(at(cov, 79, 81)).toBe(1);
+    expect(at(cov, 78 + 22, 81)).toBe(0);
     // The bottom corners' 45° chamfer: black in the corner, clear past it.
     expect(at(cov, 80, 1880)).toBe(1);
     expect(at(cov, 1420, 1880)).toBe(1);

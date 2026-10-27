@@ -115,9 +115,9 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   bloomanime: ["864x1200", "3:4", 0.722],
   // The Tarkir: Dragonstorm showcases (TODO 4.11, v68): the draconic's
   // window and the dragons' gaps, 1390 × 944 px; the ghostfire's inside its
-  // painted ring, 1348 × 1808.
+  // painted ring, 1344 × 1806.
   tarkirdraconic: ["1232x832", "3:2", 1.4725],
-  tarkirghostfire: ["880x1184", "3:4", 0.7456],
+  tarkirghostfire: ["880x1184", "3:4", 0.7442],
   // The Card Conjurer Tarkir window (TODO 4.11, v67): 1237 × 929 px.
   tarkirdragon: ["1168x880", "4:3", 1.332],
   fullart: ["896x1168", "3:4", 0.7605],

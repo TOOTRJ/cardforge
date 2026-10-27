@@ -69,6 +69,26 @@ const FRAMES = [
     // (border colour through stamp_border_mask.png) under the `card stamp
     // rim` (stamp/<c>stamp.png), both full-card canvases.
     stampNotch: { well: "stamp_border_mask.png", rim: "stamp/{c}stamp.png" },
+    // The colourless dress as the run prints it (TODO 4.11, layout v68;
+    // raw scan medians against MSE's files over the same pixels): the
+    // colourless ARTIFACTS (TDM #323 Boulderborn Dragon, #324 Dragonfire
+    // Blade, #325 Mox Jasper) wear MSE's steel `a` drawing — its dragons
+    // 78,94,99 against print's 75,91,97, its paper and bars within 3 levels
+    // — written as the master `a` (the profile's artifactMasterKeys c → a);
+    // the run's one colourless non-artifact (#326 Maelstrom of the Spirit
+    // Dragon, a land) wears the GOLD frame — MSE's `m`: dragons 140,104,51
+    // against 139,101,46, paper and bars within 5 — written as `c`. MSE's own
+    // brown `c` (dragons 116,71,47, 53 levels off the steel) is no print's.
+    // The plate follows the colour key, and the only colourless card that
+    // prints a P/T is an artifact (#323): `c`'s plate is the steel `a`'s.
+    // The stamp notch follows the master drawn: `a` the steel rim, `c` the
+    // gold (#326 is a stamped rare).
+    keys: ["w", "u", "b", "r", "g", "c", "m", "a"],
+    sourceKeys: {
+      card: { c: "m", a: "a" },
+      plate: { c: "a", a: "a" },
+      stamp: { c: "m", a: "a" },
+    },
   },
   {
     name: "tarkirghostfire",
@@ -83,10 +103,16 @@ const FRAMES = [
   },
 ];
 
+/** The MSE file key a master / plate / notch key is drawn from (`kind`
+ *  card | plate | stamp): its own unless the family maps it. */
+function sourceKey(frame, kind, color) {
+  return frame.sourceKeys?.[kind]?.[color] ?? color;
+}
+
 function srcFile(frame, color) {
   const base = path.join(PACK, `magic-m15-showcase-${frame.style}.mse-style`);
   if (frame.pat === "card.png") return path.join(base, "card.png");
-  return path.join(base, frame.pat.replace("{c}", color));
+  return path.join(base, frame.pat.replace("{c}", sourceKey(frame, "card", color)));
 }
 
 /** A full-card MSE layer upscaled to W×H as raw RGBA, alpha scaled by `alpha`. */
@@ -188,7 +214,7 @@ async function convertStampNotch(frame, color) {
     .greyscale()
     .raw()
     .toBuffer({ resolveWithObject: true });
-  const rim = await layer(path.join(base, frame.stampNotch.rim.replace("{c}", color)));
+  const rim = await layer(path.join(base, frame.stampNotch.rim.replace("{c}", sourceKey(frame, "stamp", color))));
   const data = Buffer.alloc(W * H * 4);
   for (let p = 0; p < W * H; p += 1) data[p * 4 + 3] = well[p];
   // The rim OVER the well (straight alpha).
@@ -225,7 +251,7 @@ async function convertStampNotch(frame, color) {
 }
 
 async function convertPlate(frame, color) {
-  const src = path.join(PACK, `magic-m15-showcase-${frame.style}.mse-style`, frame.plate.replace("{c}", color));
+  const src = path.join(PACK, `magic-m15-showcase-${frame.style}.mse-style`, frame.plate.replace("{c}", sourceKey(frame, "plate", color)));
   const { data, info } = await sharp(src)
     .resize(W, H, { fit: "fill" })
     .ensureAlpha()
@@ -262,19 +288,20 @@ if (only && !FRAMES.some((f) => f.name === only)) {
 }
 for (const frame of FRAMES.filter((f) => !only || f.name === only)) {
   let total = 0;
-  for (const c of COLORS) total += await convert(frame, c);
+  const keys = frame.keys ?? COLORS;
+  for (const c of keys) total += await convert(frame, c);
   if (frame.plate) {
     const boxes = new Set();
-    for (const c of COLORS) boxes.add(await convertPlate(frame, c));
+    for (const c of keys) boxes.add(await convertPlate(frame, c));
     console.log(`${frame.name}: P/T plates cropped at ${[...boxes].join(" | ")}`);
   }
   if (frame.stampNotch) {
     const boxes = new Set();
-    for (const c of COLORS) boxes.add(await convertStampNotch(frame, c));
+    for (const c of keys) boxes.add(await convertStampNotch(frame, c));
     console.log(`${frame.name}: stamp notches cropped at ${[...boxes].join(" | ")}`);
   }
   console.log(
-    `${frame.name}: cut ~${((total / 7 / (W * H)) * 100).toFixed(1)}% avg ← ${frame.style}`,
+    `${frame.name}: cut ~${((total / keys.length / (W * H)) * 100).toFixed(1)}% avg ← ${frame.style}`,
   );
 }
 console.log("done");

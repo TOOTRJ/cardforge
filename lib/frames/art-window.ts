@@ -609,7 +609,7 @@ export const ART_WINDOW_KNOWN_FAILURES: Readonly<Record<string, ArtWindowKnownFa
   bloomburrow: { keys: "all", todo: ["4.35"], why: "the window runs into the transparent sides: 0–1500 × 236–1182 (4.35 A8)", maxMissPx: 90.5 },
   bloomanime: { keys: "all", todo: ["4.35"], why: "transparent outer ring: the window is the whole card, the slot inset 2.5/3.5/93×92 (4.35)", maxMissPx: 116 },
   // (4.11 struck tarkirghostfire and tarkirdraconic, layout v68: the
-  // ghostfire's painted ring closes its window to 77–1423 × 79–1884 px and
+  // ghostfire's painted ring closes its window to 78–1420 × 80–1884 px and
   // the draconic's slot covers its window and the dragons' gaps,
   // TARKIRGHOSTFIRE_ART_SLOT / TARKIRDRACONIC_ART_SLOT.)
   // The emblem (found by v35's see-through slot rule when #421 merged main):

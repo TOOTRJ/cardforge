@@ -23,14 +23,15 @@
 //     exactly the band below and beside them (TDM #292–326: the black border
 //     at the bottom and the lower sides, the dragons to the edge above).
 //   • "ring" — a black ring of fixed width round an art window, with a
-//     footer: Tarkir ghostfire's black run (TDM #399–408). The window is
-//     MSE's `border_mask.png` (744 × 1039: window x 38–705, y 39–931, inner
-//     corners r ≈ 11, the bottom corners chamfered 45° over ~38 px) at
-//     1500 × 2100 — and print agrees: the ring 78–80 px wide on the top and
-//     both sides of the bright-art prints (#402, #403, #404, #405, #407,
-//     #408), black under the ribbon to the bottom edge. Drawn as geometry
-//     (4 × 4 supersampled), not the 2.016× upscale of a 744 px mask, so its
-//     edge is clean at 2×.
+//     footer: Tarkir ghostfire's black run (TDM #399–408). The window's
+//     shape is MSE's `border_mask.png` (744 × 1039: window x 38–705, y
+//     39–931, inner corners r ≈ 11, the bottom corners chamfered 45° over
+//     ~38 px, black under the ribbon to the bottom edge); its three straight
+//     edges are PRINT'S (owner rule: match print) — the ring's inner edge by
+//     its half-level crossing on every bright-art row / column of #399–408,
+//     median: left 78.3 px, right 80.2, top 80.0 (MSE's scaled 76.6 / 76.6 /
+//     78.8 drew it 1–3 px narrow). Drawn as geometry (4 × 4 supersampled),
+//     not the 2.016× upscale of a 744 px mask, so its edge is clean at 2×.
 //
 // The builder writes these masters as a palette PNG WITHOUT dithering
 // (PALETTE_PNG_OPTIONS) and checks the decoded file: a dithered palette
@@ -53,12 +54,14 @@ export const BORDER_BLACK = Object.freeze([0, 0, 0]);
  *  for the edge contract). */
 export const SEE_THROUGH_BELOW = 255;
 
-/** The ghostfire black run's art window at 1500 × 2100 (HD px): MSE's
- *  border mask (x 38–705.99 of 744, y 39–931.99 of 1039) scaled. */
+/** The ghostfire black run's art window at 1500 × 2100 (HD px): print's
+ *  ring (TDM #399–408, the inner edge's median: 78.3 / 80.2 / 80.0 px from
+ *  the left, right and top edges) on whole px, MSE's footer (its border
+ *  mask's y 931.99 of 1039, under the ribbon). */
 export const GHOSTFIRE_WINDOW = Object.freeze({
-  left: 77,
-  top: 79,
-  right: 1423,
+  left: 78,
+  top: 80,
+  right: 1420,
   bottom: 1884,
   /** The inner corners at the top: MSE's r ≈ 11 of 744. */
   topRadius: 22,
