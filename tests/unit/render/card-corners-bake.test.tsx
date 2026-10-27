@@ -477,8 +477,12 @@ describe("the bake's corner (TODO 3.26)", () => {
       for (const [x, y] of mirrors(0, 0)) expect(flat.at(x, y).slice(0, 3)).toEqual([0, 0, 0]);
       const before = await decode(fitted);
       expect(flat.at(375, 525)).toEqual(before.at(375, 525));
-      // (A ring's corners were its band's #101015: no ring is left since the
-      // Bloomburrow anime's layout v70.)
+      // A ring's corners are its band's #101015 — no ring is left since the
+      // Bloomburrow anime's layout v70, so the root fill is held on the m15
+      // bake with a ring's fills.
+      const rootFlat = await decode(await flattenStoredCorners(fitted, [[...ROOT], [...ROOT], [...ROOT], [...ROOT]]));
+      for (const [x, y] of mirrors(0, 0)) expect(rootFlat.at(x, y).slice(0, 3)).toEqual([...ROOT]);
+      expect(rootFlat.at(375, 525)).toEqual(before.at(375, 525));
     });
 
     // The free Square is the paid Square's twin: the stored round bake,

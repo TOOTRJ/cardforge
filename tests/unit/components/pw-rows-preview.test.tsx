@@ -251,6 +251,16 @@ describe("CardPreview — the name before a detached cost", () => {
     // TODO 4.11 and the Bloomburrow anime, the last, since its layout v70.)
     // (The full-art basics' bands aren't, but they draw no cost.)
     for (const t of FRAME_TEMPLATE_VALUES) if (!getFrameProfile(t).hideCost) expect(getFrameProfile(t).title.fit, t).toBe("measured");
+    // The uncapped path, on a synthetic unmeasured band (M15's without its
+    // fit): an inline cost leaves the name uncapped — no fit, so the
+    // preview's maxWidth stays "" — and a detached one still stops it
+    // before the pips.
+    const m15 = getFrameProfile("m15");
+    const unmeasured = { ...m15, title: { ...m15.title, fit: undefined } };
+    expect(fitTitleBand(unmeasured, "Serra Angel", "{3}{W}{W}")).toBeNull();
+    expect(fitTitleBand(unmeasured, "Serra Angel", null)).toBeNull();
+    const detached = getFrameProfile("modern");
+    expect(fitTitleBand({ ...detached, title: { ...detached.title, fit: undefined } }, "Serra Angel", "{3}{W}{W}")).not.toBeNull();
     expect(serra("m15")).toBe(cqw(fitTitleBand(getFrameProfile("m15"), "Serra Angel", "{3}{W}{W}")!.widthPct));
     cleanup();
     const { container: noCost } = render(

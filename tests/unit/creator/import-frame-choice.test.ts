@@ -5,6 +5,7 @@ import tokenPrintings from "../scryfall/fixtures/token-printings.json";
 import { scryfallCardSchema } from "@/lib/scryfall/client";
 import { mapScryfallToFormPatch, type ScryfallImportPatch } from "@/lib/scryfall/import-mapper";
 import { finalizeImportMatch } from "@/lib/creator/frame-resolve";
+import { setBorderPendingForTests } from "@/lib/scryfall/frame-signatures";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import {
   appliedImportFrameChoice,
@@ -557,6 +558,13 @@ describe("C1 — no chooser when the only gap is a detail no frame draws (owner 
     // A frame whose border isn't true yet was a second gap (4.35 / A8): the
     // Bloomburrow anime, the last, left with TODO 4.11 / 4.35's layout v70.
     expect(onlyUndrawnDetailsMissing({ ...base, template: "bloomanime" }, "g")).toBe(true);
+    // The cap's path, on a synthetic cap (both tables are empty since v70).
+    const restore = setBorderPendingForTests(["bloomanime"]);
+    try {
+      expect(onlyUndrawnDetailsMissing({ ...base, template: "bloomanime" }, "g")).toBe(false);
+    } finally {
+      restore();
+    }
     // (The MUL Tarkir dragon wings' border is true since TODO 4.11: their
     // Card Conjurer masters.)
     expect(onlyUndrawnDetailsMissing({ ...base, template: "tarkirdragon" }, "w")).toBe(true);

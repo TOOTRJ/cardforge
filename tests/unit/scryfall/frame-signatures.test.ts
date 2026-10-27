@@ -15,6 +15,7 @@ import {
   TEMPLATES_WITHOUT_PRINTED_SIGNATURE,
   isBorderPending,
   isKnownFrameSignature,
+  setBorderPendingForTests,
   landFrameColorRule,
   registryCoversEveryTemplate,
   signatureDrawnOn,
@@ -1030,23 +1031,74 @@ describe("the rule table", () => {
     }
   });
 
+  /** Where the cap and the edge contract's known failures disagree (empty
+   *  when they agree): every known failure but alphaland's corner specks is
+   *  capped — a whole template, or exactly its listed colours — and every
+   *  cap names a known failure. */
+  const capMismatches = (
+    failures: Readonly<Record<string, { keys: "all" | readonly string[] }>>,
+    templates: ReadonlySet<string>,
+    colours: ReadonlyMap<string, ReadonlySet<string>>,
+  ): string[] => {
+    const out: string[] = [];
+    for (const [template, { keys }] of Object.entries(failures)) {
+      if (template === "alphaland") continue;
+      if (keys === "all") {
+        if (!templates.has(template)) out.push(`${template} not capped`);
+      } else if ([...(colours.get(template) ?? [])].sort().join() !== [...keys].sort().join()) {
+        out.push(`${template} capped on the wrong colours`);
+      }
+    }
+    for (const template of [...templates, ...colours.keys()]) if (!failures[template]) out.push(`${template} capped with no known failure`);
+    return out;
+  };
+
   it("caps exactly the edge contract's known failures, but alphaland's invisible corner specks (A8)", () => {
     // Fixing a master strikes it from EDGE_CONTRACT_KNOWN_FAILURES (its
     // it.fails turns red); this test then asks for the cap to go too.
-    for (const [template, { keys }] of Object.entries(EDGE_CONTRACT_KNOWN_FAILURES)) {
-      if (template === "alphaland") continue;
-      if (keys === "all") {
-        expect(BORDER_PENDING_TEMPLATES.has(template as FrameTemplate), template).toBe(true);
-      } else {
-        expect([...(BORDER_PENDING_COLOURS.get(template as FrameTemplate) ?? [])].sort(), template).toEqual(
-          [...keys].sort(),
-        );
-      }
-    }
-    for (const template of [...BORDER_PENDING_TEMPLATES, ...BORDER_PENDING_COLOURS.keys()]) {
-      expect(EDGE_CONTRACT_KNOWN_FAILURES[template], template).toBeDefined();
-    }
+    expect(capMismatches(EDGE_CONTRACT_KNOWN_FAILURES, BORDER_PENDING_TEMPLATES, BORDER_PENDING_COLOURS)).toEqual([]);
     expect(EDGE_CONTRACT_KNOWN_FAILURES.alphaland?.why).toMatch(/^edges pass; corner:/);
+    // Both tables are empty since the Bloomburrow anime's layout v70 (TODO
+    // 4.11 / 4.35), so the rule is held on synthetic tables too: a whole
+    // template, a template's colours, and each way they can disagree.
+    const failures = { probe: { keys: "all" as const }, keyed: { keys: ["b", "g"] }, alphaland: { keys: ["b"] } };
+    expect(capMismatches(failures, new Set(["probe"]), new Map([["keyed", new Set(["g", "b"])]]))).toEqual([]);
+    expect(capMismatches(failures, new Set(), new Map([["keyed", new Set(["b", "g"])]]))).toEqual(["probe not capped"]);
+    expect(capMismatches(failures, new Set(["probe"]), new Map([["keyed", new Set(["b"])]]))).toEqual(["keyed capped on the wrong colours"]);
+    expect(capMismatches(failures, new Set(["probe", "stray"]), new Map([["keyed", new Set(["b", "g"])]]))).toEqual(["stray capped with no known failure"]);
+  });
+
+  it("caps a border-pending template at nearest with the border's reason (synthetic: both tables are empty since v70)", () => {
+    // The whole template capped (the avatar, as tla-338 was until v69)…
+    let restore = setBorderPendingForTests(["avatar"]);
+    try {
+      expect(isBorderPending("avatar", "u")).toBe(true);
+      const match = frameMatchFromScryfall(printing("tla-338"));
+      expect(match).toMatchObject({ status: "nearest", template: "avatar", blockedBy: "4.35" });
+      expect(match.reason).toMatch(/Avatar: The Last Airbender.*frame doesn't have the printed border yet$/);
+      // …and "never calls a border-pending template exact" holds over every
+      // fixture, with at least one capped printing among them.
+      let capped = 0;
+      for (const key of Object.keys(printingsData) as PrintingKey[]) {
+        const m = frameMatchFromScryfall(printing(key));
+        if (!isBorderPending(m.template, colorKeyOf(key))) continue;
+        capped += 1;
+        expect(m.status, key).not.toBe("exact");
+      }
+      expect(capped).toBeGreaterThan(0);
+    } finally {
+      restore();
+    }
+    // …and one colour of a template (expeditionland b / g's shape until 4.11
+    // wave 1): Yue (blue) capped, the colourless Arcane Signet not.
+    restore = setBorderPendingForTests([], new Map([["avatar", new Set(["u"])]]));
+    try {
+      expect(frameMatchFromScryfall(printing("tla-338"))).toMatchObject({ status: "nearest", blockedBy: "4.35" });
+      expect(frameMatchFromScryfall(printing("tle-315"))).toMatchObject({ status: "exact", template: "avatar" });
+    } finally {
+      restore();
+    }
+    expect(isBorderPending("avatar", "u")).toBe(false);
   });
 
   it("caps no showcase on its border any more (A8)", () => {

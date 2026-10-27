@@ -4850,7 +4850,7 @@ const LOTRSCROLL: FrameProfile = {
 // medians): the name's baseline 164 px (25 above M15's), its pen at 125;
 // the cost discs 70 px on 139.5, the row ending at ~1389; the type line on
 // the CC M15 baseline (1261); the rules ink from x 128.5 in MSE's text rect
-// (1320–1882 px, centred on print's 1601.5), white; the P/T digits on (1282,
+// (125–1372.5 × 1320–1882 px, centred on print's 1601.5), white; the P/T digits on (1282,
 // 1930) inside MSE's outline (pt.png, the plate). The art runs under the
 // whole card (full bleed, as printed).
 /** The name band 25 px above M15's (print's baseline 164 against 189), its
@@ -4893,9 +4893,11 @@ const BLOOMANIME: FrameProfile = {
   },
   rules: {
     ...M15.rules,
-    // Print's lines from x 128.5 to as far as 1393 (BLB #352), centred on
-    // 1601.5 px: 1320–1882 (MSE's rect, 1334–1896, centres them 14 px lower).
-    rect: { leftPct: (125 / 1500) * 100, topPct: (1320 / 2100) * 100, widthPct: ((1397 - 125) / 1500) * 100, heightPct: ((1882 - 1320) / 2100) * 100 },
+    // Print's lines from x 128.5, the widest to ~1362–1366 (BLB #352, #344:
+    // the box's right stroke at 1387–1395, ~17 px of margin inside it), so
+    // the rect ends where M15's does (1372.5); centred on 1601.5 px:
+    // 1320–1882 (MSE's rect, 1334–1896, centres them 14 px lower).
+    rect: { leftPct: (125 / 1500) * 100, topPct: (1320 / 2100) * 100, widthPct: ((1372.5 - 125) / 1500) * 100, heightPct: ((1882 - 1320) / 2100) * 100 },
     colorHex: SHOWCASE_WHITE_INK,
   },
   pt: {
@@ -6196,7 +6198,8 @@ export const BLOOMBURROW_HOLO_STAMP: FrameOverlaySlot = {
 };
 
 /** The anime's crown (TODO 4.11, layout v70): MSE's `crown.png` — the small
- *  flourish above the name box on every print (all 13 are legendary) — in
+ *  flourish above the name box on all 12 creature prints (the 13th, #353
+ *  Ral, is a walker) — in
  *  the strokes' flat tone, cropped to its box (646, 16, 209 × 64). */
 export const BLOOMANIME_CROWN: FrameOverlaySlot = {
   anatomy: "crown",

@@ -73,8 +73,13 @@ export const SQUARE_CORNERS: Readonly<Record<string, { kinds: Kinds; keys?: read
 
 /** What `template`'s master `key` shows outside the arc at `corner` in a
  *  square output (the art slot aside — squareCornerFills adds that). */
-export function squareCornerKind(template: string, key: string, corner: CornerName): SquareCornerKind {
-  const entry = SQUARE_CORNERS[template];
+export function squareCornerKind(
+  template: string,
+  key: string,
+  corner: CornerName,
+  table: Readonly<Record<string, { kinds: Kinds; keys?: readonly string[] }>> = SQUARE_CORNERS,
+): SquareCornerKind {
+  const entry = table[template];
   if (!entry || (entry.keys && !entry.keys.includes(key))) return "border";
   return typeof entry.kinds === "string" ? entry.kinds : (entry.kinds[corner] ?? "border");
 }
@@ -111,10 +116,13 @@ export function squareCornerFills(
   template: string,
   art: ArtRect | null | undefined,
   keys: { left: string; right: string },
+  /** The table (SQUARE_CORNERS; a test passes its own — no "root" entry is
+   *  left since the Bloomburrow anime's layout v70). */
+  table: Readonly<Record<string, { kinds: Kinds; keys?: readonly string[] }>> = SQUARE_CORNERS,
 ): CardCornerFills {
   const fill = (corner: CornerName): CornerFill => {
     if (art && artCoversCorner(art, corner)) return null;
-    const kind = squareCornerKind(template, corner === "tl" || corner === "bl" ? keys.left : keys.right, corner);
+    const kind = squareCornerKind(template, corner === "tl" || corner === "bl" ? keys.left : keys.right, corner, table);
     return kind === "frame" ? null : kind === "root" ? ROOT_BACKDROP_RGB : BORDER_BLACK_RGB;
   };
   return [fill("tl"), fill("tr"), fill("bl"), fill("br")];

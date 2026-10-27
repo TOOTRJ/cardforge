@@ -5311,9 +5311,14 @@ owner's design-backup `mse-showcase/bloomanime-sheet.jpg`.
     (8 px under the band's lift), ending at 1389 (4.5 px right);
   - the type line: the CC M15 baseline (print's 1261, ours 1260), its pen
     at 127 (4 px left);
-  - the rules: print's rect, 125–1397 × 1320–1882 px (lines from 128.5,
-    as far as 1393 on BLB #352; centred on 1601.5 — MSE's rect centres them
-    14 px lower), M15's padding, white;
+  - the rules: 125–1372.5 × 1320–1882 px — lines from 128.5, the widest
+    to ~1362–1366 on print (BLB #352, #344: the box's right stroke at
+    1387–1395, ~17 px of margin inside it), so the rect ends where M15's
+    does; centred on 1601.5 (MSE's rect centres them 14 px lower); M15's
+    padding, white. Print's rules glyphs run ~3 % wider than ours at the
+    same 76 px size (the same 74 px pitch), so a long text breaks a word
+    earlier there (BLB #344's second line ends "sorcery", ours "sorcery
+    spell,");
   - the P/T: MSE's text rect 6 px left and 12 px down, the digits on
     print's (1282, 1930), white;
   - name and type ink white, no shadow; no scrim any more (the boxes are
@@ -5321,9 +5326,13 @@ owner's design-backup `mse-showcase/bloomanime-sheet.jpg`.
 - **Opt-ins** (ADDITIONS, opt-in per card):
   - the **crown** — MSE's `crown.png`, the small flourish above the name
     box, in the strokes' tone (`BLOOMANIME_CROWN`, 646, 16, 209 × 64). All
-    thirteen are legendary and print it, so `showcase/blb/anime` imports
-    with it on (`CROWNED_SHOWCASE_SIGNATURES`; Ral names none — the crown
-    never prints on a walker);
+    twelve creatures are legendary and print it, so `showcase/blb/anime`
+    imports with it on (`CROWNED_SHOWCASE_SIGNATURES`; Ral, the walker,
+    names none) — but ONLY on the anime frame
+    (`printed_crown_frames`, `OWN_FRAME_CROWN_SIGNATURES`): the import lands
+    on the standard frame (1.18), where the printing wears no standard
+    crown, so the switch is off there and on when the card is switched to
+    the anime (the chooser's tile too);
   - the **stamp** — MSE's own notch, the footer's tone through
     `border_stamp_mask.png` under `stamp.png`'s arch in the strokes' tone
     (`bloomanimeholostamp/<key>.png`, 494, 1882, 540 × 58), our oval at
@@ -5334,7 +5343,8 @@ owner's design-backup `mse-showcase/bloomanime-sheet.jpg`.
 - **Flagged, not changed** (TODO 4.11):
   - the strokes' copper rim (raised foil) — the owner's one flat tone, a
     rim only if the sheet shows it is needed;
-  - the P/T digits print ~25 px wider than ours at the same height;
+  - the P/T digits print ~25 px wider than ours at the same height, and
+    the rules glyphs ~3 % wider (a word breaks earlier on print);
   - #353 Ral, the walker, stays out of scope.
 
 ### The Zendikar Rising hedron showcase (4.11, layout v63)

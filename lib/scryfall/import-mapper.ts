@@ -236,6 +236,10 @@ export type ScryfallImportPatch = {
    *     2026-09-30, pick (b)): nothing to follow, so the card gets the
    *     new-card default (on) if it is made Legendary later. */
   printed_crown?: boolean;
+  /** The frames whose own crown `printed_crown: true` is
+   *  (OWN_FRAME_CROWN_SIGNATURES; ImportedAnatomyFacts): the switch is on
+   *  only when the card lands on, or is switched to, one of them. */
+  printed_crown_frames?: readonly FrameTemplate[];
   /** `true` when THIS printing's own frame is two-coloured (TODO 4.6b): a
    *  2015-frame printing whose front face is exactly two colours
    *  (color_pair) — the import then switches the two-colour frame on and
@@ -1838,10 +1842,21 @@ const CROWNED_SHOWCASE_SIGNATURES: ReadonlySet<string> = new Set([
   "showcase/blb/woodland",
   "showcase/blb/woodland+two-colour",
   "showcase/blb/woodland+two-colour-hybrid",
-  // The Bloomburrow anime (TODO 4.11, layout v70): all 13 are legendary and
-  // print the flourish above the name box.
+  // The Bloomburrow anime (TODO 4.11, layout v70): its 12 creatures are
+  // legendary and print the flourish above the name box (#353 Ral, the 13th,
+  // is a walker: no crown). Its own frame's crown only (OWN_FRAME_CROWN_
+  // SIGNATURES): off on the standard frame its import lands on.
   "showcase/blb/anime",
 ]);
+
+/** The crowned showcases whose crown is their OWN frame's and which land
+ *  elsewhere (TODO 4.11, layout v70): the Bloomburrow anime's flourish —
+ *  its full bleed lands an import on the standard frame (1.18), where the
+ *  printing wears no standard crown — so the switch is on only on the
+ *  frames named here (ImportedAnatomyFacts.printed_crown_frames). */
+const OWN_FRAME_CROWN_SIGNATURES: Readonly<Record<string, readonly FrameTemplate[]>> = {
+  "showcase/blb/anime": ["bloomanime"],
+};
 
 /** Whether a printing prints the STANDARD legendary crown (see
  *  ScryfallImportPatch.printed_crown): the `legendary` frame effect, on a
@@ -2155,6 +2170,9 @@ export function mapScryfallToFormPatch(
       cardType,
       supertype: typeParts.supertype,
     }),
+    ...(OWN_FRAME_CROWN_SIGNATURES[frameMatch.signature]
+      ? { printed_crown_frames: OWN_FRAME_CROWN_SIGNATURES[frameMatch.signature] }
+      : {}),
     printed_two_color: printsTwoColorFrame(card) ? true : undefined,
     // The collector line as the printing prints it (TODO 4.9b): its style
     // (or "off" for a pre-2015 frame) and the ★ of a foil-only printing.

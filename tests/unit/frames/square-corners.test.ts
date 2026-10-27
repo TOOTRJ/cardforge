@@ -7,6 +7,7 @@ import { cardCornerRadiusPx } from "@/lib/cards/card-corner";
 import {
   BORDER_BLACK_RGB,
   CORNER_NAMES,
+  ROOT_BACKDROP_RGB,
   SQUARE_CORNERS,
   artCoversCorner,
   squareCornerFills,
@@ -96,6 +97,14 @@ describe("the square-corner table", () => {
     // …and the Bloomburrow anime's full-bleed slot (layout v70: it was the
     // last ring, #101015 at every corner).
     expect(squareCornerFills("bloomanime", getFrameProfile("bloomanime").artSlot, { left: "u", right: "r" })).toEqual([null, null, null, null]);
+    // The "root" branch on a synthetic table (no ring is left since v70): a
+    // ring's every corner the root's #101015, a keyed entry on its key's half
+    // alone, an art corner still the art's.
+    const rings = { ring: { kinds: "root" as const }, half: { kinds: "root" as const, keys: ["b"] } };
+    expect(squareCornerFills("ring", null, { left: "u", right: "r" }, rings)).toEqual([ROOT_BACKDROP_RGB, ROOT_BACKDROP_RGB, ROOT_BACKDROP_RGB, ROOT_BACKDROP_RGB]);
+    expect(squareCornerFills("half", null, { left: "b", right: "w" }, rings)).toEqual([ROOT_BACKDROP_RGB, BORDER_BLACK_RGB, ROOT_BACKDROP_RGB, BORDER_BLACK_RGB]);
+    expect(squareCornerFills("ring", { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 50 }, { left: "u", right: "u" }, rings)).toEqual([null, null, ROOT_BACKDROP_RGB, ROOT_BACKDROP_RGB]);
+    for (const c of CORNER_NAMES) expect(squareCornerKind("ring", "u", c, rings)).toBe("root");
     // A split's halves each answer for their own side (no entry is keyed by
     // colour since expeditionland's left with TODO 4.11 wave 1, so both
     // halves of its card are border black).

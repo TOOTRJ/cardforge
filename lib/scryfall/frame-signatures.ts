@@ -538,9 +538,30 @@ export const BORDER_PENDING_COLOURS: ReadonlyMap<FrameTemplate, ReadonlySet<stri
 /** True when `template`'s border isn't true yet in this colour key. */
 export function isBorderPending(template: FrameTemplate, colorKey: string): boolean {
   return (
-    BORDER_PENDING_TEMPLATES.has(template) ||
-    Boolean(BORDER_PENDING_COLOURS.get(template)?.has(colorKey))
+    borderPending.templates.has(template) ||
+    Boolean(borderPending.colours.get(template)?.has(colorKey))
   );
+}
+
+/** What isBorderPending reads: the two tables above, unless a test swaps
+ *  them (setBorderPendingForTests). */
+let borderPending: {
+  templates: ReadonlySet<FrameTemplate>;
+  colours: ReadonlyMap<FrameTemplate, ReadonlySet<string>>;
+} = { templates: BORDER_PENDING_TEMPLATES, colours: BORDER_PENDING_COLOURS };
+
+/** Tests only: cap these templates / colours as border-pending, so the cap's
+ *  paths stay covered while both tables are empty (since the Bloomburrow
+ *  anime's layout v70, TODO 4.11 / 4.35). Returns the restore function. */
+export function setBorderPendingForTests(
+  templates: Iterable<FrameTemplate>,
+  colours: ReadonlyMap<FrameTemplate, ReadonlySet<string>> = new Map(),
+): () => void {
+  const before = borderPending;
+  borderPending = { templates: new Set(templates), colours };
+  return () => {
+    borderPending = before;
+  };
 }
 
 // ---------------------------------------------------------------------------
