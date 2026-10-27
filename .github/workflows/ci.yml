@@ -805,7 +805,13 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.heavy != 'false' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    # Measured 2026-10-27 (181 attempts, 2026-10-13 → 27): the compare step
+    # grows with the cases (≈ 3 min at 51, ≈ 7.3 min at 123), the rest of the
+    # job is ≈ 1 min — but apt behind `playwright install --with-deps` is
+    # sometimes slow (25.9 MB at 47.7 kB/s: 9–10 min), and 15 cancelled #604
+    # and #610 that way (worst job ≈ 18 min). 25 = that worst case plus room
+    # for the matrix to grow.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
