@@ -35,7 +35,7 @@ function card(artUrl: string): CardPreviewData {
     artistCredit: "Probe",
     artUrl,
     artPosition: { focalX: 0.4, focalY: 0.55, scale: 1.3 },
-    frameStyle: { template: "tarkirdragon", finish: "regular" },
+    frameStyle: { template: "tarkirdraconic", finish: "regular" }, // a git frame (tarkirdragon left git with TODO 4.11)
     setIconUrl: null,
     setIconCode: null,
     backFace: null,

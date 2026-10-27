@@ -164,7 +164,10 @@ describe("bake path = preview path", () => {
                           : template === "lotr"
                             ? // …and the ring's.
                               "lotrholostamp"
-                            : "m15holostamp"
+                            : template === "tarkirdragon"
+                              ? // …and the MUL Tarkir dragon wings' oval piece.
+                                "tarkirdragonholostamp"
+                              : "m15holostamp"
               : template === "fullart"
                 ? // The Zendikar Rising hedron showcase's crown band (4.11).
                   "fullartcrown"
@@ -187,7 +190,10 @@ describe("bake path = preview path", () => {
                         : template === "lotr"
                           ? // …and the ring's.
                             "lotrcrown"
-                          : (dfcCrown ?? "m15crown");
+                          : template === "tarkirdragon"
+                            ? // …and the MUL Tarkir dragon wings' spikes.
+                              "tarkirdragoncrown"
+                            : (dfcCrown ?? "m15crown");
         for (const key of slot.keys) {
           expect(slot.assetPathTemplate.replace("{key}", key), `${template} ${slot.anatomy}`).toBe(`/frames/${folder}/${key}.png`);
           if (slot.anatomy === "holoStamp") notches += 1;
@@ -229,19 +235,21 @@ describe("bake path = preview path", () => {
     // station's 7; and the borderless walkers' 7 on each of their two
     // entries (owner Round 70).
     // …and the Lord of the Rings scroll's 8 keys (4.11, the pack's own pieces),
-    // the Zendikar Rising hedron showcase's 7 (4.11) and the LOTR ring's 8.
-    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8);
+    // the Zendikar Rising hedron showcase's 7 (4.11), the LOTR ring's 8 and
+    // the MUL Tarkir dragon wings' 7.
+    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7);
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
     ] as const) {
       expect((getFrameProfile(template).overlays ?? []).some((slot) => slot.anatomy === "holoStamp"), template).toBe(false);
     }
-    // A master outside the list still reads as "c" (no stored card has one);
+    // A master outside the list still reads as "c" (no stored card has one;
+    // a git master: tarkirdraconic — tarkirdragon left git with TODO 4.11);
     // an overlay that isn't there is nothing — never the "c" band.
-    const colourless = getFrameDataUrl("tarkirdragon", "c");
-    expect(getFrameDataUrl("tarkirdragon", "zz")).toBe(colourless);
-    expect(getFrameOverlayDataUrl("/frames/tarkirdragon/zz.png")).toBeNull();
-    expect(getFrameOverlayDataUrl("/frames/tarkirdragon/w.png")).toBe(getFrameDataUrl("tarkirdragon", "w"));
+    const colourless = getFrameDataUrl("tarkirdraconic", "c");
+    expect(getFrameDataUrl("tarkirdraconic", "zz")).toBe(colourless);
+    expect(getFrameOverlayDataUrl("/frames/tarkirdraconic/zz.png")).toBeNull();
+    expect(getFrameOverlayDataUrl("/frames/tarkirdraconic/w.png")).toBe(getFrameDataUrl("tarkirdraconic", "w"));
   });
 });

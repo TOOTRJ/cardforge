@@ -60,6 +60,16 @@ describe("Card Conjurer frame profiles", () => {
         expect(((band.topPct + band.heightPct / 2) / 100) * 2100 + (profile.costDy ?? 0) * 1500).toBeCloseTo(172.2, 6);
         continue;
       }
+      if (template === "tarkirdragon") {
+        // The MUL Tarkir dragon wings (TODO 4.11): the CC M15 row on its
+        // pack's title bar, where MUL #1 / #60 set theirs — the band 7 px up
+        // with the name, the discs centred on 155.1 px (print's 148.75 under
+        // a bar 6.55 px higher than the pack's), the bake's whole px 155.
+        expect([profile.costDy, profile.costDx, Math.round((profile.costSizePct ?? 0) * 1500)]).toEqual([-1.7 / 1500, 2 / 1500, 70]);
+        const band = profile.title.rect;
+        expect(((band.topPct + band.heightPct / 2) / 100) * 2100 + (profile.costDy ?? 0) * 1500).toBeCloseTo(155.1, 6);
+        continue;
+      }
       // v24–v60 lifted the discs 11.55 px (−0.0077 W) onto the 2014–2023
       // prints; June-2023+ prints set them 4.6 px lower (the 2023 pip move,
       // docs/FRAMES.md "The cost row as printed since 2023"): 7 px above the

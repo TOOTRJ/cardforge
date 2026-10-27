@@ -38,7 +38,7 @@ const TEMPLATE_SOURCES = {
   // (adventure, flip and aftermath are Card Conjurer masters since TODO
   // 4.21a, split and battle since 4.21b, saga since 4.21c — their geometry is
   // the CC pack's, measured on the prints; scripts/lib/cc-frames.mjs — and
-  // lotrscroll and lotr since 4.11.)
+  // lotrscroll, lotr and tarkirdragon since 4.11.)
   agclassic: { dir: "magic-agclassic.mse-style" },
   alphaland: { dir: "magic-agclassic.mse-style", note: "land variant shares agclassic geometry" },
   retro: { dir: "magic-old.mse-style" },
@@ -48,7 +48,6 @@ const TEMPLATE_SOURCES = {
   avatar: { dir: "magic-m15-showcase-avatar-elemental.mse-style" },
   bloomburrow: { dir: "magic-m15-showcase-bloomburrow-woodland.mse-style" },
   bloomanime: { dir: "magic-m15-showcase-bloomburrow-borderless-anime.mse-style" },
-  tarkirdragon: { dir: "magic-m15-showcase-tarkir-dragon-wing.mse-style" },
   tarkirdraconic: { dir: "magic-m15-showcase-tarkir-draconic.mse-style" },
   tarkirghostfire: { dir: "magic-m15-showcase-tarkir-ghostfire-walker.mse-style" },
 };

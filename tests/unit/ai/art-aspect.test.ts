@@ -115,7 +115,8 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   bloomanime: ["864x1200", "3:4", 0.722],
   tarkirdraconic: ["1152x896", "4:3", 1.273],
   tarkirghostfire: ["864x1200", "3:4", 0.722],
-  tarkirdragon: ["1168x880", "4:3", 1.329],
+  // The Card Conjurer Tarkir window (TODO 4.11, v67): 1237 × 929 px.
+  tarkirdragon: ["1168x880", "4:3", 1.332],
   fullart: ["896x1168", "3:4", 0.7605],
   extendedart: ["1168x896", "4:3", 1.314],
   extendedartland: ["1168x896", "4:3", 1.314],

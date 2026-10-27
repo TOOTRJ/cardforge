@@ -6230,7 +6230,7 @@
     }
   },
   "tarkirdragon": {
-    "note": "Dragon Wing = the Multiverse Legends (MOM 2023) Tarkir frame, not a Tarkir: Dragonstorm frame. Only MUL #1 Anafenza (W) and #60 Taigam (W/U) were printed; 'm' is Taigam, whose two colours split the wings (white left, blue right) with a gold P/T plate, so it tests the two-colour look — the 3+ colour gold-wing look was never printed. Both are legendary and show MSE's legend crown, which PipGlyph does not draw.",
+    "note": "Dragon Wing = the Multiverse Legends (MOM 2023) Tarkir frame, not a Tarkir: Dragonstorm frame. Only MUL #1 Anafenza (W) and #60 Taigam (W/U) were printed; 'm' is Taigam, whose two colours split the wings (white left, blue right) with a gold P/T plate, so it tests the two-colour look — the 3+ colour gold-wing look was never printed. Both are legendary and show the frame's legend crown — the row of dragon-wing spikes PipGlyph draws as an opt-in since TODO 4.11 (TARKIRDRAGON_CROWN, layout v67).",
     "colors": {
       "w": [
         {

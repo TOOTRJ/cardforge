@@ -4614,73 +4614,114 @@ function tarkirCard(
     },
   };
 }
-// Dragon Wing is the Multiverse Legends (MOM, 2023) Tarkir frame — printed on
-// MUL #1 Anafenza (W) and #60 Taigam (W/U) only; it is not a Tarkir:
+// MUL Tarkir "Dragon Wing" (TODO 4.11, layout v67) — Card Conjurer's
+// 'Tarkir' pack (packTarkir.js, "Tarkir Sketch (MOM)", 1500 × 2100 native;
+// scripts/lib/cc-frames.mjs TARKIR), the Multiverse Legends showcase of MUL
+// #1 Anafenza, Kin-Tree Spirit (W) and #60 Taigam, Ojutai Master (W/U) and
+// their halo-foil twins #131 / #131z / #190 / #190z. Not a Tarkir:
 // Dragonstorm frame (those are Draconic, Ghostfire and the borderless clan
-// frame). It is SILVER with colour-keyed dragon wings; there is no gold
-// version anywhere (MSE and Card Conjurer ship the same art), so a gold (3+
-// colour) card shows gold wings on silver and a two-colour card splits its
-// wings (twoColorSplit below). Its name and type bars are LIGHT silver
-// (median 200,200,200) and take black ink — MSE's own swap_fonts: name, type
-// and P/T black, rules white on the dark text box. Measured on the two MUL
-// scans and this PNG's window (owner review 2026-09-25: the old light title
-// read at 1.46:1, the art stopped 19 px short of the window, no P/T plate).
+// frame). Silver bars and a dark text box, the colour on the dragon wings
+// alone — so a two-colour card splits its wings (twoColorSplit; any two
+// masters differ only on the wings), a gold card wears gold wings. Its text
+// layout is the accurate M15 pack's (the pack's own slots are M15's but for
+// the title band, 5.6 px higher in CC, and the type band, 7.4 px higher):
+// so M15's slots and the M15-era family's sizes, each laid on the PACK's own
+// bars as the six prints lay it on theirs. The pack's drawing is kept as
+// drawn — print is the same drawing 0.66 % taller (its title bar 6 px
+// higher, its box bottom 6 px lower; docs/FRAMES.md "The MUL Tarkir
+// showcase") — and every slot rides the pack's bars.
+/** The art slot: the masters' window and its soft shadow (α < 250 on
+ *  131–1365 × 232–1158 px on every key — CC's artBounds 131 / 233 / 1235 ×
+ *  926) with the art-window check's 0.05 % to spare: 130–1367 × 231–1160. */
+const TARKIRDRAGON_ART_SLOT: Rect = { topPct: (231 / 2100) * 100, leftPct: (130 / 1500) * 100, widthPct: (1237 / 1500) * 100, heightPct: (929 / 2100) * 100 };
+/** The pack's plate at its ptBounds (1155 / 1850, 274 × 150 px). */
+const TARKIRDRAGON_PLATE_RECT: Rect = { topPct: (1850 / 2100) * 100, leftPct: (1155 / 1500) * 100, widthPct: (274 / 1500) * 100, heightPct: (150 / 2100) * 100 };
+// Measured on MUL #1 / #60 (and #131 / #190) at 1500 × 2100, each slot
+// against its OWN bar: the print registered on the pack's drawing region by
+// region (the title bar +2 / −6.4 px on the left / right, the type bar +2 /
+// +0.8, the plate +8 / +6), the slot then set where print sets it on its bar.
+/** The name and the cost row ride the pack's title bar 7 px above M15's
+ *  band (print's baseline 174.5 / 173.8 px under a bar 6.4 px higher than
+ *  the pack's: 181.5 on the pack's, where M15's band set it on 188.5; the
+ *  pack's own text box agrees, its title y 104 against M15's 109.6). */
+const TARKIRDRAGON_TITLE_DY_PX = -7;
+/** …and the name's pen 2 px left (print's capitals at 126–127 px, the bar
+ *  2 px right of the pack's; Card Conjurer's pack moves it 4). */
+const TARKIRDRAGON_TITLE_DX_PX = -2;
+/** The type band 4.5 px above M15's — its line on print's baseline (1255.7
+ *  under a bar 0.8 px lower: 1254.9 on the pack's, against the CC M15
+ *  baseline 1259.5) and the inline set symbol with it (print's centre 1237
+ *  → 1236.2; ours sat on 1240.5; the pack's own symbol bounds centre it on
+ *  1234) — and its pen 5 px left (print's L at 130 px on the pack's bar,
+ *  ours 135; Card Conjurer's pack: 123 against M15's 128). */
+const TARKIRDRAGON_TYPE_DY_PX = -4.5;
+const TARKIRDRAGON_TYPE_DX_PX = -5;
 const TARKIRDRAGON: FrameProfile = {
-  ...tarkirCard("Dragon Wing", { title: INK_DARK, type: INK_DARK, rules: INK_LIGHT }),
-  // Two-colour cards split the wings like the one printed two-colour card,
-  // MUL #60 Taigam (W/U): white wings left, blue right, gold P/T plate (owner
-  // decision 2026-09-25). It is MSE's own recipe for this style —
-  // `masked_blend(mask: "special_blend_card.png", dark: template(colors.0),
-  // light: template(colors.1))`, and that mask is a HARD vertical split. The
-  // w/u/b/r/g PNGs differ in the 35–65 %W band only by texture noise (at
-  // most ~18/255, none above 24/255), and the seam step at 50 % is at most
-  // 11/255, within the frame's own column-to-column variation (up to 17), so
-  // a hard seam at 50 % reads the same as MSE's mask, which flips at
-  // x=378/646 (58.5 %). 3+ colours
-  // keep the gold "m" wings — a look that was never printed.
+  ...M15,
+  label: "Dragon Wing",
+  // The CC M15 row (70 px discs, 78 pitch, its right end — print's right
+  // disc ends 1392.5 px, 7 right of ours where the bar is 7 right too),
+  // its lift reduced by the band's 7 px move: the discs centred on 155 px,
+  // print's 148.75 under its bar (+6.55 → 155.3).
+  ...CC_M15_COST,
+  costDy: -1.7 / 1500,
+  // Two-colour cards split the wings like MUL #60 Taigam (W/U): white wings
+  // left, blue right, the gold P/T plate (owner decision 2026-09-25) — the
+  // pack's own two-colour dress (packTarkir.js 'Right Half' =
+  // tarkir/maskFrame.png, a ramp across 41.7–61.3 %W). Any two of the
+  // pack's masters differ only on the wings (x 47–442 and 1069–1457), so
+  // the hard seam at 50 %W crosses identical pixels and reads as the ramp.
+  // 3+ colours wear the gold "m" wings.
   twoColorSplit: { atPct: 50 },
-  // Pips: Ø 67 px and right edge 92.3 %W on the scans.
-  costSizePct: 0.0445,
-  // The PNG's transparent window is 8.8–91.1 %W × 11.1–55.3 %H.
-  artSlot: { topPct: 10.9, leftPct: 8.6, widthPct: 82.8, heightPct: 44.5 },
+  artSlot: TARKIRDRAGON_ART_SLOT,
   title: {
-    rect: { topPct: 4.55, leftPct: 8.3, widthPct: 84, heightPct: 6.0 },
-    sizePct: 0.053,
-    colorHex: INK_DARK,
-    weight: 600,
-    font: "display",
+    ...M15.title,
+    rect: {
+      topPct: M15.title.rect.topPct + (TARKIRDRAGON_TITLE_DY_PX / 2100) * 100,
+      leftPct: M15.title.rect.leftPct + (TARKIRDRAGON_TITLE_DX_PX / 1500) * 100,
+      widthPct: M15.title.rect.widthPct - (TARKIRDRAGON_TITLE_DX_PX / 1500) * 100,
+      heightPct: M15.title.rect.heightPct,
+    },
   },
+  // Black on the silver bar (print's ink 20,22,12: the name's, not M15's
+  // softer type ink).
   type: {
-    rect: { topPct: 56.3, leftPct: 8.55, widthPct: 83.7, heightPct: 5.0 },
-    sizePct: 0.045,
+    ...M15.type,
+    rect: {
+      topPct: M15.type.rect.topPct + (TARKIRDRAGON_TYPE_DY_PX / 2100) * 100,
+      leftPct: M15.type.rect.leftPct + (TARKIRDRAGON_TYPE_DX_PX / 1500) * 100,
+      widthPct: M15.type.rect.widthPct - (TARKIRDRAGON_TYPE_DX_PX / 1500) * 100,
+      heightPct: M15.type.rect.heightPct,
+    },
+    dy: CC_M15_TYPE_DY,
     colorHex: INK_DARK,
-    weight: 600,
-    font: "display",
   },
-  // MSE's text box (52,566)–(594,823) on 646×902 less its padding, centred
-  // like MSE; 9 pt, the platform rules base.
+  // White on the dark box (print's ink 255,255,255 at its core). M15's box
+  // but its foot: the pack's box ends at 1926 px (M15's at 1949), and the
+  // prints' full box (MUL #60, nine lines at the 64 px step) sets its last
+  // descender on 1912 px, 1906.5 on the pack's — so the box ends at 1911,
+  // the layout's last descender 1.4 px inside it.
   rules: {
-    rect: { topPct: 62.75, leftPct: 8.7, widthPct: 82.6, heightPct: 28.5 },
-    sizePct: rulesPxToPct(RULES_SIZE_PX.standard),
-    colorHex: INK_LIGHT,
-    vAlign: "center",
-    font: "body",
+    ...M15.rules,
+    rect: { ...M15.rules.rect, heightPct: ((1911 - 1335.6) / 2100) * 100 },
+    colorHex: "#ffffff",
   },
-  // MSE's pt field (516,810 80×36 on 646×902) and its plate — MSE pt/<c>pt.png
-  // cropped by scripts/build-showcase-frames.mjs to 1156,1850 271×149 on the
-  // 1500×2100 card. Written out, not spread from M15.pt: that one follows the
-  // Card Conjurer M15 plate and its own layout versions.
-  // The plate's light face runs 1193–1388 px on the digits' rows, inside
-  // its black outline — wider than MSE's field, so 10/10–18/18 print at
-  // full size on it and 20/20, which reaches the outline, shrinks.
+  // The pack's plate; the digits where print sets them on it: the ink-
+  // weighted centre of MUL #1 "2/2" and #60 "3/4" at 1928.4 / 1928.0 px on
+  // the pack's plate (each print registered on the plate's ends and top
+  // rim: +5.8 px), where a 4.4 px lift left it on 1925.8 / 1925.6 and a
+  // 1.9 px one on 1927.6 / 1927.4 (the bake lays the box on whole px) — so
+  // the box 1.2 px above M15's, its top on a whole px (1893.0): the bake's
+  // centre 1928.5. Across, "2/2" (MUL #1) sits within 1 px of print; MUL
+  // #60's "3/4" ink ~4 px left of print's — most likely the digits' own
+  // ink asymmetry (the box is centred; a 4 and a 3 are not): left as it is,
+  // TODO 4.11.
   pt: {
-    rect: { topPct: 89.8, leftPct: 79.88, widthPct: 12.38, heightPct: 3.99 },
-    inkSpanPct: { leftPct: 79.5333, rightPct: 92.5333 },
-    plateRect: { topPct: 88.095, leftPct: 77.067, widthPct: 18.067, heightPct: 7.095 },
+    ...M15.pt!,
+    rect: { ...M15.pt!.rect, topPct: M15.pt!.rect.topPct - (1.2 / 2100) * 100 },
+    inkSpanPct: { leftPct: (1193 / 1500) * 100, rightPct: (1391 / 1500) * 100 },
+    plateRect: TARKIRDRAGON_PLATE_RECT,
     plateAssetPathTemplate: "/frames/tarkirdragon/pt/{color}.png",
-    sizePct: 0.05,
-    colorHex: INK_DARK,
-    weight: 700,
   },
 };
 // Draconic is the gold Tarkir: Dragonstorm dragon frame (TDM #292–323). Its
@@ -5999,6 +6040,56 @@ export const LOTRSCROLL_HOLO_STAMP: FrameOverlaySlot = {
 };
 
 /**
+ * The MUL Tarkir showcase's legendary crown (TODO 4.11):
+ * `tarkirdragoncrown/<key>.png`, Card Conjurer's Tarkir 'Legend Crown' — the
+ * row of dragon-wing spikes along the title bar's top that all six
+ * printings carry (MUL #1, #60 and their twins: two legends) — 1:1 at the
+ * pack's bounds (180 / 51, 1145 × 65 px), a 1500 × 120 band. Keys: the
+ * masters' w u b r g m c (c the artifact crown, as the master) and the ten
+ * pairs, the first colour's crown left and the second's right across the
+ * pack's own two-colour ramp (41.7 → 61.3 %W) — MUL #60 Taigam's white-blue
+ * crown, its centre bulb the two blended; `pairCrownOnGold`: the template
+ * draws its two colours as halves (twoColorSplit), never a pair master.
+ * Set on the tarkirdragon entry only; opt-in per card like every crown.
+ */
+export const TARKIRDRAGON_CROWN: FrameOverlaySlot = {
+  anatomy: "crown",
+  rect: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: (120 / 2100) * 100 },
+  assetPathTemplate: "/frames/tarkirdragoncrown/{key}.png",
+  // TARKIR_CROWN_BAND.keys in scripts/lib/cc-frames.mjs (a unit test holds
+  // them together).
+  keys: ["w", "u", "b", "r", "g", "m", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+  pairCrownOnGold: true,
+};
+/** The stamp's oval (scripts/lib/cc-frames.mjs TARKIR_STAMP_OVAL_PX: 683–817
+ *  × 1924–1988 px) — the PRINTS' hologram, 134 × 64 (MUL #1 / #60 / #131 /
+ *  #190; M15's is 134 × 67: the print agrees in width, not height), on the
+ *  centre of the pack's own well — 6 px higher than the prints set it, as
+ *  the whole box bottom is. */
+export const TARKIRDRAGON_HOLO_STAMP_OVAL: Rect = { leftPct: (683 / 1500) * 100, topPct: (1924 / 2100) * 100, widthPct: (134 / 1500) * 100, heightPct: (64 / 2100) * 100 };
+/** The rules box keeps out of the arch: its rim's top (1888 px at the
+ *  centre) down past the box's bottom outline (1926), over the piece's
+ *  638–863 px. */
+export const TARKIRDRAGON_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (638 / 1500) * 100, topPct: (1888 / 2100) * 100, widthPct: (225 / 1500) * 100, heightPct: (40 / 2100) * 100 };
+/**
+ * The MUL Tarkir showcase's OVAL stamp notch (TODO 4.11): the pack's one
+ * 'Holo Stamp' — the box's bottom rim arched over a black well — 1:1 at its
+ * bounds, a 227 × 110 box at 637, 1887 px (TARKIR_NOTCH_BOX in
+ * scripts/lib/cc-frames.mjs: 1 px round the piece and 8 px past its foot),
+ * its hologram oval cut clear for our oval art. Every printing is rare and
+ * stamped (`security_stamp: oval`): "auto" = a rare or mythic, as on M15.
+ * Keys: the masters' (one piece; the rim under it is the same on every
+ * key). Set on the tarkirdragon entry only.
+ */
+export const TARKIRDRAGON_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: { leftPct: (637 / 1500) * 100, topPct: (1887 / 2100) * 100, widthPct: (227 / 1500) * 100, heightPct: (110 / 2100) * 100 },
+  assetPathTemplate: "/frames/tarkirdragonholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c"],
+  stamp: { shape: "oval", oval: TARKIRDRAGON_HOLO_STAMP_OVAL, keepOut: TARKIRDRAGON_HOLO_STAMP_KEEP_OUT },
+};
+
+/**
  * The holofoil stamp's notch on the BORDERLESS frames (TODO 4.9d, owner
  * Round 66, 2026-10-14): every stamped borderless print arches the text
  * box's bottom pinline over the oval, and Card Conjurer's borderless pack has
@@ -7238,7 +7329,7 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // collector line as the prints set it (M15's two lines) — each opt-in per
   // card, so no stored card changes by them.
   lotrscroll: { ...LOTRSCROLL, overlays: [LOTRSCROLL_CROWN, LOTRSCROLL_HOLO_STAMP], collector: M15_COLLECTOR },
-  tarkirdragon: TARKIRDRAGON,
+  tarkirdragon: { ...TARKIRDRAGON, overlays: [TARKIRDRAGON_CROWN, TARKIRDRAGON_HOLO_STAMP], collector: EXPEDITION_ZNR_COLLECTOR },
   tarkirdraconic: TARKIRDRACONIC,
   tarkirghostfire: { ...TARKIRGHOSTFIRE, pickerSampleArt: true },
   // The extended-art frame draws the floating crown as an overlay band

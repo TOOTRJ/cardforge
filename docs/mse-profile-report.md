@@ -654,25 +654,6 @@ Generated 2026-07-02 by scripts/import-mse-profiles.mjs from /Users/redjester/Pr
 | pt.heightPct | 7 | 4.33 | -2.67 |  |
 | pt.sizePct | 0.04 | — | — |  |
 
-## tarkirdragon  `magic-m15-showcase-tarkir-dragon-wing.mse-style` (646×902)
-
-| field | current | MSE | Δ (MSE−cur) | notes |
-|---|---|---|---|---|
-| artSlot.topPct | 12 | 11.09 | -0.91 |  |
-| artSlot.leftPct | 9 | 8.82 | -0.18 |  |
-| artSlot.widthPct | 82 | 82.2 | 0.20 |  |
-| artSlot.heightPct | 46 | 44.12 | -1.88 |  |
-| rules.topPct | 66 | — | — | { 566 + chop_top() + body_font_vertical() } |
-| rules.leftPct | 9 | 8.05 | -0.95 |  |
-| rules.widthPct | 82 | 83.9 | 1.90 |  |
-| rules.heightPct | 26 | — | — |  |
-| rules.sizePct | 0.033 | — | — |  |
-| pt.topPct | 87 | — | — | { 810 + pt_font_vertical() } |
-| pt.leftPct | 71 | 79.88 | 8.88 |  |
-| pt.widthPct | 23 | 12.38 | -10.62 |  |
-| pt.heightPct | 7.5 | 3.99 | -3.51 |  |
-| pt.sizePct | 0.043 | — | — |  |
-
 ## tarkirdraconic  `magic-m15-showcase-tarkir-draconic.mse-style` (646×902)
 
 | field | current | MSE | Δ (MSE−cur) | notes |

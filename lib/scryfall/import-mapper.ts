@@ -1819,7 +1819,10 @@ function isShowcaseSignature(signature: string): boolean {
  *  imports as its scan with the crown ON where it prints one — and the LOTR
  *  ring showcase (TODO 4.11: all sixty printings of LTR #302–331 and
  *  #794–823 are legendary, each under the pack's scalloped title-bar crown —
- *  LOTR_CROWN; checked on #302, #310 and #317). */
+ *  LOTR_CROWN; checked on #302, #310 and #317) — and the MUL Tarkir
+ *  showcase (TODO 4.11: both legends of MUL #1 / #60 and their twins print
+ *  the pack's row of dragon-wing spikes over the title bar —
+ *  TARKIRDRAGON_CROWN). */
 const CROWNED_SHOWCASE_SIGNATURES: ReadonlySet<string> = new Set([
   "showcase/thb/constellation",
   "showcase/ltr/scroll",
@@ -1828,6 +1831,7 @@ const CROWNED_SHOWCASE_SIGNATURES: ReadonlySet<string> = new Set([
   "showcase/ltr/ring",
   "showcase/ltr/ring+two-colour",
   "showcase/ltr/ring+two-colour-hybrid",
+  "showcase/mul/tarkir",
   "showcase/znr/hedron",
 ]);
 

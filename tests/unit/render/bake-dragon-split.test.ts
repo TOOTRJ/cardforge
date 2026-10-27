@@ -1,22 +1,52 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import sharp from "sharp";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { ColorIdentity } from "@/types/card";
 import { getFrameProfile } from "@/lib/cards/template-layout";
 import { setFrameStorageForTests, type FrameManifest } from "@/lib/frames/frame-url";
 import { resetFrameAssetCacheForTests } from "@/lib/render/card-frames";
 import { renderCardImage, RENDER_PRESETS } from "@/lib/render/card-image";
+import manifestJson from "@/lib/frames/frame-manifest.json";
 
 // ---------------------------------------------------------------------------
-// Two-colour Dragon Wing (owner decision 2026-09-25), pinned on REAL bakes:
-// public/frames/tarkirdragon is in git, so these render offline. A split card
-// must be, pixel for pixel, the first colour's bake left of the seam and the
-// second colour's right of it — the text is identical in every bake, so the
-// only thing that can differ is the frame. Rendered at "default" (750 × 1050).
+// Two-colour Dragon Wing (owner decision 2026-09-25), pinned on REAL bakes.
+// Since TODO 4.11 (layout v67) its masters are Card Conjurer's, in the frames
+// bucket: the bakes read the local copies of the manifest's objects
+// (FRAMES_BUILD_DIR, else .frames-build — CI fetches them; sha-checked) and
+// skip without them. A split card must be, pixel for pixel, the first
+// colour's bake left of the seam and the second colour's right of it — the
+// text is identical in every bake, so the only thing that can differ is the
+// frame. Rendered at "default" (750 × 1050).
 // ---------------------------------------------------------------------------
+
+const BUILD = process.env.FRAMES_BUILD_DIR ? resolve(process.env.FRAMES_BUILD_DIR) : join(process.cwd(), ".frames-build");
+const MANIFEST = manifestJson as unknown as FrameManifest;
+/** A bucket object's local copy at the manifest's sha256, or null. */
+function local(rel: string): Buffer | null {
+  const entry = MANIFEST.files[rel];
+  const file = join(BUILD, rel);
+  if (!entry || !existsSync(file)) return null;
+  const bytes = readFileSync(file);
+  return createHash("sha256").update(bytes).digest("hex") === entry.sha256 ? bytes : null;
+}
+const AVAILABLE = ["w", "u", "b", "r", "g", "m", "c"].every((k) => local(`tarkirdragon/${k}.png`) && local(`tarkirdragon/pt/${k}.png`));
+const BUCKET = "https://bucket.example/frames";
+/** Serve the manifest's objects from the local copies. */
+function serveBucket() {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      const m = url.startsWith(`${BUCKET}/`) ? /^(.*)\.[0-9a-f]{12}(\.png)$/.exec(url.slice(BUCKET.length + 1)) : null;
+      const bytes = m ? local(`${m[1]}${m[2]}`) : null;
+      return bytes ? new Response(new Uint8Array(bytes), { status: 200, headers: { "content-type": "image/png" } }) : new Response(null, { status: 404 });
+    }),
+  );
+  return setFrameStorageForTests({ origin: BUCKET });
+}
 
 const W = RENDER_PRESETS.default.width;
 const H = RENDER_PRESETS.default.height;
@@ -84,7 +114,18 @@ function differing(a: Raw, b: Raw, x0: number, x1: number, tol = 0, y0 = 0, y1 =
 const leftOf = (a: Raw, b: Raw, tol = 0) => differing(a, b, 0, SEAM - GUARD, tol);
 const rightOf = (a: Raw, b: Raw, tol = 0) => differing(a, b, SEAM + GUARD, W, tol);
 
-describe("Dragon Wing two-colour split — bake", () => {
+describe.skipIf(!AVAILABLE)("Dragon Wing two-colour split — bake (set FRAMES_BUILD_DIR if skipped)", () => {
+  let restoreBucket: () => void = () => {};
+  beforeAll(() => {
+    resetFrameAssetCacheForTests();
+    restoreBucket = serveBucket();
+  });
+  afterAll(() => {
+    restoreBucket();
+    vi.unstubAllGlobals();
+    resetFrameAssetCacheForTests();
+  });
+
   it.each<[string, ColorIdentity[], ColorIdentity, ColorIdentity]>([
     // Bar (e002bc65) is stored black-first; the printed order is W then B.
     ["WB (stored black, white)", ["black", "white"], "white", "black"],
@@ -176,7 +217,7 @@ describe("Dragon Wing two-colour split — bake", () => {
   }, 120_000);
 });
 
-describe("Dragon Wing two-colour split — preload", () => {
+describe.skipIf(!AVAILABLE)("Dragon Wing two-colour split — preload", () => {
   const ORIGIN = "https://bucket.example/frames";
   let restore: () => void = () => {};
   afterEach(() => {
@@ -189,7 +230,7 @@ describe("Dragon Wing two-colour split — preload", () => {
     // Pretend the two masters are bucket objects: getFrameDataUrl then throws
     // for any master renderCardImage did not preload.
     resetFrameAssetCacheForTests();
-    const bytes = (c: string) => readFileSync(join(process.cwd(), `public/frames/tarkirdragon/${c}.png`));
+    const bytes = (c: string) => local(`tarkirdragon/${c}.png`)!;
     const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
     const files = { w: bytes("w"), b: bytes("b") };
     const manifest: FrameManifest = {

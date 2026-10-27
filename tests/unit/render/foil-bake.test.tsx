@@ -173,8 +173,9 @@ describe("foil finish — real bakes", () => {
 
   it("gives a separate plate box (plateRect) its sheen too", async () => {
     const mod = await import("@/lib/render/card-image");
-    const [regular, foil] = [await bakeWith(mod, card("tarkirdragon", "regular")), await bakeWith(mod, card("tarkirdragon", "foil"))];
-    const plate = getFrameProfile("tarkirdragon").pt!.plateRect!;
+    // (a git plate: tarkirdraconic — tarkirdragon left git with TODO 4.11)
+    const [regular, foil] = [await bakeWith(mod, card("tarkirdraconic", "regular")), await bakeWith(mod, card("tarkirdraconic", "foil"))];
+    const plate = getFrameProfile("tarkirdraconic").pt!.plateRect!;
     expect(meanDelta(regular, foil, box(plate, 0.5))).toBeGreaterThan(2);
   }, 60_000);
 

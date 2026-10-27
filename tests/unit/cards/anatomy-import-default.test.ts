@@ -161,6 +161,15 @@ describe("imports = printing-only (owner round 17, 2026-09-30)", () => {
         crownedShowcases += 1;
         continue;
       }
+      // …and the MUL Tarkir dragon wings (MUL #1 / #60 and their twins, TODO
+      // 4.11): the pack's spikes, which its frame draws.
+      if (/^mul-(1|60|131|190)z?$/.test(key)) {
+        expect(legendary, key).toBe(true);
+        expect(patch.printed_crown, key).toBe(true);
+        if (frameAnatomyOf(template).crown) expect(ai.crown, key).toBe(true);
+        crownedShowcases += 1;
+        continue;
+      }
       if (/^thb-2(5[89]|6[0-8])$/.test(key)) {
         expect(legendary, key).toBe(true);
         expect(template, key).toBe("nyx");

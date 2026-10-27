@@ -7,6 +7,7 @@ import type { CardPreviewData } from "@/components/cards/card-preview";
 import type { FrameTemplate } from "@/types/card";
 import { bandTextStyle, footerInk, getFrameProfile, slotInk } from "@/lib/cards/template-layout";
 import { setFrameStorageForTests, type FrameManifest } from "@/lib/frames/frame-url";
+import manifestJson from "@/lib/frames/frame-manifest.json";
 import { resetFrameAssetCacheForTests } from "@/lib/render/card-frames";
 import { renderCardImage, RENDER_PRESETS, type RenderPreset } from "@/lib/render/card-image";
 import { serveStandInSymbols, type StandInFrames } from "@/tests/stubs/stand-in-frames";
@@ -953,20 +954,21 @@ describe("Alpha artifact master — the bake preloads it", () => {
   }, 60_000);
 });
 
-describe("Dragon Wing P/T plates (v25)", () => {
-  it("ships a 271 × 149 plate for every colour, drawn exactly at its crop box", async () => {
+describe("Dragon Wing P/T plates (v25; Card Conjurer's since TODO 4.11, layout v67)", () => {
+  it("publishes the pack's plate for every colour (274 × 150; the pack's white one 273), drawn at its ptBounds", () => {
+    const files = (manifestJson as { files: Record<string, { width: number; height: number }> }).files;
     for (const c of ["w", "u", "b", "r", "g", "c", "m"]) {
-      const meta = await sharp(`public/frames/tarkirdragon/pt/${c}.png`).metadata();
-      expect([meta.width, meta.height], c).toEqual([271, 149]);
-      const webp = await sharp(`public/frames/tarkirdragon/pt/${c}.webp`).metadata();
-      expect([webp.width, webp.height], `${c}.webp`).toEqual([271, 149]);
+      for (const ext of ["png", "webp"]) {
+        const entry = files[`tarkirdragon/pt/${c}.${ext}`];
+        expect(entry, `${c}.${ext}`).toBeDefined();
+        expect([entry.width, entry.height], `${c}.${ext}`).toEqual([c === "w" ? 273 : 274, 150]);
+      }
     }
-    // scripts/build-showcase-frames.mjs crops MSE's plate at 1156,1850 on the
-    // 1500 × 2100 card.
+    // The pack's ptBounds: 1155 / 1850, 274 × 150 on the 1500 × 2100 card.
     const r = getFrameProfile("tarkirdragon").pt!.plateRect!;
-    expect((r.leftPct / 100) * 1500).toBeCloseTo(1156, 0);
-    expect((r.topPct / 100) * 2100).toBeCloseTo(1850, 0);
-    expect((r.widthPct / 100) * 1500).toBeCloseTo(271, 0);
-    expect((r.heightPct / 100) * 2100).toBeCloseTo(149, 0);
+    expect((r.leftPct / 100) * 1500).toBeCloseTo(1155, 6);
+    expect((r.topPct / 100) * 2100).toBeCloseTo(1850, 6);
+    expect((r.widthPct / 100) * 1500).toBeCloseTo(274, 6);
+    expect((r.heightPct / 100) * 2100).toBeCloseTo(150, 6);
   });
 });

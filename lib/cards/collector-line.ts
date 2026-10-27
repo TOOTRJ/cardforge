@@ -125,6 +125,10 @@ export const COLLECTOR_TEMPLATES = [
   // …and the ring (TODO 4.11, Card Conjurer's 'Ring'): its black bottom
   // border sets both lines where M15's slot does on LTR #302–331.
   "lotr",
+  // …and the MUL Tarkir showcase (TODO 4.11, Card Conjurer's 'Tarkir'): its
+  // black bottom border sets both lines where the ZNE Expeditions do
+  // (EXPEDITION_ZNR_COLLECTOR) on MUL #1, #60, #131 and #190.
+  "tarkirdragon",
 ] as const;
 
 export type CollectorLetter = "T" | "E" | "L" | "C" | "U" | "R" | "M";

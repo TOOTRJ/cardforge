@@ -127,6 +127,9 @@ describe("the main box on every template", () => {
         "expeditionland", "expeditionlandbfz",
         // …and the ring (layout v65): M15's box and margins too.
         "lotr",
+        // …and the MUL Tarkir dragon wings (layout v67): M15's margins, its
+        // box ending on the pack's shorter one.
+        "tarkirdragon",
       ].sort(),
     );
     for (const t of withPrintMargins) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 4, y: 0 });

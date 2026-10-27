@@ -101,6 +101,8 @@ describe("the switch values", () => {
       "expeditionlandbfz",
       // …and the ring (TODO 4.11): M15's slot on its black bottom border.
       "lotr",
+      // …and the MUL Tarkir dragon wings (TODO 4.11): the ZNE rows.
+      "tarkirdragon",
     ]);
   });
 });
