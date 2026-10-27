@@ -615,6 +615,18 @@ jobs:
     if: ${{ !cancelled() && needs.changes.outputs.heavy != 'false' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    env:
+      # The CLI's own default registry. supabase/setup-cli@v1 pins every CLI
+      # below 2.108 to GHCR unless this is set, and GHCR's shared throttle
+      # ("toomanyrequests … allowed: 44000/minute") failed both start
+      # attempts on 2026-10-27 (PR #611) and on PR #604 — the CLI pulls from
+      # ONE registry. The pull step below falls back across all three.
+      SUPABASE_INTERNAL_IMAGE_REGISTRY: public.ecr.aws
+      # The services the e2e suite never touches: the dashboard and its
+      # Postgres API (studio, postgres-meta), image transforms, functions,
+      # logs and the pooler. ONE list for the pull step and `supabase start`
+      # (tests/unit/devops/supabase-images.test.ts).
+      SUPABASE_START_EXCLUDE: studio,postgres-meta,imgproxy,edge-runtime,logflare,vector,supavisor
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -627,6 +639,17 @@ jobs:
         with:
           version: 2.84.2
 
+      # Every image the stack starts with, each from the first mirror that
+      # serves it (ECR Public, GHCR, Docker Hub — tagged with the name the CLI
+      # looks for), in up to four rounds 30 / 60 / 120 s apart; the CLI then
+      # finds them all present and pulls nothing. Never fails the job (not
+      # even at its time limit): what it could not fetch is left to
+      # `supabase start`, as before (scripts/lib/supabase-images.mjs).
+      - name: Pull the Supabase images
+        run: node scripts/ci-pull-supabase-images.mjs
+        timeout-minutes: 12
+        continue-on-error: true
+
       # Applies every migration + supabase/seed.sql + supabase/seeds/*.sql —
       # so this job also proves the whole chain builds from scratch.
       # Once more on a failed start: Docker on a fresh runner has failed to
@@ -638,7 +661,7 @@ jobs:
       - name: Start local Supabase
         run: |
           for attempt in 1 2; do
-            if supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor; then exit 0; fi
+            if supabase start -x "$SUPABASE_START_EXCLUDE"; then exit 0; fi
             if [ "$attempt" = 2 ]; then exit 1; fi
             echo "::warning::supabase start failed (attempt $attempt): stopping the stack and starting it once more"
             supabase stop --no-backup || echo "(nothing to stop)"
@@ -782,7 +805,13 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.heavy != 'false' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    # Measured 2026-10-27 (181 attempts, 2026-10-13 → 27): the compare step
+    # grows with the cases (≈ 3 min at 51, ≈ 7.3 min at 123), the rest of the
+    # job is ≈ 1 min — but apt behind `playwright install --with-deps` is
+    # sometimes slow (25.9 MB at 47.7 kB/s: 9–10 min), and 15 cancelled #604
+    # and #610 that way (worst job ≈ 18 min). 25 = that worst case plus room
+    # for the matrix to grow.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
