@@ -48,8 +48,9 @@
 //     tone — MSE's `card colored border`, border/<c>border.png through
 //     border_mask.png — whose flat colours equal the raw scan medians of the
 //     prints, colour for colour: w 64,49,56 · u 0,55,81 · r 84,0,9 · g
-//     18,66,7 · gold 64,37,49; b reads 19,12,13, the scans' black, so it is
-//     the border black; c (no print) MSE's 51,31,21). On both the region is
+//     18,66,7 · gold 64,37,49 · b 19,12,13 — the footer's own tone, not
+//     the scanner's: the same scans read 0,0,0 on BLB's black borders; c (no
+//     print) MSE's 51,31,21). On both the region is
 //     exactly MSE's mask (the woodland's differs by 56 px of rim).
 //
 // The painted layer is cut at the one card corner (lib/cards/card-corner.ts
@@ -94,7 +95,9 @@ export const BORDERED_PNG_ATTEMPTS = Object.freeze([
   PALETTE_PNG_OPTIONS,
   Object.freeze({ ...PALETTE_PNG_OPTIONS, quality: 90 }),
   Object.freeze({ ...PALETTE_PNG_OPTIONS, quality: 80 }),
-  Object.freeze({ compressionLevel: 9, palette: false }),
+  // Truecolour, lossless: adaptive filtering writes it ~30 % smaller
+  // (bloomburrow/r 2.9 MB → 2.0 MB, the same pixels).
+  Object.freeze({ compressionLevel: 9, palette: false, adaptiveFiltering: true }),
 ]);
 
 /** Pixels of the painted BORDER (coverage 1) the encode left short of
@@ -108,12 +111,18 @@ export function borderLost(cov, after) {
   return lost;
 }
 
-/** The woodland's footer per colour key (MSE's border/<c>border.png, the
- *  prints' raw medians; b the border black — see above). */
+/** The woodland's footer per colour key: MSE's border/<c>border.png, equal
+ *  to the prints' raw medians channel for channel. The black key's is the
+ *  footer's OWN tone, 19,12,13 — not the border black: every black woodland
+ *  print reads it at the footer's centre and both lower sides (BLB #309,
+ *  #311, #312, #314) while the same BLB scans read 0,0,0 on the regular
+ *  black-bordered cards (#1, #60, #86, #90, #100, #210), so it is print's
+ *  drawing, not the scanner's tint (the owner's "true black" is for a
+ *  border whose tint is the scanner's). */
 export const WOODLAND_FOOTER_RGB = Object.freeze({
   w: Object.freeze([64, 49, 56]),
   u: Object.freeze([0, 55, 81]),
-  b: BORDER_BLACK,
+  b: Object.freeze([19, 12, 13]),
   r: Object.freeze([84, 0, 9]),
   g: Object.freeze([18, 66, 7]),
   m: Object.freeze([64, 37, 49]),

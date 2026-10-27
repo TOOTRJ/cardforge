@@ -1964,9 +1964,11 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // master). #282–294 are the standard borderless run.
   // Exact once verified since TODO 4.11 (layout v69: the footer MSE paints
   // at render time painted under the masters — off BORDER_PENDING_TEMPLATES).
-  // A two-colour printing (the ten two-colour legends #327–330, #333–336)
-  // prints its two colours split down the frame, which the template doesn't
-  // draw yet: nearest (two-colour gap), on the gold master.
+  // A two-colour printing (the eight two-colour legends #327–330 and
+  // #333–336; #331 / #332 are three-colour, gold) prints its two colours
+  // split down the frame, which the template doesn't draw yet: nearest
+  // (two-colour gap), on the gold master. A double-faced printing is nearest
+  // too: the frame draws neither a face's triangle nor the back's P/T (dfc).
   ...withGaps(
     {
       key: "showcase/blb/woodland",
@@ -1974,7 +1976,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       match: { borders: ["borderless"], collectors: { blb: [[295, 336]] } },
       outcome: { status: "exact", template: "bloomburrow" },
     },
-    ["two-colour", "two-colour-hybrid"],
+    ["dfc", "two-colour", "two-colour-hybrid"],
     { "two-colour": "4.11", "two-colour-hybrid": "4.11" },
   ),
   {
@@ -2014,6 +2016,9 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // BORDER_PENDING_TEMPLATES). A two-colour printing (#348 Bumi R/G, #351
   // Katara W/U) prints its two colours split down the frame, which the
   // template doesn't draw yet: nearest (two-colour gap), on the gold master.
+  // A double-faced printing (#346 Aang, at the Crossroads and #347, transform)
+  // is nearest too: the frame draws neither the transform triangle nor the
+  // back's P/T (dfc).
   ...withGaps(
     {
       key: "showcase/tla/avatar",
@@ -2023,7 +2028,7 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       match: { borders: ["borderless"], collectors: { tla: [[336, 353]], tle: [[305, 317]] } },
       outcome: { status: "exact", template: "avatar" },
     },
-    ["two-colour", "two-colour-hybrid"],
+    ["dfc", "two-colour", "two-colour-hybrid"],
     { "two-colour": "4.11", "two-colour-hybrid": "4.11" },
   ),
   // Edge of Eternities' ten "viewport" Planets (EOE #277–285, #372–380) are

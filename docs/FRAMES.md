@@ -5157,10 +5157,13 @@ the same cards; sheet: the owner's design-backup
     the drawing. The Avatar's in the border black 0,0,0, cut at the one
     card corner. The woodland's in each colour's own tone
     (`WOODLAND_FOOTER_RGB`: MSE's `border/<c>border.png` — w 64,49,56 ·
-    u 0,55,81 · r 84,0,9 · g 18,66,7 · gold 64,37,49 — equal to the raw
-    scan medians channel for channel, so nothing is toned; black is the
-    border black, true black, where the scans read 19,12,13; `c` has no
-    print and keeps MSE's 51,31,21), kept to the corner (`keepCorners`):
+    u 0,55,81 · b 19,12,13 · r 84,0,9 · g 18,66,7 · gold 64,37,49 — equal
+    to the raw scan medians channel for channel, so nothing is toned; the
+    black footer's 19,12,13 is print's own tone, not the scanner's — every
+    black woodland print reads it (#309, #311, #312, #314) where the same
+    BLB scans read 0,0,0 on the regular black borders (#1, #60, #86, #90,
+    #100, #210), so it is never the border black; `c` has no print and
+    keeps MSE's 51,31,21), kept to the corner (`keepCorners`):
     the footer is the card's edge there, so a square output shows it.
   - Encoding: a palette PNG without dithering where that keeps every
     painted pixel opaque; the woodland's leafy band has too many colours
@@ -5226,8 +5229,10 @@ the same cards; sheet: the owner's design-backup
     631, 1882, 240 × 82), our oval at the prints' hologram (687–814 ×
     1921–1986 on the stamped printings: 684, 1920, 134 × 67), the arch a
     rules keep-out (631–871 × 1882–1952). Every printing of the run is
-    rare or mythic, so "auto" is M15's rule. The Avatar's stamp sits on the
-    black footer with no notch — none yet;
+    rare or mythic, so "auto" is M15's rule. Every Avatar print is
+    oval-stamped on its black footer, but `avatar` declares no `holoStamp`
+    slot yet, so an import's `printed_stamp: "oval"` draws nothing — a
+    follow-up addition (TODO 4.11);
   - the **collector line** on both (`M15_COLLECTOR`), on the footers.
 - **Flagged, not changed** (TODO 4.11):
   - the Avatar's bender medallion at the type bar's left end shows the

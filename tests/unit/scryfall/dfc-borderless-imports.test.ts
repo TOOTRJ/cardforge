@@ -112,6 +112,18 @@ describe("borderless double-faced imports (TODO 5.7)", () => {
     }
   });
 
+  it("the Avatar elemental's double-faced printings (TLA #346 / #347) are nearest on it: the frame draws neither the transform triangle nor the back's P/T", () => {
+    for (const key of ["tla-346", "tla-347"]) {
+      expect(frameMatchFromScryfall(printings[key]), key).toMatchObject({
+        signature: "showcase/tla/avatar+dfc",
+        status: "nearest",
+        template: "avatar",
+        blockedBy: "5.5",
+      });
+      expect(frameMatchFromScryfall(printings[key]).reason, key).toMatch(/double-faced marks/);
+    }
+  });
+
   it("the registry: exact on the borderless front; 'not yet verified' until both faces are ticked, landing on the bordered bodies", () => {
     const ecl = printings["ecl-290"];
     expect(frameMatchFromScryfall(ecl)).toMatchObject({ signature: "borderless/dfc", status: "exact", template: "m15borderlessdfcfront" });

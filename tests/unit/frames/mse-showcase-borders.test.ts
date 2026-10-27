@@ -55,10 +55,12 @@ describe("the MSE showcase borders as data", () => {
     expect(MSE_SHOWCASE_BORDERS.avatar).toMatchObject({ kind: "outside" });
     expect(MSE_SHOWCASE_BORDERS.bloomburrow).toMatchObject({ kind: "outside", keepCorners: true });
     for (const k of ["w", "u", "b", "r", "g", "c", "m"]) expect([...showcaseBorderRgb("avatar", k)!], k).toEqual([0, 0, 0]);
-    // The raw scan medians of BLB #295–336's footers (black is true black;
-    // `c` has no print and keeps MSE's own brown).
+    // The raw scan medians of BLB #295–336's footers. Black is the footer's
+    // own 19,12,13 (#309 / #311 / #312 / #314; the same scans read 0,0,0 on
+    // BLB's black-bordered cards), never the border black; `c` has no print
+    // and keeps MSE's own brown.
     expect(Object.keys(WOODLAND_FOOTER_RGB).sort()).toEqual(["b", "c", "g", "m", "r", "u", "w"]);
-    expect(showcaseBorderRgb("bloomburrow", "b")).toBe(BORDER_BLACK);
+    expect([...showcaseBorderRgb("bloomburrow", "b")!]).toEqual([19, 12, 13]);
     expect([...showcaseBorderRgb("bloomburrow", "g")!]).toEqual([18, 66, 7]);
     expect(() => showcaseBorderRgb("bloomburrow", "x")).toThrow(/no border colour/);
     expect(showcaseBorderRgb("m15", "w")).toBeNull();
