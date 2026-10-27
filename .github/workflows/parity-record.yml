@@ -40,7 +40,8 @@ jobs:
     name: Record parity baseline (linux)
     # The image CI's parity job runs on (ci.yml: never `ubuntu-latest`).
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    # ci.yml's parity job runs the same steps: its timeout and why.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
