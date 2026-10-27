@@ -77,7 +77,8 @@ describe("the square-corner table", () => {
     ]);
     const full = { topPct: 0, leftPct: 0, widthPct: 100, heightPct: 100 };
     expect(squareCornerFills("fullartland", full, { left: "w", right: "w" })).toEqual([null, null, null, null]);
-    expect(squareCornerFills("tarkirdragon", null, { left: "u", right: "r" })).toEqual([
+    // (A ring: avatar — tarkirdragon left the rings with TODO 4.11.)
+    expect(squareCornerFills("avatar", null, { left: "u", right: "r" })).toEqual([
       ROOT_BACKDROP_RGB,
       ROOT_BACKDROP_RGB,
       ROOT_BACKDROP_RGB,

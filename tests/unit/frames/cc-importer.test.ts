@@ -235,6 +235,8 @@ describe("Card Conjurer recipe", () => {
       "saga",
       "sagadfcfront",
       "split",
+      // The MUL Tarkir dragon wings (TODO 4.11, layout v67; tests/unit/frames/tarkir-dragon-importer.test.ts).
+      "tarkirdragon",
     ]);
     for (const [template, def] of Object.entries(templates)) {
       expect(FRAME_TEMPLATE_VALUES as readonly string[]).toContain(template);

@@ -124,6 +124,14 @@ describe("printed_crown", () => {
         crowned += 1;
         continue;
       }
+      // …and the MUL Tarkir dragon wings (MUL #1 / #60 and their twins, TODO
+      // 4.11): the pack's spikes over the title bar.
+      if (/^mul-(1|60|131|190)z?$/.test(key)) {
+        expect(mapScryfallToFormPatch(card).frame_match?.signature, key).toBe("showcase/mul/tarkir");
+        expect(got, key).toBe(true);
+        crowned += 1;
+        continue;
+      }
       if (/^thb-2(5[89]|6[0-8])$/.test(key)) {
         expect(mapScryfallToFormPatch(card).frame_match?.signature, key).toBe("showcase/thb/constellation");
         expect(got, key).toBe(true);
@@ -139,7 +147,8 @@ describe("printed_crown", () => {
       }
     }
     // Both kinds are in the fixtures (not a vacuous pass).
-    expect(legendary).toBeGreaterThanOrEqual(10);
+    // (9 since TODO 4.11: MUL #1 / #60 print the Tarkir pack's own crown.)
+    expect(legendary).toBeGreaterThanOrEqual(9);
     expect(nonlegendary).toBeGreaterThanOrEqual(10);
     expect(crowned).toBeGreaterThanOrEqual(1);
     // The rule itself: the constellation signature follows the printing —

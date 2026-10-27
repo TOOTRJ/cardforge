@@ -30,7 +30,8 @@ import { RENDER_PRESETS } from "@/lib/render/card-image";
 // master (opaque black, its corner cut transparent at 39 px — the pre-3.26
 // import — or at 64.5 px — 3.26's re-cut; the LANDSCAPE battle's 2100 × 1500
 // one cut at 64.5, as TODO 4.21b's importer cuts it) and clear masters for
-// the art-to-edge frames. modern, tarkirdragon (a ring) and bloomburrow
+// the art-to-edge frames. modern, tarkirghostfire (a ring; tarkirdragon until
+// its Card Conjurer masters, TODO 4.11) and bloomburrow
 // (design in its top corners) are git masters read from disk. The art is
 // one flat colour, so anything else where the art shows is something the
 // renderer drew.
@@ -129,7 +130,7 @@ afterAll(() => {
   vi.unstubAllGlobals();
 });
 
-type Template = "m15" | "m15borderless" | "fullartland" | "modern" | "battle" | "tarkirdragon" | "bloomburrow";
+type Template = "m15" | "m15borderless" | "fullartland" | "modern" | "battle" | "tarkirghostfire" | "bloomburrow";
 
 function card(template: Template): CardPreviewData {
   const base = {
@@ -269,7 +270,7 @@ describe("renderPng's corner option (lib/render/satori-png.ts)", () => {
   });
 });
 
-const TEMPLATES: Template[] = ["m15", "m15borderless", "fullartland", "modern", "battle", "tarkirdragon", "bloomburrow"];
+const TEMPLATES: Template[] = ["m15", "m15borderless", "fullartland", "modern", "battle", "tarkirghostfire", "bloomburrow"];
 const round = new Map<Template, Bake>();
 const square = new Map<Template, Bake>();
 
@@ -344,8 +345,8 @@ describe("the bake's corner (TODO 3.26)", () => {
       for (const [x, y] of mirrors(0, 0)) expect(near(full.at(x, y), ART)).toBe(true);
     });
 
-    it("a ring (tarkirdragon): the root's #101015 outside the arc — its see-through band's colour, no #000 cap", () => {
-      const b = square.get("tarkirdragon")!;
+    it("a ring (tarkirghostfire): the root's #101015 outside the arc — its see-through band's colour, no #000 cap", () => {
+      const b = square.get("tarkirghostfire")!;
       for (const [x, y] of [...mirrors(0, 0), ...mirrors(8, 2)]) expect(b.at(x, y).slice(0, 3), `${x},${y}`).toEqual([...ROOT]);
     });
 
@@ -385,7 +386,7 @@ describe("the bake's corner (TODO 3.26)", () => {
     // just past the corner box, whatever colour that band is (within a
     // scanned border's noise, ≤ 12 levels; #000 against a ring's #101015 is
     // 16–21).
-    it.each(["m15", "modern", "battle", "tarkirdragon"] as const)("%s: every filled corner matches the edge band beside it", (t) => {
+    it.each(["m15", "modern", "battle", "tarkirghostfire"] as const)("%s: every filled corner matches the edge band beside it", (t) => {
       const b = square.get(t)!;
       const past = Math.ceil(R) + 4;
       for (const [sx, sy] of [[1, 1], [-2, 1], [1, -2], [-2, -2]] as const) {
@@ -467,15 +468,15 @@ describe("the bake's corner (TODO 3.26)", () => {
       const before = await decode(fitted);
       expect(flat.at(375, 525)).toEqual(before.at(375, 525));
       // A ring's corners are its band's #101015.
-      const ring = await fitStoredRender(round.get("tarkirdragon")!.png, "default", false);
-      const ringFlat = await decode(await flattenStoredCorners(ring, squareCornerFillsOf(card("tarkirdragon"))));
+      const ring = await fitStoredRender(round.get("tarkirghostfire")!.png, "default", false);
+      const ringFlat = await decode(await flattenStoredCorners(ring, squareCornerFillsOf(card("tarkirghostfire"))));
       for (const [x, y] of mirrors(0, 0)) expect(ringFlat.at(x, y).slice(0, 3)).toEqual([...ROOT]);
     });
 
     // The free Square is the paid Square's twin: the stored round bake,
     // squared with the same fills, is the live square render pixel for pixel
     // (at the bake's own size — a free download is then downscaled 2×).
-    it.each(["m15", "modern", "battle", "tarkirdragon"] as const)("%s: the round bake squared = the live square render, at HD", async (t) => {
+    it.each(["m15", "modern", "battle", "tarkirghostfire"] as const)("%s: the round bake squared = the live square render, at HD", async (t) => {
       const [{ flattenStoredCorners }, { squareCornerFillsOf }] = await Promise.all([
         import("@/lib/render/stored-render"),
         import("@/lib/render/card-image"),

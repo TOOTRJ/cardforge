@@ -180,7 +180,7 @@ Where every frame came from, and the rules that follow from it:
 ## Card Conjurer frames
 
 TODO 4.3. `scripts/import-cc-frames.mjs` builds the Card Conjurer templates
-into `.frames-build/` — 62 templates today (`CC_TEMPLATES` in
+into `.frames-build/` — 63 templates today (`CC_TEMPLATES` in
 `scripts/lib/cc-frames.mjs`):
 
 - the Zendikar Rising hedron showcase (4.11, wave 1, layout v63): fullart —
@@ -230,6 +230,11 @@ into `.frames-build/` — 62 templates today (`CC_TEMPLATES` in
   its artifact frame, the top corners kept square), its plates, its crown
   band (`lotrcrown`) and its own triangle stamp notch per key
   (`lotrholostamp`) ([The Lord of the Rings ring](#the-lord-of-the-rings-ring-411-layout-v65));
+- the MUL Tarkir showcase (4.11, layout v67): tarkirdragon — the 'Tarkir'
+  pack's six colour frames whole at its native 1500 px (`c` its artifact
+  frame), the w and u wings toned onto print, its plates, its crown band
+  with the ten pairs (`tarkirdragoncrown`) and its oval stamp notch
+  (`tarkirdragonholostamp`) ([The MUL Tarkir showcase](#the-mul-tarkir-showcase-411-layout-v67));
 - the borderless M15 frame from 'Borderless (Alt)' (4.32): m15borderless and
   its artifact dress m15borderlessartifact, each with the pack's own P/T
   plates — and, since 4.6f (wave 2a), their pinline-split pair masters and
@@ -4819,6 +4824,162 @@ under public/frames and its rows in `build-showcase-frames.mjs` /
 **Not built** (follow-ups, in 4.11): the two-colour dress (the colour frames
 split by the pack's `lotr/maskRightHalf.png`).
 
+### The MUL Tarkir showcase (4.11, layout v67)
+
+`tarkirdragon` — "Dragon Wing", the Multiverse Legends Tarkir showcase: MUL
+#1 Anafenza, Kin-Tree Spirit (white) and #60 Taigam, Ojutai Master
+(white-blue), with their halo-foil twins #131 / #131z / #190 / #190z (six
+printings of two legendary creatures, every one rare, each stamped with the
+oval) — is Card Conjurer's 'Tarkir' pack ("Tarkir Sketch (MOM)",
+packTarkir.js, `img/frames/tarkir/`, 1500 × 2100 NATIVE: nothing is
+resampled) since TODO 4.11. The 646 px MSE drawing left git (its masters
+and plates under public/frames and its rows in `build-showcase-frames.mjs`
+/ `import-mse-profiles.mjs`); the pack goes to the frames bucket through
+`scripts/import-cc-frames.mjs` (`CC_TEMPLATES.tarkirdragon`, the `TARKIR`
+block of `scripts/lib/cc-frames.mjs`). A CORRECTION (layout v67, a sweep,
+`TARKIR_DRAGON_LAYOUT_VERSION`; taken after #609's v66): no colour was
+ticked.
+
+- **Masters.** The pack's six colour frames whole (w u b r g, m gold) and
+  `c` = the pack's 'Artifact Frame' (`tarkir/a.png`, silver-blue wings):
+  the pack's Colorless frame and plate are commented out of packTarkir.js
+  and absent from the tree, so a colourless card wears the frame Card
+  Conjurer itself offers it (no colourless card prints on the frame). The
+  pack draws ONE drawing whose dragon wings alone carry the colour — any
+  two masters differ only on x 47–442 and 1069–1457 px (the wings run down
+  the box's sides too, x 58–182 and 1329–1440) — with a real black
+  border all round, cut at the one card corner by the importer. 4.35's
+  #101015 ring is gone: `tarkirdragon` left `BORDER_PENDING_TEMPLATES`, the
+  edge contract's known failures, `SQUARE_CORNERS` (its corners are the
+  border black) and `NEVER_NORMALISE`.
+- **The window.** See-through (α < 16) on 144–1349 × 244–1157 px with a
+  soft shadow round it (α < 250 on 131–1365 × 232–1158) on every key — the
+  pack's artBounds (131 / 233 / 1235 × 926) less a pixel. The art slot
+  covers the shadow with the art-window check's 0.05 % to spare:
+  130–1367 × 231–1160 (`TARKIRDRAGON_ART_SLOT`).
+- **Two colours.** The frame keeps its split wings (`twoColorSplit` at
+  50 %W, owner 2026-09-25, MUL #60): the pack's own two-colour dress
+  ('Right Half' = `tarkir/maskFrame.png`, a ramp across 41.7–61.3 %W)
+  crosses identical pixels on every pair, so the hard seam reads the same.
+  The plate stays gold, as Taigam's.
+- **Plates.** The pack's plates (`tarkir/pt/<k>.png`, 274 × 150; the white
+  one 273 × 150, stretched to them) at its ptBounds (1155 / 1850, 274 ×
+  150); `c` the artifact's. They fill their image to every edge
+  (`lib/cards/plate-ink.ts`).
+- **The pack against its prints.** Measured 2026-10-22 on the six Scryfall
+  PNGs at 1500 × 2100 (≥ 250 ms apart; the halo-foil twins print another
+  ink and are read for geometry only) by the shift that best registers the
+  pack's drawing on the print, region by region: the top corners and the
+  title bar −5.7 / −6.4 px (print higher), the side wings at mid-height
+  −2.3, the type bar +0.5 / +1, the box bottom, plate and stamp +5 / +6;
+  horizontally +2 on the left, +7 on the right. Print is the same drawing
+  0.66 % taller and 0.4 % wider. No flat zone allows a re-cut (the wings
+  run unbroken from the title bar to the box), so the masters stay as
+  drawn and every slot is placed against ITS OWN bar, as the print places
+  it against the print's.
+- **Tones onto print** (`TARKIR_PRINT_TONES` through `TARKIR_SOURCE_TONES`):
+  ONE rule, the ring's (#607) — the raw median of the scans against the
+  pack's, over the same pixels (each print registered on the pack's
+  drawing; text and misregistered outlines, |Δluma| > 45, left out of
+  both), and a region off by ≥ 9 levels on a channel is toned. Per region
+  (pack → MUL #1 / #60):
+
+  | Region | Pack | Print | Off | |
+  |---|---|---|---|---|
+  | w wings | 207,178,138 | 202,180,152 | 14 | toned |
+  | u wings | 56,110,211 | 75,105,177 | 34 | toned |
+  | text box (dark ground) | 53,53,52 | 61,61,61 / 66,65,67 → 64,63,64 | 11 | toned |
+  | w plate's tan ends | 214,190,154 | 201,183,164 | 13 | toned |
+  | title bar's face | 197,197,197 | 198,198,201 | 4 | as drawn |
+  | type bar's face | 191,190,190 | 193,192,194 / 192,191,193 | 4 | as drawn |
+  | plate's face | 201,202,203 | 196,199,201 / 196,198,198 | 5 | as drawn |
+  | gold plate's ends | 188,146,56 | 187,151,51 | 5 | as drawn |
+
+  The wings are the pixels where the colour's file differs from the
+  artifact file (`diff`, `diffRegionPlane`: ≥ 40 levels, eroded 3 px for
+  the reading); the box its dark ground inside the box where the master is
+  the same as another (`box`, `boxRegionPlane`: the dragon wings that run
+  down its sides are not the box), on every master; the plate's ends its
+  coloured pixels (`chroma`, `chromaRegionPlane`); the stamp notch piece the
+  box's ground its arch carries round it, read at its place on the card
+  (else it composites ~8 levels darker than the toned box: a faint halo).
+  Toned as each FILE
+  loads, so the masters, crowns and plates drawn from it agree. b r g, the
+  gold wings and the artifact silver have no print: as drawn.
+- **Slots.** The pack's text layout is the accurate M15 pack's but for its
+  title and type bands, so the profile is M15's slots and the M15-era
+  family's sizes (`fit: "measured"` name and type line, joined WITH v67),
+  with:
+  - the name and the cost row 7 px above M15's band: print's baseline
+    174.5 / 173.8 px under a bar 6.4 px higher than the pack's — 181.5 on
+    the pack's (the pack's own title y is 104 against M15's 109.6);
+  - the name's pen 2 px left (print's capitals at 126–127 px, the bar 2 px
+    right of the pack's; Card Conjurer moves it 4);
+  - the CC M15 cost row (70 px discs, 78 pitch, its right end — print's
+    last disc ends 1392.5 px, 7 right of ours where the bar is 7 right
+    too), its lift cut by the band's move: `costDy` −1.7 px, the discs
+    centred on 155.1 (bake 155), print's 148.75 under its bar (+6.55 →
+    155.3); within 1 px of print against the bar after the change;
+  - the type band 4.5 px up — its line on print's baseline (1255.7 under a
+    bar 0.8 px lower: 1254.9 on the pack's, the CC M15 baseline 1259.5) and
+    the inline set symbol with it (print's centre 1237 → 1236.2; ours sat on
+    1240.5) — and its pen 5 px left (print's L at 130 on the pack's bar,
+    ours 135; Card Conjurer's 123 against M15's 128); black ink (print's
+    20,22,12), not M15's softer type ink;
+  - white rules (print's core 255,255,255) in M15's box but its foot: the
+    pack's box ends at 1926 px (M15's at 1949), and print's full box (MUL
+    #60, nine lines at the 64 px step) sets its last descender on 1912 px —
+    1906.5 on the pack's — so the box ends at 1911;
+  - the P/T where print sets it on the plate: the ink-weighted centre of
+    "2/2" and "3/4" at 1928.4 / 1928.0 px on the pack's plate (each print
+    registered on the plate's ends and top rim, +5.8 px; a first 4.4 px
+    lift left ours 2.5 px high) — the box 1.2 px above M15's, its top on a
+    whole px: the bake's centre 1928.5 / 1928.2, within 0.3 px. Across,
+    "2/2" sits within 1 px of print; "3/4"'s ink ~4 px left of print's,
+    most likely the digits' own ink asymmetry (the box is centred) — not
+    moved (TODO 4.11).
+  Flagged, not changed: MUL is not in the per-set symbol table, so its
+  glyph prints at the family's ink fit, ~0.73 of print's (a per-set row is
+  its own bump, and every MUL card on any frame would move); print's P/T
+  digits are ~7 % taller and lighter than the family's Beleren bold.
+- **Crown** (`TARKIRDRAGON_CROWN`, `tarkirdragoncrown/<key>.png`): the
+  pack's 'Legend Crown' — the row of dragon-wing spikes along the title
+  bar's top that all six printings carry — 1:1 at its bounds (180 / 51,
+  1145 × 65 px), a 1500 × 120 band over the master's own bar. Keys w u b r
+  g m, `c` (the artifact crown, as the master) and the ten pairs: the first
+  colour's crown left and the second's right across the pack's own ramp
+  (`TARKIR_PAIR_RAMP`, 41.7 → 61.3 %W), as MUL #60 prints its white-blue
+  crown — its centre bulb the two blended (159,144,152 on print);
+  `pairCrownOnGold`, the template drawing its two colours as halves. The
+  blend of tan and blue is near-neutral, so the bulb cannot reach print's
+  faint purple: accepted for now (TODO 4.11). An
+  ADDITION, opt-in per card; an import of the run names it
+  (`CROWNED_SHOWCASE_SIGNATURES`: both legends print it).
+- **Stamp** (`TARKIRDRAGON_HOLO_STAMP`, `tarkirdragonholostamp/<key>.png`):
+  every printing is rare and wears the OVAL, so "auto" is a rare or mythic
+  as on M15. The notch is the pack's one 'Holo Stamp' (`tarkir/stamp.png`,
+  225 × 101 at 638 / 1888, 1:1) — the box's bottom rim arched over a black
+  well — cut to a 227 × 110 box at 637, 1887 (1 px round the piece, 8 px
+  past its foot), the same piece for every key (the masters' rim under it
+  is the same pixels). The pack paints a capture of the hologram in the
+  well (685–815 × 1924.5–1987.5 px, measured on the piece); the cut is the
+  PRINTS' oval, 134 × 64 on the well's centre (683–817 × 1924–1988 px —
+  MUL #1 / #60 / #131 / #190: ink 132–133 px across the widest row, 62–65
+  rows down the centre; M15's 134 × 67 agrees in width only), covering the
+  capture: that oval + 2 px is cut clear and the 2 px round it painted
+  black (`blackoutAndCut`, now
+  for an oval too — `notchCutOf`), and the importer holds every lit pixel
+  of the well inside the cut and its ring (`capturePlane`) — no pixel of
+  the capture is published; our oval art covers the cut. The arch's rim is
+  a rules keep-out (638–863 × 1888–1928 px). An ADDITION.
+- **Collector line**: M15's slot on the ZNE Expeditions' rows
+  (`EXPEDITION_ZNR_COLLECTOR`: 1995.5 / 2033.5 px — MUL #1 / #60 / #131 /
+  #190 end both lines' ink on 1996 / 2034, the © line at 1402–1403). An
+  ADDITION.
+- **Imports.** `showcase/mul/tarkir` is exact on `tarkirdragon` once a
+  colour is verified (the border cap is gone); #60 / #190 Taigam is the
+  frame's own split wings, so no two-colour gap.
+
 ### The Zendikar Rising hedron showcase (4.11, layout v63)
 
 TODO 4.11, wave 1 (owner-approved 2026-10-22). `fullart` is the Zendikar
@@ -9230,8 +9391,8 @@ cost 3 px per pip and 1 per gap MORE room — a name never loses room. Inline
 rules pips are untouched (they follow the rules size, not the cost disc).
 NOT changed: flip and aftermath (their own prints' rows), the old frames,
 and the MSE-framed showcases (`nyx`, `fullart`, `expeditionland`,
-`tarkir…`; `lotr` and `lotrscroll` took the row with their Card Conjurer
-rebuilds, 4.11) — `COST_DISC_PCT` keeps 72.75 px for them; the showcases wait for
+`tarkirdraconic`, `tarkirghostfire`; `lotr`, `lotrscroll` and
+`tarkirdragon` took the row with their Card Conjurer rebuilds, 4.11) — `COST_DISC_PCT` keeps 72.75 px for them; the showcases wait for
 their Card Conjurer rebuild (TODO 4.11).
 
 **Rollout.** A CORRECTION: `"sweep"`, no badge, after the owner's before /
@@ -9246,7 +9407,7 @@ signs the row off on the before / after sheet, so every tick stays fresh.
 ## Text sizes on the M15-era family
 
 TODO 4.20, layout v32. The M15-era family (`M15_FAMILY_TEMPLATES` in
-`lib/cards/m15-family.ts`: 76 templates — the 23 of v32's frozen scope in
+`lib/cards/m15-family.ts`: 77 templates — the 23 of v32's frozen scope in
 `lib/cards/layout-version.ts`, plus the two text-box tokens and their two
 tall-box twins (4.55), the six
 full-art tokens, 4.33's two borderless planeswalkers, 4.34's borderless
@@ -9256,7 +9417,8 @@ joined WITH one — layout v43, on its Card Conjurer master, the family's
 one landscape member: its sizes are the constants through
 `displayPct(…, "landscape")`, the same px on the card — and the Lord of
 the Rings scroll, WITH one too: layout v62, on Card Conjurer's 'Scroll'
-pack, and the ring, layout v65, on its 'Ring' pack) prints its names,
+pack, the ring, layout v65, on its 'Ring' pack, and the MUL Tarkir
+dragon wings, layout v67, on its 'Tarkir' pack) prints its names,
 type lines, pips and set symbol at ONE set of sizes, Card Conjurer's, which
 match the prints. Split is M15-era too and stays OUT: a split half prints
 every line smaller than a regular card (the `SPLIT_*` constants, [The

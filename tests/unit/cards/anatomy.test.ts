@@ -311,6 +311,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       "fullart",
       // …and the ring (TODO 4.11): the pack's scalloped crown band, no pairs.
       "lotr",
+      // …and the MUL Tarkir dragon wings (TODO 4.11): the pack's spikes, its
+      // pairs split over the halves (pairCrownOnGold), no pair masters.
+      "tarkirdragon",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
       // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
@@ -354,8 +357,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // nor the Lord of the Rings scroll, TODO 4.11: its two-colour dress is
       // a follow-up; nor the Zendikar Rising hedron, TODO 4.11: its
       // two-colour card is the gold master; nor the LOTR ring, the scroll's
-      // way.)
-      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "lotrscroll" && t !== "fullart" && t !== "lotr" && t !== "battle" && t !== "sagadfcfront" && !NYX_TOKENS.includes(t)),
+      // way; nor the MUL Tarkir dragon wings, which split the frame itself,
+      // twoColorSplit.)
+      (CROWNED.includes(t) && t !== "m15textless" && t !== "m15textlessland" && t !== "m15dfclandfront" && t !== "m15station" && t !== "m15stationland" && t !== "extendedartstation" && t !== "m15borderlessstation" && t !== "nyx" && t !== "lotrscroll" && t !== "fullart" && t !== "lotr" && t !== "tarkirdragon" && t !== "battle" && t !== "sagadfcfront" && !NYX_TOKENS.includes(t)),
   );
 
   it("the crown and the pair masters on exactly the m15, m15artifact, m15land, borderless, extended-art and snow PROFILES entries — never a profile that spreads them", () => {
@@ -479,7 +483,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // …and the Zendikar Rising hedron showcase (TODO 4.11): the notch split off its own masters.
     "fullart",
     // …and the Lord of the Rings ring (4.11): the pack's own triangle piece.
-    "lotr"];
+    "lotr",
+    // …and the MUL Tarkir dragon wings (4.11): the pack's own oval piece.
+    "tarkirdragon"];
 
   it("the stamp's notch on exactly the seven wave-1 entries (4.9c): the M15 family's bordered frames and the walker, never a token, an emblem or a profile that spreads them", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).stamp)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => STAMP_TEMPLATES.includes(t)));

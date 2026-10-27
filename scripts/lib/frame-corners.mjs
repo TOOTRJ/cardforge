@@ -84,8 +84,10 @@ export const CORNER_NORMALISE_TEMPLATES = Object.freeze({
  *  same way: Card Conjurer's 'Scroll' masters, whose black border runs to
  *  the corner, cut at the one card corner by the importer — and lotr with
  *  4.11 too: Card Conjurer's 'Ring' masters, whose top corners are the
- *  frame field's, kept square by the importer.) */
-export const NEVER_NORMALISE = /^(bloomburrow|bloomanime|tarkir[a-z]*|avatar)$/;
+ *  frame field's, kept square by the importer — and tarkirdragon with 4.11:
+ *  Card Conjurer's 'Tarkir' masters, black to the corner, cut at the one
+ *  card corner by the importer.) */
+export const NEVER_NORMALISE = /^(bloomburrow|bloomanime|tarkirdraconic|tarkirghostfire|avatar)$/;
 
 /** The corner box the pass works in (and the gate confines the diff to). */
 export const NORMALISE_BOX = 96;

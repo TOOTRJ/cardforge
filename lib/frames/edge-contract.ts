@@ -267,7 +267,9 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
     left: { kind: "art", except: [[80, 100]] },
   },
   tarkirghostfire: ALL_BORDER, // the black run, TDM #399–408 (4.35)
-  tarkirdragon: ALL_BORDER, // MUL references are black-bordered (4.35)
+  // Card Conjurer's 'Tarkir' pack since TODO 4.11 (frames bucket): the printed
+  // black border all round, cut at the one card corner by the importer.
+  tarkirdragon: ALL_BORDER,
   tarkirdraconic: ALL_BORDER,
   // Card Conjurer's 'Ring' pack since TODO 4.11 (frames bucket): the frame
   // field runs to the top and side edges as every print has it (LTR #302–331,
@@ -367,10 +369,6 @@ export const EDGE_CONTRACT_KNOWN_FAILURES: Readonly<Record<string, { keys: "all"
   tarkirghostfire: {
     keys: "all",
     why: "transparent outer ring bakes #101015; the black run needs a real ring (4.35); corner: transparent at the arc",
-  },
-  tarkirdragon: {
-    keys: "all",
-    why: "the ring bakes #101015 (16,16,21), not the MUL print's black (4.35); corner: transparent at the arc",
   },
   // Found by this check on 2026-09-26 (the borderless research sampled the
   // side band at 20–80 % H only): transparent bottom band and lower sides.

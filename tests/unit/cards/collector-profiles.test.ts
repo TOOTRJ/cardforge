@@ -28,7 +28,9 @@ describe("the collector slot", () => {
     const walkers = ["m15pw", "m15borderlesspw", "m15borderlesspwtall"];
     // (…and the Expeditions', TODO 4.11 wave 1: M15's slot on each look's
     // printed rows — below.)
-    const own: Record<string, unknown> = { expeditionland: EXPEDITION_ZNR_COLLECTOR, expeditionlandbfz: EXPEDITION_BFZ_COLLECTOR };
+    // (…and the MUL Tarkir dragon wings', TODO 4.11: the ZNE rows, where
+    // MUL #1 / #60 / #131 / #190 set both lines.)
+    const own: Record<string, unknown> = { expeditionland: EXPEDITION_ZNR_COLLECTOR, expeditionlandbfz: EXPEDITION_BFZ_COLLECTOR, tarkirdragon: EXPEDITION_ZNR_COLLECTOR };
     for (const t of slotted) expect(getFrameProfile(t).collector, t).toBe(own[t] ?? (walkers.includes(t) ? M15PW_COLLECTOR : M15_COLLECTOR));
     expect(M15PW_COLLECTOR).toEqual({ ...M15_COLLECTOR, markLine: 2 });
     expect("markLine" in M15_COLLECTOR).toBe(false);
@@ -49,8 +51,10 @@ describe("the collector slot", () => {
     expect(source.match(SLOT)).toHaveLength(COLLECTOR_TEMPLATES.length);
     expect(source.match(/collector: M15PW_COLLECTOR/g)).toHaveLength(3);
     // The Expeditions' rows (TODO 4.11 wave 1): M15's slot on each look's
-    // printed rows — ZNE 2 px lower, EXP 6.5 px higher.
-    expect(source.match(/collector: EXPEDITION_(?:ZNR|BFZ)_COLLECTOR/g)).toHaveLength(2);
+    // printed rows — ZNE 2 px lower, EXP 6.5 px higher; the MUL Tarkir
+    // dragon wings on the ZNE rows (TODO 4.11).
+    expect(source.match(/collector: EXPEDITION_(?:ZNR|BFZ)_COLLECTOR/g)).toHaveLength(3);
+    expect(getFrameProfile("tarkirdragon").collector).toBe(EXPEDITION_ZNR_COLLECTOR);
     expect(getFrameProfile("expeditionland").collector).toEqual({
       ...M15_COLLECTOR,
       line1BaselinePct: (1995.5 / 2100) * 100,

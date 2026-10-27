@@ -506,10 +506,10 @@ const UNMODELLED_SUBTYPES = ["Room", "Class", "Case"] as const;
 /** The templates whose border isn't true yet, capped at `nearest` so
  *  verifying one can never make it exact:
  *   • a transparent outer ring plus an inset art slot that bakes a flat
- *     #101015 "border" (TODO 4.35): bloomanime, tarkirghostfire,
- *     tarkirdragon (battle left the list with TODO 4.21b and lotrscroll
- *     with TODO 4.11: their Card Conjurer masters have the printed black
- *     border);
+ *     #101015 "border" (TODO 4.35): bloomanime, tarkirghostfire
+ *     (battle left the list with TODO 4.21b, and lotrscroll and
+ *     tarkirdragon with TODO 4.11: their Card Conjurer masters have the
+ *     printed black border);
  *   • a transparent outer band at the bottom and lower sides, found by 7.7's
  *     edge contract (owner decision A8, 2026-09-29): avatar, bloomburrow,
  *     tarkirdraconic (lotr left with TODO 4.11: Card Conjurer's 'Ring'
@@ -521,7 +521,6 @@ const UNMODELLED_SUBTYPES = ["Room", "Class", "Case"] as const;
 export const BORDER_PENDING_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<FrameTemplate>([
   "bloomanime",
   "tarkirghostfire",
-  "tarkirdragon",
   "avatar",
   "bloomburrow",
   "tarkirdraconic",
@@ -2677,6 +2676,10 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       blockedBy: "4.30",
     },
   },
+  // Exact once verified since TODO 4.11 (Card Conjurer's 'Tarkir' masters
+  // have the printed black border: off BORDER_PENDING_TEMPLATES). Its one
+  // two-colour printing (#60 / #190 Taigam, W/U) is the frame's own split
+  // wings (FrameProfile.twoColorSplit), so no two-colour gap.
   {
     key: "showcase/mul/tarkir",
     exactLabel: "Multiverse Legends Tarkir showcase (Dragon Wing)",

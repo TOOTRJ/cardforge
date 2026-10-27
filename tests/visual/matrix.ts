@@ -714,6 +714,10 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // …and the ring's (TODO 4.11, layout v65): the scalloped title bar over
   // the pack's frame field, colours, gold and the land's brown.
   ["lotr", ["w", "u", "b", "r", "g", "c", "wub"]],
+  // …and the MUL Tarkir dragon wings' (TODO 4.11, layout v67): the spikes in
+  // each colour, the artifact's on a colourless card, gold, and a pair's
+  // split crown over the split wings (MUL #60 Taigam, W/U).
+  ["tarkirdragon", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
   ["m15ubartifact", ["c", "u"]],
   ["m15ubland", ["g", "c"]],
   ["m15land", ["g", "c", "wub"]],
@@ -1344,6 +1348,8 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   // creature on the artifact master and plate (no print has one).
   ["lotr", "creature", "r", "@wide", { power: "12", toughness: "12" }],
   ["lotr", "creature", "c", "@artifact", { supertype: "Artifact", subtypes: ["Golem"], power: "4", toughness: "4" }],
+  // TODO 4.11: the MUL Tarkir dragon wings' plate at its widest.
+  ["tarkirdragon", "creature", "r", "@wide", { power: "12", toughness: "12" }],
   [
     "m15artifact",
     "artifact",
@@ -2009,6 +2015,13 @@ export function visualCases(): VisualCase[] {
   add("lotr", "creature", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("lotr", "auto", { rarity: "mythic" }) });
   add("lotr", "artifact", "c", "long", { suffix: "@crown", row: { supertype: "Legendary", frame_style: { template: "lotr", finish: "regular", crown: true } } });
   add("lotr", "land", "c", "long", { suffix: "@crown", row: { supertype: "Legendary", frame_style: { template: "lotr", finish: "regular", crown: true } } });
+  // TODO 4.11: the MUL Tarkir dragon wings' OVAL notch — "auto" on a rare
+  // (every printing), none on a common, the two-colour card's (the split
+  // wings: the gold key's piece, `-m`), the HD bake.
+  add("tarkirdragon", "creature", "w", "long", { suffix: "@stamp", row: stampRow("tarkirdragon", "auto", { rarity: "rare" }) });
+  add("tarkirdragon", "creature", "g", "short", { suffix: "@stamp-auto-common", row: stampRow("tarkirdragon", "auto", { rarity: "common" }) });
+  add("tarkirdragon", "creature", "wu", "long", { suffix: "@stamp-m", row: stampRow("tarkirdragon", "auto", { rarity: "rare" }) });
+  add("tarkirdragon", "creature", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("tarkirdragon", "auto", { rarity: "mythic" }) });
   add("m15ub", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15ub"), cost: "{W/U}{W/U}" } });
   // TODO 4.9d: the borderless frames (new keys on templates whose stored
   // cards carry none: new cases, no bump) beyond the loops above — the
@@ -2442,6 +2455,8 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "fullart",
   // …and the ring's.
   "lotr",
+  // …and the MUL Tarkir dragon wings' oval.
+  "tarkirdragon",
 ];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's

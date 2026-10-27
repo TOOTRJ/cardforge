@@ -36,7 +36,8 @@ const green = (r: number, g: number, b: number) => Math.abs(r - 0x93) < 28 && Ma
 // (Alpha left this list with TODO 4.10c: its colour pips are the 1993
 // drawings — bucket images, not a font glyph on the disc this test reads;
 // tests/unit/render/alpha-1993-bake.test.tsx holds its pips.)
-const TEMPLATES = ["tarkirdraconic", "tarkirdragon"] as const;
+// (tarkirghostfire since TODO 4.11: tarkirdragon's masters left git for the bucket.)
+const TEMPLATES = ["tarkirdraconic", "tarkirghostfire"] as const;
 
 describe("inline pips centred on the capitals on real bakes (3.31)", () => {
   for (const template of TEMPLATES) {
