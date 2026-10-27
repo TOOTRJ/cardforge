@@ -1097,8 +1097,9 @@ export type FrameProfile = {
    *  frame (artFillsCard) — TODO 4.45, owner decision 2026-09-27. For a tall
    *  window whose master is see-through there, so the bare master read as a
    *  near-black tile on the tile's dark ground, although the art does not
-   *  fill the card: Anime, Ghostfire, the ZNR hedron (`fullart`), both M15
-   *  textless frames and Nyx. A hand-picked list, not a rule — M15
+   *  fill the card: Ghostfire, the ZNR hedron (`fullart`), both M15
+   *  textless frames and Nyx (Anime, the owner's sixth, is art-first since
+   *  its full bleed, TODO 4.11 / 4.35 layout v70). A hand-picked list, not a rule — M15
    *  planeswalker, the tokens and Expedition Land sit between these on both
    *  window size and tile brightness and keep their tiles. Picker-only:
    *  FrameThumb is its one reader; no card, preview, bake or finish reads
@@ -1318,10 +1319,11 @@ const FULL_ART_WINDOW_MIN_PCT = 85;
  *  basic inside its ring (a basic land's symbol slot, `basicSymbol`, on a
  *  window of FULL_ART_WINDOW_MIN_PCT or more each way — m15fullartland).
  *  The creator's frame tiles draw a sample art under these masters
- *  (FrameThumb); cards, previews and bakes never read it. Six other
- *  tall-window frames whose tiles read as near-black (Anime, Ghostfire, the
- *  ZNR hedron, the two textless frames, Nyx) are not art-first: their tiles
- *  opt in by name (FrameProfile.pickerSampleArt, owner 2026-09-27). */
+ *  (FrameThumb); cards, previews and bakes never read it. Five other
+ *  tall-window frames whose tiles read as near-black (Ghostfire, the ZNR
+ *  hedron, the two textless frames, Nyx) are not art-first: their tiles opt
+ *  in by name (FrameProfile.pickerSampleArt, owner 2026-09-27; Anime, the
+ *  sixth, is art-first since its full bleed, TODO 4.11 / 4.35 layout v70). */
 export function artFillsCard(profile: Pick<FrameProfile, "artSlot" | "basicSymbol">): boolean {
   if (artReachesCardEdge(profile)) return true;
   const a = profile.artSlot;
