@@ -79,9 +79,7 @@ describe("frameMasterKey — the one master rule", () => {
     // …and the Lord of the Rings scroll (TODO 4.11, layout v62): its `c` is
     // the pack's brown land frame, a colourless ARTIFACT paints its blue `a`.
     // …and the ring (layout v65), the same split.
-    // …and the Tarkir draconic (layout v68): its `c` is MSE's gold drawing
-    // (the run's colourless land), a colourless ARTIFACT paints MSE's steel `a`.
-    const DRESSED = new Set(["agclassic", "extendedart", "lotrscroll", "lotr", "tarkirdraconic", "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback", "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback"]);
+    const DRESSED = new Set(["agclassic", "extendedart", "lotrscroll", "lotr", "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15mdfcfront", "m15mdfcback", "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback"]);
     for (const t of FRAME_TEMPLATE_VALUES) {
       const profile = getFrameProfile(t);
       expect(Boolean(profile.artifactMasterKeys), t).toBe(DRESSED.has(t));

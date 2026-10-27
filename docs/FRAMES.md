@@ -5062,23 +5062,19 @@ bakes of the same cards; sheet: the owner's design-backup
 - **Draconic colourless.** MSE's own `c` is a BROWN drawing no print
   wears (its dragons 116,71,47 against the colourless prints' steel
   78,94,100 — 53 levels off; no tone carries a hue change across a
-  textured frame). The run prints two colourless dresses and MSE draws
-  both, so each is built from its own MSE file (`sourceKeys` in the
-  builder; raw scan medians against the file over the same pixels):
-  - a colourless ARTIFACT (#323 Boulderborn Dragon, #324 Dragonfire Blade,
-    #325 Mox Jasper — the `c` reference) paints MSE's steel `acard.png` as
-    the master `a` (`artifactMasterKeys` { c: "a" }): dragons 78,94,99
-    against print's 75,91,97, text box 248,238,230 on both, title bar 3
-    levels off;
-  - any other colourless card paints `c` = MSE's GOLD `mcard.png`: the
-    run's one colourless non-artifact, #326 Maelstrom of the Spirit Dragon
-    (a land), prints the gold frame — dragons 140,104,51 against 139,101,46,
-    paper and bars within 5.
-  Every region is within 9 levels, so nothing is toned and `c` needs no
-  cap. The plate follows the colour key and the only colourless card with
-  a P/T is an artifact (#323): `c`'s plate is the steel `a`'s. The stamp
-  notch follows the master drawn: `a` the steel rim, `c` the gold (#326 is
-  a stamped rare).
+  textured frame). Every colourless printing of the run is an ARTIFACT
+  (#323 Boulderborn Dragon, #324 Dragonfire Blade, #325 Mox Jasper — the
+  `c` reference) and wears MSE's STEEL drawing, so `c` is built from
+  `acard.png` (`sourceKeys` in the builder; raw scan medians against the
+  file over the same pixels: dragons 78,94,99 against print's 75,91,97,
+  text box 248,238,230 on both, title bar 3 levels off — nothing is
+  toned, `c` needs no cap), with the steel plate (`apt.png`) and the steel
+  stamp rim. A colourless non-artifact card has no print on the frame; it
+  takes the same steel `c`, plate and rim alike. #326 Maelstrom of the
+  Spirit Dragon is no colourless reference: a land that taps for any
+  colour prints GOLD, and the importer's land rule (`produced_mana`) reads
+  it as the gold `m` card it is — MSE's gold matches it (dragons
+  140,104,51 against 139,101,46).
 - **Ghostfire slots: its own, at the family's sizes.** Its bars are not
   M15's (the type bar at 51–57 %H), so the profile keeps its print-measured
   rects, with the family's name and type sizes (`fit: "measured"`, each

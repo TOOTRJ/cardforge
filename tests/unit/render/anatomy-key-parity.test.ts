@@ -239,9 +239,9 @@ describe("bake path = preview path", () => {
     // entries (owner Round 70).
     // …and the Lord of the Rings scroll's 8 keys (4.11, the pack's own pieces),
     // the Zendikar Rising hedron showcase's 7 (4.11), the LOTR ring's 8 and
-    // the MUL Tarkir dragon wings' 7, and the Tarkir draconic's 8 (4.11,
-    // MSE's own stamp per key, the steel artifact master's `a` with them).
-    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 8);
+    // the MUL Tarkir dragon wings' 7, and the Tarkir draconic's 7 (4.11,
+    // MSE's own stamp per key; `c` the steel rim).
+    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7);
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

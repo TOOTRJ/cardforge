@@ -70,24 +70,19 @@ const FRAMES = [
     // rim` (stamp/<c>stamp.png), both full-card canvases.
     stampNotch: { well: "stamp_border_mask.png", rim: "stamp/{c}stamp.png" },
     // The colourless dress as the run prints it (TODO 4.11, layout v68;
-    // raw scan medians against MSE's files over the same pixels): the
-    // colourless ARTIFACTS (TDM #323 Boulderborn Dragon, #324 Dragonfire
-    // Blade, #325 Mox Jasper) wear MSE's steel `a` drawing — its dragons
-    // 78,94,99 against print's 75,91,97, its paper and bars within 3 levels
-    // — written as the master `a` (the profile's artifactMasterKeys c → a);
-    // the run's one colourless non-artifact (#326 Maelstrom of the Spirit
-    // Dragon, a land) wears the GOLD frame — MSE's `m`: dragons 140,104,51
-    // against 139,101,46, paper and bars within 5 — written as `c`. MSE's own
-    // brown `c` (dragons 116,71,47, 53 levels off the steel) is no print's.
-    // The plate follows the colour key, and the only colourless card that
-    // prints a P/T is an artifact (#323): `c`'s plate is the steel `a`'s.
-    // The stamp notch follows the master drawn: `a` the steel rim, `c` the
-    // gold (#326 is a stamped rare).
-    keys: ["w", "u", "b", "r", "g", "c", "m", "a"],
+    // raw scan medians against MSE's files over the same pixels): every
+    // colourless printing of the run is an ARTIFACT (TDM #323 Boulderborn
+    // Dragon, #324 Dragonfire Blade, #325 Mox Jasper) and wears MSE's STEEL
+    // `a` drawing — its dragons 78,94,99 against print's 75,91,97, its paper
+    // and bars within 3 levels — so `c` is built from it, with the steel
+    // plate and the steel stamp rim. MSE's own brown `c` (dragons 116,71,47,
+    // 53 levels off the steel) is no print's. (#326 Maelstrom of the Spirit
+    // Dragon, a land that taps for any colour, prints the GOLD frame: the
+    // importer's land rule reads it as gold, the `m` master — not `c`.)
     sourceKeys: {
-      card: { c: "m", a: "a" },
-      plate: { c: "a", a: "a" },
-      stamp: { c: "m", a: "a" },
+      card: { c: "a" },
+      plate: { c: "a" },
+      stamp: { c: "a" },
     },
   },
   {

@@ -4700,12 +4700,11 @@ const TARKIRDRACONIC: FrameProfile = {
   label: "Draconic",
   ...CC_M15_COST,
   artSlot: TARKIRDRACONIC_ART_SLOT,
-  // A colourless ARTIFACT paints MSE's steel artifact drawing (`a`: TDM
-  // #323–325, within 3 levels of print); any other colourless card the gold
-  // one (`c`, built from MSE's `m`: the run's one colourless land, #326,
-  // prints gold) — scripts/build-showcase-frames.mjs `sourceKeys`. MSE's own
-  // brown `c` is no print's (53 levels off the steel).
-  artifactMasterKeys: { c: "a" },
+  // `c` is MSE's STEEL artifact drawing, not its brown colourless one: every
+  // colourless printing of the run is an artifact (TDM #323–325, within 3
+  // levels of print) — scripts/build-showcase-frames.mjs `sourceKeys`, the
+  // plate and the stamp rim with it. (#326, a land that taps for any colour,
+  // is a gold `m` card by the importer's land rule.)
   // The type line 2 px below the CC M15 baseline: MSE's type bar sits 2 px
   // lower than the Card Conjurer M15 master's (its outlines at 1185 / 1303
   // px — print's own, TDM #292–326 — against 1184 / 1301), and print sets
@@ -6115,9 +6114,7 @@ export const TARKIRDRACONIC_HOLO_STAMP: FrameOverlaySlot = {
   anatomy: "holoStamp",
   rect: { leftPct: (631 / 1500) * 100, topPct: (1895 / 2100) * 100, widthPct: (239 / 1500) * 100, heightPct: (65 / 2100) * 100 },
   assetPathTemplate: "/frames/tarkirdraconicholostamp/{key}.png",
-  // …and `a`, the steel artifact master's rim (a colourless artifact's
-  // overlay is keyed by its master); `c` is the gold rim (#326).
-  keys: ["w", "u", "b", "r", "g", "m", "c", "a"],
+  keys: ["w", "u", "b", "r", "g", "m", "c"],
   stamp: { shape: "oval", oval: TARKIRDRACONIC_HOLO_STAMP_OVAL, keepOut: TARKIRDRACONIC_HOLO_STAMP_KEEP_OUT },
 };
 
