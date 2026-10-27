@@ -40,7 +40,11 @@ describe("the square-corner table", () => {
   it("is border black by default, root on the rings, design on top of Bloomburrow / LOTR / Tarkir draconic", () => {
     expect(squareCornerKind("m15", "w", "tl")).toBe("border");
     expect(squareCornerKind("retro", "b", "br")).toBe("border");
-    for (const c of CORNER_NAMES) expect(squareCornerKind("tarkirghostfire", "r", c)).toBe("root");
+    for (const c of CORNER_NAMES) expect(squareCornerKind("avatar", "r", c)).toBe("root");
+    // The ghostfire left the rings with TODO 4.11 (layout v68): its painted
+    // ring runs black to every corner.
+    expect(SQUARE_CORNERS.tarkirghostfire).toBeUndefined();
+    for (const c of CORNER_NAMES) expect(squareCornerKind("tarkirghostfire", "r", c)).toBe("border");
     // The battle's corner is border black since TODO 4.21b: its Card
     // Conjurer master runs black to the corner (the MSE one was a
     // transparent ring, whose corner showed the root's #101015) — like the
@@ -52,9 +56,11 @@ describe("the square-corner table", () => {
         for (const c of CORNER_NAMES) expect(squareCornerKind(template, key, c), `${template}/${key} ${c}`).toBe("border");
       }
     }
-    for (const t of ["bloomburrow", "tarkirdraconic"]) {
-      expect(CORNER_NAMES.map((c) => squareCornerKind(t, "g", c))).toEqual(["frame", "frame", "root", "root"]);
-    }
+    expect(CORNER_NAMES.map((c) => squareCornerKind("bloomburrow", "g", c))).toEqual(["frame", "frame", "root", "root"]);
+    // The Tarkir draconic since TODO 4.11 (layout v68): its dragons' heads in
+    // the top corners, the border painted under its MSE masters black into
+    // the bottom ones.
+    expect(CORNER_NAMES.map((c) => squareCornerKind("tarkirdraconic", "g", c))).toEqual(["frame", "frame", "border", "border"]);
     // The LOTR ring since TODO 4.11: its Card Conjurer masters keep the frame
     // field in the top corners (square) and run the border black into the
     // bottom ones.

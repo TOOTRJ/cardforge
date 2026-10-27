@@ -676,13 +676,16 @@ describe("the general signatures (TODO 1.4)", () => {
     // Exact once verified since TODO 4.11 (its border is true now).
     ["ltr-482", "exact", "lotrscroll", undefined],
     ["ltr-602", "nearest", "lotrscroll", "saga"],
-    ["tdm-303", "nearest", "tarkirdraconic", undefined],
+    // The Tarkir: Dragonstorm showcases: exact once verified since TODO 4.11
+    // (layout v68: the border MSE paints at render time painted under their
+    // masters — off BORDER_PENDING_TEMPLATES).
+    ["tdm-303", "exact", "tarkirdraconic", undefined],
     ["tdm-320", "nearest", "tarkirdraconic", "adventure"],
     // The Ghostfire walkers (Ugin #399 / #409, Elspeth #401 / #411) print
     // the frame, but it draws no loyalty shield or ability rows: they land
     // on m15pw until the walker body exists (TODO 4.5a / 4.5b).
     ["tdm-399", "nearest", "tarkirghostfire", "m15pw"],
-    ["tdm-400", "nearest", "tarkirghostfire", undefined],
+    ["tdm-400", "exact", "tarkirghostfire", undefined],
     ["tdm-401", "nearest", "tarkirghostfire", "m15pw"],
     ["tdm-409", "nearest", "tarkirghostfire", "m15pw"],
     ["tdm-411", "nearest", "tarkirghostfire", "m15pw"],
@@ -805,17 +808,17 @@ describe("the general signatures (TODO 1.4)", () => {
     expect(frameMatchFromScryfall(printing("blb-343")).gaps).toBeUndefined();
   });
 
-  it("keeps the white ghostfire run nearest for its border (4.30), not only the ring (4.35)", () => {
+  it("keeps the white ghostfire run nearest for its border (4.30); the black run is exact since its ring is painted (4.11)", () => {
     expect(frameMatchFromScryfall(printing("tdm-409"))).toMatchObject({
       signature: "showcase/tdm/ghostfire/white",
+      status: "nearest",
       blockedBy: "4.30",
     });
     // The black run's creature (Ugin #399 is a planeswalker, which the kind
-    // check caps first — TODO 4.5a).
-    expect(frameMatchFromScryfall(printing("tdm-400"))).toMatchObject({
-      signature: "showcase/tdm/ghostfire",
-      blockedBy: "4.35",
-    });
+    // check caps first — TODO 4.5a): exact once verified, nothing blocking.
+    const black = frameMatchFromScryfall(printing("tdm-400"));
+    expect(black).toMatchObject({ signature: "showcase/tdm/ghostfire", status: "exact", template: "tarkirghostfire" });
+    expect(black.blockedBy).toBeUndefined();
   });
 
   it("says why a frame that can't dress the kind lands elsewhere", () => {

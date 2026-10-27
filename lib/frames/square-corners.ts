@@ -12,12 +12,13 @@ import type { CardCornerFills, CornerFill } from "@/lib/cards/card-corner";
 //              normalised, Alpha, nyx, adventure …). The default.
 //   "root"   — the card root's #101015: a master whose EDGE BAND is
 //              transparent at that corner, so the card's border there IS the
-//              root's backdrop — the rings (avatar, bloomanime,
-//              tarkirghostfire; lotrscroll and tarkirdragon left with TODO
-//              4.11, their Card Conjurer border black), the bottom
-//              corners of bloomburrow and tarkirdraconic (lotr's left with
-//              TODO 4.11: its Card Conjurer bottom is border black), and
-//              expeditionland b/g. A #000 cap in a #101015 band was a seam
+//              root's backdrop — the rings (avatar, bloomanime;
+//              lotrscroll and tarkirdragon left with TODO 4.11, their Card
+//              Conjurer border black, and tarkirghostfire with its painted
+//              ring, layout v68), the bottom corners of bloomburrow (lotr's
+//              and tarkirdraconic's left with TODO 4.11: a Card Conjurer
+//              bottom, and the border painted under the draconic's MSE
+//              masters, are border black), and expeditionland b/g. A #000 cap in a #101015 band was a seam
 //              (3.26 review).
 //   "frame"  — what the render drew stays: design that runs into the corner
 //              (Bloomburrow's pale top corners, the LOTR ring's frame field,
@@ -57,13 +58,15 @@ const DESIGN_TOP_ROOT_BOTTOM = { tl: "frame", tr: "frame", bl: "root", br: "root
 export const SQUARE_CORNERS: Readonly<Record<string, { kinds: Kinds; keys?: readonly string[] }>> = {
   avatar: { kinds: "root" },
   bloomanime: { kinds: "root" },
-  tarkirghostfire: { kinds: "root" },
   bloomburrow: { kinds: DESIGN_TOP_ROOT_BOTTOM },
   // Card Conjurer's 'Ring' pack since TODO 4.11: the frame field runs into
   // the top corners (the importer keeps them square); the bottom is the
   // border black, cut at the one card corner.
   lotr: { kinds: { tl: "frame", tr: "frame" } },
-  tarkirdraconic: { kinds: DESIGN_TOP_ROOT_BOTTOM },
+  // The Tarkir draconic since TODO 4.11 (layout v68): the dragons' heads
+  // run into the top corners (design); the bottom is the border black
+  // painted under the MSE masters, cut at the one card corner.
+  tarkirdraconic: { kinds: { tl: "frame", tr: "frame" } },
 };
 
 /** What `template`'s master `key` shows outside the arc at `corner` in a

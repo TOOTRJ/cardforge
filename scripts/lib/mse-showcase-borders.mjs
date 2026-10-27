@@ -1,0 +1,215 @@
+// ---------------------------------------------------------------------------
+// mse-showcase-borders.mjs — the printed border the MSE showcase masters
+// leave out (TODO 4.11 / 4.35, the MSE-only showcase step, layout v68).
+//
+// Magic Set Editor draws a showcase's border at RENDER time: the style's
+// `border color` layer, in the card's border colour, through a mask — so
+// the card PNGs it ships (and our upscales of them, scripts/build-showcase-
+// frames.mjs) are see-through where print has its black border, and the
+// bake showed the card root's #101015 there (7.7's edge contract, 4.35).
+// This module is that border as DATA, painted UNDER each master by the
+// builder: never over a pixel the drawing paints, the black itself the
+// border black the print-verified Card Conjurer M15 masters draw (0,0,0 —
+// owner 2026-10-22: Scryfall's PNGs read 19,12,12 on every black border,
+// the regular M15 printings' too, which is their scanning, not the frame).
+//
+// Two shapes:
+//   • "edge" — every see-through pixel (α < 250) joined to the card's
+//     outline through see-through pixels: the band the drawing leaves round
+//     itself. The art window is never joined to it (the builder throws if
+//     the flood reaches an art seed). Tarkir draconic: MSE's own
+//     `border_mask.png` is not a border mask (it marks the text box), and
+//     its drawing runs its dragons to the side edges — print's black is
+//     exactly the band below and beside them (TDM #292–326: the black border
+//     at the bottom and the lower sides, the dragons to the edge above).
+//   • "ring" — a black ring of fixed width round an art window, with a
+//     footer: Tarkir ghostfire's black run (TDM #399–408). The window's
+//     shape is MSE's `border_mask.png` (744 × 1039: window x 38–705, y
+//     39–931, inner corners r ≈ 11, the bottom corners chamfered 45° over
+//     ~38 px, black under the ribbon to the bottom edge); its three straight
+//     edges are PRINT'S (owner rule: match print) — the ring's inner edge by
+//     its half-level crossing on every bright-art row / column of #399–408,
+//     median: left 78.3 px, right 80.2, top 80.0 (MSE's scaled 76.6 / 76.6 /
+//     78.8 drew it 1–3 px narrow). Drawn as geometry (4 × 4 supersampled),
+//     not the 2.016× upscale of a 744 px mask, so its edge is clean at 2×.
+//
+// The builder writes these masters as a palette PNG WITHOUT dithering
+// (PALETTE_PNG_OPTIONS) and checks the decoded file: a dithered palette
+// maps a few opaque near-black pixels of the new border onto a dark
+// TRANSLUCENT entry (α 231–240 on the draconic sides — cheap for the
+// quantizer, which weighs dark colours premultiplied, and a 7.7 failure).
+//
+// The painted layer is cut at the one card corner (lib/cards/card-corner.ts
+// applyCardCornerMask) — the drawing's own pixels outside the arc are left
+// as drawn (draconic's dragon heads in the top corners: design, 3.26).
+// Pure; no I/O. Unit-tested in tests/unit/frames/mse-showcase-borders.test.ts.
+// ---------------------------------------------------------------------------
+import { applyCardCornerMask } from "../../lib/cards/card-corner.ts";
+
+/** The border black (lib/frames/square-corners.ts BORDER_BLACK_RGB). */
+export const BORDER_BLACK = Object.freeze([0, 0, 0]);
+/** "See-through" for the edge flood: every pixel short of opaque — the
+ *  drawing's anti-aliased rim and its faint specks at the edge join the
+ *  band, so the black goes under them (no light fringe, no α 0.98 speck
+ *  for the edge contract). */
+export const SEE_THROUGH_BELOW = 255;
+
+/** The ghostfire black run's art window at 1500 × 2100 (HD px): print's
+ *  ring (TDM #399–408, the inner edge's median: 78.3 / 80.2 / 80.0 px from
+ *  the left, right and top edges) on whole px, MSE's footer (its border
+ *  mask's y 931.99 of 1039, under the ribbon). */
+export const GHOSTFIRE_WINDOW = Object.freeze({
+  left: 78,
+  top: 80,
+  right: 1420,
+  bottom: 1884,
+  /** The inner corners at the top: MSE's r ≈ 11 of 744. */
+  topRadius: 22,
+  /** The bottom corners' 45° chamfer (MSE: 38 px of 744), under the
+   *  ribbon but for a sliver at its ends. */
+  bottomChamfer: 77,
+});
+
+/** The PNG encoder options for a bordered master (no dithering, see above). */
+export const PALETTE_PNG_OPTIONS = Object.freeze({ compressionLevel: 9, effort: 10, dither: 0 });
+
+/** Pixels of the painted BORDER (coverage 1) the encode left short of
+ *  opaque (α < 252, 0.99 — the edge contract's floor): must be none. (The
+ *  quantizer may still move a near-opaque rim pixel of the DRAWING a few
+ *  levels — α 240–251 on a handful of outline pixels, invisible over the
+ *  art; the border itself is held exactly.) */
+export function borderLost(cov, after) {
+  let lost = 0;
+  for (let p = 0; p < cov.length; p += 1) if (cov[p] >= 1 && after[p * 4 + 3] < 252) lost += 1;
+  return lost;
+}
+
+/** Per template: the border's shape and colour. */
+export const MSE_SHOWCASE_BORDERS = Object.freeze({
+  tarkirdraconic: Object.freeze({ kind: "edge", rgb: BORDER_BLACK }),
+  tarkirghostfire: Object.freeze({ kind: "ring", rgb: BORDER_BLACK, window: GHOSTFIRE_WINDOW }),
+});
+
+/** 1 inside the ghostfire-style window at the point (x, y), else 0. */
+function insideWindow(win, x, y) {
+  if (x < win.left || x > win.right || y < win.top || y > win.bottom) return false;
+  const r = win.topRadius;
+  if (y < win.top + r) {
+    const cx = x < win.left + r ? win.left + r : x > win.right - r ? win.right - r : x;
+    if (cx !== x && Math.hypot(x - cx, y - (win.top + r)) > r) return false;
+  }
+  // The bottom corners cut 45° from (left, bottom − c) to (left + c,
+  // bottom), and the mirror at the right.
+  const c = win.bottomChamfer;
+  if (y > win.bottom - c + (x - win.left)) return false;
+  if (y > win.bottom - c + (win.right - x)) return false;
+  return true;
+}
+
+/** The ring's coverage (0–1 per pixel): 1 − the window's coverage, 4 × 4
+ *  samples a pixel. */
+export function ringCoverage(win, width, height) {
+  const cov = new Float32Array(width * height);
+  const S = 4;
+  for (let y = 0; y < height; y += 1) {
+    const near = y < win.top - 1 || y > win.bottom + 1;
+    for (let x = 0; x < width; x += 1) {
+      if (near || x < win.left - 1 || x > win.right + 1) {
+        cov[y * width + x] = 1;
+        continue;
+      }
+      let inside = 0;
+      for (let sy = 0; sy < S; sy += 1) {
+        for (let sx = 0; sx < S; sx += 1) {
+          if (insideWindow(win, x + (sx + 0.5) / S, y + (sy + 0.5) / S)) inside += 1;
+        }
+      }
+      cov[y * width + x] = 1 - inside / (S * S);
+    }
+  }
+  return cov;
+}
+
+/** 4-connected flood over `open` pixels from every listed start. */
+function flood(open, width, height, starts) {
+  const seen = new Uint8Array(width * height);
+  const stack = [];
+  for (const p of starts) {
+    if (open(p) && !seen[p]) {
+      seen[p] = 1;
+      stack.push(p);
+    }
+  }
+  while (stack.length) {
+    const p = stack.pop();
+    const x = p % width;
+    const y = (p - x) / width;
+    const next = [x > 0 ? p - 1 : -1, x < width - 1 ? p + 1 : -1, y > 0 ? p - width : -1, y < height - 1 ? p + width : -1];
+    for (const q of next) {
+      if (q >= 0 && !seen[q] && open(q)) {
+        seen[q] = 1;
+        stack.push(q);
+      }
+    }
+  }
+  return seen;
+}
+
+/**
+ * The edge band's coverage: every see-through pixel joined to the card's
+ * outline. Throws when it reaches an art seed ([fx, fy] fractions of the
+ * card) — the window must never turn black.
+ */
+export function edgeCoverage(rgba, width, height, seeds) {
+  const open = (p) => rgba[p * 4 + 3] < SEE_THROUGH_BELOW;
+  const starts = [];
+  for (let x = 0; x < width; x += 1) starts.push(x, (height - 1) * width + x);
+  for (let y = 0; y < height; y += 1) starts.push(y * width, y * width + width - 1);
+  const seen = flood(open, width, height, starts);
+  for (const [fx, fy] of seeds) {
+    const p = Math.round(height * fy) * width + Math.round(width * fx);
+    if (seen[p]) throw new Error(`the edge band reaches the art seed ${fx},${fy}: the window would turn black`);
+  }
+  const cov = new Float32Array(width * height);
+  for (let p = 0; p < cov.length; p += 1) cov[p] = seen[p];
+  return cov;
+}
+
+/** The coverage cut at the one card corner (alpha only). */
+export function cutAtCardCorner(cov, width, height) {
+  const a = new Uint8Array(width * height * 4);
+  for (let p = 0; p < cov.length; p += 1) a[p * 4 + 3] = 255;
+  applyCardCornerMask(a, width, height);
+  const out = new Float32Array(cov.length);
+  for (let p = 0; p < cov.length; p += 1) out[p] = cov[p] * (a[p * 4 + 3] / 255);
+  return out;
+}
+
+/** Paint `rgb` at `cov` UNDER the drawing (in place, straight RGBA). */
+export function paintUnder(rgba, cov, rgb) {
+  let painted = 0;
+  for (let p = 0; p < cov.length; p += 1) {
+    const c = cov[p];
+    if (c <= 0) continue;
+    const o = p * 4;
+    const a = rgba[o + 3] / 255;
+    const outA = a + c * (1 - a);
+    if (outA <= 0) continue;
+    for (let k = 0; k < 3; k += 1) rgba[o + k] = Math.round((rgba[o + k] * a + rgb[k] * c * (1 - a)) / outA);
+    const before = rgba[o + 3];
+    rgba[o + 3] = Math.round(outA * 255);
+    if (rgba[o + 3] !== before) painted += 1;
+  }
+  return painted;
+}
+
+/** The border of `template` painted under its master (in place); its
+ *  coverage back (null: the template has none). */
+export function paintShowcaseBorder(template, rgba, width, height, seeds) {
+  const spec = MSE_SHOWCASE_BORDERS[template];
+  if (!spec) return null;
+  const raw = spec.kind === "ring" ? ringCoverage(spec.window, width, height) : edgeCoverage(rgba, width, height, seeds);
+  const cov = cutAtCardCorner(raw, width, height);
+  paintUnder(rgba, cov, spec.rgb);
+  return cov;
+}

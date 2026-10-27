@@ -178,8 +178,9 @@ describe("the notch and the resolved stamp", () => {
       // own since owner Round 70; the Lord of the Rings scroll, 4.11: the
       // pack's own triangle piece; the Zendikar Rising hedron, 4.11: the
       // notch split off its own masters; the LOTR ring, 4.11, the pack's own;
-      // the MUL Tarkir dragon wings, 4.11, the pack's own oval piece.)
-      ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15stationland", "extendedartstation", "m15borderlessstation", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlesspw", "m15borderlesspwtall", "m15snow", "m15devoid", "m15pw", "lotrscroll", "fullart", "lotr", "tarkirdragon"].includes(t)));
+      // the MUL Tarkir dragon wings, 4.11, the pack's own oval piece; the
+      // Tarkir draconic, 4.11, MSE's own stamp per key.)
+      ["m15", "m15land", "m15snowland", "m15artifact", "m15vehicle", "m15nyx", "m15station", "m15stationland", "extendedartstation", "m15borderlessstation", "m15ub", "m15ubartifact", "m15ubland", "m15borderless", "m15borderlessartifact", "m15borderlessland", "m15borderlesspw", "m15borderlesspwtall", "m15snow", "m15devoid", "m15pw", "lotrscroll", "fullart", "lotr", "tarkirdragon", "tarkirdraconic"].includes(t)));
     const keyOf = (template: string, colorKey: string, over: Record<string, unknown> = {}) =>
       resolveHoloStamp(getFrameProfile(template), { stamp: "oval" }, facts({ colorKey, colors: [colorKey === "c" ? "colorless" : "blue"], ...over }))?.notch.path ?? null;
     expect(keyOf("m15", "w")).toBe("/frames/m15holostamp/w.png");

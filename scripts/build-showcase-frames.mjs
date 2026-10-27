@@ -28,10 +28,25 @@
 // (lower z index) at `alpha` of its own opacity — Ghostfire's namebox /
 // typebox / textbox at `set_alpha(…, 60%)`, the style's default opacity.
 // Without them the frame is only card.png's outline (mean alpha ≈ 22).
+//
+// A family listed in MSE_SHOWCASE_BORDERS (scripts/lib/mse-showcase-
+// borders.mjs; TODO 4.11 / 4.35, layout v68) gets the border MSE paints at
+// render time and its PNGs leave out — painted UNDER the drawing in the
+// border black, cut at the one card corner: Tarkir draconic's band below
+// and beside its dragons, Tarkir ghostfire's black ring and footer.
+//
+// A family with `stampNotch` also gets the holofoil stamp's notch as MSE
+// draws it on a stamped card (TODO 4.11, an opt-in per card): the style's
+// `card stamp border` (the border colour through stamp_border_mask.png —
+// the black well) under its `card stamp rim` (stamp/<c>stamp.png — the text
+// box's rim arched over the well), on one full-card canvas upscaled like
+// the frame and cropped to its box into public/frames/<name>holostamp/
+// <c>.png — the profile's holoStamp rect is that box in percent.
 // ---------------------------------------------------------------------------
 import sharp from "sharp";
 import path from "node:path";
 import fs from "node:fs";
+import { MSE_SHOWCASE_BORDERS, PALETTE_PNG_OPTIONS, borderLost, paintShowcaseBorder } from "./lib/mse-showcase-borders.mjs";
 
 const PACK = "/Users/redjester/Projects/other/Full-Magic-Pack/data";
 const W = 1500;
@@ -44,7 +59,32 @@ const FRAMES = [
   { name: "avatar", style: "avatar-elemental", pat: "card/{c}.png", seeds: [[0.5, 0.24]] },
   { name: "bloomburrow", style: "bloomburrow-woodland", pat: "card/{c}card.png", seeds: [[0.5, 0.24]] },
   { name: "bloomanime", style: "bloomburrow-borderless-anime", pat: "card.png", seeds: [[0.5, 0.3]] },
-  { name: "tarkirdraconic", style: "tarkir-draconic", pat: "card/{c}card.png", seeds: [[0.5, 0.28]], plate: "pt/{c}pt.png" },
+  {
+    name: "tarkirdraconic",
+    style: "tarkir-draconic",
+    pat: "card/{c}card.png",
+    seeds: [[0.5, 0.28]],
+    plate: "pt/{c}pt.png",
+    // magic-m15-showcase-tarkir-draconic `style`: the `card stamp border`
+    // (border colour through stamp_border_mask.png) under the `card stamp
+    // rim` (stamp/<c>stamp.png), both full-card canvases.
+    stampNotch: { well: "stamp_border_mask.png", rim: "stamp/{c}stamp.png" },
+    // The colourless dress as the run prints it (TODO 4.11, layout v68;
+    // raw scan medians against MSE's files over the same pixels): every
+    // colourless printing of the run is an ARTIFACT (TDM #323 Boulderborn
+    // Dragon, #324 Dragonfire Blade, #325 Mox Jasper) and wears MSE's STEEL
+    // `a` drawing — its dragons 78,94,99 against print's 75,91,97, its paper
+    // and bars within 3 levels — so `c` is built from it, with the steel
+    // plate and the steel stamp rim. MSE's own brown `c` (dragons 116,71,47,
+    // 53 levels off the steel) is no print's. (#326 Maelstrom of the Spirit
+    // Dragon, a land that taps for any colour, prints the GOLD frame: the
+    // importer's land rule reads it as gold, the `m` master — not `c`.)
+    sourceKeys: {
+      card: { c: "a" },
+      plate: { c: "a" },
+      stamp: { c: "a" },
+    },
+  },
   {
     name: "tarkirghostfire",
     style: "tarkir-ghostfire",
@@ -58,10 +98,16 @@ const FRAMES = [
   },
 ];
 
+/** The MSE file key a master / plate / notch key is drawn from (`kind`
+ *  card | plate | stamp): its own unless the family maps it. */
+function sourceKey(frame, kind, color) {
+  return frame.sourceKeys?.[kind]?.[color] ?? color;
+}
+
 function srcFile(frame, color) {
   const base = path.join(PACK, `magic-m15-showcase-${frame.style}.mse-style`);
   if (frame.pat === "card.png") return path.join(base, "card.png");
-  return path.join(base, frame.pat.replace("{c}", color));
+  return path.join(base, frame.pat.replace("{c}", sourceKey(frame, "card", color)));
 }
 
 /** A full-card MSE layer upscaled to W×H as raw RGBA, alpha scaled by `alpha`. */
@@ -132,16 +178,75 @@ async function convert(frame, color) {
     }
   }
 
+  const bordered = Boolean(MSE_SHOWCASE_BORDERS[frame.name]);
+  let cov = null;
+  if (bordered) {
+    if (ch !== 4) throw new Error(`${frame.name}/${color}: expected RGBA`);
+    cov = paintShowcaseBorder(frame.name, data, W, H, frame.seeds);
+  }
+
   const out = path.join("public/frames", frame.name);
   fs.mkdirSync(out, { recursive: true });
+  const file = path.join(out, `${color}.png`);
   await sharp(data, { raw: { width: W, height: H, channels: ch } })
-    .png({ compressionLevel: 9, effort: 10 })
-    .toFile(path.join(out, `${color}.png`));
+    .png(bordered ? PALETTE_PNG_OPTIONS : { compressionLevel: 9, effort: 10 })
+    .toFile(file);
+  if (bordered) {
+    const { data: written } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const lost = borderLost(cov, written);
+    if (lost) throw new Error(`${file}: the palette encode left ${lost} pixels of the border see-through`);
+  }
   return cut;
 }
 
+/** The stamp notch: the black well (the border colour through the well
+ *  mask) under the rim piece, on one W×H canvas, cropped to its alpha box
+ *  (α > 8) into public/frames/<name>holostamp/<c>.png. */
+async function convertStampNotch(frame, color) {
+  const base = path.join(PACK, `magic-m15-showcase-${frame.style}.mse-style`);
+  const { data: well } = await sharp(path.join(base, frame.stampNotch.well))
+    .resize(W, H, { fit: "fill" })
+    .greyscale()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const rim = await layer(path.join(base, frame.stampNotch.rim.replace("{c}", sourceKey(frame, "stamp", color))));
+  const data = Buffer.alloc(W * H * 4);
+  for (let p = 0; p < W * H; p += 1) data[p * 4 + 3] = well[p];
+  // The rim OVER the well (straight alpha).
+  for (let p = 0; p < W * H; p += 1) {
+    const o = p * 4;
+    const a = rim[o + 3] / 255;
+    const b = data[o + 3] / 255;
+    const outA = a + b * (1 - a);
+    if (outA <= 0) continue;
+    for (let k = 0; k < 3; k += 1) data[o + k] = Math.round((rim[o + k] * a + data[o + k] * b * (1 - a)) / outA);
+    data[o + 3] = Math.round(outA * 255);
+  }
+  let x0 = W;
+  let y0 = H;
+  let x1 = -1;
+  let y1 = -1;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (data[(y * W + x) * 4 + 3] > 8) {
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+  }
+  const out = path.join("public/frames", `${frame.name}holostamp`);
+  fs.mkdirSync(out, { recursive: true });
+  await sharp(data, { raw: { width: W, height: H, channels: 4 } })
+    .extract({ left: x0, top: y0, width: x1 - x0 + 1, height: y1 - y0 + 1 })
+    .png({ compressionLevel: 9, effort: 10 })
+    .toFile(path.join(out, `${color}.png`));
+  return `${x0},${y0} ${x1 - x0 + 1}x${y1 - y0 + 1}`;
+}
+
 async function convertPlate(frame, color) {
-  const src = path.join(PACK, `magic-m15-showcase-${frame.style}.mse-style`, frame.plate.replace("{c}", color));
+  const src = path.join(PACK, `magic-m15-showcase-${frame.style}.mse-style`, frame.plate.replace("{c}", sourceKey(frame, "plate", color)));
   const { data, info } = await sharp(src)
     .resize(W, H, { fit: "fill" })
     .ensureAlpha()
@@ -178,14 +283,20 @@ if (only && !FRAMES.some((f) => f.name === only)) {
 }
 for (const frame of FRAMES.filter((f) => !only || f.name === only)) {
   let total = 0;
-  for (const c of COLORS) total += await convert(frame, c);
+  const keys = frame.keys ?? COLORS;
+  for (const c of keys) total += await convert(frame, c);
   if (frame.plate) {
     const boxes = new Set();
-    for (const c of COLORS) boxes.add(await convertPlate(frame, c));
+    for (const c of keys) boxes.add(await convertPlate(frame, c));
     console.log(`${frame.name}: P/T plates cropped at ${[...boxes].join(" | ")}`);
   }
+  if (frame.stampNotch) {
+    const boxes = new Set();
+    for (const c of keys) boxes.add(await convertStampNotch(frame, c));
+    console.log(`${frame.name}: stamp notches cropped at ${[...boxes].join(" | ")}`);
+  }
   console.log(
-    `${frame.name}: cut ~${((total / 7 / (W * H)) * 100).toFixed(1)}% avg ← ${frame.style}`,
+    `${frame.name}: cut ~${((total / keys.length / (W * H)) * 100).toFixed(1)}% avg ← ${frame.style}`,
   );
 }
 console.log("done");

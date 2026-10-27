@@ -167,7 +167,10 @@ describe("bake path = preview path", () => {
                             : template === "tarkirdragon"
                               ? // …and the MUL Tarkir dragon wings' oval piece.
                                 "tarkirdragonholostamp"
-                              : "m15holostamp"
+                              : template === "tarkirdraconic"
+                                ? // …and the Tarkir draconic's own MSE stamp (4.11).
+                                  "tarkirdraconicholostamp"
+                                : "m15holostamp"
               : template === "fullart"
                 ? // The Zendikar Rising hedron showcase's crown band (4.11).
                   "fullartcrown"
@@ -236,8 +239,9 @@ describe("bake path = preview path", () => {
     // entries (owner Round 70).
     // …and the Lord of the Rings scroll's 8 keys (4.11, the pack's own pieces),
     // the Zendikar Rising hedron showcase's 7 (4.11), the LOTR ring's 8 and
-    // the MUL Tarkir dragon wings' 7.
-    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7);
+    // the MUL Tarkir dragon wings' 7, and the Tarkir draconic's 7 (4.11,
+    // MSE's own stamp per key; `c` the steel rim).
+    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7);
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

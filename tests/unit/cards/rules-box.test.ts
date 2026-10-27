@@ -130,6 +130,9 @@ describe("the main box on every template", () => {
         // …and the MUL Tarkir dragon wings (layout v67): M15's margins, its
         // box ending on the pack's shorter one.
         "tarkirdragon",
+        // …and the Tarkir draconic (layout v68): M15's box and margins on its
+        // MSE parchment (TDM #292–326 start their lines at 133 px, ours 133).
+        "tarkirdraconic",
       ].sort(),
     );
     for (const t of withPrintMargins) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 4, y: 0 });

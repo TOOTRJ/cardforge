@@ -485,7 +485,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // …and the Lord of the Rings ring (4.11): the pack's own triangle piece.
     "lotr",
     // …and the MUL Tarkir dragon wings (4.11): the pack's own oval piece.
-    "tarkirdragon"];
+    "tarkirdragon",
+    // …and the Tarkir draconic (4.11): MSE's own stamp per key.
+    "tarkirdraconic"];
 
   it("the stamp's notch on exactly the seven wave-1 entries (4.9c): the M15 family's bordered frames and the walker, never a token, an emblem or a profile that spreads them", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).stamp)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => STAMP_TEMPLATES.includes(t)));

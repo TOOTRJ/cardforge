@@ -506,24 +506,24 @@ const UNMODELLED_SUBTYPES = ["Room", "Class", "Case"] as const;
 /** The templates whose border isn't true yet, capped at `nearest` so
  *  verifying one can never make it exact:
  *   • a transparent outer ring plus an inset art slot that bakes a flat
- *     #101015 "border" (TODO 4.35): bloomanime, tarkirghostfire
- *     (battle left the list with TODO 4.21b, and lotrscroll and
- *     tarkirdragon with TODO 4.11: their Card Conjurer masters have the
- *     printed black border);
+ *     #101015 "border" (TODO 4.35): bloomanime (battle left the list with
+ *     TODO 4.21b, and lotrscroll and tarkirdragon with TODO 4.11: their Card
+ *     Conjurer masters have the printed black border — and tarkirghostfire
+ *     with 4.11's layout v68: the ring MSE paints at render time is painted
+ *     under its masters);
  *   • a transparent outer band at the bottom and lower sides, found by 7.7's
- *     edge contract (owner decision A8, 2026-09-29): avatar, bloomburrow,
- *     tarkirdraconic (lotr left with TODO 4.11: Card Conjurer's 'Ring'
- *     masters are opaque to every edge — the frame field's design edges and
- *     the black border's shoulders).
+ *     edge contract (owner decision A8, 2026-09-29): avatar, bloomburrow
+ *     (lotr left with TODO 4.11: Card Conjurer's 'Ring' masters are opaque
+ *     to every edge — the frame field's design edges and the black border's
+ *     shoulders; and tarkirdraconic with v68, its border painted the same
+ *     way).
  *  Each is a known failure in lib/frames/edge-contract.ts; a test holds the
  *  two lists together, so fixing a master (and striking it from the known
  *  failures) lifts its cap here too. */
 export const BORDER_PENDING_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<FrameTemplate>([
   "bloomanime",
-  "tarkirghostfire",
   "avatar",
   "bloomburrow",
-  "tarkirdraconic",
 ]);
 
 /** Single colour masters whose border isn't true yet (owner decision A8).

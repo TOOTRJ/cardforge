@@ -103,6 +103,10 @@ describe("the switch values", () => {
       "lotr",
       // …and the MUL Tarkir dragon wings (TODO 4.11): the ZNE rows.
       "tarkirdragon",
+      // …and the Tarkir: Dragonstorm showcases (TODO 4.11, layout v68):
+      // M15's slot on the black footer their masters now paint.
+      "tarkirdraconic",
+      "tarkirghostfire",
     ]);
   });
 });

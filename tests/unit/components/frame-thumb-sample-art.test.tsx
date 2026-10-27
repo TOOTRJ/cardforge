@@ -220,7 +220,8 @@ describe("FrameThumb — art-first and opted-in tiles draw a sample art under th
   it("the six's windows are their own profiles' (not a full-card rect)", () => {
     const expected: Record<string, [number, number]> = {
       bloomanime: [93, 92],
-      tarkirghostfire: [93, 92],
+      // Inside its painted ring since TODO 4.11 (layout v68).
+      tarkirghostfire: [(1344 / 1500) * 100, (1806 / 2100) * 100],
       // Layout v35 (4.17b): nyx's and fullart's art run under the whole text
       // box (fullart's out past its ring's rim too).
       // …and since TODO 4.11 (layout v63) fullart's is Card Conjurer's art

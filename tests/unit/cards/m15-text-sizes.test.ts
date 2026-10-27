@@ -93,7 +93,9 @@ describe("one M15-era display size (layout v32)", () => {
     // …and TODO 4.11's Lord of the Rings scroll (with its own bump, v62).
     // …and TODO 4.11's Lord of the Rings ring (with its own bump, v65).
     // …and TODO 4.11's MUL Tarkir dragon wings (with its own bump, v67).
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(77);
+    // …and TODO 4.11's Tarkir: Dragonstorm draconic and ghostfire (with
+    // their own bump, v68).
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(79);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -174,12 +176,15 @@ describe("one M15-era display size (layout v32)", () => {
       // with its Card Conjurer rebuild, v63; the LOTR ring the CC M15 row
       // with its own, v65; the Theros constellation its prints' 70 px disc
       // with its text correction, v66; the MUL Tarkir dragon wings the CC M15
-      // row with their own, v67.)
+      // row with their own, v67; the Tarkir: Dragonstorm pair the 70 px disc
+      // with theirs, v68.)
       const disc =
         COST_ROW_PRINT_TEMPLATES.includes(t) ||
         t === "lotrscroll" ||
         t === "lotr" ||
         t === "tarkirdragon" ||
+        t === "tarkirdraconic" ||
+        t === "tarkirghostfire" ||
         ZNR_HEDRON_TEMPLATES.includes(t) ||
         NYX_GEOMETRY_TEMPLATES.includes(t)
           ? CC_M15_COST_DISC_PCT
@@ -401,6 +406,14 @@ describe("baselines (TextSlot.dy)", () => {
     // the pack's own bars — the name and the type band move with their
     // RECTS (7 / 4.5 px up), the dys are M15's name and the CC type line.
     ["tarkirdragon", base.title, cc],
+    // The Tarkir draconic (layout v68): M15's slots on its MSE master — the
+    // name M15's, the type line on the CC baseline + 2 px (MSE's type bar 2 px
+    // lower than the CC M15 master's; print's 1263).
+    ["tarkirdraconic", base.title, cc + 2 / 1500],
+    // The Tarkir ghostfire (layout v68): its own bars at the family's sizes —
+    // each band's baseline kept from its old print-measured size (0.0535 /
+    // 0.0445), the type line 2 px up onto TDM #399–408's 1158.
+    ["tarkirghostfire", kept(0.0535, TITLE_SIZE_PCT), kept(0.0445, TYPE_SIZE_PCT) - 2 / 1500],
     // The Theros constellation (TODO 4.11, layout v66): MSE-framed, its name
     // 2 px up onto THB #258–268's baseline; its type line rides the band,
     // whose RECT moves 10 px down (the text's dy is M15's).
@@ -630,8 +643,6 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
     avatar: "18b37fde1037dfccc0041e515a4f80246a9cbe0ed3e3277ca9a88014394a703a",
     bloomburrow: "736ecedbf0f59adbf31506777ef976bf18ce0b5ff549696201cefb1aa1250bfd",
     bloomanime: "86e5e9d3da194ee1ccfbe5e0654e1401024f303c54a0a912dee5e792d206705f",
-    tarkirdraconic: "50b8b1038a077ea11b977b57e330f17ba97cef36ff660f9bca457784f4b04ecc",
-    tarkirghostfire: "06c8b3c2433722bd026f6858eddb845b737d1b122aa5cb24cb73a9a8cdc4ddac",
   };
 
   // Layout v33 (TODO 3.29) gave every profile's rules box a named HD-px
@@ -686,7 +697,8 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
     // tests/unit/cards/alpha-1993-profile.test.ts).
     // (The Lord of the Rings scroll joined the family with its Card Conjurer
     // re-source, layout v62 / TODO 4.11: off this list — and the ring with
-    // its own, layout v65, and the MUL Tarkir dragon wings with theirs, v67.)
+    // its own, layout v65, and the MUL Tarkir dragon wings with theirs, v67,
+    // and the Tarkir: Dragonstorm draconic and ghostfire with theirs, v68.)
     const REBUILT = new Set<string>(["split", "retro", "retroland", "modern", "modernland", "agclassic", "alphaland"]);
     const outside = FRAME_TEMPLATE_VALUES.filter((t) => !FAMILY.has(t) && !REBUILT.has(t));
     expect([...outside].sort()).toEqual(Object.keys(V31_DIGESTS).sort());

@@ -6331,19 +6331,19 @@
     }
   },
   "tarkirghostfire": {
-    "note": "Ghostfire = TDM white-border halofoil run (#409–418), foil-only prints.",
+    "note": "Ghostfire = the TDM black-bordered run (#399–408; TODO 4.11 / 4.35: the white halo-foil run #409–418 is 4.30's), foil-only prints.",
     "colors": {
       "w": [
         {
           "name": "Clarion Conqueror",
           "set": "tdm",
-          "scryfallId": "d5eada03-eaca-4091-8fa0-f8e996a402ad",
+          "scryfallId": "5aa73d25-c887-487a-ba77-0d4ca992f106",
           "tier": 2
         },
         {
           "name": "Elspeth, Storm Slayer",
           "set": "tdm",
-          "scryfallId": "89b98fd0-e2e5-4533-af2b-5230af2c88bd",
+          "scryfallId": "f421da3b-b88d-4e9f-865b-61120bff917a",
           "tier": 2
         }
       ],
@@ -6353,13 +6353,13 @@
         {
           "name": "Dracogenesis",
           "set": "tdm",
-          "scryfallId": "38b6d099-e31f-45b5-b78a-72a4b38d60f0",
+          "scryfallId": "737d2ab6-bb45-432c-9ce2-e9ecb513ee4d",
           "tier": 2
         },
         {
           "name": "Sarkhan, Dragon Ascendant",
           "set": "tdm",
-          "scryfallId": "a267ced0-34af-483c-ba42-517f3f7e22dc",
+          "scryfallId": "e3be50dc-3735-47a6-9af3-e8d8e425b5b2",
           "tier": 2
         }
       ],
@@ -6367,7 +6367,7 @@
         {
           "name": "Craterhoof Behemoth",
           "set": "tdm",
-          "scryfallId": "c13f37b1-48ff-45b5-8625-d089073ca90b",
+          "scryfallId": "0e172790-7ab4-4dea-9439-e3cedd3e5cab",
           "tier": 2
         }
       ],
@@ -6375,7 +6375,7 @@
         {
           "name": "Ugin, Eye of the Storms",
           "set": "tdm",
-          "scryfallId": "2e7cb37b-3ab5-42d0-860a-0c0760924850",
+          "scryfallId": "43085bc6-4d16-4a78-af31-b10cea602fc8",
           "tier": 2
         }
       ],
@@ -6383,13 +6383,13 @@
         {
           "name": "Skirmish Rhino",
           "set": "tdm",
-          "scryfallId": "5346269a-aa11-4a93-9fbc-109421afe579",
+          "scryfallId": "0eaca731-0886-4617-b012-451a5ba768db",
           "tier": 2
         },
         {
           "name": "All-Out Assault",
           "set": "tdm",
-          "scryfallId": "37821af8-a873-497a-82cc-51095f1eed37",
+          "scryfallId": "42c0f348-2435-4c62-9bf7-c1efded1fca0",
           "tier": 2
         }
       ]

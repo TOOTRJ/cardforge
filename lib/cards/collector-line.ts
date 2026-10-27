@@ -129,6 +129,12 @@ export const COLLECTOR_TEMPLATES = [
   // black bottom border sets both lines where the ZNE Expeditions do
   // (EXPEDITION_ZNR_COLLECTOR) on MUL #1, #60, #131 and #190.
   "tarkirdragon",
+  // …and the Tarkir: Dragonstorm showcases (TODO 4.11, their MSE masters
+  // with the black footer painted, layout v68): TDM #292–326 and #399–408
+  // set both lines on M15's rows (line 1 at 1990–1991 px, line 2 at 2029 —
+  // the regular TDM printings the same, by the same reading).
+  "tarkirdraconic",
+  "tarkirghostfire",
 ] as const;
 
 export type CollectorLetter = "T" | "E" | "L" | "C" | "U" | "R" | "M";
