@@ -133,6 +133,9 @@ describe("the main box on every template", () => {
         // …and the Tarkir draconic (layout v68): M15's box and margins on its
         // MSE parchment (TDM #292–326 start their lines at 133 px, ours 133).
         "tarkirdraconic",
+        // …and the Avatar elemental and Bloomburrow woodland showcases
+        // (layout v69): M15's box and margins on their MSE text boxes.
+        "avatar", "bloomburrow",
       ].sort(),
     );
     for (const t of withPrintMargins) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 4, y: 0 });

@@ -555,7 +555,7 @@ describe("C1 — no chooser when the only gap is a detail no frame draws (owner 
     expect(onlyUndrawnDetailsMissing({ ...base, gaps: ["crown", "vehicle"] }, "b")).toBe(false);
     expect(onlyUndrawnDetailsMissing({ ...base, gaps: ["nyx", "crown"] }, "b")).toBe(false);
     // A frame whose border isn't true yet is a second gap (4.35 / A8).
-    expect(onlyUndrawnDetailsMissing({ ...base, template: "avatar" }, "w")).toBe(false);
+    expect(onlyUndrawnDetailsMissing({ ...base, template: "bloomanime" }, "g")).toBe(false);
     // (The MUL Tarkir dragon wings' border is true since TODO 4.11: their
     // Card Conjurer masters.)
     expect(onlyUndrawnDetailsMissing({ ...base, template: "tarkirdragon" }, "w")).toBe(true);

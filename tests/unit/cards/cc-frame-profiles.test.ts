@@ -139,8 +139,11 @@ describe("Card Conjurer frame profiles", () => {
     // layout v66): 12 px up, whole at 750 and HD. The Tarkir draconic takes
     // the CC M15 row whole (TODO 4.11, layout v68: its MSE title bar is
     // print's, which sets the row where the regular TDM printings set
-    // theirs).
-    const OWN_LIFT: Record<string, number> = { agclassic: 1 / 1500, alphaland: 1 / 1500, nyx: -12 / 1500, tarkirdraconic: getFrameProfile("m15").costDy! };
+    // theirs). So do the Avatar elemental and Bloomburrow woodland
+    // showcases (TODO 4.11, layout v69: print's rows sit within the CC M15
+    // row's known offsets).
+    const CC_ROW = getFrameProfile("m15").costDy!;
+    const OWN_LIFT: Record<string, number> = { agclassic: 1 / 1500, alphaland: 1 / 1500, nyx: -12 / 1500, tarkirdraconic: CC_ROW, avatar: CC_ROW, bloomburrow: CC_ROW };
     for (const template of FRAME_TEMPLATE_VALUES) {
       if (ccTemplates.has(template)) continue;
       expect(getFrameProfile(template).costDy, template).toBe(OWN_LIFT[template]);

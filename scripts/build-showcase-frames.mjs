@@ -46,7 +46,7 @@
 import sharp from "sharp";
 import path from "node:path";
 import fs from "node:fs";
-import { MSE_SHOWCASE_BORDERS, PALETTE_PNG_OPTIONS, borderLost, paintShowcaseBorder } from "./lib/mse-showcase-borders.mjs";
+import { BORDERED_PNG_ATTEMPTS, MSE_SHOWCASE_BORDERS, borderLost, paintShowcaseBorder, showcaseBorderRgb } from "./lib/mse-showcase-borders.mjs";
 
 const PACK = "/Users/redjester/Projects/other/Full-Magic-Pack/data";
 const W = 1500;
@@ -56,8 +56,42 @@ const COLORS = ["w", "u", "b", "r", "g", "c", "m"];
 
 // pat: "{c}" → file is card/<c>card.png; "{c}." → card/<c>.png; "single" → card.png
 const FRAMES = [
-  { name: "avatar", style: "avatar-elemental", pat: "card/{c}.png", seeds: [[0.5, 0.24]] },
-  { name: "bloomburrow", style: "bloomburrow-woodland", pat: "card/{c}card.png", seeds: [[0.5, 0.24]] },
+  {
+    name: "avatar",
+    style: "avatar-elemental",
+    pat: "card/{c}.png",
+    seeds: [[0.5, 0.24]],
+    // magic-m15-showcase-avatar-elemental `style` (TODO 4.11, layout v69):
+    // the ornate title bar is the `crown` layer (z 190, crown/<c>.png),
+    // drawn UNDER the card (z 200) — and every printing wears it, legendary
+    // or not (TLA #336–353, TLE #305–317; MSE's `noncrown` plain bar has no
+    // print), so it is part of every master. The border (z 150, through
+    // border_borderless_mask.png: the black footer) is painted under both by
+    // MSE_SHOWCASE_BORDERS.
+    underlays: { files: ["crown/{c}.png"], alpha: 1 },
+    plate: "pt/{c}.png",
+    // Every colourless printing of the run is an ARTIFACT (TLE #315 Arcane
+    // Signet, #316 Sol Ring, #317 Swiftfoot Boots) and wears MSE's silver
+    // `a` drawing (its frame 136,152,160 against print's 136,153,160); MSE's
+    // own `c` is brown (138,98,30), no print's. So `c` is built from `a` —
+    // frame, title bar and plate alike.
+    sourceKeys: { card: { c: "a" }, underlay: { c: "a" }, plate: { c: "a" } },
+  },
+  {
+    name: "bloomburrow",
+    style: "bloomburrow-woodland",
+    pat: "card/{c}card.png",
+    seeds: [[0.5, 0.24]],
+    // magic-m15-showcase-bloomburrow-woodland `style` (TODO 4.11, layout
+    // v69): the footer in the colour's own tone is MSE's `card colored
+    // border` (MSE_SHOWCASE_BORDERS), the legendary crown its `crown` layer
+    // (z 800, crown/<c>crown.png, over the card: an overlay band), the
+    // stamp its `card stamp rim` (stamp/<c>stamp.png) over the coloured well
+    // (`card stamp colored border` through border_stamp_mask.png).
+    plate: "pt/{c}pt.png",
+    crown: "crown/{c}crown.png",
+    stampNotch: { well: "border_stamp_mask.png", rim: "stamp/{c}stamp.png" },
+  },
   { name: "bloomanime", style: "bloomburrow-borderless-anime", pat: "card.png", seeds: [[0.5, 0.3]] },
   {
     name: "tarkirdraconic",
@@ -128,7 +162,7 @@ async function frameLayers(frame, color) {
   const base = path.join(PACK, `magic-m15-showcase-${frame.style}.mse-style`);
   const raw = { width: W, height: H, channels: 4 };
   const under = [];
-  for (const f of frame.underlays.files) under.push(await layer(path.join(base, f), frame.underlays.alpha));
+  for (const f of frame.underlays.files) under.push(await layer(path.join(base, f.replace("{c}", sourceKey(frame, "underlay", color))), frame.underlays.alpha));
   return sharp({ create: { ...raw, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
     .composite([...under, card].map((input) => ({ input, raw })))
     .raw()
@@ -182,19 +216,31 @@ async function convert(frame, color) {
   let cov = null;
   if (bordered) {
     if (ch !== 4) throw new Error(`${frame.name}/${color}: expected RGBA`);
-    cov = paintShowcaseBorder(frame.name, data, W, H, frame.seeds);
+    cov = paintShowcaseBorder(frame.name, data, W, H, frame.seeds, color);
   }
 
   const out = path.join("public/frames", frame.name);
   fs.mkdirSync(out, { recursive: true });
   const file = path.join(out, `${color}.png`);
-  await sharp(data, { raw: { width: W, height: H, channels: ch } })
-    .png(bordered ? PALETTE_PNG_OPTIONS : { compressionLevel: 9, effort: 10 })
-    .toFile(file);
-  if (bordered) {
-    const { data: written } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-    const lost = borderLost(cov, written);
-    if (lost) throw new Error(`${file}: the palette encode left ${lost} pixels of the border see-through`);
+  if (!bordered) {
+    await sharp(data, { raw: { width: W, height: H, channels: ch } }).png({ compressionLevel: 9, effort: 10 }).toFile(file);
+  } else {
+    // The first encoding whose decoded border is whole (BORDERED_PNG_ATTEMPTS).
+    let done = false;
+    for (const [i, opts] of BORDERED_PNG_ATTEMPTS.entries()) {
+      const buf = await sharp(data, { raw: { width: W, height: H, channels: ch } }).png(opts).toBuffer();
+      const { data: written } = await sharp(buf).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      const lost = borderLost(cov, written);
+      if (lost) {
+        console.log(`${file}: encoding ${i} left ${lost} border pixels see-through — next`);
+        continue;
+      }
+      fs.writeFileSync(file, buf);
+      if (i > 0) console.log(`${file}: written with encoding ${i}`);
+      done = true;
+      break;
+    }
+    if (!done) throw new Error(`${file}: no encoding kept the border whole`);
   }
   return cut;
 }
@@ -210,8 +256,16 @@ async function convertStampNotch(frame, color) {
     .raw()
     .toBuffer({ resolveWithObject: true });
   const rim = await layer(path.join(base, frame.stampNotch.rim.replace("{c}", sourceKey(frame, "stamp", color))));
+  // The well in the border's own colour (black, or the woodland's coloured
+  // footer: MSE's `colored border` under the rim).
+  const rgb = showcaseBorderRgb(frame.name, color) ?? [0, 0, 0];
   const data = Buffer.alloc(W * H * 4);
-  for (let p = 0; p < W * H; p += 1) data[p * 4 + 3] = well[p];
+  for (let p = 0; p < W * H; p += 1) {
+    data[p * 4] = rgb[0];
+    data[p * 4 + 1] = rgb[1];
+    data[p * 4 + 2] = rgb[2];
+    data[p * 4 + 3] = well[p];
+  }
   // The rim OVER the well (straight alpha).
   for (let p = 0; p < W * H; p += 1) {
     const o = p * 4;
@@ -237,6 +291,35 @@ async function convertStampNotch(frame, color) {
     }
   }
   const out = path.join("public/frames", `${frame.name}holostamp`);
+  fs.mkdirSync(out, { recursive: true });
+  await sharp(data, { raw: { width: W, height: H, channels: 4 } })
+    .extract({ left: x0, top: y0, width: x1 - x0 + 1, height: y1 - y0 + 1 })
+    .png({ compressionLevel: 9, effort: 10 })
+    .toFile(path.join(out, `${color}.png`));
+  return `${x0},${y0} ${x1 - x0 + 1}x${y1 - y0 + 1}`;
+}
+
+/** The legendary crown: MSE's full-card `crown` layer, upscaled like the
+ *  frame and cropped to its alpha box (α > 8) into public/frames/
+ *  <name>crown/<c>.png — the profile's crown overlay rect is that box. */
+async function convertCrown(frame, color) {
+  const base = path.join(PACK, `magic-m15-showcase-${frame.style}.mse-style`);
+  const data = await layer(path.join(base, frame.crown.replace("{c}", sourceKey(frame, "crown", color))));
+  let x0 = W;
+  let y0 = H;
+  let x1 = -1;
+  let y1 = -1;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (data[(y * W + x) * 4 + 3] > 8) {
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+  }
+  const out = path.join("public/frames", `${frame.name}crown`);
   fs.mkdirSync(out, { recursive: true });
   await sharp(data, { raw: { width: W, height: H, channels: 4 } })
     .extract({ left: x0, top: y0, width: x1 - x0 + 1, height: y1 - y0 + 1 })
@@ -289,6 +372,11 @@ for (const frame of FRAMES.filter((f) => !only || f.name === only)) {
     const boxes = new Set();
     for (const c of keys) boxes.add(await convertPlate(frame, c));
     console.log(`${frame.name}: P/T plates cropped at ${[...boxes].join(" | ")}`);
+  }
+  if (frame.crown) {
+    const boxes = new Set();
+    for (const c of keys) boxes.add(await convertCrown(frame, c));
+    console.log(`${frame.name}: crowns cropped at ${[...boxes].join(" | ")}`);
   }
   if (frame.stampNotch) {
     const boxes = new Set();

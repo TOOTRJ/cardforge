@@ -329,6 +329,10 @@ const PICKS: readonly Pick[] = [
   // The Tarkir: Dragonstorm showcases on their MSE masters (TODO 4.11 / 4.35, layout v68).
   { from: "tarkirdraconic/u/creature-short@stamp", why: "v68 Tarkir draconic: the black border painted under the MSE master, M15's slots at the family's sizes, the CC M15 cost row, the serpent plate, MSE's own oval notch with our oval" },
   { from: "tarkirghostfire/g/creature-long@collector", why: "v68 Tarkir ghostfire: the painted black ring and footer, its own bars at the family's sizes (the name and type line measured), the 70 px disc, the art inside the ring, the collector line on the footer" },
+  // The Avatar elemental and Bloomburrow woodland showcases on their MSE masters (TODO 4.11 / 4.35, layout v69).
+  { from: "avatar/g/creature-long@collector", why: "v69 Avatar elemental: MSE's title bar and the black footer built into the master, M15's slots at the family's sizes in white, the CC M15 cost row, art from the top edge, MSE's plate, the collector line on the footer" },
+  { from: "bloomburrow/g/creature-long@crown", why: "v69 Bloomburrow woodland: the footer in the colour's own tone, M15's slots in white, the art across the card, MSE's crown band (opt-in)" },
+  { from: "bloomburrow/u/creature-short@stamp", why: "v69 Bloomburrow woodland: MSE's own stamp notch with its rim per colour and our oval in its well, MSE's plate" },
   // The Zendikar Rising hedron showcase from Card Conjurer (TODO 4.11, layout v63).
   { from: "fullart/w/creature-short", why: "v63 ZNR hedron: black name and type ink on the white key's ivory bars, the art under the whole frame, the light plate's dark digits" },
   { from: "fullart/wu/creature-long@crown", why: "v63 ZNR hedron: white ink with its shadow on the gold bars, the pair's split crown band over the gold master (pairCrownOnGold)" },

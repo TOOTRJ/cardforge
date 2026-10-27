@@ -605,8 +605,8 @@ describe("keep-outs", () => {
     expect(value.topPct).toBeGreaterThan(painted.topPct);
     expect(value.topPct + value.heightPct).toBeLessThan(painted.topPct + painted.heightPct);
     // A value printed straight on the art (no plate, no badge): its rect.
-    const avatar = getFrameProfile("avatar");
-    expect(statKeepOuts(avatar, { pt: true })).toEqual([avatar.pt!.rect]);
+    const anime = getFrameProfile("bloomanime");
+    expect(statKeepOuts(anime, { pt: true })).toEqual([anime.pt!.rect]);
     // The battle frame has neither a P/T nor a loyalty: only its shield.
     expect(statKeepOuts(battle, { pt: true, loyalty: true })).toEqual([painted]);
   });

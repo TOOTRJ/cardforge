@@ -1833,6 +1833,11 @@ const CROWNED_SHOWCASE_SIGNATURES: ReadonlySet<string> = new Set([
   "showcase/ltr/ring+two-colour-hybrid",
   "showcase/mul/tarkir",
   "showcase/znr/hedron",
+  // The Bloomburrow woodland (TODO 4.11, layout v69): every legendary
+  // printing wears the leaf crown (#304, #314, #327–336).
+  "showcase/blb/woodland",
+  "showcase/blb/woodland+two-colour",
+  "showcase/blb/woodland+two-colour-hybrid",
 ]);
 
 /** Whether a printing prints the STANDARD legendary crown (see

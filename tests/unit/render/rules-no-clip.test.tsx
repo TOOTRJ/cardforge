@@ -328,6 +328,8 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       "fullart/main",
       // 5.7's borderless double-faced bodies: m15borderless's box.
       "m15borderlessdfcfront/main", "m15borderlessdfcback/main", "m15borderlessmdfcfront/main", "m15borderlessmdfcback/main",
+      // 4.11's Avatar elemental and Bloomburrow woodland showcases: M15's box (layout v69).
+      "avatar/main", "bloomburrow/main",
     ],
     ["1200 chars"],
   ],
@@ -337,8 +339,9 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // …and the 2015 Expeditions' rules panel (TODO 4.11 wave 1: 432 px over
   // the art — a land's text is a line or four).
   // (The Lord of the Rings scroll took M15's box with its Card Conjurer
-  // re-source, layout v62 / TODO 4.11: it holds the level-up card now.)
-  [["avatar/main", "battle/main", "bloomburrow/main", "emblem/main", "expeditionlandbfz/main"], ["1200 chars", "level up"]],
+  // re-source, layout v62 / TODO 4.11: it holds the level-up card now —
+  // and the Avatar elemental and Bloomburrow woodland with theirs, v69.)
+  [["battle/main", "emblem/main", "expeditionlandbfz/main"], ["1200 chars", "level up"]],
   // The 2020 Expeditions' panel (layout v64: 494 px, where the MSE box was
   // 441) holds the level-up card and the typed text now; 1,200 characters
   // still don't fit.
@@ -393,7 +396,7 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // card's paragraphs can't hold these; every full-size box draws them.
   [
     [
-      "adventure/adventure", "adventure/main", "aftermath/main", "avatar/main", "battle/main", "bloomburrow/main", "emblem/main",
+      "adventure/adventure", "adventure/main", "aftermath/main", "battle/main", "emblem/main",
       "expeditionlandbfz/main", "flip/main", "flip/second face", "m15token/main", "m15tokenartifact/main", "m15tokenartifacttext/main", "m15tokentext/main",
       "m20tokenartifacttext/main", "m20tokentext/main", "m20tokenartifactnyxtext/main", "m20tokennyxtext/main", "split/main",
     ],

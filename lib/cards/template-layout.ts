@@ -1291,10 +1291,20 @@ export function brandMarkLayout(
  *  box and border are opaque (the etched mask keeps them), and Scryfall's
  *  art_crop of an extended-art printing is the window's whole width (WOE
  *  #325: 745 × 460), so its import keeps the frame and never lands on a
- *  bordered twin. (7.7's edge contract states every edge itself.) */
-export function artReachesCardEdge(profile: Pick<FrameProfile, "artSlot">): boolean {
+ *  bordered twin. (7.7's edge contract states every edge itself.)
+ *
+ *  …and its window is TALLER than it is wide: the whole card or nearly
+ *  (borderless 1500 × 1937, a full-art basic the card). The Avatar
+ *  elemental showcase's art runs out of the top edge (TODO 4.11, layout
+ *  v69: TLA #317, #343) in a window wider than tall (1500 × 1168) under
+ *  opaque bars, box and footer — Scryfall's art_crop of its printings is
+ *  the classic 626 × 457 (TLA #338), which fills that window with 6 % of its
+ *  width trimmed, and the etched mask keeps the frame: not one either. */
+export function artReachesCardEdge(profile: Pick<FrameProfile, "artSlot" | "orientation">): boolean {
   const a = profile.artSlot;
-  return a.topPct <= 0 || a.topPct + a.heightPct >= 100;
+  if (!(a.topPct <= 0 || a.topPct + a.heightPct >= 100)) return false;
+  const [cardW, cardH] = profile.orientation === "landscape" ? [2100, 1500] : [1500, 2100];
+  return a.heightPct * cardH > a.widthPct * cardW;
 }
 
 /** A full-art basic's window spans at least this much of the card on both
@@ -4517,55 +4527,56 @@ export const AFTERMATH_PART_SEAM: PartColorSeam = { axis: "y", atPct: (1140 / 21
 // Showcase set families — per-set "showcase" frame treatments from popular
 // recent sets. The MSE pieces ship with their art window already transparent
 // (built by scripts/build-showcase-frames.mjs), so these are layout-only
-// profiles. Several share an "art-forward" layout (art bleeds to the top; a
-// name bar ~57%; type + textbox below), captured by a factory.
+// profiles.
 // ---------------------------------------------------------------------------
 const SHOWCASE_SHADOW = "0 1px 2px rgba(0,0,0,0.65), 0 0 2px rgba(0,0,0,0.5)";
 
-function artForwardShowcase(
-  label: string,
-  nameHex: string,
-  nameShadow = true,
-): FrameProfile {
-  return {
-    label,
-    artSlot: { topPct: 2.5, leftPct: 6, widthPct: 88, heightPct: 54 },
-    costSizePct: 0.034,
-    title: {
-      rect: { topPct: 56.4, leftPct: 11, widthPct: 78, heightPct: 6 },
-      sizePct: 0.042,
-      colorHex: nameHex,
-      weight: 600,
-      font: "display",
-      ...(nameShadow ? { shadowCss: SHOWCASE_SHADOW } : {}),
-    },
-    type: {
-      rect: { topPct: 63.4, leftPct: 11, widthPct: 78, heightPct: 4 },
-      sizePct: 0.026,
-      colorHex: INK_DARK,
-      weight: 600,
-      font: "display",
-    },
-    rules: {
-      rect: { topPct: 67.6, leftPct: 8, widthPct: 84, heightPct: 24.5 },
-      sizePct: rulesPxToPct(RULES_SIZE_PX.reduced),
-      colorHex: INK_DARK,
-      vAlign: "start",
-      font: "body",
-    },
-    pt: {
-      rect: { topPct: 87.2, leftPct: 71.5, widthPct: 23, heightPct: 7 },
-      sizePct: 0.04,
-      colorHex: "#ffffff",
-      weight: 700,
-      shadowCss: OUTLINE_SHADOW,
-    },
-  };
-}
-
-// Art-forward showcases (art bleeds to the top; name bar lower-middle).
-const AVATAR = artForwardShowcase("Avatar", INK_LIGHT);
-const BLOOMBURROW = artForwardShowcase("Bloomburrow", INK_LIGHT);
+// The Avatar elemental (TLA #336–353, TLE #305–317) and the Bloomburrow
+// woodland (BLB #295–336) showcases (TODO 4.11, layout v69): MSE's drawings
+// (magic-m15-showcase-avatar-elemental / -bloomburrow-woodland, upscaled by
+// scripts/build-showcase-frames.mjs) with what MSE paints at render time
+// built in — the Avatar's ornate title bar (every print wears it) and black
+// footer, the woodland's footer in the colour's own tone
+// (scripts/lib/mse-showcase-borders.mjs). Both print the M15 text layout:
+// the name, type line, rules box, P/T and collector line sit where the
+// sets' regular printings set them (TLA / BLB #1–14, same scans: name
+// baseline 189 px, type line 1259–1261, the collector rows 1988 / 2027), so
+// the profiles are M15's slots at the M15-era family's sizes (`fit:
+// "measured"`) with the CC M15 cost row (print: 70.2 px discs, a 78.5 px
+// pitch, the row ending at 1386.2 / 1386.3 px). The art runs to the top
+// and side edges (the Avatar) or to the side edges between the woodland's
+// top band and its medallions — borderless, both, over the footer. White
+// name and type ink, no shadow (print's 255,255,255 on every bar); dark
+// rules on the paper.
+const SHOWCASE_WHITE_INK = "#ffffff";
+/** The Avatar's art slot: the masters' window (α < 250 on 0–1499 × 0–1165
+ *  px on every key) with the art-window check's 0.05 % to spare. */
+export const AVATAR_ART_SLOT: Rect = { topPct: 0, leftPct: 0, widthPct: 100, heightPct: (1168 / 2100) * 100 };
+/** The woodland's: its window (0–1499 × 234–1183 on every key). */
+export const BLOOMBURROW_ART_SLOT: Rect = { topPct: (232 / 2100) * 100, leftPct: 0, widthPct: 100, heightPct: (954 / 2100) * 100 };
+/** MSE's P/T boxes as the builder crops them: the Avatar's framed
+ *  parchment box (1159, 1859, 270 × 141 px), the woodland's box with its
+ *  vine flourishes (1038, 1863, 445 × 131). */
+const AVATAR_PLATE_RECT: Rect = { topPct: (1859 / 2100) * 100, leftPct: (1159 / 1500) * 100, widthPct: (270 / 1500) * 100, heightPct: (141 / 2100) * 100 };
+const BLOOMBURROW_PLATE_RECT: Rect = { topPct: (1863 / 2100) * 100, leftPct: (1038 / 1500) * 100, widthPct: (445 / 1500) * 100, heightPct: (131 / 2100) * 100 };
+const AVATAR: FrameProfile = {
+  ...M15,
+  label: "Avatar",
+  ...CC_M15_COST,
+  artSlot: AVATAR_ART_SLOT,
+  title: { ...M15.title, colorHex: SHOWCASE_WHITE_INK },
+  type: { ...M15.type, dy: CC_M15_TYPE_DY, colorHex: SHOWCASE_WHITE_INK },
+  pt: { ...M15.pt!, plateRect: AVATAR_PLATE_RECT, plateAssetPathTemplate: "/frames/avatar/pt/{color}.png" },
+};
+const BLOOMBURROW: FrameProfile = {
+  ...M15,
+  label: "Bloomburrow",
+  ...CC_M15_COST,
+  artSlot: BLOOMBURROW_ART_SLOT,
+  title: { ...M15.title, colorHex: SHOWCASE_WHITE_INK },
+  type: { ...M15.type, dy: CC_M15_TYPE_DY, colorHex: SHOWCASE_WHITE_INK },
+  pt: { ...M15.pt!, plateRect: BLOOMBURROW_PLATE_RECT, plateAssetPathTemplate: "/frames/bloomburrow/pt/{color}.png" },
+};
 
 // MUL Tarkir "Dragon Wing" (TODO 4.11, layout v67) — Card Conjurer's
 // 'Tarkir' pack (packTarkir.js, "Tarkir Sketch (MOM)", 1500 × 2100 native;
@@ -6119,6 +6130,44 @@ export const TARKIRDRACONIC_HOLO_STAMP: FrameOverlaySlot = {
 };
 
 /**
+ * The Bloomburrow woodland's legendary crown (TODO 4.11, layout v69):
+ * MSE's `crown` layer (crown/<c>crown.png — the leaves that rise above the
+ * title band on every legendary printing, #304, #314, #327–336), upscaled
+ * like the masters and cropped to its box, a 1500 × 301 band at the card's
+ * top (scripts/build-showcase-frames.mjs `crown`; git, beside the masters).
+ * Keys: the masters' (no pairs: a two-colour card draws the gold master).
+ * Opt-in per card like every crown; an import of a crowned printing names
+ * it (CROWNED_SHOWCASE_SIGNATURES).
+ */
+export const BLOOMBURROW_CROWN: FrameOverlaySlot = {
+  anatomy: "crown",
+  rect: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: (301 / 2100) * 100 },
+  assetPathTemplate: "/frames/bloomburrowcrown/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c"],
+};
+/** The woodland's oval: the prints' hologram centred on 750.5 × 1953.5 px
+ *  (BLB #295–336, every printing within 1 px), at M15's 134 × 67. */
+export const BLOOMBURROW_HOLO_STAMP_OVAL: Rect = { leftPct: (684 / 1500) * 100, topPct: (1920 / 2100) * 100, widthPct: (134 / 1500) * 100, heightPct: (67 / 2100) * 100 };
+/** The rules box keeps out of the arch: its top (1882 px) down to the
+ *  box's bottom (1952), over the piece's 631–871 px. */
+export const BLOOMBURROW_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (631 / 1500) * 100, topPct: (1882 / 2100) * 100, widthPct: (240 / 1500) * 100, heightPct: (70 / 2100) * 100 };
+/**
+ * The woodland's OVAL stamp notch (TODO 4.11, layout v69): MSE's own stamp
+ * — the `card stamp colored border` (the footer's colour through
+ * border_stamp_mask.png: the well) under the `card stamp rim`
+ * (stamp/<c>stamp.png: the box's rim arched over it) — cut to its box, 240
+ * × 82 px at 631, 1882. Every printing is rare or mythic and stamped:
+ * "auto" = a rare or mythic, as on M15.
+ */
+export const BLOOMBURROW_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: { leftPct: (631 / 1500) * 100, topPct: (1882 / 2100) * 100, widthPct: (240 / 1500) * 100, heightPct: (82 / 2100) * 100 },
+  assetPathTemplate: "/frames/bloomburrowholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c"],
+  stamp: { shape: "oval", oval: BLOOMBURROW_HOLO_STAMP_OVAL, keepOut: BLOOMBURROW_HOLO_STAMP_KEEP_OUT },
+};
+
+/**
  * The holofoil stamp's notch on the BORDERLESS frames (TODO 4.9d, owner
  * Round 66, 2026-10-14): every stamped borderless print arches the text
  * box's bottom pinline over the oval, and Card Conjurer's borderless pack has
@@ -7343,8 +7392,13 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // AFTERMATH_PART_SEAM).
   split: { ...SPLIT, partColorSeam: SPLIT_PART_SEAM },
   aftermath: { ...AFTERMATH, partColorSeam: AFTERMATH_PART_SEAM },
-  avatar: AVATAR,
-  bloomburrow: BLOOMBURROW,
+  // The Avatar and the woodland (TODO 4.11, layout v69): the collector line
+  // on their footers (both runs set it on M15's rows: 1988 / 2027, the ©
+  // line ending at 1396 — their sets' regular printings the same), the
+  // woodland's crown band and oval stamp notch — each opt-in per card, so no
+  // stored card changes by them.
+  avatar: { ...AVATAR, collector: M15_COLLECTOR },
+  bloomburrow: { ...BLOOMBURROW, overlays: [BLOOMBURROW_CROWN, BLOOMBURROW_HOLO_STAMP], collector: M15_COLLECTOR },
   // The six near-black picker tiles that are not art-first get the tile's
   // sample art (pickerSampleArt, 4.45) on their entries here, not on their
   // bases: M15TEXTLESS spreads FULLART and M15TEXTLESSLAND spreads

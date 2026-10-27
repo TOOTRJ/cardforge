@@ -1,20 +1,25 @@
 import { describe, expect, it } from "vitest";
 import {
   BORDER_BLACK,
+  BORDERED_PNG_ATTEMPTS,
   GHOSTFIRE_WINDOW,
   MSE_SHOWCASE_BORDERS,
   PALETTE_PNG_OPTIONS,
   borderLost,
   cutAtCardCorner,
   edgeCoverage,
+  outsideCoverage,
   paintUnder,
   ringCoverage,
+  showcaseBorderRgb,
+  WOODLAND_FOOTER_RGB,
 } from "@/scripts/lib/mse-showcase-borders.mjs";
 
 // ---------------------------------------------------------------------------
 // TODO 4.11 / 4.35 (layout v68): the border MSE paints at render time,
 // painted under the Tarkir: Dragonstorm showcase masters by
-// scripts/build-showcase-frames.mjs. The masters themselves are held by the
+// scripts/build-showcase-frames.mjs — and (layout v69) the Avatar
+// elemental's black footer and the Bloomburrow woodland's coloured one. The masters themselves are held by the
 // edge contract (tests/unit/frames/edge-contract.test.ts) and the art-window
 // check (tests/unit/render/art-window-coverage.test.ts); this file holds the
 // geometry and the compositing rules.
@@ -24,10 +29,10 @@ const W = 1500;
 const H = 2100;
 const at = (cov: Float32Array, x: number, y: number) => cov[y * W + x];
 
-describe("the Tarkir: Dragonstorm borders as data", () => {
-  it("paints the two frames in the border black, the draconic's band from its edges, the ghostfire's ring round MSE's window", () => {
+describe("the MSE showcase borders as data", () => {
+  it("paints the Tarkir: Dragonstorm frames in the border black, the draconic's band from its edges, the ghostfire's ring round MSE's window", () => {
     expect([...BORDER_BLACK]).toEqual([0, 0, 0]);
-    expect(Object.keys(MSE_SHOWCASE_BORDERS).sort()).toEqual(["tarkirdraconic", "tarkirghostfire"]);
+    expect(Object.keys(MSE_SHOWCASE_BORDERS).sort()).toEqual(["avatar", "bloomburrow", "tarkirdraconic", "tarkirghostfire"]);
     expect(MSE_SHOWCASE_BORDERS.tarkirdraconic.kind).toBe("edge");
     expect(MSE_SHOWCASE_BORDERS.tarkirghostfire).toMatchObject({ kind: "ring", window: GHOSTFIRE_WINDOW });
     // Print's ring on whole px (TDM #399–408, the inner edge's median: 78.3
@@ -39,6 +44,38 @@ describe("the Tarkir: Dragonstorm borders as data", () => {
     // No dithering in the palette encode (a dithered palette turned a few
     // opaque near-black border pixels into α 231–240).
     expect(PALETTE_PNG_OPTIONS).toMatchObject({ dither: 0 });
+    // …and when even that loses a border pixel (bloomburrow's r / g / u / m:
+    // the leafy band's many colours), a finer palette, then truecolor.
+    expect(BORDERED_PNG_ATTEMPTS[0]).toBe(PALETTE_PNG_OPTIONS);
+    expect(BORDERED_PNG_ATTEMPTS.at(-1)).toMatchObject({ palette: false });
+    for (const o of BORDERED_PNG_ATTEMPTS.slice(1, -1)) expect(o).toMatchObject({ dither: 0 });
+  });
+
+  it("paints the Avatar elemental's footer true black and the Bloomburrow woodland's in each colour's own tone", () => {
+    expect(MSE_SHOWCASE_BORDERS.avatar).toMatchObject({ kind: "outside" });
+    expect(MSE_SHOWCASE_BORDERS.bloomburrow).toMatchObject({ kind: "outside", keepCorners: true });
+    for (const k of ["w", "u", "b", "r", "g", "c", "m"]) expect([...showcaseBorderRgb("avatar", k)!], k).toEqual([0, 0, 0]);
+    // The raw scan medians of BLB #295–336's footers (black is true black;
+    // `c` has no print and keeps MSE's own brown).
+    expect(Object.keys(WOODLAND_FOOTER_RGB).sort()).toEqual(["b", "c", "g", "m", "r", "u", "w"]);
+    expect(showcaseBorderRgb("bloomburrow", "b")).toBe(BORDER_BLACK);
+    expect([...showcaseBorderRgb("bloomburrow", "g")!]).toEqual([18, 66, 7]);
+    expect(() => showcaseBorderRgb("bloomburrow", "x")).toThrow(/no border colour/);
+    expect(showcaseBorderRgb("m15", "w")).toBeNull();
+  });
+
+  it("the outside band is every see-through pixel not in the art's window — the window flooded from the art seeds", () => {
+    const rgba = new Uint8Array(W * H * 4).fill(255);
+    // A see-through window (the art), a see-through footer, and a
+    // translucent rim pixel outside both.
+    for (let y = 100; y < 1100; y += 1) for (let x = 0; x < W; x += 1) rgba[(y * W + x) * 4 + 3] = 0;
+    for (let y = 1950; y < H; y += 1) for (let x = 0; x < W; x += 1) rgba[(y * W + x) * 4 + 3] = 0;
+    rgba[(1500 * W + 5) * 4 + 3] = 200;
+    const cov = outsideCoverage(rgba, W, H, [[0.5, 0.25]]);
+    expect(at(cov, 750, 600)).toBe(0); // the art window
+    expect(at(cov, 750, 2050)).toBe(1); // the footer
+    expect(at(cov, 5, 1500)).toBe(1); // the translucent rim pixel
+    expect(at(cov, 750, 1500)).toBe(0); // the opaque drawing
   });
 
   it("the ring is 1 outside the window, 0 inside, anti-aliased on its edge, with round top corners and chamfered bottom ones", () => {

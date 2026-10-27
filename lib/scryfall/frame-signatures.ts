@@ -522,8 +522,6 @@ const UNMODELLED_SUBTYPES = ["Room", "Class", "Case"] as const;
  *  failures) lifts its cap here too. */
 export const BORDER_PENDING_TEMPLATES: ReadonlySet<FrameTemplate> = new Set<FrameTemplate>([
   "bloomanime",
-  "avatar",
-  "bloomburrow",
 ]);
 
 /** Single colour masters whose border isn't true yet (owner decision A8).
@@ -1964,12 +1962,21 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
   // split at #316 was wrong), and the raised-foil anime legends #343–355
   // (black bars with vine flourishes at their corners: the bloomanime
   // master). #282–294 are the standard borderless run.
-  {
-    key: "showcase/blb/woodland",
-    exactLabel: "Bloomburrow woodland showcase",
-    match: { borders: ["borderless"], collectors: { blb: [[295, 336]] } },
-    outcome: { status: "exact", template: "bloomburrow" },
-  },
+  // Exact once verified since TODO 4.11 (layout v69: the footer MSE paints
+  // at render time painted under the masters — off BORDER_PENDING_TEMPLATES).
+  // A two-colour printing (the ten two-colour legends #327–330, #333–336)
+  // prints its two colours split down the frame, which the template doesn't
+  // draw yet: nearest (two-colour gap), on the gold master.
+  ...withGaps(
+    {
+      key: "showcase/blb/woodland",
+      exactLabel: "Bloomburrow woodland showcase",
+      match: { borders: ["borderless"], collectors: { blb: [[295, 336]] } },
+      outcome: { status: "exact", template: "bloomburrow" },
+    },
+    ["two-colour", "two-colour-hybrid"],
+    { "two-colour": "4.11", "two-colour-hybrid": "4.11" },
+  ),
   {
     key: "showcase/blb/anime",
     exactLabel: "Bloomburrow anime showcase",
@@ -2002,14 +2009,23 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       blockedBy: "4.36",
     },
   },
-  {
-    key: "showcase/tla/avatar",
-    exactLabel: "Avatar: The Last Airbender elemental showcase",
-    // TLE #305–317 (the Eternal-legal companion set) print the same frame,
-    // including its only colourless printings (Arcane Signet TLE #315).
-    match: { borders: ["borderless"], collectors: { tla: [[336, 353]], tle: [[305, 317]] } },
-    outcome: { status: "exact", template: "avatar" },
-  },
+  // Exact once verified since TODO 4.11 (layout v69: the title bar and the
+  // black footer MSE paints at render time built into the masters — off
+  // BORDER_PENDING_TEMPLATES). A two-colour printing (#348 Bumi R/G, #351
+  // Katara W/U) prints its two colours split down the frame, which the
+  // template doesn't draw yet: nearest (two-colour gap), on the gold master.
+  ...withGaps(
+    {
+      key: "showcase/tla/avatar",
+      exactLabel: "Avatar: The Last Airbender elemental showcase",
+      // TLE #305–317 (the Eternal-legal companion set) print the same frame,
+      // including its only colourless printings (Arcane Signet TLE #315).
+      match: { borders: ["borderless"], collectors: { tla: [[336, 353]], tle: [[305, 317]] } },
+      outcome: { status: "exact", template: "avatar" },
+    },
+    ["two-colour", "two-colour-hybrid"],
+    { "two-colour": "4.11", "two-colour-hybrid": "4.11" },
+  ),
   // Edge of Eternities' ten "viewport" Planets (EOE #277–285, #372–380) are
   // station cards on a showcase of their own: they keep this rule's landing
   // and item, and say the station frame is missing too (STATION_SHOWCASE).

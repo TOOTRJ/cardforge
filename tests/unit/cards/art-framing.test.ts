@@ -140,6 +140,12 @@ describe("the Etched finish on edge-to-edge frames", () => {
       "m15borderlessmdfcback",
       "fullartland",
     ]);
+    // The Avatar elemental showcase's art runs out of the top edge (TODO
+    // 4.11, layout v69) in a window wider than tall under opaque bars: like
+    // extended art, not an edge-to-edge treatment — Etched stays.
+    expect(getFrameProfile("avatar").artSlot.topPct).toBe(0);
+    expect(artReachesCardEdge(getFrameProfile("avatar"))).toBe(false);
+    expect(finishAvailableOn(getFrameProfile("avatar"), "etched")).toBe(true);
     expect(finishAvailableOn(getFrameProfile("m15borderlessland"), "etched")).toBe(false);
     expect(finishAvailableOn(getFrameProfile("m15borderlesspw"), "etched")).toBe(false);
     expect(finishAvailableOn(getFrameProfile("m15borderlesspwtall"), "etched")).toBe(false);

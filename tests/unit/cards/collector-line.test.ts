@@ -107,6 +107,9 @@ describe("the switch values", () => {
       // M15's slot on the black footer their masters now paint.
       "tarkirdraconic",
       "tarkirghostfire",
+      // …and the Avatar and the Bloomburrow woodland (TODO 4.11, layout v69).
+      "avatar",
+      "bloomburrow",
     ]);
   });
 });

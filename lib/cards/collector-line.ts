@@ -135,6 +135,12 @@ export const COLLECTOR_TEMPLATES = [
   // the regular TDM printings the same, by the same reading).
   "tarkirdraconic",
   "tarkirghostfire",
+  // …and the Avatar and the Bloomburrow woodland (TODO 4.11, layout v69):
+  // TLA / TLE / BLB set both lines on M15's rows (1988 / 2027, the © line
+  // ending at 1396 — their regular printings the same), on the footer their
+  // masters now paint.
+  "avatar",
+  "bloomburrow",
 ] as const;
 
 export type CollectorLetter = "T" | "E" | "L" | "C" | "U" | "R" | "M";

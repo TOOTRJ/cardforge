@@ -718,6 +718,8 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // each colour, the artifact's on a colourless card, gold, and a pair's
   // split crown over the split wings (MUL #60 Taigam, W/U).
   ["tarkirdragon", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
+  // The Bloomburrow woodland's leaf crown (TODO 4.11, layout v69).
+  ["bloomburrow", ["g", "u", "wu"]],
   ["m15ubartifact", ["c", "u"]],
   ["m15ubland", ["g", "c"]],
   ["m15land", ["g", "c", "wub"]],
@@ -2459,6 +2461,8 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "tarkirdragon",
   // …and the Tarkir draconic's MSE oval (TODO 4.11, layout v68).
   "tarkirdraconic",
+  // …and the Bloomburrow woodland's (TODO 4.11, layout v69).
+  "bloomburrow",
 ];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's

@@ -95,7 +95,9 @@ describe("one M15-era display size (layout v32)", () => {
     // …and TODO 4.11's MUL Tarkir dragon wings (with its own bump, v67).
     // …and TODO 4.11's Tarkir: Dragonstorm draconic and ghostfire (with
     // their own bump, v68).
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(79);
+    // …and TODO 4.11's Avatar elemental and Bloomburrow woodland (with their
+    // own bump, v69).
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(81);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -177,7 +179,8 @@ describe("one M15-era display size (layout v32)", () => {
       // with its own, v65; the Theros constellation its prints' 70 px disc
       // with its text correction, v66; the MUL Tarkir dragon wings the CC M15
       // row with their own, v67; the Tarkir: Dragonstorm pair the 70 px disc
-      // with theirs, v68.)
+      // with theirs, v68; the Avatar elemental and Bloomburrow woodland the
+      // CC M15 row with theirs, v69.)
       const disc =
         COST_ROW_PRINT_TEMPLATES.includes(t) ||
         t === "lotrscroll" ||
@@ -185,6 +188,8 @@ describe("one M15-era display size (layout v32)", () => {
         t === "tarkirdragon" ||
         t === "tarkirdraconic" ||
         t === "tarkirghostfire" ||
+        t === "avatar" ||
+        t === "bloomburrow" ||
         ZNR_HEDRON_TEMPLATES.includes(t) ||
         NYX_GEOMETRY_TEMPLATES.includes(t)
           ? CC_M15_COST_DISC_PCT
@@ -414,6 +419,11 @@ describe("baselines (TextSlot.dy)", () => {
     // each band's baseline kept from its old print-measured size (0.0535 /
     // 0.0445), the type line 2 px up onto TDM #399–408's 1158.
     ["tarkirghostfire", kept(0.0535, TITLE_SIZE_PCT), kept(0.0445, TYPE_SIZE_PCT) - 2 / 1500],
+    // The Avatar elemental and Bloomburrow woodland (layout v69): M15's slots
+    // on their MSE masters — the name M15's (print's 188–188.5 px, ours 189),
+    // the type line the CC baseline (print's 1259–1260, ours 1260).
+    ["avatar", base.title, cc],
+    ["bloomburrow", base.title, cc],
     // The Theros constellation (TODO 4.11, layout v66): MSE-framed, its name
     // 2 px up onto THB #258–268's baseline; its type line rides the band,
     // whose RECT moves 10 px down (the text's dy is M15's).
@@ -543,11 +553,16 @@ describe("baselines (TextSlot.dy)", () => {
     }
     // Only on masters from the frames bucket (Card Conjurer's), and only on
     // M15's type bar: not on the M15 base the MSE-framed spreads share.
+    // (The Avatar elemental and Bloomburrow woodland, layout v69, are MSE
+    // masters in git whose own type bars put print's baseline on the CC one:
+    // measured on TLA / BLB, not inherited from a CC master.)
     const ccTemplates = new Set(Object.keys(manifest.files).map((key) => key.split("/")[0]));
+    const MSE_ON_CC_BASELINE = new Set(["avatar", "bloomburrow"]);
     for (const t of M15_FAMILY_TEMPLATES) {
       if (Math.abs(getFrameProfile(t).type.dy! - cc) > 1e-12) continue;
-      expect(ccTemplates.has(t), t).toBe(true);
+      expect(ccTemplates.has(t) || MSE_ON_CC_BASELINE.has(t), t).toBe(true);
     }
+    for (const t of MSE_ON_CC_BASELINE) expect(ccTemplates.has(t), t).toBe(false);
   });
 
   it("keeps the planeswalker's name rect centred on its plate (v27), its text 4 px up with the pips (v60), and its type line in M15's slot", () => {
@@ -640,8 +655,6 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
   // tests/unit/cards/fixtures/profiles-base.json).
   const V31_SPLIT_DIGEST = "43801d93b7c4e70505e4562174231f8f887fa2ba0acf0f66534410b2d7667c0d";
   const V31_DIGESTS: Record<string, string> = {
-    avatar: "18b37fde1037dfccc0041e515a4f80246a9cbe0ed3e3277ca9a88014394a703a",
-    bloomburrow: "736ecedbf0f59adbf31506777ef976bf18ce0b5ff549696201cefb1aa1250bfd",
     bloomanime: "86e5e9d3da194ee1ccfbe5e0654e1401024f303c54a0a912dee5e792d206705f",
   };
 
@@ -698,7 +711,8 @@ describe("the full-art basics (4.39) and the frames outside the family", () => {
     // (The Lord of the Rings scroll joined the family with its Card Conjurer
     // re-source, layout v62 / TODO 4.11: off this list — and the ring with
     // its own, layout v65, and the MUL Tarkir dragon wings with theirs, v67,
-    // and the Tarkir: Dragonstorm draconic and ghostfire with theirs, v68.)
+    // and the Tarkir: Dragonstorm draconic and ghostfire with theirs, v68,
+    // and the Avatar elemental and Bloomburrow woodland with theirs, v69.)
     const REBUILT = new Set<string>(["split", "retro", "retroland", "modern", "modernland", "agclassic", "alphaland"]);
     const outside = FRAME_TEMPLATE_VALUES.filter((t) => !FAMILY.has(t) && !REBUILT.has(t));
     expect([...outside].sort()).toEqual(Object.keys(V31_DIGESTS).sort());
