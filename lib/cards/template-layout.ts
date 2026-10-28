@@ -4615,9 +4615,13 @@ const SNCARTDECO_INK = "#ffffff";
 // their white ink). The plain printings (60) set their name and cost row ~4
 // px LOWER than the legendary ones (30), under a title bar 6 px lower; one
 // slot serves both (no slot follows the crown), so each takes the mean of
-// the 90: the name 1 px up (plain +1, legendary −5) and 3 px left; the cost
-// row 8 px down (plain +9.3, legendary +5.2) and 1.5 px right.
-const SNCARTDECO_TITLE_DX_PX = -3;
+// the 90: the name 1 px up (plain +1, legendary −5); the cost row 8 px down
+// (plain +9.3, legendary +5.2) and 1.5 px right. Across, the name's pen
+// rides its LEFT ink edge (#622 review): print's first ink column against
+// ours on the same name, all 90 — 2 px right of ours at −3 px (median, plain
+// and legendary alike: print 128–138, e.g. #296 136, #301 131) — so 1 px
+// left of M15's pen.
+const SNCARTDECO_TITLE_DX_PX = -1;
 const SNCARTDECO_TITLE_DY_PX = -1;
 const SNCARTDECO_COST_DY_PX = 8;
 const SNCARTDECO_COST_DX_PX = 1.5;

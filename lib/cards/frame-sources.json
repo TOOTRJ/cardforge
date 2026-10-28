@@ -16863,6 +16863,7 @@
     "pack": "packSNCGilded.js 'Golden Age (SNC)' — the Streets of New Capenna Art Deco showcase, SNC #296–340 / #361–405 (groupShowcase-5.js; CC's 'Art Deco (SNC)' pack draws the Golden Age cards #341–359)",
     "converter": "scripts/import-cc-frames.mjs",
     "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "transforms": "native 1500x2100, no resample; the gold toned as the file loads (SNC_DECO_SOURCE_TONES); the translucent bars and box lifted onto print's opacity (title bar α 189, type bar α 207, text box α 209, from 127); the fin's see-through dot filled (SNC_DECO_DOT_FILLS); corners rounded to the importer radius",
     "colors": {
       "w": [
         "img/frames/snc/gilded/m.png"
@@ -16942,7 +16943,9 @@
       "a real black border all round, cut at the one card corner (print's border is the black of SNC's own regular printings on the same scans, 22,19,14 both: true black)",
       "plates = the pack's one 'Power/Toughness' plate (snc/gilded/pt/m.png, 254x134, at its bounds 1156/1857 px, 1:1) under every key",
       "the gold toned onto print by the ring's rule (raw scan medians, the 45 non-gilded prints registered block by block; a region ≥ 9 levels off is toned): the frame's gold 181,156,71 → 207,180,115, the plate's gold rim 176,152,68 → 202,164,98 (the file's pixels of chroma ≥ 45); the plate's dark face within 3 levels and the black border print's true black, as drawn; the translucent bars and box lie over the art (no raw median), as drawn; the gilded twins' foil scans near-black and is not read",
-      "geometry as drawn: the pillars, the art's foot rim, the type bar and the box rim within 0–2 px of print; the plain prints' title bar 6–7 px lower than the pack's (the legendary prints' within 1 px of the twin's), across gold pillars with no flat zone — nothing is re-cut, the slots ride the pack's bars"
+      "geometry as drawn: the pillars, the art's foot rim, the type bar and the box rim within 0–2 px of print; the plain prints' title bar 6–7 px lower than the pack's (the legendary prints' within 1 px of the twin's), across gold pillars with no flat zone — nothing is re-cut, the slots ride the pack's bars",
+      "the translucent title bar, type bar and text box as dark as print's (owner, #622 review): the pack's α 0.50 lifted to title bar 0.74, type bar 0.81, text box 0.82 — fitted as out = α·c + (1 − α)·art on pixel pairs across each region's opaque rim on the 45 non-gilded prints (flat art fields only); the layer colour fits black (15–18 against the border's 22 on the same scans), so only α moves; the rims' anti-aliased edges keep their place on the ramp (SNC_DECO_TRANSLUCENCY, liftTranslucency)",
+      "a see-through dot in the right pillar's fin (x 1378–1379 on row 969, the pack's anti-aliasing), inside the window's slot but not the window's, filled opaque from its neighbours — the window layer and the under-frame layer now meet on opaque gold all round (SNC_DECO_DOT_FILLS)"
     ]
   },
   "sncartdecoholostamp": {
@@ -16956,32 +16959,32 @@
     },
     "colors": {
       "w": [
-        "sncartdeco/w.png (published, sha256 70dd1f40a44a): its pinline lifted along the printed arch; worst 1.00 levels from the lifted master over four flat arts",
-        "drawn over sncartdeco/w-legendary.png (sha256 a67a89e8aa1f; within 0 levels) too"
+        "sncartdeco/w.png (published, sha256 c43be36fb528): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over sncartdeco/w-legendary.png (sha256 ddef6def2389; within 0 levels) too"
       ],
       "u": [
-        "sncartdeco/u.png (published, sha256 70dd1f40a44a): its pinline lifted along the printed arch; worst 1.00 levels from the lifted master over four flat arts",
-        "drawn over sncartdeco/u-legendary.png (sha256 a67a89e8aa1f; within 0 levels) too"
+        "sncartdeco/u.png (published, sha256 c43be36fb528): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over sncartdeco/u-legendary.png (sha256 ddef6def2389; within 0 levels) too"
       ],
       "b": [
-        "sncartdeco/b.png (published, sha256 70dd1f40a44a): its pinline lifted along the printed arch; worst 1.00 levels from the lifted master over four flat arts",
-        "drawn over sncartdeco/b-legendary.png (sha256 a67a89e8aa1f; within 0 levels) too"
+        "sncartdeco/b.png (published, sha256 c43be36fb528): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over sncartdeco/b-legendary.png (sha256 ddef6def2389; within 0 levels) too"
       ],
       "r": [
-        "sncartdeco/r.png (published, sha256 70dd1f40a44a): its pinline lifted along the printed arch; worst 1.00 levels from the lifted master over four flat arts",
-        "drawn over sncartdeco/r-legendary.png (sha256 a67a89e8aa1f; within 0 levels) too"
+        "sncartdeco/r.png (published, sha256 c43be36fb528): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over sncartdeco/r-legendary.png (sha256 ddef6def2389; within 0 levels) too"
       ],
       "g": [
-        "sncartdeco/g.png (published, sha256 70dd1f40a44a): its pinline lifted along the printed arch; worst 1.00 levels from the lifted master over four flat arts",
-        "drawn over sncartdeco/g-legendary.png (sha256 a67a89e8aa1f; within 0 levels) too"
+        "sncartdeco/g.png (published, sha256 c43be36fb528): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over sncartdeco/g-legendary.png (sha256 ddef6def2389; within 0 levels) too"
       ],
       "m": [
-        "sncartdeco/m.png (published, sha256 70dd1f40a44a): its pinline lifted along the printed arch; worst 1.00 levels from the lifted master over four flat arts",
-        "drawn over sncartdeco/m-legendary.png (sha256 a67a89e8aa1f; within 0 levels) too"
+        "sncartdeco/m.png (published, sha256 c43be36fb528): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over sncartdeco/m-legendary.png (sha256 ddef6def2389; within 0 levels) too"
       ],
       "c": [
-        "sncartdeco/c.png (published, sha256 70dd1f40a44a): its pinline lifted along the printed arch; worst 1.00 levels from the lifted master over four flat arts",
-        "drawn over sncartdeco/c-legendary.png (sha256 a67a89e8aa1f; within 0 levels) too"
+        "sncartdeco/c.png (published, sha256 c43be36fb528): its pinline lifted along the printed arch; worst 0.50 levels from the lifted master over four flat arts",
+        "drawn over sncartdeco/c-legendary.png (sha256 ddef6def2389; within 0 levels) too"
       ]
     },
     "sourceFiles": [

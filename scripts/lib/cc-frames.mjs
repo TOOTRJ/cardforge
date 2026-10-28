@@ -4298,6 +4298,85 @@ export const SNC_DECO_SOURCE_TONES = Object.freeze({
   ),
   [`${SNC_DECO}/pt/m.png`]: Object.freeze({ chroma: Object.freeze({ plateGold: SNC_DECO_GOLD_CHROMA }), tones: Object.freeze({ plateGold: SNC_DECO_PRINT_TONES.plateGold }), table: "SNC_DECO_PRINT_TONES (plateGold)" }),
 });
+/**
+ * The translucent title bar, type bar and text box as dark as print's
+ * (owner, #622 review): the pack draws all three black at α 127 (0.50);
+ * print's are near-black with only faint art through. Measured 2026-10-28 on
+ * the 45 non-gilded prints (Scryfall PNGs at 1500 × 2100) by fitting `out =
+ * α·c + (1 − α)·art` on pixel pairs ACROSS each region's opaque rim — the art
+ * seen through the window just outside it against the same column seen
+ * through the region (the title bar: window rows 252–275 against bar rows
+ * 190–198; the type bar: window rows 1142–1165 against bar rows 1205–1212;
+ * the text box: the type bar's foot 1275–1282, the art under it recovered
+ * with the type bar's fit, against the box's top 1331–1337), kept only where
+ * the art is a flat field on both sides (σ < 10–20 levels over the band;
+ * white ink left out). The layer colour fits at 15–18 on every channel, below
+ * the 22 the same scans read on the card's true-black border: black, as the
+ * pack draws it — so only α moves. Per region, the median α of the pairs
+ * (stable within 0.03 as the flatness threshold moves 10 → 20):
+ *   • the title bar: 0.74 (quartiles 0.56–0.80; 2,050 pairs);
+ *   • the type bar:  0.81 (0.74–0.88; 793 pairs, 26 prints);
+ *   • the text box:  0.82 (0.77–0.86; 1,872 pairs, all 45 prints).
+ * The box's mean luma on #297 / #298 agrees: print 44 / 46, ours at α 0.50
+ * 86 / 73 — α 0.82 / 0.77 for the same art.
+ * Applied by `liftTranslucency` to each band's rows: a pixel at the pack's
+ * α (`from`) takes the band's α; one between it and opaque (the rims'
+ * anti-aliased edges) keeps its place on that ramp; below `from` it scales
+ * with it. Colour untouched.
+ */
+export const SNC_DECO_TRANSLUCENCY = Object.freeze({
+  from: 127,
+  bands: Object.freeze([
+    Object.freeze({ name: "title bar", y0: 40, y1: 237, alpha: Math.round(0.74 * 255) }),
+    Object.freeze({ name: "type bar", y0: 1168, y1: 1319, alpha: Math.round(0.81 * 255) }),
+    Object.freeze({ name: "text box", y0: 1320, y1: 1960, alpha: Math.round(0.82 * 255) }),
+  ]),
+});
+/** Pure: a copy of `buf` (8-bit RGBA, `width` wide) with each band's
+ *  translucent pixels re-weighted onto its α (see SNC_DECO_TRANSLUCENCY). */
+export function liftTranslucency(buf, width, height, { from, bands }) {
+  if (buf.length !== width * height * 4) throw new Error(`liftTranslucency: the image is not ${width}x${height} RGBA`);
+  const out = Buffer.from(buf);
+  for (const { y0, y1, alpha } of bands) {
+    if (!(alpha > from && alpha < 255)) throw new Error(`liftTranslucency: α ${alpha} is not between ${from} and 255`);
+    for (let y = Math.max(0, y0); y <= Math.min(height - 1, y1); y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const o = (y * width + x) * 4 + 3;
+        const a = out[o];
+        if (a === 0 || a === 255) continue;
+        out[o] = a >= from ? Math.round(255 - ((255 - a) * (255 - alpha)) / (255 - from)) : Math.round((a * alpha) / from);
+      }
+    }
+  }
+  return out;
+}
+/**
+ * A see-through dot in the right pillar's fin, outside the window (the pack's
+ * anti-aliasing: x 1378–1379 on row 969, α 232 / 143, between opaque gold at
+ * 1377 and 1380): inside the window's slot it showed the WINDOW's art layer
+ * where the under-frame layer belongs (#622 review). Filled opaque from its
+ * two neighbours on the row, interpolated — the gold the pillar draws round
+ * it. Every other see-through pixel inside the slot is the window's own
+ * (tests/unit/frames/snc-art-deco-importer.test.ts holds it).
+ */
+export const SNC_DECO_DOT_FILLS = Object.freeze([Object.freeze({ y: 969, x0: 1378, x1: 1379 })]);
+/** Pure: a copy of `buf` with each run's pixels interpolated, opaque,
+ *  between the opaque pixels either side of it on its row. */
+export function fillDots(buf, width, runs) {
+  const out = Buffer.from(buf);
+  for (const { y, x0, x1 } of runs) {
+    const l = (y * width + x0 - 1) * 4;
+    const r = (y * width + x1 + 1) * 4;
+    if (out[l + 3] !== 255 || out[r + 3] !== 255) throw new Error(`fillDots: the run ${x0}–${x1} on row ${y} has no opaque neighbour on each side`);
+    for (let x = x0; x <= x1; x += 1) {
+      const t = (x - x0 + 1) / (x1 - x0 + 2);
+      const o = (y * width + x) * 4;
+      for (let c = 0; c < 3; c += 1) out[o + c] = Math.round(out[l + c] * (1 - t) + out[r + c] * t);
+      out[o + 3] = 255;
+    }
+  }
+  return out;
+}
 const SNC_DECO_NOTES = [
   "w u b r g c m = the pack's 'Regular Frame' (snc/gilded/m.png, 1500x2100 NATIVE — no resample), byte for byte: the one gold filigree all 90 printings wear (every card of the run is three colours); the pack's 'GildedColored' frames (snc/gilded/colored/<k>.png) are Card Conjurer's own — no printing wears them — and are not imported",
   "<k>-legendary = the pack's 'Legendary Frame' (snc/gilded/legendary/m.png): the arch over the title bar all 30 legendary printings carry, baked into its own master under every key (the profile's crownMasters) — the arch changes the translucent bar under it, which no overlay can draw",
@@ -4306,6 +4385,8 @@ const SNC_DECO_NOTES = [
   "plates = the pack's one 'Power/Toughness' plate (snc/gilded/pt/m.png, 254x134, at its bounds 1156/1857 px, 1:1) under every key",
   `the gold toned onto print by the ring's rule (raw scan medians, the 45 non-gilded prints registered block by block; a region ≥ 9 levels off is toned): the frame's gold ${SNC_DECO_PRINT_TONES.gold.from.join(",")} → ${SNC_DECO_PRINT_TONES.gold.to.join(",")}, the plate's gold rim ${SNC_DECO_PRINT_TONES.plateGold.from.join(",")} → ${SNC_DECO_PRINT_TONES.plateGold.to.join(",")} (the file's pixels of chroma ≥ ${SNC_DECO_GOLD_CHROMA.full}); the plate's dark face within 3 levels and the black border print's true black, as drawn; the translucent bars and box lie over the art (no raw median), as drawn; the gilded twins' foil scans near-black and is not read`,
   "geometry as drawn: the pillars, the art's foot rim, the type bar and the box rim within 0–2 px of print; the plain prints' title bar 6–7 px lower than the pack's (the legendary prints' within 1 px of the twin's), across gold pillars with no flat zone — nothing is re-cut, the slots ride the pack's bars",
+  `the translucent title bar, type bar and text box as dark as print's (owner, #622 review): the pack's α 0.50 lifted to ${SNC_DECO_TRANSLUCENCY.bands.map((b) => `${b.name} ${(b.alpha / 255).toFixed(2)}`).join(", ")} — fitted as out = α·c + (1 − α)·art on pixel pairs across each region's opaque rim on the 45 non-gilded prints (flat art fields only); the layer colour fits black (15–18 against the border's 22 on the same scans), so only α moves; the rims' anti-aliased edges keep their place on the ramp (SNC_DECO_TRANSLUCENCY, liftTranslucency)`,
+  "a see-through dot in the right pillar's fin (x 1378–1379 on row 969, the pack's anti-aliasing), inside the window's slot but not the window's, filled opaque from its neighbours — the window layer and the under-frame layer now meet on opaque gold all round (SNC_DECO_DOT_FILLS)",
 ];
 
 // ---------------------------------------------------------------------------
@@ -5652,7 +5733,10 @@ export const CC_TEMPLATES = {
       ...Object.fromEntries(COLORS.map((k) => [legendaryKey(k), [layer(`${SNC_DECO}/legendary/m.png`)]])),
     },
     plates: perColor(() => `${SNC_DECO}/pt/m.png`),
+    translucency: SNC_DECO_TRANSLUCENCY,
+    dotFills: SNC_DECO_DOT_FILLS,
     pack: SNC_DECO_PACK,
+    transforms: `native 1500x2100, no resample; the gold toned as the file loads (SNC_DECO_SOURCE_TONES); the translucent bars and box lifted onto print's opacity (${SNC_DECO_TRANSLUCENCY.bands.map((b) => `${b.name} α ${b.alpha}`).join(", ")}, from ${SNC_DECO_TRANSLUCENCY.from}); the fin's see-through dot filled (SNC_DECO_DOT_FILLS); corners rounded to the importer radius`,
     notes: SNC_DECO_NOTES,
   },
 };

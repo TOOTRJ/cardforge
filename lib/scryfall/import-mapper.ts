@@ -1860,6 +1860,10 @@ const CROWNED_SHOWCASE_SIGNATURES: ReadonlySet<string> = new Set([
  *  frames named here (ImportedAnatomyFacts.printed_crown_frames). */
 const OWN_FRAME_CROWN_SIGNATURES: Readonly<Record<string, readonly FrameTemplate[]>> = {
   "showcase/blb/anime": ["bloomanime"],
+  // The New Capenna Art Deco's arch (TODO 4.11 wave 2) is its own frame's
+  // crowned twin: a legend that lands on the m15 stand-in while the frame
+  // is unverified wears no standard crown there.
+  "showcase/snc/art-deco": ["sncartdeco"],
 };
 
 /** Whether a printing prints the STANDARD legendary crown (see

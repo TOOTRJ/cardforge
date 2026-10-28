@@ -5561,16 +5561,25 @@ colour is verified.
   reshapes the TRANSLUCENT title bar under it (28,300 pixels differ, 10,843
   of them translucent) — an overlay cannot draw that. Opt-in per card; an
   import of a legendary printing names it on
-  (`CROWNED_SHOWCASE_SIGNATURES`).
+  (`CROWNED_SHOWCASE_SIGNATURES`) — on the Art Deco frame only: until the
+  frame is verified the card lands on the m15 stand-in with the crown OFF
+  (`OWN_FRAME_CROWN_SIGNATURES`, the anime's rule), on once it lands on, or
+  is switched to, `sncartdeco`.
 - **The art under the frame.** The title bar, type bar and text box are
-  translucent (α 127) over the art on every printing: the profile's
+  translucent over the art on every printing (the pack's α 127, lifted onto
+  print's — below): the profile's
   `underFrameArt` covers them (96–1404 × 77–1936 px, every translucent pixel
   of both masters with the art-window check's spare; Card Conjurer's
   artBounds 96 / 78 / 1308 × 1857). The window keeps its own slot —
   `SNCARTDECO_ART_SLOT`, 119–1381 × 236–1170 (α < 250 on 120–1379 ×
   238–1167; the stepped fins narrow it to 143–1356 at its top), Scryfall's
   `art_crop` shape (626 × 457) — and the two layers meet on the opaque gold
-  round it (the fins, the title bar's foot rim, the art's foot rim).
+  round it (the fins, the title bar's foot rim, the art's foot rim). One
+  see-through dot of the pack's anti-aliasing in the right pillar's fin
+  (x 1378–1379 on row 969) sat inside the slot but outside the window, so
+  the window's layer showed there: it is filled opaque from its gold
+  neighbours (`SNC_DECO_DOT_FILLS`), and every see-through pixel inside the
+  slot is now the window's own (#622 review).
 - **Tones** — the ring's one rule (raw scan medians, a region ≥ 9 levels
   off is toned), the 45 non-gilded prints registered block by block on the
   pack's gold:
@@ -5583,8 +5592,19 @@ colour is verified.
   - the black border: as drawn (0,0,0) — the prints read 22,19,14, and so
     do SNC's own regular black borders on the same scans (16 cards, #1–17):
     print's true black (the woodland rule);
-  - the translucent bars and box lie over each card's art: no raw median,
-    as drawn.
+  - the translucent bars and box lie over each card's art, so no raw median:
+    their OPACITY is fitted instead (owner, #622 review: print's are
+    near-black with faint art through, the pack's α 0.50 read about twice
+    as bright) — `out = α·c + (1 − α)·art` on pixel pairs across each
+    region's opaque rim (the art seen through the window just outside it
+    against the same column through the region; the box through the type
+    bar's fit), flat art fields only, the 45 non-gilded prints: the title
+    bar α 0.74 (quartiles 0.56–0.80), the type bar 0.81 (0.74–0.88), the
+    text box 0.82 (0.77–0.86), each within 0.03 as the flatness threshold
+    moves; the layer colour fits black (15–18, under the border's 22 on the
+    same scans), so only α moves (`SNC_DECO_TRANSLUCENCY`,
+    `liftTranslucency`: the fill takes the band's α, a rim's anti-aliased
+    pixel keeps its place on the ramp).
 - **Geometry kept as drawn.** Registered on the prints, the pack's pillars,
   art-foot rim, type bar and box rim sit within 0–2 px of print's. The
   PLAIN printings draw their title bar 6–7 px lower than the pack does (its
@@ -5600,7 +5620,10 @@ colour is verified.
   line by their white ink). The plain 60 set the name and the cost row ~4 px
   LOWER than the 30 legends; no slot follows the crown, so each takes the
   mean of the 90:
-  - the name 1 px up and 3 px left (plain +1, legendary −5 before);
+  - the name 1 px up (plain +1, legendary −5 before) and 1 px left of
+    M15's pen — its LEFT ink edge on print's (#622 review: the first ink
+    column on all 90, print against ours on the same name, median 0 after;
+    print 128–138);
   - the cost row: the CC M15 70 px disc 8 px lower and 1.5 px further right
     (`costDy` +1.4 px, `costDx` 3.5 px; plain +9.3, legendary +5.2 before) —
     after, plain +1.3, legendary −2.9;

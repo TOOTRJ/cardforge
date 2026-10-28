@@ -5,7 +5,7 @@ import { frameColorsFromScryfall, frameMatchFromScryfall, mapScryfallToFormPatch
 import { frameAnatomyOf, importedAnatomy, normalizeAnatomy } from "@/lib/cards/anatomy";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
-import { finalizeImportMatch } from "@/lib/creator/frame-resolve";
+import { finalizeImportMatch, importFrameCandidates, resolvePublishedFrame } from "@/lib/creator/frame-resolve";
 import { frameChoicesForType, resolveGeneratedFrame } from "@/lib/creator/frame-random";
 import { frameRequestFromImport } from "@/lib/frames/frame-requests";
 import type { FrameTemplate } from "@/types/card";
@@ -123,6 +123,25 @@ describe("the New Capenna Art Deco imports", () => {
     expect(stamped).toBe(50);
     expect(legends).toBe(30);
     expect(frameAnatomyOf("sncartdeco")).toMatchObject({ crown: true, twoColor: [], collector: true, stamp: true });
+  });
+
+  it("turns a legend's crown on only where it lands on the Art Deco frame — off on its m15 stand-in while the frame is unverified", () => {
+    for (const key of ["snc-307", "snc-372", "snc-301"]) {
+      const patch = mapScryfallToFormPatch(card(key));
+      expect(patch.printed_crown, key).toBe(true);
+      expect(patch.printed_crown_frames, key).toEqual(["sncartdeco"]);
+      const candidates = importFrameCandidates({ wanted: "sncartdeco", cardType: patch.card_type ?? "creature", supertype: patch.supertype ?? null });
+      const resolve = (verifiedKeys: ReadonlySet<string>) =>
+        resolvePublishedFrame({ kind: "creature", candidates, colorKey: "m", verifiedKeys, prefer: "frame" });
+      // Unverified: the m15 stand-in, the crown OFF there.
+      const unverified = resolve(every("m15"));
+      expect(unverified, key).toMatchObject({ status: "frame-switched", template: "m15" });
+      expect(importedAnatomy(patch, "m15").style.crown, key).toBe(false);
+      // Ticked: the Art Deco frame itself, the crown ON (its crowned twin).
+      const ticked = resolve(new Set([...every("m15"), frameComboKey("sncartdeco", "m")]));
+      expect(ticked, key).toMatchObject({ status: "exact", template: "sncartdeco" });
+      expect(importedAnatomy(patch, "sncartdeco").style.crown, key).toBe(true);
+    }
   });
 
   it("the AI's random pool reaches the frame only once it is verified in the card's colour", () => {

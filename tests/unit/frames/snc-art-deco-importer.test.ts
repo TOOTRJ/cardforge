@@ -8,7 +8,11 @@ import {
   SNC_DECO,
   SNC_DECO_GOLD_CHROMA,
   SNC_DECO_PRINT_TONES,
+  SNC_DECO_DOT_FILLS,
+  SNC_DECO_TRANSLUCENCY,
   chromaRegionPlane,
+  fillDots,
+  liftTranslucency,
   legendaryKey,
   sourceFilesFor,
   sourceTonesOf,
@@ -112,6 +116,41 @@ describe("the Art Deco recipe", () => {
     expect(px([181, 156, 71])).toBe(255);
     expect(px([47, 27, 15])).toBe(0);
     expect(px([20, 16, 24])).toBe(0);
+  });
+});
+
+describe("the translucent bars and box, as dark as print's (#622 review)", () => {
+  const def2 = CC_TEMPLATES as unknown as Record<string, { translucency?: unknown; dotFills?: unknown }>;
+
+  it("lifts the pack's α 127 to print's fitted opacity, per region, as data on the recipe", () => {
+    expect(def2.sncartdeco.translucency).toBe(SNC_DECO_TRANSLUCENCY);
+    expect(def2.sncartdeco.dotFills).toBe(SNC_DECO_DOT_FILLS);
+    expect(SNC_DECO_TRANSLUCENCY.from).toBe(127);
+    expect(SNC_DECO_TRANSLUCENCY.bands.map((b) => [b.name, b.y0, b.y1, b.alpha])).toEqual([
+      ["title bar", 40, 237, 189],
+      ["type bar", 1168, 1319, 207],
+      ["text box", 1320, 1960, 209],
+    ]);
+    // The bands stop short of the window's own rows (238–1167): its edge
+    // pixels keep the pack's anti-aliasing.
+    expect(SNC_DECO_TRANSLUCENCY.bands[0].y1).toBeLessThan(238);
+    expect(SNC_DECO_TRANSLUCENCY.bands[1].y0).toBeGreaterThan(1167);
+  });
+
+  it("maps the fill to the band's α, keeps a rim's anti-aliased pixel on the ramp, leaves opaque and clear pixels alone", () => {
+    const row = (alphas: number[]) => Buffer.from(alphas.flatMap((a) => [0, 0, 0, a]));
+    const spec = { from: 127, bands: [{ name: "b", y0: 0, y1: 0, alpha: 209 }] };
+    const out = liftTranslucency(row([0, 64, 127, 191, 255]), 5, 1, spec);
+    expect([3, 7, 11, 15, 19].map((i) => out[i])).toEqual([0, Math.round((64 * 209) / 127), 209, Math.round(255 - (64 * 46) / 128), 255]);
+    // Outside the band's rows nothing moves.
+    expect(liftTranslucency(row([127]), 1, 1, { from: 127, bands: [{ name: "b", y0: 1, y1: 2, alpha: 209 }] })[3]).toBe(127);
+  });
+
+  it("fills the fin's see-through dot from its opaque neighbours", () => {
+    expect(SNC_DECO_DOT_FILLS).toEqual([{ y: 969, x0: 1378, x1: 1379 }]);
+    const buf = Buffer.from([10, 20, 30, 255, 0, 0, 0, 232, 0, 0, 0, 143, 40, 50, 60, 255]);
+    expect([...fillDots(buf, 4, [{ y: 0, x0: 1, x1: 2 }])]).toEqual([10, 20, 30, 255, 20, 30, 40, 255, 30, 40, 50, 255, 40, 50, 60, 255]);
+    expect(() => fillDots(Buffer.from([0, 0, 0, 200, 0, 0, 0, 0, 0, 0, 0, 255]), 3, [{ y: 0, x0: 1, x1: 1 }])).toThrow(/opaque neighbour/);
   });
 });
 
@@ -237,9 +276,29 @@ describe.skipIf(!available)("the published objects (set FRAMES_BUILD_DIR if skip
     }
     expect([px(0, 0)[3], px(1499, 0)[3], px(0, 2099)[3], px(1499, 2099)[3]]).toEqual([0, 0, 0, 0]);
     expect(px(750, 700)[3]).toBe(0);
-    // The title bar and the text box: α 127 over the art.
-    expect(px(750, 170)[3]).toBe(127);
-    expect(px(750, 1600)[3]).toBe(127);
+    // The title bar, the type bar and the text box at print's opacity over
+    // the art (the pack's 127 lifted: SNC_DECO_TRANSLUCENCY).
+    expect([px(750, 170)[3], px(750, 1250)[3], px(750, 1600)[3]]).toEqual([189, 207, 209]);
+    // The fin's dot is opaque; every see-through pixel inside the window's
+    // slot (119–1381 × 236–1170) is the window's own — 4-connected to its
+    // centre — so the slot and the under-frame layer meet on opaque gold.
+    expect(px(1378, 969)[3]).toBe(255);
+    expect(px(1379, 969)[3]).toBe(255);
+    const seen = new Uint8Array(1500 * 2100);
+    const stack = [[750, 700]];
+    seen[700 * 1500 + 750] = 1;
+    while (stack.length) {
+      const [x, y] = stack.pop()!;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy;
+        if (seen[ny * 1500 + nx] || px(nx, ny)[3] >= 250) continue;
+        seen[ny * 1500 + nx] = 1;
+        stack.push([nx, ny]);
+      }
+    }
+    let foreign = 0;
+    for (let y = 236; y < 1170; y += 1) for (let x = 119; x < 1381; x += 1) if (px(x, y)[3] < 250 && !seen[y * 1500 + x]) foreign += 1;
+    expect(foreign).toBe(0);
     // The gold (chroma ≥ 45) toned onto print's 207,180,115 (its median on
     // the master within 9 levels).
     const ch: number[][] = [[], [], []];
@@ -284,6 +343,6 @@ describe.skipIf(!available)("the published objects (set FRAMES_BUILD_DIR if skip
     const crown = at(750, 1939 - 35 + 5);
     expect(crown[3]).toBe(255);
     expect(crown[0] - crown[2]).toBeGreaterThan(45);
-    expect(at(750, 1935)).toEqual([0, 0, 0, 255]);
+    expect(at(750, 1920)).toEqual([0, 0, 0, 255]);
   });
 });
