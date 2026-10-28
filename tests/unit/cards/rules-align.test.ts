@@ -156,8 +156,9 @@ describe("which frames offer the choice (profileOffersRulesAlign)", () => {
     // (…and the New Capenna Art Deco, TODO 4.11 wave 2, as every showcase.)
     // (…and the D&D Sourcebook, TODO 4.11 wave 2, as every showcase.)
     // (…and the MKM dossier, TODO 4.11 wave 2, as every showcase.)
-    // (…and the Enchanting Tales, TODO 4.11 wave 2, as every showcase.)
-    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(77);
+    // (…and the Enchanting Tales and the Dominaria United Stained Glass, TODO
+    // 4.11 wave 2, as every showcase.)
+    expect(FRAME_TEMPLATE_VALUES.length - without.length).toBe(78);
   });
 
   it("rulesAlignOf is \"center\" only for the card's \"center\" on a frame that offers it", () => {

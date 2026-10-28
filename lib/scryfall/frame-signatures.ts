@@ -2777,6 +2777,32 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       blockedBy: "4.30",
     },
   },
+  // The Dominaria United Stained Glass showcase (TODO 4.11 wave 2; Card
+  // Conjurer's 'Stained Glass (DMU)' pack): DMU #287–368 (41 legends and
+  // their 41 textured-foil twins) and the nine Multiverse Legends Dominaria
+  // legends that print the same leaded-glass frame (checked by eye
+  // 2026-10-27): Kwende #5, Tetsuko Umezawa #12, Yargle #19, Squee #22,
+  // Valduk #24, Radha #55, Raff #56, Rona #58, Shanna #59 and their
+  // halo-foil twins #135, #142, #149, #152, #154, #185, #186, #188, #189 (the
+  // serialized "z" printings too) — 109 printings, every one a black-bordered
+  // legendary creature on the 2015 frame. NOT their etched twins (MUL #70,
+  // #77 …: the etched frame), nor DMU #369 (the Phyrexian-script Sheoldred)
+  // and #370 / #371 (the two Ajani walkers: another design) — those stay
+  // `showcase`. Exact once verified (withVerification). No gap: the
+  // template draws the run's two-colour dress (gold bars, the box split —
+  // its pair masters) and the crown every printing carries; none is
+  // colourless, a hybrid, a walker or double-faced.
+  {
+    key: "showcase/dmu/stained-glass",
+    exactLabel: ({ set }) => (set === "mul" ? "Multiverse Legends Dominaria showcase (stained glass)" : "Dominaria United stained-glass showcase"),
+    match: {
+      collectors: {
+        dmu: [[287, 368]],
+        mul: [[5, 5], [12, 12], [19, 19], [22, 22], [24, 24], [55, 56], [58, 59], [135, 135], [142, 142], [149, 149], [152, 152], [154, 154], [185, 186], [188, 189]],
+      },
+    },
+    outcome: { status: "exact", template: "stainedglass" },
+  },
   // Exact once verified since TODO 4.11 (Card Conjurer's 'Tarkir' masters
   // have the printed black border: off BORDER_PENDING_TEMPLATES). Its one
   // two-colour printing (#60 / #190 Taigam, W/U) is the frame's own split
@@ -3333,6 +3359,20 @@ export function templatesOfRule(rule: Rule): readonly FrameTemplate[] {
 }
 
 const RULE_BY_KEY: ReadonlyMap<string, Rule> = new Map(FRAME_SIGNATURE_RULES.map((rule) => [rule.key, rule]));
+
+/** The frames a signature's own rule NAMES — the template its printing is
+ *  drawn on where the registry sends it (and the one it names once
+ *  verified), concrete templates only: a rule whose outcome is a family
+ *  ("the borderless frame for the card") names none. A gap signature
+ *  ("…+two-colour") names its base's frame — the gap only makes it nearest.
+ *  The import's crown reads it (lib/scryfall/import-mapper.ts
+ *  ownCrownFramesOf): a crowned showcase's crown is ITS frame's, on no
+ *  other landing. Empty for an unknown signature. */
+export function ownFramesOfSignature(signature: string): readonly FrameTemplate[] {
+  const rule = RULE_BY_KEY.get(signature);
+  if (!rule) return [];
+  return [rule.outcome.template, rule.outcome.onceVerified].filter((spec): spec is FrameTemplate => typeof spec === "string");
+}
 
 /**
  * Whether a gap signature logged before its piece shipped ("era/2015+crown",

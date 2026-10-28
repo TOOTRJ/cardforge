@@ -583,6 +583,12 @@ export const FRAME_TEMPLATE_VALUES = [
   // photo clipped to the page, a colour accent per key. An addition: no
   // stored card sits on it.
   "dossier",
+  // The Dominaria United Stained Glass showcase (TODO 4.11 wave 2, Card
+  // Conjurer's 'Stained Glass (DMU)' pack, frames bucket): DMU #287–368 and
+  // the Multiverse Legends Dominaria legends (MUL #5, #12, #19, #22, #24,
+  // #55, #56, #58, #59 and their halo-foil / serialized twins). An
+  // addition: no stored card sits on it.
+  "stainedglass",
   // Variation treatments (2026-07): extended/full art, premium lands, Nyx.
   "extendedart",
   // Its land dress (TODO 4.7, owner Round 63): the pack's land frames, as
@@ -743,6 +749,8 @@ export const FRAME_TEMPLATE_LABELS: Record<FrameTemplate, string> = {
   sncartdeco: "Art Deco",
   // Set-relative: the picker prints "Murders at Karlov Manor — Dossier".
   dossier: "Dossier",
+  // Set-relative: the picker prints "Dominaria United — Stained Glass".
+  stainedglass: "Stained Glass",
   extendedart: "Extended Art",
   extendedartland: "Extended Art Land",
   // Set-relative like the other showcase labels: the picker prints
@@ -785,6 +793,7 @@ export const FRAME_SET_VALUES = [
   "avatar",
   "bloomburrow",
   "tarkir",
+  "dominariaunited",
   "multiverselegends",
   "newcapenna",
   "zendikarrising",
@@ -809,6 +818,9 @@ export const FRAME_SET_LABELS: Record<FrameSet, string> = {
   avatar: "Avatar: The Last Airbender",
   bloomburrow: "Bloomburrow",
   tarkir: "Tarkir: Dragonstorm",
+  // Dominaria United (DMU 2022) — its Stained Glass showcase, which the
+  // Multiverse Legends Dominaria legends (MUL 2023) print too.
+  dominariaunited: "Dominaria United",
   multiverselegends: "Multiverse Legends",
   newcapenna: "Streets of New Capenna",
   zendikarrising: "Zendikar Rising",
@@ -896,6 +908,7 @@ export const FRAME_TEMPLATE_SET: Record<FrameTemplate, FrameSet> = {
   bloomanime: "bloomburrow",
   tarkirdraconic: "tarkir",
   tarkirghostfire: "tarkir",
+  stainedglass: "dominariaunited",
   tarkirdragon: "multiverselegends",
   sncartdeco: "newcapenna",
   dossier: "karlov",
@@ -983,6 +996,8 @@ export const FRAME_SET_ERA: Record<FrameSet, FrameEra> = {
   avatar: "showcase",
   bloomburrow: "showcase",
   tarkir: "showcase",
+  // The Stained Glass showcase (DMU #287–368, MUL's Dominaria legends).
+  dominariaunited: "showcase",
   multiverselegends: "showcase",
   // The Art Deco showcase (SNC #296–340, #361–405).
   newcapenna: "showcase",

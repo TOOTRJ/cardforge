@@ -355,6 +355,10 @@ const PICKS: readonly Pick[] = [
   // The MKM dossier showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
   { from: "dossier/u/creature-short@collector-2015", why: "MKM dossier: CC's folder masters downscaled once, M15's slots on the folder's bands (the name 2 px up, the cost row 38 px in from the clip and 19 px down, the set symbol 17 px left, the type line 4 px down), the paper tag, the collector line 4–5 px above M15's rows" },
   { from: "dossier/wu/creature-long@pair-crown", why: "MKM dossier: a two-colour legend — the pair master lerped across print's ramp under the crown band's lerped pair" },
+  // The Dominaria United Stained Glass showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
+  { from: "stainedglass/u/creature-short@collector-2015", why: "Stained Glass: CC's leaded-glass master (the arch split off: the box's foot straight), M15's slots on the pack's bars (the name 4.5 px up, the cost row 1 px up and 9.5 px right, the type line 1 px down), the box 8.5 px shorter at each end, white ink, the pack's plate, the 2015 collector line 4 px below M15's rows" },
+  { from: "stainedglass/wu/creature-long@pair-crown", why: "Stained Glass: the pair master (gold frame, the box split across 46→57 %W) under the pair's crown (the gold dome split across 47→53 %W)" },
+  { from: "stainedglass/wub/creature-long@stamp-m", why: "Stained Glass: the arch split off the gold master, laid back over its straight foot, our oval in its cut" },
   { from: "m15borderless/b/creature-long", why: "borderless: art to the edge, white ink, the keylined set symbol" },
   // --- the borderless stamp and collector line (TODO 4.9d) -----------------
   { from: "m15borderless/r/creature-long@stamp-collector-hd", why: "borderless: the lifted-pinline arch, the oval over the black, the collector line with the mark on line 2 beside the plate" },

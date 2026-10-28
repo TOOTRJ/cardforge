@@ -98,7 +98,8 @@
   { "template":  "sncartdeco", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.11 wave 2: a NEW template — the Streets of New Capenna Art Deco showcase (SNC #296–340, #361–405), Card Conjurer's 'Golden Age (SNC)' pack (frames bucket only): M15's anatomy on the pack's own bars with its P/T plate — the IP showcases' capabilities (P/T only: no walker, battle or layout body). An addition: no stored card sits on it." },
   { "template":  "dndsourcebook", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.11 wave 2: a NEW template — the D&D Sourcebook showcase (AFR #299–349, CLB #375–450), Card Conjurer's 'D&D Sourcebook' pack (frames bucket only): M15's anatomy on the parchment page's own lines with the pack's P/T plate — the IP showcases' capabilities (P/T only: no walker, battle or layout body). An addition: no stored card sits on it." },
   { "template":  "dossier", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.11 wave 2: a NEW template — the Murders at Karlov Manor dossier showcase (MKM #336–389, #433), Card Conjurer's 'Dossier' pack (frames bucket only): M15's anatomy on the folder's own bands with the pack's P/T tag — the IP showcases' capabilities (P/T only: no walker, battle or layout body). Every kind its body draws but the land (TREATMENT_KINDS: the pack has no land frame). An addition: no stored card sits on it." },
-  { "template":  "enchantingtales", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.11 wave 2: a NEW template — the Wilds of Eldraine Enchanting Tales showcase (WOT #1–63), Card Conjurer's 'Enchanting Tales' pack (frames bucket only): M15's anatomy on the pack's bars with its P/T plates — the IP showcases' capabilities (P/T only: no walker, battle or layout body); enchantment dress (TREATMENT_KINDS: the Enchantment kind and an Enchantment Creature). An addition: no stored card sits on it." }
+  { "template":  "enchantingtales", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.11 wave 2: a NEW template — the Wilds of Eldraine Enchanting Tales showcase (WOT #1–63), Card Conjurer's 'Enchanting Tales' pack (frames bucket only): M15's anatomy on the pack's bars with its P/T plates — the IP showcases' capabilities (P/T only: no walker, battle or layout body); enchantment dress (TREATMENT_KINDS: the Enchantment kind and an Enchantment Creature). An addition: no stored card sits on it." },
+  { "template":  "stainedglass", "change":  "new-template", "capabilities":  ["pt"], "reason":  "TODO 4.11 wave 2: a NEW template — the Dominaria United Stained Glass showcase (DMU #287–368, MUL's Dominaria legends), Card Conjurer's 'Stained Glass (DMU)' pack (frames bucket only): M15's anatomy on the pack's own bars with its P/T plates — the IP showcases' capabilities (P/T only: no walker, battle or layout body). An addition: no stored card sits on it." }
  ],
  "capabilities": {
   "m15": ["pt"],
@@ -178,6 +179,7 @@
   "dndsourcebook": ["pt"],
   "dossier": ["pt"],
   "enchantingtales": ["pt"],
+  "stainedglass": ["pt"],
   "extendedart": ["pt"],
   "extendedartland": ["pt"],
   "m15fullartland": ["pt", "basicSymbol"],

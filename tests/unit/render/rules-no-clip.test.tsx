@@ -341,6 +341,10 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       // 4.11 wave 2's Enchanting Tales: Card Conjurer's text rect (604 px,
       // 1313–1917) — it holds the run's fullest boxes, not 1,200 characters.
       "enchantingtales/main",
+      // 4.11 wave 2's Dominaria United Stained Glass: M15's box 8.5 px
+      // shorter at each end (the run's own) — it holds the level-up card,
+      // not 1,200 characters.
+      "stainedglass/main",
     ],
     ["1200 chars"],
   ],

@@ -726,6 +726,10 @@ const CROWN_CASES: readonly [FrameTemplate, readonly VisualColour[]][] = [
   // …and the New Capenna Art Deco's arch (TODO 4.11 wave 2): its crowned
   // twin — one gold master, so a three-colour legend and a mono one.
   ["sncartdeco", ["wub", "r"]],
+  // TODO 4.11 wave 2: the Dominaria United stained glass's dome — each
+  // colour, `c` (the gold crown: no colourless print), a pair's gold crown
+  // with its dome split (its pair master is "@pair-crown") and gold.
+  ["stainedglass", ["w", "u", "b", "r", "g", "c", "wu", "wub"]],
   ["m15ubartifact", ["c", "u"]],
   ["m15ubland", ["g", "c"]],
   ["m15land", ["g", "c", "wub"]],
@@ -1372,6 +1376,8 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   // TODO 4.11 wave 2: the Enchanting Tales plate at its widest (an
   // Enchantment Creature borrows the frame; no print has one).
   ["enchantingtales", "creature", "r", "@wide", { supertype: "Enchantment", power: "12", toughness: "12" }],
+  // TODO 4.11 wave 2: the Dominaria United stained glass's plate at its widest.
+  ["stainedglass", "creature", "r", "@wide", { power: "12", toughness: "12" }],
   [
     "m15artifact",
     "artifact",
@@ -2064,6 +2070,12 @@ export function visualCases(): VisualCase[] {
   add("enchantingtales", "enchantment", "g", "short", { suffix: "@stamp-auto-uncommon", row: stampRow("enchantingtales", "auto", { rarity: "uncommon" }) });
   add("enchantingtales", "enchantment", "u", "long", { suffix: "@stamp", row: stampRow("enchantingtales", "auto", { rarity: "rare" }) });
   add("enchantingtales", "enchantment", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("enchantingtales", "auto", { rarity: "mythic" }) });
+  // TODO 4.11 wave 2: the Dominaria United stained glass's arch, split off
+  // its masters — none on a common (DMU / MUL print it on a rare or mythic
+  // only), a three-colour legend's (the gold master's arch), the HD bake.
+  add("stainedglass", "creature", "g", "short", { suffix: "@stamp-auto-common", row: stampRow("stainedglass", "auto", { rarity: "common" }) });
+  add("stainedglass", "creature", "wub", "long", { suffix: "@stamp-m", row: stampRow("stainedglass", "auto", { rarity: "rare" }) });
+  add("stainedglass", "creature", "u", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("stainedglass", "auto", { rarity: "mythic" }) });
   add("m15ub", "creature", "wu", "short", { suffix: "@pair-hybrid", row: { ...pairStyle("m15ub"), cost: "{W/U}{W/U}" } });
   // TODO 4.11 wave 2: the MKM dossier's OVAL notch — none on an uncommon
   // (MKM prints it on a rare or mythic only), a gold legend's (MKM #368
@@ -2519,6 +2531,9 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "dossier",
   // …and the Enchanting Tales' oval (TODO 4.11 wave 2: the pack's piece per colour).
   "enchantingtales",
+  // …and the Dominaria United stained glass's (TODO 4.11 wave 2: the pack's
+  // arch, split off every master).
+  "stainedglass",
 ];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's
@@ -2532,6 +2547,9 @@ export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = [
   // TODO 4.11 wave 2: the MKM dossier — its pair masters under the pack's
   // one notch piece (a pair draws m's).
   "dossier",
+  // TODO 4.11 wave 2: the Dominaria United stained glass (the pair master's
+  // own arch over its split box).
+  "stainedglass",
 ];
 
 /** A rules text whose fitted last line enters the arch on m15 (found on the
@@ -2985,6 +3003,9 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   // The MKM dossier (TODO 4.11 wave 2): the pack's two colour frames lerped
   // across print's ramp, and its crown's pairs.
   "dossier",
+  // The Dominaria United stained glass (TODO 4.11 wave 2): the gold frame,
+  // the box split.
+  "stainedglass",
 ];
 
 /** The collector line's fields on its cases (TODO 4.9b): a real printing's

@@ -70,6 +70,14 @@ describe("Card Conjurer frame profiles", () => {
         expect([profile.costSizePct, profile.costDy, profile.costDx]).toEqual([70 / 1500, -6.6 / 1500, 2 / 1500 + 3 / 1500]);
         continue;
       }
+      // The Dominaria United stained glass (TODO 4.11 wave 2): its own run's
+      // row — the CC M15 row 1 px higher against the bar and its end 9.5 px
+      // further right (the last disc's ink ending at 1392–1393 on print), 70
+      // px discs.
+      if (template === "stainedglass") {
+        expect([profile.costSizePct, profile.costDy, profile.costDx]).toEqual([70 / 1500, -6.6 / 1500 - 1 / 1500, 11.5 / 1500]);
+        continue;
+      }
       if (template in OWN_PRINT_COST_DY) {
         expect(profile.costDy, template).toBe(OWN_PRINT_COST_DY[template]);
         expect(profile.costDx, template).toBeUndefined();

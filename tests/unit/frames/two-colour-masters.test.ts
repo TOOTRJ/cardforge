@@ -104,6 +104,10 @@ describe("the declared pair masters", () => {
       // frames lerped across print's ramp
       // (tests/unit/frames/mkm-dossier-importer.test.ts).
       dossier: 10,
+      // …and the Dominaria United stained glass's ten (TODO 4.11 wave 2):
+      // the gold frame, the box the pair's two boxes split
+      // (tests/unit/frames/stained-glass-importer.test.ts).
+      stainedglass: 10,
     });
     // Every pair key is a master key the bake's loader knows (never "c").
     for (const key of TWO_COLOR_MASTER_KEYS) expect(FRAME_MASTER_KEYS as readonly string[]).toContain(key);

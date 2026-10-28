@@ -395,6 +395,13 @@ const TEMPLATES = {
     confirm: "WOT showcase — confirm the thumbnail is the swirled Enchanting Tales storybook frame (#1–63), not the anime-style borderless reprint (#64–103).",
     q: (k) => (k === "c" || k === "m" ? null : `set:wot cn<=63 ${spellColor(k)}`),
   },
+  // The Dominaria United Stained Glass showcase (TODO 4.11 wave 2): DMU
+  // #287–368 and MUL's Dominaria legends (#5 … #59; #135 … #189 their
+  // halo-foil twins). No colourless, artifact or land printing; no mono-green.
+  stainedglass: {
+    confirm: "DMU / MUL stained-glass showcase — confirm the thumbnail is the leaded-glass frame, not DMU #369–371 (the Phyrexian-script Sheoldred, the Ajani walkers) or MUL's etched twins.",
+    q: (k) => `((set:dmu cn>=287 cn<=368) or (set:mul (cn:5 or cn:12 or cn:19 or cn:22 or cn:24 or cn:55 or cn:56 or cn:58 or cn:59))) ${spellColor(k)}`,
+  },
   tarkirdraconic: {
     confirm: "TDM black-border showcase run (#292–326) — confirm the thumbnail shows the draconic clan treatment.",
     q: (k) => `set:tdm is:showcase border:black ${spellColor(k)}`,

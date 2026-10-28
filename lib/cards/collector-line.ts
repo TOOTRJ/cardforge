@@ -160,6 +160,11 @@ export const COLLECTOR_TEMPLATES = [
   // 'Enchanting Tales'): WOT #1–63 set both lines in the colour's dark
   // footer, 3–4 px above M15's rows (ENCHANTINGTALES_COLLECTOR).
   "enchantingtales",
+  // …and the Dominaria United Stained Glass showcase (TODO 4.11 wave 2,
+  // Card Conjurer's 'Stained Glass (DMU)'): DMU #287–368 and MUL's Dominaria
+  // legends set both lines in the black border, 4 px below M15's rows
+  // (STAINEDGLASS_COLLECTOR).
+  "stainedglass",
 ] as const;
 
 export type CollectorLetter = "T" | "E" | "L" | "C" | "U" | "R" | "M";

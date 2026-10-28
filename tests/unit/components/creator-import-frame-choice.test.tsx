@@ -427,9 +427,13 @@ describe("imports = printing-only (owner round 17, 2026-09-30)", () => {
     // MUL #66 Anafenza, a showcase: OFF again, explicitly.
     await importPayload(printing("mul-66"));
     expect(preview().crown).toBe("false");
-    // LTR #302 Boromir, the ring showcase, prints its OWN crown (TODO 4.11): ON.
+    // LTR #302 Boromir, the ring showcase, prints its OWN crown (TODO 4.11)
+    // — the ring frame's, not M15's: with `lotr` unverified here it lands on
+    // the standard frame, crown OFF (the stained glass's correction; ON on
+    // its own frame: tests/unit/scryfall/crowned-showcase-own-frame.test.ts).
     await importPayload(printing("ltr-302"));
-    expect(preview().crown).toBe("true");
+    expect(preview().template).toBe("m15");
+    expect(preview().crown).toBe("false");
   });
 });
 

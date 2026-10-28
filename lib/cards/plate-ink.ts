@@ -96,6 +96,10 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   // the pack's bounds — the plate and its curled tail fill the image to
   // every edge.
   "/frames/enchantingtales/pt/{color}.png": { left: 0, top: 0, right: 1, bottom: 1 },
+  // The Stained Glass showcase's plates (TODO 4.11 wave 2): Card Conjurer's
+  // 'Power/Toughness' (262 × 127) per key, drawn at the pack's ptBounds —
+  // the bronze-rimmed plate fills the image to every edge.
+  "/frames/stainedglass/pt/{color}.png": { left: 0, top: 0, right: 1, bottom: 1 },
   // Git plates: the Tarkir showcases' plates / ribbon.
   "/frames/avatar/pt/{color}.png": { left: 0.0037, top: 0.007, right: 0.9963, bottom: 0.993 },
   "/frames/bloomburrow/pt/{color}.png": { left: 0.0022, top: 0.0076, right: 0.9978, bottom: 0.9924 },

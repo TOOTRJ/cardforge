@@ -136,6 +136,9 @@ const DOCUMENTED_NULLS = new Set([
   // The New Capenna Art Deco (TODO 4.11 wave 2): every card of the run is
   // three colours — one gold master, referenced on `m` alone.
   "sncartdeco/w", "sncartdeco/u", "sncartdeco/b", "sncartdeco/r", "sncartdeco/g", "sncartdeco/c",
+  // The Dominaria United Stained Glass (TODO 4.11 wave 2): every printing is
+  // a coloured legendary creature — no mono-green one, no colourless one.
+  "stainedglass/g", "stainedglass/c",
   // The transform land pair (TODO 5.1a): one master under every key, the
   // emblem's model — verified on c only (INR #287 / FIN #31).
   "m15dfclandfront/w", "m15dfclandfront/u", "m15dfclandfront/b", "m15dfclandfront/r", "m15dfclandfront/g", "m15dfclandfront/m",

@@ -74,6 +74,8 @@ describe("which card draws the crown", () => {
       "sncartdeco",
       // …and the MKM dossier (TODO 4.11 wave 2): the pack's torn colour strip, its pairs lerped.
       "dossier",
+      // …and the Dominaria United stained glass (TODO 4.11 wave 2): the pack's glass dome.
+      "stainedglass",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
       // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",

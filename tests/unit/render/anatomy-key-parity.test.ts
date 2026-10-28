@@ -82,7 +82,8 @@ describe("bake path = preview path", () => {
     // borderless double-faced bodies' 10 each (TODO 5.7: 40).
     // …and the Prepare frame's 20 (4.26: both dresses with the page).
     // …and the MKM dossier's 10 (4.11 wave 2: the pack's colour frames lerped).
-    expect(pairKeys).toBe(420);
+    // …and the Dominaria United stained glass's 10 (4.11 wave 2).
+    expect(pairKeys).toBe(430);
     // …and the borderless double-faced bodies' 18 crowned twins each (TODO
     // 5.7: the seven colour keys, the artifact stand-in's `a`, ten pairs).
     // …and the New Capenna Art Deco's 7 (TODO 4.11 wave 2: its pack's
@@ -191,6 +192,9 @@ describe("bake path = preview path", () => {
                                     : template === "enchantingtales"
                                       ? // …and the Enchanting Tales' (4.11 wave 2).
                                         "enchantingtalesholostamp"
+                                    : template === "stainedglass"
+                                      ? // …and the Dominaria United stained glass's arch, split off its masters (4.11 wave 2).
+                                        "stainedglass/holostamp"
                                       : "m15holostamp"
               : template === "fullart"
                 ? // The Zendikar Rising hedron showcase's crown band (4.11).
@@ -226,6 +230,9 @@ describe("bake path = preview path", () => {
                                 : template === "dossier"
                                   ? // …and the MKM dossier's torn strip (4.11 wave 2).
                                     "dossiercrown"
+                                : template === "stainedglass"
+                                  ? // …and the Dominaria United stained glass's dome (4.11 wave 2).
+                                    "stainedglasscrown"
                                   : (dfcCrown ?? "m15crown");
         for (const key of slot.keys) {
           expect(slot.assetPathTemplate.replace("{key}", key), `${template} ${slot.anatomy}`).toBe(`/frames/${folder}/${key}.png`);
@@ -276,8 +283,10 @@ describe("bake path = preview path", () => {
     // every key), and the MKM dossier's 7 + 10 pairs (4.11 wave 2, the
     // pack's one oval piece under every key and pair), and the Enchanting
     // Tales' 7 (4.11 wave 2, the pack's piece per colour), and the New Capenna Art Deco's 7
-    // (4.11 wave 2, its lifted gold rim).
-    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7 + (7 + 10) + 7 + 7);
+    // (4.11 wave 2, its lifted gold rim), and the Dominaria United stained
+    // glass's 7 + 10 pairs (4.11 wave 2: the arch split off every master and
+    // pair master).
+    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7 + (7 + 10) + 7 + 7 + (7 + 10));
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",
