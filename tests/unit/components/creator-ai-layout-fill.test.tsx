@@ -6,6 +6,7 @@ import type { GameSystem } from "@/types/card";
 import { frameComboKey } from "@/lib/cards/frame-reference-registry";
 import { createCardSchema } from "@/lib/validation/card";
 import { sagaReminder } from "@/lib/ai/layout-design";
+import { fitArtToWindow } from "@/lib/cards/art-fit";
 
 // ---------------------------------------------------------------------------
 // The AI dialog's sagas and two-part cards (PR 2), through the REAL
@@ -187,7 +188,7 @@ describe("a two-part card from the AI dialog: its second part in back_face, as t
       power: null,
       toughness: null,
       frame_template: "split",
-      back_face: { card_type: "instant", supertype: null, subtypes: [], title: "Frostbind", cost: "{1}{U}", rules_text: "Tap target permanent. Draw a card.", color_identity: ["blue"] },
+      back_face: { card_type: "instant", supertype: null, subtypes: [], title: "Frostbind", cost: "{1}{U}", rules_text: "Tap target permanent. Draw a card.", color_identity: ["blue"], art_url: ART },
       part_color: true,
       first_part_color: ["red"],
     });
@@ -201,7 +202,10 @@ describe("a two-part card from the AI dialog: its second part in back_face, as t
     // The whole card: red and blue, the creator's single-select gold (as
     // a Fire // Ice import saves it — M2), never the first half's red.
     expect(sent.color_identity).toEqual(["multicolor"]);
-    expect(sent.back_face).not.toHaveProperty("art_url");
+    // The right half's own window: the SAME stored picture (owner
+    // 2026-10-28), fitted to its window as any picture that lands is.
+    expect(sent.back_face).toMatchObject({ art_url: ART, art_position: fitArtToWindow() });
+    expect(sent.art_url).toBe(ART);
   });
 
   it("a second run on the same kind pins the second part's kept fields and never overwrites them", async () => {
@@ -286,6 +290,7 @@ describe("a two-part card from the AI dialog: its second part in back_face, as t
         cost: "{3}{G}",
         rules_text: "Aftermath (Cast this spell only from your graveyard. Then exile it.)\nCreate two 2/2 green Wolf creature tokens.",
         color_identity: ["green"],
+        art_url: ART,
       },
       part_color: true,
       first_part_color: ["red"],
@@ -294,7 +299,7 @@ describe("a two-part card from the AI dialog: its second part in back_face, as t
       card_type: "sorcery",
       color_identity: ["multicolor"],
       frame_style: expect.objectContaining({ template: "aftermath", partColor: true, firstPartColor: ["red"] }),
-      back_face: { title: "Regrowth Rite", cost: "{3}{G}", card_type: "sorcery", color_identity: ["green"] },
+      back_face: { title: "Regrowth Rite", cost: "{3}{G}", card_type: "sorcery", color_identity: ["green"], art_url: ART, art_position: fitArtToWindow() },
     });
   });
 

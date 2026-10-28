@@ -78,6 +78,7 @@ import {
   layoutFitOf,
   layoutFrameBrief,
   layoutSteerType,
+  secondHalfSharesPicture,
   mergedSecondPart,
   type AiLayoutKind,
   type LayoutFit,
@@ -1498,6 +1499,13 @@ async function runCardFillStep(
       }
       fill.art_url = persisted.publicUrl;
       fill.artist_credit = await aiArtistCredit();
+      // A split / aftermath card's second half has a window of its own: the
+      // SAME stored picture goes there too (owner 2026-10-28) — no second
+      // painting, no second upload, still one credit. Only a layout fill
+      // carries a second part.
+      if (fill.back_face && secondHalfSharesPicture(plan.frame_template)) {
+        fill.back_face = { ...fill.back_face, art_url: persisted.publicUrl };
+      }
     }
     return { ...step, status: "done", fill, attempts: attempt, error: undefined };
   });

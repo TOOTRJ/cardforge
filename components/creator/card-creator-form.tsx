@@ -3402,6 +3402,12 @@ export function CardCreatorForm({
       if (back.power !== undefined) setValue("back_face.power", back.power ?? "", { shouldDirty: true });
       if (back.toughness !== undefined) setValue("back_face.toughness", back.toughness ?? "", { shouldDirty: true });
       if (back.color_identity !== undefined) setValue("back_face.color_identity", back.color_identity, { shouldDirty: true });
+      // A split / aftermath half's own window: the card's one picture,
+      // fitted to that window as any picture that lands is (TODO 3b.18).
+      if (back.art_url) {
+        setValue("back_face.art_url", back.art_url, { shouldDirty: true });
+        setValue("back_face.art_position", fitArtToWindow(), { shouldDirty: true });
+      }
     }
     // Each part in its own colour (TODO 4.26): the switch the plan judged —
     // on where both parts are verified, off where they are not — and a

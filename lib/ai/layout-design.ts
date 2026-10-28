@@ -649,7 +649,18 @@ export type FillSecondPart = {
   toughness?: string | null;
   /** The second part's own colour (TODO 4.26); [] = the card's. */
   color_identity?: ColorIdentity[];
+  /** A split / aftermath half's own window: the SAME stored picture as the
+   *  card's (owner 2026-10-28 — still one picture, one credit). Set by the
+   *  step once the picture is painted (secondHalfSharesPicture). */
+  art_url?: string;
 };
+
+/** True when the frame paints the second half in a window of its own (split,
+ *  aftermath): the fill puts the card's one picture there too. */
+export function secondHalfSharesPicture(template: FrameTemplate | string | null | undefined): boolean {
+  return Boolean(template) && (template === LAYOUT_TEMPLATE.split || template === LAYOUT_TEMPLATE.aftermath) &&
+    Boolean(getFrameProfile(template as FrameTemplate).secondFace?.artSlot);
+}
 
 /** The designed second part, kept to the fields wanted and the frame draws.
  *  (The fill is only offered with the card type written, so the type words

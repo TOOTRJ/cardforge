@@ -222,7 +222,11 @@ describe("design → plan → step → what the creator is handed, per kind", ()
     expect(s.refund).not.toHaveBeenCalled();
     // A second part never carries a field its frame never draws.
     const back = (step.fill!.back_face ?? {}) as Record<string, unknown>;
-    for (const key of ["flavor_text", "artist_credit", "loyalty", "defense", "art_url"]) expect(back, `${kind} ${key}`).not.toHaveProperty(key);
+    for (const key of ["flavor_text", "artist_credit", "loyalty", "defense"]) expect(back, `${kind} ${key}`).not.toHaveProperty(key);
+    // A split / aftermath half's own window shows the SAME stored picture
+    // (owner 2026-10-28) — painted once, one credit; no other part gets one.
+    if (kind === "split" || kind === "aftermath") expect(back.art_url).toBe(step.fill!.art_url);
+    else expect(back, `${kind} art_url`).not.toHaveProperty("art_url");
     if (kind !== "flip") {
       expect(back).not.toHaveProperty("power");
       expect(back).not.toHaveProperty("toughness");
@@ -235,8 +239,19 @@ describe("design → plan → step → what the creator is handed, per kind", ()
   it("the art is the card's one picture, with the frame's direction", async () => {
     s.answers = [[structuredClone(SPLIT)]];
     await fill("split");
-    await stepOf(plan());
+    const step = await stepOf(plan());
     expect(s.imagePrompts[0]![0]).toContain("ONE picture for the whole card");
+    // Painted ONCE and stored once; the same URL in both windows.
+    expect(s.imageCalls).toBe(1);
+    expect((step.fill!.back_face as Record<string, unknown>).art_url).toBe(step.fill!.art_url);
+  });
+
+  it("a fill that doesn't paint leaves the second half's window as it is", async () => {
+    s.answers = [[structuredClone(SPLIT)]];
+    await fill("split", { want: WANT_ALL.filter((field) => field !== "art") });
+    const step = await stepOf(plan());
+    expect(step.fill!.back_face).not.toHaveProperty("art_url");
+    expect(s.imageCalls).toBe(0);
   });
 });
 
