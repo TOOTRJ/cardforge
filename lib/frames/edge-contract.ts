@@ -134,6 +134,26 @@ const RING_EDGES: EdgeContract = {
   left: { kind: "design" },
 };
 
+/** CC's 'Mystical Archive (STA)' pack (TODO 4.11 wave 2; measured on all
+ *  eight masters at 1500 × 2100, the 2 % band): the gold ornament α 1.00 to
+ *  the top edge — design, no border (STA #1–63 are borderless on print);
+ *  the art to the side edges but where the ornament reaches them (rows
+ *  0–298 the title block, 1137–1317 the type bar's ends, 1432–1512 the box's
+ *  side ornament, and from 1707 the footer's shoulders); the black footer
+ *  along the bottom. */
+const MYSTICAL_ARCHIVE_SIDE_EXCEPT: readonly (readonly [number, number])[] = [
+  [0, 14.3],
+  [54.1, 62.8],
+  [68.1, 72.1],
+  [81.2, 100],
+];
+const MYSTICAL_ARCHIVE_EDGES: EdgeContract = {
+  top: { kind: "design" },
+  right: { kind: "art", except: MYSTICAL_ARCHIVE_SIDE_EXCEPT },
+  bottom: BORDER,
+  left: { kind: "art", except: MYSTICAL_ARCHIVE_SIDE_EXCEPT },
+};
+
 /**
  * The declared edges of every frame template (FRAME_TEMPLATE_VALUES —
  * tests/unit/frames/edge-contract.test.ts fails for a template missing
@@ -274,6 +294,11 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // time (scripts/lib/mse-showcase-borders.mjs), cut at the one card
   // corner. (The white halo-foil run, #409–418, is 4.30's.)
   tarkirghostfire: ALL_BORDER,
+  // The New Capenna Art Deco showcase (TODO 4.11 wave 2, Card Conjurer's
+  // 'Golden Age (SNC)' pack, frames bucket): the printed black border all
+  // round, cut at the one card corner by the importer — its crowned twins
+  // (`-legendary`) too.
+  sncartdeco: ALL_BORDER,
   // Card Conjurer's 'Tarkir' pack since TODO 4.11 (frames bucket): the printed
   // black border all round, cut at the one card corner by the importer.
   tarkirdragon: ALL_BORDER,
@@ -281,6 +306,10 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // Sourcebook' pack, frames bucket): the printed black border all round the
   // parchment page, cut at the one card corner by the importer.
   dndsourcebook: ALL_BORDER,
+  // The Dominaria United Stained Glass showcase (TODO 4.11 wave 2, Card
+  // Conjurer's 'Stained Glass (DMU)' pack, frames bucket): the printed black
+  // border all round the leaded glass, cut at the one card corner.
+  stainedglass: ALL_BORDER,
   // The Tarkir draconic (TDM #292–326), since TODO 4.11 (layout v68): the
   // black border all round on print — painted under the MSE masters below
   // and beside the dragons, cut at the one card corner at the bottom — and
@@ -304,6 +333,18 @@ export const EDGE_CONTRACTS: Readonly<Record<string, EdgeContract>> = {
   // the border's black (the folder starts below the top one and ends above
   // the bottom one).
   dossier: { top: BORDER, right: BORDER, bottom: BORDER, left: { kind: "design" } },
+  // Card Conjurer's 'Mystical Archive (STA)' pack since TODO 4.11 wave 2
+  // (frames bucket): borderless — the ornament to the top edge, the art to
+  // the sides between its pieces, the black footer; the importer cuts the
+  // one card corner at the bottom only.
+  mysticalarchive: MYSTICAL_ARCHIVE_EDGES,
+  // The Doctor Who TARDIS showcase (TODO 4.11 wave 2, Card Conjurer's
+  // 'TARDIS' pack, frames bucket): the printed black border at the top and
+  // the bottom (0,0,0 on the pack and on WHO #535–564), cut at the one card
+  // corner by the importer; the police box's blue sides run to the left and
+  // right edges beside the art and the text box (borderless, as print draws
+  // them), black beside the bars — `design`.
+  tardis: { top: BORDER, right: { kind: "design" }, bottom: BORDER, left: { kind: "design" } },
   // The Enchanting Tales showcase (TODO 4.11 wave 2, Card Conjurer's
   // 'Enchanting Tales' pack, frames bucket): borderless as WOT #1–63 print
   // it — the swirled frame field to the top edge (design) and down the sides

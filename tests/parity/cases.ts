@@ -73,6 +73,10 @@ const PICKS: readonly Pick[] = [
   },
   { from: "m15/c/creature-long", why: "the see-through colourless master: art under the frame" },
   { from: "m15/w/creature-long@centred", why: "centred rules (held lines, per-line indents)" },
+  {
+    from: "m15/g/creature-long@flavor-upright",
+    why: "flavour's upright *…* spans: roman words inside the italic, glued pieces of a word, no stars (v71)",
+  },
   { from: "m15/g/creature-long@collector", why: "the collector line and the © slot's mark" },
   { from: "m15/wu/creature-long@stamp-pair-crown", why: "crown + holofoil stamp + the two-colour pair, one card" },
   // --- the nickname (TODO 6.3): the plate, its rim and the name on it -------
@@ -336,6 +340,9 @@ const PICKS: readonly Pick[] = [
   // The Bloomburrow anime on one MSE master in print's look (TODO 4.11 / 4.35, layout v70).
   { from: "bloomanime/g/creature-long@crown", why: "v70 Bloomburrow anime: the strokes in print's flat tone, the slate name and text boxes at print's opacity over full-bleed art, its own layout on M15's slots in white, the CC M15 disc on print's row, MSE's flourish (opt-in)" },
   { from: "bloomanime/u/creature-short@stamp", why: "v70 Bloomburrow anime: the footer in print's tone, MSE's P/T outline as the plate, MSE's stamp notch on the footer's well with our oval" },
+  // The New Capenna Art Deco showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
+  { from: "sncartdeco/wub/creature-long@stamp-crown", why: "New Capenna Art Deco: CC's 'Golden Age' gold toned onto print, the art under the translucent bars and box (underFrameArt) beside the window's own layer, the crowned twin (the arch), our lifted-rim notch with our oval, white ink, the CC M15 row 8 px lower" },
+  { from: "sncartdeco/u/creature-short@collector-2015", why: "New Capenna Art Deco: one gold master under a mono colour key, the pack's plate with white digits, the name 1 px up and the type line 4.5 px under the CC baseline, M15's collector line" },
   // The Enchanting Tales showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
   { from: "enchantingtales/u/enchantment-long@stamp", why: "Enchanting Tales: the art under the whole frame and its translucent box, white rules in CC's rect 3 px up with the moved lower block, the name riding the pack's bar, the CC M15 row 3 px right, the pack's oval notch per colour with our oval and no black ring" },
   { from: "enchantingtales/g/creature-long@collector", why: "Enchanting Tales: the matrix's creature row (its primary kind; the renderers draw any card — the kind gate keeps the frame to Enchantment Creatures) on the pack's plate (3 px up), the 2023 collector line on the run's rows (1990 / 2029) in the colour's footer" },
@@ -352,6 +359,16 @@ const PICKS: readonly Pick[] = [
   // The MKM dossier showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
   { from: "dossier/u/creature-short@collector-2015", why: "MKM dossier: CC's folder masters downscaled once, M15's slots on the folder's bands (the name 2 px up, the cost row 38 px in from the clip and 19 px down, the set symbol 17 px left, the type line 4 px down), the paper tag, the collector line 4–5 px above M15's rows" },
   { from: "dossier/wu/creature-long@pair-crown", why: "MKM dossier: a two-colour legend — the pair master lerped across print's ramp under the crown band's lerped pair" },
+  // The Strixhaven Mystical Archive from Card Conjurer (TODO 4.11 wave 2, an addition).
+  { from: "mysticalarchive/r/instant-long@stamp", why: "Mystical Archive: CC's 2010 px masters downscaled once and toned onto print, the art under the frame edge to edge, M15's slots on the run's own lines (the name 5 px up, the cost row 6 px up and 4 px right, the type line 1 px down, the rules block 3 px up), our own black arch with the oval in its cut" },
+  { from: "mysticalarchive/wu/instant-long@pair", why: "Mystical Archive: the pair master on an instant — the gold frame with the two colours' lines split right of centre — the type pen 5 px left, the set symbol on M15's box" },
+  // The Dominaria United Stained Glass showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
+  { from: "stainedglass/u/creature-short@collector-2015", why: "Stained Glass: CC's leaded-glass master (the arch split off: the box's foot straight), M15's slots on the pack's bars (the name 4.5 px up, the cost row 1 px up and 9.5 px right, the type line 1 px down), the box 8.5 px shorter at each end, white ink, the pack's plate, the 2015 collector line 4 px below M15's rows" },
+  { from: "stainedglass/wu/creature-long@pair-crown", why: "Stained Glass: the pair master (gold frame, the box split across 46→57 %W) under the pair's crown (the gold dome split across 47→53 %W)" },
+  { from: "stainedglass/wub/creature-long@stamp-m", why: "Stained Glass: the arch split off the gold master, laid back over its straight foot, our oval in its cut" },
+  // The Doctor Who TARDIS showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
+  { from: "tardis/u/creature-short@collector-2015", why: "Doctor Who TARDIS: CC's police-box masters with the brace drawn in, white ink on M15's slots on the pack's bars (the name 3 px up, the cost row 4 px down, the type line 2 px down, the set symbol centred in the ring), the pack's P/T box, the collector line 6 / 5 px above M15's rows" },
+  { from: "tardis/wub/creature-long@stamp-m", why: "Doctor Who TARDIS: the pack's trapezoid notch with our triangle in the Universes Beyond hole, a three-colour legend on the gold master" },
   // The OTJ Breaking News showcase from Card Conjurer (TODO 4.11 wave 2, an addition).
   { from: "breakingnews/u/creature-short@collector-2015", why: "OTJ Breaking News: CC's page masters downscaled once, the name CENTRED in capitals on its own band under the masthead, the cost in a box of its own in the masthead (off the name's rows: the name keeps its band), the type line in capitals, the set symbol in its box, the page's rules box, the P/T box, the collector line in the charcoal strip" },
   { from: "breakingnews/wu/creature-long@pair-crown", why: "OTJ Breaking News: a two-colour legend — the pair master lerped across print's split under the crown band's lerped pair (the notched rule at the page's top); its five-pip cost slides right to the masthead's end, the chevron's paper piece over the chevron (lib/cards/masthead.ts)" },

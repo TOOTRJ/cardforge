@@ -82,11 +82,16 @@ describe("bake path = preview path", () => {
     // borderless double-faced bodies' 10 each (TODO 5.7: 40).
     // …and the Prepare frame's 20 (4.26: both dresses with the page).
     // …and the MKM dossier's 10 (4.11 wave 2: the pack's colour frames lerped).
-    // …and the OTJ Breaking News' 10 (4.11 wave 2: the same).
-    expect(pairKeys).toBe(430);
+    // …and the Dominaria United stained glass's 10 (4.11 wave 2).
+    // …and the Strixhaven Mystical Archive's 10 (4.11 wave 2: the split).
+    // …and the Doctor Who TARDIS's 10 (4.11 wave 2: its frames and braces lerped).
+    // …and the OTJ Breaking News' 10 (4.11 wave 2: the same, across print's split).
+    expect(pairKeys).toBe(460);
     // …and the borderless double-faced bodies' 18 crowned twins each (TODO
     // 5.7: the seven colour keys, the artifact stand-in's `a`, ten pairs).
-    expect(crownedKeys).toBe(51 + 4 * 18);
+    // …and the New Capenna Art Deco's 7 (TODO 4.11 wave 2: its pack's
+    // 'Legendary Frame' under every colour key).
+    expect(crownedKeys).toBe(51 + 4 * 18 + 7);
   });
 
   it("every stat plate a profile can paint (a hybrid pair's grey 'c' included)", () => {
@@ -178,6 +183,9 @@ describe("bake path = preview path", () => {
                                   : template === "bloomanime"
                                     ? // …and the Bloomburrow anime's (4.11, v70).
                                       "bloomanimeholostamp"
+                                    : template === "sncartdeco"
+                                      ? // …and the New Capenna Art Deco's lifted rim (4.11 wave 2).
+                                        "sncartdecoholostamp"
                                     : template === "dndsourcebook"
                                       ? // …and the D&D Sourcebook's oval piece (4.11 wave 2).
                                         "dndsourcebookholostamp"
@@ -187,6 +195,15 @@ describe("bake path = preview path", () => {
                                     : template === "enchantingtales"
                                       ? // …and the Enchanting Tales' (4.11 wave 2).
                                         "enchantingtalesholostamp"
+                                    : template === "stainedglass"
+                                      ? // …and the Dominaria United stained glass's arch, split off its masters (4.11 wave 2).
+                                        "stainedglass/holostamp"
+                                    : template === "mysticalarchive"
+                                      ? // …and the Strixhaven Mystical Archive's own arch (4.11 wave 2).
+                                        "mysticalarchiveholostamp"
+                                    : template === "tardis"
+                                      ? // …and the Doctor Who TARDIS's trapezoid (4.11 wave 2).
+                                        "tardisholostamp"
                                     : template === "breakingnews"
                                       ? // …and the OTJ Breaking News' oval tab (4.11 wave 2).
                                         "breakingnewsholostamp"
@@ -225,6 +242,9 @@ describe("bake path = preview path", () => {
                                 : template === "dossier"
                                   ? // …and the MKM dossier's torn strip (4.11 wave 2).
                                     "dossiercrown"
+                                : template === "stainedglass"
+                                  ? // …and the Dominaria United stained glass's dome (4.11 wave 2).
+                                    "stainedglasscrown"
                                 : template === "breakingnews"
                                   ? // …and the OTJ Breaking News' notched rule (4.11 wave 2).
                                     "breakingnewscrown"
@@ -277,10 +297,15 @@ describe("bake path = preview path", () => {
     // the D&D Sourcebook's 7 (4.11 wave 2, the pack's one oval piece under
     // every key), and the MKM dossier's 7 + 10 pairs (4.11 wave 2, the
     // pack's one oval piece under every key and pair), and the Enchanting
-    // Tales' 7 (4.11 wave 2, the pack's piece per colour), and the OTJ
-    // Breaking News' 8 + 10 pairs (4.11 wave 2, the pack's one oval tab
-    // under every key and pair: a and l for the colourless artifact and land).
-    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7 + (7 + 10) + 7 + (8 + 10));
+    // Tales' 7 (4.11 wave 2, the pack's piece per colour), and the New Capenna Art Deco's 7
+    // (4.11 wave 2, its lifted gold rim), and the Dominaria United stained
+    // glass's 7 + 10 pairs (4.11 wave 2: the arch split off every master and
+    // pair master), and the Strixhaven Mystical Archive's 7 + 10 pairs (4.11
+    // wave 2: one black arch under every key), and the Doctor Who TARDIS's
+    // 7 + 10 pairs (4.11 wave 2, the pack's one trapezoid under every key
+    // and pair), and the OTJ Breaking News' 8 + 10 pairs (4.11 wave 2, the
+    // pack's one oval tab under every key and pair: a and l).
+    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7 + (7 + 10) + 7 + 7 + (7 + 10) + (7 + 10) + (7 + 10) + (8 + 10));
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

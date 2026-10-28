@@ -550,6 +550,12 @@ const TREATMENT_KINDS: Partial<Record<FrameTemplate, readonly CardKind[]>> = {
   // land never wears (twoColorFits). So every kind its body draws but the
   // land.
   dossier: ["creature", "instant", "sorcery", "enchantment", "artifact", "token"],
+  // The Doctor Who TARDIS showcase (TODO 4.11 wave 2) is new — no stored card
+  // sits on it. Print dresses creatures and one artifact Vehicle (WHO
+  // #535–564), and the pack's Land frame and crown 404: no land master, and
+  // its pair masters are a SPELL frame's split, which a land never wears. So
+  // every kind its body draws but the land.
+  tardis: ["creature", "instant", "sorcery", "enchantment", "artifact", "token"],
   // (The OTJ Breaking News showcase, TODO 4.11 wave 2, has NO row, on
   // purpose — the capability rule alone, as the scroll and the sourcebook:
   // OTP #1–65 print it on instants, sorceries, enchantments, artifacts — a

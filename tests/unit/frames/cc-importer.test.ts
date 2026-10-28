@@ -1,4 +1,4 @@
-import { BORDERLESS_STAMP_FOLDERS, WALKER_STAMP_FOLDERS } from "@/scripts/lib/borderless-stamp.mjs";
+import { BORDERLESS_STAMP_FOLDERS, SNC_DECO_STAMP_FOLDERS, WALKER_STAMP_FOLDERS } from "@/scripts/lib/borderless-stamp.mjs";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -236,13 +236,21 @@ describe("Card Conjurer recipe", () => {
       // The 2003 frame (TODO 4.10b; tests/unit/frames/modern-2003-importer.test.ts).
       "modern",
       "modernland",
+      // The Strixhaven Mystical Archive (TODO 4.11 wave 2; tests/unit/frames/mystical-archive-importer.test.ts).
+      "mysticalarchive",
       // The 1997 frame (TODO 4.10a; tests/unit/frames/retro-1997-importer.test.ts).
       "retro",
       "retroland",
       // The saga (TODO 4.21c; its own describe below).
       "saga",
       "sagadfcfront",
+      // The New Capenna Art Deco (TODO 4.11 wave 2; tests/unit/frames/snc-art-deco-importer.test.ts).
+      "sncartdeco",
       "split",
+      // The Dominaria United Stained Glass showcase (TODO 4.11 wave 2; tests/unit/frames/stained-glass-importer.test.ts).
+      "stainedglass",
+      // The Doctor Who TARDIS showcase (TODO 4.11 wave 2; tests/unit/frames/who-tardis-importer.test.ts).
+      "tardis",
       // The MUL Tarkir dragon wings (TODO 4.11, layout v67; tests/unit/frames/tarkir-dragon-importer.test.ts).
       "tarkirdragon",
     ]);
@@ -2102,7 +2110,9 @@ describe("provenance and hygiene", () => {
     // (scripts/build-borderless-stamp.mjs; its own test:
     // tests/unit/frames/borderless-holo-stamp.test.ts).
     // (…and the borderless walkers', owner Round 70: the same script.)
-    for (const folder of [...Object.keys(BORDERLESS_STAMP_FOLDERS), ...Object.keys(WALKER_STAMP_FOLDERS)]) {
+    // (…and the New Capenna Art Deco's, TODO 4.11 wave 2: its own lifted gold
+    // rim, the same script; its own test: snc-art-deco-importer.test.ts.)
+    for (const folder of [...Object.keys(BORDERLESS_STAMP_FOLDERS), ...Object.keys(WALKER_STAMP_FOLDERS), ...Object.keys(SNC_DECO_STAMP_FOLDERS)]) {
       expect(provenance[folder].source, folder).toBe("pipglyph");
       expect(provenance[folder].converter, folder).toBe("scripts/build-borderless-stamp.mjs");
       expect(provenance[folder].commit, folder).toBeUndefined();
@@ -2129,6 +2139,7 @@ describe("provenance and hygiene", () => {
         // (scripts/build-token-nyx.mjs), its own test: token-nyx-masters.test.ts.
         ...Object.keys(TOKEN_NYX_RECIPE.templates),
         ...Object.keys(WALKER_STAMP_FOLDERS),
+        ...Object.keys(SNC_DECO_STAMP_FOLDERS),
         // …and the double-faced saga back (TODO 5.5 (b) PR 2): PipGlyph's
         // composite (scripts/build-saga-back-frames.mjs) of the published
         // saga and m15dfcback masters through Card Conjurer's masks at the

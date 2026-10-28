@@ -96,6 +96,9 @@ describe("the switch values", () => {
       "m15mdfclandback",
       // The Lord of the Rings scroll (TODO 4.11): M15's slot on its border.
       "lotrscroll",
+      // …and the Strixhaven Mystical Archive (TODO 4.11 wave 2): M15's slot
+      // on its black footer.
+      "mysticalarchive",
       // …and the Expeditions (TODO 4.11 wave 1), on their own rows.
       "expeditionland",
       "expeditionlandbfz",
@@ -112,12 +115,18 @@ describe("the switch values", () => {
       "bloomburrow",
       // …and the Bloomburrow anime (TODO 4.11, layout v70).
       "bloomanime",
+      // …and the New Capenna Art Deco (TODO 4.11 wave 2): M15's slot.
+      "sncartdeco",
       // …and the D&D Sourcebook (TODO 4.11 wave 2): its run's rows.
       "dndsourcebook",
       // …and the MKM dossier (TODO 4.11 wave 2): its run's rows.
       "dossier",
       // …and the Enchanting Tales (TODO 4.11 wave 2): its run's rows.
       "enchantingtales",
+      // …and the Dominaria United stained glass (TODO 4.11 wave 2): its run's rows.
+      "stainedglass",
+      // …and the Doctor Who TARDIS (TODO 4.11 wave 2): its run's rows.
+      "tardis",
       // …and the OTJ Breaking News (TODO 4.11 wave 2): its run's rows in the strip.
       "breakingnews",
     ]);

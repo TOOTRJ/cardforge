@@ -71,6 +71,7 @@ import type { ArtWindow } from "@/lib/cards/art-positioner-window";
 import { secondPartFieldName, type SecondPartWords } from "@/lib/creator/second-part";
 import { EVERY_SECOND_PART_UNIT, type SecondPartShown } from "@/lib/creator/second-part-fields";
 import { PtNotDrawnNote, usePtNotDrawnNoteId } from "@/components/creator/pt-not-drawn-note";
+import { FLAVOR_MARKUP_HINT } from "@/lib/cards/flavor-markup";
 
 /** Under a second part's art box on a frame that gives the part no picture
  *  of its own (a flip card: one picture, between the two sides). */
@@ -406,7 +407,7 @@ export function SecondPartFlavorField() {
     formState: { errors },
   } = useFormContext<FormValues>();
   return (
-    <FieldGroup label="Flavor text" error={errors.back_face?.flavor_text?.message}>
+    <FieldGroup label="Flavor text" error={errors.back_face?.flavor_text?.message} helper={FLAVOR_MARKUP_HINT}>
       <textarea
         {...register("back_face.flavor_text")}
         placeholder="Optional."

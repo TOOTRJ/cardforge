@@ -65,6 +65,10 @@ export const SQUARE_CORNERS: Readonly<Record<string, { kinds: Kinds; keys?: read
   // the top corners (the importer keeps them square); the bottom is the
   // border black, cut at the one card corner.
   lotr: { kinds: { tl: "frame", tr: "frame" } },
+  // Card Conjurer's 'Mystical Archive (STA)' pack since TODO 4.11 wave 2:
+  // the gold ornament runs into the top corners (the importer keeps them
+  // square); the bottom is the black footer, cut at the one card corner.
+  mysticalarchive: { kinds: { tl: "frame", tr: "frame" } },
   // The Enchanting Tales showcase (TODO 4.11 wave 2, Card Conjurer's pack):
   // borderless — its swirled field in the top corners, its footer in the
   // colour's own tone in the bottom ones; the importer keeps all four.

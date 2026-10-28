@@ -1946,6 +1946,23 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       blockedBy: "4.36",
     },
   },
+  // The Strixhaven Mystical Archive (TODO 4.11 wave 2; Card Conjurer's
+  // 'Mystical Archive (STA)' pack): STA #1–63, the English run — 58
+  // mono-colour and 5 two-colour instants and sorceries, every one
+  // borderless, single-faced, on the 2015 frame, none legendary (Scryfall
+  // 2026-10-27). Exact once verified (withVerification). No gap: the five
+  // two-colour printings split their colour lines (the template's pair
+  // masters, the import's two-colour switch), no crown prints, the oval
+  // stamp and the collector line are the template's own. NOT STA #64–126
+  // (the Japanese alternate art: a vertical name panel, no title bar —
+  // another frame) nor SOA (the 2026 archive inverts the boxes: navy, white
+  // text); both stay on the rule below.
+  {
+    key: "borderless/mystical-archive/sta",
+    exactLabel: "Strixhaven Mystical Archive frame",
+    match: { borders: ["borderless"], collectors: { sta: [[1, 63]] } },
+    outcome: { status: "exact", template: "mysticalarchive" },
+  },
   {
     key: "borderless/mystical-archive",
     exactLabel: "Mystical Archive frame",
@@ -2022,6 +2039,27 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     ["two-colour", "two-colour-hybrid"],
     { "two-colour": "4.11", "two-colour-hybrid": "4.11" },
   ),
+  // The Doctor Who TARDIS showcase (TODO 4.11 wave 2; Card Conjurer's
+  // 'TARDIS' pack): WHO #535–564, their serialized twins #552z–564z (the
+  // "z" reads as its number) and their surge-foil twins #1126–1155 — 73
+  // printings, every one single-faced and borderless on the 2015 frame,
+  // every one a creature but #551 / #1142 TARDIS (an artifact Vehicle), each
+  // with the Universes Beyond triangle stamp (Scryfall 2026-10-28). The
+  // serial and the surge foil are finishes over the same frame. Exact once
+  // verified (withVerification). No gap: the template draws the two-colour
+  // dress (its pair masters — print gives a pair's left stripe and brace its
+  // first colour, the right ones its second; 21 of the 30 base printings),
+  // the triangle stamp and the collector line; the brace the pack calls its
+  // crown is on every print, so the masters draw it. No land prints in the
+  // run (and the pack's Land frame 404s): none can land here. #551 / #1142
+  // TARDIS land here too — their art (the police box's open doors) fills the
+  // window past the brace, which the frame draws, as for every other card.
+  {
+    key: "showcase/who/tardis",
+    exactLabel: "Doctor Who TARDIS showcase",
+    match: { borders: ["borderless"], collectors: { who: [[535, 564], [1126, 1155]] } },
+    outcome: { status: "exact", template: "tardis" },
+  },
   {
     key: "showcase/tdm/clan",
     exactLabel: "Tarkir: Dragonstorm clan showcase (text on the art)",
@@ -2759,6 +2797,25 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     ["two-colour", "two-colour-hybrid"],
     { "two-colour": "4.11", "two-colour-hybrid": "4.11" },
   ),
+  // The Streets of New Capenna ART DECO showcase (TODO 4.11 wave 2; Card
+  // Conjurer's 'Golden Age (SNC)' pack, `sncartdeco`): the five families'
+  // three-colour cards, SNC #296–340, and their gilded-foil twins #361–405 —
+  // 90 printings, every one single-faced, black-bordered, on the 2015 frame,
+  // none a walker, a token or a layout card (Scryfall 2026-10-27); the
+  // gilded twins print the same frame (the gold an embossed foil). Exact
+  // once verified (withVerification). No gap: every card of the run is three
+  // colours and prints the one gold frame, its 30 legends the arch (the
+  // template's crowned twin: CROWNED_SHOWCASE_SIGNATURES), its rares and
+  // mythics the oval stamp. NOT #341–359 / #441–449: the pale Golden Age
+  // frame (the angels, the walkers, the lands; Card Conjurer's 'Art Deco
+  // (SNC)' pack), another design — nor #360, the Phyrexian Urabrask; they
+  // stay `showcase`.
+  {
+    key: "showcase/snc/art-deco",
+    exactLabel: ({ promos }) => (promos.has("gilded") ? "Streets of New Capenna Art Deco showcase (gilded foil)" : "Streets of New Capenna Art Deco showcase"),
+    match: { collectors: { snc: [[296, 340], [361, 405]] } },
+    outcome: { status: "exact", template: "sncartdeco" },
+  },
   // The Murders at Karlov Manor DOSSIER showcase (TODO 4.11 wave 2; Card
   // Conjurer's 'Dossier' pack): every printing Scryfall gives the `dossier`
   // promo type in MKM — #336–376 and their invisible-ink twins #377–389 and
@@ -2803,6 +2860,32 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
       reason: "PipGlyph doesn't print a white border yet",
       blockedBy: "4.30",
     },
+  },
+  // The Dominaria United Stained Glass showcase (TODO 4.11 wave 2; Card
+  // Conjurer's 'Stained Glass (DMU)' pack): DMU #287–368 (41 legends and
+  // their 41 textured-foil twins) and the nine Multiverse Legends Dominaria
+  // legends that print the same leaded-glass frame (checked by eye
+  // 2026-10-27): Kwende #5, Tetsuko Umezawa #12, Yargle #19, Squee #22,
+  // Valduk #24, Radha #55, Raff #56, Rona #58, Shanna #59 and their
+  // halo-foil twins #135, #142, #149, #152, #154, #185, #186, #188, #189 (the
+  // serialized "z" printings too) — 109 printings, every one a black-bordered
+  // legendary creature on the 2015 frame. NOT their etched twins (MUL #70,
+  // #77 …: the etched frame), nor DMU #369 (the Phyrexian-script Sheoldred)
+  // and #370 / #371 (the two Ajani walkers: another design) — those stay
+  // `showcase`. Exact once verified (withVerification). No gap: the
+  // template draws the run's two-colour dress (gold bars, the box split —
+  // its pair masters) and the crown every printing carries; none is
+  // colourless, a hybrid, a walker or double-faced.
+  {
+    key: "showcase/dmu/stained-glass",
+    exactLabel: ({ set }) => (set === "mul" ? "Multiverse Legends Dominaria showcase (stained glass)" : "Dominaria United stained-glass showcase"),
+    match: {
+      collectors: {
+        dmu: [[287, 368]],
+        mul: [[5, 5], [12, 12], [19, 19], [22, 22], [24, 24], [55, 56], [58, 59], [135, 135], [142, 142], [149, 149], [152, 152], [154, 154], [185, 186], [188, 189]],
+      },
+    },
+    outcome: { status: "exact", template: "stainedglass" },
   },
   // Exact once verified since TODO 4.11 (Card Conjurer's 'Tarkir' masters
   // have the printed black border: off BORDER_PENDING_TEMPLATES). Its one
@@ -3360,6 +3443,20 @@ export function templatesOfRule(rule: Rule): readonly FrameTemplate[] {
 }
 
 const RULE_BY_KEY: ReadonlyMap<string, Rule> = new Map(FRAME_SIGNATURE_RULES.map((rule) => [rule.key, rule]));
+
+/** The frames a signature's own rule NAMES — the template its printing is
+ *  drawn on where the registry sends it (and the one it names once
+ *  verified), concrete templates only: a rule whose outcome is a family
+ *  ("the borderless frame for the card") names none. A gap signature
+ *  ("…+two-colour") names its base's frame — the gap only makes it nearest.
+ *  The import's crown reads it (lib/scryfall/import-mapper.ts
+ *  ownCrownFramesOf): a crowned showcase's crown is ITS frame's, on no
+ *  other landing. Empty for an unknown signature. */
+export function ownFramesOfSignature(signature: string): readonly FrameTemplate[] {
+  const rule = RULE_BY_KEY.get(signature);
+  if (!rule) return [];
+  return [rule.outcome.template, rule.outcome.onceVerified].filter((spec): spec is FrameTemplate => typeof spec === "string");
+}
 
 /**
  * Whether a gap signature logged before its piece shipped ("era/2015+crown",

@@ -123,6 +123,7 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   lotr: { front: [1202, 918] },
   // Card Conjurer's scroll window (TODO 4.11, layout v62).
   lotrscroll: { front: [1280, 941] },
+  mysticalarchive: { front: [1500, 1587] },
   // The Enchanting Tales showcase (TODO 4.11 wave 2): CC's artBounds, the
   // art under the whole frame from the title bar to the text box's foot.
   enchantingtales: { front: [1500, 1821] },
@@ -136,9 +137,18 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   tarkirghostfire: { front: [1344, 1806] },
   // Card Conjurer's Tarkir window (TODO 4.11, layout v67): its shadow + 0.05 %.
   tarkirdragon: { front: [1237, 929] },
+  // The New Capenna Art Deco showcase (TODO 4.11 wave 2): its window with
+  // the check's spare; the art under the bars is a second layer.
+  sncartdeco: { front: [1262, 934] },
   // The MKM dossier showcase (TODO 4.11 wave 2): the tilted photo's
   // half-transparent rim covered with the art-window check's spare.
   dossier: { front: [1319, 859] },
+  // The Dominaria United Stained Glass (TODO 4.11 wave 2): the window
+  // (60–1439 × 233–1167 px) with the art-window check's spare.
+  stainedglass: { front: [1382, 939] },
+  // The Doctor Who TARDIS showcase (TODO 4.11 wave 2): the police box's
+  // window covered with the art-window check's spare.
+  tardis: { front: [1273, 902] },
   // The OTJ Breaking News showcase (TODO 4.11 wave 2): the page's
   // round-cornered window with the art-window check's spare.
   breakingnews: { front: [1347, 850] },

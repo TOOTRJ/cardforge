@@ -127,7 +127,7 @@ export const READ_ROWS = Object.freeze([BORDERLESS_NOTCH_BOX.y, BLACK_BAR_TOP]);
 /** The borderless spells', artifact's, land's and station's arch: the lift
  *  table, the first black row under the pinline and the piece's box — what
  *  every function below reads (their default). */
-/** @typedef {{ lift: readonly number[]; barTop: number; box: { x: number; y: number; width: number; height: number } }} ArchSpec */
+/** @typedef {{ lift: readonly number[]; barTop: number; box: { x: number; y: number; width: number; height: number }; boxAlphaRow?: number }} ArchSpec */
 /** @type {ArchSpec} */
 export const BORDERLESS_ARCH = Object.freeze({ lift: ARCH_LIFT_PX, barTop: BLACK_BAR_TOP, box: BORDERLESS_NOTCH_BOX });
 
@@ -200,7 +200,10 @@ const PINLINE_ALPHA_STEP = 10;
  * its own texture), only the bevel and the rim.
  */
 export function pinlineTop(m, width, x, arch = BORDERLESS_ARCH) {
-  const boxAlpha = m[(arch.box.y * width + x) * 4 + 3];
+  // The box's own alpha, read on its box row — or (the New Capenna Art Deco
+  // box, whose ornaments are opaque where the arch rises) on the arch's
+  // `boxAlphaRow`, a row of the box every column of the piece holds clear.
+  const boxAlpha = m[((arch.boxAlphaRow ?? arch.box.y) * width + x) * 4 + 3];
   let y = arch.barTop - 1;
   while (y > arch.box.y && m[((y - 1) * width + x) * 4 + 3] > boxAlpha + PINLINE_ALPHA_STEP) y -= 1;
   return y;
@@ -345,3 +348,60 @@ export function liftError(master, width, piece, arts = [[0, 0, 0], [255, 255, 25
   }
   return { worst, at };
 }
+
+// ---------------------------------------------------------------------------
+// The New Capenna ART DECO showcase's arch (TODO 4.11 wave 2: `sncartdeco`,
+// Card Conjurer's 'Golden Age (SNC)' pack, which draws no stamp piece).
+// Measured 2026-10-27 on Scryfall PNGs (745 x 1040) resampled to 1500 x 2100
+// with lanczos (measuring only; nothing committed): the 25 stamped prints of
+// the plain run (SNC #296–340: every rare and mythic, `security_stamp:
+// oval`) — the gold rim's upper and lower edges read column by column from
+// above (the hologram under the arch is never read). The straight rim runs
+// 1938–1948 px (the masters' 1939–1949); the arch lifts it 35.3 px at the
+// centre (the mean of the upper edge's 37 and the lower's 34: the rim reads
+// 3 px thicker at the crown), rising from x 664 to x 836, symmetric about x
+// 750 within 1 px. The prints' commons and uncommons run the rim straight,
+// as the masters draw it. The oval (the 25 plain and 25 gilded stamped
+// prints: its lit pixels 685–815 × 1925–1988) is 134 x 64 at 683, 1924.
+//
+// Our masters draw the box's foot as a 5-row black outline (1934–1938), the
+// 11-row gold rim (1939–1949) and the black border from 1950; above the
+// outline the box is translucent on rows 1929–1933 in every column the arch
+// spans (its brown ornaments — the arcs over the centre — are opaque, so the
+// box's alpha is read on row 1931, `boxAlphaRow`).
+// ---------------------------------------------------------------------------
+
+/** The Art Deco arch: the lift at |x − 750| = 0, 2, 4, … (linear between; 0
+ *  from the last entry on) — the mean of both sides and both edges over the
+ *  25 prints, smoothed over three samples (1-2-1). */
+export const SNC_DECO_ARCH_LIFT_PX = Object.freeze([
+  35.3, 35.3, 35.3, 35.1, 35.0, 35.0, 34.9, 34.6, 34.3, 34.1, 33.9, 33.7, 33.3, 33.0, 32.7, 32.3, 31.8, 31.4, 30.9, 30.4,
+  29.8, 29.2, 28.6, 27.9, 27.1, 26.2, 25.3, 24.3, 23.4, 22.3, 20.9, 19.6, 18.2, 16.7, 15.0, 13.4, 11.9, 10.1, 7.9, 5.9,
+  4.3, 3.1, 2.1, 1.1, 0.4, 0,
+]);
+/** The Art Deco masters' first black row under the gold rim. */
+export const SNC_DECO_BLACK_BAR_TOP = 1950;
+/** The Art Deco piece's box (whole, even px): x 656–843 (the lift is still
+ *  0.1 px at 660 and 840) and from 1896 (the outline lifted to 1898.7 at
+ *  the centre) down to the rim's last row (1949). */
+export const SNC_DECO_NOTCH_BOX = Object.freeze({ x: 656, y: 1896, width: 188, height: 54 });
+/** @type {ArchSpec} */
+export const SNC_DECO_ARCH = Object.freeze({ lift: SNC_DECO_ARCH_LIFT_PX, barTop: SNC_DECO_BLACK_BAR_TOP, box: SNC_DECO_NOTCH_BOX, boxAlphaRow: 1931 });
+
+/** The Art Deco pieces: sncartdecoholostamp/<key> over sncartdeco/<key>
+ *  (every key the same master), its crowned twin the same pixels where the
+ *  piece reads (checked by the build). */
+export const SNC_DECO_STAMP_FOLDERS = {
+  sncartdecoholostamp: {
+    keys: Object.fromEntries(["w", "u", "b", "r", "g", "m", "c"].map((k) => [k, `sncartdeco/${k}`])),
+    sharedBy: Object.fromEntries(["w", "u", "b", "r", "g", "m", "c"].map((k) => [k, [`sncartdeco/${k}-legendary`]])),
+    arch: SNC_DECO_ARCH,
+    liftTable: "SNC_DECO_ARCH_LIFT_PX",
+    derivedFrom: 'the published New Capenna Art Deco masters named per key below (Card Conjurer imports: see "sncartdeco")',
+    notes: [
+      "PipGlyph's own derivation (TODO 4.11 wave 2): the holofoil stamp's notch on the New Capenna Art Deco showcase — the text box's gold foot rim arched over the oval as every stamped print of the run draws it (SNC #296–340 and #361–405: the rares and mythics). Card Conjurer's 'Golden Age (SNC)' pack has no stamp piece (its 'Art Deco' pack's 'Rare Stamp' is a capture of the hologram itself, never read); no CC piece and no scan is read by the build — every painted pixel is the published master's own outline, gold rim and black border, moved up.",
+      "The arch is scripts/lib/borderless-stamp.mjs SNC_DECO_ARCH_LIFT_PX: the 25 stamped plain prints measured 2026-10-27 (the rim lifted 35.3 px at the centre against the straight 1938–1948, rising from x 664 to x 836). Above it the box keeps its own pixels — its brown arcs ride over the arch, as on print.",
+      "The oval is drawn by both renderers over the black (our own art, lib/cards/holo-stamp-art.ts) at 683–817 × 1924–1988 (SNCARTDECO_HOLO_STAMP_OVAL). Nothing of a hologram is in a piece.",
+    ],
+  },
+};

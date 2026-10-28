@@ -10,6 +10,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cardAccentColor } from "@/lib/og/card-accent";
 import { CARD_SOCIAL_SIZE } from "@/lib/og/card-social";
 import { getSiteBaseUrl } from "@/lib/site-url";
+import { stripFlavorMarkup } from "@/lib/cards/flavor-markup";
 
 // ---------------------------------------------------------------------------
 // Canonical public card detail page (Phase 11 chunk 11).
@@ -60,7 +61,8 @@ export async function generateMetadata({
   // (cardTitleWithNickname: the name first, as the H1 and the canonical).
   const name = cardTitleWithNickname(cardPageName(card.title, card.card_type, cardPageFacesOf(card)), card.nickname);
   const description =
-    card.flavor_text?.trim() ||
+    // The flavour's upright `*…*` spans as plain words (lib/cards/flavor-markup.ts).
+    stripFlavorMarkup(card.flavor_text?.trim() ?? "") ||
     // CARDNAME / ~ as the name the card prints (TODO 6.2).
     storedRulesTextWithSelfName(card)?.trim() ||
     "A custom trading card on PipGlyph.";

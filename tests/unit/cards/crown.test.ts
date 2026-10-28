@@ -70,8 +70,12 @@ describe("which card draws the crown", () => {
       "bloomburrow",
       // …and the Bloomburrow anime (TODO 4.11, v70): MSE's flourish above the name box.
       "bloomanime",
+      // …and the New Capenna Art Deco (TODO 4.11 wave 2): the arch in its crowned twins.
+      "sncartdeco",
       // …and the MKM dossier (TODO 4.11 wave 2): the pack's torn colour strip, its pairs lerped.
       "dossier",
+      // …and the Dominaria United stained glass (TODO 4.11 wave 2): the pack's glass dome.
+      "stainedglass",
       // …and the OTJ Breaking News (TODO 4.11 wave 2): the pack's notched rule, its pairs lerped.
       "breakingnews",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",

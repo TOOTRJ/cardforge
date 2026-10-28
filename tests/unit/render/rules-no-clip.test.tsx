@@ -330,6 +330,8 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       "m15borderlessdfcfront/main", "m15borderlessdfcback/main", "m15borderlessmdfcfront/main", "m15borderlessmdfcback/main",
       // 4.11's Avatar elemental and Bloomburrow woodland showcases: M15's box (layout v69).
       "avatar/main", "bloomburrow/main",
+      // 4.11 wave 2's New Capenna Art Deco: M15's box in its translucent one.
+      "sncartdeco/main",
       // 4.11 wave 2's D&D Sourcebook: M15's box ending above the page's
       // rounded foot (1877.5 px) — it holds the level-up card, not 1,200
       // characters.
@@ -339,6 +341,16 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       // 4.11 wave 2's Enchanting Tales: Card Conjurer's text rect (604 px,
       // 1313–1917) — it holds the run's fullest boxes, not 1,200 characters.
       "enchantingtales/main",
+      // 4.11 wave 2's Dominaria United Stained Glass: M15's box 8.5 px
+      // shorter at each end (the run's own) — it holds the level-up card,
+      // not 1,200 characters.
+      "stainedglass/main",
+      // 4.11 wave 2's Strixhaven Mystical Archive: M15's box, 3 px up.
+      "mysticalarchive/main",
+      // 4.11 wave 2's Doctor Who TARDIS: M15's margins on print's rows (552
+      // px, 1350–1902) — it holds the run's fullest boxes, not 1,200
+      // characters.
+      "tardis/main",
       // 4.11 wave 2's OTJ Breaking News: the page's box between its rules
       // (1371–1895 px, 64 px shorter than M15's).
       "breakingnews/main",
@@ -563,7 +575,7 @@ describe("rules consumers — the HD bake (subset)", () => {
   const TEMPLATES: FrameTemplate[] = ["m15", "m15pw", "m15token", "adventure", "flip", "split", "aftermath", "battle", "retro", "m15borderless"];
   // "symbols as printed" (layout v49): the Phyrexian pip's larger disc is drawn
   // at the stored bake's own px too — not only at 750.
-  const TEXTS = RULES_MATRIX.filter((t) => ["400 chars", "pips + reminder", "symbols as printed", "accented first line", "blank lines", "EOE #30", "minus sign", "flavor + attribution", "typed, as printed"].includes(t.name));
+  const TEXTS = RULES_MATRIX.filter((t) => ["400 chars", "pips + reminder", "symbols as printed", "accented first line", "blank lines", "EOE #30", "minus sign", "flavor + attribution", "flavor, upright spans", "typed, as printed"].includes(t.name));
   const cases = matrix(TEXTS, TEMPLATES);
 
   it("draws inside its box, clear of every keep-out, line for line", async () => {
@@ -637,7 +649,7 @@ describe("rules consumers, centred (FrameStyle.rulesAlign) — no clip, no keep-
 
   it("the HD bake (subset): inside its box, clear of every keep-out, the same lines at both targets", async () => {
     const TEMPLATES: FrameTemplate[] = ["m15", "m15token", "m15tokentext", "adventure", "flip", "split", "aftermath", "battle", "retro", "emblem", "m15dfcfront", "m15mdfcback"];
-    const TEXTS = RULES_MATRIX.filter((t) => ["one line", "short + flavor", "400 chars", "pips + reminder", "accented first line", "blank lines", "EOE #30", "flavor + attribution", "modal bullets", "typed, as printed"].includes(t.name));
+    const TEXTS = RULES_MATRIX.filter((t) => ["one line", "short + flavor", "400 chars", "pips + reminder", "accented first line", "blank lines", "EOE #30", "flavor + attribution", "flavor, upright spans", "modal bullets", "typed, as printed"].includes(t.name));
     for (const c of matrix(TEXTS, TEMPLATES, "center")) {
       const [hd, small] = [rulesDraw(c.layout, "hd"), rulesDraw(c.layout, "default")];
       expect(small.blocks.map((b) => (b.kind === "blank" ? 0 : b.lines))).toEqual(hd.blocks.map((b) => (b.kind === "blank" ? 0 : b.lines)));
