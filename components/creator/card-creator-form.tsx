@@ -230,7 +230,7 @@ import {
   serializeSagaMarkers,
   serializeLoyalty,
 } from "@/lib/cards/face-content";
-import { keptStationRows, sagaRowsOut, submittedRulesOf } from "@/lib/creator/structured-rules";
+import { keptStationRows, sagaRowsForKindSwitch, sagaRowsOut, submittedRulesOf } from "@/lib/creator/structured-rules";
 import { isStationFrame } from "@/lib/cards/station-frame";
 import { parseStationText } from "@/lib/cards/station";
 import { stationPtChoiceAfterFill } from "@/lib/ai/station-design";
@@ -268,6 +268,7 @@ import {
   typeLineHasWord,
   typeWordFrameFor,
   KIND_DEFS,
+  layoutKindTypeChoices,
   dfcFrontBodyFor,
   dfcLayoutForCard,
   sagaTwoFacesAvailable,
@@ -323,6 +324,7 @@ import {
   watermarkFormValuesFromValue,
 } from "@/lib/creator/card-fields";
 import { EMPTY_BACK_FACE, type FormValues } from "@/lib/creator/form-types";
+import { editBackFacePayload } from "@/lib/creator/back-face-edit";
 import {
   frameAnatomyPatchFor,
   hasMeaningfulChange,
@@ -1082,6 +1084,12 @@ export function CardCreatorForm({
   // The kind ("what am I making") is DERIVED from card_type + template — never
   // stored — so drafts, edits, and legacy rows land on the right kind for free.
   const kind = kindFromCard(watched.card_type, watched.frame_style?.template);
+  // The Identity step's card type chips of a NEW adventure or flip card
+  // (TODO 3b.14): the kind stays, the type follows the pick.
+  const layoutTypeChoice = useMemo(() => {
+    const types = layoutKindTypeChoices(kind);
+    return types ? { kindLabel: KIND_DEFS[kind].label, types } : null;
+  }, [kind]);
   // A double-faced card (TODO 5.2): its layout, the family it wears
   // (frame_style.dfcIcon, else `arrows`) and the BACK body the back's type
   // and that family derive — never form state, derived here for the live
@@ -1920,8 +1928,10 @@ export function CardCreatorForm({
       }
       setValue("loyalty_abilities", [], { shouldDirty: true });
     } else if (prevKind === "saga") {
-      // (As a save writes them: a row under the stored marker it keeps.)
-      const chapters = sagaRowsOut(getValues("saga_chapters")).filter((r) => r.marker);
+      // (As a save writes them: a row under the stored marker it keeps —
+      // and a row whose changed numbers would drop a numeral the editor
+      // can't show keeps that numeral in the text, TODO 3b.30.)
+      const chapters = sagaRowsForKindSwitch(getValues("saga_chapters")).filter((r) => r.marker);
       const intro = getValues("saga_intro").trim();
       if (chapters.length > 0 || intro) {
         setValue("rules_text", serializeSagaMarkers(intro || null, chapters), {
@@ -3642,7 +3652,18 @@ export function CardCreatorForm({
             },
             submitDfcLayout,
           )
-        : backFaceContent;
+        : isEdit && card
+          ? // A legacy back or an inline second part (TODO 3b.29): an
+            // untouched back the form cannot rebuild as stored is LEFT OUT
+            // (the update action keeps the row's) — lib/creator/back-face-edit.ts.
+            editBackFacePayload({
+              stored: card.back_face,
+              opened: defaults,
+              values,
+              built: backFaceContent,
+              trustOpened: savedUnderKey !== resetKey,
+            })
+          : backFaceContent;
 
     // Structured rows: planeswalkers + sagas dual-write face_content AND a
     // canonically serialized rules_text (round-trip tested in
@@ -3784,7 +3805,9 @@ export function CardCreatorForm({
       // Same no-art rule for the visibility dropdown (covers the "create
       // back face" save path, where intent doesn't force a visibility).
       visibility: finalVisibility,
-      back_face: backFacePayload,
+      // (Left out — not null — for an untouched back an edit keeps as
+      // stored, TODO 3b.29.)
+      ...(backFacePayload === undefined ? {} : { back_face: backFacePayload }),
       // Empty → null so an intentional clear (e.g. generating an AI card
       // over an imported one) actually REMOVES the stored provenance on
       // update; undefined would silently keep the old link. Cards whose
@@ -4691,6 +4714,7 @@ export function CardCreatorForm({
                   revise={isRevise}
                   token={kind === "token"}
                   emblem={kind === "emblem"}
+                  layoutTypes={layoutTypeChoice}
                   nicknamePrinted={frameDrawsNickname(
                     resolveFrameProfile(normalizeFrameTemplate(watched.frame_style?.template), profileOverrides),
                   )}

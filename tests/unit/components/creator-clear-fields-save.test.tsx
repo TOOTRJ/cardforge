@@ -468,3 +468,90 @@ describe("a two-part card's parts on an edit", () => {
     });
   }
 });
+
+// TODO 3b.29 (owner 2026-10-13, found by #539's check): a card with a LEGACY
+// back — a stored `back_face` on a frame that draws no second face (a saga, a
+// plain M15 card) — was rebuilt from the form on every edit, so a title-only
+// edit dropped the back's `color_identity` (only a frame that draws a part
+// colour sends one), gave it the form's default `art_position`, and turned a
+// stored null or "" into an absent key. The row-diff of #524: an untouched
+// back the form cannot rebuild as stored is LEFT OUT of the update — the
+// action keeps the row's back as it is (an omitted `back_face` is "leave it
+// alone"). A back that round-trips (every second part above) still travels.
+describe("a legacy back on an edit (TODO 3b.29)", () => {
+  const LEGACY_BACK = {
+    title: "The Other Side",
+    cost: "{1}{B}",
+    card_type: "creature",
+    supertype: "Legendary",
+    subtypes: ["Spirit"],
+    rules_text: "Flying",
+    color_identity: ["black"],
+    power: "2",
+    toughness: "2",
+  };
+  const sagaWithLegacyBack = (back: Record<string, unknown> = LEGACY_BACK) =>
+    savedCard({
+      card_type: "enchantment",
+      supertype: null,
+      subtypes: ["Saga"],
+      power: null,
+      toughness: null,
+      flavor_text: null,
+      rules_text: "I — Draw a card.",
+      face_content: { v: 1, saga: { intro: null, chapters: [{ numerals: [1], text: "Draw a card." }] } },
+      frame_style: { finish: "regular", template: "saga" },
+      back_face: back,
+    });
+
+  it("a title-only edit of a saga leaves its legacy back out — the row keeps it", async () => {
+    renderForm("edit", sagaWithLegacyBack());
+    await type("title", "Another Name");
+    const payload = await sentUpdate();
+    expect(payload.title).toBe("Another Name");
+    // Not null (that would clear it), not a rebuilt object: no key at all.
+    expect(payload).not.toHaveProperty("back_face");
+    expect(payload.rules_text).toBe("I — Draw a card.");
+  });
+
+  it("…and so does a title-only edit of a plain M15 card with one", async () => {
+    renderForm("edit", savedCard({ back_face: LEGACY_BACK }));
+    await type("title", "Another Name");
+    expect(await sentUpdate()).not.toHaveProperty("back_face");
+  });
+
+  it("a back stored with null and blank fields is left out too", async () => {
+    const sparse = { title: "Back", cost: null, rules_text: "", subtypes: [] };
+    renderForm("edit", sagaWithLegacyBack(sparse));
+    await type("title", "Another Name");
+    expect(await sentUpdate()).not.toHaveProperty("back_face");
+  });
+
+  it("a back the form rebuilds as stored still travels (main's payload)", async () => {
+    const whole = {
+      title: "Back",
+      cost: "{1}{B}",
+      card_type: "creature",
+      supertype: "Legendary",
+      subtypes: ["Spirit"],
+      rules_text: "Flying",
+      flavor_text: "Kept.",
+      power: "2",
+      toughness: "2",
+      loyalty: "3",
+      defense: "4",
+      artist_credit: "Bo Reed",
+      art_url: "https://example.com/back.png",
+      art_position: { focalX: 0.2, focalY: 0.8, scale: 1.7 },
+    };
+    renderForm("edit", sagaWithLegacyBack(whole));
+    await type("title", "Another Name");
+    expect((await sentUpdate()).back_face).toEqual(whole);
+  });
+
+  it("a card with no back still says null (nothing to keep)", async () => {
+    renderForm("edit", savedCard());
+    await type("title", "Another Name");
+    expect((await sentUpdate()).back_face).toBeNull();
+  });
+});
