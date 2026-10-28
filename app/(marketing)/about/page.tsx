@@ -94,7 +94,7 @@ export default function AboutPage() {
 
       <h2>What&apos;s next</h2>
       <p>
-        Premium custom frames, card printing, and richer deck tools are in
+        Premium custom frames, printed cards shipped to you, and richer deck tools are in
         development. Releases are announced on the{" "}
         <Link href="/news">news page</Link>, and the{" "}
         <Link href="/articles">guides</Link> grow alongside the product.

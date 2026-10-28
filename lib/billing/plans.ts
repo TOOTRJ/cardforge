@@ -189,11 +189,16 @@ export const PRINT_PERK_FACTS: Record<PaidTier, readonly RegExp[]> = {
   pro: [/sheet/i, /Letter/, /A4/, /63 × 88 mm/, /cut/i, /ZIP/],
 };
 
+/** The coming-soon print-and-ship service (owner 2026-10-28): PipGlyph prints
+ *  the cards and mails them. Worded so nobody takes it for the print EXPORTS
+ *  above, which exist; never a date or a price. */
+export const PRINTED_CARDS_COMING_SOON = "Printed cards, shipped to you";
+
 // Perks in development that paid tiers will get at no extra cost. Shared by
 // both paid tiers so the storefront can't drift.
 const PAID_COMING_SOON = [
   "Premium custom frames",
-  "Card printing",
+  PRINTED_CARDS_COMING_SOON,
 ];
 // Pro-only teasers (owner, 2026-09-15): the deck-building layer on top of
 // today's deck-aware card design — still a tease, never sold as live.

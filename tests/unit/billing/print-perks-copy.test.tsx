@@ -2,6 +2,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 // ---------------------------------------------------------------------------
 // TODO 6.26 — the pricing and upgrade copy for the print features says what
@@ -36,6 +38,7 @@ import {
   PLUS_PRINT_PERKS,
   PRINT_PERK_COPY,
   PRINT_PERK_FACTS,
+  PRINTED_CARDS_COMING_SOON,
   PRO_PRINT_PERKS,
   planForTier,
 } from "@/lib/billing/plans";
@@ -64,6 +67,22 @@ describe("the print perks — one source, the same facts everywhere (TODO 6.26)"
     for (const line of PRO_PRINT_PERKS) expect(planForTier("pro").features).toContain(line);
     // Free sells none of them.
     for (const line of [...PLUS_PRINT_PERKS, ...PRO_PRINT_PERKS]) expect(planForTier("free").features).not.toContain(line);
+  });
+
+  it("the coming-soon print service is the PHYSICAL one, never mistaken for the print exports (owner 2026-10-28)", () => {
+    expect(PRINTED_CARDS_COMING_SOON).toBe("Printed cards, shipped to you");
+    for (const tier of ["plus", "pro"] as const) {
+      const soon = planForTier(tier).comingSoon ?? [];
+      expect(soon).toContain(PRINTED_CARDS_COMING_SOON);
+      expect(soon.join("\n")).not.toMatch(/^Card printing$/im);
+      // Never a date or a price.
+      expect(soon.join("\n")).not.toMatch(/\$|\d{4}|soon by|in (january|february|march|april|may|june|july|august|september|october|november|december)/i);
+    }
+    const about = readFileSync(join(process.cwd(), "app/(marketing)/about/page.tsx"), "utf8");
+    expect(about).toMatch(/printed cards shipped to you/);
+    expect(about).not.toMatch(/card printing/i);
+    const faq = FAQ_TOPICS.flatMap((t) => t.entries.map((e) => `${e.q}\n${e.a}`)).join("\n");
+    expect(faq).not.toMatch(/card printing/i);
   });
 
   it("no plan card sells the old set (3×3 sheets only, the 1500×2100 PNG alone)", () => {
