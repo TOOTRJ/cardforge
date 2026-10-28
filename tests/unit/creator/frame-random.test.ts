@@ -264,6 +264,8 @@ describe("resolveGeneratedFrame — showcases with no walker or battle anatomy (
     "tarkirdraconic",
     "tarkirghostfire",
     "tarkirdragon",
+    // The D&D Sourcebook (TODO 4.11 wave 2): P/T only, like the rest.
+    "dndsourcebook",
     // The Strixhaven Mystical Archive (TODO 4.11 wave 2): P/T only, like the rest.
     "mysticalarchive",
   ] as const;

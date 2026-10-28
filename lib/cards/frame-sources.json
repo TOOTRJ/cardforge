@@ -376,6 +376,116 @@
       "keys are lowercase (the frames bucket's object keys are: downarrow, fanclosed, fanopen); CC's Lesson and Hammer icons have no DFC printing (BOT prints the plain ▲ / ▼) and are not built; the silver / SLD waxing-and-waning moon and upside-down families have no file"
     ]
   },
+  "dndsourcebook": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packDNDSourcebook.js 'D&D Sourcebook' (the Adventures in the Forgotten Realms / Battle for Baldur's Gate sourcebook showcase; groupShowcase-5.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "output": "1500x2100, corners rounded to 64.5px, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/dndSourcebook/frame.png"
+      ],
+      "u": [
+        "img/frames/dndSourcebook/frame.png"
+      ],
+      "b": [
+        "img/frames/dndSourcebook/frame.png"
+      ],
+      "r": [
+        "img/frames/dndSourcebook/frame.png"
+      ],
+      "g": [
+        "img/frames/dndSourcebook/frame.png"
+      ],
+      "c": [
+        "img/frames/dndSourcebook/frame.png"
+      ],
+      "m": [
+        "img/frames/dndSourcebook/frame.png"
+      ]
+    },
+    "plates": {
+      "w": "img/frames/dndSourcebook/pt.png",
+      "u": "img/frames/dndSourcebook/pt.png",
+      "b": "img/frames/dndSourcebook/pt.png",
+      "r": "img/frames/dndSourcebook/pt.png",
+      "g": "img/frames/dndSourcebook/pt.png",
+      "c": "img/frames/dndSourcebook/pt.png",
+      "m": "img/frames/dndSourcebook/pt.png"
+    },
+    "sourceFiles": [
+      "img/frames/dndSourcebook/frame.png",
+      "img/frames/dndSourcebook/pt.png"
+    ],
+    "notes": [
+      "w u b r g c m = the pack's one 'Frame' (dndSourcebook/frame.png, 1500x2100 NATIVE — no resample), byte for byte: the pack and print draw one parchment page for every colour (a sourcebook card's colour is its art's background), so there is no colour master to draw",
+      "a real black border all round, cut at the one card corner; the page's own rounded corners are the pack's drawing",
+      "plates = the pack's one 'Power/Toughness' plate (dndSourcebook/pt.png, 260x132, native size) under every key; the profile draws it 1:1 where print sets it (1167/1867 px, the median of 115 creatures), 6 px right of and below the pack's ptBounds (1161/1861)",
+      "the parchment against print by the ring's rule (raw scan medians over the title band, type band and text box, ink left out; a region ≥ 9 levels off is toned): the pack 219,178,139, the 127 sourcebook prints 217,181,144 (AFR 214,174,137, CLB 218,183,146) — within 5 levels, as drawn: nothing is toned",
+      "geometry as drawn: print's lines sit a few px higher (the title rule 1.5 / 5 px on AFR / CLB, the art's foot and the type rule 4–5 / 7.5 px) and its page's foot 3.5–4.5 px lower; the lines cross textured parchment, never a flat zone, so nothing is re-cut and the slots ride the pack's own lines",
+      "no legendary crown: the pack's 'Legend Crown' (dndSourcebook/crown.png) is not on print — none of the run's legendary printings (AFR #303, #304, #317, #323, #333, #335–347 and CLB's legends) prints one — so it is neither built nor published"
+    ]
+  },
+  "dndsourcebookholostamp": {
+    "source": "cardconjurer",
+    "repo": "Investigamer/cardconjurer",
+    "commit": "2fcddba8966156d484cedf54d8214996748dd5e1",
+    "pack": "packDNDSourcebook.js 'D&D Sourcebook' (the Adventures in the Forgotten Realms / Battle for Baldur's Gate sourcebook showcase; groupShowcase-5.js)",
+    "converter": "scripts/import-cc-frames.mjs",
+    "kind": "overlay",
+    "output": "188x88 notch piece (1:1 at 1500x2100, at 656,1916), the oval region cut to transparent, webp q90",
+    "colors": {
+      "w": [
+        "img/frames/dndSourcebook/holo.png at 657,1917 186×78 px of a clear 1500×2100 card, 1:1 (no resample), cut to 188×88 at 656,1916",
+        "the oval 45.5333/91.8571/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "u": [
+        "img/frames/dndSourcebook/holo.png at 657,1917 186×78 px of a clear 1500×2100 card, 1:1 (no resample), cut to 188×88 at 656,1916",
+        "the oval 45.5333/91.8571/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "b": [
+        "img/frames/dndSourcebook/holo.png at 657,1917 186×78 px of a clear 1500×2100 card, 1:1 (no resample), cut to 188×88 at 656,1916",
+        "the oval 45.5333/91.8571/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "r": [
+        "img/frames/dndSourcebook/holo.png at 657,1917 186×78 px of a clear 1500×2100 card, 1:1 (no resample), cut to 188×88 at 656,1916",
+        "the oval 45.5333/91.8571/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "g": [
+        "img/frames/dndSourcebook/holo.png at 657,1917 186×78 px of a clear 1500×2100 card, 1:1 (no resample), cut to 188×88 at 656,1916",
+        "the oval 45.5333/91.8571/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "m": [
+        "img/frames/dndSourcebook/holo.png at 657,1917 186×78 px of a clear 1500×2100 card, 1:1 (no resample), cut to 188×88 at 656,1916",
+        "the oval 45.5333/91.8571/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ],
+      "c": [
+        "img/frames/dndSourcebook/holo.png at 657,1917 186×78 px of a clear 1500×2100 card, 1:1 (no resample), cut to 188×88 at 656,1916",
+        "the oval 45.5333/91.8571/8.9333×3.0476 %, plus 2 px cut to transparent, the 2 px round it painted opaque black"
+      ]
+    },
+    "cut": {
+      "oval": {
+        "leftPct": 45.53333333333333,
+        "topPct": 91.85714285714286,
+        "widthPct": 8.933333333333334,
+        "heightPct": 3.0476190476190474
+      },
+      "marginPx": 2,
+      "blackoutPx": 2,
+      "what": "the hologram capture inside the pack's oval — never published; the ring round the cut painted black"
+    },
+    "sourceFiles": [
+      "img/frames/dndSourcebook/holo.png"
+    ],
+    "notes": [
+      "the sourcebook's oval stamp notch (TODO 4.11): the pack's one 'Holo Stamp' (dndSourcebook/holo.png, 186x78) — the black border arched up into the page's foot round the hologram oval — at its bounds (657/1917 px), 1:1 (the pack is 1500 px native), cut to its box 188x88 at 656,1916 px — 1 px round the piece and 8 px past its foot, so the cut's black ring fits; below the piece the box is clear but for that ring, over the master's black border",
+      "keys = the masters' w u b r g m c, every one the same piece: the pack draws one stamp, and every master is the same page",
+      "the hologram: the pack paints a capture of WotC's oval in the well (685–815 × 1930–1993 px, measured on the piece); the prints' oval (134 × 64 at 683, 1929 — the 49 stamped AFR / CLB prints, on the well's centre) plus 2 px is cut to transparent and the 2 px round it painted opaque black, and the importer holds every lit pixel of the well inside the cut and its ring: no pixel of the capture is published; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut"
+    ]
+  },
   "emblem": {
     "source": "cardconjurer",
     "repo": "Investigamer/cardconjurer",

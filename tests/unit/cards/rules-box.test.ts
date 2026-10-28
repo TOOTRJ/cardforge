@@ -142,6 +142,10 @@ describe("the main box on every template", () => {
         // …and the Bloomburrow anime (layout v70): M15's margins in print's
         // own rect (lines from x 128.5, the rect's 125 + 4).
         "bloomanime",
+        // …and the D&D Sourcebook (TODO 4.11 wave 2): M15's margins on the
+        // page (the run's lines from x 130, its right ink to 1368 at p90),
+        // the box ending above the page's rounded foot.
+        "dndsourcebook",
       ].sort(),
     );
     for (const t of withPrintMargins) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 4, y: 0 });

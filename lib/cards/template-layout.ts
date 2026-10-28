@@ -4690,6 +4690,76 @@ const TARKIRDRAGON: FrameProfile = {
     plateAssetPathTemplate: "/frames/tarkirdragon/pt/{color}.png",
   },
 };
+// The Dungeons & Dragons SOURCEBOOK showcase (TODO 4.11 wave 2) — Card
+// Conjurer's 'D&D Sourcebook' pack (packDNDSourcebook.js, 1500 × 2100
+// native; scripts/lib/cc-frames.mjs DND), the parchment page of AFR #299–349
+// and CLB #375–450. ONE master for every colour key (the page is the same
+// on every print; the colour is the art's background). An ADDITION: a new
+// template, no stored card. Its text layout is the M15 frame's on the
+// page's own lines — the slots measured on print, each against its own
+// line, and laid on the pack's (DND_* below).
+/** The art slot: the master's window and its torn, half-transparent edges
+ *  (α < 250 on 93–1439 × 227–1180 px on every key — CC's artBounds 60 /
+ *  231 / 1380 × 949) with the art-window check's 0.05 % to spare:
+ *  92–1441 × 226–1183. */
+export const DNDSOURCEBOOK_ART_SLOT: Rect = { topPct: (226 / 2100) * 100, leftPct: (92 / 1500) * 100, widthPct: (1349 / 1500) * 100, heightPct: (957 / 2100) * 100 };
+/** The pack's plate (260 × 132 px, 1:1) where PRINT sets it — not at the
+ *  pack's ptBounds (1161 / 1861): registered on 115 creatures of the run
+ *  (the pack's plate matched to each print's rim and outlines, digits left
+ *  out), its top edge on 1867 in both sets and its left edge on 1158 (AFR,
+ *  50) / 1167 (CLB, 65) — the median of all, 1167 / 1867: 6 px right of and
+ *  6 px below the pack's bounds. */
+export const DNDSOURCEBOOK_PLATE_PX = { x: 1167, y: 1867, width: 260, height: 132 } as const;
+const DNDSOURCEBOOK_PLATE_RECT: Rect = {
+  topPct: (DNDSOURCEBOOK_PLATE_PX.y / 2100) * 100,
+  leftPct: (DNDSOURCEBOOK_PLATE_PX.x / 1500) * 100,
+  widthPct: (DNDSOURCEBOOK_PLATE_PX.width / 1500) * 100,
+  heightPct: (DNDSOURCEBOOK_PLATE_PX.height / 2100) * 100,
+};
+/** The P/T's text box: M15's, moved with the plate (6 px right, 5 px down
+ *  — print sets the digits' ink centre 129.5 / 66 px from the plate's
+ *  top-left corner, the 115 prints' median; M15's box on the pack's bounds
+ *  put ours on 129.5 / 67). */
+/** The name's pen 2 px left of M15's (the median first-ink offset over
+ *  all 127 prints; AFR's alone 5, CLB's 1). */
+const DNDSOURCEBOOK_TITLE_DX_PX = 2;
+const DNDSOURCEBOOK_PT_DX_PX = 6;
+const DNDSOURCEBOOK_PT_DY_PX = 5;
+const DNDSOURCEBOOK: FrameProfile = {
+  ...M15,
+  label: "D&D Sourcebook",
+  ...CC_M15_COST,
+  costDy: CC_M15_COST.costDy - 3 / 1500,
+  costDx: 12 / 1500,
+  artSlot: DNDSOURCEBOOK_ART_SLOT,
+  // The name 1.5 px up (its baseline 42.5 px above the title rule on the
+  // 127 prints, both sets) and its pen 2 px left (the first ink: ours 5 px
+  // right of AFR's, 1 px right of CLB's — the median of all 127, 2).
+  title: {
+    ...M15.title,
+    rect: {
+      ...M15.title.rect,
+      leftPct: M15.title.rect.leftPct - (DNDSOURCEBOOK_TITLE_DX_PX / 1500) * 100,
+      widthPct: M15.title.rect.widthPct + (DNDSOURCEBOOK_TITLE_DX_PX / 1500) * 100,
+    },
+    dy: M15.title.dy! - 1.5 / 1500,
+  },
+  type: { ...M15.type, rect: { ...M15.type.rect, topPct: M15.type.rect.topPct + (7 / 2100) * 100 }, dy: CC_M15_TYPE_DY + 3 / 1500 },
+  rules: { ...M15.rules, rect: { ...M15.rules.rect, heightPct: ((1877.5 - 1335.6) / 2100) * 100 } },
+  pt: {
+    ...M15.pt!,
+    rect: {
+      ...M15.pt!.rect,
+      leftPct: M15.pt!.rect.leftPct + (DNDSOURCEBOOK_PT_DX_PX / 1500) * 100,
+      topPct: M15.pt!.rect.topPct + (DNDSOURCEBOOK_PT_DY_PX / 2100) * 100,
+    },
+    // The plate's face on the digits' rows: inside its inner outline
+    // (pt.png's columns 24–27 and 232–235), on the plate as placed.
+    inkSpanPct: { leftPct: ((DNDSOURCEBOOK_PLATE_PX.x + 28) / 1500) * 100, rightPct: ((DNDSOURCEBOOK_PLATE_PX.x + 231) / 1500) * 100 },
+    plateRect: DNDSOURCEBOOK_PLATE_RECT,
+    plateAssetPathTemplate: "/frames/dndsourcebook/pt/{color}.png",
+  },
+};
 // Tarkir draconic (TODO 4.11, layout v68): the gold Tarkir: Dragonstorm
 // dragon showcase, TDM #292–326 — MSE's drawing (magic-m15-showcase-tarkir-
 // draconic, 646 px, upscaled by scripts/build-showcase-frames.mjs), with the
@@ -5975,6 +6045,20 @@ export const EXPEDITION_BFZ_COLLECTOR: CollectorSlot = {
   line1BaselinePct: (1987 / 2100) * 100,
   line2BaselinePct: (2025.5 / 2100) * 100,
 };
+/**
+ * The collector line on the D&D Sourcebook showcase (TODO 4.11 wave 2):
+ * M15's slot — the pen x (the prints' first ink at 95–97 px), the brush
+ * column, the sizes, the © slot's right end — on the run's own rows,
+ * measured on all 127 printings at 1500 × 2100 (the foot of the flat-
+ * bottomed digits and capitals): line 1 on 1997 px, line 2 on 2035 (AFR,
+ * 51 prints) / 2036 (CLB, 76), where M15's slot bakes 1993 / 2031 — so
+ * 4 px below M15's 1993.5 / 2032.
+ */
+export const DNDSOURCEBOOK_COLLECTOR: CollectorSlot = {
+  ...M15_COLLECTOR,
+  line1BaselinePct: (1997.5 / 2100) * 100,
+  line2BaselinePct: (2036 / 2100) * 100,
+};
 
 /**
  * The holofoil stamp's notch on the black-bordered M15 family (TODO 4.9c):
@@ -6191,6 +6275,33 @@ export const TARKIRDRAGON_HOLO_STAMP: FrameOverlaySlot = {
   assetPathTemplate: "/frames/tarkirdragonholostamp/{key}.png",
   keys: ["w", "u", "b", "r", "g", "m", "c"],
   stamp: { shape: "oval", oval: TARKIRDRAGON_HOLO_STAMP_OVAL, keepOut: TARKIRDRAGON_HOLO_STAMP_KEEP_OUT },
+};
+
+/** The sourcebook's stamp oval (scripts/lib/cc-frames.mjs
+ *  DND_STAMP_OVAL_PX: 683–817 × 1929–1993 px) — the PRINTS' hologram, 134 ×
+ *  64 (the 49 stamped AFR / CLB prints), on the centre of the pack's own
+ *  well. */
+export const DNDSOURCEBOOK_HOLO_STAMP_OVAL: Rect = { leftPct: (683 / 1500) * 100, topPct: (1929 / 2100) * 100, widthPct: (134 / 1500) * 100, heightPct: (64 / 2100) * 100 };
+/** The rules box keeps out of the arch: its top (1917 px at the centre)
+ *  down to the page's foot (1949), over the piece's 657–843 px. */
+export const DNDSOURCEBOOK_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (657 / 1500) * 100, topPct: (1917 / 2100) * 100, widthPct: (186 / 1500) * 100, heightPct: (32 / 2100) * 100 };
+/**
+ * The sourcebook's OVAL stamp notch (TODO 4.11 wave 2): the pack's one 'Holo
+ * Stamp' — the black border arched up into the page's foot round the oval —
+ * 1:1 at its bounds, an 188 × 88 box at 656, 1916 px (DND_NOTCH_BOX in
+ * scripts/lib/cc-frames.mjs: 1 px round the piece and 8 px past its foot),
+ * its hologram oval cut clear for our oval art. The rares and mythics of the
+ * run print it (`security_stamp: oval`, 49 of 127), the commons and
+ * uncommons don't: "auto" = a rare or mythic, as on M15. Keys: the masters'
+ * (one piece; every master is the same page). Set on the dndsourcebook
+ * entry only.
+ */
+export const DNDSOURCEBOOK_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: { leftPct: (656 / 1500) * 100, topPct: (1916 / 2100) * 100, widthPct: (188 / 1500) * 100, heightPct: (88 / 2100) * 100 },
+  assetPathTemplate: "/frames/dndsourcebookholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "c"],
+  stamp: { shape: "oval", oval: DNDSOURCEBOOK_HOLO_STAMP_OVAL, keepOut: DNDSOURCEBOOK_HOLO_STAMP_KEEP_OUT },
 };
 
 /** The Mystical Archive's stamp oval (scripts/lib/cc-frames.mjs
@@ -7553,6 +7664,9 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // card, so no stored card changes by them.
   lotrscroll: { ...LOTRSCROLL, overlays: [LOTRSCROLL_CROWN, LOTRSCROLL_HOLO_STAMP], collector: M15_COLLECTOR },
   tarkirdragon: { ...TARKIRDRAGON, overlays: [TARKIRDRAGON_CROWN, TARKIRDRAGON_HOLO_STAMP], collector: EXPEDITION_ZNR_COLLECTOR },
+  // The D&D Sourcebook showcase (TODO 4.11 wave 2): the stamp and the
+  // collector line, opt-in per card; no crown (none prints).
+  dndsourcebook: { ...DNDSOURCEBOOK, overlays: [DNDSOURCEBOOK_HOLO_STAMP], collector: DNDSOURCEBOOK_COLLECTOR },
   // The Strixhaven Mystical Archive (TODO 4.11 wave 2): the two-colour
   // dress (its pair masters split the colour lines, as the five two-colour
   // prints do), the stamp and the collector line, opt-in per card; no crown

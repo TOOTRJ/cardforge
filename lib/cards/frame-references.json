@@ -6331,6 +6331,95 @@
       ]
     }
   },
+  "dndsourcebook": {
+    "note": "The D&D Sourcebook showcase (TODO 4.11 wave 2): AFR #299–349 and CLB #375–450 — NOT AFR #350–358, the 'Dungeon Module' lands. One parchment page under every colour key (a sourcebook card's colour is its art's background), so each key is checked on an AFR and a CLB creature of its colour; 'c' the colourless artifact creatures; 'm' a two-colour legend (Barrowin, W/B) and a three-colour one (Bane, W/U/B) — the run prints the same page whatever the colours, and no legend prints a crown.",
+    "colors": {
+      "w": [
+        {
+          "name": "Arborea Pegasus",
+          "set": "afr",
+          "scryfallId": "6bf942df-d30b-4d1b-8a46-bca4abaeb147"
+        },
+        {
+          "name": "Ancient Gold Dragon",
+          "set": "clb",
+          "scryfallId": "18f53d47-fd5c-41de-8d7a-490c1b529f4f"
+        }
+      ],
+      "u": [
+        {
+          "name": "Displacer Beast",
+          "set": "afr",
+          "scryfallId": "8646ae5c-e757-4d16-bf2a-d48770d620fa"
+        },
+        {
+          "name": "Ancient Silver Dragon",
+          "set": "clb",
+          "scryfallId": "24d9a4d3-e1d2-42ae-bca4-02bc2cf69c9d"
+        }
+      ],
+      "b": [
+        {
+          "name": "Baleful Beholder",
+          "set": "afr",
+          "scryfallId": "204f3cba-df13-4c89-b92d-47ee3be6809c"
+        },
+        {
+          "name": "Ancient Brass Dragon",
+          "set": "clb",
+          "scryfallId": "763d7fcb-e5f0-4438-8d35-8beb4cc015e4"
+        }
+      ],
+      "r": [
+        {
+          "name": "Delina, Wild Mage",
+          "set": "afr",
+          "scryfallId": "c4f1dc68-868b-4f3f-b10a-62842d88edc4"
+        },
+        {
+          "name": "Ancient Copper Dragon",
+          "set": "clb",
+          "scryfallId": "e12d32a7-60b4-4e49-b279-970b170c1a9c"
+        }
+      ],
+      "g": [
+        {
+          "name": "Bulette",
+          "set": "afr",
+          "scryfallId": "4a76c993-7cc5-428f-bfbc-7747c6a566d0"
+        },
+        {
+          "name": "Ancient Bronze Dragon",
+          "set": "clb",
+          "scryfallId": "6261fba2-0420-4271-87f4-f168a1e74c9b"
+        }
+      ],
+      "c": [
+        {
+          "name": "Iron Golem",
+          "set": "afr",
+          "scryfallId": "47852cc6-a6de-4aed-9650-0c7ce346c3b9"
+        },
+        {
+          "name": "Marching Duodrone",
+          "set": "clb",
+          "scryfallId": "5eec4350-cd61-4520-98a4-4a14fcbc226f"
+        }
+      ],
+      "m": [
+        {
+          "name": "Barrowin of Clan Undurr",
+          "set": "afr",
+          "scryfallId": "38ce406d-8253-48f8-a146-8302518c5187"
+        },
+        {
+          "name": "Bane, Lord of Darkness",
+          "set": "clb",
+          "scryfallId": "3a4ab793-0dac-4b38-ae43-2e3fe454a6b2"
+        }
+      ]
+    }
+  },
   "tarkirdraconic": {
     "note": "Draconic = TDM black-border showcase run (#292–326) — confirm the thumbnail; low-res scans.",
     "confirm": true,
