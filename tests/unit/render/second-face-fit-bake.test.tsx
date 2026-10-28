@@ -11,6 +11,8 @@ import { serveStandInFrames, type StandInFrames } from "@/tests/stubs/stand-in-f
 // A `fitLines` second face's shrunk name on a REAL bake (layout v32): set at
 // measuredLinePx — the whole pixel BELOW its fit, as the front's name — not
 // rounded up (a fit of 26.6 px drew at 27 and ran the line past its fit).
+// Since layout v73 (TODO 3.37 (d)) the 750 px bake takes that whole px of
+// the HD bake, halved — the preview's size — never above its fit either.
 // Flip's upside-down creature; its Card Conjurer master lives in the frames
 // bucket (layout v38), so the bake is served a flat stand-in master and
 // plates (tests/stubs/stand-in-frames.ts). The second face's name is
@@ -40,7 +42,7 @@ const { width: W, height: H } = RENDER_PRESETS.default;
 const magenta = (r: number, g: number, b: number) => r > 170 && b > 170 && g < 110;
 
 describe("a fitLines second face's shrunk name — real bake", () => {
-  it("is drawn at the whole px below its fit, like the front's", async () => {
+  it("is drawn at the HD bake's whole px below its fit, halved — never rounded up past it", async () => {
     const { getFrameProfile } = await import("@/lib/cards/template-layout");
     const face = getFrameProfile("flip").secondFace!;
     expect(face.fitLines).toBe(true);
@@ -61,7 +63,8 @@ describe("a fitLines second face's shrunk name — real bake", () => {
     const { name, fit } = pick!;
     expect(fit.titleText).toBe(name);
     const floorPx = measuredLinePx(fit.titleSizePct, face.title.sizePct, W);
-    expect(floorPx).toBe(Math.floor(fit.titleSizePct * W));
+    expect(floorPx).toBe(Math.floor(fit.titleSizePct * 1500) / 2);
+    expect(floorPx).toBeLessThanOrEqual(fit.titleSizePct * W);
 
     const card = {
       title: "Probe",
@@ -103,9 +106,9 @@ describe("a fitLines second face's shrunk name — real bake", () => {
     }
     const inkWidth = right - left + 1;
     const at = (px: number) => displayRunPx(displayLine(name), px, 0).ink;
-    // The ink spans the run at the floored px (its side bearings aside),
-    // clearly shorter than the rounded-up px would draw.
+    // The ink spans the run at that px (its side bearings aside), clearly
+    // shorter than the rounded-up px would draw.
     expect(Math.abs(inkWidth - at(floorPx))).toBeLessThanOrEqual(6);
-    expect(at(floorPx + 1) - inkWidth).toBeGreaterThan(8);
+    expect(at(Math.ceil(fit.titleSizePct * W)) - inkWidth).toBeGreaterThan(4);
   });
 });
