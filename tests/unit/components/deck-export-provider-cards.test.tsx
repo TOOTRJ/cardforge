@@ -70,11 +70,11 @@ describe("DeckExportProvider — a selection export", () => {
     await run(selection);
     expect(client.runCardsExport).toHaveBeenCalledWith(selection, expect.objectContaining({ onProgress: expect.any(Function) }));
     expect(client.runDeckExport).not.toHaveBeenCalled();
-    expect(screen.getByRole("status").textContent).toContain("Card ZIP ready — Stone Matriarch.");
-    // Said once, by the live region (TODO 6.30, #628's check): no toast
-    // says the start or the finish again.
+    // The progress card shows it; the ready toast says it.
+    expect(screen.getByText("Card ZIP ready")).toBeTruthy();
+    expect(toast.success).toHaveBeenCalledWith("Stone Matriarch — card ZIP ready", expect.anything());
+    // No start toast: the live region says the start (TODO 6.30).
     expect(toast.message).not.toHaveBeenCalled();
-    expect(toast.success).not.toHaveBeenCalled();
   });
 
   it("an upgrade answer opens the batch-export modal", async () => {
@@ -92,10 +92,13 @@ describe("DeckExportProvider — a selection export", () => {
   });
 });
 
-// TODO 6.30: an export that takes long says so, through ONE polite live
-// region — mounted empty before anything runs (so its first message is
-// heard), saying once per phase what is happening, never each card's tick.
-describe("DeckExportProvider — the export's live region (TODO 6.30)", () => {
+// TODO 6.30 (+ #628's check): an export that takes long says so, and each
+// phase is announced EXACTLY ONCE. The start by one persistent polite live
+// region — mounted empty before anything runs, so its first message is
+// heard, and never changing on each card's tick — with no start toast; the
+// finish (ready with the skipped count, failed, cancelled) by its toast
+// alone (Sonner's toaster is a live region of its own), the region silent.
+describe("DeckExportProvider — each phase announced once (TODO 6.30)", () => {
   it("is there, empty, before an export — and is the only one", () => {
     render(
       <DeckExportProvider>
@@ -123,16 +126,15 @@ describe("DeckExportProvider — the export's live region (TODO 6.30)", () => {
     expect(screen.getAllByRole("status")).toHaveLength(1);
   });
 
-  it("a failure is said in words — once, never by a toast too", async () => {
-    client.runCardsExport.mockRejectedValue(new DeckExportError("None of the cards could be rendered — try again in a moment."));
-    await run(selection);
-    expect(screen.getByRole("status").textContent).toBe(
-      "Export failed: None of the cards could be rendered — try again in a moment.",
-    );
-    expect(toast.error).not.toHaveBeenCalled();
+  it("the start is the region's alone: no start toast", async () => {
+    client.runDeckExport.mockReturnValue(new Promise(() => {}));
+    await run({ deckId: "d1", kind: "zip", quality: "hd", layout: "pages" });
+    expect(screen.getByRole("status").textContent).toMatch(/^Building deck ZIP\. /);
+    expect(toast.message).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
   });
 
-  it("the finish says how many cards were skipped", async () => {
+  it("ready: ONE toast with the skipped count and the Save file hint; the region falls silent", async () => {
     client.runCardsExport.mockResolvedValue({
       blob: new Blob(["pdf"]),
       filename: "pipglyph-3-cards.pdf",
@@ -141,8 +143,43 @@ describe("DeckExportProvider — the export's live region (TODO 6.30)", () => {
       title: "3 cards",
     });
     await run({ ...selection, kind: "pdf" });
-    expect(screen.getByRole("status").textContent).toBe(
-      "Print PDF ready — 3 cards. 2 cards were skipped. Check your downloads. If nothing appeared, use Save file on the progress card.",
-    );
+    expect(toast.success).toHaveBeenCalledTimes(1);
+    expect(toast.success).toHaveBeenCalledWith("3 cards — print PDF ready", {
+      description: "2 cards were skipped. Check your downloads. If nothing appeared, use Save file on the progress card.",
+      duration: 10000,
+    });
+    expect(screen.getByRole("status").textContent).toBe("");
+  });
+
+  it("ready with nothing skipped: the hint alone", async () => {
+    client.runCardsExport.mockResolvedValue({
+      blob: new Blob(["zip"]),
+      filename: "stone-matriarch.zip",
+      cardsIncluded: 1,
+      failed: [],
+      title: "Stone Matriarch",
+    });
+    await run(selection);
+    expect(toast.success).toHaveBeenCalledWith("Stone Matriarch — card ZIP ready", {
+      description: "Check your downloads. If nothing appeared, use Save file on the progress card.",
+      duration: 10000,
+    });
+  });
+
+  it("failed: ONE error toast in the export's words; the region falls silent", async () => {
+    client.runCardsExport.mockRejectedValue(new DeckExportError("None of the cards could be rendered — try again in a moment."));
+    await run(selection);
+    expect(toast.error).toHaveBeenCalledTimes(1);
+    expect(toast.error).toHaveBeenCalledWith("None of the cards could be rendered — try again in a moment.");
+    expect(screen.getByRole("status").textContent).toBe("");
+  });
+
+  it("cancelled: ONE toast; the region falls silent", async () => {
+    client.runCardsExport.mockRejectedValue(new DeckExportError("Export cancelled.", "CANCELLED"));
+    await run(selection);
+    expect(toast.message).toHaveBeenCalledTimes(1);
+    expect(toast.message).toHaveBeenCalledWith("Export cancelled.");
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(screen.getByRole("status").textContent).toBe("");
   });
 });
