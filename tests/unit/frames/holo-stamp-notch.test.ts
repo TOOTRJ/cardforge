@@ -86,7 +86,7 @@ function onDisk(rel: string): Buffer | null {
  *  Strixhaven Mystical Archive's, PipGlyph's own arch:
  *  mystical-archive-importer.test.ts; the Doctor Who TARDIS's the pack's
  *  one trapezoid, who-tardis-importer.test.ts). */
-const { lotrscrollholostamp: _scrollNotch, lotrholostamp: _ringNotch, tarkirdragonholostamp: _tarkirNotch, dndsourcebookholostamp: _dndNotch, dossierholostamp: _dossierNotch, enchantingtalesholostamp: _etalesNotch, mysticalarchiveholostamp: _archiveNotch, tardisholostamp: _tardisNotch, ...TINTED_NOTCHES } = HOLO_STAMP_NOTCHES;
+const { lotrscrollholostamp: _scrollNotch, lotrholostamp: _ringNotch, tarkirdragonholostamp: _tarkirNotch, dndsourcebookholostamp: _dndNotch, dossierholostamp: _dossierNotch, enchantingtalesholostamp: _etalesNotch, mysticalarchiveholostamp: _archiveNotch, tardisholostamp: _tardisNotch, breakingnewsholostamp: _breakingNewsNotch, ...TINTED_NOTCHES } = HOLO_STAMP_NOTCHES;
 void _scrollNotch;
 void _tarkirNotch;
 void _ringNotch;
@@ -95,6 +95,7 @@ void _dossierNotch;
 void _etalesNotch;
 void _archiveNotch;
 void _tardisNotch;
+void _breakingNewsNotch;
 type NotchDef = (typeof TINTED_NOTCHES)[keyof typeof TINTED_NOTCHES] & {
   rampKeys?: readonly string[];
   barSharedBy?: Record<string, string[]>;

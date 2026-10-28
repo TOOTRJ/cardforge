@@ -103,8 +103,8 @@ describe("one M15-era display size (layout v32)", () => {
     // …and TODO 4.11 wave 2's MKM dossier (a new template: no bump).
     // …and TODO 4.11 wave 2's Enchanting Tales and Dominaria United
     // Stained Glass, the Strixhaven Mystical Archive and the Doctor Who
-    // TARDIS (new templates: no bump).
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(89);
+    // TARDIS and the OTJ Breaking News (new templates: no bump).
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(90);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -197,6 +197,7 @@ describe("one M15-era display size (layout v32)", () => {
         t === "mysticalarchive" ||
         t === "enchantingtales" ||
         t === "tardis" ||
+        t === "breakingnews" ||
         t === "lotrscroll" ||
         t === "lotr" ||
         t === "tarkirdragon" ||
@@ -480,6 +481,11 @@ describe("baselines (TextSlot.dy)", () => {
     // every printing), the type line 2 px under the CC baseline (print's
     // full-size lines on 1261–1263).
     ["tardis", base.title - 3 / 1500, cc + 2 / 1500],
+    // The OTJ Breaking News (TODO 4.11 wave 2, a new template): M15's name
+    // and the CC type line's dy, their RECTS on the page's own bands (the
+    // name centred under the masthead, print's capitals on 298 px; the type
+    // line on print's 1324).
+    ["breakingnews", base.title, cc],
     // The Theros constellation (TODO 4.11, layout v66): MSE-framed, its name
     // 2 px up onto THB #258–268's baseline; its type line rides the band,
     // whose RECT moves 10 px down (the text's dy is M15's).

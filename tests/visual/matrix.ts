@@ -1368,6 +1368,18 @@ const KIND_ANATOMY_CASES: readonly [FrameTemplate, CardKind, VisualColour, strin
   // Magnetic Snuffler).
   ["dossier", "creature", "r", "@wide", { power: "12", toughness: "12" }],
   ["dossier", "creature", "c", "@artifact", { supertype: "Artifact", subtypes: ["Construct"], power: "4", toughness: "4" }],
+  // TODO 4.11 wave 2: the OTJ Breaking News' P/T box at its widest, and a
+  // Vehicle on the pack's slate artifact master and its box (OTP #64
+  // Unlicensed Hearse).
+  ["breakingnews", "creature", "r", "@wide", { power: "12", toughness: "12" }],
+  ["breakingnews", "artifact", "c", "@vehicle", { subtypes: ["Vehicle"], power: "*", toughness: "*" }],
+  // …and its masthead making room for the cost row as print does (owner
+  // decision on #624, lib/cards/masthead.ts): four pips drop the chevron
+  // (OTP #25), seven slide the wordmark left over the icon box (OTP #40),
+  // nine — past anything printed — drop the wordmark and keep the box.
+  ["breakingnews", "instant", "r", "@masthead-chevron", { cost: "{X}{R}{R}{R}" }],
+  ["breakingnews", "sorcery", "wub", "@masthead-shift", { cost: "{W}{W}{U}{U}{B}{B}{B}" }],
+  ["breakingnews", "sorcery", "b", "@masthead-past-print", { cost: "{B}{B}{B}{B}{B}{B}{B}{B}{B}" }],
   // TODO 4.11: the MUL Tarkir dragon wings' plate at its widest.
   ["tarkirdragon", "creature", "r", "@wide", { power: "12", toughness: "12" }],
   // TODO 4.11 wave 2: the New Capenna Art Deco's plate at its widest.
@@ -2120,6 +2132,18 @@ export function visualCases(): VisualCase[] {
   add("tardis", "creature", "b", "short", { suffix: "@stamp-auto-uncommon", row: stampRow("tardis", "auto", { rarity: "uncommon" }) });
   add("tardis", "creature", "wub", "long", { suffix: "@stamp-m", row: stampRow("tardis", "auto", { rarity: "mythic" }) });
   add("tardis", "creature", "u", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("tardis", "auto", { rarity: "rare" }) });
+  // TODO 4.11 wave 2: the OTJ Breaking News' OVAL tab — none on an uncommon
+  // (OTP prints it on a rare or mythic only), a gold card's (OTP #40 Cruel
+  // Ultimatum: the gold key's piece), the land's (OTP #65 Dust Bowl: `l`),
+  // the HD bake.
+  add("breakingnews", "instant", "u", "short", { suffix: "@stamp-auto-common", row: stampRow("breakingnews", "auto", { rarity: "uncommon" }) });
+  add("breakingnews", "sorcery", "wub", "long", { suffix: "@stamp-m", row: stampRow("breakingnews", "auto", { rarity: "rare" }) });
+  add("breakingnews", "land", "c", "short", { suffix: "@stamp-c", row: stampRow("breakingnews", "auto", { rarity: "rare" }) });
+  add("breakingnews", "sorcery", "b", "long", { suffix: "@stamp-hd", preset: "hd", row: stampRow("breakingnews", "auto", { rarity: "mythic" }) });
+  // The masthead's pieces inside both finish masks (lib/cards/masthead.ts):
+  // the sheen follows the wordmark where it slid, never the master's.
+  add("breakingnews", "sorcery", "wub", "short", { suffix: "@masthead-shift-foil", finish: "foil", row: { cost: "{W}{W}{U}{U}{B}{B}{B}" } });
+  add("breakingnews", "sorcery", "wub", "short", { suffix: "@masthead-shift-etched", finish: "etched", row: { cost: "{W}{W}{U}{U}{B}{B}{B}" } });
   // TODO 4.9d: the borderless frames (new keys on templates whose stored
   // cards carry none: new cases, no bump) beyond the loops above — the
   // see-through colourless frame and the artifact's silver, a crowned
@@ -2576,6 +2600,8 @@ export const STAMP_TEMPLATES: readonly FrameTemplate[] = [
   "stainedglass",
   // …and the Doctor Who TARDIS's triangle (TODO 4.11 wave 2: the pack's one trapezoid).
   "tardis",
+  // …and the OTJ Breaking News' oval (TODO 4.11 wave 2: the pack's one tab).
+  "breakingnews",
 ];
 
 /** The templates with BOTH the notch and pair masters — the pair notch's
@@ -2597,6 +2623,9 @@ export const STAMP_PAIR_TEMPLATES: readonly FrameTemplate[] = [
   // …and the Doctor Who TARDIS — its pair masters under the pack's one
   // trapezoid (a pair draws m's).
   "tardis",
+  // TODO 4.11 wave 2: the OTJ Breaking News — its pair masters under the
+  // pack's one notch tab.
+  "breakingnews",
 ];
 
 /** A rules text whose fitted last line enters the arch on m15 (found on the
@@ -3059,6 +3088,9 @@ export const PAIR_TEMPLATES: readonly FrameTemplate[] = [
   // The Doctor Who TARDIS (TODO 4.11 wave 2): its two colour frames and
   // braces lerped.
   "tardis",
+  // The OTJ Breaking News (TODO 4.11 wave 2): the same across print's
+  // split, and its crown's pairs.
+  "breakingnews",
 ];
 
 /** The collector line's fields on its cases (TODO 4.9b): a real printing's

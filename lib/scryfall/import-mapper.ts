@@ -1863,6 +1863,12 @@ const CROWNED_SHOWCASE_SIGNATURES: ReadonlySet<string> = new Set([
   // (CROWN_OWN_FRAMES → sncartdeco): off on the m15 stand-in an unverified
   // legend lands on.
   "showcase/snc/art-deco",
+  // The OTJ Breaking News showcase (TODO 4.11 wave 2): its one legend, OTP
+  // #63 Mindslaver, prints the coloured rule with its notched V across the
+  // page's top (against #61 / #62). Its own frame's crown only
+  // (CROWN_OWN_FRAMES → breakingnews): off on the m15 stand-in an
+  // unverified import lands on.
+  "showcase/otp/breaking-news",
 ]);
 
 /** The crowned showcases whose crown IS the standard 2015 crown, so it

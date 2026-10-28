@@ -328,7 +328,7 @@ export function FoilSheen({
    *  over its card-% rect, added to the mask after the frame — what the face
    *  shows there — so the crown sparkles like the frame it is drawn over.
    *  Never with `region`. Empty = the mask is exactly as before. */
-  overlays?: readonly { href: string; rect: Rect }[];
+  overlays?: readonly { href: string; rect: Rect; window?: Rect }[];
 }) {
   const { vw, vh } = cardSpace(landscape);
   const seamX = split && !region ? (vw * split.atPct) / 100 : null;
@@ -387,6 +387,19 @@ export function FoilSheen({
             <rect x={r2(seamX)} y="0" width={r2(vw - seamX)} height={vh} />
           </clipPath>
         ) : null}
+        {/* An overlay drawn only inside its window (a masthead's paper piece,
+            lib/cards/masthead.ts): clipped in the mask as the face clips it. */}
+        {region
+          ? null
+          : overlays.map((overlay, i) => {
+              if (!overlay.window) return null;
+              const w = pct(overlay.window);
+              return (
+                <clipPath key={`ow${i}`} id={`${id}-ow${i}`} clipPathUnits="userSpaceOnUse">
+                  <rect x={r2(w.x)} y={r2(w.y)} width={r2(w.width)} height={r2(w.height)} />
+                </clipPath>
+              );
+            })}
         <mask id={`${id}-lum`} maskUnits="userSpaceOnUse" x={view.x} y={view.y} width={view.width} height={view.height}>
           {art.map((layer, i) => {
             const { slot: box, place } = artBoxes[i];
@@ -437,7 +450,7 @@ export function FoilSheen({
             ? null
             : overlays.map((overlay, i) => {
                 const box = pct(overlay.rect);
-                return (
+                const image = (
                   <image
                     key={`overlay${i}`}
                     href={overlay.href}
@@ -447,6 +460,13 @@ export function FoilSheen({
                     height={r2(box.height)}
                     preserveAspectRatio="none"
                   />
+                );
+                return overlay.window ? (
+                  <g key={`overlay${i}`} clipPath={`url(#${id}-ow${i})`}>
+                    {image}
+                  </g>
+                ) : (
+                  image
                 );
               })}
         </mask>

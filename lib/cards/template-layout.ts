@@ -112,6 +112,7 @@ import {
 import { walkerAnatomy } from "@/lib/cards/kind-anatomy";
 import type { SymbolStyle } from "@/lib/cards/symbol-style";
 import type { WhiteBorderSlot } from "@/lib/cards/white-border";
+import type { MastheadSpec } from "@/lib/cards/masthead";
 import { TYPE_FACES, typeFace, type SlotFace } from "@/lib/cards/type-faces";
 
 /** A rectangle in card-relative percent (0–100), origin top-left. The card's
@@ -657,6 +658,11 @@ export type FrameProfile = {
    *  Opt-in per card (FrameStyle.crown), so declaring one never changes a
    *  stored card. Code-owned. */
   overlays?: readonly FrameOverlaySlot[];
+  /** A masthead painted in the master that makes room for the cost row as
+   *  print does (the OTJ Breaking News showcase: lib/cards/masthead.ts) —
+   *  its pieces drawn right after the frame, the row translated. Nothing
+   *  changes on a card whose row fits. Code-owned; a PROFILES entry's. */
+  masthead?: MastheadSpec;
   /** This template is one FACE of a double-faced card — see DfcProfile.
    *  Code-owned; set only on PROFILES entries (none yet). */
   dfc?: DfcProfile;
@@ -5353,6 +5359,110 @@ const ENCHANTINGTALES: FrameProfile = {
   },
 };
 
+// The Outlaws of Thunder Junction BREAKING NEWS showcase (TODO 4.11 wave 2)
+// — Card Conjurer's 'Breaking News' pack (packBreakingNews.js, 2010 × 2814,
+// downscaled once; scripts/lib/cc-frames.mjs BREAKING_NEWS), the front page
+// of "The Prosperity Post" on OTP #1–65: a borderless newspaper page, the
+// cost in the masthead, the name on its own band below it, the picture, the
+// type band with the set symbol in its box, the rules box, a charcoal strip
+// with the collector line. An ADDITION: a new template, no stored card. Its
+// text layout is the M15 family's sizes on the page's own bands, each slot
+// measured on the run's prints (Scryfall PNGs at 1500 × 2100, ≥ 250 ms apart)
+// against the pack's own drawing. The pack IS print's drawing at the CARD's
+// proportions (63 × 88 mm, the scans' 745 × 1040): print stretched onto
+// 1500 × 2100 sits 0.22 % lower down the card (the bands' rules on 36 / 188.5
+// / 332 / 1215.5 / 1244 / 1348.5 px of the pack, 36.5 / 189.5 / 333.5 / 1218.5
+// / 1246.5 / 1351.5 on print; the page's foot 1918 / 1922 — horizontally the
+// two agree to the px), so every slot is print's row × 0.9978, on the pack's
+// band where print sets it on its own. The measured nudges, HD px:
+/** Print's rows on the pack's drawing (× 0.9978: the scans are the card's
+ *  63 × 88 mm stretched 0.22 % taller than the pack's 5 : 7 page). */
+const breakingNewsRow = (printPx: number) => printPx * 0.9978;
+/** The name: CENTRED on the page (print's ink centres on 742–755 px; Card
+ *  Conjurer's title box 258–1752 of 2010 is centred too), in capitals as
+ *  printed (print's face is a western display face, Card Conjurer's
+ *  'saloongirl'; ours the family's Beleren, no font is added for a frame).
+ *  The band between the masthead's two boxes: 175–1325 px. Print's
+ *  capitals stand on 298 px (median of the 63 printings) → 297.3 on the
+ *  pack; the M15 title slot, in capitals, sets their foot 24 px under its
+ *  rect's centre (our bakes), so the rect centres on 273.3. */
+const BREAKING_NEWS_TITLE_BASELINE_PX = breakingNewsRow(298);
+const BREAKING_NEWS_TITLE_RECT: Rect = { topPct: ((BREAKING_NEWS_TITLE_BASELINE_PX - 24 - 63) / 2100) * 100, leftPct: (175 / 1500) * 100, widthPct: (1150 / 1500) * 100, heightPct: 6.0 };
+/** The cost row in the masthead's right end: the discs centre on 112 px on
+ *  print (a 70 px disc on 77–147 at the centre column, every printing) and
+ *  the last one ends on 1411 (all 63) — Card Conjurer's mana box ends on
+ *  1891 / 2010 = 1411.2 too. The family's 70 px disc, at the CC M15 pitch
+ *  (print's 79–80). A detached box (costRect): the name keeps its room. */
+const BREAKING_NEWS_COST_RECT: Rect = { topPct: (77 / 2100) * 100, leftPct: (811 / 1500) * 100, widthPct: (600 / 1500) * 100, heightPct: (70 / 2100) * 100 };
+/** The type line: print's first ink on 130 px (M15's pen) and its capitals
+ *  on 1324 → 1321.1 on the pack; the CC M15 type slot, in capitals, sets
+ *  their foot 17.8 px under its rect's centre (our bakes). Capitals as
+ *  printed. */
+const BREAKING_NEWS_TYPE_BASELINE_PX = breakingNewsRow(1324);
+/** The set symbol in the type band's box at its right end: print's OTP
+ *  vault inks 1279–1380 × 1253–1341 (88 px tall, every printing) → centred
+ *  on 1294.1 of the pack, its right end on 1380. A box of its own
+ *  (symbolRect), the family's 86 px box: Keyrune's OTP glyph inks 1.4 px
+ *  above the box's centre and 2 px short of its right end (our bakes), so
+ *  the box centres on 1295.5 and ends on 1382. */
+const BREAKING_NEWS_SYMBOL_RECT: Rect = { topPct: ((breakingNewsRow(1297) + 1.4 - 43) / 2100) * 100, leftPct: (1182 / 1500) * 100, widthPct: (200 / 1500) * 100, heightPct: (86 / 2100) * 100 };
+/** The rules box: the page's box between its rules (the pack's 1366–1901 px
+ *  inside them); print's full boxes ink from 1378 to 1898 → 1374.9–1893.7
+ *  on the pack, its first ink on 132 px. M15's box puts the first ascender
+ *  ≈ 4 px under its top and the last descender ≈ 1.4 px over its bottom. */
+const BREAKING_NEWS_RULES_RECT: Rect = { topPct: ((breakingNewsRow(1378) - 4) / 2100) * 100, leftPct: 8.4, widthPct: 83.2, heightPct: ((breakingNewsRow(1898) - breakingNewsRow(1378) + 5.4) / 2100) * 100 };
+/** The art slot: the masters' window — see-through on 106–1907 × 479–1613
+ *  of 2010 × 2814 (79.1–1423.1 × 357.5–1203.8 px), its rounded corners and
+ *  anti-aliased rim inside — with the art-window check's 0.05 % to spare. */
+const BREAKING_NEWS_ART_SLOT: Rect = { topPct: (356 / 2100) * 100, leftPct: (78 / 1500) * 100, widthPct: (1347 / 1500) * 100, heightPct: (850 / 2100) * 100 };
+/** The pack's P/T box at its ptBounds (1507 / 2464, 406 × 200 of the 2010 ×
+ *  2814 card: 1124.6–1427.6 × 1838.7–1987.9 px at HD), the value in Card
+ *  Conjurer's text box (1599 / 2529, 0.1367 W × 0.0372 H). */
+const BREAKING_NEWS_PLATE_RECT: Rect = { topPct: (2464 / 2814) * 100, leftPct: (1507 / 2010) * 100, widthPct: (406 / 2010) * 100, heightPct: (200 / 2814) * 100 };
+/** Card Conjurer's value box 8 px lower: print's ★/★ on #64 centres on 1925.6
+ *  px (1921.4 on the pack's page), ours sat on 1913.6. */
+const BREAKING_NEWS_PT_DY = 8;
+/** Print's name, type line and P/T ink: 51,46,48 (the median of the run's
+ *  dark ink in those bands; Card Conjurer draws #332e2e). */
+const BREAKING_NEWS_INK = "#332e30";
+const BREAKING_NEWS: FrameProfile = {
+  ...M15,
+  label: "Breaking News",
+  costSizePct: CC_M15_COST_DISC_PCT,
+  costRect: BREAKING_NEWS_COST_RECT,
+  artSlot: BREAKING_NEWS_ART_SLOT,
+  // A colourless ARTIFACT paints the pack's slate artifact frame (OTP
+  // #61–64); any other colourless card the brown land frame `c` — a land on
+  // print (#65 Dust Bowl).
+  artifactMasterKeys: { c: "a" },
+  symbolRect: BREAKING_NEWS_SYMBOL_RECT,
+  title: {
+    ...M15.title,
+    rect: BREAKING_NEWS_TITLE_RECT,
+    align: "center",
+    uppercase: true,
+    colorHex: BREAKING_NEWS_INK,
+  },
+  type: {
+    ...M15.type,
+    rect: { topPct: ((BREAKING_NEWS_TYPE_BASELINE_PX - 17.8 - 54.6) / 2100) * 100, leftPct: 8.5, widthPct: ((1380 - 127.5) / 1500) * 100, heightPct: 5.2 },
+    dy: CC_M15_TYPE_DY,
+    uppercase: true,
+    colorHex: BREAKING_NEWS_INK,
+  },
+  rules: { ...M15.rules, rect: BREAKING_NEWS_RULES_RECT },
+  pt: {
+    ...M15.pt!,
+    rect: { topPct: (2529 / 2814) * 100 + (BREAKING_NEWS_PT_DY / 2100) * 100, leftPct: (1599 / 2010) * 100, widthPct: 13.67, heightPct: 3.72 },
+    plateRect: BREAKING_NEWS_PLATE_RECT,
+    // The box's paper face on the digits' rows: 1172–1400 px (its torn
+    // right end and its brackets past them).
+    inkSpanPct: { leftPct: (1172 / 1500) * 100, rightPct: (1400 / 1500) * 100 },
+    plateAssetPathTemplate: "/frames/breakingnews/pt/{color}.png",
+    colorHex: BREAKING_NEWS_INK,
+  },
+};
+
 // (borderlessShowcase(), the art-forward layout the anime last wore —
 // inset art, a 0.55 scrim on the rules box, the name 44 px — left with TODO
 // 4.11 / 4.35's layout v70.)
@@ -6741,6 +6851,99 @@ export const TARDIS_COLLECTOR: CollectorSlot = {
   ...M15_COLLECTOR,
   line1BaselinePct: M15_COLLECTOR.line1BaselinePct + (TARDIS_COLL1_DY / 2100) * 100,
   line2BaselinePct: M15_COLLECTOR.line2BaselinePct + (TARDIS_COLL2_DY / 2100) * 100,
+};
+
+/**
+ * The OTJ Breaking News legendary crown (TODO 4.11 wave 2):
+ * `breakingnewscrown/<key>.png`, Card Conjurer's Breaking News 'Legendary
+ * Crown' — the coloured rule with its notched V across the page's top edge
+ * that the run's legendary print carries (OTP #63 Mindslaver; #61 / #62
+ * print the plain top) — at the pack's bounds, 1500 × 60 (rows 0–59; the
+ * crown ends at row 55.2). Keys: w u b r g m, a (the artifact's: a
+ * colourless ARTIFACT, `artifactKeyMap`), l (the land's: any other
+ * colourless card, `keyMap`) and the ten pairs, the first colour's crown
+ * left and the second's right across the frame's own ramp (a card drawn as
+ * its pair master: resolveTwoColor). Set on the breakingnews entry only;
+ * opt-in per card like every crown (FrameStyle.crown).
+ */
+export const BREAKING_NEWS_CROWN: FrameOverlaySlot = {
+  anatomy: "crown",
+  rect: { topPct: 0, leftPct: 0, widthPct: 100, heightPct: (60 / 2100) * 100 },
+  assetPathTemplate: "/frames/breakingnewscrown/{key}.png",
+  // BREAKING_NEWS_CROWN_BAND.keys in scripts/lib/cc-frames.mjs (a unit test
+  // holds them together).
+  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+  keyMap: { c: "l" },
+  artifactKeyMap: { c: "a" },
+};
+/** The Breaking News stamp's oval (scripts/lib/cc-frames.mjs
+ *  BREAKING_NEWS_STAMP_OVAL_PX: 685–817 × 1921–1988 px) — the PRINTS'
+ *  hologram, 132 × 67, where all 45 stamped OTP prints set it. */
+export const BREAKING_NEWS_HOLO_STAMP_OVAL: Rect = { leftPct: (685 / 1500) * 100, topPct: (1921 / 2100) * 100, widthPct: (132 / 1500) * 100, heightPct: (67 / 2100) * 100 };
+/** The rules box keeps out of the tab: its top (1908 px at the centre),
+ *  over the tab's 640–860 px — the box ends above it (1895), so nothing
+ *  moves today; declared for the fit. */
+export const BREAKING_NEWS_HOLO_STAMP_KEEP_OUT: Rect = { leftPct: (640 / 1500) * 100, topPct: (1906 / 2100) * 100, widthPct: (220 / 1500) * 100, heightPct: (10 / 2100) * 100 };
+/**
+ * The OTJ Breaking News OVAL stamp notch (TODO 4.11 wave 2): the pack's one
+ * 'Holo Stamp' — the charcoal strip raised in a tab into the page's foot
+ * round the hologram — placed and downscaled with the card, a 338 × 91 box
+ * at 581, 1905 px (BREAKING_NEWS_NOTCH_BOX in scripts/lib/cc-frames.mjs),
+ * the pack's capture painted the strip's charcoal and the prints' oval cut
+ * clear for our oval art. The rares and mythics of the run print it
+ * (`security_stamp: oval`, 45 of 65), the uncommons don't: "auto" = a rare
+ * or mythic, as on M15. Keys as the crown's (one piece under every key:
+ * every master is the same strip under the tab). Set on the breakingnews
+ * entry only.
+ */
+export const BREAKING_NEWS_HOLO_STAMP: FrameOverlaySlot = {
+  anatomy: "holoStamp",
+  rect: { leftPct: (581 / 1500) * 100, topPct: (1905 / 2100) * 100, widthPct: (338 / 1500) * 100, heightPct: (91 / 2100) * 100 },
+  assetPathTemplate: "/frames/breakingnewsholostamp/{key}.png",
+  keys: ["w", "u", "b", "r", "g", "m", "a", "l", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+  keyMap: { c: "l" },
+  artifactKeyMap: { c: "a" },
+  stamp: { shape: "oval", oval: BREAKING_NEWS_HOLO_STAMP_OVAL, keepOut: BREAKING_NEWS_HOLO_STAMP_KEEP_OUT, ring: "strip" },
+};
+/**
+ * The OTJ Breaking News masthead making room for the cost row (owner
+ * decision on #624: FOLLOW PRINT; lib/cards/masthead.ts holds the rule and
+ * what print does, scripts/lib/breaking-news-masthead.mjs the pieces —
+ * a unit test holds this to that recipe). HD px of the 1500 × 2100 card:
+ * the chevron's tip on 1184 (print's three pips start on 1185), the Y's arm
+ * on 1062 + 16 px by the row's estimate (the drawn row is 1–4 px WIDER than
+ * manaCostWidthPct, so 14–16 px drawn against print's 18; 1082 would move the
+ * wordmark at five pips, where print #22 keeps it), the row's furthest slide (print's five pips end
+ * on 1461; even px from the costRect's 1411), the box keeping its colour
+ * tab (its right border then on 132–138, the tab ending on 126) and its
+ * whole self (382 + 2 + 18).
+ */
+export const BREAKING_NEWS_MASTHEAD: MastheadSpec = {
+  chevronClearPx: 1180,
+  wordmarkClearPx: 1078,
+  slideToPx: 1463,
+  maxShiftPx: 244,
+  boxClearPx: 402,
+  rows: [40, 186],
+  wordmark: { x0: 376, x1: 1140, fadeFromPx: 1082, assetPathTemplate: "/frames/breakingnewsmasthead/{key}.png" },
+  paper: { x0: 52, x1: 1228, boxRightPx: 384, assetPathTemplate: "/frames/breakingnewsmasthead/paper/{key}.png" },
+  keys: ["w", "u", "b", "r", "g", "m", "a", "c", "wu", "wb", "ub", "ur", "br", "bg", "rg", "rw", "gw", "gu"],
+};
+/**
+ * The collector line on the OTJ Breaking News showcase (TODO 4.11 wave 2):
+ * M15's slot (the pen x — print's first ink on 99 px, the brush column, the
+ * sizes, the © slot's right end — print's on 1395) on the run's own rows in
+ * the charcoal strip, measured on all 63 single-bodied printings at 1500 ×
+ * 2100 (each line's baseline: the last row holding ≥ 35 % of the line's
+ * widest row of ink): line 1 on 1988 px, line 2 on 2027 — 1983.6 / 2022.5
+ * on the pack's page (print's rows × 0.9978, as every slot of the frame);
+ * M15's slot draws a line's foot 1.7 / 1.8 px above its baseline figure by the
+ * same reading (our bakes), so the slot says 1985.3 / 2024.3.
+ */
+export const BREAKING_NEWS_COLLECTOR: CollectorSlot = {
+  ...M15_COLLECTOR,
+  line1BaselinePct: ((breakingNewsRow(1988) + 1.7) / 2100) * 100,
+  line2BaselinePct: ((breakingNewsRow(2027) + 1.8) / 2100) * 100,
 };
 
 /**
@@ -8305,6 +8508,22 @@ const PROFILES: Record<FrameTemplate, FrameProfile> = {
   // collector line, opt-in per card; no crown (none prints, the pack has
   // none).
   enchantingtales: { ...ENCHANTINGTALES, overlays: [ENCHANTINGTALES_HOLO_STAMP], collector: ENCHANTINGTALES_COLLECTOR },
+  // The OTJ Breaking News showcase (TODO 4.11 wave 2): the crown, the oval
+  // stamp and the collector line, opt-in per card, and the two-colour
+  // "split" dress (the ten pair masters: print splits a two-colour page
+  // from its first colour to its second). The page is ONE frame for spells
+  // and lands (the pack's land frame is the colourless land's alone, OTP
+  // #65; a coloured land wears its colour's page), so a two-colour land
+  // wears its two colours' split page as well (twoColorForLands; no print
+  // has one).
+  breakingnews: {
+    ...BREAKING_NEWS,
+    overlays: [BREAKING_NEWS_CROWN, BREAKING_NEWS_HOLO_STAMP],
+    collector: BREAKING_NEWS_COLLECTOR,
+    twoColorMasters: ["split"],
+    twoColorForLands: true,
+    masthead: BREAKING_NEWS_MASTHEAD,
+  },
   tarkirdragon: { ...TARKIRDRAGON, overlays: [TARKIRDRAGON_CROWN, TARKIRDRAGON_HOLO_STAMP], collector: EXPEDITION_ZNR_COLLECTOR },
   // The D&D Sourcebook showcase (TODO 4.11 wave 2): the stamp and the
   // collector line, opt-in per card; no crown (none prints).

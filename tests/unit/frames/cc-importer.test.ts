@@ -161,6 +161,8 @@ describe("Card Conjurer recipe", () => {
       "aftermath",
       // The landscape pair (TODO 4.21b; tests/unit/frames/landscape-importer.test.ts).
       "battle",
+      // The OTJ Breaking News showcase (TODO 4.11 wave 2; tests/unit/frames/otp-breaking-news-importer.test.ts).
+      "breakingnews",
       // The D&D Sourcebook showcase (TODO 4.11 wave 2; tests/unit/frames/dnd-sourcebook-importer.test.ts).
       "dndsourcebook",
       // The MKM dossier showcase (TODO 4.11 wave 2; tests/unit/frames/mkm-dossier-importer.test.ts).
@@ -2147,8 +2149,16 @@ describe("provenance and hygiene", () => {
         // (scripts/build-prepare-frames.mjs) of the published m15 and
         // adventure masters; its own test: tests/unit/frames/prepare-recipe.test.ts.
         "prepare",
+        // …and the Breaking News masthead pieces (owner decision on #624):
+        // PipGlyph's own cut (scripts/build-breaking-news-masthead.mjs) of
+        // the published breakingnews masters; its own test:
+        // tests/unit/cards/breaking-news-masthead.test.ts.
+        "breakingnewsmasthead",
       ].sort(),
     );
+    expect(provenance.breakingnewsmasthead.source).toBe("pipglyph");
+    expect(provenance.breakingnewsmasthead.converter).toBe("scripts/build-breaking-news-masthead.mjs");
+    expect(provenance.breakingnewsmasthead.commit).toBeUndefined();
     expect(Object.keys(templates)).not.toContain("sagadfcback");
     expect(provenance.sagadfcback.source).toBe("pipglyph");
     expect(provenance.sagadfcback.converter).toBe("scripts/build-saga-back-frames.mjs");

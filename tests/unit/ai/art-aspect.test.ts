@@ -135,6 +135,8 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   stainedglass: ["1232x832", "3:2", 1.472],
   // The Card Conjurer TARDIS window (TODO 4.11 wave 2): the police box's window, 1273 × 902 px.
   tardis: ["1200x848", "4:3", 1.4113],
+  // The Card Conjurer Breaking News window (TODO 4.11 wave 2): 1347 × 850 px.
+  breakingnews: ["1280x800", "3:2", 1.5847],
   fullart: ["896x1168", "3:4", 0.7605],
   dndsourcebook: ["1200x848", "4:3", 1.41],
   extendedart: ["1168x896", "4:3", 1.314],

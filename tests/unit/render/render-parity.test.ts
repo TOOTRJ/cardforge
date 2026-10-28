@@ -326,7 +326,9 @@ describe("saga chapter rail (TODO 4.21c: the printed rail)", () => {
     // (…and, since TODO 4.30, with the white border's image after them.)
     // (…and, since TODO 4.27a, with the station frame's drawn pieces.)
     // (…and, since TODO 6.3, with the nickname plate.)
-    expect(BAKE.match(/overlays=\{\[\.\.\.drawnOverlays\(\[\.\.\.overlays, \.\.\.railPieces, \.\.\.stationPieces, \.\.\.nicknamePieces\]\), \.\.\.borderMaskOverlays\]\}/g)).toHaveLength(2);
+    // (…and, since #624, a masthead's pieces first, each clipped to its window.)
+    expect(PREVIEW.match(/overlays=\{\[\n\s+\.\.\.mastheadMaskOverlays,\n/g)).toHaveLength(2);
+    expect(BAKE.match(/overlays=\{\[\.\.\.mastheadMaskOverlays, \.\.\.drawnOverlays\(\[\.\.\.overlays, \.\.\.railPieces, \.\.\.stationPieces, \.\.\.nicknamePieces\]\), \.\.\.borderMaskOverlays\]\}/g)).toHaveLength(2);
     expect(PREVIEW.match(/\.\.\.stationPieces\.map\(\(piece\) => \(\{ href: piece\.href, rect: piece\.rect \}\)\),/g)).toHaveLength(2);
     expect(PREVIEW.match(/\.\.\.nicknamePieces\.map\(\(piece\) => \(\{ href: piece\.href, rect: piece\.rect \}\)\),/g)).toHaveLength(2);
     // The station pieces: ONE layout call in each renderer, the pieces after

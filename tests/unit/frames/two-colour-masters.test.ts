@@ -116,6 +116,9 @@ describe("the declared pair masters", () => {
       // braces lerped across a span of identical pixels
       // (tests/unit/frames/who-tardis-importer.test.ts).
       tardis: 10,
+      // …and the OTJ Breaking News' ten (TODO 4.11 wave 2): the same, across
+      // print's split (tests/unit/frames/otp-breaking-news-importer.test.ts).
+      breakingnews: 10,
     });
     // Every pair key is a master key the bake's loader knows (never "c").
     for (const key of TWO_COLOR_MASTER_KEYS) expect(FRAME_MASTER_KEYS as readonly string[]).toContain(key);

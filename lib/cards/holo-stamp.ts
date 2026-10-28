@@ -429,7 +429,18 @@ export type HoloStampArt = {
    *  sheen (as a plate's) and the oval after the rules layer, and leave the
    *  notch out of the frame layer and the finish masks. */
   aboveRows?: true;
+  /** The oval sits on a painted STRIP, not on the notch's black (the OTJ
+   *  Breaking News showcase: its notch piece is filled with the charcoal
+   *  strip, HOLO_STAMP_STRIP_RING_RGB): the art's margin is the strip's
+   *  colour and it draws no dark keyline, as print's hologram meets the
+   *  strip directly (OTP #1–65) — HOLO_STAMP_OVAL_STRIP_ART. */
+  ring?: "strip";
 };
+
+/** The Breaking News footer strip's charcoal (scripts/lib/cc-frames.mjs
+ *  BREAKING_NEWS_STRIP_RGB, the notch piece's fill; a unit test holds the
+ *  two together): the oval's ring where HoloStampArt.ring is "strip". */
+export const HOLO_STAMP_STRIP_RING_RGB = [64, 58, 60] as const;
 
 /**
  * The stamp value a frame stores (normalizeAnatomy): "none" for a value

@@ -166,6 +166,9 @@ describe("the main box on every template", () => {
         // police box's panels (the run's lines from x 129–132, its right ink
         // to 1365), the box on print's rows.
         "tardis",
+        // …and the OTJ Breaking News (TODO 4.11 wave 2): M15's margins on the
+        // page's box between its rules (the run's lines from x 132).
+        "breakingnews",
       ].sort(),
     );
     for (const t of withPrintMargins) expect(getFrameProfile(t).rules.padPx, t).toEqual({ x: 4, y: 0 });

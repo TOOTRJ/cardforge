@@ -4184,18 +4184,23 @@ export const SCROLL_NOTCH = Object.freeze({
  * pixel inside the cut grown by `blackoutPx` becomes the trapezoid's opaque
  * black — the pack's triangle is drawn ~2 px larger and higher than the
  * stamp's hole, so its edge would otherwise survive round our cut — then
- * every pixel inside the cut itself transparent (cutOval).
+ * every pixel inside the cut itself transparent (cutOval). `fillRgb` (TODO
+ * 4.11 wave 2: the Breaking News charcoal strip) paints the ring another
+ * opaque colour than black — the piece's own ground round the hologram.
  */
-export function blackoutAndCut(buf, shape, cut, marginPx, blackoutPx) {
+/** The colour a notch's blacked-out ring and capture are painted unless
+ *  the notch names its own (`fillRgb`). */
+export const NOTCH_BLACK = Object.freeze([0, 0, 0]);
+export function blackoutAndCut(buf, shape, cut, marginPx, blackoutPx, fillRgb = NOTCH_BLACK) {
   const { width, height } = shape.size;
   const inside = cutInside(shape, cut, marginPx);
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       if (!inside(x, y, blackoutPx)) continue;
       const o = (y * width + x) * 4;
-      buf[o] = 0;
-      buf[o + 1] = 0;
-      buf[o + 2] = 0;
+      buf[o] = fillRgb[0];
+      buf[o + 1] = fillRgb[1];
+      buf[o + 2] = fillRgb[2];
       buf[o + 3] = 255;
     }
   }
@@ -4214,7 +4219,7 @@ export function blackoutAndCut(buf, shape, cut, marginPx, blackoutPx) {
  * ringing): no pixel of the hologram capture is published.
  * @param {Uint8Array | null} [stamp]
  */
-export function pieceNotchFindings(buf, shape, cut, marginPx, blackoutPx, stamp = null) {
+export function pieceNotchFindings(buf, shape, cut, marginPx, blackoutPx, stamp = null, fillRgb = NOTCH_BLACK) {
   const { width, height } = shape.size;
   const inside = cutInside(shape, cut, marginPx);
   let cutClear = true;
@@ -4231,7 +4236,7 @@ export function pieceNotchFindings(buf, shape, cut, marginPx, blackoutPx, stamp 
         continue;
       }
       if (inside(x, y, blackoutPx)) {
-        if (buf[o + 3] !== 255 || buf[o] || buf[o + 1] || buf[o + 2]) ringBlack = false;
+        if (buf[o + 3] !== 255 || buf[o] !== fillRgb[0] || buf[o + 1] !== fillRgb[1] || buf[o + 2] !== fillRgb[2]) ringBlack = false;
         continue;
       }
       if (stamp) stampOutside = Math.max(stampOutside, stamp[p]);
@@ -4240,7 +4245,7 @@ export function pieceNotchFindings(buf, shape, cut, marginPx, blackoutPx, stamp 
   const corners = [0, width - 1, (height - 1) * width, height * width - 1].map((p) => buf[p * 4 + 3]);
   const failures = [];
   if (!cutClear) failures.push("a pixel inside the cut is not transparent");
-  if (!ringBlack) failures.push(`a pixel in the ${blackoutPx} px ring round the cut is not opaque black`);
+  if (!ringBlack) failures.push(`a pixel in the ${blackoutPx} px ring round the cut is not opaque ${fillRgb === NOTCH_BLACK ? "black" : fillRgb.join(",")}`);
   if (stampOutside > 8) failures.push(`the pack's stamp shape reaches α ${stampOutside} outside the cut and its ring`);
   if (corners.some((a) => a !== 0)) failures.push(`the box's corners are not clear (α ${corners.join(", ")})`);
   return { cutClear, ringBlack, stampOutside, opaque, failures };
@@ -4719,6 +4724,220 @@ export const TARDIS_NOTCH = Object.freeze({
 });
 
 // ---------------------------------------------------------------------------
+// TODO 4.11 (showcase rebuild, wave 2): the Outlaws of Thunder Junction
+// BREAKING NEWS showcase (`breakingnews`; the bonus sheet OTP #1–65, "The
+// Prosperity Post" front page) from Card Conjurer's 'Breaking News' pack
+// (packBreakingNews.js, `img/frames/breakingNews/`, 2010 × 2814). An
+// ADDITION: a new template, no stored card sits on it. Self-contained: the
+// template, its crown band and its stamp notch read only the constants
+// below.
+//   • masters: the pack's frames whole, each downscaled ONCE to 1500 × 2100
+//     (Lanczos) — w u b r g, m (gold: three colours or more — OTP #40, #44,
+//     #58, #59), `a` the pack's slate 'Artifact Frame' (artifactMasterKeys
+//     { c: "a" }: OTP #61–64) and `c` the pack's brown 'Land Frame' (the
+//     pack draws no colourless frame; the run's one colourless non-artifact
+//     is a land, #65 Dust Bowl, which prints it).
+//   • the ten two-colour PAIR masters (the "split" dress, opt-in per card
+//     like every two-colour dress): print draws a two-colour card's page —
+//     the masthead's wash, the bands' rules, the side bars — in its first
+//     colour on the left and its second on the right (pair order; 21 of the
+//     run's 65), split through a distressed edge 700–820 px across: the two
+//     colour frames lerped across BREAKING_NEWS_PAIR_RAMP (the pack has no
+//     two-colour dress of its own).
+//   • edges: the page runs to the top and side edges (design: a borderless
+//     page, its top corners the pack's paper), and the bottom strip is the
+//     pack's own charcoal (64,58,60 on every print, where OTJ's regular
+//     black border reads 0,0,0 on the same scans: print's own tone, kept —
+//     design, never held dark at the corner).
+//   • plates: the pack's P/T 'box' per key (pt/<k>.png, 406 × 200 at its
+//     ptBounds 1507 / 2464) — the colourless key the artifact's (the pack
+//     draws no land plate; OTP #64 Unlicensed Hearse prints the artifact's).
+//   • tones (the ring's one rule: raw scan medians on clean interiors, a
+//     region toned only where ≥ 9 levels off — BREAKING_NEWS_PRINT_TONES):
+//     every region within 6 levels of print; nothing toned.
+//   • geometry kept as drawn: print is the pack's drawing (the bands' rules
+//     and the strip's top within 0.22 % of the height, the scans' own
+//     63 × 88 mm aspect), so nothing is re-cut.
+// ---------------------------------------------------------------------------
+export const BREAKING_NEWS = "img/frames/breakingNews";
+const BREAKING_NEWS_PACK = "packBreakingNews.js 'Breaking News' (the Outlaws of Thunder Junction Breaking News showcase; groupShowcase-5.js 'Breaking News (OTP)')";
+/** A colour key's pack file: `c` draws the pack's land frame, `a` its
+ *  artifact frame. */
+const breakingNewsFile = (dir, k) => `${BREAKING_NEWS}/${dir}${k === "c" ? "l" : k}.png`;
+/**
+ * The two-colour split, in % of the card's width (scripts/lib/pair-ramp.mjs
+ * blendPair: the second colour's share 0 → 1 between the two): measured on
+ * the 21 two-colour OTP prints (Scryfall PNGs at 1500 × 2100), each pixel of
+ * the bands' six coloured rules (rows 188–190, 331–333, 1215–1216,
+ * 1243–1245, 1348–1350) projected between the same pixel's median on the
+ * run's mono prints of its two colours, smoothed over 15 px — 10 / 90 % at
+ * 46.7 / 54.6 %W on every print (the 50 % point 49.8 or 52.1: print splits
+ * through one fixed distressed edge, speckled, the same on all 21) →
+ * 45.7 → 55.6 (46.7 / 50.65 / 54.6). Our split is the smooth lerp across it.
+ */
+export const BREAKING_NEWS_PAIR_RAMP = Object.freeze([45.7, 55.6]);
+/**
+ * The pack's colours against print by the ring's one rule (raw scan
+ * medians over the run's mono prints of each key — w 6, u 7, b 7, r 7, g 6,
+ * m 4, a 4, l 1; Scryfall PNGs at 1500 × 2100; a region ≥ 9 levels off is
+ * toned), on clean interiors:
+ *   • the title band's rule (rows 188–190, its middle rows): w 243,236,203 /
+ *     239,234,202, u 44,105,145 / 48,105,141, b 44,41,40 / 47,43,43, r
+ *     138,43,29 / 134,42,30, g 95,126,47 / 97,122,48, m 180,129,51 /
+ *     176,128,49, a 114,120,130 / 114,119,128, l 76,51,42 / 77,51,43 — ≤ 4;
+ *   • the page (title band 205–222, type band 1318–1338): ≤ 4 on every key;
+ *   • the masthead's wash (1180–1260 × 45–75): ≤ 8;
+ *   • the side bars (x 8–18 and 1487–1497, rows 600–1100): ≤ 6;
+ *   • the bottom strip: 64,58,60 / 64,58,60 — 0;
+ *   • the artifact P/T box's face (#64): ≤ 6.
+ * Nothing toned.
+ */
+export const BREAKING_NEWS_PRINT_TONES = Object.freeze({});
+/** The Breaking News master corners the importer leaves SQUARE — all four:
+ *  the page runs into the top corners and the charcoal strip into the
+ *  bottom ones on print (design; lib/frames/square-corners.ts "frame"), so a
+ *  square output keeps what the pack draws there (its strip's charcoal; the
+ *  pack's own black corner wedge at the top); every round output cuts them
+ *  at render. */
+export const BREAKING_NEWS_KEEP_CORNERS = Object.freeze(["tl", "tr", "bl", "br"]);
+const BREAKING_NEWS_PT = Object.freeze(perColor((k) => `${BREAKING_NEWS}/pt/${k === "c" ? "a" : k}.png`));
+const BREAKING_NEWS_NOTES = [
+  "w u b r g m = the pack's colour frames whole (breakingNews/<k>.png, 2010x2814), downscaled once to 1500x2100 (Lanczos) — as the OTP Breaking News showcase prints them (OTP #1–65)",
+  "a = the pack's slate 'Artifact Frame' (breakingNews/a.png): the master a colourless ARTIFACT paints (FrameProfile.artifactMasterKeys { c: 'a' }; OTP #61–64)",
+  "c = the pack's brown 'Land Frame' (breakingNews/l.png): the pack draws no colourless frame, and the run's one colourless non-artifact is a land that prints it (OTP #65 Dust Bowl)",
+  `the ten pairs (wu wb ub ur br bg rg rw gw gu, the "split" dress) = the pair's two colour frames lerped across ${BREAKING_NEWS_PAIR_RAMP[0]} → ${BREAKING_NEWS_PAIR_RAMP[1]} %W of the card (scripts/lib/pair-ramp.mjs blendPair) at the pack's size, then downscaled once: print draws a two-colour card's page in the first colour on the left and the second on the right, split through one distressed edge (OTP #34–60's pairs); the pack has no two-colour dress of its own`,
+  "the page runs to the top and side edges (design); the bottom strip is the pack's charcoal, 64,58,60 as on every print (design: print's own tone, not the regular black border)",
+  "plates = the pack's 'Power/Toughness Box' per key (breakingNews/pt/<k>.png, 406x200 at its ptBounds 1507/2464 px of 2010x2814); c = the artifact's (the pack draws no land plate)",
+  "the page, the accents, the masthead, the side bars, the strip and the plates against print by the ring's rule (raw scan medians on clean interiors, a region ≥ 9 levels off is toned): within 6 levels, as drawn (BREAKING_NEWS_PRINT_TONES)",
+  "geometry as drawn: the pack is print's drawing (the bands' rules and the strip within the scans' own 0.22 % aspect) — nothing is re-cut",
+];
+/**
+ * The Breaking News legendary crown (TODO 4.11): the pack's 'Legendary
+ * Crown' (`breakingNews/crown/<k>.png`, 1965 × 72 at crownBounds 4 / 2 px of
+ * the 2010 × 2814 card) — the coloured rule with its notched V across the
+ * page's top edge that a legendary print carries (OTP #63 Mindslaver against
+ * #61 Contagion Engine / #62 Grindstone). A generic band: the crown placed
+ * at its bounds on a clear 2010 × 2814 canvas, downscaled once, cropped to
+ * rows 0–59 of the HD card (the crown ends at row 55.2). Keys: w u b r g m,
+ * a (the artifact's), l (the land's) and the ten pairs, the first colour's
+ * crown left and the second's right across the frame's own ramp
+ * (BREAKING_NEWS_PAIR_RAMP: no two-colour legend of the run prints one).
+ */
+export const BREAKING_NEWS_CROWN_BAND = Object.freeze({
+  source: `${BREAKING_NEWS}/crown`,
+  keys: Object.freeze(["w", "u", "b", "r", "g", "m", "a", "l", ...TWO_COLOR_PAIRS]),
+  crown: Object.freeze({ leftPct: (4 / 2010) * 100, topPct: (2 / 2814) * 100, widthPct: (1965 / 2010) * 100, heightPct: (72 / 2814) * 100 }),
+  compositeSize: Object.freeze({ width: 2010, height: 2814 }),
+  rows: 60,
+});
+/** The Breaking News crown band's one layer for a key (a pair's two crowns
+ *  lerped across BREAKING_NEWS_PAIR_RAMP). */
+export function breakingNewsCrownLayers(key) {
+  if (!BREAKING_NEWS_CROWN_BAND.keys.includes(key)) throw new Error(`breakingNewsCrownLayers: no crown for key ${key}`);
+  const file = (k) => `${BREAKING_NEWS_CROWN_BAND.source}/${k}.png`;
+  if (TWO_COLOR_PAIRS.includes(key)) {
+    const [a, b] = pairSides(key);
+    return [placed(file(a), BREAKING_NEWS_CROWN_BAND.crown, { right: file(b), ramp: [...BREAKING_NEWS_PAIR_RAMP] })];
+  }
+  return [placed(file(key), BREAKING_NEWS_CROWN_BAND.crown)];
+}
+/**
+ * What the importer checks on the full 1500 × 2100 Breaking News crown
+ * composite (pure): nothing at or below the band's last row; the crown
+ * opaque on its rule (α ≥ 250 at (750, 20), the V's middle — the pack
+ * draws it opaque); and the band clear at the card's side edges (x 0 and
+ * 1499: the crown's bounds are 3.0–1469.9 px), so it never repaints the
+ * page's edge.
+ */
+export function breakingNewsCrownFindings(buf, width, height, rows) {
+  let lastAlphaRow = -1;
+  for (let y = height - 1; y >= 0 && lastAlphaRow < 0; y -= 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (buf[(y * width + x) * 4 + 3] > 0) {
+        lastAlphaRow = y;
+        break;
+      }
+    }
+  }
+  let outside = 0;
+  for (let y = 0; y < rows; y += 1) {
+    for (const x of [0, width - 1]) outside = Math.max(outside, buf[(y * width + x) * 4 + 3]);
+  }
+  const ruleAlpha = buf[(20 * width + 750) * 4 + 3];
+  const failures = [];
+  if (lastAlphaRow >= rows) failures.push(`alpha down to row ${lastAlphaRow}, past the band's ${rows} rows`);
+  if (ruleAlpha < 250) failures.push(`the crown's rule is α ${ruleAlpha} at (750, 20), the pack draws it opaque`);
+  if (outside > 0) failures.push(`α ${outside} at the card's side edges (x 0 / ${width - 1})`);
+  return { lastAlphaRow, peakRow: 0, failures, summary: `rule α ${ruleAlpha}, α at the side edges ${outside}` };
+}
+/**
+ * The Breaking News OVAL stamp notch (TODO 4.11): the pack's one 'Holo
+ * Stamp' (`breakingNews/stamp.png`, 447 × 116 at its bounds 781 / 2555 of
+ * 2010 × 2814 — the charcoal strip raised in a tab into the page's foot
+ * round the hologram, as every stamped print draws it: the tab's top on
+ * 1908 px at the centre against print's 1912, within the scans' own
+ * 0.22 % aspect) composited on the whole card and downscaled with it, then
+ * cut to BREAKING_NEWS_NOTCH_BOX — 2 px round the piece (582.8–916.4 ×
+ * 1906.9–1993.4) — and drawn 1:1 there, its outer 7 px at the sides and its
+ * rows from 1990 down cleared (`clearOutside`): there the piece is the
+ * strip's flat charcoal over the master's same charcoal, and the downscale
+ * rang at its bounds (a +6 level line one px inside them). The pack paints a capture of
+ * WotC's oval in the tab 7 px BELOW where print sets the hologram at its
+ * top (BREAKING_NEWS_CAPTURE_PX against BREAKING_NEWS_STAMP_OVAL_PX): the
+ * capture is painted the strip's opaque charcoal first (grown 2 px — the
+ * tab is charcoal round the hologram on print), then the prints' oval plus
+ * 2 px cut clear and the 2 px round it painted charcoal (`fillRgb`). Our own
+ * oval art covers the cut (lib/cards/holo-stamp-art.ts). One piece for
+ * every key, the ten pairs' too (every master is the same strip under the
+ * tab).
+ */
+export const BREAKING_NEWS_NOTCH_BOX = Object.freeze({ x: 581, y: 1905, width: 338, height: 91 });
+/** The stamp's oval, card px: the PRINTS' hologram — lit from 686 to 815/816
+ *  across its middle rows and from 1921 to 1987 down the card's centre on
+ *  all 45 stamped OTP prints (Scryfall PNGs at 1500 × 2100; 23 end on 815,
+ *  22 on 816) — 132 × 67 at 685, 1921. */
+export const BREAKING_NEWS_STAMP_OVAL_PX = Object.freeze({ x: 685, y: 1921, width: 132, height: 67 });
+/** The pack's capture in the tab, card px (its lit pixels once placed and
+ *  downscaled: 685–814 × 1928–1990) — painted charcoal before the cut. */
+export const BREAKING_NEWS_CAPTURE_PX = Object.freeze({ x: 685, y: 1928, width: 130, height: 63 });
+/** The strip's charcoal (every print and the pack: 64,58,60) — the colour
+ *  the capture and the ring round the cut are painted. */
+export const BREAKING_NEWS_STRIP_RGB = Object.freeze([64, 58, 60]);
+const BREAKING_NEWS_NOTCH_KEYS = Object.freeze(["w", "u", "b", "r", "g", "m", "a", "l", ...TWO_COLOR_PAIRS]);
+export const BREAKING_NEWS_NOTCH = Object.freeze({
+  keys: BREAKING_NEWS_NOTCH_KEYS,
+  pieces: Object.freeze(Object.fromEntries(BREAKING_NEWS_NOTCH_KEYS.map((k) => [k, `${BREAKING_NEWS}/stamp.png`]))),
+  placeAt: Object.freeze({ x: 781, y: 2555, width: 447, height: 116 }),
+  compositeSize: Object.freeze({ width: 2010, height: 2814 }),
+  shape: Object.freeze({
+    size: Object.freeze({ width: BREAKING_NEWS_NOTCH_BOX.width, height: BREAKING_NEWS_NOTCH_BOX.height }),
+    bounds: Object.freeze({
+      leftPct: (BREAKING_NEWS_NOTCH_BOX.x / 1500) * 100,
+      topPct: (BREAKING_NEWS_NOTCH_BOX.y / 2100) * 100,
+      widthPct: (BREAKING_NEWS_NOTCH_BOX.width / 1500) * 100,
+      heightPct: (BREAKING_NEWS_NOTCH_BOX.height / 2100) * 100,
+    }),
+  }),
+  oval: Object.freeze({
+    leftPct: (BREAKING_NEWS_STAMP_OVAL_PX.x / 1500) * 100,
+    topPct: (BREAKING_NEWS_STAMP_OVAL_PX.y / 2100) * 100,
+    widthPct: (BREAKING_NEWS_STAMP_OVAL_PX.width / 1500) * 100,
+    heightPct: (BREAKING_NEWS_STAMP_OVAL_PX.height / 2100) * 100,
+  }),
+  /** The capture's pixels in the notch box: the tab's lit pixels (luma >
+   *  80; the charcoal reads 59) inside the ellipse inscribed in box x
+   *  101–236, rows 20–88 — the capture's own oval (685–814 × 1928–1990 px)
+   *  and 3 px round it; the page's foot at the box's top corners lies
+   *  outside it — painted charcoal before the cut. */
+  capture: Object.freeze({ x0: 101, x1: 236, y0: 20, y1: 88, minLuma: 80, oval: true }),
+  /** Card px the piece keeps (the rest cleared): x 590–909, rows above
+   *  1990 — outside them it is the strip's flat charcoal over the master's
+   *  same charcoal (64,58,60 on both), where the downscale rang at the
+   *  piece's bounds. */
+  clearOutside: Object.freeze({ x0: 590, x1: 909, y1: 1989 }),
+});
+
+// ---------------------------------------------------------------------------
 // TODO 4.11 (showcase rebuild, wave 1): the Lord of the Rings RING showcase
 // (`lotr`; LTR #302–331 and their surge-foil twins #794–823 — sixty
 // printings, every one a legendary creature) from Card Conjurer's 'Ring'
@@ -4958,7 +5177,7 @@ export const RING_NOTCH = Object.freeze({
  * edge at 1915 px, the stamp hole's at 1924.6), so the hole's own ring
  * leaves a strip of it above the cut: the shape itself goes, then the hole.
  */
-export function blackoutStampShape(buf, stamp, width, height, growPx) {
+export function blackoutStampShape(buf, stamp, width, height, growPx, fillRgb = NOTCH_BLACK) {
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       let hit = false;
@@ -4975,9 +5194,9 @@ export function blackoutStampShape(buf, stamp, width, height, growPx) {
       }
       if (!hit) continue;
       const o = (y * width + x) * 4;
-      buf[o] = 0;
-      buf[o + 1] = 0;
-      buf[o + 2] = 0;
+      buf[o] = fillRgb[0];
+      buf[o + 1] = fillRgb[1];
+      buf[o + 2] = fillRgb[2];
       buf[o + 3] = 255;
     }
   }
@@ -4990,15 +5209,15 @@ export function blackoutStampShape(buf, stamp, width, height, growPx) {
  * the pack's stamp shape is non-zero is opaque black or transparent — no
  * pixel of the hologram capture is published.
  */
-export function stampShapeBlackFindings(buf, stamp, width, height) {
+export function stampShapeBlackFindings(buf, stamp, width, height, fillRgb = NOTCH_BLACK) {
   let leaks = 0;
   for (let p = 0; p < width * height; p += 1) {
     if (!stamp[p]) continue;
     const o = p * 4;
     if (buf[o + 3] === 0) continue;
-    if (buf[o + 3] !== 255 || buf[o] || buf[o + 1] || buf[o + 2]) leaks += 1;
+    if (buf[o + 3] !== 255 || buf[o] !== fillRgb[0] || buf[o + 1] !== fillRgb[1] || buf[o + 2] !== fillRgb[2]) leaks += 1;
   }
-  return { leaks, failures: leaks ? [`${leaks} px of the pack's stamp shape are neither opaque black nor clear`] : [] };
+  return { leaks, failures: leaks ? [`${leaks} px of the pack's stamp shape are neither opaque ${fillRgb === NOTCH_BLACK ? "black" : fillRgb.join(",")} nor clear`] : [] };
 }
 
 // ---------------------------------------------------------------------------
@@ -6518,6 +6737,24 @@ export const CC_TEMPLATES = {
     plates: ETALES_PT,
     pack: ETALES_PACK,
     notes: ETALES_NOTES,
+  },
+  // TODO 4.11 wave 2: the Outlaws of Thunder Junction Breaking News showcase
+  // (see BREAKING_NEWS above) — and its ten two-colour pairs, lerped.
+  breakingnews: {
+    colors: {
+      ...perColor((k) => [layer(breakingNewsFile("", k))]),
+      a: [layer(breakingNewsFile("", "a"))],
+      ...Object.fromEntries(
+        TWO_COLOR_PAIRS.map((pair) => {
+          const [a, b] = pairSides(pair);
+          return [pair, [{ src: breakingNewsFile("", a), right: breakingNewsFile("", b), ramp: [...BREAKING_NEWS_PAIR_RAMP] }]];
+        }),
+      ),
+    },
+    plates: BREAKING_NEWS_PT,
+    keepCorners: BREAKING_NEWS_KEEP_CORNERS,
+    pack: BREAKING_NEWS_PACK,
+    notes: BREAKING_NEWS_NOTES,
   },
   m15: {
     colors: {
@@ -9304,6 +9541,21 @@ export const CC_OVERLAY_BANDS = {
       "the green and blue crowns toned onto print as the file loads (DOSSIER_PRINT_TONES: the pack draws them 11–12 levels off the frame's own accents, which print uses for the crown too)",
     ],
   },
+  // TODO 4.11 wave 2: the Breaking News crown — a generic band, the pack's
+  // crown at its own bounds, the pairs lerped (BREAKING_NEWS_CROWN_BAND).
+  breakingnewscrown: {
+    pack: BREAKING_NEWS_PACK,
+    band: BREAKING_NEWS_CROWN_BAND,
+    keys: BREAKING_NEWS_CROWN_BAND.keys,
+    keepCorners: ["tl", "tr"],
+    layers: breakingNewsCrownLayers,
+    findings: breakingNewsCrownFindings,
+    notes: [
+      "the Breaking News showcase's legendary crown (TODO 4.11): the pack's 'Legendary Crown' (breakingNews/crown/<k>.png, 1965x72) at its crownBounds (4/2010, 2/2814) on a clear 2010x2814 canvas, downscaled once to 1500x2100 (Lanczos) and cropped to rows 0–59 — the coloured rule with its notched V across the page's top edge that the run's legendary print carries (OTP #63 Mindslaver; plain: #61, #62). No cover strip: the crown is drawn over the master's own top",
+      `keys = the pack's eight crowns (w u b r g, m gold, a the artifact's, l the land's — the template's keyMap c → l, artifactKeyMap c → a) and the ten pairs, the first colour's crown left and the second's right lerped across the frame's own ${BREAKING_NEWS_PAIR_RAMP[0]} → ${BREAKING_NEWS_PAIR_RAMP[1]} %W (no two-colour legend of the run prints one)`,
+      "nothing toned (BREAKING_NEWS_PRINT_TONES)",
+    ],
+  },
   lotrscrollcrown: {
     pack: SCROLL_PACK,
     band: SCROLL_CROWN_BAND,
@@ -9910,6 +10162,29 @@ export const HOLO_STAMP_NOTCHES = {
       "keys = the masters' w u b r g m and c (the white piece, as the c master is the white frame)",
       `the hologram: the pack paints a capture of WotC's oval in the well; the prints' oval (${ETALES_STAMP_OVAL_PX.width} × ${ETALES_STAMP_OVAL_PX.height} at ${ETALES_STAMP_OVAL_PX.x}, ${ETALES_STAMP_OVAL_PX.y} — the 45 stamped WOT prints) plus 2 px is cut to transparent and the importer holds every lit pixel of the oval's box inside the cut: no pixel of the capture is published; the well round the cut keeps the footer's own tone (no black ring, blackoutPx 0: print draws none); our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut`,
       "the well flattened into the master's footer tone (ETALES_WELL_TONE: every pixel within 12 levels of the same key's footer, read at 750, 2060 on the master, takes it, alpha kept; from the piece's row 51 — card row 1948, the master's flat footer — every pixel of the piece outside the cut is the footer tone, opaque; what the piece leaves clear stays clear): the pack draws the well's outer ellipse 4–8 levels darker than the footer with a light low-α fringe, a faint line print does not have",
+    ],
+  },
+  // TODO 4.11 wave 2: the Breaking News OVAL notch — the pack's one piece,
+  // placed and downscaled with the card, its capture painted the strip's
+  // charcoal, the prints' oval cut (BREAKING_NEWS_NOTCH).
+  breakingnewsholostamp: {
+    pack: BREAKING_NEWS_PACK,
+    pieces: BREAKING_NEWS_NOTCH.pieces,
+    keys: BREAKING_NEWS_NOTCH.keys,
+    shape: BREAKING_NEWS_NOTCH.shape,
+    placeAt: BREAKING_NEWS_NOTCH.placeAt,
+    compositeSize: BREAKING_NEWS_NOTCH.compositeSize,
+    oval: BREAKING_NEWS_NOTCH.oval,
+    capture: BREAKING_NEWS_NOTCH.capture,
+    clearOutside: BREAKING_NEWS_NOTCH.clearOutside,
+    blackoutCapturePx: 2,
+    cutMarginPx: 2,
+    blackoutPx: 2,
+    fillRgb: BREAKING_NEWS_STRIP_RGB,
+    notes: [
+      `the Breaking News oval stamp notch (TODO 4.11): the pack's one 'Holo Stamp' (breakingNews/stamp.png, 447x116) — the charcoal strip raised in a tab into the page's foot round the hologram — placed at its bounds (781/2010, 2555/2814) on a clear 2010x2814 canvas, downscaled ONCE with the canvas (Lanczos, as the masters are) and cut to its box ${BREAKING_NEWS_NOTCH_BOX.width}x${BREAKING_NEWS_NOTCH_BOX.height} at ${BREAKING_NEWS_NOTCH_BOX.x},${BREAKING_NEWS_NOTCH_BOX.y} px of the 1500x2100 card, drawn 1:1 from there; the tab is print's (its top 1908 px at the centre against print's 1912, the scans' own 0.22 % aspect)`,
+      "keys = the masters' w u b r g m, a, l and the ten pairs, every one the same piece (every master is the same strip under the tab)",
+      `the hologram: the pack paints a capture of WotC's oval in the tab (${BREAKING_NEWS_CAPTURE_PX.x}–${BREAKING_NEWS_CAPTURE_PX.x + BREAKING_NEWS_CAPTURE_PX.width} × ${BREAKING_NEWS_CAPTURE_PX.y}–${BREAKING_NEWS_CAPTURE_PX.y + BREAKING_NEWS_CAPTURE_PX.height} px once placed and downscaled), 7 px below where print sets its top — every lit pixel of it is painted the strip's opaque charcoal (${BREAKING_NEWS_STRIP_RGB.join(",")}) first (grown 2 px; print's tab is charcoal round the hologram), then the prints' oval (${BREAKING_NEWS_STAMP_OVAL_PX.width} × ${BREAKING_NEWS_STAMP_OVAL_PX.height} at ${BREAKING_NEWS_STAMP_OVAL_PX.x}, ${BREAKING_NEWS_STAMP_OVAL_PX.y} — all 45 stamped OTP prints within 1 px) plus 2 px is cut to transparent and the 2 px round it painted charcoal: no pixel of the capture is published; our own oval bitmap (lib/cards/holo-stamp-art.ts) covers the cut`,
     ],
   },
   lotrscrollholostamp: {

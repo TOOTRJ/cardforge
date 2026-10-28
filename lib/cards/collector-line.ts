@@ -174,6 +174,11 @@ export const COLLECTOR_TEMPLATES = [
   // 'TARDIS'): WHO #535–564 / #1126–1155 set both lines in the black border
   // under the box, 6 / 5 px above M15's rows (TARDIS_COLLECTOR).
   "tardis",
+  // The OTJ Breaking News showcase (TODO 4.11 wave 2, Card Conjurer's
+  // 'Breaking News'): OTP #1–65 set both lines in the charcoal strip under
+  // the page, 10 / 9.5 px above M15's rows on the pack's page
+  // (BREAKING_NEWS_COLLECTOR).
+  "breakingnews",
 ] as const;
 
 export type CollectorLetter = "T" | "E" | "L" | "C" | "U" | "R" | "M";

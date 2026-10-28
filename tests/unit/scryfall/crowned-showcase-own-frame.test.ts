@@ -91,6 +91,7 @@ describe("a crowned showcase's crown is its own frame's", () => {
         "showcase/ltr/scroll+two-colour-hybrid",
         "showcase/mkm/dossier",
         "showcase/mul/tarkir",
+        "showcase/otp/breaking-news",
         "showcase/snc/art-deco",
         "showcase/znr/hedron",
       ].sort(),

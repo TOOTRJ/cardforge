@@ -149,6 +149,9 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   // The Doctor Who TARDIS showcase (TODO 4.11 wave 2): the police box's
   // window covered with the art-window check's spare.
   tardis: { front: [1273, 902] },
+  // The OTJ Breaking News showcase (TODO 4.11 wave 2): the page's
+  // round-cornered window with the art-window check's spare.
+  breakingnews: { front: [1347, 850] },
   fullart: { front: [1383, 1819] },
   // The D&D Sourcebook showcase (TODO 4.11 wave 2): the window's torn,
   // half-transparent edges covered with the art-window check's spare.

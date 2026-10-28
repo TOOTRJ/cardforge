@@ -4,6 +4,7 @@ import { canonicalColorSequence } from "@/lib/cards/mana-order";
 import { COLOR_KEY_LETTER, pickFrameColorKey, plainLandMasterDrawn } from "@/lib/cards/frame-color-key";
 import type { FrameMasterKey, PartColorSeam, Rect, TwoColorDress, TwoColorSplit } from "@/lib/cards/template-layout";
 import { type FrameAnatomyStyle, type FrameTypeInfo, type PartFacts, type ResolvedFrameOverlay, anatomyOn, crownedMasterKey, isArtifactFrameType, isPartColorList, resolveTwoColor } from "@/lib/cards/anatomy";
+import type { MastheadPiece } from "@/lib/cards/masthead";
 import { DEFAULT_FRAME_TEMPLATE } from "@/types/card";
 import type { ColorIdentity, FrameTemplate } from "@/types/card";
 
@@ -430,6 +431,37 @@ export function FrameOverlayLayer({
             backgroundRepeat: "no-repeat",
           }}
         />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * A masthead's pieces (lib/cards/masthead.ts resolveMasthead: the Breaking
+ * News wordmark sliding out of a long cost's way) — each image at its own
+ * box, clipped to its window (the paper's left end follows the wordmark),
+ * right after the frame and before its overlays: the bake's
+ * MastheadPiecesBake twin. Nothing when the row fits.
+ */
+export function MastheadPieceLayer({ pieces, zIndex }: { pieces: readonly MastheadPiece[] | null | undefined; zIndex?: number }) {
+  if (!pieces || pieces.length === 0) return null;
+  return (
+    <div aria-hidden data-masthead="" className="pointer-events-none absolute inset-0" style={zIndex === undefined ? undefined : { zIndex }}>
+      {pieces.map((piece) => (
+        <div key={piece.piece} data-masthead-piece={piece.piece} className="absolute overflow-hidden" style={overlayBox(piece.window)}>
+          <div
+            className="absolute"
+            style={{
+              left: `${((piece.rect.leftPct - piece.window.leftPct) / piece.window.widthPct) * 100}%`,
+              top: `${((piece.rect.topPct - piece.window.topPct) / piece.window.heightPct) * 100}%`,
+              width: `${(piece.rect.widthPct / piece.window.widthPct) * 100}%`,
+              height: `${(piece.rect.heightPct / piece.window.heightPct) * 100}%`,
+              backgroundImage: `url("${frameOverlayImageUrl(piece.path)}")`,
+              backgroundSize: "100% 100%",
+              backgroundRepeat: "no-repeat",
+            }}
+          />
+        </div>
       ))}
     </div>
   );
