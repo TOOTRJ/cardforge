@@ -81,6 +81,11 @@ export const PLATE_INK: Readonly<Record<string, InkBox>> = {
   // one 'Power/Toughness' (260 × 132) under every key, drawn at the pack's
   // ptBounds — the bevelled parchment plate fills the image to every edge.
   "/frames/dndsourcebook/pt/{color}.png": { left: 0, top: 0, right: 1, bottom: 1 },
+  // The MKM dossier showcase's tag (TODO 4.11 wave 2): Card Conjurer's one
+  // 'Power/Toughness Box' (392 × 195) under every key, drawn at the pack's
+  // ptBounds — the paper tag with its string hole fills the image but for
+  // 3 px of its shadow on the left and 1 at the top.
+  "/frames/dossier/pt/{color}.png": { left: 0.0076, top: 0.0051, right: 1, bottom: 1 },
   // The Enchanting Tales showcase's plates (TODO 4.11 wave 2): Card
   // Conjurer's six 'Power/Toughness' (499 × 276; c the white one), drawn at
   // the pack's bounds — the plate and its curled tail fill the image to

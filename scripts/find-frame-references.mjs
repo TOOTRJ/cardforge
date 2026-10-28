@@ -373,6 +373,14 @@ const TEMPLATES = {
     confirm: "AFR / CLB showcase — confirm the thumbnail is the parchment sourcebook page, not the orange 'Dungeon Module' cover (AFR #350–358).",
     q: (k) => `((set:afr cn>=299 cn<=349) or (set:clb cn>=375 cn<=450)) ${spellColor(k)}`,
   },
+  // The MKM dossier showcase (TODO 4.11 wave 2): Scryfall's `dossier` promo
+  // type in MKM (#336–389, #433) — NOT the Secret Lair's navy-bordered four
+  // (SLD #1566–1569) and not MKM's 'magnified' showcase. `m` a two-colour
+  // card (the pair masters ride the gold key) and the five-colour Niv-Mizzet.
+  dossier: {
+    confirm: "MKM dossier showcase — confirm the thumbnail is the case-file folder with the photo clipped to it (not the round 'magnified' frame, MKM #287–316).",
+    q: (k) => `set:mkm is:dossier ${spellColor(k)}`,
+  },
   // The Enchanting Tales showcase (TODO 4.11 wave 2): the bonus sheet WOT
   // #1–63 (#64–103 are the anime-style borderless reprints, another
   // design). Mono-coloured enchantments only: no colourless or gold print.

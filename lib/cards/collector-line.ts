@@ -148,6 +148,10 @@ export const COLLECTOR_TEMPLATES = [
   // Sourcebook'): AFR #299–349 and CLB #375–450 set both lines in the black
   // border under the page, 4 px below M15's rows (DNDSOURCEBOOK_COLLECTOR).
   "dndsourcebook",
+  // The MKM dossier showcase (TODO 4.11 wave 2, Card Conjurer's 'Dossier'):
+  // MKM #336–389 / #433 set both lines in the black border under the page,
+  // 4–5 px above M15's rows and 2 px left of its pen (DOSSIER_COLLECTOR).
+  "dossier",
   // …and the Enchanting Tales showcase (TODO 4.11 wave 2, Card Conjurer's
   // 'Enchanting Tales'): WOT #1–63 set both lines in the colour's dark
   // footer, 3–4 px above M15's rows (ENCHANTINGTALES_COLLECTOR).

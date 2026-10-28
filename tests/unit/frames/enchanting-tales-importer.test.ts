@@ -193,7 +193,7 @@ describe("the importer's notch piece", () => {
     const placed = piece();
     const captured = capturePlane(placed, width, height, ETALES_NOTCH.capture);
     // Without the ellipse the box's corners would read the rim as capture.
-    expect(capturePlane(placed, width, height, { ...ETALES_NOTCH.capture, ellipse: false }).some((v, p) => v > 0 && p % width < 30 && p / width < 28)).toBe(true);
+    expect(capturePlane(placed, width, height, { ...ETALES_NOTCH.capture, oval: false }).some((v, p) => v > 0 && p % width < 30 && p / width < 28)).toBe(true);
     const out = blackoutAndCut(placed, shape, ETALES_NOTCH.oval, 2, 0);
     expect(pieceNotchFindings(out, shape, ETALES_NOTCH.oval, 2, 0, captured).failures).toEqual([]);
     // The well round the cut keeps its tone: no black ring.

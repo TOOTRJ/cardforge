@@ -81,7 +81,8 @@ describe("bake path = preview path", () => {
     // …and the full-art tokens' 10 each (4.48's central split: 60), and the
     // borderless double-faced bodies' 10 each (TODO 5.7: 40).
     // …and the Prepare frame's 20 (4.26: both dresses with the page).
-    expect(pairKeys).toBe(410);
+    // …and the MKM dossier's 10 (4.11 wave 2: the pack's colour frames lerped).
+    expect(pairKeys).toBe(420);
     // …and the borderless double-faced bodies' 18 crowned twins each (TODO
     // 5.7: the seven colour keys, the artifact stand-in's `a`, ten pairs).
     expect(crownedKeys).toBe(51 + 4 * 18);
@@ -179,6 +180,9 @@ describe("bake path = preview path", () => {
                                     : template === "dndsourcebook"
                                       ? // …and the D&D Sourcebook's oval piece (4.11 wave 2).
                                         "dndsourcebookholostamp"
+                                    : template === "dossier"
+                                      ? // …and the MKM dossier's oval piece (4.11 wave 2).
+                                        "dossierholostamp"
                                     : template === "enchantingtales"
                                       ? // …and the Enchanting Tales' (4.11 wave 2).
                                         "enchantingtalesholostamp"
@@ -214,7 +218,10 @@ describe("bake path = preview path", () => {
                               : template === "bloomanime"
                                 ? // …and the Bloomburrow anime's flourish (4.11, v70).
                                   "bloomanimecrown"
-                                : (dfcCrown ?? "m15crown");
+                                : template === "dossier"
+                                  ? // …and the MKM dossier's torn strip (4.11 wave 2).
+                                    "dossiercrown"
+                                  : (dfcCrown ?? "m15crown");
         for (const key of slot.keys) {
           expect(slot.assetPathTemplate.replace("{key}", key), `${template} ${slot.anatomy}`).toBe(`/frames/${folder}/${key}.png`);
           if (slot.anatomy === "holoStamp") notches += 1;
@@ -261,9 +268,10 @@ describe("bake path = preview path", () => {
     // MSE's own stamp per key; `c` the steel rim), and the Bloomburrow
     // woodland's 7 (4.11, v69), the Bloomburrow anime's 7 (4.11, v70), and
     // the D&D Sourcebook's 7 (4.11 wave 2, the pack's one oval piece under
-    // every key), and the Enchanting Tales' 7 (4.11 wave 2, the pack's piece
-    // per colour).
-    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7 + 7);
+    // every key), and the MKM dossier's 7 + 10 pairs (4.11 wave 2, the
+    // pack's one oval piece under every key and pair), and the Enchanting
+    // Tales' 7 (4.11 wave 2, the pack's piece per colour).
+    expect(notches).toBe((9 + 10) * 11 + 7 + (9 + 10) * 3 + (8 + 10) * 2 + (7 + 10) + 7 + 7 * 2 + 8 + 7 + 8 + 7 + 7 + 7 + 7 + 7 + (7 + 10) + 7);
     for (const template of [
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15dfclandback",
       "m15mdfcfront", "m15mdfcback", "m15mdfclandfront", "m15mdfclandback",

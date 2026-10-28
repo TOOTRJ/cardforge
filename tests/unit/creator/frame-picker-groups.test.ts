@@ -184,6 +184,11 @@ const STATION_DRESSES: readonly string[] = [
   // CLB #375–450 land there once verified) and
   // tests/unit/frames/dnd-sourcebook-importer.test.ts.
   "dndsourcebook",
+  // …and the MKM dossier showcase (TODO 4.11 wave 2): a new template in a
+  // new showcase set — pinned in tests/unit/scryfall/mkm-dossier-imports.test.ts
+  // (MKM's dossier printings land there once verified) and
+  // tests/unit/frames/mkm-dossier-importer.test.ts.
+  "dossier",
   // …and the Enchanting Tales showcase (TODO 4.11 wave 2): a new template in
   // a new showcase set — pinned in
   // tests/unit/scryfall/enchanting-tales-imports.test.ts (WOT #1–63 land

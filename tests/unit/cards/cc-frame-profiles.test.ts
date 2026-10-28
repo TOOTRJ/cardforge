@@ -55,6 +55,14 @@ describe("Card Conjurer frame profiles", () => {
         expect([profile.costSizePct, profile.costDy, profile.costDx]).toEqual([70 / 1500, -6.6 / 1500 - 3 / 1500, 12 / 1500]);
         continue;
       }
+      // The MKM dossier showcase (TODO 4.11 wave 2): its own run's row — the
+      // CC M15 row 19 px lower (the discs centred on 176 px, the median of
+      // the run's prints), its end 38 px further left with the name band's
+      // (the folder's clip covers the band's end), 70 px discs.
+      if (template === "dossier") {
+        expect([profile.costSizePct, profile.costDy, profile.costDx]).toEqual([70 / 1500, -6.6 / 1500 + 19 / 1500, 2 / 1500]);
+        continue;
+      }
       // The Enchanting Tales showcase (TODO 4.11 wave 2): the CC M15 row 3 px
       // further right (registered on all 63 WOT #1–63 prints), its lift
       // kept on the pack's title bar, 70 px discs.

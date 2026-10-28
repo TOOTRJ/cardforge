@@ -312,6 +312,8 @@ describe("resolveGeneratedFrame — showcases with no walker or battle anatomy (
     "tarkirdragon",
     // The D&D Sourcebook (TODO 4.11 wave 2): P/T only, like the rest.
     "dndsourcebook",
+    // The MKM dossier (TODO 4.11 wave 2): P/T only, like the rest.
+    "dossier",
     // The Enchanting Tales (TODO 4.11 wave 2): enchantment dress, P/T only.
     "enchantingtales",
   ] as const;

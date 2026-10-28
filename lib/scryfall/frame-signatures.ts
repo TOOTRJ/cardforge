@@ -2713,6 +2713,28 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     ["two-colour", "two-colour-hybrid"],
     { "two-colour": "4.11", "two-colour-hybrid": "4.11" },
   ),
+  // The Murders at Karlov Manor DOSSIER showcase (TODO 4.11 wave 2; Card
+  // Conjurer's 'Dossier' pack): every printing Scryfall gives the `dossier`
+  // promo type in MKM — #336–376 and their invisible-ink twins #377–389 and
+  // #433, 55 printings, every one a single-faced, black-bordered creature on
+  // the 2015 frame (Scryfall 2026-10-27). The invisible ink is a finish
+  // printed over the same frame, so the twins land here too. Exact once
+  // verified (withVerification). No gap: the template draws the two-colour
+  // dress (its pair masters — print ramps a two-colour card's accents from
+  // its first colour to its second, 28 printings), the crown (every
+  // legendary printing wears it: CROWNED_SHOWCASE_SIGNATURES) and the oval
+  // stamp. NOT MKM's 'magnified' showcase (#287–316: another design, MSE
+  // only) or its Ravnica City legends (#317–323) — they stay `showcase` —
+  // and NOT the Secret Lair's four dossier legends (SLD #1566–1569 and their
+  // rainbow-foil twins, also `dossier` on Scryfall): the same page on a
+  // NAVY border (0,21,34 on every one, where MKM's reads 0,0,0) with their
+  // own blue and black accents, so they keep their landing.
+  {
+    key: "showcase/mkm/dossier",
+    exactLabel: "Murders at Karlov Manor dossier showcase",
+    match: { sets: ["mkm"], promosAny: ["dossier"] },
+    outcome: { status: "exact", template: "dossier" },
+  },
   {
     key: "showcase/tdm/draconic",
     exactLabel: "Tarkir: Dragonstorm draconic showcase",

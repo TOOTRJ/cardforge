@@ -143,6 +143,10 @@ describe("the main box on every template", () => {
         // page (the run's lines from x 130, its right ink to 1368 at p90),
         // the box ending above the page's rounded foot.
         "dndsourcebook",
+        // …and the MKM dossier (TODO 4.11 wave 2): M15's box and margins on
+        // the folder's page (the run's lines from x 133, its short texts
+        // centred on M15's middle).
+        "dossier",
         // …and the Enchanting Tales (TODO 4.11 wave 2): M15's margins in
         // Card Conjurer's rect (the run's lines from x 132–133, the rect's
         // 129 + 4).
