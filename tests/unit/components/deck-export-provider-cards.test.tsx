@@ -89,3 +89,43 @@ describe("DeckExportProvider — a selection export", () => {
     expect(screen.getByRole("status").textContent).toContain("Building deck ZIP");
   });
 });
+
+// TODO 6.30: an export that takes long says so, through ONE polite live
+// region — mounted empty before anything runs (so its first message is
+// heard), saying once per phase what is happening, never each card's tick.
+describe("DeckExportProvider — the export's live region (TODO 6.30)", () => {
+  it("is there, empty, before an export — and is the only one", () => {
+    render(
+      <DeckExportProvider>
+        <Starter request={selection} />
+      </DeckExportProvider>,
+    );
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(screen.getByRole("status").textContent).toBe("");
+    expect(screen.getByRole("status").getAttribute("aria-live")).toBe("polite");
+  });
+
+  it("says a running export can take a few minutes, and does not change on each card", async () => {
+    let progress: ((p: { phase: string; total: number; done: number; failed: string[]; deckTitle: string }) => void) | null = null;
+    client.runDeckExport.mockImplementation((_request, options) => {
+      progress = options.onProgress;
+      return new Promise(() => {});
+    });
+    await run({ deckId: "d1", kind: "pdf", quality: "hd", layout: "pages" });
+    const said = screen.getByRole("status").textContent;
+    expect(said).toBe("Building print PDF. Every card is drawn live at full resolution, so a big export can take a few minutes.");
+    await act(async () => {
+      progress!({ phase: "rendering", total: 10, done: 3, failed: [], deckTitle: "Mono Red" });
+    });
+    expect(screen.getByRole("status").textContent).toBe(said);
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+  });
+
+  it("a failure is said in words", async () => {
+    client.runCardsExport.mockRejectedValue(new DeckExportError("None of the cards could be rendered — try again in a moment."));
+    await run(selection);
+    expect(screen.getByRole("status").textContent).toBe(
+      "Export failed: None of the cards could be rendered — try again in a moment.",
+    );
+  });
+});

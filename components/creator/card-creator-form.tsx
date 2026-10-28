@@ -124,7 +124,6 @@ import { SetIconPanel } from "@/components/creator/panels/set-icon-panel";
 import { AbilitiesPanel } from "@/components/creator/panels/abilities-panel";
 import {
   SecondPartCostField,
-  SecondPartEmpty,
   SecondPartFlavorField,
   SecondPartIdentityFields,
   SecondPartRulesField,
@@ -4681,9 +4680,10 @@ export function CardCreatorForm({
                           </FaceScope>
                         }
                       />
-                    ) : (
-                      <SecondPartEmpty isAdventureFrame={isAdventureFrame} partWords={partWords} />
-                    )}
+                    ) : // Nothing while `has_back_face` is off (TODO 3b.11):
+                    // on a frame that paints a second part that lasts only
+                    // until the form's effect above turns it on.
+                    null}
                   </FaceScope>
                 ) : (
                   <FaceScope label={faceTabs ? (faceWords?.first ?? null) : null}>
@@ -4804,9 +4804,7 @@ export function CardCreatorForm({
                     <SecondPartStatsFields shown={secondPartFields.shown} />
                   </FaceScope>
                 </>
-              ) : (
-                <SecondPartEmpty isAdventureFrame={isAdventureFrame} partWords={partWords} />
-              )
+              ) : null // (as on the Identity step: never seen — TODO 3b.11)
             ) : stepKey === "text" ? (
               <FaceScope label={faceTabs ? (faceWords?.first ?? null) : null}>
                 {!hidesCost(watched.frame_style?.template) ? (

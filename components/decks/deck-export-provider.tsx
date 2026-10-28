@@ -99,6 +99,25 @@ function inSentence(label: string): string {
   return label.charAt(0).toLowerCase() + label.slice(1);
 }
 
+/** What the live region says for an export's phase (TODO 6.30): the same
+ *  label the progress card shows, and while it builds that every card is
+ *  drawn live — a big export can take a few minutes. */
+export function exportAnnouncement(state: DeckExportState | null, label: string): string {
+  if (!state) return "";
+  switch (state.status) {
+    case "preparing":
+    case "rendering":
+    case "packaging":
+      return `${label}. Every card is drawn live at full resolution, so a big export can take a few minutes.`;
+    case "done":
+      return `${label}${state.deckTitle ? ` — ${state.deckTitle}` : ""}. Check your downloads.`;
+    case "failed":
+      return `${label}: ${state.error ?? "something went wrong."}`;
+    case "cancelled":
+      return "Export cancelled.";
+  }
+}
+
 function saveBlobUrl(url: string, name: string) {
   const anchor = document.createElement("a");
   anchor.href = url;
@@ -258,14 +277,21 @@ export function DeckExportProvider({ children }: { children: React.ReactNode }) 
     <DeckExportContext.Provider value={value}>
       {children}
 
+      {/* The export's ONE polite live region (TODO 6.30): always mounted, so
+          its first message is heard, and it speaks once per phase —
+          started (with how long it can take), ready, failed — never on each
+          card's tick, as the whole progress card did when it was the
+          region. */}
+      <p role="status" aria-live="polite" className="sr-only" data-testid="export-status">
+        {exportAnnouncement(state, label)}
+      </p>
+
       {showWidget && state ? (
         <div
           className={cn(
             "fixed right-4 z-50 w-80 rounded-xl border border-border bg-surface/95 shadow-xl backdrop-blur transition-[bottom]",
             generationActive ? "bottom-[17.5rem] sm:bottom-[18.5rem]" : "bottom-24 sm:bottom-28",
           )}
-          role="status"
-          aria-live="polite"
         >
           <button
             type="button"
