@@ -366,6 +366,13 @@ const TEMPLATES = {
   tarkirdragon: {
     q: (k) => `set:mul (cn:1 or cn:60) ${spellColor(k)}`,
   },
+  // The D&D Sourcebook showcase (TODO 4.11 wave 2): AFR #299–349 and CLB
+  // #375–450 (AFR #350–358 are the 'Dungeon Module' lands, another design).
+  // One parchment page for every colour; `c` the colourless artifacts.
+  dndsourcebook: {
+    confirm: "AFR / CLB showcase — confirm the thumbnail is the parchment sourcebook page, not the orange 'Dungeon Module' cover (AFR #350–358).",
+    q: (k) => `((set:afr cn>=299 cn<=349) or (set:clb cn>=375 cn<=450)) ${spellColor(k)}`,
+  },
   tarkirdraconic: {
     confirm: "TDM black-border showcase run (#292–326) — confirm the thumbnail shows the draconic clan treatment.",
     q: (k) => `set:tdm is:showcase border:black ${spellColor(k)}`,

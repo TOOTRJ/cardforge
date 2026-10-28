@@ -2729,6 +2729,25 @@ export const FRAME_SIGNATURE_RULES: readonly Rule[] = [
     match: { collectors: { mul: [[1, 1], [60, 60], [131, 131], [190, 190]] } },
     outcome: { status: "exact", template: "tarkirdragon" },
   },
+  // The Dungeons & Dragons Sourcebook showcase (TODO 4.11 wave 2; Card
+  // Conjurer's 'D&D Sourcebook' pack): Adventures in the Forgotten Realms
+  // #299–349 and Battle for Baldur's Gate #375–450 — 127 printings, every
+  // one single-faced, black-bordered, on the 2015 frame, none a walker, a
+  // token or a layout card (Scryfall 2026-10-27). NOT AFR #350–358: the
+  // nine lands of the same showcase run print the 'Dungeon Module' cover,
+  // another design (they stay `showcase`). Exact once verified
+  // (withVerification). No gap: print draws ONE parchment page for every
+  // colour (a sourcebook card's colour is its art's background), so a
+  // two-colour or a three-colour legend prints the same frame as a mono
+  // one; none of the run's legends prints a crown (the template draws
+  // none); the oval stamp and the collector line are the template's own.
+  {
+    key: "showcase/afr/sourcebook",
+    exactLabel: ({ set }) =>
+      set === "clb" ? "Battle for Baldur's Gate D&D Sourcebook showcase" : "Adventures in the Forgotten Realms D&D Sourcebook showcase",
+    match: { collectors: { afr: [[299, 349]], clb: [[375, 450]] } },
+    outcome: { status: "exact", template: "dndsourcebook" },
+  },
   // Multiverse Legends' three Theros demigods print the same constellation
   // frame, crown included (checked by eye against THB #259 / #262,
   // 2026-10-21): Daxos #2, Tymaret #18, Renata #28 and their halo-foil

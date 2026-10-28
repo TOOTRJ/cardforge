@@ -134,6 +134,9 @@ const WINDOWS: Record<FrameTemplate, Row> = {
   // Card Conjurer's Tarkir window (TODO 4.11, layout v67): its shadow + 0.05 %.
   tarkirdragon: { front: [1237, 929] },
   fullart: { front: [1383, 1819] },
+  // The D&D Sourcebook showcase (TODO 4.11 wave 2): the window's torn,
+  // half-transparent edges covered with the art-window check's spare.
+  dndsourcebook: { front: [1349, 957] },
   // The extended-art frame (layout v58): CC's window to the side edges;
   // its see-through colourless master is ONE picture under the frame.
   extendedart: { front: [1500, 1142], masters: { c: [1500, 1959] } },
