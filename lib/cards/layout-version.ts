@@ -1,3 +1,4 @@
+import { hasFlavorMarkup } from "@/lib/cards/flavor-markup";
 import { pickFrameColorKey } from "@/lib/cards/frame-color-key";
 import { buildTypeLine, displayLine, normalizeFrameTemplate } from "@/lib/cards/card-display";
 import { statLayoutChanged } from "@/lib/cards/stat-fit";
@@ -1681,6 +1682,23 @@ export const WALKER_COST_ROW_TEMPLATES: readonly string[] = ["m15pw", "m15border
 //            Avatar / woodland pair's, #615). A CORRECTION ("sweep"), never
 //            a badge: no colour is ticked. The crown, the oval stamp notch
 //            and the collector line are ADDITIONS a card switches on.
+//   v71 — flavour text's upright spans (owner 2026-10-28): Scryfall marks
+//            the words a card prints ROMAN inside its italic flavour with
+//            `*…*` ("—*Heroics: A Book of Fables*", "Are *we* the wrong
+//            sort of people?") and both renderers drew the stars. The rules
+//            layout now sets a balanced pair's words upright, measured in
+//            the roman face, and never draws its stars
+//            (lib/cards/flavor-markup.ts, rules-layout.ts flavorRuns). The
+//            stored text keeps the markup: no migration. Any template, a
+//            card scope alone (flavorMarkupChanged): a card whose flavour —
+//            or its back face's — holds a balanced pair; every other card
+//            bakes byte-identical (a line with no span is the runs it always
+//            was). FLAVOR_MARKUP_LAYOUT_VERSION below — the ONE constant
+//            (taken as v71 at PR time: v70 is the Bloomburrow anime's,
+//            #616). A CORRECTION ("sweep"), never a badge: the stars were
+//            never the look of any print. Verification-neutral: no slot,
+//            master or plate moves, and a reference's compare render
+//            changes only in its flavour's words.
 // ---------------------------------------------------------------------------
 
 /** The Lord of the Rings scroll showcase re-sourced from Card Conjurer
@@ -1928,6 +1946,13 @@ export const TYPE_LINE_ORDER_LAYOUT_VERSION = 50;
  *  the card scope and the rollout below read this constant. */
 export const ART_FOCAL_ZERO_LAYOUT_VERSION = 51;
 
+/** Flavour text's upright `*…*` spans (owner 2026-10-28): ITS version lives
+ *  here alone — CARD_LAYOUT_VERSION, the card scope, the verification list
+ *  and the rollout below read this constant — so a bump that merges first
+ *  moves it in one place (this constant and the test's `V` move together).
+ *  v71: v70 is the Bloomburrow anime's (#616). Frozen once it ships. */
+export const FLAVOR_MARKUP_LAYOUT_VERSION = 71;
+
 /** A name's room before a detached cost of Phyrexian symbols (TODO 6.16d):
  *  ITS version lives here alone — CARD_LAYOUT_VERSION, the template and
  *  card scopes and the rollout below read this constant. */
@@ -1949,7 +1974,7 @@ export const LARGE_PIPS_LAYOUT_VERSION = 53;
  *  latest). */
 export const V53_LARGER_COST_TEMPLATES: readonly string[] = ["modern", "modernland"];
 
-export const CARD_LAYOUT_VERSION = ANIME_LAYOUT_VERSION;
+export const CARD_LAYOUT_VERSION = FLAVOR_MARKUP_LAYOUT_VERSION;
 
 /** The first layout whose stored bakes are ROUND (v31, TODO 3.26). An older
  *  stamp — or a null one, whose bake may predate it — is a square bake with
@@ -2124,6 +2149,7 @@ const TEMPLATE_SCOPED_VERSIONS: Readonly<Record<number, readonly string[]>> = {
   // whose cost holds a Phyrexian symbol (v52Changed). Verification-neutral.
   [TITLE_ROOM_SCALED_PIPS_LAYOUT_VERSION]: V52_DETACHED_COST_TEMPLATES,
   // (v53 is not here: any template — a card scope, v53Changed.)
+  // (v71 is not here: any template — a card scope, flavorMarkupChanged.)
   // The station frame on print's band rule (4.27a, PR 2): the pair's tier
   // layout and drawn pieces; every card on it (none stored in production).
   // No narrower verification scope: neither template has a tick.
@@ -2371,6 +2397,10 @@ const VERIFICATION_TEMPLATE_SCOPES: Readonly<Record<number, readonly string[]>> 
  * right on the walkers) — no slot, master, plate or text box moves, as
  * v32 / v36 / v60 changed pips and boxes and stayed neutral. The owner
  * signs it off on the before / after sheet; every tick stays fresh.
+ * v71 is (flavour text's upright spans, owner 2026-10-28): only the words of
+ * a flavour that holds a `*…*` pair change — set roman, without their stars
+ * — on any template; no slot, master, plate or text box moves, and a tick
+ * judges the frame, not a reference's flavour. Every tick stays fresh.
  * Stored bakes still owe these bumps: this list is read by frame
  * verification only, never by the stale / sweep / download rules.
  */
@@ -2382,6 +2412,7 @@ export const VERIFICATION_NEUTRAL_VERSIONS: readonly number[] = [
   UB_SEE_THROUGH_C_LAYOUT_VERSION,
   WALKER_COST_ROW_LAYOUT_VERSION,
   COST_ROW_PRINT_LAYOUT_VERSION,
+  FLAVOR_MARKUP_LAYOUT_VERSION,
 ];
 
 /** TEMPLATE_SCOPED_VERSIONS with VERIFICATION_TEMPLATE_SCOPES laid over it
@@ -2672,6 +2703,21 @@ function v61Changed(card: ScopeCard): boolean {
   if (card.back_face === undefined) return true;
   const back = card.back_face && typeof card.back_face === "object" ? (card.back_face as Record<string, unknown>) : null;
   return drawn(back?.cost);
+}
+
+/**
+ * Whether layout v71 (flavour text's upright spans) changed a card's bake:
+ * its flavour, or its `back_face`'s, holds a balanced `*…*` pair
+ * (hasFlavorMarkup — the predicate the owner's SQL count mirrors). Any
+ * template: a frame that draws no flavour is re-baked to the same pixels
+ * (read wider than drawn). Every other card bakes byte-identical. A row
+ * that doesn't carry the flavour or the back face → affected.
+ */
+export function flavorMarkupChanged(card: ScopeCard): boolean {
+  if (card.flavor_text === undefined || card.back_face === undefined) return true;
+  if (hasFlavorMarkup(card.flavor_text)) return true;
+  const back = card.back_face && typeof card.back_face === "object" ? (card.back_face as Record<string, unknown>) : null;
+  return typeof back?.flavor_text === "string" && hasFlavorMarkup(back.flavor_text);
 }
 
 /**
@@ -3140,6 +3186,9 @@ export const VERSION_SCOPES: Readonly<Record<number, (card: ScopeCard) => boolea
   // v61 — the cost row as current print draws it: on the 39 templates (the
   // template scope), a card that draws a cost — v61Changed.
   [COST_ROW_PRINT_LAYOUT_VERSION]: v61Changed,
+  // v71 — flavour text's upright spans: on any template, a card whose
+  // flavour (or its back face's) holds a `*…*` pair — flavorMarkupChanged.
+  [FLAVOR_MARKUP_LAYOUT_VERSION]: flavorMarkupChanged,
 };
 
 /** `frame_style.finish` from the jsonb column, or null when absent (= regular). */
@@ -3240,6 +3289,7 @@ function pendingVersions(
 export type RolloutPolicy = "sweep" | "opt-in";
 
 export const VERSION_ROLLOUT: Readonly<Record<number, RolloutPolicy>> = {
+  [FLAVOR_MARKUP_LAYOUT_VERSION]: "sweep", // flavour text's upright `*…*` spans (owner 2026-10-28): the words set roman, the stars never drawn — a correction of what both renderers printed, against every print that marks them; card-scoped to the flavours that hold a pair, never a badge
   20: "sweep", // display always watermarked — must not linger
   21: "sweep", // re-do of the v20 sweep with the billing flag set
   22: "opt-in", // rules-text typography standard — owner's call

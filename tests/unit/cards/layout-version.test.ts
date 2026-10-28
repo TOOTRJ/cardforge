@@ -3579,3 +3579,92 @@ describe("v70 — the Bloomburrow anime showcase on one MSE master in print's lo
     expect(isRenderStale(V - 2, "m15", undefined, V - 1), "v69 reads as a sweep of every card").toBe(false);
   });
 });
+describe("v71 — flavour text's upright `*…*` spans (owner 2026-10-28)", () => {
+  // Renumbered with FLAVOR_MARKUP_LAYOUT_VERSION if another bump merges
+  // first (taken as v71 at PR time: v70 is the Bloomburrow anime's, #616).
+  const V = 71;
+  const png = "https://x/y.png";
+  /** A v70 bake: only v71 can be pending. */
+  const at = (over: Record<string, unknown> = {}) => ({
+    ...UNTOUCHED_SINCE_V22,
+    visibility: "public",
+    layout_version: V - 1,
+    rendered_image_url: png,
+    flavor_text: null,
+    back_face: null,
+    ...over,
+  });
+  const AT = { current: V } as const;
+
+  it("is a sweep, never a badge, on ANY template — a card scope alone, and verification-neutral", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.FLAVOR_MARKUP_LAYOUT_VERSION).toBe(V);
+    expect(lv.CARD_LAYOUT_VERSION).toBeGreaterThanOrEqual(V);
+    expect(lv.VERSION_ROLLOUT[V]).toBe("sweep");
+    expect(lv.rolloutPolicy(V)).toBe("sweep");
+    expect(lv.latestSweepVersion(undefined, V)).toBe(V);
+    expect(lv.latestOptInVersion()).toBe(22);
+    expect(lv.VERSION_SCOPES[V]).toBe(lv.flavorMarkupChanged);
+    expect(lv.VERIFICATION_NEUTRAL_VERSIONS).toContain(V);
+    expect(lv.VERIFICATION_SCOPED_VERSIONS[V]).toEqual([]);
+    // Without a card to judge by, every template is touched.
+    for (const t of FRAME_TEMPLATE_VALUES) expect(isRenderStale(V - 1, t, undefined, V), t).toBe(true);
+  });
+
+  it("re-bakes a card whose flavour — or its back face's — holds a balanced pair, on any template", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const sweep = await sweepAt(V);
+    for (const flavor of [
+      "“Her quest began with one small step.”\n—*The Explorer’s Testament*",
+      "Sometimes the closet *is* the monster.",
+      "—Oracle *en*-Vec",
+      "*I*",
+    ]) {
+      for (const template of ["m15", "saga", "split", "retro", "m15borderless", "lotr"]) {
+        const row = at({ flavor_text: flavor, frame_style: { template } });
+        expect(sweep(row), `${template} ${flavor}`).toBe("rebake");
+        expect(isRenderStale(V - 1, template, undefined, V, row)).toBe(true);
+        expect(lv.hasPendingCorrection(row, AT)).toBe(true);
+        expect(lv.hasNewerLook(row, AT)).toBe(false);
+      }
+    }
+    expect(sweep(at({ back_face: { title: "Back", flavor_text: "—*Song of All*, canto 2" } }))).toBe("rebake");
+  });
+
+  it("stamps every other card: no flavour, stars that are not a pair, a pair in the RULES text", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    const sweep = await sweepAt(V);
+    for (const over of [
+      {},
+      { flavor_text: "Plain italic flavour." },
+      { flavor_text: "A lone * star." },
+      { flavor_text: "2 * 3 * 4" },
+      { flavor_text: "** nothing **" },
+      { flavor_text: "*open\nclose*" },
+      { flavor_text: "* spaced *" },
+      { rules_text: "*Not* markup in rules.", flavor_text: null },
+      { back_face: { title: "Back", flavor_text: "A * star" } },
+      { back_face: { title: "Back" } },
+    ]) {
+      const row = at(over);
+      expect(sweep(row), JSON.stringify(over)).toBe("stamp");
+      expect(isRenderStale(V - 1, "m15", undefined, V, row)).toBe(false);
+      expect(lv.hasPendingCorrection(row, AT), JSON.stringify(over)).toBe(false);
+    }
+  });
+
+  it("can't judge a row without its flavour or back face → affected", async () => {
+    const { flavorMarkupChanged } = await import("@/lib/cards/layout-version");
+    expect(flavorMarkupChanged({ back_face: null })).toBe(true);
+    expect(flavorMarkupChanged({ flavor_text: null })).toBe(true);
+    expect(flavorMarkupChanged({ flavor_text: null, back_face: null })).toBe(false);
+  });
+
+  // v70 is #616's (the Bloomburrow anime). A version with no rollout and no
+  // scope reads as a SWEEP OF EVERY CARD, so v71 never ships over a gap.
+  it("ships only after v70 (#616): no gap below it", async () => {
+    const lv = await import("@/lib/cards/layout-version");
+    expect(lv.VERSION_ROLLOUT[V - 1], "v70 has no rollout yet").toBeDefined();
+    expect(isRenderStale(V - 2, "m15", undefined, V - 1), "v70 reads as a sweep of every card").toBe(false);
+  });
+});

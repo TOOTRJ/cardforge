@@ -23,8 +23,11 @@ import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 // whose height was MEASURED on their Scryfall PNGs (the type pill's position
 // against CC's three masters, 2026-09-29), with their Oracle text, flavour
 // and P/T: 63 references and the height study's regular-box prints set at
-// 8.5 pt and below (TTDC #12 Dragon Egg …). Six of those WotC sets below the
+// 8.5 pt and below (TTDC #12 Dragon Egg …). Five of those WotC sets below the
 // 72 px floor (62–70 px) — the rule sends them tall (`ruleSays`), listed.
+// (TSPM #1 Copy was a sixth until layout v71: its flavour's "*I'm*" is
+// Scryfall's upright markup, no longer measured as two stars, and the rule
+// now picks the regular box it prints in.)
 // ---------------------------------------------------------------------------
 
 type Printing = {
@@ -137,7 +140,7 @@ describe("tokenHeightForText (TODO 4.48's rule)", () => {
     }
   });
 
-  it("covers all three heights in the fixture; the rule agrees on all but six regular-box prints set below 72 px", () => {
+  it("covers all three heights in the fixture; the rule agrees on all but five regular-box prints set below 72 px", () => {
     const counts = { textless: 0, regular: 0, tall: 0 };
     for (const [, p] of PRINTS) counts[p.printed] += 1;
     expect(counts).toEqual({ textless: 28, regular: 32, tall: 16 });
@@ -146,7 +149,6 @@ describe("tokenHeightForText (TODO 4.48's rule)", () => {
       "tblc-23",
       "tinr-13",
       "tmid-7",
-      "tspm-1",
       "ttsr-5",
     ]);
   });

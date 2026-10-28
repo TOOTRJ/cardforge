@@ -91,6 +91,7 @@ import { getSiteBaseUrl } from "@/lib/site-url";
 import { breadcrumbJsonLd, JsonLd, serializeJsonLd } from "@/components/seo/json-ld";
 import type { CardBackFace, FrameStyle, FaceContent } from "@/types/card";
 import { formatShortDate } from "@/lib/format/dates";
+import { stripFlavorMarkup } from "@/lib/cards/flavor-markup";
 
 // ---------------------------------------------------------------------------
 // CardDetailContent — the shared body of the public card detail view.
@@ -947,7 +948,8 @@ export function buildCardJsonLd({
   siteBase: string;
 }): Record<string, unknown> {
   const description =
-    card.flavor_text?.trim() ||
+    // The flavour's upright `*…*` spans as plain words (lib/cards/flavor-markup.ts).
+    stripFlavorMarkup(card.flavor_text?.trim() ?? "") ||
     // CARDNAME / ~ as the name the card prints (TODO 6.2).
     storedRulesTextWithSelfName(card)?.trim() ||
     "A custom Magic: The Gathering card forged on PipGlyph.";
@@ -1065,7 +1067,7 @@ export function buildCardJsonLd({
   if (back) {
     // Its rules with CARDNAME / ~ as ITS name (TODO 6.2), as the back draws.
     const backDescription =
-      back.flavor_text?.trim() || backRulesTextWithSelfName(back, card.frame_style as { selfName?: string } | null)?.trim() || "";
+      stripFlavorMarkup(back.flavor_text?.trim() ?? "") || backRulesTextWithSelfName(back, card.frame_style as { selfName?: string } | null)?.trim() || "";
     const backName = back.title?.trim() || "Back face";
     const part: Record<string, unknown> = {
       "@type": "CreativeWork",

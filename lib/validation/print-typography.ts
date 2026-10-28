@@ -160,21 +160,29 @@ function convertLine(rawLine: string, field: TypographyField): string {
   if (text.includes('"') || text.includes("'")) {
     const out: string[] = [];
     let prev: string | undefined;
+    // Flavor text's upright markup (`*"Red Box"*`, lib/cards/flavor-markup.ts)
+    // is never printed: a quote is read through its stars, so the one that
+    // opens a span opens and the one that ends it closes.
+    const throughStars = field === "flavor";
     for (let i = 0; i < text.length; i += 1) {
       const ch = text[i];
-      const following = text[i + 1];
+      let next = i + 1;
+      while (throughStars && text[next] === "*") next += 1;
+      const following = text[next];
       let set = ch;
       if (ch === '"') {
         set = opensAfter(prev, following) ? "“" : "”";
       } else if (ch === "'") {
         // '90s, 'tis: an apostrophe although it opens the word. (The longest
-        // elision is five letters; the slice keeps a long text linear.)
-        const rest = text.slice(i + 1, i + 8);
+        // elision is five letters; the slice keeps a long text linear. In
+        // flavour it starts past the upright markup's stars, as `following`
+        // does: '*tis* is an elision too.)
+        const rest = text.slice(next, next + 7);
         const elision = /^\d/.test(rest) || ELISIONS.test(rest);
         set = opensAfter(prev, following) && !elision ? "‘" : "’";
       }
       out.push(set);
-      prev = set;
+      if (!(throughStars && ch === "*")) prev = set;
     }
     text = out.join("");
   }

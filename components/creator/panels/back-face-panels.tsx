@@ -62,6 +62,7 @@ import {
 } from "@/lib/creator/form-types";
 import { SECOND_PART_WORDS } from "@/lib/creator/second-part";
 import { FRAME_TEMPLATE_LABELS, type CardType, type ColorIdentity, type FrameTemplate } from "@/types/card";
+import { FLAVOR_MARKUP_HINT } from "@/lib/cards/flavor-markup";
 
 /** Under the Cost field of a modal card's LAND back (TODO 5.14). */
 export const MODAL_LAND_BACK_COST_HINT =
@@ -505,7 +506,7 @@ export function BackFaceFlavorField() {
     formState: { errors },
   } = useFormContext<FormValues>();
   return (
-    <FieldGroup label="Flavor text" error={errors.back_face?.flavor_text?.message}>
+    <FieldGroup label="Flavor text" error={errors.back_face?.flavor_text?.message} helper={FLAVOR_MARKUP_HINT}>
       <textarea
         {...register("back_face.flavor_text")}
         placeholder="Optional."

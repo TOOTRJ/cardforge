@@ -161,6 +161,22 @@ describe("JSON-LD of a double-faced card", () => {
     expect((foreign.hasPart as Array<Record<string, unknown>>)[0]).not.toHaveProperty("image");
   });
 
+  it("describes each face by its flavour as plain words: the upright `*…*` markup's stars dropped (layout v71)", () => {
+    const marked = buildCardJsonLd({
+      inDecks: [],
+      card: {
+        ...DFC,
+        flavor_text: "“Into the dark.”\n—*Song of All*, canto 2",
+        back_face: { ...BACK, flavor_text: "Sometimes the closet *is* the monster." },
+      },
+      username: "kesh",
+      ownerDisplay: "Kesh",
+      siteBase: SITE,
+    });
+    expect(marked.description).toBe("“Into the dark.”\n—Song of All, canto 2");
+    expect((marked.hasPart as Array<Record<string, unknown>>)[0].description).toBe("Sometimes the closet is the monster.");
+  });
+
   it("a legacy two-faced card's JSON-LD is the front's: no hasPart, the front's name", () => {
     const legacy = buildCardJsonLd({ inDecks: [], card: LEGACY, username: "kesh", ownerDisplay: "Kesh", siteBase: SITE });
     expect(legacy.name).toBe("Village Elder");

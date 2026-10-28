@@ -14,6 +14,15 @@ export const TYPED_RULES = printTypography(
 );
 export const TYPED_FLAVOR = printTypography(`"It's the 'landing' that kills--not the fall."\n-Kesh, '99`, "flavor");
 
+/** Flavour with Scryfall's upright markup (layout v71), as an import stores
+ *  it: a stressed word, a ship's name before an apostrophe, a span inside a
+ *  word and a book's title (which wraps inside its span on a narrow box) —
+ *  no longer than "flavor + attribution", so it clips nowhere that does. */
+export const FLAVOR_UPRIGHT = printTypography(
+  `"Are *we* the *Weatherlight*'s crew?"\n-Oracle *en*-Vec, *Heroics: A Book of Fables*`,
+  "flavor",
+);
+
 /** EOE #30 — a full M15 box on print (59.85 px). */
 export const EOE_30 =
   "When this creature enters, put a +1/+1 counter on target creature you control.\nWhenever a nontoken creature you control with a +1/+1 counter on it dies, create a 1/1 white Human Soldier creature token.\nWarp {1}{W} (You may cast this card from your hand for its warp cost. Exile this creature at the beginning of the next end step, then you may cast it from exile on a later turn.)";
@@ -59,6 +68,10 @@ export const RULES_MATRIX: readonly RulesCase[] = [
     flavor: null,
   },
   { name: "flavor + attribution", rules: "Lifelink", flavor: "\"The light does not ask whether you are ready.\"\n—Serra, founder of the realm" },
+  // Layout v71: flavour's upright `*…*` spans (lib/cards/flavor-markup.ts) —
+  // a stressed word, a span inside a word, a title that wraps, measured in
+  // the roman face and drawn without their stars.
+  { name: "flavor, upright spans", rules: "Lifelink", flavor: FLAVOR_UPRIGHT },
   { name: "blank lines", rules: "Flying\n\nWhen this creature enters, draw a card.\n\nScry 2.", flavor: null },
   { name: "modal bullets", rules: "Choose one —\n• Destroy target artifact.\n• Destroy target enchantment.\n• Target player draws two cards.", flavor: null },
   {

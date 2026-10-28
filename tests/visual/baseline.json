@@ -1,6 +1,6 @@
 {
   "about": "Visual-regression baseline (TODO 7.1): every case in tests/visual/matrix.ts as <pixel hash>:<input fingerprint> (the case's row, preset and corners). Generated — never edit by hand; `npm run test:visual -- --update` (or the CI job's visual-baseline artifact) rewrites it. Hashes only: no pixels, no frame art.",
-  "layoutVersion": 70,
+  "layoutVersion": 71,
   "generatedOn": {
     "platform": "darwin-arm64",
     "node": "v25.6.1",
@@ -652,6 +652,8 @@
     "m15/g/creature-long@collector-hd": "fbcf4a45b3ee1e4f:9ffee2a1",
     "m15/g/creature-long@crown": "f6e81fbe20130ab8:2312ebd6",
     "m15/g/creature-long@crown-hd": "73903de31704e4a2:07b4a396",
+    "m15/g/creature-long@flavor-upright": "ceeb46cb7613b50e:6c705bd6",
+    "m15/g/creature-long@flavor-upright-hd": "4af2bab853a39a93:e674ba32",
     "m15/g/creature-long@hd": "8dcbdbf0ff8c3888:fa7e6053",
     "m15/g/creature-long@nickname": "f72ba095bcc8025f:71b5370c",
     "m15/g/creature-long@stamp-hd": "218fa208580f6e03:4d3d5434",
@@ -2351,6 +2353,7 @@
     "retro/c/creature-short@white": "54962b09bab30de1:7fc59c3c",
     "retro/c/creature-short@white-square": "35d41f4a3d49f0c4:9b8bcf20",
     "retro/g/creature-long": "34170692c3179dba:b08013bb",
+    "retro/g/creature-long@flavor-upright": "1dabed21597e2ebd:fe9031aa",
     "retro/g/creature-long@hd": "4d5edee036b16e32:d8746eee",
     "retro/g/creature-short": "205bbe01c66cb643:3fb925be",
     "retro/g/creature-short@white-foil": "3ed2b67644876eb5:4cb3d03b",

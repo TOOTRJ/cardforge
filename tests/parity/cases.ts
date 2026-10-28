@@ -73,6 +73,10 @@ const PICKS: readonly Pick[] = [
   },
   { from: "m15/c/creature-long", why: "the see-through colourless master: art under the frame" },
   { from: "m15/w/creature-long@centred", why: "centred rules (held lines, per-line indents)" },
+  {
+    from: "m15/g/creature-long@flavor-upright",
+    why: "flavour's upright *…* spans: roman words inside the italic, glued pieces of a word, no stars (v71)",
+  },
   { from: "m15/g/creature-long@collector", why: "the collector line and the © slot's mark" },
   { from: "m15/wu/creature-long@stamp-pair-crown", why: "crown + holofoil stamp + the two-colour pair, one card" },
   // --- the nickname (TODO 6.3): the plate, its rim and the name on it -------
