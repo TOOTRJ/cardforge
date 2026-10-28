@@ -144,18 +144,18 @@ export type RulesMetrics = {
   /** Line box to line box between two paragraphs. */
   paragraphGapPx: number;
   /** Line box to line box before a bullet mode that follows a rules
-   *  paragraph (TODO 3.16, layout v73): the "Choose … —" line or the mode
+   *  paragraph (TODO 3.16, layout v74): the "Choose … —" line or the mode
    *  before it. */
   bulletGapPx: number;
   /** Rules → flavor on a frame that draws the bar: the gap above the bar
-   *  and the gap below it (layout v73: their sum and the bar are the v33
+   *  and the gap below it (layout v74: their sum and the bar are the v33
    *  hairline's 30 + 1 + 30, whole px at each target, so the flavor text
    *  does not move). */
   flavorBarAbovePx: number;
   flavorBarBelowPx: number;
   /** Rules → flavor with no bar. */
   flavorGapNoBarPx: number;
-  /** The flavor bar's thickness (TODO 3.19, layout v73): RULES_TEXT's
+  /** The flavor bar's thickness (TODO 3.19, layout v74): RULES_TEXT's
    *  flavorBarPx at the target — 4 px at HD, 2 at 750. */
   barPx: number;
   /** A blank source line's height. */
@@ -191,7 +191,7 @@ export function metricsFor(
   const baseline = (face: { ascent: number; descent: number }) =>
     Math.round(face.ascent * fontPx + (linePx - (face.ascent + face.descent) * fontPx) / 2);
   const regularBaseline = baseline(MPLANTIN_LINE_METRICS.regular);
-  // The rules → flavor gap with its bar (layout v73, TODO 3.19): the v33
+  // The rules → flavor gap with its bar (layout v74, TODO 3.19): the v33
   // total (both gaps and the 1 px hairline) at the target, the thicker bar
   // centred on the hairline's centre line — the flavor text keeps its place.
   const flavorTotal = targetPx(2 * RULES_TEXT.flavorGapPx + 1, scale);
@@ -239,7 +239,7 @@ export type RulesBlock =
   | {
       kind: "rules";
       lines: RulesLine[];
-      /** A modal spell's bullet mode (TODO 3.16, layout v73): a paragraph
+      /** A modal spell's bullet mode (TODO 3.16, layout v74): a paragraph
        *  whose first run is the bullet "•" alone (isBulletRun). Its lines
        *  after the first HANG — they start where the mode's first word
        *  does, the bullet's width and a word gap in (hangIndentPx), and
@@ -599,10 +599,10 @@ export type RulesLayoutInput = {
    *  Unset: the gap never moves (every other box). */
   paragraphGapMinPx?: number;
   /** "plain": lay a bullet mode (RulesBlock.bullet, TODO 3.16) out as the
-   *  plain paragraph it was until layout v73 — no hang, an ability's gap.
+   *  plain paragraph it was until layout v74 — no hang, an ability's gap.
    *  The token height rule's measure only (lib/cards/token-height.ts
    *  tokenTextFitPx): which box a token's text asks for is held to its
-   *  pre-v73 answers (TBLB #5 Warren Warleader prints its modes on the TALL
+   *  pre-v74 answers (TBLB #5 Warren Warleader prints its modes on the TALL
    *  box, where the tighter modes would fit the regular box at exactly
    *  72 px); never a drawn layout. */
   bulletModes?: "plain";
@@ -704,7 +704,7 @@ export type RulesPlacement = {
   lines: RulesLinePlacement[];
   /** Blank blocks' boxes (a paragraph break's height). */
   blanks: { block: number; top: number; height: number }[];
-  /** The flavor bar when one is drawn (layout v73, TODO 3.19): its box,
+  /** The flavor bar when one is drawn (layout v74, TODO 3.19): its box,
    *  `barPx` tall and RULES_TEXT.flavorBarWidth of the column, centred. */
   bar: { top: number; left: number; width: number; height: number } | null;
 };

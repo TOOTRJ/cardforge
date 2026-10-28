@@ -87,7 +87,7 @@ type Svg = { words: (Box | null)[]; ink: Box[]; contours: Box[]; bars: number[] 
 
 /** Satori's SVG, read: its glyph paths (absolute M/L/Q/C/Z — opentype's path
  *  data) in document order, every drawn box (a pip's disc and shadow carry
- *  x / y / width / height) and the flavor bar (since layout v73, TODO 3.19:
+ *  x / y / width / height) and the flavor bar (since layout v74, TODO 3.19:
  *  its picture, flavorBarArt — an <image> of the bar's own SVG; until then
  *  a 1 px box in the ink at 44 alpha). Masks, clip paths and defs draw
  *  nothing. */
@@ -416,7 +416,7 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
   // hedron panel): a full card's text never fits them. (The textless promo
   // pair draws no box since layout v58 — no consumer, as the full-art
   // token's textless height.) The four-mode Command fits them at the floor
-  // since layout v73 (TODO 3.16): its modes sit the bullet gap apart, not an
+  // since layout v74 (TODO 3.16): its modes sit the bullet gap apart, not an
   // ability's.
   [
     ["aftermath/main", "flip/main", "m15token/main", "m15tokenartifact/main"],

@@ -139,7 +139,7 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
     min: -5,
     max: -4,
     why:
-      "The emblem's long name (it has no cost: this region is the name band's right end; the fit shrinks it to 57 HD px) ends 4 px further LEFT in the preview at 750 px. Until layout v73 the 750 px bake floored the shrunk name to 28 px while the preview drew the HD bake's 57 ÷ 2 = 28.5, and the line ran 4 px further RIGHT in the preview; since v73 both draw 28.5 px (TODO 3.37 (d)) and the bake's line is the WIDER, by about 4 px over ~600 — so at one size Satori sets this name wider than Chromium at 750 (at HD the two agree, 0). Fable of the Mirror-Breaker and the 1997 type line, also shrunk, end together since v73; this name does not. Not traced (its comma and capitals' kerning at a half-px size are the suspects).",
+      "The emblem's long name (it has no cost: this region is the name band's right end; the fit shrinks it to 57 HD px) ends 4 px further LEFT in the preview at 750 px. Until layout v74 the 750 px bake floored the shrunk name to 28 px while the preview drew the HD bake's 57 ÷ 2 = 28.5, and the line ran 4 px further RIGHT in the preview; since v74 both draw 28.5 px (TODO 3.37 (d)) and the bake's line is the WIDER, by about 4 px over ~600 — so at one size Satori sets this name wider than Chromium at 750 (at HD the two agree, 0). Fable of the Mirror-Breaker and the 1997 type line, also shrunk, end together since v74; this name does not. Not traced (its comma and capitals' kerning at a half-px size are the suspects).",
   },
   {
     name: "750-token-flavour-end",
@@ -192,7 +192,7 @@ export const KNOWN_DIFFERENCES: readonly KnownDifference[] = [
   // (TODO 3.37's three 750-walker-phyrexian-cost entries struck at layout
   // v61: the walkers' 70 px disc is a whole 35 px at 750, and the preview's
   // row and the bake's now agree there, as 750-cost-row-width's did.)
-  // (TODO 3.37 (d)'s fix struck two more at layout v73: 750-left-well-
+  // (TODO 3.37 (d)'s fix struck two more at layout v74: 750-left-well-
   // title-width and 750-retro-type-line-end were a measured line the fit
   // SHRANK — Fable of the Mirror-Breaker beside its cost, the 1997 type
   // line — which the 750 px bake floored to its own whole px while the

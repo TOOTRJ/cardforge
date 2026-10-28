@@ -315,7 +315,7 @@ export function pastFloorText(
  * A bake SMALLER than the stored HD one (the 750 px bake: OG images, live
  * free downloads) sets a shrunk line at the HD bake's whole px, scaled —
  * a half px at 750 — as the preview draws it (measuredLinePreviewPct;
- * TODO 3.37 (d), layout v73): flooring the fit to its own whole px set a
+ * TODO 3.37 (d), layout v74): flooring the fit to its own whole px set a
  * long walker name up to half a px smaller at 750 than the preview, 5 px
  * shorter over the line. Never larger than the fit (the HD px is at most
  * the fit there). The stored HD bake is unchanged.
@@ -343,7 +343,7 @@ const STORED_BAKE_WIDTH: Readonly<Record<CardOrientation, number>> = { portrait:
  * the stored HD bake's own whole px (measuredLinePx at 1500 — 2100
  * landscape), so the editor shows exactly the size the stored PNG prints;
  * otherwise the slot's size. The 750 px bake draws the same px, scaled
- * (measuredLinePx, layout v73; it floored the fit to its own whole px
+ * (measuredLinePx, layout v74; it floored the fit to its own whole px
  * before — ≤ 1 px of 750 apart). Only for a line the bake sets with
  * measuredLinePx; the old path keeps its continuous size.
  */

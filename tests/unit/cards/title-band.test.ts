@@ -143,7 +143,7 @@ describe("fitTitleBand — a measured name with no cost beside it", () => {
   it("has the whole band on a start-aligned band too (a measured bake band draws no filler span)", () => {
     const land = measured(getFrameProfile("m15land"));
     expect(titleBandRoomPct(land, null)).toBeCloseTo(land.title.rect.widthPct / 100, 12);
-    // The band ends at M15's 92.2 %W (TODO 3.22, layout v73): a name that
+    // The band ends at M15's 92.2 %W (TODO 3.22, layout v74): a name that
     // shrank in the old 77.5 % band keeps its size…
     expect(land.title.rect.leftPct + land.title.rect.widthPct).toBeCloseTo(92.2, 9);
     expect(fitTitleBand(land, "Training Ground: Waterfall Basin", null)!.sizePct).toBe(TITLE_SIZE_PCT);

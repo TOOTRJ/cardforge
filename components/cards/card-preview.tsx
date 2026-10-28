@@ -2031,7 +2031,7 @@ function BandSlot({
         color: slot.colorHex,
         // A zero-blur outline (OUTLINE_SHADOW) is the text's alone — set by
         // bandTextStyle on the name / type line, never on the band, whose
-        // pips would inherit it (layout v73, TODO 3.25: the bake draws it
+        // pips would inherit it (layout v74, TODO 3.25: the bake draws it
         // as copies of the text only).
         ...(slot.shadowCss && !shadowDrawsAsCopies(slot.shadowCss) ? { textShadow: slot.shadowCss } : {}),
       }}
@@ -3513,7 +3513,7 @@ function RulesBox({
             <div key={bi} style={{ flexShrink: 0, height: hd(b.height), marginTop: hd(b.marginTop) }} />
           ) : (
             <Fragment key={bi}>
-              {/* The flavor bar (layout v73, TODO 3.19): the bake's box and
+              {/* The flavor bar (layout v74, TODO 3.19): the bake's box and
                   picture (flavorBarArt: the faded ends), at the HD bake's px
                   — card-relative at every editor width (it was one CSS px). */}
               {b.bar ? (

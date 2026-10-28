@@ -164,7 +164,7 @@ describe("fitRulesLayout's paragraph squeeze (RulesLayoutInput.paragraphGapMinPx
     expect(fit.input.paragraphGapPx).toBeLessThan(RULES_TEXT.paragraphGapPx);
     const draw = rulesDraw(fit, "hd");
     const flavour = draw.blocks.find((b) => b.kind === "flavor");
-    // The v33 hairline's 30 + 1 + 30, the v73 bar on its centre line.
+    // The v33 hairline's 30 + 1 + 30, the v74 bar on its centre line.
     expect(flavour && flavour.kind === "flavor" ? flavour.bar : null).toMatchObject({
       above: RULES_TEXT.flavorGapPx - 1,
       thickness: RULES_TEXT.flavorBarPx,
@@ -180,8 +180,8 @@ describe("TBLB #5 Warren Warleader on the tall box: 9 pt, as printed", () => {
       expect(fit.sizePx, t).toBe(76);
       expect(fit.clipped, t).toBe(false);
       // Its two modes sit the bullet gap apart (12 px, TODO 3.16 — layout
-      // v73), so the one ability gap left (before the reminder) squeezes
-      // only to 14 px; before v73 every gap squeezed to 12.
+      // v74), so the one ability gap left (before the reminder) squeezes
+      // only to 14 px; before v74 every gap squeezed to 12.
       expect(fit.input.paragraphGapPx, t).toBe(14);
       // Without the squeeze (the rect as it is), the plate stepped it down
       // (to 70 before layout v36's narrower inline pips, TODO 3.31).

@@ -92,7 +92,7 @@ describe("metricsFor — whole px per target", () => {
       pipGapPx: 8,
       paragraphGapPx: 24,
       bulletGapPx: 12,
-      // The v33 hairline's 30 + 1 + 30, the v73 bar (TODO 3.19) on its
+      // The v33 hairline's 30 + 1 + 30, the v74 bar (TODO 3.19) on its
       // centre line: the flavor text keeps its place.
       flavorBarAbovePx: 29,
       barPx: 4,

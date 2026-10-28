@@ -1,11 +1,11 @@
 import { RULES_TEXT } from "@/lib/cards/typography";
 
 // ---------------------------------------------------------------------------
-// The flavor bar (layout v73, TODO 3.19): the line between a card's rules
+// The flavor bar (layout v74, TODO 3.19): the line between a card's rules
 // and its flavor text, as the prints draw it — ≈ 0.2 % of the card's height
 // (RULES_TEXT.flavorBarPx: 4 HD px, 2 at the 750 px bake), 96 % of the text
 // column, centred, its ends faded (DOM #33, M19 #38; Card Conjurer's
-// `bar.png`). Until v73 both renderers drew a 1 px line across the whole
+// `bar.png`). Until v74 both renderers drew a 1 px line across the whole
 // column — a CSS px in the preview (0.2 % of a 750 px card) but ONE px of the
 // 1500 px HD bake (0.05 %), so the stored PNG's bar was a quarter of the
 // preview's.

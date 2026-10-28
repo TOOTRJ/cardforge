@@ -130,7 +130,7 @@ describe(`v${V} — the type line in its printed order + a land creature's P/T (
             const back = at("agclassic", { back_face: { ...row, title: "Back" } });
             expect(VERSION_SCOPES[V]!(front), label).toBe(lineChanged || ptChanged);
             expect(VERSION_SCOPES[V]!(back), `back ${label}`).toBe(lineChanged || ptChanged);
-            // At v50 (v73, rendering corrections round 1, re-bakes every card).
+            // At v50 (v74, rendering corrections round 1, re-bakes every card).
             expect(classifyForSweep(front, undefined, { current: V }), label).toBe(lineChanged || ptChanged ? "rebake" : "stamp");
             expect(hasNewerLook({ ...front, visibility: "public" }), label).toBe(false);
             if (lineChanged || ptChanged) changed += 1;

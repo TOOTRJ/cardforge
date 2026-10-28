@@ -1804,7 +1804,7 @@ function Band({
         textTransform: slot.uppercase ? "uppercase" : "none",
         color: slot.colorHex,
         zIndex: 20,
-        // In px at this width (cardPx, layout v73 — TODO 3.5). A zero-blur
+        // In px at this width (cardPx, layout v74 — TODO 3.5). A zero-blur
         // outline (OUTLINE_SHADOW) is never the band's: its text draws it
         // as copies (bandTextCopies, TODO 3.25) and the pips beside it
         // none — the preview's BandSlot sets it on the text alone too.
@@ -1817,7 +1817,7 @@ function Band({
 }
 
 /** A band's text ink with its shadow in px at this width (bandTextStyle's
- *  output for the bake: cardPx lengths materialised, layout v73). */
+ *  output for the bake: cardPx lengths materialised, layout v74). */
 function bakeBandTextStyle(ink: { color?: string; textShadow?: string }, cardWidth: number): { color?: string; textShadow?: string } {
   return ink.textShadow ? { ...ink, textShadow: bakeShadowCss(ink.textShadow, cardWidth) } : ink;
 }
@@ -1825,7 +1825,7 @@ function bakeBandTextStyle(ink: { color?: string; textShadow?: string }, cardWid
 /**
  * The copies a band's TEXT is drawn over when its slot's shadow is a
  * zero-blur outline (OUTLINE_SHADOW — tarkirghostfire's name and type line;
- * TODO 3.25, layout v73): one per layer, in the layer's colour and offset,
+ * TODO 3.25, layout v74): one per layer, in the layer's colour and offset,
  * in px at this width. Satori merges a multi-layer text-shadow into one
  * filter and the rasteriser keeps only its last layer, so the band baked a
  * one-sided up-left shadow where the browser draws a ring (the footer's
@@ -2842,7 +2842,7 @@ export function RulesBoxBake({
           b.kind === "blank"
             ? [<div key={bi} style={{ display: "flex", flexShrink: 0, height: b.height, marginTop: b.marginTop }} />]
             : [
-                // The flavor bar (layout v73, TODO 3.19) is its own box,
+                // The flavor bar (layout v74, TODO 3.19) is its own box,
                 // never the block's border: Satori clips a border with its
                 // own clip path, so a border past the box (text clipped at
                 // the floor) drew on the frame; a box's picture stays inside
@@ -3316,7 +3316,7 @@ function StatBake({
   const ink = slotInk(slot, masterKey);
   const size = statPx(slot, value, orientation, cardWidth);
   // A zero-blur outline (OUTLINE_SHADOW — the walkers' starting loyalty,
-  // tarkirghostfire's P/T; TODO 3.25, layout v73) is drawn as one copy of
+  // tarkirghostfire's P/T; TODO 3.25, layout v74) is drawn as one copy of
   // the value per layer under it, as FooterBake draws the footer's: Satori
   // merges the layers into one filter and the rasteriser keeps the last
   // (a one-sided up-left shadow where the browser draws a ring). Any other

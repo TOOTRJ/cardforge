@@ -42,8 +42,8 @@
   "past the floor | hd | regular": "a6ff7e5d1426426995f1adacee78695b2d98cc41da306cc30de3299b553871ea",
   "past the floor | hd | foil": "7ba23f74e5a5fc26101e37007e80c93e591a81805140fcbc7f44a5d10120a0b5"
  },
- "v73Comment": "every walker, as layout v73 bakes it (the starting loyalty's four-way outline drawn as copies, in card-width px — TODO 3.25 / 3.5); written with PIN_PW_BAKES=write-v73 on the v73 commit, never since",
- "v73": {
+ "v74Comment": "every walker, as layout v74 bakes it (the starting loyalty's four-way outline drawn as copies, in card-width px — TODO 3.25 / 3.5); written with PIN_PW_BAKES=write-v74 on the v74 commit, never since",
+ "v74": {
   "three short | default | regular": "d4eb30598200f0f8ad493e78ef00393d4c3f8ad206c22668e7f9b1c68cd4a948",
   "three short | default | foil": "367e901e12e0a7ac580746a7ee679bff914b2084d58d508a5f606b0c27bbf8ec",
   "three short | hd | regular": "3aaad422efed2faf0be2db944b6c43fe09bfd61b63e30f38be267d377fb87db9",

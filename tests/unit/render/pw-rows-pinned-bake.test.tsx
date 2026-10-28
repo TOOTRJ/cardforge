@@ -44,14 +44,14 @@ import { RENDER_PRESETS } from "@/lib/render/card-image";
 // Layout v61 (the cost row as current print draws it, TODO 3.34) gave the
 // walkers the family's 70 px disc and moved their row 4 px right (costSizePct
 // 72.75 → 70 / 1500, costDx 4 / 1500): `withV59TitleBar` puts those back too.
-// Layout v73 (TODO 3.25 / 3.5) draws the starting loyalty's four-way outline
-// as copies of the value, in card-width px (2 px at HD): until v73 the bake
+// Layout v74 (TODO 3.25 / 3.5) draws the starting loyalty's four-way outline
+// as copies of the value, in card-width px (2 px at HD): until v74 the bake
 // kept only the outline's LAST layer (Satori merges the layers into one
 // filter; librsvg draws the last one). That moved every walker's shield, so
-// every bake is pinned again under `v73` (PIN_PW_BAKES=write-v73, on the
-// v73 commit) and must DIFFER from its earlier pin; and the change is
+// every bake is pinned again under `v74` (PIN_PW_BAKES=write-v74, on the
+// v74 commit) and must DIFFER from its earlier pin; and the change is
 // proven to stay in the shield: a bake with the outline set back to the one
-// layer the old bake drew differs from v73's only inside the loyalty slot.
+// layer the old bake drew differs from v74's only inside the loyalty slot.
 // (The old bake's merged filter is not byte-identical to that one layer —
 // its region is wider — so the v41 / v49 hashes are not reached again.)
 // ---------------------------------------------------------------------------
@@ -212,13 +212,13 @@ describe("m15pw walker bakes are what layout v41 baked (pinned before the saga's
 
   const WRITE = process.env.PIN_PW_BAKES === "write";
   const WRITE_V49 = process.env.PIN_PW_BAKES === "write-v49";
-  const WRITE_V73 = process.env.PIN_PW_BAKES === "write-v73";
+  const WRITE_V74 = process.env.PIN_PW_BAKES === "write-v74";
   const fixture = existsSync(FIXTURE)
     ? (JSON.parse(readFileSync(FIXTURE, "utf8")) as {
         base: string;
         bakes: Record<string, string>;
         v49?: Record<string, string>;
-        v73?: Record<string, string>;
+        v74?: Record<string, string>;
       })
     : null;
   /** The walkers whose rows draw a pip: what layout v49 changed. */
@@ -231,13 +231,13 @@ describe("m15pw walker bakes are what layout v41 baked (pinned before the saga's
         it(`${id}: the same pixels`, async () => {
           const hash = await withV59TitleBar(() => bakeHash(rules, preset, finish));
           baked[id] = hash;
-          if (WRITE || WRITE_V49 || WRITE_V73) return;
+          if (WRITE || WRITE_V49 || WRITE_V74) return;
           expect(fixture, "tests/unit/render/fixtures/pw-rows-v41-bakes.json is missing").not.toBeNull();
           // v49 re-pinned the walkers whose rows hold a pip (flat, {S} the
-          // white flake); v73 every walker (its starting loyalty's outline).
+          // white flake); v74 every walker (its starting loyalty's outline).
           const before = hasPip(rules) ? fixture!.v49?.[id] : fixture!.bakes[id];
-          expect(hash, `${id}: v73 changed this walker's starting loyalty`).not.toBe(before);
-          expect(hash, `${id}: a walker bake changed since layout v73`).toBe(fixture!.v73?.[id]);
+          expect(hash, `${id}: v74 changed this walker's starting loyalty`).not.toBe(before);
+          expect(hash, `${id}: a walker bake changed since layout v74`).toBe(fixture!.v74?.[id]);
         }, 60_000);
       }
     }
@@ -279,8 +279,8 @@ describe("m15pw walker bakes are what layout v41 baked (pinned before the saga's
     return { inside, outside };
   }
 
-  it("v73 moved nothing but the starting loyalty's outline: with the one layer the old bake drew put back, only the loyalty slot differs", async () => {
-    if (WRITE || WRITE_V49 || WRITE_V73) return;
+  it("v74 moved nothing but the starting loyalty's outline: with the one layer the old bake drew put back, only the loyalty slot differs", async () => {
+    if (WRITE || WRITE_V49 || WRITE_V74) return;
     const profile = getFrameProfile("m15pw") as { loyalty?: { shadowCss?: string } };
     const loyalty = profile.loyalty!;
     for (const preset of PRESETS) {
@@ -296,9 +296,9 @@ describe("m15pw walker bakes are what layout v41 baked (pinned before the saga's
   }, 120_000);
 
   it("v49 moved nothing but the inline shadow where no symbol was redrawn: with it switched back on, \"past the floor\" differs only in its rows", async () => {
-    // (Until v73 this compared with v41's hash; v73's loyalty outline moved
-    // every walker's shield, so the rows are compared with v73's bake.)
-    if (WRITE || WRITE_V49 || WRITE_V73) return;
+    // (Until v74 this compared with v41's hash; v74's loyalty outline moved
+    // every walker's shield, so the rows are compared with v74's bake.)
+    if (WRITE || WRITE_V49 || WRITE_V74) return;
     const { SYMBOL_STYLES } = await import("@/lib/cards/symbol-style");
     const modern = SYMBOL_STYLES.modern as { inlineShadow: boolean };
     expect(modern.inlineShadow).toBe(false);
@@ -315,22 +315,22 @@ describe("m15pw walker bakes are what layout v41 baked (pinned before the saga's
   }, 120_000);
 
   it("v60 moved the title bar: as v60 bakes it, a pinned walker is NOT its pinned pixels", async () => {
-    if (WRITE || WRITE_V49 || WRITE_V73) return;
+    if (WRITE || WRITE_V49 || WRITE_V74) return;
     expect(getFrameProfile("m15pw").costDy).toBe(2 / 1500);
     expect(getFrameProfile("m15pw").title.dy).toBe(-4 / 1500);
     for (const preset of PRESETS) {
       const id = `three short | ${preset} | regular`;
-      expect(await bakeHash(WALKERS["three short"], preset, "regular"), id).not.toBe(fixture!.v73?.[id]);
+      expect(await bakeHash(WALKERS["three short"], preset, "regular"), id).not.toBe(fixture!.v74?.[id]);
     }
   }, 120_000);
 
   it("covers every walker, both targets and both finishes — and the foil bakes differ from the regular ones", () => {
     const ids = Object.keys(WALKERS).flatMap((name) => PRESETS.flatMap((preset) => FINISHES.map((finish) => `${name} | ${preset} | ${finish}`)));
     const pipIds = ids.filter((id) => hasPip(WALKERS[id.split(" | ")[0]]));
-    if (WRITE_V73) {
+    if (WRITE_V74) {
       writeFileSync(
         FIXTURE,
-        `${JSON.stringify({ ...fixture, v73Comment: "every walker, as layout v73 bakes it (the starting loyalty's four-way outline drawn as copies, in card-width px — TODO 3.25 / 3.5); written with PIN_PW_BAKES=write-v73 on the v73 commit, never since", v73: Object.fromEntries(ids.map((id) => [id, baked[id]])) }, null, 1)}\n`,
+        `${JSON.stringify({ ...fixture, v74Comment: "every walker, as layout v74 bakes it (the starting loyalty's four-way outline drawn as copies, in card-width px — TODO 3.25 / 3.5); written with PIN_PW_BAKES=write-v74 on the v74 commit, never since", v74: Object.fromEntries(ids.map((id) => [id, baked[id]])) }, null, 1)}\n`,
       );
       return;
     }
@@ -361,8 +361,8 @@ describe("m15pw walker bakes are what layout v41 baked (pinned before the saga's
     }
     // Different walkers are different pictures.
     expect(new Set(Object.values(fixture!.bakes)).size).toBe(ids.length);
-    // v73 re-pinned every walker, and still told them apart.
-    expect(Object.keys(fixture!.v73 ?? {}).sort()).toEqual([...ids].sort());
-    expect(new Set(Object.values(fixture!.v73 ?? {})).size).toBe(ids.length);
+    // v74 re-pinned every walker, and still told them apart.
+    expect(Object.keys(fixture!.v74 ?? {}).sort()).toEqual([...ids].sort());
+    expect(new Set(Object.values(fixture!.v74 ?? {})).size).toBe(ids.length);
   });
 });

@@ -103,7 +103,7 @@ const plain = (value: unknown) => JSON.parse(JSON.stringify(value)) as unknown;
  *  M15's disc shadow at that metrics' own pip (discShadowPx). The ONLY
  *  numbers v49 changed on a walker's rows — and without the field layout
  *  v53 added to the metrics (`largePipScale`), which v41 did not have, and
- *  with the flavor gap and bar as v41 named them (layout v73, TODO 3.16 /
+ *  with the flavor gap and bar as v41 named them (layout v74, TODO 3.16 /
  *  3.19: the bullet gap is new; the bar's two gaps and its thickness were
  *  one `flavorGapPx` around a 1 px bar — no walker row draws either). */
 function withV41PipShadow<T>(drawing: T): T {

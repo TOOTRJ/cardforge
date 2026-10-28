@@ -24,9 +24,9 @@ import {
 import { RULES_TEXT } from "@/lib/cards/typography";
 
 // ---------------------------------------------------------------------------
-// Layout v73 — rendering corrections, round 1 (TODO 3.5 / 3.16 / 3.19 /
+// Layout v74 — rendering corrections, round 1 (TODO 3.5 / 3.16 / 3.19 /
 // 3.22 / 3.25): the shared numbers both renderers draw. The bakes are held
-// by tests/unit/render/rendering-corrections-v73-bake.test.tsx, the preview
+// by tests/unit/render/rendering-corrections-v74-bake.test.tsx, the preview
 // by tests/unit/components/rules-lines-preview.test.tsx, the sweep's scope
 // by tests/unit/cards/layout-version.test.ts.
 // ---------------------------------------------------------------------------
@@ -103,7 +103,7 @@ describe("3.16 — modal bullets: hung lines, the bullet gap", () => {
     const now = fitRulesLayout(m15(long));
     const plain = fitRulesLayout(m15(long, { bulletModes: "plain" }));
     expect(now.sizePx).toBeGreaterThanOrEqual(plain.sizePx);
-    // "plain" is the v72 layout: no mode is a bullet, every gap an ability's.
+    // "plain" is the pre-v74 layout: no mode is a bullet, every gap an ability’s.
     expect(plain.blocks.some((b) => b.kind === "rules" && b.bullet)).toBe(false);
     for (const t of RULES_TARGETS) {
       const m = metricsFor(plain.sizePx, RULES_TEXT.lineHeight, t);

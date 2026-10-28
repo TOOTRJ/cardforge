@@ -9,10 +9,10 @@ import { getFrameProfile, type Rect } from "@/lib/cards/template-layout";
 import { RulesBoxBake, RENDER_PRESETS, renderCardImage } from "@/lib/render/card-image";
 
 // ---------------------------------------------------------------------------
-// Layout v73 on real bakes (TODO 3.19 / 3.25): the flavor bar as the layout
+// Layout v74 on real bakes (TODO 3.19 / 3.25): the flavor bar as the layout
 // places it, its ends faded; a zero-blur outline (OUTLINE_SHADOW) ringing
 // its text on every side — the name, the type line and the P/T of the
-// Ghostfire showcase, whose masters are in git (offline bakes). Until v73
+// Ghostfire showcase, whose masters are in git (offline bakes). Until v74
 // Satori merged the outline's four layers into one filter and the
 // rasteriser kept the last: a one-sided up-left shadow (measured ~6 : 1
 // above : below on the footer, the new-frames review 2026-09-26).
@@ -87,7 +87,7 @@ function ring(b: Bake, rect: Rect, d: number) {
   return { glyph, hits };
 }
 
-describe("3.25 — a zero-blur outline rings its text on every side in the bake (layout v73)", () => {
+describe("3.25 — a zero-blur outline rings its text on every side in the bake (layout v74)", () => {
   const G = getFrameProfile("tarkirghostfire");
 
   for (const [name, rect] of [
@@ -112,7 +112,7 @@ describe("3.25 — a zero-blur outline rings its text on every side in the bake 
   }
 });
 
-describe("3.19 — the flavor bar in the bake: where the layout puts it, 96 % of the column, faded ends (layout v73)", () => {
+describe("3.19 — the flavor bar in the bake: where the layout puts it, 96 % of the column, faded ends (layout v74)", () => {
   it("draws a 4 px bar at HD (2 at 750), dark in the middle, clear at both ends", async () => {
     const fonts = [{ name: "MPlantin", data: readFileSync("public/fonts/mplantin.ttf"), weight: 400 as const, style: "normal" as const }];
     const layout = mainRulesLayout({ layout: getFrameProfile("m15"), rulesText: "Flying", flavorText: "Up.", aspect: 7 / 5, show: {} });

@@ -14,7 +14,7 @@
 //   blocks    — each `marginTop` below the previous one: a paragraph, a blank
 //               source line (its own height), or the flavor block (its gap
 //               split around the bar on a frame that prints one — layout
-//               v73, TODO 3.19: `barPx` tall, 96 % of the column, centred,
+//               v74, TODO 3.19: `barPx` tall, 96 % of the column, centred,
 //               its ends faded: lib/cards/flavor-bar.ts);
 //   lines     — a nowrap flex row `linePx` tall, its runs (the words and pips
 //               that never part, rules-text.ts groupTightRuns) side by side,
@@ -242,7 +242,7 @@ export type RulesDrawBlock =
       kind: "rules" | "flavor";
       /** Space above the block (px at the target). */
       marginTop: number;
-      /** The flavor bar (TODO 3.19, layout v73): the gap above it and below
+      /** The flavor bar (TODO 3.19, layout v74): the gap above it and below
        *  it, its thickness, and its box across the column — `inset` px in
        *  from the column's left edge, `width` px wide (the column's
        *  RULES_TEXT.flavorBarWidth, centred). The block's marginTop is 0

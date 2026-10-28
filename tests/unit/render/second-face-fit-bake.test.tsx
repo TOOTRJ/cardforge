@@ -11,7 +11,7 @@ import { serveStandInFrames, type StandInFrames } from "@/tests/stubs/stand-in-f
 // A `fitLines` second face's shrunk name on a REAL bake (layout v32): set at
 // measuredLinePx — the whole pixel BELOW its fit, as the front's name — not
 // rounded up (a fit of 26.6 px drew at 27 and ran the line past its fit).
-// Since layout v73 (TODO 3.37 (d)) the 750 px bake takes that whole px of
+// Since layout v74 (TODO 3.37 (d)) the 750 px bake takes that whole px of
 // the HD bake, halved — the preview's size — never above its fit either.
 // Flip's upside-down creature; its Card Conjurer master lives in the frames
 // bucket (layout v38), so the bake is served a flat stand-in master and

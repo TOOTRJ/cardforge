@@ -73,7 +73,7 @@ const PICKS: readonly Pick[] = [
   {
     from: "m15/r/creature-long",
     as: "@command",
-    why: "a four-mode Command (DTK #224): its modes hung where their first word starts, the bullet gap apart, and the flavour bar under them — 96 % of the column, faded ends (3.16 / 3.19, v73)",
+    why: "a four-mode Command (DTK #224): its modes hung where their first word starts, the bullet gap apart, and the flavour bar under them — 96 % of the column, faded ends (3.16 / 3.19, v74)",
     row: () => ({ rules_text: KOLAGHANS_COMMAND, flavor_text: "“Hesitation is a sign of weakness.”\n—Kolaghan" }),
   },
   {

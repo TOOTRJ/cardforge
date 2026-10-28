@@ -478,8 +478,8 @@ Rules and gotchas:
   Resume / Retry. A migration that nulls stamps for a CODE fix ships with a
   sweep bump (or pause first): the old deployment's cron can re-bake them
   with the old code before the new deploy is live.
-- Shadows (layout v73, TODO 3.5 / 3.25): a shadow or outline length on a
-  profile (or the brand mark's) is CARD-WIDTH px — `cardPx(n)` (n px of a
+- Shadows (layout v74, TODO 3.5 / 3.25): a shadow or outline length on a
+  profile is CARD-WIDTH px — `cardPx(n)` (n px of a
   750 px card, written in `cqw`), never a CSS px literal: the preview draws
   `cqw` natively, the bake through `bakeShadowCss` / `textShadowCopies` at
   its own width (a raw `cqw` reaching Satori is dropped). A shadow of two or
@@ -591,10 +591,10 @@ Rules and gotchas:
   12 before a "•" mode, whose wrapped lines HANG where its first word
   starts — `hangIndentPx`, never spree's "+"; 29 + 4 + 28 around the flavor
   bar, 96 % of the column with faded ends, ONE SVG in both renderers,
-  `lib/cards/flavor-bar.ts` — layout v73, TODO 3.16 / 3.19) of rules,
+  `lib/cards/flavor-bar.ts` — layout v74, TODO 3.16 / 3.19) of rules,
   flavor, walker rows and the saga rail; the token height rule measures
   modes as plain paragraphs (`bulletModes: "plain"`, its answers held to
-  v72's). Both renderers only DRAW its lines (`rulesDraw` → `RulesBox` /
+  the pre-v74 layout's). Both renderers only DRAW its lines (`rulesDraw` → `RulesBox` /
   `RulesBoxBake`, `RulesLines*`: nowrap rows, word gaps as `marginLeft`, each
   preview word at its ceiled `wordWidthPx`) — never a box that wraps. An
   inline pip is a 0.785 em disc centred 0.334 em above the baseline (on the

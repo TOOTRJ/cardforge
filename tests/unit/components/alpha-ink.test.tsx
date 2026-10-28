@@ -168,7 +168,7 @@ describe("slotInk / footerInk", () => {
           if (p.pt) expect(slotInk(p.pt, k)).toEqual({ colorHex: p.pt.colorHex, shadowCss: p.pt.shadowCss });
           if (p.footer) expect(footerInk(p.footer, k)).toEqual({ colorHex: p.footer.colorHex, shadowCss: undefined });
           // A zero-blur outline the band declares (OUTLINE_SHADOW on
-          // tarkirghostfire) is its text's (layout v73, TODO 3.25).
+          // tarkirghostfire) is its text's (layout v74, TODO 3.25).
           const own = (slot: typeof p.title) => (slot.shadowCss && shadowDrawsAsCopies(slot.shadowCss) ? { textShadow: slot.shadowCss } : {});
           expect(bandTextStyle(p.title, k), `${t} ${k} title`).toEqual(own(p.title));
           expect(bandTextStyle(p.type, k), `${t} ${k} type`).toEqual(own(p.type));
