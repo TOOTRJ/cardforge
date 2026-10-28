@@ -189,6 +189,11 @@ const STATION_DRESSES: readonly string[] = [
   // (MKM's dossier printings land there once verified) and
   // tests/unit/frames/mkm-dossier-importer.test.ts.
   "dossier",
+  // …and the OTJ Breaking News showcase (TODO 4.11 wave 2): a new template
+  // in a new showcase set — pinned in
+  // tests/unit/scryfall/otp-breaking-news-imports.test.ts (OTP #1–65 land
+  // there once verified) and tests/unit/frames/otp-breaking-news-importer.test.ts.
+  "breakingnews",
 ];
 function withoutStationDresses(dump: Dump): Dump {
   const named = (text: string) => STATION_DRESSES.some((t) => text === t || text.startsWith(`${t}|`));

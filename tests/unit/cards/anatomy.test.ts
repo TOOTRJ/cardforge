@@ -322,6 +322,10 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // strip, and its pair masters (the colour frames lerped across print's
       // ramp) with the crown's pairs.
       "dossier",
+      // …and the OTJ Breaking News (TODO 4.11 wave 2): the pack's notched
+      // rule, and its pair masters (the colour frames lerped across print's
+      // split) with the crown's pairs.
+      "breakingnews",
       "m15dfcfront", "m15dfcback", "m15dfcbackleft", "m15dfclandfront", "m15mdfcfront", "m15mdfcback",
       // The borderless double-faced bodies (TODO 5.7): the floating crown in their crowned twins.
       "m15borderlessdfcfront", "m15borderlessdfcback", "m15borderlessmdfcfront", "m15borderlessmdfcback",
@@ -434,6 +438,8 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
       // The MKM dossier (4.11 wave 2): the pack's two colour frames lerped
       // across print's ramp; no hybrid printing.
       dossier: ["split"],
+      // The OTJ Breaking News (4.11 wave 2): the same, across print's split.
+      breakingnews: ["split"],
     });
     // The borderless frames draw their crown from the crowned twins, not a
     // band (4.6f): no crown slot, crownMasters set. (Their one overlay is
@@ -506,7 +512,9 @@ describe("what the templates draw (4.6a: the crown; 4.6b: the pair masters; 4.6f
     // …and the D&D Sourcebook (4.11 wave 2): the pack's own oval piece.
     "dndsourcebook",
     // …and the MKM dossier (4.11 wave 2): the pack's one oval piece.
-    "dossier"];
+    "dossier",
+    // …and the OTJ Breaking News (4.11 wave 2): the pack's one oval tab.
+    "breakingnews"];
 
   it("the stamp's notch on exactly the seven wave-1 entries (4.9c): the M15 family's bordered frames and the walker, never a token, an emblem or a profile that spreads them", () => {
     expect(FRAME_TEMPLATE_VALUES.filter((t) => frameAnatomyOf(t).stamp)).toEqual(FRAME_TEMPLATE_VALUES.filter((t) => STAMP_TEMPLATES.includes(t)));
@@ -776,7 +784,10 @@ describe("a LAND wears the two-colour frame only on a land frame (owner round 17
       expect(twoColorFits(profile, "land"), template).toBe(templateSupportsKind(template, "land"));
       expect(twoColorFits(profile, "creature"), template).toBe(true);
     }
-    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).twoColorForLands === true)).toEqual(["m15land", "m15ubland", "m15snowland", "m15borderlessland", "extendedartland", "retroland", "modernland"]);
+    expect(FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).twoColorForLands === true)).toEqual(["m15land", "m15ubland", "m15snowland", "m15borderlessland", "breakingnews", "extendedartland", "retroland", "modernland"]);
+    // (The OTJ Breaking News, TODO 4.11 wave 2: ONE page for spells and lands —
+    // a two-colour land wears its colours' split page, as a coloured land its
+    // colour's.)
     expect(parseFrameProfileOverride({ twoColorForLands: true })).toBeNull();
   });
 });

@@ -81,13 +81,15 @@ function onDisk(rel: string): Buffer | null {
  *  pack's one oval piece, TODO 4.11: their own tests,
  *  tests/unit/frames/lotr-scroll-importer.test.ts, lotr-ring-importer.test.ts,
  *  tarkir-dragon-importer.test.ts, dnd-sourcebook-importer.test.ts and
- *  mkm-dossier-importer.test.ts). */
-const { lotrscrollholostamp: _scrollNotch, lotrholostamp: _ringNotch, tarkirdragonholostamp: _tarkirNotch, dndsourcebookholostamp: _dndNotch, dossierholostamp: _dossierNotch, ...TINTED_NOTCHES } = HOLO_STAMP_NOTCHES;
+ *  mkm-dossier-importer.test.ts — and the OTJ Breaking News' one oval tab,
+ *  otp-breaking-news-importer.test.ts). */
+const { lotrscrollholostamp: _scrollNotch, lotrholostamp: _ringNotch, tarkirdragonholostamp: _tarkirNotch, dndsourcebookholostamp: _dndNotch, dossierholostamp: _dossierNotch, breakingnewsholostamp: _breakingNewsNotch, ...TINTED_NOTCHES } = HOLO_STAMP_NOTCHES;
 void _scrollNotch;
 void _tarkirNotch;
 void _ringNotch;
 void _dndNotch;
 void _dossierNotch;
+void _breakingNewsNotch;
 type NotchDef = (typeof TINTED_NOTCHES)[keyof typeof TINTED_NOTCHES] & {
   rampKeys?: readonly string[];
   barSharedBy?: Record<string, string[]>;

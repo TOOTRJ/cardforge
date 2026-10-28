@@ -336,6 +336,9 @@ const EXPECTED_FLOOR_CLIPS: readonly [consumers: readonly string[], texts: reado
       "dndsourcebook/main",
       // 4.11 wave 2's MKM dossier: M15's box (a new template).
       "dossier/main",
+      // 4.11 wave 2's OTJ Breaking News: the page's box between its rules
+      // (1371–1895 px, 64 px shorter than M15's).
+      "breakingnews/main",
     ],
     ["1200 chars"],
   ],

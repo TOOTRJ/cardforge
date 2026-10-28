@@ -6,6 +6,7 @@ import {
   isRenderStale,
   templateOfFrameStyle,
 } from "@/lib/cards/layout-version";
+import { costRectSharesTitleRows } from "@/lib/cards/title-band";
 import { getFrameProfile, sameRect, underFrameArtRect, underFrameArtSlot } from "@/lib/cards/template-layout";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import { UNTOUCHED_SINCE_V22 } from "@/tests/stubs/layout-scope-cards";
@@ -443,6 +444,8 @@ const POST_V29_TEMPLATES: readonly string[] = [
   "dndsourcebook",
   // TODO 4.11 wave 2's MKM dossier.
   "dossier",
+  // TODO 4.11 wave 2's OTJ Breaking News.
+  "breakingnews",
 ];
 /** The modal bodies added after v53 (TODO 5.7's borderless pair): the v49
  *  and v53 frozen lists never name them. */
@@ -483,6 +486,8 @@ const POST_V36_TEMPLATES: readonly string[] = [
   "dndsourcebook",
   // TODO 4.11 wave 2's MKM dossier.
   "dossier",
+  // TODO 4.11 wave 2's OTJ Breaking News.
+  "breakingnews",
 ];
 
 describe("v29 — the round-5 leftovers, one sweep (2026-09-25)", () => {
@@ -864,6 +869,8 @@ describe("v32 — one M15-era title / type size (TODO 4.20)", () => {
       "dndsourcebook",
       // …and TODO 4.11 wave 2's MKM dossier: the same, no bump.
       "dossier",
+      // …and TODO 4.11 wave 2's OTJ Breaking News: the same, no bump.
+      "breakingnews",
     ];
     // An EXISTING template that joined brought its own bump: the battle
     // (TODO 4.21b), with layout v43 — its Card Conjurer master and the
@@ -2705,7 +2712,9 @@ describe("v52 — a name's room before a detached cost of Phyrexian symbols (TOD
     expect(
       FRAME_TEMPLATE_VALUES.filter((t) => {
         const p = getFrameProfile(t);
-        return Boolean(p.costRect) && !p.hideCost;
+        // (A cost box off the name's rows takes none of its room — the
+        // OTJ Breaking News masthead, TODO 4.11 wave 2: costRectSharesTitleRows.)
+        return Boolean(p.costRect) && !p.hideCost && costRectSharesTitleRows(p);
       }).sort(),
     ).toEqual([...DETACHED].sort());
     // No second face draws its cost in a detached box: the front's cost alone is read.
@@ -3232,8 +3241,10 @@ describe("v61 — the cost row as current print draws it (the 2023 pip move + TO
     // The MKM dossier (TODO 4.11 wave 2) was BORN on its run's own row too: a
     // new template, no bump (the CC M15 row 19 px lower, ending 38 px further
     // left with its name band).
-    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime", "dndsourcebook", "dossier"];
-    const ownRow = ["fullart", "nyx", "tarkirghostfire", "bloomanime", "dndsourcebook", "dossier"];
+    // …and the OTJ Breaking News (TODO 4.11 wave 2): the 70 px disc in a box
+    // of its own in the masthead (costRect), its run's row.
+    const later = ["lotrscroll", "fullart", "lotr", "nyx", "tarkirdragon", "tarkirdraconic", "tarkirghostfire", "avatar", "bloomburrow", "bloomanime", "dndsourcebook", "dossier", "breakingnews"];
+    const ownRow = ["fullart", "nyx", "tarkirghostfire", "bloomanime", "dndsourcebook", "dossier", "breakingnews"];
     const drawn = FRAME_TEMPLATE_VALUES.filter((t) => getFrameProfile(t).costSizePct === 70 / 1500);
     expect([...drawn].filter((t) => !later.includes(t)).sort()).toEqual([...lv.COST_ROW_PRINT_TEMPLATES].sort());
     for (const t of later) expect(drawn, t).toContain(t);

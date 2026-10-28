@@ -124,6 +124,8 @@ const TABLE: Record<FrameTemplate, [string, string, number]> = {
   tarkirdragon: ["1168x880", "4:3", 1.332],
   // The Card Conjurer dossier window (TODO 4.11 wave 2): the tilted photo, 1319 × 859 px.
   dossier: ["1264x816", "3:2", 1.5355],
+  // The Card Conjurer Breaking News window (TODO 4.11 wave 2): 1347 × 850 px.
+  breakingnews: ["1280x800", "3:2", 1.5847],
   fullart: ["896x1168", "3:4", 0.7605],
   dndsourcebook: ["1200x848", "4:3", 1.41],
   extendedart: ["1168x896", "4:3", 1.314],

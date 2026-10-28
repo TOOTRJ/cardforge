@@ -100,7 +100,8 @@ describe("one M15-era display size (layout v32)", () => {
     // …and TODO 4.11 / 4.35's Bloomburrow anime (with its own bump, v70).
     // …and TODO 4.11 wave 2's D&D Sourcebook (a new template: no bump).
     // …and TODO 4.11 wave 2's MKM dossier (a new template: no bump).
-    expect(M15_FAMILY_TEMPLATES).toHaveLength(84);
+    // …and TODO 4.11 wave 2's OTJ Breaking News (a new template: no bump).
+    expect(M15_FAMILY_TEMPLATES).toHaveLength(85);
     for (const t of M15_FAMILY_TEMPLATES) {
       const p = getFrameProfile(t);
       // The 2014–19 arch token's name is its prints' small capitals (TODO
@@ -189,6 +190,7 @@ describe("one M15-era display size (layout v32)", () => {
         COST_ROW_PRINT_TEMPLATES.includes(t) ||
         t === "dndsourcebook" ||
         t === "dossier" ||
+        t === "breakingnews" ||
         t === "lotrscroll" ||
         t === "lotr" ||
         t === "tarkirdragon" ||
@@ -444,6 +446,11 @@ describe("baselines (TextSlot.dy)", () => {
     // folder's own bands — the name 2 px up (print's baseline 187, the run's
     // median), the type line 4 px under the CC baseline (print's 1264).
     ["dossier", base.title - 2 / 1500, cc + 4 / 1500],
+    // The OTJ Breaking News (TODO 4.11 wave 2, a new template): M15's name
+    // and the CC type line's dy, their RECTS on the page's own bands (the
+    // name centred under the masthead, print's capitals on 298 px; the type
+    // line on print's 1324).
+    ["breakingnews", base.title, cc],
     // The Theros constellation (TODO 4.11, layout v66): MSE-framed, its name
     // 2 px up onto THB #258–268's baseline; its type line rides the band,
     // whose RECT moves 10 px down (the text's dy is M15's).

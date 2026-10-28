@@ -136,6 +136,8 @@ describe("declared and published", () => {
       "prepare",
       // …and the MKM dossier since 4.11 wave 2 (the pack's colour frames lerped).
       "dossier",
+      // …and the OTJ Breaking News since 4.11 wave 2 (the same).
+      "breakingnews",
       // …and the extended-art frame and its land dress since the TODO 4.7 follow-up (owner Round 63).
       "extendedart", "extendedartland",
       // …and the old frames since 4.6h (the 2003 gold card, the 2003 and 1997 lands).

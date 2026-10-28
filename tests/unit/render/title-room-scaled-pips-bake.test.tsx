@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { pipScale } from "@/lib/cards/mana-gem";
 import { symbolStyle, symbolStyleOf } from "@/lib/cards/symbol-style";
 import { getFrameProfile } from "@/lib/cards/template-layout";
-import { manaCostWidthPct, titleBandRoomPct } from "@/lib/cards/title-band";
+import { costRectSharesTitleRows, manaCostWidthPct, titleBandRoomPct } from "@/lib/cards/title-band";
 import { FRAME_TEMPLATE_VALUES } from "@/types/card";
 import {
   TITLE_ROOM_BAKE_PARTS,
@@ -41,7 +41,9 @@ describe("the detached-cost templates", () => {
   it("are these four — every profile that places a cost it draws in its own box", () => {
     const detached = FRAME_TEMPLATE_VALUES.filter((t) => {
       const p = getFrameProfile(t);
-      return Boolean(p.costRect) && !p.hideCost;
+      // (A cost box off the name's rows takes none of its room — the OTJ
+      // Breaking News masthead, TODO 4.11 wave 2.)
+      return Boolean(p.costRect) && !p.hideCost && costRectSharesTitleRows(p);
     });
     expect([...detached].sort()).toEqual([...TEMPLATES].sort());
   });
